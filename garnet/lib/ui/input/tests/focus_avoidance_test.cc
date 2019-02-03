@@ -124,65 +124,88 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByViewManager) {
 
         root_node->AddChild(translate_1);
         translate_1.SetTranslation(0, 0, 1);
-        translate_1.SetTag(1);
         translate_1.Export(std::move(export_1));
 
         root_node->AddChild(translate_2);
         translate_2.SetTranslation(4, 4, 2);
-        translate_2.SetTag(2);
         translate_2.Export(std::move(export_2));
 
         RequestToPresent(session);
       });
 
+  // Create the tokens ViewManager will use internally.
+  zx::eventpair view_holder_token_1, view_token_1, view_holder_token_2,
+      view_token_2;
+  CreateTokenPair(&view_holder_token_1, &view_token_1);
+  CreateTokenPair(&view_holder_token_2, &view_token_2);
+
   // Create the tokens for ViewManager to share with each View.
-  zx::eventpair import_view_1, export_view_1, import_view_2, export_view_2;
-  CreateTokenPair(&import_view_1, &export_view_1);
-  CreateTokenPair(&import_view_2, &export_view_2);
+  zx::eventpair import_node_token_1, export_node_token_1, import_node_token_2,
+      export_node_token_2;
+  CreateTokenPair(&import_node_token_1, &export_node_token_1);
+  CreateTokenPair(&import_node_token_2, &export_node_token_2);
 
   // "ViewManager" sets up two Views.
   SessionWrapper view_manager(scenic());
-  view_manager.RunNow(
-      [this, import_1 = std::move(import_1), import_2 = std::move(import_2),
-       export_view_1 = std::move(export_view_1),
-       export_view_2 = std::move(export_view_2)](
-          scenic::Session* session, scenic::EntityNode* ignored) mutable {
-        scenic::ImportNode view_holder_1(session);  // Implicit delegate node.
-        view_holder_1.Bind(std::move(import_1));
-        scenic::EntityNode view_1(session);
-        view_1.SetLabel("<view 1>");
-        view_1.SetTag(3);
-        view_1.Export(std::move(export_view_1));
-        view_holder_1.AddChild(view_1);
+  view_manager.RunNow([this, import_1 = std::move(import_1),
+                       import_2 = std::move(import_2),
+                       export_node_token_1 = std::move(export_node_token_1),
+                       export_node_token_2 = std::move(export_node_token_2),
+                       view_holder_token_1 = std::move(view_holder_token_1),
+                       view_token_1 = std::move(view_token_1),
+                       view_holder_token_2 = std::move(view_holder_token_2),
+                       view_token_2 = std::move(view_token_2)](
+                          scenic::Session* session,
+                          scenic::EntityNode* ignored) mutable {
+    scenic::ImportNode import_node_1(session);  // Implicit delegate node.
+    import_node_1.Bind(std::move(import_1));
 
-        scenic::ImportNode view_holder_2(session);  // Implicit delegate node.
-        view_holder_2.Bind(std::move(import_2));
-        scenic::EntityNode view_2(session);
-        view_2.SetLabel("<view 2>");
-        view_2.SetTag(4);
-        view_2.Export(std::move(export_view_2));
-        view_holder_2.AddChild(view_2);
+    scenic::ViewHolder view_holder_1(session, std::move(view_holder_token_1),
+                                     "View Manager View Holder 1");
+    import_node_1.Attach(view_holder_1);
 
-        // ViewManager sets "no-focus" property for view 2.
-        {
-          fuchsia::ui::gfx::SetImportFocusCmd focus_cmd;
-          focus_cmd.id = view_holder_2.id();
-          focus_cmd.focusable = false;
-          fuchsia::ui::gfx::Command gfx_cmd;
-          gfx_cmd.set_set_import_focus(std::move(focus_cmd));
-          session->Enqueue(std::move(gfx_cmd));
-        }
+    scenic::View view_1(session, std::move(view_token_1),
+                        "View Manager View 1");
 
-        RequestToPresent(session);
-      });
+    scenic::EntityNode export_node_1(session);
+    export_node_1.SetLabel("<view 1>");
+    export_node_1.SetTag(3);
+    export_node_1.Export(std::move(export_node_token_1));
+    view_1.AddChild(export_node_1);
+
+    scenic::ImportNode import_node_2(session);  // Implicit delegate node.
+    import_node_2.Bind(std::move(import_2));
+
+    scenic::ViewHolder view_holder_2(session, std::move(view_holder_token_2),
+                                     "View Manager View Holder 2");
+    import_node_2.Attach(view_holder_2);
+
+    scenic::View view_2(session, std::move(view_token_2),
+                        "View Manager View 2");
+
+    scenic::EntityNode export_node_2(session);
+    export_node_2.SetLabel("<view 2>");
+    export_node_2.SetTag(4);
+    export_node_2.Export(std::move(export_node_token_2));
+    view_2.AddChild(export_node_2);
+
+    // View 2's parent (Presenter) sets "no-focus" property for view 2.
+    {
+      fuchsia::ui::gfx::ViewProperties properties;
+      properties.focus_change = false;
+      view_holder_2.SetViewProperties(std::move(properties));
+    }
+
+    RequestToPresent(session);
+  });
 
   // Client 1 vends a View to the global scene.
   SessionWrapper client_1(scenic());
   client_1.RunNow(
-      [this, import_view_1 = std::move(import_view_1)](
+      [this, import_node_token_1 = std::move(import_node_token_1)](
           scenic::Session* session, scenic::EntityNode* root_node) mutable {
         scenic::ImportNode import(session);
-        import.Bind(std::move(import_view_1));
+        import.Bind(std::move(import_node_token_1));
         import.AddChild(*root_node);
 
         scenic::ShapeNode shape(session);
@@ -201,10 +224,10 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByViewManager) {
   // Client 2 vends a View to the global scene.
   SessionWrapper client_2(scenic());
   client_2.RunNow(
-      [this, import_view_2 = std::move(import_view_2)](
+      [this, import_node_token_2 = std::move(import_node_token_2)](
           scenic::Session* session, scenic::EntityNode* root_node) mutable {
         scenic::ImportNode import(session);
-        import.Bind(std::move(import_view_2));
+        import.Bind(std::move(import_node_token_2));
         import.AddChild(*root_node);
 
         scenic::ShapeNode shape(session);

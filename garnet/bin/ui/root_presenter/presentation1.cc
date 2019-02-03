@@ -22,6 +22,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "lib/component/cpp/connect.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/views/cpp/formatting.h"
@@ -755,7 +756,10 @@ void Presentation1::OnChildUnavailable(uint32_t child_key,
 void Presentation1::OnPropertiesChanged(
     ::fuchsia::ui::viewsv1::ViewProperties properties,
     OnPropertiesChangedCallback callback) {
-  // Nothing to do right now.
+  // Update the content view's size to match our size.
+  root_container_->SetChildProperties(
+      kContentViewKey, fidl::MakeOptional(std::move(properties)));
+
   callback();
 }
 

@@ -313,6 +313,14 @@ void ImportNode::BindAsRequest(zx::eventpair* out_export_token) {
   is_bound_ = true;
 }
 
+void ImportNode::Attach(const ViewHolder& view_holder) {
+  session()->Enqueue(NewAddChildCmd(id(), view_holder.id()));
+}
+
+void ImportNode::Snapshot(fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback) {
+  session()->Enqueue(NewTakeSnapshotCmdHACK(id(), std::move(callback)));
+}
+
 ViewHolder::ViewHolder(Session* session, zx::eventpair token,
                        const std::string& debug_name)
     : Resource(session) {

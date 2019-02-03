@@ -468,19 +468,31 @@ void Node::RefreshScene(Scene* new_scene) {
       *this, [this](Node* node) { node->RefreshScene(scene_); });
 }
 
-ResourcePtr Node::FindOwningView() const {
+// TODO(SCN-1006): After v2 transition, remove this function.
+ResourcePtr Node::FindOwningViewOrImportNode() const {
   const Node* node = this;
   while (node) {
-    if (View* view = node->view()) {
-      return ViewPtr(view);
-    }
-
-    // TODO(SCN-1006): After v2 transition, remove this clause.
     if (node->is_exported() &&         // Exported
         node->imports().size() > 0 &&  // Imported
         node->tag_value() > 0) {       // Used by ViewManager
       FXL_DCHECK(node->imports().size() == 1);
       return ImportPtr(node->imports()[0]);
+    }
+
+    if (View* view = node->view()) {
+      return ViewPtr(view);
+    }
+
+    node = node->parent();
+  }
+  return nullptr;
+}
+
+ResourcePtr Node::FindOwningView() const {
+  const Node* node = this;
+  while (node) {
+    if (View* view = node->view()) {
+      return ViewPtr(view);
     }
 
     node = node->parent();

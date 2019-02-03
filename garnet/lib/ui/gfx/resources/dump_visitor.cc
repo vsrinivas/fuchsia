@@ -171,6 +171,9 @@ void DumpVisitor::VisitNode(Node* r) {
   if (r->clip_to_self()) {
     WriteProperty("clip_to_self") << r->clip_to_self();
   }
+  if (r->is_exported()) {
+    WriteProperty("is_exported") << r->is_exported();
+  }
   if (r->transform().IsIdentity()) {
     WriteProperty("transform") << "identity";
   } else {

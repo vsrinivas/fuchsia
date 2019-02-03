@@ -26,17 +26,12 @@ class ViewTreeImpl;
 // This object is owned by the ViewRegistry that created it.
 class ViewTreeState : public ViewContainerState {
  public:
-  enum {
-    // Some of the tree's views have been invalidated.
-    INVALIDATION_VIEWS_INVALIDATED = 1u << 0,
-  };
-
   ViewTreeState(ViewRegistry* registry,
                 ::fuchsia::ui::viewsv1::ViewTreeToken view_tree_token,
                 fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewTree>
                     view_tree_request,
                 ::fuchsia::ui::viewsv1::ViewTreeListenerPtr view_tree_listener,
-                const std::string& label);
+                fuchsia::ui::scenic::Scenic* scenic, const std::string& label);
   ~ViewTreeState() override;
 
   fxl::WeakPtr<ViewTreeState> GetWeakPtr() {
@@ -55,13 +50,6 @@ class ViewTreeState : public ViewContainerState {
     return view_tree_listener_;
   }
 
-  // Gets the view tree's root view.
-  ViewStub* GetRoot() const;
-
-  // Gets or sets flags describing the invalidation state of the view tree.
-  uint32_t invalidation_flags() const { return invalidation_flags_; }
-  void set_invalidation_flags(uint32_t value) { invalidation_flags_ = value; }
-
   ViewTreeState* AsViewTreeState() override;
 
   const std::string& label() const { return label_; }
@@ -76,8 +64,6 @@ class ViewTreeState : public ViewContainerState {
 
   std::unique_ptr<ViewTreeImpl> impl_;
   fidl::Binding<::fuchsia::ui::viewsv1::ViewTree> view_tree_binding_;
-
-  uint32_t invalidation_flags_ = 0u;
 
   fxl::WeakPtrFactory<ViewTreeState> weak_factory_;  // must be last
 

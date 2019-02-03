@@ -48,8 +48,7 @@ class ViewStub {
   // Begins the process of resolving a view.
   // |host_import_token| is the import token for the node exported by the parent
   // view in order to host this view's graphical contents.
-  ViewStub(ViewRegistry* registry, ViewLinker::ExportLink view_link,
-           zx::eventpair host_import_token);
+  ViewStub(ViewRegistry* registry, zx::eventpair host_import_token);
   ~ViewStub();
 
   fxl::WeakPtr<ViewStub> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
@@ -89,12 +88,6 @@ class ViewStub {
     return properties_;
   }
 
-  // Sets the properties set by the container.
-  // May be called when the view is pending or attached but not after it
-  // has become unavailable.
-  void SetProperties(::fuchsia::ui::viewsv1::ViewPropertiesPtr properties,
-                     scenic::Session* session);
-
   // Binds the stub to the specified actual view, which must not be null.
   // Must be called at most once to apply the effects of resolving the
   // view owner.
@@ -108,9 +101,6 @@ class ViewStub {
 
   // Sets the child's container and key.  Must not be null.
   void SetContainer(ViewContainerState* container, uint32_t key);
-
-  // Resets the parent view state and tree pointers to null.
-  void Unlink();
 
   // Called in the rare case when |OnViewResolved| hasn't been called, but
   // we have already been removed and the child view's ownership is supposed to
@@ -131,11 +121,6 @@ class ViewStub {
   scenic::ImportNode* host_node() { return host_node_.get(); }
 
  private:
-  void SetTreeRecursively(ViewTreeState* tree);
-  static void SetTreeForChildrenOfView(ViewState* view, ViewTreeState* tree);
-
-  void OnViewResolved(ViewState* view_state, bool success);
-
   // This is true when |ViewStub| has been transferred before |OnViewResolved|
   // has been called, and the child view's ownership is supposed to be
   // transferred. In that case, we will transfer ownership of the child
@@ -148,7 +133,6 @@ class ViewStub {
   ViewState* state_ = nullptr;
   bool unavailable_ = false;
 
-  ViewLinker::ExportLink view_link_;
   zx::eventpair host_import_token_;
   std::unique_ptr<scenic::ImportNode> host_node_;
 

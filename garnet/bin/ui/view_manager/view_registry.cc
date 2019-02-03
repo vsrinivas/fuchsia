@@ -17,6 +17,7 @@
 #include "garnet/bin/ui/view_manager/view_tree_impl.h"
 #include "garnet/public/lib/escher/util/type_utils.h"
 #include "lib/component/cpp/connect.h"
+#include "lib/fsl/handles/object_info.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -60,29 +61,8 @@ bool Validate(const ::fuchsia::ui::viewsv1::ViewProperties& value) {
   return true;
 }
 
-// Returns true if the properties are valid and are sufficient for
-// operating the view tree.
-bool IsComplete(const ::fuchsia::ui::viewsv1::ViewProperties& value) {
-  return Validate(value) && value.view_layout;
-}
-
-void ApplyOverrides(::fuchsia::ui::viewsv1::ViewProperties* value,
-                    const ::fuchsia::ui::viewsv1::ViewProperties* overrides) {
-  if (!overrides)
-    return;
-  if (overrides->view_layout)
-    *value->view_layout = *overrides->view_layout;
-}
-
 std::string SanitizeLabel(fidl::StringPtr label) {
   return label.get().substr(0, ::fuchsia::ui::viewsv1::kLabelMaxLength);
-}
-
-bool Equals(const ::fuchsia::ui::viewsv1::ViewPropertiesPtr& a,
-            const ::fuchsia::ui::viewsv1::ViewPropertiesPtr& b) {
-  if (!a || !b)
-    return !a && !b;
-  return *a == *b;
 }
 
 }  // namespace
@@ -132,29 +112,14 @@ void ViewRegistry::CreateView(
   FXL_CHECK(view_id);
   FXL_CHECK(!FindView(view_id));
 
-  // Create the state and bind the interfaces to it.
-  ViewLinker::ImportLink view_owner_link =
-      view_linker_.CreateImport(std::move(view_token), this);
+  // Create the state.
   auto view_state = std::make_unique<ViewState>(
       this, view_id, std::move(view_request), std::move(view_listener),
-      &session_, SanitizeLabel(label));
+      std::move(view_token), std::move(parent_export_token), scenic_.get(),
+      SanitizeLabel(label));
 
-  // Export a node which represents the view's attachment point.
-  view_state->top_node().Export(std::move(parent_export_token));
-  view_state->top_node().SetTag(view_state->view_token());
-  view_state->top_node().SetLabel(view_state->FormattedLabel());
-
-  // TODO(MZ-371): Avoid Z-fighting by introducing a smidgen of elevation
-  // between each view and its embedded sub-views.  This is not a long-term fix.
-  view_state->top_node().SetTranslation(0.f, 0.f, 0.1f);
-  SchedulePresentSession();
-
-  // Begin tracking the view, and bind it to the owner link.  Binding may cause
-  // the ViewStub to be attached, so we make sure to begin tracking the view in
-  // the map beforehand.
   ViewState* view_state_ptr = view_state.get();
   views_by_token_.emplace(view_id, std::move(view_state));
-  view_state_ptr->BindOwner(std::move(view_owner_link));
   FXL_VLOG(1) << "CreateView: view=" << view_state_ptr;
 }
 
@@ -176,8 +141,7 @@ void ViewRegistry::UnregisterView(ViewState* view_state) {
   UnregisterChildren(view_state);
 
   // Remove the view's content node from the session.
-  view_state->top_node().Detach();
-  SchedulePresentSession();
+  view_state->ReleaseScenicResources();
 
   // Remove from registry.
   views_by_token_.erase(view_state->view_token());
@@ -200,7 +164,7 @@ void ViewRegistry::CreateViewTree(
   // Create the state and bind the interfaces to it.
   auto tree_state = std::make_unique<ViewTreeState>(
       this, view_tree_token, std::move(view_tree_request),
-      std::move(view_tree_listener), SanitizeLabel(label));
+      std::move(view_tree_listener), scenic_.get(), SanitizeLabel(label));
 
   // Add to registry.
   ViewTreeState* tree_state_ptr = tree_state.get();
@@ -253,10 +217,7 @@ void ViewRegistry::UnregisterViewStub(std::unique_ptr<ViewStub> view_stub) {
 void ViewRegistry::UnregisterChildren(ViewContainerState* container_state) {
   FXL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
 
-  // Recursively unregister all children since they will become unowned
-  // at this point taking care to unlink each one before its unregistration.
-  for (auto& child : container_state->UnlinkAllChildren())
-    UnregisterViewStub(std::move(child));
+  container_state->RemoveAllChildren();
 }
 
 void ViewRegistry::ReleaseViewStubChildHost(ViewStub* view_stub) {
@@ -298,11 +259,8 @@ void ViewRegistry::AddChild(ViewContainerState* container_state,
   // Add a stub, pending resolution of the view owner.
   // Assuming the stub isn't removed prematurely, |OnViewResolved| will be
   // called asynchronously with the result of the resolution.
-  ViewLinker::ExportLink view_link =
-      view_linker_.CreateExport(std::move(view_holder_token), this);
-  container_state->LinkChild(child_key, std::unique_ptr<ViewStub>(new ViewStub(
-                                            this, std::move(view_link),
-                                            std::move(host_import_token))));
+  container_state->AddChild(child_key, std::move(view_holder_token),
+                            std::move(host_import_token));
 }
 
 void ViewRegistry::RemoveChild(ViewContainerState* container_state,
@@ -322,8 +280,7 @@ void ViewRegistry::RemoveChild(ViewContainerState* container_state,
     return;
   }
 
-  // Unlink the child from its container.
-  TransferOrUnregisterViewStub(container_state->UnlinkChild(child_key),
+  container_state->RemoveChild(child_key,
                                std::move(transferred_view_holder_token));
 }
 
@@ -356,21 +313,7 @@ void ViewRegistry::SetChildProperties(
     return;
   }
 
-  // Immediately discard requests on unavailable views.
-  ViewStub* child_stub = child_it->second.get();
-  if (child_stub->is_unavailable())
-    return;
-
-  // Store the updated properties specified by the container if changed.
-  if (Equals(child_properties, child_stub->properties()))
-    return;
-
-  // Apply the change.
-  child_stub->SetProperties(std::move(child_properties), &session_);
-  if (child_stub->state()) {
-    InvalidateView(child_stub->state(),
-                   ViewState::INVALIDATION_PROPERTIES_CHANGED);
-  }
+  container_state->SetChildProperties(child_key, std::move(child_properties));
 }
 
 void ViewRegistry::RequestSnapshotHACK(
@@ -390,16 +333,6 @@ void ViewRegistry::RequestSnapshotHACK(
     return;
   }
 
-  // Immediately discard requests on unavailable views.
-  ViewStub* child_stub = child_it->second.get();
-  if (child_stub->is_unavailable() || child_stub->is_pending()) {
-    FXL_VLOG(1) << "RequestSnapshot called for view that is currently "
-                << (child_stub->is_unavailable() ? "unavailable" : "pending");
-    // TODO(SCN-978): Return an error to the caller for invalid data.
-    callback(fuchsia::mem::Buffer{});
-    return;
-  }
-
   fuchsia::ui::gfx::SnapshotCallbackHACKPtr snapshot_callback;
   auto snapshot_callback_impl = std::make_shared<SnapshotCallbackImpl>(
       snapshot_callback.NewRequest(), std::move(callback));
@@ -409,7 +342,7 @@ void ViewRegistry::RequestSnapshotHACK(
   snapshot_bindings_.push_back(std::move(snapshot_callback_impl));
 
   // Snapshot the child.
-  child_stub->state()->top_node().Snapshot(std::move(snapshot_callback));
+  child_it->second->host_node->Snapshot(std::move(snapshot_callback));
   SchedulePresentSession();
 }
 
@@ -432,263 +365,9 @@ void ViewRegistry::SendSizeChangeHintHACK(ViewContainerState* container_state,
     return;
   }
 
-  // Immediately discard requests on unavailable views.
-  ViewStub* child_stub = child_it->second.get();
-  if (child_stub->is_unavailable() || child_stub->is_pending()) {
-    FXL_VLOG(1) << "SendSizeChangeHintHACK called for view that is currently "
-                << (child_stub->is_unavailable() ? "unavailable" : "pending");
-    return;
-  }
-  FXL_DCHECK(child_stub->state());
-
-  child_stub->state()->top_node().SendSizeChangeHint(width_change_factor,
-                                                     height_change_factor);
+  child_it->second->host_node->SendSizeChangeHint(width_change_factor,
+                                                  height_change_factor);
   SchedulePresentSession();
-}
-
-void ViewRegistry::OnViewResolved(ViewStub* view_stub, ViewState* view_state) {
-  FXL_DCHECK(view_stub);
-
-  if (view_state)
-    AttachResolvedViewAndNotify(view_stub, view_state);
-  else
-    ReleaseUnavailableViewAndNotify(view_stub);
-}
-
-void ViewRegistry::TransferView(ViewState* view_state,
-                                zx::eventpair transferred_view_token) {
-  FXL_DCHECK(transferred_view_token);
-
-  if (view_state) {
-    InvalidateView(view_state, ViewState::INVALIDATION_PARENT_CHANGED);
-
-    // This will cause the view_state to be rebound, and released from the
-    // view_stub.
-    ViewLinker::ImportLink view_owner_link =
-        view_linker_.CreateImport(std::move(transferred_view_token), this);
-    view_state->BindOwner(std::move(view_owner_link));
-  }
-}
-
-void ViewRegistry::AttachResolvedViewAndNotify(ViewStub* view_stub,
-                                               ViewState* view_state) {
-  FXL_DCHECK(view_stub);
-  FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  FXL_VLOG(2) << "AttachViewStubAndNotify: view=" << view_state;
-
-  // Precondition:  The view_state will not have a view_stub attached.
-  FXL_CHECK(!view_state->view_stub())
-      << "Attempted to attach ViewState " << view_state
-      << " that already had a ViewStub";
-
-  // Attach the view's content.
-  if (view_stub->container()) {
-    view_stub->ImportHostNode(&session_);
-    view_stub->host_node()->AddChild(view_state->top_node());
-    SchedulePresentSession();
-
-    SendChildAttached(view_stub->container(), view_stub->key(),
-                      ::fuchsia::ui::viewsv1::ViewInfo());
-  }
-
-  // Attach the view.
-  view_stub->AttachView(view_state);
-  InvalidateView(view_state, ViewState::INVALIDATION_PARENT_CHANGED);
-}
-
-void ViewRegistry::ReleaseUnavailableViewAndNotify(ViewStub* view_stub) {
-  FXL_DCHECK(view_stub);
-  FXL_VLOG(2) << "ReleaseUnavailableViewAndNotify: key=" << view_stub->key();
-
-  ViewState* view_state = view_stub->ReleaseView();
-  FXL_DCHECK(!view_state);
-
-  if (view_stub->container())
-    SendChildUnavailable(view_stub->container(), view_stub->key());
-}
-
-void ViewRegistry::TransferOrUnregisterViewStub(
-    std::unique_ptr<ViewStub> view_stub, zx::eventpair transferred_view_token) {
-  FXL_DCHECK(view_stub);
-
-  if (transferred_view_token) {
-    ReleaseViewStubChildHost(view_stub.get());
-
-    if (view_stub->state()) {
-      ViewState* view_state = view_stub->ReleaseView();
-      TransferView(view_state, std::move(transferred_view_token));
-
-      return;
-    }
-
-    if (view_stub->is_pending()) {
-      FXL_DCHECK(!view_stub->state());
-
-      // Handle transfer of pending view.
-      view_stub->TransferViewWhenResolved(std::move(view_stub),
-                                          std::move(transferred_view_token));
-
-      return;
-    }
-  }
-  UnregisterViewStub(std::move(view_stub));
-}
-
-// INVALIDATION
-
-void ViewRegistry::InvalidateView(ViewState* view_state, uint32_t flags) {
-  FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  FXL_VLOG(2) << "InvalidateView: view=" << view_state << ", flags=" << flags;
-
-  view_state->set_invalidation_flags(view_state->invalidation_flags() | flags);
-  if (view_state->view_stub() && view_state->view_stub()->tree()) {
-    InvalidateViewTree(view_state->view_stub()->tree(),
-                       ViewTreeState::INVALIDATION_VIEWS_INVALIDATED);
-  }
-}
-
-void ViewRegistry::InvalidateViewTree(ViewTreeState* tree_state,
-                                      uint32_t flags) {
-  FXL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
-  FXL_VLOG(2) << "InvalidateViewTree: tree=" << tree_state
-              << ", flags=" << flags;
-
-  tree_state->set_invalidation_flags(tree_state->invalidation_flags() | flags);
-  ScheduleTraversal();
-}
-
-void ViewRegistry::ScheduleTraversal() {
-  if (!traversal_scheduled_) {
-    traversal_scheduled_ = true;
-    async::PostTask(async_get_default_dispatcher(),
-                    [weak = weak_factory_.GetWeakPtr()] {
-                      if (weak)
-                        weak->Traverse();
-                    });
-  }
-}
-
-void ViewRegistry::Traverse() {
-  FXL_DCHECK(traversal_scheduled_);
-
-  traversal_scheduled_ = false;
-  for (const auto& pair : view_trees_by_token_)
-    TraverseViewTree(pair.second.get());
-}
-
-void ViewRegistry::TraverseViewTree(ViewTreeState* tree_state) {
-  FXL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
-  FXL_VLOG(2) << "TraverseViewTree: tree=" << tree_state
-              << ", invalidation_flags=" << tree_state->invalidation_flags();
-
-  uint32_t flags = tree_state->invalidation_flags();
-
-  if (flags & ViewTreeState::INVALIDATION_VIEWS_INVALIDATED) {
-    ViewStub* root_stub = tree_state->GetRoot();
-    if (root_stub && root_stub->state())
-      TraverseView(root_stub->state(), false);
-  }
-
-  tree_state->set_invalidation_flags(0u);
-}
-
-void ViewRegistry::TraverseView(ViewState* view_state,
-                                bool parent_properties_changed) {
-  FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  FXL_VLOG(2) << "TraverseView: view=" << view_state
-              << ", parent_properties_changed=" << parent_properties_changed
-              << ", invalidation_flags=" << view_state->invalidation_flags();
-
-  uint32_t flags = view_state->invalidation_flags();
-
-  // Update view properties.
-  bool view_properties_changed = false;
-  if (parent_properties_changed ||
-      (flags & (ViewState::INVALIDATION_PROPERTIES_CHANGED |
-                ViewState::INVALIDATION_PARENT_CHANGED))) {
-    ::fuchsia::ui::viewsv1::ViewPropertiesPtr properties =
-        ResolveViewProperties(view_state);
-    if (properties) {
-      if (!view_state->issued_properties() ||
-          !Equals(properties, view_state->issued_properties())) {
-        view_state->IssueProperties(std::move(properties));
-        view_properties_changed = true;
-      }
-    }
-    flags &= ~(ViewState::INVALIDATION_PROPERTIES_CHANGED |
-               ViewState::INVALIDATION_PARENT_CHANGED);
-  }
-
-  // If we don't have view properties yet then we cannot pursue traversals
-  // any further.
-  if (!view_state->issued_properties()) {
-    FXL_VLOG(2) << "View has no valid properties: view=" << view_state;
-    view_state->set_invalidation_flags(flags);
-    return;
-  }
-
-  // Deliver property change event if needed.
-  bool send_properties = view_properties_changed ||
-                         (flags & ViewState::INVALIDATION_RESEND_PROPERTIES);
-  if (send_properties) {
-    if (!(flags & ViewState::INVALIDATION_IN_PROGRESS)) {
-      ::fuchsia::ui::viewsv1::ViewProperties cloned_properties;
-      view_state->issued_properties()->Clone(&cloned_properties);
-      SendPropertiesChanged(view_state, std::move(cloned_properties));
-      flags = ViewState::INVALIDATION_IN_PROGRESS;
-    } else {
-      FXL_VLOG(2) << "View invalidation stalled awaiting response: view="
-                  << view_state;
-      if (send_properties)
-        flags |= ViewState::INVALIDATION_RESEND_PROPERTIES;
-      flags |= ViewState::INVALIDATION_STALLED;
-    }
-  }
-  view_state->set_invalidation_flags(flags);
-
-  // TODO(jeffbrown): Optimize propagation.
-  // This should defer traversal of the rest of the subtree until the view
-  // flushes its container or a timeout expires.  We will need to be careful
-  // to ensure that we completely process one traversal before starting the
-  // next one and we'll have to retain some state.  The same behavior should
-  // be applied when the parent's own properties change (assuming that it is
-  // likely to want to resize its children, unless it says otherwise somehow).
-
-  // Traverse all children.
-  for (const auto& pair : view_state->children()) {
-    ViewState* child_state = pair.second->state();
-    if (child_state)
-      TraverseView(pair.second->state(), view_properties_changed);
-  }
-}
-
-::fuchsia::ui::viewsv1::ViewPropertiesPtr ViewRegistry::ResolveViewProperties(
-    ViewState* view_state) {
-  FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
-
-  ViewStub* view_stub = view_state->view_stub();
-  if (!view_stub || !view_stub->properties())
-    return nullptr;
-
-  if (view_stub->parent()) {
-    if (!view_stub->parent()->issued_properties())
-      return nullptr;
-    auto properties = ::fuchsia::ui::viewsv1::ViewProperties::New();
-    view_stub->parent()->issued_properties()->Clone(properties.get());
-    ApplyOverrides(properties.get(), view_stub->properties().get());
-    return properties;
-  } else if (view_stub->is_root_of_tree()) {
-    if (!view_stub->properties() || !IsComplete(*view_stub->properties())) {
-      FXL_VLOG(2) << "View tree properties are incomplete: root=" << view_state
-                  << ", properties=" << view_stub->properties();
-      return nullptr;
-    }
-    auto cloned_properties = ::fuchsia::ui::viewsv1::ViewProperties::New();
-    view_stub->properties()->Clone(cloned_properties.get());
-    return cloned_properties;
-  } else {
-    return nullptr;
-  }
 }
 
 void ViewRegistry::SchedulePresentSession() {
@@ -725,34 +404,6 @@ void ViewRegistry::ConnectToViewTreeService(ViewTreeState* tree_state,
 
 // EXTERNAL SIGNALING
 
-void ViewRegistry::SendPropertiesChanged(
-    ViewState* view_state, ::fuchsia::ui::viewsv1::ViewProperties properties) {
-  FXL_DCHECK(view_state);
-  FXL_DCHECK(view_state->view_listener());
-
-  FXL_VLOG(1) << "SendPropertiesChanged: view_state=" << view_state
-              << ", properties=" << properties;
-
-  // It's safe to capture the view state because the ViewListener is closed
-  // before the view state is destroyed so we will only receive the callback
-  // if the view state is still alive.
-  view_state->view_listener()->OnPropertiesChanged(
-      std::move(properties), [this, view_state] {
-        uint32_t old_flags = view_state->invalidation_flags();
-        FXL_DCHECK(old_flags & ViewState::INVALIDATION_IN_PROGRESS);
-
-        view_state->set_invalidation_flags(
-            old_flags & ~(ViewState::INVALIDATION_IN_PROGRESS |
-                          ViewState::INVALIDATION_STALLED));
-
-        if (old_flags & ViewState::INVALIDATION_STALLED) {
-          FXL_VLOG(2) << "View recovered from stalled invalidation: view_state="
-                      << view_state;
-          InvalidateView(view_state, 0u);
-        }
-      });
-}
-
 void ViewRegistry::SendChildAttached(
     ViewContainerState* container_state, uint32_t child_key,
     ::fuchsia::ui::viewsv1::ViewInfo child_view_info) {
@@ -783,34 +434,39 @@ void ViewRegistry::SendChildUnavailable(ViewContainerState* container_state,
                                                                  [] {});
 }
 
-// SNAPSHOT
-void ViewRegistry::TakeSnapshot(
-    uint64_t view_koid, fit::function<void(::fuchsia::mem::Buffer)> callback) {
-  auto view_state = static_cast<ViewState*>(view_linker_.GetImport(view_koid));
-  if (view_koid > 0 && !view_state) {
-    // TODO(SCN-978): Did not find the view for the view koid, return error.
-    callback(fuchsia::mem::Buffer{});
-    return;
-  }
+// TRANSFERRING VIEWS
 
-  fuchsia::ui::gfx::SnapshotCallbackHACKPtr snapshot_callback;
-  auto snapshot_callback_impl = std::make_shared<SnapshotCallbackImpl>(
-      snapshot_callback.NewRequest(), std::move(callback));
-  snapshot_callback_impl->SetClear([this, snapshot_callback_impl]() {
-    snapshot_bindings_.remove(snapshot_callback_impl);
-  });
-  snapshot_bindings_.push_back(std::move(snapshot_callback_impl));
-
-  if (view_state) {
-    // Snapshot the child.
-    view_state->top_node().Snapshot(std::move(snapshot_callback));
-  } else {
-    // Snapshot the entire composition.
-    session_.Enqueue(
-        scenic::NewTakeSnapshotCmdHACK(0, std::move(snapshot_callback)));
+std::unique_ptr<ViewContainerState::ChildView> ViewRegistry::FindOrphanedView(
+    zx_handle_t view_holder_token) {
+  zx_koid_t peer_koid = fsl::GetRelatedKoid(view_holder_token);
+  auto view_it = orphaned_views_.find(peer_koid);
+  if (view_it != orphaned_views_.end()) {
+    auto child_view = std::move(view_it->second.child_view);
+    orphaned_views_.erase(view_it);
+    return child_view;
   }
-  SchedulePresentSession();
+  return nullptr;
 }
+void ViewRegistry::AddOrphanedView(
+    zx::eventpair view_holder_token,
+    std::unique_ptr<ViewContainerState::ChildView> child) {
+  zx_koid_t koid = fsl::GetKoid(view_holder_token.get());
+  orphaned_views_[koid] = {std::move(view_holder_token), std::move(child)};
+}
+
+void ViewRegistry::RemoveOrphanedView(ViewContainerState::ChildView* child) {
+  for (auto entry_it = orphaned_views_.begin();
+       entry_it != orphaned_views_.end(); entry_it++) {
+    if (entry_it->second.child_view.get() == child) {
+      orphaned_views_.erase(entry_it);
+    }
+  }
+}
+
+// SNAPSHOT
+// TODO(SCN-1263): Get Snapshots working with Views v2
+void ViewRegistry::TakeSnapshot(
+    uint64_t view_koid, fit::function<void(::fuchsia::mem::Buffer)> callback) {}
 
 // LOOKUP
 

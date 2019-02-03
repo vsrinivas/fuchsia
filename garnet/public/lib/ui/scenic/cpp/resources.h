@@ -315,6 +315,10 @@ class ImportNode final : public ContainerNode {
   // Returns true if the import has been bound.
   bool is_bound() const { return is_bound_; }
 
+  void Attach(const ViewHolder& view_holder);
+
+  void Snapshot(fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback);
+
  private:
   bool is_bound_ = false;
 };

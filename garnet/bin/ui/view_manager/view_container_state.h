@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_UI_VIEW_MANAGER_VIEW_CONTAINER_STATE_H_
 #define GARNET_BIN_UI_VIEW_MANAGER_VIEW_CONTAINER_STATE_H_
 
+#include <array>
 #include <iosfwd>
 #include <memory>
 #include <unordered_map>
@@ -24,9 +25,30 @@ class ViewTreeState;
 // This object is owned by the ViewRegistry that created it.
 class ViewContainerState {
  public:
-  using ChildrenMap = std::unordered_map<uint32_t, std::unique_ptr<ViewStub>>;
+  // Whether the View below us is connected.
+  enum ViewConnectionState { UNKNOWN, CONNECTED, DISCONNECTED };
+  struct ChildView {
+    // The ViewContainer we are attached to.
+    ViewContainerState* container = nullptr;
+    // Whether the View below us is connected.
+    ViewConnectionState view_connected = UNKNOWN;
+    ViewRegistry* view_registry = nullptr;
+    // If zero, then it's not attached.
+    uint32_t child_key = 0;
+    std::unique_ptr<scenic::Session> session;
+    std::unique_ptr<scenic::ImportNode> host_node;
+    scenic::ViewHolder view_holder;
+    std::array<float, 3> min_dimensions = {0, 0, 0};
+    std::array<float, 3> max_dimensions = {0, 0, 0};
+    std::array<float, 3> inset_min = {0, 0, 0};
+    std::array<float, 3> inset_max = {0, 0, 0};
 
-  ViewContainerState();
+    static void OnScenicEvent(ChildView* session,
+                              std::vector<fuchsia::ui::scenic::Event> events);
+  };
+
+  ViewContainerState(ViewRegistry* registry,
+                     fuchsia::ui::scenic::Scenic* scenic);
 
   // Gets or sets the view container listener.
   ::fuchsia::ui::viewsv1::ViewContainerListener* view_container_listener()
@@ -40,18 +62,19 @@ class ViewContainerState {
   }
 
   // The map of children, indexed by child key.
-  // The view stub pointers are never null but some view stubs may
-  // have been marked unavailable.
-  const ChildrenMap& children() const { return children_; }
+  const std::unordered_map<uint32_t, std::unique_ptr<ChildView>>& children()
+      const {
+    return children_;
+  }
 
-  // Links a child into the view tree.
-  void LinkChild(uint32_t key, std::unique_ptr<ViewStub> child);
+  // Removes all children as a single operation.
+  void RemoveAllChildren();
 
-  // Unlinks a child of the view tree.
-  std::unique_ptr<ViewStub> UnlinkChild(uint32_t key);
-
-  // Unlinks all children as a single operation.
-  std::vector<std::unique_ptr<ViewStub>> UnlinkAllChildren();
+  // Transform the properties into a SendViewPropertiesCmd,
+  // and forward it to Scenic.
+  void SetChildProperties(
+      uint32_t child_key,
+      ::fuchsia::ui::viewsv1::ViewPropertiesPtr child_properties);
 
   // Dynamic type tests (ugh).
   virtual ViewState* AsViewState();
@@ -59,12 +82,22 @@ class ViewContainerState {
 
   virtual const std::string& FormattedLabel() const = 0;
 
+  void AddChild(uint32_t child_key, zx::eventpair view_holder_token,
+                zx::eventpair host_import_token);
+
+  void RemoveChild(uint32_t child_key,
+                   zx::eventpair transferred_view_holder_token);
+
  protected:
   virtual ~ViewContainerState();
 
  private:
-  ::fuchsia::ui::viewsv1::ViewContainerListenerPtr view_container_listener_;
-  ChildrenMap children_;
+  ViewRegistry* view_registry_ = nullptr;
+  fuchsia::ui::scenic::Scenic* scenic_ = nullptr;
+
+  fuchsia::ui::viewsv1::ViewContainerListenerPtr view_container_listener_;
+
+  std::unordered_map<uint32_t, std::unique_ptr<ChildView>> children_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewContainerState);
 };

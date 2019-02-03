@@ -18,8 +18,9 @@ ViewTreeState::ViewTreeState(
     ::fuchsia::ui::viewsv1::ViewTreeToken view_tree_token,
     fidl::InterfaceRequest<::fuchsia::ui::viewsv1::ViewTree> view_tree_request,
     ::fuchsia::ui::viewsv1::ViewTreeListenerPtr view_tree_listener,
-    const std::string& label)
-    : view_tree_token_(std::move(view_tree_token)),
+    fuchsia::ui::scenic::Scenic* scenic, const std::string& label)
+    : ViewContainerState(registry, scenic),
+      view_tree_token_(std::move(view_tree_token)),
       view_tree_listener_(std::move(view_tree_listener)),
       label_(label),
       impl_(new ViewTreeImpl(registry, this)),
@@ -36,12 +37,6 @@ ViewTreeState::ViewTreeState(
 }
 
 ViewTreeState::~ViewTreeState() {}
-
-ViewStub* ViewTreeState::GetRoot() const {
-  if (children().empty())
-    return nullptr;
-  return children().cbegin()->second.get();
-}
 
 ViewTreeState* ViewTreeState::AsViewTreeState() { return this; }
 

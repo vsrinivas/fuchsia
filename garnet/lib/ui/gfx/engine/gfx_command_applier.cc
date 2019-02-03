@@ -110,13 +110,6 @@ bool GfxCommandApplier::ApplyCommand(Session* session,
       return ApplyImportResourceCmd(session,
                                     std::move(command.import_resource()));
     case fuchsia::ui::gfx::Command::Tag::kSetImportFocus: {
-      // TODO(SCN-1026): Remove this.
-      if (auto import = session->resources()->FindResource<Import>(
-              command.set_import_focus().id,
-              ResourceMap::ErrorBehavior::kDontReportErrors)) {
-        import->set_focusable(command.set_import_focus().focusable);
-        return true;
-      }
       return false;
     }
     case fuchsia::ui::gfx::Command::Tag::kAddChild:

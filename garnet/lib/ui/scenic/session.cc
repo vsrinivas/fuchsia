@@ -15,6 +15,10 @@ Session::Session(
     : id_(id), listener_(listener.Bind()), weak_factory_(this) {}
 
 void Session::Enqueue(::std::vector<fuchsia::ui::scenic::Command> cmds) {
+  // TODO(SCN-1265): Come up with a better solution to avoid children
+  // calling into us during destruction.
+  if (!valid_)
+    return;
   for (auto& cmd : cmds) {
     // TODO(SCN-710): This dispatch is far from optimal in terms of performance.
     // We need to benchmark it to figure out whether it matters.
@@ -34,6 +38,10 @@ void Session::Present(uint64_t presentation_time,
                       ::std::vector<zx::event> acquire_fences,
                       ::std::vector<zx::event> release_fences,
                       PresentCallback callback) {
+  // TODO(SCN-1265): Come up with a better solution to avoid children
+  // calling into us during destruction.
+  if (!valid_)
+    return;
   // TODO(MZ-469): Move Present logic into Session.
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
@@ -54,6 +62,10 @@ void Session::SetCommandDispatchers(
 void Session::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
                       ::fuchsia::ui::gfx::vec3 ray_direction,
                       HitTestCallback callback) {
+  // TODO(SCN-1265): Come up with a better solution to avoid children
+  // calling into us during destruction.
+  if (!valid_)
+    return;
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
   TempSessionDelegate* delegate =
@@ -63,6 +75,10 @@ void Session::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
 }
 
 void Session::SetDebugName(std::string debug_name) {
+  // TODO(SCN-1265): Come up with a better solution to avoid children
+  // calling into us during destruction.
+  if (!valid_)
+    return;
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
   TempSessionDelegate* delegate =
@@ -95,6 +111,10 @@ void Session::PostFlushTask() {
 }
 
 void Session::EnqueueEvent(fuchsia::ui::gfx::Event event) {
+  // TODO(SCN-1265): Come up with a better solution to avoid children
+  // calling into us during destruction.
+  if (!valid_)
+    return;
   PostFlushTask();
 
   fuchsia::ui::scenic::Event scenic_event;
@@ -103,6 +123,10 @@ void Session::EnqueueEvent(fuchsia::ui::gfx::Event event) {
 }
 
 void Session::EnqueueEvent(fuchsia::ui::scenic::Command unhandled_command) {
+  // TODO(SCN-1265): Come up with a better solution to avoid children
+  // calling into us during destruction.
+  if (!valid_)
+    return;
   PostFlushTask();
 
   fuchsia::ui::scenic::Event scenic_event;
@@ -111,6 +135,12 @@ void Session::EnqueueEvent(fuchsia::ui::scenic::Command unhandled_command) {
 }
 
 void Session::EnqueueEvent(fuchsia::ui::input::InputEvent event) {
+  // TODO(SCN-1265): Come up with a better solution to avoid
+  // children calling
+  // into us during destruction.
+  if (!valid_)
+    return;
+
   // Force an immediate flush, preserving event order.
   fuchsia::ui::scenic::Event scenic_event;
   scenic_event.set_input(std::move(event));
@@ -135,6 +165,11 @@ void Session::FlushEvents() {
 }
 
 void Session::ReportError(fxl::LogSeverity severity, std::string error_string) {
+  // TODO(SCN-1265): Come up with a better solution to avoid children
+  // calling into us during destruction.
+  if (!valid_)
+    return;
+
   switch (severity) {
     case fxl::LOG_INFO:
       FXL_LOG(INFO) << error_string;

@@ -4,6 +4,8 @@
 
 #include "garnet/bin/ui/view_manager/view_state.h"
 
+#include <algorithm>
+
 #include "garnet/bin/ui/view_manager/view_impl.h"
 #include "garnet/bin/ui/view_manager/view_registry.h"
 #include "garnet/bin/ui/view_manager/view_stub.h"
@@ -15,17 +17,29 @@ ViewState::ViewState(
     ViewRegistry* registry, uint32_t view_token,
     fidl::InterfaceRequest<::fuchsia::ui::viewsv1::View> view_request,
     ::fuchsia::ui::viewsv1::ViewListenerPtr view_listener,
-    scenic::Session* session, const std::string& label)
-    : registry_(registry),
+    zx::eventpair scenic_view_token, zx::eventpair parent_export_token,
+    fuchsia::ui::scenic::Scenic* scenic, const std::string& label)
+    : ViewContainerState(registry, scenic),
+      registry_(registry),
       view_token_(view_token),
       view_listener_(std::move(view_listener)),
-      top_node_(session),
       label_(label),
+      session_(scenic),
+      top_node_(std::in_place, &session_),
+      scenic_view_(std::in_place, &session_, std::move(scenic_view_token),
+                   FormattedLabel()),
       impl_(new ViewImpl(registry, this)),
       view_binding_(impl_.get(), std::move(view_request)),
       weak_factory_(this) {
   FXL_DCHECK(registry_);
   FXL_DCHECK(view_listener_);
+
+  session_.set_error_handler([this](zx_status_t status) {
+    registry_->OnViewDied(this,
+                          "view_manager::ViewState: Session connection closed");
+  });
+
+  session_.set_event_handler(fit::bind_member(this, &ViewState::OnScenicEvent));
 
   view_binding_.set_error_handler([this](zx_status_t status) {
     registry_->OnViewDied(this, "View connection closed");
@@ -33,38 +47,95 @@ ViewState::ViewState(
   view_listener_.set_error_handler([this](zx_status_t status) {
     registry_->OnViewDied(this, "ViewListener connection closed");
   });
+
+  scenic_view_->AddChild(*top_node_);
+
+  // Export a node which represents the view's attachment point.
+  top_node_->Export(std::move(parent_export_token));
+  top_node_->SetTag(view_token_);
+  top_node_->SetLabel("ViewState" + FormattedLabel());
+
+  // TODO(SCN-371): Avoid Z-fighting by introducing a smidgen of elevation
+  // between each view and its embedded sub-views.  This is not a long-term fix.
+  top_node_->SetTranslation(0.f, 0.f, 0.1f);
+
+  session_.Present(0, [](fuchsia::images::PresentationInfo info) {});
 }
 
 ViewState::~ViewState() {}
 
-void ViewState::IssueProperties(
-    ::fuchsia::ui::viewsv1::ViewPropertiesPtr properties) {
-  issued_properties_ = std::move(properties);
+void ViewState::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
+  for (const auto& event : events) {
+    switch (event.Which()) {
+      case fuchsia::ui::scenic::Event::Tag::kGfx:
+        switch (event.gfx().Which()) {
+          case fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged: {
+            auto v2props = event.gfx().view_properties_changed().properties;
+
+            ::fuchsia::ui::viewsv1::ViewProperties v1props;
+            v1props.view_layout = ::fuchsia::ui::viewsv1::ViewLayout::New();
+            v1props.view_layout->size.width =
+                v2props.bounding_box.max.x - v2props.bounding_box.min.x;
+            v1props.view_layout->size.height =
+                v2props.bounding_box.max.y - v2props.bounding_box.min.y;
+
+            view_listener()->OnPropertiesChanged(std::move(v1props), []() {});
+            break;
+          }
+          case fuchsia::ui::gfx::Event::Tag::kImportUnbound:
+            FXL_LOG(WARNING) << "ViewState::OnScenicEvent: Unhandled GFX event "
+                                "(fuchsia.ui.gfx.ImportUnboundEvent).";
+            break;
+          case fuchsia::ui::gfx::Event::Tag::kViewConnected:
+            FXL_LOG(WARNING) << "ViewState::OnScenicEvent: Unhandled GFX event "
+                                "(fuchsia.ui.gfx.ViewConnectedEvent).";
+            break;
+          case fuchsia::ui::gfx::Event::Tag::kViewDisconnected:
+            FXL_LOG(WARNING) << "ViewState::OnScenicEvent: Unhandled GFX event "
+                                "(fuchsia.ui.gfx.ViewDisconnectedEvent).";
+            break;
+          case fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected:
+            registry_->OnViewDied(this, "View connection closed");
+            break;
+          case fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene:
+            FXL_LOG(WARNING) << "ViewState::OnScenicEvent: Unhandled GFX event "
+                                "(fuchsia.ui.gfx.ViewAttachedToScene).";
+            break;
+          case fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene:
+            FXL_LOG(WARNING) << "ViewState::OnScenicEvent: Unhandled GFX event "
+                                "(fuchsia.ui.gfx.ViewDetachedFromScene).";
+            break;
+          case fuchsia::ui::gfx::Event::Tag::kViewStateChanged:
+            FXL_LOG(WARNING) << "ViewState::OnScenicEvent: Unhandled GFX event "
+                                "(fuchsia.ui.gfx.ViewStateChanged).";
+            break;
+          case fuchsia::ui::gfx::Event::Tag::Invalid:
+            FXL_DCHECK(false) << "ViewState::OnScenicEvent: Got an invalid GFX "
+                                 "event.";
+            break;
+          default:
+            FXL_DCHECK(false) << "ViewState::OnScenicEvent: Unhandled GFX "
+                                 "event.";
+            break;
+        }
+        break;
+      case fuchsia::ui::scenic::Event::Tag::kInput:
+        FXL_LOG(WARNING) << "ViewState::OnScenicEvent: "
+                            "Unhandled input event.";
+
+        break;
+      default: {
+        FXL_LOG(WARNING) << "ViewState::OnScenicEvent: Unhandled Scenic event.";
+      }
+    }
+  }
 }
 
-void ViewState::BindOwner(ViewLinker::ImportLink owner_link) {
-  FXL_DCHECK(owner_link.valid());
-  FXL_DCHECK(!owner_link.initialized());
-
-  owner_link_ = std::move(owner_link);
-  owner_link_.Initialize(
-      this,
-      [this](ViewStub* stub) {
-        // The peer ViewStub will take care of setting
-        // view_stub_ via set_view_stub.  Otherwise,
-        // ViewRegistry::HijackView will cause us to be
-        // detached from the ViewStub prematurely.
-        FXL_VLOG(1) << "View connected: " << this;
-      },
-      [this] {
-        // Ensure the referenced ViewStub is marked nullptr
-        // here, as the pointer is invalid at this point as
-        // we don't want ViewRegistry::HijackView to use it
-        // at all.
-        FXL_VLOG(1) << "View disconnected: " << this;
-        view_stub_ = nullptr;
-        registry_->OnViewDied(this, "ViewHolder connection closed");
-      });
+void ViewState::ReleaseScenicResources() {
+  top_node_->Detach();
+  top_node_.reset();
+  scenic_view_.reset();
+  session_.Present(0, [](fuchsia::images::PresentationInfo info) {});
 }
 
 ViewState* ViewState::AsViewState() { return this; }

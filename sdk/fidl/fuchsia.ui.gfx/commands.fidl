@@ -78,7 +78,7 @@ union Command {
     SetDisableClippingCmd set_disable_clipping;
 
     // TODO(SCN-1026): Remove this.
-    SetImportFocusCmd set_import_focus;
+    SetImportFocusCmdDEPRECATED set_import_focus;
 
     // TODO(SCN-1225): Move these where they belong.  They're added to the end of
     // the struct temporarily until we transition to xunions.
@@ -779,7 +779,4 @@ struct SetDisableClippingCmd {
 };
 
 // TODO(SCN-1026): Remove this.
-struct SetImportFocusCmd {
-    uint32 id;
-    bool focusable;
-};
+struct SetImportFocusCmdDEPRECATED {};

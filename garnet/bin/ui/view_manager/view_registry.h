@@ -35,8 +35,6 @@ class ViewRegistry : public scenic_impl::ErrorReporter {
   explicit ViewRegistry(component::StartupContext* startup_context);
   virtual ~ViewRegistry();
 
-  ViewLinker& view_linker() { return view_linker_; }
-
   // |ErrorReporter|
   void ReportError(fxl::LogSeverity severity,
                    std::string error_string) override {
@@ -57,12 +55,6 @@ class ViewRegistry : public scenic_impl::ErrorReporter {
           view_tree_request,
       ::fuchsia::ui::viewsv1::ViewTreeListenerPtr view_tree_listener,
       fidl::StringPtr label);
-
-  // VIEW STUB REQUESTS
-
-  void OnViewResolved(ViewStub* view_stub, ViewState* view_state);
-  void TransferView(ViewState* view_state,
-                    zx::eventpair transferred_view_token);
 
   // VIEW REQUESTS
 
@@ -121,6 +113,21 @@ class ViewRegistry : public scenic_impl::ErrorReporter {
   void TakeSnapshot(uint64_t view_koid,
                     fit::function<void(::fuchsia::mem::Buffer)> callback);
 
+  // SIGNALING
+
+  void SendChildAttached(ViewContainerState* container_state,
+                         uint32_t child_key,
+                         ::fuchsia::ui::viewsv1::ViewInfo child_view_info);
+  void SendChildUnavailable(ViewContainerState* container_state,
+                            uint32_t child_key);
+
+  // Transferring views.
+  std::unique_ptr<ViewContainerState::ChildView> FindOrphanedView(
+      zx_handle_t view_holder_token);
+  void AddOrphanedView(zx::eventpair transferred_view_token,
+                       std::unique_ptr<ViewContainerState::ChildView> child);
+  void RemoveOrphanedView(ViewContainerState::ChildView* child);
+
  private:
   // LIFETIME
 
@@ -131,46 +138,10 @@ class ViewRegistry : public scenic_impl::ErrorReporter {
   void UnregisterChildren(ViewContainerState* container_state);
   void ReleaseViewStubChildHost(ViewStub* view_stub);
 
-  // TREE MANIPULATION
-
-  void AttachResolvedViewAndNotify(ViewStub* view_stub, ViewState* view_state);
-  void ReleaseUnavailableViewAndNotify(ViewStub* view_stub);
-  void TransferOrUnregisterViewStub(std::unique_ptr<ViewStub> view_stub,
-                                    zx::eventpair transferred_view_token);
-
-  // INVALIDATION
-
-  // Makes note of the fact that a view or view tree has changed in some
-  // manner to be applied during upcoming traversals.
-  void InvalidateView(ViewState* view_state, uint32_t flags);
-  void InvalidateViewTree(ViewTreeState* tree_state, uint32_t flags);
-
-  // TRAVERSAL
-
-  void ScheduleTraversal();
-
-  // Traverses views delivering updates to view properties in response to prior
-  // invalidations.
-  void Traverse();
-  void TraverseViewTree(ViewTreeState* tree_state);
-  void TraverseView(ViewState* view_state, bool parent_properties_changed);
-  ::fuchsia::ui::viewsv1::ViewPropertiesPtr ResolveViewProperties(
-      ViewState* view_state);
-
   // SESSION MANAGEMENT
 
   void SchedulePresentSession();
   void PresentSession();
-
-  // SIGNALING
-
-  void SendPropertiesChanged(ViewState* view_state,
-                             ::fuchsia::ui::viewsv1::ViewProperties properties);
-  void SendChildAttached(ViewContainerState* container_state,
-                         uint32_t child_key,
-                         ::fuchsia::ui::viewsv1::ViewInfo child_view_info);
-  void SendChildUnavailable(ViewContainerState* container_state,
-                            uint32_t child_key);
 
   // LOOKUP
 
@@ -197,21 +168,19 @@ class ViewRegistry : public scenic_impl::ErrorReporter {
             IsViewTreeStateRegisteredDebug(container_state->AsViewTreeState()));
   }
 
-  // Returns whether view is allowed to capture focus
-  bool IsViewFocusable(uint32_t view_token);
-
-  // A11Y VIEW INSPECTOR
-
   component::StartupContext* startup_context_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   scenic::Session session_;
 
-  bool traversal_scheduled_ = false;
   bool present_session_scheduled_ = false;
   uint32_t next_view_id_value_ = 1u;
   uint32_t next_view_tree_token_value_ = 1u;
 
-  ViewLinker view_linker_;
+  struct OrphanedView {
+    zx::eventpair view_holder_token;
+    std::unique_ptr<ViewContainerState::ChildView> child_view;
+  };
+  std::map<zx_koid_t, OrphanedView> orphaned_views_;
   std::unordered_map<uint32_t, std::unique_ptr<ViewState>> views_by_token_;
   std::unordered_map<uint32_t, std::unique_ptr<ViewTreeState>>
       view_trees_by_token_;

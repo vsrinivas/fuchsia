@@ -194,7 +194,6 @@ bool IsFocusChange(gfx::ResourcePtr view) {
       return view_ptr->view_holder()->view_properties().focus_change;
     }
   } else {
-    // TODO(SCN-1026): Convert to query v2 view properties.
     // TODO(SCN-1006): After v2 transition, remove this clause.
     // We traverse up the scene graph to find the closest "ancestor" Import
     // starting from a given Import. We assume the scene graph is set up by
@@ -204,12 +203,12 @@ bool IsFocusChange(gfx::ResourcePtr view) {
       if (gfx::Resource* imported = import->imported_resource()) {
         if (imported->IsKindOf<gfx::EntityNode>()) {
           gfx::NodePtr attach_point = imported->As<gfx::EntityNode>();
-          if (gfx::Node* delegate = attach_point->parent()) {
-            if (gfx::Node* parent_node = delegate->parent()) {
-              if (parent_node->imports().size() > 0) {
-                return parent_node->imports()[0]->focusable();
-              }
-            }
+
+          auto resource = attach_point->FindOwningView();
+
+          if (resource && resource->IsKindOf<gfx::View>()) {
+            gfx::ViewPtr view = resource->As<gfx::View>();
+            return view->view_holder()->view_properties().focus_change;
           }
         }
       }
@@ -326,7 +325,7 @@ void InputCommandDispatcher::DispatchTouchCommand(
       views.reserve(hits.size());
       for (const gfx::Hit& hit : hits) {
         FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
-        views.push_back(hit.node->FindOwningView());
+        views.push_back(hit.node->FindOwningViewOrImportNode());
       }
       FXL_DCHECK(hits.size() == views.size());
 
@@ -447,7 +446,7 @@ void InputCommandDispatcher::DispatchMouseCommand(
     ViewStack hit_view;
     for (gfx::Hit hit : hits) {
       FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
-      if (gfx::ResourcePtr view = hit.node->FindOwningView()) {
+      if (gfx::ResourcePtr view = hit.node->FindOwningViewOrImportNode()) {
         hit_view.stack.push_back(
             {view->global_id(), FindGlobalTransform(view)});
         hit_view.focus_change = IsFocusChange(view);
@@ -520,7 +519,7 @@ void InputCommandDispatcher::DispatchMouseCommand(
     GlobalId view_id;
     for (gfx::Hit hit : hits) {
       FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
-      if (gfx::ResourcePtr view = hit.node->FindOwningView()) {
+      if (gfx::ResourcePtr view = hit.node->FindOwningViewOrImportNode()) {
         view_id = view->global_id();
 
         escher::ray4 screen_ray =

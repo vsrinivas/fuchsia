@@ -28,14 +28,11 @@ class PendingViewTransferState {
   zx::eventpair transferred_view_token_;
 };
 
-ViewStub::ViewStub(ViewRegistry* registry, ViewLinker::ExportLink view_link,
-                   zx::eventpair host_import_token)
+ViewStub::ViewStub(ViewRegistry* registry, zx::eventpair host_import_token)
     : registry_(registry),
-      view_link_(std::move(view_link)),
       host_import_token_(std::move(host_import_token)),
       weak_factory_(this) {
   FXL_DCHECK(registry_);
-  FXL_DCHECK(view_link_.valid());
   FXL_DCHECK(host_import_token_);
 }
 
@@ -58,25 +55,6 @@ void ViewStub::AttachView(ViewState* state) {
 
   state_ = state;
   state_->set_view_stub(this);
-  SetTreeForChildrenOfView(state_, tree_);
-}
-
-void ViewStub::SetProperties(
-    ::fuchsia::ui::viewsv1::ViewPropertiesPtr properties,
-    scenic::Session* session) {
-  FXL_DCHECK(!is_unavailable());
-
-  properties_ = std::move(properties);
-
-  // TODO(SCN-1026): Remove this.
-  if (properties_ && properties_->custom_focus_behavior && host_node_) {
-    fuchsia::ui::gfx::SetImportFocusCmd import_focus;
-    import_focus.id = host_node_->id();
-    import_focus.focusable = properties_->custom_focus_behavior->allow_focus;
-    fuchsia::ui::gfx::Command cmd;
-    cmd.set_set_import_focus(std::move(import_focus));
-    session->Enqueue(std::move(cmd));
-  }
 }
 
 ViewState* ViewStub::ReleaseView() {
@@ -88,7 +66,6 @@ ViewState* ViewStub::ReleaseView() {
     FXL_DCHECK(state->view_stub() == this);
     state->set_view_stub(nullptr);
     state_ = nullptr;
-    SetTreeForChildrenOfView(state, nullptr);
   }
   properties_.reset();
   unavailable_ = true;
@@ -101,77 +78,6 @@ void ViewStub::SetContainer(ViewContainerState* container, uint32_t key) {
 
   key_ = key;
   parent_ = container->AsViewState();
-  if (parent_) {
-    if (parent_->view_stub())
-      SetTreeRecursively(parent_->view_stub()->tree());
-  } else {
-    ViewTreeState* tree = container->AsViewTreeState();
-    FXL_DCHECK(tree);
-    SetTreeRecursively(tree);
-  }
-
-  // We cannot call this in the constructor, because this might resolve
-  // immediately.  The resolution callback assumes that |container| has been
-  // set.
-  // TODO(SCN-972): Remove the need for this by making callbacks fire async.
-  view_link_.Initialize(
-      this,
-      [this](ViewState* state) {
-        FXL_VLOG(1) << "ViewStub connected: " << this;
-        OnViewResolved(state, true);
-      },
-      [this] {
-        FXL_VLOG(1) << "ViewStub disconnected: " << this;
-        OnViewResolved(nullptr, false);
-      });
-}
-
-void ViewStub::Unlink() {
-  parent_ = nullptr;
-  key_ = 0;
-  SetTreeRecursively(nullptr);
-}
-
-void ViewStub::SetTreeRecursively(ViewTreeState* tree) {
-  if (tree_ == tree)
-    return;
-  tree_ = tree;
-  if (state_)
-    SetTreeForChildrenOfView(state_, tree);
-}
-
-void ViewStub::SetTreeForChildrenOfView(ViewState* view, ViewTreeState* tree) {
-  for (const auto& pair : view->children()) {
-    pair.second->SetTreeRecursively(tree);
-  }
-}
-
-void ViewStub::OnViewResolved(ViewState* view_state, bool success) {
-  if (success && transfer_view_when_resolved()) {
-    // While we were waiting for linking, the view was transferred to a new
-    // ViewOwner. Now that we are linked, transfer the ownership
-    // correctly internally.
-    FXL_DCHECK(!container());  // Make sure we're removed from the view tree
-    FXL_DCHECK(pending_view_transfer_->view_stub_ != nullptr);
-    FXL_DCHECK(pending_view_transfer_->transferred_view_token_);
-
-    registry_->TransferView(
-        view_state, std::move(pending_view_transfer_->transferred_view_token_));
-
-    // We don't have any |view_state| resolved to us now, but |ReleaseView| will
-    // still mark us as unavailable and clear properties
-    ReleaseView();
-
-    // |pending_view_transfer_| holds a reference to ourselves. Don't hold that
-    // reference anymore, which should release us immediately.
-    pending_view_transfer_.reset();
-  } else {
-    // 1. We got the linking callback as expected (in which case view_state is
-    // non-null and success is true).
-    // 2. Or, the ViewOwner was closed before linking (in which case view_state
-    // is null and success if false).
-    registry_->OnViewResolved(this, view_state);
-  }
 }
 
 void ViewStub::TransferViewWhenResolved(std::unique_ptr<ViewStub> view_stub,
@@ -192,21 +98,8 @@ void ViewStub::ReleaseHost() {
 }
 
 void ViewStub::ImportHostNode(scenic::Session* session) {
-  FXL_DCHECK(host_import_token_);
-  FXL_DCHECK(!host_node_);
-
-  host_node_.reset(new scenic::ImportNode(session));
-  host_node_->Bind(std::move(host_import_token_));
-
-  // TODO(SCN-1026): Remove this.
-  if (properties_ && properties_->custom_focus_behavior) {
-    fuchsia::ui::gfx::SetImportFocusCmd import_focus;
-    import_focus.id = host_node_->id();
-    import_focus.focusable = properties_->custom_focus_behavior->allow_focus;
-    fuchsia::ui::gfx::Command cmd;
-    cmd.set_set_import_focus(std::move(import_focus));
-    session->Enqueue(std::move(cmd));
-  }
+  // Should be dead code.
+  FXL_CHECK(false);
 }
 
 }  // namespace view_manager

@@ -124,6 +124,9 @@ class Node : public Resource {
   // to have them inhabit different sessions.
   ResourcePtr FindOwningView() const;
 
+  // TODO(SCN-1006): After v2 transition, remove this function.
+  ResourcePtr FindOwningViewOrImportNode() const;
+
  protected:
   Node(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info);
   // Protected so that Scene Node can set itself as a Scene.

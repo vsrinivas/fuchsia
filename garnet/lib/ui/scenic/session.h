@@ -34,7 +34,7 @@ class Session final : public fuchsia::ui::scenic::Session,
   Session(
       SessionId id,
       ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
-  ~Session() override = default;
+  ~Session() override { valid_ = false; };
 
   void SetCommandDispatchers(std::array<std::unique_ptr<CommandDispatcher>,
                                         System::TypeId::kMaxSystems>
@@ -101,6 +101,9 @@ class Session final : public fuchsia::ui::scenic::Session,
   // to |listener_|.  If |listener_| is null but |event_callback_| isn't, then
   // invoke the callback for each event.
   void FlushEvents();
+
+  // True until we are in the process of being destroyed.
+  bool valid_ = true;
 
   const SessionId id_;
   ::fidl::InterfacePtr<fuchsia::ui::scenic::SessionListener> listener_;
