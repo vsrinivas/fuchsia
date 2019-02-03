@@ -17,12 +17,16 @@ import sys
 import xml.etree.ElementTree
 
 
-LAYERS_RE = re.compile('^(garnet|peridot|topaz|vendor/.*)$')
+LAYERS_RE = re.compile('^(fuchsia|garnet|peridot|topaz|vendor/.*)$')
 
 
 # Returns True iff LAYERS_RE matches name.
 def print_if_layer_name(name):
     if LAYERS_RE.match(name):
+        # TODO: Remove the guesswork from configuring the build. Instead,
+        # developers should configure the product they want to build explicitly.
+        if name == "fuchsia":
+          name = "peridot"
         print(name)
         return True
     return False
@@ -61,7 +65,7 @@ def main():
           return 0
 
     sys.stderr.write("ERROR: Could not guess petal from %s. "
-                     "Ensure 'boards' and either 'products' or 'packages' is set.\n"
+                     "Ensure 'board' and either 'product' or 'packages' is set.\n"
                      % args.manifest.name)
 
     return 2
