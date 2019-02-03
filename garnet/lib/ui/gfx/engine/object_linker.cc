@@ -26,9 +26,9 @@ zx_koid_t ObjectLinkerBase::CreateEndpoint(zx::handle token,
     return ZX_KOID_INVALID;
   }
 
-  std::pair<zx_koid_t, zx_koid_t> peer_koids = fsl::GetKoids(token.get());
-  zx_koid_t& endpoint_id = peer_koids.first;
-  zx_koid_t& peer_endpoint_id = peer_koids.second;
+  zx_koid_t endpoint_id;
+  zx_koid_t peer_endpoint_id;
+  std::tie(endpoint_id, peer_endpoint_id) = fsl::GetKoids(token.get());
   if (endpoint_id == ZX_KOID_INVALID || peer_endpoint_id == ZX_KOID_INVALID) {
     error_reporter->ERROR()
         << "Token with ID " << token.get() << " refers to invalid objects";
