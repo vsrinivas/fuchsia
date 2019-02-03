@@ -16,12 +16,12 @@ GuestView::GuestView(
       material_(session()),
       scanout_(*scanout),
       view_listener_(view_listener.Bind()) {
-  view().AddChild(background_);
+  root_node().AddChild(background_);
   background_.SetMaterial(material_);
 
   // Request hard key events be delivered to the view.
   fuchsia::ui::input::Command command;
-  command.set_set_hard_keyboard_delivery({ .delivery_request = true });
+  command.set_set_hard_keyboard_delivery({.delivery_request = true});
   session()->Enqueue(std::move(command));
 
   scanout_.SetFlushHandler(

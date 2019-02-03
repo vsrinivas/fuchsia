@@ -26,8 +26,13 @@ BaseView::BaseView(ViewContext context, const std::string& debug_name)
             context.view_token2.value
                 ? std::move(context.view_token2)
                 : scenic::ToViewToken(std::move(context.view_token)),
-            debug_name) {
+            debug_name),
+      root_node_(&session_) {
   session_.SetDebugName(debug_name);
+
+  // Listen for metrics events on our top node.
+  root_node_.SetEventMask(fuchsia::ui::gfx::kMetricsEventMask);
+  view_.AddChild(root_node_);
 
   // We must immediately invalidate the scene, otherwise we wouldn't ever hook
   // the View up to the ViewHolder.  An alternative would be to require
@@ -65,9 +70,7 @@ void BaseView::InvalidateScene() {
     PresentScene(last_presentation_time_);
 }
 
-void BaseView::PresentScene() {
-  PresentScene(last_presentation_time_);
-}
+void BaseView::PresentScene() { PresentScene(last_presentation_time_); }
 
 void BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
   TRACE_DURATION("view", "BaseView::OnScenicEvent");
@@ -85,8 +88,25 @@ void BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
                 ViewPropertiesLayoutBox(view_properties_);
 
             logical_size_ = scenic::Max(layout_box.max - layout_box.min, 0.f);
+            physical_size_.x = logical_size_.x * metrics_.scale_x;
+            physical_size_.y = logical_size_.y * metrics_.scale_y;
+            physical_size_.z = logical_size_.z * metrics_.scale_z;
 
             OnPropertiesChanged(std::move(old_props));
+            InvalidateScene();
+            break;
+          }
+          case fuchsia::ui::gfx::Event::Tag::kMetrics: {
+            auto& evt = event.gfx().metrics();
+            if (evt.node_id == root_node_.id()) {
+              auto old_metrics = metrics_;
+              metrics_ = std::move(evt.metrics);
+              physical_size_.x = logical_size_.x * metrics_.scale_x;
+              physical_size_.y = logical_size_.y * metrics_.scale_y;
+              physical_size_.z = logical_size_.z * metrics_.scale_z;
+              OnMetricsChanged(std::move(old_metrics));
+              InvalidateScene();
+            }
             break;
           }
           default: {

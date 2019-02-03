@@ -104,12 +104,14 @@ class NewView : public scenic::BaseView {
       fuchsia::ui::gfx::ViewProperties old_properties) override;
 
   // |scenic::BaseView|.
+  void OnMetricsChanged(fuchsia::ui::gfx::Metrics old_metrics) override;
+
+  // |scenic::BaseView|.
   void OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
   // |scenic::SessionListener|
   virtual void OnScenicError(::std::string error) override;
 
-  scenic::EntityNode root_node_;
   ViewImpl impl_;
 
   bool focused_;

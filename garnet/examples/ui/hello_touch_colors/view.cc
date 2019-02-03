@@ -42,14 +42,12 @@ HelloTouchColorsView::HelloTouchColorsView(scenic::ViewContext context,
     : scenic::BaseView(std::move(context),
                        "hello_touch_colors HelloTouchColorsView"),
       message_loop_(message_loop),
-      node_(session()),
       background_(session()),
       focused_(false) {
   FXL_CHECK(message_loop_);
 
-  view().AddChild(node_);
+  root_node().AddChild(background_);
 
-  node_.AddChild(background_);
   scenic::Material background_material(session());
   background_material.SetColor(30, 30, 120, 255);
   background_.SetMaterial(background_material);

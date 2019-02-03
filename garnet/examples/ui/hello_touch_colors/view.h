@@ -33,7 +33,6 @@ class HelloTouchColorsView : public scenic::BaseView {
 
   async::Loop* const message_loop_;
 
-  scenic::EntityNode node_;
   scenic::ShapeNode background_;
 
   scenic::EmbeddedViewInfo embedded_view_info_;

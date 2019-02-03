@@ -43,7 +43,10 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
 
   BaseView(const BaseView&) = delete;
 
-  const scenic::View& view() const { return view_; }
+  // |root_node| is the node directly under our View; i.e. it's the top-most
+  // node within the tree under our View. Use it to attach any resources for
+  // your UI.
+  scenic::EntityNode& root_node() { return root_node_; }
   Session* session() { return &session_; }
   component::StartupContext* startup_context() { return startup_context_; }
 
@@ -74,11 +77,17 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   // Gets the size of the view in physical pixels.
   // This value is zero until the view receives a layout from its parent
   // and metrics from its session.
-  const fuchsia::ui::gfx::vec3& physical_size() const {
-    // TODO(SCN-809): use logical size for now.  Needs metrics to be provided
-    // by Scenic.
-    return logical_size();
+  const fuchsia::ui::gfx::vec3& physical_size() const { return physical_size_; }
+
+  // Returns true if the view has received metrics from its session.
+  bool has_metrics() const {
+    return metrics_.scale_x > 0.f && metrics_.scale_y > 0.f &&
+           metrics_.scale_z > 0.f;
   }
+
+  // Gets the view's metrics.
+  // This value is zero until the view receives metrics from its session.
+  const fuchsia::ui::gfx::Metrics& metrics() const { return metrics_; }
 
   // Sets the view's presentation configuration (i18n profile, etc.). If the new
   // |ViewConfig| differs at all from the existing one, |OnConfigChanged()|
@@ -114,6 +123,15 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   // The default implementation does nothing.
   virtual void OnPropertiesChanged(
       fuchsia::ui::gfx::ViewProperties old_properties) {}
+
+  // Called when the view's metrics have changed.
+  //
+  // The subclass should compare the old and new metrics and make note of
+  // whether this change will affect the layout or content of the view then
+  // update accordingly.
+  //
+  // The default implementation does nothing.
+  virtual void OnMetricsChanged(fuchsia::ui::gfx::Metrics old_metrics){};
 
   // Called when the view's |ViewConfig| is first set or has changed.
   //
@@ -176,10 +194,13 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   fidl::Binding<fuchsia::ui::scenic::SessionListener> listener_binding_;
   Session session_;
   scenic::View view_;
+  scenic::EntityNode root_node_;
 
   fuchsia::ui::gfx::vec3 logical_size_;
+  fuchsia::ui::gfx::vec3 physical_size_;
   fuchsia::ui::gfx::ViewProperties view_properties_;
   fuchsia::ui::app::ViewConfig view_config_;
+  fuchsia::ui::gfx::Metrics metrics_;
 
   zx_time_t last_presentation_time_ = 0;
   size_t session_present_count_ = 0;

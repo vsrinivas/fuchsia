@@ -16,14 +16,12 @@ ShadertoyEmbedderView::ShadertoyEmbedderView(scenic::ViewContext context,
     : scenic::BaseView(std::move(context),
                        "hello_base_view ShadertoyEmbedderView"),
       message_loop_(message_loop),
-      node_(session()),
       background_(session()),
       focused_(false) {
   FXL_CHECK(message_loop_);
 
-  view().AddChild(node_);
+  root_node().AddChild(background_);
 
-  node_.AddChild(background_);
   scenic::Material background_material(session());
   background_material.SetColor(30, 30, 120, 255);
   background_.SetMaterial(background_material);
@@ -47,7 +45,7 @@ void ShadertoyEmbedderView::LaunchShadertoyClient() {
       session(), std::move(embedded_view_info_.view_holder_token),
       "shadertoy_client for hello_base_view");
 
-  node_.Attach(*(view_holder_.get()));
+  root_node().Attach(*(view_holder_.get()));
 }
 
 void ShadertoyEmbedderView::OnPropertiesChanged(

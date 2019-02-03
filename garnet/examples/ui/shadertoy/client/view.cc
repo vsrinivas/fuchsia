@@ -226,10 +226,7 @@ bool OldView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
 
 NewView::NewView(scenic::ViewContext context, const std::string& debug_name)
     : scenic::BaseView(std::move(context), debug_name),
-      root_node_(session()),
-      impl_(startup_context(), session(), &root_node_) {
-  view().AddChild(root_node_);
-
+      impl_(startup_context(), session(), &root_node()) {
   InvalidateScene();
 }
 
@@ -246,6 +243,10 @@ void NewView::OnSceneInvalidated(
 
 void NewView::OnPropertiesChanged(
     fuchsia::ui::gfx::ViewProperties old_properties) {
+  InvalidateScene();
+}
+
+void NewView::OnMetricsChanged(fuchsia::ui::gfx::Metrics old_metrics) {
   InvalidateScene();
 }
 

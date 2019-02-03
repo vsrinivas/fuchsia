@@ -61,7 +61,7 @@ class MinimalClientView : public scenic::BaseView {
     background.SetShape(rectangle);
     background.SetTranslationRH(width / 2, height / 2, -10.f);
 
-    view().AddChild(background);
+    root_node().AddChild(background);
   }
 
   void Update(uint64_t present_time) {
@@ -252,4 +252,3 @@ TEST_F(MinimalInputTest, Tap) {
 }  // namespace
 
 // NOTE: We link in FXL's gtest_main to enable proper logging.
-
