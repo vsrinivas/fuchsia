@@ -1046,9 +1046,9 @@ static zx_status_t aml_raw_nand_bind(void* ctx, zx_device_t* parent) {
         }
     }
 
-    status = pdev_map_interrupt(&raw_nand->pdev, 0, &raw_nand->irq_handle);
+    status = pdev_get_interrupt(&raw_nand->pdev, 0, 0, &raw_nand->irq_handle);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_raw_nand_bind: pdev_map_interrupt failed %d\n",
+        zxlogf(ERROR, "aml_raw_nand_bind: pdev_get_interrupt failed %d\n",
                status);
         goto fail;
     }

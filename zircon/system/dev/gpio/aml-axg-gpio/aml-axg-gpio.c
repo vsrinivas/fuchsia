@@ -325,7 +325,7 @@ static zx_status_t aml_gpio_get_interrupt(void *ctx, uint32_t pin,
     status = pdev_get_interrupt(&gpio->pdev, index, flags_,
                                     out_handle);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_gpio_get_interrupt: pdev_map_interrupt failed %d\n", status);
+        zxlogf(ERROR, "aml_gpio_get_interrupt: pdev_get_interrupt failed %d\n", status);
         goto fail;
     }
 

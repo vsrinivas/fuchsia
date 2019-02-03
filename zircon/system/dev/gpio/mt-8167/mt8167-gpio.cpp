@@ -235,9 +235,9 @@ zx_status_t Mt8167GpioDevice::Bind() {
         return status;
     }
 
-    status = pdev_map_interrupt(&pdev, 0, int_.reset_and_get_address());
+    status = pdev_get_interrupt(&pdev, 0, 0, int_.reset_and_get_address());
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s pdev_map_interrupt failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s pdev_get_interrupt failed %d\n", __FUNCTION__, status);
         return status;
     }
 

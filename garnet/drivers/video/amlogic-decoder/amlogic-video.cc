@@ -725,19 +725,19 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
   dmc_ = std::make_unique<DmcRegisterIo>(mmio);
-  status = pdev_map_interrupt(&pdev_, kParserIrq,
+  status = pdev_get_interrupt(&pdev_, kParserIrq, 0,
                               parser_interrupt_handle_.reset_and_get_address());
   if (status != ZX_OK) {
     DECODE_ERROR("Failed get parser interrupt");
     return ZX_ERR_NO_MEMORY;
   }
-  status = pdev_map_interrupt(&pdev_, kDosMbox0Irq,
+  status = pdev_get_interrupt(&pdev_, kDosMbox0Irq, 0,
                               vdec0_interrupt_handle_.reset_and_get_address());
   if (status != ZX_OK) {
     DECODE_ERROR("Failed get vdec0 interrupt");
     return ZX_ERR_NO_MEMORY;
   }
-  status = pdev_map_interrupt(&pdev_, kDosMbox1Irq,
+  status = pdev_get_interrupt(&pdev_, kDosMbox1Irq, 0,
                               vdec1_interrupt_handle_.reset_and_get_address());
   if (status != ZX_OK) {
     DECODE_ERROR("Failed get vdec interrupt");

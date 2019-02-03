@@ -268,7 +268,7 @@ zx_status_t AmlTSensor::InitPdev(zx_device_t* parent) {
     hiu_mmio_ = ddk::MmioBuffer(mmio);
 
     // Map tsensor interrupt.
-    status = pdev_map_interrupt(&pdev_, 0, tsensor_irq_.reset_and_get_address());
+    status = pdev_get_interrupt(&pdev_, 0, 0, tsensor_irq_.reset_and_get_address());
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml-tsensor: could not map tsensor interrupt\n");
         return status;

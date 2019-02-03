@@ -468,9 +468,9 @@ static zx_status_t usb_xhci_bind_pdev(zx_device_t* parent, pdev_protocol_t* pdev
         goto error_return;
     }
 
-    status = pdev_map_interrupt(pdev, PDEV_IRQ_INDEX, &irq_handle);
+    status = pdev_get_interrupt(pdev, PDEV_IRQ_INDEX, 0, &irq_handle);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "usb_xhci_bind_pdev: pdev_map_interrupt failed\n");
+        zxlogf(ERROR, "usb_xhci_bind_pdev: pdev_get_interrupt failed\n");
         goto error_return;
     }
 

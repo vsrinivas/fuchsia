@@ -260,9 +260,9 @@ zx_status_t AmlUart::SerialImplEnable(bool enable) {
     fbl::AutoLock al(&enable_lock_);
 
     if (enable && !enabled_) {
-        zx_status_t status = pdev_map_interrupt(&pdev_, 0, irq_.reset_and_get_address());
+        zx_status_t status = pdev_get_interrupt(&pdev_, 0, 0, irq_.reset_and_get_address());
         if (status != ZX_OK) {
-            zxlogf(ERROR, "%s: pdev_map_interrupt failed %d\n", __func__, status);
+            zxlogf(ERROR, "%s: pdev_get_interrupt failed %d\n", __func__, status);
             return status;
         }
 

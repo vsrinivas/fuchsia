@@ -147,10 +147,9 @@ static zx_status_t imx8m_mini_gpio_bind(void* ctx, zx_device_t* parent) {
 
     for (i = 0; i < info.irq_count; i++) {
         // Create Interrupt Object
-        status = pdev_map_interrupt(&gpio->pdev, i,
-                                    &gpio->inth[i]);
+        status = pdev_get_interrupt(&gpio->pdev, i, 0, &gpio->inth[i]);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "%s: pdev_map_interrupt failed %d\n", __FUNCTION__, status);
+            zxlogf(ERROR, "%s: pdev_get_interrupt failed %d\n", __FUNCTION__, status);
             goto fail;
         }
         // The KEY is the Interrupt Number for our usecase

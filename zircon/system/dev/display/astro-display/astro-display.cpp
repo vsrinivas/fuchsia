@@ -470,7 +470,7 @@ zx_status_t AstroDisplay::Bind() {
     }
 
     // Map VSync Interrupt
-    status = pdev_map_interrupt(&pdev_, IRQ_VSYNC, vsync_irq_.reset_and_get_address());
+    status = pdev_get_interrupt(&pdev_, IRQ_VSYNC, 0, vsync_irq_.reset_and_get_address());
     if (status  != ZX_OK) {
         DISP_ERROR("Could not map vsync interrupt\n");
         return status;

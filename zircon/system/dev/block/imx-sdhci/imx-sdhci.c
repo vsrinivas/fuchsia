@@ -1149,9 +1149,9 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    status = pdev_map_interrupt(&dev->pdev, 0, &dev->irq_handle);
+    status = pdev_get_interrupt(&dev->pdev, 0, 0, &dev->irq_handle);
     if (status != ZX_OK) {
-        SDHCI_ERROR("pdev_map_interrupt failed %d\n", status);
+        SDHCI_ERROR("pdev_get_interrupt failed %d\n", status);
         goto fail;
     }
 

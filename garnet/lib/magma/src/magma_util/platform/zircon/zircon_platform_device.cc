@@ -41,7 +41,7 @@ ZirconPlatformDevice::CpuMapMmio(unsigned int index, PlatformMmio::CachePolicy c
 std::unique_ptr<PlatformInterrupt> ZirconPlatformDevice::RegisterInterrupt(unsigned int index)
 {
     zx_handle_t interrupt_handle;
-    zx_status_t status = pdev_map_interrupt(&pdev_, index, &interrupt_handle);
+    zx_status_t status = pdev_get_interrupt(&pdev_, index, 0, &interrupt_handle);
     if (status != ZX_OK)
         return DRETP(nullptr, "register interrupt failed");
 

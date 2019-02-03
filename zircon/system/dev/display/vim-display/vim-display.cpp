@@ -749,13 +749,13 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    status = pdev_map_interrupt(&display->pdev, IRQ_VSYNC, &display->vsync_interrupt);
+    status = pdev_get_interrupt(&display->pdev, IRQ_VSYNC, 0, &display->vsync_interrupt);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map vsync interrupt\n");
         return status;
     }
 
-    status = pdev_map_interrupt(&display->pdev, IRQ_RDMA, &display->rdma_interrupt);
+    status = pdev_get_interrupt(&display->pdev, IRQ_RDMA, 0, &display->rdma_interrupt);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map RDMA interrupt\n");
         return status;

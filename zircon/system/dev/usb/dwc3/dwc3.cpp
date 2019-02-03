@@ -382,9 +382,10 @@ static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
     }
 
     if (mode == USB_MODE_PERIPHERAL) {
-        status = pdev_map_interrupt(&dwc->pdev, IRQ_USB3, dwc->irq_handle.reset_and_get_address());
+        status = pdev_get_interrupt(&dwc->pdev, IRQ_USB3, 0,
+                                    dwc->irq_handle.reset_and_get_address());
         if (status != ZX_OK) {
-            zxlogf(ERROR, "dwc3_set_mode: pdev_map_interrupt failed\n");
+            zxlogf(ERROR, "dwc3_set_mode: pdev_get_interrupt failed\n");
             goto fail;
         }
 

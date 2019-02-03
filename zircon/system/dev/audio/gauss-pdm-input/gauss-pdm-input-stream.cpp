@@ -62,8 +62,8 @@ zx_status_t GaussPdmInputStream::Bind(const char* devname,
     a113_pdm_arb_config(&audio_device_);
 
     // Register interrupt and start irq handling thread.
-    zx_status_t status = pdev_map_interrupt(
-        &audio_device_.pdev, 0 /* PDM IRQ */, &audio_device_.pdm_irq);
+    zx_status_t status = pdev_get_interrupt(
+        &audio_device_.pdev, 0 /* PDM IRQ */, 0, &audio_device_.pdm_irq);
 
     if (status != ZX_OK) {
         zxlogf(ERROR, "Could not map interrupt.\n");

@@ -89,7 +89,7 @@ zx_status_t Osd::Init(zx_device_t* parent) {
     }
 
     //Map RDMA Done Interrupt
-    status = pdev_map_interrupt(&pdev_, IRQ_RDMA, rdma_irq_.reset_and_get_address());
+    status = pdev_get_interrupt(&pdev_, IRQ_RDMA, 0, rdma_irq_.reset_and_get_address());
     if (status != ZX_OK) {
         DISP_ERROR("Could not map RDMA interrupt\n");
         return status;

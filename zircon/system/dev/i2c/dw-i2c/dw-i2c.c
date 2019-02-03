@@ -392,7 +392,7 @@ static zx_status_t i2c_dw_init(i2c_dw_t* i2c, uint32_t index) {
         goto init_fail;
     }
 
-    status = pdev_map_interrupt(&i2c->pdev, index, &device->irq_handle);
+    status = pdev_get_interrupt(&i2c->pdev, index, 0, &device->irq_handle);
     if (status != ZX_OK) {
         goto init_fail;
     }

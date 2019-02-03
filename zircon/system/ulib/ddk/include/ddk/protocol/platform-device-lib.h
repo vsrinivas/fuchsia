@@ -12,13 +12,6 @@
 
 __BEGIN_CDECLS;
 
-
-// Returns an interrupt handle. "index" is relative to the list of IRQs for the device.
-static inline zx_status_t pdev_map_interrupt(const pdev_protocol_t* pdev, uint32_t index,
-                                             zx_handle_t* out_handle) {
-    return pdev->ops->get_interrupt(pdev->ctx, index, 0, out_handle);
-}
-
 // MMIO mapping helper.
 static inline zx_status_t pdev_map_mmio_buffer(const pdev_protocol_t* pdev,
                                                uint32_t index, uint32_t cache_policy,

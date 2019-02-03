@@ -263,7 +263,7 @@ static zx_status_t aml_i2c_dev_init(aml_i2c_t* i2c, unsigned index) {
 
     device->virt_regs = (aml_i2c_regs_t*)device->regs_iobuff.vaddr;
 
-    status = pdev_map_interrupt(&i2c->pdev, index, &device->irq);
+    status = pdev_get_interrupt(&i2c->pdev, index, 0, &device->irq);
     if (status != ZX_OK) {
         return status;
     }

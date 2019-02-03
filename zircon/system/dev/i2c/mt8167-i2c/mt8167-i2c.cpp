@@ -244,7 +244,7 @@ zx_status_t Mt8167I2c::Bind() {
         }
         keys_.push_back({ddk::MmioBuffer(mmio), zx::interrupt(), std::move(event)});
 
-        status = pdev_map_interrupt(&pdev, id, keys_[id].irq.reset_and_get_address());
+        status = pdev_get_interrupt(&pdev, id, 0, keys_[id].irq.reset_and_get_address());
         if (status != ZX_OK) {
             return status;
         }

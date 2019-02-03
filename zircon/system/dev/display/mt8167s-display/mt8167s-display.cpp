@@ -314,7 +314,7 @@ zx_status_t Mt8167sDisplay::Bind() {
     }
 
     // Map VSync Interrupt
-    status = pdev_map_interrupt(&pdev_, 0, vsync_irq_.reset_and_get_address());
+    status = pdev_get_interrupt(&pdev_, 0, 0, vsync_irq_.reset_and_get_address());
     if (status != ZX_OK) {
         DISP_ERROR("Could not map vsync Interruptn");
         return status;
