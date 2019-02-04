@@ -64,6 +64,22 @@ if (package_host_tests != []) {
   }
 }
 
+# TODO(joshuaseaton|mcgrathr): Make this a formal build_api_module.
+#
+# Aggregates metadata about all tests within the build graph to create a
+# top-level manifest.
+generated_file("tests") {
+  outputs = [
+    "$root_build_dir/tests.json",
+  ]
+  data_keys = [ "test_spec" ]
+  output_conversion = "json"
+  deps = [
+    ":host_tests",
+    ":packages",
+  ]
+}
+
 # Write a JSON metadata file about the host tests in the build.
 host_tests = []
 foreach(label, package_host_tests) {

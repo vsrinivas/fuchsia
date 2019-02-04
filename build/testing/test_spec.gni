@@ -8,9 +8,6 @@ import("//build/testing/platforms.gni")
 # Extension identifying a test spec JSON file.
 _test_spec_ext = "spec.json"
 
-# Extension identifying the runtime dependencies of a test.
-test_data_ext = "spec.data"
-
 # Describes the target device environment in which a test should run. This
 # specification is written in JSON to the build directory, to be aggregated
 # at test-time.
@@ -26,6 +23,9 @@ test_data_ext = "spec.data"
 #
 #   output_dir (required for fuchsia; else is optional)
 #     [string]: Directory where the test spec will be written.
+#
+#   deps (optional)
+#     [list of labels]: List of labels that the test depends on.
 #
 #   environments (optional, default: QEMU for fuchsia; else a VM)
 #     [list of scopes] Device environments in which the test should run.
@@ -44,27 +44,24 @@ test_data_ext = "spec.data"
 #         default testing pipeline for special tests or environments.
 #
 template("test_spec") {
-  # A canonical target name is the name of the test itself; however that name
-  # must be reserved for the actual test target in the expansion of other
-  # templates that give both a test and its spec. With that in mind,
-  # `test_name` is provided as a parameter, and the choice of an alternative
-  # target name does not ultimately matter.
-  not_needed([ "target_name" ])
-
   assert(defined(invoker.name), "name must be defined.")
   assert(defined(invoker.location), "location must be defined.")
   forward_variables_from(invoker,
                          [
                            "environments",
                            "output_dir",
+
+                           # Not all test-defining targets have testonly = true
+                           # (e.g., rust library targets with unit tests)
+                           "testonly",
                          ])
 
   # Set default environments: QEMU for a fuchsia test, and VMs for linux and mac
   # tests.
   if (is_fuchsia) {
     assert(defined(invoker.output_dir), "output_dir must be defined.")
-    envs_specified = defined(environments)
 
+    envs_specified = defined(environments)
     if (!envs_specified) {
       environments = [ qemu_env ]
     }
@@ -189,6 +186,32 @@ template("test_spec") {
     }
   }
 
+  # We take the basename just to make sure no other path components are given
+  # in the name, for which we have no guarantees.
+  test_name = get_path_info(invoker.name, "name")
+
+  target_name_deps = []
+
+  # Rely on metadata reachable through deps to determine any runtime
+  # dependencies of the test; record them to a file.
+  runtime_deps_file = ""
+  if (defined(invoker.deps) && invoker.deps != []) {
+    runtime_deps_file = "$target_gen_dir/${test_name}.deps.json"
+    runtime_deps_target_name = "${target_name}_deps"
+
+    generated_file(runtime_deps_target_name) {
+      outputs = [
+        runtime_deps_file,
+      ]
+      data_keys = [ "test_runtime_deps" ]
+      deps = invoker.deps
+      rebase = root_build_dir
+      output_conversion = "json"
+    }
+
+    target_name_deps += [ ":$runtime_deps_target_name" ]
+  }
+
   test_spec = {
     test = {
       name = get_label_info(":${invoker.name}", "label_no_toolchain")
@@ -199,6 +222,9 @@ template("test_spec") {
       }
       os = current_os
       cpu = current_cpu
+      if (runtime_deps_file != "") {
+        deps_file = rebase_path(runtime_deps_file, root_build_dir)
+      }
     }
     environments = []  # Clear from above.
     environments = target_envs
@@ -228,8 +254,12 @@ template("test_spec") {
     }
   }
 
-  # We take the basename just to make sure no other path components are given
-  # in the name, for which we have no guarantees.
-  test_name = get_path_info(invoker.name, "name")
   write_file("${output_dir}/${test_name}.${_test_spec_ext}", test_spec, "json")
+
+  group(target_name) {
+    metadata = {
+      test_spec = [ test_spec ]
+    }
+    deps = target_name_deps
+  }
 }
