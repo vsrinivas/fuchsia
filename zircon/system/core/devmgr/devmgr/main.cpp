@@ -324,14 +324,31 @@ zx_status_t fuchsia_create_job() {
 
     g_handles.fuchsia_job.set_property(ZX_PROP_NAME, "fuchsia", 7);
 
-    const zx_policy_basic_t fuchsia_job_policy[] = {
+    const zx_policy_basic_t basic_policy[] = {
+        // Lock down process creation. Child tasks must use fuchsia.process.Launcher.
         {.condition = ZX_POL_NEW_PROCESS, .policy = ZX_POL_ACTION_DENY}};
 
-    status =
-        g_handles.fuchsia_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, fuchsia_job_policy,
-                                         fbl::count_of(fuchsia_job_policy));
+    status = g_handles.fuchsia_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, basic_policy,
+                                              fbl::count_of(basic_policy));
     if (status != ZX_OK) {
-        printf("devmgr: unable to set policy fuchsia job: %d (%s)\n", status,
+        printf("devmgr: unable to set basic policy for fuchsia job: %d (%s)\n", status,
+               zx_status_get_string(status));
+        return status;
+    }
+
+    // Set the minimum timer slack amount and default mode. The amount should be large enough to
+    // allow for some coalescing of timers, but small enough to ensure applications don't miss
+    // deadlines.
+    //
+    // Why LATE and not CENTER or EARLY? Timers firing a little later than requested is not uncommon
+    // in non-realtime systems. Programs are generally tolerant of some delays. However, timers
+    // firing before their dealine can be unexpected and lead to bugs.
+    const zx_policy_timer_slack_t timer_slack_policy{ZX_USEC(500), ZX_TIMER_SLACK_LATE};
+
+    status = g_handles.fuchsia_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK,
+                                              &timer_slack_policy, 1);
+    if (status != ZX_OK) {
+        printf("devmgr: unable to set timer slack policy for fuchsia job: %d (%s)\n", status,
                zx_status_get_string(status));
         return status;
     }
