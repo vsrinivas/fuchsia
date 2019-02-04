@@ -9,13 +9,13 @@ rustc_binary("rust") {
   edition = "2018"
 
   deps = [
-    "//garnet/tests/fidl-changes:fidl.test.before-rustc",
-    "//garnet/tests/fidl-changes:fidl.test.during-rustc",
-    "//garnet/tests/fidl-changes:fidl.test.after-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
+    "//garnet/tests/fidl-changes:fidl.test.after-rustc",
+    "//garnet/tests/fidl-changes:fidl.test.before-rustc",
+    "//garnet/tests/fidl-changes:fidl.test.during-rustc",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
   ]

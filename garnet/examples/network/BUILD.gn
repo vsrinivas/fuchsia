@@ -20,7 +20,9 @@ package("nc") {
     "third_party/openbsd-netcat:nc",
   ]
 
-  binaries = [ {
-        name = "nc"
-      } ]
+  binaries = [
+    {
+      name = "nc"
+    },
+  ]
 }

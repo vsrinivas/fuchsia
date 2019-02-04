@@ -38,12 +38,12 @@ executable("bin") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.mdns",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/mdns/cpp",
-    "//garnet/public/fidl/fuchsia.mdns",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

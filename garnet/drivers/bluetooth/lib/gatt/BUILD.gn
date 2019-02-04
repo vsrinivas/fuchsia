@@ -73,7 +73,7 @@ source_set("tests") {
     "generic_attribute_service_unittest.cc",
     "local_service_manager_unittest.cc",
     "remote_service_manager_unittest.cc",
-    "server_unittest.cc"
+    "server_unittest.cc",
   ]
 
   deps = [

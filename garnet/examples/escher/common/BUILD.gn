@@ -42,9 +42,9 @@ source_set("demo_harness_fuchsia") {
     "demo_harness_fuchsia.h",
   ]
   deps = [
+    "//garnet/lib/vulkan:image_pipe_swapchain",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/lib/vulkan:image_pipe_swapchain",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]

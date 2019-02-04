@@ -10,6 +10,7 @@ package("garnet_bluetooth_examples") {
   deps = [
     "bt-le-battery-service",
     "bt-le-heart-rate-peripheral",
+
     # "bt_beacon_reader",
   ]
 
@@ -21,6 +22,7 @@ package("garnet_bluetooth_examples") {
     {
       name = "bt-le-heart-rate-peripheral"
     },
+
     # {
     #   name = "bt_beacon_reader"
     # },

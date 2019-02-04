@@ -22,7 +22,6 @@ executable("bin") {
 }
 
 package("vulkan_loader") {
-
   deps = [
     ":bin",
   ]

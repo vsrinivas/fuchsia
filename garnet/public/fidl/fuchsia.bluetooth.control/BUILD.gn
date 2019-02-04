@@ -15,4 +15,3 @@ fidl("fuchsia.bluetooth.control") {
     "//garnet/public/fidl/fuchsia.bluetooth",
   ]
 }
-

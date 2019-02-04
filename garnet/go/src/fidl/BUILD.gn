@@ -20,7 +20,9 @@ go_binary("fidlgen") {
 
   sdk_category = "partner"
 
-  deps = [ ":fidl_lib" ]
+  deps = [
+    ":fidl_lib",
+  ]
 }
 
 install_host_tools("fidl") {
@@ -35,35 +37,47 @@ install_host_tools("fidl") {
 go_test("fidlgen_cpp_test") {
   gopackage = "fidl/compiler/backend/cpp"
 
-  deps = [ ":fidl_lib" ]
+  deps = [
+    ":fidl_lib",
+  ]
 }
 
 go_test("fidlgen_llcpp_test") {
   gopackage = "fidl/compiler/backend/llcpp"
 
-  deps = [ ":fidl_lib" ]
+  deps = [
+    ":fidl_lib",
+  ]
 }
 
 go_test("fidlgen_cpp_ir_test") {
   gopackage = "fidl/compiler/backend/cpp/ir"
 
-  deps = [ ":fidl_lib" ]
+  deps = [
+    ":fidl_lib",
+  ]
 }
 
 go_test("fidlgen_golang_test") {
   gopackage = "fidl/compiler/backend/golang"
 
-  deps = [ ":fidl_lib" ]
+  deps = [
+    ":fidl_lib",
+  ]
 }
 
 go_test("fidlgen_golang_ir_test") {
   gopackage = "fidl/compiler/backend/golang/ir"
 
-  deps = [ ":fidl_lib" ]
+  deps = [
+    ":fidl_lib",
+  ]
 }
 
 go_test("fidlgen_rust_test") {
   gopackage = "fidl/compiler/backend/rust"
 
-  deps = [ ":fidl_lib" ]
+  deps = [
+    ":fidl_lib",
+  ]
 }

@@ -180,7 +180,6 @@ executable("mock_pose_buffer_provider_cc") {
 }
 
 package("mock_pose_buffer_provider") {
-
   meta = [
     {
       path = "meta/mock_pose_buffer_provider.cmx"

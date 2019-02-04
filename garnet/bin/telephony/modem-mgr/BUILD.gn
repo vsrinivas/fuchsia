@@ -2,18 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   name = "modem_mgr"
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/qmi",
     "//garnet/public/fidl/fuchsia.telephony.manager:fuchsia.telephony.manager-rustc",
     "//garnet/public/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/lib/rust/qmi",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",

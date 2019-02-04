@@ -11,6 +11,6 @@ rustc_library("fdio") {
   deps = [
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-sys",
-    "//third_party/rust-crates/rustc_deps:bytes"
+    "//third_party/rust-crates/rustc_deps:bytes",
   ]
 }

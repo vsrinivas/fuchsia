@@ -16,4 +16,3 @@ rustc_library("account_common") {
     "//third_party/rust-crates/rustc_deps:log",
   ]
 }
-

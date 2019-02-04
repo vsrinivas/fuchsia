@@ -47,8 +47,8 @@ executable("bin") {
   }
 
   deps = [
-    ":session_spec",
     ":session_result_spec",
+    ":session_spec",
     "//garnet/lib/cpuperf",
     "//garnet/lib/debugger_utils",
     "//garnet/public/lib/fxl",
@@ -66,14 +66,14 @@ package("cpuperf") {
     {
       name = "cpuperf"
       shell = true
-    }
+    },
   ]
 
   meta = [
     {
       path = rebase_path("meta/cpuperf.cmx")
       dest = "cpuperf.cmx"
-    }
+    },
   ]
 
   resources = []
@@ -95,7 +95,7 @@ package("cpuperf") {
       {
         path = rebase_path("cpspec/l3.cpspec")
         dest = "l3.cpspec"
-      }
+      },
     ]
   }
 }
@@ -104,13 +104,13 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "session_spec_unittest.cc",
     "session_result_spec_unittest.cc",
+    "session_spec_unittest.cc",
   ]
 
   deps = [
-    ":session_spec",
     ":session_result_spec",
+    ":session_spec",
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest",
   ]

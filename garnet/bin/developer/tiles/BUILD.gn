@@ -42,7 +42,6 @@ executable("bin") {
 }
 
 package("tiles") {
-
   meta = [
     {
       path = "meta/tiles.cmx"

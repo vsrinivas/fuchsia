@@ -9,7 +9,8 @@ package("frank_media_config") {
   resources = [
     {
       dest = "media/audio/settings/default/34384e7da9d52c8062a9765baeb6053a-output.json"
-      path = rebase_path("media/audio/settings/default/34384e7da9d52c8062a9765baeb6053a-output.json")
+      path = rebase_path(
+              "media/audio/settings/default/34384e7da9d52c8062a9765baeb6053a-output.json")
     },
   ]
 }

@@ -71,8 +71,8 @@ source_set("packet_nub") {
 source_set("packet_nub_fuzzer_lib") {
   testonly = true
   sources = [
-    "packet_nub_fuzzer.h",
     "packet_nub_fuzzer.cc",
+    "packet_nub_fuzzer.h",
   ]
   public_deps = [
     ":packet_nub",

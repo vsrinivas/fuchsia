@@ -6,7 +6,6 @@ import("//build/fidl/fidl.gni")
 import("//peridot/build/executable_package.gni")
 
 executable_package("simple_agent") {
-
   meta = [
     {
       path = "meta/simple_agent.cmx"
@@ -29,7 +28,6 @@ executable_package("simple_agent") {
 }
 
 executable_package("simple_module") {
-
   meta = [
     {
       path = "meta/simple_module.cmx"

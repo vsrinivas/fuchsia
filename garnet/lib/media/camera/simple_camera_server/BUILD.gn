@@ -33,14 +33,15 @@ executable("bin") {
 }
 
 package("simple_camera_server_cpp") {
-
   deps = [
     ":bin",
   ]
-    meta = [ {
-        path = rebase_path("meta/simple_camera_server_cpp.cmx")
-        dest = "simple_camera_server_cpp.cmx"
-      } ]
+  meta = [
+    {
+      path = rebase_path("meta/simple_camera_server_cpp.cmx")
+      dest = "simple_camera_server_cpp.cmx"
+    },
+  ]
 
   binary = "simple_camera_server_cpp"
 }

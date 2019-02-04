@@ -15,23 +15,23 @@ executable("tests") {
     "basic-lifecycle-test.cc",
     "integration-test.cc",
     "main.cc",
-    "mock-device.cc",
     "mock-device-hooks.cc",
+    "mock-device.cc",
     "root-mock-device.cc",
   ]
 
   deps = [
     ":mock-device",
+    "//garnet/public/lib/async_promise",
+    "//garnet/public/lib/gtest",
+    "//zircon/public/fidl/fuchsia-device-test:fuchsia-device-test",
+    "//zircon/public/fidl/fuchsia-device-test:fuchsia-device-test_c",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fit",
-    "//zircon/public/fidl/fuchsia-io:fuchsia-io",
-    "//zircon/public/fidl/fuchsia-device-test:fuchsia-device-test",
-    "//zircon/public/fidl/fuchsia-device-test:fuchsia-device-test_c",
-    "//garnet/public/lib/async_promise",
-    "//garnet/public/lib/gtest",
   ]
 }
 
@@ -55,5 +55,5 @@ fidl("mock-device") {
     "//zircon/system/dev/test/mock-device/mock-device.fidl",
   ]
 
-  deps = [ ]
+  deps = []
 }

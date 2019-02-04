@@ -29,7 +29,7 @@ package("run") {
     {
       dest = "run.cmx"
       path = rebase_path(dest)
-    }
+    },
   ]
 
   binaries = [

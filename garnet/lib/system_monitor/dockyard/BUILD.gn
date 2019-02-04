@@ -42,7 +42,7 @@ source_set("tests") {
   ]
 
   deps = [
-     ":lib",
-     "//third_party/googletest:gtest",
+    ":lib",
+    "//third_party/googletest:gtest",
   ]
 }

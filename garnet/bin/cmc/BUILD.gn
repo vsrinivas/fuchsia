@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/host.gni")
 import("//build/package.gni")
 import("//build/package/component.gni")
+import("//build/rust/rustc_binary.gni")
 
 rustc_binary("cmc") {
   name = "cmc"
@@ -27,9 +27,7 @@ rustc_binary("cmc") {
     "//third_party/rust-crates/rustc_deps:tempfile",
   ]
 
-  non_rust_deps = [
-    "//garnet/lib/rust/cm_json:cm_schema_json"
-  ]
+  non_rust_deps = [ "//garnet/lib/rust/cm_json:cm_schema_json" ]
 }
 
 rustc_binary("cmc_integration_test_bin") {
@@ -73,7 +71,7 @@ fuchsia_component("cmc_integration_test_component") {
         path = rebase_path("tests/golden_release.cm")
       }
       dest = "golden.cm"
-    }
+    },
   ]
 
   binary = "cmc_integration_test"
@@ -83,7 +81,7 @@ fuchsia_component("cmc_integration_test_component") {
 package("cmc_integration_test") {
   components = [
     ":example_component",
-    ":cmc_integration_test_component"
+    ":cmc_integration_test_component",
   ]
   testonly = true
 }

@@ -3,6 +3,10 @@
 # found in the LICENSE file.
 
 copy("install-fuchsia") {
-  sources = [ "install-fuchsia.sh" ]
-  outputs = [ "$root_build_dir/install-fuchsia" ]
+  sources = [
+    "install-fuchsia.sh",
+  ]
+  outputs = [
+    "$root_build_dir/install-fuchsia",
+  ]
 }

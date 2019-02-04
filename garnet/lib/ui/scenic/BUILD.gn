@@ -31,5 +31,5 @@ source_set("scenic") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/input/cpp",
-]
+  ]
 }

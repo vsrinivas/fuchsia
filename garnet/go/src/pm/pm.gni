@@ -25,22 +25,21 @@ template("pm_publish") {
     ]
 
     outputs = [
-      "$amber_repository_dir/keys/{{source_file_part}}"
+      "$amber_repository_dir/keys/{{source_file_part}}",
     ]
   }
 
   copy("root_manifest") {
     sources = [
-      "$amber_keys_dir/root_manifest.json"
+      "$amber_keys_dir/root_manifest.json",
     ]
 
     outputs = [
-      "$amber_repository_dir/repository/root.json"
+      "$amber_repository_dir/repository/root.json",
     ]
   }
 
   compiled_action(target_name) {
-
     tool = "//garnet/go/src/pm:pm_bin"
     tool_output_name = "pm"
 

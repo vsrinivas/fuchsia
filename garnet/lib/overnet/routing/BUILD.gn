@@ -32,12 +32,12 @@ source_set("router") {
   deps = [
     "//garnet/lib/overnet/environment:timer",
     "//garnet/lib/overnet/environment:trace",
+    "//garnet/lib/overnet/protocol:fidl",
     "//garnet/lib/overnet/protocol:routable_message",
     "//garnet/lib/overnet/vocabulary:callback",
     "//garnet/lib/overnet/vocabulary:closed_ptr",
     "//garnet/lib/overnet/vocabulary:lazy_slice",
     "//garnet/lib/overnet/vocabulary:slice",
-    "//garnet/lib/overnet/protocol:fidl",
   ]
 }
 
@@ -62,8 +62,8 @@ source_set("routing_table") {
     "routing_table.h",
   ]
   public_deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.overnet.protocol",
     "//garnet/public/fidl/fuchsia.overnet.protocol",
+    "//garnet/public/lib/fostr/fidl/fuchsia.overnet.protocol",
   ]
   deps = [
     "//garnet/lib/overnet/environment:timer",
@@ -83,10 +83,10 @@ fuzz_target("routing_table_fuzzer") {
     "routing_table_fuzzer.cc",
   ]
   deps = [
-        ":routing_table",
-        "//garnet/lib/overnet/protocol:fidl",
-        "//garnet/lib/overnet/protocol:varint",
-        "//garnet/lib/overnet/testing:test_timer",
-        "//garnet/lib/overnet/testing:trace_cout",
+    ":routing_table",
+    "//garnet/lib/overnet/protocol:fidl",
+    "//garnet/lib/overnet/protocol:varint",
+    "//garnet/lib/overnet/testing:test_timer",
+    "//garnet/lib/overnet/testing:trace_cout",
   ]
 }

@@ -5,7 +5,6 @@
 import("//build/package.gni")
 
 package("token_manager_factory") {
-
   deps = [
     "//garnet/bin/auth/token_manager_factory:token_manager_factory",
   ]
@@ -21,7 +20,6 @@ package("token_manager_factory") {
 }
 
 package("account_manager") {
-
   deps = [
     "//garnet/bin/auth/account_manager:account_manager",
   ]
@@ -37,7 +35,6 @@ package("account_manager") {
 }
 
 package("account_handler") {
-
   deps = [
     "//garnet/bin/auth/account_handler:account_handler",
   ]

@@ -4,12 +4,10 @@
 
 import("//build/package.gni")
 
-
-
 source_set("lib") {
   sources = [
     "service.cc",
-    "service.h"
+    "service.h",
   ]
 
   public_deps = [
@@ -19,7 +17,6 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
-    
   ]
 }
 
@@ -27,7 +24,7 @@ executable("bin") {
   output_name = "network_time_service"
 
   sources = [
-    "main.cc"
+    "main.cc",
   ]
 
   deps = [
@@ -41,7 +38,6 @@ executable("bin") {
 }
 
 package("network_time_service") {
-
   deps = [
     ":bin",
   ]

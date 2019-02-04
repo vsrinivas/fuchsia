@@ -6,8 +6,8 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.overnet.protocol") {
   sources = [
-    "labels.fidl",
     "forking.fidl",
+    "labels.fidl",
     "routing.fidl",
   ]
 }

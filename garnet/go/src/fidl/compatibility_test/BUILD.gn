@@ -30,7 +30,6 @@ go_library("lib") {
 }
 
 package("fidl_compatibility_test_server_go") {
-
   testonly = true
   deps = [
     ":compatibility_test_server_go_bin",

@@ -8,8 +8,8 @@ fostr_fidl("fuchsia.ui.views") {
   fidl_target = "//garnet/public/fidl/fuchsia.ui.views"
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.sys",
     "//garnet/public/lib/fostr/fidl/fuchsia.math",
+    "//garnet/public/lib/fostr/fidl/fuchsia.sys",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
   ]

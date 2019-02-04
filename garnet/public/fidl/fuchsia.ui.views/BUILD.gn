@@ -13,8 +13,8 @@ fidl("fuchsia.ui.views") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/fidl/fuchsia.math",
+    "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/fidl/fuchsia.ui.input",
   ]

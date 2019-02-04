@@ -6,9 +6,9 @@ executable("netstack_loopback_test") {
   testonly = true
 
   sources = [
-    "multiple_listening_sockets.cc",
     "datagram_sendto_recvfrom.cc",
     "loopbacktest.cc",
+    "multiple_listening_sockets.cc",
   ]
 
   deps = [

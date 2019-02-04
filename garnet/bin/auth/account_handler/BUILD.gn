@@ -11,8 +11,8 @@ rustc_binary("account_handler") {
 
   deps = [
     "//garnet/lib/auth/account_common",
-    "//garnet/lib/auth/token_manager",
     "//garnet/lib/auth/fidl:account-rustc",
+    "//garnet/lib/auth/token_manager",
     "//garnet/public/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//garnet/public/fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
@@ -29,4 +29,3 @@ rustc_binary("account_handler") {
     "//third_party/rust-crates/rustc_deps:tempfile",
   ]
 }
-

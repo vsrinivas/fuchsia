@@ -5,7 +5,6 @@
 import("//peridot/build/executable_package.gni")
 
 executable_package("swap_module1") {
-
   meta = [
     {
       path = "meta/swap_module1.cmx"
@@ -25,7 +24,6 @@ executable_package("swap_module1") {
 }
 
 executable_package("swap_module2") {
-
   meta = [
     {
       path = "meta/swap_module2.cmx"
@@ -62,7 +60,6 @@ source_set("module") {
 }
 
 executable_package("swap_recipe") {
-
   meta = [
     {
       path = "meta/swap_recipe.cmx"

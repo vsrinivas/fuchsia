@@ -6,7 +6,6 @@ import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
 
 executable_package("clipboard_agent") {
-
   meta = [
     {
       path = "meta/clipboard_agent.cmx"

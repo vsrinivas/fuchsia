@@ -9,8 +9,8 @@ rustc_binary("util") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/lib/rust/fuchsia-wlan-dev",
+    "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",

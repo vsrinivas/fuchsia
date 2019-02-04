@@ -5,17 +5,25 @@
 import("//build/package.gni")
 
 copy("copy_runbenchmarks") {
-  sources = ["runbenchmarks.sh"]
-  outputs = ["$root_out_dir/{{source_file_part}}"]
+  sources = [
+    "runbenchmarks.sh",
+  ]
+  outputs = [
+    "$root_out_dir/{{source_file_part}}",
+  ]
 }
 
 package("runbenchmarks") {
   testonly = true
 
-  deps = [":copy_runbenchmarks"]
+  deps = [
+    ":copy_runbenchmarks",
+  ]
 
-  resources = [ {
-        path = "runbenchmarks.sh"
-        dest = "runbenchmarks.sh"
-      } ]
+  resources = [
+    {
+      path = "runbenchmarks.sh"
+      dest = "runbenchmarks.sh"
+    },
+  ]
 }

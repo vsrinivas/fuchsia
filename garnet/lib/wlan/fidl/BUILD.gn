@@ -37,11 +37,11 @@ fidl("service") {
   ]
 
   public_deps = [
+    ":fidl",
+    ":sme",
     "//garnet/public/fidl/fuchsia.wlan.common",
     "//garnet/public/fidl/fuchsia.wlan.minstrel",
     "//garnet/public/fidl/fuchsia.wlan.stats",
-    ":fidl",
-    ":sme",
   ]
 }
 
@@ -53,8 +53,8 @@ fidl("wlantap") {
   ]
 
   public_deps = [
+    ":fidl",
     "//garnet/public/fidl/fuchsia.wlan.common",
     "//garnet/public/fidl/fuchsia.wlan.mlme",
-    ":fidl",
   ]
 }

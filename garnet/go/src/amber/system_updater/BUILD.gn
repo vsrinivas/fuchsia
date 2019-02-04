@@ -11,11 +11,11 @@ go_library("lib") {
   name = "system_updater"
 
   deps = [
+    "//garnet/go/src/amber:metrics_lib",
     "//garnet/public/fidl/fuchsia.amber($go_toolchain)",
     "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
-    "//garnet/go/src/amber:metrics_lib",
   ]
 }
 

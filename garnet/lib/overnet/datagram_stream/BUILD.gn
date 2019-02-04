@@ -32,12 +32,12 @@ source_set("datagram_stream") {
     ":receive_mode",
     "//garnet/lib/overnet/environment:timer",
     "//garnet/lib/overnet/environment:trace",
-    "//garnet/public/fidl/fuchsia.overnet.protocol",
     "//garnet/lib/overnet/labels:seq_num",
     "//garnet/lib/overnet/packet_protocol",
     "//garnet/lib/overnet/routing:router",
     "//garnet/lib/overnet/vocabulary:internal_list",
     "//garnet/lib/overnet/vocabulary:slice",
+    "//garnet/public/fidl/fuchsia.overnet.protocol",
   ]
 }
 
@@ -47,10 +47,10 @@ source_set("datagram_stream_test") {
     "datagram_stream_test.cc",
   ]
   deps = [
-    "//garnet/public/fidl/fuchsia.overnet.protocol",
     ":datagram_stream",
     "//garnet/lib/overnet/testing:test_timer",
     "//garnet/lib/overnet/testing:trace_cout",
+    "//garnet/public/fidl/fuchsia.overnet.protocol",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -74,8 +74,8 @@ source_set("linearizer") {
 source_set("linearizer_fuzzer_lib") {
   testonly = true
   sources = [
-    "linearizer_fuzzer.h",
     "linearizer_fuzzer.cc",
+    "linearizer_fuzzer.h",
   ]
   deps = [
     ":linearizer",
@@ -125,7 +125,7 @@ source_set("receive_mode") {
 }
 
 source_set("receive_mode_fuzzer_helpers") {
-    testonly = true
+  testonly = true
   sources = [
     "receive_mode_fuzzer_helpers.h",
   ]

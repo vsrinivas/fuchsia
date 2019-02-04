@@ -84,7 +84,7 @@ template("guest_package") {
         invoker.memory,
       ]
     }
-    args += [rebase_path("$guest_config_file")]
+    args += [ rebase_path("$guest_config_file") ]
   }
 
   package(target_name) {

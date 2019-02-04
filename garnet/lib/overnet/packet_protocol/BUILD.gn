@@ -104,8 +104,8 @@ source_set("packet_protocol") {
 source_set("packet_protocol_fuzzer_lib") {
   testonly = true
   sources = [
-    "packet_protocol_fuzzer.h",
     "packet_protocol_fuzzer.cc",
+    "packet_protocol_fuzzer.h",
   ]
   deps = [
     ":packet_protocol",

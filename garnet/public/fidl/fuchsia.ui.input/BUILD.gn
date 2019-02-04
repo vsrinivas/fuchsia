@@ -19,6 +19,5 @@ fidl("fuchsia.ui.input") {
     "usages.fidl",
   ]
 
-  public_deps = [
-  ]
+  public_deps = []
 }

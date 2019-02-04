@@ -5,7 +5,6 @@
 import("//build/package.gni")
 
 package("intl_wisdom") {
-
   deps = [
     "//garnet/examples/intl/client:intl_wisdom_client",
     "//garnet/examples/intl/server:intl_wisdom_server",

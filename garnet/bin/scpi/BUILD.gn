@@ -49,7 +49,6 @@ executable("scpi_unittests") {
 }
 
 package("scpi") {
-
   deps = [
     ":bin",
   ]

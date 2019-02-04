@@ -94,7 +94,8 @@ template("prebuilt_package") {
   }
 
   generate_response_file("${pkg_target_name}.blobs.rsp") {
-    response_file_contents = ["--input=" + rebase_path(blobs_json, root_build_dir)]
+    response_file_contents =
+        [ "--input=" + rebase_path(blobs_json, root_build_dir) ]
   }
 
   pkg = {

@@ -5,7 +5,6 @@
 import("//peridot/build/executable_package.gni")
 
 executable_package("todo_cpp") {
-
   meta = [
     {
       path = "meta/todo_cpp.cmx"

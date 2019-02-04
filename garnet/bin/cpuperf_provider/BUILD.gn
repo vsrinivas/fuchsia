@@ -38,17 +38,18 @@ executable("bin") {
 }
 
 package("cpuperf_provider") {
-
   deps = [
     ":bin",
   ]
 
   binary = "cpuperf_provider"
 
-  meta = [ {
-        path = rebase_path("meta/cpuperf_provider.cmx")
-        dest = "cpuperf_provider.cmx"
-      } ]
+  meta = [
+    {
+      path = rebase_path("meta/cpuperf_provider.cmx")
+      dest = "cpuperf_provider.cmx"
+    },
+  ]
 }
 
 group("report_generators") {

@@ -5,16 +5,16 @@
 import("//build/host.gni")
 
 if (current_toolchain == host_toolchain) {
-executable("dockyard_host") {
-  sources = [
-    "dockyard_host.cc",
-  ]
+  executable("dockyard_host") {
+    sources = [
+      "dockyard_host.cc",
+    ]
 
-  deps = [
-    "//third_party/grpc:grpc++",
-    "//garnet/lib/system_monitor/dockyard:lib",
-  ]
-}
+    deps = [
+      "//garnet/lib/system_monitor/dockyard:lib",
+      "//third_party/grpc:grpc++",
+    ]
+  }
 }
 
 install_host_tools("host_tools") {

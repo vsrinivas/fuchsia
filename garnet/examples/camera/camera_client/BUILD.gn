@@ -33,7 +33,6 @@ executable("bin") {
 }
 
 package("example_camera_client") {
-
   deps = [
     ":bin",
   ]

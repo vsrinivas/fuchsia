@@ -54,13 +54,13 @@ package("insntrace") {
     {
       name = "insntrace"
       shell = true
-    }
+    },
   ]
 
   meta = [
     {
       path = rebase_path("meta/insntrace.cmx")
       dest = "insntrace.cmx"
-    }
+    },
   ]
 }

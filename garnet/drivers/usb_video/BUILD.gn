@@ -33,10 +33,10 @@ driver_module("usb_video_driver") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/fzl",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

@@ -23,14 +23,14 @@ static_library("libunwindstack") {
     "Elf.cpp",
     "ElfInterface.cpp",
     "ElfInterfaceArm.cpp",
-    "fuchsia/LogFuchsia.cpp",
-    "fuchsia/MapsFuchsia.cpp",
-    "fuchsia/MemoryFuchsia.cpp",
     "Global.cpp",
     "JitDebug.cpp",
     "MapInfo.cpp",
     "Symbols.cpp",
     "Unwinder.cpp",
+    "fuchsia/LogFuchsia.cpp",
+    "fuchsia/MapsFuchsia.cpp",
+    "fuchsia/MemoryFuchsia.cpp",
 
     # These files are Android-specific and aren't compiled for Fuchsia.
     #"DexFile.cpp",

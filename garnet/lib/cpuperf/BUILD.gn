@@ -35,9 +35,7 @@ static_library("cpuperf") {
       "device_reader.h",
     ]
 
-    public_deps += [
-      "//zircon/public/lib/zx",
-    ]
+    public_deps += [ "//zircon/public/lib/zx" ]
   }
 
   if (!is_fuchsia) {

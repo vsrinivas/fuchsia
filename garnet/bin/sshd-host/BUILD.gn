@@ -22,7 +22,6 @@ executable("bin") {
 }
 
 package("sshd-host") {
-
   deps = [
     ":bin",
     "//third_party/openssh-portable:hostkeygen",
@@ -32,11 +31,21 @@ package("sshd-host") {
   ]
 
   binaries = [
-    { name = "sshd-host" },
-    { name = "hostkeygen" },
-    { name = "scp" },
-    { name = "sftp-server" },
-    { name = "sshd" },
+    {
+      name = "sshd-host"
+    },
+    {
+      name = "hostkeygen"
+    },
+    {
+      name = "scp"
+    },
+    {
+      name = "sftp-server"
+    },
+    {
+      name = "sshd"
+    },
   ]
 
   meta = [
@@ -46,8 +55,10 @@ package("sshd-host") {
     },
   ]
 
-  resources = [ {
-        path = rebase_path("//third_party/openssh-portable/fuchsia/sshd_config")
-        dest = "ssh/sshd_config"
-      } ]
+  resources = [
+    {
+      path = rebase_path("//third_party/openssh-portable/fuchsia/sshd_config")
+      dest = "ssh/sshd_config"
+    },
+  ]
 }

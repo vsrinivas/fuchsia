@@ -31,15 +31,16 @@ executable("bin") {
 }
 
 package("ktrace_provider") {
-
   deps = [
     ":bin",
   ]
 
   binary = "ktrace_provider"
 
-  meta = [ {
-        path = rebase_path("meta/ktrace_provider.cmx")
-        dest = "ktrace_provider.cmx"
-      } ]
+  meta = [
+    {
+      path = rebase_path("meta/ktrace_provider.cmx")
+      dest = "ktrace_provider.cmx"
+    },
+  ]
 }

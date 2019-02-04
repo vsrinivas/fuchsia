@@ -21,7 +21,6 @@ executable("bin") {
 }
 
 package("tiles_ctl") {
-
   deps = [
     ":bin",
   ]

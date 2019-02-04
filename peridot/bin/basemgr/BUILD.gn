@@ -122,7 +122,6 @@ source_set("lib") {
 }
 
 executable_package("dev_base_shell") {
-
   meta = [
     {
       path = "meta/dev_base_shell.cmx"

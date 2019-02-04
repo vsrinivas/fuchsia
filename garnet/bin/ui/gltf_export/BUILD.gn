@@ -9,9 +9,7 @@ executable("gltf_export") {
     "main.cc",
   ]
 
-  configs += [
-    "//third_party/cobalt:cobalt_config",
-  ]
+  configs += [ "//third_party/cobalt:cobalt_config" ]
 
   deps = [
     "//garnet/lib/ui/gfx",

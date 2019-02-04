@@ -42,7 +42,9 @@ package("wlanif") {
     ":wlanif_driver",
   ]
 
-  drivers = [ {
-        name = "wlanif.so"
-      } ]
+  drivers = [
+    {
+      name = "wlanif.so"
+    },
+  ]
 }

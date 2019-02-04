@@ -24,9 +24,9 @@ executable("bin") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.tracing",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.tracing",
     "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-tracelink",
     "//zircon/public/lib/async-loop-cpp",
@@ -40,7 +40,6 @@ executable("bin") {
 }
 
 package("trace_manager") {
-
   deps = [
     ":bin",
     "//zircon/public/fidl/fuchsia-tracelink",
@@ -55,8 +54,10 @@ package("trace_manager") {
     },
   ]
 
-  resources = [ {
-        path = rebase_path("tracing.config")
-        dest = "tracing.config"
-      } ]
+  resources = [
+    {
+      path = rebase_path("tracing.config")
+      dest = "tracing.config"
+    },
+  ]
 }

@@ -12,9 +12,9 @@ go_library("wlantool_lib") {
   source_dir = "wlantool"
 
   deps = [
-    "//garnet/public/lib/component/go/src/app",
     "//garnet/public/fidl/fuchsia.wlan.common($go_toolchain)",
     "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",
+    "//garnet/public/lib/component/go/src/app",
   ]
 }
 
@@ -22,7 +22,9 @@ go_binary("wlantool_bin") {
   output_name = "wlan"
   gopackage = "wlantool"
 
-  deps = [ ":wlantool_lib" ]
+  deps = [
+    ":wlantool_lib",
+  ]
 }
 
 package("wlantool") {

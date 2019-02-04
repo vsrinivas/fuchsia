@@ -11,10 +11,10 @@ source_set("lib") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.memory",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.memory",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
@@ -38,17 +38,18 @@ executable("bin") {
 }
 
 package("memory_monitor") {
-
   deps = [
     ":bin",
   ]
 
   binary = "memory_monitor"
 
-  meta = [ {
-        path = rebase_path("meta/memory_monitor.cmx")
-        dest = "memory_monitor.cmx"
-      } ]
+  meta = [
+    {
+      path = rebase_path("meta/memory_monitor.cmx")
+      dest = "memory_monitor.cmx"
+    },
+  ]
 }
 
 package("config") {

@@ -14,7 +14,6 @@ rustc_binary("bin") {
   deps = [
     "//garnet/bin/wayland/core",
     "//garnet/bin/wayland/protocols:wayland",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles-rustc",
     "//garnet/public/fidl/fuchsia.guest:fuchsia.guest-rustc",
     "//garnet/public/fidl/fuchsia.images:fuchsia.images-rustc",
@@ -23,6 +22,7 @@ rustc_binary("bin") {
     "//garnet/public/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//garnet/public/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//garnet/public/fidl/fuchsia.ui.viewsv1:fuchsia.ui.viewsv1-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-scenic",
@@ -34,7 +34,6 @@ rustc_binary("bin") {
 }
 
 package("bridge") {
-
   meta = [
     {
       path = rebase_path("meta/test_wayland_bridge.cmx")

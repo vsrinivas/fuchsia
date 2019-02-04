@@ -20,7 +20,6 @@ executable("bin") {
 }
 
 package("trace_stress") {
-
   meta = [
     {
       path = rebase_path("meta/trace_stress.cmx")

@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 
 package("tennis_service") {
   deps = [
@@ -109,11 +109,11 @@ rustc_binary("tennis_rust5_ai_bin") {
 }
 
 package("tennis_sysmgr_config") {
-    deprecated_system_image = true
-    resources = [
-      {
-        dest = "sysmgr/tennis.config"
-        path = rebase_path("tennis_sysmgr.config")
-      }
-    ]
+  deprecated_system_image = true
+  resources = [
+    {
+      dest = "sysmgr/tennis.config"
+      path = rebase_path("tennis_sysmgr.config")
+    },
+  ]
 }

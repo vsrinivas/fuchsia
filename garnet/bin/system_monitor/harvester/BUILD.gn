@@ -12,9 +12,9 @@ executable("bin") {
   ]
 
   deps = [
-    "//third_party/grpc:grpc++",
-    "//garnet/lib/system_monitor/dockyard:protos",
     "//garnet/lib/system_monitor/dockyard:lib",
+    "//garnet/lib/system_monitor/dockyard:protos",
+    "//third_party/grpc:grpc++",
   ]
 }
 

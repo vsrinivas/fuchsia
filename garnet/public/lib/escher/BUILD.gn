@@ -16,7 +16,6 @@ declare_args() {
 }
 
 package("escher_tests") {
-
   testonly = true
 
   deps = [

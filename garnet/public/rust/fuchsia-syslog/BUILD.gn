@@ -15,7 +15,5 @@ rustc_library("fuchsia-syslog") {
     "//third_party/rust-crates/rustc_deps:log",
     "//third_party/rust-crates/rustc_deps:tempfile",
   ]
-  non_rust_deps = [
-    "//zircon/public/lib/syslog",
-  ]
+  non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }

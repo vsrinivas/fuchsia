@@ -60,7 +60,8 @@ monolith += fuchsia_packages
 if (fuchsia_products != [] && current_toolchain == default_toolchain) {
   print("WARNING! Deprecated fuchsia product specification detected")
   print("Please re-run 'fx set' to update your build configuration")
-  print("See https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/build/")
+  print(
+      "See https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/build/")
   print("or BLD-240 for more details")
 }
 

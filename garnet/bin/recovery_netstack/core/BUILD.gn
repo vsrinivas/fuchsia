@@ -16,6 +16,6 @@ rustc_library("netstack-core") {
     "//third_party/rust-crates/rustc_deps:byteorder",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:log",
-    "//third_party/rust-crates/rustc_deps:rand"
+    "//third_party/rust-crates/rustc_deps:rand",
   ]
 }

@@ -8,12 +8,13 @@ import("//build/go/go_test.gni")
 go_library("raw_printer_test_lib") {
   name = "cpuperf/printer/tests"
 
-  deps = [
-  ]
+  deps = []
 }
 
 go_test("cpuperf_raw_printer_test") {
   gopackage = "cpuperf/printer/tests"
-  deps = [":raw_printer_test_lib"]
-  non_go_deps = ["..:host_cpuperf_print"]
+  deps = [
+    ":raw_printer_test_lib",
+  ]
+  non_go_deps = [ "..:host_cpuperf_print" ]
 }

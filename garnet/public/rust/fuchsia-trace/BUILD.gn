@@ -12,7 +12,5 @@ rustc_library("fuchsia-trace") {
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:libc",
   ]
-  non_rust_deps = [
-    "//zircon/public/lib/trace-engine",
-  ]
+  non_rust_deps = [ "//zircon/public/lib/trace-engine" ]
 }

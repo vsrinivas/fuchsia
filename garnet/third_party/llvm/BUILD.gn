@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 config("LLVM_config") {
-  include_dirs = [
-    "include",
-  ]
+  include_dirs = [ "include" ]
   if (current_os == "linux") {
     libs = [ "lib/libLLVM-8svn.so" ]
   } else if (current_os == "mac") {

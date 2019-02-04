@@ -36,13 +36,13 @@ source_set("fake_controller") {
   ]
 
   public_deps = [
+    "//garnet/drivers/bluetooth/lib/att:definitions",
     "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/gatt:definitions",
+
     # TODO(armansito): Pull in just the hci:definitions target.
     "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/drivers/bluetooth/lib/l2cap:definitions",
-    "//garnet/drivers/bluetooth/lib/att:definitions",
-    "//garnet/drivers/bluetooth/lib/gatt:definitions",
-
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",

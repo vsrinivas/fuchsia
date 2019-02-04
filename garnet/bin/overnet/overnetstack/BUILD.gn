@@ -59,7 +59,6 @@ executable("bin") {
 }
 
 package("overnetstack") {
-
   deps = [
     ":bin",
   ]

@@ -10,17 +10,19 @@ import("//build/package.gni")
 go_binary("echo2_server_go_bin") {
   output_name = "echo2_server_go"
   gopackage = "echo2_server_go"
-  deps = [ ":echo2_server_go_lib" ]
+  deps = [
+    ":echo2_server_go_lib",
+  ]
 }
 
 go_library("echo2_server_go_lib") {
   name = "echo2_server_go"
   deps = [
     "//garnet/examples/fidl/services:echo2($go_toolchain)",
+    "//garnet/examples/fidl/services:echo2($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/svc/go/src/svc",
-    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
-    "//garnet/examples/fidl/services:echo2($go_toolchain)",
   ]
 }
 

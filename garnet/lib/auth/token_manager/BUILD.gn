@@ -20,4 +20,3 @@ rustc_library("token_manager") {
     "//third_party/rust-crates/rustc_deps:parking_lot",
   ]
 }
-

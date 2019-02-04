@@ -26,7 +26,7 @@ sandbox_test_package("no_services") {
   deps = [
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
     "//garnet/public/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock"
+    "//third_party/googletest:gmock",
   ]
 }
 
@@ -39,6 +39,6 @@ sandbox_test_package("multiple_components") {
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock"
+    "//third_party/googletest:gmock",
   ]
 }

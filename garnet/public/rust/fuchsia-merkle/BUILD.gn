@@ -10,9 +10,9 @@ rustc_library("fuchsia-merkle") {
   with_unit_tests = true
 
   deps = [
-    "//third_party/rust-crates/rustc_deps:bytes",
-    "//third_party/rust-crates/rustc_deps:hex",
-    "//third_party/rust-crates/rustc_deps:failure",
     "//garnet/public/rust/mundane",
+    "//third_party/rust-crates/rustc_deps:bytes",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:hex",
   ]
 }

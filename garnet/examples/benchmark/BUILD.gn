@@ -19,7 +19,6 @@ executable("benchmark_example") {
 }
 
 package("benchmark") {
-
   deps = [
     ":benchmark_example",
   ]

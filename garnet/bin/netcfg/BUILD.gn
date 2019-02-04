@@ -43,7 +43,6 @@ rustc_binary("bin") {
 }
 
 package("netcfg") {
-
   deps = [
     ":bin",
   ]

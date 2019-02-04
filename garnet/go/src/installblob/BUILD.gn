@@ -17,7 +17,7 @@ go_binary("bin") {
   output_name = "installblob"
   gopackage = "fuchsia.googlesource.com/installblob"
   deps = [
-    ":lib"
+    ":lib",
   ]
 }
 

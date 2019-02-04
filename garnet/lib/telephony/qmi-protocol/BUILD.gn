@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/compiled_action.gni")
-import("//build/rust/rustc_library.gni")
+import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 
 # Generate the rust sources using the gen.
 compiled_action("gen_qmi_protocol_source") {
@@ -15,11 +15,13 @@ compiled_action("gen_qmi_protocol_source") {
     "protocol/common.json",
     "protocol/ctl.json",
     "protocol/dms.json",
+    "protocol/wda.json",
     "protocol/wds.json",
-    "protocol/wda.json"
   ]
-  outputs = [ output ]
-  args = ["-i"] + rebase_path(sources) + ["-o"] + [rebase_path(output)]
+  outputs = [
+    output,
+  ]
+  args = [ "-i" ] + rebase_path(sources) + [ "-o" ] + [ rebase_path(output) ]
 }
 
 # Build the library.
@@ -39,20 +41,20 @@ if (host_toolchain == current_toolchain) {
   rustc_binary("qmigen") {
     edition = "2018"
     deps = [
+      "//third_party/rust-crates/rustc_deps:failure",
       "//third_party/rust-crates/rustc_deps:serde",
       "//third_party/rust-crates/rustc_deps:serde_derive",
       "//third_party/rust-crates/rustc_deps:serde_json",
-      "//third_party/rust-crates/rustc_deps:failure",
     ]
   }
 
   rustc_library("qmigen_lib") {
     edition = "2018"
     deps = [
+      "//third_party/rust-crates/rustc_deps:failure",
       "//third_party/rust-crates/rustc_deps:serde",
       "//third_party/rust-crates/rustc_deps:serde_derive",
       "//third_party/rust-crates/rustc_deps:serde_json",
-      "//third_party/rust-crates/rustc_deps:failure",
     ]
   }
 
@@ -63,8 +65,8 @@ if (host_toolchain == current_toolchain) {
 
     deps = [
       ":qmigen",
-      "//third_party/rust-crates/rustc_deps:pretty_assertions",
       ":qmigen_lib($host_toolchain)",
+      "//third_party/rust-crates/rustc_deps:pretty_assertions",
     ]
     source_root = "tests/codegen_tests.rs"
   }
@@ -85,4 +87,3 @@ if (host_toolchain == current_toolchain) {
     ]
   }
 }
-

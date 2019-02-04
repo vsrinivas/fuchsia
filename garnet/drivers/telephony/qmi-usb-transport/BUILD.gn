@@ -9,32 +9,34 @@ package("qmi-usb-transport") {
   deprecated_system_image = true
 
   deps = [
-    ":qmi_driver"
+    ":qmi_driver",
   ]
 
-  drivers = [ {
-    name = "qmi-transport.so"
-  } ]
+  drivers = [
+    {
+      name = "qmi-transport.so"
+    },
+  ]
 }
 
 driver_module("qmi_driver") {
   output_name = "qmi-transport"
 
   sources = [
-    "qmi-usb-transport.h",
     "qmi-usb-transport.c",
+    "qmi-usb-transport.h",
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
     "//zircon/public/banjo/ddk-protocol-ethernet",
     "//zircon/public/banjo/ddk-protocol-usb",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/usb",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
-    "//garnet/public/lib/fsl",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zx",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

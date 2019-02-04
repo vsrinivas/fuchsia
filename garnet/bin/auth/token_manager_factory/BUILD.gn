@@ -21,4 +21,3 @@ rustc_binary("token_manager_factory") {
     "//third_party/rust-crates/rustc_deps:parking_lot",
   ]
 }
-

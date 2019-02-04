@@ -2,22 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/host.gni")
 
 if (host_toolchain == current_toolchain) {
   rustc_binary("banjo_bin") {
     edition = "2018"
     deps = [
-      "//third_party/rust-crates/rustc_deps:structopt",
+      "//third_party/rust-crates/rustc_deps:failure",
+      "//third_party/rust-crates/rustc_deps:heck",
       "//third_party/rust-crates/rustc_deps:pest",
       "//third_party/rust-crates/rustc_deps:pest_derive",
-      "//third_party/rust-crates/rustc_deps:failure",
-      "//third_party/rust-crates/rustc_deps:serde_json",
       "//third_party/rust-crates/rustc_deps:serde",
       "//third_party/rust-crates/rustc_deps:serde_derive",
-      "//third_party/rust-crates/rustc_deps:heck",
+      "//third_party/rust-crates/rustc_deps:serde_json",
+      "//third_party/rust-crates/rustc_deps:structopt",
     ]
     source_root = "src/main.rs"
   }

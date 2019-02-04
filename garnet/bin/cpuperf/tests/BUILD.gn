@@ -50,7 +50,6 @@ executable("cpuperf_integration_tests") {
 }
 
 package("cpuperf_tests") {
-
   testonly = true
 
   deps = [

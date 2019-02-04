@@ -11,7 +11,7 @@ go_library("lib") {
   name = "tally"
 
   deps = [
-    "//garnet/public/go/third_party:github.com/dustin/go-humanize"
+    "//garnet/public/go/third_party:github.com/dustin/go-humanize",
   ]
 }
 
@@ -19,7 +19,9 @@ go_binary("bin") {
   output_name = "traceutil-generate-tally"
   gopackage = "tally"
 
-  deps = [":lib"]
+  deps = [
+    ":lib",
+  ]
 }
 
 install_host_tools("tally") {

@@ -11,10 +11,10 @@ go_library("lib") {
   name = "fuchsia.googlesource.com/grand_unified_binary"
 
   deps = [
-    "//garnet/go/src/pmd",
-    "//garnet/go/src/amber/system_updater:lib",
     "//garnet/go/src/amber:lib",
-    "//garnet/go/src/netstack:netstack_lib"
+    "//garnet/go/src/amber/system_updater:lib",
+    "//garnet/go/src/netstack:netstack_lib",
+    "//garnet/go/src/pmd",
   ]
 }
 
@@ -26,6 +26,6 @@ go_library("lib") {
 go_binary("grand_unified_binary") {
   gopackage = "fuchsia.googlesource.com/grand_unified_binary"
   deps = [
-    ":lib"
+    ":lib",
   ]
 }

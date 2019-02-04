@@ -18,7 +18,7 @@ fidl("fuchsia.net.oldhttp") {
   ]
 
   public_deps = [
-    "//zircon/public/fidl/fuchsia-mem",
     "//garnet/public/fidl/fuchsia.netstack",
+    "//zircon/public/fidl/fuchsia-mem",
   ]
 }

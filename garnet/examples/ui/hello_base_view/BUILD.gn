@@ -6,11 +6,11 @@ executable("hello_base_view") {
   output_name = "hello_base_view"
 
   sources = [
-    "example_presenter.h",
     "example_presenter.cc",
+    "example_presenter.h",
     "main.cc",
-    "view.h",
     "view.cc",
+    "view.h",
   ]
 
   deps = [

@@ -14,35 +14,64 @@ template("fidl_example") {
     name = "fidl.examples.$nick"
 
     sources = [
-      "//zircon/system/host/fidl/examples/${target_name}.fidl"
+      "//zircon/system/host/fidl/examples/${target_name}.fidl",
     ]
   }
 }
 
-fidl_example("alignment") {}
-fidl_example("empty") {}
-fidl_example("enums") {}
-fidl_example("events") {}
-fidl_example("example-0") { nick = "example0" }
-fidl_example("example-1") { nick = "example1" }
-fidl_example("example-2") { nick = "example2" }
-fidl_example("example-3") { nick = "example3" }
-fidl_example("example-4") { nick = "example4" }
-fidl_example("example-5") { nick = "example5" }
-fidl_example("example-6") { nick = "example6" }
-fidl_example("example-7") { nick = "example7" }
-fidl_example("example-8") { nick = "example8" }
-fidl_example("example-9") { nick = "example9" }
-fidl_example("interface-ordinals") { nick = "ordinals" }
-fidl_example("tables") {}
-fidl_example("test") {}
-fidl_example("types") {}
+fidl_example("alignment") {
+}
+fidl_example("empty") {
+}
+fidl_example("enums") {
+}
+fidl_example("events") {
+}
+fidl_example("example-0") {
+  nick = "example0"
+}
+fidl_example("example-1") {
+  nick = "example1"
+}
+fidl_example("example-2") {
+  nick = "example2"
+}
+fidl_example("example-3") {
+  nick = "example3"
+}
+fidl_example("example-4") {
+  nick = "example4"
+}
+fidl_example("example-5") {
+  nick = "example5"
+}
+fidl_example("example-6") {
+  nick = "example6"
+}
+fidl_example("example-7") {
+  nick = "example7"
+}
+fidl_example("example-8") {
+  nick = "example8"
+}
+fidl_example("example-9") {
+  nick = "example9"
+}
+fidl_example("interface-ordinals") {
+  nick = "ordinals"
+}
+fidl_example("tables") {
+}
+fidl_example("test") {
+}
+fidl_example("types") {
+}
 
 fidl("point") {
   name = "fidl.examples.librarya"
 
   sources = [
-    "//zircon/system/host/fidl/examples/library-a/point.fidl"
+    "//zircon/system/host/fidl/examples/library-a/point.fidl",
   ]
 }
 
@@ -50,7 +79,7 @@ fidl("view") {
   name = "fidl.examples.libraryb"
 
   sources = [
-    "//zircon/system/host/fidl/examples/library-b/view.fidl"
+    "//zircon/system/host/fidl/examples/library-b/view.fidl",
   ]
 
   deps = [
@@ -74,10 +103,10 @@ group("examples") {
     ":example-8",
     ":example-9",
     ":interface-ordinals",
+    ":point",
     ":tables",
     ":test",
     ":types",
-    ":point",
     ":view",
   ]
 }

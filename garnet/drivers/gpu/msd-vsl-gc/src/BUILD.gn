@@ -40,7 +40,5 @@ source_set("src") {
     "//garnet/lib/magma/src/magma_util/platform:mmio",
     "//garnet/lib/magma/src/magma_util/platform:semaphore",
   ]
-  friend = [
-    "../tests/unit_tests:*",
-  ]
+  friend = [ "../tests/unit_tests:*" ]
 }

@@ -9,7 +9,7 @@ rustc_macro("fuchsia-async-macro") {
   edition = "2018"
   deps = [
     "//third_party/rust-crates/rustc_deps:proc-macro2",
-    "//third_party/rust-crates/rustc_deps:syn",
     "//third_party/rust-crates/rustc_deps:quote",
+    "//third_party/rust-crates/rustc_deps:syn",
   ]
 }

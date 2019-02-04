@@ -28,7 +28,6 @@ rustc_binary("bin") {
 }
 
 package("net-cli") {
-
   deps = [
     ":bin",
   ]

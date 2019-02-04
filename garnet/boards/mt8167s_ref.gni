@@ -1,5 +1,6 @@
 import("//garnet/boards/arm64.gni")
 
-custom_signing_script = "//zircon/kernel/target/arm64/board/mt8167s_ref/package-image.sh"
+custom_signing_script =
+    "//zircon/kernel/target/arm64/board/mt8167s_ref/package-image.sh"
 
 use_vbmeta = true

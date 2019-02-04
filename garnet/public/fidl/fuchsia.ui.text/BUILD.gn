@@ -8,12 +8,12 @@ fidl("fuchsia.ui.text") {
   sdk_category = "partner"
 
   sources = [
-    "text_field.fidl",
     "primitives.fidl",
+    "text_field.fidl",
     "text_manager.fidl",
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.ui.input"
+    "//garnet/public/fidl/fuchsia.ui.input",
   ]
 }

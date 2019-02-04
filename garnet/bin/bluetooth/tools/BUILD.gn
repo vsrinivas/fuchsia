@@ -7,13 +7,13 @@ import("//build/package.gni")
 package("tools") {
   deps = [
     "bt-cli:bin",
-    "bt-snoop-cli:bin",
     "bt-fake-hci",
     "bt-hci-tool",
     "bt-intel-tool",
     "bt-le-central",
     "bt-le-peripheral",
     "bt-pairing-tool",
+    "bt-snoop-cli:bin",
   ]
 
   binaries = [
