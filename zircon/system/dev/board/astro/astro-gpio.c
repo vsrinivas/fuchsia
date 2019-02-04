@@ -93,6 +93,12 @@ zx_status_t aml_gpio_init(aml_bus_t* bus) {
         return status;
     }
 
+    // Enable mute LED so it will be controlled by mute switch.
+    status = gpio_impl_config_out(&bus->gpio, S905D2_GPIOAO(11), 1);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml_gpio_init: gpio_impl_config_out failed: %d\n", status);
+    }
+
 #if GPIO_TEST
     const pbus_gpio_t gpio_test_gpios[] = {
         {
