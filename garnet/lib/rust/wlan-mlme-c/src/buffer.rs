@@ -106,11 +106,13 @@ pub struct OutBuf {
 
 impl OutBuf {
     fn from(buf: InBuf, written_bytes: usize) -> Self {
-        OutBuf {
+        let outbuf = OutBuf {
             raw: buf.raw,
             data: buf.data,
             written_bytes,
-        }
+        };
+        std::mem::forget(buf);
+        outbuf
     }
 }
 
@@ -197,8 +199,17 @@ mod tests {
 
     #[test]
     fn from_in_buf() {
+        static mut RETURNED_RAW_BUFFER: *mut c_void = ptr::null_mut();
+
+        unsafe extern "C" fn assert_free_buffer(raw: *mut c_void) {
+            // Safe, this is a function specific static field.
+            unsafe {
+                RETURNED_RAW_BUFFER = raw;
+            }
+        }
+
         let inbuf = InBuf {
-            free_buffer: default_free_buffer,
+            free_buffer: assert_free_buffer,
             raw: 42 as *mut c_void,
             data: 43 as *mut u8,
             len: 20,
@@ -207,6 +218,11 @@ mod tests {
         assert_eq!(42 as *mut c_void, outbuf.raw);
         assert_eq!(43 as *mut u8, outbuf.data);
         assert_eq!(10, outbuf.written_bytes);
+
+        // Safe, this is a function specific static field.
+        unsafe {
+            assert!(RETURNED_RAW_BUFFER.is_null());
+        }
     }
 
 }
