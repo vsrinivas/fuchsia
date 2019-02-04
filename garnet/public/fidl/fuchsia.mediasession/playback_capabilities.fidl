@@ -38,4 +38,7 @@ struct PlaybackCapabilities {
 
     /// A set of names of custom extensions the player advertises.
     vector<string> custom_extensions;
+
+    /// If set, the player can |BindGainControl()|.
+    bool has_gain_control;
 };

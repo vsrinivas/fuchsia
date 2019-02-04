@@ -142,6 +142,9 @@ impl RequestForwarder {
             ControllerRequest::SetShuffleMode { shuffle_on, .. } => {
                 self.controller_proxy.set_shuffle_mode(shuffle_on)?
             }
+            ControllerRequest::BindGainControl { gain_control_request, .. } => {
+                self.controller_proxy.bind_gain_control(gain_control_request)?
+            }
             ControllerRequest::ConnectToExtension { extension, channel, .. } => {
                 self.controller_proxy.connect_to_extension(&extension, channel)?
             }
