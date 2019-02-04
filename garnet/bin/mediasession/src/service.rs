@@ -23,9 +23,7 @@ struct ActiveSessionQueue {
 
 impl ActiveSessionQueue {
     pub fn new() -> Self {
-        Self {
-            active_sessions: VecDeque::new(),
-        }
+        Self { active_sessions: VecDeque::new() }
     }
 
     /// Returns session which most recently reported an active status if it
@@ -65,10 +63,7 @@ pub enum ServiceEvent {
     NewSession(Session),
     SessionClosed(u64),
     SessionActivity(u64),
-    NewControllerRequest {
-        session_id: u64,
-        request: ServerEnd<ControllerMarker>,
-    },
+    NewControllerRequest { session_id: u64, request: ServerEnd<ControllerMarker> },
     NewActiveSessionChangeListener(ControllerRegistryControlHandle),
 }
 
@@ -106,10 +101,7 @@ impl Service {
                         self.broadcast_active_session();
                     }
                 }
-                ServiceEvent::NewControllerRequest {
-                    session_id,
-                    request,
-                } => {
+                ServiceEvent::NewControllerRequest { session_id, request } => {
                     if let Some(request_sink) = self.published_sessions.get_mut(&session_id) {
                         log_error_discard_result(await!(request_sink.send(request)));
                     }
@@ -143,11 +135,10 @@ impl Service {
     }
 
     fn send_active_session(
-        active_session: Option<u64>, recipient: &ControllerRegistryControlHandle,
+        active_session: Option<u64>,
+        recipient: &ControllerRegistryControlHandle,
     ) -> Result<()> {
-        let mut update_out_of_line = ActiveSession {
-            session_id: active_session.unwrap_or(0),
-        };
+        let mut update_out_of_line = ActiveSession { session_id: active_session.unwrap_or(0) };
 
         recipient
             .send_on_active_session(active_session.map(|_| OutOfLine(&mut update_out_of_line)))

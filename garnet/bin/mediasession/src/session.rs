@@ -32,7 +32,9 @@ impl Session {
     /// `Session` should not be used after it sends a `SessionClosed`
     /// `ServiceEvent`.
     pub fn new(
-        id: u64, controller_proxy: ControllerProxy, service_event_sink: Sender<ServiceEvent>,
+        id: u64,
+        controller_proxy: ControllerProxy,
+        service_event_sink: Sender<ServiceEvent>,
     ) -> Result<Self> {
         let event_stream = controller_proxy.take_event_stream();
         Ok(Self {
@@ -55,10 +57,8 @@ impl Session {
         let mut listener_sink = self.event_broadcaster.start(
             async move {
                 forwarder_handle.abort();
-                trylog!(
-                    await!(service_event_sink.send(ServiceEvent::SessionClosed(session_id)))
-                        .context("Sending Session epitaph.")
-                );
+                trylog!(await!(service_event_sink.send(ServiceEvent::SessionClosed(session_id)))
+                    .context("Sending Session epitaph."));
             },
         );
 
@@ -142,11 +142,9 @@ impl RequestForwarder {
             ControllerRequest::SetShuffleMode { shuffle_on, .. } => {
                 self.controller_proxy.set_shuffle_mode(shuffle_on)?
             }
-            ControllerRequest::ConnectToExtension {
-                extension, channel, ..
-            } => self
-                .controller_proxy
-                .connect_to_extension(&extension, channel)?,
+            ControllerRequest::ConnectToExtension { extension, channel, .. } => {
+                self.controller_proxy.connect_to_extension(&extension, channel)?
+            }
         };
         Ok(())
     }
@@ -191,17 +189,16 @@ struct EventBroadcaster {
 
 impl EventBroadcaster {
     fn new(
-        id: u64, service_event_sink: Sender<ServiceEvent>, source: ControllerEventStream,
+        id: u64,
+        service_event_sink: Sender<ServiceEvent>,
+        source: ControllerEventStream,
     ) -> Self {
-        Self {
-            id,
-            service_event_sink,
-            source,
-        }
+        Self { id, service_event_sink, source }
     }
 
     fn start(
-        self, epitaph: impl Future<Output = ()> + Send + 'static,
+        self,
+        epitaph: impl Future<Output = ()> + Send + 'static,
     ) -> Sender<ControllerControlHandle> {
         let (listener_sink, listener_stream) = channel(CHANNEL_BUFFER_SIZE);
         fasync::spawn(
@@ -278,31 +275,29 @@ impl EventBroadcaster {
             ControllerEvent::OnMetadataChanged { media_metadata } => {
                 listener.send_on_metadata_changed(media_metadata)
             }
-            ControllerEvent::OnPlaybackCapabilitiesChanged {
-                playback_capabilities,
-            } => listener.send_on_playback_capabilities_changed(playback_capabilities),
+            ControllerEvent::OnPlaybackCapabilitiesChanged { playback_capabilities } => {
+                listener.send_on_playback_capabilities_changed(playback_capabilities)
+            }
         }
         .map_err(Into::into)
     }
 
     /// Delivers `state` to `listener`.
     fn deliver_state(state: &mut SessionState, listener: &ControllerControlHandle) -> Result<()> {
-        [
-            &mut state.metadata,
-            &mut state.playback_capabilities,
-            &mut state.playback_status,
-        ]
-        .iter_mut()
-        .filter_map(|update: &mut &mut Option<ControllerEvent>| (*update).as_mut())
-        .map(|update: &mut ControllerEvent| Self::send_event(&listener, update))
-        .collect()
+        [&mut state.metadata, &mut state.playback_capabilities, &mut state.playback_status]
+            .iter_mut()
+            .filter_map(|update: &mut &mut Option<ControllerEvent>| (*update).as_mut())
+            .map(|update: &mut ControllerEvent| Self::send_event(&listener, update))
+            .collect()
     }
 
     fn event_is_an_active_playback_status(event: &ControllerEvent) -> bool {
         match *event {
-            ControllerEvent::OnPlaybackStatusChanged {
-                ref playback_status,
-            } if playback_status.playback_state == PlaybackState::Playing => true,
+            ControllerEvent::OnPlaybackStatusChanged { ref playback_status }
+                if playback_status.playback_state == PlaybackState::Playing =>
+            {
+                true
+            }
             _ => false,
         }
     }

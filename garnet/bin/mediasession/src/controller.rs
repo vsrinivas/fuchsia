@@ -26,13 +26,12 @@ impl ControllerRegistry {
     }
 
     async fn serve(mut self, channel: fasync::Channel) {
-        let (mut request_stream, control_handle) = trylog!(
-            ServerEnd::<ControllerRegistryMarker>::new(channel.into_zx_channel())
-                .into_stream_and_control_handle()
-        );
-        trylog!(await!(self.fidl_sink.send(
-            ServiceEvent::NewActiveSessionChangeListener(control_handle)
-        )));
+        let (mut request_stream, control_handle) =
+            trylog!(ServerEnd::<ControllerRegistryMarker>::new(channel.into_zx_channel())
+                .into_stream_and_control_handle());
+        trylog!(await!(self
+            .fidl_sink
+            .send(ServiceEvent::NewActiveSessionChangeListener(control_handle))));
         while let Some(request) =
             trylog!(await!(request_stream.try_next())
                 .context("ControllerRegistry server request stream."))
@@ -43,12 +42,10 @@ impl ControllerRegistry {
                 ..
             } = request;
 
-            trylog!(await!(self.fidl_sink.send(
-                ServiceEvent::NewControllerRequest {
-                    session_id,
-                    request: controller_request
-                }
-            )));
+            trylog!(await!(self.fidl_sink.send(ServiceEvent::NewControllerRequest {
+                session_id,
+                request: controller_request
+            })));
         }
     }
 }

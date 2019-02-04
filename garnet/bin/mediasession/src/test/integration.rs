@@ -6,10 +6,10 @@ use failure::{Error, ResultExt};
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_mediaplayer::TimelineFunction;
 use fidl_fuchsia_mediasession::{
-    ActiveSession, ControllerControlHandle, ControllerEvent, ControllerMarker, ControllerRequest,
-    ControllerRequestStream, ControllerRegistryEvent, ControllerRegistryEventStream,
-    ControllerRegistryMarker, ControllerRegistryProxy, PlaybackState, PlaybackStatus, PublisherMarker,
-    PublisherProxy, RepeatMode,
+    ActiveSession, ControllerControlHandle, ControllerEvent, ControllerMarker,
+    ControllerRegistryEvent, ControllerRegistryEventStream, ControllerRegistryMarker,
+    ControllerRegistryProxy, ControllerRequest, ControllerRequestStream, PlaybackState,
+    PlaybackStatus, PublisherMarker, PublisherProxy, RepeatMode,
 };
 use fuchsia_app as app;
 use fuchsia_async as fasync;
@@ -51,11 +51,7 @@ impl TestSession {
             .into_stream_and_control_handle()
             .context("Unpacking Controller server end.")?;
 
-        Ok(Self {
-            request_stream,
-            control_handle,
-            client_end,
-        })
+        Ok(Self { request_stream, control_handle, client_end })
     }
 }
 
@@ -75,33 +71,23 @@ impl TestService {
             .launch(String::from(MEDIASESSION_URL), None)
             .context("Launching mediasession.")?;
 
-        let publisher = mediasession
-            .connect_to_service(PublisherMarker)
-            .context("Connecting to Publisher.")?;
+        let publisher =
+            mediasession.connect_to_service(PublisherMarker).context("Connecting to Publisher.")?;
         let controller_registry = mediasession
             .connect_to_service(ControllerRegistryMarker)
             .context("Connecting to ControllerRegistry.")?;
         let active_session_changes = controller_registry.take_event_stream();
 
-        Ok(Self {
-            app: mediasession,
-            publisher,
-            controller_registry,
-            active_session_changes,
-        })
+        Ok(Self { app: mediasession, publisher, controller_registry, active_session_changes })
     }
 
     async fn expect_active_session(&mut self, expected: Option<u64>) {
         assert!(!self.active_session_changes.is_terminated());
-        let ControllerRegistryEvent::OnActiveSession {
-            active_session: actual,
-        } = await!(self.active_session_changes.try_next())
-            .expect("Reported active session.")
-            .expect("Active session stream");
-        assert_eq!(
-            actual,
-            expected.map(|session_id| Box::new(ActiveSession { session_id }))
-        );
+        let ControllerRegistryEvent::OnActiveSession { active_session: actual } =
+            await!(self.active_session_changes.try_next())
+                .expect("Reported active session.")
+                .expect("Active session stream");
+        assert_eq!(actual, expected.map(|session_id| Box::new(ActiveSession { session_id })));
     }
 }
 
@@ -232,10 +218,8 @@ async fn service_broadcasts_events() {
             .controller_registry
             .connect_to_controller_by_id(session_id, server_end)
             .expect("To connect to session.");
-        let mut event_stream = client_end
-            .into_proxy()
-            .expect("Controller proxy")
-            .take_event_stream();
+        let mut event_stream =
+            client_end.into_proxy().expect("Controller proxy").take_event_stream();
         let event = await!(event_stream.try_next()).expect("Next Controller event.");
         assert_eq!(
             event.and_then(|event| match event {
@@ -257,10 +241,7 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
     // Publish 100 sessions and have each of them post a playback status.
     let count = 100;
     let mut test_sessions = Vec::new();
-    let numbered_playback_status = |i| PlaybackStatus {
-        duration: i,
-        ..default_playback_status()
-    };
+    let numbered_playback_status = |i| PlaybackStatus { duration: i, ..default_playback_status() };
     for i in 0..count {
         let test_session = TestSession::new().expect(&format!("Test session {}.", i));
         let session_id = await!(test_service.publisher.publish(test_session.client_end))
@@ -301,10 +282,7 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
         test_service
             .controller_registry
             .connect_to_controller_by_id(session_id, server_end)
-            .expect(&format!(
-                "To make connection request to session {}",
-                session_id
-            ));
+            .expect(&format!("To make connection request to session {}", session_id));
         let mut event_stream = client_end
             .into_proxy()
             .expect(&format!("Controller proxy for session {}.", session_id))
@@ -321,9 +299,9 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
                 }
             }
             Expectation::SessionReportsPlaybackStatus(expected) => match maybe_event {
-                Some(ControllerEvent::OnPlaybackStatusChanged {
-                    playback_status: actual,
-                }) => assert_eq!(actual, expected),
+                Some(ControllerEvent::OnPlaybackStatusChanged { playback_status: actual }) => {
+                    assert_eq!(actual, expected)
+                }
                 other => panic!("Expected a playback status event; got: {:?}", other),
             },
         }

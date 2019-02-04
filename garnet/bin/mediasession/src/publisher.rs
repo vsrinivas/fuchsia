@@ -28,12 +28,7 @@ impl Publisher {
     pub fn factory(fidl_sink: Sender<ServiceEvent>) -> impl ServiceFactory {
         let publisher = Publisher { fidl_sink };
         (PublisherMarker::NAME, move |channel| {
-            fasync::spawn(
-                publisher
-                    .clone()
-                    .serve(channel)
-                    .unwrap_or_else(|e| eprintln!("{}", e)),
-            )
+            fasync::spawn(publisher.clone().serve(channel).unwrap_or_else(|e| eprintln!("{}", e)))
         })
     }
 
@@ -42,10 +37,7 @@ impl Publisher {
         while let Some(request) =
             await!(request_stream.try_next()).context("Publisher server request stream.")?
         {
-            let PublisherRequest::Publish {
-                responder,
-                controller,
-            } = request;
+            let PublisherRequest::Publish { responder, controller } = request;
             responder
                 .send(await!(self.publish(controller))?)
                 .context("Giving session id to client.")?;
@@ -57,9 +49,7 @@ impl Publisher {
         let id = random::<u64>();
         await!(self.fidl_sink.send(ServiceEvent::NewSession(Session::new(
             id,
-            controller
-                .into_proxy()
-                .context("Making controller client end into proxy.")?,
+            controller.into_proxy().context("Making controller client end into proxy.")?,
             self.fidl_sink.clone(),
         )?)))?;
         Ok(id)
