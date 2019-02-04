@@ -14,6 +14,7 @@ use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use wlan_sme::{ap as ap_sme, DeviceInfo};
+use wlan_common::RadioConfig;
 
 use crate::stats_scheduler::StatsRequest;
 use crate::Never;
@@ -104,7 +105,11 @@ async fn handle_fidl_request(
 
 async fn start(sme: &Mutex<Sme>, config: fidl_sme::ApConfig) -> fidl_sme::StartApResultCode {
     let sme_config =
-        ap_sme::Config { ssid: config.ssid, password: config.password, channel: config.channel };
+        ap_sme::Config {
+            ssid: config.ssid,
+            password: config.password,
+            radio_cfg: RadioConfig::from_fidl(config.radio_cfg),
+        };
 
     let receiver = sme.lock().unwrap().on_start_command(sme_config);
     let r = await!(receiver).unwrap_or_else(|_| {

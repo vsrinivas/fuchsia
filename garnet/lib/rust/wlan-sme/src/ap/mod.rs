@@ -21,13 +21,12 @@ use crate::sink::MlmeSink;
 use crate::timer::{self, EventId, TimedEvent, Timer};
 use crate::{DeviceInfo, MacAddr, MlmeRequest, Ssid};
 use failure::{bail, ensure};
-use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
 use futures::channel::{mpsc, oneshot};
 use log::{debug, error, info, warn};
 use std::boxed::Box;
 use std::sync::{Arc, Mutex};
-use wlan_common::channel::{Cbw, Channel};
+use wlan_common::{channel::Channel, RadioConfig};
 use wlan_rsn::{self, gtk::GtkProvider, nonce::NonceReader, psk, rsne::Rsne, NegotiatedRsne};
 
 const DEFAULT_BEACON_PERIOD: u16 = 100;
@@ -37,7 +36,7 @@ const DEFAULT_DTIM_PERIOD: u8 = 1;
 pub struct Config {
     pub ssid: Ssid,
     pub password: Vec<u8>,
-    pub channel: u8,
+    pub radio_cfg: RadioConfig,
 }
 
 pub type TimeStream = timer::TimeStream<Event>;
@@ -246,7 +245,11 @@ impl super::Station for ApSme {
 }
 
 fn validate_config(config: &Config) -> Result<(), StartResult> {
-    let c = Channel::new(config.channel.clone(), Cbw::Cbw20);
+    let rc = &config.radio_cfg;
+    if rc.phy.is_none() || rc.cbw.is_none() || rc.primary_chan.is_none() {
+        return Err(StartResult::InvalidArguments);
+    }
+    let c = Channel::new(rc.primary_chan.unwrap(), config.radio_cfg.cbw.unwrap());
     if !c.is_valid() {
         Err(StartResult::InvalidArguments)
     } else if c.is_dfs() {
@@ -442,12 +445,15 @@ fn create_start_request(config: &Config, ap_rsn: Option<&RsnCfg>) -> fidl_mlme::
         rsne.as_bytes(&mut buf);
         buf
     });
+
+    let phy_to_use = config.radio_cfg.phy.unwrap().to_fidl();
+    let (cbw_to_use, _) = config.radio_cfg.cbw.unwrap().to_fidl();
     fidl_mlme::StartRequest {
         ssid: config.ssid.clone(),
         bss_type: fidl_mlme::BssTypes::Infrastructure,
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
-        channel: config.channel,
+        channel: config.radio_cfg.primary_chan.unwrap(),
         country: fidl_mlme::Country {
             // TODO(WLAN-870): Get config from wlancfg
             alpha2: ['U' as u8, 'S' as u8],
@@ -455,8 +461,8 @@ fn create_start_request(config: &Config, ap_rsn: Option<&RsnCfg>) -> fidl_mlme::
         },
         rsne: rsne_bytes,
         mesh_id: vec![],
-        phy: fidl_common::Phy::Ht, // TODO(WLAN-908, WLAN-909): Use dynamic value
-        cbw: fidl_common::Cbw::Cbw20,
+        phy: phy_to_use,
+        cbw: cbw_to_use,
     }
 }
 
@@ -465,6 +471,7 @@ mod tests {
     use super::*;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use std::error::Error;
+    use wlan_common::{channel::{Cbw, Phy}, RadioConfig};
 
     use crate::{MlmeStream, Station};
 
@@ -488,15 +495,19 @@ mod tests {
         0x11, 0x00, 0x0f, 0xac, 0x04, // group management cipher suite -- CCMP-128
     ];
 
+    fn radio_cfg(pri_chan: u8) -> RadioConfig {
+        RadioConfig::new(Phy::Ht, Cbw::Cbw20, pri_chan)
+    }
+
     fn unprotected_config() -> Config {
-        Config { ssid: SSID.to_vec(), password: vec![], channel: 11 }
+        Config { ssid: SSID.to_vec(), password: vec![], radio_cfg: radio_cfg(11), }
     }
 
     fn protected_config() -> Config {
         Config {
             ssid: SSID.to_vec(),
             password: vec![0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68],
-            channel: 11,
+            radio_cfg: radio_cfg(11),
         }
     }
 
@@ -504,15 +515,15 @@ mod tests {
     fn test_validate_config() {
         assert_eq!(
             Err(StartResult::InvalidArguments),
-            validate_config(&Config { ssid: vec![], password: vec![], channel: 15 })
+            validate_config(&Config { ssid: vec![], password: vec![], radio_cfg: radio_cfg(15),})
         );
         assert_eq!(
             Err(StartResult::DfsUnsupported),
-            validate_config(&Config { ssid: vec![], password: vec![], channel: 52 })
+            validate_config(&Config { ssid: vec![], password: vec![], radio_cfg: radio_cfg(52),})
         );
         assert_eq!(
             Ok(()),
-            validate_config(&Config { ssid: vec![], password: vec![], channel: 40 })
+            validate_config(&Config { ssid: vec![], password: vec![], radio_cfg: radio_cfg(40),})
         );
     }
 
@@ -539,7 +550,7 @@ mod tests {
             assert_eq!(start_req.bss_type, fidl_mlme::BssTypes::Infrastructure);
             assert_ne!(start_req.beacon_period, 0);
             assert_ne!(start_req.dtim_period, 0);
-            assert_eq!(start_req.channel, unprotected_config().channel);
+            assert_eq!(start_req.channel, unprotected_config().radio_cfg.primary_chan.expect("invalid config"));
             assert!(start_req.rsne.is_none());
         } else {
             panic!("expect start AP request to MLME");

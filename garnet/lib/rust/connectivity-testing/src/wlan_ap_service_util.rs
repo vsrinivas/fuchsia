@@ -4,6 +4,7 @@
 
 use failure::{format_err, Error, ResultExt};
 use fidl::endpoints;
+use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_zircon as zx;
@@ -39,7 +40,14 @@ pub async fn start_ap(
     let mut config = fidl_sme::ApConfig {
         ssid: target_ssid,
         password: target_pwd,
-        channel,
+        radio_cfg: fidl_sme::RadioConfig {
+            override_phy: false,
+            phy: fidl_common::Phy::Ht,
+            override_cbw: false,
+            cbw: fidl_common::Cbw::Cbw20,
+            override_primary_chan: true,
+            primary_chan: channel,
+        },
     };
     let start_ap_result_code = await!(iface_sme_proxy.start(&mut config));
 
@@ -109,7 +117,14 @@ mod tests {
         let config = fidl_sme::ApConfig {
             ssid: target_ssid.to_vec(),
             password: target_password.to_vec(),
-            channel,
+            radio_cfg: fidl_sme::RadioConfig {
+                override_phy: false,
+                phy: fidl_common::Phy::Ht,
+                override_cbw: false,
+                cbw: fidl_common::Cbw::Cbw20,
+                override_primary_chan: true,
+                primary_chan: channel,
+            },
         };
 
         let fut = start_ap(&ap_sme, target_ssid, target_password, channel);

@@ -21,6 +21,7 @@ use futures::prelude::*;
 use std::fmt;
 use std::str::FromStr;
 use structopt::StructOpt;
+use wlan_common::{channel::{Cbw, Phy}, RadioConfig};
 
 mod opts;
 use crate::opts::*;
@@ -214,17 +215,17 @@ async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             let mut config = fidl_sme::ApConfig {
                 ssid: ssid.as_bytes().to_vec(),
                 password: password.map_or(vec![], |p| p.as_bytes().to_vec()),
-                channel,
+                radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, channel).to_fidl(),
             };
             let r = await!(sme.start(&mut config))?;
             match r {
                 fidl_sme::StartApResultCode::InvalidArguments => {
-                    println!("{:?}: Channel {:?} is invalid", r, config.channel);
+                    println!("{:?}: Channel {:?} is invalid", r, config.radio_cfg.primary_chan);
                 }
                 fidl_sme::StartApResultCode::DfsUnsupported => {
                     println!(
                         "{:?}: The specified role does not support DFS channel {:?}",
-                        r, config.channel
+                        r, config.radio_cfg.primary_chan
                     );
                 }
                 _ => {

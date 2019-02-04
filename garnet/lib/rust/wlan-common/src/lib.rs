@@ -19,7 +19,7 @@ pub mod sequence;
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use channel::{Phy, Cbw};
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct RadioConfig {
     pub phy: Option<Phy>,
     pub cbw: Option<Cbw>,

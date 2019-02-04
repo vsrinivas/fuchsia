@@ -6,7 +6,7 @@
 pub mod tests {
     use crate::{config, mac_frames, test_utils};
     use {
-        fidl, fidl_fuchsia_wlan_common as wlan_common, fidl_fuchsia_wlan_device as wlan_device,
+        fidl, fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device as wlan_device,
         fidl_fuchsia_wlan_device_service as fidl_wlan_service, fidl_fuchsia_wlan_sme as fidl_sme,
         fidl_fuchsia_wlan_tap as wlantap, fuchsia_app as app,
         fuchsia_async::{self as fasync, temp::TempStreamExt, TimeoutExt},
@@ -16,6 +16,7 @@ pub mod tests {
         hex,
         std::io::Cursor,
         std::panic,
+        wlan_common::{channel::{Cbw, Phy}, RadioConfig},
     };
 
     pub fn test_open_ap_connect() {
@@ -64,7 +65,7 @@ pub mod tests {
         let mut config = fidl_sme::ApConfig {
             ssid: String::from("fuchsia").into_bytes(),
             password: vec![],
-            channel: 11,
+            radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, 11).to_fidl(),
         };
         let result_code =
             exec.run_singlethreaded(sme.start(&mut config)).expect("expect start ap result code");
@@ -203,10 +204,10 @@ pub mod tests {
             valid_fields: 0,
             phy: 0,
             data_rate: 0,
-            chan: wlan_common::WlanChan {
+            chan: fidl_common::WlanChan {
                 // TODO(FIDL-54): use clone()
                 primary: 11,
-                cbw: wlan_common::Cbw::Cbw20,
+                cbw: fidl_common::Cbw::Cbw20,
                 secondary80: 0,
             },
             mcs: 0,

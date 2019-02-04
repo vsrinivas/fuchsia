@@ -324,6 +324,7 @@ mod tests {
     use futures::channel::mpsc;
     use futures::task::Poll;
     use pin_utils::pin_mut;
+    use wlan_common::{channel::{Cbw, Phy}, RadioConfig};
 
     use crate::{
         mlme_query_proxy::MlmeQueryProxy,
@@ -701,6 +702,8 @@ mod tests {
     }
 
     fn fake_ap_config() -> fidl_sme::ApConfig {
-        fidl_sme::ApConfig { ssid: b"qwerty".to_vec(), password: vec![], channel: 6 }
+        fidl_sme::ApConfig { ssid: b"qwerty".to_vec(),
+            password: vec![],
+            radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6).to_fidl(), }
     }
 }

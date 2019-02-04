@@ -13,6 +13,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/ethernet",
+    "//garnet/lib/rust/wlan-common",
     "//garnet/lib/rust/wlantap-client",
     "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/lib/wlan/fidl:service-rustc",
