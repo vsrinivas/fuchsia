@@ -107,9 +107,11 @@ MODULE_TYPE := usertest
 TEST_DIR := $(LOCAL_DIR)/test/integration/
 
 MODULE_SRCS := \
-    $(TEST_DIR)/helper.cpp \
     $(TEST_DIR)/assertions_test.c \
     $(TEST_DIR)/assertions_test.cpp \
+    $(TEST_DIR)/helper.cpp \
+    $(TEST_DIR)/print_test.c \
+    $(TEST_DIR)/print_test.cpp \
     $(TEST_DIR)/register_test.c \
     $(TEST_DIR)/register_test.cpp \
     $(TEST_DIR)/main.cpp \
@@ -173,6 +175,8 @@ MODULE_SRCS := \
     $(TEST_DIR)/assertions_test.cpp \
     $(TEST_DIR)/helper.cpp \
     $(TEST_DIR)/main.cpp \
+    $(TEST_DIR)/print_test.c \
+    $(TEST_DIR)/print_test.cpp \
     $(TEST_DIR)/register_test.c \
     $(TEST_DIR)/register_test.cpp \
 

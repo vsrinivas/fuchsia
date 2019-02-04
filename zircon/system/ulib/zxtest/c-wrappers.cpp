@@ -68,7 +68,7 @@ size_t _zxtest_print_int32(int32_t val, char* buffer, size_t buffer_size) {
     return snprintf(buffer, buffer_size, "%" PRIi32, val);
 }
 
-size_t _zxtest_print_uint32(int32_t val, char* buffer, size_t buffer_size) {
+size_t _zxtest_print_uint32(uint32_t val, char* buffer, size_t buffer_size) {
     return snprintf(buffer, buffer_size, "%" PRIu32, val);
 }
 
