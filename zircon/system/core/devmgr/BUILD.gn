@@ -10,7 +10,7 @@ group("devmgr") {
   ]
 }
 
-# Drivers depend on this (see $standard_fuchsia_user_configs).
+# Drivers depend on this (see $standard_environments).
 # It just gets the standard devhost binary into the BOOTFS image.
 group("driver_deps") {
   data_deps = [

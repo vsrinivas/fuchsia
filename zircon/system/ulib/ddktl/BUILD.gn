@@ -1,0 +1,70 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("ddktl") {
+  sdk = "static"
+  sdk_headers = [
+    "ddktl/protocol/empty-protocol.h",
+    "ddktl/device-internal.h",
+    "ddktl/device.h",
+    "ddktl/i2c-channel.h",
+    "ddktl/pdev.h",
+  ]
+  sources = [
+    "pdev.cpp",
+  ]
+  public_deps = [
+    # <ddktl/pdev.h> has #include <ddktl/protocol/clk.h>.
+    "$zx/system/banjo/ddk-protocol-clk",
+
+    # <ddktl/pdev.h> has #include <ddktl/protocol/gpio.h>.
+    "$zx/system/banjo/ddk-protocol-gpio",
+
+    # <ddktl/pdev.h> has #include <ddktl/protocol/platform/device.h>.
+    "$zx/system/banjo/ddk-protocol-platform-device",
+
+    # <ddktl/device-internal.h> has #include <fbl/type_support.h>.
+    "$zx/system/ulib/fbl:headers",
+
+    # <ddktl/protocol/display-controller.h> has #include <lib/zx/vmo.h>.
+    "$zx/system/ulib/zx:headers",
+
+    # <ddktl/pdev.h> has #include <lib/mmio/mmio.h>.
+    "$zx/system/dev/lib/mmio:headers",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-ethernet",
+    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+test_driver("ddktl-test") {
+  sources = [
+    "test/ddktl-test-binding.c",
+    "test/ddktl-test.cpp",
+    "test/device-tests.cpp",
+    "test/ethernet-tests.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-ethernet",
+    "$zx/system/banjo/ddk-protocol-test",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

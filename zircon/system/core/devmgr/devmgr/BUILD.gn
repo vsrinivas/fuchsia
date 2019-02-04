@@ -16,7 +16,7 @@ executable("devmgr") {
   # Bring the auxiliaries into the build and the image.  devhost isn't
   # listed here because it's implicitly in data_deps of every driver().
   data_deps = [
-    # TODO: "../dmctl",
+    "../dmctl",
     "../fshost",
     "$zx/system/core/netsvc",
     "$zx/system/core/svchost",

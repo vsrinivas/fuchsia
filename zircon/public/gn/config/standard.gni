@@ -109,6 +109,15 @@ standard_environments = [
         types = [ "host_tool" ]
         add = [ "$zx/system/ulib/fdio" ]
       },
+      {
+        # The "driver_deps" target represents the execution environment
+        # into which driver modules get loaded.  This represents the
+        # vanilla (or configured) environment.  Variants can remove this
+        # and add a different variant driver_deps label that represents the
+        # execution environment those drivers should get.
+        types = [ "driver" ]
+        add = [ "$zx/system/core/devmgr:driver_deps" ]
+      },
     ]
     shlib = true
     strip = "--strip-sections"

@@ -114,6 +114,7 @@ template("_shlib_toolchain_target") {
                            "*",
                            [
                              "data_deps",
+                             "match",
                              "target_type",
                              "visibility",
                            ])
@@ -130,8 +131,8 @@ template("_shlib_toolchain_target") {
         # and mutators.  See environment().
         if (dep == "$dep") {
           deps += [ dep ]
-        } else if (!defined(dep.types) || dep.types + [ invoker.target_type ] -
-                                          [ invoker.target_type ] != dep.types) {
+        } else if (!defined(dep.types) || dep.types + [ invoker.match ] -
+                                          [ invoker.match ] != dep.types) {
           deps += dep.add
           deps -= dep.remove
         }
@@ -150,6 +151,7 @@ template("shared_library") {
     # This is the toolchain that actually builds the libraries.
     _shlib_toolchain_target(target_name) {
       target_type = "shared_library"
+      match = target_type
       forward_variables_from(invoker,
                              "*",
                              [
@@ -455,9 +457,9 @@ template("library") {
           deps += invoker.deps
         }
 
-        # An explicit `install_path = false` means this DSO is not installed.
-        if (install_path != false) {
-          metadata = {
+        metadata = {
+          # An explicit `install_path = false` means this DSO is not installed.
+          if (install_path != false) {
             manifest_inputs = [ "$target_out_dir/lib${output_name}.so" ]
             manifest_lines = [ "${install_path}=" +
                                rebase_path(manifest_inputs[0], root_build_dir) ]
@@ -1209,35 +1211,25 @@ template("host_tool") {
   }
 }
 
-# Build a C/C++ loadable module to run on the target system.
-#
-# Parameters
-#
-#   install_path
-#     Optional: If false (the default), nothing happens--the binary won't
-#     be installed anywhere automatically.  Set this to a string containing
-#     the install path where this module will appear in a BOOTFS
-#     or package filesystem image built containing it.
-#     Default: false
-#     Type: string or false
-#
-# See `gn help loadable_module()` for additional parameters and details.
-template("loadable_module") {
+# Subroutine of loadable_module() and driver().
+template("_loadable_module") {
   assert(!is_kernel)
   assert(!is_host)
   _variant_target(target_name) {
     # This is for _variant_target().
     target = {
       shlib = true
-      match = "loadable_module"
+      match = invoker.match
       type = "_shlib_toolchain_target"
     }
 
     # This is for _shlib_toolchain_target().
     target_type = "loadable_module"
+    match = target.match
     forward_variables_from(invoker,
                            "*",
                            [
+                             "match",
                              "metadata",
                              "target_type",
                              "testonly",
@@ -1307,6 +1299,125 @@ template("loadable_module") {
   }
 }
 
+# Build a C/C++ loadable module to run on the target system.
+#
+# Parameters
+#
+#   install_path
+#     Optional: If false (the default), nothing happens--the binary won't
+#     be installed anywhere automatically.  Set this to a string containing
+#     the install path where this module will appear in a BOOTFS
+#     or package filesystem image built containing it.
+#     Default: false
+#     Type: string or false
+#
+# See `gn help loadable_module` for additional parameters and details.
+template("loadable_module") {
+  _loadable_module(target_name) {
+    match = "loadable_module"
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+}
+
+# Build a Zircon driver module.
+#
+# A driver() target is like a loadable_module() target but with special
+# defaults.  It takes all the same parameters as loadable_module().
+# Drivers automatically depend on the driver ABI library and use configs
+# appropriate for drivers, including the static C++ standard library.
+# Drivers are prohibited from depending on arbitrary shared libraries.
+#
+# Parameters
+#
+#   install_path
+#     Optional: Where to install the driver in the BOOTFS.
+#     Default: "driver/${output_name}.so"
+#     Type: string or false
+#
+#   See loadable_module() for others
+#
+template("driver") {
+  _loadable_module(target_name) {
+    match = "driver"
+
+    data_deps = []
+    deps = []
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    # All drivers implicitly get the driver ABI.
+    deps += [ "$zx/system/ulib/driver" ]
+
+    # Elaborate the defaults to compute the output file name.
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
+
+    # Set the standard install_path.
+    if (!defined(install_path)) {
+      install_path = "driver/${output_name}.so"
+    }
+  }
+}
+
+# Build a driver() target meant only for testing.
+#
+# This is just like driver() with $testonly set to true and with
+# $install_path set to place the driver under driver/test/ rather than
+# driver/ (the default).
+#
+# Parameters
+#
+#   install_path
+#     Optional: Where to install the driver in the BOOTFS.
+#     Default: "driver/test/${output_name}.so"
+#     Type: string or false
+#
+#   See driver().
+#
+template("test_driver") {
+  driver(target_name) {
+    testonly = true
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "install_path",
+                             "testonly",
+                             "visibility",
+                           ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    # Elaborate the defaults to compute the output file name.
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
+    install_path = "driver/test/${output_name}.so"
+  }
+}
+
 ###
 ### set_defaults()
 ###
@@ -1331,6 +1442,12 @@ _compile_target_types = [
   "static_library",
   "test",
 ]
+if (toolchain.environment == "user") {
+  _compile_target_types += [
+    "driver",
+    "test_driver",
+  ]
+}
 
 # Apply set_defaults($target_name) according to ${toolchain.configs}.
 #
