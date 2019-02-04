@@ -4,11 +4,9 @@
 
 import("//build/package.gni")
 
-executable("bin") {
+source_set("src") {
   testonly = true
-  output_name = "netemul_sandbox"
   sources = [
-    "main.cc",
     "managed_environment.cc",
     "managed_environment.h",
     "managed_launcher.cc",
@@ -44,6 +42,45 @@ executable("bin") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/memfs-cpp",
     "//zircon/public/lib/zx",
+  ]
+}
+
+executable("bin") {
+  testonly = true
+  output_name = "netemul_sandbox"
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":src",
+    "//garnet/public/lib/component/cpp",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/memfs-cpp",
+  ]
+}
+
+executable("sandbox_unittest") {
+  testonly = true
+  sources = [
+    "sandbox_unittest.cc",
+  ]
+
+  deps = [
+    ":src",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/json",
+    "//garnet/public/lib/pkg_url",
+    "//third_party/rapidjson",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/memfs-cpp",
   ]
 }
 

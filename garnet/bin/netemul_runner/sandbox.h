@@ -18,6 +18,8 @@ class SandboxArgs {
  public:
   std::string package;
   std::vector<std::string> args;
+  // cmx facet override, used for testing.
+  std::string cmx_facet_override;
 };
 
 class Sandbox {
@@ -25,6 +27,7 @@ class Sandbox {
   using TerminationReason = fuchsia::sys::TerminationReason;
   using TerminationCallback =
       fit::function<void(int64_t code, TerminationReason reason)>;
+  using PackageLoadedCallback = fit::function<void()>;
   explicit Sandbox(SandboxArgs args);
 
   void SetTerminationCallback(TerminationCallback callback) {
@@ -32,6 +35,12 @@ class Sandbox {
   }
 
   void Start(async_dispatcher_t* dispatcher);
+
+  void SetPackageLoadedCallback(PackageLoadedCallback callback) {
+    package_loaded_callback_ = std::move(callback);
+  }
+
+  const SandboxEnv::Ptr& sandbox_environment() { return sandbox_env_; }
 
  private:
   void LoadPackage(fuchsia::sys::PackagePtr package);
@@ -61,6 +70,8 @@ class Sandbox {
           env,
       const config::Environment& config, bool root = false);
   bool ConfigureNetworks();
+  bool LoadEnvironmentConfig(const rapidjson::Value& facet,
+                             json::JSONParser* json_parser);
 
   async_dispatcher_t* main_dispatcher_;
   std::unique_ptr<async::Loop> helper_loop_;
@@ -69,6 +80,7 @@ class Sandbox {
   SandboxArgs args_;
   SandboxEnv::Ptr sandbox_env_;
   TerminationCallback termination_callback_;
+  PackageLoadedCallback package_loaded_callback_;
   fuchsia::sys::EnvironmentPtr parent_env_;
   fuchsia::sys::LoaderPtr loader_;
   ManagedEnvironment::Ptr root_;

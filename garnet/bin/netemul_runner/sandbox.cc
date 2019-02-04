@@ -135,12 +135,28 @@ void Sandbox::LoadPackage(fuchsia::sys::PackagePtr package) {
     return;
   }
 
-  if (!env_config_.ParseFromJSON(cmx.GetFacet(config::Config::Facet),
-                                 &json_parser)) {
-    FXL_LOG(ERROR) << "netemul facet failed to parse: "
-                   << json_parser.error_str();
+  bool env_config_ok = false;
+  if (args_.cmx_facet_override.empty()) {
+    env_config_ok = LoadEnvironmentConfig(cmx.GetFacet(config::Config::Facet),
+                                          &json_parser);
+  } else {
+    auto facet =
+        json_parser.ParseFromString(args_.cmx_facet_override, "Facet Override");
+    if (json_parser.HasError()) {
+      FXL_LOG(ERROR) << "netemul facet failed to parse: "
+                     << json_parser.error_str();
+    } else {
+      env_config_ok = LoadEnvironmentConfig(facet, &json_parser);
+    }
+  }
+
+  if (!env_config_ok) {
     Terminate(TerminationReason::INTERNAL_ERROR);
     return;
+  }
+
+  if (package_loaded_callback_) {
+    package_loaded_callback_();
   }
 
   async::PostTask(helper_loop_->dispatcher(), [this]() {
@@ -498,6 +514,16 @@ void Sandbox::UnregisterTest(size_t ticket) {
     // all tests finished successfully
     PostTerminate(0, TerminationReason::EXITED);
   }
+}
+
+bool Sandbox::LoadEnvironmentConfig(const rapidjson::Value& facet,
+                                    json::JSONParser* json_parser) {
+  if (!env_config_.ParseFromJSON(facet, json_parser)) {
+    FXL_LOG(ERROR) << "netemul facet failed to parse: "
+                   << json_parser->error_str();
+    return false;
+  }
+  return true;
 }
 
 }  // namespace netemul

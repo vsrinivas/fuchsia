@@ -6,7 +6,9 @@ import("//build/test/test_package.gni")
 
 test_package("netemul_sandbox_test") {
   deps = [
+    "//garnet/bin/netemul_runner:sandbox_unittest",
     "//garnet/bin/netemul_runner/model:model_unittest",
+    "//garnet/bin/netemul_runner/test/dummy_proc",
     "//garnet/bin/netemul_runner/test/env_build",
     "//garnet/bin/netemul_runner/test/netstack_socks",
     "//garnet/bin/netemul_runner/test/svc_list",
@@ -25,6 +27,16 @@ test_package("netemul_sandbox_test") {
       path = rebase_path("meta/env_build_run.cmx")
       dest = "env_build_run.cmx"
     },
+    {
+      path = rebase_path("meta/dummy_proc.cmx")
+      dest = "dummy_proc.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "dummy_proc"
+    },
   ]
 
   tests = [
@@ -39,6 +51,9 @@ test_package("netemul_sandbox_test") {
     },
     {
       name = "model_unittest"
+    },
+    {
+      name = "sandbox_unittest"
     },
   ]
 }
