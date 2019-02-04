@@ -41,7 +41,7 @@ std::pair<std::unique_ptr<ClientConfig>, uint32_t> GetClientConfig(
     return std::make_pair(nullptr, 0);
   }
 
-  return ClientConfig::CreateFromCobaltProjectConfigBytes(config_bytes);
+  return ClientConfig::CreateFromCobaltProjectRegistryBytes(config_bytes);
 }
 
 ReleaseStage ToReleaseStageProto(fuchsia::cobalt::ReleaseStage stage) {

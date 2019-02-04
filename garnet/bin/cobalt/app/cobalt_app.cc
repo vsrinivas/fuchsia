@@ -122,7 +122,7 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
 
   // Parse the data as a ClientConfig
   client_config_.reset(
-      ClientConfig::CreateFromCobaltConfigBytes(metrics_registry_bytes)
+      ClientConfig::CreateFromCobaltRegistryBytes(metrics_registry_bytes)
           .release());
   FXL_CHECK(client_config_)
       << "Could not parse the Cobalt global metrics registry: "
@@ -130,7 +130,7 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
 
   // Parse the data as a ProjectConfigs
   project_configs_.reset(
-      ProjectConfigs::CreateFromCobaltConfigBytes(metrics_registry_bytes)
+      ProjectConfigs::CreateFromCobaltRegistryBytes(metrics_registry_bytes)
           .release());
   FXL_CHECK(project_configs_)
       << "Could not parse the Cobalt global metrics registry: "
