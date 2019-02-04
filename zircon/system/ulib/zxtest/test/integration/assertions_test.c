@@ -488,3 +488,32 @@ TEST(ZXTestCAssertionTest, AssertBytesSingleCall) {
     ZX_ASSERT_MSG(called == 1, "ASSERT_BYTES_* evaluating multiple times.");
     ZX_ASSERT_MSG(getter_called == 1, "ASSERT_* evaluating multiple times.");
 }
+
+static void HelperFnFatal(bool fail) {
+    ASSERT_FALSE(fail, "Expected to fail.");
+}
+
+TEST(ZXTestCAssertionTest, AssertNoFatalFailureWithFatalFailure) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
+                     "Failed to abort test execution on helper fatal failure.");
+    ASSERT_NO_FATAL_FAILURES(HelperFnFatal(true), "HelperFnFatal had a failure. This is expected.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZXTestCAssertionTest, AssertNoFatalFailureWithoutFailure) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
+                     "Aborted test execution on helper with no failures.");
+    ASSERT_NO_FATAL_FAILURES(HelperFnFatal(false),
+                             "HelperFnFatal had a failure. This is not expected.");
+    TEST_CHECKPOINT();
+}
+
+static void HelperFn(bool fail) {
+    EXPECT_FALSE(fail, "Expected to fail.");
+}
+
+TEST(ZXTestCAssertionTest, AssertNoFatalFailureWithFailure) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Aborted test execution on helper failure.");
+    ASSERT_NO_FATAL_FAILURES(HelperFn(true), "HelperFn had a failure. This is expected.");
+    TEST_CHECKPOINT();
+}

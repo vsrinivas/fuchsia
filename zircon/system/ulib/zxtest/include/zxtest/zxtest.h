@@ -227,6 +227,7 @@ static void zxtest_clean_buffer(char** buffer) {
 #define FAIL(...)                                                                                  \
     _ASSERT_VAR(_EQ, false, true, true, __FILE__, __LINE__, "Failure condition met.", ##__VA_ARGS__)
 
-#define ASSERT_NO_FATAL_FAILURES(...)                                                              \
-    _ASSERT_VAR(_EQ, false, true, true, __FILE__, __LINE__, "Test registered fatal failures.",     \
-                ##__VA_ARGS__)
+#define ASSERT_NO_FATAL_FAILURES(statement, ...)                                                   \
+    statement;                                                                                     \
+    _ASSERT_VAR(_EQ, _ZXTEST_ABORT_IF_ERROR, false, true, __FILE__, __LINE__,                      \
+                "Test registered fatal failures in " #statement ".", ##__VA_ARGS__)

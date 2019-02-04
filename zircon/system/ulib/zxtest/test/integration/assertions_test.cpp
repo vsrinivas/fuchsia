@@ -14,6 +14,7 @@
 // and expects dont.
 // Tests will fail because we are verifying they actually work as intended, though the
 // pass/fail behavior is decided based on Verify functions.
+namespace {
 TEST(ZxTestAssertionsTest, Fail) {
     TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
                      "FAIL(...) macro did not abort test execution.");
@@ -491,3 +492,34 @@ TEST(ZXTestAssertionTest, AssertBytesSingleCall) {
     ZX_ASSERT_MSG(called == 1, "Assertion evaluating multiple times.");
     ZX_ASSERT_MSG(getter_called == 1, "Assertion evaluating multiple times.");
 }
+
+void HelperFnFatal(bool fail) {
+    ASSERT_FALSE(fail, "Expected to fail.");
+}
+
+TEST(ZXTestAssertionTest, AssertNoFatalFailureWithFatalFailure) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
+                     "Failed to abort test execution on helper fatal failure.");
+    ASSERT_NO_FATAL_FAILURES(HelperFnFatal(true), "HelperFnFatal had a failure. This is expected.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZXTestAssertionTest, AssertNoFatalFailureWithoutFailure) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
+                     "Aborted test execution on helper with no failures.");
+    ASSERT_NO_FATAL_FAILURES(HelperFnFatal(false),
+                             "HelperFnFatal had a failure. This is not expected.");
+    TEST_CHECKPOINT();
+}
+
+void HelperFn(bool fail) {
+    EXPECT_FALSE(fail, "Expected to fail.");
+}
+
+TEST(ZXTestAssertionTest, AssertNoFatalFailureWithFailure) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Aborted test execution on helper failure.");
+    ASSERT_NO_FATAL_FAILURES(HelperFn(true), "HelperFn had a failure. This is expected.");
+    TEST_CHECKPOINT();
+}
+
+} // namespace
