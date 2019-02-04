@@ -13,7 +13,7 @@ using fxl::StringPrintf;
 
 namespace component {
 
-SystemObjectsDirectory::ProcessThreads::ProcessThreads(
+SystemObjectsDirectory::ThreadsDirectory::ThreadsDirectory(
     const zx::process* process)
     : ExposedObject("threads"), process_(process) {
   auto all_dir = component::ObjectDir::Make("all_thread_stacks");
@@ -47,7 +47,7 @@ SystemObjectsDirectory::ProcessThreads::ProcessThreads(
       });
 }
 
-void SystemObjectsDirectory::ProcessThreads::GetThreads(
+void SystemObjectsDirectory::ThreadsDirectory::GetThreads(
     fbl::Vector<ThreadInfo>* out) {
   zx_koid_t thread_ids[kMaxThreads];
   size_t num_ids;
@@ -69,6 +69,64 @@ void SystemObjectsDirectory::ProcessThreads::GetThreads(
     t.get_property(ZX_PROP_NAME, &name, ZX_MAX_NAME_LEN);
     out->push_back({thread_ids[i], name, std::move(t)});
   }
+}
+
+SystemObjectsDirectory::MemoryDirectory::MemoryDirectory(
+    const zx::process* process)
+    : ExposedObject("memory"), process_(process) {
+  zx_info_task_stats_t task_stats;
+  if (process_->get_info(ZX_INFO_TASK_STATS, &task_stats,
+                         sizeof(zx_info_task_stats_t), nullptr,
+                         nullptr) != ZX_OK) {
+    return;
+  }
+
+  object_dir().set_metric(
+      "mapped_bytes", component::CallbackMetric([this](component::Metric* out) {
+        zx_info_task_stats_t task_stats;
+        if (GetTaskStats(&task_stats) != ZX_OK)
+          return;
+        out->SetUInt(task_stats.mem_mapped_bytes);
+      }));
+
+  object_dir().set_metric(
+      "private_bytes",
+      component::CallbackMetric([this](component::Metric* out) {
+        zx_info_task_stats_t task_stats;
+        if (GetTaskStats(&task_stats) != ZX_OK)
+          return;
+        out->SetUInt(task_stats.mem_private_bytes);
+      }));
+
+  object_dir().set_metric(
+      "shared_bytes", component::CallbackMetric([this](component::Metric* out) {
+        zx_info_task_stats_t task_stats;
+        if (GetTaskStats(&task_stats) != ZX_OK)
+          return;
+        out->SetUInt(task_stats.mem_shared_bytes);
+      }));
+
+  object_dir().set_metric(
+      "scaled_shared_bytes",
+      component::CallbackMetric([this](component::Metric* out) {
+        zx_info_task_stats_t task_stats;
+        if (GetTaskStats(&task_stats) != ZX_OK)
+          return;
+        out->SetUInt(task_stats.mem_scaled_shared_bytes);
+      }));
+}
+
+zx_status_t SystemObjectsDirectory::MemoryDirectory::GetTaskStats(
+    zx_info_task_stats_t* task_stats) {
+  zx_status_t status =
+      process_->get_info(ZX_INFO_TASK_STATS, task_stats,
+                         sizeof(zx_info_task_stats_t), nullptr, nullptr);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "zx_object_get_info failed, status: " << status;
+    return status;
+  }
+
+  return ZX_OK;
 }
 
 }  // namespace component

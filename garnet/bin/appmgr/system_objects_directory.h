@@ -19,14 +19,16 @@ class SystemObjectsDirectory : public component::ExposedObject {
   explicit SystemObjectsDirectory(zx::process process)
       : ExposedObject("system_objects"),
         process_(std::move(process)),
-        threads_(std::make_unique<ProcessThreads>(&process_)) {
+        threads_(std::make_unique<ThreadsDirectory>(&process_)),
+        memory_(std::make_unique<MemoryDirectory>(&process_)) {
     add_child(threads_.get());
+    add_child(memory_.get());
   }
 
  private:
-  class ProcessThreads : public component::ExposedObject {
+  class ThreadsDirectory : public component::ExposedObject {
    public:
-    ProcessThreads(const zx::process* process);
+    ThreadsDirectory(const zx::process* process);
 
    private:
     static constexpr size_t kMaxThreads = 2048;
@@ -43,8 +45,19 @@ class SystemObjectsDirectory : public component::ExposedObject {
     const zx::process* process_;
   };
 
+  class MemoryDirectory : public component::ExposedObject {
+   public:
+    MemoryDirectory(const zx::process* process);
+
+   private:
+    zx_status_t GetTaskStats(zx_info_task_stats_t* task_stats);
+
+    const zx::process* process_;
+  };
+
   zx::process process_;
-  std::unique_ptr<ProcessThreads> threads_;
+  std::unique_ptr<ThreadsDirectory> threads_;
+  std::unique_ptr<MemoryDirectory> memory_;
 };
 
 }  // namespace component

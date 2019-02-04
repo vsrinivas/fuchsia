@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use failure::{err_msg, Error};
-use inspect::{generate_inspect_object_tree, InspectObject, InspectValue};
+use fidl_fuchsia_inspect::{MetricValue, PropertyValue};
+use inspect::{generate_inspect_object_tree, InspectObject};
 use std::{
     fmt, fs,
     path::{Path, PathBuf},
@@ -38,13 +39,7 @@ impl Realm {
     }
 
     fn write_indented(&self, f: &mut fmt::Formatter, indent: usize) -> fmt::Result {
-        writeln!(
-            f,
-            "{}Realm[{}]: {}",
-            " ".repeat(indent),
-            self.job_id,
-            self.name,
-        )?;
+        writeln!(f, "{}Realm[{}]: {}", " ".repeat(indent), self.job_id, self.name,)?;
 
         for comp in &self.child_components {
             comp.write_indented(f, indent + 2)?;
@@ -88,14 +83,7 @@ impl Component {
     }
 
     fn write_indented(&self, f: &mut fmt::Formatter, indent: usize) -> fmt::Result {
-        writeln!(
-            f,
-            "{}{}[{}]: {}",
-            " ".repeat(indent),
-            self.name,
-            self.job_id,
-            self.url,
-        )?;
+        writeln!(f, "{}{}[{}]: {}", " ".repeat(indent), self.name, self.job_id, self.url,)?;
 
         for child in &self.child_components {
             child.write_indented(f, indent + 2)?;
@@ -147,8 +135,8 @@ fn find_id_directory(dir: &Path) -> DirEntryResult {
     return Err(err_msg("Directory not found"));
 }
 
-fn visit_threads(component_path: &Path, exclude_objects: &Vec<String>) -> TraversalResult {
-    let channel_path = component_path.join("system_objects/threads/.channel");
+fn visit_system_objects(component_path: &Path, exclude_objects: &Vec<String>) -> TraversalResult {
+    let channel_path = component_path.join("system_objects/.channel");
     let inspect_object = generate_inspect_object_tree(&channel_path, &exclude_objects)?;
     visit_inspect_object(1, &inspect_object);
     Ok(())
@@ -157,14 +145,26 @@ fn visit_threads(component_path: &Path, exclude_objects: &Vec<String>) -> Traver
 fn visit_inspect_object(depth: usize, inspect_object: &InspectObject) {
     let indent = " ".repeat(depth);
     println!("{}{}", indent, inspect_object.name);
+    for metric in &inspect_object.metrics {
+        println!(
+            "{} {}: {}",
+            indent,
+            metric.key,
+            match &metric.value {
+                MetricValue::IntValue(v) => format!("{}", v),
+                MetricValue::UintValue(v) => format!("{}", v),
+                MetricValue::DoubleValue(v) => format!("{}", v),
+            },
+        );
+    }
     for property in &inspect_object.properties {
         println!(
             "{} {}: {}",
             indent,
             property.key,
             match &property.value {
-                InspectValue::Text(s) => s.clone(),
-                InspectValue::Binary => String::from("<binary>"),
+                PropertyValue::Str(s) => s.clone(),
+                PropertyValue::Bytes(_) => String::from("<binary>"),
             },
         );
     }
@@ -204,11 +204,13 @@ fn inspect_realm(job_id: u32, exclude_objects: &Vec<String>, realm: &Realm) -> T
 }
 
 fn inspect_component(
-    job_id: u32, exclude_objects: &Vec<String>, component: &Component,
+    job_id: u32,
+    exclude_objects: &Vec<String>,
+    component: &Component,
 ) -> TraversalResult {
     if component.job_id == job_id {
         println!("{}", component);
-        visit_threads(&component.path, exclude_objects)?;
+        visit_system_objects(&component.path, exclude_objects)?;
     }
     for component in &component.child_components {
         inspect_component(job_id, exclude_objects, component)?;
