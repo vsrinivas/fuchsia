@@ -30,8 +30,9 @@ use fuchsia_ui::{
 };
 use fuchsia_zircon::{EventPair, Handle};
 use futures::{FutureExt, TryFutureExt, TryStreamExt};
+use parking_lot::Mutex;
 use std::env;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use term_model::ansi::Handler;
 use term_model::config::Config;
 use term_model::term::{SizeInfo, Term};
@@ -56,8 +57,11 @@ type ViewControllerPtr = Arc<Mutex<ViewController>>;
 
 impl ViewController {
     pub fn new(
-        face: FontFacePtr, view_listener_request: ServerEnd<ViewListenerMarker>, view: ViewProxy,
-        mine: EventPair, scenic: ScenicProxy,
+        face: FontFacePtr,
+        view_listener_request: ServerEnd<ViewListenerMarker>,
+        view: ViewProxy,
+        mine: EventPair,
+        scenic: ScenicProxy,
     ) -> Result<ViewControllerPtr, Error> {
         let ime_service = connect_to_service::<ImeServiceMarker>()?;
         let (ime_listener, ime_listener_request) = create_endpoints::<InputMethodEditorMarker>()?;
@@ -109,7 +113,7 @@ impl ViewController {
                             InputMethodEditorClientRequest::DidUpdateState {
                                 event: Some(event),
                                 ..
-                            } => view_controller.lock().unwrap().handle_input_event(*event),
+                            } => view_controller.lock().handle_input_event(*event),
                             _ => (),
                         }
                     }
@@ -126,7 +130,7 @@ impl ViewController {
                     while let Some(request) = await!(stream.try_next())? {
                         match request {
                             SessionListenerRequest::OnScenicEvent { events, control_handle: _ } => {
-                                view_controller.lock().unwrap().handle_session_events(events)
+                                view_controller.lock().handle_session_events(events)
                             }
                             _ => (),
                         }
@@ -144,7 +148,7 @@ impl ViewController {
                     while let Some(req) = await!(stream.try_next())? {
                         let ViewListenerRequest::OnPropertiesChanged { properties, responder } =
                             req;
-                        view_controller.lock().unwrap().handle_properties_changed(properties);
+                        view_controller.lock().handle_properties_changed(properties);
                         responder
                             .send()
                             .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e))
@@ -186,7 +190,7 @@ impl ViewController {
         };
         {
             let guard = self.image_cycler.acquire(info).expect("failed to allocate buffer");
-            let mut face = self.face.lock().unwrap();
+            let mut face = self.face.lock();
             let mut canvas = Canvas::<SharedBufferPixelSink>::new(guard.image().buffer(), stride);
             let size = Size { width: 14, height: 22 };
             let mut font = FontDescription { face: &mut face, size: 20, baseline: 18 };
@@ -280,7 +284,7 @@ impl App {
     pub fn new() -> Result<AppPtr, Error> {
         let view_manager = connect_to_service::<ViewManagerMarker>()?;
         Ok(Arc::new(Mutex::new(App {
-            face: Arc::new(Mutex::new(FontFace::new(FONT_DATA).unwrap())),
+            face: Arc::new(Mutex::new(FontFace::new(FONT_DATA)?)),
             view_manager,
             view_controllers: vec![],
         })))
@@ -293,7 +297,9 @@ impl App {
                 .try_for_each(move |req| {
                     let CreateView { view_owner, .. } = req;
                     let token: EventPair = EventPair::from(Handle::from(view_owner.into_channel()));
-                    App::app_create_view(app.clone(), token).unwrap();
+                    app.lock()
+                        .create_view(token)
+                        .expect("error creating view from V1 view_provider");
                     futures::future::ready(Ok(()))
                 })
                 .unwrap_or_else(|e| eprintln!("error running V1 view_provider server: {:?}", e)),
@@ -306,15 +312,13 @@ impl App {
             viewsv2::ViewProviderRequestStream::from_channel(chan)
                 .try_for_each(move |req| {
                     let viewsv2::ViewProviderRequest::CreateView { token, .. } = req;
-                    App::app_create_view(app.clone(), token).unwrap();
+                    app.lock()
+                        .create_view(token)
+                        .expect("error creating view from V2 view_provider");
                     futures::future::ready(Ok(()))
                 })
                 .unwrap_or_else(|e| eprintln!("error running V2 view_provider server: {:?}", e)),
         )
-    }
-
-    pub fn app_create_view(app: AppPtr, view_token: EventPair) -> Result<(), Error> {
-        app.lock().unwrap().create_view(view_token)
     }
 
     pub fn create_view(&mut self, view_token: EventPair) -> Result<(), Error> {
