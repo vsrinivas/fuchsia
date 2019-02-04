@@ -54,8 +54,8 @@ struct SetupData {
 
 static constexpr char kDtbPath[] = "/pkg/data/board.dtb";
 static constexpr uintptr_t kRamdiskOffset = 0x4000000;
-static constexpr uintptr_t kDtbOffset = kRamdiskOffset - PAGE_SIZE;
-static constexpr uintptr_t kDtbOverlayOffset = kDtbOffset - PAGE_SIZE;
+static constexpr uintptr_t kDtbOffset = kRamdiskOffset - (PAGE_SIZE * 2);
+static constexpr uintptr_t kDtbOverlayOffset = kDtbOffset - (PAGE_SIZE * 2);
 static constexpr uintptr_t kDtbBootParamsOffset =
     kDtbOffset + sizeof(SetupData);
 

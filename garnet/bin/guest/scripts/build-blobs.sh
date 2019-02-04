@@ -26,7 +26,7 @@ which iasl > /dev/null || {
 }
 
 # Generate device tree blobs.
-MAX_SIZE=4096
+MAX_SIZE=8192
 for DTS in garnet/bin/guest/vmm/arch/arm64/dts/*.dts; do
   DTB=${DTS%.dts}.dtb
   dtc $DTS -o $DTB -S $MAX_SIZE

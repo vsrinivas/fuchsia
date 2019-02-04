@@ -46,7 +46,6 @@
   gic: interrupt-controller {
     interrupt-controller;
     #address-cells = <0>;
-    ranges;
     #interrupt-cells = <3>;
     // Interrupt controller is populated at run-time.
   };
