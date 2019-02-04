@@ -110,20 +110,21 @@ void Options::Usage(const std::string& argv0) {
 
   Mode options:
   --cat:  [DEFAULT] Print the data for the object(s) given by each PATH.
-          Defining --recursive will also output the children for that object.
+          Specifying --recursive will also output the children for that object.
   --find: find all objects under PATH. For each sub-path, will stop at finding
-          the first object. Defining --recursive will search the whole tree.
-  --ls:   List the children of the object(s) given by PATH.
+          the first object. Specifying --recursive will search the whole tree.
+  --ls:   List the children of the object(s) given by PATH. Specifying
+          --recursive has no effect.
 
-  --recursive: Whether iquery should continue inside an object. See each mode
-             c to see how it modifies their behaviour.
+  --recursive: Whether iquery should continue inside an object. See each mode's
+               description to see how it modifies their behaviors.
 
   --format: What formatter to use for output. Available options are:
     - text: [DEFAULT] Simple text output meant for manual inspection.
     - json: JSON format meant for machine consumption.
 
   --full_paths:     Include the full path in object names.
-  --absolute_paths: Include full absolute path in objectnames.
+  --absolute_paths: Include full absolute path in object names.
                     Overrides --full_paths.
 
   PATH: paths where to look for targets. The interpretation of those depends
