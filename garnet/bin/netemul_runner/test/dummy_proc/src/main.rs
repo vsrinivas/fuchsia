@@ -6,7 +6,7 @@
 
 use {
     failure::{format_err, Error, ResultExt},
-    fidl_fuchsia_netemul_bus::{BusManagerMarker, BusMarker, BusProxy, Event},
+    fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker},
     fuchsia_app::client,
     fuchsia_async as fasync,
     futures::TryStreamExt,
@@ -35,16 +35,16 @@ pub struct BusConnection {
 
 impl BusConnection {
     pub fn new(client: &str) -> Result<BusConnection, Error> {
-        let busm =
-            client::connect_to_service::<BusManagerMarker>().context("BusManager not available")?;
+        let busm = client::connect_to_service::<SyncManagerMarker>()
+            .context("SyncManager not available")?;
         let (bus, busch) = fidl::endpoints::create_proxy::<BusMarker>()?;
-        busm.subscribe(BUS_NAME, client, busch)?;
+        busm.bus_subscribe(BUS_NAME, client, busch)?;
         Ok(BusConnection { bus })
     }
 
     pub async fn publish_code(&self, code: i32) -> Result<(), Error> {
-        let () = await!(self.bus.ensure_publish(&mut Event {
-            code: code,
+        let () = await!(self.bus.ensure_publish(Event {
+            code: Some(code),
             message: None,
             arguments: None,
         }))?;
@@ -61,13 +61,16 @@ impl BusConnection {
             .bus
             .take_event_stream()
             .try_filter_map(|event| match event {
-                fidl_fuchsia_netemul_bus::BusEvent::OnBusData { data } => {
-                    if data.code == code {
-                        futures::future::ok(Some(()))
-                    } else {
-                        futures::future::ok(None)
+                fidl_fuchsia_netemul_sync::BusEvent::OnBusData { data } => match data.code {
+                    Some(rcv_code) => {
+                        if rcv_code == code {
+                            futures::future::ok(Some(()))
+                        } else {
+                            futures::future::ok(None)
+                        }
                     }
-                }
+                    None => futures::future::ok(None),
+                },
                 _ => futures::future::ok(None),
             });
         await!(stream.try_next())?;

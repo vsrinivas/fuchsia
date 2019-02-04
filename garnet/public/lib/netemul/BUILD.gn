@@ -8,8 +8,8 @@ package("netemul_lib_test") {
   testonly = true
 
   deps = [
-    "//garnet/public/lib/netemul/bus:bus_test_bin",
     "//garnet/public/lib/netemul/network:network_test_bin",
+    "//garnet/public/lib/netemul/sync:sync_test_bin",
   ]
 
   tests = [
@@ -17,7 +17,7 @@ package("netemul_lib_test") {
       name = "network_test"
     },
     {
-      name = "bus_test"
+      name = "sync_test"
     },
   ]
 }

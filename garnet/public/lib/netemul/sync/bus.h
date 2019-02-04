@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_NETEMUL_BUS_BUS_H_
-#define LIB_NETEMUL_BUS_BUS_H_
+#ifndef LIB_NETEMUL_SYNC_BUS_H_
+#define LIB_NETEMUL_SYNC_BUS_H_
 
-#include <fuchsia/netemul/bus/cpp/fidl.h>
+#include <fuchsia/netemul/sync/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <unordered_map>
 
@@ -14,8 +14,8 @@ namespace netemul {
 class BusBinding;
 class Bus {
  public:
-  using FBus = fuchsia::netemul::bus::Bus;
-  using FEvent = fuchsia::netemul::bus::Event;
+  using FBus = fuchsia::netemul::sync::Bus;
+  using FEvent = fuchsia::netemul::sync::Event;
   using Ptr = std::unique_ptr<Bus>;
 
   explicit Bus(async_dispatcher_t* dispatcher);
@@ -39,4 +39,4 @@ class Bus {
 
 }  // namespace netemul
 
-#endif  // LIB_NETEMUL_BUS_BUS_H_
+#endif  // LIB_NETEMUL_SYNC_BUS_H_

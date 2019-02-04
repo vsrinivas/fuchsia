@@ -4,16 +4,16 @@
 
 import("//build/test/test_package.gni")
 
-source_set("bus_service") {
+source_set("sync_service") {
   sources = [
     "bus.cc",
     "bus.h",
-    "bus_manager.cc",
-    "bus_manager.h",
+    "sync_manager.cc",
+    "sync_manager.h",
   ]
 
   deps = [
-    "//garnet/public/lib/netemul/fidl:bus",
+    "//garnet/public/lib/netemul/fidl:sync",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -22,17 +22,17 @@ source_set("bus_service") {
   ]
 }
 
-executable("bus_test_bin") {
+executable("sync_test_bin") {
   testonly = true
 
-  output_name = "bus_test"
+  output_name = "sync_test"
 
   sources = [
     "bus_unittest.cc",
   ]
 
   deps = [
-    ":bus_service",
+    ":sync_service",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fzl",

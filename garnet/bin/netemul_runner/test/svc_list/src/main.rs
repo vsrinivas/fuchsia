@@ -12,7 +12,6 @@ use std::path::Path;
 
 use fidl;
 use fidl::endpoints::ServiceMarker;
-use fidl_fuchsia_netemul_bus::BusManagerMarker;
 use fidl_fuchsia_netemul_environment::{
     EnvironmentOptions, LaunchService, ManagedEnvironmentMarker, VirtualDevice,
 };
@@ -20,6 +19,7 @@ use fidl_fuchsia_netemul_network::{
     DeviceProxy_Marker, EndpointBacking, EndpointConfig, EndpointManagerMarker,
     NetworkContextMarker,
 };
+use fidl_fuchsia_netemul_sync::SyncManagerMarker;
 use fidl_fuchsia_netstack::NetstackMarker;
 use fidl_fuchsia_sys::{
     ComponentControllerEvent, ComponentControllerEventStream, ComponentControllerMarker,
@@ -241,7 +241,7 @@ fn main() -> Result<(), Error> {
     check_vdata()?;
     check_service(NetworkContextMarker::NAME)?;
     check_service(ManagedEnvironmentMarker::NAME)?;
-    check_service(BusManagerMarker::NAME)?;
+    check_service(SyncManagerMarker::NAME)?;
 
     #[derive(StructOpt, Debug)]
     struct Opt {

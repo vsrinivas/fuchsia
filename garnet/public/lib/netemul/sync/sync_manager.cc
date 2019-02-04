@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "bus_manager.h"
+#include "sync_manager.h"
 
 namespace netemul {
 
-void BusManager::Subscribe(std::string busName, std::string clientName,
-                           ::fidl::InterfaceRequest<Bus::FBus> bus) {
+void SyncManager::BusSubscribe(std::string busName, std::string clientName,
+                               ::fidl::InterfaceRequest<Bus::FBus> bus) {
   auto& b = GetBus(busName);
   b.Subscribe(clientName, std::move(bus));
 }
 
-Bus& BusManager::GetBus(const std::string& name) {
+Bus& SyncManager::GetBus(const std::string& name) {
   auto f = buses_.find(name);
   if (f != buses_.end()) {
     return *f->second;
@@ -24,8 +24,8 @@ Bus& BusManager::GetBus(const std::string& name) {
   return *ret.first->second;
 }
 
-fidl::InterfaceRequestHandler<fuchsia::netemul::bus::BusManager>
-BusManager::GetHandler() {
+fidl::InterfaceRequestHandler<fuchsia::netemul::sync::SyncManager>
+SyncManager::GetHandler() {
   return bindings_.GetHandler(this, dispatcher_);
 }
 }  // namespace netemul

@@ -6,7 +6,7 @@
 
 use {
     failure::{format_err, Error, ResultExt},
-    fidl_fuchsia_netemul_bus::{BusManagerMarker, BusMarker, BusProxy},
+    fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, SyncManagerMarker},
     fuchsia_app::client,
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_zircon::DurationNum,
@@ -31,10 +31,10 @@ pub struct BusConnection {
 
 impl BusConnection {
     pub fn new(client: &str) -> Result<BusConnection, Error> {
-        let busm =
-            client::connect_to_service::<BusManagerMarker>().context("BusManager not available")?;
+        let busm = client::connect_to_service::<SyncManagerMarker>()
+            .context("SyncManager not available")?;
         let (bus, busch) = fidl::endpoints::create_proxy::<BusMarker>()?;
-        busm.subscribe(BUS_NAME, client, busch)?;
+        busm.bus_subscribe(BUS_NAME, client, busch)?;
         Ok(BusConnection { bus })
     }
 
@@ -48,7 +48,7 @@ impl BusConnection {
             .bus
             .take_event_stream()
             .try_filter_map(|event| match event {
-                fidl_fuchsia_netemul_bus::BusEvent::OnClientAttached { client } => {
+                fidl_fuchsia_netemul_sync::BusEvent::OnClientAttached { client } => {
                     if client == expect {
                         futures::future::ok(Some(()))
                     } else {

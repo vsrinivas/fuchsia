@@ -27,9 +27,9 @@ fidl("environment") {
   ]
 }
 
-fidl("bus") {
-  name = "fuchsia.netemul.bus"
+fidl("sync") {
+  name = "fuchsia.netemul.sync"
   sources = [
-    "bus.fidl",
+    "sync.fidl",
   ]
 }

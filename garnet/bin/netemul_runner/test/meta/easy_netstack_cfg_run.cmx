@@ -63,7 +63,7 @@
     "sandbox": {
         "services": [
             "fuchsia.net.SocketProvider",
-            "fuchsia.netemul.bus.BusManager"
+            "fuchsia.netemul.sync.SyncManager"
         ]
     }
 }

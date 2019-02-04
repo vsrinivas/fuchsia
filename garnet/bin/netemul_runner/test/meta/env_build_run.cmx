@@ -91,7 +91,7 @@
         "services": [
             "fuchsia.netemul.environment.ManagedEnvironment",
             "fuchsia.netemul.network.NetworkContext",
-            "fuchsia.netemul.bus.BusManager",
+            "fuchsia.netemul.sync.SyncManager",
             "fuchsia.netstack.Netstack",
             "fuchsia.net.SocketProvider"
         ]

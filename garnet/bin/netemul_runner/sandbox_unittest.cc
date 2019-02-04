@@ -122,7 +122,7 @@ class SandboxTest : public ::gtest::RealLoopFixture {
 
   const std::unordered_set<int32_t>& events() { return collected_codes_; }
 
-  bus::BusPtr& bus() { return bus_; }
+  sync::BusPtr& bus() { return bus_; }
 
   network::NetworkManagerPtr& network_manager() { return net_manager_; }
 
@@ -139,12 +139,15 @@ class SandboxTest : public ::gtest::RealLoopFixture {
 
   void InstallEventCollection(Sandbox* sandbox) {
     // connect to bus manager:
-    bus::BusManagerPtr busm;
-    sandbox->sandbox_environment()->bus_manager().GetHandler()(
-        busm.NewRequest());
-    busm->Subscribe(kBusName, kBusClientName, bus_.NewRequest());
-    bus_.events().OnBusData = [this](bus::Event event) {
-      auto code = event.code;
+    sync::SyncManagerPtr syncManager;
+    sandbox->sandbox_environment()->sync_manager().GetHandler()(
+        syncManager.NewRequest());
+    syncManager->BusSubscribe(kBusName, kBusClientName, bus_.NewRequest());
+    bus_.events().OnBusData = [this](sync::Event event) {
+      if (!event.has_code()) {
+        return;
+      }
+      auto code = *event.code();
       std::cout << "Observed event " << code << std::endl;
       // assert that code hasn't happened yet.
       // given we're putting codes in a set, it's an invalid test setup
@@ -182,7 +185,7 @@ class SandboxTest : public ::gtest::RealLoopFixture {
   std::unordered_set<int32_t> collected_codes_;
   std::unordered_set<std::string> observed_clients_;
   std::unordered_set<std::string> detached_clients_;
-  bus::BusPtr bus_;
+  sync::BusPtr bus_;
   network::NetworkContextPtr net_ctx_;
   network::NetworkManagerPtr net_manager_;
   network::EndpointManagerPtr endp_manager_;
@@ -296,8 +299,8 @@ TEST_F(SandboxTest, AppsAreLaunched) {
     // if all app events are seen and root is waiting for us
     // unlock root with event code 100
     if (PeekEvents({1, 2, 3}) && ObservedClient("root")) {
-      bus::Event evt;
-      evt.code = 100;
+      sync::Event evt;
+      evt.set_code(100);
       bus()->Publish(std::move(evt));
     }
   });
@@ -330,8 +333,8 @@ TEST_F(SandboxTest, AppExitCodesAreIgnored) {
     // if all app events are seen and root is waiting for us
     // unlock root with event code 100
     if (PeekEvents({1}) && ObservedClient("root")) {
-      bus::Event evt;
-      evt.code = 100;
+      sync::Event evt;
+      evt.set_code(100);
       bus()->Publish(std::move(evt));
     }
   });
@@ -558,8 +561,8 @@ TEST_F(SandboxTest, ValidNetworkSetup) {
             check();
           });
     } else {
-      bus::Event event;
-      event.code = 100;
+      sync::Event event;
+      event.set_code(100);
       bus()->Publish(std::move(event));
     }
   };

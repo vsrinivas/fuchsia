@@ -1,13 +1,13 @@
-library fuchsia.netemul.bus;
+library fuchsia.netemul.sync;
 
 /// Simple data structure passed on netemul bus.
-struct Event {
+table Event {
     /// User-defined event code.
-    int32 code;
-    /// Optional string message.
-    string? message;
-    /// Optional serialized arguments.
-    vector<uint8>? arguments;
+    1: int32 code;
+    /// string message.
+    2: string message;
+    /// serialized arguments.
+    3: vector<uint8> arguments;
 };
 
 /// Represents a named bus:
@@ -31,11 +31,12 @@ interface Bus {
     -> OnClientDetached(string client);
 };
 
-/// The bus manager is the entry point to attach a client to a bus.
-/// The client's 'ticket' to remain on the bus is the channel obtained through the 'Subscribe' call.
+/// The SyncManager is the entry point to attach a client to a bus or use other synchronization
+/// primitives.
+/// The client's 'ticket' to remain on the bus is the channel obtained through the 'BusSubscribe' call.
 [Discoverable]
-interface BusManager {
+interface SyncManager {
     /// Subscribes to bus 'busName' with a given client name.
     /// Duplicate client names are disallowed and will cause the request to return unfulfilled.
-    Subscribe(string busName, string clientName, request<Bus> bus);
+    BusSubscribe(string busName, string clientName, request<Bus> bus);
 };

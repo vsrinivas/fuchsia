@@ -6,10 +6,10 @@
 
 use {
     failure::{format_err, Error, ResultExt},
-    fidl_fuchsia_netemul_bus::{BusManagerMarker, BusMarker, BusProxy, Event},
     fidl_fuchsia_netemul_network::{
         EndpointManagerMarker, NetworkContextMarker, NetworkManagerMarker,
     },
+    fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker},
     fuchsia_app::client,
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_zircon::DurationNum,
@@ -42,16 +42,16 @@ pub struct BusConnection {
 
 impl BusConnection {
     pub fn new(client: &str) -> Result<BusConnection, Error> {
-        let busm =
-            client::connect_to_service::<BusManagerMarker>().context("BusManager not available")?;
+        let busm = client::connect_to_service::<SyncManagerMarker>()
+            .context("SyncManager not available")?;
         let (bus, busch) = fidl::endpoints::create_proxy::<BusMarker>()?;
-        busm.subscribe(BUS_NAME, client, busch)?;
+        busm.bus_subscribe(BUS_NAME, client, busch)?;
         Ok(BusConnection { bus })
     }
 
     pub fn publish_code(&self, code: i32) -> Result<(), Error> {
-        self.bus.publish(&mut Event {
-            code: code,
+        self.bus.publish(Event {
+            code: Some(code),
             message: None,
             arguments: None,
         })?;
@@ -68,7 +68,7 @@ impl BusConnection {
             .bus
             .take_event_stream()
             .try_filter_map(|event| match event {
-                fidl_fuchsia_netemul_bus::BusEvent::OnClientAttached { client } => {
+                fidl_fuchsia_netemul_sync::BusEvent::OnClientAttached { client } => {
                     if client == expect {
                         futures::future::ok(Some(()))
                     } else {
@@ -87,13 +87,16 @@ impl BusConnection {
             .bus
             .take_event_stream()
             .try_filter_map(|event| match event {
-                fidl_fuchsia_netemul_bus::BusEvent::OnBusData { data } => {
-                    if data.code == code {
-                        futures::future::ok(Some(()))
-                    } else {
-                        futures::future::ok(None)
+                fidl_fuchsia_netemul_sync::BusEvent::OnBusData { data } => match data.code {
+                    Some(rcv_code) => {
+                        if rcv_code == code {
+                            futures::future::ok(Some(()))
+                        } else {
+                            futures::future::ok(None)
+                        }
                     }
-                }
+                    None => futures::future::ok(None),
+                },
                 _ => futures::future::ok(None),
             });
         await!(stream.try_next())?;
@@ -132,7 +135,7 @@ fn check_path_absent(path: &str) -> Result<(), Error> {
 }
 
 fn check_netemul_environment() -> Result<(), Error> {
-    let () = check_path_present(&service_path("fuchsia.netemul.bus.BusManager"))?;
+    let () = check_path_present(&service_path("fuchsia.netemul.sync.SyncManager"))?;
     let () = check_path_present(&service_path(
         "fuchsia.netemul.environment.ManagedEnvironment",
     ))?;

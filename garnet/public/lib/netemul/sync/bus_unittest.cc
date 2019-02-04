@@ -6,7 +6,7 @@
 #include <lib/component/cpp/testing/test_util.h>
 #include <lib/component/cpp/testing/test_with_environment.h>
 
-#include "bus_manager.h"
+#include "sync_manager.h"
 
 #define ASSERT_OK(st) ASSERT_EQ(ZX_OK, (st))
 #define ASSERT_NOK(st) ASSERT_NE(ZX_OK, (st))
@@ -29,7 +29,8 @@ static const char* kAltTestBus = "alt-bus";
 
 class BusTest : public TestWithEnvironment {
  public:
-  using BusManagerSync = fidl::SynchronousInterfacePtr<BusManager::FBusManager>;
+  using SyncManagerSync =
+      fidl::SynchronousInterfacePtr<SyncManager::FSyncManager>;
   using BusSync = fidl::SynchronousInterfacePtr<Bus::FBus>;
   using BusAsync = fidl::InterfacePtr<Bus::FBus>;
 
@@ -41,7 +42,7 @@ class BusTest : public TestWithEnvironment {
     svc_loop_ =
         std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
     ASSERT_OK(svc_loop_->StartThread("testloop"));
-    svc_ = std::make_unique<BusManager>(svc_loop_->dispatcher());
+    svc_ = std::make_unique<SyncManager>(svc_loop_->dispatcher());
 
     auto services =
         EnvironmentServices::Create(parent_env, svc_loop_->dispatcher());
@@ -60,40 +61,57 @@ class BusTest : public TestWithEnvironment {
     svc_loop_->JoinThreads();
   }
 
-  void GetBusManager(fidl::InterfaceRequest<BusManager::FBusManager> manager) {
+  void GetSyncManager(
+      fidl::InterfaceRequest<SyncManager::FSyncManager> manager) {
     test_env_->ConnectToService(std::move(manager));
   }
 
-  void FillEventData(Bus::FEvent* event, int32_t code,
-                     const std::string& name = "", size_t args_size = 0) {
-    event->code = code;
-    if (!name.empty()) {
-      event->message = name;
+  void FillEventData(Bus::FEvent* event, int32_t code = 0,
+                     const std::string& name = "",
+                     std::vector<uint8_t> args = {}) {
+    if (code != 0) {
+      event->set_code(code);
+    } else {
+      event->clear_code();
     }
-    event->arguments->clear();
-    while (args_size > 0) {
-      event->arguments->push_back(static_cast<uint8_t>(args_size--));
+
+    if (!name.empty()) {
+      event->set_message(name);
+    } else {
+      event->clear_message();
+    }
+
+    if (!args.empty()) {
+      event->set_arguments(std::move(args));
+    } else {
+      event->clear_arguments();
     }
   }
 
-  static bool EventEquals(const Bus::FEvent& e1, const Bus::FEvent& e2) {
-    return (e1.code == e2.code) && (e1.message == e2.message) &&
-           (e2.arguments->size() == e1.arguments->size()) &&
-           (memcmp(&e2.arguments.get()[0], &e1.arguments.get()[0],
-                   e1.arguments->size()) == 0);
+  static bool EventEquals(const netemul::Bus::FEvent& e1,
+                          const netemul::Bus::FEvent& e2) {
+    return (e1.has_code() == e2.has_code() &&
+            (!e1.has_code() || *e1.code() == *e2.code())) &&
+           (e1.has_message() == e2.has_message() &&
+            (!e1.has_message() || *e1.message() == *e2.message())) &&
+           (e1.has_arguments() == e2.has_arguments() &&
+            (!e1.has_arguments() ||
+             (e1.arguments()->size() == e2.arguments()->size() &&
+              memcmp(e1.arguments()->data(), e2.arguments()->data(),
+                     e1.arguments()->size()) == 0)));
   }
 
   void DataExchangeTest(const Bus::FEvent& ref_event_1,
                         const Bus::FEvent& ref_event_2, bool ensure = false) {
-    BusManagerSync bm;
-    GetBusManager(bm.NewRequest());
+    SyncManagerSync bm;
+    GetSyncManager(bm.NewRequest());
 
     BusAsync cli1;
-    ASSERT_OK(bm->Subscribe(kMainTestBus, "cli1", cli1.NewRequest()));
+    ASSERT_OK(bm->BusSubscribe(kMainTestBus, "cli1", cli1.NewRequest()));
     ASSERT_TRUE(cli1.is_bound());
 
     BusAsync cli2;
-    ASSERT_OK(bm->Subscribe(kMainTestBus, "cli2", cli2.NewRequest()));
+    ASSERT_OK(bm->BusSubscribe(kMainTestBus, "cli2", cli2.NewRequest()));
     ASSERT_TRUE(cli2.is_bound());
 
     bool ok1 = false;
@@ -140,7 +158,7 @@ class BusTest : public TestWithEnvironment {
     if (s1.size() != s2.size()) {
       return false;
     }
-    // these vectors are small enough that the O(n2) search here is not too
+    // these vectors are  small enough that the O(n2) search here is not too
     // problematic shouldn't use larger vectors here, performance will suffer
     for (const auto& x1 : s1) {
       bool found = false;
@@ -159,40 +177,40 @@ class BusTest : public TestWithEnvironment {
 
   std::unique_ptr<EnclosingEnvironment> test_env_;
   std::unique_ptr<async::Loop> svc_loop_;
-  std::unique_ptr<BusManager> svc_;
+  std::unique_ptr<SyncManager> svc_;
 };
 
 TEST_F(BusTest, CreateBusAndClient) {
-  BusManagerSync bm;
-  GetBusManager(bm.NewRequest());
+  SyncManagerSync bm;
+  GetSyncManager(bm.NewRequest());
 
   BusSync cli1;
-  ASSERT_OK(bm->Subscribe(kMainTestBus, "cli1", cli1.NewRequest()));
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "cli1", cli1.NewRequest()));
   ASSERT_TRUE(cli1.is_bound());
 
   BusSync cli2;
-  ASSERT_OK(bm->Subscribe(kMainTestBus, "cli2", cli2.NewRequest()));
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "cli2", cli2.NewRequest()));
   ASSERT_TRUE(cli2.is_bound());
 
   // client with name cli2 on same bus should be disallowed:
   BusSync cli3;
-  ASSERT_OK(bm->Subscribe(kMainTestBus, "cli2", cli2.NewRequest()));
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "cli2", cli2.NewRequest()));
   RunLoopUntilIdle();
   ASSERT_FALSE(cli3.is_bound());
 }
 
 TEST_F(BusTest, ExchangeFullData) {
   Bus::FEvent ref_event_1, ref_event_2;
-  FillEventData(&ref_event_1, 1, "Hello evt 1", 10);
-  FillEventData(&ref_event_2, 2, "Hello evt 2", 20);
+  FillEventData(&ref_event_1, 1, "Hello evt 1", {1, 2, 3, 4});
+  FillEventData(&ref_event_2, 2, "Hello evt 2", {1, 2, 3, 4, 5, 6, 7, 8});
 
   DataExchangeTest(ref_event_1, ref_event_2);
 }
 
 TEST_F(BusTest, ExchangeFullDataEnsured) {
   Bus::FEvent ref_event_1, ref_event_2;
-  FillEventData(&ref_event_1, 1, "Hello evt 1", 10);
-  FillEventData(&ref_event_2, 2, "Hello evt 2", 20);
+  FillEventData(&ref_event_1, 1, "Hello evt 1", {1, 2, 3, 4});
+  FillEventData(&ref_event_2, 2, "Hello evt 2", {1, 2, 3, 4, 5, 6, 7, 8});
 
   DataExchangeTest(ref_event_1, ref_event_2, true);
 }
@@ -206,13 +224,13 @@ TEST_F(BusTest, ExchangeCodeOnlyData) {
 }
 
 TEST_F(BusTest, CrossTalk) {
-  BusManagerSync bm;
-  GetBusManager(bm.NewRequest());
+  SyncManagerSync bm;
+  GetSyncManager(bm.NewRequest());
 
   bool received_data = false;
   // attach a client to an alternate test bus
   BusAsync cli1;
-  ASSERT_OK(bm->Subscribe(kAltTestBus, "cli1", cli1.NewRequest()));
+  ASSERT_OK(bm->BusSubscribe(kAltTestBus, "cli1", cli1.NewRequest()));
   ASSERT_TRUE(cli1.is_bound());
   cli1.events().OnBusData = [&received_data](Bus::FEvent event) {
     received_data = true;
@@ -227,55 +245,6 @@ TEST_F(BusTest, CrossTalk) {
   // received:
   ASSERT_FALSE(received_data);
   ASSERT_TRUE(cli1.is_bound());
-}
-
-TEST_F(BusTest, ClientObservation) {
-  BusManagerSync bm;
-  GetBusManager(bm.NewRequest());
-
-  BusSync cli3;
-  ASSERT_OK(bm->Subscribe(kMainTestBus, "c3", cli3.NewRequest()));
-  std::vector<std::string> clients;
-  ASSERT_OK(cli3->GetClients(&clients));
-  ASSERT_TRUE(VectorSetEquals(clients, {"c3"}));
-
-  BusAsync cli1;
-  ASSERT_OK(bm->Subscribe(kMainTestBus, "c1", cli1.NewRequest()));
-  ASSERT_TRUE(cli1.is_bound());
-
-  bool ok = false;
-  cli1.events().OnClientAttached = [&ok](fidl::StringPtr client) {
-    ASSERT_EQ(client, "c2");
-    ok = true;
-  };
-  cli1.events().OnClientDetached = [&ok](fidl::StringPtr client) {
-    ASSERT_EQ(client, "c2");
-    ok = true;
-  };
-
-  ASSERT_OK(cli3->GetClients(&clients));
-  ASSERT_TRUE(VectorSetEquals(clients, {"c1", "c3"}));
-
-  {
-    BusAsync cli2;
-    ASSERT_OK(bm->Subscribe(kMainTestBus, "c2", cli2.NewRequest()));
-    ASSERT_TRUE(cli2.is_bound());
-
-    // wait for OnClientAttached event to fire
-    WAIT_FOR_OK_AND_RESET(ok);
-
-    ASSERT_OK(cli3->GetClients(&clients));
-    ASSERT_TRUE(VectorSetEquals(clients, {"c1", "c2", "c3"}));
-  }
-  // cli2 went away, wait for client detached event
-  WAIT_FOR_OK_AND_RESET(ok);
-
-  // check again that it went away
-  ASSERT_OK(cli3->GetClients(&clients));
-  ASSERT_TRUE(VectorSetEquals(clients, {"c1", "c3"}));
-
-  // make sure to unbind cli1 first
-  cli1.Unbind();
 }
 
 }  // namespace testing

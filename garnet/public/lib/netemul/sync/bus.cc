@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 #include "bus.h"
+#include <lib/async/cpp/task.h>
 #include <zircon/assert.h>
 
 namespace netemul {
 
-class BusBinding : public fuchsia::netemul::bus::Bus {
+class BusBinding : public fuchsia::netemul::sync::Bus {
  public:
-  using FBus = fuchsia::netemul::bus::Bus;
-  using FEvent = fuchsia::netemul::bus::Event;
+  using FBus = fuchsia::netemul::sync::Bus;
+  using FEvent = fuchsia::netemul::sync::Event;
   BusBinding(std::string name, ::netemul::Bus* parent,
              async_dispatcher_t* dispatcher,
              fidl::InterfaceRequest<FBus> request)
