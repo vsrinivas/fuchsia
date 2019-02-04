@@ -1,7 +1,6 @@
 #!/boot/bin/sh
 #
 # Usage: scenic_benchmark.sh
-#          --out_dir <trace output dir>
 #          --out_file <benchmark output file path>
 #          --benchmark_label <benchmark label>
 #          --cmd <cmd to benchmark>
@@ -22,10 +21,6 @@ SLEEP_BEFORE_TRACE=''
 
 while [ "$1" != "" ]; do
   case "$1" in
-    --out_dir)
-      OUT_DIR="$2"
-      shift
-      ;;
     --out_file)
       OUT_FILE="$2"
       shift
@@ -56,7 +51,7 @@ done
 RENDERER_PARAMS=$@
 
 DATE=`date +%Y-%m-%dT%H:%M:%S`
-TRACE_FILE=$OUT_DIR/trace.$DATE.json
+TRACE_FILE="/tmp/trace-${DATE}.json"
 
 echo "== $BENCHMARK_LABEL: Killing processes..."
 killall root_presenter*; killall scenic*; killall basemgr*; killall view_manager*; killall flutter*; killall set_root_view*

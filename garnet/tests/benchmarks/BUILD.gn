@@ -4,8 +4,26 @@
 
 import("//build/package.gni")
 
+executable("garnet_benchmarks_bin") {
+  output_name = "garnet_benchmarks"
+
+  sources = [
+    "benchmarks.cc",
+    "gfx_benchmarks.cc",
+    "gfx_benchmarks.h",
+  ]
+
+  deps = [
+    "//garnet/testing/benchmarking:benchmarking",
+  ]
+}
+
 package("garnet_benchmarks") {
   testonly = true
+
+  deps = [
+    ":garnet_benchmarks_bin",
+  ]
 
   binaries = [
     {
@@ -13,8 +31,8 @@ package("garnet_benchmarks") {
       dest = "benchmarks.sh"
     },
     {
-      name = rebase_path("gfx_benchmarks.sh")
-      dest = "gfx_benchmarks.sh"
+      shell = true
+      name = "garnet_benchmarks"
     },
     {
       name = rebase_path("benchmarks_perfcompare.sh")

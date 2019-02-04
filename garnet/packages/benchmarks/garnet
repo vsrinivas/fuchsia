@@ -1,7 +1,8 @@
 {
     "imports": [
         "garnet/packages/examples/scenic",
-        "garnet/packages/tests/scenic"
+        "garnet/packages/tests/scenic",
+        "garnet/packages/examples/benchmark"
     ],
     "packages": [
         "//garnet/tests/benchmarks:garnet_benchmarks"
