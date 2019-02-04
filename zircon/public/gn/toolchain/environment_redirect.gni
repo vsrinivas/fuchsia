@@ -115,6 +115,7 @@ template("environment_redirect") {
   group(target_name) {
     forward_variables_from(invoker,
                            [
+                             "assert_no_deps",
                              "testonly",
                              "visibility",
                            ])

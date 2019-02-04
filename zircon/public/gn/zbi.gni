@@ -300,6 +300,7 @@ template("zbi") {
   host_tool_action(zbi_target) {
     forward_variables_from(invoker,
                            [
+                             "assert_no_deps",
                              "data_deps",
                              "visibility",
                              "testonly",

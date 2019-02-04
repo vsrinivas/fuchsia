@@ -19,6 +19,7 @@ template("host_tool_redirect") {
   environment_redirect(target_name) {
     forward_variables_from(invoker,
                            [
+                             "assert_no_deps",
                              "testonly",
                              "visibility",
                            ])
@@ -69,6 +70,7 @@ template("_host_tool_action_target") {
   target(invoker._target_type, action_target) {
     forward_variables_from(invoker,
                            [
+                             "assert_no_deps",
                              "data_deps",
                              "deps",
                              "inputs",

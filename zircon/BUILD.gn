@@ -135,8 +135,8 @@ if (current_toolchain == default_toolchain) {
       testonly = true
       data_keys = [ "legacy_pkg_manifest" ]
       deps = [
-        ":legacy-$cpu",
         ":all-ulib-$cpu",
+        ":legacy-$cpu",
         ":tools",
 
         # Separately listed because they're reached by dependencies only on x64.
@@ -222,6 +222,10 @@ foreach(cpu, standard_fuchsia_cpus) {
     deps = [
       "kernel",
       "system/utest:core-tests",
+    ]
+    assert_no_deps = [
+      "system/core/*",
+      "system/dev/*",
     ]
   }
 
