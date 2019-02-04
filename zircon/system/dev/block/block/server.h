@@ -55,93 +55,50 @@ private:
 };
 
 class BlockServer;
-
-typedef struct block_msg_extra block_msg_extra_t;
-typedef struct block_msg block_msg_t;
-
-// All the C++ bits of a block message. This allows the block server to utilize
-// C++ libraries while also using "block_op_t"s, which may require extra space.
-struct block_msg_extra {
-    fbl::DoublyLinkedListNodeState<block_msg_t*> dll_node_state;
-    fbl::RefPtr<IoBuffer> iobuf;
-    BlockServer* server;
-    reqid_t reqid;
-    groupid_t group;
-};
+class BlockMessage;
 
 // A single unit of work transmitted to the underlying block layer.
-struct block_msg {
-    block_msg_extra_t extra;
-    block_op_t op;
-    // + Extra space for underlying block_op
-};
-
-// Since the linked list state (necessary to queue up block messages) is based
-// in C++ code, but may need to reference the "block_op_t" object, it uses
-// a custom type trait.
-struct DoublyLinkedListTraits {
-    static fbl::DoublyLinkedListNodeState<block_msg_t*>& node_state(block_msg_t& obj) {
-        return obj.extra.dll_node_state;
-    }
-};
-
-using BlockMsgQueue = fbl::DoublyLinkedList<block_msg_t*, DoublyLinkedListTraits>;
-
-// C++ safe wrapper around block_msg_t.
-//
-// It's difficult to allocate a dynamic-length "block_op" as requested by the
-// underlying driver while maintaining valid object construction & destruction;
-// this class attempts to hide those details.
-class BlockMsg {
+// BlockMessage contains a block_op_t, which is dynamically sized. Therefore, it implements its
+// own allocator that takes block_op_size.
+class BlockMessage final : public fbl::DoublyLinkedListable<BlockMessage*> {
 public:
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(BlockMsg);
+    DISALLOW_COPY_ASSIGN_AND_MOVE(BlockMessage);
+    BlockMessage() { }
 
-    bool valid() { return bop_ != nullptr; }
-
-    void reset(block_msg_t* bop = nullptr) {
-        if (bop_) {
-            bop_->extra.~block_msg_extra_t();
-            free(bop_);
-        }
-        bop_ = bop;
+    // Overloaded new operator allows variable-sized allocation to match block op size.
+    void* operator new(size_t size) = delete;
+    void* operator new(size_t size, size_t block_op_size) {
+        return calloc(1, size + block_op_size - sizeof(block_op_t));
     }
+    void operator delete(void* msg) { free(msg); }
 
-    block_msg_t* release() {
-        auto bop = bop_;
-        bop_ = nullptr;
-        return bop;
-    }
-    block_msg_extra_t* extra() { return &bop_->extra; }
-    block_op_t* op() { return &bop_->op; }
+    // Allocate a new, uninitialized BlockMessage whose block_op begins in a memory region that
+    // is block_op_size bytes long.
+    static zx_status_t Create(size_t block_op_size, fbl::unique_ptr<BlockMessage>* out);
 
-    BlockMsg(block_msg_t* bop) : bop_(bop) {}
-    BlockMsg() : bop_(nullptr) {}
-    BlockMsg& operator=(BlockMsg&& o) {
-        reset(o.release());
-        return *this;
-    }
+    // Initialize the contents of this from the supplied args. block_op op_ is cleared.
+    void Init(fbl::RefPtr<IoBuffer> iobuf, BlockServer* server, block_fifo_request_t* req);
 
+    // End the transaction specified by reqid and group, and release iobuf.
+    // BlockMessage can be reused with another call to Init().
+    void Complete(zx_status_t status);
 
-    ~BlockMsg() {
-        reset();
-    }
-
-    static zx_status_t Create(size_t block_op_size, BlockMsg* out) {
-        block_msg_t* bop = (block_msg_t*) calloc(block_op_size + sizeof(block_msg_t) -
-                                                 sizeof(block_op_t), 1);
-        if (bop == nullptr) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        // Placement constructor, followed by explicit destructor in ~BlockMsg();
-        new (&bop->extra) block_msg_extra_t();
-        BlockMsg msg(bop);
-        *out = std::move(msg);
-        return ZX_OK;
-    }
+    block_op_t* Op() { return &op_; }
 
 private:
-    block_msg_t* bop_;
+    fbl::RefPtr<IoBuffer> iobuf_;
+    BlockServer* server_;
+    reqid_t reqid_;
+    groupid_t group_;
+    size_t op_size_;
+    // Must be at the end of structure.
+    union {
+        block_op_t op_;
+        uint8_t _op_raw_[1]; // Extra space for underlying block_op.
+    };
 };
+
+using BlockMessageQueue = fbl::DoublyLinkedList<BlockMessage*>;
 
 class BlockServer {
 public:
@@ -207,7 +164,7 @@ private:
     // BARRIER_AFTER is implemented by sticking "BARRIER_BEFORE" on the
     // next operation that arrives.
     bool deferred_barrier_before_ = false;
-    BlockMsgQueue in_queue_;
+    BlockMessageQueue in_queue_;
     std::atomic<size_t> pending_count_;
     std::atomic<bool> barrier_in_progress_;
     TransactionGroup groups_[MAX_TXN_GROUP_COUNT];
