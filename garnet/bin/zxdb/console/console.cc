@@ -43,8 +43,7 @@ Console::Console(Session* session)
 
   line_input_.set_completion_callback(&GetCommandCompletions);
 
-  // Set stdin to async mode or OnStdinReadable will block, but make sure
-  // stdout is in blocking mode since we don't expect to retry.
+  // Set stdin to async mode or OnStdinReadable will block.
   fcntl(STDIN_FILENO, F_SETFL, fcntl(STDIN_FILENO, F_GETFL, 0) | O_NONBLOCK);
 }
 
@@ -113,9 +112,21 @@ void Console::Output(OutputBuffer output) {
   // TODO(brettw) This can cause flickering. A more advanced system would
   // do more fancy console stuff to output above the input line so we'd
   // never have to hide it.
+
+  // Make sure stdout is in blocking mode since normal output won't expect
+  // non-blocking mode. We can get in this state if stdin and stdout are the
+  // same underlying handle because the constructor sets stdin to O_NONBLOCK
+  // so we can asynchronously wait for input.
+  int old_bits = fcntl(STDIN_FILENO, F_GETFL, 0);
+  if (old_bits & O_NONBLOCK)
+    fcntl(STDOUT_FILENO, F_SETFL, old_bits & ~O_NONBLOCK);
+
   line_input_.Hide();
   output.WriteToStdout();
   line_input_.Show();
+
+  if (old_bits & O_NONBLOCK)
+    fcntl(STDOUT_FILENO, F_SETFL, old_bits);
 }
 
 void Console::Output(const std::string& s) {
