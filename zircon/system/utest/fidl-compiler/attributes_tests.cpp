@@ -100,6 +100,31 @@ interface A {
     END_TEST;
 }
 
+// This tests our ability to treat warnings as errors.  It is here because this
+// is the most convenient warning.
+bool warnings_as_errors_test() {
+    BEGIN_TEST;
+
+    TestLibrary library("dup_attributes.fidl", R"FIDL(
+library fidl.test.dupattributes;
+
+[Duc = "should be Doc"]
+interface A {
+    MethodA();
+};
+
+)FIDL");
+    library.set_warnings_as_errors(true);
+    EXPECT_FALSE(library.Compile());
+    auto warnings = library.warnings();
+    ASSERT_EQ(warnings.size(), 0);
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "suspect attribute with name 'Duc'; did you mean 'Doc'?");
+
+    END_TEST;
+}
+
 bool empty_transport() {
     BEGIN_TEST;
 
@@ -398,6 +423,7 @@ RUN_TEST(no_two_same_attribute_test);
 RUN_TEST(no_two_same_doc_attribute_test);
 RUN_TEST(no_two_same_attribute_on_library_test);
 RUN_TEST(warn_on_close_attribute_test);
+RUN_TEST(warnings_as_errors_test);
 RUN_TEST(empty_transport);
 RUN_TEST(bogus_transport);
 RUN_TEST(channel_transport);

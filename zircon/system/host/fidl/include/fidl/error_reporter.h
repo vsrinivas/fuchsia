@@ -16,6 +16,9 @@ namespace fidl {
 
 class ErrorReporter {
 public:
+    ErrorReporter(bool warnings_as_errors = false)
+        : warnings_as_errors_(warnings_as_errors) {}
+
     class Counts {
     public:
         Counts(const ErrorReporter* reporter)
@@ -38,8 +41,10 @@ public:
     Counts Checkpoint() const { return Counts(this); };
     const std::vector<std::string>& errors() const { return errors_; };
     const std::vector<std::string>& warnings() const { return warnings_; };
+    void set_warnings_as_errors(bool value) { warnings_as_errors_ = value; }
 
 private:
+    bool warnings_as_errors_;
     std::vector<std::string> errors_;
     std::vector<std::string> warnings_;
 };

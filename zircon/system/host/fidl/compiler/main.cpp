@@ -36,6 +36,7 @@ void Usage() {
            "             [--tables TABLES_PATH]\n"
            "             [--json JSON_PATH]\n"
            "             [--name LIBRARY_NAME]\n"
+           "             [--werror]\n"
            "             [--files [FIDL_FILE...]...]\n"
            "             [--help]\n"
            "\n"
@@ -70,6 +71,8 @@ void Usage() {
            "\n"
            " * `--json-schema`. If present, this flag instructs `fidlc` to output the\n"
            "   JSON schema of the intermediate representation.\n"
+           "\n"
+           " * `--werror`. Treats warnings as errors.\n"
            "\n"
            " * `--help`. Prints this help, and exit immediately.\n"
            "\n"
@@ -284,6 +287,7 @@ int main(int argc, char* argv[]) {
 
     std::string library_name;
 
+    bool warnings_as_errors = false;
     std::map<Behavior, std::fstream> outputs;
     while (args->Remaining()) {
         // Try to parse an output type.
@@ -295,6 +299,8 @@ int main(int argc, char* argv[]) {
         } else if (behavior_argument == "--json-schema") {
             PrintJsonSchema();
             exit(0);
+        } else if (behavior_argument == "--werror") {
+            warnings_as_errors = true;
         } else if (behavior_argument == "--c-header") {
             outputs.emplace(Behavior::kCHeader, Open(args->Claim(), std::ios::out));
         } else if (behavior_argument == "--c-client") {
@@ -334,7 +340,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Ready. Set. Go.
-    fidl::ErrorReporter error_reporter;
+    fidl::ErrorReporter error_reporter(warnings_as_errors);
     auto typespace = fidl::flat::Typespace::RootTypes(&error_reporter);
     auto status = compile(&error_reporter,
                           &typespace,

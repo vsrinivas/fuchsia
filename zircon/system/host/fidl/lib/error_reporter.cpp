@@ -94,6 +94,10 @@ void ErrorReporter::ReportError(StringView message) {
 //     sourceline
 //        ^
 void ErrorReporter::ReportWarning(const SourceLocation& location, StringView message) {
+    if (warnings_as_errors_) {
+        ReportError(location, message);
+        return;
+    }
     auto error = Format("warning", location, message);
     warnings_.push_back(std::move(error));
 }
