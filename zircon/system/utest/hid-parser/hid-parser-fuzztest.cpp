@@ -15,9 +15,5 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         return 0;
     }
     auto cleanup = fbl::MakeAutoCall([dd]() { hid::FreeDeviceDescriptor(dd); });
-
-    size_t ff_count = 0u;
-    auto collection __attribute__((unused)) =
-        hid::GetAppCollection(hid::GetFirstInputField(dd, &ff_count));
     return 0;
 }

@@ -171,12 +171,7 @@ static bool parse_boot_mouse() {
     EXPECT_TRUE(collection->parent == nullptr);
 
     // Test the helpers.
-    size_t count_first_input = 0;
-    auto first_input = hid::GetFirstInputField(dev, &count_first_input);
-    EXPECT_EQ(first_input, dev->report[0].input_fields);
-    EXPECT_EQ(6u, count_first_input);
-
-    auto app_col = hid::GetAppCollection(first_input);
+    auto app_col = hid::GetAppCollection(&dev->report[0].input_fields[0]);
     EXPECT_EQ(app_col, collection);
 
     hid::FreeDeviceDescriptor(dev);
@@ -730,12 +725,6 @@ static bool parse_ps3_controller() {
     EXPECT_EQ(collection->usage.page, hid::usage::Page::kGenericDesktop);
     EXPECT_EQ(collection->usage.usage, hid::usage::GenericDesktop::kJoystick);
     EXPECT_TRUE(collection->parent == nullptr);
-
-    size_t ff_count = 0u;
-    auto top_col = hid::GetAppCollection(hid::GetFirstInputField(dev, &ff_count));
-    ASSERT_TRUE(top_col != nullptr);
-    EXPECT_EQ(top_col, collection);
-    EXPECT_EQ(ff_count, 172);
 
     hid::FreeDeviceDescriptor(dev);
     END_TEST;

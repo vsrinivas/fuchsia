@@ -230,16 +230,6 @@ struct ReportDescriptor {
     size_t feature_byte_sz;
     size_t feature_count;
     ReportField* feature_fields;
-
-    // TODO(dgilhooley) - Remove all of these fields below, they
-    // were created before input, output, feature fields and are now
-    // depreciated.
-
-    // This is the byte_sz of the input fields only
-    size_t byte_sz;
-    size_t count;
-    // The array of all fields (input, output, and feature)
-    ReportField* first_field;
 };
 
 struct DeviceDescriptor {
@@ -273,9 +263,6 @@ ParseResult ParseReportDescriptor(
     DeviceDescriptor** dev_desc);
 
 void FreeDeviceDescriptor(DeviceDescriptor* dev_desc);
-
-ReportField* GetFirstInputField(const DeviceDescriptor* dev_desc,
-                                size_t* count);
 
 Collection* GetAppCollection(const ReportField* field);
 

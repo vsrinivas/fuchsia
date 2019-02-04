@@ -209,7 +209,6 @@ public:
             // of the first field, and the report id.
             dev->report[ifr] = {};
             dev->report[ifr].report_id = report_id.report_id;
-            dev->report[ifr].first_field = &dest_fields[ix];
 
             dev->report[ifr].input_fields = input_fields_start;
             dev->report[ifr].output_fields = output_fields_start;
@@ -262,8 +261,6 @@ public:
                 feature_bit_sz = 0;
 
             // Update the report ReportDescriptor with the final information.
-            dev->report[ifr].count = field_count;
-
             dev->report[ifr].input_count = input_count;
             dev->report[ifr].input_byte_sz = DIV_ROUND_UP(input_bit_sz, 8);
 
@@ -273,9 +270,6 @@ public:
             dev->report[ifr].feature_count = feature_count;
             dev->report[ifr].feature_byte_sz = DIV_ROUND_UP(feature_bit_sz, 8);
 
-            // TODO(dgilhooley) Fix this by removing byte_sz entirely when this change lands.
-            dev->report[ifr].byte_sz =
-                dev->report[ifr].input_byte_sz;
             ++ifr;
         }
 
@@ -729,25 +723,6 @@ ParseResult ParseReportDescriptor(
 void FreeDeviceDescriptor(DeviceDescriptor* dev_desc) {
     // memory was allocated via ParseState::Alloc()
     impl::ParseState::Free(dev_desc);
-}
-
-ReportField* GetFirstInputField(const DeviceDescriptor* dev_desc,
-                                size_t* field_count) {
-    if (dev_desc == nullptr)
-        return nullptr;
-
-    auto rep_count = dev_desc->rep_count;
-
-    for (size_t ix = 0; ix != rep_count; ix++) {
-        auto fields = dev_desc->report[ix].first_field;
-        if (fields[0].type == hid::kInput) {
-            *field_count = dev_desc->report[ix].count;
-            return &fields[0];
-        }
-    }
-
-    *field_count = 0u;
-    return nullptr;
 }
 
 Collection* GetAppCollection(const ReportField* field) {
