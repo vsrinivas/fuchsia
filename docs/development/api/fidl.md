@@ -282,6 +282,9 @@ in a row) or the `[Doc = "this is a comment"]` attribute:
 [Doc = "and so is this"]
 ```
 
+For more information about what your comments should contain, consult the [API
+Documentation Rubric](documentation.md).
+
 #### Flow-through vs. regular comment guidelines
 
 For flow through comments, the `///` form is preferred over the `[Doc = ]`
