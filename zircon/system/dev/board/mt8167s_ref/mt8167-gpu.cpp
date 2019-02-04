@@ -55,7 +55,7 @@ zx_status_t Mt8167::GpuInit() {
             .clk = kClkMfgMm,
         }};
     pbus_dev_t gpu_dev = {};
-    gpu_dev.name = "gpio";
+    gpu_dev.name = "mt8167s_gpu";
     gpu_dev.vid = PDEV_VID_MEDIATEK;
     gpu_dev.did = PDEV_DID_MEDIATEK_GPU;
     gpu_dev.mmio_list = gpu_mmios;
@@ -67,7 +67,7 @@ zx_status_t Mt8167::GpuInit() {
 
     zx_status_t status = pbus_.DeviceAdd(&gpu_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __FUNCTION__, status);
+        zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
         return status;
     }
 
