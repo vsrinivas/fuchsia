@@ -39,7 +39,7 @@ prebuilt/
 Session.vim
 tags
 target
-third_party/
+/third_party/
 Thumbs.db
 /tools/
 tools/cipd.gni
