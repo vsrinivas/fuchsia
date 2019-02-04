@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
 import("//build/test/test_package.gni")
+import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
 
 declare_args() {
   # Include the vulkan validation layers in scenic.
@@ -12,7 +12,6 @@ declare_args() {
 }
 
 package("scenic_tests") {
-
   testonly = true
 
   deps = [
@@ -113,12 +112,15 @@ package("scenic_tests") {
 }
 
 package("root_presenter") {
-
   deps = [
     "root_presenter",
   ]
 
-  binary = "root_presenter"
+  binaries = [
+    {
+      name = "root_presenter"
+    },
+  ]
 
   resources = [
     {
@@ -136,12 +138,15 @@ package("root_presenter") {
 }
 
 package("ime_service") {
-
   deps = [
     "ime",
   ]
 
-  binary = "ime_service"
+  binaries = [
+    {
+      name = "ime_service"
+    },
+  ]
 
   meta = [
     {
@@ -165,12 +170,15 @@ test_package("ime_service_tests") {
 }
 
 package("view_manager") {
-
   deps = [
     "view_manager",
   ]
 
-  binary = "view_manager"
+  binaries = [
+    {
+      name = "view_manager"
+    },
+  ]
 
   meta = [
     {
@@ -181,12 +189,15 @@ package("view_manager") {
 }
 
 package("scenic") {
-
   deps = [
     "scenic",
   ]
 
-  binary = "scenic"
+  binaries = [
+    {
+      name = "scenic"
+    },
+  ]
 
   meta = [
     {
@@ -210,104 +221,40 @@ package("scenic") {
   }
 }
 
-package("screencap") {
+# Component shell tools can be run as shell command or as components via a
+# component URI. The following list contains the names of such components that
+# follow the pattern:
+# name/meta/name.cmx contains the component manifest
+# name is the name of a subdirectory that builds the output binary `name`
+component_shell_tools = [
+  "screencap",
+  "snapshot",
+  "gltf_export",
+  "set_root_view",
+]
+foreach(tool, component_shell_tools) {
+  package(tool) {
+    meta = [
+      {
+        path = rebase_path("$tool/meta/$tool.cmx")
+        dest = "$tool.cmx"
+      },
+    ]
 
-  meta = [
-    {
-      path = rebase_path("screencap/meta/screencap.cmx")
-      dest = "screencap.cmx"
-    },
-  ]
+    deps = [
+      tool,
+    ]
 
-  deps = [
-    "screencap",
-  ]
-
-  binary = "screencap"
-}
-
-package("snapshot") {
-
-  meta = [
-    {
-      path = rebase_path("snapshot/meta/snapshot.cmx")
-      dest = "snapshot.cmx"
-    },
-  ]
-
-  deps = [
-    "snapshot",
-  ]
-
-  binary = "snapshot"
-}
-
-package("gltf_export") {
-
-  meta = [
-    {
-      path = rebase_path("gltf_export/meta/gltf_export.cmx")
-      dest = "gltf_export.cmx"
-    },
-  ]
-
-  deps = [
-    "gltf_export",
-  ]
-
-  binary = "gltf_export"
-}
-
-package("scenic_tools") {
-  deps = [
-    "gltf_export",
-    "input",
-    "present_view",
-    "print_input",
-    "screencap",
-    "set_renderer_params_HACK:set_renderer_params",
-    "set_root_view",
-    "snapshot",
-  ]
-
-  binaries = [
-    {
-      name = "gltf_export"
-      shell = true
-    },
-    {
-      name = "input"
-      shell = true
-    },
-    {
-      name = "set_root_view"
-      shell = true
-    },
-    {
-      name = "set_renderer_params"
-      shell = true
-    },
-    {
-      name = "present_view"
-      shell = true
-    },
-    {
-      name = "print_input"
-      shell = true
-    },
-    {
-      name = "screencap"
-      shell = true
-    },
-    {
-      name = "snapshot"
-      shell = true
-    },
-  ]
+    binaries = [
+      {
+        name = tool
+        shell = true
+      },
+    ]
+  }
 }
 
 package("set_renderer_params") {
-
   deps = [
     "set_renderer_params_HACK:set_renderer_params",
   ]
@@ -315,6 +262,7 @@ package("set_renderer_params") {
   binaries = [
     {
       name = "set_renderer_params"
+      shell = true
     },
   ]
 
@@ -327,21 +275,24 @@ package("set_renderer_params") {
   ]
 }
 
-package("set_root_view") {
-  deps = [
-    "set_root_view",
-  ]
+# Non-component tools contains the names of shell command tools that do not
+# have any CMX.
+non_component_tools = [
+  "input",
+  "present_view",
+  "print_input",
+]
 
-  binaries = [
-    {
-      name = "set_root_view"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("set_root_view/meta/set_root_view.cmx")
-      dest = "set_root_view.cmx"
-    },
-  ]
+foreach(tool, non_component_tools) {
+  package(tool) {
+    deps = [
+      tool,
+    ]
+    binaries = [
+      {
+        name = tool
+        shell = true
+      },
+    ]
+  }
 }

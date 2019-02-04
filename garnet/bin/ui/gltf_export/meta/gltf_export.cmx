@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/gltf_export"
     },
     "sandbox": {
         "services": [

@@ -1,8 +1,12 @@
 {
     "packages": [
-        "//garnet/bin/ui:scenic_tools",
+        "//garnet/bin/ui:gltf_export",
+        "//garnet/bin/ui:input",
+        "//garnet/bin/ui:present_view",
+        "//garnet/bin/ui:print_input",
         "//garnet/bin/ui:screencap",
         "//garnet/bin/ui:set_renderer_params",
-        "//garnet/bin/ui:set_root_view"
+        "//garnet/bin/ui:set_root_view",
+        "//garnet/bin/ui:snapshot"
     ]
 }

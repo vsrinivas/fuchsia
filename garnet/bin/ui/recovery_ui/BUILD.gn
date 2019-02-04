@@ -34,5 +34,10 @@ package("recovery_ui") {
     ":bin",
   ]
 
-  binary = "rust_crates/recovery_ui"
+  binaries = [
+    {
+      name = "recovery_ui"
+      path = "rust_crates/recovery_ui"
+    },
+  ]
 }

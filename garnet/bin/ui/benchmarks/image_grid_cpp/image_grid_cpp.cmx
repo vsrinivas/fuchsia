@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/image_grid_cpp"
     },
     "sandbox": {
         "services": [

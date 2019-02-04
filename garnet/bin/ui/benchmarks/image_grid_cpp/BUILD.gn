@@ -31,7 +31,11 @@ package("image_grid_cpp") {
     ":bin",
   ]
 
-  binary = "image_grid_cpp"
+  binaries = [
+    {
+      name = "image_grid_cpp"
+    },
+  ]
 
   meta = [
     {

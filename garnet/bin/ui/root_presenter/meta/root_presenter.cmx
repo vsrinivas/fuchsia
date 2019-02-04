@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/root_presenter"
     },
     "sandbox": {
         "dev": [

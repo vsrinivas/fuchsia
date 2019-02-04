@@ -67,7 +67,11 @@ package("sketchy_service") {
     ":bin",
   ]
 
-  binary = "sketchy_service"
+  binaries = [
+    {
+      name = "sketchy_service"
+    },
+  ]
 
   meta = [
     {

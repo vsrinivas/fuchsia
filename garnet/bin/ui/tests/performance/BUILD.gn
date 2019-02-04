@@ -14,7 +14,11 @@ package("vulkan_is_supported") {
   deps = [
     "vulkan_is_supported",
   ]
-  binary = "vulkan_is_supported"
+  binaries = [
+    {
+      name = "vulkan_is_supported"
+    },
+  ]
 
   meta = [
     {
