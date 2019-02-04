@@ -101,6 +101,7 @@ sdk("garnet") {
 
   deps = [
     "docs",
+    "tools:symbolize_sdk($host_toolchain)",
     "//build/images:images_sdk",
     "//garnet/bin/cmc:cmc_sdk($host_toolchain)",
     "//garnet/bin/far:bin_sdk($host_toolchain)",
