@@ -89,11 +89,13 @@ examples of these.  Protocols are usually in-process interactions between
 devices in the same devhost, but in cases of driver isolation, they may take
 place via RPC to a "higher" devhost (via proxy).
 
-Devices may implement Interfaces, which are RPC protocols that clients (services,
-applications, etc) use.  The base device interface supports POSIX style
-open/close/read/write IO.  Currently, Interfaces are supported via the ioctl
-operation in the base device interface.  In the future, Fuchsia's interface definition
-language and bindings (FIDL) will be supported.
+Devices may implement Interfaces, which are
+[FIDL](../../../docs/development/languages/fidl/README.md) RPC protocols
+that clients (services, applications, etc) use.  The base device interface
+supports POSIX style open/close/read/write IO.  Interfaces are supported via
+the `message()` operation in the base device interface.  For legacy reasons,
+an `ioctl()` operation is currently present, but it is deprecated and in the
+process of being removed.
 
 In many cases a Protocol is used to allow drivers to be simpler by taking advantage
 of a common implementation of an Interface.  For example, the "block" driver implements

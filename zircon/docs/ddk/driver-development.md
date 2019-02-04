@@ -158,8 +158,8 @@ directly with hardware (for example, via MMIO) or by communicating with its
 parent device (for example, queuing a USB transaction).
 
 External client requests from processes outside the devhost are fulfilled by
-the device ops `read()`, `write()`, and `ioctl()`. Requests from children
-drivers, generally in the same process, are fulfilled by device
+the device ops `message()`, `read()`, `write()`, and `ioctl()`. Requests from
+children drivers, generally in the same process, are fulfilled by device
 protocols corresponding to the device class. Driver-to-driver requests should
 use device protocols instead of device ops.
 
@@ -190,7 +190,17 @@ You can signal an interrupt handle with
 **ZX_INTERRUPT_SLOT_USER** to return from `zx_interrupt_wait()`. This is
 necessary to shut down the interrupt thread during driver clean up.
 
+## FIDL Messages
+
+Messages for each device class are defined in the
+[FIDL](../../../docs/development/languages/fidl/README.md) language.
+Each device implements zero or more FIDL interfaces, multiplexed over a single
+channel per client.  The driver is given the opportunity to interpret FIDL
+messages via the `message()` hook.
+
 ## Ioctl
+
+Ioctls are deprecated in favor of messages.  No new ioctls should be implemented.
 
 Ioctls for each device class are defined in
 [zircon/device/](../../system/public/zircon/device). Ioctls may accept or
@@ -202,12 +212,12 @@ handles when they’re no longer needed, unless it returns
 `ZX_ERR_NOT_SUPPORTED` in which case the devhost RPC layer will close the
 handles.
 
-## Protocol ops vs. ioctls
+## Protocol ops vs. FIDL messages
 
-Protocol ops define the DDK-internal API for a device. Ioctls define the
-external API. Define a protocol op if the function is primarily meant to be
-called by other drivers, and generally a driver should call a protocol op on
-its parent instead of an ioctl.
+Protocol ops define the DDK-internal API for a device. FIDL messages define the
+external API.  Define a protocol op if the function is meant to be called by
+other drivers.  A driver should call a protocol op on its parent to make use of
+those functions.
 
 ## Isolate devices
 
