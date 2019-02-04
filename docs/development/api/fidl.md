@@ -340,33 +340,26 @@ Divide libraries into files to maximize readability.
 
 ### Ordinals
 
-Interfaces contain a number of methods.  In its declaration, each method is
-assigned a unique 32 bit identifier, called an ordinal.
+Interfaces contain a number of methods.  Each method is automatically assigned a
+unique 32 bit identifier, called an ordinal.  Servers use the ordinal value
+to determine which interface method should be dispatched.
 
-Interfaces evolve in two directions.  First, an interface can grow new methods,
-with new ordinals.  Second, a superinterface can be extended by a subinterface.
-The subinterface has all of the methods of its superinterface plus its own.
+The compiler determines the ordinal value by hashing the library, interface, and
+method name.  In rare cases, ordinals in the same interface may collide.  If
+this happens, you can use the `Selector` attribute to change the name of the
+method the compiler uses for hashing.  The following example will use the method
+name "C" instead of the method name "B" for calculating the hash:
 
-The goal of the guidelines here is to avoid these extension mechanisms
-colliding.
+```
+interface A {
+    [ Selector = "C" ]
+    B(string s, bool b);
+};
+```
 
- * Never use the zero ordinal. (The compiler forbids the zero ordinal.)
 
- * Ordinals within an interface should be allocated in contiguous blocks. For example:
-   * 0x80000001--0x80000007
-   * 1, 2, 3
-   * 1000--1010, 1100--1112, 1200--1999
-
- * New ordinals in an interface should use the next ordinal in the block. After
-   1, 2, and 3, use 4.
-
- * Related interfaces should consider using nearby and distinct ordinal blocks:
-
- * Interfaces A and B, in the same library, that refer to each other might
-   choose to allocate in blocks 0x100-0x1ff and 0x200-0x2ff respectively.
-
- * Interfaces that expect to be extended by subinterfaces should explicitly
-   claim ordinal blocks in a comment.
+Selectors can also be used to maintain backwards compatibility with the wire
+format in cases where developers wish to change the name of a method.
 
 ### Library structure
 
@@ -941,8 +934,8 @@ union MyCommand {
 };
 
 interface HighVolumeSink {
-  1: Enqueue(vector<MyCommand> commands);
-  2: Commit() -> (MyStatus result);
+  Enqueue(vector<MyCommand> commands);
+  Commit() -> (MyStatus result);
 };
 ```
 

@@ -32,9 +32,10 @@ work properly in future versions of the system.
 ### Source stability
 
 FIDL definitions in the SDK might evolve in source-incompatible ways. For
-example, we might rename a method in an interface while maintaining its
-ordinal and semantics. Such a change preserves the ABI but breaks source
-compatibility.
+example, we might rename a method in an interface while maintaining its ordinal
+and semantics (the ordinal can be maintained by adding a `Selector` attribute
+that is set to the original name). Such a change preserves the ABI but breaks
+source compatibility.
 
 We do not currently have any standards about when we should break source
 compatibility.

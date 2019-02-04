@@ -487,8 +487,6 @@ to the selected option.
     *   `uint32 ordinal`
         *   The zero ordinal is invalid.
         *   Ordinals with the most significant bit set are reserved.
-            *   Ordinals 0x80001xxx are "control" messages
-            *   Ordinals 0x80002xxx are "fileio" messages
 *   A non-zero transaction ID is used to correlate sequences of messages which
     involve a request and a response, e.g. in a two-way method call. The
     initiator of the request is responsible for assigning a unique transaction
@@ -513,10 +511,10 @@ Messages which are sent directly through Zircon channels have a maximum total
 size (header + body) which is defined by the kernel <em>(currently 64 KB,
 eventual intent may be 16 KB).</em>
 
-It is possible to extend interfaces by declaring additional methods with unique
-ordinals. The language also supports creating derived interfaces provided the
-method ordinals remain unique down the hierarchy. Interface derivation is purely
-syntactic; it does not affect the wire format).
+It is possible to extend interfaces by declaring additional methods. The
+language also supports creating derived interfaces provided the method ordinals
+remain unique down the hierarchy. Interface derivation is purely syntactic; it
+does not affect the wire format).
 
 We'll use the following interface for the next few examples.
 

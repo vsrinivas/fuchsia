@@ -97,7 +97,7 @@ to the server, the server just echoes back to the client.
 2
 3   [Discoverable]
 4   interface Echo {
-5       1: EchoString(string? value) -> (string? response);
+5       EchoString(string? value) -> (string? response);
 6   };
 ```
 
@@ -113,13 +113,8 @@ follows should be made available for clients to connect to.
 **Line 4:** The `interface` keyword introduces the name of the interface, here it's called `Echo`.
 
 **Line 5:** The method, its parameters, and return values.
-There are three unusual aspects of this line:
+There are two unusual aspects of this line:
 
-*   Note the `1:` before the method name.
-    This is the **ordinal number** of the interface.
-    This number can be used to ensure backwards compatibility when there are
-    multiple versions of the same interface.
-    All methods must have a unique ordinal number.
 *   Note the declaration `string?` (for both `value` and `response`).
     The `string` part indicates that the parameters are strings (sequences of
     characters), while the question mark indicates that the parameter is optional.

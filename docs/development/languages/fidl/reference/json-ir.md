@@ -24,7 +24,7 @@ library echo2;
 
 [Discoverable]
 interface Echo {
-    1: EchoString(string? value) -> (string? response);
+    EchoString(string? value) -> (string? response);
 };
 ```
 
@@ -133,7 +133,7 @@ array element:
 [15]          ],
 [16]          "methods": [
 [17]            {
-[18]              "ordinal": 1,
+[18]              "ordinal": 1108195967,
 [19]              "name": "EchoString",
 [20]              "has_request": true,
 [21]              "maybe_request": [
