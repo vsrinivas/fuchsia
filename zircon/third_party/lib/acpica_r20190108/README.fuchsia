@@ -1,0 +1,7 @@
+Source: https://github.com/acpica/acpica/archive/R01_08_19.tar.gz
+SHA256: 71cacb92bb61f17d0755738b38fa77d90f9d8540fea8e59e10343dc5bcea5002
+License: Dual-licensed GPLv2/BSD
+Version: 20190108
+
+Modifications:
+- Added README.fuchsia
