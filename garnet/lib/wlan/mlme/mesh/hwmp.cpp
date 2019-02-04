@@ -115,13 +115,27 @@ static const MeshPath* UpdateForwardingInfo(PathTable* path_table, HwmpState* st
     return ret;
 }
 
-// See IEEE Std 802.11-2016, 14.10.10.3, Case A
+struct SeqnoAndMetric {
+    uint32_t hwmp_seqno;
+    uint32_t metric;
+
+    static SeqnoAndMetric FromState(const HwmpState* state) {
+        return {.hwmp_seqno = state->our_hwmp_seqno, .metric = 0};
+    }
+
+    static SeqnoAndMetric FromPath(const MeshPath* path) {
+        ZX_ASSERT(path->hwmp_seqno.has_value());
+        return {.hwmp_seqno = *path->hwmp_seqno, .metric = path->metric};
+    }
+};
+
+// See IEEE Std 802.11-2016, 14.10.10.3, Cases A and C
 static fbl::unique_ptr<Packet> MakeOriginalPrep(const MacHeaderWriter& header_writer,
                                                 const common::MacAddr& preq_transmitter_addr,
-                                                const common::MacAddr& self_addr,
+                                                const PreqPerTarget& per_target,
                                                 const common::ParsedPreq& preq,
                                                 const MeshPath& path_to_originator,
-                                                const HwmpState& state) {
+                                                SeqnoAndMetric target_info) {
     auto packet = GetWlanPacket(kMaxHwmpFrameSize);
     if (!packet) { return {}; }
     BufferWriter w(*packet);
@@ -134,13 +148,13 @@ static fbl::unique_ptr<Packet> MakeOriginalPrep(const MacHeaderWriter& header_wr
             .flags = {},
             .hop_count = 0,
             .element_ttl = kInitialTtl,
-            .target_addr = self_addr,
-            .target_hwmp_seqno = state.our_hwmp_seqno,
+            .target_addr = per_target.target_addr,
+            .target_hwmp_seqno = target_info.hwmp_seqno,
         },
         nullptr,  // For now, we don't support external addresses in path selection
         {
             .lifetime = preq.middle->lifetime,
-            .metric = 0,
+            .metric = target_info.metric,
             .originator_addr = preq.header->originator_addr,
             // Safe because this can only be called after updating the path to the originator
             .originator_hwmp_seqno = *path_to_originator.hwmp_seqno,
@@ -214,16 +228,21 @@ static void HandlePreq(const common::MacAddr& preq_transmitter_addr,
 
             // See IEEE Std 802.11-2016, 14.10.8.3, second bullet point
             state->our_hwmp_seqno = MaxHwmpSeqno(state->our_hwmp_seqno, t.target_hwmp_seqno) + 1;
-
-            if (auto prep = MakeOriginalPrep(mac_header_writer, preq_transmitter_addr, self_addr,
-                                             preq, *path_to_originator, *state)) {
-                packets_to_tx->Enqueue(std::move(prep));
+            if (auto packet =
+                    MakeOriginalPrep(mac_header_writer, preq_transmitter_addr, t, preq,
+                                     *path_to_originator, SeqnoAndMetric::FromState(state))) {
+                packets_to_tx->Enqueue(std::move(packet));
             }
         } else {
             bool replied = false;
             if (!t.flags.target_only()) {
-                if (auto path_to_target = path_table->GetPath(t.target_addr)) {
-                    // TODO(gbonik): send a PREP on behalf of target (case(c))
+                auto path_to_target = path_table->GetPath(t.target_addr);
+                if (path_to_target != nullptr && path_to_target->hwmp_seqno.has_value() &&
+                    path_to_target->expiration_time >= state->timer_mgr.Now()) {
+                    auto packet = MakeOriginalPrep(mac_header_writer, preq_transmitter_addr, t,
+                                                   preq, *path_to_originator,
+                                                   SeqnoAndMetric::FromPath(path_to_target));
+                    if (packet) { packets_to_tx->Enqueue(std::move(packet)); }
                     replied = true;
                 }
             }

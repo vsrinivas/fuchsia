@@ -182,6 +182,161 @@ TEST_F(HwmpTest, ForwardPreq) {
     EXPECT_RANGES_EQ(expected_preq_frame, Span<const uint8_t>(*packet));
 }
 
+// IEEE 802.11-2016, 14.10.10.3, Case C
+TEST_F(HwmpTest, ReplyToPreqOnBehalfOfAnotherNode) {
+    // Assume we have a fresh path to target
+    table.AddOrUpdatePath(common::MacAddr("33:33:33:33:33:33"),
+                          {.next_hop = common::MacAddr("22:22:22:22:22:22"),
+                           .hwmp_seqno = {12},
+                           .expiration_time = zx::time(ZX_SEC(1000000)),
+                           .metric = 1000});
+
+    // clang-format off
+    const uint8_t preq[] = {
+        130, 37,
+        0x00, // flags: no address extension
+        0x03, // hop count
+        0x20, // element ttl
+        0x04, 0x05, 0x06, 0x07, // path discovery ID
+        0x44, 0x44, 0x44, 0x44, 0x44, 0x44, // originator addr
+        0x07, 0x00, 0x00, 0x00, // originator hwmp seqno
+        0x05, 0x00, 0x00, 0x00, // lifetime
+        50, 0, 0, 0, // metric
+        1, // target count
+        // Target 1
+        0x00, // target flags: 'target only' = 0
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // target address
+        0x09, 0x00, 0x00, 0x00, // target hwmp seqno
+    };
+    // clang-format on
+
+    auto packets_to_tx = HandleHwmpAction(preq, common::MacAddr("11:11:11:11:11:11"), self_addr(),
+                                          100, CreateMacHeaderWriter(), &state, &table);
+    // Expect two frames: the PREP and the forwarded PREQ
+    ASSERT_EQ(2u, packets_to_tx.size());
+
+    // clang-format off
+    const uint8_t expected_prep_frame[] = {
+        // Mgmt header
+        0xd0, 0x00, 0x00, 0x00, // fc, duration
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+        0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, // addr2
+        0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, // addr3
+        0x10, 0x00, // seq ctl
+        // Action
+        13, // category (mesh)
+        1, // action = HWMP mesh path selection
+        // Prep element
+        131, 31,
+        0x00, 0x00, 0x20, // flags, hop count, elem ttl
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // target addr
+        0x0c, 0x00, 0x00, 0x00, // target hwmp seqno: ours, not what's in the PREQ
+        0x05, 0x00, 0x00, 0x00, // lifetime: preserved from preq
+        0xe8, 0x03, 0x00, 0x00, // metric = 1000
+        0x44, 0x44, 0x44, 0x44, 0x44, 0x44, // originator addr
+        0x07, 0x00, 0x00, 0x00, // originator hwmp seqno
+    };
+    // clang-format on
+
+    // Expect us to reply to the PREQ on behalf of the target
+    auto packet = packets_to_tx.Dequeue();
+    EXPECT_RANGES_EQ(expected_prep_frame, Span<const uint8_t>(*packet));
+
+    // clang-format off
+    const uint8_t expected_preq_frame[] = {
+        // Mgmt header
+        0xd0, 0x00, 0x00, 0x00, // fc, duration
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr1
+        0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, // addr2
+        0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, // addr3
+        0x10, 0x00, // seq ctl
+        // Action
+        13, // category (mesh)
+        1, // action = HWMP mesh path selection
+        // Preq element
+        130, 37,
+        0x00, // flags: no address extension
+        0x04, // hop count = previous hop count + 1
+        0x1f, // element ttl = previous ttl - 1
+        0x04, 0x05, 0x06, 0x07, // path discovery ID
+        0x44, 0x44, 0x44, 0x44, 0x44, 0x44, // originator addr
+        0x07, 0x00, 0x00, 0x00, // originator hwmp seqno
+        0x05, 0x00, 0x00, 0x00, // lifetime
+        150, 0, 0, 0, // metric: previous metric + last hop
+        1, // target count
+        // Target 1
+        0x01, // target flags: target only, even though the original frame had 'target only' = 0
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // target address
+        0x09, 0x00, 0x00, 0x00, // target hwmp seqno from the original PREQ
+    };
+    // clang-format on
+
+    // Expect the original PREQ to be forwarded, with 'target only' overwritten to 1
+    packet = packets_to_tx.Dequeue();
+    EXPECT_RANGES_EQ(expected_preq_frame, Span<const uint8_t>(*packet));
+}
+
+TEST_F(HwmpTest, DontReplyToPreqOnBehalfOfAnotherNode) {
+    // clang-format off
+    const uint8_t preq[] = {
+        130, 37,
+        0x00, // flags: no address extension
+        0x03, // hop count
+        0x20, // element ttl
+        0x04, 0x05, 0x06, 0x07, // path discovery ID
+        0x44, 0x44, 0x44, 0x44, 0x44, 0x44, // originator addr
+        0x07, 0x00, 0x00, 0x00, // originator hwmp seqno
+        0x05, 0x00, 0x00, 0x00, // lifetime
+        50, 0, 0, 0, // metric
+        1, // target count
+        // Target 1
+        0x00, // target flags: 'target only' = 0
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // target address
+        0x09, 0x00, 0x00, 0x00, // target hwmp seqno
+    };
+    // clang-format on
+
+    auto packets_to_tx = HandleHwmpAction(preq, common::MacAddr("11:11:11:11:11:11"), self_addr(),
+                                          100, CreateMacHeaderWriter(), &state, &table);
+    // Expect one frame (the forwarded PREQ). PREP shouldn't be sent because
+    // we don't have a path to target.
+    ASSERT_EQ(1u, packets_to_tx.size());
+
+    // clang-format off
+    const uint8_t expected_preq_frame[] = {
+        // Mgmt header
+        0xd0, 0x00, 0x00, 0x00, // fc, duration
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr1
+        0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, // addr2
+        0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, // addr3
+        0x10, 0x00, // seq ctl
+        // Action
+        13, // category (mesh)
+        1, // action = HWMP mesh path selection
+        // Preq element
+        130, 37,
+        0x00, // flags: no address extension
+        0x04, // hop count = previous hop count + 1
+        0x1f, // element ttl = previous ttl - 1
+        0x04, 0x05, 0x06, 0x07, // path discovery ID
+        0x44, 0x44, 0x44, 0x44, 0x44, 0x44, // originator addr
+        0x07, 0x00, 0x00, 0x00, // originator hwmp seqno
+        0x05, 0x00, 0x00, 0x00, // lifetime
+        150, 0, 0, 0, // metric: previous metric + last hop
+        1, // target count
+        // Target 1
+        0x00, // target flags: 'target only' should still be set to 0
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // target address
+        0x09, 0x00, 0x00, 0x00, // target hwmp seqno from the original PREQ
+    };
+    // clang-format on
+
+    // Expect the original PREQ to be forwarded, with 'target only' still set to 0
+    // since we didn't reply.
+    auto packet = packets_to_tx.Dequeue();
+    EXPECT_RANGES_EQ(expected_preq_frame, Span<const uint8_t>(*packet));
+}
+
 TEST_F(HwmpTest, PreqTimeToDie) {
     // clang-format off
     const uint8_t preq[] = {
