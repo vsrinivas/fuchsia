@@ -53,7 +53,7 @@ void UntilThreadController::InitWithThread(Thread* thread,
   // this class is still alive when this callback is issued, even though we
   // destroy the breakpoint in the destructor.
   breakpoint_->SetSettings(
-      settings, [ weak_this = weak_factory_.GetWeakPtr(), cb ](const Err& err) {
+      settings, [weak_this = weak_factory_.GetWeakPtr(), cb](const Err& err) {
         if (weak_this)
           weak_this->OnBreakpointSet(err, std::move(cb));
       });

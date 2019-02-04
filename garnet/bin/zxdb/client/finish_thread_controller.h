@@ -30,6 +30,9 @@ class FinishThreadController : public ThreadController {
  public:
   // Finishes the given frame of the stack, leaving control at frame
   // |frame_to_finish + 1] when the controller is complete.
+  //
+  // The frame_to_finish must have its fingerprint computable. This means that
+  // either you're finishing frame 0, or have synced all frames.
   FinishThreadController(Stack& stack, size_t frame_to_finish);
 
   ~FinishThreadController() override;
@@ -59,7 +62,8 @@ class FinishThreadController : public ThreadController {
 
   // Will be non-null when stepping out of the nearest physical frame. When
   // doing the subsequent inline step this will be null.
-  std::unique_ptr<FinishPhysicalFrameThreadController> finish_physical_controller_;
+  std::unique_ptr<FinishPhysicalFrameThreadController>
+      finish_physical_controller_;
 
   // The frame being stepped out of. This will be set when the frame being
   // stepped out of is an inline frame. Otherwise, only the physical frame

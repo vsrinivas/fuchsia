@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <string>
+
 namespace zxdb {
 
 // A FrameFingerprint is a way to compare stack frames across pause/resumes of
@@ -79,6 +81,9 @@ class FrameFingerprint {
   // Returns true if the input refers to the same frame as this one. This
   // will assert if either frame is !is_valid().
   bool operator==(const FrameFingerprint& other) const;
+
+  // For debugging.
+  std::string ToString() const;
 
   // Computes "left Newer than right". This doesn't use operator < or > because
   // it's ambiguous whether a newer frame is "less" or "greater".

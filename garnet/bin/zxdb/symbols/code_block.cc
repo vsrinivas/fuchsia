@@ -20,11 +20,18 @@ CodeBlock::~CodeBlock() = default;
 
 const CodeBlock* CodeBlock::AsCodeBlock() const { return this; }
 
-AddressRange CodeBlock::GetFullRange(const SymbolContext& symbol_context) const {
+AddressRanges CodeBlock::GetAbsoluteCodeRanges(
+    const SymbolContext& symbol_context) const {
+  return symbol_context.RelativeToAbsolute(code_ranges());
+}
+
+AddressRange CodeBlock::GetFullRange(
+    const SymbolContext& symbol_context) const {
   if (code_ranges_.empty())
     return AddressRange();
-  return AddressRange(symbol_context.RelativeToAbsolute(code_ranges_.front().begin()),
-                      symbol_context.RelativeToAbsolute(code_ranges_.back().end()));
+  return AddressRange(
+      symbol_context.RelativeToAbsolute(code_ranges_.front().begin()),
+      symbol_context.RelativeToAbsolute(code_ranges_.back().end()));
 }
 
 bool CodeBlock::ContainsAddress(const SymbolContext& symbol_context,

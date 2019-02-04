@@ -187,6 +187,8 @@ source_set("tests") {
     "finish_thread_controller_unittest.cc",
     "frame_fingerprint_unittest.cc",
     "frame_impl_unittest.cc",
+    "inline_thread_controller_test.cc",
+    "inline_thread_controller_test.h",
     "memory_dump_unittest.cc",
     "minidump_unittest.cc",
     "process_impl_unittest.cc",

@@ -38,9 +38,15 @@ class CodeBlock : public Symbol {
   // declaration/implementation split and there's so much overlap it's more
   // convenient to just have one type representing both.
   //
-  // These ranges will be RELATIVE to the module.
+  // These ranges will be RELATIVE to the module. See GetAbsoluteCodeRanges()
+  // to get absolute addresses.
   const AddressRanges& code_ranges() const { return code_ranges_; }
   void set_code_ranges(AddressRanges r) { code_ranges_ = std::move(r); }
+
+  // Retrieves the code ranges for this block in absolute addresses for the
+  // process.
+  AddressRanges GetAbsoluteCodeRanges(
+      const SymbolContext& symbol_context) const;
 
   // Computes the full code range covering all sub-ranges. There can be
   // multiple code ranges that can be discontiguous so not everything in this

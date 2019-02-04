@@ -29,6 +29,12 @@ class MockFrame : public Frame {
 
   ~MockFrame() override;
 
+  const debug_ipc::StackFrame& stack_frame() const { return stack_frame_; }
+  void set_stack_frame(debug_ipc::StackFrame sf) { stack_frame_ = sf; }
+
+  // Use GetLocation() to retrieve the location.
+  void set_location(Location l) { location_ = std::move(l); }
+
   // Frame implementation.
   Thread* GetThread() const override;
   bool IsInline() const override;

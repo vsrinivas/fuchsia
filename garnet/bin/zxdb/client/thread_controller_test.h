@@ -18,7 +18,7 @@ class Thread;
 
 // This test harness automatically makes a process and a thread
 //
-// In the future we will probably want to add support got setting up a mock
+// In the future we will probably want to add support for setting up a mock
 // symbol system (this is more involved).
 class ThreadControllerTest : public RemoteAPITest {
  public:

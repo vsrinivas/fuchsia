@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 
+#include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system_impl.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
@@ -56,6 +57,53 @@ Thread* RemoteAPITest::InjectThread(uint64_t process_koid,
 void RemoteAPITest::InjectException(
     const debug_ipc::NotifyException& exception) {
   session_->DispatchNotifyException(exception);
+}
+
+void RemoteAPITest::InjectExceptionWithStack(
+    const debug_ipc::NotifyException& exception,
+    std::vector<std::unique_ptr<Frame>> frames, bool has_all_frames) {
+  ThreadImpl* thread = session_->ThreadImplFromKoid(exception.process_koid,
+                                                    exception.thread.koid);
+  FXL_CHECK(thread);  // Tests should always pass valid KOIDs.
+
+  // Need to supply at least one stack frame.
+  FXL_CHECK(!frames.empty());
+
+  // Create an exception record with a thread frame so it's valid. There must
+  // be one frame even though the stack will be immediately overwritten.
+  debug_ipc::NotifyException modified(exception);
+  modified.thread.stack_amount =
+      debug_ipc::ThreadRecord::StackAmount::kMinimal;
+  modified.thread.frames.clear();
+  modified.thread.frames.emplace_back(frames[0]->GetAddress(),
+                                      frames[0]->GetBasePointerRegister(),
+                                      frames[0]->GetStackPointer());
+
+  // To manually set the thread state, set the general metadata which will pick
+  // up the basic flags and the first stack frame. Then re-set the stack frame
+  // with the information passed in by our caller.
+  thread->SetMetadata(modified.thread);
+  thread->GetStack().SetFramesForTest(std::move(frames), has_all_frames);
+
+  // Normal exception dispatch path, but skipping the metadata (so the metadata
+  // set above will stay).
+  session_->DispatchNotifyException(modified, false);
+}
+
+void RemoteAPITest::InjectExceptionWithStack(
+    uint64_t process_koid, uint64_t thread_koid,
+    debug_ipc::NotifyException::Type exception_type,
+    std::vector<std::unique_ptr<Frame>> frames, bool has_all_frames) {
+  // Need to supply at least one stack frame to get the address from.
+  FXL_CHECK(!frames.empty());
+
+  debug_ipc::NotifyException exception;
+  exception.process_koid = process_koid;
+  exception.type = exception_type;
+  exception.thread.koid = thread_koid;
+  exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+
+  InjectExceptionWithStack(exception, std::move(frames), has_all_frames);
 }
 
 }  // namespace zxdb

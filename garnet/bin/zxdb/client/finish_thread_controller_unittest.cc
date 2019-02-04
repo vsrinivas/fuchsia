@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/client/finish_thread_controller.h"
+#include "garnet/bin/zxdb/client/inline_thread_controller_test.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/client/thread_controller_test.h"
 #include "garnet/bin/zxdb/client/thread_impl_test_support.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "gtest/gtest.h"
@@ -14,126 +14,151 @@ namespace zxdb {
 
 namespace {
 
-constexpr uint64_t kInitialAddress = 0x12345678;
-constexpr uint64_t kInitialBase = 0x1000;
-constexpr uint64_t kReturnAddress = 0x34567890;
-constexpr uint64_t kReturnBase = 0x1010;
-
-class FinishThreadControllerTest : public ThreadControllerTest {
- public:
-  // Creates a break notification with two stack frames using the constants
-  // above.
-  debug_ipc::NotifyException MakeBreakNotification() {
-    debug_ipc::NotifyException n;
-
-    n.process_koid = process()->GetKoid();
-    n.type = debug_ipc::NotifyException::Type::kSoftware;
-    n.thread.koid = thread()->GetKoid();
-    n.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-    n.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
-    n.thread.frames.emplace_back(kInitialAddress, kInitialBase, kInitialBase);
-    n.thread.frames.emplace_back(kReturnAddress, kReturnBase, kReturnBase);
-
-    return n;
-  }
-};
+class FinishThreadControllerTest : public InlineThreadControllerTest {};
 
 }  // namespace
 
-TEST_F(FinishThreadControllerTest, Finish) {
-  // Notify of thread stop.
-  auto break_notification = MakeBreakNotification();
-  auto& break_frames = break_notification.thread.frames;
-  InjectException(break_notification);
+// See also the FinishPhysicalFrameThreadController tests.
 
-  constexpr uint64_t kBottomBase = kReturnBase + 0x10;
-  debug_ipc::StackFrame bottom_frame(kReturnAddress, kBottomBase, kBottomBase);
+// Tests finishing a single inline frame. This finishes the top frame of the
+// stack which is an inline function (see InlineThreadControllerTest for what
+// the returned stack layout is).
+TEST_F(FinishThreadControllerTest, FinishInline) {
+  auto mock_frames = GetStack();
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
 
-  // Supply three frames for when the thread requests them: the top one (of the
-  // stop above), the one we'll return to, and the one before that (so the
-  // fingerprint of the one to return to can be computed). This stack value
-  // should be larger than above (stack grows downward).
-  debug_ipc::ThreadStatusReply expected_reply;
-  // Copy previous frames and add to it.
-  expected_reply.record = break_notification.thread;
-  expected_reply.record.stack_amount =
-      debug_ipc::ThreadRecord::StackAmount::kFull;
-  expected_reply.record.frames.push_back(bottom_frame);
-  mock_remote_api()->set_thread_status_reply(expected_reply);
+  // "Finish" from the top stack frame, which is an inline one.
+  auto finish_controller =
+      std::make_unique<FinishThreadController>(thread()->GetStack(), 0);
+  bool continued = false;
+  thread()->ContinueWith(std::move(finish_controller),
+                         [&continued](const Err& err) {
+                           if (!err.has_error())
+                             continued = true;
+                         });
 
-  EXPECT_EQ(0, mock_remote_api()->breakpoint_add_count());
-  Err out_err;
-  thread()->ContinueWith(
-      std::make_unique<FinishThreadController>(thread()->GetStack(), 0),
-      [&out_err](const Err& err) {
-        out_err = err;
-        debug_ipc::MessageLoop::Current()->QuitNow();
-      });
-  loop().Run();
+  // It should have been able to step without doing any further async work.
+  EXPECT_TRUE(continued);
+  EXPECT_EQ(1, mock_remote_api()->resume_count());
 
-  TestThreadObserver thread_observer(thread());
+  // Do one step inside the inline function (add 4 to the address).
+  mock_frames = GetStack();
+  SetAddressForMockFrame(mock_frames[0]->GetAddress() + 4,
+                         mock_frames[0].get());
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
 
-  // Finish should have added a temporary breakpoint at the return address.
-  // The particulars of this may change with the implementation, but it's worth
-  // testing to make sure the breakpoints are all hooked up to the stepping
-  // properly.
-  ASSERT_EQ(1, mock_remote_api()->breakpoint_add_count());
-  ASSERT_EQ(kReturnAddress, mock_remote_api()->last_breakpoint_address());
-  ASSERT_EQ(0, mock_remote_api()->breakpoint_remove_count());
+  // That's still inside the frame's range, so it should continue.
+  EXPECT_EQ(2, mock_remote_api()->resume_count());
 
-  // Simulate a hit of the breakpoint. This stack frame is a recursive call
-  // above the frame we're returning to so it should not trigger.
-  break_frames.emplace(break_frames.begin(), kReturnAddress,
-                       kInitialBase - 0x100, kInitialBase - 0x100);
-  break_notification.hit_breakpoints.emplace_back();
-  break_notification.hit_breakpoints[0].breakpoint_id =
-      mock_remote_api()->last_breakpoint_id();
-  InjectException(break_notification);
-  EXPECT_FALSE(thread_observer.got_stopped());
+  // Set exception at the first instruction after the inline frame.
+  mock_frames = GetStack();
+  uint64_t after_inline = kTopInlineFunctionRange.end();
+  mock_frames.erase(mock_frames.begin());  // Remove the inline function.
+  SetAddressForMockFrame(after_inline, mock_frames[0].get());
 
-  // Simulate a breakpoint hit with a lower BP (erase the two top ones = the
-  // recursive call and the old top one). Need to add the bottom frame so there
-  // are two (for computing the fingerprint).
-  break_frames.erase(break_frames.begin(), break_frames.begin() + 2);
-  break_frames.push_back(bottom_frame);
-  InjectException(break_notification);
-  EXPECT_TRUE(thread_observer.got_stopped());
-  EXPECT_EQ(1, mock_remote_api()->breakpoint_remove_count());
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
+
+  // Should not have resumed.
+  EXPECT_EQ(2, mock_remote_api()->resume_count());
+  EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
 }
 
-// Tests "finish" at the bottom stack frame. Normally there's a stack frame
-// with an IP of 0 below the last "real" stack frame.
-TEST_F(FinishThreadControllerTest, BottomStackFrame) {
-  // Notify of thread stop. Here we have the 0th frame of the current
-  // location, and a null frame.
-  auto break_notification = MakeBreakNotification();
-  break_notification.thread.frames[1] = debug_ipc::StackFrame(0, 0, 0);
-  InjectException(break_notification);
+// Finishes multiple frames, consisting of one physical frame finish followed
+// by two inline frame finishes. This finishes to frame 4 (see
+// InlineThreadControllerTest) which is the "middle" physical frame. It
+// requires doing a "finish" of the top physical frame, then stepping through
+// both middle inline frames.
+TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
+  auto mock_frames = GetStack();
+  uint64_t frame_2_ip = mock_frames[2]->GetAddress();
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
 
-  // The backtrace reply gives the same two frames since that's all there is
-  // (the Thread doesn't know until it requests them).
-  debug_ipc::ThreadStatusReply expected_reply;
-  expected_reply.record = break_notification.thread;
-  expected_reply.record.stack_amount =
-      debug_ipc::ThreadRecord::StackAmount::kFull;
-  mock_remote_api()->set_thread_status_reply(expected_reply);
+  // "Finish" frame 3,
+  auto finish_controller =
+      std::make_unique<FinishThreadController>(thread()->GetStack(), 3);
+  bool continued = false;
+  thread()->ContinueWith(std::move(finish_controller),
+                         [&continued](const Err& err) {
+                           if (!err.has_error())
+                             continued = true;
+                         });
 
-  EXPECT_EQ(0, mock_remote_api()->breakpoint_add_count());
-  Err out_err;
-  thread()->ContinueWith(
-      std::make_unique<FinishThreadController>(thread()->GetStack(), 0),
-      [&out_err](const Err& err) {
-        out_err = err;
-        debug_ipc::MessageLoop::Current()->QuitNow();
-      });
-  loop().Run();
+  // That should have sent a resume + a breakpoint set at the frame 2 IP (this
+  // breakpoint is implementing the "finish" to step out of the frame 1
+  // physical frame).
+  EXPECT_EQ(1, mock_remote_api()->resume_count());
+  EXPECT_EQ(0, mock_remote_api()->breakpoint_remove_count());
+  EXPECT_EQ(frame_2_ip, mock_remote_api()->last_breakpoint_address());
 
-  TestThreadObserver thread_observer(thread());
+  // Simulate a breakpoint hit of that breakpoint (breakpoint exceptions are
+  // "software").
+  debug_ipc::NotifyException exception;
+  exception.process_koid = process()->GetKoid();
+  exception.type = debug_ipc::NotifyException::Type::kSoftware;
+  exception.thread.koid = thread()->GetKoid();
+  exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+  exception.hit_breakpoints.emplace_back();
+  exception.hit_breakpoints[0].breakpoint_id =
+      mock_remote_api()->last_breakpoint_id();
 
-  // Since the return address is null, we should not have attempted to create
-  // a breakpoint, and the thread should have been resumed.
-  ASSERT_EQ(0, mock_remote_api()->breakpoint_add_count());
-  ASSERT_EQ(1, mock_remote_api()->resume_count());
+  // Create a stack now showing frame 2 as the top (new frame 0).
+  mock_frames = GetStack();
+  mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 3);
+  InjectExceptionWithStack(
+      exception, MockFrameVectorToFrameVector(std::move(mock_frames)), true);
+
+  // The breakpoint should have been cleared and the thread should have been
+  // resumed.
+  EXPECT_EQ(2, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->breakpoint_remove_count());
+
+  // Do another stop 4 bytes later in the inline frame 2 which should get
+  // continued.
+  mock_frames = GetStack();
+  mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 3);
+  SetAddressForMockFrame(mock_frames[0]->GetAddress() + 4,
+                         mock_frames[0].get());
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
+  EXPECT_EQ(3, mock_remote_api()->resume_count());
+
+  // Stop in inline frame 1. This leaves inline frame 2 (right after its
+  // address range) but should still continue since we haven't reached the
+  // target.
+  mock_frames = GetStack();
+  mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 4);
+  SetAddressForMockFrame(kMiddleInline2FunctionRange.end(),
+                         mock_frames[0].get());
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
+  EXPECT_EQ(4, mock_remote_api()->resume_count());
+
+  // Stop in middle frame which is the target (right after the inline 1 range).
+  mock_frames = GetStack();
+  mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 5);
+  SetAddressForMockFrame(kMiddleInline1FunctionRange.end(),
+                         mock_frames[0].get());
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
+  EXPECT_EQ(4, mock_remote_api()->resume_count());  // Unchanged
 }
 
 }  // namespace zxdb

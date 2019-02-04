@@ -6,6 +6,7 @@
 
 #include <initializer_list>
 #include <memory>
+#include <vector>
 
 #include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
@@ -14,6 +15,7 @@
 
 namespace zxdb {
 
+class Frame;
 class Process;
 class Session;
 class Thread;
@@ -45,6 +47,23 @@ class RemoteAPITest : public testing::Test {
 
   // Sends the exception notification to the session.
   void InjectException(const debug_ipc::NotifyException& exception);
+
+  // Sends the exception notification and forces the given stack information.
+  // This bypasses the normal thread metadata computation. The exception
+  // address will be taken from the address of the top of the stack.
+  //
+  // If you use the one that takes a NotifyException, the calling code need not
+  // populate the thread vector and stack amount, they will be ignored.
+  void InjectExceptionWithStack(
+      const debug_ipc::NotifyException& exception,
+      std::vector<std::unique_ptr<Frame>> frames,
+      bool has_all_frames);
+  void InjectExceptionWithStack(
+      uint64_t process_koid,
+      uint64_t thread_koid,
+      debug_ipc::NotifyException::Type exception_type,
+      std::vector<std::unique_ptr<Frame>> frames,
+      bool has_all_frames);
 
  protected:
   // Derived classes implement this to provide their own IPC mocks. Ownership

@@ -106,9 +106,16 @@ class Session {
 
   // Dispatches these particular notification types from the agent. These are
   // public since tests will commonly want to synthesize these events.
+  //
+  // Note on DispatchNotifyException: Test code can skip setting the metadata
+  // by clearing the set_metadata flag. This allows them to set up the thread's
+  // state manually before issuing an exception. Production code should always
+  // set the set_metadata flag to populate the thread's state from the data
+  // in the exception.
   void DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
                             const debug_ipc::NotifyThread& notify);
-  void DispatchNotifyException(const debug_ipc::NotifyException& notify);
+  void DispatchNotifyException(const debug_ipc::NotifyException& notify,
+                               bool set_metadata = true);
   void DispatchNotifyModules(const debug_ipc::NotifyModules& notify);
 
  private:

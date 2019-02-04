@@ -81,7 +81,7 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
   // frames above the desired destination will be inline ones that we can
   // step out of with the "step over" controller.
   Log("Newer stack frame needs stepping out of.");
-  if (!CreateInlineStepOverController([](const Err&){}))
+  if (!CreateInlineStepOverController([](const Err&) {}))
     return kStop;  // Something unexpected happened.
   return step_over_controller_->OnThreadStop(stop_type, hit_breakpoints);
 }
@@ -104,6 +104,19 @@ void FinishThreadController::InitWithThread(
   FXL_DCHECK(stack.size() > frame_to_finish_);
   FXL_DCHECK(stack[frame_to_finish_]->GetAddress() == frame_ip_);
 #endif
+
+  auto found_fingerprint = stack.GetFrameFingerprint(frame_to_finish_);
+  if (!found_fingerprint) {
+    // This can happen if the creator of this class requested that we finish
+    // the bottom-most stack frame available, without having all stack frames
+    // available. That's not allowed and any code doing that should be fixed.
+    FXL_NOTREACHED();
+    cb(
+        Err("Trying to step out of an inline frame with insufficient context.\n"
+            "Please file a bug with a repro."));
+    return;
+  }
+  from_inline_frame_fingerprint_ = *found_fingerprint;
 
   // Find the next physical frame above the one being stepped out of.
   std::optional<size_t> found_physical_index;
@@ -150,7 +163,8 @@ bool FinishThreadController::CreateInlineStepOverController(
     return false;
   }
 
-  const Function* func = stack[0]->GetLocation().symbol().Get()->AsFunction();
+  const Location& location = stack[0]->GetLocation();
+  const Function* func = location.symbol().Get()->AsFunction();
   if (!func) {
     const char kMsg[] = "No function symbol for inline frame, giving up.";
     Log(kMsg);
@@ -162,7 +176,7 @@ bool FinishThreadController::CreateInlineStepOverController(
   // the top of the stack.
   Log("Creating a new step over controller to get out of inline frame.");
   step_over_controller_ = std::make_unique<StepOverThreadController>(
-      func->code_ranges());
+      func->GetAbsoluteCodeRanges(location.symbol_context()));
   step_over_controller_->InitWithThread(thread(), std::move(cb));
   return true;
 }

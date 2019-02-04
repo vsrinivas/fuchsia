@@ -528,7 +528,8 @@ void Session::DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
 
 // This is the main entrypoint for all thread stops notifications in the client.
 void Session::DispatchNotifyException(
-    const debug_ipc::NotifyException& notify) {
+    const debug_ipc::NotifyException& notify,
+    bool set_metadata) {
   ThreadImpl* thread =
       ThreadImplFromKoid(notify.process_koid, notify.thread.koid);
   if (!thread) {
@@ -539,7 +540,8 @@ void Session::DispatchNotifyException(
 
   // First update the thread state so the breakpoint code can query it.
   // This should not issue any notifications.
-  thread->SetMetadata(notify.thread);
+  if (set_metadata)
+    thread->SetMetadata(notify.thread);
 
   // The breakpoints that were hit to pass to the thread stop handler.
   std::vector<fxl::WeakPtr<Breakpoint>> hit_breakpoints;

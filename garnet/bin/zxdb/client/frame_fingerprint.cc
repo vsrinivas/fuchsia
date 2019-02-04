@@ -4,11 +4,20 @@
 
 #include "garnet/bin/zxdb/client/frame_fingerprint.h"
 
+#include <inttypes.h>
+
+#include "lib/fxl/strings/string_printf.h"
+
 namespace zxdb {
 
 bool FrameFingerprint::operator==(const FrameFingerprint& other) const {
   return frame_address_ == other.frame_address_ &&
          inline_count_ == other.inline_count_;
+}
+
+std::string FrameFingerprint::ToString() const {
+  return fxl::StringPrintf("{0x%" PRIx64 ", %zu}", frame_address_,
+                           inline_count_);
 }
 
 // static
@@ -30,4 +39,4 @@ bool FrameFingerprint::NewerOrEqual(const FrameFingerprint& left,
   return Newer(left, right) || left == right;
 }
 
-}  // namespace
+}  // namespace zxdb

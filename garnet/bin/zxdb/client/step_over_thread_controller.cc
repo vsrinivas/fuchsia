@@ -77,7 +77,8 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
       return kContinue;
     }
   } else {
-    if (step_into_->OnThreadStop(stop_type, hit_breakpoints) == kContinue) {
+    // Ignore the stop type as above.
+    if (step_into_->OnThreadStopIgnoreType(hit_breakpoints) == kContinue) {
       Log("Still in range.");
       return kContinue;
     }

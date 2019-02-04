@@ -6,6 +6,8 @@
 
 #include <stdint.h>
 
+#include "garnet/bin/zxdb/common/address_ranges.h"
+
 namespace zxdb {
 
 // Addresses in symbols are interpreted in terms of relative offsets from the
@@ -24,12 +26,21 @@ class SymbolContext {
 
   explicit SymbolContext(uint64_t load_address) : load_address_(load_address) {}
 
+  // Address conversion.
   uint64_t RelativeToAbsolute(uint64_t relative) const {
     return load_address_ + relative;
   }
   uint64_t AbsoluteToRelative(uint64_t absolute) const {
     return absolute - load_address_;
   }
+
+  // AddressRange conversion.
+  AddressRange RelativeToAbsolute(const AddressRange& relative) const;
+  AddressRange AbsoluteToRelative(const AddressRange& absolute) const;
+
+  // AddressRanges conversion.
+  AddressRanges RelativeToAbsolute(const AddressRanges& relative) const;
+  AddressRanges AbsoluteToRelative(const AddressRanges& absolute) const;
 
  private:
   // Use ForRelativeAddresses() to create a context with no load address.
