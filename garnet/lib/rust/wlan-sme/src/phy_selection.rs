@@ -200,10 +200,8 @@ pub fn derive_phy_cbw_for_ap(device_info: &DeviceInfo, config_phy: &Phy, chan: &
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::client::test_utils::{
-        fake_5ghz_band_capabilities, fake_ht_capabilities, fake_ht_operation,
-        fake_vht_bss_description, fake_vht_capabilities, fake_vht_operation,
-    };
+    use crate::client::test_utils::fake_vht_bss_description;
+    use crate::test_utils::*;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use wlan_common::{
         channel::{Cbw, Channel, Phy},
@@ -481,64 +479,5 @@ mod tests {
                     &usr_cfg.phy, &usr_cfg.chan);
             assert_eq!(want, got);
         }
-    }
-
-    fn fake_ht_cap_chanwidth(chanwidth: fidl_mlme::ChanWidthSet) -> fidl_mlme::HtCapabilities {
-        let mut ht_cap = fake_ht_capabilities();
-        ht_cap.ht_cap_info.chan_width_set = chanwidth as u8;
-        ht_cap
-    }
-
-    fn fake_ht_op_sec_offset(secondary_offset: fidl_mlme::SecChanOffset) -> fidl_mlme::HtOperation {
-        let mut ht_op = fake_ht_operation();
-        ht_op.ht_op_info.secondary_chan_offset = secondary_offset as u8;
-        ht_op
-    }
-
-    fn fake_vht_op_cbw(cbw: fidl_mlme::VhtCbw) -> fidl_mlme::VhtOperation {
-        fidl_mlme::VhtOperation { vht_cbw: cbw as u8, ..fake_vht_operation() }
-    }
-
-    pub fn fake_device_info_ht(chanwidth: fidl_mlme::ChanWidthSet) -> DeviceInfo {
-        DeviceInfo { addr: [0; 6], bands: vec![fake_5ghz_band_capabilities_ht_cbw(chanwidth)] }
-    }
-
-    pub fn fake_device_info_vht(chanwidth: fidl_mlme::ChanWidthSet) -> DeviceInfo {
-        DeviceInfo { addr: [0; 6], bands: vec![fake_band_capabilities_5ghz_vht(chanwidth)] }
-    }
-
-    fn fake_5ghz_band_capabilities_ht_cbw(
-        chanwidth: fidl_mlme::ChanWidthSet,
-    ) -> fidl_mlme::BandCapabilities {
-        let bc = fake_5ghz_band_capabilities();
-        fidl_mlme::BandCapabilities {
-            ht_cap: Some(Box::new(fake_ht_capabilities_cbw(chanwidth))),
-            ..bc
-        }
-    }
-
-    fn fake_band_capabilities_5ghz_vht(
-        chanwidth: fidl_mlme::ChanWidthSet,
-    ) -> fidl_mlme::BandCapabilities {
-        let bc = fake_5ghz_band_capabilities();
-        fidl_mlme::BandCapabilities {
-            ht_cap: Some(Box::new(fake_ht_capabilities_cbw(chanwidth))),
-            vht_cap: Some(Box::new(fake_vht_capabilities())),
-            ..bc
-        }
-    }
-
-    fn fake_overrider(phy: fidl_common::Phy, cbw: fidl_common::Cbw) -> RadioConfig {
-        RadioConfig {
-            phy: Some(Phy::from_fidl(phy)),
-            cbw: Some(Cbw::from_fidl(cbw, 0)),
-            primary_chan: None,
-        }
-    }
-
-    fn fake_ht_capabilities_cbw(chanwidth: fidl_mlme::ChanWidthSet) -> fidl_mlme::HtCapabilities {
-        let mut ht_cap = fake_ht_capabilities();
-        ht_cap.ht_cap_info.chan_width_set = chanwidth as u8;
-        ht_cap
     }
 }
