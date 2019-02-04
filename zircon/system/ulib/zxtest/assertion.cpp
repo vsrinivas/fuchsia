@@ -21,7 +21,7 @@ Assertion::Assertion(Assertion&& other) = default;
 Assertion::~Assertion() = default;
 
 namespace internal {
-fbl::String ToHex(void* ptr, size_t size) {
+fbl::String ToHex(const void* ptr, size_t size) {
     if (size == 0) {
         return "<empty>";
     }
@@ -68,6 +68,9 @@ fbl::String PrintValue(uint64_t value) {
 
 template <>
 fbl::String PrintValue(const char* value) {
+    if (value == nullptr) {
+        return "<nullptr>";
+    }
     return fbl::StringPrintf("%s", value);
 }
 

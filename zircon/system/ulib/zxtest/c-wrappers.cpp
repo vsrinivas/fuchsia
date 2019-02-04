@@ -85,10 +85,13 @@ size_t _zxtest_print_bool(bool val, char* buffer, size_t buffer_size) {
 }
 
 size_t _zxtest_print_str(const char* val, char* buffer, size_t buffer_size) {
-    return snprintf(buffer, buffer_size, "%s", (val == NULL) ? "nullptr" : val);
+    return snprintf(buffer, buffer_size, "%s", (val == nullptr) ? "<nullptr>" : val);
 }
 
 size_t _zxtest_print_ptr(const void* val, char* buffer, size_t buffer_size) {
+    if (val == nullptr) {
+        return snprintf(buffer, buffer_size, "<nullptr>");
+    }
     return snprintf(buffer, buffer_size, "%p", val);
 }
 
@@ -97,8 +100,8 @@ size_t _zxtest_print_hex(const void* val, size_t size, char* buffer, size_t buff
         return 3 * size + 1;
     }
 
-    if (val == NULL) {
-        snprintf(buffer, 4, "nullptr");
+    if (val == nullptr) {
+        snprintf(buffer, 9, "<nullptr>");
     }
 
     for (size_t curr = 0; curr < size; ++curr) {

@@ -45,8 +45,8 @@
 
 // Actually make it print hex value, used with ASSERT_BYTES_EQ, though for C++ that is the default
 // behaviour.
-#define _ZXTEST_LOAD_PRINT_HEX(var, type, line)                                                    \
-    auto str_buffer_##type##_##line = zxtest::PrintValue(var);
+#define _ZXTEST_LOAD_PRINT_HEX(var, var_size, type, line)                                          \
+    auto str_buffer_##type##_##line = zxtest::internal::ToHex(var, var_size);
 
 #define _ZXTEST_GET_PRINT_VAR(var, type, line) str_buffer_##type##_##line
 

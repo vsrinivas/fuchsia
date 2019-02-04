@@ -16,7 +16,7 @@
 // pass/fail behavior is decided based on Verify functions.
 
 TEST(ZxTestAssertionsTest, Fail) {
-    FAIL("Something bad happened\n");
+    FAIL("Something bad happened.");
     ZX_ASSERT_MSG(_ZXTEST_ABORT_IF_ERROR, "FAIL did not abort test execution");
     ZX_ASSERT_MSG(false, "_ZXTEST_ABORT_IF_ERROR not set on failure.");
 }
@@ -234,7 +234,7 @@ TEST(ZXTestAssertionTest, AssertStrEqFailures) {
     EXPECT_STR_EQ(str1, str2, "ASSERT_STR_EQ failed to identify equal strings.");
     ZX_ASSERT_MSG(!_ZXTEST_ABORT_IF_ERROR, "Assert was did not abort test.");
     ASSERT_STR_EQ(str1, str2, "ASSERT_STR_EQ failed to identify equal strings.");
-    ZX_ASSERT_MSG(_ZXTEST_ABORT_IF_ERROR, "Assert was did not abort test.");
+    ZX_ASSERT_MSG(false, "Assert was did not abort test.");
 }
 
 TEST(ZXTestAssertionTest, AssertNotNull) {
@@ -300,12 +300,25 @@ TEST(ZXTestAssertionTest, AssertBytesEq) {
     b.a = 0;
     b.b = 1;
 
-    ASSERT_BYTES_EQ(a, a, "ASSERT_BYTES_EQ identity failed.");
-    ASSERT_BYTES_EQ(a, b, "ASSERT_BYTES_EQ identity failed.");
+    ASSERT_BYTES_EQ(&a, &a, sizeof(mytype), "ASSERT_BYTES_EQ identity failed.");
+    ASSERT_BYTES_EQ(&a, &b, sizeof(mytype), "ASSERT_BYTES_EQ identity failed.");
     ZX_ASSERT_MSG(!_ZXTEST_ABORT_IF_ERROR, "Succesful assert marked as fatal error.");
     b.b = 2;
-    ASSERT_BYTES_EQ(a, b, "ASSERT_BYTES_EQ identity failed.");
+    ASSERT_BYTES_NE(&a, &b, sizeof(struct mytype), "ASSERT_BYTES_EQ identity failed.");
+    ASSERT_BYTES_EQ(&a, &b, sizeof(mytype), "ASSERT_BYTES_EQ identity failed.");
     ZX_ASSERT_MSG(_ZXTEST_ABORT_IF_ERROR, "Assert was did not abort test.");
+}
+
+TEST(ZXTestAssertionTest, AssertBytesEqArray) {
+    int a[] = {1, 2, 3, 4, 5};
+    int b[] = {1, 2, 3, 4, 5};
+    int c[] = {1, 2, 3, 4, 6};
+
+    ASSERT_BYTES_EQ(a, a, sizeof(int) * 5, "ASSERT_BYTES_EQ identity failed.");
+    ASSERT_BYTES_EQ(a, b, sizeof(int) * 5, "ASSERT_BYTES_EQ identity failed.");
+    ZX_ASSERT_MSG(!_ZXTEST_ABORT_IF_ERROR, "Succesful assert marked as fatal error.");
+    ASSERT_BYTES_EQ(a, c, sizeof(int) * 5, "ASSERT_BYTES_EQ identity failed.");
+    ZX_ASSERT_MSG(false, "Failed to detect inequality.");
 }
 
 TEST(ZXTestAssertionTest, AssertSingleCall) {
@@ -325,13 +338,16 @@ TEST(ZXTestAssertionTest, AssertSingleCall) {
 TEST(ZXTestAssertionTest, AssertBytesSingleCall) {
     int called = 0;
     int getter_called = 0;
-    auto increase = [&called]() { return ++called; };
+    auto increase = [&called]() {
+        ++called;
+        return &called;
+    };
     auto getter = [&getter_called, &called]() {
         getter_called++;
-        return called;
+        return &called;
     };
 
-    EXPECT_BYTES_EQ(getter(), increase());
+    EXPECT_BYTES_EQ(getter(), increase(), sizeof(int));
     ZX_ASSERT_MSG(called == 1, "Assertion evaluating multiple times.");
     ZX_ASSERT_MSG(getter_called == 1, "Assertion evaluating multiple times.");
 }
