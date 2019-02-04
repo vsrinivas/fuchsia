@@ -73,6 +73,10 @@ trailing underscores are conventionally used for member variables in C++).
 Additionally, the FIDL compiler uses leading and trailing underscores to munge
 identifiers to avoid collisions.
 
+Use the term `size` to name a number of bytes. Use the term `count` to name a
+number of some other quantity (e.g., the number of items in a vector of
+structs).
+
 ### Libraries
 
 Library names are period-separated lists of identifiers. Portions of the library
@@ -160,6 +164,9 @@ const uint64 FOO_BAR = 4096;
 Constant names must not repeat names from the enclosing library.  In all target
 languages, constant names are scoped by their enclosing library.
 
+Constants that describe minimum and maximum bounds should use the prefix `MIN_`
+and `MAX_`, respectively.
+
 ### Interfaces
 
 Interfaces must be named in `UpperCamelCase` and must be noun phrases.  Typically,
@@ -213,7 +220,7 @@ Structs and unions must be named in `UpperCamelCase` and must be noun phrases.
 For example, `Point` is a struct that defines a location in space and
 `KeyboardEvent` is a struct that defines a keyboard-related event.
 
-### Struct and union members
+### Struct, table, and union members
 
 Struct and union members must be named in `lower_snake_case`.  Prefer names with
 a single word when practical because single-word names render more consistently
@@ -359,7 +366,6 @@ interface A {
     B(string s, bool b);
 };
 ```
-
 
 Selectors can also be used to maintain backwards compatibility with the wire
 format in cases where developers wish to change the name of a method.
@@ -587,20 +593,20 @@ Use `array` for fixed-length data:
 
 ### Should I use a struct or a table?
 
-Structs and tables provide semantically similar notions,
-and so it can seem complicated deciding which to prefer.
+Both structs and tables represent an object with multiple named fields. The
+difference is that structs have a fixed layout in the wire format, which means
+they *cannot* be modified without breaking binary compatibility. By contrast,
+tables have a flexible layout in the wire format, which means fields *can* be
+added to a table over time without breaking binary compatibility.
 
-For very high level IPCs, or for persistent storage, where
-serialization performance tends not to be a concern:
-- Tables provide some forwards and backwards compatibility, and so offer an
-  element of future proofing: prefer them for most concepts.
-- Take the performance benefits of structs only for concepts that are very
-  unlikely to change in the future (say `struct Vec3 { float x; float y; float z }`,
-  or `Ipv4Address`).
+Use structs for performance-critical protocol elements or for protocol elements
+that are very unlikely to change in the future. For example, use a struct to
+represent a MAC address because the structure of a MAC address is very unlikely
+to change in the future.
 
-Once serialization performance becomes an overriding concern (this is common on the
-data path for device drivers for example), we can begin to prefer structs only and
-rely on adding new methods to interfaces to account for future changes.
+Use tables for protocol elements that are likely to change in the future.  For
+example, use a table to represent metadata information about camera devices
+because the fields in the metadata are likely to evolve over time.
 
 ### When should I use an enum?
 
