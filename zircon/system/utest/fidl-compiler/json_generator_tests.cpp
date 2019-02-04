@@ -983,6 +983,117 @@ interface Example {
     END_TEST;
 }
 
+bool json_generator_test_byte_and_bytes() {
+    BEGIN_TEST;
+
+    for (int i = 0; i < kRepeatTestCount; i++) {
+        EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+library example;
+
+struct ByteAndBytes {
+  byte single_byte;
+  bytes many_bytes;
+  bytes:1024 only_one_k_bytes;
+  bytes:1024? opt_only_one_k_bytes;
+};
+
+)FIDL",
+                                       R"JSON({
+  "version": "0.0.1",
+  "name": "example",
+  "library_dependencies": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "example/ByteAndBytes",
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "name": "single_byte",
+          "size": 1,
+          "max_out_of_line": 0,
+          "alignment": 1,
+          "offset": 0,
+          "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "primitive",
+              "subtype": "uint8"
+            },
+            "nullable": false
+          },
+          "name": "many_bytes",
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 8,
+          "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "primitive",
+              "subtype": "uint8"
+            },
+            "maybe_element_count": 1024,
+            "nullable": false
+          },
+          "name": "only_one_k_bytes",
+          "size": 16,
+          "max_out_of_line": 1024,
+          "alignment": 8,
+          "offset": 24,
+          "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "primitive",
+              "subtype": "uint8"
+            },
+            "maybe_element_count": 1024,
+            "nullable": true
+          },
+          "name": "opt_only_one_k_bytes",
+          "size": 16,
+          "max_out_of_line": 1024,
+          "alignment": 8,
+          "offset": 40,
+          "max_handles": 0
+        }
+      ],
+      "size": 56,
+      "max_out_of_line": 4294967295,
+      "alignment": 8,
+      "max_handles": 0
+    }
+  ],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "declaration_order": [
+    "example/ByteAndBytes"
+  ],
+  "declarations": {
+    "example/ByteAndBytes": "struct"
+  }
+})JSON"));
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(json_generator_tests);
@@ -994,4 +1105,5 @@ RUN_TEST(json_generator_test_xunion);
 RUN_TEST(json_generator_test_inheritance);
 RUN_TEST(json_generator_test_inheritance_with_recursive_decl);
 RUN_TEST(json_generator_test_error);
+RUN_TEST(json_generator_test_byte_and_bytes);
 END_TEST_CASE(json_generator_tests);

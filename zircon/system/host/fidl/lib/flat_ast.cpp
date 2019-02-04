@@ -456,6 +456,32 @@ private:
     const types::PrimitiveSubtype subtype_;
 };
 
+class BytesTypeTemplate : public TypeTemplate {
+public:
+    BytesTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
+        : TypeTemplate(Name(nullptr, "bytes"), typespace, error_reporter),
+        uint8_type_(types::PrimitiveSubtype::kUint8) {}
+
+    bool Create(const SourceLocation& location,
+                const Type* maybe_arg_type,
+                const types::HandleSubtype* handle_subtype,
+                const Size* size,
+                types::Nullability nullability,
+                std::unique_ptr<Type>* out_type) const {
+        if (maybe_arg_type != nullptr)
+            return CannotBeParameterized(location);
+        if (size == nullptr)
+            size = &max_size;
+
+        *out_type = std::make_unique<VectorType>(&uint8_type_, size, nullability);
+        return true;
+    }
+
+private:
+    const PrimitiveType uint8_type_;
+    Size max_size = Size::Max();
+};
+
 class ArrayTypeTemplate : public TypeTemplate {
 public:
     ArrayTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
@@ -652,6 +678,11 @@ Typespace Typespace::RootTypes(ErrorReporter* error_reporter) {
 
     add_primitive("float32", types::PrimitiveSubtype::kFloat32);
     add_primitive("float64", types::PrimitiveSubtype::kFloat64);
+
+    // TODO(FIDL-483): Remove when there is generalized support.
+    add_primitive("byte", types::PrimitiveSubtype::kUint8);
+    add_template(std::make_unique<BytesTypeTemplate>(
+        &root_typespace, error_reporter));
 
     add_template(std::make_unique<ArrayTypeTemplate>(
         &root_typespace, error_reporter));
