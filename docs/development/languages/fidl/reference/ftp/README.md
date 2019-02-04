@@ -2,8 +2,8 @@
 
 FTP                   | Submitted  | Reviewed   | Title
 ----------------------|------------|------------|----------------------------------
-[FTP-001](ftp-001.md) | 2018-07-17 |            | FTP process
-[FTP-002](ftp-002.md) | 2018-07-17 |            | Type aliases with "using" keyword
+[FTP-001](ftp-001.md) | 2018-07-17 | 2018-08-01 | FTP process
+[FTP-002](ftp-002.md) | 2018-07-17 | 2018-08-03 | Type aliases with "using" keyword
 [FTP-009](ftp-009.md) | 2018-07-31 | 2018-08-20 | Documentation comments
 [FTP-012](ftp-012.md) | 2018-08-30 | 2018-09-11 | Empty structs
 [FTP-007](ftp-007.md) | 2018-07-27 | 2018-09-20 | Tables
