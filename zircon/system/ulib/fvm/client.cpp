@@ -8,11 +8,11 @@
 #include <zircon/device/block.h>
 #endif
 
-namespace fs {
+namespace fvm {
 
 #ifdef __Fuchsia__
 
-zx_status_t fvm_reset_volume_slices(int fd) {
+zx_status_t ResetAllSlices(int fd) {
     query_request_t request;
     query_response_t response;
 
@@ -52,4 +52,4 @@ zx_status_t fvm_reset_volume_slices(int fd) {
 
 #endif
 
-} // namespace fs
+} // namespace fvm

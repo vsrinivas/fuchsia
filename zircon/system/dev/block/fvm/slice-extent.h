@@ -12,7 +12,7 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 
 namespace fvm {
 

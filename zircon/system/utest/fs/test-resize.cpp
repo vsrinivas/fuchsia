@@ -15,7 +15,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/io/c/fidl.h>
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 #include <lib/fzl/fdio.h>
 #include <minfs/format.h>
 #include <unittest/unittest.h>

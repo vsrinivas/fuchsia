@@ -35,7 +35,7 @@
 #include <fs-management/mount.h>
 #include <ramdevice-client/ramdisk.h>
 #include <fuchsia/io/c/fidl.h>
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 #include <fvm/fvm-check.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fzl/fdio.h>

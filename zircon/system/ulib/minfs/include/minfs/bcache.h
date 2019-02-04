@@ -11,7 +11,7 @@
 
 #ifdef __Fuchsia__
 #include <block-client/cpp/client.h>
-#include <fs/fvm.h>
+#include <fvm/client.h>
 #include <lib/zx/vmo.h>
 #else
 #include <fbl/vector.h>
@@ -115,7 +115,7 @@ public:
     }
 
     zx_status_t FVMReset() {
-        return fs::fvm_reset_volume_slices(fd_.get());
+        return fvm::ResetAllSlices(fd_.get());
     }
 
 #else

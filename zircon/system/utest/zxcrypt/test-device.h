@@ -14,9 +14,9 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
-#include <ramdevice-client/ramdisk.h>
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 #include <lib/zx/vmo.h>
+#include <ramdevice-client/ramdisk.h>
 #include <zircon/compiler.h>
 #include <zircon/status.h>
 #include <zircon/types.h>

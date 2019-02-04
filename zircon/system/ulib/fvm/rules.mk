@@ -11,6 +11,7 @@ MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/client.cpp \
     $(LOCAL_DIR)/fvm.cpp \
     $(LOCAL_DIR)/fvm-check.cpp \
     $(LOCAL_DIR)/sparse-reader.cpp \

@@ -37,6 +37,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fidl-async \
     system/ulib/fidl-utils \
     system/ulib/fs \
+    system/ulib/fvm \
     system/ulib/fzl \
     system/ulib/sync \
     system/ulib/trace \

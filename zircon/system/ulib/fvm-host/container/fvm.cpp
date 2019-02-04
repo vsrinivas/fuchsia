@@ -6,7 +6,7 @@
 #include <inttypes.h>
 #include <utility>
 
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 #include <lib/fit/defer.h>
 #include <sys/ioctl.h>
 

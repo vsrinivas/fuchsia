@@ -23,7 +23,7 @@
 #include <fs-management/mount.h>
 #include <ramdevice-client/ramdisk.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 #include <lib/fdio/debug.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/time.h>

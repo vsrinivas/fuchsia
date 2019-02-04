@@ -11,7 +11,7 @@
 #include <crypto/bytes.h>
 #include <crypto/cipher.h>
 #include <fbl/unique_fd.h>
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 #include <unittest/unittest.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>

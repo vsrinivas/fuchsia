@@ -7,7 +7,7 @@
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 #include <stdarg.h>
 #include <stdlib.h>
 

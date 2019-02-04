@@ -16,7 +16,7 @@
 #include <ramdevice-client/ramdisk.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fzl/fdio.h>
 #include <minfs/format.h>

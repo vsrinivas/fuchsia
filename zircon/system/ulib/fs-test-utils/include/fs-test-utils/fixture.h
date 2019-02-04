@@ -12,7 +12,7 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <fs-management/mount.h>
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 #include <lib/zx/time.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zircon/status.h>

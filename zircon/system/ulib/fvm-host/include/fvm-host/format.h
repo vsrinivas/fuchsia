@@ -14,7 +14,7 @@
 #include <blobfs/host.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 #include <fvm/fvm-sparse.h>
 #include <minfs/bcache.h>
 #include <minfs/format.h>

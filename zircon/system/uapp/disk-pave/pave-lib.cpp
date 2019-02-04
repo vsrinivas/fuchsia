@@ -38,7 +38,7 @@
 #include <utility>
 
 #include "fvm/fvm-sparse.h"
-#include "fvm/fvm.h"
+#include "fvm/format.h"
 #include "pave-lib.h"
 #include "pave-logging.h"
 #include "pave-utils.h"

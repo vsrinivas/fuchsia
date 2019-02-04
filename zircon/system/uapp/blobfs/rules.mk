@@ -26,6 +26,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/digest \
     system/ulib/fbl \
     system/ulib/fs \
+    system/ulib/fvm \
     system/ulib/fzl \
     system/ulib/sync \
     system/ulib/trace \

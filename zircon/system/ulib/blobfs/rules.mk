@@ -54,6 +54,7 @@ TARGET_MODULE_STATIC_LIBS := \
     system/ulib/fidl \
     system/ulib/fidl-async \
     system/ulib/fidl-utils \
+    system/ulib/fvm \
     system/ulib/fs \
     system/ulib/fzl \
     system/ulib/sync \

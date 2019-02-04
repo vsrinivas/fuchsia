@@ -20,7 +20,7 @@
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
 
-#include "fvm/fvm.h"
+#include "fvm/format.h"
 
 #define ZXDEBUG 0
 

@@ -10,7 +10,7 @@
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 #include <fvm/fvm-check.h>
 #include <zircon/status.h>
 

@@ -12,7 +12,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <ramdevice-client/ramdisk.h>

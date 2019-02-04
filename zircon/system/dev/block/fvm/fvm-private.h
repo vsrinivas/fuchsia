@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 #include <ddk/device.h>
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 #include <zircon/device/block.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>

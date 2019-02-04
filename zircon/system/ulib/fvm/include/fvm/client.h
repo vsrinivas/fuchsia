@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This header includes FVM-specific functionality that
-// may be used by filesystem servers.
+// This header includes FVM utilities which may be used by clients of
+// the volume manager.
 
 #pragma once
 
@@ -13,10 +13,10 @@
 
 #include <zircon/device/block.h>
 
-namespace fs {
+namespace fvm {
 
 // Walks through all slices on the partition backed by |fd|, attempting to free
 // everything except for the first slice. Does not close |fd|.
-zx_status_t fvm_reset_volume_slices(int fd);
+zx_status_t ResetAllSlices(int fd);
 
 }

@@ -18,7 +18,7 @@
 #include <fs/trace.h>
 
 #ifdef __Fuchsia__
-#include <fs/fvm.h>
+#include <fvm/client.h>
 #endif
 
 #include <blobfs/common.h>
@@ -207,7 +207,7 @@ int Mkfs(int fd, uint64_t block_count) {
             return -1;
         }
 
-        if (fs::fvm_reset_volume_slices(fd) != ZX_OK) {
+        if (fvm::ResetAllSlices(fd) != ZX_OK) {
             FS_TRACE_ERROR("blobfs mkfs: Failed to reset slices\n");
             return -1;
         }

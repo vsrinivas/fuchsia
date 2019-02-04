@@ -15,7 +15,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs-management/fvm.h>
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>

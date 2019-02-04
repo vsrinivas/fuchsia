@@ -30,7 +30,7 @@
 #include <fs-management/mount.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
-#include <fvm/fvm.h>
+#include <fvm/format.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/io.h>
 #include <lib/fzl/fdio.h>
