@@ -10,7 +10,6 @@
 void ExpectBasicManifest(const char manifest_str[]) {
   fuchsia::modular::ModuleManifest m;
   EXPECT_TRUE(XdrRead(manifest_str, &m, modular::XdrModuleManifest));
-  EXPECT_EQ("binary", m.binary);
   EXPECT_EQ("suggestion_headline", m.suggestion_headline);
 
   EXPECT_EQ(1u, m.intent_filters->size());
@@ -19,12 +18,31 @@ void ExpectBasicManifest(const char manifest_str[]) {
   EXPECT_EQ("type", m.intent_filters->at(0).parameter_constraints.at(0).type);
 }
 
-// Tests version 4 of the manifest
-TEST(XdrModuleManifestTest, BasicVersion2) {
+// Tests version 2 of the manifest with "binary" specified
+TEST(XdrModuleManifestTest, BasicVersion2WithBinary) {
   ExpectBasicManifest(R"(
     {
       "@version": 2,
       "binary": "binary",
+      "suggestion_headline": "suggestion_headline",
+      "intent_filters": [
+        {
+          "action": "action",
+          "parameters": [{
+            "name": "name",
+            "type": "type"
+          }]
+        }
+      ]
+    }
+  )");
+}
+
+// Tests version 2 of the manifest
+TEST(XdrModuleManifestTest, BasicVersion2) {
+  ExpectBasicManifest(R"(
+    {
+      "@version": 2,
       "suggestion_headline": "suggestion_headline",
       "intent_filters": [
         {

@@ -24,7 +24,8 @@ void XdrModuleManifestIntentFilters(
 
 void XdrModuleManifest_v1(XdrContext* const xdr,
                           fuchsia::modular::ModuleManifest* const data) {
-  xdr->Field("binary", &data->binary);
+  std::string dummy_binary;
+  xdr->Field("binary", &dummy_binary);
   xdr->Field("suggestion_headline", &data->suggestion_headline);
   xdr->Field("composition_pattern", &data->composition_pattern);
 
@@ -42,7 +43,6 @@ void XdrModuleManifest_v2(XdrContext* const xdr,
   if (!xdr->Version(2)) {
     return;
   }
-  xdr->Field("binary", &data->binary);
   xdr->Field("suggestion_headline", &data->suggestion_headline);
   xdr->Field("composition_pattern", &data->composition_pattern);
   xdr->Field("intent_filters", &data->intent_filters,
