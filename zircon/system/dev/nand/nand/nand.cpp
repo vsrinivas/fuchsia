@@ -13,7 +13,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
@@ -28,9 +27,6 @@
 
 namespace nand {
 namespace {
-
-constexpr zx_signals_t kNandTxnReceived = ZX_EVENT_SIGNALED;
-constexpr zx_signals_t kNandShutdown = ZX_USER_SIGNAL_0;
 
 constexpr size_t kNandReadRetries = 3;
 
@@ -193,29 +189,24 @@ void NandDevice::DoIo(Transaction txn) {
 
 // Initialization is complete by the time the thread starts.
 zx_status_t NandDevice::WorkerThread() {
-    zx_status_t status;
-
     for (;;) {
-        // Don't loop until txn_queue_ is empty to check for kNandShutdown
+        // Don't loop until txn_queue_ is empty to check for shutdown.
         // between each io.
-        std::optional<Transaction> txn = txn_queue_.pop();
-        if (txn) {
+        for (auto txn = txn_queue_.pop(); txn; txn = txn_queue_.pop()) {
+            {
+                fbl::AutoLock al(&lock_);
+                if (shutdown_) {
+                    break;
+                }
+            }
             DoIo(*std::move(txn));
-        } else {
-            // Clear the "RECEIVED" flag under the lock.
-            worker_event_.signal(kNandTxnReceived, 0);
         }
 
-        zx_signals_t pending;
-        status = worker_event_.wait_one(kNandTxnReceived | kNandShutdown,
-                                        zx::time::infinite(), &pending);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "nand: worker thread wait failed, retcode = %d\n", status);
+        fbl::AutoLock al(&lock_);
+        if (shutdown_) {
             break;
         }
-        if (pending & kNandShutdown) {
-            break;
-        }
+        worker_event_.Wait(&lock_);
     }
 
     zxlogf(TRACE, "nand: worker thread terminated\n");
@@ -267,9 +258,7 @@ void NandDevice::NandQueue(nand_operation_t* op, nand_queue_callback completion_
 
     // TODO: UPDATE STATS HERE.
     txn_queue_.push(std::move(txn));
-    // Wake up the worker thread (while locked, so they don't accidentally
-    // clear the event).
-    worker_event_.signal(0, kNandTxnReceived);
+    worker_event_.Signal();
 }
 
 zx_status_t NandDevice::NandGetFactoryBadBlockList(uint32_t* bad_blocks,
@@ -284,7 +273,11 @@ void NandDevice::DdkRelease() {
 
 NandDevice::~NandDevice() {
     // Signal the worker thread and wait for it to terminate.
-    worker_event_.signal(0, kNandShutdown);
+    {
+        fbl::AutoLock al(&lock_);
+        shutdown_ = true;
+    }
+    worker_event_.Signal();
     thrd_join(worker_thread_, nullptr);
 
     // Error out all pending requests.
@@ -331,12 +324,6 @@ zx_status_t NandDevice::Init() {
     }
 
     num_nand_pages_ = nand_info_.num_blocks * nand_info_.pages_per_block;
-
-    status = zx::event::create(0, &worker_event_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "nand: failed to create event, retcode = %d\n", status);
-        return status;
-    }
 
     int rc = thrd_create_with_name(
         &worker_thread_,

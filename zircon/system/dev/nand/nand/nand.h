@@ -10,11 +10,11 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/nand.h>
 #include <ddktl/protocol/rawnand.h>
+#include <fbl/condition_variable.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
-#include <lib/operation/nand.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/zx/event.h>
+#include <lib/operation/nand.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -78,10 +78,12 @@ private:
     fuchsia_hardware_nand_Info nand_info_;
     uint32_t num_nand_pages_;
 
+    thrd_t worker_thread_;
     nand::UnownedOperationQueue<> txn_queue_;
 
-    thrd_t worker_thread_;
-    zx::event worker_event_;
+    fbl::Mutex lock_;
+    fbl::ConditionVariable worker_event_;
+    bool shutdown_ TA_GUARDED(lock_) = false;
 };
 
 } // namespace nand
