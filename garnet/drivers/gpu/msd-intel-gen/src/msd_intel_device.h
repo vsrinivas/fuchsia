@@ -56,7 +56,10 @@ public:
         return static_cast<MsdIntelDevice*>(dev);
     }
 
-    bool Init(void* device_handle);
+    // Initialize the device using the given platform |device_handle|.
+    // If |exec_init_batch|, then the render init batch will be executed
+    // (normal case).
+    bool Init(void* device_handle, bool exec_init_batch);
 
     struct DumpState {
         struct RenderCommandStreamer {

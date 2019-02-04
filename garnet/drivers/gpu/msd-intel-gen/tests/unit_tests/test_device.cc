@@ -253,7 +253,8 @@ public:
         std::unique_ptr<MsdIntelDevice> device(new MsdIntelDevice());
         ASSERT_NE(device, nullptr);
 
-        ASSERT_TRUE(device->BaseInit(platform_device->GetDeviceHandle()));
+        constexpr bool kExecInitBatch = false;
+        ASSERT_TRUE(device->Init(platform_device->GetDeviceHandle(), kExecInitBatch));
 
         auto ringbuffer =
             device->global_context()->get_ringbuffer(device->render_engine_cs()->id());

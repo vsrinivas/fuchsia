@@ -93,7 +93,7 @@ std::unique_ptr<MsdIntelDevice> MsdIntelDevice::Create(void* device_handle,
 {
     std::unique_ptr<MsdIntelDevice> device(new MsdIntelDevice());
 
-    if (!device->Init(device_handle))
+    if (!device->Init(device_handle, true))
         return DRETP(nullptr, "Failed to initialize MsdIntelDevice");
 
     if (start_device_thread)
@@ -131,6 +131,11 @@ void MsdIntelDevice::Destroy()
         freq_monitor_device_thread_.join();
         DLOG("joined");
     }
+
+    if (render_engine_cs_) {
+        // Ensure gpu is idle
+        render_engine_cs_->Reset();
+    }
 }
 
 std::unique_ptr<MsdIntelConnection> MsdIntelDevice::Open(msd_client_id_t client_id)
@@ -138,12 +143,12 @@ std::unique_ptr<MsdIntelConnection> MsdIntelDevice::Open(msd_client_id_t client_
     return MsdIntelConnection::Create(this, client_id);
 }
 
-bool MsdIntelDevice::Init(void* device_handle)
+bool MsdIntelDevice::Init(void* device_handle, bool exec_init_batch)
 {
     if (!BaseInit(device_handle))
         return DRETF(false, "BaseInit failed");
 
-    if (!RenderEngineInit(true))
+    if (!RenderEngineInit(exec_init_batch))
         return DRETF(false, "RenderEngineInit failed");
 
     return true;
@@ -355,16 +360,18 @@ int MsdIntelDevice::DeviceThreadLoop()
 {
     magma::PlatformThreadHelper::SetCurrentThreadName("DeviceThread");
 
+    std::unique_lock<std::mutex> lock(device_request_mutex_);
+    // Manipulate device_thread_id_ while locked, here and below
     device_thread_id_ = std::make_unique<magma::PlatformThreadId>();
+    lock.unlock();
+
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
     DLOG("DeviceThreadLoop starting thread 0x%lx", device_thread_id_->id());
 
-    constexpr uint32_t kTimeoutMs = 1000;
-
-    std::unique_lock<std::mutex> lock(device_request_mutex_, std::defer_lock);
-
     while (true) {
+        constexpr uint32_t kTimeoutMs = 1000;
+
         auto timeout = std::chrono::duration_cast<std::chrono::milliseconds>(
             progress_->GetHangcheckTimeout(kTimeoutMs, std::chrono::steady_clock::now()));
         // When the semaphore wait returns the semaphore will be reset.
@@ -390,10 +397,10 @@ int MsdIntelDevice::DeviceThreadLoop()
             break;
     }
 
-    // Ensure gpu is idle
-    render_engine_cs_->Reset();
-
     DLOG("DeviceThreadLoop exit");
+    lock.lock();
+    device_thread_id_.reset();
+
     return 0;
 }
 
