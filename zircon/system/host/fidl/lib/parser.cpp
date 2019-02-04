@@ -925,7 +925,6 @@ Parser::ParseXUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, A
             ConsumeToken(OfKind(Token::Kind::kRightCurly));
             return Done;
 
-        case Token::Kind::kNumericLiteral: // Ordinal
         TOKEN_ATTR_CASES:
             // intentional fallthrough for attribute parsing
         TOKEN_TYPE_CASES:
