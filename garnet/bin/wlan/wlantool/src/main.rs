@@ -21,7 +21,10 @@ use futures::prelude::*;
 use std::fmt;
 use std::str::FromStr;
 use structopt::StructOpt;
-use wlan_common::{channel::{Cbw, Phy}, RadioConfig};
+use wlan_common::{
+    channel::{Cbw, Phy},
+    RadioConfig,
+};
 
 mod opts;
 use crate::opts::*;

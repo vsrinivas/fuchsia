@@ -16,8 +16,8 @@ pub mod ie;
 pub mod mac;
 pub mod sequence;
 
+use channel::{Cbw, Phy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
-use channel::{Phy, Cbw};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RadioConfig {
@@ -28,11 +28,7 @@ pub struct RadioConfig {
 
 impl RadioConfig {
     pub fn new(phy: Phy, cbw: Cbw, primary_chan: u8) -> Self {
-        RadioConfig {
-            phy: Some(phy),
-            cbw: Some(cbw),
-            primary_chan: Some(primary_chan),
-        }
+        RadioConfig { phy: Some(phy), cbw: Some(cbw), primary_chan: Some(primary_chan) }
     }
 
     pub fn to_fidl(&self) -> fidl_sme::RadioConfig {
@@ -51,7 +47,11 @@ impl RadioConfig {
         RadioConfig {
             phy: if radio_cfg.override_phy { Some(Phy::from_fidl(radio_cfg.phy)) } else { None },
             cbw: if radio_cfg.override_cbw { Some(Cbw::from_fidl(radio_cfg.cbw, 0)) } else { None },
-            primary_chan: if radio_cfg.override_primary_chan { Some(radio_cfg.primary_chan) } else { None },
+            primary_chan: if radio_cfg.override_primary_chan {
+                Some(radio_cfg.primary_chan)
+            } else {
+                None
+            },
         }
     }
 }

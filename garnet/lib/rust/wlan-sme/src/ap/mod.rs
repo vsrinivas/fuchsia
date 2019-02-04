@@ -27,7 +27,10 @@ use futures::channel::{mpsc, oneshot};
 use log::{debug, error, info, warn};
 use std::boxed::Box;
 use std::sync::{Arc, Mutex};
-use wlan_common::{channel::{Channel, Phy}, RadioConfig};
+use wlan_common::{
+    channel::{Channel, Phy},
+    RadioConfig,
+};
 use wlan_rsn::{self, gtk::GtkProvider, nonce::NonceReader, psk, rsne::Rsne, NegotiatedRsne};
 
 const DEFAULT_BEACON_PERIOD: u16 = 100;
@@ -192,7 +195,10 @@ impl ApSme {
 }
 
 /// Adapt user-providing operation condition to underlying device capabilities.
-fn adapt_operation(device_info: &DeviceInfo, usr_cfg: &RadioConfig) -> Result<OpRadioConfig, failure::Error>{
+fn adapt_operation(
+    device_info: &DeviceInfo,
+    usr_cfg: &RadioConfig,
+) -> Result<OpRadioConfig, failure::Error> {
     // TODO(porce): .expect() may go way, if wlantool absorbs the default value,
     // eg. CBW20 in HT. But doing so would hinder later control from WLANCFG.
     if usr_cfg.phy.is_none() || usr_cfg.cbw.is_none() || usr_cfg.primary_chan.is_none() {
@@ -206,10 +212,7 @@ fn adapt_operation(device_info: &DeviceInfo, usr_cfg: &RadioConfig) -> Result<Op
     }
 
     let (phy_adapted, cbw_adapted) = derive_phy_cbw_for_ap(device_info, &phy, &chan);
-    Ok(OpRadioConfig {
-        phy: phy_adapted,
-        chan: Channel::new(chan.primary, cbw_adapted),
-    })
+    Ok(OpRadioConfig { phy: phy_adapted, chan: Channel::new(chan.primary, cbw_adapted) })
 }
 
 impl super::Station for ApSme {
@@ -480,9 +483,11 @@ fn create_rsn_cfg(ssid: &[u8], password: &[u8]) -> Result<Option<RsnCfg>, failur
     }
 }
 
-fn create_start_request(op: &OpRadioConfig, ssid: &Ssid, ap_rsn: Option<&RsnCfg>)
-    -> fidl_mlme::StartRequest
-{
+fn create_start_request(
+    op: &OpRadioConfig,
+    ssid: &Ssid,
+    ap_rsn: Option<&RsnCfg>,
+) -> fidl_mlme::StartRequest {
     let rsne_bytes = ap_rsn.as_ref().map(|RsnCfg { rsne, .. }| {
         let mut buf = Vec::with_capacity(rsne.len());
         rsne.as_bytes(&mut buf);
@@ -514,9 +519,12 @@ mod tests {
     use super::*;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use std::error::Error;
-    use wlan_common::{channel::{Cbw, Phy}, RadioConfig};
+    use wlan_common::{
+        channel::{Cbw, Phy},
+        RadioConfig,
+    };
 
-    use crate::{MlmeStream, Station, test_utils::*};
+    use crate::{test_utils::*, MlmeStream, Station};
 
     const AP_ADDR: [u8; 6] = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
@@ -543,7 +551,7 @@ mod tests {
     }
 
     fn unprotected_config() -> Config {
-        Config { ssid: SSID.to_vec(), password: vec![], radio_cfg: radio_cfg(11), }
+        Config { ssid: SSID.to_vec(), password: vec![], radio_cfg: radio_cfg(11) }
     }
 
     fn protected_config() -> Config {
@@ -558,15 +566,15 @@ mod tests {
     fn test_validate_config() {
         assert_eq!(
             Err(StartResult::InvalidArguments),
-            validate_config(&Config { ssid: vec![], password: vec![], radio_cfg: radio_cfg(15),})
+            validate_config(&Config { ssid: vec![], password: vec![], radio_cfg: radio_cfg(15) })
         );
         assert_eq!(
             Err(StartResult::DfsUnsupported),
-            validate_config(&Config { ssid: vec![], password: vec![], radio_cfg: radio_cfg(52),})
+            validate_config(&Config { ssid: vec![], password: vec![], radio_cfg: radio_cfg(52) })
         );
         assert_eq!(
             Ok(()),
-            validate_config(&Config { ssid: vec![], password: vec![], radio_cfg: radio_cfg(40),})
+            validate_config(&Config { ssid: vec![], password: vec![], radio_cfg: radio_cfg(40) })
         );
     }
 
@@ -593,7 +601,10 @@ mod tests {
             assert_eq!(start_req.bss_type, fidl_mlme::BssTypes::Infrastructure);
             assert_ne!(start_req.beacon_period, 0);
             assert_ne!(start_req.dtim_period, 0);
-            assert_eq!(start_req.channel, unprotected_config().radio_cfg.primary_chan.expect("invalid config"));
+            assert_eq!(
+                start_req.channel,
+                unprotected_config().radio_cfg.primary_chan.expect("invalid config")
+            );
             assert!(start_req.rsne.is_none());
         } else {
             panic!("expect start AP request to MLME");
@@ -786,7 +797,7 @@ mod tests {
         // Invalid input
         {
             let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty);
-            let ucfg = RadioConfig { phy: None, cbw: Some(Cbw::Cbw20), primary_chan: Some(1)};
+            let ucfg = RadioConfig { phy: None, cbw: Some(Cbw::Cbw20), primary_chan: Some(1) };
             let got = adapt_operation(&dinf, &ucfg);
             assert!(got.is_err());
         }

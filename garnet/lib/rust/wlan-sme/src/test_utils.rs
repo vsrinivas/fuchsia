@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::Bytes;
 use crate::DeviceInfo;
-use fidl_fuchsia_wlan_common::{self as fidl_common};
-use fidl_fuchsia_wlan_mlme::{self as fidl_mlme};
-use wlan_common::{channel::{Cbw, Phy}, RadioConfig};
+use bytes::Bytes;
+use fidl_fuchsia_wlan_common as fidl_common;
+use fidl_fuchsia_wlan_mlme as fidl_mlme;
+use wlan_common::{
+    channel::{Cbw, Phy},
+    RadioConfig,
+};
 use wlan_rsn::{
     akm::{self, Akm},
     cipher::{self, Cipher},
@@ -110,42 +113,35 @@ pub fn fake_ht_op_sec_offset(secondary_offset: fidl_mlme::SecChanOffset) -> fidl
 }
 
 pub fn fake_vht_op_cbw(cbw: fidl_mlme::VhtCbw) -> fidl_mlme::VhtOperation {
-    fidl_mlme::VhtOperation {
-        vht_cbw: cbw as u8,
-        .. fake_vht_operation()
-    }
+    fidl_mlme::VhtOperation { vht_cbw: cbw as u8, ..fake_vht_operation() }
 }
 
 pub fn fake_device_info_ht(chanwidth: fidl_mlme::ChanWidthSet) -> DeviceInfo {
-    DeviceInfo {
-        addr: [0; 6],
-        bands: vec![fake_5ghz_band_capabilities_ht_cbw(chanwidth)],
-    }
+    DeviceInfo { addr: [0; 6], bands: vec![fake_5ghz_band_capabilities_ht_cbw(chanwidth)] }
 }
 
 pub fn fake_device_info_vht(chanwidth: fidl_mlme::ChanWidthSet) -> DeviceInfo {
-    DeviceInfo {
-        addr: [0; 6],
-        bands: vec![fake_band_capabilities_5ghz_vht(chanwidth)],
-    }
+    DeviceInfo { addr: [0; 6], bands: vec![fake_band_capabilities_5ghz_vht(chanwidth)] }
 }
 
-pub fn fake_5ghz_band_capabilities_ht_cbw(chanwidth: fidl_mlme::ChanWidthSet)
-                                          -> fidl_mlme::BandCapabilities {
+pub fn fake_5ghz_band_capabilities_ht_cbw(
+    chanwidth: fidl_mlme::ChanWidthSet,
+) -> fidl_mlme::BandCapabilities {
     let bc = fake_5ghz_band_capabilities();
     fidl_mlme::BandCapabilities {
         ht_cap: Some(Box::new(fake_ht_capabilities_cbw(chanwidth))),
-        .. bc
+        ..bc
     }
 }
 
-pub fn fake_band_capabilities_5ghz_vht(chanwidth: fidl_mlme::ChanWidthSet)
-                                       -> fidl_mlme::BandCapabilities {
+pub fn fake_band_capabilities_5ghz_vht(
+    chanwidth: fidl_mlme::ChanWidthSet,
+) -> fidl_mlme::BandCapabilities {
     let bc = fake_5ghz_band_capabilities();
     fidl_mlme::BandCapabilities {
         ht_cap: Some(Box::new(fake_ht_capabilities_cbw(chanwidth))),
         vht_cap: Some(Box::new(fake_vht_capabilities())),
-        .. bc
+        ..bc
     }
 }
 
@@ -157,8 +153,7 @@ pub fn fake_overrider(phy: fidl_common::Phy, cbw: fidl_common::Cbw) -> RadioConf
     }
 }
 
-pub fn fake_ht_capabilities_cbw(chanwidth: fidl_mlme::ChanWidthSet)
-                                -> fidl_mlme::HtCapabilities {
+pub fn fake_ht_capabilities_cbw(chanwidth: fidl_mlme::ChanWidthSet) -> fidl_mlme::HtCapabilities {
     let mut ht_cap = fake_ht_capabilities();
     ht_cap.ht_cap_info.chan_width_set = chanwidth as u8;
     ht_cap
@@ -192,7 +187,6 @@ pub fn fake_ht_capabilities() -> fidl_mlme::HtCapabilities {
         asel_cap: fake_asel_capability(),
     }
 }
-
 
 pub fn fake_ht_cap_info() -> fidl_mlme::HtCapabilityInfo {
     fidl_mlme::HtCapabilityInfo {
@@ -284,7 +278,6 @@ pub fn fake_ht_operation() -> fidl_mlme::HtOperation {
     }
 }
 
-
 pub fn fake_ht_op_info() -> fidl_mlme::HtOperationInfo {
     fidl_mlme::HtOperationInfo {
         secondary_chan_offset: fidl_mlme::SecChanOffset::SecondaryAbove as u8,
@@ -331,7 +324,7 @@ pub fn fake_vht_capabilities_info() -> fidl_mlme::VhtCapabilitiesInfo {
         link_adapt: fidl_mlme::VhtLinkAdaptation::NoFeedback as u8,
         rx_ant_pattern: true,
         tx_ant_pattern: true,
-        ext_nss_bw:2,
+        ext_nss_bw: 2,
     }
 }
 
@@ -356,9 +349,7 @@ pub fn fake_vht_operation() -> fidl_mlme::VhtOperation {
 }
 
 pub fn fake_basic_vht_mcs_nss() -> fidl_mlme::BasicVhtMcsNss {
-    fidl_mlme::BasicVhtMcsNss {
-        max_mcs: [fidl_mlme::VhtMcs::Set0To9 as u8; 8],
-    }
+    fidl_mlme::BasicVhtMcsNss { max_mcs: [fidl_mlme::VhtMcs::Set0To9 as u8; 8] }
 }
 
 pub fn fake_5ghz_band_capabilities() -> fidl_mlme::BandCapabilities {

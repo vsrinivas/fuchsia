@@ -12,7 +12,8 @@ use fuchsia_zircon as zx;
 type WlanService = DeviceServiceProxy;
 
 pub async fn get_iface_ap_sme_proxy(
-    wlan_svc: &WlanService, iface_id: u16,
+    wlan_svc: &WlanService,
+    iface_id: u16,
 ) -> Result<fidl_sme::ApSmeProxy, Error> {
     let (sme_proxy, sme_remote) = endpoints::create_proxy()?;
     let status = await!(wlan_svc.get_ap_sme(iface_id, sme_remote))
@@ -34,7 +35,10 @@ pub async fn stop_ap(iface_sme_proxy: &fidl_sme::ApSmeProxy) -> Result<(), Error
 }
 
 pub async fn start_ap(
-    iface_sme_proxy: &fidl_sme::ApSmeProxy, target_ssid: Vec<u8>, target_pwd: Vec<u8>, channel: u8,
+    iface_sme_proxy: &fidl_sme::ApSmeProxy,
+    target_ssid: Vec<u8>,
+    target_pwd: Vec<u8>,
+    channel: u8,
 ) -> Result<fidl_sme::StartApResultCode, Error> {
     // create ConnectRequest holding network info
     let mut config = fidl_sme::ApConfig {
@@ -106,7 +110,10 @@ mod tests {
     }
 
     fn test_ap_start(
-        ssid: &str, password: &str, channel: u8, result_code: StartApResultCode,
+        ssid: &str,
+        password: &str,
+        channel: u8,
+        result_code: StartApResultCode,
     ) -> StartApResultCode {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (ap_sme, server) = create_ap_sme_proxy();
@@ -151,15 +158,15 @@ mod tests {
     fn create_ap_sme_proxy() -> (fidl_sme::ApSmeProxy, ApSmeRequestStream) {
         let (proxy, server) =
             endpoints::create_proxy::<ApSmeMarker>().expect("failed to create sme ap channel");
-        let server = server
-            .into_stream()
-            .expect("failed to create ap sme response stream");
+        let server = server.into_stream().expect("failed to create ap sme response stream");
         (proxy, server)
     }
 
     fn send_start_ap_response(
-        exec: &mut fasync::Executor, server: &mut StreamFuture<ApSmeRequestStream>,
-        expected_config: fidl_sme::ApConfig, result_code: StartApResultCode,
+        exec: &mut fasync::Executor,
+        server: &mut StreamFuture<ApSmeRequestStream>,
+        expected_config: fidl_sme::ApConfig,
+        result_code: StartApResultCode,
     ) {
         let rsp = match poll_ap_sme_request(exec, server) {
             Poll::Ready(ApSmeRequest::Start { config, responder }) => {
@@ -170,18 +177,17 @@ mod tests {
             _ => panic!("Expected AP Start Request"),
         };
 
-        rsp.send(result_code)
-            .expect("Failed to send AP start response.");
+        rsp.send(result_code).expect("Failed to send AP start response.");
     }
 
     fn poll_ap_sme_request(
-        exec: &mut fasync::Executor, next_ap_sme_req: &mut StreamFuture<ApSmeRequestStream>,
+        exec: &mut fasync::Executor,
+        next_ap_sme_req: &mut StreamFuture<ApSmeRequestStream>,
     ) -> Poll<ApSmeRequest> {
-        exec.run_until_stalled(next_ap_sme_req)
-            .map(|(req, stream)| {
-                *next_ap_sme_req = stream.into_future();
-                req.expect("did not expect the ApSmeRequestStream to end")
-                    .expect("error polling ap sme request stream")
-            })
+        exec.run_until_stalled(next_ap_sme_req).map(|(req, stream)| {
+            *next_ap_sme_req = stream.into_future();
+            req.expect("did not expect the ApSmeRequestStream to end")
+                .expect("error polling ap sme request stream")
+        })
     }
 }

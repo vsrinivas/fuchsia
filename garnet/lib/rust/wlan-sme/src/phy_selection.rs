@@ -5,7 +5,10 @@
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use log::error;
-use wlan_common::{channel::{Cbw, Channel, Phy}, RadioConfig};
+use wlan_common::{
+    channel::{Cbw, Channel, Phy},
+    RadioConfig,
+};
 
 use crate::DeviceInfo;
 
@@ -146,49 +149,52 @@ pub fn derive_phy_cbw(
 }
 
 /// Derive PHY to use for AP or Mesh role. Input config_phy and chan are required to be valid.
-pub fn derive_phy_cbw_for_ap(device_info: &DeviceInfo, config_phy: &Phy, chan: &Channel)
-                             -> (Phy, Cbw)
-{
+pub fn derive_phy_cbw_for_ap(
+    device_info: &DeviceInfo,
+    config_phy: &Phy,
+    chan: &Channel,
+) -> (Phy, Cbw) {
     let band_cap = match get_device_band_info(device_info, chan.primary) {
         None => {
-            error!("Could not find the device capability corresponding to the \
-                   channel {} Falling back to HT with 20 MHz bandwidth", chan.primary);
+            error!(
+                "Could not find the device capability corresponding to the \
+                 channel {} Falling back to HT with 20 MHz bandwidth",
+                chan.primary
+            );
             return (Phy::Ht, Cbw::Cbw20);
         }
         Some(bc) => bc,
     };
 
-    let supported_phy =
-        if band_cap.ht_cap.is_none() {
-            Phy::Erp
-        } else if band_cap.vht_cap.is_none() {
-            Phy::Ht
-        } else {
-            Phy::Vht
-        };
+    let supported_phy = if band_cap.ht_cap.is_none() {
+        Phy::Erp
+    } else if band_cap.vht_cap.is_none() {
+        Phy::Ht
+    } else {
+        Phy::Vht
+    };
 
     let phy_to_use = std::cmp::min(*config_phy, supported_phy);
 
     let best_cbw = match phy_to_use {
         Phy::Hr | Phy::Erp => Cbw::Cbw20,
-        Phy::Ht =>
-            {
-                // Consider the input chan of this function can be Channel
-                // { primary: 48, cbw: Cbw80 }, which is valid. If phy_to_use is HT, however,
-                // Cbw80 becomes infeasible, and a next feasible CBW needs to be found.
-                let ht_cap = band_cap.ht_cap.as_ref().expect("band capability needs ht_cap");
-                if ht_cap.ht_cap_info.chan_width_set == fidl_mlme::ChanWidthSet::TwentyOnly as u8 {
-                    Cbw::Cbw20
+        Phy::Ht => {
+            // Consider the input chan of this function can be Channel
+            // { primary: 48, cbw: Cbw80 }, which is valid. If phy_to_use is HT, however,
+            // Cbw80 becomes infeasible, and a next feasible CBW needs to be found.
+            let ht_cap = band_cap.ht_cap.as_ref().expect("band capability needs ht_cap");
+            if ht_cap.ht_cap_info.chan_width_set == fidl_mlme::ChanWidthSet::TwentyOnly as u8 {
+                Cbw::Cbw20
+            } else {
+                // Only one is feasible.
+                let c = Channel::new(chan.primary, Cbw::Cbw40);
+                if c.is_valid() {
+                    Cbw::Cbw40
                 } else {
-                    // Only one is feasible.
-                    let c = Channel::new(chan.primary, Cbw::Cbw40);
-                    if c.is_valid() {
-                        Cbw::Cbw40
-                    } else {
-                        Cbw::Cbw40Below
-                    }
+                    Cbw::Cbw40Below
                 }
-            },
+            }
+        }
         // TODO(porce): CBW160, CBW80P80, HEW support
         Phy::Vht | Phy::Hew => Cbw::Cbw80,
     };
@@ -366,10 +372,7 @@ mod tests {
 
     impl UserCfg {
         fn new(phy: Phy, primary_chan: u8, cbw: Cbw) -> Self {
-            UserCfg {
-                phy,
-                chan: Channel::new(primary_chan, cbw)
-            }
+            UserCfg { phy, chan: Channel::new(primary_chan, cbw) }
         }
     }
 
@@ -379,37 +382,41 @@ mod tests {
         {
             let usr_cfg = UserCfg::new(Phy::Vht, 36, Cbw::Cbw80);
             let want = (Phy::Vht, Cbw::Cbw80);
-            let got =
-                derive_phy_cbw_for_ap(
-                    &fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty),
-                    &usr_cfg.phy, &usr_cfg.chan);
+            let got = derive_phy_cbw_for_ap(
+                &fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty),
+                &usr_cfg.phy,
+                &usr_cfg.chan,
+            );
             assert_eq!(want, got);
         }
         {
             let usr_cfg = UserCfg::new(Phy::Vht, 36, Cbw::Cbw40);
             let want = (Phy::Vht, Cbw::Cbw40);
-            let got =
-                derive_phy_cbw_for_ap(
-                    &fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty),
-                    &usr_cfg.phy, &usr_cfg.chan);
+            let got = derive_phy_cbw_for_ap(
+                &fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty),
+                &usr_cfg.phy,
+                &usr_cfg.chan,
+            );
             assert_eq!(want, got);
         }
         {
             let usr_cfg = UserCfg::new(Phy::Vht, 36, Cbw::Cbw20);
             let want = (Phy::Vht, Cbw::Cbw20);
-            let got =
-                derive_phy_cbw_for_ap(
-                    &fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty),
-                    &usr_cfg.phy, &usr_cfg.chan);
+            let got = derive_phy_cbw_for_ap(
+                &fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty),
+                &usr_cfg.phy,
+                &usr_cfg.chan,
+            );
             assert_eq!(want, got);
         }
         {
             let usr_cfg = UserCfg::new(Phy::Vht, 40, Cbw::Cbw40Below);
             let want = (Phy::Vht, Cbw::Cbw40Below);
-            let got =
-                derive_phy_cbw_for_ap(
-                    &fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty),
-                    &usr_cfg.phy, &usr_cfg.chan);
+            let got = derive_phy_cbw_for_ap(
+                &fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty),
+                &usr_cfg.phy,
+                &usr_cfg.chan,
+            );
             assert_eq!(want, got);
         }
 
@@ -417,37 +424,41 @@ mod tests {
         {
             let usr_cfg = UserCfg::new(Phy::Ht, 36, Cbw::Cbw40);
             let want = (Phy::Ht, Cbw::Cbw40);
-            let got =
-                derive_phy_cbw_for_ap(
-                    &fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty),
-                    &usr_cfg.phy, &usr_cfg.chan);
+            let got = derive_phy_cbw_for_ap(
+                &fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty),
+                &usr_cfg.phy,
+                &usr_cfg.chan,
+            );
             assert_eq!(want, got);
         }
         {
             let usr_cfg = UserCfg::new(Phy::Ht, 40, Cbw::Cbw40Below);
             let want = (Phy::Ht, Cbw::Cbw40Below);
-            let got =
-                derive_phy_cbw_for_ap(
-                    &fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty),
-                    &usr_cfg.phy, &usr_cfg.chan);
+            let got = derive_phy_cbw_for_ap(
+                &fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty),
+                &usr_cfg.phy,
+                &usr_cfg.chan,
+            );
             assert_eq!(want, got);
         }
         {
             let usr_cfg = UserCfg::new(Phy::Ht, 36, Cbw::Cbw40);
             let want = (Phy::Ht, Cbw::Cbw40);
-            let got =
-                derive_phy_cbw_for_ap(
-                    &fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty),
-                    &usr_cfg.phy, &usr_cfg.chan);
+            let got = derive_phy_cbw_for_ap(
+                &fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty),
+                &usr_cfg.phy,
+                &usr_cfg.chan,
+            );
             assert_eq!(want, got);
         }
         {
             let usr_cfg = UserCfg::new(Phy::Ht, 36, Cbw::Cbw20);
             let want = (Phy::Ht, Cbw::Cbw20);
-            let got =
-                derive_phy_cbw_for_ap(
-                    &fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty),
-                    &usr_cfg.phy, &usr_cfg.chan);
+            let got = derive_phy_cbw_for_ap(
+                &fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty),
+                &usr_cfg.phy,
+                &usr_cfg.chan,
+            );
             assert_eq!(want, got);
         }
 
@@ -455,28 +466,31 @@ mod tests {
         {
             let usr_cfg = UserCfg::new(Phy::Vht, 36, Cbw::Cbw80);
             let want = (Phy::Ht, Cbw::Cbw40);
-            let got =
-                derive_phy_cbw_for_ap(
-                    &fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty),
-                    &usr_cfg.phy, &usr_cfg.chan);
+            let got = derive_phy_cbw_for_ap(
+                &fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty),
+                &usr_cfg.phy,
+                &usr_cfg.chan,
+            );
             assert_eq!(want, got);
         }
         {
             let usr_cfg = UserCfg::new(Phy::Vht, 40, Cbw::Cbw80);
             let want = (Phy::Ht, Cbw::Cbw40Below);
-            let got =
-                derive_phy_cbw_for_ap(
-                    &fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty),
-                    &usr_cfg.phy, &usr_cfg.chan);
+            let got = derive_phy_cbw_for_ap(
+                &fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty),
+                &usr_cfg.phy,
+                &usr_cfg.chan,
+            );
             assert_eq!(want, got);
         }
         {
             let usr_cfg = UserCfg::new(Phy::Vht, 36, Cbw::Cbw80);
             let want = (Phy::Ht, Cbw::Cbw20);
-            let got =
-                derive_phy_cbw_for_ap(
-                    &fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyOnly),
-                    &usr_cfg.phy, &usr_cfg.chan);
+            let got = derive_phy_cbw_for_ap(
+                &fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyOnly),
+                &usr_cfg.phy,
+                &usr_cfg.chan,
+            );
             assert_eq!(want, got);
         }
     }

@@ -11,7 +11,11 @@ use std::sync::{
 };
 use wlan_rsn::{rsna::UpdateSink, rsne::RsnCapabilities};
 
-use crate::{client::rsn::Supplicant, test_utils::{self, *}, InfoEvent, InfoStream, Ssid};
+use crate::{
+    client::rsn::Supplicant,
+    test_utils::{self, *},
+    InfoEvent, InfoStream, Ssid,
+};
 
 fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescription {
     fidl_mlme::BssDescription {

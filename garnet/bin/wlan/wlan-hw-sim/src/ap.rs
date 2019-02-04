@@ -16,7 +16,10 @@ pub mod tests {
         hex,
         std::io::Cursor,
         std::panic,
-        wlan_common::{channel::{Cbw, Phy}, RadioConfig},
+        wlan_common::{
+            channel::{Cbw, Phy},
+            RadioConfig,
+        },
     };
 
     pub fn test_open_ap_connect() {
