@@ -394,17 +394,7 @@ zx_status_t hid_process_hid_report_desc(hid_device_t* dev) {
 #endif
 
         dev->num_reports = reports.num_reports;
-
-        // If we saw a report ID, adjust the expected report sizes to reflect
-        // the fact that we expect a report ID to be prepended to each report.
         ZX_DEBUG_ASSERT(dev->num_reports <= countof(dev->sizes));
-        if (reports.has_rpt_id) {
-            for (size_t i = 0; i < dev->num_reports; ++i) {
-                if (dev->sizes[i].in_size)   dev->sizes[i].in_size   += 8;
-                if (dev->sizes[i].out_size)  dev->sizes[i].out_size  += 8;
-                if (dev->sizes[i].feat_size) dev->sizes[i].feat_size += 8;
-            }
-        }
     }
 
     return status;

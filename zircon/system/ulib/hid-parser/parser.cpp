@@ -253,6 +253,14 @@ public:
                 ++ix;
             }
 
+            // If we haven't seen any fields reset the size to 0.
+            if (input_count == 0)
+                input_bit_sz = 0;
+            if (output_count == 0)
+                output_bit_sz = 0;
+            if (feature_count == 0)
+                feature_bit_sz = 0;
+
             // Update the report ReportDescriptor with the final information.
             dev->report[ifr].count = field_count;
 

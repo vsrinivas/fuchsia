@@ -217,6 +217,8 @@ struct ReportField {
 struct ReportDescriptor {
     uint8_t report_id;
 
+    // The byte size includes the 1 byte for the report ID if the report ID is
+    // not equal to zero.
     size_t input_byte_sz;
     size_t input_count;
     ReportField* input_fields;

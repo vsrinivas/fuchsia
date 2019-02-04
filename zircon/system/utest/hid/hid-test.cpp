@@ -19,6 +19,8 @@ extern "C" const uint8_t acer12_touch_r_desc[660];
 extern "C" const uint8_t eve_tablet_r_desc[28];
 extern "C" const uint8_t asus_touch_desc[945];
 
+// All sizes below are in bits. They also include the 8 bits for the report
+// ID if the report ID is not 0.
 hid_report_size_t boot_mouse_golden_sizes[] = {
     {
         .id = 0,
@@ -38,25 +40,25 @@ hid_reports_t boot_mouse_golden = {
 hid_report_size_t trinket_golden_sizes[] = {
     {
         .id = 1,
-        .in_size   = 24,
+        .in_size   = 32,
         .out_size  = 0,
         .feat_size = 0,
     },
     {
         .id = 2,
-        .in_size   = 56,
-        .out_size  = 8,
+        .in_size   = 64,
+        .out_size  = 16,
         .feat_size = 0,
     },
     {
         .id = 3,
-        .in_size   = 16,
+        .in_size   = 24,
         .out_size  = 0,
         .feat_size = 0,
     },
     {
         .id = 4,
-        .in_size   = 8,
+        .in_size   = 16,
         .out_size  = 0,
         .feat_size = 0,
     },
@@ -88,27 +90,27 @@ hid_reports_t eve_tablet_golden = {
 hid_report_size_t ps3_golden_sizes[] = {
     {
         .id = 1,
-        .in_size   = 384,
-        .out_size  = 384,
-        .feat_size = 384,
+        .in_size   = 392,
+        .out_size  = 392,
+        .feat_size = 392,
     },
     {
         .id = 2,
         .in_size   = 0,
         .out_size  = 0,
-        .feat_size = 384,
+        .feat_size = 392,
     },
     {
         .id = 238,
         .in_size   = 0,
         .out_size  = 0,
-        .feat_size = 384,
+        .feat_size = 392,
     },
     {
         .id = 239,
         .in_size   = 0,
         .out_size  = 0,
-        .feat_size = 384,
+        .feat_size = 392,
     },
 };
 
@@ -122,7 +124,7 @@ hid_reports_t ps3_golden = {
 hid_report_size_t acer12_golden_sizes[] = {
     {
         .id = 1,
-        .in_size   = 480,
+        .in_size   = 488,
         .out_size  = 0,
         .feat_size = 0,
     },
@@ -130,47 +132,47 @@ hid_report_size_t acer12_golden_sizes[] = {
         .id = 10,
         .in_size   = 0,
         .out_size  = 0,
-        .feat_size = 8,
+        .feat_size = 16,
     },
     {
         .id = 14,
         .in_size   = 0,
         .out_size  = 0,
-        .feat_size = 2048,
+        .feat_size = 2056,
     },
     {
         .id = 2,
-        .in_size   = 512,
+        .in_size   = 520,
         .out_size  = 0,
         .feat_size = 0,
     },
     {
         .id = 3,
         .in_size   = 0,
-        .out_size  = 256,
+        .out_size  = 264,
         .feat_size = 0,
     },
     {
         .id = 6,
         .in_size   = 0,
-        .out_size  = 144,
-        .feat_size = 24,
+        .out_size  = 152,
+        .feat_size = 32,
     },
     {
         .id = 4,
-        .in_size   = 152,
+        .in_size   = 160,
         .out_size  = 0,
         .feat_size = 0,
     },
     {
         .id = 7,
-        .in_size   = 56,
+        .in_size   = 64,
         .out_size  = 0,
         .feat_size = 0,
     },
     {
         .id = 23,
-        .in_size   = 248,
+        .in_size   = 256,
         .out_size  = 0,
         .feat_size = 0,
     },
@@ -187,7 +189,7 @@ hid_reports_t acer12_golden = {
 hid_report_size_t asus_golden_sizes[] = {
     {
         .id = 1,
-        .in_size   = 920,
+        .in_size   = 928,
         .out_size  = 0,
         .feat_size = 0,
     },
@@ -195,29 +197,29 @@ hid_report_size_t asus_golden_sizes[] = {
         .id = 10,
         .in_size   = 0,
         .out_size  = 0,
-        .feat_size = 8,
+        .feat_size = 16,
     },
     {
         .id = 68,
         .in_size   = 0,
         .out_size  = 0,
-        .feat_size = 2048,
+        .feat_size = 2056,
     },
     {
         .id = 2,
-        .in_size   = 512,
+        .in_size   = 520,
         .out_size  = 0,
         .feat_size = 0,
     },
     {
         .id = 3,
         .in_size   = 0,
-        .out_size  = 504,
+        .out_size  = 512,
         .feat_size = 0,
     },
     {
         .id = 4,
-        .in_size   = 152,
+        .in_size   = 160,
         .out_size  = 0,
         .feat_size = 0,
     },
