@@ -1,0 +1,80 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.accessibility;
+
+enum AccessibilitySettingsManagerStatus {
+    OK = 0;
+    ERROR = 1;
+};
+
+// Specifies color correction mode.
+enum ColorCorrection {
+    // No color correction enabled.
+    DISABLED = 0;
+
+    // Color correction enabled for protoanomaly (red-green -- reduced sensitivity to red light).
+    CORRECT_PROTANOMALY = 1;
+
+    // Color correction enabled for deuteranomaly (red-green -- reduced sensitivy to green light).
+    CORRECT_DEUTERANOMALY = 2;
+
+    // Color correction enabled for tritanomaly (blue-yellow -- reduced sensitivity to blude light).
+    CORRECT_TRITANOMALY = 3;
+};
+
+table AccessibilityOptions {
+    1: bool magnification_enabled = false;
+
+    2: float32 magnification_zoom_factor = 1.0;
+
+    3: bool screen_reader_enabled = false;
+
+    4: bool color_inversion_enabled = false;
+
+    5: ColorCorrection color_correction = DISABLED;
+};
+
+// The accessibility settings manager enables clients to get/set and watch settings values
+// for accessibility services.
+[Discoverable]
+interface AccessibilitySettingsManager {
+    GetAccessibilitySettings()
+        -> (AccessibilitySettingsManagerStatus status, AccessibilityOptions accessibility_options);
+
+    // When magnification is currently disabled, SetMagnificationEnabled(false) has no effect.
+    //
+    // When magnification is currently disabled, SetMagnificationEnabled(true)
+    // sets zoom factor to 1.0, enables magnification.
+    //
+    // When magnification is currently enabled, SetMagnificationEnabled(false)
+    // sets zoom factor to 1.0, disables magnification.
+    //
+    // When magnification is currently enabled, SetMagnificationEnabled(true) has no effect.
+    SetMagnificationEnabled(bool magnification_enabled)
+        -> (AccessibilitySettingsManagerStatus status);
+
+    // Sets value of zoom factor, provided that magnification is enabled.
+    // Zoom factor must be > 1.0.
+    // Returns ERROR if zoom is disabled or if magnification_zoom_factor < 0.
+    SetMagnificationZoomFactor(float32 magnification_zoom_factor)
+        -> (AccessibilitySettingsManagerStatus status);
+
+    SetScreenReaderEnabled(bool screen_reader_enabled)
+        -> (AccessibilitySettingsManagerStatus status);
+
+    SetColorInversionEnabled(bool color_inversion_enabled)
+        -> (AccessibilitySettingsManagerStatus status);
+
+    SetColorCorrection(ColorCorrection color_correction)
+        -> (AccessibilitySettingsManagerStatus status);
+
+    Watch(AccessibilitySettingsWatcher watcher)
+        -> (AccessibilitySettingsManagerStatus status);
+};
+
+interface AccessibilitySettingsWatcher {
+    // Called when accessibility settings elections change.
+    OnAccessibilitySettingsChange(AccessibilityOptions accessibility_options);
+};

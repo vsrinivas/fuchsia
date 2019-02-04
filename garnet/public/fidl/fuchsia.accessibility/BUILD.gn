@@ -11,6 +11,7 @@ fidl("fuchsia.accessibility") {
     "data.fidl",
     "manager.fidl",
     "semantics_root.fidl",
+    "settings.fidl",
     "toggler.fidl",
     "touch_dispatcher.fidl",
   ]
