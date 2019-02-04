@@ -73,6 +73,9 @@
 #define T931_HIU_BASE                   0xff63c000
 #define T931_HIU_LENGTH                 0x2000
 
+#define T931_DSI_PHY_BASE               0xff644000
+#define T931_DSI_PHY_LENGTH             0x2000
+
 #define T931_AOBUS_BASE                 0xff800000
 #define T931_AOBUS_LENGTH               0x100000
 
@@ -81,6 +84,9 @@
 
 #define T931_CBUS_BASE                  0xffd00000
 #define T931_CBUS_LENGTH                0x100000
+
+#define T931_MIPI_DSI_BASE              0xffd07000
+#define T931_MIPI_DSI_LENGTH            0x1000
 
 #define T931_MSR_CLK_BASE               0xffd18000
 #define T931_MSR_CLK_LENGTH             0x1000

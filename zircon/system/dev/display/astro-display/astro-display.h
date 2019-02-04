@@ -46,8 +46,8 @@ using DeviceType = ddk::Device<AstroDisplay, ddk::Unbindable>;
 class AstroDisplay : public DeviceType,
                      public ddk::DisplayControllerImplProtocol<AstroDisplay, ddk::base_protocol> {
 public:
-    AstroDisplay(zx_device_t* parent, uint32_t width, uint32_t height)
-        : DeviceType(parent), width_(width), height_(height) {}
+    AstroDisplay(zx_device_t* parent)
+        : DeviceType(parent) {}
 
     // This function is called from the c-bind function upon driver matching
     zx_status_t Bind();
@@ -98,7 +98,7 @@ private:
     thrd_t                              vsync_thread_;
 
     // Protocol handles used in by this driver
-    pdev_protocol_t          pdev_ = {};
+    pdev_protocol_t                     pdev_ = {};
     gpio_protocol_t                     gpio_ = {};
     amlogic_canvas_protocol_t           canvas_ = {};
 

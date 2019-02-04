@@ -61,8 +61,8 @@ enum {
 constexpr uint8_t PANEL_DISPLAY_ID = 1;
 
 // Astro Display dimension
-constexpr uint32_t DISPLAY_WIDTH = 608;
-constexpr uint32_t DISPLAY_HEIGHT = 1024;
+constexpr uint32_t ASTRO_DISPLAY_WIDTH = 608;
+constexpr uint32_t ASTRO_DISPLAY_HEIGHT = 1024;
 
 // Sherlock Display dimension
 constexpr uint32_t SHERLOCK_DISPLAY_WIDTH = 800;
@@ -73,6 +73,8 @@ constexpr bool kBootloaderDisplayEnabled = true;
 // Supported panel types
 constexpr uint8_t  PANEL_TV070WSM_FT = 0x00;
 constexpr uint8_t  PANEL_P070ACB_FT = 0x01;
+constexpr uint8_t  PANEL_TV101WXM_FT = 0x02;
+constexpr uint8_t  PANEL_G101B158_FT = 0x03;
 constexpr uint8_t  PANEL_UNKNOWN = 0xff;
 
 // This display driver supports EVT hardware and onwards. For pre-EVT boards,

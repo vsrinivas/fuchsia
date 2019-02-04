@@ -13,7 +13,7 @@ zx_pixel_format_t kSupportedPixelFormats[] = { ZX_PIXEL_FORMAT_RGB_x888 };
 
 constexpr uint64_t kDisplayId = PANEL_DISPLAY_ID;
 
-// Astro Display Configuration. These configuration comes directly from
+// Astro/Sherlock Display Configuration. These configuration comes directly from
 // from LCD vendor and hardware team.
 constexpr DisplaySetting kDisplaySettingTV070WSM_FT = {
     .lane_num                   = 4,
@@ -44,6 +44,38 @@ constexpr DisplaySetting kDisplaySettingP070ACB_FT = {
     .hsync_bp                   = 80,
     .hsync_pol                  = 0,
     .vsync_width                = 6,
+    .vsync_bp                   = 20,
+    .vsync_pol                  = 0,
+};
+constexpr DisplaySetting kDisplaySettingG101B158_FT = {
+    .lane_num                   = 4,
+    .bit_rate_max               = 566,
+    .clock_factor               = 8,
+    .lcd_clock                  = 70701600,
+    .h_active                   = 800,
+    .v_active                   = 1280,
+    .h_period                   = 890,
+    .v_period                   = 1324,
+    .hsync_width                = 24,
+    .hsync_bp                   = 20,
+    .hsync_pol                  = 0,
+    .vsync_width                = 4,
+    .vsync_bp                   = 20,
+    .vsync_pol                  = 0,
+};
+constexpr DisplaySetting kDisplaySettingTV101WXM_FT = {
+    .lane_num                   = 4,
+    .bit_rate_max               = 566,
+    .clock_factor               = 8,
+    .lcd_clock                  = 70701600,
+    .h_active                   = 800,
+    .v_active                   = 1280,
+    .h_period                   = 890,
+    .v_period                   = 1324,
+    .hsync_width                = 20,
+    .hsync_bp                   = 50,
+    .hsync_pol                  = 0,
+    .vsync_width                = 4,
     .vsync_bp                   = 20,
     .vsync_pol                  = 0,
 };
@@ -87,11 +119,14 @@ zx_status_t AstroDisplay::DisplayInit() {
     if (!skip_disp_init_) {
         // Detect panel type
         PopulatePanelType();
-
         if (panel_type_ == PANEL_TV070WSM_FT) {
             init_disp_table_ = &kDisplaySettingTV070WSM_FT;
         } else if (panel_type_ == PANEL_P070ACB_FT) {
             init_disp_table_ = &kDisplaySettingP070ACB_FT;
+        } else if (panel_type_ == PANEL_TV101WXM_FT) {
+            init_disp_table_ = &kDisplaySettingTV101WXM_FT;
+        } else if (panel_type_ == PANEL_G101B158_FT) {
+            init_disp_table_ = &kDisplaySettingG101B158_FT;
         } else {
             DISP_ERROR("Unsupported panel detected!\n");
             status = ZX_ERR_NOT_SUPPORTED;
@@ -125,7 +160,6 @@ zx_status_t AstroDisplay::DisplayInit() {
         vpu_->PowerOff();
         vpu_->PowerOn();
         vpu_->VppInit();
-
         clock_ = fbl::make_unique_checked<astro_display::AstroDisplayClock>(&ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
@@ -245,7 +279,6 @@ zx_status_t AstroDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx
     }
     imported_images_.SetOne(local_canvas_idx);
     image->handle = local_canvas_idx;
-
     return status;
 }
 
@@ -300,12 +333,11 @@ uint32_t AstroDisplay::DisplayControllerImplCheckConfiguration(
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-void AstroDisplay::DisplayControllerImplApplyConfiguration( const display_config_t** display_configs,
+void AstroDisplay::DisplayControllerImplApplyConfiguration(const display_config_t** display_configs,
                                                         size_t display_count) {
     ZX_DEBUG_ASSERT(display_configs);
 
     fbl::AutoLock lock(&display_lock_);
-
     uint8_t addr;
     if (display_count == 1 && display_configs[0]->layer_count) {
        if (!full_init_done_) {
@@ -327,6 +359,16 @@ void AstroDisplay::DisplayControllerImplApplyConfiguration( const display_config
         current_image_valid_= false;
         if (full_init_done_) {
             osd_->Disable();
+        }
+    }
+
+    // If bootloader does not enable any of the display hardware, no vsync will be generated.
+    // This fakes a vsync to let clients know we are ready until we actually initialize hardware
+    if (!full_init_done_) {
+        if (dc_intf_.is_valid()) {
+            if (display_count == 0 || display_configs[0]->layer_count == 0) {
+                dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get(ZX_CLOCK_MONOTONIC), nullptr, 0);
+            }
         }
     }
 }
@@ -355,8 +397,17 @@ void AstroDisplay::PopulatePanelType() {
     if ((gpio_config_in(&gpio_, GPIO_NO_PULL) == ZX_OK) &&
         (gpio_read(&gpio_, &pt) == ZX_OK)) {
         panel_type_ = pt;
-        DISP_INFO("Detected panel type = %s (%d)\n",
-                  panel_type_ ? "P070ACB_FT" : "TV070WSM_FT", panel_type_);
+        if (board_info_.pid == PDEV_PID_ASTRO) {
+            DISP_INFO("Detected panel type = %s (%d)\n",
+                      panel_type_ ? "P070ACB_FT" : "TV070WSM_FT", panel_type_);
+        } else if (board_info_.pid == PDEV_PID_SHERLOCK) {
+            DISP_INFO("Detected panel type = %s (%d)\n",
+                      panel_type_ ? "G101B158_FT" : "TV101WXM_FT", panel_type_);
+            panel_type_ = static_cast<uint8_t>(pt + PANEL_TV101WXM_FT);
+        } else {
+            DISP_ERROR("Panel detection attempted on Unsupported hardware\n");
+            ZX_ASSERT(0);
+        }
     } else {
         panel_type_ = PANEL_UNKNOWN;
         DISP_ERROR("Failed to detect a valid panel\n");
@@ -375,6 +426,9 @@ zx_status_t AstroDisplay::SetupDisplayInterface() {
                 board_info_.board_revision);
             skip_disp_init_ = true;
         }
+    } else if (board_info_.pid == PDEV_PID_SHERLOCK) {
+        panel_type_ = PANEL_UNKNOWN;
+        skip_disp_init_ = false;
     } else {
         skip_disp_init_ = true;
     }
@@ -435,19 +489,24 @@ zx_status_t AstroDisplay::Bind() {
     }
 
     if (board_info_.pid == PDEV_PID_ASTRO) {
-        // Obtain GPIO Protocol for Panel reset
-        size_t actual;
-        status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, GPIO_PANEL_DETECT, &gpio_, sizeof(gpio_),
-                                   &actual);
-        if (status != ZX_OK) {
-            DISP_ERROR("Could not obtain GPIO protocol.\n");
-            return status;
-        }
-    }
-
-    if (board_info_.pid == PDEV_PID_SHERLOCK) {
+        width_ = ASTRO_DISPLAY_WIDTH;
+        height_ = ASTRO_DISPLAY_HEIGHT;
+    } else if (board_info_.pid == PDEV_PID_SHERLOCK) {
         width_ = SHERLOCK_DISPLAY_WIDTH;
         height_ = SHERLOCK_DISPLAY_HEIGHT;
+    } else {
+        DISP_ERROR("Running on Unsupported hardware. Use at your own risk\n");
+    }
+
+    // Obtain GPIO Protocol for Panel reset
+    size_t actual;
+    status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_GPIO, GPIO_PANEL_DETECT,
+                               &gpio_,
+                               sizeof(gpio_),
+                               &actual);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not obtain GPIO protocol.\n");
+        return status;
     }
 
     status = device_get_protocol(parent_, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
@@ -535,7 +594,7 @@ void AstroDisplay::Dump() {
 extern "C" zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
     auto dev = fbl::make_unique_checked<astro_display::AstroDisplay>(&ac,
-        parent, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+        parent);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
