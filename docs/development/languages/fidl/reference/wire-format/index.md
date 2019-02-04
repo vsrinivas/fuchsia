@@ -18,7 +18,7 @@ purpose, goals, and requirements, as well as links to related documents.
 *   Optimized for Zircon IPC only; portability is not a goal.
 *   Optimized for direct memory access; inter-machine transport is not a goal.
 *   Optimized for 64-bit only; no accommodation for 32-bit environments.
-*   Uses uncompressed native data types with host-endianness and correct
+*   Uses uncompressed native data types with little-endianness and correct
     alignment to support in-place access of message contents.
 *   Compatible with C structure in-memory layout (with suitable field ordering
     and packing annotations).
