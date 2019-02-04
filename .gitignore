@@ -41,7 +41,7 @@ tags
 target
 third_party/
 Thumbs.db
-tools/
+/tools/
 tools/cipd.gni
 topaz/
 vendor/
