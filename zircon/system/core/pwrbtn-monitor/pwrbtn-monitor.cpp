@@ -52,64 +52,26 @@ zx_status_t FindSystemPowerDown(const hid::DeviceDescriptor* desc,
     };
 
     // Search for the field
-    bool found = false;
-    for (size_t rpt_idx = 0; rpt_idx < desc->rep_count && !found; ++rpt_idx) {
-        const hid::ReportDescriptor& report = desc->report[rpt_idx];
-        for (size_t i = 0; i < report.count; ++i) {
-            const hid::ReportField& field = report.first_field[i];
-            if (field.type != hid::kInput || !usage_eq(field.attr.usage, power_down)) {
-                continue;
-            }
-
-            const hid::Collection* collection = hid::GetAppCollection(&field);
-            if (!collection || !usage_eq(collection->usage, system_control)) {
-                continue;
-            }
-
-            found = true;
-            *report_id = field.report_id;
-            break;
-        }
-    }
-
-    if (!found) {
-        return ZX_ERR_NOT_FOUND;
-    }
-
-    // Compute the offset of the field.  Since reports may be discontinuous, we
-    // have to search from the beginning.
-    *bit_offset = 0;
     for (size_t rpt_idx = 0; rpt_idx < desc->rep_count; ++rpt_idx) {
         const hid::ReportDescriptor& report = desc->report[rpt_idx];
-        if (report.report_id != *report_id) {
-            continue;
-        }
 
-        for (size_t i = 0; i < report.count; ++i) {
-            const hid::ReportField& field = report.first_field[i];
-            if (field.type != hid::kInput) {
-                continue;
-            }
+        for (size_t i = 0; i < report.input_count; ++i) {
+            const hid::ReportField& field = report.input_fields[i];
 
-            *bit_offset += field.attr.bit_sz;
-
-            // Check if we found the field again, and if so return.
             if (!usage_eq(field.attr.usage, power_down)) {
                 continue;
             }
+
             const hid::Collection* collection = hid::GetAppCollection(&field);
             if (!collection || !usage_eq(collection->usage, system_control)) {
                 continue;
             }
-
-            // Subtract out the field, since we want its start not its end.
-            *bit_offset -= field.attr.bit_sz;
+            *report_id = field.report_id;
+            *bit_offset = field.attr.offset;
             return ZX_OK;
         }
     }
-
-    // Should be unreachable
-    return ZX_ERR_INTERNAL;
+    return ZX_ERR_NOT_FOUND;
 }
 
 struct PowerButtonInfo {
