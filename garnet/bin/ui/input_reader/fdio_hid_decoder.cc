@@ -269,7 +269,7 @@ bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
   const hid::ReportDescriptor* input_desc = nullptr;
   for (size_t rep = 0; rep < count; rep++) {
     const hid::ReportDescriptor* desc = &dev_desc->report[rep];
-    if (desc->first_field[0].type == hid::kInput) {
+    if (desc->input_count != 0) {
       input_desc = desc;
       break;
     }
@@ -281,7 +281,7 @@ bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
   }
 
   // Traverse up the nested collections to the Application collection.
-  auto collection = input_desc->first_field[0].col;
+  auto collection = input_desc->input_fields[0].col;
   while (collection != nullptr) {
     if (collection->type == hid::CollectionType::kApplication) {
       break;
@@ -301,16 +301,16 @@ bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
   // Most modern gamepads report themselves as Joysticks. Madness.
   if (collection->usage.page == hid::usage::Page::kGenericDesktop &&
       collection->usage.usage == hid::usage::GenericDesktop::kJoystick &&
-      ParseGamepadDescriptor(input_desc->first_field, input_desc->count)) {
+      ParseGamepadDescriptor(input_desc->input_fields, input_desc->input_count)) {
     protocol_ = Protocol::Gamepad;
   } else {
     protocol_ = ExtractProtocol(collection->usage);
     switch (protocol_) {
       case Protocol::LightSensor:
-        ParseAmbientLightDescriptor(input_desc->first_field, input_desc->count);
+        ParseAmbientLightDescriptor(input_desc->input_fields, input_desc->input_count);
         break;
       case Protocol::Buttons:
-        ParseButtonsDescriptor(input_desc->first_field, input_desc->count);
+        ParseButtonsDescriptor(input_desc->input_fields, input_desc->input_count);
         break;
       case Protocol::Touchpad:
         // Fallthrough

@@ -26,8 +26,8 @@ bool Touchscreen::ParseTouchscreenDescriptor(
   hid::Collection *finger_collection;
   uint32_t caps = 0;
 
-  for (size_t i = 0; i < desc->count; i++) {
-    const hid::ReportField field = desc->first_field[i];
+  for (size_t i = 0; i < desc->input_count; i++) {
+    const hid::ReportField field = desc->input_fields[i];
 
     // Process the global items if we haven't seen them before
     if (!(caps & Capabilities::CONTACT_COUNT) &&
@@ -128,7 +128,7 @@ bool Touchscreen::ParseTouchscreenDescriptor(
   button_ = button;
   contact_count_ = contact_count;
   capabilities_ = caps;
-  report_size_ = desc->byte_sz;
+  report_size_ = desc->input_byte_sz;
   report_id_ = desc->report_id;
   for (size_t i = 0; i < touch_points; i++) {
     configs_[i] = configs[i];

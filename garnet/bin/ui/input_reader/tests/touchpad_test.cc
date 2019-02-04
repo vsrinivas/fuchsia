@@ -28,13 +28,13 @@ void ParseTouchpad(const uint8_t *desc, size_t desc_len,
   const hid::ReportDescriptor *input_desc = nullptr;
   for (size_t rep = 0; rep < count; rep++) {
     const hid::ReportDescriptor *desc = &dev_desc->report[rep];
-    if (desc->first_field[0].type == hid::kInput) {
-      input_desc = desc;
-      break;
+    if (desc->input_count != 0) {
+        input_desc = desc;
+        break;
     }
   }
   ASSERT_NE(nullptr, input_desc);
-  ASSERT_LT(0UL, input_desc->count);
+  ASSERT_LT(0UL, input_desc->input_count);
 
   auto success = ts->ParseTouchscreenDescriptor(input_desc);
   ASSERT_EQ(true, success);
