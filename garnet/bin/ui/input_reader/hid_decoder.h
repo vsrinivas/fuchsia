@@ -10,6 +10,7 @@
 
 #include <zx/event.h>
 
+#include "garnet/bin/ui/input_reader/mouse.h"
 #include "garnet/bin/ui/input_reader/touchscreen.h"
 
 namespace mozart {
@@ -29,6 +30,7 @@ class HidDecoder {
     LightSensor,
     Buttons,
     // The ones below are hacks that need to be removed.
+    BootMouse,
     Acer12Touch,
     SamsungTouch,
     ParadiseV1Touch,
@@ -89,6 +91,7 @@ class HidDecoder {
   virtual bool Read(HidAmbientLightSimple* light) = 0;
   virtual bool Read(HidButtons* data) = 0;
   virtual bool Read(Touchscreen::Report* report) = 0;
+  virtual bool Read(Mouse::Report* report) = 0;
 
   virtual bool SetDescriptor(Touchscreen::Descriptor* touch_desc) = 0;
 };

@@ -211,4 +211,27 @@ TEST_F(ReaderInterpreterInputTest, TouchscreenTest) {
   EXPECT_TRUE(touch.x = 10);
   EXPECT_TRUE(touch.y = 20);
 }
+
+TEST_F(ReaderInterpreterInputTest, MouseTest) {
+  fxl::WeakPtr<MockHidDecoder> device = AddDevice(HidDecoder::Protocol::Mouse);
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(0, report_count_);
+
+  {
+    Mouse::Report mouse_rpt{};
+    mouse_rpt.left_click = true;
+    mouse_rpt.rel_x = 10;
+    mouse_rpt.rel_y = 20;
+    device->Send(mouse_rpt);
+    RunLoopUntilIdle();
+  }
+
+  EXPECT_EQ(1, report_count_);
+  ASSERT_TRUE(last_report_.mouse);
+  EXPECT_EQ(last_report_.mouse->rel_x, 10);
+  EXPECT_EQ(last_report_.mouse->rel_y, 20);
+  EXPECT_EQ(last_report_.mouse->pressed_buttons,
+            fuchsia::ui::input::kMouseButtonPrimary);
+}
 }  // namespace mozart

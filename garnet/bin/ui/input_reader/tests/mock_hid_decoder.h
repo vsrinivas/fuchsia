@@ -47,7 +47,10 @@ class MockHidDecoder : public HidDecoder {
   bool Read(HidAmbientLightSimple* light) override;
   // |HidDecoder|
   bool Read(HidButtons* data) override;
+  // |HidDecoder|
   bool Read(Touchscreen::Report* report) override;
+  // |HidDecoder|
+  bool Read(Mouse::Report* report) override;
 
   bool SetDescriptor(Touchscreen::Descriptor* touch_desc) override;
 
@@ -63,6 +66,8 @@ class MockHidDecoder : public HidDecoder {
   void Send(const HidButtons& buttons);
   // There must not be a pending report that has not been |Read|.
   void Send(const Touchscreen::Report& touchscreen);
+  // There must not be a pending report that has not been |Read|.
+  void Send(const Mouse::Report& report);
   // Emulates device removal. There must not be a pending report that has not
   // been |Read|.
   void Close();
@@ -74,7 +79,8 @@ class MockHidDecoder : public HidDecoder {
     kGamepad,
     kLight,
     kButtons,
-    kTouchscreen
+    kTouchscreen,
+    kMouse,
   };
 
   struct Report {
@@ -92,6 +98,7 @@ class MockHidDecoder : public HidDecoder {
       HidAmbientLightSimple light;
       HidButtons buttons;
       Touchscreen::Report touchscreen;
+      Mouse::Report mouse;
     };
   };
 

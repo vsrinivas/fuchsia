@@ -12,6 +12,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
+#include "garnet/bin/ui/input_reader/mouse.h"
 #include "garnet/bin/ui/input_reader/touchscreen.h"
 
 namespace fzl {
@@ -51,6 +52,8 @@ class FdioHidDecoder : public HidDecoder {
   bool Read(HidButtons* data) override;
   // |HidDecoder|
   bool Read(Touchscreen::Report* report) override;
+  // |HidDecoder|
+  bool Read(Mouse::Report* report) override;
 
   bool SetDescriptor(Touchscreen::Descriptor* touch_desc) override;
 
@@ -73,6 +76,7 @@ class FdioHidDecoder : public HidDecoder {
   std::vector<uint8_t> report_;
   std::vector<DataLocator> decoder_;
   Touchscreen ts_;
+  Mouse mouse_;
 };
 
 }  // namespace mozart

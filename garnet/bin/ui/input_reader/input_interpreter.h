@@ -69,6 +69,7 @@ class InputInterpreter {
   enum class MouseDeviceType {
     NONE,
     BOOT,
+    HID,
     TOUCH,
     PARADISEv1,
     PARADISEv2,
@@ -85,6 +86,7 @@ class InputInterpreter {
 
   void ParseKeyboardReport(uint8_t* report, size_t len);
   void ParseMouseReport(uint8_t* report, size_t len);
+  bool ParseHidMouseReport(const Mouse::Report* report);
   void ParseGamepadMouseReport(const HidDecoder::HidGamepadSimple* gamepad);
   bool ParseTouchscreenReport(Touchscreen::Report* report);
   bool ParseTouchpadReport(Touchscreen::Report* report);

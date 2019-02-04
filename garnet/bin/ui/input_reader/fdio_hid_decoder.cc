@@ -123,6 +123,7 @@ zx::event FdioHidDecoder::GetEvent() {
 FdioHidDecoder::Protocol ExtractProtocol(hid::Usage input) {
   using ::hid::usage::Consumer;
   using ::hid::usage::Digitizer;
+  using ::hid::usage::GenericDesktop;
   using ::hid::usage::Page;
   using ::hid::usage::Sensor;
   struct {
@@ -141,6 +142,9 @@ FdioHidDecoder::Protocol ExtractProtocol(hid::Usage input) {
       {{static_cast<uint16_t>(Page::kDigitizer),
         static_cast<uint32_t>(Digitizer::kTouchPad)},
        HidDecoder::Protocol::Touchpad},
+      {{static_cast<uint16_t>(Page::kGenericDesktop),
+        static_cast<uint32_t>(GenericDesktop::kMouse)},
+       HidDecoder::Protocol::Mouse},
       // Add more sensors here
   };
   for (auto& j : usage_to_protocol) {
@@ -169,7 +173,7 @@ bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
     return true;
   }
   if (boot_protocol == fuchsia_hardware_input_BootProtocol_MOUSE) {
-    *protocol = Protocol::Mouse;
+    *protocol = Protocol::BootMouse;
     return true;
   }
 
@@ -314,6 +318,14 @@ bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
         bool success = ts_.ParseTouchscreenDescriptor(input_desc);
         if (!success) {
           FXL_LOG(ERROR) << "invalid touchscreen descriptor for " << name_;
+          return false;
+        }
+        break;
+      }
+      case Protocol::Mouse: {
+        bool success = mouse_.ParseDescriptor(input_desc);
+        if (!success) {
+          FXL_LOG(ERROR) << "invalid mouse descriptor for " << name_;
           return false;
         }
         break;
@@ -596,6 +608,25 @@ bool FdioHidDecoder::Read(Touchscreen::Report* report) {
   }
 
   return ts_.ParseReport(r.data(), rc, report);
+}
+
+bool FdioHidDecoder::Read(Mouse::Report* report) {
+  int rc;
+  auto r = Read(&rc);
+
+  if (rc < 1) {
+    FXL_LOG(ERROR) << "Failed to read from input: " << rc;
+    return false;
+  }
+
+  if (r[0] != mouse_.report_id()) {
+    FXL_VLOG(0) << name() << " Mouse report " << static_cast<uint32_t>(r[0])
+                << " does not match report id "
+                << static_cast<uint32_t>(mouse_.report_id());
+    return false;
+  }
+
+  return mouse_.ParseReport(r.data(), rc, report);
 }
 
 bool FdioHidDecoder::SetDescriptor(Touchscreen::Descriptor* touch_desc) {

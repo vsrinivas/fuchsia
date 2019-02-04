@@ -63,6 +63,8 @@ source_set("device") {
     "device_watcher.h",
     "hid_decoder.cc",
     "hid_decoder.h",
+    "mouse.cc",
+    "mouse.h",
     "touchscreen.cc",
     "touchscreen.h",
   ]

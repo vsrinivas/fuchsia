@@ -98,6 +98,7 @@ executable("input_reader_unittests") {
   testonly = true
 
   sources = [
+    "mouse_test.cc",
     "touchpad_test.cc",
     "touchscreen_test.cc",
   ]

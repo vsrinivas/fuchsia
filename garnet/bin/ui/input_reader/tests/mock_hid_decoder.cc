@@ -73,6 +73,10 @@ bool MockHidDecoder::Read(Touchscreen::Report* report) {
   return MockRead(ReportType::kTouchscreen, report_.touchscreen, report);
 }
 
+bool MockHidDecoder::Read(Mouse::Report* report) {
+  return MockRead(ReportType::kMouse, report_.mouse, report);
+}
+
 bool MockHidDecoder::SetDescriptor(Touchscreen::Descriptor* touch_desc) {
   // It isn't necessary to set a mock descriptor since we don't actually
   // check this data.
@@ -112,6 +116,13 @@ void MockHidDecoder::Send(const Touchscreen::Report& touchscreen) {
   FXL_CHECK(report_.type == ReportType::kNone);
   report_.type = ReportType::kTouchscreen;
   report_.touchscreen = touchscreen;
+  Signal();
+}
+
+void MockHidDecoder::Send(const Mouse::Report& mouse) {
+  FXL_CHECK(report_.type == ReportType::kNone);
+  report_.type = ReportType::kMouse;
+  report_.mouse = mouse;
   Signal();
 }
 

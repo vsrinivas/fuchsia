@@ -90,11 +90,33 @@ bool InputInterpreter::Initialize() {
     buttons_descriptor_->buttons |= fuchsia::ui::input::kMicMute;
     buttons_report_ = fuchsia::ui::input::InputReport::New();
     buttons_report_->buttons = fuchsia::ui::input::ButtonsReport::New();
-  } else if (protocol == HidDecoder::Protocol::Mouse ||
+  } else if (protocol == HidDecoder::Protocol::Mouse) {
+    FXL_VLOG(2) << "Device " << name() << " has mouse";
+    has_mouse_ = true;
+    mouse_device_type_ = MouseDeviceType::HID;
+
+    mouse_descriptor_ = fuchsia::ui::input::MouseDescriptor::New();
+    // At the moment all mice send relative units, so these min and max values
+    // do not affect anything. Set them to maximum range.
+    mouse_descriptor_->rel_x.range.min = INT32_MIN;
+    mouse_descriptor_->rel_x.range.max = INT32_MAX;
+    mouse_descriptor_->rel_x.resolution = 1;
+
+    mouse_descriptor_->rel_y.range.min = INT32_MIN;
+    mouse_descriptor_->rel_y.range.max = INT32_MAX;
+    mouse_descriptor_->rel_y.resolution = 1;
+
+    mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonPrimary;
+    mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonSecondary;
+    mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonTertiary;
+
+    mouse_report_ = fuchsia::ui::input::InputReport::New();
+    mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
+  } else if (protocol == HidDecoder::Protocol::BootMouse ||
              protocol == HidDecoder::Protocol::Gamepad) {
     FXL_VLOG(2) << "Device " << name() << " has mouse";
     has_mouse_ = true;
-    mouse_device_type_ = (protocol == HidDecoder::Protocol::Mouse)
+    mouse_device_type_ = (protocol == HidDecoder::Protocol::BootMouse)
                              ? MouseDeviceType::BOOT
                              : MouseDeviceType::GAMEPAD;
 
@@ -570,6 +592,19 @@ bool InputInterpreter::Read(bool discard) {
         }
       }
       break;
+    case MouseDeviceType::HID:
+      Mouse::Report mouse_report;
+      if (!hid_decoder_->Read(&mouse_report)) {
+        FXL_LOG(ERROR) << " failed reading from mouse";
+        return false;
+      }
+
+      if (ParseHidMouseReport(&mouse_report)) {
+        if (!discard) {
+          input_device_->DispatchReport(CloneReport(mouse_report_));
+        }
+      }
+      break;
     case MouseDeviceType::PARADISEv1:
       if (ParseParadiseTouchpadReport<paradise_touchpad_v1_t>(report.data(),
                                                               rc)) {
@@ -775,6 +810,18 @@ void InputInterpreter::ParseGamepadMouseReport(
   mouse_report_->mouse->rel_x = gamepad->left_x;
   mouse_report_->mouse->rel_y = gamepad->left_y;
   mouse_report_->mouse->pressed_buttons = gamepad->hat_switch;
+}
+
+bool InputInterpreter::ParseHidMouseReport(const Mouse::Report* report) {
+  mouse_report_->event_time = InputEventTimestampNow();
+
+  mouse_report_->mouse->rel_x = report->rel_x;
+  mouse_report_->mouse->rel_y = report->rel_y;
+
+  mouse_report_->mouse->pressed_buttons = 0;
+  mouse_report_->mouse->pressed_buttons |=
+      report->left_click ? fuchsia::ui::input::kMouseButtonPrimary : 0;
+  return true;
 }
 
 // This logic converts the multi-finger report from the touchpad into
