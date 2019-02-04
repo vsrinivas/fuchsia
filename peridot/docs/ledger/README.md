@@ -24,6 +24,25 @@ Each data store is organized into collections exposing a **key-value store** API
 called *pages*. Page API supports storing data of arbitrary size, atomic changes
 across multiple keys, snapshots and modification observers.
 
+## When should Ledger be used?
+
+Ledger should be used by software storing data that is scoped to a single user,
+and that needs to be synced on all of the users's devices.
+Ledger should also be used to store data that needs to be restored after a user
+resets a device.
+
+The exception is if the data needs to be processed in the cloud or on a device
+not owned by the user. Because Ledger transfers opaque encrypted data, the data
+would need to be exchanged via a different channel.
+
+There is a computation and disk space cost to storing data in Ledger, so if the
+data does not need to be persisted and synced, do not use Ledger. For example,
+Ledger is not the optimal for local caches.
+
+## Ledger availability
+
+Ledger is available to any software running under the [Modular] framework.
+
 ## Documentation
 
 Documentation for using Ledger:
@@ -53,7 +72,7 @@ Design documentation:
  - [Data in Storage](data_in_storage.md)
  - [Life of a Put](life_of_a_put.md)
 
-
 [cloud provider]: /peridot/public/fidl/fuchsia.ledger.cloud/cloud_provider.fidl
 [component context]: /peridot/public/fidl/fuchsia.modular/component/component_context.fidl
 [Firestore]: /peridot/bin/cloud_provider_firestore/README.md
+[Modular]: /peridot/docs/modular/overview.md
