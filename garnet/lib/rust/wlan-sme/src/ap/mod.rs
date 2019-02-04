@@ -16,6 +16,7 @@ use crate::ap::{
     event::{Event, SmeEvent},
     rsn::{create_wpa2_psk_rsne, is_valid_rsne_subset},
 };
+use crate::phy_selection::derive_phy_cbw_for_ap;
 use crate::responder::Responder;
 use crate::sink::MlmeSink;
 use crate::timer::{self, EventId, TimedEvent, Timer};
@@ -26,7 +27,7 @@ use futures::channel::{mpsc, oneshot};
 use log::{debug, error, info, warn};
 use std::boxed::Box;
 use std::sync::{Arc, Mutex};
-use wlan_common::{channel::Channel, RadioConfig};
+use wlan_common::{channel::{Channel, Phy}, RadioConfig};
 use wlan_rsn::{self, gtk::GtkProvider, nonce::NonceReader, psk, rsne::Rsne, NegotiatedRsne};
 
 const DEFAULT_BEACON_PERIOD: u16 = 100;
@@ -37,6 +38,13 @@ pub struct Config {
     pub ssid: Ssid,
     pub password: Vec<u8>,
     pub radio_cfg: RadioConfig,
+}
+
+// OpRadioConfig keeps admitted configuration and operation state
+#[derive(Clone, Debug, PartialEq)]
+pub struct OpRadioConfig {
+    phy: Phy,
+    chan: Channel,
 }
 
 pub type TimeStream = timer::TimeStream<Event>;
@@ -112,28 +120,40 @@ impl ApSme {
                     responder.respond(result);
                     return State::Idle { ctx };
                 }
+
+                let op_result = adapt_operation(&ctx.device_info, &config.radio_cfg);
+                let op = match op_result {
+                    Err(e) => {
+                        error!("error in adapting to device capabilities. operation not accepted: {:?}", e);
+                        responder.respond(StartResult::InternalError);
+                        return State::Idle { ctx };
+                    },
+                    Ok(o) => o
+                };
+
                 let rsn_cfg_result = create_rsn_cfg(&config.ssid[..], &config.password[..]);
-                match rsn_cfg_result {
+                let rsn_cfg = match rsn_cfg_result {
                     Err(e) => {
                         error!("error configuring RSN: {}", e);
                         responder.respond(StartResult::InternalError);
-                        State::Idle { ctx }
-                    }
-                    Ok(rsn_cfg) => {
-                        let req = create_start_request(&config, rsn_cfg.as_ref());
-                        ctx.mlme_sink.send(MlmeRequest::Start(req));
-                        let event = Event::Sme { event: SmeEvent::StartTimeout };
-                        let start_timeout = ctx.timer.schedule(event);
-                        State::Starting {
-                            ctx,
-                            ssid: config.ssid,
-                            rsn_cfg,
-                            responder,
-                            start_timeout,
-                        }
-                    }
+                        return State::Idle { ctx };
+                    },
+                    Ok(rsn_cfg) => rsn_cfg
+                };
+
+                let req = create_start_request(&op, &config.ssid, rsn_cfg.as_ref());
+                ctx.mlme_sink.send(MlmeRequest::Start(req));
+                let event = Event::Sme { event: SmeEvent::StartTimeout };
+                let start_timeout = ctx.timer.schedule(event);
+
+                State::Starting {
+                    ctx,
+                    ssid: config.ssid,
+                    rsn_cfg,
+                    responder,
+                    start_timeout,
                 }
-            }
+            },
             s @ State::Starting { .. } => {
                 responder.respond(StartResult::PreviousStartInProgress);
                 s
@@ -169,6 +189,27 @@ impl ApSme {
         });
         receiver
     }
+}
+
+/// Adapt user-providing operation condition to underlying device capabilities.
+fn adapt_operation(device_info: &DeviceInfo, usr_cfg: &RadioConfig) -> Result<OpRadioConfig, failure::Error>{
+    // TODO(porce): .expect() may go way, if wlantool absorbs the default value,
+    // eg. CBW20 in HT. But doing so would hinder later control from WLANCFG.
+    if usr_cfg.phy.is_none() || usr_cfg.cbw.is_none() || usr_cfg.primary_chan.is_none() {
+        bail!("Incomplete user config: {:?}", usr_cfg);
+    }
+
+    let phy = usr_cfg.phy.unwrap();
+    let chan = Channel::new(usr_cfg.primary_chan.unwrap(), usr_cfg.cbw.unwrap());
+    if !chan.is_valid() {
+        bail!("Invalid channel: {:?}", usr_cfg);
+    }
+
+    let (phy_adapted, cbw_adapted) = derive_phy_cbw_for_ap(device_info, &phy, &chan);
+    Ok(OpRadioConfig {
+        phy: phy_adapted,
+        chan: Channel::new(chan.primary, cbw_adapted),
+    })
 }
 
 impl super::Station for ApSme {
@@ -439,21 +480,23 @@ fn create_rsn_cfg(ssid: &[u8], password: &[u8]) -> Result<Option<RsnCfg>, failur
     }
 }
 
-fn create_start_request(config: &Config, ap_rsn: Option<&RsnCfg>) -> fidl_mlme::StartRequest {
+fn create_start_request(op: &OpRadioConfig, ssid: &Ssid, ap_rsn: Option<&RsnCfg>)
+    -> fidl_mlme::StartRequest
+{
     let rsne_bytes = ap_rsn.as_ref().map(|RsnCfg { rsne, .. }| {
         let mut buf = Vec::with_capacity(rsne.len());
         rsne.as_bytes(&mut buf);
         buf
     });
 
-    let phy_to_use = config.radio_cfg.phy.unwrap().to_fidl();
-    let (cbw_to_use, _) = config.radio_cfg.cbw.unwrap().to_fidl();
+    let (cbw, _secondary80) = op.chan.cbw.to_fidl();
+
     fidl_mlme::StartRequest {
-        ssid: config.ssid.clone(),
+        ssid: ssid.clone(),
         bss_type: fidl_mlme::BssTypes::Infrastructure,
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
-        channel: config.radio_cfg.primary_chan.unwrap(),
+        channel: op.chan.primary,
         country: fidl_mlme::Country {
             // TODO(WLAN-870): Get config from wlancfg
             alpha2: ['U' as u8, 'S' as u8],
@@ -461,8 +504,8 @@ fn create_start_request(config: &Config, ap_rsn: Option<&RsnCfg>) -> fidl_mlme::
         },
         rsne: rsne_bytes,
         mesh_id: vec![],
-        phy: phy_to_use,
-        cbw: cbw_to_use,
+        phy: op.phy.to_fidl(),
+        cbw: cbw,
     }
 }
 
@@ -473,7 +516,7 @@ mod tests {
     use std::error::Error;
     use wlan_common::{channel::{Cbw, Phy}, RadioConfig};
 
-    use crate::{MlmeStream, Station};
+    use crate::{MlmeStream, Station, test_utils::*};
 
     const AP_ADDR: [u8; 6] = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
@@ -736,6 +779,115 @@ mod tests {
         sme.on_mlme_event(client2.create_assoc_ind(Some(RSNE.to_vec())));
         client2.verify_assoc_resp(&mut mlme_stream, 2, fidl_mlme::AssociateResultCodes::Success);
         client2.verify_eapol_req(&mut mlme_stream);
+    }
+
+    #[test]
+    fn test_adapt_operation() {
+        // Invalid input
+        {
+            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let ucfg = RadioConfig { phy: None, cbw: Some(Cbw::Cbw20), primary_chan: Some(1)};
+            let got = adapt_operation(&dinf, &ucfg);
+            assert!(got.is_err());
+        }
+        {
+            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw40, 48);
+            let got = adapt_operation(&dinf, &ucfg);
+            assert!(got.is_err());
+        }
+
+        // VHT device, VHT config
+        {
+            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw80, 48);
+            let want = OpRadioConfig { phy: Phy::Vht, chan: Channel::new(48, Cbw::Cbw80) };
+            let got = adapt_operation(&dinf, &ucfg).unwrap();
+            assert_eq!(want, got);
+        }
+        {
+            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw40Below, 48);
+            let want = OpRadioConfig { phy: Phy::Vht, chan: Channel::new(48, Cbw::Cbw40Below) };
+            let got = adapt_operation(&dinf, &ucfg).unwrap();
+            assert_eq!(want, got);
+        }
+        {
+            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw20, 48);
+            let want = OpRadioConfig { phy: Phy::Vht, chan: Channel::new(48, Cbw::Cbw20) };
+            let got = adapt_operation(&dinf, &ucfg).unwrap();
+            assert_eq!(want, got);
+        }
+
+        // VHT device, HT config
+        {
+            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
+            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw40Below) };
+            let got = adapt_operation(&dinf, &ucfg).unwrap();
+            assert_eq!(want, got);
+        }
+        {
+            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 48);
+            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw20) };
+            let got = adapt_operation(&dinf, &ucfg).unwrap();
+            assert_eq!(want, got);
+        }
+        {
+            let dinf = fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyOnly);
+            let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
+            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw20) };
+            let got = adapt_operation(&dinf, &ucfg).unwrap();
+            assert_eq!(want, got);
+        }
+
+        // HT device, VHT config
+        {
+            let dinf = fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw80, 48);
+            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw40Below) };
+            let got = adapt_operation(&dinf, &ucfg).unwrap();
+            assert_eq!(want, got);
+        }
+        {
+            let dinf = fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw40Below, 48);
+            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw40Below) };
+            let got = adapt_operation(&dinf, &ucfg).unwrap();
+            assert_eq!(want, got);
+        }
+        {
+            let dinf = fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw20, 48);
+            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw20) };
+            let got = adapt_operation(&dinf, &ucfg).unwrap();
+            assert_eq!(want, got);
+        }
+
+        // HT device, HT config
+        {
+            let dinf = fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
+            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw40Below) };
+            let got = adapt_operation(&dinf, &ucfg).unwrap();
+            assert_eq!(want, got);
+        }
+        {
+            let dinf = fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyForty);
+            let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 48);
+            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw20) };
+            let got = adapt_operation(&dinf, &ucfg).unwrap();
+            assert_eq!(want, got);
+        }
+        {
+            let dinf = fake_device_info_ht(fidl_mlme::ChanWidthSet::TwentyOnly);
+            let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
+            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw20) };
+            let got = adapt_operation(&dinf, &ucfg).unwrap();
+            assert_eq!(want, got);
+        }
     }
 
     fn create_start_conf(result_code: fidl_mlme::StartResultCodes) -> MlmeEvent {
