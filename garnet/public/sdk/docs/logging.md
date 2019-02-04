@@ -16,3 +16,12 @@ To view specifics logs, add a tag specification:
 ```
 $ log_listener --tag foobar
 ```
+
+## Symbolization
+
+`//tools/symbolize` should be used to symbolize stack traces. It should be
+pointed to the `.build-id` directory at the root of the SDK, where debug symbols
+are hosted:
+```
+tools/symbolize --build-id-dir .build-id
+```
