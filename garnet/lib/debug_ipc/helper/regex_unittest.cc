@@ -2,21 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/common/regex.h"
+#include "garnet/lib/debug_ipc/helper/regex.h"
 
 #include <gtest/gtest.h>
 
-namespace zxdb {
+namespace debug_ipc {
 
 TEST(Regex, CaseInsensitive) {
   Regex regex;
   // Inser
-  Err err = regex.Init("test");
-  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_TRUE(regex.Init("test"));
 
   // Init again should fail.
-  err = regex.Init("test");
-  EXPECT_TRUE(err.has_error());
+  EXPECT_FALSE(regex.Init("test"));
 
   EXPECT_TRUE(regex.Match("test"));
   EXPECT_FALSE(regex.Match("bla"));
@@ -25,12 +23,10 @@ TEST(Regex, CaseInsensitive) {
 
 TEST(Regex, CaseSensitive) {
   Regex regex;
-  Err err = regex.Init("TEST.*test", Regex::CompareType::kCaseSensitive);
-  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_TRUE(regex.Init("TEST.*test", Regex::CompareType::kCaseSensitive));
 
   // Init again should fail.
-  err = regex.Init("test");
-  EXPECT_TRUE(err.has_error());
+  EXPECT_FALSE(regex.Init("test"));
 
   EXPECT_FALSE(regex.Match("test"));
   EXPECT_FALSE(regex.Match("TEST"));
@@ -38,4 +34,4 @@ TEST(Regex, CaseSensitive) {
   EXPECT_TRUE(regex.Match("TESTaaatest"));
 }
 
-}  // namespace zxdb
+}  // namespace debug_ipc

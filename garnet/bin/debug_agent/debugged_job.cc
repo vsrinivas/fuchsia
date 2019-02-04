@@ -11,16 +11,6 @@
 
 namespace debug_agent {
 
-namespace {
-
-bool StartsWithCaseInsensitive(std::string mainStr, std::string toMatch) {
-  std::transform(mainStr.begin(), mainStr.end(), mainStr.begin(), ::tolower);
-  std::transform(toMatch.begin(), toMatch.end(), toMatch.begin(), ::tolower);
-  return mainStr.find(toMatch) == 0;
-}
-
-}  // namespace
-
 DebuggedJob::DebuggedJob(ProcessStartHandler* handler, zx_koid_t job_koid,
                          zx::job job)
     : handler_(handler), koid_(job_koid), job_(std::move(job)) {}
@@ -44,13 +34,26 @@ void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
   auto proc_name = NameForObject(process);
   zx::thread thread = ThreadForKoid(process.get(), thread_koid);
 
-  // TODO(anmittal): use some data structure(trie) to make it efficient.
+  bool found = false;
+  // Search through the available filters. If the regex is not valid, fallback
+  // to checking if |proc_name| contains the filter.
   for (auto& filter : filters_) {
-    if (StartsWithCaseInsensitive(proc_name, filter)) {
-      handler_->OnProcessStart(std::move(process));
-      break;
+    if (filter.regex.valid()) {
+      if (filter.regex.Match(proc_name)) {
+        found = true;
+        break;
+      }
+    } else {
+      // TODO(DX-953): Job filters should always be valid.
+      if (proc_name.find(filter.filter) != std::string::npos) {
+        found = true;
+        break;
+      }
     }
   }
+
+  if (found)
+    handler_->OnProcessStart(std::move(process));
 
   // Attached to the process. At that point it will get a new thread
   // notification for the initial thread which it can stop or continue as it
@@ -60,7 +63,40 @@ void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
 }
 
 void DebuggedJob::SetFilters(std::vector<std::string> filters) {
-  filters_ = std::move(filters);
+  filters_.clear();
+  filters_.reserve(filters.size());
+
+  for (auto& filter : filters) {
+    debug_ipc::Regex regex;
+    if (!regex.Init(filter)) {
+      FXL_LOG(WARNING) << "Could not initialize regex for filter " << filter;
+    }
+
+    FilterInfo filter_info = {};
+    filter_info.filter = std::move(filter);
+    filter_info.regex = std::move(regex);
+
+    filters_.push_back(std::move(filter_info));
+  }
+}
+
+void DebuggedJob::AppendFilter(std::string filter) {
+  // We check whether this filter already exists.
+  for (auto& existent_filter : filters_) {
+    if (existent_filter.filter == filter)
+      return;
+  }
+
+    debug_ipc::Regex regex;
+    if (!regex.Init(filter)) {
+      FXL_LOG(WARNING) << "Could not initialize regex for filter " << filter;
+    }
+
+    FilterInfo filter_info = {};
+    filter_info.filter = std::move(filter);
+    filter_info.regex = std::move(regex);
+
+  filters_.push_back(std::move(filter_info));
 }
 
 }  // namespace debug_agent

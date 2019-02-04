@@ -8,6 +8,8 @@
 #include "garnet/lib/debug_ipc/message_writer.h"
 #include "garnet/lib/debug_ipc/protocol_helpers.h"
 
+#include "lib/fxl/logging.h"
+
 namespace debug_ipc {
 
 // Record deserializers --------------------------------------------------------
@@ -163,6 +165,7 @@ bool ReadReply(MessageReader* reader, HelloReply* reply,
 void WriteRequest(const LaunchRequest& request, uint32_t transaction_id,
                   MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kLaunch, transaction_id);
+  writer->WriteUint32(static_cast<uint32_t>(request.inferior_type));
   Serialize(request.argv, writer);
 }
 
@@ -172,6 +175,13 @@ bool ReadReply(MessageReader* reader, LaunchReply* reply,
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
+
+  uint32_t inferior_type;
+  if (!reader->ReadUint32(&inferior_type) ||
+      inferior_type >= static_cast<uint32_t>(InferiorType::kLast)) {
+    return false;
+  }
+  reply->inferior_type = static_cast<InferiorType>(inferior_type);
 
   if (!reader->ReadUint32(&reply->status))
     return false;

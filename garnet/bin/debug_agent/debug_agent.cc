@@ -5,6 +5,10 @@
 #include "garnet/bin/debug_agent/debug_agent.h"
 
 #include <inttypes.h>
+
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/component/cpp/termination_reason.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
@@ -22,6 +26,7 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/strings/concatenate.h"
 
 namespace debug_agent {
 
@@ -77,29 +82,18 @@ void DebugAgent::OnHello(const debug_ipc::HelloRequest& request,
 
 void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
                           debug_ipc::LaunchReply* reply) {
-  Launcher launcher(services_);
-  reply->status = launcher.Setup(request.argv);
-  if (reply->status != ZX_OK)
-    return;
-
-  zx::process process = launcher.GetProcess();
-  zx_koid_t process_koid = KoidForObject(process);
-
-  // TODO(donosoc): change resume thread setting once we have global settings.
-  DebuggedProcess* debugged_process =
-      AddDebuggedProcess(process_koid, std::move(process), true);
-  if (!debugged_process)
-    return;
-
-  reply->status = launcher.Start();
-  if (reply->status != ZX_OK) {
-    RemoveDebuggedProcess(process_koid);
-    return;
+  switch (request.inferior_type) {
+    case debug_ipc::InferiorType::kBinary:
+      LaunchProcess(request, reply);
+      return;
+    case debug_ipc::InferiorType::kComponent:
+      LaunchComponent(request, reply);
+      return;
+    case debug_ipc::InferiorType::kLast:
+      break;
   }
 
-  // Success, fill out the reply.
-  reply->process_koid = process_koid;
-  reply->process_name = NameForObject(process);
+  reply->status = ZX_ERR_INVALID_ARGS;
 }
 
 void DebugAgent::OnKill(const debug_ipc::KillRequest& request,
@@ -192,6 +186,7 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
           auto new_job = AddDebuggedJob(koid, std::move(job));
           if (new_job) {
             reply.status = ZX_OK;
+            component_root_job_koid_ = koid;
           }
         }
       }
@@ -476,6 +471,111 @@ DebuggedProcess* DebugAgent::AddDebuggedProcess(zx_koid_t process_koid,
   DebuggedProcess* result = proc.get();
   procs_[process_koid] = std::move(proc);
   return result;
+}
+
+void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
+                               debug_ipc::LaunchReply* reply) {
+  Launcher launcher(services_);
+  reply->inferior_type = debug_ipc::InferiorType::kBinary;
+  reply->status = launcher.Setup(request.argv);
+  if (reply->status != ZX_OK)
+    return;
+
+  zx::process process = launcher.GetProcess();
+  zx_koid_t process_koid = KoidForObject(process);
+
+  // TODO(donosoc): change resume thread setting once we have global settings.
+  DebuggedProcess* debugged_process =
+      AddDebuggedProcess(process_koid, std::move(process), true);
+  if (!debugged_process)
+    return;
+
+  reply->status = launcher.Start();
+  if (reply->status != ZX_OK) {
+    RemoveDebuggedProcess(process_koid);
+    return;
+  }
+
+  // Success, fill out the reply.
+  reply->process_koid = process_koid;
+  reply->process_name = NameForObject(process);
+}
+
+void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
+                                 debug_ipc::LaunchReply* reply) {
+  // TODO(DX-953): This assumes a lot. Eventually we would like a way for the
+  //               agent to recognize available components and match the correct
+  //               one.
+  const auto& pkg_url = request.argv.front();
+
+  *reply = {};
+  reply->inferior_type = debug_ipc::InferiorType::kComponent;
+  if (component_root_job_koid_ == 0) {
+    reply->process_name = pkg_url;
+    reply->status = ZX_ERR_BAD_STATE;
+    return;
+  }
+
+  fuchsia::sys::LaunchInfo launch_info = {};
+  launch_info.url = pkg_url;
+  for (size_t i = 1; i < request.argv.size(); i++) {
+    launch_info.arguments.push_back(request.argv[i]);
+  }
+
+  // Create the filter
+  // TODO(donosoc): Filters should be removed on attach or failure.
+  DebuggedJob* job = GetDebuggedJob(component_root_job_koid_);
+  FXL_DCHECK(job);
+  job->AppendFilter(pkg_url);
+
+  fuchsia::sys::LauncherSyncPtr launcher;
+  services_->ConnectToService(launcher.NewRequest());
+
+  // TODO(DX-952): The debug agent currently don't have support on the message
+  //               loop to receive fidl messages. When MessageLoopZircon has
+  //               been implemented in terms of this, we can remove this
+  //               stupid ephemeral message loop.
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+
+  // Controller is a way to manage the newly created component. We need it in
+  // order to receive the terminated events. Sadly, there is no component
+  // started event. This also makes us need an async::Loop so that the fidl
+  // plumbing can work.
+  fuchsia::sys::ComponentControllerPtr controller;
+  launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
+
+  bool launched = true;
+  controller.events().OnTerminated =
+      [this, &pkg_url, &launched, &loop](int64_t return_code,
+                                    fuchsia::sys::TerminationReason reason) {
+        if (reason != fuchsia::sys::TerminationReason::EXITED) {
+          FXL_LOG(WARNING) << "Component " << pkg_url << " exited with "
+                           << component::HumanReadableTerminationReason(reason);
+          launched = false;
+        }
+        loop.Quit();
+      };
+
+  // TODO(DX-952): This is very brittle. This will go away when the message loop
+  //               is implemented in terms of an async loop.
+  loop.Run(zx::deadline_after(zx::msec(500)), true);
+
+  // Detaching means that we're no longer controlling the component. This is
+  // needed because otherwise the component is removed once the controller is
+  // destroyed.
+  controller.get()->Detach();
+
+  // TODO(donosoc): This should be replaced with the actual TerminationReason
+  //                provided by the fidl interface. But this requires to put
+  //                it in debug_ipc/helper so that the client can interpret
+  //                it and this CL is big enough already.
+  reply->inferior_type = debug_ipc::InferiorType::kComponent;
+  reply->process_name = pkg_url;
+  if (launched) {
+    reply->status = 0;
+  } else {
+    reply->status = ZX_ERR_NOT_FOUND;
+  }
 }
 
 }  // namespace debug_agent

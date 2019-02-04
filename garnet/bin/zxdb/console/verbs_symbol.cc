@@ -15,7 +15,6 @@
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/common/err.h"
-#include "garnet/bin/zxdb/common/regex.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
@@ -40,6 +39,7 @@
 #include "garnet/bin/zxdb/symbols/target_symbols.h"
 #include "garnet/bin/zxdb/symbols/type.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
+#include "garnet/lib/debug_ipc/helper/regex.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/ascii.h"
 #include "lib/fxl/strings/join_strings.h"
@@ -671,7 +671,7 @@ std::string CreateSymbolName(const Command& cmd,
 struct DumpModuleContext {
   std::vector<std::string>* names = nullptr;
   std::vector<std::string>* output = nullptr;
-  Regex* regex = nullptr;   // nullptr if no filter is defined.
+  debug_ipc::Regex* regex = nullptr;   // nullptr if no filter is defined.
 };
 
 // Returns true if the list was truncated.
@@ -723,11 +723,10 @@ Err DoSymSearch(ConsoleContext* context, const Command& cmd) {
 
   Console* console = Console::get();
 
-  Regex regex;
+  debug_ipc::Regex regex;
   if (cmd.args().size() == 1) {
-    Err err = regex.Init(cmd.args().front());
-    if (err.has_error())
-      return err;
+    if (!regex.Init(cmd.args().front()))
+      return Err("Could not initialize regex %s.", cmd.args().front().c_str());
   }
 
   // The collected symbols that pass the filter.

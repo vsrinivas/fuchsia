@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/client/process.h"
+#include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/common/err.h"
@@ -119,15 +120,23 @@ void ProcessCommandCallback(const char* verb, fxl::WeakPtr<Target> target,
 
 // run -------------------------------------------------------------------------
 
+constexpr int kRunComponentSwitch = 1;
+
 const char kRunShortHelp[] = "run / r: Run the program.";
 const char kRunHelp[] =
-    R"(run [ <program name> <program args>* ]
+    R"(run [--component] [ <program name> <program args>* ]
 
   Alias: "r"
 
   Runs the program. With no arguments, "run" will run the binary stored in the
   process context, if any. With an argument, the binary name will be set and
   that binary will be run.
+
+Arguments
+
+  --component | -c [EXPERIMENTAL]
+    Run this program as a component.
+    TODO(donosoc): Document this feature once it's fleshed out.
 
 Hints
 
@@ -148,6 +157,31 @@ Examples
       Runs the given process.
 )";
 
+void LaunchComponent(const Command& cmd) {
+  debug_ipc::LaunchRequest request;
+  request.inferior_type = debug_ipc::InferiorType::kComponent;
+  request.argv = cmd.args();
+
+  auto launch_cb = [](const Err& err, debug_ipc::LaunchReply reply) {
+    FXL_DCHECK(reply.inferior_type == debug_ipc::InferiorType::kComponent);
+    if (err.has_error()) {
+      Console::get()->Output(err);
+      return;
+    }
+
+    if (reply.status != 0) {
+      // TODO(donosoc): This should interpret the component termination reason
+      //                values.
+      Console::get()->Output(
+          Err("Could not start component %s.", reply.process_name.c_str()));
+      return;
+    }
+  };
+
+  cmd.target()->session()->remote_api()->Launch(std::move(request),
+                                                std::move(launch_cb));
+}
+
 Err DoRun(ConsoleContext* context, const Command& cmd,
           CommandCallback callback = nullptr) {
   // Only a process can be run.
@@ -159,17 +193,23 @@ Err DoRun(ConsoleContext* context, const Command& cmd,
   if (err.has_error())
     return err;
 
-  if (cmd.args().empty()) {
-    // Use the args already set on the target.
-    if (cmd.target()->GetArgs().empty())
-      return Err("No program to run. Try \"run <program name>\".");
+  if (!cmd.HasSwitch(kRunComponentSwitch)) {
+    if (cmd.args().empty()) {
+      // Use the args already set on the target.
+      if (cmd.target()->GetArgs().empty())
+        return Err("No program to run. Try \"run <program name>\".");
+    } else {
+      cmd.target()->SetArgs(cmd.args());
+    }
+
+    cmd.target()->Launch(
+        [callback](fxl::WeakPtr<Target> target, const Err& err) {
+          ProcessCommandCallback("launch", target, true, err, callback);
+        });
   } else {
-    cmd.target()->SetArgs(cmd.args());
+    LaunchComponent(cmd);
   }
 
-  cmd.target()->Launch([callback](fxl::WeakPtr<Target> target, const Err& err) {
-    ProcessCommandCallback("launch", target, true, err, callback);
-  });
   return Err();
 }
 
@@ -495,8 +535,12 @@ Err DoAspace(ConsoleContext* context, const Command& cmd) {
 
 void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
   // TODO(anmittal): Add one for job when we fix verbs.
-  (*verbs)[Verb::kRun] = VerbRecord(&DoRun, {"run", "r"}, kRunShortHelp,
-                                    kRunHelp, CommandGroup::kProcess);
+  VerbRecord run(&DoRun, {"run", "r"}, kRunShortHelp, kRunHelp,
+                 CommandGroup::kProcess);
+  run.switches.push_back(
+      SwitchRecord(kRunComponentSwitch, false, "component", 'c'));
+  (*verbs)[Verb::kRun] = std::move(run);
+
   (*verbs)[Verb::kKill] = VerbRecord(&DoKill, {"kill", "k"}, kKillShortHelp,
                                      kKillHelp, CommandGroup::kProcess);
   (*verbs)[Verb::kAttach] = VerbRecord(&DoAttach, {"attach"}, kAttachShortHelp,

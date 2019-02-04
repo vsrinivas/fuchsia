@@ -95,6 +95,7 @@ void TargetImpl::Launch(Callback callback) {
   state_ = State::kStarting;
 
   debug_ipc::LaunchRequest request;
+  request.inferior_type = debug_ipc::InferiorType::kBinary;
   request.argv = args_;
   session()->remote_api()->Launch(
       request, [callback, weak_target = impl_weak_factory_.GetWeakPtr()](

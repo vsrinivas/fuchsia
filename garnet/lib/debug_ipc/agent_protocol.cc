@@ -128,12 +128,20 @@ bool ReadRequest(MessageReader* reader, LaunchRequest* request,
     return false;
   *transaction_id = header.transaction_id;
 
+  uint32_t inferior_type;
+  if (!reader->ReadUint32(&inferior_type) ||
+      inferior_type >= static_cast<uint32_t>(InferiorType::kLast)) {
+    return false;
+  }
+
+  request->inferior_type = static_cast<InferiorType>(inferior_type);
   return Deserialize(reader, &request->argv);
 }
 
 void WriteReply(const LaunchReply& reply, uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kLaunch, transaction_id);
+  writer->WriteUint32(static_cast<uint32_t>(reply.inferior_type));
   writer->WriteUint32(reply.status);
   writer->WriteUint64(reply.process_koid);
   writer->WriteString(reply.process_name);

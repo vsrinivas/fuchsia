@@ -86,11 +86,27 @@ struct HelloReply {
   Arch arch = Arch::kUnknown;
 };
 
+enum class InferiorType : uint32_t {
+    kBinary,
+    kComponent,
+    kLast,
+};
+const char* InferiorTypeToString(InferiorType);
+
 struct LaunchRequest {
+  // TODO(DX-953): zxdb should be able to recognize when something is a binary
+  //               or a component. Replying with the type is probably OK as it
+  //               makes the client handling a bit easier.
+  InferiorType inferior_type = InferiorType::kLast;
+
   // argv[0] is the app to launch.
   std::vector<std::string> argv;
 };
 struct LaunchReply {
+  // The client needs to react differently depending on whether we started a
+  // process or a component.
+  InferiorType inferior_type;
+
   uint32_t status = 0;  // zx_status_t value from launch, ZX_OK on success.
   uint64_t process_koid = 0;
   std::string process_name;

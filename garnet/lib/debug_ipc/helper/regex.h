@@ -9,10 +9,9 @@
 #include <optional>
 #include <string>
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "lib/fxl/macros.h"
 
-namespace zxdb {
+namespace debug_ipc {
 
 // Simple RAII class wrapper over the POSIX regex API.
 // Currently it only looks for normal matches, but can be extended to support
@@ -27,11 +26,16 @@ class Regex {
   Regex();
   ~Regex();
 
-  Err Init(const std::string& regexp,
-           CompareType = CompareType::kCaseInsensitive);
-  bool Match(const std::string&) const;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(Regex);
+
+  // We need to define moving because optional doesn't clears the value on move,
+  // which would double free the regex_t.
+  Regex(Regex&&);
+  Regex& operator=(Regex&&);
+
+  bool Init(const std::string& regexp,
+            CompareType = CompareType::kCaseInsensitive);
+  bool Match(const std::string&) const;
 
   bool valid() const { return handle_.has_value(); }
 
@@ -40,5 +44,4 @@ class Regex {
   std::optional<regex_t> handle_ = std::nullopt;
 };
 
-}  // namespace zxdb
-
+}  // namespace debug_ipc

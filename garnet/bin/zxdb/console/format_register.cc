@@ -10,7 +10,6 @@
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/common/err.h"
-#include "garnet/bin/zxdb/common/regex.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/format_register_arm64.h"
@@ -18,6 +17,7 @@
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_formatters.h"
+#include "garnet/lib/debug_ipc/helper/regex.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
@@ -103,10 +103,11 @@ Err FilterRegisters(const FormatRegisterOptions& options,
       }
     } else {
       // We use insensitive case regexp matching.
-      Regex regex;
-      Err err = regex.Init(options.filter_regexp);
-      if (err.has_error())
-        return err;
+      debug_ipc::Regex regex;
+      if (!regex.Init(options.filter_regexp)) {
+        return Err("Could not initialize regex %s.",
+                   options.filter_regexp.c_str());
+      }
 
       for (const auto& reg : it->second) {
         const char* reg_name = RegisterIDToString(reg.id());

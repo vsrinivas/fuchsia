@@ -16,6 +16,8 @@ static_library("helper") {
     "file_line_function.h",
     "message_loop.cc",
     "message_loop.h",
+    "regex.cc",
+    "regex.h",
     "stream_buffer.cc",
     "stream_buffer.h",
     "test_stream_buffer.cc",
@@ -91,6 +93,7 @@ source_set("tests") {
   sources = [
     "elf_unittest.cc",
     "message_loop_unittest.cc",
+    "regex_unittest.cc",
     "stream_buffer_unittest.cc",
   ]
 

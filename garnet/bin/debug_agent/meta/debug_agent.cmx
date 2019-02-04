@@ -10,6 +10,8 @@
             "fuchsia.net.SocketProvider",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
+            "fuchsia.sys.ComponentController",
+            "fuchsia.sys.Launcher",
             "fuchsia.sysinfo.Device"
         ]
     }

@@ -2,31 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/common/regex.h"
+#include "garnet/lib/debug_ipc/helper/regex.h"
 
 #include "lib/fxl/logging.h"
 
-namespace zxdb {
-
-namespace {
-
-std::string GetRegexError(const regex_t& r, int status) {
-  char err_buf[256];
-  regerror(status, &r, err_buf, sizeof(err_buf));
-  return err_buf;
-}
-
-}  // namespace
+namespace debug_ipc {
 
 Regex::Regex() = default;
+
 Regex::~Regex() {
   if (handle_.has_value())
     regfree(&handle_.value());
 }
 
-Err Regex::Init(const std::string& regexp, Regex::CompareType compare_type) {
+Regex::Regex(Regex&& other) : handle_(std::move(other.handle_)) {
+  other.handle_.reset();
+}
+
+Regex& Regex::operator=(Regex&& other) {
+  if (this == &other)
+    return *this;
+
+  handle_ = std::move(other.handle_);
+  other.handle_.reset();
+  return *this;
+}
+
+bool Regex::Init(const std::string& regexp, Regex::CompareType compare_type) {
   if (valid())
-    return Err("Already initialized.");
+    return false;
 
   regex_t r;
   int flags = REG_EXTENDED;
@@ -34,12 +38,11 @@ Err Regex::Init(const std::string& regexp, Regex::CompareType compare_type) {
     flags |= REG_ICASE;
   int status = regcomp(&r, regexp.c_str(), flags);
   if (status) {
-    auto regex_err = GetRegexError(r, status);
-    return Err("Could not compile regexp: %s", regex_err.c_str());
+    return false;
   }
 
   handle_ = r;
-  return Err();
+  return true;
 }
 
 bool Regex::Match(const std::string& candidate) const {
@@ -49,4 +52,4 @@ bool Regex::Match(const std::string& candidate) const {
   return status == 0;
 }
 
-}  // namespace zxdb
+}  // namespace debug_ipc

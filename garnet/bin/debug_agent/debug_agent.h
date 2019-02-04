@@ -5,9 +5,11 @@
 #ifndef GARNET_BIN_DEBUG_AGENT_DEBUG_AGENT_H_
 #define GARNET_BIN_DEBUG_AGENT_DEBUG_AGENT_H_
 
-#include <zircon/types.h>
 #include <map>
 #include <memory>
+
+#include <zircon/types.h>
+
 #include "garnet/bin/debug_agent/breakpoint.h"
 #include "garnet/bin/debug_agent/debugged_job.h"
 #include "garnet/bin/debug_agent/debugged_process.h"
@@ -109,6 +111,7 @@ class DebugAgent : public RemoteAPI,
 
   // Returns the debugged process/thread for the given koid(s) or null if not
   // found.
+  DebuggedJob* AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job);
   DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
   DebuggedJob* GetDebuggedJob(zx_koid_t koid);
   DebuggedThread* GetDebuggedThread(zx_koid_t process_koid,
@@ -119,7 +122,9 @@ class DebugAgent : public RemoteAPI,
                                       zx::process zx_proc,
                                       bool resume_initial_thread);
 
-  DebuggedJob* AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job);
+  void LaunchProcess(const debug_ipc::LaunchRequest&, debug_ipc::LaunchReply*);
+  void LaunchComponent(const debug_ipc::LaunchRequest&,
+                       debug_ipc::LaunchReply*);
 
   debug_ipc::StreamBuffer* stream_;
 
@@ -135,6 +140,13 @@ class DebugAgent : public RemoteAPI,
   // Whether the debug agent should exit.
   // The main reason for this is receiving a QuitNow message.
   bool should_quit_ = false;
+
+  // Normally the debug agent would be attached to the base component and give
+  // the client the koid. This is a job koid needed to be able to create an
+  // invisible filter to catch the newly started component.
+  // TODO(donosoc): Hopefully we could get the created job for the component
+  //                so we can only filter on that.
+  zx_koid_t component_root_job_koid_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebugAgent);
 };

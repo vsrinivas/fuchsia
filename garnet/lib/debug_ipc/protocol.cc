@@ -76,7 +76,7 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
   }
 
   FXL_NOTREACHED();
-  return "";
+  return nullptr;
 }
 
 const char* NotifyException::TypeToString(NotifyException::Type type) {
@@ -92,10 +92,25 @@ const char* NotifyException::TypeToString(NotifyException::Type type) {
     case NotifyException::Type::kSoftware:
       return "Software";
     case NotifyException::Type::kLast:
-      break;
+      return "kLast";
   }
   FXL_NOTREACHED();
-  return "";
+  return nullptr;
 }
+
+const char* InferiorTypeToString(InferiorType type) {
+  switch (type) {
+    case InferiorType::kBinary:
+      return "kBinary";
+    case InferiorType::kComponent:
+      return "kComponent";
+    case InferiorType::kLast:
+      return "kLast";
+  }
+
+  FXL_NOTREACHED();
+  return nullptr;
+}
+
 
 }  // namespace debug_ipc

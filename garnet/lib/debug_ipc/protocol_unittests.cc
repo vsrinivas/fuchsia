@@ -81,11 +81,13 @@ TEST(Protocol, HelloReply) {
 
 TEST(Protocol, LaunchRequest) {
   LaunchRequest initial;
+  initial.inferior_type = InferiorType::kBinary;
   initial.argv.push_back("/usr/bin/WINWORD.EXE");
   initial.argv.push_back("--dosmode");
 
   LaunchRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  EXPECT_EQ(second.inferior_type, InferiorType::kBinary);
   ASSERT_EQ(initial.argv.size(), second.argv.size());
   for (size_t i = 0; i < initial.argv.size(); i++)
     EXPECT_EQ(initial.argv[i], second.argv[i]);
@@ -93,12 +95,14 @@ TEST(Protocol, LaunchRequest) {
 
 TEST(Protocol, LaunchReply) {
   LaunchReply initial;
+  initial.inferior_type = InferiorType::kComponent;
   initial.status = 67;
   initial.process_koid = 0x1234;
   initial.process_name = "winword.exe";
 
   LaunchReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  EXPECT_EQ(second.inferior_type, InferiorType::kComponent);
   EXPECT_EQ(initial.status, second.status);
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.process_name, second.process_name);
