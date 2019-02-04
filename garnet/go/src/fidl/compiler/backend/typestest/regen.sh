@@ -1,20 +1,24 @@
 #!/usr/bin/env bash
 
-EXAMPLE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-FUCHSIA_DIR="$( echo ${EXAMPLE_DIR} | sed -e 's,garnet/go/src.*$,,' )"
+if [ ! -x "${FUCHSIA_BUILD_DIR}" ]; then
+    echo "error: did you fx exec? missing \$FUCHSIA_BUILD_DIR" 1>&2
+    exit 1
+fi
 
-FIDLC=${FUCHSIA_DIR}out/x64/host_x64/fidlc
-FIDLGEN=${FUCHSIA_DIR}out/x64/host_x64/fidlgen
-
+FIDLC="${FUCHSIA_BUILD_DIR}/host_x64/fidlc"
 if [ ! -x "${FIDLC}" ]; then
     echo "error: fidlc missing; did you fx clean-build x64?" 1>&2
     exit 1
 fi
 
+FIDLGEN="${FUCHSIA_BUILD_DIR}/host_x64/fidlgen"
 if [ ! -x "${FIDLGEN}" ]; then
     echo "error: fidlgen missing; maybe fx clean-build x64?" 1>&2
     exit 1
 fi
+
+EXAMPLE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+GOLDENS_DIR="${EXAMPLE_DIR}/../goldens"
 
 for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     src_name="$( basename "${src_path}" )"
@@ -31,42 +35,42 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
 
     echo "  json ir: ${src_name} > ${json_name}"
     ${FIDLC} \
-        --json "${EXAMPLE_DIR}/${json_name}" \
+        --json "${GOLDENS_DIR}/${json_name}" \
         --files "${EXAMPLE_DIR}/${src_name}"
 
     echo "  cpp: ${json_name} > ${cpp_header_name}, ${cpp_source_name}, and ${cpp_test_header_name}"
     ${FIDLGEN} \
         -generators cpp \
-        -json "${EXAMPLE_DIR}/${json_name}" \
-        -output-base "${EXAMPLE_DIR}/${json_name}" \
-        -include-base "${EXAMPLE_DIR}"
-    mv "${EXAMPLE_DIR}/${cpp_header_name}" "${EXAMPLE_DIR}/${cpp_header_name}.golden"
-    mv "${EXAMPLE_DIR}/${cpp_source_name}" "${EXAMPLE_DIR}/${cpp_source_name}.golden"
-    mv "${EXAMPLE_DIR}/${cpp_test_header_name}" "${EXAMPLE_DIR}/${cpp_test_header_name}.golden"
+        -json "${GOLDENS_DIR}/${json_name}" \
+        -output-base "${GOLDENS_DIR}/${json_name}" \
+        -include-base "${GOLDENS_DIR}"
+    mv "${GOLDENS_DIR}/${cpp_header_name}" "${GOLDENS_DIR}/${cpp_header_name}.golden"
+    mv "${GOLDENS_DIR}/${cpp_source_name}" "${GOLDENS_DIR}/${cpp_source_name}.golden"
+    mv "${GOLDENS_DIR}/${cpp_test_header_name}" "${GOLDENS_DIR}/${cpp_test_header_name}.golden"
 
     echo "  llcpp: ${json_name} > ${llcpp_header_name} and ${llcpp_source_name}"
     ${FIDLGEN} \
         -generators llcpp \
-        -json "${EXAMPLE_DIR}/${json_name}" \
-        -output-base "${EXAMPLE_DIR}/${json_name}.llcpp" \
-        -include-base "${EXAMPLE_DIR}"
-    mv "${EXAMPLE_DIR}/${llcpp_header_name}" "${EXAMPLE_DIR}/${llcpp_header_name}.golden"
-    mv "${EXAMPLE_DIR}/${llcpp_source_name}" "${EXAMPLE_DIR}/${llcpp_source_name}.golden"
+        -json "${GOLDENS_DIR}/${json_name}" \
+        -output-base "${GOLDENS_DIR}/${json_name}.llcpp" \
+        -include-base "${GOLDENS_DIR}"
+    mv "${GOLDENS_DIR}/${llcpp_header_name}" "${GOLDENS_DIR}/${llcpp_header_name}.golden"
+    mv "${GOLDENS_DIR}/${llcpp_source_name}" "${GOLDENS_DIR}/${llcpp_source_name}.golden"
 
     echo "  go: ${json_name} > ${go_impl_name}"
     ${FIDLGEN} \
         -generators go \
-        -json "${EXAMPLE_DIR}/${json_name}" \
-        -output-base "${EXAMPLE_DIR}" \
-        -include-base "${EXAMPLE_DIR}"
-    rm "${EXAMPLE_DIR}/pkg_name"
-    mv "${EXAMPLE_DIR}/impl.go" "${EXAMPLE_DIR}/${go_impl_name}.golden"
+        -json "${GOLDENS_DIR}/${json_name}" \
+        -output-base "${GOLDENS_DIR}" \
+        -include-base "${GOLDENS_DIR}"
+    rm "${GOLDENS_DIR}/pkg_name"
+    mv "${GOLDENS_DIR}/impl.go" "${GOLDENS_DIR}/${go_impl_name}.golden"
 
     echo "  rust: ${json_name} > ${rust_name}"
     ${FIDLGEN} \
         -generators rust \
-        -json "${EXAMPLE_DIR}/${json_name}" \
-        -output-base "${EXAMPLE_DIR}/${json_name}" \
-        -include-base "${EXAMPLE_DIR}"
-    mv "${EXAMPLE_DIR}/${rust_name}" "${EXAMPLE_DIR}/${rust_name}.golden"
+        -json "${GOLDENS_DIR}/${json_name}" \
+        -output-base "${GOLDENS_DIR}/${json_name}" \
+        -include-base "${GOLDENS_DIR}"
+    mv "${GOLDENS_DIR}/${rust_name}" "${GOLDENS_DIR}/${rust_name}.golden"
 done

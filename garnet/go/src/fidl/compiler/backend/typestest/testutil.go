@@ -6,6 +6,7 @@ package typestest
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
@@ -18,6 +19,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+// basePath holds the base path to the directory containing goldens.
 var basePath = func() string {
 	for i := 0; i < 10; i++ {
 		_, file, _, ok := runtime.Caller(i)
@@ -26,7 +28,7 @@ var basePath = func() string {
 		}
 		if strings.HasSuffix(file, "testutil.go") {
 			path, _ := filepath.Split(file)
-			return path
+			return fmt.Sprintf("%s%c", filepath.Join(path, "..", "goldens"), filepath.Separator)
 		}
 	}
 	panic("")

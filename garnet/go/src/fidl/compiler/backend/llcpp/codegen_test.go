@@ -27,6 +27,7 @@ var excludedCases = map[string]bool{
 	"tables.fidl.json": true,
 	"xunion.fidl.json": true,
 }
+
 var cases = func() []string {
 	var (
 		filtered []string
@@ -44,7 +45,6 @@ var cases = func() []string {
 	}
 	return filtered
 }()
-
 
 func TestCodegenHeader(t *testing.T) {
 	for _, filename := range cases {
