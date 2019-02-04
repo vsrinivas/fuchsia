@@ -840,11 +840,11 @@ struct Interface : public TypeDecl {
     };
 
     Interface(std::unique_ptr<raw::AttributeList> attributes, Name name,
-              std::vector<Name> superinterfaces, std::vector<Method> methods)
+              std::set<Name> superinterfaces, std::vector<Method> methods)
         : TypeDecl(Kind::kInterface, std::move(attributes), std::move(name)),
           superinterfaces(std::move(superinterfaces)), methods(std::move(methods)) {}
 
-    std::vector<Name> superinterfaces;
+    std::set<Name> superinterfaces;
     std::vector<Method> methods;
     // Pointers here are set after superinterfaces are compiled, and
     // are owned by the correspending superinterface.

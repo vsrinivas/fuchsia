@@ -541,60 +541,19 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod(std::unique_p
                                        "\nan error.");
     }
 
-    std::unique_ptr<raw::Identifier> method_name;
-    std::unique_ptr<raw::ParameterList> maybe_request;
-    std::unique_ptr<raw::ParameterList> maybe_response;
-    std::unique_ptr<raw::TypeConstructor> maybe_error;
-
-    auto parse_params = [this](std::unique_ptr<raw::ParameterList>* params_out) {
-        ConsumeToken(OfKind(Token::Kind::kLeftParen));
-        if (!Ok())
-            return false;
-        *params_out = ParseParameterList();
-        if (!Ok())
-            return false;
-        ConsumeToken(OfKind(Token::Kind::kRightParen));
-        if (!Ok())
-            return false;
-        return true;
-    };
-
-    if (MaybeConsumeToken(OfKind(Token::Kind::kArrow))) {
-        method_name = ParseIdentifier();
-        if (!Ok())
-            return Fail();
-        if (!parse_params(&maybe_response))
-            return Fail();
-    } else {
-        method_name = ParseIdentifier();
-        if (!Ok())
-            return Fail();
-        if (!parse_params(&maybe_request))
-            return Fail();
-
-        if (MaybeConsumeToken(OfKind(Token::Kind::kArrow))) {
+    switch (Peek().kind()) {
+        case Token::Kind::kArrow:
+            return ParseProtocolEvent(std::move(attributes), scope, std::move(ordinal));
+        case Token::Kind::kIdentifier: {
+            auto method_name = ParseIdentifier();
             if (!Ok())
                 return Fail();
-            if (!parse_params(&maybe_response))
-                return Fail();
-            if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kError))) {
-                maybe_error = ParseTypeConstructor();
-                if (!Ok())
-                    return Fail();
-            }
+            return ParseProtocolMethod(
+                std::move(attributes), scope, std::move(ordinal), std::move(method_name));
         }
+        default:
+            return Fail();
     }
-
-    assert(method_name);
-    assert(maybe_request || maybe_response);
-
-    return std::make_unique<raw::InterfaceMethod>(scope.GetSourceElement(),
-                                                  std::move(attributes),
-                                                  std::move(ordinal),
-                                                  std::move(method_name),
-                                                  std::move(maybe_request),
-                                                  std::move(maybe_response),
-                                                  std::move(maybe_error));
 }
 
 std::unique_ptr<raw::InterfaceDeclaration>
@@ -658,6 +617,188 @@ Parser::ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes
                                                        std::move(attributes), std::move(identifier),
                                                        std::move(superinterfaces),
                                                        std::move(methods));
+}
+
+std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolEvent(
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
+    std::unique_ptr<raw::Ordinal> ordinal) {
+
+    ConsumeToken(OfKind(Token::Kind::kArrow));
+    if (!Ok())
+        return Fail();
+
+    auto method_name = ParseIdentifier();
+    if (!Ok())
+        return Fail();
+
+    auto parse_params = [this](std::unique_ptr<raw::ParameterList>* params_out) {
+        ConsumeToken(OfKind(Token::Kind::kLeftParen));
+        if (!Ok())
+            return false;
+        *params_out = ParseParameterList();
+        if (!Ok())
+            return false;
+        ConsumeToken(OfKind(Token::Kind::kRightParen));
+        if (!Ok())
+            return false;
+        return true;
+    };
+
+    std::unique_ptr<raw::ParameterList> response;
+    if (!parse_params(&response))
+        return Fail();
+
+    std::unique_ptr<raw::TypeConstructor> maybe_error;
+    if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kError))) {
+        maybe_error = ParseTypeConstructor();
+        if (!Ok())
+            return Fail();
+    }
+
+    assert(method_name);
+    assert(response);
+
+    return std::make_unique<raw::InterfaceMethod>(scope.GetSourceElement(),
+                                                  std::move(attributes),
+                                                  std::move(ordinal),
+                                                  std::move(method_name),
+                                                  nullptr /* maybe_request */,
+                                                  std::move(response),
+                                                  std::move(maybe_error));
+}
+
+std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolMethod(
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
+    std::unique_ptr<raw::Ordinal> ordinal,
+    std::unique_ptr<raw::Identifier> method_name) {
+
+    auto parse_params = [this](std::unique_ptr<raw::ParameterList>* params_out) {
+        ConsumeToken(OfKind(Token::Kind::kLeftParen));
+        if (!Ok())
+            return false;
+        *params_out = ParseParameterList();
+        if (!Ok())
+            return false;
+        ConsumeToken(OfKind(Token::Kind::kRightParen));
+        if (!Ok())
+            return false;
+        return true;
+    };
+
+    std::unique_ptr<raw::ParameterList> request;
+    if (!parse_params(&request))
+        return Fail();
+
+    std::unique_ptr<raw::ParameterList> maybe_response;
+    std::unique_ptr<raw::TypeConstructor> maybe_error;
+    if (MaybeConsumeToken(OfKind(Token::Kind::kArrow))) {
+        if (!Ok())
+            return Fail();
+        if (!parse_params(&maybe_response))
+            return Fail();
+        if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kError))) {
+            maybe_error = ParseTypeConstructor();
+            if (!Ok())
+                return Fail();
+        }
+    }
+
+    assert(method_name);
+    assert(request);
+
+    return std::make_unique<raw::InterfaceMethod>(scope.GetSourceElement(),
+                                                  std::move(attributes),
+                                                  std::move(ordinal),
+                                                  std::move(method_name),
+                                                  std::move(request),
+                                                  std::move(maybe_response),
+                                                  std::move(maybe_error));
+}
+
+bool Parser::ParseProtocolMember(
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
+    std::vector<std::unique_ptr<raw::CompoundIdentifier>>* composed_protocols,
+    std::vector<std::unique_ptr<raw::InterfaceMethod>>* methods) {
+
+    switch (Peek().kind()) {
+        case Token::Kind::kArrow: {
+            auto event = ParseProtocolEvent(std::move(attributes), scope, nullptr /* ordinal */);
+            methods->push_back(std::move(event));
+            return true;
+        }
+        case Token::Kind::kIdentifier: {
+            auto identifier = ParseIdentifier();
+            if (!Ok())
+                return false;
+            if (Peek().kind() == Token::Kind::kLeftParen) {
+                auto method = ParseProtocolMethod(
+                    std::move(attributes), scope, nullptr /* ordinal */, std::move(identifier));
+                methods->push_back(std::move(method));
+            } else if (identifier->location().data() == "compose") {
+                auto protocol_name = ParseCompoundIdentifier();
+                if (!Ok())
+                    return false;
+                composed_protocols->push_back(std::move(protocol_name));
+            } else {
+                Fail("unrecognized protocol member");
+                return false;
+            }
+        }
+        default:
+            return false;
+    }
+}
+
+std::unique_ptr<raw::InterfaceDeclaration>
+Parser::ParseProtocolDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+    std::vector<std::unique_ptr<raw::CompoundIdentifier>> composed_protocols;
+    std::vector<std::unique_ptr<raw::InterfaceMethod>> methods;
+
+    ConsumeToken(IdentifierOfSubkind(Token::Subkind::kProtocol));
+    if (!Ok())
+        return Fail();
+
+    auto identifier = ParseIdentifier();
+    if (!Ok())
+        return Fail();
+
+    ConsumeToken(OfKind(Token::Kind::kLeftCurly));
+    if (!Ok())
+        return Fail();
+
+    auto parse_member = [&composed_protocols, &methods, this]() {
+        ASTScope scope(this);
+        std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
+        if (!Ok())
+            return More;
+
+        switch (Peek().kind()) {
+        default:
+            ConsumeToken(OfKind(Token::Kind::kRightCurly));
+            return Done;
+
+        case Token::Kind::kArrow:
+        case Token::Kind::kIdentifier:
+            ParseProtocolMember(std::move(attributes), scope,
+                                &composed_protocols, &methods);
+            return More;
+        }
+    };
+
+    while (parse_member() == More) {
+        if (!Ok())
+            Fail();
+        ConsumeToken(OfKind(Token::Kind::kSemicolon));
+        if (!Ok())
+            return Fail();
+    }
+    if (!Ok())
+        Fail();
+
+    return std::make_unique<raw::InterfaceDeclaration>(scope.GetSourceElement(),
+                                                    std::move(attributes), std::move(identifier),
+                                                    std::move(composed_protocols),
+                                                    std::move(methods));
 }
 
 std::unique_ptr<raw::StructMember> Parser::ParseStructMember() {
@@ -997,6 +1138,11 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         case CASE_IDENTIFIER(Token::Subkind::kInterface):
             interface_declaration_list.emplace_back(
                 ParseInterfaceDeclaration(std::move(attributes), scope));
+            return More;
+
+        case CASE_IDENTIFIER(Token::Subkind::kProtocol):
+            interface_declaration_list.emplace_back(
+                ParseProtocolDeclaration(std::move(attributes), scope));
             return More;
 
         case CASE_IDENTIFIER(Token::Subkind::kStruct):

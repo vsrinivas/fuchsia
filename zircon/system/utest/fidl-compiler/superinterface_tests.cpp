@@ -11,6 +11,8 @@
 
 #include "test_library.h"
 
+// TODO(FIDL-460): Delete this test.
+
 namespace {
 
 class ValidSuperinterfaces : public TestLibrary {
@@ -96,7 +98,7 @@ library fidl.test.superinterfaces;
 
 [FragileBase]
 interface A {
-    1: MethodA(vector<uint64>);
+    1: MethodA(vector<uint64> arg);
 };
 
 [FragileBase]

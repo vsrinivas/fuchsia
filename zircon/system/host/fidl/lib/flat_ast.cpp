@@ -1434,14 +1434,15 @@ bool Library::ConsumeInterfaceDeclaration(
     auto attributes = std::move(interface_declaration->attributes);
     auto name = Name(this, interface_declaration->identifier->location());
 
-    std::vector<Name> superinterfaces;
+    std::set<Name> superinterfaces;
     for (auto& superinterface : interface_declaration->superinterfaces) {
         Name superinterface_name;
         auto location = superinterface->components[0]->location();
         if (!CompileCompoundIdentifier(superinterface.get(), location, &superinterface_name)) {
             return false;
         }
-        superinterfaces.push_back(std::move(superinterface_name));
+        if (!superinterfaces.insert(std::move(superinterface_name)).second)
+            return Fail(superinterface_name, "protocol composed multiple times");
     }
 
     std::vector<Interface::Method> methods;
@@ -2360,29 +2361,29 @@ bool Library::VerifyDeclAttributes(Decl* decl) {
         ValidateAttributesPlacement(
             AttributeSchema::Placement::kInterfaceDecl,
             interface_declaration->attributes.get());
-        for (const auto& method : interface_declaration->methods) {
+        for (const auto method : interface_declaration->all_methods) {
             ValidateAttributesPlacement(
                 AttributeSchema::Placement::kMethod,
-                method.attributes.get());
+                method->attributes.get());
         }
         if (placement_ok.NoNewErrors()) {
             // Attributes: check constraints.
-            for (const auto& method : interface_declaration->methods) {
-                if (method.maybe_request) {
+            for (const auto method : interface_declaration->all_methods) {
+                if (method->maybe_request) {
                     ValidateAttributesConstraints(
-                        method.maybe_request,
+                        method->maybe_request,
                         interface_declaration->attributes.get());
                     ValidateAttributesConstraints(
-                        method.maybe_request,
-                        method.attributes.get());
+                        method->maybe_request,
+                        method->attributes.get());
                 }
-                if (method.maybe_response) {
+                if (method->maybe_response) {
                     ValidateAttributesConstraints(
-                        method.maybe_response,
+                        method->maybe_response,
                         interface_declaration->attributes.get());
                     ValidateAttributesConstraints(
-                        method.maybe_response,
-                        method.attributes.get());
+                        method->maybe_response,
+                        method->attributes.get());
                 }
             }
         }
