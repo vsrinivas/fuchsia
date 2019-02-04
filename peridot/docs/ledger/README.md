@@ -54,6 +54,6 @@ Design documentation:
  - [Life of a Put](life_of_a_put.md)
 
 
-[cloud provider]: /public/fidl/fuchsia.ledger.cloud/cloud_provider.fidl
-[component context]: /public/fidl/fuchsia.modular/component/component_context.fidl
-[Firestore]: /bin/cloud_provider_firestore/README.md
+[cloud provider]: /peridot/public/fidl/fuchsia.ledger.cloud/cloud_provider.fidl
+[component context]: /peridot/public/fidl/fuchsia.modular/component/component_context.fidl
+[Firestore]: /peridot/bin/cloud_provider_firestore/README.md

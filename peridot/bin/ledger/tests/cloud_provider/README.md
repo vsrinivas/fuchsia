@@ -10,5 +10,5 @@ We expect that individual cloud provider implementations would develop custom
 launcher applications that configure and run the validation tests against their
 implementation of CloudProvider ([example]).
 
-[CloudProvider]: /public/fidl/fuchsia.ledger.cloud/cloud_provider.fidl
-[example]: /bin/cloud_provider_firestore/validation/
+[CloudProvider]: /peridot/public/fidl/fuchsia.ledger.cloud/cloud_provider.fidl
+[example]: /peridot/bin/cloud_provider_firestore/validation/

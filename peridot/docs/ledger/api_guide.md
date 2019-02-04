@@ -261,6 +261,6 @@ automatically in the background, and clients do not have to manage them.
  - [Data Organization](data_organization.md)
  - [Examples of client apps](examples.md)
 
-[FIDL interface]: /public/fidl/fuchsia.ledger/ledger.fidl
-[C++ watcher example]: /examples/todo_cpp/todo.h
+[FIDL interface]: /peridot/public/fidl/fuchsia.ledger/ledger.fidl
+[C++ watcher example]: /peridot/examples/todo_cpp/todo.h
 [Dart watcher example]: https://fuchsia.googlesource.com/topaz/+/master/examples/ledger/todo_list/lib/src/models/todo_list_model.dart
