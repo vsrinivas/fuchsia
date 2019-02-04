@@ -37,7 +37,7 @@ class MockStackDelegate : public Stack::Delegate {
 
   void SyncFramesForStack(std::function<void(const Err&)> cb) override {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [ cb = std::move(cb), this ]() {
+        FROM_HERE, [cb = std::move(cb), this]() {
           stack_->SetFramesForTest(std::move(async_frames_), true);
           cb(Err());
         });
@@ -126,15 +126,21 @@ TEST_F(StackTest, InlineFingerprint) {
   // The top frames (physical and inline) have the middle frame's SP as their
   // fingerprint, along with the inline count.
   EXPECT_EQ(FrameFingerprint(kMiddleSP, 2), *stack.GetFrameFingerprint(0));
+  EXPECT_EQ(2u, stack.InlineDepthForIndex(0));
   EXPECT_EQ(FrameFingerprint(kMiddleSP, 1), *stack.GetFrameFingerprint(1));
+  EXPECT_EQ(1u, stack.InlineDepthForIndex(1));
   EXPECT_EQ(FrameFingerprint(kMiddleSP, 0), *stack.GetFrameFingerprint(2));
+  EXPECT_EQ(0u, stack.InlineDepthForIndex(2));
 
   // Middle frames have the bottom frame's SP.
   EXPECT_EQ(FrameFingerprint(kBottomSP, 1), *stack.GetFrameFingerprint(3));
+  EXPECT_EQ(1u, stack.InlineDepthForIndex(3));
   EXPECT_EQ(FrameFingerprint(kBottomSP, 0), *stack.GetFrameFingerprint(4));
+  EXPECT_EQ(0u, stack.InlineDepthForIndex(4));
 
   // Since there's nothing below the bottom frame, it gets its own SP.
   EXPECT_EQ(FrameFingerprint(kBottomSP, 0), *stack.GetFrameFingerprint(5));
+  EXPECT_EQ(0u, stack.InlineDepthForIndex(5));
 }
 
 // Tests basic requesting of asynchronous frame fingerprints.
@@ -165,17 +171,15 @@ TEST_F(StackTest, AsyncFingerprint) {
 
   // Ask for the middle inline function fingerprint.
   bool called = false;
-  stack.GetFrameFingerprint(3, [&called](const Err& err, size_t new_index,
-                                         FrameFingerprint fingerprint) {
-    EXPECT_FALSE(err.has_error()) << err.msg();
-    called = true;
+  stack.GetFrameFingerprint(
+      3, [&called](const Err& err, FrameFingerprint fingerprint) {
+        EXPECT_FALSE(err.has_error()) << err.msg();
+        called = true;
 
-    // Index should not have changed.
-    EXPECT_EQ(3u, new_index);
-    EXPECT_EQ(FrameFingerprint(kBottomSP, 1), fingerprint);
+        EXPECT_EQ(FrameFingerprint(kBottomSP, 1), fingerprint);
 
-    debug_ipc::MessageLoop::Current()->QuitNow();
-  });
+        debug_ipc::MessageLoop::Current()->QuitNow();
+      });
 
   // Should not be called synchronously.
   EXPECT_FALSE(called);
@@ -189,17 +193,15 @@ TEST_F(StackTest, AsyncFingerprint) {
   // in the delegate will be empty and getting the frame fingerprint will
   // fail.
   called = false;
-  stack.GetFrameFingerprint(4, [&called](const Err& err, size_t new_index,
-                                         FrameFingerprint fingerprint) {
-    EXPECT_FALSE(err.has_error()) << err.msg();
-    called = true;
+  stack.GetFrameFingerprint(
+      4, [&called](const Err& err, FrameFingerprint fingerprint) {
+        EXPECT_FALSE(err.has_error()) << err.msg();
+        called = true;
 
-    // Index should not have changed.
-    EXPECT_EQ(4u, new_index);
-    EXPECT_EQ(FrameFingerprint(kBottomSP, 0), fingerprint);
+        EXPECT_EQ(FrameFingerprint(kBottomSP, 0), fingerprint);
 
-    debug_ipc::MessageLoop::Current()->QuitNow();
-  });
+        debug_ipc::MessageLoop::Current()->QuitNow();
+      });
   EXPECT_FALSE(called);
   debug_ipc::MessageLoop::Current()->Run();
   EXPECT_TRUE(called);
@@ -225,60 +227,14 @@ TEST_F(StackTest, AsyncFingerprintMoved) {
 
   // Ask for the middle inline function fingerprint.
   bool called = false;
-  stack.GetFrameFingerprint(3, [&called](const Err& err, size_t new_index,
-                                         FrameFingerprint fingerprint) {
-    EXPECT_FALSE(err.has_error()) << err.msg();
-    called = true;
+  stack.GetFrameFingerprint(
+      3, [&called](const Err& err, FrameFingerprint fingerprint) {
+        EXPECT_TRUE(err.has_error());
+        EXPECT_EQ(FrameFingerprint(), fingerprint);
+        called = true;
 
-    // Index should now be at the top because the top physical frame was
-    // deleted in the full stack reply.
-    EXPECT_EQ(0u, new_index);
-    EXPECT_EQ(FrameFingerprint(kBottomSP, 1), fingerprint);
-
-    debug_ipc::MessageLoop::Current()->QuitNow();
-  });
-
-  // Should not be called synchronously.
-  EXPECT_FALSE(called);
-
-  // Running the message loop should run the lambda.
-  debug_ipc::MessageLoop::Current()->Run();
-  EXPECT_TRUE(called);
-}
-
-// Tests the case that a requested async fingerprint has been deleted by the
-// time the async stack request has come back.
-TEST_F(StackTest, AsyncFingerprintGone) {
-  MockStackDelegate delegate;
-  Stack stack(&delegate);
-  delegate.set_stack(&stack);
-
-  // Only send the top physical stack frame for the initial data, and mark
-  // stack as incomplete. This will cause the topmost stack frame to require
-  // an async fetch.
-  auto frames = MakeInlineStackFrames();
-  frames.erase(frames.begin() + 2, frames.begin() + 6);
-  stack.SetFramesForTest(std::move(frames), false);
-
-  // The async frames reply is the full stack but missing the top physical
-  // frame (which has two inline frames above it).
-  auto frame_reply = MakeInlineStackFrames();
-  frame_reply.erase(frame_reply.begin(), frame_reply.begin() + 3);
-  delegate.SetAsyncFrames(std::move(frame_reply));
-
-  // Ask for the top function fingerprint.
-  bool called = false;
-  stack.GetFrameFingerprint(0, [&called](const Err& err, size_t new_index,
-                                         FrameFingerprint fingerprint) {
-    EXPECT_TRUE(err.has_error()) << err.msg();
-    called = true;
-
-    // These two values are the generic ones that should be set on error.
-    EXPECT_EQ(0u, new_index);
-    EXPECT_EQ(FrameFingerprint(), fingerprint);
-
-    debug_ipc::MessageLoop::Current()->QuitNow();
-  });
+        debug_ipc::MessageLoop::Current()->QuitNow();
+      });
 
   // Should not be called synchronously.
   EXPECT_FALSE(called);

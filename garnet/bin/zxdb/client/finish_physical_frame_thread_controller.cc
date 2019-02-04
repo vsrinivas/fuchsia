@@ -69,7 +69,7 @@ void FinishPhysicalFrameThreadController::InitWithThread(
     stack.GetFrameFingerprint(
         frame_to_finish_,
         [weak_this = weak_factory_.GetWeakPtr(), cb = std::move(cb)](
-            const Err& err, size_t new_index, FrameFingerprint fingerprint) {
+            const Err& err, FrameFingerprint fingerprint) {
           // Callback could come after this stepping is torn down, so don't
           // even issue the callback in that case.
           if (!weak_this)
@@ -79,7 +79,6 @@ void FinishPhysicalFrameThreadController::InitWithThread(
             cb(err);
           } else {
             // Save possibly-updated frame index before dispatching.
-            weak_this->frame_to_finish_ = new_index;
             weak_this->InitWithFingerprint(fingerprint);
             cb(Err());
           }

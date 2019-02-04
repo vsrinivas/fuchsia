@@ -107,6 +107,17 @@ std::optional<size_t> Stack::IndexForFrame(const Frame* frame) const {
   return std::nullopt;
 }
 
+size_t Stack::InlineDepthForIndex(size_t index) const {
+  FXL_DCHECK(index < frames_.size());
+  for (size_t depth = 0; index + depth < frames_.size(); depth++) {
+    if (!frames_[index + depth]->IsInline())
+      return depth;
+  }
+
+  FXL_NOTREACHED();  // Should have found a physical frame that generated it.
+  return 0;
+}
+
 std::optional<FrameFingerprint> Stack::GetFrameFingerprint(
     size_t virtual_frame_index) const {
   size_t frame_index = virtual_frame_index + hide_top_inline_frame_count_;
@@ -117,12 +128,9 @@ std::optional<FrameFingerprint> Stack::GetFrameFingerprint(
     return FrameFingerprint();
   }
 
-  // Compute the inline frame count. This is the number of steps from the
-  // requested frame index to the current physical frame.
-  uint32_t inline_count = 0;
-  while (frame_index + inline_count < frames_.size() &&
-         frames_[frame_index + inline_count]->IsInline())
-    inline_count++;
+  // The inline frame count is the number of steps from the requested frame
+  // index to the current physical frame.
+  size_t inline_count = InlineDepthForIndex(frame_index);
 
   // The stack pointer we want is the one from right before the current
   // physical frame (see frame_fingerprint.h).
@@ -143,70 +151,51 @@ std::optional<FrameFingerprint> Stack::GetFrameFingerprint(
 
 void Stack::GetFrameFingerprint(
     size_t virtual_frame_index,
-    std::function<void(const Err&, size_t new_index, FrameFingerprint)> cb) {
+    std::function<void(const Err&, FrameFingerprint)> cb) {
   size_t frame_index = virtual_frame_index + hide_top_inline_frame_count_;
   FXL_DCHECK(frame_index < frames_.size());
 
   // Identify the frame in question across the async call by its combination of
-  // IP, SP, and inline nesting count.
+  // IP, SP, and inline nesting count. If anything changes we don't want to
+  // issue the callback.
   uint64_t ip = frames_[frame_index]->GetAddress();
   uint64_t sp = frames_[frame_index]->GetStackPointer();
-  uint32_t inline_count = 0;
-  while (frame_index + inline_count < frames_.size() &&
-         frames_[frame_index + inline_count]->IsInline())
-    inline_count++;
+  size_t inline_count = InlineDepthForIndex(frame_index);
 
   // This callback is issued when the full stack is available.
-  auto on_full_stack =
-      [ weak_stack = GetWeakPtr(), ip, sp, inline_count,
-        cb = std::move(cb) ](const Err& err) {
+  auto on_full_stack = [weak_stack = GetWeakPtr(), frame_index, ip, sp,
+                        inline_count, cb = std::move(cb)](const Err& err) {
     if (err.has_error()) {
-      cb(err, 0, FrameFingerprint());
+      cb(err, FrameFingerprint());
       return;
     }
     if (!weak_stack) {
-      cb(Err("Thread destroyed."), 0, FrameFingerprint());
+      cb(Err("Thread destroyed."), FrameFingerprint());
       return;
     }
     const auto& frames = weak_stack->frames_;
 
-    // Re-find the first frame index with matching IP/SP.
-    bool found_frame = false;
-    int new_index = 0;
-    for (int i = static_cast<int>(frames.size()) - 1; i >= 0; i--) {
-      if (frames[i]->GetAddress() == ip && frames[i]->GetStackPointer() == sp) {
-        new_index = i;
-        found_frame = true;
-        break;
-      }
-    }
-
-    if (found_frame && inline_count) {
-      // Check inline frames.
-      new_index -= inline_count;
-      if (new_index >= 0) {
-        // Inline frame still in range, it must have the same IP/SP.
-        if (frames[new_index]->GetAddress() != ip ||
-            frames[new_index]->GetStackPointer() != sp)
-          found_frame = false;
-      } else {
-        found_frame = false;
-      }
-    }
-    if (!found_frame) {
-      cb(Err("Frame destroyed."), 0, FrameFingerprint());
+    if (frame_index >= frames.size() ||
+        frames[frame_index]->GetAddress() != ip ||
+        frames[frame_index]->GetStackPointer() != sp ||
+        weak_stack->InlineDepthForIndex(frame_index) != inline_count) {
+      // Something changed about this stack item since the original call.
+      // Count the request as invalid.
+      cb(Err("Stack changed across queries."), FrameFingerprint());
       return;
     }
 
     // Should always have a fingerprint after syncing the stack.
-    auto found_fingerprint = weak_stack->GetFrameFingerprint(new_index);
+    auto found_fingerprint = weak_stack->GetFrameFingerprint(frame_index);
     FXL_DCHECK(found_fingerprint);
-    cb(Err(), new_index, *found_fingerprint);
+    cb(Err(), *found_fingerprint);
   };
 
   if (has_all_frames()) {
     // All frames are available, don't force a recomputation of the stack. But
-    // the caller still expects an async response.
+    // the caller still expects an async response. Calling the full callback
+    // is important for the checking in case the frames changed while the
+    // async task is pending.
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE,
         [on_full_stack = std::move(on_full_stack)]() { on_full_stack(Err()); });
@@ -216,6 +205,9 @@ void Stack::GetFrameFingerprint(
 }
 
 size_t Stack::GetTopInlineFrameCount() const {
+  // This can't be InlineDepthForIndex() because that takes an index relative
+  // to the hide_top_inline_frame_count_ and this function always wants to
+  // return the same thing regardless of the hide count.
   for (size_t i = 0; i < frames_.size(); i++) {
     if (!frames_[i]->IsInline())
       return i;

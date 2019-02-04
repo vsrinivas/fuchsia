@@ -95,6 +95,10 @@ class Stack {
   // Returns the index of the frame pointer in this stack if it is there.
   std::optional<size_t> IndexForFrame(const Frame* frame) const;
 
+  // Returns the inline depth of the frame at the given index. If the frame is
+  // a physical frame, this will be 0.
+  size_t InlineDepthForIndex(size_t index) const;
+
   // Computes the stack frame fingerprint for the stack frame at the given
   // index. The index must be valid in the current set of frames in this stack
   // object.
@@ -103,21 +107,18 @@ class Stack {
   // be a physical frame before the most recent physical frame (the fingerprint
   // is based on the calling physical frame's stack pointer) or the frame is
   // known to be the oldest item in the stack (the fingerprint is special-cased
-  // for this entry). This should always be the case for frame 0.
+  // for this entry). Frame 0 should always be synchronously available since
+  // the agent should send the top two physical frames for every stop.
   //
   // The asynchonous version will request more stack frames if necessary from
-  // the agent. Since the stack can change during the asynchronous operation,
-  // the new index will be passed to the callback along with the fingerprint.
-  //
-  // If the requested stack frame isn't found after the sync, or if the Stack
-  // object is destroyed before the callback completes, the Err will be set in
-  // the callback.
+  // the agent. If the requested frame changes, moves, or is deleted during the
+  // request, or if the Stack object is deleted, the callback will be issued
+  // with an error.
   //
   // See frame.h for a discussion on stack frames.
   std::optional<FrameFingerprint> GetFrameFingerprint(size_t frame_index) const;
   void GetFrameFingerprint(
-      size_t frame_index,
-      std::function<void(const Err&, size_t new_index, FrameFingerprint)> cb);
+      size_t frame_index, std::function<void(const Err&, FrameFingerprint)> cb);
 
   // Sets the number of inline frames at the top of the stack to show. See the
   // class-level comment above for more.

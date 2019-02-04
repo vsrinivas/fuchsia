@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdlib.h>
 
 namespace zxdb {
 
@@ -70,7 +71,7 @@ class FrameFingerprint {
 
   // We currently don't have a use for "function begin" so it is not included
   // here. It may be necessary in the future.
-  explicit FrameFingerprint(uint64_t frame_address, uint32_t inline_count)
+  explicit FrameFingerprint(uint64_t frame_address, size_t inline_count)
       : frame_address_(frame_address), inline_count_(inline_count) {}
 
   bool is_valid() const { return frame_address_ != 0; }
@@ -95,7 +96,7 @@ class FrameFingerprint {
   // When this frame is a physical frame, the inline count will be 0. Higher
   // counts indicate the nesting depth of inline function calls at the current
   // location.
-  uint32_t inline_count_ = 0;
+  size_t inline_count_ = 0;
 };
 
 }  // namespace zxdb
