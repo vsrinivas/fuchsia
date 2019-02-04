@@ -54,7 +54,6 @@ void Station::Reset() {
 
     state_ = WlanState::kIdle;
     timer_mgr_.CancelAll();
-    bu_queue_.clear();
 }
 
 zx_status_t Station::HandleWlanFrame(fbl::unique_ptr<Packet> pkt) {
@@ -221,7 +220,6 @@ zx_status_t Station::Deauthenticate(wlan_mlme::ReasonCode reason_code) {
     state_ = WlanState::kIdle;
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
-    bu_queue_.clear();
     service::SendDeauthConfirm(device_, join_ctx_->bssid());
 
     return ZX_OK;
@@ -415,7 +413,6 @@ zx_status_t Station::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame)
     state_ = WlanState::kIdle;
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
-    bu_queue_.clear();
 
     return service::SendDeauthIndication(device_, join_ctx_->bssid(),
                                          static_cast<wlan_mlme::ReasonCode>(deauth->reason_code));
@@ -511,7 +508,6 @@ zx_status_t Station::HandleDisassociation(MgmtFrame<Disassociation>&& frame) {
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
     timer_mgr_.Cancel(signal_report_timeout_);
-    bu_queue_.clear();
 
     return service::SendDisassociateIndication(device_, join_ctx_->bssid(), disassoc->reason_code);
 }
@@ -673,7 +669,9 @@ zx_status_t Station::HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_
     packet->set_len(w.WrittenBytes());
 
     auto status = device_->DeliverEthernet(*packet);
-    if (status != ZX_OK) { errorf("could not send ethernet data: %d\n", status); }
+    if (status != ZX_OK) {
+        errorf("could not deliver rx'ed ethernet data: %s\n", zx_status_get_string(status));
+    }
     return status;
 }
 
@@ -705,16 +703,8 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
         return ZX_ERR_BAD_STATE;
     }
 
-    // If off channel, buffer Ethernet frame
-    if (!chan_sched_->OnChannel()) {
-        if (bu_queue_.size() >= kMaxPowerSavingQueueSize) {
-            bu_queue_.Dequeue();
-            warnf("dropping oldest unicast frame\n");
-        }
-        bu_queue_.Enqueue(eth_frame.Take());
-        debugps("queued frame since off channel; bu queue size: %lu\n", bu_queue_.size());
-        return ZX_OK;
-    }
+    // If off channel, drop the frame and let upper layer handle retransmission if necessary.
+    if (!chan_sched_->OnChannel()) { return ZX_ERR_IO_NOT_PRESENT; }
 
     auto eth_hdr = eth_frame.hdr();
     const size_t frame_len =
@@ -766,7 +756,9 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
     finspect("  frame   : %s\n", debug::HexDump(packet->data(), packet->len()).c_str());
 
     auto status = SendDataFrame(std::move(packet), data_hdr->addr3.IsUcast());
-    if (status != ZX_OK) { errorf("could not send wlan data: %d\n", status); }
+    if (status != ZX_OK && status != ZX_ERR_NO_RESOURCES) {
+        errorf("could not send wlan data: %s\n", zx_status_get_string(status));
+    }
     return status;
 }
 
@@ -1012,17 +1004,6 @@ void Station::BackToMainChannel() {
         auto deadline = now + std::max(remaining_auto_deauth_timeout_, WLAN_TU(1u));
         timer_mgr_.Schedule(deadline, {}, &auto_deauth_timeout_);
         auto_deauth_last_accounted_ = now;
-
-        SendBufferedUnits();
-    }
-}
-
-void Station::SendBufferedUnits() {
-    while (bu_queue_.size() > 0) {
-        fbl::unique_ptr<Packet> packet = bu_queue_.Dequeue();
-        debugps("sending buffered frame; queue size at: %lu\n", bu_queue_.size());
-        ZX_DEBUG_ASSERT(packet->peer() == Packet::Peer::kEthernet);
-        HandleEthFrame(EthFrame(std::move(packet)));
     }
 }
 
@@ -1093,10 +1074,10 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
     packet->set_len(w.WrittenBytes());
     auto status = SendDataFrame(std::move(packet), true);
     if (status != ZX_OK) {
-        errorf("could not send power management frame: %d\n", status);
-        return status;
+        errorf("could not send power management frame to set to %d: %s\n", ps_mode,
+               zx_status_get_string(status));
     }
-    return ZX_OK;
+    return status;
 }
 
 zx_status_t Station::SendPsPoll() {

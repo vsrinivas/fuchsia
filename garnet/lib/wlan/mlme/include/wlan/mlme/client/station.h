@@ -103,7 +103,6 @@ class Station : public ClientInterface {
     zx_status_t SetPowerManagementMode(bool ps_mode);
     zx_status_t SendPsPoll();
     zx_status_t SendDeauthFrame(::fuchsia::wlan::mlme::ReasonCode reason_code);
-    void SendBufferedUnits();
     zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy, uint32_t flags = 0);
     void DumpDataFrame(const DataFrameView<>&);
 
@@ -153,9 +152,6 @@ class Station : public ClientInterface {
 
     common::WlanStats<common::ClientMlmeStats, ::fuchsia::wlan::stats::ClientMlmeStats> stats_;
     AssocContext assoc_ctx_{};
-
-    // Queue holding buffered, outbound Ethernet frames
-    PacketQueue bu_queue_;
 };
 
 }  // namespace wlan

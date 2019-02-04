@@ -4247,8 +4247,12 @@ zx_status_t ath10k_mac_op_tx(struct ath10k* ar, wlan_tx_packet_t* pkt) {
 
         ret = ath10k_htt_tx_inc_pending(htt);
         if (ret != ZX_OK) {
-            ath10k_warn("failed to increase tx pending count: %s, dropping\n",
-                        zx_status_get_string(ret));
+            // Temporarily running out of resource is OK. Upper layer will handle that.
+            static size_t failed_writes = 0;
+            if (failed_writes++ % 100 == 0) {
+                ath10k_warn("failed to increase tx pending count: %s, dropping data packet #%zu\n",
+                            zx_status_get_string(ret), failed_writes);
+            }
             mtx_unlock(&ar->htt.tx_lock);
             ath10k_msg_buf_free(tx_buf);
             return ret;

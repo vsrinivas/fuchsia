@@ -4164,11 +4164,13 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* wlan_pkt)
     {
         std::lock_guard<std::mutex> guard(lock_);
         if (free_write_reqs_.empty()) {
-            // No free write requests! Drop the packet.
+            // No free write requests! Drop the packet. Error code matches ath10k.
             // TODO(tkilbourn): buffer the wlan_tx_packet_ts.
-            static int failed_writes = 0;
-            if (failed_writes++ % 50 == 0) { warnf("dropping tx; no free usb requests\n"); }
-            return ZX_ERR_IO;
+            static size_t failed_writes = 0;
+            if (failed_writes++ % 100 == 0) {
+                warnf("dropped %zu tx (no free usb requests)\n", failed_writes);
+            }
+            return ZX_ERR_NO_RESOURCES;
         }
         req = free_write_reqs_.back();
         free_write_reqs_.pop_back();

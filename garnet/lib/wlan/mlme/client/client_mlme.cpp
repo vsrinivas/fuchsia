@@ -167,20 +167,19 @@ zx_status_t ClientMlme::HandleFramePacket(fbl::unique_ptr<Packet> pkt) {
         // off channel.
         if (sta_ != nullptr) {
             if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
-                sta_->HandleEthFrame(eth_frame.IntoOwned(std::move(pkt)));
+                return sta_->HandleEthFrame(eth_frame.IntoOwned(std::move(pkt)));
             }
         }
-        break;
+        return ZX_ERR_BAD_STATE;
     }
     case Packet::Peer::kWlan: {
         chan_sched_->HandleIncomingFrame(std::move(pkt));
-        break;
+        return ZX_OK;
     }
     default:
         errorf("unknown Packet peer: %u\n", pkt->peer());
-        break;
+        return ZX_ERR_INVALID_ARGS;
     }
-    return ZX_OK;
 }
 
 zx_status_t ClientMlme::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& req) {

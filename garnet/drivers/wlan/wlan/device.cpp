@@ -246,16 +246,16 @@ zx_status_t Device::QueuePacket(fbl::unique_ptr<Packet> packet) {
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
     std::lock_guard<std::mutex> lock(packet_queue_lock_);
     bool was_empty = packet_queue_.is_empty();
-    packet_queue_.Enqueue(std::move(packet));
 
     if (was_empty) {
         zx_status_t status = QueueDevicePortPacket(DevicePacket::kPacketQueued);
         if (status != ZX_OK) {
             errorf("could not send packet queued msg err=%d\n", status);
-            packet_queue_.UndoEnqueue();
             return status;
         }
     }
+    packet_queue_.Enqueue(std::move(packet));
+
     return ZX_OK;
 }
 
@@ -298,6 +298,8 @@ zx_status_t Device::WlanIoctl(uint32_t op, const void* in_buf, size_t in_len, vo
     *out_actual = sizeof(zx_handle_t);
     return ZX_OK;
 }
+
+// ddk ethmac_protocol_ops methods
 
 void Device::EthUnbind() {
     debugfn();
@@ -342,6 +344,23 @@ void Device::EthmacStop() {
 
     std::lock_guard<std::mutex> lock(lock_);
     if (ethmac_proxy_ == nullptr) { warnf("ethmac not started\n"); }
+    std::lock_guard<std::mutex> guard(packet_queue_lock_);
+    PacketQueue queued_packets = packet_queue_.Drain();
+    while (!queued_packets.is_empty()) {
+        auto packet = queued_packets.Dequeue();
+        if (packet->peer() == Packet::Peer::kEthernet) {
+            auto netbuf = packet->ext_data();
+            ZX_DEBUG_ASSERT(netbuf != nullptr);
+            ZX_DEBUG_ASSERT(ethmac_proxy_ != nullptr);
+            if (netbuf != nullptr && ethmac_proxy_ != nullptr) {
+                ethmac_proxy_->CompleteTx(netbuf, ZX_ERR_CANCELED);
+            }
+            // Outgoing ethernet frames are dropped.
+        } else {
+            // Incoming WLAN frames are preserved.
+            packet_queue_.Enqueue(std::move(packet));
+        }
+    }
     ethmac_proxy_.reset();
 }
 
@@ -352,9 +371,14 @@ zx_status_t Device::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
         warnf("could not prepare Ethernet packet with len %zu\n", netbuf->data_size);
         return ZX_ERR_NO_RESOURCES;
     }
+    packet->set_ext_data(netbuf, 0);
     zx_status_t status = QueuePacket(std::move(packet));
-    if (status != ZX_OK) { warnf("could not queue Ethernet packet err=%d\n", status); }
-    return status;
+    if (status != ZX_OK) {
+        warnf("could not queue Ethernet packet err=%s\n", zx_status_get_string(status));
+        ZX_DEBUG_ASSERT(status != ZX_ERR_SHOULD_WAIT);
+        return status;
+    }
+    return ZX_ERR_SHOULD_WAIT;
 }
 
 zx_status_t Device::EthmacSetParam(uint32_t param, int32_t value, const void* data,
@@ -395,7 +419,8 @@ void Device::WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_r
 
     zx_status_t status = QueuePacket(std::move(packet));
     if (status != ZX_OK) {
-        warnf("could not queue inbound packet with len %zu err=%d\n", length, status);
+        warnf("could not queue inbound packet with len %zu err=%s\n", length,
+              zx_status_get_string(status));
     }
 }
 
@@ -667,14 +692,22 @@ void Device::MainLoop() {
             case to_enum_type(DevicePacket::kPacketQueued): {
                 PacketQueue queued_packets{};
                 {
-                    std::lock_guard<std::mutex> lock(packet_queue_lock_);
+                    std::lock_guard<std::mutex> guard(packet_queue_lock_);
                     queued_packets = packet_queue_.Drain();
                 }
                 while (!queued_packets.is_empty()) {
                     auto packet = queued_packets.Dequeue();
                     ZX_DEBUG_ASSERT(packet != nullptr);
+                    ethmac_netbuf_t* netbuf = nullptr;
+                    auto peer = packet->peer();
+                    if (peer == Packet::Peer::kEthernet) {
+                        netbuf = packet->ext_data();
+                        ZX_ASSERT(netbuf != nullptr);
+                    }
                     zx_status_t status = dispatcher_->HandlePacket(std::move(packet));
-                    if (status != ZX_OK) { errorf("could not handle packet err=%d\n", status); }
+                    if (peer == Packet::Peer::kEthernet) {
+                        ethmac_proxy_->CompleteTx(netbuf, status);
+                    }
                 }
                 break;
             }

@@ -1701,7 +1701,7 @@ zx_status_t ath10k_wmi_cmd_send(struct ath10k* ar, struct ath10k_msg_buf* buf, u
     } while (ret == ZX_OK);
 
     if (ret != ZX_OK) {
-        ath10k_info("failed to send wmi command: %s\n", zx_status_get_string(ret));
+        ath10k_info("failed to send wmi command %d: %s\n", cmd_id, zx_status_get_string(ret));
         ath10k_msg_buf_free(buf);
     }
 

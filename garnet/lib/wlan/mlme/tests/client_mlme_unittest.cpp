@@ -860,7 +860,7 @@ TEST_F(ClientTest, AutoDeauth_ForeignBeaconShouldNotPreventDeauth) {
     ASSERT_EQ(deauth_inds.size(), 1ULL);
 }
 
-TEST_F(ClientTest, BufferFramesWhileOffChannelAndSendWhenOnChannel) {
+TEST_F(ClientTest, DropFramesWhileOffChannel) {
     Connect();
 
     GoOffChannel();
@@ -868,18 +868,7 @@ TEST_F(ClientTest, BufferFramesWhileOffChannelAndSendWhenOnChannel) {
     ASSERT_TRUE(device.wlan_queue.empty());
 
     GoOnChannel();
-    ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
-
-    auto pkt = std::move(*device.wlan_queue.begin());
-    auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
-    EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kBssid1, 6), 0);
-    EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
-    EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-
-    auto llc_frame = frame.NextFrame();
-    EXPECT_RANGES_EQ(llc_frame.body_data(), kTestPayload);
-
-    AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, 0);
+    ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(0));
 }
 
 TEST_F(ClientTest, InvalidAuthenticationResponse) {
