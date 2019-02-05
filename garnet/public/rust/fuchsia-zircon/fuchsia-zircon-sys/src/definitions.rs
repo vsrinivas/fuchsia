@@ -20,10 +20,10 @@ extern {
         ) -> zx_status_t;
 
     pub fn zx_ticks_get(
-        ) -> u64;
+        ) -> zx_ticks_t;
 
     pub fn zx_ticks_per_second(
-        ) -> u64;
+        ) -> zx_ticks_t;
 
     pub fn zx_deadline_after(
         nanoseconds: zx_duration_t

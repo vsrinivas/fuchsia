@@ -17,6 +17,7 @@ pub type zx_signals_t = u32;
 pub type zx_size_t = usize;
 pub type zx_ssize_t = isize;
 pub type zx_status_t = i32;
+pub type zx_ticks_t = u64;
 pub type zx_time_t = i64;
 pub type zx_vaddr_t = usize;
 pub type zx_gpaddr_t = usize;
