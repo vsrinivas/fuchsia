@@ -51,8 +51,8 @@ zx_status_t AmlThermal::SetTarget(uint32_t opp_idx) {
     // Now let's change CPU frequency.
     status = cpufreq_scaling_->SetFrequency(new_frequency);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-thermal: Could not change CPU frequemcy: %d\n", status);
-        // Failed to change CPU frequemcy, change back to old
+        zxlogf(ERROR, "aml-thermal: Could not change CPU frequency: %d\n", status);
+        // Failed to change CPU frequency, change back to old
         // voltage before returning.
         status = voltage_regulator_->SetVoltage(old_voltage);
         if (status != ZX_OK) {
@@ -102,7 +102,7 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
     // Initialize Temperature Sensor.
     status = tsensor->InitSensor(device, thermal_config);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-thermal: Could not inititalize Temperature Sensor: %d\n", status);
+        zxlogf(ERROR, "aml-thermal: Could not initialize Temperature Sensor: %d\n", status);
         return status;
     }
 
@@ -115,7 +115,7 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
     // Initialize Temperature Sensor.
     status = voltage_regulator->Init(device, &opp_info);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-thermal: Could not inititalize Voltage Regulator: %d\n", status);
+        zxlogf(ERROR, "aml-thermal: Could not initialize Voltage Regulator: %d\n", status);
         return status;
     }
 
@@ -128,7 +128,7 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
     // Initialize CPU frequency scaling.
     status = cpufreq_scaling->Init(device);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-thermal: Could not inititalize CPU freq. scaling: %d\n", status);
+        zxlogf(ERROR, "aml-thermal: Could not initialize CPU freq. scaling: %d\n", status);
         return status;
     }
 

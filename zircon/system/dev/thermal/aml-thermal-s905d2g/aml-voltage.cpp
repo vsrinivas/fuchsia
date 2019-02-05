@@ -36,7 +36,7 @@ zx_status_t AmlVoltageRegulator::Init(zx_device_t* parent, opp_info_t* opp_info)
     // Initialize the PWM.
     zx_status_t status = pwm_->Init(parent);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-voltage: Could not inititalize PWM: %d\n", status);
+        zxlogf(ERROR, "aml-voltage: Could not initialize PWM: %d\n", status);
         return status;
     }
 

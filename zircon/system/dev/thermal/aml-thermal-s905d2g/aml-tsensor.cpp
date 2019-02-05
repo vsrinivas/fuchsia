@@ -241,7 +241,7 @@ zx_status_t AmlTSensor::InitPdev(zx_device_t* parent) {
         return status;
     }
 
-    // Map amlogic temperature sensopr peripheral control registers.
+    // Map amlogic temperature sensor peripheral control registers.
     mmio_buffer_t mmio;
     status = pdev_map_mmio_buffer(&pdev_, kPllMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &mmio);
