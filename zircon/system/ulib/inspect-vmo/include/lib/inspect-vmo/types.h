@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_INSPECT_VMO_TYPES_H_
+#define LIB_INSPECT_VMO_TYPES_H_
 
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <lib/inspect/block.h>
+#include <lib/inspect-vmo/block.h>
 #include <zircon/types.h>
 
 namespace inspect {
+namespace vmo {
+
 class Object;
 
 namespace internal {
@@ -163,4 +166,7 @@ private:
     internal::BlockIndex value_index_;
 };
 
+} // namespace vmo
 } // namespace inspect
+
+#endif  // LIB_INSPECT_VMO_TYPES_H_

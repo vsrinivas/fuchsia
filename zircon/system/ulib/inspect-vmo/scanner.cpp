@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/inspect/limits.h>
-#include <lib/inspect/scanner.h>
+#include <lib/inspect-vmo/limits.h>
+#include <lib/inspect-vmo/scanner.h>
 
 namespace inspect {
+namespace vmo {
 namespace internal {
 
 zx_status_t ScanBlocks(const uint8_t* buffer, size_t size,
@@ -35,4 +36,5 @@ zx_status_t ScanBlocks(const uint8_t* buffer, size_t size,
 }
 
 } // namespace internal
+} // namespace vmo
 } // namespace inspect

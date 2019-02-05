@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_INSPECT_VMO_STATE_H_
+#define LIB_INSPECT_VMO_STATE_H_
 
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
-#include <lib/inspect/block.h>
-#include <lib/inspect/heap.h>
-#include <lib/inspect/types.h>
+#include <lib/inspect-vmo/block.h>
+#include <lib/inspect-vmo/heap.h>
+#include <lib/inspect-vmo/types.h>
 
 namespace inspect {
+namespace vmo {
 namespace internal {
 
 // |State| wraps a |Heap| and implements the Inspect VMO API on top of
@@ -119,4 +121,7 @@ private:
 };
 
 } // namespace internal
+} // namespace vmo
 } // namespace inspect
+
+#endif  // LIB_INSPECT_VMO_STATE_H_

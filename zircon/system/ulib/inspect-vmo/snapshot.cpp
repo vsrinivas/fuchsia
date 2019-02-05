@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/inspect/block.h>
-#include <lib/inspect/snapshot.h>
+#include <lib/inspect-vmo/block.h>
+#include <lib/inspect-vmo/snapshot.h>
 
 namespace inspect {
+namespace vmo {
 
 using internal::Block;
 
-Snapshot::Snapshot(fbl::Array<uint8_t> buffer) : buffer_(std::move(buffer)) {}
+Snapshot::Snapshot(fbl::Array<uint8_t> buffer)
+    : buffer_(std::move(buffer)) {}
 
 zx_status_t Snapshot::Create(zx::vmo vmo, Snapshot* out_snapshot) {
     return Snapshot::Create(std::move(vmo), kDefaultOptions, out_snapshot);
@@ -68,7 +70,7 @@ zx_status_t Snapshot::Create(zx::vmo vmo, Options options, ReadObserver read_obs
         uint64_t new_generation;
         status = Snapshot::ParseHeader(buffer.begin(), &new_generation);
         if (status != ZX_OK) {
-          return status;
+            return status;
         }
         if (!options.skip_consistency_check && generation != new_generation) {
             continue;
@@ -111,4 +113,5 @@ internal::Block* Snapshot::GetBlock(internal::BlockIndex index) const {
     return reinterpret_cast<internal::Block*>(buffer_.begin() + index * kMinOrderSize);
 }
 
+} // namespace vmo
 } // namespace inspect

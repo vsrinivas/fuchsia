@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_INSPECT_VMO_SCANNER_H_
+#define LIB_INSPECT_VMO_SCANNER_H_
 
 #include <fbl/function.h>
-#include <lib/inspect/block.h>
+#include <lib/inspect-vmo/block.h>
 #include <zircon/types.h>
 
 namespace inspect {
+namespace vmo {
 namespace internal {
 
 // Read blocks out of the buffer.
@@ -20,4 +22,7 @@ zx_status_t ScanBlocks(const uint8_t* buffer, size_t size,
                        fbl::Function<void(BlockIndex, const Block*)> callback);
 
 } // namespace internal
+} // namespace vmo
 } // namespace inspect
+
+#endif  // LIB_INSPECT_VMO_SCANNER_H_

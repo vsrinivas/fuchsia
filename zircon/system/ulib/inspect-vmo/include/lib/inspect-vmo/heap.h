@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_INSPECT_VMO_HEAP_H_
+#define LIB_INSPECT_VMO_HEAP_H_
 
 #include "block.h"
 #include "limits.h"
@@ -11,6 +12,7 @@
 #include <zircon/assert.h>
 
 namespace inspect {
+namespace vmo {
 namespace internal {
 
 // A buddy-allocated heap of blocks stored in an extendable VMO.
@@ -82,4 +84,7 @@ bool Heap::IsFreeBlock(BlockIndex block, size_t expected_order) const {
 }
 
 } // namespace internal
+} // namespace vmo
 } // namespace inspect
+
+#endif  // LIB_INSPECT_VMO_HEAP_H_

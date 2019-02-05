@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_INSPECT_VMO_LIMITS_H_
+#define LIB_INSPECT_VMO_LIMITS_H_
 
 #include <zircon/types.h>
 
 namespace inspect {
+namespace vmo {
 
 // The size for order 0.
 constexpr size_t kMinOrderShift = 4;
@@ -36,4 +38,7 @@ constexpr size_t IndexForOffset(size_t offset) {
     return offset / kMinOrderSize;
 }
 
+} // namespace vmo
 } // namespace inspect
+
+#endif  // LIB_INSPECT_VMO_LIMITS_H_

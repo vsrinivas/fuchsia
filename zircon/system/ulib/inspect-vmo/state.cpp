@@ -4,9 +4,10 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <lib/inspect/state.h>
+#include <lib/inspect-vmo/state.h>
 
 namespace inspect {
+namespace vmo {
 namespace internal {
 
 namespace {
@@ -551,4 +552,5 @@ zx_status_t State::CreateName(fbl::StringPiece name, BlockIndex* out) {
 }
 
 } // namespace internal
+} // namespace vmo
 } // namespace inspect

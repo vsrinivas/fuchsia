@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/inspect/inspect.h>
+#include <lib/inspect-vmo/inspect.h>
 
 namespace inspect {
+namespace vmo {
 
 namespace {
 constexpr size_t kDefaultCapacityBytes = 4 << 10;
@@ -39,4 +40,5 @@ Inspector::Inspector(size_t capacity, size_t max_size) {
     root_object_ = state_->CreateObject(kRootObjectName, 0);
 }
 
+} // namespace vmo
 } // namespace inspect

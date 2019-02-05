@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_INSPECT_VMO_BLOCK_H_
+#define LIB_INSPECT_VMO_BLOCK_H_
 
 #include "limits.h"
 
@@ -14,6 +15,7 @@
 #include <zircon/types.h>
 
 namespace inspect {
+namespace vmo {
 
 enum class BlockType {
     kFree = 0,
@@ -137,4 +139,7 @@ constexpr size_t BlockSizeForPayload(size_t payload_size) {
 constexpr size_t kMaxPayloadSize = kMaxOrderSize - sizeof(Block::header);
 
 } // namespace internal
+} // namespace vmo
 } // namespace inspect
+
+#endif  // LIB_INSPECT_VMO_BLOCK_H_

@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 
 #include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/inspect/block.h>
-#include <lib/inspect/snapshot.h>
+#include <lib/inspect-vmo/block.h>
+#include <lib/inspect-vmo/snapshot.h>
 #include <unittest/unittest.h>
 
 namespace {
 
-using inspect::BlockType;
-using inspect::Snapshot;
-using inspect::internal::Block;
-using inspect::internal::HeaderBlockFields;
+using inspect::vmo::BlockType;
+using inspect::vmo::Snapshot;
+using inspect::vmo::internal::Block;
+using inspect::vmo::internal::HeaderBlockFields;
 
 bool ValidRead() {
     BEGIN_TEST;
@@ -24,7 +24,7 @@ bool ValidRead() {
     header->header = HeaderBlockFields::Order::Make(0) |
                      HeaderBlockFields::Type::Make(BlockType::kHeader) |
                      HeaderBlockFields::Version::Make(0);
-    memcpy(&header->header_data[4], inspect::kMagicNumber, 4);
+    memcpy(&header->header_data[4], inspect::vmo::kMagicNumber, 4);
     header->payload.u64 = 0;
 
     zx::vmo dup;
@@ -52,7 +52,7 @@ bool InvalidWritePending() {
     header->header = HeaderBlockFields::Order::Make(0) |
                      HeaderBlockFields::Type::Make(BlockType::kHeader) |
                      HeaderBlockFields::Version::Make(0);
-    memcpy(&header->header_data[4], inspect::kMagicNumber, 4);
+    memcpy(&header->header_data[4], inspect::vmo::kMagicNumber, 4);
     header->payload.u64 = 1;
 
     zx::vmo dup;
@@ -75,7 +75,7 @@ bool ValidPendingSkipCheck() {
     header->header = HeaderBlockFields::Order::Make(0) |
                      HeaderBlockFields::Type::Make(BlockType::kHeader) |
                      HeaderBlockFields::Version::Make(0);
-    memcpy(&header->header_data[4], inspect::kMagicNumber, 4);
+    memcpy(&header->header_data[4], inspect::vmo::kMagicNumber, 4);
     header->payload.u64 = 1;
 
     zx::vmo dup;
@@ -98,7 +98,7 @@ bool InvalidGenerationChange() {
     header->header = HeaderBlockFields::Order::Make(0) |
                      HeaderBlockFields::Type::Make(BlockType::kHeader) |
                      HeaderBlockFields::Version::Make(0);
-    memcpy(&header->header_data[4], inspect::kMagicNumber, 4);
+    memcpy(&header->header_data[4], inspect::vmo::kMagicNumber, 4);
     header->payload.u64 = 0;
 
     zx::vmo dup;
@@ -106,7 +106,7 @@ bool InvalidGenerationChange() {
     Snapshot snapshot;
     zx_status_t status = Snapshot::Create(
         std::move(dup), Snapshot::kDefaultOptions,
-        [header] (uint8_t* buffer, size_t buffer_size) { header->payload.u64 += 2; }, &snapshot);
+        [header](uint8_t* buffer, size_t buffer_size) { header->payload.u64 += 2; }, &snapshot);
 
     EXPECT_EQ(ZX_ERR_INTERNAL, status);
 
@@ -122,7 +122,7 @@ bool ValidGenerationChangeSkipCheck() {
     header->header = HeaderBlockFields::Order::Make(0) |
                      HeaderBlockFields::Type::Make(BlockType::kHeader) |
                      HeaderBlockFields::Version::Make(0);
-    memcpy(&header->header_data[4], inspect::kMagicNumber, 4);
+    memcpy(&header->header_data[4], inspect::vmo::kMagicNumber, 4);
     header->payload.u64 = 0;
 
     zx::vmo dup;
@@ -130,7 +130,7 @@ bool ValidGenerationChangeSkipCheck() {
     Snapshot snapshot;
     zx_status_t status = Snapshot::Create(
         std::move(dup), {.read_attempts = 100, .skip_consistency_check = true},
-        [header] (uint8_t* buffer, size_t buffer_size) { header->payload.u64 += 2; }, &snapshot);
+        [header](uint8_t* buffer, size_t buffer_size) { header->payload.u64 += 2; }, &snapshot);
 
     EXPECT_EQ(ZX_OK, status);
     EXPECT_EQ(4096, snapshot.size());

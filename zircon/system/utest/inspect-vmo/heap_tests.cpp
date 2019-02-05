@@ -4,17 +4,17 @@
 
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
-#include <lib/inspect/heap.h>
-#include <lib/inspect/scanner.h>
+#include <lib/inspect-vmo/heap.h>
+#include <lib/inspect-vmo/scanner.h>
 #include <unittest/unittest.h>
 
 namespace {
 
-using inspect::BlockType;
-using inspect::internal::Block;
-using inspect::internal::BlockIndex;
-using inspect::internal::Heap;
-using inspect::internal::ScanBlocks;
+using inspect::vmo::BlockType;
+using inspect::vmo::internal::Block;
+using inspect::vmo::internal::BlockIndex;
+using inspect::vmo::internal::Heap;
+using inspect::vmo::internal::ScanBlocks;
 
 constexpr size_t kMinAllocationSize = sizeof(Block);
 

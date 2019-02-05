@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/inspect/inspect.h>
-#include <lib/inspect/snapshot.h>
-#include <lib/inspect/state.h>
+#include <lib/inspect-vmo/inspect.h>
+#include <lib/inspect-vmo/snapshot.h>
+#include <lib/inspect-vmo/state.h>
 #include <unittest/unittest.h>
 
-using inspect::Inspector;
+using inspect::vmo::Inspector;
 
 namespace {
 

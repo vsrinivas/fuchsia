@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/inspect/heap.h>
+#include <lib/inspect-vmo/heap.h>
 
 namespace inspect {
+namespace vmo {
 namespace internal {
 
 namespace {
@@ -216,4 +217,5 @@ zx_status_t Heap::Extend(size_t new_size) {
 }
 
 } // namespace internal
+} // namespace vmo
 } // namespace inspect

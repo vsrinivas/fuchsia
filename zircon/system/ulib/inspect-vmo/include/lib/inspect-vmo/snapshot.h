@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_INSPECT_VMO_SNAPSHOT_H_
+#define LIB_INSPECT_VMO_SNAPSHOT_H_
 
 #include <fbl/array.h>
 #include <fbl/function.h>
-#include <lib/inspect/block.h>
+#include <lib/inspect-vmo/block.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
 #include <zircon/types.h>
 
 namespace inspect {
+namespace vmo {
 
 // |Snapshot| parses an incoming VMO buffer and produces a snapshot of
 // the VMO contents. |Snapshot::Options| determines the behavior of
@@ -90,4 +92,7 @@ private:
     fbl::Array<uint8_t> buffer_;
 };
 
+} // namespace vmo
 } // namespace inspect
+
+#endif  // LIB_INSPECT_VMO_SNAPSHOT_H_

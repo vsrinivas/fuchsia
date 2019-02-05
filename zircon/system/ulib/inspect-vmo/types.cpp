@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/inspect/state.h>
-#include <lib/inspect/types.h>
+#include <lib/inspect-vmo/state.h>
+#include <lib/inspect-vmo/types.h>
 
 namespace inspect {
+namespace vmo {
 
 template <>
 internal::NumericMetric<int64_t>::~NumericMetric<int64_t>() {
@@ -200,4 +201,5 @@ Property Object::CreateProperty(fbl::StringPiece name, fbl::StringPiece value) {
     return Property();
 }
 
+} // namespace vmo
 } // namespace inspect

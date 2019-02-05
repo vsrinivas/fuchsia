@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_INSPECT_VMO_INSPECT_H_
+#define LIB_INSPECT_VMO_INSPECT_H_
 
-#include <lib/inspect/state.h>
+#include <lib/inspect-vmo/state.h>
 
 namespace inspect {
+namespace vmo {
 
 // Entry point into the Inspection API.
 //
@@ -43,4 +45,7 @@ private:
     Object root_object_;
 };
 
+} // namespace vmo
 } // namespace inspect
+
+#endif  // LIB_INSPECT_VMO_INSPECT_H_

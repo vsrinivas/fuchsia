@@ -5,30 +5,30 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <lib/inspect/scanner.h>
-#include <lib/inspect/snapshot.h>
-#include <lib/inspect/state.h>
+#include <lib/inspect-vmo/scanner.h>
+#include <lib/inspect-vmo/snapshot.h>
+#include <lib/inspect-vmo/state.h>
 #include <unittest/unittest.h>
 
 namespace {
 
-using inspect::BlockType;
-using inspect::DoubleMetric;
-using inspect::IntMetric;
-using inspect::kNumOrders;
-using inspect::Object;
-using inspect::Property;
-using inspect::Snapshot;
-using inspect::UintMetric;
-using inspect::internal::Block;
-using inspect::internal::BlockIndex;
-using inspect::internal::ExtentBlockFields;
-using inspect::internal::HeaderBlockFields;
-using inspect::internal::Heap;
-using inspect::internal::NameBlockFields;
-using inspect::internal::PropertyBlockPayload;
-using inspect::internal::State;
-using inspect::internal::ValueBlockFields;
+using inspect::vmo::BlockType;
+using inspect::vmo::DoubleMetric;
+using inspect::vmo::IntMetric;
+using inspect::vmo::kNumOrders;
+using inspect::vmo::Object;
+using inspect::vmo::Property;
+using inspect::vmo::Snapshot;
+using inspect::vmo::UintMetric;
+using inspect::vmo::internal::Block;
+using inspect::vmo::internal::BlockIndex;
+using inspect::vmo::internal::ExtentBlockFields;
+using inspect::vmo::internal::HeaderBlockFields;
+using inspect::vmo::internal::Heap;
+using inspect::vmo::internal::NameBlockFields;
+using inspect::vmo::internal::PropertyBlockPayload;
+using inspect::vmo::internal::State;
+using inspect::vmo::internal::ValueBlockFields;
 
 // Container for scanned blocks from the buffer.
 // TODO(CF-236): Use std::map instead of intrusive containers when
@@ -91,7 +91,7 @@ Block MakeHeader(uint64_t generation) {
     Block ret;
     ret.header = HeaderBlockFields::Type::Make(BlockType::kHeader) |
                  HeaderBlockFields::Order::Make(0) | HeaderBlockFields::Version::Make(0);
-    memcpy(&ret.header_data[4], inspect::kMagicNumber, 4);
+    memcpy(&ret.header_data[4], inspect::vmo::kMagicNumber, 4);
     ret.payload.u64 = generation;
     return ret;
 }
@@ -104,9 +104,9 @@ Snapshot SnapshotAndScan(zx::vmo vmo,
     Snapshot snapshot;
     Snapshot::Create(std::move(vmo), &snapshot);
     if (snapshot) {
-        inspect::internal::ScanBlocks(
+        inspect::vmo::internal::ScanBlocks(
             snapshot.data(), snapshot.size(), [&](BlockIndex index, const Block* block) {
-                if (inspect::internal::GetType(block) == BlockType::kFree) {
+                if (inspect::vmo::internal::GetType(block) == BlockType::kFree) {
                     *free_blocks += 1;
                 } else {
                     *allocated_blocks += 1;
