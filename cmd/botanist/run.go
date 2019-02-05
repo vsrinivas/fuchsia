@@ -213,7 +213,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			logger.Debugf(ctx, "rebooting the node %q\n", properties.Nodename)
 
 			if err := pdu.RebootDevice(properties.PDU); err != nil {
-				logger.Fatalf(ctx, "failed to reboot %q: %v\n", properties.Nodename, err)
+				logger.Errorf(ctx, "failed to reboot %q: %v\n", properties.Nodename, err)
 			}
 		}()
 	}

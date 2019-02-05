@@ -356,7 +356,7 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 			logger.Debugf(ctx, "rebooting the node %q\n", properties.Nodename)
 
 			if err := pdu.RebootDevice(properties.PDU); err != nil {
-				logger.Fatalf(ctx, "failed to reboot the device: %v\n", err)
+				logger.Errorf(ctx, "failed to reboot the device: %v\n", err)
 			}
 		}()
 	}
