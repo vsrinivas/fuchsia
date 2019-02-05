@@ -60,8 +60,12 @@ void zxtest_runner_notify_assertion(const char* desc, const char* expected,
                           {.filename = file, .line_number = line}, is_fatal));
 }
 
-bool zxtest_runner_should_abort_current_test(void) {
-    return zxtest::Runner::GetInstance()->ShouldAbortCurrentTest();
+bool zxtest_runner_current_test_has_fatal_failures(void) {
+    return zxtest::Runner::GetInstance()->CurrentTestHasFatalFailures();
+}
+
+bool zxtest_runner_current_test_has_failures(void) {
+    return zxtest::Runner::GetInstance()->CurrentTestHasFailures();
 }
 
 size_t _zxtest_print_int32(int32_t val, char* buffer, size_t buffer_size) {

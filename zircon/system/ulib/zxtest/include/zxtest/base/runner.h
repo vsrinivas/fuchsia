@@ -54,6 +54,9 @@ public:
     // Resets the states for running new tests.
     void Reset();
 
+    // Returns whether the current test has any failures so far.
+    bool CurrentTestHasAnyFailures() const { return current_test_has_any_failures_; }
+
     // Returns whether any test driven by this instance had any test failure.
     // This is not cleared on |TestDriverImpl::Reset|.
     bool HadAnyFailures() const { return had_any_failures_; }
@@ -61,7 +64,8 @@ public:
 private:
     TestStatus status_ = TestStatus::kFailed;
 
-    bool has_fatal_failures_ = false;
+    bool current_test_has_any_failures_ = false;
+    bool current_test_has_fatal_failures_ = false;
 
     bool had_any_failures_ = false;
 };
@@ -181,7 +185,10 @@ public:
 
     // Returns true if the current test should be aborted. This happens as a result of a fatal
     // failure.
-    bool ShouldAbortCurrentTest() { return !test_driver_.Continue(); }
+    bool CurrentTestHasFatalFailures() const { return !test_driver_.Continue(); }
+
+    // Returns whether the current test has experienced any type of failure.
+    bool CurrentTestHasFailures() const { return test_driver_.CurrentTestHasAnyFailures(); }
 
 private:
     TestRef RegisterTest(const fbl::String& test_case_name, const fbl::String& test_name,

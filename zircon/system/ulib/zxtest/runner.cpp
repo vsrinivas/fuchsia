@@ -19,7 +19,7 @@ void TestDriverImpl::Skip() {
 }
 
 bool TestDriverImpl::Continue() const {
-    return !has_fatal_failures_;
+    return !current_test_has_fatal_failures_;
 }
 
 void TestDriverImpl::OnTestStart(const TestCase& test_case, const TestInfo& test_info) {
@@ -40,12 +40,14 @@ void TestDriverImpl::OnTestFailure(const TestCase& test_case, const TestInfo& te
 
 void TestDriverImpl::OnAssertion(const Assertion& assertion) {
     status_ = TestStatus::kFailed;
-    has_fatal_failures_ = assertion.is_fatal();
+    current_test_has_any_failures_ = true;
+    current_test_has_fatal_failures_ = assertion.is_fatal();
     had_any_failures_ = true;
 }
 
 void TestDriverImpl::Reset() {
-    has_fatal_failures_ = false;
+    current_test_has_fatal_failures_ = false;
+    current_test_has_any_failures_ = false;
     status_ = TestStatus::kPassed;
 }
 

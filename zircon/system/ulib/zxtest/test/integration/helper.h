@@ -4,6 +4,10 @@
 
 #pragma once
 
+#include <stdlib.h>
+#include <zircon/compiler.h>
+#include <zxtest/zxtest.h>
+
 #ifdef __cplusplus
 namespace zxtest {
 namespace test {
@@ -20,11 +24,46 @@ void CheckAll();
 } // namespace test
 } // namespace zxtest
 
-extern "C" {
 #endif
+
+__BEGIN_CDECLS
+#define CHECKPOINT_REACHED true
+#define CHECKPOINT_NOT_REACHED false
+#define HAS_ERRORS true
+#define NO_ERRORS false
+
+#define CHECK_ERROR() ZX_ASSERT_MSG(_ZXTEST_TEST_HAS_ERRORS, "Expected errors, non registered.");
+#define CHECK_NO_ERROR() ZX_ASSERT_MSG(!_ZXTEST_TEST_HAS_ERRORS, "Unexpected errors.");
+
+typedef struct test_expectation {
+    // Information of where the error happened.
+    const char* filename;
+    size_t line;
+    const char* reason;
+
+    // Flag marking whether the test reached a checkpoint.
+    bool checkpoint_reached;
+    // Whether the checkpoint should be reached.
+    bool checkpoint_reached_expected;
+
+    // Whether the test should have errors on exit.
+    bool expect_errors;
+} test_expectation_t;
+
+// Verifies that the expectations set for the |expectation| are met.
+void verify_expectation(test_expectation_t* expectation);
+
+// Macros to capture context, and validate.
+#define TEST_EXPECTATION(checkpoint_reached_set, test_must_have_errors, err_desc)                  \
+    test_expectation_t _expectation __attribute__((cleanup(verify_expectation)));                  \
+    _expectation.filename = __FILE__;                                                              \
+    _expectation.line = __LINE__;                                                                  \
+    _expectation.reason = err_desc;                                                                \
+    _expectation.expect_errors = test_must_have_errors;                                            \
+    _expectation.checkpoint_reached_expected = checkpoint_reached_set;                             \
+    _expectation.checkpoint_reached = false
+
+#define TEST_CHECKPOINT() _expectation.checkpoint_reached = true
 
 void zxtest_add_check_function(void (*check)(void));
-
-#ifdef __cplusplus
-}
-#endif
+__END_CDECLS

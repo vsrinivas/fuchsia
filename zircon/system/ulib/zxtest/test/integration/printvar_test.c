@@ -6,12 +6,12 @@
 
 #include <zxtest/zxtest.h>
 
-// Sanity tests that enforce compile time check for printing primitive types, and preventing
-// undefined symbols.
+// Sanity tests that enforce compile time check for printing primitive typoes.
+
 TEST(CPrintTest, Uint32) {
     uint32_t a = 0;
 
-    ASSERT_EQ(a, 0u);
+    ASSERT_EQ(a, 0);
 }
 
 TEST(CPrintTest, Int32) {
@@ -23,7 +23,7 @@ TEST(CPrintTest, Int32) {
 TEST(CPrintTest, Uint64) {
     int64_t a = 0;
 
-    ASSERT_EQ(a, 0u);
+    ASSERT_EQ(a, 0);
 }
 
 TEST(CPrintTest, Int64) {

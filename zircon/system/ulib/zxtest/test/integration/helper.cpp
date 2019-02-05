@@ -33,3 +33,17 @@ void CheckAll() {
 void zxtest_add_check_function(void (*check)(void)) {
     zxtest::test::AddCheckFunction(check);
 }
+
+void verify_expectation(test_expectation_t* expectation) {
+    if (expectation->expect_errors) {
+        CHECK_ERROR();
+    } else {
+        CHECK_NO_ERROR();
+    }
+    if (expectation->checkpoint_reached != expectation->checkpoint_reached_expected) {
+        fprintf(stdout, "[%s:%zu]: Failed due to %s\n", expectation->filename, expectation->line,
+                expectation->reason);
+        ZX_ASSERT_MSG(expectation->checkpoint_reached_expected == expectation->checkpoint_reached,
+                      "Checkpoint expectation failed. See error above.");
+    }
+}

@@ -6,7 +6,8 @@
 
 #include <zxtest/zxtest.h>
 
-// Sanity tests that enforce compile time check for printing primitive types.
+// Sanity tests that enforce compile time check for printing primitive types, and preventing
+// undefined symbols.
 TEST(PrintTest, Uint32) {
     uint32_t a = 0;
 
