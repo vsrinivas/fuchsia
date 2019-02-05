@@ -123,7 +123,9 @@ template("banjo_library") {
     library_name = invoker.name
   }
 
-  response_file = "$target_gen_dir/$target_name.args"
+  c_response_file = "$target_gen_dir/c/$target_name.args"
+  cpp_response_file = "$target_gen_dir/cpp/$target_name.args"
+  cpp_i_response_file = "$target_gen_dir/cpp_i/$target_name.args"
   ddk_root = string_replace(string_replace(library_name, ".", "/"), "_", "-")
   ddktl_root = string_replace(ddk_root, "ddk", "ddktl")
   ddk_header = "$root_gen_dir/$ddk_root.h"
@@ -131,8 +133,19 @@ template("banjo_library") {
   ddktl_internal_header = "$root_gen_dir/$ddktl_root-internal.h"
 
   main_target_name = target_name
-  response_file_target_name = "${target_name}_response_file"
-  compilation_target_name = "${target_name}_compile"
+  c_response_file_target_name = "${target_name}_c_response_file"
+  cpp_response_file_target_name = "${target_name}_cpp_response_file"
+  cpp_i_response_file_target_name = "${target_name}_cpp_i_response_file"
+  c_compile_target_name = "${target_name}_c_compile"
+  cpp_compile_target_name = "${target_name}_cpp_compile"
+  cpp_i_compile_target_name = "${target_name}_cpp_i_compile"
+
+
+  targets = [
+    [c_response_file_target_name, c_compile_target_name, c_response_file, "c", ddk_header],
+    [cpp_response_file_target_name, cpp_compile_target_name, cpp_response_file, "cpp", ddktl_header],
+    [cpp_i_response_file_target_name, cpp_i_compile_target_name, cpp_i_response_file, "cpp_i", ddktl_internal_header],
+  ]
 
   all_deps = []
   if (defined(invoker.deps)) {
@@ -142,79 +155,92 @@ template("banjo_library") {
     all_deps += invoker.public_deps
   }
 
-  action(response_file_target_name) {
-    visibility = [ ":*" ]
+  foreach(target, targets) {
+    target_name = target[0]
+    response_file = target[2]
+    backend = target[3]
+    output = target[4]
 
-    script = "//build/banjo/gen_response_file.py"
+    action(target_name) {
+      visibility = [ ":*" ]
 
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "public_deps",
-                             "sources",
-                             "testonly",
-                           ])
+      script = "//build/banjo/gen_response_file.py"
 
-    libraries = "$target_gen_dir/$main_target_name.libraries"
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "public_deps",
+                               "sources",
+                               "testonly",
+                             ])
 
-    outputs = [
-      response_file,
-      libraries,
-    ]
+      libraries = "$target_gen_dir/$backend/$main_target_name.libraries"
 
-    args = [
-             "--out-response-file",
-             rebase_path(response_file, root_build_dir),
-             "--out-libraries",
-             rebase_path(libraries, root_build_dir),
-             "--ddk-header",
-             rebase_path(ddk_header, root_build_dir),
-             "--ddktl-header",
-             rebase_path(ddktl_header, root_build_dir),
-             "--name",
-             library_name,
-             "--sources",
-           ] + rebase_path(sources, root_build_dir)
+      outputs = [
+        response_file,
+        libraries,
+      ]
 
-    if (all_deps != []) {
-      dep_libraries = []
+      args = [
+               "--out-response-file",
+               rebase_path(response_file, root_build_dir),
+               "--out-libraries",
+               rebase_path(libraries, root_build_dir),
+               "--backend",
+               backend,
+               "--output",
+               rebase_path(output, root_build_dir),
+               "--name",
+               library_name,
+               "--sources",
+             ] + rebase_path(sources, root_build_dir)
 
-      foreach(dep, all_deps) {
-        gen_dir = get_label_info(dep, "target_gen_dir")
-        name = get_label_info(dep, "name")
-        dep_libraries += [ "$gen_dir/$name.libraries" ]
+      if (all_deps != []) {
+        dep_libraries = []
+
+        foreach(dep, all_deps) {
+          gen_dir = get_label_info(dep, "target_gen_dir")
+          name = get_label_info(dep, "name")
+          dep_libraries += [ "$gen_dir/c/$name.libraries" ]
+        }
+
+        inputs = dep_libraries
+
+        args += [ "--dep-libraries" ] + rebase_path(dep_libraries, root_build_dir)
       }
-
-      inputs = dep_libraries
-
-      args += [ "--dep-libraries" ] + rebase_path(dep_libraries, root_build_dir)
     }
   }
 
-  compiled_action(compilation_target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+  foreach(target, targets) {
+    target_name = target[1]
+    response_target_name = target[0]
+    response_file = target[2]
+    backend = target[3]
+    output = target[4]
 
-    visibility = [ ":*" ]
+    compiled_action(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
 
-    tool = "//zircon/public/tool/banjoc"
+      visibility = [ ":*" ]
 
-    inputs = [
-      response_file,
-    ]
+      tool = "//zircon/public/tool/banjoc"
 
-    outputs = [
-      ddk_header,
-      ddktl_header,
-      ddktl_internal_header,
-    ]
+      inputs = [
+        response_file,
+      ]
 
-    rebased_response_file = rebase_path(response_file, root_build_dir)
+      outputs = [
+        output,
+      ]
 
-    args = [ "@$rebased_response_file" ]
+      rebased_response_file = rebase_path(response_file, root_build_dir)
 
-    deps = [
-      ":$response_file_target_name",
-    ]
+      args = [ "@$rebased_response_file" ]
+
+      deps = [
+        ":$response_target_name",
+      ]
+    }
   }
 
   group(main_target_name) {
@@ -225,13 +251,17 @@ template("banjo_library") {
                            ])
 
     public_deps = [
-      ":$compilation_target_name",
-      ":$response_file_target_name",
+      ":$c_compile_target_name",
+      ":$cpp_compile_target_name",
+      ":$cpp_i_compile_target_name",
+      ":$c_response_file_target_name",
+      ":$cpp_response_file_target_name",
+      ":$cpp_i_response_file_target_name",
     ]
   }
 
   if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
-    _banjo_library_sdk("$target_name") {
+    _banjo_library_sdk("$main_target_name") {
       forward_variables_from(invoker, "*")
     }
   }
@@ -267,7 +297,7 @@ template("banjo_dummy_library") {
                            ])
 
     response_file = "$target_gen_dir/$main_target_name.args"
-    libraries = "$target_gen_dir/$main_target_name.libraries"
+    libraries = "$target_gen_dir/c/$main_target_name.libraries"
 
     outputs = [
       response_file,

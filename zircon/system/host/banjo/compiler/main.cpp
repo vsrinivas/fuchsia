@@ -30,35 +30,24 @@ namespace {
 
 void Usage() {
     std::cout
-        << "usage: banjoc [--ddk-header HEADER_PATH]\n"
-           "              [--ddktl-header HEADER_PATH]\n"
-           "              [--json JSON_PATH]\n"
-           "              [--name LIBRARY_NAME]\n"
-           "              [--files [BANJO_FILE...]...]\n"
-           "              [--help]\n"
+        << "usage: banjoc [FLAGS] --backend <BACKEND> --output <PATH> --files [BANJO_FILE...]...\n"
            "\n"
-           " * `--ddk-header HEADER_PATH`. If present, this flag instructs `banjoc` to output\n"
-           "   a C ddk header at the given path.\n"
+           " * `-b, --backend [c|cpp|json]`. This flag instructs `banjoc` which codegen backend\n"
+           "   to use.\n"
            "\n"
-           " * `--ddktl-header HEADER_PATH`. If present, this flag instructs `banjoc` to output\n"
-           "   a C++ ddktl header at the given path.\n"
+           " * `-o, --output <PATH>`. If present, this flag instructs `banjoc` to output\n"
+           "   codegen to PATH.\n"
            "\n"
-           " * `--json JSON_PATH`. If present, this flag instructs `banjoc` to output the\n"
-           "   library's intermediate representation at the given path. The intermediate\n"
-           "   representation is JSON that conforms to a particular schema (located at\n"
-           "   https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/host/banjo/schema.json).\n"
-           "   The intermediate representation is used as input to the various backends.\n"
+           " * `-f, --files [BANJO_FILE...]...`. Each `--file [BANJO_FILE...]` chunk of arguments\n"
+           "   describes a library, all of which must share the same top-level library name\n"
+           "   declaration. Libraries must be presented in dependency order, with later\n"
+           "   libraries able to use declarations from preceding libraries but not vice versa.\n"
+           "   Output is only generated for the final library, not for each of its dependencies.\n"
            "\n"
            " * `--name LIBRARY_NAME`. If present, this flag instructs `banjoc` to validate\n"
            "   that the library being compiled has the given name. This flag is useful to\n"
            "   cross-check between the library's declaration in a build system and the\n"
            "   actual contents of the library.\n"
-           "\n"
-           " * `--files [BANJO_FILE...]...`. Each `--file [BANJO_FILE...]` chunk of arguments\n"
-           "   describes a library, all of which must share the same top-level library name\n"
-           "   declaration. Libraries must be presented in dependency order, with later\n"
-           "   libraries able to use declarations from preceding libraries but not vice versa.\n"
-           "   Output is only generated for the final library, not for each of its dependencies.\n"
            "\n"
            " * `--help`. Prints this help, and exit immediately.\n"
            "\n"
@@ -123,6 +112,15 @@ public:
         other.out_ = false;
     }
 
+    Stream& operator=(Stream&& other) {
+        stream_ = std::move(other.stream_);
+        filename_ = other.filename_;
+        written_to_ = other.written_to_;
+        out_ = other.out_;
+        other.out_ = false;
+        return *this;
+    }
+
     auto eof() const { return stream_.eof(); }
     void flush() { stream_.flush(); }
     auto get() { return stream_.get(); }
@@ -155,7 +153,6 @@ private:
     bool written_to_ = false;
     bool out_ = false;
 };
-
 
 Stream Open(std::string filename, std::ios::openmode mode) {
     if ((mode & std::ios::out) != 0) {
@@ -248,6 +245,7 @@ private:
 };
 
 enum struct Behavior {
+    kUnknown,
     kDdkHeader,
     kDdktlHeader,
     kDdktlInternalHeader,
@@ -304,37 +302,43 @@ int main(int argc, char* argv[]) {
 
     std::string library_name;
 
-    std::map<Behavior, Stream> outputs;
+    Behavior behavior = Behavior::kUnknown;
+    Stream output_file;
     while (args->Remaining()) {
         // Try to parse an output type.
         std::string behavior_argument = args->Claim();
-        Stream output_file;
-        if (behavior_argument == "--help") {
+        if (behavior_argument == "-h" || behavior_argument == "--help") {
             Usage();
             exit(0);
-        } else if (behavior_argument == "--ddk-header") {
-            outputs.emplace(Behavior::kDdkHeader, Open(args->Claim(), std::ios::out));
-        } else if (behavior_argument == "--ddktl-header") {
+        } else if (behavior_argument == "-b" || behavior_argument == "--backend") {
+            const auto backend = args->Claim();
+            if (backend == "c") {
+                behavior = Behavior::kDdkHeader;
+            } else if (backend == "cpp") {
+                behavior = Behavior::kDdktlHeader;
+            } else if (backend == "cpp_i") {
+                behavior = Behavior::kDdktlInternalHeader;
+            } else if (backend == "json") {
+                behavior = Behavior::kJSON;
+            }
+        } else if (behavior_argument == "-o" || behavior_argument == "--output") {
             const auto path = args->Claim();
-            outputs.emplace(Behavior::kDdktlHeader, Open(path, std::ios::out));
-            // TODO(surajmalhotra): Create the internal header via a separate
-            // build command (or expect it as another argument).
-            const size_t dot = path.find_last_of(".");
-            const std::string noext = (dot != std::string::npos)
-                                          ? path.substr(0, dot)
-                                          : path;
-            outputs.emplace(Behavior::kDdktlInternalHeader,
-                            Open(noext + "-internal.h", std::ios::out));
-        } else if (behavior_argument == "--json") {
-            outputs.emplace(Behavior::kJSON, Open(args->Claim(), std::ios::out));
+            output_file = Open(path, std::ios::out);
         } else if (behavior_argument == "--name") {
             library_name = args->Claim();
-        } else if (behavior_argument == "--files") {
+        } else if (behavior_argument == "-f" || behavior_argument == "--files") {
             // Start parsing filenames.
             break;
         } else {
             FailWithUsage("Unknown argument: %s\n", behavior_argument.data());
         }
+    }
+
+    if (behavior == Behavior::kUnknown) {
+        FailWithUsage("Backend needs to be specified\n");
+    }
+    if (!output_file.is_open()) {
+        FailWithUsage("Output needs be specified\n");
     }
 
     // Parse libraries.
@@ -346,7 +350,7 @@ int main(int argc, char* argv[]) {
     source_managers.push_back(banjo::SourceManager());
     while (args->Remaining()) {
         std::string arg = args->Claim();
-        if (arg == "--files") {
+        if (arg == "-f" || arg == "--files") {
             source_managers.emplace_back();
         } else {
             if (!source_managers.back().CreateSource(arg.data())) {
@@ -394,31 +398,28 @@ int main(int argc, char* argv[]) {
 
     // We recompile dependencies, and only emit output for the final
     // library.
-    for (auto& output : outputs) {
-        auto& behavior = output.first;
-        auto& output_file = output.second;
-
-        switch (behavior) {
-        case Behavior::kDdkHeader: {
-            banjo::DdkGenerator generator(final_library);
-            Write(generator.ProduceHeader(), std::move(output_file));
-            break;
-        }
-        case Behavior::kDdktlHeader: {
-            banjo::DdktlGenerator generator(final_library);
-            Write(generator.ProduceHeader(), std::move(output_file));
-            break;
-        }
-        case Behavior::kDdktlInternalHeader: {
-            banjo::DdktlGenerator generator(final_library);
-            Write(generator.ProduceInternalHeader(), std::move(output_file));
-            break;
-        }
-        case Behavior::kJSON: {
-            banjo::JSONGenerator generator(final_library);
-            Write(generator.Produce(), std::move(output_file));
-            break;
-        }
-        }
+    switch (behavior) {
+    case Behavior::kDdkHeader: {
+        banjo::DdkGenerator generator(final_library);
+        Write(generator.ProduceHeader(), std::move(output_file));
+        break;
+    }
+    case Behavior::kDdktlHeader: {
+        banjo::DdktlGenerator generator(final_library);
+        Write(generator.ProduceHeader(), std::move(output_file));
+        break;
+    }
+    case Behavior::kDdktlInternalHeader: {
+        banjo::DdktlGenerator generator(final_library);
+        Write(generator.ProduceInternalHeader(), std::move(output_file));
+        break;
+    }
+    case Behavior::kJSON: {
+        banjo::JSONGenerator generator(final_library);
+        Write(generator.Produce(), std::move(output_file));
+        break;
+    }
+    default:
+        break;
     }
 }

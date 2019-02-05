@@ -29,8 +29,8 @@ def main():
     parser = argparse.ArgumentParser(description="Generate response file for Banjo frontend")
     parser.add_argument("--out-response-file", help="The path for for the response file to generate", required=True)
     parser.add_argument("--out-libraries", help="The path for for the libraries file to generate", required=True)
-    parser.add_argument("--ddk-header", help="The path for the C simple client file to generate, if any")
-    parser.add_argument("--ddktl-header", help="The path for the C header file to generate, if any")
+    parser.add_argument("--backend", help="The path for the C simple client file to generate, if any")
+    parser.add_argument("--output", help="The path for the C++ header file to generate, if any")
     parser.add_argument("--name", help="The name for the generated Banjo library, if any")
     parser.add_argument("--sources", help="List of Banjo source files", nargs="*")
     parser.add_argument("--dep-libraries", help="List of dependent libraries", nargs="*")
@@ -54,11 +54,11 @@ def main():
     if args.name:
         response_file.append("--name %s" % args.name)
 
-    if args.ddk_header:
-        response_file.append("--ddk-header %s" % args.ddk_header)
+    if args.backend:
+        response_file.append("--backend %s" % args.backend)
 
-    if args.ddktl_header:
-        response_file.append("--ddktl-header %s" % args.ddktl_header)
+    if args.output:
+        response_file.append("--output %s" % args.output)
 
     response_file.extend(["--files %s" % library for library in target_libraries])
 
