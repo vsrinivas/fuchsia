@@ -7,6 +7,8 @@
 
 #include "gtest/gtest.h"
 
+#include <string>
+
 namespace testing {
 namespace internal {
 namespace escher {
@@ -14,13 +16,10 @@ namespace escher {
 // Callback used by MakeAndRegisterVulkanTestInfo() to create a test factory.
 typedef TestFactoryBase* (*TestFactoryFactory)();
 
-// Wrapper around GTest's internal MakeAndRegisterTestInfo(), intended to
-// support the VK_TEST() and VK_TEST_F() macros... see below.
-GTEST_API_ TestInfo* MakeAndRegisterVulkanTestInfo(
-    const char* test_case_name, const char* name, const char* type_param,
-    const char* value_param, CodeLocation code_location,
-    TypeId fixture_class_id, SetUpTestCaseFunc set_up_tc,
-    TearDownTestCaseFunc tear_down_tc, TestFactoryFactory factory_factory);
+// If Vulkan is disabled, then prepend "DISABLED_" to test_case and return it,
+// otherwise return it unmodified. This is used by the VK_GTEST_TEST_ macro to
+// disable tests when required.
+std::string PrependDisabledIfNecessary(const std::string& test_case);
 
 // Template function that matches the TestFactoryFactory typedef above.
 template <typename T>
@@ -48,12 +47,13 @@ TestFactoryBase* ConcreteTestFactoryFactory() {
                                                                               \
   ::testing::TestInfo* const GTEST_TEST_CLASS_NAME_(test_case_name,           \
                                                     test_name)::test_info_ =  \
-      ::testing::internal::escher::MakeAndRegisterVulkanTestInfo(             \
-          #test_case_name, #test_name, NULL, NULL,                            \
-          ::testing::internal::CodeLocation(__FILE__, __LINE__), (parent_id), \
-          parent_class::SetUpTestCase, parent_class::TearDownTestCase,        \
-          ::testing::internal::escher::ConcreteTestFactoryFactory<            \
-              GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>);            \
+      ::testing::RegisterTest(                                                \
+          #test_case_name,                                                    \
+          ::testing::internal::escher::PrependDisabledIfNecessary(#test_name) \
+              .c_str(),                                                       \
+          nullptr, nullptr, __FILE__, __LINE__, []() -> parent_class* {       \
+            return new GTEST_TEST_CLASS_NAME_(test_case_name, test_name);     \
+          });                                                                 \
   void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody()
 
 #endif  // LIB_ESCHER_TEST_GTEST_VULKAN_INTERNAL_H_
