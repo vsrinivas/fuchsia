@@ -463,7 +463,7 @@ impl fmt::Display for StreamEndpointId {
 /// interpreted differently for different Media Types, so we do not interpret
 /// them here.
 /// See https://www.bluetooth.com/specifications/assigned-numbers/audio-video
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct MediaCodecType(u8);
 
 impl MediaCodecType {
@@ -475,7 +475,7 @@ impl MediaCodecType {
 /// The type of content protection used in the Content Protection Service Capability.
 /// Defined in the Bluetooth Assigned Numbers
 /// https://www.bluetooth.com/specifications/assigned-numbers/audio-video
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ContentProtectionType {
     DigitalTransmissionContentProtection, // DTCP, 0x0001
     SerialCopyManagementSystem,           // SCMS-T, 0x0002
@@ -518,7 +518,7 @@ pub_decodable_enum! {
 }
 /// Service Capabilities indicate possible services that can be provided by
 /// each stream endpoint.  See AVDTP Spec section 8.21.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ServiceCapability {
     /// Indicates that the end point can provide at least basic media transport
     /// service as defined by RFC 3550 and outlined in section 7.2.
@@ -589,7 +589,7 @@ impl ServiceCapability {
 
     /// True when this capability should be included in the response to a |sig| command.
     pub(crate) fn in_response(&self, sig: SignalIdentifier) -> bool {
-        sig == SignalIdentifier::GetAllCapabilities || self.is_basic()
+        sig != SignalIdentifier::GetCapabilities || self.is_basic()
     }
 
     /// True when this capability is classified as an "Application Service Capability"

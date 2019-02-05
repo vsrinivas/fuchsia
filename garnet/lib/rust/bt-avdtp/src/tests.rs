@@ -291,25 +291,39 @@ fn command_timeout() {
     assert!(exec.run_until_stalled(&mut another_fut).is_pending());
 }
 
-// Discovery tests
+macro_rules! incoming_cmd_length_fail_test {
+    ($test_name:ident, $signal_value:expr, $length:expr) => {
+        #[test]
+        fn $test_name() {
+            let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-#[test]
-fn discover_invalid_length() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
+            // TxLabel 4, signal value, no params
+            let mut incoming_cmd = vec![0x40, $signal_value];
 
-    // TxLabel 4, Discover, which doesn't have a payload, but we're including one.
-    assert!(remote.write(&[0x40, 0x01, 0x40]).is_ok());
+            // Add $length bytes
+            incoming_cmd.extend_from_slice(&[0; $length]);
 
-    let mut fut = stream.next();
-    let complete = exec.run_until_stalled(&mut fut);
+            // Send the command
+            assert!(remote.write(&incoming_cmd).is_ok());
 
-    // We shouldn't have received anything on the future
-    assert!(complete.is_pending());
+            let mut fut = stream.next();
+            let complete = exec.run_until_stalled(&mut fut);
 
-    // The peer should have responded with a Response Reject message with the
-    // same TxLabel with BAD_LENGTH
-    expect_remote_recv(&[0x43, 0x01, 0x11], &remote);
+            // We shouldn't have received any request.
+            assert!(complete.is_pending());
+
+            // The peer should have responded with a Response Reject message with the
+            // same TxLabel with BAD_LENGTH
+            expect_remote_recv(&[0x43, $signal_value, 0x11], &remote);
+        }
+    };
 }
+
+// Discover tests
+const CMD_DISCOVER_VALUE: &'static u8 = &0x01;
+
+incoming_cmd_length_fail_test!(discover_invalid_length_one, *CMD_DISCOVER_VALUE, 1);
+incoming_cmd_length_fail_test!(discover_invalid_length_two, *CMD_DISCOVER_VALUE, 2);
 
 #[test]
 fn discover_event_responder_send_works() {
@@ -445,44 +459,16 @@ fn discover_command_rejected() {
     assert_eq!(Error::RemoteRejected(0x31), error);
 }
 
-// Get(All)Capabilities tests
-
+// GetCapabilities tests
+const CMD_GET_CAPABILITIES_VALUE: &'static u8 = &0x02;
 const CMD_GET_CAPABILITIES: &'static [u8] = &[
     0x40, // TxLabel (4), Single Packet (0b00), Command (0b00)
     0x02, // RFA (0b00), Get Capabilities (0x02)
     0x30, // SEID 12 (0b001100)
 ];
 
-#[test]
-fn get_capabilities_invalid_length() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
-
-    // TxLabel 4, GetCapabilities, which needs a SEID.
-    assert!(remote.write(&[0x40, 0x02]).is_ok());
-
-    let mut fut = stream.next();
-    let complete = exec.run_until_stalled(&mut fut);
-
-    // We shouldn't have received any request.
-    assert!(complete.is_pending());
-
-    // The peer should have responded with a Response Reject message with the
-    // same TxLabel with BAD_LENGTH
-    expect_remote_recv(&[0x43, 0x02, 0x11], &remote);
-
-    // TxLabel 4, GetCapabilities, with more than we expected.
-    assert!(remote.write(&[0x40, 0x02, 0x01, 0x10]).is_ok());
-
-    let mut fut = stream.next();
-    let complete = exec.run_until_stalled(&mut fut);
-
-    // We shouldn't have received any request.
-    assert!(complete.is_pending());
-
-    // The peer should have responded with a Response Reject message with the
-    // same TxLabel with BAD_LENGTH
-    expect_remote_recv(&[0x43, 0x02, 0x11], &remote);
-}
+incoming_cmd_length_fail_test!(get_capabilities_too_short, *CMD_GET_CAPABILITIES_VALUE, 0);
+incoming_cmd_length_fail_test!(get_capabilities_too_long, *CMD_GET_CAPABILITIES_VALUE, 2);
 
 #[test]
 fn get_capabilities_event_responder_send_works() {
@@ -666,43 +652,15 @@ fn get_capabilities_reject_command() {
 }
 
 //  Get All Capabilities
-
+const CMD_GET_ALL_CAPABILITIES_VALUE: &'static u8 = &0x0C;
 const CMD_GET_ALL_CAPABILITIES: &'static [u8] = &[
     0x40, // TxLabel (4), Single Packet (0b00), Command (0b00)
     0x0C, // RFA (0b00), Get All Capabilities (0x0C)
     0x30, // SEID 12 (0b001100)
 ];
 
-#[test]
-fn get_all_capabilities_invalid_length() {
-    let (mut stream, _, remote, mut exec) = setup_stream_test();
-
-    // TxLabel 4, GetAllCapabilities, which needs a SEID.
-    assert!(remote.write(&[0x40, 0x0C]).is_ok());
-
-    let mut fut = stream.next();
-    let complete = exec.run_until_stalled(&mut fut);
-
-    // We shouldn't have received any request.
-    assert!(complete.is_pending());
-
-    // The peer should have responded with a Response Reject message with the
-    // same TxLabel with BAD_LENGTH
-    expect_remote_recv(&[0x43, 0x0C, 0x11], &remote);
-
-    // TxLabel 4, GetCapabilities, with more than we expected.
-    assert!(remote.write(&[0x40, 0x0C, 0x01, 0x10]).is_ok());
-
-    let mut fut = stream.next();
-    let complete = exec.run_until_stalled(&mut fut);
-
-    // We shouldn't have received any request.
-    assert!(complete.is_pending());
-
-    // The peer should have responded with a Response Reject message with the
-    // same TxLabel with BAD_LENGTH
-    expect_remote_recv(&[0x43, 0x0C, 0x11], &remote);
-}
+incoming_cmd_length_fail_test!(get_all_capabilities_too_short, *CMD_GET_ALL_CAPABILITIES_VALUE, 0);
+incoming_cmd_length_fail_test!(get_all_capabilities_too_long, *CMD_GET_ALL_CAPABILITIES_VALUE, 2);
 
 #[test]
 fn get_all_capabilities_event_responder_send_works() {
@@ -885,32 +843,196 @@ fn get_all_capabilities_reject_command() {
     assert_eq!(Error::RemoteRejected(0x12), error);
 }
 
-macro_rules! incoming_cmd_length_fail_test {
-    ($test_name:ident, $signal_value:expr, $length:expr) => {
-        #[test]
-        fn $test_name() {
-            let (mut stream, _, remote, mut exec) = setup_stream_test();
+// Get Configuration
+const CMD_GET_CONFIGURATION_VALUE: &'static u8 = &0x04;
+const CMD_GET_CONFIGURATION: &'static [u8] = &[
+    0x40, // TxLabel (4), Single Packet (0b00), Command (0b00)
+    0x04, // RFA (0b00), Get All Capabilities (0x0C)
+    0x30, // SEID 12 (0b001100)
+];
 
-            // TxLabel 4, signal value, no params
-            let mut incoming_cmd = vec![0x40, $signal_value];
+incoming_cmd_length_fail_test!(get_configuration_too_short, *CMD_GET_CONFIGURATION_VALUE, 0);
+incoming_cmd_length_fail_test!(get_configuration_too_long, *CMD_GET_CONFIGURATION_VALUE, 2);
 
-            // Add $length bytes
-            incoming_cmd.extend_from_slice(&[0; $length]);
+#[test]
+fn get_configuration_event_responder_send_works() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-            // Send the command
-            assert!(remote.write(&incoming_cmd).is_ok());
+    assert!(remote.write(&CMD_GET_CONFIGURATION).is_ok());
 
-            let mut fut = stream.next();
-            let complete = exec.run_until_stalled(&mut fut);
-
-            // We shouldn't have received any request.
-            assert!(complete.is_pending());
-
-            // The peer should have responded with a Response Reject message with the
-            // same TxLabel with BAD_LENGTH
-            expect_remote_recv(&[0x43, $signal_value, 0x11], &remote);
+    let respond_res = match next_request(&mut stream, &mut exec) {
+        Request::GetConfiguration {
+            responder,
+            stream_id,
+        } => {
+            assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
+            let capabilities = &[
+                ServiceCapability::MediaTransport,
+                ServiceCapability::Reporting,
+                ServiceCapability::Recovery {
+                    recovery_type: 0x01,
+                    max_recovery_window_size: 10,
+                    max_number_media_packets: 255,
+                },
+                ServiceCapability::MediaCodec {
+                    media_type: MediaType::Audio,
+                    codec_type: MediaCodecType::new(0x40),
+                    codec_extra: vec![0xDE, 0xAD, 0xBE, 0xEF],
+                },
+                ServiceCapability::ContentProtection {
+                    protection_type: ContentProtectionType::DigitalTransmissionContentProtection,
+                    extra: vec![0xF0, 0x0D],
+                },
+                ServiceCapability::DelayReporting,
+            ];
+            responder.send(capabilities)
         }
+        _ => panic!("should have received a GetConfiguration"),
     };
+
+    assert!(respond_res.is_ok());
+
+    // Should receive the encoded version of the capabilities:
+    #[rustfmt::skip]
+    let get_configuration_rsp = &[
+        0x42, // TxLabel (4) + ResponseAccept (0x02)
+        0x04, // GetConfiguration Signal
+        // MediaTransport (Length of Service Capability = 0)
+        0x01, 0x00,
+        // Reporting (LOSC = 0)
+        0x02, 0x00,
+        // Recovery (LOSC = 3), Type (0x01), Window size (10), Number Media Packets (255)
+        0x03, 0x03, 0x01, 0x0A, 0xFF,
+        // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec speciic
+        // as above
+        0x07, 0x06, 0x00, 0x40, 0xDE, 0xAD, 0xBE, 0xEF,
+        // Content Protection (LOSC = 2 + 2), DTCP (0x01, 0x00), CP Specific as above
+        0x04, 0x04, 0x01, 0x00, 0xF0, 0x0D,
+        // DelayReporting (LOSC = 0)
+        0x08, 0x00,
+    ];
+    expect_remote_recv(get_configuration_rsp, &remote);
+}
+
+#[test]
+fn get_configuration_responder_reject_works() {
+    let (mut stream, _, remote, mut exec) = setup_stream_test();
+
+    assert!(remote.write(&CMD_GET_CONFIGURATION).is_ok());
+
+    let respond_res = match next_request(&mut stream, &mut exec) {
+        Request::GetConfiguration {
+            responder,
+            stream_id,
+        } => {
+            assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
+            responder.reject(ErrorCode::BadAcpSeid)
+        }
+        _ => panic!("should have received a GetConfiguration"),
+    };
+
+    assert!(respond_res.is_ok());
+
+    let get_configuration_rsp = &[
+        0x43, // TxLabel (4),  RemoteRejected (3)
+        0x04, // Get Configuration
+        0x12, // BAD_ACP_SEID
+    ];
+    expect_remote_recv(get_configuration_rsp, &remote);
+}
+
+#[test]
+fn get_configuration_command_works() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let seid = StreamEndpointId::try_from(1).unwrap();
+    let mut response_fut = Box::pin(peer.get_configuration(&seid));
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x04, received[1]); // 0x04 = GetConfiguration
+    assert_eq!(0x01 << 2, received[2]); // SEID (0x01) , RFA
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    #[rustfmt::skip]
+    let response: &[u8] = &[
+        txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
+        0x04,                              // Get Configuration
+        // MediaTransport (Length of Service Capability = 0)
+        0x01, 0x00,
+        // Reporting (LOSC = 0)
+        0x02, 0x00,
+        // Media Codec (LOSC = 2 + 2), Video (0x1), Codec type (0x20), Codec speific (0xB0DE)
+        0x07, 0x04, 0x10, 0x20, 0xB0, 0xDE,
+        // Content Protection (LOSC = 2 + 1), SCMS (0x02, 0x00), CP Specific (0x7A)
+        0x04, 0x03, 0x02, 0x00, 0x7A,
+        // Delay Reporting
+        0x08, 0x00,
+    ];
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+
+    let capabilities = match complete {
+        Poll::Ready(Ok(response)) => response,
+        x => panic!("Should have a ready Ok response: {:?}", x),
+    };
+
+    assert_eq!(5, capabilities.len());
+    let c1 = ServiceCapability::MediaTransport;
+    assert_eq!(c1, capabilities[0]);
+    let c2 = ServiceCapability::Reporting;
+    assert_eq!(c2, capabilities[1]);
+    let c3 = ServiceCapability::MediaCodec {
+        media_type: MediaType::Video,
+        codec_type: MediaCodecType::new(0x20),
+        codec_extra: vec![0xb0, 0xde],
+    };
+    assert_eq!(c3, capabilities[2]);
+    let c4 = ServiceCapability::ContentProtection {
+        protection_type: ContentProtectionType::SerialCopyManagementSystem,
+        extra: vec![0x7a],
+    };
+    assert_eq!(c4, capabilities[3]);
+    let c5 = ServiceCapability::DelayReporting;
+    assert_eq!(c5, capabilities[4]);
+}
+
+#[test]
+fn get_configuration_reject_command() {
+    let mut exec = fasync::Executor::new().expect("failed to create an executor");
+    let (peer, remote) = setup_peer();
+    let seid = StreamEndpointId::try_from(1).unwrap();
+    let mut response_fut = Box::pin(peer.get_configuration(&seid));
+    assert!(exec.run_until_stalled(&mut response_fut).is_pending());
+
+    let received = recv_remote(&remote).unwrap();
+    // Last half of header must be Single (0b00) and Command (0b00)
+    assert_eq!(0x00, received[0] & 0xF);
+    assert_eq!(0x04, received[1]); // 0x04 = GetConfiguration
+    assert_eq!(0x01 << 2, received[2]); // SEID (0x01), RFA
+
+    let txlabel_raw = received[0] & 0xF0;
+
+    let response: &[u8] = &[
+        txlabel_raw | 0x0 << 2 | 0x3, // txlabel (same), Single (0b00), Response Reject (0b11)
+        0x04,                         // Get Configuration
+        0x12,                         // BAD_ACP_SEID
+    ];
+
+    assert!(remote.write(response).is_ok());
+
+    let complete = exec.run_until_stalled(&mut response_fut);
+
+    let error = match complete {
+        Poll::Ready(Err(response)) => response,
+        x => panic!("Should have a ready Error response: {:?}", x),
+    };
+
+    assert_eq!(Error::RemoteRejected(0x12), error);
 }
 
 macro_rules! seid_command_test {

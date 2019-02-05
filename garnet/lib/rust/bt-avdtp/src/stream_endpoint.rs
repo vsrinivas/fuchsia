@@ -32,6 +32,18 @@ enum StreamState {
     Aborting,
 }
 
+impl StreamState {
+    fn configured(&self) -> bool {
+        match self {
+            StreamState::Configured |
+                StreamState::Opening |
+                StreamState::Open |
+                StreamState::Streaming => true,
+            _ => false
+        }
+    }
+}
+
 /// An AVDTP Transport Stream, which implements the Basic service
 /// See Section 7.2
 /// Audio frames are currently not delivered anywhere, and are counted and dropped.
@@ -128,6 +140,18 @@ impl StreamEndpoint {
         });
         self.capabilities.append(&mut capabilities);
         Ok(())
+    }
+
+    /// Get the current configuration of this stream.
+    /// If the stream is in the Idle, Closing, or Aborting state, this shall
+    /// fail.
+    /// Used for the Steam Get Configuration Procedure, see Section 6.10
+    pub fn get_configuration(&self) -> Result<Vec<ServiceCapability>> {
+        if self.state.configured() {
+            Ok(self.capabilities.clone())
+        } else {
+            Err(Error::InvalidState)
+        }
     }
 
     /// When a L2CAP channel is received after an Open command is accepted, it should be
@@ -660,5 +684,44 @@ mod tests {
     }
 
     #[test]
-    fn media_delivery() {}
+    fn get_configuration() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut s = StreamEndpoint::new(
+            REMOTE_ID_VAL,
+            MediaType::Audio,
+            EndpointType::Sink,
+            vec![ServiceCapability::MediaTransport,
+                 ServiceCapability::MediaCodec {
+                    media_type: MediaType::Audio,
+                    codec_type: MediaCodecType::new(0),
+                    codec_extra: vec![0x60, 0x0D, 0xF0, 0x0D],
+                }]
+        )
+        .unwrap();
+
+        // Can't get configuration if we aren't configured.
+        assert_eq!(Err(Error::InvalidState), s.get_configuration());
+
+        let config = vec![ServiceCapability::MediaTransport,
+                    ServiceCapability::MediaCodec {
+                    media_type: MediaType::Audio,
+                    codec_type: MediaCodecType::new(0),
+                    codec_extra: vec![0x60, 0x0D, 0xF0, 0x0D],
+                }];
+
+        assert_eq!(Ok(()),
+        s.configure(&REMOTE_ID, config.clone())
+        );
+
+        assert_eq!(Ok(config), s.get_configuration());
+
+        {
+            // Abort this stream, putting it back to the idle state.
+            let mut abort_fut = Box::pin(s.abort(None));
+            let complete = exec.run_until_stalled(&mut abort_fut);
+            assert_eq!(Poll::Ready(Ok(())), complete);
+        }
+
+        assert_eq!(Err(Error::InvalidState), s.get_configuration());
+    }
 }

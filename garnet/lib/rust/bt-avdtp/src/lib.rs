@@ -156,6 +156,24 @@ impl Peer {
         response.and(Ok(()))
     }
 
+    /// Send a Get Stream Configuration (Sec 8.10) command to the remote peer
+    /// for the given remote `stream_id`.
+    /// Asynchronously returns the set of ServiceCapabilities previously
+    /// configured between these two peers.
+    /// Error will be RemoteRejected with the error code reported by the remote
+    /// if the remote peer rejects this command.
+    pub async fn get_configuration<'a>(
+        &'a self, stream_id: &'a StreamEndpointId,
+    ) -> Result<Vec<ServiceCapability>> {
+        let stream_params = &[stream_id.to_msg()];
+        let response: Result<GetCapabilitiesResponse> =
+            await!(self.send_command(SignalIdentifier::GetConfiguration, stream_params));
+        match response {
+            Ok(response) => Ok(response.capabilities),
+            Err(e) => Err(e),
+        }
+    }
+
     /// Send a Stream Reconfigure (Sec 8.11) command to the remote peer for the
     /// given remote `stream_id`, to reconfigure the Application Service
     /// capabilities in `capabilities`.
@@ -310,14 +328,18 @@ pub enum Request {
         capabilities: Vec<ServiceCapability>,
         responder: ConfigureResponder,
     },
-    Open {
+    GetConfiguration {
         stream_id: StreamEndpointId,
-        responder: SimpleResponder,
+        responder: GetCapabilitiesResponder,
     },
     Reconfigure {
         local_stream_id: StreamEndpointId,
         capabilities: Vec<ServiceCapability>,
         responder: ConfigureResponder,
+    },
+    Open {
+        stream_id: StreamEndpointId,
+        responder: SimpleResponder,
     },
     Start {
         stream_ids: Vec<StreamEndpointId>,
@@ -424,6 +446,14 @@ impl Request {
                     responder: ConfigureResponder { signal, peer, id },
                 })
             }
+            SignalIdentifier::GetConfiguration => parse_one_seid!(
+                body,
+                signal,
+                peer,
+                id,
+                GetConfiguration,
+                GetCapabilitiesResponder
+            ),
             SignalIdentifier::Reconfigure => {
                 if body.len() < 3 {
                     return Err(Error::RequestInvalid(ErrorCode::BadLength));

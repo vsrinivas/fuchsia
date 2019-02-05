@@ -334,6 +334,23 @@ impl RemotePeer {
                     }
                 }
             }
+            avdtp::Request::GetConfiguration {
+                stream_id,
+                responder,
+            } => {
+                let stream = match self.streams.get_endpoint(&stream_id) {
+                    None => return responder.reject(avdtp::ErrorCode::BadAcpSeid),
+                    Some(stream) => stream,
+                };
+                match stream.get_configuration() {
+                    Ok(c) => responder.send(&c),
+                    Err(e) => {
+                        // Only happens when the stream is in the wrong state
+                        responder.reject(avdtp::ErrorCode::BadState)?;
+                        Err(e)
+                    }
+                }
+            }
             avdtp::Request::Reconfigure {
                 responder,
                 local_stream_id,
