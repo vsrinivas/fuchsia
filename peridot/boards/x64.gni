@@ -1,1 +1,1 @@
-import("//garnet/boards/x64.gni")
+import("//boards/x64.gni")
