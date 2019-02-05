@@ -11,8 +11,9 @@
         ],
         "services": [
             "fuchsia.devicesettings.DeviceSettingsManager",
-            "fuchsia.netstack.Netstack",
-            "fuchsia.net.stack.Stack"
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.stack.Stack",
+            "fuchsia.netstack.Netstack"
         ]
     }
 }
