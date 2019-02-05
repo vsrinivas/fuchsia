@@ -1,7 +1,7 @@
 # Wire Format Specification
 
 This document is a specification of the Fuchsia Interface Definition Language
-(FIDL) data structure encoding.
+(**FIDL**) data structure encoding.
 
 See [Overview](../README.md) for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
@@ -49,23 +49,23 @@ header**).
 To store variable-size or optional data, the primary object may refer to
 **secondary objects**, such as string content, vector content, structs, and
 unions. Secondary objects are stored **out-of-line** sequentially in traversal
-order following the object which reference them. In encoded messages, the
+order following the object which references them. In encoded messages, the
 presence of secondary objects is marked by a flag. In decoded messages, the
 flags are substituted with pointers to their location in memory (or null
 pointers when absent).
 
 Primary and secondary objects are 8-byte aligned and stored sequentially in
-traversal order without gaps other than the minimum required padding to maintain
-object alignment.
+traversal order without gaps (other than the minimum required padding to maintain
+object alignment).
 
 Objects may also contain **in-line objects** which are aggregated within the
 body of the containing object, such as embedded structs and fixed-size arrays of
 structs. The alignment factor of in-line objects is determined by the alignment
 factor of their most restrictive member.
 
-In the following example, each Rect structure contains two Point objects which
-are stored in-line whereas each Region structure contains a vector with a
-variable number of Rect objects which are stored sequentially out-of-line. In
+In the following example, each `Rect` structure contains two `Point` objects which
+are stored in-line, whereas each `Region` structure contains a vector with a
+variable number of `Rect` objects which are stored sequentially out-of-line. In
 this case, the secondary object is the vector's content (as a unit).
 
 ```fidl
@@ -83,7 +83,7 @@ struct Point { uint32 x, y; };
 
 #### Traversal Order
 
-The **traversal order** of a message is a determined by a recursive depth-first
+The **traversal order** of a message is determined by a recursive depth-first
 walk of all of the **objects** it contains, as obtained by following the chain
 of references.
 
@@ -105,7 +105,7 @@ struct Product {
 };
 ```
 
-The depth-first traversal order for a Cart message is defined by the following
+The depth-first traversal order for a `Cart` message is defined by the following
 pseudo-code:
 
 ```
@@ -121,13 +121,12 @@ visit Cart:
 
 #### Dual Forms
 
-The same message content can be expressed in two forms -- **encoded** and
-**decoded** -- which have the same size and overall layout but differ in terms
-of their representation of pointers (memory addresses) or handles
-(capabilities).
+The same message content can be expressed in two forms: **encoded** and **decoded**.
+These have the same size and overall layout, but differ in terms of their
+representation of pointers (memory addresses) or handles (capabilities).
 
 FIDL is designed such that **encoding** and **decoding** of messages can occur
-in place in memory assuming that objects have been stored in traversal order.
+in place in memory, assuming that objects have been stored in traversal order.
 
 The representation of encoded messages is unambiguous. There is exactly one
 possible encoding for all messages of the same type with the same content.
@@ -139,16 +138,16 @@ possible encoding for all messages of the same type with the same content.
 An **encoded message** has been prepared for transfer to another process: it
 does not contain pointers (memory addresses) or handles (capabilities).
 
-During **encoding**…
+During **encoding**...
 
 *   all pointers to sub-objects within the message are replaced with flags which
-    indicate whether their referent is present or not-present in traversal order
+    indicate whether their referent is present or not-present in traversal order,
 *   all handles within the message are extracted to an associated **handle
     vector** and replaced with flags which indicate whether their referent is
-    present or not-present in traversal order
+    present or not-present in traversal order.
 
-The resulting **encoding message** and **handle vector** can then be sent to
-another process using **zx_channel_call()** or a similar IPC mechanism.
+The resulting **encoded message** and **handle vector** can then be sent to
+another process using [**zx_channel_call()**][channel call] or a similar IPC mechanism.
 
 #### Decoded Messages
 
@@ -158,9 +157,9 @@ space: it may contain pointers (memory addresses) or handles (capabilities).
 During **decoding**...
 
 *   all pointers to sub-objects within the message are reconstructed using the
-    encoded present / not-present flags in traversal order
+    encoded present / not-present flags in traversal order,
 *   all handles within the message are restored from the associated **handle
-    vector** using the encoded present / not-present flags in traversal order
+    vector** using the encoded present / not-present flags in traversal order.
 
 The resulting **decoded message** is ready to be consumed directly from memory.
 
@@ -212,8 +211,8 @@ ordinary C `int32_t` would be.
 
 Arrays are denoted:
 
-*   `array<T>:n`: where *T* can be any FIDL type
-    (including an array) and *n* is the number of elements in the array.
+*   `array<T>:N`: where **T** can be any FIDL type
+    (including an array) and **N** is the number of elements in the array.
 
 ![drawing](arrays.png)
 
@@ -223,36 +222,30 @@ Arrays are denoted:
 *   Nullable; null strings and empty strings are distinct.
 *   Can specify a maximum size, e.g. `string:40` for
     a maximum 40 byte string.
-*   String content does not have a null-terminator.[^1]
+*   String content does not have a null-terminator [[1]](#Footnote-1).
 
 *   Stored as a 16 byte record consisting of:
 
-    *   `size` : 64-bit unsigned number of code
-        units (bytes)
-    *   `data` : 64-bit presence indication or
-        pointer to out-of-line string data
+    *   `size`: 64-bit unsigned number of code units (bytes)
+    *   `data`: 64-bit presence indication or pointer to out-of-line string data
 
 *   When encoded for transfer, `data` indicates
     presence of content:
 
-    *   `0` : string is null
-    *   `UINTPTR_MAX` : string is non-null, data is
-        the next out-of-line object
+    *   `0`: string is null
+    *   `UINTPTR_MAX`: string is non-null, data is the next out-of-line object
 
 *   When decoded for consumption, `data` is a
-    pointer to content.
+    pointer to content:
 
-    *   `0` : string is null
-    *   `<valid pointer>` : string is non-null, data
-        is at indicated memory address
+    *   `0`: string is null
+    *   `<valid pointer>`: string is non-null, data is at indicated memory address
 
 Strings are denoted as follows:
 
-*   `string` : non-nullable string (validation error
-    occurs if null `data` is encountered)
-*   `string?` : nullable string
-*   `string:N, string:N?` : string with maximum
-    length of <em>N</em> bytes
+*   `string`: non-nullable string (validation error occurs if null `data` is encountered)
+*   `string?`: nullable string
+*   `string:N`, `string:N?`: string with maximum length of **N** bytes
 
 ![drawing](strings.png)
 
@@ -263,33 +256,27 @@ Strings are denoted as follows:
 *   Can specify a maximum size, e.g. `vector<T>:40`
     for a maximum 40 element vector.
 *   Stored as a 16 byte record consisting of:
-    *   `size` : 64-bit unsigned number of elements
-    *   `data` : 64-bit presence indication or
-        pointer to out-of-line element data
+    *   `size`: 64-bit unsigned number of elements
+    *   `data`: 64-bit presence indication or pointer to out-of-line element data
 *   When encoded for transfer, `data` indicates
     presence of content:
-    *   `0` : vector is null
-    *   `UINTPTR_MAX` : vector is non-null, data is
-        the next out-of-line object
+    *   `0`: vector is null
+    *   `UINTPTR_MAX`: vector is non-null, data is the next out-of-line object
 *   When decoded for consumption, `data` is a
-    pointer to content.
-    *   `0` : vector is null
-    *   `<valid pointer>` : vector is non-null, data
-        is at indicated memory address
+    pointer to content:
+    *   `0`: vector is null
+    *   `<valid pointer>`: vector is non-null, data is at indicated memory address
 *   There is no special case for vectors of bools. Each bool element takes one
     byte as usual.
 
 Vectors are denoted as follows:
 
-*   `vector<T>` : non-nullable vector of element
-    type <em>T</em> (validation error occurs if null
-    `data` is encountered)
-*   `vector<T>?` : nullable vector of element type
-    <em>T</em>
-*   `vector<T>:N, vector<T>:N?` : vector with
-    maximum length of <em>N</em> elements
+*   `vector<T>`: non-nullable vector of element type **T** (validation error
+    occurs if null `data` is encountered)
+*   `vector<T>?`: nullable vector of element type **T**
+*   `vector<T>:N`, `vector<T>:N?`: vector with maximum length of **N** elements
 
-<em>T</em> can be any FIDL type.
+**T** can be any FIDL type.
 
 ![drawing](vectors.png)
 
@@ -297,68 +284,58 @@ Vectors are denoted as follows:
 
 *   Transfers a Zircon capability by handle value.
 *   Stored as a 32-bit unsigned integer.
-*   Nullable by encoding as a zero-valued[^2] handle (equivalent to
+*   Nullable by encoding as a zero-valued [[2]](#Footnote-2) handle (equivalent to
     `ZX_HANDLE_INVALID`).
 
 *   When encoded for transfer, the stored integer indicates presence of handle:
 
-    *   `0` : handle is null
-    *   `UINT32_MAX` : handle is non-null, handle
+    *   `0`: handle is null
+    *   `UINT32_MAX`: handle is non-null, handle
         value is the next entry in handle table
 
-*   When decoded for consumption, the stored integer is handle value itself.
+*   When decoded for consumption, the stored integer is the handle value itself:
 
-    *   `0` : handle is null
-    *   `<valid handle>` : handle is non-null,
+    *   `0`: handle is null
+    *   `<valid handle>`: handle is non-null,
         handle value is provided in-line
 
 Handles are denoted:
 
-*   `handle` : non-nullable Zircon handle of
-    unspecified type
-*   `handle?` : nullable Zircon handle of
-    unspecified type
-*   `handle<H>` : non-nullable Zircon handle of type
-    <em>H</em>
-*   `handle<H>?` : nullable Zircon handle of type
-    <em>H</em>
-*   `Interface` : non-nullable FIDL interface
-    (client endpoint of channel)
-*   `Interface?` : nullable FIDL interface (client
-    endpoint of channel)
-*   `request<Interface>` : non-nullable FIDL interface
-    request (server endpoint of channel)
-*   `request<Interface>?` : nullable FIDL interface request
-    (server endpoint of channel)
+*   `handle`: non-nullable Zircon handle of unspecified type
+*   `handle?`: nullable Zircon handle of unspecified type
+*   `handle<H>`: non-nullable Zircon handle of type **H**
+*   `handle<H>?`: nullable Zircon handle of type **H**
+*   `Interface`: non-nullable FIDL interface (client endpoint of channel)
+*   `Interface?`: nullable FIDL interface (client endpoint of channel)
+*   `request<Interface>`: non-nullable FIDL interface request (server endpoint of channel)
+*   `request<Interface>?`: nullable FIDL interface request (server endpoint of channel)
 
-<em>H</em> can be one of[^3]: `channel, event, eventpair, fifo,
-job, process, port, resource, socket, thread, vmo`
+**H** can be one of [[3]](#Footnote-3): `bti`, `channel`, `debuglog`, `event`, `eventpair`,
+`fifo`, `guest`, `interrupt`, `job`, `port`, `process`, `profile`, `resource`, `socket`,
+`thread`, `timer`, `vmar`, or `vmo`.
 
 ### Structs
 
 *   Record type consisting of a sequence of typed fields.
 
-*   Alignment factor of structure is defined by maximal alignment factor of any
-    of its fields.
+*   Alignment factor of structure is defined by maximal alignment factor of all
+    fields.
 
-*   Structure is padded with zeroes so that its size is a multiple of its
-    alignment factor.
+*   Structure is padded with zeros so that its size is a multiple of its
+    alignment factor. For example:
 
-    *   e.g. 1. a struct with an **int32** and an **int8** field has an
-        alignment of 4 bytes (due to **int32**) and a size of 8 bytes (3 bytes
-        of padding)
-    *   e.g. 2. a struct with a **bool** and a **string** field has an alignment
-        of 8 bytes (due to **string**) and a size of 24 bytes (7 bytes of
-        padding)
-    *   e.g. 3. a struct with a **bool** and a **uint8[2]** field has an
-        alignment of 1 byte and a size of 3 bytes (no padding!)
+    1. a struct with an **int32** and an **int8** field has an alignment of 4 bytes (due to
+       the **int32**), and a size of 8 bytes (3 bytes of padding after the **int8**)
+    2. a struct with a **bool** and a **string** field has an alignment of 8 bytes (due to
+       the **string**) and a size of 24 bytes (7 bytes of padding after the **bool**)
+    3. a struct with a **bool** and a **uint8[2]** field has an alignment of 1 byte and a
+       size of 3 bytes (no padding!)
 
 *   In general, changing the definition of a struct will break binary
     compatibility; instead prefer to extend interfaces by adding new methods
     which use new structs.
 
-*   A struct with no fields (an "empty" struct) has a size of 1 and an alignment
-    of 1.
+*   A struct with no fields (an "empty" struct) has a size of 1 and an alignment of 1.
 
     *   An empty struct is exactly equivalent to a struct with a single
         **uint8** field that contains a value of zero.
@@ -375,19 +352,18 @@ Storage of a structure depends on whether it is nullable at point of reference.
         reference.
     *   When encoded for transfer, stored reference indicates presence of
         structure:
-        *   `0` : reference is null
-        *   `UINTPTR_MAX` : reference is non-null,
-            structure content is the next out-of-line object
-    *   When decoded for consumption, stored reference is a pointer.
-        *   `0` : reference is null
-        *   `<valid pointer>` : reference is
-            non-null, structure content is at indicated memory address
+        *   `0`: reference is null
+        *   `UINTPTR_MAX`: reference is non-null, structure content
+            is the next out-of-line object
+    *   When decoded for consumption, stored reference is a pointer:
+        *   `0`: reference is null
+        *   `<valid pointer>`: reference is non-null, structure content is at
+            indicated memory address
 
-Structs are denoted by their declared name (e.g. <strong>Circle</strong>) and
-nullability:
+Structs are denoted by their declared name (e.g. `Circle`) and nullability:
 
-*   `Circle` : non-nullable Circle
-*   `Circle?` : nullable Circle
+*   `Circle`: non-nullable `Circle`
+*   `Circle?`: nullable `Circle`
 
 The following example shows how structs are laid out according to their fields.
 
@@ -403,10 +379,33 @@ struct Point { float32 x, y; };
 struct Color { float32 r, g, b; };
 ```
 
-The Color content is padded to the 8 byte secondary object alignment
-boundary.
+The `Color` content is padded to the 8 byte secondary object alignment boundary.
 
 ![drawing](structs.png)
+
+### Tables
+
+*   Record type consisting of the number of elements and a pointer.
+*   Pointer points to an array of envelopes, each of which contains one element.
+*   Each element is associated with an ordinal.
+*   Ordinals are sequential, gaps are discouraged.
+
+Tables are denoted by their declared name (e.g., **Value**) and nullability:
+
+*   `Value`: non-nullable `Value`
+*   `Value?`: nullable `Value`
+
+The following example shows how tables are laid out according to their fields.
+
+```fidl
+table Value {
+    1: int16 command;
+    2: Circle data;
+    3: float64 offset;
+};
+```
+
+![drawing](tables.png)
 
 ### Unions
 
@@ -417,12 +416,11 @@ boundary.
 *   Alignment factor of union is defined by the maximal alignment factor of the
     tag field and any of its options.
 *   Union is padded so that its size is a multiple of its alignment factor.
-    *   e.g. 1. a union with an **int32** and an **int8** option has an
-        alignment of 4 bytes (due to **int32**) and a size of 8 bytes including
-        the 4 byte tag (0 to 3 bytes of padding).
-    *   e.g. 2. a union with a **bool** and a **string** option has an alignment
-        of 8 bytes (due to **string**) and a size of 24 bytes (4 to 19 bytes of
-        padding).
+    For example:
+    1. a union with an **int32** and an **int8** option has an alignment of 4 bytes (due to
+       the **int32**), and a size of 8 bytes including the 4 byte tag (0 to 3 bytes of padding).
+    2. a union with a **bool** and a **string** option has an alignment of 8 bytes (due to
+       the **string**), and a size of 24 bytes (4 to 19 bytes of padding).
 *   In general, changing the definition of a union will break binary
     compatibility; instead prefer to extend interfaces by adding new methods
     which use new unions.
@@ -438,19 +436,16 @@ Storage of a union depends on whether it is nullable at point of reference.
     *   Contents are stored out-of-line and accessed through an indirect
         reference.
     *   When encoded for transfer, stored reference indicates presence of union:
-        *   `0` : reference is null
-        *   `UINTPTR_MAX` : reference is non-null,
-            union content is the next out-of-line object
-    *   When decoded for consumption, stored reference is a pointer.
-        *   `0` : reference is null
-        *   `<valid pointer>` : reference is
-            non-null, union content is at indicated memory address
+        *   `0`: reference is null
+        *   `UINTPTR_MAX`: reference is non-null, union content is the next out-of-line object
+    *   When decoded for consumption, stored reference is a pointer:
+        *   `0`: reference is null
+        *   `<valid pointer>`: reference is non-null, union content is at indicated memory address
 
-Union are denoted by their declared name (e.g. <strong>Pattern</strong>) and
-nullability:
+Unions are denoted by their declared name (e.g. `Pattern`) and nullability:
 
-*   `Pattern` : non-nullable Shape
-*   `Pattern?` : nullable Shape
+*   `Pattern`: non-nullable `Pattern`
+*   `Pattern?`: nullable `Pattern`
 
 The following example shows how unions are laid out according to their options.
 
@@ -467,7 +462,7 @@ struct Color { float32 r, g, b; };
 struct Texture { string name; };
 ```
 
-When laying out **Pattern**, space is first allotted to the tag (4 bytes) then
+When laying out `Pattern`, space is first allotted to the tag (4 bytes), then
 to the selected option.
 
 ![drawing](unions.png)
@@ -479,9 +474,9 @@ to the selected option.
 *   Each message is prefixed with a simple 16 byte header, the body immediately
     follows header.
     *   `zx_txid_t txid`, transaction ID (32 bits)
-        * txids with the high bit set are reserved for use by zx_channel_call
+        * txids with the high bit set are reserved for use by [**zx_channel_call()**][channel call]
         * txids with the high bit unset are reserved for use by userspace
-        * See the [channel call] manpage for more details on txid allocation
+        * See [**zx_channel_call()**][channel call] for more details on txid allocation
     *   `uint32 reserved0`, reserved for future use.
     *   `uint32 flags`, all unused bits must be set to zero
     *   `uint32 ordinal`
@@ -508,27 +503,27 @@ to the selected option.
     *   Currently there are no flags, so all bits must be zero.
 
 Messages which are sent directly through Zircon channels have a maximum total
-size (header + body) which is defined by the kernel <em>(currently 64 KB,
-eventual intent may be 16 KB).</em>
+size (header + body) which is defined by the kernel (*currently 64 kB,
+eventual intent may be 16 kB*).</em>
 
 It is possible to extend interfaces by declaring additional methods. The
 language also supports creating derived interfaces provided the method ordinals
 remain unique down the hierarchy. Interface derivation is purely syntactic; it
 does not affect the wire format).
 
-We'll use the following interface for the next few examples.
+We'll use the following interface for the next few examples:
 
 ```fidl
-    interface Calculator {
-        1: Add(int32 a, int32 b) -> (int32 sum);
-        2: Divide(int32 dividend, int32 divisor)
-        -> (int32 quotient, int32 remainder);
-        3: Clear();
-    };
+interface Calculator {
+    1: Add(int32 a, int32 b) -> (int32 sum);
+    2: Divide(int32 dividend, int32 divisor)
+    -> (int32 quotient, int32 remainder);
+    3: Clear();
+};
 ```
 
 _FIDL does not provide a mechanism to determine the "version" of an interface;
-interface capabilities must be determined out-of-band such as by querying a
+interface capabilities must be determined out-of-band, such as by querying a
 **ServiceProvider** for an interface "version" by name or by other means._
 
 #### Method Call Messages
@@ -562,17 +557,21 @@ A method result message provides the result associated with a prior method call.
 The body of the message contains the method results as if they were packed in a
 **struct**.
 
-The message result header consists of `uint32 txid, uint32 reserved, uint32
-flags, uint32 ordinal`.  The `txid` must be equal to the `txid` of the method
-call to which this message is a response. The flags must be zero. The `ordinal`
-must be equal to the `ordinal` of the method call to which this message is a
-response.
+The message result header consists of 4 unsigned 32-bit values:
+
+Value      | Meaning
+-----------|-------------------------------------------------------------------------------------------------
+`txid`     | This `txid` must be equal to the `txid` of the method call to which this message is a response.
+`reserved` | (not used, must be zero)
+`flags`    | No flags currently defined, must be zero.
+`ordinal`  | This `ordinal` must be equal to the `ordinal` of the method call to which this message is a response.
 
 ![drawing](method-result-messages.png)
 
 #### Event Messages
 
 These support sending unsolicited messages from the server back to the client.
+Here we've added ordinal 4 to our `Calculator` example:
 
 ```fidl
 interface Calculator {
@@ -584,16 +583,16 @@ interface Calculator {
 ```
 
 The implementor of an interface sends unsolicited event messages to the client
-of the interface to indicate that an asynchronous event occurred as specified by
+of the interface to indicate that an asynchronous event occurred, as specified by
 the interface declaration.
 
-Events may be used to let the client observe significant state changes without
+Events may be used to let the client observe significant state changes, without
 having to create an additional channel to receive the response.
 
-In the **Calculator** example, we can imagine that an attempt to divide by zero
+In the `Calculator` example, we can imagine that an attempt to divide by zero
 would cause the **Error()** event to be sent with a "divide by zero" status code
 prior to the connection being closed. This allows the client to distinguish
-between the connection being closed due to an error as opposed to for other
+between the connection being closed due to an error, as opposed to for other
 reasons (such as the calculator process terminating abnormally).
 
 The body of the message contains the event arguments as if they were packed in a
@@ -615,38 +614,36 @@ header.
 
 ##### Epitaph (Control Message Ordinal 0xFFFFFFFF)
 
-An epitaph is a message with ordinal **0xFFFFFFFF**.  A server may send an
+An epitaph is a message with ordinal **0xFFFFFFFF**. A server may send an
 epitaph as the last message prior to closing the connection, to provide an
-indication of why the connection is being closed.  No further messages may be
-sent through the channel after the epitaph.  Epitaphs are not sent from clients
+indication of why the connection is being closed. No further messages may be
+sent through the channel after the epitaph. Epitaphs are not sent from clients
 to servers.
 
-The epitaph contains an error status.  The error status of the epitaph is stored
-in the reserved uint32 of the message header.  The reserved word is treated as
+The epitaph contains an error status. The error status of the epitaph is stored
+in the reserved `uint32` of the message header. The reserved word is treated as
 being of type **zx_status_t**: negative numbers are reserved for system error
-codes, positive numbers are reserved for application error codes, and ZX_OK is
-used to indicate normal connection closure.  The message is otherwise empty.
+codes, positive numbers are reserved for application error codes, and `ZX_OK` is
+used to indicate normal connection closure. The message is otherwise empty.
 
 ## Details
 
 #### Size and Alignment
 
-`sizeof(T)` denotes the size in bytes for an object
-of type T.
+`sizeof(T)` denotes the size in bytes for an object of type **T**.
 
-`alignof(T)` denotes the alignment factor in bytes
-to store an object of type T.
+`alignof(T)` denotes the alignment factor in bytes to store an object of type **T**.
 
 FIDL primitive types are stored at offsets in the message which are a multiple
-of their size in bytes. Thus for primitives T_,_ `alignof(T) ==
-sizeof(T)`. This is called <em>natural alignment</em>. It has the
+of their size in bytes. Thus for primitives **T**, `alignof(T) ==
+sizeof(T)`. This is called *natural alignment*. It has the
 nice property of satisfying typical alignment requirements of modern CPU
 architectures.
 
 FIDL complex types, such as structs and arrays, are stored at offsets in the
-message which are a multiple of the maximum alignment factor of any of their
-fields. Thus for complex types T, `alignof(T) ==
-max(alignof(F:T))` over all fields F in T. It has the nice
+message which are a multiple of the maximum alignment factor of all of their
+fields. Thus for complex types **T**, `alignof(T) ==
+max(alignof(F:T))` over all fields **F** in **T**. It has the nice
 property of satisfying typical C structure packing requirements (which can be
 enforced using packing attributes in the generated code). The size of a complex
 type is the total number of bytes needed to store its members properly aligned
@@ -662,170 +659,60 @@ FIDL in-line objects (complex types embedded within primary or secondary
 objects) are aligned according to their type. They are not forced to 8 byte
 alignment.
 
-<table>
-  <tr>
-   <td><strong>types</strong>
-   </td>
-   <td><strong>sizeof(T)</strong>
-   </td>
-   <td><strong>alignof(T)</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>bool
-   </td>
-   <td>1
-   </td>
-   <td>1
-   </td>
-  </tr>
-  <tr>
-   <td>int8, uint8
-   </td>
-   <td>1
-   </td>
-   <td>1
-   </td>
-  </tr>
-  <tr>
-   <td>int16, uint16
-   </td>
-   <td>2
-   </td>
-   <td>2
-   </td>
-  </tr>
-  <tr>
-   <td>int32, uint32
-   </td>
-   <td>4
-   </td>
-   <td>4
-   </td>
-  </tr>
-  <tr>
-   <td>float32
-   </td>
-   <td>4
-   </td>
-   <td>4
-   </td>
-  </tr>
-  <tr>
-   <td>int64, uint64
-   </td>
-   <td>8
-   </td>
-   <td>8
-   </td>
-  </tr>
-  <tr>
-   <td>float64
-   </td>
-   <td>8
-   </td>
-   <td>8
-   </td>
-  </tr>
-  <tr>
-   <td>enum
-   </td>
-   <td>sizeof(underlying type)
-   </td>
-   <td>alignof(underlying type)
-   </td>
-  </tr>
-  <tr>
-   <td>array<T>:n
-   </td>
-   <td>sizeof(T) * n
-   </td>
-   <td>alignof(T)
-   </td>
-  </tr>
-  <tr>
-   <td>string, string?, string:N, string:N?
-   </td>
-   <td>16
-   </td>
-   <td>8
-   </td>
-  </tr>
-  <tr>
-   <td>vector<T>, vector<T>?,
-<p>
-vector<T>:N,
-<p>
-vector<T>:N?
-   </td>
-   <td>16
-   </td>
-   <td>8
-   </td>
-  </tr>
-  <tr>
-   <td>handle, handle?, handle<H>, handle<H>?,
-<p>
-Interface, Interface?, request<Interface>, request<Interface>?
-   </td>
-   <td>4
-   </td>
-   <td>4
-   </td>
-  </tr>
-  <tr>
-   <td>struct T
-   </td>
-   <td>sum of field sizes and padding for alignment
-   </td>
-   <td>maximum alignment factor among all fields
-   </td>
-  </tr>
-  <tr>
-   <td>struct T?
-   </td>
-   <td>8
-   </td>
-   <td>8
-   </td>
-  </tr>
-  <tr>
-   <td>union T
-   </td>
-   <td>maximum of field sizes and padding for alignment
-   </td>
-   <td>maximum alignment factor among all fields
-   </td>
-  </tr>
-  <tr>
-   <td>union T?
-   </td>
-   <td>8
-   </td>
-   <td>8
-   </td>
-  </tr>
-  <tr>
-   <td>message header
-   </td>
-   <td>16
-   </td>
-   <td>16
-   </td>
-  </tr>
-</table>
+##### Primitive types
+
+Type(s)           | bytes                   | alignment
+------------------|-------------------------|-------------------------
+`bool`            | 1                       | 1
+`int8`, `uint8`   | 1                       | 1
+`int16`, `uint16` | 2                       | 2
+`int32`, `uint32` | 4                       | 4
+`float32`         | 4                       | 4
+`int64`, `uint64` | 8                       | 8
+`float64`         | 8                       | 8
+`enum`            | sizeof(underlying type) | alignof(underlying type)
+
+##### Complex types
+
+> Note that **N** indicates the number of elements, whether stated explicity (as in
+> `array<T>:N`, an array with **N** elements of type **T**) or implictly (a `table`
+> consisting of 7 elements would have `N=7`).
+
+Type(s)                                                  | bytes         | alignment
+---------------------------------------------------------|---------------|-----------
+`array<T>:N`                                             | sizeof(T) * N | alignof(T)
+`string`, `string?`, `string:N`, `string:N?`             | 16            | 8
+`vector<T>`, `vector<T>?`, `vector<T>:N`, `vector<T>:N?` | 16            | 8
+`handle`, `handle?`, `handle<H>`, `handle<H>?`           | 4             | 4
+`Interface`, `Interface?`                                | 4             | 4
+`request<Interface>`, `request<Interface>?`              | 4             | 4
+
+##### Aggregate types
+
+Type(s)        | bytes                                | alignment
+---------------|--------------------------------------|----------------
+`struct`       | sum(field sizes) + pad               | max(all fields)
+`struct?`      | 8                                    | 8
+`table`        | 16 + 16 * N + sum(field sizes) + pad | 8
+`table?`       | 16                                   | 8
+`union`        | 4 + pad + max(field sizes) + pad     | max(all fields)
+`union?`       | 8                                    | 8
+`xunion`       | 24 + max(field sizes)                | 8
+`xunion?`      | 8                                    | 8
+message header | 16                                   | 16
+envelope       | 24 + content                         | 8
 
 #### Padding
 
 The creator of a message must fill all alignment padding gaps with zeros.
 
-The consumer of a message may verify that padding contains zeroes (and generate
+The consumer of a message may verify that padding contains zeros (and generate
 an error if not) but it is not required to check as long as it does not actually
 read the padding bytes.
 
 #### Maximum Recursion Depth
 
-FIDL arrays, vectors, structures, and unions enable the construction of
+FIDL arrays, vectors, structures, tables, and unions enable the construction of
 recursive messages. Left unchecked, processing excessively deep messages could
 lead to resource exhaustion of the consumer.
 
@@ -833,12 +720,12 @@ For safety, the maximum recursion depth for all FIDL messages is limited to
 **32** levels of nested complex objects. The FIDL validator **must** enforce
 this by keeping track of the current nesting level during message validation.
 
-Complex objects are arrays, vectors, structures, or unions which contain
+Complex objects are arrays, vectors, structures, tables, or unions which contain
 pointers or handles which require fix-up. These are precisely the kinds of
 objects for which **encoding tables** must be generated. See [C
 Language Bindings](../../languages/c.md)
 for information about encoding
-tables. Therefore limiting the nesting depth of complex objects has the effect
+tables. Therefore, limiting the nesting depth of complex objects has the effect
 of limiting the recursion depth for traversal of encoding tables.
 
 Formal definition:
@@ -859,10 +746,10 @@ Message validation is **required** when decoding messages received from a peer
 to prevent bad data from propagating beyond the service entry point.
 
 Message validation is **optional but recommended** when encoding messages to
-send to a peer to help localize violated integrity constraints.
+send to a peer in order to help localize violated integrity constraints.
 
 To minimize runtime overhead, validation should generally be performed as part
-of a single pass message encoding or decoding process such that only a single
+of a single pass message encoding or decoding process, such that only a single
 traversal is needed. Since messages are encoded in depth-first traversal order,
 traversal exhibits good memory locality and should therefore be quite efficient.
 
@@ -887,31 +774,37 @@ Conformant FIDL bindings must check all of the following integrity constraints:
         a corollary, pointers never refer to locations outside of the buffer.
 *   Decoding only:
     *   All present / not-present flags for referenced sub-objects hold the
-        value **0** or **UINTPTR_MAX**.
+        value **0** or **UINTPTR_MAX** only.
     *   All present / not-present flags for referenced handles hold the value
-        **0** or **UINT32_MAX.**
+        **0** or **UINT32_MAX** only.
 
 Stricter FIDL bindings may perform some or all of the following additional
 safety checks:
 
-*   All padding is filled with zeroes.
+*   All padding is filled with zeros.
 *   All floating point values represent valid IEEE 754 bit patterns.
 *   All bools have the value **0** or **1**.
 
-<!-- Footnotes themselves at the bottom. -->
+--------------------------------------------------------------------------------------------------
 
-## Notes
+#### Footnote 1
 
-[channel call]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/channel_call.md
+Justification for unterminated strings. Since strings can contain embedded null characters, it is
+safer to encode the size explicitly and to make no guarantees about null-termination, thereby
+defeating incorrect assumptions that clients might make.
+Modern APIs generally use sized strings as a security precaution.
+It's important that data always have one unambiguous interpretation.
 
-[^1]: Justification for unterminated strings. Since strings can contain embedded
-    null characters, it is safer to encode the size explicitly and to make no
-    guarantees about null-termination, thereby defeating incorrect assumptions
-    that clients might make. Modern APIs generally use sized strings as a
-    security precaution. It's important that data always have one unambiguous
-    interpretation.
-[^2]: Defining the zero handle to mean "there is no handle" makes it is safe to
-    default-initialize wire format structures to all zeroes. Zero is also the
-    value of the `ZX_HANDLE_INVALID` constant.
-[^3]: New handle types can easily be added to the language without affecting the
-    wire format since all handles are transferred the same way.
+#### Footnote 2
+
+Defining the zero handle to mean "there is no handle" makes it is safe to default-initialize
+wire format structures to all zeros.
+Zero is also the value of the `ZX_HANDLE_INVALID` constant.
+
+#### Footnote 3
+
+New handle types can easily be added to the language without affecting the wire format
+since all handles are transferred the same way.
+
+[channel call]: https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_call.md
+
