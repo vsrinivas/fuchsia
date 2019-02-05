@@ -98,6 +98,9 @@ zx_status_t LauncherImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
     if (ordinal == fuchsia_process_LauncherLaunchOrdinal ||
         ordinal == fuchsia_process_LauncherLaunchGenOrdinal) {
         return Launch(buffer, std::move(message));
+    } else if (ordinal == fuchsia_process_LauncherLaunch2Ordinal ||
+        ordinal == fuchsia_process_LauncherLaunch2GenOrdinal) {
+        return Launch2(buffer, std::move(message));
     } else if (ordinal == fuchsia_process_LauncherCreateWithoutStartingOrdinal ||
                ordinal == fuchsia_process_LauncherCreateWithoutStartingGenOrdinal) {
         return CreateWithoutStarting(buffer, std::move(message));
@@ -160,6 +163,41 @@ zx_status_t LauncherImpl::Launch(fidl::MessageBuffer* buffer, fidl::Message mess
     return message.Write(channel_.get(), 0);
 }
 
+zx_status_t LauncherImpl::Launch2(fidl::MessageBuffer* buffer, fidl::Message message) {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(&fuchsia_process_LauncherLaunch2RequestTable, &error_msg);
+    if (status != ZX_OK) {
+        fprintf(stderr, "launcher: error: Launch: %s\n", error_msg);
+        return status;
+    }
+
+    zx_txid_t txid = message.txid();
+    uint32_t ordinal = message.ordinal();
+
+    launchpad_t* lp = nullptr;
+    PrepareLaunchpad(message, &lp);
+
+    fidl::Builder builder = buffer->CreateBuilder();
+    auto* response = builder.New<fuchsia_process_LauncherLaunch2Response>();
+    response->hdr.txid = txid;
+    response->hdr.ordinal = ordinal;
+    response->status = launchpad_go(lp, &response->process, &error_msg);
+
+    if (response->status != ZX_OK && error_msg) {
+        fprintf(stderr, "launcher: error: Launch: %s\n", error_msg);
+    }
+
+    message.set_bytes(builder.Finalize());
+    Reset();
+
+    status = message.Encode(&fuchsia_process_LauncherLaunch2ResponseTable, &error_msg);
+    if (status != ZX_OK) {
+        fprintf(stderr, "launcher: error: Launch: %s\n", error_msg);
+        return status;
+    }
+    return message.Write(channel_.get(), 0);
+}
+
 zx_status_t LauncherImpl::CreateWithoutStarting(fidl::MessageBuffer* buffer, fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(&fuchsia_process_LauncherCreateWithoutStartingRequestTable, &error_msg);
@@ -175,30 +213,25 @@ zx_status_t LauncherImpl::CreateWithoutStarting(fidl::MessageBuffer* buffer, fid
     PrepareLaunchpad(message, &lp);
 
     fidl::Builder builder = buffer->CreateBuilder();
-    fidl_message_header_t* header = builder.New<fidl_message_header_t>();
-    header->txid = txid;
-    header->ordinal = ordinal;
-    fuchsia_process_CreateWithoutStartingResult* result = builder.New<fuchsia_process_CreateWithoutStartingResult>();
+    auto* response = builder.New<fuchsia_process_LauncherCreateWithoutStartingResponse>();
+    response->hdr.txid = txid;
+    response->hdr.ordinal = ordinal;
 
-    launchpad_start_data_t data;
-    status = launchpad_ready_set(lp, &data, &error_msg);
+    launchpad_start_data_t data = {};
+    response->status = launchpad_ready_set(lp, &data, &error_msg);
 
-    result->status = status;
-    if (status == ZX_OK) {
-        result->data = builder.New<fuchsia_process_ProcessStartData>();
-        result->data->process = data.process;
-        result->data->root_vmar = data.root_vmar;
-        result->data->thread = data.thread;
-        result->data->entry = data.entry;
-        result->data->stack = data.stack;
-        result->data->bootstrap = data.bootstrap;
-        result->data->vdso_base = data.vdso_base;
-        result->data->base = data.base;
+    if (response->status == ZX_OK) {
+        response->data = builder.New<fuchsia_process_ProcessStartData>();
+        response->data->process = data.process;
+        response->data->root_vmar = data.root_vmar;
+        response->data->thread = data.thread;
+        response->data->entry = data.entry;
+        response->data->stack = data.stack;
+        response->data->bootstrap = data.bootstrap;
+        response->data->vdso_base = data.vdso_base;
+        response->data->base = data.base;
     } else if (error_msg) {
-        uint32_t len = static_cast<uint32_t>(strlen(error_msg));
-        result->error_message.size = len;
-        result->error_message.data = builder.NewArray<char>(len);
-        strncpy(result->error_message.data, error_msg, len);
+        fprintf(stderr, "launcher: error: CreateWithoutStarting: %s\n", error_msg);
     }
 
     message.set_bytes(builder.Finalize());

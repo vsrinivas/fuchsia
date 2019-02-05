@@ -628,14 +628,14 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
 
         struct {
             FIDL_ALIGNDECL
-            fuchsia_process_LauncherLaunchRequest req;
+            fuchsia_process_LauncherLaunch2Request req;
             uint8_t process_name[FIDL_ALIGN(ZX_MAX_NAME_LEN)];
         } msg;
 
         memset(&msg, 0, sizeof(msg));
-        size_t msg_len = sizeof(fuchsia_process_LauncherLaunchRequest) + FIDL_ALIGN(process_name_size);
+        size_t msg_len = sizeof(fuchsia_process_LauncherLaunch2Request) + FIDL_ALIGN(process_name_size);
 
-        msg.req.hdr.ordinal = fuchsia_process_LauncherLaunchOrdinal;
+        msg.req.hdr.ordinal = fuchsia_process_LauncherLaunch2Ordinal;
         msg.req.info.executable = FIDL_HANDLE_PRESENT;
         msg.req.info.job = FIDL_HANDLE_PRESENT;
         msg.req.info.name.size = process_name_size;
@@ -651,11 +651,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
             goto cleanup;
         }
 
-        struct {
-            FIDL_ALIGNDECL
-            fuchsia_process_LauncherLaunchResponse rsp;
-            uint8_t err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-        } reply;
+        fuchsia_process_LauncherLaunch2Response reply;
 
         zx_handle_t process = ZX_HANDLE_INVALID;
 
@@ -685,7 +681,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
             goto cleanup;
         }
 
-        status = reply.rsp.result.status;
+        status = reply.status;
 
         if (status == ZX_OK) {
             // The launcher claimed to succeed but didn't actually give us a
@@ -703,13 +699,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
                 process = ZX_HANDLE_INVALID;
             }
         } else {
-            if (err_msg) {
-                size_t n = reply.rsp.result.error_message.size;
-                if (n >= FDIO_SPAWN_ERR_MSG_MAX_LENGTH)
-                    n = FDIO_SPAWN_ERR_MSG_MAX_LENGTH - 1;
-                memcpy(err_msg, reply.err_msg, n);
-                err_msg[n] = '\0';
-            }
+            report_error(err_msg, "fuchsia.process.Launcher failed");
         }
 
         if (process != ZX_HANDLE_INVALID)

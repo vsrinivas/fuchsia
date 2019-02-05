@@ -40,6 +40,7 @@ private:
     zx_status_t ReadAndDispatchMessage(fidl::MessageBuffer* buffer);
 
     zx_status_t Launch(fidl::MessageBuffer* buffer, fidl::Message message);
+    zx_status_t Launch2(fidl::MessageBuffer* buffer, fidl::Message message);
     zx_status_t CreateWithoutStarting(fidl::MessageBuffer* buffer, fidl::Message message);
     zx_status_t AddArgs(fidl::Message message);
     zx_status_t AddEnvirons(fidl::Message message);

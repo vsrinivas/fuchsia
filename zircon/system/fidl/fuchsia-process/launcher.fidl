@@ -59,6 +59,8 @@ struct LaunchInfo {
 };
 
 // The result of attempting to launch a process.
+//
+// TODO(REVIEW): Remove this struct
 struct LaunchResult {
     // A status code describing the result of the launch.
     zx.status status;
@@ -67,7 +69,7 @@ struct LaunchResult {
     //
     // Non-null when |status| is an error.
     //
-    // TODO(REVIEW) Remove this error message.
+    // TODO(REVIEW): Remove this error message.
     string? error_message;
 
     // The process that was launched.
@@ -79,8 +81,6 @@ struct LaunchResult {
 // The information required to start a process.
 //
 // To start the process, call |zx_process_start| with the arguments provided.
-//
-// See |CreateWithoutStartingResult|.
 struct ProcessStartData {
     // The process that was created.
     handle<process> process;
@@ -121,24 +121,6 @@ struct ProcessStartData {
     zx.vaddr base;
 };
 
-// The result of creating a process without starting the process.
-struct CreateWithoutStartingResult {
-    // A status code describing the result of the launch.
-    zx.status status;
-
-    // A string describing the failure.
-    //
-    // Non-null when |status| is an error.
-    //
-    // TODO(REVIEW) Remove this error message.
-    string? error_message;
-
-    // Data describing the process that was created.
-    //
-    // Non-null when |status| is ZX_OK.
-    ProcessStartData? data;
-};
-
 // A low-level interface for launching processes.
 //
 // This interface is used for manually assembling a process. The caller supplies
@@ -158,7 +140,10 @@ interface Launcher {
     //
     // After processing this message, the |Launcher| is reset to its initial
     // state and is ready to launch another process.
+    //
+    // |process| is present if, and only if, |status| is ZX_OK.
     Launch(LaunchInfo info) -> (LaunchResult result);
+    Launch2(LaunchInfo info) -> (zx.status status, handle<process>? process);
 
     // Creates the process described by |info| but does not start it.
     //
@@ -167,7 +152,10 @@ interface Launcher {
     //
     // The caller is responsible for calling |zx_process_start| using the data
     // in |ProcessStartData| to actually start the process.
-    CreateWithoutStarting(LaunchInfo info) -> (CreateWithoutStartingResult result);
+    //
+    // |data| is present if, and only if, |status| is ZX_OK.
+    CreateWithoutStarting(LaunchInfo info) -> (zx.status status,
+                                               ProcessStartData? data);
 
     // Adds the given arguments to the command-line for the process.
     //

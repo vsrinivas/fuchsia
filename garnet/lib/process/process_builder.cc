@@ -234,18 +234,17 @@ zx_status_t ProcessBuilder::Prepare(std::string* error_message) {
     if (status != ZX_OK)
       return status;
   }
-  fuchsia::process::CreateWithoutStartingResult result;
-  status = launcher_->CreateWithoutStarting(std::move(launch_info_), &result);
+  zx_status_t launcher_status = ZX_OK;
+  fuchsia::process::ProcessStartDataPtr data;
+  status = launcher_->CreateWithoutStarting(std::move(launch_info_),
+                                            &launcher_status, &data);
   if (status != ZX_OK)
     return status;
-  if (result.status != ZX_OK) {
-    if (error_message)
-      *error_message = result.error_message;
-    return result.status;
-  }
-  if (!result.data)
+  if (launcher_status != ZX_OK)
+    return launcher_status;
+  if (!data)
     return ZX_ERR_INVALID_ARGS;
-  data_ = std::move(*result.data);
+  data_ = std::move(*data);
   return ZX_OK;
 }
 
