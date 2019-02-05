@@ -23,11 +23,14 @@ anywhere from 7ms before its deadline to 7ms after its deadline.
 ## Timer-like Syscalls
 
 Slack may also be applied to blocking syscalls that accept a deadline
-argument, like [`zx_nanosleep()`](syscalls/nanosleep.md).
+argument, like [`zx_nanosleep()`].
 
 ## Defaults and Job Policy
 
 For Timer objects, slack is specified when creating and setting
 timers. For other syscalls that take a deadline, but no slack
 parameters, the slack type and amount are specified by the job's
-policy. See [`zx_job_set_policy()`](syscalls/job_set_policy.md).
+policy. See [`zx_job_set_policy()`].
+
+[`zx_job_set_policy()`]: syscalls/job_set_policy.md
+[`zx_nanosleep()`]: syscalls/nanosleep.md

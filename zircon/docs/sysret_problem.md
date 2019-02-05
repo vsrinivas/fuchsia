@@ -19,8 +19,10 @@ To avoid this problem:
   will be non-canonical.
 
 * We disallow setting the RIP register to a non-canonical address using
-  **zx_thread_write_state**() when the address would be used with SYSRET.
+  [`zx_thread_write_state()`] when the address would be used with SYSRET.
 
 For more background, see "A Stitch In Time Saves Nine: A Case Of Multiple
 OS Vulnerability", Rafal Wojtczuk
 (https://media.blackhat.com/bh-us-12/Briefings/Wojtczuk/BH_US_12_Wojtczuk_A_Stitch_In_Time_WP.pdf).
+
+[`zx_thread_write_state()`]: syscalls/thread_write_state.md

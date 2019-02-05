@@ -21,7 +21,7 @@ handling" is at a high level (though it certainly can if there is a need).
 Exceptions are handled from userspace by binding a Zircon Port to the
 Exception Port of the desired object: thread, process, or job.
 This is done with the
-[**task_bind_exception_port**() system call](syscalls/task_bind_exception_port.md).
+[`zx_task_bind_exception_port()`] system call.
 
 Example:
 
@@ -47,10 +47,10 @@ exception is processed as if the reply was "exception not handled".
 
 Here is a simple exception handling loop.
 The main components of it are the call to the
-[**port_wait**() system call](syscalls/port_wait.md)
+[`zx_port_wait()`] system call
 to wait for an exception, or anything else that's interesting, to happen,
 and the call to the
-[**task_resume_from_exception**() system call](syscalls/task_resume_from_exception.md)
+[`zx_task_resume_from_exception()`] system call
 to indicate the handler is finished processing the exception.
 
 ```cpp
@@ -106,7 +106,7 @@ the *zx_packet_exception_t* type defined in
 The exception handler is expected to read the message, decide how it
 wants to process the exception, and then resume the thread that got the
 exception with the
-[**task_resume_from_exception**() system call](syscalls/task_resume_from_exception.md).
+[`zx_task_resume_from_exception()`] system call.
 
 Resuming the thread can be done in either of two ways:
 
@@ -132,10 +132,12 @@ when the exception is not one the handler intends to process.
 ```
 
 If there are no remaining exception ports to try the kernel terminates
-the process, as if *zx_task_kill(process)* was called.
+the process, as if [`zx_task_kill()`] was called with the process.
 The return code of a process terminated by an exception is an
 unspecified non-zero value.
-The return code can be obtained with *zx_object_get_info(ZX_INFO_PROCESS)*.
+The return code can be obtained with [`zx_object_get_info()`] and
+**ZX_INFO_PROCESS**.
+
 Example:
 
 ```cpp
@@ -148,7 +150,7 @@ Example:
 
 Resuming the thread requires a handle of the thread, which the handler
 may not yet have. The handle is obtained with the
-[**object_get_child**() system call](syscalls/object_get_child.md).
+[`zx_object_get_child()`] system call.
 The pid,tid necessary to look up the thread are contained in the
 exception report. See the above trivial exception handler example.
 
@@ -293,7 +295,7 @@ It does, however, mean that an exception handler must wait on the
 port *and* every thread handle that it wishes to monitor.
 Fortunately, one can reduce this to continuing to just have to wait
 on the port by using the
-[**object_wait_async**() system call](syscalls/object_wait_async.md)
+[`zx_object_wait_async()`] system call
 to have signals regarding each thread sent to the port.
 In other words, there is still just one system call involved to wait
 for something interesting to happen.
@@ -313,7 +315,7 @@ for something interesting to happen.
 
 When the thread gets any of the specified signals a **ZX_PKT_TYPE_SIGNAL_ONE**
 packet will be sent to the port. After processing the signal the above
-call to **zx_object_wait_async**() must be done again, that is the nature
+call to [`zx_object_wait_async()`] must be done again, that is the nature
 of **ZX_WAIT_ASYNC_ONCE**.
 
 *Note:* There is both an exception and a signal for thread termination.
@@ -334,7 +336,7 @@ asserted. When a thread terminates both **ZX_THREAD_RUNNING** and
 **ZX_THREAD_SUSPENDED** are deasserted and **ZX_THREAD_TERMINATED**
 is asserted. However, signals are OR'd into the state maintained by
 the port thus you may see any combination of requested signals
-when **zx_port_wait**() returns.
+when [`zx_port_wait()`] returns.
 
 ## Comparison with Posix (and Linux)
 
@@ -364,10 +366,10 @@ process_read_memory          ptrace(PEEKTEXT)
 process_write_memory         ptrace(POKETEXT)
 ```
 
-Zircon does not have asynchronous signals like SIGINT, SIGQUIT, SIGTERM,
-SIGUSR1, SIGUSR2, and so on.
+Zircon does not have asynchronous signals like `SIGINT`, `SIGQUIT`, `SIGTERM`,
+`SIGUSR1`, `SIGUSR2`, and so on.
 
-Another significant different from Posix is that the exception handler
+Another significant difference from Posix is that the exception handler
 is always run on a separate thread.
 
 ## Example programs
@@ -389,7 +391,7 @@ The basic exception handling testcase.
 - `system/utest/debugger`
 
 Testcase for the rest of the system calls a debugger would use, beyond
-those exercised by system/utest/exception.
+those exercised by `system/utest/exception`.
 There are tests for segfault recovery, reading/writing thread registers,
 reading/writing process memory, as well as various other tests.
 
@@ -397,14 +399,14 @@ reading/writing process memory, as well as various other tests.
 
 There are a few outstanding issues:
 
-- signal()/sigaction() replacement
+- `signal()`/`sigaction()` replacement
 
 In Posix one is able to specify handlers for particular signals,
 whereas in Zircon there is currently just the exception port,
 and the handler is expected to understand all possible exceptions.
 This is tracked as ZX-560.
 
-- W*() macros from sys/wait.h
+- `W\*()` macros from `sys/wait.h`
 
 When a process exits because of an exception, no information is provided
 on which exception the process got (e.g., segfault). At present only a
@@ -445,5 +447,13 @@ Possible use-cases are for debugging purposes (e.g, to see what's going on
 in the system).
 Another possible use-case is to allow chaining exception handlers, though for
 the case of in-process chaining it's likely better to use a
-signal()/sigaction() replacement (see ZX-560).
+`signal()`/`sigaction()` replacement (see ZX-560).
 This is tracked as ZX-1216.
+
+[`zx_object_get_child()`]: syscalls/object_get_child.md
+[`zx_object_get_info()`]: syscalls/object_get_info.md
+[`zx_object_wait_async()`]: syscalls/object_wait_async.md
+[`zx_port_wait()`]: syscalls/port_wait.md
+[`zx_task_bind_exception_port()`]: syscalls/task_bind_exception_port.md
+[`zx_task_kill()`]: syscalls/task_kill.md
+[`zx_task_resume_from_exception()`]: syscalls/task_resume_from_exception.md

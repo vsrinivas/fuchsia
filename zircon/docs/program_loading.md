@@ -140,7 +140,7 @@ Three types of file are handled:
     up to whole pages).  Otherwise, a reasonable default stack size is used.
   * The [vDSO](vdso.md) is mapped into the process
     (another VMO containing an ELF image), also at a random base address.
-  * A new thread is created in the process with [**thread_create**()](syscalls/thread_create.md).
+  * A new thread is created in the process with [`zx_thread_create()`].
   * A new [channel](objects/channel.md) is created, called the *bootstrap
     channel*.  The program loader writes into this channel a message
     in [the `processargs` protocol](#the-processargs-protocol) format. This
@@ -160,7 +160,7 @@ Three types of file are handled:
 
     The program loader then closes its end of the channel.
    * The initial thread is launched with
-     the [**process_start**() system call](syscalls/process_start.md):
+     the [`zx_process_start()`] system call:
 
       * `entry` sets the new thread's PC to `e_entry` from the executable's
         ELF header, adjusted by base address.
@@ -317,9 +317,9 @@ not have access to nontrivial library facilities.
 An ELF interpreter receives a channel handle for its loader service in its
 `processargs` bootstrap message, identified by the *handle info entry*
 `PA_HND(PA_LDSVC_LOADER, 0)`.  All requests are synchronous RPCs made
-with [**channel_call**()](syscalls/channel_call.md).  Both requests and
-replies start with the `zx_loader_svc_msg_t` header; some contain
-additional data; some contain a VMO handle.  Request opcodes are:
+with [`zx_channel_call()`].  Both requests and replies start with the
+`zx_loader_svc_msg_t` header; some contain additional data; some contain
+a VMO handle.  Request opcodes are:
 
  * `LOADER_SVC_OP_LOAD_SCRIPT_INTERP`: *string* -> *VMO handle*
 
@@ -414,3 +414,7 @@ the *load configuration* string `asan` before loading shared libraries.
 When [SanitizerCoverage](https://clang.llvm.org/docs/SanitizerCoverage.html)
 is enabled, it publishes a VMO to the *data sink* name `sancov` and uses a
 VMO name including the process KOID.
+
+[`zx_channel_call()`]: syscalls/channel_call.md
+[`zx_process_start()`]: syscalls/process_start.md
+[`zx_thread_create()`]: syscalls/thread_create.md

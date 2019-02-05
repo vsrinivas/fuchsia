@@ -64,12 +64,12 @@ innately tied to (and embedded within) the kernel binary and includes
 information specific to each kernel build, so the Build ID of the vDSO
 distinguishes kernels as well.
 
-### **process_start**() argument
+### `zx_process_start()` argument
 
-The [**process_start**()](syscalls/process_start.md) system call is how a
+The [`zx_process_start()`] system call is how a
 program loader tells the kernel to start a new process's first thread
 executing.  The final argument (`arg2`
-in [the **process_start**() documentation](syscalls/process_start.md)) is a
+in the [`zx_process_start()`] documentation) is a
 plain `uintptr_t` value passed to the new thread in a register.
 
 By convention, the program loader maps the vDSO into each new process's
@@ -178,9 +178,8 @@ runtime of the whole system, though the ABI of the system is that their
 values must be queried at runtime and cannot be compiled into user code.
 These values either are fixed in the kernel at compile time or are
 determined by the kernel at boot time from hardware or boot parameters.
-Examples include [**system_get_version**()](syscalls/system_get_version.md),
-[**system_get_num_cpus**()](syscalls/system_get_num_cpus.md), and
-[**ticks_per_second**()](syscalls/ticks_per_second.md).
+Examples include [`zx_system_get_version()`],
+[`zx_system_get_num_cpus()`], and [`zx_ticks_per_second()`].
 The last example is influenced by
 a [kernel command line option](kernel_cmdline.md#vdso_soft_ticks_bool).
 
@@ -224,7 +223,7 @@ The kernel enforces correct use of the vDSO in two ways:
 
  1. It constrains how the vDSO VMO can be mapped into a process.
 
-    When a [**vmar_map**()](syscalls/vmar_map.md) call is made using the
+    When a [`zx_vmar_map()`] call is made using the
     vDSO VMO and requesting `ZX_VM_PERM_EXECUTE`, the kernel
     requires that the offset and size of the mapping exactly match the
     vDSO's executable segment.  It also allows only one such mapping.
@@ -263,7 +262,7 @@ The kernel enforces correct use of the vDSO in two ways:
     On entry to the kernel for a system call, the kernel examines the PC
     location of the `syscall` instruction on x86 (or equivalent
     instruction on other machines).  It subtracts the base address of
-    the vDSO code recorded for the process at **vmar_map**() time from
+    the vDSO code recorded for the process at [`zx_vmar_map()`] time from
     the PC, and passes the resulting offset to the validity predicate
     for the system call being invoked.  If the predicate rules the PC
     invalid, the calling thread is not allowed to proceed with the
@@ -281,3 +280,9 @@ concept is to provide variants of the vDSO image that export only a
 subset of the full vDSO system call interface.  For example, system
 calls intended only for use by device drivers might be elided from the
 vDSO variant used for normal application code.
+
+[`zx_process_start()]: syscalls/process_start.md
+[`zx_system_get_num_cpus()`]: syscalls/system_get_num_cpus.md
+[`zx_system_get_version()`]: syscalls/system_get_version.md
+[`zx_ticks_per_second()`]: syscalls/ticks_per_second.md
+[`zx_vmar_map()`]: syscalls/vmar_map.md
