@@ -129,6 +129,29 @@ ComponentControllerBase::ComponentControllerBase(
     } else if (export_dir_type == ExportedDirType::kLegacyFlatLayout) {
       fdio_service_clone_to(exported_dir_.channel().get(),
                             client_request.release());
+
+      // Components using the legacy flat format can expose information using
+      // inspect by implementing "fuchsia.inspect.Inspect". This code attempts
+      // to connect to that endpoint, and if the connection works it will mount
+      // a new "out/objects" on the hub for the component.
+      fdio_service_connect_at(
+          exported_dir_.channel().get(), fuchsia::inspect::Inspect::Name_,
+          inspect_checker_.NewRequest().TakeChannel().release());
+
+      inspect_checker_->ReadData([this](fuchsia::inspect::Object unused) {
+        inspect_checker_.Unbind();
+        auto out = fbl::AdoptRef(new fs::PseudoDir());
+        auto objects = fbl::AdoptRef(new fs::PseudoDir());
+        hub_.PublishOut(out);
+        out->AddEntry("objects", objects);
+        objects->AddEntry(
+            fuchsia::inspect::Inspect::Name_,
+            fbl::AdoptRef(new fs::Service([this](zx::channel chan) {
+              return fdio_service_connect_at(exported_dir_.channel().get(),
+                                             fuchsia::inspect::Inspect::Name_,
+                                             chan.release());
+            })));
+      });
     }
   }
 

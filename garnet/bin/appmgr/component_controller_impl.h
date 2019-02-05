@@ -147,6 +147,8 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
   fuchsia::io::NodePtr cloned_exported_dir_;
 
   fuchsia::io::DirectoryPtr exported_dir_;
+
+  fuchsia::inspect::InspectPtr inspect_checker_;
 };
 
 class ComponentControllerImpl : public ComponentControllerBase {
