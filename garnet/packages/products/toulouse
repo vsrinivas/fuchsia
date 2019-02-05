@@ -30,7 +30,6 @@
     "garnet/packages/prod/telephony",
     "garnet/packages/prod/terminal",
     "garnet/packages/prod/test_runner",
-    "garnet/packages/prod/thinfs",
     "garnet/packages/prod/tracing",
     "garnet/packages/prod/tz-util",
     "garnet/packages/prod/vboot_reference",

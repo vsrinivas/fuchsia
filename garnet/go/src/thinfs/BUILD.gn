@@ -14,25 +14,3 @@ go_library("thinfs_lib") {
     "//garnet/public/go/third_party:github.com/pkg/errors",
   ]
 }
-
-go_binary("thinfs_bin") {
-  output_name = "thinfs"
-  gopackage = "thinfs/cmd/thinfs"
-  deps = [
-    ":thinfs_lib",
-  ]
-}
-
-package("thinfs") {
-  deprecated_system_image = true
-
-  deps = [
-    ":thinfs_bin",
-  ]
-
-  binaries = [
-    {
-      name = "thinfs"
-    },
-  ]
-}
