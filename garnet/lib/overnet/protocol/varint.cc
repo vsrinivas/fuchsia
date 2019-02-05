@@ -30,6 +30,28 @@ uint8_t WireSizeFor(uint64_t x) {
   return 10;
 }
 
+uint64_t SmallerRecordedNumber(uint64_t x) {
+  if (x < (1ull << 7))
+    return 0;
+  if (x < (1ull << 14))
+    return (1ull << 7) - 1;
+  if (x < (1ull << 21))
+    return (1ull << 14) - 1;
+  if (x < (1ull << 28))
+    return (1ull << 21) - 1;
+  if (x < (1ull << 35))
+    return (1ull << 28) - 1;
+  if (x < (1ull << 42))
+    return (1ull << 35) - 1;
+  if (x < (1ull << 49))
+    return (1ull << 42) - 1;
+  if (x < (1ull << 56))
+    return (1ull << 49) - 1;
+  if (x < (1ull << 63))
+    return (1ull << 56) - 1;
+  return (1ull << 63) - 1;
+}
+
 uint64_t MaximumLengthWithPrefix(uint64_t x) {
   assert(x > 0);
   uint64_t r = x - WireSizeFor(x);

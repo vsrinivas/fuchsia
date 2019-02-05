@@ -9,44 +9,25 @@
 namespace overnet {
 
 AckFrame::Writer::Writer(const AckFrame* ack_frame)
-    : ack_frame_(ack_frame),
-      ack_to_seq_length_(varint::WireSizeFor(ack_frame_->ack_to_seq_)),
-      delay_and_flags_length_(
-          varint::WireSizeFor(ack_frame_->DelayAndFlags())) {
-  wire_length_ = ack_to_seq_length_ + delay_and_flags_length_;
-  nack_length_.reserve(ack_frame_->nack_seqs_.size());
-  uint64_t base = ack_frame_->ack_to_seq_;
-  for (auto n : ack_frame_->nack_seqs_) {
-    auto enc = base - n;
-    auto l = varint::WireSizeFor(enc);
-    wire_length_ += l;
-    nack_length_.push_back(l);
-    base = n;
-  }
-  assert(ack_frame->WrittenLength() == wire_length_);
-}
+    : ack_frame_(ack_frame), wire_length_(ack_frame_->WrittenLength()) {}
 
 uint64_t AckFrame::WrittenLength() const {
   uint64_t wire_length =
       varint::WireSizeFor(ack_to_seq_) + varint::WireSizeFor(DelayAndFlags());
-  uint64_t base = ack_to_seq_;
-  for (auto n : nack_seqs_) {
-    wire_length += varint::WireSizeFor(base - n);
-    base = n;
+  for (const auto block : blocks_) {
+    wire_length += varint::WireSizeFor(block.acks);
+    wire_length += varint::WireSizeFor(block.nacks);
   }
   return wire_length;
 }
 
 uint8_t* AckFrame::Writer::Write(uint8_t* out) const {
   uint8_t* p = out;
-  p = varint::Write(ack_frame_->ack_to_seq_, ack_to_seq_length_, p);
-  p = varint::Write(ack_frame_->DelayAndFlags(), delay_and_flags_length_, p);
-  uint64_t base = ack_frame_->ack_to_seq_;
-  for (size_t i = 0; i < nack_length_.size(); i++) {
-    auto n = ack_frame_->nack_seqs_[i];
-    auto enc = base - n;
-    p = varint::Write(enc, nack_length_[i], p);
-    base = n;
+  p = varint::Write(ack_frame_->ack_to_seq_, p);
+  p = varint::Write(ack_frame_->DelayAndFlags(), p);
+  for (const auto block : ack_frame_->blocks_) {
+    p = varint::Write(block.acks, p);
+    p = varint::Write(block.nacks, p);
   }
   assert(p == out + wire_length_);
   return p;
@@ -82,18 +63,31 @@ StatusOr<AckFrame> AckFrame::Parse(Slice slice) {
   frame.partial_ = is_partial;
   uint64_t base = ack_to_seq;
   while (bytes != end) {
-    uint64_t offset;
-    if (!varint::Read(&bytes, end, &offset)) {
+    uint64_t acks, nacks;
+    if (!varint::Read(&bytes, end, &acks)) {
       return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT,
-                                "Failed to read nack offset from ack frame");
+                                "Failed to read ack count from ack frame");
     }
-    if (offset >= base) {
+    if (!varint::Read(&bytes, end, &nacks)) {
       return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT,
-                                "Failed to read nack");
+                                "Failed to read nack count from ack frame");
     }
-    const uint64_t seq = base - offset;
-    frame.AddNack(seq);
-    base = seq;
+    if (acks >= base) {
+      return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT,
+                                "Failed to read nack (too many acks)");
+    }
+    if (nacks > base - acks) {
+      return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT,
+                                "Failed to read nack (too many nacks)");
+    }
+    if (nacks == 0) {
+      return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT,
+                                "Nack count cannot be zero");
+    }
+    base -= acks;
+    base -= nacks;
+    frame.blocks_.push_back(Block{acks, nacks});
+    frame.last_nack_ = base + 1;
   }
   return StatusOr<AckFrame>(std::move(frame));
 }

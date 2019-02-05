@@ -50,6 +50,16 @@ source_set("ack_frame_test") {
   ]
 }
 
+fuzz_target("ack_frame_fuzzer") {
+  testonly = true
+  sources = [
+    "ack_frame_fuzzer.cc",
+  ]
+  deps = [
+    ":ack_frame",
+  ]
+}
+
 # coding
 source_set("coding") {
     sources = [

@@ -21,7 +21,7 @@ void RoundTrip(const AckFrame& h, const std::vector<uint8_t>& expect) {
   auto v = Encode(h);
   EXPECT_EQ(expect, v);
   auto p = AckFrame::Parse(Slice::FromCopiedBuffer(v.data(), v.size()));
-  EXPECT_TRUE(p.is_ok());
+  EXPECT_TRUE(p.is_ok()) << p.AsStatus();
   EXPECT_EQ(h, *p.get());
 }
 
@@ -33,7 +33,8 @@ TEST(AckFrame, NoNack) {
 TEST(AckFrame, OneNack) {
   AckFrame h(5, 10);
   h.AddNack(2);
-  RoundTrip(h, {5, 20, 3});
+  RoundTrip(h, {5, 20, 3, 1});
+  EXPECT_EQ(h.nack_seqs().AsVector(), std::vector<uint64_t>({2}));
 }
 
 TEST(AckFrame, ThreeNacks) {
@@ -41,7 +42,52 @@ TEST(AckFrame, ThreeNacks) {
   h.AddNack(4);
   h.AddNack(3);
   h.AddNack(2);
-  RoundTrip(h, {5, 84, 1, 1, 1});
+  RoundTrip(h, {5, 84, 1, 3});
+  EXPECT_EQ(h.nack_seqs().AsVector(), std::vector<uint64_t>({2, 3, 4}));
+}
+
+TEST(AckFrame, TwoBlocks) {
+  AckFrame h(20, 42);
+  h.AddNack(15);
+  h.AddNack(14);
+  h.AddNack(13);
+  h.AddNack(5);
+  h.AddNack(4);
+  h.AddNack(3);
+  h.AddNack(2);
+  h.AddNack(1);
+  RoundTrip(h, {20, 84, 5, 3, 7, 5});
+  EXPECT_EQ(h.nack_seqs().AsVector(),
+            std::vector<uint64_t>({1, 2, 3, 4, 5, 13, 14, 15}));
+}
+
+TEST(AckFrame, FuzzedExamples) {
+  auto test = [](std::initializer_list<uint8_t> bytes) {
+    auto input = Slice::FromContainer(bytes);
+    std::cerr << "Test: " << input << "\n";
+    if (auto p = AckFrame::Parse(input); p.is_ok()) {
+      {
+        auto ns = p->nack_seqs();
+        const auto begin = ns.begin();
+        const auto end = ns.end();
+        for (auto it = begin; it != end; ++it) {
+          [](auto) {}(*it);
+        }
+      }
+      std::cerr << "Parsed: " << *p << "\n";
+      auto written = Slice::FromWriters(AckFrame::Writer(p.get()));
+      auto p2 = AckFrame::Parse(written);
+      EXPECT_TRUE(p2.is_ok());
+      EXPECT_EQ(*p, *p2);
+    } else {
+      std::cerr << "Parse error: " << p.AsStatus() << "\n";
+    }
+  };
+  test({0x0a, 0x0a, 0x00, 0x00});
+  test({0xc1, 0xe0, 0x00, 0x2d});
+  test({0x80, 0xcd, 0xcd, 0xcd, 0xcd, 0x2b, 0x00, 0x2f, 0xcd, 0xcd, 0xf9, 0xe4,
+        0x00, 0x51});
+  test({0x65, 0x01, 0x01, 0x02});
 }
 
 }  // namespace ack_frame_test

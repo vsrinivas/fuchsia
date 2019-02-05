@@ -628,14 +628,13 @@ void PacketProtocol::OutstandingMessages::ProcessValidAck(AckFrame ack,
                              TimeDelta::FromMicroseconds(ack.ack_delay_us()));
 
   // Fail any nacked packets.
-  // Nacks are received in descending order of sequence number. We iterate the
-  // callbacks here in reverse order then so that the OLDEST nacked message is
-  // the most likely to be sent first. This has the important consequence that
-  // if the packet was a fragment of a large message that was rejected due to
-  // buffering, the earlier pieces (that are more likely to fit) are
-  // retransmitted first.
-  for (auto it = ack.nack_seqs().rbegin(); it != ack.nack_seqs().rend(); ++it) {
-    ack_processor.Nack(*it, Status::Unavailable());
+  // Iteration is from oldest packet to newest, such that the OLDEST nacked
+  // message is the most likely to be sent first. This has the important
+  // consequence that if the packet was a fragment of a large message that was
+  // rejected due to buffering, the earlier pieces (that are more likely to fit)
+  // are retransmitted first.
+  for (auto nack_seq : ack.nack_seqs()) {
+    ack_processor.Nack(nack_seq, Status::Unavailable());
   }
 
   // Clear out outstanding packet references, propagating acks.
