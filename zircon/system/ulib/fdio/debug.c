@@ -73,10 +73,3 @@ void fdio_set_debug_level(unsigned level) {
     debug_level = level;
 #endif
 }
-
-void fdio_free(fdio_t* io) {
-    LOG(5, "fdio: io: free: %p\n", io);
-    io->magic = 0xDEAD0123;
-    io->ops = NULL;
-    free(io);
-}

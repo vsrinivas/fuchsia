@@ -83,7 +83,7 @@ static int checksocket(int fd, int sock_err, int err) {
         errno = EBADF;
         return -1;
     }
-    int32_t is_socket = io->ioflag & IOFLAG_SOCKET;
+    int32_t is_socket = *fdio_get_ioflag(io) & IOFLAG_SOCKET;
     fdio_release(io);
     if (!is_socket) {
         errno = sock_err;

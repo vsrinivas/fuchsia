@@ -113,7 +113,7 @@ int socket(int domain, int type, int protocol) {
     }
 
     if (type & SOCK_NONBLOCK) {
-        io->ioflag |= IOFLAG_NONBLOCK;
+        *fdio_get_ioflag(io) |= IOFLAG_NONBLOCK;
     }
 
     // TODO(ZX-973): Implement CLOEXEC.
@@ -122,7 +122,7 @@ int socket(int domain, int type, int protocol) {
 
     int fd = fdio_bind_to_fd(io, -1, 0);
     if (fd < 0) {
-        io->ops->close(io);
+        fdio_get_ops(io)->close(io);
         fdio_release(io);
         return ERRNO(EMFILE);
     }
@@ -145,10 +145,10 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
         return ERROR(status);
     }
     if (out_code == EINPROGRESS) {
-        bool nonblocking = io->ioflag & IOFLAG_NONBLOCK;
+        bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
 
         if (nonblocking) {
-            io->ioflag |= IOFLAG_SOCKET_CONNECTING;
+            *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTING;
         } else {
             zx_signals_t observed;
             status = zx_object_wait_one(
@@ -170,7 +170,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
 
     switch (out_code) {
       case 0: {
-          io->ioflag |= IOFLAG_SOCKET_CONNECTED;
+          *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTED;
           fdio_release(io);
           return out_code;
       }
@@ -243,7 +243,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         return ERRNO(EBADF);
     }
 
-    bool nonblocking = io->ioflag & IOFLAG_NONBLOCK;
+    bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
 
     int nfd = fdio_reserve_fd(0);
     if (nfd < 0) {
@@ -347,12 +347,12 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
     }
 
     if (flags & SOCK_NONBLOCK) {
-        accepted_io->ioflag |= IOFLAG_NONBLOCK;
+        *fdio_get_ioflag(accepted_io) |= IOFLAG_NONBLOCK;
     }
 
     nfd = fdio_assign_reserved(nfd, accepted_io);
     if (nfd < 0) {
-        accepted_io->ops->close(accepted_io);
+        fdio_get_ops(accepted_io)->close(accepted_io);
         fdio_release(accepted_io);
     }
     return nfd;

@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
@@ -424,15 +425,11 @@ static fdio_ops_t dir_ops = {
 };
 
 static fdio_t* fdio_dir_create_locked(fdio_ns_t* ns, mxvn_t* vn) {
-    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    fdio_t* io = fdio_alloc(&dir_ops);
     if (io == NULL) {
         return NULL;
     }
-    io->ops = &dir_ops;
-    io->magic = FDIO_MAGIC;
-    atomic_init(&io->refcount, 1);
-    memset(&io->storage, 0, sizeof(io->storage));
-    zxio_null_init(&io->storage.io);
+    zxio_null_init(&(fdio_get_zxio_storage(io)->io));
     zxio_dir_t* dir = fdio_get_zxio_dir(io);
     dir->ns = ns;
     dir->vn = vn;
@@ -443,7 +440,7 @@ static fdio_t* fdio_dir_create_locked(fdio_ns_t* ns, mxvn_t* vn) {
 __EXPORT
 zx_status_t fdio_ns_create(fdio_ns_t** out) {
     // +1 is for the "" name
-    fdio_ns_t* ns = fdio_alloc(sizeof(fdio_ns_t) + 1);
+    fdio_ns_t* ns = calloc(1, sizeof(fdio_ns_t) + 1);
     if (ns == NULL) {
         return ZX_ERR_NO_MEMORY;
     }

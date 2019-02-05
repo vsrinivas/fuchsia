@@ -174,16 +174,12 @@ fdio_ops_t fdio_zxio_ops = {
 
 __EXPORT
 fdio_t* fdio_zxio_create(zxio_storage_t** out_storage) {
-    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    fdio_t* io = fdio_alloc(&fdio_zxio_ops);
     if (io == NULL) {
         return NULL;
     }
-    io->ops = &fdio_zxio_ops;
-    io->magic = FDIO_MAGIC;
-    atomic_init(&io->refcount, 1);
-    memset(&io->storage, 0, sizeof(io->storage));
-    zxio_null_init(&io->storage.io);
-    *out_storage = &io->storage;
+    zxio_null_init(&fdio_get_zxio_storage(io)->io);
+    *out_storage = fdio_get_zxio_storage(io);
     return io;
 }
 
@@ -414,16 +410,13 @@ static fdio_ops_t fdio_zxio_remote_ops = {
 
 __EXPORT
 fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event) {
-    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    fdio_t* io = fdio_alloc(&fdio_zxio_remote_ops);
     if (io == NULL) {
         zx_handle_close(control);
         zx_handle_close(event);
         return NULL;
     }
-    io->ops = &fdio_zxio_remote_ops;
-    io->magic = FDIO_MAGIC;
-    atomic_init(&io->refcount, 1);
-    zx_status_t status = zxio_remote_init(&io->storage, control, event);
+    zx_status_t status = zxio_remote_init(fdio_get_zxio_storage(io), control, event);
     if (status != ZX_OK) {
         return NULL;
     }
@@ -431,15 +424,12 @@ fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event) {
 }
 
 fdio_t* fdio_dir_create(zx_handle_t control) {
-    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    fdio_t* io = fdio_alloc(&fdio_zxio_remote_ops);
     if (io == NULL) {
         zx_handle_close(control);
         return NULL;
     }
-    io->ops = &fdio_zxio_remote_ops;
-    io->magic = FDIO_MAGIC;
-    atomic_init(&io->refcount, 1);
-    zx_status_t status = zxio_dir_init(&io->storage, control);
+    zx_status_t status = zxio_dir_init(fdio_get_zxio_storage(io), control);
     if (status != ZX_OK) {
         return NULL;
     }
@@ -454,9 +444,9 @@ zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
         return ZX_ERR_NOT_FOUND;
     }
     fdio_t* io = fdio_fdtab[fd];
-    io->dupcount--;
+    fdio_dupcount_release(io);
     fdio_fdtab[fd] = NULL;
-    if (io->dupcount > 0) {
+    if (fdio_get_dupcount(io) > 0) {
         // still alive in other fdtab slots
         // this fd goes away but we can't give away the handle
         mtx_unlock(&fdio_lock);
@@ -465,12 +455,12 @@ zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
     } else {
         mtx_unlock(&fdio_lock);
         zx_status_t r;
-        if (io->ops == &fdio_zxio_remote_ops) {
+        if (fdio_get_ops(io) == &fdio_zxio_remote_ops) {
             zxio_remote_t* file = fdio_get_zxio_remote(io);
             r = zxio_release(&file->io, out);
         } else {
             r = ZX_ERR_NOT_SUPPORTED;
-            io->ops->close(io);
+            fdio_get_ops(io)->close(io);
         }
         fdio_release(io);
         return r;
@@ -483,7 +473,7 @@ zx_handle_t fdio_unsafe_borrow_channel(fdio_t* io) {
         return ZX_HANDLE_INVALID;
     }
 
-    if (io->ops == &fdio_zxio_remote_ops) {
+    if (fdio_get_ops(io) == &fdio_zxio_remote_ops) {
         zxio_remote_t* file = fdio_get_zxio_remote(io);
         return file->control;
     }
@@ -557,16 +547,13 @@ fdio_ops_t fdio_zxio_vmofile_ops = {
 fdio_t* fdio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
                             zx_off_t offset, zx_off_t length,
                             zx_off_t seek) {
-    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    fdio_t* io = fdio_alloc(&fdio_zxio_vmofile_ops);
     if (io == NULL) {
         zx_handle_close(control);
         zx_handle_close(vmo);
         return NULL;
     }
-    io->ops = &fdio_zxio_vmofile_ops;
-    io->magic = FDIO_MAGIC;
-    atomic_init(&io->refcount, 1);
-    zx_status_t status = zxio_vmofile_init(&io->storage, control, vmo, offset,
+    zx_status_t status = zxio_vmofile_init(fdio_get_zxio_storage(io), control, vmo, offset,
                                            length, seek);
     if (status != ZX_OK) {
         return NULL;
@@ -745,15 +732,12 @@ static fdio_ops_t fdio_zxio_pipe_ops = {
 };
 
 fdio_t* fdio_pipe_create(zx_handle_t socket) {
-    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    fdio_t* io = fdio_alloc(&fdio_zxio_pipe_ops);
     if (io == NULL) {
         zx_handle_close(socket);
         return NULL;
     }
-    io->ops = &fdio_zxio_pipe_ops;
-    io->magic = FDIO_MAGIC;
-    atomic_init(&io->refcount, 1);
-    zx_status_t status = zxio_pipe_init(&io->storage, socket);
+    zx_status_t status = zxio_pipe_init(fdio_get_zxio_storage(io), socket);
     if (status != ZX_OK) {
         return NULL;
     }
@@ -860,15 +844,12 @@ static fdio_ops_t fdio_zxio_debuglog_ops = {
 
 __EXPORT
 fdio_t* fdio_logger_create(zx_handle_t handle) {
-    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    fdio_t* io = fdio_alloc(&fdio_zxio_debuglog_ops);
     if (io == NULL) {
         zx_handle_close(handle);
         return NULL;
     }
-    io->ops = &fdio_zxio_debuglog_ops;
-    io->magic = FDIO_MAGIC;
-    atomic_init(&io->refcount, 1);
-    zx_status_t status = zxio_debuglog_init(&io->storage, handle);
+    zx_status_t status = zxio_debuglog_init(fdio_get_zxio_storage(io), handle);
     if (status != ZX_OK) {
         return NULL;
     }

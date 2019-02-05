@@ -16,6 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/bsdsocket.c \
     $(LOCAL_DIR)/debug.c \
     $(LOCAL_DIR)/get-vmo.c \
+    $(LOCAL_DIR)/fdio.c \
     $(LOCAL_DIR)/namespace.c \
     $(LOCAL_DIR)/null.c \
     $(LOCAL_DIR)/remoteio.c \

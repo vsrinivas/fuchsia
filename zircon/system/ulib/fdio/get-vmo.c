@@ -42,7 +42,7 @@ static zx_status_t read_file_into_vmo(fdio_t* io, zx_handle_t* out_vmo) {
     zx_handle_t current_vmar_handle = zx_vmar_root_self();
 
     fuchsia_io_NodeAttributes attr;
-    zx_status_t status = io->ops->get_attr(io, &attr);
+    zx_status_t status = fdio_get_ops(io)->get_attr(io, &attr);
     if (status != ZX_OK) {
         return ZX_ERR_BAD_HANDLE;
     }
@@ -109,8 +109,8 @@ static zx_status_t read_file_into_vmo(fdio_t* io, zx_handle_t* out_vmo) {
 }
 
 static zx_status_t get_file_vmo(fdio_t* io, zx_handle_t* out_vmo) {
-    return io->ops->get_vmo(io, fuchsia_io_VMO_FLAG_READ |
-                            fuchsia_io_VMO_FLAG_PRIVATE, out_vmo);
+    return fdio_get_ops(io)->get_vmo(io, fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_PRIVATE,
+                                     out_vmo);
 }
 
 static zx_status_t copy_file_vmo(fdio_t* io, zx_handle_t* out_vmo) {
@@ -168,8 +168,8 @@ zx_status_t fdio_get_vmo_exact(int fd, zx_handle_t* out_vmo) {
     }
 
     zx_handle_t vmo;
-    zx_status_t status = io->ops->get_vmo(io, fuchsia_io_VMO_FLAG_READ |
-                                          fuchsia_io_VMO_FLAG_EXACT, &vmo);
+    zx_status_t status = fdio_get_ops(io)->get_vmo(io, fuchsia_io_VMO_FLAG_READ |
+                                                   fuchsia_io_VMO_FLAG_EXACT, &vmo);
     fdio_release(io);
     // TODO(mdempsky): Make callers responsible for adding executability as needed.
     if (status == ZX_OK)

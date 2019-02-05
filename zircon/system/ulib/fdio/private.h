@@ -10,7 +10,6 @@
 #include <lib/fdio/vfs.h>
 #include <lib/zxio/ops.h>
 #include <stdarg.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -82,18 +81,42 @@ typedef struct fdio_ops {
 // Static assertions in unistd.c ensure we aren't colliding.
 #define IOFLAG_FD_FLAGS IOFLAG_CLOEXEC
 
-typedef struct fdio {
-    fdio_ops_t* ops;
-    uint32_t magic;
-    atomic_int_fast32_t refcount;
-    int32_t dupcount;
-    uint32_t ioflag;
-    zxio_storage_t storage;
-} fdio_t;
+typedef struct fdio fdio_t;
 
-static inline zxio_t* fdio_get_zxio(fdio_t* io) {
-    return &io->storage.io;
-}
+// Acquire a reference to a globally shared "fdio_t" object
+// acts as a sentinel value for reservation.
+//
+// It is unsafe to call any ops within this object.
+// It is unsafe to change the reference count of this object.
+fdio_t* fdio_get_reserved_io(void);
+
+// Access the |zxio_t| field within an |fdio_t|.
+zxio_t* fdio_get_zxio(fdio_t* io);
+
+// Initialize an |fdio_t| object with the provided ops table.
+//
+// Initializes the refcount to one. The refcount may be altered with the |fdio_acquire| and
+// |fdio_release| functions. When the refcount reaches zero, the object is destroyed.
+fdio_t* fdio_alloc(fdio_ops_t* ops);
+
+// Increases the refcount of |io| by one.
+void fdio_acquire(fdio_t* io);
+
+// Decreases the refcount of |io| by one. If the reference count
+// reaches zero, the object is destroyed.
+void fdio_release(fdio_t* io);
+
+// Returns true if |io| is the only acquired reference to an object.
+bool fdio_is_last_reference(fdio_t* io);
+
+// Accessors for the internal fields of fdio_t:
+
+const fdio_ops_t* fdio_get_ops(const fdio_t* io);
+int32_t fdio_get_dupcount(const fdio_t* io);
+void fdio_dupcount_acquire(fdio_t* io);
+void fdio_dupcount_release(fdio_t* io);
+uint32_t* fdio_get_ioflag(fdio_t* io);
+zxio_storage_t* fdio_get_zxio_storage(fdio_t* io);
 
 // Lifecycle notes:
 //
@@ -117,8 +140,6 @@ static inline zxio_t* fdio_get_zxio(fdio_t* io) {
 // dupcount tracks how many fdtab entries an fdio object
 // is in.  close() reduces the dupcount, and only actually
 // closes the underlying object when it reaches zero.
-
-#define FDIO_MAGIC 0x4f49584d // FDIO
 
 zx_status_t fdio_close(fdio_t* io);
 zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx_time_t deadline,
@@ -173,8 +194,6 @@ fdio_t* fdio_socket_create_datagram(zx_handle_t s, int flags);
 
 // creates a message port and pair of simple io fdio_t's
 int fdio_pipe_pair(fdio_t** a, fdio_t** b);
-
-void fdio_free(fdio_t* io);
 
 fdio_t* fdio_ns_open_root(fdio_ns_t* ns);
 
@@ -268,24 +287,6 @@ void fdio_lldebug_printf(unsigned level, const char* fmt, ...);
 #endif
 
 void fdio_set_debug_level(unsigned level);
-
-static inline void fdio_acquire(fdio_t* io) {
-    LOG(6, "fdio: acquire: %p\n", io);
-    atomic_fetch_add(&io->refcount, 1);
-}
-
-static inline void fdio_release(fdio_t* io) {
-    LOG(6, "fdio: release: %p\n", io);
-    if (atomic_fetch_sub(&io->refcount, 1) == 1) {
-        fdio_free(io);
-    }
-}
-
-static inline void* fdio_alloc(size_t sz) {
-    void* ptr = calloc(1, sz);
-    LOG(5, "fdio: io: alloc: %p\n", ptr);
-    return ptr;
-}
 
 // Returns an fd number greater than or equal to |starting_fd|, following the
 // same rules as fdio_bind_fd. If there are no free file descriptors, -1 is
