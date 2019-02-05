@@ -11,6 +11,8 @@ sdk_source_set("cpp") {
 
   include_base = "//garnet/public"
 
+  public_configs = [ "//garnet/public:config" ]
+
   sources = [
     "images.cc",
     "images.h",

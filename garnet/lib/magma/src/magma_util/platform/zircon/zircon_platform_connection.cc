@@ -7,7 +7,7 @@
 #include "platform_connection.h"
 #include "zircon_platform_event.h"
 #include <fuchsia/gpu/magma/cpp/fidl.h>
-#include <garnet/public/lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/task.h>
 #include <lib/async/time.h>

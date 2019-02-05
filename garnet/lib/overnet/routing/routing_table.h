@@ -18,7 +18,7 @@
 #include "garnet/lib/overnet/vocabulary/internal_list.h"
 #include "garnet/lib/overnet/vocabulary/optional.h"
 #include "garnet/lib/overnet/vocabulary/slice.h"
-#include "garnet/public/lib/fidl/cpp/clone.h"
+#include "lib/fidl/cpp/clone.h"
 
 #include <iostream>
 

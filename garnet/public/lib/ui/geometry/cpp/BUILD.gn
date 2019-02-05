@@ -10,6 +10,8 @@ source_set("cpp") {
     "geometry_util.h",
   ]
 
+  public_configs = [ "//garnet/public:config" ]
+
   public_deps = [
     "$garnet_sdk_fidl/fuchsia.math",
   ]

@@ -20,6 +20,8 @@ source_set("testing") {
     "//zircon/public/lib/fdio",
   ]
 
+  public_configs = [ "//garnet/public:config" ]
+
   public_deps = [
     ":enclosing_environment",
     ":fake_component",
@@ -42,6 +44,8 @@ source_set("test_util") {
     "test_util.h",
   ]
 
+  public_configs = [ "//garnet/public:config" ]
+
   public_deps = [
     "$garnet_sdk_fidl/fuchsia.sys",
     "//zircon/public/lib/fs",
@@ -59,6 +63,8 @@ source_set("fake_launcher") {
     "fake_launcher.cc",
     "fake_launcher.h",
   ]
+
+  public_configs = [ "//garnet/public:config" ]
 
   public_deps = [
     "$garnet_sdk_fidl/fuchsia.sys",
@@ -81,6 +87,8 @@ source_set("enclosing_environment") {
     ":test_util",
   ]
 
+  public_configs = [ "//garnet/public:config" ]
+
   public_deps = [
     "$garnet_sdk_fidl/fuchsia.sys",
     "//garnet/public/lib/fidl/cpp",
@@ -97,6 +105,8 @@ source_set("fake_component") {
     "fake_component.cc",
     "fake_component.h",
   ]
+
+  public_configs = [ "//garnet/public:config" ]
 
   public_deps = [
     ":fake_launcher",

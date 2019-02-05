@@ -6,7 +6,7 @@
 
 #include "garnet/lib/overnet/vocabulary/slice.h"
 #include "garnet/lib/overnet/vocabulary/status.h"
-#include "garnet/public/lib/fidl/cpp/object_coding.h"
+#include "lib/fidl/cpp/object_coding.h"
 
 namespace overnet {
 

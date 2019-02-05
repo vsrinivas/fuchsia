@@ -8,6 +8,10 @@ source_set("entity_watcher") {
     "entity_watcher_impl.h",
   ]
 
+  public_deps = [
+    "//garnet/public/lib/fxl",
+  ]
+
   deps = [
     "$peridot_sdk_fidl/fuchsia.modular",
   ]

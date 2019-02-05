@@ -58,7 +58,7 @@ source_set("fidl") {
   deps = [
     "//garnet/lib/overnet/vocabulary:slice",
     "//garnet/lib/overnet/vocabulary:status",
-    "//garnet/public/lib/fidl/cpp:cpp_base",
+    "//sdk/lib/fidl/cpp:cpp_base",
   ]
 }
 

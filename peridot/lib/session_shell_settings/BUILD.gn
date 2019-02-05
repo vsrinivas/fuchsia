@@ -18,6 +18,7 @@ source_set("session_shell_settings") {
 
   public_deps = [
     "$garnet_sdk_fidl/fuchsia.ui.policy",
+    "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson:rapidjson",
   ]
 }

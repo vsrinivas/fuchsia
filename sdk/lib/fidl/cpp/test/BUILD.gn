@@ -22,11 +22,11 @@ source_set("test") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//third_party/googletest:gtest",
   ]
 
-  public_configs = [ "//garnet/public:config" ]
+  public_configs = [ "//sdk:config" ]
 }
 
 fidl("frobinator") {

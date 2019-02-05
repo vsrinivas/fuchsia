@@ -8,6 +8,8 @@ source_set("cpp") {
     "math.h",
   ]
 
+  public_configs = [ "//garnet/public:config" ]
+
   public_deps = [
     "$garnet_sdk_fidl/fuchsia.ui.gfx",
   ]

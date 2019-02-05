@@ -21,6 +21,7 @@ source_set("scenic") {
     "//garnet/lib/ui/scenic/util",
     "$garnet_sdk_fidl/fuchsia.ui.gfx",
     "$garnet_sdk_fidl/fuchsia.ui.scenic",
+    "//garnet/public/lib/fxl",
     "//zircon/public/lib/fit",
   ]
 
@@ -29,7 +30,6 @@ source_set("scenic") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/input/cpp",
   ]
 }

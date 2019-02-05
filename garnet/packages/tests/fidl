@@ -4,7 +4,7 @@
         "//garnet/tests/fidl-dangerous-identifiers"
     ],
     "packages": [
-        "//garnet/public/lib/fidl/cpp:fidl_tests",
+        "//sdk/lib/fidl/cpp:fidl_tests",
         "//garnet/public/lib/fidl/rust/fidl:rust_fidl_tests",
         "//garnet/examples/fidl/echo2_server_cpp:echo2_server_cpp_tests"
     ],
@@ -15,6 +15,6 @@
         "//garnet/go/src/fidl:fidlgen_golang_test",
         "//garnet/go/src/fidl:fidlgen_golang_ir_test",
         "//garnet/go/src/fidl:fidlgen_rust_test",
-        "//garnet/public/lib/fidl/cpp:fidl_cpp_host_unittests"
+        "//sdk/lib/fidl/cpp:fidl_cpp_host_unittests"
     ]
 }

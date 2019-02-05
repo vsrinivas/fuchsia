@@ -8,6 +8,8 @@ source_set("context_helper") {
     "context_helper.h",
   ]
 
+  public_configs = [ "//peridot/public:config" ]
+
   deps = [
     "$peridot_sdk_fidl/fuchsia.modular",
   ]
@@ -18,6 +20,8 @@ source_set("context_metadata_builder") {
     "context_metadata_builder.cc",
     "context_metadata_builder.h",
   ]
+
+  public_configs = [ "//peridot/public:config" ]
 
   deps = [
     "//garnet/public/lib/fidl/cpp",

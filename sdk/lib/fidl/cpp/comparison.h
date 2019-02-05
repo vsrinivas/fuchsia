@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_PUBLIC_LIB_FIDL_CPP_COMPARISON_H_
-#define GARNET_PUBLIC_LIB_FIDL_CPP_COMPARISON_H_
+#ifndef LIB_FIDL_CPP_COMPARISON_H_
+#define LIB_FIDL_CPP_COMPARISON_H_
 
 #include <memory>
 #include <vector>
@@ -44,4 +44,4 @@ inline bool Equals(const std::vector<std::unique_ptr<T>>& lhs,
 
 }  // namespace fidl
 
-#endif  // GARNET_PUBLIC_LIB_FIDL_CPP_COMPARISON_H_
+#endif  // LIB_FIDL_CPP_COMPARISON_H_
