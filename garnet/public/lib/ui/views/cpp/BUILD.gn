@@ -9,7 +9,7 @@ source_set("cpp") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/ui/geometry/cpp",
   ]
 }

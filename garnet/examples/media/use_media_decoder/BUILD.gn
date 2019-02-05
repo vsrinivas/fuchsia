@@ -17,7 +17,7 @@ source_set("use_media_decoder_source_set") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.mediacodec",
+    "$garnet_sdk_fidl/fuchsia.mediacodec",
     "//third_party/boringssl:crypto",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",

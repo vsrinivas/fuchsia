@@ -12,7 +12,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/bin/network_time:lib",
-    "//garnet/public/fidl/fuchsia.timezone",
+    "$garnet_sdk_fidl/fuchsia.timezone",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/syslog/cpp",

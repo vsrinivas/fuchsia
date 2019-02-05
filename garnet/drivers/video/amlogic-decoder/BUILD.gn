@@ -121,7 +121,7 @@ source_set("sources") {
     ":test_support",
     "third_party/libvpx",
     "//garnet/lib/media/codec_impl",
-    "//garnet/public/fidl/fuchsia.mediacodec",
+    "$garnet_sdk_fidl/fuchsia.mediacodec",
     "//garnet/public/lib/fidl/cpp",
   ]
   public_configs = [ ":sources_include_config" ]
@@ -134,7 +134,7 @@ source_set("tests") {
     ":sources",
     ":test_support",
     "//garnet/lib/media/codec_impl:codec_impl",
-    "//garnet/public/fidl/fuchsia.mediacodec",
+    "$garnet_sdk_fidl/fuchsia.mediacodec",
     "//third_party/googletest:gtest",
   ]
   sources = [
@@ -255,7 +255,7 @@ executable("test_amlogic_codec_factory") {
     "tests/manual/test_amlogic_codec_factory.cc",
   ]
   deps = [
-    "//garnet/public/fidl/fuchsia.mediacodec",
+    "$garnet_sdk_fidl/fuchsia.mediacodec",
     "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]

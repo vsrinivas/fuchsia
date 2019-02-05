@@ -14,7 +14,7 @@ source_set("include") {
 
   public_deps = [
     "//peridot/bin/ledger/fidl",
-    "//peridot/public/fidl/fuchsia.ledger",
-    "//peridot/public/fidl/fuchsia.ledger.cloud",
+    "$peridot_sdk_fidl/fuchsia.ledger",
+    "$peridot_sdk_fidl/fuchsia.ledger.cloud",
   ]
 }

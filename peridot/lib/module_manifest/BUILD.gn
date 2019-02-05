@@ -23,7 +23,7 @@ source_set("module_facet_reader") {
   ]
 
   deps = [
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
   ]
 }
 
@@ -36,14 +36,14 @@ source_set("module_facet_reader_impl") {
   deps = [
     ":json_xdr",
     ":module_facet_reader",
-    "//garnet/public/fidl/fuchsia.sys",
+    "$garnet_sdk_fidl/fuchsia.sys",
     "//garnet/public/lib/cmx_facet_parser",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/json",
     "//garnet/public/lib/pkg_url",
     "//peridot/lib/fidl:json_xdr",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
   ]
 }
 
@@ -60,7 +60,7 @@ source_set("module_facet_reader_impl_unittest") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//peridot/lib/scoped_tmpfs",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//third_party/googletest:gtest",
   ]
 }
@@ -73,7 +73,7 @@ source_set("json_xdr") {
 
   deps = [
     "//peridot/lib/fidl:json_xdr",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
   ]
 }
 
@@ -87,7 +87,7 @@ source_set("module_manifest_xdr_unittest") {
   deps = [
     ":json_xdr",
     "//peridot/lib/fidl:json_xdr",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//third_party/googletest:gtest",
   ]
 }

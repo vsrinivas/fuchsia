@@ -14,9 +14,9 @@ executable("tile") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.ui.gfx",
-    "//garnet/public/fidl/fuchsia.ui.policy",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "$garnet_sdk_fidl/fuchsia.ui.gfx",
+    "$garnet_sdk_fidl/fuchsia.ui.policy",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

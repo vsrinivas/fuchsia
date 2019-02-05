@@ -13,16 +13,16 @@ executable("sessionctl_test") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/fidl/fuchsia.testing.runner",
+    "$garnet_sdk_fidl/fuchsia.sys",
+    "$garnet_sdk_fidl/fuchsia.testing.runner",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/test_runner/cpp",
     "//peridot/bin/sessionctl:lib",
-    "//peridot/public/fidl/fuchsia.modular",
-    "//peridot/public/fidl/fuchsia.modular.internal",
+    "$peridot_sdk_fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular.internal",
     "//peridot/public/lib/integration_testing/cpp",
     "//third_party/googletest:gtest",
   ]

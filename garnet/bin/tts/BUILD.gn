@@ -14,8 +14,8 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.media",
-    "//garnet/public/fidl/fuchsia.tts",
+    "$garnet_sdk_fidl/fuchsia.media",
+    "$garnet_sdk_fidl/fuchsia.tts",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//third_party/flite",

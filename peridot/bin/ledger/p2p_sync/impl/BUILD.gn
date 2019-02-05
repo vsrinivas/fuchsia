@@ -31,7 +31,7 @@ source_set("impl") {
     "//peridot/bin/ledger/p2p_sync/public",
     "//peridot/bin/ledger/storage/public",
     "//peridot/lib/convert",
-    "//peridot/public/fidl/fuchsia.modular.auth",
+    "$peridot_sdk_fidl/fuchsia.modular.auth",
   ]
 
   deps = [

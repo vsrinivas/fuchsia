@@ -9,7 +9,7 @@ rustc_binary("bin") {
   name = "xi_core"
   edition = "2018"
   deps = [
-    "//garnet/public/fidl/fuchsia.xi:fuchsia.xi-rustc",
+    "$garnet_sdk_fidl/fuchsia.xi:fuchsia.xi-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",

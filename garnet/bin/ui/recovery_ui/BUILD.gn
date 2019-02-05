@@ -11,7 +11,7 @@ rustc_binary("bin") {
   with_lto = "fat"
 
   deps = [
-    "//garnet/public/fidl/fuchsia.amber:fuchsia.amber-rustc",
+    "$garnet_sdk_fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-framebuffer",

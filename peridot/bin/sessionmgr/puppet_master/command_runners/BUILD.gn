@@ -10,7 +10,7 @@ source_set("command_runner") {
 
   public_deps = [
     "//peridot/bin/sessionmgr/storage",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
   ]
 }
 
@@ -28,7 +28,7 @@ source_set("set_link_value_command_runner") {
 
   public_deps = [
     ":command_runner",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
   ]
 }
@@ -155,7 +155,7 @@ source_set("focus_mod_command_runner") {
   ]
 
   public_deps = [
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
   ]
 
   deps = [
@@ -184,7 +184,7 @@ source_set("set_kind_of_proto_story_option_command_runner") {
   ]
 
   public_deps = [
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
   ]
 
   deps = [

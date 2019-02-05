@@ -37,7 +37,7 @@ executable("mock_resolver") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.pkg",
+    "$garnet_sdk_fidl/fuchsia.pkg",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",

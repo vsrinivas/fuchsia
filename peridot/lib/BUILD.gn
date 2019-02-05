@@ -36,6 +36,6 @@ fidl("maxwell_internal") {
   ]
 
   deps = [
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
   ]
 }

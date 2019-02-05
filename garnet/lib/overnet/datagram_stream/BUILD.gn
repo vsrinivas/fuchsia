@@ -37,7 +37,7 @@ source_set("datagram_stream") {
     "//garnet/lib/overnet/routing:router",
     "//garnet/lib/overnet/vocabulary:internal_list",
     "//garnet/lib/overnet/vocabulary:slice",
-    "//garnet/public/fidl/fuchsia.overnet.protocol",
+    "$garnet_sdk_fidl/fuchsia.overnet.protocol",
   ]
 }
 
@@ -50,7 +50,7 @@ source_set("datagram_stream_test") {
     ":datagram_stream",
     "//garnet/lib/overnet/testing:test_timer",
     "//garnet/lib/overnet/testing:trace_cout",
-    "//garnet/public/fidl/fuchsia.overnet.protocol",
+    "$garnet_sdk_fidl/fuchsia.overnet.protocol",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -115,7 +115,7 @@ source_set("receive_mode") {
     "receive_mode.h",
   ]
   public_deps = [
-    "//garnet/public/fidl/fuchsia.overnet.protocol",
+    "$garnet_sdk_fidl/fuchsia.overnet.protocol",
   ]
   deps = [
     "//garnet/lib/overnet/vocabulary:callback",
@@ -130,7 +130,7 @@ source_set("receive_mode_fuzzer_helpers") {
     "receive_mode_fuzzer_helpers.h",
   ]
   public_deps = [
-    "//garnet/public/fidl/fuchsia.overnet.protocol",
+    "$garnet_sdk_fidl/fuchsia.overnet.protocol",
   ]
   deps = [
     ":receive_mode",

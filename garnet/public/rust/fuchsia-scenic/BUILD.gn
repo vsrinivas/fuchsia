@@ -9,10 +9,10 @@ rustc_library("fuchsia-scenic") {
   version = "0.1.0"
   edition = "2018"
   deps = [
-    "//garnet/public/fidl/fuchsia.images:fuchsia.images-rustc",
-    "//garnet/public/fidl/fuchsia.math:fuchsia.math-rustc",
-    "//garnet/public/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
-    "//garnet/public/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "$garnet_sdk_fidl/fuchsia.images:fuchsia.images-rustc",
+    "$garnet_sdk_fidl/fuchsia.math:fuchsia.math-rustc",
+    "$garnet_sdk_fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
+    "$garnet_sdk_fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/shared-buffer",

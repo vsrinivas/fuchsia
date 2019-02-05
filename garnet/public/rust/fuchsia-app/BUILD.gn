@@ -9,7 +9,7 @@ rustc_library("fuchsia-app") {
   version = "0.1.0"
   edition = "2018"
   deps = [
-    "//garnet/public/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "$garnet_sdk_fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",

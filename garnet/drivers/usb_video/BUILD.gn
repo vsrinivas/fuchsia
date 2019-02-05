@@ -23,7 +23,7 @@ driver_module("usb_video_driver") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.camera",
+    "$garnet_sdk_fidl/fuchsia.camera",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//zircon/public/banjo/ddk-protocol-usb",

@@ -15,8 +15,8 @@ go_library("pmd") {
     "//garnet/go/src/merkle",
     "//garnet/go/src/pm:pm_lib",
     "//garnet/go/src/thinfs:thinfs_lib",
-    "//garnet/public/fidl/fuchsia.amber($go_toolchain)",
-    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
+    "$garnet_sdk_fidl/fuchsia.amber($go_toolchain)",
+    "$garnet_sdk_fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",
   ]
 }

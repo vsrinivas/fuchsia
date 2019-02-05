@@ -13,7 +13,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
-    "//garnet/public/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "$garnet_sdk_fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",

@@ -19,7 +19,7 @@ source_set("mutation_matchers") {
   ]
 
   public_deps = [
-    "//peridot/public/fidl/fuchsia.modular.storymodel",
+    "$peridot_sdk_fidl/fuchsia.modular.storymodel",
     "//peridot/public/lib/fostr/fidl/fuchsia.modular",
     "//peridot/public/lib/fostr/fidl/fuchsia.modular.storymodel",
     "//third_party/googletest:gmock",
@@ -36,6 +36,6 @@ source_set("test_mutator") {
 
   deps = [
     "//peridot/bin/sessionmgr/story/model",
-    "//peridot/public/fidl/fuchsia.modular.storymodel",
+    "$peridot_sdk_fidl/fuchsia.modular.storymodel",
   ]
 }

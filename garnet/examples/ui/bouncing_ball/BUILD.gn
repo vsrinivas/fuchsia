@@ -10,9 +10,9 @@ executable("bouncing_ball") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.ui.app",
-    "//garnet/public/fidl/fuchsia.ui.gfx",
-    "//garnet/public/fidl/fuchsia.ui.scenic",
+    "$garnet_sdk_fidl/fuchsia.ui.app",
+    "$garnet_sdk_fidl/fuchsia.ui.gfx",
+    "$garnet_sdk_fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/component/cpp:cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/scenic/cpp:cpp",

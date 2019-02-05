@@ -11,7 +11,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_net_policy_ext",
-    "//garnet/public/fidl/fuchsia.net.policy:fuchsia.net.policy-rustc",
+    "$garnet_sdk_fidl/fuchsia.net.policy:fuchsia.net.policy-rustc",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",

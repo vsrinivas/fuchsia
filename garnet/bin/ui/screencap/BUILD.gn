@@ -10,7 +10,7 @@ executable("screencap") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.ui.scenic",
+    "$garnet_sdk_fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

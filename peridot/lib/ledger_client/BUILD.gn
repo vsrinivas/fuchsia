@@ -29,7 +29,7 @@ source_set("operations") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:json_xdr",
-    "//peridot/public/fidl/fuchsia.ledger",
+    "$peridot_sdk_fidl/fuchsia.ledger",
     "//peridot/public/lib/async/cpp:operation",
   ]
 }
@@ -53,7 +53,7 @@ source_set("page_client") {
     "//peridot/bin/ledger/fidl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:clone",
-    "//peridot/public/fidl/fuchsia.ledger",
+    "$peridot_sdk_fidl/fuchsia.ledger",
     "//peridot/public/lib/async/cpp:operation",
   ]
 }
@@ -65,7 +65,7 @@ source_set("promise") {
 
   public_deps = [
     "//peridot/lib/fidl:array_to_string",
-    "//peridot/public/fidl/fuchsia.ledger",
+    "$peridot_sdk_fidl/fuchsia.ledger",
   ]
 }
 
@@ -77,7 +77,7 @@ source_set("status") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/public/fidl/fuchsia.ledger",
+    "$peridot_sdk_fidl/fuchsia.ledger",
   ]
 }
 

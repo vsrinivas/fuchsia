@@ -92,7 +92,7 @@ source_set("lib") {
     "//garnet/bin/guest/third_party/fdt",
     "//garnet/bin/guest/vmm/fidl:fuchsia.guest.device",
     "//garnet/bin/guest/vmm/fidl:fuchsia.guest.vmm",
-    "//garnet/public/fidl/fuchsia.guest",
+    "$garnet_sdk_fidl/fuchsia.guest",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/base_view/cpp",
     "//third_party/rapidjson",

@@ -21,7 +21,7 @@ rustc_binary("tennis_manual_player_bin") {
   edition = "2018"
   source_root = "src/main.rs"
   deps = [
-    "//garnet/public/fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
+    "$garnet_sdk_fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",

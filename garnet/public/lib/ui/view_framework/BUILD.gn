@@ -8,16 +8,16 @@ source_set("view_framework") {
     "base_view.h",
   ]
   public_deps = [
-    "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/fidl/fuchsia.ui.input",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "$garnet_sdk_fidl/fuchsia.sys",
+    "$garnet_sdk_fidl/fuchsia.ui.input",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/scenic/cpp",
     "//zircon/public/lib/fit",
   ]
   deps = [
-    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "$garnet_sdk_fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/ui/geometry/cpp",
     "//zircon/public/lib/trace",

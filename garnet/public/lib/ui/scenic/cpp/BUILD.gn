@@ -28,8 +28,8 @@ sdk_source_set("cpp") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.ui.gfx",
-    "//garnet/public/fidl/fuchsia.ui.scenic",
+    "$garnet_sdk_fidl/fuchsia.ui.gfx",
+    "$garnet_sdk_fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/images/cpp",
     "//zircon/public/lib/fit",

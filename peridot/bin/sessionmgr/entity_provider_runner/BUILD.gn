@@ -15,14 +15,14 @@ source_set("entity_provider_runner") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.sys",
+    "$garnet_sdk_fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/util",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
   ]
 }
 
@@ -41,7 +41,7 @@ executable("entity_provider_runner_unittest") {
 
   deps = [
     ":entity_provider_runner",
-    "//garnet/public/fidl/fuchsia.sys",
+    "$garnet_sdk_fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing:fake_launcher",
     "//garnet/public/lib/fsl",
@@ -52,8 +52,8 @@ executable("entity_provider_runner_unittest") {
     "//peridot/lib/testing:fake_agent_runner_storage",
     "//peridot/lib/testing:mock_base",
     "//peridot/lib/testing:test_with_ledger",
-    "//peridot/public/fidl/fuchsia.modular",
-    "//peridot/public/fidl/fuchsia.modular.auth",
+    "$peridot_sdk_fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular.auth",
     "//peridot/public/lib/agent/cpp",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/trace",

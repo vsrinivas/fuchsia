@@ -545,7 +545,7 @@ source_set("escher") {
       "util/fuchsia_utils.h",
     ]
     public_deps += [
-      "//garnet/public/fidl/fuchsia.images",
+      "$garnet_sdk_fidl/fuchsia.images",
       "//zircon/public/lib/async-loop-cpp",
       "//zircon/public/lib/fit",
       "//zircon/public/lib/fs",

@@ -10,7 +10,7 @@ rustc_library("account_common") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/public/fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
+    "$garnet_sdk_fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:log",

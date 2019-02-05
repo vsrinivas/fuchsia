@@ -11,9 +11,9 @@ source_set("tiles_lib") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.developer.tiles",
-    "//garnet/public/fidl/fuchsia.ui.app",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "$garnet_sdk_fidl/fuchsia.developer.tiles",
+    "$garnet_sdk_fidl/fuchsia.ui.app",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
     "//zircon/public/lib/zx",
@@ -33,7 +33,7 @@ executable("bin") {
 
   deps = [
     ":tiles_lib",
-    "//garnet/public/fidl/fuchsia.ui.policy",
+    "$garnet_sdk_fidl/fuchsia.ui.policy",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",

@@ -19,7 +19,7 @@ source_set("app_client") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//peridot/lib/common:async_holder",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
   ]
 }
 
@@ -93,14 +93,14 @@ source_set("single_service_app") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/fidl/fuchsia.ui.app",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
+    "$garnet_sdk_fidl/fuchsia.sys",
+    "$garnet_sdk_fidl/fuchsia.ui.app",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1token",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//zircon/public/lib/zx",
   ]
 }
@@ -118,9 +118,9 @@ source_set("view_host") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.ui.app",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
+    "$garnet_sdk_fidl/fuchsia.ui.app",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1token",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
   ]

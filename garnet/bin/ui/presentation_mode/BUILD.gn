@@ -16,7 +16,7 @@ source_set("presentation_mode") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.ui.input",
-    "//garnet/public/fidl/fuchsia.ui.policy",
+    "$garnet_sdk_fidl/fuchsia.ui.input",
+    "$garnet_sdk_fidl/fuchsia.ui.policy",
   ]
 }

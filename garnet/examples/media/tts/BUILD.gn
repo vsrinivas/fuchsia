@@ -8,7 +8,7 @@ executable("tts") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.tts",
+    "$garnet_sdk_fidl/fuchsia.tts",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//zircon/public/lib/async-loop-cpp",

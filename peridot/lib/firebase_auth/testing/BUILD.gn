@@ -20,7 +20,7 @@ source_set("testing") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.auth",
+    "$garnet_sdk_fidl/fuchsia.auth",
     "//peridot/lib/firebase_auth",
     "//peridot/lib/rng",
   ]
@@ -46,7 +46,7 @@ source_set("service_account_provider") {
 
   public_deps = [
     ":service_account",
-    "//garnet/public/fidl/fuchsia.auth",
+    "$garnet_sdk_fidl/fuchsia.auth",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network_wrapper",

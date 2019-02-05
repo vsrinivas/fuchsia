@@ -36,8 +36,8 @@ source_set("story_runner") {
 
   public_deps = [
     "//garnet/bin/ui/snapshot:snapshot_loader",
-    "//garnet/public/fidl/fuchsia.ui.policy",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "$garnet_sdk_fidl/fuchsia.ui.policy",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
@@ -69,9 +69,9 @@ source_set("story_runner") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/util",
     "//peridot/lib/util:debug",
-    "//peridot/public/fidl/fuchsia.ledger",
-    "//peridot/public/fidl/fuchsia.modular",
-    "//peridot/public/fidl/fuchsia.modular.internal",
+    "$peridot_sdk_fidl/fuchsia.ledger",
+    "$peridot_sdk_fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular.internal",
     "//peridot/public/lib/async/cpp:future",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/context/cpp:context_helper",
@@ -86,7 +86,7 @@ source_set("story_runner") {
     "//peridot/bin/sessionmgr/story/model:noop_story_model_storage",
     "//peridot/bin/sessionmgr/story/model:story_model_owner",
     "//peridot/lib/fidl:clone",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -103,12 +103,12 @@ executable_package("dev_story_shell") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]

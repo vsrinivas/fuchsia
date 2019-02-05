@@ -14,9 +14,9 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/bt-avdtp",
     "//garnet/lib/rust/fuchsia-bluetooth",
-    "//garnet/public/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
-    "//garnet/public/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//garnet/public/fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
+    "$garnet_sdk_fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "$garnet_sdk_fidl/fuchsia.media:fuchsia.media-rustc",
+    "$garnet_sdk_fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",

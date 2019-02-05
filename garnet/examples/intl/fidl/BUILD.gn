@@ -11,7 +11,7 @@ fidl("wisdom") {
     "intl_wisdom.fidl",
   ]
   deps = [
-    "//garnet/public/fidl/fuchsia.intl",
+    "$garnet_sdk_fidl/fuchsia.intl",
   ]
   sdk_category = "internal"
 }

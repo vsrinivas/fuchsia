@@ -18,6 +18,6 @@ fidl("fuchsia.auth") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1token",
   ]
 }

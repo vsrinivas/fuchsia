@@ -19,8 +19,8 @@ executable_package("sessionctl") {
     ":lib",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson",
-    "//peridot/public/fidl/fuchsia.modular",
-    "//peridot/public/fidl/fuchsia.modular.internal",
+    "$peridot_sdk_fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular.internal",
     "//peridot/public/lib/async/cpp:future",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
@@ -45,8 +45,8 @@ source_set("lib") {
 
   deps = [
     "//peridot/lib/rapidjson",
-    "//peridot/public/fidl/fuchsia.modular",
-    "//peridot/public/fidl/fuchsia.modular.internal",
+    "$peridot_sdk_fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular.internal",
     "//peridot/public/lib/async/cpp:future",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -65,7 +65,7 @@ executable("sessionctl_unittest") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:test_story_command_executor",
     "//peridot/lib/testing:test_with_session_storage",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//third_party/googletest:gtest_main",
   ]
 }

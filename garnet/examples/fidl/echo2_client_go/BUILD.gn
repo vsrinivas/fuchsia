@@ -20,7 +20,7 @@ go_library("echo2_client_go_lib") {
   name = "echo2_client_go"
   deps = [
     "//garnet/examples/fidl/services:echo2($go_toolchain)",
-    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
+    "$garnet_sdk_fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/svc/go/src/svc",
   ]

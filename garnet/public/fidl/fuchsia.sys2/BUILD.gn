@@ -8,7 +8,7 @@ fidl("fuchsia.sys2") {
   sdk_category = "partner"
 
   deps = [
-    "//garnet/public/fidl/fuchsia.data",
+    "$garnet_sdk_fidl/fuchsia.data",
     "//zircon/public/fidl/fuchsia-io",
   ]
 

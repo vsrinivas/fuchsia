@@ -10,8 +10,8 @@ rustc_library("cm_fidl") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/cm_json",
-    "//garnet/public/fidl/fuchsia.data:fuchsia.data-rustc",
-    "//garnet/public/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "$garnet_sdk_fidl/fuchsia.data:fuchsia.data-rustc",
+    "$garnet_sdk_fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//third_party/rust-crates/rustc_deps:json5",
     "//third_party/rust-crates/rustc_deps:lazy_static",
     "//third_party/rust-crates/rustc_deps:regex",

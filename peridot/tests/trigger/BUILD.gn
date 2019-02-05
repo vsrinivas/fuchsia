@@ -29,14 +29,14 @@ executable_package("trigger_test_session_shell") {
 
   deps = [
     ":defs",
-    "//garnet/public/fidl/fuchsia.testing.runner",
+    "$garnet_sdk_fidl/fuchsia.testing.runner",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_main",
     "//peridot/lib/testing:session_shell_base",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
   ]
@@ -60,7 +60,7 @@ executable_package("trigger_test_module") {
     ":defs",
     ":trigger_test_service",
     "//garnet/public/lib/callback",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/lib/message_queue/cpp",
@@ -86,7 +86,7 @@ executable_package("trigger_test_agent") {
   deps = [
     ":defs",
     ":trigger_test_service",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",

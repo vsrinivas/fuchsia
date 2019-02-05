@@ -11,7 +11,7 @@ source_set("cpp") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.math",
+    "$garnet_sdk_fidl/fuchsia.math",
   ]
 }
 

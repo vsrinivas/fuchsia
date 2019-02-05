@@ -17,7 +17,7 @@ executable("app") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rng:system",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
@@ -48,8 +48,8 @@ source_set("lib") {
     "//peridot/bin/cloud_provider_firestore/include",
     "//peridot/lib/firebase_auth",
     "//peridot/lib/rng",
-    "//peridot/public/fidl/fuchsia.ledger.cloud",
-    "//peridot/public/fidl/fuchsia.modular.auth",
+    "$peridot_sdk_fidl/fuchsia.ledger.cloud",
+    "$peridot_sdk_fidl/fuchsia.modular.auth",
     "//third_party/grpc:grpc++",
   ]
 

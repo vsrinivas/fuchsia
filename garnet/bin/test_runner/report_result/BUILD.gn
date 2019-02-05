@@ -10,7 +10,7 @@ executable("report_result") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.testing.runner",
+    "$garnet_sdk_fidl/fuchsia.testing.runner",
     "//garnet/public/lib/test_runner/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",

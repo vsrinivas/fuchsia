@@ -11,7 +11,7 @@ source_set("lib") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.memory",
+    "$garnet_sdk_fidl/fuchsia.memory",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

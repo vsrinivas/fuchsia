@@ -9,7 +9,7 @@ rustc_binary("dev_auth_provider") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/fidl/fuchsia.auth:fuchsia.auth-rustc",
+    "$garnet_sdk_fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",

@@ -11,7 +11,7 @@ sandbox_test_package("some_services") {
 
   deps = [
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
-    "//garnet/public/fidl/fuchsia.sys",
+    "$garnet_sdk_fidl/fuchsia.sys",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//zircon/public/fidl/fuchsia-process",

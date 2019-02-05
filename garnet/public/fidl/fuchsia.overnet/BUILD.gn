@@ -10,6 +10,6 @@ fidl("fuchsia.overnet") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.overnet.protocol",
+    "$garnet_sdk_fidl/fuchsia.overnet.protocol",
   ]
 }

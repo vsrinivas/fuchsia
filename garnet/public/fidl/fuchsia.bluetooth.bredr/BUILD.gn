@@ -10,6 +10,6 @@ fidl("fuchsia.bluetooth.bredr") {
     "service.fidl",
   ]
   public_deps = [
-    "//garnet/public/fidl/fuchsia.bluetooth",
+    "$garnet_sdk_fidl/fuchsia.bluetooth",
   ]
 }

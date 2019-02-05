@@ -12,8 +12,8 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/fidl/fuchsia.data:fuchsia.data-rustc",
-    "//garnet/public/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "$garnet_sdk_fidl/fuchsia.data:fuchsia.data-rustc",
+    "$garnet_sdk_fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",

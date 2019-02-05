@@ -12,8 +12,8 @@ executable("child") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.ui.app",
-    "//garnet/public/fidl/fuchsia.ui.input",
+    "$garnet_sdk_fidl/fuchsia.ui.app",
+    "$garnet_sdk_fidl/fuchsia.ui.input",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/input",

@@ -45,7 +45,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/lib/cmx",
     "//garnet/lib/loader",
-    "//garnet/public/fidl/fuchsia.sys",
+    "$garnet_sdk_fidl/fuchsia.sys",
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
@@ -77,7 +77,7 @@ source_set("appmgr_for_test") {
 
   public_deps = [
     ":lib",
-    "//garnet/public/fidl/fuchsia.sys",
+    "$garnet_sdk_fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fs",

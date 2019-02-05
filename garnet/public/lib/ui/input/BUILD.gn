@@ -16,8 +16,8 @@ source_set("input") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.math",
-    "//garnet/public/fidl/fuchsia.ui.input",
+    "$garnet_sdk_fidl/fuchsia.math",
+    "$garnet_sdk_fidl/fuchsia.ui.input",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fit",

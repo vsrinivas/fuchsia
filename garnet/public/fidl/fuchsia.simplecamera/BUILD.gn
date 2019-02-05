@@ -12,6 +12,6 @@ fidl("fuchsia.simplecamera") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.images",
+    "$garnet_sdk_fidl/fuchsia.images",
   ]
 }

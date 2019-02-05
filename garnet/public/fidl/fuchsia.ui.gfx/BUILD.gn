@@ -22,8 +22,8 @@ fidl("fuchsia.ui.gfx") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.images",
-    "//garnet/public/fidl/fuchsia.math",
+    "$garnet_sdk_fidl/fuchsia.images",
+    "$garnet_sdk_fidl/fuchsia.math",
     "//zircon/public/fidl/fuchsia-mem",
   ]
 }

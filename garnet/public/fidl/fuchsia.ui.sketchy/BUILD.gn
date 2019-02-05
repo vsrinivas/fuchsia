@@ -13,7 +13,7 @@ fidl("fuchsia.ui.sketchy") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.images",
-    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "$garnet_sdk_fidl/fuchsia.images",
+    "$garnet_sdk_fidl/fuchsia.ui.gfx",
   ]
 }

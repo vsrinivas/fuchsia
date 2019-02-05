@@ -10,7 +10,7 @@ source_set("network_wrapper") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.net.oldhttp",
+    "$garnet_sdk_fidl/fuchsia.net.oldhttp",
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
@@ -46,7 +46,7 @@ source_set("unittests") {
 
   deps = [
     ":network_wrapper",
-    "//garnet/public/fidl/fuchsia.netstack",
+    "$garnet_sdk_fidl/fuchsia.netstack",
     "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",

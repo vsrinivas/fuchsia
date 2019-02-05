@@ -17,9 +17,9 @@ fidl("fuchsia.accessibility") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/fidl/fuchsia.ui.gfx",
-    "//garnet/public/fidl/fuchsia.ui.input",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "$garnet_sdk_fidl/fuchsia.sys",
+    "$garnet_sdk_fidl/fuchsia.ui.gfx",
+    "$garnet_sdk_fidl/fuchsia.ui.input",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
   ]
 }

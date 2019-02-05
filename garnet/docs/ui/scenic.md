@@ -126,7 +126,7 @@ its links become inoperable.
 animations which belong to particular `Sessions`.
 
 The list of Scenic resources is described by the API:
-//garnet/public/fidl/fuchsia.ui.gfx/resources.fidl
+$garnet_sdk_fidl/fuchsia.ui.gfx/resources.fidl
 
 Clients of Scenic generate graphical content to be rendered by queuing and
 submitting operations to add, remove, or modify resources within their

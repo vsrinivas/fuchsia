@@ -14,7 +14,7 @@ fidl("fuchsia.mediasession") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.media",
-    "//garnet/public/fidl/fuchsia.mediaplayer",
+    "$garnet_sdk_fidl/fuchsia.media",
+    "$garnet_sdk_fidl/fuchsia.mediaplayer",
   ]
 }

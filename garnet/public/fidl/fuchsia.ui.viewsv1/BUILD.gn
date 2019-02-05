@@ -19,10 +19,10 @@ fidl("fuchsia.ui.viewsv1") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.math",
-    "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/fidl/fuchsia.ui.scenic",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
+    "$garnet_sdk_fidl/fuchsia.math",
+    "$garnet_sdk_fidl/fuchsia.sys",
+    "$garnet_sdk_fidl/fuchsia.ui.scenic",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1token",
     "//zircon/public/fidl/fuchsia-mem",
   ]
 }

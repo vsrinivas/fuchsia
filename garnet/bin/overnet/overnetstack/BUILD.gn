@@ -22,7 +22,7 @@ executable("overnetstack_unittests") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.overnet",
+    "$garnet_sdk_fidl/fuchsia.overnet",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -47,8 +47,8 @@ executable("bin") {
   deps = [
     ":overnet_fuchsia_compatibility",
     "//garnet/lib/overnet",
-    "//garnet/public/fidl/fuchsia.mdns",
-    "//garnet/public/fidl/fuchsia.overnet",
+    "$garnet_sdk_fidl/fuchsia.mdns",
+    "$garnet_sdk_fidl/fuchsia.overnet",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fostr/fidl/fuchsia.mdns",

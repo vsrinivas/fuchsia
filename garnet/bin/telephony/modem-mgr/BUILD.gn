@@ -11,8 +11,8 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/qmi",
-    "//garnet/public/fidl/fuchsia.telephony.manager:fuchsia.telephony.manager-rustc",
-    "//garnet/public/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
+    "$garnet_sdk_fidl/fuchsia.telephony.manager:fuchsia.telephony.manager-rustc",
+    "$garnet_sdk_fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",

@@ -11,8 +11,8 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/public/fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
-    "//garnet/public/fidl/fuchsia.mediasession:fuchsia.mediasession-rustc",
+    "$garnet_sdk_fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
+    "$garnet_sdk_fidl/fuchsia.mediasession:fuchsia.mediasession-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",

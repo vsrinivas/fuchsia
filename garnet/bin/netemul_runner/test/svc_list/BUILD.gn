@@ -9,8 +9,8 @@ rustc_binary("svc_list") {
   name = "svc_list"
   edition = "2018"
   deps = [
-    "//garnet/public/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
-    "//garnet/public/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "$garnet_sdk_fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "$garnet_sdk_fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/lib/netemul/fidl:environment-rustc",
     "//garnet/public/lib/netemul/fidl:network-rustc",

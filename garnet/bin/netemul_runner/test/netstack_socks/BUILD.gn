@@ -11,8 +11,8 @@ rustc_binary("netstack_socks") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
     "//garnet/lib/rust/fidl_fuchsia_netstack_ext",
-    "//garnet/public/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
-    "//garnet/public/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "$garnet_sdk_fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "$garnet_sdk_fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/lib/netemul/fidl:environment-rustc",
     "//garnet/public/lib/netemul/fidl:network-rustc",

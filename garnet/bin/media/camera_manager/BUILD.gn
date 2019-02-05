@@ -13,7 +13,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.camera:fuchsia.camera",
+    "$garnet_sdk_fidl/fuchsia.camera:fuchsia.camera",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",

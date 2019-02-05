@@ -246,7 +246,7 @@ executable("common_tests") {
   deps = [
     ":test_main",
     "//garnet/lib/wlan/common",
-    "//garnet/public/fidl/fuchsia.wlan.stats",
+    "$garnet_sdk_fidl/fuchsia.wlan.stats",
     "//third_party/googletest:gtest",
   ]
 

@@ -10,9 +10,9 @@ fidl("fuchsia.guest.device") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.guest",
-    "//garnet/public/fidl/fuchsia.ui.gfx",
-    "//garnet/public/fidl/fuchsia.ui.input",
+    "$garnet_sdk_fidl/fuchsia.guest",
+    "$garnet_sdk_fidl/fuchsia.ui.gfx",
+    "$garnet_sdk_fidl/fuchsia.ui.input",
     "//zircon/public/fidl/fuchsia-io",
   ]
 }
@@ -23,6 +23,6 @@ fidl("fuchsia.guest.vmm") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.guest",
+    "$garnet_sdk_fidl/fuchsia.guest",
   ]
 }

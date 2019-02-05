@@ -72,15 +72,15 @@ fidl("fuchsia.modular") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.auth",
-    "//garnet/public/fidl/fuchsia.images",
-    "//garnet/public/fidl/fuchsia.media",
-    "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/fidl/fuchsia.ui.policy",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
-    "//peridot/public/fidl/fuchsia.ledger",
-    "//peridot/public/fidl/fuchsia.modular.auth",
-    "//peridot/public/fidl/fuchsia.speech",
+    "$garnet_sdk_fidl/fuchsia.auth",
+    "$garnet_sdk_fidl/fuchsia.images",
+    "$garnet_sdk_fidl/fuchsia.media",
+    "$garnet_sdk_fidl/fuchsia.sys",
+    "$garnet_sdk_fidl/fuchsia.ui.policy",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1token",
+    "$peridot_sdk_fidl/fuchsia.ledger",
+    "$peridot_sdk_fidl/fuchsia.modular.auth",
+    "$peridot_sdk_fidl/fuchsia.speech",
     "//zircon/public/fidl/fuchsia-mem",
   ]
 }

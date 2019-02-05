@@ -5,7 +5,7 @@
 import("//garnet/public/build/fostr/fostr_fidl.gni")
 
 fostr_fidl("fuchsia.modular.internal") {
-  fidl_target = "//peridot/public/fidl/fuchsia.modular.internal"
+  fidl_target = "$peridot_sdk_fidl/fuchsia.modular.internal"
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.auth",

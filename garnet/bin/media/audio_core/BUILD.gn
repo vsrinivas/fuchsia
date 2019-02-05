@@ -77,7 +77,7 @@ executable("audio_core") {
     "//garnet/bin/media/audio_core/mixer:audio_mixer_lib",
     "//garnet/bin/media/util",
     "//garnet/lib/media/wav_writer",
-    "//garnet/public/fidl/fuchsia.media",
+    "$garnet_sdk_fidl/fuchsia.media",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

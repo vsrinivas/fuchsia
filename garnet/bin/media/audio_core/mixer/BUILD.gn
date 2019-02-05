@@ -28,7 +28,7 @@ source_set("audio_mixer_lib") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.media",
+    "$garnet_sdk_fidl/fuchsia.media",
   ]
 
   deps = [

@@ -40,7 +40,7 @@ source_set("router_endpoint") {
     "router_endpoint.h",
   ]
   public_deps = [
-    "//garnet/public/fidl/fuchsia.overnet.protocol",
+    "$garnet_sdk_fidl/fuchsia.overnet.protocol",
     "//garnet/public/lib/fostr/fidl/fuchsia.overnet.protocol",
   ]
   deps = [

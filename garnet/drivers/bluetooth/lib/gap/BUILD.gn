@@ -46,8 +46,8 @@ static_library("gap") {
     "//garnet/drivers/bluetooth/lib/l2cap",
     "//garnet/drivers/bluetooth/lib/sdp",
     "//garnet/drivers/bluetooth/lib/sm",
-    "//garnet/public/fidl/fuchsia.bluetooth",
-    "//garnet/public/fidl/fuchsia.bluetooth.le",
+    "$garnet_sdk_fidl/fuchsia.bluetooth",
+    "$garnet_sdk_fidl/fuchsia.bluetooth.le",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fit",
   ]

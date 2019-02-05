@@ -15,8 +15,8 @@ fidl("fidl") {
   ]
 
   deps = [
-    "//peridot/public/fidl/fuchsia.ledger",
-    "//peridot/public/fidl/fuchsia.ledger.cloud",
+    "$peridot_sdk_fidl/fuchsia.ledger",
+    "$peridot_sdk_fidl/fuchsia.ledger.cloud",
   ]
 }
 
@@ -25,7 +25,7 @@ error_notifier_fidl("error_notifier_internal") {
 }
 
 error_notifier_fidl("error_notifier_public") {
-  fidl_target = "//peridot/public/fidl/fuchsia.ledger"
+  fidl_target = "$peridot_sdk_fidl/fuchsia.ledger"
 }
 
 source_set("error_notifier") {

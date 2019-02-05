@@ -10,6 +10,6 @@ fidl("fuchsia.wayland") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.ui.app",
+    "$garnet_sdk_fidl/fuchsia.ui.app",
   ]
 }

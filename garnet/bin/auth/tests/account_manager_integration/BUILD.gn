@@ -15,8 +15,8 @@ rustc_library("account_manager_integration") {
 
   deps = [
     "//garnet/lib/auth/account_common",
-    "//garnet/public/fidl/fuchsia.auth:fuchsia.auth-rustc",
-    "//garnet/public/fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
+    "$garnet_sdk_fidl/fuchsia.auth:fuchsia.auth-rustc",
+    "$garnet_sdk_fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",

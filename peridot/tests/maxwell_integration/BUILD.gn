@@ -24,7 +24,7 @@ executable("context_engine_test") {
     "//garnet/public/lib/fsl",
     "//peridot/bin/context_engine:scope_utils",
     "//peridot/lib/testing:entity_resolver_fake",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//third_party/googletest:gtest_main",
@@ -46,7 +46,7 @@ executable("suggestion_engine_test") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:story_provider_mock",
     "//peridot/lib/testing:wait_until_idle",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
     "//third_party/googletest:gtest_main",
   ]
@@ -68,7 +68,7 @@ source_set("context_common") {
   ]
 
   public_deps = [
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -105,7 +105,7 @@ source_set("test_suggestion_listener") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//peridot/public/lib/fostr/fidl/fuchsia.modular",
   ]
 

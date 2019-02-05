@@ -28,8 +28,8 @@ executable_package("link_context_entities_test_session_shell") {
 
   deps = [
     ":defs",
-    "//garnet/public/fidl/fuchsia.testing.runner",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "$garnet_sdk_fidl/fuchsia.testing.runner",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
@@ -37,7 +37,7 @@ executable_package("link_context_entities_test_session_shell") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_main",
     "//peridot/lib/testing:session_shell_base",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/fostr/fidl/fuchsia.modular",
     "//peridot/public/lib/integration_testing/cpp",
@@ -62,9 +62,9 @@ executable_package("link_context_entities_test_module") {
 
   deps = [
     ":defs",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
     "//peridot/lib/testing:component_base",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",

@@ -13,11 +13,11 @@ fidl("fuchsia.modular.internal") {
     "story_data.fidl",
   ]
   deps = [
-    "//garnet/public/fidl/fuchsia.auth",
-    "//garnet/public/fidl/fuchsia.ui.policy",
-    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
-    "//peridot/public/fidl/fuchsia.ledger",
-    "//peridot/public/fidl/fuchsia.modular",
-    "//peridot/public/fidl/fuchsia.modular.auth",
+    "$garnet_sdk_fidl/fuchsia.auth",
+    "$garnet_sdk_fidl/fuchsia.ui.policy",
+    "$garnet_sdk_fidl/fuchsia.ui.viewsv1token",
+    "$peridot_sdk_fidl/fuchsia.ledger",
+    "$peridot_sdk_fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular.auth",
   ]
 }

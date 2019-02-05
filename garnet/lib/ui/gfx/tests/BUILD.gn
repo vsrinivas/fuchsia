@@ -120,9 +120,9 @@ executable("pixeltests") {
     "//third_party/glm",
   ]
   deps = [
-    "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/fidl/fuchsia.ui.policy",
-    "//garnet/public/fidl/fuchsia.ui.scenic",
+    "$garnet_sdk_fidl/fuchsia.sys",
+    "$garnet_sdk_fidl/fuchsia.ui.policy",
+    "$garnet_sdk_fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -146,10 +146,10 @@ executable("viewstate_apptests") {
     "//third_party/glm",
   ]
   deps = [
-    "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/fidl/fuchsia.ui.app",
-    "//garnet/public/fidl/fuchsia.ui.policy",
-    "//garnet/public/fidl/fuchsia.ui.scenic",
+    "$garnet_sdk_fidl/fuchsia.sys",
+    "$garnet_sdk_fidl/fuchsia.ui.app",
+    "$garnet_sdk_fidl/fuchsia.ui.policy",
+    "$garnet_sdk_fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -171,7 +171,7 @@ executable("mock_pose_buffer_provider_cc") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "$garnet_sdk_fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//zircon/public/lib/async-default",

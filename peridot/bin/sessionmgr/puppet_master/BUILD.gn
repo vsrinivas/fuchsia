@@ -33,7 +33,7 @@ source_set("puppet_master_impl") {
 
   public_deps = [
     "//peridot/bin/sessionmgr/storage",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
   ]
 }
@@ -50,7 +50,7 @@ executable("puppet_master_impl_unittest") {
     ":story_command_executor",
     "//peridot/lib/testing:test_story_command_executor",
     "//peridot/lib/testing:test_with_session_storage",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -63,7 +63,7 @@ source_set("story_command_executor") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
   ]
 }
 
@@ -76,7 +76,7 @@ executable("story_command_executor_unittest") {
 
   deps = [
     ":story_command_executor",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -90,7 +90,7 @@ source_set("dispatch_story_command_executor") {
   public_deps = [
     ":story_command_executor",
     "//peridot/bin/sessionmgr/puppet_master/command_runners:command_runner",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:future",
     "//peridot/public/lib/async/cpp:operation",
   ]
@@ -106,7 +106,7 @@ executable("dispatch_story_command_executor_unittest") {
   deps = [
     ":dispatch_story_command_executor",
     "//peridot/lib/testing:test_with_ledger",
-    "//peridot/public/fidl/fuchsia.modular",
+    "$peridot_sdk_fidl/fuchsia.modular",
     "//third_party/googletest:gtest_main",
   ]
 }

@@ -38,7 +38,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.mdns",
+    "$garnet_sdk_fidl/fuchsia.mdns",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fsl",

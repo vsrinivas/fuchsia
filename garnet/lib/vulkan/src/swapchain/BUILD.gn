@@ -10,7 +10,7 @@ source_set("surface_header") {
   ]
   public_deps = [
     "$loader_build_root:vulkan",
-    "//garnet/public/fidl/fuchsia.images",
+    "$garnet_sdk_fidl/fuchsia.images",
   ]
 }
 

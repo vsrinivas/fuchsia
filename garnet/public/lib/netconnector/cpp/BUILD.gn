@@ -14,7 +14,7 @@ source_set("cpp") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.netconnector",
+    "$garnet_sdk_fidl/fuchsia.netconnector",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",

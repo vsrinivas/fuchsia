@@ -36,8 +36,8 @@ source_set("lib") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.net.oldhttp",
-    "//garnet/public/fidl/fuchsia.netstack",
+    "$garnet_sdk_fidl/fuchsia.net.oldhttp",
+    "$garnet_sdk_fidl/fuchsia.netstack",
     "//garnet/public/lib/url",
     "//third_party/asio",
     "//third_party/boringssl:boringssl",

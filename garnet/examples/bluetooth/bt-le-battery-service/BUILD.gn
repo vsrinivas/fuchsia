@@ -10,8 +10,8 @@ rustc_binary("bt-le-battery-service") {
 
   deps = [
     "//garnet/lib/rust/fuchsia-bluetooth",
-    "//garnet/public/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
-    "//garnet/public/fidl/fuchsia.power:fuchsia.power-rustc",
+    "$garnet_sdk_fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
+    "$garnet_sdk_fidl/fuchsia.power:fuchsia.power-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",

@@ -11,7 +11,7 @@ rustc_binary("font_server") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
+    "$garnet_sdk_fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
@@ -144,7 +144,7 @@ rustc_binary("font_provider_test") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
+    "$garnet_sdk_fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
