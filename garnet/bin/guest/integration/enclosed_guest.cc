@@ -6,6 +6,8 @@
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_printf.h>
 
+#include <algorithm>
+
 #include "garnet/bin/guest/integration/enclosed_guest.h"
 
 static constexpr char kGuestManagerUrl[] =
@@ -62,9 +64,13 @@ zx_status_t EnclosedGuest::Start() {
     return status;
   }
 
+  // Generate an environment label from the URL, but remove path separator
+  // characters which aren't allowed in the label.
+  std::string env_label = guest_launch_info.url;
+  std::replace(env_label.begin(), env_label.end(), '/', ':');
+
   enclosing_environment_->ConnectToService(environment_manager_.NewRequest());
-  environment_manager_->Create(guest_launch_info.url,
-                               environment_controller_.NewRequest());
+  environment_manager_->Create(env_label, environment_controller_.NewRequest());
 
   environment_controller_->LaunchInstance(std::move(guest_launch_info),
                                           instance_controller_.NewRequest(),

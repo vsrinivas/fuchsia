@@ -48,6 +48,16 @@ void NamespaceBuilder::AddServices(zx::channel services) {
 void NamespaceBuilder::AddSandbox(
     const SandboxMetadata& sandbox,
     const HubDirectoryFactory& hub_directory_factory) {
+  AddSandbox(sandbox, hub_directory_factory, [] {
+    FXL_NOTREACHED() << "IsolatedDataPathFactory unexpectedly used";
+    return "";
+  });
+}
+
+void NamespaceBuilder::AddSandbox(
+    const SandboxMetadata& sandbox,
+    const HubDirectoryFactory& hub_directory_factory,
+    const IsolatedDataPathFactory& isolated_data_path_factory) {
   for (const auto& path : sandbox.dev()) {
     if (path == "class") {
       FXL_LOG(WARNING) << "Ignoring request for all device classes";
@@ -62,11 +72,18 @@ void NamespaceBuilder::AddSandbox(
   for (const auto& path : sandbox.pkgfs())
     PushDirectoryFromPath("/pkgfs/" + path);
 
+  // Prioritize isolated persistent storage feature over old persistent storage
+  // if both included.
+  if (sandbox.HasFeature("isolated-persistent-storage")) {
+    PushDirectoryFromPathAs(isolated_data_path_factory(), "/data");
+  } else if (sandbox.HasFeature("persistent-storage")) {
+    // TODO(bryanhenry,CF-28): Remove this feature once users have migrated to
+    // isolated storage.
+    PushDirectoryFromPath("/data");
+  }
+
   for (const auto& feature : sandbox.features()) {
-    if (feature == "persistent-storage") {
-      // TODO(flowerhack): Make this feature more fine-grained.
-      PushDirectoryFromPath("/data");
-    } else if (feature == "build-info") {
+    if (feature == "build-info") {
       PushDirectoryFromPathAs("/pkgfs/packages/build-info/0/data",
                               "/config/build-info");
     } else if (feature == "root-ssl-certificates" || feature == "shell") {
@@ -122,12 +139,6 @@ void NamespaceBuilder::PushDirectoryFromPathAs(std::string src_path,
     return;
   }
   PushDirectoryFromChannel(std::move(dst_path), std::move(handle));
-}
-
-void NamespaceBuilder::PushDirectoryFromPathIfNotPresent(std::string path) {
-  if (std::find(paths_.begin(), paths_.end(), path) != paths_.end())
-    return;
-  PushDirectoryFromPathAs(path, path);
 }
 
 void NamespaceBuilder::PushDirectoryFromChannel(std::string path,

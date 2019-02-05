@@ -6,6 +6,8 @@
 #include "garnet/bin/guest/vmm/device/config.h"
 #include "garnet/bin/guest/vmm/device/virtio_queue.h"
 
+#include <algorithm>
+
 zx_status_t TestWithDevice::LaunchDevice(
     const std::string& url, size_t phys_mem_size,
     fuchsia::guest::device::StartInfo* start_info,
@@ -13,9 +15,15 @@ zx_status_t TestWithDevice::LaunchDevice(
   if (!env_services) {
     env_services = CreateServices();
   }
+
+  // Generate an environment label from the URL, but remove path separator
+  // characters which aren't allowed in the label.
+  std::string env_label = "realm:" + url;
+  std::replace(env_label.begin(), env_label.end(), '/', ':');
+
   // Create test environment.
   enclosing_environment_ =
-      CreateNewEnclosingEnvironment("realm:" + url, std::move(env_services));
+      CreateNewEnclosingEnvironment(env_label, std::move(env_services));
   bool started = WaitForEnclosingEnvToStart(enclosing_environment_.get());
   if (!started) {
     return ZX_ERR_TIMED_OUT;

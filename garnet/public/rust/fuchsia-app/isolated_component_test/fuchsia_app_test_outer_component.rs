@@ -53,7 +53,7 @@ fn spawn_echo_hidden_server(chan: fasync::Channel) {
 }
 
 const CHILD_URL: &str = fuchsia_single_component_package_url!("fuchsia_app_test_middle_component");
-const ENV_NAME: &str = "fuchsia app middle component test environment";
+const ENV_NAME: &str = "fuchsia_app_middle_component_test_environment";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {

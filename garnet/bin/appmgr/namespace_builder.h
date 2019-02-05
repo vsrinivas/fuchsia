@@ -31,8 +31,14 @@ class NamespaceBuilder {
 
   // A factory function that returns a new directory that /hub points to.
   using HubDirectoryFactory = fit::function<zx::channel()>;
+  // A factory function that returns a new path for /data to point to when it
+  // should be isolated from other components and realms
+  using IsolatedDataPathFactory = fit::function<std::string()>;
   void AddSandbox(const SandboxMetadata& sandbox,
                   const HubDirectoryFactory& hub_directory_factory);
+  void AddSandbox(const SandboxMetadata& sandbox,
+                  const HubDirectoryFactory& hub_directory_factory,
+                  const IsolatedDataPathFactory& isolated_data_path_factory);
 
   // Returns an fdio_flat_namespace_t representing the built namespace.
   //
@@ -53,7 +59,6 @@ class NamespaceBuilder {
  private:
   void PushDirectoryFromPath(std::string path);
   void PushDirectoryFromPathAs(std::string src_path, std::string dst_path);
-  void PushDirectoryFromPathIfNotPresent(std::string path);
   void PushDirectoryFromChannel(std::string path, zx::channel channel);
   void Release();
 

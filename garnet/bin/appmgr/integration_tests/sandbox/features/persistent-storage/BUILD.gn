@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/fidl.gni")
+import("//build/test/test_package.gni")
 import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
 sandbox_test_package("has_persistent_storage") {
@@ -23,5 +25,92 @@ sandbox_test_package("no_persistent_storage") {
   deps = [
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
     "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
+
+sandbox_test_package("has_isolated_persistent_storage") {
+  # This reuses the same source file as the has_persistent_storage test since it
+  # is very simple (just check if /data exists), but the test runs with a
+  # different sandbox.
+  sources = [
+    "has_persistent_storage.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
+    "//garnet/public/lib/fxl/test:gtest_main",
+  ]
+}
+
+fidl("data_file_reader_writer") {
+  name = "test.appmgr.sandbox"
+
+  sources = [
+    "data_file_reader_writer.fidl",
+  ]
+}
+
+executable("isolated_storage_test_util") {
+  testonly = true
+
+  sources = [
+    "isolated_storage_test_util.cc",
+  ]
+
+  deps = [
+    ":data_file_reader_writer",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("isolated_persistent_storage_bin") {
+  testonly = true
+  output_name = "isolated_persistent_storage"
+
+  sources = [
+    "isolated_persistent_storage.cc",
+  ]
+
+  deps = [
+    ":data_file_reader_writer",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/svc/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+test_package("isolated_persistent_storage") {
+  tests = [
+    {
+      name = "isolated_persistent_storage"
+    },
+  ]
+
+  meta = [
+    # Same test util manifest gets added into package with two different names
+    # to enable testing isolation of components based on URL
+    {
+      path = "meta/test_util.cmx"
+      dest = "test_util.cmx"
+    },
+    {
+      path = "meta/test_util.cmx"
+      dest = "test_util2.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "isolated_storage_test_util"
+    },
+  ]
+
+  deps = [
+    ":isolated_persistent_storage_bin",
+    ":isolated_storage_test_util",
   ]
 }

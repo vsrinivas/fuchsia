@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/isolated_storage_test_util"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage",
+            "persistent-storage"
+        ],
+        "services": []
+    }
+}

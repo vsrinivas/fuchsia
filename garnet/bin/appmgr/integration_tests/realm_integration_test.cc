@@ -162,15 +162,18 @@ TEST_F(RealmTest, LaunchNonExistentComponent) {
 TEST_F(RealmTest, CreateTwoKillOne) {
   // launch component as a service.
   auto env_services = CreateServices();
-  ASSERT_EQ(ZX_OK, env_services->AddServiceWithLaunchInfo(
-                       CreateLaunchInfo("fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx"),
-                       fidl::examples::echo::Echo::Name_));
+  ASSERT_EQ(ZX_OK,
+            env_services->AddServiceWithLaunchInfo(
+                CreateLaunchInfo("fuchsia-pkg://fuchsia.com/"
+                                 "echo2_server_cpp#meta/echo2_server_cpp.cmx"),
+                fidl::examples::echo::Echo::Name_));
   auto enclosing_environment =
       CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
   ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
   // launch component normally
-  auto controller1 =
-      RunComponent(enclosing_environment.get(), "fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx");
+  auto controller1 = RunComponent(
+      enclosing_environment.get(),
+      "fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx");
 
   // make sure echo service is running.
   fidl::examples::echo::EchoPtr echo;
@@ -201,9 +204,11 @@ TEST_F(RealmTest, CreateTwoKillOne) {
 
 TEST_F(RealmTest, KillRealmKillsComponent) {
   auto env_services = CreateServices();
-  ASSERT_EQ(ZX_OK, env_services->AddServiceWithLaunchInfo(
-                       CreateLaunchInfo("fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx"),
-                       fidl::examples::echo::Echo::Name_));
+  ASSERT_EQ(ZX_OK,
+            env_services->AddServiceWithLaunchInfo(
+                CreateLaunchInfo("fuchsia-pkg://fuchsia.com/"
+                                 "echo2_server_cpp#meta/echo2_server_cpp.cmx"),
+                fidl::examples::echo::Echo::Name_));
   auto enclosing_environment =
       CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
   ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
@@ -242,29 +247,6 @@ TEST_F(RealmTest, EnvironmentControllerRequired) {
       RunLoopWithTimeoutOrUntil([&] { return env_status != ZX_OK; }, kTimeout));
 }
 
-TEST_F(RealmTest, EnvironmentLabelRequired) {
-  // Can't use EnclosingEnvironment here since there's no way to discern between
-  // 'not yet created' and 'failed to create'. This also lets use check the
-  // specific status returned.
-  fuchsia::sys::EnvironmentPtr env;
-  fuchsia::sys::EnvironmentControllerPtr env_controller;
-
-  zx_status_t env_status = ZX_OK;
-  zx_status_t env_controller_status = ZX_OK;
-  env.set_error_handler([&](zx_status_t status) { env_status = status; });
-  env_controller.set_error_handler(
-      [&](zx_status_t status) { env_controller_status = status; });
-
-  real_env()->CreateNestedEnvironment(
-      env.NewRequest(), env_controller.NewRequest(), /* label = */ "",
-      /* additional_services = */ nullptr, fuchsia::sys::EnvironmentOptions{});
-
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return env_status == ZX_ERR_INVALID_ARGS; }, kTimeout));
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return env_controller_status == ZX_ERR_INVALID_ARGS; }, kTimeout));
-}
-
 TEST_F(RealmTest, EnvironmentLabelMustBeUnique) {
   // Create first environment with label kRealm using EnclosingEnvironment since
   // that's easy.
@@ -292,6 +274,64 @@ TEST_F(RealmTest, EnvironmentLabelMustBeUnique) {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] { return env_controller_status == ZX_ERR_BAD_STATE; }, kTimeout));
 }
+
+using LabelAndValidity = std::tuple<std::string, bool>;
+class EnvironmentLabelTest
+    : public RealmTest,
+      public ::testing::WithParamInterface<LabelAndValidity> {};
+
+TEST_P(EnvironmentLabelTest, CheckLabelValidity) {
+  // Can't use EnclosingEnvironment here since there's no way to discern between
+  // 'not yet created' and 'failed to create'. This also lets use check the
+  // specific status returned.
+  fuchsia::sys::EnvironmentPtr env;
+  fuchsia::sys::EnvironmentControllerPtr env_controller;
+
+  zx_status_t env_status = ZX_OK;
+  zx_status_t env_controller_status = ZX_OK;
+  bool env_created = false;
+  env.set_error_handler([&](zx_status_t status) { env_status = status; });
+  env_controller.set_error_handler(
+      [&](zx_status_t status) { env_controller_status = status; });
+  env_controller.events().OnCreated = [&] { env_created = true; };
+
+  auto [label, label_valid] = GetParam();
+  real_env()->CreateNestedEnvironment(
+      env.NewRequest(), env_controller.NewRequest(), label,
+      /* additional_services = */ nullptr, fuchsia::sys::EnvironmentOptions{});
+
+  if (label_valid) {
+    EXPECT_TRUE(
+        RunLoopWithTimeoutOrUntil([&] { return env_created; }, kTimeout));
+  } else {
+    EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+        [&] { return env_status == ZX_ERR_INVALID_ARGS; }, kTimeout));
+    EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+        [&] { return env_controller_status == ZX_ERR_INVALID_ARGS; },
+        kTimeout));
+    EXPECT_FALSE(env_created);
+  }
+}
+
+INSTANTIATE_TEST_CASE_P(
+    InvalidLabels, EnvironmentLabelTest,
+    ::testing::Combine(
+        ::testing::Values("", "a/b", "/", ".", "..", "../..", "\t", "\r",
+                          "ab\n", std::string("123\0", 4), "\10", "\33", "\177",
+                          " ", "my realm", "~", "`", "!", "@", "$", "%", "^",
+                          "&", "*", "(", ")", "=", "+", "{", "}", "[", "]", "|",
+                          "?", ";", "'", "\"", "<", ">", ",",
+                          "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cmx"),
+        ::testing::Values(false)));
+
+INSTANTIATE_TEST_CASE_P(
+    ValidLabels, EnvironmentLabelTest,
+    ::testing::Combine(
+        ::testing::Values("abcdefghijklmnopqrstuvwxyz",
+                          "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789", "#-_:.",
+                          "my.realm", "my..realm",
+                          "fuchsia-pkg:::fuchsia.com:abcd#meta:abcd.cmx"),
+        ::testing::Values(true)));
 
 class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
  protected:
@@ -330,17 +370,15 @@ class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
 TEST_F(RealmFakeLoaderTest, CreateWebComponent_HTTP) {
   RunComponent(enclosing_environment_.get(), "http://example.com");
   ASSERT_TRUE(WaitForComponentLoad());
-  EXPECT_THAT(
-      component_url(),
-      Eq("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx"));
+  EXPECT_THAT(component_url(),
+              Eq("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx"));
 }
 
 TEST_F(RealmFakeLoaderTest, CreateWebComponent_HTTPS) {
   RunComponent(enclosing_environment_.get(), "https://example.com");
   ASSERT_TRUE(WaitForComponentLoad());
-  EXPECT_THAT(
-      component_url(),
-      Eq("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx"));
+  EXPECT_THAT(component_url(),
+              Eq("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx"));
 }
 
 TEST_F(RealmFakeLoaderTest, CreateCastComponent_CAST) {

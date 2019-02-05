@@ -31,18 +31,19 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
+#include "lib/pkg_url/fuchsia_pkg_url.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
 
 namespace component {
 
 struct RealmArgs {
   static RealmArgs Make(
-      Realm* parent, std::string label,
+      Realm* parent, std::string label, std::string data_path,
       const std::shared_ptr<component::Services>& env_services,
       bool run_virtual_console, bool inherit_parent_services, bool kill_on_oom);
 
   static RealmArgs MakeWithAdditionalServices(
-      Realm* parent, std::string label,
+      Realm* parent, std::string label, std::string data_path,
       const std::shared_ptr<component::Services>& env_services,
       bool run_virtual_console,
       fuchsia::sys::ServiceListPtr additional_services,
@@ -50,6 +51,7 @@ struct RealmArgs {
 
   Realm* parent;
   std::string label;
+  std::string data_path;
   std::shared_ptr<component::Services> environment_services;
   bool run_virtual_console;
   fuchsia::sys::ServiceListPtr additional_services;
@@ -65,6 +67,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   Realm* parent() const { return parent_; }
   const std::string& label() const { return label_; }
+  const std::string& data_path() const { return data_path_; }
   const std::string& koid() const { return koid_; }
 
   const fbl::RefPtr<fs::PseudoDir>& hub_dir() const { return hub_.dir(); }
@@ -145,9 +148,12 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   zx::channel OpenInfoDir();
 
+  std::string IsolatedDataPathForPackage(const FuchsiaPkgUrl& fp);
+
   Realm* const parent_;
   fuchsia::sys::LoaderPtr loader_;
   std::string label_;
+  std::string data_path_;
   std::string koid_;
   const bool run_virtual_console_;
   std::unique_ptr<component::PackageLoader> package_loader_;

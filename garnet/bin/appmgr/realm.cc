@@ -16,6 +16,7 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include <algorithm>
 #include <utility>
 
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
@@ -34,11 +35,11 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
+#include "lib/fxl/files/path.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/substitute.h"
 #include "lib/json/json_parser.h"
-#include "lib/pkg_url/fuchsia_pkg_url.h"
 #include "lib/pkg_url/url_resolver.h"
 #include "lib/svc/cpp/services.h"
 
@@ -160,15 +161,54 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
   return process;
 }
 
+bool IsValidEnvironmentLabel(const std::string& label) {
+  static const std::regex* const kEnvironmentLabelRegex =
+      new std::regex{"[0-9a-zA-Z\\.\\-_:#]+"};
+
+  // The regex technically covers the empty check, but checking separately
+  // allows us to print a more useful error message.
+  if (label.empty()) {
+    FXL_LOG(ERROR) << "Environment label cannot be empty";
+    return false;
+  }
+  if (!std::regex_match(label, *kEnvironmentLabelRegex)) {
+    FXL_LOG(ERROR) << "Environment label '" << label
+                   << "' contains invalid characters";
+    return false;
+  }
+  if (label == "." || label == "..") {
+    FXL_LOG(ERROR) << "Environment label cannot be '.' or '..'";
+    return false;
+  }
+  return true;
+}
+
+// Returns a unique ID for the component containing all of the 'stable' pieces
+// of the component URL, i.e. the repo/host name, package name, variant, and
+// resource path but not the package hash/version.
+std::string StableComponentID(const FuchsiaPkgUrl& fp) {
+  // If the parsed URL did not include a resource path, the default is used.
+  // TODO(CF-156): Remove this default once all component URLs include a
+  // resource path.
+  std::string resource = fp.resource_path();
+  if (resource.empty()) {
+    resource = fp.GetDefaultComponentCmxPath();
+  }
+  std::replace(resource.begin(), resource.end(), '/', ':');
+  return fxl::Substitute("$0:$1:$2#$3", fp.host_name(), fp.package_name(),
+                         fp.variant(), resource);
+}
+
 }  // namespace
 
 // static
 RealmArgs RealmArgs::Make(
-    Realm* parent, std::string label,
+    Realm* parent, std::string label, std::string data_path,
     const std::shared_ptr<component::Services>& env_services,
     bool run_virtual_console, bool inherit_parent_services, bool kill_on_oom) {
   return {.parent = parent,
           .label = label,
+          .data_path = data_path,
           .environment_services = env_services,
           .run_virtual_console = run_virtual_console,
           .additional_services = nullptr,
@@ -177,12 +217,13 @@ RealmArgs RealmArgs::Make(
 }
 
 RealmArgs RealmArgs::MakeWithAdditionalServices(
-    Realm* parent, std::string label,
+    Realm* parent, std::string label, std::string data_path,
     const std::shared_ptr<component::Services>& env_services,
     bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
     bool inherit_parent_services, bool kill_on_oom) {
   return {.parent = parent,
           .label = label,
+          .data_path = data_path,
           .environment_services = env_services,
           .run_virtual_console = run_virtual_console,
           .additional_services = std::move(additional_services),
@@ -192,6 +233,7 @@ RealmArgs RealmArgs::MakeWithAdditionalServices(
 
 Realm::Realm(RealmArgs args)
     : parent_(args.parent),
+      data_path_(args.data_path),
       run_virtual_console_(args.run_virtual_console),
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
       info_vfs_(async_get_default_dispatcher()),
@@ -306,16 +348,16 @@ void Realm::CreateNestedEnvironment(
     fuchsia::sys::EnvironmentOptions options) {
   TRACE_DURATION("appmgr", "Realm::CreateNestedEnvironment", "label", label);
 
-  // Check that label is non-empty and unique among existing children.
-  if (label.empty()) {
+  // Check that label is valid and unique among existing children.
+  if (!IsValidEnvironmentLabel(label)) {
     environment.Close(ZX_ERR_INVALID_ARGS);
     controller_request.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
   for (const auto& child : children_) {
     if (label == child.first->label_) {
-      FXL_LOG(ERROR) << "Attempt to create nested environment '"
-                     << label.c_str() << "' under '" << label_
+      FXL_LOG(ERROR) << "Attempt to create nested environment '" << label
+                     << "' under '" << label_
                      << "' but label matches existing environment";
       environment.Close(ZX_ERR_BAD_STATE);
       controller_request.Close(ZX_ERR_BAD_STATE);
@@ -324,7 +366,7 @@ void Realm::CreateNestedEnvironment(
   }
 
   if (additional_services && !additional_services->host_directory) {
-    FXL_LOG(ERROR) << label.c_str()
+    FXL_LOG(ERROR) << label
                    << ": |additional_services.provider| is not supported for "
                    << "CreateNestedEnvironment. Use "
                    << "|additional_services.host_directory| instead.";
@@ -334,14 +376,15 @@ void Realm::CreateNestedEnvironment(
   }
 
   RealmArgs args;
+  std::string nested_data_path = files::JoinPath(data_path(), "r/" + label);
   if (additional_services) {
     args = RealmArgs::MakeWithAdditionalServices(
-        this, label, environment_services_, /*run_virtual_console=*/false,
-        std::move(additional_services), options.inherit_parent_services,
-        options.kill_on_oom);
+        this, label, nested_data_path, environment_services_,
+        /*run_virtual_console=*/false, std::move(additional_services),
+        options.inherit_parent_services, options.kill_on_oom);
   } else {
     args =
-        RealmArgs::Make(this, label, environment_services_,
+        RealmArgs::Make(this, label, nested_data_path, environment_services_,
                         /*run_virtual_console=*/false,
                         options.inherit_parent_services, options.kill_on_oom);
   }
@@ -646,11 +689,12 @@ void Realm::CreateComponentFromPackage(
     }
   } else {
     TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:IsFileAt");
-    FXL_LOG(ERROR) << "Component " << package->resolved_url
-                   << " does not have a component manifest (a.k.a. cmx file)! "
-                   << "Please add a cmx file to your component. "
-                   << "https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/"
-                   << "package_metadata.md#Component-manifest.";
+    FXL_LOG(ERROR)
+        << "Component " << package->resolved_url
+        << " does not have a component manifest (a.k.a. cmx file)! "
+        << "Please add a cmx file to your component. "
+        << "https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/"
+        << "package_metadata.md#Component-manifest.";
     component_request.SetReturnValues(kComponentCreationFailed,
                                       TerminationReason::INTERNAL_ERROR);
     return;
@@ -662,7 +706,8 @@ void Realm::CreateComponentFromPackage(
         << "Component " << fp.GetDefaultComponentName()
         << " was launched without using fuchsia-pkg URLs! Use "
         << package->resolved_url << "#" << fp.GetDefaultComponentCmxPath()
-        << " instead. See https://fuchsia.googlesource.com/fuchsia/+/master/docs/"
+        << " instead. See "
+           "https://fuchsia.googlesource.com/fuchsia/+/master/docs/"
         << "glossary.md#fuchsia_pkg-url for more information. The component "
         << "was not whitelisted to launch with bare package URLs, and it "
         << "cannot be launched!";
@@ -754,7 +799,11 @@ void Realm::CreateComponentFromPackage(
       loader_service.reset();
     }
 
-    builder.AddSandbox(sandbox, [this] { return OpenInfoDir(); });
+    builder.AddSandbox(
+        sandbox,
+        /*hub_directory_factory=*/[this] { return OpenInfoDir(); },
+        /*isolated_data_path_factory=*/
+        [&] { return IsolatedDataPathForPackage(fp); });
   }
 
   fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
@@ -911,6 +960,19 @@ zx_status_t Realm::BindSvc(zx::channel channel) {
   }
   return fdio_service_clone_to(root_realm->svc_channel_client_.get(),
                                channel.release());
+}
+
+std::string Realm::IsolatedDataPathForPackage(const FuchsiaPkgUrl& fp) {
+  // Create a unique path for this combination of Realm and Component
+  // identities. The Realm part comes from data_path(), which includes all Realm
+  // labels from the root Realm to this Realm. The Component part comes from
+  // combining the Component URL.
+  std::string path = files::JoinPath(data_path(), StableComponentID(fp));
+  if (!files::CreateDirectory(path)) {
+    FXL_LOG(ERROR) << "Failed to create data directory " << path;
+    return "";
+  }
+  return path;
 }
 
 }  // namespace component

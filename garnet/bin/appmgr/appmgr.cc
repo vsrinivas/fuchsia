@@ -25,10 +25,11 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       sysmgr_backoff_(kMinSmsmgrBackoff, kMaxSysmgrBackoff, kSysmgrAliveReset),
       sysmgr_permanently_failed_(false) {
   // 1. Create root realm.
-  RealmArgs realm_args = RealmArgs::Make(
-      nullptr, kRootLabel, args.environment_services, args.run_virtual_console,
-      /*inherit_parent_services=*/false,
-      /*kill_on_oom=*/false);
+  RealmArgs realm_args =
+      RealmArgs::Make(nullptr, kRootLabel, "/data", args.environment_services,
+                      args.run_virtual_console,
+                      /*inherit_parent_services=*/false,
+                      /*kill_on_oom=*/false);
 
   root_realm_ = std::make_unique<Realm>(std::move(realm_args));
 
