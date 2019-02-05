@@ -32,7 +32,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.accessibility",
   ]
 
   deps = [

@@ -41,7 +41,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/lib/ui/gfx",
-    "//garnet/public/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.accessibility",
     "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/fidl/fuchsia.ui.input",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",

@@ -10,7 +10,7 @@ executable("a11y_toggler") {
   ]
 
   deps = [
-    "//garnet/public/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.accessibility",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//zircon/public/lib/async-loop-cpp",
