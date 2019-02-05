@@ -269,10 +269,6 @@ void fdio_lldebug_printf(unsigned level, const char* fmt, ...);
 
 void fdio_set_debug_level(unsigned level);
 
-// Enable intrusive allocation debugging
-//
-//#define FDIO_ALLOCDEBUG
-
 static inline void fdio_acquire(fdio_t* io) {
     LOG(6, "fdio: acquire: %p\n", io);
     atomic_fetch_add(&io->refcount, 1);
@@ -285,15 +281,11 @@ static inline void fdio_release(fdio_t* io) {
     }
 }
 
-#ifdef FDIO_ALLOCDEBUG
-void* fdio_alloc(size_t sz);
-#else
 static inline void* fdio_alloc(size_t sz) {
     void* ptr = calloc(1, sz);
     LOG(5, "fdio: io: alloc: %p\n", ptr);
     return ptr;
 }
-#endif
 
 // Returns an fd number greater than or equal to |starting_fd|, following the
 // same rules as fdio_bind_fd. If there are no free file descriptors, -1 is
