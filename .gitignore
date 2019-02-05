@@ -1,8 +1,8 @@
+### General file patterns
 *~
 .*.sw?
 .build_lock
 .checkstyle
-.cipd/
 .classpath
 .config
 .cproject
@@ -10,10 +10,7 @@
 .gdb_history
 .gdbinit
 .gn
-.idea/
 .jiri_manifest
-.jiri_root/
-.jiri/
 .landmines
 .packages
 .project
@@ -25,26 +22,38 @@
 *.pyc
 *.sublime-project
 *.sublime-workspace
-**/Cargo.lock
-**/Cargo.toml
-/.cipd
+Cargo.lock
+Cargo.toml
 compile_commands.json
 cscope.*
-go/pkg
-infra/
-integration/
-old/
-out/
-prebuilt/
 Session.vim
 tags
-target
-/third_party/
 Thumbs.db
 /tools/
 tools/cipd.gni
 topaz/
 vendor/
 tmp/
+
+### Specific files
+/garnet/tools/cipd.gni
+
+### Directories to be ignored across the tree
+.cipd/
+.idea/
+
+### Top-level directories
+/.jiri/
+/.jiri_root/
+/infra/
+/integration/
 # For storing local scripts and data files in a source tree.
-/local
+/local/
+/old/
+/out/
+/prebuilt/
+/third_party/
+/tmp/
+/tools/
+/topaz/
+/vendor/
