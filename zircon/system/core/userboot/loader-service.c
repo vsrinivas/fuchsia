@@ -91,26 +91,32 @@ static bool handle_loader_rpc(struct loader_state* state,
 
     zx_handle_t handle = ZX_HANDLE_INVALID;
     switch (req.header.ordinal) {
+    case LDMSG_OP_DONE_OLD:
     case LDMSG_OP_DONE:
         printl(state->log, "loader-service received DONE request");
         goto no_reply;
 
+    case LDMSG_OP_CONFIG_OLD:
     case LDMSG_OP_CONFIG:
         loader_config(state, string, string_len);
         break;
 
+    case LDMSG_OP_LOAD_OBJECT_OLD:
     case LDMSG_OP_LOAD_OBJECT:
         handle = load_object(state, string, string_len);
         break;
 
+    case LDMSG_OP_CLONE_OLD:
     case LDMSG_OP_CLONE:
         rsp.rv = ZX_ERR_NOT_SUPPORTED;
         goto error_reply;
 
+    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER_OLD:
     case LDMSG_OP_LOAD_SCRIPT_INTERPRETER:
         fail(state->log, "loader-service received LOAD_SCRIPT_INTERP request");
         break;
 
+    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK_OLD: 
     case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK: {
         if (hcount != 1) {
             fail(state->log, "loader-service received DEBUG_PUBLISH_DATA_SINK request without VMO");

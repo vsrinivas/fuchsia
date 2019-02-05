@@ -158,6 +158,7 @@ static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_st
 
     zx_handle_t rsp_handle = ZX_HANDLE_INVALID;
     switch (req.header.ordinal) {
+    case LDMSG_OP_CONFIG_OLD:
     case LDMSG_OP_CONFIG: {
         size_t len = strlen(data);
         if (len < 2 || len >= sizeof(session_state->config_prefix) - 1 || strchr(data, '/') != NULL) {
@@ -175,6 +176,7 @@ static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_st
         status = ZX_OK;
         break;
     }
+    case LDMSG_OP_LOAD_OBJECT_OLD:
     case LDMSG_OP_LOAD_OBJECT:
         // If a prefix is configured, try loading with that prefix first
         if (session_state->config_prefix[0] != '\0') {
@@ -192,12 +194,15 @@ static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_st
         }
         status = svc->ops->load_object(svc->ctx, data, &rsp_handle);
         break;
+    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER_OLD:
+    case LDMSG_OP_DEBUG_LOAD_CONFIG_OLD:
     case LDMSG_OP_LOAD_SCRIPT_INTERPRETER:
     case LDMSG_OP_DEBUG_LOAD_CONFIG:
         // When loading a script interpreter or debug configuration file,
         // we expect an absolute path.
         if (data[0] != '/') {
             fprintf(stderr, "dlsvc: invalid %s '%s' is not an absolute path\n",
+                    req.header.ordinal == LDMSG_OP_LOAD_SCRIPT_INTERPRETER_OLD ||
                     req.header.ordinal == LDMSG_OP_LOAD_SCRIPT_INTERPRETER ? "script interpreter" : "debug config file",
                     data);
             status = ZX_ERR_NOT_FOUND;
@@ -205,14 +210,17 @@ static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_st
         }
         status = svc->ops->load_abspath(svc->ctx, data, &rsp_handle);
         break;
+    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK_OLD:
     case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK:
         status = svc->ops->publish_data_sink(svc->ctx, data, req_handle);
         req_handle = ZX_HANDLE_INVALID;
         break;
+    case LDMSG_OP_CLONE_OLD:
     case LDMSG_OP_CLONE:
         status = loader_service_attach(svc, req_handle);
         req_handle = ZX_HANDLE_INVALID;
         break;
+    case LDMSG_OP_DONE_OLD:
     case LDMSG_OP_DONE:
         zx_handle_close(req_handle);
         return ZX_ERR_PEER_CLOSED;
