@@ -92,9 +92,11 @@ func (o *TestRunnerOutput) Complete() error {
 }
 
 type testResult struct {
-	Name   string
-	Output io.Reader
-	Result runtests.TestResult
+	Name      string
+	Output    io.Reader
+	Result    runtests.TestResult
+	StartTime time.Time
+	EndTime   time.Time
 }
 
 func usage() {
@@ -286,14 +288,22 @@ func runTest(ctx context.Context, test testsharder.Test, tester Tester) (*testRe
 	output := new(bytes.Buffer)
 	multistdout := io.MultiWriter(output, os.Stdout)
 	multistderr := io.MultiWriter(output, os.Stderr)
+
+	startTime := time.Now()
+
 	if err := tester(ctx, test, multistdout, multistderr); err != nil {
 		result = runtests.TestFailure
 		log.Println(err)
 	}
+
+	endTime := time.Now()
+
 	// Record the test details in the summary.
 	return &testResult{
-		Name:   test.Name,
-		Output: output,
-		Result: result,
+		Name:      test.Name,
+		Output:    output,
+		Result:    result,
+		StartTime: startTime,
+		EndTime:   endTime,
 	}, nil
 }
