@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "xhci-root-hub.h"
+
 #include <ddk/debug.h>
+#include <fbl/alloc_checker.h>
 #include <usb/usb-request.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -225,7 +229,7 @@ static void xhci_reset_port(xhci_t* xhci, xhci_root_hub_t* rh, int rh_port_index
 
 zx_status_t xhci_root_hub_init(xhci_t* xhci, int rh_index) {
     xhci_root_hub_t* rh = &xhci->root_hubs[rh_index];
-    const uint8_t* rh_port_map = xhci->rh_map;
+    auto* rh_port_map = xhci->rh_map.get();
     uint8_t rh_ports = xhci->rh_num_ports;
 
     list_initialize(&rh->pending_intr_reqs);
@@ -242,11 +246,15 @@ zx_status_t xhci_root_hub_init(xhci_t* xhci, int rh_index) {
     }
     rh->num_ports = port_count;
 
-    rh->port_status = (usb_port_status_t *)calloc(port_count, sizeof(usb_port_status_t));
-    if (!rh->port_status) return ZX_ERR_NO_MEMORY;
-
-    rh->port_map = static_cast<uint8_t*>(calloc(port_count, sizeof(uint8_t)));
-    if (!rh->port_map) return ZX_ERR_NO_MEMORY;
+    fbl::AllocChecker ac;
+    rh->port_status.reset(new (&ac) usb_port_status_t[port_count], port_count);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    rh->port_map.reset(new (&ac) uint8_t[port_count], port_count);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
 
     // build map from virtual port index to actual port index
     uint8_t port_index = 0;
@@ -261,26 +269,7 @@ zx_status_t xhci_root_hub_init(xhci_t* xhci, int rh_index) {
     return ZX_OK;
 }
 
-void xhci_root_hub_free(xhci_root_hub_t* rh) {
-    free(rh->port_map);
-    free(rh->port_status);
-}
-
 static zx_status_t xhci_start_root_hub(xhci_t* xhci, xhci_root_hub_t* rh, int rh_index) {
-    auto* device_desc =
-            static_cast<usb_device_descriptor_t*>(malloc(sizeof(usb_device_descriptor_t)));
-    if (!device_desc) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    auto* config_desc =
-            static_cast<usb_configuration_descriptor_t*>(malloc(sizeof(xhci_rh_config_desc)));
-    if (!config_desc) {
-        free(device_desc);
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    memcpy(device_desc, rh->device_desc, sizeof(usb_device_descriptor_t));
-    memcpy(config_desc, rh->config_desc, le16toh(rh->config_desc->wTotalLength));
     rh->speed = xhci_rh_speeds[rh_index];
 
     // Notify bus driver that our emulated hub exists
