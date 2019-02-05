@@ -39,6 +39,14 @@ shared_library("fostr_shared") {
     "indent.cc",
     "indent.h",
   ]
+
+  metadata = {
+    if (is_linux) {
+      test_runtime_deps = ["$root_out_dir/libfostr_shared.so"]
+    } else if (is_mac) {
+      test_runtime_deps = ["$root_out_dir/libfostr_shared.dylib"]
+    }
+  }
 }
 
 test("tests") {

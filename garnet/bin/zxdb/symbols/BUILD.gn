@@ -234,4 +234,8 @@ source_set("tests") {
     ":copy_test_so",
     ":copy_test_so_deprecated($default_toolchain)",
   ]
+
+  metadata = {
+    test_runtime_deps = get_target_outputs(":copy_test_so")
+  }
 }

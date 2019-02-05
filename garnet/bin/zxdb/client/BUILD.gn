@@ -213,6 +213,10 @@ source_set("tests") {
     ":copy_test_data_deprecated",
   ]
 
+  metadata = {
+    test_runtime_deps = get_target_outputs(":copy_test_data")
+  }
+
   deps = [
     ":client",
     ":test_support",

@@ -23,8 +23,14 @@ copy("copy_stripped_example_elf") {
   ]
 
   outputs = [
-    "$root_out_dir/test_data/elflib/{{source_file_part}}",
+    "$root_out_dir/test_data/elflib/stripped_example.elf",
   ]
+
+  metadata = {
+    test_runtime_deps = [
+      "$root_out_dir/test_data/elflib/stripped_example.elf",
+    ]
+  }
 }
 
 # TODO(IN-819): Delete once zxdb_tests is no longer being run out of
