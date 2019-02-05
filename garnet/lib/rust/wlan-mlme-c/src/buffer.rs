@@ -4,7 +4,11 @@
 
 use {
     failure::{ensure, Error},
-    std::{ffi::c_void, ops::{Deref, DerefMut}, ptr, slice},
+    std::{
+        ffi::c_void,
+        ops::{Deref, DerefMut},
+        ptr, slice,
+    },
 };
 
 #[repr(C)]
@@ -91,7 +95,6 @@ impl DerefMut for InBuf {
     }
 }
 
-
 /// An output buffer requires its owner to manage the underlying buffer's memory themselves.
 /// An output buffer is used for every buffer handed from Rust to C++.
 #[derive(Debug)]
@@ -106,11 +109,7 @@ pub struct OutBuf {
 
 impl OutBuf {
     fn from(buf: InBuf, written_bytes: usize) -> Self {
-        let outbuf = OutBuf {
-            raw: buf.raw,
-            data: buf.data,
-            written_bytes,
-        };
+        let outbuf = OutBuf { raw: buf.raw, data: buf.data, written_bytes };
         std::mem::forget(buf);
         outbuf
     }
