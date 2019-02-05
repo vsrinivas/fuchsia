@@ -33,13 +33,13 @@ interface Manager {
 
     // Get all the available formats for a camera.
     // |camera_id| is obtained from a DeviceInfo returned by GetDevices.
-    2: GetFormats(uint64 camera_id, uint32 index)
-           -> (vector<VideoFormat> formats, uint32 total_format_count);
+    GetFormats(uint64 camera_id, uint32 index)
+        -> (vector<VideoFormat> formats, uint32 total_format_count);
 
     // Create a Stream with the specified access rights.  This may not succeed.
     // If it does succeed, the Stream will have the rights indicated.
     // |buffer_info| contains a set of buffers to be used with the Stream.
-    3: CreateStream(VideoStream request,
-                    fuchsia.sysmem.BufferCollectionInfo buffer_info,
-                    request<Stream> stream, handle<eventpair> client_token);
+    CreateStream(VideoStream request,
+                 fuchsia.sysmem.BufferCollectionInfo buffer_info,
+                 request<Stream> stream, handle<eventpair> client_token);
 };
