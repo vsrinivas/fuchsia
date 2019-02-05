@@ -49,6 +49,8 @@ public:
                                                                     uint32_t collection) {
         return ZX_ERR_NOT_SUPPORTED;
     }
+    zx_status_t DisplayControllerImplGetSingleBufferFramebuffer(zx::vmo* out_vmo,
+                                                                uint32_t* out_stride);
 
 private:
     ddk::MmioBuffer framebuffer_mmio_;

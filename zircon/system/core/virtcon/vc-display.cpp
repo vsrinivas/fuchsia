@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string.h>
-#include <port/port.h>
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/io/c/fidl.h>
@@ -11,6 +9,9 @@
 #include <lib/fidl/coding.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/vmo.h>
+#include <port/port.h>
+#include <string.h>
 #include <zircon/assert.h>
 #include <zircon/device/display-controller.h>
 #include <zircon/process.h>
@@ -35,7 +36,6 @@ typedef struct display_info {
     uint64_t id;
     uint32_t width;
     uint32_t height;
-    uint32_t stride;
     zx_pixel_format_t format;
 
     uint64_t image_id;
@@ -165,31 +165,6 @@ static void release_image(uint64_t image_id) {
 
 static zx_status_t handle_display_added(fuchsia_hardware_display_Info* info,
                                         fuchsia_hardware_display_Mode* mode, int32_t pixel_format) {
-    fuchsia_hardware_display_ControllerComputeLinearImageStrideRequest stride_msg;
-    stride_msg.hdr.ordinal = fuchsia_hardware_display_ControllerComputeLinearImageStrideOrdinal;
-    stride_msg.width = mode->horizontal_resolution;
-    stride_msg.pixel_format = pixel_format;
-
-    fuchsia_hardware_display_ControllerComputeLinearImageStrideResponse stride_rsp;
-    zx_channel_call_args_t stride_call = {};
-    stride_call.wr_bytes = &stride_msg;
-    stride_call.rd_bytes = &stride_rsp;
-    stride_call.wr_num_bytes = sizeof(stride_msg);
-    stride_call.rd_num_bytes = sizeof(stride_rsp);
-    uint32_t actual_bytes, actual_handles;
-    zx_status_t status;
-    if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &stride_call,
-                                  &actual_bytes, &actual_handles)) != ZX_OK) {
-        printf("vc: Failed to compute fb stride: %d (%s)\n", status,
-               zx_status_get_string(status));
-        return status;
-    }
-
-    if (stride_rsp.stride < mode->horizontal_resolution) {
-        printf("vc: Got bad stride\n");
-        return ZX_ERR_INVALID_ARGS;
-    }
-
     display_info_t* display_info =
             reinterpret_cast<display_info_t*>(malloc(sizeof(display_info_t)));
     if (!display_info) {
@@ -197,6 +172,7 @@ static zx_status_t handle_display_added(fuchsia_hardware_display_Info* info,
         return ZX_ERR_NO_MEMORY;
     }
 
+    zx_status_t status;
     if ((status = create_layer(info->id, &display_info->layer_id)) != ZX_OK) {
         printf("vc: failed to create display layer\n");
         free(display_info);
@@ -206,7 +182,6 @@ static zx_status_t handle_display_added(fuchsia_hardware_display_Info* info,
     display_info->id = info->id;
     display_info->width = mode->horizontal_resolution;
     display_info->height = mode->vertical_resolution;
-    display_info->stride = stride_rsp.stride;
     display_info->format = reinterpret_cast<int32_t*>(info->pixel_format.data)[0];
     display_info->image_id = 0;
 
@@ -242,6 +217,42 @@ static void handle_display_removed(uint64_t id) {
         vc_free_gfx();
         displays_bound = false;
     }
+}
+
+static zx_status_t get_single_framebuffer(zx_handle_t* vmo_out, uint32_t* stride_out) {
+    zx::vmo vmo;
+    fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequest framebuffer_msg;
+    framebuffer_msg.hdr.ordinal =
+        fuchsia_hardware_display_ControllerGetSingleBufferFramebufferOrdinal;
+
+    fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponse framebuffer_rsp;
+    zx_channel_call_args_t framebuffer_call = {};
+    framebuffer_call.wr_bytes = &framebuffer_msg;
+    framebuffer_call.rd_bytes = &framebuffer_rsp;
+    framebuffer_call.wr_num_bytes = sizeof(framebuffer_msg);
+    framebuffer_call.rd_num_bytes = sizeof(framebuffer_rsp);
+    framebuffer_call.rd_handles = vmo.reset_and_get_address();
+    framebuffer_call.rd_num_handles = 1;
+    uint32_t actual_bytes, actual_handles;
+    zx_status_t status;
+    if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &framebuffer_call,
+                                  &actual_bytes, &actual_handles)) != ZX_OK) {
+        printf("vc: Failed to get single framebuffer: %d (%s)\n", status,
+               zx_status_get_string(status));
+        return status;
+    }
+    if (framebuffer_rsp.res != ZX_OK) {
+        // Don't print an error since this can happen on non-single-framebuffer
+        // systems.
+        return framebuffer_rsp.res;
+    }
+    if (actual_handles != 1) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    *vmo_out = vmo.release();
+    *stride_out = framebuffer_rsp.stride;
+    return ZX_OK;
 }
 
 static zx_status_t allocate_vmo(uint32_t size, zx_handle_t* vmo_out) {
@@ -428,17 +439,46 @@ static zx_status_t rebind_display(bool use_all) {
 
     zx_status_t status;
     if (!displays_bound) {
-        uint32_t size = primary->stride * primary->height * ZX_PIXEL_FORMAT_BYTES(primary->format);
-        if ((status = allocate_vmo(size, &image_vmo)) != ZX_OK) {
-            return ZX_ERR_NO_MEMORY;
+        uint32_t stride;
+        if (get_single_framebuffer(&image_vmo, &stride) != ZX_OK) {
+            fuchsia_hardware_display_ControllerComputeLinearImageStrideRequest stride_msg;
+            stride_msg.hdr.ordinal = fuchsia_hardware_display_ControllerComputeLinearImageStrideOrdinal;
+            stride_msg.width = primary->width;
+            stride_msg.pixel_format = primary->format;
+
+            fuchsia_hardware_display_ControllerComputeLinearImageStrideResponse stride_rsp;
+            zx_channel_call_args_t stride_call = {};
+            stride_call.wr_bytes = &stride_msg;
+            stride_call.rd_bytes = &stride_rsp;
+            stride_call.wr_num_bytes = sizeof(stride_msg);
+            stride_call.rd_num_bytes = sizeof(stride_rsp);
+            uint32_t actual_bytes, actual_handles;
+            zx_status_t status;
+            if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &stride_call,
+                                          &actual_bytes, &actual_handles)) != ZX_OK) {
+                printf("vc: Failed to compute fb stride: %d (%s)\n", status,
+                       zx_status_get_string(status));
+                return status;
+            }
+
+            if (stride_rsp.stride < primary->width) {
+                printf("vc: Got bad stride\n");
+                return ZX_ERR_INVALID_ARGS;
+            }
+
+            stride = stride_rsp.stride;
+            uint32_t size = stride * primary->height * ZX_PIXEL_FORMAT_BYTES(primary->format);
+            if ((status = allocate_vmo(size, &image_vmo)) != ZX_OK) {
+                return ZX_ERR_NO_MEMORY;
+            }
         }
         image_config.height = primary->height;
         image_config.width = primary->width;
         image_config.pixel_format = primary->format;
         image_config.type = IMAGE_TYPE_SIMPLE;
 
-        if ((status = vc_init_gfx(image_vmo, primary->width, primary->height,
-                                  primary->format, primary->stride)) != ZX_OK) {
+        if ((status = vc_init_gfx(image_vmo, primary->width, primary->height, primary->format,
+                                  stride)) != ZX_OK) {
             printf("vc: failed to initialize graphics for new display %d\n", status);
             zx_handle_close(image_vmo);
             return status;

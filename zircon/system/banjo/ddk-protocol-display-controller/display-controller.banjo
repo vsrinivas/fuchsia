@@ -403,4 +403,8 @@ interface DisplayControllerImpl {
     // Set sysmem buffer collection contraints needed to ensure an image can be imported with config
     // |config| on the fuchsia.sysmem.BufferCollection handle |collection|.
     SetBufferCollectionConstraints(Image config, ZxUnownedHandle collection) -> (zx.status s);
+
+    // If the system only supports single-buffered mode with a single framebuffer, then this returns
+    // that buffer and its stride. Otherwise it can return ZX_ERR_NOT_SUPPORTED.
+    GetSingleBufferFramebuffer() -> (zx.status res, handle<vmo>? vmo, uint32 stride);
 };

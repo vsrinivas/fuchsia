@@ -69,6 +69,10 @@ public:
     zx_status_t DisplayControllerImplGetSysmemConnection(zx::channel connection);
     zx_status_t DisplayControllerImplSetBufferCollectionConstraints(const image_t* config,
                                                                     uint32_t collection);
+    zx_status_t DisplayControllerImplGetSingleBufferFramebuffer(zx::vmo* out_vmo,
+                                                                uint32_t* out_stride) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     // Required functions for DeviceType
     void DdkUnbind();

@@ -198,6 +198,10 @@ private:
     void HandleAllocateVmo(const fuchsia_hardware_display_ControllerAllocateVmoRequest* req,
                            fidl::Builder* resp_builder, zx_handle_t* handle_out,
                            bool* has_handle_out, const fidl_type_t** resp_table);
+    void HandleGetSingleBufferFramebuffer(
+        const fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequest* req,
+        fidl::Builder* resp_builder, zx_handle_t* handle_out, bool* has_handle_out,
+        const fidl_type_t** resp_table);
     void HandleImportBufferCollection(
         const fuchsia_hardware_display_ControllerImportBufferCollectionRequest* req,
         fidl::Builder* resp_builder, const fidl_type_t** resp_table);

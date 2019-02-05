@@ -57,6 +57,7 @@ zx_status_t decode_message(fidl::Message* msg) {
         SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportBufferCollection);
         SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetBufferCollectionConstraints);
         SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseBufferCollection);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerGetSingleBufferFramebuffer);
     }
     if (table != nullptr) {
         const char* err;
@@ -192,6 +193,13 @@ void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase
         auto r = reinterpret_cast<const fuchsia_hardware_display_ControllerAllocateVmoRequest*>(
             msg.bytes().data());
         HandleAllocateVmo(r, &builder, &out_handle, &has_out_handle, &out_type);
+        break;
+    }
+    case fuchsia_hardware_display_ControllerGetSingleBufferFramebufferOrdinal: {
+        auto r = reinterpret_cast<
+            const fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequest*>(
+            msg.bytes().data());
+        HandleGetSingleBufferFramebuffer(r, &builder, &out_handle, &has_out_handle, &out_type);
         break;
     }
     default:
@@ -960,6 +968,23 @@ void Client::HandleAllocateVmo(const fuchsia_hardware_display_ControllerAllocate
     *has_handle_out = resp->res == ZX_OK;
     *handle_out = vmo.release();
     resp->vmo = *has_handle_out ? FIDL_HANDLE_PRESENT : FIDL_HANDLE_ABSENT;
+}
+
+void Client::HandleGetSingleBufferFramebuffer(
+    const fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequest* req,
+    fidl::Builder* resp_builder, zx_handle_t* handle_out, bool* has_handle_out,
+    const fidl_type_t** resp_table) {
+    auto resp =
+        resp_builder->New<fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponse>();
+    *resp_table = &fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponseTable;
+
+    zx::vmo vmo;
+    uint32_t stride = 0;
+    resp->res = controller_->dc()->GetSingleBufferFramebuffer(&vmo, &stride);
+    *has_handle_out = resp->res == ZX_OK;
+    *handle_out = vmo.release();
+    resp->vmo = *has_handle_out ? FIDL_HANDLE_PRESENT : FIDL_HANDLE_ABSENT;
+    resp->stride = stride;
 }
 
 bool Client::CheckConfig(fidl::Builder* resp_builder) {

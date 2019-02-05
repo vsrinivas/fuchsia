@@ -97,6 +97,10 @@ public:
                                                                     uint32_t collection) {
         return ZX_ERR_NOT_SUPPORTED;
     }
+    zx_status_t DisplayControllerImplGetSingleBufferFramebuffer(zx::vmo* out_vmo,
+                                                                uint32_t* out_stride) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     // gpu core ops
     zx_status_t ReadPciConfig16(uint16_t addr, uint16_t* value_out);

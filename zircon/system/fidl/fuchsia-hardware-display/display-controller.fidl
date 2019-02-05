@@ -426,4 +426,8 @@ interface Controller {
     // Takes an imported buffer collection and sets the constraints
     // on it so that it can be imported with a specific config.
     SetBufferCollectionConstraints(uint64 collection_id, ImageConfig config) -> (zx.status res);
+
+    // If the system only supports single-buffered mode with a single framebuffer, then this returns
+    // that buffer and its stride. Otherwise it can return ZX_ERR_NOT_SUPPORTED.
+    GetSingleBufferFramebuffer() -> (zx.status res, handle<vmo>? vmo, uint32 stride);
 };
