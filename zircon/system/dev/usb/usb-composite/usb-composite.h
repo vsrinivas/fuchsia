@@ -67,7 +67,7 @@ private:
     // Array of all our USB interfaces.
     fbl::Vector<fbl::RefPtr<UsbInterface>> interfaces_ __TA_GUARDED(lock_);
 
-    InterfaceStatus interface_statuses_[UINT8_MAX] __TA_GUARDED(lock_);
+    InterfaceStatus interface_statuses_[UINT8_MAX] __TA_GUARDED(lock_) = {};
 
     usb_device_descriptor_t device_desc_;
     fbl::Array<uint8_t> config_desc_;
