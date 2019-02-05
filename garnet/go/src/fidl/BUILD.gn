@@ -34,11 +34,20 @@ install_host_tools("fidl") {
   ]
 }
 
+go_library("fidlgen_test_lib") {
+  deps = [
+    ":fidl_lib",
+  ]
+  if (is_linux || is_mac) {
+    non_go_deps = [ "compiler/backend/goldens" ]
+  }
+}
+
 go_test("fidlgen_cpp_test") {
   gopackage = "fidl/compiler/backend/cpp"
 
   deps = [
-    ":fidl_lib",
+    ":fidlgen_test_lib",
   ]
 }
 
@@ -46,7 +55,7 @@ go_test("fidlgen_llcpp_test") {
   gopackage = "fidl/compiler/backend/llcpp"
 
   deps = [
-    ":fidl_lib",
+    ":fidlgen_test_lib",
   ]
 }
 
@@ -54,7 +63,7 @@ go_test("fidlgen_cpp_ir_test") {
   gopackage = "fidl/compiler/backend/cpp/ir"
 
   deps = [
-    ":fidl_lib",
+    ":fidlgen_test_lib",
   ]
 }
 
@@ -62,7 +71,7 @@ go_test("fidlgen_golang_test") {
   gopackage = "fidl/compiler/backend/golang"
 
   deps = [
-    ":fidl_lib",
+    ":fidlgen_test_lib",
   ]
 }
 
@@ -70,7 +79,7 @@ go_test("fidlgen_golang_ir_test") {
   gopackage = "fidl/compiler/backend/golang/ir"
 
   deps = [
-    ":fidl_lib",
+    ":fidlgen_test_lib",
   ]
 }
 
@@ -78,6 +87,6 @@ go_test("fidlgen_rust_test") {
   gopackage = "fidl/compiler/backend/rust"
 
   deps = [
-    ":fidl_lib",
+    ":fidlgen_test_lib",
   ]
 }

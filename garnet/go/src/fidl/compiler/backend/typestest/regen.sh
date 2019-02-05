@@ -19,7 +19,7 @@ fi
 
 EXAMPLE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 GOLDENS_DIR="${EXAMPLE_DIR}/../goldens"
-
+GOLDENS=()
 for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     src_name="$( basename "${src_path}" )"
     json_name=${src_name}.json
@@ -30,6 +30,17 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     llcpp_source_name=${json_name}.llcpp.cpp
     go_impl_name=${json_name}.go
     rust_name=${json_name}.rs
+
+    GOLDENS+=(
+      $json_name,
+      "${cpp_header_name}.golden",
+      "${cpp_test_header_name}.golden",
+      "${cpp_source_name}.golden",
+      "${llcpp_header_name}.golden",
+      "${llcpp_source_name}.golden",
+      "${go_impl_name}.golden",
+      "${rust_name}.golden",
+    )
 
     echo -e "\033[1mexample: ${src_name}\033[0m"
 
@@ -74,3 +85,6 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
         -include-base "${GOLDENS_DIR}"
     mv "${GOLDENS_DIR}/${rust_name}" "${GOLDENS_DIR}/${rust_name}.golden"
 done
+
+> "${GOLDENS_DIR}/goldens.txt"
+printf "%s\n" "${GOLDENS[@]//,}" >> "${GOLDENS_DIR}/goldens.txt"

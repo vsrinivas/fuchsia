@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -21,17 +21,12 @@ import (
 
 // basePath holds the base path to the directory containing goldens.
 var basePath = func() string {
-	for i := 0; i < 10; i++ {
-		_, file, _, ok := runtime.Caller(i)
-		if !ok {
-			break
-		}
-		if strings.HasSuffix(file, "testutil.go") {
-			path, _ := filepath.Split(file)
-			return fmt.Sprintf("%s%c", filepath.Join(path, "..", "goldens"), filepath.Separator)
-		}
+	testPath, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		panic(err)
 	}
-	panic("")
+	testDataDir := filepath.Join(filepath.Dir(testPath), "test_data", "fidlgen")
+	return fmt.Sprintf("%s%c", testDataDir, filepath.Separator)
 }()
 
 // AllExamples returns all examples by filename.

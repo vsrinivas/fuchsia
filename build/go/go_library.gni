@@ -31,7 +31,10 @@
 #
 #   non_go_deps (optional)
 #     List of labels for non-Go targets this library depends on.
-
+#
+#   metadata (optional)
+#     Scope giving the metadata of this library.
+#
 template("go_library") {
   assert(!(defined(invoker.name) && defined(invoker.name_file)),
          "Defining both name and name_file is not allowed")
@@ -100,5 +103,9 @@ template("go_library") {
              rebase_path(library_file),
              "--deps",
            ] + rebase_path(dependent_libraries)
+
+    if (defined(invoker.metadata)) {
+      metadata = invoker.metadata
+    }
   }
 }
