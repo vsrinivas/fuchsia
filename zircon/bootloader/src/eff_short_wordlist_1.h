@@ -1,7 +1,8 @@
-#pragma once
+#ifndef ZIRCON_BOOTLOADER_SRC_EFF_SHORT_WORDLIST_1_H_
+#define ZIRCON_BOOTLOADER_SRC_EFF_SHORT_WORDLIST_1_H_
 
 // This list must be consistent with
-// garnet/go/src/netstack/deviceid/eff_short_wordlist.go.
+// garnet/bin/netcfg/src/device_id.rs
 const char dictionary[1296][6] = {
     "acid",
     "acorn",
@@ -246,7 +247,7 @@ const char dictionary[1296][6] = {
     "crate",
     "crave",
     "crawl",
-    "crazy",
+    "creek",
     "creme",
     "crepe",
     "crept",
@@ -1300,3 +1301,5 @@ const char dictionary[1296][6] = {
     "zone",
     "zoom",
 };
+
+#endif  // ZIRCON_BOOTLOADER_SRC_EFF_SHORT_WORDLIST_1_H_

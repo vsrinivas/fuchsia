@@ -268,7 +268,7 @@ pub const DICTIONARY: [&str; 1296] = [
 	"crate",
 	"crave",
 	"crawl",
-	"crazy",
+	"creek",
 	"creme",
 	"crepe",
 	"crept",
