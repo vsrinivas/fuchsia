@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "xhci.h"
+
 #include <ddk/debug.h>
 #include <hw/arch_ops.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 #include <hw/reg.h>
 #include <zircon/types.h>
 #include <zircon/syscalls.h>
@@ -16,7 +20,6 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include "xhci.h"
 #include "xhci-device-manager.h"
 #include "xhci-root-hub.h"
 #include "xhci-transfer.h"
@@ -54,7 +57,7 @@ int xhci_get_root_hub_index(xhci_t* xhci, uint32_t device_id) {
 
 static void xhci_read_extended_caps(xhci_t* xhci) {
     uint32_t* cap_ptr = nullptr;
-    while ((cap_ptr = xhci_get_next_ext_cap(xhci->mmio.vaddr, cap_ptr, nullptr))) {
+    while ((cap_ptr = xhci_get_next_ext_cap(xhci->mmio->get(), cap_ptr, nullptr))) {
         uint32_t cap_id = XHCI_GET_BITS32(cap_ptr, EXT_CAP_CAPABILITY_ID_START,
                                           EXT_CAP_CAPABILITY_ID_BITS);
 
@@ -149,16 +152,12 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
     zx_status_t result = ZX_OK;
 
     list_initialize(&xhci->command_queue);
-    mtx_init(&xhci->command_ring_lock, mtx_plain);
-    mtx_init(&xhci->command_queue_mutex, mtx_plain);
-    mtx_init(&xhci->mfindex_mutex, mtx_plain);
-    mtx_init(&xhci->input_context_lock, mtx_plain);
     sync_completion_reset(&xhci->command_queue_completion);
 
     usb_request_pool_init(&xhci->free_reqs, sizeof(usb_request_t) +
                           offsetof(xhci_usb_request_internal_t, node));
 
-    xhci->cap_regs = (xhci_cap_regs_t*)xhci->mmio.vaddr;
+    xhci->cap_regs = (xhci_cap_regs_t*)xhci->mmio->get();
     xhci->op_regs = (xhci_op_regs_t*)((uint8_t*)xhci->cap_regs + xhci->cap_regs->length);
     xhci->doorbells = (uint32_t*)((uint8_t*)xhci->cap_regs + xhci->cap_regs->dboff);
     xhci->runtime_regs = (xhci_runtime_regs_t*)((uint8_t*)xhci->cap_regs + xhci->cap_regs->rtsoff);
@@ -184,24 +183,23 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
                                         HCSPARAMS2_MAX_SBBUF_LO_BITS);
     xhci->page_size = XHCI_READ32(&xhci->op_regs->pagesize) << 12;
 
+    fbl::AllocChecker ac;
+
     // allocate array to hold our slots
     // add 1 to allow 1-based indexing of slots
-    xhci->slots = (xhci_slot_t*)calloc(xhci->max_slots + 1, sizeof(xhci_slot_t));
-    if (!xhci->slots) {
-        result = ZX_ERR_NO_MEMORY;
-        goto fail;
+    xhci->slots.reset(new (&ac) xhci_slot_t[xhci->max_slots + 1], xhci->max_slots + 1);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    xhci->rh_map.reset(new (&ac) uint8_t[xhci->rh_num_ports], xhci->rh_num_ports);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    xhci->rh_port_map.reset(new (&ac) uint8_t[xhci->rh_num_ports], xhci->rh_num_ports);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
     }
 
-    xhci->rh_map = (uint8_t *)calloc(xhci->rh_num_ports, sizeof(uint8_t));
-    if (!xhci->rh_map) {
-        result = ZX_ERR_NO_MEMORY;
-        goto fail;
-    }
-    xhci->rh_port_map = (uint8_t *)calloc(xhci->rh_num_ports, sizeof(uint8_t));
-    if (!xhci->rh_port_map) {
-        result = ZX_ERR_NO_MEMORY;
-        goto fail;
-    }
     xhci_read_extended_caps(xhci);
 
     // We need to claim before we write to any other registers on the
@@ -213,14 +211,16 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
     }
 
     // Allocate DMA memory for various things
-    result = io_buffer_init(&xhci->dcbaa_erst_buffer, xhci->bti_handle, PAGE_SIZE,
-                            IO_BUFFER_RW | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
+    result = xhci->dcbaa_erst_buffer.Init(xhci->bti_handle.get(), PAGE_SIZE,
+                                          IO_BUFFER_RW | IO_BUFFER_CONTIG |
+                                          XHCI_IO_BUFFER_UNCACHED);
     if (result != ZX_OK) {
         zxlogf(ERROR, "io_buffer_init failed for xhci->dcbaa_erst_buffer\n");
         goto fail;
     }
-    result = io_buffer_init(&xhci->input_context_buffer, xhci->bti_handle, PAGE_SIZE,
-                            IO_BUFFER_RW | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
+    result = xhci->input_context_buffer.Init(xhci->bti_handle.get(), PAGE_SIZE,
+                                             IO_BUFFER_RW | IO_BUFFER_CONTIG |
+                                             XHCI_IO_BUFFER_UNCACHED);
     if (result != ZX_OK) {
         zxlogf(ERROR, "io_buffer_init failed for xhci->input_context_buffer\n");
         goto fail;
@@ -236,21 +236,21 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
             scratch_pad_is_contig = true;
         }
         size_t scratch_pad_pages_size = scratch_pad_bufs * xhci->page_size;
-        result = io_buffer_init(&xhci->scratch_pad_pages_buffer, xhci->bti_handle,
+        result = xhci->scratch_pad_pages_buffer.Init(xhci->bti_handle.get(),
                                 scratch_pad_pages_size, flags);
         if (result != ZX_OK) {
             zxlogf(ERROR, "io_buffer_init failed for xhci->scratch_pad_pages_buffer\n");
             goto fail;
         }
         if (!scratch_pad_is_contig) {
-            result = io_buffer_physmap(&xhci->scratch_pad_pages_buffer);
+            result = xhci->scratch_pad_pages_buffer.PhysMap();
             if (result != ZX_OK) {
                 zxlogf(ERROR, "io_buffer_physmap failed for xhci->scratch_pad_pages_buffer\n");
                 goto fail;
             }
         }
         size_t scratch_pad_index_size = PAGE_ROUNDUP(scratch_pad_bufs * sizeof(uint64_t));
-        result = io_buffer_init(&xhci->scratch_pad_index_buffer, xhci->bti_handle,
+        result = xhci->scratch_pad_index_buffer.Init(xhci->bti_handle.get(),
                                 scratch_pad_index_size,
                                 IO_BUFFER_RW | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
         if (result != ZX_OK) {
@@ -260,10 +260,10 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
     }
 
     // set up DCBAA, ERST array and input context
-    xhci->dcbaa = (uint64_t *)io_buffer_virt(&xhci->dcbaa_erst_buffer);
-    xhci->dcbaa_phys = io_buffer_phys(&xhci->dcbaa_erst_buffer);
-    xhci->input_context = (uint8_t *)io_buffer_virt(&xhci->input_context_buffer);
-    xhci->input_context_phys = io_buffer_phys(&xhci->input_context_buffer);
+    xhci->dcbaa = static_cast<uint64_t*>(xhci->dcbaa_erst_buffer.virt());
+    xhci->dcbaa_phys = xhci->dcbaa_erst_buffer.phys();
+    xhci->input_context = static_cast<uint8_t*>(xhci->input_context_buffer.virt());
+    xhci->input_context_phys = xhci->input_context_buffer.phys();
 
     // DCBAA can only be 256 * sizeof(uint64_t) = 2048 bytes, so we have room for ERST array after DCBAA
     zx_off_t erst_offset;
@@ -290,36 +290,37 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
     }
 
     if (scratch_pad_bufs > 0) {
-        uint64_t* scratch_pad_index = (uint64_t *)io_buffer_virt(&xhci->scratch_pad_index_buffer);
+        uint64_t* scratch_pad_index = static_cast<uint64_t*>(xhci->scratch_pad_index_buffer.virt());
         off_t offset = 0;
         for (uint32_t i = 0; i < scratch_pad_bufs; i++) {
             zx_paddr_t scratch_pad_phys;
             if (scratch_pad_is_contig) {
-                scratch_pad_phys = io_buffer_phys(&xhci->scratch_pad_pages_buffer) + offset;
+                scratch_pad_phys = xhci->scratch_pad_pages_buffer.phys() + offset;
             } else {
                 size_t index = offset / PAGE_SIZE;
                 size_t suboffset = offset & (PAGE_SIZE - 1);
-                scratch_pad_phys = xhci->scratch_pad_pages_buffer.phys_list[index] + suboffset;
+                scratch_pad_phys = xhci->scratch_pad_pages_buffer.phys_list()[index] + suboffset;
             }
 
             scratch_pad_index[i] = scratch_pad_phys;
             offset += xhci->page_size;
         }
 
-        zx_paddr_t scratch_pad_index_phys = io_buffer_phys(&xhci->scratch_pad_index_buffer);
+        zx_paddr_t scratch_pad_index_phys = xhci->scratch_pad_index_buffer.phys();
         xhci->dcbaa[0] = scratch_pad_index_phys;
     } else {
         xhci->dcbaa[0] = 0;
     }
 
-    result = xhci_transfer_ring_init(&xhci->command_ring, xhci->bti_handle, COMMAND_RING_SIZE);
+    result = xhci_transfer_ring_init(&xhci->command_ring, xhci->bti_handle.get(),
+                                     COMMAND_RING_SIZE);
     if (result != ZX_OK) {
         zxlogf(ERROR, "xhci_command_ring_init failed\n");
         goto fail;
     }
 
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
-        result = xhci_event_ring_init(&xhci->event_rings[i], xhci->bti_handle,
+        result = xhci_event_ring_init(&xhci->event_rings[i], xhci->bti_handle.get(),
                                       xhci->erst_arrays[i], EVENT_RING_SIZE);
         if (result != ZX_OK) {
             zxlogf(ERROR, "xhci_event_ring_init failed\n");
@@ -333,7 +334,6 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
         xhci_endpoint_t* eps = slot->eps;
         for (int j = 0; j < XHCI_NUM_EPS; j++) {
             xhci_endpoint_t* ep = &eps[j];
-            mtx_init(&ep->lock, mtx_plain);
             list_initialize(&ep->queued_reqs);
             list_initialize(&ep->pending_reqs);
             ep->current_req = nullptr;
@@ -354,7 +354,7 @@ fail:
 }
 
 uint32_t xhci_get_max_interrupters(xhci_t* xhci) {
-    xhci_cap_regs_t* cap_regs = (xhci_cap_regs_t*)xhci->mmio.vaddr;
+    auto* cap_regs = static_cast<xhci_cap_regs_t*>(xhci->mmio->get());
     volatile uint32_t* hcsparams1 = &cap_regs->hcsparams1;
     return XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_INTRS_START,
                            HCSPARAMS1_MAX_INTRS_BITS);
@@ -468,26 +468,31 @@ static void xhci_slot_stop(xhci_slot_t* slot, xhci_t* xhci) {
     for (int i = 0; i < XHCI_NUM_EPS; i++) {
         xhci_endpoint_t* ep = &slot->eps[i];
 
-        mtx_lock(&ep->lock);
-        if (ep->state != EP_STATE_DEAD) {
-            usb_request_t* req = nullptr;
-            xhci_usb_request_internal_t* req_int = nullptr;
-            while ((req_int = list_remove_head_type(&ep->pending_reqs,
-                                                    xhci_usb_request_internal_t,
-                                                    node)) != nullptr) {
-                req = XHCI_INTERNAL_TO_USB_REQ(req_int);
-                usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, &req_int->complete_cb);
-            }
-            while ((req_int = list_remove_head_type(&ep->queued_reqs,
-                                                    xhci_usb_request_internal_t,
-                                                    node)) != nullptr) {
-                req = XHCI_INTERNAL_TO_USB_REQ(req_int);
-                usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, &req_int->complete_cb);
-            }
+        list_node_t pending_reqs = LIST_INITIAL_VALUE(pending_reqs);
+        list_node_t queued_reqs = LIST_INITIAL_VALUE(queued_reqs);
+        {
+            fbl::AutoLock al(&ep->lock);
 
-            ep->state = EP_STATE_DEAD;
+            if (ep->state != EP_STATE_DEAD) {
+                list_move(&ep->pending_reqs, &pending_reqs);
+                list_move(&ep->queued_reqs, &queued_reqs);
+                ep->state = EP_STATE_DEAD;
+            }
         }
-        mtx_unlock(&ep->lock);
+        usb_request_t* req = nullptr;
+        xhci_usb_request_internal_t* req_int = nullptr;
+        while ((req_int = list_remove_head_type(&pending_reqs,
+                                                xhci_usb_request_internal_t,
+                                                node)) != nullptr) {
+            req = XHCI_INTERNAL_TO_USB_REQ(req_int);
+            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, &req_int->complete_cb);
+        }
+        while ((req_int = list_remove_head_type(&queued_reqs,
+                                                xhci_usb_request_internal_t,
+                                                node)) != nullptr) {
+            req = XHCI_INTERNAL_TO_USB_REQ(req_int);
+            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0, &req_int->complete_cb);
+        }
     }
 }
 
@@ -510,46 +515,14 @@ void xhci_stop(xhci_t* xhci) {
 }
 
 void xhci_free(xhci_t* xhci) {
-    for (uint32_t i = 1; i <= xhci->max_slots; i++) {
-        xhci_slot_t* slot = &xhci->slots[i];
-        io_buffer_release(&slot->buffer);
-
-        for (int j = 0; j < XHCI_NUM_EPS; j++) {
-            xhci_endpoint_t* ep = &slot->eps[j];
-            xhci_transfer_ring_free(&ep->transfer_ring);
-        }
-    }
-    free(xhci->slots);
-
-     for (int i = 0; i < XHCI_RH_COUNT; i++) {
-        xhci_root_hub_free(&xhci->root_hubs[i]);
-    }
-    free(xhci->rh_map);
-    free(xhci->rh_port_map);
-
-    for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
-        xhci_event_ring_free(&xhci->event_rings[i]);
-    }
-
-    xhci_transfer_ring_free(&xhci->command_ring);
-    io_buffer_release(&xhci->dcbaa_erst_buffer);
-    io_buffer_release(&xhci->input_context_buffer);
-    io_buffer_release(&xhci->scratch_pad_pages_buffer);
-    io_buffer_release(&xhci->scratch_pad_index_buffer);
-    mmio_buffer_release(&xhci->mmio);
-
-    // this must done after releasing anything that relies
-    // on our bti, like our io_buffers
-    zx_handle_close(xhci->bti_handle);
-
-    free(xhci);
+    delete xhci;
 }
 
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
                        xhci_command_context_t* context) {
     // FIXME - check that command ring is not full?
 
-    mtx_lock(&xhci->command_ring_lock);
+    fbl::AutoLock al(&xhci->command_ring_lock);
 
     xhci_transfer_ring_t* cr = &xhci->command_ring;
     xhci_trb_t* trb = cr->current;
@@ -564,8 +537,6 @@ void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t co
 
     hw_mb();
     XHCI_WRITE32(&xhci->doorbells[0], 0);
-
-    mtx_unlock(&xhci->command_ring_lock);
 }
 
 static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_trb) {
@@ -582,23 +553,24 @@ static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_t
         return;
     }
 
-    mtx_lock(&xhci->command_ring_lock);
-    xhci_command_context_t* context = xhci->command_contexts[index];
-    xhci->command_contexts[index] = nullptr;
-    mtx_unlock(&xhci->command_ring_lock);
+    xhci_command_context_t* context;
+    {
+        fbl::AutoLock al(&xhci->command_ring_lock);
+        context = xhci->command_contexts[index];
+        xhci->command_contexts[index] = nullptr;
+    }
 
     context->callback(context->data, cc, command_trb, event_trb);
 }
 
 static void xhci_handle_mfindex_wrap(xhci_t* xhci) {
-    mtx_lock(&xhci->mfindex_mutex);
+    fbl::AutoLock al(&xhci->mfindex_mutex);
     xhci->mfindex_wrap_count++;
     xhci->last_mfindex_wrap = zx_clock_get_monotonic();
-    mtx_unlock(&xhci->mfindex_mutex);
 }
 
 uint64_t xhci_get_current_frame(xhci_t* xhci) {
-    mtx_lock(&xhci->mfindex_mutex);
+    fbl::AutoLock al(&xhci->mfindex_mutex);
 
     uint32_t mfindex = XHCI_READ32(&xhci->runtime_regs->mfindex) & ((1 << XHCI_MFINDEX_BITS) - 1);
     uint64_t wrap_count = xhci->mfindex_wrap_count;
@@ -609,7 +581,6 @@ uint64_t xhci_get_current_frame(xhci_t* xhci) {
             wrap_count++;
         }
     }
-    mtx_unlock(&xhci->mfindex_mutex);
 
     // shift three to convert from 125us microframes to 1ms frames
     return ((wrap_count * (1 << XHCI_MFINDEX_BITS)) + mfindex) >> 3;
