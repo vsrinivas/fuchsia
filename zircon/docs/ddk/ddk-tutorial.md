@@ -20,6 +20,7 @@ This Driver Development Kit (*DDK*) tutorial documentation section consists of:
 *   [Advanced Topics and Tips](advanced.md) &mdash; hints for experienced driver writers
     and comments on unusual situations
 *   [Tracing](tracing.md) &mdash; monitoring driver performance with tracing
+*	[C++ DDKTL](using-ddktl.md) &mdash; Using the C++ DDK Template Library
 *   [Reference](reference.md) &mdash; helper functions, data structures, manifest constants
 
 The sections are listed above in default reading order, but it's perfectly fine
