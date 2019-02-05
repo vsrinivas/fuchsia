@@ -67,9 +67,6 @@ interface PuppetMaster {
 };
 
 struct WatchSessionOptions {
-    // FIDL doens't allow empty structs. We want this struct to exist in the API
-    // for future session watching options.
-    int32 placeholder;
 };
 
 interface StoryPuppetMaster {

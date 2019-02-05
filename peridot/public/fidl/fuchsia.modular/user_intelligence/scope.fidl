@@ -19,7 +19,6 @@ union ComponentScope {
 };
 
 struct GlobalScope {
-    uint32 dummy; // FIDL does not allow empty structs
 };
 
 struct ModuleScope {
