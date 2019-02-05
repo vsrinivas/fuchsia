@@ -13,9 +13,14 @@ LoadedModuleSymbols::LoadedModuleSymbols(
     : module_(std::move(module)),
       load_address_(load_address),
       build_id_(std::move(build_id)),
-      symbol_context_(load_address) {}
+      symbol_context_(load_address),
+      weak_factory_(this) {}
 
 LoadedModuleSymbols::~LoadedModuleSymbols() = default;
+
+fxl::WeakPtr<LoadedModuleSymbols> LoadedModuleSymbols::GetWeakPtr() {
+  return weak_factory_.GetWeakPtr();
+}
 
 std::vector<Location> LoadedModuleSymbols::ResolveInputLocation(
     const InputLocation& input_location, const ResolveOptions& options) const {

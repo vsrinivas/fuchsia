@@ -485,7 +485,9 @@ bool ReadReply(MessageReader* reader, ModulesReply* reply,
 void WriteRequest(const SymbolTablesRequest& request, uint32_t transaction_id,
                   MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kSymbolTables, transaction_id);
-  writer->WriteBytes(&request, sizeof(SymbolTablesRequest));
+  writer->WriteUint64(request.process_koid);
+  writer->WriteUint64(request.base);
+  writer->WriteString(request.build_id);
 }
 
 bool ReadReply(MessageReader* reader, SymbolTablesReply* reply,

@@ -13,7 +13,8 @@
 #include "garnet/bin/zxdb/symbols/resolve_options.h"
 #include "garnet/bin/zxdb/symbols/system_symbols.h"
 #include "garnet/lib/debug_ipc/records.h"
-#include "garnet/public/lib/fxl/macros.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -34,6 +35,8 @@ class LoadedModuleSymbols {
   const ModuleSymbols* module_symbols() const {
     return module_->module_symbols();
   }
+
+  fxl::WeakPtr<LoadedModuleSymbols> GetWeakPtr();
 
   // Base address for the module.
   uint64_t load_address() const { return load_address_; }
@@ -102,6 +105,8 @@ class LoadedModuleSymbols {
   std::string build_id_;
   std::vector<debug_ipc::ElfSymbol> elf_symbols_;
   SymbolContext symbol_context_;
+
+  fxl::WeakPtrFactory<LoadedModuleSymbols> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LoadedModuleSymbols);
 };

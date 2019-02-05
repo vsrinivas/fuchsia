@@ -249,14 +249,18 @@ void ProcessImpl::DidLoadModuleSymbols(LoadedModuleSymbols* module) {
   request.build_id = module->build_id();
 
   session()->remote_api()->SymbolTables(
-      request,
-      [this, module](const Err& err, debug_ipc::SymbolTablesReply reply) {
+      request, [weak_this = weak_factory_.GetWeakPtr(),
+                weak_module = module->GetWeakPtr()](
+                   const Err& err, debug_ipc::SymbolTablesReply reply) {
+        if (!weak_this || !weak_module)
+          return;
+
         if (!err.has_error()) {
-          module->SetElfSymbols(reply.symbols);
+          weak_module->SetElfSymbols(reply.symbols);
         }
 
-        for (auto& observer : observers())
-          observer.DidLoadModuleSymbols(this, module);
+        for (auto& observer : weak_this->observers())
+          observer.DidLoadModuleSymbols(weak_this.get(), weak_module.get());
       });
 }
 

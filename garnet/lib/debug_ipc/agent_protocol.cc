@@ -407,7 +407,11 @@ bool ReadRequest(MessageReader* reader, SymbolTablesRequest* request,
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
-  return reader->ReadBytes(sizeof(SymbolTablesRequest), request);
+  if (!reader->ReadUint64(&request->process_koid))
+    return false;
+  if (!reader->ReadUint64(&request->base))
+    return false;
+  return reader->ReadString(&request->build_id);
 }
 
 void WriteReply(const SymbolTablesReply& reply, uint32_t transaction_id,

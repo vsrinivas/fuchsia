@@ -423,9 +423,11 @@ void DebugAgent::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
 
 void DebugAgent::OnSymbolTables(const debug_ipc::SymbolTablesRequest& request,
                                 debug_ipc::SymbolTablesReply* reply) {
+  /* TODO enable when this code works.
   DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
   if (proc)
     proc->OnSymbolTables(request, reply);
+  */
 }
 
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
