@@ -12,7 +12,11 @@ use {
     fidl::endpoints::{RequestStream, ServiceMarker},
     fidl_fuchsia_telephony_manager::{ManagerMarker, ManagerRequest, ManagerRequestStream},
     fidl_fuchsia_telephony_ril::{RadioInterfaceLayerMarker, RadioInterfaceLayerProxy},
-    fuchsia_app::{client::{App, Launcher}, fuchsia_single_component_package_url, server::ServicesServer},
+    fuchsia_app::{
+        client::{App, Launcher},
+        fuchsia_single_component_package_url,
+        server::ServicesServer,
+    },
     fuchsia_async as fasync,
     fuchsia_syslog::{self as syslog, macros::*},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
@@ -36,16 +40,16 @@ pub fn connect_qmi_transport(path: PathBuf) -> Result<fasync::Channel, zx::Statu
 
 pub async fn start_qmi_modem(chan: zx::Channel) -> Result<Radio, Error> {
     let launcher = Launcher::new().context("Failed to open launcher service")?;
-    let app = launcher
-        .launch(RIL_URI.to_string(), None)
-        .context("Failed to launch qmi-modem service")?;
+    let app =
+        launcher.launch(RIL_URI.to_string(), None).context("Failed to launch qmi-modem service")?;
     let ril = app.connect_to_service(RadioInterfaceLayerMarker)?;
     let _success = await!(ril.connect_transport(chan.into()))?;
     Ok(Radio::new(app, ril))
 }
 
 pub fn start_service(
-    mgr: Arc<Manager>, channel: fasync::Channel,
+    mgr: Arc<Manager>,
+    channel: fasync::Channel,
 ) -> impl Future<Output = Result<(), Error>> {
     let stream = ManagerRequestStream::from_channel(channel);
     stream
@@ -60,10 +64,13 @@ pub fn start_service(
                     let radios = mgr.radios.read();
                     match radios.first() {
                         Some(radio) => {
-                            let resp = radio.app.pass_to_service(RadioInterfaceLayerMarker, ril_iface.into_channel());
+                            let resp = radio.app.pass_to_service(
+                                RadioInterfaceLayerMarker,
+                                ril_iface.into_channel(),
+                            );
                             responder.send(resp.is_ok())
                         }
-                        None => responder.send(false)
+                        None => responder.send(false),
                     }
                 }
             };
@@ -82,10 +89,7 @@ pub struct Radio {
 
 impl Radio {
     pub fn new(app: App, ril: RadioInterfaceLayerProxy) -> Self {
-        Radio {
-            app,
-            ril,
-        }
+        Radio { app, ril }
     }
 }
 
@@ -95,9 +99,7 @@ pub struct Manager {
 
 impl Manager {
     pub fn new() -> Self {
-        Manager {
-            radios: RwLock::new(vec![]),
-        }
+        Manager { radios: RwLock::new(vec![]) }
     }
 
     async fn watch_new_devices(&self) -> Result<(), Error> {
@@ -141,7 +143,5 @@ fn main() -> Result<(), Error> {
         }))
         .start()?;
 
-    executor
-        .run_singlethreaded(device_watcher.try_join(server))
-        .map(|_| ())
+    executor.run_singlethreaded(device_watcher.try_join(server)).map(|_| ())
 }
