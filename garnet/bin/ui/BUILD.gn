@@ -89,6 +89,10 @@ package("scenic_tests") {
       dest = "gfx_pixeltests.cmx"
     },
     {
+      path = rebase_path("meta/gfx_viewstate_apptests.cmx")
+      dest = "gfx_viewstate_apptests.cmx"
+    },
+    {
       path = rebase_path("meta/gfx_unittests.cmx")
       dest = "gfx_unittests.cmx"
     },

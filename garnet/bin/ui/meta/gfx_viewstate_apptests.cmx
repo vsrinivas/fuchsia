@@ -1,11 +1,8 @@
 {
     "program": {
-        "binary": "test/gfx_view_state_tests"
+        "binary": "test/gfx_viewstate_apptests"
     },
     "sandbox": {
-        "features": [
-            "system-temp"
-        ],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"

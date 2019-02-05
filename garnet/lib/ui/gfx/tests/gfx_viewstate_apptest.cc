@@ -46,27 +46,34 @@ const std::map<std::string, std::string> kServices = {
 
 class EmbedderView : public fuchsia::ui::scenic::SessionListener {
  public:
-  EmbedderView(ViewContext context, scenic::EmbeddedViewInfo info,
+  EmbedderView(ViewContext context,
                const std::string& debug_name = "EmbedderView")
       : binding_(this, std::move(context.session_and_listener_request.second)),
         session_(std::move(context.session_and_listener_request.first)),
         view_(&session_, std::move(context.view_token), debug_name),
-        embedded_view_info_(std::move(info)),
-        view_holder_(&session_,
-                     std::move(embedded_view_info_.view_holder_token),
-                     debug_name + " ViewHolder"),
         top_node_(&session_) {
     binding_.set_error_handler([](zx_status_t status) { FAIL() << status; });
     view_.AddChild(top_node_);
-    top_node_.Attach(view_holder_);
     // Call |Session::Present| in order to flush events having to do with
     // creation of |view_| and |top_node_|.
     session_.Present(0, [](auto) {});
   }
 
-  void SetViewStateChangedCallback(
-      std::function<void(fuchsia::ui::gfx::ViewState)> callback) {
-    view_state_changed_callback_ = std::move(callback);
+  // Sets the EmbeddedViewInfo and attaches the embedded View to the scene. Any
+  // callbacks for the embedded View's ViewState are delivered to the supplied
+  // callback.
+  void EmbedView(scenic::EmbeddedViewInfo info,
+                 std::function<void(fuchsia::ui::gfx::ViewState)> callback) {
+    // Only one EmbeddedView is currently supported.
+    FXL_CHECK(!embedded_view_);
+    embedded_view_ = std::make_unique<EmbeddedView>(std::move(info), &session_,
+                                                    std::move(callback));
+
+    // Attach the embedded view to the scene.
+    top_node_.Attach(embedded_view_->view_holder);
+
+    // Call |Session::Present| to apply the embedded view to the scene graph.
+    session_.Present(0, [](auto) {});
   }
 
  private:
@@ -76,17 +83,22 @@ class EmbedderView : public fuchsia::ui::scenic::SessionListener {
           event.gfx().Which() ==
               fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged) {
         const auto& evt = event.gfx().view_properties_changed();
-        view_holder_.SetViewProperties(std::move(evt.properties));
-        session_.Present(0, [](auto) {});
+        // Naively apply the parent's ViewProperties to any EmbeddedViews.
+        if (embedded_view_) {
+          embedded_view_->view_holder.SetViewProperties(
+              std::move(evt.properties));
+          session_.Present(0, [](auto) {});
+        }
       } else if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
                  event.gfx().Which() ==
                      fuchsia::ui::gfx::Event::Tag::kViewStateChanged) {
         const auto& evt = event.gfx().view_state_changed();
-        if (evt.view_holder_id == view_holder_.id()) {
+        if (embedded_view_ &&
+            evt.view_holder_id == embedded_view_->view_holder.id()) {
           // Clients of |EmbedderView| *must* set a view state changed
           // callback.  Failure to do so is a usage error.
-          FXL_DCHECK(view_state_changed_callback_);
-          view_state_changed_callback_(evt.state);
+          FXL_CHECK(embedded_view_->view_state_changed_callback);
+          embedded_view_->view_state_changed_callback(evt.state);
         }
       }
     }
@@ -94,13 +106,28 @@ class EmbedderView : public fuchsia::ui::scenic::SessionListener {
 
   void OnScenicError(std::string error) override { FAIL() << error; }
 
+  struct EmbeddedView {
+    EmbeddedView(
+        scenic::EmbeddedViewInfo info, scenic::Session* session,
+        std::function<void(fuchsia::ui::gfx::ViewState)> view_state_callback,
+        const std::string& debug_name = "EmbedderView")
+        : embedded_info(std::move(info)),
+          view_holder(session, std::move(embedded_info.view_holder_token),
+                      debug_name + " ViewHolder"),
+          view_state_changed_callback(std::move(view_state_callback)) {}
+
+    scenic::EmbeddedViewInfo embedded_info;
+    scenic::ViewHolder view_holder;
+    std::function<void(fuchsia::ui::gfx::ViewState)>
+        view_state_changed_callback;
+  };
+
   fidl::Binding<fuchsia::ui::scenic::SessionListener> binding_;
   scenic::Session session_;
   scenic::View view_;
-  scenic::EmbeddedViewInfo embedded_view_info_;
-  scenic::ViewHolder view_holder_;
   scenic::EntityNode top_node_;
-  std::function<void(fuchsia::ui::gfx::ViewState)> view_state_changed_callback_;
+  std::optional<fuchsia::ui::gfx::ViewProperties> embedded_view_properties_;
+  std::unique_ptr<EmbeddedView> embedded_view_;
 };
 
 // Test fixture that sets up an environment suitable for Scenic pixel tests
@@ -157,18 +184,19 @@ TEST_F(ViewEmbedderTest, BouncingBall) {
       environment_->launcher_ptr(),
       "fuchsia-pkg://fuchsia.com/bouncing_ball#meta/bouncing_ball.cmx", {});
 
-  EmbedderView embedder_view(CreatePresentationContext(), std::move(info));
+  EmbedderView embedder_view(CreatePresentationContext());
+
+  bool view_state_changed_observed = false;
+  auto view_state_callback = [this,
+                              &view_state_changed_observed](auto view_state) {
+    view_state_changed_observed = true;
+    QuitLoop();
+  };
+  embedder_view.EmbedView(std::move(info), std::move(view_state_callback));
 
   // Run the loop until we observe the view state changing, or hit a 10 second
   // timeout.
-  bool view_state_changed_observed = false;
-  embedder_view.SetViewStateChangedCallback(
-      [this, &view_state_changed_observed](auto view_state) {
-        view_state_changed_observed = true;
-        async::PostTask(dispatcher(), QuitLoopClosure());
-      });
   RunLoopWithTimeout(zx::sec(10));
-
   EXPECT_TRUE(view_state_changed_observed);
 }
 
