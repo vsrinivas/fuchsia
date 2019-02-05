@@ -54,22 +54,22 @@ class HackFilesystem : public fxl::RefCountedThreadSafe<HackFilesystem> {
   std::unique_ptr<HackFilesystemWatcher> RegisterWatcher(
       HackFilesystemWatcherFunc func);
 
-  // Load the specified files from the real filesystem.  A prefix will be
-  // prepended to each path. On Fuchsia the default prefix is "/pkg/data/". On
-  // Linux, the default prefix is "garnet/public/lib/escher/", assuming $PWD is
-  // $FUCHSIA_DIR.
+  // Load the specified files from the real filesystem, given a root directory.
+  // On Fuchsia the default root is "/pkg/data/"; on Linux, the default is
+  // "../test_data/escher", which points to a directory of escher test data
+  // relative to the test binary itself.
   virtual bool InitializeWithRealFiles(const std::vector<HackFilePath>& paths,
-                                       const char* prefix =
+                                       const char* root =
 #ifdef __Fuchsia__
-                                           "/pkg/data/"
+                                           "/pkg/data"
 #else
-                                           "garnet/public/lib/escher/"
+                                           "../test_data/escher"
 #endif
                                        ) = 0;
 
  protected:
   HackFilesystem() = default;
-  static bool LoadFile(HackFilesystem* fs, const HackFilePath& prefix,
+  static bool LoadFile(HackFilesystem* fs, const HackFilePath& root,
                        const HackFilePath& path);
 
  private:

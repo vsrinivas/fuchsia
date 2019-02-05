@@ -14,7 +14,7 @@ class LinuxDataSource : public HackFilesystem {
  public:
   // |HackFilesystem|
   bool InitializeWithRealFiles(const std::vector<HackFilePath>& paths,
-                               const char* prefix) override;
+                               const char* root) override;
 };
 
 }  // namespace escher

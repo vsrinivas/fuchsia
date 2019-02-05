@@ -30,7 +30,8 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
   // Initialize filesystem with files before creating renderer; it will use them
   // to generate the necessary ShaderPrograms.
   escher()->shader_program_factory()->filesystem()->InitializeWithRealFiles(
-      {"shaders/model_renderer/main.frag", "shaders/model_renderer/main.vert",
+      {"shaders/model_renderer/main.frag",
+       "shaders/model_renderer/main.vert",
        "shaders/model_renderer/default_position.vert",
        "shaders/model_renderer/shadow_map_generation.frag",
        "shaders/model_renderer/shadow_map_lighting.frag",

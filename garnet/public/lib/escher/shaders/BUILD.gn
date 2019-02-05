@@ -1,0 +1,61 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(is_linux,
+       "shaders need only be copied to the build directory for linux tests")
+
+shaders = [
+  "model_renderer/default_position.vert",
+  "model_renderer/main.frag",
+  "model_renderer/main.vert",
+  "model_renderer/shadow_map_generation.frag",
+  "model_renderer/shadow_map_lighting.frag",
+  "model_renderer/wobble_position.vert",
+  "paper/common/use.glsl",
+  "paper/frag/main_ambient_light.frag",
+  "paper/frag/main_point_light.frag",
+  "paper/vert/compute_model_space_position.vert",
+  "paper/vert/compute_world_space_position.vert",
+  "paper/vert/main_shadow_volume_extrude.vert",
+  "paper/vert/vertex_attributes.vert",
+]
+
+# Copies shaders needed for escher linux tests to a specific test data
+# directory near the test binary.
+group_deps = []
+test_data = []
+foreach(shader, shaders) {
+  name = get_path_info(shader, "file")
+  copy_name = "copy_$name"
+  copy(copy_name) {
+    sources = [
+      shader,
+    ]
+    outputs = [
+      "$root_out_dir/test_data/escher/shaders/$shader",
+    ]
+  }
+  group_deps += [ ":$copy_name" ]
+  test_data += get_target_outputs(":$copy_name")
+
+  # TODO(IN-819): Delete once tests are no longer being run out of
+  # $root_build_dir/host_tests/.
+  deprecated_copy_name = "${copy_name}_deprecated"
+  copy(deprecated_copy_name) {
+    sources = [
+      shader,
+    ]
+    outputs = [
+      "$root_build_dir/host_tests/test_data/escher/shaders/$shader",
+    ]
+  }
+  group_deps += [ ":$deprecated_copy_name" ]
+}
+
+group("linux_shader_data") {
+  deps = group_deps
+  metadata = {
+    test_runtime_deps = test_data
+  }
+}

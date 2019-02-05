@@ -4,21 +4,30 @@
 
 #include "lib/escher/fs/linux_data_source.h"
 
+#include <limits.h>
+#include <unistd.h>
+
 #include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/path.h"
 
 namespace escher {
 
 bool LinuxDataSource::InitializeWithRealFiles(
-    const std::vector<HackFilePath>& paths, const char* prefix) {
-  const std::string kPrefix(prefix);
-  if (!files::IsDirectory(kPrefix)) {
-    FXL_LOG(ERROR) << "Cannot find garnet/public/lib/escher/.  Are you running "
-                      "from $FUCHSIA_DIR?";
-    return false;
+    const std::vector<HackFilePath>& paths, const char* root) {
+
+  if (root == nullptr) {
+    FXL_LOG(ERROR) << "root not provided";
+  } else if (root[0] != '.') {
+    FXL_LOG(ERROR) << "root must be a relative path: " << root;
   }
+  char test_path[PATH_MAX];
+  const char exe_link[] = "/proc/self/exe";
+  realpath(exe_link, test_path);
+  const std::string kRoot = files::SimplifyPath(files::JoinPath(test_path, root));
+
   bool success = true;
   for (const auto& path : paths) {
-    success &= LoadFile(this, kPrefix, path);
+    success &= LoadFile(this, kRoot, path);
   }
   return success;
 }

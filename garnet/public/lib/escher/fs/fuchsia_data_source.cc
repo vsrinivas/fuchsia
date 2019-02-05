@@ -38,11 +38,11 @@ FuchsiaDataSource::FuchsiaDataSource()
     : root_dir_(fbl::MakeRefCounted<fs::PseudoDir>()) {}
 
 bool FuchsiaDataSource::InitializeWithRealFiles(
-    const std::vector<HackFilePath>& paths, const char* prefix) {
-  const std::string kPrefix(prefix);
+    const std::vector<HackFilePath>& paths, const char* root) {
+  const std::string kRoot(root);
   bool success = true;
   for (const auto& path : paths) {
-    success &= LoadFile(this, kPrefix, path);
+    success &= LoadFile(this, kRoot, path);
 
     auto segs = StrSplit(path, "/");
     FXL_DCHECK(segs.size() > 0);

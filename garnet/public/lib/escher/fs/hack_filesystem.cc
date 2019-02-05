@@ -6,6 +6,7 @@
 
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
+#include "lib/fxl/files/path.h"
 
 #ifdef __Fuchsia__
 #include "lib/escher/fs/fuchsia_data_source.h"
@@ -67,14 +68,15 @@ HackFilesystemWatcher::~HackFilesystemWatcher() {
   FXL_DCHECK(erased == 1);
 }
 
-bool HackFilesystem::LoadFile(HackFilesystem* fs, const HackFilePath& prefix,
+bool HackFilesystem::LoadFile(HackFilesystem* fs, const HackFilePath& root,
                               const HackFilePath& path) {
   std::string contents;
-  if (files::ReadFileToString(prefix + path, &contents)) {
+  std::string fullpath = files::JoinPath(root, path);
+  if (files::ReadFileToString(fullpath, &contents)) {
     fs->WriteFile(path, contents);
     return true;
   }
-  FXL_LOG(WARNING) << "Failed to read file: " << prefix + path;
+  FXL_LOG(WARNING) << "Failed to read file: " << fullpath;
   return false;
 }
 

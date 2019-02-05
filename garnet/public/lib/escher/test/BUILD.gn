@@ -83,6 +83,10 @@ if (is_mac) {
       "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
     ]
 
+    if (is_linux) {
+      deps += ["//garnet/public/lib/escher/shaders:linux_shader_data"]
+    }
+
     if (is_fuchsia) {
       sources += [
         "flib/fence_listener_unittest.cc",

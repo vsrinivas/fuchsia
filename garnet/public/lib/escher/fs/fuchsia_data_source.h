@@ -18,7 +18,7 @@ class FuchsiaDataSource : public HackFilesystem {
 
   // |HackFilesystem|
   bool InitializeWithRealFiles(const std::vector<HackFilePath>& paths,
-                               const char* prefix) override;
+                               const char* root) override;
 
  private:
   fbl::RefPtr<fs::PseudoDir> root_dir_;

@@ -31,7 +31,10 @@ static_library("common") {
     deps += [ ":demo_harness_fuchsia" ]
   }
   if (is_linux) {
-    deps += [ ":demo_harness_linux" ]
+    deps += [
+      ":demo_harness_linux",
+      "//garnet/public/lib/escher/shaders:linux_shader_data",
+    ]
   }
 }
 
