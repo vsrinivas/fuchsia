@@ -15,11 +15,6 @@ const std::string kDeviceName = "MockHidDecoder";
 
 }
 
-MockHidDecoder::MockHidDecoder(InitHandler init_handler)
-    : init_handler_(std::move(init_handler)), weak_ptr_factory_(this) {}
-MockHidDecoder::MockHidDecoder(Protocol protocol)
-    : MockHidDecoder(
-          [=] { return std::pair<Protocol, bool>(protocol, true); }) {}
 MockHidDecoder::~MockHidDecoder() = default;
 
 fxl::WeakPtr<MockHidDecoder> MockHidDecoder::GetWeakPtr() {
@@ -28,12 +23,7 @@ fxl::WeakPtr<MockHidDecoder> MockHidDecoder::GetWeakPtr() {
 
 const std::string& MockHidDecoder::name() const { return kDeviceName; }
 
-bool MockHidDecoder::Init() {
-  std::pair<Protocol, bool> result = init_handler_();
-  protocol_ = result.first;
-  report_.type = ReportType::kNone;
-  return result.second;
-}
+bool MockHidDecoder::Init() { return true; }
 
 zx::event MockHidDecoder::GetEvent() {
   zx::event dup;
@@ -43,109 +33,48 @@ zx::event MockHidDecoder::GetEvent() {
   return dup;
 }
 
+HidDecoder::BootMode MockHidDecoder::ReadBootMode() const { return boot_mode_; }
+
+// We don't test this function so it is a stub for now.
+void MockHidDecoder::SetupDevice(Device device) { return; }
+
+const std::vector<uint8_t>& MockHidDecoder::ReadReportDescriptor(
+    int* bytes_read) {
+  FXL_CHECK(report_descriptor_.length != 0);
+  *bytes_read = report_descriptor_.length;
+  return report_descriptor_.data;
+}
+
 const std::vector<uint8_t>& MockHidDecoder::Read(int* bytes_read) {
-  FXL_CHECK(report_.type == ReportType::kLegacy ||
-            report_.type == ReportType::kNone);
-
-  if (report_.type == ReportType::kLegacy) {
-    *bytes_read = report_.legacy_content_length;
-    ClearReport();
-  } else {
-    *bytes_read = -1;
-  }
-
-  return report_.legacy_bytes;
+  FXL_CHECK(report_.length != 0);
+  *bytes_read = report_.length;
+  ClearReport();
+  return report_.data;
 }
 
-bool MockHidDecoder::Read(HidGamepadSimple* gamepad) {
-  return MockRead(ReportType::kGamepad, report_.gamepad, gamepad);
-}
-
-bool MockHidDecoder::Read(HidAmbientLightSimple* light) {
-  return MockRead(ReportType::kLight, report_.light, light);
-}
-
-bool MockHidDecoder::Read(HidButtons* data) {
-  return MockRead(ReportType::kButtons, report_.buttons, data);
-}
-
-bool MockHidDecoder::Read(Touchscreen::Report* report) {
-  return MockRead(ReportType::kTouchscreen, report_.touchscreen, report);
-}
-
-bool MockHidDecoder::Read(Mouse::Report* report) {
-  return MockRead(ReportType::kMouse, report_.mouse, report);
-}
-
-bool MockHidDecoder::SetDescriptor(Touchscreen::Descriptor* touch_desc) {
-  // It isn't necessary to set a mock descriptor since we don't actually
-  // check this data.
-  return true;
-}
-
-void MockHidDecoder::Send(std::vector<uint8_t> bytes, int content_length) {
-  FXL_CHECK(report_.type == ReportType::kNone);
-  report_.type = ReportType::kLegacy;
-  report_.legacy_bytes = std::move(bytes);
-  report_.legacy_content_length = content_length;
+void MockHidDecoder::Send(std::vector<uint8_t> bytes, int length) {
+  FXL_CHECK(report_.length == 0);
+  report_.data = std::move(bytes);
+  report_.length = length;
   Signal();
 }
 
-void MockHidDecoder::Send(const HidGamepadSimple& gamepad) {
-  FXL_CHECK(report_.type == ReportType::kNone);
-  report_.type = ReportType::kGamepad;
-  report_.gamepad = gamepad;
-  Signal();
+void MockHidDecoder::SetReportDescriptor(std::vector<uint8_t> bytes,
+                                         int length) {
+  FXL_CHECK(report_descriptor_.length == 0);
+  report_descriptor_.data = std::move(bytes);
+  report_descriptor_.length = length;
 }
 
-void MockHidDecoder::Send(const HidAmbientLightSimple& light) {
-  FXL_CHECK(report_.type == ReportType::kNone);
-  report_.type = ReportType::kLight;
-  report_.light = light;
-  Signal();
-}
-
-void MockHidDecoder::Send(const HidButtons& buttons) {
-  FXL_CHECK(report_.type == ReportType::kNone);
-  report_.type = ReportType::kButtons;
-  report_.buttons = buttons;
-  Signal();
-}
-
-void MockHidDecoder::Send(const Touchscreen::Report& touchscreen) {
-  FXL_CHECK(report_.type == ReportType::kNone);
-  report_.type = ReportType::kTouchscreen;
-  report_.touchscreen = touchscreen;
-  Signal();
-}
-
-void MockHidDecoder::Send(const Mouse::Report& mouse) {
-  FXL_CHECK(report_.type == ReportType::kNone);
-  report_.type = ReportType::kMouse;
-  report_.mouse = mouse;
-  Signal();
+void MockHidDecoder::SetBootMode(HidDecoder::BootMode boot_mode) {
+  boot_mode_ = boot_mode;
 }
 
 void MockHidDecoder::Close() {
   // Signalling while the device is not readable indicates that it should be
   // removed.
-  FXL_CHECK(report_.type == ReportType::kNone);
+  FXL_CHECK(report_.length == 0);
   Signal();
-}
-
-template <class ReportVariant>
-bool MockHidDecoder::MockRead(ReportType expected_type,
-                              const ReportVariant& source,
-                              ReportVariant* dest) {
-  FXL_CHECK(report_.type == expected_type || report_.type == ReportType::kNone);
-
-  if (report_.type == expected_type) {
-    *dest = source;
-    ClearReport();
-    return true;
-  } else {
-    return false;
-  }
 }
 
 void MockHidDecoder::Signal() {
@@ -153,7 +82,7 @@ void MockHidDecoder::Signal() {
 }
 
 void MockHidDecoder::ClearReport() {
-  report_.type = ReportType::kNone;
+  report_.length = 0;
   FXL_CHECK(event_.signal(ZX_USER_SIGNAL_0, 0) == ZX_OK);
 }
 

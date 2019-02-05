@@ -17,9 +17,29 @@ executable("input_apptests") {
   testonly = true
 
   deps = [
+    ":end_to_end_tests",
     ":interface_tests",
-    ":reader_interpreter_tests",
     "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("end_to_end_tests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [
+    "end_to_end_tests.cc",
+  ]
+
+  deps = [
+    ":mock_device_watcher",
+    ":mock_hid_decoder",
+    "//garnet/bin/ui/input_reader",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/ui/tests/mocks",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/hid-parser",
   ]
 }
 
@@ -36,24 +56,6 @@ source_set("interface_tests") {
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/tests/mocks",
     "//zircon/public/lib/hid",
-    "//zircon/public/lib/hid-parser",
-  ]
-}
-
-source_set("reader_interpreter_tests") {
-  visibility = [ ":*" ]
-  testonly = true
-
-  sources = [
-    "reader_interpreter_tests.cc",
-  ]
-
-  deps = [
-    ":mock_device_watcher",
-    ":mock_hid_decoder",
-    "//garnet/bin/ui/input_reader",
-    "//garnet/public/lib/gtest",
-    "//garnet/public/lib/ui/tests/mocks",
     "//zircon/public/lib/hid-parser",
   ]
 }

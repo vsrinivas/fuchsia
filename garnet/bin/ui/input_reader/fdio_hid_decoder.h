@@ -35,48 +35,24 @@ class FdioHidDecoder : public HidDecoder {
   const std::string& name() const override { return name_; }
 
   // |HidDecoder|
-  Protocol protocol() const override { return protocol_; }
-
-  // |HidDecoder|
   bool Init() override;
   // |HidDecoder|
   zx::event GetEvent() override;
   // |HidDecoder|
+  BootMode ReadBootMode() const override { return boot_mode_; }
+  // |HidDecoder|
+  void SetupDevice(Device device) override;
+  // |HidDecoder|
+  const std::vector<uint8_t>& ReadReportDescriptor(int* bytes_read) override;
+  // |HidDecoder|
   const std::vector<uint8_t>& Read(int* bytes_read) override;
 
-  // |HidDecoder|
-  bool Read(HidGamepadSimple* gamepad) override;
-  // |HidDecoder|
-  bool Read(HidAmbientLightSimple* light) override;
-  // |HidDecoder|
-  bool Read(HidButtons* data) override;
-  // |HidDecoder|
-  bool Read(Touchscreen::Report* report) override;
-  // |HidDecoder|
-  bool Read(Mouse::Report* report) override;
-
-  bool SetDescriptor(Touchscreen::Descriptor* touch_desc) override;
-
  private:
-  struct DataLocator {
-    uint32_t begin;
-    uint32_t count;
-    uint32_t match;
-  };
-
-  bool ParseProtocol(const fzl::FdioCaller& caller, Protocol* protocol);
-  bool ParseGamepadDescriptor(const hid::ReportField* fields, size_t count);
-  bool ParseAmbientLightDescriptor(const hid::ReportField* fields,
-                                   size_t count);
-  bool ParseButtonsDescriptor(const hid::ReportField* fields, size_t count);
-
   fbl::unique_fd fd_;
   const std::string name_;
-  Protocol protocol_;
+  BootMode boot_mode_ = BootMode::NONE;
   std::vector<uint8_t> report_;
-  std::vector<DataLocator> decoder_;
-  Touchscreen ts_;
-  Mouse mouse_;
+  std::vector<uint8_t> report_descriptor_;
 };
 
 }  // namespace mozart

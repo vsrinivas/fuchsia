@@ -13,106 +13,65 @@
 
 namespace mozart {
 
-// Base class for mock HID decoders, which fails every operation but implements
-// |GetEvent| properly.
+// Mocks HidDecoder and allows sending arbitrary ReportDescriptors and Reports
+// through |SendReportDescriptor| and |Send|.
 class MockHidDecoder : public HidDecoder {
  public:
-  // Function mocking out |Init()|, which produces the |Protocol| of the device
-  // and the bool return value of |Init()| (true on success).
-  using InitHandler = fit::function<std::pair<Protocol, bool>()>;
-
-  MockHidDecoder(InitHandler init_handler);
-  // Convenience constructor that just sets the protocol on |Init()|.
-  MockHidDecoder(Protocol protocol);
+  MockHidDecoder() : weak_ptr_factory_(this) {}
+  MockHidDecoder(std::vector<uint8_t> report_descriptor)
+      : weak_ptr_factory_(this) {
+    report_descriptor_.data = report_descriptor;
+    report_descriptor_.length = report_descriptor.size();
+  }
+  MockHidDecoder(BootMode boot_mode) : weak_ptr_factory_(this) {
+    boot_mode_ = boot_mode;
+  }
   ~MockHidDecoder() override;
 
   fxl::WeakPtr<MockHidDecoder> GetWeakPtr();
 
   // |HidDecoder|
   const std::string& name() const override;
-
-  // |HidDecoder|
-  Protocol protocol() const override { return protocol_; }
-
   // |HidDecoder|
   bool Init() override;
   // |HidDecoder|
   zx::event GetEvent() override;
-
+  // |HidDecoder|
+  BootMode ReadBootMode() const override;
+  // |HidDecoder|
+  void SetupDevice(Device device) override;
+  // |HidDecoder|
+  const std::vector<uint8_t>& ReadReportDescriptor(int* bytes_read) override;
   // |HidDecoder|
   const std::vector<uint8_t>& Read(int* bytes_read) override;
-  // |HidDecoder|
-  bool Read(HidGamepadSimple* gamepad) override;
-  // |HidDecoder|
-  bool Read(HidAmbientLightSimple* light) override;
-  // |HidDecoder|
-  bool Read(HidButtons* data) override;
-  // |HidDecoder|
-  bool Read(Touchscreen::Report* report) override;
-  // |HidDecoder|
-  bool Read(Mouse::Report* report) override;
 
-  bool SetDescriptor(Touchscreen::Descriptor* touch_desc) override;
-
-  // Legacy emulation, which will allow |Read(int* bytes_read)| returning
-  // |bytes| and setting |bytes_read| to |content_length|. There must not be a
-  // pending report that has not been |Read|.
-  void Send(std::vector<uint8_t> bytes, int content_length);
+  // Emulates sending a report, which will be read by |Read|.
   // There must not be a pending report that has not been |Read|.
-  void Send(const HidGamepadSimple& gamepad);
-  // There must not be a pending report that has not been |Read|.
-  void Send(const HidAmbientLightSimple& light);
-  // There must not be a pending report that has not been |Read|.
-  void Send(const HidButtons& buttons);
-  // There must not be a pending report that has not been |Read|.
-  void Send(const Touchscreen::Report& touchscreen);
-  // There must not be a pending report that has not been |Read|.
-  void Send(const Mouse::Report& report);
-  // Emulates device removal. There must not be a pending report that has not
-  // been |Read|.
+  void Send(std::vector<uint8_t> bytes, int length);
+  // Sets the report descripter, which will be read by
+  // |ReadReportDescriptor|. This should only be called once at the beginning
+  // of setting up |MockHidDecoder|.
+  void SetReportDescriptor(std::vector<uint8_t> bytes, int length);
+  // Sets the Boot Mode, which is read by |ReadBootMode|.
+  void SetBootMode(HidDecoder::BootMode boot_mode);
+  // Emulates removing the device. There must not be a pending report that has
+  // not been |Read|.
   void Close();
 
  private:
-  enum class ReportType {
-    kNone = 0,
-    kLegacy,
-    kGamepad,
-    kLight,
-    kButtons,
-    kTouchscreen,
-    kMouse,
-  };
-
   struct Report {
-    ReportType type;
-
-    // Keep this outside of the union/don't use std::variant because the legacy
-    // |Read| overload needs to return a const ref, so this needs to linger even
-    // after the report has been read.
-    std::vector<uint8_t> legacy_bytes;
-    union {
-      // This can be shorter than the length of |legacy_bytes|.
-      int legacy_content_length;
-
-      HidGamepadSimple gamepad;
-      HidAmbientLightSimple light;
-      HidButtons buttons;
-      Touchscreen::Report touchscreen;
-      Mouse::Report mouse;
-    };
+    std::vector<uint8_t> data;
+    // This can be shorter than the length of the |data| vector.
+    int length;
   };
-
-  template <class ReportVariant>
-  bool MockRead(ReportType expected_type, const ReportVariant& source,
-                ReportVariant* dest);
 
   void Signal();
   void ClearReport();
 
-  InitHandler init_handler_;
   zx::event event_;
-  Protocol protocol_;
-  Report report_;
+  Report report_ = {};
+  Report report_descriptor_ = {};
+  HidDecoder::BootMode boot_mode_ = HidDecoder::BootMode::NONE;
 
   fxl::WeakPtrFactory<MockHidDecoder> weak_ptr_factory_;
 };

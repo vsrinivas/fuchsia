@@ -28,6 +28,30 @@ namespace mozart {
 
 class InputInterpreter {
  public:
+  enum class Protocol : uint32_t {
+    Other,
+    Keyboard,
+    Mouse,
+    Touch,
+    Touchpad,
+    Gamepad,
+    LightSensor,
+    Buttons,
+    // The ones below are hacks that need to be removed.
+    BootMouse,
+    Acer12Touch,
+    SamsungTouch,
+    ParadiseV1Touch,
+    ParadiseV2Touch,
+    ParadiseV3Touch,
+    EgalaxTouch,
+    ParadiseV1TouchPad,
+    ParadiseV2TouchPad,
+    ParadiseSensor,
+    EyoyoTouch,
+    Ft3x27Touch,
+  };
+
   enum ReportType {
     kKeyboard,
     kMouse,
@@ -82,12 +106,54 @@ class InputInterpreter {
     AMBIENT_LIGHT,
   };
 
+  struct HidGamepadSimple {
+    int32_t left_x;
+    int32_t left_y;
+    int32_t right_x;
+    int32_t right_y;
+    uint32_t hat_switch;
+  };
+
+  struct HidAmbientLightSimple {
+    int16_t illuminance;
+  };
+
+  struct HidButtons {
+    int8_t volume;
+    bool mic_mute;
+  };
+
+  struct DataLocator {
+    uint32_t begin;
+    uint32_t count;
+    uint32_t match;
+  };
+
+  // Helper function called during Init() that determines which protocol
+  // is going to be used. If it returns true then |protocol_| has been
+  // set correctly.
+  bool ParseProtocol();
+
+  bool use_legacy_mode() const;
+  bool Read(HidGamepadSimple* gamepad);
+  bool Read(HidAmbientLightSimple* light);
+  bool Read(HidButtons* data);
+  bool Read(Touchscreen::Report* report);
+  bool Read(Mouse::Report* report);
+
+  bool SetDescriptor(Touchscreen::Descriptor* touch_desc);
+
+  bool ParseGamepadDescriptor(const hid::ReportField* fields, size_t count);
+  bool ParseAmbientLightDescriptor(const hid::ReportField* fields,
+                                   size_t count);
+  bool ParseButtonsDescriptor(const hid::ReportField* fields, size_t count);
+
   void NotifyRegistry();
 
   void ParseKeyboardReport(uint8_t* report, size_t len);
   void ParseMouseReport(uint8_t* report, size_t len);
   bool ParseHidMouseReport(const Mouse::Report* report);
-  void ParseGamepadMouseReport(const HidDecoder::HidGamepadSimple* gamepad);
+  void ParseGamepadMouseReport(const HidGamepadSimple* gamepad);
   bool ParseTouchscreenReport(Touchscreen::Report* report);
   bool ParseTouchpadReport(Touchscreen::Report* report);
   bool ParseAcer12TouchscreenReport(uint8_t* report, size_t len);
@@ -163,6 +229,11 @@ class InputInterpreter {
   fuchsia::ui::input::InputDevicePtr input_device_;
 
   std::unique_ptr<HidDecoder> hid_decoder_;
+
+  Protocol protocol_;
+  std::vector<DataLocator> decoder_;
+  Touchscreen ts_;
+  Mouse mouse_;
 };
 
 }  // namespace mozart

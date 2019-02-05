@@ -1,9 +1,11 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include <set>
 
+#include <hid/boot.h>
+#include <hid/paradise.h>
 #include <hid/usages.h>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
@@ -73,48 +75,35 @@ class ReaderInterpreterInputTest : public ReaderInterpreterTest {
 
 }  // namespace
 
-TEST_F(ReaderInterpreterTest, RegisterKeyboardTest) {
-  int registration_count = 0;
+TEST_F(ReaderInterpreterInputTest, BootMouse) {
+  // Create the MockHidDecoder as a BootMouse. Note that when a boot protocol is
+  // set, InputInterpreter never reads a report descriptor so it is not
+  // necessary to set one.
+  fxl::WeakPtr<MockHidDecoder> device = AddDevice(HidDecoder::BootMode::MOUSE);
+  RunLoopUntilIdle();
 
-  MockInputDeviceRegistry registry(
-      [&](MockInputDevice* client_device) {
-        EXPECT_EQ(0, registration_count++);
-        EXPECT_TRUE(client_device->descriptor()->keyboard);
-      },
-      nullptr);
-  InputReader input_reader(&registry);
+  // Create a single boot mouse report.
+  hid_boot_mouse_report_t mouse_report = {};
+  mouse_report.rel_x = 50;
+  mouse_report.rel_y = 100;
+  uint8_t* mouse_report_bytes = reinterpret_cast<uint8_t*>(&mouse_report);
+  std::vector<uint8_t> report(mouse_report_bytes,
+                              mouse_report_bytes + sizeof(mouse_report));
 
-  StartInputReader(&input_reader);
+  // Send the boot mouse report.
+  device->Send(report, sizeof(mouse_report));
+  RunLoopUntilIdle();
 
-  bool did_init = false;
-  AddDevice([&] {
-    did_init = true;
-    return std::make_pair<HidDecoder::Protocol, bool>(
-        HidDecoder::Protocol::Keyboard, true);
-  });
-  EXPECT_TRUE(did_init);
-  EXPECT_EQ(1, registration_count);
+  ASSERT_TRUE(last_report_.mouse);
+  EXPECT_EQ(last_report_.mouse->rel_x, 50);
+  EXPECT_EQ(last_report_.mouse->rel_y, 100);
 }
 
-TEST_F(ReaderInterpreterTest, RemoveKeyboardTest) {
-  MockInputDeviceRegistry registry(nullptr, nullptr);
-  InputReader input_reader(&registry);
-  StartInputReader(&input_reader);
-
+TEST_F(ReaderInterpreterInputTest, BootKeyboard) {
   fxl::WeakPtr<MockHidDecoder> device =
-      AddDevice(HidDecoder::Protocol::Keyboard);
-
-  device->Close();
-  RunLoopUntilIdle();
-  EXPECT_FALSE(device);
-}
-
-TEST_F(ReaderInterpreterInputTest, KeyboardTest) {
-  fxl::WeakPtr<MockHidDecoder> device =
-      AddDevice(HidDecoder::Protocol::Keyboard);
+      AddDevice(HidDecoder::BootMode::KEYBOARD);
 
   RunLoopUntilIdle();
-  EXPECT_EQ(0, report_count_);
 
   // A keyboard report is 8 bytes long, with bytes 3-8 containing HID usage
   // codes.
@@ -139,99 +128,40 @@ TEST_F(ReaderInterpreterInputTest, KeyboardTest) {
             last_report_.keyboard->pressed_keys);
 }
 
-TEST_F(ReaderInterpreterInputTest, LightSensorTest) {
-  fxl::WeakPtr<MockHidDecoder> device =
-      AddDevice(HidDecoder::Protocol::LightSensor);
+TEST_F(ReaderInterpreterInputTest, ParadiseTouchscreen) {
+  // Create the paradise report descriptor.
+  size_t desc_len;
+  const uint8_t* desc_data = get_paradise_touch_report_desc(&desc_len);
+  ASSERT_TRUE(desc_len > 0);
+  std::vector<uint8_t> report_descriptor(desc_data, desc_data + desc_len);
 
+  // Create the MockHidDecoder with our report descriptor.
+  fxl::WeakPtr<MockHidDecoder> device = AddDevice(report_descriptor);
   RunLoopUntilIdle();
-  EXPECT_EQ(0, report_count_);
 
-  {
-    HidDecoder::HidAmbientLightSimple light{/* int16_t illuminance */ 42};
-    device->Send(light);
-  }
+  // Create a single touch report.
+  paradise_touch_t touch_report = {};
+  touch_report.rpt_id = PARADISE_RPT_ID_TOUCH;
+  touch_report.contact_count = 1;
+  touch_report.fingers[0].flags = 0xFF;
+  touch_report.fingers[0].finger_id = 1;
+  touch_report.fingers[0].x = 100;
+  touch_report.fingers[0].y = 200;
+  uint8_t* touch_report_bytes = reinterpret_cast<uint8_t*>(&touch_report);
+  std::vector<uint8_t> report(touch_report_bytes,
+                              touch_report_bytes + sizeof(touch_report));
 
+  // Send the touch report.
+  device->Send(report, sizeof(touch_report));
   RunLoopUntilIdle();
-  EXPECT_EQ(1, report_count_);
-  ASSERT_TRUE(last_report_.sensor);
-  EXPECT_TRUE(last_report_.sensor->is_scalar());
-  EXPECT_EQ(42, last_report_.sensor->scalar());
-}
 
-TEST_F(ReaderInterpreterInputTest, TouchpadTest) {
-  fxl::WeakPtr<MockHidDecoder> device =
-      AddDevice(HidDecoder::Protocol::Touchpad);
-
-  RunLoopUntilIdle();
-  EXPECT_EQ(0, report_count_);
-
-  {
-    // Touchpads use the touchscreen driver behind the scenes, so we
-    // must send touchscreen reports.
-    Touchscreen::Report touchpad_rpt{};
-    touchpad_rpt.contact_count = 1;
-    touchpad_rpt.contacts[0].id = 1;
-    touchpad_rpt.contacts[0].x = 10;
-    touchpad_rpt.contacts[0].y = 20;
-    device->Send(touchpad_rpt);
-    RunLoopUntilIdle();
-
-    touchpad_rpt.contacts[0].x = 15;
-    touchpad_rpt.contacts[0].y = 10;
-    device->Send(touchpad_rpt);
-    RunLoopUntilIdle();
-  }
-
-  EXPECT_EQ(2, report_count_);
-  ASSERT_TRUE(last_report_.mouse);
-  EXPECT_TRUE(last_report_.mouse->rel_x = 5);
-  EXPECT_TRUE(last_report_.mouse->rel_y = -10);
-}
-
-TEST_F(ReaderInterpreterInputTest, TouchscreenTest) {
-  fxl::WeakPtr<MockHidDecoder> device = AddDevice(HidDecoder::Protocol::Touch);
-
-  RunLoopUntilIdle();
-  EXPECT_EQ(0, report_count_);
-
-  {
-    Touchscreen::Report touchscreen_rpt{};
-    touchscreen_rpt.contact_count = 1;
-    touchscreen_rpt.contacts[0].id = 1;
-    touchscreen_rpt.contacts[0].x = 10;
-    touchscreen_rpt.contacts[0].y = 20;
-    device->Send(touchscreen_rpt);
-    RunLoopUntilIdle();
-  }
-
-  EXPECT_EQ(1, report_count_);
+  // Check that we saw one report, and that the data was sent out correctly.
+  ASSERT_EQ(1, report_count_);
   ASSERT_TRUE(last_report_.touchscreen);
   fuchsia::ui::input::Touch touch = last_report_.touchscreen->touches.at(0);
   EXPECT_TRUE(touch.finger_id = 1);
-  EXPECT_TRUE(touch.x = 10);
-  EXPECT_TRUE(touch.y = 20);
+  EXPECT_TRUE(touch.x = 100);
+  EXPECT_TRUE(touch.y = 200);
 }
 
-TEST_F(ReaderInterpreterInputTest, MouseTest) {
-  fxl::WeakPtr<MockHidDecoder> device = AddDevice(HidDecoder::Protocol::Mouse);
-
-  RunLoopUntilIdle();
-  EXPECT_EQ(0, report_count_);
-
-  {
-    Mouse::Report mouse_rpt{};
-    mouse_rpt.left_click = true;
-    mouse_rpt.rel_x = 10;
-    mouse_rpt.rel_y = 20;
-    device->Send(mouse_rpt);
-    RunLoopUntilIdle();
-  }
-
-  EXPECT_EQ(1, report_count_);
-  ASSERT_TRUE(last_report_.mouse);
-  EXPECT_EQ(last_report_.mouse->rel_x, 10);
-  EXPECT_EQ(last_report_.mouse->rel_y, 20);
-  EXPECT_EQ(last_report_.mouse->pressed_buttons,
-            fuchsia::ui::input::kMouseButtonPrimary);
-}
 }  // namespace mozart

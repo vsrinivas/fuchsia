@@ -20,80 +20,46 @@ namespace mozart {
 // step towards fully wrapping the HID protocol.
 class HidDecoder {
  public:
-  enum class Protocol : uint32_t {
-    Other,
-    Keyboard,
-    Mouse,
-    Touch,
-    Touchpad,
-    Gamepad,
-    LightSensor,
-    Buttons,
-    // The ones below are hacks that need to be removed.
-    BootMouse,
-    Acer12Touch,
-    SamsungTouch,
-    ParadiseV1Touch,
-    ParadiseV2Touch,
-    ParadiseV3Touch,
-    EgalaxTouch,
-    ParadiseV1TouchPad,
-    ParadiseV2TouchPad,
-    ParadiseSensor,
-    EyoyoTouch,
-    Ft3x27Touch,
-  };
-
-  struct HidGamepadSimple {
-    int32_t left_x;
-    int32_t left_y;
-    int32_t right_x;
-    int32_t right_y;
-    uint32_t hat_switch;
-  };
-
-  struct HidAmbientLightSimple {
-    int16_t illuminance;
-  };
-
-  struct HidButtons {
-    int8_t volume;
-    bool mic_mute;
-  };
-
   HidDecoder();
   virtual ~HidDecoder();
 
   virtual const std::string& name() const = 0;
 
   // Inits the internal state. Returns false if any underlying ioctl
-  // fails. If so the decoder is not usable. Upon success |protocol()|
-  // contains the best guess on the device protocol.
+  // fails. If so the decoder is not usable.
   virtual bool Init() = 0;
 
   // Returns the event that signals when the device is ready to be read.
   virtual zx::event GetEvent() = 0;
 
-  // Specifies if clients should use Read(int*) or the new mode which
-  // is dependent on the device retuned by protocol().
-  bool use_legacy_mode() const;
+  // Checks if the kernel has set a bootmode for the device. If the kernel
+  // has, then the hid descriptor and report must follow a specific format.
+  // TODO (SCN-1266) - This should be removed when we can just run these
+  // through generic HID parsers.
+  enum class BootMode {
+    NONE,
+    MOUSE,
+    KEYBOARD,
+  };
+  virtual BootMode ReadBootMode() const = 0;
 
-  // Returns a best guess on the device protocol. Only valid after |Init()|.
-  virtual Protocol protocol() const = 0;
+  // Some devices require that data is sent back to the device. At the moment
+  // we don't have a general framework for this so we have hardcoded support
+  // for 3 devices. This should be removed when the generic parsers are
+  // complete.
+  enum class Device {
+    EYOYO,
+    FT3X27,
+    SAMSUNG,
+  };
+  virtual void SetupDevice(Device device) = 0;
 
-  // Reads data from the device. Used when decoding happens on the
-  // input interpreter (|use_legacy_mode()|).
+  // Reads the Report descriptor from the device.
+  virtual const std::vector<uint8_t>& ReadReportDescriptor(int* bytes_read) = 0;
+
+  // Reads a single Report from the device. This will block unless the
+  // device has signaled that it is ready to be read.
   virtual const std::vector<uint8_t>& Read(int* bytes_read) = 0;
-
-  // Reads data from the device and decodes it into the specified struct.
-  // Only valid if |Init()| is successful.
-  virtual bool Read(HidGamepadSimple* gamepad) = 0;
-  virtual bool Read(HidAmbientLightSimple* light) = 0;
-  virtual bool Read(HidButtons* data) = 0;
-  virtual bool Read(Touchscreen::Report* report) = 0;
-  virtual bool Read(Mouse::Report* report) = 0;
-
-  virtual bool SetDescriptor(Touchscreen::Descriptor* touch_desc) = 0;
 };
 
 }  // namespace mozart
