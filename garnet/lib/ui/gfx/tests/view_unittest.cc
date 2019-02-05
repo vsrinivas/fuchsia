@@ -36,7 +36,9 @@ class ViewTest : public SessionTest {
   std::unique_ptr<ViewLinker> view_linker_;
 };
 
-TEST_F(ViewTest, CreateViewWithBadTokenDies) {
+
+// TODO(ES-179): Only seems to die in debug builds.
+TEST_F(ViewTest, DISABLED_CreateViewWithBadTokenDies) {
   EXPECT_DEATH_IF_SUPPORTED(
       Apply(scenic::NewCreateViewCmd(1, zx::eventpair(), "")), "");
   EXPECT_DEATH_IF_SUPPORTED(
