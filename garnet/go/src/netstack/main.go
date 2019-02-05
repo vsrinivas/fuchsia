@@ -7,6 +7,7 @@ package netstack
 import (
 	"flag"
 	"log"
+	"reflect"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -17,6 +18,7 @@ import (
 	"netstack/link/eth"
 
 	"fidl/fuchsia/devicesettings"
+	"fidl/fuchsia/inspect"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
@@ -76,8 +78,6 @@ func Main() {
 		log.Fatalf("loopback: %s", err)
 	}
 
-	// TODO(NET-1263): register resolver admin service once clients don't crash netstack
-	// var dnsService netstack.ResolverAdminService
 	var netstackService netstack.NetstackService
 
 	ns.OnInterfacesChanged = func(interfaces []netstack.NetInterface) {
@@ -90,6 +90,16 @@ func Main() {
 			}
 		}
 	}
+
+	var inspectService inspect.InspectService
+	ctx.OutgoingService.AddService(inspect.InspectName, func(c zx.Channel) error {
+		_, err := inspectService.Add(&statCounterInspectImpl{
+			svc:   &inspectService,
+			name:  "netstack",
+			Value: reflect.ValueOf(stk.Stats()),
+		}, c, nil)
+		return err
+	})
 
 	ctx.OutgoingService.AddService(netstack.NetstackName, func(c zx.Channel) error {
 		k, err := netstackService.Add(&netstackImpl{
@@ -114,6 +124,7 @@ func Main() {
 
 	// TODO(NET-1263): register resolver admin service once clients don't crash netstack
 	// when registering.
+	// var dnsService netstack.ResolverAdminService
 	// ctx.OutgoingService.AddService(netstack.ResolverAdminName, func(c zx.Channel) error {
 	//   _, err := dnsService.Add(&dnsImpl{ns: ns}, c, nil)
 	//   return err
