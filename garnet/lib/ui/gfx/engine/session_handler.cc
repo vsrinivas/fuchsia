@@ -15,14 +15,14 @@ namespace gfx {
 SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
                                SessionManager* session_manager,
                                SessionContext session_context,
-                               SessionId session_id,
                                EventReporter* event_reporter,
                                ErrorReporter* error_reporter)
     : TempSessionDelegate(std::move(dispatcher_context)),
       session_manager_(session_manager),
       event_reporter_(event_reporter),
       error_reporter_(error_reporter),
-      session_(std::make_unique<Session>(session_id, std::move(session_context),
+      session_(std::make_unique<Session>(context()->session_id(),
+                                         std::move(session_context),
                                          event_reporter, error_reporter)) {
   FXL_DCHECK(session_manager_);
 }

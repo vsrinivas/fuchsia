@@ -14,7 +14,7 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-TEST_F(GfxSystemTest, DISABLED_CreateAndDestroySession) {
+TEST_F(GfxSystemTest, CreateAndDestroySession) {
   EXPECT_EQ(0U, scenic()->num_sessions());
 
   fuchsia::ui::scenic::SessionPtr session;
@@ -30,7 +30,7 @@ TEST_F(GfxSystemTest, DISABLED_CreateAndDestroySession) {
   EXPECT_EQ(0U, scenic()->num_sessions());
 }
 
-TEST_F(GfxSystemTest, DISABLED_ScheduleUpdateInOrder) {
+TEST_F(GfxSystemTest, ScheduleUpdateInOrder) {
   // Create a session.
   fuchsia::ui::scenic::SessionPtr session;
   EXPECT_EQ(0U, scenic()->num_sessions());
@@ -57,7 +57,7 @@ bool IsFenceSignalled(const zx::event& fence) {
   return signals & escher::kFenceSignalled;
 }
 
-TEST_F(GfxSystemTest, DISABLED_ReleaseFences) {
+TEST_F(GfxSystemTest, ReleaseFences) {
   // Tests creating a session, and calling Present with two release fences.
   // The release fences should be signalled after a subsequent Present.
   fuchsia::ui::scenic::SessionPtr session;
@@ -97,7 +97,7 @@ TEST_F(GfxSystemTest, DISABLED_ReleaseFences) {
   EXPECT_TRUE(IsFenceSignalled(release_fence2));
 }
 
-TEST_F(GfxSystemTest, DISABLED_AcquireAndReleaseFences) {
+TEST_F(GfxSystemTest, AcquireAndReleaseFences) {
   // Tests creating a session, and calling Present with an acquire and a release
   // fence. The release fences should be signalled only after a subsequent
   // Present, and not until the acquire fence has been signalled.

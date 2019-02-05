@@ -31,8 +31,8 @@ class SessionHandler : public TempSessionDelegate {
  public:
   SessionHandler(CommandDispatcherContext context,
                  SessionManager* session_manager,
-                 SessionContext session_context, SessionId session_id,
-                 EventReporter* event_reporter, ErrorReporter* error_reporter);
+                 SessionContext session_context, EventReporter* event_reporter,
+                 ErrorReporter* error_reporter);
   virtual ~SessionHandler();
 
   scenic_impl::gfx::Session* session() const { return session_.get(); }

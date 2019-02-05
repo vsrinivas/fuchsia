@@ -34,7 +34,7 @@ class Session final : public fuchsia::ui::scenic::Session,
   Session(
       SessionId id,
       ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
-  ~Session() override;
+  ~Session() override = default;
 
   void SetCommandDispatchers(std::array<std::unique_ptr<CommandDispatcher>,
                                         System::TypeId::kMaxSystems>

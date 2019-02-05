@@ -29,7 +29,8 @@
 namespace scenic_impl {
 namespace gfx {
 
-Engine::Engine(DisplayManager* display_manager,
+Engine::Engine(std::unique_ptr<FrameScheduler> frame_scheduler,
+               DisplayManager* display_manager,
                escher::EscherWeakPtr weak_escher)
     : display_manager_(display_manager),
       escher_(std::move(weak_escher)),
@@ -41,6 +42,7 @@ Engine::Engine(DisplayManager* display_manager,
       release_fence_signaller_(std::make_unique<escher::ReleaseFenceSignaller>(
           escher()->command_buffer_sequencer())),
       session_manager_(std::make_unique<SessionManager>()),
+      frame_scheduler_(std::move(frame_scheduler)),
       imported_memory_type_index_(GetImportedMemoryTypeIndex(
           escher()->vk_physical_device(), escher()->vk_device())),
       has_vulkan_(escher_ && escher_->vk_device()),
@@ -48,10 +50,14 @@ Engine::Engine(DisplayManager* display_manager,
   FXL_DCHECK(display_manager_);
   FXL_DCHECK(escher_);
 
-  InitializeFrameScheduler();
+  // TODO(SCN-1092): make |frame_scheduler_| non-nullable.  For testing, this
+  // might entail plugging in a dummy Display.  Relates to SCN-452.
+  if (frame_scheduler_)
+    frame_scheduler_->set_delegate(this);
 }
 
 Engine::Engine(
+    std::unique_ptr<FrameScheduler> frame_scheduler,
     DisplayManager* display_manager,
     std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
     std::unique_ptr<SessionManager> session_manager,
@@ -60,6 +66,7 @@ Engine::Engine(
       escher_(std::move(weak_escher)),
       release_fence_signaller_(std::move(release_fence_signaller)),
       session_manager_(std::move(session_manager)),
+      frame_scheduler_(std::move(frame_scheduler)),
       imported_memory_type_index_(
           escher_ ? GetImportedMemoryTypeIndex(escher_->vk_physical_device(),
                                                escher_->vk_device())
@@ -68,20 +75,13 @@ Engine::Engine(
       weak_factory_(this) {
   FXL_DCHECK(display_manager_);
 
-  InitializeFrameScheduler();
+  // TODO(SCN-1092): make |frame_scheduler_| non-nullable.  For testing, this
+  // might entail plugging in a dummy Display.  Relates to SCN-452.
+  if (frame_scheduler_)
+    frame_scheduler_->set_delegate(this);
 }
 
 Engine::~Engine() = default;
-
-void Engine::InitializeFrameScheduler() {
-  // TODO(SCN-1092): make |frame_scheduler_| non-nullable.  For testing, this
-  // might entail plugging in a dummy Display.  Relates to SCN-452.
-  if (display_manager_->default_display()) {
-    frame_scheduler_ =
-        std::make_unique<FrameScheduler>(display_manager_->default_display());
-    frame_scheduler_->set_delegate(this);
-  }
-}
 
 void Engine::ScheduleUpdate(uint64_t presentation_time) {
   // TODO(SCN-1092): make |frame_scheduler_| non-nullable.  This is feasible now

@@ -9,6 +9,7 @@
 
 #include "garnet/lib/ui/gfx/gfx_system.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
+#include "garnet/lib/ui/scenic/tests/mocks.h"
 #include "garnet/lib/ui/scenic/tests/scenic_test.h"
 
 namespace scenic_impl {
@@ -41,7 +42,7 @@ class GfxSystemForTest : public GfxSystem {
   escher::impl::CommandBufferSequencer* command_buffer_sequencer_;
 };
 
-class GfxSystemTest : public ::scenic_impl::test::ScenicTest {
+class GfxSystemTest : public scenic_impl::test::ScenicTest {
  public:
   // ::testing::Test virtual method.
   void SetUp() override {
@@ -62,11 +63,17 @@ class GfxSystemTest : public ::scenic_impl::test::ScenicTest {
   std::unique_ptr<escher::impl::CommandBufferSequencer>
       command_buffer_sequencer_;
 
-  GfxSystemForTest* gfx_system_;
+  GfxSystemForTest* gfx_system_ = nullptr;
 
   void InitializeScenic(Scenic* scenic) override {
+    auto display_manager = std::make_unique<gfx::DisplayManager>();
+    display_manager->SetDefaultDisplayForTests(
+        std::make_unique<scenic_impl::test::TestDisplay>(
+            /*id*/ 0, /* width */ 0, /* height */ 0));
+    command_buffer_sequencer_ =
+        std::make_unique<escher::impl::CommandBufferSequencer>();
     gfx_system_ = scenic->RegisterSystem<GfxSystemForTest>(
-        std::make_unique<DisplayManager>(), command_buffer_sequencer_.get());
+        std::move(display_manager), command_buffer_sequencer_.get());
   }
 };
 

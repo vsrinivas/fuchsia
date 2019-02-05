@@ -100,13 +100,12 @@ class SessionManager {
   void RemoveSessionHandler(SessionId id);
 
   virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
-      CommandDispatcherContext context, Engine* engine, SessionId session_id,
+      CommandDispatcherContext context, Engine* engine,
       EventReporter* event_reporter, ErrorReporter* error_reporter) const;
 
   // Map of all the sessions.
   std::unordered_map<SessionId, SessionHandler*> session_handlers_;
   size_t session_count_ = 0;
-  SessionId next_session_id_ = 1;
 
   // Lists all Session that have updates to apply, sorted by the earliest
   // requested presentation time of each update.

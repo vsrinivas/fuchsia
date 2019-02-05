@@ -21,7 +21,9 @@ EngineForTest::EngineForTest(
     gfx::DisplayManager* display_manager,
     std::unique_ptr<escher::ReleaseFenceSignaller> release_signaler,
     escher::EscherWeakPtr escher)
-    : gfx::Engine(display_manager, std::move(release_signaler),
+    : gfx::Engine(std::make_unique<gfx::FrameScheduler>(
+                      display_manager->default_display()),
+                  display_manager, std::move(release_signaler),
                   std::make_unique<gfx::SessionManager>(), std::move(escher)) {}
 
 }  // namespace test

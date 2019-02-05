@@ -31,8 +31,8 @@ void SessionHandlerTest::InitializeSessionHandler() {
 
   auto session_context = CreateBarebonesSessionContext();
   session_handler_ = std::make_unique<SessionHandlerForTest>(
-      session_manager_.get(), std::move(session_context), session_->id(),
-      scenic_.get());
+      CommandDispatcherContext(scenic_.get(), nullptr, session_->id()),
+      session_manager_.get(), std::move(session_context));
   session_manager_->InsertSessionHandler(session_->id(),
                                          session_handler_.get());
 }

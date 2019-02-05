@@ -48,11 +48,11 @@ using ViewLinker = ObjectLinker<ViewHolder, View>;
 // which belong to different engines to communicate with one another.
 class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
  public:
-  Engine(DisplayManager* display_manager, escher::EscherWeakPtr escher);
+  Engine(std::unique_ptr<FrameScheduler> frame_scheduler,
+         DisplayManager* display_manager, escher::EscherWeakPtr escher);
 
   ~Engine() override;
 
-  DisplayManager* display_manager() const { return display_manager_; }
   escher::Escher* escher() const { return escher_.get(); }
   escher::EscherWeakPtr GetEscherWeakPtr() const { return escher_; }
 
@@ -87,7 +87,7 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
                           session_manager(),
                           frame_scheduler(),
                           static_cast<UpdateScheduler*>(this),
-                          display_manager(),
+                          display_manager_,
                           scene_graph(),
                           resource_linker(),
                           view_linker()};
@@ -110,7 +110,8 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
 
  protected:
   // Only used by subclasses used in testing.
-  Engine(DisplayManager* display_manager,
+  Engine(std::unique_ptr<FrameScheduler> frame_scheduler,
+         DisplayManager* display_manager,
          std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
          std::unique_ptr<SessionManager> session_manager,
          escher::EscherWeakPtr escher);
@@ -141,7 +142,6 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   bool RenderFrame(const FrameTimingsPtr& frame, uint64_t presentation_time,
                    uint64_t presentation_interval, bool force_render) override;
 
-  void InitializeFrameScheduler();
   void InitializeShaderFs();
 
   // Apply updates to all sessions who have updates and have acquired all

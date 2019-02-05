@@ -14,8 +14,6 @@ Session::Session(
     ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
     : id_(id), listener_(listener.Bind()), weak_factory_(this) {}
 
-Session::~Session() = default;
-
 void Session::Enqueue(::std::vector<fuchsia::ui::scenic::Command> cmds) {
   for (auto& cmd : cmds) {
     // TODO(SCN-710): This dispatch is far from optimal in terms of performance.

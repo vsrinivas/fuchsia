@@ -26,8 +26,8 @@ class SessionForTest : public Session {
 class SessionHandlerForTest : public SessionHandler {
  public:
   SessionHandlerForTest(
-      SessionManager* session_manager, SessionContext session_context,
-      SessionId session_id, Scenic* scenic,
+      CommandDispatcherContext context, SessionManager* session_manager,
+      SessionContext session_context,
       EventReporter* event_reporter = EventReporter::Default(),
       ErrorReporter* error_reporter = ErrorReporter::Default());
 
@@ -69,8 +69,15 @@ class ReleaseFenceSignallerForTest : public escher::ReleaseFenceSignaller {
 class SessionManagerForTest : public SessionManager {
  public:
   SessionManagerForTest();
+
+  // Publicly accessible for tests.
   void InsertSessionHandler(SessionId session_id,
                             SessionHandler* session_handler);
+
+  std::unique_ptr<SessionHandler> CreateSessionHandler(
+      CommandDispatcherContext context, Engine* engine,
+      EventReporter* event_reporter,
+      ErrorReporter* error_reporter) const override;
 };
 
 class EngineForTest : public Engine {

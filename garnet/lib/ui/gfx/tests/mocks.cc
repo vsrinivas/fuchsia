@@ -16,15 +16,14 @@ SessionForTest::SessionForTest(SessionId id, SessionContext context,
                                ErrorReporter* error_reporter)
     : Session(id, std::move(context), event_reporter, error_reporter) {}
 
-SessionHandlerForTest::SessionHandlerForTest(SessionManager* session_manager,
+SessionHandlerForTest::SessionHandlerForTest(CommandDispatcherContext context,
+                                             SessionManager* session_manager,
                                              SessionContext session_context,
-                                             SessionId session_id,
-                                             Scenic* scenic,
                                              EventReporter* event_reporter,
                                              ErrorReporter* error_reporter)
-    : SessionHandler(CommandDispatcherContext(scenic, nullptr, session_id),
-                     session_manager, std::move(session_context), session_id,
-                     event_reporter, error_reporter),
+    : SessionHandler(std::move(context), session_manager,
+                     std::move(session_context), event_reporter,
+                     error_reporter),
       command_count_(0),
       present_count_(0) {}
 
@@ -60,10 +59,18 @@ void SessionManagerForTest::InsertSessionHandler(
   SessionManager::InsertSessionHandler(session_id, session_handler);
 }
 
+std::unique_ptr<SessionHandler> SessionManagerForTest::CreateSessionHandler(
+    CommandDispatcherContext context, Engine* engine,
+    EventReporter* event_reporter, ErrorReporter* error_reporter) const {
+  return std::make_unique<SessionHandlerForTest>(
+      std::move(context), engine->session_manager(), engine->session_context(),
+      event_reporter, error_reporter);
+};
+
 EngineForTest::EngineForTest(DisplayManager* display_manager,
                              std::unique_ptr<escher::ReleaseFenceSignaller> r,
                              escher::EscherWeakPtr escher)
-    : Engine(display_manager, std::move(r),
+    : Engine(std::unique_ptr<FrameScheduler>(), display_manager, std::move(r),
              std::make_unique<SessionManagerForTest>(), std::move(escher)) {}
 
 }  // namespace test
