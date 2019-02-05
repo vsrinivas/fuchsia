@@ -9,7 +9,10 @@
 #include <ddk/metadata.h>
 #include <ddk/protocol/acpi.h>
 #include <ddk/protocol/pciroot.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/platform/bus.h>
 
+#include <assert.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stdio.h>
@@ -18,10 +21,13 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <threads.h>
+#include <unistd.h>
 
 #include <acpica/acpi.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
+#include <zircon/assert.h>
+#include <zircon/syscalls.h>
 #include <zircon/syscalls/iommu.h>
 
 #include "acpi-private.h"
@@ -303,10 +309,6 @@ static __attribute__ ((unused)) acpi_protocol_ops_t acpi_proto = {
     .map_interrupt = acpi_op_map_interrupt,
 };
 
-static zx_protocol_device_t acpi_root_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-};
-
 static zx_status_t sys_device_suspend(void* ctx, uint32_t flags) {
     switch (flags & DEVICE_SUSPEND_REASON_MASK) {
     case DEVICE_SUSPEND_FLAG_MEXEC: {
@@ -327,11 +329,6 @@ static zx_status_t sys_device_suspend(void* ctx, uint32_t flags) {
         return ZX_ERR_NOT_SUPPORTED;
     };
 }
-
-static zx_protocol_device_t sys_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .suspend = sys_device_suspend,
-};
 
 static const char* hid_from_acpi_devinfo(ACPI_DEVICE_INFO* info) {
     const char* hid = NULL;
@@ -543,42 +540,56 @@ static zx_status_t publish_acpi_devices(zx_device_t* parent) {
     }
 }
 
-static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* name,
-                                   const char* _args, zx_handle_t zbi_vmo) {
-    // ACPI is the root driver for its devhost so run init in the bind thread.
-    zxlogf(TRACE, "acpi: bind to %s %p\n", device_get_name(parent), parent);
+typedef struct {
+    pbus_protocol_t pbus;
+    zx_device_t* parent;
+} pbus_acpi_t;
+
+static void acpi_root_release(void* ctx) {
+    pbus_acpi_t* acpi = ctx;
+
+    free(acpi);
+}
+
+static zx_protocol_device_t acpi_root_device_proto = {
+    .version = DEVICE_OPS_VERSION,
+    .release = acpi_root_release,
+};
+
+static zx_status_t acpi_bus_bind(void* ctx, zx_device_t* parent) {
     root_resource_handle = get_root_resource();
 
-    // We don't need ZBI VMO handle.
-    zx_handle_close(zbi_vmo);
+    pbus_acpi_t* acpi = calloc(1, sizeof(pbus_acpi_t));
+    if (!acpi) {
+        return ZX_ERR_NO_MEMORY;
+    }
 
-    zx_status_t status = init();
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &acpi->pbus);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "acpi: failed to initialize ACPI %d \n", status);
+        free(acpi);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // Do ACPI init.
+    status = init();
+    if (status != ZX_OK) {
+        free(acpi);
+        zxlogf(ERROR, "%s: failed to initialize ACPI %d \n", __func__, status);
         return ZX_ERR_INTERNAL;
     }
 
-    zxlogf(TRACE, "acpi: initialized\n");
-
-    // publish sys root
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = name,
-        .ops = &sys_device_proto,
-        .flags = DEVICE_ADD_NON_BINDABLE,
-    };
-
-    zx_device_t* sys_root = NULL;
-    status = device_add(parent, &args, &sys_root);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "acpi: error %d in device_add(sys)\n", status);
-        return status;
+    zx_device_t* sys_root = device_get_parent(parent);
+    if (sys_root == NULL) {
+        free(acpi);
+        zxlogf(ERROR, "%s: failed to find parent node of platform (expected sys)\n", __func__);
+        return ZX_ERR_INTERNAL;
     }
 
     zx_handle_t dummy_iommu_handle;
     status = iommu_manager_get_dummy_iommu(&dummy_iommu_handle);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "acpi-bus: error %d in iommu_manager_get_dummy_iommu()\n", status);
+        free(acpi);
+        zxlogf(ERROR, "%s: error %d in iommu_manager_get_dummy_iommu()\n", __func__, status);
         return status;
     }
 
@@ -586,11 +597,13 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
     zx_handle_t sysmem_bti;
     status = zx_bti_create(dummy_iommu_handle, 0, SYSMEM_BTI_ID, &sysmem_bti);
     if (status != ZX_OK) {
+        free(acpi);
         zxlogf(ERROR, "acpi: error %d in bti_create(sysmem_bti)\n", status);
         return status;
     }
     status = publish_sysmem(sysmem_bti, sys_root);
     if (status != ZX_OK) {
+        free(acpi);
         zxlogf(ERROR, "publish_sysmem failed: %d\n", status);
         return status;
     }
@@ -598,11 +611,13 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
     zx_handle_t cpu_trace_bti;
     status = zx_bti_create(dummy_iommu_handle, 0, CPU_TRACE_BTI_ID, &cpu_trace_bti);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "acpi: error %d in bti_create(cpu_trace_bti)\n", status);
+        free(acpi);
+        zxlogf(ERROR, "%s: error %d in bti_create(cpu_trace_bti)\n", __func__, status);
         return status;
     }
     status = publish_cpu_trace(cpu_trace_bti, sys_root);
     if (status != ZX_OK) {
+        free(acpi);
         zxlogf(ERROR, "publish_cpu_trace failed: %d\n", status);
         return status;
     }
@@ -611,20 +626,21 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
     device_add_args_t args2 = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "acpi",
+        .ctx = acpi,
         .ops = &acpi_root_device_proto,
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
     zx_device_t* acpi_root = NULL;
-    status = device_add(sys_root, &args2, &acpi_root);
+    status = device_add(parent, &args2, &acpi_root);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "acpi: error %d in device_add(sys/acpi)\n", status);
-        device_remove(sys_root);
+        free(acpi);
+        zxlogf(ERROR, "acpi: error %d in device_add(sys/platform/acpi)\n", status);
         return status;
     }
 
     // TODO - retrieve more useful board name from ACPI data
-    const char board_name[] = { "pc" };
+    const char board_name[] = {"pc"};
 
     // Publish board name to sysinfo driver
     status = device_publish_metadata(acpi_root, "/dev/misc/sysinfo", DEVICE_METADATA_BOARD_NAME,
@@ -635,14 +651,28 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
 
     publish_acpi_devices(acpi_root);
 
+    // Set the "sys" suspend op in platform-bus.
+    // The devmgr coordinator code that arranges ordering in which the suspend hooks
+    // are called makes sure the suspend hook attached to sys/ is called dead last,
+    // (coordinator.cpp:BuildSuspendList()). If move this suspend hook elsewhere,
+    // we must make sure that the coordinator code arranges for this suspend op to be
+    // called last.
+    pbus_sys_suspend_t suspend = {sys_device_suspend, NULL};
+    status = pbus_register_sys_suspend_callback(&acpi->pbus, &suspend);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Could not register suspend callback: %d\n", __func__, status);
+    }
+
     return ZX_OK;
 }
 
-static zx_driver_ops_t acpi_driver_ops = {
+static zx_driver_ops_t acpi_bus_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-    .create = acpi_drv_create,
+    .bind = acpi_bus_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(acpi, acpi_driver_ops, "zircon", "0.1", 1)
-    BI_ABORT_IF_AUTOBIND, // loaded by devcoordinator
-ZIRCON_DRIVER_END(acpi)
+ZIRCON_DRIVER_BEGIN(acpi_bus, acpi_bus_driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_INTEL),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_X86),
+ZIRCON_DRIVER_END(acpi_bus)

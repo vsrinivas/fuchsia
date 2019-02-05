@@ -61,6 +61,8 @@ public:
     zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info);
     zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info);
 
+    zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin);
+
     // IOMMU protocol implementation.
     zx_status_t IommuGetBti(uint32_t iommu_index, uint32_t bti_id, zx::bti* out_bti);
 
@@ -81,7 +83,11 @@ public:
     inline ddk::GpioImplProtocolClient* gpio() { return &*gpio_; }
     inline ddk::I2cImplProtocolClient* i2c() { return &*i2c_; }
 
+    pbus_sys_suspend_t suspend_cb() { return suspend_cb_; }
+
 private:
+    pbus_sys_suspend_t suspend_cb_ = {};
+
     // This class is a wrapper for a platform_proxy_cb_t added via pbus_register_protocol().
     // It also is the element type for the proto_proxys_ WAVL tree.
     class ProtoProxy : public fbl::WAVLTreeContainable<fbl::unique_ptr<ProtoProxy>> {

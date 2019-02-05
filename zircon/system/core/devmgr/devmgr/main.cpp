@@ -816,13 +816,7 @@ int main(int argc, char** argv) {
         args.driver_search_paths.push_back("/boot/driver");
     }
     if (args.sys_device_driver == nullptr) {
-        // x86 platforms use acpi as the system device
-        // all other platforms use the platform bus
-#if defined(__x86_64__)
-        args.sys_device_driver = "/boot/driver/bus-acpi.so";
-#else
         args.sys_device_driver = "/boot/driver/platform-bus.so";
-#endif
     }
 
     g_handles.root_job = zx::job::default_job();
