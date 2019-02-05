@@ -15,6 +15,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_discovery_manager.h"
 #include "garnet/drivers/bluetooth/lib/sm/util.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -253,42 +254,43 @@ void HostServer::AddBondedDevices(::std::vector<BondingData> bonds,
     return;
   }
 
+  std::vector<std::string> failed_ids;
+
   for (auto& bond : bonds) {
     btlib::sm::PairingData bond_data;
-    if (bond.le) {
-      bond_data = fidl_helpers::PairingDataFromFidl(*bond.le);
-
-      // Report error if bond data is missing a security key.
-      if (!bond_data.irk && !bond_data.csrk) {
-        bt_log(ERROR, "bt-host", "LE bond data is missing security key");
-        callback(fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
-                                            "LE IRK/CSRK missing"));
-        return;
-      }
-    }
 
     // TODO(armansito): Handle BR/EDR data here. For now we skip the entry if LE
     // data isn't available.
-    if (!bond_data.identity_address) {
-      bt_log(ERROR, "bt-host", "LE bonding data is required");
+    if (!bond.le) {
+      bt_log(ERROR, "bt-host", "Ignore non-LE bonding data");
       continue;
     }
+
+    bond_data = fidl_helpers::PairingDataFromFidl(*bond.le);
+
+    // The |identity_address| field in btlib::sm::PairingData is optional
+    // however it is not nullable in the FIDL struct. Hence it must be
+    // present.
+    ZX_DEBUG_ASSERT(bond_data.identity_address);
 
     // TODO(armansito): BondingData should contain the identity address for both
     // transports instead of storing them separately. For now use the one we
     // obtained from |bond.le|.
     if (!adapter()->AddBondedDevice(bond.identifier,
                                     *bond_data.identity_address, bond_data)) {
-      // TODO(armansito): Continue walking the list if this fails?
-      callback(fidl_helpers::NewFidlError(
-          ErrorCode::FAILED,
-          fxl::StringPrintf("Failed to initialize bonded device (id: %s)",
-                            bond.identifier.c_str())));
-      return;
+      failed_ids.push_back(bond.identifier);
+      continue;
     }
   }
 
-  callback(Status());
+  if (!failed_ids.empty()) {
+    callback(fidl_helpers::NewFidlError(
+        ErrorCode::FAILED,
+        fxl::StringPrintf("Some devices failed to load (ids: %s)",
+                          fxl::JoinStrings(failed_ids, ", ").c_str())));
+  } else {
+    callback(Status());
+  }
 }
 
 void HostServer::OnRemoteDeviceBonded(
@@ -418,8 +420,7 @@ void HostServer::SetPairingDelegate(
   });
 }
 
-void HostServer::Connect(::std::string device_id,
-                         ConnectCallback callback) {
+void HostServer::Connect(::std::string device_id, ConnectCallback callback) {
   auto device = adapter()->remote_device_cache()->FindDeviceById(device_id);
   if (!device) {
     // We don't support connections to devices not in our cache
