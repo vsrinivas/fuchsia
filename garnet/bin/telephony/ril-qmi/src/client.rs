@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    bytes::{BufMut, BytesMut},
     crate::errors::QmuxError,
     crate::transport::{ClientId, SvcId},
     crate::transport::{QmiResponse, QmiTransport},
+    bytes::{BufMut, BytesMut},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_telephony_ril::NetworkConnectionMarker,
     fuchsia_syslog::macros::*,
@@ -56,17 +56,14 @@ impl Unpin for QmiClient {}
 
 impl QmiClient {
     pub fn new(inner: Arc<QmiTransport>) -> Self {
-        QmiClient {
-            inner: inner,
-            clients: ClientSvcMap::default(),
-            data_conn: None,
-        }
+        QmiClient { inner: inner, clients: ClientSvcMap::default(), data_conn: None }
     }
 
     /// Send a QMI message and allocate the client IDs for the service
     /// if they have not yet been
     pub async fn send_msg<'a, E: Encodable + 'a, D: Decodable + Debug>(
-        &'a self, msg: E,
+        &'a self,
+        msg: E,
     ) -> Result<QmiResult<D>, QmuxError> {
         let svc_id = SvcId(msg.svc_id());
         let mut need_id = false;
@@ -99,7 +96,8 @@ impl QmiClient {
 
     /// Send a QMI message without checking if a client ID has been allocated for the service
     async fn send_msg_actual<'a, E: Encodable + 'a, D: Decodable + Debug>(
-        &'a self, msg: E,
+        &'a self,
+        msg: E,
     ) -> Result<QmiResult<D>, QmuxError> {
         fx_log_info!("Sending a structured QMI message");
 
@@ -152,9 +150,7 @@ impl QmiClient {
             if transport.is_closed() {
                 fx_log_err!("Transport channel to modem is closed");
             }
-            transport
-                .write(bytes.as_ref(), &mut Vec::new())
-                .map_err(QmuxError::ClientWrite)?
+            transport.write(bytes.as_ref(), &mut Vec::new()).map_err(QmuxError::ClientWrite)?
         }
 
         let resp = await!(QmiResponse {
@@ -193,13 +189,11 @@ mod tests {
         let sender = async {
             let client = await!(modem_lock.create_client()).unwrap();
             // Panic should occur here. No valid channel to send message on!
-            let _: Result<WDA::SetDataFormatResp, QmiError> = await!(client
-                .send_msg(WDA::SetDataFormatReq::new(None, Some(0x01)))
-                .map_err(|e| io::Error::new(
-                    io::ErrorKind::Other,
-                    &*format!("fidl error: {:?}", e)
-                )))
-            .unwrap();
+            let _: Result<WDA::SetDataFormatResp, QmiError> =
+                await!(client.send_msg(WDA::SetDataFormatReq::new(None, Some(0x01))).map_err(
+                    |e| io::Error::new(io::ErrorKind::Other, &*format!("fidl error: {:?}", e))
+                ))
+                .unwrap();
         };
         executor.run_singlethreaded(sender);
     }
@@ -224,17 +218,13 @@ mod tests {
         let receiver = async {
             await!(server.recv_msg(&mut buffer)).expect("failed to recv msg");
             assert_eq!(EXPECTED, buffer.bytes());
-            let bytes = &[
-                1, 15, 0, 0, 0, 0, 1, 1, 34, 0, 12, 0, 0, 4, 0, 0, 0, 0, 0, 1, 0, 0, 42, 6,
-            ];
-            let _ = server
-                .write(bytes, &mut vec![])
-                .expect("Server channel write failed");
+            let bytes =
+                &[1, 15, 0, 0, 0, 0, 1, 1, 34, 0, 12, 0, 0, 4, 0, 0, 0, 0, 0, 1, 0, 0, 42, 6];
+            let _ = server.write(bytes, &mut vec![]).expect("Server channel write failed");
         };
 
-        let receiver = receiver.on_timeout(1000.millis().after_now(), || {
-            panic!("did not receiver message in time!")
-        });
+        let receiver = receiver
+            .on_timeout(1000.millis().after_now(), || panic!("did not receiver message in time!"));
 
         let sender = async {
             let client = await!(modem_lock.create_client()).unwrap();
@@ -245,9 +235,8 @@ mod tests {
             assert_eq!(msg.client_id, 6);
         };
 
-        let sender = sender.on_timeout(1000.millis().after_now(), || {
-            panic!("did not receive response in time!")
-        });
+        let sender = sender
+            .on_timeout(1000.millis().after_now(), || panic!("did not receive response in time!"));
 
         executor.run_singlethreaded(receiver.join(sender));
     }

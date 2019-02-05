@@ -39,9 +39,7 @@ impl QmiModem {
     }
 
     pub fn new_with_transport(transport: Arc<QmiTransport>) -> Self {
-        QmiModem {
-            inner: Some(transport),
-        }
+        QmiModem { inner: Some(transport) }
     }
 
     pub fn connected(&self) -> bool {
@@ -110,7 +108,9 @@ impl FrilService {
     }
 
     async fn handle_request(
-        modem: QmiModemPtr, client_ptr: ClientPtr, request: RadioInterfaceLayerRequest,
+        modem: QmiModemPtr,
+        client_ptr: ClientPtr,
+        request: RadioInterfaceLayerRequest,
     ) -> Result<(), fidl::Error> {
         // TODO(bwb) after component model v2, switch to on channel setup and
         // deprecated ConnectTransport method
@@ -195,9 +195,8 @@ impl FrilService {
             RadioInterfaceLayerRequest::GetDeviceIdentity { responder } => {
                 match *await!(client_ptr.lock()) {
                     Some(ref mut client) => {
-                        let resp: QmiResult<
-                            DMS::GetDeviceSerialNumbersResp,
-                        > = await!(client.send_msg(DMS::GetDeviceSerialNumbersReq::new())).unwrap();
+                        let resp: QmiResult<DMS::GetDeviceSerialNumbersResp> =
+                            await!(client.send_msg(DMS::GetDeviceSerialNumbersReq::new())).unwrap();
                         responder.send(&mut GetDeviceIdentityReturn::Imei(resp.unwrap().imei))?
                     }
                     None => {
@@ -239,13 +238,10 @@ fn main() -> Result<(), Error> {
     let modem = Arc::new(Mutex::new(QmiModem::new()));
 
     let server = ServicesServer::new()
-        .add_service((
-            RadioInterfaceLayerMarker::NAME,
-            move |chan: fasync::Channel| {
-                fx_log_info!("New client connecting to the Fuchsia RIL");
-                FrilService::spawn(modem.clone(), chan)
-            },
-        ))
+        .add_service((RadioInterfaceLayerMarker::NAME, move |chan: fasync::Channel| {
+            fx_log_info!("New client connecting to the Fuchsia RIL");
+            FrilService::spawn(modem.clone(), chan)
+        }))
         .start()
         .context("Error starting QMI modem service")?;
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::Buf;
 use crate::errors::QmuxError;
+use bytes::Buf;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{
@@ -53,10 +53,7 @@ impl Future for QmiResponse {
     type Output = Result<zx::MessageBuf, QmuxError>;
     fn poll(mut self: Pin<&mut Self>, waker: &LocalWaker) -> Poll<Self::Output> {
         let this = &mut *self;
-        let transport = this
-            .transport
-            .as_ref()
-            .ok_or(QmuxError::PollAfterCompletion)?;
+        let transport = this.transport.as_ref().ok_or(QmuxError::PollAfterCompletion)?;
         transport.poll_recv_msg_response(this.client_id, this.svc_id, this.tx_id, waker)
     }
 }
@@ -136,14 +133,7 @@ pub fn parse_qmux_header<T: Buf>(mut buf: T) -> Result<(QmuxHeader, T), QmuxErro
         // The bits for the ctrl flags are shifted by one in non CTL messages
     }
     Ok((
-        QmuxHeader {
-            length,
-            ctrl_flags,
-            svc_type,
-            client_id,
-            svc_ctrl_flags,
-            transaction_id,
-        },
+        QmuxHeader { length, ctrl_flags, svc_type, client_id, svc_ctrl_flags, transaction_id },
         buf,
     ))
 }
@@ -165,9 +155,7 @@ impl QmiTransport {
 
     pub fn register_interest(&self, svc_id: SvcId, client_id: ClientId) -> TxId {
         let mut lock = self.message_interests.lock();
-        let interests = lock
-            .entry((svc_id, client_id))
-            .or_insert(Slab::<MessageInterest>::new());
+        let interests = lock.entry((svc_id, client_id)).or_insert(Slab::<MessageInterest>::new());
         let id = interests.insert(MessageInterest::WillPoll);
         TxId(id as u16)
     }
@@ -254,13 +242,16 @@ impl QmiTransport {
     }
 
     pub fn poll_recv_msg_response(
-        &self, client_id: ClientId, svc_id: SvcId, txid: TxId, waker: &LocalWaker,
+        &self,
+        client_id: ClientId,
+        svc_id: SvcId,
+        txid: TxId,
+        waker: &LocalWaker,
     ) -> Poll<Result<zx::MessageBuf, QmuxError>> {
         let is_closed = self.recv_all(waker)?;
         let mut mi = self.message_interests.lock();
-        let message_interests: &mut Slab<MessageInterest> = mi
-            .get_mut(&(svc_id, client_id))
-            .ok_or(QmuxError::InvalidSvcOrClient)?;
+        let message_interests: &mut Slab<MessageInterest> =
+            mi.get_mut(&(svc_id, client_id)).ok_or(QmuxError::InvalidSvcOrClient)?;
         if message_interests
             .get(txid.as_raw_id())
             .expect("Polled unregistered interest")
@@ -270,9 +261,7 @@ impl QmiTransport {
             Poll::Ready(Ok(buf))
         } else {
             // Set the current waker to be notified when a response arrives.
-            *message_interests
-                .get_mut(txid.as_raw_id())
-                .expect("Polled unregistered interest") =
+            *message_interests.get_mut(txid.as_raw_id()).expect("Polled unregistered interest") =
                 MessageInterest::Waiting(waker.clone().into_waker());
             if is_closed {
                 Poll::Ready(Err(QmuxError::ClientRead(zx::Status::PEER_CLOSED)))
