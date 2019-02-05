@@ -15,12 +15,11 @@ type MacAddr = [u8; 6];
 /// Fills a given buffer with auth frame which will be sent from client to AP.
 /// Fails if the given buffer is too short.
 /// Returns the amount of bytes written to the buffer.
-pub fn write_auth_frame<B: ByteSliceMut>(
+pub fn write_open_auth_frame<B: ByteSliceMut>(
     buf: B,
     bssid: MacAddr,
     client_addr: MacAddr,
     seq_ctrl: u16,
-    auth_alg_num: mac::AuthAlgorithm,
 ) -> Result<usize, Error> {
     let (mut mgmt_hdr, mut w) = BufferWriter::new(buf).reserve_zeroed::<mac::MgmtHdr>()?;
     let mut fc = mac::FrameControl(0);
@@ -33,7 +32,7 @@ pub fn write_auth_frame<B: ByteSliceMut>(
     mgmt_hdr.set_seq_ctrl(seq_ctrl);
 
     let (mut auth_hdr, w) = w.reserve_zeroed::<mac::AuthHdr>()?;
-    auth_hdr.set_auth_alg_num(auth_alg_num as u16);
+    auth_hdr.set_auth_alg_num(mac::AuthAlgorithm::Open as u16);
     auth_hdr.set_auth_txn_seq_num(1);
     auth_hdr.set_status_code(0);
     Ok(w.written_bytes())
@@ -66,11 +65,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn auth_frame() {
+    fn open_auth_frame() {
         let mut buf = [99u8; 30];
         let written_bytes =
-            write_auth_frame(&mut buf[..], [1; 6], [2; 6], 42, mac::AuthAlgorithm::Sae)
-                .expect("failed writing frame");
+            write_open_auth_frame(&mut buf[..], [1; 6], [2; 6], 42).expect("failed writing frame");
         assert_eq!(30, written_bytes);
         assert_eq!(
             [
@@ -82,7 +80,7 @@ mod tests {
                 1, 1, 1, 1, 1, 1, // addr3
                 42, 0, // Sequence Control
                 // Auth body
-                3, 0, // Auth Algorithm Number
+                0, 0, // Auth Algorithm Number
                 1, 0, // Auth Txn Seq Number
                 0, 0, // Status code
             ],
