@@ -140,11 +140,10 @@ func main() {
 
 	// Add an archive Output if specified.
 	if archive != "" {
-		tar, err := NewTarOutput(archive)
+		output.Tar, err = NewTarOutput(archive)
 		if err != nil {
 			log.Fatalf("failed to initialize tar recorder: %v", err)
 		}
-		output.Tar = tar
 	}
 
 	// Prepare the Fuchsia DeviceContext, which will be nil if the testrunner is
