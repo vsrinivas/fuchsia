@@ -123,11 +123,7 @@ impl Hinter for CmdHelper {
         line.trim()
             .parse::<Cmd>()
             .map(|cmd| {
-                format!(
-                    "{}{}",
-                    if needs_space { " " } else { "" },
-                    cmd.arguments().to_string(),
-                )
+                format!("{}{}", if needs_space { " " } else { "" }, cmd.arguments().to_string(),)
             })
             .ok()
     }

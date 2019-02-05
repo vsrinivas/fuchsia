@@ -84,7 +84,8 @@ fn u32_to_netaddr(ip: u32, mask: u32) -> Result<InterfaceAddress, Error> {
 }
 
 async fn get_imei<'a>(
-    _args: &'a [&'a str], ril_modem: &'a RadioInterfaceLayerProxy,
+    _args: &'a [&'a str],
+    ril_modem: &'a RadioInterfaceLayerProxy,
 ) -> Result<String, Error> {
     match await!(ril_modem.get_device_identity())? {
         GetDeviceIdentityReturn::Imei(string) => Ok(string),
@@ -93,7 +94,8 @@ async fn get_imei<'a>(
 }
 
 async fn connect<'a>(
-    args: &'a [&'a str], ril_modem: &'a RadioInterfaceLayerProxy,
+    args: &'a [&'a str],
+    ril_modem: &'a RadioInterfaceLayerProxy,
 ) -> Result<(NetworkSettings, NetworkConnectionProxy), Error> {
     match await!(ril_modem.start_network(args[0]))? {
         StartNetworkReturn::Conn(iface) => {
@@ -108,7 +110,8 @@ async fn connect<'a>(
 }
 
 async fn get_power<'a>(
-    _args: &'a [&'a str], ril_modem: &'a RadioInterfaceLayerProxy,
+    _args: &'a [&'a str],
+    ril_modem: &'a RadioInterfaceLayerProxy,
 ) -> Result<String, Error> {
     match await!(ril_modem.radio_power_status())? {
         RadioPowerStatusReturn::Result(state) => match state {
@@ -125,7 +128,9 @@ pub struct Connections {
 }
 
 async fn handle_cmd<'a>(
-    ril_modem: &'a RadioInterfaceLayerProxy, line: String, state: Arc<Mutex<Connections>>,
+    ril_modem: &'a RadioInterfaceLayerProxy,
+    line: String,
+    state: Arc<Mutex<Connections>>,
 ) -> Result<ReplControl, Error> {
     let components: Vec<_> = line.trim().split_whitespace().collect();
     if let Some((raw_cmd, args)) = components.split_first() {
@@ -204,10 +209,7 @@ pub fn main() -> Result<(), Error> {
         Some(ref device) => Some(File::open(device)?),
         None => None,
     };
-    let conns = Arc::new(Mutex::new(Connections {
-        file_ref: file,
-        net_conn: None,
-    }));
+    let conns = Arc::new(Mutex::new(Connections { file_ref: file, net_conn: None }));
 
     let fut = async move {
         let app; // need outside the match so it won't drop
