@@ -267,6 +267,11 @@ multiconst!(zx_obj_type_t, [
     ZX_OBJ_TYPE_VCPU                = 21;
     ZX_OBJ_TYPE_TIMER               = 22;
     ZX_OBJ_TYPE_IOMMU               = 23;
+    ZX_OBJ_TYPE_BTI                 = 24;
+    ZX_OBJ_TYPE_PROFILE             = 25;
+    ZX_OBJ_TYPE_PMT                 = 26;
+    ZX_OBJ_TYPE_SUSPEND_TOKEN       = 27;
+    ZX_OBJ_TYPE_PAGER               = 28;
 ]);
 
 multiconst!(zx_obj_props_t, [
