@@ -12,6 +12,11 @@ union this_is_a_union {
     string s;
 };
 
+xunion this_is_a_xunion {
+    string s;
+    int32 i;
+};
+
 interface this_is_an_interface {
     Copy(string s, uint32 count) -> (string s);
 };
@@ -328,6 +333,11 @@ struct structs {
 struct unions {
     this_is_a_union s;
     this_is_a_union? nullable_u;
+};
+
+struct xunions {
+    this_is_a_xunion xu;
+    this_is_a_xunion? nullable_xu;
 };
 
 struct interfaces {
