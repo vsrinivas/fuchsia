@@ -28,6 +28,7 @@ CMakeLists.txt
 compile_commands.json
 cmake-build-debug/
 cscope.*
+rls*.log
 Session.vim
 tags
 Thumbs.db
