@@ -26,33 +26,22 @@ ControlImpl::ControlImpl(video::usb::UsbVideoStream* usb_video_stream,
 }
 
 void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
-  if (index == 0) {
+  if (formats_->size() == 0) {
     zx_status_t status = usb_video_stream_->GetFormats(formats_);
-    if ((status == ZX_OK) &&
-        (formats_->size() > fuchsia::camera::MAX_FORMATS_PER_RESPONSE)) {
-      fidl::VectorPtr<fuchsia::camera::VideoFormat> formats;
-      for (uint32_t i = 0; i < fuchsia::camera::MAX_FORMATS_PER_RESPONSE; i++) {
-        formats.push_back((*formats_)[i]);
-      }
-      callback(std::move(formats), formats_->size(), ZX_OK);
-    } else {
+    if (status != ZX_OK) {
       callback(std::move(formats_), formats_->size(), status);
-    }
-  } else {
-    uint32_t formats_to_send =
-        std::min(static_cast<uint32_t>(formats_->size() - index),
-                 fuchsia::camera::MAX_FORMATS_PER_RESPONSE);
-    fidl::VectorPtr<fuchsia::camera::VideoFormat> formats;
-    if (index < formats_->size()) {
-      for (uint32_t i = 0; i < formats_to_send; i++) {
-        formats.push_back((*formats_)[index + i]);
-      }
-
-      callback(std::move(formats), formats_->size(), ZX_OK);
-    } else {
-      callback(std::move(formats), formats_->size(), ZX_ERR_INVALID_ARGS);
+      return;
     }
   }
+
+  size_t min_index = std::max((size_t)0, std::min((size_t)index, formats_->size() - 1));
+  size_t max_index =
+      std::min(min_index + fuchsia::camera::MAX_FORMATS_PER_RESPONSE - 1,
+               formats_->size() - 1);
+
+  callback(std::vector<fuchsia::camera::VideoFormat>(
+               &(*formats_)[min_index], &(*formats_)[max_index + 1]),
+           formats_->size(), ZX_OK);
 }
 
 void ControlImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {

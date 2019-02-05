@@ -120,14 +120,13 @@ void CameraManagerImpl::GetFormats(uint64_t camera_id, uint32_t index,
     }
   }
 
-  size_t min_index = std::min((size_t)index, formats->size() - 1);
+  size_t min_index = std::max((size_t)0, std::min((size_t)index, formats->size() - 1));
   size_t max_index =
       std::min(min_index + fuchsia::camera::MAX_FORMATS_PER_RESPONSE - 1,
-               formats->size() - 1) +
-      1;
+               formats->size() - 1);
 
-  callback(std::vector<fuchsia::camera::VideoFormat>(&(*formats)[min_index],
-                                                     &(*formats)[max_index]),
+  callback(std::vector<fuchsia::camera::VideoFormat>(
+               &(*formats)[min_index], &(*formats)[max_index + 1]),
            formats->size());
 }
 

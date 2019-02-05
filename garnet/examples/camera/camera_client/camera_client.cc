@@ -34,7 +34,7 @@ zx_status_t Client::LoadVideoFormats(
     std::vector<VideoFormat> call_formats;
 
     zx_status_t status =
-        get_formats(format_index, &formats_, &total_format_count);
+        get_formats(format_index, &call_formats, &total_format_count);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Couldn't get camera formats (status " << status << ")";
       return status;
