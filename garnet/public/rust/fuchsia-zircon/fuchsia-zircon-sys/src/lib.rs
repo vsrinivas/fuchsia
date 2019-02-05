@@ -6,6 +6,7 @@
 #![deny(warnings)]
 
 pub type zx_addr_t = usize;
+pub type zx_clock_t = u32;
 pub type zx_duration_t = i64;
 pub type zx_futex_t = i32;
 pub type zx_handle_t = u32;
@@ -305,7 +306,11 @@ multiconst!(zx_obj_props_t, [
 pub const ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET: usize = 1;
 
 // clock ids
-pub const ZX_CLOCK_MONOTONIC: u32 = 0;
+multiconst!(zx_clock_t, [
+    ZX_CLOCK_MONOTONIC    = 0;
+    ZX_CLOCK_UTC          = 1;
+    ZX_CLOCK_THREAD       = 2;
+]);
 
 // Buffer size limits on the cprng syscalls
 pub const ZX_CPRNG_DRAW_MAX_LEN: usize = 256;

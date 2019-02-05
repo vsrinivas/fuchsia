@@ -4,7 +4,15 @@
 #[link(name = "zircon")]
 extern {
     pub fn zx_clock_get(
-        clock_id: u32
+        clock_id: zx_clock_t
+        ) -> zx_time_t;
+
+    pub fn zx_clock_get_new(
+        clock_id: zx_clock_t,
+        out: *mut zx_time_t
+        ) -> zx_status_t;
+
+    pub fn zx_clock_get_monotonic(
         ) -> zx_time_t;
 
     pub fn zx_nanosleep(
@@ -23,7 +31,7 @@ extern {
 
     pub fn zx_clock_adjust(
         handle: zx_handle_t,
-        clock_id: u32,
+        clock_id: zx_clock_t,
         offset: i64
         ) -> zx_status_t;
 
@@ -388,7 +396,7 @@ extern {
 
     pub fn zx_timer_create(
         options: u32,
-        clock_id: u32,
+        clock_id: zx_clock_t,
         out: *mut zx_handle_t
         ) -> zx_status_t;
 
