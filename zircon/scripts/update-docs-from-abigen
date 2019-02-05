@@ -468,7 +468,8 @@ def check_for_orphans(syscalls, root):
 SEE_ALSO_CONCEPTS = {
     'rights': '../rights.md',
     'exceptions': '../exceptions.md',
-    'futex objects': '../objects/futex.md'
+    'futex objects': '../objects/futex.md',
+    'timer slack': '../timer_slack.md'
 }
 
 def make_see_also_block(referenced_syscalls, concepts, extra):

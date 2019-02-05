@@ -130,7 +130,7 @@ communications on a channel that is timing out.
 
 ## SEE ALSO
 
- - [timer slack]
+ - [timer slack](../timer_slack.md)
  - [`zx_channel_create()`]
  - [`zx_channel_read()`]
  - [`zx_channel_write()`]
@@ -140,8 +140,6 @@ communications on a channel that is timing out.
  - [`zx_object_wait_async()`]
  - [`zx_object_wait_many()`]
  - [`zx_object_wait_one()`]
-
-[timer slack]: ../timer_slack.md
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
