@@ -28,6 +28,10 @@ class Flags {
   static bool ShouldDescribe(uint32_t flags) {
     return (flags & fuchsia::io::OPEN_FLAG_DESCRIBE) != 0;
   }
+
+  static bool IsPathOnly(uint32_t flags) {
+    return (flags & fuchsia::io::OPEN_FLAG_NODE_REFERENCE) != 0;
+  }
 };
 
 }  // namespace vfs

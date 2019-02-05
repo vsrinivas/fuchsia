@@ -282,6 +282,36 @@ class PseudoDirConnection : public gtest::RealLoopFixture {
     ptr->Rewind(&status);
     ASSERT_EQ(expected_status, status);
   }
+
+  void AssertOpen(async_dispatcher_t* dispatcher, uint32_t flags,
+                  zx_status_t expected_status, bool test_on_open_event = true) {
+    fuchsia::io::NodePtr node_ptr;
+    if (test_on_open_event) {
+      flags |= fuchsia::io::OPEN_FLAG_DESCRIBE;
+    }
+    EXPECT_EQ(expected_status,
+              dir_.dir().Serve(flags, node_ptr.NewRequest().TakeChannel(),
+                               dispatcher));
+
+    if (test_on_open_event) {
+      bool on_open_called = false;
+      node_ptr.events().OnOpen =
+          [&](zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfo> info) {
+            EXPECT_FALSE(on_open_called);  // should be called only once
+            on_open_called = true;
+            EXPECT_EQ(expected_status, status);
+            if (expected_status == ZX_OK) {
+              ASSERT_NE(info.get(), nullptr);
+              EXPECT_TRUE(info->is_directory());
+            } else {
+              EXPECT_EQ(info.get(), nullptr);
+            }
+          };
+
+      ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&]() { return on_open_called; }));
+    }
+  }
+
   DirectoryWrapper dir_;
 };
 
@@ -538,6 +568,47 @@ TEST_F(PseudoDirConnection, ReadDirAfterRemovingEntry) {
       Dirent::DirentForDot(),
   };
   AssertReadDirents(ptr, 1024, expected_dirents2);
+}
+
+TEST_F(PseudoDirConnection, CantReadNodeReferenceDir) {
+  auto ptr = dir_.Serve(fuchsia::io::OPEN_FLAG_NODE_REFERENCE);
+  // make sure node reference was opened
+  zx_status_t status;
+  fuchsia::io::NodeAttributes attr;
+  ASSERT_EQ(ZX_OK, ptr->GetAttr(&status, &attr));
+  ASSERT_EQ(ZX_OK, status);
+  ASSERT_NE(0u, attr.mode | fuchsia::io::MODE_TYPE_DIRECTORY);
+
+  std::vector<uint8_t> out_dirents;
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED, ptr->ReadDirents(100, &status, &out_dirents));
+}
+
+TEST_F(PseudoDirConnection, ServeOnInValidFlags) {
+  uint32_t prohibitive_flags[] = {fuchsia::io::OPEN_RIGHT_ADMIN,
+                                  fuchsia::io::OPEN_FLAG_NO_REMOTE};
+  uint32_t not_allowed_flags[] = {
+      fuchsia::io::OPEN_FLAG_CREATE, fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
+      fuchsia::io::OPEN_FLAG_TRUNCATE, fuchsia::io::OPEN_FLAG_APPEND};
+
+  for (auto not_allowed_flag : not_allowed_flags) {
+    SCOPED_TRACE(std::to_string(not_allowed_flag));
+    AssertOpen(dispatcher(), not_allowed_flag, ZX_ERR_INVALID_ARGS);
+  }
+
+  for (auto prohibitive_flag : prohibitive_flags) {
+    SCOPED_TRACE(std::to_string(prohibitive_flag));
+    AssertOpen(dispatcher(), prohibitive_flag, ZX_ERR_NOT_SUPPORTED);
+  }
+}
+
+TEST_F(PseudoDirConnection, ServeOnValidFlags) {
+  uint32_t allowed_flags[] = {
+      fuchsia::io::OPEN_RIGHT_READABLE, fuchsia::io::OPEN_RIGHT_WRITABLE,
+      fuchsia::io::OPEN_FLAG_NODE_REFERENCE, fuchsia::io::OPEN_FLAG_DIRECTORY};
+  for (auto allowed_flag : allowed_flags) {
+    SCOPED_TRACE(std::to_string(allowed_flag));
+    AssertOpen(dispatcher(), allowed_flag, ZX_OK);
+  }
 }
 
 }  // namespace

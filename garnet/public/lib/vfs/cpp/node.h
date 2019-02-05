@@ -87,6 +87,11 @@ class Node {
     return connections_;
   }
 
+  // Filters out flags that are invalid when combined with
+  // |OPEN_FLAG_NODE_REFERENCE|.
+  // Allowed flags are |OPEN_FLAG_DIRECTORY| and |OPEN_FLAG_DESCRIBE|.
+  uint32_t FilterRefFlags(uint32_t flags);
+
   // Sends OnOpen event on error status if |OPEN_FLAG_DESCRIBE| is set.
   void SendOnOpenEventOnError(uint32_t flags, zx::channel request,
                               zx_status_t status);

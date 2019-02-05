@@ -76,15 +76,27 @@ zx_status_t Node::SetAttr(uint32_t flags,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+uint32_t Node::FilterRefFlags(uint32_t flags) {
+  if (Flags::IsPathOnly(flags)) {
+    return flags & (kCommonAllowedFlags | fuchsia::io::OPEN_FLAG_DIRECTORY);
+  }
+  return flags;
+}
+
 zx_status_t Node::Serve(uint32_t flags, zx::channel request,
                         async_dispatcher_t* dispatcher) {
+  flags = FilterRefFlags(flags);
   zx_status_t status = ValidateFlags(flags);
   if (status != ZX_OK) {
     SendOnOpenEventOnError(flags, std::move(request), status);
     return status;
   }
   std::unique_ptr<Connection> connection;
-  status = CreateConnection(flags, &connection);
+  if (Flags::IsPathOnly(flags)) {
+    status = Node::CreateConnection(flags, &connection);
+  } else {
+    status = CreateConnection(flags, &connection);
+  }
   if (status != ZX_OK) {
     SendOnOpenEventOnError(flags, std::move(request), status);
     return status;

@@ -544,4 +544,21 @@ TEST_F(BufferedPseudoFileTest, ReadFailsForWriteOnly) {
   AssertRead(file, 10, "", ZX_ERR_ACCESS_DENIED);
 }
 
+TEST_F(BufferedPseudoFileTest, CantReadNodeReferenceFile) {
+  const std::string str = "this is a test string";
+  auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
+  auto file =
+      OpenFile(file_wrapper.file(), fuchsia::io::OPEN_FLAG_NODE_REFERENCE,
+               file_wrapper.dispatcher());
+  // make sure node reference was opened
+  zx_status_t status;
+  fuchsia::io::NodeAttributes attr;
+  ASSERT_EQ(ZX_OK, file->GetAttr(&status, &attr));
+  ASSERT_EQ(ZX_OK, status);
+  ASSERT_NE(0u, attr.mode | fuchsia::io::MODE_TYPE_FILE);
+
+  std::vector<uint8_t> buffer;
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED, file->Read(100, &status, &buffer));
+}
+
 }  // namespace
