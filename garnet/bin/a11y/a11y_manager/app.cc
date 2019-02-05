@@ -10,7 +10,8 @@ App::App()
     : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       semantic_tree_(std::make_unique<SemanticTree>()),
       a11y_manager_(std::make_unique<ManagerImpl>()),
-      toggler_impl_(std::make_unique<TogglerImpl>()) {
+      toggler_impl_(std::make_unique<TogglerImpl>()),
+      settings_manager_impl_(std::make_unique<SettingsManagerImpl>()) {
   startup_context_->outgoing()
       .AddPublicService<fuchsia::accessibility::Manager>(
           [this](
@@ -37,6 +38,13 @@ App::App()
               fidl::InterfaceRequest<fuchsia::accessibility::ToggleBroadcaster>
                   request) {
             toggler_impl_->AddToggleBroadcasterBinding(std::move(request));
+          });
+
+  startup_context_->outgoing()
+      .AddPublicService<fuchsia::accessibility::SettingsManager>(
+          [this](fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager>
+                     request) {
+            settings_manager_impl_->AddBinding(std::move(request));
           });
 }
 

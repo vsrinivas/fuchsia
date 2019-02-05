@@ -28,6 +28,8 @@ source_set("lib") {
     "manager_impl.h",
     "semantic_tree.cc",
     "semantic_tree.h",
+    "settings_manager.cc",
+    "settings_manager.h",
     "toggler_impl.cc",
     "toggler_impl.h",
   ]
