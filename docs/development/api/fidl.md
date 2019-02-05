@@ -77,6 +77,19 @@ Use the term `size` to name a number of bytes. Use the term `count` to name a
 number of some other quantity (e.g., the number of items in a vector of
 structs).
 
+### Case definitions
+
+Sometimes there is more than one way to decide on how to delimit words in
+identifiers.  Our style is as follows:
+
+ * Start with the original phrase in US English (e.g., "Non-Null HTTP Client")
+ * Remove any punctuation. ("Non Null HTTP Client")
+ * Make everything lowercase ("non null http client")
+ * Do one of the following, depending on what style is appropriate for the given identifier:
+    * Replace spaces with underscores ('_') for _lower snake case_ (`non_null_http_client`).
+    * Capitalize and replace spaces with underscores for _upper snake case_ (`NON_NULL_HTTP_CLIENT`).
+    * Capitalize the first letter of each word and join all words together for _upper camel case_ (`NonNullHttpClient`).
+
 ### Libraries
 
 Library names are period-separated lists of identifiers. Portions of the library
@@ -214,15 +227,15 @@ event named `OnPacketCaptured`.
 
 Parameter must be named in `lower_snake_case`.
 
-### Structs and unions
+### Structs, unions, and tables
 
-Structs and unions must be named in `UpperCamelCase` and must be noun phrases.
+Structs, unions, and tables must be named in `UpperCamelCase` and must be noun phrases.
 For example, `Point` is a struct that defines a location in space and
 `KeyboardEvent` is a struct that defines a keyboard-related event.
 
-### Struct, table, and union members
+### Structs, unions, and tables members
 
-Struct and union members must be named in `lower_snake_case`.  Prefer names with
+Structs, unions, and tables members must be named in `lower_snake_case`.  Prefer names with
 a single word when practical because single-word names render more consistently
 across target languages.  However, do not be afraid to use multiple words if a
 single word would be ambiguous or confusing.
