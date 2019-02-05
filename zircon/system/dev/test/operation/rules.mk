@@ -12,6 +12,7 @@ MODULE_NAME := operation-test
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/operation-test.cpp \
+    $(LOCAL_DIR)/operation-list-test.cpp \
     $(LOCAL_DIR)/operation-pool-test.cpp \
     $(LOCAL_DIR)/operation-queue-test.cpp \
     $(LOCAL_DIR)/main.cpp \

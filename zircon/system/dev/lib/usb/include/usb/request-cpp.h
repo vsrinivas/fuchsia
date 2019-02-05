@@ -230,8 +230,8 @@ public:
         return status;
     }
 
-    Request(usb_request_t* request, size_t parent_req_size)
-        : BaseClass(request, parent_req_size) {}
+    Request(usb_request_t* request, size_t parent_req_size, bool allow_destruct = true)
+        : BaseClass(request, parent_req_size, allow_destruct) {}
 
     Request(Request&& other)
         : BaseClass(std::move(other)) {}
@@ -290,8 +290,8 @@ public:
                    size_t parent_req_size)
         : BaseClass(request, complete_cb.callback, complete_cb.ctx, parent_req_size) {}
 
-    UnownedRequest(usb_request_t* request, size_t parent_req_size)
-        : BaseClass(request, parent_req_size) {}
+    UnownedRequest(usb_request_t* request, size_t parent_req_size, bool allow_destruct = true)
+        : BaseClass(request, parent_req_size, allow_destruct) {}
 
     UnownedRequest(UnownedRequest&& other)
         : BaseClass(std::move(other)) {}
