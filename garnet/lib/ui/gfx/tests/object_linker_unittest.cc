@@ -240,7 +240,8 @@ TEST_F(ObjectLinkerTest, LinkDeathRemovesImport) {
   EXPECT_EQ(0u, object_linker_.ImportCount());
 }
 
-TEST_F(ObjectLinkerTest, InitializingLinkTwiceCausesDeath) {
+// TODO(ES-179): Only fails in debug builds.
+TEST_F(ObjectLinkerTest, DISABLED_InitializingLinkTwiceCausesDeath) {
   TestExportObj export_obj, export_obj2;
   zx::eventpair export_token, import_token;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
