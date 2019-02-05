@@ -73,12 +73,12 @@ TEST_F(ConfigTest, ParseWithErrors) {
     const std::string json_file = NewJSONFile(dir, json);
     Config config;
     EXPECT_FALSE(config.ParseFromDirectory(dir));
-    EXPECT_THAT(config.error_str(), ::testing::HasSubstr(
-        fxl::Substitute(kBadServiceError, "services.chrome")));
-    EXPECT_THAT(config.error_str(), ::testing::HasSubstr(
-        fxl::Substitute(kBadServiceError, "services.appmgr")));
-    EXPECT_THAT(config.error_str(), ::testing::HasSubstr(
-        fxl::Substitute(kBadServiceError, "services.other")));
+    EXPECT_THAT(config.error_str(), ::testing::HasSubstr(fxl::Substitute(
+                                        kBadServiceError, "services.chrome")));
+    EXPECT_THAT(config.error_str(), ::testing::HasSubstr(fxl::Substitute(
+                                        kBadServiceError, "services.appmgr")));
+    EXPECT_THAT(config.error_str(), ::testing::HasSubstr(fxl::Substitute(
+                                        kBadServiceError, "services.other")));
   }
 
   // Bad apps.
@@ -102,10 +102,7 @@ TEST_F(ConfigTest, Parse) {
     "apps": [
       "netconnector",
       ["listen", "22"]
-    ],
-    "loaders": {
-      "http": "fuchsia-pkg://fuchsia.com/network_loader#meta/network_loader.cmx"
-    }
+    ]
   })json";
 
   std::string dir;
@@ -130,10 +127,6 @@ TEST_F(ConfigTest, Parse) {
 
   auto startup_services = config.TakeStartupServices();
   EXPECT_THAT(startup_services, ElementsAre("fuchsia.logger.Log"));
-
-  auto loaders = config.TakeAppLoaders();
-  EXPECT_THAT(loaders, UnorderedElementsAre(Key("http")));
-  EXPECT_EQ(loaders["http"]->url, "fuchsia-pkg://fuchsia.com/network_loader#meta/network_loader.cmx");
 }
 
 }  // namespace

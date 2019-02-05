@@ -16,7 +16,6 @@ namespace {
 
 using fxl::StringPrintf;
 
-constexpr char kAppLoaders[] = "loaders";
 constexpr char kApps[] = "apps";
 constexpr char kServices[] = "services";
 constexpr char kStartupServices[] = "startup_services";
@@ -52,8 +51,7 @@ void Config::ParseDocument(rapidjson::Document document) {
     return;
   }
 
-  if (!ParseServiceMap(document, kServices, &services_) ||
-      !ParseServiceMap(document, kAppLoaders, &app_loaders_)) {
+  if (!ParseServiceMap(document, kServices, &services_)) {
     return;
   }
 

@@ -32,22 +32,6 @@ name and the application URL which provides it.
       }
     }
 
-### App Loaders
-
-The sysmgr loaders configuration is a JSON file consisting of application
-loader mappings.  Each entry in the "loader" map consists of a URI scheme and
-the application loader that can load from it.  The root loader, capable of
-handling "file" URIs, is mapped by default.
-
-    {
-      "loaders": {
-        "scheme-1": "loader_without_args",
-        "scheme-2": [
-           "loader_with_args", "arg1", "arg2", "arg3"
-        ]
-      }
-    }
-
 ### Apps
 
 The sysmgr apps configuration is a JSON file consisting of apps to run at

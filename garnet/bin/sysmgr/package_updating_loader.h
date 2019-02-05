@@ -30,12 +30,15 @@ class PackageUpdatingLoader final : public component::PackageLoader {
                         async_dispatcher_t* dispatcher);
   ~PackageUpdatingLoader() override;
 
+  void Bind(fidl::InterfaceRequest<fuchsia::sys::Loader> request);
+
   void LoadUrl(std::string url, LoadUrlCallback callback) override;
 
  private:
   const std::unordered_set<std::string> update_dependency_urls_;
   fuchsia::pkg::PackageResolverPtr resolver_;
   fuchsia::sys::ServiceProviderPtr service_provider_;
+  fidl::BindingSet<fuchsia::sys::Loader> bindings_;
   async_dispatcher_t* const dispatcher_;  // Not owned.
   bool needs_reconnect_;
 

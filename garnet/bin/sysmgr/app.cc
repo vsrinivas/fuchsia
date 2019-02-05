@@ -47,16 +47,11 @@ App::App(Config config)
     RegisterSingleton(pair.first, std::move(pair.second));
   }
 
-  // Ordering note: The impl of CreateNestedEnvironment will resolve the
-  // delegating app loader. However, since its call back to the host directory
-  // won't happen until the next (first) message loop iteration, we'll be set up
-  // by then.
   auto env_request = env_.NewRequest();
   fuchsia::sys::ServiceProviderPtr env_services;
   env_->GetLauncher(env_launcher_.NewRequest());
   env_->GetServices(env_services.NewRequest());
 
-  // check whether we should enable auto updates before we register app loaders.
   if (auto_updates_enabled_) {
     const bool resolver_missing =
         std::find(update_dependencies.begin(), update_dependencies.end(),
@@ -83,11 +78,25 @@ App::App(Config config)
     }
   }
 
-  // Register the app loaders. Note that we have to do this after
-  // |env_services_| is initialized because |env_services_| is used to
-  // initialize the package resolver if auto-updating is available.
-  RegisterAppLoaders(std::move(env_services), config.TakeAppLoaders(),
-                     std::move(update_dependency_urls));
+  // Configure loader.
+  if (auto_updates_enabled_) {
+    package_updating_loader_ = std::make_unique<PackageUpdatingLoader>(
+        std::move(update_dependency_urls), std::move(env_services),
+        async_get_default_dispatcher());
+  }
+  static const char* const kLoaderName = fuchsia::sys::Loader::Name_;
+  auto child = fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+    if (auto_updates_enabled_) {
+      package_updating_loader_->Bind(
+          fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
+    } else {
+      startup_context_->ConnectToEnvironmentService(kLoaderName,
+                                                    std::move(channel));
+    }
+    return ZX_OK;
+  }));
+  svc_names_.push_back(kLoaderName);
+  svc_root_->AddEntry(kLoaderName, std::move(child));
 
   // Set up environment for the programs we will run.
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
@@ -167,30 +176,6 @@ void App::RegisterSingleton(std::string service_name,
       }));
   svc_names_.push_back(service_name);
   svc_root_->AddEntry(service_name, std::move(child));
-}
-
-void App::RegisterAppLoaders(
-    fuchsia::sys::ServiceProviderPtr env_services,
-    Config::ServiceMap app_loaders,
-    std::unordered_set<std::string> update_dependency_urls) {
-  if (auto_updates_enabled_) {
-    app_loader_ = DelegatingLoader::MakeWithPackageUpdatingFallback(
-        std::move(app_loaders), env_launcher_.get(),
-        std::move(update_dependency_urls), std::move(env_services));
-  } else {
-    app_loader_ = DelegatingLoader::MakeWithParentFallback(
-        std::move(app_loaders), env_launcher_.get(),
-        startup_context_->ConnectToEnvironmentService<fuchsia::sys::Loader>());
-  }
-  auto child = fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-    app_loader_bindings_.AddBinding(
-        app_loader_.get(),
-        fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
-    return ZX_OK;
-  }));
-  static const char* kLoaderName = fuchsia::sys::Loader::Name_;
-  svc_names_.push_back(kLoaderName);
-  svc_root_->AddEntry(kLoaderName, std::move(child));
 }
 
 void App::LaunchApplication(fuchsia::sys::LaunchInfo launch_info) {

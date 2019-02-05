@@ -52,8 +52,6 @@ class Config {
     return std::move(update_dependencies_);
   }
 
-  ServiceMap TakeAppLoaders() { return std::move(app_loaders_); }
-
   AppVector TakeApps() { return std::move(apps_); }
 
  private:
@@ -66,7 +64,6 @@ class Config {
   ServiceMap services_;
   StartupServiceVector startup_services_;
   UpdateDependencies update_dependencies_;
-  ServiceMap app_loaders_;
   AppVector apps_;
   json::JSONParser json_parser_;
 

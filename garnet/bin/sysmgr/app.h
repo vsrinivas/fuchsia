@@ -13,7 +13,8 @@
 #include <fs/managed-vfs.h>
 #include <fuchsia/pkg/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include "garnet/bin/sysmgr/delegating_loader.h"
+#include "garnet/bin/sysmgr/config.h"
+#include "garnet/bin/sysmgr/package_updating_loader.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_namespace.h"
@@ -38,11 +39,8 @@ class App {
 
   void RegisterSingleton(std::string service_name,
                          fuchsia::sys::LaunchInfoPtr launch_info);
+  void RegisterLoader();
   void RegisterDefaultServiceConnector();
-  void RegisterAppLoaders(
-      fuchsia::sys::ServiceProviderPtr env_services,
-      Config::ServiceMap app_loaders,
-      std::unordered_set<std::string> update_dependency_urls);
   void LaunchApplication(fuchsia::sys::LaunchInfo launch_info);
 
   std::unique_ptr<component::StartupContext> startup_context_;
@@ -54,14 +52,14 @@ class App {
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
   fuchsia::sys::LauncherPtr env_launcher_;
-  fuchsia::sys::ServiceProviderPtr env_services_;
 
   fs::ManagedVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> svc_root_;
   fidl::VectorPtr<std::string> svc_names_;
 
-  std::unique_ptr<DelegatingLoader> app_loader_;
-  fidl::BindingSet<fuchsia::sys::Loader> app_loader_bindings_;
+  std::unique_ptr<PackageUpdatingLoader> package_updating_loader_;
+  fuchsia::sys::LoaderPtr loader_;
+  fidl::BindingSet<fuchsia::sys::Loader> loader_bindings_;
 
   bool auto_updates_enabled_;
 

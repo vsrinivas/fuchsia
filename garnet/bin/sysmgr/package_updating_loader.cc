@@ -38,6 +38,11 @@ PackageUpdatingLoader::PackageUpdatingLoader(
 
 PackageUpdatingLoader::~PackageUpdatingLoader() = default;
 
+void PackageUpdatingLoader::Bind(
+    fidl::InterfaceRequest<fuchsia::sys::Loader> request) {
+  bindings_.AddBinding(this, std::move(request), dispatcher_);
+}
+
 void PackageUpdatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
   EnsureConnectedToResolver();
 
