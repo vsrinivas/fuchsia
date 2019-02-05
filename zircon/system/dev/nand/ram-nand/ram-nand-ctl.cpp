@@ -43,7 +43,8 @@ zx_status_t CreateDevice(void* ctx, const fuchsia_hardware_nand_RamNandInfo* inf
     RamNandCtl* device = reinterpret_cast<RamNandCtl*>(ctx);
     const char* name = nullptr;
     zx_status_t status = device->CreateDevice(info, &name);
-    return fuchsia_hardware_nand_RamNandCtlCreateDevice_reply(txn, status, name, strlen(name));
+    return fuchsia_hardware_nand_RamNandCtlCreateDevice_reply(txn, status, name,
+                                                              name ? strlen(name) : 0);
 }
 
 fuchsia_hardware_nand_RamNandCtl_ops_t fidl_ops = {.CreateDevice = CreateDevice};

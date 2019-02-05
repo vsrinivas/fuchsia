@@ -82,10 +82,21 @@ bool ExportPartitionsTest() {
     END_TEST;
 }
 
+bool CreateFailureTest() {
+    BEGIN_TEST;
+    fuchsia_hardware_nand_RamNandInfo config = BuildConfig();
+    config.nand_info.num_blocks = 0;
+
+    NandDevice device(config);
+    ASSERT_FALSE(device.IsValid());
+    END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(RamNandCtlTests)
 RUN_TEST_SMALL(TrivialLifetimeTest)
 RUN_TEST_SMALL(ExportConfigTest)
 RUN_TEST_SMALL(ExportPartitionsTest)
+RUN_TEST_SMALL(CreateFailureTest)
 END_TEST_CASE(RamNandCtlTests)
