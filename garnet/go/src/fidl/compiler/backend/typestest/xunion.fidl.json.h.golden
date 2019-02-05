@@ -34,8 +34,6 @@ class OlderSimpleUnion {
   static void Decode(::fidl::Decoder* decoder, OlderSimpleUnion* value, size_t offset);
   zx_status_t Clone(OlderSimpleUnion* result) const;
 
-  bool empty() const { return tag_ == Tag::Empty; }
-
   bool is_i() const { return tag_ == 1026732503; }
   
   int64_t& i() {
@@ -104,8 +102,6 @@ class NewerSimpleUnion {
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, NewerSimpleUnion* value, size_t offset);
   zx_status_t Clone(NewerSimpleUnion* result) const;
-
-  bool empty() const { return tag_ == Tag::Empty; }
 
   bool is_i() const { return tag_ == 693944286; }
   
@@ -183,8 +179,6 @@ class EmptyUnion {
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, EmptyUnion* value, size_t offset);
   zx_status_t Clone(EmptyUnion* result) const;
-
-  bool empty() const { return tag_ == Tag::Empty; }
 
   Tag Which() const { return Tag(tag_); }
 

@@ -36,8 +36,6 @@ class {{ .Name }} {
   static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
   zx_status_t Clone({{ .Name }}* result) const;
 
-  bool empty() const { return tag_ == Tag::Empty; }
-
   {{- range .Members }}
 
   bool is_{{ .Name }}() const { return tag_ == {{ .Ordinal }}; }
