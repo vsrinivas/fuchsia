@@ -27,6 +27,8 @@ KCOUNTER(mmio_resource_created, "resource.mmio.created");
 KCOUNTER(irq_resource_created, "resource.irq.created");
 KCOUNTER(ioport_resource_created, "resource.ioport.created");
 KCOUNTER(smc_resource_created, "resource.smc.created");
+KCOUNTER(dispatcher_resource_create_count, "dispatcher.resource.create");
+KCOUNTER(dispatcher_resource_destroy_count, "dispatcher.resource.destroy");
 
 // Storage for static members of ResourceDispatcher
 RegionAllocator ResourceDispatcher::static_rallocs_[ZX_RSRC_KIND_COUNT];
@@ -138,6 +140,9 @@ ResourceDispatcher::ResourceDispatcher(uint32_t kind,
                                        ResourceList* resource_list)
     : kind_(kind), base_(base), size_(size), flags_(flags),
       resource_list_(resource_list) {
+
+    kcounter_add(dispatcher_resource_create_count, 1);
+
     if (flags_ & ZX_RSRC_FLAG_EXCLUSIVE) {
         exclusive_region_ = ktl::move(region);
     }
@@ -169,6 +174,8 @@ ResourceDispatcher::ResourceDispatcher(uint32_t kind,
 }
 
 ResourceDispatcher::~ResourceDispatcher() {
+    kcounter_add(dispatcher_resource_destroy_count, 1);
+
     // exclusive allocations will be released when the uptr goes out of scope,
     // shared need to be removed from |all_shared_list_|
     Guard<fbl::Mutex> guard{ResourcesLock::Get()};

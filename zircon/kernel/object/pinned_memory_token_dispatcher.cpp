@@ -9,17 +9,21 @@
 
 #include <assert.h>
 #include <err.h>
-#include <vm/pinned_vm_object.h>
-#include <vm/vm.h>
-#include <vm/vm_object.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <lib/counters.h>
 #include <new>
 #include <object/bus_transaction_initiator_dispatcher.h>
 #include <trace.h>
+#include <vm/pinned_vm_object.h>
+#include <vm/vm.h>
+#include <vm/vm_object.h>
 
 #define LOCAL_TRACE 0
+
+KCOUNTER(dispatcher_pinned_memory_token_create_count, "dispatcher.pinned_memory_token.create");
+KCOUNTER(dispatcher_pinned_memory_token_destroy_count, "dispatcher.pinned_memory_token.destroy");
 
 zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitiatorDispatcher> bti,
                                                 PinnedVmObject pinned_vmo, uint32_t perms,
@@ -202,6 +206,8 @@ void PinnedMemoryTokenDispatcher::on_zero_handles() {
 }
 
 PinnedMemoryTokenDispatcher::~PinnedMemoryTokenDispatcher() {
+    kcounter_add(dispatcher_pinned_memory_token_destroy_count, 1);
+
     // In most cases the Unmap will already have run via on_zero_handles(), but
     // it is possible for that to never run if an error occurs between the
     // creation of the PinnedMemoryTokenDispatcher and the completion of the
@@ -226,6 +232,7 @@ PinnedMemoryTokenDispatcher::PinnedMemoryTokenDispatcher(
       bti_(ktl::move(bti)), mapped_addrs_(ktl::move(mapped_addrs)) {
     DEBUG_ASSERT(pinned_vmo_.vmo() != nullptr);
     InvalidateMappedAddrsLocked();
+    kcounter_add(dispatcher_pinned_memory_token_create_count, 1);
 }
 
 zx_status_t PinnedMemoryTokenDispatcher::EncodeAddrs(bool compress_results,

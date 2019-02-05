@@ -6,13 +6,17 @@
 
 #include <object/interrupt_event_dispatcher.h>
 
-#include <kernel/auto_lock.h>
 #include <dev/interrupt.h>
-#include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <kernel/auto_lock.h>
+#include <lib/counters.h>
 #include <platform.h>
+#include <zircon/rights.h>
+
+KCOUNTER(dispatcher_interrupt_event_create_count, "dispatcher.interrupt_event.create");
+KCOUNTER(dispatcher_interrupt_event_destroy_count, "dispatcher.interrupt_event.destroy");
 
 zx_status_t InterruptEventDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher,
                                              zx_rights_t* rights,
@@ -159,6 +163,15 @@ void InterruptEventDispatcher::VcpuInterruptHandler() {
     if (mask != 0) {
         mp_interrupt(MP_IPI_TARGET_MASK, mask);
     }
+}
+
+InterruptEventDispatcher::InterruptEventDispatcher(uint32_t vector)
+    : vector_(vector) {
+    kcounter_add(dispatcher_interrupt_event_create_count, 1);
+}
+
+InterruptEventDispatcher::~InterruptEventDispatcher() {
+    kcounter_add(dispatcher_interrupt_event_destroy_count, 1);
 }
 
 void InterruptEventDispatcher::MaskInterrupt() {

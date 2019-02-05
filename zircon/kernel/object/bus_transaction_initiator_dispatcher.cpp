@@ -8,10 +8,14 @@
 
 #include <dev/iommu.h>
 #include <err.h>
+#include <lib/counters.h>
+#include <new>
 #include <vm/pinned_vm_object.h>
 #include <vm/vm_object.h>
 #include <zircon/rights.h>
-#include <new>
+
+KCOUNTER(dispatcher_bti_create_count, "dispatcher.bti.create");
+KCOUNTER(dispatcher_bti_destroy_count, "dispatcher.bti.destroy");
 
 zx_status_t BusTransactionInitiatorDispatcher::Create(fbl::RefPtr<Iommu> iommu, uint64_t bti_id,
                                                       fbl::RefPtr<Dispatcher>* dispatcher,
@@ -34,10 +38,13 @@ zx_status_t BusTransactionInitiatorDispatcher::Create(fbl::RefPtr<Iommu> iommu, 
 
 BusTransactionInitiatorDispatcher::BusTransactionInitiatorDispatcher(fbl::RefPtr<Iommu> iommu,
                                                                      uint64_t bti_id)
-        : iommu_(ktl::move(iommu)), bti_id_(bti_id), zero_handles_(false) {}
+        : iommu_(ktl::move(iommu)), bti_id_(bti_id), zero_handles_(false) {
+    kcounter_add(dispatcher_bti_create_count, 1);
+}
 
 BusTransactionInitiatorDispatcher::~BusTransactionInitiatorDispatcher() {
     DEBUG_ASSERT(pinned_memory_.is_empty());
+    kcounter_add(dispatcher_bti_destroy_count, 1);
 }
 
 zx_status_t BusTransactionInitiatorDispatcher::Pin(fbl::RefPtr<VmObject> vmo, uint64_t offset,

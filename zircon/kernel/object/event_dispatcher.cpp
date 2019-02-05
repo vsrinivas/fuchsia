@@ -8,8 +8,12 @@
 
 #include <err.h>
 
-#include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
+#include <lib/counters.h>
+#include <zircon/rights.h>
+
+KCOUNTER(dispatcher_event_create_count, "dispatcher.event.create");
+KCOUNTER(dispatcher_event_destroy_count, "dispatcher.event.destroy");
 
 zx_status_t EventDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
                                     zx_rights_t* rights) {
@@ -23,6 +27,10 @@ zx_status_t EventDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* d
     return ZX_OK;
 }
 
-EventDispatcher::EventDispatcher(uint32_t options) {}
+EventDispatcher::EventDispatcher(uint32_t options) {
+    kcounter_add(dispatcher_event_create_count, 1);
+}
 
-EventDispatcher::~EventDispatcher() {}
+EventDispatcher::~EventDispatcher() {
+    kcounter_add(dispatcher_event_destroy_count, 1);
+}

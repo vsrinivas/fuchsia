@@ -5,11 +5,16 @@
 // https://opensource.org/licenses/MIT
 
 #include <object/pager_dispatcher.h>
+
+#include <lib/counters.h>
 #include <object/thread_dispatcher.h>
 #include <trace.h>
 #include <vm/page_source.h>
 
 #define LOCAL_TRACE 0
+
+KCOUNTER(dispatcher_pager_create_count, "dispatcher.pager.create");
+KCOUNTER(dispatcher_pager_destroy_count, "dispatcher.pager.destroy");
 
 zx_status_t PagerDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights) {
     fbl::AllocChecker ac;
@@ -23,10 +28,13 @@ zx_status_t PagerDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher, zx_righ
     return ZX_OK;
 }
 
-PagerDispatcher::PagerDispatcher() : SoloDispatcher() {}
+PagerDispatcher::PagerDispatcher() : SoloDispatcher() {
+    kcounter_add(dispatcher_pager_create_count, 1);
+}
 
 PagerDispatcher::~PagerDispatcher() {
     DEBUG_ASSERT(srcs_.is_empty());
+    kcounter_add(dispatcher_pager_destroy_count, 1);
 }
 
 zx_status_t PagerDispatcher::CreateSource(fbl::RefPtr<PortDispatcher> port,

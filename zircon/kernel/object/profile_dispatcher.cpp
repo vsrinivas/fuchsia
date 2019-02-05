@@ -10,10 +10,14 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
+#include <lib/counters.h>
 
 #include <object/thread_dispatcher.h>
 
 #include <zircon/rights.h>
+
+KCOUNTER(dispatcher_profile_create_count, "dispatcher.profile.create");
+KCOUNTER(dispatcher_profile_destroy_count, "dispatcher.profile.destroy");
 
 zx_status_t validate_profile(const zx_profile_info_t& info) {
     if (info.type != ZX_PROFILE_INFO_SCHEDULER)
@@ -42,9 +46,12 @@ zx_status_t ProfileDispatcher::Create(const zx_profile_info_t& info,
 }
 
 ProfileDispatcher::ProfileDispatcher(const zx_profile_info_t& info)
-    : info_(info) {}
+    : info_(info) {
+    kcounter_add(dispatcher_profile_create_count, 1);
+}
 
 ProfileDispatcher::~ProfileDispatcher() {
+    kcounter_add(dispatcher_profile_destroy_count, 1);
 }
 
 zx_status_t ProfileDispatcher::ApplyProfile(fbl::RefPtr<ThreadDispatcher> thread) {

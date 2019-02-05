@@ -20,6 +20,7 @@
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 
+#include <lib/counters.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/ktrace.h>
 
@@ -37,6 +38,9 @@
 #include <fbl/auto_lock.h>
 
 #define LOCAL_TRACE 0
+
+KCOUNTER(dispatcher_process_create_count, "dispatcher.process.create");
+KCOUNTER(dispatcher_process_destroy_count, "dispatcher.process.destroy");
 
 static zx_handle_t map_handle_to_value(const Handle* handle, uint32_t mixer) {
     // Ensure that the last bit of the result is not zero, and make sure
@@ -99,6 +103,8 @@ ProcessDispatcher::ProcessDispatcher(fbl::RefPtr<JobDispatcher> job,
     name_(name.data(), name.length()) {
     LTRACE_ENTRY_OBJ;
 
+    kcounter_add(dispatcher_process_create_count, 1);
+
     // Generate handle XOR mask with top bit and bottom two bits cleared
     uint32_t secret;
     auto prng = crypto::GlobalPRNG::GetInstance();
@@ -117,6 +123,8 @@ ProcessDispatcher::~ProcessDispatcher() {
     DEBUG_ASSERT(handles_.is_empty());
     DEBUG_ASSERT(exception_port_ == nullptr);
     DEBUG_ASSERT(debugger_exception_port_ == nullptr);
+
+    kcounter_add(dispatcher_process_destroy_count, 1);
 
     // Remove ourselves from the parent job's raw ref to us. Note that this might
     // have beeen called when transitioning State::DEAD. The Job can handle double calls.

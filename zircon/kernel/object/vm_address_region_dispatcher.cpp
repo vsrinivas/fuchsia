@@ -13,6 +13,7 @@
 #include <zircon/rights.h>
 
 #include <fbl/alloc_checker.h>
+#include <lib/counters.h>
 
 #include <assert.h>
 #include <err.h>
@@ -20,6 +21,9 @@
 #include <trace.h>
 
 #define LOCAL_TRACE 0
+
+KCOUNTER(dispatcher_vmar_create_count, "dispatcher.vmar.create");
+KCOUNTER(dispatcher_vmar_destroy_count, "dispatcher.vmar.destroy");
 
 namespace {
 
@@ -120,9 +124,13 @@ zx_status_t VmAddressRegionDispatcher::Create(fbl::RefPtr<VmAddressRegion> vmar,
 
 VmAddressRegionDispatcher::VmAddressRegionDispatcher(fbl::RefPtr<VmAddressRegion> vmar,
                                                      uint base_arch_mmu_flags)
-    : vmar_(ktl::move(vmar)), base_arch_mmu_flags_(base_arch_mmu_flags) {}
+    : vmar_(ktl::move(vmar)), base_arch_mmu_flags_(base_arch_mmu_flags) {
+    kcounter_add(dispatcher_vmar_create_count, 1);
+}
 
-VmAddressRegionDispatcher::~VmAddressRegionDispatcher() {}
+VmAddressRegionDispatcher::~VmAddressRegionDispatcher() {
+    kcounter_add(dispatcher_vmar_destroy_count, 1);
+}
 
 zx_status_t VmAddressRegionDispatcher::Allocate(
     size_t offset, size_t size, uint32_t flags,

@@ -10,10 +10,14 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
+#include <lib/counters.h>
 #include <kernel/auto_lock.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <zircon/rights.h>
+
+KCOUNTER(dispatcher_suspend_token_create_count, "dispatcher.suspend_token.create");
+KCOUNTER(dispatcher_suspend_token_destroy_count, "dispatcher.suspend_token.destroy");
 
 namespace {
 
@@ -71,9 +75,13 @@ zx_status_t SuspendTokenDispatcher::Create(fbl::RefPtr<Dispatcher> task,
 }
 
 SuspendTokenDispatcher::SuspendTokenDispatcher(fbl::RefPtr<Dispatcher> task)
-    : task_(ktl::move(task)) {}
+    : task_(ktl::move(task)) {
+    kcounter_add(dispatcher_suspend_token_create_count, 1);
+}
 
-SuspendTokenDispatcher::~SuspendTokenDispatcher() {}
+SuspendTokenDispatcher::~SuspendTokenDispatcher() {
+    kcounter_add(dispatcher_suspend_token_destroy_count, 1);
+}
 
 void SuspendTokenDispatcher::on_zero_handles() {
     // This is only called once and we're done with |task_| afterwards so we can move it out.

@@ -6,13 +6,17 @@
 
 #include <object/virtual_interrupt_dispatcher.h>
 
-#include <kernel/auto_lock.h>
 #include <dev/interrupt.h>
-#include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <kernel/auto_lock.h>
+#include <lib/counters.h>
 #include <platform.h>
+#include <zircon/rights.h>
+
+KCOUNTER(dispatcher_virtual_interrupt_create_count, "dispatcher.virtual_interrupt.create");
+KCOUNTER(dispatcher_virtual_interrupt_destroy_count, "dispatcher.virtual_interrupt.destroy");
 
 zx_status_t VirtualInterruptDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher,
                                                zx_rights_t* rights,
@@ -48,3 +52,11 @@ void VirtualInterruptDispatcher::MaskInterrupt() { }
 void VirtualInterruptDispatcher::UnmaskInterrupt() { }
 
 void VirtualInterruptDispatcher::UnregisterInterruptHandler() { }
+
+VirtualInterruptDispatcher::VirtualInterruptDispatcher() {
+    kcounter_add(dispatcher_virtual_interrupt_create_count, 1);
+}
+
+VirtualInterruptDispatcher::~VirtualInterruptDispatcher() {
+    kcounter_add(dispatcher_virtual_interrupt_destroy_count, 1);
+}

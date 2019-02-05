@@ -8,13 +8,19 @@
 
 #include <object/pci_interrupt_dispatcher.h>
 
-#include <kernel/auto_lock.h>
-#include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
+#include <kernel/auto_lock.h>
+#include <lib/counters.h>
 #include <object/pci_device_dispatcher.h>
 #include <platform.h>
+#include <zircon/rights.h>
+
+KCOUNTER(dispatcher_pci_interrupt_create_count, "dispatcher.pci_interrupt.create");
+KCOUNTER(dispatcher_pci_interrupt_destroy_count, "dispatcher.pci_interrupt.destroy");
 
 PciInterruptDispatcher::~PciInterruptDispatcher() {
+    kcounter_add(dispatcher_pci_interrupt_destroy_count, 1);
+
     // Release our reference to our device.
     device_ = nullptr;
 }
@@ -76,6 +82,12 @@ void PciInterruptDispatcher::MaskInterrupt() {
 void PciInterruptDispatcher::UnmaskInterrupt() {
     if (maskable_)
         device_->UnmaskIrq(vector_);
+}
+
+PciInterruptDispatcher::PciInterruptDispatcher(const fbl::RefPtr<PcieDevice>& device,
+                                               uint32_t vector, bool maskable)
+    : device_(device), vector_(vector), maskable_(maskable) {
+    kcounter_add(dispatcher_pci_interrupt_create_count, 1);
 }
 
 zx_status_t PciInterruptDispatcher::RegisterInterruptHandler() {

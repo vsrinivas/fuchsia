@@ -17,10 +17,14 @@
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <lib/counters.h>
 
 #include <object/process_dispatcher.h>
 
 #include <platform.h>
+
+KCOUNTER(dispatcher_job_create_count, "dispatcher.job.create");
+KCOUNTER(dispatcher_job_destroy_count, "dispatcher.job.destroy");
 
 // The starting max_height value of the root job.
 static constexpr uint32_t kRootJobMaxHeight = 32;
@@ -150,6 +154,8 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
       kill_on_oom_(false),
       policy_(policy) {
 
+    kcounter_add(dispatcher_job_create_count, 1);
+
     // Maintain consistent lock ordering by grabbing the all-jobs lock before
     // any individual JobDispatcher lock.
     Guard<fbl::Mutex> guard{AllJobsLock::Get()};
@@ -188,6 +194,8 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
 }
 
 JobDispatcher::~JobDispatcher() {
+    kcounter_add(dispatcher_job_destroy_count, 1);
+
     if (parent_)
         parent_->RemoveChildJob(this);
 

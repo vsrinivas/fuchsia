@@ -13,6 +13,7 @@
 #include <pow2.h>
 #include <trace.h>
 
+#include <lib/counters.h>
 #include <lib/user_copy/user_ptr.h>
 
 #include <vm/vm_aspace.h>
@@ -25,6 +26,9 @@
 #include <fbl/auto_lock.h>
 
 #define LOCAL_TRACE 0
+
+KCOUNTER(dispatcher_socket_create_count, "dispatcher.socket.create");
+KCOUNTER(dispatcher_socket_destroy_count, "dispatcher.socket.destroy");
 
 // static
 zx_status_t SocketDispatcher::Create(uint32_t flags,
@@ -93,9 +97,11 @@ SocketDispatcher::SocketDispatcher(fbl::RefPtr<PeerHolder<SocketDispatcher>> hol
       read_threshold_(0),
       write_threshold_(0),
       read_disabled_(false) {
+    kcounter_add(dispatcher_socket_create_count, 1);
 }
 
 SocketDispatcher::~SocketDispatcher() {
+    kcounter_add(dispatcher_socket_destroy_count, 1);
 }
 
 // This is called before either SocketDispatcher is accessible from threads other than the one

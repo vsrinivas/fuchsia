@@ -8,8 +8,12 @@
 
 #include <arch/hypervisor.h>
 #include <fbl/alloc_checker.h>
+#include <lib/counters.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <zircon/rights.h>
+
+KCOUNTER(dispatcher_guest_create_count, "dispatcher.guest.create");
+KCOUNTER(dispatcher_guest_destroy_count, "dispatcher.guest.destroy");
 
 // static
 zx_status_t GuestDispatcher::Create(fbl::RefPtr<Dispatcher>* guest_dispatcher,
@@ -40,9 +44,13 @@ zx_status_t GuestDispatcher::Create(fbl::RefPtr<Dispatcher>* guest_dispatcher,
 }
 
 GuestDispatcher::GuestDispatcher(ktl::unique_ptr<Guest> guest)
-    : guest_(ktl::move(guest)) {}
+    : guest_(ktl::move(guest)) {
+    kcounter_add(dispatcher_guest_create_count, 1);
+}
 
-GuestDispatcher::~GuestDispatcher() {}
+GuestDispatcher::~GuestDispatcher() {
+    kcounter_add(dispatcher_guest_destroy_count, 1);
+}
 
 zx_status_t GuestDispatcher::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
                                      fbl::RefPtr<PortDispatcher> port, uint64_t key) {

@@ -13,6 +13,10 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <lib/counters.h>
+
+KCOUNTER(dispatcher_log_create_count, "dispatcher.log.create");
+KCOUNTER(dispatcher_log_destroy_count, "dispatcher.log.destroy");
 
 zx_status_t LogDispatcher::Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispatcher,
                                   zx_rights_t* rights) {
@@ -31,9 +35,11 @@ zx_status_t LogDispatcher::Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispa
 
 LogDispatcher::LogDispatcher(uint32_t flags)
     : SoloDispatcher(ZX_LOG_WRITABLE), flags_(flags) {
+    kcounter_add(dispatcher_log_create_count, 1);
 }
 
 LogDispatcher::~LogDispatcher() {
+    kcounter_add(dispatcher_log_destroy_count, 1);
     if (flags_ & ZX_LOG_FLAG_READABLE) {
         dlog_reader_destroy(&reader_);
     }

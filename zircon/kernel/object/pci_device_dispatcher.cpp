@@ -15,10 +15,14 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <lib/counters.h>
 
 #include <assert.h>
 #include <err.h>
 #include <trace.h>
+
+KCOUNTER(dispatcher_pci_device_create_count, "dispatcher.pci_device.create");
+KCOUNTER(dispatcher_pci_device_destroy_count, "dispatcher.pci_device.destroy");
 
 zx_status_t PciDeviceDispatcher::Create(uint32_t                  index,
                                         zx_pcie_device_info_t*    out_info,
@@ -46,6 +50,8 @@ PciDeviceDispatcher::PciDeviceDispatcher(fbl::RefPtr<PcieDevice> device,
                                          zx_pcie_device_info_t* out_info)
     : device_(device) {
 
+    kcounter_add(dispatcher_pci_device_create_count, 1);
+
     out_info->vendor_id         = device_->vendor_id();
     out_info->device_id         = device_->device_id();
     out_info->base_class        = device_->class_id();
@@ -61,6 +67,8 @@ PciDeviceDispatcher::~PciDeviceDispatcher() {
     // Bus mastering and IRQ configuration are two states that should be
     // disabled when the driver using them has been unloaded.
     DEBUG_ASSERT(device_);
+
+    kcounter_add(dispatcher_pci_device_destroy_count, 1);
 
     zx_status_t s = EnableBusMaster(false);
     if (s != ZX_OK) {

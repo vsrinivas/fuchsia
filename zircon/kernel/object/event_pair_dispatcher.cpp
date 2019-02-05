@@ -9,8 +9,12 @@
 #include <assert.h>
 #include <err.h>
 
-#include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
+#include <lib/counters.h>
+#include <zircon/rights.h>
+
+KCOUNTER(dispatcher_eventpair_create_count, "dispatcher.eventpair.create");
+KCOUNTER(dispatcher_eventpair_destroy_count, "dispatcher.eventpair.destroy");
 
 zx_status_t EventPairDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
                                         fbl::RefPtr<Dispatcher>* dispatcher1,
@@ -39,7 +43,9 @@ zx_status_t EventPairDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
     return ZX_OK;
 }
 
-EventPairDispatcher::~EventPairDispatcher() {}
+EventPairDispatcher::~EventPairDispatcher() {
+    kcounter_add(dispatcher_eventpair_destroy_count, 1);
+}
 
 void EventPairDispatcher::on_zero_handles_locked() {
     canary_.Assert();
@@ -51,8 +57,9 @@ void EventPairDispatcher::OnPeerZeroHandlesLocked() {
 }
 
 EventPairDispatcher::EventPairDispatcher(fbl::RefPtr<PeerHolder<EventPairDispatcher>> holder)
-    : PeeredDispatcher(ktl::move(holder))
-{}
+    : PeeredDispatcher(ktl::move(holder)) {
+    kcounter_add(dispatcher_eventpair_create_count, 1);
+}
 
 // This is called before either EventPairDispatcher is accessible from threads other than the one
 // initializing the event pair, so it does not need locking.

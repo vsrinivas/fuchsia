@@ -37,7 +37,12 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
+#include <lib/counters.h>
+
 #define LOCAL_TRACE 0
+
+KCOUNTER(dispatcher_thread_create_count, "dispatcher.thread.create");
+KCOUNTER(dispatcher_thread_destroy_count, "dispatcher.thread.destroy");
 
 // static
 zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags,
@@ -62,10 +67,14 @@ ThreadDispatcher::ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process,
                                    uint32_t flags)
     : process_(ktl::move(process)) {
     LTRACE_ENTRY_OBJ;
+
+    kcounter_add(dispatcher_thread_create_count, 1);
 }
 
 ThreadDispatcher::~ThreadDispatcher() {
     LTRACE_ENTRY_OBJ;
+
+    kcounter_add(dispatcher_thread_destroy_count, 1);
 
     DEBUG_ASSERT(&thread_ != get_current_thread());
 

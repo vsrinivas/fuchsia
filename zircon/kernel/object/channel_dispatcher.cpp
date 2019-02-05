@@ -33,6 +33,8 @@ KCOUNTER(channel_packet_depth_16, "channel.depth.16");
 KCOUNTER(channel_packet_depth_64, "channel.depth.64");
 KCOUNTER(channel_packet_depth_256, "channel.depth.256");
 KCOUNTER(channel_packet_depth_unbounded, "channel.depth.unbounded");
+KCOUNTER(dispatcher_channel_create_count, "dispatcher.channel.create");
+KCOUNTER(dispatcher_channel_destroy_count, "dispatcher.channel.destroy");
 
 // static
 zx_status_t ChannelDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
@@ -63,6 +65,7 @@ zx_status_t ChannelDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
 
 ChannelDispatcher::ChannelDispatcher(fbl::RefPtr<PeerHolder<ChannelDispatcher>> holder)
     : PeeredDispatcher(ktl::move(holder), ZX_CHANNEL_WRITABLE) {
+    kcounter_add(dispatcher_channel_create_count, 1);
 }
 
 // This is called before either ChannelDispatcher is accessible from threads other than the one
@@ -73,6 +76,8 @@ void ChannelDispatcher::Init(fbl::RefPtr<ChannelDispatcher> other) TA_NO_THREAD_
 }
 
 ChannelDispatcher::~ChannelDispatcher() {
+    kcounter_add(dispatcher_channel_destroy_count, 1);
+
     // At this point the other endpoint no longer holds
     // a reference to us, so we can be sure we're discarding
     // any remaining messages safely.

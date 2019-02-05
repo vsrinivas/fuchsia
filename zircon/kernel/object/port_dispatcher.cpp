@@ -38,6 +38,8 @@ static_assert(sizeof(zx_packet_page_request_t) == 32,
 
 KCOUNTER(port_arena_count, "port.arena.count");
 KCOUNTER(port_full_count, "port.full.count");
+KCOUNTER(dispatcher_port_create_count, "dispatcher.port.create");
+KCOUNTER(dispatcher_port_destroy_count, "dispatcher.port.destroy");
 
 class ArenaPortAllocator final : public PortAllocator {
 public:
@@ -187,11 +189,13 @@ zx_status_t PortDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* di
 
 PortDispatcher::PortDispatcher(uint32_t options)
     : options_(options), zero_handles_(false), num_packets_(0u) {
+    kcounter_add(dispatcher_port_create_count, 1);
 }
 
 PortDispatcher::~PortDispatcher() {
     DEBUG_ASSERT(zero_handles_);
     DEBUG_ASSERT(num_packets_ == 0u);
+    kcounter_add(dispatcher_port_destroy_count, 1);
 }
 
 void PortDispatcher::on_zero_handles() {

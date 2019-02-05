@@ -9,10 +9,14 @@
 #include <arch/hypervisor.h>
 #include <fbl/alloc_checker.h>
 #include <hypervisor/guest_physical_address_space.h>
+#include <lib/counters.h>
 #include <object/guest_dispatcher.h>
 #include <vm/vm_object.h>
 #include <zircon/rights.h>
 #include <zircon/types.h>
+
+KCOUNTER(dispatcher_vcpu_create_count, "dispatcher.vcpu.create");
+KCOUNTER(dispatcher_vcpu_destroy_count, "dispatcher.vcpu.destroy");
 
 zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher, zx_vaddr_t entry,
                                    fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights) {
@@ -34,9 +38,13 @@ zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher
 }
 
 VcpuDispatcher::VcpuDispatcher(fbl::RefPtr<GuestDispatcher> guest, ktl::unique_ptr<Vcpu> vcpu)
-    : guest_(guest), vcpu_(ktl::move(vcpu)) {}
+    : guest_(guest), vcpu_(ktl::move(vcpu)) {
+    kcounter_add(dispatcher_vcpu_create_count, 1);
+}
 
-VcpuDispatcher::~VcpuDispatcher() {}
+VcpuDispatcher::~VcpuDispatcher() {
+    kcounter_add(dispatcher_vcpu_destroy_count, 1);
+}
 
 zx_status_t VcpuDispatcher::Resume(zx_port_packet_t* packet) {
     canary_.Assert();

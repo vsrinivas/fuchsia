@@ -8,10 +8,14 @@
 
 #include <string.h>
 
-#include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <lib/counters.h>
 #include <object/handle.h>
+#include <zircon/rights.h>
+
+KCOUNTER(dispatcher_fifo_create_count, "dispatcher.fifo.create");
+KCOUNTER(dispatcher_fifo_destroy_count, "dispatcher.fifo.destroy");
 
 // static
 zx_status_t FifoDispatcher::Create(size_t count, size_t elemsize, uint32_t options,
@@ -66,9 +70,11 @@ FifoDispatcher::FifoDispatcher(fbl::RefPtr<PeerHolder<FifoDispatcher>> holder,
     : PeeredDispatcher(ktl::move(holder), ZX_FIFO_WRITABLE),
       elem_count_(count), elem_size_(elem_size), mask_(count - 1),
       head_(0u), tail_(0u), data_(ktl::move(data)) {
+    kcounter_add(dispatcher_fifo_create_count, 1);
 }
 
 FifoDispatcher::~FifoDispatcher() {
+    kcounter_add(dispatcher_fifo_destroy_count, 1);
 }
 
 // Thread safety analysis disabled as this happens during creation only,

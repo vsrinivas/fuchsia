@@ -33,8 +33,7 @@ private:
     static pcie_irq_handler_retval_t IrqThunk(const PcieDevice& dev,
                                               uint irq_id,
                                               void* ctx);
-    PciInterruptDispatcher(const fbl::RefPtr<PcieDevice>& device, uint32_t vector, bool maskable)
-        : device_(device), vector_(vector), maskable_(maskable) { }
+    PciInterruptDispatcher(const fbl::RefPtr<PcieDevice>& device, uint32_t vector, bool maskable);
     zx_status_t RegisterInterruptHandler();
 
     fbl::Canary<fbl::magic("INPD")> canary_;

@@ -14,9 +14,13 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <lib/counters.h>
 #include <zircon/compiler.h>
 #include <zircon/rights.h>
 #include <zircon/types.h>
+
+KCOUNTER(dispatcher_timer_create_count, "dispatcher.timer.create");
+KCOUNTER(dispatcher_timer_destroy_count, "dispatcher.timer.destroy");
 
 static void timer_irq_callback(timer* timer, zx_time_t now, void* arg) {
     // We are in IRQ context and cannot touch the timer state_tracker, so we
@@ -62,10 +66,12 @@ TimerDispatcher::TimerDispatcher(slack_mode slack_mode)
       timer_dpc_({LIST_INITIAL_CLEARED_VALUE, &dpc_callback, this}),
       deadline_(0u), slack_amount_(0u), cancel_pending_(false),
       timer_(TIMER_INITIAL_VALUE(timer_)) {
+    kcounter_add(dispatcher_timer_create_count, 1);
 }
 
 TimerDispatcher::~TimerDispatcher() {
     DEBUG_ASSERT(deadline_ == 0u);
+    kcounter_add(dispatcher_timer_destroy_count, 1);
 }
 
 void TimerDispatcher::on_zero_handles() {

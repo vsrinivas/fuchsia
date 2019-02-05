@@ -12,6 +12,7 @@
 #include <zircon/rights.h>
 
 #include <fbl/alloc_checker.h>
+#include <lib/counters.h>
 
 #include <assert.h>
 #include <err.h>
@@ -19,6 +20,9 @@
 #include <trace.h>
 
 #define LOCAL_TRACE 0
+
+KCOUNTER(dispatcher_vmo_create_count, "dispatcher.vmo.create");
+KCOUNTER(dispatcher_vmo_destroy_count, "dispatcher.vmo.destroy");
 
 zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo,
                                        zx_koid_t pager_koid,
@@ -37,10 +41,12 @@ zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo,
 
 VmObjectDispatcher::VmObjectDispatcher(fbl::RefPtr<VmObject> vmo, zx_koid_t pager_koid)
     : SoloDispatcher(ZX_VMO_ZERO_CHILDREN), vmo_(vmo), pager_koid_(pager_koid) {
-        vmo_->SetChildObserver(this);
-    }
+    kcounter_add(dispatcher_vmo_create_count, 1);
+    vmo_->SetChildObserver(this);
+}
 
 VmObjectDispatcher::~VmObjectDispatcher() {
+    kcounter_add(dispatcher_vmo_destroy_count, 1);
     // Intentionally leave vmo_->user_id() set to our koid even though we're
     // dying and the koid will no longer map to a Dispatcher. koids are never
     // recycled, and it could be a useful breadcrumb.

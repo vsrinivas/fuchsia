@@ -26,5 +26,6 @@ protected:
     void UnregisterInterruptHandler() final;
 
 private:
-    VirtualInterruptDispatcher() = default;
+    VirtualInterruptDispatcher();
+    ~VirtualInterruptDispatcher() final;
 };

@@ -26,8 +26,8 @@ public:
     zx_status_t BindVcpu(fbl::RefPtr<VcpuDispatcher> vcpu_dispatcher) final;
 
 private:
-    explicit InterruptEventDispatcher(uint32_t vector)
-        : vector_(vector) {}
+    explicit InterruptEventDispatcher(uint32_t vector);
+    ~InterruptEventDispatcher() final;
 
     void MaskInterrupt() final;
     void UnmaskInterrupt() final;
