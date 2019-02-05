@@ -5,6 +5,7 @@
 import("//build/assert_cmx.gni")
 import("//build/cmx/cmx.gni")
 import("//build/compiled_action.gni")
+import("//build/disabled_for_asan.gni")
 import("//build/gn/packages.gni")
 import("//build/images/manifest.gni")
 import("//build/json/validate_json.gni")
@@ -449,6 +450,7 @@ template("package") {
         },
       ]
     }
+
     foreach(test, pkg.tests) {
       is_disabled = defined(test.disabled) && test.disabled
       pkg_manifest += [
@@ -462,16 +464,20 @@ template("package") {
             dest = "disabled/${dest}"
           }
           dest = "test/${dest}"
+          if (pkg.deprecated_system_image) {
+            location = "/system/$dest"
+          } else {
+            location = "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
+          }
           source = rebase_path(test.name, "", root_out_dir)
-
+          is_asan = select_variant + [ "asan" ] - [ "asan" ] != select_variant
+          is_disabled_for_asan = disabled_for_asan + [ location ] -
+                                 [ location ] != disabled_for_asan
+          is_disabled = is_disabled || (is_asan && is_disabled_for_asan)
           if (!is_disabled) {
             test_spec("${test.name}.spec") {
               name = test.name
-              if (pkg.deprecated_system_image) {
-                location = "/system/$dest"
-              } else {
-                location = "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
-              }
+              location = location
 
               # Encode the package name in the output directory to disambiguate
               # during post-processing - cross-referencing with packages.json -

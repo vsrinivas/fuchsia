@@ -1,0 +1,110 @@
+disabled_for_asan = [
+  # MF-190
+  "/pkgfs/packages/agent_runner_unittests/0/test/agent_runner_unittest",
+
+  # CF-571 (flaky)
+  "/pkgfs/packages/appmgr_unittests/0/test/appmgr_unittests",
+
+  # MTWN-233 (flaky)
+  "/pkgfs/packages/audio_fidl_tests/0/test/audio_fidl_tests",
+
+  # BT-712
+  "/pkgfs/packages/bluetooth-tests/0/test/bt-host-unittests",
+
+  # MF-191
+  "/pkgfs/packages/clipboard_unittests/0/test/clipboard_impl_unittest",
+
+  # DX-964
+  "/pkgfs/packages/crashpad_analyzer_tests/0/test/crashpad_analyzer_impl",
+  "/pkgfs/packages/crashpad_analyzer_tests/0/test/crashpad_analyzer_impl_unittest",
+
+  # DNO-408 (flaky)
+  "/pkgfs/packages/debugger_utils_tests/0/test/debugger_utils_tests",
+
+  # ES-180
+  "/pkgfs/packages/escher_tests/0/test/escher_unittests",
+
+  # MF-192
+  "/pkgfs/packages/entity_provider_runner_unittests/0/test/entity_provider_runner_unittest",
+
+  # DNO-409
+  "/pkgfs/packages/garnet_lib_tests/0/test/garnet_lib_unittests",
+
+  # MAC-243
+  "/pkgfs/packages/guest_integration_tests/0/test/guest_integration_tests",
+
+  # LE-684
+  "/pkgfs/packages/ledger_tests/0/test/ledger_integration_tests",
+  "/pkgfs/packages/ledger_tests/0/test/ledger_unittests",
+
+  # TC-351
+  "/pkgfs/packages/libc-tests/0/test/libc-tests",
+
+  # CF-568
+  "/pkgfs/packages/libdriver-integration-test/0/test/libdriver-integration-test",
+
+  # MTWN-234
+  "/pkgfs/packages/mediaplayer_tests/0/test/mediaplayer_core_tests",
+
+  # MF-193
+  "/pkgfs/packages/modular_tests/0/test/run_modular_tests.sh",
+
+  # MF-194
+  "/pkgfs/packages/peridot_tests/0/test/peridot_lib_unittests",
+
+  # MF-195
+  "/pkgfs/packages/puppet_master_unittests/0/test/add_mod_command_runner_unittest",
+  "/pkgfs/packages/puppet_master_unittests/0/test/dispatch_story_command_executor_unittest",
+  "/pkgfs/packages/puppet_master_unittests/0/test/puppet_master_impl_unittest",
+  "/pkgfs/packages/puppet_master_unittests/0/test/remove_mod_command_runner_unittest",
+  "/pkgfs/packages/puppet_master_unittests/0/test/set_kind_of_proto_story_option_command_runner_unittest",
+  "/pkgfs/packages/puppet_master_unittests/0/test/set_link_value_command_runner_unittest",
+
+  # SCN-1250
+  "/pkgfs/packages/scenic_tests/0/test/input_unittests",
+  "/pkgfs/packages/scenic_tests/0/test/gfx_unittests",
+  "/pkgfs/packages/scenic_tests/0/test/gfx_viewstate_apptests",
+
+  # Causes crash not asan failure (might be require toolchain help)
+  "/pkgfs/packages/scenic_tests/0/test/gfx_pixeltests",
+
+  # MF-196
+  "/pkgfs/packages/sessionctl_integration_tests/0/test/sessionctl_test",
+  "/pkgfs/packages/sessionctl_unittests/0/test/sessionctl_unittest",
+
+  # MF-197
+  "/pkgfs/packages/storage_unittests/0/test/session_storage_unittest",
+  "/pkgfs/packages/storage_unittests/0/test/story_storage_unittest",
+
+  # MF-198
+  "/pkgfs/packages/story_model_unittests/0/test/ledger_story_model_storage_unittest",
+  "/pkgfs/packages/story_runner_unittests/0/test/link_impl_unittest",
+
+  # MI4-1803
+  "/pkgfs/packages/suggestion_engine_unittests/0/test/annoyance_ranking_feature_unittest",
+  "/pkgfs/packages/suggestion_engine_unittests/0/test/suggestion_engine_impl_unittest",
+
+  # CF-569 (flaky)
+  "/pkgfs/packages/system_time_updater_test/0/test/system_time_updater_test",
+
+  # PT-97
+  "/pkgfs/packages/trace_tests/0/test/trace_integration_tests",
+
+  # MTWN-236
+  "/pkgfs/packages/use_aac_decoder_test/0/test/use_aac_decoder_test",
+
+  # ZX-3382
+  "/pkgfs/packages/vfs_cpp_tests/0/test/vfs_cpp_unittests",
+
+  # MAC-242
+  "/pkgfs/packages/vmm_tests/0/test/device_unittests",
+
+  # MA-553
+  "/pkgfs/packages/vulkan-tests/0/test/vkext",
+
+  # ZX-3384
+  "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks",
+
+  # CONN-14
+  "/system/test/wlan_client_mlme_unittest",
+]
