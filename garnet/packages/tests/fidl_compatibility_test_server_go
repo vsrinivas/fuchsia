@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//garnet/go/src/fidl/compatibility_test:fidl_compatibility_test_server_go"
+        "//garnet/bin/fidl_compatibility_test/golang:fidl_compatibility_test_server_go"
     ]
 }
