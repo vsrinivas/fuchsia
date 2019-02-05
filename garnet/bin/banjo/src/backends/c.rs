@@ -121,11 +121,7 @@ fn name_size(ty: &str) -> &'static str {
 
 fn get_first_param(ast: &BanjoAst, method: &ast::Method) -> Result<(bool, String), Error> {
     // Return parameter if a primitive type.
-    if method
-        .out_params
-        .get(0)
-        .map_or(false, |p| p.1.is_primitive())
-    {
+    if method.out_params.get(0).map_or(false, |p| p.1.is_primitive()) {
         Ok((true, ty_to_c_str(ast, &method.out_params[0].1)?))
     } else {
         Ok((false, "void".to_string()))
@@ -152,11 +148,9 @@ fn get_in_params(m: &ast::Method, ast: &BanjoAst) -> Result<Vec<String>, Error> 
                             let prefix = if ty.is_nullable() { "" } else { "const " };
                             Ok(format!("{}{}* {}", prefix, ty_name, to_c_name(name)))
                         }
-                        ast::Ty::Enum => Ok(format!(
-                            "{} {}",
-                            ty_to_c_str(ast, ty).unwrap(),
-                            to_c_name(name)
-                        )),
+                        ast::Ty::Enum => {
+                            Ok(format!("{} {}", ty_to_c_str(ast, ty).unwrap(), to_c_name(name)))
+                        }
                         ast::Ty::Bool
                         | ast::Ty::Int8
                         | ast::Ty::Int16
@@ -167,11 +161,9 @@ fn get_in_params(m: &ast::Method, ast: &BanjoAst) -> Result<Vec<String>, Error> 
                         | ast::Ty::UInt32
                         | ast::Ty::UInt64
                         | ast::Ty::USize
-                        | ast::Ty::Voidptr => Ok(format!(
-                            "{} {}",
-                            ty_to_c_str(ast, ty).unwrap(),
-                            to_c_name(name)
-                        )),
+                        | ast::Ty::Voidptr => {
+                            Ok(format!("{} {}", ty_to_c_str(ast, ty).unwrap(), to_c_name(name)))
+                        }
                         e => Err(format_err!("unsupported: {}", e)),
                     }
                 }
@@ -185,18 +177,16 @@ fn get_in_params(m: &ast::Method, ast: &BanjoAst) -> Result<Vec<String>, Error> 
                         name = to_c_name(name)
                     ))
                 }
-                _ => Ok(format!(
-                    "{} {}",
-                    ty_to_c_str(ast, ty).unwrap(),
-                    to_c_name(name)
-                )),
+                _ => Ok(format!("{} {}", ty_to_c_str(ast, ty).unwrap(), to_c_name(name))),
             }
         })
         .collect()
 }
 
 fn get_out_params(
-    m: &ast::Method, name: &str, ast: &BanjoAst,
+    m: &ast::Method,
+    name: &str,
+    ast: &BanjoAst,
 ) -> Result<(Vec<String>, String), Error> {
     if m.attributes.has_attribute("Async") {
         return Ok((
@@ -304,12 +294,7 @@ fn get_out_args(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, bool), 
 fn filter_interface<'a>(
     decl: &'a ast::Decl,
 ) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
-    if let ast::Decl::Interface {
-        ref name,
-        ref methods,
-        ref attributes,
-    } = *decl
-    {
+    if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == "\"ddk-interface\"" {
                 return Some((name, methods, attributes));
@@ -323,12 +308,7 @@ fn filter_interface<'a>(
 fn filter_protocol<'a>(
     decl: &'a ast::Decl,
 ) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
-    if let ast::Decl::Interface {
-        ref name,
-        ref methods,
-        ref attributes,
-    } = *decl
-    {
+    if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == "\"ddk-callback\"" || layout == "\"ddk-interface\"" {
                 None
@@ -345,18 +325,14 @@ fn filter_protocol<'a>(
 
 impl<'a, W: io::Write> CBackend<'a, W> {
     fn codegen_enum_decl(
-        &self, namespace: &Vec<ast::Decl>, ast: &BanjoAst,
+        &self,
+        namespace: &Vec<ast::Decl>,
+        ast: &BanjoAst,
     ) -> Result<String, Error> {
         namespace
             .iter()
             .filter_map(|decl| {
-                if let ast::Decl::Enum {
-                    ref name,
-                    ref ty,
-                    ref variants,
-                    ..
-                } = *decl
-                {
+                if let ast::Decl::Enum { ref name, ref ty, ref variants, .. } = *decl {
                     Some((name, ty, variants))
                 } else {
                     None
@@ -387,18 +363,14 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     }
 
     fn codegen_constant_defs(
-        &self, namespace: &Vec<ast::Decl>, _ast: &BanjoAst,
+        &self,
+        namespace: &Vec<ast::Decl>,
+        _ast: &BanjoAst,
     ) -> Result<String, Error> {
         namespace
             .iter()
             .filter_map(|decl| {
-                if let ast::Decl::Constant {
-                    ref name,
-                    ref ty,
-                    ref value,
-                    ref attributes,
-                } = *decl
-                {
+                if let ast::Decl::Constant { ref name, ref ty, ref value, ref attributes } = *decl {
                     Some((name, ty, value, attributes))
                 } else {
                     None
@@ -422,7 +394,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     }
 
     fn codegen_union_decl(
-        &self, namespace: &Vec<ast::Decl>, _ast: &BanjoAst,
+        &self,
+        namespace: &Vec<ast::Decl>,
+        _ast: &BanjoAst,
     ) -> Result<String, Error> {
         Ok(namespace
             .iter()
@@ -433,29 +407,20 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                     None
                 }
             })
-            .map(|name| {
-                format!(
-                    "typedef union {c_name} {c_name}_t;",
-                    c_name = to_c_name(name)
-                )
-            })
+            .map(|name| format!("typedef union {c_name} {c_name}_t;", c_name = to_c_name(name)))
             .collect::<Vec<_>>()
             .join("\n"))
     }
 
     fn codegen_union_defs(
-        &self, namespace: &Vec<ast::Decl>, ast: &BanjoAst,
+        &self,
+        namespace: &Vec<ast::Decl>,
+        ast: &BanjoAst,
     ) -> Result<String, Error> {
         namespace
             .iter()
             .filter_map(|decl| {
-                if let ast::Decl::Union {
-                    ref name,
-                    ref fields,
-                    ref attributes,
-                    ..
-                } = *decl
-                {
+                if let ast::Decl::Union { ref name, ref fields, ref attributes, .. } = *decl {
                     Some((name, fields, attributes))
                 } else {
                     None
@@ -497,7 +462,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     }
 
     fn codegen_struct_decl(
-        &self, namespace: &Vec<ast::Decl>, _ast: &BanjoAst,
+        &self,
+        namespace: &Vec<ast::Decl>,
+        _ast: &BanjoAst,
     ) -> Result<String, Error> {
         Ok(namespace
             .iter()
@@ -508,28 +475,20 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                     None
                 }
             })
-            .map(|name| {
-                format!(
-                    "typedef struct {c_name} {c_name}_t;",
-                    c_name = to_c_name(name)
-                )
-            })
+            .map(|name| format!("typedef struct {c_name} {c_name}_t;", c_name = to_c_name(name)))
             .collect::<Vec<_>>()
             .join("\n"))
     }
 
     fn codegen_struct_defs(
-        &self, namespace: &Vec<ast::Decl>, ast: &BanjoAst,
+        &self,
+        namespace: &Vec<ast::Decl>,
+        ast: &BanjoAst,
     ) -> Result<String, Error> {
         namespace
             .iter()
             .filter_map(|decl| {
-                if let ast::Decl::Struct {
-                    ref name,
-                    ref fields,
-                    ref attributes,
-                } = *decl
-                {
+                if let ast::Decl::Struct { ref name, ref fields, ref attributes } = *decl {
                     Some((name, fields, attributes))
                 } else {
                     None
@@ -571,7 +530,11 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     }
 
     fn codegen_protocol_def(
-        &self, name: &str, methods: &Vec<ast::Method>, protocol: bool, ast: &BanjoAst,
+        &self,
+        name: &str,
+        methods: &Vec<ast::Method>,
+        protocol: bool,
+        ast: &BanjoAst,
     ) -> Result<String, Error> {
         let fns = methods
             .iter()
@@ -603,7 +566,11 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     }
 
     fn codegen_helper_def(
-        &self, name: &str, methods: &Vec<ast::Method>, protocol: bool, ast: &BanjoAst,
+        &self,
+        name: &str,
+        methods: &Vec<ast::Method>,
+        protocol: bool,
+        ast: &BanjoAst,
     ) -> Result<String, Error> {
         methods
             .iter()
@@ -662,7 +629,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     }
 
     fn codegen_protocol_defs(
-        &self, namespace: &Vec<ast::Decl>, ast: &BanjoAst,
+        &self,
+        namespace: &Vec<ast::Decl>,
+        ast: &BanjoAst,
     ) -> Result<String, Error> {
         namespace
             .into_iter()
@@ -680,7 +649,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     }
 
     fn codegen_interface_defs(
-        &self, namespace: &Vec<ast::Decl>, ast: &BanjoAst,
+        &self,
+        namespace: &Vec<ast::Decl>,
+        ast: &BanjoAst,
     ) -> Result<String, Error> {
         namespace
             .into_iter()
@@ -698,7 +669,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     }
 
     fn codegen_protocol_decl(
-        &self, namespace: &Vec<ast::Decl>, _ast: &BanjoAst,
+        &self,
+        namespace: &Vec<ast::Decl>,
+        _ast: &BanjoAst,
     ) -> Result<String, Error> {
         Ok(namespace
             .into_iter()
@@ -714,16 +687,15 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     }
 
     fn codegen_interface_decl(
-        &self, namespace: &Vec<ast::Decl>, _ast: &BanjoAst,
+        &self,
+        namespace: &Vec<ast::Decl>,
+        _ast: &BanjoAst,
     ) -> Result<String, Error> {
         Ok(namespace
             .into_iter()
             .filter_map(filter_interface)
             .map(|(name, _, _)| {
-                format!(
-                    "typedef struct {c_name} {c_name}_t;",
-                    c_name = to_c_name(name)
-                )
+                format!("typedef struct {c_name} {c_name}_t;", c_name = to_c_name(name))
             })
             .collect::<Vec<_>>()
             .join("\n"))

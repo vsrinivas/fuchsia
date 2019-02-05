@@ -78,17 +78,12 @@ impl Attrs {
                     }
                 }
                 Rule::attribute_list => {
-                    let attr_string = inner_pair
-                        .as_str()
-                        .trim_start_matches('[')
-                        .trim_end_matches(']');
+                    let attr_string =
+                        inner_pair.as_str().trim_start_matches('[').trim_end_matches(']');
                     let attr_pairs = attr_string.split(",");
                     for ap in attr_pairs {
                         if !ap.contains("=") {
-                            attrs.0.push(Attr {
-                                key: String::from(ap.trim()),
-                                val: None,
-                            });
+                            attrs.0.push(Attr { key: String::from(ap.trim()), val: None });
                         } else {
                             let split: Vec<&str> = ap.split("=").collect();
                             attrs.0.push(Attr {
@@ -102,10 +97,7 @@ impl Attrs {
             }
         }
         if doc_string.is_some() {
-            attrs.0.push(Attr {
-                key: String::from("Doc"),
-                val: doc_string,
-            });
+            attrs.0.push(Attr { key: String::from("Doc"), val: doc_string });
         }
         Ok(attrs)
     }
@@ -164,31 +156,15 @@ pub enum Ty {
     UInt64,
     Float32,
     Float64,
-    Str {
-        size: Option<Constant>,
-        nullable: bool,
-    },
-    Vector {
-        ty: Box<Ty>,
-        size: Option<Constant>,
-        nullable: bool,
-    },
-    Array {
-        ty: Box<Ty>,
-        size: Constant,
-    },
+    Str { size: Option<Constant>, nullable: bool },
+    Vector { ty: Box<Ty>, size: Option<Constant>, nullable: bool },
+    Array { ty: Box<Ty>, size: Constant },
     Interface,
     Struct,
     Union,
     Enum,
-    Handle {
-        ty: HandleTy,
-        nullable: bool,
-    },
-    Ident {
-        id: String,
-        nullable: bool,
-    },
+    Handle { ty: HandleTy, nullable: bool },
+    Ident { id: String, nullable: bool },
 }
 
 impl fmt::Display for Ty {
@@ -486,45 +462,18 @@ impl Method {
                 e => return Err(ParseError::UnexpectedToken(e)),
             }
         }
-        Ok(Method {
-            attributes,
-            name,
-            in_params,
-            out_params,
-        })
+        Ok(Method { attributes, name, in_params, out_params })
     }
 }
 
 #[derive(PartialEq, Eq, Serialize, Debug, Hash)]
 pub enum Decl {
-    Struct {
-        attributes: Attrs,
-        name: String,
-        fields: Vec<StructField>,
-    },
-    Interface {
-        attributes: Attrs,
-        name: String,
-        methods: Vec<Method>,
-    },
+    Struct { attributes: Attrs, name: String, fields: Vec<StructField> },
+    Interface { attributes: Attrs, name: String, methods: Vec<Method> },
     Alias(String, String),
-    Constant {
-        attributes: Attrs,
-        name: String,
-        ty: Ty,
-        value: Constant,
-    },
-    Union {
-        attributes: Attrs,
-        name: String,
-        fields: Vec<UnionField>,
-    },
-    Enum {
-        attributes: Attrs,
-        name: String,
-        ty: Ty,
-        variants: Vec<EnumVariant>,
-    },
+    Constant { attributes: Attrs, name: String, ty: Ty, value: Constant },
+    Union { attributes: Attrs, name: String, fields: Vec<UnionField> },
+    Enum { attributes: Attrs, name: String, ty: Ty, variants: Vec<EnumVariant> },
 }
 
 #[derive(PartialEq, Serialize, Debug)]
@@ -599,7 +548,8 @@ impl BanjoAst {
     }
 
     pub fn parse_decl(
-        pair: Pair<'_, Rule>, _namespaces: &HashMap<String, Vec<Decl>>,
+        pair: Pair<'_, Rule>,
+        _namespaces: &HashMap<String, Vec<Decl>>,
     ) -> Result<Decl, ParseError> {
         match pair.as_rule() {
             Rule::struct_declaration => {
@@ -618,11 +568,7 @@ impl BanjoAst {
                         e => return Err(ParseError::UnexpectedToken(e)),
                     }
                 }
-                Ok(Decl::Struct {
-                    attributes,
-                    name,
-                    fields,
-                })
+                Ok(Decl::Struct { attributes, name, fields })
             }
             Rule::enum_declaration => {
                 let mut attributes = Attrs::default();
@@ -644,12 +590,7 @@ impl BanjoAst {
                         e => return Err(ParseError::UnexpectedToken(e)),
                     }
                 }
-                Ok(Decl::Enum {
-                    attributes,
-                    name,
-                    ty,
-                    variants,
-                })
+                Ok(Decl::Enum { attributes, name, ty, variants })
             }
             Rule::union_declaration => {
                 let mut attributes = Attrs::default();
@@ -667,11 +608,7 @@ impl BanjoAst {
                         e => return Err(ParseError::UnexpectedToken(e)),
                     }
                 }
-                Ok(Decl::Union {
-                    attributes,
-                    name,
-                    fields,
-                })
+                Ok(Decl::Union { attributes, name, fields })
             }
             // TODO extend to be more expressive for banjo
             Rule::interface_declaration => {
@@ -690,11 +627,7 @@ impl BanjoAst {
                         e => return Err(ParseError::UnexpectedToken(e)),
                     }
                 }
-                Ok(Decl::Interface {
-                    attributes,
-                    name,
-                    methods,
-                })
+                Ok(Decl::Interface { attributes, name, methods })
             }
             Rule::const_declaration => {
                 let mut attributes = Attrs::default();
@@ -718,12 +651,7 @@ impl BanjoAst {
                         e => return Err(ParseError::UnexpectedToken(e)),
                     }
                 }
-                Ok(Decl::Constant {
-                    attributes,
-                    name,
-                    ty,
-                    value,
-                })
+                Ok(Decl::Constant { attributes, name, ty, value })
             }
             e => Err(ParseError::UnexpectedToken(e)),
         }
@@ -896,11 +824,8 @@ impl BanjoAst {
                             }
                         }
                         Rule::using_decl => {
-                            let contents: Vec<&str> = inner_pair
-                                .clone()
-                                .into_inner()
-                                .map(|p| p.as_str())
-                                .collect();
+                            let contents: Vec<&str> =
+                                inner_pair.clone().into_inner().map(|p| p.as_str()).collect();
                             namespace.push(Decl::Alias(
                                 contents[0].to_string(),
                                 contents[1].to_string(),
@@ -938,10 +863,7 @@ impl BanjoAst {
             }
         }
 
-        let ast = BanjoAst {
-            primary_namespace: primary_namespace.unwrap(),
-            namespaces,
-        };
+        let ast = BanjoAst { primary_namespace: primary_namespace.unwrap(), namespaces };
         ast.validate_declaration_deps()?;
 
         Ok(ast)

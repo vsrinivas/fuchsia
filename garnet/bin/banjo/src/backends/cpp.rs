@@ -129,11 +129,7 @@ fn name_size(ty: &str) -> &'static str {
 
 fn get_first_param(ast: &BanjoAst, method: &ast::Method) -> Result<(bool, String), Error> {
     // Return parameter if a primitive type.
-    if method
-        .out_params
-        .get(0)
-        .map_or(false, |p| p.1.is_primitive())
-    {
+    if method.out_params.get(0).map_or(false, |p| p.1.is_primitive()) {
         Ok((true, ty_to_cpp_str(ast, false, &method.out_params[0].1)?))
     } else {
         Ok((false, "void".to_string()))
@@ -178,18 +174,19 @@ fn get_in_params(m: &ast::Method, wrappers: bool, ast: &BanjoAst) -> Result<Vec<
                         name = to_c_name(name)
                     ))
                 }
-                _ => Ok(format!(
-                    "{} {}",
-                    ty_to_cpp_str(ast, wrappers, ty).unwrap(),
-                    to_c_name(name)
-                )),
+                _ => {
+                    Ok(format!("{} {}", ty_to_cpp_str(ast, wrappers, ty).unwrap(), to_c_name(name)))
+                }
             }
         })
         .collect()
 }
 
 fn get_out_params(
-    m: &ast::Method, name: &str, wrappers: bool, ast: &BanjoAst,
+    m: &ast::Method,
+    name: &str,
+    wrappers: bool,
+    ast: &BanjoAst,
 ) -> Result<(Vec<String>, String), Error> {
     if m.attributes.has_attribute("Async") {
         return Ok((
@@ -252,11 +249,7 @@ fn get_in_args(m: &ast::Method, wrappers: bool, ast: &BanjoAst) -> Result<Vec<St
             }
             ast::Ty::Handle { .. } => {
                 if wrappers {
-                    format!(
-                        "{}({})",
-                        ty_to_cpp_str(ast, wrappers, ty).unwrap(),
-                        to_c_name(name)
-                    )
+                    format!("{}({})", ty_to_cpp_str(ast, wrappers, ty).unwrap(), to_c_name(name))
                 } else {
                     format!("{}.release()", to_c_name(name))
                 }
@@ -267,7 +260,9 @@ fn get_in_args(m: &ast::Method, wrappers: bool, ast: &BanjoAst) -> Result<Vec<St
 }
 
 fn get_out_args(
-    m: &ast::Method, client: bool, ast: &BanjoAst,
+    m: &ast::Method,
+    client: bool,
+    ast: &BanjoAst,
 ) -> Result<(Vec<String>, bool), Error> {
     if m.attributes.has_attribute("Async") {
         return Ok((vec!["callback".to_string(), "cookie".to_string()], false));
@@ -317,12 +312,7 @@ fn get_out_args(
 fn filter_interface<'a>(
     decl: &'a ast::Decl,
 ) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
-    if let ast::Decl::Interface {
-        ref name,
-        ref methods,
-        ref attributes,
-    } = *decl
-    {
+    if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == "\"ddk-interface\"" {
                 return Some((name, methods, attributes));
@@ -336,12 +326,7 @@ fn filter_interface<'a>(
 fn filter_protocol<'a>(
     decl: &'a ast::Decl,
 ) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
-    if let ast::Decl::Interface {
-        ref name,
-        ref methods,
-        ref attributes,
-    } = *decl
-    {
+    if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == "\"ddk-callback\"" || layout == "\"ddk-interface\"" {
                 None
@@ -368,7 +353,10 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
 
 impl<'a, W: io::Write> CppInternalBackend<'a, W> {
     fn codegen_decls(
-        &self, name: &str, methods: &Vec<ast::Method>, ast: &BanjoAst,
+        &self,
+        name: &str,
+        methods: &Vec<ast::Method>,
+        ast: &BanjoAst,
     ) -> Result<String, Error> {
         methods
             .iter()
@@ -376,11 +364,7 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
                 let (out_params, return_param) = get_out_params(&m, name, true, ast)?;
                 let in_params = get_in_params(&m, true, ast)?;
 
-                let params = in_params
-                    .into_iter()
-                    .chain(out_params)
-                    .collect::<Vec<_>>()
-                    .join(", ");
+                let params = in_params.into_iter().chain(out_params).collect::<Vec<_>>().join(", ");
 
                 Ok(format!(
                     include_str!("templates/cpp/internal_decl.h"),
@@ -397,7 +381,10 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
     }
 
     fn codegen_static_asserts(
-        &self, name: &str, methods: &Vec<ast::Method>, ast: &BanjoAst,
+        &self,
+        name: &str,
+        methods: &Vec<ast::Method>,
+        ast: &BanjoAst,
     ) -> Result<String, Error> {
         methods
             .iter()
@@ -405,11 +392,7 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
                 let (out_params, return_param) = get_out_params(&m, name, true, ast)?;
                 let in_params = get_in_params(&m, true, ast)?;
 
-                let params = in_params
-                    .into_iter()
-                    .chain(out_params)
-                    .collect::<Vec<_>>()
-                    .join(", ");
+                let params = in_params.into_iter().chain(out_params).collect::<Vec<_>>().join(", ");
 
                 Ok(format!(
                     include_str!("templates/cpp/internal_static_assert.h"),
@@ -430,16 +413,14 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
             .iter()
             .filter(|n| *n.0 != "zx")
             .flat_map(|n| {
-                n.1.iter()
-                    .filter_map(filter_protocol)
-                    .map(|(name, methods, _)| {
-                        Ok(format!(
-                            include_str!("templates/cpp/internal_protocol.h"),
-                            protocol_name = to_cpp_name(name),
-                            decls = self.codegen_decls(name, &methods, ast)?,
-                            static_asserts = self.codegen_static_asserts(name, &methods, ast)?
-                        ))
-                    })
+                n.1.iter().filter_map(filter_protocol).map(|(name, methods, _)| {
+                    Ok(format!(
+                        include_str!("templates/cpp/internal_protocol.h"),
+                        protocol_name = to_cpp_name(name),
+                        decls = self.codegen_decls(name, &methods, ast)?,
+                        static_asserts = self.codegen_static_asserts(name, &methods, ast)?
+                    ))
+                })
             })
             .collect::<Result<Vec<_>, Error>>()
             .map(|x| x.join("\n"))
@@ -448,10 +429,7 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
 
 impl<'a, W: io::Write> Backend<'a, W> for CppInternalBackend<'a, W> {
     fn codegen(&mut self, ast: BanjoAst) -> Result<(), Error> {
-        let namespace_include = &ast
-            .primary_namespace
-            .replace('.', "/")
-            .replace("ddk", "ddktl");
+        let namespace_include = &ast.primary_namespace.replace('.', "/").replace("ddk", "ddktl");
         self.w.write_fmt(format_args!(
             include_str!("templates/cpp/internal.h"),
             protocol_static_asserts = self.codegen_protocol(&ast)?,
@@ -476,7 +454,11 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
 impl<'a, W: io::Write> CppBackend<'a, W> {
     fn codegen_protocol_constructor_def(
-        &self, name: &str, _attributes: &ast::Attrs, methods: &Vec<ast::Method>, _ast: &BanjoAst,
+        &self,
+        name: &str,
+        _attributes: &ast::Attrs,
+        methods: &Vec<ast::Method>,
+        _ast: &BanjoAst,
     ) -> Result<String, Error> {
         let assignments = methods
             .into_iter()
@@ -501,7 +483,11 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
     }
 
     fn codegen_interface_constructor_def(
-        &self, name: &str, _attributes: &ast::Attrs, methods: &Vec<ast::Method>, _ast: &BanjoAst,
+        &self,
+        name: &str,
+        _attributes: &ast::Attrs,
+        methods: &Vec<ast::Method>,
+        _ast: &BanjoAst,
     ) -> Result<String, Error> {
         let assignments = methods
             .into_iter()
@@ -520,7 +506,10 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
     }
 
     fn codegen_protocol_defs(
-        &self, name: &str, methods: &Vec<ast::Method>, ast: &BanjoAst,
+        &self,
+        name: &str,
+        methods: &Vec<ast::Method>,
+        ast: &BanjoAst,
     ) -> Result<String, Error> {
         methods.iter().map(|m| {
             let mut accum = String::new();
@@ -581,7 +570,10 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
     }
 
     fn codegen_client_defs(
-        &self, name: &str, methods: &Vec<ast::Method>, ast: &BanjoAst,
+        &self,
+        name: &str,
+        methods: &Vec<ast::Method>,
+        ast: &BanjoAst,
     ) -> Result<String, Error> {
         methods
             .iter()
@@ -592,11 +584,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                 let (out_params, return_param) = get_out_params(&m, name, true, ast)?;
                 let in_params = get_in_params(&m, true, ast)?;
 
-                let params = in_params
-                    .into_iter()
-                    .chain(out_params)
-                    .collect::<Vec<_>>()
-                    .join(", ");
+                let params = in_params.into_iter().chain(out_params).collect::<Vec<_>>().join(", ");
 
                 accum.push_str(
                     format!(
@@ -635,7 +623,9 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
     }
 
     fn codegen_interfaces(
-        &self, namespaces: &Vec<ast::Decl>, ast: &BanjoAst,
+        &self,
+        namespaces: &Vec<ast::Decl>,
+        ast: &BanjoAst,
     ) -> Result<String, Error> {
         namespaces
             .iter()
@@ -657,7 +647,9 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
     }
 
     fn codegen_protocols(
-        &self, namespaces: &Vec<ast::Decl>, ast: &BanjoAst,
+        &self,
+        namespaces: &Vec<ast::Decl>,
+        ast: &BanjoAst,
     ) -> Result<String, Error> {
         namespaces
             .iter()
@@ -686,12 +678,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
             "zircon/types".to_string(),
         ]
         .into_iter()
-        .chain(
-            ast.namespaces
-                .iter()
-                .filter(|n| n.0 != "zx")
-                .map(|n| n.0.replace('.', "/")),
-        )
+        .chain(ast.namespaces.iter().filter(|n| n.0 != "zx").map(|n| n.0.replace('.', "/")))
         .map(|n| format!("#include <{}.h>", n))
         .chain(
             // Include handle headers for zx_handle_t wrapper types used in interfaces.
@@ -739,7 +726,9 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
     }
 
     fn codegen_examples(
-        &self, namespaces: &Vec<ast::Decl>, ast: &BanjoAst,
+        &self,
+        namespaces: &Vec<ast::Decl>,
+        ast: &BanjoAst,
     ) -> Result<String, Error> {
         namespaces
             .iter()
@@ -751,11 +740,8 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                         let (out_params, return_param) = get_out_params(&m, name, true, ast)?;
                         let in_params = get_in_params(&m, true, ast)?;
 
-                        let params = in_params
-                            .into_iter()
-                            .chain(out_params)
-                            .collect::<Vec<_>>()
-                            .join(", ");
+                        let params =
+                            in_params.into_iter().chain(out_params).collect::<Vec<_>>().join(", ");
 
                         Ok(format!(
                             "//     {return_param} {protocol_name}{function_name}({params});",
@@ -792,14 +778,9 @@ impl<'a, W: io::Write> Backend<'a, W> for CppBackend<'a, W> {
             primary_namespace = to_c_name(&ast.primary_namespace).as_str()
         ))?;
 
-        self.w.write_fmt(format_args!(
-            "{}",
-            self.codegen_interfaces(namespace, &ast)?
-        ))?;
-        self.w
-            .write_fmt(format_args!("{}", self.codegen_protocols(namespace, &ast)?))?;
-        self.w
-            .write_fmt(format_args!(include_str!("templates/cpp/footer.h")))?;
+        self.w.write_fmt(format_args!("{}", self.codegen_interfaces(namespace, &ast)?))?;
+        self.w.write_fmt(format_args!("{}", self.codegen_protocols(namespace, &ast)?))?;
+        self.w.write_fmt(format_args!(include_str!("templates/cpp/footer.h")))?;
 
         Ok(())
     }
