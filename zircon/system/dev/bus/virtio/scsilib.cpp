@@ -98,27 +98,52 @@ zx_status_t Disk::Bind() {
 
 void Disk::BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_cb,
                           void* cookie) {
-    if ((op->command & BLOCK_OP_MASK) != BLOCK_OP_READ) {
+    auto op_type = op->command & BLOCK_OP_MASK;
+    switch (op_type) {
+    case BLOCK_OP_READ: {
+        void* data = calloc(op->rw.length, block_size_);
+        Read16CDB cdb = {};
+        cdb.opcode = Opcode::READ_16;
+        cdb.logical_block_address = htobe64(op->rw.offset_dev);
+        cdb.transfer_length = htonl(op->rw.length);
+
+        auto status = controller_->ExecuteCommandSync(/*target=*/target_, /*lun=*/lun_,
+            /*cdb=*/{&cdb, sizeof(cdb)},
+            /*data_out=*/{nullptr, 0},
+            /*data_in=*/{data, op->rw.length * block_size_});
+        // TODO(ZX-2314): Pass VMO directly to ExecuteCommandSync to skip this copy.
+        if (status == ZX_OK) {
+            status = zx_vmo_write(op->rw.vmo, data, op->rw.offset_vmo,
+                                  op->rw.length * block_size_);
+        }
+        free(data);
+        completion_cb(cookie, status, op);
+        break;
+    }
+    case BLOCK_OP_WRITE: {
+        void* data = calloc(op->rw.length, block_size_);
+        Write16CDB cdb = {};
+        cdb.opcode = Opcode::WRITE_16;
+        cdb.logical_block_address = htobe64(op->rw.offset_dev);
+        cdb.transfer_length = htonl(op->rw.length);
+        // Copy data from VMO to temporary buffer for writing.
+        // TODO(ZX-2314): Eliminate this copy by passing the VMO/offset to the controller.
+        auto status = zx_vmo_read(op->rw.vmo, data, op->rw.offset_vmo,
+                                  op->rw.length * block_size_);
+        if (status == ZX_OK) {
+            status = controller_->ExecuteCommandSync(/*target=*/target_, /*lun=*/lun_,
+                /*cdb=*/{&cdb, sizeof(cdb)},
+                /*data_out=*/{data, op->rw.length * block_size_},
+                /*data_in=*/{nullptr, 0});
+        }
+        free(data);
+        completion_cb(cookie, status, op);
+        break;
+    }
+    default:
         completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, op);
-        return;
+        break;
     }
-
-    void* data = calloc(op->rw.length, block_size_);
-    Read16CDB cdb = {};
-    cdb.opcode = Opcode::READ_16;
-    cdb.logical_block_address = htobe64(op->rw.offset_dev);
-    cdb.transfer_length = htonl(op->rw.length);
-
-    auto status = controller_->ExecuteCommandSync(/*target=*/target_, /*lun=*/lun_,
-        /*cdb=*/{&cdb, sizeof(cdb)},
-        /*data_out=*/{nullptr, 0},
-        /*data_in=*/{data, op->rw.length * block_size_});
-    // TODO(ZX-2314): Pass VMO directly to ExecuteCommandSync to skip this copy.
-    if (status == ZX_OK) {
-        status = zx_vmo_write(op->rw.vmo, data, op->rw.offset_vmo, op->rw.length * block_size_);
-    }
-    free(data);
-    completion_cb(cookie, status, op);
 }
 
 Disk::Disk(Controller* controller, zx_device_t* parent, uint8_t target, uint16_t lun)

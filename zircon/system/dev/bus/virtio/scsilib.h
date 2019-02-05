@@ -155,6 +155,21 @@ struct Read16CDB {
 
 static_assert(sizeof(Read16CDB) == 16, "Read 16 CDB must be 16 bytes");
 
+struct Write16CDB {
+    Opcode opcode;
+    // dpo_fua(4) - DPO - Disable Page Out
+    // dpo_fua(3) - FUA - Write to medium
+    // dpo_fua(1) - FUA_NV - If NV_SUP is 1, prefer write to nonvolatile cache.
+    uint8_t dpo_fua;
+    // Network byte order
+    uint64_t logical_block_address;
+    uint32_t transfer_length;
+    uint8_t reserved;
+    uint8_t control;
+} __PACKED;
+
+static_assert(sizeof(Write16CDB) == 16, "Write 16 CDB must be 16 bytes");
+
 class Disk;
 using DeviceType = ddk::Device<Disk, ddk::GetSizable, ddk::Unbindable>;
 
@@ -183,13 +198,11 @@ class Disk : public DeviceType, public ddk::BlockImplProtocol<Disk, ddk::base_pr
     zx_off_t DdkGetSize() { return blocks_ * block_size_; }
 
     // ddk::BlockImplProtocol functions.
-    // TODO(ZX-2314): Implement these two functions.
     void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
         info_out->block_size = block_size_;
         info_out->block_count = blocks_;
         info_out->max_transfer_size = block_size_;  // TODO(ZX-2314): Correct this size.
         info_out->flags = (removable_) ? BLOCK_FLAG_REMOVABLE : 0;
-        info_out->flags |= BLOCK_FLAG_READONLY;
     }
     void BlockImplQueue(block_op_t* operation, block_impl_queue_callback completion_cb,
                         void* cookie);
