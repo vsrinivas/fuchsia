@@ -33,7 +33,6 @@ def main():
         'name': args.name,
         'root': args.root,
         'sources': args.sources,
-        'files': args.sources,
     }
 
     deps = []

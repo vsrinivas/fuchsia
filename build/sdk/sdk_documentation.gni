@@ -46,7 +46,6 @@ template("sdk_documentation") {
         type = "documentation"
         name = invoker.name
         docs = sdk_files
-        root = "docs"
       }
     }
   }

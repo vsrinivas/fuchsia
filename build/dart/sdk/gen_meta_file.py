@@ -54,7 +54,6 @@ def main():
         'name': args.name,
         'root': args.root,
         'sources': args.sources,
-        'files': args.sources,
     }
 
     third_party_deps = []

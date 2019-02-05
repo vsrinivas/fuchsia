@@ -41,6 +41,7 @@ def main():
         'sources': args.sources,
         'headers': args.headers,
         'include_dir': args.include_dir,
+        'banjo_deps': [],
     }
 
     deps = []

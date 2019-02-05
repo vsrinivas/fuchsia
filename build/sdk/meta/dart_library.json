@@ -18,6 +18,10 @@
           "description": "Name of the library",
           "$ref": "#/definitions/package_name"
         },
+        "root": {
+          "description": "The root of the element in the SDK",
+          "type": "string"
+        },
         "sources": {
           "description": "List of library sources",
           "type": "array",
@@ -50,11 +54,14 @@
       "required": [
         "deps",
         "fidl_deps",
-        "name",
+        "root",
         "sources",
         "third_party_deps",
+
+        "name",
         "type"
-      ]
+      ],
+      "additionalProperties": false
     }
   ],
   "definitions": {

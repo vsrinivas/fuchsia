@@ -23,9 +23,12 @@
         }
       },
       "required": [
-        "type",
-        "docs"
-      ]
+        "docs",
+
+        "name",
+        "type"
+      ],
+      "additionalProperties": false
     }
   ]
 }

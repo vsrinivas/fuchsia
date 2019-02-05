@@ -33,9 +33,12 @@
         }
       },
       "required": [
-        "type",
-        "file"
-      ]
+        "file",
+
+        "name",
+        "type"
+      ],
+      "additionalProperties": false
     }
   ]
 }

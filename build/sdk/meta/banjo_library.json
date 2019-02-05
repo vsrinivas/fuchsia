@@ -27,10 +27,12 @@
         }
       },
       "required": [
-        "name",
         "sources",
+
+        "name",
         "type"
-      ]
+      ],
+      "additionalProperties": false
     }
   ]
 }

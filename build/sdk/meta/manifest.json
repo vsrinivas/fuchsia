@@ -32,9 +32,9 @@
       }
     }
   },
-  "additionalProperties": false,
   "required": [
     "arch",
     "parts"
-  ]
+  ],
+  "additionalProperties": false
 }

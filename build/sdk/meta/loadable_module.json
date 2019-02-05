@@ -45,10 +45,12 @@
       },
       "required": [
         "binaries",
-        "name",
         "resources",
+
+        "name",
         "type"
-      ]
+      ],
+      "additionalProperties": false
     }
   ],
   "definitions": {

@@ -51,7 +51,6 @@ version_content = {
 metadata = {
   type = "sysroot"
   name = "sysroot"
-  root = "pkg/sysroot"
   versions = {}
   if (target_cpu == "arm64") {
     versions.arm64 = version_content

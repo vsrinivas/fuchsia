@@ -1638,7 +1638,6 @@ foreach(image, images) {
         value = {
           type = "image"
           name = "${image.sdk}"
-          root = "images"
           file = {
             if (target_cpu == "x64") {
               x64 = file_content

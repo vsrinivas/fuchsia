@@ -79,8 +79,6 @@ metadata = {
 
   fidl_deps = []
   banjo_deps = []
-
-  files = sources + headers
 }
 
 sdk_atom("${data.name}_sdk") {

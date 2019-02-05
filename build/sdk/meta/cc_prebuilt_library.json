@@ -18,6 +18,10 @@
           "description": "Name of the library",
           "$ref": "common.json#/definitions/cc_library_name"
         },
+        "root": {
+          "description": "The root of the element in the SDK",
+          "type": "string"
+        },
         "format": {
           "description": "The distribution format of the binaries",
           "type": "string",
@@ -67,9 +71,13 @@
         "deps",
         "format",
         "headers",
+        "include_dir",
+        "root",
+
         "name",
         "type"
-      ]
+      ],
+      "additionalProperties": false
     }
   ],
   "definitions": {

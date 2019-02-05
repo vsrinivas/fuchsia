@@ -40,10 +40,12 @@
         }
       },
       "required": [
+        "versions",
+
         "name",
-        "type",
-        "versions"
-      ]
+        "type"
+      ],
+      "additionalProperties": false
     }
   ],
   "definitions": {
@@ -95,7 +97,8 @@
         "link_libs",
         "dist_libs",
         "debug_libs"
-      ]
+      ],
+      "additionalProperties": false
     }
   }
 }
