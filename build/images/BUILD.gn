@@ -585,6 +585,7 @@ images += [
     ]
     sdk = "fuchsia.zbi"
     updater = "zbi"
+    installer = "fuchsia.zbi"
     json = {
       name = "zircon-a"
       type = "zbi"
@@ -675,6 +676,7 @@ images += [
       "$root_out_dir/zedboot.zbi",
     ]
     updater = "zedboot"
+    installer = "zedboot.zbi"
   },
 ]
 
@@ -897,7 +899,6 @@ if (target_cpu != "arm64") {
     },
   ]
 
-  # The installer also wants the zedboot vboot image.
   images += [
     {
       deps = [
@@ -906,7 +907,6 @@ if (target_cpu != "arm64") {
       sources = [
         "$root_out_dir/zedboot.vboot",
       ]
-      installer = "zedboot.vboot"
     },
   ]
 
@@ -930,7 +930,7 @@ if (target_cpu != "arm64") {
         type = "blk"
         bootserver_pave = [ "--efi" ]
       }
-      installer = "local.esp.blk"
+      installer = "fuchsia.esp.blk"
       sdk = "local.esp.blk"
       updater = "efi"
       public = [
@@ -944,7 +944,6 @@ if (target_cpu != "arm64") {
       sources = [
         "$root_out_dir/zedboot.esp.blk",
       ]
-      installer = "zedboot.esp.blk"
     },
   ]
 }

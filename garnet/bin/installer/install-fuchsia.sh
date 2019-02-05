@@ -8,7 +8,7 @@ INSTALL_PATH="/install"
 PAVER="/boot/bin/install-disk-image"
 
 # TODO(raggi): template this from the build instead.
-IMAGES="fvm.sparse.blk local.esp.blk zircon.vboot"
+IMAGES="fvm.sparse.blk fuchsia.esp.blk fuchsia.zbi zircon.vboot"
 
 if [ ! -e "${PAVER}" ]; then
   echo "Paver \"install-disk-image\" is missing!"
@@ -36,6 +36,12 @@ for file in $IMAGES; do
       ;;
     *.vboot)
       typ="kernc"
+      ;;
+    fuchsia.zbi)
+      typ="zircona"
+      ;;
+    zedboot.zbi)
+      typ="zirconr"
       ;;
     *)
       echo "Unknown paver image type for $file" >&2
