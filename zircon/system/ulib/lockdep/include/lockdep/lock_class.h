@@ -191,7 +191,7 @@ protected:
         : id_{id}, lock_(fbl::forward<Args>(args)...) {}
 
 private:
-    template <typename, typename>
+    template <typename, typename, typename>
     friend class Guard;
     template <size_t, typename, typename>
     friend class GuardMultiple;
@@ -244,7 +244,7 @@ protected:
         : id_{id} {}
 
 private:
-    template <typename, typename>
+    template <typename, typename, typename>
     friend class Guard;
     template <size_t, typename, typename>
     friend class GuardMultiple;

@@ -6,11 +6,11 @@
 
 #include "tests.h"
 
-#include <stdint.h>
 #include <fbl/mutex.h>
 #include <lib/unittest/unittest.h>
 #include <lockdep/guard_multiple.h>
 #include <lockdep/lockdep.h>
+#include <stdint.h>
 
 #if WITH_LOCK_DEP_TESTS
 
@@ -39,7 +39,7 @@ struct Spinlock : fbl::Mutex {
         return g_try_lock_succeeds;
     }
     bool TryAcquireIrqSave(uint64_t* flags) __TA_TRY_ACQUIRE(true) {
-        (void) flags;
+        (void)flags;
         if (g_try_lock_succeeds)
             Acquire();
         return g_try_lock_succeeds;
@@ -53,10 +53,14 @@ LOCK_DEP_TRAITS(spinlock_t, lockdep::LockFlagsIrqSafe);
 
 void spinlock_lock(spinlock_t* /*lock*/) {}
 void spinlock_unlock(spinlock_t* /*lock*/) {}
-bool spinlock_try_lock(spinlock_t* /*lock*/) { return true; }
+bool spinlock_try_lock(spinlock_t* /*lock*/) {
+    return true;
+}
 void spinlock_lock_irqsave(spinlock_t* /*lock*/, uint64_t* /*flags*/) {}
 void spinlock_unlock_irqrestore(spinlock_t* /*lock*/, uint64_t /*flags*/) {}
-bool spinlock_try_lock_irqsave(spinlock_t* /*lock*/, uint64_t* /*flags*/) { return true; }
+bool spinlock_try_lock_irqsave(spinlock_t* /*lock*/, uint64_t* /*flags*/) {
+    return true;
+}
 
 // Type tags to select Guard<> lock policies for Spinlock and spinlock_t.
 struct IrqSave {};
@@ -154,7 +158,7 @@ struct spinlock_t_TryNoIrqSave {
 
     static bool Acquire(spinlock_t* lock, State*) {
         spinlock_lock(lock);
-      return g_try_lock_succeeds;
+        return g_try_lock_succeeds;
     }
     static void Release(spinlock_t* lock, State*) {
         spinlock_unlock(lock);
@@ -170,7 +174,7 @@ struct spinlock_t_TryIrqSave {
 
     static bool Acquire(spinlock_t* lock, State* state) {
         spinlock_lock_irqsave(lock, &state->flags);
-      return g_try_lock_succeeds;
+        return g_try_lock_succeeds;
     }
     static void Release(spinlock_t* lock, State* state) {
         spinlock_unlock_irqrestore(lock, state->flags);
@@ -187,6 +191,39 @@ struct Nestable : fbl::Mutex {
     using fbl::Mutex::Mutex;
 };
 LOCK_DEP_TRAITS(Nestable, lockdep::LockFlagsNestable);
+
+struct __TA_CAPABILITY("mutex") ReadWriteLock {
+    bool AcquireWrite() __TA_ACQUIRE() {
+        return true;
+    }
+    bool AcquireRead() __TA_ACQUIRE_SHARED() {
+        return true;
+    }
+    void Release() __TA_RELEASE() {}
+
+    struct Read {
+        struct State {};
+        struct Shared {};
+        static bool Acquire(ReadWriteLock* lock, State*) __TA_ACQUIRE_SHARED(lock) {
+            return lock->AcquireRead();
+        }
+        static void Release(ReadWriteLock* lock, State*) __TA_RELEASE(lock) {
+            lock->Release();
+        }
+    };
+
+    struct Write {
+        struct State {};
+        static bool Acquire(ReadWriteLock* lock, State*) __TA_ACQUIRE(lock) {
+            return lock->AcquireWrite();
+        }
+        static void Release(ReadWriteLock* lock, State*) __TA_RELEASE(lock) {
+            lock->Release();
+        }
+    };
+};
+LOCK_DEP_POLICY_OPTION(ReadWriteLock, ReadWriteLock::Read, ReadWriteLock::Read);
+LOCK_DEP_POLICY_OPTION(ReadWriteLock, ReadWriteLock::Write, ReadWriteLock::Write);
 
 struct Foo {
     LOCK_DEP_INSTRUMENT(Foo, Mutex) lock;
@@ -208,6 +245,7 @@ struct Baz {
 
     void TestRequire() __TA_REQUIRES(lock) {}
     void TestExclude() __TA_EXCLUDES(lock) {}
+    void TestShared() __TA_REQUIRES_SHARED(lock) {}
 };
 
 struct MultipleLocks {
@@ -240,7 +278,7 @@ lockdep::LockResult GetLastResult() {
 void ResetTrackingState() {
 #if WITH_LOCK_DEP
     for (auto& state : lockdep::LockClassState::Iter())
-      state.Reset();
+        state.Reset();
 #endif
 }
 
@@ -251,23 +289,24 @@ static bool lock_dep_dynamic_analysis_tests() {
 
     using lockdep::Guard;
     using lockdep::GuardMultiple;
+    using lockdep::LockClassState;
     using lockdep::LockResult;
     using lockdep::ThreadLockState;
-    using lockdep::LockClassState;
     using test::Bar;
     using test::Baz;
     using test::Foo;
     using test::GetLastResult;
     using test::IrqSave;
-    using test::TryIrqSave;
     using test::MultipleLocks;
     using test::Mutex;
     using test::Nestable;
     using test::NoIrqSave;
-    using test::TryNoIrqSave;
     using test::Number;
+    using test::ReadWriteLock;
     using test::Spinlock;
     using test::spinlock_t;
+    using test::TryIrqSave;
+    using test::TryNoIrqSave;
 
     // Reset the tracking state before each test run.
     test::ResetTrackingState();
@@ -566,6 +605,98 @@ static bool lock_dep_dynamic_analysis_tests() {
         }
     }
 
+    // Test read/write lock compiles and basic guard options.
+    {
+        Baz<ReadWriteLock> a{};
+        Baz<ReadWriteLock> b{};
+
+        {
+            Guard<ReadWriteLock, ReadWriteLock::Read> guard{&a.lock};
+            EXPECT_TRUE(guard, "");
+            guard.Release();
+            EXPECT_FALSE(guard, "");
+        }
+
+        {
+            Guard<ReadWriteLock, ReadWriteLock::Read> guard{&b.lock};
+            EXPECT_TRUE(guard, "");
+            guard.Release();
+            EXPECT_FALSE(guard, "");
+        }
+
+        {
+            Guard<ReadWriteLock, ReadWriteLock::Write> guard{&a.lock};
+            EXPECT_TRUE(guard, "");
+            guard.Release();
+            EXPECT_FALSE(guard, "");
+        }
+
+        {
+            Guard<ReadWriteLock, ReadWriteLock::Write> guard{&b.lock};
+            EXPECT_TRUE(guard, "");
+            guard.Release();
+            EXPECT_FALSE(guard, "");
+        }
+    }
+
+    // Test read/write lock order invariants.
+    {
+        Baz<ReadWriteLock> a{};
+        Baz<ReadWriteLock> b{};
+
+        {
+            Guard<ReadWriteLock, ReadWriteLock::Read> guard_a{&a.lock};
+            EXPECT_TRUE(guard_a, "");
+            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+            Guard<ReadWriteLock, ReadWriteLock::Read> guard_b{&b.lock};
+            EXPECT_TRUE(guard_b, "");
+            EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
+        }
+
+        {
+            Guard<ReadWriteLock, ReadWriteLock::Read> guard_a{&a.lock};
+            EXPECT_TRUE(guard_a, "");
+            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+            Guard<ReadWriteLock, ReadWriteLock::Write> guard_b{&b.lock};
+            EXPECT_TRUE(guard_b, "");
+            EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
+        }
+
+        {
+            Guard<ReadWriteLock, ReadWriteLock::Write> guard_a{&a.lock};
+            EXPECT_TRUE(guard_a, "");
+            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+            Guard<ReadWriteLock, ReadWriteLock::Read> guard_b{&b.lock};
+            EXPECT_TRUE(guard_b, "");
+            EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
+        }
+
+        {
+            Guard<ReadWriteLock, ReadWriteLock::Write> guard_a{&a.lock};
+            EXPECT_TRUE(guard_a, "");
+            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+
+            Guard<ReadWriteLock, ReadWriteLock::Write> guard_b{&b.lock};
+            EXPECT_TRUE(guard_b, "");
+            EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(), "");
+        }
+
+        {
+            GuardMultiple<2, ReadWriteLock, ReadWriteLock::Read> guard{&a.lock, &b.lock};
+            EXPECT_TRUE(guard, "");
+            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+        }
+
+        {
+            GuardMultiple<2, ReadWriteLock, ReadWriteLock::Write> guard{&a.lock, &b.lock};
+            EXPECT_TRUE(guard, "");
+            EXPECT_EQ(LockResult::Success, test::GetLastResult(), "");
+        }
+    }
+
     // Test that each lock in a structure behaves as an individual lock class.
     {
         MultipleLocks value{};
@@ -672,6 +803,7 @@ static bool lock_dep_static_analysis_tests() {
     using test::Mutex;
     using test::Nestable;
     using test::Number;
+    using test::ReadWriteLock;
     using test::Spinlock;
     using test::TryNoIrqSave;
 
@@ -709,6 +841,25 @@ static bool lock_dep_static_analysis_tests() {
         Guard<Mutex> guard_a{&a.lock};
         guard_a.Release();
         Guard<Mutex> guard_b{&a.lock};
+    }
+
+    // Test shared.
+    {
+        Baz<ReadWriteLock> a{};
+
+        Guard<ReadWriteLock, ReadWriteLock::Read> guard_a{&a.lock};
+        a.TestShared();
+#if TEST_WILL_NOT_COMPILE || 0
+        a.TestRequire();
+#endif
+    }
+
+    {
+        Baz<ReadWriteLock> a{};
+
+        Guard<ReadWriteLock, ReadWriteLock::Write> guard_a{&a.lock};
+        a.TestShared();
+        a.TestRequire();
     }
 
     END_TEST;
