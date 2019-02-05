@@ -205,15 +205,18 @@ static zx_status_t build_data_zbi(const GuestConfig& cfg,
   }
   // Memory config.
   std::vector<zbi_mem_range_t> mem_config;
-  auto yield = [&mem_config](auto range) {
+  auto yield = [&mem_config](zx_gpaddr_t addr, size_t size) {
     mem_config.emplace_back(zbi_mem_range_t{
-        .paddr = range.addr,
-        .length = range.size,
+        .paddr = addr,
+        .length = size,
         .type = ZBI_MEM_RANGE_RAM,
     });
   };
   for (const MemorySpec& spec : cfg.memory()) {
-    dev_mem.YieldInverseRange(spec.base, spec.size, yield);
+    // Do not use device memory when yielding normal memory.
+    if (spec.policy != MemoryPolicy::HOST_DEVICE) {
+      dev_mem.YieldInverseRange(spec.base, spec.size, yield);
+    }
   }
 
   // Zircon only supports a limited number of peripheral ranges so for any

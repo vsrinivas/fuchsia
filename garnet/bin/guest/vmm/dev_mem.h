@@ -41,13 +41,13 @@ class DevMem {
     for (const auto& range : ranges) {
       zx_gpaddr_t next_top = std::min(range.addr, base + size);
       if (next_top > prev) {
-        yield(Range{.addr = prev, .size = next_top - prev});
+        yield(prev, next_top - prev);
       }
       prev = range.addr + range.size;
     }
-    zx_gpaddr_t next_top = std::min(prev, base + size);
+    zx_gpaddr_t next_top = std::max(prev, base + size);
     if (next_top > prev) {
-      yield(Range{.addr = prev, .size = next_top - prev});
+      yield(prev, next_top - prev);
     }
   }
 

@@ -439,11 +439,11 @@ static zx_status_t load_device_tree(const int dtb_fd, const GuestConfig& cfg,
     FXL_LOG(ERROR) << "Failed to find root node in device tree";
     return ZX_ERR_BAD_STATE;
   }
-  auto yield = [&status, dtb, root_off](auto range) {
+  auto yield = [&status, dtb, root_off](zx_gpaddr_t addr, size_t size) {
     if (status != ZX_OK) {
       return;
     }
-    std::string name = fxl::StringPrintf("memory@%lx", range.addr);
+    std::string name = fxl::StringPrintf("memory@%lx", addr);
     int memory_off = fdt_add_subnode(dtb, root_off, name.c_str());
     if (memory_off < 0) {
       status = ZX_ERR_BAD_STATE;
@@ -454,12 +454,15 @@ static zx_status_t load_device_tree(const int dtb_fd, const GuestConfig& cfg,
       status = ZX_ERR_BAD_STATE;
       return;
     }
-    status = add_memory_entry(dtb, memory_off, range.addr, range.size);
+    status = add_memory_entry(dtb, memory_off, addr, size);
   };
   for (const MemorySpec& spec : cfg.memory()) {
-    dev_mem.YieldInverseRange(spec.base, spec.size, yield);
-    if (status != ZX_OK) {
-      return status;
+    // Do not use device memory when yielding normal memory.
+    if (spec.policy != MemoryPolicy::HOST_DEVICE) {
+      dev_mem.YieldInverseRange(spec.base, spec.size, yield);
+      if (status != ZX_OK) {
+        return status;
+      }
     }
   }
 

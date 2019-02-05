@@ -22,7 +22,8 @@ E820Map::E820Map(size_t mem_size, const DevMem &dev_mem) {
   entries.emplace_back(
       e820entry_t{kAddr512kb, kAddr1mb - kAddr512kb, E820_RESERVED});
   // 1mb to min(size, 1mb) is available.
-  dev_mem.YieldInverseRange(kAddr1mb, mem_size - kAddr1mb, [this](auto range) {
-    entries.emplace_back(e820entry_t{range.addr, range.size, E820_RAM});
-  });
+  dev_mem.YieldInverseRange(
+      kAddr1mb, mem_size - kAddr1mb, [this](zx_gpaddr_t addr, size_t size) {
+        entries.emplace_back(e820entry_t{addr, size, E820_RAM});
+      });
 }
