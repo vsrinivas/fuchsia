@@ -56,7 +56,7 @@ constexpr camera_sensor_t isp_mipi[] = {
     {
         .vid = PDEV_VID_AMLOGIC,
         .pid = PDEV_PID_AMLOGIC_T931,
-        .did = PDEV_DID_AMLOGIC_MIPI,
+        .did = PDEV_DID_AMLOGIC_MIPI_CSI,
     },
 };
 
