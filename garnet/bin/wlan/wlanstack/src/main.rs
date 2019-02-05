@@ -36,6 +36,8 @@ use std::sync::Arc;
 use crate::device::{IfaceDevice, IfaceMap, PhyDevice, PhyMap};
 use crate::watchable_map::MapEvent;
 
+const COBALT_CONFIG_PATH: &'static str = "/pkg/data/wlan_metrics_registry.pb";
+const COBALT_BUFFER_SIZE: usize = 100;
 const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 
 static LOGGER: logger::Logger = logger::Logger;
@@ -65,7 +67,8 @@ fn main() -> Result<(), Error> {
     let ifaces = Arc::new(ifaces);
 
     let phy_server = device::serve_phys(phys.clone()).map_ok(|x| x.into_any());
-    let (cobalt_sender, cobalt_reporter) = fuchsia_cobalt::serve();
+    let (cobalt_sender, cobalt_reporter) =
+        fuchsia_cobalt::serve(COBALT_BUFFER_SIZE, COBALT_CONFIG_PATH);
     let telemetry_server =
         telemetry::report_telemetry_periodically(ifaces.clone(), cobalt_sender.clone());
     let iface_server = device::serve_ifaces(ifaces.clone(), cobalt_sender).map_ok(|x| x.into_any());

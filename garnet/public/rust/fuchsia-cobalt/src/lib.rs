@@ -23,10 +23,6 @@ use {
     },
 };
 
-const COBALT_CONFIG_PATH: &'static str = "/pkg/data/wlan_metrics_registry.pb";
-
-const COBALT_BUFFER_SIZE: usize = 100;
-
 enum EventValue {
     Count {
         event_code: u32,
@@ -91,23 +87,23 @@ impl CobaltSender {
     }
 }
 
-pub fn serve() -> (CobaltSender, impl Future<Output = ()>) {
-    let (sender, receiver) = mpsc::channel(COBALT_BUFFER_SIZE);
+pub fn serve(buffer_size: usize, config_path: &str) -> (CobaltSender, impl Future<Output = ()>) {
+    let (sender, receiver) = mpsc::channel(buffer_size);
     let sender = CobaltSender {
         sender,
         is_blocked: Arc::new(AtomicBool::new(false)),
     };
-    let fut = send_cobalt_events(receiver);
+    let fut = send_cobalt_events(config_path.to_string(), receiver);
     (sender, fut)
 }
 
-async fn get_cobalt_logger() -> Result<LoggerProxy, Error> {
+async fn get_cobalt_logger(config_path: String) -> Result<LoggerProxy, Error> {
     let (logger_proxy, server_end) =
         fidl::endpoints::create_proxy().context("Failed to create endpoints")?;
     let logger_factory = fuchsia_app::client::connect_to_service::<LoggerFactoryMarker>()
         .context("Failed to connect to the Cobalt LoggerFactory")?;
 
-    let mut cobalt_config = File::open(COBALT_CONFIG_PATH)?;
+    let mut cobalt_config = File::open(config_path)?;
     let vmo = fdio::get_vmo_copy_from_file(&cobalt_config)?;
     let size = cobalt_config.seek(std::io::SeekFrom::End(0))?;
 
@@ -134,8 +130,8 @@ fn handle_cobalt_factory_result(
     }
 }
 
-async fn send_cobalt_events(mut receiver: mpsc::Receiver<Event>) {
-    let logger = match await!(get_cobalt_logger()) {
+async fn send_cobalt_events(cobalt_config_path: String, mut receiver: mpsc::Receiver<Event>) {
+    let logger = match await!(get_cobalt_logger(cobalt_config_path)) {
         Ok(logger) => logger,
         Err(e) => {
             error!("Error obtaining a Cobalt Logger: {}", e);
