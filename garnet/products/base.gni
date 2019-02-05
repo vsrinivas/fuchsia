@@ -1,12 +1,7 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-monolith = [ "garnet/packages/products/base" ]
+# DEPRECATED - this import path is deprecated, please use //products/base.gni.
 
-preinstall = []
-
-available = [
-  "garnet/packages/prod/vboot_reference",
-  "garnet/packages/tools/bluetooth",
-]
+import("//products/base.gni")

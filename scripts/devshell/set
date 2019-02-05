@@ -143,7 +143,7 @@
 ##   -> architecture: x64
 ##      build directory: out/kitchensink
 ##      board: topaz/boards/x64.gni
-##      product: topaz/products/ermine.gni
+##      product: products/ermine.gni
 ##      available: topaz/packages/kitchen_sink (all other packages)
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
@@ -153,6 +153,12 @@ function guess_config_within_layer {
   local config_name="$2"
   local __resultvar="$3"
 
+  # Check if the configuration is in the top-level location
+  guessed_config="${config_type}/${config_name}.gni"
+  if [[ -a "${FUCHSIA_DIR}/${guessed_config}" ]]; then
+    eval "${__resultvar}"="${guessed_config}"
+    return
+  fi
   # Guess the petal we're using. We'll search at this petal and below for
   # config matching the type and short name
   local current_petal
