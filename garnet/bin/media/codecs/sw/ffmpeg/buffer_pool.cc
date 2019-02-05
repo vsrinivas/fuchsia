@@ -4,6 +4,10 @@
 
 #include "buffer_pool.h"
 
+extern "C" {
+#include "libavutil/imgutils.h"
+}
+
 #include <lib/fxl/logging.h>
 #include <lib/media/codec_impl/fourcc.h>
 
@@ -22,18 +26,21 @@ AVPixelFormat FourccToPixelFormat(uint32_t fourcc) {
 
 BufferPool::Status BufferPool::AttachFrameToBuffer(
     AVFrame* frame,
-    const AvCodecContext::DecodedOutputInfo& decoded_output_info, int flags) {
+    const FrameBufferRequest& frame_buffer_request, int flags,
+    const CodecBuffer* buffer) {
   AVPixelFormat pix_fmt =
-      FourccToPixelFormat(decoded_output_info.format.fourcc);
+      FourccToPixelFormat(frame_buffer_request.format.fourcc);
   if (pix_fmt == AV_PIX_FMT_NONE) {
     return UNSUPPORTED_FOURCC;
   }
 
-  std::optional<const CodecBuffer*> maybe_buffer = free_buffers_.WaitForElement();
-  if (!maybe_buffer) {
-    return SHUTDOWN;
+  if (!buffer) {
+    std::optional<const CodecBuffer*> maybe_buffer = free_buffers_.WaitForElement();
+    if (!maybe_buffer) {
+      return SHUTDOWN;
+    }
+    buffer = *maybe_buffer;
   }
-  auto buffer = *maybe_buffer;
 
   AVBufferRef* buffer_ref = av_buffer_create(
       buffer->buffer_base(), static_cast<int>(buffer->buffer_size()),
@@ -43,14 +50,14 @@ BufferPool::Status BufferPool::AttachFrameToBuffer(
     std::lock_guard<std::mutex> lock(lock_);
     buffers_in_use_[buffer->buffer_base()] = {
         .buffer = buffer,
-        .bytes_used = decoded_output_info.buffer_bytes_needed,
+        .bytes_used = frame_buffer_request.buffer_bytes_needed,
     };
   }
 
   int status = av_image_fill_arrays(
       frame->data, frame->linesize, buffer_ref->data, pix_fmt,
-      decoded_output_info.format.primary_width_pixels,
-      decoded_output_info.format.primary_height_pixels, 1);
+      frame_buffer_request.format.primary_width_pixels,
+      frame_buffer_request.format.primary_height_pixels, 1);
   if (status < 0) {
     return FILL_ARRAYS_FAILED;
   }

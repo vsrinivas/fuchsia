@@ -120,7 +120,7 @@ int AvCodecContext::EndStream() {
   return avcodec_send_packet(avcodec_context_.get(), nullptr);
 }
 
-AvCodecContext::DecodedOutputInfo AvCodecContext::decoded_output_info(
+BufferPool::FrameBufferRequest AvCodecContext::frame_buffer_request(
     AVFrame* frame) const {
   ZX_DEBUG_ASSERT(avcodec_context_);
   ZX_DEBUG_ASSERT(avcodec_is_open(avcodec_context_.get()));
@@ -197,7 +197,7 @@ int AvCodecContext::GetBufferHandler(AVCodecContext* avcodec_context,
   ZX_DEBUG_ASSERT(get_buffer_callback_);
   ZX_DEBUG_ASSERT(frame->width);
 
-  return get_buffer_callback_(decoded_output_info(frame), avcodec_context,
+  return get_buffer_callback_(frame_buffer_request(frame), avcodec_context,
                               frame, flags);
 }
 

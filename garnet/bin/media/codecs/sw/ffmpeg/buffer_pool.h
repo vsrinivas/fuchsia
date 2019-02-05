@@ -5,11 +5,14 @@
 #ifndef GARNET_BIN_MEDIA_CODECS_SW_FFMPEG_BUFFER_POOL_H_
 #define GARNET_BIN_MEDIA_CODECS_SW_FFMPEG_BUFFER_POOL_H_
 
+extern "C" {
+#include "libavcodec/avcodec.h"
+}
+
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fxl/synchronization/thread_annotations.h>
 #include <lib/media/codec_impl/codec_buffer.h>
 
-#include "avcodec_context.h"
 #include "mpsc_queue.h"
 
 // BufferPool manages buffers for backing AVFrames and integrates with Ffmpeg's
@@ -23,6 +26,12 @@ class BufferPool {
     FILL_ARRAYS_FAILED = 3
   };
 
+  // Describes the requirements of a buffer which can back a frame.
+  struct FrameBufferRequest {
+    fuchsia::media::VideoUncompressedFormat format;
+    size_t buffer_bytes_needed;
+  };
+
   struct Allocation {
     const CodecBuffer* buffer;
     size_t bytes_used;
@@ -30,9 +39,9 @@ class BufferPool {
 
   // Configures an AVFrame to point at a buffer, including the logic to
   // point at each plane.
-  Status AttachFrameToBuffer(
-      AVFrame* frame,
-      const AvCodecContext::DecodedOutputInfo& decoded_output_info, int flags);
+  Status AttachFrameToBuffer(AVFrame* frame,
+                             const FrameBufferRequest& frame_buffer_request,
+                             int flags, const CodecBuffer* buffer = nullptr);
 
   void AddBuffer(const CodecBuffer* buffer);
 
