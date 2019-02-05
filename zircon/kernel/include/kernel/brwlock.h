@@ -73,6 +73,8 @@ public:
 
     struct ReaderPolicy {
         struct State {};
+        // This will be seen by Guard to know to generate shared acquisitions for thread analysis.
+        struct Shared {};
 
         static bool Acquire(BrwLock* lock, State* state) TA_ACQ_SHARED(lock) {
             lock->ReadAcquire();
@@ -157,7 +159,5 @@ private:
 // Configure fbl::Guard<BrwLock, BrwLock::Writer> write locks through the given policy.
 LOCK_DEP_POLICY_OPTION(BrwLock, BrwLock::Writer, BrwLock::WriterPolicy);
 
-// Policy for read locks is currently disabled as `Guard` will currently make the thread
-// analysis think that an exclusive lock has been acquire instead of a shared lock. Once `Guard`
-// has been fixed this can be uncommented.
-// LOCK_DEP_POLICY_OPTION(BrwLock, BrwLock::Reader, BrwLock::ReaderPolicy);
+// Configure fbl::Guard<BrwLock, BrwLock::Reader> read locks through the given policy.
+LOCK_DEP_POLICY_OPTION(BrwLock, BrwLock::Reader, BrwLock::ReaderPolicy);
