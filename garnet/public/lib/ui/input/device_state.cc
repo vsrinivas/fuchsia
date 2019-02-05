@@ -370,13 +370,16 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
     pt.type = fuchsia::ui::input::PointerEventType::TOUCH;
 
     // Quantize the value to [0, 1) based on the resolution.
+    // The large number of casts here are so the multiplications don't cause
+    // overflows.
     float x_denominator =
         (1 +
          static_cast<float>(descriptor->x.range.max - descriptor->x.range.min) /
              static_cast<float>(descriptor->x.resolution)) *
         static_cast<float>(descriptor->x.resolution);
-    float x = static_cast<float>(display_size.width *
-                                 (touch.x - descriptor->x.range.min)) /
+    float x = static_cast<float>(
+                  display_size.width *
+                  static_cast<float>(touch.x - descriptor->x.range.min)) /
               x_denominator;
 
     float y_denominator =
@@ -384,8 +387,9 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
          static_cast<float>(descriptor->y.range.max - descriptor->y.range.min) /
              static_cast<float>(descriptor->y.resolution)) *
         static_cast<float>(descriptor->y.resolution);
-    float y = static_cast<float>(display_size.height *
-                                 (touch.y - descriptor->y.range.min)) /
+    float y = static_cast<float>(
+                  display_size.height *
+                  static_cast<float>(touch.y - descriptor->y.range.min)) /
               y_denominator;
 
     uint32_t width = 2 * touch.width;
