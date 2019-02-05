@@ -270,14 +270,3 @@ jiri upload
 git commit --amend
 jiri upload
 ```
-
-## Github integration
-
-While Fuchsia's code is hosted at https://fuchsia.googlesource.com, it is also
-mirrored to https://github.com/fuchsia-mirror. To ensure Fuchsia contributions
-are associated with your Github account:
-
-1. [Set your email in Git](https://help.github.com/articles/setting-your-email-in-git/).
-2. [Adding your email address to your GitHub account](https://help.github.com/articles/adding-an-email-address-to-your-github-account/).
-3. Star the project for your contributions to show up in your profile's
-Contribution Activity.
