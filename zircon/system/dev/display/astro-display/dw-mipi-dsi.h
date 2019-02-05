@@ -9,25 +9,20 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <lib/mmio/mmio.h>
-
+#include <lib/mipi-dsi/mipi-dsi.h>
 #include "common.h"
 #include "dw-mipi-dsi-reg.h"
-#include "mipi-dsi.h"
 #include <optional>
 
-// Assigned Virtual Channel ID for Astro
-// TODO(payamm): Will need to generate and maintain VCID for multi-display
-// solutions
-
-#define MIPI_DSI_VIRTUAL_CHAN_ID                (0)
-
 namespace astro_display {
+
+using mipi_dsi::MipiDsiCmd;
 
 class DwMipiDsi {
 public:
     DwMipiDsi() {}
     zx_status_t Init(zx_device_t* parent);
-    zx_status_t Cmd(const uint8_t* tbuf, size_t tlen, uint8_t* rbuf, size_t rlen, bool is_dcs);
+    zx_status_t SendCmd(const MipiDsiCmd& cmd);
 
 private:
     inline bool IsPldREmpty();
@@ -54,12 +49,11 @@ private:
     zx_status_t DcsWriteShort(const MipiDsiCmd& cmd);
     zx_status_t GenWriteLong(const MipiDsiCmd& cmd);
     zx_status_t GenRead(const MipiDsiCmd& cmd);
-    zx_status_t SendCmd(const MipiDsiCmd& cmd);
 
-    std::optional<ddk::MmioBuffer>          mipi_dsi_mmio_;
-    pdev_protocol_t              pdev_ = {nullptr, nullptr};
+    std::optional<ddk::MmioBuffer> mipi_dsi_mmio_;
+    pdev_protocol_t pdev_ = {nullptr, nullptr};
 
-    bool                                    initialized_ = false;
+    bool initialized_ = false;
 };
 
 } // namespace astro_display

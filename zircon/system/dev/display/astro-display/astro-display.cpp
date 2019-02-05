@@ -5,6 +5,7 @@
 #include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
 #include <fuchsia/sysmem/c/fidl.h>
+#include <ddk/binding.h>
 
 namespace astro_display {
 
@@ -649,10 +650,8 @@ void AstroDisplay::Dump() {
               disp_setting_.clock_factor);
 }
 
-} // namespace astro_display
-
 // main bind function called from dev manager
-extern "C" zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
+zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
     auto dev = fbl::make_unique_checked<astro_display::AstroDisplay>(&ac,
         parent);
@@ -667,3 +666,20 @@ extern "C" zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
     }
     return status;
 }
+
+static zx_driver_ops_t astro_display_ops = [](){
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = astro_display_bind;
+    return ops;
+}();
+
+} // namespace astro_display
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(astro_display, astro_display::astro_display_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_DISPLAY),
+ZIRCON_DRIVER_END(astro_display)

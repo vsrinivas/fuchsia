@@ -384,69 +384,6 @@ zx_status_t DwMipiDsi::SendCmd(const MipiDsiCmd& cmd) {
     return status;
 }
 
-zx_status_t DwMipiDsi::Cmd(const uint8_t* tbuf, size_t tlen, uint8_t* rbuf, size_t rlen,
-                           bool is_dcs) {
-    ZX_DEBUG_ASSERT(initialized_);
-    // Create a command packet
-    MipiDsiCmd cmd;
-    cmd.virt_chn_id = MIPI_DSI_VIRTUAL_CHAN_ID; // TODO(payamm): change name
-    cmd.pld_data = tbuf; // tbuf is allowed to be null
-    cmd.pld_size = tlen;
-    cmd.rsp_data = rbuf; // rbuf is allowed to be null if rlen is 0
-    cmd.rsp_size = rlen;
-    cmd.flags = 0;
-    cmd.dsi_data_type = MIPI_DSI_DT_UNKNOWN;
-
-    switch (tlen) {
-        case 0:
-            if (rbuf && rlen > 0) {
-                cmd.dsi_data_type = is_dcs ? MIPI_DSI_DT_DCS_READ_0 :
-                                            MIPI_DSI_DT_GEN_SHORT_READ_0;
-                cmd.flags |= MIPI_DSI_CMD_FLAGS_ACK | MIPI_DSI_CMD_FLAGS_SET_MAX;
-            } else {
-                cmd.dsi_data_type = is_dcs ? MIPI_DSI_DT_DCS_SHORT_WRITE_0 :
-                                            MIPI_DSI_DT_GEN_SHORT_WRITE_0;
-            }
-            break;
-        case 1:
-            if (rbuf && rlen > 0) {
-                if (is_dcs) {
-                    DISP_ERROR("Invalid DCS Read request\n");
-                    return ZX_ERR_INVALID_ARGS;
-                }
-                cmd.dsi_data_type = MIPI_DSI_DT_GEN_SHORT_READ_1;
-                cmd.flags |= MIPI_DSI_CMD_FLAGS_ACK | MIPI_DSI_CMD_FLAGS_SET_MAX;
-            } else {
-                cmd.dsi_data_type = is_dcs ? MIPI_DSI_DT_DCS_SHORT_WRITE_1 :
-                                            MIPI_DSI_DT_GEN_SHORT_WRITE_1;
-            }
-            break;
-        case 2:
-            if (is_dcs) {
-                DISP_ERROR("Invalid DCS request\n");
-                return ZX_ERR_INVALID_ARGS;
-            }
-            if (rbuf && rlen > 0) {
-                cmd.flags |= MIPI_DSI_CMD_FLAGS_ACK | MIPI_DSI_CMD_FLAGS_SET_MAX;
-            } else {
-                cmd.dsi_data_type = MIPI_DSI_DT_GEN_SHORT_WRITE_2;
-            }
-            break;
-        default:
-            if (rbuf || rlen > 0) {
-                DISP_ERROR("Invalid DSI GEN READ Command!\n");
-                return ZX_ERR_INVALID_ARGS;
-            } else {
-                cmd.dsi_data_type = is_dcs ? MIPI_DSI_DT_DCS_LONG_WRITE :
-                                            MIPI_DSI_DT_GEN_LONG_WRITE;
-            }
-            break;
-    }
-
-    // packet command has been created.
-    return SendCmd(cmd);
-}
-
 zx_status_t DwMipiDsi::Init(zx_device_t* parent) {
     if (initialized_) {
         return ZX_OK;

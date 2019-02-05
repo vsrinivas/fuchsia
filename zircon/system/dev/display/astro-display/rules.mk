@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/bind.c \
     $(LOCAL_DIR)/osd.cpp \
     $(LOCAL_DIR)/astro-clock.cpp \
     $(LOCAL_DIR)/dw-mipi-dsi.cpp \
@@ -30,6 +29,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fidl \
     system/ulib/zx \
     system/ulib/zxcpp \
+    system/ulib/mipi-dsi \
 
 MODULE_LIBS := \
     system/ulib/driver \

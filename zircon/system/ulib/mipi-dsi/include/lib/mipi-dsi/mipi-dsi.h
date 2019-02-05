@@ -1,8 +1,21 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #pragma once
+#include <unistd.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <zircon/compiler.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
+#include "lib/mipi-dsi/mipi-dsi.h"
+
+// Assigned Virtual Channel ID
+// TODO(payamm): Will need to generate and maintain VCID for multi-display
+// solutions
+#define MIPI_DSI_VIRTUAL_CHAN_ID                (0)
 
 #define MIPI_DSI_DT_VSYNC_START                 (0x01)
 #define MIPI_DSI_DT_VSYNC_END                   (0x11)
@@ -52,6 +65,8 @@
 #define MIPI_DSI_CMD_FLAGS_ACK                  (1 << 0)
 #define MIPI_DSI_CMD_FLAGS_SET_MAX              (1 << 1)
 
+namespace mipi_dsi {
+
 // This is the generic MIPI-DSI command structure that
 // can be used as a IP-independent driver
 struct MipiDsiCmd {
@@ -68,3 +83,13 @@ struct MipiDsiCmd {
 
     uint32_t            flags;
 };
+
+class MipiDsi {
+public:
+    static zx_status_t CreateCommand(const uint8_t* tbuf, size_t tlen,
+                                     uint8_t* rbuf, size_t rlen,
+                                     bool is_dcs, MipiDsiCmd* cmd);
+};
+
+} // mipi_dsi
+

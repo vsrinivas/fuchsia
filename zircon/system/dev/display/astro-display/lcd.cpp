@@ -6,6 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
+#include <lib/mipi-dsi/mipi-dsi.h>
 
 #define DELAY_CMD           (0xFF)
 #define DCS_CMD             (0xFE)
@@ -1131,16 +1132,24 @@ constexpr uint8_t lcd_init_sequence_TV101WXM_FT[] = {
 
 zx_status_t Lcd::GetDisplayId() {
 
-    uint8_t cmd = READ_DISPLAY_ID_CMD;
+    uint8_t txcmd = READ_DISPLAY_ID_CMD;
     uint8_t rsp[READ_DISPLAY_ID_LEN];
     zx_status_t status = ZX_OK;
-    if ((status = dsi_->Cmd(&cmd, 1, rsp, READ_DISPLAY_ID_LEN,
-                            COMMAND_GEN)) != ZX_OK) {
-        DISP_ERROR("Could not read out Display ID\n");
-        return status;
+    // Create the command using mipi-dsi library
+    mipi_dsi::MipiDsiCmd cmd;
+    status = mipi_dsi::MipiDsi::CreateCommand(&txcmd, 1,
+                                     rsp, READ_DISPLAY_ID_LEN,
+                                     COMMAND_GEN, &cmd);
+    if (status == ZX_OK) {
+        if ((status = dsi_->SendCmd(cmd)) != ZX_OK) {
+            DISP_ERROR("Could not read out Display ID\n");
+            return status;
+        }
+        DISP_INFO("Display ID: 0x%x, 0x%x, 0x%x\n", rsp[0], rsp[1], rsp[2]);
+    } else {
+        DISP_ERROR("Invalid command (%d)\n", status);
     }
 
-    DISP_INFO("Display ID: 0x%x, 0x%x, 0x%x\n", rsp[0], rsp[1], rsp[2]);
     return status;
 }
 
@@ -1161,10 +1170,18 @@ zx_status_t Lcd::LoadInitTable(const uint8_t* buffer, size_t size) {
              __FALLTHROUGH;
         case GEN_CMD:
         default:
-            if ((status = dsi_->Cmd(&buffer[i+2], buffer[i+1], NULL, 0,
-                                    isDCS)) != ZX_OK) {
-                DISP_ERROR("Error loading LCD init table. Aborting %d\n", status);
-                return status;
+            // Create the command using mipi-dsi library
+            mipi_dsi::MipiDsiCmd cmd;
+            status = mipi_dsi::MipiDsi::CreateCommand(&buffer[i+2], buffer[i+1],
+                                              NULL, 0,
+                                              isDCS, &cmd);
+            if (status == ZX_OK) {
+                if ((status = dsi_->SendCmd(cmd)) != ZX_OK) {
+                    DISP_ERROR("Error loading LCD init table. Aborting %d\n", status);
+                    return status;
+                }
+            } else {
+                DISP_ERROR("Invalid command (%d). Skipping\n", status);
             }
             // increment by payload length
             i += buffer[i + 1] + 2; // the 2 includes current plus size field
