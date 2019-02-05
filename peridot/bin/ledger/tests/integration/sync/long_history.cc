@@ -103,7 +103,7 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     LongHistorySyncTest, LongHistorySyncTest,
     ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 

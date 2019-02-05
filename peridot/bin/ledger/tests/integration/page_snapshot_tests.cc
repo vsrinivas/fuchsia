@@ -743,7 +743,7 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   EXPECT_EQ("Alice", ToString(value));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     PageSnapshotIntegrationTest, PageSnapshotIntegrationTest,
     ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 

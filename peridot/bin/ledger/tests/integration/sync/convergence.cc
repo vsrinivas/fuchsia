@@ -469,7 +469,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
   EXPECT_TRUE(AreValuesIdentical(watchers, "value"));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ManyLedgersConvergenceTest, ConvergenceTest,
     ::testing::Combine(
         ::testing::Values(MergeType::LAST_ONE_WINS,

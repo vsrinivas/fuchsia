@@ -361,8 +361,8 @@ std::vector<SimulationArgs> GenerateArguments() {
   return args;
 }
 
-INSTANTIATE_TEST_CASE_P(BBR, SimulationTest,
-                        ::testing::ValuesIn(GenerateArguments()));
+INSTANTIATE_TEST_SUITE_P(BBR, SimulationTest,
+                         ::testing::ValuesIn(GenerateArguments()));
 
 }  // namespace bbr_test
 }  // namespace overnet

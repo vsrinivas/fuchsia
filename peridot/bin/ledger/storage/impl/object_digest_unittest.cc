@@ -39,9 +39,9 @@ TEST_P(ObjectDigestSmallTest, Value) {
   EXPECT_EQ(GetParam(), ExtractObjectDigestData(object_digest));
 }
 
-INSTANTIATE_TEST_CASE_P(ObjectDigestTest, ObjectDigestSmallTest,
-                        ::testing::Values("", "hello", "world\0withzero"_s,
-                                          "01234567890123456789012345678901"));
+INSTANTIATE_TEST_SUITE_P(ObjectDigestTest, ObjectDigestSmallTest,
+                         ::testing::Values("", "hello", "world\0withzero"_s,
+                                           "01234567890123456789012345678901"));
 
 // Test for object ids bigger than the inlining threshold.
 using ObjectDigestBigTest = ::testing::TestWithParam<fxl::StringView>;
@@ -70,10 +70,11 @@ TEST_P(ObjectDigestBigTest, Value) {
             ExtractObjectDigestData(object_digest));
 }
 
-INSTANTIATE_TEST_CASE_P(ObjectDigestTest, ObjectDigestBigTest,
-                        ::testing::Values("012345678901234567890123456789012",
-                                          "012345678900123456789001234567890012"
-                                          "345678900123456789001234567890012345"
-                                          "67890"));
+INSTANTIATE_TEST_SUITE_P(
+    ObjectDigestTest, ObjectDigestBigTest,
+    ::testing::Values("012345678901234567890123456789012",
+                      "012345678900123456789001234567890012"
+                      "345678900123456789001234567890012345"
+                      "67890"));
 }  // namespace
 }  // namespace storage

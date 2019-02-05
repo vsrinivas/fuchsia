@@ -258,7 +258,7 @@ TEST_P(PageMutationTest, ClearAndRestoreInsideTransaction) {
   ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}}));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     PageMutationTest, PageMutationTest,
     ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 

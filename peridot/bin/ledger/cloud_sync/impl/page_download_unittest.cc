@@ -489,7 +489,7 @@ using FailingEncryptionServices =
     ::testing::Types<FailingGetNameEncryptionService,
                      FailingDecryptObjectEncryptionService>;
 
-TYPED_TEST_CASE(FailingPageDownloadTest, FailingEncryptionServices);
+TYPED_TEST_SUITE(FailingPageDownloadTest, FailingEncryptionServices);
 
 TYPED_TEST(FailingPageDownloadTest, Fail) {
   storage::ObjectIdentifier object_identifier = MakeObjectIdentifier();

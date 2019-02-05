@@ -58,7 +58,7 @@ using CollectionTypes =
     ::testing::Types<std::vector<uint32_t>, std::unordered_set<uint32_t>,
                      std::set<uint32_t>>;
 
-TYPED_TEST_CASE(CollectionViewTest, CollectionTypes);
+TYPED_TEST_SUITE(CollectionViewTest, CollectionTypes);
 
 TYPED_TEST(CollectionViewTest, Views) {
   TypeParam values = {0, 1, 2, 3, 4, 5};

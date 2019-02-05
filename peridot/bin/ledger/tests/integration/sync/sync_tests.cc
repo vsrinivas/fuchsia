@@ -161,7 +161,7 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SyncIntegrationTest, SyncIntegrationTest,
     ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 

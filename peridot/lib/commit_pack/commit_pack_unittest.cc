@@ -20,11 +20,11 @@ TEST_P(CommitPackTest, BackAndForth) {
   EXPECT_EQ(commits, result);
 }
 
-INSTANTIATE_TEST_CASE_P(CommitPackTest, CommitPackTest,
-                        ::testing::Values(std::vector<CommitPackEntry>(),
-                                          std::vector<CommitPackEntry>{
-                                              {"id_0", "data_0"},
-                                              {"id_1", "data_1"}}));
+INSTANTIATE_TEST_SUITE_P(CommitPackTest, CommitPackTest,
+                         ::testing::Values(std::vector<CommitPackEntry>(),
+                                           std::vector<CommitPackEntry>{
+                                               {"id_0", "data_0"},
+                                               {"id_1", "data_1"}}));
 
 }  // namespace
 }  // namespace cloud_provider

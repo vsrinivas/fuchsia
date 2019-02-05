@@ -104,7 +104,7 @@ TEST_P(OnceFnTestCase, MoveAssignWorks) {
   cb();
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     OnceFnTests, OnceFnTestCase,
     testing::Values([](auto* mock) { return [mock]() { mock->Called(); }; },
                     [](auto* mock) {

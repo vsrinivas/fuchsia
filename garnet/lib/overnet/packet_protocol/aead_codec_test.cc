@@ -72,9 +72,9 @@ const auto kTestCases = [] {
   return out;
 }();
 
-INSTANTIATE_TEST_CASE_P(AEADCodecTest, AEADCodec,
-                        ::testing::ValuesIn(kTestCases.begin(),
-                                            kTestCases.end()));
+INSTANTIATE_TEST_SUITE_P(AEADCodecTest, AEADCodec,
+                         ::testing::ValuesIn(kTestCases.begin(),
+                                             kTestCases.end()));
 
 }  // namespace aead_codec_test
 }  // namespace overnet

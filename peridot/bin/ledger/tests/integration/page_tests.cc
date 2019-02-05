@@ -100,7 +100,7 @@ TEST_P(PageIntegrationTest, MultiplePageConnections) {
   EXPECT_EQ(page_id_1.id, page_id_2.id);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     PageIntegrationTest, PageIntegrationTest,
     ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 

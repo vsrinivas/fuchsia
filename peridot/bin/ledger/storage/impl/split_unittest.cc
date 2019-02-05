@@ -216,14 +216,14 @@ TEST_P(SplitBigValueTest, BigValues) {
   EXPECT_EQ(content, found_content);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SplitTest, SplitSmallValueTest,
     ::testing::Combine(
         ::testing::Values(0, 12, kStorageHashSize, kStorageHashSize + 1, 100,
                           1024, kMinChunkSize),
         ::testing::Values(ObjectType::TREE_NODE, ObjectType::BLOB)));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SplitTest, SplitBigValueTest,
     ::testing::Combine(::testing::Values(kMaxChunkSize + 1, 32 * kMaxChunkSize),
                        ::testing::Values(ObjectType::TREE_NODE,

@@ -704,7 +704,7 @@ using FailingEncryptionServices =
                      FailingGetNameEncryptionService,
                      FailingEncryptObjectEncryptionService>;
 
-TYPED_TEST_CASE(FailingBatchUploadTest, FailingEncryptionServices);
+TYPED_TEST_SUITE(FailingBatchUploadTest, FailingEncryptionServices);
 
 TYPED_TEST(FailingBatchUploadTest, Fail) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;

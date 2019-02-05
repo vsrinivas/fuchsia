@@ -2290,7 +2290,7 @@ TEST_P(MergingIntegrationTest,
   EXPECT_EQ(convert::ToString(val1->value), convert::ToString(val2->value));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     MergingIntegrationTest, MergingIntegrationTest,
     ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 

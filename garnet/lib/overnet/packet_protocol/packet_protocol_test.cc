@@ -5268,10 +5268,11 @@ TEST_P(PacketProtocolTest, _9a9d0c4f2766121be0657c11a5fa3d354b7cf63e) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(PacketProtocol, PacketProtocolTest,
-                        ::testing::Values(PacketProtocol::NullCodec(),
-                                          &dummy_codec, aead_codec_chacha.get(),
-                                          aead_codec_hmac.get()));
+INSTANTIATE_TEST_SUITE_P(PacketProtocol, PacketProtocolTest,
+                         ::testing::Values(PacketProtocol::NullCodec(),
+                                           &dummy_codec,
+                                           aead_codec_chacha.get(),
+                                           aead_codec_hmac.get()));
 
 }  // namespace packet_protocol_test
 }  // namespace overnet
