@@ -21,7 +21,7 @@ use fidl_fuchsia_auth::{
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use futures::try_join;
-use log::{error, warn};
+use log::{error, info, warn};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::path::Path;
@@ -669,6 +669,10 @@ impl Responder for TokenManagerAuthorizeResponder {
     fn send_raw(
         self, status: Status, mut data: Option<UserProfileInfo>,
     ) -> Result<(), fidl::Error> {
+        // Explicitly log successes for the infrequent Authorize request to help debug.
+        if status == Status::Ok {
+          info!("Success authorizing new account");
+        }
         self.send(status, data.as_mut().map(|v| OutOfLine(v)))
     }
 }
