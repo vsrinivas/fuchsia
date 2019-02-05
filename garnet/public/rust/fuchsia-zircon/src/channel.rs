@@ -20,7 +20,7 @@ impl_handle_based!(Channel);
 impl Peered for Channel {}
 
 impl Channel {
-    /// Create a channel, resulting an a pair of `Channel` objects representing both
+    /// Create a channel, resulting in a pair of `Channel` objects representing both
     /// sides of the channel. Messages written into one maybe read from the opposite.
     ///
     /// Wraps the

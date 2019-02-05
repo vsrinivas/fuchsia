@@ -38,7 +38,7 @@ macro_rules! impl_handle_based {
 
 /// Convenience macro for creating get/set property functions on an object.
 ///
-/// This is for use whenthe underlying property type is a simple raw type.
+/// This is for use when the underlying property type is a simple raw type.
 /// It creates an empty 'tag' struct to implement the relevant PropertyQuery*
 /// traits against. One, or both, of a getting and setter may be defined
 /// depending upon what the property supports. Example usage is
