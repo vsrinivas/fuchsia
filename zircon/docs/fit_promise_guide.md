@@ -112,7 +112,7 @@ auto DoImportantThingsInParallel() {
   auto promise1 = FetchStringFromDbAsync("foo");
   auto promise2 = InitializeFrobinatorAsync();
   return fit::join_promises(std::move(promise1), std::move(promise2))
-      .and_then([](std::tuple<fit::result<std::string>, fit::result<Frobinator>> results) {
+      .and_then([] (std::tuple<fit::result<std::string>, fit::result<Frobinator>> results) {
         return fit::ok(std::get<0>(results).value() + std::get<1>(results).value().GetFrobinatorSummary());
       });
 }
@@ -126,7 +126,7 @@ It may become useful to defer the decision of which promises to chain together u
 
 ```cpp
 fit::make_promise(...)
-  .then(fit::result<> result) {
+  .then([] (fit::result<> result) {
     if (result.is_ok()) {
       return fit::make_promise(...); // Do work in success case.
     } else {
@@ -169,6 +169,7 @@ fit::promise<> MakePromise() {
 
 #### `std::shared_ptr<>`
 
+```cpp
 fit::promise<> MakePromise() {
   struct State {
     int i;
@@ -182,6 +183,8 @@ fit::promise<> MakePromise() {
     state->i--;
   });
 }
+```
+
 ### `fit::scope`: Abandoning promises to avoid memory safety violations
 
 `fit::scope` becomes useful to tie the lifecycle of a `fit::promise<>` to a resource in memory. For example:
