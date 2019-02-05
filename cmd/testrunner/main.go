@@ -12,6 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"time"
@@ -29,9 +30,6 @@ const (
 
 	// The username used to authenticate with the Fuchsia device.
 	sshUser = "fuchsia"
-
-	// The test output directory to create on the Fuchsia device.
-	fuchsiaOutputDir = "/data/infra/testrunner"
 
 	// The filename to use for log_listener's stdout captured during Fuchsia tests.
 	syslogStdoutFilename = "syslog-stdout.txt"
@@ -215,40 +213,15 @@ func sshIntoNode(nodename, privateKey string) (*ssh.Client, error) {
 }
 
 func runFuchsiaTests(tests []testsharder.Test, output *TestRunnerOutput, devCtx *botanist.DeviceContext) error {
-	if len(tests) == 0 {
-		return nil
-	} else if devCtx == nil {
+	if devCtx == nil {
 		return errors.New("no DeviceContext set; cannot execute fuchsia tests")
 	}
 
-	// Initialize the connection to the Fuchsia device.
-	sshClient, err := sshIntoNode(devCtx.Nodename, devCtx.SSHKey)
+	tester, err := NewFuchsiaTester(*devCtx)
 	if err != nil {
-		return fmt.Errorf("failed to connect to node %q: %v", devCtx.Nodename, err)
+		return fmt.Errorf("failed to initialize fuchsia tester: %v", err)
 	}
-	defer sshClient.Close()
-
-	fuchsiaTester := &FuchsiaTester{
-		remoteOutputDir: fuchsiaOutputDir,
-		delegate: &SSHTester{
-			client: sshClient,
-		},
-	}
-
-	// Record log_listener output. This goes into the output archive as "syslog.txt"
-	session, err := sshClient.NewSession()
-	if err != nil {
-		return err
-	}
-	defer session.Close()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	syslogStdout := new(bytes.Buffer)
-	syslogStderr := new(bytes.Buffer)
-	runner := &testrunner.SSHRunner{Session: session}
-	go runner.Run(ctx, []string{"bin/log_listener"}, syslogStdout, syslogStderr)
+	defer tester.Close()
 
 	// Ensure the syslog is always included in the output, even if tests fail.
 	// TODO(IN-824): Run fuchsia/linux/mac tests in go-routines and emit errors on channels.
@@ -257,16 +230,28 @@ func runFuchsiaTests(tests []testsharder.Test, output *TestRunnerOutput, devCtx 
 			return
 		}
 
-		if err := output.Tar.TarFile(syslogStdout.Bytes(), syslogStdoutFilename); err != nil {
+		stdout, stderr := tester.SyslogOutput()
+		stdoutBytes, err := ioutil.ReadAll(stdout)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		stderrBytes, err := ioutil.ReadAll(stderr)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		if err := output.Tar.TarFile(stdoutBytes, syslogStdoutFilename); err != nil {
 			log.Println(err)
 		}
 
-		if err := output.Tar.TarFile(syslogStderr.Bytes(), syslogStderrFilename); err != nil {
+		if err := output.Tar.TarFile(stderrBytes, syslogStderrFilename); err != nil {
 			log.Println(err)
 		}
 	}()
 
-	return runTests(tests, fuchsiaTester.Test, output)
+	return runTests(tests, tester.Test, output)
 }
 
 func runTests(tests []testsharder.Test, tester Tester, output *TestRunnerOutput) error {
