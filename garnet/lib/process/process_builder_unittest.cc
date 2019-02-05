@@ -19,7 +19,7 @@ TEST(ProcessBuilder, Control) {
   ASSERT_EQ(ZX_OK, builder.Prepare(nullptr));
   EXPECT_TRUE(builder.data().process.is_valid());
   EXPECT_TRUE(builder.data().root_vmar.is_valid());
-  EXPECT_GT(builder.data().sp, 0u);
+  EXPECT_GT(builder.data().stack, 0u);
   EXPECT_GT(builder.data().entry, 0u);
   EXPECT_GT(builder.data().vdso_base, 0u);
   EXPECT_GT(builder.data().base, 0u);

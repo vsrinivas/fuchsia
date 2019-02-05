@@ -1204,7 +1204,7 @@ zx_handle_close failed on low address space reservation VMAR");
     result->root_vmar = root_vmar;
     result->thread = thread;
     result->entry = lp->entry;
-    result->sp = sp;
+    result->stack = sp;
     result->bootstrap = bootstrap;
     result->vdso_base = lp->vdso_base;
     result->base = lp->base;
@@ -1247,7 +1247,7 @@ static zx_status_t launchpad_start(launchpad_t* lp, zx_handle_t* process_out) {
     if (status != ZX_OK)
         return status;
 
-    status = zx_process_start(data.process, data.thread, data.entry, data.sp,
+    status = zx_process_start(data.process, data.thread, data.entry, data.stack,
                               data.bootstrap, data.vdso_base);
 
     zx_handle_close(data.thread);

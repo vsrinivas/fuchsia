@@ -23,8 +23,12 @@ fbl::String GetString(fidl_string_t string) {
     return fbl::String(string.data, string.size);
 }
 
+fbl::String GetString(fidl_vector_t bytes) {
+    return fbl::String(static_cast<char*>(bytes.data), bytes.count);
+}
+
 void PushStrings(fidl_vector_t* input, fbl::Vector<fbl::String>* target) {
-    fidl_string_t* data = static_cast<fidl_string_t*>(input->data);
+    fidl_vector_t* data = static_cast<fidl_vector_t*>(input->data);
     for (size_t i = 0; i < input->count; ++i) {
         target->push_back(GetString(data[i]));
     }
@@ -186,7 +190,7 @@ zx_status_t LauncherImpl::CreateWithoutStarting(fidl::MessageBuffer* buffer, fid
         result->data->root_vmar = data.root_vmar;
         result->data->thread = data.thread;
         result->data->entry = data.entry;
-        result->data->sp = data.sp;
+        result->data->stack = data.stack;
         result->data->bootstrap = data.bootstrap;
         result->data->vdso_base = data.vdso_base;
         result->data->base = data.base;

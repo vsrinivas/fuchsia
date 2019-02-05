@@ -73,7 +73,7 @@ zx_status_t ProcessBuilder::LoadPath(const std::string& path) {
   // Resolve VMOs containing #!resolve.
   fuchsia::process::ResolverSyncPtr resolver;  // Lazily bound.
   for (int i = 0; true; i++) {
-    std::array<char, fuchsia::process::MAX_RESOLVE_NAME + kFdioResolvePrefixLen>
+    std::array<char, fuchsia::process::MAX_RESOLVE_NAME_SIZE + kFdioResolvePrefixLen>
         head;
     head.fill(0);
     status = executable_vmo.read(head.data(), 0, head.size());
@@ -87,7 +87,7 @@ zx_status_t ProcessBuilder::LoadPath(const std::string& path) {
 
     // The process name is after the prefix until the first newline.
     std::string_view name(&head[kFdioResolvePrefixLen],
-                          fuchsia::process::MAX_RESOLVE_NAME);
+                          fuchsia::process::MAX_RESOLVE_NAME_SIZE);
     if (auto newline_index = name.rfind('\n');
         newline_index != std::string_view::npos)
       name = name.substr(0, newline_index);
@@ -130,9 +130,9 @@ void ProcessBuilder::AddArgs(const std::vector<std::string>& argv) {
     return;
   if (launch_info_.name.empty())
     launch_info_.name = argv[0];
-  fidl::VectorPtr<std::string> args;
+  fidl::VectorPtr<std::vector<uint8_t>> args;
   for (const auto& arg : argv)
-    args.push_back(arg);
+    args.push_back(std::vector<uint8_t>(arg.data(), arg.data() + arg.size()));
   launcher_->AddArgs(std::move(args));
 }
 
@@ -194,9 +194,11 @@ void ProcessBuilder::CloneStdio() {
 }
 
 void ProcessBuilder::CloneEnvironment() {
-  auto env = fidl::VectorPtr<std::string>::New(0);
-  for (size_t i = 0; environ[i]; ++i)
-    env.push_back(environ[i]);
+  auto env = fidl::VectorPtr<std::vector<uint8_t>>::New(0);
+  for (size_t i = 0; environ[i]; ++i) {
+    const char* var = environ[i];
+    env.push_back(std::vector<uint8_t>(var, var + strlen(var)));
+  }
   launcher_->AddEnvirons(std::move(env));
 }
 
@@ -250,7 +252,7 @@ zx_status_t ProcessBuilder::Prepare(std::string* error_message) {
 zx_status_t ProcessBuilder::Start(zx::process* process_out) {
   zx_status_t status =
       zx_process_start(data_.process.get(), data_.thread.get(), data_.entry,
-                       data_.sp, data_.bootstrap.release(), data_.vdso_base);
+                       data_.stack, data_.bootstrap.release(), data_.vdso_base);
   if (status == ZX_OK && process_out)
     *process_out = std::move(data_.process);
   return status;

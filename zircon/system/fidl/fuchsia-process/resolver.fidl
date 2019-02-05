@@ -7,8 +7,24 @@ library fuchsia.process;
 using fuchsia.ldsvc;
 using zx;
 
-const uint32 MAX_RESOLVE_NAME = 2048;
+// The maximum size for a name used by |Resolver|.
+const uint32 MAX_RESOLVE_NAME_SIZE = 2048;
 
+// An interface for resolving names to executables and library loaders.
+//
+// An executable itself is often not sufficient to create a working process
+// because many executables also load shared libraries. On Fuchsia, there is no
+// global pool of shared libraries. Instead, every process has an associated
+// |fuchsia.ldsvc.Loader|, which provides access to a private pool of shared
+// libraries appropriate for that process.
+//
+// This interface provides a protocol for resolving a name into both the
+// |handle<vmo>| for the executable and the |fuchsia.ldsvc.Loader| for its
+// associated shared libraries.
+//
+// This interface is rarely used directly. Instead, |fdio_spawn| and
+// |fdio_spawn_etc| use this interface internally when they try to run a file
+// with a |#!resolve| directive.
 [Discoverable, Layout = "Simple"]
 interface Resolver {
     // Resolves the given |name| to an |executable| and an shared library loader.
@@ -20,7 +36,7 @@ interface Resolver {
     // For example, the resolver might locate the given |name| inside a package
     // and return the executable binary from the package as well as a shared
     // library loader scoped to that package.
-    Resolve(string:MAX_RESOLVE_NAME name) -> (zx.status status,
-                                              handle<vmo>? executable,
-                                              fuchsia.ldsvc.Loader? ldsvc);
+    Resolve(string:MAX_RESOLVE_NAME_SIZE name) -> (zx.status status,
+                                                   handle<vmo>? executable,
+                                                   fuchsia.ldsvc.Loader? ldsvc);
 };

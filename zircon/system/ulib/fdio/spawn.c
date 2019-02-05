@@ -92,7 +92,7 @@ static zx_status_t load_path(const char* path, zx_handle_t* vmo) {
     return status;
 }
 
-static void measure_string_array(const char* const* array, size_t* count_out, size_t* len_out) {
+static void measure_cstring_array(const char* const* array, size_t* count_out, size_t* len_out) {
     size_t i = 0;
     size_t len = 0;
     while (array[i]) {
@@ -144,25 +144,25 @@ static zx_status_t resolve_name(const char* name, size_t name_len,
     return status;
 }
 
-static zx_status_t send_string_array(zx_handle_t launcher, int ordinal, const char* const* array) {
+static zx_status_t send_cstring_array(zx_handle_t launcher, int ordinal, const char* const* array) {
     size_t count = 0;
     size_t len = 0;
 
     // TODO(abarth): In principle, we should chunk array into separate
     // messages if we exceed ZX_CHANNEL_MAX_MSG_BYTES.
-    measure_string_array(array, &count, &len);
+    measure_cstring_array(array, &count, &len);
 
     if (count == 0)
         return ZX_OK;
 
-    size_t msg_len = sizeof(fidl_message_header_t) + sizeof(fidl_vector_t) + count * sizeof(fidl_string_t) + FIDL_ALIGN(len);
+    size_t msg_len = sizeof(fidl_message_header_t) + sizeof(fidl_vector_t) + count * sizeof(fidl_vector_t) + FIDL_ALIGN(len);
     uint8_t msg[msg_len];
     memset(msg, 0, msg_len);
 
     fidl_message_header_t* hdr = (fidl_message_header_t*)msg;
     fidl_vector_t* vector = (fidl_vector_t*)hdr + 1;
-    fidl_string_t* strings = (fidl_string_t*)(vector + 1);
-    uint8_t* payload = (uint8_t*)(strings + count);
+    fidl_vector_t* bytes = (fidl_vector_t*)(vector + 1);
+    uint8_t* payload = (uint8_t*)(bytes + count);
 
     hdr->ordinal = ordinal;
     vector->count = count;
@@ -171,8 +171,8 @@ static zx_status_t send_string_array(zx_handle_t launcher, int ordinal, const ch
     size_t offset = 0;
     for (size_t i = 0; i < count; ++i) {
         size_t size = strlen(array[i]);
-        strings[i].size = size;
-        strings[i].data = (void*)FIDL_ALLOC_PRESENT;
+        bytes[i].count = size;
+        bytes[i].data = (void*)FIDL_ALLOC_PRESENT;
         memcpy(payload + offset, array[i], size);
         offset += FIDL_ALIGN(size);
     }
@@ -522,7 +522,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
 
     // resolve vmos containing #!resolve, updating the vmo & ldsvc
     for (size_t i = 0; true; ++i) {
-        char head[fuchsia_process_MAX_RESOLVE_NAME + FDIO_RESOLVE_PREFIX_LEN];
+        char head[fuchsia_process_MAX_RESOLVE_NAME_SIZE + FDIO_RESOLVE_PREFIX_LEN];
         ZX_ASSERT(sizeof(head) < PAGE_SIZE);
         memset(head, 0, sizeof(head));
         status = zx_vmo_read(executable_vmo, head, 0, sizeof(head));
@@ -542,7 +542,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
         }
 
         char* name = &head[FDIO_RESOLVE_PREFIX_LEN];
-        size_t len = fuchsia_process_MAX_RESOLVE_NAME;
+        size_t len = fuchsia_process_MAX_RESOLVE_NAME_SIZE;
         char* end = memchr(name, '\n', len);
         if (end != NULL) {
             len = end - name;
@@ -567,20 +567,20 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
         goto cleanup;
     }
 
-    status = send_string_array(launcher, fuchsia_process_LauncherAddArgsOrdinal, argv);
+    status = send_cstring_array(launcher, fuchsia_process_LauncherAddArgsOrdinal, argv);
     if (status != ZX_OK) {
         report_error(err_msg, "failed to send argument vector: %d", status);
         goto cleanup;
     }
 
     if (explicit_environ) {
-        status = send_string_array(launcher, fuchsia_process_LauncherAddEnvironsOrdinal, explicit_environ);
+        status = send_cstring_array(launcher, fuchsia_process_LauncherAddEnvironsOrdinal, explicit_environ);
         if (status != ZX_OK) {
             report_error(err_msg, "failed to send environment: %d", status);
             goto cleanup;
         }
     } else if ((flags & FDIO_SPAWN_CLONE_ENVIRON) != 0) {
-        status = send_string_array(launcher, fuchsia_process_LauncherAddEnvironsOrdinal, (const char* const*)environ);
+        status = send_cstring_array(launcher, fuchsia_process_LauncherAddEnvironsOrdinal, (const char* const*)environ);
         if (status != ZX_OK) {
             report_error(err_msg, "failed to send environment clone with FDIO_SPAWN_CLONE_ENVIRON: %d", status);
             goto cleanup;

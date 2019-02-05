@@ -119,7 +119,7 @@ typedef struct launchpad_start_data {
     zx_vaddr_t entry;
 
     // The stack pointer value for the initial thread of the process.
-    zx_vaddr_t sp;
+    zx_vaddr_t stack;
 
     // The bootstrap channel to pass to the process on startup.
     zx_handle_t bootstrap;

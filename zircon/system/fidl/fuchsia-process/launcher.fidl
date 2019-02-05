@@ -7,24 +7,43 @@ library fuchsia.process;
 using fuchsia.io;
 using zx;
 
+// Information about a handle provided to a process at startup.
+//
+// Processes are given a set of initial handles as part of the bootstrapping
+// sequence. Some of these handles are associated with zx.procarg identifiers
+// that designate their intended use by the new process.
+//
+// This structure represents one such handle and its associated zx.procarg
+// identifier.
 struct HandleInfo {
-    // The handle to use for this argument.
+    // The handle to use for this process argument.
     handle handle;
 
-    // Process argument identifier, from <zircon/processargs.h>.
-    uint32 id;
+    // Process argument identifier.
+    //
+    // See <zircon/processargs.h> for definitions of well-known process
+    // arguments.
+    zx.procarg id;
 };
 
+// A namespace entry provided to a process at startup.
+//
+// Processes are given a set of initial handles as part of the bootstrapping
+// sequence. Some of these handles are associated with paths that designate
+// their intended use by the new process as namespace entries.
+//
+// This structure represents one such handle and its associated namespace path.
 struct NameInfo {
     // Path at which to install the associated directory.
     //
     // Must be an absolute path (i.e., start with '/').
-    string path;
+    string:fuchsia.io.MAX_PATH path;
 
     // The associated directory.
     fuchsia.io.Directory directory;
 };
 
+// The information needed to launch a process.
 struct LaunchInfo {
     // The executable to run in the process.
     handle<vmo> executable;
@@ -33,9 +52,13 @@ struct LaunchInfo {
     handle<job> job;
 
     // The name to assign to the created process.
+    //
+    // TODO(REVIEW): Define a zx.MAX_NAME_SIZE constant (i.e., 32) and limit
+    // this string to that size.
     string name;
 };
 
+// The result of attempting to launch a process.
 struct LaunchResult {
     // A status code describing the result of the launch.
     zx.status status;
@@ -43,6 +66,8 @@ struct LaunchResult {
     // A string describing the failure.
     //
     // Non-null when |status| is an error.
+    //
+    // TODO(REVIEW) Remove this error message.
     string? error_message;
 
     // The process that was launched.
@@ -51,6 +76,11 @@ struct LaunchResult {
     handle<process>? process;
 };
 
+// The information required to start a process.
+//
+// To start the process, call |zx_process_start| with the arguments provided.
+//
+// See |CreateWithoutStartingResult|.
 struct ProcessStartData {
     // The process that was created.
     handle<process> process;
@@ -68,12 +98,12 @@ struct ProcessStartData {
     // The address of the initial entry point in the process.
     //
     // Should be passed to |zx_process_start| when starting the process.
-    uint64 entry;
+    zx.vaddr entry;
 
     // The stack pointer value for the initial thread of the process.
     //
     // Should be passed to |zx_process_start| when starting the process.
-    uint64 sp;
+    zx.vaddr stack;
 
     // The bootstrap channel to pass to the process on startup.
     //
@@ -83,14 +113,15 @@ struct ProcessStartData {
     // The base address of the vDSO to pass to the process on startup.
     //
     // Should be passed to |zx_process_start| when starting the process.
-    uint64 vdso_base;
+    zx.vaddr vdso_base;
 
     // The base load address of the ELF file loaded.
     //
     // Most often used by debuggers or other tools that inspect the process.
-    uint64 base;
+    zx.vaddr base;
 };
 
+// The result of creating a process without starting the process.
 struct CreateWithoutStartingResult {
     // A status code describing the result of the launch.
     zx.status status;
@@ -98,6 +129,8 @@ struct CreateWithoutStartingResult {
     // A string describing the failure.
     //
     // Non-null when |status| is an error.
+    //
+    // TODO(REVIEW) Remove this error message.
     string? error_message;
 
     // Data describing the process that was created.
@@ -106,6 +139,19 @@ struct CreateWithoutStartingResult {
     ProcessStartData? data;
 };
 
+// A low-level interface for launching processes.
+//
+// This interface is used for manually assembling a process. The caller supplies
+// all the capabilities for the newly created process.
+//
+// That create processes typically use |fdio_spawn| or |fdio_spawn_etc| rather
+// than using this interface directly. The |fdio_spawn| and |fdio_spawn_etc|
+// functions are implemented using this interface.
+//
+// Debuggers and other clients that need to create processes in a suspended
+// state often use this interface directly. These clients use the
+// |CreateWithoutStarting| method to create the process without actually
+// starting it.
 [Discoverable]
 interface Launcher {
     // Creates and starts the process described by |info|.
@@ -126,12 +172,12 @@ interface Launcher {
     // Adds the given arguments to the command-line for the process.
     //
     // Calling this method multiple times concatenattes the arguments.
-    AddArgs(vector<string> args);
+    AddArgs(vector<vector<uint8>> args);
 
     // Adds the given variables to the environment variables for the process.
     //
     // Calling this method multiple times concatenates the variables.
-    AddEnvirons(vector<string> environ);
+    AddEnvirons(vector<vector<uint8>> environ);
 
     // Adds the given names to the namespace for the process.
     //
