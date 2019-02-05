@@ -11,14 +11,19 @@ using zx;
 struct BlockReadWrite {
     /// Command and flags.
     uint32 command;
+
     /// Available for temporary use.
     uint32 extra;
+
     /// VMO of data to read or write.
     handle<vmo> vmo;
+
     /// Transfer length in blocks (0 is invalid).
     uint32 length;
+
     /// Device offset in blocks.
     uint64 offset_dev;
+
     /// VMO offset in blocks.
     uint64 offset_vmo;
 };
@@ -27,17 +32,25 @@ struct BlockReadWrite {
 struct BlockTrim {
     /// Command and flags.
     uint32 command;
-    // ???
+
+    /// Transfer length in blocks (0 is invalid).
+    uint32 length;
+
+    /// Device offset in blocks.
+    uint64 offset_dev;
 };
 
 union BlockOp {
     /// All Commands
     uint32 command;
+
     /// Read and Write ops use rw for parameters.
     BlockReadWrite rw;
     BlockTrim trim;
 };
 
+/// Performs a regular data read or write from the device. The operation may
+/// be cached internally.
 const uint32 BLOCK_OP_READ = 0x00000001;
 const uint32 BLOCK_OP_WRITE = 0x00000002;
 
@@ -47,8 +60,13 @@ const uint32 BLOCK_OP_WRITE = 0x00000002;
 /// and later operations will not start until it is done.
 const uint32 BLOCK_OP_FLUSH = 0x00000003;
 
-// TBD
+/// Instructs the device to invalidate a number of blocks, making them  usable
+/// for storing something else. This is basically a "delete" optimization,
+/// where the device is in charge of discarding the old content without
+/// clients having to write a given pattern. The operation may be cached
+/// internally.
 const uint32 BLOCK_OP_TRIM = 0x00000004;
+
 const uint32 BLOCK_OP_MASK = 0x000000FF;
 
 /// Mark this operation as "Force Unit Access" (FUA), indicating that
