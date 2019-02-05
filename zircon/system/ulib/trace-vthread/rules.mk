@@ -16,9 +16,6 @@ LOCAL_SRCS := \
 LOCAL_HEADER_DEPS := \
     system/ulib/fbl
 
-LOCAL_STATIC_LIBS := \
-    system/ulib/trace
-
 LOCAL_LIBS := \
     system/ulib/c \
     system/ulib/zircon
@@ -35,7 +32,8 @@ MODULE_SRCS := $(LOCAL_SRCS)
 MODULE_HEADER_DEPS := \
     $(LOCAL_HEADER_DEPS)
 
-MODULE_STATIC_LIBS := $(LOCAL_STATIC_LIBS)
+MODULE_STATIC_LIBS := \
+    system/ulib/trace
 
 MODULE_LIBS := \
     $(LOCAL_LIBS) \
@@ -60,10 +58,11 @@ MODULE_SRCS := $(LOCAL_SRCS)
 
 MODULE_HEADER_DEPS := \
     $(LOCAL_HEADER_DEPS) \
+    system/ulib/trace \
     system/ulib/trace-engine
 
 MODULE_STATIC_LIBS := \
-    $(LOCAL_STATIC_LIBS) \
+    system/ulib/trace.with-static-engine \
     system/ulib/trace-engine.static
 
 MODULE_LIBS := $(LOCAL_LIBS)
