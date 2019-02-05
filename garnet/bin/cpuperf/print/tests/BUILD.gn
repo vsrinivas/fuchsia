@@ -5,10 +5,47 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
+copy("raw_printer_test_data") {
+  sources = [
+    "raw-expected-output.txt",
+    "raw-test.0.0.cpuperf",
+    "raw-test.0.1.cpuperf",
+    "raw-test.0.2.cpuperf",
+    "raw-test.0.3.cpuperf",
+    "raw-test.cpsession",
+  ]
+  outputs = [
+    "$root_out_dir/test_data/cpuperf/{{source_file_part}}",
+  ]
+}
+
+# TODO(IN-819): Delete the following target once cpuperf tests are no
+# longer being run out of $root_build_dir/host_tests/.
+copy("raw_printer_test_data_deprecated") {
+  sources = [
+    "raw-expected-output.txt",
+    "raw-test.0.0.cpuperf",
+    "raw-test.0.1.cpuperf",
+    "raw-test.0.2.cpuperf",
+    "raw-test.0.3.cpuperf",
+    "raw-test.cpsession",
+  ]
+  outputs = [
+    "$root_build_dir/host_tests/test_data/cpuperf/{{source_file_part}}",
+  ]
+}
+
 go_library("raw_printer_test_lib") {
   name = "cpuperf/printer/tests"
-
-  deps = []
+  non_go_deps = [
+    "//garnet/bin/cpuperf/print:cpuperf_print($host_toolchain)",
+    ":raw_printer_test_data",
+    ":raw_printer_test_data_deprecated",
+  ]
+  metadata = {
+    test_runtime_deps = [ "$root_out_dir/cpuperf_print" ] +
+                        get_target_outputs(":raw_printer_test_data")
+  }
 }
 
 go_test("cpuperf_raw_printer_test") {
@@ -16,5 +53,4 @@ go_test("cpuperf_raw_printer_test") {
   deps = [
     ":raw_printer_test_lib",
   ]
-  non_go_deps = [ "..:host_cpuperf_print" ]
 }

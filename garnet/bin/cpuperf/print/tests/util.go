@@ -13,75 +13,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"os/exec"
-	"path"
-	"runtime"
 )
-
-var (
-	fuchsiaRoot = getFuchsiaRoot()
-	buildRoot   = getBuildRoot(fuchsiaRoot)
-)
-
-// TODO(dje): Move into a common package, use by traceutil too.
-func getFuchsiaRoot() string {
-	execPath, err := os.Executable()
-	if err != nil {
-		panic(err.Error())
-	}
-
-	dir, _ := path.Split(execPath)
-	for dir != "" && dir != "/" {
-		dir = path.Clean(dir)
-		manifestPath := path.Join(dir, ".jiri_manifest")
-		if _, err = os.Stat(manifestPath); !os.IsNotExist(err) {
-			return dir
-		}
-		dir, _ = path.Split(dir)
-	}
-
-	panic("Can not determine Fuchsia source root based on executable path.")
-}
-
-func getProgramBuildDir() string {
-	execPath, err := os.Executable()
-	if err != nil {
-		panic(err.Error())
-	}
-	dir, _ := path.Split(execPath)
-	return dir
-}
-
-func getBuildRoot(fxRoot string) string {
-	execPath := getProgramBuildDir()
-
-	outPath := path.Join(fxRoot, "out")
-	dir, file := path.Split(execPath)
-	for dir != "" && dir != "/" {
-		dir = path.Clean(dir)
-		if dir == outPath {
-			return path.Join(dir, file)
-		}
-		dir, file = path.Split(dir)
-	}
-
-	panic("Can not determine output directory based on executable path.")
-}
-
-// Return (effectively) $FUCHSIA_DIR/out/$ARCH/host_$ARCH.
-func getHostBuildDir() string {
-	arch := ""
-	switch runtime.GOARCH {
-	case "amd64":
-		arch = "x64"
-	case "arm64":
-		arch = "arm64"
-	default:
-		panic(fmt.Errorf("unknown GOARCH: %s", runtime.GOARCH))
-	}
-	return path.Join(buildRoot, "host_"+arch)
-}
 
 func runCommandWithOutputToFile(command string, args []string,
 	output io.Writer) error {
