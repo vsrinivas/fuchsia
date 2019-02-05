@@ -6,8 +6,8 @@
 #define GARNET_BIN_GUEST_VMM_ARCH_ARM64_GIC_DISTRIBUTOR_H_
 
 #include <limits.h>
+#include <map>
 #include <mutex>
-#include <unordered_map>
 #include <vector>
 
 #include <fuchsia/sysinfo/cpp/fidl.h>
@@ -63,7 +63,12 @@ class GicDistributor : public IoHandler, public PlatformDevice {
   Guest* guest_;
   fuchsia::sysinfo::InterruptControllerType type_ =
       fuchsia::sysinfo::InterruptControllerType::GIC_V2;
-  std::unordered_map<uint32_t, zx::interrupt> interrupts_;
+
+  struct InterruptEntry {
+    uint32_t options;
+    zx::interrupt interrupt;
+  };
+  std::map<uint32_t, InterruptEntry> interrupts_;
 
   mutable std::mutex mutex_;
   bool affinity_routing_ __TA_GUARDED(mutex_) = false;
@@ -75,6 +80,9 @@ class GicDistributor : public IoHandler, public PlatformDevice {
 
   // SPI routing uses these CPU masks.
   uint8_t cpu_masks_[kNumInterrupts - kSpiBase] __TA_GUARDED(mutex_) = {};
+
+  // Configuration registers. We skip ICFGR0 (for SGIs) as it is RAO/WI.
+  uint32_t cfg_[31] __TA_GUARDED(mutex_) = {};
 
   zx_status_t TargetInterrupt(uint32_t vector, uint8_t cpu_mask);
   zx_status_t BindVcpus(uint32_t vector, uint8_t cpu_mask);

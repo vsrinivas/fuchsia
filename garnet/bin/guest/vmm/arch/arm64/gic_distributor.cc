@@ -214,7 +214,8 @@ zx_status_t GicDistributor::Init(uint8_t num_cpus,
                        << " with options " << spec.options << " " << status;
         return status;
       }
-      interrupts_.try_emplace(spec.vector, std::move(interrupt));
+      interrupts_.try_emplace(
+          spec.vector, InterruptEntry{spec.options, std::move(interrupt)});
     }
   }
 
@@ -294,7 +295,7 @@ zx_status_t GicDistributor::BindVcpus(uint32_t vector, uint8_t cpu_mask) {
     if (!(cpu_mask & 1)) {
       continue;
     }
-    zx_status_t status = it->second.bind_vcpu(vcpus[i]->object(), 0);
+    zx_status_t status = it->second.interrupt.bind_vcpu(vcpus[i]->object(), 0);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to bind VCPU " << status;
       return status;
@@ -318,9 +319,13 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
       // SGIs are RAO/WI.
       value->u32 = UINT32_MAX;
       return ZX_OK;
-    case GicdRegister::ICFG1... GicdRegister::ICFG31:
-      value->u32 = 0;
+    case GicdRegister::ICFG1... GicdRegister::ICFG31: {
+      std::lock_guard<std::mutex> lock(mutex_);
+      size_t index = (addr - static_cast<uint64_t>(GicdRegister::ICFG1)) /
+                     value->access_size;
+      value->u32 = cfg_[index];
       return ZX_OK;
+    }
     case GicdRegister::ISENABLE0: {
       uint64_t id = Vcpu::GetCurrent()->id();
       std::lock_guard<std::mutex> lock(mutex_);
@@ -388,6 +393,31 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
     default:
       FXL_LOG(ERROR) << "Unhandled GIC distributor address read 0x" << std::hex
                      << addr;
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+}
+
+static zx_status_t validate_cfg(uint32_t cfg, uint32_t vector,
+                                uint32_t options) {
+  uint32_t field = (vector % 16) * 2;
+  bool edge_triggered = bits_shift(cfg, field + 1, field) >> 1;
+  switch (options & ZX_INTERRUPT_MODE_MASK) {
+    case ZX_INTERRUPT_MODE_EDGE_HIGH:
+      if (edge_triggered) {
+        return ZX_OK;
+      }
+      FXL_LOG(ERROR) << "Mismatched mode for interrupt " << vector
+                     << ", host is edge-triggered, guest is level-sensitive";
+      return ZX_ERR_INVALID_ARGS;
+    case ZX_INTERRUPT_MODE_LEVEL_HIGH:
+      if (!edge_triggered) {
+        return ZX_OK;
+      }
+      FXL_LOG(ERROR) << "Mismatched mode for interrupt " << vector
+                     << ", host is level-sensitive, guest is edge-triggered";
+      return ZX_ERR_INVALID_ARGS;
+    default:
+      FXL_LOG(ERROR) << "Unsupported GIC distributor interrupt mode";
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -490,8 +520,27 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       cpu_masks_[vector - kSpiBase] = cpu_mask;
       return BindVcpus(vector, cpu_mask);
     }
+    case GicdRegister::ICFG1... GicdRegister::ICFG31: {
+      std::lock_guard<std::mutex> lock(mutex_);
+      size_t index = (addr - static_cast<uint64_t>(GicdRegister::ICFG1)) /
+                     value.access_size;
+      cfg_[index] = value.u32;
+
+      // Check that the guest configuration matches the host configuration of
+      // physical interrupts in the modified range.
+      auto it = interrupts_.lower_bound((index + 1) * 16);
+      auto end = interrupts_.lower_bound((index + 2) * 16);
+      for (; it != end; ++it) {
+        zx_status_t status =
+            validate_cfg(value.u32, it->first, it->second.options);
+        if (status != ZX_OK) {
+          return status;
+        }
+      }
+      return ZX_OK;
+    }
     case GicdRegister::ICACTIVE0... GicdRegister::ICACTIVE15:
-    case GicdRegister::ICFG0... GicdRegister::ICFG31:
+    case GicdRegister::ICFG0:
     case GicdRegister::ICPEND0... GicdRegister::ICPEND31:
     case GicdRegister::IPRIORITY0... GicdRegister::IPRIORITY255:
     case GicdRegister::IGROUP0... GicdRegister::IGROUP31:
