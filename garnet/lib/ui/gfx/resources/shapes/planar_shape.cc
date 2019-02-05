@@ -14,12 +14,12 @@ PlanarShape::PlanarShape(Session* session, ResourceId id,
 bool PlanarShape::GetIntersection(const escher::ray4& ray,
                                   float* out_distance) const {
   // Reject if the ray origin is behind the Z=0 plane.
-  if (ray.origin.z < 0.f)
+  if (ray.origin.z > 0.f)
     return false;
 
   // Reject if the ray is not pointing down towards the Z=0 plane.
   float delta_z = -ray.direction.z;
-  if (delta_z < std::numeric_limits<float>::epsilon())
+  if (delta_z > std::numeric_limits<float>::epsilon())
     return false;
 
   // Compute the distance to the plane in multiples of the ray's direction

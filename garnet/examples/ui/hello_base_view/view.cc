@@ -72,7 +72,7 @@ void ShadertoyEmbedderView::OnSceneInvalidated(
   scenic::RoundedRectangle background_shape(session(), width, height, 20, 20,
                                             80, 10);
   background_.SetShape(background_shape);
-  background_.SetTranslation(width / 2.f, height / 2.f, 10.f);
+  background_.SetTranslationRH(width / 2.f, height / 2.f, -10.f);
 }
 
 // Helper for OnInputEvent: respond to pointer events.

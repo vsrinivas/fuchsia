@@ -98,7 +98,7 @@ void ViewHost::UpdateScene() {
     GetViewContainer()->SetChildProperties(it->first,
                                            std::move(view_properties));
 
-    view_data->host_node.SetTranslation(layout_bounds.x, layout_bounds.y, 0u);
+    view_data->host_node.SetTranslationRH(layout_bounds.x, layout_bounds.y, 0u);
   }
 
   InvalidateScene();

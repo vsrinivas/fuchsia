@@ -1,14 +1,15 @@
 # Scenic, the Fuchsia graphics engine
 
 * [Introduction](#introduction)
+* [Scenic and Fuchsia](#scenic-and-fuchsia)
 * [Concepts](#concepts)
   * [Scenic](#scenic)
-    * [Scenic and Fuchsia](#scenic-and-fuchsia)
   * [Sessions](#sessions)
   * [Resources](#resources)
     * [Nodes](#nodes)
     * [Scenes](#scenes)
     * [Compositors](#compositors)
+  * [Coordinate Frames and Units](#coordinate-frames-and-units)
   * [Timing Model](#timing-model)
   * [Fences](#fences)
 * [Examples of using Scenic](#examples-of-using-scenic)
@@ -209,13 +210,31 @@ can contain either an `Image` (perhaps transformed by a matrix), or a
 Add sections to discuss all other kinds of resources: shapes, materials,
 links, memory, images, buffers, animations, variables, renderers etc.
 
+## Coordinate Frames and Units
+Scenic manages a global scene graph in a three dimensional space. Some of the charactaristics of this space are defined by Scenic itself, whereas some are defined by the root presenter or even other clients.
+
+![Scenic Axes](scenic_axes.png)
+
+### Units
+Units are configured by the root presenter. The default root presenter uses a device-independent scalable unit called "pips" for the root space. See [Units and Metrics](units_and_metrics.md) for details. What units are used for your view space depends on what transforms are applied to your view by your parent.
+
+### World Space
+The Scenic world space is a right handed Cartesian space. It is configured by the root presenter which configures the view and projection parameters of the camera. The default root presenter will put the origin at the top left of the screen and make +X point right, +Y point down, and +Z point into the screen.
+
+### View Space
+Ultimately the space of a given view depends on what transforms are applied to it by its parent View and the parent View's parent and so on. If no rotation transform is applied and all scale transforms are positive along all axes then the View's axes will align with the axes of the root presenter and the handedness will match.
+
+The bounds of the root view are defined by a min and a max point as follows:
+
+![Scenic Root View Bounds](scenic_root_view_bounds.png)
+
 ## Timing Model
 
-TODO: Talk about scheduling frames, presentation timestamps, etc.
+TODO(SCN-1202): Talk about scheduling frames, presentation timestamps, etc.
 
 ## Fences
 
-TODO: Talk about synchronization.
+TODO(SCN-1228): Talk about synchronization.
 
 # Examples of using Scenic
 

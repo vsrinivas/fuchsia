@@ -232,10 +232,11 @@ void App::CreateScene(float display_width, float display_height) {
   background_node.SetMaterial(background_material);
   root_node.SetClip(0, true);
   if (type_ == AppType::CONTAINER) {
-    root_node.SetTranslation(kBackgroundMargin + background_width * 0.5f,
-                             kBackgroundMargin + background_height * 0.5f, 1.f);
+    root_node.SetTranslationRH(kBackgroundMargin + background_width * 0.5f,
+                               kBackgroundMargin + background_height * 0.5f,
+                               -1.f);
   } else {
-    root_node.SetTranslation(0.f, 0.f, 1.f);
+    root_node.SetTranslationRH(0.f, 0.f, -1.f);
   }
   root_node.AddPart(background_node);
 

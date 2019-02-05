@@ -270,9 +270,9 @@ void MediaPlayerTestUtilView::Layout() {
   scenic::Rectangle background_shape(session(), logical_size().width,
                                      logical_size().height);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslation(logical_size().width * .5f,
-                                  logical_size().height * .5f,
-                                  kBackgroundElevation);
+  background_node_.SetTranslationRH(logical_size().width * .5f,
+                                    logical_size().height * .5f,
+                                    -kBackgroundElevation);
 
   // Compute maximum size of video content after reserving space
   // for decorations.
@@ -314,18 +314,18 @@ void MediaPlayerTestUtilView::Layout() {
   scenic::Rectangle progress_bar_shape(session(), controls_rect_.width,
                                        controls_rect_.height);
   progress_bar_node_.SetShape(progress_bar_shape);
-  progress_bar_node_.SetTranslation(
+  progress_bar_node_.SetTranslationRH(
       controls_rect_.x + controls_rect_.width * 0.5f,
-      controls_rect_.y + controls_rect_.height * 0.5f, kProgressBarElevation);
+      controls_rect_.y + controls_rect_.height * 0.5f, -kProgressBarElevation);
 
   // Put the progress bar slider on top of the progress bar.
   scenic::Rectangle progress_bar_slider_shape(session(), controls_rect_.width,
                                               controls_rect_.height);
   progress_bar_slider_node_.SetShape(progress_bar_slider_shape);
-  progress_bar_slider_node_.SetTranslation(
+  progress_bar_slider_node_.SetTranslationRH(
       controls_rect_.x + controls_rect_.width * 0.5f,
       controls_rect_.y + controls_rect_.height * 0.5f,
-      kProgressBarSliderElevation);
+      -kProgressBarSliderElevation);
 
   // Ask the view to fill the space.
   ::fuchsia::ui::viewsv1::ViewProperties view_properties;
@@ -346,11 +346,11 @@ void MediaPlayerTestUtilView::OnSceneInvalidated(
   // Position the video.
   if (video_host_node_) {
     // TODO(dalesat): Fix this when SCN-1041 is fixed. Should be:
-    // video_host_node_->SetTranslation(
+    // video_host_node_->SetTranslationRH(
     //     content_rect_.x + content_rect_.width * 0.5f,
     //     content_rect_.y + content_rect_.height * 0.5f, kVideoElevation);
-    video_host_node_->SetTranslation(content_rect_.x, content_rect_.y,
-                                     kVideoElevation);
+    video_host_node_->SetTranslationRH(content_rect_.x, content_rect_.y,
+                                       -kVideoElevation);
   }
 
   float progress_bar_slider_width =
@@ -358,10 +358,10 @@ void MediaPlayerTestUtilView::OnSceneInvalidated(
   scenic::Rectangle progress_bar_slider_shape(
       session(), progress_bar_slider_width, controls_rect_.height);
   progress_bar_slider_node_.SetShape(progress_bar_slider_shape);
-  progress_bar_slider_node_.SetTranslation(
+  progress_bar_slider_node_.SetTranslationRH(
       controls_rect_.x + progress_bar_slider_width * 0.5f,
       controls_rect_.y + controls_rect_.height * 0.5f,
-      kProgressBarSliderElevation);
+      -kProgressBarSliderElevation);
 
   if (state_ == State::kPlaying) {
     InvalidateScene();

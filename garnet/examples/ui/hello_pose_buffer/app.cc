@@ -71,10 +71,10 @@ void App::CreateExampleScene(float display_width, float display_height) {
   Scene scene(session);
   camera_ = std::make_unique<Camera>(scene);
 
-  float camera_offset = kEdgeLength * 4.f;
+  float camera_offset = -kEdgeLength * 4.f;
   float eye_position[3] = {0, 0, camera_offset};
   float look_at[3] = {0, 0, 0};
-  float up[3] = {0, 1, 0};
+  float up[3] = {0, -1, 0};
   float fovy = glm::radians(30.f);
 
   camera_->SetTransform(eye_position, look_at, up);
@@ -118,15 +118,15 @@ void App::CreateExampleScene(float display_width, float display_height) {
       glm::vec3 translation(
           kEdgeLength * -0.5 + checker_length * i + checker_length / 2,
           kEdgeLength * -0.5 + checker_length * j + checker_length / 2,
-          kEdgeLength);
+          -kEdgeLength);
 
       // EntityNode checker_node(session);
       ShapeNode checker_shape_node(session);
       checker_shape_node.SetShape(checker_shape);
       checker_shape_node.SetMaterial(materials[material_index]);
       // checker_node.AddPart(checker_shape_node);
-      checker_shape_node.SetTranslation(translation.x, translation.y,
-                                        translation.z);
+      checker_shape_node.SetTranslationRH(translation.x, translation.y,
+                                          translation.z);
       root_node.AddChild(checker_shape_node);
     }
   }

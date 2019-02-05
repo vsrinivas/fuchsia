@@ -139,7 +139,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     s_1.Apply(scenic::NewCreateShapeNodeCmd(kChildId));
     s_1.Apply(scenic::NewAddChildCmd(kRootNodeId, kChildId));
     s_1.Apply(scenic::NewSetTranslationCmd(kChildId,
-                                           (float[3]){4.f, 4.f, /*z*/ 2.f}));
+                                           (float[3]){4.f, 4.f, /*z*/ -2.f}));
 
     const uint32_t kShapeId = 2004;
     s_1.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 9.f,
@@ -160,7 +160,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     s_2.Apply(scenic::NewCreateShapeNodeCmd(kChildId));
     s_2.Apply(scenic::NewAddChildCmd(kRootNodeId, kChildId));
     s_2.Apply(scenic::NewSetTranslationCmd(kChildId,
-                                           (float[3]){4.f, 4.f, /*z*/ 3.f}));
+                                           (float[3]){4.f, 4.f, /*z*/ -3.f}));
 
     const uint32_t kShapeId = 3004;
     s_2.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 9.f,
@@ -183,8 +183,8 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     ASSERT_NE(layer_stack.get(), nullptr);
 
     escher::ray4 ray;
-    ray.origin = escher::vec4(4.f, 4.f, -1.f, 1.f);
-    ray.direction = escher::vec4(0.f, 0.f, 1.f, 0.f);
+    ray.origin = escher::vec4(4.f, 4.f, 1.f, 1.f);
+    ray.direction = escher::vec4(0.f, 0.f, -1.f, 0.f);
     GlobalHitTester hit_tester;
     hits = layer_stack->HitTest(ray, &hit_tester);
   }

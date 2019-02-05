@@ -20,7 +20,7 @@ View::View(scenic::ViewContext context, async::Loop* loop)
   background_node_.SetMaterial(background_material);
 
   parent_node().AddChild(import_node_holder_);
-  import_node_holder_.SetTranslation(0.f, 0.f, 50.f);
+  import_node_holder_.SetTranslationRH(0.f, 0.f, -50.f);
   import_node_.AddChild(scratch_group_);
   import_node_.AddChild(stable_group_);
 }
@@ -31,7 +31,7 @@ void View::OnPropertiesChanged(
   float height = properties().view_layout->size.height;
   scenic::Rectangle background_shape(session(), width, height);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslation(width * .5f, height * .5f, .1f);
+  background_node_.SetTranslationRH(width * .5f, height * .5f, -.1f);
   canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
                   [](fuchsia::images::PresentationInfo info) {});
 }

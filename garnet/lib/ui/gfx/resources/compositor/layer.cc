@@ -108,9 +108,8 @@ std::vector<Hit> Layer::HitTest(const escher::ray4& ray,
 }
 
 escher::ViewingVolume Layer::GetViewingVolume() const {
-  // TODO(MZ-194): Define these properties somewhere better (perhaps Scene?)
-  // instead of hardcoding them here.
-  constexpr float kTop = 1000;
+  // TODO(SCN-1276): Don't hardcode Z bounds in multiple locations.
+  constexpr float kTop = -1000;
   constexpr float kBottom = 0;
   return escher::ViewingVolume(size_.x, size_.y, kTop, kBottom);
 }

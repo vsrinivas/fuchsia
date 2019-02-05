@@ -83,7 +83,7 @@ ExamplePresenter::Presentation::Presentation(scenic::Session* session,
   scene.AddChild(view_holder_node_);
 
   view_holder_node_.Attach(view_holder_);
-  view_holder_node_.SetTranslation(0, 0, 10.f);
+  view_holder_node_.SetTranslationRH(0, 0, -10.f);
 
   ambient_light.SetColor(0.3f, 0.3f, 0.3f);
   directional_light.SetColor(0.7f, 0.7f, 0.7f);
@@ -92,8 +92,9 @@ ExamplePresenter::Presentation::Presentation(scenic::Session* session,
 
 void ExamplePresenter::Presentation::SetSize(float width, float height) {
   layer_.SetSize(static_cast<int32_t>(width), static_cast<int32_t>(height));
-  view_holder_.SetViewProperties(0.f, 0.f, 0.f, width, height, 1000.f, 0.f, 0.f,
-                                 0.f, 0.f, 0.f, 0.f);
+  // TODO(SCN-1276): Don't hardcode Z bounds in multiple locations.
+  view_holder_.SetViewProperties(0.f, 0.f, -1000.f, width, height, 0.f, 0.f,
+                                 0.f, 0.f, 0.f, 0.f, 0.f);
 }
 
 }  // namespace hello_base_view

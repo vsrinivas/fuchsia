@@ -116,7 +116,8 @@ Presentation1::Presentation1(fuchsia::ui::scenic::Scenic* scenic,
   ambient_light_.SetColor(kAmbient, kAmbient, kAmbient);
   directional_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
   point_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
-  light_direction_ = glm::vec3(1.f, 1.f, -2.f);
+  light_direction_ = glm::vec3(1.f, 1.f, 2.f);
+
   directional_light_.SetDirection(light_direction_.x, light_direction_.y,
                                   light_direction_.z);
   point_light_.SetPosition(300.f, 300.f, 2000.f);
@@ -480,7 +481,7 @@ bool Presentation1::ApplyDisplayModelChangesHelper(bool print_log) {
     float left_offset = (info_w - metrics_w) / density_w / 2;
     float top_offset = (info_h - metrics_h) / density_h / 2;
 
-    root_view_host_node_.SetTranslation(left_offset, top_offset, 0.f);
+    root_view_host_node_.SetTranslationRH(left_offset, top_offset, 0.f);
     FXL_VLOG(2) << "DisplayModel translation: " << left_offset << ", "
                 << top_offset;
   }
@@ -856,12 +857,12 @@ void Presentation1::PresentScene() {
         scene_.AddChild(*state.node);
         state.created = true;
       }
-      state.node->SetTranslation(
+      state.node->SetTranslationRH(
           state.position.x * display_metrics_.x_scale_in_pp_per_px() +
               kCursorWidth * .5f,
           state.position.y * display_metrics_.y_scale_in_pp_per_px() +
               kCursorHeight * .5f,
-          kCursorElevation);
+          -kCursorElevation);
     } else if (state.created) {
       state.node->Detach();
       state.created = false;

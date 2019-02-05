@@ -23,7 +23,7 @@ ViewingVolume::ViewingVolume(const BoundingBox& box)
 
 ViewingVolume::ViewingVolume(float width, float height, float top, float bottom)
     : width_(width), height_(height), top_(top), bottom_(bottom) {
-  FXL_DCHECK(width >= 0 && height >= 0 && top >= bottom);
+  FXL_DCHECK(width >= 0 && height >= 0 && top <= bottom);
 }
 
 ViewingVolume::~ViewingVolume() {}

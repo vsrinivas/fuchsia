@@ -56,12 +56,13 @@ void SpinningSquareView::OnSceneInvalidated(
   scenic::Rectangle background_shape(session(), logical_size().width,
                                      logical_size().height);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslation(
-      (float[]){center_x, center_y, kBackgroundElevation});
+  background_node_.SetTranslationRH(
+      (float[]){center_x, center_y, -kBackgroundElevation});
 
   scenic::Rectangle square_shape(session(), square_size, square_size);
   square_node_.SetShape(square_shape);
-  square_node_.SetTranslation((float[]){center_x, center_y, kSquareElevation});
+  square_node_.SetTranslationRH(
+      (float[]){center_x, center_y, -kSquareElevation});
   square_node_.SetRotation(
       (float[]){0.f, 0.f, sinf(angle * .5f), cosf(angle * .5f)});
 

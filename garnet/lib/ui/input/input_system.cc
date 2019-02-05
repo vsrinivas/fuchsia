@@ -80,8 +80,8 @@ escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
   //
   // During dispatch, we translate an arbitrary pointer's (x,y) device-space
   // coordinates to a View's (x', y') model-space coordinates.
-  return {{x, y, -1.f, 1.f},  // Origin as homogeneous point.
-          {0.f, 0.f, 1.f, 0.f}};
+  return {{x, y, 1.f, 1.f},  // Origin as homogeneous point.
+          {0.f, 0.f, -1.f, 0.f}};
 }
 
 // Helper for Dispatch[Touch|Mouse]Command.

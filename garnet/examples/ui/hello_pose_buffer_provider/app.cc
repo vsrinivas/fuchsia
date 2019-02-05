@@ -140,7 +140,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
   // kEdgeLength to end up with a cube whose edge length is kEdgeLength long.
   float scale_factor = 0.5 * kEdgeLength;
   cube_node_->SetScale(scale_factor, scale_factor, scale_factor);
-  cube_node_->SetTranslation(0, 0, 4.0 * kEdgeLength);
+  cube_node_->SetTranslationRH(0, 0, -4.0 * kEdgeLength);
 
   root_node.AddChild(*cube_node_);
 }

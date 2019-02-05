@@ -257,7 +257,7 @@ class BackgroundView : public TestView,
   virtual void Draw(float cx, float cy, float sx, float sy) {
     scenic::Rectangle background_shape(&session_, sx, sy);
     background_node_.SetShape(background_shape);
-    background_node_.SetTranslation((float[]){cx, cy, kBackgroundElevation});
+    background_node_.SetTranslationRH((float[]){cx, cy, -kBackgroundElevation});
   }
 
  private:
@@ -321,12 +321,67 @@ class RotatedSquareView : public BackgroundView {
 
     scenic::Rectangle square_shape(session(), square_size, square_size);
     square_node_.SetShape(square_shape);
-    square_node_.SetTranslation((float[]){cx, cy, kSquareElevation});
+    square_node_.SetTranslationRH((float[]){cx, cy, -kSquareElevation});
     square_node_.SetRotation(
         (float[]){0.f, 0.f, sinf(kAngle * .5f), cosf(kAngle * .5f)});
   }
 
   scenic::ShapeNode square_node_;
+};
+
+// Draws the following coordinate test pattern in a view:
+//
+// ___________________________________
+// |                |                |
+// |     BLACK      |        RED     |
+// |           _____|_____           |
+// |___________|  GREEN  |___________|
+// |           |_________|           |
+// |                |                |
+// |      BLUE      |     MAGENTA    |
+// |________________|________________|
+//
+class CoordinateTestView : public BackgroundView {
+ public:
+  CoordinateTestView(ViewContext context,
+                     const std::string& debug_name = "RotatedSquareView")
+      : BackgroundView(std::move(context), debug_name) {}
+
+ private:
+  void Draw(float cx, float cy, float sx, float sy) override {
+    BackgroundView::Draw(cx, cy, sx, sy);
+
+    scenic::EntityNode root_node(session());
+    view()->AddChild(root_node);
+
+    static const float pane_width = sx / 2;
+    static const float pane_height = sy / 2;
+
+    for (uint32_t i = 0; i < 2; i++) {
+      for (uint32_t j = 0; j < 2; j++) {
+        scenic::Rectangle pane_shape(session(), pane_width, pane_height);
+        scenic::Material pane_material(session());
+        pane_material.SetColor(i * 255.f, 0, j * 255.f, 255);
+
+        scenic::ShapeNode pane_node(session());
+        pane_node.SetShape(pane_shape);
+        pane_node.SetMaterial(pane_material);
+        pane_node.SetTranslationRH((i + 0.5) * pane_width,
+                                   (j + 0.5) * pane_height, -20);
+        root_node.AddChild(pane_node);
+      }
+    }
+
+    scenic::Rectangle pane_shape(session(), sx / 4, sy / 4);
+    scenic::Material pane_material(session());
+    pane_material.SetColor(0, 255, 0, 255);
+
+    scenic::ShapeNode pane_node(session());
+    pane_node.SetShape(pane_shape);
+    pane_node.SetMaterial(pane_material);
+    pane_node.SetTranslationRH(0.5 * sx, 0.5 * sy, -40);
+    root_node.AddChild(pane_node);
+  }
 };
 
 TEST_F(ScenicPixelTest, SolidColor) {
@@ -367,6 +422,163 @@ TEST_F(ScenicPixelTest, RotatedSquare) {
 
   const std::string filename = DumpScreenshot(TakeScreenshot());
   FXL_LOG(INFO) << "Wrote screenshot to " << filename;
+}
+
+TEST_F(ScenicPixelTest, ViewCoordinates) {
+  // Synchronously get display dimensions
+  float display_width;
+  float display_height;
+  scenic_->GetDisplayInfo([this, &display_width, &display_height](
+      fuchsia::ui::gfx::DisplayInfo display_info) {
+    display_width = static_cast<float>(display_info.width_in_px);
+    display_height = static_cast<float>(display_info.height_in_px);
+    QuitLoop();
+  });
+  RunLoop();
+
+  CoordinateTestView view(CreatePresentationContext());
+  RunUntilPresent(&view);
+
+  fuchsia::ui::scenic::ScreenshotData screenshot = TakeScreenshot();
+  std::vector<uint8_t> data;
+  EXPECT_TRUE(fsl::VectorFromVmo(screenshot.data, &data))
+      << "Failed to read screenshot";
+
+  auto get_color_at_coordinates = [&display_width, &display_height, &data](
+      float x, float y) -> Color {
+    auto pixels = reinterpret_cast<Color*>(data.data());
+    uint32_t index_x = x * display_width;
+    uint32_t index_y = y * display_height;
+    uint32_t index = index_y * display_width + index_x;
+    return pixels[index];
+  };
+
+  EXPECT_EQ(Color({0, 0, 0, 255}), get_color_at_coordinates(.25f, .25f));
+  EXPECT_EQ(Color({255, 0, 0, 255}), get_color_at_coordinates(.25f, .75f));
+  EXPECT_EQ(Color({0, 0, 255, 255}), get_color_at_coordinates(.75f, .25f));
+  EXPECT_EQ(Color({255, 0, 255, 255}), get_color_at_coordinates(.75f, .75f));
+  EXPECT_EQ(Color({0, 255, 0, 255}), get_color_at_coordinates(.5f, .5f));
+}
+
+// Draws and tests the following coordinate test pattern without views:
+// ___________________________________
+// |                |                |
+// |     BLACK      |        RED     |
+// |           _____|_____           |
+// |___________|  GREEN  |___________|
+// |           |_________|           |
+// |                |                |
+// |      BLUE      |     MAGENTA    |
+// |________________|________________|
+//
+TEST_F(ScenicPixelTest, GlobalCoordinates) {
+  // Synchronously get display dimensions
+  float display_width;
+  float display_height;
+  scenic_->GetDisplayInfo([this, &display_width, &display_height](
+      fuchsia::ui::gfx::DisplayInfo display_info) {
+    display_width = static_cast<float>(display_info.width_in_px);
+    display_height = static_cast<float>(display_info.height_in_px);
+    QuitLoop();
+  });
+  RunLoop();
+
+  // Initialize session
+  auto unique_session = std::make_unique<scenic::Session>(scenic_.get());
+  auto session = unique_session.get();
+  session->set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Session terminated.";
+    QuitLoop();
+  });
+
+  scenic::DisplayCompositor compositor(session);
+  scenic::LayerStack layer_stack(session);
+  scenic::Layer layer(session);
+  scenic::Renderer renderer(session);
+  scenic::Scene scene(session);
+  scenic::Camera camera(scene);
+
+  float eye_position[3] = {display_width / 2.f, display_height / 2.f, -1001};
+  float look_at[3] = {display_width / 2.f, display_height / 2.f, 1};
+  float up[3] = {0, -1, 0};
+  camera.SetTransform(eye_position, look_at, up);
+
+  compositor.SetLayerStack(layer_stack);
+  layer_stack.AddLayer(layer);
+  layer.SetSize(display_width, display_height);
+  layer.SetRenderer(renderer);
+  renderer.SetCamera(camera.id());
+
+  // Set up lights.
+  scenic::AmbientLight ambient_light(session);
+  scene.AddLight(ambient_light);
+  ambient_light.SetColor(1.f, 1.f, 1.f);
+
+  // Create an EntityNode to serve as the scene root.
+  scenic::EntityNode root_node(session);
+  scene.AddChild(root_node.id());
+
+  static const float pane_width = display_width / 2;
+  static const float pane_height = display_height / 2;
+
+  for (uint32_t i = 0; i < 2; i++) {
+    for (uint32_t j = 0; j < 2; j++) {
+      scenic::Rectangle pane_shape(session, pane_width, pane_height);
+      scenic::Material pane_material(session);
+      pane_material.SetColor(i * 255.f, 0, j * 255.f, 255);
+
+      scenic::ShapeNode pane_node(session);
+      pane_node.SetShape(pane_shape);
+      pane_node.SetMaterial(pane_material);
+      pane_node.SetTranslationRH((i + 0.5) * pane_width,
+                                 (j + 0.5) * pane_height, -20);
+      root_node.AddChild(pane_node);
+    }
+  }
+
+  scenic::Rectangle pane_shape(session, display_width / 4, display_height / 4);
+  scenic::Material pane_material(session);
+  pane_material.SetColor(0, 255, 0, 255);
+
+  scenic::ShapeNode pane_node(session);
+  pane_node.SetShape(pane_shape);
+  pane_node.SetMaterial(pane_material);
+  pane_node.SetTranslationRH(0.5 * display_width, 0.5 * display_height, -40);
+  root_node.AddChild(pane_node);
+
+  // Actual tests. Test the same scene with an orthographic and perspective
+  // camera.
+  std::string camera_type[2] = {"orthographic", "perspective"};
+  float fov[2] = {0, 2 * atan((display_height / 2.f) / abs(eye_position[2]))};
+
+  for (int i = 0; i < 2; i++) {
+    FXL_LOG(INFO) << "Testing " << camera_type[i] << " camera";
+    camera.SetProjection(fov[i]);
+
+    session->Present(
+        0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+    RunLoop();
+
+    fuchsia::ui::scenic::ScreenshotData screenshot = TakeScreenshot();
+    std::vector<uint8_t> data;
+    EXPECT_TRUE(fsl::VectorFromVmo(screenshot.data, &data))
+        << "Failed to read screenshot";
+
+    auto get_color_at_coordinates = [&display_width, &display_height, &data](
+        float x, float y) -> Color {
+      auto pixels = reinterpret_cast<Color*>(data.data());
+      uint32_t index_x = x * display_width;
+      uint32_t index_y = y * display_height;
+      uint32_t index = index_y * display_width + index_x;
+      return pixels[index];
+    };
+
+    EXPECT_EQ(Color({0, 0, 0, 255}), get_color_at_coordinates(.25f, .25f));
+    EXPECT_EQ(Color({255, 0, 0, 255}), get_color_at_coordinates(.25f, .75f));
+    EXPECT_EQ(Color({0, 0, 255, 255}), get_color_at_coordinates(.75f, .25f));
+    EXPECT_EQ(Color({255, 0, 255, 255}), get_color_at_coordinates(.75f, .75f));
+    EXPECT_EQ(Color({0, 255, 0, 255}), get_color_at_coordinates(.5f, .5f));
+  }
 }
 
 }  // namespace

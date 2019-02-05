@@ -16,8 +16,8 @@ namespace test {
 namespace {
 using vec3 = escher::vec3;
 
-constexpr vec3 kDownVector{0.f, 0.f, -1.f};
-constexpr vec3 kUpVector{0.f, 0.f, 1.f};
+constexpr vec3 kDownVector{0.f, 0.f, 1.f};
+constexpr vec3 kUpVector{0.f, 0.f, -1.f};
 }  // namespace
 
 /*
@@ -75,12 +75,12 @@ class HitTestTest : public SessionTest {
     Apply(scenic::NewCreateShapeNodeCmd(4));
     Apply(scenic::NewSetTagCmd(4, 10));
     Apply(scenic::NewSetShapeCmd(4, 20));
-    Apply(scenic::NewSetTranslationCmd(4, (float[3]){0.f, 0.f, 2.f}));
+    Apply(scenic::NewSetTranslationCmd(4, (float[3]){0.f, 0.f, -2.f}));
     Apply(scenic::NewAddChildCmd(3, 4));
 
     Apply(scenic::NewCreateEntityNodeCmd(5));
     Apply(scenic::NewSetTagCmd(5, 20));
-    Apply(scenic::NewSetTranslationCmd(5, (float[3]){5.f, 5.f, 1.f}));
+    Apply(scenic::NewSetTranslationCmd(5, (float[3]){5.f, 5.f, -1.f}));
     Apply(scenic::NewAddChildCmd(3, 5));
 
     Apply(scenic::NewCreateShapeNodeCmd(6));
@@ -89,7 +89,7 @@ class HitTestTest : public SessionTest {
 
     Apply(scenic::NewCreateEntityNodeCmd(7));
     Apply(scenic::NewSetTagCmd(7, 35));
-    Apply(scenic::NewSetTranslationCmd(7, (float[3]){10.f, 0.f, 1.f}));
+    Apply(scenic::NewSetTranslationCmd(7, (float[3]){10.f, 0.f, -1.f}));
     Apply(scenic::NewAddChildCmd(2, 7));
 
     Apply(scenic::NewCreateShapeNodeCmd(8));
@@ -166,87 +166,87 @@ TEST_F(HitTestTest, InvalidNodeId) {
 }
 
 TEST_F(HitTestTest, RayBelowScenePointingDown) {
-  ExpectHits(1, vec3(0.f, 0.f, -10.f), kDownVector, {});
+  ExpectHits(1, vec3(0.f, 0.f, 10.f), kDownVector, {});
 }
 
 TEST_F(HitTestTest, RayBelowScenePointingUp) {
-  ExpectHits(1, vec3(0.f, 0.f, -10.f), kUpVector, {});
-}
-
-TEST_F(HitTestTest, RayAboveScenePointingUp) {
   ExpectHits(1, vec3(0.f, 0.f, 10.f), kUpVector, {});
 }
 
+TEST_F(HitTestTest, RayAboveScenePointingUp) {
+  ExpectHits(1, vec3(0.f, 0.f, -10.f), kUpVector, {});
+}
+
 TEST_F(HitTestTest, Hit10InTopLeftCornerFromNode1) {
-  ExpectHits(1, vec3(0.f, 0.f, 10.f), kDownVector,
-             {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f},
+  ExpectHits(1, vec3(0.f, 0.f, -10.f), kDownVector,
+             {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = 2.f, .d = 8.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 8.f},
               {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f}});
 }
 
 TEST_F(HitTestTest, Hit10InTopLeftCornerFromNode2) {
-  ExpectHits(2, vec3(0.f, 0.f, 10.f), kDownVector,
-             {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f},
+  ExpectHits(2, vec3(0.f, 0.f, -10.f), kDownVector,
+             {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = 2.f, .d = 8.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 8.f},
               {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f}});
 }
 
 TEST_F(HitTestTest, Hit10InTopLeftCornerFromNode3) {
-  ExpectHits(3, vec3(-4.f, -4.f, 10.f), kDownVector,
-             {{.tag = 10, .tx = 0.f, .ty = 0.f, .tz = -2.f, .d = 8.f},
+  ExpectHits(3, vec3(-4.f, -4.f, -10.f), kDownVector,
+             {{.tag = 10, .tx = 0.f, .ty = 0.f, .tz = 2.f, .d = 8.f},
               {.tag = 25, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f}});
 }
 
 TEST_F(HitTestTest, Hit10InTopLeftCornerFromNode4) {
-  ExpectHits(4, vec3(-4.f, -4.f, 10.f), kDownVector,
+  ExpectHits(4, vec3(-4.f, -4.f, -10.f), kDownVector,
              {{.tag = 10, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 10.f}});
 }
 
 TEST_F(HitTestTest, Hit20InMiddleFromNode1) {
-  ExpectHits(1, vec3(9.f, 9.f, 10.f), kDownVector,
-             {{.tag = 20, .tx = -9.f, .ty = -9.f, .tz = -1.f, .d = 9.f},
+  ExpectHits(1, vec3(9.f, 9.f, -10.f), kDownVector,
+             {{.tag = 20, .tx = -9.f, .ty = -9.f, .tz = 1.f, .d = 9.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 9.f},
               {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f}});
 }
 
 TEST_F(HitTestTest, Hit20InMiddleFromNode2) {
-  ExpectHits(2, vec3(9.f, 9.f, 10.f), kDownVector,
-             {{.tag = 20, .tx = -9.f, .ty = -9.f, .tz = -1.f, .d = 9.f},
+  ExpectHits(2, vec3(9.f, 9.f, -10.f), kDownVector,
+             {{.tag = 20, .tx = -9.f, .ty = -9.f, .tz = 1.f, .d = 9.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 9.f},
               {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f}});
 }
 
 TEST_F(HitTestTest, Hit20InMiddleFromNode3) {
-  ExpectHits(3, vec3(5.f, 5.f, 10.f), kDownVector,
-             {{.tag = 20, .tx = -5.f, .ty = -5.f, .tz = -1.f, .d = 9.f},
+  ExpectHits(3, vec3(5.f, 5.f, -10.f), kDownVector,
+             {{.tag = 20, .tx = -5.f, .ty = -5.f, .tz = 1.f, .d = 9.f},
               {.tag = 25, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f}});
 }
 
 TEST_F(HitTestTest, Hit20InMiddleFromNode5) {
-  ExpectHits(5, vec3(0.f, 0.f, 10.f), kDownVector,
+  ExpectHits(5, vec3(0.f, 0.f, -10.f), kDownVector,
              {{.tag = 20, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 10.f}});
 }
 
 TEST_F(HitTestTest, Hit20InMiddleFromNode6) {
-  ExpectHits(6, vec3(0.f, 0.f, 10.f), kDownVector, {});
+  ExpectHits(6, vec3(0.f, 0.f, -10.f), kDownVector, {});
 }
 
 TEST_F(HitTestTest, HitBoth10And20FromNode1) {
   // 10 is nearer so it comes before 20
-  ExpectHits(1, vec3(6.f, 6.f, 10.f), kDownVector,
-             {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f},
+  ExpectHits(1, vec3(6.f, 6.f, -10.f), kDownVector,
+             {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = 2.f, .d = 8.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 8.f},
               {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f},
-              {.tag = 20, .tx = -9.f, .ty = -9.f, .tz = -1.f, .d = 9.f}});
+              {.tag = 20, .tx = -9.f, .ty = -9.f, .tz = 1.f, .d = 9.f}});
 }
 
 TEST_F(HitTestTest, HitBoth20And30FromNode1) {
   // 20 and 30 are same distance but 30 is closer in draw order so it
   // comes before 20
-  ExpectHits(1, vec3(12.f, 6.f, 10.f), kDownVector,
-             {{.tag = 30, .tx = -14.f, .ty = -4.f, .tz = -1.f, .d = 9.f},
-              {.tag = 35, .tx = -10.f, .ty = 0.f, .tz = -1.f, .d = 9.f},
-              {.tag = 20, .tx = -9.f, .ty = -9.f, .tz = -1.f, .d = 9.f},
+  ExpectHits(1, vec3(12.f, 6.f, -10.f), kDownVector,
+             {{.tag = 30, .tx = -14.f, .ty = -4.f, .tz = 1.f, .d = 9.f},
+              {.tag = 35, .tx = -10.f, .ty = 0.f, .tz = 1.f, .d = 9.f},
+              {.tag = 20, .tx = -9.f, .ty = -9.f, .tz = 1.f, .d = 9.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 9.f},
               {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f}});
 }
@@ -256,9 +256,9 @@ TEST_F(HitTestTest, SuppressNode25FromNode1) {
       3, ::fuchsia::ui::gfx::HitTestBehavior::kSuppress));
 
   // While we would have hit 20 and 25, we suppressed node 3 so neither appears.
-  ExpectHits(1, vec3(12.f, 6.f, 10.f), kDownVector,
-             {{.tag = 30, .tx = -14.f, .ty = -4.f, .tz = -1.f, .d = 9.f},
-              {.tag = 35, .tx = -10.f, .ty = 0.f, .tz = -1.f, .d = 9.f},
+  ExpectHits(1, vec3(12.f, 6.f, -10.f), kDownVector,
+             {{.tag = 30, .tx = -14.f, .ty = -4.f, .tz = 1.f, .d = 9.f},
+              {.tag = 35, .tx = -10.f, .ty = 0.f, .tz = 1.f, .d = 9.f},
               {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 9.f}});
 }
 
@@ -281,8 +281,8 @@ TEST_F(HitTestTest, Clipping) {
 
   // Now disable clipping and try again.
   Apply(scenic::NewSetClipCmd(3, 0, false));
-  ExpectHits(1, vec3(0.f, 0.f, 10.f), kDownVector,
-             {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f},
+  ExpectHits(1, vec3(0.f, 0.f, -10.f), kDownVector,
+             {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = 2.f, .d = 8.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 8.f},
               {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f}});
 
@@ -290,8 +290,8 @@ TEST_F(HitTestTest, Clipping) {
   // and reenable clipping.
   Apply(scenic::NewSetTranslationCmd(11, (float[3]){-4.f, -4.f, 0.f}));
   Apply(scenic::NewSetClipCmd(3, 0, true));
-  ExpectHits(1, vec3(0.f, 0.f, 10.f), kDownVector,
-             {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f},
+  ExpectHits(1, vec3(0.f, 0.f, -10.f), kDownVector,
+             {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = 2.f, .d = 8.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 8.f},
               {.tag = 100, .tx = 0.f, .ty = 0.f, .tz = 0.f, .d = 8.f}});
 }

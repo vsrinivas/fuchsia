@@ -191,13 +191,13 @@ void App::OnPointerEvent(const fuchsia::ui::input::PointerEvent& event) {
           << "Pointer index full: " << contents(pointer_id_);
       pointer_id_[idx] = event.pointer_id;
       view_->AddChild(*pointer_tracker_[idx]);
-      pointer_tracker_[idx]->SetTranslation(event.x, event.y, 400.f);
+      pointer_tracker_[idx]->SetTranslationRH(event.x, event.y, -400.f);
 
     } else if (event.phase == Phase::MOVE) {
       size_t idx = find_idx(pointer_id_, event.pointer_id);
       if (idx != kNoFinger) {
         // It's a finger we know, keep moving.
-        pointer_tracker_[idx]->SetTranslation(event.x, event.y, 400.f);
+        pointer_tracker_[idx]->SetTranslationRH(event.x, event.y, -400.f);
       }
 
     } else if (event.phase == Phase::UP || event.phase == Phase::CANCEL) {
@@ -251,7 +251,7 @@ void App::CreateScene(float display_width, float display_height) {
     std::unique_ptr<scenic::EntityNode> root_node =
         std::make_unique<scenic::EntityNode>(session);
     root_node->SetLabel("child root node");
-    root_node->SetTranslation(0.f, 0.f, 100.f);
+    root_node->SetTranslationRH(0.f, 0.f, -100.f);
 
     scenic::ShapeNode shape(session);
     scenic::Rectangle rec(session, kWidth, kHeight);
@@ -287,25 +287,25 @@ void App::CreateScene(float display_width, float display_height) {
     scenic::Rectangle vertical_bar(session, kBar, kHeight);
 
     scenic::ShapeNode top_bar(session);
-    top_bar.SetTranslation(0.f, -kTranslateY, kElevation);
+    top_bar.SetTranslationRH(0.f, -kTranslateY, -kElevation);
     top_bar.SetShape(horizontal_bar);
     top_bar.SetMaterial(material);
     frame->AddPart(top_bar);
 
     scenic::ShapeNode bottom_bar(session);
-    bottom_bar.SetTranslation(0.f, kTranslateY, kElevation);
+    bottom_bar.SetTranslationRH(0.f, kTranslateY, -kElevation);
     bottom_bar.SetShape(horizontal_bar);
     bottom_bar.SetMaterial(material);
     frame->AddPart(bottom_bar);
 
     scenic::ShapeNode left_bar(session);
-    left_bar.SetTranslation(-kTranslateX, 0, kElevation);
+    left_bar.SetTranslationRH(-kTranslateX, 0, -kElevation);
     left_bar.SetShape(vertical_bar);
     left_bar.SetMaterial(material);
     frame->AddPart(left_bar);
 
     scenic::ShapeNode right_bar(session);
-    right_bar.SetTranslation(kTranslateX, 0, kElevation);
+    right_bar.SetTranslationRH(kTranslateX, 0, -kElevation);
     right_bar.SetShape(vertical_bar);
     right_bar.SetMaterial(material);
     frame->AddPart(right_bar);
@@ -323,7 +323,7 @@ void App::CreateScene(float display_width, float display_height) {
 
       pointer_tracker_[i] = std::make_unique<scenic::ShapeNode>(session);
       pointer_tracker_[i]->SetLabel("pointer tracker");
-      pointer_tracker_[i]->SetTranslation(0.f, 0.f, kElevation);
+      pointer_tracker_[i]->SetTranslationRH(0.f, 0.f, -kElevation);
 
       scenic::Circle circle(session, 50.f);
       pointer_tracker_[i]->SetShape(circle);

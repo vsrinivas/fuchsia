@@ -29,8 +29,8 @@ class ViewingVolume {
   float depth() const { return top_ - bottom_; }
 
   BoundingBox bounding_box() const {
-    return BoundingBox(glm::vec3(0.f, 0.f, bottom_),
-                       glm::vec3(width_, height_, top_));
+    return BoundingBox(glm::vec3(0.f, 0.f, top_),
+                       glm::vec3(width_, height_, bottom_));
   }
 
  private:

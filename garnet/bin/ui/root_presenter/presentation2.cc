@@ -37,7 +37,10 @@ namespace {
 constexpr float kCursorWidth = 20;
 constexpr float kCursorHeight = 20;
 constexpr float kCursorRadius = 10;
+// TODO(SCN-1276): Don't hardcode Z bounds in multiple locations.
+// Derive cursor elevation from non-hardcoded Z bounds.
 constexpr float kCursorElevation = 800;
+constexpr float kDefaultRootViewDepth = 1000;
 
 // TODO(SCN-1278): Remove this.
 // Turn two floats (high bits, low bits) into a 64-bit uint.
@@ -79,7 +82,7 @@ Presentation2::Presentation2(fuchsia::ui::scenic::Scenic* scenic,
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
   scene_.AddChild(root_node_);
-  root_node_.SetTranslation(0.f, 0.f, 0.1f);  // TODO(SCN-371).
+  root_node_.SetTranslationRH(0.f, 0.f, -0.1f);  // TODO(SCN-371).
   root_node_.AddChild(view_holder_node_);
   view_holder_node_.Attach(view_holder_);
 
@@ -98,10 +101,10 @@ Presentation2::Presentation2(fuchsia::ui::scenic::Scenic* scenic,
   ambient_light_.SetColor(kAmbient, kAmbient, kAmbient);
   directional_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
   point_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
-  light_direction_ = glm::vec3(1.f, 1.f, -2.f);
+  light_direction_ = glm::vec3(1.f, 1.f, 2.f);
   directional_light_.SetDirection(light_direction_.x, light_direction_.y,
                                   light_direction_.z);
-  point_light_.SetPosition(300.f, 300.f, 2000.f);
+  point_light_.SetPosition(300.f, 300.f, -2000.f);
   point_light_.SetFalloff(0.f);
 
   cursor_material_.SetColor(0xff, 0x00, 0xff, 0xff);
@@ -377,8 +380,9 @@ bool Presentation2::ApplyDisplayModelChangesHelper(bool print_log) {
       std::swap(metrics_width, metrics_height);
     }
 
-    view_holder_.SetViewProperties(0.f, 0.f, 0.f, metrics_width, metrics_height,
-                                   1000.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
+    view_holder_.SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth,
+                                   metrics_width, metrics_height, 0.f, 0.f, 0.f,
+                                   0.f, 0.f, 0.f, 0.f);
     FXL_VLOG(2) << "DisplayModel layout: " << metrics_width << ", "
                 << metrics_height;
   }
@@ -443,7 +447,7 @@ bool Presentation2::ApplyDisplayModelChangesHelper(bool print_log) {
     float left_offset = (info_w - metrics_w) / density_w / 2;
     float top_offset = (info_h - metrics_h) / density_h / 2;
 
-    view_holder_node_.SetTranslation(left_offset, top_offset, 0.f);
+    view_holder_node_.SetTranslationRH(left_offset, top_offset, 0.f);
     FXL_VLOG(2) << "DisplayModel translation: " << left_offset << ", "
                 << top_offset;
   }
@@ -787,12 +791,12 @@ void Presentation2::PresentScene() {
         scene_.AddChild(*state.node);
         state.created = true;
       }
-      state.node->SetTranslation(
+      state.node->SetTranslationRH(
           state.position.x * display_metrics_.x_scale_in_pp_per_px() +
               kCursorWidth * .5f,
           state.position.y * display_metrics_.y_scale_in_pp_per_px() +
               kCursorHeight * .5f,
-          kCursorElevation);
+          -kCursorElevation);
     } else if (state.created) {
       state.node->Detach();
       state.created = false;

@@ -133,7 +133,7 @@ impl ViewAssistant for SpinningSquareViewAssistant {
             square_size,
             square_size,
         ));
-        self.spinning_square_node.set_translation(center_x, center_y, 8.0);
+        self.spinning_square_node.set_translation(center_x, center_y, -8.0);
         self.spinning_square_node.set_rotation(0.0, 0.0, (angle * 0.5).sin(), (angle * 0.5).cos());
         Ok(())
     }

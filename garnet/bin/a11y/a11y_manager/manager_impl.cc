@@ -20,9 +20,9 @@ std::pair<Point3F, Point3F> DefaultRayForHitTestingScreenPoint(
   Point3F origin;
   origin.x = point.x;
   origin.y = point.y;
-  origin.z = -1.f;
+  origin.z = 1.f;
   Point3F direction;
-  direction.z = 1.f;
+  direction.z = -1.f;
   return {origin, direction};
 }
 

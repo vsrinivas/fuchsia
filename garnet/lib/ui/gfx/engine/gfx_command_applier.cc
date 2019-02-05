@@ -491,10 +491,10 @@ bool GfxCommandApplier::ApplySetTranslationCmd(
       if (auto variable =
               session->resources()->FindVariableResource<Vector3Variable>(
                   command.value.variable_id)) {
-        return node->SetTranslation(variable);
+        return node->SetTranslationRH(variable);
       }
     } else {
-      return node->SetTranslation(UnwrapVector3(command.value));
+      return node->SetTranslationRH(UnwrapVector3(command.value));
     }
   }
   return false;

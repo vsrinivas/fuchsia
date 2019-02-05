@@ -191,19 +191,35 @@ class Material final : public Resource {
 class Node : public Resource {
  public:
   // Sets the node's transform properties.
-  void SetTranslation(float tx, float ty, float tz) {
-    SetTranslation((float[3]){tx, ty, tz});
+  // TODO(SCN-1054) Remove negative on Z once all clients
+  // have been migrated to SetTranslationRH
+  [
+      [deprecated("(SCN-1054) Move to using SetTranslationRH() until "
+                  "handedness transistion is complete to avoid a breaking "
+                  "transition.")]] void
+  SetTranslation(float tx, float ty, float tz) {
+    SetTranslationInternal((float[3]){tx, ty, -1.0f * tz});
   }
-  void SetTranslation(const float translation[3]);
+
+  [
+      [deprecated("(SCN-1054) Move to using SetTranslationRH() until "
+                  "handedness transistion is complete to avoid a breaking "
+                  "transition")]] void
+  SetTranslation(const float translation[3]) {
+    SetTranslationInternal(
+        (float[3]){translation[0], translation[1], -1.0f * translation[2]});
+  }
+
   void SetTranslation(uint32_t variable_id);
 
+  // Temporary placeholders to soften handedness transistion
   // TODO(SCN-1054) These methods are temporary, remove them.
   void SetTranslationRH(float tx, float ty, float tz) {
-    SetTranslation(tx, ty, -tz);
+    SetTranslationInternal((float[3]){tx, ty, tz});
   }
+
   void SetTranslationRH(const float translation[3]) {
-    SetTranslation(
-        (float[3]){translation[0], translation[1], -1.0f * translation[2]});
+    SetTranslationInternal(translation);
   }
 
   void SetScale(float sx, float sy, float sz) {
@@ -238,6 +254,8 @@ class Node : public Resource {
   explicit Node(Session* session);
   Node(Node&& moved);
   ~Node();
+
+  void SetTranslationInternal(const float translation[3]);
 };
 
 // Represents an shape node resource in a session.

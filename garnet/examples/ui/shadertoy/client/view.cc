@@ -109,7 +109,7 @@ void ViewImpl::OnSceneInvalidated(
     // Compute the translation for kSwirling mode.
     // Each node has a slightly different speed.
     const float animation_progress = seconds * (32 + i) / 32.f;
-    const float elevation = 50.f + 20.f * i;
+    const float elevation = -1.f * (50.f + 20.f * i);
     glm::vec3 swirl_translation(
         kHalfWidth + sin(animation_progress * 0.8) * kHalfWidth * 1.1,
         kHalfHeight + sin(animation_progress * 0.6) * kHalfHeight * 1.2,
@@ -136,7 +136,7 @@ void ViewImpl::OnSceneInvalidated(
         glm::mix(swirl_translation, quadrant_translation, transition_param);
     float scale = 0.7f + 0.3f * transition_param;
 
-    nodes_[i].SetTranslation(translation.x, translation.y, translation.z);
+    nodes_[i].SetTranslationRH(translation.x, translation.y, translation.z);
     nodes_[i].SetScale(scale, scale, scale);
   }
 }

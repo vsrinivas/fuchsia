@@ -287,7 +287,7 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
       constexpr float kBackgroundElevation = 0.f;
       PushCommand(&cmds, scenic::NewSetTranslationCmd(
                              kBgNodeId, (float[]){center_x, center_y,
-                                                  kBackgroundElevation}));
+                                                  -kBackgroundElevation}));
 
       // Circle Shape.
       circle_radius_ = std::min(view_width_, view_height_) * .1f;
@@ -359,7 +359,7 @@ However, we should use the information we received in `PresentationInfo` to dete
     PushCommand(&cmds, scenic::NewSetTranslationCmd(
                            kCircleNodeId,
                            (float[]){circle_pos_x_absolute,
-                                     circle_pos_y_absolute, kCircleElevation}));
+                                     circle_pos_y_absolute, -kCircleElevation}));
     session_->Enqueue(std::move(cmds));
 
     zx_time_t next_presentation_time = presentation_info.presentation_time +

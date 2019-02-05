@@ -152,7 +152,7 @@ void PaperDrawCallFactory::EnqueueDrawCalls(
   // incorrect results at glancing angles (i.e. where the center of one object
   // is closer to the camera than the other, but is nevertheless partly behind
   // the other object from the camera's perspective.
-  float depth = camera_pos_.z - transform.matrix[3][2];
+  float depth = -(camera_pos_.z - transform.matrix[3][2]);
 #else
   // Compute the vector from the camera to the object, and project it against
   // the camera's direction to obtain the depth.

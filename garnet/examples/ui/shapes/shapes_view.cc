@@ -50,19 +50,20 @@ void ShapesView::OnSceneInvalidated(
   scenic::Rectangle background_shape(session(), logical_size().width,
                                      logical_size().height);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslation(center_x, center_y, kBackgroundElevation);
+  background_node_.SetTranslationRH(center_x, center_y, -kBackgroundElevation);
 
   scenic::RoundedRectangle card_shape(session(), logical_size().width * .9f,
                                       logical_size().height * .9f,
                                       kCardCornerRadius, kCardCornerRadius,
                                       kCardCornerRadius, kCardCornerRadius);
   card_node_.SetShape(card_shape);
-  card_node_.SetTranslation((float[]){center_x, center_y, kCardElevation});
+  card_node_.SetTranslationRH((float[]){center_x, center_y, -kCardElevation});
 
   scenic::Circle circle_shape(session(), kCircleRadius);
   circle_node_.SetShape(circle_shape);
-  circle_node_.SetTranslation(logical_size().width * .85f,
-                              logical_size().height * .85f, kCircleElevation);
+  circle_node_.SetTranslationRH(logical_size().width * .85f,
+                                logical_size().height * .85f,
+                                -kCircleElevation);
 }
 
 }  // namespace examples

@@ -150,7 +150,8 @@ void PerspectiveDemoMode::UpdateCamera(Presentation* presenter, float pan_param,
   float zoom = glm::lerp(0.f, target_camera_zoom_, zoom_param);
   float half_fovy = ComputeHalfFov(presenter, zoom);
   float eye_dist = half_height / tan(half_fovy);
-  glm::vec3 eye_start(half_width, half_height, eye_dist);
+  float eye_z = -eye_dist;
+  glm::vec3 eye_start(half_width, half_height, eye_z);
 
   constexpr float kMaxCameraPan = kPi / 4;
   float eye_end_x =
@@ -160,21 +161,21 @@ void PerspectiveDemoMode::UpdateCamera(Presentation* presenter, float pan_param,
       cos(glm::lerp(0.f, kMaxCameraPan, target_camera_pan_)) * eye_dist +
       half_height;
 
-  float three_quarters_distance = 0.75f * eye_dist;
-  glm::vec3 eye_end(eye_end_x, eye_end_y, three_quarters_distance);
+  glm::vec3 eye_end(eye_end_x, eye_end_y, 0.75f * eye_z);
 
   // Halfway point for the pan animation is further out than the starting point,
   // to get a cool zoom out->zoom in effect.
   glm::vec3 eye_mid = glm::mix(eye_start, eye_end, 0.4f);
-  eye_mid.z = 1.5f * eye_dist;
+  eye_mid.z = 1.5f * eye_z;
 
   // Quadratic bezier.
   glm::vec3 eye = glm::mix(glm::mix(eye_start, eye_mid, pan_param),
                            glm::mix(eye_mid, eye_end, pan_param), pan_param);
 
   glm::vec3 glm_up =
-      glm::mix(glm::vec3(0, 1.f, 0.f), glm::vec3(0, 0.1f, -0.9f), pan_param);
+      glm::mix(glm::vec3(0, -1.f, 0.f), glm::vec3(0, -0.1f, -0.9f), pan_param);
   glm_up = glm::normalize(glm_up);
+
   float up[3] = {glm_up[0], glm_up[1], glm_up[2]};
   presenter->camera()->SetTransform(glm::value_ptr(eye), target, up);
   presenter->camera()->SetProjection(2.f * half_fovy);
@@ -211,15 +212,13 @@ bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter,
         // Always look at the middle of the stage.
         const float target[3] = {half_width, half_height, 0};
 
-        glm::vec3 glm_up(0, 1.f, 0.f);
+        glm::vec3 glm_up(0, -1.f, 0.f);
         glm_up = glm::normalize(glm_up);
         float up[3] = {glm_up[0], glm_up[1], glm_up[2]};
 
         // Switch back to ortho view, and re-enable clipping.
-        // TODO(MZ-194): This distance matches the hard coded behavior from
-        // escher::Camera::NewOrtho() and
-        // scenic::gfx::Layer::GetViewingVolume().
-        float ortho_eye[3] = {half_width, half_height, 1010.f};
+        // TODO(SCN-1276): Don't hardcode Z bounds in multiple locations.
+        float ortho_eye[3] = {half_width, half_height, -1010.f};
         presenter->camera()->SetTransform(ortho_eye, target, up);
         presenter->camera()->SetProjection(0.f);
         return true;

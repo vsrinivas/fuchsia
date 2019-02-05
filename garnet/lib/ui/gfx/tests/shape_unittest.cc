@@ -22,11 +22,11 @@ using escher::vec3;
 using escher::vec4;
 
 constexpr float kSqrt2_2 = M_SQRT2 / 2.f;
-constexpr vec4 kDownVector{0.f, 0.f, -1.f, 0.f};
-constexpr vec4 kUpVector{0.f, 0.f, 1.f, 0.f};
+constexpr vec4 kDownVector{0.f, 0.f, 1.f, 0.f};
+constexpr vec4 kUpVector{0.f, 0.f, -1.f, 0.f};
 constexpr vec4 kSideVector{1.f, 0.f, 0.f, 0.f};
 constexpr vec4 kZeroVector{0.f, 0.f, 0.f, 0.f};
-constexpr vec4 kAngledVector{2.f, -1.f, -.5f, 0.f};
+constexpr vec4 kAngledVector{2.f, -1.f, .5f, 0.f};
 }  // namespace
 
 using ShapeTest = SessionTest;
@@ -57,10 +57,10 @@ TEST_F(ShapeTest, Circle) {
       ray4{vec4(0.f, 0.f, 0.f, 1.f), kDownVector}, &distance));
   EXPECT_EQ(0.f, distance);
   EXPECT_TRUE(circle->GetIntersection(
-      ray4{vec4(0.f, 0.f, 5.f, 1.f), kDownVector}, &distance));
+      ray4{vec4(0.f, 0.f, -5.f, 1.f), kDownVector}, &distance));
   EXPECT_EQ(5.f, distance);
   EXPECT_TRUE(circle->GetIntersection(
-      ray4{vec4(50.f, 0.f, 10.f, 1.f), kDownVector}, &distance));
+      ray4{vec4(50.f, 0.f, -10.f, 1.f), kDownVector}, &distance));
   EXPECT_EQ(10.f, distance);
   EXPECT_TRUE(circle->GetIntersection(
       ray4{vec4(50.f * kSqrt2_2, -50.f * kSqrt2_2, 0.f, 1.f) -
@@ -76,7 +76,7 @@ TEST_F(ShapeTest, Circle) {
   EXPECT_EQ(40.f, distance);
 
   EXPECT_FALSE(circle->GetIntersection(
-      ray4{vec4(0.f, 0.f, -1.f, 1.f), kDownVector}, &distance));
+      ray4{vec4(0.f, 0.f, 1.f, 1.f), kDownVector}, &distance));
   EXPECT_FALSE(circle->GetIntersection(
       ray4{vec4(0.f, 0.f, 0.f, 1.f), kUpVector}, &distance));
   EXPECT_FALSE(circle->GetIntersection(
@@ -123,10 +123,10 @@ TEST_F(ShapeTest, Rectangle) {
       ray4{vec4(0.f, 0.f, 0.f, 1.f), kDownVector}, &distance));
   EXPECT_EQ(0.f, distance);
   EXPECT_TRUE(rectangle->GetIntersection(
-      ray4{vec4(0.f, 0.f, 5.f, 1.f), kDownVector}, &distance));
+      ray4{vec4(0.f, 0.f, -5.f, 1.f), kDownVector}, &distance));
   EXPECT_EQ(5.f, distance);
   EXPECT_TRUE(rectangle->GetIntersection(
-      ray4{vec4(15.f, 20.f, 10.f, 1.f), kDownVector}, &distance));
+      ray4{vec4(15.f, 20.f, -10.f, 1.f), kDownVector}, &distance));
   EXPECT_EQ(10.f, distance);
   EXPECT_TRUE(rectangle->GetIntersection(
       ray4{vec4(15.f, -20.f, 0.f, 1.f) - 40.f * kAngledVector, kAngledVector},
@@ -139,7 +139,7 @@ TEST_F(ShapeTest, Rectangle) {
   EXPECT_EQ(40.f, distance);
 
   EXPECT_FALSE(rectangle->GetIntersection(
-      ray4{vec4(0.f, 0.f, -1.f, 1.f), kDownVector}, &distance));
+      ray4{vec4(0.f, 0.f, 1.f, 1.f), kDownVector}, &distance));
   EXPECT_FALSE(rectangle->GetIntersection(
       ray4{vec4(0.f, 0.f, 0.f, 1.f), kUpVector}, &distance));
   EXPECT_FALSE(rectangle->GetIntersection(

@@ -81,7 +81,7 @@ void CreateClient(scenic::Session* session, zx::eventpair view_token,
   view.AddChild(*root_node);
 
   scenic::ShapeNode shape(session);
-  shape.SetTranslation(2, 2, 0);  // Center the shape within the View.
+  shape.SetTranslationRH(2, 2, 0);  // Center the shape within the View.
   root_node->AddPart(shape);
 
   scenic::Rectangle rec(session, 5, 5);  // Simple; no real GPU work.
@@ -134,17 +134,17 @@ TEST_F(MouseDeliveryTest, StandardTest) {
             holder_2(session, std::move(vh2_token), "holder_2");
 
         root_node->AddChild(translate_1);
-        translate_1.SetTranslation(0, 2, 2);
+        translate_1.SetTranslationRH(0, 2, -2);
         translate_1.Attach(holder_1);
 
         root_node->AddChild(translate_2);
-        translate_2.SetTranslation(2, 0, 1);
+        translate_2.SetTranslationRH(2, 0, -1);
         translate_2.Attach(holder_2);
 
         // Add three "mouse cursors" to the scene.
         for (int i = 0; i < 3; ++i) {
           scenic::ShapeNode cursor(session);
-          cursor.SetTranslation(3, 3, 100);
+          cursor.SetTranslationRH(3, 3, -100);
           cursor.SetLabel("mouse cursor");
           scene.AddChild(cursor);
 
@@ -285,7 +285,7 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
             holder_2(session, std::move(vh2_token), "holder_2");
 
         root_node->AddChild(translate_1);
-        translate_1.SetTranslation(0, 2, 2);
+        translate_1.SetTranslationRH(0, 2, -2);
         translate_1.Attach(holder_1);
 
         // Set view 1 to "no-focus".
@@ -296,13 +296,13 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
         }
 
         root_node->AddChild(translate_2);
-        translate_2.SetTranslation(2, 0, 1);
+        translate_2.SetTranslationRH(2, 0, -1);
         translate_2.Attach(holder_2);
 
         // Add three "mouse cursors" to the scene.
         for (int i = 0; i < 3; ++i) {
           scenic::ShapeNode cursor(session);
-          cursor.SetTranslation(3, 3, 100);
+          cursor.SetTranslationRH(3, 3, -100);
           cursor.SetLabel("mouse cursor");
           scene.AddChild(cursor);
 

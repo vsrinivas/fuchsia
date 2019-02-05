@@ -18,7 +18,7 @@ static std::pair<float, float> ComputeNearAndFarPlanes(
   float height = volume.height();
   float bottom = volume.bottom();
   float top = volume.top();
-  FXL_DCHECK(bottom < top);
+  FXL_DCHECK(bottom > top);
 
   vec3 corners[] = {{0, 0, bottom},      {width, 0, bottom},
                     {0, 0, top},         {width, 0, top},
@@ -36,12 +36,10 @@ static std::pair<float, float> ComputeNearAndFarPlanes(
   // The reason for computing these negated Z-coordinates is that the smallest
   // one can be directly used as the near plane distance, and the largest for
   // the far plane distance.
-  float negated_z = -(camera_transform * vec4(corners[0], 1)).z;
-  float far = negated_z;
-  float near = negated_z;
-
-  // Determine near/far planes, as described above.
-  for (int i = 1; i < 8; ++i) {
+  float negated_z;
+  float far = FLT_MIN;
+  float near = FLT_MAX;
+  for (int i = 0; i < 8; ++i) {
     negated_z = -(camera_transform * vec4(corners[i], 1)).z;
     near = negated_z < near ? negated_z : near;
     far = negated_z > far ? negated_z : far;
@@ -52,8 +50,10 @@ static std::pair<float, float> ComputeNearAndFarPlanes(
   // We can relax this restriction later, but we'll need to develop some
   // heuristics.
   if (near < 0) {
-    vec3 pos(camera_transform[3][0], camera_transform[3][1],
-             camera_transform[3][2]);
+    // Invert the camera matrix to obtain the camera space to world space
+    // transform from which we can extract the camera position in world space.
+    mat4 camera_inverse = glm::inverse(camera_transform);
+    vec3 pos(camera_transform * vec4(0, 0, 0, 1));
     vec3 dir(camera_transform * vec4(0, 0, -1, 0));
 
     FXL_LOG(FATAL) << "ViewingVolume must be entirely in front of the "
@@ -76,12 +76,21 @@ Camera Camera::NewOrtho(const ViewingVolume& volume) {
   // camera points into the screen along the negative-Z axis, this is equivalent
   // to moving the entire stage by a negative amount in Z.
   mat4 transform = glm::translate(
-      vec3(-volume.width() / 2, -volume.height() / 2, -(volume.top() + 10.f)));
+      vec3(-volume.width() / 2, -volume.height() / 2, volume.top() - 10.f));
+
+  // This method does not take the transform of the camera as input so there is
+  // no way to reorient the view matrix outside of this method, so we point it
+  // down the -Z axis here. The reason we mirror here instead of rotating is
+  // because glm::orthoRH() produces a "right handed" matrix only in the sense
+  // that it projects a right handed view space into OpenGL's left handed NDC
+  // space, and thus it also projects a left handed view space into Vulkan's
+  // right handed NDC space.
+  transform = glm::scale(transform, glm::vec3(1.f, 1.f, -1.f));
 
   auto near_and_far = ComputeNearAndFarPlanes(volume, transform);
-  mat4 projection = glm::ortho(-0.5f * volume.width(), 0.5f * volume.width(),
-                               -0.5f * volume.height(), 0.5f * volume.height(),
-                               near_and_far.first, near_and_far.second);
+  mat4 projection = glm::orthoRH(
+      -0.5f * volume.width(), 0.5f * volume.width(), -0.5f * volume.height(),
+      0.5f * volume.height(), near_and_far.first, near_and_far.second);
 
   return Camera(transform, projection);
 }
@@ -108,7 +117,16 @@ Camera Camera::NewPerspective(const ViewingVolume& volume,
   auto near_and_far = ComputeNearAndFarPlanes(volume, transform);
   float aspect = volume.width() / volume.height();
   mat4 projection =
-      glm::perspective(fovy, aspect, near_and_far.first, near_and_far.second);
+      glm::perspectiveRH(fovy, aspect, near_and_far.first, near_and_far.second);
+
+  // glm::perspectiveRH() generates "right handed" projection matrices but
+  // since glm is intended to work with OpenGL, glm::perspectiveRH() generates
+  // a matrix that projects a right handed space into OpenGL's left handed NDC
+  // space. In order to make it project a right handed space into Vulkan's
+  // right handed NDC space we must flip it again. Note that this is equivilent
+  // to calling glm::perspectiveLH with the same arguments and rotating the
+  // resulting matrix 180 degrees around the X axis.
+  projection = glm::scale(projection, glm::vec3(1.f, -1.f, 1.f));
 
   return Camera(transform, projection);
 }
