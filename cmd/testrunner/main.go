@@ -102,10 +102,10 @@ type testResult struct {
 func usage() {
 	fmt.Println(`testrunner [flags] tests-file
 
-		Executes all tests found in the JSON [tests-file]
-		Fuchsia tests require botanist.DeviceContext to have been registered and in the current
-		environment; for more details see
-		https://fuchsia.googlesource.com/tools/+/master/botanist/context.go.`)
+Executes all tests found in the JSON [tests-file]
+Fuchsia tests require botanist.DeviceContext to have been registered and in the current
+environment; for more details see
+https://fuchsia.googlesource.com/tools/+/master/botanist/context.go.`)
 }
 
 func init() {
