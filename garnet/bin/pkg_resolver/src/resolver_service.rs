@@ -2,24 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use failure::{Error, ResultExt};
 use fidl::endpoints::{RequestStream, ServerEnd};
-use fidl_fuchsia_amber::{self, ControlProxy as AmberProxy};
+use fidl_fuchsia_amber::{self, ControlMarker as AmberMarker, ControlProxy as AmberProxy};
 use fidl_fuchsia_io::{self, DirectoryMarker};
 use fidl_fuchsia_pkg::{
     PackageCacheProxy, PackageResolverRequest, PackageResolverRequestStream, UpdatePolicy,
 };
 use fidl_fuchsia_pkg_ext::BlobId;
+use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
 use fuchsia_pkg_uri::PackageUri;
 use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_zircon::{Channel, MessageBuf, Signals, Status};
 use futures::prelude::*;
+use log::{info, warn};
 
 pub async fn run_resolver_service(
-    amber: AmberProxy, cache: PackageCacheProxy, chan: fasync::Channel,
+    mut amber: AmberProxy, cache: PackageCacheProxy, chan: fasync::Channel,
 ) -> Result<(), Error> {
     let mut stream = PackageResolverRequestStream::from_channel(chan);
+
+    let mut should_reconnect = false;
 
     while let Some(event) = await!(stream.try_next())? {
         let PackageResolverRequest::Resolve {
@@ -30,6 +34,14 @@ pub async fn run_resolver_service(
             responder,
         } = event;
 
+        if should_reconnect {
+            info!("Reconnecting to amber.");
+            amber = connect_to_service::<AmberMarker>().context("error connecting to amber")?;
+            should_reconnect = false;
+        }
+
+        info!("Resolving {}.", package_uri);
+
         let status = await!(resolve(
             &amber,
             &cache,
@@ -38,6 +50,13 @@ pub async fn run_resolver_service(
             update_policy,
             dir
         ));
+
+        // TODO this is an overbroad error type for this, make it more accurate
+        if let Err(Status::INTERNAL) = &status {
+            warn!("Resolution had an internal error, will reconnect to amber on next request.");
+            should_reconnect = true;
+        }
+
         responder.send(Status::from(status).into_raw())?;
     }
 
