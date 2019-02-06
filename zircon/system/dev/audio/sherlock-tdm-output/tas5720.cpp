@@ -28,7 +28,7 @@ constexpr uint8_t kRegDigitalClipper1     = 0x11;
 // static
 fbl::unique_ptr<Tas5720> Tas5720::Create(ddk::PDev pdev, uint32_t index) {
     auto i2c = pdev.GetI2c(index);
-    if (i2c.is_valid()) {
+    if (!i2c.is_valid()) {
         zxlogf(ERROR, "%s pdev_get_protocol failed\n", __FUNCTION__);
         return nullptr;
     }
