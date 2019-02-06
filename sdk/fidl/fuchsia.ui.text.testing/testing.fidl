@@ -1,0 +1,21 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.text.testing;
+using fuchsia.ui.text;
+
+/// This interface runs the standard suite of tests on an implementation of TextField.
+/// If you maintain a TextField implementation, you should ensure to spin up the
+/// text_test_suite package and call RunTest in your integration tests.
+interface TextFieldTestSuite {
+  RunTest(fuchsia.ui.text.TextField field, uint64 test_id) -> (bool passed, string message);
+  ListTests() -> (vector<TestInfo> results);
+};
+
+/// Indicates if the tests passed, and a human-readable message indicating test failures
+/// if not.
+struct TestInfo {
+  uint64 id;
+  string name;
+};

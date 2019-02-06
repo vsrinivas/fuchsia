@@ -9,6 +9,7 @@
         "//garnet/bin/ui/benchmarks/image_grid_cpp",
         "//garnet/bin/ui/tests/performance:scenic_benchmarks",
         "//garnet/bin/ui/tests/performance:vulkan_is_supported",
+        "//garnet/bin/ui/text/test_suite:text_test_suite",
         "//garnet/lib/ui/gfx/tests:mock_pose_buffer_provider"
     ]
 }
