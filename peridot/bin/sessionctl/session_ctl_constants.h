@@ -23,6 +23,7 @@ constexpr char kModNameFlagString[] = "mod_name";
 constexpr char kModUrlFlagString[] = "mod_url";
 constexpr char kStoryIdFlagString[] = "story_id";
 constexpr char kStoryNameFlagString[] = "story_name";
+constexpr char kWaitForSessionFlagString[] = "wait_for_session";
 
 // Internal error string returned from SessionCtlApp.ExecuteCommand() if
 // the user does not set a required flag.

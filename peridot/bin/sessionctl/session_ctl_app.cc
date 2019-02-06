@@ -173,9 +173,10 @@ std::string SessionCtlApp::ExecuteListStoriesCommand() {
 }
 
 std::string SessionCtlApp::ExecuteRestartSessionCommand() {
-  basemgr_->RestartSession();
-  logger_.Log(kRestartSessionCommandString, std::vector<std::string>());
-  on_command_executed_();
+  basemgr_->RestartSession([this]() {
+    logger_.Log(kRestartSessionCommandString, std::vector<std::string>());
+    on_command_executed_();
+  });
 
   return "";
 }

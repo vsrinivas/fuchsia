@@ -537,9 +537,10 @@ FuturePtr<> UserProviderImpl::SwapSessionShell(
   return user_controller->SwapSessionShell(std::move(session_shell_config));
 }
 
-void UserProviderImpl::RestartSession() {
+void UserProviderImpl::RestartSession(
+    const std::function<void()>& on_restart_complete) {
   // Callback to log the user back in if login is not automatic
-  auto login = [this] {
+  auto login = [this, on_restart_complete]() {
     if (user_controllers_.size() < 1 && users_storage_) {
       auto account = Convert(users_storage_->users()->Get(0));
 
@@ -547,6 +548,7 @@ void UserProviderImpl::RestartSession() {
       params.account_id = account->id;
       Login(std::move(params));
     }
+    on_restart_complete();
   };
 
   // Log the user out to shut down sessionmgr

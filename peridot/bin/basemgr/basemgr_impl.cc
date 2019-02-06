@@ -541,7 +541,9 @@ void BasemgrImpl::ShowSetupOrLogin() {
       });
 }
 
-void BasemgrImpl::RestartSession() { user_provider_impl_->RestartSession(); }
+void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
+  user_provider_impl_->RestartSession(on_restart_complete);
+}
 
 void BasemgrImpl::LoginAsGuest() {
   fuchsia::modular::UserLoginParams params;

@@ -77,7 +77,7 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
 
   // Restarts the current session by logging out the current user and logging
   // that user back in.
-  void RestartSession();
+  void RestartSession(const std::function<void()>& on_restart_complete);
 
   // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
   void Login(fuchsia::modular::UserLoginParams params) override;
@@ -86,8 +86,7 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   void PreviousUsers(PreviousUsersCallback callback) override;
 
   // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
-  void RemoveUser(std::string account_id,
-                  RemoveUserCallback callback) override;
+  void RemoveUser(std::string account_id, RemoveUserCallback callback) override;
 
  private:
   // |fuchsia::modular::UserProvider|

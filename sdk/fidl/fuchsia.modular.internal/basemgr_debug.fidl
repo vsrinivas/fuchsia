@@ -8,8 +8,10 @@ library fuchsia.modular.internal;
 // state within the `basemgr` process.
 [Discoverable]
 interface BasemgrDebug {
-    // Restarts the current session.
-    RestartSession();
+    // Restarts the current session. If a user was logged in, this will return
+    // when the same user is logged back in. Otherwise, this will return when
+    // sessionmgr has been torn down.
+    RestartSession() -> ();
 
     // Logs in as a guest user.
     LoginAsGuest();

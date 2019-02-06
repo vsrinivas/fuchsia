@@ -132,7 +132,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   void UpdateSessionShellConfig();
 
   // |BasemgrDebug|
-  void RestartSession() override;
+  void RestartSession(RestartSessionCallback on_restart_complete) override;
 
   // |BasemgrDebug|
   void LoginAsGuest() override;

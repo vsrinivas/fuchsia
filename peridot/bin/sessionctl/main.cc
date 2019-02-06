@@ -55,6 +55,8 @@ sessionctl --story_name=story1 remove_mod slider_mod
     Don't focus the story.
 --json_out
     If flag is set output json for consuming instead of text.
+--wait_for_session
+    Blocks progress on completing a command until a guest user is logged in.
 
 <command>
 add_mod
@@ -195,16 +197,18 @@ bool LoginAsGuest(bool has_running_sessions,
 // Returns true if a guest user was logged in.
 bool LoginDefaultGuestUser(fuchsia::modular::internal::BasemgrDebug* basemgr,
                            modular::Logger logger,
-                           std::vector<DebugService>* sessions,
-                           std::string cmd) {
+                           std::vector<DebugService>* sessions, std::string cmd,
+                           bool wait_for_session) {
   std::cout << "Logging in as a guest user in the absence of running sessions."
             << std::endl;
   LoginAsGuest(/*has_running_sessions=*/false, basemgr, logger);
 
-  // Wait 2 seconds to allow sessionmgr to initialize
-  std::this_thread::sleep_for(std::chrono::seconds(2));
-  std::cout << "Finding sessions..." << std::endl;
-  *sessions = FindAllSessions();
+  do {
+    // Wait 2 seconds to allow sessionmgr to initialize
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::cout << "Finding sessions..." << std::endl;
+    *sessions = FindAllSessions();
+  } while (wait_for_session && sessions->empty());
 
   if (sessions->empty()) {
     logger.LogError(cmd,
@@ -212,6 +216,7 @@ bool LoginDefaultGuestUser(fuchsia::modular::internal::BasemgrDebug* basemgr,
                     "Please try your command again.");
     return false;
   }
+
   return true;
 }
 
@@ -250,8 +255,13 @@ int main(int argc, const char** argv) {
       logger.LogError(cmd, "No session to be restarted.");
       return 1;
     }
+
+    bool wait_for_session =
+        command_line.HasOption(modular::kWaitForSessionFlagString);
+
     // Exit here if no sessions were found after logging in a guest user
-    if (!LoginDefaultGuestUser(basemgr.get(), logger, &sessions, cmd)) {
+    if (!LoginDefaultGuestUser(basemgr.get(), logger, &sessions, cmd,
+                               wait_for_session)) {
       return 1;
     }
   }
