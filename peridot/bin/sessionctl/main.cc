@@ -246,6 +246,10 @@ int main(int argc, const char** argv) {
   // Log in a guest user if no session is found before continuing to execute
   // the requested command
   if (sessions.empty()) {
+    if (cmd == modular::kRestartSessionCommandString) {
+      logger.LogError(cmd, "No session to be restarted.");
+      return 1;
+    }
     // Exit here if no sessions were found after logging in a guest user
     if (!LoginDefaultGuestUser(basemgr.get(), logger, &sessions, cmd)) {
       return 1;
