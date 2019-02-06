@@ -35,6 +35,9 @@ extern {
         offset: i64
         ) -> zx_status_t;
 
+    pub fn zx_system_get_dcache_line_size(
+        ) -> u32;
+
     pub fn zx_system_get_num_cpus(
         ) -> u32;
 
@@ -46,6 +49,11 @@ extern {
     pub fn zx_system_get_physmem(
         ) -> u64;
 
+    pub fn zx_system_get_features(
+        kind: u32,
+        features: *mut u32
+        ) -> zx_status_t;
+
     pub fn zx_cache_flush(
         addr: *const u8,
         size: usize,
@@ -54,6 +62,11 @@ extern {
 
     pub fn zx_handle_close(
         handle: zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_handle_close_many(
+        handles: *const zx_handle_t,
+        num_handles: usize
         ) -> zx_status_t;
 
     pub fn zx_handle_duplicate(
@@ -198,6 +211,16 @@ extern {
         buffer: *mut u8,
         buffer_size: usize,
         actual: *mut usize
+        ) -> zx_status_t;
+
+    pub fn zx_socket_share(
+        handle: zx_handle_t,
+        socket_to_share: zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_socket_accept(
+        handle: zx_handle_t,
+        out_socket: *mut zx_handle_t
         ) -> zx_status_t;
 
     pub fn zx_socket_shutdown(
