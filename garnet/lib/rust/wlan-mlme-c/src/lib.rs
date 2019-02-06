@@ -7,5 +7,8 @@
 // Allow while bringing up MLME.
 #![allow(unused)]
 
+#[macro_use]
+pub mod utils;
+
 pub mod auth;
 pub mod buffer;

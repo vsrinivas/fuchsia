@@ -62,7 +62,7 @@ typedef struct {
   uintptr_t written_bytes;
 } rust_mlme_out_buf_t;
 
-extern "C" int32_t rust_mlme_is_valid_open_auth_resp(rust_mlme_in_buf_t buf,
-                                                     bool has_body_aligned);
+extern "C" int32_t rust_mlme_is_valid_open_auth_resp(const uint8_t *data,
+                                                     uintptr_t len);
 
 #endif /* GARNET_LIB_RUST_WLAN_MLME_ABI_H_ */

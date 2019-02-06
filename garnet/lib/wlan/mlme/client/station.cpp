@@ -4,6 +4,7 @@
 
 #include <wlan/mlme/client/station.h>
 
+#include <garnet/lib/rust/wlan-mlme-c/bindings.h>
 #include <wlan/common/band.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/channel.h>
@@ -22,7 +23,6 @@
 #include <wlan/mlme/rates_elements.h>
 #include <wlan/mlme/sequence.h>
 #include <wlan/mlme/service.h>
-#include <garnet/lib/rust/wlan-mlme-c/bindings.h>
 
 #include <fuchsia/wlan/mlme/c/fidl.h>
 #include <zircon/status.h>
@@ -383,10 +383,8 @@ zx_status_t Station::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
     // Authentication notification received. Cancel pending timeout.
     timer_mgr_.Cancel(auth_timeout_);
 
-    auto pkt = frame.Take();
-    bool body_aligned = IsBodyAligned(*pkt);
-    auto buf = IntoRustInBuf(std::move(pkt));
-    zx_status_t status = rust_mlme_is_valid_open_auth_resp(buf, body_aligned);
+    auto auth_hdr = frame.body_data();
+    zx_status_t status = rust_mlme_is_valid_open_auth_resp(auth_hdr.data(), auth_hdr.size());
     if (status == ZX_OK) {
         state_ = WlanState::kAuthenticated;
         debugjoin("authenticated to %s\n", join_ctx_->bssid().ToString().c_str());
