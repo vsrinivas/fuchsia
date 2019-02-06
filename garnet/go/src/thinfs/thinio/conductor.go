@@ -13,6 +13,7 @@ import (
 
 	"thinfs/block"
 	"thinfs/cache"
+
 	"github.com/golang/glog"
 )
 
@@ -149,11 +150,6 @@ func (d *device) Close() {
 			err:  err,
 		})
 	}
-}
-
-// Path is a convenience function for calling Path on the underlying block.Device.
-func (d *device) Path() string {
-	return d.dev.Path()
 }
 
 // Conductor orchestrates all I/O operations on a block.Device, maintaining an internal cache
@@ -372,9 +368,4 @@ func (c *Conductor) Errors() []error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.errs
-}
-
-// Path returns the path to the underlying block device.
-func (c *Conductor) Path() string {
-	return c.dev.Path()
 }

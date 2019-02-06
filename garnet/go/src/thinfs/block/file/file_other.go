@@ -26,7 +26,3 @@ func ioctlBlockGetSectorSize(fd uintptr) (int64, error) {
 func fallocate(fd uintptr, off, len int64) error {
 	return syscall.EOPNOTSUPP
 }
-
-func ioctlDeviceGetTopoPath(fd uintptr) string {
-	return ""
-}

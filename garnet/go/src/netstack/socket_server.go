@@ -13,7 +13,6 @@ import (
 	"sync"
 	"syscall"
 	"syscall/zx"
-	"syscall/zx/fdio"
 	"syscall/zx/fidl"
 	"syscall/zx/mxerror"
 	"syscall/zx/mxnet"
@@ -41,11 +40,7 @@ import "C"
 
 const debug = false
 
-// TODO: Replace these with a better tracing mechanism (NET-757)
-const logListen = false
-const logAccept = false
-
-const LOCAL_SIGNAL_CLOSING = zx.SignalUser5
+const localSignalClosing = zx.SignalUser5
 
 type iostate struct {
 	wq *waiter.Queue
@@ -67,7 +62,7 @@ type iostate struct {
 // loopWrite connects libc write to the network stack.
 func (ios *iostate) loopWrite() error {
 	const sigs = zx.SignalSocketReadable | zx.SignalSocketReadDisabled |
-		zx.SignalSocketPeerClosed | LOCAL_SIGNAL_CLOSING
+		zx.SignalSocketPeerClosed | localSignalClosing
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	defer ios.wq.EventUnregister(&waitEntry)
@@ -100,7 +95,7 @@ func (ios *iostate) loopWrite() error {
 					continue
 				case obs&zx.SignalSocketPeerClosed != 0:
 					return nil
-				case obs&LOCAL_SIGNAL_CLOSING != 0:
+				case obs&localSignalClosing != 0:
 					return nil
 				}
 			case zx.ErrCanceled:
@@ -175,7 +170,7 @@ func (ios *iostate) loopWrite() error {
 // loopRead connects libc read to the network stack.
 func (ios *iostate) loopRead() error {
 	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled |
-		zx.SignalSocketPeerClosed | LOCAL_SIGNAL_CLOSING
+		zx.SignalSocketPeerClosed | localSignalClosing
 
 	inEntry, inCh := waiter.NewChannelEntry(nil)
 	defer ios.wq.EventUnregister(&inEntry)
@@ -310,7 +305,7 @@ func (ios *iostate) loopRead() error {
 						continue
 					case obs&zx.SignalSocketPeerClosed != 0:
 						return nil
-					case obs&LOCAL_SIGNAL_CLOSING != 0:
+					case obs&localSignalClosing != 0:
 						return nil
 					}
 				case zx.ErrBadHandle, zx.ErrCanceled:
@@ -384,7 +379,7 @@ func (ios *iostate) loopControl() error {
 			return nil
 		case zx.ErrShouldWait:
 			obs, err := zxwait.Wait(zx.Handle(ios.dataHandle),
-				zx.SignalSocketControlReadable|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
+				zx.SignalSocketControlReadable|zx.SignalSocketPeerClosed|localSignalClosing,
 				zx.TimensecInfinite)
 			switch mxerror.Status(err) {
 			case zx.ErrCanceled:
@@ -393,7 +388,7 @@ func (ios *iostate) loopControl() error {
 				switch {
 				case obs&zx.SignalSocketControlReadable != 0:
 					continue
-				case obs&LOCAL_SIGNAL_CLOSING != 0:
+				case obs&localSignalClosing != 0:
 					synthesizeClose = false
 					return nil
 				case obs&zx.SignalSocketPeerClosed != 0:
@@ -493,10 +488,19 @@ func (ios *iostate) buildIfInfos() *C.netc_get_if_info_t {
 	return rep
 }
 
+func ioctlNum(kind, family, number uint32) uint32 {
+	return ((kind & 0xF) << 20) | ((family & 0xFF) << 8) | (number & 0xFF)
+}
+
+const (
+	ioctlKindDefault     = 0x0  // IOCTL_KIND_DEFAULT
+	ioctlFamilyNetconfig = 0x26 // IOCTL_FAMILY_NETCONFIG
+)
+
 var (
-	ioctlNetcGetNumIfs   = fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 1)
-	ioctlNetcGetIfInfoAt = fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 2)
-	ioctlNetcGetNodename = fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 8)
+	ioctlNetcGetNumIfs   = ioctlNum(ioctlKindDefault, ioctlFamilyNetconfig, 1)
+	ioctlNetcGetIfInfoAt = ioctlNum(ioctlKindDefault, ioctlFamilyNetconfig, 2)
+	ioctlNetcGetNodename = ioctlNum(ioctlKindDefault, ioctlFamilyNetconfig, 8)
 )
 
 // We remember the interface list from the last time ioctlNetcGetNumIfs was called. This avoids
@@ -723,7 +727,7 @@ func decodeAddr(addr []uint8) (tcpip.FullAddress, error) {
 func (ios *iostate) Close() (int16, error) {
 	// Signal that we're about to close. This tells the various message loops to finish
 	// processing, and let us know when they're done.
-	if err := ios.dataHandle.Handle().Signal(0, LOCAL_SIGNAL_CLOSING); err != nil {
+	if err := ios.dataHandle.Handle().Signal(0, localSignalClosing); err != nil {
 		panic(err)
 	}
 

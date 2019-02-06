@@ -47,7 +47,3 @@ func ioctlBlockGetSectorSize(fd uintptr) (int64, error) {
 func fallocate(fd uintptr, off, len int64) error {
 	return syscall.Fallocate(int(fd), C.FALLOC_FL_PUNCH_HOLE|C.FALLOC_FL_KEEP_SIZE, off, len)
 }
-
-func ioctlDeviceGetTopoPath(fd uintptr) string {
-	return ""
-}

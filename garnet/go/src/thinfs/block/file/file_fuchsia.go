@@ -8,7 +8,6 @@ package file
 
 import (
 	"syscall"
-	"syscall/zx/fdio"
 )
 
 func ioctlBlockGetSize(fd uintptr) (int64, error) {
@@ -25,15 +24,4 @@ func ioctlBlockGetSectorSize(fd uintptr) (int64, error) {
 
 func fallocate(fd uintptr, off, len int64) error {
 	return syscall.EOPNOTSUPP
-}
-
-func ioctlDeviceGetTopoPath(fd uintptr) string {
-	m := syscall.FDIOForFD(int(fd))
-	path, _, err := m.Ioctl(fdio.IoctlDeviceGetTopoPath, 1024, nil, nil)
-
-	if err == nil {
-		return string(path)
-	}
-
-	return ""
 }

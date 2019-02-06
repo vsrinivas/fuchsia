@@ -218,8 +218,3 @@ func (f *File) Close() error {
 
 	return f.f.Close()
 }
-
-// Path obtains path to underlying block device via ioctl.
-func (f *File) Path() string {
-	return ioctlDeviceGetTopoPath(f.f.Fd())
-}

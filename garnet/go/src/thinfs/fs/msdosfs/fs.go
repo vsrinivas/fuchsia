@@ -178,8 +178,3 @@ func (f *fsFAT) FreeSize() int64 {
 
 	return f.Size()
 }
-
-// DevicePath returns the path to the underlying block device as a string.
-func (f *fsFAT) DevicePath() string {
-	return f.info.Dev.Path()
-}

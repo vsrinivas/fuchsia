@@ -412,11 +412,6 @@ func (d *directoryWrapper) QueryFilesystem() (int32, *io.FilesystemInfo, error) 
 	return int32(zx.ErrOk), &info, nil
 }
 
-func (d *directoryWrapper) GetDevicePath() (int32, *string, error) {
-	name := d.vfs.fs.DevicePath()
-	return int32(zx.ErrOk), &name, nil
-}
-
 type fileWrapper struct {
 	vfs   *ThinVFS
 	token fidl.BindingKey
