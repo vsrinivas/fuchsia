@@ -22,8 +22,7 @@ declare_args() {
 #   api (required)
 #     Path to the file representing the canonical contents of this SDK.
 #     This file is used to ensure modifications to the SDK contents are
-#     explicitly acknowledged, with such acknowledgement being enabled by
-#     post-build tooling.
+#     explicitly acknowledged.
 #
 #   category (required)
 #     Describes the minimum category that atoms in this SDK must have.
@@ -100,7 +99,7 @@ template("sdk") {
   action(verify_api_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
-    script = "//build/sdk/verify_api.py"
+    script = "//build/sdk/verify_sdk_api.py"
 
     inputs = [
       intermediate_manifest_file,
@@ -119,6 +118,9 @@ template("sdk") {
 
     # TODO(DX-685): always set this argument.
     if (defined(invoker.api)) {
+      inputs += [
+        invoker.api,
+      ]
       args += [
         "--reference",
         rebase_path(invoker.api),

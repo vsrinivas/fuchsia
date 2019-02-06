@@ -48,6 +48,28 @@ import("//build/json/validate_json.gni")
 #     Each line in the file should contain a "dest=source" mapping, similarly to
 #     file scopes.
 #
+#   api (optional)
+#     Path to the file representing the API canonically exposed by this atom.
+#     This file is used to ensure modifications to the API are explicitly
+#     acknowledged.
+#     If this attribute is set, one of "current_api" and "api_contents" must be
+#     set as well.
+#
+#   current_api (optional)
+#     Path to the file representing the API locally exposed by this atom.
+#     This file is used to verify that the API has not changed locally.
+#     Only relevant when "api" is set, and mutually exclusive with
+#     "api_contents".
+#
+#   api_contents (optional)
+#     List of scopes for the files making up the atom's API.
+#     This list will be used to verify that the API has not changed locally.
+#     This is very roughly approximated by checking whether the files themselves
+#     have changed at all.
+#     See the "File scopes" section for how to describe files.
+#     Only relevant when "api" is set, and mutually exclusive with
+#     "current_api".
+#
 #   deps (optional)
 #     List of GN labels for other SDK elements this element depends on at build
 #     time.
@@ -98,6 +120,14 @@ template("sdk_atom") {
 
   assert(defined(invoker.meta), "Must specify some metadata")
   meta = invoker.meta
+
+  if (defined(invoker.api)) {
+    if (!defined(invoker.current_api) && !defined(invoker.api_contents)) {
+      assert(false, "Must set one of 'current_api' and 'api_contents'")
+    } else if (defined(invoker.current_api) && defined(invoker.api_contents)) {
+      assert(false, "Must set only one of 'current_api' and 'api_contents'")
+    }
+  }
 
   gn_deps = []
   if (defined(invoker.non_sdk_deps)) {
@@ -179,6 +209,77 @@ template("sdk_atom") {
     meta_source,
   ]
 
+  if (defined(invoker.api)) {
+    if (defined(invoker.api_contents)) {
+      assert(invoker.api_contents != [], "api_contents cannot be empty")
+
+      generate_api_target_name = "${target_name}_generate_api"
+      current_api_file = "$target_gen_dir/$target_name.api"
+
+      action(generate_api_target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
+
+        script = "//build/sdk/compute_atom_api.py"
+
+        inputs = []
+
+        outputs = [
+          current_api_file,
+        ]
+
+        args = [
+          "--output",
+          rebase_path(current_api_file),
+        ]
+
+        foreach(file, invoker.api_contents) {
+          inputs += [ file.source ]
+          args += [
+            "--file",
+            file.dest,
+            rebase_path(file.source),
+          ]
+        }
+      }
+    } else {
+      current_api_file = invoker.current_api
+    }
+
+    verify_api_target_name = "${target_name}_verify_api"
+
+    action(verify_api_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      script = "//build/sdk/verify_atom_api.py"
+
+      stamp_file = "$target_gen_dir/$target_name.api_verified"
+
+      inputs = [
+        current_api_file,
+        invoker.api,
+      ]
+
+      outputs = [
+        stamp_file,
+      ]
+
+      args = [
+        "--reference",
+        rebase_path(invoker.api),
+        "--current",
+        rebase_path(current_api_file),
+        "--stamp",
+        rebase_path(stamp_file),
+      ]
+
+      if (defined(invoker.api_contents)) {
+        deps = [
+          ":$generate_api_target_name",
+        ]
+      }
+    }
+  }  # if defined(invoker.api)
+
   # Builds a manifest representing this element.
   action(target_name) {
     forward_variables_from(invoker, [ "testonly" ])
@@ -189,6 +290,9 @@ template("sdk_atom") {
     script = "//build/sdk/create_atom_manifest.py"
 
     public_deps = gn_deps + [ ":$meta_target_name" ]
+    if (defined(invoker.api)) {
+      public_deps += [ ":$verify_api_target_name" ]
+    }
 
     inputs = dep_manifests + file_inputs + [
                # Imported by the action's script.
