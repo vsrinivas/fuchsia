@@ -41,8 +41,8 @@ TEST_P(RandBytesTest, GenerateBytes) {
 // positive flake (i.e. actually randomly generating an array of all the same
 // byte). If the generator was uniformly distributed, an 8 byte array yields a
 // probability of a flake only 1 in every 1/(2^8*(1/(2^8))^8) or 2^56 runs.
-INSTANTIATE_TEST_CASE_P(DifferentSizes, RandBytesTest,
-                        ::testing::Values(8, 16, 17, 512, 2048, 2049));
+INSTANTIATE_TEST_SUITE_P(DifferentSizes, RandBytesTest,
+                         ::testing::Values(8, 16, 17, 512, 2048, 2049));
 
 TEST(Random, RandUint64) {
   for (int i = 0; i < 256; ++i) {
