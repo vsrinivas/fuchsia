@@ -204,9 +204,6 @@ static void print_debug_info(zx_handle_t process, zx_handle_t thread, zx_excp_ty
     // ZX_CRASHLOGGER_REQUEST_SELF_BT_MAGIC isn't set. Big deal.
     if (is_resumable_swbreak(*type))
         fatal = "";
-    // TODO(MA-922): Remove this and make policy exceptions fatal.
-    if (*type == ZX_EXCP_POLICY_ERROR)
-        fatal = "";
 
     char process_name[ZX_MAX_NAME_LEN];
     status = zx_object_get_property(process, ZX_PROP_NAME, process_name, sizeof(process_name));
