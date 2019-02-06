@@ -40,7 +40,7 @@ extern {
 
     pub fn zx_system_get_version(
         version: *mut u8,
-        version_len: zx_size_t,
+        version_len: usize,
         ) -> zx_status_t;
 
     pub fn zx_system_get_physmem(
@@ -48,7 +48,7 @@ extern {
 
     pub fn zx_cache_flush(
         addr: *const u8,
-        len: zx_size_t,
+        len: usize,
         options: u32
         ) -> zx_status_t;
 
@@ -227,7 +227,7 @@ extern {
     pub fn zx_thread_create(
         process: zx_handle_t,
         name: *const u8,
-        name_len: zx_size_t,
+        name_len: usize,
         options: u32,
         out: *mut zx_handle_t
         ) -> zx_status_t;
@@ -244,7 +244,7 @@ extern {
         handle: zx_handle_t,
         kind: u32,
         buffer: *mut u8,
-        len: zx_size_t,
+        len: usize,
         actual: *mut u64
         ) -> zx_status_t;
 
@@ -252,7 +252,7 @@ extern {
         handle: zx_handle_t,
         kind: u32,
         buffer: *const u8,
-        buffer_len: zx_size_t,
+        buffer_len: usize,
         ) -> zx_status_t;
 
     pub fn zx_thread_set_priority(
@@ -266,7 +266,7 @@ extern {
     pub fn zx_process_create(
         job: zx_handle_t,
         name: *const u8,
-        name_len: zx_size_t,
+        name_len: usize,
         options: u32,
         proc_handle: *mut zx_handle_t,
         vmar_handle: *mut zx_handle_t
@@ -285,7 +285,7 @@ extern {
         proc_: zx_handle_t,
         vaddr: usize,
         buffer: *mut u8,
-        len: zx_size_t,
+        len: usize,
         actual: *mut usize
         ) -> zx_status_t;
 
@@ -293,7 +293,7 @@ extern {
         proc_: zx_handle_t,
         vaddr: usize,
         buffer: *const u8,
-        len: zx_size_t,
+        len: usize,
         actual: *mut usize
         ) -> zx_status_t;
 
@@ -420,14 +420,14 @@ extern {
         handle: zx_handle_t,
         data: *mut u8,
         offset: u64,
-        len: zx_size_t,
+        len: usize,
         ) -> zx_status_t;
 
     pub fn zx_vmo_write(
         handle: zx_handle_t,
         data: *const u8,
         offset: u64,
-        len: zx_size_t,
+        len: usize,
         ) -> zx_status_t;
 
     pub fn zx_vmo_get_size(
@@ -481,7 +481,7 @@ extern {
         vmar_offset: usize,
         vmo_handle: zx_handle_t,
         vmo_offset: u64,
-        len: zx_size_t,
+        len: usize,
         mapped_addr: *mut usize
         ) -> zx_status_t;
 
@@ -572,7 +572,7 @@ extern {
         handle: zx_handle_t,
         data: *mut u8,
         offset: u32,
-        len: zx_size_t,
+        len: usize,
         actual: *mut u32
         ) -> zx_status_t;
 
@@ -596,24 +596,24 @@ extern {
         action: u32,
         options: u32,
         ptr: *mut u8,
-        size: zx_size_t,
+        size: usize,
         ) -> zx_status_t;
 
     pub fn zx_debug_read(
         handle: zx_handle_t,
         buffer: *mut u8,
-        length: zx_size_t,
+        length: usize,
         ) -> zx_status_t;
 
     pub fn zx_debug_write(
         buffer: *const u8,
-        length: zx_size_t,
+        length: usize,
         ) -> zx_status_t;
 
     pub fn zx_debug_send_command(
         resource_handle: zx_handle_t,
         buffer: *const u8,
-        length: zx_size_t,
+        length: usize,
         ) -> zx_status_t;
 
     pub fn zx_interrupt_create(
@@ -657,7 +657,7 @@ extern {
 
     pub fn zx_vmo_create_contiguous(
         rsrc_handle: zx_handle_t,
-        size: zx_size_t,
+        size: usize,
         alignment_log2: u32,
         out: *mut zx_handle_t
         ) -> zx_status_t;
@@ -765,7 +765,7 @@ extern {
         base: u64,
         size: usize,
         name: *const u8,
-        name_size: zx_size_t,
+        name_size: usize,
         resource_out: *mut zx_handle_t
         ) -> zx_status_t;
 
@@ -806,14 +806,14 @@ extern {
         vcpu: zx_handle_t,
         kind: u32,
         buffer: *mut u8,
-        buffer_size: zx_size_t,
+        buffer_size: usize,
         ) -> zx_status_t;
 
     pub fn zx_vcpu_write_state(
         vcpu: zx_handle_t,
         kind: u32,
         buffer: *const u8,
-        buffer_size: zx_size_t,
+        buffer_size: usize,
         ) -> zx_status_t;
 
     pub fn zx_system_mexec(
