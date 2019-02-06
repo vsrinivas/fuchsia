@@ -476,7 +476,7 @@ TxVector GetTxVector(const fbl::unique_ptr<MinstrelRateSelector>& minstrel,
 }
 
 wlan_tx_info_t MakeTxInfo(const fbl::unique_ptr<Packet>& packet, const TxVector& tv,
-                          uint32_t has_minstrel, uint32_t flags) {
+                          bool has_minstrel, uint32_t flags) {
     tx_vec_idx_t idx;
     zx_status_t status = tv.ToIdx(&idx);
     ZX_DEBUG_ASSERT(status == ZX_OK);
