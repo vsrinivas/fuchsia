@@ -155,7 +155,9 @@ zx_status_t ScsiDevice::WorkerThread() {
     uint32_t max_lun;
     {
         fbl::AutoLock lock(&lock_);
-        max_target = config_.max_target;
+        // virtio-scsi has a 16-bit max_target field, but the encoding we use limits us to one byte
+        // target identifiers.
+        max_target = fbl::min(config_.max_target, static_cast<uint16_t>(UINT8_MAX - 1));
         max_lun = config_.max_lun;
     }
 
@@ -173,6 +175,12 @@ zx_status_t ScsiDevice::WorkerThread() {
     // TODO(ZX-2314): Move probe sequence to ScsiLib -- have it call down into LLDs to execute
     // commands.
     for (uint8_t target = 0u; target <= max_target; target++) {
+        const uint32_t luns_on_this_target = CountLuns(this, target);
+        if (luns_on_this_target == 0) {
+            continue;
+        }
+
+        uint16_t luns_found = 0;
         for (uint16_t lun = 0u; lun <= max_lun; lun++) {
             scsi::TestUnitReadyCDB cdb = {};
             cdb.opcode = scsi::Opcode::TEST_UNIT_READY;
@@ -182,6 +190,14 @@ zx_status_t ScsiDevice::WorkerThread() {
                 /*lun=*/lun, {&cdb, sizeof(cdb)}, {}, {});
             if (status == ZX_OK) {
                 scsi::Disk::Create(this, device_, /*target=*/target, /*lun=*/lun);
+                luns_found++;
+            }
+            // If we've found all the LUNs present on this target, move on.
+            // Subtle detail - LUN 0 may respond to TEST UNIT READY even if it is not a valid LUN
+            // and there is a valid LUN elsewhere on the target. Test for one more LUN than we
+            // expect to work around that.
+            if (luns_found > luns_on_this_target) {
+                break;
             }
         }
     }

@@ -11,6 +11,25 @@
 
 namespace scsi {
 
+uint32_t CountLuns(Controller* controller, uint8_t target) {
+    ReportLunsParameterDataHeader data = {};
+
+    ReportLunsCDB cdb = {};
+    cdb.opcode = Opcode::REPORT_LUNS;
+    cdb.allocation_length = htonl(sizeof(data));
+
+    auto status = controller->ExecuteCommandSync(/*target=*/target, /*lun=*/0,
+        /*cdb=*/{&cdb, sizeof(cdb)},
+        /*data_out=*/{nullptr, 0},
+        /*data_in=*/{&data, sizeof(data)});
+    if (status != ZX_OK) {
+        // For now, assume REPORT LUNS is supported. A failure indicates no LUNs on this target.
+        return 0;
+    }
+    // data.lun_list_length is 8 + the number of bytes of LUN structures.
+    return (ntohl(data.lun_list_length) - 8) / 8;
+}
+
 zx_status_t Disk::Create(Controller* controller, zx_device_t* parent, uint8_t target,
                          uint16_t lun) {
     fbl::AllocChecker ac;

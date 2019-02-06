@@ -21,6 +21,7 @@ enum class Opcode : uint8_t {
     READ_16 = 0x88,
     WRITE_16 = 0x8A,
     READ_CAPACITY_16 = 0x9E,
+    REPORT_LUNS = 0xA0,
 };
 
 // SCSI command structures (CDBs)
@@ -115,6 +116,30 @@ struct ReadCapacity16ParameterData {
 } __PACKED;
 
 static_assert(sizeof(ReadCapacity16ParameterData) == 32, "Read Capacity 16 Params are 32 bytes");
+
+struct ReportLunsCDB {
+    Opcode opcode;
+    uint8_t reserved0;
+    uint8_t select_report;
+    uint8_t reserved1[3];
+    uint32_t allocation_length;
+    uint8_t reserved2;
+    uint8_t control;
+} __PACKED;
+
+static_assert(sizeof(ReportLunsCDB) == 12, "Report LUNs CDB must be 12 bytes");
+
+struct ReportLunsParameterDataHeader {
+    uint32_t lun_list_length;
+    uint32_t reserved;
+    uint64_t lun;  // Need space for at least one LUN.
+    // Followed by 8-byte LUN structures.
+} __PACKED;
+
+static_assert(sizeof(ReportLunsParameterDataHeader) == 16, "Report LUNs Header must be 16 bytes");
+
+// Count the number of addressable LUNs attached to a target.
+uint32_t CountLuns(Controller* controller, uint8_t target);
 
 class Disk;
 using DeviceType = ddk::Device<Disk, ddk::GetSizable, ddk::Unbindable>;
