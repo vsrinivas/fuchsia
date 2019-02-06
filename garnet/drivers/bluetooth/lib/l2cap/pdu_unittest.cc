@@ -42,6 +42,33 @@ std::unique_ptr<PDU> PduFromByteBuffer(const common::ByteBuffer& buf,
           .BuildBasicFrame(kChannelId, buf));
 }
 
+TEST(L2CAP_PduTest, CanCopyEmptyBody) {
+  Recombiner recombiner;
+
+  // clang-format off
+
+  auto packet = PacketFromBytes(
+    // ACL data header
+    0x01, 0x00, 0x04, 0x00,
+
+    // Basic L2CAP header
+    0x00, 0x00, 0xFF, 0xFF
+  );
+
+  // clang-format on
+
+  ASSERT_TRUE(recombiner.AddFragment(std::move(packet)));
+
+  PDU pdu;
+  ASSERT_TRUE(recombiner.Release(&pdu));
+  ASSERT_TRUE(pdu.is_valid());
+  ASSERT_EQ(1u, pdu.fragment_count());
+  ASSERT_EQ(0u, pdu.length());
+
+  common::DynamicByteBuffer buf(0);
+  EXPECT_EQ(0u, pdu.Copy(&buf));
+}
+
 TEST(L2CAP_PduTest, Move) {
   Recombiner recombiner;
 

@@ -103,11 +103,14 @@ PDU& PDU::operator=(PDU&& other) {
 size_t PDU::Copy(common::MutableByteBuffer* out_buffer, size_t pos,
                  size_t size) const {
   ZX_DEBUG_ASSERT(out_buffer);
-  ZX_DEBUG_ASSERT(pos < length());
+  ZX_DEBUG_ASSERT(pos <= length());
   ZX_DEBUG_ASSERT(is_valid());
 
   size_t remaining = std::min(size, length() - pos);
   ZX_DEBUG_ASSERT(out_buffer->size() >= remaining);
+  if (!remaining) {
+    return 0;
+  }
 
   bool found = false;
   size_t offset = 0u;
