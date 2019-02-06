@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
 
 rustc_library("bt-avdtp") {
   name = "bt_avdtp"
@@ -23,11 +24,7 @@ rustc_library("bt-avdtp") {
   ]
 }
 
-package("tests") {
-  testonly = true
-
-  package_name = "bt-avdtp-tests"
-
+test_package("bt-avdtp-tests") {
   deps = [
     ":bt-avdtp",
   ]

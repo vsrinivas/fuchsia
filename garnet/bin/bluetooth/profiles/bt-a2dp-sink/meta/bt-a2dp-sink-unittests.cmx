@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/bt-a2dp-sink-unittests"
+    }
+}

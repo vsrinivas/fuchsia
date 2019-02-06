@@ -4,8 +4,10 @@
     ],
     "packages": [
         "//garnet/bin/bluetooth/bt-gap:bt-gap-tests",
+        "//garnet/bin/bluetooth/profiles/bt-a2dp-sink:bt-a2dp-sink-tests",
         "//garnet/bin/bluetooth/tests:bluetooth-tests",
         "//garnet/drivers/bluetooth/hci/fake",
+        "//garnet/lib/rust/bt-avdtp:bt-avdtp-tests",
         "//garnet/lib/rust/fuchsia-bluetooth:bluetooth-crate-tests"
     ]
 }
