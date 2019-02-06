@@ -14,9 +14,11 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-const (
+var (
 	// Google Cloud API scope required to use ResultStore Upload API.
-	scope = "https://www.googleapis.com/auth/cloud-platform"
+	RequiredScopes = []string{
+		"https://www.googleapis.com/auth/cloud-platform",
+	}
 )
 
 // Connect returns a new UploadClient connected to the ResultStore backend at the given host.
@@ -77,4 +79,20 @@ func (e Environment) GRPCServiceAddress() string {
 		// We should never get here.
 		panic("invalid environment: " + e)
 	}
+}
+
+func (e Environment) String() string {
+	return string(e)
+}
+
+// Set implements flag.Var
+func (e *Environment) Set(value string) error {
+	switch value {
+	case string(Production), string(Staging):
+		*e = Environment(value)
+	default:
+		return fmt.Errorf("invalid environment: %q", value)
+	}
+
+	return nil
 }
