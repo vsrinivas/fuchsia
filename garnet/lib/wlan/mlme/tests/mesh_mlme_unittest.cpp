@@ -52,6 +52,33 @@ struct MeshMlmeTest : public ::testing::Test {
         return device.GetServiceMsgs<wlan_mesh::MeshPathTable>();
     }
 
+    void EstablishPath(const common::MacAddr& target_addr, const common::MacAddr& next_hop,
+                       uint32_t lifetime) {
+        // Receive a PREP to establish a path
+        zx_status_t status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({
+            // clang-format off
+            // Mgmt header
+            0xd0, 0x00, 0x00, 0x00, // fc, duration
+            LIST_MAC_ADDR_BYTES(device.GetState()->address()), // addr1 = self
+            LIST_MAC_ADDR_BYTES(next_hop), // addr2
+            LIST_MAC_ADDR_BYTES(next_hop), // addr3
+            0x10, 0x00, // seq ctl
+            // Action
+            13, // category (mesh)
+            1, // action = HWMP mesh path selection
+            131, 31, // PREP
+            0x00, 0x01, 0x20, // flags, hop count, elem ttl
+            LIST_MAC_ADDR_BYTES(target_addr), // target addr
+            LIST_UINT32_BYTES(0u), // target hwmp seqno
+            LIST_UINT32_BYTES(lifetime), // lifetime
+            LIST_UINT32_BYTES(150), // metric
+            LIST_MAC_ADDR_BYTES(device.GetState()->address()), // originator addr = self
+            LIST_UINT32_BYTES(2), // originator hwmp seqno
+            // clang-format on
+        }));
+        EXPECT_EQ(ZX_OK, status);
+    }
+
     MockDevice device;
     MeshMlme mlme;
 };
@@ -357,42 +384,26 @@ TEST_F(MeshMlmeTest, DeliverDuplicateData) {
 TEST_F(MeshMlmeTest, DataForwarding) {
     EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
 
-    // Receive a PREP to establish a path to 33:33:33:33:33:33 via 22:22:22:22:22:22
-    zx_status_t status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({
-        // clang-format off
-        // Mgmt header
-        0xd0, 0x00, 0x00, 0x00, // fc, duration
-        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
-        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr2
-        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr3
-        0x10, 0x00, // seq ctl
-        // Action
-        13, // category (mesh)
-        1, // action = HWMP mesh path selection
-        131, 31, // PREP
-        0x00, 0x01, 0x20, // flags, hop count, elem ttl
-        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // target addr
-        0x07, 0x00, 0x00, 0x00, // target hwmp seqno
-        0x00, 0x01, 0x00, 0x00, // lifetime
-        150, 0x0, 0x0, 0x0, // metric
-        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // originator addr = self
-        0x02, 0x00, 0x00, 0x00, // originator hwmp seqno
-        // clang-format on
-    }));
-    EXPECT_EQ(ZX_OK, status);
+    const common::MacAddr next_hop("20:20:20:20:20:20");
+    const common::MacAddr mesh_da("30:30:30:30:30:30");
+    const common::MacAddr prev_hop("40:40:40:40:40:40");
+    const common::MacAddr mesh_sa("50:50:50:50:50:50");
 
-    // Receive a data frame originating from 55:55:55:55:55:55 and targeted at 33:33:33:33:33:33,
-    // sent to us (11:11:11:11:11:11) by the previous hop (44:44:44:44:44:44)
-    status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({
+    // Receive a PREP to establish a path to 'mesh_da' via 'next_hop'
+    EstablishPath(mesh_da, next_hop, 256);
+
+    // Receive a data frame originating from 'mesh_sa' and targeted at 'mesh_da',
+    // sent to us by 'prev_hop'
+    zx_status_t status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({
         // clang-format off
         // Data header
         0x88, 0x03, // fc: qos data, 4-address, no ht ctl
         0x00, 0x00, // duration
-        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
-        0x44, 0x44, 0x44, 0x44, 0x44, 0x44, // addr2
-        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // addr3: mesh da
+        LIST_MAC_ADDR_BYTES(device.GetState()->address()), // addr1
+        LIST_MAC_ADDR_BYTES(prev_hop), // addr2
+        LIST_MAC_ADDR_BYTES(mesh_da), // addr3
         0x00, 0x00, // seq ctl
-        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, // addr4: mesh sa
+        LIST_MAC_ADDR_BYTES(mesh_sa), // addr4
         0x00, 0x01, // qos ctl: mesh control present
         // Mesh control
         0x00, 0x20, // flags, ttl
@@ -415,11 +426,11 @@ TEST_F(MeshMlmeTest, DataForwarding) {
         // Data header
         0x88, 0x03, // fc: qos data, 4-address, no ht ctl
         0x00, 0x00, // duration
-        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr1: next hop to destination
-        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr2
-        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // addr3: mesh da
+        LIST_MAC_ADDR_BYTES(next_hop), // addr1: next hop to destination
+        LIST_MAC_ADDR_BYTES(device.GetState()->address()), // addr2 = self
+        LIST_MAC_ADDR_BYTES(mesh_da), // addr3
         0x10, 0x00, // seq ctl: should be filled by us
-        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, // addr4: mesh sa
+        LIST_MAC_ADDR_BYTES(mesh_sa), // addr4
         0x00, 0x01, // qos ctl: mesh control present
         // Mesh control
         0x00, 0x1f, // flags, ttl (decreased by one)
@@ -433,6 +444,96 @@ TEST_F(MeshMlmeTest, DataForwarding) {
         // clang-format on
     };
     EXPECT_RANGES_EQ(expected, Span<const uint8_t>(*packets[0].pkt));
+}
+
+TEST_F(MeshMlmeTest, OutgoingData) {
+    const common::MacAddr dest("30:30:30:30:30:30");
+    const common::MacAddr next_hop("20:20:20:20:20:20");
+    const common::MacAddr src("40:40:40:40:40:40");
+
+    auto expected_data_frame = [](uint8_t index, uint8_t payload) {
+        return std::vector<uint8_t>{
+            // clang-format off
+            // Data header
+            0x88, 0x03, // fc: qos data, 4-address, no ht ctl
+            0x00, 0x00, // duration
+            0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // addr1: next hop to destination
+            0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr2: transmitter address (self)
+            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, // addr3: mesh da
+            static_cast<uint8_t>((index + 1) << 4), 0x00, // seq ctl
+            0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr4: mesh sa (self)
+            0x00, 0x01, // qos ctl: mesh control present
+            // Mesh control
+            0x02, 0x20, // flags (addr ext), ttl
+            index, 0, 0, 0, // seq
+            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, // addr5: da
+            0x40, 0x40, 0x40, 0x40, 0x40, 0x40, // addr6: sa
+            // LLC header
+            0xaa, 0xaa, 0x03, // dsap ssap ctrl
+            0x00, 0x00, 0x00, // oui
+            0x00, 0x00, // protocol id
+            payload,
+            // clang-format on
+        };
+    };
+
+    EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+
+    EstablishPath(dest, next_hop, 100);
+
+    // Transmit a data frame
+    ASSERT_EQ(ZX_OK, mlme.HandleFramePacket(test_utils::MakeEthPacket(dest, src, {'a'})));
+    auto packets = device.GetWlanPackets();
+    ASSERT_EQ(1u, packets.size());
+    EXPECT_RANGES_EQ(expected_data_frame(0, 'a'), Span<const uint8_t>(*packets[0].pkt));
+
+    // Transmit another data frame
+    ASSERT_EQ(ZX_OK, mlme.HandleFramePacket(test_utils::MakeEthPacket(dest, src, {'b'})));
+    packets = device.GetWlanPackets();
+    ASSERT_EQ(1u, packets.size());
+    EXPECT_RANGES_EQ(expected_data_frame(1, 'b'), Span<const uint8_t>(*packets[0].pkt));
+
+    // Fast forward well into the future and attempt to transmit yet another data frame
+    device.SetTime(zx::time(ZX_SEC(12345)));
+    ASSERT_EQ(ZX_OK, mlme.HandleFramePacket(test_utils::MakeEthPacket(dest, src, {'c'})));
+
+    packets = device.GetWlanPackets();
+    ASSERT_EQ(2u, packets.size());
+
+    // Expect a PREQ
+    const uint8_t expected_preq_frame[] = {
+        // clang-format off
+        // Mgmt header
+        0xd0, 0x00, 0x00, 0x00, // fc, duration
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr1
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr2
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr3
+        0x10, 0x00, // seq ctl
+        // Action
+        13, // category (mesh)
+        1, // action = HWMP mesh path selection
+        // Preq element
+        130, 37,
+        0x00, // flags: no address extension
+        0x00, // hop count
+        0x20, // element ttl
+        0x01, 0x00, 0x00, 0x00, // path discovery ID
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // originator addr
+        0x01, 0x00, 0x00, 0x00, // originator hwmp seqno
+        0x88, 0x13, 0x00, 0x00, // lifetime (default = 5000 TU)
+        0, 0, 0, 0, // metric
+        1, // target count
+        // Target 1
+        0x01, // target flags: target only (default)
+        0x30, 0x30, 0x30, 0x30, 0x30, 0x30, // target address
+        0x00, 0x00, 0x00, 0x00, // target hwmp seqno
+        // clang-format on
+    };
+    EXPECT_RANGES_EQ(expected_preq_frame, Span<const uint8_t>(*packets[0].pkt));
+
+    // The current implementation is expected to send out the data frame even if the path
+    // has expired. This might change in the future if we implement packet buffering.
+    EXPECT_RANGES_EQ(expected_data_frame(2, 'c'), Span<const uint8_t>(*packets[1].pkt));
 }
 
 }  // namespace wlan

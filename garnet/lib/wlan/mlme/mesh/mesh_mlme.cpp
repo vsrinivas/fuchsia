@@ -282,7 +282,7 @@ void MeshMlme::HandleEthTx(EthFrame&& frame) {
         auto proxy_info = state_->path_table.GetProxyInfo(frame.hdr()->dest);
         auto mesh_dest = proxy_info == nullptr ? frame.hdr()->dest : proxy_info->mesh_target;
 
-        auto path = state_->path_table.GetPath(mesh_dest);
+        auto path = QueryPathTable(mesh_dest);
         if (path == nullptr) {
             // TODO(gbonik): buffer the frame
             TriggerPathDiscovery(mesh_dest);
@@ -387,6 +387,21 @@ zx_status_t MeshMlme::HandleMpmOpenAction(common::MacAddr src_addr, BufferReader
 
     src_addr.CopyTo(action.common.peer_sta_address.data());
     return SendServiceMsg(device_, &action, fuchsia_wlan_mlme_MLMEIncomingMpOpenActionOrdinal);
+}
+
+const MeshPath* MeshMlme::QueryPathTable(const common::MacAddr& mesh_dest) {
+    ZX_ASSERT(state_);
+
+    auto path = state_->path_table.GetPath(mesh_dest);
+    if (path == nullptr) { return nullptr; }
+
+    if (path->expiration_time <= state_->hwmp.timer_mgr.Now()) {
+        // Still use the expired path but trigger path discovery.
+        // Since we don't have buffering implemented, this is a better alternative than
+        // throwing out the frame.
+        TriggerPathDiscovery(mesh_dest);
+    }
+    return path;
 }
 
 void MeshMlme::TriggerPathDiscovery(const common::MacAddr& target) {
@@ -517,7 +532,7 @@ std::optional<common::MacAddr> MeshMlme::GetNextHopForForwarding(
     if (header.mac_header.addr4 != nullptr) {
         // Individually addressed frame: addr3 is the mesh destination
         if (header.mac_header.fixed->addr3 == self_addr()) { return {}; }
-        auto path = state_->path_table.GetPath(header.mac_header.fixed->addr3);
+        auto path = QueryPathTable(header.mac_header.fixed->addr3);
         if (path == nullptr) { return {}; }
         return {path->next_hop};
     } else {

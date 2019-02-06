@@ -50,6 +50,7 @@ class MeshMlme : public Mlme {
     zx_status_t HandleMpmOpenAction(common::MacAddr src_addr, BufferReader* r);
     void HandleMeshAction(const MgmtFrameHeader& mgmt, BufferReader* r);
 
+    const MeshPath* QueryPathTable(const common::MacAddr& mesh_dest);
     void TriggerPathDiscovery(const common::MacAddr& target);
 
     void HandleDataFrame(fbl::unique_ptr<Packet> packet);
