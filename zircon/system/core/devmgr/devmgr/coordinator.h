@@ -264,7 +264,7 @@ public:
     zx_status_t SetBootdata(const zx::unowned_vmo& vmo);
     bool InSuspend() const;
 
-    void ScanSystemDrivers();
+    zx_status_t ScanSystemDrivers();
     void BindDrivers();
     void UseFallbackDrivers();
     void DriverAdded(Driver* drv, const char* version);

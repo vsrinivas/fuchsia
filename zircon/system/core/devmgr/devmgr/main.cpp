@@ -907,17 +907,21 @@ int main(int argc, char** argv) {
     }
 
     thrd_t t;
-    if ((thrd_create_with_name(&t, pwrbtn_monitor_starter, nullptr, "pwrbtn-monitor-starter")) ==
-        thrd_success) {
-        thrd_detach(t);
+    int ret = thrd_create_with_name(&t, pwrbtn_monitor_starter, nullptr, "pwrbtn-monitor-starter");
+    if (ret != thrd_success) {
+        log(ERROR, "devmgr: failed to create pwrbtn monitor starter thread\n");
+        return 1;
     }
+    thrd_detach(t);
 
     start_console_shell();
 
-    if ((thrd_create_with_name(&t, service_starter, &coordinator, "service-starter")) ==
-        thrd_success) {
-        thrd_detach(t);
+    ret = thrd_create_with_name(&t, service_starter, &coordinator, "service-starter");
+    if (ret != thrd_success) {
+        log(ERROR, "devmgr: failed to create service starter thread\n");
+        return 1;
     }
+    thrd_detach(t);
 
     fbl::unique_ptr<devmgr::DevhostLoaderService> loader_service;
     if (devmgr::getenv_bool("devmgr.devhost.strict-linking", false)) {
@@ -943,7 +947,10 @@ int main(int argc, char** argv) {
     // can be removed once the real driver priority system
     // exists.
     if (coordinator.system_available()) {
-        coordinator.ScanSystemDrivers();
+        status = coordinator.ScanSystemDrivers();
+        if (status != ZX_OK) {
+            return 1;
+        }
     }
 
     if (coordinator.require_system() && !coordinator.system_loaded()) {

@@ -1845,7 +1845,9 @@ void Coordinator::Suspend(SuspendContext ctx) {
         int ret = thrd_create_with_name(&t, suspend_timeout_thread, &suspend_context(),
                                         "devcoord-suspend-timeout");
         if (ret != thrd_success) {
-            log(ERROR, "devcoord: can't create suspend timeout thread\n");
+            log(ERROR, "devcoord: failed to create suspend timeout thread\n");
+        } else {
+            thrd_detach(t);
         }
     }
 
@@ -1995,9 +1997,9 @@ zx_status_t Coordinator::BindDriver(Driver* drv) {
     return ZX_OK;
 }
 
-void Coordinator::ScanSystemDrivers() {
+zx_status_t Coordinator::ScanSystemDrivers() {
     if (system_loaded_) {
-        return;
+        return ZX_ERR_BAD_STATE;
     }
     system_loaded_ = true;
     // Fire up a thread to scan/load system drivers.
@@ -2013,9 +2015,12 @@ void Coordinator::ScanSystemDrivers() {
         return 0;
     };
     int ret = thrd_create_with_name(&t, callback, this, "system-driver-loader");
-    if (ret == thrd_success) {
-        thrd_detach(t);
+    if (ret != thrd_success) {
+        log(ERROR, "devcoord: failed to create system driver scanning thread\n");
+        return ZX_ERR_NO_RESOURCES;
     }
+    thrd_detach(t);
+    return ZX_OK;
 }
 
 void Coordinator::BindSystemDrivers() {
