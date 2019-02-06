@@ -21,21 +21,25 @@ fxl::RefPtr<Function> MakeFunction(const char* name, bool is_inline,
   return func;
 }
 
-
 }  // namespace
 
 const uint64_t InlineThreadControllerTest::kTopSP = 0x2010;
 const uint64_t InlineThreadControllerTest::kMiddleSP = 0x2020;
 const uint64_t InlineThreadControllerTest::kBottomSP = 0x2040;
 
-const AddressRange InlineThreadControllerTest::kTopFunctionRange(0x30000, 0x40000);
+const AddressRange InlineThreadControllerTest::kTopFunctionRange(0x30000,
+                                                                 0x40000);
 // Must be inside the top function.
-const AddressRange InlineThreadControllerTest::kTopInlineFunctionRange(0x30100, 0x30200);
-const AddressRange InlineThreadControllerTest::kMiddleFunctionRange(0x10000, 0x20000);
+const AddressRange InlineThreadControllerTest::kTopInlineFunctionRange(0x30100,
+                                                                       0x30200);
+const AddressRange InlineThreadControllerTest::kMiddleFunctionRange(0x10000,
+                                                                    0x20000);
 // Must be inside the middle function
-const AddressRange InlineThreadControllerTest::kMiddleInline1FunctionRange(0x10100, 0x10200);
+const AddressRange InlineThreadControllerTest::kMiddleInline1FunctionRange(
+    0x10100, 0x10200);
 // Must be inside the middle inline 1 function with same start address.
-const AddressRange InlineThreadControllerTest::kMiddleInline2FunctionRange(0x10100, 0x10110);
+const AddressRange InlineThreadControllerTest::kMiddleInline2FunctionRange(
+    0x10100, 0x10110);
 
 // static
 fxl::RefPtr<Function> InlineThreadControllerTest::GetTopFunction() {
@@ -180,19 +184,6 @@ InlineThreadControllerTest::MockFrameVectorToFrameVector(
   for (auto& mf : mock_frames)
     frames.push_back(std::move(mf));
   return frames;
-}
-
-// static
-void InlineThreadControllerTest::SetAddressForMockFrame(uint64_t address,
-                                                        MockFrame* mock_frame) {
-  debug_ipc::StackFrame stack_frame = mock_frame->stack_frame();
-  stack_frame.ip = address;
-  mock_frame->set_stack_frame(stack_frame);
-
-  const Location& old_loc = mock_frame->GetLocation();
-  mock_frame->set_location(Location(address, old_loc.file_line(),
-                                    old_loc.column(), old_loc.symbol_context(),
-                                    old_loc.symbol()));
 }
 
 }  // namespace zxdb

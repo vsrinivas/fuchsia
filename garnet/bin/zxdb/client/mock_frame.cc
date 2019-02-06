@@ -21,6 +21,13 @@ MockFrame::MockFrame(Session* session, Thread* thread,
       location_(location) {}
 MockFrame::~MockFrame() = default;
 
+void MockFrame::SetAddress(uint64_t address) {
+  stack_frame_.ip = address;
+  location_ = Location(address, location_.file_line(),
+                       location_.column(), location_.symbol_context(),
+                       location_.symbol());
+}
+
 Thread* MockFrame::GetThread() const { return thread_; }
 
 bool MockFrame::IsInline() const { return !!physical_frame_; }

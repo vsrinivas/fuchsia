@@ -80,11 +80,6 @@ class InlineThreadControllerTest : public ThreadControllerTest {
   // pointers.
   static std::vector<std::unique_ptr<Frame>> MockFrameVectorToFrameVector(
       std::vector<std::unique_ptr<MockFrame>> mock_frames);
-
-  // Adjusts the instruction pointer address of the given much frame by the
-  // given offset. This is used to generate variants of the result of
-  // GetStack().
-  static void SetAddressForMockFrame(uint64_t address, MockFrame* mock_frame);
 };
 
 }  // namespace zxdb

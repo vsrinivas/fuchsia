@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#pragma once
+
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/lib/debug_ipc/records.h"
@@ -34,6 +36,10 @@ class MockFrame : public Frame {
 
   // Use GetLocation() to retrieve the location.
   void set_location(Location l) { location_ = std::move(l); }
+
+  // Overrides all IPs with a new address, but doesn't change anything else
+  // about the location including the stack or symbols.
+  void SetAddress(uint64_t address);
 
   // Frame implementation.
   Thread* GetThread() const override;

@@ -3,17 +3,20 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/client/step_over_thread_controller.h"
+#include "garnet/bin/zxdb/client/inline_thread_controller_test.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/client/thread_controller_test.h"
 #include "garnet/bin/zxdb/common/address_ranges.h"
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 
 namespace zxdb {
 
-class StepOverThreadControllerTest : public ThreadControllerTest {};
+class StepOverThreadControllerTest : public InlineThreadControllerTest {};
 
+// Tests a "step over" including a function call that's skipped. This generates
+// an internal "finish" command to get out of the subroutine.
 TEST_F(StepOverThreadControllerTest, InOutFinish) {
   // Step as long as we're in this range. Using the "code range" for stepping
   // allows us to avoid dependencies on the symbol subsystem.
@@ -104,6 +107,89 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
   // Should have stopped.
   EXPECT_EQ(4, mock_remote_api()->resume_count());  // Same value as above.
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
+}
+
+// Tests "step over" stepping from before an inline function to the call of
+// the inline function. This is tricky because that call is actually the
+// first instruction of the inline function so needs special handling.
+TEST_F(StepOverThreadControllerTest, Inline) {
+  // The GetStack() function returns a stack in an inline function. Modify
+  // the initial state so it's right before the inline call (popping the
+  // inline frame off, exposing the physical frame right before the call).
+  auto mock_frames = GetStack();
+  mock_frames.erase(mock_frames.begin());
+  ASSERT_FALSE(mock_frames[0]->IsInline());
+
+  // Step in a range right before the inline call.
+  AddressRange step_range1(mock_frames[0]->GetAddress() - 4,
+                           mock_frames[0]->GetAddress());
+  mock_frames[0]->SetAddress(step_range1.begin());
+
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
+
+  thread()->ContinueWith(
+      std::make_unique<StepOverThreadController>(AddressRanges(step_range1)),
+      [](const Err& err) {});
+  EXPECT_EQ(1, mock_remote_api()->resume_count());  // Continued.
+
+  // Issue a stop at the beginning of the inline function. We provide the
+  // full stack (including the inline function) because that's where the
+  // address resolves to.
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(GetStack()), true);
+  EXPECT_EQ(1, mock_remote_api()->resume_count());  // Unchanged (stopped).
+
+  // The "step over" controller should have reported "stop" and fixed up the
+  // stack to be at the call point of the inline function.
+  EXPECT_EQ(1u, thread()->GetStack().hide_top_inline_frame_count());
+
+  // Now step over the inline call.
+  thread()->ContinueWith(std::make_unique<StepOverThreadController>(
+                             AddressRanges(kTopFunctionRange)),
+                         [](const Err& err) {});
+  EXPECT_EQ(2, mock_remote_api()->resume_count());  // Continued.
+
+  // Pretend that immediately following that inline call is another inline
+  // call. This is as if two inline functions are back-to-back in the source
+  // code, so "returning" from the first immediately pops you in the first
+  // instruction of the next.
+
+  // The function range for inline function immediately following the first.
+  AddressRange second_inline_range(kTopFunctionRange.end(),
+                                   kTopFunctionRange.end() + 4);
+  auto second_inline_func =
+      fxl::MakeRefCounted<Function>(Symbol::kTagInlinedSubroutine);
+  second_inline_func->set_assigned_name("Second");
+  second_inline_func->set_code_ranges(AddressRanges(second_inline_range));
+
+  Location second_inline_loc(
+      second_inline_range.begin(), FileLine("file.cc", 21), 0,
+      SymbolContext::ForRelativeAddresses(), LazySymbol(second_inline_func));
+
+  // Clear so we can tell in the next step that it was actually changed.
+  thread()->GetStack().SetHideTopInlineFrameCount(0);
+
+  // Replace the inline function at the top with our new one.
+  mock_frames = GetStack();
+  mock_frames.erase(mock_frames.begin());  // Erase old top inline function.
+  mock_frames.insert(
+      mock_frames.begin(),
+      std::make_unique<MockFrame>(
+          nullptr, nullptr,
+          debug_ipc::StackFrame(second_inline_range.begin(), kTopSP, kTopSP),
+          second_inline_loc, mock_frames[0].get()));
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
+
+  // The step controller should have fixed the stack to look like the call
+  // to the second inline.
+  EXPECT_EQ(1u, thread()->GetStack().hide_top_inline_frame_count());
 }
 
 }  // namespace zxdb

@@ -84,6 +84,16 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     }
   }
 
+  // If the current location is ambiguous and could be in the frame we're
+  // stepping within, set the top frame to that (rather than inline calls off
+  // of that). This will treat the inline call as a separate statement.
+  //
+  // Without this call, when stepping to an inlined call, this code will notice
+  // that the stack is in a subframe of the function we're stepping in and then
+  // try to step out. The "finish" controller will then step out of the inline
+  // frame, which will skip over it from the context of the user.
+  SetInlineFrameIfAmbiguous(frame_fingerprint_);
+
   // If we get here the thread is no longer in range but could be in a sub-
   // frame that we need to step out of.
   FrameFingerprint current_fingerprint =
@@ -103,6 +113,8 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   // at one of them.
   if (subframe_should_stop_callback_) {
     if (subframe_should_stop_callback_(stack[0])) {
+      // Don't set the ambiguous inline frame in this case because we're in
+      // a subframe of the one we were originally stepping in.
       Log("should_stop callback returned true, stopping.");
       return kStop;
     } else {

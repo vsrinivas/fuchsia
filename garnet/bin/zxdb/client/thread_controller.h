@@ -7,6 +7,7 @@
 #include <functional>
 #include <vector>
 
+#include "garnet/bin/zxdb/client/frame_fingerprint.h"
 #include "garnet/bin/zxdb/common/address_range.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/macros.h"
@@ -118,6 +119,25 @@ class ThreadController {
   // Returns the name of this thread controller. This will be visible in logs.
   // This should be something simple and short like "Step" or "Step Over".
   virtual const char* GetName() const = 0;
+
+  // The beginning of an inline function is ambiguous about whether you're at
+  // the beginning of the function or about to call it (see Stack object for
+  // more).
+  //
+  // Many stepping functions know what frame they think they should be in, and
+  // identify this based on the frame fingerprint. As a concrete example, if
+  // a "finish" command exits a stack frame, but the next instruction is the
+  // beginning of an inlined function, the "finish" controller would like to
+  // say you're in the stack it returned to, not the inlined function.
+  //
+  // This function checks if there is ambiguity of inline frames and whether
+  // one of those ambiguous frames matches the given fingerprint. In this case,
+  // it will set the top stack frame to be the requested one.
+  //
+  // If there is no ambiguity or one of the possibly ambiguous frames doesn't
+  // match the given fingerprint, the inline frame hide count will be reset to
+  // zero.
+  void SetInlineFrameIfAmbiguous(FrameFingerprint fingerprint);
 
   // Tells the owner of this class that this ThreadController has completed
   // its work. Normally returning kStop from OnThreadStop() will do this, but

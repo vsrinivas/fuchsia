@@ -46,8 +46,7 @@ TEST_F(FinishThreadControllerTest, FinishInline) {
 
   // Do one step inside the inline function (add 4 to the address).
   mock_frames = GetStack();
-  SetAddressForMockFrame(mock_frames[0]->GetAddress() + 4,
-                         mock_frames[0].get());
+  mock_frames[0]->SetAddress(mock_frames[0]->GetAddress() + 4);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)),
@@ -60,7 +59,7 @@ TEST_F(FinishThreadControllerTest, FinishInline) {
   mock_frames = GetStack();
   uint64_t after_inline = kTopInlineFunctionRange.end();
   mock_frames.erase(mock_frames.begin());  // Remove the inline function.
-  SetAddressForMockFrame(after_inline, mock_frames[0].get());
+  mock_frames[0]->SetAddress(after_inline);
 
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
@@ -128,8 +127,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   // continued.
   mock_frames = GetStack();
   mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 3);
-  SetAddressForMockFrame(mock_frames[0]->GetAddress() + 4,
-                         mock_frames[0].get());
+  mock_frames[0]->SetAddress(mock_frames[0]->GetAddress() + 4);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)),
@@ -141,8 +139,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   // target.
   mock_frames = GetStack();
   mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 4);
-  SetAddressForMockFrame(kMiddleInline2FunctionRange.end(),
-                         mock_frames[0].get());
+  mock_frames[0]->SetAddress(kMiddleInline2FunctionRange.end());
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)),
@@ -152,8 +149,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   // Stop in middle frame which is the target (right after the inline 1 range).
   mock_frames = GetStack();
   mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 5);
-  SetAddressForMockFrame(kMiddleInline1FunctionRange.end(),
-                         mock_frames[0].get());
+  mock_frames[0]->SetAddress(kMiddleInline1FunctionRange.end());
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)),

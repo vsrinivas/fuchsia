@@ -204,6 +204,7 @@ source_set("tests") {
     "target_impl_unittest.cc",
     "thread_controller_test.cc",
     "thread_controller_test.h",
+    "thread_controller_unittest.cc",
     "thread_impl_unittest.cc",
   ]
 
