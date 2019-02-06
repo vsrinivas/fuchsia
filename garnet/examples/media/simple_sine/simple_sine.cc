@@ -106,7 +106,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
 
 // Write a sine wave into our buffer; we'll submit packets that point to it.
 void MediaApp::WriteAudioIntoBuffer() {
-  float* float_buffer = reinterpret_cast<float*>(payload_buffer_.start());
+  auto float_buffer = reinterpret_cast<float*>(payload_buffer_.start());
 
   for (size_t frame = 0; frame < kFramesPerPayload * kNumPayloads; ++frame) {
     float_buffer[frame] =

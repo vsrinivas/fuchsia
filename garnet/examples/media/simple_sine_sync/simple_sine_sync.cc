@@ -5,8 +5,8 @@
 #include "garnet/examples/media/simple_sine_sync/simple_sine_sync.h"
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <math.h>
 #include <zircon/syscalls.h>
+#include <cmath>
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
@@ -39,7 +39,7 @@ namespace examples {
 
 MediaApp::MediaApp(std::unique_ptr<component::StartupContext> context)
     : context_(std::move(context)) {}
-MediaApp::~MediaApp() {}
+MediaApp::~MediaApp() = default;
 
 // Prepare for playback, compute playback data, supply media packets, start.
 int MediaApp::Run() {
@@ -190,10 +190,10 @@ void MediaApp::WriteAudioIntoBuffer(void* buffer, size_t num_frames) {
 
     for (size_t chan_num = 0; chan_num < kNumChannels; ++chan_num) {
       if (use_float_) {
-        float* float_buffer = reinterpret_cast<float*>(buffer);
+        auto float_buffer = reinterpret_cast<float*>(buffer);
         float_buffer[frame * kNumChannels + chan_num] = val;
       } else {
-        int16_t* int_buffer = reinterpret_cast<int16_t*>(buffer);
+        auto int_buffer = reinterpret_cast<int16_t*>(buffer);
         int_buffer[frame * kNumChannels + chan_num] = static_cast<int16_t>(
             round(val * std::numeric_limits<int16_t>::max()));
       }

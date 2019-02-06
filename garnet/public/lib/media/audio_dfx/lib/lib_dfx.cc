@@ -5,7 +5,7 @@
 #include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
 
 #include <fbl/algorithm.h>
-#include <math.h>
+#include <cmath>
 
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_base.h"

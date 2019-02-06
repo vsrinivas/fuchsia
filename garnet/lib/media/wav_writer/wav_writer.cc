@@ -5,15 +5,14 @@
 #include "garnet/lib/media/wav_writer/wav_writer.h"
 #include <endian.h>
 #include <fcntl.h>
-#include <iomanip>
 #include <lib/fdio/io.h>
-#include <limits>
-#include <optional>
 #include <unistd.h>
 #include <zircon/compiler.h>
+#include <iomanip>
+#include <limits>
+#include <optional>
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 namespace {
 
@@ -193,7 +192,7 @@ zx_status_t UpdateHeaderLengths(int file_desc, size_t payload_len) {
 
   uint32_t file_offset = offsetof(RiffChunkHeader, length);
   ::lseek(file_desc, file_offset, SEEK_SET);
-  uint32_t new_length =
+  auto new_length =
       htole32(static_cast<uint32_t>(kWavHeaderOverhead + payload_len));
   if (::write(file_desc, &new_length, sizeof(new_length)) < 0) {
     return ZX_ERR_IO;
@@ -390,5 +389,4 @@ bool WavWriter<enabled>::Delete() {
 // It should always be possible for a client to enable the WavWriter.
 template class WavWriter<true>;
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

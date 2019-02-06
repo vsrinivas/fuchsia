@@ -93,7 +93,7 @@ Tones::Tones(bool interactive, fit::closure quit_callback)
   audio_renderer_->EnableMinLeadTimeEvents(true);
 }
 
-Tones::~Tones() {}
+Tones::~Tones() = default;
 
 void Tones::Quit() {
   midi_keyboard_.reset();

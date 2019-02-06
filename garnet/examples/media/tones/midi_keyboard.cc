@@ -10,9 +10,9 @@
 #include <fcntl.h>
 #include <lib/fit/defer.h>
 #include <poll.h>
-#include <stdio.h>
 #include <unistd.h>
 #include <zircon/device/midi.h>
+#include <cstdio>
 
 #include "garnet/examples/media/tones/midi.h"
 #include "garnet/examples/media/tones/tones.h"
@@ -35,7 +35,7 @@ std::unique_ptr<MidiKeyboard> MidiKeyboard::Create(Tones* owner) {
 
   auto cleanup = fit::defer([dir]() { closedir(dir); });
 
-  while ((de = readdir(dir)) != NULL) {
+  while ((de = readdir(dir)) != nullptr) {
     char devname[128];
 
     snprintf(devname, sizeof(devname), "%s/%s", kDevMidiPath, de->d_name);

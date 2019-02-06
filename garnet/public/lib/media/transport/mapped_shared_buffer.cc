@@ -18,7 +18,7 @@ constexpr uint64_t kMaxBufferLen = 0x3fffffffffffffff;
 
 }  // namespace
 
-MappedSharedBuffer::MappedSharedBuffer() {}
+MappedSharedBuffer::MappedSharedBuffer() = default;
 
 MappedSharedBuffer::~MappedSharedBuffer() { Reset(); }
 

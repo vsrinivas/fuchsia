@@ -5,13 +5,12 @@
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_delay.h"
 
 #include <fbl/algorithm.h>
-#include <math.h>
+#include <cmath>
 
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
 
-namespace media {
-namespace audio_dfx_test {
+namespace media::audio_dfx_test {
 
 //
 // DfxDelay: static member functions
@@ -125,5 +124,4 @@ bool DfxDelay::Flush() {
   return true;
 }
 
-}  // namespace audio_dfx_test
-}  // namespace media
+}  // namespace media::audio_dfx_test

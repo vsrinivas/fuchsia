@@ -10,7 +10,7 @@ SharedBufferSetAllocator::SharedBufferSetAllocator(uint32_t local_map_flags,
                                                    zx_rights_t remote_rights)
     : SharedBufferSet(local_map_flags), remote_rights_(remote_rights) {}
 
-SharedBufferSetAllocator::~SharedBufferSetAllocator() {}
+SharedBufferSetAllocator::~SharedBufferSetAllocator() = default;
 
 void SharedBufferSetAllocator::Reset() {
   std::lock_guard<std::mutex> locker(mutex_);
@@ -230,7 +230,7 @@ uint32_t SharedBufferSetAllocator::CreateBuffer(bool whole, uint64_t size) {
   Buffer& buffer = buffers_[buffer_id];
   buffer.size_ = size;
   if (!whole) {
-    buffer.allocator_.reset(new FifoAllocator(size));
+    buffer.allocator_ = std::make_unique<FifoAllocator>(size);
   }
 
   buffer_updates_.emplace(buffer_id, std::move(vmo));
@@ -254,9 +254,9 @@ void SharedBufferSetAllocator::MaybeDeleteSlicedBuffer(uint32_t id) {
   }
 }
 
-SharedBufferSetAllocator::Buffer::Buffer() {}
+SharedBufferSetAllocator::Buffer::Buffer() = default;
 
-SharedBufferSetAllocator::Buffer::~Buffer() {}
+SharedBufferSetAllocator::Buffer::~Buffer() = default;
 
 SharedBufferSetAllocator::BufferUpdate::BufferUpdate(uint32_t buffer_id,
                                                      zx::vmo vmo)
@@ -265,6 +265,6 @@ SharedBufferSetAllocator::BufferUpdate::BufferUpdate(uint32_t buffer_id,
 SharedBufferSetAllocator::BufferUpdate::BufferUpdate(uint32_t buffer_id)
     : buffer_id_(buffer_id) {}
 
-SharedBufferSetAllocator::BufferUpdate::~BufferUpdate() {}
+SharedBufferSetAllocator::BufferUpdate::~BufferUpdate() = default;
 
 }  // namespace media

@@ -5,7 +5,7 @@
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_base.h"
 
 #include <fbl/algorithm.h>
-#include <math.h>
+#include <cmath>
 
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
@@ -13,8 +13,7 @@
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_rechannel.h"
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_swap.h"
 
-namespace media {
-namespace audio_dfx_test {
+namespace media::audio_dfx_test {
 
 //
 // DfxBase: static member functions
@@ -99,5 +98,4 @@ bool DfxBase::GetParameters(fuchsia_audio_dfx_parameters* device_fx_params) {
   return true;
 }
 
-}  // namespace audio_dfx_test
-}  // namespace media
+}  // namespace media::audio_dfx_test

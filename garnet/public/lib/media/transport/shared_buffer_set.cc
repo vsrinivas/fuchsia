@@ -13,7 +13,7 @@ namespace media {
 SharedBufferSet::SharedBufferSet(uint32_t local_map_flags)
     : local_map_flags_(local_map_flags) {}
 
-SharedBufferSet::~SharedBufferSet() {}
+SharedBufferSet::~SharedBufferSet() = default;
 
 zx_status_t SharedBufferSet::AddBuffer(uint32_t buffer_id, zx::vmo vmo) {
   if (buffer_id >= buffers_.size()) {
@@ -22,7 +22,7 @@ zx_status_t SharedBufferSet::AddBuffer(uint32_t buffer_id, zx::vmo vmo) {
     FXL_DCHECK(!buffers_[buffer_id]);
   }
 
-  MappedSharedBuffer* mapped_shared_buffer = new MappedSharedBuffer();
+  auto mapped_shared_buffer = new MappedSharedBuffer();
   zx_status_t status =
       mapped_shared_buffer->InitFromVmo(std::move(vmo), local_map_flags_);
 
@@ -43,7 +43,7 @@ zx_status_t SharedBufferSet::CreateNewBuffer(uint64_t size,
 
   uint32_t buffer_id = AllocateBufferId();
 
-  MappedSharedBuffer* mapped_shared_buffer = new MappedSharedBuffer();
+  auto mapped_shared_buffer = new MappedSharedBuffer();
   zx_status_t status = mapped_shared_buffer->InitNew(size, local_map_flags_);
 
   if (status == ZX_OK) {
@@ -102,7 +102,7 @@ SharedBufferSet::Locator SharedBufferSet::LocatorFromPtr(void* ptr) const {
 
   FXL_DCHECK(!buffer_ids_by_base_address_.empty());
 
-  uint8_t* byte_ptr = reinterpret_cast<uint8_t*>(ptr);
+  auto byte_ptr = reinterpret_cast<uint8_t*>(ptr);
 
   // upper_bound finds the first buffer whose base address is greater than the
   // supplied pointer. We want the buffer just before that. If upper_bound()
