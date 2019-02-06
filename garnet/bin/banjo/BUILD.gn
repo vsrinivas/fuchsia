@@ -5,6 +5,7 @@
 import("//build/host.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 
 if (host_toolchain == current_toolchain) {
   rustc_binary("banjo_bin") {
@@ -20,6 +21,50 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust-crates/rustc_deps:structopt",
     ]
     source_root = "src/main.rs"
+  }
+
+  rustc_library("banjo_lib") {
+    edition = "2018"
+    deps = [
+      "//third_party/rust-crates/rustc_deps:structopt",
+      "//third_party/rust-crates/rustc_deps:pest",
+      "//third_party/rust-crates/rustc_deps:pest_derive",
+      "//third_party/rust-crates/rustc_deps:failure",
+      "//third_party/rust-crates/rustc_deps:serde_json",
+      "//third_party/rust-crates/rustc_deps:serde",
+      "//third_party/rust-crates/rustc_deps:serde_derive",
+      "//third_party/rust-crates/rustc_deps:heck",
+    ]
+    source_root = "src/lib.rs"
+  }
+
+  rustc_library("banjo_unittests") {
+    edition = "2018"
+    with_unit_tests = true
+    testonly = true
+
+    deps = [
+      ":banjo_bin",
+      "//third_party/rust-crates/rustc_deps:pretty_assertions",
+      ":banjo_lib($host_toolchain)",
+    ]
+    source_root = "test/codegen_tests.rs"
+  }
+
+  copy("banjo_host_tests") {
+    testonly = true
+
+    sources = [
+      "$root_out_dir/banjo_unittests_lib_test",
+    ]
+
+    outputs = [
+      "$root_out_dir/banjo_host_tests",
+    ]
+
+    public_deps = [
+      ":banjo_unittests($host_toolchain)",
+    ]
   }
 }
 
