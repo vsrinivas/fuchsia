@@ -25,7 +25,7 @@ source_set("ranking_feature") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
   ]
 

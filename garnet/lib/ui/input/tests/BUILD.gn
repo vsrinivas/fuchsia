@@ -29,7 +29,7 @@ executable("unittests") {
     "//garnet/lib/ui/input",
     "//garnet/lib/ui/scenic/tests:testing_deps",
     "$garnet_sdk_fidl/fuchsia.ui.scenic",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",

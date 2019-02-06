@@ -32,7 +32,7 @@ source_set("core") {
     "//garnet/bin/mediaplayer/util",
     "$garnet_sdk_fidl/fuchsia.media",
     "$garnet_sdk_fidl/fuchsia.mediaplayer",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/timeline",
     "//zircon/public/lib/fbl",

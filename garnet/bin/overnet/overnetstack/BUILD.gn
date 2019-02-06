@@ -50,7 +50,7 @@ executable("bin") {
     "$garnet_sdk_fidl/fuchsia.mdns",
     "$garnet_sdk_fidl/fuchsia.overnet",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fostr/fidl/fuchsia.mdns",
     "//garnet/public/lib/fsl",
     "//zircon/public/lib/async-default",

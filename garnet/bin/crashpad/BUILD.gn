@@ -66,7 +66,7 @@ source_set("crashpad_analyzer_files") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//third_party/crashpad/client",
     "//third_party/crashpad/util",

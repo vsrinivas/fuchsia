@@ -34,7 +34,7 @@ source_set("clipboard_sources") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/ledger_client:page_client",
     "$peridot_sdk_fidl/fuchsia.modular",

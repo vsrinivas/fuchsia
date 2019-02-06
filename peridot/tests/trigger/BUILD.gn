@@ -31,7 +31,7 @@ executable_package("trigger_test_session_shell") {
     ":defs",
     "$garnet_sdk_fidl/fuchsia.testing.runner",
     "//garnet/public/lib/callback",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_main",

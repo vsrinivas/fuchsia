@@ -26,7 +26,7 @@ executable("a11y_manager_apptests") {
     "$garnet_sdk_fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest_main",
   ]

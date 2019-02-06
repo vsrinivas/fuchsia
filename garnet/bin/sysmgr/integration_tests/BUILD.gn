@@ -22,7 +22,7 @@ executable("test_sysmgr_service") {
   deps = [
     ":interface",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zx",
@@ -39,7 +39,7 @@ executable("mock_resolver") {
   deps = [
     "$garnet_sdk_fidl/fuchsia.pkg",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",

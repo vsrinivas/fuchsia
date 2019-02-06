@@ -47,7 +47,7 @@ executable("app") {
   deps = [
     ":lib",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rng:system",
     "$peridot_sdk_fidl/fuchsia.modular",

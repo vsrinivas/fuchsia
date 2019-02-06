@@ -13,7 +13,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/examples/intl/fidl:wisdom",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//third_party/icu:icu",
   ]
 }
@@ -29,7 +29,7 @@ executable("intl_wisdom_client") {
     ":lib",
     "//garnet/examples/intl/fidl:wisdom",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/icu_data/cpp",
     "//garnet/public/lib/svc/cpp",

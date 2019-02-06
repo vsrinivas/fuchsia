@@ -16,7 +16,7 @@ executable("e2e_local") {
 
   deps = [
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/bin/cloud_provider_in_memory:lib",
     "//peridot/bin/ledger/app:serialization_version",

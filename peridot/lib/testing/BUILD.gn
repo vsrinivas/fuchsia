@@ -69,7 +69,7 @@ source_set("module_resolver_fake") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "$peridot_sdk_fidl/fuchsia.modular",
   ]
 }
@@ -113,7 +113,7 @@ source_set("session_shell_impl") {
   public_deps = [
     "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl",
@@ -136,7 +136,7 @@ source_set("story_controller_mock") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 
@@ -154,7 +154,7 @@ source_set("story_provider_mock") {
 
   deps = [
     ":story_controller_mock",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 

@@ -14,7 +14,7 @@ executable("bin") {
   deps = [
     "$garnet_sdk_fidl/fuchsia.vulkan.loader",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",

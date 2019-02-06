@@ -13,7 +13,7 @@ executable_package("test_driver_module") {
   deps = [
     "$garnet_sdk_fidl/fuchsia.testing.runner",
     "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:test_driver",

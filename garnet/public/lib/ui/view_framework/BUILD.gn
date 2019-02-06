@@ -11,7 +11,7 @@ source_set("view_framework") {
     "$garnet_sdk_fidl/fuchsia.sys",
     "$garnet_sdk_fidl/fuchsia.ui.input",
     "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/scenic/cpp",
     "//zircon/public/lib/fit",

@@ -23,7 +23,7 @@ source_set("add_mod_call") {
     ":get_link_path_for_parameter_name_call",
     ":get_types_from_entity_call",
     ":initialize_chain_call",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/module_manifest:module_facet_reader",

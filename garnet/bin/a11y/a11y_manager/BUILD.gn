@@ -41,7 +41,7 @@ source_set("lib") {
     "$garnet_sdk_fidl/fuchsia.ui.input",
     "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
   ]

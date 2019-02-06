@@ -122,7 +122,7 @@ source_set("sources") {
     "third_party/libvpx",
     "//garnet/lib/media/codec_impl",
     "$garnet_sdk_fidl/fuchsia.mediacodec",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
   ]
   public_configs = [ ":sources_include_config" ]
   cflags = []

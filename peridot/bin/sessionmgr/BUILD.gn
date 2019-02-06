@@ -30,7 +30,7 @@ executable_package("sessionmgr") {
     "$garnet_sdk_fidl/fuchsia.ui.policy",
     "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/basemgr/cobalt",
@@ -104,7 +104,7 @@ executable_package("dev_session_shell") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/common:names",
     "//peridot/lib/fidl:array_to_string",
@@ -165,7 +165,7 @@ source_set("focus") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/sessionmgr/storage:constants_and_utils",
@@ -191,7 +191,7 @@ source_set("presentation_provider") {
 
   deps = [
     "$garnet_sdk_fidl/fuchsia.ui.policy",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "$peridot_sdk_fidl/fuchsia.modular",
   ]

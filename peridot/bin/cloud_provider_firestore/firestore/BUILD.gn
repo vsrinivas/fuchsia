@@ -46,7 +46,7 @@ source_set("unittests") {
 
   deps = [
     ":firestore",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl:fxl_printers",
     "//garnet/public/lib/gtest",
     "//peridot/bin/cloud_provider_firestore/firestore/testing",

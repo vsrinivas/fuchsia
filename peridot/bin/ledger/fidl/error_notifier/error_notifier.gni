@@ -47,7 +47,7 @@ template("error_notifier_fidl") {
 
     public_deps = [
       "$fidl_target",
-      "//garnet/public/lib/fidl/cpp",
+      "//sdk/lib/fidl/cpp",
       "//peridot/bin/ledger/fidl/error_notifier",
     ]
 

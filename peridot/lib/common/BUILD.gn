@@ -36,7 +36,7 @@ source_set("story_provider_watcher_base") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "$peridot_sdk_fidl/fuchsia.modular",

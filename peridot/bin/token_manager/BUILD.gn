@@ -18,7 +18,7 @@ executable_package("dev_token_manager") {
 
   deps = [
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "$peridot_sdk_fidl/fuchsia.modular.auth",

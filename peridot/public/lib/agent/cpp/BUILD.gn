@@ -17,7 +17,7 @@ source_set("agent_impl") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "$peridot_sdk_fidl/fuchsia.modular",

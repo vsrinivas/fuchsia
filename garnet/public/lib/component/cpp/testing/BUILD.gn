@@ -29,7 +29,7 @@ source_set("testing") {
     ":test_util",
     "$garnet_sdk_fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp:environment_services",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/svc/cpp",
     "//zircon/public/lib/fs",
@@ -68,7 +68,7 @@ source_set("fake_launcher") {
 
   public_deps = [
     "$garnet_sdk_fidl/fuchsia.sys",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/fs",
   ]
 }
@@ -91,7 +91,7 @@ source_set("enclosing_environment") {
 
   public_deps = [
     "$garnet_sdk_fidl/fuchsia.sys",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/svc/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fs",

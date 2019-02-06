@@ -22,7 +22,7 @@ executable("view_manager_apptests") {
 
   deps = [
     "//garnet/bin/ui/view_manager:lib",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/tests/mocks",
     "//third_party/googletest:gtest_main",

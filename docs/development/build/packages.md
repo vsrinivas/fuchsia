@@ -67,7 +67,7 @@ executable("bin") {
   deps = [
     # This executable also has its own dependencies.
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 ```

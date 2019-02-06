@@ -14,7 +14,7 @@ source_set("lib") {
     "//garnet/lib/media/camera/simple_camera_lib",
     "$garnet_sdk_fidl/fuchsia.simplecamera",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 

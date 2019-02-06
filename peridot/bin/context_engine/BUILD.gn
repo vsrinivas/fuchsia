@@ -145,7 +145,7 @@ source_set("context_engine_impl") {
     ":context_reader_impl",
     ":context_repository",
     ":context_writer_impl",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "$peridot_sdk_fidl/fuchsia.modular",
   ]
 }

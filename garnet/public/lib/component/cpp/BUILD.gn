@@ -28,7 +28,7 @@ source_set("cpp") {
 
   public_deps = [
     "$garnet_sdk_fidl/fuchsia.sys",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//zircon/public/fidl/fuchsia-inspect",

@@ -16,7 +16,7 @@ executable("fidl_compatibility_test") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service",
     "//garnet/public/lib/fidl/compatibility_test:echo_client_app",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
@@ -34,7 +34,7 @@ executable("compatibility_test_server_cpp_bin") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service",
     "//garnet/public/lib/fidl/compatibility_test:echo_client_app",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
   ]

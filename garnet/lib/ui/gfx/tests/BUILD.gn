@@ -173,7 +173,7 @@ executable("mock_pose_buffer_provider_cc") {
   deps = [
     "$garnet_sdk_fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
   ]

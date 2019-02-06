@@ -108,7 +108,7 @@ executable_package("embed_shell_test_story_shell") {
     ":defs",
     "$garnet_sdk_fidl/fuchsia.testing.runner",
     "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
-    "//garnet/public/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/rapidjson",
