@@ -28,6 +28,7 @@ MODULE_BANJO_LIBS := \
 
 MODULE_STATIC_LIBS := \
   system/dev/audio/lib/simple-audio-stream \
+  system/dev/audio/lib/codec-interface \
   system/dev/lib/amlogic \
   system/dev/lib/mmio \
   system/ulib/audio-proto-utils \

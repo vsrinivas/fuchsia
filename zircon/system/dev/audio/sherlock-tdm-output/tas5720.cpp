@@ -58,14 +58,17 @@ zx_status_t Tas5720::SetGain(float gain) {
     return status;
 }
 
-bool Tas5720::ValidGain(float gain) {
+bool Tas5720::ValidGain(float gain) const {
     return (gain <= kMaxGain) && (gain >= kMinGain);
 }
 
-zx_status_t Tas5720::Init(uint8_t slot) {
+zx_status_t Tas5720::Init(std::optional<uint8_t> slot) {
     Standby();
     WriteReg(kRegDigitalControl1, 0x45);        // Use Slot, Stereo Left Justified.
-    WriteReg(kRegDigitalControl2, slot & 0x07); // Slot.
+    if (!slot.has_value() || slot.value() >= 8) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    WriteReg(kRegDigitalControl2, slot.value());
     WriteReg(kRegAnalogControl, 0x55);          // PWM rate 16 x lrclk, gain 20.7 dBV.
     WriteReg(kRegDigitalClipper2, 0xFF);        // Disabled.
     WriteReg(kRegDigitalClipper1, 0xFC);        // Disabled.

@@ -62,11 +62,14 @@ zx_status_t Tas5760::SetGain(float gain) {
     return status;
 }
 
-bool Tas5760::ValidGain(float gain) {
+bool Tas5760::ValidGain(float gain) const {
     return (gain <= kMaxGain) && (gain >= kMinGain);
 }
 
-zx_status_t Tas5760::Init() {
+zx_status_t Tas5760::Init(std::optional<uint8_t> slot) {
+    if (slot.has_value()) {
+        return ZX_ERR_NOT_SUPPORTED; // Always use L+R (slots 0 and 1).
+    }
     Standby();
     WriteReg(kRegDigitalControl, 0x05);   // no HPF, no boost, Single Speed, Stereo Left Justified.
     WriteReg(kRegVolumeControlCnf, 0x80); // Fade enabled.

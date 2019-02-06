@@ -5,27 +5,23 @@
 #pragma once
 
 #include <audio-proto/audio-proto.h>
-
 #include <ddk/io-buffer.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform/device.h>
-
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
+#include <ddktl/metadata/audio.h>
 #include <ddktl/pdev.h>
 #include <ddktl/protocol/gpio.h>
-
 #include <dispatcher-pool/dispatcher-timer.h>
-
+#include <fbl/array.h>
 #include <fbl/mutex.h>
-
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
-
 #include <soc/aml-common/aml-tdm-audio.h>
-
 #include <zircon/thread_annotations.h>
 
 #include "tas5720.h"
@@ -64,8 +60,8 @@ private:
     uint32_t us_per_notification_ = 0;
     fbl::RefPtr<dispatcher::Timer> notify_timer_;
     ddk::PDev pdev_ TA_GUARDED(domain_->token());
-    fbl::unique_ptr<Tas5760> codec_tweeters_ TA_GUARDED(domain_->token());
-    fbl::unique_ptr<Tas5720> codec_woofer_ TA_GUARDED(domain_->token());
+    metadata::Codec codecs_types_ TA_GUARDED(domain_->token());
+    fbl::Array<fbl::unique_ptr<Codec>> codecs_ TA_GUARDED(domain_->token());
     zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_->token());
     fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_->token());
     fbl::unique_ptr<AmlTdmDevice> aml_audio_;

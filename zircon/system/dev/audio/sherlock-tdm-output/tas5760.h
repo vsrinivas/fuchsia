@@ -6,29 +6,29 @@
 
 #include <ddk/debug.h>
 #include <ddk/protocol/i2c.h>
-
 #include <ddktl/pdev.h>
-
 #include <fbl/unique_ptr.h>
+#include <lib/codec-interface/codec-interface.h>
 
 namespace audio {
 
-class Tas5760 {
+class Tas5760 final : public Codec {
 public:
     static fbl::unique_ptr<Tas5760> Create(ddk::PDev pdev, uint32_t index);
 
     explicit Tas5760(const ddk::I2cChannel& i2c)
         : i2c_(i2c) {}
-    bool ValidGain(float gain);
-    zx_status_t SetGain(float gain);
-    zx_status_t Init();
-    zx_status_t Reset();
-    zx_status_t Standby();
-    zx_status_t ExitStandby();
-    float GetGain() const { return current_gain_; }
-    float GetMinGain() { return kMinGain; }
-    float GetMaxGain() { return kMaxGain; }
-    float GetGainStep() const { return kGainStep; }
+
+    bool ValidGain(float gain) const override;
+    zx_status_t SetGain(float gain) override;
+    zx_status_t Init(std::optional<uint8_t> slot) override;
+    zx_status_t Reset() override;
+    zx_status_t Standby() override;
+    zx_status_t ExitStandby() override;
+    float GetGain() const override { return current_gain_; }
+    float GetMinGain() const override { return kMinGain; }
+    float GetMaxGain() const override { return kMaxGain; }
+    float GetGainStep() const override { return kGainStep; }
 
 private:
     static constexpr float kMaxGain = 24.0;

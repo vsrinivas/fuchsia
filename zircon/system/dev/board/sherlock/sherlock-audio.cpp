@@ -7,7 +7,8 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
-
+#include <ddk/metadata.h>
+#include <ddktl/metadata/audio.h>
 #include <soc/aml-s905d2/s905d2-hiu.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
@@ -49,7 +50,7 @@ zx_status_t Sherlock::AudioInit() {
         },
     };
 
-    static constexpr pbus_i2c_channel_t codecs_i2cs[] = {
+    static constexpr pbus_i2c_channel_t p2_codecs_i2cs[] = {
         {
             .bus_id = SHERLOCK_I2C_A0_0,
             .address = 0x6c, // Tweeters.
@@ -60,6 +61,44 @@ zx_status_t Sherlock::AudioInit() {
         },
     };
 
+    static constexpr pbus_i2c_channel_t evt_codecs_i2cs[] = {
+        {
+            .bus_id = SHERLOCK_I2C_A0_0,
+            .address = 0x6c, // Tweeter left.
+        },
+        {
+            .bus_id = SHERLOCK_I2C_A0_0,
+            .address = 0x6d, // Tweeter right.
+        },
+        {
+            .bus_id = SHERLOCK_I2C_A0_0,
+            .address = 0x6f, // Woofer.
+        },
+    };
+
+    pdev_board_info_t board_info = {};
+    zx_status_t status = pbus_.GetBoardInfo(&board_info);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: GetBoardInfo failed %d\n", __FILE__, status);
+        return status;
+    }
+
+    // We treat EVT and higher the same (having 3 TAS5720s).
+    metadata::Codec out_codec = metadata::Codec::Tas5720x3;
+    if (board_info.board_revision < BOARD_REV_P2) {
+        return ZX_ERR_NOT_SUPPORTED; // For audio we don't support boards revision lower than P2.
+    } else if (board_info.board_revision < BOARD_REV_EVT1) {
+        out_codec = metadata::Codec::Tas5760_Tas5720; // We treat all P2 variants the same.
+    }
+
+    pbus_metadata_t out_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data_buffer = &out_codec,
+            .data_size = sizeof(out_codec),
+        },
+    };
+
     pbus_dev_t tdm_dev = {};
     tdm_dev.name = "SherlockAudio";
     tdm_dev.vid = PDEV_VID_AMLOGIC;
@@ -67,13 +106,20 @@ zx_status_t Sherlock::AudioInit() {
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
     tdm_dev.gpio_list = audio_gpios;
     tdm_dev.gpio_count = countof(audio_gpios);
-    tdm_dev.i2c_channel_list = codecs_i2cs;
-    tdm_dev.i2c_channel_count = countof(codecs_i2cs);
     tdm_dev.mmio_list = audio_mmios;
     tdm_dev.mmio_count = countof(audio_mmios);
     tdm_dev.bti_list = tdm_btis;
     tdm_dev.bti_count = countof(tdm_btis);
+    tdm_dev.metadata_list = out_metadata;
+    tdm_dev.metadata_count = countof(out_metadata);
 
+    if (board_info.board_revision < BOARD_REV_EVT1) {
+        tdm_dev.i2c_channel_list = p2_codecs_i2cs;
+        tdm_dev.i2c_channel_count = countof(p2_codecs_i2cs);
+    } else {
+        tdm_dev.i2c_channel_list = evt_codecs_i2cs;
+        tdm_dev.i2c_channel_count = countof(evt_codecs_i2cs);
+    }
 
     static constexpr pbus_mmio_t pdm_mmios[] = {
         {
@@ -105,7 +151,7 @@ zx_status_t Sherlock::AudioInit() {
 
 
     aml_hiu_dev_t hiu;
-    zx_status_t status = s905d2_hiu_init(&hiu);
+    status = s905d2_hiu_init(&hiu);
     if (status != ZX_OK) {
         zxlogf(ERROR, "hiu_init: failed: %d\n", status);
         return status;

@@ -4,6 +4,15 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULES += \
-    $(LOCAL_DIR)/simple-audio-stream \
-    $(LOCAL_DIR)/codec-interface \
+MODULE := $(LOCAL_DIR)
+
+MODULE_TYPE := userlib
+
+MODULE_SRCS += \
+
+MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
+
+MODULE_PACKAGE := src
+
+include make/module.mk

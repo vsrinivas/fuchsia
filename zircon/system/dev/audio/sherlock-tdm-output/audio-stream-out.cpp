@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-
 #include <ddktl/pdev.h>
-
 #include <soc/aml-t931/t931-gpio.h>
 
 #include "audio-stream-out.h"
@@ -29,6 +27,50 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
         return ZX_ERR_NO_RESOURCES;
     }
 
+    size_t actual = 0;
+    zx_status_t status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &codecs_types_,
+                                             sizeof(metadata::Codec), &actual);
+    if (status != ZX_OK || sizeof(metadata::Codec) != actual) {
+        zxlogf(ERROR, "%s device_get_metadata failed %d\n", __FILE__, status);
+        return status;
+    }
+
+    if (codecs_types_ == metadata::Codec::Tas5760_Tas5720) {
+        zxlogf(INFO, "audio: using Tas5760 and Tas5720 codecs\n");
+        fbl::AllocChecker ac;
+        codecs_ = fbl::Array(new (&ac) fbl::unique_ptr<Codec>[2], 2);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        codecs_[0] = Tas5760::Create(pdev_, 0);
+        if (!codecs_[0]) {
+            zxlogf(ERROR, "%s could not get tas5760\n", __func__);
+            return ZX_ERR_NO_RESOURCES;
+        }
+        codecs_[1] = Tas5720::Create(pdev_, 1);
+        if (!codecs_[1]) {
+            zxlogf(ERROR, "%s could not get tas5720\n", __func__);
+            return ZX_ERR_NO_RESOURCES;
+        }
+    } else if (codecs_types_ == metadata::Codec::Tas5720x3) {
+        zxlogf(INFO, "audio: using 3 Tas5720 codecs\n");
+        fbl::AllocChecker ac;
+        codecs_ = fbl::Array(new (&ac) fbl::unique_ptr<Codec>[3], 3);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        for (uint32_t i = 0; i < 3; ++i) {
+            codecs_[i] = Tas5720::Create(pdev_, i);
+            if (!codecs_[i]) {
+                zxlogf(ERROR, "%s could not get tas5720\n", __func__);
+                return ZX_ERR_NO_RESOURCES;
+            }
+        }
+    } else {
+        zxlogf(ERROR, "%s invalid or unsupported codec\n", __func__);
+        return ZX_ERR_NO_RESOURCES;
+    }
+
     audio_fault_ = pdev_.GetGpio(0);
     audio_en_ = pdev_.GetGpio(1);
 
@@ -37,18 +79,7 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    codec_tweeters_ = Tas5760::Create(pdev_, 0);
-    if (!codec_tweeters_) {
-        zxlogf(ERROR, "%s could not get tas5760\n", __func__);
-        return ZX_ERR_NO_RESOURCES;
-    }
-    codec_woofer_ = Tas5720::Create(pdev_, 1);
-    if (!codec_woofer_) {
-        zxlogf(ERROR, "%s could not get tas5720\n", __func__);
-        return ZX_ERR_NO_RESOURCES;
-    }
-
-    zx_status_t status = pdev_.GetBti(0, &bti_);
+    status = pdev_.GetBti(0, &bti_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s could not obtain bti - %d\n", __func__, status);
         return status;
@@ -82,8 +113,14 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
 
     audio_en_.Write(1); // SOC_AUDIO_EN.
 
-    codec_tweeters_->Init(); // No slot setting, always uses L+R.
-    codec_woofer_->Init(0);  // Use TDM slot 0.
+    if (codecs_types_ == metadata::Codec::Tas5760_Tas5720) {
+        codecs_[0]->Init(std::nullopt); // No slot setting, always uses L+R.
+        codecs_[1]->Init(0);  // Use TDM slot 0.
+    } else {
+        codecs_[0]->Init(0); // Use TDM slot 0.
+        codecs_[1]->Init(1); // Use TDM slot 1.
+        codecs_[2]->Init(0); // Use TDM slot 0.
+    }
 
     InitBuffer(kRingBufferSize);
 
@@ -138,20 +175,26 @@ zx_status_t SherlockAudioStreamOut::Init() {
         return status;
     }
 
-    // Set our gain capabilities.
-    float tweeters_gain = codec_tweeters_->GetGain();
-    status = codec_woofer_->SetGain(tweeters_gain);
-    if (status != ZX_OK) {
-        return status;
+    float gain = codecs_[0]->GetGain();
+    float min_gain = codecs_[0]->GetMinGain();
+    float max_gain = codecs_[0]->GetMaxGain();
+    float gain_step = codecs_[0]->GetGainStep();
+    for (size_t i = 1; i < codecs_.size(); ++i) {
+        min_gain = fbl::max(min_gain, codecs_[i]->GetMinGain());
+        max_gain = fbl::min(max_gain, codecs_[i]->GetMaxGain());
+        gain_step = fbl::max(gain_step, codecs_[i]->GetGainStep());
+        status = codecs_[i]->SetGain(gain);
+        if (status != ZX_OK) {
+            return status;
+        }
     }
-    cur_gain_state_.cur_gain = codec_woofer_->GetGain();
+    cur_gain_state_.cur_gain = gain;
     cur_gain_state_.cur_mute = false;
     cur_gain_state_.cur_agc = false;
 
-    cur_gain_state_.min_gain = fbl::max(codec_tweeters_->GetMinGain(), codec_woofer_->GetMinGain());
-    cur_gain_state_.max_gain = fbl::min(codec_tweeters_->GetMaxGain(), codec_woofer_->GetMaxGain());
-    cur_gain_state_.gain_step = fbl::max(codec_tweeters_->GetGainStep(),
-                                         codec_woofer_->GetGainStep());
+    cur_gain_state_.min_gain = min_gain;
+    cur_gain_state_.max_gain = max_gain;
+    cur_gain_state_.gain_step = gain_step;
     cur_gain_state_.can_mute = false;
     cur_gain_state_.can_agc = false;
 
@@ -211,20 +254,17 @@ void SherlockAudioStreamOut::ShutdownHook() {
 }
 
 zx_status_t SherlockAudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {
-    zx_status_t status = codec_tweeters_->SetGain(req.gain);
-    if (status != ZX_OK) {
-        return status;
+    for (size_t i = 0; i < codecs_.size(); ++i) {
+        zx_status_t status = codecs_[i]->SetGain(req.gain);
+        if (status != ZX_OK) {
+            return status;
+        }
     }
-    float tweeters_gain = codec_tweeters_->GetGain();
+    cur_gain_state_.cur_gain = req.gain;
     // TODO(andresoportus): More options on volume setting, e.g.:
     // -Allow for ratio between tweeters and woofer gains.
     // -Make use of analog gain options in TAS5720.
     // -Add codecs mute and fade support.
-    status = codec_woofer_->SetGain(tweeters_gain);
-    if (status != ZX_OK) {
-        return status;
-    }
-    cur_gain_state_.cur_gain = codec_woofer_->GetGain();
     return ZX_OK;
 }
 
