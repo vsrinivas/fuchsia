@@ -63,19 +63,6 @@ zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, zx_handle_t bti, size_t 
 zx_status_t io_buffer_init_vmo(io_buffer_t* buffer, zx_handle_t bti, zx_handle_t vmo_handle,
                                zx_off_t offset, uint32_t flags);
 
-// Initializes an io_buffer base on an existing VMO that has already been mapped
-// duplicates the provided vmo_handle - does not take ownership
-// vmo_handle must be a VMO that was created via zx_vmo_create_physical()
-// the virtual address provided in vaddr will be unmapped by io_buffer_release()
-// |bti| is borrowed by the io_buffer and may be used throughout the lifetime of the io_buffer.
-zx_status_t io_buffer_init_mmio(io_buffer_t* buffer, zx_handle_t vmo_handle, void* vaddr,
-                                zx_off_t offset, size_t size);
-
-// Initializes an io_buffer that maps a given physical address
-// |bti| is borrowed by the io_buffer and may be used throughout the lifetime of the io_buffer.
-zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_handle_t bti, zx_paddr_t addr,
-                                    size_t size, zx_handle_t resource, uint32_t cache_policy);
-
 zx_status_t io_buffer_cache_op(io_buffer_t* buffer, const uint32_t op,
                                const zx_off_t offset, const size_t size);
 
@@ -126,3 +113,74 @@ static inline size_t io_buffer_size(const io_buffer_t* buffer, size_t offset) {
 }
 
 __END_CDECLS;
+
+#ifdef __cplusplus
+
+namespace ddk {
+
+class IoBuffer {
+public:
+    IoBuffer() {}
+
+    ~IoBuffer() {
+        io_buffer_release(&io_buffer_);
+    }
+
+    inline void release() {
+        io_buffer_release(&io_buffer_);
+    }
+
+    inline zx_status_t Init(zx_handle_t bti, size_t size, uint32_t flags) {
+        return io_buffer_init(&io_buffer_, bti, size, flags);
+    }
+    inline zx_status_t InitAligned(zx_handle_t bti, size_t size, uint32_t alignment_log2,
+                                   uint32_t flags) {
+        return io_buffer_init_aligned(&io_buffer_, bti, size, alignment_log2, flags);
+    }
+    inline zx_status_t InitVmo(zx_handle_t bti, zx_handle_t vmo_handle, zx_off_t offset,
+                               uint32_t flags) {
+        return io_buffer_init_vmo(&io_buffer_, bti, vmo_handle, offset, flags);
+    }
+
+    inline zx_status_t CacheOp(uint32_t op, zx_off_t offset, size_t size) {
+        return io_buffer_cache_op(&io_buffer_, op, offset, size);
+    }
+    inline zx_status_t CacheFlush(zx_off_t offset, size_t length) {
+        return  io_buffer_cache_flush(&io_buffer_, offset, length);
+    }
+    inline zx_status_t CacheFlushInvalidate(zx_off_t offset, size_t length) {
+        return  io_buffer_cache_flush_invalidate(&io_buffer_, offset, length);
+    }
+
+    inline zx_status_t PhysMap() {
+        return io_buffer_physmap(&io_buffer_);
+    }
+    inline zx_status_t PhysMapRange(zx_off_t offset, size_t length, size_t phys_count,
+                                    zx_paddr_t* physmap, zx_handle_t* pmt) {
+        return io_buffer_physmap_range(&io_buffer_, offset, length, phys_count, physmap, pmt);
+    }
+
+    inline bool is_valid() const {
+        return io_buffer_is_valid(&io_buffer_);
+    }
+    inline void* virt() const {
+        return io_buffer_virt(&io_buffer_);
+    }
+    inline zx_paddr_t phys() const {
+        return io_buffer_phys(&io_buffer_);
+    }
+
+    inline const zx_paddr_t* phys_list() const {
+        return io_buffer_.phys_list;
+    }
+    inline uint64_t phys_count() const {
+        return io_buffer_.phys_count;
+    }
+
+private:
+    io_buffer_t io_buffer_ = {};
+};
+
+} // namespace ddk
+
+#endif // __cplusplus

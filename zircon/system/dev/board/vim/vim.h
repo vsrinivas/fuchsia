@@ -6,7 +6,6 @@
 
 #include <threads.h>
 
-#include <ddk/io-buffer.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/gpioimpl.h>
 #include <ddktl/protocol/iommu.h>

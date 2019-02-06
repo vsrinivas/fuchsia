@@ -31,6 +31,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/sync \
     system/dev/lib/broadcom \
+    system/dev/lib/mmio \
     system/ulib/ddktl \
     system/ulib/fbl \
     system/ulib/zx \

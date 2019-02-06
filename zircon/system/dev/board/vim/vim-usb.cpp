@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <lib/mmio/mmio.h>
+#include <lib/zx/resource.h>
 #include <ddk/platform-defs.h>
 #include <hw/reg.h>
 
@@ -54,21 +56,16 @@ zx_status_t Vim::UsbInit() {
 
     zx::bti bti;
 
-    status = iommu_.GetBti(0, BTI_BOARD, &bti);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "UsbInit: iommu_get_bti failed: %d\n", status);
-        return status;
-    }
-    io_buffer_t usb_phy;
-    status = io_buffer_init_physical(&usb_phy, bti.get(), S912_USB_PHY_BASE, S912_USB_PHY_LENGTH,
-                                     get_root_resource(),
-                                     ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    std::optional<ddk::MmioBuffer> usb_phy;
+    zx::unowned_resource resource(get_root_resource());
+    status = ddk::MmioBuffer::Create(S912_USB_PHY_BASE, S912_USB_PHY_LENGTH, *resource,
+                                     ZX_CACHE_POLICY_UNCACHED_DEVICE,  &usb_phy);
     if (status != ZX_OK) {
         zxlogf(ERROR, "UsbInit io_buffer_init_physical failed %d\n", status);
         return status;
     }
 
-    volatile uint8_t* regs = static_cast<uint8_t*>(io_buffer_virt(&usb_phy));
+    volatile uint8_t* regs = static_cast<uint8_t*>(usb_phy->get());
 
     // amlogic_new_usb2_init
     for (int i = 0; i < 4; i++) {
@@ -100,8 +97,6 @@ zx_status_t Vim::UsbInit() {
     temp |= USB_R5_IDDIG_EN1;
     temp = SET_BITS(temp, USB_R5_IDDIG_TH_START, USB_R5_IDDIG_TH_BITS, 255);
     writel(temp, addr + USB_R5_OFFSET);
-
-    io_buffer_release(&usb_phy);
 
     if ((status = pbus_.DeviceAdd(&xhci_dev)) != ZX_OK) {
         zxlogf(ERROR, "UsbInit could not add xhci_dev: %d\n", status);
