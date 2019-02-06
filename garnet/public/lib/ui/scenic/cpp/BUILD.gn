@@ -33,7 +33,7 @@ sdk_source_set("cpp") {
     "$garnet_sdk_fidl/fuchsia.ui.gfx",
     "$garnet_sdk_fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
-    "//garnet/public/lib/images/cpp",
+    "//sdk/lib/images/cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]

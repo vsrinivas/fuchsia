@@ -9,9 +9,9 @@ sdk_source_set("cpp") {
 
   sdk_name = "images_cpp"
 
-  include_base = "//garnet/public"
+  include_base = "//sdk"
 
-  public_configs = [ "//garnet/public:config" ]
+  public_configs = [ "//sdk:config" ]
 
   sources = [
     "images.cc",
@@ -19,6 +19,6 @@ sdk_source_set("cpp") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.images:fuchsia.images",
+    "$garnet_sdk_fidl/fuchsia.images",
   ]
 }

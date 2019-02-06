@@ -55,7 +55,7 @@ source_set("gfx_always_optimized") {
   ]
   deps = [
     "//garnet/lib/ui/yuv",
-    "//garnet/public/lib/images/cpp",
+    "//sdk/lib/images/cpp",
   ]
 }
 
