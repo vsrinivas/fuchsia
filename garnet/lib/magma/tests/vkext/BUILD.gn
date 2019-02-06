@@ -9,6 +9,7 @@ executable("vkext") {
 
   sources = [
     "main.cc",
+    "vk_ext_buffer_collection.cc",
     "vk_ext_scanout.cc",
     "vk_external_semaphore_fuchsia.cc",
   ]
@@ -17,6 +18,9 @@ executable("vkext") {
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:semaphore",
     "//third_party/googletest:gtest",
+    "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem",
+    "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//zircon/public/lib/fdio",
   ]
 
   if (use_vulkan_loader_for_tests) {
