@@ -105,6 +105,7 @@ class BlockDevice : public DeviceType,
 
     // Implementation of the actual commands.
     zx_status_t ReadWriteData(block_op_t* operation);
+    zx_status_t TrimData(block_op_t* operation);
     zx_status_t Flush();
 
     BlockParams params_ = {};

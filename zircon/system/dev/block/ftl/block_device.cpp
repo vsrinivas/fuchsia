@@ -179,6 +179,14 @@ void BlockDevice::BlockImplQueue(block_op_t* operation, block_impl_queue_callbac
         }
         break;
     }
+    case BLOCK_OP_TRIM:
+        if (operation->trim.offset_dev >= max_pages || !operation->trim.length ||
+            (max_pages - operation->trim.offset_dev) < operation->trim.length) {
+            completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, operation);
+            return;
+        }
+        break;
+
     case BLOCK_OP_FLUSH:
         break;
 
@@ -304,6 +312,11 @@ int BlockDevice::WorkerThread() {
             status = ReadWriteData(&operation->op);
             break;
 
+        case BLOCK_OP_TRIM:
+            pending_flush_ = true;
+            status = TrimData(&operation->op);
+            break;
+
         case BLOCK_OP_FLUSH: {
             status = Flush();
             pending_flush_ = false;
@@ -355,6 +368,23 @@ zx_status_t BlockDevice::ReadWriteData(block_op_t* operation) {
             zxlogf(ERROR, "FTL: Failed to read from ftl\n");
             return status;
         }
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t BlockDevice::TrimData(block_op_t* operation) {
+    uint32_t offset = static_cast<uint32_t>(operation->trim.offset_dev);
+    if (offset != operation->trim.offset_dev) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    ZX_DEBUG_ASSERT(operation->command == BLOCK_OP_TRIM);
+    zxlogf(SPEW, "FTL: BLK To trim %d blocks at %d :\n", operation->trim.length, offset);
+    zx_status_t status = volume_->Trim(offset, operation->trim.length);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "FTL: Failed to trim\n");
+        return status;
     }
 
     return ZX_OK;

@@ -67,6 +67,7 @@ class FakeVolume : public ftl::Volume {
     bool written() const { return written_; }
     bool flushed() const { return flushed_; }
     bool formatted() const { return formatted_; }
+    bool trimmed() const { return trimmed_; }
     uint32_t first_page() const { return first_page_; }
     int num_pages() const { return num_pages_; }
 
@@ -101,7 +102,12 @@ class FakeVolume : public ftl::Volume {
         flushed_ = true;
         return ZX_OK;
     }
-    zx_status_t Trim(uint32_t first_page, uint32_t num_pages) final { return ZX_OK; }
+    zx_status_t Trim(uint32_t first_page, uint32_t num_pages) final {
+        trimmed_ = true;
+        first_page_ = first_page;
+        num_pages_ = num_pages;
+        return ZX_OK;
+    }
     zx_status_t GarbageCollect() final { return ZX_OK; }
     zx_status_t GetStats(Stats* stats) final  { return ZX_OK; }
 
@@ -112,6 +118,7 @@ class FakeVolume : public ftl::Volume {
     bool written_ = false;
     bool flushed_ = false;
     bool formatted_ = false;
+    bool trimmed_ = false;
 };
 
 bool TrivialLifetimeTest() {
@@ -407,6 +414,41 @@ bool ReadWriteTest() {
     END_TEST;
 }
 
+bool TrimTest() {
+    BEGIN_TEST;
+    BlockDeviceTest test;
+    ftl::BlockDevice* device = test.device();
+    ASSERT_TRUE(device);
+
+    Operation operation(test.op_size(), &test);
+    block_op_t* op = operation.GetOperation();
+    ASSERT_TRUE(op);
+
+    op->trim.command = BLOCK_OP_TRIM;
+    device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
+
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
+
+    op->trim.length = 2;
+    op->trim.offset_dev = kNumPages - 1;
+    device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
+
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
+
+    op->trim.offset_dev = 3;
+    device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
+
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_OK, operation.status());
+
+    EXPECT_TRUE(test.volume()->trimmed());
+    EXPECT_EQ(2, test.volume()->num_pages());
+    EXPECT_EQ(3, test.volume()->first_page());
+    END_TEST;
+}
+
 bool FlushTest() {
     BEGIN_TEST;
     BlockDeviceTest test;
@@ -418,7 +460,6 @@ bool FlushTest() {
     ASSERT_TRUE(op);
 
     op->rw.command = BLOCK_OP_FLUSH;
-    ASSERT_TRUE(operation.SetVmo());
     device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
 
     ASSERT_TRUE(test.Wait());
@@ -492,6 +533,7 @@ RUN_TEST_SMALL(GetTypeTest)
 RUN_TEST_SMALL(QueryTest)
 RUN_TEST_SMALL(QueueOneTest)
 RUN_TEST_SMALL(ReadWriteTest)
+RUN_TEST_SMALL(TrimTest)
 RUN_TEST_SMALL(FlushTest)
 RUN_TEST_SMALL(QueueMultipleTest)
 RUN_TEST_SMALL(FormatTest)
