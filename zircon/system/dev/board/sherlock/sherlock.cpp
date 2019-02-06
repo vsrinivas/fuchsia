@@ -68,6 +68,11 @@ int Sherlock::Thread() {
         return -1;
     }
 
+    if (BoardInit() != ZX_OK) {
+        zxlogf(ERROR, "BoardInit() failed\n");
+        return -1;
+    }
+
     if (ClkInit() != ZX_OK) {
         zxlogf(ERROR, "ClkInit() failed\n");
         return -1;
