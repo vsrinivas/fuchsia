@@ -102,13 +102,7 @@ interface PlatformProxyCb {
                                                                  vector<handle> resp_handle);
 };
 
-[Layout = "ddk-callback"]
-interface PbusSysSuspend {
-    Callback(uint32 flags) -> (zx.status out_status);
-};
-
-
-[Layout="ddk-protocol", DefaultProtocol]
+[Layout = "ddk-protocol"]
 interface PBus {
     /// Adds a new platform device to the bus, using configuration provided by |dev|.
     /// Platform devices are created in their own separate devhosts.
@@ -131,5 +125,4 @@ interface PBus {
     /// (like the board revision number).
     /// Platform device drivers can access this via `pdev_get_board_info()`.
     SetBoardInfo(PbusBoardInfo info) -> (zx.status s);
-    RegisterSysSuspendCallback(PbusSysSuspend suspend_cb) -> (zx.status s);
 };

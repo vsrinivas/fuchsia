@@ -12,7 +12,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_NAME := platform-bus-acpi
+MODULE_NAME := bus-acpi
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 MODULE_COMPILEFLAGS += -Wno-null-pointer-arithmetic
@@ -84,6 +84,19 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-platform-device \
     system/banjo/ddk-protocol-scpi \
     system/banjo/ddk-protocol-sysmem \
+
+else # !ARCH=x86
+
+MODULE_NAME := bus-acpi
+
+MODULE_TYPE := userapp
+MODULE_GROUP := core
+
+MODULE_SRCS += $(LOCAL_DIR)/dummy.c
+
+MODULE_LIBS := \
+    system/ulib/zircon \
+    system/ulib/c \
 
 endif # ARCH=x86
 
