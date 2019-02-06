@@ -37,6 +37,8 @@ public:
             magma_release_connection(connection_);
     }
 
+    static constexpr int64_t kOneSecondInNs = 1000000000;
+
     int32_t Test()
     {
         DASSERT(connection_);
@@ -64,8 +66,8 @@ public:
 
         magma_submit_command_buffer(connection_, command_buffer, context_id);
 
-        magma::InflightList list(connection_);
-        EXPECT_TRUE(list.WaitForCompletion(1000));
+        magma::InflightList list;
+        EXPECT_TRUE(list.WaitForCompletion(connection_, kOneSecondInNs));
 
         magma_release_context(connection_, context_id);
         magma_release_buffer(connection_, batch_buffer);

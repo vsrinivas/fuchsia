@@ -23,6 +23,8 @@ static magma_status_t MagmaChannelStatus(const zx_status_t status)
             return MAGMA_STATUS_OK;
         case ZX_ERR_PEER_CLOSED:
             return MAGMA_STATUS_CONNECTION_LOST;
+        case ZX_ERR_TIMED_OUT:
+            return MAGMA_STATUS_TIMED_OUT;
         default:
             return MAGMA_STATUS_INTERNAL_ERROR;
     }
@@ -262,6 +264,22 @@ public:
             return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
                             "failed to wait on notification channel status %u", status);
         }
+    }
+
+    magma_status_t WaitNotificationChannel(int64_t timeout_ns) override
+    {
+        zx_signals_t pending;
+        zx_status_t status =
+            notification_channel_.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                           zx::deadline_after(zx::nsec(timeout_ns)), &pending);
+        if (status != ZX_OK)
+            return DRET(MagmaChannelStatus(status));
+        if (pending & ZX_CHANNEL_READABLE)
+            return MAGMA_STATUS_OK;
+        if (pending & ZX_CHANNEL_PEER_CLOSED)
+            return DRET(MAGMA_STATUS_CONNECTION_LOST);
+        DASSERT(false);
+        return MAGMA_STATUS_INTERNAL_ERROR;
     }
 
 private:

@@ -8,10 +8,8 @@
 #include "magma.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
+#include "magma_util/status.h"
 #include <deque>
-#include <errno.h>
-#include <poll.h>
-#include <unistd.h>
 
 namespace magma {
 
@@ -22,12 +20,10 @@ namespace magma {
 // Note, this class is not threadsafe.
 class InflightList {
 public:
-    InflightList(magma_connection_t connection) : fd_(magma_get_notification_channel_fd(connection))
-    {
-        DASSERT(fd_ >= 0);
-    }
+    InflightList() {}
 
-    ~InflightList() { Shutdown(); }
+    // Deprecated
+    InflightList(magma_connection_t connection) : connection_(connection) {}
 
     void add(uint64_t buffer_id) { buffers_.push_back(buffer_id); }
 
@@ -45,22 +41,18 @@ public:
         return std::find(buffers_.begin(), buffers_.end(), buffer_id) != buffers_.end();
     }
 
-    // Wait on the fd for a completion; returns true if a completion was
-    // received before |timeout_ms|.
+    // Deprecated
     bool WaitForCompletion(uint64_t timeout_ms)
     {
-        if (fd_ < 0)
-            return DRETF(false, "notification fd has been closed");
+        return magma_wait_notification_channel(connection_, timeout_ms * 1000000ull) ==
+               MAGMA_STATUS_OK;
+    }
 
-        pollfd pfd = {};
-        pfd.events = POLLIN;
-        pfd.fd = fd_;
-
-        int status = poll(&pfd, 1, timeout_ms == UINT64_MAX ? -1 : timeout_ms);
-        if (status < 0)
-            DLOG("poll returned status %d errno %d", status, errno);
-
-        return status == 1;
+    // Wait for a completion; returns true if a completion was
+    // received before |timeout_ms|.
+    magma::Status WaitForCompletion(magma_connection_t connection, int64_t timeout_ns)
+    {
+        return magma::Status(magma_wait_notification_channel(connection, timeout_ns));
     }
 
     // Read all outstanding completions and update the inflight list.
@@ -73,7 +65,6 @@ public:
                 connection, buffer_ids, sizeof(buffer_ids), &bytes_available);
             if (status != MAGMA_STATUS_OK) {
                 DLOG("magma_read_notification_channel returned %d", status);
-                Shutdown();
                 return;
             }
             if (bytes_available == 0)
@@ -87,16 +78,9 @@ public:
     }
 
 private:
-    void Shutdown()
-    {
-        if (fd_ >= 0) {
-            close(fd_);
-            fd_ = -1;
-        }
-    }
-
+    // Deprecated
+    magma_connection_t connection_;
     std::deque<uint64_t> buffers_;
-    int32_t fd_;
 };
 
 } // namespace magma

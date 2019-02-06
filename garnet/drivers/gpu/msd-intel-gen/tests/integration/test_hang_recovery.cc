@@ -50,6 +50,7 @@ public:
     enum How { NORMAL, FAULT, HANG };
 
     static constexpr bool kUseGlobalGtt = false;
+    static constexpr int64_t kOneSecondInNs = 1000000000;
 
     void SubmitCommandBuffer(How how)
     {
@@ -69,11 +70,11 @@ public:
         EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size, how == FAULT));
         magma_submit_command_buffer(connection_, command_buffer, context_id_);
 
-        magma::InflightList list(connection_);
+        magma::InflightList list;
 
         switch (how) {
             case NORMAL:
-                EXPECT_TRUE(list.WaitForCompletion(1000));
+                EXPECT_TRUE(list.WaitForCompletion(connection_, kOneSecondInNs));
                 EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
                 EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
                 break;
@@ -88,7 +89,7 @@ public:
                     }
                 }
                 EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(connection_));
-                EXPECT_TRUE(list.WaitForCompletion(1000));
+                EXPECT_TRUE(list.WaitForCompletion(connection_, kOneSecondInNs));
                 EXPECT_EQ(0xdeadbeef, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
                 break;
             }
@@ -102,7 +103,7 @@ public:
                     }
                 }
                 EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(connection_));
-                EXPECT_TRUE(list.WaitForCompletion(1000));
+                EXPECT_TRUE(list.WaitForCompletion(connection_, kOneSecondInNs));
                 EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
                 break;
             }

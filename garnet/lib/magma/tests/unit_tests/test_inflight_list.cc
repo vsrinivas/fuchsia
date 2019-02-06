@@ -8,22 +8,24 @@
 #include <zx/channel.h>
 
 struct TestConnection : public magma_connection {
-    TestConnection()
-    {
-        zx::channel::create(0, &channel[0], &channel[1]);
-        fd = fdio_handle_fd(channel[0].get(), ZX_CHANNEL_READABLE, 0, true);
-    }
-    ~TestConnection() { close(fd); }
+    TestConnection() { zx::channel::create(0, &channel[0], &channel[1]); }
 
     zx::channel channel[2];
-    int fd;
 };
 
 extern "C" {
 
-int32_t magma_get_notification_channel_fd(magma_connection_t connection)
+magma_status_t magma_wait_notification_channel(magma_connection_t connection, int64_t timeout_ns)
 {
-    return static_cast<TestConnection*>(connection)->fd;
+    zx_signals_t pending;
+    zx_status_t status =
+        static_cast<TestConnection*>(connection)
+            ->channel[0]
+            .wait_one(ZX_CHANNEL_READABLE, zx::deadline_after(zx::nsec(timeout_ns)), &pending);
+    if (status != ZX_OK)
+        return DRET(MAGMA_STATUS_INTERNAL_ERROR);
+    DASSERT(pending & ZX_CHANNEL_READABLE);
+    return MAGMA_STATUS_OK;
 }
 
 magma_status_t magma_read_notification_channel(magma_connection_t connection, void* buffer,
@@ -42,24 +44,19 @@ magma_status_t magma_read_notification_channel(magma_connection_t connection, vo
 }
 }
 
-// Read a notification from the channel into |buffer|. Sets |*buffer_size_out| to 0 if there are no
-// messages pending.
-magma_status_t magma_read_notification_channel(magma_connection_t connection, void* buffer,
-                                               uint64_t buffer_size, uint64_t* buffer_size_out);
-
 TEST(MagmaUtil, InflightList)
 {
     TestConnection connection;
-    magma::InflightList list(&connection);
+    magma::InflightList list;
 
     uint64_t buffer_id = 0xabab1234;
     EXPECT_FALSE(list.is_inflight(buffer_id));
     list.add(buffer_id);
     EXPECT_TRUE(list.is_inflight(buffer_id));
 
-    EXPECT_FALSE(list.WaitForCompletion(100));
+    EXPECT_FALSE(list.WaitForCompletion(&connection, 100));
     connection.channel[1].write(0, &buffer_id, sizeof(buffer_id), nullptr, 0);
-    EXPECT_TRUE(list.WaitForCompletion(100));
+    EXPECT_TRUE(list.WaitForCompletion(&connection, 100));
 
     list.ServiceCompletions(&connection);
     EXPECT_FALSE(list.is_inflight(buffer_id));

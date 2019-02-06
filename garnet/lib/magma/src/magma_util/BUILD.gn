@@ -48,7 +48,7 @@ source_set("inflight_list") {
 
   public_deps = [
     ":common",
-    "$magma_build_root/src/libmagma:libmagma_static",
+    "$magma_build_root/include:magma_abi",
   ]
 }
 

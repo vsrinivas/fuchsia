@@ -221,3 +221,8 @@ magma_status_t magma_read_notification_channel(magma_connection_t connection, vo
 {
     return MAGMA_STATUS_UNIMPLEMENTED;
 }
+
+magma_status_t magma_wait_notification_channel(magma_connection_t connection, int64_t timeout_ns)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
