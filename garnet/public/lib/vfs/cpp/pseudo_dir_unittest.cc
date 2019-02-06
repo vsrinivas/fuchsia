@@ -200,24 +200,28 @@ class Dirent {
 
 class DirectoryWrapper {
  public:
-  DirectoryWrapper() : loop_(&kAsyncLoopConfigNoAttachToThread) {
-    loop_.StartThread("vfs test thread");
+  DirectoryWrapper(bool start_loop = true)
+      : dir_(std::make_shared<vfs::PseudoDir>()),
+        loop_(&kAsyncLoopConfigNoAttachToThread) {
+    if (start_loop) {
+      loop_.StartThread("vfs test thread");
+    }
   }
 
   void AddEntry(const std::string& name, std::unique_ptr<vfs::Node> node,
                 zx_status_t expected_status = ZX_OK) {
-    ASSERT_EQ(expected_status, dir_.AddEntry(name, std::move(node)));
+    ASSERT_EQ(expected_status, dir_->AddEntry(name, std::move(node)));
   }
 
   void AddSharedEntry(const std::string& name, std::shared_ptr<vfs::Node> node,
                       zx_status_t expected_status = ZX_OK) {
-    ASSERT_EQ(expected_status, dir_.AddSharedEntry(name, std::move(node)));
+    ASSERT_EQ(expected_status, dir_->AddSharedEntry(name, std::move(node)));
   }
 
   fuchsia::io::DirectorySyncPtr Serve(
       int flags = fuchsia::io::OPEN_RIGHT_READABLE) {
     fuchsia::io::DirectorySyncPtr ptr;
-    dir_.Serve(flags, ptr.NewRequest().TakeChannel(), loop_.dispatcher());
+    dir_->Serve(flags, ptr.NewRequest().TakeChannel(), loop_.dispatcher());
     return ptr;
   }
 
@@ -236,10 +240,10 @@ class DirectoryWrapper {
     AddEntry(file_name, std::move(file));
   }
 
-  vfs::PseudoDir& dir() { return dir_; };
+  std::shared_ptr<vfs::PseudoDir>& dir() { return dir_; };
 
  private:
-  vfs::PseudoDir dir_;
+  std::shared_ptr<vfs::PseudoDir> dir_;
   async::Loop loop_;
 };
 
@@ -290,8 +294,8 @@ class PseudoDirConnection : public gtest::RealLoopFixture {
       flags |= fuchsia::io::OPEN_FLAG_DESCRIBE;
     }
     EXPECT_EQ(expected_status,
-              dir_.dir().Serve(flags, node_ptr.NewRequest().TakeChannel(),
-                               dispatcher));
+              dir_.dir()->Serve(flags, node_ptr.NewRequest().TakeChannel(),
+                                dispatcher));
 
     if (test_on_open_event) {
       bool on_open_called = false;
@@ -308,8 +312,45 @@ class PseudoDirConnection : public gtest::RealLoopFixture {
             }
           };
 
-      ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&]() { return on_open_called; }));
+      ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&]() { return on_open_called; },
+                                            zx::sec(1), zx::msec(1)));
     }
+  }
+
+  template <typename T>
+  void AssertOpenPath(fuchsia::io::DirectorySyncPtr& dir_ptr,
+                      const std::string& path,
+                      ::fidl::SynchronousInterfacePtr<T>& out_sync_ptr,
+                      uint32_t flags = 0, uint32_t mode = 0,
+                      zx_status_t expected_status = ZX_OK) {
+    ::fidl::InterfacePtr<fuchsia::io::Node> node_ptr;
+    dir_ptr->Open(flags | fuchsia::io::OPEN_FLAG_DESCRIBE, mode, path,
+                  node_ptr.NewRequest());
+    bool on_open_called = false;
+    node_ptr.events().OnOpen =
+        [&](zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfo> unused) {
+          EXPECT_FALSE(on_open_called);  // should be called only once
+          on_open_called = true;
+          EXPECT_EQ(expected_status, status);
+        };
+
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&]() { return on_open_called; },
+                                          zx::sec(1), zx::msec(1)));
+
+    // Bind channel to sync_ptr
+    out_sync_ptr.Bind(node_ptr.Unbind().TakeChannel());
+  }
+
+  void AssertRead(fuchsia::io::FileSyncPtr& file, int count,
+                  const std::string& expected_str,
+                  zx_status_t expected_status = ZX_OK) {
+    zx_status_t status;
+    std::vector<uint8_t> buffer;
+    file->Read(count, &status, &buffer);
+    ASSERT_EQ(expected_status, status);
+    std::string str(buffer.size(), 0);
+    std::copy(buffer.begin(), buffer.end(), str.begin());
+    ASSERT_EQ(expected_str, str);
   }
 
   DirectoryWrapper dir_;
@@ -558,7 +599,7 @@ TEST_F(PseudoDirConnection, ReadDirAfterRemovingEntry) {
   };
   AssertReadDirents(ptr, 1024, expected_dirents1);
   std::vector<Dirent> empty_dirents;
-  ASSERT_EQ(ZX_OK, dir_.dir().RemoveEntry("subdir"));
+  ASSERT_EQ(ZX_OK, dir_.dir()->RemoveEntry("subdir"));
   AssertReadDirents(ptr, 1024, empty_dirents);
 
   // rewind and check again
@@ -608,6 +649,295 @@ TEST_F(PseudoDirConnection, ServeOnValidFlags) {
   for (auto allowed_flag : allowed_flags) {
     SCOPED_TRACE(std::to_string(allowed_flag));
     AssertOpen(dispatcher(), allowed_flag, ZX_OK);
+  }
+}
+
+TEST_F(PseudoDirConnection, OpenSelf) {
+  std::string paths[] = {
+      "",       ".",     "./",
+      ".//",    "././",  "././/.",
+      "././//", "././/", "././././/././././////./././//././/./././/././."};
+  auto subdir = std::make_shared<vfs::PseudoDir>();
+  dir_.AddSharedEntry("subdir", subdir);
+  auto ptr = dir_.Serve();
+  std::vector<Dirent> expected_dirents = {Dirent::DirentForDot(),
+                                          Dirent::DirentForDirectory("subdir")};
+  for (auto& path : paths) {
+    SCOPED_TRACE("path: " + path);
+
+    fuchsia::io::DirectorySyncPtr new_ptr;
+    AssertOpenPath(ptr, path, new_ptr);
+
+    // assert correct directory was opened
+    AssertReadDirents(new_ptr, 1024, expected_dirents);
+  }
+}
+
+TEST_F(PseudoDirConnection, OpenSubDir) {
+  DirectoryWrapper subdir1(false);
+  DirectoryWrapper subdir2(false);
+  dir_.AddSharedEntry("subdir1", subdir1.dir());
+  dir_.AddSharedEntry("subdir2", subdir2.dir());
+  subdir1.AddReadOnlyFile("file1", "file1");
+  subdir2.AddReadOnlyFile("file2", "file2");
+
+  auto ptr = dir_.Serve();
+  std::vector<Dirent> expected_dirents_sub1 = {Dirent::DirentForDot(),
+                                               Dirent::DirentForFile("file1")};
+  std::vector<Dirent> expected_dirents_sub2 = {Dirent::DirentForDot(),
+                                               Dirent::DirentForFile("file2")};
+
+  std::string paths1[] = {"./subdir1",
+                          "././subdir1",
+                          ".//./././././/./subdir1",
+                          "subdir1",
+                          "subdir1/",
+                          "subdir1/.",
+                          "subdir1//",
+                          "subdir1///",
+                          "subdir1/./",
+                          "subdir1/.//",
+                          "subdir1/.//.",
+                          "subdir1/.//././//./",
+                          "subdir1/.//././/./."};
+  for (auto& path : paths1) {
+    SCOPED_TRACE("path: " + path);
+
+    fuchsia::io::DirectorySyncPtr new_ptr;
+    AssertOpenPath(ptr, path, new_ptr);
+
+    // assert correct directory was opened
+    AssertReadDirents(new_ptr, 1024, expected_dirents_sub1);
+  }
+
+  // test with other directory
+  std::string paths2[] = {"./subdir2",
+                          "././subdir2",
+                          ".//./././././/./subdir2",
+                          "subdir2",
+                          "subdir2/",
+                          "subdir2/.",
+                          "subdir2//",
+                          "subdir2///",
+                          "subdir2/./",
+                          "subdir2/.//",
+                          "subdir2/.//.",
+                          "subdir2/.//././//./",
+                          "subdir2/.//././/./."};
+  for (auto& path : paths2) {
+    SCOPED_TRACE("path: " + path);
+
+    fuchsia::io::DirectorySyncPtr new_ptr;
+    AssertOpenPath(ptr, path, new_ptr);
+
+    // assert correct directory was opened
+    AssertReadDirents(new_ptr, 1024, expected_dirents_sub2);
+  }
+}
+
+TEST_F(PseudoDirConnection, OpenFile) {
+  dir_.AddReadOnlyFile("file1", "file1");
+  dir_.AddReadOnlyFile("file2", "file2");
+  dir_.AddReadOnlyFile("..foo", "..foo");
+  dir_.AddReadOnlyFile("...foo", "...foo");
+  dir_.AddReadOnlyFile(".foo", ".foo");
+
+  DirectoryWrapper subdir1(false);
+  DirectoryWrapper subdir2(false);
+
+  dir_.AddSharedEntry("subdir1", subdir1.dir());
+  dir_.AddSharedEntry("subdir2", subdir2.dir());
+  subdir1.AddReadOnlyFile("file2", "subdir1/file2");
+  subdir1.AddReadOnlyFile("file1", "subdir1/file1");
+  subdir1.AddReadOnlyFile("..foo", "subdir1/..foo");
+  subdir1.AddReadOnlyFile("...foo", "subdir1/...foo");
+  subdir1.AddReadOnlyFile(".foo", "subdir1/.foo");
+  subdir2.AddReadOnlyFile("file3", "subdir2/file3");
+  subdir2.AddReadOnlyFile("file4", "subdir2/file4");
+
+  auto ptr = dir_.Serve();
+
+  std::string files[] = {"file1",         "file2",         ".foo",
+                         "..foo",         "...foo",        "subdir1/file1",
+                         "subdir1/file2", "subdir2/file3", "subdir2/file4",
+                         "subdir1/.foo",  "subdir1/..foo", "subdir1/...foo"};
+  for (auto& file : files) {
+    SCOPED_TRACE("file: " + file);
+    fuchsia::io::FileSyncPtr file_ptr;
+    AssertOpenPath(ptr, file, file_ptr, fuchsia::io::OPEN_RIGHT_READABLE);
+
+    AssertRead(file_ptr, 100, file);
+  }
+}
+
+TEST_F(PseudoDirConnection, OpenFileWithMultipleSlashesAndDotsInPath) {
+  DirectoryWrapper subdir1(false);
+
+  dir_.AddSharedEntry("subdir1", subdir1.dir());
+  subdir1.AddReadOnlyFile("file1", "file1");
+  dir_.AddReadOnlyFile("file1", "file1");
+
+  auto ptr = dir_.Serve();
+
+  std::string files[] = {"./file1",
+                         ".//file1",
+                         "././/././///././file1",
+                         "subdir1//file1",
+                         "subdir1///file1",
+                         "subdir1////file1",
+                         "subdir1/./file1",
+                         "subdir1/.//./file1",
+                         "subdir1/././file1",
+                         "subdir1/././///file1"};
+  for (auto& file : files) {
+    SCOPED_TRACE("file: " + file);
+    fuchsia::io::FileSyncPtr file_ptr;
+    AssertOpenPath(ptr, file, file_ptr, fuchsia::io::OPEN_RIGHT_READABLE);
+
+    AssertRead(file_ptr, 100, "file1");
+  }
+}
+
+TEST_F(PseudoDirConnection, OpenWithInValidPaths) {
+  dir_.AddReadOnlyFile("file1", "file1");
+
+  DirectoryWrapper subdir1(false);
+  DirectoryWrapper subdir2(false);
+
+  dir_.AddSharedEntry("subdir1", subdir1.dir());
+  dir_.AddSharedEntry("subdir2", subdir2.dir());
+  subdir1.AddReadOnlyFile("file1", "subdir1/file1");
+  subdir2.AddReadOnlyFile("file3", "subdir2/file3");
+
+  auto ptr = dir_.Serve();
+
+  std::vector<std::string> not_found_paths = {"file", "subdir", "subdir1/file",
+                                              "subdir2/file1"};
+
+  std::string big_path(NAME_MAX + 1, 'a');
+  std::vector<std::string> invalid_args_paths = {"..",
+                                                 "../",
+                                                 "subdir1/..",
+                                                 "subdir1/../",
+                                                 "subdir1/../file1",
+                                                 "file1/../file1",
+                                                 std::move(big_path)};
+
+  std::vector<std::string> not_dir_paths = {
+      "subdir1/file1/",  "subdir1/file1//",     "subdir1/file1///",
+      "subdir1/file1/.", "subdir1/file1/file2", "./file1/",
+      "./file1/.",       "./file1/file2"};
+
+  std::vector<zx_status_t> expected_errors = {
+      ZX_ERR_NOT_FOUND, ZX_ERR_INVALID_ARGS, ZX_ERR_NOT_DIR};
+  std::vector<std::vector<std::string>> invalid_paths = {
+      not_found_paths, invalid_args_paths, not_dir_paths};
+
+  // sanity check
+  ASSERT_EQ(expected_errors.size(), invalid_paths.size());
+
+  for (size_t i = 0; i < expected_errors.size(); i++) {
+    auto expected_status = expected_errors[i];
+    auto& paths = invalid_paths[i];
+    for (auto& path : paths) {
+      SCOPED_TRACE("path: " + path);
+      fuchsia::io::NodeSyncPtr file_ptr;
+      AssertOpenPath(ptr, path, file_ptr, 0, 0, expected_status);
+    }
+  }
+}
+
+TEST_F(PseudoDirConnection, CannotOpenFileWithDirectoryFlag) {
+  dir_.AddReadOnlyFile("file1", "file1");
+  auto ptr = dir_.Serve();
+  fuchsia::io::FileSyncPtr file_ptr;
+  AssertOpenPath(ptr, "file1", file_ptr, fuchsia::io::OPEN_FLAG_DIRECTORY, 0,
+                 ZX_ERR_NOT_DIR);
+}
+
+TEST_F(PseudoDirConnection, CannotOpenDirectoryWithInvalidFlags) {
+  uint32_t invalid_flags[] = {
+      fuchsia::io::OPEN_FLAG_CREATE, fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
+      fuchsia::io::OPEN_FLAG_TRUNCATE, fuchsia::io::OPEN_FLAG_APPEND};
+  DirectoryWrapper subdir1(false);
+  dir_.AddSharedEntry("subdir1", subdir1.dir());
+
+  auto ptr = dir_.Serve();
+  std::string paths[] = {".", "subdir1"};
+
+  for (auto& path : paths) {
+    for (auto flag : invalid_flags) {
+      SCOPED_TRACE("path: " + path + ", flag: " + std::to_string(flag));
+      fuchsia::io::NodeSyncPtr node_ptr;
+      AssertOpenPath(ptr, path, node_ptr, flag, 0, ZX_ERR_INVALID_ARGS);
+    }
+  }
+}
+
+TEST_F(PseudoDirConnection, OpenDirWithCorrectMode) {
+  DirectoryWrapper subdir1(false);
+  dir_.AddSharedEntry("subdir1", subdir1.dir());
+
+  auto ptr = dir_.Serve();
+  std::string paths[] = {".", "subdir1"};
+
+  uint32_t modes[] = {fuchsia::io::MODE_TYPE_DIRECTORY, V_IXUSR, V_IWUSR,
+                      V_IRUSR};
+
+  for (auto& path : paths) {
+    for (auto mode : modes) {
+      SCOPED_TRACE("path: " + path + ", mode: " + std::to_string(mode));
+      fuchsia::io::NodeSyncPtr node_ptr;
+      AssertOpenPath(ptr, path, node_ptr, 0, mode);
+    }
+  }
+}
+
+TEST_F(PseudoDirConnection, OpenDirWithInCorrectMode) {
+  DirectoryWrapper subdir1(false);
+  dir_.AddSharedEntry("subdir1", subdir1.dir());
+
+  auto ptr = dir_.Serve();
+  std::string paths[] = {".", "subdir1"};
+
+  uint32_t modes[] = {
+      fuchsia::io::MODE_TYPE_FILE, fuchsia::io::MODE_TYPE_BLOCK_DEVICE,
+      fuchsia::io::MODE_TYPE_SOCKET, fuchsia::io::MODE_TYPE_SERVICE};
+
+  for (auto& path : paths) {
+    for (auto mode : modes) {
+      SCOPED_TRACE("path: " + path + ", mode: " + std::to_string(mode));
+      fuchsia::io::NodeSyncPtr node_ptr;
+      AssertOpenPath(ptr, path, node_ptr, 0, mode, ZX_ERR_INVALID_ARGS);
+    }
+  }
+}
+
+TEST_F(PseudoDirConnection, OpenFileWithCorrectMode) {
+  dir_.AddReadOnlyFile("file1", "file1");
+  auto ptr = dir_.Serve();
+
+  uint32_t modes[] = {fuchsia::io::MODE_TYPE_FILE, V_IXUSR, V_IWUSR, V_IRUSR};
+
+  for (auto mode : modes) {
+    SCOPED_TRACE("mode: " + std::to_string(mode));
+    fuchsia::io::NodeSyncPtr node_ptr;
+    AssertOpenPath(ptr, "file1", node_ptr, 0, mode);
+  }
+}
+
+TEST_F(PseudoDirConnection, OpenFileWithInCorrectMode) {
+  dir_.AddReadOnlyFile("file1", "file1");
+  auto ptr = dir_.Serve();
+
+  uint32_t modes[] = {
+      fuchsia::io::MODE_TYPE_DIRECTORY, fuchsia::io::MODE_TYPE_BLOCK_DEVICE,
+      fuchsia::io::MODE_TYPE_SOCKET, fuchsia::io::MODE_TYPE_SERVICE};
+
+  for (auto mode : modes) {
+    SCOPED_TRACE("mode: " + std::to_string(mode));
+    fuchsia::io::NodeSyncPtr node_ptr;
+    AssertOpenPath(ptr, "file1", node_ptr, 0, mode, ZX_ERR_INVALID_ARGS);
   }
 }
 

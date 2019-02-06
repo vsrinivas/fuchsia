@@ -59,7 +59,8 @@ class PseudoDir : public Directory {
   zx_status_t Lookup(const std::string& name, Node** out_node) const final;
 
   // |Node| implementations:
-  zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) override;
+  zx_status_t GetAttr(
+      fuchsia::io::NodeAttributes* out_attributes) const override;
 
   zx_status_t Readdir(uint64_t offset, void* data, uint64_t len,
                       uint64_t* out_offset, uint64_t* out_actual) override;

@@ -41,7 +41,7 @@ std::unique_ptr<Connection> Node::Close(Connection* connection) {
 
 zx_status_t Node::Sync() { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t Node::GetAttr(fuchsia::io::NodeAttributes* out_attributes) {
+zx_status_t Node::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -51,12 +51,12 @@ zx_status_t Node::ValidateFlags(uint32_t flags) const {
     return ZX_ERR_NOT_DIR;
   }
 
-  auto allowed_flags = kCommonAllowedFlags | GetAdditionalAllowedFlags();
+  uint32_t allowed_flags = kCommonAllowedFlags | GetAdditionalAllowedFlags();
   if (is_directory) {
     allowed_flags = allowed_flags | fuchsia::io::OPEN_FLAG_DIRECTORY;
   }
 
-  auto prohibitive_flags = GetProhibitiveFlags();
+  uint32_t prohibitive_flags = GetProhibitiveFlags();
 
   if ((flags & prohibitive_flags) != 0) {
     return ZX_ERR_INVALID_ARGS;
@@ -65,6 +65,25 @@ zx_status_t Node::ValidateFlags(uint32_t flags) const {
     return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_OK;
+}
+
+zx_status_t Node::ValidateMode(uint32_t mode) const {
+  fuchsia::io::NodeAttributes attr;
+  uint32_t mode_from_attr = 0;
+  zx_status_t status = GetAttr(&attr);
+  if (status == ZX_OK) {
+    mode_from_attr = attr.mode & fuchsia::io::MODE_TYPE_MASK;
+  }
+
+  if (((mode & ~fuchsia::io::MODE_PROTECTION_MASK) & ~mode_from_attr) != 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_OK;
+}
+
+zx_status_t Node::Lookup(const std::string& name, Node** out_node) const {
+  ZX_ASSERT(!IsDirectory());
+  return ZX_ERR_NOT_DIR;
 }
 
 uint32_t Node::GetAdditionalAllowedFlags() const { return 0; }
@@ -109,6 +128,17 @@ zx_status_t Node::Serve(uint32_t flags, zx::channel request,
     AddConnection(std::move(connection));
   }  // can't send status as request object is gone.
   return status;
+}
+
+zx_status_t Node::ServeWithMode(uint32_t flags, uint32_t mode,
+                                zx::channel request,
+                                async_dispatcher_t* dispatcher) {
+  zx_status_t status = ValidateMode(mode);
+  if (status != ZX_OK) {
+    SendOnOpenEventOnError(flags, std::move(request), status);
+    return status;
+  }
+  return Serve(flags, std::move(request), dispatcher);
 }
 
 void Node::SendOnOpenEventOnError(uint32_t flags, zx::channel request,

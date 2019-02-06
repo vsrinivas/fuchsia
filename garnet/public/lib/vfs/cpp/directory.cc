@@ -40,4 +40,116 @@ uint32_t Directory::GetProhibitiveFlags() const {
 
 bool Directory::IsDirectory() const { return true; }
 
+zx_status_t Directory::ValidatePath(const char* path, size_t path_len) {
+  bool starts_with_dot_dot = (path_len > 1 && path[0] == '.' && path[1] == '.');
+  if (path_len > NAME_MAX || (path_len == 2 && starts_with_dot_dot) ||
+      (path_len > 2 && starts_with_dot_dot && path[2] == '/') ||
+      (path_len > 0 && path[0] == '/')) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_OK;
+}
+
+zx_status_t Directory::WalkPath(const char* path, size_t path_len,
+                                const char** out_path, size_t* out_len,
+                                std::string* out_key, bool* out_is_self) {
+  *out_path = path;
+  *out_len = path_len;
+  *out_is_self = false;
+  zx_status_t status = ValidatePath(path, path_len);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // remove any "./", ".//", etc
+  while (path_len > 1 && path[0] == '.' && path[1] == '/') {
+    path += 2;
+    path_len -= 2;
+    size_t index = 0u;
+    while (index < path_len && path[index] == '/') {
+      index++;
+    }
+    path += index;
+    path_len -= index;
+  }
+
+  *out_path = path;
+  *out_len = path_len;
+
+  if (path_len == 0 || (path_len == 1 && path[0] == '.')) {
+    *out_is_self = true;
+    return ZX_OK;
+  }
+
+  // Lookup node
+  const char* path_end = path + path_len;
+  const char* match = std::find(path, path_end, '/');
+
+  if (path_end == match) {
+    // "/" not found
+    *out_key = std::string(path, path_len);
+    *out_len = 0;
+    *out_path = path_end;
+  } else {
+    size_t index = std::distance(path, match);
+    *out_key = std::string(path, index);
+
+    // remove all '/'
+    while (index < path_len && path[index] == '/') {
+      index++;
+    }
+    *out_len -= index;
+    *out_path += index;
+  }
+  return ZX_OK;
+}
+
+zx_status_t Directory::LookupPath(const char* path, size_t path_len,
+                                  bool* out_is_dir, Node** out_node) {
+  Node* current_node = this;
+  size_t new_path_len = path_len;
+  const char* new_path = path;
+  *out_is_dir = path_len == 0 || path[path_len - 1] == '/';
+  do {
+    std::string key;
+    bool is_self = false;
+    zx_status_t status = WalkPath(new_path, new_path_len, &new_path,
+                                  &new_path_len, &key, &is_self);
+    if (status != ZX_OK) {
+      return status;
+    }
+    if (is_self) {
+      *out_is_dir = true;
+      *out_node = current_node;
+      return ZX_OK;
+    }
+    Node* n = nullptr;
+    status = current_node->Lookup(key, &n);
+    if (status != ZX_OK) {
+      return status;
+    }
+    current_node = n;
+  } while (new_path_len > 0);
+
+  *out_node = current_node;
+  return ZX_OK;
+}
+
+void Directory::Open(uint32_t flags, uint32_t mode, const char* path,
+                     size_t path_len, zx::channel request,
+                     async_dispatcher_t* dispatcher) {
+  Node* n = nullptr;
+  bool is_dir = false;
+  zx_status_t status = LookupPath(path, path_len, &is_dir, &n);
+  if (status != ZX_OK) {
+    return SendOnOpenEventOnError(flags, std::move(request), status);
+  }
+
+  if (is_dir) {
+    // append directory flag
+    flags = flags | fuchsia::io::OPEN_FLAG_DIRECTORY;
+  }
+  n->ServeWithMode(flags, mode, std::move(request), dispatcher);
+}
+
 }  // namespace vfs

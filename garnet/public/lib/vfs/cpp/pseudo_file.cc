@@ -39,7 +39,7 @@ zx_status_t BufferedPseudoFile::CreateConnection(
 }
 
 zx_status_t BufferedPseudoFile::GetAttr(
-    fuchsia::io::NodeAttributes* out_attributes) {
+    fuchsia::io::NodeAttributes* out_attributes) const {
   out_attributes->mode = fuchsia::io::MODE_TYPE_FILE;
   if (read_handler_ != nullptr)
     out_attributes->mode |= V_IRUSR;
@@ -117,7 +117,7 @@ uint32_t BufferedPseudoFile::Content::GetProhibitiveFlags() const {
 }
 
 zx_status_t BufferedPseudoFile::Content::GetAttr(
-    fuchsia::io::NodeAttributes* out_attributes) {
+    fuchsia::io::NodeAttributes* out_attributes) const {
   return file_->GetAttr(out_attributes);
 }
 

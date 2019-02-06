@@ -48,7 +48,8 @@ class Node {
   virtual zx_status_t Sync();
 
   // Implementation of |fuchsia.io.Node/GetAttr|.
-  virtual zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes);
+  virtual zx_status_t GetAttr(
+      fuchsia::io::NodeAttributes* out_attributes) const;
 
   // Implementation of |fuchsia.io.Node/SetAttr|.
   virtual zx_status_t SetAttr(uint32_t flags,
@@ -70,6 +71,13 @@ class Node {
   // Returns ZX_OK if none of the above cases are true.
   zx_status_t ValidateFlags(uint32_t flags) const;
 
+  // Validate flags on |ServeWithMode|.
+  //
+  // Calls |GetAttr| and checks that mode should not be anything other than
+  // |MODE_PROTECTION_MASK| and one in attr. Returns |ZX_ERR_INVALID_ARGS| if it
+  // is, else returns |ZX_OK|.
+  zx_status_t ValidateMode(uint32_t mode) const;
+
   // Establishes a connection for |request| using the given |flags|.
   //
   // Waits for messages asynchronously on the |request| channel using
@@ -81,6 +89,24 @@ class Node {
   // type of this object.
   zx_status_t Serve(uint32_t flags, zx::channel request,
                     async_dispatcher_t* dispatcher = nullptr);
+
+  // Validates |mode| and passes request to serve
+  //
+  // Would be called by |Open|.
+  zx_status_t ServeWithMode(uint32_t flags, uint32_t mode, zx::channel request,
+                            async_dispatcher_t* dispatcher = nullptr);
+
+  // Find an entry in this directory with the given |name|.
+  //
+  // The entry is returned via |out_node|. The returned entry is owned by this
+  // directory.
+  //
+  // Returns |ZX_ERR_NOT_FOUND| if no entry exists.
+  // Default implementation in this class return |ZX_ERR_NOT_DIR| if
+  // |IsDirectory| is false, else throws error with |ZX_ASSERT|.
+  //
+  // All directory types should implement this method.
+  virtual zx_status_t Lookup(const std::string& name, Node** out_node) const;
 
  protected:
   const std::vector<std::unique_ptr<Connection>>& connections() const {
@@ -109,7 +135,8 @@ class Node {
       uint32_t flags, std::unique_ptr<Connection>* connection) = 0;
 
   // Return true if |Node| is a directory.
-  // This function is used in |ValidateFlags| to return correct error.
+  // This function is used in |ValidateFlags| and |Lookup| to return correct
+  // error.
   //
   // This should be overriden by every implementation.
   virtual bool IsDirectory() const = 0;

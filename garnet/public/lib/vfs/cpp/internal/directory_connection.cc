@@ -64,7 +64,10 @@ void DirectoryConnection::Ioctl(uint32_t opcode, uint64_t max_out,
 
 void DirectoryConnection::Open(
     uint32_t flags, uint32_t mode, std::string path,
-    fidl::InterfaceRequest<fuchsia::io::Node> object) {}
+    fidl::InterfaceRequest<fuchsia::io::Node> object) {
+  vn_->Open(flags, mode, path.data(), path.length(), object.TakeChannel(),
+            binding_.dispatcher());
+}
 
 void DirectoryConnection::Unlink(::std::string path, UnlinkCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);

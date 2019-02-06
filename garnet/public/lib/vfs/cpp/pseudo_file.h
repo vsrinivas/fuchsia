@@ -46,7 +46,8 @@ class BufferedPseudoFile : public File {
   ~BufferedPseudoFile() override;
 
   // |Node| implementations:
-  zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) override;
+  zx_status_t GetAttr(
+      fuchsia::io::NodeAttributes* out_attributes) const override;
 
  protected:
   zx_status_t CreateConnection(
@@ -83,7 +84,8 @@ class BufferedPseudoFile : public File {
     // |Node| implementations:
     std::unique_ptr<Connection> Close(Connection* connection) override;
 
-    zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) override;
+    zx_status_t GetAttr(
+        fuchsia::io::NodeAttributes* out_attributes) const override;
 
    protected:
     uint32_t GetAdditionalAllowedFlags() const override;

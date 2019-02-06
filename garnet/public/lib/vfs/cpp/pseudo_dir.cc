@@ -74,7 +74,8 @@ zx_status_t PseudoDir::Lookup(const std::string& name, Node** out_node) const {
   }
 }
 
-zx_status_t PseudoDir::GetAttr(fuchsia::io::NodeAttributes* out_attributes) {
+zx_status_t PseudoDir::GetAttr(
+    fuchsia::io::NodeAttributes* out_attributes) const {
   out_attributes->mode = fuchsia::io::MODE_TYPE_DIRECTORY | V_IRUSR;
   out_attributes->id = fuchsia::io::INO_UNKNOWN;
   out_attributes->content_size = 0;

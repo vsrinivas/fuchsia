@@ -29,13 +29,8 @@ class Directory : public Node {
   Directory();
   ~Directory() override;
 
-  // Find an entry in this directory with the given |name|.
-  //
-  // The entry is returned via |out_node|. The returned entry is owned by this
-  // directory.
-  //
-  // Returns |ZX_ERR_NOT_FOUND| if no entry exists.
-  virtual zx_status_t Lookup(const std::string& name, Node** out_node) const;
+  // |Node| implementation
+  zx_status_t Lookup(const std::string& name, Node** out_node) const override;
 
   // Override that describes this object as a directory.
   void Describe(fuchsia::io::NodeInfo* out_info) override;
@@ -50,9 +45,52 @@ class Directory : public Node {
   virtual zx_status_t Readdir(uint64_t offset, void* data, uint64_t len,
                               uint64_t* out_offset, uint64_t* out_actual) = 0;
 
+  // Parses path and opens correct node.
+  //
+  // Called from |fuchsia.io.Directory#Open|.
+  void Open(uint32_t flags, uint32_t mode, const char* path, size_t path_len,
+            zx::channel request, async_dispatcher_t* dispatcher);
+
+  // Validates passed path
+  //
+  // Returns |ZX_ERR_INVALID_ARGS| if path_len is more than |NAME_MAX| or if
+  // |path| starts with ".." or "/".
+  // Retuns |ZX_OK| on valid path.
+  static zx_status_t ValidatePath(const char* path, size_t path_len);
+
+  // Walks provided path to find first node name in from path and then
+  // sets |out_path| and |out_len| to correct position in path beyond current
+  // node name and sets |out_key| to node name.
+  //
+  // Calls |ValidatePath| and returns |status| on error.
+  // Sets |out_is_self| to true if path is empty or '.' or './'
+  //
+  // Supports paths like 'a/./b//.'
+  // Supports repetitive '/'
+  // Doesn't support 'a/../a/b'
+  //
+  // eg:
+  // path ="a/b/c/d", out_path would be "b/c/d"
+  // path =".", out_path would be ""
+  // path ="./", out_path would be ""
+  // path ="a/b/", out_path would be "b/"
+  static zx_status_t WalkPath(const char* path, size_t path_len,
+                              const char** out_path, size_t* out_len,
+                              std::string* out_key, bool* out_is_self);
+
  protected:
   zx_status_t CreateConnection(
       uint32_t flags, std::unique_ptr<Connection>* connection) override;
+
+  // Walks path and returns correct |node| inside this and containing directory
+  // if found.
+  // Sets |out_is_dir| to true if path has '/' or '/.' at the end.
+  //
+  // Calls |WalkPath| in loop and returns status on error.
+  // Returns |ZX_ERR_NOT_DIR| if path tries to search for node within a
+  // non-directory node type.
+  zx_status_t LookupPath(const char* path, size_t path_len, bool* out_is_dir,
+                         Node** out_node);
 
   bool IsDirectory() const override;
 
