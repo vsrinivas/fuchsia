@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <lib/async/wait.h>
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/component/cpp/expose.h>
 #include <lib/component/cpp/object_dir.h>
@@ -113,7 +114,21 @@ bool GetRepositoryName(rng::Random* random, const DetachedPath& content_path,
 class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
  public:
   explicit LedgerRepositoryContainer(fxl::UniqueFD root_fd)
-      : root_fd_(std::move(root_fd)) {}
+      : root_fd_(std::move(root_fd)) {
+    // Ensure that we close the repository if the underlying filesystem closes
+    // too. This prevents us from trying to write on disk when there's no disk
+    // anymore. This situation can happen when the Ledger is shut down, if the
+    // storage is shut down at the same time.
+    fd_chan_ = fsl::CloneChannelFromFileDescriptor(root_fd_.get());
+    fd_wait_ = std::make_unique<async::Wait>(
+        fd_chan_.get(), ZX_CHANNEL_PEER_CLOSED,
+        [this](async_dispatcher_t* dispatcher, async::WaitBase* wait,
+               zx_status_t status,
+               const zx_packet_signal* signal) { on_empty(); });
+    zx_status_t status = fd_wait_->Begin(async_get_default_dispatcher());
+    FXL_DCHECK(status == ZX_OK);
+  }
+
   ~LedgerRepositoryContainer() {
     for (const auto& request : requests_) {
       request.second(Status::INTERNAL_ERROR);
@@ -121,11 +136,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   }
 
   void set_on_empty(fit::closure on_empty_callback) {
-    if (ledger_repository_) {
-      ledger_repository_->set_on_empty(std::move(on_empty_callback));
-    } else {
-      on_empty_callback_ = std::move(on_empty_callback);
-    }
+    on_empty_callback_ = std::move(on_empty_callback);
   };
 
   // Forwards to the Inspect method of the wrapped LedgerRepositoryImpl, if the
@@ -169,12 +180,10 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
       request.second(status_);
     }
     requests_.clear();
-    if (on_empty_callback_) {
-      if (ledger_repository_) {
-        ledger_repository_->set_on_empty(std::move(on_empty_callback_));
-      } else {
-        on_empty_callback_();
-      }
+    if (ledger_repository_) {
+      ledger_repository_->set_on_empty([this] { on_empty(); });
+    } else {
+      on_empty();
     }
   }
 
@@ -195,7 +204,15 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   }
 
  private:
+  void on_empty() {
+    if (on_empty_callback_) {
+      on_empty_callback_();
+    }
+  }
+
   fxl::UniqueFD root_fd_;
+  zx::channel fd_chan_;
+  std::unique_ptr<async::Wait> fd_wait_;
   std::unique_ptr<LedgerRepositoryImpl> ledger_repository_;
   Status status_ = Status::OK;
   std::vector<

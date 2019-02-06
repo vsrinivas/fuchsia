@@ -66,8 +66,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
       fuchsia::inspect::InspectPtr* inspect_ptr,
       std::vector<std::string>* children_names);
   ::testing::AssertionResult OpenChild(
-      fuchsia::inspect::InspectPtr* parent_inspect_ptr,
-      std::string child_name,
+      fuchsia::inspect::InspectPtr* parent_inspect_ptr, std::string child_name,
       fuchsia::inspect::InspectPtr* child_inspect_ptr);
 
   scoped_tmpfs::ScopedTmpFS tmpfs_;
@@ -202,8 +201,7 @@ LedgerRepositoryFactoryImplTest::OpenTopLevelRepositoriesChild(
 }
 
 ::testing::AssertionResult LedgerRepositoryFactoryImplTest::OpenChild(
-    fuchsia::inspect::InspectPtr* parent_inspect_ptr,
-    std::string child_name,
+    fuchsia::inspect::InspectPtr* parent_inspect_ptr, std::string child_name,
     fuchsia::inspect::InspectPtr* child_inspect_ptr) {
   bool callback_called;
   bool success = false;
@@ -304,7 +302,7 @@ TEST_F(LedgerRepositoryFactoryImplTest,
                      return name == first_repository_name;
                    });
   EXPECT_THAT(children_names, UnorderedElementsAre(first_repository_name,
-                                                    second_repository_name));
+                                                   second_repository_name));
   EXPECT_THAT(*second_repository_name, Not(IsEmpty()));
   ASSERT_TRUE(OpenChild(&repositories_inspect_ptr, first_repository_name,
                         &first_repository_inspect_ptr));
@@ -328,7 +326,7 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   ASSERT_TRUE(OpenTopLevelRepositoriesChild(&repositories_inspect_ptr));
   ASSERT_TRUE(ListChildren(&repositories_inspect_ptr, &children_names));
   EXPECT_THAT(children_names, UnorderedElementsAre(first_repository_name,
-                                                    second_repository_name));
+                                                   second_repository_name));
   ASSERT_TRUE(OpenChild(&repositories_inspect_ptr, first_repository_name,
                         &first_repository_inspect_ptr));
   ASSERT_TRUE(OpenChild(&repositories_inspect_ptr, second_repository_name,
@@ -339,6 +337,39 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   ASSERT_TRUE(ReadData(&second_repository_inspect_ptr, &object));
   EXPECT_EQ(second_repository_name, object.name);
   ExpectRequestsMetric(&object, 1UL);
+}
+
+TEST_F(LedgerRepositoryFactoryImplTest, CloseOnFilesystemUnavailable) {
+  std::unique_ptr<scoped_tmpfs::ScopedTmpFS> tmpfs =
+      std::make_unique<scoped_tmpfs::ScopedTmpFS>();
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
+
+  bool get_repository_called;
+  Status status = Status::UNKNOWN_ERROR;
+
+  repository_factory_->GetRepository(
+      fsl::CloneChannelFromFileDescriptor(tmpfs->root_fd()), nullptr, "",
+      ledger_repository_ptr.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&get_repository_called),
+                        &status));
+
+  bool channel_closed;
+  zx_status_t zx_status;
+
+  ledger_repository_ptr.set_error_handler(
+      callback::Capture(callback::SetWhenCalled(&channel_closed), &zx_status));
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(get_repository_called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_FALSE(channel_closed);
+
+  tmpfs.reset();
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(channel_closed);
 }
 
 }  // namespace

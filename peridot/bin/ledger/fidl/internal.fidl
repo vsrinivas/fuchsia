@@ -22,6 +22,7 @@ interface LedgerRepositoryFactory : fuchsia.ledger.ErrorNotifier {
     //     repository is stored. At any given time, at most one repository
     //     instance backed by the same disk directory can be running
     //     concurrently.
+    //     If this channel closes, |LedgerRepository| will close immediately.
     //     TODO(qsr): Use typed channel when remoteio has been migrated to FIDL2.
     // |cloud_provider| is used by Ledger to synchronize data through the
     //     cloud. If |cloud_provider| is disconnected, Ledger shuts down the
