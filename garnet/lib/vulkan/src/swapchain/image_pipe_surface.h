@@ -16,8 +16,9 @@ struct SupportedImageProperties {
   std::vector<VkSurfaceFormatKHR> formats;
 };
 
-// An abstract surface that must implement AddImage, RemoveImage, and PresentImage.
-// These methods are defined as per the ImagePipe fidl interface (see image_pipe.fidl).
+// An abstract surface that must implement AddImage, RemoveImage, and
+// PresentImage. These methods are defined as per the ImagePipe fidl interface
+// (see image_pipe.fidl).
 class ImagePipeSurface {
  public:
   ImagePipeSurface() {
@@ -32,7 +33,28 @@ class ImagePipeSurface {
     return supported_image_properties_;
   }
 
+  VkFlags DetermineUsage(VkFlags requestedUsage) {
+    VkFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | requestedUsage;
+    VkFlags supportedUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                             VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                             VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+    if (UseScanoutExtension()) {
+      usage &= supportedUsage;
+      usage |= VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE;
+    } else {
+      supportedUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+      usage &= supportedUsage;
+    }
+    return usage;
+  }
+
   virtual bool CanPresentPendingImage() { return true; }
+
+  // We can't call EnumerateInstanceExtensionsProperties in the layer; so assume
+  // that VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME is available. This should
+  // perhaps be a device extension anyway; but it will be going away once we
+  // have an image import extension.
   virtual bool UseScanoutExtension() { return false; }
 
   virtual bool GetSize(uint32_t* width_out, uint32_t* height_out) {

@@ -110,15 +110,7 @@ VkResult ImagePipeSwapchain::Initialize(
       GetLayerDataPtr(get_dispatch_key(device), layer_data_map)
           ->device_dispatch_table;
 
-  VkFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-  // We can't call EnumerateInstanceExtensionsProperties here; so just assume
-  // that VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME is available. This should
-  // perhaps be a device extension anyway; but it will be going away once we
-  // have an image import extension.
-  if (surface_->UseScanoutExtension()) {
-    usage |= VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE;
-  }
+  VkFlags usage = surface_->DetermineUsage(pCreateInfo->imageUsage);
 
   uint32_t num_images = pCreateInfo->minImageCount;
   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR);

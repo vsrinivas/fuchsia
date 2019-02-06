@@ -7,6 +7,9 @@
 
 class MockImagePipeSurface : public image_pipe_swapchain::ImagePipeSurface {
  public:
+  MockImagePipeSurface(bool use_scanout_extension = false)
+      : use_scanout_extension_(use_scanout_extension) {}
+
   void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
                 zx::vmo buffer, uint64_t size_bytes) override {}
   void RemoveImage(uint32_t image_id) override {}
@@ -16,6 +19,8 @@ class MockImagePipeSurface : public image_pipe_swapchain::ImagePipeSurface {
         {image_id, std::move(acquire_fences), std::move(release_fences)});
   }
 
+  bool UseScanoutExtension() override { return use_scanout_extension_; }
+
   struct Presented {
     uint32_t image_id;
     std::vector<zx::event> acquire_fences;
@@ -23,6 +28,7 @@ class MockImagePipeSurface : public image_pipe_swapchain::ImagePipeSurface {
   };
 
   std::vector<Presented> presented_;
+  bool use_scanout_extension_;
 };
 
 class TestSwapchain {
@@ -222,6 +228,41 @@ class TestSwapchain {
                                       VK_NULL_HANDLE, &image_index));
   }
 
+  void Usage(bool use_scanout_extension) {
+    MockImagePipeSurface surface(use_scanout_extension);
+    VkFlags expected =
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+        (use_scanout_extension ? VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE : 0);
+    EXPECT_EQ(expected, surface.DetermineUsage(0));
+    EXPECT_EQ(expected,
+              surface.DetermineUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT));
+
+    expected = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+               VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+               (use_scanout_extension ? VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE : 0);
+    EXPECT_EQ(expected,
+              surface.DetermineUsage(VK_IMAGE_USAGE_TRANSFER_SRC_BIT));
+
+    expected = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+               VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+               (use_scanout_extension ? VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE : 0);
+    EXPECT_EQ(expected,
+              surface.DetermineUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                     VK_IMAGE_USAGE_TRANSFER_DST_BIT));
+
+    expected = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+               VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+               VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+               (use_scanout_extension ? VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE
+                                      : VK_IMAGE_USAGE_SAMPLED_BIT);
+    EXPECT_EQ(expected,
+              surface.DetermineUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                     VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                                     VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                                     VK_IMAGE_USAGE_SAMPLED_BIT));
+    EXPECT_EQ(expected, surface.DetermineUsage(~0));
+  }
+
   VkInstance vk_instance_;
   VkDevice vk_device_;
   PFN_vkCreateSwapchainKHR create_swapchain_khr_;
@@ -238,3 +279,7 @@ TEST(Swapchain, AcquireNoSemaphore) { TestSwapchain().AcquireNoSemaphore(); }
 TEST(Swapchain, Surface) { TestSwapchain().Surface(); }
 
 TEST(Swapchain, Create) { TestSwapchain().CreateSwapchain(); }
+
+TEST(Swapchain, Usage) { TestSwapchain().Usage(false); }
+
+TEST(Swapchain, UsageScanout) { TestSwapchain().Usage(true); }
