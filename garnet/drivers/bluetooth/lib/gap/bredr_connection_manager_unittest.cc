@@ -179,7 +179,7 @@ const auto kReadRemoteSupportedFeaturesComplete =
         hci::kReadRemoteSupportedFeaturesCompleteEventCode,
         0x0B,                       // parameter_total_size (11 bytes)
         hci::StatusCode::kSuccess,  // status
-        0xAA, 0x0B,                 // conneciton_handle,
+        0xAA, 0x0B,                 // connection_handle,
         0xFF, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x80
         // lmp_features
         // Set: 3 slot packets, 5 slot packets, Encryption, Timing Accuracy,
@@ -507,7 +507,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest,
   QueueDisconnection();
 }
 
-// Test: A remote disconnect should correctly remove the conneection.
+// Test: A remote disconnect should correctly remove the connection.
 TEST_F(GAP_BrEdrConnectionManagerTest, RemoteDisconnect) {
   EXPECT_EQ("", connmgr()->GetPeerId(kConnectionHandle));
 

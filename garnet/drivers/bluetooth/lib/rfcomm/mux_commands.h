@@ -333,7 +333,7 @@ class RemotePortNegotiationCommand : public MuxCommand {
   // The DLCI which this RPN command is negotiating over.
   inline DLCI dlci() const { return dlci_; }
 
-  // The Remote Port Negotiation parameters. These are described in detaul in
+  // The Remote Port Negotiation parameters. These are described in detail in
   // GSM 5.4.6.3.9.
   inline RemotePortNegotiationParams params() const { return params_; }
 
@@ -382,7 +382,7 @@ class RemoteLineStatusCommand : public MuxCommand {
   // Whether or not this frame contains an error.
   inline bool error_occurred() const { return error_occurred_; }
 
-  // The type of error which occured. See GSM 5.4.6.3.10 for an explanation of
+  // The type of error which occurred. See GSM 5.4.6.3.10 for an explanation of
   // the errors.
   inline LineError error() const { return error_; }
 

@@ -161,7 +161,7 @@ static zx_status_t hogd_hid_get_protocol(void* ctx, uint8_t* protocol) {
 static zx_status_t hogd_hid_set_protocol(void* ctx, uint8_t protocol) {
   hog_log_trace("bt_hog hogd_hid_set_protocol, ctx: %p, protocol: %u\n", ctx,
                 protocol);
-  // We are explictly setting BOOT protocol internally so ignore attempts to
+  // We are explicitly setting BOOT protocol internally so ignore attempts to
   // change it until report mode is fully implemented.
   return ZX_OK;
 }
@@ -192,7 +192,7 @@ static void hogd_child_unbind(void* ctx) {
   hog_log_trace("bt_hog hogd_child_unbind, ctx: %p\n", ctx);
   hogd_device_t* child = (hogd_device_t*)ctx;
   child->is_initialized = false;
-  // TODO(zbowling): Explicty remove any notifications we are still receiving.
+  // TODO(zbowling): Explicitly remove any notifications we are still receiving.
 }
 
 static hidbus_protocol_ops_t hogd_hidbus_ops = {
@@ -220,7 +220,7 @@ static zx_protocol_device_t hogd_child_dev_ops = {
     .release = hogd_child_release,
 };
 
-// Catch-all handler for status callbacks we can't handle explictly.
+// Catch-all handler for status callbacks we can't handle explicitly.
 static void hogd_noop_status(void* ctx, const bt_gatt_status_t* status,
                              bt_gatt_id_t id) {
   hog_log_trace("bt_hog hogd_noop_status, ctx: %p\n", ctx);
@@ -247,7 +247,7 @@ static void hogd_report_notification(void* ctx, bt_gatt_id_t id,
   hogd_log_blob("bt_hog input event", value, len);
   hogd_device_t* child = (hogd_device_t*)ctx;
   if (!child) {
-    zxlogf(ERROR, "bt_hog received input event for an uninitalized device\n");
+    zxlogf(ERROR, "bt_hog received input event for an uninitialized device\n");
     return;
   }
 
@@ -332,7 +332,7 @@ static void hogd_on_read_report_map(void* ctx, const bt_gatt_status_t* status,
   hogd->hid_descriptor_len = len;
 
   zxlogf(INFO,
-         "bt_hog NOTE: Explictly setting protocol mode to BOOT as REPORT mode "
+         "bt_hog NOTE: Explicitly setting protocol mode to BOOT as REPORT mode "
          "is not supported by HIDBUS yet.\n");
 
   // Set protocol mode to boot mode again, just in case the asking for the

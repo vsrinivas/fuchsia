@@ -23,7 +23,7 @@ void CopyUUIDBytes(bt_gatt_uuid_t* dest, const common::UUID source) {
 
 bt_gatt_err_t AttErrorToDdkError(btlib::att::ErrorCode error) {
   // Both of these enums *should* be identical and values.
-  // Being explict so we get compiler warnings if either changes.
+  // Being explicit so we get compiler warnings if either changes.
   switch (error) {
     case btlib::att::ErrorCode::kNoError:
       return BT_GATT_ERR_NO_ERROR;
@@ -135,7 +135,7 @@ bt_gatt_svc_protocol_ops_t GattRemoteServiceDevice::proto_ops_ = {
 };
 
 zx_status_t GattRemoteServiceDevice::Bind() {
-  // The bind program of an attaching device driver can eiher bind using to the
+  // The bind program of an attaching device driver can either bind using to the
   // well known short 16 bit UUID of the service if available or the full 128
   // bit UUID (split across 4 32 bit values).
   const common::UUID& uuid = service_->uuid();
@@ -259,7 +259,7 @@ void GattRemoteServiceDevice::Connect(bt_gatt_svc_connect_callback connect_cb, v
 
 void GattRemoteServiceDevice::Stop() {
   // TODO(zbowling): Unregister notifications on the remote service.
-  // We may replace this with an explict unregister for notifications instead.
+  // We may replace this with an explicit unregister for notifications instead.
 }
 
 void GattRemoteServiceDevice::ReadCharacteristic(

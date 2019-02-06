@@ -496,7 +496,7 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
     unregister_async_handler = true;
   }
 
-  // If an asyncronous command failed, then remove it's event handler.
+  // If an asynchronous command failed, then remove it's event handler.
   if (unregister_async_handler) {
     bt_log(DEBUG, "hci", "async command failed; removing its handler");
     RemoveEventHandlerInternal(pending->handler_id());

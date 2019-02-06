@@ -67,7 +67,7 @@ class ByteBuffer {
 
   // Copies |size| bytes of this buffer into |out_buffer| starting at offset
   // |pos| and returns the number of bytes that were copied. |out_buffer| must
-  // be large enough to accomodate the result of this operation.
+  // be large enough to accommodate the result of this operation.
   size_t Copy(MutableByteBuffer* out_buffer,
               size_t pos = 0,
               size_t size = std::numeric_limits<std::size_t>::max()) const;
@@ -111,7 +111,7 @@ class ByteBuffer {
 using ByteBufferPtr = std::unique_ptr<ByteBuffer>;
 
 // Mutable extension to the ByteBuffer interface. This provides methods that
-// allows durect mutable access to the underlying buffer.
+// allows direct mutable access to the underlying buffer.
 class MutableByteBuffer : public ByteBuffer {
  public:
   ~MutableByteBuffer() override = default;

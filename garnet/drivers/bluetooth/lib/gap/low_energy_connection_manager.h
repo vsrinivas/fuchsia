@@ -168,7 +168,7 @@ class LowEnergyConnectionManager final {
   void SetDisconnectCallbackForTesting(DisconnectCallback callback);
 
   // Sets the timeout interval to be used on future connect requests. The
-  // default value is kLECreateConnecionTimeoutMs.
+  // default value is kLECreateConnectionTimeoutMs.
   void set_request_timeout_for_testing(int64_t value_ms) {
     request_timeout_ms_ = value_ms;
   }
@@ -291,7 +291,7 @@ class LowEnergyConnectionManager final {
   // discovery, as recommended by the specification in v5.0, Vol 3, Part C,
   // Section 9.3.12.1).
   //
-  // |device_identifier| uniquely identifies the peer. |handle| represents the
+  // |device_identifier| uniquely identifies the peer. |handle| represents
   // the logical link that |params| should be applied to.
   void OnNewLEConnectionParams(
       const std::string& device_identifier,
@@ -322,12 +322,12 @@ class LowEnergyConnectionManager final {
   // is configurable to allow unit tests to set a shorter value.
   int64_t request_timeout_ms_;
 
-  // The dispather for all asynchronous tasks.
+  // The dispatcher for all asynchronous tasks.
   async_dispatcher_t* dispatcher_;
 
   // The device cache is used to look up and persist remote device data that is
   // relevant during connection establishment (such as the address, preferred
-  // connetion parameters, etc). Expected to outlive this instance.
+  // connection parameters, etc). Expected to outlive this instance.
   RemoteDeviceCache* device_cache_;  // weak
 
   // The reference to the data domain, used to interact with the L2CAP layer to

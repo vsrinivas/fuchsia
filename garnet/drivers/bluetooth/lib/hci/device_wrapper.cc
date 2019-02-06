@@ -70,7 +70,7 @@ zx::channel DdkDeviceWrapper::GetACLDataChannel() {
   return channel;
 }
 
-// ================= DummyDeviceWrappper =================
+// ================= DummyDeviceWrapper =================
 
 DummyDeviceWrapper::DummyDeviceWrapper(zx::channel cmd_channel,
                                        zx::channel acl_data_channel)

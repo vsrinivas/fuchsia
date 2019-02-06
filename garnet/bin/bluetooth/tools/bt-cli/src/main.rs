@@ -249,7 +249,7 @@ async fn handle_cmd(bt_svc: &ControlProxy, state: Arc<Mutex<State>>, line: Strin
 /// that rustyline should handle the next line of input.
 fn cmd_stream(state: Arc<Mutex<State>>) -> (impl Stream<Item = String>, impl Sink<SinkItem = (), SinkError = SendError>) {
 
-    // Editor thread and command processing thread must be syncronized so that output
+    // Editor thread and command processing thread must be synchronized so that output
     // is printed in the correct order.
     let (mut cmd_sender, cmd_receiver) = channel(512);
     let (ack_sender, mut ack_receiver) = channel(512);
@@ -293,7 +293,7 @@ fn cmd_stream(state: Arc<Mutex<State>>) -> (impl Stream<Item = String>, impl Sin
 
 /// REPL execution
 async fn run_repl(bt_svc: ControlProxy, state: Arc<Mutex<State>>) -> Result<(), Error> {
-    // `cmd_stream` blocks on input in a seperate thread and passes commands and acks back to
+    // `cmd_stream` blocks on input in a separate thread and passes commands and acks back to
     // the main thread via async channels.
     let (mut commands, mut acks) = cmd_stream(state.clone());
     loop {

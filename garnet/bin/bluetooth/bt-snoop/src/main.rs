@@ -266,7 +266,7 @@ fn handle_packet(
             // TODO (belgum):
             // It's unclear to me what the correct response is in this case. Should we:
             //                  - bring down and restart the bt-snoop service
-            //                  - remove the the snooper for that channel
+            //                  - remove the snooper for that channel
             //                  - attempt to reinit snoop stream
             //                  - clean up logs for that device (very likely not!)
             let snooper = Snooper::new(snooper.device_path);

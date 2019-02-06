@@ -200,7 +200,7 @@ void HostDevice::OnRemoteGattServiceAdded(
 void HostDevice::CleanUp() {
   host_ = nullptr;
 
-  // Removing the devices explictly instead of letting unbind handle it for us.
+  // Removing the devices explicitly instead of letting unbind handle it for us.
   gatt_devices_.clear();
   device_remove(dev_);
 

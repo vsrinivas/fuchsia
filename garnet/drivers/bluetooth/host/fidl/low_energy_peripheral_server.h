@@ -47,7 +47,7 @@ class LowEnergyPeripheralServer
     void RetainConnection(ConnectionRefPtr conn_ref,
                           fuchsia::bluetooth::le::RemoteDevice central);
 
-    // Deletes the connetion reference and notifies the delegate of
+    // Deletes the connection reference and notifies the delegate of
     // disconnection.
     void ReleaseConnection();
 
