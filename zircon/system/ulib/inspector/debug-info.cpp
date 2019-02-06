@@ -26,7 +26,7 @@ static bool swbreak_backtrace_enabled = true;
 
 // Return true if the thread is to be resumed "successfully" (meaning the o/s
 // won't kill it, and thus the kill process).
-static bool is_resumable_swbreak(zx_excp_type_t excp_type) {
+static bool is_resumable_swbreak(const zx_excp_type_t excp_type) {
     if (excp_type == ZX_EXCP_SW_BREAKPOINT && swbreak_backtrace_enabled)
         return true;
     return false;
@@ -52,7 +52,12 @@ static int have_swbreak_magic(const zx_thread_state_general_regs_t* regs) {
 
 #endif
 
-static const char* excp_type_to_str(zx_excp_type_t type) {
+static bool is_backtrace_request(const zx_excp_type_t excp_type,
+                                 const zx_thread_state_general_regs_t* regs) {
+    return is_resumable_swbreak(excp_type) && regs != nullptr && have_swbreak_magic(regs);
+}
+
+static const char* excp_type_to_str(const zx_excp_type_t type) {
     switch (type) {
     case ZX_EXCP_GENERAL:
         return "general fault";
@@ -122,8 +127,7 @@ static void resume_thread(zx_handle_t thread, zx_handle_t exception_port, bool h
 static void resume_thread_from_exception(zx_handle_t thread, zx_handle_t exception_port,
                                          zx_excp_type_t excp_type,
                                          const zx_thread_state_general_regs_t* gregs) {
-    if (is_resumable_swbreak(excp_type) &&
-        gregs != nullptr && have_swbreak_magic(gregs)) {
+    if (is_backtrace_request(excp_type, gregs)) {
 #if defined(__x86_64__)
 // On x86, the pc is left at one past the s/w break insn,
 // so there's nothing more we need to do.
@@ -180,7 +184,6 @@ static void print_debug_info(zx_handle_t process, zx_handle_t thread, zx_excp_ty
 
     zx_vaddr_t pc = 0, sp = 0, fp = 0;
     const char* arch = "unknown";
-    const char* fatal = "fatal ";
 
     if (inspector_read_general_regs(thread, regs) != ZX_OK) {
         return;
@@ -200,10 +203,12 @@ static void print_debug_info(zx_handle_t process, zx_handle_t thread, zx_excp_ty
 #error unsupported architecture
 #endif
 
-    // This won't print "fatal" in the case where this is a s/w bkpt but
-    // ZX_CRASHLOGGER_REQUEST_SELF_BT_MAGIC isn't set. Big deal.
-    if (is_resumable_swbreak(*type))
+    const char* fatal = "fatal ";
+    // We don't want to print "fatal" when we are printing the debug info from a
+    // backtrace request as we will resume the thread at the end.
+    if (is_backtrace_request(*type, regs)) {
         fatal = "";
+    }
 
     char process_name[ZX_MAX_NAME_LEN];
     status = zx_object_get_property(process, ZX_PROP_NAME, process_name, sizeof(process_name));
