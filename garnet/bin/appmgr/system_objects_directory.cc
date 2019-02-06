@@ -33,6 +33,13 @@ SystemObjectsDirectory::ThreadsDirectory::ThreadsDirectory(
           auto thread_obj = component::ObjectDir::Make(koid_string);
           thread_obj.set_prop("koid", koid_string);
           thread_obj.set_prop("name", thread.name.data());
+          zx_handle_t handle = thread.thread.get();
+          zx_info_thread_stats_t thread_stats;
+          thread_obj.set_metric(
+              "total_runtime",
+              UIntMetric(GetThreadStats(handle, &thread_stats) == ZX_OK
+                             ? thread_stats.total_runtime
+                             : 0u));
           out_children->push_back(thread_obj.object());
 
           auto koid = thread.koid;
@@ -69,6 +76,20 @@ void SystemObjectsDirectory::ThreadsDirectory::GetThreads(
     t.get_property(ZX_PROP_NAME, &name, ZX_MAX_NAME_LEN);
     out->push_back({thread_ids[i], name, std::move(t)});
   }
+}
+
+zx_status_t SystemObjectsDirectory::ThreadsDirectory::GetThreadStats(
+    zx_handle_t thread, zx_info_thread_stats_t* thread_stats) {
+  zx_status_t status =
+      zx_object_get_info(thread, ZX_INFO_THREAD_STATS, thread_stats,
+                         sizeof(zx_info_thread_stats_t), nullptr, nullptr);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "zx_object_get_info failed, status: " << status
+                   << " thread: " << thread;
+    return status;
+  }
+
+  return ZX_OK;
 }
 
 SystemObjectsDirectory::MemoryDirectory::MemoryDirectory(

@@ -42,6 +42,10 @@ class SystemObjectsDirectory : public component::ExposedObject {
     // Retrieves a list of ThreadInfos, one for each thread of the process.
     void GetThreads(fbl::Vector<ThreadInfo>* out);
 
+    // Given a thread's handle, returns stats about the thread.
+    zx_status_t GetThreadStats(zx_handle_t thread,
+                               zx_info_thread_stats_t* thread_stats);
+
     const zx::process* process_;
   };
 
