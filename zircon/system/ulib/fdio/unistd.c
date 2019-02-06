@@ -2425,8 +2425,11 @@ int shutdown(int fd, int how) {
     return STATUS(r);
 }
 
-__EXPORT
-int fstatfs(int fd, struct statfs* buf) {
+// The common denominator between the Linux-y fstatfs and the POSIX
+// fstatvfs, which align on most fields. The fs version is more easily
+// computed from the fuchsia_io_FilesystemInfo, so this takes a struct
+// statfs.
+static int fs_stat(int fd, struct statfs* buf) {
     fdio_t* io;
     if ((io = fd_to_io(fd)) == NULL) {
         return ERRNO(EBADF);
@@ -2468,12 +2471,72 @@ int fstatfs(int fd, struct statfs* buf) {
 }
 
 __EXPORT
+int fstatfs(int fd, struct statfs* buf) {
+    return fs_stat(fd, buf);
+}
+
+__EXPORT
 int statfs(const char* path, struct statfs* buf) {
     int fd = open(path, O_RDONLY | O_CLOEXEC);
     if (fd < 0) {
         return fd;
     }
     int rv = fstatfs(fd, buf);
+    close(fd);
+    return rv;
+}
+
+__EXPORT
+int fstatvfs(int fd, struct statvfs* buf) {
+    struct statfs stats = {};
+    int result = fs_stat(fd, &stats);
+    if (result >= 0) {
+        struct statvfs vstats = {};
+
+        // The following fields are 1-1 between the Linux statfs
+        // definition and the POSIX statvfs definition.
+        vstats.f_bsize = stats.f_bsize;
+        vstats.f_blocks = stats.f_blocks;
+        vstats.f_bfree = stats.f_bfree;
+        vstats.f_bavail = stats.f_bavail;
+
+        vstats.f_files = stats.f_files;
+        vstats.f_ffree = stats.f_ffree;
+
+        vstats.f_flag = stats.f_flags;
+
+        vstats.f_namemax = stats.f_namelen;
+
+        // The following fields have slightly different semantics
+        // between the two.
+
+        // The two have different represenations for the fsid.
+        vstats.f_fsid = stats.f_fsid.__val[0] + (((uint64_t)stats.f_fsid.__val[1]) << 32);
+
+        // The statvfs "fragment size" value best corresponds to the
+        // FilesystemInfo "block size" value.
+        vstats.f_frsize = stats.f_bsize;
+
+        // The statvfs struct distinguishes between available files,
+        // and available files for unpriviliged processes. fuchsia.io
+        // makes no such distinction, so use the same value for both.
+        vstats.f_favail = stats.f_ffree;
+
+        // Finally, the f_type and f_spare fields on struct statfs
+        // have no equivalent for struct statvfs.
+
+        *buf = vstats;
+    }
+    return result;
+}
+
+__EXPORT
+int statvfs(const char* path, struct statvfs* buf) {
+    int fd = open(path, O_RDONLY | O_CLOEXEC);
+    if (fd < 0) {
+        return fd;
+    }
+    int rv = fstatvfs(fd, buf);
     close(fd);
     return rv;
 }

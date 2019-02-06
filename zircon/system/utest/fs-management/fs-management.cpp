@@ -11,6 +11,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
+#include <sys/statvfs.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
@@ -669,6 +670,45 @@ bool StatfsTest() {
     END_TEST;
 }
 
+bool StatvfsTest() {
+    const char* mount_path = "/tmp/mount_unmount";
+
+    BEGIN_TEST;
+    ramdisk_client_t* ramdisk = nullptr;
+    ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
+    const char* ramdisk_path = ramdisk_get_path(ramdisk);
+    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
+              ZX_OK);
+    ASSERT_EQ(mkdir(mount_path, 0666), 0);
+    int fd = open(ramdisk_path, O_RDWR);
+    ASSERT_GT(fd, 0);
+    ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
+              ZX_OK);
+
+    struct statvfs stats;
+    int rc = statvfs("", &stats);
+    int err = errno;
+    ASSERT_EQ(rc, -1);
+    ASSERT_EQ(err, ENOENT);
+
+    rc = statvfs(mount_path, &stats);
+    ASSERT_EQ(rc, 0);
+
+    // Verify that at least some values make sense, without making the test too brittle.
+    ASSERT_NE(stats.f_fsid, 0);
+    ASSERT_EQ(stats.f_bsize, 8192u);
+    ASSERT_EQ(stats.f_frsize, 8192u);
+    ASSERT_EQ(stats.f_namemax, 255u);
+    ASSERT_GT(stats.f_bavail, 0u);
+    ASSERT_GT(stats.f_ffree, 0u);
+    ASSERT_GT(stats.f_favail, 0u);
+
+    ASSERT_EQ(umount(mount_path), ZX_OK);
+    ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
+    ASSERT_EQ(unlink(mount_path), 0);
+    END_TEST;
+}
+
 // Verifies that the values in stats match the other parameters
 bool CheckStats(block_stats_t stats, size_t total_ops, size_t total_blocks, size_t total_reads,
                 size_t total_blocks_read, size_t total_writes, size_t total_blocks_written) {
@@ -795,6 +835,7 @@ RUN_TEST_MEDIUM(MountGetDevice)
 RUN_TEST_MEDIUM(MountReadonly)
 RUN_TEST_MEDIUM(MountBlockReadonly)
 RUN_TEST_MEDIUM(StatfsTest)
+RUN_TEST_MEDIUM(StatvfsTest)
 END_TEST_CASE(fs_management_tests)
 
 BEGIN_FS_TEST_CASE(fs_management_get_stats, MinfsRamdiskOptions)
