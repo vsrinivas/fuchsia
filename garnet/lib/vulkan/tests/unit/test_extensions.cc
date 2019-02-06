@@ -5,58 +5,42 @@
 #include <vulkan/vulkan.h>
 #include "gtest/gtest.h"
 
-static const char* kLayerName = "VK_LAYER_GOOGLE_image_pipe_swapchain";
+static const char* kLayerName = "VK_LAYER_FUCHSIA_imagepipe_swapchain";
 
 // Note: the loader returns results based on the layer's manifest file, not the
 // implementation of the vkEnumerateInstanceExtensionProperties and
 // vkEnumerateDeviceExtensionProperties apis inside the layer.
 
-const char* expected_instance_extensions[] = {
-    VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_MAGMA_SURFACE_EXTENSION_NAME};
+static const std::vector<const char*> kLayers = {kLayerName};
 
-const char* expected_device_extensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+static const std::vector<const char*> kExpectedInstanceExtensions = {
+    VK_KHR_SURFACE_EXTENSION_NAME, VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME};
 
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
+static const std::vector<const char*> kExpectedDeviceExtensions = {
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
 TEST(Swapchain, InstanceExtensions) {
   uint32_t prop_count = 0;
   EXPECT_EQ(VK_SUCCESS, vkEnumerateInstanceExtensionProperties(
                             kLayerName, &prop_count, nullptr));
-  EXPECT_EQ(prop_count, ARRAY_SIZE(expected_instance_extensions));
+  EXPECT_EQ(prop_count, kExpectedInstanceExtensions.size());
 
   std::vector<VkExtensionProperties> props(prop_count);
   EXPECT_EQ(VK_SUCCESS, vkEnumerateInstanceExtensionProperties(
                             kLayerName, &prop_count, props.data()));
   for (uint32_t i = 0; i < prop_count; i++) {
-    EXPECT_STREQ(expected_instance_extensions[i], props[i].extensionName);
-    props[i].extensionName[0] = 0;
+    EXPECT_STREQ(kExpectedInstanceExtensions[i], props[i].extensionName);
   }
-
-  prop_count = 0;
-  EXPECT_EQ(VK_SUCCESS, vkEnumerateInstanceExtensionProperties(
-                            nullptr, &prop_count, nullptr));
-  props.resize(prop_count);
-
-  EXPECT_EQ(VK_SUCCESS, vkEnumerateInstanceExtensionProperties(
-                            nullptr, &prop_count, props.data()));
-
-  uint32_t found_count = 0;
-  for (uint32_t i = 0; i < ARRAY_SIZE(expected_instance_extensions); i++) {
-    for (uint32_t j = 0; j < props.size(); j++) {
-      if (strcmp(expected_instance_extensions[i], props[j].extensionName) == 0)
-        found_count++;
-    }
-  }
-  EXPECT_EQ(found_count, ARRAY_SIZE(expected_instance_extensions));
 
   VkInstanceCreateInfo inst_info = {
       .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
       .pNext = nullptr,
       .pApplicationInfo = nullptr,
-      .enabledLayerCount = 0,
-      .ppEnabledLayerNames = nullptr,
-      .enabledExtensionCount = ARRAY_SIZE(expected_instance_extensions),
-      .ppEnabledExtensionNames = expected_instance_extensions,
+      .enabledLayerCount = static_cast<uint32_t>(kLayers.size()),
+      .ppEnabledLayerNames = kLayers.data(),
+      .enabledExtensionCount =
+          static_cast<uint32_t>(kExpectedInstanceExtensions.size()),
+      .ppEnabledExtensionNames = kExpectedInstanceExtensions.data(),
   };
   VkInstance instance;
   ASSERT_EQ(VK_SUCCESS, vkCreateInstance(&inst_info, nullptr, &instance));
@@ -67,10 +51,11 @@ TEST(Swapchain, DeviceExtensions) {
       .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
       .pNext = nullptr,
       .pApplicationInfo = nullptr,
-      .enabledLayerCount = 0,
-      .ppEnabledLayerNames = nullptr,
-      .enabledExtensionCount = 0,
-      .ppEnabledExtensionNames = nullptr,
+      .enabledLayerCount = static_cast<uint32_t>(kLayers.size()),
+      .ppEnabledLayerNames = kLayers.data(),
+      .enabledExtensionCount =
+          static_cast<uint32_t>(kExpectedInstanceExtensions.size()),
+      .ppEnabledExtensionNames = kExpectedInstanceExtensions.data(),
   };
   VkInstance instance;
 
@@ -89,14 +74,14 @@ TEST(Swapchain, DeviceExtensions) {
   EXPECT_EQ(VK_SUCCESS,
             vkEnumerateDeviceExtensionProperties(
                 physical_devices[0], kLayerName, &prop_count, nullptr));
-  EXPECT_EQ(prop_count, ARRAY_SIZE(expected_device_extensions));
+  EXPECT_EQ(prop_count, kExpectedDeviceExtensions.size());
 
   std::vector<VkExtensionProperties> props(prop_count);
   EXPECT_EQ(VK_SUCCESS,
             vkEnumerateDeviceExtensionProperties(
                 physical_devices[0], kLayerName, &prop_count, props.data()));
   for (uint32_t i = 0; i < prop_count; i++) {
-    EXPECT_STREQ(expected_device_extensions[i], props[i].extensionName);
+    EXPECT_STREQ(kExpectedDeviceExtensions[i], props[i].extensionName);
   }
 
   float queue_priorities[1] = {0.0};
@@ -114,8 +99,9 @@ TEST(Swapchain, DeviceExtensions) {
       .pQueueCreateInfos = &queue_create_info,
       .enabledLayerCount = 0,
       .ppEnabledLayerNames = nullptr,
-      .enabledExtensionCount = ARRAY_SIZE(expected_device_extensions),
-      .ppEnabledExtensionNames = expected_device_extensions,
+      .enabledExtensionCount =
+          static_cast<uint32_t>(kExpectedDeviceExtensions.size()),
+      .ppEnabledExtensionNames = kExpectedDeviceExtensions.data(),
       .pEnabledFeatures = nullptr};
   VkDevice device;
   EXPECT_EQ(VK_SUCCESS, vkCreateDevice(physical_devices[0], &device_create_info,

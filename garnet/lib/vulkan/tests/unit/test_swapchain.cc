@@ -10,8 +10,7 @@ class MockImagePipeSurface : public image_pipe_swapchain::ImagePipeSurface {
   void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
                 zx::vmo buffer, uint64_t size_bytes) override {}
   void RemoveImage(uint32_t image_id) override {}
-  void PresentImage(uint32_t image_id,
-                    std::vector<zx::event> acquire_fences,
+  void PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
                     std::vector<zx::event> release_fences) override {
     presented_.push_back(
         {image_id, std::move(acquire_fences), std::move(release_fences)});
@@ -37,9 +36,10 @@ class TestSwapchain {
 
   TestSwapchain() {
     std::vector<const char*> instance_layers{
-        "VK_LAYER_GOOGLE_image_pipe_swapchain"};
-    std::vector<const char*> instance_ext{VK_KHR_SURFACE_EXTENSION_NAME,
-                                          VK_KHR_MAGMA_SURFACE_EXTENSION_NAME};
+        "VK_LAYER_FUCHSIA_imagepipe_swapchain"};
+    std::vector<const char*> instance_ext{
+        VK_KHR_SURFACE_EXTENSION_NAME,
+        VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME};
     std::vector<const char*> device_ext{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
     VkInstanceCreateInfo inst_info = {
@@ -69,9 +69,6 @@ class TestSwapchain {
         .queueCount = 1,
         .pQueuePriorities = queue_priorities,
         .flags = 0};
-
-    std::vector<const char*> enabled_layers{
-        "VK_LAYER_GOOGLE_image_pipe_swapchain"};
 
     VkDeviceCreateInfo device_create_info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -136,14 +133,14 @@ class TestSwapchain {
     zx::channel endpoint0, endpoint1;
     EXPECT_EQ(ZX_OK, zx::channel::create(0, &endpoint0, &endpoint1));
 
-    VkMagmaSurfaceCreateInfoKHR create_info = {
-        .sType = VK_STRUCTURE_TYPE_MAGMA_SURFACE_CREATE_INFO_KHR,
+    VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
         .imagePipeHandle = endpoint0.release(),
         .pNext = nullptr,
     };
     VkSurfaceKHR surface;
-    EXPECT_EQ(VK_SUCCESS, vkCreateMagmaSurfaceKHR(vk_instance_, &create_info,
-                                                  nullptr, &surface));
+    EXPECT_EQ(VK_SUCCESS, vkCreateImagePipeSurfaceFUCHSIA(
+                              vk_instance_, &create_info, nullptr, &surface));
     vkDestroySurfaceKHR(vk_instance_, surface, nullptr);
   }
 
@@ -151,14 +148,14 @@ class TestSwapchain {
     zx::channel endpoint0, endpoint1;
     EXPECT_EQ(ZX_OK, zx::channel::create(0, &endpoint0, &endpoint1));
 
-    VkMagmaSurfaceCreateInfoKHR create_info = {
-        .sType = VK_STRUCTURE_TYPE_MAGMA_SURFACE_CREATE_INFO_KHR,
+    VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
         .imagePipeHandle = endpoint0.release(),
         .pNext = nullptr,
     };
     VkSurfaceKHR surface;
-    EXPECT_EQ(VK_SUCCESS, vkCreateMagmaSurfaceKHR(vk_instance_, &create_info,
-                                                  nullptr, &surface));
+    EXPECT_EQ(VK_SUCCESS, vkCreateImagePipeSurfaceFUCHSIA(
+                              vk_instance_, &create_info, nullptr, &surface));
 
     VkSwapchainKHR swapchain;
     EXPECT_EQ(VK_SUCCESS, CreateSwapchainHelper(surface, &swapchain));
