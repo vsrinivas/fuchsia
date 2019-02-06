@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 //! Temporary Futures extensions used during the transition from 0.2 -> 0.3.
-//! These SHOUD NOT be used for new code. Instead, use the corresponding 0.3
+//! These SHOULD NOT be used for new code. Instead, use the corresponding 0.3
 //! functions or `async_await`-based utilities.
 
 #![allow(missing_docs)]

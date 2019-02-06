@@ -442,7 +442,7 @@ impl task::Wake for SingleThreadedMainTaskWake {
 
 impl Drop for Executor {
     fn drop(&mut self) {
-        // Done flag must be set before dropping packet recievers
+        // Done flag must be set before dropping packet receivers
         // so that future receivers that attempt to deregister themselves
         // know that it's okay if their entries are already missing.
         self.inner.done.store(true, Ordering::SeqCst);
@@ -568,7 +568,7 @@ const THREADINESS_SINGLE: usize = 1;
 /// No thread-unsafe futures can be spawned.
 const THREADINESS_MULTI: usize = 2;
 
-/// Tracks the multihthreaded-compatibility state of the executor.
+/// Tracks the multithreaded-compatibility state of the executor.
 struct Threadiness(AtomicUsize);
 
 impl Default for Threadiness {

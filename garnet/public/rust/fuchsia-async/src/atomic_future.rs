@@ -91,7 +91,7 @@ impl AtomicFuture {
         // performed a successful transition from INACTIVE to ACTIVE.
         //
         // After any mutation to `self.future`, no other threads will read
-        // `self.future` until the following two operations have occured:
+        // `self.future` until the following two operations have occurred:
         //
         // - The mutating thread has transitioned from ACTIVE to (INACTIVE or DONE)
         // - The new reader has transitioned from INACTIVE to ACTIVE.
