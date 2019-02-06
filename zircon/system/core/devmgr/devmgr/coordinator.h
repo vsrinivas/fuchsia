@@ -208,12 +208,6 @@ private:
 
 // clang-format on
 
-zx_status_t devfs_publish(Device* parent, Device* dev);
-void devfs_unpublish(Device* dev);
-void devfs_advertise(Device* dev);
-void devfs_advertise_modified(Device* dev);
-zx_status_t devfs_connect(Device* dev, zx::channel client_remote);
-
 // Values parsed out of argv.  All paths described below are absolute paths.
 struct DevmgrArgs {
     // Load drivers from these directories.  If this is empty, the default will

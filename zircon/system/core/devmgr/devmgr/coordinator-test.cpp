@@ -11,7 +11,7 @@
 #include <zircon/fidl.h>
 
 #include "coordinator.h"
-#include "devmgr.h"
+#include "devfs.h"
 
 namespace devmgr {
 zx::channel fs_clone(const char* path) {

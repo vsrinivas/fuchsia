@@ -5,7 +5,7 @@
 #include "../shared/async-loop-owned-rpc-handler.h"
 #include "../shared/log.h"
 #include "coordinator.h"
-#include "devmgr.h"
+#include "devfs.h"
 
 #include <zircon/device/vfs.h>
 #include <zircon/fidl.h>

@@ -45,7 +45,7 @@
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"
 #include "devhost-loader-service.h"
-#include "devmgr.h"
+#include "devfs.h"
 
 namespace {
 

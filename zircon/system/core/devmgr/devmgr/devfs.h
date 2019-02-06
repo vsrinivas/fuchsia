@@ -6,7 +6,6 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/job.h>
 #include <zircon/types.h>
 
 namespace devmgr {
@@ -25,5 +24,11 @@ zx::unowned_channel devfs_root_borrow();
 
 // Clones the channel connected to the root of devfs.
 zx::channel devfs_root_clone();
+
+zx_status_t devfs_publish(Device* parent, Device* dev);
+void devfs_unpublish(Device* dev);
+void devfs_advertise(Device* dev);
+void devfs_advertise_modified(Device* dev);
+zx_status_t devfs_connect(Device* dev, zx::channel client_remote);
 
 } // namespace devmgr

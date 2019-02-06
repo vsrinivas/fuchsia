@@ -46,7 +46,7 @@
 #include "../shared/log.h"
 #include "coordinator.h"
 #include "devhost-loader-service.h"
-#include "devmgr.h"
+#include "devfs.h"
 
 namespace {
 
