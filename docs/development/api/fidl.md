@@ -470,6 +470,94 @@ sequence up into multiple messages using one of the pagination patterns
 discussed below or consider moving the data out of the message itself, for
 example into a `fuchsia.mem.Buffer`.
 
+### String encoding, string contents, and length bounds
+
+FIDL `string`s are encoded in [UTF-8](https://en.wikipedia.org/wiki/UTF-8), a
+variable-width encoding that uses 1, 2, 3, or 4 bytes per
+[Unicode code point](http://unicode.org/glossary/#code_point).
+
+Bindings enforce valid UTF-8 for strings, and strings are therefore not
+appropriate for arbitrary binary data. See
+[Should I use string or vector?](#should-i-use-string-or-vector).
+
+Because the purpose of length bound declarations is to provide an easily
+calculable upper bound on the total byte size of a FIDL message, `string` bounds
+specify the maximum _number of bytes_ in the field. To be on the safe side, you
+will generally want to budget <code>(4 bytes · <var>code points in
+string</var>)</code>. (If you know for certain that the text only uses code
+points in the single-byte ASCII range, as in the case of phone numbers or credit
+card numbers, 1 byte per code point will be sufficient.)
+
+How many code points are in a string? This question can be complicated to
+answer, particularly for user-generated string contents, because there is not
+necessarily a one-to-one correspondence between a Unicode code point and what
+users might think of as "characters".
+
+For example, the string
+
+```
+á
+```
+
+is rendered as a single user-perceived "character", but actually consists of two
+code points:
+
+```
+1. LATIN SMALL LETTER A (U+0061)
+2. COMBINING ACUTE ACCENT (U+0301)
+```
+
+In Unicode terminology, this kind of user-perceived "character" is known as a
+[grapheme cluster](https://unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries).
+
+A single grapheme cluster can consist of arbitrarily many code points. Consider
+this longer example:
+
+```
+á🇨🇦b👮🏽‍♀️
+```
+
+If your system and fonts support it, you should see **four grapheme clusters**
+above:
+
+```
+1. 'a' with acute accent
+2. emoji of Canadian flag
+3. 'b'
+4. emoji of a female police officer with a medium skin tone
+```
+
+These four grapheme clusters are encoded as **ten code points**:
+
+```
+ 1. LATIN SMALL LETTER A (U+0061)
+ 2. COMBINING ACUTE ACCENT (U+0301)
+ 3. REGIONAL INDICATOR SYMBOL LETTER C (U+1F1E8)
+ 4. REGIONAL INDICATOR SYMBOL LETTER A (U+1F1E6)
+ 5. LATIN SMALL LETTER B (U+0062)
+ 6. POLICE OFFICER (U+1F46E)
+ 7. EMOJI MODIFIER FITZPATRICK TYPE-4 (U+1F3FD)
+ 8. ZERO WIDTH JOINER (U+200D)
+ 9. FEMALE SIGN (U+2640)
+10. VARIATION SELECTOR-16 (U+FE0F)
+```
+
+In UTF-8, this string takes up **28 bytes**.
+
+From this example, it should be clear that if your application's UI displays a
+text input box that allows _N_ arbitrary grapheme clusters (what users think of
+as "characters"), and you plan to transport those user-entered strings over
+FIDL, you will have to budget _some multiple_ of <code>4·<var>N</var></code> in
+your FIDL `string` field.
+
+What should that multiple be? It depends on your data. If you're dealing with a
+fairly constrained use case (e.g. human names, postal addresses, credit card
+numbers), you might be able to assume 1-2 code points per grapheme cluster. If
+you're building a chat client where emoji use is rampant, 4-5 code points per
+grapheme cluster might be safer. In any case, your input validation UI should
+show clear visual feedback so that users aren't surprised if they run out of
+room.
+
 ### Errors
 
 Select the appropriate error type for your use case and be consistent about how
