@@ -52,6 +52,10 @@ zx_status_t ramdisk_sleep_after(const ramdisk_client_t* client, uint64_t blk_cou
 // Wake the ramdisk at |ramdisk_path| from a sleep state.
 zx_status_t ramdisk_wake(const ramdisk_client_t* client);
 
+// Grows the ramdisk up to |required_size|. |required_size| must be a multiple of
+// the ramdisk block size and not less than the current size.
+zx_status_t ramdisk_grow(const ramdisk_client_t* client, uint64_t required_size);
+
 // A struct containing the number of write operations transmitted to the ramdisk
 // since the last invocation of "wake" or "sleep_after".
 typedef struct ramdisk_block_write_counts {

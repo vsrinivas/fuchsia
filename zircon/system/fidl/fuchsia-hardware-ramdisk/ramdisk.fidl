@@ -40,6 +40,11 @@ interface Ramdisk {
     // Returns the number of write requests since the last call to either
     // "SleepAfter" or "Wake".
     GetBlockCounts() -> (zx.status s, BlockWriteCounts? counts);
+
+    // Causes the ramdisk size to grow to |required_size| in bytes.
+    // If |required_size| is smaller than the current size an error will be
+    // returned. |required_size| must be a multiple of |block_size|.
+    Grow(uint64 new_size) -> (zx.status s);
 };
 
 // TODO(smklein): Deduplicate GUID declarations with other FIDL interfaces.

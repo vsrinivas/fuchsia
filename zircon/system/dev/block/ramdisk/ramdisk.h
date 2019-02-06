@@ -12,7 +12,7 @@
 #include <fbl/mutex.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
-#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/operation/block.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
@@ -24,11 +24,8 @@
 namespace ramdisk {
 
 class Ramdisk;
-using RamdiskDeviceType = ddk::Device<Ramdisk,
-                                      ddk::GetProtocolable,
-                                      ddk::GetSizable,
-                                      ddk::Unbindable,
-                                      ddk::Messageable>;
+using RamdiskDeviceType =
+    ddk::Device<Ramdisk, ddk::GetProtocolable, ddk::GetSizable, ddk::Unbindable, ddk::Messageable>;
 
 class Ramdisk : public RamdiskDeviceType,
                 public ddk::BlockImplProtocol<Ramdisk, ddk::base_protocol>,
@@ -40,9 +37,7 @@ public:
                               uint64_t block_count, const uint8_t* type_guid,
                               std::unique_ptr<Ramdisk>* out);
 
-    const char* Name() const {
-        return &name_[0];
-    }
+    const char* Name() const { return &name_[0]; }
 
     // Device Protocol
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
@@ -60,6 +55,7 @@ public:
     zx_status_t FidlWake(fidl_txn_t* txn);
     zx_status_t FidlSleepAfter(uint64_t count, fidl_txn_t* txn);
     zx_status_t FidlGetBlockCounts(fidl_txn_t* txn);
+    zx_status_t FidlGrow(uint64_t required_size, fidl_txn_t* txn);
 
     // Partition Protocol
     zx_status_t BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid);
@@ -67,7 +63,7 @@ public:
 
 private:
     Ramdisk(zx_device_t* parent, uint64_t block_size, uint64_t block_count,
-            const uint8_t* type_guid, fzl::OwnedVmoMapper mapping);
+            const uint8_t* type_guid, fzl::ResizeableVmoMapper mapping);
 
     // Processes requests made to the ramdisk until it is unbound.
     void ProcessRequests();
@@ -80,6 +76,7 @@ private:
             .Wake = Binder::BindMember<&Ramdisk::FidlWake>,
             .SleepAfter = Binder::BindMember<&Ramdisk::FidlSleepAfter>,
             .GetBlockCounts = Binder::BindMember<&Ramdisk::FidlGetBlockCounts>,
+            .Grow = Binder::BindMember<&Ramdisk::FidlGrow>,
         };
         return &kOps;
     }
@@ -93,7 +90,7 @@ private:
     uint64_t block_size_;
     uint64_t block_count_;
     uint8_t type_guid_[ZBI_PARTITION_GUID_LEN];
-    fzl::OwnedVmoMapper mapping_;
+    fzl::ResizeableVmoMapper mapping_;
 
     // |signal| identifies when the worker thread should stop sleeping.
     // This may occur when the device:
@@ -127,7 +124,7 @@ private:
     // The number of blocks-to-be-written that should be processed.
     // When this reaches zero, the ramdisk will set |asleep| to true.
     uint64_t pre_sleep_write_block_count_ TA_GUARDED(lock_) = 0;
-    fuchsia_hardware_ramdisk_BlockWriteCounts block_counts_ TA_GUARDED(lock_) {};
+    fuchsia_hardware_ramdisk_BlockWriteCounts block_counts_ TA_GUARDED(lock_){};
 
     thrd_t worker_ = {};
     char name_[ZBI_PARTITION_NAME_LEN];

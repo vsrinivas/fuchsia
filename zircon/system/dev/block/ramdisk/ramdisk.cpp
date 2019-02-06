@@ -32,7 +32,7 @@ static std::atomic<uint64_t> g_ramdisk_count = 0;
 } // namespace
 
 Ramdisk::Ramdisk(zx_device_t* parent, uint64_t block_size, uint64_t block_count,
-                 const uint8_t* type_guid, fzl::OwnedVmoMapper mapping)
+                 const uint8_t* type_guid, fzl::ResizeableVmoMapper mapping)
     : RamdiskDeviceType(parent), block_size_(block_size), block_count_(block_count),
       mapping_(std::move(mapping)) {
     if (type_guid) {
@@ -45,16 +45,15 @@ Ramdisk::Ramdisk(zx_device_t* parent, uint64_t block_size, uint64_t block_count,
 
 zx_status_t Ramdisk::Create(zx_device_t* parent, zx::vmo vmo, uint64_t block_size,
                             uint64_t block_count, const uint8_t* type_guid,
-                            std::unique_ptr<Ramdisk>* out)
-{
-    fzl::OwnedVmoMapper mapping;
+                            std::unique_ptr<Ramdisk>* out) {
+    fzl::ResizeableVmoMapper mapping;
     zx_status_t status = mapping.Map(std::move(vmo), block_size * block_count);
     if (status != ZX_OK) {
         return status;
     }
 
     auto ramdev = std::unique_ptr<Ramdisk>(
-            new Ramdisk(parent, block_size, block_count, type_guid, std::move(mapping)));
+        new Ramdisk(parent, block_size, block_count, type_guid, std::move(mapping)));
     if (thrd_create(&ramdev->worker_, WorkerThunk, ramdev.get()) != thrd_success) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -216,6 +215,24 @@ zx_status_t Ramdisk::BlockPartitionGetName(char* out_name, size_t capacity) {
     static_assert(ZBI_PARTITION_NAME_LEN <= MAX_PARTITION_NAME_LENGTH, "Name length mismatch");
     strlcpy(out_name, name_, ZBI_PARTITION_NAME_LEN);
     return ZX_OK;
+}
+
+zx_status_t Ramdisk::FidlGrow(uint64_t required_size, fidl_txn_t* txn) {
+    fbl::AutoLock lock(&lock_);
+    if (required_size < block_size_ * block_count_) {
+        return fuchsia_hardware_ramdisk_RamdiskGrow_reply(txn, ZX_ERR_INVALID_ARGS);
+    }
+
+    if (required_size % block_size_ != 0) {
+        return fuchsia_hardware_ramdisk_RamdiskGrow_reply(txn, ZX_ERR_INVALID_ARGS);
+    }
+    zx_status_t status = mapping_.Grow(required_size);
+    if (status != ZX_OK) {
+        return fuchsia_hardware_ramdisk_RamdiskGrow_reply(txn, status);
+    }
+
+    block_count_ = required_size / block_size_;
+    return fuchsia_hardware_ramdisk_RamdiskGrow_reply(txn, ZX_OK);
 }
 
 void Ramdisk::ProcessRequests() {
