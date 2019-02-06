@@ -111,31 +111,24 @@ void LESignalingChannel::DecodeRxUnit(const SDU& sdu,
                                       const SignalingPacketHandler& cb) {
   // "[O]nly one command per C-frame shall be sent over [the LE] Fixed Channel"
   // (v5.0, Vol 3, Part A, Section 4).
-  if (sdu.length() < sizeof(CommandHeader)) {
+  if (sdu->size() < sizeof(CommandHeader)) {
     bt_log(TRACE, "l2cap-le", "sig: dropped malformed LE signaling packet");
     return;
   }
 
-  SDU::Reader reader(&sdu);
+  const common::ByteBuffer& data = *sdu;
+  SignalingPacket packet(sdu.get());
+  uint16_t expected_payload_length = le16toh(packet.header().length);
+  if (expected_payload_length != data.size() - sizeof(CommandHeader)) {
+    bt_log(TRACE, "l2cap-le",
+           "sig: packet size mismatch (expected: %zu, recv: %zu); drop",
+           expected_payload_length, data.size() - sizeof(CommandHeader));
+    SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
+                      common::BufferView());
+    return;
+  }
 
-  auto process_sdu_as_packet = [this, &cb](const auto& data) {
-    SignalingPacket packet(&data);
-
-    uint16_t expected_payload_length = le16toh(packet.header().length);
-    if (expected_payload_length != data.size() - sizeof(CommandHeader)) {
-      bt_log(TRACE, "l2cap-le",
-             "sig: packet size mismatch (expected: %zu, recv: %zu); drop",
-             expected_payload_length, data.size() - sizeof(CommandHeader));
-      SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
-                        common::BufferView());
-      return;
-    }
-
-    cb(SignalingPacket(&data, expected_payload_length));
-  };
-
-  // Performing a single read for the entire length of an SDU can never fail.
-  ZX_ASSERT(reader.ReadNext(sdu.length(), process_sdu_as_packet));
+  cb(SignalingPacket(&data, expected_payload_length));
 }
 
 bool LESignalingChannel::HandlePacket(const SignalingPacket& packet) {

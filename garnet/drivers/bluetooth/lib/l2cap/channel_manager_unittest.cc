@@ -296,7 +296,8 @@ TEST_F(L2CAP_ChannelManagerTest,
        CallingDeactivateFromClosedCallbackDoesNotCrashOrHang) {
   RegisterACL(kTestHandle1, hci::Connection::Role::kMaster);
   auto chan = chanmgr()->OpenFixedChannel(kTestHandle1, kSMPChannelId);
-  chan->Activate(NopRxCallback, [chan] { chan->Deactivate(); }, dispatcher());
+  chan->Activate(
+      NopRxCallback, [chan] { chan->Deactivate(); }, dispatcher());
   chanmgr()->Unregister(kTestHandle1);  // Triggers ClosedCallback.
   RunLoopUntilIdle();
 }
@@ -305,26 +306,21 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveData) {
   // LE-U link
   RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
 
-  common::StaticByteBuffer<255> buffer;
-
   // We use the ATT channel to control incoming packets and the SMP channel to
   // quit the message loop.
   std::vector<std::string> sdus;
-  auto att_rx_cb = [&sdus, &buffer](const SDU& sdu) {
-    size_t size = sdu.Copy(&buffer);
-    sdus.push_back(buffer.view(0, size).ToString());
-  };
+  auto att_rx_cb = [&sdus](const SDU& sdu) { sdus.push_back(sdu->ToString()); };
 
   bool smp_cb_called = false;
   auto smp_rx_cb = [&smp_cb_called, this](const SDU& sdu) {
-    EXPECT_EQ(0u, sdu.length());
+    EXPECT_EQ(0u, sdu->size());
     smp_cb_called = true;
   };
 
-  auto att_chan =
-      ActivateNewFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
-  auto smp_chan =
-      ActivateNewFixedChannel(kLESMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
+  auto att_chan = ActivateNewFixedChannel(
+      kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
+  auto smp_chan = ActivateNewFixedChannel(
+      kLESMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
   ASSERT_TRUE(att_chan);
   ASSERT_TRUE(smp_chan);
 
@@ -376,7 +372,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeRegisteringLink) {
 
   bool smp_cb_called = false;
   auto smp_rx_cb = [&smp_cb_called, this](const SDU& sdu) {
-    EXPECT_EQ(0u, sdu.length());
+    EXPECT_EQ(0u, sdu->size());
     smp_cb_called = true;
   };
 
@@ -405,12 +401,12 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeRegisteringLink) {
 
   RegisterLE(kTestHandle1, hci::Connection::Role::kMaster);
 
-  att_chan =
-      ActivateNewFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
+  att_chan = ActivateNewFixedChannel(
+      kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
   ZX_DEBUG_ASSERT(att_chan);
 
-  smp_chan =
-      ActivateNewFixedChannel(kLESMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
+  smp_chan = ActivateNewFixedChannel(
+      kLESMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
   ZX_DEBUG_ASSERT(smp_chan);
 
   RunLoopUntilIdle();
@@ -433,7 +429,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeCreatingChannel) {
 
   bool smp_cb_called = false;
   auto smp_rx_cb = [&smp_cb_called, this](const SDU& sdu) {
-    EXPECT_EQ(0u, sdu.length());
+    EXPECT_EQ(0u, sdu->size());
     smp_cb_called = true;
   };
 
@@ -460,12 +456,12 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeCreatingChannel) {
   // Run the loop so all packets are received.
   RunLoopUntilIdle();
 
-  att_chan =
-      ActivateNewFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
+  att_chan = ActivateNewFixedChannel(
+      kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
   ZX_DEBUG_ASSERT(att_chan);
 
-  smp_chan =
-      ActivateNewFixedChannel(kLESMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
+  smp_chan = ActivateNewFixedChannel(
+      kLESMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
   ZX_DEBUG_ASSERT(smp_chan);
 
   RunLoopUntilIdle();
@@ -495,7 +491,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
 
   bool smp_cb_called = false;
   auto smp_rx_cb = [&smp_cb_called, this](const SDU& sdu) {
-    EXPECT_EQ(0u, sdu.length());
+    EXPECT_EQ(0u, sdu->size());
     smp_cb_called = true;
   };
 
@@ -939,10 +935,7 @@ TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelRemoteDisconnect) {
   bool sdu_received = false;
   auto data_rx_cb = [&sdu_received](const SDU& sdu) {
     sdu_received = true;
-    auto received = common::DynamicByteBuffer(sdu.length());
-    const size_t length = sdu.Copy(&received);
-    EXPECT_EQ(sdu.length(), length);
-    EXPECT_EQ("Test", received.AsString());
+    EXPECT_EQ("Test", sdu->AsString());
   };
 
   ActivateOutboundChannel(kTestPsm, std::move(channel_cb), kTestHandle1,

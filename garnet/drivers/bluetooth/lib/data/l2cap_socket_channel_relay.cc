@@ -15,12 +15,13 @@
 // explicitly mentions |static| as an example of non-external linkage.
 namespace {
 using BufT = btlib::l2cap::Channel::PacketType;
-static inline bool ValidateRxData(const BufT& buf) { return buf.is_valid(); }
-static inline size_t GetRxDataLen(const BufT& buf) { return buf.length(); }
+static inline bool ValidateRxData(const BufT& buf) { return buf != nullptr; }
+static inline size_t GetRxDataLen(const BufT& buf) { return buf->size(); }
 static inline bool InvokeWithRxData(
     fit::function<void(const btlib::common::ByteBuffer& data)> callback,
     const BufT& buf) {
-  return BufT::Reader(&buf).ReadNext(buf.length(), callback);
+  callback(*buf);
+  return true;
 }
 }  // namespace
 

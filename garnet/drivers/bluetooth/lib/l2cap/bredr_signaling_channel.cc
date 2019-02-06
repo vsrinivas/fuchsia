@@ -64,50 +64,41 @@ void BrEdrSignalingChannel::DecodeRxUnit(const SDU& sdu,
                                          const SignalingPacketHandler& cb) {
   // "Multiple commands may be sent in a single C-frame over Fixed Channel CID
   // 0x0001 (ACL-U) (v5.0, Vol 3, Part A, Section 4)"
-  if (sdu.length() < sizeof(CommandHeader)) {
+  if (sdu->size() < sizeof(CommandHeader)) {
     bt_log(TRACE, "l2cap-bredr", "sig: dropped malformed ACL signaling packet");
     return;
   }
 
-  SDU::Reader reader(&sdu);
+  const common::ByteBuffer& sdu_data = *sdu;
+  size_t sdu_offset = 0;
+  while (sdu_offset + sizeof(CommandHeader) <= sdu_data.size()) {
+    auto& header_data = sdu_data.view(sdu_offset, sizeof(CommandHeader));
+    SignalingPacket packet(&header_data);
 
-  auto split_and_process_packets_from_sdu =
-      [&cb, this](const common::ByteBuffer& sdu_data) {
-        size_t sdu_offset = 0;
+    uint16_t expected_payload_length = le16toh(packet.header().length);
+    size_t remaining_sdu_length =
+        sdu_data.size() - sdu_offset - sizeof(CommandHeader);
+    if (remaining_sdu_length < expected_payload_length) {
+      bt_log(TRACE, "l2cap-bredr", "sig: expected more bytes (%zu < %u); drop",
+             remaining_sdu_length, expected_payload_length);
+      SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
+                        common::BufferView());
+      return;
+    }
 
-        while (sdu_offset + sizeof(CommandHeader) <= sdu_data.size()) {
-          auto& header_data = sdu_data.view(sdu_offset, sizeof(CommandHeader));
-          SignalingPacket packet(&header_data);
+    auto& packet_data = sdu_data.view(
+        sdu_offset, sizeof(CommandHeader) + expected_payload_length);
+    cb(SignalingPacket(&packet_data, expected_payload_length));
 
-          uint16_t expected_payload_length = le16toh(packet.header().length);
-          size_t remaining_sdu_length =
-              sdu_data.size() - sdu_offset - sizeof(CommandHeader);
-          if (remaining_sdu_length < expected_payload_length) {
-            bt_log(TRACE, "l2cap-bredr",
-                   "sig: expected more bytes (%zu < %u); drop",
-                   remaining_sdu_length, expected_payload_length);
-            SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
-                              common::BufferView());
-            return;
-          }
+    sdu_offset += packet_data.size();
+  }
 
-          auto& packet_data = sdu_data.view(
-              sdu_offset, sizeof(CommandHeader) + expected_payload_length);
-          cb(SignalingPacket(&packet_data, expected_payload_length));
-
-          sdu_offset += packet_data.size();
-        }
-
-        if (sdu_offset != sdu_data.size()) {
-          bt_log(TRACE, "l2cap-bredr",
-                 "sig: incomplete packet header "
-                 "(expected: %zu, left: %zu)",
-                 sizeof(CommandHeader), sdu_data.size() - sdu_offset);
-        }
-      };
-
-  // Performing a single read for the entire length of an SDU can never fail.
-  ZX_ASSERT(reader.ReadNext(sdu.length(), split_and_process_packets_from_sdu));
+  if (sdu_offset != sdu_data.size()) {
+    bt_log(TRACE, "l2cap-bredr",
+           "sig: incomplete packet header "
+           "(expected: %zu, left: %zu)",
+           sizeof(CommandHeader), sdu_data.size() - sdu_offset);
+  }
 }
 
 bool BrEdrSignalingChannel::HandlePacket(const SignalingPacket& packet) {

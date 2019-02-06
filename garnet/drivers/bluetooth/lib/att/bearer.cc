@@ -733,7 +733,7 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
   ZX_DEBUG_ASSERT(is_open());
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
-  uint16_t length = sdu.length();
+  uint16_t length = sdu->size();
 
   // An ATT PDU should at least contain the opcode.
   if (length < sizeof(OpCode)) {
@@ -748,37 +748,29 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
     return;
   }
 
-  // The following will read the entire ATT PDU in a single call.
-  l2cap::SDU::Reader reader(&sdu);
-  reader.ReadNext(length, [this, length](const common::ByteBuffer& att_pdu) {
-    ZX_ASSERT(att_pdu.size() == length);
-    PacketReader packet(&att_pdu);
-
-    MethodType type = GetMethodType(packet.opcode());
-
-    switch (type) {
-      case MethodType::kResponse:
-        HandleEndTransaction(&request_queue_, packet);
-        break;
-      case MethodType::kConfirmation:
-        HandleEndTransaction(&indication_queue_, packet);
-        break;
-      case MethodType::kRequest:
-        HandleBeginTransaction(&remote_request_, packet);
-        break;
-      case MethodType::kIndication:
-        HandleBeginTransaction(&remote_indication_, packet);
-        break;
-      case MethodType::kNotification:
-      case MethodType::kCommand:
-        HandlePDUWithoutResponse(packet);
-        break;
-      default:
-        bt_log(TRACE, "att", "Unsupported opcode: %#.2x", packet.opcode());
-        SendErrorResponse(packet.opcode(), 0, ErrorCode::kRequestNotSupported);
-        break;
-    }
-  });
+  PacketReader packet(sdu.get());
+  switch (GetMethodType(packet.opcode())) {
+    case MethodType::kResponse:
+      HandleEndTransaction(&request_queue_, packet);
+      break;
+    case MethodType::kConfirmation:
+      HandleEndTransaction(&indication_queue_, packet);
+      break;
+    case MethodType::kRequest:
+      HandleBeginTransaction(&remote_request_, packet);
+      break;
+    case MethodType::kIndication:
+      HandleBeginTransaction(&remote_indication_, packet);
+      break;
+    case MethodType::kNotification:
+    case MethodType::kCommand:
+      HandlePDUWithoutResponse(packet);
+      break;
+    default:
+      bt_log(TRACE, "att", "Unsupported opcode: %#.2x", packet.opcode());
+      SendErrorResponse(packet.opcode(), 0, ErrorCode::kRequestNotSupported);
+      break;
+  }
 }
 
 }  // namespace att

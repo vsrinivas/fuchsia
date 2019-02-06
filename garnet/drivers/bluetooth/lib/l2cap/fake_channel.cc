@@ -31,13 +31,15 @@ void FakeChannel::Receive(const common::ByteBuffer& data) {
   ZX_DEBUG_ASSERT(!!rx_cb_ == !!dispatcher_);
 
   auto pdu = fragmenter_.BuildBasicFrame(id(), data);
+  auto sdu = std::make_unique<common::DynamicByteBuffer>(pdu.length());
+  pdu.Copy(sdu.get());
   if (dispatcher_) {
     async::PostTask(dispatcher_,
-                    [cb = rx_cb_.share(), pdu = std::move(pdu)]() mutable {
-                      cb(std::move(pdu));
+                    [cb = rx_cb_.share(), sdu = std::move(sdu)]() mutable {
+                      cb(std::move(sdu));
                     });
   } else {
-    pending_rx_sdus_.push(std::move(pdu));
+    pending_rx_sdus_.push(std::move(sdu));
   }
 }
 

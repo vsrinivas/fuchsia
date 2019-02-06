@@ -46,8 +46,8 @@ ServiceRecord MakeServiceDiscoveryService() {
   return sdp;
 }
 
-void SendErrorResponse(const fbl::RefPtr<l2cap::Channel>& chan,
-                       TransactionId tid, ErrorCode code) {
+void SendErrorResponse(l2cap::Channel* chan, TransactionId tid,
+                       ErrorCode code) {
   ErrorResponse response(code);
   chan->Send(response.GetPDU(0 /* ignored */, tid, BufferView()));
 }
@@ -369,7 +369,7 @@ void Server::OnChannelClosed(const hci::ConnectionHandle& handle) {
 
 void Server::OnRxBFrame(const hci::ConnectionHandle& handle,
                         const l2cap::SDU& sdu) {
-  uint16_t length = sdu.length();
+  uint16_t length = sdu->size();
   if (length < sizeof(Header)) {
     bt_log(TRACE, "sdp", "PDU too short; dropping");
     return;
@@ -380,82 +380,78 @@ void Server::OnRxBFrame(const hci::ConnectionHandle& handle,
     bt_log(TRACE, "sdp", "can't find peer to respond to; dropping");
     return;
   }
-  l2cap::SDU::Reader reader(&sdu);
 
-  reader.ReadNext(length, [this, length, chan = it->second.share()](
-                              const common::ByteBuffer& pdu) {
-    ZX_ASSERT(pdu.size() == length);
-    common::PacketView<Header> packet(&pdu);
-    TransactionId tid = betoh16(packet.header().tid);
-    uint16_t param_length = betoh16(packet.header().param_length);
+  l2cap::Channel* chan = it->second.get();
+  common::PacketView<Header> packet(sdu.get());
+  TransactionId tid = betoh16(packet.header().tid);
+  uint16_t param_length = betoh16(packet.header().param_length);
 
-    if (param_length != (pdu.size() - sizeof(Header))) {
-      bt_log(SPEW, "sdp", "request isn't the correct size (%d != %d)",
-             param_length, pdu.size() - sizeof(Header));
-      SendErrorResponse(chan, tid, ErrorCode::kInvalidSize);
+  if (param_length != (sdu->size() - sizeof(Header))) {
+    bt_log(SPEW, "sdp", "request isn't the correct size (%d != %d)",
+           param_length, sdu->size() - sizeof(Header));
+    SendErrorResponse(chan, tid, ErrorCode::kInvalidSize);
+    return;
+  }
+
+  packet.Resize(param_length);
+
+  switch (packet.header().pdu_id) {
+    case kServiceSearchRequest: {
+      ServiceSearchRequest request(packet.payload_data());
+      if (!request.valid()) {
+        bt_log(TRACE, "sdp", "ServiceSearchRequest not valid");
+        SendErrorResponse(chan, tid, ErrorCode::kInvalidRequestSyntax);
+        return;
+      }
+      auto resp = SearchServices(request.service_search_pattern());
+      chan->Send(
+          resp.GetPDU(request.max_service_record_count(), tid, BufferView()));
       return;
     }
-
-    packet.Resize(param_length);
-
-    switch (packet.header().pdu_id) {
-      case kServiceSearchRequest: {
-        ServiceSearchRequest request(packet.payload_data());
-        if (!request.valid()) {
-          bt_log(TRACE, "sdp", "ServiceSearchRequest not valid");
-          SendErrorResponse(chan, tid, ErrorCode::kInvalidRequestSyntax);
-          return;
-        }
-        auto resp = SearchServices(request.service_search_pattern());
-        chan->Send(
-            resp.GetPDU(request.max_service_record_count(), tid, BufferView()));
-        return;
-      }
-      case kServiceAttributeRequest: {
-        ServiceAttributeRequest request(packet.payload_data());
-        if (!request.valid()) {
-          bt_log(SPEW, "sdp", "ServiceAttributeRequest not valid");
-          SendErrorResponse(chan, tid, ErrorCode::kInvalidRequestSyntax);
-          return;
-        }
-        auto handle = request.service_record_handle();
-        if (records_.find(handle) == records_.end()) {
-          bt_log(SPEW, "sdp", "ServiceAttributeRequest can't find handle %#.8x",
-                 handle);
-          SendErrorResponse(chan, tid, ErrorCode::kInvalidRecordHandle);
-          return;
-        }
-        auto resp = GetServiceAttributes(handle, request.attribute_ranges());
-
-        chan->Send(resp.GetPDU(request.max_attribute_byte_count(), tid,
-                               request.ContinuationState()));
-        return;
-      }
-      case kServiceSearchAttributeRequest: {
-        ServiceSearchAttributeRequest request(packet.payload_data());
-        if (!request.valid()) {
-          bt_log(SPEW, "sdp", "ServiceSearchAttributeRequest not valid");
-          SendErrorResponse(chan, tid, ErrorCode::kInvalidRequestSyntax);
-          return;
-        }
-        auto resp = SearchAllServiceAttributes(request.service_search_pattern(),
-                                               request.attribute_ranges());
-        chan->Send(resp.GetPDU(request.max_attribute_byte_count(), tid,
-                               request.ContinuationState()));
-        return;
-      }
-      case kErrorResponse: {
-        bt_log(SPEW, "sdp", "ErrorResponse isn't allowed as a request");
+    case kServiceAttributeRequest: {
+      ServiceAttributeRequest request(packet.payload_data());
+      if (!request.valid()) {
+        bt_log(SPEW, "sdp", "ServiceAttributeRequest not valid");
         SendErrorResponse(chan, tid, ErrorCode::kInvalidRequestSyntax);
         return;
       }
-      default: {
-        bt_log(SPEW, "sdp", "unhandled request, returning InvalidRequest");
-        SendErrorResponse(chan, tid, ErrorCode::kInvalidRequestSyntax);
+      auto handle = request.service_record_handle();
+      if (records_.find(handle) == records_.end()) {
+        bt_log(SPEW, "sdp", "ServiceAttributeRequest can't find handle %#.8x",
+               handle);
+        SendErrorResponse(chan, tid, ErrorCode::kInvalidRecordHandle);
         return;
       }
+      auto resp = GetServiceAttributes(handle, request.attribute_ranges());
+
+      chan->Send(resp.GetPDU(request.max_attribute_byte_count(), tid,
+                             request.ContinuationState()));
+      return;
     }
-  });
+    case kServiceSearchAttributeRequest: {
+      ServiceSearchAttributeRequest request(packet.payload_data());
+      if (!request.valid()) {
+        bt_log(SPEW, "sdp", "ServiceSearchAttributeRequest not valid");
+        SendErrorResponse(chan, tid, ErrorCode::kInvalidRequestSyntax);
+        return;
+      }
+      auto resp = SearchAllServiceAttributes(request.service_search_pattern(),
+                                             request.attribute_ranges());
+      chan->Send(resp.GetPDU(request.max_attribute_byte_count(), tid,
+                             request.ContinuationState()));
+      return;
+    }
+    case kErrorResponse: {
+      bt_log(SPEW, "sdp", "ErrorResponse isn't allowed as a request");
+      SendErrorResponse(chan, tid, ErrorCode::kInvalidRequestSyntax);
+      return;
+    }
+    default: {
+      bt_log(SPEW, "sdp", "unhandled request, returning InvalidRequest");
+      SendErrorResponse(chan, tid, ErrorCode::kInvalidRequestSyntax);
+      return;
+    }
+  }
 }
 
 }  // namespace sdp

@@ -644,7 +644,7 @@ void Bearer::OnChannelClosed() {
 }
 
 void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
-  uint8_t length = sdu.length();
+  uint8_t length = sdu->size();
   if (length < sizeof(Code)) {
     bt_log(TRACE, "sm", "PDU too short!");
     Abort(ErrorCode::kInvalidParameters);
@@ -657,54 +657,49 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
     return;
   }
 
-  // The following will read the entire PDU in a single call.
-  l2cap::SDU::Reader l2cap_reader(&sdu);
-  l2cap_reader.ReadNext(length, [this, length](const ByteBuffer& sm_pdu) {
-    ZX_DEBUG_ASSERT(sm_pdu.size() == length);
-    PacketReader reader(&sm_pdu);
+  PacketReader reader(sdu.get());
 
-    switch (reader.code()) {
-      case kPairingFailed:
-        OnPairingFailed(reader);
-        break;
-      case kPairingRequest:
-        OnPairingRequest(reader);
-        break;
-      case kPairingResponse:
-        OnPairingResponse(reader);
-        break;
-      case kPairingConfirm:
-        OnPairingConfirm(reader);
-        break;
-      case kPairingRandom:
-        OnPairingRandom(reader);
-        break;
-      case kEncryptionInformation:
-        OnEncryptionInformation(reader);
-        break;
-      case kMasterIdentification:
-        OnMasterIdentification(reader);
-        break;
-      case kIdentityInformation:
-        OnIdentityInformation(reader);
-        break;
-      case kIdentityAddressInformation:
-        OnIdentityAddressInformation(reader);
-        break;
-      case kSecurityRequest:
-        OnSecurityRequest(reader);
-        break;
-      default:
-        bt_log(SPEW, "sm", "unsupported command: %#.2x", reader.code());
-        auto ecode = ErrorCode::kCommandNotSupported;
-        if (pairing_started()) {
-          Abort(ecode);
-        } else {
-          SendPairingFailed(ecode);
-        }
-        break;
-    }
-  });
+  switch (reader.code()) {
+    case kPairingFailed:
+      OnPairingFailed(reader);
+      break;
+    case kPairingRequest:
+      OnPairingRequest(reader);
+      break;
+    case kPairingResponse:
+      OnPairingResponse(reader);
+      break;
+    case kPairingConfirm:
+      OnPairingConfirm(reader);
+      break;
+    case kPairingRandom:
+      OnPairingRandom(reader);
+      break;
+    case kEncryptionInformation:
+      OnEncryptionInformation(reader);
+      break;
+    case kMasterIdentification:
+      OnMasterIdentification(reader);
+      break;
+    case kIdentityInformation:
+      OnIdentityInformation(reader);
+      break;
+    case kIdentityAddressInformation:
+      OnIdentityAddressInformation(reader);
+      break;
+    case kSecurityRequest:
+      OnSecurityRequest(reader);
+      break;
+    default:
+      bt_log(SPEW, "sm", "unsupported command: %#.2x", reader.code());
+      auto ecode = ErrorCode::kCommandNotSupported;
+      if (pairing_started()) {
+        Abort(ecode);
+      } else {
+        SendPairingFailed(ecode);
+      }
+      break;
+  }
 }
 
 }  // namespace sm

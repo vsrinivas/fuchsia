@@ -49,13 +49,11 @@ class TestSignalingChannel : public SignalingChannel {
 
   // SignalingChannel overrides
   void DecodeRxUnit(const SDU& sdu, const SignalingPacketHandler& cb) override {
-    SDU::Reader sdu_reader(&sdu);
-
-    // Callback dumbly re-casts read data as a command packet and forwards it to
-    // the dispatch function.
-    sdu_reader.ReadNext(sdu.length(), [&cb](const common::ByteBuffer& data) {
-      cb(SignalingPacket(&data, data.size() - sizeof(CommandHeader)));
-    });
+    if (sdu->size()) {
+      cb(SignalingPacket(sdu.get(), sdu->size() - sizeof(CommandHeader)));
+    } else {
+      // Silently drop the packet. See documentation in signaling_channel.h.
+    }
   }
 
   bool HandlePacket(const SignalingPacket& packet) override {

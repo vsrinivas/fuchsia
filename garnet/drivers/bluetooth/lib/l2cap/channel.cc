@@ -42,9 +42,13 @@ ChannelImpl::ChannelImpl(ChannelId id, ChannelId remote_id,
     : Channel(id, remote_id, link->type(), link->handle()),
       active_(false),
       dispatcher_(nullptr),
-      link_(link),
-      pending_rx_sdus_(std::move(buffered_pdus)) {
+      link_(link) {
   ZX_DEBUG_ASSERT(link_);
+  for (const auto& pdu : buffered_pdus) {
+    auto sdu = std::make_unique<common::DynamicByteBuffer>(pdu.length());
+    pdu.Copy(sdu.get());
+    pending_rx_sdus_.push(std::move(sdu));
+  }
 }
 
 const sm::SecurityProperties ChannelImpl::security() {
@@ -223,14 +227,16 @@ void ChannelImpl::HandleRxPdu(PDU&& pdu) {
     ZX_DEBUG_ASSERT(link_);
 
     // Buffer the packets if the channel hasn't been activated.
+    auto sdu = std::make_unique<common::DynamicByteBuffer>(pdu.length());
+    pdu.Copy(sdu.get());
     if (!active_) {
-      pending_rx_sdus_.emplace(std::forward<PDU>(pdu));
+      pending_rx_sdus_.emplace(std::move(sdu));
       return;
     }
 
     dispatcher = dispatcher_;
-    task = [func = rx_cb_.share(), pdu = std::move(pdu)]() mutable {
-      func(std::move(pdu));
+    task = [func = rx_cb_.share(), sdu = std::move(sdu)]() mutable {
+      func(std::move(sdu));
     };
 
     ZX_DEBUG_ASSERT(rx_cb_);

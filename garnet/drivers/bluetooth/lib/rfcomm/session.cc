@@ -234,87 +234,83 @@ void Session::OpenRemoteChannel(ServerChannel server_channel,
 }
 
 void Session::RxCallback(const l2cap::SDU& sdu) {
-  l2cap::PDU::Reader reader(&sdu);
-  reader.ReadNext(sdu.length(), [&](const common::ByteBuffer& buffer) {
-    auto frame = Frame::Parse(credit_based_flow_, OppositeRole(role_), buffer);
-    if (!frame) {
-      bt_log(ERROR, "rfcomm", "could not parse frame");
+  auto frame = Frame::Parse(credit_based_flow_, OppositeRole(role_), *sdu);
+  if (!frame) {
+    bt_log(ERROR, "rfcomm", "could not parse frame");
+    return;
+  }
+
+  DLCI dlci = frame->dlci();
+
+  switch ((FrameType)frame->control()) {
+    case FrameType::kSetAsynchronousBalancedMode:
+      HandleSABM(dlci);
+      return;
+
+    case FrameType::kUnnumberedAcknowledgement:
+    case FrameType::kDisconnectedMode: {
+      auto callbacks_it = outstanding_frames_.find(dlci);
+      if (callbacks_it == outstanding_frames_.end()) {
+        bt_log(TRACE, "rfcomm", "unsolicited UA or DM frame");
+        return;
+      }
+
+      // Cancel the timeout and run the callback.
+      callbacks_it->second.second->Cancel();
+      async::PostTask(dispatcher_,
+                      [cb = std::move(callbacks_it->second.first),
+                       fr = std::move(frame)]() mutable { cb(std::move(fr)); });
+
+      outstanding_frames_.erase(dlci);
+
       return;
     }
 
-    DLCI dlci = frame->dlci();
-
-    switch ((FrameType)frame->control()) {
-      case FrameType::kSetAsynchronousBalancedMode:
-        HandleSABM(dlci);
+    case FrameType::kUnnumberedInfoHeaderCheck: {
+      if (dlci == kMuxControlDLCI) {
+        HandleMuxCommand(frame->AsMuxCommandFrame()->TakeMuxCommand());
         return;
-
-      case FrameType::kUnnumberedAcknowledgement:
-      case FrameType::kDisconnectedMode: {
-        auto callbacks_it = outstanding_frames_.find(dlci);
-        if (callbacks_it == outstanding_frames_.end()) {
-          bt_log(TRACE, "rfcomm", "unsolicited UA or DM frame");
+      } else if (IsUserDLCI(dlci)) {
+        auto chan = GetChannel(dlci);
+        if (!chan) {
+          bt_log(WARN, "rfcomm", "data received for unopened DLCI %u", dlci);
           return;
         }
 
-        // Cancel the timeout and run the callback.
-        callbacks_it->second.second->Cancel();
-        async::PostTask(
-            dispatcher_,
-            [cb = std::move(callbacks_it->second.first),
-             fr = std::move(frame)]() mutable { cb(std::move(fr)); });
+        auto* data_frame = frame->AsUserDataFrame();
+        // TODO(gusss): Currently, our UIH frames can bear credits, but it
+        // only makes sense for UserDataFrames to bear credits (because you
+        // don't send credits along the mux control channel). Should change
+        // this in frames.[h,cc].
+        if (credit_based_flow_) {
+          HandleReceivedCredits(dlci, data_frame->credits());
+          if (CreditsApply(*frame)) {
+            // Reduce their number of credits if it should be reduced.
+            if (frame->length() > 0) {
+              chan->remote_credits_--;
+            }
 
-        outstanding_frames_.erase(dlci);
-
-        return;
-      }
-
-      case FrameType::kUnnumberedInfoHeaderCheck: {
-        if (dlci == kMuxControlDLCI) {
-          HandleMuxCommand(frame->AsMuxCommandFrame()->TakeMuxCommand());
-          return;
-        } else if (IsUserDLCI(dlci)) {
-          auto chan = GetChannel(dlci);
-          if (!chan) {
-            bt_log(WARN, "rfcomm", "data received for unopened DLCI %u", dlci);
-            return;
-          }
-
-          auto* data_frame = frame->AsUserDataFrame();
-          // TODO(gusss): Currently, our UIH frames can bear credits, but it
-          // only makes sense for UserDataFrames to bear credits (because you
-          // don't send credits along the mux control channel). Should change
-          // this in frames.[h,cc].
-          if (credit_based_flow_) {
-            HandleReceivedCredits(dlci, data_frame->credits());
-            if (CreditsApply(*frame)) {
-              // Reduce their number of credits if it should be reduced.
-              if (frame->length() > 0) {
-                chan->remote_credits_--;
-              }
-
-              if (chan->remote_credits_ <= kLowWaterMark) {
-                // Replenish the remote's credits by sending an empty user data
-                // frame, which will attach the max amount of credits.
-                SendUserData(dlci, nullptr);
-              }
+            if (chan->remote_credits_ <= kLowWaterMark) {
+              // Replenish the remote's credits by sending an empty user data
+              // frame, which will attach the max amount of credits.
+              SendUserData(dlci, nullptr);
             }
           }
-
-          chan->Receive(data_frame->TakeInformation());
-          return;
-        } else {
-          bt_log(WARN, "rfcomm", "UIH frame on invalid DLCI %u", dlci);
         }
-      }
 
-      default:
-        // TODO(gusss): implement better error handling here.
-        bt_log(WARN, "rfcomm", "unrecognized frame type received: %u",
-               frame->control());
+        chan->Receive(data_frame->TakeInformation());
         return;
+      } else {
+        bt_log(WARN, "rfcomm", "UIH frame on invalid DLCI %u", dlci);
+      }
     }
-  });
+
+    default:
+      // TODO(gusss): implement better error handling here.
+      bt_log(WARN, "rfcomm", "unrecognized frame type received: %u",
+             frame->control());
+      return;
+  }
 }
 
 void Session::ClosedCallback() { Closedown(); }
