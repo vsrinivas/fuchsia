@@ -1,0 +1,75 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+static_library("lib") {
+  friend = [ ":tests" ]
+
+  public = [
+    "library_loader.h",
+    "wire_parser.h",
+  ]
+
+  sources = [
+    "library_loader.cc",
+    "wire_parser.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/fidl",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+  sources = [
+    "library_loader_test.cc",
+    "wire_parser_test.cc",
+  ]
+
+  deps = [
+    ":fidl",
+    ":json_for_test",
+    ":lib",
+    "//sdk/lib/fidl/cpp:test_support",
+    "//sdk/lib/fidl/cpp/test",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+action("json_for_test") {
+  deps = [
+    ":fidl($fidl_toolchain)",
+    "//sdk/lib/fidl/cpp/test:frobinator",
+    "//zircon/public/fidl/fuchsia-io",
+  ]
+  outputs = [
+    "$target_gen_dir/library_loader_test_data.h",
+  ]
+  script = "generate_test_includes.sh"
+  args = [
+    rebase_path(target_gen_dir, root_build_dir) + "/library_loader_test_data.h",
+    rebase_path(root_build_dir) +
+        "/fidling/gen/sdk/lib/fidl/cpp/test/frobinator.fidl.json",
+    rebase_path(root_build_dir) +
+        "/fidling/gen/zircon/public/fidl/fuchsia-io/fuchsia-io.fidl.json",
+    rebase_path(root_build_dir) +
+        "/fidling/gen/garnet/bin/fidlcat/lib/fidl.fidl.json",
+  ]
+}
+
+fidl("fidl") {
+  name = "test.fidlcat.examples"
+
+  sources = [
+    "testdata/empty.fidl.test",
+    "testdata/types.fidl.test",
+  ]
+}

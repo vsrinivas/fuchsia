@@ -1,0 +1,54 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_executable.gni")
+import("//build/host.gni")
+import("//build/package.gni")
+
+# Not a thing yet.
+# if (current_toolchain == host_toolchain) {
+#   sdk_executable("fidlcat") {
+#     category = "partner"
+
+#     sources = [
+#       "main.cc",
+#     ]
+#     deps = [
+#       "//garnet/bin/zxdb/client",
+#       "//garnet/bin/zxdb/common",
+#       "//garnet/bin/zxdb/console",
+#       "//garnet/lib/debug_ipc:client",
+#       "//garnet/public/lib/fxl",
+#     ]
+#   }
+# }
+
+executable("fidlcat_lib_tests") {
+  testonly = true
+  output_name = "fidlcat_lib_tests"
+  sources = []
+  deps = [
+    "//garnet/bin/fidlcat/lib:tests",
+  ]
+}
+
+package("fidlcat_tests") {
+  testonly = true
+  deps = [
+    ":fidlcat_lib_tests",
+  ]
+  tests = [
+    {
+      name = "fidlcat_lib_tests"
+    },
+  ]
+}
+# install_host_tools("fidlcat_host") {
+#   deps = [
+#     ":fidlcat",
+#   ]
+#   outputs = [
+#     "fidlcat",
+#   ]
+# }

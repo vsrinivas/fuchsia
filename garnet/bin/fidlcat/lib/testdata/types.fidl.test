@@ -1,0 +1,55 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.fidlcat.examples;
+
+interface this_is_an_interface {
+    String(string s);
+    Bool(bool b);
+    Int8(int8 i8);
+    Int16(int16 i16);
+    Int32(int32 i32);
+    Int64(int64 i64);
+    Uint8(uint8 i8);
+    Uint16(uint16 i16);
+    Uint32(uint32 i32);
+    Uint64(uint64 i64);
+    Float32(float32 f32);
+    Float64(float64 f64);
+    Struct(primitive_types p);
+    Array1(array<int32>:1 b_1);
+    Array2(array<int32>:2 b_2);
+    Vector(vector<int32>? v_1);
+    DefaultEnum(default_enum ev);
+    I8Enum(i8_enum ev);
+    I16Enum(i16_enum ev);
+
+    Complex(int32 real, int32 imaginary);
+};
+
+struct primitive_types {
+    bool b;
+    int8 i8;
+    int16 i16;
+    int32 i32;
+    int64 i64;
+    uint8 u8;
+    uint16 u16;
+    uint32 u32;
+    uint64 u64;
+    float32 f32;
+    float64 f64;
+};
+
+enum default_enum {
+    x = 23;
+};
+
+enum i8_enum : int8 {
+    x = -23;
+};
+
+enum i16_enum : int16 {
+    x = -23;
+};
