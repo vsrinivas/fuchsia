@@ -32,18 +32,85 @@ pub struct Player {
     playing: bool,
 }
 
+#[derive(Debug, PartialEq)]
+enum ChannelMode {
+    Mono,
+    DualChannel,
+    Stereo,
+    JointStereo,
+}
+
+impl From<u8> for ChannelMode {
+    fn from(bits: u8) -> Self {
+        match bits {
+            0 => ChannelMode::Mono,
+            1 => ChannelMode::DualChannel,
+            2 => ChannelMode::Stereo,
+            3 => ChannelMode::JointStereo,
+            _ => panic!("invalid channel mode"),
+        }
+    }
+}
+
 bitfield! {
     pub struct SbcHeader(u32);
     impl Debug;
     u8;
     syncword, _: 7, 0;
-    sampling_frequency, _: 9, 8;
-    blocks, _: 11, 10;
-    channel_mode, _: 13, 12;
-    allocation_method, _: 14;
-    subbands, _: 15;
-    bitpool, _: 23, 16;
+    subbands, _: 8;
+    allocation_method, _: 9;
+    into ChannelMode, channel_mode, _: 11, 10;
+    blocks_bits, _: 13, 12;
+    frequency_bits, _: 15, 14;
+    bitpool_bits, _: 23, 16;
     crccheck, _: 31, 24;
+}
+
+impl SbcHeader {
+    /// The number of channels, based on the channel mode in the header.
+    /// From Table 12.18 in the A2DP Spec.
+    fn channels(&self) -> usize {
+        match self.channel_mode() {
+            ChannelMode::Mono => 1,
+            _ => 2,
+        }
+    }
+
+    fn has_syncword(&self) -> bool {
+        const SBC_SYNCWORD: u8 = 0x9c;
+        self.syncword() == SBC_SYNCWORD
+    }
+
+    /// The number of blocks, based on tbe bits in the header.
+    /// From Table 12.17 in the A2DP Spec.
+    fn blocks(&self) -> usize {
+        4 * (self.blocks_bits() + 1) as usize
+    }
+
+    fn bitpool(&self) -> usize {
+        self.bitpool_bits() as usize
+    }
+
+    /// Number of subbands based on the header bit.
+    /// From Table 12.20 in the A2DP Spec.
+    fn num_subbands(&self) -> usize {
+        if self.subbands() { 8 } else { 4 }
+    }
+
+    /// Calculates the frame length.
+    /// Formula from Section 12.9 of the A2DP Spec.
+    fn frame_length(&self) -> Result<usize, Error> {
+        if !self.has_syncword() {
+            return Err(format_err!("syncword does not match"));
+        }
+        let len = 4 + (4 * self.num_subbands() * self.channels()) / 8;
+        let rest = (match self.channel_mode() {
+            ChannelMode::Mono | ChannelMode::DualChannel => self.blocks() * self.channels() * self.bitpool(),
+            ChannelMode::Stereo => self.blocks() * self.bitpool(),
+            ChannelMode::JointStereo => self.num_subbands() + (self.blocks() * self.bitpool()),
+        } as f64 / 8.0).ceil() as usize;
+        Ok(len + rest)
+    }
 }
 
 impl Player {
@@ -135,29 +202,10 @@ impl Player {
     /// Given a buffer with an SBC frame at the start, find the length of the
     /// SBC frame.
     fn find_sbc_frame_len(buf: &[u8]) -> Result<usize, Error> {
-        const SBC_SYNCWORD: u8 = 0x9c;
-        if buf[0] != SBC_SYNCWORD {
-            return Err(format_err!("SBC frame syncword not found"));
-        }
         if buf.len() < 4 {
             return Err(format_err!("Buffer too short for header"));
         }
-        let head = SbcHeader(Player::as_u32_le(&buf[0..4]));
-        let subbands: usize = match head.subbands() {
-            false => 4,
-            true => 8,
-        };
-        let channels: usize = match head.channel_mode() {
-            0 => 1,
-            _ => 2,
-        };
-        let blocks: usize = (head.blocks() as usize + 1) * 4;
-        let bitpool: usize = head.bitpool() as usize;
-        let joint = 1; // should be 0 if stereo instead
-        let stereo_frame_length: usize = 4
-            + (4 * subbands * channels as usize) / 8 as usize
-            + ((joint * subbands + blocks * bitpool) as f64 / 8.0).ceil() as usize;
-        Ok(stereo_frame_length)
+        SbcHeader(Player::as_u32_le(&buf[0..4])).frame_length()
     }
 
     /// Accepts a payload which may contain multiple frames and breaks it into
@@ -239,14 +287,37 @@ mod tests {
 
     #[test]
     fn test_frame_length() {
-        assert_eq!(
-            119,
-            Player::find_sbc_frame_len(&[156, 189, 53, 102]).unwrap()
+        // 44.1, 16 blocks, Joint Stereo, Loudness, 8 subbands, 53 bitpool (Android P)
+        let header1 = [0x9c, 0xBD, 0x35, 0xA2];
+        const HEADER1_FRAMELEN: usize = 119;
+        let head = SbcHeader(Player::as_u32_le(&header1));
+        assert!(head.has_syncword());
+        assert_eq!(16, head.blocks());
+        assert_eq!(ChannelMode::JointStereo, head.channel_mode());
+        assert_eq!(2, head.channels());
+        assert_eq!(53, head.bitpool());
+        assert_eq!(HEADER1_FRAMELEN, head.frame_length().unwrap());
+        assert_eq!(HEADER1_FRAMELEN,
+            Player::find_sbc_frame_len(&[0x9c, 0xBD, 0x35, 0xA2]).unwrap()
+        );
+
+        // 44.1, 16 blocks, Stereo, Loudness, 8 subbands, 53 bitpool (OS X)
+        let header2 = [0x9c, 0xB9, 0x35, 0xA2];
+        const HEADER2_FRAMELEN: usize = 118;
+        let head = SbcHeader(Player::as_u32_le(&header2));
+        assert!(head.has_syncword());
+        assert_eq!(16, head.blocks());
+        assert_eq!(ChannelMode::Stereo, head.channel_mode());
+        assert_eq!(2, head.channels());
+        assert_eq!(53, head.bitpool());
+        assert_eq!(HEADER2_FRAMELEN, head.frame_length().unwrap());
+        assert_eq!(HEADER2_FRAMELEN,
+            Player::find_sbc_frame_len(&header2).unwrap()
         );
     }
 
     #[test]
-    #[should_panic(expected = "should have paniced on not enough data")]
+    #[should_panic(expected = "out of bounds")]
     fn test_as_u32_le_len() {
         let _ = Player::as_u32_le(&[0, 1, 2]);
     }
