@@ -609,22 +609,42 @@ extern {
         ) -> zx_status_t;
 
     pub fn zx_interrupt_create(
-        handle: zx_handle_t,
-        vector: u32,
+        src_obj: zx_handle_t,
+        src_num: u32,
         options: u32,
         out_handle: *mut zx_handle_t
         ) -> zx_status_t;
 
-    pub fn zx_interrupt_complete(
-        handle: zx_handle_t
+    pub fn zx_interrupt_bind(
+        handle: zx_handle_t,
+        port_handle: zx_handle_t,
+        key: u64,
+        options: u32
         ) -> zx_status_t;
 
     pub fn zx_interrupt_wait(
+        handle: zx_handle_t,
+        out_timestamp: *mut zx_time_t
+        ) -> zx_status_t;
+
+    pub fn zx_interrupt_destroy(
         handle: zx_handle_t
         ) -> zx_status_t;
 
-    pub fn zx_interrupt_signal(
+    pub fn zx_interrupt_ack(
         handle: zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_interrupt_trigger(
+        handle: zx_handle_t,
+        options: u32,
+        timestamp: zx_time_t
+        ) -> zx_status_t;
+
+    pub fn zx_interrupt_bind_vcpu(
+        handle: zx_handle_t,
+        vcpu: zx_handle_t,
+        options: u32
         ) -> zx_status_t;
 
     pub fn zx_vmo_create_contiguous(
