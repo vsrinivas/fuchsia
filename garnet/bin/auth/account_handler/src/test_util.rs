@@ -6,8 +6,15 @@
 //! modules within the crate.
 
 use account_common::{LocalAccountId, LocalPersonaId};
+use fidl::endpoints::{ClientEnd, create_endpoints};
 use fidl_fuchsia_auth::AppConfig;
+use fidl_fuchsia_auth_account_internal::{
+    AccountHandlerContextMarker, AccountHandlerContextRequest, AccountHandlerContextRequestStream,
+};
+use fuchsia_async as fasync;
+use futures::prelude::*;
 use lazy_static::lazy_static;
+use log::error;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
@@ -48,5 +55,75 @@ impl TempLocation {
     /// Returns a path to a test file inside the temporary location. The file name is static.
     pub fn test_file(&self) -> PathBuf {
         self.path.join("testfile")
+    }
+}
+
+/// A fake meant for tests which rely on an AccountHandlerContext, but the context itself
+/// isn't under test. As opposed to the real type, this doesn't depend on any other
+/// components. Panics when getting unexpected messages or args, as defined by the implementation.
+pub struct FakeAccountHandlerContext {
+    account_dir_parent: String,
+}
+
+impl FakeAccountHandlerContext {
+    /// Creates new fake account handler context
+    pub fn new(account_dir_parent: &str) -> Self {
+        Self {
+            account_dir_parent: account_dir_parent.to_string(),
+        }
+    }
+
+    /// Asynchronously handles the supplied stream of `AccountHandlerContextRequest` messages.
+    pub async fn handle_requests_from_stream(
+        &self, mut stream: AccountHandlerContextRequestStream,
+    ) -> Result<(), fidl::Error> {
+        while let Some(req) = await!(stream.try_next())? {
+            await!(self.handle_request(req))?;
+        }
+        Ok(())
+    }
+
+    /// Asynchronously handles a single `AccountHandlerContextRequest`.
+    async fn handle_request(&self, req: AccountHandlerContextRequest) -> Result<(), fidl::Error> {
+        match req {
+            AccountHandlerContextRequest::GetAccountDirParent { responder } => {
+                responder.send(&self.account_dir_parent)
+            }
+            _ => panic!("Not implemented"),
+        }
+    }
+}
+
+/// Creates a new `AccountHandlerContext` channel, spawns a task to handle requests received on
+/// this channel using the supplied `FakeAccountHandlerContext`, and returns the `ClientEnd`.
+pub fn spawn_context_channel(
+    context: FakeAccountHandlerContext,
+) -> ClientEnd<AccountHandlerContextMarker> {
+    let (client_end, server_end) = create_endpoints().unwrap();
+    let request_stream = server_end.into_stream().unwrap();
+    fasync::spawn(
+        async move {
+            await!(context.handle_requests_from_stream(request_stream))
+                .unwrap_or_else(|err| error!("Error handling FakeAccountHandlerContext: {:?}", err))
+        },
+    );
+    client_end
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_DIR: &str = "/some/dir";
+
+    #[test]
+    fn test_context_fake() {
+        let mut executor = fasync::Executor::new().expect("Failed to create executor");
+        let fake_context = FakeAccountHandlerContext::new(TEST_DIR);
+        let client_end = spawn_context_channel(fake_context);
+        let proxy = client_end.into_proxy().unwrap();
+        let dir_future = proxy.get_account_dir_parent();
+        let dir = executor.run_singlethreaded(dir_future).unwrap();
+        assert_eq!(dir, TEST_DIR);
     }
 }
