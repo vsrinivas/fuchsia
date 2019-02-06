@@ -273,7 +273,7 @@ class PacketQueue {
     }
 
     void Enqueue(PacketPtr packet) {
-        ZX_DEBUG_ASSERT(packet.get() != nullptr);
+        ZX_DEBUG_ASSERT(packet != nullptr);
         queue_.push_front(std::move(packet));
         size_++;
     }
@@ -285,17 +285,11 @@ class PacketQueue {
 
     PacketPtr Dequeue() {
         auto packet = queue_.pop_back();
-        if (packet.get()) size_--;
+        if (packet) { size_--; }
         return packet;
     }
 
-    PacketQueue Drain() {
-        fbl::DoublyLinkedList<PacketPtr> ret{};
-        queue_.swap(ret);
-        size_t size = size_;
-        size_ = 0;
-        return {std::move(ret), size};
-    }
+    PacketQueue Drain() { return {std::move(queue_), std::exchange(size_, 0)}; }
 
    private:
     PacketQueue(fbl::DoublyLinkedList<PacketPtr>&& queue, size_t size)
