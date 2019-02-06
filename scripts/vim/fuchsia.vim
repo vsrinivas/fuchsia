@@ -6,7 +6,7 @@
 " .jiri_manifest file
 let jiri_manifest = findfile(".jiri_manifest", ".;")
 if jiri_manifest != ""
-  let g:fuchsia_dir = fnamemodify(jiri_manifest, ":h")
+  let g:fuchsia_dir = fnamemodify(jiri_manifest, ":h:p")
   " Get the current build dir from fx
   let g:fuchsia_build_dir = systemlist(g:fuchsia_dir . "/scripts/fx get-build-dir")[0]
   " Get the current buildtools dir from paths.py
