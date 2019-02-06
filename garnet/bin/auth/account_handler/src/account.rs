@@ -20,7 +20,7 @@ use fidl_fuchsia_auth::{
 use fidl_fuchsia_auth_account::{
     AccountRequest, AccountRequestStream, AuthListenerMarker, PersonaMarker, Status,
 };
-use fidl_fuchsia_auth_account_internal::AccountHandlerContextMarker;
+use fidl_fuchsia_auth_account_internal::{AccountHandlerContextProxy};
 use fuchsia_async as fasync;
 use futures::prelude::*;
 use log::{error, warn};
@@ -55,6 +55,10 @@ pub struct Account {
     /// A device-local identifier for this account.
     id: LocalAccountId,
 
+    /// A directory containing data about the Fuchsia account. It is exclusively created, modified
+    /// and deleted by the Account only. Its parent directory must exist.
+    account_dir: PathBuf,
+
     /// The default persona for this account.
     default_persona: Arc<Persona>,
     // TODO(jsankey): Once the system and API surface can support more than a single persona, add
@@ -72,15 +76,16 @@ impl Account {
     /// Manually construct an account object, shouldn't normally be called directly.
     fn new(
         account_id: LocalAccountId, persona_id: LocalPersonaId, account_dir: &Path,
-        context: ClientEnd<AccountHandlerContextMarker>,
+        context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
         let token_db_path = account_dir.join(TOKEN_DB);
         let token_manager = Arc::new(
-            TokenManager::new(&token_db_path, AuthProviderSupplier::new(context)?)
+            TokenManager::new(&token_db_path, AuthProviderSupplier::new(context_proxy))
                 .account_manager_status(Status::UnknownError)?,
         );
         Ok(Self {
             id: account_id.clone(),
+            account_dir: account_dir.to_owned(),
             default_persona: Arc::new(Persona::new(persona_id, account_id, token_manager)),
         })
     }
@@ -88,30 +93,50 @@ impl Account {
     /// Creates a new Fuchsia account and persist it on disk.
     pub fn create(
         account_id: LocalAccountId, account_dir: &Path,
-        context: ClientEnd<AccountHandlerContextMarker>,
+        context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
         fs::create_dir(account_dir).map_err(|err| {
             warn!("Failed to create account dir: {:?}", err);
             AccountManagerError::new(Status::IoError).with_cause(err)
         })?;
+
         let local_persona_id = LocalPersonaId::new(rand::random::<u64>());
         let stored_account = StoredAccount::new(local_persona_id.clone());
-        stored_account.save(account_dir)?;
-        Self::new(account_id, local_persona_id, account_dir, context)
+        match stored_account.save(account_dir) {
+            Ok(_) => Self::new(account_id, local_persona_id, account_dir, context_proxy),
+            Err(err) => {
+                warn!("Failed to initialize new Account: {:?}", err);
+                if let Err(err) = fs::remove_dir(account_dir) {
+                    warn!("and failed to remove redundant dir: {:?}", err);
+                }
+                Err(err)
+            }
+        }
     }
 
     /// Loads an existing Fuchsia account from disk.
     pub fn load(
         account_id: LocalAccountId, account_dir: &Path,
-        context: ClientEnd<AccountHandlerContextMarker>,
+        context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
+        if !account_dir.exists() {
+            return Err(AccountManagerError::new(Status::NotFound))
+        };
         let stored_account = StoredAccount::load(account_dir)?;
         Self::new(
             account_id,
             stored_account.default_persona_id,
             account_dir,
-            context,
+            context_proxy,
         )
+    }
+
+    /// Removes the account from disk.
+    pub fn remove(&self) -> Result<(), AccountManagerError> {
+        fs::remove_dir_all(&self.account_dir).map_err(|err| {
+            warn!("Failed to delete account dir: {:?}", err);
+            AccountManagerError::new(Status::IoError).with_cause(err)
+        })
     }
 
     /// A device-local identifier for this account
@@ -323,6 +348,7 @@ mod tests {
     use fidl::endpoints::create_endpoints;
     use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
     use fidl_fuchsia_auth_account::{AccountMarker, AccountProxy};
+    use fidl_fuchsia_auth_account_internal::{AccountHandlerContextMarker};
     use fuchsia_async as fasync;
 
     /// Type to hold the common state require during construction of test objects and execution
@@ -341,20 +367,22 @@ mod tests {
         }
 
         fn create_account(&self) -> Result<Account, AccountManagerError> {
-            let (account_handler_context_client_end, _) = create_endpoints().unwrap();
+            let (account_handler_context_client_end, _) =
+                create_endpoints::<AccountHandlerContextMarker>().unwrap();
             Account::create(
                 TEST_ACCOUNT_ID.clone(),
                 &self.location.test_path(),
-                account_handler_context_client_end,
+                account_handler_context_client_end.into_proxy().unwrap(),
             )
         }
 
         fn load_account(&self) -> Result<Account, AccountManagerError> {
-            let (account_handler_context_client_end, _) = create_endpoints().unwrap();
+            let (account_handler_context_client_end, _) =
+                create_endpoints::<AccountHandlerContextMarker>().unwrap();
             Account::load(
                 TEST_ACCOUNT_ID.clone(),
                 &self.location.test_path(),
-                account_handler_context_client_end,
+                account_handler_context_client_end.into_proxy().unwrap(),
             )
         }
 

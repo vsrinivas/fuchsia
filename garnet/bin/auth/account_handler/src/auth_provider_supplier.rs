@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use account_common::{AccountManagerError, ResultExt};
 use failure::format_err;
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::{AuthProviderMarker, Status};
-use fidl_fuchsia_auth_account_internal::{AccountHandlerContextMarker, AccountHandlerContextProxy};
+use fidl_fuchsia_auth_account_internal::{AccountHandlerContextProxy};
 use futures::future::{ready as fready, FutureObj};
 use token_manager::TokenManagerError;
 
@@ -22,15 +21,13 @@ pub struct AuthProviderSupplier {
 }
 
 impl AuthProviderSupplier {
-    /// Creates a new `AuthProviderSupplier` from the supplied `AccountHandlerContext`.
+    /// Creates a new `AuthProviderSupplier` from the supplied `AccountHandlerContextProxy`.
     pub fn new(
-        account_handler_client_end: ClientEnd<AccountHandlerContextMarker>,
-    ) -> Result<Self, AccountManagerError> {
-        Ok(AuthProviderSupplier {
-            account_handler_context: account_handler_client_end
-                .into_proxy()
-                .account_manager_status(fidl_fuchsia_auth_account::Status::IoError)?,
-        })
+        account_handler_context: AccountHandlerContextProxy,
+    ) -> Self {
+        AuthProviderSupplier {
+            account_handler_context
+        }
     }
 }
 
@@ -70,9 +67,9 @@ impl token_manager::AuthProviderSupplier for AuthProviderSupplier {
 mod tests {
     use super::*;
     use fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd};
-    use fidl_fuchsia_auth_account_internal::AccountHandlerContextRequest;
+    use fidl_fuchsia_auth_account_internal::{
+        AccountHandlerContextRequest, AccountHandlerContextMarker};
     use fuchsia_async as fasync;
-    use fuchsia_zircon as zx;
     use futures::TryStreamExt;
     use token_manager::AuthProviderSupplier as AuthProviderSupplierTrait;
 
@@ -84,7 +81,8 @@ mod tests {
         mut executor: fasync::Executor, client_end: ClientEnd<AccountHandlerContextMarker>,
         expected_error: Option<Status>,
     ) {
-        let auth_provider_supplier = AuthProviderSupplier::new(client_end).unwrap();
+        let proxy = client_end.into_proxy().unwrap();
+        let auth_provider_supplier = AuthProviderSupplier::new(proxy);
         executor.run_singlethreaded(
             async move {
                 let result = await!(auth_provider_supplier.get(TEST_AUTH_PROVIDER_TYPE));
@@ -125,22 +123,6 @@ mod tests {
                 }
             },
         );
-    }
-
-    #[test]
-    fn test_new_valid() {
-        // Note: AuthProviderSupplier schedules async tasks hence an executor needs to be defined.
-        let _executor = fasync::Executor::new().expect("Failed to create executor");
-        let (client_end, _) = create_endpoints::<AccountHandlerContextMarker>().unwrap();
-        assert!(AuthProviderSupplier::new(client_end).is_ok());
-    }
-
-    #[test]
-    fn test_new_invalid() {
-        // Note: AuthProviderSupplier schedules async tasks hence an executor needs to be defined.
-        let _executor = fasync::Executor::new().expect("Failed to create executor");
-        let client_end = ClientEnd::from(zx::Handle::invalid());
-        assert!(AuthProviderSupplier::new(client_end).is_err());
     }
 
     #[test]

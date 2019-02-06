@@ -13,9 +13,6 @@ mod error;
 /// More ergonomic wrapper types for FIDL account and persona identifiers.
 mod identifiers;
 
-/// Directory of all accounts.
-pub const ACCOUNT_DIR: &'static str = "/data/account";
-
 pub use crate::error::{AccountManagerError, ResultExt};
 pub use crate::identifiers::{
     FidlGlobalAccountId, FidlLocalAccountId, FidlLocalPersonaId, GlobalAccountId, LocalAccountId,

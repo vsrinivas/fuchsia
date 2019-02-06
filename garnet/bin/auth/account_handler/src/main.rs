@@ -19,7 +19,6 @@ mod persona;
 mod test_util;
 
 use crate::account_handler::AccountHandler;
-use account_common::ACCOUNT_DIR;
 use failure::{Error, ResultExt};
 use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_auth_account_internal::{
@@ -28,7 +27,6 @@ use fidl_fuchsia_auth_account_internal::{
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
 use log::{error, info};
-use std::path::Path;
 use std::sync::Arc;
 
 type TokenManager = token_manager::TokenManager<auth_provider_supplier::AuthProviderSupplier>;
@@ -38,7 +36,7 @@ fn main() -> Result<(), Error> {
     info!("Starting account handler");
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    let account_handler = Arc::new(AccountHandler::new(Path::new(ACCOUNT_DIR).to_path_buf()));
+    let account_handler = Arc::new(AccountHandler::new());
 
     let fut = ServicesServer::new()
         .add_service((AccountHandlerControlMarker::NAME, move |chan| {

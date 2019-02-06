@@ -10,14 +10,14 @@ use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{AuthState, AuthStateSummary, AuthenticationContextProviderMarker};
 use fidl_fuchsia_auth_account::{AccountMarker, Status};
 use fidl_fuchsia_auth_account_internal::{
-    AccountHandlerContextMarker, AccountHandlerControlRequest, AccountHandlerControlRequestStream,
+    AccountHandlerContextProxy, AccountHandlerContextMarker, AccountHandlerControlRequest,
+    AccountHandlerControlRequestStream,
 };
 use fuchsia_async as fasync;
 use futures::prelude::*;
 use log::{error, info, warn};
 use parking_lot::RwLock;
-use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 /// The core state of the AccountHandler, i.e. the Account (once it is known) and references to
@@ -28,7 +28,6 @@ pub struct AccountHandler {
     // This will be None until a particular Account is established over the control channel. Once
     // set, the account will never be cleared or modified.
     account: RwLock<Option<Arc<Account>>>,
-    accounts_dir: PathBuf,
     // TODO(jsankey): Add TokenManager and AccountHandlerContext.
 }
 
@@ -40,10 +39,9 @@ impl AccountHandler {
     };
 
     /// Constructs a new AccountHandler.
-    pub fn new(accounts_dir: PathBuf) -> AccountHandler {
+    pub fn new() -> AccountHandler {
         Self {
             account: RwLock::new(None),
-            accounts_dir,
         }
     }
 
@@ -52,17 +50,17 @@ impl AccountHandler {
         &self, mut stream: AccountHandlerControlRequestStream,
     ) -> Result<(), Error> {
         while let Some(req) = await!(stream.try_next())? {
-            self.handle_request(req)?;
+            await!(self.handle_request(req))?;
         }
         Ok(())
     }
 
     /// Dispatches an `AccountHandlerControlRequest` message to the appropriate handler method
     /// based on its type.
-    pub fn handle_request(&self, req: AccountHandlerControlRequest) -> Result<(), fidl::Error> {
+    pub async fn handle_request(&self, req: AccountHandlerControlRequest) -> Result<(), fidl::Error> {
         match req {
             AccountHandlerControlRequest::CreateAccount { context, responder } => {
-                let response = self.create_account(context);
+                let response = await!(self.create_account(context));
                 responder.send(
                     response.0,
                     response
@@ -77,7 +75,7 @@ impl AccountHandler {
                 id,
                 responder,
             } => {
-                let response = self.load_account(id.into(), context);
+                let response = await!(self.load_account(id.into(), context));
                 responder.send(response)?;
             }
             AccountHandlerControlRequest::RemoveAccount { responder } => {
@@ -102,9 +100,28 @@ impl AccountHandler {
         Ok(())
     }
 
-    fn create_account(
+    /// Turn the context client end into a proxy, query it for the account_parent_dir and return
+    /// the (proxy, account_dir_parent) as a tuple.
+    async fn init_context(context: ClientEnd<AccountHandlerContextMarker>)
+        -> Result<(AccountHandlerContextProxy, PathBuf), Status> {
+        let context_proxy = context.into_proxy().map_err(|err| {
+                warn!("Error using AccountHandlerContext {:?}", err);
+                Status::InvalidRequest
+        })?;
+        let account_dir_parent = await!(context_proxy.get_account_dir_parent()).map_err(|err| {
+                warn!("Error calling AccountHandlerContext.get_account_dir_parent() {:?}", err);
+                Status::InvalidRequest
+        })?;
+        Ok((context_proxy, PathBuf::from(account_dir_parent)))
+    }
+
+    async fn create_account(
         &self, context: ClientEnd<AccountHandlerContextMarker>,
     ) -> (Status, Option<LocalAccountId>) {
+        let (context_proxy, account_dir_parent) = match await!(Self::init_context(context)) {
+            Err(status) => return (status, None),
+            Ok(result) => result,
+        };
         let mut account_lock = self.account.write();
         if account_lock.is_some() {
             warn!("AccountHandler is already initialized");
@@ -114,17 +131,13 @@ impl AccountHandler {
             // than just a random number.
             let local_account_id = LocalAccountId::new(rand::random::<u64>());
 
-            // First create the directory to contain the new account
-            let account_dir = self.account_dir(&local_account_id);
+            let account_dir = Self::account_dir(&account_dir_parent, &local_account_id);
 
             // Construct an Account value to maintain state inside this directory
-            let account = match Account::create(local_account_id.clone(), &account_dir, context) {
+            let account = match Account::create(
+                local_account_id.clone(), &account_dir, context_proxy) {
                 Ok(account) => account,
                 Err(err) => {
-                    warn!("Failed to initialize new Account: {:?}", err);
-                    if let Err(err) = fs::remove_dir(&account_dir) {
-                        warn!("and failed to remove redundant dir: {:?}", err);
-                    }
                     return (err.status, None);
                 }
             };
@@ -135,25 +148,25 @@ impl AccountHandler {
         }
     }
 
-    fn load_account(
+    async fn load_account(
         &self, id: LocalAccountId, context: ClientEnd<AccountHandlerContextMarker>,
     ) -> Status {
+        let (context_proxy, account_dir_parent) = match await!(Self::init_context(context)) {
+            Err(status) => return status,
+            Ok(result) => result,
+        };
         let mut account_lock = self.account.write();
         if account_lock.is_some() {
             warn!("AccountHandler is already initialized");
             Status::InvalidRequest
         } else {
-            let account_dir = self.account_dir(&id);
-            if account_dir.exists() {
-                let account = match Account::load(id.clone(), &account_dir, context) {
-                    Ok(account) => account,
-                    Err(err) => return err.status,
-                };
-                *account_lock = Some(Arc::new(account));
-                Status::Ok
-            } else {
-                Status::NotFound
-            }
+            let account_dir = Self::account_dir(&account_dir_parent, &id);
+            let account = match Account::load(id.clone(), &account_dir, context_proxy) {
+                Ok(account) => account,
+                Err(err) => return err.status,
+            };
+            *account_lock = Some(Arc::new(account));
+            Status::Ok
         }
     }
 
@@ -166,16 +179,15 @@ impl AccountHandler {
                 return Status::InvalidRequest;
             }
         };
-        let account_dir = self.account_dir(&account.id());
-        match fs::remove_dir_all(account_dir) {
-            Err(err) => {
-                warn!("Could not remove account dir: {:?}", err);
-                Status::IoError
-            }
+        match account.remove() {
             Ok(()) => {
                 info!("Deleted Fuchsia account {:?}", &account.id());
                 *account_lock = None;
                 Status::Ok
+            },
+            Err(err) => {
+                warn!("Could not remove account: {:?}", err);
+                err.status
             }
         }
     }
@@ -218,8 +230,8 @@ impl AccountHandler {
     }
 
     /// Returns the directory that should be used for the specified LocalAccountId
-    fn account_dir(&self, account_id: &LocalAccountId) -> PathBuf {
-        self.accounts_dir.join(account_id.to_canonical_string())
+    fn account_dir(account_dir_parent: &Path, account_id: &LocalAccountId) -> PathBuf {
+        PathBuf::from(account_dir_parent).join(account_id.to_canonical_string())
     }
 }
 
@@ -234,16 +246,21 @@ mod tests {
     use fuchsia_async as fasync;
     use parking_lot::Mutex;
     use std::sync::Arc;
+    use std::path::Path;
 
     // Will not match a randomly generated account id with high probability.
     const WRONG_ACCOUNT_ID: u64 = 111111;
 
-    fn request_stream_test<TestFn, Fut>(test_object: AccountHandler, test_fn: TestFn)
+    fn request_stream_test<TestFn, Fut>(tmp_dir: &Path, test_fn: TestFn)
     where
-        TestFn: FnOnce(AccountHandlerControlProxy) -> Fut,
+        TestFn: FnOnce(AccountHandlerControlProxy, ClientEnd<AccountHandlerContextMarker>) -> Fut,
         Fut: Future<Output = Result<(), Error>>,
     {
         let mut executor = fasync::Executor::new().expect("Failed to create executor");
+        let test_object = AccountHandler::new();
+        let fake_context = Arc::new(FakeAccountHandlerContext::new(&tmp_dir.to_string_lossy()));
+        let ahc_client_end = spawn_context_channel(fake_context.clone());
+
 
         let (client_end, server_end) = create_endpoints::<AccountHandlerControlMarker>().unwrap();
         let proxy = client_end.into_proxy().unwrap();
@@ -257,18 +274,18 @@ mod tests {
         );
 
         executor
-            .run_singlethreaded(test_fn(proxy))
+            .run_singlethreaded(test_fn(proxy, ahc_client_end))
             .expect("Executor run failed.")
     }
 
     #[test]
     fn test_get_account_before_initialization() {
         let location = TempLocation::new();
-        request_stream_test(AccountHandler::new(location.path), async move |proxy| {
+        request_stream_test(&location.path, async move |proxy, _| {
             let (_, account_server_end) = create_endpoints().unwrap();
-            let (ahc_client_end, _) = create_endpoints().unwrap();
+            let (acp_client_end, _) = create_endpoints().unwrap();
             assert_eq!(
-                await!(proxy.get_account(ahc_client_end, account_server_end))?,
+                await!(proxy.get_account(acp_client_end, account_server_end))?,
                 Status::NotFound
             );
             Ok(())
@@ -278,13 +295,14 @@ mod tests {
     #[test]
     fn test_double_initialize() {
         let location = TempLocation::new();
-        request_stream_test(AccountHandler::new(location.path), async move |proxy| {
-            let (ahc_client_end_1, _) = create_endpoints::<AccountHandlerContextMarker>().unwrap();
-            let (status, account_id_optional) = await!(proxy.create_account(ahc_client_end_1))?;
+        let path = &location.path;
+        request_stream_test(&path, async move |proxy, ahc_client_end| {
+            let (status, account_id_optional) = await!(proxy.create_account(ahc_client_end))?;
             assert_eq!(status, Status::Ok);
             assert!(account_id_optional.is_some());
 
-            let (ahc_client_end_2, _) = create_endpoints::<AccountHandlerContextMarker>().unwrap();
+            let fake_context_2 = Arc::new(FakeAccountHandlerContext::new(&path.to_string_lossy()));
+            let ahc_client_end_2 = spawn_context_channel(fake_context_2.clone());
             assert_eq!(
                 await!(proxy.create_account(ahc_client_end_2))?,
                 (Status::InvalidRequest, None)
@@ -297,10 +315,8 @@ mod tests {
     fn test_create_and_get_account() {
         let location = TempLocation::new();
         request_stream_test(
-            AccountHandler::new(location.path),
-            async move |account_handler_proxy| {
-                let (ahc_client_end, _) =
-                    create_endpoints::<AccountHandlerContextMarker>().unwrap();
+            &location.path,
+            async move |account_handler_proxy, ahc_client_end| {
                 let (status, account_id_optional) =
                     await!(account_handler_proxy.create_account(ahc_client_end))?;
                 assert_eq!(status, Status::Ok);
@@ -334,18 +350,15 @@ mod tests {
         let acc_id_holder: Arc<Mutex<Option<FidlLocalAccountId>>> = Arc::new(Mutex::new(None));
         let acc_id_holder_clone = Arc::clone(&acc_id_holder);
         request_stream_test(
-            AccountHandler::new(location.path.clone()),
-            async move |proxy| {
-                let (ahc_client_end, _) =
-                    create_endpoints::<AccountHandlerContextMarker>().unwrap();
+            &location.path,
+            async move |proxy, ahc_client_end| {
                 let (status, account_id_optional) = await!(proxy.create_account(ahc_client_end))?;
                 assert_eq!(status, Status::Ok);
                 *acc_id_holder_clone.lock() = account_id_optional.map(|x| *x);
                 Ok(())
             },
         );
-        request_stream_test(AccountHandler::new(location.path), async move |proxy| {
-            let (ahc_client_end, _) = create_endpoints::<AccountHandlerContextMarker>().unwrap();
+        request_stream_test(&location.path, async move |proxy, ahc_client_end| {
             match acc_id_holder.lock().as_mut() {
                 Some(mut acc_id) => {
                     assert_eq!(
@@ -362,16 +375,14 @@ mod tests {
     #[test]
     fn test_create_and_remove_account() {
         let location = TempLocation::new();
+        let path = location.path.clone();
         request_stream_test(
-            AccountHandler::new(location.path.clone()),
-            async move |proxy| {
-                let (ahc_client_end, _) =
-                    create_endpoints::<AccountHandlerContextMarker>().unwrap();
+            &location.path,
+            async move |proxy, ahc_client_end| {
                 let (status, account_id_optional) = await!(proxy.create_account(ahc_client_end))?;
                 assert_eq!(status, Status::Ok);
                 assert!(account_id_optional.is_some());
-                let account_path = location
-                    .path
+                let account_path = path
                     .join(account_id_optional.unwrap().id.to_string());
                 assert!(account_path.is_dir());
                 assert_eq!(await!(proxy.remove_account())?, Status::Ok);
@@ -384,7 +395,7 @@ mod tests {
     #[test]
     fn test_remove_account_before_initialization() {
         let location = TempLocation::new();
-        request_stream_test(AccountHandler::new(location.path), async move |proxy| {
+        request_stream_test(&location.path, async move |proxy, _| {
             assert_eq!(await!(proxy.remove_account())?, Status::InvalidRequest);
             Ok(())
         });
@@ -394,10 +405,8 @@ mod tests {
     fn test_create_and_remove_account_twice() {
         let location = TempLocation::new();
         request_stream_test(
-            AccountHandler::new(location.path.clone()),
-            async move |proxy| {
-                let (ahc_client_end, _) =
-                    create_endpoints::<AccountHandlerContextMarker>().unwrap();
+            &location.path,
+            async move |proxy, ahc_client_end| {
                 let (status, account_id_optional) = await!(proxy.create_account(ahc_client_end))?;
                 assert_eq!(status, Status::Ok);
                 assert!(account_id_optional.is_some());
@@ -414,8 +423,7 @@ mod tests {
     #[test]
     fn test_load_account_not_found() {
         let location = TempLocation::new();
-        request_stream_test(AccountHandler::new(location.path), async move |proxy| {
-            let (ahc_client_end, _) = create_endpoints::<AccountHandlerContextMarker>().unwrap();
+        request_stream_test(&location.path, async move |proxy, ahc_client_end| {
             assert_eq!(
                 await!(proxy.load_account(
                     ahc_client_end,

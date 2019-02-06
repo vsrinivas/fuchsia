@@ -152,6 +152,7 @@ mod tests {
     use fidl::endpoints::create_endpoints;
     use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
     use fidl_fuchsia_auth_account::{PersonaMarker, PersonaProxy};
+    use fidl_fuchsia_auth_account_internal::{AccountHandlerContextMarker};
     use fuchsia_async as fasync;
 
     /// Type to hold the common state require during construction of test objects and execution
@@ -166,11 +167,13 @@ mod tests {
         fn new() -> Test {
             let executor = fasync::Executor::new().expect("Failed to create executor");
             let location = TempLocation::new();
-            let (account_handler_context_client_end, _) = create_endpoints().unwrap();
+            let (account_handler_context_client_end, _) =
+                create_endpoints::<AccountHandlerContextMarker>().unwrap();
             let token_manager = Arc::new(
                 TokenManager::new(
                     &location.test_path(),
-                    AuthProviderSupplier::new(account_handler_context_client_end).unwrap(),
+                    AuthProviderSupplier::new(
+                        account_handler_context_client_end.into_proxy().unwrap()),
                 )
                 .unwrap(),
             );
