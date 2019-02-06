@@ -491,40 +491,39 @@ void Session::StartupMultiplexer() {
 
   role_ = Role::kNegotiating;
 
-  SendCommand(FrameType::kSetAsynchronousBalancedMode, kMuxControlDLCI,
-              [this](auto response) {
-                ZX_DEBUG_ASSERT(response);
+  SendCommand(
+      FrameType::kSetAsynchronousBalancedMode, kMuxControlDLCI,
+      [this](auto response) {
+        ZX_DEBUG_ASSERT(response);
 
-                FrameType type = static_cast<FrameType>(response->control());
-                ZX_DEBUG_ASSERT(type == FrameType::kUnnumberedAcknowledgement ||
-                                type == FrameType::kDisconnectedMode);
+        FrameType type = static_cast<FrameType>(response->control());
+        ZX_DEBUG_ASSERT(type == FrameType::kUnnumberedAcknowledgement ||
+                        type == FrameType::kDisconnectedMode);
 
-                switch (role_) {
-                  case Role::kNegotiating: {
-                    if (type == FrameType::kUnnumberedAcknowledgement) {
-                      SetMultiplexerStarted(Role::kInitiator);
-                    } else {
-                      bt_log(WARN, "rfcomm",
-                             "remote multiplexer startup refused by remote");
-                      role_ = Role::kUnassigned;
-                    }
-                    return;
-                  }
-                  case Role::kUnassigned:
-                  case Role::kInitiator:
-                  case Role::kResponder:
-                    // TODO(guss): should a UA be received in any of these
-                    // cases?
-                    bt_log(WARN, "rfcomm",
-                           "mux UA frame received in unexpected state");
-                    break;
-                  default:
-                    // TODO(gusss): shouldn't get here.
-                    ZX_PANIC("invalid role: %u",
-                             static_cast<unsigned int>(role_));
-                    break;
-                }
-              });
+        switch (role_) {
+          case Role::kNegotiating: {
+            if (type == FrameType::kUnnumberedAcknowledgement) {
+              SetMultiplexerStarted(Role::kInitiator);
+            } else {
+              bt_log(WARN, "rfcomm",
+                     "remote multiplexer startup refused by remote");
+              role_ = Role::kUnassigned;
+            }
+            return;
+          }
+          case Role::kUnassigned:
+          case Role::kInitiator:
+          case Role::kResponder:
+            // TODO(guss): should a UA be received in any of these
+            // cases?
+            bt_log(WARN, "rfcomm", "mux UA frame received in unexpected state");
+            break;
+          default:
+            // TODO(gusss): shouldn't get here.
+            ZX_PANIC("invalid role: %u", static_cast<unsigned int>(role_));
+            break;
+        }
+      });
 }
 
 void Session::HandleSABM(DLCI dlci) {
@@ -766,9 +765,8 @@ void Session::HandleMuxCommand(std::unique_ptr<MuxCommand> mux_command) {
                       CreditBasedFlowHandshake::kSupportedResponse
                   ? "on"
                   : "off"),
-             received_params.initial_credits,
-             negotiated_params.initial_credits, negotiated_params.priority,
-             negotiated_params.maximum_frame_size);
+             received_params.initial_credits, negotiated_params.initial_credits,
+             negotiated_params.priority, negotiated_params.maximum_frame_size);
 
       // Respond with the negotiated params.
       SendMuxCommand(std::make_unique<DLCParameterNegotiationCommand>(
@@ -826,101 +824,101 @@ void Session::RunInitialParameterNegotiation(DLCI dlci) {
 
   auto pn_command = std::make_unique<DLCParameterNegotiationCommand>(
       CommandResponse::kCommand, params);
-  SendMuxCommand(std::move(pn_command), [this, dlci, priority = params.priority,
-                                         maximum_frame_size =
-                                             params.maximum_frame_size,
-                                         their_credits = params.initial_credits,
-                                         chan = std::move(chan)](
-                                            auto mux_command) {
-    ZX_DEBUG_ASSERT(initial_param_negotiation_state_ ==
-                        ParameterNegotiationState::kNegotiating ||
-                    initial_param_negotiation_state_ ==
-                        ParameterNegotiationState::kNegotiated);
+  SendMuxCommand(
+      std::move(pn_command), [this, dlci, priority = params.priority,
+                              maximum_frame_size = params.maximum_frame_size,
+                              their_credits = params.initial_credits,
+                              chan = std::move(chan)](auto mux_command) {
+        ZX_DEBUG_ASSERT(initial_param_negotiation_state_ ==
+                            ParameterNegotiationState::kNegotiating ||
+                        initial_param_negotiation_state_ ==
+                            ParameterNegotiationState::kNegotiated);
 
-    // If we fail negotation for any reason, remove the nascent channel and
-    // reset to not-negotiated if negotiation didn't already finish.
-    auto failed_negotiation = fit::defer([this, dlci] {
-      channels_.erase(dlci);
-      if (initial_param_negotiation_state_ ==
-          ParameterNegotiationState::kNegotiating) {
-        initial_param_negotiation_state_ =
-            ParameterNegotiationState::kNotNegotiated;
-      }
-    });
+        // If we fail negotation for any reason, remove the nascent channel and
+        // reset to not-negotiated if negotiation didn't already finish.
+        auto failed_negotiation = fit::defer([this, dlci] {
+          channels_.erase(dlci);
+          if (initial_param_negotiation_state_ ==
+              ParameterNegotiationState::kNegotiating) {
+            initial_param_negotiation_state_ =
+                ParameterNegotiationState::kNotNegotiated;
+          }
+        });
 
-    if (mux_command == nullptr) {
-      // A response of nullptr signals a DM response from the peer.
-      bt_log(TRACE, "rfcomm", "PN command for DLCI %u rejected", dlci);
-      return;
-    }
+        if (mux_command == nullptr) {
+          // A response of nullptr signals a DM response from the peer.
+          bt_log(TRACE, "rfcomm", "PN command for DLCI %u rejected", dlci);
+          return;
+        }
 
-    ZX_DEBUG_ASSERT(mux_command->command_type() ==
-                        MuxCommandType::kDLCParameterNegotiation &&
-                    mux_command->command_response() ==
-                        CommandResponse::kResponse);
+        ZX_DEBUG_ASSERT(mux_command->command_type() ==
+                            MuxCommandType::kDLCParameterNegotiation &&
+                        mux_command->command_response() ==
+                            CommandResponse::kResponse);
 
-    auto pn_response = std::unique_ptr<DLCParameterNegotiationCommand>(
-        static_cast<DLCParameterNegotiationCommand*>(mux_command.release()));
-    auto params = pn_response->params();
+        auto pn_response = std::unique_ptr<DLCParameterNegotiationCommand>(
+            static_cast<DLCParameterNegotiationCommand*>(
+                mux_command.release()));
+        auto params = pn_response->params();
 
-    if (dlci != params.dlci) {
-      bt_log(TRACE, "rfcomm", "remote changed DLCI in PN response");
-      SendCommand(FrameType::kDisconnect, dlci);
-      // don't need to erase params.dlci, it's unknown.
-      return;
-    }
+        if (dlci != params.dlci) {
+          bt_log(TRACE, "rfcomm", "remote changed DLCI in PN response");
+          SendCommand(FrameType::kDisconnect, dlci);
+          // don't need to erase params.dlci, it's unknown.
+          return;
+        }
 
-    // TODO(gusss): currently we completely ignore priority (other than this
-    // check)
-    if (params.priority != priority)
-      bt_log(TRACE, "rfcomm", "remote changed priority in PN response");
+        // TODO(gusss): currently we completely ignore priority (other than this
+        // check)
+        if (params.priority != priority)
+          bt_log(TRACE, "rfcomm", "remote changed priority in PN response");
 
-    if (params.maximum_frame_size > maximum_frame_size) {
-      bt_log(WARN, "rfcomm",
-             "peer's PN response contained an invalid max frame size");
-      SendCommand(FrameType::kDisconnect, dlci);
-      return;
-    }
+        if (params.maximum_frame_size > maximum_frame_size) {
+          bt_log(WARN, "rfcomm",
+                 "peer's PN response contained an invalid max frame size");
+          SendCommand(FrameType::kDisconnect, dlci);
+          return;
+        }
 
-    if (initial_param_negotiation_state_ ==
-            ParameterNegotiationState::kNegotiated &&
-        params.maximum_frame_size != maximum_frame_size_) {
-      bt_log(WARN, "rfcomm",
-             "peer tried to change max frame size after initial"
-             " param negotiation; rejecting");
-      SendCommand(FrameType::kDisconnect, dlci);
-      return;
-    }
+        if (initial_param_negotiation_state_ ==
+                ParameterNegotiationState::kNegotiated &&
+            params.maximum_frame_size != maximum_frame_size_) {
+          bt_log(WARN, "rfcomm",
+                 "peer tried to change max frame size after initial"
+                 " param negotiation; rejecting");
+          SendCommand(FrameType::kDisconnect, dlci);
+          return;
+        }
 
-    // Successfully negotiated.
-    failed_negotiation.cancel();
+        // Successfully negotiated.
+        failed_negotiation.cancel();
 
-    // Only set these parameters on initial parameter negotiation.
-    if (initial_param_negotiation_state_ ==
-        ParameterNegotiationState::kNegotiating) {
-      // Credit-based flow is turned on if the peer sends the correct
-      // response.
-      credit_based_flow_ = params.credit_based_flow_handshake ==
-                           CreditBasedFlowHandshake::kSupportedResponse;
+        // Only set these parameters on initial parameter negotiation.
+        if (initial_param_negotiation_state_ ==
+            ParameterNegotiationState::kNegotiating) {
+          // Credit-based flow is turned on if the peer sends the correct
+          // response.
+          credit_based_flow_ = params.credit_based_flow_handshake ==
+                               CreditBasedFlowHandshake::kSupportedResponse;
 
-      maximum_frame_size_ = params.maximum_frame_size;
-      InitialParameterNegotiationComplete();
-    }
+          maximum_frame_size_ = params.maximum_frame_size;
+          InitialParameterNegotiationComplete();
+        }
 
-    // Take the credits they give us, and log the credits we give them.
-    HandleReceivedCredits(dlci, params.initial_credits);
-    chan->remote_credits_ = their_credits;
+        // Take the credits they give us, and log the credits we give them.
+        HandleReceivedCredits(dlci, params.initial_credits);
+        chan->remote_credits_ = their_credits;
 
-    bt_log(TRACE, "rfcomm",
-           "parameters negotiated: DLCI %u, credit-based flow %s "
-           "(ours %u, theirs %u), priority %u, max frame size %u",
-           params.dlci, (credit_based_flow_ ? "on" : "off"),
-           params.initial_credits, their_credits, params.priority,
-           maximum_frame_size_);
+        bt_log(TRACE, "rfcomm",
+               "parameters negotiated: DLCI %u, credit-based flow %s "
+               "(ours %u, theirs %u), priority %u, max frame size %u",
+               params.dlci, (credit_based_flow_ ? "on" : "off"),
+               params.initial_credits, their_credits, params.priority,
+               maximum_frame_size_);
 
-    // Set channel to not negotiating anymore.
-    chan->negotiation_state_ = ParameterNegotiationState::kNegotiated;
-  });
+        // Set channel to not negotiating anymore.
+        chan->negotiation_state_ = ParameterNegotiationState::kNegotiated;
+      });
 }
 
 ParameterNegotiationParams Session::GetIdealParameters(DLCI dlci) const {
@@ -980,7 +978,7 @@ void Session::QueueFrame(std::unique_ptr<Frame> frame, fit::closure sent_cb) {
 }
 
 void Session::TrySendQueued() {
-  for (const auto& it : channels_)  {
+  for (const auto& it : channels_) {
     TrySendQueued(it.first);
   }
 }
