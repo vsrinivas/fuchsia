@@ -105,8 +105,8 @@
 + [pager_supply_pages](syscalls/pager_supply_pages.md) - supply pages into a pager owned vmo
 
 ## Cryptographically Secure RNG
-+ [cprng_draw](syscalls/cprng_draw.md)
 + [cprng_add_entropy](syscalls/cprng_add_entropy.md)
++ [cprng_draw](syscalls/cprng_draw.md)
 
 ## Time
 + [nanosleep](syscalls/nanosleep.md) - sleep for some number of nanoseconds

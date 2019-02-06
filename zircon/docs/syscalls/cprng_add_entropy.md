@@ -40,3 +40,9 @@ userspace pointer.
 ## BUGS
 
 This syscall should be very privileged.
+
+## SEE ALSO
+
+ - [`zx_cprng_draw()`]
+
+[`zx_cprng_draw()`]: cprng_draw.md

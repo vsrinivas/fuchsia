@@ -37,3 +37,9 @@ a valid userspace pointer.
 
 There are no other error conditions.  If its arguments are valid,
 `zx_cprng_draw()` will succeed.
+
+## SEE ALSO
+
+ - [`zx_cprng_add_entropy()`]
+
+[`zx_cprng_add_entropy()`]: cprng_add_entropy.md
