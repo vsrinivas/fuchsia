@@ -96,7 +96,7 @@ class ZirconVsockGuestTest : public ZirconEnclosedGuest,
 
     // Open another connection.
     EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &socket1, &socket2), ZX_OK);
-    ASSERT_EQ(vsock_endpoint->Connect(GetGuestCid(), 8001, std::move(socket2),
+    ASSERT_EQ(vsock_endpoint->Connect(GetGuestCid(), 8002, std::move(socket2),
                                       &out_status),
               ZX_OK);
     ASSERT_EQ(out_status, ZX_OK);
@@ -106,7 +106,7 @@ class ZirconVsockGuestTest : public ZirconEnclosedGuest,
 
     // Wait for another connection to get accepted
     EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &socket1, &socket2), ZX_OK);
-    ASSERT_EQ(vsock_endpoint->Connect(GetGuestCid(), 8001, std::move(socket2),
+    ASSERT_EQ(vsock_endpoint->Connect(GetGuestCid(), 8003, std::move(socket2),
                                       &out_status),
               ZX_OK);
     ASSERT_EQ(out_status, ZX_OK);

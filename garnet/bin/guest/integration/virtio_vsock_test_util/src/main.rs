@@ -81,10 +81,16 @@ fn make_con() -> Result<(fasync::Socket, ConnectionProxy, ConnectionTransport), 
 async fn main() -> Result<(), Error> {
     let vsock =
         connect_to_service::<ConnectorMarker>().context("failed to connect to vsock service")?;
-    // Register the listener early to avoid any race conditions later
+    // Register the listeners early to avoid any race conditions later.
     let (acceptor_client, acceptor) = endpoints::create_endpoints::<AcceptorMarker>()?;
     await!(vsock.listen(8001, acceptor_client))?;
+    let (acceptor_client2, acceptor2) = endpoints::create_endpoints::<AcceptorMarker>()?;
+    await!(vsock.listen(8002, acceptor_client2))?;
+    let (acceptor_client3, acceptor3) = endpoints::create_endpoints::<AcceptorMarker>()?;
+    await!(vsock.listen(8003, acceptor_client3))?;
     let mut acceptor = acceptor.into_stream()?;
+    let mut acceptor2 = acceptor2.into_stream()?;
+    let mut acceptor3 = acceptor3.into_stream()?;
 
     let (mut data_stream, client_end, mut con) = make_con()?;
     let _port = await!(vsock.connect(2, 8000, &mut con))?.0;
@@ -109,7 +115,7 @@ async fn main() -> Result<(), Error> {
 
     // Get next connection
     let AcceptorRequest::Accept { addr: _, responder } =
-        await!(acceptor.next()).ok_or(format_err!("Failed to get incoming connection"))??;
+        await!(acceptor2.next()).ok_or(format_err!("Failed to get incoming connection"))??;
     let (mut data_stream, _client_end, mut con) = make_con()?;
     responder.send(Some(OutOfLine(&mut con)))?;
     // Send data until the peer closes
@@ -127,7 +133,7 @@ async fn main() -> Result<(), Error> {
     // Get next connection
     {
         let AcceptorRequest::Accept { addr: _, responder } =
-            await!(acceptor.next()).ok_or(format_err!("Failed to get incoming connection"))??;
+            await!(acceptor3.next()).ok_or(format_err!("Failed to get incoming connection"))??;
         let (mut data_stream, _client_end, mut con) = make_con()?;
         responder.send(Some(OutOfLine(&mut con)))?;
         // Read some data then suddenly close the connection.
