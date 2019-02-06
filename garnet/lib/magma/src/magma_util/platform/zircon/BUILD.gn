@@ -279,9 +279,10 @@ source_set("trace") {
     public_deps += [
       "$zircon_build_root/public/lib/async-cpp",
       "$zircon_build_root/public/lib/async-loop-cpp",
-      "$zircon_build_root/public/lib/trace",
-      "$zircon_build_root/public/lib/trace-provider",
-      "$zircon_build_root/public/lib/trace-vthread",
+      "$zircon_build_root/public/lib/trace-provider-fdio-connect",
+      "$zircon_build_root/public/lib/trace-provider-with-static-engine",
+      "$zircon_build_root/public/lib/trace-vthread-with-static-engine",
+      "$zircon_build_root/public/lib/trace-with-static-engine",
     ]
   }
 }
