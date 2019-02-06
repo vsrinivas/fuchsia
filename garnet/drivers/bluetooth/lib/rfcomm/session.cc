@@ -242,8 +242,7 @@ void Session::RxCallback(common::ByteBufferPtr sdu) {
   }
 
   DLCI dlci = frame->dlci();
-
-  switch ((FrameType)frame->control()) {
+  switch (static_cast<FrameType>(frame->control())) {
     case FrameType::kSetAsynchronousBalancedMode:
       HandleSABM(dlci);
       return;
