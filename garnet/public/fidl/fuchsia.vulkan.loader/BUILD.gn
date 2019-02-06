@@ -1,13 +1,15 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fidl/fidl.gni")
+group("fuchsia.vulkan.loader") {
+  public_deps = [
+    "//sdk/fidl/fuchsia.vulkan.loader",
+  ]
+}
 
-fidl("fuchsia.vulkan.loader") {
-  sdk_category = "internal"
-
-  sources = [
-    "loader.fidl",
+group("fuchsia.vulkan.loader_c_client") {
+  public_deps = [
+    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_c_client",
   ]
 }

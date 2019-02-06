@@ -4,7 +4,7 @@
         "//garnet/bin/sys/component_manager:component_manager_tests"
     ],
     "labels": [
-        "//garnet/public/fidl/fuchsia.data",
-        "//garnet/public/fidl/fuchsia.sys2"
+        "//sdk/fidl/fuchsia.data",
+        "//sdk/fidl/fuchsia.sys2"
     ]
 }
