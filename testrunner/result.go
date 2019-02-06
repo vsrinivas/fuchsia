@@ -1,7 +1,6 @@
 package testrunner
 
 import (
-	"io"
 	"time"
 
 	"fuchsia.googlesource.com/tools/runtests"
@@ -12,12 +11,11 @@ type TestResult struct {
 	// Name is the name of the test that was executed.
 	Name string
 
-	// Output is the test's combined stdout and stderr streams.
-	Output io.Reader
-
 	// Result describes whether the test passed or failed.
 	Result runtests.TestResult
 
+	Stdout    []byte
+	Stderr    []byte
 	StartTime time.Time
 	EndTime   time.Time
 }

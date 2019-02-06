@@ -261,9 +261,14 @@ func runTests(tests []testsharder.Test, tester Tester, output *TestRunnerOutput)
 
 func runTest(ctx context.Context, test testsharder.Test, tester Tester) (*testrunner.TestResult, error) {
 	result := runtests.TestSuccess
-	output := new(bytes.Buffer)
-	multistdout := io.MultiWriter(output, os.Stdout)
-	multistderr := io.MultiWriter(output, os.Stderr)
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
+
+	// Fork the test's stdout and stderr streams to the test runner's stderr stream to
+	// make local debugging easier.  Writing both to stderr ensures that stdout only
+	// contains the test runner's TAP output stream.
+	multistdout := io.MultiWriter(stdout, os.Stderr)
+	multistderr := io.MultiWriter(stderr, os.Stderr)
 
 	startTime := time.Now()
 
@@ -277,7 +282,8 @@ func runTest(ctx context.Context, test testsharder.Test, tester Tester) (*testru
 	// Record the test details in the summary.
 	return &testrunner.TestResult{
 		Name:      test.Name,
-		Output:    output,
+		Stdout:    stdout.Bytes(),
+		Stderr:    stderr.Bytes(),
 		Result:    result,
 		StartTime: startTime,
 		EndTime:   endTime,

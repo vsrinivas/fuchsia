@@ -6,6 +6,7 @@ package main
 
 import (
 	"archive/tar"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -25,7 +26,9 @@ type TarOutput struct {
 
 func (o *TarOutput) Record(result testrunner.TestResult) {
 	pathInArchive := path.Join(result.Name, runtests.TestOutputFilename)
-	botanist.ArchiveReader(o.w, result.Output, pathInArchive)
+	stdout := bytes.NewReader(result.Stdout)
+	stderr := bytes.NewReader(result.Stderr)
+	botanist.ArchiveReader(o.w, io.MultiReader(stdout, stderr), pathInArchive)
 }
 
 // TarFile adds a file to the underlying archive.

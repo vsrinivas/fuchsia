@@ -27,7 +27,7 @@ func TestTarOutput(t *testing.T) {
 			name: "archive entry for test_a",
 			input: testrunner.TestResult{
 				Name:   "test_a",
-				Output: strings.NewReader("the test passed"),
+				Stdout: []byte("the test passed"),
 				Result: runtests.TestSuccess,
 			},
 			expectedHeader: &tar.Header{
@@ -43,7 +43,7 @@ func TestTarOutput(t *testing.T) {
 			name: "archive entry for test_b",
 			input: testrunner.TestResult{
 				Name:   "test_b",
-				Output: strings.NewReader("the test failed"),
+				Stdout: []byte("the test failed"),
 				Result: runtests.TestSuccess,
 			},
 			expectedHeader: &tar.Header{
