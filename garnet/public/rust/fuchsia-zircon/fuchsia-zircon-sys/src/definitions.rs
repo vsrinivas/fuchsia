@@ -77,7 +77,7 @@ extern {
 
     pub fn zx_object_wait_many(
         items: *mut zx_wait_item_t,
-        count: u32,
+        count: usize,
         deadline: zx_time_t
         ) -> zx_status_t;
 

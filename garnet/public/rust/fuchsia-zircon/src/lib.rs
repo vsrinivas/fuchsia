@@ -245,9 +245,8 @@ pub enum ClockId {
 /// syscall.
 pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, Status>
 {
-    let len = usize_into_u32(items.len()).map_err(|_| Status::OUT_OF_RANGE)?;
     let items_ptr = items.as_mut_ptr() as *mut sys::zx_wait_item_t;
-    let status = unsafe { sys::zx_object_wait_many( items_ptr, len, deadline.nanos()) };
+    let status = unsafe { sys::zx_object_wait_many( items_ptr, items.len(), deadline.nanos()) };
     if status == sys::ZX_ERR_CANCELED {
         return Ok(true)
     }
