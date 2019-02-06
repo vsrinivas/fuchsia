@@ -76,6 +76,11 @@ public:
     };
 
 private:
+    struct NamedBits {
+        std::string name;
+        const flat::Bits& bits_info;
+    };
+
     struct NamedConst {
         std::string name;
         const flat::Const& const_info;
@@ -135,6 +140,8 @@ private:
     void GenerateTaggedUnionDeclaration(StringView name, const std::vector<Member>& members);
     void GenerateTaggedXUnionDeclaration(StringView name, const std::vector<Member>& members);
 
+    std::map<const flat::Decl*, NamedBits>
+    NameBits(const std::vector<std::unique_ptr<flat::Bits>>& bits_infos);
     std::map<const flat::Decl*, NamedConst>
     NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos);
     std::map<const flat::Decl*, NamedEnum>
@@ -150,6 +157,7 @@ private:
     std::map<const flat::Decl*, NamedXUnion>
     NameXUnions(const std::vector<std::unique_ptr<flat::XUnion>>& xunion_infos);
 
+    void ProduceBitsForwardDeclaration(const NamedBits& named_bits);
     void ProduceConstForwardDeclaration(const NamedConst& named_const);
     void ProduceEnumForwardDeclaration(const NamedEnum& named_enum);
     void ProduceInterfaceForwardDeclaration(const NamedInterface& named_interface);

@@ -483,6 +483,21 @@ type EnumMember struct {
 	Value Constant   `json:"value"`
 }
 
+// Bits represents a FIDL declaration of an bits.
+type Bits struct {
+	Attributes
+	Type    Type                      `json:"type"`
+	Name    EncodedCompoundIdentifier `json:"name"`
+	Members []BitsMember              `json:"members"`
+}
+
+// BitsMember represents a single variant in a FIDL bits.
+type BitsMember struct {
+	Attributes
+	Name  Identifier `json:"name"`
+	Value Constant   `json:"value"`
+}
+
 // Const represents a FIDL declaration of a named constant.
 type Const struct {
 	Attributes
@@ -495,6 +510,7 @@ type DeclType string
 
 const (
 	ConstDeclType     DeclType = "const"
+	BitsDeclType               = "bits"
 	EnumDeclType               = "enum"
 	InterfaceDeclType          = "interface"
 	StructDeclType             = "struct"
@@ -516,6 +532,7 @@ type Library struct {
 type Root struct {
 	Name       EncodedLibraryIdentifier    `json:"name,omitempty"`
 	Consts     []Const                     `json:"const_declarations,omitempty"`
+	Bits       []Bits                      `json:"bits_declarations,omitempty"`
 	Enums      []Enum                      `json:"enum_declarations,omitempty"`
 	Interfaces []Interface                 `json:"interface_declarations,omitempty"`
 	Structs    []Struct                    `json:"struct_declarations,omitempty"`

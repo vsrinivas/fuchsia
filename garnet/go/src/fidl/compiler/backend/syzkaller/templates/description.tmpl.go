@@ -20,6 +20,13 @@ include <{{ .HeaderPath }}>
 {{- end -}}
 {{- end }}
 
+{{- range .Bits }}
+{{ .Name }} =
+{{- range $index, $element := .Members -}}
+{{- if $index -}},{{- end }} {{ $element }}
+{{- end -}}
+{{- end }}
+
 {{- range .Structs }}
 {{ template "StructDefinition" . }}
 {{- end }}

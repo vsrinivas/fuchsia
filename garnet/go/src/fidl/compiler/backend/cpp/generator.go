@@ -24,6 +24,7 @@ func NewFidlGenerator() *FidlGenerator {
 		"Kinds": func() interface{} { return ir.Kinds },
 		"Eq": func(a interface{}, b interface{}) bool { return a == b },
 	})
+	template.Must(tmpls.Parse(templates.Bits))
 	template.Must(tmpls.Parse(templates.Const))
 	template.Must(tmpls.Parse(templates.Enum))
 	template.Must(tmpls.Parse(templates.Header))

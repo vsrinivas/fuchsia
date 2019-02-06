@@ -95,6 +95,29 @@ void Using::Accept(TreeVisitor& visitor) {
     }
 }
 
+void BitsMember::Accept(TreeVisitor& visitor) {
+    SourceElementMark sem(visitor, *this);
+    if (attributes != nullptr) {
+        visitor.OnAttributeList(attributes);
+    }
+    visitor.OnIdentifier(identifier);
+    visitor.OnConstant(value);
+}
+
+void BitsDeclaration::Accept(TreeVisitor& visitor) {
+    SourceElementMark sem(visitor, *this);
+    if (attributes != nullptr) {
+        visitor.OnAttributeList(attributes);
+    }
+    visitor.OnIdentifier(identifier);
+    if (maybe_type_ctor != nullptr) {
+        visitor.OnTypeConstructor(maybe_type_ctor);
+    }
+    for (auto member = members.begin(); member != members.end(); ++member) {
+        visitor.OnBitsMember(*member);
+    }
+}
+
 void ConstDeclaration::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
     if (attributes != nullptr) {

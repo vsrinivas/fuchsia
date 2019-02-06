@@ -85,6 +85,10 @@ public:
         return fidl_test_spaceship_SpaceShipReportAstrologicalData_reply(txn, status);
     }
 
+    virtual zx_status_t ActivateShields(fidl_test_spaceship_Shields shields) {
+        return ZX_OK;
+    }
+
     virtual zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) {
         static constexpr fidl_test_spaceship_SpaceShip_ops_t kOps = {
             .AdjustHeading = SpaceShipBinder::BindMember<&SpaceShip::AdjustHeading>,
@@ -98,6 +102,7 @@ public:
                     SpaceShipBinder::BindMember<&SpaceShip::ScanForTensorLifeforms>,
             .ReportAstrologicalData =
                 SpaceShipBinder::BindMember<&SpaceShip::ReportAstrologicalData>,
+            .ActivateShields = SpaceShipBinder::BindMember<&SpaceShip::ActivateShields>,
         };
 
         return SpaceShipBinder::BindOps<fidl_test_spaceship_SpaceShip_dispatch>(
@@ -298,6 +303,7 @@ public:
                     SpaceShipBinder::BindMember<&SpaceShip::ScanForTensorLifeforms>,
             .ReportAstrologicalData =
                     SpaceShipBinder::BindMember<&SpaceShip::ReportAstrologicalData>,
+            .ActivateShields = SpaceShipBinder::BindMember<&SpaceShip::ActivateShields>,
         };
 
         return SpaceShipBinder::BindOps<fidl_test_spaceship_SpaceShip_dispatch>(
@@ -407,6 +413,7 @@ public:
             .AddFuelTank = DerivedBinder::BindMember<&SpaceShip::AddFuelTank>,
             .ScanForTensorLifeforms = DerivedBinder::BindMember<&Derived::ScanForTensorLifeforms>,
             .ReportAstrologicalData = DerivedBinder::BindMember<&Derived::ReportAstrologicalData>,
+            .ActivateShields = SpaceShipBinder::BindMember<&Derived::ActivateShields>,
         };
 
         return SpaceShipBinder::BindOps<fidl_test_spaceship_SpaceShip_dispatch>(

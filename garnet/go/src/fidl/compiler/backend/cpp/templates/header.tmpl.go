@@ -26,6 +26,7 @@ namespace {{ . }} {
 {{ "" }}
 
 {{- range .Decls }}
+{{- if Eq .Kind Kinds.Bits }}{{ template "BitsForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Interface }}{{ template "DispatchInterfaceForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructForwardDeclaration" . }}{{- end }}
@@ -50,6 +51,7 @@ namespace fidl {
 {{ "" }}
 
 {{- range .Decls }}
+{{- if Eq .Kind Kinds.Bits }}{{ template "BitsTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Interface }}{{ template "DispatchInterfaceTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructTraits" . }}{{- end }}

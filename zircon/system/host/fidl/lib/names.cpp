@@ -398,6 +398,7 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
         case flat::Type::Kind::kIdentifier: {
             auto identifier_type = static_cast<const flat::IdentifierType*>(type);
             switch (decl_kind) {
+            case flat::Decl::Kind::kBits:
             case flat::Decl::Kind::kConst:
             case flat::Decl::Kind::kEnum:
             case flat::Decl::Kind::kStruct:

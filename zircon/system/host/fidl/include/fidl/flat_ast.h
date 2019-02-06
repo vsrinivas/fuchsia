@@ -430,6 +430,7 @@ struct Decl {
     virtual ~Decl() {}
 
     enum struct Kind {
+        kBits,
         kConst,
         kEnum,
         kInterface,
@@ -707,6 +708,26 @@ struct Enum : public TypeDecl {
     const PrimitiveType* type = nullptr;
 };
 
+struct Bits : public TypeDecl {
+    struct Member {
+        Member(SourceLocation name, std::unique_ptr<Constant> value, std::unique_ptr<raw::AttributeList> attributes)
+            : name(name), value(std::move(value)), attributes(std::move(attributes)) {}
+        SourceLocation name;
+        std::unique_ptr<Constant> value;
+        std::unique_ptr<raw::AttributeList> attributes;
+    };
+
+    Bits(std::unique_ptr<raw::AttributeList> attributes, Name name,
+         std::unique_ptr<TypeConstructor> subtype_ctor,
+         std::vector<Member> members)
+        : TypeDecl(Kind::kBits, std::move(attributes), std::move(name)),
+          subtype_ctor(std::move(subtype_ctor)),
+          members(std::move(members)) {}
+
+    std::unique_ptr<TypeConstructor> subtype_ctor;
+    std::vector<Member> members;
+};
+
 struct Struct : public TypeDecl {
     struct Member {
         Member(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
@@ -946,6 +967,8 @@ public:
     // attribute is placed on an enum declaration, method, or union
     // member.
     enum class Placement {
+        kBitsDecl,
+        kBitsMember,
         kConstDecl,
         kEnumDecl,
         kEnumMember,
@@ -1085,6 +1108,7 @@ private:
 
     bool ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
     bool ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive);
+    bool ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration);
     bool ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
     bool ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
     bool
@@ -1127,6 +1151,7 @@ private:
 
     bool CompileLibraryName();
 
+    bool CompileBits(Bits* bits_declaration);
     bool CompileConst(Const* const_declaration);
     bool CompileEnum(Enum* enum_declaration);
     bool CompileInterface(Interface* interface_declaration);
@@ -1145,6 +1170,14 @@ private:
     bool ResolveIdentifierConstant(IdentifierConstant* identifier_constant, const Type* type);
     bool ResolveLiteralConstant(LiteralConstant* literal_constant, const Type* type);
 
+    // Validates a single member of a bits or enum. On failure,
+    // returns false and places an error message in the out parameter.
+    template <typename MemberType>
+    using MemberValidator = fit::function<bool(const MemberType& member, std::string* out_error)>;
+    template <typename DeclType, typename MemberType>
+    bool ValidateMembers(DeclType* decl, MemberValidator<MemberType> validator);
+    template <typename MemberType>
+    bool ValidateBitsMembers(Bits* bits_decl);
     template <typename MemberType>
     bool ValidateEnumMembers(Enum* enum_decl);
 
@@ -1167,6 +1200,7 @@ public:
     std::vector<StringView> library_name_;
 
     std::vector<std::unique_ptr<Using>> using_;
+    std::vector<std::unique_ptr<Bits>> bits_declarations_;
     std::vector<std::unique_ptr<Const>> const_declarations_;
     std::vector<std::unique_ptr<Enum>> enum_declarations_;
     std::vector<std::unique_ptr<Interface>> interface_declarations_;

@@ -33,6 +33,13 @@ enum Alert {
     RED = 3;
 };
 
+bits Shields : uint8 {
+    PORT = 1;
+    STARBOARD = 2;
+    FORE = 4;
+    AFT = 8;
+};
+
 struct FuelLevel {
     uint32 reaction_mass;
 };
@@ -61,4 +68,5 @@ interface SpaceShip {
     AddFuelTank(FuelLevel? level) -> (uint32 consumed);
     ScanForTensorLifeforms() -> (array<array<array<uint32>:3>:5>:8 lifesigns);
     ReportAstrologicalData(AstrologicalData data) -> (zx.status status);
+    ActivateShields(Shields shields);
 };

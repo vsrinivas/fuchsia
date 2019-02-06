@@ -377,6 +377,25 @@ void JSONGenerator::Generate(const flat::Name& value) {
     Generate(NameName(value, ".", "/"));
 }
 
+void JSONGenerator::Generate(const flat::Bits& value) {
+    GenerateObject([&]() {
+        GenerateObjectMember("name", value.name, Position::kFirst);
+        if (value.attributes)
+            GenerateObjectMember("maybe_attributes", value.attributes);
+        GenerateObjectMember("type", value.subtype_ctor->type);
+        GenerateObjectMember("members", value.members);
+    });
+}
+
+void JSONGenerator::Generate(const flat::Bits::Member& value) {
+    GenerateObject([&]() {
+        GenerateObjectMember("name", value.name, Position::kFirst);
+        GenerateObjectMember("value", value.value);
+        if (value.attributes)
+            GenerateObjectMember("maybe_attributes", value.attributes);
+    });
+}
+
 void JSONGenerator::Generate(const flat::Const& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
@@ -593,6 +612,9 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Pos
     EmitObjectKey(&json_file_, indent_level_, "declarations");
     GenerateObject([&]() {
         int count = 0;
+        for (const auto& decl : library->bits_declarations_)
+            GenerateDeclarationsEntry(count++, decl->name, "bits");
+
         for (const auto& decl : library->const_declarations_)
             GenerateDeclarationsEntry(count++, decl->name, "const");
 
@@ -637,6 +659,7 @@ std::ostringstream JSONGenerator::Produce() {
 
         GenerateArray(dependencies.begin(), dependencies.end());
 
+        GenerateObjectMember("bits_declarations", library_->bits_declarations_);
         GenerateObjectMember("const_declarations", library_->const_declarations_);
         GenerateObjectMember("enum_declarations", library_->enum_declarations_);
         GenerateObjectMember("interface_declarations", library_->interface_declarations_);

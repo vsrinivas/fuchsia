@@ -24,6 +24,7 @@ type FidlGenerator struct {
 
 func NewFidlGenerator() *FidlGenerator {
 	tmpls := template.New("GoTemplates")
+	template.Must(tmpls.Parse(templates.Bits))
 	template.Must(tmpls.Parse(templates.Enum))
 	template.Must(tmpls.Parse(templates.Interface))
 	template.Must(tmpls.Parse(templates.Library))

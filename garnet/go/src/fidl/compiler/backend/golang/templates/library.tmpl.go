@@ -32,6 +32,9 @@ const (
 {{ range $enum := .Enums -}}
 {{ template "EnumDefinition" $enum }}
 {{ end -}}
+{{ range $bits := .Bits -}}
+{{ template "BitsDefinition" $bits }}
+{{ end -}}
 {{ range $struct := .Structs -}}
 {{ template "StructDefinition" $struct }}
 {{ end -}}

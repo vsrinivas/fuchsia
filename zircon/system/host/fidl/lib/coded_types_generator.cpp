@@ -295,6 +295,16 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
 
 void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     switch (decl->kind) {
+    case flat::Decl::Kind::kBits: {
+        auto bits_decl = static_cast<const flat::Bits*>(decl);
+        std::string bits_name = NameName(bits_decl->name, "_", "_");
+        auto bits_subtype = static_cast<const flat::PrimitiveType*>(bits_decl->subtype_ctor->type)->subtype;
+        named_coded_types_.emplace(&bits_decl->name,
+                                   std::make_unique<coded::PrimitiveType>(
+                                       std::move(bits_name), bits_subtype,
+                                       flat::PrimitiveType::SubtypeSize(bits_subtype)));
+        break;
+    }
     case flat::Decl::Kind::kConst:
         // Nothing to do for const declarations.
         break;

@@ -399,6 +399,79 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
         nullability);
 }
 
+std::unique_ptr<raw::BitsMember> Parser::ParseBitsMember() {
+    ASTScope scope(this);
+    auto attributes = MaybeParseAttributeList();
+    if (!Ok())
+        return Fail();
+    auto identifier = ParseIdentifier();
+    if (!Ok())
+        return Fail();
+
+    ConsumeToken(OfKind(Token::Kind::kEqual));
+    if (!Ok())
+        return Fail();
+
+    auto member_value = ParseConstant();
+    if (!Ok())
+        return Fail();
+
+    return std::make_unique<raw::BitsMember>(scope.GetSourceElement(), std::move(identifier),
+                                             std::move(member_value), std::move(attributes));
+}
+
+std::unique_ptr<raw::BitsDeclaration>
+Parser::ParseBitsDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+    std::vector<std::unique_ptr<raw::BitsMember>> members;
+    ConsumeToken(IdentifierOfSubkind(Token::Subkind::kBits));
+    if (!Ok())
+        return Fail();
+
+    auto identifier = ParseIdentifier();
+    if (!Ok())
+        return Fail();
+
+    std::unique_ptr<raw::TypeConstructor> maybe_type_ctor;
+    if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
+        if (!Ok())
+            return Fail();
+        maybe_type_ctor = ParseTypeConstructor();
+        if (!Ok())
+            return Fail();
+    }
+
+    ConsumeToken(OfKind(Token::Kind::kLeftCurly));
+    if (!Ok())
+        return Fail();
+
+    auto parse_member = [&members, this]() {
+        if (Peek().kind() == Token::Kind::kRightCurly) {
+          ConsumeToken(OfKind(Token::Kind::kRightCurly));
+          return Done;
+        } else {
+          members.emplace_back(ParseBitsMember());
+          return More;
+        }
+    };
+
+    while (parse_member() == More) {
+        if (!Ok())
+            Fail();
+        ConsumeToken(OfKind(Token::Kind::kSemicolon));
+        if (!Ok())
+            return Fail();
+    }
+    if (!Ok())
+        Fail();
+
+    if (members.empty())
+        return Fail("must have at least one bits member");
+
+    return std::make_unique<raw::BitsDeclaration>(scope.GetSourceElement(),
+                                                  std::move(attributes), std::move(identifier),
+                                                  std::move(maybe_type_ctor), std::move(members));
+}
+
 std::unique_ptr<raw::ConstDeclaration>
 Parser::ParseConstDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
     ConsumeToken(IdentifierOfSubkind(Token::Subkind::kConst));
@@ -440,19 +513,21 @@ std::unique_ptr<raw::EnumMember> Parser::ParseEnumMember() {
     if (!Ok())
         return Fail();
 
-    return std::make_unique<raw::EnumMember>(scope.GetSourceElement(), std::move(identifier), std::move(member_value), std::move(attributes));
+    return std::make_unique<raw::EnumMember>(scope.GetSourceElement(), std::move(identifier),
+                                             std::move(member_value), std::move(attributes));
 }
 
 std::unique_ptr<raw::EnumDeclaration>
 Parser::ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
     std::vector<std::unique_ptr<raw::EnumMember>> members;
     ConsumeToken(IdentifierOfSubkind(Token::Subkind::kEnum));
-
     if (!Ok())
         return Fail();
+
     auto identifier = ParseIdentifier();
     if (!Ok())
         return Fail();
+
     std::unique_ptr<raw::TypeConstructor> maybe_type_ctor;
     if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
         if (!Ok())
@@ -461,6 +536,7 @@ Parser::ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes, AST
         if (!Ok())
             return Fail();
     }
+
     ConsumeToken(OfKind(Token::Kind::kLeftCurly));
     if (!Ok())
         return Fail();
@@ -1085,6 +1161,7 @@ Parser::ParseXUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, A
 std::unique_ptr<raw::File> Parser::ParseFile() {
     ASTScope scope(this);
     std::vector<std::unique_ptr<raw::Using>> using_list;
+    std::vector<std::unique_ptr<raw::BitsDeclaration>> bits_declaration_list;
     std::vector<std::unique_ptr<raw::ConstDeclaration>> const_declaration_list;
     std::vector<std::unique_ptr<raw::EnumDeclaration>> enum_declaration_list;
     std::vector<std::unique_ptr<raw::InterfaceDeclaration>> interface_declaration_list;
@@ -1125,7 +1202,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
             return Fail();
     }
 
-    auto parse_declaration = [&const_declaration_list, &enum_declaration_list,
+    auto parse_declaration = [&bits_declaration_list, &const_declaration_list, &enum_declaration_list,
                               &interface_declaration_list, &struct_declaration_list,
                               &table_declaration_list, &union_declaration_list, &xunion_declaration_list, this]() {
         ASTScope scope(this);
@@ -1136,6 +1213,10 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         switch (Peek().combined()) {
         default:
             return Done;
+
+        case CASE_IDENTIFIER(Token::Subkind::kBits):
+            bits_declaration_list.emplace_back(ParseBitsDeclaration(std::move(attributes), scope));
+            return More;
 
         case CASE_IDENTIFIER(Token::Subkind::kConst):
             const_declaration_list.emplace_back(ParseConstDeclaration(std::move(attributes), scope));
@@ -1187,8 +1268,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
     return std::make_unique<raw::File>(
         scope.GetSourceElement(), end,
-        std::move(attributes), std::move(library_name), std::move(using_list), std::move(const_declaration_list),
-        std::move(enum_declaration_list), std::move(interface_declaration_list),
+        std::move(attributes), std::move(library_name), std::move(using_list), std::move(bits_declaration_list),
+        std::move(const_declaration_list), std::move(enum_declaration_list), std::move(interface_declaration_list),
         std::move(struct_declaration_list), std::move(table_declaration_list), std::move(union_declaration_list), std::move(xunion_declaration_list));
 }
 

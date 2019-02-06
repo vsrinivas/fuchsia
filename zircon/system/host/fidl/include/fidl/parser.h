@@ -194,6 +194,10 @@ private:
 
     std::unique_ptr<raw::TypeConstructor> ParseTypeConstructor();
 
+    std::unique_ptr<raw::BitsMember> ParseBitsMember();
+    std::unique_ptr<raw::BitsDeclaration>
+    ParseBitsDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
+
     std::unique_ptr<raw::ConstDeclaration>
     ParseConstDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
 

@@ -26,6 +26,7 @@ func NewFidlGenerator() *FidlGenerator {
 		"Eq": func(a interface{}, b interface{}) bool { return a == b },
 	})
 	templates := []string {
+		fragments.Bits,
 		fragments.Const,
 		fragments.Enum,
 		fragments.Interface,

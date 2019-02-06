@@ -22,6 +22,7 @@ var legacyCallbacks = flag.Bool("cpp-legacy-callbacks", false,
 const llcppMaxStackAllocSize = 512
 
 // These are used in header/impl templates to select the correct type-specific template
+type bitsKind struct{}
 type constKind struct{}
 type enumKind struct{}
 type interfaceKind struct{}
@@ -32,6 +33,7 @@ type xunionKind struct{}
 
 var Kinds = struct {
 	Const     constKind
+	Bits      bitsKind
 	Enum      enumKind
 	Interface interfaceKind
 	Struct    structKind
@@ -57,6 +59,19 @@ type Const struct {
 	Name      string
 	Value     string
 	Kind      constKind
+}
+
+type Bits struct {
+	Namespace string
+	Type      string
+	Name      string
+	Members   []BitsMember
+	Kind      bitsKind
+}
+
+type BitsMember struct {
+	Name  string
+	Value string
 }
 
 type Enum struct {
@@ -471,7 +486,7 @@ func (c *compiler) compileConstant(val types.Constant, t *Type) string {
 	switch val.Kind {
 	case types.IdentifierConstant:
 		v := c.compileCompoundIdentifier(val.Identifier, "")
-		if t != nil && t.DeclType == types.EnumDeclType {
+		if t != nil && (t.DeclType == types.BitsDeclType || t.DeclType == types.EnumDeclType) {
 			v = fmt.Sprintf("%s::%s", t.Decl, v)
 		}
 		return v
@@ -536,6 +551,8 @@ func (c *compiler) compileType(val types.Type) Type {
 			log.Fatal("Unknown identifier: ", val.Identifier)
 		}
 		switch declType {
+		case types.BitsDeclType:
+			fallthrough
 		case types.ConstDeclType:
 			fallthrough
 		case types.EnumDeclType:
@@ -566,6 +583,22 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.DeclType = declType
 	default:
 		log.Fatal("Unknown type kind: ", val.Kind)
+	}
+	return r
+}
+
+func (c *compiler) compileBits(val types.Bits) Bits {
+	r := Bits{
+		Namespace: c.namespace,
+		Type:      c.compileType(val.Type).Decl,
+		Name:      c.compileCompoundIdentifier(val.Name, ""),
+		Members:   []BitsMember{},
+	}
+	for _, v := range val.Members {
+		r.Members = append(r.Members, BitsMember{
+			changeIfReserved(v.Name, ""),
+			c.compileConstant(v.Value, nil),
+		})
 	}
 	return r
 }
@@ -921,6 +954,11 @@ func Compile(r types.Root) Root {
 	root.LibraryReversed = libraryReversed
 
 	decls := map[types.EncodedCompoundIdentifier]Decl{}
+
+	for _, v := range r.Bits {
+		d := c.compileBits(v)
+		decls[v.Name] = &d
+	}
 
 	for _, v := range r.Consts {
 		d := c.compileConst(v)

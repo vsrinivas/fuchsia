@@ -27,6 +27,9 @@ use fidl::{
 	fidl_xunion,
 };
 
+{{ range $bits := .Bits -}}
+{{ template "BitsDeclaration" $bits }}
+{{ end -}}
 {{ range $const := .Consts -}}
 {{ template "ConstDeclaration" $const }}
 {{ end -}}

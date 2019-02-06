@@ -55,6 +55,7 @@ KEYWORD(Request, "request")
 KEYWORD(String, "string")
 KEYWORD(Vector, "vector")
 
+KEYWORD(Bits, "bits")
 KEYWORD(Const, "const")
 KEYWORD(Enum, "enum")
 KEYWORD(Interface, "interface")

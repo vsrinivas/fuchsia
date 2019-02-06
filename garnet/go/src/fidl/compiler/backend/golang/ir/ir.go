@@ -52,6 +52,41 @@ type Const struct {
 	Value string
 }
 
+// Bits represents the idiomatic representation of an bits in golang.
+//
+// That is, something like:
+// type MyBits int32
+// const (
+//    MyBitsMember1 MyBits = 1
+//    MyBitsMember2        = 4
+//    ...
+// )
+type Bits struct {
+	types.Attributes
+
+	// Name is the name of the bits type alias.
+	Name string
+
+	// Type is the underlying primitive type for the bits.
+	Type Type
+
+	// Members is the list of bits variants that are a part of this bits.
+	// The values of the Members must not overlap.
+	Members []BitsMember
+}
+
+// BitsMember represents a single bits variant. See Bits for more details.
+type BitsMember struct {
+	types.Attributes
+
+	// Name is the name of the bits variant without any prefix.
+	Name string
+
+	// Value is the raw value of the bits variant, represented as a string
+	// to support many types.
+	Value string
+}
+
 // Enum represents the idiomatic representation of an enum in golang.
 //
 // That is, something like:
@@ -402,6 +437,9 @@ type Root struct {
 	// import it.
 	PackageName string
 
+	// Bits represents a list of FIDL bits represented as Go bits.
+	Bits []Bits
+
 	// Consts represents a list of FIDL constants represented as Go constants.
 	Consts []Const
 
@@ -680,6 +718,8 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag, t2 tagNew) {
 			log.Fatal("Unknown identifier: ", val.Identifier)
 		}
 		switch declType {
+		case types.BitsDeclType:
+			fallthrough
 		case types.EnumDeclType:
 			r = Type(e)
 		case types.InterfaceDeclType:
@@ -704,6 +744,27 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag, t2 tagNew) {
 		log.Fatal("Unknown type kind: ", val.Kind)
 	}
 	return
+}
+
+func (c *compiler) compileBitsMember(val types.BitsMember) BitsMember {
+	return BitsMember{
+		Attributes: val.Attributes,
+		Name:       c.compileIdentifier(val.Name, true, ""),
+		Value:      c.compileConstant(val.Value),
+	}
+}
+
+func (c *compiler) compileBits(val types.Bits) Bits {
+	t, _, _ := c.compileType(val.Type)
+	r := Bits{
+		Attributes: val.Attributes,
+		Name:       c.compileCompoundIdentifier(val.Name, ""),
+		Type:       t,
+	}
+	for _, v := range val.Members {
+		r.Members = append(r.Members, c.compileBitsMember(v))
+	}
+	return r
 }
 
 func (c *compiler) compileConst(val types.Const) Const {
@@ -945,6 +1006,9 @@ func Compile(fidlData types.Root) Root {
 	r := Root{
 		Name:        string(libraryName[len(libraryName)-1]),
 		PackageName: libraryPath,
+	}
+	for _, v := range fidlData.Bits {
+		r.Bits = append(r.Bits, c.compileBits(v))
 	}
 	for _, v := range fidlData.Consts {
 		r.Consts = append(r.Consts, c.compileConst(v))

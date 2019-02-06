@@ -31,6 +31,13 @@ type Enum struct {
 	Members []string
 }
 
+// Bits represents a set of syzkaller flags
+type Bits struct {
+	Name    string
+	Type    string
+	Members []string
+}
+
 // Struct represents a syzkaller struct.
 type Struct struct {
 	Name    string
@@ -107,11 +114,15 @@ type Root struct {
 
 	// Enums correspond to syzkaller flags.
 	Enums []Enum
+
+	// Bits correspond to syzkaller flags.
+	Bits []Bits
 }
 
 type StructMap map[types.EncodedCompoundIdentifier]types.Struct
 type UnionMap map[types.EncodedCompoundIdentifier]types.Union
 type EnumMap map[types.EncodedCompoundIdentifier]types.Enum
+type BitsMap map[types.EncodedCompoundIdentifier]types.Bits
 
 type compiler struct {
 	// decls contains all top-level declarations for the FIDL source.
@@ -125,6 +136,9 @@ type compiler struct {
 
 	// enums contain all top-level enum definitions for the FIDL source.
 	enums EnumMap
+
+	// bits contain all top-level bits definitions for the FIDL source.
+	bits BitsMap
 
 	// library is the identifier for the current library.
 	library types.LibraryIdentifier
@@ -258,6 +272,18 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	return e
 }
 
+func (c *compiler) compileBits(val types.Bits) Bits {
+	e := Bits{
+		c.compileCompoundIdentifier(val.Name, ""),
+		string(c.compilePrimitiveSubtype(val.Type.PrimitiveSubtype)),
+		[]string{},
+	}
+	for _, v := range val.Members {
+		e.Members = append(e.Members, fmt.Sprintf("%s_%s", e.Name, v.Name))
+	}
+	return e
+}
+
 func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *StructMember, *StructMember) {
 	var i StructMember
 	var o *StructMember
@@ -370,6 +396,11 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 		case types.EnumDeclType:
 			i = StructMember{
 				Type: Type(fmt.Sprintf("flags[%s, %s]", c.compileCompoundIdentifier(p.Type.Identifier, ""), c.compilePrimitiveSubtype(c.enums[p.Type.Identifier].Type))),
+				Name: c.compileIdentifier(p.Name, ""),
+			}
+		case types.BitsDeclType:
+			i = StructMember{
+				Type: Type(fmt.Sprintf("flags[%s, %s]", c.compileCompoundIdentifier(p.Type.Identifier, ""), c.compilePrimitiveSubtype(c.bits[p.Type.Identifier].Type.PrimitiveSubtype))),
 				Name: c.compileIdentifier(p.Name, ""),
 			}
 		case types.InterfaceDeclType:
@@ -586,6 +617,7 @@ func Compile(fidlData types.Root) Root {
 		structs: make(StructMap),
 		unions:  make(UnionMap),
 		enums:   make(EnumMap),
+		bits:   make(BitsMap),
 		library: libraryName,
 	}
 
@@ -595,6 +627,12 @@ func Compile(fidlData types.Root) Root {
 		c.enums[v.Name] = v
 
 		root.Enums = append(root.Enums, c.compileEnum(v))
+	}
+
+	for _, v := range fidlData.Bits {
+		c.bits[v.Name] = v
+
+		root.Bits = append(root.Bits, c.compileBits(v))
 	}
 
 	for _, v := range fidlData.Structs {

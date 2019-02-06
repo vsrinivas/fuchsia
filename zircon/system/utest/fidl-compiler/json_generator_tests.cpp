@@ -78,6 +78,7 @@ struct Simple {
   "version": "0.0.1",
   "name": "fidl.test.json",
   "library_dependencies": [],
+  "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [],
@@ -169,6 +170,7 @@ interface EmptyInterface {
   "version": "0.0.1",
   "name": "fidl.test.json",
   "library_dependencies": [],
+  "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [
@@ -360,6 +362,7 @@ table Simple {
   "version": "0.0.1",
   "name": "fidl.test.json",
   "library_dependencies": [],
+  "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [],
@@ -461,6 +464,7 @@ union PizzaOrPasta {
   "version": "0.0.1",
   "name": "fidl.test.json",
   "library_dependencies": [],
+  "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [],
@@ -623,6 +627,7 @@ xunion xu {
   "version": "0.0.1",
   "name": "fidl.test.json",
   "library_dependencies": [],
+  "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [],
@@ -714,6 +719,7 @@ interface sub : super {
   "version": "0.0.1",
   "name": "fidl.test.json",
   "library_dependencies": [],
+  "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [
@@ -891,6 +897,7 @@ interface Child : Parent {
   "version": "0.0.1",
   "name": "fidl.test.json",
   "library_dependencies": [],
+  "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [
@@ -1057,6 +1064,7 @@ interface Example {
   "version": "0.0.1",
   "name": "fidl.test.json",
   "library_dependencies": [],
+  "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [
@@ -1252,6 +1260,7 @@ struct ByteAndBytes {
   "version": "0.0.1",
   "name": "example",
   "library_dependencies": [],
+  "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [],
   "interface_declarations": [],
@@ -1369,6 +1378,75 @@ struct ByteAndBytes {
     END_TEST;
 }
 
+bool json_generator_test_bits() {
+    BEGIN_TEST;
+
+    for (int i = 0; i < kRepeatTestCount; i++) {
+        EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+library fidl.test.json;
+
+bits Bits : uint64 {
+    SMALLEST = 1;
+    BIGGEST = 0x8000000000000000;
+};
+
+)FIDL",
+                                       R"JSON(
+{
+  "version": "0.0.1",
+  "name": "fidl.test.json",
+  "library_dependencies": [],
+  "bits_declarations": [
+    {
+      "name": "fidl.test.json/Bits",
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint64"
+      },
+      "members": [
+        {
+          "name": "SMALLEST",
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "1"
+            }
+          }
+        },
+        {
+          "name": "BIGGEST",
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "0x8000000000000000"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "declaration_order": [
+    "fidl.test.json/Bits"
+  ],
+  "declarations": {
+    "fidl.test.json/Bits": "bits"
+  }
+}
+)JSON"));
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(json_generator_tests);
@@ -1381,4 +1459,5 @@ RUN_TEST(json_generator_test_inheritance);
 RUN_TEST(json_generator_test_inheritance_with_recursive_decl);
 RUN_TEST(json_generator_test_error);
 RUN_TEST(json_generator_test_byte_and_bytes);
+RUN_TEST(json_generator_test_bits);
 END_TEST_CASE(json_generator_tests);

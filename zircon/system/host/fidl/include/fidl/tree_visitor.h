@@ -128,6 +128,12 @@ public:
         element->Accept(*this);
     }
 
+    virtual void OnBitsMember(std::unique_ptr<BitsMember> const& element) {
+        element->Accept(*this);
+    }
+    virtual void OnBitsDeclaration(std::unique_ptr<BitsDeclaration> const& element) {
+        element->Accept(*this);
+    }
     virtual void OnEnumMember(std::unique_ptr<EnumMember> const& element) {
         element->Accept(*this);
     }

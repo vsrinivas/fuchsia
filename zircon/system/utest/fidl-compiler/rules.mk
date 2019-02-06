@@ -18,6 +18,7 @@ EXAMPLE_DIR := system/host/fidl/examples/
 
 EXAMPLE_FILES := \
     $(EXAMPLE_DIR)/alignment.fidl \
+    $(EXAMPLE_DIR)/bits.fidl \
     $(EXAMPLE_DIR)/empty.fidl \
     $(EXAMPLE_DIR)/enums.fidl \
     $(EXAMPLE_DIR)/events.fidl \
@@ -65,6 +66,7 @@ std::map<std::string, std::string> Examples::map_ = {\n" >> $@ && \
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/attributes_tests.cpp \
+    $(LOCAL_DIR)/bits_tests.cpp \
     $(LOCAL_DIR)/coded_types_generator_tests.cpp \
     $(LOCAL_DIR)/consts_tests.cpp \
     $(LOCAL_DIR)/declaration_order_tests.cpp \

@@ -5,6 +5,7 @@
     "required": [
         "version",
         "name",
+        "bits_declarations",
         "const_declarations",
         "enum_declarations",
         "interface_declarations",
@@ -24,6 +25,13 @@
         "name": {
             "description": "Name of the library",
             "$ref": "#/definitions/library-identifier"
+        },
+        "bits_declarations": {
+            "description": "List of bits declarations",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/bits"
+            }
         },
         "const_declarations": {
             "description": "List of constants",
@@ -94,6 +102,58 @@
         }
     },
     "definitions": {
+        "bits": {
+            "description": "Definition of a bits declaration",
+            "type": "object",
+            "required": [
+                "name",
+                "type",
+                "members"
+            ],
+            "properties": {
+                "maybe_attributes": {
+                    "description": "Optional list of attributes of the bits declaration",
+                    "$ref": "#/definitions/attributes-list"
+                },
+                "name": {
+                    "description": "Fully qualified name of the bits",
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "type": {
+                    "description": "Type of the bits",
+                    "$ref": "#/definitions/type"
+                },
+                "members": {
+                    "description": "List of bits members",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/bits-member"
+                    }
+                }
+            }
+        },
+        "bits-member": {
+            "description": "Definition of an bits member",
+            "type": "object",
+            "required": [
+                "name",
+                "value"
+            ],
+            "properties": {
+                "name": {
+                    "description": "Name of the bits member",
+                    "$ref": "#/definitions/identifier"
+                },
+                "maybe_attributes": {
+                    "description": "Optional list of attributes of the bits member",
+                    "$ref": "#/definitions/attributes-list"
+                },
+                "value": {
+                    "description": "Value of the bits member",
+                    "$ref": "#/definitions/constant"
+                }
+            }
+        },
         "const": {
             "description": "Definition of a constant declaration",
             "type": "object",
@@ -219,7 +279,7 @@
             "type": "object",
             "required": [
                 "ordinal",
-  	        "generated_ordinal",
+                "generated_ordinal",
                 "name",
                 "has_request",
                 "has_response"
@@ -717,6 +777,7 @@
                 ".*": {
                     "type": "string",
                     "enum": [
+                        "bits",
                         "const",
                         "enum",
                         "interface",

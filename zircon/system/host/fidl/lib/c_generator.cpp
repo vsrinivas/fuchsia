@@ -130,6 +130,7 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
         case flat::Decl::Kind::kConst:
             assert(false && "bad decl kind for member");
             break;
+        case flat::Decl::Kind::kBits:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kInterface:
             *file << member.type << " " << member.name;
@@ -180,6 +181,7 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
         case flat::Decl::Kind::kConst:
             assert(false && "bad decl kind for member");
             break;
+        case flat::Decl::Kind::kBits:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kInterface:
             *file << member.type << "* out_" << member.name;
@@ -376,6 +378,7 @@ void EmitLinearizeMessage(std::ostream* file,
             case flat::Decl::Kind::kConst:
                 assert(false && "bad decl kind for member");
                 break;
+            case flat::Decl::Kind::kBits:
             case flat::Decl::Kind::kEnum:
             case flat::Decl::Kind::kInterface:
                 *file << kIndent << receiver << "->" << name << " = " << name << ";\n";
@@ -409,6 +412,46 @@ void EmitLinearizeMessage(std::ostream* file,
 }
 
 // Various computational helper routines.
+
+void BitsValue(const flat::Constant* constant, std::string* out_value) {
+    std::ostringstream member_value;
+
+    const flat::ConstantValue& const_val = constant->Value();
+    switch (const_val.kind) {
+    case flat::ConstantValue::Kind::kUint8: {
+        auto value = static_cast<const flat::NumericConstantValue<uint8_t>&>(const_val);
+        member_value << value;
+        break;
+    }
+    case flat::ConstantValue::Kind::kUint16: {
+        auto value = static_cast<const flat::NumericConstantValue<uint16_t>&>(const_val);
+        member_value << value;
+        break;
+    }
+    case flat::ConstantValue::Kind::kUint32: {
+        auto value = static_cast<const flat::NumericConstantValue<uint32_t>&>(const_val);
+        member_value << value;
+        break;
+    }
+    case flat::ConstantValue::Kind::kUint64: {
+        auto value = static_cast<const flat::NumericConstantValue<uint64_t>&>(const_val);
+        member_value << value;
+        break;
+    }
+    case flat::ConstantValue::Kind::kInt8:
+    case flat::ConstantValue::Kind::kInt16:
+    case flat::ConstantValue::Kind::kInt32:
+    case flat::ConstantValue::Kind::kInt64:
+    case flat::ConstantValue::Kind::kBool:
+    case flat::ConstantValue::Kind::kFloat32:
+    case flat::ConstantValue::Kind::kFloat64:
+    case flat::ConstantValue::Kind::kString:
+        assert(false && "bad primitive type for a bits declaration");
+        break;
+    }
+
+    *out_value = member_value.str();
+}
 
 void EnumValue(const flat::Constant* constant, std::string* out_value) {
     std::ostringstream member_value;
@@ -729,6 +772,16 @@ void CGenerator::GenerateTaggedXUnionDeclaration(StringView name,
     // XUnions are (intentionally) unimplemented for C bindings.
 }
 
+std::map<const flat::Decl*, CGenerator::NamedBits>
+CGenerator::NameBits(const std::vector<std::unique_ptr<flat::Bits>>& bits_infos) {
+    std::map<const flat::Decl*, NamedBits> named_bits;
+    for (const auto& bits_info : bits_infos) {
+        std::string bits_name = NameName(bits_info->name, "_", "_");
+        named_bits.emplace(bits_info.get(), NamedBits{std::move(bits_name), *bits_info});
+    }
+    return named_bits;
+}
+
 // TODO(TO-702) These should maybe check for global name
 // collisions? Otherwise, is there some other way they should fail?
 std::map<const flat::Decl*, CGenerator::NamedConst>
@@ -848,6 +901,19 @@ CGenerator::NameXUnions(const std::vector<std::unique_ptr<flat::XUnion>>& xunion
         named_xunions.emplace(xunion_info.get(), NamedXUnion{std::move(xunion_name), *xunion_info});
     }
     return named_xunions;
+}
+
+void CGenerator::ProduceBitsForwardDeclaration(const NamedBits& named_bits) {
+    auto subtype = static_cast<const flat::PrimitiveType*>(named_bits.bits_info.subtype_ctor->type)->subtype;
+    GenerateIntegerTypedef(subtype, named_bits.name);
+    for (const auto& member : named_bits.bits_info.members) {
+        std::string member_name = named_bits.name + "_" + NameIdentifier(member.name);
+        std::string member_value;
+        BitsValue(member.value.get(), &member_value);
+        GenerateIntegerDefine(member_name, subtype, std::move(member_value));
+    }
+
+    EmitBlank(&file_);
 }
 
 void CGenerator::ProduceConstForwardDeclaration(const NamedConst& named_const) {
@@ -1208,6 +1274,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                     case flat::Decl::Kind::kConst:
                         assert(false && "bad decl kind for member");
                         break;
+                    case flat::Decl::Kind::kBits:
                     case flat::Decl::Kind::kEnum:
                     case flat::Decl::Kind::kInterface:
                         file_ << kIndent << "*out_" << name << " = _response->" << name << ";\n";
@@ -1329,6 +1396,7 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
                 case flat::Decl::Kind::kConst:
                     assert(false && "bad decl kind for member");
                     break;
+                case flat::Decl::Kind::kBits:
                 case flat::Decl::Kind::kEnum:
                 case flat::Decl::Kind::kInterface:
                     file_ << ", request->" << member.name;
@@ -1428,6 +1496,7 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
 std::ostringstream CGenerator::ProduceHeader() {
     GeneratePrologues();
 
+    std::map<const flat::Decl*, NamedBits> named_bits = NameBits(library_->bits_declarations_);
     std::map<const flat::Decl*, NamedConst> named_consts =
         NameConsts(library_->const_declarations_);
     std::map<const flat::Decl*, NamedEnum> named_enums = NameEnums(library_->enum_declarations_);
@@ -1446,6 +1515,13 @@ std::ostringstream CGenerator::ProduceHeader() {
 
     for (const auto* decl : library_->declaration_order_) {
         switch (decl->kind) {
+        case flat::Decl::Kind::kBits: {
+            auto iter = named_bits.find(decl);
+            if (iter != named_bits.end()) {
+                ProduceBitsForwardDeclaration(iter->second);
+            }
+            break;
+        }
         case flat::Decl::Kind::kConst: {
             auto iter = named_consts.find(decl);
             if (iter != named_consts.end()) {
@@ -1504,6 +1580,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 
     for (const auto* decl : library_->declaration_order_) {
         switch (decl->kind) {
+        case flat::Decl::Kind::kBits:
         case flat::Decl::Kind::kConst:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kStruct:
@@ -1528,6 +1605,10 @@ std::ostringstream CGenerator::ProduceHeader() {
 
     for (const auto* decl : library_->declaration_order_) {
         switch (decl->kind) {
+        case flat::Decl::Kind::kBits:
+            // Bits can be entirely forward declared, as they have no
+            // dependencies other than standard headers.
+            break;
         case flat::Decl::Kind::kConst: {
             auto iter = named_consts.find(decl);
             if (iter != named_consts.end()) {
@@ -1580,6 +1661,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 
     for (const auto* decl : library_->declaration_order_) {
         switch (decl->kind) {
+        case flat::Decl::Kind::kBits:
         case flat::Decl::Kind::kConst:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kStruct:
@@ -1622,6 +1704,7 @@ std::ostringstream CGenerator::ProduceClient() {
 
     for (const auto* decl : library_->declaration_order_) {
         switch (decl->kind) {
+        case flat::Decl::Kind::kBits:
         case flat::Decl::Kind::kConst:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kStruct:
@@ -1660,6 +1743,7 @@ std::ostringstream CGenerator::ProduceServer() {
 
     for (const auto* decl : library_->declaration_order_) {
         switch (decl->kind) {
+        case flat::Decl::Kind::kBits:
         case flat::Decl::Kind::kConst:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kStruct:

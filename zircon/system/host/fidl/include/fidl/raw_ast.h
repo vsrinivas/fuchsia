@@ -245,6 +245,36 @@ public:
     types::Nullability nullability;
 };
 
+class BitsMember : public SourceElement {
+public:
+    BitsMember(SourceElement const& element, std::unique_ptr<Identifier> identifier, std::unique_ptr<Constant> value, std::unique_ptr<AttributeList> attributes)
+        : SourceElement(element), identifier(std::move(identifier)), value(std::move(value)), attributes(std::move(attributes)) {}
+
+    void Accept(TreeVisitor& visitor);
+
+    std::unique_ptr<Identifier> identifier;
+    std::unique_ptr<Constant> value;
+    std::unique_ptr<AttributeList> attributes;
+};
+
+class BitsDeclaration : public SourceElement {
+public:
+    BitsDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+                    std::unique_ptr<Identifier> identifier,
+                    std::unique_ptr<TypeConstructor> maybe_type_ctor,
+                    std::vector<std::unique_ptr<BitsMember>> members)
+        : SourceElement(element), attributes(std::move(attributes)),
+          identifier(std::move(identifier)),
+          maybe_type_ctor(std::move(maybe_type_ctor)), members(std::move(members)) {}
+
+    void Accept(TreeVisitor& visitor);
+
+    std::unique_ptr<AttributeList> attributes;
+    std::unique_ptr<Identifier> identifier;
+    std::unique_ptr<TypeConstructor> maybe_type_ctor;
+    std::vector<std::unique_ptr<BitsMember>> members;
+};
+
 class Using : public SourceElement {
 public:
     Using(SourceElement const& element, std::unique_ptr<CompoundIdentifier> using_path,
@@ -532,6 +562,7 @@ public:
          std::unique_ptr<AttributeList> attributes,
          std::unique_ptr<CompoundIdentifier> library_name,
          std::vector<std::unique_ptr<Using>> using_list,
+         std::vector<std::unique_ptr<BitsDeclaration>> bits_declaration_list,
          std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list,
          std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list,
          std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list,
@@ -543,6 +574,7 @@ public:
           attributes(std::move(attributes)),
           library_name(std::move(library_name)),
           using_list(std::move(using_list)),
+          bits_declaration_list(std::move(bits_declaration_list)),
           const_declaration_list(std::move(const_declaration_list)),
           enum_declaration_list(std::move(enum_declaration_list)),
           interface_declaration_list(std::move(interface_declaration_list)),
@@ -557,6 +589,7 @@ public:
     std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<CompoundIdentifier> library_name;
     std::vector<std::unique_ptr<Using>> using_list;
+    std::vector<std::unique_ptr<BitsDeclaration>> bits_declaration_list;
     std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list;
     std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list;
     std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list;

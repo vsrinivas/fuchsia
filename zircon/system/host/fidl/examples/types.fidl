@@ -325,6 +325,28 @@ enum u64_enum : uint64 {
     x = 23;
 };
 
+bits default_bits {
+    x = 64;
+};
+
+bits u8_bits : uint8 {
+    x = 1;
+};
+
+bits u16_bits : uint16 {
+    x = 2;
+    y = 4;
+};
+
+bits u32_bits : uint32 {
+    x = 0x8;
+};
+
+bits u64_bits : uint64 {
+    x = 0x4000000000000000;
+    y = 0x8000000000000000;
+};
+
 struct structs {
     this_is_a_struct s;
     this_is_a_struct? nullable_s;

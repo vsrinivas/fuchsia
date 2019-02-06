@@ -83,6 +83,15 @@ public:
                library_->Compile();
     }
 
+    const fidl::flat::Bits* LookupBits(const std::string& name) {
+        for (const auto& bits_decl : library_->bits_declarations_) {
+            if (bits_decl->GetName() == name) {
+                return bits_decl.get();
+            }
+        }
+        return nullptr;
+    }
+
     const fidl::flat::Struct* LookupStruct(const std::string& name) {
         for (const auto& struct_decl : library_->struct_declarations_) {
             if (struct_decl->GetName() == name) {

@@ -24,6 +24,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
         OnUsing(*i);
     }
 
+    auto bits_decls_it = element->bits_declaration_list.begin();
     auto const_decls_it = element->const_declaration_list.begin();
     auto enum_decls_it = element->enum_declaration_list.begin();
     auto interface_decls_it = element->interface_declaration_list.begin();
@@ -33,6 +34,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
     auto xunion_decls_it = element->xunion_declaration_list.begin();
 
     enum Next {
+        bits_t,
         const_t,
         enum_t,
         interface_t,
@@ -52,6 +54,9 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
         // put earliest in the map.  That will be the earliest declaration
         // in the file.  We then visit the declaration accordingly.
         m.clear();
+        if (bits_decls_it != element->bits_declaration_list.end()) {
+            m[(*bits_decls_it)->start_.previous_end().data().data()] = bits_t;
+        }
         if (const_decls_it != element->const_declaration_list.end()) {
             m[(*const_decls_it)->start_.previous_end().data().data()] = const_t;
         }
@@ -83,6 +88,10 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
 
         // And the earliest top level declaration is...
         switch (m.begin()->second) {
+        case bits_t:
+            OnBitsDeclaration(*bits_decls_it);
+            ++bits_decls_it;
+            break;
         case const_t:
             OnConstDeclaration(*const_decls_it);
             ++const_decls_it;

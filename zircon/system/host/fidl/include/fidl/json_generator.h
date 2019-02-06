@@ -95,6 +95,8 @@ private:
     void Generate(const flat::Name& value);
     void Generate(const flat::Type* value);
     void Generate(const flat::Constant& value);
+    void Generate(const flat::Bits& value);
+    void Generate(const flat::Bits::Member& value);
     void Generate(const flat::Const& value);
     void Generate(const flat::Enum& value);
     void Generate(const flat::Enum::Member& value);

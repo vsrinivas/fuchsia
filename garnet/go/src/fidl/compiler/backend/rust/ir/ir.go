@@ -19,6 +19,20 @@ type Type struct {
 	LargeArray bool
 }
 
+type Bits struct {
+	types.Attributes
+	Name    string
+	Type    Type
+	Members []BitsMember
+}
+
+type BitsMember struct {
+	types.Attributes
+	Name      string
+	ConstName string
+	Value     string
+}
+
 type Const struct {
 	types.Attributes
 	Name  string
@@ -129,6 +143,7 @@ type Parameter struct {
 
 type Root struct {
 	ExternCrates []string
+	Bits        []Bits
 	Consts       []Const
 	Enums        []Enum
 	Structs      []Struct
@@ -483,8 +498,9 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 			log.Fatal("unknown identifier: ", val.Identifier)
 		}
 		switch declType {
+		case types.BitsDeclType:
 		case types.EnumDeclType:
-			// Enums are small, simple, and never contain handles,
+			// Bits and enums are small, simple, and never contain handles,
 			// so no need to borrow
 			borrowed = false
 			fallthrough
@@ -539,6 +555,24 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		DeclType:   declType,
 		LargeArray: largeArray,
 	}
+}
+
+func (c *compiler) compileBits(val types.Bits) Bits {
+	e := Bits{
+		val.Attributes,
+		c.compileCamelCompoundIdentifier(val.Name),
+		c.compileType(val.Type, false),
+		[]BitsMember{},
+	}
+	for _, v := range val.Members {
+		e.Members = append(e.Members, BitsMember{
+			Attributes: v.Attributes,
+			Name:       compileCamelIdentifier(v.Name),
+			ConstName:  compileScreamingSnakeIdentifier(v.Name),
+			Value:      c.compileConstant(v.Value),
+		})
+	}
+	return e
 }
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
@@ -711,6 +745,10 @@ func Compile(r types.Root) Root {
 	root := Root{}
 	thisLibParsed := types.ParseLibraryName(r.Name)
 	c := compiler{&r.Decls, thisLibParsed, map[string]bool{}}
+
+	for _, v := range r.Bits {
+		root.Bits = append(root.Bits, c.compileBits(v))
+	}
 
 	for _, v := range r.Consts {
 		root.Consts = append(root.Consts, c.compileConst(v))

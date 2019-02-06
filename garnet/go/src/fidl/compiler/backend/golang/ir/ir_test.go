@@ -17,6 +17,7 @@ type expectKind int
 
 const (
 	expectEnums expectKind = iota
+	expectBits
 	expectStructs
 	expectInterface
 	expectTable
@@ -30,6 +31,9 @@ func compileExpect(t *testing.T, testName string, kind expectKind, input types.R
 		case expectEnums:
 			actual = wrapped_actual.Enums
 			expect = wrapped_expect.Enums
+		case expectBits:
+			actual = wrapped_actual.Bits
+			expect = wrapped_expect.Bits
 		case expectStructs:
 			actual = wrapped_actual.Structs
 			expect = wrapped_expect.Structs
@@ -50,6 +54,10 @@ func compileExpect(t *testing.T, testName string, kind expectKind, input types.R
 
 func compileEnumsExpect(t *testing.T, testName string, input []types.Enum, expect []Enum) {
 	compileExpect(t, testName, expectEnums, types.Root{Enums: input}, Root{Enums: expect})
+}
+
+func compileBitsExpect(t *testing.T, testName string, input []types.Bits, expect []Bits) {
+	compileExpect(t, testName, expectBits, types.Root{Bits: input}, Root{Bits: expect})
 }
 
 func compileStructsExpect(t *testing.T, testName string, input []types.Struct, expect []Struct) {
@@ -449,6 +457,98 @@ func TestCompileEnum(t *testing.T) {
 			Name: "Test",
 			Type: "uint32",
 			Members: []EnumMember{
+				{
+					Name:  "Test",
+					Value: "125412512",
+				},
+			},
+		},
+	})
+}
+
+func TestCompileBits(t *testing.T) {
+	t.Parallel()
+
+	compileBitsExpect(t, "Basic bits", []types.Bits{
+		{
+			Name: types.EncodedCompoundIdentifier("Test"),
+			Type: PrimitiveType(types.Int64),
+			Members: []types.BitsMember{
+				{
+					Name:  types.Identifier("One"),
+					Value: NumericLiteral(1),
+				},
+				{
+					Name:  types.Identifier("Two"),
+					Value: NumericLiteral(2),
+				},
+			},
+		},
+	}, []Bits{
+		{
+			Name: "Test",
+			Type: "int64",
+			Members: []BitsMember{
+				{
+					Name:  "One",
+					Value: "1",
+				},
+				{
+					Name:  "Two",
+					Value: "2",
+				},
+			},
+		},
+	})
+
+	compileBitsExpect(t, "Bool bits", []types.Bits{
+		{
+			Name: types.EncodedCompoundIdentifier("Test"),
+			Type: PrimitiveType(types.Bool),
+			Members: []types.BitsMember{
+				{
+					Name:  types.Identifier("One"),
+					Value: BoolLiteral(true),
+				},
+				{
+					Name:  types.Identifier("Two"),
+					Value: BoolLiteral(false),
+				},
+			},
+		},
+	}, []Bits{
+		{
+			Name: "Test",
+			Type: "bool",
+			Members: []BitsMember{
+				{
+					Name:  "One",
+					Value: "true",
+				},
+				{
+					Name:  "Two",
+					Value: "false",
+				},
+			},
+		},
+	})
+
+	compileBitsExpect(t, "Bits with name mangling", []types.Bits{
+		{
+			Name: types.EncodedCompoundIdentifier("test"),
+			Type: PrimitiveType(types.Uint32),
+			Members: []types.BitsMember{
+				{
+					Name:  types.Identifier("test"),
+					Value: NumericLiteral(125412512),
+				},
+			},
+		},
+	}, []Bits{
+		{
+			Name: "Test",
+			Type: "uint32",
+			Members: []BitsMember{
 				{
 					Name:  "Test",
 					Value: "125412512",
