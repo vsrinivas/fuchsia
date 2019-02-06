@@ -42,7 +42,7 @@ class SingleCpuLinuxEnclosedGuest : public LinuxEnclosedGuest {
 using GuestTypes =
     ::testing::Types<ZirconEnclosedGuest, SingleCpuZirconEnclosedGuest,
                      LinuxEnclosedGuest, SingleCpuLinuxEnclosedGuest>;
-TYPED_TEST_CASE(GuestTest, GuestTypes);
+TYPED_TEST_SUITE(GuestTest, GuestTypes);
 
 TYPED_TEST(GuestTest, LaunchGuest) {
   std::string result;

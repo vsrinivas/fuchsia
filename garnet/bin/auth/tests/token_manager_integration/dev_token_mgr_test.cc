@@ -152,12 +152,11 @@ class DevTokenManagerAppTest
     Status status;
     fuchsia::auth::UserProfileInfoPtr user_info;
 
-    token_mgr_->Authorize(app_config,
-                          nullptr, /* optional AuthenticationUiContext */
-                          std::move(scopes),
-                          "", /* new user, no existing user_profile_id */
-                          "", /* empty auth_code */
-                          &status, &user_info);
+    token_mgr_->Authorize(
+        app_config, nullptr,   /* optional AuthenticationUiContext */
+        std::move(scopes), "", /* new user, no existing user_profile_id */
+        "",                    /* empty auth_code */
+        &status, &user_info);
     ASSERT_EQ(Status::OK, status);
     ASSERT_FALSE(!user_info);
     user_profile_id_ = user_info->id;
@@ -173,13 +172,11 @@ TEST_P(DevTokenManagerAppTest, Authorize) {
   Status status;
   fuchsia::auth::UserProfileInfoPtr user_info;
 
-  token_mgr_->Authorize(dev_app_config_,
-                        nullptr, /* optional AuthenticationUiContext */
-                        std::move(scopes),
-                        "", /* new user, no existing user_profile_id */
-                        "", /* empty auth_code */
-                        &status,
-                        &user_info);
+  token_mgr_->Authorize(
+      dev_app_config_, nullptr, /* optional AuthenticationUiContext */
+      std::move(scopes), "",    /* new user, no existing user_profile_id */
+      "",                       /* empty auth_code */
+      &status, &user_info);
   ASSERT_EQ(Status::OK, status);
   ASSERT_FALSE(!user_info);
   EXPECT_FALSE(user_info->id.empty());
@@ -231,8 +228,7 @@ TEST_P(DevTokenManagerAppTest, GetFirebaseToken) {
   } else {
     ASSERT_EQ(Status::OK, status);
     if (firebase_token) {
-      EXPECT_TRUE(firebase_token->id_token.find(":fbt_") !=
-                  std::string::npos);
+      EXPECT_TRUE(firebase_token->id_token.find(":fbt_") != std::string::npos);
       EXPECT_TRUE(firebase_token->email.get().find("@firebase.example.com") !=
                   std::string::npos);
       EXPECT_TRUE(firebase_token->local_id.get().find("local_id_") !=
@@ -413,8 +409,8 @@ TEST_P(DevTokenManagerAppTest, Reauthorize) {
   EXPECT_TRUE(token2.get().find(credential) == std::string::npos);
 }
 
-INSTANTIATE_TEST_CASE_P(Cpp, DevTokenManagerAppTest,
-                        ::testing::ValuesIn(kTestComponentParams));
+INSTANTIATE_TEST_SUITE_P(Cpp, DevTokenManagerAppTest,
+                         ::testing::ValuesIn(kTestComponentParams));
 }  // namespace
 }  // namespace e2e_dev
 

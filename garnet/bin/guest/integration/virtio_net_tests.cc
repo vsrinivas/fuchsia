@@ -59,7 +59,7 @@ template <class T>
 using VirtioNetTest = GuestTest<T>;
 
 using GuestTypes = ::testing::Types<VirtioNetZirconGuest>;
-TYPED_TEST_CASE(VirtioNetTest, GuestTypes);
+TYPED_TEST_SUITE(VirtioNetTest, GuestTypes);
 
 TYPED_TEST(VirtioNetTest, ReceiveAndSend) {
   auto handle = std::async(std::launch::async, [this] {

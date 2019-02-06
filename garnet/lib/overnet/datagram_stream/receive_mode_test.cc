@@ -90,7 +90,7 @@ typedef ::testing::Types<
     ParameterizedWrapper<
         fuchsia::overnet::protocol::ReliabilityAndOrdering::TailReliable>>
     ReceiveModeTypes;
-TYPED_TEST_CASE(ReceiveModeTest, ReceiveModeTypes);
+TYPED_TEST_SUITE(ReceiveModeTest, ReceiveModeTypes);
 
 TYPED_TEST(ReceiveModeTest, SimpleInSeq) {
   for (uint64_t i = 1u; i <= 10u; i++) {
@@ -142,7 +142,7 @@ typedef ::testing::Types<
     ParameterizedWrapper<
         fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableOrdered>>
     ReliableOrderedTypes;
-TYPED_TEST_CASE(ReliableOrderedTest, ReliableOrderedTypes);
+TYPED_TEST_SUITE(ReliableOrderedTest, ReliableOrderedTypes);
 
 TYPED_TEST(ReliableOrderedTest, MissedOneThenGotIt) {
   this->Begin(2);
@@ -163,7 +163,7 @@ typedef ::testing::Types<
     ParameterizedWrapper<
         fuchsia::overnet::protocol::ReliabilityAndOrdering::ReliableUnordered>>
     ReliableUnorderedTypes;
-TYPED_TEST_CASE(ReliableUnorderedTest, ReliableUnorderedTypes);
+TYPED_TEST_SUITE(ReliableUnorderedTest, ReliableUnorderedTypes);
 
 TYPED_TEST(ReliableUnorderedTest, MissedOneThenGotIt) {
   this->ExpectBegin(2, StatusCode::OK);
@@ -184,7 +184,7 @@ typedef ::testing::Types<
     ParameterizedWrapper<
         fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableOrdered>>
     UnreliableOrderedTypes;
-TYPED_TEST_CASE(UnreliableOrderedTest, UnreliableOrderedTypes);
+TYPED_TEST_SUITE(UnreliableOrderedTest, UnreliableOrderedTypes);
 
 TYPED_TEST(UnreliableOrderedTest, Skippy) {
   this->ExpectBegin(1, StatusCode::OK);
@@ -216,7 +216,7 @@ typedef ::testing::Types<
     ParameterizedWrapper<fuchsia::overnet::protocol::ReliabilityAndOrdering::
                              UnreliableUnordered>>
     UnreliableUnorderedTypes;
-TYPED_TEST_CASE(UnreliableUnorderedTest, UnreliableUnorderedTypes);
+TYPED_TEST_SUITE(UnreliableUnorderedTest, UnreliableUnorderedTypes);
 
 TYPED_TEST(UnreliableUnorderedTest, AnythingGoesReally) {
   this->ExpectBegin(3, StatusCode::OK);
@@ -239,7 +239,7 @@ typedef ::testing::Types<
     Error, ParameterizedWrapper<static_cast<
                fuchsia::overnet::protocol::ReliabilityAndOrdering>(255)>>
     ErrorTypes;
-TYPED_TEST_CASE(ErrorTest, ErrorTypes);
+TYPED_TEST_SUITE(ErrorTest, ErrorTypes);
 
 TYPED_TEST(ErrorTest, BeginAlwaysFails) {
   for (uint64_t i = 0; i < 20; i++) {

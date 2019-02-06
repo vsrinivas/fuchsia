@@ -214,7 +214,7 @@ using RawGuestTypes = ::testing::Types<
                           fuchsia::guest::BlockFormat::RAW>,
     VirtioBlockLinuxGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
                           fuchsia::guest::BlockFormat::RAW>>;
-TYPED_TEST_CASE(RawVirtioBlockGuestTest, RawGuestTypes);
+TYPED_TEST_SUITE(RawVirtioBlockGuestTest, RawGuestTypes);
 
 TYPED_TEST(RawVirtioBlockGuestTest, BlockDeviceExists) {
   std::string args =
@@ -318,7 +318,7 @@ using QcowGuestTypes = ::testing::Types<
                           fuchsia::guest::BlockFormat::QCOW>,
     VirtioBlockLinuxGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
                           fuchsia::guest::BlockFormat::QCOW>>;
-TYPED_TEST_CASE(QcowVirtioBlockGuestTest, QcowGuestTypes);
+TYPED_TEST_SUITE(QcowVirtioBlockGuestTest, QcowGuestTypes);
 
 TYPED_TEST(QcowVirtioBlockGuestTest, BlockDeviceExists) {
   std::string args = fxl::StringPrintf("%lu %u check", kBlockSectorSize,

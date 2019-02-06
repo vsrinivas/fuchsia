@@ -112,8 +112,8 @@ class IqueryGoldenTest : public component::testing::TestWithEnvironment,
 
     // Run:
     // /boot/bin/sh -c "cd <hub>; /system/bin/iquery <args>"
-    command_line = fxl::Substitute("cd $0; /bin/$1", hub_directory_path_,
-                                   command_line);
+    command_line =
+        fxl::Substitute("cd $0; /bin/$1", hub_directory_path_, command_line);
     const char* argv[] = {"sh", "-c", command_line.c_str(), nullptr};
 
     zx_handle_t proc = ZX_HANDLE_INVALID;
@@ -201,7 +201,7 @@ std::string OutputTestName(const ::testing::TestParamInfo<std::string>& info) {
   return out;
 };
 
-INSTANTIATE_TEST_CASE_P(AllFiles, IqueryGoldenTest,
-                        ::testing::ValuesIn(GetGoldenFiles()), OutputTestName);
+INSTANTIATE_TEST_SUITE_P(AllFiles, IqueryGoldenTest,
+                         ::testing::ValuesIn(GetGoldenFiles()), OutputTestName);
 
 }  // namespace

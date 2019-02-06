@@ -414,10 +414,10 @@ TEST_P(RouterEndpoint_IntegrationEnv, NodeDescriptionPropagation) {
   EXPECT_TRUE(found);
 }
 
-INSTANTIATE_TEST_CASE_P(RouterEndpoint_IntegrationEnv_Instance,
-                        RouterEndpoint_IntegrationEnv,
-                        ::testing::ValuesIn(kEnvVariations.begin(),
-                                            kEnvVariations.end()));
+INSTANTIATE_TEST_SUITE_P(RouterEndpoint_IntegrationEnv_Instance,
+                         RouterEndpoint_IntegrationEnv,
+                         ::testing::ValuesIn(kEnvVariations.begin(),
+                                             kEnvVariations.end()));
 
 struct OneMessageArgs {
   MakeEnv make_env;
@@ -454,8 +454,7 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
   env->endpoint2()->RecvIntro(StatusOrCallback<
                               RouterEndpoint::ReceivedIntroduction>(
       ALLOCATED_CALLBACK,
-      [this,
-       got_pull_cb](StatusOr<RouterEndpoint::ReceivedIntroduction>&& status) {
+      [got_pull_cb](StatusOr<RouterEndpoint::ReceivedIntroduction>&& status) {
         OVERNET_TRACE(INFO) << "ep2: recv_intro status=" << status.AsStatus();
         ASSERT_TRUE(status.is_ok()) << status.AsStatus();
         auto intro = std::move(*status);
@@ -468,7 +467,7 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
         OVERNET_TRACE(INFO) << "ep2: op=" << op;
         op->PullAll(StatusOrCallback<Optional<std::vector<Slice>>>(
             ALLOCATED_CALLBACK,
-            [this, got_pull_cb, stream{std::move(stream)},
+            [got_pull_cb, stream{std::move(stream)},
              op](const StatusOr<Optional<std::vector<Slice>>>& status) mutable {
               OVERNET_TRACE(INFO)
                   << "ep2: pull_all status=" << status.AsStatus();
@@ -489,8 +488,7 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
       std::move(*AbcIntro()),
       StatusOrCallback<RouterEndpoint::NewStream>(
           ALLOCATED_CALLBACK,
-          [this,
-           got_push_cb](StatusOr<RouterEndpoint::NewStream> intro_status) {
+          [got_push_cb](StatusOr<RouterEndpoint::NewStream> intro_status) {
             OVERNET_TRACE(INFO) << "ep1: send_intro status=" << intro_status;
             ASSERT_TRUE(intro_status.is_ok());
             auto stream = MakeClosedPtr<RouterEndpoint::Stream>(
@@ -520,10 +518,10 @@ const std::vector<OneMessageArgs> kOneMessageArgTests = [] {
   return out;
 }();
 
-INSTANTIATE_TEST_CASE_P(RouterEndpoint_OneMessageIntegration_Instance,
-                        RouterEndpoint_OneMessageIntegration,
-                        ::testing::ValuesIn(kOneMessageArgTests.begin(),
-                                            kOneMessageArgTests.end()));
+INSTANTIATE_TEST_SUITE_P(RouterEndpoint_OneMessageIntegration_Instance,
+                         RouterEndpoint_OneMessageIntegration,
+                         ::testing::ValuesIn(kOneMessageArgTests.begin(),
+                                             kOneMessageArgTests.end()));
 
 }  // namespace router_endpoint2node
 }  // namespace overnet

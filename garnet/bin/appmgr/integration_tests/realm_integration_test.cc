@@ -313,7 +313,7 @@ TEST_P(EnvironmentLabelTest, CheckLabelValidity) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     InvalidLabels, EnvironmentLabelTest,
     ::testing::Combine(
         ::testing::Values("", "a/b", "/", ".", "..", "../..", "\t", "\r",
@@ -324,7 +324,7 @@ INSTANTIATE_TEST_CASE_P(
                           "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cmx"),
         ::testing::Values(false)));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ValidLabels, EnvironmentLabelTest,
     ::testing::Combine(
         ::testing::Values("abcdefghijklmnopqrstuvwxyz",

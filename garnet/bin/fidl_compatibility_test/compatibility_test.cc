@@ -151,8 +151,7 @@ void ExpectEq(const Struct& a, const Struct& b) {
   EXPECT_EQ(a.vectors.f32_0, b.vectors.f32_0);
   EXPECT_EQ(a.vectors.f64_0, b.vectors.f64_0);
   for (uint8_t i = 0; i < kArbitraryVectorSize; ++i) {
-    EXPECT_TRUE(
-        HandlesEq(a.vectors.handle_0[i], b.vectors.handle_0[i]));
+    EXPECT_TRUE(HandlesEq(a.vectors.handle_0[i], b.vectors.handle_0[i]));
   }
 
   for (uint8_t i = 0; i < kArbitraryVectorSize; ++i) {
@@ -168,8 +167,8 @@ void ExpectEq(const Struct& a, const Struct& b) {
     EXPECT_EQ(a.vectors.f32_1[i], b.vectors.f32_1[i]);
     EXPECT_EQ(a.vectors.f64_1[i], b.vectors.f64_1[i]);
     for (uint8_t j = 0; j < kArbitraryConstant; ++j) {
-      EXPECT_TRUE(HandlesEq(a.vectors.handle_1[i][j],
-                            b.vectors.handle_1[i][j]));
+      EXPECT_TRUE(
+          HandlesEq(a.vectors.handle_1[i][j], b.vectors.handle_1[i][j]));
     }
   }
 
@@ -184,8 +183,8 @@ void ExpectEq(const Struct& a, const Struct& b) {
   EXPECT_EQ(a.vectors.u64_sized_0, b.vectors.u64_sized_0);
   EXPECT_EQ(a.vectors.f32_sized_0, b.vectors.f32_sized_0);
   EXPECT_EQ(a.vectors.f64_sized_0, b.vectors.f64_sized_0);
-  EXPECT_TRUE(HandlesEq(a.vectors.handle_sized_0[0],
-                        b.vectors.handle_sized_0[0]));
+  EXPECT_TRUE(
+      HandlesEq(a.vectors.handle_sized_0[0], b.vectors.handle_sized_0[0]));
 
   EXPECT_EQ(a.vectors.b_sized_1, b.vectors.b_sized_1);
   EXPECT_EQ(a.vectors.i8_sized_1, b.vectors.i8_sized_1);
@@ -199,33 +198,22 @@ void ExpectEq(const Struct& a, const Struct& b) {
   EXPECT_EQ(a.vectors.f32_sized_1, b.vectors.f32_sized_1);
   EXPECT_EQ(a.vectors.f64_sized_1, b.vectors.f64_sized_1);
   for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
-    EXPECT_TRUE(HandlesEq(a.vectors.handle_sized_1[i],
-                          b.vectors.handle_sized_1[i]));
+    EXPECT_TRUE(
+        HandlesEq(a.vectors.handle_sized_1[i], b.vectors.handle_sized_1[i]));
   }
 
   for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
-    EXPECT_EQ(a.vectors.b_sized_2[i],
-              b.vectors.b_sized_2[i]);
-    EXPECT_EQ(a.vectors.i8_sized_2[i],
-              b.vectors.i8_sized_2[i]);
-    EXPECT_EQ(a.vectors.i16_sized_2[i],
-              b.vectors.i16_sized_2[i]);
-    EXPECT_EQ(a.vectors.i32_sized_2[i],
-              b.vectors.i32_sized_2[i]);
-    EXPECT_EQ(a.vectors.i64_sized_2[i],
-              b.vectors.i64_sized_2[i]);
-    EXPECT_EQ(a.vectors.u8_sized_2[i],
-              b.vectors.u8_sized_2[i]);
-    EXPECT_EQ(a.vectors.u16_sized_2[i],
-              b.vectors.u16_sized_2[i]);
-    EXPECT_EQ(a.vectors.u32_sized_2[i],
-              b.vectors.u32_sized_2[i]);
-    EXPECT_EQ(a.vectors.u64_sized_2[i],
-              b.vectors.u64_sized_2[i]);
-    EXPECT_EQ(a.vectors.f32_sized_2[i],
-              b.vectors.f32_sized_2[i]);
-    EXPECT_EQ(a.vectors.f64_sized_2[i],
-              b.vectors.f64_sized_2[i]);
+    EXPECT_EQ(a.vectors.b_sized_2[i], b.vectors.b_sized_2[i]);
+    EXPECT_EQ(a.vectors.i8_sized_2[i], b.vectors.i8_sized_2[i]);
+    EXPECT_EQ(a.vectors.i16_sized_2[i], b.vectors.i16_sized_2[i]);
+    EXPECT_EQ(a.vectors.i32_sized_2[i], b.vectors.i32_sized_2[i]);
+    EXPECT_EQ(a.vectors.i64_sized_2[i], b.vectors.i64_sized_2[i]);
+    EXPECT_EQ(a.vectors.u8_sized_2[i], b.vectors.u8_sized_2[i]);
+    EXPECT_EQ(a.vectors.u16_sized_2[i], b.vectors.u16_sized_2[i]);
+    EXPECT_EQ(a.vectors.u32_sized_2[i], b.vectors.u32_sized_2[i]);
+    EXPECT_EQ(a.vectors.u64_sized_2[i], b.vectors.u64_sized_2[i]);
+    EXPECT_EQ(a.vectors.f32_sized_2[i], b.vectors.f32_sized_2[i]);
+    EXPECT_EQ(a.vectors.f64_sized_2[i], b.vectors.f64_sized_2[i]);
     for (uint8_t j = 0; j < kArbitraryConstant; ++j) {
       EXPECT_TRUE(HandlesEq(a.vectors.handle_sized_2[i][j],
                             b.vectors.handle_sized_2[i][j]));
@@ -368,9 +356,8 @@ void ExpectEq(const Struct& a, const Struct& b) {
 
   for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
     for (uint8_t j = 0; j < kArbitraryConstant; ++j) {
-      EXPECT_TRUE(
-          HandlesEq(a.vectors.handle_nullable_sized_2.get()[i][j],
-                    b.vectors.handle_nullable_sized_2.get()[i][j]));
+      EXPECT_TRUE(HandlesEq(a.vectors.handle_nullable_sized_2.get()[i][j],
+                            b.vectors.handle_nullable_sized_2.get()[i][j]));
     }
   }
 
@@ -654,7 +641,8 @@ void Initialize(Struct* s) {
       handle_outer_vector.emplace_back(
           std::vector<zx::handle>(std::move(handle_inner_vector)));
     }
-    s->vectors.b_1 = std::vector<std::vector<bool>>(std::move(bool_outer_vector));
+    s->vectors.b_1 =
+        std::vector<std::vector<bool>>(std::move(bool_outer_vector));
     s->vectors.i8_1 =
         std::vector<std::vector<int8_t>>(std::move(int8_outer_vector));
     s->vectors.i16_1 =
@@ -863,7 +851,8 @@ void Initialize(Struct* s) {
   ASSERT_EQ(ZX_OK, zx::vmo::create(0u, 0u, &s->handles.vmo_handle));
   ASSERT_EQ(ZX_OK, zx::event::create(0u, &s->handles.event_handle));
   ASSERT_EQ(ZX_OK, zx::port::create(0u, &s->handles.port_handle));
-  ASSERT_EQ(ZX_OK, zx::debuglog::create(zx::resource(), 0u, &s->handles.log_handle));
+  ASSERT_EQ(ZX_OK,
+            zx::debuglog::create(zx::resource(), 0u, &s->handles.log_handle));
 
   zx::socket socket1;
   ASSERT_EQ(ZX_OK, zx::socket::create(0u, &s->handles.socket_handle, &socket1));
