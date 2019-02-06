@@ -140,12 +140,24 @@ bool TestSegmentSelectorsZeroedOnContextSwitch() {
     set_es(1);
     set_gs(1);
 
+    // Sleep repeatedly until the segment selector registers have been cleared.
+    //
     // Sleeping should cause a context switch away from this thread (to the
     // kernel's idle thread) and another context switch back.
     //
-    // It is possible that this thread is interrupted by an interrupt, but
-    // not very likely, because this thread does not execute very long.
-    EXPECT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(1))), ZX_OK);
+    // Why loop? A single short sleep may not be sufficient to trigger a context
+    // switch. By the time this thread has entered the kernel, the duration may
+    // have already elapsed.
+    //
+    // This test is not as precise as we'd like it to be. It is possible that
+    // this thread will be interrupted by an interrupt, which would also clear
+    // the segment selector registers. Keep the sleep duration short to reduce
+    // the chance of that happening.
+    zx_duration_t duration = ZX_MSEC(1);
+    while (get_gs() == 1 && duration < ZX_SEC(10)) {
+        EXPECT_EQ(zx_nanosleep(zx_deadline_after(duration)), ZX_OK);
+        duration *= 2;
+    }
 
     EXPECT_EQ(get_ds(), 0);
     EXPECT_EQ(get_es(), 0);
