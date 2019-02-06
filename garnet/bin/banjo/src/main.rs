@@ -56,6 +56,10 @@ struct Opt {
     #[structopt(short = "d", long = "debug")]
     debug: bool,
 
+    /// Library name.
+    #[structopt(short = "n", long = "name")]
+    name: Option<String>,
+
     /// Output file
     #[structopt(short = "o", long = "output", parse(from_os_str))]
     output: Option<PathBuf>,
@@ -65,7 +69,7 @@ struct Opt {
     backend: BackendName,
 
     /// Files to process
-    #[structopt(name = "FILE", parse(from_os_str))]
+    #[structopt(short = "f", long = "files", parse(from_os_str))]
     input: Vec<PathBuf>,
 }
 
@@ -93,6 +97,14 @@ fn main() -> Result<(), Error> {
     } else {
         Box::new(io::stdout())
     };
+
+    if let Some(name) = opt.name {
+        if name != ast.primary_namespace {
+            eprintln!("Generated library '{}' did not match --name arguement {}",
+                      ast.primary_namespace, name);
+            ::std::process::exit(1);
+        }
+    }
 
     let mut backend: Box<dyn Backend<_>> = match opt.backend {
         BackendName::C => Box::new(CBackend::new(&mut output)),
