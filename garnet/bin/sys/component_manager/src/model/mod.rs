@@ -8,13 +8,14 @@ mod runner;
 
 pub use self::{moniker::*, resolver::*, runner::*};
 use {
-    crate::{data, io_util},
     crate::ns_util::PKG_PATH,
-    failure::{format_err, Error},
+    crate::{data, io_util},
+    failure::Error,
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys,
     futures::lock::Mutex,
+    std::convert::TryFrom,
     std::{cell::RefCell, error, fmt, rc::Rc},
 };
 
@@ -70,7 +71,56 @@ struct Instance {
 /// The execution state for a component instance that has started running.
 // TODO: Hold the component instance's controller.
 struct Execution {
-    component: fsys::Component,
+    resolved_uri: String,
+    decl: fsys::ComponentDecl,
+    package_dir: Option<DirectoryProxy>,
+}
+
+impl TryFrom<fsys::Component> for Execution {
+    type Error = ModelError;
+
+    fn try_from(component: fsys::Component) -> Result<Self, Self::Error> {
+        if component.resolved_uri.is_none() || component.decl.is_none() {
+            return Err(ModelError::ComponentInvalid);
+        }
+        let package_dir = match component.package {
+            Some(package) => {
+                if package.package_dir.is_none() {
+                    return Err(ModelError::ComponentInvalid);
+                }
+                let package_dir = package
+                    .package_dir
+                    .unwrap()
+                    .into_proxy()
+                    .expect("could not convert package dir to proxy");
+                Some(package_dir)
+            }
+            None => None,
+        };
+        Ok(Execution {
+            resolved_uri: component.resolved_uri.unwrap(),
+            decl: component.decl.unwrap(),
+            package_dir,
+        })
+    }
+}
+
+impl Execution {
+    fn make_namespace(&self) -> Result<fsys::ComponentNamespace, Error> {
+        // TODO: Populate namespace from the component declaration.
+        let mut ns = fsys::ComponentNamespace { paths: vec![], directories: vec![] };
+        if let Some(package_dir) = self.package_dir.as_ref() {
+            let cloned_dir = ClientEnd::new(
+                io_util::clone_directory(package_dir)?
+                    .into_channel()
+                    .expect("could not convert directory to channel")
+                    .into_zx_channel(),
+            );
+            ns.paths.push(PKG_PATH.to_str().unwrap().to_string());
+            ns.directories.push(cloned_dir);
+        }
+        Ok(ns)
+    }
 }
 
 impl Model {
@@ -111,74 +161,29 @@ impl Model {
             None => {
                 let component =
                     await!(realm.resolver_registry.resolve(&realm.instance.component_uri))?;
-                let (component, ns) = Self::ns_from_component(component)?;
+                let execution = Execution::try_from(component)?;
+                let ns =
+                    execution.make_namespace().map_err(|_| ModelError::NamespaceCreationError)?;
                 let start_info = fsys::ComponentStartInfo {
-                    resolved_uri: component.resolved_uri.clone(),
-                    program: component
-                        .decl
-                        .as_ref()
-                        .and_then(|x| data::clone_option_dictionary(&x.program)),
+                    resolved_uri: Some(execution.resolved_uri.clone()),
+                    program: data::clone_option_dictionary(&execution.decl.program),
                     ns: Some(ns),
                 };
                 await!(realm.default_runner.start(start_info))?;
-                *execution_lock = Some(Execution { component });
+                *execution_lock = Some(execution);
                 Ok(())
             }
         }
     }
-
-    // Takes ownership of `component` and returns it unchanged. We must take ownership to be able
-    // to clone the package directory.
-    fn ns_from_component(
-        component: fsys::Component,
-    ) -> Result<(fsys::Component, fsys::ComponentNamespace), ModelError> {
-        // TODO: Populate namespace from the component declaration.
-        let mut ns = fsys::ComponentNamespace { paths: vec![], directories: vec![] };
-        let mut out_component = fsys::Component {
-            resolved_uri: component.resolved_uri,
-            decl: component.decl,
-            package: None,
-        };
-        if let Some(package) = component.package {
-            if package.package_dir.is_none() {
-                return Err(ResolverError::internal_error("Package missing package_dir").into());
-            }
-            let (package_dir, cloned_dir) =
-                Self::clone_dir(package.package_dir.unwrap()).map_err(|e| {
-                    ModelError::from(ResolverError::internal_error(format!(
-                        "failed to clone package_dir: {}",
-                        e
-                    )))
-                })?;
-            ns.paths.push(PKG_PATH.to_str().unwrap().to_string());
-            ns.directories.push(cloned_dir);
-            out_component.package = Some(fsys::Package {
-                package_uri: package.package_uri,
-                package_dir: Some(package_dir),
-            });
-        }
-        Ok((out_component, ns))
-    }
-
-    fn clone_dir(
-        dir: ClientEnd<DirectoryMarker>,
-    ) -> Result<(ClientEnd<DirectoryMarker>, ClientEnd<DirectoryMarker>), Error> {
-        let dir_proxy = dir.into_proxy()?;
-        let clone_end = ClientEnd::new(
-            io_util::clone_directory(&dir_proxy)?
-                .into_channel()
-                .map_err(|_| format_err!("could not convert directory into channel"))?
-                .into_zx_channel(),
-        );
-        let orig_end = ClientEnd::new(dir_proxy.into_channel().unwrap().into_zx_channel());
-        Ok((orig_end, clone_end))
-    }
 }
 
+// TODO: Derive from Fail and take cause where appropriate.
 /// Errors produced by `Model`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ModelError {
     InstanceNotFound,
+    ComponentInvalid,
+    NamespaceCreationError,
     ResolverError(ResolverError),
     RunnerError(RunnerError),
 }
@@ -187,6 +192,8 @@ impl fmt::Display for ModelError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ModelError::InstanceNotFound => write!(f, "component instance not found"),
+            ModelError::ComponentInvalid => write!(f, "invalid fuchsia.sys2.Component"),
+            ModelError::NamespaceCreationError => write!(f, "failed to create namespace"),
             ModelError::ResolverError(err) => err.fmt(f),
             ModelError::RunnerError(err) => err.fmt(f),
         }
@@ -197,6 +204,8 @@ impl error::Error for ModelError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
             ModelError::InstanceNotFound => None,
+            ModelError::ComponentInvalid => None,
+            ModelError::NamespaceCreationError => None,
             ModelError::ResolverError(err) => err.source(),
             ModelError::RunnerError(err) => err.source(),
         }

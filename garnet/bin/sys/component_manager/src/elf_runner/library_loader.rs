@@ -29,14 +29,9 @@ pub fn start(ns_map: HashMap<PathBuf, DirectoryProxy>, chan: zx::Channel) {
                         control_handle.shutdown();
                     }
                     LoaderRequest::LoadObject { object_name, responder } => {
-                        // The name provided by the client here has a null byte at the end, which
-                        // doesn't work from here on out (io.fidl doesn't like it). Context:
-                        // https://fuchsia-review.git.corp.google.com/c/zircon/+/121048/3/system/ulib/ldmsg/ldmsg.c#96
+                        // TODO(ZX-3392): The name provided by the client here has a null byte at
+                        // the end, which doesn't work from here on out (io.fidl doesn't like it).
                         let object_name = object_name.trim_matches(char::from(0));
-                        // TODO: the loader service in C will use the "lib" prefix for programs
-                        // started with a root fd, and check under both "/system/lib" and
-                        // "/boot/lib" for programs that don't (aka programs from the system
-                        // package I think?). I don't know if we still need this behavior here.
                         let object_path = PKG_PATH.join("lib").join(object_name);
                         match await!(load_object(&ns_map, PathBuf::from(object_path))) {
                             Ok(b) => responder.send(zx::sys::ZX_OK, Some(b))?,

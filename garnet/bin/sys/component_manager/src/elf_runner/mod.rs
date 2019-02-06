@@ -148,10 +148,7 @@ impl ElfRunner {
         })?;
         let status = zx::Status::from_raw(status);
         if status != zx::Status::OK {
-            eprintln!(
-                "failed to launch: {}",
-                status,
-            );
+            eprintln!("failed to launch: {}", status,);
             return Err(RunnerError::ComponentNotAvailable);
         }
         Ok(())
@@ -185,32 +182,23 @@ fn get_program_binary(program: &Option<fdata::Dictionary>) -> Result<PathBuf, Ru
 #[cfg(test)]
 mod tests {
     use {
-        crate::elf_runner::*,
-        crate::io_util,
-        fidl::endpoints::ClientEnd,
-        fuchsia_async as fasync,
+        crate::elf_runner::*, crate::io_util, fidl::endpoints::ClientEnd, fuchsia_async as fasync,
     };
 
     #[test]
-    #[ignore]
     fn hello_world_test() {
         let mut executor = fasync::Executor::new().unwrap();
-
         executor.run_singlethreaded(
             async {
                 // Get a handle to /bin
-                let bin_path = "/bin".to_string();
-                let bin_proxy =
-                    await!(io_util::open_absolute_directory("/pkgfs/packages/fortune/0/bin"))
-                        .unwrap();
+                let bin_path = "/pkg/bin".to_string();
+                let bin_proxy = await!(io_util::open_directory_in_namespace("/pkg/bin")).unwrap();
                 let bin_chan = bin_proxy.into_channel().unwrap();
                 let bin_handle = ClientEnd::new(bin_chan.into_zx_channel());
 
                 // Get a handle to /lib
-                let lib_path = "/lib".to_string();
-                let lib_proxy =
-                    await!(io_util::open_absolute_directory("/pkgfs/packages/fortune/0/lib"))
-                        .unwrap();
+                let lib_path = "/pkg/lib".to_string();
+                let lib_proxy = await!(io_util::open_directory_in_namespace("/pkg/lib")).unwrap();
                 let lib_chan = lib_proxy.into_channel().unwrap();
                 let lib_handle = ClientEnd::new(lib_chan.into_zx_channel());
 
@@ -221,12 +209,15 @@ mod tests {
 
                 let start_info = fsys::ComponentStartInfo {
                     resolved_uri: Some(
-                        "fuchsia-pkg://fuchsia.com/fortune#meta/fortune.cmx".to_string(),
+                        "fuchsia-pkg://fuchsia.com/hello_world_hippo#meta/hello_world.cm"
+                            .to_string(),
                     ),
                     program: Some(fdata::Dictionary {
                         entries: vec![fdata::Entry {
                             key: "binary".to_string(),
-                            value: Some(Box::new(fdata::Value::Str("/bin/fortune".to_string()))),
+                            value: Some(Box::new(fdata::Value::Str(
+                                "/pkg/bin/hello_world".to_string(),
+                            ))),
                         }],
                     }),
                     ns: Some(ns),

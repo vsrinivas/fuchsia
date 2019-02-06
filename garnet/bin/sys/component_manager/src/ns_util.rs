@@ -80,16 +80,14 @@ mod tests {
     use {super::*, fuchsia_async as fasync};
 
     #[test]
-    #[ignore] // mysteriously fails on ASan builds
     fn clone_ns_test() {
         let mut executor = fasync::Executor::new().unwrap();
-
         executor.run_singlethreaded(
             async {
                 // Get a handle to /bin
                 let bin_path = "/bin".to_string();
                 let bin_proxy =
-                    await!(io_util::open_absolute_directory("/pkgfs/packages/fortune/0/bin"))
+                    await!(io_util::open_directory_in_namespace("/pkg/bin"))
                         .unwrap();
                 let bin_chan = bin_proxy.into_channel().unwrap();
                 let bin_handle = ClientEnd::new(bin_chan.into_zx_channel());
@@ -97,7 +95,7 @@ mod tests {
                 // Get a handle to /lib
                 let lib_path = "/lib".to_string();
                 let lib_proxy =
-                    await!(io_util::open_absolute_directory("/pkgfs/packages/fortune/0/lib"))
+                    await!(io_util::open_directory_in_namespace("/pkg/lib"))
                         .unwrap();
                 let lib_chan = lib_proxy.into_channel().unwrap();
                 let lib_handle = ClientEnd::new(lib_chan.into_zx_channel());
@@ -112,10 +110,11 @@ mod tests {
                 let ns_map = ns_to_map(ns_clone).unwrap();
 
                 let dir = ns_map.get(&PathBuf::from("/lib")).unwrap();
-                println!("ns_map's /lib object: {:?}", dir);
-
                 let path = PathBuf::from("ld.so.1");
-                await!(io_util::open_file(&dir, &path)).unwrap()
+                await!(io_util::open_file(&dir, &path)).unwrap();
+                let dir = ns_map.get(&PathBuf::from("/bin")).unwrap();
+                let path = PathBuf::from("hello_world");
+                await!(io_util::open_file(&dir, &path)).unwrap();
             },
         );
     }

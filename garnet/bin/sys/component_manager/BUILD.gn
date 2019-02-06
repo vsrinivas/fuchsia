@@ -58,6 +58,7 @@ package("component_manager") {
 test_package("component_manager_tests") {
   deps = [
     ":bin",
+    "//garnet/examples/components/v2:hello_world_bin",
   ]
 
   tests = [
@@ -65,6 +66,12 @@ test_package("component_manager_tests") {
       name = "component_manager_bin_test"
       dest = "component_manager_tests"
       environments = basic_envs
+    },
+  ]
+
+  binaries = [
+    {
+      name = "hello_world"
     },
   ]
 }
