@@ -43,13 +43,15 @@ class CoroutineManager {
     service_->StartCoroutine(
         [this, callback = std::move(callback),
          runnable = std::move(runnable)](CoroutineHandler* handler) mutable {
+          bool callback_called = false;
           auto iter = handlers_.insert(handlers_.cend(), handler);
-          auto final_callback = [this, iter,
+          auto final_callback = [this, &callback_called, iter,
                                  callback = std::move(callback)](auto... args) {
             // Remove the handler before calling the final callback. Otherwise
             // the handler might be unnecessarily interrupted, if this object
             // destructor is called in the callback.
             handlers_.erase(iter);
+            callback_called = true;
             callback(std::move(args)...);
           };
 
@@ -57,8 +59,7 @@ class CoroutineManager {
 
           // Verify that the handler is correctly unregistered. It would be a
           // bug otherwise.
-          FXL_DCHECK(std::find(handlers_.begin(), handlers_.end(), handler) ==
-                     handlers_.end());
+          FXL_DCHECK(callback_called);
         });
   }
 

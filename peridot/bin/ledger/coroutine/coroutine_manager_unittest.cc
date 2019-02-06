@@ -70,5 +70,18 @@ TEST(CoroutineManager, NoCallback) {
   handler->Resume(ContinuationStatus::OK);
 }
 
+TEST(CoroutineManager, DeleteInCallback) {
+  CoroutineServiceImpl coroutine_service;
+  std::unique_ptr<CoroutineManager> manager =
+      std::make_unique<CoroutineManager>(&coroutine_service);
+
+  manager->StartCoroutine([&manager] { manager.reset(); },
+                          [](CoroutineHandler* current_handler,
+                                     fit::function<void()> callback) {
+                            callback();
+                          });
+
+}
+
 }  // namespace
 }  // namespace coroutine
