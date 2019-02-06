@@ -169,22 +169,6 @@ extern {
         num_handles: u32
         ) -> zx_status_t;
 
-    pub fn zx_channel_call_noretry(
-        handle: zx_handle_t,
-        options: u32,
-        deadline: zx_time_t,
-        args: *const zx_channel_call_args_t,
-        actual_bytes: *mut u32,
-        actual_handles: *mut u32,
-        ) -> zx_status_t;
-
-    pub fn zx_channel_call_finish(
-        deadline: zx_time_t,
-        args: *const zx_channel_call_args_t,
-        actual_bytes: *mut u32,
-        actual_handles: *mut u32,
-        ) -> zx_status_t;
-
     pub fn zx_channel_call(
         handle: zx_handle_t,
         options: u32,
