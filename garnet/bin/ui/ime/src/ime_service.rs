@@ -25,9 +25,7 @@ impl ImeServiceState {
 
         self.visibility_listeners.retain(|listener| {
             // drop listeners if they error on send
-            listener
-                .send_on_keyboard_visibility_changed(visible)
-                .is_ok()
+            listener.send_on_keyboard_visibility_changed(visible).is_ok()
         });
     }
 }
@@ -50,7 +48,9 @@ impl ImeService {
 
     /// Only updates the keyboard visibility if IME passed in is active
     pub fn update_keyboard_visibility_from_ime(
-        &self, check_ime: &Arc<Mutex<ImeState>>, visible: bool,
+        &self,
+        check_ime: &Arc<Mutex<ImeState>>,
+        visible: bool,
     ) {
         let mut state = self.0.lock();
         let active_ime_weak = match &state.active_ime {
@@ -67,18 +67,15 @@ impl ImeService {
     }
 
     fn get_input_method_editor(
-        &mut self, keyboard_type: uii::KeyboardType, action: uii::InputMethodAction,
-        initial_state: uii::TextInputState, client: ClientEnd<uii::InputMethodEditorClientMarker>,
+        &mut self,
+        keyboard_type: uii::KeyboardType,
+        action: uii::InputMethodAction,
+        initial_state: uii::TextInputState,
+        client: ClientEnd<uii::InputMethodEditorClientMarker>,
         editor: ServerEnd<uii::InputMethodEditorMarker>,
     ) {
         if let Ok(client_proxy) = client.into_proxy() {
-            let ime = Ime::new(
-                keyboard_type,
-                action,
-                initial_state,
-                client_proxy,
-                self.clone(),
-            );
+            let ime = Ime::new(keyboard_type, action, initial_state, client_proxy, self.clone());
             let mut state = self.0.lock();
             state.active_ime = Some(ime.downgrade());
             if let Ok(chan) = fuchsia_async::Channel::from_channel(editor.into_channel()) {
@@ -213,10 +210,7 @@ mod test {
 
     fn bind_ime_for_test(
         ime_service: &uii::ImeServiceProxy,
-    ) -> (
-        uii::InputMethodEditorProxy,
-        uii::InputMethodEditorClientRequestStream,
-    ) {
+    ) -> (uii::InputMethodEditorProxy, uii::InputMethodEditorClientRequestStream) {
         let (ime_proxy, ime_server_end) =
             fidl::endpoints::create_proxy::<uii::InputMethodEditorMarker>().unwrap();
         let (editor_client_end, editor_request_stream) =

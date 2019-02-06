@@ -22,9 +22,6 @@ pub fn clone_state(state: &uii::TextInputState) -> uii::TextInputState {
             extent: state.selection.extent,
             affinity: state.selection.affinity,
         },
-        composing: uii::TextRange {
-            start: state.composing.start,
-            end: state.composing.end,
-        },
+        composing: uii::TextRange { start: state.composing.start, end: state.composing.end },
     }
 }
