@@ -121,6 +121,16 @@ impl FuchsiaPkgUri {
         self.resource.as_ref().map(|s| &**s)
     }
 
+    pub fn root_uri(&self) -> FuchsiaPkgUri {
+        FuchsiaPkgUri{
+            host: self.host.clone(),
+            name: self.name.clone(),
+            variant: self.variant.clone(),
+            hash: self.hash.clone(),
+            resource: None,
+        }
+    }
+
     pub fn new_repository(host: String) -> Result<FuchsiaPkgUri, ParseError> {
         if host.is_empty() {
             return Err(ParseError::InvalidHost);
@@ -615,6 +625,7 @@ mod tests {
             uri.hash()
         );
         assert_eq!(None, uri.resource());
+        assert_eq!(uri, uri.root_uri());
 
         assert_eq!(
             FuchsiaPkgUri::new_package("".to_string(), "fonts".to_string(), None, None),
@@ -673,6 +684,9 @@ mod tests {
             uri.hash()
         );
         assert_eq!(Some("foo/bar"), uri.resource());
+        let mut uri_no_resource = uri.clone();
+        uri_no_resource.resource = None;
+        assert_eq!(uri_no_resource, uri.root_uri());
 
         assert_eq!(
             FuchsiaPkgUri::new_resource(

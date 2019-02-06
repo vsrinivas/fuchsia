@@ -11,6 +11,7 @@
 mod data;
 mod elf_runner;
 mod fuchsia_boot_resolver;
+mod fuchsia_pkg_resolver;
 mod io_util;
 mod model;
 mod ns_util;
@@ -20,6 +21,7 @@ use {
     failure::{self, Error, ResultExt},
     fuchsia_async as fasync,
     fuchsia_boot_resolver::FuchsiaBootResolver,
+    fuchsia_pkg_resolver::FuchsiaPkgResolver,
     fuchsia_syslog::{self, macros::*},
     futures::prelude::*,
     model::{AbsoluteMoniker, Model, ModelParams, ResolverRegistry},
@@ -55,6 +57,10 @@ fn main() -> Result<(), Error> {
     resolver_registry.register(
         fuchsia_boot_resolver::SCHEME.to_string(),
         Box::new(FuchsiaBootResolver::new()),
+    );
+    resolver_registry.register(
+        fuchsia_pkg_resolver::SCHEME.to_string(),
+        Box::new(FuchsiaPkgResolver::new()?),
     );
 
     let params = ModelParams {

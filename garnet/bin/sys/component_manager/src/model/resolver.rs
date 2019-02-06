@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use {
+    failure::{Error, Fail},
     fidl_fuchsia_sys2 as fsys,
     futures::future,
     futures::future::FutureObj,
-    std::{collections::HashMap, error, fmt},
+    std::collections::HashMap,
     url::Url,
 };
 
@@ -48,58 +49,72 @@ impl Resolver for ResolverRegistry {
                     FutureObj::new(Box::new(future::err(ResolverError::SchemeNotRegistered)))
                 }
             }
-            Err(err) => FutureObj::new(Box::new(future::err(ResolverError::from(err)))),
+            Err(e) => FutureObj::new(Box::new(future::err(ResolverError::uri_parse_error(
+                component_uri,
+                e,
+            )))),
         }
     }
 }
 
-// TODO: Allow variants other than InternalError to take strings.
 /// Errors produced by `Resolver`.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Debug, Fail)]
 pub enum ResolverError {
-    ComponentNotAvailable,
+    #[fail(display = "component not available with uri \"{}\": {}", uri, err)]
+    ComponentNotAvailable {
+        uri: String,
+        #[fail(cause)]
+        err: Error,
+    },
+    #[fail(display = "component manifest not available for uri \"{}\": {}", uri, err)]
+    ManifestNotAvailable {
+        uri: String,
+        #[fail(cause)]
+        err: Error,
+    },
+    #[fail(display = "component manifest invalid for uri \"{}\": {}", uri, err)]
+    ManifestInvalid {
+        uri: String,
+        #[fail(cause)]
+        err: Error,
+    },
+    #[fail(display = "scheme not registered")]
     SchemeNotRegistered,
-    UrlParseError(url::ParseError),
-    InternalError(String),
+    #[fail(display = "failed to parse uri \"{}\": {}", uri, err)]
+    UriParseError {
+        uri: String,
+        #[fail(cause)]
+        err: Error,
+    },
+    #[fail(display = "uri missing resource \"{}\"", uri)]
+    UriMissingResourceError { uri: String },
 }
 
 impl ResolverError {
-    pub fn internal_error(err: impl Into<String>) -> Self {
-        ResolverError::InternalError(err.into())
+    pub fn component_not_available(uri: impl Into<String>, err: impl Into<Error>) -> ResolverError {
+        ResolverError::ComponentNotAvailable { uri: uri.into(), err: err.into() }
     }
-}
 
-impl fmt::Display for ResolverError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            ResolverError::ComponentNotAvailable => write!(f, "component not available"),
-            ResolverError::SchemeNotRegistered => write!(f, "component uri scheme not registered"),
-            ResolverError::UrlParseError(err) => err.fmt(f),
-            ResolverError::InternalError(err) => write!(f, "internal error: {}", err),
-        }
+    pub fn manifest_not_available(uri: impl Into<String>, err: impl Into<Error>) -> ResolverError {
+        ResolverError::ManifestInvalid { uri: uri.into(), err: err.into() }
     }
-}
 
-impl error::Error for ResolverError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match *self {
-            ResolverError::ComponentNotAvailable => None,
-            ResolverError::SchemeNotRegistered => None,
-            ResolverError::UrlParseError(ref err) => err.source(),
-            ResolverError::InternalError(_) => None,
-        }
+    pub fn manifest_invalid(uri: impl Into<String>, err: impl Into<Error>) -> ResolverError {
+        ResolverError::ManifestInvalid { uri: uri.into(), err: err.into() }
     }
-}
 
-impl From<url::ParseError> for ResolverError {
-    fn from(err: url::ParseError) -> Self {
-        ResolverError::UrlParseError(err)
+    pub fn uri_parse_error(uri: impl Into<String>, err: impl Into<Error>) -> ResolverError {
+        ResolverError::UriParseError { uri: uri.into(), err: err.into() }
+    }
+
+    pub fn uri_missing_resource_error(uri: impl Into<String>) -> ResolverError {
+        ResolverError::UriMissingResourceError { uri: uri.into() }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, failure::format_err};
 
     struct MockOkResolver {
         pub expected_uri: String,
@@ -129,7 +144,7 @@ mod tests {
 
     struct MockErrorResolver {
         pub expected_uri: String,
-        pub error: ResolverError,
+        pub error: Box<dyn Fn(&str) -> ResolverError>,
     }
 
     impl Resolver for MockErrorResolver {
@@ -138,7 +153,7 @@ mod tests {
             component_uri: &str,
         ) -> FutureObj<Result<fsys::Component, ResolverError>> {
             assert_eq!(self.expected_uri, component_uri);
-            FutureObj::new(Box::new(future::err(self.error.clone())))
+            FutureObj::new(Box::new(future::err((self.error)(component_uri))))
         }
     }
 
@@ -156,7 +171,9 @@ mod tests {
             "bar".to_string(),
             Box::new(MockErrorResolver {
                 expected_uri: "bar://uri".to_string(),
-                error: ResolverError::ComponentNotAvailable,
+                error: Box::new(|uri| {
+                    ResolverError::component_not_available(uri, format_err!("not available"))
+                }),
             }),
         );
 
@@ -165,21 +182,24 @@ mod tests {
         assert_eq!("foo://resolved", component.resolved_uri.unwrap());
 
         // Resolve a different scheme that produces an error.
+        let expected_res: Result<fsys::Component, ResolverError> =
+            Err(ResolverError::component_not_available("bar://uri", format_err!("not available")));
         assert_eq!(
-            Err(ResolverError::ComponentNotAvailable),
-            await!(registry.resolve("bar://uri"))
+            format!("{:?}", expected_res),
+            format!("{:?}", await!(registry.resolve("bar://uri")))
         );
 
-        // Resolve an unknown scheme.
+        // Resolve an unknown scheme
+        let expected_res: Result<fsys::Component, ResolverError> =
+            Err(ResolverError::SchemeNotRegistered);
         assert_eq!(
-            Err(ResolverError::SchemeNotRegistered),
-            await!(registry.resolve("unknown://uri")),
+            format!("{:?}", expected_res),
+            format!("{:?}", await!(registry.resolve("unknown://uri"))),
         );
 
         // Resolve an URL lacking a scheme.
-        assert_eq!(
-            Err(ResolverError::UrlParseError(url::ParseError::RelativeUrlWithoutBase)),
-            await!(registry.resolve("xxx")),
-        );
+        let expected_res: Result<fsys::Component, ResolverError> =
+            Err(ResolverError::uri_parse_error("xxx", url::ParseError::RelativeUrlWithoutBase));
+        assert_eq!(format!("{:?}", expected_res), format!("{:?}", await!(registry.resolve("xxx"))),);
     }
 }

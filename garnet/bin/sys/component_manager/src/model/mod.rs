@@ -10,13 +10,12 @@ pub use self::{moniker::*, resolver::*, runner::*};
 use {
     crate::ns_util::PKG_PATH,
     crate::{data, io_util},
-    failure::Error,
+    failure::{Error, Fail},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys,
     futures::lock::Mutex,
-    std::convert::TryFrom,
-    std::{cell::RefCell, error, fmt, rc::Rc},
+    std::{cell::RefCell, convert::TryFrom, rc::Rc},
 };
 
 /// Parameters for initializing a component model, particularly the root of the component
@@ -145,7 +144,7 @@ impl Model {
         if moniker.is_root() {
             await!(self.bind_instance_in_realm(self.root_realm.clone()))
         } else {
-            Err(ModelError::InstanceNotFound)
+            Err(ModelError::instance_not_found(moniker))
         }
     }
 
@@ -162,8 +161,9 @@ impl Model {
                 let component =
                     await!(realm.resolver_registry.resolve(&realm.instance.component_uri))?;
                 let execution = Execution::try_from(component)?;
-                let ns =
-                    execution.make_namespace().map_err(|_| ModelError::NamespaceCreationError)?;
+                let ns = execution
+                    .make_namespace()
+                    .map_err(|e| ModelError::namespace_creation_failed(e))?;
                 let start_info = fsys::ComponentStartInfo {
                     resolved_uri: Some(execution.resolved_uri.clone()),
                     program: data::clone_option_dictionary(&execution.decl.program),
@@ -179,48 +179,48 @@ impl Model {
 
 // TODO: Derive from Fail and take cause where appropriate.
 /// Errors produced by `Model`.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Debug, Fail)]
 pub enum ModelError {
-    InstanceNotFound,
+    #[fail(display = "component instance not found with moniker {}", moniker)]
+    InstanceNotFound { moniker: AbsoluteMoniker },
+    #[fail(display = "component declaration invalid")]
     ComponentInvalid,
-    NamespaceCreationError,
-    ResolverError(ResolverError),
-    RunnerError(RunnerError),
+    #[fail(display = "namespace creation failed: {}", err)]
+    NamespaceCreationFailed {
+        #[fail(cause)]
+        err: Error,
+    },
+    #[fail(display = "resolver error")]
+    ResolverError {
+        #[fail(cause)]
+        err: ResolverError,
+    },
+    #[fail(display = "runner error")]
+    RunnerError {
+        #[fail(cause)]
+        err: RunnerError,
+    },
 }
 
-impl fmt::Display for ModelError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ModelError::InstanceNotFound => write!(f, "component instance not found"),
-            ModelError::ComponentInvalid => write!(f, "invalid fuchsia.sys2.Component"),
-            ModelError::NamespaceCreationError => write!(f, "failed to create namespace"),
-            ModelError::ResolverError(err) => err.fmt(f),
-            ModelError::RunnerError(err) => err.fmt(f),
-        }
+impl ModelError {
+    fn instance_not_found(moniker: AbsoluteMoniker) -> ModelError {
+        ModelError::InstanceNotFound { moniker }
     }
-}
 
-impl error::Error for ModelError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            ModelError::InstanceNotFound => None,
-            ModelError::ComponentInvalid => None,
-            ModelError::NamespaceCreationError => None,
-            ModelError::ResolverError(err) => err.source(),
-            ModelError::RunnerError(err) => err.source(),
-        }
+    fn namespace_creation_failed(err: impl Into<Error>) -> ModelError {
+        ModelError::NamespaceCreationFailed { err: err.into() }
     }
 }
 
 impl From<ResolverError> for ModelError {
     fn from(err: ResolverError) -> Self {
-        ModelError::ResolverError(err)
+        ModelError::ResolverError { err }
     }
 }
 
 impl From<RunnerError> for ModelError {
     fn from(err: RunnerError) -> Self {
-        ModelError::RunnerError(err)
+        ModelError::RunnerError { err }
     }
 }
 
@@ -272,11 +272,17 @@ mod tests {
             root_resolver_registry: resolver,
             root_default_runner: Box::new(MockRunner {}),
         });
+        let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(
+            AbsoluteMoniker::new(vec![ChildMoniker::new("no-such-instance".to_string())]),
+        ));
         assert_eq!(
-            Err(ModelError::InstanceNotFound),
-            await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
-                "no-such-instance".to_string()
-            )])))
+            format!("{:?}", expected_res,),
+            format!(
+                "{:?}",
+                await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+                    "no-such-instance".to_string()
+                )])))
+            ),
         );
     }
 
@@ -289,6 +295,10 @@ mod tests {
             root_resolver_registry: resolver,
             root_default_runner: Box::new(MockRunner {}),
         });
-        assert_eq!(Ok(()), await!(model.bind_instance(AbsoluteMoniker::root())));
+        let expected_res: Result<(), ModelError> = Ok(());
+        assert_eq!(
+            format!("{:?}", expected_res),
+            format!("{:?}", await!(model.bind_instance(AbsoluteMoniker::root()))),
+        );
     }
 }

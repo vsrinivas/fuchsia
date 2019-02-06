@@ -8,7 +8,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl::endpoints::Proxy,
     fidl_fuchsia_io::{
-        DirectoryEvent, DirectoryProxy, FileEvent, FileProxy, NodeInfo, NodeProxy,
+        DirectoryEvent, DirectoryProxy, FileEvent, FileProxy, NodeInfo, NodeProxy, MAX_BUF,
         MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
     },
     fuchsia_async as fasync,
@@ -17,6 +17,7 @@ use {
     std::ffi::CString,
     std::path::PathBuf,
     std::ptr,
+    std::str::from_utf8,
 };
 
 /// open_node will return a NodeProxy opened to the node at the given path relative to the
@@ -125,6 +126,22 @@ pub async fn open_file_in_namespace(path: &str) -> Result<FileProxy, Error> {
     }
 }
 
+pub async fn read_file(file: &FileProxy) -> Result<String, Error> {
+    let mut out = String::new();
+    loop {
+        let (status, bytes) = await!(file.read(MAX_BUF)).map_err(|e| Error::from(e))?;
+        let status = zx::Status::from_raw(status);
+        if status != zx::Status::OK {
+            return Err(format_err!("failed to read file: {}", status));
+        }
+        if bytes.is_empty() {
+            break;
+        }
+        out.push_str(from_utf8(&bytes).map_err(|e| Error::from(e))?);
+    }
+    Ok(out)
+}
+
 /// node_to_directory will convert the given NodeProxy into a DirectoryProxy. This is unsafe if the
 /// type of the node is not checked first.
 pub fn node_to_directory(node: NodeProxy) -> Result<DirectoryProxy, Error> {
@@ -151,29 +168,20 @@ mod tests {
     use {super::*, fuchsia_async as fasync, std::fs, tempfile::TempDir};
 
     #[test]
-    fn open_directory_in_namespace_test() {
-        let mut executor = fasync::Executor::new().unwrap();
-        executor.run_singlethreaded(
-            async {
-                let tempdir = TempDir::new().expect("failed to create tmp dir");
-                await!(open_directory_in_namespace(tempdir.path().to_str().unwrap()))
-                    .expect("could not open tmp dir");
-            },
-        );
-    }
-
-    #[test]
-    fn open_file_test() {
+    fn open_and_read_file_test() {
         let mut executor = fasync::Executor::new().unwrap();
         executor.run_singlethreaded(
             async {
                 let tempdir = TempDir::new().expect("failed to create tmp dir");
                 let data = "abc".repeat(10000);
                 fs::write(tempdir.path().join("myfile"), &data).expect("failed writing file");
+
                 let dir = await!(open_directory_in_namespace(tempdir.path().to_str().unwrap()))
                     .expect("could not open tmp dir");
                 let path = PathBuf::from("myfile");
-                await!(open_file(&dir, &path)).expect("could not open file");
+                let file = await!(open_file(&dir, &path)).expect("could not open file");
+                let contents = await!(read_file(&file)).expect("could not read file");
+                assert_eq!(&contents, &data, "File contents did not match");
             },
         );
     }

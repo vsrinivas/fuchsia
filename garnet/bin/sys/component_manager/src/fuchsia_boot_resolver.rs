@@ -4,6 +4,7 @@
 
 use {
     crate::model::{Resolver, ResolverError},
+    failure::format_err,
     fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys,
     futures::future::FutureObj,
 };
@@ -22,13 +23,11 @@ impl FuchsiaBootResolver {
     }
 
     async fn resolve_async<'a>(
-        &'a self, component_uri: &'a str,
+        &'a self,
+        component_uri: &'a str,
     ) -> Result<fsys::Component, ResolverError> {
         // TODO: Actually resolve and parse CM files from the boot filesystem.
-        println!(
-            "FuchsiaBootResolver: pretending to resolve '{}'",
-            component_uri
-        );
+        println!("FuchsiaBootResolver: pretending to resolve '{}'", component_uri);
         if component_uri == "fuchsia-boot:///boot#meta/scaffold.cm" {
             Ok(fsys::Component {
                 resolved_uri: Some(component_uri.to_string()),
@@ -48,14 +47,18 @@ impl FuchsiaBootResolver {
                 package: None,
             })
         } else {
-            Err(ResolverError::ComponentNotAvailable)
+            Err(ResolverError::component_not_available(
+                component_uri,
+                format_err!("unknown component"),
+            ))
         }
     }
 }
 
 impl Resolver for FuchsiaBootResolver {
     fn resolve<'a>(
-        &'a self, component_uri: &'a str,
+        &'a self,
+        component_uri: &'a str,
     ) -> FutureObj<'a, Result<fsys::Component, ResolverError>> {
         FutureObj::new(Box::new(self.resolve_async(component_uri)))
     }
