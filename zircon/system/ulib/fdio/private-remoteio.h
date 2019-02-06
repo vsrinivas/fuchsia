@@ -6,6 +6,10 @@
 
 #include "private.h"
 
+__BEGIN_CDECLS
+
 // open operation directly on remoteio handle
 zx_status_t zxrio_open_handle(zx_handle_t h, const char* path, uint32_t flags,
                               uint32_t mode, fdio_t** out);
+
+__END_CDECLS

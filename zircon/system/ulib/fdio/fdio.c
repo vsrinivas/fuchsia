@@ -14,7 +14,7 @@
 #include "private.h"
 
 struct fdio {
-    fdio_ops_t* ops;
+    const fdio_ops_t* ops;
     atomic_int_fast32_t refcount;
     int32_t dupcount;
     uint32_t ioflag;
@@ -70,7 +70,7 @@ zxio_storage_t* fdio_get_zxio_storage(fdio_t* io) {
     return &io->storage;
 }
 
-fdio_t* fdio_alloc(fdio_ops_t* ops) {
+fdio_t* fdio_alloc(const fdio_ops_t* ops) {
     fdio_t* io = (fdio_t*) calloc(1, sizeof(fdio_t));
     LOG(5, "fdio: io: alloc: %p\n", io);
     io->ops = ops;

@@ -60,7 +60,7 @@ typedef struct fdio_ops {
     zx_status_t (*get_flags)(fdio_t* io, uint32_t* out_flags);
     zx_status_t (*set_flags)(fdio_t* io, uint32_t flags);
     ssize_t (*recvfrom)(fdio_t* io, void* data, size_t len, int flags,
-                        struct sockaddr* restrict addr, socklen_t* restrict addrlen);
+                        struct sockaddr* __restrict addr, socklen_t* __restrict addrlen);
     ssize_t (*sendto)(fdio_t* io, const void* data, size_t len, int flags,
                       const struct sockaddr* addr, socklen_t addrlen);
     ssize_t (*recvmsg)(fdio_t* io, struct msghdr* msg, int flags);
@@ -83,6 +83,8 @@ typedef struct fdio_ops {
 
 typedef struct fdio fdio_t;
 
+__BEGIN_CDECLS
+
 // Acquire a reference to a globally shared "fdio_t" object
 // acts as a sentinel value for reservation.
 //
@@ -97,7 +99,7 @@ zxio_t* fdio_get_zxio(fdio_t* io);
 //
 // Initializes the refcount to one. The refcount may be altered with the |fdio_acquire| and
 // |fdio_release| functions. When the refcount reaches zero, the object is destroyed.
-fdio_t* fdio_alloc(fdio_ops_t* ops);
+fdio_t* fdio_alloc(const fdio_ops_t* ops);
 
 // Increases the refcount of |io| by one.
 void fdio_acquire(fdio_t* io);
@@ -226,8 +228,8 @@ zx_status_t fdio_default_set_flags(fdio_t* io, uint32_t flags);
 ssize_t fdio_default_write(fdio_t* io, const void* _data, size_t len);
 ssize_t fdio_default_write_at(fdio_t* io, const void* _data, size_t len, off_t offset);
 ssize_t fdio_default_recvfrom(fdio_t* io, void* _data, size_t len, int flags,
-                              struct sockaddr* restrict addr,
-                              socklen_t* restrict addrlen);
+                              struct sockaddr* __restrict addr,
+                              socklen_t* __restrict addrlen);
 ssize_t fdio_default_sendto(fdio_t* io, const void* _data, size_t len,
                             int flags, const struct sockaddr* addr,
                             socklen_t addrlen);
@@ -307,3 +309,5 @@ int fdio_assign_reserved(int fd, fdio_t* io);
 // Unassign the reservation at |fd|. If |fd| does not resolve to a reservation
 // then -1 is returned and errno is set to EINVAL, otherwise |fd| is returned.
 int fdio_release_reserved(int fd);
+
+__END_CDECLS
