@@ -84,11 +84,11 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.sshKey, "ssh", "", "file containing a private SSH user key; if not provided, a private key will be generated.")
 }
 
-func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename string, args []string, privKey []byte) error {
+func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename string, args []string, privKeys [][]byte) error {
 	// Set up log listener and dump kernel output to stdout.
 	l, err := netboot.NewLogListener(nodename)
 	if err != nil {
-		return fmt.Errorf("cannot listen: %v\n", err)
+		return fmt.Errorf("cannot listen: %v", err)
 	}
 	go func() {
 		defer l.Close()
@@ -112,11 +112,14 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		return err
 	}
 
-	signer, err := ssh.ParsePrivateKey(privKey)
-	if err != nil {
-		return err
+	var signers []ssh.Signer
+	for _, p := range privKeys {
+		s, err := ssh.ParsePrivateKey(p)
+		if err != nil {
+			return err
+		}
+		signers = append(signers, s)
 	}
-	authorizedKey := ssh.MarshalAuthorizedKey(signer.PublicKey())
 
 	// Boot fuchsia.
 	var bootMode int
@@ -125,15 +128,14 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 	} else {
 		bootMode = botanist.ModePave
 	}
-	if err = botanist.Boot(ctx, addr, bootMode, imgs, r.zirconArgs, authorizedKey); err != nil {
+	if err = botanist.Boot(ctx, addr, bootMode, imgs, r.zirconArgs, signers); err != nil {
 		return err
 	}
 
-	env := os.Environ()
-	env = append(
-		env,
+	env := append(
+		os.Environ(),
 		fmt.Sprintf("NODENAME=%s", nodename),
-		fmt.Sprintf("SSH_KEY=%s", string(privKey)),
+		fmt.Sprintf("SSH_KEY=%s", string(privKeys[0])),
 	)
 
 	// Run command.
@@ -190,22 +192,28 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to load images: %v", err)
 	}
 
-	var privKey []byte
-	if r.sshKey == "" {
-		privKey, err = botanist.GeneratePrivateKey()
-		if err != nil {
-			return err
-		}
-	} else {
-		privKey, err = ioutil.ReadFile(r.sshKey)
-		if err != nil {
-			return err
-		}
-	}
-
 	var properties botanist.DeviceProperties
 	if err := botanist.LoadDeviceProperties(r.deviceFile, &properties); err != nil {
 		return fmt.Errorf("failed to open device properties file \"%v\": %v", r.deviceFile, err)
+	}
+
+	// Merge config file and command-line keys.
+	privKeyPaths := append(properties.SSHKeys, r.sshKey)
+	var privKeys [][]byte
+	if len(privKeyPaths) == 0 {
+		p, err := botanist.GeneratePrivateKey()
+		if err != nil {
+			return err
+		}
+		privKeys = append(privKeys, p)
+	} else {
+		for _, keyPath := range privKeyPaths {
+			p, err := ioutil.ReadFile(keyPath)
+			if err != nil {
+				return err
+			}
+			privKeys = append(privKeys, p)
+		}
 	}
 
 	if properties.PDU != nil {
@@ -219,6 +227,9 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
+
+	// Ensure cancel() is called on all return paths.
+	defer cancel()
 
 	// Handle SIGTERM and make sure we send a reboot to the device.
 	signals := make(chan os.Signal, 1)
@@ -245,14 +256,13 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 				return
 			}
 		}
-		errs <- r.runCmd(ctx, imgs, properties.Nodename, args, privKey)
+		errs <- r.runCmd(ctx, imgs, properties.Nodename, args, privKeys)
 	}()
 
 	select {
 	case err := <-errs:
 		return err
 	case <-signals:
-		cancel()
 	}
 
 	return nil

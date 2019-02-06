@@ -59,6 +59,9 @@ type DeviceProperties struct {
 
 	// PDU is the configuration for the attached Power Distribution Unit.
 	PDU *pdu.Config `json:"pdu,omitempty"`
+
+	// SSHKeys are the default system keys to be used with the device.
+	SSHKeys []string `json:"keys,omitempty"`
 }
 
 // LoadDeviceProperties unmarshalls the DeviceProperties found in a given file.

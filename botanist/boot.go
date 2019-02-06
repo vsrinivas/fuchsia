@@ -20,6 +20,7 @@ import (
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/retry"
 	"fuchsia.googlesource.com/tools/tftp"
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -77,7 +78,7 @@ var transferOrder = map[string]int{
 // Boot prepares and boots a device at the given IP address. Depending on bootMode, the
 // device will either be paved or netbooted with the provided images, command-line
 // arguments and a public SSH user key.
-func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []build.Image, cmdlineArgs []string, authorizedKey []byte) error {
+func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []build.Image, cmdlineArgs []string, signers []ssh.Signer) error {
 	var bootArgs func(build.Image) []string
 	switch bootMode {
 	case ModePave:
@@ -116,12 +117,17 @@ func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []build.Ima
 		}
 	}
 
-	if len(authorizedKey) > 0 {
-		sshFile, err := newNetsvcFile(authorizedKeysNetsvcName, authorizedKey)
+	if len(signers) > 0 {
+		var authorizedKeys []byte
+		for _, s := range signers {
+			authorizedKey := ssh.MarshalAuthorizedKey(s.PublicKey())
+			authorizedKeys = append(authorizedKeys, authorizedKey...)
+		}
+		authorizedKeysFile, err := newNetsvcFile(authorizedKeysNetsvcName, authorizedKeys)
 		if err != nil {
 			return err
 		}
-		files = append(files, sshFile)
+		files = append(files, authorizedKeysFile)
 	}
 
 	sort.Slice(files, func(i, j int) bool {

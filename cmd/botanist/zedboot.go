@@ -31,6 +31,7 @@ import (
 	"fuchsia.googlesource.com/tools/runtests"
 	"fuchsia.googlesource.com/tools/tftp"
 	"github.com/google/subcommands"
+	"golang.org/x/crypto/ssh"
 )
 
 // ZedbootCommand is a Command implementation for running the testing workflow on a device
@@ -101,7 +102,7 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 func (cmd *ZedbootCommand) createTarFile() (*os.File, error) {
 	file, err := os.OpenFile(cmd.outputArchive, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create file %s: %v\n", cmd.outputArchive, err)
+		return nil, fmt.Errorf("failed to create file %s: %v", cmd.outputArchive, err)
 	}
 
 	return file, nil
@@ -208,11 +209,11 @@ func (cmd *ZedbootCommand) runHostCmd(ctx context.Context) error {
 	return cmd.tarHostCmdArtifacts(summaryBuffer.Bytes(), stdoutBuf.Bytes(), tmpDir)
 }
 
-func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, nodename string, cmdlineArgs []string) error {
+func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, nodename string, cmdlineArgs []string, signers []ssh.Signer) error {
 	// Set up log listener and dump kernel output to stdout.
 	l, err := netboot.NewLogListener(nodename)
 	if err != nil {
-		return fmt.Errorf("cannot listen: %v\n", err)
+		return fmt.Errorf("cannot listen: %v", err)
 	}
 	go func() {
 		defer l.Close()
@@ -244,7 +245,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 	} else {
 		bootMode = botanist.ModePave
 	}
-	if err = botanist.Boot(ctx, addr, bootMode, imgs, cmdlineArgs, nil); err != nil {
+	if err = botanist.Boot(ctx, addr, bootMode, imgs, cmdlineArgs, signers); err != nil {
 		return err
 	}
 
@@ -277,13 +278,13 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 	logger.Debugf(ctx, "reading %q\n", cmd.summaryFilename)
 
 	if _, err := writer.WriteTo(&buffer); err != nil {
-		return fmt.Errorf("failed to receive summary file: %v\n", err)
+		return fmt.Errorf("failed to receive summary file: %v", err)
 	}
 
 	// Parse and save the summary.json file.
 	var result runtests.TestSummary
 	if err := json.Unmarshal(buffer.Bytes(), &result); err != nil {
-		return fmt.Errorf("cannot unmarshall test results: %v\n", err)
+		return fmt.Errorf("cannot unmarshall test results: %v", err)
 	}
 
 	outFile, err := cmd.createTarFile()
@@ -351,6 +352,19 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		return fmt.Errorf("failed to open device properties file \"%v\"", cmd.propertiesFile)
 	}
 
+	var signers []ssh.Signer
+	for _, keyPath := range properties.SSHKeys {
+		p, err := ioutil.ReadFile(keyPath)
+		if err != nil {
+			return err
+		}
+		s, err := ssh.ParsePrivateKey(p)
+		if err != nil {
+			return err
+		}
+		signers = append(signers, s)
+	}
+
 	if properties.PDU != nil {
 		defer func() {
 			logger.Debugf(ctx, "rebooting the node %q\n", properties.Nodename)
@@ -362,6 +376,9 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
+
+	// Ensure cancel() is called on all return paths.
+	defer cancel()
 
 	// Handle SIGTERM and make sure we send a reboot to the device.
 	signals := make(chan os.Signal, 1)
@@ -392,14 +409,13 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 				return
 			}
 		}
-		errs <- cmd.runTests(ctx, imgs, properties.Nodename, cmdlineArgs)
+		errs <- cmd.runTests(ctx, imgs, properties.Nodename, cmdlineArgs, signers)
 	}()
 
 	select {
 	case err := <-errs:
 		return err
 	case <-signals:
-		cancel()
 	}
 
 	return nil
