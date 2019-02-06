@@ -441,10 +441,10 @@ static zx_status_t fdio_from_handles(zx_handle_t handle, fuchsia_io_NodeInfo* in
         return ZX_OK;
     case fuchsia_io_NodeInfoTag_file:
         if (info->file.event == ZX_HANDLE_INVALID) {
-            io = fdio_remote_create(handle, 0);
+            io = fdio_file_create(handle, 0);
             xprintf("rio (%x,%x) -> %p\n", handle, 0, io);
         } else {
-            io = fdio_remote_create(handle, info->file.event);
+            io = fdio_file_create(handle, info->file.event);
             xprintf("rio (%x,%x) -> %p\n", handle, info->file.event, io);
         }
         if (io == NULL) {

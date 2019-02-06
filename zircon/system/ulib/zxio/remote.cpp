@@ -436,3 +436,31 @@ zx_status_t zxio_dir_init(zxio_storage_t* storage, zx_handle_t control) {
     remote->event = ZX_HANDLE_INVALID;
     return ZX_OK;
 }
+
+static constexpr zxio_ops_t zxio_file_ops = []() {
+    zxio_ops_t ops = zxio_default_ops;
+    ops.release = zxio_remote_release;
+    ops.close = zxio_remote_close;
+    ops.clone_async = zxio_remote_clone_async;
+    ops.sync = zxio_remote_sync;
+    ops.attr_get = zxio_remote_attr_get;
+    ops.attr_set = zxio_remote_attr_set;
+    ops.read = zxio_remote_read;
+    ops.read_at = zxio_remote_read_at;
+    ops.write = zxio_remote_write;
+    ops.write_at = zxio_remote_write_at;
+    ops.seek = zxio_remote_seek;
+    ops.truncate = zxio_remote_truncate;
+    ops.flags_get = zxio_remote_flags_get;
+    ops.flags_set = zxio_remote_flags_set;
+    return ops;
+}();
+
+zx_status_t zxio_file_init(zxio_storage_t* storage, zx_handle_t control,
+                           zx_handle_t event) {
+    zxio_remote_t* remote = reinterpret_cast<zxio_remote_t*>(storage);
+    zxio_init(&remote->io, &zxio_file_ops);
+    remote->control = control;
+    remote->event = event;
+    return ZX_OK;
+}
