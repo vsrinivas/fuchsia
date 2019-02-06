@@ -99,6 +99,10 @@ static void HandOffException(const crash_ctx& ctx, const zx_port_packet_t& packe
 
     if (ctx.svc_request.is_valid()) {
         // Use the full system analyzer FIDL service, presumably crashpad_analyzer.
+
+        // First, we still dump the crash info in the logs.
+        inspector_print_debug_info(process.get(), thread.get());
+
         zx::port port;
         if (ctx.exception_port.duplicate(ZX_RIGHT_SAME_RIGHTS, &port) != ZX_OK) {
             fprintf(stderr, "crashsvc: failed to duplicate exception port\n");
@@ -178,10 +182,10 @@ void start_crashsvc(zx::job root_job, zx_handle_t analyzer_svc) {
         }
     }
 
-    auto ctx = new crash_ctx {
+    auto ctx = new crash_ctx{
         std::move(root_job),
         std::move(exception_port),
-        std::move(ch1)
+        std::move(ch1),
     };
 
     thrd_t t;

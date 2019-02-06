@@ -9,7 +9,6 @@
 #include <utility>
 
 #include <fuchsia/crash/cpp/fidl.h>
-#include <inspector/inspector.h>
 #include <lib/fxl/files/directory.h>
 #include <lib/fxl/files/file.h>
 #include <lib/fxl/logging.h>
@@ -161,8 +160,6 @@ zx_status_t CrashpadAnalyzerImpl::UploadReport(
 
 zx_status_t CrashpadAnalyzerImpl::HandleNativeException(
     zx::process process, zx::thread thread, zx::port exception_port) {
-  inspector_print_debug_info(process.get(), thread.get());
-
   const std::string package_name = GetPackageName(process);
   FX_LOGS(INFO) << "generating crash report for exception thrown by "
                 << package_name;
