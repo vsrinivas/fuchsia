@@ -19,6 +19,8 @@
 #include <zircon/compiler.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/pdu.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 #include "garnet/drivers/bluetooth/lib/sm/status.h"
 #include "garnet/drivers/bluetooth/lib/sm/types.h"
