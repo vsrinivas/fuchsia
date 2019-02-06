@@ -57,7 +57,7 @@ type TestRunnerOutput struct {
 	Tar     *TarOutput
 }
 
-func (o *TestRunnerOutput) Record(result testResult) {
+func (o *TestRunnerOutput) Record(result testrunner.TestResult) {
 	if o.Summary != nil {
 		o.Summary.Record(result)
 	}
@@ -87,14 +87,6 @@ func (o *TestRunnerOutput) Complete() error {
 	}
 
 	return o.Tar.Close()
-}
-
-type testResult struct {
-	Name      string
-	Output    io.Reader
-	Result    runtests.TestResult
-	StartTime time.Time
-	EndTime   time.Time
 }
 
 func usage() {
@@ -267,7 +259,7 @@ func runTests(tests []testsharder.Test, tester Tester, output *TestRunnerOutput)
 	return nil
 }
 
-func runTest(ctx context.Context, test testsharder.Test, tester Tester) (*testResult, error) {
+func runTest(ctx context.Context, test testsharder.Test, tester Tester) (*testrunner.TestResult, error) {
 	result := runtests.TestSuccess
 	output := new(bytes.Buffer)
 	multistdout := io.MultiWriter(output, os.Stdout)
@@ -283,7 +275,7 @@ func runTest(ctx context.Context, test testsharder.Test, tester Tester) (*testRe
 	endTime := time.Now()
 
 	// Record the test details in the summary.
-	return &testResult{
+	return &testrunner.TestResult{
 		Name:      test.Name,
 		Output:    output,
 		Result:    result,

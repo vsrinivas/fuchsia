@@ -13,18 +13,19 @@ import (
 	"testing"
 
 	"fuchsia.googlesource.com/tools/runtests"
+	"fuchsia.googlesource.com/tools/testrunner"
 )
 
 func TestTarOutput(t *testing.T) {
 	tests := []struct {
 		name             string
-		input            testResult
+		input            testrunner.TestResult
 		expectedHeader   *tar.Header
 		expectedContents string
 	}{
 		{
 			name: "archive entry for test_a",
-			input: testResult{
+			input: testrunner.TestResult{
 				Name:   "test_a",
 				Output: strings.NewReader("the test passed"),
 				Result: runtests.TestSuccess,
@@ -40,7 +41,7 @@ func TestTarOutput(t *testing.T) {
 		},
 		{
 			name: "archive entry for test_b",
-			input: testResult{
+			input: testrunner.TestResult{
 				Name:   "test_b",
 				Output: strings.NewReader("the test failed"),
 				Result: runtests.TestSuccess,
@@ -102,7 +103,7 @@ func TestTarOutput(t *testing.T) {
 }
 
 func TestTapOutput(t *testing.T) {
-	inputs := []testResult{{
+	inputs := []testrunner.TestResult{{
 		Name:   "test_a",
 		Result: runtests.TestSuccess,
 	}, {
@@ -130,7 +131,7 @@ not ok 2 test_b
 }
 
 func TestSummaryOutput(t *testing.T) {
-	inputs := []testResult{{
+	inputs := []testrunner.TestResult{{
 		Name:   "test_a",
 		Result: runtests.TestFailure,
 	}, {

@@ -15,6 +15,7 @@ import (
 	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/runtests"
 	"fuchsia.googlesource.com/tools/tap"
+	"fuchsia.googlesource.com/tools/testrunner"
 )
 
 // TarOutput records test results in a TAR archive.
@@ -22,7 +23,7 @@ type TarOutput struct {
 	w *tar.Writer
 }
 
-func (o *TarOutput) Record(result testResult) {
+func (o *TarOutput) Record(result testrunner.TestResult) {
 	pathInArchive := path.Join(result.Name, runtests.TestOutputFilename)
 	botanist.ArchiveReader(o.w, result.Output, pathInArchive)
 }
@@ -57,7 +58,7 @@ func NewTAPOutput(output io.Writer, testCount int) *TAPOutput {
 	return &TAPOutput{producer}
 }
 
-func (o *TAPOutput) Record(result testResult) {
+func (o *TAPOutput) Record(result testrunner.TestResult) {
 	o.producer.Ok(result.Result == runtests.TestSuccess, result.Name)
 }
 
@@ -66,7 +67,7 @@ type SummaryOutput struct {
 	Summary runtests.TestSummary
 }
 
-func (o *SummaryOutput) Record(result testResult) {
+func (o *SummaryOutput) Record(result testrunner.TestResult) {
 	pathInArchive := path.Join(result.Name, runtests.TestOutputFilename)
 	// Strip any leading //, contributed by Linux/Mac test names, so that
 	// pathInArchive gives a valid relative path.
