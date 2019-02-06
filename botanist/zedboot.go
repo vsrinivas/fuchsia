@@ -10,12 +10,9 @@ import (
 	"fuchsia.googlesource.com/tools/fastboot"
 )
 
-// FastbootToZedboot uses fastboot to flash and boot into Zedboot.
+// FastbootToZedboot uses fastboot to boot into Zedboot.
 func FastbootToZedboot(ctx context.Context, fastbootTool, zirconRPath string) error {
-	f := fastboot.Fastboot{fastbootTool}
-	if _, err := f.Flash(ctx, "boot", zirconRPath); err != nil {
-		return fmt.Errorf("failed to flash the fastboot device: %v", err)
-	}
+	f := fastboot.Fastboot{ToolPath: fastbootTool}
 	if _, err := f.Continue(ctx); err != nil {
 		return fmt.Errorf("failed to boot the device with \"fastboot continue\": %v", err)
 	}

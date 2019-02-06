@@ -37,8 +37,3 @@ func (f *Fastboot) exec(ctx context.Context, args ...string) ([]byte, error) {
 func (f *Fastboot) Continue(ctx context.Context) ([]byte, error) {
 	return f.exec(ctx, "continue")
 }
-
-// Flash is equivalent to the command "fastboot flash <partition> <image>".
-func (f *Fastboot) Flash(ctx context.Context, partition string, image string) ([]byte, error) {
-	return f.exec(ctx, "flash", partition, image)
-}
