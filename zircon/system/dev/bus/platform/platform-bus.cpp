@@ -206,6 +206,11 @@ zx_status_t PlatformBus::PBusSetBoardInfo(const pbus_board_info_t* info) {
     return ZX_OK;
 }
 
+zx_status_t PlatformBus::PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin) {
+    suspend_cb_ = *suspend_cbin;
+    return ZX_OK;
+}
+
 zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
     switch (proto_id) {
     case ZX_PROTOCOL_PBUS: {
@@ -276,6 +281,7 @@ zx_status_t PlatformBus::ReadZbi(zx::vmo zbi) {
     size_t metadata_size = 0;
     size_t len = zbi_length;
     size_t off = sizeof(header);
+    zbi_platform_id_t platform_id;
 
     while (len > sizeof(header)) {
         auto status = zbi.read(&header, off, sizeof(header));
@@ -324,7 +330,6 @@ zx_status_t PlatformBus::ReadZbi(zx::vmo zbi) {
             break;
         }
         if (header.type == ZBI_TYPE_PLATFORM_ID) {
-            zbi_platform_id_t platform_id;
             status = zbi.read(&platform_id, off + sizeof(zbi_header_t), sizeof(platform_id));
             if (status != ZX_OK) {
                 zxlogf(ERROR, "zbi.read() failed: %d\n", status);
@@ -376,8 +381,30 @@ zx_status_t PlatformBus::ReadZbi(zx::vmo zbi) {
     }
 
     if (!got_platform_id) {
+#if __x86_64__
+        /*
+         * For x86_64, we might not find the ZBI_TYPE_PLATFORM_ID, old bootloaders
+         * won't support this, for example. If this is the case, cons up the VID/PID here
+         * to allow the acpi board driver to load and bind.
+         */
+        board_info_.vid = PDEV_VID_INTEL;
+        board_info_.pid = PDEV_PID_X86;
+        strncpy(board_info_.board_name, "x86_64", sizeof(board_info_.board_name));
+        // This is optionally set later by the board driver.
+        board_info_.board_revision = 0;
+
+        // Publish board name to sysinfo driver
+        status = device_publish_metadata(parent(), "/dev/misc/sysinfo",
+                                         DEVICE_METADATA_BOARD_NAME, "x86_64",
+                                         strlen("x86_64") + 1);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "device_publish_metadata(board_name) failed: %d\n", status);
+            return status;
+        }
+#else
         zxlogf(ERROR, "platform_bus: ZBI_TYPE_PLATFORM_ID not found\n");
         return ZX_ERR_INTERNAL;
+#endif
     }
 
     return ZX_OK;
@@ -457,29 +484,73 @@ void PlatformBus::DdkRelease() {
     delete this;
 }
 
-static zx_protocol_device_t sys_device_proto = {};
+typedef struct {
+    void *pbus_instance;
+} sysdev_suspend_t;
+
+static zx_status_t sys_device_suspend(void* ctx, uint32_t flags) {
+    auto* p = reinterpret_cast<sysdev_suspend_t *>(ctx);
+    auto* pbus = reinterpret_cast<class PlatformBus *>(p->pbus_instance);
+
+    if (pbus != nullptr) {
+        pbus_sys_suspend_t suspend_cb = pbus->suspend_cb();
+        if (suspend_cb.callback != nullptr) {
+            return suspend_cb.callback(suspend_cb.ctx, flags);
+        }
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+static void sys_device_release(void* ctx) {
+    auto* p = reinterpret_cast<sysdev_suspend_t *>(ctx);
+    delete p;
+}
+
+static zx_protocol_device_t sys_device_proto = []() {
+    zx_protocol_device_t result;
+
+    result.version = DEVICE_OPS_VERSION;
+    result.suspend = sys_device_suspend;
+    result.release = sys_device_release;
+    return result;
+}();
 
 zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::vmo zbi) {
     // This creates the "sys" device.
     sys_device_proto.version = DEVICE_OPS_VERSION;
+
+    // The suspend op needs to get access to the PBus instance, to be able to
+    // callback the ACPI suspend hook. Introducing a level of indirection here
+    // to allow us to update the PBus instance in the device context after creating
+    // the device.
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> ptr(new (&ac) uint8_t[sizeof(sysdev_suspend_t)]);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    auto* suspend_buf = reinterpret_cast<sysdev_suspend_t *>(ptr.get());
+    suspend_buf->pbus_instance = nullptr;
 
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = "sys";
     args.ops = &sys_device_proto;
     args.flags = DEVICE_ADD_NON_BINDABLE;
+    args.ctx = suspend_buf;
 
     // Add child of sys for the board driver to bind to.
     auto status = device_add(parent, &args, &parent);
     if (status != ZX_OK) {
         return status;
+    } else {
+        __UNUSED auto* dummy = ptr.release();
     }
 
-    fbl::AllocChecker ac;
     fbl::unique_ptr<platform_bus::PlatformBus> bus(new (&ac) platform_bus::PlatformBus(parent));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
+    suspend_buf->pbus_instance = bus.get();
 
     status = bus->Init(std::move(zbi));
     if (status != ZX_OK) {

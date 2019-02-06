@@ -560,7 +560,7 @@ zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle) {
 
 // This pci_init initializes the kernel pci driver and is not compiled in at the same time as the
 // userspace pci driver under development.
-zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,  publish_acpi_device_ctx_t* ctx) {
+zx_status_t pci_init(zx_device_t* sysdev, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,  publish_acpi_device_ctx_t* ctx) {
     if (!ctx->found_pci) {
         // Report current resources to kernel PCI driver
         zx_status_t status = pci_report_current_resources(get_root_resource());
@@ -585,11 +585,10 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
 
         free(arg);
 
-        // Publish PCI root as top level
+        // Publish PCI root as /dev/sys/ level.
         // Only publish one PCI root device for all PCI roots
         // TODO: store context for PCI root protocol
-        parent = device_get_parent(parent);
-        zx_device_t* pcidev = publish_device(parent, object, info, "pci",
+        zx_device_t* pcidev = publish_device(sysdev, object, info, "pci",
                 ZX_PROTOCOL_PCIROOT, get_pciroot_ops());
         ctx->found_pci = (pcidev != NULL);
     }

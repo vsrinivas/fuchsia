@@ -51,7 +51,8 @@ typedef struct acpi_device {
 } acpi_device_t;
 
 typedef struct {
-    zx_device_t* parent;
+    zx_device_t* sys_root;
+    zx_device_t* acpi_root;    
     bool found_pci;
     uint8_t last_pci; // bus number of the last PCI root seen
 } publish_acpi_device_ctx_t;
