@@ -14,7 +14,6 @@
 
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/resources.h"
-#include "lib/ui/scenic/fidl_helpers.h"
 
 // Lifted from hello_views.
 static fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd) {

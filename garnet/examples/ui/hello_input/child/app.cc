@@ -14,7 +14,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/resources.h"
-#include "lib/ui/scenic/fidl_helpers.h"
 
 namespace examples_ui_hello_input_child {
 
