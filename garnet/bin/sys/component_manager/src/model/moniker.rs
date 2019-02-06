@@ -172,10 +172,7 @@ mod tests {
         assert_eq!(".", format!("{}", me));
 
         let ancestor = RelativeMoniker::new(
-            vec![
-                ChildMoniker::new("a".to_string()),
-                ChildMoniker::new("b".to_string()),
-            ],
+            vec![ChildMoniker::new("a".to_string()), ChildMoniker::new("b".to_string())],
             vec![],
         );
         assert_eq!(false, ancestor.is_self());
@@ -183,10 +180,7 @@ mod tests {
 
         let descendant = RelativeMoniker::new(
             vec![],
-            vec![
-                ChildMoniker::new("a".to_string()),
-                ChildMoniker::new("b".to_string()),
-            ],
+            vec![ChildMoniker::new("a".to_string()), ChildMoniker::new("b".to_string())],
         );
         assert_eq!(false, descendant.is_self());
         assert_eq!("./a/b", format!("{}", descendant));
@@ -199,14 +193,8 @@ mod tests {
         assert_eq!(".\\a/b", format!("{}", sibling));
 
         let cousin = RelativeMoniker::new(
-            vec![
-                ChildMoniker::new("a".to_string()),
-                ChildMoniker::new("a0".to_string()),
-            ],
-            vec![
-                ChildMoniker::new("b0".to_string()),
-                ChildMoniker::new("b".to_string()),
-            ],
+            vec![ChildMoniker::new("a".to_string()), ChildMoniker::new("a0".to_string())],
+            vec![ChildMoniker::new("b0".to_string()), ChildMoniker::new("b".to_string())],
         );
         assert_eq!(false, cousin.is_self());
         assert_eq!(".\\a\\a0/b0/b", format!("{}", cousin));

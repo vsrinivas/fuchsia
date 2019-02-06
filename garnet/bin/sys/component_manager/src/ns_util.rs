@@ -3,14 +3,19 @@
 // found in the LICENSE file.
 
 use {
-    crate::elf_runner::io_util,
+    crate::io_util,
     failure::{err_msg, Error},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys,
+    lazy_static::lazy_static,
     std::collections::HashMap,
     std::path::PathBuf,
 };
+
+lazy_static! {
+    pub static ref PKG_PATH: PathBuf = PathBuf::from("/pkg");
+}
 
 /// clone_component_namespace will create a duplicate namespace struct, with different channels
 /// (but to the same place) for the directories. It must take ownership of the namespace to be

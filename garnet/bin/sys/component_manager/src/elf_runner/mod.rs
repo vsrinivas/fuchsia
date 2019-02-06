@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod io_util;
 mod library_loader;
-mod ns_util;
 
 use {
     crate::data::DictionaryExt,
     crate::model::{Runner, RunnerError},
+    crate::ns_util::{self, PKG_PATH},
+    failure::{format_err, Error},
+    fdio::fdio_sys,
     fidl_fuchsia_data as fdata, fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys,
     fuchsia_app::client::connect_to_service,
-    fuchsia_zircon as zx,
-    fuchsia_zircon::HandleBased,
+    fuchsia_zircon::{self as zx, HandleBased},
     futures::future::FutureObj,
     std::path::PathBuf,
 };
@@ -24,6 +24,33 @@ const PA_LDSVC_LOADER: u32 = 0x10;
 /// Runs components with ELF binaries.
 pub struct ElfRunner {}
 
+fn handles_from_fd(fd: i32) -> Result<Vec<fproc::HandleInfo>, Error> {
+    // TODO(CF-592): fdio is not guaranteed to be asynchronous, replace with native rust solution
+    unsafe {
+        let mut fdio_handles = [zx::sys::ZX_HANDLE_INVALID; fdio_sys::FDIO_MAX_HANDLES as usize];
+        let mut fdio_types = [0u32; fdio_sys::FDIO_MAX_HANDLES as usize];
+        let handle_ptr = &mut fdio_handles[0] as *mut _ as *mut zx::sys::zx_handle_t;
+        let type_ptr = &mut fdio_types[0] as *mut _ as *mut u32;
+        let status = fdio_sys::fdio_clone_fd(fd, fd, handle_ptr, type_ptr);
+        if status == zx::sys::ZX_ERR_BAD_HANDLE {
+            // This file descriptor is closed. We just skip it rather than
+            // generating an error.
+            return Ok(vec![]);
+        }
+        if status < zx::sys::ZX_OK {
+            return Err(format_err!("failed to clone fd {}: {}", fd, status));
+        }
+        let mut infos = vec![];
+        for i in 0usize..(status as usize) {
+            infos.push(fproc::HandleInfo {
+                handle: zx::Handle::from_raw(fdio_handles[i]),
+                id: fdio_types[i],
+            });
+        }
+        Ok(infos)
+    }
+}
+
 impl ElfRunner {
     pub fn new() -> ElfRunner {
         ElfRunner {}
@@ -32,7 +59,7 @@ impl ElfRunner {
     // TODO: all internal error handling from here down uses failure::Error and converts into
     // RunnerError for returning purposes. This was because RunnerError was not descriptive enough
     // for debugging purposes. This has the unfortunate side effect of a smattering of
-    // `.map_err(|e| println!(...`'s scattered around. The RunnerError type should probably become
+    // `.map_err(|e| eprintln!(...`'s scattered around. The RunnerError type should probably become
     // more expressive, or at least error handling in this function should be less tedious.
     async fn start_async(&self, start_info: fsys::ComponentStartInfo) -> Result<(), RunnerError> {
         // TODO: remove these unwraps
@@ -53,7 +80,7 @@ impl ElfRunner {
         let bin_path: PathBuf = get_program_binary(&start_info.program)?;
         let executable_vmo =
             await!(library_loader::load_object(&ns_map, bin_path)).map_err(|e| {
-                println!("error loading object: {}", e);
+                eprintln!("error loading object: {}", e);
                 RunnerError::ComponentNotAvailable
             })?;
 
@@ -64,7 +91,7 @@ impl ElfRunner {
             default_job.create_child_job().map_err(|_| RunnerError::ComponentNotAvailable)?; // TODO: handle this error better
 
         let child_job_dup = child_job.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(|e| {
-            println!("failed to duplicate handle to child job: {}", e);
+            eprintln!("failed to duplicate handle to child job: {}", e);
             RunnerError::ComponentNotAvailable
         })?; // TODO: handle this error better
 
@@ -79,7 +106,15 @@ impl ElfRunner {
         // TODO: launcher.AddArgs
         // TODO: launcher.AddEnvirons
 
-        let mut handle_infos = vec![
+        let mut handle_infos = vec![];
+        for fd in 0..3 {
+            handle_infos.append(&mut handles_from_fd(fd).map_err(|e| {
+                eprintln!("error getting handles for {}: {}", fd, e);
+                RunnerError::ComponentNotAvailable
+            })?);
+        }
+
+        handle_infos.append(&mut vec![
             fproc::HandleInfo { handle: ll_client_chan.into_handle(), id: PA_LDSVC_LOADER },
             // TODO: is this needed?
             //fproc::HandleInfo{
@@ -87,7 +122,7 @@ impl ElfRunner {
             //    id: PA_JOB_DEFAULT,
             //},
             // TODO: PA_DIRECTORY_REQUEST
-        ];
+        ]);
         launcher
             .add_handles(&mut handle_infos.iter_mut())
             .map_err(|_| RunnerError::ComponentNotAvailable)?;
@@ -108,15 +143,17 @@ impl ElfRunner {
             name: name.to_string(),
         }))
         .map_err(|e| {
-            println!("got an error from launcher.launch: {}", e);
+            eprintln!("got an error from launcher.launch: {}", e);
             RunnerError::ComponentNotAvailable
         })?;
-
-        if status != zx::sys::ZX_OK {
-            println!("failed to launch! {}", status);
+        let status = zx::Status::from_raw(status);
+        if status != zx::Status::OK {
+            eprintln!(
+                "failed to launch: {}",
+                status,
+            );
             return Err(RunnerError::ComponentNotAvailable);
         }
-
         Ok(())
     }
 }
@@ -138,7 +175,7 @@ fn get_program_binary(program: &Option<fdata::Dictionary>) -> Result<PathBuf, Ru
     if let Some(program) = program {
         if let Some(binary) = program.find("binary") {
             if let fdata::Value::Str(bin) = binary {
-                return Ok(PathBuf::from(bin));
+                return Ok(PKG_PATH.join(bin));
             }
         }
     }
@@ -147,7 +184,12 @@ fn get_program_binary(program: &Option<fdata::Dictionary>) -> Result<PathBuf, Ru
 
 #[cfg(test)]
 mod tests {
-    use {crate::elf_runner::*, fidl::endpoints::ClientEnd, fuchsia_async as fasync};
+    use {
+        crate::elf_runner::*,
+        crate::io_util,
+        fidl::endpoints::ClientEnd,
+        fuchsia_async as fasync,
+    };
 
     #[test]
     #[ignore]

@@ -11,7 +11,9 @@
 mod data;
 mod elf_runner;
 mod fuchsia_boot_resolver;
+mod io_util;
 mod model;
+mod ns_util;
 
 use {
     elf_runner::ElfRunner,

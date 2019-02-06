@@ -15,7 +15,8 @@ use {
 /// further isolate the `Model` from FIDL interfacting concerns.
 pub trait Resolver {
     fn resolve<'a>(
-        &'a self, component_uri: &'a str,
+        &'a self,
+        component_uri: &'a str,
     ) -> FutureObj<'a, Result<fsys::Component, ResolverError>>;
 }
 
@@ -26,9 +27,7 @@ pub struct ResolverRegistry {
 
 impl ResolverRegistry {
     pub fn new() -> ResolverRegistry {
-        ResolverRegistry {
-            resolvers: HashMap::new(),
-        }
+        ResolverRegistry { resolvers: HashMap::new() }
     }
 
     pub fn register(&mut self, scheme: String, resolver: Box<dyn Resolver>) {
@@ -38,7 +37,8 @@ impl ResolverRegistry {
 
 impl Resolver for ResolverRegistry {
     fn resolve<'a>(
-        &'a self, component_uri: &'a str,
+        &'a self,
+        component_uri: &'a str,
     ) -> FutureObj<'a, Result<fsys::Component, ResolverError>> {
         match Url::parse(component_uri) {
             Ok(parsed_uri) => {
@@ -53,20 +53,29 @@ impl Resolver for ResolverRegistry {
     }
 }
 
+// TODO: Allow variants other than InternalError to take strings.
 /// Errors produced by `Resolver`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ResolverError {
     ComponentNotAvailable,
     SchemeNotRegistered,
     UrlParseError(url::ParseError),
+    InternalError(String),
+}
+
+impl ResolverError {
+    pub fn internal_error(err: impl Into<String>) -> Self {
+        ResolverError::InternalError(err.into())
+    }
 }
 
 impl fmt::Display for ResolverError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
+        match &self {
             ResolverError::ComponentNotAvailable => write!(f, "component not available"),
             ResolverError::SchemeNotRegistered => write!(f, "component uri scheme not registered"),
-            ResolverError::UrlParseError(ref err) => err.fmt(f),
+            ResolverError::UrlParseError(err) => err.fmt(f),
+            ResolverError::InternalError(err) => write!(f, "internal error: {}", err),
         }
     }
 }
@@ -77,6 +86,7 @@ impl error::Error for ResolverError {
             ResolverError::ComponentNotAvailable => None,
             ResolverError::SchemeNotRegistered => None,
             ResolverError::UrlParseError(ref err) => err.source(),
+            ResolverError::InternalError(_) => None,
         }
     }
 }
@@ -98,7 +108,8 @@ mod tests {
 
     impl Resolver for MockOkResolver {
         fn resolve(
-            &self, component_uri: &str,
+            &self,
+            component_uri: &str,
         ) -> FutureObj<Result<fsys::Component, ResolverError>> {
             assert_eq!(self.expected_uri, component_uri);
             FutureObj::new(Box::new(future::ok(fsys::Component {
@@ -123,7 +134,8 @@ mod tests {
 
     impl Resolver for MockErrorResolver {
         fn resolve(
-            &self, component_uri: &str,
+            &self,
+            component_uri: &str,
         ) -> FutureObj<Result<fsys::Component, ResolverError>> {
             assert_eq!(self.expected_uri, component_uri);
             FutureObj::new(Box::new(future::err(self.error.clone())))
@@ -166,9 +178,7 @@ mod tests {
 
         // Resolve an URL lacking a scheme.
         assert_eq!(
-            Err(ResolverError::UrlParseError(
-                url::ParseError::RelativeUrlWithoutBase
-            )),
+            Err(ResolverError::UrlParseError(url::ParseError::RelativeUrlWithoutBase)),
             await!(registry.resolve("xxx")),
         );
     }

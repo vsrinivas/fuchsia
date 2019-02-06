@@ -8,7 +8,11 @@ mod runner;
 
 pub use self::{moniker::*, resolver::*, runner::*};
 use {
-    crate::data,
+    crate::{data, io_util},
+    crate::ns_util::PKG_PATH,
+    failure::{format_err, Error},
+    fidl::endpoints::ClientEnd,
+    fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys,
     futures::lock::Mutex,
     std::{cell::RefCell, error, fmt, rc::Rc},
@@ -96,7 +100,8 @@ impl Model {
     }
 
     async fn bind_instance_in_realm(
-        &self, realm_cell: Rc<RefCell<Realm>>,
+        &self,
+        realm_cell: Rc<RefCell<Realm>>,
     ) -> Result<(), ModelError> {
         // There can only be one task manipulating an instance's execution at a time.
         let realm = realm_cell.borrow();
@@ -104,22 +109,69 @@ impl Model {
         match &*execution_lock {
             Some(_) => Ok(()),
             None => {
-                let component = await!(realm
-                    .resolver_registry
-                    .resolve(&realm.instance.component_uri))?;
+                let component =
+                    await!(realm.resolver_registry.resolve(&realm.instance.component_uri))?;
+                let (component, ns) = Self::ns_from_component(component)?;
                 let start_info = fsys::ComponentStartInfo {
                     resolved_uri: component.resolved_uri.clone(),
                     program: component
                         .decl
                         .as_ref()
                         .and_then(|x| data::clone_option_dictionary(&x.program)),
-                    ns: None, // TODO: Populate the component's namespace
+                    ns: Some(ns),
                 };
                 await!(realm.default_runner.start(start_info))?;
                 *execution_lock = Some(Execution { component });
                 Ok(())
             }
         }
+    }
+
+    // Takes ownership of `component` and returns it unchanged. We must take ownership to be able
+    // to clone the package directory.
+    fn ns_from_component(
+        component: fsys::Component,
+    ) -> Result<(fsys::Component, fsys::ComponentNamespace), ModelError> {
+        // TODO: Populate namespace from the component declaration.
+        let mut ns = fsys::ComponentNamespace { paths: vec![], directories: vec![] };
+        let mut out_component = fsys::Component {
+            resolved_uri: component.resolved_uri,
+            decl: component.decl,
+            package: None,
+        };
+        if let Some(package) = component.package {
+            if package.package_dir.is_none() {
+                return Err(ResolverError::internal_error("Package missing package_dir").into());
+            }
+            let (package_dir, cloned_dir) =
+                Self::clone_dir(package.package_dir.unwrap()).map_err(|e| {
+                    ModelError::from(ResolverError::internal_error(format!(
+                        "failed to clone package_dir: {}",
+                        e
+                    )))
+                })?;
+            ns.paths.push(PKG_PATH.to_str().unwrap().to_string());
+            ns.directories.push(cloned_dir);
+            out_component.package = Some(fsys::Package {
+                package_uri: package.package_uri,
+                package_dir: Some(package_dir),
+            });
+        }
+        Ok((out_component, ns))
+    }
+
+    fn clone_dir(
+        dir: ClientEnd<DirectoryMarker>,
+    ) -> Result<(ClientEnd<DirectoryMarker>, ClientEnd<DirectoryMarker>), Error> {
+        let dir_proxy = dir.into_proxy()?;
+        let clone_end = ClientEnd::new(
+            io_util::clone_directory(&dir_proxy)?
+                .into_channel()
+                .map_err(|_| format_err!("could not convert directory into channel"))?
+                .into_zx_channel(),
+        );
+        let orig_end = ClientEnd::new(dir_proxy.into_channel().unwrap().into_zx_channel());
+        Ok((orig_end, clone_end))
     }
 }
 
@@ -172,7 +224,8 @@ mod tests {
 
     impl Resolver for MockResolver {
         fn resolve(
-            &self, component_uri: &str,
+            &self,
+            component_uri: &str,
         ) -> FutureObj<Result<fsys::Component, ResolverError>> {
             assert_eq!("test:///root", component_uri);
             FutureObj::new(Box::new(future::ok(fsys::Component {
@@ -194,12 +247,10 @@ mod tests {
 
     impl Runner for MockRunner {
         fn start(
-            &self, start_info: fsys::ComponentStartInfo,
+            &self,
+            start_info: fsys::ComponentStartInfo,
         ) -> FutureObj<Result<(), RunnerError>> {
-            assert_eq!(
-                Some("test:///resolved_root".to_string()),
-                start_info.resolved_uri
-            );
+            assert_eq!(Some("test:///resolved_root".to_string()), start_info.resolved_uri);
             FutureObj::new(Box::new(future::ok(())))
         }
     }
@@ -214,11 +265,9 @@ mod tests {
         });
         assert_eq!(
             Err(ModelError::InstanceNotFound),
-            await!(
-                model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
-                    "no-such-instance".to_string()
-                )]))
-            )
+            await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+                "no-such-instance".to_string()
+            )])))
         );
     }
 
