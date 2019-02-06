@@ -153,7 +153,7 @@ TEST_F(ResourceLinkerTest, CannotImportWithDeadDestinationHandles) {
   ASSERT_FALSE(did_resolve);
 }
 
-TEST_F(ResourceLinkerTest, DISABLED_CanImportWithDeadSourceHandle) {
+TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
   zx::eventpair destination;
   zx::eventpair source_out;
   {
@@ -170,37 +170,37 @@ TEST_F(ResourceLinkerTest, DISABLED_CanImportWithDeadSourceHandle) {
   bool expiry_cb_called = false;
   bool did_resolve = false;
 
-  async::PostTask(dispatcher(), [this, &import, &resource, linker,
-                                 &expiry_cb_called, &did_resolve,
-                                 destination =
-                                     std::move(destination)]() mutable {
-    // Set an expiry callback that checks the resource expired for the right
-    // reason and signal the latch.
-    linker->SetOnExpiredCallback(
-        [&linker, &expiry_cb_called](Resource*,
-                                     ResourceLinker::ExpirationCause cause) {
-          ASSERT_EQ(ResourceLinker::ExpirationCause::kExportTokenClosed, cause);
-          ASSERT_EQ(0u, linker->NumUnresolvedImports());
-          ASSERT_EQ(0u, linker->NumExports());
-          expiry_cb_called = true;
-        });
+  // Set an expiry callback that checks the resource expired for the right
+  // reason and signal the latch.
+  linker->SetOnExpiredCallback(
+      [&linker, &expiry_cb_called](Resource*,
+                                   ResourceLinker::ExpirationCause cause) {
+        ASSERT_EQ(ResourceLinker::ExpirationCause::kExportTokenClosed, cause);
+        ASSERT_EQ(0u, linker->NumUnresolvedImports());
+        ASSERT_EQ(0u, linker->NumExports());
+        expiry_cb_called = true;
+      });
 
-    linker->SetOnImportResolvedCallback(
-        [&did_resolve](Import* import, Resource* resource,
-                       ImportResolutionResult cause) -> void {
-          did_resolve = true;
-        });
-    import = fxl::MakeRefCounted<Import>(session_.get(), 1,
-                                         ::fuchsia::ui::gfx::ImportSpec::NODE,
-                                         linker->GetWeakPtr());
-    ASSERT_TRUE(linker->ImportResource(
-        import.get(),
-        ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
-        std::move(destination)));              // import handle
+  linker->SetOnImportResolvedCallback(
+      [&did_resolve](Import* import, Resource* resource,
+                     ImportResolutionResult cause) -> void {
+        did_resolve = true;
+      });
 
-    ASSERT_EQ(1u, linker->NumUnresolvedImports());
-    ASSERT_FALSE(did_resolve);
-  });
+  async::PostTask(dispatcher(),
+                  [this, &import, &resource, linker, &did_resolve,
+                   destination = std::move(destination)]() mutable {
+                    import = fxl::MakeRefCounted<Import>(
+                        session_.get(), 1, ::fuchsia::ui::gfx::ImportSpec::NODE,
+                        linker->GetWeakPtr());
+                    ASSERT_TRUE(linker->ImportResource(
+                        import.get(),
+                        ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
+                        std::move(destination)));              // import handle
+
+                    ASSERT_EQ(1u, linker->NumUnresolvedImports());
+                    ASSERT_FALSE(did_resolve);
+                  });
 
   EXPECT_TRUE(RunLoopUntilIdle());
   ASSERT_TRUE(expiry_cb_called);

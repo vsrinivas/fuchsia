@@ -48,8 +48,14 @@ void ViewHolder::SetParent(Node* parent) {
       }
     }
   }
+
+  ViewHolderPtr self(this);
   if (parent_ != nullptr) {
-    parent_->EraseViewHolder(fxl::RefPtr<ViewHolder>(this));
+    // Be careful! If we were not holding on to |self|, this could remove the
+    // last reference to ourselves and subsequent code would be operating on
+    // invalid memory.
+    // TODO(SCN-1176): Make this less brittle.
+    parent_->EraseViewHolder(self);
   }
 
   parent_ = parent;

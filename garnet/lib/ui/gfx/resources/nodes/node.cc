@@ -43,7 +43,15 @@ Node::Node(Session* session, ResourceId node_id,
 }
 
 Node::~Node() {
-  for (auto& view_holder : view_holders_) {
+  // TODO(SCN-1176): This teardown code is brittle. Figure out a better way to
+  // structure the View/ViewHolder-Node relationship.
+
+  // |view_holder->Detach()| will trigger removing an item from
+  // |view_holders_|, so move |view_holders_| before we start iterating through
+  // it.
+  auto view_holders_to_detach = std::move(view_holders_);
+  view_holders_.clear();
+  for (auto& view_holder : view_holders_to_detach) {
     view_holder->Detach();
   }
   ForEachDirectDescendantFrontToBack(*this, [](Node* node) {
@@ -140,6 +148,8 @@ bool Node::AddViewHolder(ViewHolderPtr view_holder) {
 }
 
 void Node::EraseViewHolder(ViewHolderPtr view_holder) {
+  // This might be a no-op; for example, we do a std::move(view_holders) in our
+  // destructor before detaching ViewHolders.
   view_holders_.erase(view_holder);
 }
 
@@ -177,16 +187,25 @@ bool Node::DetachChildren() {
         << "' cannot have children.";
     return false;
   }
-  for (auto& child : children_) {
+
+  // To be safe, avoid invalid iterations over detached children by moving the
+  // vector first.
+  auto children_to_detach = std::move(children_);
+  children_.clear();
+  for (auto& child : children_to_detach) {
     // Detach without affecting parent Node (because thats us) or firing the
     // on_detached_cb_ (because that shouldn't be up to us).
     child->DetachInternal();
   }
-  children_.clear();
-  for (auto& view_holder : view_holders_) {
+
+  // |view_holder->Detach()| will trigger removing an item from
+  // |view_holders_|, so move |view_holders_| before we start iterating through
+  // it.
+  auto view_holders_to_detach = std::move(view_holders_);
+  view_holders_.clear();
+  for (auto& view_holder : view_holders_to_detach) {
     view_holder->Detach();
   }
-  view_holders_.clear();
   return true;
 }
 

@@ -36,7 +36,6 @@ class ViewTest : public SessionTest {
   std::unique_ptr<ViewLinker> view_linker_;
 };
 
-
 // TODO(ES-179): Only seems to die in debug builds.
 TEST_F(ViewTest, DISABLED_CreateViewWithBadTokenDies) {
   EXPECT_DEATH_IF_SUPPORTED(
@@ -132,7 +131,7 @@ TEST_F(ViewTest, ImportsViewViaCmd) {
   EXPECT_EQ(1u, view_linker_->UnresolvedImportCount());
 }
 
-TEST_F(ViewTest, DISABLED_PairedViewAndHolderAreLinked) {
+TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
   zx::eventpair view_holder_token, view_token;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &view_holder_token, &view_token));
 
@@ -194,7 +193,7 @@ TEST_F(ViewTest, ExportViewHolderWithDeadHandleFails) {
   EXPECT_EQ(0u, view_linker_->UnresolvedImportCount());
 }
 
-TEST_F(ViewTest, DISABLED_ViewHolderDestroyedBeforeView) {
+TEST_F(ViewTest, ViewHolderDestroyedBeforeView) {
   // Create ViewHolder and View.
   zx::eventpair view_holder_token, view_token;
   zx::eventpair::create(0, &view_holder_token, &view_token);
@@ -215,7 +214,7 @@ TEST_F(ViewTest, DISABLED_ViewHolderDestroyedBeforeView) {
             event.gfx().Which());
 }
 
-TEST_F(ViewTest, DISABLED_ViewDestroyedBeforeViewHolder) {
+TEST_F(ViewTest, ViewDestroyedBeforeViewHolder) {
   // Create ViewHolder and View.
   zx::eventpair view_holder_token, view_token;
   zx::eventpair::create(0, &view_holder_token, &view_token);
@@ -235,7 +234,7 @@ TEST_F(ViewTest, DISABLED_ViewDestroyedBeforeViewHolder) {
             event.gfx().Which());
 }
 
-TEST_F(ViewTest, DISABLED_ViewHolderConnectsToScene) {
+TEST_F(ViewTest, ViewHolderConnectsToScene) {
   // Create ViewHolder and View.
   zx::eventpair view_holder_token, view_token;
   zx::eventpair::create(0, &view_holder_token, &view_token);
@@ -263,7 +262,7 @@ TEST_F(ViewTest, DISABLED_ViewHolderConnectsToScene) {
             event.gfx().Which());
 }
 
-TEST_F(ViewTest, DISABLED_ViewHolderGrandchildGetsSceneRefreshed) {
+TEST_F(ViewTest, ViewHolderGrandchildGetsSceneRefreshed) {
   zx::eventpair view_holder_token, view_token;
   zx::eventpair::create(0, &view_holder_token, &view_token);
   const ResourceId kViewHolderId = 1u;
@@ -290,7 +289,7 @@ TEST_F(ViewTest, DISABLED_ViewHolderGrandchildGetsSceneRefreshed) {
             event.gfx().Which());
 }
 
-TEST_F(ViewTest, DISABLED_ViewLinksAfterViewHolderConnectsToScene) {
+TEST_F(ViewTest, ViewLinksAfterViewHolderConnectsToScene) {
   // Create ViewHolder and View.
   zx::eventpair view_holder_token, view_token;
   zx::eventpair::create(0, &view_holder_token, &view_token);
@@ -332,7 +331,7 @@ void VerifyViewState(const fuchsia::ui::scenic::Event& event,
   EXPECT_EQ(is_rendering_expected, view_state.is_rendering);
 }
 
-TEST_F(ViewTest, DISABLED_ViewStateChangeNotifiesViewHolder) {
+TEST_F(ViewTest, ViewStateChangeNotifiesViewHolder) {
   // Create ViewHolder and View.
   zx::eventpair view_holder_token, view_token;
   zx::eventpair::create(0, &view_holder_token, &view_token);
@@ -359,7 +358,7 @@ TEST_F(ViewTest, DISABLED_ViewStateChangeNotifiesViewHolder) {
   VerifyViewState(event, true);
 }
 
-TEST_F(ViewTest, DISABLED_RenderStateAcrossManyFrames) {
+TEST_F(ViewTest, RenderStateAcrossManyFrames) {
   // Create ViewHolder and View.
   zx::eventpair view_holder_token, view_token;
   zx::eventpair::create(0, &view_holder_token, &view_token);
@@ -391,7 +390,7 @@ TEST_F(ViewTest, DISABLED_RenderStateAcrossManyFrames) {
   VerifyViewState(event, true);
 }
 
-TEST_F(ViewTest, DISABLED_RenderStateFalseWhenViewDisconnects) {
+TEST_F(ViewTest, RenderStateFalseWhenViewDisconnects) {
   // Create ViewHolder and View.
   zx::eventpair view_holder_token, view_token;
   zx::eventpair::create(0, &view_holder_token, &view_token);
@@ -423,7 +422,7 @@ TEST_F(ViewTest, DISABLED_RenderStateFalseWhenViewDisconnects) {
             event2.gfx().Which());
 }
 
-TEST_F(ViewTest, DISABLED_ViewHolderRenderWaitClearedWhenViewDestroyed) {
+TEST_F(ViewTest, ViewHolderRenderWaitClearedWhenViewDestroyed) {
   // Create ViewHolder and View.
   zx::eventpair view_holder_token, view_token;
   zx::eventpair::create(0, &view_holder_token, &view_token);
@@ -450,7 +449,7 @@ TEST_F(ViewTest, DISABLED_ViewHolderRenderWaitClearedWhenViewDestroyed) {
             event.gfx().Which());
 }
 
-TEST_F(ViewTest, DISABLED_RenderSignalDoesntCrashWhenViewHolderDestroyed) {
+TEST_F(ViewTest, RenderSignalDoesntCrashWhenViewHolderDestroyed) {
   // Create ViewHolder and View.
   zx::eventpair view_holder_token, view_token;
   zx::eventpair::create(0, &view_holder_token, &view_token);
@@ -473,7 +472,7 @@ TEST_F(ViewTest, DISABLED_RenderSignalDoesntCrashWhenViewHolderDestroyed) {
   EXPECT_EQ(0u, events_.size());
 }
 
-TEST_F(ViewTest, DISABLED_RenderStateFalseWhenViewHolderDisconnectsFromScene) {
+TEST_F(ViewTest, RenderStateFalseWhenViewHolderDisconnectsFromScene) {
   // Create ViewHolder and View.
   zx::eventpair view_holder_token, view_token;
   zx::eventpair::create(0, &view_holder_token, &view_token);

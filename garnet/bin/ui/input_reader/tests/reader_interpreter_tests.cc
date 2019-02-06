@@ -96,7 +96,7 @@ TEST_F(ReaderInterpreterTest, RegisterKeyboardTest) {
   EXPECT_EQ(1, registration_count);
 }
 
-TEST_F(ReaderInterpreterTest, DISABLED_RemoveKeyboardTest) {
+TEST_F(ReaderInterpreterTest, RemoveKeyboardTest) {
   MockInputDeviceRegistry registry(nullptr, nullptr);
   InputReader input_reader(&registry);
   StartInputReader(&input_reader);

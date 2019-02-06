@@ -68,7 +68,7 @@ using MultiSessionHitTestTest = ::gtest::TestLoopFixture;
 // A comprehensive test that sets up three independent sessions, with
 // View/ViewHolder pairs, and checks if global hit testing has access to
 // hittable nodes across all sessions.
-TEST_F(MultiSessionHitTestTest, DISABLED_GlobalHits) {
+TEST_F(MultiSessionHitTestTest, GlobalHits) {
   DisplayManager display_manager;
   display_manager.SetDefaultDisplayForTests(std::make_unique<Display>(
       /*id*/ 0, /*px-width*/ 9, /*px-height*/ 9));

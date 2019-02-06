@@ -216,7 +216,7 @@ TEST_F(ImagePipeTest, PresentImagesInOrder) {
 
 // Call Present with an image with an offset into its memory, and expect no
 // error.
-TEST_F(ImagePipeTest, DISABLED_PresentImagesWithOffset) {
+TEST_F(ImagePipeTest, PresentImagesWithOffset) {
   ImagePipePtr image_pipe =
       fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
           session_.get(), this, update_scheduler_.get());
@@ -231,7 +231,8 @@ TEST_F(ImagePipeTest, DISABLED_PresentImagesWithOffset) {
     auto pixels =
         escher::image_utils::NewCheckerboardPixels(w, h, &pixels_size);
     auto shared_vmo = CreateSharedVmo(pixels_size + offset_bytes);
-    memcpy(shared_vmo->Map(), pixels.get() + offset_bytes, pixels_size);
+    memcpy(shared_vmo->Map(), pixels.get() + offset_bytes,
+           pixels_size - offset_bytes);
 
     auto image_info = CreateImageInfoForBgra8Image(w, h);
 

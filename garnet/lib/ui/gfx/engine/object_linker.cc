@@ -91,7 +91,10 @@ void ObjectLinkerBase::DestroyEndpoint(zx_koid_t endpoint_id, bool is_import) {
     // called on it yet (so no callbacks exist).
     peer_endpoint.peer_endpoint_id = ZX_KOID_INVALID;
     if (peer_endpoint.link_failed) {
-      peer_endpoint.link_failed();
+      // link_failed_cb() will destroy |peer_endpoint|, so we need to pull it
+      // out before we invoked it.
+      auto link_failed_cb = std::move(peer_endpoint.link_failed);
+      link_failed_cb();
     }
   }
 
@@ -127,7 +130,10 @@ void ObjectLinkerBase::InitializeEndpoint(
   // endpoint is created, but before Initialize() is called on it.
   zx_koid_t peer_endpoint_id = endpoint.peer_endpoint_id;
   if (peer_endpoint_id == ZX_KOID_INVALID) {
-    endpoint.link_failed();
+    // link_failed_cb() will destroy |peer_endpoint|, so we need to pull it
+    // out before we invoked it.
+    auto link_failed_cb = std::move(endpoint.link_failed);
+    link_failed_cb();
     return;
   }
 
@@ -210,7 +216,8 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(
         // as invalid.
         endpoint.peer_endpoint_id = ZX_KOID_INVALID;
         if (endpoint.object) {
-          endpoint.link_failed();
+          auto link_failed_cb = std::move(endpoint.link_failed);
+          link_failed_cb();
         }
       }));
 

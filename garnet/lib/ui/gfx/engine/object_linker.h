@@ -25,7 +25,7 @@ namespace gfx {
 // Use ObjectLinker to link objects of concrete types together.
 class ObjectLinkerBase {
  public:
-  ~ObjectLinkerBase() = default;
+  virtual ~ObjectLinkerBase() = default;
 
   // Returns the corresponding import's client object.
   void* GetImport(zx_koid_t endpoint_id) {
@@ -264,6 +264,11 @@ void ObjectLinker<Export, Import>::Link<is_import>::Initialize(
         peer_object_ = static_cast<PeerObj*>(object);
         resolved_cb(peer_object_);
       },
+      // Be careful when invoking this closure! It needs to be moved out of the
+      // underlying endpoint before being invoked, because the underlying
+      // endpoint will be destroyed in Invalidate() and we don't want
+      // disconnected_cb to be destroyed along with it.
+      // TODO(SCN-1257): Make this safe to invoke.
       [this, disconnected_cb = std::move(link_failed)]() {
         Invalidate();
         disconnected_cb();
