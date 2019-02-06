@@ -26,16 +26,19 @@ namespace debug_agent {
 
 namespace {
 
+using elflib::Elf64_Ehdr;
+using elflib::Elf64_Phdr;
+using elflib::Elf64_Shdr;
 using elflib::ElfLib;
 
-class ProcessMemoryAccessor : public ElfLib::MemoryAccessor {
+class ProcessMemoryAccessor : public ElfLib::MemoryAccessorForAddressSpace {
  public:
   ProcessMemoryAccessor(const zx::process* process, uint64_t base)
       : process_(process), base_(base) {}
   virtual ~ProcessMemoryAccessor() = default;
 
-  std::optional<std::vector<uint8_t>> GetMemory(uint64_t offset,
-                                                size_t size) override {
+  std::optional<std::vector<uint8_t>> GetLoadedMemory(uint64_t offset,
+                                                      size_t size) override {
     std::vector<uint8_t> out;
     out.resize(size);
     size_t got;
@@ -52,10 +55,32 @@ class ProcessMemoryAccessor : public ElfLib::MemoryAccessor {
     return out;
   }
 
-  std::optional<std::vector<uint8_t>> GetMappedMemory(
-      uint64_t offset, uint64_t file_size, uint64_t mapped_address,
-      uint64_t mapped_size) override {
-    return GetMemory(mapped_address, mapped_size);
+  std::optional<Elf64_Ehdr> GetHeader() override {
+    auto data = GetLoadedMemory(0, sizeof(Elf64_Ehdr));
+
+    if (!data) {
+      return std::nullopt;
+    }
+
+    return *reinterpret_cast<const Elf64_Ehdr*>(data->data());
+  }
+
+  std::optional<std::vector<Elf64_Phdr>> GetProgramHeaders(
+      uint64_t offset, size_t count) override {
+    auto data = GetLoadedMemory(offset, sizeof(Elf64_Phdr) * count);
+
+    if (!data) {
+      return std::nullopt;
+    }
+
+    auto array = reinterpret_cast<const Elf64_Phdr*>(data->data());
+
+    return std::vector<Elf64_Phdr>(array, array + count);
+  }
+
+  std::optional<std::vector<Elf64_Shdr>> GetSectionHeaders(
+      uint64_t offset, size_t count) override {
+    return std::nullopt;
   }
 
  private:

@@ -23,21 +23,70 @@ class ElfLib {
   class MemoryAccessor {
    public:
     virtual ~MemoryAccessor() = default;
-    // Get memory from the process relative to the base of this lib. That means
-    // offset 0 should point to the Elf64_Ehdr. The vector should be cleared and
-    // filled. Return true unless the memory could not be read.
+
+    // Retrieve the header for this ELF object. Create() will fail if this
+    // returns an empty optional.
+    virtual std::optional<Elf64_Ehdr> GetHeader() = 0;
+
+    // Retrieve the section header table. The recorded offset and size are
+    // passed. The callee just has to derference.
+    virtual std::optional<std::vector<Elf64_Shdr>> GetSectionHeaders(
+        uint64_t offset, size_t count) = 0;
+
+    // Retrieve the program header table. The recorded offset and size are
+    // passed. The callee just has to dereference.
+    virtual std::optional<std::vector<Elf64_Phdr>> GetProgramHeaders(
+        uint64_t offset, size_t count) = 0;
+
+    // Get memory for a mapped area as specified by a section or segment. We're
+    // given the dimensions both as we'd find them in the file and as we'd find
+    // them in address space.
+    virtual std::optional<std::vector<uint8_t>> GetLoadableMemory(
+        uint64_t offset, uint64_t mapped_address, size_t file_size,
+        size_t mapped_size) = 0;
+
+    // Get memory for a mapped area specified by a segment. The memory is
+    // assumed to only be accessible at the desired address after loading and
+    // you should return std::nullopt if this isn't a loaded ELF object.
+    virtual std::optional<std::vector<uint8_t>> GetLoadedMemory(
+        uint64_t mapped_address, size_t mapped_size) = 0;
+  };
+
+  class MemoryAccessorForFile : public MemoryAccessor {
+   public:
+    // Get memory from the file based on its offset.
     virtual std::optional<std::vector<uint8_t>> GetMemory(uint64_t offset,
                                                           size_t size) = 0;
 
-    // Get memory for a mapped area. This is the same as GetMemory except we
-    // are also given the target address of the memory we want according to the
-    // ELF file, and the expected mapped size. If we're reading ELF structures
-    // that have been mapped into a running process already we may want to
-    // check the mapped address instead.
-    virtual std::optional<std::vector<uint8_t>> GetMappedMemory(
+    std::optional<std::vector<uint8_t>> GetLoadedMemory(
+        uint64_t mapped_address, size_t mapped_size) override {
+      return std::nullopt;
+    }
+
+    std::optional<std::vector<uint8_t>> GetLoadableMemory(
         uint64_t offset, uint64_t mapped_address, size_t file_size,
-        size_t mapped_size) {
+        size_t mapped_size) override {
       return GetMemory(offset, file_size);
+    }
+
+    std::optional<Elf64_Ehdr> GetHeader() override;
+    std::optional<std::vector<Elf64_Shdr>> GetSectionHeaders(
+        uint64_t offset, size_t count) override;
+    std::optional<std::vector<Elf64_Phdr>> GetProgramHeaders(
+        uint64_t offset, size_t count) override;
+  };
+
+  class MemoryAccessorForAddressSpace : public MemoryAccessor {
+   public:
+    std::optional<std::vector<uint8_t>> GetLoadableMemory(
+        uint64_t offset, uint64_t mapped_address, size_t file_size,
+        size_t mapped_size) override {
+      return GetLoadedMemory(mapped_address, mapped_size);
+    }
+
+    std::optional<std::vector<Elf64_Shdr>> GetSectionHeaders(
+        uint64_t offset, size_t count) override {
+      return std::nullopt;
     }
   };
 

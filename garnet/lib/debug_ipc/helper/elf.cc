@@ -16,15 +16,19 @@ constexpr uint64_t kNoteGnuBuildId = 3;
 
 }  // namespace
 
+using elflib::Elf64_Ehdr;
+using elflib::Elf64_Phdr;
+using elflib::Elf64_Shdr;
 using elflib::ElfLib;
 
-class Accessor : public ElfLib::MemoryAccessor {
+class Accessor : public ElfLib::MemoryAccessorForAddressSpace {
  public:
   Accessor(
       std::function<bool(uint64_t offset, void* buffer, size_t length)> read_fn)
       : read_fn_(std::move(read_fn)) {}
 
-  std::optional<std::vector<uint8_t>> GetMemory(uint64_t offset, size_t size) {
+  std::optional<std::vector<uint8_t>> GetLoadedMemory(uint64_t offset,
+                                                      size_t size) override {
     std::vector<uint8_t> out;
     out.resize(size);
 
@@ -32,6 +36,34 @@ class Accessor : public ElfLib::MemoryAccessor {
       return out;
     }
 
+    return std::nullopt;
+  }
+
+  std::optional<Elf64_Ehdr> GetHeader() override {
+    auto data = GetLoadedMemory(0, sizeof(Elf64_Ehdr));
+
+    if (!data) {
+      return std::nullopt;
+    }
+
+    return *reinterpret_cast<const Elf64_Ehdr*>(data->data());
+  }
+
+  std::optional<std::vector<Elf64_Phdr>> GetProgramHeaders(
+      uint64_t offset, size_t count) override {
+    auto data = GetLoadedMemory(offset, sizeof(Elf64_Phdr) * count);
+
+    if (!data) {
+      return std::nullopt;
+    }
+
+    auto array = reinterpret_cast<const Elf64_Phdr*>(data->data());
+
+    return std::vector<Elf64_Phdr>(array, array + count);
+  }
+
+  std::optional<std::vector<Elf64_Shdr>> GetSectionHeaders(
+      uint64_t offset, size_t count) override {
     return std::nullopt;
   }
 

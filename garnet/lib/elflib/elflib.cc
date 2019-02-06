@@ -33,6 +33,44 @@ std::string GetNullTerminatedStringAt(const std::vector<uint8_t>& data,
 
 }  // namespace
 
+std::optional<Elf64_Ehdr> ElfLib::MemoryAccessorForFile::GetHeader() {
+  auto data = GetMemory(0, sizeof(Elf64_Ehdr));
+
+  if (!data) {
+    return std::nullopt;
+  }
+
+  return *reinterpret_cast<const Elf64_Ehdr*>(data->data());
+}
+
+std::optional<std::vector<Elf64_Shdr>>
+ElfLib::MemoryAccessorForFile::GetSectionHeaders(uint64_t offset,
+                                                 size_t count) {
+  auto data = GetMemory(offset, sizeof(Elf64_Shdr) * count);
+
+  if (!data) {
+    return std::nullopt;
+  }
+
+  auto array = reinterpret_cast<const Elf64_Shdr*>(data->data());
+
+  return std::vector<Elf64_Shdr>(array, array + count);
+}
+
+std::optional<std::vector<Elf64_Phdr>>
+ElfLib::MemoryAccessorForFile::GetProgramHeaders(uint64_t offset,
+                                                 size_t count) {
+  auto data = GetMemory(offset, sizeof(Elf64_Phdr) * count);
+
+  if (!data) {
+    return std::nullopt;
+  }
+
+  auto array = reinterpret_cast<const Elf64_Phdr*>(data->data());
+
+  return std::vector<Elf64_Phdr>(array, array + count);
+}
+
 ElfLib::ElfLib(std::unique_ptr<MemoryAccessor>&& memory)
     : memory_(std::move(memory)) {}
 
@@ -41,13 +79,14 @@ ElfLib::~ElfLib() = default;
 std::unique_ptr<ElfLib> ElfLib::Create(
     std::unique_ptr<MemoryAccessor>&& memory) {
   std::unique_ptr<ElfLib> out = std::make_unique<ElfLib>(std::move(memory));
-  auto header_data = out->memory_->GetMemory(0, sizeof(Elf64_Ehdr));
 
-  if (!header_data) {
+  auto header = out->memory_->GetHeader();
+
+  if (!header) {
     return std::unique_ptr<ElfLib>();
   }
 
-  out->header_ = *reinterpret_cast<Elf64_Ehdr*>(header_data->data());
+  out->header_ = *header;
 
   // We don't support non-standard section header sizes. Stripped binaries that
   // don't have sections sometimes zero out the shentsize, so we can ignore it
@@ -67,17 +106,14 @@ std::unique_ptr<ElfLib> ElfLib::Create(
 
 const Elf64_Shdr* ElfLib::GetSectionHeader(size_t section) {
   if (sections_.empty()) {
-    auto data = memory_->GetMemory(header_.e_shoff,
-                                   sizeof(Elf64_Shdr) * header_.e_shnum);
+    auto sections =
+        memory_->GetSectionHeaders(header_.e_shoff, header_.e_shnum);
 
-    if (!data) {
+    if (!sections) {
       return nullptr;
     }
 
-    Elf64_Shdr* header_array = reinterpret_cast<Elf64_Shdr*>(data->data());
-
-    std::copy(header_array, header_array + header_.e_shnum,
-              std::back_inserter(sections_));
+    sections_ = *sections;
   }
 
   if (section >= sections_.size()) {
@@ -92,18 +128,13 @@ bool ElfLib::LoadProgramHeaders() {
     return true;
   }
 
-  auto data =
-      memory_->GetMemory(header_.e_phoff, sizeof(Elf64_Phdr) * header_.e_phnum);
+  auto segments = memory_->GetProgramHeaders(header_.e_phoff, header_.e_phnum);
 
-  if (!data) {
+  if (!segments) {
     return false;
   }
 
-  Elf64_Phdr* header_array = reinterpret_cast<Elf64_Phdr*>(data->data());
-
-  std::copy(header_array, header_array + header_.e_phnum,
-            std::back_inserter(segments_));
-
+  segments_ = *segments;
   return true;
 }
 
@@ -121,8 +152,8 @@ const std::vector<uint8_t>* ElfLib::GetSegmentData(size_t segment) {
 
   const Elf64_Phdr* header = &segments_[segment];
 
-  auto data = memory_->GetMappedMemory(header->p_offset, header->p_vaddr,
-                                       header->p_filesz, header->p_memsz);
+  auto data = memory_->GetLoadableMemory(header->p_offset, header->p_vaddr,
+                                         header->p_filesz, header->p_memsz);
 
   if (!data) {
     return nullptr;
@@ -185,8 +216,8 @@ const std::vector<uint8_t>* ElfLib::GetSectionData(size_t section) {
     return nullptr;
   }
 
-  auto data = memory_->GetMappedMemory(header->sh_offset, header->sh_addr,
-                                       header->sh_size, header->sh_size);
+  auto data = memory_->GetLoadableMemory(header->sh_offset, header->sh_addr,
+                                         header->sh_size, header->sh_size);
 
   if (!data) {
     return nullptr;
@@ -290,8 +321,7 @@ bool ElfLib::LoadDynamicSymbols() {
 
         static_assert(sizeof(Header) == 16);
 
-        auto data = memory_->GetMappedMemory(addr, addr, sizeof(header),
-                                             sizeof(header));
+        auto data = memory_->GetLoadedMemory(addr, sizeof(header));
 
         if (!data) {
           continue;
@@ -303,8 +333,7 @@ bool ElfLib::LoadDynamicSymbols() {
         addr += 8 * header.bloom_size;
 
         size_t bucket_bytes = 4 * header.nbuckets;
-        auto bucket_data =
-            memory_->GetMappedMemory(addr, addr, bucket_bytes, bucket_bytes);
+        auto bucket_data = memory_->GetLoadedMemory(addr, bucket_bytes);
 
         if (!bucket_data) {
           continue;
@@ -323,7 +352,7 @@ bool ElfLib::LoadDynamicSymbols() {
         addr += (max_bucket - header.symoffset) * 4;
 
         for (uint32_t nsyms = max_bucket + 1;; nsyms++, addr += 4) {
-          auto chain_entry_data = memory_->GetMappedMemory(addr, addr, 4, 4);
+          auto chain_entry_data = memory_->GetLoadedMemory(addr, 4);
 
           if (!chain_entry_data) {
             break;
@@ -355,9 +384,8 @@ std::optional<std::string> ElfLib::GetString(size_t index) {
       return std::nullopt;
     }
 
-    auto data = memory_->GetMappedMemory(
-        *dynamic_strtab_offset_, *dynamic_strtab_offset_, dynamic_strtab_size_,
-        dynamic_strtab_size_);
+    auto data =
+        memory_->GetLoadedMemory(*dynamic_strtab_offset_, dynamic_strtab_size_);
 
     if (!data) {
       return std::nullopt;
@@ -385,8 +413,7 @@ bool ElfLib::LoadSymbols() {
       }
 
       size_t size = dynamic_symtab_size_ * sizeof(Elf64_Sym);
-      auto data = memory_->GetMappedMemory(*dynamic_symtab_offset_,
-                                           *dynamic_symtab_offset_, size, size);
+      auto data = memory_->GetLoadedMemory(*dynamic_symtab_offset_, size);
 
       if (!data) {
         return false;

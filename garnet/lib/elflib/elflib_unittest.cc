@@ -60,7 +60,7 @@ inline std::string GetTestFilePath(const std::string& rel_path) {
 // The test files will be copied over to this specific location at build time.
 const char kRelativeTestDataPath[] = "test_data/elflib/";
 
-class StrippedExampleAccessor : public ElfLib::MemoryAccessor {
+class StrippedExampleAccessor : public ElfLib::MemoryAccessorForFile {
  public:
   StrippedExampleAccessor() {
     file_ =
@@ -86,6 +86,13 @@ class StrippedExampleAccessor : public ElfLib::MemoryAccessor {
     return ret;
   }
 
+  // Addresses will still point us to the right location in the file when we do
+  // symbol table lookups.
+  std::optional<std::vector<uint8_t>> GetLoadedMemory(uint64_t offset,
+                                                      size_t size) override {
+    return GetMemory(offset, size);
+  }
+
   ~StrippedExampleAccessor() {
     if (file_) {
       fclose(file_);
@@ -96,7 +103,7 @@ class StrippedExampleAccessor : public ElfLib::MemoryAccessor {
   FILE* file_ = nullptr;
 };
 
-class TestMemoryAccessor : public ElfLib::MemoryAccessor {
+class TestMemoryAccessor : public ElfLib::MemoryAccessorForFile {
  public:
   TestMemoryAccessor() {
     PushData(Elf64_Ehdr{
@@ -218,17 +225,6 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessor {
 
     std::copy(start_iter, start_iter + out.size(), out.begin());
     return out;
-  }
-
-  std::optional<std::vector<uint8_t>> GetMappedMemory(uint64_t offset,
-                                                      uint64_t address,
-                                                      size_t size,
-                                                      size_t map_size) {
-    if (address != kAddrPoison) {
-      return std::nullopt;
-    }
-
-    return GetMemory(offset, size);
   }
 
  private:

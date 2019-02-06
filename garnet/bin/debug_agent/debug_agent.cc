@@ -7,8 +7,8 @@
 #include <inttypes.h>
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/component/cpp/termination_reason.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/termination_reason.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
@@ -25,8 +25,8 @@
 #include "garnet/lib/debug_ipc/message_writer.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/concatenate.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
 
@@ -423,11 +423,9 @@ void DebugAgent::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
 
 void DebugAgent::OnSymbolTables(const debug_ipc::SymbolTablesRequest& request,
                                 debug_ipc::SymbolTablesReply* reply) {
-  /* TODO enable when this code works.
   DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
   if (proc)
     proc->OnSymbolTables(request, reply);
-  */
 }
 
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
@@ -548,8 +546,8 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
 
   bool launched = true;
   controller.events().OnTerminated =
-      [this, &pkg_url, &launched, &loop](int64_t return_code,
-                                    fuchsia::sys::TerminationReason reason) {
+      [this, &pkg_url, &launched, &loop](
+          int64_t return_code, fuchsia::sys::TerminationReason reason) {
         if (reason != fuchsia::sys::TerminationReason::EXITED) {
           FXL_LOG(WARNING) << "Component " << pkg_url << " exited with "
                            << component::HumanReadableTerminationReason(reason);
