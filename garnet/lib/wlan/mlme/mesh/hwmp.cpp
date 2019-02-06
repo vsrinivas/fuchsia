@@ -97,7 +97,7 @@ static const MeshPath* UpdateForwardingInfo(PathTable* path_table, HwmpState* st
     // originator/destination (see the first bullet point in 14.10.8.4).
     if (transmitter_addr != remote_addr) {
         auto path = path_table->GetPath(transmitter_addr);
-        if (!path || path->metric > metric + last_hop_metric) {
+        if (!path || path->metric > last_hop_metric) {
             zx::time old_expiration = path ? path->expiration_time : zx::time{};
             auto path_seqno = path ? path->hwmp_seqno : std::optional<uint32_t>{};
 
