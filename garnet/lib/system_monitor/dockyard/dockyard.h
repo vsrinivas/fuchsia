@@ -194,14 +194,14 @@ class Dockyard {
 
  private:
   typedef std::map<SampleStreamId, SampleStream*> SampleStreamMap;
-  uint64_t _next_context_id;
-  StreamNamesCallback _stream_name_handler;
-  StreamSetsCallback _stream_sets_handler;
-  std::vector<StreamSetsRequest*> _pending_requests;
-  SampleStreamMap _sample_streams;
+  uint64_t next_context_id_;
+  StreamNamesCallback stream_name_handler_;
+  StreamSetsCallback stream_sets_handler_;
+  std::vector<StreamSetsRequest*> pending_requests_;
+  SampleStreamMap sample_streams_;
   std::map<SampleStreamId, std::pair<SampleValue, SampleValue>>
-      _sample_stream_low_high;
-  std::map<std::string, SampleStreamId> _stream_ids;
+      sample_stream_low_high_;
+  std::map<std::string, SampleStreamId> stream_ids_;
 
   // Each of these Compute*() methods aggregate samples in different ways.
   // There's no single 'true' way to represent aggregated data, so the choice

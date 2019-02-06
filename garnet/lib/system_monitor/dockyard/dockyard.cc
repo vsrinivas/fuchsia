@@ -26,13 +26,13 @@ constexpr SampleTimeNs CalcStride(const StreamSetsRequest& request) {
 }  // namespace
 
 Dockyard::Dockyard()
-    : _next_context_id(0ULL),
-      _stream_name_handler(nullptr),
-      _stream_sets_handler(nullptr) {}
+    : next_context_id_(0ULL),
+      stream_name_handler_(nullptr),
+      stream_sets_handler_(nullptr) {}
 
 Dockyard::~Dockyard() {
-  for (SampleStreamMap::iterator i = _sample_streams.begin();
-       i != _sample_streams.end(); ++i) {
+  for (SampleStreamMap::iterator i = sample_streams_.begin();
+       i != sample_streams_.end(); ++i) {
     delete i->second;
   }
 }
@@ -41,18 +41,18 @@ void Dockyard::AddSamples(SampleStreamId stream_id,
                           std::vector<Sample> samples) {
   // Find or create a sample_stream for this stream_id.
   SampleStream* sample_stream;
-  auto search = _sample_streams.find(stream_id);
-  if (search == _sample_streams.end()) {
+  auto search = sample_streams_.find(stream_id);
+  if (search == sample_streams_.end()) {
     sample_stream = new SampleStream();
-    _sample_streams.emplace(stream_id, sample_stream);
+    sample_streams_.emplace(stream_id, sample_stream);
   } else {
     sample_stream = search->second;
   }
 
   // Track the overall lowest and highest values encountered.
-  _sample_stream_low_high.try_emplace(stream_id,
+  sample_stream_low_high_.try_emplace(stream_id,
                                       std::make_pair(SAMPLE_MAX_VALUE, 0ULL));
-  auto low_high = _sample_stream_low_high.find(stream_id);
+  auto low_high = sample_stream_low_high_.find(stream_id);
   SampleValue lowest = low_high->second.first;
   SampleValue highest = low_high->second.second;
   for (auto i = samples.begin(); i != samples.end(); ++i) {
@@ -64,36 +64,36 @@ void Dockyard::AddSamples(SampleStreamId stream_id,
     }
     sample_stream->emplace(i->time, i->value);
   }
-  _sample_stream_low_high[stream_id] = std::make_pair(lowest, highest);
+  sample_stream_low_high_[stream_id] = std::make_pair(lowest, highest);
 }
 
 SampleStreamId Dockyard::GetSampleStreamId(const std::string& name) {
-  auto search = _stream_ids.find(name);
-  if (search != _stream_ids.end()) {
+  auto search = stream_ids_.find(name);
+  if (search != stream_ids_.end()) {
     return search->second;
   }
-  SampleStreamId id = _stream_ids.size();
-  _stream_ids.emplace(name, id);
+  SampleStreamId id = stream_ids_.size();
+  stream_ids_.emplace(name, id);
   return id;
 }
 
 uint64_t Dockyard::GetStreamSets(StreamSetsRequest* request) {
-  request->request_id = _next_context_id;
-  _pending_requests.push_back(request);
-  ++_next_context_id;
+  request->request_id = next_context_id_;
+  pending_requests_.push_back(request);
+  ++next_context_id_;
   return request->request_id;
 }
 
 StreamNamesCallback Dockyard::SetStreamNamesHandler(
     StreamNamesCallback callback) {
-  auto old_handler = _stream_name_handler;
-  _stream_name_handler = callback;
+  auto old_handler = stream_name_handler_;
+  stream_name_handler_ = callback;
   return old_handler;
 }
 
 StreamSetsCallback Dockyard::SetStreamSetsHandler(StreamSetsCallback callback) {
-  auto old_handler = _stream_sets_handler;
-  _stream_sets_handler = callback;
+  auto old_handler = stream_sets_handler_;
+  stream_sets_handler_ = callback;
   return old_handler;
 }
 
@@ -103,8 +103,8 @@ void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
   for (auto stream_id = request.stream_ids.begin();
        stream_id != request.stream_ids.end(); ++stream_id) {
     std::vector<SampleValue> samples;
-    auto search = _sample_streams.find(*stream_id);
-    if (search == _sample_streams.end()) {
+    auto search = sample_streams_.find(*stream_id);
+    if (search == sample_streams_.end()) {
       samples.push_back(NO_STREAM);
     } else {
       auto sample_stream = *search->second;
@@ -215,7 +215,7 @@ void Dockyard::NormalizeResponse(SampleStreamId stream_id,
                                  const SampleStream& sample_stream,
                                  const StreamSetsRequest& request,
                                  std::vector<SampleValue>* samples) const {
-  auto low_high = _sample_stream_low_high.find(stream_id);
+  auto low_high = sample_stream_low_high_.find(stream_id);
   SampleValue lowest = low_high->second.first;
   SampleValue highest = low_high->second.second;
   SampleValue value_range = highest - lowest;
@@ -291,8 +291,8 @@ void Dockyard::ComputeSmoothed(SampleStreamId stream_id,
 }
 
 SampleValue Dockyard::OverallAverageForStream(SampleStreamId stream_id) const {
-  auto low_high = _sample_stream_low_high.find(stream_id);
-  if (low_high == _sample_stream_low_high.end()) {
+  auto low_high = sample_stream_low_high_.find(stream_id);
+  if (low_high == sample_stream_low_high_.end()) {
     return NO_DATA;
   }
   return (low_high->second.first + low_high->second.second) / 2;
@@ -305,8 +305,8 @@ void Dockyard::ComputeLowestHighestForRequest(
   SampleValue highest = 0ULL;
   for (auto stream_id = request.stream_ids.begin();
        stream_id != request.stream_ids.end(); ++stream_id) {
-    auto low_high = _sample_stream_low_high.find(*stream_id);
-    if (low_high == _sample_stream_low_high.end()) {
+    auto low_high = sample_stream_low_high_.find(*stream_id);
+    if (low_high == sample_stream_low_high_.end()) {
       continue;
     }
     if (lowest > low_high->second.first) {
@@ -321,15 +321,15 @@ void Dockyard::ComputeLowestHighestForRequest(
 }
 
 void Dockyard::ProcessRequests() {
-  if (_stream_sets_handler != nullptr) {
+  if (stream_sets_handler_ != nullptr) {
     StreamSetsResponse response;
-    for (auto i = _pending_requests.begin(); i != _pending_requests.end();
+    for (auto i = pending_requests_.begin(); i != pending_requests_.end();
          ++i) {
       ProcessSingleRequest(**i, &response);
-      _stream_sets_handler(response);
+      stream_sets_handler_(response);
     }
   }
-  _pending_requests.clear();
+  pending_requests_.clear();
 }
 
 }  // namespace dockyard
