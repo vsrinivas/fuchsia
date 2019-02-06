@@ -24,6 +24,19 @@
 namespace scenic_impl {
 namespace gfx {
 
+namespace {
+
+// HACK(SCN-1253): The FIDL requires a valid VMO (even in failure cases).
+fuchsia::ui::scenic::ScreenshotData EmptyScreenshot() {
+  fuchsia::ui::scenic::ScreenshotData screenshot;
+  // TODO(SCN-1253): If we can't create an empty VMO, bail because otherwise the
+  // caller will hang indefinitely.
+  FXL_CHECK(zx::vmo::create(0, 0u, &screenshot.data.vmo) == ZX_OK);
+  return screenshot;
+}
+
+};  // namespace
+
 // static
 void Screenshotter::OnCommandBufferDone(
     const escher::ImagePtr& image, uint32_t width, uint32_t height,
@@ -60,7 +73,7 @@ void Screenshotter::OnCommandBufferDone(
 
   fsl::SizedVmo sized_vmo;
   if (!fsl::VmoFromVector(imgvec, &sized_vmo)) {
-    done_callback(fuchsia::ui::scenic::ScreenshotData{}, false);
+    done_callback(EmptyScreenshot(), false);
   }
 
   fuchsia::ui::scenic::ScreenshotData data;
@@ -79,8 +92,9 @@ void Screenshotter::TakeScreenshot(
       engine->scene_graph()->first_compositor();
 
   if (!compositor || compositor->GetNumDrawableLayers() == 0) {
-    FXL_LOG(ERROR) << "No drawable layers.";
-    done_callback(fuchsia::ui::scenic::ScreenshotData{}, false);
+    FXL_LOG(WARNING)
+        << "TakeScreenshot: No drawable layers; returning empty screenshot.";
+    done_callback(EmptyScreenshot(), false);
     return;
   }
   uint32_t width;

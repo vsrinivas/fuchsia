@@ -32,7 +32,6 @@ class SceneGraph {
   // WeakPtr if there are no compositors.
   // TODO(SCN-1170): get rid of SceneGraph::first_compositor().
   CompositorWeakPtr first_compositor() const {
-    FXL_DCHECK(!compositors_.empty() && compositors_[0]);
     for (auto& compositor : compositors_) {
       if (compositor) {
         return compositor;

@@ -223,8 +223,14 @@ void GfxSystem::GetDisplayInfo(
 
 void GfxSystem::TakeScreenshot(
     fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
-  FXL_CHECK(initialized_);
-  Screenshotter::TakeScreenshot(engine_.get(), std::move(callback));
+  if (initialized_) {
+    Screenshotter::TakeScreenshot(engine_.get(), std::move(callback));
+  } else {
+    run_after_initialized_.push_back(
+        [this, callback = std::move(callback)]() mutable {
+          Screenshotter::TakeScreenshot(engine_.get(), std::move(callback));
+        });
+  }
 }
 
 void GfxSystem::GetDisplayOwnershipEventImmediately(
