@@ -113,7 +113,7 @@ class TestApp : public modular::testing::SessionShellBase {
 
     std::vector<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
-    add_mod.mod_name.push_back("root");
+    add_mod.mod_name_transitional = "root";
     add_mod.intent.handler = kModuleUrl;
     add_mod.intent.action = kModuleAction;
 
@@ -218,9 +218,7 @@ class TestApp : public modular::testing::SessionShellBase {
     }
   }
 
-  void Logout() {
-    Signal(modular::testing::kTestShutdown);
-  }
+  void Logout() { Signal(modular::testing::kTestShutdown); }
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;

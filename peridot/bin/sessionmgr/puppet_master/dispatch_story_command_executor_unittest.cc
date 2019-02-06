@@ -165,14 +165,14 @@ TEST_F(DispatchStoryCommandExecutorTest, Sequential) {
   AddCommandRunner(
       fuchsia::modular::StoryCommand::Tag::kAddMod,
       [&](fidl::StringPtr story_id, fuchsia::modular::StoryCommand command) {
-        names.push_back(command.add_mod().mod_name.at(0));
+        names.push_back(command.add_mod().mod_name_transitional);
         return fuchsia::modular::ExecuteStatus::OK;
       },
       true /* delay_done */);
   AddCommandRunner(
       fuchsia::modular::StoryCommand::Tag::kRemoveMod,
       [&](fidl::StringPtr story_id, fuchsia::modular::StoryCommand command) {
-        names.push_back(command.remove_mod().mod_name.at(0));
+        names.push_back(command.remove_mod().mod_name_transitional);
         return fuchsia::modular::ExecuteStatus::OK;
       });
 
@@ -181,10 +181,10 @@ TEST_F(DispatchStoryCommandExecutorTest, Sequential) {
   std::vector<fuchsia::modular::StoryCommand> commands;
   commands.resize(2);
   fuchsia::modular::AddMod add_mod;
-  add_mod.mod_name.push_back("one");
+  add_mod.mod_name_transitional = "one";
   commands[0].set_add_mod(std::move(add_mod));
   fuchsia::modular::RemoveMod remove_mod;
-  remove_mod.mod_name.push_back("two");
+  remove_mod.mod_name_transitional = "two";
   commands[1].set_remove_mod(std::move(remove_mod));
 
   bool done{false};

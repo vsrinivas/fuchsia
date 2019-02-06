@@ -122,7 +122,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
     std::vector<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
-    add_mod.mod_name.push_back("root");
+    add_mod.mod_name_transitional = "root";
     add_mod.intent.handler = settings_.root_module;
     add_mod.intent.action = "action";
     add_mod.intent.parameters = CreateIntentParameters();
@@ -207,7 +207,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
   // |SessionShell|
   void AttachView(fuchsia::modular::ViewIdentifier view_id,
                   fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>
-                  view_owner) override {
+                      view_owner) override {
     FXL_LOG(INFO) << "DevSessionShell AttachView(): " << view_id.story_id;
     view_->ConnectView(std::move(view_owner));
   }
@@ -228,8 +228,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
   void OnModuleAdded(fuchsia::modular::ModuleData /*module_data*/) override {}
 
   // |fuchsia::modular::StoryWatcher|
-  void OnModuleFocused(
-      std::vector<std::string> /*module_path*/) override {}
+  void OnModuleFocused(std::vector<std::string> /*module_path*/) override {}
 
   // |fuchsia::modular::NextListener|
   void OnNextResults(

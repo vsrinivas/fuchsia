@@ -45,7 +45,8 @@ class Settings {
 
     module_url = command_line.GetOptionValueWithDefault(
         "module_url",
-        "fuchsia-pkg://fuchsia.com/modular_benchmark_story_module#meta/modular_benchmark_story_module.cmx");
+        "fuchsia-pkg://fuchsia.com/modular_benchmark_story_module#meta/"
+        "modular_benchmark_story_module.cmx");
   }
 
   int story_count{0};
@@ -182,12 +183,13 @@ class TestApp : public modular::ViewApp {
   void StoryCreate() {
     FXL_LOG(INFO) << "StoryCreate()";
     TRACE_ASYNC_BEGIN("benchmark", "story/create", 0);
-    std::string story_name = std::string(kStoryNamePrefix) + std::to_string(story_count_);
+    std::string story_name =
+        std::string(kStoryNamePrefix) + std::to_string(story_count_);
     puppet_master_->ControlStory(story_name, story_puppet_master_.NewRequest());
 
     std::vector<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
-    add_mod.mod_name.push_back("root");
+    add_mod.mod_name_transitional = "root";
     add_mod.intent.handler = settings_.module_url;
     add_mod.intent.action = "action";
 

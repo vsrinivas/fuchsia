@@ -113,7 +113,7 @@ class TestApp : public modular::testing::SessionShellBase,
     auto addMod = [&commands](fidl::StringPtr name,
                               std::vector<fidl::StringPtr> parent) {
       fuchsia::modular::AddMod add_mod;
-      add_mod.mod_name.push_back(name);
+      add_mod.mod_name_transitional = name;
       add_mod.intent.action = kCommonNullAction;
       add_mod.intent.handler = kCommonNullModule;
 
@@ -143,7 +143,8 @@ class TestApp : public modular::testing::SessionShellBase,
   TestPoint story1_run1_{"Story1 Run1"};
 
   void Story1_Run1() {
-    story_provider()->GetController(kStoryName1, story_controller_.NewRequest());
+    story_provider()->GetController(kStoryName1,
+                                    story_controller_.NewRequest());
 
     // TODO(jphsiao|vardhan): remodel this |proceed_after_6| style of
     // continuation to use Futures instead.
@@ -198,7 +199,7 @@ class TestApp : public modular::testing::SessionShellBase,
     auto addMod = [&commands](fidl::StringPtr name,
                               std::vector<fidl::StringPtr> parent) {
       fuchsia::modular::AddMod add_mod;
-      add_mod.mod_name.push_back(name);
+      add_mod.mod_name_transitional = name;
       add_mod.intent.action = kCommonNullAction;
       add_mod.intent.handler = kCommonNullModule;
 
@@ -239,7 +240,8 @@ class TestApp : public modular::testing::SessionShellBase,
     Get("root:one:two manifest", proceed_after_5);
     Get("root:one:two ordering", proceed_after_5);
 
-    story_provider()->GetController(kStoryName2, story_controller_.NewRequest());
+    story_provider()->GetController(kStoryName2,
+                                    story_controller_.NewRequest());
     story_controller_->RequestStart();
   }
 

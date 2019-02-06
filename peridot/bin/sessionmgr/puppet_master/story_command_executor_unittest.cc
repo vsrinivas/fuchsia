@@ -46,7 +46,7 @@ class TestStoryCommandExecutor : public StoryCommandExecutor {
 StoryCommand MakeRemoveModCommand(std::string mod_name) {
   StoryCommand command;
   fuchsia::modular::RemoveMod remove_mod;
-  remove_mod.mod_name.push_back(mod_name);
+  remove_mod.mod_name_transitional = mod_name;
   command.set_remove_mod(std::move(remove_mod));
   return command;
 }

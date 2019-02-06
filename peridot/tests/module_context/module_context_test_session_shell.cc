@@ -35,19 +35,18 @@ class StoryActivityWatcherImpl : fuchsia::modular::StoryActivityWatcher {
  public:
   StoryActivityWatcherImpl()
       : binding_(this),
-        on_notify_(
-            [](std::string,
-               std::vector<fuchsia::modular::OngoingActivityType>) {}) {}
+        on_notify_([](std::string,
+                      std::vector<fuchsia::modular::OngoingActivityType>) {}) {}
   ~StoryActivityWatcherImpl() override = default;
 
   void Watch(fuchsia::modular::StoryProvider* const story_provider) {
     story_provider->WatchActivity(binding_.NewBinding());
   }
 
-  void OnNotify(std::function<
-                void(std::string,
-                     std::vector<fuchsia::modular::OngoingActivityType>)>
-                    on_notify) {
+  void OnNotify(
+      std::function<void(std::string,
+                         std::vector<fuchsia::modular::OngoingActivityType>)>
+          on_notify) {
     on_notify_ = std::move(on_notify);
   }
 
@@ -55,8 +54,7 @@ class StoryActivityWatcherImpl : fuchsia::modular::StoryActivityWatcher {
   // |fuchsia::modular::StoryActivityWatcher|
   void OnStoryActivityChange(
       std::string story_id,
-      std::vector<fuchsia::modular::OngoingActivityType> activities)
-      override {
+      std::vector<fuchsia::modular::OngoingActivityType> activities) override {
     on_notify_(std::move(story_id), std::move(activities));
   }
 
@@ -87,7 +85,7 @@ class TestApp : public modular::testing::SessionShellBase {
     std::vector<fuchsia::modular::StoryCommand> commands;
     {
       fuchsia::modular::AddMod add_mod;
-      add_mod.mod_name.push_back(kFirstModuleName);
+      add_mod.mod_name_transitional = kFirstModuleName;
       add_mod.intent = IntentWithParameterString(kFirstModuleName);
 
       fuchsia::modular::StoryCommand command;
@@ -96,7 +94,7 @@ class TestApp : public modular::testing::SessionShellBase {
     }
     {
       fuchsia::modular::AddMod add_mod;
-      add_mod.mod_name.push_back(kSecondModuleName);
+      add_mod.mod_name_transitional = kSecondModuleName;
       add_mod.intent = IntentWithParameterString(kSecondModuleName);
 
       fuchsia::modular::StoryCommand command;
@@ -108,7 +106,7 @@ class TestApp : public modular::testing::SessionShellBase {
       intent.handler = kEntityModuleUrl;
       intent.action = kEntityIntentAction;
       fuchsia::modular::AddMod add_mod;
-      add_mod.mod_name.push_back("entity_module");
+      add_mod.mod_name_transitional = "entity_module";
       add_mod.intent = std::move(intent);
       add_mod.surface_parent_mod_name.resize(0);
 
@@ -148,9 +146,8 @@ class TestApp : public modular::testing::SessionShellBase {
   void PerformWatchActivity() {
     story_activity_watcher_.Watch(story_provider());
     story_activity_watcher_.OnNotify(
-        [this](
-            std::string story_id,
-            std::vector<fuchsia::modular::OngoingActivityType> activities) {
+        [this](std::string story_id,
+               std::vector<fuchsia::modular::OngoingActivityType> activities) {
           if (story_id == kStoryName && activities.empty()) {
             on_watch_ongoing_activities_dispatched.Pass();
           }
@@ -165,12 +162,10 @@ class TestApp : public modular::testing::SessionShellBase {
   void PerformFirstModuleStartActivity() {
     Signal(kFirstModuleCallStartActivity);
     story_activity_watcher_.OnNotify(
-        [this](
-            std::string story_id,
-            std::vector<fuchsia::modular::OngoingActivityType> activities) {
+        [this](std::string story_id,
+               std::vector<fuchsia::modular::OngoingActivityType> activities) {
           if (story_id == kStoryName && activities.size() == 1 &&
-              activities[0] ==
-                  fuchsia::modular::OngoingActivityType::VIDEO) {
+              activities[0] == fuchsia::modular::OngoingActivityType::VIDEO) {
             on_start_ongoing_activity_dispatched.Pass();
           }
           PerformSecondModuleStartActivity();
@@ -184,14 +179,11 @@ class TestApp : public modular::testing::SessionShellBase {
   void PerformSecondModuleStartActivity() {
     Signal(kSecondModuleCallStartActivity);
     story_activity_watcher_.OnNotify(
-        [this](
-            std::string story_id,
-            std::vector<fuchsia::modular::OngoingActivityType> activities) {
+        [this](std::string story_id,
+               std::vector<fuchsia::modular::OngoingActivityType> activities) {
           if (story_id == kStoryName && activities.size() == 2 &&
-              activities[0] ==
-                  fuchsia::modular::OngoingActivityType::VIDEO &&
-              activities[1] ==
-                  fuchsia::modular::OngoingActivityType::VIDEO) {
+              activities[0] == fuchsia::modular::OngoingActivityType::VIDEO &&
+              activities[1] == fuchsia::modular::OngoingActivityType::VIDEO) {
             on_start_all_ongoing_activities_dispatched.Pass();
           }
           PerformSecondModuleStopActivity();
@@ -205,12 +197,10 @@ class TestApp : public modular::testing::SessionShellBase {
   void PerformSecondModuleStopActivity() {
     Signal(kSecondModuleCallStopActivity);
     story_activity_watcher_.OnNotify(
-        [this](
-            std::string story_id,
-            std::vector<fuchsia::modular::OngoingActivityType> activities) {
+        [this](std::string story_id,
+               std::vector<fuchsia::modular::OngoingActivityType> activities) {
           if (story_id == kStoryName && activities.size() == 1 &&
-              activities[0] ==
-                  fuchsia::modular::OngoingActivityType::VIDEO) {
+              activities[0] == fuchsia::modular::OngoingActivityType::VIDEO) {
             on_stop_remaining_ongoing_activities_dispatched.Pass();
           }
           TestModuleCreatingEntity();
@@ -224,7 +214,7 @@ class TestApp : public modular::testing::SessionShellBase {
         intent.handler = kEntityModuleUrl;
         intent.action = kEntityIntentAction;
         fuchsia::modular::RemoveMod remove_mod;
-        remove_mod.mod_name.push_back("entity_module");
+        remove_mod.mod_name_transitional = "entity_module";
 
         std::vector<fuchsia::modular::StoryCommand> commands;
         fuchsia::modular::StoryCommand command;
@@ -264,9 +254,8 @@ class TestApp : public modular::testing::SessionShellBase {
     });
 
     story_activity_watcher_.OnNotify(
-        [this](
-            std::string story_id,
-            std::vector<fuchsia::modular::OngoingActivityType> activities) {
+        [this](std::string story_id,
+               std::vector<fuchsia::modular::OngoingActivityType> activities) {
           if (story_id == kStoryName && activities.empty()) {
             on_done_ongoing_activities_stopped.Pass();
           }

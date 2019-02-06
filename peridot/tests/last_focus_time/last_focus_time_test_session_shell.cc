@@ -114,8 +114,7 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
   void OnModuleAdded(fuchsia::modular::ModuleData /*module_data*/) override {}
 
   // |fuchsia::modular::StoryWatcher|
-  void OnModuleFocused(
-      std::vector<std::string> /*module_path*/) override {}
+  void OnModuleFocused(std::vector<std::string> /*module_path*/) override {}
 
   fidl::Binding<fuchsia::modular::StoryWatcher> binding_;
   std::function<void()> continue_;
@@ -174,7 +173,7 @@ class TestApp : public modular::testing::SessionShellBase {
     puppet_master_->ControlStory(kStoryName, story_puppet_master_.NewRequest());
 
     fuchsia::modular::AddMod add_mod;
-    add_mod.mod_name.push_back("mod1");
+    add_mod.mod_name_transitional = "mod1";
     add_mod.intent.handler = kCommonNullModule;
     add_mod.intent.action = kCommonNullAction;
 

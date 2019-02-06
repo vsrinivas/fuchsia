@@ -51,7 +51,7 @@ class TestApp : fuchsia::modular::NextListener,
   void CreateStory() {
     std::vector<fuchsia::modular::StoryCommand> commands;
     fuchsia::modular::AddMod add_mod;
-    add_mod.mod_name.push_back("root");
+    add_mod.mod_name_transitional = "root";
     add_mod.intent.action = kSuggestionTestAction;
     add_mod.intent.handler = kSuggestionTestModule;
 

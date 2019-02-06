@@ -132,7 +132,6 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
       const std::string& mod_name, const std::string& parent_mod_name,
       float surface_emphasis, const fuchsia::modular::Intent& intent) {
     fuchsia::modular::AddMod add_mod;
-    add_mod.mod_name = {mod_name};
     add_mod.mod_name_transitional = mod_name;
     if (!parent_mod_name.empty()) {
       add_mod.surface_parent_mod_name.reset({parent_mod_name});

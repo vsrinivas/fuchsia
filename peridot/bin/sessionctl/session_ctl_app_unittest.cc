@@ -95,8 +95,9 @@ TEST_F(SessionCtlAppTest, AddMod) {
   auto story_data = GetStoryData("mod_url");
   ASSERT_TRUE(story_data);
   EXPECT_EQ("mod_url", story_data->story_name);
-  EXPECT_EQ("mod_url",
-            test_executor_.last_commands().at(0).add_mod().mod_name.at(0));
+  EXPECT_EQ(
+      "mod_url",
+      test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx",
             test_executor_.last_commands().at(0).add_mod().intent.handler);
   EXPECT_EQ(1, test_executor_.execute_count());
@@ -115,8 +116,9 @@ TEST_F(SessionCtlAppTest, AddModWeb) {
   auto story_data = GetStoryData("www.google.com");
   ASSERT_TRUE(story_data);
   EXPECT_EQ("www.google.com", story_data->story_name);
-  EXPECT_EQ("www.google.com",
-            test_executor_.last_commands().at(0).add_mod().mod_name.at(0));
+  EXPECT_EQ(
+      "www.google.com",
+      test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
   EXPECT_EQ("https://www.google.com",
             test_executor_.last_commands().at(0).add_mod().intent.handler);
   EXPECT_EQ(1, test_executor_.execute_count());
@@ -136,8 +138,9 @@ TEST_F(SessionCtlAppTest, AddModExoticScheme) {
   auto story_data = GetStoryData("mod_url");
   ASSERT_TRUE(story_data);
   EXPECT_EQ("mod_url", story_data->story_name);
-  EXPECT_EQ("mod_url",
-            test_executor_.last_commands().at(0).add_mod().mod_name.at(0));
+  EXPECT_EQ(
+      "mod_url",
+      test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
   EXPECT_EQ("foobar-pkg://mod_url?q=bad+wolf",
             test_executor_.last_commands().at(0).add_mod().intent.handler);
   EXPECT_EQ(1, test_executor_.execute_count());
@@ -158,7 +161,9 @@ TEST_F(SessionCtlAppTest, AddModOverrideDefaults) {
   auto story_data = GetStoryData(story_name);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(story_name, story_data->story_name);
-  EXPECT_EQ("m", test_executor_.last_commands().at(0).add_mod().mod_name.at(0));
+  EXPECT_EQ(
+      "m",
+      test_executor_.last_commands().at(0).add_mod().mod_name_transitional);
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx",
             test_executor_.last_commands().at(0).add_mod().intent.handler);
   EXPECT_EQ(1, test_executor_.execute_count());
@@ -197,8 +202,9 @@ TEST_F(SessionCtlAppTest, RemoveMod) {
   auto story_data = GetStoryData(mod);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(mod, story_data->story_name);
-  EXPECT_EQ(mod,
-            test_executor_.last_commands().at(0).remove_mod().mod_name.at(0));
+  EXPECT_EQ(
+      mod,
+      test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);
   EXPECT_EQ(2, test_executor_.execute_count());
 }
 
@@ -225,8 +231,9 @@ TEST_F(SessionCtlAppTest, RemoveModOverrideDefault) {
   auto story_data = GetStoryData(story_name);
   ASSERT_TRUE(story_data);
   EXPECT_EQ(story_name, story_data->story_name);
-  EXPECT_EQ(mod_name,
-            test_executor_.last_commands().at(0).remove_mod().mod_name.at(0));
+  EXPECT_EQ(
+      mod_name,
+      test_executor_.last_commands().at(0).remove_mod().mod_name_transitional);
   EXPECT_EQ(2, test_executor_.execute_count());
 }
 

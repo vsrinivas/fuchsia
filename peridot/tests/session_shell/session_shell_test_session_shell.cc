@@ -263,7 +263,7 @@ class TestApp : public modular::testing::SessionShellBase {
     puppet_master_->ControlStory("story1", story_puppet_master_.NewRequest());
 
     fuchsia::modular::AddMod add_mod;
-    add_mod.mod_name.push_back("mod1");
+    add_mod.mod_name_transitional = "mod1";
     add_mod.intent.handler = kCommonActiveModule;
 
     fuchsia::modular::IntentParameter param;
@@ -332,7 +332,7 @@ class TestApp : public modular::testing::SessionShellBase {
     puppet_master_->ControlStory("story2", story_puppet_master_.NewRequest());
 
     fuchsia::modular::AddMod add_mod;
-    add_mod.mod_name.push_back("mod1");
+    add_mod.mod_name_transitional = "mod1";
     add_mod.intent.handler = kCommonNullModule;
 
     fuchsia::modular::StoryCommand command;
@@ -541,7 +541,7 @@ class TestApp : public modular::testing::SessionShellBase {
     puppet_master_->ControlStory("story4", story_puppet_master_.NewRequest());
 
     fuchsia::modular::AddMod add_mod;
-    add_mod.mod_name.push_back("mod1");
+    add_mod.mod_name_transitional = "mod1";
     add_mod.intent.handler = kCommonNullModule;
 
     fuchsia::modular::StoryCommand command;
@@ -638,7 +638,7 @@ class TestApp : public modular::testing::SessionShellBase {
     puppet_master_->ControlStory("story5", story_puppet_master_.NewRequest());
 
     fuchsia::modular::AddMod add_mod;
-    add_mod.mod_name.push_back("mod1");
+    add_mod.mod_name_transitional = "mod1";
     add_mod.intent.handler = kCommonNullModule;
 
     fuchsia::modular::StoryCommand command;
@@ -739,7 +739,7 @@ class TestApp : public modular::testing::SessionShellBase {
     puppet_master_->ControlStory("story6", story_puppet_master_.NewRequest());
 
     fuchsia::modular::AddMod add_mod;
-    add_mod.mod_name.push_back("mod1");
+    add_mod.mod_name_transitional = "mod1";
     add_mod.intent.handler = kCommonNullModule;
 
     fuchsia::modular::StoryCommand command;

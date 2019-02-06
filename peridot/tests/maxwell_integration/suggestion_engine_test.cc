@@ -65,7 +65,7 @@ class Proposinator {
   virtual ~Proposinator() = default;
 
   void Propose(const std::string& id,
-               std::vector<fuchsia::modular::StoryCommand> commands ={}) {
+               std::vector<fuchsia::modular::StoryCommand> commands = {}) {
     Propose(id, id, fuchsia::modular::AnnoyanceType::NONE, std::move(commands));
   }
 
@@ -135,7 +135,7 @@ class AskProposinator : public Proposinator,
       const std::string& id, const std::string& headline,
       fuchsia::modular::AnnoyanceType annoyance =
           fuchsia::modular::AnnoyanceType::NONE,
-      std::vector<fuchsia::modular::StoryCommand> commands ={}) {
+      std::vector<fuchsia::modular::StoryCommand> commands = {}) {
     query_proposals_.push_back(
         CreateProposal(id, headline, std::move(commands), annoyance));
   }
@@ -206,8 +206,9 @@ class SuggestionEngineTest : public ContextEngineTestBase,
   void SetUp() override {
     ContextEngineTestBase::SetUp();
 
-    component::Services suggestion_services =
-        StartServices("fuchsia-pkg://fuchsia.com/suggestion_engine#meta/suggestion_engine.cmx");
+    component::Services suggestion_services = StartServices(
+        "fuchsia-pkg://fuchsia.com/suggestion_engine#meta/"
+        "suggestion_engine.cmx");
     suggestion_engine_ =
         suggestion_services
             .ConnectToService<fuchsia::modular::SuggestionEngine>();
@@ -877,7 +878,7 @@ TEST_F(SuggestionFilteringTest, Baseline) {
   fuchsia::modular::Intent intent;
   intent.handler = "foo://bar";
   fuchsia::modular::AddMod add_mod;
-  add_mod.mod_name.push_back("foo");
+  add_mod.mod_name_transitional = "foo";
   add_mod.intent = std::move(intent);
 
   fuchsia::modular::StoryCommand command;
@@ -908,7 +909,7 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   intent.handler = "foo://bar";
   fuchsia::modular::AddMod add_mod;
   add_mod.intent = std::move(intent);
-  add_mod.mod_name.push_back("foo");
+  add_mod.mod_name_transitional = "foo";
 
   fuchsia::modular::StoryCommand command;
   command.set_add_mod(std::move(add_mod));

@@ -165,7 +165,7 @@ class SuggestionEngineTest : public testing::TestWithSessionStorage {
     fuchsia::modular::Intent intent;
     intent.handler = mod_url;
     fuchsia::modular::AddMod add_mod;
-    add_mod.mod_name.push_back(mod_name);
+    add_mod.mod_name_transitional = mod_name;
     add_mod.intent = std::move(intent);
     if (!parent_mod.empty()) {
       add_mod.surface_parent_mod_name.push_back(parent_mod);
@@ -188,7 +188,7 @@ class SuggestionEngineTest : public testing::TestWithSessionStorage {
   void AddFocusModuleAction(fuchsia::modular::Proposal* proposal,
                             const std::string& mod_name) {
     fuchsia::modular::FocusMod focus_mod;
-    focus_mod.mod_name.push_back(mod_name);
+    focus_mod.mod_name_transitional = mod_name;
     fuchsia::modular::StoryCommand command;
     command.set_focus_mod(std::move(focus_mod));
     proposal->on_selected.push_back(std::move(command));
@@ -329,8 +329,8 @@ TEST_F(SuggestionEngineTest, AddNextProposalRich) {
   ASSERT_TRUE(commands.at(0).is_add_mod());
 
   auto& command = commands.at(0).add_mod();
-  ASSERT_EQ(1u, command.mod_name.size());
-  EXPECT_EQ("mod_name", command.mod_name.at(0));
+  ASSERT_FALSE(command.mod_name_transitional.is_null());
+  EXPECT_EQ("mod_name", command.mod_name_transitional.get());
   EXPECT_EQ("mod_url", command.intent.handler);
   EXPECT_EQ(fuchsia::modular::SurfaceArrangement::ONTOP,
             command.surface_relation.arrangement);
@@ -388,8 +388,8 @@ TEST_F(SuggestionEngineTest, AddNextProposalRichReusesStory) {
   ASSERT_TRUE(commands.at(0).is_add_mod());
 
   auto& command = commands.at(0).add_mod();
-  ASSERT_EQ(1u, command.mod_name.size());
-  EXPECT_EQ("mod_name", command.mod_name.at(0));
+  ASSERT_FALSE(command.mod_name_transitional.is_null());
+  EXPECT_EQ("mod_name", command.mod_name_transitional.get());
   EXPECT_EQ("mod_url", command.intent.handler);
   EXPECT_EQ(fuchsia::modular::SurfaceArrangement::COPRESENT,
             command.surface_relation.arrangement);
@@ -520,16 +520,16 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelected) {
   EXPECT_TRUE(commands.at(3).is_set_link_value());
 
   auto& add_mod = commands.at(0).add_mod();
-  ASSERT_EQ(1u, add_mod.mod_name.size());
-  EXPECT_EQ("mod_name", add_mod.mod_name.at(0));
+  ASSERT_FALSE(add_mod.mod_name_transitional.is_null());
+  EXPECT_EQ("mod_name", add_mod.mod_name_transitional.get());
   EXPECT_EQ("mod_url", add_mod.intent.handler);
 
   auto& set_focus_state = commands.at(1).set_focus_state();
   EXPECT_TRUE(set_focus_state.focused);
 
   auto& focus_mod = commands.at(2).focus_mod();
-  ASSERT_EQ(1u, focus_mod.mod_name.size());
-  EXPECT_EQ("mod_name", focus_mod.mod_name.at(0));
+  ASSERT_FALSE(focus_mod.mod_name_transitional.is_null());
+  EXPECT_EQ("mod_name", focus_mod.mod_name_transitional.get());
 
   auto& set_link_value = commands.at(3).set_link_value();
   ASSERT_EQ(1u, set_link_value.path.module_path.size());
@@ -587,8 +587,8 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedWithStoryName) {
   ASSERT_EQ(1u, commands.size());
   EXPECT_TRUE(commands.at(0).is_focus_mod());
   auto& focus_mod = commands.at(0).focus_mod();
-  ASSERT_EQ(1u, focus_mod.mod_name.size());
-  EXPECT_EQ("mod_name", focus_mod.mod_name.at(0));
+  ASSERT_FALSE(focus_mod.mod_name_transitional.is_null());
+  EXPECT_EQ("mod_name", focus_mod.mod_name_transitional.get());
 
   // Ensure a regular story was created when we executed the proposal.
   bool done{};
@@ -843,8 +843,8 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelectedInterruption) {
   auto& commands = test_executor_.last_commands();
   ASSERT_EQ(1u, commands.size());
   auto& focus_mod = commands.at(0).focus_mod();
-  ASSERT_EQ(1u, focus_mod.mod_name.size());
-  EXPECT_EQ("mod_name", focus_mod.mod_name.at(0));
+  ASSERT_FALSE(focus_mod.mod_name_transitional.is_null());
+  EXPECT_EQ("mod_name", focus_mod.mod_name_transitional.get());
 
   // Ensure a regular story was created when we executed the proposal.
   bool done{};

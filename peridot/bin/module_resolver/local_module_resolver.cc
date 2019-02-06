@@ -262,8 +262,8 @@ class LocalModuleResolver::FindModulesByTypesCall
 
       using iter = decltype(results->begin());
       response_.results.insert(response_.results.end(),
-                                std::move_iterator<iter>(results->begin()),
-                                std::move_iterator<iter>(results->end()));
+                               std::move_iterator<iter>(results->begin()),
+                               std::move_iterator<iter>(results->end()));
     }
   }
 
@@ -454,8 +454,7 @@ class LocalModuleResolver::FindModulesByTypesCall
   fuchsia::modular::FindModulesByTypesQuery const query_;
   fuchsia::modular::FindModulesByTypesResponse response_;
   // A cache of the parameter types for each parameter name in |query_|.
-  std::map<std::string, std::vector<std::string>>
-      parameter_types_cache_;
+  std::map<std::string, std::vector<std::string>> parameter_types_cache_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FindModulesByTypesCall);
 };
@@ -522,7 +521,7 @@ void LocalModuleResolver::OnQuery(fuchsia::modular::UserInput query,
 
         fuchsia::modular::AddMod add_mod;
         add_mod.intent.handler = manifest.binary;
-        add_mod.mod_name.push_back("root");
+        add_mod.mod_name_transitional = "root";
 
         fuchsia::modular::StoryCommand command;
         command.set_add_mod(std::move(add_mod));
@@ -630,7 +629,9 @@ void LocalModuleResolver::PeriodicCheckIfSourcesAreReady() {
       }
     }
 
-    if (already_checking_if_sources_are_ready_) return;
+    if (already_checking_if_sources_are_ready_) {
+      return;
+    }
     already_checking_if_sources_are_ready_ = true;
     async::PostDelayedTask(
         async_get_default_dispatcher(),

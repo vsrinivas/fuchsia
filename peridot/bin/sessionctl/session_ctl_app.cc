@@ -209,7 +209,7 @@ fuchsia::modular::StoryCommand SessionCtlApp::MakeFocusModCommand(
     const std::string& mod_name) {
   fuchsia::modular::StoryCommand command;
   fuchsia::modular::FocusMod focus_mod;
-  focus_mod.mod_name.push_back(mod_name);
+  focus_mod.mod_name_transitional = mod_name;
   command.set_focus_mod(std::move(focus_mod));
   return command;
 }
@@ -225,7 +225,7 @@ std::vector<fuchsia::modular::StoryCommand> SessionCtlApp::MakeAddModCommands(
   // Add command to add or update the mod (it will be updated if the mod_name
   // already exists in the story).
   fuchsia::modular::AddMod add_mod;
-  add_mod.mod_name.push_back(mod_name);
+  add_mod.mod_name_transitional = mod_name;
   intent.Clone(&add_mod.intent);
   // TODO(MI4-953): Sessionctl takes in inital intent and other fields.
 
@@ -241,7 +241,7 @@ SessionCtlApp::MakeRemoveModCommands(const std::string& mod_name) {
   fuchsia::modular::StoryCommand command;
 
   fuchsia::modular::RemoveMod remove_mod;
-  remove_mod.mod_name.push_back(mod_name);
+  remove_mod.mod_name_transitional = mod_name;
   command.set_remove_mod(std::move(remove_mod));
   commands.push_back(std::move(command));
   return commands;
