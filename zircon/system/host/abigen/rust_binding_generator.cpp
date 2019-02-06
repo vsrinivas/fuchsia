@@ -22,6 +22,10 @@ bool RustBindingGenerator::footer(std::ofstream& os) {
 }
 
 bool RustBindingGenerator::syscall(std::ofstream& os, const Syscall& sc) {
+    if (sc.is_internal()) {
+        return os.good();
+    }
+
     os << "    pub fn zx_" << sc.name << "(";
 
     // Writes all arguments.
