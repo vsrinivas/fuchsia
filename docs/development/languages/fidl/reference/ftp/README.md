@@ -15,3 +15,4 @@ FTP-021               | 2018-10-31 | 2018-11-01 | Soft Transitions for Methods A
 FTP-014               | 2019-09-18 | 2018-12-06 | Error Handling
 [FTP-023](ftp-023.md) | 2018-12-10 | 2019-01-09 | Compositional Model for Protocols
 [FTP-030](ftp-030.md) | 2019-01-30 | 2019-01-30 | FIDL is little endian
+[FTP-027](ftp-027.md) | 2019-01-19 | 2019-02-04 | You only pay for what you use

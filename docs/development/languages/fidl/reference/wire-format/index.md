@@ -12,7 +12,8 @@ purpose, goals, and requirements, as well as links to related documents.
 
 ### Goals
 
-*   Efficiently transfer messages between processes.
+*   Efficiently transfer messages between processes. You only pay for what you
+    use.
 *   General purpose, for use with device drivers, high-level services, and
     applications.
 *   Optimized for Zircon IPC only; portability is not a goal.
