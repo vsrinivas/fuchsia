@@ -521,3 +521,62 @@ magma_status_t magma_get_buffer_format_plane_info(magma_buffer_format_descriptio
     memcpy(image_planes_out, buffer_description->planes, sizeof(buffer_description->planes));
     return MAGMA_STATUS_OK;
 }
+
+magma_status_t magma_buffer_collection_import(magma_sysmem_connection_t connection, uint32_t handle,
+                                              magma_buffer_collection_t* collection_out)
+{
+    auto sysmem_connection = reinterpret_cast<magma::PlatformSysmemConnection*>(connection);
+    std::unique_ptr<magma::PlatformBufferCollection> buffer_collection;
+    magma::Status status = sysmem_connection->ImportBufferCollection(handle, &buffer_collection);
+    if (!status.ok())
+        return status.get();
+    *collection_out = reinterpret_cast<magma_buffer_collection_t>(buffer_collection.release());
+    return MAGMA_STATUS_OK;
+}
+
+void magma_buffer_collection_release(magma_sysmem_connection_t connection,
+                                     magma_buffer_collection_t collection)
+{
+    delete reinterpret_cast<magma::PlatformBufferCollection*>(collection);
+}
+
+magma_status_t
+magma_buffer_constraints_create(magma_sysmem_connection_t connection,
+                                const magma_buffer_format_constraints_t* buffer_constraints_in,
+                                magma_sysmem_buffer_constraints_t* constraints_out)
+{
+    auto sysmem_connection = reinterpret_cast<magma::PlatformSysmemConnection*>(connection);
+    std::unique_ptr<magma::PlatformBufferConstraints> buffer_constraints;
+    magma::Status status =
+        sysmem_connection->CreateBufferConstraints(buffer_constraints_in, &buffer_constraints);
+    if (!status.ok())
+        return status.get();
+    *constraints_out =
+        reinterpret_cast<magma_sysmem_buffer_constraints_t>(buffer_constraints.release());
+    return MAGMA_STATUS_OK;
+}
+
+magma_status_t
+magma_buffer_constraints_set_format(magma_sysmem_connection_t connection,
+                                    magma_sysmem_buffer_constraints_t constraints, uint32_t index,
+                                    const magma_image_format_constraints_t* format_constraints)
+{
+    auto buffer_constraints = reinterpret_cast<magma::PlatformBufferConstraints*>(constraints);
+    return buffer_constraints->SetImageFormatConstraints(index, format_constraints).get();
+}
+
+void magma_buffer_constraints_release(magma_sysmem_connection_t connection,
+                                      magma_sysmem_buffer_constraints_t constraints)
+{
+    delete reinterpret_cast<magma::PlatformBufferConstraints*>(constraints);
+}
+
+magma_status_t
+magma_buffer_collection_set_constraints(magma_sysmem_connection_t connection,
+                                        magma_buffer_collection_t collection,
+                                        magma_sysmem_buffer_constraints_t constraints)
+{
+    auto buffer_collection = reinterpret_cast<magma::PlatformBufferCollection*>(collection);
+    auto buffer_constraints = reinterpret_cast<magma::PlatformBufferConstraints*>(constraints);
+    return buffer_collection->SetConstraints(buffer_constraints).get();
+}

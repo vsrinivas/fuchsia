@@ -46,7 +46,11 @@ extern "C" {
 // Start perf counter recording
 #define MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE (1 << 2)
 
-#define MAGMA_FORMAT_R8G8B8A8 0
+enum {
+    MAGMA_FORMAT_R8G8B8A8 = 0,
+    MAGMA_FORMAT_BGRA32 = 1,
+    MAGMA_FORMAT_NV12 = 2,
+};
 
 #define MAGMA_SYSMEM_FLAG_PROTECTED (1 << 0)
 #define MAGMA_SYSMEM_FLAG_DISPLAY (1 << 1)
@@ -71,6 +75,10 @@ typedef struct magma_connection {
 } * magma_connection_t;
 
 typedef uintptr_t magma_sysmem_connection_t;
+
+typedef uintptr_t magma_buffer_collection_t;
+
+typedef uintptr_t magma_sysmem_buffer_constraints_t;
 
 typedef uintptr_t magma_buffer_format_description_t;
 
@@ -124,6 +132,24 @@ typedef struct magma_image_plane {
     uint32_t bytes_per_row;
     uint32_t byte_offset;
 } magma_image_plane_t;
+
+typedef struct {
+    uint32_t image_format;
+    magma_bool_t has_format_modifier;
+    uint32_t format_modifier;
+    uint32_t width;
+    uint32_t height;
+    uint32_t layers;
+    uint32_t bytes_per_row_divisor;
+    uint32_t min_bytes_per_row;
+} magma_image_format_constraints_t;
+
+typedef struct {
+    uint32_t count;
+    uint32_t usage;
+    magma_bool_t secure_permitted;
+    magma_bool_t secure_required;
+} magma_buffer_format_constraints_t;
 
 #if defined(__cplusplus)
 }

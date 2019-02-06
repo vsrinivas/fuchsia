@@ -9,9 +9,120 @@
 #include <lib/fdio/util.h>
 #include <lib/zx/channel.h>
 
+#include <limits>
+
 #include "magma_util/macros.h"
 
 namespace magma {
+class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
+public:
+    virtual ~ZirconPlatformBufferConstraints() {}
+
+    ZirconPlatformBufferConstraints(const magma_buffer_format_constraints_t* constraints)
+    {
+        constraints_.min_buffer_count_for_camping = constraints->count;
+        // Ignore input usage
+        fuchsia::sysmem::BufferUsage usage;
+        usage.vulkan = fuchsia::sysmem::vulkanUsageTransientAttachment |
+                       fuchsia::sysmem::vulkanUsageStencilAttachment |
+                       fuchsia::sysmem::vulkanUsageInputAttachment |
+                       fuchsia::sysmem::vulkanUsageColorAttachment |
+                       fuchsia::sysmem::vulkanUsageTransferSrc |
+                       fuchsia::sysmem::vulkanUsageTransferDst |
+                       fuchsia::sysmem::vulkanUsageStorage | fuchsia::sysmem::vulkanUsageSampled;
+        constraints_.usage = usage;
+        constraints_.has_buffer_memory_constraints = true;
+        // No buffer constraints, except those passed directly through from the client. These two
+        // are for whether this memory should be protected (e.g. usable for DRM content, the precise
+        // definition depending on the system).
+        constraints_.buffer_memory_constraints.secure_required = constraints->secure_permitted;
+        constraints_.buffer_memory_constraints.secure_permitted = constraints->secure_required;
+    }
+
+    Status
+    SetImageFormatConstraints(uint32_t index,
+                              const magma_image_format_constraints_t* format_constraints) override
+    {
+        if (index >= constraints_.image_format_constraints.size())
+            return DRET(MAGMA_STATUS_INVALID_ARGS);
+        if (index > constraints_.image_format_constraints_count)
+            return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Format constraint gaps not allowed");
+
+        constraints_.image_format_constraints_count =
+            std::max(constraints_.image_format_constraints_count, index + 1);
+        auto& constraints = constraints_.image_format_constraints[index];
+        // Initialize to default, since the array constructor initializes to 0
+        // normally.
+        constraints = fuchsia::sysmem::ImageFormatConstraints();
+        constraints.color_spaces_count = 1;
+        constraints.min_coded_width = format_constraints->width;
+        constraints.max_coded_width = format_constraints->width;
+        constraints.min_coded_height = format_constraints->height;
+        constraints.max_coded_height = format_constraints->height;
+        constraints.min_bytes_per_row = format_constraints->min_bytes_per_row;
+        constraints.max_bytes_per_row =
+            std::numeric_limits<decltype(constraints.max_bytes_per_row)>::max();
+
+        switch (format_constraints->image_format) {
+            case MAGMA_FORMAT_R8G8B8A8:
+                constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::R8G8B8A8;
+                constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::SRGB;
+                break;
+            case MAGMA_FORMAT_BGRA32:
+                constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+                constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::SRGB;
+                break;
+            case MAGMA_FORMAT_NV12:
+                constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+                constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC709;
+                break;
+            default:
+                return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid format: %d",
+                                format_constraints->image_format);
+        }
+        constraints.pixel_format.has_format_modifier = format_constraints->has_format_modifier;
+        constraints.pixel_format.format_modifier.value = format_constraints->format_modifier;
+        constraints.layers = format_constraints->layers;
+        constraints.bytes_per_row_divisor = format_constraints->bytes_per_row_divisor;
+        return MAGMA_STATUS_OK;
+    }
+    fuchsia::sysmem::BufferCollectionConstraints constraints() { return constraints_; }
+
+private:
+    fuchsia::sysmem::BufferCollectionConstraints constraints_ = {};
+};
+
+class ZirconPlatformBufferCollection : public PlatformBufferCollection {
+public:
+    ~ZirconPlatformBufferCollection() override
+    {
+        if (collection_.is_bound())
+            collection_->Close();
+    }
+
+    Status Bind(const fuchsia::sysmem::Allocator2SyncPtr& allocator, uint32_t handle)
+    {
+        fuchsia::sysmem::BufferCollectionTokenSyncPtr token;
+        token.Bind(zx::channel(handle));
+        zx_status_t status = allocator->BindSharedCollection(token, collection_.NewRequest());
+        if (status != ZX_OK)
+            return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Internal error: %d", status);
+        return MAGMA_STATUS_OK;
+    }
+
+    Status SetConstraints(PlatformBufferConstraints* constraints) override
+    {
+        zx_status_t status = collection_->SetConstraints(
+            true, static_cast<ZirconPlatformBufferConstraints*>(constraints)->constraints());
+        if (status != ZX_OK) {
+            return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Error setting constraints: %d", status);
+        }
+        return MAGMA_STATUS_OK;
+    }
+
+private:
+    fuchsia::sysmem::BufferCollectionSyncPtr collection_;
+};
 
 class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
 
@@ -154,6 +265,40 @@ public:
             return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "PlatformBuffer::Import failed");
         }
 
+        return MAGMA_STATUS_OK;
+    }
+
+    Status CreateBufferCollectionToken(uint32_t* handle_out) override
+    {
+        fuchsia::sysmem::BufferCollectionTokenSyncPtr token;
+        zx_status_t status = sysmem_allocator_->AllocateSharedCollection(token.NewRequest());
+        if (status != ZX_OK) {
+            return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "AllocateSharedCollection failed: %d",
+                            status);
+        }
+        *handle_out = token.Unbind().TakeChannel().release();
+        return MAGMA_STATUS_OK;
+    }
+
+    Status
+    ImportBufferCollection(uint32_t handle,
+                           std::unique_ptr<PlatformBufferCollection>* collection_out) override
+    {
+        auto collection = std::make_unique<ZirconPlatformBufferCollection>();
+        Status status = collection->Bind(sysmem_allocator_, handle);
+        if (!status.ok()) {
+            return DRET(status.get());
+        }
+
+        *collection_out = std::move(collection);
+        return MAGMA_STATUS_OK;
+    }
+
+    Status
+    CreateBufferConstraints(const magma_buffer_format_constraints_t* constraints,
+                            std::unique_ptr<PlatformBufferConstraints>* constraints_out) override
+    {
+        *constraints_out = std::make_unique<ZirconPlatformBufferConstraints>(constraints);
         return MAGMA_STATUS_OK;
     }
 

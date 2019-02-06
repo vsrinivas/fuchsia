@@ -14,6 +14,22 @@
 
 namespace magma {
 
+class PlatformBufferConstraints {
+public:
+    virtual ~PlatformBufferConstraints() {}
+
+    virtual Status
+    SetImageFormatConstraints(uint32_t index,
+                              const magma_image_format_constraints_t* format_constraints) = 0;
+};
+
+class PlatformBufferCollection {
+public:
+    virtual ~PlatformBufferCollection() {}
+
+    virtual Status SetConstraints(PlatformBufferConstraints* constraints) = 0;
+};
+
 class PlatformSysmemConnection {
 public:
     struct BufferDescription {
@@ -31,6 +47,15 @@ public:
     AllocateTexture(uint32_t flags, uint32_t format, uint32_t width, uint32_t height,
                     std::unique_ptr<PlatformBuffer>* buffer_out,
                     std::unique_ptr<BufferDescription>* buffer_description_out) = 0;
+
+    virtual Status CreateBufferCollectionToken(uint32_t* handle_out) = 0;
+    virtual Status
+    ImportBufferCollection(uint32_t handle,
+                           std::unique_ptr<PlatformBufferCollection>* collection_out) = 0;
+
+    virtual Status
+    CreateBufferConstraints(const magma_buffer_format_constraints_t* constraints,
+                            std::unique_ptr<PlatformBufferConstraints>* constraints_out) = 0;
 };
 
 } // namespace magma

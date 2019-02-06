@@ -36,6 +36,34 @@ void magma_buffer_format_description_release(magma_buffer_format_description_t d
 magma_status_t magma_get_buffer_format_plane_info(magma_buffer_format_description_t description,
                                                   magma_image_plane_t* image_planes_out);
 
+// Import a magma buffer collection from BufferCollectionToken handle.
+magma_status_t magma_buffer_collection_import(magma_sysmem_connection_t connection, uint32_t handle,
+                                              magma_buffer_collection_t* collection_out);
+
+void magma_buffer_collection_release(magma_sysmem_connection_t connection,
+                                     magma_buffer_collection_t collection);
+
+// Create a set of buffer constraints.
+magma_status_t
+magma_buffer_constraints_create(magma_sysmem_connection_t connection,
+                                const magma_buffer_format_constraints_t* buffer_constraints,
+                                magma_sysmem_buffer_constraints_t* constraints_out);
+
+// Set a format slot on a buffer constraints. Any format slot may be used to create the texture.
+magma_status_t
+magma_buffer_constraints_set_format(magma_sysmem_connection_t connection,
+                                    magma_sysmem_buffer_constraints_t constraints, uint32_t index,
+                                    const magma_image_format_constraints_t* format_constraints);
+
+void magma_buffer_constraints_release(magma_sysmem_connection_t connection,
+                                      magma_sysmem_buffer_constraints_t constraints);
+
+// Set format constraints for allocating buffers in the collection.
+magma_status_t
+magma_buffer_collection_set_constraints(magma_sysmem_connection_t connection,
+                                        magma_buffer_collection_t collection,
+                                        magma_sysmem_buffer_constraints_t constraints);
+
 #if defined(__cplusplus)
 }
 #endif

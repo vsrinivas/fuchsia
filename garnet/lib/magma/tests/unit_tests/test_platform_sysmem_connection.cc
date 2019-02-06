@@ -33,8 +33,53 @@ public:
         ASSERT_TRUE(description != nullptr);
         EXPECT_TRUE(description->planes[0].bytes_per_row >= 128 * 4);
     }
+
+    static void TestSetConstraints()
+    {
+        auto connection = magma::PlatformSysmemConnection::Create();
+
+        ASSERT_NE(nullptr, connection.get());
+
+        uint32_t token;
+        EXPECT_EQ(MAGMA_STATUS_OK, connection->CreateBufferCollectionToken(&token).get());
+        std::unique_ptr<magma::PlatformBufferCollection> collection;
+        EXPECT_EQ(MAGMA_STATUS_OK, connection->ImportBufferCollection(token, &collection).get());
+
+        magma_buffer_format_constraints_t buffer_constraints;
+
+        buffer_constraints.count = 1;
+        buffer_constraints.usage = 0;
+        buffer_constraints.secure_permitted = false;
+        buffer_constraints.secure_required = false;
+        std::unique_ptr<magma::PlatformBufferConstraints> constraints;
+        EXPECT_EQ(MAGMA_STATUS_OK,
+                  connection->CreateBufferConstraints(&buffer_constraints, &constraints).get());
+
+        // Create a set of basic 512x512 RGBA image constraints.
+        magma_image_format_constraints_t image_constraints;
+        image_constraints.image_format = MAGMA_FORMAT_R8G8B8A8;
+        image_constraints.has_format_modifier = false;
+        image_constraints.format_modifier = 0;
+        image_constraints.width = 512;
+        image_constraints.height = 512;
+        image_constraints.layers = 1;
+        image_constraints.bytes_per_row_divisor = 1;
+
+        EXPECT_NE(MAGMA_STATUS_OK,
+                  constraints->SetImageFormatConstraints(1, &image_constraints).get());
+        EXPECT_EQ(MAGMA_STATUS_OK,
+                  constraints->SetImageFormatConstraints(0, &image_constraints).get());
+        EXPECT_EQ(MAGMA_STATUS_OK,
+                  constraints->SetImageFormatConstraints(1, &image_constraints).get());
+        EXPECT_EQ(MAGMA_STATUS_OK, collection->SetConstraints(constraints.get()).get());
+    }
 };
 
 TEST(PlatformSysmemConnection, CreateBuffer) { TestPlatformSysmemConnection::TestCreateBuffer(); }
 
 TEST(PlatformSysmemConnection, Create) { TestPlatformSysmemConnection::TestCreate(); }
+
+TEST(PlatformSysmemConnection, SetConstraints)
+{
+    TestPlatformSysmemConnection::TestSetConstraints();
+}
