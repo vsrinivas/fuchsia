@@ -1003,7 +1003,7 @@ std::vector<std::string> ServerURLsFromEnv() {
 
 }  // namespace
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     CompatibilityTest, CompatibilityTest,
     ::testing::Combine(::testing::ValuesIn(ServerURLsFromEnv()),
                        ::testing::ValuesIn(ServerURLsFromEnv())));
