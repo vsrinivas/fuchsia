@@ -177,7 +177,7 @@ MODULE_SRCS += \
 	$(SRC_DIR)/common/ahpredef.c \
 	$(SRC_DIR)/common/ahids.c \
 	$(SRC_DIR)/common/ahtable.c \
-	$(SRC_DIR)/os_specific/service_layers/osfuchsia.cpp
+	$(LOCAL_DIR)/osfuchsia.cpp
 else
 MODULE_SRCS += $(LOCAL_DIR)/empty.c
 endif

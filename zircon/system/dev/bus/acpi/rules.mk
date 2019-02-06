@@ -49,6 +49,7 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-hardware-power
 
 MODULE_STATIC_LIBS := \
+    system/ulib/acpica \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
@@ -58,7 +59,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/region-alloc \
     system/ulib/zx \
     system/ulib/zxcpp \
-    third_party/ulib/acpica \
     third_party/ulib/chromiumos-platform-ec \
 
 MODULE_LIBS := \
