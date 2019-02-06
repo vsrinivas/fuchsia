@@ -7,7 +7,7 @@
 #include <lib/fsl/vmo/strings.h>
 
 #include "peridot/lib/convert/convert.h"
-#include "peridot/public/fidl/fuchsia.ledger.cloud/serialized_commits_generated.h"
+#include "sdk/fidl/fuchsia.ledger.cloud/serialized_commits_generated.h"
 
 namespace cloud_provider {
 

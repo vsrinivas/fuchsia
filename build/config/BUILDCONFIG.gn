@@ -985,4 +985,4 @@ set_defaults("component") {
 # These variables are to ease the transition to storing these FIDL definitions
 # in //sdk/fidl. After the transition, they will be removed.
 garnet_sdk_fidl = "//sdk/fidl"
-peridot_sdk_fidl = "//peridot/public/fidl"
+peridot_sdk_fidl = "//sdk/fidl"
