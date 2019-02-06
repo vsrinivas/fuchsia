@@ -37,6 +37,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/bootfs:bootfs-test",
       "$zx/system/ulib/ddk:ddk-unittest",
       "$zx/system/ulib/driver-integration-test/test",
+      "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/id_allocator/test",
       "$zx/system/ulib/kvstore:kvstore-test",
       "$zx/system/ulib/minfs/test",
@@ -180,6 +181,7 @@ if (current_cpu != "") {
     testonly = true
     deps = [
       "$zx/system/ulib/zxtest/test",
+      "$zx/system/ulib/fvm/test",
       "banjo-compiler",
       "fbl",
       "fidl-compiler",

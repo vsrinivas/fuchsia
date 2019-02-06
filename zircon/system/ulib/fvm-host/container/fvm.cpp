@@ -25,8 +25,7 @@
 
 zx_status_t FvmContainer::Create(const char* path, size_t slice_size, off_t offset, off_t length,
                                  fbl::unique_ptr<FvmContainer>* out) {
-    fbl::unique_ptr<FvmContainer> fvmContainer(new FvmContainer(path, slice_size, offset,
-                                                                length));
+    fbl::unique_ptr<FvmContainer> fvmContainer(new FvmContainer(path, slice_size, offset, length));
 
     zx_status_t status;
     if ((status = fvmContainer->Init()) != ZX_OK) {
@@ -226,6 +225,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
     // Then, we update the on-disk metadata to reflect the new size of the disk.
     // To avoid collision between relocated slices, this is done on a temporary file.
     uint64_t pslice_count = info_.SuperBlock()->pslice_count;
+    fvm::FormatInfo format_info = fvm::FormatInfo::FromDiskSize(disk_size_, slice_size_);
     for (uint32_t index = 1; index <= pslice_count; index++) {
         zx_status_t status;
         fvm::slice_entry_t* slice = nullptr;
@@ -240,7 +240,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
 
         fbl::Array<uint8_t> data(new uint8_t[slice_size_], slice_size_);
 
-        if (lseek(fd_.get(), fvm::SliceStart(disk_size_, slice_size_, index), SEEK_SET) < 0) {
+        if (lseek(fd_.get(), format_info.GetSliceStart(index), SEEK_SET) < 0) {
             fprintf(stderr, "Cannot seek to slice %u in current FVM\n", index);
             return ZX_ERR_BAD_STATE;
         }
@@ -251,7 +251,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
             return ZX_ERR_BAD_STATE;
         }
 
-        if (lseek(fd.get(), fvm::SliceStart(disk_size, slice_size_, index), SEEK_SET) < 0) {
+        if (lseek(fd.get(), format_info.GetSliceStart(index), SEEK_SET) < 0) {
             fprintf(stderr, "Cannot seek to slice %u in new FVM\n", index);
             return ZX_ERR_BAD_STATE;
         }
@@ -401,8 +401,8 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name) 
         for (unsigned i = 0; i < vslice_info.slice_count; i++) {
             uint32_t pslice;
 
-            if ((status = info_.AllocateSlice(format->VpartIndex(), vslice + i, &pslice))
-                != ZX_OK) {
+            if ((status = info_.AllocateSlice(format->VpartIndex(), vslice + i, &pslice)) !=
+                ZX_OK) {
                 return status;
             }
 
@@ -464,8 +464,8 @@ uint64_t FvmContainer::GetDiskSize() const {
 zx_status_t FvmContainer::WritePartition(unsigned part_index) {
     info_.CheckValid();
     if (part_index > partitions_.size()) {
-        fprintf(stderr, "Error: Tried to access partition %u / %zu\n",
-                part_index, partitions_.size());
+        fprintf(stderr, "Error: Tried to access partition %u / %zu\n", part_index,
+                partitions_.size());
         return ZX_ERR_OUT_OF_RANGE;
     }
 
@@ -505,7 +505,8 @@ zx_status_t FvmContainer::WriteExtent(unsigned extent_index, Format* format, uin
                 }
                 format->EmptyBlock();
             } else {
-                if ((status = format->FillBlock(vslice_info.block_offset + current_block)) != ZX_OK) {
+                if ((status = format->FillBlock(vslice_info.block_offset + current_block)) !=
+                    ZX_OK) {
                     fprintf(stderr, "Failed to read block from minfs\n");
                     return status;
                 }
@@ -527,13 +528,15 @@ zx_status_t FvmContainer::WriteExtent(unsigned extent_index, Format* format, uin
 zx_status_t FvmContainer::WriteData(uint32_t pslice, uint32_t block_offset, size_t block_size,
                                     void* data) {
     info_.CheckValid();
-
+    fvm::FormatInfo format_info = fvm::FormatInfo::FromDiskSize(disk_size_, slice_size_);
     if (block_offset * block_size > slice_size_) {
         fprintf(stderr, "Not enough space in slice\n");
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    if (lseek(fd_.get(), disk_offset_ + fvm::SliceStart(disk_size_, slice_size_, pslice) + block_offset * block_size, SEEK_SET) < 0) {
+    if (lseek(fd_.get(),
+              disk_offset_ + format_info.GetSliceStart(pslice) + block_offset * block_size,
+              SEEK_SET) < 0) {
         return ZX_ERR_BAD_STATE;
     }
 

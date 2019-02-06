@@ -38,8 +38,8 @@ zx_status_t FvmLoadThread(void* arg) {
 
 VPartitionManager::VPartitionManager(zx_device_t* parent, const block_info_t& info,
                                      size_t block_op_size, const block_impl_protocol_t* bp)
-    : ManagerDeviceType(parent), info_(info), metadata_size_(0), slice_size_(0),
-      pslice_total_count_(0), pslice_allocated_count_(0), block_op_size_(block_op_size) {
+    : ManagerDeviceType(parent), info_(info), pslice_allocated_count_(0),
+      block_op_size_(block_op_size) {
     memcpy(&bp_, bp, sizeof(*bp));
 }
 
@@ -211,9 +211,10 @@ zx_status_t VPartitionManager::Load() {
         return ZX_ERR_INTERNAL;
     }
 
+    format_info_ = FormatInfo::FromSuperBlock(sb);
+
     // Validate the superblock, confirm the slice size
-    slice_size_ = sb.slice_size;
-    if ((slice_size_ * VSliceMax()) / VSliceMax() != slice_size_) {
+    if ((format_info_.slice_size() * VSliceMax()) / VSliceMax() != format_info_.slice_size()) {
         fprintf(stderr, "fvm: Slice Size, VSliceMax overflow block address space\n");
         return ZX_ERR_BAD_STATE;
     } else if (info_.block_size == 0 || SliceSize() % info_.block_size) {
@@ -223,27 +224,23 @@ zx_status_t VPartitionManager::Load() {
         fprintf(stderr, "fvm: Bad vpartition table size %zu (expected %zu)\n",
                 sb.vpartition_table_size, kVPartTableLength);
         return ZX_ERR_BAD_STATE;
-    } else if (sb.allocation_table_size != AllocTableLength(DiskSize(), SliceSize())) {
-        fprintf(stderr, "fvm: Bad allocation table size %zu (expected %zu)\n",
+    } else if (sb.allocation_table_size < AllocTableLength(sb.fvm_partition_size, SliceSize())) {
+        fprintf(stderr, "fvm: Bad allocation table size %zu (expected at least %zu)\n",
                 sb.allocation_table_size, AllocTableLength(DiskSize(), SliceSize()));
         return ZX_ERR_BAD_STATE;
     }
 
-    // Cache calculated FVM information.
-    metadata_size_ = fvm::MetadataSize(DiskSize(), SliceSize());
-    pslice_total_count_ = UsableSlicesCount(DiskSize(), SliceSize());
-
     // Now that the slice size is known, read the rest of the metadata
     auto make_metadata_vmo = [&](size_t offset, fzl::OwnedVmoMapper* out_mapping) {
         fzl::OwnedVmoMapper mapper;
-        zx_status_t status = mapper.CreateAndMap(MetadataSize(), "fvm-metadata");
+        zx_status_t status = mapper.CreateAndMap(format_info_.metadata_size(), "fvm-metadata");
         if (status != ZX_OK) {
             return status;
         }
 
         // Read both copies of metadata, ensure at least one is valid
-        if ((status = DoIoLocked(mapper.vmo().get(), offset, MetadataSize(), BLOCK_OP_READ)) !=
-            ZX_OK) {
+        if ((status = DoIoLocked(mapper.vmo().get(), offset, format_info_.metadata_size(),
+                                 BLOCK_OP_READ)) != ZX_OK) {
             return status;
         }
 
@@ -252,19 +249,21 @@ zx_status_t VPartitionManager::Load() {
     };
 
     fzl::OwnedVmoMapper mapper;
-    if ((status = make_metadata_vmo(0, &mapper)) != ZX_OK) {
+    if ((status = make_metadata_vmo(format_info_.GetSuperblockOffset(SuperblockType::kPrimary),
+                                    &mapper)) != ZX_OK) {
         fprintf(stderr, "fvm: Failed to load metadata vmo: %d\n", status);
         return status;
     }
     fzl::OwnedVmoMapper mapper_backup;
-    if ((status = make_metadata_vmo(MetadataSize(), &mapper_backup)) != ZX_OK) {
+    if ((status = make_metadata_vmo(format_info_.GetSuperblockOffset(SuperblockType::kSecondary),
+                                    &mapper_backup)) != ZX_OK) {
         fprintf(stderr, "fvm: Failed to load backup metadata vmo: %d\n", status);
         return status;
     }
 
     const void* metadata;
-    if ((status = fvm_validate_header(mapper.start(), mapper_backup.start(), MetadataSize(),
-                                      &metadata)) != ZX_OK) {
+    if ((status = fvm_validate_header(mapper.start(), mapper_backup.start(),
+                                      format_info_.metadata_size(), &metadata)) != ZX_OK) {
         fprintf(stderr, "fvm: Header validation failure: %d\n", status);
         return status;
     }
@@ -336,11 +335,11 @@ zx_status_t VPartitionManager::WriteFvmLocked() {
     zx_status_t status;
 
     GetFvmLocked()->generation++;
-    fvm_update_hash(GetFvmLocked(), MetadataSize());
+    fvm_update_hash(GetFvmLocked(), format_info_.metadata_size());
 
     // If we were reading from the primary, write to the backup.
-    status =
-        DoIoLocked(metadata_.vmo().get(), BackupOffsetLocked(), MetadataSize(), BLOCK_OP_WRITE);
+    status = DoIoLocked(metadata_.vmo().get(), BackupOffsetLocked(), format_info_.metadata_size(),
+                        BLOCK_OP_WRITE);
     if (status != ZX_OK) {
         fprintf(stderr, "FVM: Failed to write metadata\n");
         return status;
@@ -365,7 +364,7 @@ zx_status_t VPartitionManager::FindFreeVPartEntryLocked(size_t* out) const {
 
 zx_status_t VPartitionManager::FindFreeSliceLocked(size_t* out, size_t hint) const {
     hint = fbl::max(hint, 1lu);
-    for (size_t i = hint; i <= pslice_total_count_; i++) {
+    for (size_t i = hint; i <= format_info_.slice_count(); i++) {
         if (GetSliceEntryLocked(i)->Vpart() == FVM_SLICE_ENTRY_FREE) {
             *out = i;
             return ZX_OK;
@@ -532,7 +531,7 @@ void VPartitionManager::Query(volume_info_t* info) {
     info->vslice_count = VSliceMax();
     {
         fbl::AutoLock lock(&lock_);
-        info->pslice_total_count = pslice_total_count_;
+        info->pslice_total_count = format_info_.slice_count();
         info->pslice_allocated_count = pslice_allocated_count_;
     }
 }
