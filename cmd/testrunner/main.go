@@ -186,7 +186,6 @@ func execute(tests []testsharder.Test, output *TestRunnerOutput, nodename, sshKe
 		)
 	}
 
-
 	if err := runTests(linux, localTester.Test, output); err != nil {
 		return err
 	}

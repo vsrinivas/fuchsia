@@ -18,7 +18,6 @@ import (
 	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/netboot"
-	"fuchsia.googlesource.com/tools/pdu"
 
 	"github.com/google/subcommands"
 	"golang.org/x/crypto/ssh"
@@ -148,8 +147,8 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		Args:        args,
 		Env:         env,
 		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
+		Stdout:      os.Stdout,
+		Stderr:      os.Stderr,
 	}
 
 	if r.cmdStdout != "" {
@@ -216,11 +215,20 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		}
 	}
 
+	var signers []ssh.Signer
+	for _, p := range privKeys {
+		signer, err := ssh.ParsePrivateKey(p)
+		if err != nil {
+			return err
+		}
+		signers = append(signers, signer)
+	}
+
 	if properties.PDU != nil {
 		defer func() {
 			logger.Debugf(ctx, "rebooting the node %q\n", properties.Nodename)
 
-			if err := pdu.RebootDevice(properties.PDU); err != nil {
+			if err := botanist.RebootDevice(properties.PDU, signers, properties.Nodename); err != nil {
 				logger.Errorf(ctx, "failed to reboot %q: %v\n", properties.Nodename, err)
 			}
 		}()

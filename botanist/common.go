@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/tools/netboot"
-	"fuchsia.googlesource.com/tools/pdu"
 	"fuchsia.googlesource.com/tools/retry"
 )
 
@@ -58,7 +57,7 @@ type DeviceProperties struct {
 	Nodename string `json:"nodename"`
 
 	// PDU is the configuration for the attached Power Distribution Unit.
-	PDU *pdu.Config `json:"pdu,omitempty"`
+	PDU *Config `json:"pdu,omitempty"`
 
 	// SSHKeys are the default system keys to be used with the device.
 	SSHKeys []string `json:"keys,omitempty"`

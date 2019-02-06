@@ -26,7 +26,6 @@ import (
 	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/netboot"
-	"fuchsia.googlesource.com/tools/pdu"
 	"fuchsia.googlesource.com/tools/retry"
 	"fuchsia.googlesource.com/tools/runtests"
 	"fuchsia.googlesource.com/tools/tftp"
@@ -369,7 +368,7 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		defer func() {
 			logger.Debugf(ctx, "rebooting the node %q\n", properties.Nodename)
 
-			if err := pdu.RebootDevice(properties.PDU); err != nil {
+			if err := botanist.RebootDevice(properties.PDU, signers, properties.Nodename); err != nil {
 				logger.Errorf(ctx, "failed to reboot the device: %v\n", err)
 			}
 		}()
