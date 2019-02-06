@@ -30,6 +30,9 @@ class FinishPhysicalFrameThreadController : public ThreadController {
   // Finishes the given frame of the stack, leaving control at frame
   // |frame_to_finish + 1] when the controller is complete. The frame at the
   // given index must be a physical frame.
+  //
+  // The frame_to_finish must have its fingerprint computable. This means that
+  // either you're finishing frame 0, or have synced all frames.
   FinishPhysicalFrameThreadController(Stack& stack, size_t frame_to_finish);
 
   ~FinishPhysicalFrameThreadController() override;

@@ -56,34 +56,18 @@ void FinishPhysicalFrameThreadController::InitWithThread(
   FXL_DCHECK(stack[frame_to_finish_]->GetAddress() == frame_ip_);
 #endif
 
-  if (auto found_fingerprint = stack.GetFrameFingerprint(frame_to_finish_)) {
-    // Common case where the frame to finish has a previous frame and the
-    // frame fingerprint and return address are known. If the frame's
-    // fingerprint can be computed, that means that the previous stack frame is
-    // available (or known not to exist).
-    // TODO(brettw) this won't handle inline frame selection properly.
-    InitWithFingerprint(*found_fingerprint);
-    cb(Err());
-  } else {
-    // Fingerprint needs an asynchronous request.
-    stack.GetFrameFingerprint(
-        frame_to_finish_,
-        [weak_this = weak_factory_.GetWeakPtr(), cb = std::move(cb)](
-            const Err& err, FrameFingerprint fingerprint) {
-          // Callback could come after this stepping is torn down, so don't
-          // even issue the callback in that case.
-          if (!weak_this)
-            return;
-
-          if (err.has_error()) {
-            cb(err);
-          } else {
-            // Save possibly-updated frame index before dispatching.
-            weak_this->InitWithFingerprint(fingerprint);
-            cb(Err());
-          }
-        });
+  auto found_fingerprint = stack.GetFrameFingerprint(frame_to_finish_);
+  if (!found_fingerprint) {
+    // This can happen if the creator of this class requested that we finish
+    // the bottom-most stack frame available, without having all stack frames
+    // available. That's not allowed and any code doing that should be fixed.
+    FXL_NOTREACHED();
+    cb(Err("Trying to step out of a frame with insufficient context.\n"
+            "Please file a bug with a repro."));
+    return;
   }
+  InitWithFingerprint(*found_fingerprint);
+  cb(Err());
 }
 
 ThreadController::ContinueOp

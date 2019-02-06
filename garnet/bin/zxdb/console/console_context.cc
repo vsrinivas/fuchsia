@@ -757,8 +757,20 @@ Err ConsoleContext::FillOutFrame(Command* cmd,
 
   Stack& stack = thread_record->thread->GetStack();
   if (frame_id >= 0 && frame_id < static_cast<int>(stack.size())) {
-    cmd->set_frame(stack[frame_id]);
-    return Err();
+    // References a valid frame. Now check that the frame index references
+    // the top physical frame (or one of its inline expansions above it) or
+    // all frames are synced.
+    //
+    // Computing frame fingerprints (required by some step operations) require
+    // that the previous physical frame is available. The step operations
+    // require that the fingerprints be synchronously available, so we want
+    // to be sure that any frame that one references has a fingerprint
+    // available. Since this is not a performance-sensitive code path, save
+    // logic by just validating the fingerprint is available.
+    if (stack.GetFrameFingerprint(frame_id)) {
+      cmd->set_frame(stack[frame_id]);
+      return Err();
+    }
   }
 
   // Invalid frame specified. The full backtrace list is populated on
@@ -768,11 +780,9 @@ Err ConsoleContext::FillOutFrame(Command* cmd,
   // if we detect the list isn't populated and the user requested one
   // that's out-of-range, request they manually sync the list.
   //
-  // Check for the presence of one frame to indicate that the thread is in
-  // a state to have frames at all (stopped). There will always be the
-  // topmost frame in this case. If the thread is running there will be no
-  // frames.
-  if (stack.size() == 1 &&
+  // Check for the presence of any frames because the thread might not be
+  // in a state to have frames (i.e. it's running).
+  if (!stack.empty() &&
       !thread_record->thread->GetStack().has_all_frames()) {
     return Err(ErrType::kInput,
                "The frames for this thread haven't been synced.\n"
