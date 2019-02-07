@@ -437,15 +437,12 @@ fdio_t* fdio_dir_create(zx_handle_t control) {
 }
 
 fdio_t* fdio_file_create(zx_handle_t control, zx_handle_t event) {
-    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    fdio_t* io = fdio_alloc(&fdio_zxio_remote_ops);
     if (io == NULL) {
         zx_handle_close(control);
         return NULL;
     }
-    io->ops = &fdio_zxio_remote_ops;
-    io->magic = FDIO_MAGIC;
-    atomic_init(&io->refcount, 1);
-    zx_status_t status = zxio_file_init(&io->storage, control, event);
+    zx_status_t status = zxio_file_init(fdio_get_zxio_storage(io), control, event);
     if (status != ZX_OK) {
         return NULL;
     }
