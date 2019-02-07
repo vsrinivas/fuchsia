@@ -57,7 +57,7 @@ class IsolatedPersistentStorageTest
       done = true;
       *result = contents;
     });
-    return RunLoopWithTimeoutOrUntil([&] { return done; });
+    return RunLoopWithTimeoutOrUntil([&] { return done; }, zx::sec(10));
   }
 
   bool WriteFileSync(const DataFileReaderWriterPtr& util, std::string path,
@@ -67,7 +67,7 @@ class IsolatedPersistentStorageTest
       done = true;
       *result = write_result;
     });
-    return RunLoopWithTimeoutOrUntil([&] { return done; });
+    return RunLoopWithTimeoutOrUntil([&] { return done; }, zx::sec(10));
   }
 
   // Verify that a file written in one component's /data dir is not accessible
@@ -92,7 +92,7 @@ class IsolatedPersistentStorageTest
     EXPECT_EQ(contents.get(), test_file_content_);
     if (!ReadFileSync(util2, kTestFileName, &contents))
       return false;
-    EXPECT_TRUE(contents.is_null());
+    EXPECT_NE(contents.get(), test_file_content_);
     return true;
   }
 
