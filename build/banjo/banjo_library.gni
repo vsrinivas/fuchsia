@@ -126,25 +126,54 @@ template("banjo_library") {
   c_response_file = "$target_gen_dir/c/$target_name.args"
   cpp_response_file = "$target_gen_dir/cpp/$target_name.args"
   cpp_i_response_file = "$target_gen_dir/cpp_i/$target_name.args"
+  rust_response_file = "$target_gen_dir/rust/$target_name.args"
   ddk_root = string_replace(string_replace(library_name, ".", "/"), "_", "-")
   ddktl_root = string_replace(ddk_root, "ddk", "ddktl")
   ddk_header = "$root_gen_dir/$ddk_root.h"
   ddktl_header = "$root_gen_dir/$ddktl_root.h"
   ddktl_internal_header = "$root_gen_dir/$ddktl_root-internal.h"
+  rust_file = "banjo_" + string_replace(library_name, ".", "_") + ".rs"
+  rust_internal_header = "$target_gen_dir/$rust_file"
 
   main_target_name = target_name
   c_response_file_target_name = "${target_name}_c_response_file"
   cpp_response_file_target_name = "${target_name}_cpp_response_file"
   cpp_i_response_file_target_name = "${target_name}_cpp_i_response_file"
+  rust_response_file_target_name = "${target_name}_rust_response_file"
   c_compile_target_name = "${target_name}_c_compile"
   cpp_compile_target_name = "${target_name}_cpp_compile"
   cpp_i_compile_target_name = "${target_name}_cpp_i_compile"
-
+  rust_compile_target_name = "${target_name}_rust_compile"
 
   targets = [
-    [c_response_file_target_name, c_compile_target_name, c_response_file, "c", ddk_header],
-    [cpp_response_file_target_name, cpp_compile_target_name, cpp_response_file, "cpp", ddktl_header],
-    [cpp_i_response_file_target_name, cpp_i_compile_target_name, cpp_i_response_file, "cpp_i", ddktl_internal_header],
+    [
+      c_response_file_target_name,
+      c_compile_target_name,
+      c_response_file,
+      "c",
+      ddk_header,
+    ],
+    [
+      cpp_response_file_target_name,
+      cpp_compile_target_name,
+      cpp_response_file,
+      "cpp",
+      ddktl_header,
+    ],
+    [
+      cpp_i_response_file_target_name,
+      cpp_i_compile_target_name,
+      cpp_i_response_file,
+      "cpp_i",
+      ddktl_internal_header,
+    ],
+    [
+      rust_response_file_target_name,
+      rust_compile_target_name,
+      rust_response_file,
+      "rust",
+      rust_internal_header,
+    ],
   ]
 
   all_deps = []
@@ -206,7 +235,8 @@ template("banjo_library") {
 
         inputs = dep_libraries
 
-        args += [ "--dep-libraries" ] + rebase_path(dep_libraries, root_build_dir)
+        args +=
+            [ "--dep-libraries" ] + rebase_path(dep_libraries, root_build_dir)
       }
     }
   }
@@ -218,28 +248,30 @@ template("banjo_library") {
     backend = target[3]
     output = target[4]
 
-    compiled_action(target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
+    if (backend != "rust") {
+      compiled_action(target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
 
-      visibility = [ ":*" ]
+        visibility = [ ":*" ]
 
-      tool = "//zircon/public/tool/banjoc"
+        tool = "//zircon/public/tool/banjoc"
 
-      inputs = [
-        response_file,
-      ]
+        inputs = [
+          response_file,
+        ]
 
-      outputs = [
-        output,
-      ]
+        outputs = [
+          output,
+        ]
 
-      rebased_response_file = rebase_path(response_file, root_build_dir)
+        rebased_response_file = rebase_path(response_file, root_build_dir)
 
-      args = [ "@$rebased_response_file" ]
+        args = [ "@$rebased_response_file" ]
 
-      deps = [
-        ":$response_target_name",
-      ]
+        deps = [
+          ":$response_target_name",
+        ]
+      }
     }
   }
 
@@ -252,11 +284,12 @@ template("banjo_library") {
 
     public_deps = [
       ":$c_compile_target_name",
+      ":$c_response_file_target_name",
       ":$cpp_compile_target_name",
       ":$cpp_i_compile_target_name",
-      ":$c_response_file_target_name",
-      ":$cpp_response_file_target_name",
       ":$cpp_i_response_file_target_name",
+      ":$cpp_response_file_target_name",
+      ":$rust_response_file_target_name",
     ]
   }
 
@@ -281,38 +314,66 @@ template("banjo_dummy_library") {
   }
 
   main_target_name = target_name
-  response_file_target_name = "${target_name}_response_file"
+  c_response_file_target_name = "${target_name}_rust_response_file"
+  rust_response_file_target_name = "${target_name}_c_response_file"
+  ddk_root = string_replace(string_replace(library_name, ".", "/"), "_", "-")
+  rust_file = "banjo_" + string_replace(library_name, ".", "_") + ".rs"
+  ddk_header = "$target_gen_dir/$ddk_root.h"
+  rust_internal_header = "$target_gen_dir/$rust_file"
 
-  action(response_file_target_name) {
-    visibility = [ ":*" ]
+  targets = [
+    [
+      c_response_file_target_name,
+      "c",
+      ddk_header,
+    ],
+    [
+      rust_response_file_target_name,
+      "rust",
+      rust_internal_header,
+    ],
+  ]
 
-    script = "//build/banjo/gen_response_file.py"
+  foreach(target, targets) {
+    response_target_name = target[0]
+    backend = target[1]
+    output = target[2]
 
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "public_deps",
-                             "sources",
-                             "testonly",
-                           ])
+    action(response_target_name) {
+      visibility = [ ":*" ]
 
-    response_file = "$target_gen_dir/$main_target_name.args"
-    libraries = "$target_gen_dir/c/$main_target_name.libraries"
+      script = "//build/banjo/gen_response_file.py"
 
-    outputs = [
-      response_file,
-      libraries,
-    ]
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "public_deps",
+                               "sources",
+                               "testonly",
+                             ])
 
-    args = [
-             "--out-response-file",
-             rebase_path(response_file, root_build_dir),
-             "--out-libraries",
-             rebase_path(libraries, root_build_dir),
-             "--name",
-             library_name,
-             "--sources",
-           ] + rebase_path(sources, root_build_dir)
+      response_file = "$target_gen_dir/$backend/$main_target_name.args"
+      libraries = "$target_gen_dir/$backend/$main_target_name.libraries"
+
+      outputs = [
+        response_file,
+        libraries,
+      ]
+
+      args = [
+               "--output",
+               rebase_path(output, root_build_dir),
+               "--backend",
+               backend,
+               "--out-response-file",
+               rebase_path(response_file, root_build_dir),
+               "--out-libraries",
+               rebase_path(libraries, root_build_dir),
+               "--name",
+               library_name,
+               "--sources",
+             ] + rebase_path(sources, root_build_dir)
+    }
   }
 
   group(main_target_name) {
@@ -323,7 +384,8 @@ template("banjo_dummy_library") {
                            ])
 
     public_deps = [
-      ":$response_file_target_name",
+      ":$c_response_file_target_name",
+      ":$rust_response_file_target_name",
     ]
   }
 

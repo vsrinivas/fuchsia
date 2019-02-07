@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/banjo/toolchain.gni")
+import("//build/rust/toolchain.gni")
 
 # Declares a BANJO library.
 #
@@ -36,8 +37,19 @@ template("banjo") {
     banjo_library(target_name) {
       forward_variables_from(invoker, "*")
     }
+  } else if (current_toolchain == rust_toolchain) {
+    import("//build/rust/banjo_rust.gni")
+
+    banjo_rust(target_name) {
+      forward_variables_from(invoker, "*")
+    }
   } else if (is_fuchsia) {
     import("//build/c/banjo_c.gni")
+    import("//build/rust/banjo_rust_library.gni")
+
+    banjo_rust_library(target_name) {
+      forward_variables_from(invoker, "*")
+    }
 
     banjo_c_target(target_name) {
       forward_variables_from(invoker, "*")
@@ -58,8 +70,21 @@ template("banjo_dummy") {
     banjo_dummy_library(target_name) {
       forward_variables_from(invoker, "*")
     }
+  } else if (current_toolchain == rust_toolchain) {
+    import("//build/rust/banjo_rust.gni")
+
+    banjo_rust(target_name) {
+      forward_variables_from(invoker, "*")
+    }
   } else if (is_fuchsia) {
     import("//build/c/banjo_c.gni")
+    import("//build/rust/banjo_rust_library.gni")
+
+    #
+    # TODO(cramertj): remove pending TC-81.
+    banjo_rust_library(target_name) {
+      forward_variables_from(invoker, "*")
+    }
 
     banjo_dummy_c_target(target_name) {
       forward_variables_from(invoker, "*")

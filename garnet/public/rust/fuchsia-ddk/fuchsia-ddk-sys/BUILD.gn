@@ -5,6 +5,7 @@
 import("//build/rust/rustc_library.gni")
 
 rustc_library("fuchsia-ddk-sys") {
+  edition = "2018"
   deps = [
     "//garnet/public/rust/fuchsia-zircon",
   ]
