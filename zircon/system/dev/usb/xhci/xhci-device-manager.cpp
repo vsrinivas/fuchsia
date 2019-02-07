@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
 #include <zircon/hw/usb.h>
-
 #include <endian.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,13 +27,13 @@ typedef enum {
 
 // list of devices pending result of enable slot command
 // list is kept on xhci_t.command_queue
-struct xhci_device_command_t {
+typedef struct {
     xhci_command_t command;
     list_node_t node;
     uint32_t hub_address;
     uint32_t port;
     usb_speed_t speed;
-};
+} xhci_device_command_t;
 
 static uint32_t xhci_get_route_string(xhci_t* xhci, uint32_t hub_address, uint32_t port) {
     if (hub_address == 0) {
@@ -87,31 +84,27 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     if (enumerating) {
         // allocate a read-only DMA buffer for device context
         size_t dc_length = xhci->context_size * XHCI_NUM_EPS;
-        status = io_buffer_init(&slot->buffer, xhci->bti_handle.get(), dc_length,
+        status = io_buffer_init(&slot->buffer, xhci->bti_handle, dc_length,
                                 IO_BUFFER_RO | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
         if (status != ZX_OK) {
             zxlogf(ERROR, "xhci_address_device: failed to allocate io_buffer for slot\n");
             return status;
         }
 
-        status = xhci_transfer_ring_init(&ep->transfer_ring, xhci->bti_handle.get(),
-        TRANSFER_RING_SIZE);
+        status = xhci_transfer_ring_init(&ep->transfer_ring, xhci->bti_handle, TRANSFER_RING_SIZE);
         if (status < 0) return status;
-
-        fbl::AllocChecker ac;
-        ep->transfer_state = new (&ac) xhci_transfer_state_t;
-        if (!ac.check()) {
+        ep->transfer_state = static_cast<xhci_transfer_state_t*>(
+                                               calloc(1, sizeof(xhci_transfer_state_t)));
+        if (!ep->transfer_state) {
             return ZX_ERR_NO_MEMORY;
         }
-        memset(ep->transfer_state, 0, sizeof(*ep->transfer_state));
         ep->ep_type = USB_ENDPOINT_CONTROL;
     }
 
     auto* device_context = static_cast<uint8_t*>(io_buffer_virt(&slot->buffer));
     xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
 
-    fbl::AutoLock al(&xhci->input_context_lock);
-
+    mtx_lock(&xhci->input_context_lock);
     auto* icc = reinterpret_cast<xhci_input_control_context_t*>(xhci->input_context);
     zx_paddr_t icc_phys = xhci->input_context_phys;
     auto* sc = reinterpret_cast<xhci_slot_context_t*>(&xhci->input_context[1 * xhci->context_size]);
@@ -248,6 +241,7 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
             }
         }
     }
+    mtx_unlock(&xhci->input_context_lock);
 
     if (status == ZX_OK) {
         ep->state = EP_STATE_RUNNING;
@@ -303,7 +297,7 @@ static void xhci_disable_slot(xhci_t* xhci, uint32_t slot_id) {
     for (int i = 0; i < XHCI_NUM_EPS; i++) {
         xhci_endpoint_t* ep = &slot->eps[i];
         xhci_transfer_ring_free(&ep->transfer_ring);
-        delete ep->transfer_state;
+        free(ep->transfer_state);
         ep->transfer_state = nullptr;
         ep->state = EP_STATE_DISABLED;
     }
@@ -368,8 +362,7 @@ static zx_status_t xhci_setup_slot(xhci_t* xhci, uint32_t slot_id, uint32_t hub_
     }
 
     // update the max packet size in our device context
-    fbl::AutoLock al(&xhci->input_context_lock);
-
+    mtx_lock(&xhci->input_context_lock);
     xhci_input_control_context_t* icc;
     icc = reinterpret_cast<xhci_input_control_context_t*>(xhci->input_context);
     zx_paddr_t icc_phys;
@@ -384,6 +377,7 @@ static zx_status_t xhci_setup_slot(xhci_t* xhci, uint32_t slot_id, uint32_t hub_
 
     result = xhci_send_command(xhci, TRB_CMD_EVAL_CONTEXT, icc_phys,
                                (slot_id << TRB_SLOT_ID_START));
+    mtx_unlock(&xhci->input_context_lock);
     if (result != ZX_OK) {
         zxlogf(ERROR, "xhci_handle_enable_device: TRB_CMD_EVAL_CONTEXT failed\n");
     }
@@ -425,14 +419,14 @@ static zx_status_t xhci_free_endpoint_state(xhci_t* xhci, xhci_slot_t* slot, xhc
                                             zx_status_t complete_status) {
     xhci_transfer_ring_t* transfer_ring = &ep->transfer_ring;
 
-    {
-        fbl::AutoLock al(&ep->lock);
-        if (ep->state != EP_STATE_DISABLED && ep->state != EP_STATE_DEAD) {
-            return ZX_ERR_BAD_STATE;
-        }
+    mtx_lock(&ep->lock);
+    if (ep->state != EP_STATE_DISABLED && ep->state != EP_STATE_DEAD) {
+        mtx_unlock(&ep->lock);
+        return ZX_ERR_BAD_STATE;
     }
+    mtx_unlock(&ep->lock);
 
-    delete ep->transfer_state;
+    free(ep->transfer_state);
     ep->transfer_state = nullptr;
     xhci_transfer_ring_free(transfer_ring);
 
@@ -463,13 +457,13 @@ static zx_status_t xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_ind
         return ZX_ERR_INTERNAL;
     }
 
-    {
-        fbl::AutoLock al(&ep->lock);
-        if (ep->state != EP_STATE_RUNNING) {
-            return ZX_ERR_BAD_STATE;
-        }
-        ep->state = new_state;
+    mtx_lock(&ep->lock);
+    if (ep->state != EP_STATE_RUNNING) {
+        mtx_unlock(&ep->lock);
+        return ZX_ERR_BAD_STATE;
     }
+    ep->state = new_state;
+    mtx_unlock(&ep->lock);
 
     xhci_sync_command_t command;
     xhci_sync_command_init(&command);
@@ -539,18 +533,17 @@ static zx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
 
     xhci_remove_device(xhci, slot_id);
 
-    {
-        fbl::AutoLock al(&xhci->input_context_lock);
-        auto* icc = reinterpret_cast<xhci_input_control_context_t*>(xhci->input_context);
-        zx_paddr_t icc_phys = xhci->input_context_phys;
-        memset(icc, 0, xhci->context_size);
-        XHCI_WRITE32(&icc->drop_context_flags, drop_flags);
+    mtx_lock(&xhci->input_context_lock);
+    auto* icc = reinterpret_cast<xhci_input_control_context_t*>(xhci->input_context);
+    zx_paddr_t icc_phys = xhci->input_context_phys;
+    memset(icc, 0, xhci->context_size);
+    XHCI_WRITE32(&icc->drop_context_flags, drop_flags);
 
-        zx_status_t status = xhci_send_command(xhci, TRB_CMD_CONFIGURE_EP, icc_phys,
-                                               (slot_id << TRB_SLOT_ID_START));
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "xhci_handle_disconnect_device: TRB_CMD_CONFIGURE_EP failed\n");
-        }
+    zx_status_t status = xhci_send_command(xhci, TRB_CMD_CONFIGURE_EP, icc_phys,
+                                           (slot_id << TRB_SLOT_ID_START));
+    mtx_unlock(&xhci->input_context_lock);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "xhci_handle_disconnect_device: TRB_CMD_CONFIGURE_EP failed\n");
     }
 
     xhci_disable_slot(xhci, slot_id);
@@ -578,10 +571,9 @@ static zx_status_t xhci_handle_reset_device(xhci_t* xhci, uint32_t hub_address, 
     for (int i = 1; i < XHCI_NUM_EPS; i++) {
         xhci_endpoint_t* ep =  &slot->eps[i];
 
-        {
-            fbl::AutoLock al(&ep->lock);
-            ep->state = EP_STATE_DISABLED;
-        }
+        mtx_lock(&ep->lock);
+        ep->state = EP_STATE_DISABLED;
+        mtx_unlock(&ep->lock);
 
         result = xhci_free_endpoint_state(xhci, slot, ep, ZX_ERR_IO_NOT_PRESENT);
         if (result != ZX_OK) {
@@ -610,16 +602,16 @@ static int xhci_device_thread(void* arg) {
         zxlogf(TRACE, "xhci_device_thread top of loop\n");
         // wait for a device to enumerate
         sync_completion_wait(&xhci->command_queue_completion, ZX_TIME_INFINITE);
-        xhci_device_command_t* command;
 
-        {
-            fbl::AutoLock al(&xhci->command_queue_mutex);
-            list_node_t* node = list_remove_head(&xhci->command_queue);
-            command = (node ? containerof(node, xhci_device_command_t, node) : nullptr);
-            if (list_is_empty(&xhci->command_queue)) {
-                sync_completion_reset(&xhci->command_queue_completion);
-            }
+        mtx_lock(&xhci->command_queue_mutex);
+        list_node_t* node = list_remove_head(&xhci->command_queue);
+        xhci_device_command_t* command =
+                                    (node ? containerof(node, xhci_device_command_t, node)
+                                          : nullptr);
+        if (list_is_empty(&xhci->command_queue)) {
+            sync_completion_reset(&xhci->command_queue_completion);
         }
+        mtx_unlock(&xhci->command_queue_mutex);
 
         if (!command) {
             zxlogf(ERROR, "xhci_device_thread: command_queue_completion was signaled, "
@@ -643,7 +635,6 @@ static int xhci_device_thread(void* arg) {
         case STOP_THREAD:
             return 0;
         }
-        delete command;
     }
 
     return 0;
@@ -651,9 +642,9 @@ static int xhci_device_thread(void* arg) {
 
 static zx_status_t xhci_queue_command(xhci_t* xhci, xhci_command_t command, uint32_t hub_address,
                                       uint32_t port, usb_speed_t speed) {
-    fbl::AllocChecker ac;
-    auto* device_command = new (&ac) xhci_device_command_t;
-    if (!ac.check()) {
+    xhci_device_command_t* device_command =
+            static_cast<xhci_device_command_t*>(calloc(1, sizeof(xhci_device_command_t)));
+    if (!device_command) {
         return ZX_ERR_NO_MEMORY;
     }
     device_command->command = command;
@@ -661,9 +652,10 @@ static zx_status_t xhci_queue_command(xhci_t* xhci, xhci_command_t command, uint
     device_command->port = port;
     device_command->speed = speed;
 
-    fbl::AutoLock al(&xhci->command_queue_mutex);
+    mtx_lock(&xhci->command_queue_mutex);
     list_add_tail(&xhci->command_queue, &device_command->node);
     sync_completion_signal(&xhci->command_queue_completion);
+    mtx_unlock(&xhci->command_queue_mutex);
 
     return ZX_OK;
 }
@@ -684,20 +676,19 @@ zx_status_t xhci_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t p
 
 zx_status_t xhci_device_disconnected(xhci_t* xhci, uint32_t hub_address, uint32_t port) {
     zxlogf(TRACE, "xhci_device_disconnected %d %d\n", hub_address, port);
-    {
-        fbl::AutoLock al(&xhci->command_queue_mutex);
-        // check pending device list first
-        xhci_device_command_t* command;
-        list_for_every_entry (&xhci->command_queue, command, xhci_device_command_t, node) {
-            if (command->command == ENUMERATE_DEVICE && command->hub_address == hub_address &&
-                command->port == port) {
-                zxlogf(TRACE, "found on pending list\n");
-                list_delete(&command->node);
-                delete command;
-                return ZX_OK;
-            }
+    mtx_lock(&xhci->command_queue_mutex);
+    // check pending device list first
+    xhci_device_command_t* command;
+    list_for_every_entry (&xhci->command_queue, command, xhci_device_command_t, node) {
+        if (command->command == ENUMERATE_DEVICE && command->hub_address == hub_address &&
+            command->port == port) {
+            zxlogf(TRACE, "found on pending list\n");
+            list_delete(&command->node);
+            mtx_unlock(&xhci->command_queue_mutex);
+            return ZX_OK;
         }
     }
+    mtx_unlock(&xhci->command_queue_mutex);
 
     return xhci_queue_command(xhci, DISCONNECT_DEVICE, hub_address, port, USB_SPEED_UNDEFINED);
 }
@@ -718,7 +709,7 @@ static zx_status_t xhci_update_input_context(xhci_t* xhci, uint32_t slot_id, int
 
 zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id,
                                  const usb_endpoint_descriptor_t* ep_desc,
-                                 const usb_ss_ep_comp_descriptor_t* ss_comp_desc) {
+                                 const usb_ss_ep_comp_descriptor_t* ss_comp_desc, bool enable) {
     if (xhci_is_root_hub(xhci, slot_id)) {
         // nothing to do for root hubs
         return ZX_OK;
@@ -731,135 +722,115 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id,
     ep->ep_type = usb_ep_type(ep_desc);
     ep->max_packet_size = usb_ep_max_packet(ep_desc);
 
-    fbl::AutoLock al(&ep->lock);
+    mtx_lock(&ep->lock);
 
-    if (ep->state == EP_STATE_RUNNING) {
+    if ((enable && ep->state == EP_STATE_RUNNING) || (!enable && ep->state == EP_STATE_DISABLED)) {
+        mtx_unlock(&ep->lock);
         return ZX_OK;
     }
 
-    fbl::AutoLock al2(&xhci->input_context_lock);
-
+    mtx_lock(&xhci->input_context_lock);
     auto* icc = reinterpret_cast<xhci_input_control_context_t*>(xhci->input_context);
     auto* sc = reinterpret_cast<xhci_slot_context_t*>(&xhci->input_context[1 * xhci->context_size]);
     memset(icc, 0, xhci->context_size);
 
-    memset(sc, 0, xhci->context_size);
+    if (enable) {
+        memset(sc, 0, xhci->context_size);
 
-    uint32_t ep_type = ep_desc->bmAttributes & USB_ENDPOINT_TYPE_MASK;
-    uint32_t ep_index = ep_type;
-    if ((ep_desc->bEndpointAddress & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_IN) {
-        ep_index += 4;
-    }
-
-    // See Table 65 in XHCI spec
-    int cerr = (ep_type == USB_ENDPOINT_ISOCHRONOUS ? 0 : 3);
-    int max_packet_size = usb_ep_max_packet(ep_desc);
-
-    int max_burst = 0;
-    if (speed == USB_SPEED_SUPER) {
-        if (ss_comp_desc != nullptr) {
-            max_burst = ss_comp_desc->bMaxBurst;
+        uint32_t ep_type = ep_desc->bmAttributes & USB_ENDPOINT_TYPE_MASK;
+        uint32_t ep_index = ep_type;
+        if ((ep_desc->bEndpointAddress & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_IN) {
+            ep_index += 4;
         }
-    } else if (speed == USB_SPEED_HIGH) {
+
+        // See Table 65 in XHCI spec
+        int cerr = (ep_type == USB_ENDPOINT_ISOCHRONOUS ? 0 : 3);
+        int max_packet_size = usb_ep_max_packet(ep_desc);
+
+        int max_burst = 0;
+        if (speed == USB_SPEED_SUPER) {
+            if (ss_comp_desc != nullptr) {
+                max_burst = ss_comp_desc->bMaxBurst;
+            }
+        } else if (speed == USB_SPEED_HIGH) {
+            if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {
+                max_burst = usb_ep_add_mf_transactions(ep_desc);
+            }
+        }
+
+        int avg_trb_length = max_packet_size * max_burst;
+        int max_esit_payload = 0;
         if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {
-            max_burst = usb_ep_add_mf_transactions(ep_desc);
+            // FIXME - more work needed for superspeed here
+            max_esit_payload = max_packet_size * max_burst;
         }
-    }
 
-    int avg_trb_length = max_packet_size * max_burst;
-    int max_esit_payload = 0;
-    if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {
-        // FIXME - more work needed for superspeed here
-        max_esit_payload = max_packet_size * max_burst;
-    }
+        auto* epc = reinterpret_cast<xhci_endpoint_context_t*>(
+                                        &xhci->input_context[(index + 2) * xhci->context_size]);
+        memset(epc, 0, xhci->context_size);
+        // allocate a transfer ring for the endpoint
+        zx_status_t status = xhci_transfer_ring_init(&ep->transfer_ring, xhci->bti_handle, TRANSFER_RING_SIZE);
+        if (status < 0) {
+            mtx_unlock(&xhci->input_context_lock);
+            mtx_unlock(&ep->lock);
+            return status;
+        }
 
-    auto* epc = reinterpret_cast<xhci_endpoint_context_t*>(
-                                    &xhci->input_context[(index + 2) * xhci->context_size]);
-    memset(epc, 0, xhci->context_size);
-    // allocate a transfer ring for the endpoint
-    zx_status_t status = xhci_transfer_ring_init(&ep->transfer_ring, xhci->bti_handle.get(),
-                                                 TRANSFER_RING_SIZE);
-    if (status < 0) {
+        zx_paddr_t tr_dequeue = xhci_transfer_ring_start_phys(&slot->eps[index].transfer_ring);
+
+        XHCI_SET_BITS32(&epc->epc0, EP_CTX_INTERVAL_START, EP_CTX_INTERVAL_BITS,
+                        compute_interval(ep_desc, speed));
+        XHCI_SET_BITS32(&epc->epc0, EP_CTX_MAX_ESIT_PAYLOAD_HI_START,
+                        EP_CTX_MAX_ESIT_PAYLOAD_HI_BITS,
+                        max_esit_payload >> EP_CTX_MAX_ESIT_PAYLOAD_LO_BITS);
+        XHCI_SET_BITS32(&epc->epc1, EP_CTX_CERR_START, EP_CTX_CERR_BITS, cerr);
+        XHCI_SET_BITS32(&epc->epc1, EP_CTX_EP_TYPE_START, EP_CTX_EP_TYPE_BITS, ep_index);
+        XHCI_SET_BITS32(&epc->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS,
+                        max_packet_size);
+        XHCI_SET_BITS32(&epc->epc1, EP_CTX_MAX_BURST_SIZE_START, EP_CTX_MAX_BURST_SIZE_BITS,
+                        max_burst);
+
+        XHCI_WRITE32(&epc->epc2, ((uint32_t)tr_dequeue & EP_CTX_TR_DEQUEUE_LO_MASK) | EP_CTX_DCS);
+        XHCI_WRITE32(&epc->tr_dequeue_hi, (uint32_t)(tr_dequeue >> 32));
+        XHCI_SET_BITS32(&epc->epc4, EP_CTX_AVG_TRB_LENGTH_START, EP_CTX_AVG_TRB_LENGTH_BITS,
+                        avg_trb_length);
+        XHCI_SET_BITS32(&epc->epc4, EP_CTX_MAX_ESIT_PAYLOAD_LO_START,
+                        EP_CTX_MAX_ESIT_PAYLOAD_LO_BITS, max_esit_payload);
+
+        XHCI_WRITE32(&icc->add_context_flags, XHCI_ICC_SLOT_FLAG | XHCI_ICC_EP_FLAG(index));
+
+        XHCI_WRITE32(&sc->sc0, XHCI_READ32(&slot->sc->sc0));
+        XHCI_WRITE32(&sc->sc1, XHCI_READ32(&slot->sc->sc1));
+        XHCI_WRITE32(&sc->sc2, XHCI_READ32(&slot->sc->sc2));
+        XHCI_SET_BITS32(&sc->sc0, SLOT_CTX_CONTEXT_ENTRIES_START, SLOT_CTX_CONTEXT_ENTRIES_BITS,
+                        index + 1);
+
+        status = xhci_update_input_context(xhci, slot_id, index);
+        mtx_unlock(&xhci->input_context_lock);
+
+        // xhci_stop_endpoint() will handle the !enable case
+        if (status == ZX_OK) {
+            ep->transfer_state =
+                    static_cast<xhci_transfer_state_t*>(calloc(1, sizeof(xhci_transfer_state_t)));
+            if (!ep->transfer_state) {
+                status = ZX_ERR_NO_MEMORY;
+            } else {
+                ep->state = EP_STATE_RUNNING;
+            }
+        }
+        mtx_unlock(&ep->lock);
+        return status;
+    } else {
+        // xhci_stop_endpoint will try to acquire the endpoint lock.
+        // It also needs to wait for the TRB_CMD_STOP_ENDPOINT completion, which may never
+        // complete if another xhci event is waiting for the same endpoint lock.
+        mtx_unlock(&ep->lock);
+        xhci_stop_endpoint(xhci, slot_id, index, EP_STATE_DISABLED, ZX_ERR_BAD_STATE);
+        XHCI_WRITE32(&icc->drop_context_flags, XHCI_ICC_EP_FLAG(index));
+        zx_status_t status = xhci_update_input_context(xhci, slot_id, index);
+        mtx_unlock(&xhci->input_context_lock);
         return status;
     }
-
-    zx_paddr_t tr_dequeue = xhci_transfer_ring_start_phys(&slot->eps[index].transfer_ring);
-
-    XHCI_SET_BITS32(&epc->epc0, EP_CTX_INTERVAL_START, EP_CTX_INTERVAL_BITS,
-                    compute_interval(ep_desc, speed));
-    XHCI_SET_BITS32(&epc->epc0, EP_CTX_MAX_ESIT_PAYLOAD_HI_START,
-                    EP_CTX_MAX_ESIT_PAYLOAD_HI_BITS,
-                    max_esit_payload >> EP_CTX_MAX_ESIT_PAYLOAD_LO_BITS);
-    XHCI_SET_BITS32(&epc->epc1, EP_CTX_CERR_START, EP_CTX_CERR_BITS, cerr);
-    XHCI_SET_BITS32(&epc->epc1, EP_CTX_EP_TYPE_START, EP_CTX_EP_TYPE_BITS, ep_index);
-    XHCI_SET_BITS32(&epc->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS,
-                    max_packet_size);
-    XHCI_SET_BITS32(&epc->epc1, EP_CTX_MAX_BURST_SIZE_START, EP_CTX_MAX_BURST_SIZE_BITS,
-                    max_burst);
-
-    XHCI_WRITE32(&epc->epc2, ((uint32_t)tr_dequeue & EP_CTX_TR_DEQUEUE_LO_MASK) | EP_CTX_DCS);
-    XHCI_WRITE32(&epc->tr_dequeue_hi, (uint32_t)(tr_dequeue >> 32));
-    XHCI_SET_BITS32(&epc->epc4, EP_CTX_AVG_TRB_LENGTH_START, EP_CTX_AVG_TRB_LENGTH_BITS,
-                    avg_trb_length);
-    XHCI_SET_BITS32(&epc->epc4, EP_CTX_MAX_ESIT_PAYLOAD_LO_START,
-                    EP_CTX_MAX_ESIT_PAYLOAD_LO_BITS, max_esit_payload);
-
-    XHCI_WRITE32(&icc->add_context_flags, XHCI_ICC_SLOT_FLAG | XHCI_ICC_EP_FLAG(index));
-
-    XHCI_WRITE32(&sc->sc0, XHCI_READ32(&slot->sc->sc0));
-    XHCI_WRITE32(&sc->sc1, XHCI_READ32(&slot->sc->sc1));
-    XHCI_WRITE32(&sc->sc2, XHCI_READ32(&slot->sc->sc2));
-    XHCI_SET_BITS32(&sc->sc0, SLOT_CTX_CONTEXT_ENTRIES_START, SLOT_CTX_CONTEXT_ENTRIES_BITS,
-                    index + 1);
-
-    status = xhci_update_input_context(xhci, slot_id, index);
-
-    // xhci_stop_endpoint() will handle the !enable case
-    if (status == ZX_OK) {
-        fbl::AllocChecker ac;
-        ep->transfer_state = new (&ac) xhci_transfer_state_t;
-        if (!ac.check()) {
-            status = ZX_ERR_NO_MEMORY;
-        } else {
-            memset(ep->transfer_state, 0, sizeof(*ep->transfer_state));
-            ep->state = EP_STATE_RUNNING;
-        }
-    }
-    return status;
-}
-
-zx_status_t xhci_disable_endpoint(xhci_t* xhci, uint32_t slot_id,
-                                  const usb_endpoint_descriptor_t* ep_desc) {
-    if (xhci_is_root_hub(xhci, slot_id)) {
-        // nothing to do for root hubs
-        return ZX_OK;
-    }
-
-    xhci_slot_t* slot = &xhci->slots[slot_id];
-    uint32_t index = xhci_endpoint_index(ep_desc->bEndpointAddress);
-    xhci_endpoint_t* ep = &slot->eps[index];
-    ep->ep_type = usb_ep_type(ep_desc);
-    ep->max_packet_size = usb_ep_max_packet(ep_desc);
-
-    {
-        fbl::AutoLock al(&ep->lock);
-
-        if (ep->state == EP_STATE_DISABLED) {
-            return ZX_OK;
-        }
-    }
-
-    fbl::AutoLock al(&xhci->input_context_lock);
-
-    auto* icc = reinterpret_cast<xhci_input_control_context_t*>(xhci->input_context);
-    memset(icc, 0, xhci->context_size);
-
-    // xhci_stop_endpoint will try to acquire the endpoint lock.
-    // It also needs to wait for the TRB_CMD_STOP_ENDPOINT completion, which may never
-    // complete if another xhci event is waiting for the same endpoint lock.
-    xhci_stop_endpoint(xhci, slot_id, index, EP_STATE_DISABLED, ZX_ERR_BAD_STATE);
-    XHCI_WRITE32(&icc->drop_context_flags, XHCI_ICC_EP_FLAG(index));
-    return xhci_update_input_context(xhci, slot_id, index);
 }
 
 zx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed,
@@ -878,29 +849,30 @@ zx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed
         ttt = (descriptor->wHubCharacteristics >> 5) & 3;
     }
     //TODO: Check for MTT. Needs a hook for calling set_interface from usb layer.
-    {
-        fbl::AutoLock al(&xhci->input_context_lock);
-        auto* icc = reinterpret_cast<xhci_input_control_context_t*>(xhci->input_context);
-        zx_paddr_t icc_phys = xhci->input_context_phys;
-        auto* sc = reinterpret_cast<xhci_slot_context_t*>(&xhci->input_context[xhci->context_size]);
-        memset(icc, 0, xhci->context_size);
-        memset(sc, 0, xhci->context_size);
-    
-        XHCI_WRITE32(&icc->add_context_flags, XHCI_ICC_SLOT_FLAG);
-        XHCI_WRITE32(&sc->sc0, XHCI_READ32(&slot->sc->sc0) | SLOT_CTX_HUB);
-        XHCI_WRITE32(&sc->sc1, XHCI_READ32(&slot->sc->sc1));
-        XHCI_WRITE32(&sc->sc2, XHCI_READ32(&slot->sc->sc2));
-    
-        XHCI_SET_BITS32(&sc->sc1, SLOT_CTX_ROOT_NUM_PORTS_START, SLOT_CTX_ROOT_NUM_PORTS_BITS,
-                        num_ports);
-        XHCI_SET_BITS32(&sc->sc2, SLOT_CTX_TTT_START, SLOT_CTX_TTT_BITS, ttt);
-    
-        zx_status_t status = xhci_send_command(xhci, TRB_CMD_EVAL_CONTEXT, icc_phys,
-                                               (slot_id << TRB_SLOT_ID_START));
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "xhci_configure_hub: TRB_CMD_EVAL_CONTEXT failed\n");
-            return status;
-        }
+
+    mtx_lock(&xhci->input_context_lock);
+    auto* icc = reinterpret_cast<xhci_input_control_context_t*>(xhci->input_context);
+    zx_paddr_t icc_phys = xhci->input_context_phys;
+    auto* sc = reinterpret_cast<xhci_slot_context_t*>(&xhci->input_context[1 * xhci->context_size]);
+    memset(icc, 0, xhci->context_size);
+    memset(sc, 0, xhci->context_size);
+
+    XHCI_WRITE32(&icc->add_context_flags, XHCI_ICC_SLOT_FLAG);
+    XHCI_WRITE32(&sc->sc0, XHCI_READ32(&slot->sc->sc0) | SLOT_CTX_HUB);
+    XHCI_WRITE32(&sc->sc1, XHCI_READ32(&slot->sc->sc1));
+    XHCI_WRITE32(&sc->sc2, XHCI_READ32(&slot->sc->sc2));
+
+    XHCI_SET_BITS32(&sc->sc1, SLOT_CTX_ROOT_NUM_PORTS_START, SLOT_CTX_ROOT_NUM_PORTS_BITS,
+                    num_ports);
+    XHCI_SET_BITS32(&sc->sc2, SLOT_CTX_TTT_START, SLOT_CTX_TTT_BITS, ttt);
+
+    zx_status_t status = xhci_send_command(xhci, TRB_CMD_EVAL_CONTEXT, icc_phys,
+                                           (slot_id << TRB_SLOT_ID_START));
+    mtx_unlock(&xhci->input_context_lock);
+
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "xhci_configure_hub: TRB_CMD_EVAL_CONTEXT failed\n");
+        return status;
     }
 
     if (speed == USB_SPEED_SUPER) {

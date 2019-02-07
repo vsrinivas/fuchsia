@@ -10,7 +10,7 @@
 
 namespace usb_xhci {
 
-struct xhci_t;
+typedef struct xhci xhci_t;
 
 typedef void (*xhci_transfer_complete_cb)(zx_status_t result, void* data);
 

@@ -5,13 +5,9 @@
 #pragma once
 
 #include <ddktl/device.h>
-#include <ddktl/pdev.h>
 #include <ddktl/protocol/pci.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/usb/hci.h>
-#include <fbl/array.h>
-
-#include <memory>
 
 #include "xhci.h"
 
@@ -55,26 +51,17 @@ public:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(UsbXhci);
 
-    struct Completer {
-        xhci_t *xhci;
-        uint32_t interrupter;
-        uint32_t priority;
-    };
-
     int StartThread();
-    static int CompleterThread(void* arg);
     zx_status_t FinishBind();
     zx_status_t InitPci();
     zx_status_t InitPdev();
     zx_status_t Init();
 
-    fbl::Array<Completer> completers_;
-
     // Pointer to C struct that represents most of the driver.
-    std::unique_ptr<xhci_t> xhci_;
+    xhci_t* xhci_ = nullptr;
 
     ddk::PciProtocolClient pci_;
-    ddk::PDev pdev_;
+    ddk::PDevProtocolClient pdev_;
 };
 
 } // namespace usb_xhci

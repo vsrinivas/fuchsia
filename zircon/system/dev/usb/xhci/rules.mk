@@ -21,7 +21,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/xhci-util.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/dev/lib/mmio \
     system/dev/lib/usb \
     system/ulib/ddk \
     system/ulib/ddktl \
@@ -41,9 +40,6 @@ MODULE_LIBS := \
 MODULE_FIDL_LIBS := system/fidl/fuchsia-usb-debug
 
 MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-clk \
-    system/banjo/ddk-protocol-gpio \
-    system/banjo/ddk-protocol-i2c \
     system/banjo/ddk-protocol-pci \
     system/banjo/ddk-protocol-platform-device \
     system/banjo/ddk-protocol-usb \

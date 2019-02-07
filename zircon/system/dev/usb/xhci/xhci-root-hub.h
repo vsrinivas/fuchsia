@@ -5,36 +5,32 @@
 #pragma once
 
 #include <ddk/protocol/usb/request.h>
-#include <fbl/array.h>
-#include <zircon/hw/usb/hub.h>
 #include <zircon/listnode.h>
 
 #include "xhci-trb.h"
 
 namespace usb_xhci {
 
-struct xhci_t;
-
 // this struct contains state needed for a virtual root hub device
-struct xhci_root_hub_t {
+typedef struct {
     uint8_t num_ports;
 
     // port status for each of our ports
-    fbl::Array<usb_port_status_t>  port_status;
+    usb_port_status_t*  port_status;
 
     // maps our virtual port index to actual root hub port index
-    fbl::Array<uint8_t> port_map;
+    uint8_t* port_map;
 
     // interrupt requests we have pending from hub driver
     list_node_t pending_intr_reqs;
 
-    // device_desc and config_desc point into static data in xhci-root-hub.cpp
-    const usb_device_descriptor_t* device_desc = nullptr;
-    const usb_configuration_descriptor_t* config_desc = nullptr;
+    const usb_device_descriptor_t* device_desc;
+    const usb_configuration_descriptor_t* config_desc;
     usb_speed_t speed;
-};
+} xhci_root_hub_t;
 
 zx_status_t xhci_root_hub_init(xhci_t* xhci, int rh_index);
+void xhci_root_hub_free(xhci_root_hub_t* rh);
 zx_status_t xhci_start_root_hubs(xhci_t* xhci);
 void xhci_stop_root_hubs(xhci_t* xhci);
 zx_status_t xhci_rh_usb_request_queue(xhci_t* xhci, usb_request_t* req, int rh_index);

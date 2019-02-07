@@ -13,7 +13,7 @@ namespace usb_xhci {
 
 // cache is coherent on x86
 // state for endpoint's current transfer
-struct xhci_transfer_state_t {
+typedef struct {
     phys_iter_t         phys_iter;
     uint32_t            packet_count;       // remaining packets to send
     uint8_t             direction;
@@ -21,7 +21,7 @@ struct xhci_transfer_state_t {
     bool                needs_status;       // true if we still need to queue status TRB
     bool                needs_transfer_trb; // true if we still need to queue transfer TRB
     bool                needs_zlp;          // true if we still need to queue a zero length packet
-};
+} xhci_transfer_state_t;
 
 void xhci_print_trb(xhci_transfer_ring_t* ring, xhci_trb_t* trb);
 
