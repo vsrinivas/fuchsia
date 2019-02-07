@@ -8,7 +8,8 @@
 * [Platform Bus](platform-bus.md)
 * [Device Firmware](firmware.md)
 
-## Tutorial presentation
+## Tutorial presentations
 
 * [Driver Development Kit tutorial](ddk-tutorial.md)
+* [Banjo tutorial](banjo-tutorial.md)
 
