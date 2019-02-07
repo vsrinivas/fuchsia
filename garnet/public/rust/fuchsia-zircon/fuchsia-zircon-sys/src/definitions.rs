@@ -188,7 +188,7 @@ extern {
         deadline: zx_time_t,
         args: *const zx_channel_call_args_t,
         actual_bytes: *mut u32,
-        actual_handles: *mut u32,
+        actual_handles: *mut u32
         ) -> zx_status_t;
 
     pub fn zx_socket_create(
@@ -225,7 +225,7 @@ extern {
 
     pub fn zx_socket_shutdown(
         handle: zx_handle_t,
-        options: u32,
+        options: u32
         ) -> zx_status_t;
 
     pub fn zx_thread_exit(
@@ -559,21 +559,21 @@ extern {
         resource: zx_handle_t,
         options: u32,
         out: *mut zx_handle_t
-    ) -> zx_status_t;
+        ) -> zx_status_t;
 
     pub fn zx_debuglog_write(
         handle: zx_handle_t,
         options: u32,
         buffer: *const u8,
         buffer_size: usize
-    ) -> zx_status_t;
+        ) -> zx_status_t;
 
     pub fn zx_debuglog_read(
         handle: zx_handle_t,
         options: u32,
         buffer: *mut u8,
         buffer_size: usize
-    ) -> zx_status_t;
+        ) -> zx_status_t;
 
     pub fn zx_ktrace_read(
         handle: zx_handle_t,
