@@ -113,7 +113,7 @@ TEST(SessionShellSettingsTest, ParseSessionShellSettings_ParseEmptyList) {
 TEST(SessionShellSettingsTest, ParseSessionShellSettings_ParseNameOnly) {
   using DisplayUsage = fuchsia::ui::policy::DisplayUsage;
 
-  const auto& settings =
+  const auto settings =
       internal::ParseSessionShellSettings(R"( [{ "name": "example_name" }] )")
           .at(0);
 
@@ -126,12 +126,12 @@ TEST(SessionShellSettingsTest, ParseSessionShellSettings_ParseNameOnly) {
 TEST(SessionShellSettingsTest, ParseSessionShellSettings_ParseCompleteEntry) {
   using DisplayUsage = fuchsia::ui::policy::DisplayUsage;
 
-  const auto& settings = internal::ParseSessionShellSettings(
-                             R"( [{ "name": "example_name",
+  const auto settings = internal::ParseSessionShellSettings(
+                            R"( [{ "name": "example_name",
                                     "screen_width": "3.14",
                                     "screen_height": "2.718",
                                     "display_usage": "close" }] )")
-                             .at(0);
+                            .at(0);
 
   EXPECT_EQ(settings.name, "example_name");
   EXPECT_FLOAT_EQ(settings.screen_width, 3.14f);
@@ -140,12 +140,12 @@ TEST(SessionShellSettingsTest, ParseSessionShellSettings_ParseCompleteEntry) {
 }
 
 TEST(SessionShellSettingsTest, ParseSessionShellSettings_ParseThreeEntries) {
-  const auto& vector = internal::ParseSessionShellSettings(
+  const auto settings = internal::ParseSessionShellSettings(
       R"( [{ "name": "example_name1" },
            { "name": "example_name2" },
            { "name": "example_name3" }] )");
 
-  EXPECT_EQ(vector.size(), 3u);
+  EXPECT_EQ(settings.size(), 3u);
 }
 
 }  // namespace
