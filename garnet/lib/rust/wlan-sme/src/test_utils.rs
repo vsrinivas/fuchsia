@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::DeviceInfo;
+use crate::{DeviceInfo, MacAddr};
 use bytes::Bytes;
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
@@ -116,12 +116,22 @@ pub fn fake_vht_op_cbw(cbw: fidl_mlme::VhtCbw) -> fidl_mlme::VhtOperation {
     fidl_mlme::VhtOperation { vht_cbw: cbw as u8, ..fake_vht_operation() }
 }
 
+pub fn fake_device_info(addr: MacAddr) -> DeviceInfo {
+    DeviceInfo { addr, bands: vec![], driver_features: vec![] }
+}
+
 pub fn fake_device_info_ht(chanwidth: fidl_mlme::ChanWidthSet) -> DeviceInfo {
-    DeviceInfo { addr: [0; 6], bands: vec![fake_5ghz_band_capabilities_ht_cbw(chanwidth)] }
+    DeviceInfo {
+        bands: vec![fake_5ghz_band_capabilities_ht_cbw(chanwidth)],
+        ..fake_device_info([0; 6])
+    }
 }
 
 pub fn fake_device_info_vht(chanwidth: fidl_mlme::ChanWidthSet) -> DeviceInfo {
-    DeviceInfo { addr: [0; 6], bands: vec![fake_band_capabilities_5ghz_vht(chanwidth)] }
+    DeviceInfo {
+        bands: vec![fake_band_capabilities_5ghz_vht(chanwidth)],
+        ..fake_device_info([0; 6])
+    }
 }
 
 pub fn fake_5ghz_band_capabilities_ht_cbw(

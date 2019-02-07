@@ -1043,6 +1043,6 @@ mod tests {
     }
 
     fn create_sme() -> (ApSme, MlmeStream, TimeStream) {
-        ApSme::new(DeviceInfo { addr: AP_ADDR, bands: vec![] })
+        ApSme::new(fake_device_info(AP_ADDR))
     }
 }

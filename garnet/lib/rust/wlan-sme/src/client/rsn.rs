@@ -139,7 +139,7 @@ mod tests {
     use super::*;
     use crate::{
         client::test_utils::{fake_protected_bss_description, fake_unprotected_bss_description},
-        test_utils::{make_rsne, rsne_as_bytes, wpa2_psk_ccmp_rsne_with_caps},
+        test_utils::{fake_device_info, make_rsne, rsne_as_bytes, wpa2_psk_ccmp_rsne_with_caps},
     };
     use wlan_rsn::rsne::RsnCapabilities;
 
@@ -242,18 +242,14 @@ mod tests {
     #[test]
     fn test_get_rsna_password_for_unprotected_network() {
         let bss = fake_unprotected_bss_description(b"foo_bss".to_vec());
-        let rsna = get_rsna(&make_device_info(), "somepass".as_bytes(), &bss);
+        let rsna = get_rsna(&fake_device_info(CLIENT_ADDR), "somepass".as_bytes(), &bss);
         assert!(rsna.is_err(), "expect error when password is supplied for unprotected network")
     }
 
     #[test]
     fn test_get_rsna_no_password_for_protected_network() {
         let bss = fake_protected_bss_description(b"foo_bss".to_vec());
-        let rsna = get_rsna(&make_device_info(), "".as_bytes(), &bss);
+        let rsna = get_rsna(&fake_device_info(CLIENT_ADDR), "".as_bytes(), &bss);
         assert!(rsna.is_err(), "expect error when no password is supplied for protected network")
-    }
-
-    fn make_device_info() -> DeviceInfo {
-        DeviceInfo { addr: CLIENT_ADDR, bands: vec![] }
     }
 }

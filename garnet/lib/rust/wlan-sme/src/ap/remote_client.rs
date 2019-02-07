@@ -210,7 +210,7 @@ mod tests {
     use crate::{
         ap::{event::Event, test_utils::MockAuthenticator, TimeStream},
         sink::MlmeSink,
-        test_utils, timer, DeviceInfo, MacAddr, MlmeStream,
+        test_utils, timer, MacAddr, MlmeStream,
     };
     use {
         futures::channel::mpsc,
@@ -434,7 +434,7 @@ mod tests {
     }
 
     fn make_env() -> (Context, MlmeStream, TimeStream) {
-        let device_info = DeviceInfo { addr: AP_ADDR, bands: vec![] };
+        let device_info = test_utils::fake_device_info(AP_ADDR);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (timer, time_stream) = timer::create_timer();
         let ctx = Context { device_info, mlme_sink: MlmeSink::new(mlme_sink), timer };

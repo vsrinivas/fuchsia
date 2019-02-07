@@ -9,6 +9,7 @@ use log::error;
 use std::collections::HashSet;
 use std::mem;
 use std::sync::Arc;
+use wlan_common::channel::{Cbw, Channel};
 
 use crate::client::{DeviceInfo, Ssid};
 
@@ -269,7 +270,7 @@ fn new_scan_request(
         ssid,
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
-        channel_list: Some(get_channels_to_scan(&device_info)),
+        channel_list: Some(get_channels_to_scan(&device_info, scan_type)),
         min_channel_time: PASSIVE_SCAN_MIN_CHANNEL_MS,
         max_channel_time: PASSIVE_SCAN_MAX_CHANNEL_MS,
         ssid_list: None,
@@ -317,15 +318,42 @@ fn convert_discovery_result(
     }
 }
 
-fn get_channels_to_scan(device_info: &DeviceInfo) -> Vec<u8> {
+/// Get channels to scan depending on device's capability and scan type. If scan type is passive,
+/// or if scan type is active but the device handles DFS channels, then the channels returned by
+/// this function are the intersection of device's supported channels and Fuchsia supported
+/// channels. If scan type is active and the device doesn't handle DFS channels, then the return
+/// value excludes DFS channels.
+///
+/// Example:
+///
+/// Suppose that Fuchsia supported channels are [1, 2, 52], and 1, 2 are non-DFS channels while
+/// 112 is DFS channel. Also suppose that device's supported channels are [1, 52] as parameter
+/// to DeviceInfo below.
+///
+/// ScanType | Device handles DFS | Return values
+/// ---------+--------------------+-----------------
+/// Passive  | Y                  | [1, 52]
+/// Passive  | N                  | [1, 52]
+/// Active   | Y                  | [1, 52]
+/// Active   | N                  | [1]
+fn get_channels_to_scan(device_info: &DeviceInfo, scan_type: fidl_common::ScanType) -> Vec<u8> {
     let mut device_supported_channels: HashSet<u8> = HashSet::new();
     for band in &device_info.bands {
         device_supported_channels.extend(&band.channels);
     }
 
+    let supports_dfs = device_info.driver_features.contains(&fidl_common::DriverFeature::Dfs);
+
     SUPPORTED_CHANNELS
         .iter()
         .filter(|chan| device_supported_channels.contains(chan))
+        .filter(|chan| {
+            if scan_type == fidl_common::ScanType::Passive || supports_dfs {
+                true
+            } else {
+                !Channel::new(**chan, Cbw::Cbw20).is_dfs()
+            }
+        })
         .map(|chan| *chan)
         .collect()
 }
@@ -345,6 +373,7 @@ mod tests {
 
     use crate::client::test_utils::{fake_bss_with_bssid, fake_unprotected_bss_description};
     use crate::clone_utils::clone_bss_desc;
+    use crate::test_utils;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
@@ -638,7 +667,68 @@ mod tests {
         assert_eq!(Some(&passive_join_scan(b"bar".to_vec(), 20)), sched.get_join_scan());
     }
 
+    #[test]
+    fn test_scan_channels_arg_when_dfs_channel_handling_supported() {
+        let mut device_info = device_info_with_chan(vec![1, 52]);
+        device_info.driver_features = vec![fidl_common::DriverFeature::Dfs];
+        let mut sched: ScanScheduler<i32, i32> = ScanScheduler::new(Arc::new(device_info));
+
+        // Passive scan request should always include all channels supported by device
+        let (_, req) = sched.enqueue_scan_to_join(passive_join_scan(b"foo".to_vec(), 10));
+        let req = req.expect("expect ScanRequest");
+        assert_eq!(req.channel_list, Some(vec![52, 1]));
+
+        let _ = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
+            txn_id: req.txn_id,
+            code: fidl_mlme::ScanResultCodes::Success,
+        });
+
+        // Active scan request should include both DFS and non-DFS channels since device handles
+        // DFS channel
+        let (_, req) = sched.enqueue_scan_to_join(JoinScan {
+            ssid: b"foo".to_vec(),
+            token: 10,
+            scan_type: fidl_common::ScanType::Active,
+        });
+        assert_eq!(req.expect("expect ScanRequest").channel_list, Some(vec![52, 1]));
+    }
+
+    #[test]
+    fn test_scan_channels_arg_when_dfs_channel_handling_not_supported() {
+        let mut device_info = device_info_with_chan(vec![1, 52]);
+        device_info.driver_features = vec![];
+        let mut sched: ScanScheduler<i32, i32> = ScanScheduler::new(Arc::new(device_info));
+
+        // Passive scan request should always include all channels supported by device
+        let (_, req) = sched.enqueue_scan_to_join(passive_join_scan(b"foo".to_vec(), 10));
+        let req = req.expect("expect ScanRequest");
+        assert_eq!(req.channel_list, Some(vec![52, 1]));
+
+        let _ = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
+            txn_id: req.txn_id,
+            code: fidl_mlme::ScanResultCodes::Success,
+        });
+
+        // Active scan request should exclude DFS channels since device does not handle them
+        let (_, req) = sched.enqueue_scan_to_join(JoinScan {
+            ssid: b"foo".to_vec(),
+            token: 10,
+            scan_type: fidl_common::ScanType::Active,
+        });
+        assert_eq!(req.expect("expect ScanRequest").channel_list, Some(vec![1]));
+    }
+
     fn create_sched() -> ScanScheduler<i32, i32> {
-        ScanScheduler::new(Arc::new(DeviceInfo { addr: CLIENT_ADDR, bands: vec![] }))
+        ScanScheduler::new(Arc::new(test_utils::fake_device_info(CLIENT_ADDR)))
+    }
+
+    fn device_info_with_chan(channels: Vec<u8>) -> DeviceInfo {
+        DeviceInfo {
+            bands: vec![fidl_mlme::BandCapabilities {
+                channels,
+                ..test_utils::fake_5ghz_band_capabilities()
+            }],
+            ..test_utils::fake_device_info(CLIENT_ADDR)
+        }
     }
 }

@@ -375,6 +375,7 @@ mod tests {
         expect_info_event, fake_protected_bss_description, fake_unprotected_bss_description,
     };
 
+    use crate::test_utils;
     use crate::Station;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
@@ -601,6 +602,6 @@ mod tests {
     }
 
     fn create_sme() -> (ClientSme, MlmeStream, InfoStream, TimeStream) {
-        ClientSme::new(DeviceInfo { addr: CLIENT_ADDR, bands: vec![] })
+        ClientSme::new(test_utils::fake_device_info(CLIENT_ADDR))
     }
 }

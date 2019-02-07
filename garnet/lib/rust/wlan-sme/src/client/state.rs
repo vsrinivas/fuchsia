@@ -1420,6 +1420,6 @@ mod tests {
     }
 
     fn fake_device_info() -> DeviceInfo {
-        DeviceInfo { addr: [0, 1, 2, 3, 4, 5], bands: vec![] }
+        test_utils::fake_device_info([0, 1, 2, 3, 4, 5])
     }
 }

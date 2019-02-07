@@ -165,6 +165,7 @@ where
     let device_info = wlan_sme::DeviceInfo {
         addr: device_info.mac_addr,
         bands: clone_utils::clone_bands(&device_info.bands),
+        driver_features: device_info.driver_features.clone(),
     };
 
     match role {
