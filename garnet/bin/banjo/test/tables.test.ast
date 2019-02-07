@@ -1,0 +1,79 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.tables",
+    namespaces: {
+        "banjo.examples.tables": [
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "A ",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Ident {
+                            id: "B",
+                            nullable: true
+                        },
+                        ident: "foo"
+                    }
+                ]
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "B ",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Ident {
+                            id: "A",
+                            nullable: true
+                        },
+                        ident: "bar"
+                    }
+                ]
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "C ",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Handle,
+                            nullable: false
+                        },
+                        ident: "baz"
+                    }
+                ]
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "D ",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Ident {
+                            id: "C",
+                            nullable: false
+                        },
+                        ident: "qux"
+                    }
+                ]
+            }
+        ]
+    }
+}

@@ -100,8 +100,10 @@ fn main() -> Result<(), Error> {
 
     if let Some(name) = opt.name {
         if name != ast.primary_namespace {
-            eprintln!("Generated library '{}' did not match --name arguement {}",
-                      ast.primary_namespace, name);
+            eprintln!(
+                "Generated library '{}' did not match --name arguement {}",
+                ast.primary_namespace, name
+            );
             ::std::process::exit(1);
         }
     }

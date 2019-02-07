@@ -1,0 +1,29 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.librarya",
+    namespaces: {
+        "banjo.examples.librarya": [
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "Point",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Float32,
+                        ident: "x"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Float32,
+                        ident: "y"
+                    }
+                ]
+            }
+        ]
+    }
+}

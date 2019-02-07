@@ -1,0 +1,151 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.alignment",
+    namespaces: {
+        "banjo.examples.alignment": [
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "packing_0",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int16,
+                        ident: "i16_0"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int32,
+                        ident: "i32_0"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int16,
+                        ident: "i16_1"
+                    }
+                ]
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "packing_1",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int16,
+                        ident: "i16_0"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int8,
+                        ident: "i8_0"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int16,
+                        ident: "i16_1"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int8,
+                        ident: "i8_1"
+                    }
+                ]
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "packing_2",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int16,
+                        ident: "i16_0"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int8,
+                        ident: "i8_0"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int8,
+                        ident: "i8_1"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int16,
+                        ident: "i16_1"
+                    }
+                ]
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "packing_3",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int32,
+                        ident: "i32_0"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int64,
+                        ident: "i64_0"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int16,
+                        ident: "i16_0"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int32,
+                        ident: "i32_1"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int16,
+                        ident: "i16_1"
+                    }
+                ]
+            }
+        ]
+    }
+}

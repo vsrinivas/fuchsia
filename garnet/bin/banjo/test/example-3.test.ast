@@ -1,0 +1,29 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.example3",
+    namespaces: {
+        "banjo.examples.example3": [
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "Point",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int64,
+                        ident: "x"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int64,
+                        ident: "y"
+                    }
+                ]
+            }
+        ]
+    }
+}

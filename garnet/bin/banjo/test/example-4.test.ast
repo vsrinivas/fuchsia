@@ -1,0 +1,61 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.example4",
+    namespaces: {
+        "banjo.examples.example4": [
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "Point",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: UInt64,
+                        ident: "x"
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "Enum",
+                ty: UInt16,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "x ",
+                        size: SizedRaw(
+                            23
+                        )
+                    }
+                ]
+            },
+            Interface {
+                attributes: Attrs(
+                    []
+                ),
+                name: "Interface",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "func",
+                        in_params: [
+                            (
+                                "x",
+                                Bool
+                            )
+                        ],
+                        out_params: []
+                    }
+                ]
+            }
+        ]
+    }
+}

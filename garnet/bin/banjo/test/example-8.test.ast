@@ -1,0 +1,36 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.example8",
+    namespaces: {
+        "banjo.examples.example8": [
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "foo",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: UInt8,
+                        ident: "u8_0"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: UInt64,
+                        ident: "u64_0"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: UInt8,
+                        ident: "u8_1"
+                    }
+                ]
+            }
+        ]
+    }
+}

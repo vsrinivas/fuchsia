@@ -1,0 +1,439 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.enums",
+    namespaces: {
+        "banjo.examples.enums": [
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "int8_enum",
+                ty: Int8,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kNegativeOne",
+                        size: SizedConstant(
+                            "-1"
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kOne",
+                        size: SizedRaw(
+                            1
+                        )
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "int16_enum",
+                ty: Int16,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kNegativeOne",
+                        size: SizedConstant(
+                            "-1"
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kOne",
+                        size: SizedRaw(
+                            1
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kTwo",
+                        size: SizedRaw(
+                            2
+                        )
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "int32_enum",
+                ty: Int32,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kNegativeOne",
+                        size: SizedConstant(
+                            "-1"
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kOne",
+                        size: SizedRaw(
+                            1
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kTwo",
+                        size: SizedRaw(
+                            2
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kThree",
+                        size: SizedRaw(
+                            3
+                        )
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "int64_enum",
+                ty: Int64,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kNegativeOne",
+                        size: SizedConstant(
+                            "-1"
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kOne",
+                        size: SizedRaw(
+                            1
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kTwo",
+                        size: SizedRaw(
+                            2
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kThree",
+                        size: SizedRaw(
+                            3
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kFour",
+                        size: SizedRaw(
+                            4
+                        )
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "uint8_enum",
+                ty: UInt8,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kOne",
+                        size: SizedRaw(
+                            1
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kTwo",
+                        size: SizedRaw(
+                            2
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kThree",
+                        size: SizedRaw(
+                            3
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kFour",
+                        size: SizedRaw(
+                            4
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kFive",
+                        size: SizedRaw(
+                            5
+                        )
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "uint16_enum",
+                ty: UInt16,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kOne",
+                        size: SizedRaw(
+                            1
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kTwo",
+                        size: SizedRaw(
+                            2
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kThree",
+                        size: SizedRaw(
+                            3
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kFour",
+                        size: SizedRaw(
+                            4
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kFive",
+                        size: SizedRaw(
+                            5
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kSix",
+                        size: SizedRaw(
+                            6
+                        )
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "uint32_enum",
+                ty: UInt32,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kOne",
+                        size: SizedRaw(
+                            1
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kTwo",
+                        size: SizedRaw(
+                            2
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kThree",
+                        size: SizedRaw(
+                            3
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kFour",
+                        size: SizedRaw(
+                            4
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kFive",
+                        size: SizedRaw(
+                            5
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kSix",
+                        size: SizedRaw(
+                            6
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kSeven",
+                        size: SizedRaw(
+                            7
+                        )
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "uint64_enum",
+                ty: UInt64,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kOne",
+                        size: SizedRaw(
+                            1
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kTwo",
+                        size: SizedRaw(
+                            2
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kThree",
+                        size: SizedRaw(
+                            3
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kFour",
+                        size: SizedRaw(
+                            4
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kFive",
+                        size: SizedRaw(
+                            5
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kSix",
+                        size: SizedRaw(
+                            6
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kSeven",
+                        size: SizedRaw(
+                            7
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "kEight",
+                        size: SizedRaw(
+                            8
+                        )
+                    }
+                ]
+            }
+        ]
+    }
+}

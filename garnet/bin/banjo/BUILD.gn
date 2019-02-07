@@ -45,10 +45,11 @@ if (host_toolchain == current_toolchain) {
 
     deps = [
       ":banjo_bin",
+      "//third_party/rust-crates/rustc_deps:pest",
       "//third_party/rust-crates/rustc_deps:pretty_assertions",
       ":banjo_lib($host_toolchain)",
     ]
-    source_root = "test/codegen_tests.rs"
+    source_root = "test/ast_tests.rs"
   }
 
   copy("banjo_host_tests") {

@@ -1,0 +1,49 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.example6",
+    namespaces: {
+        "banjo.examples.example6": [
+            Constant {
+                attributes: Attrs(
+                    []
+                ),
+                name: "x ",
+                ty: Int32,
+                value: SizedRaw(
+                    23
+                )
+            },
+            Interface {
+                attributes: Attrs(
+                    []
+                ),
+                name: "Hello",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Say",
+                        in_params: [
+                            (
+                                "req",
+                                Str {
+                                    size: None,
+                                    nullable: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "response",
+                                Str {
+                                    size: None,
+                                    nullable: false
+                                }
+                            )
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
