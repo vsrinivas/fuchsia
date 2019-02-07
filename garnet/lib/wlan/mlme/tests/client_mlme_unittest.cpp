@@ -636,7 +636,8 @@ TEST_F(ClientTest, ProcessEmptyDataFrames) {
 }
 
 TEST_F(ClientTest, ProcessAmsduDataFrame) {
-    Span<const uint8_t> payload({1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+    const uint8_t payload_data[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    Span<const uint8_t> payload(payload_data);
     std::vector<Span<const uint8_t>> payloads;
     for (size_t payload_len = 1; payload_len <= 10; ++payload_len) {
         payloads.push_back(payload.subspan(0, payload_len));
