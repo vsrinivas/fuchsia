@@ -203,6 +203,14 @@ channel.
 
 ### fidl_encode / fidl_encode_msg
 
+```c
+zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                        zx_handle_t* handles, uint32_t max_handles,
+                        uint32_t* out_actual_handles, const char** out_error_msg);
+zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_msg_t* msg,
+                            uint32_t* out_actual_handles, const char** out_error_msg);
+```
+
 Declared in
 [lib/fidl/coding.h](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl/include/lib/fidl/coding.h),
 defined in
@@ -215,7 +223,7 @@ to fix up internal references. Replaces internal pointers references with
 Extracts non-zero internal handle references out of **bytes**, stores up to
 **max_handles** of them sequentially in **handles**, and replaces their location
 in **bytes** with `FIDL_HANDLE_PRESENT` to indicate their presence. Sets
-**actual_handles_out** to the number of handles stored in **handles**.
+**out_actual_handles** to the number of handles stored in **handles**.
 
 To prevent handle leakage, this operation ensures that either all handles within
 **bytes** are moved into **handles** in case of success or they are all closed in
@@ -225,7 +233,7 @@ If a recoverable error occurs, such as encountering a null pointer for a
 required sub-object, **bytes** remains in an unusable partially modified state.
 
 All handles in **bytes** which were already been consumed up to the point of the
-error are closed and **actual_handles_out** is set to zero. Depth-first traversal of
+error are closed and **out_actual_handles** is set to zero. Depth-first traversal of
 the object then continues to completion, closing all remaining handles in **bytes**.
 
 If an unrecoverable error occurs, such as exceeding the bound of the buffer,
@@ -265,6 +273,14 @@ must be fixed up, the only work amounts to checking the object size and the
 ranges of data types such as enums and union tags.
 
 ### fidl_decode / fidl_decode_msg
+
+```c
+zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                        const zx_handle_t* handles, uint32_t num_handles,
+                        const char** error_msg_out);
+zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_msg_t* msg,
+                            const char** out_error_msg);
+```
 
 Declared in
 [lib/fidl/coding.h](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl/include/lib/fidl/coding.h),
@@ -328,6 +344,13 @@ ranges of data types such as enums and union tags.
 
 ### fidl_validate
 
+```c
+zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
+                          uint32_t num_handles, const char** error_msg_out);
+zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_msg_t* msg,
+                              const char** out_error_msg);
+```
+
 Declared in
 [system/ulib/fidl/include/lib/fidl/coding.h](
 https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl/include/lib/fidl/coding.h),
@@ -352,6 +375,10 @@ must be fixed up, the only work amounts to checking the object size and the
 ranges of data types such as enums and union tags.
 
 ### fidl_epitaph_write
+
+```c
+zx_status_t fidl_epitaph_write(zx_handle_t channel, zx_status_t error);
+```
 
 Declared in
 [lib/fidl/epitaph.h](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl/include/lib/fidl/epitaph.h),
@@ -467,9 +494,9 @@ enum Alert {
 
 [Layout="Simple"]
 interface SpaceShip {
-    1: AdjustHeading(SolarPosition destination) -> (int8 result);
-    2: ScanForLifeforms() -> (vector<uint32>:64 life_signs);
-    3: SetDefenseCondition(Alert alert);
+    AdjustHeading(SolarPosition destination) -> (int8 result);
+    ScanForLifeforms() -> (vector<uint32>:64 life_signs);
+    SetDefenseCondition(Alert alert);
 };
 ```
 
