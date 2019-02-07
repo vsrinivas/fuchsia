@@ -50,6 +50,7 @@ class SessionCtlApp {
   std::string ExecuteAddModCommand(const fxl::CommandLine& command_line);
   std::string ExecuteRemoveModCommand(const fxl::CommandLine& command_line);
   std::string ExecuteDeleteStoryCommand(const fxl::CommandLine& command_line);
+  std::string ExecuteDeleteAllStoriesCommand();
   std::string ExecuteListStoriesCommand();
   std::string ExecuteRestartSessionCommand();
 

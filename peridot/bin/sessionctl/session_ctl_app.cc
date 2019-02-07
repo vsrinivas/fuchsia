@@ -28,6 +28,8 @@ std::string SessionCtlApp::ExecuteCommand(
     return ExecuteRemoveModCommand(command_line);
   } else if (cmd == kDeleteStoryCommandString) {
     return ExecuteDeleteStoryCommand(command_line);
+  } else if (cmd == kDeleteAllStoriesCommandString) {
+    return ExecuteDeleteAllStoriesCommand();
   } else if (cmd == kListStoriesCommandString) {
     return ExecuteListStoriesCommand();
   } else if (cmd == kRestartSessionCommandString) {
@@ -154,6 +156,20 @@ std::string SessionCtlApp::ExecuteDeleteStoryCommand(
   async::PostTask(dispatcher_, [this, story_name, params]() mutable {
     puppet_master_->DeleteStory(story_name, [this, params] {
       logger_.Log(kDeleteStoryCommandString, params);
+      on_command_executed_();
+    });
+  });
+
+  return "";
+}
+
+std::string SessionCtlApp::ExecuteDeleteAllStoriesCommand() {
+  async::PostTask(dispatcher_, [this]() mutable {
+    puppet_master_->GetStories([this](std::vector<std::string> story_names) {
+      for (auto story : story_names) {
+        puppet_master_->DeleteStory(story, [] {});
+      }
+      logger_.Log(kDeleteAllStoriesCommandString, std::move(story_names));
       on_command_executed_();
     });
   });

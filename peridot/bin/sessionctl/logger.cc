@@ -34,13 +34,15 @@ void Logger::LogError(const std::string& command,
 
 void Logger::Log(const std::string& command,
                  const std::vector<std::string>& params) const {
-  std::stringstream output;
-
   if (json_out_) {
     std::cout << GenerateJsonLogString(command, params) << std::endl;
   } else {
+    std::stringstream output;
+
     if (command == kListStoriesCommandString) {
       output << "Stories in this session:" << std::endl;
+    } else if (command == kDeleteAllStoriesCommandString) {
+      output << "Deleted the following stories:" << std::endl;
     }
 
     for (auto& param : params) {
@@ -75,7 +77,8 @@ std::string Logger::GenerateJsonLogString(
 
   // Determine what the strings in |params| represent.
   rapidjson::Value key;
-  if (command == kListStoriesCommandString) {
+  if (command == kListStoriesCommandString ||
+      command == kDeleteAllStoriesCommandString) {
     key.SetString(kStoriesKeyString);
   } else {
     key.SetString(kParamsKeyString);

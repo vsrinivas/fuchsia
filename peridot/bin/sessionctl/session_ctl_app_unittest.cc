@@ -70,7 +70,8 @@ class SessionCtlAppTest : public testing::TestWithSessionStorage {
 
 TEST_F(SessionCtlAppTest, GetUsage) {
   auto command_line = fxl::CommandLineFromInitializerList(
-      {"sessionctl", "--mod_name=mod", "--story_name=story", "--mod_url=foo"});
+      {kSessionCtlString, "--mod_name=mod", "--story_name=story",
+       "--mod_url=foo"});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
 
   // Try to execute an invalid command
@@ -83,7 +84,7 @@ TEST_F(SessionCtlAppTest, GetUsage) {
 TEST_F(SessionCtlAppTest, AddMod) {
   // Add a mod
   auto command_line = fxl::CommandLineFromInitializerList(
-      {"sessionctl", "add_mod",
+      {kSessionCtlString, kAddModCommandString,
        "fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx"});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   RunLoopUntilCommandExecutes([&] {
@@ -104,7 +105,7 @@ TEST_F(SessionCtlAppTest, AddMod) {
 TEST_F(SessionCtlAppTest, AddModWeb) {
   // Add a mod
   auto command_line = fxl::CommandLineFromInitializerList(
-      {"sessionctl", "add_mod", "https://www.google.com"});
+      {kSessionCtlString, kAddModCommandString, "https://www.google.com"});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
@@ -124,7 +125,8 @@ TEST_F(SessionCtlAppTest, AddModWeb) {
 TEST_F(SessionCtlAppTest, AddModExoticScheme) {
   // Add a mod
   auto command_line = fxl::CommandLineFromInitializerList(
-      {"sessionctl", "add_mod", "foobar-pkg://mod_url?q=bad+wolf"});
+      {kSessionCtlString, kAddModCommandString,
+       "foobar-pkg://mod_url?q=bad+wolf"});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
@@ -144,16 +146,18 @@ TEST_F(SessionCtlAppTest, AddModExoticScheme) {
 TEST_F(SessionCtlAppTest, AddModOverrideDefaults) {
   // Add a mod
   auto command_line = fxl::CommandLineFromInitializerList(
-      {"sessionctl", "--story_name=s", "--mod_name=m", "add_mod", "mod_url"});
+      {kSessionCtlString, "--story_name=s", "--mod_name=m",
+       kAddModCommandString, "mod_url"});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
   });
 
   // Assert the story and the mod were added with overriden story and mod names
-  auto story_data = GetStoryData("s");
+  auto story_name = "s";
+  auto story_data = GetStoryData(story_name);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ("s", story_data->story_name);
+  EXPECT_EQ(story_name, story_data->story_name);
   EXPECT_EQ("m", test_executor_.last_commands().at(0).add_mod().mod_name.at(0));
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx",
             test_executor_.last_commands().at(0).add_mod().intent.handler);
@@ -162,8 +166,8 @@ TEST_F(SessionCtlAppTest, AddModOverrideDefaults) {
 
 TEST_F(SessionCtlAppTest, AddModMissingModUrl) {
   // Attempt to add a mod without a mod url
-  auto command_line =
-      fxl::CommandLineFromInitializerList({"sessionctl", "add_mod"});
+  auto command_line = fxl::CommandLineFromInitializerList(
+      {kSessionCtlString, kAddModCommandString});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   std::string error =
       sessionctl.ExecuteCommand(kAddModCommandString, command_line);
@@ -174,25 +178,26 @@ TEST_F(SessionCtlAppTest, AddModMissingModUrl) {
 
 TEST_F(SessionCtlAppTest, RemoveMod) {
   // Add a mod
-  auto command_line =
-      fxl::CommandLineFromInitializerList({"sessionctl", "add_mod", "mod"});
+  auto mod = "mod";
+  auto command_line = fxl::CommandLineFromInitializerList(
+      {kSessionCtlString, kAddModCommandString, mod});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
   });
 
   // Remove the mod
-  command_line =
-      fxl::CommandLineFromInitializerList({"sessionctl", "remove_mod", "mod"});
+  command_line = fxl::CommandLineFromInitializerList(
+      {kSessionCtlString, kRemoveModCommandString, mod});
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kRemoveModCommandString, command_line);
   });
 
   // Assert session_storage still contains the story
-  auto story_data = GetStoryData("mod");
+  auto story_data = GetStoryData(mod);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ("mod", story_data->story_name);
-  EXPECT_EQ("mod",
+  EXPECT_EQ(mod, story_data->story_name);
+  EXPECT_EQ(mod,
             test_executor_.last_commands().at(0).remove_mod().mod_name.at(0));
   EXPECT_EQ(2, test_executor_.execute_count());
 }
@@ -200,32 +205,35 @@ TEST_F(SessionCtlAppTest, RemoveMod) {
 TEST_F(SessionCtlAppTest, RemoveModOverrideDefault) {
   // Add a mod with overridden story and mod names
   auto command_line = fxl::CommandLineFromInitializerList(
-      {"sessionctl", "--story_name=s", "--mod_name=m", "add_mod", "mod"});
+      {kSessionCtlString, "--story_name=s", "--mod_name=m",
+       kAddModCommandString, "mod"});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
   });
 
   // Remove the mod with an overridden story name
+  auto mod_name = "m";
   command_line = fxl::CommandLineFromInitializerList(
-      {"sessionctl", "--story_name=s", "remove_mod", "m"});
+      {kSessionCtlString, "--story_name=s", kRemoveModCommandString, mod_name});
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kRemoveModCommandString, command_line);
   });
 
   // Assert session_storage still contains the story
-  auto story_data = GetStoryData("s");
+  auto story_name = "s";
+  auto story_data = GetStoryData(story_name);
   ASSERT_TRUE(story_data);
-  EXPECT_EQ("s", story_data->story_name);
-  EXPECT_EQ("m",
+  EXPECT_EQ(story_name, story_data->story_name);
+  EXPECT_EQ(mod_name,
             test_executor_.last_commands().at(0).remove_mod().mod_name.at(0));
   EXPECT_EQ(2, test_executor_.execute_count());
 }
 
 TEST_F(SessionCtlAppTest, RemoveModMissingModName) {
   // Attempt to remove a mod without a mod name
-  auto command_line =
-      fxl::CommandLineFromInitializerList({"sessionctl", "remove_mod"});
+  auto command_line = fxl::CommandLineFromInitializerList(
+      {kSessionCtlString, kRemoveModCommandString});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   std::string error =
       sessionctl.ExecuteCommand(kRemoveModCommandString, command_line);
@@ -237,34 +245,67 @@ TEST_F(SessionCtlAppTest, RemoveModMissingModName) {
 TEST_F(SessionCtlAppTest, DeleteStory) {
   // Add a mod with overridden story name
   auto command_line = fxl::CommandLineFromInitializerList(
-      {"sessionctl", "--story_name=story", "add_mod", "mod"});
+      {kSessionCtlString, "--story_name=story", kAddModCommandString, "mod"});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
   });
 
   // Remove the story
+  auto story_name = "story";
   command_line = fxl::CommandLineFromInitializerList(
-      {"sessionctl", "delete_story", "story"});
+      {kSessionCtlString, kDeleteStoryCommandString, story_name});
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kDeleteStoryCommandString, command_line);
   });
 
-  auto story_data = GetStoryData("mod");
+  auto story_data = GetStoryData(story_name);
   EXPECT_FALSE(story_data);
   EXPECT_EQ(1, test_executor_.execute_count());
 }
 
 TEST_F(SessionCtlAppTest, DeleteStoryMissingStoryName) {
   // Attempt to delete a story without the required flags
-  auto command_line =
-      fxl::CommandLineFromInitializerList({"sessionctl", "delete_story"});
+  auto command_line = fxl::CommandLineFromInitializerList(
+      {kSessionCtlString, kDeleteStoryCommandString});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   std::string error =
       sessionctl.ExecuteCommand(kDeleteStoryCommandString, command_line);
 
   RunLoopUntilIdle();
   EXPECT_EQ("Missing STORY_NAME. Ex. sessionctl delete_story story", error);
+}
+
+TEST_F(SessionCtlAppTest, DeleteAllStories) {
+  // Add two mods
+  auto story1 = "story1";
+  auto command_line = fxl::CommandLineFromInitializerList(
+      {kSessionCtlString, kAddModCommandString, story1});
+  SessionCtlApp sessionctl = CreateSessionCtl(command_line);
+  RunLoopUntilCommandExecutes([&] {
+    return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
+  });
+
+  auto story2 = "story2";
+  command_line = fxl::CommandLineFromInitializerList(
+      {kSessionCtlString, kAddModCommandString, story2});
+  RunLoopUntilCommandExecutes([&] {
+    return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
+  });
+
+  EXPECT_TRUE(GetStoryData(story1));
+  EXPECT_TRUE(GetStoryData(story2));
+
+  // Delete all stories
+  command_line = fxl::CommandLineFromInitializerList(
+      {kSessionCtlString, kDeleteAllStoriesCommandString});
+  RunLoopUntilCommandExecutes([&] {
+    return sessionctl.ExecuteCommand(kDeleteAllStoriesCommandString,
+                                     command_line);
+  });
+
+  EXPECT_FALSE(GetStoryData(story1));
+  EXPECT_FALSE(GetStoryData(story2));
 }
 
 }  // namespace

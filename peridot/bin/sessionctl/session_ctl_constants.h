@@ -7,8 +7,11 @@
 
 namespace modular {
 
+constexpr char kSessionCtlString[] = "sessionctl";
+
 // Commands available to SessionCtlApp.
 constexpr char kAddModCommandString[] = "add_mod";
+constexpr char kDeleteAllStoriesCommandString[] = "delete_all_stories";
 constexpr char kDeleteStoryCommandString[] = "delete_story";
 constexpr char kListStoriesCommandString[] = "list_stories";
 constexpr char kLoginGuestCommandString[] = "login_guest";

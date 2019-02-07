@@ -95,6 +95,9 @@ delete_story
   STORY_NAME
     The name of the story.
 
+delete_all_stories
+  Deletes all stories in the current session.
+
 list_stories
   List all the stories in the current session.
 
