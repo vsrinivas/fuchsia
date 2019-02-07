@@ -24,6 +24,7 @@
 namespace {
 
 constexpr char kEnvironment[] = "ScenicPixelTest";
+constexpr zx::duration kTimeout = zx::sec(15);
 
 // These tests need Scenic and RootPresenter at minimum, which expand to the
 // dependencies below. Using |TestWithEnvironment|, we use
@@ -161,12 +162,34 @@ class ScenicPixelTest : public component::testing::TestWithEnvironment {
   // |Present| callback is invoked with an expected presentation timestamp, and
   // then waits until that time.
   void RunUntilPresent(TestView* view) {
+    // Typical sequence of events:
+    // 1. We set up a view bound as a |SessionListener|.
+    // 2. The view sends its initial |Present| to get itself connected, without
+    //    a callback.
+    // 3. We call |RunUntilPresent| which sets a present callback on our
+    //    |TestView|.
+    // 4. |RunUntilPresent| runs the message loop, which allows the view to
+    //    receive a Scenic event telling us our metrics.
+    // 5. In response, the view sets up the scene graph with the test scene.
+    // 6. The view calls |Present| with the callback set in |RunUntilPresent|.
+    // 7. The still-running message loop eventually dispatches the present
+    //    callback.
+    // 8. The callback schedules a quit for the presentation timestamp we got.
+    // 9. The message loop eventually dispatches the quit and exits.
+
     view->set_present_callback([this](fuchsia::images::PresentationInfo info) {
+      zx::time presentation_time =
+          static_cast<zx::time>(info.presentation_time);
+      FXL_LOG(INFO)
+          << "Present scheduled for "
+          << (presentation_time - zx::clock::get_monotonic()).to_msecs()
+          << " ms from now";
       async::PostTaskForTime(dispatcher(), QuitLoopClosure(),
-                             static_cast<zx::time>(info.presentation_time));
+                             presentation_time);
     });
 
-    RunLoop();
+    EXPECT_FALSE(RunLoopWithTimeout(kTimeout))
+        << "Timed out waiting for present. See surrounding logs for details.";
   }
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
@@ -239,6 +262,7 @@ class BackgroundView : public TestView,
 
  private:
   void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) override {
+    FXL_LOG(INFO) << "OnScenicEvent";
     for (const auto& event : events) {
       if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
           event.gfx().Which() ==
@@ -256,11 +280,11 @@ class BackgroundView : public TestView,
   void OnScenicError(std::string error) override { FAIL() << error; }
 
   void OnViewPropertiesChanged(const fuchsia::ui::gfx::vec3& sz) {
+    FXL_LOG(INFO) << "Metrics: " << sz.x << "x" << sz.y << "x" << sz.z;
     if (!sz.x || !sz.y || !sz.z)
       return;
 
     Draw(sz.x * .5f, sz.y * .5f, sz.x, sz.y);
-
     session_.Present(0, std::move(present_callback_));
   }
 
