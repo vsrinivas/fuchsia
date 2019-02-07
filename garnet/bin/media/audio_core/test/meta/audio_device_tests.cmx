@@ -1,0 +1,19 @@
+{
+    "program": {
+        "binary": "test/audio_device_tests"
+    },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.media.Audio": "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx",
+                "fuchsia.media.AudioDeviceEnumerator": "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx"
+            }
+        }
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.media.Audio",
+            "fuchsia.media.AudioDeviceEnumerator"
+        ]
+    }
+}

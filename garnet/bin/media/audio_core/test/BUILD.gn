@@ -40,6 +40,36 @@ test_package("audio_fidl_tests") {
   ]
 }
 
+executable("audio_device_tests_bin") {
+  testonly = true
+  output_name = "audio_device_tests"
+
+  sources = [
+    "audio_device_test.cc",
+    "audio_device_test.h",
+    "audio_tests_shared.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+test_package("audio_device_tests") {
+  deps = [
+    ":audio_device_tests_bin",
+  ]
+
+  tests = [
+    {
+      name = "audio_device_tests"
+    },
+  ]
+}
+
 executable("audio_loopback_tests_bin") {
   testonly = true
   output_name = "audio_loopback_tests"
