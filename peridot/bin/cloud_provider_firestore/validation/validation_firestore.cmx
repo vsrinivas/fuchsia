@@ -2,10 +2,10 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.net.oldhttp.HttpService": "http"
+                "fuchsia.net.oldhttp.HttpService": "fuchsia-pkg://fuchsia.com/http#meta/http.cmx"
             },
             "system-services": [
-                "fuchsia.net.LegacySocketProvider",
+                "fuchsia.net.SocketProvider",
                 "fuchsia.netstack.Netstack",
                 "fuchsia.net.stack.Stack"
             ]
