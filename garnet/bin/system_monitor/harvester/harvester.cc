@@ -20,9 +20,9 @@
 
 #include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
 
-using dockyard::Greeter;
-using dockyard::HelloReply;
-using dockyard::HelloRequest;
+using dockyard_proto::Dockyard;
+using dockyard_proto::InitReply;
+using dockyard_proto::InitRequest;
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
@@ -30,24 +30,24 @@ using grpc::Status;
 class Harvester {
  public:
   Harvester(std::shared_ptr<Channel> channel)
-      : stub_(Greeter::NewStub(channel)) {}
+      : stub_(Dockyard::NewStub(channel)) {}
 
-  std::string SayHello(const std::string& user) {
+  std::string Init() {
     // Data we are sending to the server.
-    HelloRequest request;
-    request.set_name(user);
+    InitRequest request;
+    request.set_name("test");
 
     // Container for the data we expect from the server.
-    HelloReply reply;
+    InitReply reply;
 
     // Context for the client. It could be used to convey extra information to
     // the server and/or tweak certain RPC behaviors.
     ClientContext context;
 
     // The actual RPC.
-    Status status = stub_->SayHello(&context, request, &reply);
+    Status status = stub_->Init(&context, request, &reply);
     if (status.ok()) {
-      return reply.message();
+      return "Init";
     } else {
       std::cout << status.error_code() << ": " << status.error_message()
                 << std::endl;
@@ -56,7 +56,7 @@ class Harvester {
   }
 
  private:
-  std::unique_ptr<Greeter::Stub> stub_;
+  std::unique_ptr<Dockyard::Stub> stub_;
 };
 
 int main(int argc, char** argv) {
@@ -70,8 +70,7 @@ int main(int argc, char** argv) {
   // (InsecureChannelCredentials()).
   Harvester harvester(
       grpc::CreateChannel(argv[1], grpc::InsecureChannelCredentials()));
-  std::string user("world");
-  std::string reply = harvester.SayHello(user);
+  std::string reply = harvester.Init();
   std::cout << "harvester received: " << reply << std::endl;
 
   return 0;

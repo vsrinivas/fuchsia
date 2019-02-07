@@ -33,6 +33,9 @@ constexpr SampleValue SAMPLE_MAX_VALUE = (SampleValue)-3ULL;
 // The upper value used to represent zero to one values with integers.
 constexpr SampleValue NORMALIZATION_RANGE = 1000000ULL;
 
+// For compatibility check with the Harvester.
+constexpr uint32_t DOCKYARD_VERSION = 1;
+
 // A Sample.
 struct Sample {
   SampleTimeNs time;

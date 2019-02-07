@@ -9,20 +9,67 @@ option java_package = "io.grpc.system_monitor.dockyard";
 option java_outer_classname = "DockyardProto";
 option objc_class_prefix = "HLW";
 
-package dockyard;
+package dockyard_proto;
 
-// The greeting service definition.
-service Greeter {
-  // Sends a greeting
-  rpc SayHello (HelloRequest) returns (HelloReply) {}
+// The dockyard service definition.
+service Dockyard {
+  // Sends initial set up data.
+  rpc Init (InitRequest) returns (InitReply) {}
+
+  // Ask the Dockyard what the ID is for the given StreamName.
+  rpc GetStreamIdForName (StreamNameMessage) returns (StreamIdMessage) {}
+
+  // Sends a single sample.
+  rpc SendSample (stream RawSample) returns (stream EmptyMessage) {}
 }
 
-// The request message containing the user's name.
-message HelloRequest {
+// Introduction from the Harvester to the Dockyard.
+message InitRequest {
+  // Device name (e.g. a four word string).
+  string name = 1;
+  // Use `dockyard::DOCKYARD_VERSION` for this value.
+  uint32 version = 2;
+}
+
+// Introduction from the Dockyard to the Harvester
+message InitReply {
+  // The `dockyard::DOCKYARD_VERSION`. The version will be checked by the
+  // Dockyard. Sending this version to the Harvester is for reporting in the
+  // log.
+  uint32 version = 1;
+}
+
+// A non-message. Used for stream protocols to say that nothing is returned.
+message EmptyMessage {}
+
+// A stream name is a colon separated stream label. E.g. "cpu:0:busy_time".
+message StreamNameMessage {
   string name = 1;
 }
 
-// The response message containing the greetings
-message HelloReply {
-  string message = 1;
+// A stream ID is an integer reference to a StreamName.
+message StreamIdMessage {
+  uint64 id = 1;
+}
+
+// Sample data going from the Harvester to the Dockyard. This message defines
+// a type for use by other messages. It is not intended to be used on its own.
+message Sample {
+  uint64 key = 1;
+  uint64 value = 2;
+}
+
+// Sample data going from the Harvester to the Dockyard. A single sample with a
+// time stamp.
+message RawSample {
+  uint64 time = 1;
+  Sample sample = 2;
+}
+
+// Sample data going from the Harvester to the Dockyard. A list of samples with
+// a common timestamp. This is an optimization over sending a burst of separate
+// samples with `RawSample`.
+message RawSamples {
+  uint64 time = 1;
+  repeated Sample samples = 2;
 }

@@ -10,9 +10,9 @@
 
 #include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
 
-using dockyard::Greeter;
-using dockyard::HelloReply;
-using dockyard::HelloRequest;
+using dockyard_proto::Dockyard;
+using dockyard_proto::InitReply;
+using dockyard_proto::InitRequest;
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
@@ -21,11 +21,10 @@ using grpc::Status;
 constexpr char DEFAULT_SERVER_ADDRESS[] = "0.0.0.0:50051";
 
 // Logic and data behind the server's behavior.
-class DockyardServiceImpl final : public Greeter::Service {
-  Status SayHello(ServerContext* context, const HelloRequest* request,
-                  HelloReply* reply) override {
-    std::string prefix("Hello ");
-    reply->set_message(prefix + request->name());
+class DockyardServiceImpl final : public Dockyard::Service {
+  Status Init(ServerContext* context, const InitRequest* request,
+                  InitReply* reply) override {
+    reply->set_version(0);
     return Status::OK;
   }
 };
