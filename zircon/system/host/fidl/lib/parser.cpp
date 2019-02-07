@@ -533,12 +533,10 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod(std::unique_p
     if (!Ok())
         return Fail();
     if (ordinal != nullptr) {
-        // Ordinals are currently ignored.  If we actually found one, we issue a
-        // warning.  This will turn into an error soon.  See FIDL-372.
-        error_reporter_->ReportWarning(scope.GetSourceElement().location(),
-                                       "\nExplicit ordinals are currently ignored. They will be removed from the"
-                                       "\nFIDL language on 11 February 2019.  At that time, this warning will become"
-                                       "\nan error.");
+        // Ordinals are currently an error.  At some point, we should remove the
+        // check for ordinals here. See FIDL-372.
+        error_reporter_->ReportError(scope.GetSourceElement().location(),
+                                     "\nExplicit ordinals are disallowed in Interfaces.");
     }
 
     switch (Peek().kind()) {

@@ -144,7 +144,7 @@ struct Empty {
 };
 
 interface EmptyInterface {
-  5: Send(Empty e);
+  Send(Empty e);
   -> Receive (Empty e);
   SendAndReceive(Empty e) -> (Empty e);
 };
@@ -162,7 +162,7 @@ interface EmptyInterface {
       "methods": [
         {
           "ordinal": 296942602,
-          "generated_ordinal": 5,
+          "generated_ordinal": 296942602,
           "name": "Send",
           "has_request": true,
           "maybe_request": [

@@ -22,21 +22,21 @@ library fidl.test.superinterfaces;
 
 [FragileBase]
 interface A {
-    1: MethodA();
+    MethodA();
 };
 
 [FragileBase]
 interface B : A {
-    2: MethodB();
+    MethodB();
 };
 
 [FragileBase]
 interface C : A {
-    3: MethodC();
+    MethodC();
 };
 
 interface D: B, C {
-    4: MethodD();
+    MethodD();
 };
 
 )FIDL") {}
@@ -49,22 +49,22 @@ library fidl.test.superinterfaces;
 
 [FragileBase]
 interface A {
-    1: MethodA();
+    MethodA();
 };
 
 [FragileBase]
 interface B : A {
-    2: MethodB();
+    MethodB();
 };
 
 [FragileBase]
 interface C : A {
-    3: MethodC();
+    MethodC();
 };
 
 interface D: B, C {
-    4: MethodD();
-    5: MethodA();
+    MethodD();
+    MethodA();
 };
 
 )FIDL") {}
@@ -98,22 +98,22 @@ library fidl.test.superinterfaces;
 
 [FragileBase]
 interface A {
-    1: MethodA(vector<uint64> arg);
+    MethodA(vector<uint64> arg);
 };
 
 [FragileBase]
 interface B : A {
-    2: MethodB();
+    MethodB();
 };
 
 [FragileBase]
 interface C : A {
-    3: MethodC();
+    MethodC();
 };
 
 [Layout="Simple"]
 interface D: B, C {
-    4: MethodD();
+    MethodD();
 };
 
 )FIDL") {}
@@ -175,11 +175,11 @@ bool missing_fragile_base_test() {
 library fidl.test.foo;
 
 interface A {
-    1: MethodA();
+    MethodA();
 };
 
 interface B : A {
-    2: MethodB();
+    MethodB();
 };
 
 )FIDL");
