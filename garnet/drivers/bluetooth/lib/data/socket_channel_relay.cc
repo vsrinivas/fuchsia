@@ -71,7 +71,7 @@ bool SocketChannelRelay<ChannelT>::Activate() {
   const auto self = weak_ptr_factory_.GetWeakPtr();
   const auto channel_id = channel_->id();
   const bool activate_success = channel_->Activate(
-      [self, channel_id](PacketType rx_data) {
+      [self, channel_id](common::ByteBufferPtr rx_data) {
         // Note: this lambda _may_ be invoked synchronously.
         if (self) {
           self->OnChannelDataReceived(std::move(rx_data));
@@ -162,7 +162,8 @@ void SocketChannelRelay<ChannelT>::OnSocketClosed(zx_status_t status) {
 }
 
 template <typename ChannelT>
-void SocketChannelRelay<ChannelT>::OnChannelDataReceived(PacketType rx_data) {
+void SocketChannelRelay<ChannelT>::OnChannelDataReceived(
+    common::ByteBufferPtr rx_data) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   // Note: kActivating is deliberately permitted, as ChannelImpl::Activate()
   // will synchronously deliver any queued frames.
@@ -261,45 +262,38 @@ void SocketChannelRelay<ChannelT>::ServiceSocketWriteQueue() {
   zx_status_t write_res;
   do {
     ZX_DEBUG_ASSERT(!socket_write_queue_.empty());
-    ZX_DEBUG_ASSERT(ValidateRxData(socket_write_queue_.front()));
-    ZX_DEBUG_ASSERT(GetRxDataLen(socket_write_queue_.front()));
+    ZX_DEBUG_ASSERT(socket_write_queue_.front());
+    ZX_DEBUG_ASSERT(socket_write_queue_.front()->size());
 
-    const PacketType& rx_data = socket_write_queue_.front();
-    const bool copy_success = InvokeWithRxData(
-        [&](const common::ByteBuffer& rx_bytes) {
-          size_t n_bytes_written = 0;
-          write_res = socket_.write(0, rx_bytes.data(), rx_bytes.size(),
-                                    &n_bytes_written);
-          ZX_DEBUG_ASSERT_MSG(write_res == ZX_OK ||
-                                  write_res == ZX_ERR_SHOULD_WAIT ||
-                                  write_res == ZX_ERR_PEER_CLOSED,
-                              "%s", zx_status_get_string(write_res));
-          if (write_res != ZX_OK) {
-            ZX_DEBUG_ASSERT(n_bytes_written == 0);
-            bt_log(SPEW, "l2cap",
-                   "Failed to write %zu bytes to socket for channel %u: %s",
-                   rx_bytes.size(), channel_->id(),
-                   zx_status_get_string(write_res));
-            return;
-          }
-          ZX_DEBUG_ASSERT_MSG(n_bytes_written == rx_bytes.size(),
-                              "(n_bytes_written=%zu, rx_bytes.size()=%zu)",
-                              n_bytes_written, rx_bytes.size());
-          socket_write_queue_.pop_front();
-        },
-        rx_data);
-    ZX_DEBUG_ASSERT(copy_success);
+    const common::ByteBuffer& rx_data = *socket_write_queue_.front();
+    size_t n_bytes_written = 0;
+    write_res =
+        socket_.write(0, rx_data.data(), rx_data.size(), &n_bytes_written);
+    ZX_DEBUG_ASSERT_MSG(write_res == ZX_OK || write_res == ZX_ERR_SHOULD_WAIT ||
+                            write_res == ZX_ERR_PEER_CLOSED,
+                        "%s", zx_status_get_string(write_res));
+    if (write_res != ZX_OK) {
+      ZX_DEBUG_ASSERT(n_bytes_written == 0);
+      bt_log(SPEW, "l2cap",
+             "Failed to write %zu bytes to socket for channel %u: %s",
+             rx_data.size(), channel_->id(), zx_status_get_string(write_res));
+      break;
+    }
+    ZX_DEBUG_ASSERT_MSG(n_bytes_written == rx_data.size(),
+                        "(n_bytes_written=%zu, rx_data.size()=%zu)",
+                        n_bytes_written, rx_data.size());
+    socket_write_queue_.pop_front();
   } while (write_res == ZX_OK && !socket_write_queue_.empty());
 
   if (!socket_write_queue_.empty() && write_res == ZX_ERR_SHOULD_WAIT) {
     // Since we hava data to write, we want to be woken when the socket has free
     // space in its buffer. And, to avoid spinning, we want to be woken only
-    // when the free space is large enough for our first pending PacketType.
+    // when the free space is large enough for our first pending buffer.
     //
     // Note: it is safe to leave TX_THRESHOLD set, even when our queue is empty,
     // because we will only be woken if we also have an active Wait for
     // ZX_SOCKET_WRITE_THRESHOLD, and Waits are one-shot.
-    const size_t rx_data_len = GetRxDataLen(socket_write_queue_.front());
+    const size_t rx_data_len = socket_write_queue_.front()->size();
     const auto prop_set_res = socket_.set_property(
         ZX_PROP_SOCKET_TX_THRESHOLD, &rx_data_len, sizeof(rx_data_len));
     switch (prop_set_res) {

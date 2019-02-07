@@ -60,8 +60,6 @@ namespace l2cap {
 // Activate().
 class Channel : public fbl::RefCounted<Channel> {
  public:
-  using PacketType = common::ByteBufferPtr;
-
   // Identifier for this channel's endpoint on this device. It can be prior-
   // specified for fixed channels or allocated for dynamic channels per v5.0,
   // Vol 3, Part A, Section 2.1 "Channel Identifiers." Channels on a link will
@@ -105,7 +103,7 @@ class Channel : public fbl::RefCounted<Channel> {
   // Callback invoked when a new packet is received on this channel. Any
   // previously buffered packets will be sent to |rx_cb| right away, provided
   // that |rx_cb| is not empty and the underlying logical link is active.
-  using RxCallback = fit::function<void(PacketType packet)>;
+  using RxCallback = fit::function<void(common::ByteBufferPtr packet)>;
 
   // Activates this channel assigning |dispatcher| to execute |rx_callback| and
   // |closed_callback|.

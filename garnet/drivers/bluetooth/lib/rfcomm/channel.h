@@ -25,7 +25,6 @@ class Session;  // Break mutual dependency.
 class Channel : public fbl::RefCounted<Channel> {
  public:
   using UniqueId = uint64_t;
-  using PacketType = common::ByteBufferPtr;
 
   virtual ~Channel() = default;
 
@@ -37,7 +36,7 @@ class Channel : public fbl::RefCounted<Channel> {
   // connections.
   UniqueId unique_id() const { return dlci_; }
 
-  using RxCallback = fit::function<void(PacketType)>;
+  using RxCallback = fit::function<void(common::ByteBufferPtr)>;
   using ClosedCallback = fit::closure;
   // Activates this channel assigning |dispatcher| to execute |rx_callback| and
   // |closed_callback|. Returns true on success.
@@ -52,7 +51,7 @@ class Channel : public fbl::RefCounted<Channel> {
   // the assumption that the underlying transport is reliable. The channel must
   // be activated prior to sending. Returns true if the data was successfully
   // queued.
-  virtual bool Send(PacketType data) = 0;
+  virtual bool Send(common::ByteBufferPtr data) = 0;
 
  protected:
   friend class Session;
@@ -85,7 +84,7 @@ class Channel : public fbl::RefCounted<Channel> {
   // |rx_callback_| is registered, the frame is forwarded to the callback;
   // otherwise, the frame is buffered and is forwarded once a callback gets
   // registered.
-  virtual void Receive(PacketType data) = 0;
+  virtual void Receive(common::ByteBufferPtr data) = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Channel);
 };
@@ -97,7 +96,7 @@ class ChannelImpl : public Channel {
   // Channel overrides
   bool Activate(RxCallback rx_callback, ClosedCallback closed_callback,
                 async_dispatcher_t* dispatcher) override;
-  bool Send(PacketType data) override;
+  bool Send(common::ByteBufferPtr data) override;
 
  private:
   friend class rfcomm::Session;
@@ -106,9 +105,9 @@ class ChannelImpl : public Channel {
   ChannelImpl(DLCI dlci, Session* session);
 
   // This should only be called from Session.
-  void Receive(PacketType data) override;
+  void Receive(common::ByteBufferPtr data) override;
 
-  std::queue<PacketType> pending_rxed_frames_;
+  std::queue<common::ByteBufferPtr> pending_rxed_frames_;
 };
 
 }  //  namespace internal

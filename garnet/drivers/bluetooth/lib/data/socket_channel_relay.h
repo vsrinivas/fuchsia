@@ -17,6 +17,8 @@
 #include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/zx/socket.h"
 
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+
 namespace btlib::data::internal {
 
 // SocketChannelRelay relays data between a zx::socket and a Channel. This class
@@ -64,8 +66,6 @@ class SocketChannelRelay final {
   __WARN_UNUSED_RESULT bool Activate();
 
  private:
-  using PacketType = typename ChannelT::PacketType;
-
   enum class RelayState {
     kActivating,
     kActivated,
@@ -94,7 +94,7 @@ class SocketChannelRelay final {
   void OnSocketClosed(zx_status_t status);
 
   // Callbacks for ChannelT events.
-  void OnChannelDataReceived(PacketType sdu);
+  void OnChannelDataReceived(common::ByteBufferPtr sdu);
   void OnChannelClosed();
 
   // Copies any data currently available on |socket_| to |channel_|. Does not
@@ -139,7 +139,7 @@ class SocketChannelRelay final {
   //
   // TODO(NET-1478): Switch to common::LinkedList.
   // TODO(NET-1476): We should set an upper bound on the size of this queue.
-  std::deque<PacketType> socket_write_queue_;
+  std::deque<common::ByteBufferPtr> socket_write_queue_;
 
   const fxl::ThreadChecker thread_checker_;
   fxl::WeakPtrFactory<SocketChannelRelay> weak_ptr_factory_;  // Keep last.
