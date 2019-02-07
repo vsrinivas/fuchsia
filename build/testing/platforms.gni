@@ -48,8 +48,14 @@ test_platforms = [
   # See IN-819.
   {
     os = "Linux"
+    cpu = "x64"
+  },
+  {
+    os = "Linux"
+    cpu = "arm64"
   },
   {
     os = "Mac"
+    cpu = "x64"
   },
 ]

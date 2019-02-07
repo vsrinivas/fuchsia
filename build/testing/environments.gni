@@ -20,7 +20,6 @@ vim2_env = {
   dimensions = {
     device_type = "Khadas Vim2 Max"
   }
-
   # TODO(IN-571): Delete after bring-up.
   label = "vim2"
 }
@@ -28,8 +27,8 @@ vim2_env = {
 linux_env = {
   dimensions = {
     os = "Linux"
+    cpu = current_cpu
   }
-
   # TODO(IN-819): Delete after bring-up.
   label = "host"
 }
@@ -37,8 +36,8 @@ linux_env = {
 mac_env = {
   dimensions = {
     os = "Mac"
+    cpu = current_cpu
   }
-
   # TODO(IN-819): Delete after bring-up.
   label = "host"
 }
