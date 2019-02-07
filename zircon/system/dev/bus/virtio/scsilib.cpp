@@ -26,8 +26,8 @@ uint32_t CountLuns(Controller* controller, uint8_t target) {
         // For now, assume REPORT LUNS is supported. A failure indicates no LUNs on this target.
         return 0;
     }
-    // data.lun_list_length is 8 + the number of bytes of LUN structures.
-    return (ntohl(data.lun_list_length) - 8) / 8;
+    // data.lun_list_length is the number of bytes of LUN structures.
+    return ntohl(data.lun_list_length) / 8;
 }
 
 zx_status_t Disk::Create(Controller* controller, zx_device_t* parent, uint8_t target,
@@ -88,7 +88,7 @@ zx_status_t Disk::Bind() {
         return status;
     }
 
-    blocks_ = htobe64(read_capacity_data.returned_logical_block_address);
+    blocks_ = htobe64(read_capacity_data.returned_logical_block_address) + 1;
     block_size_ = ntohl(read_capacity_data.block_length_in_bytes);
 
     zxlogf(INFO, "%ld blocks of %d bytes\n", blocks_, block_size_);

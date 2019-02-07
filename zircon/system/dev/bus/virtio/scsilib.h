@@ -203,6 +203,7 @@ class Disk : public DeviceType, public ddk::BlockImplProtocol<Disk, ddk::base_pr
         info_out->block_count = blocks_;
         info_out->max_transfer_size = block_size_;  // TODO(ZX-2314): Correct this size.
         info_out->flags = (removable_) ? BLOCK_FLAG_REMOVABLE : 0;
+        *block_op_size_out = sizeof(block_op_t);
     }
     void BlockImplQueue(block_op_t* operation, block_impl_queue_callback completion_cb,
                         void* cookie);
