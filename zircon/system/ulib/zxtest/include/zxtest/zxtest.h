@@ -50,6 +50,11 @@ static void zxtest_clean_buffer(char** buffer) {
         (char*)malloc(req_size * sizeof(char));                                                    \
     memset(buffer_name, '\0', req_size);
 
+#define _RETURN_IF_FATAL(fatal)                                                                    \
+    if (fatal && _ZXTEST_ABORT_IF_ERROR) {                                                         \
+        return;                                                                                    \
+    }
+
 #define _ASSERT_VAR_BYTES(op, expected, actual, size, fatal, file, line, desc, ...)                \
     do {                                                                                           \
         const void* _actual = (actual);                                                            \
@@ -61,45 +66,31 @@ static void zxtest_clean_buffer(char** buffer) {
             _ZXTEST_LOAD_PRINT_HEX(_expected, size, exptd, line);                                  \
             _ZXTEST_ASSERT(msg_buffer, #expected, _ZXTEST_GET_PRINT_VAR(_expected, exptd, line),   \
                            #actual, _ZXTEST_GET_PRINT_VAR(_actual, act, line), file, line, fatal); \
-            if (fatal && _ZXTEST_ABORT_IF_ERROR) {                                                 \
-                return;                                                                            \
-            }                                                                                      \
+            _RETURN_IF_FATAL(fatal);                                                               \
+        }                                                                                          \
+    } while (0)
+
+#define _ASSERT_VAR_COERCE(op, expected, actual, type, fatal, file, line, desc, ...)               \
+    do {                                                                                           \
+        const type _actual = (actual);                                                             \
+        const type _expected = (expected);                                                         \
+        if (!(op(_actual, _expected))) {                                                           \
+            _LOAD_BUFFER(msg_buffer, desc, __VA_ARGS__);                                           \
+            _GEN_ASSERT_DESC(msg_buffer, req_size, desc, ##__VA_ARGS__);                           \
+            _ZXTEST_LOAD_PRINT_VAR(_actual, act, line);                                            \
+            _ZXTEST_LOAD_PRINT_VAR(_expected, exptd, line);                                        \
+            _ZXTEST_ASSERT(msg_buffer, #expected, _ZXTEST_GET_PRINT_VAR(_expected, exptd, line),   \
+                           #actual, _ZXTEST_GET_PRINT_VAR(_actual, act, line), file, line, fatal); \
+            _RETURN_IF_FATAL(fatal);                                                               \
         }                                                                                          \
     } while (0)
 
 #define _ASSERT_VAR(op, expected, actual, fatal, file, line, desc, ...)                            \
-    do {                                                                                           \
-        const _ZXTEST_AUTO_VAR_TYPE(actual) _actual = (actual);                                    \
-        const _ZXTEST_AUTO_VAR_TYPE(expected) _expected = (expected);                              \
-        if (!(op(_actual, _expected))) {                                                           \
-            _LOAD_BUFFER(msg_buffer, desc, __VA_ARGS__);                                           \
-            _GEN_ASSERT_DESC(msg_buffer, req_size, desc, ##__VA_ARGS__);                           \
-            _ZXTEST_LOAD_PRINT_VAR(_actual, act, line);                                            \
-            _ZXTEST_LOAD_PRINT_VAR(_expected, exptd, line);                                        \
-            _ZXTEST_ASSERT(msg_buffer, #expected, _ZXTEST_GET_PRINT_VAR(_expected, exptd, line),   \
-                           #actual, _ZXTEST_GET_PRINT_VAR(_actual, act, line), file, line, fatal); \
-            if (fatal && _ZXTEST_ABORT_IF_ERROR) {                                                 \
-                return;                                                                            \
-            }                                                                                      \
-        }                                                                                          \
-    } while (0)
+    _ASSERT_VAR_COERCE(op, expected, actual, _ZXTEST_AUTO_VAR_TYPE(expected), fatal, file, line,   \
+                       desc, ##__VA_ARGS__)
 
 #define _ASSERT_PTR(op, expected, actual, fatal, file, line, desc, ...)                            \
-    do {                                                                                           \
-        const void* _actual = (const void*)(actual);                                               \
-        const void* _expected = (const void*)(expected);                                           \
-        if (!(op(_actual, _expected))) {                                                           \
-            _LOAD_BUFFER(msg_buffer, desc, __VA_ARGS__);                                           \
-            _GEN_ASSERT_DESC(msg_buffer, req_size, desc, ##__VA_ARGS__);                           \
-            _ZXTEST_LOAD_PRINT_VAR(_actual, act, line);                                            \
-            _ZXTEST_LOAD_PRINT_VAR(_expected, exptd, line);                                        \
-            _ZXTEST_ASSERT(msg_buffer, #expected, _ZXTEST_GET_PRINT_VAR(_expected, exptd, line),   \
-                           #actual, _ZXTEST_GET_PRINT_VAR(_actual, act, line), file, line, fatal); \
-            if (fatal && _ZXTEST_ABORT_IF_ERROR) {                                                 \
-                return;                                                                            \
-            }                                                                                      \
-        }                                                                                          \
-    } while (0)
+    _ASSERT_VAR_COERCE(op, expected, actual, void*, fatal, file, line, desc, ##__VA_ARGS__)
 
 #define ASSERT_EQ(val2, val1, ...)                                                                 \
     _ASSERT_VAR(_EQ, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " == " #val2 ".",     \
@@ -209,20 +200,20 @@ static void zxtest_clean_buffer(char** buffer) {
                       "Expected " #val1 " same bytes as " #val2 ".", ##__VA_ARGS__)
 
 #define ASSERT_TRUE(val, ...)                                                                      \
-    _ASSERT_VAR(_EQ, val, true, true, __FILE__, __LINE__, "Expected " #val " is true.",            \
-                ##__VA_ARGS__)
+    _ASSERT_VAR_COERCE(_EQ, val, true, bool, true, __FILE__, __LINE__,                             \
+                       "Expected " #val " is true.", ##__VA_ARGS__)
 
 #define ASSERT_FALSE(val, ...)                                                                     \
-    _ASSERT_VAR(_EQ, val, false, true, __FILE__, __LINE__, "Expected " #val " is false.",          \
-                ##__VA_ARGS__)
+    _ASSERT_VAR_COERCE(_EQ, val, false, bool, true, __FILE__, __LINE__,                            \
+                       "Expected " #val " is false.", ##__VA_ARGS__)
 
 #define EXPECT_TRUE(val, ...)                                                                      \
-    _ASSERT_VAR(_EQ, val, true, false, __FILE__, __LINE__, "Expected " #val " is true.",           \
-                ##__VA_ARGS__)
+    _ASSERT_VAR_COERCE(_EQ, val, true, bool, false, __FILE__, __LINE__,                            \
+                       "Expected " #val " is true.", ##__VA_ARGS__)
 
 #define EXPECT_FALSE(val, ...)                                                                     \
-    _ASSERT_VAR(_EQ, val, false, false, __FILE__, __LINE__, "Expected " #val " is false.",         \
-                ##__VA_ARGS__)
+    _ASSERT_VAR_COERCE(_EQ, val, false, bool, false, __FILE__, __LINE__,                           \
+                       "Expected " #val " is false.", ##__VA_ARGS__)
 
 #define FAIL(...)                                                                                  \
     _ASSERT_VAR(_EQ, false, true, true, __FILE__, __LINE__, "Failure condition met.", ##__VA_ARGS__)

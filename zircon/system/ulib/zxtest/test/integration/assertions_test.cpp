@@ -15,14 +15,14 @@
 // Tests will fail because we are verifying they actually work as intended, though the
 // pass/fail behavior is decided based on Verify functions.
 namespace {
-TEST(ZxTestAssertionsTest, Fail) {
+TEST(ZxTestAssertionTest, Fail) {
     TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
                      "FAIL(...) macro did not abort test execution.");
     FAIL("Something bad happened.");
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertTrueAndFalse) {
+TEST(ZxTestAssertionTest, AssertTrueAndFalse) {
     TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
                      "EXPECT/ASSERT_TRUE/FALSE returned on success.");
     EXPECT_TRUE(true, "EXPECT_TRUE failed.");
@@ -32,7 +32,7 @@ TEST(ZxTestAssertionsTest, AssertTrueAndFalse) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertTrueAndFalseFailure) {
+TEST(ZxTestAssertionTest, AssertTrueAndFalseFailure) {
     TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS,
                      "EXPECT/ASSERT_TRUE/FALSE returned on success.");
     EXPECT_TRUE(false, "EXPECT_TRUE suceed");
@@ -40,21 +40,21 @@ TEST(ZxTestAssertionsTest, AssertTrueAndFalseFailure) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertFalseFailureFatal) {
+TEST(ZxTestAssertionTest, AssertFalseFailureFatal) {
     TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
                      "ASSERT_FALSE failed to abort test execution.");
     ASSERT_FALSE(true, "ASSERT_FALSE success.");
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertTrueFailureFatal) {
+TEST(ZxTestAssertionTest, AssertTrueFailureFatal) {
     TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
                      "ASSERT_TRUE failed to abort test execution.");
     ASSERT_TRUE(false, "ASSERT_TRUE succeed.");
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertEQSuccess) {
+TEST(ZxTestAssertionTest, AssertEQSuccess) {
     TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "ASSERT/EXPECT_EQ aborted test on success.");
     int a = 1;
     int b = 2;
@@ -68,7 +68,7 @@ TEST(ZxTestAssertionsTest, AssertEQSuccess) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertEQFailure) {
+TEST(ZxTestAssertionTest, AssertEQFailure) {
     TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_EQ aborted execution.");
     int a = 1;
     int b = 2;
@@ -78,13 +78,13 @@ TEST(ZxTestAssertionsTest, AssertEQFailure) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertEQFailureFatal) {
+TEST(ZxTestAssertionTest, AssertEQFailureFatal) {
     TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "ASSERT_EQ did not abort test execution.");
     ASSERT_EQ(1, 2, "ASSERT_EQ inequality detection succeeded.");
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertNESuccess) {
+TEST(ZxTestAssertionTest, AssertNESuccess) {
     TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "EXPECT_NE aborted test execution.");
     int a = 1;
     int b = 2;
@@ -95,7 +95,7 @@ TEST(ZxTestAssertionsTest, AssertNESuccess) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertNEFailure) {
+TEST(ZxTestAssertionTest, AssertNEFailure) {
     TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_NE aborted test execution.");
     int a = 1;
 
@@ -104,7 +104,7 @@ TEST(ZxTestAssertionsTest, AssertNEFailure) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertNEFailureFatal) {
+TEST(ZxTestAssertionTest, AssertNEFailureFatal) {
     TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
                      "ASSERT_NE  did not abort test execution.");
     int a = 1;
@@ -113,7 +113,7 @@ TEST(ZxTestAssertionsTest, AssertNEFailureFatal) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertLT) {
+TEST(ZxTestAssertionTest, AssertLT) {
     TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "ASSERT_LT did not abort test execution.");
     int a = 1;
     int b = 2;
@@ -124,7 +124,7 @@ TEST(ZxTestAssertionsTest, AssertLT) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertLTFailure) {
+TEST(ZxTestAssertionTest, AssertLTFailure) {
     TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "ASSERT_LT  did not abort test execution.");
     int a = 1;
     int b = 2;
@@ -134,7 +134,7 @@ TEST(ZxTestAssertionsTest, AssertLTFailure) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertLTFailureFatal) {
+TEST(ZxTestAssertionTest, AssertLTFailureFatal) {
     TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "ASSERT_LT did not abort test execution.");
     int a = 1;
     int b = 2;
@@ -143,7 +143,7 @@ TEST(ZxTestAssertionsTest, AssertLTFailureFatal) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertLE) {
+TEST(ZxTestAssertionTest, AssertLE) {
     TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
                      "ASSERT/EXPECT_LE aborted test execution on success.");
     int a = 1;
@@ -158,7 +158,7 @@ TEST(ZxTestAssertionsTest, AssertLE) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertLEFailure) {
+TEST(ZxTestAssertionTest, AssertLEFailure) {
     TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_LE aborted test execution.");
     int a = 1;
     int b = 2;
@@ -168,7 +168,7 @@ TEST(ZxTestAssertionsTest, AssertLEFailure) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertLEFailureFatal) {
+TEST(ZxTestAssertionTest, AssertLEFailureFatal) {
     TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "ASSERT_LE did not abort test execution.");
     int a = 1;
     int b = 2;
@@ -177,7 +177,7 @@ TEST(ZxTestAssertionsTest, AssertLEFailureFatal) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertGT) {
+TEST(ZxTestAssertionTest, AssertGT) {
     TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "EXPECT_GT aborted test execution on success.");
     int a = 1;
     int b = 2;
@@ -187,7 +187,7 @@ TEST(ZxTestAssertionsTest, AssertGT) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertGTFailure) {
+TEST(ZxTestAssertionTest, AssertGTFailure) {
     TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_GT aborted test execution.");
     int a = 1;
     int b = 2;
@@ -196,7 +196,7 @@ TEST(ZxTestAssertionsTest, AssertGTFailure) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertGTFatalFailure) {
+TEST(ZxTestAssertionTest, AssertGTFatalFailure) {
     TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "EXPECT_GT did aborted test execution.");
     int a = 1;
     int b = 2;
@@ -205,7 +205,7 @@ TEST(ZxTestAssertionsTest, AssertGTFatalFailure) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertGE) {
+TEST(ZxTestAssertionTest, AssertGE) {
     TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
                      "ASSERT/EXPECT_GE aborted test execution on success.");
     int a = 1;
@@ -218,7 +218,7 @@ TEST(ZxTestAssertionsTest, AssertGE) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertGEFailure) {
+TEST(ZxTestAssertionTest, AssertGEFailure) {
     TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS,
                      "ASSERT/EXPECT_GE aborted test execution on success.");
     int a = 1;
@@ -229,7 +229,7 @@ TEST(ZxTestAssertionsTest, AssertGEFailure) {
     TEST_CHECKPOINT();
 }
 
-TEST(ZxTestAssertionsTest, AssertGEFailureFatal) {
+TEST(ZxTestAssertionTest, AssertGEFailureFatal) {
     TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
                      "ASSERT/EXPECT_GE aborted test execution on success.");
     int a = 1;
@@ -519,6 +519,94 @@ void HelperFn(bool fail) {
 TEST(ZXTestAssertionTest, AssertNoFatalFailureWithFailure) {
     TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Aborted test execution on helper failure.");
     ASSERT_NO_FATAL_FAILURES(HelperFn(true), "HelperFn had a failure. This is expected.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZXTestAssertionTest, AssertTrueCoerceTypeToBoolFailure) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to identify false.");
+    int a = 0;
+    ASSERT_TRUE(a, "0 coerced to false.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZXTestAssertionTest, AssertTrueCoerceTypeToBool) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify true.");
+    int a = 1;
+    ASSERT_TRUE(a, "1 not coerced to true.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZXTestAssertionTest, AssertFalseCoerceTypeToBool) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify false.");
+    int a = 0;
+    ASSERT_FALSE(a, "0 not coerced to false.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZXTestAssertionTest, AssertFalseCoerceTypeToBoolFailure) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to identify true.");
+    int a = 1;
+    ASSERT_FALSE(a, "1 coerced to true.");
+    TEST_CHECKPOINT();
+}
+
+// Class to be coerced to bool.
+class ConverToBool {
+public:
+    ConverToBool(bool value) { value_ = value; }
+    virtual ~ConverToBool() {}
+
+    operator bool() const { return value_; }
+
+private:
+    bool value_;
+};
+
+class ConverToBoolNotCopyable : public ConverToBool {
+public:
+    ConverToBoolNotCopyable(bool value) : ConverToBool(value) {}
+    ConverToBoolNotCopyable(const ConverToBoolNotCopyable&) = delete;
+};
+
+class ConverToBoolNotMoveable : public ConverToBool {
+public:
+    ConverToBoolNotMoveable(bool value) : ConverToBool(value) {}
+    ConverToBoolNotMoveable(const ConverToBoolNotMoveable&) = delete;
+    ConverToBoolNotMoveable(ConverToBoolNotMoveable&&) = delete;
+};
+
+TEST(ZxTestAssertionTest, CoerceNullPtrToBoolBase) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify false.");
+    void* val = nullptr;
+    ASSERT_FALSE(val);
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, CoercePtrToBoolBase) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify false.");
+    char val;
+    ASSERT_TRUE(&val);
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, CoerceTypeToBoolBase) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify false.");
+    ConverToBool val(true);
+    ASSERT_TRUE(val);
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, CoerceTypeToBoolNonCopyable) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify false.");
+    ConverToBoolNotCopyable val(true);
+    ASSERT_TRUE(val);
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, CoerceTypeToBoolNonMoveable) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify false.");
+    ConverToBoolNotMoveable val(true);
+    ASSERT_TRUE(val);
     TEST_CHECKPOINT();
 }
 

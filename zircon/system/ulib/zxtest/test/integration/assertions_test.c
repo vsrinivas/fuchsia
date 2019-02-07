@@ -517,3 +517,31 @@ TEST(ZXTestCAssertionTest, AssertNoFatalFailureWithFailure) {
     ASSERT_NO_FATAL_FAILURES(HelperFn(true), "HelperFn had a failure. This is expected.");
     TEST_CHECKPOINT();
 }
+
+TEST(ZXTestCAssertionTest, AssertTrueCoerceTypeToBoolFailure) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to identify false.");
+    int a = 0;
+    ASSERT_TRUE(a, "0 coerced to false.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZXTestCAssertionTest, AssertTrueCoerceTypeToBool) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify true.");
+    int a = 1;
+    ASSERT_TRUE(a, "1 not coerced to true.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZXTestCAssertionTest, AssertFalseCoerceTypeToBool) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify false.");
+    int a = 0;
+    ASSERT_FALSE(a, "0 not coerced to false.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZXTestCAssertionTest, AssertFalseCoerceTypeToBoolFailure) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to identify true.");
+    int a = 1;
+    ASSERT_FALSE(a, "1 coerced to true.");
+    TEST_CHECKPOINT();
+}
