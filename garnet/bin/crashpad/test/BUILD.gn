@@ -7,8 +7,6 @@ import("//build/test/test_package.gni")
 executable("config_unittest") {
   testonly = true
 
-  output_name = "config_unittest"
-
   sources = [
     "config_unittest.cc",
   ]
@@ -20,10 +18,16 @@ executable("config_unittest") {
   ]
 }
 
-executable("crashpad_analyzer_impl_unittest") {
+executable("crasher_exe") {
   testonly = true
 
-  output_name = "crashpad_analyzer_impl_unittest"
+  sources = [
+    "crasher_exe.cc",
+  ]
+}
+
+executable("crashpad_analyzer_impl_unittest") {
+  testonly = true
 
   sources = [
     "crashpad_analyzer_impl_unittest.cc",
@@ -45,6 +49,7 @@ executable("crashpad_analyzer_impl_unittest") {
 test_package("crashpad_analyzer_tests") {
   deps = [
     ":config_unittest",
+    ":crasher_exe",
     ":crashpad_analyzer_impl_unittest",
   ]
 
@@ -54,6 +59,13 @@ test_package("crashpad_analyzer_tests") {
     },
     {
       name = "crashpad_analyzer_impl_unittest"
+    },
+  ]
+
+  binaries = [
+    # needed for crashpad_analyzer_impl_unittest
+    {
+      name = "crasher_exe"
     },
   ]
 

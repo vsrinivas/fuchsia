@@ -109,7 +109,7 @@ TEST_F(CrashpadAnalyzerImplTest, HandleNativeException_C_Basic) {
   const char* argv[] = {"crasher", nullptr};
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   ASSERT_EQ(fdio_spawn_etc(job.get(), FDIO_SPAWN_CLONE_ALL,
-                           "/system/bin/crasher", argv, nullptr, 0, nullptr,
+                           "/pkg/bin/crasher_exe", argv, nullptr, 0, nullptr,
                            process.reset_and_get_address(), err_msg),
             ZX_OK)
       << err_msg;

@@ -2,10 +2,6 @@ disabled_for_asan = [
   # MTWN-233 (flaky)
   "/pkgfs/packages/audio_fidl_tests/0/test/audio_fidl_tests",
 
-  # DX-964
-  "/pkgfs/packages/crashpad_analyzer_tests/0/test/crashpad_analyzer_impl",
-  "/pkgfs/packages/crashpad_analyzer_tests/0/test/crashpad_analyzer_impl_unittest",
-
   # DNO-408 (flaky)
   "/pkgfs/packages/debugger_utils_tests/0/test/debugger_utils_tests",
 

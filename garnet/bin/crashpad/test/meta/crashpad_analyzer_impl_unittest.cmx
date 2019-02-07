@@ -13,7 +13,6 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher"
-        ],
-        "system": [ "bin" ]
+        ]
     }
 }
