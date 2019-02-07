@@ -74,7 +74,22 @@ struct Opt {
 }
 
 fn main() -> Result<(), Error> {
-    let opt = Opt::from_args();
+    let mut args: Vec<String> = std::env::args().collect();
+    // @ gn integration
+    if let Some(c) = args[1].chars().nth(0) {
+        if c == String::from("@").chars().nth(0).unwrap() { // TODO better way
+            let (_, f_name) = args[1].split_at(1);
+            let mut f = File::open(f_name).expect("file not found");
+            let mut contents = String::new();
+            f.read_to_string(&mut contents)
+                .expect("something went wrong reading the file");
+            // program name
+            args = vec![args[0].clone()];
+            args.extend(contents.split(" ").map(|s| s.trim().to_string()))
+        }
+    }
+
+    let opt = Opt::from_iter(args);
     let mut pair_vec = Vec::new();
     let files: Vec<String> = opt
         .input
@@ -87,6 +102,9 @@ fn main() -> Result<(), Error> {
         })
         .collect();
 
+
+    let zx_file = include_str!("../zx.banjo");
+    pair_vec.push(BanjoParser::parse(Rule::file, zx_file)?);
     for file in files.iter() {
         pair_vec.push(BanjoParser::parse(Rule::file, file.as_str())?);
     }
