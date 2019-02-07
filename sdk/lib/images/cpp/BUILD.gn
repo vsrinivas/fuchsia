@@ -11,7 +11,7 @@ sdk_source_set("cpp") {
 
   include_base = "//sdk"
 
-  public_configs = [ "//sdk:config" ]
+  public_configs = [ "//sdk/config" ]
 
   sources = [
     "images.cc",

@@ -52,7 +52,7 @@ sdk_source_set("cpp") {
     "//zircon/public/lib/zx",
   ]
 
-  public_configs = [ "//sdk:config" ]
+  public_configs = [ "//sdk/config" ]
 }
 
 sdk_source_set("cpp_sync") {
@@ -70,7 +70,7 @@ sdk_source_set("cpp_sync") {
 
   include_base = "//sdk"
 
-  public_configs = [ "//sdk:config" ]
+  public_configs = [ "//sdk/config" ]
 
   public_deps = [
     ":cpp_base",
@@ -108,7 +108,7 @@ sdk_source_set("cpp_base") {
 
   include_base = "//sdk"
 
-  public_configs = [ "//sdk:config" ]
+  public_configs = [ "//sdk/config" ]
 
   public_deps = [
     "//zircon/public/lib/fidl",
@@ -195,7 +195,7 @@ source_set("test_sources") {
     "//zircon/public/lib/async-loop",
   ]
 
-  public_configs = [ "//sdk:config" ]
+  public_configs = [ "//sdk/config" ]
 }
 
 executable("fidl_cpp_unittests") {
