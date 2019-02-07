@@ -5,16 +5,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <utility>
+
 #include <ddk/metadata/nand.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fake_ddk/fake_ddk.h>
-#include <unittest/unittest.h>
 #include <zircon/boot/image.h>
 #include <zircon/process.h>
-
-#include <utility>
+#include <zxtest/zxtest.h>
 
 #include "ram-nand.h"
 
@@ -33,42 +33,37 @@ fuchsia_hardware_nand_RamNandInfo BuildConfig() {
     return config;
 }
 
-bool TrivialLifetimeTest() {
-    BEGIN_TEST;
+TEST(RamNandTest, TrivialLifetime) {
     NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);  // 6 bits of ECC, no OOB.
     char name[NAME_MAX];
     {
         NandDevice device(params);
 
-        ASSERT_EQ(ZX_OK, device.Init(name, zx::vmo()));
-        EXPECT_EQ(0, strncmp("ram-nand-0", name, NAME_MAX));
+        ASSERT_OK(device.Init(name, zx::vmo()));
+        EXPECT_STR_EQ("ram-nand-0", name);
     }
     {
         NandDevice device(params);
 
-        ASSERT_EQ(ZX_OK, device.Init(name, zx::vmo()));
-        EXPECT_EQ(0, strncmp("ram-nand-1", name, NAME_MAX));
+        ASSERT_OK(device.Init(name, zx::vmo()));
+        EXPECT_STR_EQ("ram-nand-1", name);
     }
-    END_TEST;
 }
 
-bool DdkLifetimeTest() {
-    BEGIN_TEST;
+TEST(RamNandTest, DdkLifetime) {
     NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);  // 6 bits of ECC, no OOB.
     NandDevice* device(new NandDevice(params, fake_ddk::kFakeParent));
 
     fake_ddk::Bind ddk;
-    ASSERT_EQ(ZX_OK, device->Bind(BuildConfig()));
+    ASSERT_OK(device->Bind(BuildConfig()));
     device->DdkUnbind();
     EXPECT_TRUE(ddk.Ok());
 
     // This should delete the object, which means this test should not leak.
     device->DdkRelease();
-    END_TEST;
 }
 
-bool ExportNandConfigTest() {
-    BEGIN_TEST;
+TEST(RamNandTest, ExportNandConfig) {
     NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);
     NandDevice device(params, fake_ddk::kFakeParent);
 
@@ -101,18 +96,16 @@ bool ExportNandConfigTest() {
 
     fake_ddk::Bind ddk;
     ddk.ExpectMetadata(&expected, sizeof(expected));
-    ASSERT_EQ(ZX_OK, device.Bind(config));
+    ASSERT_OK(device.Bind(config));
 
     int calls;
     size_t length;
     ddk.GetMetadataInfo(&calls, &length);
     EXPECT_EQ(1, calls);
     EXPECT_EQ(sizeof(expected), length);
-    END_TEST;
 }
 
-bool ExportPartitionMapTest() {
-    BEGIN_TEST;
+TEST(RamNandTest, ExportPartitionMap) {
     NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);
     NandDevice device(params, fake_ddk::kFakeParent);
 
@@ -161,18 +154,16 @@ bool ExportPartitionMapTest() {
 
     fake_ddk::Bind ddk;
     ddk.ExpectMetadata(expected, expected_size);
-    ASSERT_EQ(ZX_OK, device.Bind(config));
+    ASSERT_OK(device.Bind(config));
 
     int calls;
     size_t length;
     ddk.GetMetadataInfo(&calls, &length);
     EXPECT_EQ(1, calls);
     EXPECT_EQ(expected_size, length);
-    END_TEST;
 }
 
-bool AddMetadataTest() {
-    BEGIN_TEST;
+TEST(RamNandTest, AddMetadata) {
     NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);
     NandDevice device(params, fake_ddk::kFakeParent);
 
@@ -181,14 +172,13 @@ bool AddMetadataTest() {
     config.export_partition_map = true;
 
     fake_ddk::Bind ddk;
-    ASSERT_EQ(ZX_OK, device.Bind(config));
+    ASSERT_OK(device.Bind(config));
 
     int calls;
     size_t length;
     ddk.GetMetadataInfo(&calls, &length);
     EXPECT_EQ(2, calls);
     EXPECT_EQ(sizeof(nand_config_t) + sizeof(zbi_partition_map_t), length);
-    END_TEST;
 }
 
 fbl::unique_ptr<NandDevice> CreateDevice(size_t* operation_size) {
@@ -211,45 +201,39 @@ fbl::unique_ptr<NandDevice> CreateDevice(size_t* operation_size) {
     return device;
 }
 
-bool BasicDeviceProtocolTest() {
-    BEGIN_TEST;
+TEST(RamNandTest, BasicDeviceProtocol) {
     NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);  // 6 bits of ECC, no OOB.
     NandDevice device(params);
 
     char name[NAME_MAX];
-    ASSERT_EQ(ZX_OK, device.Init(name, zx::vmo()));
+    ASSERT_OK(device.Init(name, zx::vmo()));
 
     ASSERT_EQ(kPageSize * kNumPages, device.DdkGetSize());
 
     device.DdkUnbind();
 
     ASSERT_EQ(ZX_ERR_BAD_STATE, device.DdkMessage(nullptr, nullptr));
-    END_TEST;
 }
 
-bool UnlinkTest() {
-    BEGIN_TEST;
+TEST(RamNandTest, Unlink) {
     fbl::unique_ptr<NandDevice> device = CreateDevice(nullptr);
     ASSERT_TRUE(device);
 
-    ASSERT_EQ(ZX_OK, device->Unlink());
+    ASSERT_OK(device->Unlink());
 
     // The device is "dead" now.
     ASSERT_EQ(ZX_ERR_BAD_STATE, device->DdkMessage(nullptr, nullptr));
-    END_TEST;
 }
 
-bool QueryTest() {
-    BEGIN_TEST;
+TEST(RamNandTest, Query) {
     NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 8);  // 6 bits of ECC, 8 OOB bytes.
     NandDevice device(params);
 
     fuchsia_hardware_nand_Info info;
     size_t operation_size;
     device.NandQuery(&info, &operation_size);
-    ASSERT_EQ(0, memcmp(&info, &params, sizeof(info)));
+    ASSERT_BYTES_EQ(&info, &params, sizeof(info));
     ASSERT_GT(operation_size, sizeof(nand_operation_t));
-    END_TEST;
 }
 
 // Data to be pre-pended to a nand_op_t issued to the device.
@@ -363,7 +347,7 @@ void Operation::CreateOperation() {
 }
 
 // Provides control primitives for tests that issue IO requests to the device.
-class NandTest {
+class NandTest : public zxtest::Test {
   public:
     NandTest() {}
     ~NandTest() {}
@@ -399,43 +383,37 @@ class NandTest {
 };
 
 // Tests trivial attempts to queue one operation.
-bool QueueOneTest() {
-    BEGIN_TEST;
-
+TEST_F(NandTest, QueueOne) {
     size_t op_size;
     fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
     ASSERT_TRUE(device);
 
-    NandTest test;
-    Operation operation(op_size, &test);
-
+    Operation operation(op_size, this);
     nand_operation_t* op = operation.GetOperation();
     ASSERT_TRUE(op);
 
     op->rw.command = NAND_OP_WRITE;
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
 
-    ASSERT_TRUE(test.Wait());
+    ASSERT_TRUE(Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     op->rw.length = 1;
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
-    ASSERT_TRUE(test.Wait());
+    ASSERT_TRUE(Wait());
     ASSERT_EQ(ZX_ERR_BAD_HANDLE, operation.status());
 
     op->rw.offset_nand = kNumPages;
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
-    ASSERT_TRUE(test.Wait());
+    ASSERT_TRUE(Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     ASSERT_TRUE(operation.SetDataVmo());
 
     op->rw.offset_nand = kNumPages - 1;
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
-
-    END_TEST;
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
 }
 
 // Verifies that the buffer pointed to by the operation's vmo contains the given
@@ -466,15 +444,12 @@ void SetForRead(int offset, int num_pages, Operation* operation) {
     op->rw.offset_nand = offset;
 }
 
-bool ReadWriteTest() {
-    BEGIN_TEST;
-
+TEST_F(NandTest, ReadWrite) {
     size_t op_size;
     fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
     ASSERT_TRUE(device);
 
-    NandTest test;
-    Operation operation(op_size, &test);
+    Operation operation(op_size, this);
     ASSERT_TRUE(operation.SetDataVmo());
     memset(operation.buffer(), 0x55, operation.buffer_size());
 
@@ -484,32 +459,27 @@ bool ReadWriteTest() {
     SetForWrite(4, 4, &operation);
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
 
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
     ASSERT_EQ(125, op->rw.corrected_bit_flips);  // Doesn't modify the value.
 
     op->rw.command = NAND_OP_READ;
     memset(operation.buffer(), 0, operation.buffer_size());
 
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
     ASSERT_EQ(0, op->rw.corrected_bit_flips);
     ASSERT_TRUE(CheckPattern(0x55, 0, 4, operation));
-
-    END_TEST;
 }
 
 // Tests that a new device is filled with 0xff (as a new nand chip).
-bool NewChipTest() {
-    BEGIN_TEST;
-
+TEST_F(NandTest, NewChip) {
     size_t op_size;
     fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
     ASSERT_TRUE(device);
 
-    NandTest test;
-    Operation operation(op_size, &test);
+    Operation operation(op_size, this);
     ASSERT_TRUE(operation.SetDataVmo());
     ASSERT_TRUE(operation.SetOobVmo());
     memset(operation.buffer(), 0x55, operation.buffer_size());
@@ -521,34 +491,28 @@ bool NewChipTest() {
     op->rw.offset_oob_vmo = kNumPages;
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
 
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
     ASSERT_EQ(0, op->rw.corrected_bit_flips);
 
     ASSERT_TRUE(CheckPattern(0xff, 0, kNumPages, operation));
 
     // Verify OOB area.
     memset(operation.buffer(), 0xff, kOobSize * kNumPages);
-    ASSERT_EQ(0,
-              memcmp(operation.buffer() + kPageSize * kNumPages, operation.buffer(),
-                     kOobSize * kNumPages));
-
-    END_TEST;
+    ASSERT_BYTES_EQ(operation.buffer() + kPageSize * kNumPages, operation.buffer(),
+                    kOobSize * kNumPages);
 }
 
 // Tests serialization of multiple reads and writes.
-bool QueueMultipleTest() {
-    BEGIN_TEST;
-
+TEST_F(NandTest, QueueMultiple) {
     size_t op_size;
     fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
     ASSERT_TRUE(device);
 
-    NandTest test;
     fbl::unique_ptr<Operation> operations[10];
     for (int i = 0; i < 10; i++) {
         fbl::AllocChecker checker;
-        operations[i].reset(new (&checker) Operation(op_size, &test));
+        operations[i].reset(new (&checker) Operation(op_size, this));
         ASSERT_TRUE(checker.check());
         Operation& operation = *(operations[i].get());
         ASSERT_TRUE(operation.SetDataVmo());
@@ -571,10 +535,10 @@ bool QueueMultipleTest() {
         device->NandQueue(op, &NandTest::CompletionCb, nullptr);
     }
 
-    ASSERT_TRUE(test.WaitFor(10));
+    ASSERT_TRUE(WaitFor(10));
 
     for (const auto& operation : operations) {
-        ASSERT_EQ(ZX_OK, operation->status());
+        ASSERT_OK(operation->status());
         ASSERT_TRUE(operation->completed());
     }
 
@@ -592,61 +556,50 @@ bool QueueMultipleTest() {
     ASSERT_TRUE(CheckPattern(33, 2, 2, *(operations[8].get())));
 
     ASSERT_TRUE(CheckPattern(37, 0, 2, *(operations[9].get())));
-
-    END_TEST;
 }
 
-bool OobLimitsTest() {
-    BEGIN_TEST;
-
+TEST_F(NandTest, OobLimits) {
     size_t op_size;
     fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
     ASSERT_TRUE(device);
 
-    NandTest test;
-    Operation operation(op_size, &test);
-
+    Operation operation(op_size, this);
     nand_operation_t* op = operation.GetOperation();
     op->rw.command = NAND_OP_READ;
 
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
-    ASSERT_TRUE(test.Wait());
+    ASSERT_TRUE(Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     op->rw.length = 1;
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
-    ASSERT_TRUE(test.Wait());
+    ASSERT_TRUE(Wait());
     ASSERT_EQ(ZX_ERR_BAD_HANDLE, operation.status());
 
     op->rw.offset_nand = kNumPages;
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
-    ASSERT_TRUE(test.Wait());
+    ASSERT_TRUE(Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     ASSERT_TRUE(operation.SetOobVmo());
 
     op->rw.offset_nand = kNumPages - 1;
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
 
     op->rw.length = 5;
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
-    ASSERT_TRUE(test.Wait());
+    ASSERT_TRUE(Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
-
-    END_TEST;
 }
 
-bool ReadWriteOobTest() {
-    BEGIN_TEST;
-
+TEST_F(NandTest, ReadWriteOob) {
     size_t op_size;
     fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
     ASSERT_TRUE(device);
 
-    NandTest test;
-    Operation operation(op_size, &test);
+    Operation operation(op_size, this);
     ASSERT_TRUE(operation.SetOobVmo());
 
     const char desired[kOobSize] = { 'a', 'b', 'c', 'd' };
@@ -658,8 +611,8 @@ bool ReadWriteOobTest() {
     SetForWrite(2, 1, &operation);
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
 
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
     ASSERT_EQ(125, op->rw.corrected_bit_flips);  // Doesn't modify the value.
 
     op->rw.command = NAND_OP_READ;
@@ -668,25 +621,20 @@ bool ReadWriteOobTest() {
     memset(operation.buffer(), 0, kOobSize * 2);
 
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
     ASSERT_EQ(0, op->rw.corrected_bit_flips);
 
     // The "second page" has the data of interest.
-    ASSERT_EQ(0, memcmp(operation.buffer() + kOobSize, desired, kOobSize));
-
-    END_TEST;
+    ASSERT_BYTES_EQ(operation.buffer() + kOobSize, desired, kOobSize);
 }
 
-bool ReadWriteDataAndOobTest() {
-    BEGIN_TEST;
-
+TEST_F(NandTest, ReadWriteDataAndOob) {
     size_t op_size;
     fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
     ASSERT_TRUE(device);
 
-    NandTest test;
-    Operation operation(op_size, &test);
+    Operation operation(op_size, this);
     ASSERT_TRUE(operation.SetDataVmo());
     ASSERT_TRUE(operation.SetOobVmo());
 
@@ -700,16 +648,16 @@ bool ReadWriteDataAndOobTest() {
     op->rw.offset_oob_vmo = 2;  // OOB is right after data.
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
 
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
     ASSERT_EQ(125, op->rw.corrected_bit_flips);  // Doesn't modify the value.
 
     op->rw.command = NAND_OP_READ;
     memset(operation.buffer(), 0, kPageSize * 4);
 
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
     ASSERT_EQ(0, op->rw.corrected_bit_flips);
 
     // Verify data.
@@ -717,62 +665,51 @@ bool ReadWriteDataAndOobTest() {
 
     // Verify OOB.
     memset(operation.buffer(), 0xaa, kPageSize);
-    ASSERT_EQ(0, memcmp(operation.buffer() + kPageSize * 2, operation.buffer(), kOobSize * 2));
-
-    END_TEST;
+    ASSERT_BYTES_EQ(operation.buffer() + kPageSize * 2, operation.buffer(), kOobSize * 2);
 }
 
-bool EraseLimitsTest() {
-    BEGIN_TEST;
-
+TEST_F(NandTest, EraseLimits) {
     size_t op_size;
     fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
     ASSERT_TRUE(device);
 
-    NandTest test;
-    Operation operation(op_size, &test);
+    Operation operation(op_size, this);
     ASSERT_TRUE(operation.SetDataVmo());
 
     nand_operation_t* op = operation.GetOperation();
     op->erase.command = NAND_OP_ERASE;
 
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
-    ASSERT_TRUE(test.Wait());
+    ASSERT_TRUE(Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     op->erase.first_block = 5;
     op->erase.num_blocks = 1;
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
-    ASSERT_TRUE(test.Wait());
+    ASSERT_TRUE(Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     op->erase.first_block = 4;
     op->erase.num_blocks = 2;
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
-    ASSERT_TRUE(test.Wait());
+    ASSERT_TRUE(Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
-
-    END_TEST;
 }
 
-bool EraseTest() {
-    BEGIN_TEST;
-
+TEST_F(NandTest, Erase) {
     size_t op_size;
     fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
     ASSERT_TRUE(device);
 
-    NandTest test;
-    Operation operation(op_size, &test);
-
+    Operation operation(op_size, this);
     nand_operation_t* op = operation.GetOperation();
     op->erase.command = NAND_OP_ERASE;
     op->erase.first_block = 3;
     op->erase.num_blocks = 2;
 
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
 
     memset(op, 0, sizeof(*op));
     SetForRead(0, kNumPages, &operation);
@@ -781,36 +718,14 @@ bool EraseTest() {
     op->rw.offset_oob_vmo = kNumPages;
     device->NandQueue(op, &NandTest::CompletionCb, nullptr);
 
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
     ASSERT_TRUE(CheckPattern(0xff, 0, kNumPages, operation));
 
     // Verify OOB area.
     memset(operation.buffer(), 0xff, kOobSize * kNumPages);
-    ASSERT_EQ(0,
-              memcmp(operation.buffer() + kPageSize * kNumPages, operation.buffer(),
-                     kOobSize * kNumPages));
-
-    END_TEST;
+    ASSERT_BYTES_EQ(operation.buffer() + kPageSize * kNumPages, operation.buffer(),
+                    kOobSize * kNumPages);
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(RamNandTests)
-RUN_TEST_SMALL(TrivialLifetimeTest)
-RUN_TEST_SMALL(DdkLifetimeTest)
-RUN_TEST_SMALL(ExportNandConfigTest)
-RUN_TEST_SMALL(ExportPartitionMapTest)
-RUN_TEST_SMALL(AddMetadataTest)
-RUN_TEST_SMALL(BasicDeviceProtocolTest)
-RUN_TEST_SMALL(UnlinkTest)
-RUN_TEST_SMALL(QueryTest)
-RUN_TEST_SMALL(QueueOneTest)
-RUN_TEST_SMALL(ReadWriteTest)
-RUN_TEST_SMALL(QueueMultipleTest)
-RUN_TEST_SMALL(OobLimitsTest)
-RUN_TEST_SMALL(ReadWriteOobTest)
-RUN_TEST_SMALL(ReadWriteDataAndOobTest)
-RUN_TEST_SMALL(EraseLimitsTest)
-RUN_TEST_SMALL(EraseTest)
-END_TEST_CASE(RamNandTests)

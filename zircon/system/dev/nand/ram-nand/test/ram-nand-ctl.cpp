@@ -7,13 +7,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <utility>
+
 #include <fbl/unique_fd.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fzl/fdio.h>
 #include <ramdevice-client/ramnand.h>
-#include <unittest/unittest.h>
-
-#include <utility>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -48,8 +48,7 @@ class NandDevice {
     DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
 };
 
-bool TrivialLifetimeTest() {
-    BEGIN_TEST;
+TEST(RamNandCtlTest, TrivialLifetime) {
     fbl::String path;
     {
         NandDevice device;
@@ -59,44 +58,30 @@ bool TrivialLifetimeTest() {
 
     fbl::unique_fd found(open(path.c_str(), O_RDWR));
     ASSERT_FALSE(found);
-    END_TEST;
 }
 
-bool ExportConfigTest() {
-    BEGIN_TEST;
+TEST(RamNandCtlTest, ExportConfig) {
     fuchsia_hardware_nand_RamNandInfo config = BuildConfig();
     config.export_nand_config = true;
 
     NandDevice device(config);
     ASSERT_TRUE(device.IsValid());
-    END_TEST;
 }
 
-bool ExportPartitionsTest() {
-    BEGIN_TEST;
+TEST(RamNandCtlTest, ExportPartitions) {
     fuchsia_hardware_nand_RamNandInfo config = BuildConfig();
     config.export_partition_map = true;
 
     NandDevice device(config);
     ASSERT_TRUE(device.IsValid());
-    END_TEST;
 }
 
-bool CreateFailureTest() {
-    BEGIN_TEST;
+TEST(RamNandCtlTest, CreateFailure) {
     fuchsia_hardware_nand_RamNandInfo config = BuildConfig();
     config.nand_info.num_blocks = 0;
 
     NandDevice device(config);
     ASSERT_FALSE(device.IsValid());
-    END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(RamNandCtlTests)
-RUN_TEST_SMALL(TrivialLifetimeTest)
-RUN_TEST_SMALL(ExportConfigTest)
-RUN_TEST_SMALL(ExportPartitionsTest)
-RUN_TEST_SMALL(CreateFailureTest)
-END_TEST_CASE(RamNandCtlTests)

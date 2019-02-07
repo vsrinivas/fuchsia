@@ -46,6 +46,7 @@ TEST_DIR := $(LOCAL_DIR)/test
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/ram-nand.cpp \
+    $(TEST_DIR)/main.cpp \
     $(TEST_DIR)/ram-nand.cpp \
     $(TEST_DIR)/ram-nand-ctl.cpp \
 
@@ -62,6 +63,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
+    system/ulib/zxtest \
 
 MODULE_LIBS := \
     system/ulib/c \
