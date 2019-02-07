@@ -33,7 +33,7 @@ use futures::{FutureExt, TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::env;
 use std::sync::Arc;
-use term_model::ansi::Handler;
+use term_model::ansi::Processor;
 use term_model::config::Config;
 use term_model::term::{SizeInfo, Term};
 
@@ -51,6 +51,7 @@ struct ViewController {
     metrics: Option<gfx::Metrics>,
     logical_size: Option<SizeF>,
     term: Option<Term>,
+    parser: Processor,
 }
 
 type ViewControllerPtr = Arc<Mutex<ViewController>>;
@@ -95,6 +96,7 @@ impl ViewController {
             metrics: None,
             logical_size: None,
             term: None,
+            parser: Processor::new(),
         };
         view_controller.setup_scene();
         view_controller.present();
@@ -194,6 +196,7 @@ impl ViewController {
             let mut canvas = Canvas::<SharedBufferPixelSink>::new(guard.image().buffer(), stride);
             let size = Size { width: 14, height: 22 };
             let mut font = FontDescription { face: &mut face, size: 20, baseline: 18 };
+            let parser = &mut self.parser;
             let term = self.term.get_or_insert_with(|| {
                 let mut term = Term::new(
                     &Config::default(),
@@ -206,8 +209,8 @@ impl ViewController {
                         padding_y: 0.,
                     },
                 );
-                for c in "$ echo \"hello, world!\"".chars() {
-                    term.input(c);
+                for byte in "$ echo \"\u{001b}[31mhello, world!\u{001b}[0m\"".as_bytes() {
+                    parser.advance(&mut term, *byte, &mut ::std::io::sink());
                 }
                 term
             });
@@ -263,7 +266,17 @@ impl ViewController {
             {
                 if let Some(c) = std::char::from_u32(event.code_point) {
                     if c != '\0' {
-                        term.input(c);
+                        // The API that parses escape sequences (the vte library) takes as input a
+                        // stream of bytes  in utf8, rather than taking a stream of codepoints. Thus,
+                        // we need to  convert each codepoint into a ut8 byte stream, which it will
+                        // then convert back to codepoints.
+                        // There is an issue on the vte github to address this:
+                        // https://github.com/jwilm/vte/issues/19
+                        let mut buffer: [u8; 4] = [0, 0, 0, 0];
+                        c.encode_utf8(&mut buffer);
+                        for i in 0..c.len_utf8() {
+                            self.parser.advance(term, buffer[i], &mut ::std::io::sink());
+                        }
                         self.invalidate();
                     }
                 }
