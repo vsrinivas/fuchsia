@@ -108,6 +108,10 @@ pub struct OutBuf {
 }
 
 impl OutBuf {
+    /// Converts a given `InBuf` into an `OutBuf`.
+    /// The resulting `OutBuf` must be used and returned to `InBuf`'s original owner.
+    /// If the buffer is not returned, memory is leaked.
+    #[must_use]
     pub fn from(buf: InBuf, written_bytes: usize) -> Self {
         let outbuf = OutBuf { raw: buf.raw, data: buf.data, written_bytes };
         std::mem::forget(buf);
