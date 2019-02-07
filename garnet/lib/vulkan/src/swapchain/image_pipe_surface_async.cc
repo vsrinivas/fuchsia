@@ -3,16 +3,96 @@
 // found in the LICENSE file.
 
 #include "image_pipe_surface_async.h"
+#include "vk_dispatch_table_helper.h"
+#include "vulkan/vk_layer.h"
 
 namespace image_pipe_swapchain {
 
-void ImagePipeSurfaceAsync::AddImage(uint32_t image_id,
-                                     fuchsia::images::ImageInfo image_info,
-                                     zx::vmo buffer, uint64_t size_bytes) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  image_pipe_->AddImage(image_id, std::move(image_info), std::move(buffer), 0,
-                        size_bytes,
-                        fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
+bool ImagePipeSurfaceAsync::CreateImage(
+    VkDevice device, VkLayerDispatchTable* pDisp, VkFormat format,
+    VkImageUsageFlags usage, fuchsia::images::ImageInfo image_info,
+    uint32_t image_count, const VkAllocationCallbacks* pAllocator,
+    std::vector<ImageInfo>* image_info_out) {
+  for (uint32_t i = 0; i < image_count; ++i) {
+    // Allocate a buffer.
+    uint32_t width = image_info.width;
+    uint32_t height = image_info.height;
+    VkImageCreateInfo create_info{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = format,
+        .extent = {.width = width, .height = height, .depth = 1},
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = usage,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 0,
+        .pQueueFamilyIndices = nullptr,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+
+    VkImage image;
+    VkResult result =
+        pDisp->CreateImage(device, &create_info, pAllocator, &image);
+    if (result != VK_SUCCESS) {
+      fprintf(stderr, "VkCreateImage failed: %d", result);
+      return false;
+    }
+
+    VkMemoryRequirements memory_requirements;
+    pDisp->GetImageMemoryRequirements(device, image, &memory_requirements);
+
+    VkExportMemoryAllocateInfoKHR export_allocate_info = {
+        .sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR,
+        .pNext = nullptr,
+        .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR};
+
+    VkMemoryAllocateInfo alloc_info{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .pNext = &export_allocate_info,
+        .allocationSize = memory_requirements.size,
+        .memoryTypeIndex = 0,
+    };
+    VkDeviceMemory memory;
+    result = pDisp->AllocateMemory(device, &alloc_info, pAllocator, &memory);
+    if (result != VK_SUCCESS) {
+      fprintf(stderr, "vkAllocMemory failed: %d", result);
+      return false;
+    }
+    result = pDisp->BindImageMemory(device, image, memory, 0);
+    if (result != VK_SUCCESS) {
+      fprintf(stderr, "vkBindImageMemory failed: %d", result);
+      return false;
+    }
+    zx::vmo vmo;
+    // Export the vkDeviceMemory to a VMO.
+    VkMemoryGetFuchsiaHandleInfoKHR get_handle_info = {
+        VK_STRUCTURE_TYPE_MEMORY_GET_FUCHSIA_HANDLE_INFO_KHR, nullptr, memory,
+        VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR};
+
+    result = pDisp->GetMemoryFuchsiaHandleKHR(device, &get_handle_info,
+                                              vmo.reset_and_get_address());
+    if (result != VK_SUCCESS) {
+      fprintf(stderr, "vkGetMemoryFuchsiaHandleKHR failed: %d", result);
+      return false;
+    }
+
+    ImageInfo info = {
+        .image = image,
+        .memory = memory,
+        .image_id = next_image_id(),
+    };
+    image_info_out->push_back(info);
+    std::lock_guard<std::mutex> lock(mutex_);
+    image_pipe_->AddImage(info.image_id, std::move(image_info), std::move(vmo),
+                          0, memory_requirements.size,
+                          fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
+  }
+  return true;
 }
 
 void ImagePipeSurfaceAsync::RemoveImage(uint32_t image_id) {

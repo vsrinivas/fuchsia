@@ -40,8 +40,8 @@ loadable_module("fb") {
   output_name = "libVkLayer_image_pipe_swapchain_fb"
   defines = [ "USE_IMAGEPIPE_SURFACE_FB" ]
   sources = [
-    "image_pipe_surface_fb.cc",
-    "image_pipe_surface_fb.h",
+    "image_pipe_surface_display.cc",
+    "image_pipe_surface_display.h",
     "image_pipe_swapchain_layer.cc",
   ]
   include_dirs = [
@@ -54,8 +54,11 @@ loadable_module("fb") {
     ":surface_header",
     "$loader_build_root:extra_vulkan_headers",
     "$loader_build_root/layers:micro_layer_common",
+    "//zircon/public/fidl/fuchsia-hardware-display",
+    "//zircon/public/fidl/fuchsia-sysmem",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/framebuffer",
+    "//zircon/public/lib/fdio",
   ]
   ldflags = [ "-static-libstdc++" ]
 }

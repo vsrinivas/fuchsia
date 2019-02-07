@@ -4,22 +4,102 @@
 
 #include "garnet/lib/vulkan/src/swapchain/image_pipe_surface.h"
 #include "gtest/gtest.h"
+#include "vk_dispatch_table_helper.h"
+#include "vulkan/vk_layer.h"
 
 class MockImagePipeSurface : public image_pipe_swapchain::ImagePipeSurface {
  public:
-  MockImagePipeSurface(bool use_scanout_extension = false)
-      : use_scanout_extension_(use_scanout_extension) {}
+  MockImagePipeSurface() {}
 
-  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
-                zx::vmo buffer, uint64_t size_bytes) override {}
+  bool CreateImage(VkDevice device, VkLayerDispatchTable* pDisp,
+                   VkFormat format, VkImageUsageFlags usage,
+                   fuchsia::images::ImageInfo image_info, uint32_t image_count,
+                   const VkAllocationCallbacks* pAllocator,
+                   std::vector<ImageInfo>* image_info_out) override {
+    for (uint32_t i = 0; i < image_count; ++i) {
+      // Allocate a buffer.
+      uint32_t width = image_info.width;
+      uint32_t height = image_info.height;
+      VkImageCreateInfo create_info{
+          .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+          .pNext = nullptr,
+          .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+          .imageType = VK_IMAGE_TYPE_2D,
+          .format = format,
+          .extent = {.width = width, .height = height, .depth = 1},
+          .mipLevels = 1,
+          .arrayLayers = 1,
+          .samples = VK_SAMPLE_COUNT_1_BIT,
+          .tiling = VK_IMAGE_TILING_OPTIMAL,
+          .usage = usage,
+          .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+          .queueFamilyIndexCount = 0,
+          .pQueueFamilyIndices = nullptr,
+          .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+      };
+
+      VkImage image;
+      VkResult result =
+          pDisp->CreateImage(device, &create_info, pAllocator, &image);
+      if (result != VK_SUCCESS) {
+        fprintf(stderr, "VkCreateImage failed: %d", result);
+        return false;
+      }
+
+      VkMemoryRequirements memory_requirements;
+      pDisp->GetImageMemoryRequirements(device, image, &memory_requirements);
+
+      VkExportMemoryAllocateInfoKHR export_allocate_info = {
+          .sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR,
+          .pNext = nullptr,
+          .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR};
+
+      VkMemoryAllocateInfo alloc_info{
+          .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+          .pNext = &export_allocate_info,
+          .allocationSize = memory_requirements.size,
+          .memoryTypeIndex = 0,
+      };
+      VkDeviceMemory memory;
+      result = pDisp->AllocateMemory(device, &alloc_info, pAllocator, &memory);
+      if (result != VK_SUCCESS) {
+        fprintf(stderr, "vkAllocMemory failed: %d", result);
+        return false;
+      }
+
+      result = pDisp->BindImageMemory(device, image, memory, 0);
+      if (result != VK_SUCCESS) {
+        fprintf(stderr, "vkBindImageMemory failed: %d", result);
+        return false;
+      }
+      zx::vmo vmo;
+      // Export the vkDeviceMemory to a VMO.
+      VkMemoryGetFuchsiaHandleInfoKHR get_handle_info = {
+          VK_STRUCTURE_TYPE_MEMORY_GET_FUCHSIA_HANDLE_INFO_KHR, nullptr, memory,
+          VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR};
+
+      result = pDisp->GetMemoryFuchsiaHandleKHR(device, &get_handle_info,
+                                                vmo.reset_and_get_address());
+      if (result != VK_SUCCESS) {
+        fprintf(stderr, "vkGetMemoryFuchsiaHandleKHR failed: %d", result);
+        return false;
+      }
+
+      ImageInfo info = {
+          .image = image,
+          .memory = memory,
+          .image_id = next_image_id(),
+      };
+      image_info_out->push_back(info);
+    }
+    return true;
+  }
   void RemoveImage(uint32_t image_id) override {}
   void PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
                     std::vector<zx::event> release_fences) override {
     presented_.push_back(
         {image_id, std::move(acquire_fences), std::move(release_fences)});
   }
-
-  bool UseScanoutExtension() override { return use_scanout_extension_; }
 
   struct Presented {
     uint32_t image_id;
@@ -28,7 +108,6 @@ class MockImagePipeSurface : public image_pipe_swapchain::ImagePipeSurface {
   };
 
   std::vector<Presented> presented_;
-  bool use_scanout_extension_;
 };
 
 class TestSwapchain {
@@ -228,41 +307,6 @@ class TestSwapchain {
                                       VK_NULL_HANDLE, &image_index));
   }
 
-  void Usage(bool use_scanout_extension) {
-    MockImagePipeSurface surface(use_scanout_extension);
-    VkFlags expected =
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-        (use_scanout_extension ? VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE : 0);
-    EXPECT_EQ(expected, surface.DetermineUsage(0));
-    EXPECT_EQ(expected,
-              surface.DetermineUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT));
-
-    expected = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-               VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-               (use_scanout_extension ? VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE : 0);
-    EXPECT_EQ(expected,
-              surface.DetermineUsage(VK_IMAGE_USAGE_TRANSFER_SRC_BIT));
-
-    expected = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-               VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-               (use_scanout_extension ? VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE : 0);
-    EXPECT_EQ(expected,
-              surface.DetermineUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                                     VK_IMAGE_USAGE_TRANSFER_DST_BIT));
-
-    expected = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-               VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-               VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-               (use_scanout_extension ? VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE
-                                      : VK_IMAGE_USAGE_SAMPLED_BIT);
-    EXPECT_EQ(expected,
-              surface.DetermineUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                                     VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                                     VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                                     VK_IMAGE_USAGE_SAMPLED_BIT));
-    EXPECT_EQ(expected, surface.DetermineUsage(~0));
-  }
-
   VkInstance vk_instance_;
   VkDevice vk_device_;
   PFN_vkCreateSwapchainKHR create_swapchain_khr_;
@@ -279,7 +323,3 @@ TEST(Swapchain, AcquireNoSemaphore) { TestSwapchain().AcquireNoSemaphore(); }
 TEST(Swapchain, Surface) { TestSwapchain().Surface(); }
 
 TEST(Swapchain, Create) { TestSwapchain().CreateSwapchain(); }
-
-TEST(Swapchain, Usage) { TestSwapchain().Usage(false); }
-
-TEST(Swapchain, UsageScanout) { TestSwapchain().Usage(true); }

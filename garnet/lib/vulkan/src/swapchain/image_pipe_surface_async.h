@@ -22,13 +22,15 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
     loop_.StartThread();
   }
 
-  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
-                zx::vmo buffer, uint64_t size_bytes) override;
+  bool CreateImage(VkDevice device, VkLayerDispatchTable* pDisp,
+                   VkFormat format, VkImageUsageFlags usage,
+                   fuchsia::images::ImageInfo image_info, uint32_t image_count,
+                   const VkAllocationCallbacks* pAllocator,
+                   std::vector<ImageInfo>* image_info_out) override;
 
   void RemoveImage(uint32_t image_id) override;
 
-  void PresentImage(uint32_t image_id,
-                    std::vector<zx::event> acquire_fences,
+  void PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
                     std::vector<zx::event> release_fences) override;
 
  private:

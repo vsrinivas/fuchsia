@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #if USE_IMAGEPIPE_SURFACE_FB
-#include "image_pipe_surface_fb.h"  // nogncheck
+#include "image_pipe_surface_display.h"  // nogncheck
 #else
 #include "image_pipe_surface_async.h"  // nogncheck
 #endif
@@ -109,94 +109,26 @@ VkResult ImagePipeSwapchain::Initialize(
   VkLayerDispatchTable* pDisp =
       GetLayerDataPtr(get_dispatch_key(device), layer_data_map)
           ->device_dispatch_table;
-
-  VkFlags usage = surface_->DetermineUsage(pCreateInfo->imageUsage);
-
   uint32_t num_images = pCreateInfo->minImageCount;
+  VkFlags usage = pCreateInfo->imageUsage & surface_->SupportedUsage();
   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR);
+  fuchsia::images::ImageInfo image_info;
+  image_info.width = pCreateInfo->imageExtent.width;
+  image_info.height = pCreateInfo->imageExtent.height;
+  image_info.stride = 0;  // Meaningless for optimal tiling.
+  image_info.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
+  image_info.color_space = fuchsia::images::ColorSpace::SRGB;
+  image_info.tiling = fuchsia::images::Tiling::GPU_OPTIMAL;
+  std::vector<ImagePipeSurface::ImageInfo> image_infos;
+
+  if (!surface_->CreateImage(device, pDisp, pCreateInfo->imageFormat, usage,
+                             image_info, num_images, pAllocator,
+                             &image_infos)) {
+    return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+  }
   for (uint32_t i = 0; i < num_images; i++) {
-    // Allocate a buffer.
-    VkImage image;
-    uint32_t width = pCreateInfo->imageExtent.width;
-    uint32_t height = pCreateInfo->imageExtent.height;
-    VkImageCreateInfo create_info{
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
-        .imageType = VK_IMAGE_TYPE_2D,
-        .format = pCreateInfo->imageFormat,
-        .extent = {.width = width, .height = height, .depth = 1},
-        .mipLevels = 1,
-        .arrayLayers = 1,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .tiling = VK_IMAGE_TILING_OPTIMAL,
-        .usage = usage,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        .queueFamilyIndexCount = 0,
-        .pQueueFamilyIndices = nullptr,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-    };
-
-    result = pDisp->CreateImage(device, &create_info, pAllocator, &image);
-    if (result != VK_SUCCESS) {
-      fprintf(stderr, "VkCreateImage failed: %d", result);
-      return result;
-    }
-    images_.push_back({image, surface_->next_image_id()});
-
-    VkMemoryRequirements memory_requirements;
-    pDisp->GetImageMemoryRequirements(device, image, &memory_requirements);
-
-    VkExportMemoryAllocateInfoKHR export_allocate_info = {
-        .sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR,
-        .pNext = nullptr,
-        .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR};
-
-    VkMemoryAllocateInfo alloc_info{
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .pNext = &export_allocate_info,
-        .allocationSize = memory_requirements.size,
-        .memoryTypeIndex = 0,
-    };
-    VkDeviceMemory device_mem;
-    result =
-        pDisp->AllocateMemory(device, &alloc_info, pAllocator, &device_mem);
-    if (result != VK_SUCCESS) {
-      fprintf(stderr, "vkAllocMemory failed: %d", result);
-      return result;
-    }
-    memories_.push_back(device_mem);
-    result = pDisp->BindImageMemory(device, image, device_mem, 0);
-    if (result != VK_SUCCESS) {
-      fprintf(stderr, "vkBindImageMemory failed: %d", result);
-      return result;
-    }
-    uint32_t vmo_handle;
-    // Export the vkDeviceMemory to a VMO.
-    VkMemoryGetFuchsiaHandleInfoKHR get_handle_info = {
-        VK_STRUCTURE_TYPE_MEMORY_GET_FUCHSIA_HANDLE_INFO_KHR, nullptr,
-        device_mem, VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR};
-
-    result =
-        pDisp->GetMemoryFuchsiaHandleKHR(device, &get_handle_info, &vmo_handle);
-    if (result != VK_SUCCESS) {
-      fprintf(stderr, "vkGetMemoryFuchsiaHandleKHR failed: %d", result);
-      return result;
-    }
-
-    zx::vmo vmo(vmo_handle);
-
-    fuchsia::images::ImageInfo image_info;
-    image_info.width = width;
-    image_info.height = height;
-    image_info.stride = 0;  // Meaningless for optimal tiling.
-    image_info.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
-    image_info.color_space = fuchsia::images::ColorSpace::SRGB;
-    image_info.tiling = fuchsia::images::Tiling::GPU_OPTIMAL;
-
-    surface()->AddImage(images_[i].id, std::move(image_info), std::move(vmo),
-                        alloc_info.allocationSize);
-
+    images_.push_back({image_infos[i].image, image_infos[i].image_id});
+    memories_.push_back(image_infos[i].memory);
     VkExportSemaphoreCreateInfoKHR export_create_info = {
         .sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO_KHR,
         .pNext = nullptr,
@@ -492,13 +424,18 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceSupportKHR(
 VKAPI_ATTR VkResult VKAPI_CALL CreateImagePipeSurfaceFUCHSIA(
     VkInstance instance, const VkImagePipeSurfaceCreateInfoFUCHSIA* pCreateInfo,
     const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface) {
-  *pSurface = reinterpret_cast<VkSurfaceKHR>(
+  auto out_surface =
 #if USE_IMAGEPIPE_SURFACE_FB
-      new ImagePipeSurfaceFb()
+      std::make_unique<ImagePipeSurfaceDisplay>();
 #else
-      new ImagePipeSurfaceAsync(pCreateInfo->imagePipeHandle)
+      std::make_unique<ImagePipeSurfaceAsync>(pCreateInfo->imagePipeHandle);
 #endif
-  );
+
+  if (!out_surface->Init()) {
+    return VK_ERROR_DEVICE_LOST;
+  }
+
+  *pSurface = reinterpret_cast<VkSurfaceKHR>(out_surface.release());
   return VK_SUCCESS;
 }
 
@@ -540,7 +477,8 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(
   pSurfaceCapabilities->currentTransform =
       VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
   pSurfaceCapabilities->maxImageArrayLayers = 1;
-  pSurfaceCapabilities->supportedUsageFlags = image_pipe_surface->SupportedUsage();
+  pSurfaceCapabilities->supportedUsageFlags =
+      image_pipe_surface->SupportedUsage();
   pSurfaceCapabilities->supportedCompositeAlpha =
       VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
   return VK_SUCCESS;
@@ -634,6 +572,7 @@ CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
 
   bool external_memory_extension_available = false;
   bool external_semaphore_extension_available = false;
+  bool fuchsia_buffer_collection_extension_available = false;
   uint32_t device_extension_count;
   VkResult result =
       layer_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
@@ -654,6 +593,10 @@ CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
                     device_extensions[i].extensionName)) {
           external_semaphore_extension_available = true;
         }
+        if (!strcmp(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME,
+                    device_extensions[i].extensionName)) {
+          fuchsia_buffer_collection_extension_available = true;
+        }
       }
     }
   }
@@ -665,6 +608,12 @@ CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
     fprintf(stderr, "Device extension not available: %s\n",
             VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME);
   }
+#if USE_IMAGEPIPE_SURFACE_FB
+  if (!fuchsia_buffer_collection_extension_available) {
+    fprintf(stderr, "Device extension not available: %s\n",
+            VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
+  }
+#endif
   if (!external_memory_extension_available ||
       !external_semaphore_extension_available)
     return VK_ERROR_INITIALIZATION_FAILED;
@@ -677,6 +626,9 @@ CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
   enabled_extensions.push_back(VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME);
   enabled_extensions.push_back(
       VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME);
+#if USE_IMAGEPIPE_SURFACE_FB
+  enabled_extensions.push_back(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
+#endif
   create_info.enabledExtensionCount = enabled_extensions.size();
   create_info.ppEnabledExtensionNames = enabled_extensions.data();
 

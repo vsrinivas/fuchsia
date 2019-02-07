@@ -10,6 +10,9 @@
 
 #include <vector>
 
+struct VkLayerDispatchTable_;
+typedef struct VkLayerDispatchTable_ VkLayerDispatchTable;
+
 namespace image_pipe_swapchain {
 
 struct SupportedImageProperties {
@@ -21,6 +24,12 @@ struct SupportedImageProperties {
 // (see image_pipe.fidl).
 class ImagePipeSurface {
  public:
+  struct ImageInfo {
+    VkImage image{};
+    VkDeviceMemory memory{};
+    uint32_t image_id{};
+  };
+
   ImagePipeSurface() {
     std::vector<VkSurfaceFormatKHR> formats(
         {{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}});
@@ -34,48 +43,36 @@ class ImagePipeSurface {
   }
 
   VkFlags SupportedUsage() {
-    VkFlags supportedUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                             VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                             VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    if (UseScanoutExtension()) {
-      supportedUsage |= VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE;
-    } else {
-      supportedUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;
-    }
-    return supportedUsage;
+    return VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+           VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+           VK_IMAGE_USAGE_SAMPLED_BIT;
   }
 
-  VkFlags DetermineUsage(VkFlags requestedUsage) {
-   requestedUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE;
-   return requestedUsage & SupportedUsage();
-  }
-
+  virtual bool Init() { return true; }
   virtual bool CanPresentPendingImage() { return true; }
-
-  // We can't call EnumerateInstanceExtensionsProperties in the layer; so assume
-  // that VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME is available. This should
-  // perhaps be a device extension anyway; but it will be going away once we
-  // have an image import extension.
-  virtual bool UseScanoutExtension() { return false; }
 
   virtual bool GetSize(uint32_t* width_out, uint32_t* height_out) {
     return false;
   }
 
+  virtual bool CreateImage(VkDevice device, VkLayerDispatchTable* pDisp,
+                           VkFormat format, VkImageUsageFlags usage,
+                           fuchsia::images::ImageInfo image_info,
+                           uint32_t image_count,
+                           const VkAllocationCallbacks* pAllocator,
+                           std::vector<ImageInfo>* image_info_out) = 0;
+  virtual void RemoveImage(uint32_t image_id) = 0;
+  virtual void PresentImage(uint32_t image_id,
+                            std::vector<zx::event> acquire_fences,
+                            std::vector<zx::event> release_fences) = 0;
+
+ protected:
   uint32_t next_image_id() {
     if (++next_image_id_ == 0) {
       ++next_image_id_;
     }
     return next_image_id_;
   }
-
-  virtual void AddImage(uint32_t image_id,
-                        fuchsia::images::ImageInfo image_info, zx::vmo buffer,
-                        uint64_t size_bytes) = 0;
-  virtual void RemoveImage(uint32_t image_id) = 0;
-  virtual void PresentImage(uint32_t image_id,
-                            std::vector<zx::event> acquire_fences,
-                            std::vector<zx::event> release_fences) = 0;
 
  private:
   SupportedImageProperties supported_image_properties_;
