@@ -85,8 +85,7 @@ class Node {
   // |async_get_default_dispatcher| to obtain the default dispatcher for the
   // current thread.
   //
-  // Uses |CreateConnection| to create a connection appropriate for the concrete
-  // type of this object.
+  // Calls |Connect| after validating flags and modes.
   zx_status_t Serve(uint32_t flags, zx::channel request,
                     async_dispatcher_t* dispatcher = nullptr);
 
@@ -109,6 +108,16 @@ class Node {
   virtual zx_status_t Lookup(const std::string& name, Node** out_node) const;
 
  protected:
+  // Called by |Serve| after validating flags and modes.
+  // This should be implemented by sub classes which doesn't create a connection
+  // class.
+  //
+  // Default implementation:
+  // Uses |CreateConnection| to create a connection appropriate for the concrete
+  // type of this object.
+  virtual zx_status_t Connect(uint32_t flags, zx::channel request,
+                              async_dispatcher_t* dispatcher);
+
   const std::vector<std::unique_ptr<Connection>>& connections() const {
     return connections_;
   }

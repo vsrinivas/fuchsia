@@ -28,6 +28,8 @@ zx_status_t Directory::CreateConnection(
 }
 
 uint32_t Directory::GetAdditionalAllowedFlags() const {
+  // TODO(ZX-3251): overide this in PseudoDir and remove OPEN_RIGHT_WRITABLE
+  // flag.
   return fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
          fuchsia::io::OPEN_FLAG_DIRECTORY;
 }

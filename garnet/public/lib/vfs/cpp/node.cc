@@ -110,6 +110,12 @@ zx_status_t Node::Serve(uint32_t flags, zx::channel request,
     SendOnOpenEventOnError(flags, std::move(request), status);
     return status;
   }
+  return Connect(flags, std::move(request), dispatcher);
+}
+
+zx_status_t Node::Connect(uint32_t flags, zx::channel request,
+                          async_dispatcher_t* dispatcher) {
+  zx_status_t status;
   std::unique_ptr<Connection> connection;
   if (Flags::IsPathOnly(flags)) {
     status = Node::CreateConnection(flags, &connection);
