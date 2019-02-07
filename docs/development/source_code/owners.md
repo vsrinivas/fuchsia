@@ -1,9 +1,9 @@
-# Maintainers
+# Owners
 
-Each repository in the system has a set of maintainers. These are
-tracked in files all aptly named `MAINTAINERS`. One of these will
+Each repository in the system has a set of owners. These are
+tracked in files all aptly named `OWNERS`. One of these will
 always be present in the root of a repository. Many directories will
-have their own `MAINTAINERS` files.
+have their own `OWNERS` files.
 
 ## Contents
 
@@ -17,14 +17,10 @@ questions about it.
 
 ## Responsibilities
 
-MAINTAINERS are not OWNERS, and in particular code review +2 is not
-gated on membership in the appropriate file.
+Eventually, Fuchsia will require changes to have an OWNERS +2 review.
 
-Rather, these files are about being able to find an individual who
-knows about and is responsible for code in the system. I.e. someone
-who can answer questions about the role of the code in the system, or
-who can review changes to the code in question (or at least provide
-more appropriate reviewers).
+For now, this is not required, and many OWNERS files contain a `*` allowing
+anyone to provide such a +2.
 
 ## Tools
 
@@ -34,6 +30,6 @@ such as suggesting reviewers automatically in Gerrit.
 ## Format
 
 We use the [Gerrit find-owners plugin][find-owners] file format for our
-MAINTAINERS files.
+OWNERS files.
 
 [find-owners]: https://gerrit.googlesource.com/plugins/find-owners/+/master/src/main/resources/Documentation/about.md
