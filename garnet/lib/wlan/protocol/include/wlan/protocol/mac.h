@@ -186,11 +186,19 @@ enum {
     WLAN_INDICATION_HW_SCAN_ABORTED = 4,
 };
 
+enum {
+    WLAN_HW_SCAN_TYPE_ACTIVE = 1,
+    WLAN_HW_SCAN_TYPE_PASSIVE = 2,
+};
+
 typedef struct wlan_hw_scan_config {
+    uint8_t scan_type;  // WLAN_HW_SCAN_TYPE_*
     // Number of channels in the |channels| array. Must be at least 1
     uint8_t num_channels;
     // Channel numbers to scan
     uint8_t channels[WLAN_CHANNELS_MAX_LEN];
+    // SSID for directed probe requests
+    wlan_ssid_t ssid;
 } wlan_hw_scan_config_t;
 
 enum {

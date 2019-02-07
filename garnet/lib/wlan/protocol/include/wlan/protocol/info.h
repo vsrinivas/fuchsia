@@ -11,6 +11,14 @@
 
 __BEGIN_CDECLS;
 
+// IEEE Std 802.11-2016, 9.4.2.2
+#define WLAN_MAX_SSID_LEN 32
+
+typedef struct wlan_ssid {
+    uint8_t len;
+    uint8_t ssid[WLAN_MAX_SSID_LEN];
+} wlan_ssid_t;
+
 enum Band {
     // See IEEE Std 802.11-2016 Annex E
     // This is a simplified expression of channel starting frequencies.

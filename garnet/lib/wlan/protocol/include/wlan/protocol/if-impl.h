@@ -19,8 +19,6 @@ enum {
 };
 
 // IEEE Std 802.11-2016, 9.4.2.2
-#define WLAN_MAX_SSID_LEN 32
-
 #define WLAN_SCAN_MAX_SSIDS 32
 
 typedef struct wlanif_ssid {

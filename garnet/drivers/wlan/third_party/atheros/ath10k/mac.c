@@ -5498,7 +5498,9 @@ static zx_status_t ath10k_mac_convert_scan_config(const wlan_hw_scan_config_t* s
 
     memset(arg, 0, sizeof(*arg));
     ath10k_wmi_start_scan_init(arg);
-    arg->scan_ctrl_flags |= WMI_SCAN_FLAG_PASSIVE;
+    if (scan_config->scan_type == WLAN_HW_SCAN_TYPE_PASSIVE) {
+        arg->scan_ctrl_flags |= WMI_SCAN_FLAG_PASSIVE;
+    }
     arg->n_channels = scan_config->num_channels;
 
     for (size_t i = 0; i < scan_config->num_channels; ++i) {
@@ -5509,6 +5511,14 @@ static zx_status_t ath10k_mac_convert_scan_config(const wlan_hw_scan_config_t* s
         }
         ZX_DEBUG_ASSERT(ath_chan->center_freq.cbw20 != 0);
         arg->channels[i] = ath_chan->center_freq.cbw20;
+    }
+
+    if (scan_config->ssid.len > 0) {
+        arg->n_ssids = 1;
+        arg->ssids[0].len = scan_config->ssid.len;
+        arg->ssids[0].ssid = scan_config->ssid.ssid;
+    } else {
+        arg->n_ssids = 0;
     }
     return ZX_OK;
 }

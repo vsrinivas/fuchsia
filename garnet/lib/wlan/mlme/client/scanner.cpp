@@ -110,6 +110,12 @@ zx_status_t Scanner::Start(const MlmeMsg<wlan_mlme::ScanRequest>& req) {
 
 zx_status_t Scanner::StartHwScan() {
     wlan_hw_scan_config_t config = {};
+    if (req_->scan_type == wlan_mlme::ScanTypes::ACTIVE) {
+        config.scan_type = WLAN_HW_SCAN_TYPE_ACTIVE;
+    } else {
+        config.scan_type = WLAN_HW_SCAN_TYPE_PASSIVE;
+    }
+
     const auto& chans = req_->channel_list;
     if (chans->size() > arraysize(config.channels)) {
         errorf("too many channels to scan: %zu\n", chans->size());
@@ -119,6 +125,15 @@ zx_status_t Scanner::StartHwScan() {
     }
     config.num_channels = chans->size();
     std::copy(chans->begin(), chans->end(), config.channels);
+
+    if (req_->ssid.size() > arraysize(config.ssid.ssid)) {
+        errorf("SSID too large: %zu\n", req_->ssid.size());
+        SendScanEnd(device_, req_->txn_id, wlan_mlme::ScanResultCodes::INVALID_ARGS);
+        Reset();
+        return ZX_ERR_INVALID_ARGS;
+    }
+    config.ssid.len = static_cast<uint8_t>(req_->ssid.size());
+    std::copy(req_->ssid.begin(), req_->ssid.end(), config.ssid.ssid);
 
     zx_status_t status = device_->StartHwScan(&config);
     if (status != ZX_OK) {
