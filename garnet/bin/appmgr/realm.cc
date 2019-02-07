@@ -968,7 +968,7 @@ std::string Realm::IsolatedDataPathForPackage(const FuchsiaPkgUrl& fp) {
   // labels from the root Realm to this Realm. The Component part comes from
   // combining the Component URL.
   std::string path = files::JoinPath(data_path(), StableComponentID(fp));
-  if (!files::IsDirectory(path) && !files::CreateDirectory(path)) {
+  if (!files::CreateDirectory(path)) {
     FXL_LOG(ERROR) << "Failed to create data directory " << path;
     return "";
   }
