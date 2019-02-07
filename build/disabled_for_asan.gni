@@ -89,9 +89,6 @@ disabled_for_asan = [
   # MTWN-236
   "/pkgfs/packages/use_aac_decoder_test/0/test/use_aac_decoder_test",
 
-  # ZX-3382
-  "/pkgfs/packages/vfs_cpp_tests/0/test/vfs_cpp_unittests",
-
   # MAC-242
   "/pkgfs/packages/vmm_tests/0/test/device_unittests",
 

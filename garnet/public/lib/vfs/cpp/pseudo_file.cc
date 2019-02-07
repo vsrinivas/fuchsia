@@ -114,7 +114,7 @@ zx_status_t BufferedPseudoFile::Content::WriteAt(std::vector<uint8_t> data,
   }
 
   dirty_ = true;
-  if (actual > buffer_.size() - offset) {
+  if (actual + offset > buffer_.size()) {
     SetInputLength(offset + actual);
   }
 

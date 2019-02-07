@@ -473,7 +473,8 @@ TEST_F(BufferedPseudoFileTest, WriteafterEndOfFile) {
 
   AssertWrite(file, "is");
 
-  auto updated_str = str + "\0\0\0\0\0is";
+  auto updated_str = str;
+  updated_str.append(5, 0).append("is");
 
   AssertReadAt(file, 0, 100, updated_str);
 
