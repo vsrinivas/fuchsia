@@ -454,10 +454,10 @@ void HostServer::Connect(::std::string device_id, ConnectCallback callback) {
     } else {
       ZX_DEBUG_ASSERT(conn_ref);
       ZX_DEBUG_ASSERT(peer_id == conn_ref->device_identifier());
+      if (self) {
+        self->OnConnect(std::move(conn_ref), false);
+      }
       callback(Status());
-    }
-    if (self) {
-      self->OnConnect(std::move(conn_ref), false);
     }
   };
   adapter()->le_connection_manager()->Connect(device_id,

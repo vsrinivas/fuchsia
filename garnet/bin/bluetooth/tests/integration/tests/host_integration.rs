@@ -36,6 +36,13 @@ mod common;
 const TIMEOUT: i64 = 10; // in seconds
 const BT_HOST_DIR: &str = "/dev/class/bt-host";
 
+// TODO(BT-229): Currently these tests rely on fakes that are hard-coded in the fake
+// HCI driver. Remove these once it is possible to set up mock devices programmatically.
+const FAKE_LE_DEVICE_ADDR: &str = "00:00:00:00:00:01";
+const FAKE_BREDR_DEVICE_ADDR: &str = "00:00:00:00:00:02";
+const FAKE_LE_CONN_ERROR_DEVICE_ADDR: &str = "00:00:00:00:00:03";
+const FAKE_DEVICE_COUNT: usize = 3;
+
 type HostTestPtr = Arc<RwLock<HostTest>>;
 
 struct HostTest {
@@ -710,29 +717,80 @@ async fn test_list_devices(test_state: HostTestPtr) -> Result<(), Error> {
     expect_eq!(vec![], devices)?;
 
     // Wait for all fake devices to be discovered.
-    // TODO(NET-1457): Add support for setting these up programmatically instead of hardcoding
+    // TODO(BT-229): Add support for setting these up programmatically instead of hardcoding
     // them. The fake HCI driver currently sets up one LE and one BR/EDR device.
     await!(test_state.read().host_proxy.start_discovery())?;
     let expected_le = RemoteDeviceExpectation {
-        address: Some("00:00:00:00:00:01".to_string()),
+        address: Some(FAKE_LE_DEVICE_ADDR.to_string()),
         technology: Some(TechnologyType::LowEnergy),
         ..Default::default()
     };
     let expected_bredr = RemoteDeviceExpectation {
-        address: Some("00:00:00:00:00:02".to_string()),
+        address: Some(FAKE_BREDR_DEVICE_ADDR.to_string()),
         technology: Some(TechnologyType::Classic),
+        ..Default::default()
+    };
+    let expected_le2 = RemoteDeviceExpectation {
+        address: Some(FAKE_LE_CONN_ERROR_DEVICE_ADDR.to_string()),
+        technology: Some(TechnologyType::LowEnergy),
         ..Default::default()
     };
     await!(HostTest::on_device_update(test_state.clone(), None, expected_le.clone()))?;
     await!(HostTest::on_device_update(test_state.clone(), None, expected_bredr.clone()))?;
+    await!(HostTest::on_device_update(test_state.clone(), None, expected_le2.clone()))?;
 
     // List the host's devices
     let devices = await!(test_state.read().host_proxy.list_devices())?;
 
     // Both fake devices should be in the map.
-    expect_eq!(2, devices.len())?;
-    expect_remote_device(&test_state, "00:00:00:00:00:01", &expected_le)?;
-    expect_remote_device(&test_state, "00:00:00:00:00:02", &expected_bredr)?;
+    expect_eq!(FAKE_DEVICE_COUNT, devices.len())?;
+    expect_remote_device(&test_state, FAKE_LE_DEVICE_ADDR, &expected_le)?;
+    expect_remote_device(&test_state, FAKE_BREDR_DEVICE_ADDR, &expected_bredr)?;
+    expect_remote_device(&test_state, FAKE_LE_CONN_ERROR_DEVICE_ADDR, &expected_le2)?;
+    Ok(())
+}
+
+async fn test_connect(test_state: HostTestPtr) -> Result<(), Error> {
+    // Start discovery and let bt-host process the fake LE devices.
+    await!(test_state.read().host_proxy.start_discovery())?;
+    let le_dev = RemoteDeviceExpectation {
+        address: Some(FAKE_LE_DEVICE_ADDR.to_string()),
+        ..Default::default()
+    };
+    let le_error_dev = RemoteDeviceExpectation {
+        address: Some(FAKE_LE_CONN_ERROR_DEVICE_ADDR.to_string()),
+        ..Default::default()
+    };
+    await!(HostTest::on_device_update(test_state.clone(), None, le_dev))?;
+    await!(HostTest::on_device_update(test_state.clone(), None, le_error_dev))?;
+
+    let devices = await!(test_state.read().host_proxy.list_devices())?;
+    expect_true!(devices.len() >= 2)?;
+
+    // Obtain bt-host assigned IDs of the devices.
+    let success_dev = devices
+        .iter()
+        .find(|x| x.address == FAKE_LE_DEVICE_ADDR)
+        .ok_or(BtError::new("success device not found"))?;
+    let failure_dev = devices
+        .iter()
+        .find(|x| x.address == FAKE_LE_CONN_ERROR_DEVICE_ADDR)
+        .ok_or(BtError::new("error device not found"))?;
+
+    // Connecting to the failure device should result in an error.
+    let mut status = await!(test_state.read().host_proxy.connect(&failure_dev.identifier))?;
+    expect_true!(status.error.is_some())?;
+
+    // Connecting to the success device should return success and the device should become
+    // connected.
+    status = await!(test_state.read().host_proxy.connect(&success_dev.identifier))?;
+    expect_true!(status.error.is_none())?;
+    await!(HostTest::on_device_update(
+        test_state.clone(),
+        Some(&success_dev.identifier),
+        RemoteDeviceExpectation { connected: Some(true), ..Default::default() }
+    ))?;
+
     Ok(())
 }
 
@@ -906,6 +964,7 @@ fn main() -> Result<(), Error> {
     run_test!(test_discovery)?;
     run_test!(test_close)?;
     run_test!(test_list_devices)?;
+    run_test!(test_connect)?;
     run_test!(test_add_bonded_devices_success)?;
     run_test!(test_add_bonded_devices_no_ltk_fails)?;
     run_test!(test_add_bonded_devices_duplicate_entry)?;

@@ -25,6 +25,8 @@ namespace bthci_fake {
 const DeviceAddress kAddress0(DeviceAddress::Type::kLEPublic,
                               "00:00:00:00:00:01");
 const DeviceAddress kAddress1(DeviceAddress::Type::kBREDR, "00:00:00:00:00:02");
+const DeviceAddress kAddress2(DeviceAddress::Type::kLEPublic,
+                              "00:00:00:00:00:03");
 
 Device::Device(zx_device_t* device)
     : loop_(&kAsyncLoopConfigNoAttachToThread), parent_(device) {}
@@ -77,7 +79,7 @@ zx_status_t Device::Bind() {
   fake_device_->set_settings(settings);
 
   // A Sample LE remote device for le-scan to pick up.
-  // TODO(bwb): add tooling for adding/removing fake devices
+  // TODO(BT-229): add tooling for adding/removing fake devices
   const auto kAdvData0 = btlib::common::CreateStaticByteBuffer(
       // Flags
       0x02, 0x01, 0x02,
@@ -95,6 +97,14 @@ zx_status_t Device::Bind() {
   device = std::make_unique<FakeDevice>(kAddress1, false, false);
   // A Toy Game
   device->set_class_of_device(btlib::common::DeviceClass({0x14, 0x08, 0x00}));
+  fake_device_->AddDevice(std::move(device));
+
+  // Add a LE device that always fails to connect.
+  // TODO(BT-229): Allow this to be created programmatically by
+  // clients of this driver.
+  device = std::make_unique<FakeDevice>(kAddress2, true, true);
+  device->SetAdvertisingData(kAdvData0);
+  device->set_connect_response(btlib::hci::StatusCode::kConnectionTimeout);
   fake_device_->AddDevice(std::move(device));
 
   loop_.StartThread("bt_hci_fake");
