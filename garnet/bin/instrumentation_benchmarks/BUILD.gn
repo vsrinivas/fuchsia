@@ -10,10 +10,12 @@ executable("bin") {
   testonly = true
   sources = [
     "inspect.cc",
+    "inspector.cc",
     "test_runner.cc",
   ]
   deps = [
     "//garnet/public/lib/component/cpp",
+    "//zircon/public/lib/inspect-vmo",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fbl",
