@@ -12,7 +12,7 @@ fidl("fuchsia.wlan.ap.policy") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.wlan.common",
+    "//sdk/fidl/fuchsia.wlan.common",
     "//zircon/public/fidl/fuchsia-net",
   ]
 }

@@ -23,7 +23,7 @@ executable("realm_tests") {
     "mock_runner:appmgr_mock_runner",
     "//garnet//examples/fidl/services:echo2",
     "//garnet/bin/appmgr:lib",
-    "$garnet_sdk_fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl",

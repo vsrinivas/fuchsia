@@ -31,7 +31,7 @@ source_set("ranking_feature") {
 
   public_deps = [
     "//peridot/bin/suggestion_engine:models",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
     "//third_party/rapidjson",
   ]
 }
@@ -44,7 +44,7 @@ source_set("annoyance_ranking_feature") {
 
   public_deps = [
     ":ranking_feature",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -72,7 +72,7 @@ source_set("affinity_ranking_feature") {
     ":ranking_feature",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -98,7 +98,7 @@ source_set("interrupting_ranking_feature") {
 
   public_deps = [
     ":ranking_feature",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -124,7 +124,7 @@ source_set("kronk_ranking_feature") {
 
   public_deps = [
     ":ranking_feature",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -150,7 +150,7 @@ source_set("mod_pair_ranking_feature") {
 
   public_deps = [
     ":ranking_feature",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 
   deps = [
@@ -182,7 +182,7 @@ source_set("proposal_hint_ranking_feature") {
 
   public_deps = [
     ":ranking_feature",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -208,7 +208,7 @@ source_set("query_match_ranking_feature") {
 
   public_deps = [
     ":ranking_feature",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -234,7 +234,7 @@ source_set("dead_story_ranking_feature") {
 
   public_deps = [
     ":ranking_feature",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 

@@ -9,7 +9,7 @@ group("model") {
   public_deps = [
     ":story_mutator",
     ":story_observer",
-    "$peridot_sdk_fidl/fuchsia.modular.storymodel",
+    "//sdk/fidl/fuchsia.modular.storymodel",
   ]
 }
 
@@ -27,7 +27,7 @@ source_set("story_observer") {
   ]
 
   public_deps = [
-    "$peridot_sdk_fidl/fuchsia.modular.storymodel",
+    "//sdk/fidl/fuchsia.modular.storymodel",
   ]
 }
 
@@ -38,7 +38,7 @@ source_set("story_mutator") {
   ]
 
   public_deps = [
-    "$peridot_sdk_fidl/fuchsia.modular.storymodel",
+    "//sdk/fidl/fuchsia.modular.storymodel",
     "//garnet/public/lib/fxl",
   ]
 }
@@ -51,7 +51,7 @@ source_set("story_model_storage") {
 
   public_deps = [
     "//garnet/public/lib/async_promise",
-    "$peridot_sdk_fidl/fuchsia.modular.storymodel",
+    "//sdk/fidl/fuchsia.modular.storymodel",
   ]
 }
 
@@ -62,7 +62,7 @@ source_set("apply_mutations") {
   ]
 
   public_deps = [
-    "$peridot_sdk_fidl/fuchsia.modular.storymodel",
+    "//sdk/fidl/fuchsia.modular.storymodel",
     "//peridot/public/lib/fostr/fidl/fuchsia.modular.storymodel",
   ]
 
@@ -92,7 +92,7 @@ source_set("noop_story_model_storage") {
   ]
 
   public_deps = [
-    "$peridot_sdk_fidl/fuchsia.modular.storymodel",
+    "//sdk/fidl/fuchsia.modular.storymodel",
   ]
 
   deps = [
@@ -108,7 +108,7 @@ source_set("ledger_story_model_storage") {
   ]
 
   public_deps = [
-    "$peridot_sdk_fidl/fuchsia.modular.storymodel",
+    "//sdk/fidl/fuchsia.modular.storymodel",
   ]
 
   deps = [
@@ -119,7 +119,7 @@ source_set("ledger_story_model_storage") {
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:promise",
-    "$peridot_sdk_fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.ledger",
   ]
 }
 
@@ -151,7 +151,7 @@ source_set("story_model_owner") {
   public_deps = [
     "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fxl",
-    "$peridot_sdk_fidl/fuchsia.modular.storymodel",
+    "//sdk/fidl/fuchsia.modular.storymodel",
   ]
 
   deps = [

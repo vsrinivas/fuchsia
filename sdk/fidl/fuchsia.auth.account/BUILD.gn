@@ -10,6 +10,6 @@ fidl("fuchsia.auth.account") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.auth",
+    "//sdk/fidl/fuchsia.auth",
   ]
 }

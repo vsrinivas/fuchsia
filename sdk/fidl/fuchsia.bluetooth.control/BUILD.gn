@@ -12,6 +12,6 @@ fidl("fuchsia.bluetooth.control") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.bluetooth",
+    "//sdk/fidl/fuchsia.bluetooth",
   ]
 }

@@ -17,8 +17,8 @@ source_set("render") {
 
   public_deps = [
     "//garnet/bin/mediaplayer/graph",
-    "$garnet_sdk_fidl/fuchsia.math",
-    "$garnet_sdk_fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.math",
+    "//sdk/fidl/fuchsia.media",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/timeline",
   ]

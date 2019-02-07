@@ -10,9 +10,9 @@ rustc_binary("bt-le-peripheral") {
 
   deps = [
     "//garnet/lib/rust/fuchsia-bluetooth",
-    "$garnet_sdk_fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
-    "$garnet_sdk_fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
-    "$garnet_sdk_fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
+    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",

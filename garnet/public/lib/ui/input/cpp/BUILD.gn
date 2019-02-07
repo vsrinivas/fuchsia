@@ -13,7 +13,7 @@ source_set("cpp") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input",
     "//garnet/public/lib/fxl",
   ]
 }

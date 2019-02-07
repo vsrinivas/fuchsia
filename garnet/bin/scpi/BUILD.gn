@@ -11,7 +11,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.scpi",
+    "//sdk/fidl/fuchsia.scpi",
     "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
     "//zircon/public/banjo/ddk-protocol-scpi",

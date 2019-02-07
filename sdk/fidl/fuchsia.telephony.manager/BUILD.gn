@@ -10,6 +10,6 @@ fidl("fuchsia.telephony.manager") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.telephony.ril",
+    "//sdk/fidl/fuchsia.telephony.ril",
   ]
 }

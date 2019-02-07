@@ -6,7 +6,7 @@ import("//third_party/flatbuffers/flatbuffer.gni")
 
 flatbuffer("commit_pack_flatbuffer") {
   sources = [
-    "$peridot_sdk_fidl/fuchsia.ledger.cloud/serialized_commits.fbs",
+    "//sdk/fidl/fuchsia.ledger.cloud/serialized_commits.fbs",
   ]
 }
 
@@ -22,7 +22,7 @@ source_set("commit_pack") {
   ]
 
   public_deps = [
-    "$peridot_sdk_fidl/fuchsia.ledger.cloud",
+    "//sdk/fidl/fuchsia.ledger.cloud",
   ]
 }
 

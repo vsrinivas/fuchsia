@@ -18,7 +18,7 @@ source_set("testing") {
     "//sdk/lib/fidl/cpp",
     "//peridot/bin/cloud_provider_firestore/firestore",
     "//peridot/bin/cloud_provider_firestore/include",
-    "$peridot_sdk_fidl/fuchsia.ledger.cloud",
+    "//sdk/fidl/fuchsia.ledger.cloud",
   ]
 
   deps = [

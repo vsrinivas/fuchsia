@@ -33,7 +33,7 @@ source_set("lib") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.tts",
+    "//sdk/fidl/fuchsia.tts",
     "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",

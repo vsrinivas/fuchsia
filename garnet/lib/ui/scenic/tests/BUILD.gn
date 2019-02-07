@@ -37,7 +37,7 @@ source_set("dummy_system") {
   ]
   deps = [
     "//garnet/lib/ui/scenic",
-    "$garnet_sdk_fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.scenic",
   ]
 }
 

@@ -30,7 +30,7 @@ executable_package("suggestion_test_module") {
     ":defs",
     "//garnet/public/lib/callback",
     "//peridot/lib/testing:component_base",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
@@ -56,7 +56,7 @@ executable_package("suggestion_test_session_shell") {
     ":defs",
     "//peridot/lib/testing:component_main",
     "//peridot/lib/testing:session_shell_base",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
   ]

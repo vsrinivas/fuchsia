@@ -11,7 +11,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/fuchsia-bluetooth",
-    "$garnet_sdk_fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop-rustc",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//third_party/rust-crates/rustc_deps:byteorder",

@@ -28,8 +28,8 @@ executable_package("intent_test_parent_module") {
 
   deps = [
     ":defs",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
@@ -53,9 +53,9 @@ executable_package("intent_test_child_module") {
 
   deps = [
     ":defs",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/callback",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",

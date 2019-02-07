@@ -10,10 +10,10 @@ fidl("fuchsia.bluetooth.host") {
     "host.fidl",
   ]
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.bluetooth",
-    "$garnet_sdk_fidl/fuchsia.bluetooth.bredr",
-    "$garnet_sdk_fidl/fuchsia.bluetooth.control",
-    "$garnet_sdk_fidl/fuchsia.bluetooth.gatt",
-    "$garnet_sdk_fidl/fuchsia.bluetooth.le",
+    "//sdk/fidl/fuchsia.bluetooth",
+    "//sdk/fidl/fuchsia.bluetooth.bredr",
+    "//sdk/fidl/fuchsia.bluetooth.control",
+    "//sdk/fidl/fuchsia.bluetooth.gatt",
+    "//sdk/fidl/fuchsia.bluetooth.le",
   ]
 }

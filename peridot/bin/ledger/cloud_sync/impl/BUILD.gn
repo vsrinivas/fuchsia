@@ -34,7 +34,7 @@ source_set("impl") {
     "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/storage/public",
     "//peridot/lib/commit_pack",
-    "$peridot_sdk_fidl/fuchsia.ledger.cloud",
+    "//sdk/fidl/fuchsia.ledger.cloud",
   ]
 
   deps = [

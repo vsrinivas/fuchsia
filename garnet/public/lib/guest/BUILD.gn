@@ -11,9 +11,9 @@ source_set("guest") {
   ]
   public_deps = [
     "//garnet/bin/wayland/fidl:fuchsia.wayland",
-    "$garnet_sdk_fidl/fuchsia.guest",
-    "$garnet_sdk_fidl/fuchsia.sys",
-    "$garnet_sdk_fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.guest",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
   ]

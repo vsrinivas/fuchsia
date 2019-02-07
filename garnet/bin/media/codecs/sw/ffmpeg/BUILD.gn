@@ -31,7 +31,7 @@ executable("codec_runner_sw_ffmpeg") {
   deps = [
     "//garnet/lib/media/codec_impl",
     "//garnet/lib/media/ffmpeg",
-    "$garnet_sdk_fidl/fuchsia.mediacodec",
+    "//sdk/fidl/fuchsia.mediacodec",
     "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]

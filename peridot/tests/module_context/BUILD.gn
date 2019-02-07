@@ -20,8 +20,8 @@ executable_package("module_context_test_session_shell") {
 
   deps = [
     ":defs",
-    "$garnet_sdk_fidl/fuchsia.testing.runner",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.testing.runner",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -30,7 +30,7 @@ executable_package("module_context_test_session_shell") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_main",
     "//peridot/lib/testing:session_shell_base",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
   ]
@@ -52,10 +52,10 @@ executable_package("module_context_test_module") {
 
   deps = [
     ":defs",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_base",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
@@ -80,11 +80,11 @@ executable_package("module_context_test_entity_module") {
 
   deps = [
     ":defs",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//peridot/lib/entity:entity_watcher",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_base",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/tests/common:defs",
     "//peridot/tests/trigger:trigger_test_service",

@@ -28,7 +28,7 @@ executable_package("suggestion_engine") {
     ":debug",
     ":suggestion_engine_impl",
     "//garnet/public/lib/component/cpp",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -58,7 +58,7 @@ source_set("suggestion_engine_impl") {
     ":debug",
     ":interruption_processor",
     ":models",
-    "$garnet_sdk_fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/timeline",
     "//peridot/bin/suggestion_engine/decision_policies:all",
@@ -68,7 +68,7 @@ source_set("suggestion_engine_impl") {
     "//peridot/lib/bound_set",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/util:rate_limited_retry",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
   ]
 
@@ -106,7 +106,7 @@ source_set("interruption_processor") {
     ":models",
     "//peridot/bin/suggestion_engine/decision_policies:all",
     "//peridot/bin/suggestion_engine/ranking_features:ranking_feature",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -121,7 +121,7 @@ source_set("state") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/suggestion_engine/filters:base",
     "//peridot/bin/suggestion_engine/rankers:ranker",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
   ]
   public_deps = [
@@ -142,7 +142,7 @@ source_set("models") {
   ]
 
   public_deps = [
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -156,7 +156,7 @@ source_set("debug") {
     ":models",
     ":state",
     "//garnet/public/lib/fxl",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 
   public_deps = [
@@ -177,8 +177,8 @@ executable("suggestion_engine_impl_unittest") {
     "//peridot/bin/sessionmgr/puppet_master:puppet_master_impl",
     "//peridot/lib/testing:test_story_command_executor",
     "//peridot/lib/testing:test_with_session_storage",
-    "$peridot_sdk_fidl/fuchsia.modular",
-    "$peridot_sdk_fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
     "//third_party/googletest:gtest_main",
   ]
 }

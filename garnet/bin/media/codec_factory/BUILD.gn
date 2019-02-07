@@ -12,7 +12,7 @@ executable("codec_factory") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.mediacodec",
+    "//sdk/fidl/fuchsia.mediacodec",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//zircon/public/lib/async-loop-cpp",

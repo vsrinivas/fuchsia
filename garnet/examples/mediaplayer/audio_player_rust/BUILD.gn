@@ -10,8 +10,8 @@ rustc_binary("audio_player_rust") {
   edition = "2018"
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.math:fuchsia.math-rustc",
-    "$garnet_sdk_fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
+    "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
+    "//sdk/fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",

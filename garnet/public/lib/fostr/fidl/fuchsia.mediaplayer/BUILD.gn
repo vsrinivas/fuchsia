@@ -5,7 +5,7 @@
 import("//garnet/public/build/fostr/fostr_fidl.gni")
 
 fostr_fidl("fuchsia.mediaplayer") {
-  fidl_target = "$garnet_sdk_fidl/fuchsia.mediaplayer"
+  fidl_target = "//sdk/fidl/fuchsia.mediaplayer"
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.math",

@@ -42,7 +42,7 @@ source_set("component_context_fake") {
   public_deps = [
     ":entity_resolver_fake",
     "//garnet/public/lib/fxl",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -56,7 +56,7 @@ source_set("entity_resolver_fake") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -70,7 +70,7 @@ source_set("module_resolver_fake") {
 
   public_deps = [
     "//sdk/lib/fidl/cpp",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -85,7 +85,7 @@ source_set("module_facet_reader_fake") {
   public_deps = [
     "//garnet/public/lib/fxl",
     "//peridot/lib/module_manifest:module_facet_reader",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -111,13 +111,13 @@ source_set("session_shell_impl") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/integration_testing/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -132,7 +132,7 @@ source_set("story_controller_mock") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 
   deps = [
@@ -149,7 +149,7 @@ source_set("story_provider_mock") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 
   deps = [
@@ -169,7 +169,7 @@ source_set("test_story_command_executor") {
   deps = [
     "//peridot/bin/sessionmgr/puppet_master:story_command_executor",
     "//peridot/lib/fidl:clone",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -203,7 +203,7 @@ source_set("test_with_session_storage") {
   public_deps = [
     ":test_with_ledger",
     "//peridot/bin/sessionmgr/storage",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -230,7 +230,7 @@ source_set("ledger_repository_for_testing") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -239,12 +239,12 @@ source_set("ledger_repository_for_testing") {
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/ledger_client:constants",
     "//peridot/lib/ledger_client:status",
-    "$peridot_sdk_fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.ledger",
   ]
 
   public_deps = [
     "//peridot/lib/scoped_tmpfs",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 

@@ -13,9 +13,9 @@ executable("video_display") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.simplecamera",
-    "$garnet_sdk_fidl/fuchsia.ui.scenic",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.simplecamera",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",

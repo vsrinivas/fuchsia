@@ -14,8 +14,8 @@ executable("yuv_to_image_pipe") {
 
   deps = [
     "//garnet/lib/ui/yuv",
-    "$garnet_sdk_fidl/fuchsia.ui.scenic",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",

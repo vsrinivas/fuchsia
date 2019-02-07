@@ -26,7 +26,7 @@ rustc_binary("tennis_service_bin") {
   edition = "2018"
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
+    "//sdk/fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
@@ -61,7 +61,7 @@ rustc_binary("tennis_viewer_bin") {
   source_root = "viewer/main.rs"
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
+    "//sdk/fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
@@ -96,7 +96,7 @@ rustc_binary("tennis_rust5_ai_bin") {
   source_root = "rust5_ai/main.rs"
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
+    "//sdk/fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",

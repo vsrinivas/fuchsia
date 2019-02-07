@@ -13,8 +13,8 @@ fidl("services") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.images",
-    "$garnet_sdk_fidl/fuchsia.ui.gfx",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
   ]
 }

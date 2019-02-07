@@ -14,6 +14,6 @@ fidl("fuchsia.ui.text") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input",
   ]
 }

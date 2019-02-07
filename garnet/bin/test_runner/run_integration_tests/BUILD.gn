@@ -9,7 +9,7 @@ executable("run_integration_tests") {
     "test_runner_config.h",
   ]
   deps = [
-    "$garnet_sdk_fidl/fuchsia.testing.runner",
+    "//sdk/fidl/fuchsia.testing.runner",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/cpp",
     "//third_party/rapidjson",

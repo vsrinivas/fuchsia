@@ -11,7 +11,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
+    "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",

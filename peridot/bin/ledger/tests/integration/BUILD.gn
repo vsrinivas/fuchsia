@@ -44,8 +44,8 @@ executable("integration") {
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing",
     "//peridot/lib/socket",
-    "$peridot_sdk_fidl/fuchsia.ledger",
-    "$peridot_sdk_fidl/fuchsia.modular.auth",
+    "//sdk/fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.modular.auth",
     "//third_party/googletest:gtest_main",
   ]
 
@@ -72,7 +72,7 @@ source_set("integration_lib") {
     "//garnet/public/lib/gtest",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/testing:ledger_instance_factory",
-    "$peridot_sdk_fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.ledger",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-testutils",

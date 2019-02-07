@@ -120,10 +120,10 @@ go_library("netstack_lib") {
   name = "netstack"
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.devicesettings($go_toolchain)",
-    "$garnet_sdk_fidl/fuchsia.net.filter($go_toolchain)",
-    "$garnet_sdk_fidl/fuchsia.netstack($go_toolchain)",
-    "$garnet_sdk_fidl/fuchsia.sys($go_toolchain)",
+    "//sdk/fidl/fuchsia.devicesettings($go_toolchain)",
+    "//sdk/fidl/fuchsia.net.filter($go_toolchain)",
+    "//sdk/fidl/fuchsia.netstack($go_toolchain)",
+    "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/go/src/fidlext/fuchsia/hardware/ethernet:fidlext_fuchsia_hardware_ethernet_fake_lib($go_toolchain)",
     "//garnet/public/go/third_party:github.com/google/btree",
     "//garnet/public/go/third_party:github.com/google/go-cmp",

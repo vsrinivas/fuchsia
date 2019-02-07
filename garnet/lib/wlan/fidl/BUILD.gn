@@ -12,8 +12,8 @@ fidl("fidl") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.wlan.common",
-    "$garnet_sdk_fidl/fuchsia.wlan.mlme",
+    "//sdk/fidl/fuchsia.wlan.common",
+    "//sdk/fidl/fuchsia.wlan.mlme",
   ]
 }
 
@@ -25,7 +25,7 @@ fidl("sme") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.wlan.common",
+    "//sdk/fidl/fuchsia.wlan.common",
   ]
 }
 
@@ -39,9 +39,9 @@ fidl("service") {
   public_deps = [
     ":fidl",
     ":sme",
-    "$garnet_sdk_fidl/fuchsia.wlan.common",
-    "$garnet_sdk_fidl/fuchsia.wlan.minstrel",
-    "$garnet_sdk_fidl/fuchsia.wlan.stats",
+    "//sdk/fidl/fuchsia.wlan.common",
+    "//sdk/fidl/fuchsia.wlan.minstrel",
+    "//sdk/fidl/fuchsia.wlan.stats",
   ]
 }
 
@@ -54,7 +54,7 @@ fidl("wlantap") {
 
   public_deps = [
     ":fidl",
-    "$garnet_sdk_fidl/fuchsia.wlan.common",
-    "$garnet_sdk_fidl/fuchsia.wlan.mlme",
+    "//sdk/fidl/fuchsia.wlan.common",
+    "//sdk/fidl/fuchsia.wlan.mlme",
   ]
 }

@@ -25,8 +25,8 @@ go_library("lib") {
   deps = [
     "//garnet/go/src/merkle",
     "//garnet/go/src/sse",
-    "$garnet_sdk_fidl/fuchsia.amber($go_toolchain)",
-    "$garnet_sdk_fidl/fuchsia.sys($go_toolchain)",
+    "//sdk/fidl/fuchsia.amber($go_toolchain)",
+    "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/go/third_party:github.com/flynn/go-tuf",
     "//garnet/public/go/third_party:github.com/rjw57/oauth2device",
     "//garnet/public/go/third_party:golang.org/x/oauth2",

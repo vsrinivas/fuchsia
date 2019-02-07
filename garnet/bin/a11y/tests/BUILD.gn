@@ -23,7 +23,7 @@ executable("a11y_manager_apptests") {
     "//garnet/bin/a11y/a11y_manager:lib",
     "//garnet/bin/a11y/tests/mocks",
     "//sdk/fidl/fuchsia.accessibility",
-    "$garnet_sdk_fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
     "//sdk/lib/fidl/cpp",

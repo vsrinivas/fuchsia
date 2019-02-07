@@ -39,7 +39,7 @@ source_set("story_provider_watcher_base") {
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -61,6 +61,6 @@ source_set("xdr") {
 
   public_deps = [
     "//peridot/lib/fidl:json_xdr",
-    "$peridot_sdk_fidl/fuchsia.modular.auth",
+    "//sdk/fidl/fuchsia.modular.auth",
   ]
 }

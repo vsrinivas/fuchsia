@@ -29,7 +29,7 @@ executable("service") {
   deps = [
     "services",
     "//garnet/examples/escher/common",
-    "$garnet_sdk_fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/escher",
     "//sdk/lib/fidl/cpp",

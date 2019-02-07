@@ -13,9 +13,9 @@ executable("hello_input") {
 
   deps = [
     "//garnet/bin/ui/input_reader",
-    "$garnet_sdk_fidl/fuchsia.sys",
-    "$garnet_sdk_fidl/fuchsia.ui.app",
-    "$garnet_sdk_fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.input",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/base_view/cpp",

@@ -23,7 +23,7 @@ fidl("environment") {
 
   deps = [
     ":network",
-    "$garnet_sdk_fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys",
   ]
 }
 

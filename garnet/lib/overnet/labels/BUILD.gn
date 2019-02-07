@@ -30,7 +30,7 @@ source_set("node_id") {
     "node_id.h",
   ]
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.overnet.protocol",
+    "//sdk/fidl/fuchsia.overnet.protocol",
   ]
   deps = [
     "//garnet/lib/overnet/protocol:serialization_helpers",
@@ -78,7 +78,7 @@ source_set("stream_id") {
     "stream_id.h",
   ]
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.overnet.protocol",
+    "//sdk/fidl/fuchsia.overnet.protocol",
   ]
   deps = [
     "//garnet/lib/overnet/protocol:varint",

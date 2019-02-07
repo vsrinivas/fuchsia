@@ -44,9 +44,9 @@ executable("mediaplayer_bin") {
     "//garnet/bin/mediaplayer/graph_create",
     "//garnet/bin/mediaplayer/render",
     "//garnet/bin/mediaplayer/util",
-    "$garnet_sdk_fidl/fuchsia.media",
-    "$garnet_sdk_fidl/fuchsia.mediaplayer",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.mediaplayer",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -73,7 +73,7 @@ executable("mediaplayer_test_util_bin") {
 
   deps = [
     "//garnet/bin/mediaplayer/graph",
-    "$garnet_sdk_fidl/fuchsia.mediaplayer",
+    "//sdk/fidl/fuchsia.mediaplayer",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/base_view/cpp",
@@ -138,7 +138,7 @@ executable("tests") {
   deps = [
     ":mediaplayer_bin",
     "//garnet/bin/mediaplayer/graph",
-    "$garnet_sdk_fidl/fuchsia.mediaplayer",
+    "//sdk/fidl/fuchsia.mediaplayer",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",

@@ -53,7 +53,7 @@ test("tests") {
 
   deps = [
     ":fostr",
-    "$garnet_sdk_fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//third_party/googletest:gtest_main",

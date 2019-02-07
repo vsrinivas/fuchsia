@@ -17,7 +17,7 @@ executable("mock_runner") {
 
   deps = [
     "//garnet/bin/appmgr/integration_tests/fidl:test.component.mockrunner",
-    "$garnet_sdk_fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]

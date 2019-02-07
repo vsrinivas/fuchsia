@@ -173,7 +173,7 @@ executable("virtio_gpu_bin") {
   ]
   deps = [
     ":virtio",
-    "$garnet_sdk_fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.policy",
     "//garnet/public/lib/ui/base_view/cpp",
   ]
 }
@@ -202,7 +202,7 @@ executable("virtio_net_bin") {
   ]
   deps = [
     ":virtio",
-    "$garnet_sdk_fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.netstack",
     "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet",
   ]
 }
@@ -298,7 +298,7 @@ executable("device_tests") {
   deps = [
     ":device",
     "//garnet/bin/guest/vmm/fidl:fuchsia.guest.device",
-    "$garnet_sdk_fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.netstack",
     "//garnet/public/lib/component/cpp/testing",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fzl",

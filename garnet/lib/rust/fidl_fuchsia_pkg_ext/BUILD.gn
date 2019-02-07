@@ -12,7 +12,7 @@ rustc_library("fidl_fuchsia_pkg_ext") {
   with_unit_tests = true
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:hex",
     "//third_party/rust-crates/rustc_deps:proptest",

@@ -72,7 +72,7 @@ struct Peer {
     uint8_t num_pkt_until_next_probe = kProbeInterval - 1;
     size_t probes;
 };
-// LINT.ThenChange($garnet_sdk_fidl/fuchsia.wlan.minstrel/wlan_minstrel.fidl)
+// LINT.ThenChange(//sdk/fidl/fuchsia.wlan.minstrel/wlan_minstrel.fidl)
 
 class MinstrelRateSelector {
    public:

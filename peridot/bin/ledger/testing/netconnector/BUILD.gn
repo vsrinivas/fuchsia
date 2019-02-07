@@ -15,7 +15,7 @@ source_set("netconnector") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.netconnector",
+    "//sdk/fidl/fuchsia.netconnector",
     "//garnet/public/lib/callback",
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/bin/ledger/testing:lib",
@@ -41,7 +41,7 @@ source_set("unittests") {
 
   deps = [
     ":netconnector",
-    "$garnet_sdk_fidl/fuchsia.netconnector",
+    "//sdk/fidl/fuchsia.netconnector",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

@@ -76,7 +76,7 @@ struct Stream {
     endpoint: avdtp::StreamEndpoint,
     /// The encoding that media sent to this endpoint should be encoded with.
     /// This should be an encoding constant from fuchsia.media like AUDIO_ENCODING_SBC.
-    /// See $garnet_sdk_fidl/fuchsia.media/stream_type.fidl for valid encodings.
+    /// See //sdk/fidl/fuchsia.media/stream_type.fidl for valid encodings.
     encoding: String,
     /// Some(sender) when a stream task is started.  Signaling on this sender will
     /// end the media streaming task.

@@ -12,7 +12,7 @@ source_set("timeline") {
 
   public_deps = [
     ":no_converters",
-    "$garnet_sdk_fidl/fuchsia.mediaplayer",
+    "//sdk/fidl/fuchsia.mediaplayer",
   ]
 }
 

@@ -17,13 +17,13 @@ source_set("story_visibility_system") {
   ]
 
   public_deps = [
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 
   deps = [
     "//peridot/bin/sessionmgr/story:system",
     "//peridot/bin/sessionmgr/story/model",
-    "$peridot_sdk_fidl/fuchsia.modular.storymodel",
+    "//sdk/fidl/fuchsia.modular.storymodel",
   ]
 }
 

@@ -37,7 +37,7 @@ source_set("clipboard_sources") {
     "//sdk/lib/fidl/cpp",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/ledger_client:page_client",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
   ]
 }
@@ -53,7 +53,7 @@ executable("clipboard_impl_unittest") {
     ":clipboard_sources",
     "//garnet/public/lib/gtest",
     "//peridot/lib/testing:test_with_ledger",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
     "//third_party/googletest:gtest_main",
   ]
 }

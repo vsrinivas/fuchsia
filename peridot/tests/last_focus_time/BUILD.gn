@@ -28,8 +28,8 @@ executable_package("last_focus_time_test_session_shell") {
 
   deps = [
     ":defs",
-    "$garnet_sdk_fidl/fuchsia.testing.runner",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.testing.runner",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -38,7 +38,7 @@ executable_package("last_focus_time_test_session_shell") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_main",
     "//peridot/lib/testing:session_shell_base",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
   ]

@@ -5,5 +5,5 @@
 import("//garnet/public/build/fostr/fostr_fidl.gni")
 
 fostr_fidl("fuchsia.speech") {
-  fidl_target = "$peridot_sdk_fidl/fuchsia.speech"
+  fidl_target = "//sdk/fidl/fuchsia.speech"
 }

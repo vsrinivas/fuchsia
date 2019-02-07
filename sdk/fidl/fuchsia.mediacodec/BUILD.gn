@@ -12,6 +12,6 @@ fidl("fuchsia.mediacodec") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media",
   ]
 }

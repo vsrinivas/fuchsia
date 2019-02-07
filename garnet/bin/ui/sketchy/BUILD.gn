@@ -51,7 +51,7 @@ executable("bin") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.ui.sketchy",
+    "//sdk/fidl/fuchsia.ui.sketchy",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/ui/scenic/cpp",

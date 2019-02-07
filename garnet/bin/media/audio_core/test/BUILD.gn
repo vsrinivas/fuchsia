@@ -21,7 +21,7 @@ executable("audio_fidl_tests_bin") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -52,7 +52,7 @@ executable("audio_loopback_tests_bin") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

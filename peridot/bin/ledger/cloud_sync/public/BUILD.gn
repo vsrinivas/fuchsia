@@ -23,7 +23,7 @@ source_set("public") {
   ]
 
   deps = [
-    "$peridot_sdk_fidl/fuchsia.ledger.cloud",
+    "//sdk/fidl/fuchsia.ledger.cloud",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

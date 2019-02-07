@@ -32,7 +32,7 @@ class PoseBufferLatchingShader {
   // to LatchStereoPose.
   //
   // For details on pose buffers and the layout of the Pose struct see
-  // $garnet_sdk_fidl/fuchsia.ui.gfx/commands.fidl
+  // //sdk/fidl/fuchsia.ui.gfx/commands.fidl
   BufferPtr LatchPose(const FramePtr& frame, const Camera& camera,
                       PoseBuffer pose_buffer, int64_t latch_time,
                       bool host_accessible_output = false);

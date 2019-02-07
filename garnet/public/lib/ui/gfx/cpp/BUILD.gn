@@ -11,6 +11,6 @@ source_set("cpp") {
   public_configs = [ "//garnet/public:config" ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.gfx",
   ]
 }

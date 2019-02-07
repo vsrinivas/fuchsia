@@ -13,6 +13,6 @@ source_set("entity_watcher") {
   ]
 
   deps = [
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }

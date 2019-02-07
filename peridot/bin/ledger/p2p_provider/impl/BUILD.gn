@@ -17,7 +17,7 @@ source_set("impl") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.netconnector",
+    "//sdk/fidl/fuchsia.netconnector",
     "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
@@ -34,7 +34,7 @@ source_set("impl") {
     "//peridot/bin/ledger/environment",
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth",
-    "$peridot_sdk_fidl/fuchsia.modular.auth",
+    "//sdk/fidl/fuchsia.modular.auth",
   ]
 }
 

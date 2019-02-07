@@ -17,7 +17,7 @@ rustc_binary("inheritance") {
   edition = "2018"
   deps = [
     ":counter-rustc",
-    "$garnet_sdk_fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/lib/netemul/fidl:environment-rustc",
     "//garnet/public/rust/fuchsia-app",

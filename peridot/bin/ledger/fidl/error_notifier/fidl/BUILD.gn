@@ -12,6 +12,6 @@ fidl("fidl") {
   ]
 
   deps = [
-    "$peridot_sdk_fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.ledger",
   ]
 }

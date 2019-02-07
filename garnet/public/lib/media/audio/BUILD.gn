@@ -15,6 +15,6 @@ source_set("audio") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media",
   ]
 }

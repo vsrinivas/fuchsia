@@ -11,7 +11,7 @@ source_set("context_helper") {
   public_configs = [ "//peridot/public:config" ]
 
   deps = [
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -25,6 +25,6 @@ source_set("context_metadata_builder") {
 
   deps = [
     "//sdk/lib/fidl/cpp",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }

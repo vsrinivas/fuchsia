@@ -23,7 +23,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/lib/loader",
-    "$garnet_sdk_fidl/fuchsia.pkg",
+    "//sdk/fidl/fuchsia.pkg",
     "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",

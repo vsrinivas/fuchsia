@@ -32,8 +32,8 @@ source_set("constants_and_utils") {
   ]
 
   public_deps = [
-    "$peridot_sdk_fidl/fuchsia.modular",
-    "$peridot_sdk_fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
   ]
 }
 
@@ -69,8 +69,8 @@ source_set("session_storage") {
   public_deps = [
     ":story_storage",
     "//peridot/lib/ledger_client:page_client",
-    "$peridot_sdk_fidl/fuchsia.modular",
-    "$peridot_sdk_fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
     "//peridot/public/lib/async/cpp:future",
   ]
 }
@@ -84,8 +84,8 @@ source_set("session_storage_xdr") {
   deps = [
     "//peridot/lib/base64url",
     "//peridot/lib/fidl:json_xdr",
-    "$peridot_sdk_fidl/fuchsia.modular",
-    "$peridot_sdk_fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
   ]
 }
 
@@ -100,7 +100,7 @@ executable("session_storage_unittest") {
     ":session_storage",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/testing:test_with_ledger",
-    "$peridot_sdk_fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.ledger",
     "//peridot/public/lib/async/cpp:future",
     "//third_party/googletest:gtest_main",
   ]
@@ -118,9 +118,9 @@ source_set("story_storage") {
     "//peridot/lib/fidl:clone",
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:page_client",
-    "$peridot_sdk_fidl/fuchsia.ledger",
-    "$peridot_sdk_fidl/fuchsia.modular",
-    "$peridot_sdk_fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
     "//peridot/public/lib/async/cpp:future",
   ]
 }
@@ -135,8 +135,8 @@ source_set("story_storage_xdr") {
     "//peridot/lib/base64url",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/module_manifest:json_xdr",
-    "$peridot_sdk_fidl/fuchsia.modular",
-    "$peridot_sdk_fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
   ]
 }
 
@@ -151,7 +151,7 @@ executable("story_storage_unittest") {
     ":story_storage",
     "//peridot/lib/entity:entity_watcher",
     "//peridot/lib/testing:test_with_ledger",
-    "$peridot_sdk_fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.ledger",
     "//peridot/public/lib/async/cpp:future",
     "//third_party/googletest:gtest_main",
   ]

@@ -10,6 +10,6 @@ fidl("fuchsia.netconnector") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys",
   ]
 }

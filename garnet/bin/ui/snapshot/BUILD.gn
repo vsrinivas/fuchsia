@@ -29,7 +29,7 @@ executable("snapshot") {
   deps = [
     ":snapshot_loader",
     "//garnet/lib/ui/gfx",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",

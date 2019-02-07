@@ -12,9 +12,9 @@ fidl("fidl") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.auth",
-    "$peridot_sdk_fidl/fuchsia.ledger",
-    "$peridot_sdk_fidl/fuchsia.ledger.cloud",
-    "$peridot_sdk_fidl/fuchsia.modular.auth",
+    "//sdk/fidl/fuchsia.auth",
+    "//sdk/fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.ledger.cloud",
+    "//sdk/fidl/fuchsia.modular.auth",
   ]
 }

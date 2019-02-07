@@ -34,11 +34,11 @@ executable("root_presenter") {
     "//garnet/bin/ui/input_reader",
     "//garnet/bin/ui/presentation_mode",
     "//garnet/lib/ui/scenic/util:rk4_spring_simulation",
-    "$garnet_sdk_fidl/fuchsia.ui.gfx",
-    "$garnet_sdk_fidl/fuchsia.ui.input",
-    "$garnet_sdk_fidl/fuchsia.ui.policy",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1token",
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.viewsv1token",
     "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
@@ -64,7 +64,7 @@ source_set("renderer_params") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/fxl",
   ]
 }

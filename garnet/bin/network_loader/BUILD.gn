@@ -12,8 +12,8 @@ executable("bin") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.net.oldhttp",
-    "$garnet_sdk_fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.net.oldhttp",
+    "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

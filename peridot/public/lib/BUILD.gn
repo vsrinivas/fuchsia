@@ -6,13 +6,13 @@ import("//build/fidl/toolchain.gni")
 
 group("services") {
   deps = [
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
 group("just_fidl") {
   deps = [
-    "$peridot_sdk_fidl/fuchsia.modular($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.modular($fidl_toolchain)",
   ]
 }
 

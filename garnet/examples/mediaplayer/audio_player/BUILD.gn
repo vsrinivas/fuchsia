@@ -12,8 +12,8 @@ executable("audio_player") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.media",
-    "$garnet_sdk_fidl/fuchsia.mediaplayer",
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.mediaplayer",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/timeline",

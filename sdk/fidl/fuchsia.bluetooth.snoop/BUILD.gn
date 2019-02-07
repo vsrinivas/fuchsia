@@ -9,6 +9,6 @@ fidl("fuchsia.bluetooth.snoop") {
     "snooper.fidl",
   ]
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.bluetooth",
+    "//sdk/fidl/fuchsia.bluetooth",
   ]
 }

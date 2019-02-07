@@ -62,7 +62,7 @@ source_set("codec_client") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.mediacodec",
+    "//sdk/fidl/fuchsia.mediacodec",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",

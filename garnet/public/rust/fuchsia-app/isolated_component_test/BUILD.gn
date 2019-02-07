@@ -19,7 +19,7 @@ rustc_binary("fuchsia_app_test_outer_component_bin") {
   edition = "2018"
   deps = [
     ":echos-rustc",
-    "$garnet_sdk_fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
@@ -46,7 +46,7 @@ rustc_binary("fuchsia_app_test_middle_component_bin") {
   edition = "2018"
   deps = [
     ":echos-rustc",
-    "$garnet_sdk_fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",

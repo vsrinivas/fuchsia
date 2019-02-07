@@ -12,7 +12,7 @@ executable("bin") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.vulkan.loader",
+    "//sdk/fidl/fuchsia.vulkan.loader",
     "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",

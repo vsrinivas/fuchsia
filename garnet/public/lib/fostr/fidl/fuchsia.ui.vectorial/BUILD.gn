@@ -5,5 +5,5 @@
 import("//garnet/public/build/fostr/fostr_fidl.gni")
 
 fostr_fidl("fuchsia.ui.vectorial") {
-  fidl_target = "$garnet_sdk_fidl/fuchsia.ui.vectorial"
+  fidl_target = "//sdk/fidl/fuchsia.ui.vectorial"
 }

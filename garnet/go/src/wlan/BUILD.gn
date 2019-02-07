@@ -12,8 +12,8 @@ go_library("wlantool_lib") {
   source_dir = "wlantool"
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.wlan.common($go_toolchain)",
-    "$garnet_sdk_fidl/fuchsia.wlan.service($go_toolchain)",
+    "//sdk/fidl/fuchsia.wlan.common($go_toolchain)",
+    "//sdk/fidl/fuchsia.wlan.service($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",
   ]
 }

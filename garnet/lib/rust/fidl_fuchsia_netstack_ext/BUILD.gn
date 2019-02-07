@@ -10,7 +10,7 @@ rustc_library("fidl_fuchsia_netstack_ext") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
-    "$garnet_sdk_fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
   ]
 }
 

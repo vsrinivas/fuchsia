@@ -16,7 +16,7 @@ fidl("fuchsia.ui.app") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.intl",
-    "$garnet_sdk_fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.sys",
   ]
 }

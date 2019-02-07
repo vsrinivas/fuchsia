@@ -22,8 +22,8 @@ source_set("message_queue") {
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
-    "$peridot_sdk_fidl/fuchsia.ledger",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
   ]
 }

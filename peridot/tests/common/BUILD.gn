@@ -25,8 +25,8 @@ executable("common_null_module_bin") {
 
   deps = [
     ":defs",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -61,8 +61,8 @@ executable("common_active_module_bin") {
 
   deps = [
     ":defs",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//zircon/public/lib/async-loop-cpp",

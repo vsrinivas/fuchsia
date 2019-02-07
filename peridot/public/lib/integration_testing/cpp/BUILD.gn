@@ -11,7 +11,7 @@ source_set("cpp") {
   ]
 
   deps = [
-    "$garnet_sdk_fidl/fuchsia.testing.runner",
+    "//sdk/fidl/fuchsia.testing.runner",
     "//garnet/public/lib/component/cpp",
   ]
 }

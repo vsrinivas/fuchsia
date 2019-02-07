@@ -16,8 +16,8 @@ source_set("raw_frames") {
 
   public_deps = [
     "//garnet/lib/media/codec_impl:fourcc",
-    "$garnet_sdk_fidl/fuchsia.images",
-    "$garnet_sdk_fidl/fuchsia.mediacodec",
+    "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.mediacodec",
     "//zircon/public/lib/fzl",
   ]
 }

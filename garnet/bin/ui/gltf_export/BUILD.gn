@@ -14,7 +14,7 @@ executable("gltf_export") {
   deps = [
     "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic",
-    "$garnet_sdk_fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

@@ -18,7 +18,7 @@ source_set("message_queue_client") {
   public_deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -34,6 +34,6 @@ source_set("message_sender_client") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }

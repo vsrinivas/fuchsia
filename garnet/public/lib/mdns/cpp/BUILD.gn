@@ -9,7 +9,7 @@ source_set("cpp") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.mdns",
+    "//sdk/fidl/fuchsia.mdns",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fit",
   ]

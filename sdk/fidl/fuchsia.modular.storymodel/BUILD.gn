@@ -11,6 +11,6 @@ fidl("fuchsia.modular.storymodel") {
     "story_model_mutation.fidl",
   ]
   deps = [
-    "$peridot_sdk_fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }

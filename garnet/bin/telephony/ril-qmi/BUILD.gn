@@ -12,7 +12,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/telephony/qmi-protocol",
-    "$garnet_sdk_fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
+    "//sdk/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",

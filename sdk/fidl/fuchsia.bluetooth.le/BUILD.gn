@@ -14,7 +14,7 @@ fidl("fuchsia.bluetooth.le") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.bluetooth",
-    "$garnet_sdk_fidl/fuchsia.bluetooth.gatt",
+    "//sdk/fidl/fuchsia.bluetooth",
+    "//sdk/fidl/fuchsia.bluetooth.gatt",
   ]
 }

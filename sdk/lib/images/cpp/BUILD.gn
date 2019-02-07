@@ -19,6 +19,6 @@ sdk_source_set("cpp") {
   ]
 
   public_deps = [
-    "$garnet_sdk_fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.images",
   ]
 }
