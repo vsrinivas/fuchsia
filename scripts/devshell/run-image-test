@@ -24,6 +24,9 @@ function main {
     usage
     return 1
   fi
+  RED='\033[0;31m'
+  NC='\033[0m'
+  echo -e "${RED}fx run-image-test is scheduled to be deleted on March 4, 2019.\nIf you are still using it please switch to fx run-test\nor contact @anmittal if there is any blocker.${NC}\n"
 
   target="$1"
   fx-command-run build "${target}"
