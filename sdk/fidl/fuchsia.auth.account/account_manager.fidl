@@ -16,7 +16,10 @@ const uint32 MAX_PERSONAE_PER_ACCOUNT = 128;
 
 // The maximum length of the global Fuchsia account and persona identifiers,
 // in bytes.
-const uint32 MAX_ID_LENGTH = 256;
+const uint32 MAX_ID_SIZE = 256;
+
+// The maximum length of the (UTF-8 encoded) human readable names, in bytes.
+const uint32 MAX_NAME_SIZE = 128;
 
 // Specifies the success/failure status of AccountManager calls.
 enum Status {
@@ -49,7 +52,7 @@ enum Status {
 // the devices that the account is provisioned on. Identifiers are not human
 // readable.
 struct GlobalAccountId {
-    vector<uint8>:MAX_ID_LENGTH id;
+    vector<uint8>:MAX_ID_SIZE id;
 };
 
 // A unique identifier for a Fuchsia account on the current device. If the
@@ -294,6 +297,11 @@ interface AuthTarget {
 interface Account : AuthTarget {
     // TODO(jsankey): Add account ID accessor if and when the first valid
     // use case arrives.
+
+    // Returns a human readable name for the account. Account names are set by
+    // a human and are not guaranteed to be meaningful or unique, even among the
+    // accounts on a single device.
+    GetAccountName() -> (string:MAX_NAME_SIZE name);
 
     // Returns a vector of all the personae defined for the account.
     // NOTE: Currently all Fuchsia accounts have exactly one persona.

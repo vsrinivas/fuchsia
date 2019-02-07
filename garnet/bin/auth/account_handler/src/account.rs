@@ -53,6 +53,11 @@ pub struct Account {
 }
 
 impl Account {
+
+    /// A fixed string returned as the name of all accounts until account names are fully
+    /// implemented.
+    const DEFAULT_ACCOUNT_NAME: &'static str = "Unnamed account";
+
     /// Constructs a new Account.
     pub fn new(
         account_id: LocalAccountId, account_dir: &Path,
@@ -91,6 +96,10 @@ impl Account {
         &self, context: &AccountContext, req: AccountRequest,
     ) -> Result<(), fidl::Error> {
         match req {
+            AccountRequest::GetAccountName { responder } => {
+                let response = self.get_account_name();
+                responder.send(&response)?;
+            }
             AccountRequest::GetAuthState { responder } => {
                 let mut response = self.get_auth_state();
                 responder.send(response.0, response.1.as_mut().map(OutOfLine))?;
@@ -130,6 +139,12 @@ impl Account {
             }
         }
         Ok(())
+    }
+
+    fn get_account_name(&self) -> String {
+        // TODO(dnordstrom, jsankey): Implement this method, initially by populating the name from
+        // an associated service provider account profile name or a randomly assigned string.
+        Self::DEFAULT_ACCOUNT_NAME.to_string()
     }
 
     fn get_auth_state(&self) -> (Status, Option<AuthState>) {
@@ -274,6 +289,15 @@ mod tests {
             account_1.default_persona.id(),
             account_2.default_persona.id()
         );
+    }
+
+    #[test]
+    fn test_get_account_name() {
+        let mut test = Test::new();
+        test.run(test.create_account(), async move |proxy| {
+            assert_eq!(await!(proxy.get_account_name())?, Account::DEFAULT_ACCOUNT_NAME);
+            Ok(())
+        });
     }
 
     #[test]
