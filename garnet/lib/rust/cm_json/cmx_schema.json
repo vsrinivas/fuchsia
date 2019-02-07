@@ -73,6 +73,7 @@
             "title": "Specific environment features",
             "enum": [
               "build-info",
+              "deprecated-global-persistent-storage",
               "isolated-persistent-storage",
               "persistent-storage",
               "shell",
