@@ -6,15 +6,14 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl_fuchsia_bluetooth::Bool,
+    fidl_fuchsia_bluetooth::{Bool, Status},
     fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice, TechnologyType},
-    fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
+    fidl_fuchsia_bluetooth_host::{
+        AddressType, BondingData, HostEvent, HostProxy, Key, LeData, Ltk, SecurityProperties,
+    },
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_bluetooth::{
-        error::Error as BtError,
-        fake_hci::FakeHciDevice,
-        host,
-        util::clone_host_state,
+        error::Error as BtError, fake_hci::FakeHciDevice, host, util::clone_host_state,
     },
     fuchsia_vfs_watcher::{WatchEvent as VfsWatchEvent, Watcher as VfsWatcher},
     fuchsia_zircon::DurationNum,
@@ -59,7 +58,10 @@ struct HostTest {
 
 impl HostTest {
     fn new(
-        hci: FakeHciDevice, host_path: String, host: HostProxy, info: AdapterInfo,
+        hci: FakeHciDevice,
+        host_path: String,
+        host: HostProxy,
+        info: AdapterInfo,
     ) -> HostTestPtr {
         Arc::new(RwLock::new(HostTest {
             fake_hci_dev: Some(hci),
@@ -112,16 +114,12 @@ impl HostTest {
     // If the adapter is already in the requested state, then the Future will resolve the first
     // time it gets polled.
     fn on_adapter_state_change(
-        test_state: HostTestPtr, target_state: AdapterState,
+        test_state: HostTestPtr,
+        target_state: AdapterState,
     ) -> impl Future<Output = Result<AdapterState, Error>> {
-        let err_msg = format!(
-            "timed out waiting for adapter state (expected: {:?})",
-            target_state
-        );
+        let err_msg = format!("timed out waiting for adapter state (expected: {:?})", target_state);
         AdapterStateFuture::new(test_state, target_state)
-            .on_timeout(TIMEOUT.seconds().after_now(), move || {
-                Err(BtError::new(&err_msg).into())
-            })
+            .on_timeout(TIMEOUT.seconds().after_now(), move || Err(BtError::new(&err_msg).into()))
     }
 
     // Returns a Future that resolves when the state of a particular RemoteDevice matches
@@ -129,16 +127,14 @@ impl HostTest {
     // `target_state`. Otherwise, the Future will resolve when the state of the requested device
     // changes.
     fn on_device_update<'a>(
-        test_state: HostTestPtr, id: Option<&'a str>, target_state: RemoteDeviceExpectation,
+        test_state: HostTestPtr,
+        id: Option<&'a str>,
+        target_state: RemoteDeviceExpectation,
     ) -> impl Future<Output = Result<(), Error>> + 'a {
-        let err_msg = format!(
-            "timed out waiting for remote device state (expected: {:?})",
-            target_state
-        );
+        let err_msg =
+            format!("timed out waiting for remote device state (expected: {:?})", target_state);
         RemoteDeviceStateFuture::new(test_state, id, Some(target_state))
-            .on_timeout(TIMEOUT.seconds().after_now(), move || {
-                Err(BtError::new(&err_msg).into())
-            })
+            .on_timeout(TIMEOUT.seconds().after_now(), move || Err(BtError::new(&err_msg).into()))
     }
 
     fn close_fake_hci(&mut self) {
@@ -180,8 +176,7 @@ impl HostTest {
 
     // Handle the OnDeviceUpdated event
     fn handle_device_updated(&mut self, device: RemoteDevice) {
-        self.remote_devices
-            .insert(device.identifier.clone(), device);
+        self.remote_devices.insert(device.identifier.clone(), device);
         self.notify_host_state_changed();
     }
 
@@ -287,21 +282,12 @@ fn compare_adapter_states(base: &AdapterState, target: &AdapterState) -> bool {
     compare_fields!(
         base,
         target,
-        [
-            (local_name),
-            (discoverable),
-            (discovering),
-            (local_service_uuids)
-        ]
+        [(local_name), (discoverable), (discovering), (local_service_uuids)]
     )
 }
 
 fn compare_remote_device(base: &RemoteDevice, target: &RemoteDeviceExpectation) -> bool {
-    compare_fields!(
-        base,
-        target,
-        [(name), address, technology, connected, bonded]
-    )
+    compare_fields!(base, target, [(name), address, technology, connected, bonded])
 }
 
 struct StateUpdateFutureInner {
@@ -311,10 +297,7 @@ struct StateUpdateFutureInner {
 
 impl StateUpdateFutureInner {
     fn new(test: HostTestPtr) -> StateUpdateFutureInner {
-        StateUpdateFutureInner {
-            test_state: test,
-            waker_key: None,
-        }
+        StateUpdateFutureInner { test_state: test, waker_key: None }
     }
 
     fn maybe_remove_waker(&mut self) {
@@ -384,7 +367,8 @@ struct RemoteDeviceStateFuture<'a> {
 
 impl<'a> RemoteDeviceStateFuture<'a> {
     fn new(
-        test: HostTestPtr, target_id: Option<&'a str>,
+        test: HostTestPtr,
+        target_id: Option<&'a str>,
         target_state: Option<RemoteDeviceExpectation>,
     ) -> Self {
         RemoteDeviceStateFuture {
@@ -444,16 +428,14 @@ impl<'a> Future for RemoteDeviceStateFuture<'a> {
 // Returns a Future that resolves when a bt-host device gets added under the given topological
 // path.
 async fn watch_for_new_host_helper(
-    mut watcher: VfsWatcher, parent_topo_path: String,
+    mut watcher: VfsWatcher,
+    parent_topo_path: String,
 ) -> Result<(File, PathBuf), Error> {
     while let Some(msg) = await!(watcher.try_next())? {
         match msg.event {
             VfsWatchEvent::EXISTING | VfsWatchEvent::ADD_FILE => {
-                let path = PathBuf::from(format!(
-                    "{}/{}",
-                    BT_HOST_DIR,
-                    msg.filename.to_string_lossy()
-                ));
+                let path =
+                    PathBuf::from(format!("{}/{}", BT_HOST_DIR, msg.filename.to_string_lossy()));
                 let host_fd = common::open_rdwr(&path)?;
                 let host_topo_path = fdio::device_get_topo_path(&host_fd)?;
                 if host_topo_path.starts_with(parent_topo_path.as_str()) {
@@ -487,27 +469,21 @@ fn timeout<T, F>(fut: F, msg: &'static str) -> impl Future<Output = Result<T, Er
 where
     F: Future<Output = Result<T, Error>>,
 {
-    fut.on_timeout(TIMEOUT.seconds().after_now(), move || {
-        Err(BtError::new(msg).into())
-    })
+    fut.on_timeout(TIMEOUT.seconds().after_now(), move || Err(BtError::new(msg).into()))
 }
 
 fn watch_for_new_host(
-    watcher: VfsWatcher, fake_hci_topo_path: String,
+    watcher: VfsWatcher,
+    fake_hci_topo_path: String,
 ) -> impl Future<Output = Result<(File, PathBuf), Error>> {
-    timeout(
-        watch_for_new_host_helper(watcher, fake_hci_topo_path),
-        "timed out waiting for bt-host",
-    )
+    timeout(watch_for_new_host_helper(watcher, fake_hci_topo_path), "timed out waiting for bt-host")
 }
 
 fn wait_for_host_removal(
-    watcher: VfsWatcher, path: String,
+    watcher: VfsWatcher,
+    path: String,
 ) -> impl Future<Output = Result<(), Error>> {
-    timeout(
-        wait_for_host_removal_helper(watcher, path),
-        "timed out waiting for bt-host removal",
-    )
+    timeout(wait_for_host_removal_helper(watcher, path), "timed out waiting for bt-host removal")
 }
 
 // Creates a fake bt-hci device and returns the corresponding bt-host device once it gets created.
@@ -524,12 +500,7 @@ async fn setup_emulated_host_test() -> Result<HostTestPtr, Error> {
     let host = HostProxy::new(fasync::Channel::from_channel(fidl_handle.into())?);
     let info = await!(host.get_info())?;
 
-    Ok(HostTest::new(
-        fake_hci,
-        path.to_string_lossy().to_string(),
-        host,
-        info,
-    ))
+    Ok(HostTest::new(fake_hci, path.to_string_lossy().to_string(), host, info))
 }
 
 async fn run_test_async<F, Fut>(test_func: F) -> Result<(), Error>
@@ -549,10 +520,7 @@ where
     let dir = File::open(&BT_HOST_DIR)?;
     let watcher = VfsWatcher::new(&dir)?;
     host_test.write().close_fake_hci();
-    await!(wait_for_host_removal(
-        watcher,
-        host_test.read().host_path.clone()
-    ))?;
+    await!(wait_for_host_removal(watcher, host_test.read().host_path.clone()))?;
 
     if result.is_ok() {
         println!("\x1b[32mPASSED\x1b[0m");
@@ -587,11 +555,8 @@ where
     if *expected == *actual {
         Ok(())
     } else {
-        Err(BtError::new(&format!(
-            "failed - expected '{:#?}', found: '{:#?}'",
-            expected, actual
-        ))
-        .into())
+        Err(BtError::new(&format!("failed - expected '{:#?}', found: '{:#?}'", expected, actual))
+            .into())
     }
 }
 
@@ -615,7 +580,9 @@ macro_rules! expect_true {
 }
 
 fn expect_remote_device(
-    test_state: &HostTestPtr, address: &str, expected: &RemoteDeviceExpectation,
+    test_state: &HostTestPtr,
+    address: &str,
+    expected: &RemoteDeviceExpectation,
 ) -> Result<(), Error> {
     expect_true!(compare_remote_device(
         test_state.read().find_device_by_address(address)?,
@@ -643,10 +610,7 @@ async fn test_set_local_name(test_state: HostTestPtr) -> Result<(), Error> {
         discovering: None,
         local_service_uuids: None,
     };
-    await!(HostTest::on_adapter_state_change(
-        test_state.clone(),
-        state_change
-    ))?;
+    await!(HostTest::on_adapter_state_change(test_state.clone(), state_change))?;
 
     Ok(())
 }
@@ -662,10 +626,7 @@ async fn test_discoverable(test_state: HostTestPtr) -> Result<(), Error> {
         discovering: None,
         local_service_uuids: None,
     };
-    await!(HostTest::on_adapter_state_change(
-        test_state.clone(),
-        discoverable_state
-    ))?;
+    await!(HostTest::on_adapter_state_change(test_state.clone(), discoverable_state))?;
 
     // Disable discoverable mode
     await!(test_state.read().host_proxy.set_discoverable(false))?;
@@ -675,10 +636,7 @@ async fn test_discoverable(test_state: HostTestPtr) -> Result<(), Error> {
         discovering: None,
         local_service_uuids: None,
     };
-    await!(HostTest::on_adapter_state_change(
-        test_state.clone(),
-        non_discoverable_state
-    ))?;
+    await!(HostTest::on_adapter_state_change(test_state.clone(), non_discoverable_state))?;
 
     Ok(())
 }
@@ -694,24 +652,15 @@ async fn test_discovery(test_state: HostTestPtr) -> Result<(), Error> {
         discovering: Some(Box::new(Bool { value: true })),
         local_service_uuids: None,
     };
-    await!(HostTest::on_adapter_state_change(
-        test_state.clone(),
-        discovering_state
-    ))?;
+    await!(HostTest::on_adapter_state_change(test_state.clone(), discovering_state))?;
 
     // The host should discover a fake device.
     // TODO(NET-1457): The name is currently hard-coded in
     // garnet/drivers/bluetooth/hci/fake/fake-device.cpp:89. Configure this dynamically when it is
     // supported.
-    let new_device = RemoteDeviceExpectation {
-        name: Some("Fake".to_string()),
-        ..Default::default()
-    };
-    await!(HostTest::on_device_update(
-        test_state.clone(),
-        None,
-        new_device
-    ))?;
+    let new_device =
+        RemoteDeviceExpectation { name: Some("Fake".to_string()), ..Default::default() };
+    await!(HostTest::on_device_update(test_state.clone(), None, new_device))?;
 
     // Stop discovery. "discovering" should get set to false.
     await!(test_state.read().host_proxy.stop_discovery())?;
@@ -721,10 +670,7 @@ async fn test_discovery(test_state: HostTestPtr) -> Result<(), Error> {
         discovering: Some(Box::new(Bool { value: false })),
         local_service_uuids: None,
     };
-    await!(HostTest::on_adapter_state_change(
-        test_state.clone(),
-        not_discovering_state
-    ))?;
+    await!(HostTest::on_adapter_state_change(test_state.clone(), not_discovering_state))?;
 
     Ok(())
 }
@@ -742,10 +688,7 @@ async fn test_close(test_state: HostTestPtr) -> Result<(), Error> {
         discovering: Some(Box::new(Bool { value: true })),
         local_service_uuids: None,
     };
-    await!(HostTest::on_adapter_state_change(
-        test_state.clone(),
-        active_state
-    ))?;
+    await!(HostTest::on_adapter_state_change(test_state.clone(), active_state))?;
 
     // Close should cancel these procedures.
     test_state.read().host_proxy.close()?;
@@ -755,10 +698,7 @@ async fn test_close(test_state: HostTestPtr) -> Result<(), Error> {
         discovering: Some(Box::new(Bool { value: false })),
         local_service_uuids: None,
     };
-    await!(HostTest::on_adapter_state_change(
-        test_state.clone(),
-        closed_state_update
-    ))?;
+    await!(HostTest::on_adapter_state_change(test_state.clone(), closed_state_update))?;
 
     Ok(())
 }
@@ -766,8 +706,8 @@ async fn test_close(test_state: HostTestPtr) -> Result<(), Error> {
 // Tests that "list_devices" returns devices from a host's cache.
 async fn test_list_devices(test_state: HostTestPtr) -> Result<(), Error> {
     // Devices should be initially empty.
-    let mut devices = await!(test_state.read().host_proxy.list_devices())?;
-    expect_eq!(vec![] as Vec<RemoteDevice>, devices)?;
+    let devices = await!(test_state.read().host_proxy.list_devices())?;
+    expect_eq!(vec![], devices)?;
 
     // Wait for all fake devices to be discovered.
     // TODO(NET-1457): Add support for setting these up programmatically instead of hardcoding
@@ -783,19 +723,11 @@ async fn test_list_devices(test_state: HostTestPtr) -> Result<(), Error> {
         technology: Some(TechnologyType::Classic),
         ..Default::default()
     };
-    await!(HostTest::on_device_update(
-        test_state.clone(),
-        None,
-        expected_le.clone()
-    ))?;
-    await!(HostTest::on_device_update(
-        test_state.clone(),
-        None,
-        expected_bredr.clone()
-    ))?;
+    await!(HostTest::on_device_update(test_state.clone(), None, expected_le.clone()))?;
+    await!(HostTest::on_device_update(test_state.clone(), None, expected_bredr.clone()))?;
 
     // List the host's devices
-    devices = await!(test_state.read().host_proxy.list_devices())?;
+    let devices = await!(test_state.read().host_proxy.list_devices())?;
 
     // Both fake devices should be in the map.
     expect_eq!(2, devices.len())?;
@@ -803,6 +735,167 @@ async fn test_list_devices(test_state: HostTestPtr) -> Result<(), Error> {
     expect_remote_device(&test_state, "00:00:00:00:00:02", &expected_bredr)?;
     Ok(())
 }
+
+fn new_le_bond_data(id: &str, address: &str, has_ltk: bool) -> BondingData {
+    BondingData {
+        identifier: id.to_string(),
+        local_address: "AA:BB:CC:DD:EE:FF".to_string(),
+        name: None,
+        le: Some(Box::new(LeData {
+            address: address.to_string(),
+            address_type: AddressType::LeRandom,
+            connection_parameters: None,
+            services: vec![],
+            ltk: if has_ltk {
+                Some(Box::new(Ltk {
+                    key: Key {
+                        security_properties: SecurityProperties {
+                            authenticated: true,
+                            secure_connections: false,
+                            encryption_key_size: 16,
+                        },
+                        value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                    },
+                    key_size: 16,
+                    ediv: 1,
+                    rand: 2,
+                }))
+            } else {
+                None
+            },
+            irk: None,
+            csrk: None,
+        })),
+        bredr: None,
+    }
+}
+
+fn add_bonds(
+    state: &HostTestPtr,
+    mut bonds: Vec<BondingData>,
+) -> impl Future<Output = Result<(Status), Error>> {
+    state.read().host_proxy.add_bonded_devices(&mut bonds.iter_mut()).err_into()
+}
+
+const TEST_ID1: &str = "1234";
+const TEST_ID2: &str = "2345";
+const TEST_ADDR1: &str = "01:02:03:04:05:06";
+const TEST_ADDR2: &str = "06:05:04:03:02:01";
+
+// Tests initializing bonded LE devices.
+async fn test_add_bonded_devices_success(test_state: HostTestPtr) -> Result<(), Error> {
+    // Devices should be initially empty.
+    let devices = await!(test_state.read().host_proxy.list_devices())?;
+    expect_eq!(vec![], devices)?;
+
+    let bond_data1 = new_le_bond_data(TEST_ID1, TEST_ADDR1, true /* has LTK */);
+    let bond_data2 = new_le_bond_data(TEST_ID2, TEST_ADDR2, true /* has LTK */);
+    let status = await!(add_bonds(&test_state, vec![bond_data1, bond_data2]))?;
+    expect_true!(status.error.is_none())?;
+
+    // We should receive notifications for the newly added devices.
+    let expected1 = RemoteDeviceExpectation {
+        address: Some(TEST_ADDR1.to_string()),
+        technology: Some(TechnologyType::LowEnergy),
+        bonded: Some(true),
+        ..Default::default()
+    };
+    let expected2 = RemoteDeviceExpectation {
+        address: Some(TEST_ADDR2.to_string()),
+        technology: Some(TechnologyType::LowEnergy),
+        bonded: Some(true),
+        ..Default::default()
+    };
+    await!(HostTest::on_device_update(test_state.clone(), None, expected1))?;
+    await!(HostTest::on_device_update(test_state.clone(), None, expected2))?;
+
+    let devices = await!(test_state.read().host_proxy.list_devices())?;
+    expect_eq!(2, devices.len())?;
+    expect_true!(devices.iter().any(|dev| dev.address == TEST_ADDR1))?;
+    expect_true!(devices.iter().any(|dev| dev.address == TEST_ADDR2))?;
+
+    Ok(())
+}
+
+async fn test_add_bonded_devices_no_ltk_fails(test_state: HostTestPtr) -> Result<(), Error> {
+    // Devices should be initially empty.
+    let devices = await!(test_state.read().host_proxy.list_devices())?;
+    expect_eq!(vec![], devices)?;
+
+    // Inserting a bonded device without a LTK should fail.
+    let bond_data = new_le_bond_data(TEST_ID1, TEST_ADDR1, false /* no LTK */);
+    let status = await!(add_bonds(&test_state, vec![bond_data]))?;
+    expect_true!(status.error.is_some())?;
+
+    let devices = await!(test_state.read().host_proxy.list_devices())?;
+    expect_eq!(vec![], devices)?;
+
+    Ok(())
+}
+
+async fn test_add_bonded_devices_duplicate_entry(test_state: HostTestPtr) -> Result<(), Error> {
+    // Devices should be initially empty.
+    let devices = await!(test_state.read().host_proxy.list_devices())?;
+    expect_eq!(vec![], devices)?;
+
+    // Initialize one entry.
+    let bond_data = new_le_bond_data(TEST_ID1, TEST_ADDR1, true /* with LTK */);
+    let status = await!(add_bonds(&test_state, vec![bond_data]))?;
+    expect_true!(status.error.is_none())?;
+
+    // We should receive a notification for the newly added device.
+    let expected = RemoteDeviceExpectation {
+        address: Some(TEST_ADDR1.to_string()),
+        technology: Some(TechnologyType::LowEnergy),
+        bonded: Some(true),
+        ..Default::default()
+    };
+    await!(HostTest::on_device_update(test_state.clone(), None, expected.clone()))?;
+    let devices = await!(test_state.read().host_proxy.list_devices())?;
+    expect_eq!(1, devices.len())?;
+
+    // Adding an entry with the existing id should fail.
+    let bond_data = new_le_bond_data(TEST_ID1, TEST_ADDR2, true /* with LTK */);
+    let status = await!(add_bonds(&test_state, vec![bond_data]))?;
+    expect_true!(status.error.is_some())?;
+
+    // Adding an entry with a different ID but existing address should fail.
+    let bond_data = new_le_bond_data(TEST_ID2, TEST_ADDR1, true /* with LTK */);
+    let status = await!(add_bonds(&test_state, vec![bond_data]))?;
+    expect_true!(status.error.is_some())?;
+
+    Ok(())
+}
+
+// Tests that adding a list of bonding data with malformed content succeeds for the valid entries
+// but reports an error.
+async fn test_add_bonded_devices_invalid_entry(test_state: HostTestPtr) -> Result<(), Error> {
+    // Devices should be initially empty.
+    let devices = await!(test_state.read().host_proxy.list_devices())?;
+    expect_eq!(vec![], devices)?;
+
+    // Add one entry with no LTK (invalid) and one with (valid). This should create an entry for the
+    // valid device but report an error for the invalid entry.
+    let no_ltk = new_le_bond_data(TEST_ID1, TEST_ADDR1, false);
+    let with_ltk = new_le_bond_data(TEST_ID2, TEST_ADDR2, true);
+    let status = await!(add_bonds(&test_state, vec![no_ltk, with_ltk]))?;
+    expect_true!(status.error.is_some())?;
+
+    let expected = RemoteDeviceExpectation {
+        address: Some(TEST_ADDR2.to_string()),
+        technology: Some(TechnologyType::LowEnergy),
+        bonded: Some(true),
+        ..Default::default()
+    };
+    await!(HostTest::on_device_update(test_state.clone(), None, expected.clone()))?;
+    let devices = await!(test_state.read().host_proxy.list_devices())?;
+    expect_eq!(1, devices.len())?;
+    expect_remote_device(&test_state, TEST_ADDR2, &expected)?;
+
+    Ok(())
+}
+
+// TODO(armansito|xow): Add tests for BR/EDR and dual mode bond data.
 
 fn main() -> Result<(), Error> {
     println!("TEST BEGIN");
@@ -813,6 +906,10 @@ fn main() -> Result<(), Error> {
     run_test!(test_discovery)?;
     run_test!(test_close)?;
     run_test!(test_list_devices)?;
+    run_test!(test_add_bonded_devices_success)?;
+    run_test!(test_add_bonded_devices_no_ltk_fails)?;
+    run_test!(test_add_bonded_devices_duplicate_entry)?;
+    run_test!(test_add_bonded_devices_invalid_entry)?;
 
     println!("ALL TESTS PASSED");
     Ok(())
