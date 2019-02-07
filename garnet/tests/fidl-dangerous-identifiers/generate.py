@@ -225,7 +225,7 @@ def generate_cpp(identifiers: List[str], libraries: List[str]) -> None:
   # generate BUILD.gn for C++ test
   with open(os.path.join(directory, 'BUILD.gn'), 'w') as build_gn:
     build_gn.write(generated('#'))
-    build_gn.write("""executable("cpp") {
+    build_gn.write("""source_set("cpp") {
     output_name = "cpp_fidl_dangerous_identifiers_test"
     sources = [ "test.cpp" ]
     deps = [
