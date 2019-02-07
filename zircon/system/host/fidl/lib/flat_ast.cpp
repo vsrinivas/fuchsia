@@ -1436,9 +1436,10 @@ bool Library::ConsumeInterfaceDeclaration(
 
     std::set<Name> superinterfaces;
     for (auto& superinterface : interface_declaration->superinterfaces) {
+        auto& protocol_name = superinterface->protocol_name;
+        auto location = protocol_name->components[0]->location();
         Name superinterface_name;
-        auto location = superinterface->components[0]->location();
-        if (!CompileCompoundIdentifier(superinterface.get(), location, &superinterface_name)) {
+        if (!CompileCompoundIdentifier(protocol_name.get(), location, &superinterface_name)) {
             return false;
         }
         if (!superinterfaces.insert(std::move(superinterface_name)).second)

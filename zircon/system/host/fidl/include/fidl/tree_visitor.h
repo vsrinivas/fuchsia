@@ -143,6 +143,9 @@ public:
     virtual void OnInterfaceMethod(std::unique_ptr<InterfaceMethod> const& element) {
         element->Accept(*this);
     }
+    virtual void OnComposeProtocol(std::unique_ptr<ComposeProtocol> const& element) {
+        element->Accept(*this);
+    }
     virtual void OnInterfaceDeclaration(std::unique_ptr<InterfaceDeclaration> const& element) {
         element->Accept(*this);
     }
@@ -188,6 +191,8 @@ public:
 class DeclarationOrderTreeVisitor : public TreeVisitor {
 public:
     virtual void OnFile(std::unique_ptr<File> const& element) override;
+    virtual void OnInterfaceDeclaration(
+        std::unique_ptr<InterfaceDeclaration> const& element) override;
 };
 
 } // namespace raw

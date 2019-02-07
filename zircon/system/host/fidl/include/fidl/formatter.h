@@ -61,7 +61,7 @@ public:
 
     virtual void OnInterfaceDeclaration(std::unique_ptr<InterfaceDeclaration> const& element) override {
         OnBlankLineRequiringNode();
-        TreeVisitor::OnInterfaceDeclaration(element);
+        DeclarationOrderTreeVisitor::OnInterfaceDeclaration(element);
     }
 
     virtual void OnSourceElementStart(const SourceElement& element) override {
@@ -118,6 +118,11 @@ public:
         ScopedBool mem(is_member_decl_);
         ScopedBool has_ordinal(has_ordinal_, element->ordinal != nullptr);
         TreeVisitor::OnInterfaceMethod(element);
+    }
+
+    virtual void OnComposeProtocol(std::unique_ptr<ComposeProtocol> const& element) override {
+        OnBlankLineRespectingNode();
+        TreeVisitor::OnComposeProtocol(element);
     }
 
     virtual void OnStructDeclaration(std::unique_ptr<StructDeclaration> const& element) override {
@@ -328,6 +333,7 @@ private:
         bool RequiresWSAfterChar(char ch) {
             return (ch == '=') ||
                    (ch == ',') ||
+                   (ch == ')') ||
                    (ch == '>' && (visitor_->nested_type_depth_ <= 1)) ||
                    (ch == ':' && visitor_->blank_space_after_colon_);
         }

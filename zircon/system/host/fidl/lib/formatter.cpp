@@ -395,7 +395,7 @@ void FormattingTreeVisitor::OnFile(std::unique_ptr<fidl::raw::File> const& eleme
     element->start_.set_previous_end(
         fidl::SourceLocation(processed_file_start, real_start.previous_end().source_file()));
 
-    fidl::raw::DeclarationOrderTreeVisitor::OnFile(element);
+    DeclarationOrderTreeVisitor::OnFile(element);
 }
 
 } // namespace raw

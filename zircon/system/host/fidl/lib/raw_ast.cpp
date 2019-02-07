@@ -9,6 +9,8 @@
 #include "fidl/raw_ast.h"
 #include "fidl/tree_visitor.h"
 
+#include <map>
+
 namespace fidl {
 namespace raw {
 
@@ -156,6 +158,11 @@ void InterfaceMethod::Accept(TreeVisitor& visitor) {
     }
 }
 
+void ComposeProtocol::Accept(TreeVisitor& visitor) {
+    SourceElementMark sem(visitor, *this);
+    visitor.OnCompoundIdentifier(protocol_name);
+}
+
 void InterfaceDeclaration::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
     if (attributes != nullptr) {
@@ -163,13 +170,13 @@ void InterfaceDeclaration::Accept(TreeVisitor& visitor) {
     }
     visitor.OnIdentifier(identifier);
     for (auto superinterface = superinterfaces.begin();
-         superinterface != superinterfaces.end();
-         ++superinterface) {
-        visitor.OnCompoundIdentifier(*superinterface);
+        superinterface != superinterfaces.end();
+        ++superinterface) {
+        visitor.OnComposeProtocol(*superinterface);
     }
     for (auto method = methods.begin();
-         method != methods.end();
-         ++method) {
+        method != methods.end();
+        ++method) {
         visitor.OnInterfaceMethod(*method);
     }
 }

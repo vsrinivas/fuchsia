@@ -356,20 +356,34 @@ public:
     std::unique_ptr<TypeConstructor> maybe_error_ctor;
 };
 
+class ComposeProtocol : public SourceElement {
+public:
+    ComposeProtocol(SourceElement const& element,
+                    std::unique_ptr<CompoundIdentifier> protocol_name)
+        : SourceElement(element), protocol_name(std::move(protocol_name)) {}
+
+    void Accept(TreeVisitor& visitor);
+
+    std::unique_ptr<CompoundIdentifier> protocol_name;
+};
+
 class InterfaceDeclaration : public SourceElement {
 public:
     InterfaceDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                          std::unique_ptr<Identifier> identifier,
-                         std::vector<std::unique_ptr<CompoundIdentifier>> superinterfaces,
+                         std::vector<std::unique_ptr<ComposeProtocol>> superinterfaces,
                          std::vector<std::unique_ptr<InterfaceMethod>> methods)
         : SourceElement(element), attributes(std::move(attributes)), identifier(std::move(identifier)),
           superinterfaces(std::move(superinterfaces)), methods(std::move(methods)) {}
 
     void Accept(TreeVisitor& visitor);
 
+    // TODO(FIDL-460): Remove.
+    bool is_interface = false;
+
     std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<Identifier> identifier;
-    std::vector<std::unique_ptr<CompoundIdentifier>> superinterfaces;
+    std::vector<std::unique_ptr<ComposeProtocol>> superinterfaces;
     std::vector<std::unique_ptr<InterfaceMethod>> methods;
 };
 

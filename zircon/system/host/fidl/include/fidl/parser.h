@@ -218,7 +218,7 @@ private:
     // a method, or a compose stanza.
     bool ParseProtocolMember(
         std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
-        std::vector<std::unique_ptr<raw::CompoundIdentifier>>* composed_protocols,
+        std::vector<std::unique_ptr<raw::ComposeProtocol>>* composed_protocols,
         std::vector<std::unique_ptr<raw::InterfaceMethod>>* methods);
     std::unique_ptr<raw::InterfaceDeclaration>
     ParseProtocolDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);

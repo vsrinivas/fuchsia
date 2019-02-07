@@ -558,7 +558,7 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod(std::unique_p
 
 std::unique_ptr<raw::InterfaceDeclaration>
 Parser::ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
-    std::vector<std::unique_ptr<raw::CompoundIdentifier>> superinterfaces;
+    std::vector<std::unique_ptr<raw::ComposeProtocol>> superinterfaces;
     std::vector<std::unique_ptr<raw::InterfaceMethod>> methods;
 
     ConsumeToken(IdentifierOfSubkind(Token::Subkind::kInterface));
@@ -572,7 +572,10 @@ Parser::ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes
 
     if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
         for (;;) {
-            superinterfaces.emplace_back(ParseCompoundIdentifier());
+            auto protocol_name = ParseCompoundIdentifier();
+            superinterfaces.emplace_back(std::make_unique<raw::ComposeProtocol>(
+                raw::SourceElement(protocol_name->start_, protocol_name->end_),
+                std::move(protocol_name)));
             if (!Ok())
                 return Fail();
             if (!MaybeConsumeToken(OfKind(Token::Kind::kComma)))
@@ -613,10 +616,11 @@ Parser::ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes
     if (!Ok())
         Fail();
 
-    return std::make_unique<raw::InterfaceDeclaration>(scope.GetSourceElement(),
-                                                       std::move(attributes), std::move(identifier),
-                                                       std::move(superinterfaces),
-                                                       std::move(methods));
+    auto interface_decl = std::make_unique<raw::InterfaceDeclaration>(
+        scope.GetSourceElement(), std::move(attributes), std::move(identifier),
+        std::move(superinterfaces), std::move(methods));
+    interface_decl->is_interface = true;
+    return interface_decl;
 }
 
 std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolEvent(
@@ -717,7 +721,7 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolMethod(
 
 bool Parser::ParseProtocolMember(
     std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
-    std::vector<std::unique_ptr<raw::CompoundIdentifier>>* composed_protocols,
+    std::vector<std::unique_ptr<raw::ComposeProtocol>>* composed_protocols,
     std::vector<std::unique_ptr<raw::InterfaceMethod>>* methods) {
 
     switch (Peek().kind()) {
@@ -738,7 +742,9 @@ bool Parser::ParseProtocolMember(
                 auto protocol_name = ParseCompoundIdentifier();
                 if (!Ok())
                     return false;
-                composed_protocols->push_back(std::move(protocol_name));
+                composed_protocols->push_back(std::make_unique<raw::ComposeProtocol>(
+                    raw::SourceElement(identifier->start_, protocol_name->end_),
+                    std::move(protocol_name)));
             } else {
                 Fail("unrecognized protocol member");
                 return false;
@@ -751,7 +757,7 @@ bool Parser::ParseProtocolMember(
 
 std::unique_ptr<raw::InterfaceDeclaration>
 Parser::ParseProtocolDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
-    std::vector<std::unique_ptr<raw::CompoundIdentifier>> composed_protocols;
+    std::vector<std::unique_ptr<raw::ComposeProtocol>> composed_protocols;
     std::vector<std::unique_ptr<raw::InterfaceMethod>> methods;
 
     ConsumeToken(IdentifierOfSubkind(Token::Subkind::kProtocol));
