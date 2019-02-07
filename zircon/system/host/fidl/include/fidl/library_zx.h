@@ -5,11 +5,13 @@
 #ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LIBRARY_ZX_H_
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LIBRARY_ZX_H_
 
+#include <string>
+
 namespace fidl {
 namespace LibraryZX {
 
-extern const char kFilename[];
-extern const char kData[];
+extern const std::string kFilename;
+extern const std::string kData;
 
 } // namespace LibraryZX
 } // namespace fidl

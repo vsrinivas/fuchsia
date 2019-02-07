@@ -25,13 +25,13 @@ public:
     // simplifies advancing to the next character.
     Lexer(const SourceFile& source_file, ErrorReporter* error_reporter)
         : source_file_(source_file), error_reporter_(error_reporter) {
-        assert(data()[data().size() - 1] == 0);
         keyword_table_ = {
 #define KEYWORD(Name, Spelling) {Spelling, Token::Subkind::k##Name},
 #include "fidl/token_definitions.inc"
 #undef KEYWORD
         };
         current_ = data().data();
+        end_of_file_ = current_ + data().size();
         previous_end_ = token_start_ = current_;
     }
 
@@ -61,6 +61,7 @@ private:
     ErrorReporter* error_reporter_;
 
     const char* current_ = nullptr;
+    const char* end_of_file_ = nullptr;
     const char* token_start_ = nullptr;
     const char* previous_end_ = nullptr;
     size_t token_size_ = 0u;

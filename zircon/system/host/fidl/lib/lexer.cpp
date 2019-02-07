@@ -126,7 +126,7 @@ bool IsNumericLiteralBody(char c) {
 } // namespace
 
 constexpr char Lexer::Peek() const {
-    return *current_;
+    return current_ < end_of_file_ ? *current_ : 0;
 }
 
 void Lexer::Skip() {
@@ -135,7 +135,7 @@ void Lexer::Skip() {
 }
 
 char Lexer::Consume() {
-    auto current = *current_;
+    auto current = Peek();
     ++current_;
     ++token_size_;
     return current;

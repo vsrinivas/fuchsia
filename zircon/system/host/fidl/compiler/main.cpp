@@ -100,7 +100,7 @@ void PrintJsonSchema() {
     exit(1);
 }
 
-[[noreturn]] void Fail(const char* message, ...) {
+    [[noreturn]] void Fail(const char* message, ...) {
     va_list args;
     va_start(args, message);
     vfprintf(stderr, message, args);
@@ -324,7 +324,7 @@ int main(int argc, char* argv[]) {
     // Prepare source files.
     std::vector<fidl::SourceManager> source_managers;
     source_managers.push_back(fidl::SourceManager());
-    std::string library_zx_data(fidl::LibraryZX::kData, strlen(fidl::LibraryZX::kData) + 1);
+    std::string library_zx_data = fidl::LibraryZX::kData;
     source_managers.back().AddSourceFile(
         std::make_unique<fidl::SourceFile>(fidl::LibraryZX::kFilename, std::move(library_zx_data)));
     source_managers.push_back(fidl::SourceManager());
