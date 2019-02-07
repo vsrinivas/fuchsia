@@ -111,6 +111,10 @@
                     "description": "Fully qualified name of the constant",
                     "$ref": "#/definitions/compound-identifier"
                 },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
+                },
                 "type": {
                     "description": "Type of the constant",
                     "$ref": "#/definitions/type"
@@ -138,6 +142,10 @@
                     "description": "Fully qualified name of the enum",
                     "$ref": "#/definitions/compound-identifier"
                 },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
+                },
                 "type": {
                     "description": "Type of the enum",
                     "$ref": "#/definitions/integer-type"
@@ -162,6 +170,10 @@
                 "name": {
                     "description": "Name of the enum member",
                     "$ref": "#/definitions/identifier"
+                },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
                 },
                 "maybe_attributes": {
                     "description": "Optional list of attributes of the enum member",
@@ -188,6 +200,10 @@
                 "name": {
                     "description": "Name of the interface",
                     "$ref": "#/definitions/compound-identifier"
+                },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
                 },
                 "methods": {
                     "description": "List of methods and events",
@@ -224,6 +240,10 @@
                 "name": {
                     "description": "Name of the interface method",
                     "$ref": "#/definitions/identifier"
+                },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
                 },
                 "has_request": {
                     "description": "Flag indicating that interface method has a request component",
@@ -285,6 +305,10 @@
                     "description": "Name of the parameter or return",
                     "$ref": "#/definitions/identifier"
                 },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
+                },
                 "size": {
                     "description": "Size of the parameter or return",
                     "$ref": "#/definitions/count"
@@ -324,6 +348,10 @@
                 "name": {
                     "description": "Name of struct",
                     "$ref": "#/definitions/compound-identifier"
+                },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
                 },
                 "anonymous": {
                     "description": "Flag indicating that struct is anonymous",
@@ -365,6 +393,10 @@
                 "name": {
                     "description": "Name of struct member",
                     "$ref": "#/definitions/identifier"
+                },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
                 },
                 "size": {
                     "description": "Size of struct member",
@@ -414,6 +446,10 @@
                     "description": "Name of table",
                     "$ref": "#/definitions/compound-identifier"
                 },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
+                },
                 "members": {
                     "description": "List of table members",
                     "type": "array",
@@ -450,6 +486,10 @@
                 "name": {
                     "description": "Name of table member",
                     "$ref": "#/definitions/identifier"
+                },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
                 },
                 "ordinal": {
                     "description": "Ordinal value of table member",
@@ -500,6 +540,10 @@
                     "description": "Name of union",
                     "$ref": "#/definitions/compound-identifier"
                 },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
+                },
                 "members": {
                     "description": "List of union members",
                     "type": "array",
@@ -540,6 +584,10 @@
                 "name": {
                     "description": "Name of union member",
                     "$ref": "#/definitions/identifier"
+                },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
                 },
                 "size": {
                     "description": "Size of union member",
@@ -586,6 +634,10 @@
                     "description": "Name of extensible union",
                     "$ref": "#/definitions/compound-identifier"
                 },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
+                },
                 "members": {
                     "description": "List of extensible union members",
                     "type": "array",
@@ -631,6 +683,10 @@
                 "name": {
                     "description": "Name of extensible union member",
                     "$ref": "#/definitions/identifier"
+                },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
                 },
                 "size": {
                     "description": "Size of extensible union member",
@@ -1095,6 +1151,29 @@
                     "enum": [
                         "default"
                     ]
+                }
+            }
+        },
+        "location": {
+            "type": "object",
+            "required": [
+                "filename",
+                "line",
+                "column"
+            ],
+            "properties": {
+                "filename": {
+                    "type": "string"
+                },
+                "line": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4294967295
+                },
+                "column": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4294967295
                 }
             }
         },

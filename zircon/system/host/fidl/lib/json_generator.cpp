@@ -209,6 +209,14 @@ void JSONGenerator::Generate(SourceLocation value) {
     EmitString(&json_file_, value.data());
 }
 
+void JSONGenerator::Generate(NameLocation value) {
+    GenerateObject([&]() {
+        GenerateObjectMember("filename", value.filename, Position::kFirst);
+        GenerateObjectMember("line", (uint32_t)value.position.line);
+        GenerateObjectMember("column", (uint32_t)value.position.column);
+    });
+}
+
 void JSONGenerator::Generate(uint32_t value) {
     EmitUint32(&json_file_, value);
 }
@@ -372,6 +380,7 @@ void JSONGenerator::Generate(const flat::Name& value) {
 void JSONGenerator::Generate(const flat::Const& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
+        GenerateObjectMember("location", NameLocation(value.name));
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("type", value.type_ctor->type);
@@ -382,6 +391,7 @@ void JSONGenerator::Generate(const flat::Const& value) {
 void JSONGenerator::Generate(const flat::Enum& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
+        GenerateObjectMember("location", NameLocation(value.name));
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("type", value.type->subtype);
@@ -392,6 +402,7 @@ void JSONGenerator::Generate(const flat::Enum& value) {
 void JSONGenerator::Generate(const flat::Enum::Member& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
+        GenerateObjectMember("location", NameLocation(value.name));
         GenerateObjectMember("value", value.value);
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
@@ -401,6 +412,7 @@ void JSONGenerator::Generate(const flat::Enum::Member& value) {
 void JSONGenerator::Generate(const flat::Interface& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
+        GenerateObjectMember("location", NameLocation(value.name));
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("methods", value.all_methods);
@@ -414,6 +426,7 @@ void JSONGenerator::Generate(const flat::Interface::Method* method) {
         GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
         GenerateObjectMember("generated_ordinal", value.generated_ordinal);
         GenerateObjectMember("name", value.name);
+        GenerateObjectMember("location", NameLocation(value.name));
         GenerateObjectMember("has_request", value.maybe_request != nullptr);
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
@@ -436,6 +449,7 @@ void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struc
 void JSONGenerator::Generate(const flat::Struct& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
+        GenerateObjectMember("location", NameLocation(value.name));
         GenerateObjectMember("anonymous", value.anonymous);
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
@@ -451,6 +465,7 @@ void JSONGenerator::Generate(const flat::Struct::Member& value) {
     GenerateObject([&]() {
         GenerateObjectMember("type", value.type_ctor->type, Position::kFirst);
         GenerateObjectMember("name", value.name);
+        GenerateObjectMember("location", NameLocation(value.name));
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         if (value.maybe_default_value)
@@ -466,6 +481,7 @@ void JSONGenerator::Generate(const flat::Struct::Member& value) {
 void JSONGenerator::Generate(const flat::Table& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
+        GenerateObjectMember("location", NameLocation(value.name));
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("members", value.members);
@@ -483,6 +499,7 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
             GenerateObjectMember("reserved", false);
             GenerateObjectMember("type", value.maybe_used->type_ctor->type);
             GenerateObjectMember("name", value.maybe_used->name);
+            GenerateObjectMember("location", NameLocation(value.maybe_used->name));
             if (value.maybe_used->attributes)
                 GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
             if (value.maybe_used->maybe_default_value)
@@ -500,6 +517,7 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
 void JSONGenerator::Generate(const flat::Union& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
+        GenerateObjectMember("location", NameLocation(value.name));
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("members", value.members);
@@ -514,6 +532,7 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
     GenerateObject([&]() {
         GenerateObjectMember("type", value.type_ctor->type, Position::kFirst);
         GenerateObjectMember("name", value.name);
+        GenerateObjectMember("location", NameLocation(value.name));
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("size", value.fieldshape.Size());
@@ -526,6 +545,7 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
 void JSONGenerator::Generate(const flat::XUnion& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
+        GenerateObjectMember("location", NameLocation(value.name));
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("members", value.members);
@@ -541,6 +561,7 @@ void JSONGenerator::Generate(const flat::XUnion::Member& value) {
         GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
         GenerateObjectMember("type", value.type_ctor->type);
         GenerateObjectMember("name", value.name);
+        GenerateObjectMember("location", NameLocation(value.name));
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("size", value.fieldshape.Size());

@@ -15,6 +15,16 @@
 
 namespace fidl {
 
+struct NameLocation {
+    explicit NameLocation(const SourceLocation& source_location)
+        : filename(source_location.source_file().filename()) {
+      source_location.SourceLine(&position);
+    }
+    explicit NameLocation(const flat::Name& name) : NameLocation(name.source_location()) {}
+    const std::string filename;
+    SourceFile::Position position;
+};
+
 // Methods or functions named "Emit..." are the actual interface to
 // the JSON output.
 
@@ -68,6 +78,7 @@ private:
     void Generate(bool value);
     void Generate(StringView value);
     void Generate(SourceLocation value);
+    void Generate(NameLocation value);
     void Generate(uint32_t value);
 
     void Generate(types::HandleSubtype value);

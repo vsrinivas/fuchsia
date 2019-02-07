@@ -84,6 +84,11 @@ struct Simple {
   "struct_declarations": [
     {
       "name": "fidl.test.json/Simple",
+      "location": {
+        "filename": "json.fidl",
+        "line": 4,
+        "column": 7
+      },
       "anonymous": false,
       "members": [
         {
@@ -92,6 +97,11 @@ struct Simple {
             "subtype": "uint8"
           },
           "name": "f1",
+          "location": {
+            "filename": "json.fidl",
+            "line": 5,
+            "column": 10
+          },
           "size": 1,
           "max_out_of_line": 0,
           "alignment": 1,
@@ -104,6 +114,11 @@ struct Simple {
             "subtype": "bool"
           },
           "name": "f2",
+          "location": {
+            "filename": "json.fidl",
+            "line": 6,
+            "column": 9
+          },
           "size": 1,
           "max_out_of_line": 0,
           "alignment": 1,
@@ -159,11 +174,21 @@ interface EmptyInterface {
   "interface_declarations": [
     {
       "name": "fidl.test.json/EmptyInterface",
+      "location": {
+        "filename": "json.fidl",
+        "line": 7,
+        "column": 10
+      },
       "methods": [
         {
           "ordinal": 296942602,
           "generated_ordinal": 296942602,
           "name": "Send",
+          "location": {
+            "filename": "json.fidl",
+            "line": 8,
+            "column": 2
+          },
           "has_request": true,
           "maybe_request": [
             {
@@ -173,6 +198,11 @@ interface EmptyInterface {
                 "nullable": false
               },
               "name": "e",
+              "location": {
+                "filename": "json.fidl",
+                "line": 8,
+                "column": 13
+              },
               "size": 1,
               "max_out_of_line": 0,
               "alignment": 1,
@@ -188,6 +218,11 @@ interface EmptyInterface {
           "ordinal": 939543845,
           "generated_ordinal": 939543845,
           "name": "Receive",
+          "location": {
+            "filename": "json.fidl",
+            "line": 9,
+            "column": 5
+          },
           "has_request": false,
           "has_response": true,
           "maybe_response": [
@@ -198,6 +233,11 @@ interface EmptyInterface {
                 "nullable": false
               },
               "name": "e",
+              "location": {
+                "filename": "json.fidl",
+                "line": 9,
+                "column": 20
+              },
               "size": 1,
               "max_out_of_line": 0,
               "alignment": 1,
@@ -212,6 +252,11 @@ interface EmptyInterface {
           "ordinal": 556045674,
           "generated_ordinal": 556045674,
           "name": "SendAndReceive",
+          "location": {
+            "filename": "json.fidl",
+            "line": 10,
+            "column": 2
+          },
           "has_request": true,
           "maybe_request": [
             {
@@ -221,6 +266,11 @@ interface EmptyInterface {
                 "nullable": false
               },
               "name": "e",
+              "location": {
+                "filename": "json.fidl",
+                "line": 10,
+                "column": 23
+              },
               "size": 1,
               "max_out_of_line": 0,
               "alignment": 1,
@@ -239,6 +289,11 @@ interface EmptyInterface {
                 "nullable": false
               },
               "name": "e",
+              "location": {
+                "filename": "json.fidl",
+                "line": 10,
+                "column": 36
+              },
               "size": 1,
               "max_out_of_line": 0,
               "alignment": 1,
@@ -255,6 +310,11 @@ interface EmptyInterface {
   "struct_declarations": [
     {
       "name": "fidl.test.json/Empty",
+      "location": {
+        "filename": "json.fidl",
+        "line": 4,
+        "column": 7
+      },
       "anonymous": false,
       "members": [],
       "size": 1,
@@ -307,6 +367,11 @@ table Simple {
   "table_declarations": [
     {
       "name": "fidl.test.json/Simple",
+      "location": {
+        "filename": "json.fidl",
+        "line": 4,
+        "column": 6
+      },
       "members": [
         {
           "ordinal": 1,
@@ -316,6 +381,11 @@ table Simple {
             "subtype": "uint8"
           },
           "name": "f1",
+          "location": {
+            "filename": "json.fidl",
+            "line": 5,
+            "column": 13
+          },
           "size": 1,
           "max_out_of_line": 0,
           "alignment": 1,
@@ -329,6 +399,11 @@ table Simple {
             "subtype": "bool"
           },
           "name": "f2",
+          "location": {
+            "filename": "json.fidl",
+            "line": 6,
+            "column": 12
+          },
           "size": 1,
           "max_out_of_line": 0,
           "alignment": 1,
@@ -392,6 +467,11 @@ union PizzaOrPasta {
   "struct_declarations": [
     {
       "name": "fidl.test.json/Pizza",
+      "location": {
+        "filename": "json.fidl",
+        "line": 4,
+        "column": 7
+      },
       "anonymous": false,
       "members": [
         {
@@ -405,6 +485,11 @@ union PizzaOrPasta {
             "nullable": false
           },
           "name": "toppings",
+          "location": {
+            "filename": "json.fidl",
+            "line": 5,
+            "column": 22
+          },
           "size": 16,
           "max_out_of_line": 4294967295,
           "alignment": 8,
@@ -419,6 +504,11 @@ union PizzaOrPasta {
     },
     {
       "name": "fidl.test.json/Pasta",
+      "location": {
+        "filename": "json.fidl",
+        "line": 8,
+        "column": 7
+      },
       "anonymous": false,
       "members": [
         {
@@ -428,6 +518,11 @@ union PizzaOrPasta {
             "nullable": false
           },
           "name": "sauce",
+          "location": {
+            "filename": "json.fidl",
+            "line": 9,
+            "column": 14
+          },
           "size": 16,
           "max_out_of_line": 16,
           "alignment": 8,
@@ -445,6 +540,11 @@ union PizzaOrPasta {
   "union_declarations": [
     {
       "name": "fidl.test.json/PizzaOrPasta",
+      "location": {
+        "filename": "json.fidl",
+        "line": 12,
+        "column": 6
+      },
       "members": [
         {
           "type": {
@@ -453,6 +553,11 @@ union PizzaOrPasta {
             "nullable": false
           },
           "name": "pizza",
+          "location": {
+            "filename": "json.fidl",
+            "line": 13,
+            "column": 10
+          },
           "size": 16,
           "max_out_of_line": 4294967295,
           "alignment": 8,
@@ -465,6 +570,11 @@ union PizzaOrPasta {
             "nullable": false
           },
           "name": "pasta",
+          "location": {
+            "filename": "json.fidl",
+            "line": 14,
+            "column": 10
+          },
           "size": 16,
           "max_out_of_line": 16,
           "alignment": 8,
@@ -522,6 +632,11 @@ xunion xu {
   "xunion_declarations": [
     {
       "name": "fidl.test.json/xu",
+      "location": {
+        "filename": "json.fidl",
+        "line": 4,
+        "column": 7
+      },
       "members": [
         {
           "ordinal": 730795057,
@@ -530,6 +645,11 @@ xunion xu {
             "nullable": false
           },
           "name": "s",
+          "location": {
+            "filename": "json.fidl",
+            "line": 5,
+            "column": 9
+          },
           "size": 16,
           "max_out_of_line": 4294967295,
           "alignment": 8,
@@ -542,6 +662,11 @@ xunion xu {
             "subtype": "int32"
           },
           "name": "i",
+          "location": {
+            "filename": "json.fidl",
+            "line": 6,
+            "column": 8
+          },
           "size": 4,
           "max_out_of_line": 0,
           "alignment": 4,
@@ -594,6 +719,11 @@ interface sub : super {
   "interface_declarations": [
     {
       "name": "fidl.test.json/super",
+      "location": {
+        "filename": "json.fidl",
+        "line": 5,
+        "column": 10
+      },
       "maybe_attributes": [
         {
           "name": "FragileBase",
@@ -605,6 +735,11 @@ interface sub : super {
           "ordinal": 790020540,
           "generated_ordinal": 790020540,
           "name": "foo",
+          "location": {
+            "filename": "json.fidl",
+            "line": 6,
+            "column": 3
+          },
           "has_request": true,
           "maybe_request": [
             {
@@ -613,6 +748,11 @@ interface sub : super {
                 "nullable": false
               },
               "name": "s",
+              "location": {
+                "filename": "json.fidl",
+                "line": 6,
+                "column": 14
+              },
               "size": 16,
               "max_out_of_line": 4294967295,
               "alignment": 8,
@@ -630,6 +770,11 @@ interface sub : super {
                 "subtype": "int64"
               },
               "name": "y",
+              "location": {
+                "filename": "json.fidl",
+                "line": 6,
+                "column": 27
+              },
               "size": 8,
               "max_out_of_line": 0,
               "alignment": 8,
@@ -644,11 +789,21 @@ interface sub : super {
     },
     {
       "name": "fidl.test.json/sub",
+      "location": {
+        "filename": "json.fidl",
+        "line": 9,
+        "column": 10
+      },
       "methods": [
         {
           "ordinal": 790020540,
           "generated_ordinal": 790020540,
           "name": "foo",
+          "location": {
+            "filename": "json.fidl",
+            "line": 6,
+            "column": 3
+          },
           "has_request": true,
           "maybe_request": [
             {
@@ -657,6 +812,11 @@ interface sub : super {
                 "nullable": false
               },
               "name": "s",
+              "location": {
+                "filename": "json.fidl",
+                "line": 6,
+                "column": 14
+              },
               "size": 16,
               "max_out_of_line": 4294967295,
               "alignment": 8,
@@ -674,6 +834,11 @@ interface sub : super {
                 "subtype": "int64"
               },
               "name": "y",
+              "location": {
+                "filename": "json.fidl",
+                "line": 6,
+                "column": 27
+              },
               "size": 8,
               "max_out_of_line": 0,
               "alignment": 8,
@@ -731,6 +896,11 @@ interface Child : Parent {
   "interface_declarations": [
     {
       "name": "fidl.test.json/Parent",
+      "location": {
+        "filename": "json.fidl",
+        "line": 5,
+        "column": 10
+      },
       "maybe_attributes": [
         {
           "name": "FragileBase",
@@ -742,6 +912,11 @@ interface Child : Parent {
           "ordinal": 1722375644,
           "generated_ordinal": 1722375644,
           "name": "First",
+          "location": {
+            "filename": "json.fidl",
+            "line": 6,
+            "column": 2
+          },
           "has_request": true,
           "maybe_request": [
             {
@@ -751,6 +926,11 @@ interface Child : Parent {
                 "nullable": false
               },
               "name": "request",
+              "location": {
+                "filename": "json.fidl",
+                "line": 6,
+                "column": 24
+              },
               "size": 4,
               "max_out_of_line": 0,
               "alignment": 4,
@@ -766,11 +946,21 @@ interface Child : Parent {
     },
     {
       "name": "fidl.test.json/Child",
+      "location": {
+        "filename": "json.fidl",
+        "line": 9,
+        "column": 10
+      },
       "methods": [
         {
           "ordinal": 1722375644,
           "generated_ordinal": 1722375644,
           "name": "First",
+          "location": {
+            "filename": "json.fidl",
+            "line": 6,
+            "column": 2
+          },
           "has_request": true,
           "maybe_request": [
             {
@@ -780,6 +970,11 @@ interface Child : Parent {
                 "nullable": false
               },
               "name": "request",
+              "location": {
+                "filename": "json.fidl",
+                "line": 6,
+                "column": 24
+              },
               "size": 4,
               "max_out_of_line": 0,
               "alignment": 4,
@@ -795,6 +990,11 @@ interface Child : Parent {
           "ordinal": 19139766,
           "generated_ordinal": 19139766,
           "name": "Second",
+          "location": {
+            "filename": "json.fidl",
+            "line": 10,
+            "column": 2
+          },
           "has_request": true,
           "maybe_request": [
             {
@@ -804,6 +1004,11 @@ interface Child : Parent {
                 "nullable": false
               },
               "name": "request",
+              "location": {
+                "filename": "json.fidl",
+                "line": 10,
+                "column": 25
+              },
               "size": 4,
               "max_out_of_line": 0,
               "alignment": 4,
@@ -857,11 +1062,21 @@ interface Example {
   "interface_declarations": [
     {
       "name": "fidl.test.json/Example",
+      "location": {
+        "filename": "json.fidl",
+        "line": 4,
+        "column": 10
+      },
       "methods": [
         {
           "ordinal": 1369693400,
           "generated_ordinal": 1369693400,
           "name": "foo",
+          "location": {
+            "filename": "json.fidl",
+            "line": 5,
+            "column": 3
+          },
           "has_request": true,
           "maybe_request": [
             {
@@ -870,6 +1085,11 @@ interface Example {
                 "nullable": false
               },
               "name": "s",
+              "location": {
+                "filename": "json.fidl",
+                "line": 5,
+                "column": 14
+              },
               "size": 16,
               "max_out_of_line": 4294967295,
               "alignment": 8,
@@ -888,6 +1108,11 @@ interface Example {
                 "nullable": false
               },
               "name": "result",
+              "location": {
+                "filename": "generated",
+                "line": 6,
+                "column": 0
+              },
               "size": 16,
               "max_out_of_line": 0,
               "alignment": 8,
@@ -904,6 +1129,11 @@ interface Example {
   "struct_declarations": [
     {
       "name": "fidl.test.json/Example_foo_Response",
+      "location": {
+        "filename": "generated",
+        "line": 2,
+        "column": 0
+      },
       "anonymous": false,
       "members": [
         {
@@ -912,6 +1142,11 @@ interface Example {
             "subtype": "int64"
           },
           "name": "y",
+          "location": {
+            "filename": "json.fidl",
+            "line": 5,
+            "column": 27
+          },
           "size": 8,
           "max_out_of_line": 0,
           "alignment": 8,
@@ -929,6 +1164,11 @@ interface Example {
   "union_declarations": [
     {
       "name": "fidl.test.json/Example_foo_Result",
+      "location": {
+        "filename": "generated",
+        "line": 5,
+        "column": 0
+      },
       "maybe_attributes": [
         {
           "name": "Result",
@@ -943,6 +1183,11 @@ interface Example {
             "nullable": false
           },
           "name": "response",
+          "location": {
+            "filename": "generated",
+            "line": 3,
+            "column": 0
+          },
           "size": 8,
           "max_out_of_line": 0,
           "alignment": 8,
@@ -954,6 +1199,11 @@ interface Example {
             "subtype": "uint32"
           },
           "name": "err",
+          "location": {
+            "filename": "generated",
+            "line": 4,
+            "column": 0
+          },
           "size": 4,
           "max_out_of_line": 0,
           "alignment": 4,
@@ -1008,6 +1258,11 @@ struct ByteAndBytes {
   "struct_declarations": [
     {
       "name": "example/ByteAndBytes",
+      "location": {
+        "filename": "json.fidl",
+        "line": 4,
+        "column": 7
+      },
       "anonymous": false,
       "members": [
         {
@@ -1016,6 +1271,11 @@ struct ByteAndBytes {
             "subtype": "uint8"
           },
           "name": "single_byte",
+          "location": {
+            "filename": "json.fidl",
+            "line": 5,
+            "column": 7
+          },
           "size": 1,
           "max_out_of_line": 0,
           "alignment": 1,
@@ -1032,6 +1292,11 @@ struct ByteAndBytes {
             "nullable": false
           },
           "name": "many_bytes",
+          "location": {
+            "filename": "json.fidl",
+            "line": 6,
+            "column": 8
+          },
           "size": 16,
           "max_out_of_line": 4294967295,
           "alignment": 8,
@@ -1049,6 +1314,11 @@ struct ByteAndBytes {
             "nullable": false
           },
           "name": "only_one_k_bytes",
+          "location": {
+            "filename": "json.fidl",
+            "line": 7,
+            "column": 13
+          },
           "size": 16,
           "max_out_of_line": 1024,
           "alignment": 8,
@@ -1066,6 +1336,11 @@ struct ByteAndBytes {
             "nullable": true
           },
           "name": "opt_only_one_k_bytes",
+          "location": {
+            "filename": "json.fidl",
+            "line": 8,
+            "column": 14
+          },
           "size": 16,
           "max_out_of_line": 1024,
           "alignment": 8,
