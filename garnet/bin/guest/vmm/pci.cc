@@ -169,25 +169,26 @@ PciBus::PciBus(Guest* guest, InterruptController* interrupt_controller)
       root_complex_(kRootComplexAttributes),
       mmio_base_(kPciMmioBarPhysBase) {}
 
-zx_status_t PciBus::Init() {
+zx_status_t PciBus::Init(async_dispatcher_t* dispatcher) {
   root_complex_.bar_[0].size = 0x10;
   root_complex_.bar_[0].trap_type = TrapType::MMIO_SYNC;
-  zx_status_t status = Connect(&root_complex_);
+  zx_status_t status = Connect(&root_complex_, dispatcher, false);
   if (status != ZX_OK) {
     return status;
   }
 
   // Setup ECAM trap for a single bus.
   status = guest_->CreateMapping(TrapType::MMIO_SYNC, kPciEcamPhysBase,
-                                 kPciEcamSize, 0, &ecam_handler_);
+                                 kPciEcamSize, 0, &ecam_handler_, dispatcher);
   if (status != ZX_OK) {
     return status;
   }
 
 #if __x86_64__
   // Setup PIO trap.
-  status = guest_->CreateMapping(TrapType::PIO_SYNC, kPciConfigPortBase,
-                                 kPciConfigPortSize, 0, &port_handler_);
+  status =
+      guest_->CreateMapping(TrapType::PIO_SYNC, kPciConfigPortBase,
+                            kPciConfigPortSize, 0, &port_handler_, dispatcher);
   if (status != ZX_OK) {
     return status;
   }
@@ -206,7 +207,8 @@ void PciBus::set_config_addr(uint32_t addr) {
   config_addr_ = addr;
 }
 
-zx_status_t PciBus::Connect(PciDevice* device, bool skip_bell) {
+zx_status_t PciBus::Connect(PciDevice* device, async_dispatcher_t* dispatcher,
+                            bool skip_bell) {
   if (next_open_slot_ >= kPciMaxDevices) {
     FXL_LOG(ERROR) << "No PCI device slots available";
     return ZX_ERR_OUT_OF_RANGE;
@@ -235,7 +237,7 @@ zx_status_t PciBus::Connect(PciDevice* device, bool skip_bell) {
   device->command_ = kPciCommandIoEnable | kPciCommandMemEnable;
   device->global_irq_ = kPciGlobalIrqAssigments[slot];
   device_[slot] = device;
-  return device->SetupBarTraps(guest_, skip_bell);
+  return device->SetupBarTraps(guest_, skip_bell, dispatcher);
 }
 
 // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1: All PCI devices must
@@ -629,7 +631,8 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
   }
 }
 
-zx_status_t PciDevice::SetupBarTraps(Guest* guest, bool skip_bell) {
+zx_status_t PciDevice::SetupBarTraps(Guest* guest, bool skip_bell,
+                                     async_dispatcher_t* dispatcher) {
   for (uint8_t i = 0; i < kPciMaxBars; ++i) {
     PciBar* bar = &bar_[i];
     if (!is_bar_implemented(i)) {
@@ -640,8 +643,8 @@ zx_status_t PciDevice::SetupBarTraps(Guest* guest, bool skip_bell) {
 
     bar->n = i;
     bar->device = this;
-    zx_status_t status =
-        guest->CreateMapping(bar->trap_type, bar->base(), bar->size, 0, bar);
+    zx_status_t status = guest->CreateMapping(bar->trap_type, bar->base(),
+                                              bar->size, 0, bar, dispatcher);
     if (status != ZX_OK) {
       return status;
     }

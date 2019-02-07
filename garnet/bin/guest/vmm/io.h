@@ -92,7 +92,7 @@ class IoMapping {
     return handler_->Write(address, value);
   }
 
-  zx_status_t SetTrap(Guest* guest);
+  zx_status_t SetTrap(Guest* guest, async_dispatcher_t* dispatcher);
 
  private:
   void CallIoHandlerAsync(async_dispatcher_t* dispatcher,

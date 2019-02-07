@@ -34,13 +34,11 @@ class Guest {
 
   const PhysMem& phys_mem() const { return phys_mem_; }
   const zx::guest& object() { return guest_; }
-  async_dispatcher_t* device_dispatcher() const {
-    return device_loop_.dispatcher();
-  }
 
   // Setup a trap to delegate accesses to an IO region to |handler|.
   zx_status_t CreateMapping(TrapType type, uint64_t addr, size_t size,
-                            uint64_t offset, IoHandler* handler);
+                            uint64_t offset, IoHandler* handler,
+                            async_dispatcher_t* dispatcher = nullptr);
 
   // Creates a VMAR for a specific region of guest memory.
   zx_status_t CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar);
@@ -65,8 +63,6 @@ class Guest {
 
   std::shared_mutex mutex_;
   VcpuArray vcpus_;
-
-  async::Loop device_loop_{&kAsyncLoopConfigNoAttachToThread};
 };
 
 #endif  // GARNET_BIN_GUEST_VMM_GUEST_H_

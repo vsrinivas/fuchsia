@@ -22,9 +22,6 @@
 
 #include "garnet/bin/guest/vmm/sysinfo.h"
 
-// Number of threads reading from the async device port.
-static constexpr size_t kNumAsyncWorkers = 2;
-
 static constexpr uint32_t trap_kind(TrapType type) {
   switch (type) {
     case TrapType::MMIO_SYNC:
@@ -135,23 +132,15 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
     }
   }
 
-  for (size_t i = 0; i < kNumAsyncWorkers; ++i) {
-    auto name = fxl::StringPrintf("io-handler-%zu", i);
-    status = device_loop_.StartThread(name.c_str());
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create async worker " << status;
-      return status;
-    }
-  }
-
   return ZX_OK;
 }
 
 zx_status_t Guest::CreateMapping(TrapType type, uint64_t addr, size_t size,
-                                 uint64_t offset, IoHandler* handler) {
+                                 uint64_t offset, IoHandler* handler,
+                                 async_dispatcher_t* dispatcher) {
   uint32_t kind = trap_kind(type);
   mappings_.emplace_front(kind, addr, size, offset, handler);
-  zx_status_t status = mappings_.front().SetTrap(this);
+  zx_status_t status = mappings_.front().SetTrap(this, dispatcher);
   if (status != ZX_OK) {
     mappings_.pop_front();
     return status;

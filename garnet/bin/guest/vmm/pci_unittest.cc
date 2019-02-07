@@ -23,7 +23,7 @@ constexpr uint64_t pci_type1_addr(uint8_t bus, uint8_t device, uint8_t function,
 TEST(PciDeviceTest, ReadConfigRegister) {
   Guest guest;
   PciBus bus(&guest, nullptr);
-  bus.Init();
+  bus.Init(async_get_default_dispatcher());
   PciDevice& device = bus.root_complex();
 
   // Access Vendor/Device ID as a single 32bit read.
@@ -37,7 +37,7 @@ TEST(PciDeviceTest, ReadConfigRegister) {
 TEST(PciDeviceTest, ReadConfigRegisterBytewise) {
   Guest guest;
   PciBus bus(&guest, nullptr);
-  bus.Init();
+  bus.Init(async_get_default_dispatcher());
   PciDevice& device = bus.root_complex();
 
   uint32_t expected_device_vendor =
@@ -61,7 +61,7 @@ TEST(PciDeviceTest, ReadConfigRegisterBytewise) {
 TEST(PciDeviceTest, ReadBarSize) {
   Guest guest;
   PciBus bus(&guest, nullptr);
-  bus.Init();
+  bus.Init(async_get_default_dispatcher());
   PciDevice& device = bus.root_complex();
 
   // Set all bits in the BAR register. The device will ignore writes to the
@@ -112,7 +112,7 @@ TEST(PciDeviceTest, ReadBarSize) {
 TEST(PciDeviceTest, ReadCapability) {
   Guest guest;
   PciBus bus(&guest, nullptr);
-  bus.Init();
+  bus.Init(async_get_default_dispatcher());
   PciDevice& device = bus.root_complex();
 
   // Create and install a simple capability. First two bytes are ignored.
@@ -161,7 +161,7 @@ TEST(PciDeviceTest, ReadCapability) {
 TEST(PciDeviceTest, ReadChainedCapability) {
   Guest guest;
   PciBus bus(&guest, nullptr);
-  bus.Init();
+  bus.Init(async_get_default_dispatcher());
   PciDevice& device = bus.root_complex();
 
   // Build list of caps.
@@ -213,7 +213,7 @@ TEST(PciDeviceTest, ReadChainedCapability) {
 TEST(PciBusTest, WriteConfigAddressPort) {
   Guest guest;
   PciBus bus(&guest, nullptr);
-  bus.Init();
+  bus.Init(async_get_default_dispatcher());
 
   // 32 bit write.
   IoValue value;
@@ -241,7 +241,7 @@ TEST(PciBusTest, WriteConfigAddressPort) {
 TEST(PciBusTest, ReadConfigAddressPort) {
   Guest guest;
   PciBus bus(&guest, nullptr);
-  bus.Init();
+  bus.Init(async_get_default_dispatcher());
   bus.set_config_addr(0x12345678);
 
   // 32 bit read (bits 31..0).
@@ -272,7 +272,7 @@ TEST(PciBusTest, ReadConfigAddressPort) {
 TEST(PciBusTest, ReadConfigDataPort) {
   Guest guest;
   PciBus bus(&guest, nullptr);
-  bus.Init();
+  bus.Init(async_get_default_dispatcher());
   IoValue value = {};
 
   // 16-bit read.

@@ -498,7 +498,8 @@ VirtioVsock::VirtioVsock(component::StartupContext* context,
       tx_stream_(dispatcher, tx_queue(), this) {
   config_.guest_cid = 0;
   if (context) {
-    context->outgoing().AddPublicService(endpoint_bindings_.GetHandler(this));
+    context->outgoing().AddPublicService(
+        endpoint_bindings_.GetHandler(this, dispatcher));
   }
 }
 
@@ -522,8 +523,8 @@ void VirtioVsock::SetContextId(
     std::lock_guard<std::mutex> lock(device_config_.mutex);
     config_.guest_cid = cid;
   }
-  acceptor_bindings_.AddBinding(this, std::move(acceptor));
-  FXL_CHECK(connector_.Bind(std::move(connector)) == ZX_OK);
+  acceptor_bindings_.AddBinding(this, std::move(acceptor), dispatcher_);
+  FXL_CHECK(connector_.Bind(std::move(connector), dispatcher_) == ZX_OK);
   tx_stream_.WaitOnQueue();
 }
 
