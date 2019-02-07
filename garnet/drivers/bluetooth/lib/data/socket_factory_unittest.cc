@@ -15,7 +15,6 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 
 namespace btlib::data::internal {
 namespace {

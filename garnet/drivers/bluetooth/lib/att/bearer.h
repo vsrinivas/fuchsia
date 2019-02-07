@@ -21,7 +21,6 @@
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/scoped_channel.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 
 #include "lib/fxl/functional/cancelable_callback.h"
 #include "lib/fxl/macros.h"
@@ -287,7 +286,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
 
   // l2cap::Channel callbacks:
   void OnChannelClosed();
-  void OnRxBFrame(const l2cap::SDU& sdu);
+  void OnRxBFrame(common::ByteBufferPtr sdu);
 
   l2cap::ScopedChannel chan_;
   uint16_t mtu_;
@@ -295,7 +294,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   uint16_t min_mtu_;
 
   // Callback passed to l2cap::Channel::OnRxBFrame().
-  fxl::CancelableCallback<void(const l2cap::SDU& sdu)> rx_task_;
+  fxl::CancelableCallback<void(common::ByteBufferPtr sdu)> rx_task_;
 
   // Callback that wraps our internal OnChannelClosed handler.
   fxl::CancelableClosure chan_closed_cb_;

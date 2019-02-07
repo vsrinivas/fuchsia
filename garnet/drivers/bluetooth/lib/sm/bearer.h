@@ -12,7 +12,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/scoped_channel.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 #include "garnet/drivers/bluetooth/lib/sm/packet.h"
 #include "garnet/drivers/bluetooth/lib/sm/smp.h"
 #include "garnet/drivers/bluetooth/lib/sm/status.h"
@@ -210,7 +209,7 @@ class Bearer final {
 
   // l2cap::Channel callbacks:
   void OnChannelClosed();
-  void OnRxBFrame(const l2cap::SDU& sdu);
+  void OnRxBFrame(common::ByteBufferPtr sdu);
 
   l2cap::ScopedChannel chan_;
   hci::Connection::Role role_;

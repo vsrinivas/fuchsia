@@ -729,7 +729,8 @@ void Bearer::OnChannelClosed() {
   ShutDown();
 }
 
-void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
+void Bearer::OnRxBFrame(common::ByteBufferPtr sdu) {
+  ZX_DEBUG_ASSERT(sdu);
   ZX_DEBUG_ASSERT(is_open());
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 

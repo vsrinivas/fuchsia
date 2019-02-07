@@ -12,7 +12,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/scoped_channel.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 
@@ -135,7 +134,7 @@ class SignalingChannel : public SignalingChannelInterface {
   // a valid payload length, send a Command Reject packet for each packet with
   // an intact ID in its header but invalid payload length, and drop any other
   // incoming data.
-  virtual void DecodeRxUnit(const SDU& sdu,
+  virtual void DecodeRxUnit(common::ByteBufferPtr sdu,
                             const SignalingPacketHandler& cb) = 0;
 
   // Called when a new signaling packet has been received. Returns false if
@@ -181,7 +180,7 @@ class SignalingChannel : public SignalingChannelInterface {
 
   // Channel callbacks:
   void OnChannelClosed();
-  void OnRxBFrame(const SDU& sdu);
+  void OnRxBFrame(common::ByteBufferPtr sdu);
 
   // Invoke the abstract packet handler |HandlePacket| for well-formed command
   // packets and send responses for command packets that exceed this host's MTU

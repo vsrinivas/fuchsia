@@ -5,9 +5,9 @@
 #ifndef GARNET_DRIVERS_BLUETOOTH_LIB_RFCOMM_SESSION_H_
 #define GARNET_DRIVERS_BLUETOOTH_LIB_RFCOMM_SESSION_H_
 
+#include <map>
 #include <queue>
 #include <unordered_map>
-#include <map>
 
 #include <fbl/ref_ptr.h>
 #include <lib/async/cpp/task.h>
@@ -72,7 +72,7 @@ class Session {
                          ChannelOpenedCallback channel_opened_cb);
 
   // l2cap::Channel callbacks.
-  void RxCallback(const l2cap::SDU& sdu);
+  void RxCallback(common::ByteBufferPtr sdu);
   void ClosedCallback();
 
   // Send a SABM or a DISC command. When a response (UA or DM) is received,

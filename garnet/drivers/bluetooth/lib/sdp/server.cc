@@ -140,9 +140,9 @@ bool Server::AddConnection(fbl::RefPtr<l2cap::Channel> channel) {
 
   auto self = weak_ptr_factory_.GetWeakPtr();
   bool activated = channel->Activate(
-      [self, handle](const l2cap::SDU& sdu) {
+      [self, handle](common::ByteBufferPtr sdu) {
         if (self) {
-          self->OnRxBFrame(handle, sdu);
+          self->OnRxBFrame(handle, std::move(sdu));
         }
       },
       [self, handle] {
@@ -368,7 +368,8 @@ void Server::OnChannelClosed(const hci::ConnectionHandle& handle) {
 }
 
 void Server::OnRxBFrame(const hci::ConnectionHandle& handle,
-                        const l2cap::SDU& sdu) {
+                        common::ByteBufferPtr sdu) {
+  ZX_DEBUG_ASSERT(sdu);
   uint16_t length = sdu->size();
   if (length < sizeof(Header)) {
     bt_log(TRACE, "sdp", "PDU too short; dropping");

@@ -63,9 +63,9 @@ Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan, hci::Connection::Role role,
 
   auto self = weak_ptr_factory_.GetWeakPtr();
   chan_->Activate(
-      [self](const auto& sdu) {
+      [self](auto sdu) {
         if (self) {
-          self->OnRxBFrame(sdu);
+          self->OnRxBFrame(std::move(sdu));
         }
       },
       [self] {
@@ -643,7 +643,8 @@ void Bearer::OnChannelClosed() {
   }
 }
 
-void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
+void Bearer::OnRxBFrame(common::ByteBufferPtr sdu) {
+  ZX_DEBUG_ASSERT(sdu);
   uint8_t length = sdu->size();
   if (length < sizeof(Code)) {
     bt_log(TRACE, "sm", "PDU too short!");

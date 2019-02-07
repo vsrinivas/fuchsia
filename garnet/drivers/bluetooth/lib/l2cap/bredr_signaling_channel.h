@@ -37,7 +37,8 @@ class BrEdrSignalingChannel final : public SignalingChannel {
 
  private:
   // SignalingChannel overrides
-  void DecodeRxUnit(const SDU& sdu, const SignalingPacketHandler& cb) override;
+  void DecodeRxUnit(common::ByteBufferPtr sdu,
+                    const SignalingPacketHandler& cb) override;
   bool HandlePacket(const SignalingPacket& packet) override;
 
   // Register a callback that will be invoked when a response-type command

@@ -18,10 +18,10 @@
 #include <lib/fit/function.h>
 #include <zircon/compiler.h>
 
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/pdu.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 #include "garnet/drivers/bluetooth/lib/sm/status.h"
 #include "garnet/drivers/bluetooth/lib/sm/types.h"
 #include "lib/fxl/macros.h"
@@ -59,7 +59,7 @@ namespace l2cap {
 // Activate().
 class Channel : public fbl::RefCounted<Channel> {
  public:
-  using PacketType = SDU;
+  using PacketType = common::ByteBufferPtr;
 
   // Identifier for this channel's endpoint on this device. It can be prior-
   // specified for fixed channels or allocated for dynamic channels per v5.0,
@@ -224,7 +224,8 @@ class ChannelImpl : public Channel {
   // TODO(armansito): We should avoid STL containers for data packets as they
   // all implicitly allocate. This is a reminder to fix this elsewhere
   // (especially in the HCI layer).
-  std::queue<SDU, std::list<SDU>> pending_rx_sdus_ __TA_GUARDED(mtx_);
+  std::queue<common::ByteBufferPtr, std::list<common::ByteBufferPtr>>
+      pending_rx_sdus_ __TA_GUARDED(mtx_);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ChannelImpl);
 };

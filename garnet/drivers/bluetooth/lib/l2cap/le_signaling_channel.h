@@ -49,7 +49,8 @@ class LESignalingChannel final : public SignalingChannel {
   void OnConnParamUpdateReceived(const SignalingPacket& packet);
 
   // SignalingChannel override
-  void DecodeRxUnit(const SDU& sdu, const SignalingPacketHandler& cb) override;
+  void DecodeRxUnit(common::ByteBufferPtr sdu,
+                    const SignalingPacketHandler& cb) override;
 
   bool HandlePacket(const SignalingPacket& packet) override;
 

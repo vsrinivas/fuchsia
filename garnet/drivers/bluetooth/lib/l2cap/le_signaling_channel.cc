@@ -107,28 +107,28 @@ void LESignalingChannel::OnConnParamUpdateReceived(
   }
 }
 
-void LESignalingChannel::DecodeRxUnit(const SDU& sdu,
+void LESignalingChannel::DecodeRxUnit(common::ByteBufferPtr sdu,
                                       const SignalingPacketHandler& cb) {
   // "[O]nly one command per C-frame shall be sent over [the LE] Fixed Channel"
   // (v5.0, Vol 3, Part A, Section 4).
+  ZX_DEBUG_ASSERT(sdu);
   if (sdu->size() < sizeof(CommandHeader)) {
     bt_log(TRACE, "l2cap-le", "sig: dropped malformed LE signaling packet");
     return;
   }
 
-  const common::ByteBuffer& data = *sdu;
   SignalingPacket packet(sdu.get());
   uint16_t expected_payload_length = le16toh(packet.header().length);
-  if (expected_payload_length != data.size() - sizeof(CommandHeader)) {
+  if (expected_payload_length != sdu->size() - sizeof(CommandHeader)) {
     bt_log(TRACE, "l2cap-le",
            "sig: packet size mismatch (expected: %zu, recv: %zu); drop",
-           expected_payload_length, data.size() - sizeof(CommandHeader));
+           expected_payload_length, sdu->size() - sizeof(CommandHeader));
     SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
                       common::BufferView());
     return;
   }
 
-  cb(SignalingPacket(&data, expected_payload_length));
+  cb(SignalingPacket(sdu.get(), expected_payload_length));
 }
 
 bool LESignalingChannel::HandlePacket(const SignalingPacket& packet) {

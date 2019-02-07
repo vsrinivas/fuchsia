@@ -48,7 +48,9 @@ class TestSignalingChannel : public SignalingChannel {
   void ServeRequest(CommandCode req_code, RequestDelegate cb) override {}
 
   // SignalingChannel overrides
-  void DecodeRxUnit(const SDU& sdu, const SignalingPacketHandler& cb) override {
+  void DecodeRxUnit(common::ByteBufferPtr sdu,
+                    const SignalingPacketHandler& cb) override {
+    ZX_DEBUG_ASSERT(sdu);
     if (sdu->size()) {
       cb(SignalingPacket(sdu.get(), sdu->size() - sizeof(CommandHeader)));
     } else {

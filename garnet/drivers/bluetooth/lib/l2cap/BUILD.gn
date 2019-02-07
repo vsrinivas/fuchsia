@@ -43,7 +43,6 @@ static_library("l2cap") {
     "recombiner.h",
     "scoped_channel.cc",
     "scoped_channel.h",
-    "sdu.h",
     "signaling_channel.cc",
     "signaling_channel.h",
   ]

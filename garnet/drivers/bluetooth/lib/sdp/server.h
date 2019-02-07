@@ -15,7 +15,6 @@
 #include "garnet/drivers/bluetooth/lib/data/domain.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/scoped_channel.h"
-#include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 #include "garnet/drivers/bluetooth/lib/sdp/pdu.h"
 #include "garnet/drivers/bluetooth/lib/sdp/sdp.h"
 #include "garnet/drivers/bluetooth/lib/sdp/service_record.h"
@@ -79,7 +78,8 @@ class Server final {
 
   // l2cap::Channel callbacks
   void OnChannelClosed(const hci::ConnectionHandle& handle);
-  void OnRxBFrame(const hci::ConnectionHandle& handle, const l2cap::SDU& sdu);
+  void OnRxBFrame(const hci::ConnectionHandle& handle,
+                  common::ByteBufferPtr sdu);
 
   // The data domain that owns the L2CAP layer.  Used to register callbacks for
   // the channels of services registered.

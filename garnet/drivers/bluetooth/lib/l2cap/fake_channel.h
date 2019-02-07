@@ -101,7 +101,7 @@ class FakeChannel : public Channel {
 
   // The pending SDUs on this channel. Received PDUs are buffered if |rx_cb_| is
   // currently not set.
-  std::queue<SDU> pending_rx_sdus_;
+  std::queue<common::ByteBufferPtr> pending_rx_sdus_;
 
   fxl::WeakPtrFactory<FakeChannel> weak_ptr_factory_;
 

@@ -60,24 +60,24 @@ bool BrEdrSignalingChannel::TestLink(const common::ByteBuffer& data,
                      });
 }
 
-void BrEdrSignalingChannel::DecodeRxUnit(const SDU& sdu,
+void BrEdrSignalingChannel::DecodeRxUnit(common::ByteBufferPtr sdu,
                                          const SignalingPacketHandler& cb) {
   // "Multiple commands may be sent in a single C-frame over Fixed Channel CID
   // 0x0001 (ACL-U) (v5.0, Vol 3, Part A, Section 4)"
+  ZX_DEBUG_ASSERT(sdu);
   if (sdu->size() < sizeof(CommandHeader)) {
     bt_log(TRACE, "l2cap-bredr", "sig: dropped malformed ACL signaling packet");
     return;
   }
 
-  const common::ByteBuffer& sdu_data = *sdu;
   size_t sdu_offset = 0;
-  while (sdu_offset + sizeof(CommandHeader) <= sdu_data.size()) {
-    auto& header_data = sdu_data.view(sdu_offset, sizeof(CommandHeader));
+  while (sdu_offset + sizeof(CommandHeader) <= sdu->size()) {
+    auto& header_data = sdu->view(sdu_offset, sizeof(CommandHeader));
     SignalingPacket packet(&header_data);
 
     uint16_t expected_payload_length = le16toh(packet.header().length);
     size_t remaining_sdu_length =
-        sdu_data.size() - sdu_offset - sizeof(CommandHeader);
+        sdu->size() - sdu_offset - sizeof(CommandHeader);
     if (remaining_sdu_length < expected_payload_length) {
       bt_log(TRACE, "l2cap-bredr", "sig: expected more bytes (%zu < %u); drop",
              remaining_sdu_length, expected_payload_length);
@@ -86,18 +86,18 @@ void BrEdrSignalingChannel::DecodeRxUnit(const SDU& sdu,
       return;
     }
 
-    auto& packet_data = sdu_data.view(
-        sdu_offset, sizeof(CommandHeader) + expected_payload_length);
+    auto& packet_data =
+        sdu->view(sdu_offset, sizeof(CommandHeader) + expected_payload_length);
     cb(SignalingPacket(&packet_data, expected_payload_length));
 
     sdu_offset += packet_data.size();
   }
 
-  if (sdu_offset != sdu_data.size()) {
+  if (sdu_offset != sdu->size()) {
     bt_log(TRACE, "l2cap-bredr",
            "sig: incomplete packet header "
            "(expected: %zu, left: %zu)",
-           sizeof(CommandHeader), sdu_data.size() - sdu_offset);
+           sizeof(CommandHeader), sdu->size() - sdu_offset);
   }
 }
 

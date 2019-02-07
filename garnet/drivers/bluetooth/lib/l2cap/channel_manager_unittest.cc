@@ -26,7 +26,7 @@ constexpr hci::ConnectionHandle kTestHandle2 = 0x0002;
 constexpr PSM kTestPsm = 0x0001;
 
 void DoNothing() {}
-void NopRxCallback(const SDU&) {}
+void NopRxCallback(common::ByteBufferPtr) {}
 void NopLeConnParamCallback(const hci::LEPreferredConnectionParameters&) {}
 void NopSecurityCallback(hci::ConnectionHandle, sm::SecurityLevel,
                          sm::StatusCallback) {}
@@ -309,10 +309,14 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveData) {
   // We use the ATT channel to control incoming packets and the SMP channel to
   // quit the message loop.
   std::vector<std::string> sdus;
-  auto att_rx_cb = [&sdus](const SDU& sdu) { sdus.push_back(sdu->ToString()); };
+  auto att_rx_cb = [&sdus](common::ByteBufferPtr sdu) {
+    ZX_DEBUG_ASSERT(sdu);
+    sdus.push_back(sdu->ToString());
+  };
 
   bool smp_cb_called = false;
-  auto smp_rx_cb = [&smp_cb_called, this](const SDU& sdu) {
+  auto smp_rx_cb = [&smp_cb_called, this](common::ByteBufferPtr sdu) {
+    ZX_DEBUG_ASSERT(sdu);
     EXPECT_EQ(0u, sdu->size());
     smp_cb_called = true;
   };
@@ -368,10 +372,13 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeRegisteringLink) {
   // We use the ATT channel to control incoming packets and the SMP channel to
   // quit the message loop.
   size_t packet_count = 0;
-  auto att_rx_cb = [&packet_count](const SDU& sdu) { packet_count++; };
+  auto att_rx_cb = [&packet_count](common::ByteBufferPtr sdu) {
+    packet_count++;
+  };
 
   bool smp_cb_called = false;
-  auto smp_rx_cb = [&smp_cb_called, this](const SDU& sdu) {
+  auto smp_rx_cb = [&smp_cb_called, this](common::ByteBufferPtr sdu) {
+    ZX_DEBUG_ASSERT(sdu);
     EXPECT_EQ(0u, sdu->size());
     smp_cb_called = true;
   };
@@ -425,10 +432,13 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeCreatingChannel) {
   // We use the ATT channel to control incoming packets and the SMP channel to
   // quit the message loop.
   size_t packet_count = 0;
-  auto att_rx_cb = [&packet_count](const SDU& sdu) { packet_count++; };
+  auto att_rx_cb = [&packet_count](common::ByteBufferPtr sdu) {
+    packet_count++;
+  };
 
   bool smp_cb_called = false;
-  auto smp_rx_cb = [&smp_cb_called, this](const SDU& sdu) {
+  auto smp_rx_cb = [&smp_cb_called, this](common::ByteBufferPtr sdu) {
+    ZX_DEBUG_ASSERT(sdu);
     EXPECT_EQ(0u, sdu->size());
     smp_cb_called = true;
   };
@@ -487,10 +497,13 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
   // We use the ATT channel to control incoming packets and the SMP channel to
   // quit the message loop.
   size_t packet_count = 0;
-  auto att_rx_cb = [&packet_count](const SDU& sdu) { packet_count++; };
+  auto att_rx_cb = [&packet_count](common::ByteBufferPtr sdu) {
+    packet_count++;
+  };
 
   bool smp_cb_called = false;
-  auto smp_rx_cb = [&smp_cb_called, this](const SDU& sdu) {
+  auto smp_rx_cb = [&smp_cb_called, this](common::ByteBufferPtr sdu) {
+    ZX_DEBUG_ASSERT(sdu);
     EXPECT_EQ(0u, sdu->size());
     smp_cb_called = true;
   };
@@ -933,8 +946,9 @@ TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelRemoteDisconnect) {
   auto closed_cb = [&channel_closed] { channel_closed = true; };
 
   bool sdu_received = false;
-  auto data_rx_cb = [&sdu_received](const SDU& sdu) {
+  auto data_rx_cb = [&sdu_received](common::ByteBufferPtr sdu) {
     sdu_received = true;
+    ZX_DEBUG_ASSERT(sdu);
     EXPECT_EQ("Test", sdu->AsString());
   };
 
@@ -1029,7 +1043,7 @@ TEST_F(L2CAP_ChannelManagerTest, ACLOutboundDynamicChannelDataNotBuffered) {
   bool channel_closed = false;
   auto closed_cb = [&channel_closed] { channel_closed = true; };
 
-  auto data_rx_cb = [](const SDU& sdu) {
+  auto data_rx_cb = [](common::ByteBufferPtr sdu) {
     FAIL() << "Unexpected data reception";
   };
 

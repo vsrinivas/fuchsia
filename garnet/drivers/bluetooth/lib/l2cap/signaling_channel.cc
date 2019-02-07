@@ -32,9 +32,9 @@ SignalingChannel::SignalingChannel(fbl::RefPtr<Channel> chan,
   // called on the L2CAP thread.
   auto self = weak_ptr_factory_.GetWeakPtr();
   chan_->Activate(
-      [self](const SDU& sdu) {
+      [self](common::ByteBufferPtr sdu) {
         if (self)
-          self->OnRxBFrame(sdu);
+          self->OnRxBFrame(std::move(sdu));
       },
       [self] {
         if (self)
@@ -149,14 +149,15 @@ void SignalingChannel::OnChannelClosed() {
   is_open_ = false;
 }
 
-void SignalingChannel::OnRxBFrame(const SDU& sdu) {
+void SignalingChannel::OnRxBFrame(common::ByteBufferPtr sdu) {
   ZX_DEBUG_ASSERT(IsCreationThreadCurrent());
 
   if (!is_open())
     return;
 
   DecodeRxUnit(
-      sdu, fit::bind_member(this, &SignalingChannel::CheckAndDispatchPacket));
+      std::move(sdu),
+      fit::bind_member(this, &SignalingChannel::CheckAndDispatchPacket));
 }
 
 void SignalingChannel::CheckAndDispatchPacket(const SignalingPacket& packet) {

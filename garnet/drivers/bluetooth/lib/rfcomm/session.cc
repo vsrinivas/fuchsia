@@ -149,9 +149,9 @@ bool Session::SetL2CAPChannel(fbl::RefPtr<l2cap::Channel> l2cap_channel) {
   l2cap_channel_.Reset(l2cap_channel);
   auto self = weak_ptr_factory_.GetWeakPtr();
   return l2cap_channel_->Activate(
-      [self](const auto& sdu) {
+      [self](auto sdu) {
         if (self)
-          self->RxCallback(sdu);
+          self->RxCallback(std::move(sdu));
       },
       [self]() {
         if (self)
@@ -233,7 +233,8 @@ void Session::OpenRemoteChannel(ServerChannel server_channel,
       });
 }
 
-void Session::RxCallback(const l2cap::SDU& sdu) {
+void Session::RxCallback(common::ByteBufferPtr sdu) {
+  ZX_DEBUG_ASSERT(sdu);
   auto frame = Frame::Parse(credit_based_flow_, OppositeRole(role_), *sdu);
   if (!frame) {
     bt_log(ERROR, "rfcomm", "could not parse frame");

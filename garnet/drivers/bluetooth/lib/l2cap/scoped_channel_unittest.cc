@@ -14,7 +14,7 @@ namespace testing {
 namespace {
 
 void DoNothing() {}
-void NopRxCallback(const SDU&) {}
+void NopRxCallback(common::ByteBufferPtr) {}
 
 }  // namespace
 
