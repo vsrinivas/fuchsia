@@ -93,7 +93,7 @@ class EntityWrapper final {
 }  // namespace internal
 
 // Template for metrics that are concretely stored in memeory (as opposed to
-// CallbackMetrics, which are dynamically created when needed). StaticMetrics
+// LazyMetrics, which are dynamically created when needed). StaticMetrics
 // can be set, added to, and subtracted from.
 template <typename T>
 class StaticMetric final {
@@ -143,11 +143,11 @@ using UIntMetric = StaticMetric<uint64_t>;
 using DoubleMetric = StaticMetric<double>;
 
 // Metric with value determined by evaluating a callback.
-class CallbackMetric final {
+class LazyMetric final {
  public:
   // Construct a default metric.
   // Operations on the metric will have no effect.
-  CallbackMetric();
+  LazyMetric();
 
   // Set the callback used to return the value of the metric.
   void Set(::component::Metric::ValueCallback callback);
@@ -155,7 +155,7 @@ class CallbackMetric final {
  private:
   friend class ::inspect::Object;
   // Internal constructor setting an actual value on an Object.
-  explicit CallbackMetric(internal::EntityWrapper<component::Metric> entity);
+  explicit LazyMetric(internal::EntityWrapper<component::Metric> entity);
 
   internal::EntityWrapper<component::Metric> entity_;
 };
@@ -338,9 +338,9 @@ class Object final {
   [[nodiscard]] LazyByteVectorProperty CreateLazyByteVectorProperty(
       std::string name, component::Property::VectorValueCallback callback);
 
-  // Create a new |CallbackMetric| with the given name that is a child of this
+  // Create a new |LazyMetric| with the given name that is a child of this
   // object.
-  [[nodiscard]] CallbackMetric CreateCallbackMetric(
+  [[nodiscard]] LazyMetric CreateLazyMetric(
       std::string name, component::Metric::ValueCallback);
 
   // Create a new |ChildrenCallback| that dynamically adds children to the

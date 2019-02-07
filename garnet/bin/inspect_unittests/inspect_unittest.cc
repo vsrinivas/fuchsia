@@ -148,7 +148,7 @@ TEST(Inspect, MetricCallbacks) {
   {
     int64_t metric_value = -100;
     // Create a child and check it exists.
-    auto metric = root.CreateCallbackMetric(
+    auto metric = root.CreateLazyMetric(
         "value",
         [defer = std::move(defer), &metric_value](component::Metric* value) {
           value->SetInt(metric_value++);

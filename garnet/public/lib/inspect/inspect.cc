@@ -35,12 +35,12 @@ void internal::RemoveEntity<component::Metric>(component::Object* object,
   object->RemoveMetric(name);
 }
 
-CallbackMetric::CallbackMetric() {}
+LazyMetric::LazyMetric() {}
 
-CallbackMetric::CallbackMetric(
+LazyMetric::LazyMetric(
     internal::EntityWrapper<component::Metric> entity)
     : entity_(std::move(entity)) {}
-void CallbackMetric::Set(MetricCallback callback) {
+void LazyMetric::Set(MetricCallback callback) {
   if (entity_) {
     entity_.ParentObject()->SetMetric(
         entity_.name(), component::CallbackMetric(std::move(callback)));
@@ -126,11 +126,11 @@ DoubleMetric Object::CreateDoubleMetric(std::string name, double value) {
       std::move(name), object_.object()));
 }
 
-CallbackMetric Object::CreateCallbackMetric(
+LazyMetric Object::CreateLazyMetric(
     std::string name, component::Metric::ValueCallback callback) {
   object_.object()->SetMetric(name,
                               component::CallbackMetric(std::move(callback)));
-  return CallbackMetric(internal::EntityWrapper<component::Metric>(
+  return LazyMetric(internal::EntityWrapper<component::Metric>(
       std::move(name), object_.object()));
 }
 
