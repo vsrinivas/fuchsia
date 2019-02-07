@@ -18,9 +18,6 @@ namespace {
 
 using common::CreateStaticByteBuffer;
 
-constexpr hci::ConnectionHandle kConnectionHandle = 0x0001;
-constexpr ChannelId kChannelId = 0x0001;
-
 template <typename... T>
 hci::ACLDataPacketPtr PacketFromBytes(T... data) {
   auto bytes = CreateStaticByteBuffer(std::forward<T>(data)...);
@@ -32,14 +29,6 @@ hci::ACLDataPacketPtr PacketFromBytes(T... data) {
   packet->InitializeFromBuffer();
 
   return packet;
-}
-
-std::unique_ptr<PDU> PduFromByteBuffer(const common::ByteBuffer& buf,
-                                       size_t first_fragment_payload_size) {
-  return std::make_unique<PDU>(
-      Fragmenter(kConnectionHandle,
-                 sizeof(BasicHeader) + first_fragment_payload_size)
-          .BuildBasicFrame(kChannelId, buf));
 }
 
 TEST(L2CAP_PduTest, CanCopyEmptyBody) {
@@ -334,131 +323,6 @@ TEST(L2CAP_PduTest, ViewFirstFragment) {
   // first fragment.
   view = pdu.ViewFirstFragment(100);
   EXPECT_EQ("Te", view.AsString());
-}
-
-TEST(L2CAP_PduTest, Reader) {
-  Recombiner recombiner;
-
-  // clang-format off
-
-  // Partial initial fragment
-  auto packet0 = PacketFromBytes(
-    // ACL data header (PBF: initial fragment)
-    0x01, 0x00, 0x09, 0x00,
-
-    // Basic L2CAP header
-    0x0F, 0x00, 0xFF, 0xFF, 'R', 'e', 'a', 'd', 'i'
-  );
-
-  // Continuation fragment
-  auto packet1 = PacketFromBytes(
-    // ACL data header (PBF: continuing fragment)
-    0x01, 0x10, 0x06, 0x00,
-
-    // L2CAP PDU fragment
-    'n', 'g', ' ', 'p', 'a', 'c'
-  );
-
-  // Continuation fragment
-  auto packet2 = PacketFromBytes(
-    // ACL data header (PBF: continuing fragment)
-    0x01, 0x10, 0x04, 0x00,
-
-    // L2CAP PDU fragment
-    'k', 'e', 't', 's'
-  );
-
-  // clang-format on
-
-  EXPECT_TRUE(recombiner.AddFragment(std::move(packet0)));
-  EXPECT_TRUE(recombiner.AddFragment(std::move(packet1)));
-  EXPECT_TRUE(recombiner.AddFragment(std::move(packet2)));
-
-  PDU pdu;
-  EXPECT_TRUE(recombiner.Release(&pdu));
-  ASSERT_TRUE(pdu.is_valid());
-
-  PDU::Reader reader(&pdu);
-  EXPECT_FALSE(reader.ReadNext(16, [](const auto&) {}));
-  EXPECT_FALSE(reader.ReadNext(0, [](const auto&) {}));
-
-  // Read the entire PDU.
-  EXPECT_TRUE(reader.ReadNext(15, [](const auto& data) {
-    EXPECT_EQ("Reading packets", data.AsString());
-  }));
-
-  reader = PDU::Reader(&pdu);
-
-  // Read 4 bytes (no-copy).
-  EXPECT_TRUE(reader.ReadNext(
-      4, [](const auto& data) { EXPECT_EQ("Read", data.AsString()); }));
-
-  // Read across fragment boundaries which will make a copy.
-  EXPECT_TRUE(reader.ReadNext(
-      4, [](const auto& data) { EXPECT_EQ("ing ", data.AsString()); }));
-
-  // Read until the end of the current fragment (no-copy). The iterator should
-  // point to the next fragment.
-  EXPECT_TRUE(reader.ReadNext(
-      3, [](const auto& data) { EXPECT_EQ("pac", data.AsString()); }));
-
-  // Read all of the last fragment (no-copy).
-  EXPECT_TRUE(reader.ReadNext(
-      4, [](const auto& data) { EXPECT_EQ("kets", data.AsString()); }));
-}
-
-TEST(L2CAP_PduTest,
-     DestroyingPduInReaderCallbackWithUnfragmentedPduDoesNotCrash) {
-  auto payload = CreateStaticByteBuffer('T', 'e', 's', 't');
-  std::unique_ptr<PDU> pdu = PduFromByteBuffer(payload, payload.size());
-  ASSERT_TRUE(pdu->is_valid());
-  ASSERT_EQ(1u, pdu->fragment_count());
-
-  size_t call_count = 0;
-  PDU::Reader(pdu.get()).ReadNext(payload.size(), [&](const auto& buf) {
-    ++call_count;
-    EXPECT_EQ(payload.size(), buf.size());
-    pdu.reset();
-  });
-  EXPECT_EQ(1u, call_count);
-}
-
-TEST(L2CAP_PduTest,
-     DestroyingPduInReaderCallbackWithFullReadOfFragmentedPduDoesNotCrash) {
-  const auto kFirstFragmentPayloadSize = 1u;
-  auto payload = common::CreateStaticByteBuffer('a', 'b');
-  std::unique_ptr<PDU> pdu =
-      PduFromByteBuffer(payload, kFirstFragmentPayloadSize);
-  ASSERT_TRUE(pdu->is_valid());
-  ASSERT_EQ(2u, pdu->fragment_count());
-
-  size_t call_count = 0;
-  PDU::Reader(pdu.get()).ReadNext(payload.size(), [&](const auto& buf) {
-    ++call_count;
-    EXPECT_EQ(payload.size(), buf.size());
-    pdu.reset();
-  });
-  EXPECT_EQ(1u, call_count);
-}
-
-TEST(L2CAP_PduTest,
-     DestroyingPduInReaderCallbackWithPartialReadOfFragmentedPduDoesNotCrash) {
-  const auto kFirstFragmentPayloadSize = 1u;
-  auto payload = CreateStaticByteBuffer('a', 'b', 'c');
-  std::unique_ptr<PDU> pdu =
-      PduFromByteBuffer(payload, kFirstFragmentPayloadSize);
-  ASSERT_TRUE(pdu->is_valid());
-  ASSERT_EQ(2u, pdu->fragment_count());  // Second fragment contains 'b', 'c'.
-
-  // Read across fragments, but without consuming the whole PDU.
-  size_t call_count = 0;
-  PDU::Reader(pdu.get()).ReadNext(kFirstFragmentPayloadSize + 1,
-                                  [&](const auto& buf) {
-                                    ++call_count;
-                                    EXPECT_EQ(payload.size() - 1, buf.size());
-                                    pdu.reset();
-                                  });
-  EXPECT_EQ(1u, call_count);
 }
 
 }  // namespace
