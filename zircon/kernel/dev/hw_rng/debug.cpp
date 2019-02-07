@@ -13,8 +13,20 @@
 #include <stdlib.h>
 
 static int cmd_rng32(int argc, const cmd_args* argv, uint32_t flags) {
-    uint32_t val = hw_rng_get_u32();
+    uint32_t val;
+    __UNUSED size_t fetched;
+
+    fetched = hw_rng_get_entropy(&val, sizeof(val), true);
+
+    if (fetched == 0) {
+        printf("hw rng failed. Support may not exist on this platform\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    DEBUG_ASSERT(fetched == sizeof(val));
+
     printf("Random val = %u (0x%08x)\n", val, val);
+
     return ZX_OK;
 }
 
