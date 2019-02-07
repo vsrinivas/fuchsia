@@ -50,7 +50,8 @@ void AmlMipiDevice::InitMipiClock() {
     // source for the unused mux = S905D2_FCLK_DIV5   = 6 // 400 MHz
     hiu_mmio_->SetBits32(((1 << kClkEnableShift) | 6 << 9 | 1),
                          HHI_MIPI_CSI_PHY_CLK_CNTL);
-
+    // TODO(braval@) Double check to look into if
+    // this sleep is really necessary.
     zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
 }
 

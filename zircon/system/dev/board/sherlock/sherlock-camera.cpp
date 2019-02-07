@@ -178,6 +178,14 @@ static const pbus_dev_t isp_children = []() {
     return dev;
 }();
 
+// IRQ for ISP
+static const pbus_irq_t isp_irqs[] = {
+    {
+        .irq = T931_MALI_ISP_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
 static pbus_dev_t isp_dev = []() {
     // ISP
     pbus_dev_t dev;
@@ -187,6 +195,8 @@ static pbus_dev_t isp_dev = []() {
     dev.did = PDEV_DID_ARM_MALI_IV009;
     dev.mmio_list = isp_mmios;
     dev.mmio_count = countof(isp_mmios);
+    dev.irq_list = isp_irqs;
+    dev.irq_count = countof(isp_irqs);
     dev.metadata_list = isp_metadata;
     dev.metadata_count = countof(isp_metadata);
     dev.child_list = &isp_children;

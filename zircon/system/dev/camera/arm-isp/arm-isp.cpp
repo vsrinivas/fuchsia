@@ -34,11 +34,17 @@ void ArmIspDevice::IspHWReset(bool reset) {
     } else {
         reset_mmio_->SetBits32(1 << 1, RESET4_LEVEL);
     }
+    // Reference code has a sleep in this path.
+    // TODO(braval@) Double check to look into if
+    // this sleep is really necessary.
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
 }
 
 void ArmIspDevice::PowerUpIsp() {
     // set bit[18-19]=0
     power_mmio_->ClearBits32(1 << 18 | 1 << 19, AO_RTI_GEN_PWR_SLEEP0);
+    // TODO(braval@) Double check to look into if
+    // this sleep is really necessary.
     zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
 
     // set bit[18-19]=0
@@ -54,6 +60,22 @@ void ArmIspDevice::PowerUpIsp() {
     hiu_mmio_->Write32(0x803f4321, HHI_CSI_PHY_CNTL1);
 }
 
+// Interrupt handler for the ISP.
+int ArmIspDevice::IspIrqHandler() {
+    zxlogf(INFO, "%s start\n", __func__);
+    zx_status_t status = ZX_OK;
+
+    while (running_.load()) {
+        status = isp_irq_.wait(NULL);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        // Handle the Interrupt here.
+    }
+    return status;
+}
+
 zx_status_t ArmIspDevice::InitIsp() {
     // The ISP and MIPI module is in same power domain.
     // So if we don't call the power sequence of ISP, the mipi module
@@ -62,7 +84,19 @@ zx_status_t ArmIspDevice::InitIsp() {
 
     IspHWReset(true);
 
-    // TODO(braval@): Interrupt Init()
+    // Start ISP Interrupt Handling Thread.
+    auto start_thread = [](void* arg) -> int {
+        return static_cast<ArmIspDevice*>(arg)->IspIrqHandler();
+    };
+
+    running_.store(true);
+    int rc = thrd_create_with_name(&irq_thread_,
+                                   start_thread,
+                                   this,
+                                   "isp_irq_thread");
+    if (rc != thrd_success) {
+        return ZX_ERR_INTERNAL;
+    }
 
     IspHWReset(false);
 
@@ -98,6 +132,12 @@ zx_status_t ArmIspDevice::InitPdev(zx_device_t* parent) {
         return status;
     }
 
+    status = pdev_.GetInterrupt(0, &isp_irq_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: pdev_.GetInterrupt failed %d\n", __func__, status);
+        return status;
+    }
+
     return status;
 }
 
@@ -129,6 +169,9 @@ zx_status_t ArmIspDevice::Create(zx_device_t* parent) {
 }
 
 ArmIspDevice::~ArmIspDevice() {
+    running_.store(false);
+    thrd_join(irq_thread_, NULL);
+    isp_irq_.destroy();
 }
 
 void ArmIspDevice::DdkUnbind() {

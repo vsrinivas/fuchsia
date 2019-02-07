@@ -13,6 +13,7 @@
 #include <ddktl/protocol/isp.h>
 #include <ddktl/protocol/ispimpl.h>
 #include <fbl/unique_ptr.h>
+#include <lib/zx/interrupt.h>
 #include <threads.h>
 
 namespace camera {
@@ -50,6 +51,7 @@ private:
     void PowerUpIsp();
     void IspHWReset(bool reset);
     zx_status_t InitIsp();
+    int IspIrqHandler();
 
     std::optional<ddk::MmioBuffer> power_mmio_;
     std::optional<ddk::MmioBuffer> memory_pd_mmio_;
@@ -57,6 +59,9 @@ private:
     std::optional<ddk::MmioBuffer> reset_mmio_;
 
     ddk::PDev pdev_;
+    zx::interrupt isp_irq_;
+    thrd_t irq_thread_;
+    std::atomic<bool> running_;
 };
 
 } // namespace camera

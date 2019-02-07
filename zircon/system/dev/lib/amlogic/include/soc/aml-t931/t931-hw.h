@@ -176,6 +176,7 @@
 #define T931_UART_B_IRQ                 107
 #define T931_RDMA_DONE                  121
 #define T931_UART_C_IRQ                 125
+#define T931_MALI_ISP_IRQ               174
 #define T931_MALI_IRQ_GP                192
 #define T931_MALI_IRQ_GPMMU             193
 #define T931_MALI_IRQ_PP                194
