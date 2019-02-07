@@ -1,0 +1,68 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.avrcp;
+
+using fuchsia.bluetooth;
+
+[Discoverable]
+interface Avrcp {
+    /// Returns a client to a remote target (TG) service at the address specified by |device_id|.
+    /// TODO (BT-305): change device_id to int.
+    GetControllerForTarget(string device_id, request<Controller> client) -> (fuchsia.bluetooth.Status status);
+};
+
+/// Client wrapper for local controller (CT) -> remote target (TG) AVCTP connections between devices.
+/// A client is high level construct and does not represent a connection with a device.
+/// Connections are internally managed and may be shared by multiple clients.
+/// The actual connection may be opened on-demand after any command here is called.
+interface Controller {
+    /// Returns the remote PlayerApplicationSettings.
+    GetPlayerApplicationSettings() -> (fuchsia.bluetooth.Status status, PlayerApplicationSettings settings);
+
+    /// Returns the currently playing media attributes.
+    /// May send either the GetElementAttributes or GetItemAttributes command depending on what
+    /// is supported.
+    GetMediaAttributes() -> (fuchsia.bluetooth.Status status, MediaAttributes attributes);
+
+    /// Sets the absolute volume on the device. Values can range from 0x00 to 0x7F
+    /// (with 100% volume being 0x7F). This is in addition to the relative volume change
+    /// commands that can be sent over AV\C. You will get a volume changed notification event
+    /// as part of successfully sending this.
+    SetAbsoluteVolume(uint8 volume) -> (fuchsia.bluetooth.Status status);
+
+    /// Infrom target of the controller's battery level.
+    InformBatteryStatus(BatteryStatus battery_status) -> (fuchsia.bluetooth.Status status);
+
+    /// Register for the notification specified by |event|.
+    /// Some events may not be supported depending on TG AVRCP version.
+    RegisterNotification(TargetEvent event) -> (fuchsia.bluetooth.Status status);
+
+    /// Incoming AV\C NOTIFY. EVENT_PLAYBACK_STATUS_CHANGED
+    -> PlaybackStatusChanged(PlaybackStatus status);
+    /// Incoming AV\C NOTIFY. EVENT_TRACK_CHANGED
+    -> TrackChanged(uint64 track_id);
+    /// Incoming AV\C NOTIFY. EVENT_TRACK_REACHED_END
+    -> TrackReachedEnd();
+    /// Incoming AV\C NOTIFY. EVENT_TRACK_REACHED_START
+    -> TrackReachedStart();
+    /// Incoming AV\C NOTIFY. EVENT_TRACK_POS_CHANGED
+    -> TrackPosChanged(uint32 pos);
+    /// Incoming AV\C NOTIFY. EVENT_BATT_STATUS_CHANGED
+    -> BattStatusChanged(BatteryStatus battery_status);
+    /// Incoming AV\C NOTIFY. EVENT_SYSTEM_STATUS_CHANGED
+    -> SystemStatusChanged(SystemStatus system_status);
+    /// Incoming AV\C NOTIFY. EVENT_PLAYER_APPLICATION_SETTINGS_CHANGED
+    -> PlayerApplicationSettingsChanged(PlayerApplicationSettings application_settings);
+    /// Incoming AV\C NOTIFY. EVENT_ADDRESSED_PLAYER_CHANGED
+    -> AddressedPlayerChanged(uint16 player_id);
+    /// Incoming AV\C NOTIFY. EVENT_VOLUME_CHANGED
+    -> VolumeChanged(uint8 volume);
+
+    /// Changes the addressed |player_id| on the target when multiple are supported.
+    SetAddressedPlayer(uint16 player_id) -> (fuchsia.bluetooth.Status status);
+
+    /// Send an AV\C passthrough key command. Sends both a key down and key up event.
+    SendCommand(AvcPanelCommand command) -> (fuchsia.bluetooth.Status status);
+};

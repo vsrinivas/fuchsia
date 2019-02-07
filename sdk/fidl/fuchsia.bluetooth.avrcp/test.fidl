@@ -1,0 +1,57 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.avrcp;
+
+using fuchsia.bluetooth;
+
+[Discoverable]
+interface AvrcpTest {
+    /// Sets an implementation of target handler that will vend delegates for each incoming
+    /// remote TG -> local CT connections to handle the commands being sent by the remote TG.
+    /// If no target handler is set, a default handler will be used internally that will
+    /// dispatch to the MediaSession service. This should only be used for debug and testing.
+    RegisterIncomingTargetHandler(TargetHandler handler);
+
+    /// Returns a test client to a remote target service at the address specified by |device_id|.
+    /// This client is to be used in conjunction the non test client from the primary Avrcp service.
+    /// The test client provides additional methods not exposed by normal client to be used
+    /// for debugging and testing purposes.
+    /// TODO (BT-305): change device_id to int.
+    GetTestControllerForTarget(string device_id, request<TestController> test_controller) -> (fuchsia.bluetooth.Status status);
+};
+
+/// An implementation of this interface is registered with the AvrcpTest service to handle
+/// incoming connections.
+interface TargetHandler {
+    /// Called when an incoming target is connected. |delegate| should be fulfilled with an
+    /// interface that will be used to handle commands from the connected Controller.
+    /// TODO (BT-305): change device_id to int.
+    ControllerConnected(string device_id, request<TargetDelegate> delegate);
+};
+
+/// Returned by an implementer of the TargetHandler interface.
+/// Handles incoming connection commands by a remote CT device.
+interface TargetDelegate {
+    /// Called after Panel key down and up events.
+    OnCommand(AvcPanelCommand command) -> (fuchsia.bluetooth.Status status);
+};
+
+/// Provides methods not exposed in `Controller` that are strictly for testing and debug.
+interface TestController {
+    /// Returns whether there is an underlying connection open with the remote device currently.
+    IsConnected() -> (bool connected);
+
+    /// Queries the target and returns what events are supported for notification.
+    /// Sends GetCapabilties(0x03 (EVENTS_SUPPORTED)) command for all events supported by
+    /// the negoitated version of AVRCP.
+    GetEventsSupported() -> (fuchsia.bluetooth.Status status, vector<TargetEvent> events_supported);
+
+    /// Explicitly connect to the remote device.
+    Connect();
+
+    /// Explicitly disconnect the L2CAP channel to the remote.
+    /// Be warned that other clients may be sharing this L2CAP connection.
+    Disconnect();
+};

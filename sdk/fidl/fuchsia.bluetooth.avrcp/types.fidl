@@ -1,0 +1,180 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.avrcp;
+
+using fuchsia.bluetooth;
+
+// Types are intented match how they are defined in the BT AVRCP 1.6.2 spec
+// and the 1394-TA AV\C Panel specification.
+// Deviations are called out in comments.
+
+/// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification) and Appendix H.
+enum TargetEvent : uint8 {
+    /// EVENT_PLAYBACK_STATUS_CHANGED
+    PlaybackStatusChanged = 0x01;
+    /// EVENT_TRACK_CHANGED
+    TrackChanged = 0x02;
+    /// EVENT_TRACK_REACHED_END
+    TrackReachedEnd = 0x03;
+    /// EVENT_TRACK_REACHED_START
+    TrackReachedStart = 0x04;
+    /// EVENT_TRACK_POS_CHANGED
+    TrackPosChanged = 0x05;
+    /// EVENT_BATT_STATUS_CHANGED
+    BattStatusChanged = 0x06;
+    /// EVENT_SYSTEM_STATUS_CHANGED
+    SystemStatusChanged = 0x07;
+    /// EVENT_PLAYER_APPLICATION_SETTINGS_CHANGED
+    PlayerApplicationSettingsChanged = 0x08;
+    /// EVENT_NOW_PLAYING_CONTENT_CHANGED
+    NowPlayingContentChanged = 0x09;
+    /// EVENT_AVAILABLE_PLAYERS_CHANGED
+    AvailablePlayersChanged = 0x0a;
+    /// EVENT_ADDRESSED_PLAYER_CHANGED
+    AddressedPlayerChanged = 0x0b;
+    /// EVENT_UIDS_CHANGED
+    UidsChanged = 0x0c;
+    /// EVENT_VOLUME_CHANGED
+    VolumeChanged = 0x0d;
+};
+
+/// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification).
+/// Format for EVENT_SYSTEM_STATUS_CHANGED.
+enum SystemStatus : uint8 {
+    PowerOn = 0x00;
+    PowerOff = 0x01;
+    Unplugged = 0x02;
+};
+
+/// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification).
+/// Format for EVENT_PLAYBACK_STATUS_CHANGED.
+enum PlaybackStatus : uint8 {
+    Stopped = 0x00;
+    Playing = 0x01;
+    Paused = 0x02;
+    FwdSeek = 0x03;
+    RevSeek = 0x04;
+    Error = 0xFF;
+};
+
+/// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification).
+/// Format for EVENT_BATT_STATUS_CHANGED.
+/// Same encoding also defined by 6.5.8 (InformBatteryStatusOfCT).
+enum BatteryStatus : uint8 {
+    Normal = 0x00;
+    Warning = 0x01;
+    Critical = 0x02;
+    External = 0x03;
+    FullCharge = 0x04;
+    Reserved = 0x05;
+};
+
+/// Defined by AVRCP 1.6.2 Appendix F (player application settings).
+enum RepeatStatusMode : uint8 {
+    Off = 0x01;
+    SingleTrackRepeat = 0x02;
+    AllTrackRepeat = 0x03;
+    GroupRepeat = 0x04;
+    Reserved = 0xFF;
+};
+
+/// Defined by AVRCP 1.6.2 Appendix F (player application settings).
+enum ShuffleMode : uint8 {
+    Off = 0x01;
+    AllTracksShuffle = 0x02;
+    GroupShuffle = 0x03;
+    Reserved = 0xFF;
+};
+
+/// Defined by AVRCP 1.6.2 Appendix F (player application settings).
+enum ScanMode : uint8 {
+    Off = 0x01;
+    AllTracksScan = 0x02;
+    GroupScan = 0x03;
+    Reserved = 0xFF;
+};
+
+/// Defined by AVRCP 1.6.2 Appendix F (player application settings).
+struct PlayerApplicationSettings {
+    bool equalizer;
+    RepeatStatusMode repeat_status_mode;
+    ShuffleMode shuffle_mode;
+    ScanMode scan_mode;
+};
+
+/// Defined by AVRCP 1.6.2 Appendix E (media attributes).
+struct MediaAttributes {
+    string title;
+    string artist_name;
+    string album_name;
+    string track_number;
+    string total_number_of_tracks;
+    string genre;
+    string playing_time;
+    // TODO(BT-729): Add BIP cover art handle.
+};
+
+/// Defined by AV\C Panel specification.
+enum AvcPanelCommand : uint8 {
+    select = 0x00;
+    up = 0x01;
+    down = 0x02;
+    left = 0x03;
+    right = 0x04;
+    root_menu = 0x09;
+    contents_menu = 0x0b;
+    favorite_menu = 0x0c;
+    exit = 0x0d;
+    on_demand_menu = 0x0e;
+    apps_menu = 0x0f;
+    key_0 = 0x20;
+    key_1 = 0x21;
+    key_2 = 0x22;
+    key_3 = 0x23;
+    key_4 = 0x24;
+    key_5 = 0x25;
+    key_6 = 0x26;
+    key_7 = 0x27;
+    key_8 = 0x28;
+    key_9 = 0x29;
+    dot = 0x2a;
+    enter = 0x2b;
+    channel_up = 0x30;
+    channel_down = 0x31;
+    channel_previous = 0x32;
+    input_select = 0x34;
+    info = 0x35;
+    help = 0x36;
+    page_up = 0x37;
+    page_down = 0x38;
+    lock = 0x3a;
+    power = 0x40;
+    volume_up = 0x41;
+    volume_down = 0x42;
+    mute = 0x43;
+    play = 0x44;
+    stop = 0x45;
+    pause = 0x46;
+    record = 0x47;
+    rewind = 0x48;
+    fast_forward = 0x49;
+    eject = 0x4a;
+    forward = 0x4b;
+    backward = 0x4c;
+    list = 0x4d;
+    f1 = 0x71;
+    f2 = 0x72;
+    f3 = 0x73;
+    f4 = 0x74;
+    f5 = 0x75;
+    f6 = 0x76;
+    f7 = 0x77;
+    f8 = 0x78;
+    f9 = 0x79;
+    red = 0x7a;
+    green = 0x7b;
+    blue = 0x7c;
+    yellow = 0x7d;
+};
