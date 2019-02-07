@@ -24,7 +24,7 @@ static_assert(sizeof(vmo_header) ==
               offsetof(counters::DescriptorVmo, descriptor_table_size));
 
 // This counter gets a constant value just as a sanity check.
-KCOUNTER(magic, "kernel.counters.magic");
+KCOUNTER(magic, "counters.magic");
 
 static void counters_init(unsigned level) {
     // Wire the memory defined in the .bss section to the counters.

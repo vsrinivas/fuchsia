@@ -19,16 +19,16 @@
 
 // kernel counters. The following counters never decrease.
 // counts the number of times a dispatcher has been created and destroyed.
-KCOUNTER(dispatcher_create_count, "kernel.dispatcher.create");
-KCOUNTER(dispatcher_destroy_count, "kernel.dispatcher.destroy");
+KCOUNTER(dispatcher_create_count, "dispatcher.create");
+KCOUNTER(dispatcher_destroy_count, "dispatcher.destroy");
 // counts the number of times observers have been added to a kernel object.
-KCOUNTER(dispatcher_observe_count, "kernel.dispatcher.observer.add");
+KCOUNTER(dispatcher_observe_count, "dispatcher.observer.add");
 // counts the number of times observers have been canceled.
-KCOUNTER(dispatcher_cancel_bh_count, "kernel.dispatcher.observer.cancel.byhandle");
-KCOUNTER(dispatcher_cancel_bk_count, "kernel.dispatcher.observer.cancel.bykey");
+KCOUNTER(dispatcher_cancel_bh_count, "dispatcher.observer.cancel.byhandle");
+KCOUNTER(dispatcher_cancel_bk_count, "dispatcher.observer.cancel.bykey");
 // counts the number of cookies set or changed (reset).
-KCOUNTER(dispatcher_cookie_set_count, "kernel.dispatcher.cookie.set");
-KCOUNTER(dispatcher_cookie_reset_count, "kernel.dispatcher.cookie.reset");
+KCOUNTER(dispatcher_cookie_set_count, "dispatcher.cookie.set");
+KCOUNTER(dispatcher_cookie_reset_count, "dispatcher.cookie.reset");
 
 namespace {
 // The first 1K koids are reserved.

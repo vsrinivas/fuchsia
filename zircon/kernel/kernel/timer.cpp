@@ -43,17 +43,17 @@
 #define LOCAL_TRACE 0
 
 // Total number of timers set. Always increasing.
-KCOUNTER(timer_created_counter, "kernel.timer.created");
+KCOUNTER(timer_created_counter, "timer.created");
 
 // Number of timers merged into an existing timer because of slack.
-KCOUNTER(timer_coalesced_counter, "kernel.timer.coalesced");
+KCOUNTER(timer_coalesced_counter, "timer.coalesced");
 
 // Number of timers that have fired (i.e. callback was invoked).
-KCOUNTER(timer_fired_counter, "kernel.timer.fired");
+KCOUNTER(timer_fired_counter, "timer.fired");
 
 // Number of timers that were successfully canceled. Attempts to cancel a timer that is currently
 // firing are not counted.
-KCOUNTER(timer_canceled_counter, "kernel.timer.canceled");
+KCOUNTER(timer_canceled_counter, "timer.canceled");
 
 namespace {
 

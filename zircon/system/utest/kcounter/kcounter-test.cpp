@@ -89,10 +89,10 @@ bool test_counters() {
     };
 
     constexpr counters::Descriptor kExpected[] = {
-        {"kernel.counters.magic", counters::Type::kSum},
-        {"kernel.handles.duped", counters::Type::kSum},
-        {"kernel.handles.live", counters::Type::kSum},
-        {"kernel.handles.made", counters::Type::kSum},
+        {"counters.magic", counters::Type::kSum},
+        {"handles.duped", counters::Type::kSum},
+        {"handles.live", counters::Type::kSum},
+        {"handles.made", counters::Type::kSum},
     };
     for (const auto& ref : kExpected) {
         auto found = find(ref);
@@ -116,9 +116,9 @@ bool test_counters() {
                 }
             }
             EXPECT_GT(value, 0, ref.name);
-            if (!strcmp(ref.name, "kernel.counters.magic")) {
+            if (!strcmp(ref.name, "counters.magic")) {
                 EXPECT_EQ(value, counters::DescriptorVmo::kMagic,
-                          "kernel.counters.magic");
+                          "counters.magic");
             }
         }
     }

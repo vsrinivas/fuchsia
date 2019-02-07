@@ -36,8 +36,8 @@ static_assert(sizeof(zx_packet_interrupt_t) == 32, "incorrect size for zx_packet
 static_assert(sizeof(zx_packet_page_request_t) == 32,
               "incorrect size for zx_packet_page_request_t");
 
-KCOUNTER(port_arena_count, "kernel.port.arena.count");
-KCOUNTER(port_full_count, "kernel.port.full.count");
+KCOUNTER(port_arena_count, "port.arena.count");
+KCOUNTER(port_full_count, "port.full.count");
 
 class ArenaPortAllocator final : public PortAllocator {
 public:
