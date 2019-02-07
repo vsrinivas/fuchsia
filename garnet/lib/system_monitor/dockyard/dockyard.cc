@@ -4,9 +4,87 @@
 
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
 
+#include <iostream>
+#include <memory>
+#include <string>
+
+#include <grpc++/grpc++.h>
+
+#include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
+#include "lib/fxl/logging.h"
+
 namespace dockyard {
 
 namespace {
+
+// This is an arbitrary default port.
+constexpr char DEFAULT_SERVER_ADDRESS[] = "0.0.0.0:50051";
+
+// Logic and data behind the server's behavior.
+class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
+ public:
+  void SetDockyard(Dockyard* dockyard) { dockyard_ = dockyard; }
+
+ private:
+  Dockyard* dockyard_;
+
+  grpc::Status Init(grpc::ServerContext* context,
+                    const dockyard_proto::InitRequest* request,
+                    dockyard_proto::InitReply* reply) override {
+    if (request->version() != DOCKYARD_VERSION) {
+      return grpc::Status::CANCELLED;
+    }
+    reply->set_version(DOCKYARD_VERSION);
+    return grpc::Status::OK;
+  }
+
+  // This is the handler for the client sending a `SendSample` message. A better
+  // name would be `ReceiveSample` but then it wouldn't match the message
+  // name.
+  grpc::Status SendSample(
+      grpc::ServerContext* context,
+      grpc::ServerReaderWriter<dockyard_proto::EmptyMessage,
+                               dockyard_proto::RawSample>* stream) override {
+    dockyard_proto::RawSample sample;
+    while (stream->Read(&sample)) {
+      FXL_LOG(INFO) << "Received sample at " << sample.time() << ", key "
+                    << sample.sample().key() << ": " << sample.sample().value();
+    }
+    return grpc::Status::OK;
+  }
+
+  grpc::Status GetStreamIdForName(
+      grpc::ServerContext* context,
+      const dockyard_proto::StreamNameMessage* request,
+      dockyard_proto::StreamIdMessage* reply) override {
+    SampleStreamId stream_id = dockyard_->GetSampleStreamId(request->name());
+    reply->set_id(stream_id);
+    FXL_LOG(INFO) << "Received StreamNameMessage "
+                  << ": " << request->name() << ", id " << stream_id;
+    return grpc::Status::OK;
+  }
+};
+
+// Listen for Harvester connections from the Fuchsia device.
+void RunGrpcServer(const char* listen_at, Dockyard* dockyard) {
+  std::string server_address(listen_at);
+  DockyardServiceImpl service;
+  service.SetDockyard(dockyard);
+
+  grpc::ServerBuilder builder;
+  // Listen on the given address without any authentication mechanism.
+  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  // Register "service" as the instance through which we'll communicate with
+  // clients. In this case it corresponds to a *synchronous* service.
+  builder.RegisterService(&service);
+  // Finally assemble the server.
+  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
+  FXL_LOG(INFO) << "Server listening on " << server_address;
+
+  // Wait for the server to shutdown. Note that some other thread must be
+  // responsible for shutting down the server for this call to ever return.
+  server->Wait();
+}
 
 // The stride is how much time is in each sample.
 constexpr SampleTimeNs CalcStride(SampleTimeNs start, SampleTimeNs finish,
@@ -26,11 +104,17 @@ constexpr SampleTimeNs CalcStride(const StreamSetsRequest& request) {
 }  // namespace
 
 Dockyard::Dockyard()
-    : next_context_id_(0ULL),
+    : server_thread_(nullptr),
       stream_name_handler_(nullptr),
-      stream_sets_handler_(nullptr) {}
+      stream_sets_handler_(nullptr),
+      next_context_id_(0ULL) {}
 
 Dockyard::~Dockyard() {
+  std::lock_guard<std::mutex> guard(mutex_);
+  FXL_LOG(INFO) << "Stopping dockyard server";
+  if (server_thread_ != nullptr) {
+    server_thread_->Join();
+  }
   for (SampleStreamMap::iterator i = sample_streams_.begin();
        i != sample_streams_.end(); ++i) {
     delete i->second;
@@ -39,6 +123,7 @@ Dockyard::~Dockyard() {
 
 void Dockyard::AddSamples(SampleStreamId stream_id,
                           std::vector<Sample> samples) {
+  std::lock_guard<std::mutex> guard(mutex_);
   // Find or create a sample_stream for this stream_id.
   SampleStream* sample_stream;
   auto search = sample_streams_.find(stream_id);
@@ -68,24 +153,49 @@ void Dockyard::AddSamples(SampleStreamId stream_id,
 }
 
 SampleStreamId Dockyard::GetSampleStreamId(const std::string& name) {
+  std::lock_guard<std::mutex> guard(mutex_);
   auto search = stream_ids_.find(name);
   if (search != stream_ids_.end()) {
     return search->second;
   }
   SampleStreamId id = stream_ids_.size();
   stream_ids_.emplace(name, id);
+  stream_names_.emplace(id, name);
   return id;
 }
 
 uint64_t Dockyard::GetStreamSets(StreamSetsRequest* request) {
+  std::lock_guard<std::mutex> guard(mutex_);
   request->request_id = next_context_id_;
   pending_requests_.push_back(request);
   ++next_context_id_;
   return request->request_id;
 }
 
+void Dockyard::StartCollectingFrom(const std::string& device) {
+  Initialize();
+  FXL_LOG(INFO) << "Starting collecting from " << device;
+  // TODO(dschuyler): Connect to the device and start the harvester.
+}
+
+void Dockyard::StopCollectingFrom(const std::string& device) {
+  FXL_LOG(INFO) << "Stop collecting from " << device;
+  // TODO(dschuyler): Stop the harvester.
+}
+
+bool Dockyard::Initialize() {
+  if (server_thread_ != nullptr) {
+    return true;
+  }
+  FXL_LOG(INFO) << "Starting dockyard server";
+  server_thread_ =
+      new fxl::Thread([this] { RunGrpcServer(DEFAULT_SERVER_ADDRESS, this); });
+  return server_thread_->Run();
+}
+
 StreamNamesCallback Dockyard::SetStreamNamesHandler(
     StreamNamesCallback callback) {
+  assert(server_thread_ == nullptr);
   auto old_handler = stream_name_handler_;
   stream_name_handler_ = callback;
   return old_handler;
@@ -99,6 +209,7 @@ StreamSetsCallback Dockyard::SetStreamSetsHandler(StreamSetsCallback callback) {
 
 void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
                                     StreamSetsResponse* response) const {
+  std::lock_guard<std::mutex> guard(mutex_);
   response->request_id = request.request_id;
   for (auto stream_id = request.stream_ids.begin();
        stream_id != request.stream_ids.end(); ++stream_id) {

@@ -12,6 +12,8 @@ source_set("lib") {
     "test_sample_generator.h",
   ]
   public_deps = [
+    "//garnet/public/lib/fxl",
+    "//third_party/grpc:grpc++",
     ":protos",
   ]
 }
@@ -26,9 +28,6 @@ proto_library("protos") {
   generator_plugin_suffix = ".grpc.pb"
   generator_plugin_label = "//third_party/grpc:grpc_cpp_plugin"
 
-  import_dirs = [
-    #"//garnet/lib/system_monitor/protos",
-  ]
   deps = [
     "//third_party/grpc:grpc++",
   ]

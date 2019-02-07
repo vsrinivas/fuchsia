@@ -12,66 +12,213 @@
     See also: ./README.md
 */
 
+#include <fcntl.h>
+#include <chrono>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 
+#include <fuchsia/memory/cpp/fidl.h>
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <grpc++/grpc++.h>
+#include <lib/fdio/util.h>
+#include <zircon/status.h>
 
+#include "garnet/lib/system_monitor/dockyard/dockyard.h"
 #include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
+#include "lib/fxl/command_line.h"
+#include "lib/fxl/log_settings_command_line.h"
+#include "lib/fxl/logging.h"
 
-using dockyard_proto::Dockyard;
-using dockyard_proto::InitReply;
-using dockyard_proto::InitRequest;
-using grpc::Channel;
-using grpc::ClientContext;
-using grpc::Status;
+namespace {
+
+zx_status_t get_root_resource(zx_handle_t* root_resource) {
+  const char* sysinfo = "/dev/misc/sysinfo";
+  int fd = open(sysinfo, O_RDWR);
+  if (fd < 0) {
+    FXL_LOG(ERROR) << "Cannot open sysinfo: " << strerror(errno);
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  zx::channel channel;
+  zx_status_t status =
+      fdio_get_service_handle(fd, channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Cannot obtain sysinfo channel: "
+                   << zx_status_get_string(status);
+    return status;
+  }
+
+  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootResource(
+      channel.get(), &status, root_resource);
+  if (fidl_status != ZX_OK) {
+    FXL_LOG(ERROR) << "Cannot obtain root resource: "
+                   << zx_status_get_string(fidl_status);
+    return fidl_status;
+  } else if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Cannot obtain root resource: "
+                   << zx_status_get_string(status);
+    return status;
+  }
+  return ZX_OK;
+}
+
+}  // namespace
 
 class Harvester {
  public:
-  Harvester(std::shared_ptr<Channel> channel)
-      : stub_(Dockyard::NewStub(channel)) {}
+  Harvester(std::shared_ptr<grpc::Channel> channel)
+      : stub_(dockyard_proto::Dockyard::NewStub(channel)) {}
 
-  std::string Init() {
-    // Data we are sending to the server.
-    InitRequest request;
-    request.set_name("test");
+  bool Init() {
+    dockyard_proto::InitRequest request;
+    request.set_name("TODO SET DEVICE NAME");
+    request.set_version(dockyard::DOCKYARD_VERSION);
+    dockyard_proto::InitReply reply;
 
-    // Container for the data we expect from the server.
-    InitReply reply;
-
-    // Context for the client. It could be used to convey extra information to
-    // the server and/or tweak certain RPC behaviors.
-    ClientContext context;
-
-    // The actual RPC.
-    Status status = stub_->Init(&context, request, &reply);
+    grpc::ClientContext context;
+    grpc::Status status = stub_->Init(&context, request, &reply);
     if (status.ok()) {
-      return "Init";
-    } else {
-      std::cout << status.error_code() << ": " << status.error_message()
-                << std::endl;
-      return "Unable to send to dockyard.";
+      return true;
     }
+    FXL_LOG(ERROR) << status.error_code() << ": " << status.error_message();
+    FXL_LOG(ERROR) << "Unable to send to dockyard.";
+    return false;
+  }
+
+  grpc::Status SendSample(const std::string& stream_name, uint64_t value) {
+    // TODO(dschuyler): system_clock might be at usec resolution. Consider using
+    // high_resolution_clock.
+    auto now = std::chrono::system_clock::now();
+    uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                               now.time_since_epoch())
+                               .count();
+    dockyard::SampleStreamId stream_id;
+    grpc::Status status = GetStreamIdForName(&stream_id, stream_name);
+    if (status.ok()) {
+      return SendSampleById(nanoseconds, stream_id, value);
+    }
+    return status;
   }
 
  private:
-  std::unique_ptr<Dockyard::Stub> stub_;
+  std::unique_ptr<dockyard_proto::Dockyard::Stub> stub_;
+  std::map<std::string, dockyard::SampleStreamId> _stream_ids;
+
+  grpc::Status SendSampleById(uint64_t time, dockyard::SampleStreamId stream_id,
+                              uint64_t value) {
+    // Data we are sending to the server.
+    dockyard_proto::RawSample sample;
+    sample.set_time(time);
+    sample.mutable_sample()->set_key(stream_id);
+    sample.mutable_sample()->set_value(value);
+
+    grpc::ClientContext context;
+    std::shared_ptr<grpc::ClientReaderWriter<dockyard_proto::RawSample,
+                                             dockyard_proto::EmptyMessage> >
+        stream(stub_->SendSample(&context));
+    if (stream->Write(sample)) {
+      stream->WritesDone();
+      return grpc::Status::OK;
+    }
+    FXL_LOG(INFO) << "ERROR: stream->Write";
+    return grpc::Status::CANCELLED;
+  }
+
+  grpc::Status GetStreamIdForName(dockyard::SampleStreamId* stream_id,
+                                  const std::string& stream_name) {
+    auto iter = _stream_ids.find(stream_name);
+    if (iter != _stream_ids.end()) {
+      *stream_id = iter->second;
+      return grpc::Status::OK;
+    }
+
+    dockyard_proto::StreamNameMessage name;
+    name.set_name(stream_name);
+
+    // Container for the data we expect from the server.
+    dockyard_proto::StreamIdMessage reply;
+
+    grpc::ClientContext context;
+    grpc::Status status = stub_->GetStreamIdForName(&context, name, &reply);
+    if (status.ok()) {
+      *stream_id = reply.id();
+      // Memoize it.
+      _stream_ids.emplace(stream_name, *stream_id);
+    }
+    return status;
+  }
 };
 
+void GatherCpuSamples(zx_handle_t root_resource, Harvester* harvester) {
+  // TODO(dschuyler): Determine the array size at runtime (32 is arbitrary).
+  zx_info_cpu_stats_t stats[32];
+  size_t actual, avail;
+  zx_status_t err = zx_object_get_info(root_resource, ZX_INFO_CPU_STATS, &stats,
+                                       sizeof(stats), &actual, &avail);
+  if (err != ZX_OK) {
+    FXL_LOG(ERROR) << "ZX_INFO_CPU_STATS returned " << err << "("
+                   << zx_status_get_string(err) << ")";
+    return;
+  }
+  auto now = std::chrono::high_resolution_clock::now();
+  auto cpu_time = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                      now.time_since_epoch())
+                      .count();
+  for (size_t i = 0; i < actual; ++i) {
+    {
+      // "cpu:0:busy_time"
+      std::ostringstream label;
+      label << "cpu:" << i << ":busy_time";
+      uint64_t busy_time =
+          cpu_time > stats[i].idle_time ? cpu_time - stats[i].idle_time : 0ull;
+      grpc::Status status = harvester->SendSample(label.str(), busy_time);
+    }
+  }
+}
+
+void GatherThreadSamples(zx_handle_t root_resource, Harvester* harvester) {
+  // TODO(dschuyler): Actually gather the thread samples.
+}
+
 int main(int argc, char** argv) {
-  printf("System Monitor Harvester - wip 5\n");
-  if (argc < 2) {
-    std::cout << "Please specify an IP:Port, such as localhost:50051"
+  // A broad 'something went wrong' error.
+  constexpr int EXIT_CODE_GENERAL_ERROR = 1;
+
+  FXL_LOG(INFO) << "System Monitor Harvester - wip 7";
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
+    exit(1);  // 1 == General error.
+  }
+  const auto& positional_args = command_line.positional_args();
+  if (positional_args.size() < 1) {
+    // TODO(dschuyler): Adhere to CLI tool requirements for --help.
+    std::cerr << "Please specify an IP:Port, such as localhost:50051"
               << std::endl;
-    exit(1);
+    exit(EXIT_CODE_GENERAL_ERROR);
   }
   // TODO(dschuyler): This channel isn't authenticated
   // (InsecureChannelCredentials()).
-  Harvester harvester(
-      grpc::CreateChannel(argv[1], grpc::InsecureChannelCredentials()));
-  std::string reply = harvester.Init();
-  std::cout << "harvester received: " << reply << std::endl;
+  Harvester harvester(grpc::CreateChannel(positional_args[0],
+                                          grpc::InsecureChannelCredentials()));
 
+  if (!harvester.Init()) {
+    exit(EXIT_CODE_GENERAL_ERROR);
+  }
+
+  zx_handle_t root_resource;
+  zx_status_t ret = get_root_resource(&root_resource);
+  if (ret != ZX_OK) {
+    exit(EXIT_CODE_GENERAL_ERROR);
+  }
+
+  while (true) {
+    GatherCpuSamples(root_resource, &harvester);
+    GatherThreadSamples(root_resource, &harvester);
+    // TODO(dschuyler): Make delay configurable (100 msec is arbitrary).
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  FXL_LOG(INFO) << "System Monitor Harvester - exiting";
   return 0;
 }

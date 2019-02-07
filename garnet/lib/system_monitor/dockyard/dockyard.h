@@ -7,8 +7,11 @@
 
 #include <stdint.h>
 #include <map>
+#include <mutex>
 #include <string>
 #include <vector>
+
+#include "lib/fxl/threading/thread.h"
 
 namespace dockyard {
 
@@ -131,7 +134,8 @@ struct StreamSetsResponse {
 };
 
 // Lookup for a sample stream name string, given the sample stream ID.
-typedef std::map<SampleStreamId, std::string> StreamInfoMap;
+typedef std::map<SampleStreamId, std::string> StreamIdNameMap;
+typedef std::map<std::string, SampleStreamId> StreamNameIdMap;
 
 // Called when new streams are added or removed. Added values include their ID
 // and string name. Removed values only have the ID.
@@ -177,6 +181,11 @@ class Dockyard {
   // Returns unique context ID.
   uint64_t GetStreamSets(StreamSetsRequest* request);
 
+  // Start collecting data from a named device. Tip: device names are normally
+  // four short words, such as "duck floor quick rock".
+  void StartCollectingFrom(const std::string& device);
+  void StopCollectingFrom(const std::string& device);
+
   // Sets the function called when sample streams are added or removed. Pass
   // nullptr as |callback| to stop receiving calls.
   //
@@ -196,15 +205,28 @@ class Dockyard {
   void ProcessRequests();
 
  private:
-  typedef std::map<SampleStreamId, SampleStream*> SampleStreamMap;
-  uint64_t next_context_id_;
+  // TODO(dschuyler): avoid having a global mutex. Use a queue to update data.
+  mutable std::mutex mutex_;
+  fxl::Thread* server_thread_;
+
+  // Communication with the GUI.
   StreamNamesCallback stream_name_handler_;
   StreamSetsCallback stream_sets_handler_;
   std::vector<StreamSetsRequest*> pending_requests_;
+
+  // Storage of sample data.
+  typedef std::map<SampleStreamId, SampleStream*> SampleStreamMap;
   SampleStreamMap sample_streams_;
   std::map<SampleStreamId, std::pair<SampleValue, SampleValue>>
       sample_stream_low_high_;
-  std::map<std::string, SampleStreamId> stream_ids_;
+
+  // Name <--> ID look up.
+  uint64_t next_context_id_;
+  StreamNameIdMap stream_ids_;
+  StreamIdNameMap stream_names_;
+
+  // Listen for incoming samples.
+  bool Initialize();
 
   // Each of these Compute*() methods aggregate samples in different ways.
   // There's no single 'true' way to represent aggregated data, so the choice

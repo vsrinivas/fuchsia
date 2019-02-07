@@ -12,7 +12,6 @@ if (current_toolchain == host_toolchain) {
 
     deps = [
       "//garnet/lib/system_monitor/dockyard:lib",
-      "//third_party/grpc:grpc++",
     ]
   }
 }
