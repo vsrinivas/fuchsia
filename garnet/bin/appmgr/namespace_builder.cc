@@ -13,9 +13,59 @@
 #include <unistd.h>
 
 #include "lib/fsl/io/fd.h"
+#include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/path.h"
 #include "lib/fxl/files/unique_fd.h"
 
 namespace component {
+
+namespace {
+
+// This function is used to migrate the existing contents of minfs into a new
+// subdirectory. The subdirectory will be added to components' namespaces as
+// when they request the 'deprecated-global-persistent-data' feature, in place
+// of the minfs root directly. The migration allows changing the path without
+// losing data across an OTA.
+// TODO(CF-28): Delete this when removing 'deprecated-global-persistent-data'.
+std::string MigratedGlobalPersistentDataPath() {
+  static const char* kGlobalPersistentDataPath =
+      "/data/deprecated-global-persistent-storage";
+  static const char* kDataPathsNotToMigrate[] = {"pkgfs_index", "ssh"};
+
+  // Only migrate if the new directory has not been created yet, so that we only
+  // do it once.
+  const std::string new_dir(kGlobalPersistentDataPath);
+  if (files::IsDirectory(new_dir)) {
+    return new_dir;
+  }
+
+  if (!files::CreateDirectory(new_dir)) {
+    FXL_LOG(ERROR) << "Failed to create global data directory";
+    return "";
+  }
+
+  std::vector<std::string> data_paths;
+  if (!files::ReadDirContents("/data", &data_paths)) {
+    FXL_LOG(ERROR) << "Failed to read data contents";
+    return "";
+  }
+
+  for (const auto& old_path : data_paths) {
+    if (std::find_if(std::begin(kDataPathsNotToMigrate),
+                     std::end(kDataPathsNotToMigrate), [&](auto p) {
+                       return old_path == std::string(p);
+                     }) == std::end(kDataPathsNotToMigrate)) {
+      if (rename(files::JoinPath("/data", old_path).c_str(),
+                 files::JoinPath(new_dir, old_path).c_str()) < 0) {
+        FXL_LOG(ERROR) << "Failed to migrate '" << old_path
+                       << "' to new global data directory";
+      }
+    }
+  }
+  return new_dir;
+}
+
+}  // namespace
 
 NamespaceBuilder::NamespaceBuilder() = default;
 
@@ -76,10 +126,11 @@ void NamespaceBuilder::AddSandbox(
   // if both included.
   if (sandbox.HasFeature("isolated-persistent-storage")) {
     PushDirectoryFromPathAs(isolated_data_path_factory(), "/data");
-  } else if (sandbox.HasFeature("persistent-storage")) {
+  } else if (sandbox.HasFeature("persistent-storage") ||
+             sandbox.HasFeature("deprecated-global-persistent-storage")) {
     // TODO(bryanhenry,CF-28): Remove this feature once users have migrated to
     // isolated storage.
-    PushDirectoryFromPath("/data");
+    PushDirectoryFromPathAs(MigratedGlobalPersistentDataPath(), "/data");
   }
 
   for (const auto& feature : sandbox.features()) {
