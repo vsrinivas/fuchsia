@@ -12,6 +12,7 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fxl/macros.h>
+#include <lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
@@ -29,7 +30,7 @@ class LedgerRepositoryForTesting {
   fuchsia::ledger::internal::LedgerRepository* ledger_repository();
 
   // Terminates the ledger repository app.
-  void Terminate(std::function<void()> done);
+  void Terminate(std::function<void()> callback);
 
  private:
   std::unique_ptr<component::StartupContext> startup_context_;
@@ -38,6 +39,8 @@ class LedgerRepositoryForTesting {
       ledger_app_client_;
   fuchsia::ledger::internal::LedgerRepositoryFactoryPtr ledger_repo_factory_;
   fuchsia::ledger::internal::LedgerRepositoryPtr ledger_repo_;
+
+  fxl::WeakPtrFactory<LedgerRepositoryForTesting> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryForTesting);
 };

@@ -1,12 +1,6 @@
 disabled_for_asan = [
-  # MF-190
-  "/pkgfs/packages/agent_runner_unittests/0/test/agent_runner_unittest",
-
   # MTWN-233 (flaky)
   "/pkgfs/packages/audio_fidl_tests/0/test/audio_fidl_tests",
-
-  # MF-191
-  "/pkgfs/packages/clipboard_unittests/0/test/clipboard_impl_unittest",
 
   # DX-964
   "/pkgfs/packages/crashpad_analyzer_tests/0/test/crashpad_analyzer_impl",
@@ -17,9 +11,6 @@ disabled_for_asan = [
 
   # ES-180
   "/pkgfs/packages/escher_tests/0/test/escher_unittests",
-
-  # MF-192
-  "/pkgfs/packages/entity_provider_runner_unittests/0/test/entity_provider_runner_unittest",
 
   # DNO-409
   "/pkgfs/packages/garnet_lib_tests/0/test/garnet_lib_unittests",

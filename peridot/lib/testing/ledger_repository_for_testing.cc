@@ -19,7 +19,8 @@ namespace modular {
 namespace testing {
 
 LedgerRepositoryForTesting::LedgerRepositoryForTesting()
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()) {
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      weak_ptr_factory_(this) {
   fuchsia::modular::AppConfig ledger_config;
   ledger_config.url = kLedgerAppUrl;
 
@@ -49,16 +50,19 @@ LedgerRepositoryForTesting::ledger_repository() {
   return ledger_repo_.get();
 }
 
-void LedgerRepositoryForTesting::Terminate(std::function<void()> done) {
+void LedgerRepositoryForTesting::Terminate(std::function<void()> callback) {
   if (ledger_app_client_) {
-    ledger_app_client_->Teardown(kBasicTimeout, [this, done] {
-      ledger_repo_factory_.Unbind();
-      done();
-      ledger_app_client_.reset();
-    });
-
+    ledger_app_client_->Teardown(
+        kBasicTimeout,
+        [this, weak_this = weak_ptr_factory_.GetWeakPtr(), callback] {
+          ledger_repo_factory_.Unbind();
+          callback();
+          if (weak_this) {
+            weak_this->ledger_app_client_.reset();
+          }
+        });
   } else {
-    done();
+    callback();
   }
 }
 
