@@ -1,0 +1,80 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Defines an alias for an SDK atom or molecule.
+#
+# Parameters
+#
+#   target
+#     The label of the aliased element.
+#
+#   type
+#     The type of the target, either "atom" or "molecule".
+#
+#   non_sdk_deps (optional)
+#     List of GN labels which this target needs built.
+
+template("sdk_alias") {
+  assert(defined(invoker.target), "Must define a target to alias")
+  assert(defined(invoker.type), "Must define a target type")
+  assert(invoker.type == "atom" || invoker.type == "molecule", "Unknown type")
+
+  is_atom = invoker.type == "atom"
+
+  # This template simply copies the output files of the sdk_* templates to the
+  # correct location.
+
+  sdk_target_gen_dir = get_label_info(invoker.target, "target_gen_dir")
+  sdk_target_name = get_label_info(invoker.target, "name")
+
+  group_deps = []
+
+  if (is_atom) {
+    copy_meta_target_name = "${target_name}_copy_meta"
+    group_deps += [ ":$copy_meta_target_name" ]
+    copy(copy_meta_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      sources = [
+        "$sdk_target_gen_dir/$sdk_target_name.meta.json",
+      ]
+
+      outputs = [
+        "$target_gen_dir/$target_name.meta.json",
+      ]
+
+      deps = [
+        invoker.target,
+      ]
+    }
+  }
+
+  copy_manifest_target_name = "${target_name}_copy_manifest"
+  group_deps += [ ":$copy_manifest_target_name" ]
+  copy(copy_manifest_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    sources = [
+      "$sdk_target_gen_dir/$sdk_target_name.sdk",
+    ]
+
+    outputs = [
+      "$target_gen_dir/$target_name.sdk",
+    ]
+
+    deps = [
+      invoker.target,
+    ]
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    public_deps = group_deps
+
+    if (defined(invoker.non_sdk_deps)) {
+      public_deps += invoker.non_sdk_deps
+    }
+  }
+}
