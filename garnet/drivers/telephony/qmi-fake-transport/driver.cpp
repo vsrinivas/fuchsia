@@ -4,6 +4,7 @@
 
 #include "fake-device.h"
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/test.h>
@@ -15,7 +16,7 @@
 #include <memory>
 #include <thread>
 
-extern "C" zx_status_t qmi_fake_bind(void* ctx, zx_device_t* device) {
+zx_status_t qmi_fake_bind(void* ctx, zx_device_t* device) {
 
   test_protocol_t proto;
   auto status = device_get_protocol(device, ZX_PROTOCOL_TEST, &proto);
@@ -37,3 +38,16 @@ extern "C" zx_status_t qmi_fake_bind(void* ctx, zx_device_t* device) {
 
   return status;
 }
+
+static zx_driver_ops_t qmi_fake_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = qmi_fake_bind;
+    return ops;
+}();
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(qmi_fake, qmi_fake_driver_ops, "zircon", "0.1", 2)
+  BI_ABORT_IF_AUTOBIND,
+  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST),
+ZIRCON_DRIVER_END(qmi_fake)
