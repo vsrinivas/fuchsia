@@ -57,7 +57,7 @@ TEST(VolatileWriteBlockDispatcherTest, WriteBlock) {
   zx_status_t status;
   fidl::VectorPtr<uint8_t> buf(kBlockSectorSize);
   disp->ReadAt(buf->data(), buf->size(), 0,
-               [&status](zx_status_t s) { s = status; });
+               [&status](zx_status_t s) { status = s; });
   ASSERT_EQ(ZX_OK, status);
   ASSERT_BLOCK_VALUE(buf->data(), buf->size(), 0xab);
 
