@@ -17,7 +17,7 @@ if (current_os == target_os && target_sysroot != "") {
 } else if (is_linux) {
   sysroot = rebase_path("//build/third_party/sysroot/${current_platform}")
 } else if (is_mac) {
-  import("//build/config/mac/config.gni")
+  import("//build/config/mac/mac_sdk.gni")
   sysroot = mac_sdk_path
 } else {
   sysroot = ""

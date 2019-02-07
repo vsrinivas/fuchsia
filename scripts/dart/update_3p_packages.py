@@ -15,6 +15,7 @@ import sys
 # be updated.
 ROOT_PUBSPECS = [
     'third_party/dart/pkg/analyzer',
+    'third_party/dart/pkg/analysis_tool',
     'third_party/dart/pkg/build_integration',
     'third_party/dart/pkg/expect',
     'third_party/dart/pkg/front_end',
