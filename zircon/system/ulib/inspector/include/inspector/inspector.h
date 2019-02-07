@@ -91,6 +91,10 @@ void inspector_print_general_regs(FILE* f,
                                   const zx_thread_state_general_regs_t* regs,
                                   const inspector_excp_data_t* excp_data);
 
+// Print the contents of memory, typically the bottom of a thread's stack.
+void inspector_print_memory(FILE* f, zx_handle_t process, zx_vaddr_t addr,
+                            size_t length);
+
 // Prints to stdout the debug info (registers, bottom of user stack, dso list,
 // backtrace, etc.) of the given |thread| in |process|.
 // Does NOT close the handles nor resume the thread.

@@ -8,7 +8,6 @@
 #include <string.h>
 
 #include <lib/backtrace-request/backtrace-request.h>
-#include <pretty/hexdump.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
@@ -82,7 +81,6 @@ static const char* excp_type_to_str(const zx_excp_type_t type) {
 }
 
 // How much memory to dump, in bytes.
-// Space for this is allocated on the stack, so this can't be too large.
 static constexpr size_t kMemoryDumpSize = 256;
 
 #if defined(__aarch64__)
@@ -97,19 +95,6 @@ static bool write_general_regs(zx_handle_t thread, void* buf, size_t buf_size) {
     return true;
 }
 #endif
-
-static void dump_memory(zx_handle_t proc, uintptr_t start, size_t len) {
-    // Make sure we're not allocating an excessive amount of stack.
-    ZX_DEBUG_ASSERT(len <= kMemoryDumpSize);
-
-    uint8_t buf[len];
-    auto res = zx_process_read_memory(proc, start, buf, len, &len);
-    if (res < 0) {
-        printf("failed reading %p memory; error : %d\n", (void*)start, res);
-    } else if (len != 0) {
-        hexdump_ex(buf, len, start);
-    }
-}
 
 static void resume_thread(zx_handle_t thread, zx_handle_t exception_port, bool handled) {
     uint32_t options = 0;
@@ -241,7 +226,7 @@ static void print_debug_info(zx_handle_t process, zx_handle_t thread, zx_excp_ty
 #endif
 
     printf("bottom of user stack:\n");
-    dump_memory(process, sp, kMemoryDumpSize);
+    inspector_print_memory(stdout, process, sp, kMemoryDumpSize);
 
     printf("arch: %s\n", arch);
 

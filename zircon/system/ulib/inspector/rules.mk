@@ -14,6 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/backtrace.cpp \
     $(LOCAL_DIR)/debug-info.cpp \
     $(LOCAL_DIR)/dso-list.cpp \
+    $(LOCAL_DIR)/memory.cpp \
     $(LOCAL_DIR)/registers.cpp \
     $(LOCAL_DIR)/utils.cpp \
 
