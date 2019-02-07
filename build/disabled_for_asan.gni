@@ -54,9 +54,6 @@ disabled_for_asan = [
   "/pkgfs/packages/suggestion_engine_unittests/0/test/annoyance_ranking_feature_unittest",
   "/pkgfs/packages/suggestion_engine_unittests/0/test/suggestion_engine_impl_unittest",
 
-  # CF-569 (flaky)
-  "/pkgfs/packages/system_time_updater_test/0/test/system_time_updater_test",
-
   # PT-97
   "/pkgfs/packages/trace_tests/0/test/trace_integration_tests",
 
