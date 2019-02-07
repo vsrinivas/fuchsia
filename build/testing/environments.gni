@@ -10,6 +10,14 @@ qemu_env = {
   }
 }
 
+astro_env = {
+  dimensions = {
+    device_type = "Astro"
+  }
+  # TODO(IN-876): Delete after bring-up.
+  label = "astro"
+}
+
 nuc_env = {
   dimensions = {
     device_type = "Intel NUC Kit NUC7i5DNHE"

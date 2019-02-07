@@ -74,6 +74,8 @@ template("test_spec") {
       # tests that need to specify hardware are doing so.
       environments += [ nuc_env ]
     } else if (current_cpu == "arm64" && !envs_specified) {
+      # TODO(IN-876): Remove after astros are ready to be targeted.
+      environments += [ astro_env ]
       # TODO(IN-571): Remove after vim2s are ready to be targeted.
       environments += [ vim2_env ]
     }
@@ -205,6 +207,12 @@ template("test_spec") {
   foreach(env, target_envs) {
     dims = []  # Clear from previous iteration.
     dims = env.dimensions
+
+    # TODO(IN-876): Delete this block once astros are ready to be targeted.
+    if (defined(dims.device_type) && dims.device_type == "Astro") {
+      assert(defined(env.label) && env.label == "astro",
+             "astros may not yet be targeted.")
+    }
 
     # TODO(IN-571): Delete this block once vim2s are ready to be targeted.
     if (defined(dims.device_type) && dims.device_type == "Khadas Vim2 Max") {
