@@ -6,7 +6,7 @@
 
 #include <lib/gtest/real_loop_fixture.h>
 
-#include "garnet/bin/media/audio_core/test/audio_fidl_tests_shared.h"
+#include "garnet/bin/media/audio_core/test/audio_tests_shared.h"
 #include "lib/component/cpp/environment_services_helper.h"
 
 namespace media::audio::test {
@@ -65,6 +65,8 @@ void AudioCapturerTest::TearDown() {
 }
 
 bool AudioCapturerTest::ExpectCallback() {
+  received_callback_ = false;
+
   bool timed_out = !RunLoopWithTimeoutOrUntil(
       [this]() { return error_occurred_ || received_callback_; },
       kDurationResponseExpected, kDurationGranularity);
@@ -79,11 +81,12 @@ bool AudioCapturerTest::ExpectCallback() {
 
   bool return_val = !error_occurred_ && !timed_out;
 
-  received_callback_ = false;
   return return_val;
 }
 
 bool AudioCapturerTest::ExpectTimeout() {
+  received_callback_ = false;
+
   bool timed_out = !RunLoopWithTimeoutOrUntil(
       [this]() { return error_occurred_ || received_callback_; },
       kDurationTimeoutExpected);
@@ -98,11 +101,12 @@ bool AudioCapturerTest::ExpectTimeout() {
 
   bool return_val = !error_occurred_ && !received_callback_;
 
-  received_callback_ = false;
   return return_val;
 }
 
 bool AudioCapturerTest::ExpectDisconnect() {
+  received_callback_ = false;
+
   bool timed_out = !RunLoopWithTimeoutOrUntil(
       [this]() { return received_callback_ || !audio_capturer_.is_bound(); },
       kDurationResponseExpected, kDurationGranularity);
@@ -117,7 +121,6 @@ bool AudioCapturerTest::ExpectDisconnect() {
 
   bool return_val = !received_callback_ && !timed_out;
 
-  received_callback_ = false;
   return return_val;
 }
 
@@ -219,8 +222,9 @@ TEST_F(AudioCapturerTest, BindGainControlNull) {
   audio_capturer_2.set_error_handler(err_handler);
 
   fidl::InterfaceRequest<fuchsia::media::GainControl> bad_request;
-  uint32_t garbage = 0xF0B4783C;
-  memmove(&bad_request, &garbage, sizeof(uint32_t));
+  auto bad_request_void_ptr = static_cast<void*>(&bad_request);
+  auto bad_request_dword_ptr = static_cast<uint32_t*>(bad_request_void_ptr);
+  *bad_request_dword_ptr = 0x0BADCAFE;
   audio_capturer_2->BindGainControl(std::move(bad_request));
 
   // Give time for Disconnect to occur, if it must.

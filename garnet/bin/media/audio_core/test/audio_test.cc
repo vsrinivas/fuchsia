@@ -7,9 +7,8 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <cmath>
 
-#include "garnet/bin/media/audio_core/test/audio_fidl_tests_shared.h"
+#include "garnet/bin/media/audio_core/test/audio_tests_shared.h"
 #include "lib/component/cpp/environment_services_helper.h"
-#include "lib/fxl/logging.h"
 
 namespace media::audio::test {
 
@@ -275,8 +274,10 @@ TEST_F(AudioTest, CreateBadAudioRenderer) {
 
   // Corrupt the contents of this request.
   fidl::InterfaceRequest<fuchsia::media::AudioRenderer> bad_request;
-  uint32_t garbage = 0xF0B4783C;
-  memmove(&bad_request, &garbage, sizeof(uint32_t));
+  auto bad_request_void_ptr = static_cast<void*>(&bad_request);
+  auto bad_request_dword_ptr = static_cast<uint32_t*>(bad_request_void_ptr);
+  *bad_request_dword_ptr = 0x0BADCAFE;
+
   audio_->CreateAudioRenderer(std::move(bad_request));
 
   // Give time for Disconnect to occur, if it must.
@@ -359,8 +360,9 @@ TEST_F(AudioTest, CreateBadAudioCapturer) {
 
   // Corrupt the contents of this request.
   fidl::InterfaceRequest<fuchsia::media::AudioCapturer> bad_request;
-  uint32_t garbage = 0xF0B4783C;
-  memmove(&bad_request, &garbage, sizeof(uint32_t));
+  auto bad_request_void_ptr = static_cast<void*>(&bad_request);
+  auto bad_request_dword_ptr = static_cast<uint32_t*>(bad_request_void_ptr);
+  *bad_request_dword_ptr = 0x0BADCAFE;
   audio_2->CreateAudioCapturer(std::move(bad_request), true);
 
   // Give time for Disconnect to occur, if it must.

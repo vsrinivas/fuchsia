@@ -7,7 +7,7 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/gtest/real_loop_fixture.h>
 
-#include "garnet/bin/media/audio_core/test/audio_fidl_tests_shared.h"
+#include "garnet/bin/media/audio_core/test/audio_tests_shared.h"
 #include "lib/component/cpp/environment_services_helper.h"
 #include "lib/fxl/logging.h"
 

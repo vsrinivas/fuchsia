@@ -76,8 +76,9 @@ TEST_F(AudioSyncTest, CreateBadAudioRenderer) {
 
   // Corrupt the contents of this request.
   fidl::InterfaceRequest<fuchsia::media::AudioRenderer> bad_request;
-  uint32_t garbage = 0xF0B4783C;
-  memmove(&bad_request, &garbage, sizeof(uint32_t));
+  auto bad_request_void_ptr = static_cast<void*>(&bad_request);
+  auto bad_request_dword_ptr = static_cast<uint32_t*>(bad_request_void_ptr);
+  *bad_request_dword_ptr = 0x0BADCAFE;
 
   EXPECT_EQ(ZX_ERR_BAD_HANDLE,
             audio_sync_->CreateAudioRenderer(std::move(bad_request)));
@@ -122,8 +123,9 @@ TEST_F(AudioSyncTest, CreateBadAudioCapturer) {
 
   // Corrupt the contents of this request.
   fidl::InterfaceRequest<fuchsia::media::AudioCapturer> bad_request;
-  uint32_t garbage = 0xF0B4783C;
-  memmove(&bad_request, &garbage, sizeof(uint32_t));
+  auto bad_request_void_ptr = static_cast<void*>(&bad_request);
+  auto bad_request_dword_ptr = static_cast<uint32_t*>(bad_request_void_ptr);
+  *bad_request_dword_ptr = 0x0BADCAFE;
 
   EXPECT_EQ(ZX_ERR_BAD_HANDLE,
             audio_sync_->CreateAudioCapturer(std::move(bad_request), false));

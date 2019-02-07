@@ -11,11 +11,11 @@ executable("audio_fidl_tests_bin") {
   sources = [
     "audio_capturer_test.cc",
     "audio_fidl_tests.cc",
-    "audio_fidl_tests_shared.h",
     "audio_renderer_sync_test.cc",
     "audio_renderer_test.cc",
     "audio_sync_test.cc",
     "audio_test.cc",
+    "audio_tests_shared.h",
     "gain_control_test.cc",
     "gain_control_test.h",
   ]
@@ -23,8 +23,6 @@ executable("audio_fidl_tests_bin") {
   deps = [
     "//sdk/fidl/fuchsia.media",
     "//garnet/public/lib/component/cpp/testing",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest_main",
   ]
@@ -47,14 +45,13 @@ executable("audio_loopback_tests_bin") {
   output_name = "audio_loopback_tests"
 
   sources = [
-    "audio_fidl_tests_shared.h",
     "audio_loopback_test.cc",
+    "audio_tests_shared.h",
   ]
 
   deps = [
     "//sdk/fidl/fuchsia.media",
     "//garnet/public/lib/component/cpp/testing",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest_main",
