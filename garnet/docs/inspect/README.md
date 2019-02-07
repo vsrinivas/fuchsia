@@ -11,18 +11,23 @@ that expose information.
 
 # Quick Links
 
-[iquery](iquery.md) - The userspace tool for inspecting components.
+[iquery](iquery.md) &mdash; The userspace tool for inspecting components.
+[Getting started with Inspect](gsw-inspect.md) &mdash; A quick start guide.
 
 # Concepts
 
 Components may expose a tree of **Objects**, each of which has a set of
 string-valued **Properties** and numeric **Metrics**.
 
+![Figure: A tree of **Object**s](tree.png)
+
 ## Object
 
 An object is an exported entity within a component that may have 0 or
 more children. Each object has a name, and each child of an object
 must have a unique name among the children.
+
+![Figure: An **Object**](object.png)
 
 ## Property
 
