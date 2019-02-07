@@ -64,6 +64,7 @@ private:
     async_dispatcher_t* dispatcher_;
     zx::event event_;
     int ref_count_ = 0;
+    zx_koid_t koid_ = 0;
 
     friend FenceReference;
 

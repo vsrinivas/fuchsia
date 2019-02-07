@@ -6,6 +6,7 @@
 #include "fence.h"
 
 #include <utility>
+#include <ddk/trace/event.h>
 
 namespace display {
 
@@ -60,6 +61,8 @@ void Fence::OnRefDisarmed(FenceReference* ref) {
 void Fence::OnReady(async_dispatcher_t* dispatcher, async::WaitBase* self,
                     zx_status_t status, const zx_packet_signal_t* signal) {
     ZX_DEBUG_ASSERT(status == ZX_OK && (signal->observed & ZX_EVENT_SIGNALED));
+    TRACE_DURATION("gfx", "Display::Fence::OnReady");
+    TRACE_FLOW_END("gfx", "event_signal", koid_);
 
     event_.signal(ZX_EVENT_SIGNALED, 0);
 
@@ -75,6 +78,11 @@ void Fence::OnReady(async_dispatcher_t* dispatcher, async::WaitBase* self,
 Fence::Fence(FenceCallback* cb, async_dispatcher_t* dispatcher, uint64_t fence_id, zx::event&& event)
         : cb_(cb), dispatcher_(dispatcher), event_(std::move(event)) {
     id = fence_id;
+    zx_info_handle_basic_t info;
+    zx_status_t status =
+        event_.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    koid_ = info.koid;
 }
 
 Fence::~Fence() {

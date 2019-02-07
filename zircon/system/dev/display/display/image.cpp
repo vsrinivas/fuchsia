@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/trace/event.h>
 
 #include <atomic>
 #include <utility>
@@ -48,6 +49,8 @@ void Image::StartPresent() {
     ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
 
     presenting_ = true;
+    TRACE_DURATION("gfx", "Image::StartPresent", "id", id);
+    TRACE_FLOW_BEGIN("gfx", "present_image", id);
 }
 
 void Image::EarlyRetire() {

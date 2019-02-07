@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -1157,6 +1158,7 @@ bool Client::CheckConfig(fidl::Builder* resp_builder) {
 
 void Client::ApplyConfig() {
     ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
+    TRACE_DURATION("gfx", "Display::Client::ApplyConfig");
 
     bool config_missing_image = false;
     layer_t* layers[layers_.size()];

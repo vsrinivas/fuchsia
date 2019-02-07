@@ -419,6 +419,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
     // Emit an event called "VSYNC", which is by convention the event
     // that Trace Viewer looks for in its "Highlight VSync" feature.
     TRACE_INSTANT("gfx", "VSYNC", TRACE_SCOPE_THREAD, "display_id", display_id);
+    TRACE_DURATION("gfx", "Display::Controller::OnDisplayVsync", "display_id", display_id);
     fbl::AutoLock lock(&mtx_);
     DisplayInfo* info = nullptr;
     for (auto& display_config : displays_) {
@@ -515,6 +516,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
         list_for_every_entry(&info->images, cur, image_node_t, link) {
             for (unsigned i = 0; i < handle_count; i++) {
                 if (handles[i] == cur->self->info().handle) {
+                    TRACE_FLOW_END("gfx", "present_image", cur->self->id);
                     images[i] = cur->self->id;
                     break;
                 }
