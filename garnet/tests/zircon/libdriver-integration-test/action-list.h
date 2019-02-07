@@ -13,13 +13,15 @@
 
 namespace libdriver_integration_test {
 
-// Forward-declaration
+// Forward-declarations
 class MockDevice;
+class MockDeviceThread;
 
 // Represents an ordered list of actions to perform.
 class ActionList {
 public:
     using Action = fuchsia::device::mock::Action;
+    using CompleterMap = std::map<uint64_t, fit::completer<void, std::string>>;
 
     ActionList();
     ~ActionList();
@@ -31,10 +33,6 @@ public:
     ActionList& operator=(const ActionList&) = delete;
 
     const std::vector<Action>& actions() const { return actions_; }
-
-    // Consume this action list
-    void Take(std::vector<Action>* actions,
-              std::map<uint64_t, fit::completer<void, std::string>>* local_action_map);
 
     // Methods for adding to the stored actions
     void AppendAction(Action action);
@@ -48,14 +46,19 @@ public:
                              std::unique_ptr<MockDevice>* new_device_out);
     void AppendRemoveDevice(fit::promise<void, std::string>* remove_done_out);
     void AppendRemoveDevice(fit::completer<void, std::string> remove_done);
+    void AppendCreateThread(async_dispatcher_t* dispatcher, std::unique_ptr<MockDeviceThread>* out);
     void AppendReturnStatus(zx_status_t status);
+
+    // Consume this action list, updating the given |map| and action counter.
+    std::vector<Action> FinalizeActionList(CompleterMap* map, uint64_t* next_action_id);
 private:
     std::vector<Action> actions_;
 
     // Map of locally assigned action IDs to completers for them.  These will be
     // remapped by MockDevice::FinalizeActionList.
-    std::map<uint64_t, fit::completer<void, std::string>> local_action_map_;
+    CompleterMap local_action_map_;
     uint64_t next_action_id_ = 0;
 };
+
 
 } // namespace libdriver_integration_test

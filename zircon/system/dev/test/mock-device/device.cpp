@@ -100,10 +100,14 @@ struct ProcessActionsContext {
     size_t associated_buf_count = 0;
     // OUT: Number of bytes written by actions
     size_t associated_buf_actual = 0;
-    // IN: MockDevice to use for associating threads with
+    // IN/OUT: MockDevice to use for associating threads with.  NULL'd out if
+    // remove was called.
     MockDevice* mock_device = nullptr;
-    // IN: Device to use for invoking add_device/remove_device
+    // IN/OUT: Device to use for invoking add_device/remove_device.  NULL'd out
+    // if remove was called.
     zx_device_t* device = nullptr;
+    // IN: Whether or not this context is running in a separate thread
+    bool is_thread = false;
 };
 
 // Execute the actions returned by a hook
@@ -126,8 +130,13 @@ int MockDevice::ThreadFunc(void* raw_arg) {
             break;
         }
         ProcessActionsContext ctx(arg->channel, false, arg->dev, arg->dev->zxdev());
+        ctx.is_thread = true;
         status = ProcessActions(std::move(actions), &ctx);
         ZX_ASSERT(status == ZX_OK);
+        if (ctx.device == nullptr) {
+            // If the device was removed, bail out since we're releasing.
+            break;
+        }
     }
     return 0;
 }
@@ -182,13 +191,20 @@ void MockDevice::DdkRelease() {
     zx_status_t status = ReleaseHook(controller_, ConstructHookInvocation());
     ZX_ASSERT(status == ZX_OK);
 
-    {
-        fbl::AutoLock guard(&lock_);
-        for (auto& t : threads_) {
+    // Launch a thread to do the actual joining and delete, since this could get
+    // called from a thread.
+    thrd_t thrd;
+    int ret = thrd_create(&thrd, [](void* arg) {
+        auto me = static_cast<MockDevice*>(arg);
+        fbl::AutoLock guard(&me->lock_);
+        for (auto& t : me->threads_) {
             thrd_join(t, nullptr);
         }
-    }
-    delete this;
+        delete me;
+        return 0;
+    }, this);
+    ZX_ASSERT(ret == thrd_success);
+    thrd_detach(thrd);
 }
 
 zx_status_t MockDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
@@ -383,8 +399,17 @@ zx_status_t ProcessActions(fbl::Array<const fuchsia_device_mock_Action> actions,
         }
         case fuchsia_device_mock_ActionTag_remove_device: {
             device_remove(ctx->device);
-            zx_status_t status = SendRemoveDeviceDone(*ctx->channel,
-                                                      action.remove_device.action_id);
+            // Null out the device pointers, since the release hook might get
+            // activated.
+            ctx->device = nullptr;
+            ctx->mock_device = nullptr;
+            zx_status_t status;
+            if (ctx->is_thread) {
+                status = SendRemoveDeviceDoneFromThread(*ctx->channel,
+                                                        action.remove_device.action_id);
+            } else {
+                status = SendRemoveDeviceDone(*ctx->channel, action.remove_device.action_id);
+            }
             ZX_ASSERT(status == ZX_OK);
             break;
         }
@@ -412,7 +437,11 @@ zx_status_t ProcessActions(fbl::Array<const fuchsia_device_mock_Action> actions,
             // Devmgr now owns this
             __UNUSED auto ptr = dev.release();
 
-            status = SendAddDeviceDone(*ctx->channel, action.add_device.action_id);
+            if (ctx->is_thread) {
+                status = SendAddDeviceDoneFromThread(*ctx->channel, action.add_device.action_id);
+            } else {
+                status = SendAddDeviceDone(*ctx->channel, action.add_device.action_id);
+            }
             ZX_ASSERT(status == ZX_OK);
             break;
         }

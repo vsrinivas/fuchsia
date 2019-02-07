@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "mock-device.h"
+#include "mock-device-thread.h"
 
 namespace libdriver_integration_test {
 
@@ -67,16 +68,43 @@ void ActionList::AppendRemoveDevice(fit::completer<void, std::string> remove_don
     return AppendAction(std::move(action));
 }
 
+void ActionList::AppendCreateThread(async_dispatcher_t* dispatcher,
+                                    std::unique_ptr<MockDeviceThread>* out) {
+    fidl::InterfacePtr<MockDeviceThread::Interface> interface;
+    Action action;
+    action.set_create_thread(interface.NewRequest(dispatcher));
+    AppendAction(std::move(action));
+    *out = std::make_unique<MockDeviceThread>(std::move(interface));
+}
+
 void ActionList::AppendReturnStatus(zx_status_t status) {
     Action action;
     action.set_return_status(status);
     return AppendAction(std::move(action));
 }
 
-void ActionList::Take(std::vector<Action>* actions,
-                      std::map<uint64_t, fit::completer<void, std::string>>* local_action_map) {
-    *actions = std::move(actions_);
-    *local_action_map = std::move(local_action_map_);
+// Consume this action list, updating the given |map| and action counter.
+std::vector<ActionList::Action> ActionList::FinalizeActionList(CompleterMap* map,
+                                                               uint64_t* next_action_id) {
+    CompleterMap local_ids;
+    for (auto& action : actions_) {
+        uint64_t* action_id = nullptr;
+        if (action.is_add_device()) {
+            action_id = &action.add_device().action_id;
+        } else if (action.is_remove_device()) {
+            action_id = &action.remove_device().action_id;
+        } else {
+            continue;
+        }
+        uint64_t local_action_id = *action_id;
+        auto itr = local_action_map_.find(local_action_id);
+        ZX_ASSERT(itr != local_action_map_.end());
+        uint64_t remote_action_id = (*next_action_id)++;
+        (*map)[remote_action_id] = std::move(itr->second);
+        local_action_map_.erase(itr);
+        *action_id = remote_action_id;
+    }
+    return std::move(actions_);
 }
 
 } // namespace libdriver_integration_test

@@ -21,7 +21,6 @@ void MockDevice::Bind(HookInvocation record, BindCallback callback)  {
 
 void MockDevice::Release(HookInvocation record) {
     hooks_->Release(record);
-
 }
 
 void MockDevice::GetProtocol(HookInvocation record, uint32_t protocol_id,
@@ -94,25 +93,7 @@ void MockDevice::RemoveDeviceDone(uint64_t action_id) {
 }
 
 std::vector<ActionList::Action> MockDevice::FinalizeActionList(ActionList action_list) {
-    std::vector<ActionList::Action> actions;
-    std::map<uint64_t, fit::completer<void, std::string>> local_ids;
-    action_list.Take(&actions, &local_ids);
-    for (auto& action : actions) {
-        uint64_t local_action_id = 0;
-        if (action.is_add_device()) {
-            local_action_id = action.add_device().action_id;
-        } else if (action.is_remove_device()) {
-            local_action_id = action.remove_device().action_id;
-        } else {
-            continue;
-        }
-        auto itr = local_ids.find(local_action_id);
-        ZX_ASSERT(itr != local_ids.end());
-        uint64_t remote_action_id = next_action_id_++;
-        pending_actions_[remote_action_id] = std::move(itr->second);
-        local_ids.erase(itr);
-    }
-    return actions;
+    return action_list.FinalizeActionList(&pending_actions_, &next_action_id_);
 }
 
 } // namespace libdriver_integration_test

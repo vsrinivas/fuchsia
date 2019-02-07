@@ -97,6 +97,6 @@ interface MockDeviceThread {
     PerformActions(vector<Action>:MAX_ACTIONS actions);
 
     /// Notification that the requested action was done
-    AddDeviceDone(uint64 action_id);
-    RemoveDeviceDone(uint64 action_id);
+    -> AddDeviceDone(uint64 action_id);
+    -> RemoveDeviceDone(uint64 action_id);
 };

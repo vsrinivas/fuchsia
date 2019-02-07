@@ -15,8 +15,9 @@ executable("tests") {
     "basic-lifecycle-test.cc",
     "integration-test.cc",
     "main.cc",
-    "mock-device-hooks.cc",
     "mock-device.cc",
+    "mock-device-hooks.cc",
+    "mock-device-thread.cc",
     "root-mock-device.cc",
   ]
 

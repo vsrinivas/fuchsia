@@ -92,10 +92,10 @@ public:
         Fail(__FUNCTION__);
     }
 
-    void AddDeviceDone(uint64_t action_id) override {
+    void AddDeviceDone(uint64_t action_id) final {
         ZX_ASSERT(false);
     }
-    void RemoveDeviceDone(uint64_t action_id) override {
+    void RemoveDeviceDone(uint64_t action_id) final {
         ZX_ASSERT(false);
     }
 
@@ -207,6 +207,73 @@ public:
     }
 private:
     Callback callback_;
+};
+
+// Class for expecting a sequence of hooks in any order (each once)
+class UnorderedHooks : public MockDeviceHooks {
+public:
+    // Construct a set of hooks that will complete |completer| after they all
+    // run.
+    explicit UnorderedHooks(Completer completer)
+            : MockDeviceHooks(std::move(completer)) { }
+    virtual ~UnorderedHooks() = default;
+
+    void Bind(HookInvocation record, BindCallback callback) override;
+    void Release(HookInvocation record) override;
+    void GetProtocol(HookInvocation record, uint32_t protocol_id,
+                     GetProtocolCallback callback) override;
+    void Open(HookInvocation record, uint32_t flags, OpenCallback callback) override;
+    void OpenAt(HookInvocation record, std::string path, uint32_t flags,
+                OpenAtCallback callback) override;
+    void Close(HookInvocation record, uint32_t flags, CloseCallback callback) override;
+    void Unbind(HookInvocation record, UnbindCallback callback) override;
+    void Read(HookInvocation record, uint64_t count, zx_off_t off,
+                        ReadCallback callback) override;
+    void Write(HookInvocation record, std::vector<uint8_t> buffer, zx_off_t off,
+                   WriteCallback callback) override;
+    void GetSize(HookInvocation record, GetSizeCallback callback) override;
+    void Suspend(HookInvocation record, uint32_t flags, SuspendCallback callback) override;
+    void Resume(HookInvocation record, uint32_t flags, ResumeCallback callback) override;
+    void Ioctl(HookInvocation record, uint32_t op, std::vector<uint8_t> in,
+                   uint64_t out_count, IoctlCallback callback) override;
+    void Message(HookInvocation record, MessageCallback callback) override;
+    void Rxrpc(HookInvocation record, RxrpcCallback callback) override;
+private:
+    // Check if all of the hooks have been run, and if so complete the
+    // completer.
+    void TryFinish();
+
+    fit::function<ActionList(HookInvocation)> bind_;
+    fit::function<void(HookInvocation)> release_;
+    fit::function<ActionList(HookInvocation, uint32_t)> get_protocol_;
+    fit::function<ActionList(HookInvocation, uint32_t)> open_;
+    fit::function<ActionList(HookInvocation, std::string, uint32_t)> open_at_;
+    fit::function<ActionList(HookInvocation, uint32_t)> close_;
+    fit::function<ActionList(HookInvocation)> unbind_;
+    fit::function<ActionList(HookInvocation, uint64_t, zx_off_t)> read_;
+    fit::function<ActionList(HookInvocation, std::vector<uint8_t>, zx_off_t)> write_;
+    fit::function<ActionList(HookInvocation)> get_size_;
+    fit::function<ActionList(HookInvocation, uint32_t)> suspend_;
+    fit::function<ActionList(HookInvocation, uint32_t)> resume_;
+    fit::function<ActionList(HookInvocation, uint32_t, std::vector<uint8_t>, uint64_t)> ioctl_;
+    fit::function<ActionList(HookInvocation)> message_;
+    fit::function<ActionList(HookInvocation)> rxrpc_;
+public:
+    void set_bind(decltype(bind_) hook) { bind_ = std::move(hook); }
+    void set_release(decltype(release_) hook) { release_ = std::move(hook); }
+    void set_get_protocol(decltype(get_protocol_) hook) { get_protocol_ = std::move(hook); }
+    void set_open(decltype(open_) hook) { open_ = std::move(hook); }
+    void set_open_at(decltype(open_at_) hook) { open_at_ = std::move(hook); }
+    void set_close(decltype(close_) hook) { close_ = std::move(hook); }
+    void set_unbind(decltype(unbind_) hook) { unbind_ = std::move(hook); }
+    void set_read(decltype(read_) hook) { read_ = std::move(hook); }
+    void set_write(decltype(write_) hook) { write_ = std::move(hook); }
+    void set_get_size(decltype(get_size_) hook) { get_size_ = std::move(hook); }
+    void set_suspend(decltype(suspend_) hook) { suspend_ = std::move(hook); }
+    void set_resume(decltype(resume_) hook) { resume_ = std::move(hook); }
+    void set_ioctl(decltype(ioctl_) hook) { ioctl_ = std::move(hook); }
+    void set_message(decltype(message_) hook) { message_ = std::move(hook); }
+    void set_rxrpc(decltype(rxrpc_) hook) { rxrpc_ = std::move(hook); }
 };
 
 } // namespace libdriver_integration_test
