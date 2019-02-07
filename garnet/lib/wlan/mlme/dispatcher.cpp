@@ -35,6 +35,7 @@
 
 namespace wlan {
 
+namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_minstrel = ::fuchsia::wlan::minstrel;
 namespace wlan_stats = ::fuchsia::wlan::stats;
@@ -252,6 +253,23 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
         }
 
         resp.bands.push_back(std::move(band));
+    }
+
+    resp.driver_features.resize(0);
+    if (info.driver_features & WLAN_DRIVER_FEATURE_SCAN_OFFLOAD) {
+        resp.driver_features.push_back(wlan_common::DriverFeature::SCAN_OFFLOAD);
+    }
+    if (info.driver_features & WLAN_DRIVER_FEATURE_RATE_SELECTION) {
+        resp.driver_features.push_back(wlan_common::DriverFeature::RATE_SELECTION);
+    }
+    if (info.driver_features & WLAN_DRIVER_FEATURE_SYNTH) {
+        resp.driver_features.push_back(wlan_common::DriverFeature::SYNTH);
+    }
+    if (info.driver_features & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) {
+        resp.driver_features.push_back(wlan_common::DriverFeature::TX_STATUS_REPORT);
+    }
+    if (info.driver_features & WLAN_DRIVER_FEATURE_DFS) {
+        resp.driver_features.push_back(wlan_common::DriverFeature::DFS);
     }
 
     return SendServiceMsg(device_, &resp, fuchsia_wlan_mlme_MLMEQueryDeviceInfoOrdinal, txid);

@@ -4486,6 +4486,9 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
     band->vht_supported = true;
     band->vht_caps = brcmf_get_vht_cap();
 
+    // driver features
+    info->driver_features |= WLAN_DRIVER_FEATURE_DFS;
+
     if (BRCMF_INFO_ON()) {
         brcmf_dump_query_info(info);
     }

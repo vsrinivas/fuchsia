@@ -523,7 +523,8 @@ zx_status_t brcmf_phy_query(void* ctx, wlanphy_info_t* phy_info) {
     memcpy(info->mac_addr, ifp->mac_addr, ETH_ALEN);
     info->mac_role = WLAN_MAC_ROLE_CLIENT | WLAN_MAC_ROLE_AP;
     info->supported_phys = 0x1f; //WLAN_PHY_;
-    info->driver_features = WLAN_DRIVER_FEATURE_SCAN_OFFLOAD;
+    info->driver_features = WLAN_DRIVER_FEATURE_SCAN_OFFLOAD
+        | WLAN_DRIVER_FEATURE_DFS;
     info->caps = 0xf; //WLAN_CAP_;
     info->num_bands = 1;
     info->bands[0].band_id = WLAN_BAND_2GHZ;

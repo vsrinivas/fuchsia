@@ -49,6 +49,7 @@ struct DeviceInfo {
     array<uint8>:6 mac_addr;
     MacRole role;
     vector<BandCapabilities> bands;
+    vector<fuchsia.wlan.common.DriverFeature>:32 driver_features;
 };
 
 // STATS_QUERY.response

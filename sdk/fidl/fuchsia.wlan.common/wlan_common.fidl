@@ -51,3 +51,11 @@ enum ScanType {
     ACTIVE = 1;
     PASSIVE = 2;
 };
+
+enum DriverFeature {
+    SCAN_OFFLOAD = 0;
+    RATE_SELECTION = 1;
+    SYNTH = 2;
+    TX_STATUS_REPORT = 3;
+    DFS = 4;
+};

@@ -21,6 +21,7 @@
 
 namespace wlanphy {
 
+namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_device = ::fuchsia::wlan::device;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
@@ -123,13 +124,22 @@ static void ConvertPhySupportedPhyInfo(::std::vector<wlan_device::SupportedPhy>*
 }
 
 static void ConvertPhyDriverFeaturesInfo(
-    ::std::vector<wlan_device::DriverFeature>* DriverFeatures, uint32_t driver_features_mask) {
+    ::std::vector<wlan_common::DriverFeature>* DriverFeatures, uint32_t driver_features_mask) {
     DriverFeatures->resize(0);
     if (driver_features_mask & WLAN_DRIVER_FEATURE_SCAN_OFFLOAD) {
-        DriverFeatures->push_back(wlan_device::DriverFeature::SCAN_OFFLOAD);
+        DriverFeatures->push_back(wlan_common::DriverFeature::SCAN_OFFLOAD);
     }
     if (driver_features_mask & WLAN_DRIVER_FEATURE_RATE_SELECTION) {
-        DriverFeatures->push_back(wlan_device::DriverFeature::RATE_SELECTION);
+        DriverFeatures->push_back(wlan_common::DriverFeature::RATE_SELECTION);
+    }
+    if (driver_features_mask & WLAN_DRIVER_FEATURE_SYNTH) {
+        DriverFeatures->push_back(wlan_common::DriverFeature::SYNTH);
+    }
+    if (driver_features_mask & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) {
+        DriverFeatures->push_back(wlan_common::DriverFeature::RATE_SELECTION);
+    }
+    if (driver_features_mask & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) {
+        DriverFeatures->push_back(wlan_common::DriverFeature::TX_STATUS_REPORT);
     }
 }
 

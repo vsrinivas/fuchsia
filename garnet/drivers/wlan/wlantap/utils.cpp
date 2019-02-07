@@ -12,6 +12,8 @@
 #include <wlan/protocol/info.h>
 
 namespace wlan {
+
+namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_device = ::fuchsia::wlan::device;
 namespace wlan_tap = ::fuchsia::wlan::tap;
 
@@ -39,21 +41,24 @@ uint16_t ConvertSupportedPhys(const ::std::vector<wlan_device::SupportedPhy>& ph
     return ret;
 }
 
-uint32_t ConvertDriverFeatures(const ::std::vector<wlan_device::DriverFeature>& dfs) {
+uint32_t ConvertDriverFeatures(const ::std::vector<wlan_common::DriverFeature>& dfs) {
     uint32_t ret = 0;
     for (auto df : dfs) {
         switch (df) {
-        case wlan_device::DriverFeature::SCAN_OFFLOAD:
+        case wlan_common::DriverFeature::SCAN_OFFLOAD:
             ret |= WLAN_DRIVER_FEATURE_SCAN_OFFLOAD;
             break;
-        case wlan_device::DriverFeature::RATE_SELECTION:
+        case wlan_common::DriverFeature::RATE_SELECTION:
             ret |= WLAN_DRIVER_FEATURE_RATE_SELECTION;
             break;
-        case wlan_device::DriverFeature::SYNTH:
+        case wlan_common::DriverFeature::SYNTH:
             ret |= WLAN_DRIVER_FEATURE_SYNTH;
             break;
-        case wlan_device::DriverFeature::TX_STATUS_REPORT:
+        case wlan_common::DriverFeature::TX_STATUS_REPORT:
             ret |= WLAN_DRIVER_FEATURE_TX_STATUS_REPORT;
+            break;
+        case wlan_common::DriverFeature::DFS:
+            ret |= WLAN_DRIVER_FEATURE_DFS;
             break;
         }
     }

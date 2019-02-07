@@ -394,6 +394,7 @@ typedef struct wlanif_query_info {
     uint32_t features;  // WLANIF_FEATURE_*
     size_t num_bands;
     wlanif_band_capabilities_t bands[WLAN_MAX_BANDS];
+    uint32_t driver_features;  // WLAN_DRIVER_FEATURE_*
 } wlanif_query_info_t;
 
 typedef struct wlanif_counter {

@@ -16,6 +16,7 @@
 
 namespace wlanif {
 
+namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
@@ -554,6 +555,24 @@ void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
     fidl_resp.bands.resize(query_info_.num_bands);
     for (size_t ndx = 0; ndx < query_info_.num_bands; ndx++) {
         ConvertBandCapabilities(&fidl_resp.bands[ndx], query_info_.bands[ndx]);
+    }
+
+    // driver features flag
+    fidl_resp.driver_features.resize(0);
+    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_SCAN_OFFLOAD) {
+        fidl_resp.driver_features.push_back(wlan_common::DriverFeature::SCAN_OFFLOAD);
+    }
+    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_RATE_SELECTION) {
+        fidl_resp.driver_features.push_back(wlan_common::DriverFeature::RATE_SELECTION);
+    }
+    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_SYNTH) {
+        fidl_resp.driver_features.push_back(wlan_common::DriverFeature::SYNTH);
+    }
+    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) {
+        fidl_resp.driver_features.push_back(wlan_common::DriverFeature::TX_STATUS_REPORT);
+    }
+    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_DFS) {
+        fidl_resp.driver_features.push_back(wlan_common::DriverFeature::DFS);
     }
 
     cb(std::move(fidl_resp));

@@ -108,6 +108,10 @@ enum {
     // Driver supports transmission reports, and will use the wlanmac_ifc.report_tx_status()
     // callback to report the status of each queued transmission.
     WLAN_DRIVER_FEATURE_TX_STATUS_REPORT = (1 << 3),
+    // Set this flag to indicate whether SME should trust this device or driver to handle DFS
+    // channels correctly in an active scan (e.g. it makes sure DFS channel is safe to transmit
+    // before doing so).
+    WLAN_DRIVER_FEATURE_DFS = (1 << 4),
 };
 
 // Mac roles: a device may support multiple roles, but an interface is instantiated with
