@@ -93,7 +93,4 @@ disabled_for_asan = [
 
   # ZX-3384
   "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks",
-
-  # CONN-14
-  "/system/test/wlan_client_mlme_unittest",
 ]
