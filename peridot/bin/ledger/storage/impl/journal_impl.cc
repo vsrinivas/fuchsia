@@ -20,17 +20,45 @@
 
 namespace storage {
 
+namespace {
+class JournalEntriesIterator : public Iterator<const storage::EntryChange> {
+ public:
+  JournalEntriesIterator(std::map<std::string, EntryChange>& journal_entries)
+      : it_(journal_entries.begin()), end_(journal_entries.end()) {}
+
+  ~JournalEntriesIterator() override {}
+
+  Iterator<const storage::EntryChange>& Next() override {
+    FXL_DCHECK(Valid()) << "Iterator::Next iterator not valid";
+    ++it_;
+    return *this;
+  }
+
+  bool Valid() const override { return it_ != end_; }
+
+  Status GetStatus() const override { return Status::OK; }
+
+  const storage::EntryChange& operator*() const override { return it_->second; }
+  const storage::EntryChange* operator->() const override {
+    return &(it_->second);
+  }
+
+ private:
+  std::map<std::string, EntryChange>::const_iterator it_;
+  std::map<std::string, EntryChange>::const_iterator end_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(JournalEntriesIterator);
+};
+}  // namespace
+
 JournalImpl::JournalImpl(Token /* token */, JournalType type,
                          ledger::Environment* environment,
-                         PageStorageImpl* page_storage, JournalId id,
-                         CommitId base)
+                         PageStorageImpl* page_storage, CommitId base)
     : type_(type),
       environment_(environment),
       page_storage_(page_storage),
-      id_(std::move(id)),
       base_(std::move(base)),
-      valid_(true),
-      failed_operation_(false) {}
+      valid_(true) {}
 
 JournalImpl::~JournalImpl() {
   // Log a warning if the journal was not committed or rolled back.
@@ -42,158 +70,99 @@ JournalImpl::~JournalImpl() {
 std::unique_ptr<Journal> JournalImpl::Simple(JournalType type,
                                              ledger::Environment* environment,
                                              PageStorageImpl* page_storage,
-                                             const JournalId& id,
                                              const CommitId& base) {
   return std::make_unique<JournalImpl>(Token(), type, environment, page_storage,
-                                       id, base);
+                                       base);
 }
 
 std::unique_ptr<Journal> JournalImpl::Merge(ledger::Environment* environment,
                                             PageStorageImpl* page_storage,
-                                            const JournalId& id,
                                             const CommitId& base,
                                             const CommitId& other) {
-  auto journal = std::make_unique<JournalImpl>(
-      Token(), JournalType::EXPLICIT, environment, page_storage, id, base);
+  auto journal = std::make_unique<JournalImpl>(Token(), JournalType::EXPLICIT,
+                                               environment, page_storage, base);
   journal->other_ = std::make_unique<CommitId>(other);
   return journal;
 }
 
-const JournalId& JournalImpl::GetId() const { return id_; }
-
 void JournalImpl::Commit(
     fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
-  serializer_.Serialize<Status, std::unique_ptr<const storage::Commit>>(
-      std::move(callback),
-      [this](fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
-                 callback) {
-        if (!StateAllowsMutation()) {
-          callback(Status::ILLEGAL_STATE, nullptr);
+  FXL_DCHECK(valid_);
+  valid_ = false;
+
+  GetParents(
+      [this, callback = std::move(callback)](
+          Status status,
+          std::vector<std::unique_ptr<const storage::Commit>> parents) mutable {
+        if (status != Status::OK) {
+          callback(status, nullptr);
+          return;
+        }
+        auto changes =
+            std::make_unique<JournalEntriesIterator>(journal_entries_);
+
+        if (cleared_ == JournalContainsClearOperation::NO) {
+          // The journal doesn't contain the clear operation. The changes
+          // recorded on the journal need to be executed over the content of
+          // the first parent.
+          ObjectIdentifier root_identifier = parents[0]->GetRootIdentifier();
+          CreateCommitFromChanges(std::move(parents),
+                                  std::move(root_identifier),
+                                  std::move(changes), std::move(callback));
           return;
         }
 
-        GetParents([this, callback = std::move(callback)](
-                       Status status,
-                       std::vector<std::unique_ptr<const storage::Commit>>
-                           parents) mutable {
-          if (status != Status::OK) {
-            callback(status, nullptr);
-            return;
-          }
-          page_storage_->GetJournalEntries(
-              id_, [this, parents = std::move(parents),
-                    callback = std::move(callback)](
-                       Status status,
-                       std::unique_ptr<Iterator<const EntryChange>> changes,
-                       JournalContainsClearOperation
-                           contains_clear_operation) mutable {
-                if (status != Status::OK) {
-                  callback(status, nullptr);
-                  return;
-                }
-                if (contains_clear_operation ==
-                    JournalContainsClearOperation::NO) {
-                  // The journal doesn't contain the clear operation. The
-                  // changes recorded on the journal need to be executed
-                  // over the content of the first parent.
-                  ObjectIdentifier root_identifier =
-                      parents[0]->GetRootIdentifier();
-                  CreateCommitFromChanges(
-                      std::move(parents), std::move(root_identifier),
-                      std::move(changes), std::move(callback));
-                  return;
-                }
-
-                // The journal contains the clear operation. The changes
-                // recorded on the journal need to be executed over an empty
-                // page.
-                btree::TreeNode::Empty(
-                    page_storage_,
-                    [this, parents = std::move(parents),
-                     changes = std::move(changes),
-                     callback = std::move(callback)](
-                        Status status,
-                        ObjectIdentifier root_identifier) mutable {
-                      if (status != Status::OK) {
-                        callback(status, nullptr);
-                        return;
-                      }
-                      CreateCommitFromChanges(
-                          std::move(parents), std::move(root_identifier),
-                          std::move(changes), std::move(callback));
-                    });
-              });
-        });
+        // The journal contains the clear operation. The changes recorded on the
+        // journal need to be executed over an empty page.
+        btree::TreeNode::Empty(
+            page_storage_,
+            [this, parents = std::move(parents), changes = std::move(changes),
+             callback = std::move(callback)](
+                Status status, ObjectIdentifier root_identifier) mutable {
+              if (status != Status::OK) {
+                callback(status, nullptr);
+                return;
+              }
+              CreateCommitFromChanges(std::move(parents),
+                                      std::move(root_identifier),
+                                      std::move(changes), std::move(callback));
+            });
       });
 }
 
 void JournalImpl::Rollback(fit::function<void(Status)> callback) {
-  serializer_.Serialize<Status>(std::move(callback),
-                                [this](fit::function<void(Status)> callback) {
-                                  RollbackInternal(std::move(callback));
-                                });
+  FXL_DCHECK(valid_);
+  valid_ = false;
+  callback(Status::OK);
 }
 
 void JournalImpl::Put(convert::ExtendedStringView key,
                       ObjectIdentifier object_identifier, KeyPriority priority,
                       fit::function<void(Status)> callback) {
-  serializer_.Serialize<Status>(
-      std::move(callback),
-      [this, key = key.ToString(),
-       object_identifier = std::move(object_identifier),
-       priority](fit::function<void(Status)> callback) mutable {
-        if (!StateAllowsMutation()) {
-          callback(Status::ILLEGAL_STATE);
-          return;
-        }
-        page_storage_->AddJournalEntry(
-            id_, key, std::move(object_identifier), priority,
-            [this, callback = std::move(callback)](Status s) {
-              if (s != Status::OK) {
-                failed_operation_ = true;
-              }
-              callback(s);
-            });
-      });
+  FXL_DCHECK(StateAllowsMutation());
+  EntryChange change;
+  change.entry = {key.ToString(), std::move(object_identifier), priority};
+  change.deleted = false;
+  journal_entries_[key.ToString()] = std::move(change);
+  callback(Status::OK);
 }
 
 void JournalImpl::Delete(convert::ExtendedStringView key,
                          fit::function<void(Status)> callback) {
-  serializer_.Serialize<Status>(
-      std::move(callback),
-      [this, key = key.ToString()](fit::function<void(Status)> callback) {
-        if (!StateAllowsMutation()) {
-          callback(Status::ILLEGAL_STATE);
-          return;
-        }
-
-        page_storage_->RemoveJournalEntry(
-            id_, key, [this, callback = std::move(callback)](Status s) {
-              if (s != Status::OK) {
-                failed_operation_ = true;
-              }
-              callback(s);
-            });
-      });
+  FXL_DCHECK(StateAllowsMutation());
+  EntryChange change;
+  change.entry = {key.ToString(), ObjectIdentifier(), KeyPriority::EAGER};
+  change.deleted = true;
+  journal_entries_[key.ToString()] = std::move(change);
+  callback(Status::OK);
 }
 
 void JournalImpl::Clear(fit::function<void(Status)> callback) {
-  serializer_.Serialize<Status>(
-      std::move(callback), [this](fit::function<void(Status)> callback) {
-        if (!StateAllowsMutation()) {
-          callback(Status::ILLEGAL_STATE);
-          return;
-        }
-
-        page_storage_->EmptyJournalAndMarkContainsClearOperation(
-            id_, [this, callback = std::move(callback)](Status s) {
-              if (s != Status::OK) {
-                failed_operation_ = true;
-              }
-              callback(s);
-            });
-      });
+  FXL_DCHECK(StateAllowsMutation());
+  cleared_ = JournalContainsClearOperation::YES;
+  journal_entries_.clear();
+  callback(Status::OK);
 }
 
 void JournalImpl::GetParents(
@@ -226,7 +195,8 @@ void JournalImpl::CreateCommitFromChanges(
           callback(status, nullptr);
           return;
         }
-        // If the commit is a no-op, return early.
+        // If the commit is a no-op, return early, without creating a new
+        // commit.
         if (parents.size() == 1 &&
             parents.front()->GetRootIdentifier() == object_identifier) {
           // |new_nodes| can be ignored here. If a clear operation has been
@@ -234,57 +204,40 @@ void JournalImpl::CreateCommitFromChanges(
           // transaction, |ApplyChanges| might have re-created some nodes that
           // already exist. Because they already exist in a pre-existing commit,
           // there is no need to update their state.
-
-          // We are in an operation from the serializer: make sure not to sent
-          // the rollback operation in the serializer as well, or a deadlock
-          // will be created.
-          RollbackInternal(
-              [parent = std::move(parents.front()),
-               callback = std::move(callback)](Status status) mutable {
-                callback(status, std::move(parent));
-              });
+          callback(Status::OK, std::move(parents.front()));
           return;
         }
         std::unique_ptr<const storage::Commit> commit =
             CommitImpl::FromContentAndParents(environment_->clock(),
                                               page_storage_, object_identifier,
                                               std::move(parents));
-        GetObjectsToSync([this, new_nodes = std::move(new_nodes),
-                          commit = std::move(commit),
-                          callback = std::move(callback)](
-                             Status status, std::vector<ObjectIdentifier>
-                                                objects_to_sync) mutable {
-          if (status != Status::OK) {
-            callback(status, nullptr);
-            return;
-          }
+        GetObjectsToSync(
+            [this, new_nodes = std::move(new_nodes), commit = std::move(commit),
+             callback = std::move(callback)](
+                Status status,
+                std::vector<ObjectIdentifier> objects_to_sync) mutable {
+              if (status != Status::OK) {
+                callback(status, nullptr);
+                return;
+              }
 
-          objects_to_sync.reserve(objects_to_sync.size() + new_nodes.size());
-          // TODO(qsr): When using C++17, move data out of the set using
-          // extract.
-          objects_to_sync.insert(objects_to_sync.end(), new_nodes.begin(),
-                                 new_nodes.end());
-          page_storage_->AddCommitFromLocal(
-              commit->Clone(), std::move(objects_to_sync),
-              [this, commit = std::move(commit),
-               callback = std::move(callback)](Status status) mutable {
-                valid_ = false;
-                if (status != Status::OK) {
-                  callback(status, nullptr);
-                  return;
-                }
-                page_storage_->RemoveJournal(
-                    id_,
-                    [commit = std::move(commit),
-                     callback = std::move(callback)](Status status) mutable {
-                      if (status != Status::OK) {
-                        FXL_LOG(INFO)
-                            << "Commit created, but failed to delete journal.";
-                      }
-                      callback(Status::OK, std::move(commit));
-                    });
-              });
-        });
+              objects_to_sync.reserve(objects_to_sync.size() +
+                                      new_nodes.size());
+              // TODO(qsr): When using C++17, move data out of the set using
+              // extract.
+              objects_to_sync.insert(objects_to_sync.end(), new_nodes.begin(),
+                                     new_nodes.end());
+              page_storage_->AddCommitFromLocal(
+                  commit->Clone(), std::move(objects_to_sync),
+                  [commit = std::move(commit),
+                   callback = std::move(callback)](Status status) mutable {
+                    if (status != Status::OK) {
+                      callback(status, nullptr);
+                      return;
+                    }
+                    callback(Status::OK, std::move(commit));
+                  });
+            });
       });
 }
 
@@ -292,71 +245,42 @@ void JournalImpl::GetObjectsToSync(
     fit::function<void(Status status,
                        std::vector<ObjectIdentifier> objects_to_sync)>
         callback) {
-  page_storage_->GetJournalEntries(
-      id_, [this, callback = std::move(callback)](
-               Status s, std::unique_ptr<Iterator<const EntryChange>> entries,
-               JournalContainsClearOperation contains_clear_operation) mutable {
-        if (s != Status::OK) {
-          callback(s, {});
+  auto waiter = fxl::MakeRefCounted<callback::Waiter<Status, bool>>(Status::OK);
+  std::vector<ObjectIdentifier> added_values;
+  for (auto const& journal_entry : journal_entries_) {
+    if (journal_entry.second.deleted) {
+      continue;
+    }
+    added_values.push_back(journal_entry.second.entry.object_identifier);
+    page_storage_->ObjectIsUntracked(added_values.back(),
+                                     waiter->NewCallback());
+  }
+  waiter->Finalize(
+      [added_values = std::move(added_values), callback = std::move(callback)](
+          Status status, std::vector<bool> is_untracked) {
+        if (status != Status::OK) {
+          callback(status, {});
           return;
         }
-        // Compute the key-value pairs added in this journal.
-        std::map<std::string, ObjectIdentifier> key_values;
-        while (entries->Valid()) {
-          const Entry& entry = (*entries)->entry;
-          if ((*entries)->deleted) {
-            key_values.erase(entry.key);
-          } else {
-            key_values[entry.key] = entry.object_identifier;
-          }
-          entries->Next();
-        }
-        auto waiter =
-            fxl::MakeRefCounted<callback::Waiter<Status, bool>>(Status::OK);
-        for (const auto& key_value : key_values) {
-          page_storage_->ObjectIsUntracked(key_value.second,
-                                           waiter->NewCallback());
-        }
-        waiter->Finalize([key_values = std::move(key_values),
-                          callback = std::move(callback)](
-                             Status s, std::vector<bool> is_untracked) {
-          if (s != Status::OK) {
-            callback(s, {});
-            return;
-          }
-          // Compute the set of values.
-          std::set<ObjectIdentifier> result_set;
-          size_t i = 0;
-          for (const auto& key_value : key_values) {
-            // Only untracked objects should be synced.
-            if (is_untracked[i++]) {
-              result_set.insert(key_value.second);
-            }
-          }
-          std::vector<ObjectIdentifier> objects_to_sync;
-          std::copy(result_set.begin(), result_set.end(),
-                    std::back_inserter(objects_to_sync));
-          callback(Status::OK, std::move(objects_to_sync));
-        });
-      });
-}
+        FXL_DCHECK(added_values.size() == is_untracked.size());
 
-void JournalImpl::RollbackInternal(fit::function<void(Status)> callback) {
-  if (!valid_) {
-    callback(Status::ILLEGAL_STATE);
-    return;
-  }
-  page_storage_->RemoveJournal(
-      id_, [this, callback = std::move(callback)](Status s) {
-        if (s == Status::OK) {
-          valid_ = false;
+        // Only untracked objects should be synced.
+        std::vector<ObjectIdentifier> objects_to_sync;
+        for (size_t i = 0; i < is_untracked.size(); ++i) {
+          if (is_untracked[i]) {
+            objects_to_sync.push_back(std::move(added_values[i]));
+          }
         }
-        callback(s);
+        callback(Status::OK, std::move(objects_to_sync));
       });
 }
 
 bool JournalImpl::StateAllowsMutation() {
-  return valid_ && (type_ == JournalType::IMPLICIT || !failed_operation_);
+  // If the journal is IMPLICIT, it can only have a single mutation operation
+  // applied.
+  return valid_ && (type_ == JournalType::EXPLICIT ||
+                    (journal_entries_.empty() &&
+                     cleared_ == JournalContainsClearOperation::NO));
 }
 
 }  // namespace storage

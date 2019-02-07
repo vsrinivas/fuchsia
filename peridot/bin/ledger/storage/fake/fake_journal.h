@@ -36,7 +36,6 @@ class FakeJournal : public Journal {
   void Delete(convert::ExtendedStringView key,
               fit::function<void(Status)> callback) override;
   void Clear(fit::function<void(Status)> callback) override;
-  const JournalId& GetId() const override;
 
  private:
   FakeJournalDelegate* delegate_;

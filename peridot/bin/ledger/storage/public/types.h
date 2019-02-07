@@ -18,8 +18,6 @@ using PageId = std::string;
 using PageIdView = convert::ExtendedStringView;
 using CommitId = std::string;
 using CommitIdView = convert::ExtendedStringView;
-using JournalId = std::string;
-using JournalIdView = convert::ExtendedStringView;
 
 // The type of object.
 // Ledger stores user created content on BTrees, where the nodes (TREE_NODE

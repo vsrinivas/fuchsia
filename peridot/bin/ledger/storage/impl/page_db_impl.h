@@ -36,15 +36,6 @@ class PageDbImpl : public PageDb {
   Status GetCommitStorageBytes(coroutine::CoroutineHandler* handler,
                                CommitIdView commit_id,
                                std::string* storage_bytes) override;
-  Status GetImplicitJournalIds(coroutine::CoroutineHandler* handler,
-                               std::vector<JournalId>* journal_ids) override;
-  Status GetBaseCommitForJournal(coroutine::CoroutineHandler* handler,
-                                 const JournalId& journal_id,
-                                 CommitId* base) override;
-  Status GetJournalEntries(
-      coroutine::CoroutineHandler* handler, const JournalId& journal_id,
-      std::unique_ptr<Iterator<const EntryChange>>* entries,
-      JournalContainsClearOperation* contains_clear_operation) override;
   Status ReadObject(coroutine::CoroutineHandler* handler,
                     ObjectIdentifier object_identifier,
                     std::unique_ptr<const Object>* object) override;
@@ -78,22 +69,6 @@ class PageDbImpl : public PageDb {
                                fxl::StringView storage_bytes) override;
   Status RemoveCommit(coroutine::CoroutineHandler* handler,
                       const CommitId& commit_id) override;
-  Status CreateJournalId(coroutine::CoroutineHandler* handler,
-                         JournalType journal_type, const CommitId& base,
-                         JournalId* journal_id) override;
-  Status RemoveExplicitJournals(coroutine::CoroutineHandler* handler) override;
-  Status RemoveJournal(coroutine::CoroutineHandler* handler,
-                       const JournalId& journal_id) override;
-  Status AddJournalEntry(coroutine::CoroutineHandler* handler,
-                         const JournalId& journal_id, fxl::StringView key,
-                         const ObjectIdentifier& object_identifier,
-                         KeyPriority priority) override;
-  Status RemoveJournalEntry(coroutine::CoroutineHandler* handler,
-                            const JournalId& journal_id,
-                            convert::ExtendedStringView key) override;
-  Status EmptyJournalAndMarkContainsClearOperation(
-      coroutine::CoroutineHandler* handler,
-      const JournalId& journal_id) override;
   Status WriteObject(coroutine::CoroutineHandler* handler,
                      ObjectIdentifier object_identifier,
                      std::unique_ptr<DataSource::DataChunk> content,

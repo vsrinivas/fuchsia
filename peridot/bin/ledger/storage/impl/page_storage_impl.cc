@@ -197,48 +197,19 @@ void PageStorageImpl::AddCommitsFromSync(
       });
 }
 
+// TODO(nellyv): Remove the callback: The operation is synchronous.
 void PageStorageImpl::StartCommit(
     const CommitId& commit_id, JournalType journal_type,
     fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
-  coroutine_manager_.StartCoroutine(
-      std::move(callback),
-      [this, commit_id, journal_type](
-          CoroutineHandler* handler,
-          fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
-        JournalId journal_id;
-        Status status =
-            db_->CreateJournalId(handler, journal_type, commit_id, &journal_id);
-        if (status != Status::OK) {
-          callback(status, nullptr);
-          return;
-        }
-
-        std::unique_ptr<Journal> journal = JournalImpl::Simple(
-            journal_type, environment_, this, journal_id, commit_id);
-        callback(Status::OK, std::move(journal));
-      });
+  callback(Status::OK,
+           JournalImpl::Simple(journal_type, environment_, this, commit_id));
 }
 
+// TODO(nellyv): Remove the callback: The operation is synchronous.
 void PageStorageImpl::StartMergeCommit(
     const CommitId& left, const CommitId& right,
     fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
-  coroutine_manager_.StartCoroutine(
-      std::move(callback),
-      [this, left, right](
-          CoroutineHandler* handler,
-          fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
-        JournalId journal_id;
-        Status status = db_->CreateJournalId(handler, JournalType::EXPLICIT,
-                                             left, &journal_id);
-        if (status != Status::OK) {
-          callback(status, nullptr);
-          return;
-        }
-
-        std::unique_ptr<Journal> journal =
-            JournalImpl::Merge(environment_, this, journal_id, left, right);
-        callback(Status::OK, std::move(journal));
-      });
+  callback(Status::OK, JournalImpl::Merge(environment_, this, left, right));
 }
 
 void PageStorageImpl::CommitJournal(
@@ -249,20 +220,13 @@ void PageStorageImpl::CommitJournal(
   auto managed_journal = managed_container_.Manage(std::move(journal));
   JournalImpl* journal_ptr = static_cast<JournalImpl*>(managed_journal->get());
 
+  // |managed_journal| needs to be kept in memory until |Commit| has finished
+  // execution.
   journal_ptr->Commit(
-      [journal_ptr, managed_journal = std::move(managed_journal),
+      [managed_journal = std::move(managed_journal),
        callback = std::move(callback)](
           Status status, std::unique_ptr<const Commit> commit) mutable {
-        if (status != Status::OK) {
-          // Commit failed, roll the journal back.
-          journal_ptr->Rollback(
-              [status, managed_journal = std::move(managed_journal),
-               callback = std::move(callback)](Status /*rollback_status*/) {
-                callback(status, nullptr);
-              });
-          return;
-        }
-        callback(Status::OK, std::move(commit));
+        callback(status, std::move(commit));
       });
 }
 
@@ -704,74 +668,6 @@ void PageStorageImpl::GetThreeWayContentsDiff(
       std::move(min_key), std::move(on_next_diff), std::move(on_done));
 }
 
-void PageStorageImpl::GetJournalEntries(
-    const JournalId& journal_id,
-    fit::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>,
-                       JournalContainsClearOperation contains_clear_operation)>
-        callback) {
-  coroutine_manager_.StartCoroutine(
-      std::move(callback),
-      [this, journal_id](
-          CoroutineHandler* handler,
-          fit::function<void(
-              Status, std::unique_ptr<Iterator<const EntryChange>>,
-              JournalContainsClearOperation contains_clear_operation)>
-              callback) {
-        std::unique_ptr<Iterator<const EntryChange>> entries;
-        JournalContainsClearOperation contains_clear_operation;
-        Status s = db_->GetJournalEntries(handler, journal_id, &entries,
-                                          &contains_clear_operation);
-        callback(s, std::move(entries), contains_clear_operation);
-      });
-}
-
-void PageStorageImpl::AddJournalEntry(const JournalId& journal_id,
-                                      fxl::StringView key,
-                                      ObjectIdentifier object_identifier,
-                                      KeyPriority priority,
-                                      fit::function<void(Status)> callback) {
-  coroutine_manager_.StartCoroutine(
-      std::move(callback),
-      [this, journal_id, key = key.ToString(),
-       object_identifier = std::move(object_identifier), priority](
-          CoroutineHandler* handler, fit::function<void(Status)> callback) {
-        callback(db_->AddJournalEntry(handler, journal_id, key,
-                                      object_identifier, priority));
-      });
-}
-
-void PageStorageImpl::RemoveJournalEntry(const JournalId& journal_id,
-                                         convert::ExtendedStringView key,
-                                         fit::function<void(Status)> callback) {
-  coroutine_manager_.StartCoroutine(
-      std::move(callback),
-      [this, journal_id, key = key.ToString()](
-          CoroutineHandler* handler, fit::function<void(Status)> callback) {
-        callback(db_->RemoveJournalEntry(handler, journal_id, key));
-      });
-}
-
-void PageStorageImpl::EmptyJournalAndMarkContainsClearOperation(
-    const JournalId& journal_id, fit::function<void(Status)> callback) {
-  coroutine_manager_.StartCoroutine(
-      std::move(callback),
-      [this, journal_id](CoroutineHandler* handler,
-                         fit::function<void(Status)> callback) {
-        callback(db_->EmptyJournalAndMarkContainsClearOperation(handler,
-                                                                journal_id));
-      });
-}
-
-void PageStorageImpl::RemoveJournal(const JournalId& journal_id,
-                                    fit::function<void(Status)> callback) {
-  coroutine_manager_.StartCoroutine(
-      std::move(callback),
-      [this, journal_id](CoroutineHandler* handler,
-                         fit::function<void(Status)> callback) {
-        callback(db_->RemoveJournal(handler, journal_id));
-      });
-}
-
 void PageStorageImpl::NotifyWatchersOfNewCommits(
     const std::vector<std::unique_ptr<const Commit>>& new_commits,
     ChangeSource source) {
@@ -1122,53 +1018,7 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
   }
 
   // Cache whether this page is online or not.
-  s = db_->IsPageOnline(handler, &page_is_online_);
-  if (s != Status::OK) {
-    return s;
-  }
-
-  // Remove uncommited explicit journals.
-  if (db_->RemoveExplicitJournals(handler) == Status::INTERRUPTED) {
-    // Only fail if the handler is invalidated. Otherwise, failure to remove
-    // explicit journals should not block the initalization.
-    return Status::INTERRUPTED;
-  }
-
-  // Commit uncommited implicit journals.
-  std::vector<JournalId> journal_ids;
-  s = db_->GetImplicitJournalIds(handler, &journal_ids);
-  if (s != Status::OK) {
-    return s;
-  }
-
-  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
-  for (JournalId& id : journal_ids) {
-    CommitId base;
-    s = db_->GetBaseCommitForJournal(handler, id, &base);
-    if (s != Status::OK) {
-      FXL_LOG(ERROR) << "Failed to get implicit journal with status " << s
-                     << ". journal id: " << id;
-      return s;
-    }
-    std::unique_ptr<Journal> journal = JournalImpl::Simple(
-        JournalType::IMPLICIT, environment_, this, id, base);
-
-    CommitJournal(
-        std::move(journal), [status_callback = waiter->NewCallback()](
-                                Status status, std::unique_ptr<const Commit>) {
-          if (status != Status::OK) {
-            FXL_LOG(ERROR) << "Failed to commit implicit journal created in "
-                              "previous Ledger execution.";
-          }
-          status_callback(status);
-        });
-  }
-
-  if (coroutine::Wait(handler, std::move(waiter), &s) ==
-      coroutine::ContinuationStatus::INTERRUPTED) {
-    return Status::INTERRUPTED;
-  }
-  return s;
+  return db_->IsPageOnline(handler, &page_is_online_);
 }
 
 Status PageStorageImpl::SynchronousGetCommit(

@@ -8,14 +8,12 @@
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/page_db.h"
 #include "peridot/bin/ledger/storage/public/db.h"
-#include "peridot/lib/rng/random.h"
 
 namespace storage {
 
 class PageDbBatchImpl : public PageDb::Batch {
  public:
-  explicit PageDbBatchImpl(rng::Random* random,
-                           std::unique_ptr<Db::Batch> batch, PageDb* db);
+  explicit PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* db);
   ~PageDbBatchImpl() override;
 
   // Heads.
@@ -34,26 +32,6 @@ class PageDbBatchImpl : public PageDb::Batch {
                                fxl::StringView storage_bytes) override;
   Status RemoveCommit(coroutine::CoroutineHandler* handler,
                       const CommitId& commit_id) override;
-
-  // Journals.
-  Status CreateJournalId(coroutine::CoroutineHandler* handler,
-                         JournalType journal_type, const CommitId& base,
-                         JournalId* journal_id) override;
-  Status RemoveExplicitJournals(coroutine::CoroutineHandler* handler) override;
-  Status RemoveJournal(coroutine::CoroutineHandler* handler,
-                       const JournalId& journal_id) override;
-
-  // Journal entries.
-  Status AddJournalEntry(coroutine::CoroutineHandler* handler,
-                         const JournalId& journal_id, fxl::StringView key,
-                         const ObjectIdentifier& object_identifier,
-                         KeyPriority priority) override;
-  Status RemoveJournalEntry(coroutine::CoroutineHandler* handler,
-                            const JournalId& journal_id,
-                            convert::ExtendedStringView key) override;
-  Status EmptyJournalAndMarkContainsClearOperation(
-      coroutine::CoroutineHandler* handler,
-      const JournalId& journal_id) override;
 
   // Object data.
   Status WriteObject(coroutine::CoroutineHandler* handler,
@@ -84,7 +62,6 @@ class PageDbBatchImpl : public PageDb::Batch {
   Status DCheckHasObject(coroutine::CoroutineHandler* handler,
                          const ObjectDigest& key);
 
-  rng::Random* const random_;
   std::unique_ptr<Db::Batch> batch_;
   PageDb* const db_;
 

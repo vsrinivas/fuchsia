@@ -11,7 +11,6 @@
 
 #include "peridot/bin/ledger/storage/impl/data_serialization.h"
 #include "peridot/bin/ledger/storage/impl/db_serialization.h"
-#include "peridot/bin/ledger/storage/impl/journal_impl.h"
 #include "peridot/bin/ledger/storage/impl/object_identifier_encoding.h"
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "peridot/bin/ledger/storage/impl/page_db_batch_impl.h"
@@ -54,65 +53,6 @@ void ExtractSortedCommitsIds(
   }
 }
 
-class JournalEntryIterator final : public Iterator<const EntryChange> {
- public:
-  explicit JournalEntryIterator(
-      std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
-                                               convert::ExtendedStringView>>>
-          it)
-      : it_(std::move(it)) {
-    PrepareEntry();
-  }
-
-  ~JournalEntryIterator() override {}
-
-  Iterator<const EntryChange>& Next() override {
-    it_->Next();
-    PrepareEntry();
-    return *this;
-  }
-
-  bool Valid() const override { return it_->Valid(); }
-
-  Status GetStatus() const override { return it_->GetStatus(); }
-
-  const EntryChange& operator*() const override { return *(change_.get()); }
-  const EntryChange* operator->() const override { return change_.get(); }
-
- private:
-  void PrepareEntry() {
-    if (!JournalEntryIterator::Valid()) {
-      change_.reset(nullptr);
-      return;
-    }
-    change_ = std::make_unique<EntryChange>();
-
-    const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>&
-        key_value = **it_;
-    change_->entry.key =
-        key_value.first.substr(JournalEntryRow::kPrefixSize).ToString();
-
-    if (key_value.second[0] == JournalEntryRow::kAddPrefix) {
-      Status status = JournalEntryRow::ExtractObjectIdentifier(
-          key_value.second, &change_->entry.object_identifier);
-      FXL_DCHECK(status == Status::OK);
-      change_->deleted = false;
-      change_->entry.priority =
-          (key_value.second[1] == JournalEntryRow::kLazyPrefix)
-              ? KeyPriority::LAZY
-              : KeyPriority::EAGER;
-    } else {
-      change_->deleted = true;
-    }
-  }
-
-  std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
-                                           convert::ExtendedStringView>>>
-      it_;
-
-  std::unique_ptr<EntryChange> change_;
-};
-
 }  // namespace
 
 PageDbImpl::PageDbImpl(ledger::Environment* environment, std::unique_ptr<Db> db)
@@ -127,8 +67,7 @@ Status PageDbImpl::StartBatch(coroutine::CoroutineHandler* handler,
                               std::unique_ptr<Batch>* batch) {
   std::unique_ptr<Db::Batch> db_batch;
   RETURN_ON_ERROR(db_->StartBatch(handler, &db_batch));
-  *batch = std::make_unique<PageDbBatchImpl>(environment_->random(),
-                                             std::move(db_batch), this);
+  *batch = std::make_unique<PageDbBatchImpl>(std::move(db_batch), this);
   return Status::OK;
 }
 
@@ -153,43 +92,6 @@ Status PageDbImpl::GetCommitStorageBytes(CoroutineHandler* handler,
                                          CommitIdView commit_id,
                                          std::string* storage_bytes) {
   return db_->Get(handler, CommitRow::GetKeyFor(commit_id), storage_bytes);
-}
-
-Status PageDbImpl::GetImplicitJournalIds(CoroutineHandler* handler,
-                                         std::vector<JournalId>* journal_ids) {
-  return db_->GetByPrefix(handler,
-                          convert::ToSlice(ImplicitJournalMetadataRow::kPrefix),
-                          journal_ids);
-}
-
-Status PageDbImpl::GetBaseCommitForJournal(CoroutineHandler* handler,
-                                           const JournalId& journal_id,
-                                           CommitId* base) {
-  FXL_DCHECK(journal_id.size() == JournalEntryRow::kJournalIdSize);
-  FXL_DCHECK(journal_id[0] == JournalEntryRow::kImplicitPrefix);
-  return db_->Get(handler, ImplicitJournalMetadataRow::GetKeyFor(journal_id),
-                  base);
-}
-
-Status PageDbImpl::GetJournalEntries(
-    CoroutineHandler* handler, const JournalId& journal_id,
-    std::unique_ptr<Iterator<const EntryChange>>* entries,
-    JournalContainsClearOperation* contains_clear_operation) {
-  std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
-                                           convert::ExtendedStringView>>>
-      it;
-  RETURN_ON_ERROR(db_->GetIteratorAtPrefix(
-      handler, JournalEntryRow::GetEntriesPrefixFor(journal_id), &it));
-  bool contains_clear_operation_key;
-  RETURN_ON_ERROR(db_->HasKey(handler,
-                              JournalEntryRow::GetClearMarkerKey(journal_id),
-                              &contains_clear_operation_key));
-
-  *entries = std::make_unique<JournalEntryIterator>(std::move(it));
-  *contains_clear_operation = contains_clear_operation_key
-                                  ? JournalContainsClearOperation::YES
-                                  : JournalContainsClearOperation::NO;
-  return Status::OK;
 }
 
 Status PageDbImpl::ReadObject(CoroutineHandler* handler,
@@ -323,62 +225,6 @@ Status PageDbImpl::RemoveCommit(CoroutineHandler* handler,
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->RemoveCommit(handler, commit_id));
-  return batch->Execute(handler);
-}
-
-Status PageDbImpl::CreateJournalId(CoroutineHandler* handler,
-                                   JournalType journal_type,
-                                   const CommitId& base,
-                                   JournalId* journal_id) {
-  std::unique_ptr<Batch> batch;
-  RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(
-      batch->CreateJournalId(handler, journal_type, base, journal_id));
-  return batch->Execute(handler);
-}
-
-Status PageDbImpl::RemoveExplicitJournals(CoroutineHandler* handler) {
-  std::unique_ptr<Batch> batch;
-  RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(batch->RemoveExplicitJournals(handler));
-  return batch->Execute(handler);
-}
-
-Status PageDbImpl::RemoveJournal(CoroutineHandler* handler,
-                                 const JournalId& journal_id) {
-  std::unique_ptr<Batch> batch;
-  RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(batch->RemoveJournal(handler, journal_id));
-  return batch->Execute(handler);
-}
-
-Status PageDbImpl::AddJournalEntry(CoroutineHandler* handler,
-                                   const JournalId& journal_id,
-                                   fxl::StringView key,
-                                   const ObjectIdentifier& object_identifier,
-                                   KeyPriority priority) {
-  std::unique_ptr<Batch> batch;
-  RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(batch->AddJournalEntry(handler, journal_id, key,
-                                         object_identifier, priority));
-  return batch->Execute(handler);
-}
-
-Status PageDbImpl::RemoveJournalEntry(CoroutineHandler* handler,
-                                      const JournalId& journal_id,
-                                      convert::ExtendedStringView key) {
-  std::unique_ptr<Batch> batch;
-  RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(batch->RemoveJournalEntry(handler, journal_id, key));
-  return batch->Execute(handler);
-}
-
-Status PageDbImpl::EmptyJournalAndMarkContainsClearOperation(
-    coroutine::CoroutineHandler* handler, const JournalId& journal_id) {
-  std::unique_ptr<Batch> batch;
-  RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(
-      batch->EmptyJournalAndMarkContainsClearOperation(handler, journal_id));
   return batch->Execute(handler);
 }
 

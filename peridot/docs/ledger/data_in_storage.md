@@ -4,7 +4,6 @@ Storage implements persistent representation of data held in Ledger. Such data
 include:
 
 - commit, value and tree node objects
-- journal entries and metadata
 - information on head commits
 - information on which objects have been synced to the cloud
 - other synchronization metadata, such as the time of the last synchronization
@@ -63,58 +62,6 @@ the data chunks and index files form a tree, where the content of the object is
 stored on the leaves.
 
 See also [split.h] and [split.cc] for more details.
-
-## Journals
-
-Changes in Page (Put entry, Delete entry, Clear page) that have not yet been
-committed are organized in [journals]. A journal can be explicit, when it is
-part of an explicitly created transaction or part of a merge commit, or
-implicit, for any other case. On a system crash all explicit journals are
-considered invalid and once the system restarts they are removed from the
-storage. Implicit ones on the other hand, are immediately committed on system
-restart.
-
-A common prefix for all explicit journal entries (`journals/E`) helps remove
-them all together when necessary, and an additional metadata row, for implicit
-journals only, helps retrieve the ids of the not-yet-committed journals.
-
-Journal entry keys (for both implicit and explicit journals) are serialized in
-LevelDB as:
-
-Row key: `journals/{journal_id}/entry/{user_defined_key}`
-
-`{journal_id}` has an `E` prefix if the journal is explicit or an `I` prefix if
-it's implicit.
-
-- If the journal entry is about adding a new or updating an existing Ledger
-key-value pair, then:
-
-  Row value: `A{priority_byte}{object_identifier}`
-
-  Where `{priority_byte}` is either `E` if the priority is Eager, or `L` if it's
-  Lazy.
-
-- If the journal entry is about removing and existing key-value pair, the value
-  is:
-
-  Row value: `D`
-
-Moreover, if a journal contains a page clear operation, a row with an empty
-value is added to the journal. If it is present, when the journal is commited,
-the previous state of the page must be discarded.
-
-- Row key: `journals/{journal_id}/C`
-- Row value: (empty value)
-
-### Metadata row for implicit journals
-
-For every implicit journal an additional row is kept in LevelDB:
-- Row key: `journals/implicit_metadata/{journal-id}`
-- Row value: `{base_commit_id}`
-
-`{base_commit_id}` is the parent commit of this journal. Note that implicit
-journals always have a single parent (merge commits cannot be implicit
-journals).
 
 ## Head commits
 

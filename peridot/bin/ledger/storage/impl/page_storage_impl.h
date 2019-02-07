@@ -39,8 +39,7 @@ class PageStorageImpl : public PageStorage {
   ~PageStorageImpl() override;
 
   // Initializes this PageStorageImpl. This includes initializing the underlying
-  // database, adding the default page head if the page is empty, removing
-  // uncommitted explicit and committing implicit journals.
+  // database and adding the default page head if the page is empty.
   void Init(fit::function<void(Status)> callback);
 
   // Adds the given locally created |commit| in this |PageStorage|.
@@ -116,28 +115,6 @@ class PageStorageImpl : public PageStorage {
   void GetSyncMetadata(
       fxl::StringView key,
       fit::function<void(Status, std::string)> callback) override;
-
-  // Methods to be used by JournalImpl.
-  void GetJournalEntries(
-      const JournalId& journal_id,
-      fit::function<
-          void(Status, std::unique_ptr<Iterator<const EntryChange>>,
-               JournalContainsClearOperation contains_clear_operation)>
-          callback);
-
-  void AddJournalEntry(const JournalId& journal_id, fxl::StringView key,
-                       ObjectIdentifier object_identifier, KeyPriority priority,
-                       fit::function<void(Status)> callback);
-
-  void RemoveJournalEntry(const JournalId& journal_id,
-                          convert::ExtendedStringView key,
-                          fit::function<void(Status)> callback);
-
-  void EmptyJournalAndMarkContainsClearOperation(
-      const JournalId& journal_id, fit::function<void(Status)> callback);
-
-  void RemoveJournal(const JournalId& journal_id,
-                     fit::function<void(Status)> callback);
 
   // Commit contents.
   void GetCommitContents(const Commit& commit, std::string min_key,

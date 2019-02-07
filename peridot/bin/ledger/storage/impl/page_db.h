@@ -17,7 +17,6 @@
 #include "peridot/bin/ledger/storage/public/data_source.h"
 #include "peridot/bin/ledger/storage/public/db.h"
 #include "peridot/bin/ledger/storage/public/iterator.h"
-#include "peridot/bin/ledger/storage/public/journal.h"
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 
@@ -70,40 +69,6 @@ class PageDbMutator {
   // Removes the commit with the given |commit_id| from the commits.
   FXL_WARN_UNUSED_RESULT virtual Status RemoveCommit(
       coroutine::CoroutineHandler* handler, const CommitId& commit_id) = 0;
-
-  // Journals.
-  // Creates a new id for a journal with the given type and base commit. In a
-  // merge journal, the base commit is always the left one.
-  FXL_WARN_UNUSED_RESULT virtual Status CreateJournalId(
-      coroutine::CoroutineHandler* handler, JournalType journal_type,
-      const CommitId& base, JournalId* journal_id) = 0;
-
-  // Removes all information on explicit journals from the database.
-  FXL_WARN_UNUSED_RESULT virtual Status RemoveExplicitJournals(
-      coroutine::CoroutineHandler* handler) = 0;
-
-  // Removes all information on the journal with the given |journal_id| from the
-  // database.
-  FXL_WARN_UNUSED_RESULT virtual Status RemoveJournal(
-      coroutine::CoroutineHandler* handler, const JournalId& journal_id) = 0;
-
-  // Adds a new |key|-|value| pair with the given |priority| to the journal with
-  // the given |journal_id|.
-  FXL_WARN_UNUSED_RESULT virtual Status AddJournalEntry(
-      coroutine::CoroutineHandler* handler, const JournalId& journal_id,
-      fxl::StringView key, const ObjectIdentifier& object_identifier,
-      KeyPriority priority) = 0;
-
-  // Removes the given key from the journal with the given |journal_id|.
-  FXL_WARN_UNUSED_RESULT virtual Status RemoveJournalEntry(
-      coroutine::CoroutineHandler* handler, const JournalId& journal_id,
-      convert::ExtendedStringView key) = 0;
-
-  // Marks the journal with the given |journal_id| as containing a clear
-  // operation and removes all entries.
-  FXL_WARN_UNUSED_RESULT virtual Status
-  EmptyJournalAndMarkContainsClearOperation(
-      coroutine::CoroutineHandler* handler, const JournalId& journal_id) = 0;
 
   // Object data.
   // Writes the content of the given object.
@@ -194,28 +159,6 @@ class PageDb : public PageDbMutator {
   FXL_WARN_UNUSED_RESULT virtual Status GetCommitStorageBytes(
       coroutine::CoroutineHandler* handler, CommitIdView commit_id,
       std::string* storage_bytes) = 0;
-
-  // Journals.
-  // Finds all implicit journal ids and replaces the contents of |journal_ids|
-  // with their ids.
-  FXL_WARN_UNUSED_RESULT virtual Status GetImplicitJournalIds(
-      coroutine::CoroutineHandler* handler,
-      std::vector<JournalId>* journal_ids) = 0;
-
-  // Stores the id of the base commit for the journal with the given |base|
-  // parameter.
-  FXL_WARN_UNUSED_RESULT virtual Status GetBaseCommitForJournal(
-      coroutine::CoroutineHandler* handler, const JournalId& journal_id,
-      CommitId* base) = 0;
-
-  // Finds all the entries of the journal with the given |journal_id| and stores
-  // an interator over the results on |entires|. Also returns a flag indicating
-  // if the journal contains a clear operation, in which case we need to delete
-  // all pre-existing data from the page upon commit.
-  FXL_WARN_UNUSED_RESULT virtual Status GetJournalEntries(
-      coroutine::CoroutineHandler* handler, const JournalId& journal_id,
-      std::unique_ptr<Iterator<const EntryChange>>* entries,
-      JournalContainsClearOperation* contains_clear_operation) = 0;
 
   // Object data.
   // Reads the content of the given object. To check whether an object is stored

@@ -6,14 +6,13 @@
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_JOURNAL_IMPL_H_
 
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 
-#include <lib/callback/operation_serializer.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 
-#include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/journal.h"
@@ -21,7 +20,18 @@
 
 namespace storage {
 
-// A |JournalImpl| represents a commit in progress.
+// A |JournalImpl| represents an in-memory |Journal|. As such, if the journal's
+// type is |IMPLICIT| only one mutation operation (Put/Delete/Clear) can be
+// applied before it is commited or rolled back. This way, it is guaranteed that
+// in case of unexpected shut down of Ledger, all operations that completed
+// successfully (i.e. returned with a status |OK|) will actually be persisted.
+// Instances of |JournalImpl| are valid as long as none of |Commit| or
+// |Rollback| has been called. When no longer valid, it is an error to try to
+// call any further methods on that object. A journal that is not commited
+// before destruction, will be rolled back.
+// TODO(nellyv): Remove |Rollback()|: it is no longer useful.
+// TODO(nellyv): Remove callbacks from Put/Delete/Clear operations, as they can
+// now be synchronous.
 class JournalImpl : public Journal {
  private:
   // Passkey idiom to restrict access to the constructor to static factories.
@@ -29,20 +39,18 @@ class JournalImpl : public Journal {
 
  public:
   JournalImpl(Token token, JournalType type, ledger::Environment* environment,
-              PageStorageImpl* page_storage, JournalId id, CommitId base);
+              PageStorageImpl* page_storage, CommitId base);
   ~JournalImpl() override;
 
   // Creates a new Journal for a simple commit.
   static std::unique_ptr<Journal> Simple(JournalType type,
                                          ledger::Environment* environment,
                                          PageStorageImpl* page_storage,
-                                         const JournalId& id,
                                          const CommitId& base);
 
   // Creates a new Journal for a merge commit.
   static std::unique_ptr<Journal> Merge(ledger::Environment* environment,
                                         PageStorageImpl* page_storage,
-                                        const JournalId& id,
                                         const CommitId& base,
                                         const CommitId& other);
 
@@ -65,7 +73,6 @@ class JournalImpl : public Journal {
   void Delete(convert::ExtendedStringView key,
               fit::function<void(Status)> callback) override;
   void Clear(fit::function<void(Status)> callback) override;
-  const JournalId& GetId() const override;
 
  private:
   class Token {
@@ -94,8 +101,6 @@ class JournalImpl : public Journal {
                          std::vector<ObjectIdentifier> objects_to_sync)>
           callback);
 
-  void RollbackInternal(fit::function<void(Status)> callback);
-
   // Returns whether the journal is in a state where it is legal to call |Put|,
   // |Delete| or |Clear|.
   bool StateAllowsMutation();
@@ -103,20 +108,14 @@ class JournalImpl : public Journal {
   const JournalType type_;
   ledger::Environment* const environment_;
   PageStorageImpl* const page_storage_;
-  const JournalId id_;
   CommitId base_;
   std::unique_ptr<CommitId> other_;
-  // A journal is no longer valid if either commit or rollback have been
-  // executed.
+
+  JournalContainsClearOperation cleared_ = JournalContainsClearOperation::NO;
+  std::map<std::string, EntryChange> journal_entries_;
+
+  // A journal is no longer valid after calling commit or rollback.
   bool valid_;
-  // |failed_operation_| is true if any of the Put or Delete methods in this
-  // journal have failed. In this case, any operation on EXPLICIT journals
-  // other than rolling back will fail. IMPLICIT journals can still be commited
-  // even if some operations have failed.
-  bool failed_operation_;
-  // Serializes all update operations so that entries are inserted in the
-  // journal in the order calls to put and delete were received.
-  callback::OperationSerializer serializer_;
 };
 
 }  // namespace storage

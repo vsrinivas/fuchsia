@@ -89,79 +89,12 @@ fxl::StringView ObjectStatusRow::GetPrefixFor(
   }
 }
 
-// ImplicitJournalMetadataRow.
-
-constexpr fxl::StringView ImplicitJournalMetadataRow::kPrefix;
-
-std::string ImplicitJournalMetadataRow::GetKeyFor(const JournalId& journal_id) {
-  return fxl::Concatenate({kPrefix, journal_id});
-}
-
 // SyncMetadataRow.
 
 constexpr fxl::StringView SyncMetadataRow::kPrefix;
 
 std::string SyncMetadataRow::GetKeyFor(fxl::StringView key) {
   return fxl::Concatenate({kPrefix, key});
-}
-
-// JournalEntryRow.
-
-constexpr fxl::StringView JournalEntryRow::kPrefix;
-constexpr fxl::StringView JournalEntryRow::kJournalEntry;
-constexpr fxl::StringView JournalEntryRow::kDeletePrefix;
-constexpr char JournalEntryRow::kImplicitPrefix;
-constexpr char JournalEntryRow::kExplicitPrefix;
-constexpr char JournalEntryRow::kAddPrefix;
-constexpr char JournalEntryRow::kClear;
-
-std::string JournalEntryRow::NewJournalId(rng::Random* random,
-                                          JournalType journal_type) {
-  std::string id;
-  id.resize(kJournalIdSize);
-  id[0] = (journal_type == JournalType::IMPLICIT ? kImplicitPrefix
-                                                 : kExplicitPrefix);
-  random->Draw(&id[1], kJournalIdSize - 1);
-  return id;
-}
-
-std::string JournalEntryRow::GetPrefixFor(const JournalId& journal_id) {
-  return fxl::Concatenate({kPrefix, journal_id, "/"});
-}
-
-std::string JournalEntryRow::GetEntriesPrefixFor(const JournalId& journal_id) {
-  return fxl::Concatenate(
-      {JournalEntryRow::GetPrefixFor(journal_id), kJournalEntry});
-}
-
-std::string JournalEntryRow::GetKeyFor(const JournalId& id,
-                                       fxl::StringView key) {
-  return fxl::Concatenate({JournalEntryRow::GetEntriesPrefixFor(id), key});
-}
-
-std::string JournalEntryRow::GetClearMarkerKey(const JournalId& id) {
-  return fxl::Concatenate({JournalEntryRow::GetPrefixFor(id), {&kClear, 1}});
-}
-
-std::string JournalEntryRow::GetValueFor(
-    const ObjectIdentifier& object_identifier, KeyPriority priority) {
-  char priority_byte =
-      (priority == KeyPriority::EAGER) ? kEagerPrefix : kLazyPrefix;
-  return fxl::Concatenate({{&kAddPrefix, 1},
-                           {&priority_byte, 1},
-                           EncodeObjectIdentifier(object_identifier)});
-}
-
-Status JournalEntryRow::ExtractObjectIdentifier(
-    fxl::StringView db_value, ObjectIdentifier* object_identifier) {
-  if (db_value[0] == kDeletePrefix[0]) {
-    return Status::NOT_FOUND;
-  }
-  if (!DecodeObjectIdentifier(db_value.substr(kAddPrefixSize),
-                              object_identifier)) {
-    return Status::FORMAT_ERROR;
-  }
-  return Status::OK;
 }
 
 // PageIsOnlineRow.

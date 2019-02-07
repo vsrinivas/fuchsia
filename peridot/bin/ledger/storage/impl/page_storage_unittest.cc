@@ -151,13 +151,6 @@ class FakePageDbImpl : public PageDbEmptyImpl {
  public:
   FakePageDbImpl(rng::Random* random) : random_(random) {}
 
-  Status CreateJournalId(CoroutineHandler* /*handler*/,
-                         JournalType /*journal_type*/, const CommitId& /*base*/,
-                         JournalId* journal_id) override {
-    *journal_id = RandomString(random_, 10);
-    return Status::OK;
-  }
-
   Status StartBatch(CoroutineHandler* /*handler*/,
                     std::unique_ptr<PageDb::Batch>* batch) override {
     *batch = std::make_unique<FakePageDbImpl>(random_);
@@ -1038,7 +1031,7 @@ TEST_F(PageStorageTest, CreateJournals) {
   // Explicit journal.
   auto left_commit = TryCommitFromLocal(JournalType::EXPLICIT, 5);
   ASSERT_TRUE(left_commit);
-  auto right_commit = TryCommitFromLocal(JournalType::IMPLICIT, 10);
+  auto right_commit = TryCommitFromLocal(JournalType::EXPLICIT, 10);
   ASSERT_TRUE(right_commit);
 
   // Journal for merge commit.
@@ -1125,98 +1118,6 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
     }
   }
   EXPECT_TRUE(found_index);
-}
-
-TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
-  // Using FakePageDbImpl will cause all PageDb operations that have to do
-  // with journal entry update, to fail with a NOT_IMPLEMENTED error.
-  auto test_storage = std::make_unique<PageStorageImpl>(
-      &environment_, &encryption_service_,
-      std::make_unique<FakePageDbImpl>(environment_.random()),
-      RandomString(environment_.random(), 10));
-
-  bool called;
-  Status status;
-  std::unique_ptr<Journal> journal;
-  // Explicit journals.
-  // The first call will fail because FakePageDbImpl::AddJournalEntry()
-  // returns an error. After a failed call all other Put/Delete/Commit
-  // operations should fail with ILLEGAL_STATE.
-  test_storage->StartCommit(
-      RandomCommitId(environment_.random()), JournalType::EXPLICIT,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &journal));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
-
-  ObjectIdentifier random_identifier =
-      RandomObjectIdentifier(environment_.random());
-
-  journal->Put("key", random_identifier, KeyPriority::EAGER,
-               callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_NE(Status::OK, status);
-
-  journal->Put("key", random_identifier, KeyPriority::EAGER,
-               callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::ILLEGAL_STATE, status);
-
-  journal->Delete("key",
-                  callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::ILLEGAL_STATE, status);
-
-  journal->Clear(callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::ILLEGAL_STATE, status);
-
-  ASSERT_FALSE(TryCommitJournal(std::move(journal), Status::ILLEGAL_STATE));
-
-  // Implicit journals.
-  // All calls will fail because of FakePageDbImpl implementation, not because
-  // of an ILLEGAL_STATE error.
-  test_storage->StartCommit(
-      RandomCommitId(environment_.random()), JournalType::IMPLICIT,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &journal));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
-
-  journal->Put("key", random_identifier, KeyPriority::EAGER,
-               callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_NE(Status::OK, status);
-
-  journal->Put("key", random_identifier, KeyPriority::EAGER,
-               callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_NE(Status::ILLEGAL_STATE, status);
-
-  journal->Delete("key",
-                  callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_NE(Status::ILLEGAL_STATE, status);
-
-  journal->Clear(callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_NE(Status::ILLEGAL_STATE, status);
-
-  std::unique_ptr<const Commit> commit;
-  test_storage->CommitJournal(
-      std::move(journal),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_NE(Status::ILLEGAL_STATE, status);
 }
 
 TEST_F(PageStorageTest, DestroyUncommittedJournal) {
@@ -1698,7 +1599,7 @@ TEST_F(PageStorageTest, PageIsSynced) {
   called = false;
   std::unique_ptr<Journal> journal;
   storage_->StartCommit(
-      GetFirstHead()->GetId(), JournalType::IMPLICIT,
+      GetFirstHead()->GetId(), JournalType::EXPLICIT,
       callback::Capture(callback::SetWhenCalled(&called), &status, &journal));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -1936,7 +1837,7 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   // untracked after committing.
   journal.reset();
   storage_->StartCommit(
-      GetFirstHead()->GetId(), JournalType::IMPLICIT,
+      GetFirstHead()->GetId(), JournalType::EXPLICIT,
       callback::Capture(callback::SetWhenCalled(&called), &status, &journal));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -1969,7 +1870,7 @@ TEST_F(PageStorageTest, CommitWatchers) {
   // Add a second watcher.
   FakeCommitWatcher watcher2;
   storage_->AddCommitWatcher(&watcher2);
-  expected = TryCommitFromLocal(JournalType::IMPLICIT, 10);
+  expected = TryCommitFromLocal(JournalType::EXPLICIT, 10);
   ASSERT_TRUE(expected);
   EXPECT_EQ(2, watcher.commit_count);
   EXPECT_EQ(expected->GetId(), watcher.last_commit_id);

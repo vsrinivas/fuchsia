@@ -10,7 +10,6 @@
 
 #include "peridot/bin/ledger/storage/impl/data_serialization.h"
 #include "peridot/bin/ledger/storage/impl/db_serialization.h"
-#include "peridot/bin/ledger/storage/impl/journal_impl.h"
 
 #define RETURN_ON_ERROR(expr)   \
   do {                          \
@@ -24,9 +23,8 @@ namespace storage {
 
 using coroutine::CoroutineHandler;
 
-PageDbBatchImpl::PageDbBatchImpl(rng::Random* random,
-                                 std::unique_ptr<Db::Batch> batch, PageDb* db)
-    : random_(random), batch_(std::move(batch)), db_(db) {}
+PageDbBatchImpl::PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* db)
+    : batch_(std::move(batch)), db_(db) {}
 
 PageDbBatchImpl::~PageDbBatchImpl() {}
 
@@ -59,67 +57,6 @@ Status PageDbBatchImpl::AddCommitStorageBytes(CoroutineHandler* handler,
 Status PageDbBatchImpl::RemoveCommit(CoroutineHandler* handler,
                                      const CommitId& commit_id) {
   return batch_->Delete(handler, CommitRow::GetKeyFor(commit_id));
-}
-
-Status PageDbBatchImpl::CreateJournalId(coroutine::CoroutineHandler* handler,
-                                        JournalType journal_type,
-                                        const CommitId& base,
-                                        JournalId* journal_id) {
-  JournalId id = JournalEntryRow::NewJournalId(random_, journal_type);
-
-  Status status = Status::OK;
-  if (journal_type == JournalType::IMPLICIT) {
-    status =
-        batch_->Put(handler, ImplicitJournalMetadataRow::GetKeyFor(id), base);
-  }
-
-  if (status == Status::OK) {
-    journal_id->swap(id);
-  }
-  return status;
-}
-
-Status PageDbBatchImpl::RemoveExplicitJournals(CoroutineHandler* handler) {
-  static std::string kExplicitJournalPrefix =
-      fxl::Concatenate({JournalEntryRow::kPrefix,
-                        fxl::StringView(&JournalEntryRow::kExplicitPrefix, 1)});
-  return batch_->DeleteByPrefix(handler, kExplicitJournalPrefix);
-}
-
-Status PageDbBatchImpl::RemoveJournal(CoroutineHandler* handler,
-                                      const JournalId& journal_id) {
-  if (journal_id[0] == JournalEntryRow::kImplicitPrefix) {
-    RETURN_ON_ERROR(batch_->Delete(
-        handler, ImplicitJournalMetadataRow::GetKeyFor(journal_id)));
-  }
-  return batch_->DeleteByPrefix(handler,
-                                JournalEntryRow::GetPrefixFor(journal_id));
-}
-
-Status PageDbBatchImpl::AddJournalEntry(
-    coroutine::CoroutineHandler* handler, const JournalId& journal_id,
-    fxl::StringView key, const ObjectIdentifier& object_identifier,
-    KeyPriority priority) {
-  return batch_->Put(handler, JournalEntryRow::GetKeyFor(journal_id, key),
-                     JournalEntryRow::GetValueFor(object_identifier, priority));
-}
-
-Status PageDbBatchImpl::RemoveJournalEntry(coroutine::CoroutineHandler* handler,
-                                           const JournalId& journal_id,
-                                           convert::ExtendedStringView key) {
-  return batch_->Put(handler, JournalEntryRow::GetKeyFor(journal_id, key),
-                     JournalEntryRow::kDeletePrefix);
-}
-
-Status PageDbBatchImpl::EmptyJournalAndMarkContainsClearOperation(
-    CoroutineHandler* handler, const JournalId& journal_id) {
-  Status status = batch_->DeleteByPrefix(
-      handler, JournalEntryRow::GetPrefixFor(journal_id));
-  if (status != Status::OK) {
-    return status;
-  }
-  return batch_->Put(handler, JournalEntryRow::GetClearMarkerKey(journal_id),
-                     "");
 }
 
 Status PageDbBatchImpl::WriteObject(

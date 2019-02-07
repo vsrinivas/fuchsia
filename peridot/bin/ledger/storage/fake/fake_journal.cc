@@ -38,7 +38,5 @@ void FakeJournal::Clear(fit::function<void(Status)> callback) {
   callback(delegate_->Clear());
 }
 
-const JournalId& FakeJournal::GetId() const { return delegate_->GetId(); }
-
 }  // namespace fake
 }  // namespace storage

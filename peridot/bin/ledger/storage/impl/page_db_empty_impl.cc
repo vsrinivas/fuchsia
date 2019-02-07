@@ -27,21 +27,6 @@ Status PageDbEmptyImpl::GetCommitStorageBytes(CoroutineHandler* /*handler*/,
                                               std::string* /*storage_bytes*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetImplicitJournalIds(
-    CoroutineHandler* /*handler*/, std::vector<JournalId>* /*journal_ids*/) {
-  return Status::NOT_IMPLEMENTED;
-}
-Status PageDbEmptyImpl::GetBaseCommitForJournal(CoroutineHandler* /*handler*/,
-                                                const JournalId& /*journal_id*/,
-                                                CommitId* /*base*/) {
-  return Status::NOT_IMPLEMENTED;
-}
-Status PageDbEmptyImpl::GetJournalEntries(
-    CoroutineHandler* /*handler*/, const JournalId& /*journal_id*/,
-    std::unique_ptr<Iterator<const EntryChange>>* /*entries*/,
-    JournalContainsClearOperation* /*contains_clear_operation*/) {
-  return Status::NOT_IMPLEMENTED;
-}
 Status PageDbEmptyImpl::ReadObject(CoroutineHandler* /*handler*/,
                                    ObjectIdentifier /*object_identifier*/,
                                    std::unique_ptr<const Object>* /*object*/) {
@@ -102,34 +87,6 @@ Status PageDbEmptyImpl::AddCommitStorageBytes(
 }
 Status PageDbEmptyImpl::RemoveCommit(CoroutineHandler* /*handler*/,
                                      const CommitId& /*commit_id*/) {
-  return Status::NOT_IMPLEMENTED;
-}
-Status PageDbEmptyImpl::CreateJournalId(CoroutineHandler* /*handler*/,
-                                        JournalType /*journal_type*/,
-                                        const CommitId& /*base*/,
-                                        JournalId* /*journal*/) {
-  return Status::NOT_IMPLEMENTED;
-}
-Status PageDbEmptyImpl::RemoveExplicitJournals(CoroutineHandler* /*handler*/) {
-  return Status::NOT_IMPLEMENTED;
-}
-Status PageDbEmptyImpl::RemoveJournal(CoroutineHandler* /*handler*/,
-                                      const JournalId& /*journal_id*/) {
-  return Status::NOT_IMPLEMENTED;
-}
-Status PageDbEmptyImpl::AddJournalEntry(
-    CoroutineHandler* /*handler*/, const JournalId& /*journal_id*/,
-    fxl::StringView /*key*/, const ObjectIdentifier& /*object_identifier*/,
-    KeyPriority /*priority*/) {
-  return Status::NOT_IMPLEMENTED;
-}
-Status PageDbEmptyImpl::RemoveJournalEntry(
-    CoroutineHandler* /*handler*/, const JournalId& /*journal_id*/,
-    convert::ExtendedStringView /*key*/) {
-  return Status::NOT_IMPLEMENTED;
-}
-Status PageDbEmptyImpl::EmptyJournalAndMarkContainsClearOperation(
-    coroutine::CoroutineHandler* /*handler*/, const JournalId& /*journal_id*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::WriteObject(

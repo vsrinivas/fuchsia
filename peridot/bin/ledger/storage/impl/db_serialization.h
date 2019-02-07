@@ -66,56 +66,11 @@ class ObjectStatusRow {
   static fxl::StringView GetPrefixFor(PageDbObjectStatus object_status);
 };
 
-class ImplicitJournalMetadataRow {
- public:
-  static constexpr fxl::StringView kPrefix = "journals/implicit_metadata/";
-
-  static std::string GetKeyFor(const JournalId& journal_id);
-};
-
 class SyncMetadataRow {
  public:
   static constexpr fxl::StringView kPrefix = "sync_metadata/";
 
   static std::string GetKeyFor(fxl::StringView key);
-};
-
-class JournalEntryRow {
- public:
-  // Journal keys
-  static const size_t kJournalIdSize = 16;
-  static constexpr fxl::StringView kPrefix = "journals/";
-
-  static constexpr fxl::StringView kJournalEntry = "entry/";
-  static constexpr char kImplicitPrefix = 'I';
-  static constexpr char kExplicitPrefix = 'E';
-  static const size_t kPrefixSize =
-      kPrefix.size() + kJournalIdSize + 1 + kJournalEntry.size();
-
-  // Journal values
-  static constexpr char kClear = 'C';
-  static constexpr char kAddPrefix = 'A';
-  static constexpr fxl::StringView kDeletePrefix = "D";
-  static const char kLazyPrefix = 'L';
-  static const char kEagerPrefix = 'E';
-  static const size_t kAddPrefixSize = 2;
-
-  static std::string NewJournalId(rng::Random* random,
-                                  JournalType journal_type);
-
-  static std::string GetPrefixFor(const JournalId& journal_id);
-
-  static std::string GetEntriesPrefixFor(const JournalId& journal_id);
-
-  static std::string GetKeyFor(const JournalId& id, fxl::StringView key);
-
-  static std::string GetValueFor(const ObjectIdentifier& object_identifier,
-                                 KeyPriority priority);
-
-  static std::string GetClearMarkerKey(const JournalId& id);
-
-  static Status ExtractObjectIdentifier(fxl::StringView db_value,
-                                        ObjectIdentifier* object_identifier);
 };
 
 class PageIsOnlineRow {

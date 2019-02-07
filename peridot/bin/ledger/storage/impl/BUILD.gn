@@ -159,6 +159,7 @@ source_set("unittests") {
     "commit_random_impl.cc",
     "commit_random_impl.h",
     "file_index_unittest.cc",
+    "journal_unittest.cc",
     "ledger_storage_unittest.cc",
     "leveldb_factory_unittest.cc",
     "object_digest_unittest.cc",
