@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 executable("bin") {
   visibility = [ ":*" ]
@@ -47,19 +48,7 @@ test_package("guest_integration_tests") {
   tests = [
     {
       name = "guest_integration_tests"
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-        {
-          dimensions = {
-            device_type = "Khadas Vim2 Max"
-          }
-          label = "vim2"
-        },
-      ]
+      environments = [nuc_env, vim2_env]
     },
   ]
 }

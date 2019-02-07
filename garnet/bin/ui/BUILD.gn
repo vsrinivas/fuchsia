@@ -31,23 +31,11 @@ package("scenic_tests") {
     },
     {
       name = "gfx_pixeltests"
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+      environments = [nuc_env]
     },
     {
       name = "gfx_viewstate_apptests"
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+      environments = [nuc_env]
     },
     {
       name = "gfx_unittests"
