@@ -45,6 +45,7 @@ PaperRenderer2::PaperRenderer2(EscherWeakPtr weak_escher,
           "shaders/paper/frag/main_ambient_light.frag",
           ShaderVariantArgs({
               {"USE_ATTRIBUTE_UV", "1"},
+              {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
               // TODO(ES-153): currently required by main.vert.
               {"NO_SHADOW_LIGHTING_PASS", "1"},
           }))),
@@ -110,26 +111,35 @@ PaperRenderer2::FrameData::FrameData(
     vk::Viewport viewport(rect.offset.x, rect.offset.y, rect.extent.width,
                           rect.extent.height, 0, 1);
 
-    // TODO(before-submit): document this if/else.  Probably say more about
-    // cameras in the header file.
     UniformBinding binding;
+    CameraEye eye = CameraEye::kLeft;
     if (auto buffer = cam.latched_pose_buffer()) {
-      // TODO(before-submit): keep buffer alive.
-      binding.descriptor_set_index = PaperShaderCamera::kDescriptorSet;
-      binding.binding_index = PaperShaderCamera::kDescriptorBinding;
+      // The camera has a latched pose-buffer, so we use it to obtain a
+      // view-projection matrix in the shader.  We pass the eye_index as a
+      // push-constant to obtain the correct matrix.
+      frame->command_buffer()->KeepAlive(buffer);
+      binding.descriptor_set_index =
+          PaperShaderLatchedPoseBuffer::kDescriptorSet;
+      binding.binding_index = PaperShaderLatchedPoseBuffer::kDescriptorBinding;
       binding.buffer = buffer.get();
-      binding.offset = cam.latched_pose_buffer_vp_matrix_offset();
-      binding.size = sizeof(mat4);
-
-      // For example, if we start needing additional fields in PaperShaderCamera
-      // then we can no longer directly use the camera's pose buffer.
-      static_assert(sizeof(PaperShaderCamera) == sizeof(mat4));
+      binding.offset = 0;
+      binding.size = sizeof(PaperShaderLatchedPoseBuffer);
+      eye = cam.latched_camera_eye();
     } else {
-      auto pair = NewPaperShaderUniformBinding<PaperShaderCamera>(frame);
-      pair.first->vp_matrix = cam.projection() * cam.transform();
+      // The camera has no latched pose-buffer, so allocate/populate uniform
+      // data with the same layout, based on the camera's projection/transform
+      // matrices.
+      auto pair =
+          NewPaperShaderUniformBinding<PaperShaderLatchedPoseBuffer>(frame);
+      pair.first->vp_matrix[0] = cam.projection() * cam.transform();
+      pair.first->vp_matrix[1] = cam.projection() * cam.transform();
       binding = pair.second;
     }
-    cameras.push_back({.binding = binding, .rect = rect, .viewport = viewport});
+
+    cameras.push_back({.binding = binding,
+                       .rect = rect,
+                       .viewport = viewport,
+                       .eye_index = (eye == CameraEye::kLeft ? 0U : 1U)});
   }
 
   // Generate a UniformBinding for global scene data (e.g. ambient lighting).
@@ -203,15 +213,6 @@ void PaperRenderer2::BeginFrame(const FramePtr& frame,
   TRACE_DURATION("gfx", "PaperRenderer2::BeginFrame");
   FXL_DCHECK(!frame_data_ && !cameras.empty());
 
-  mat4 camera_transform = cameras[0].transform();
-  for (auto& c : cameras) {
-    // All cameras must have the same transform, because this transform is
-    // used for sorting draw calls in |draw_call_factory_|.  This is useful
-    // for stereo cameras; more changes will be necessary to remove this DCHECK
-    // to allow multiple cameras for other use-cases.
-    FXL_DCHECK(camera_transform == c.transform());
-  }
-
   frame_data_ = std::make_unique<FrameData>(
       frame, scene, output_image,
       ObtainDepthAndMsaaTextures(frame, output_image->info()), cameras);
@@ -223,6 +224,10 @@ void PaperRenderer2::BeginFrame(const FramePtr& frame,
                           frame->frame_number());
 
   {
+    // As described in the header file, we use the first camera's transform for
+    // the purpose of depth-sorting.
+    mat4 camera_transform = cameras[0].transform();
+
     // A camera's transform doesn't move the camera; it is applied to the rest
     // of the scene to "move it away from the camera".  Therefore, the camera's
     // position in the scene can be obtained by inverting it and applying it to
@@ -249,18 +254,10 @@ void PaperRenderer2::EndFrame() {
 
   frame_data_->gpu_uploader->Submit();
 
-  auto* cmd_buf = frame_data_->frame->cmds();
-  for (UniformBinding& binding : frame_data_->scene_uniform_bindings) {
-    binding.Bind(cmd_buf);
-  }
-
   render_queue_.Sort();
   {
     for (uint32_t camera_index = 0; camera_index < frame_data_->cameras.size();
          ++camera_index) {
-      // Install the current camera.
-      frame_data_->cameras[camera_index].binding.Bind(cmd_buf);
-
       switch (config_.shadow_type) {
         case PaperRendererShadowType::kNone:
           GenerateCommandsForNoShadows(camera_index);
@@ -281,6 +278,14 @@ void PaperRenderer2::EndFrame() {
   transform_stack_.Clear();
   shape_cache_.EndFrame();
   draw_call_factory_.EndFrame();
+}
+
+void PaperRenderer2::BindSceneAndCameraUniforms(uint32_t camera_index) {
+  auto* cmd_buf = frame_data_->frame->cmds();
+  for (UniformBinding& binding : frame_data_->scene_uniform_bindings) {
+    binding.Bind(cmd_buf);
+  }
+  frame_data_->cameras[camera_index].binding.Bind(cmd_buf);
 }
 
 void PaperRenderer2::Draw(PaperDrawable* drawable, PaperDrawableFlags flags,
@@ -428,6 +433,7 @@ void PaperRenderer2::InitRenderPassInfo(RenderPassInfo* rp,
 // lighting model.
 void PaperRenderer2::GenerateCommandsForNoShadows(uint32_t camera_index) {
   TRACE_DURATION("gfx", "PaperRenderer2::GenerateCommandsForNoShadows");
+
   const FramePtr& frame = frame_data_->frame;
   CommandBuffer* cmd_buf = frame->cmds();
 
@@ -438,7 +444,14 @@ void PaperRenderer2::GenerateCommandsForNoShadows(uint32_t camera_index) {
   cmd_buf->BeginRenderPass(render_pass_info);
   frame->AddTimestamp("started no-shadows render pass");
 
-  cmd_buf->SetViewport(frame_data_->cameras[camera_index].viewport);
+  BindSceneAndCameraUniforms(camera_index);
+
+  const CameraData& cam_data = frame_data_->cameras[camera_index];
+  cmd_buf->SetViewport(cam_data.viewport);
+  cmd_buf->PushConstants(PaperShaderPushConstants{
+      .light_index = 0,  // ignored
+      .eye_index = cam_data.eye_index,
+  });
 
   {
     PaperRenderQueueContext context;
@@ -455,6 +468,7 @@ void PaperRenderer2::GenerateCommandsForNoShadows(uint32_t camera_index) {
 
 void PaperRenderer2::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
   TRACE_DURATION("gfx", "PaperRenderer2::GenerateCommandsForShadowVolumes");
+
   const uint32_t width = frame_data_->output_image->width();
   const uint32_t height = frame_data_->output_image->height();
   const FramePtr& frame = frame_data_->frame;
@@ -467,6 +481,8 @@ void PaperRenderer2::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
   cmd_buf->BeginRenderPass(render_pass_info);
   frame->AddTimestamp("started shadow_volume render pass");
 
+  BindSceneAndCameraUniforms(camera_index);
+
   const CameraData& cam_data = frame_data_->cameras[camera_index];
   cmd_buf->SetViewport(cam_data.viewport);
 
@@ -476,6 +492,11 @@ void PaperRenderer2::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
   // actual Vulkan pass/subpass), and emit Vulkan commands into the command
   // buffer.
   {
+    cmd_buf->PushConstants(PaperShaderPushConstants{
+        .light_index = 0,  // ignored
+        .eye_index = cam_data.eye_index,
+    });
+
     context.set_draw_mode(PaperRendererDrawMode::kAmbient);
     context.set_shader_program(ambient_light_program_);
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
@@ -510,6 +531,7 @@ void PaperRenderer2::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
     }
     cmd_buf->PushConstants(PaperShaderPushConstants{
         .light_index = i,
+        .eye_index = cam_data.eye_index,
     });
 
     // Emit commands for stencil shadow geometry.

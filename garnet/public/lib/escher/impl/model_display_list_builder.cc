@@ -130,7 +130,10 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
     vp_uniform_buffer = camera.latched_pose_buffer();
     // Pose buffer latching shader writes the latched pose before the VP matrix
     // so we need to offset past it.
-    vp_uniform_buffer_offset = camera.latched_pose_buffer_vp_matrix_offset();
+    vp_uniform_buffer_offset = sizeof(hmd::Pose);
+    if (camera.latched_camera_eye() == CameraEye::kRight) {
+      vp_uniform_buffer_offset += sizeof(mat4);
+    }
     // Keep the latched pose buffer alive for the lifetime of the display list.
     resources_.push_back(camera.latched_pose_buffer());
   } else {

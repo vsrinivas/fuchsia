@@ -90,6 +90,12 @@ class PaperRenderer2 final : public Renderer {
   //   - |BeginFrame()|
   //   - |Draw()| each object in the scene.
   //   - |EndFrame()| emits the Vulkan commands that actually render the scene.
+  //
+  // Multiple cameras are supported, each rendering into its own viewport.
+  // However, the position of the first camera is the one used for depth-sorting
+  // the scene contents.  For use-cases such as stereo rendering this is not a
+  // problem, however there can be problems with e.g. translucent objects if two
+  // cameras have dramatically different positions.
   void BeginFrame(const FramePtr& frame, const PaperScenePtr& scene,
                   const std::vector<Camera>& cameras,
                   const escher::ImagePtr& output_image);
@@ -139,6 +145,7 @@ class PaperRenderer2 final : public Renderer {
     UniformBinding binding;
     vk::Rect2D rect;
     vk::Viewport viewport;
+    uint32_t eye_index;  // For PaperShaderPushConstants.
   };
 
   // Stores all per-frame data in one place.
@@ -174,6 +181,7 @@ class PaperRenderer2 final : public Renderer {
       const FramePtr& frame, const ImageInfo& info);
 
   // Called during EndFrame().
+  void BindSceneAndCameraUniforms(uint32_t camera_index);
   void GenerateCommandsForNoShadows(uint32_t camera_index);
   void GenerateCommandsForShadowVolumes(uint32_t camera_index);
   static void InitRenderPassInfo(RenderPassInfo* render_pass_info,

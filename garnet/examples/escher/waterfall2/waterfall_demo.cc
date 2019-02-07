@@ -9,6 +9,7 @@
 #include "lib/escher/defaults/default_shader_program_factory.h"
 #include "lib/escher/geometry/tessellation.h"
 #include "lib/escher/paper/paper_scene.h"
+#include "lib/escher/paper/paper_shader_structs.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/viewing_volume.h"
 #include "lib/escher/shape/mesh.h"
@@ -237,48 +238,35 @@ static std::vector<escher::Camera> GenerateCameras(
     // from the pose buffer, because the camera's position is used for z-sorting
     // etc.
     case 4: {
-      vec3 eye(volume.width() / 3, 6000, 3000);
-      vec3 target(volume.width() / 2, volume.height() / 3, 0);
+      vec3 eye(volume.width() / 2, 6000, 3500);
+      vec3 eye_offset(40.f, 0.f, 0.f);
+      vec3 target(volume.width() / 2, volume.height() / 2, 0);
       vec3 up(0, 1, 0);
+      float fov = glm::radians(15.f);
       auto left_camera = escher::Camera::NewPerspective(
-          volume, glm::lookAt(eye, target, up), glm::radians(15.f));
-
-      // For simplicity, we render the exact same view for the right and left
-      // eyes, but in different viewports.  However, we do this in a complicated
-      // way to demonstrate the use of "pose buffer latching", which allows the
-      // camera's view-projection to be overridden by the value in a buffer.
-      // More precisely, when the buffer is available it is used directly,
-      // instead of uploading the view-projection matrix to a newly-allocated
-      // range of uniform data.  See below for more details.
-#if 0
+          volume, glm::lookAt(eye - eye_offset, target, up), fov);
       auto right_camera = escher::Camera::NewPerspective(
-          volume, glm::lookAt(eye, target, up), glm::radians(15.f));
-#else
-      // Note that we use a different FOV here (5 radians instead of 15 above).
-      // This would result in a very different rendering in the right viewport;
-      // comment out SetLatchedPoseBuffer() below to see for yourself!
-      auto right_camera = escher::Camera::NewPerspective(
-          volume, glm::lookAt(eye, target, up), glm::radians(5.f));
+          volume, glm::lookAt(eye + eye_offset, target, up), fov);
 
-      // TODO(before-submit): I don't think the below will quite work with a
-      // real latched pose-buffer; the alignment won't be a multiple of 256.
-      // Instead, will probably need to use a push-buffer constant to index
-      // into the vp-matrices?  G'aah!
-      {
-        // TODO(before-submit): clarify the purpose here.
-        constexpr size_t kMinUniformBufferOffsetAlignment = 256;
-        struct Foo {
-          uint8_t padding[kMinUniformBufferOffsetAlignment];
-          escher::mat4 vp_matrix;
-        };
-        UniformAllocation allocation = frame->AllocateUniform(sizeof(Foo), 256);
-        auto foo = reinterpret_cast<Foo*>(allocation.host_ptr);
-        foo->vp_matrix = left_camera.projection() * left_camera.transform();
-        right_camera.SetLatchedPoseBuffer(
-            BufferPtr(allocation.buffer),
-            allocation.offset + kMinUniformBufferOffsetAlignment);
-      }
-#endif
+      // Obtain a buffer and populate it as though it were obtained by invoking
+      // PoseBufferLatchingShader.
+      auto binding = escher::NewPaperShaderUniformBinding<
+          escher::PaperShaderLatchedPoseBuffer>(frame);
+      binding.first->vp_matrix[0] =
+          left_camera.projection() * left_camera.transform();
+      binding.first->vp_matrix[1] =
+          right_camera.projection() * right_camera.transform();
+      escher::BufferPtr latched_pose_buffer(binding.second.buffer);
+
+      // Both cameras use the same buffer, but index into it using a different
+      // eye index.  NOTE: if you comment these lines out, there will be no
+      // visible difference, because PaperRenderer2 will compute/upload the same
+      // project * transform matrix.  What would happen if you swap the kLeft
+      // and kRight?
+      left_camera.SetLatchedPoseBuffer(latched_pose_buffer,
+                                       escher::CameraEye::kLeft);
+      right_camera.SetLatchedPoseBuffer(latched_pose_buffer,
+                                        escher::CameraEye::kRight);
 
       left_camera.SetViewport({0.f, 0.25f, 0.5f, 0.5f});
       right_camera.SetViewport({0.5f, 0.25f, 0.5f, 0.5f});

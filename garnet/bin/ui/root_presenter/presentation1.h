@@ -233,6 +233,7 @@ class Presentation1 : private ::fuchsia::ui::viewsv1::ViewTreeListener,
   scenic::AmbientLight ambient_light_;
   glm::vec3 light_direction_;
   scenic::DirectionalLight directional_light_;
+  scenic::PointLight point_light_;
   scenic::EntityNode root_view_host_node_;
   zx::eventpair root_view_host_import_token_;
   scenic::ImportNode root_view_parent_node_;

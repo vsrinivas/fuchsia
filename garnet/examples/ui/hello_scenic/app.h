@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "lib/component/cpp/startup_context.h"
+#include "lib/fxl/command_line.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 
@@ -15,7 +16,7 @@ namespace hello_scenic {
 
 class App {
  public:
-  App(async::Loop* loop);
+  App(async::Loop* loop, const fxl::CommandLine& command_line);
 
  private:
   // Called asynchronously by constructor.
@@ -43,6 +44,7 @@ class App {
   std::unique_ptr<scenic::ShapeNode> rrect_node_;
   std::unique_ptr<scenic::ShapeNode> clipper_1_;
   std::unique_ptr<scenic::ShapeNode> clipper_2_;
+  std::unique_ptr<scenic::EntityNode> pane_2_contents_;
 
   // Time of the first update.  Animation of the "pane" content is based on the
   // time elapsed since this time.
@@ -51,6 +53,9 @@ class App {
   // time is the timestamp that the last change of direction occurred.
   uint64_t camera_anim_start_time_;
   bool camera_anim_returning_ = false;
+
+  fuchsia::ui::gfx::ShadowTechnique shadow_technique_ =
+      fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED;
 };
 
 }  // namespace hello_scenic

@@ -38,6 +38,7 @@ class Object;
 // a PipelineLayout in impl/vk.
 class PipelineLayout;
 class PaperRenderer;
+class PaperRenderer2;
 class PaperRenderQueue;
 class PaperShapeCache;
 class Resource;

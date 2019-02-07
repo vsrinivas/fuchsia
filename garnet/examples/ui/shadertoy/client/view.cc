@@ -39,7 +39,7 @@ ViewImpl::ViewImpl(component::StartupContext* startup_context,
       shadertoy_factory_(startup_context_->ConnectToEnvironmentService<
                          fuchsia::examples::shadertoy::ShadertoyFactory>()),
       start_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)) {
-  shadertoy_factory_.set_error_handler([this] (zx_status_t status){
+  shadertoy_factory_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to ShadertoyFactory.";
     QuitLoop();
   });
@@ -108,27 +108,28 @@ void ViewImpl::OnSceneInvalidated(
   for (size_t i = 0; i < nodes_.size(); ++i) {
     // Compute the translation for kSwirling mode.
     // Each node has a slightly different speed.
-    float animation_progress = seconds * (32 + i) / 32.f;
+    const float animation_progress = seconds * (32 + i) / 32.f;
+    const float elevation = 50.f + 20.f * i;
     glm::vec3 swirl_translation(
         kHalfWidth + sin(animation_progress * 0.8) * kHalfWidth * 1.1,
         kHalfHeight + sin(animation_progress * 0.6) * kHalfHeight * 1.2,
-        50.0 + i);
+        elevation);
 
     // Compute the translation for kFourCorners mode.
-    int quadrant = (i / 4) % 4;
+    int quadrant = i % 4;
     glm::vec3 quadrant_translation;
     if (quadrant == 0) {
       quadrant_translation =
-          glm::vec3(kHalfWidth * 0.5, kHalfHeight * 0.5, 50 + i);
+          glm::vec3(kHalfWidth * 0.5, kHalfHeight * 0.5, elevation);
     } else if (quadrant == 1) {
       quadrant_translation =
-          glm::vec3(kHalfWidth * 0.5, kHalfHeight * 1.5, 50 + i);
+          glm::vec3(kHalfWidth * 0.5, kHalfHeight * 1.5, elevation);
     } else if (quadrant == 2) {
       quadrant_translation =
-          glm::vec3(kHalfWidth * 1.5, kHalfHeight * 0.5, 50 + i);
+          glm::vec3(kHalfWidth * 1.5, kHalfHeight * 0.5, elevation);
     } else if (quadrant == 3) {
       quadrant_translation =
-          glm::vec3(kHalfWidth * 1.5, kHalfHeight * 1.5, 50 + i);
+          glm::vec3(kHalfWidth * 1.5, kHalfHeight * 1.5, elevation);
     }
 
     glm::vec3 translation =

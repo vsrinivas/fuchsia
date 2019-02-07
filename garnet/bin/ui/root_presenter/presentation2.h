@@ -220,6 +220,7 @@ class Presentation2 : public Presentation {
   scenic::AmbientLight ambient_light_;
   glm::vec3 light_direction_;
   scenic::DirectionalLight directional_light_;
+  scenic::PointLight point_light_;
   scenic::EntityNode view_holder_node_;
   scenic::EntityNode root_node_;
   scenic::ViewHolder view_holder_;

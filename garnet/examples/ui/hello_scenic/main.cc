@@ -16,13 +16,14 @@ int main(int argc, const char** argv) {
     return 1;
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  hello_scenic::App app(&loop);
-  async::PostDelayedTask(loop.dispatcher(),
-                         [&loop] {
-                           FXL_LOG(INFO) << "Quitting.";
-                           loop.Quit();
-                         },
-                         zx::sec(50));
+  hello_scenic::App app(&loop, command_line);
+  async::PostDelayedTask(
+      loop.dispatcher(),
+      [&loop] {
+        FXL_LOG(INFO) << "Quitting.";
+        loop.Quit();
+      },
+      zx::sec(50));
   loop.Run();
   return 0;
 }

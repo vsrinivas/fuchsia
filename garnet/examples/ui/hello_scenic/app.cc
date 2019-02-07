@@ -15,13 +15,13 @@
 // No workaround required.
 #include <glm/glm.hpp>
 #endif
-
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <zx/time.h>
+#include <string>
 
 #include "lib/component/cpp/connect.h"
 #include "lib/escher/util/image_utils.h"
@@ -38,9 +38,35 @@ namespace hello_scenic {
 
 static constexpr uint64_t kBillion = 1000000000;
 
-App::App(async::Loop* loop)
+fuchsia::ui::gfx::ShadowTechnique GetShadowTechniqueFromCommandLine(
+    const fxl::CommandLine& command_line) {
+  using fuchsia::ui::gfx::ShadowTechnique;
+
+  std::string shadow_type;
+  if (command_line.GetOptionValue("shadow_type", &shadow_type)) {
+    if (shadow_type == "UNSHADOWED") {
+      return ShadowTechnique::UNSHADOWED;
+    } else if (shadow_type == "SCREEN_SPACE") {
+      return ShadowTechnique::SCREEN_SPACE;
+    } else if (shadow_type == "SHADOW_MAP") {
+      return ShadowTechnique::SHADOW_MAP;
+    } else if (shadow_type == "MOMENT_SHADOW_MAP") {
+      return ShadowTechnique::MOMENT_SHADOW_MAP;
+    } else if (shadow_type == "STENCIL_SHADOW_VOLUME") {
+      return ShadowTechnique::STENCIL_SHADOW_VOLUME;
+    } else {
+      FXL_LOG(INFO) << "Unknown shadow type: " << shadow_type
+                    << ".  Valid choices are: UNSHADOWED, SCREEN_SPACE, "
+                       "SHADOW_MAP, MOMENT_SHADOW_MAP, STENCIL_SHADOW_VOLUME.";
+    }
+  }
+  return ShadowTechnique::UNSHADOWED;
+}
+
+App::App(async::Loop* loop, const fxl::CommandLine& command_line)
     : startup_context_(component::StartupContext::CreateFromStartupInfo()),
-      loop_(loop) {
+      loop_(loop),
+      shadow_technique_(GetShadowTechniqueFromCommandLine(command_line)) {
   // Connect to the SceneManager service.
   scenic_ = startup_context_
                 ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
@@ -105,15 +131,50 @@ void App::CreateExampleScene(float display_width, float display_height) {
   layer.SetSize(display_width, display_height);
   layer.SetRenderer(renderer);
   renderer.SetCamera(camera_->id());
+  fuchsia::ui::gfx::RendererParam param;
+  param.set_shadow_technique(shadow_technique_);
+  renderer.SetParam(std::move(param));
 
-  // Set up lights.
-  AmbientLight ambient_light(session);
-  DirectionalLight directional_light(session);
-  scene.AddLight(ambient_light);
-  scene.AddLight(directional_light);
-  ambient_light.SetColor(0.3f, 0.3f, 0.3f);
-  directional_light.SetColor(0.7f, 0.7f, 0.7f);
-  directional_light.SetDirection(1.f, 1.f, -2.f);
+  if (shadow_technique_ ==
+      fuchsia::ui::gfx::ShadowTechnique::STENCIL_SHADOW_VOLUME) {
+    AmbientLight ambient_light(session);
+    PointLight point_light1(session);
+    PointLight point_light2(session);
+
+    scene.AddLight(ambient_light);
+    scene.AddLight(point_light1);
+    scene.AddLight(point_light2);
+
+    // Specify colors for the three lights.  The first two values are tweakable,
+    // and are used to generate the colors of the two point lights.  The color
+    // of the three lights sum to (1.0, 1.0, 1.0).  kPointLightColorDiff causes
+    // the two point lights to differ in color from each other.
+    const glm::vec3 kAmbientLightColor(0.4f, 0.4f, 0.4f);
+    const glm::vec3 kPointLightColorDiff(0.05f, -0.1f, 0.f);
+    const glm::vec3 kPointLightAverageColor =
+        0.5f * (glm::vec3(1, 1, 1) - kAmbientLightColor);
+    const glm::vec3 kPointLight1Color =
+        kPointLightAverageColor + kPointLightColorDiff;
+    const glm::vec3 kPointLight2Color =
+        kPointLightAverageColor - kPointLightColorDiff;
+
+    ambient_light.SetColor(&kAmbientLightColor[0]);
+    point_light1.SetColor(&kPointLight1Color[0]);
+    point_light2.SetColor(&kPointLight2Color[0]);
+    point_light1.SetPosition(0.3f * display_width, 0.3f * display_height,
+                             1000.f);
+    point_light2.SetPosition(display_width, 0.2f * display_height, 1000.f);
+    point_light1.SetFalloff(0.f);
+    point_light2.SetFalloff(0.f);
+  } else {
+    AmbientLight ambient_light(session);
+    DirectionalLight directional_light(session);
+    scene.AddLight(ambient_light);
+    scene.AddLight(directional_light);
+    ambient_light.SetColor(0.3f, 0.3f, 0.3f);
+    directional_light.SetColor(0.7f, 0.7f, 0.7f);
+    directional_light.SetDirection(1.f, 1.f, -2.f);
+  }
 
   // Create an EntityNode to serve as the scene root.
   EntityNode root_node(session);
@@ -133,20 +194,18 @@ void App::CreateExampleScene(float display_width, float display_height) {
   ShapeNode pane_bg_1(session);
   pane_bg_1.SetShape(pane_shape);
   pane_bg_1.SetMaterial(pane_material);
-  pane_node_1.AddPart(pane_bg_1);
+  pane_node_1.AddChild(pane_bg_1);
   pane_node_1.SetTranslation(kPaneMargin + pane_width * 0.5,
                              kPaneMargin + pane_height * 0.5, 20);
-  pane_node_1.SetClip(0, true);
   root_node.AddChild(pane_node_1);
 
   EntityNode pane_node_2(session);
   ShapeNode pane_bg_2(session);
   pane_bg_2.SetShape(pane_shape);
   pane_bg_2.SetMaterial(pane_material);
-  pane_node_2.AddPart(pane_bg_2);
+  pane_node_2.AddChild(pane_bg_2);
   pane_node_2.SetTranslation(kPaneMargin * 2 + pane_width * 1.5,
                              kPaneMargin + pane_height * 0.5, 20);
-  pane_node_2.SetClip(0, true);
   root_node.AddChild(pane_node_2);
 
   // Create a Material with the checkerboard image.  This will be used for
@@ -166,32 +225,23 @@ void App::CreateExampleScene(float display_width, float display_height) {
 
   // The second pane will contain two large circles that are clipped by a pair
   // of smaller animated circles.
-  EntityNode pane_2_contents(session);
-
-  Circle clipper_circle(session, 200);
-  clipper_1_ = std::make_unique<ShapeNode>(session);
-  clipper_2_ = std::make_unique<ShapeNode>(session);
-  clipper_1_->SetShape(clipper_circle);
-  clipper_2_->SetShape(clipper_circle);
+  pane_2_contents_ = std::make_unique<EntityNode>(session);
 
   Circle clippee_circle(session, 400);
   ShapeNode clippee1(session);
   clippee1.SetShape(clippee_circle);
   clippee1.SetMaterial(green_material);
-  clippee1.SetTranslation(0, 400, 0);
+  clippee1.SetTranslation(0, 300, 0);
   ShapeNode clippee2(session);
   clippee2.SetShape(clippee_circle);
   clippee2.SetMaterial(checkerboard_material);
-  clippee2.SetTranslation(0, -400, 0);
+  clippee2.SetTranslation(0, -300, 100);
 
-  pane_2_contents.AddPart(clipper_1_->id());
-  pane_2_contents.AddPart(clipper_2_->id());
-  pane_2_contents.AddChild(clippee1);
-  pane_2_contents.AddChild(clippee2);
-  pane_2_contents.SetClip(0, true);
+  pane_2_contents_->AddChild(clippee1);
+  pane_2_contents_->AddChild(clippee2);
 
-  pane_node_2.AddChild(pane_2_contents);
-  pane_2_contents.SetTranslation(0, 0, 10);
+  pane_node_2.AddChild(*pane_2_contents_.get());
+  pane_2_contents_->SetTranslation(0, 0, 100);
 }
 
 void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
@@ -207,9 +257,9 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
 
   // Wait kSessionDuration seconds, and close the session.
   constexpr int kSessionDuration = 40;
-  async::PostDelayedTask(loop_->dispatcher(),
-                         [this] { ReleaseSessionResources(); },
-                         zx::sec(kSessionDuration));
+  async::PostDelayedTask(
+      loop_->dispatcher(), [this] { ReleaseSessionResources(); },
+      zx::sec(kSessionDuration));
 
   // Set up initial scene.
   const float display_width = static_cast<float>(display_info.width_in_px);
@@ -222,30 +272,25 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
 }
 
 void App::Update(uint64_t next_presentation_time) {
-  // Translate / rotate the rounded rect.
   {
     double secs =
         static_cast<double>(next_presentation_time - start_time_) / kBillion;
 
+    // Translate / rotate the rounded rect.
     rrect_node_->SetTranslation(sin(secs * 0.8) * 500.f,
-                                sin(secs * 0.6) * 570.f, 10.f);
-
+                                sin(secs * 0.6) * 570.f, 200.f);
     auto quaternion =
         glm::angleAxis(static_cast<float>(secs / 2.0), glm::vec3(0, 0, 1));
     rrect_node_->SetRotation(quaternion.x, quaternion.y, quaternion.z,
                              quaternion.w);
-  }
 
-  // Translate the clip-circles.
-  {
-    double secs =
-        static_cast<double>(next_presentation_time - start_time_) / kBillion;
-
-    float offset1 = sin(secs * 0.8) * 300.f;
-    float offset2 = cos(secs * 0.8) * 300.f;
-
-    clipper_1_->SetTranslation(offset1, offset2 * 3, -5);
-    clipper_2_->SetTranslation(offset2, offset1 * 2, -4);
+    // Set a moving clip plane, clipping only the two circles.
+    fuchsia::ui::gfx::Plane3 clip_plane;
+    clip_plane.dir.x = sin(secs * 0.5);
+    clip_plane.dir.y = cos(secs * 0.5);
+    clip_plane.dir.z = 0.f;
+    clip_plane.dist = -200.f;
+    pane_2_contents_->SetClipPlanes({clip_plane});
   }
 
   // Move the camera.
@@ -293,6 +338,7 @@ void App::ReleaseSessionResources() {
   clipper_2_.reset();
   clipper_1_.reset();
   rrect_node_.reset();
+  pane_2_contents_.reset();
 
   session_.reset();
 }

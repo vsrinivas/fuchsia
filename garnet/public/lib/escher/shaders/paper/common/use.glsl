@@ -28,19 +28,23 @@ layout(location = 4) in vec2 inBlendWeight;
 
 // ***** DESCRIPTOR BINDINGS ********************************
 
-// TODO(before-submit): maybe don't reuse this define for both camera params
-// and scene globals.
-#ifdef USE_PAPER_SHADER_CAMERA_AMBIENT
+#ifdef USE_PAPER_SHADER_SCENE_DATA
 // Struct that defines a grepable common layout for C++ and GLSL code.
 layout(set = 0, binding = 0) uniform PaperShaderSceneData {
   vec3 ambient_light_color;
 };
+#endif  // USE_PAPER_SHADER_SCENE_DATA
 
-layout(set = 0, binding = 1) uniform PaperShaderCamera {
-  mat4 vp_matrix;
+#ifdef USE_PAPER_SHADER_LATCHED_POSEBUFFER
+layout(set = 0, binding = 1) uniform PaperShaderLatchedPoseBuffer {
+  // Padding same size as escher::hmd::Pose.
+  vec4 _padding_PaperShaderLatchedPoseBuffer[2];
+  // Latched view-projection matrices for the two eyes.  The left eye is at 
+  // index 0 and the right at index 1.  See the |eye_index| field of
+  // PaperShaderPushConstants.
+  mat4 vp_matrix[2];
 };
-#endif  // USE_PAPER_SHADER_CAMERA_AMBIENT
-
+#endif  // USE_PAPER_SHADER_LATCHED_POSEBUFFER
 
 #ifdef USE_PAPER_SHADER_POINT_LIGHT
 // Struct that defines a grepable common layout for C++ and GLSL code.
@@ -77,5 +81,6 @@ layout(set = 1, binding = 1) uniform sampler2D material_tex;
 #ifdef USE_PAPER_SHADER_PUSH_CONSTANTS
 layout(push_constant) uniform PushConstants {
   uint light_index;
+  uint eye_index;
 } PaperShaderPushConstants;
 #endif  // USE_PAPER_SHADER_PUSH_CONSTANTS

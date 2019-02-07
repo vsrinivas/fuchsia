@@ -13,8 +13,8 @@ out gl_PerVertex {
 // ShaderProgram will add other USE_* definitions that are appropriate for that
 // shader variant.
 #define IS_VERTEX_SHADER 1
-#define USE_PAPER_SHADER_CAMERA_AMBIENT 1
 #define USE_PAPER_SHADER_MESH_INSTANCE 1
+#define USE_PAPER_SHADER_LATCHED_POSEBUFFER 1
 #define USE_ATTRIBUTE_POSITION 1
 #include "shaders/paper/common/use.glsl"
 
@@ -34,7 +34,7 @@ out gl_PerVertex {
 //   the specified clip-planes.  Then write each result into the special
 //   gl_ClipDistance variable, which is used by the Vulkan rasterizer.
 void ClipWorldSpaceAndOutputScreenSpaceCoords(vec4 world_pos) {
-  gl_Position = vp_matrix * world_pos;
+  gl_Position = vp_matrix[PaperShaderPushConstants.eye_index] * world_pos;
 
   #ifdef NUM_CLIP_PLANES
   for (int i = 0; i < NUM_CLIP_PLANES; ++i) {
@@ -90,7 +90,7 @@ layout(location = 1) out vec4 irradiance;
 
 void main() {
   vec4 world_pos = model_transform * ComputeVertexPosition();
-  gl_Position = vp_matrix * world_pos;
+  gl_Position = vp_matrix[PaperShaderPushConstants.eye_index] * world_pos;
   fragUV = inUV;
 
 #ifdef USE_PAPER_SHADER_POINT_LIGHT_FALLOFF
@@ -120,9 +120,14 @@ void main() {
       point_lights[PaperShaderPushConstants.light_index].position;
   // TODO(ES-160): optimize length of extrusion vec so that it doesn't
   // extend far below the floor of the stage.  This can improve performance
-  // by reducing the number of stencil-buffer pixels that are touched.
+  // by reducing the number of stencil-buffer pixels that are touched.  On the
+  // other hand, ensure that it extends far enough: there will be artifacts when
+  // the shadow volume does not extend far enough (especially likely at glancing
+  // shadow angles).
+  const float kShadowVolumeExtrusionLength = 500.f;
   vec4 extrusion_vec =
-      500.f * normalize(world_pos - light_position);
-  gl_Position = vp_matrix * (world_pos + inBlendWeight.x * extrusion_vec);
+      kShadowVolumeExtrusionLength * normalize(world_pos - light_position);
+  gl_Position = vp_matrix[PaperShaderPushConstants.eye_index] *
+      (world_pos + inBlendWeight.x * extrusion_vec);
 }
 #endif

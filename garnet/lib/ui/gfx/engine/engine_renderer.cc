@@ -240,12 +240,10 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame,
       latched_pose_buffer = pose_buffer_latching_shader_->LatchStereoPose(
           frame, left_camera, right_camera, pose_buffer,
           target_presentation_time);
-      left_camera.SetLatchedPoseBuffer(
-          latched_pose_buffer,
-          escher::hmd::PoseBufferLatchingShader::kLeftVpMatrixOffset);
-      right_camera.SetLatchedPoseBuffer(
-          latched_pose_buffer,
-          escher::hmd::PoseBufferLatchingShader::kRightVpMatrixOffset);
+      left_camera.SetLatchedPoseBuffer(latched_pose_buffer,
+                                       escher::CameraEye::kLeft);
+      right_camera.SetLatchedPoseBuffer(latched_pose_buffer,
+                                        escher::CameraEye::kRight);
     }
 
     draw_frame_lambda(left_camera);
@@ -259,9 +257,8 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame,
             renderer->camera()->GetEscherPoseBuffer()) {
       latched_pose_buffer = pose_buffer_latching_shader_->LatchPose(
           frame, camera, pose_buffer, target_presentation_time);
-      camera.SetLatchedPoseBuffer(
-          latched_pose_buffer,
-          escher::hmd::PoseBufferLatchingShader::kLeftVpMatrixOffset);
+      camera.SetLatchedPoseBuffer(latched_pose_buffer,
+                                  escher::CameraEye::kLeft);
     }
 
     draw_frame_lambda(camera);

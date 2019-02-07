@@ -62,6 +62,7 @@ Presentation1::Presentation1(fuchsia::ui::scenic::Scenic* scenic,
       camera_(scene_),
       ambient_light_(session_),
       directional_light_(session_),
+      point_light_(session_),
       root_view_host_node_(session_),
       root_view_parent_node_(session_),
       content_view_host_node_(session_),
@@ -92,13 +93,25 @@ Presentation1::Presentation1(fuchsia::ui::scenic::Scenic* scenic,
   scene_.AddChild(root_view_host_node_);
 
   // Create the root view's scene.
+  // TODO(SCN-1255): we add a directional light and a point light, expecting
+  // only one of them to be active at a time.  This logic is implicit in
+  // EngineRenderer, since no shadow-mode supports both directional and point
+  // lights (either one or the other).  When directional light support is added
+  // to PaperRenderer2, the code here will result in over-brightening, and will
+  // need to be adjusted at that time.
   scene_.AddLight(ambient_light_);
   scene_.AddLight(directional_light_);
-  ambient_light_.SetColor(0.3f, 0.3f, 0.3f);
-  directional_light_.SetColor(0.7f, 0.7f, 0.7f);
+  scene_.AddLight(point_light_);
+  constexpr float kAmbient = 0.3f;
+  constexpr float kNonAmbient = 1.f - kAmbient;
+  ambient_light_.SetColor(kAmbient, kAmbient, kAmbient);
+  directional_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
+  point_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
   light_direction_ = glm::vec3(1.f, 1.f, -2.f);
   directional_light_.SetDirection(light_direction_.x, light_direction_.y,
                                   light_direction_.z);
+  point_light_.SetPosition(300.f, 300.f, 2000.f);
+  point_light_.SetFalloff(0.f);
 
   // Create host nodes for the views.
   root_view_host_node_.ExportAsRequest(&root_view_host_import_token_);

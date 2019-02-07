@@ -36,7 +36,7 @@ ResourceManager* Resource::owner() const {
 }
 
 uint64_t Resource::GetUniqueId() {
-  static std::atomic_uint64_t next_id(0);
+  static std::atomic_uint64_t next_id(1);
   return next_id++;
 }
 

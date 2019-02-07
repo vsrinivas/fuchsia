@@ -13,6 +13,13 @@
 
 namespace escher {
 
+// Used to indicate which eye a camera represents, in order to distinguish them
+// for stereo rendering.
+enum class CameraEye {
+  kLeft,
+  kRight,
+};
+
 // Generates and encapsulates a view/projection matrix pair.  The camera follows
 // the Vulkan convention of looking down the negative Z-axis.
 class Camera {
@@ -36,14 +43,12 @@ class Camera {
   const mat4& projection() const { return projection_; }
 
   void SetLatchedPoseBuffer(const BufferPtr& latched_pose_buffer,
-                            uint32_t vp_matrix_offset) {
+                            CameraEye eye) {
     latched_pose_buffer_ = latched_pose_buffer;
-    latched_pose_buffer_vp_matrix_offset_ = vp_matrix_offset;
+    latched_camera_eye_ = eye;
   }
   const BufferPtr& latched_pose_buffer() const { return latched_pose_buffer_; }
-  uint32_t latched_pose_buffer_vp_matrix_offset() const {
-    return latched_pose_buffer_vp_matrix_offset_;
-  }
+  CameraEye latched_camera_eye() const { return latched_camera_eye_; }
 
   // This viewport class is independent of framebuffer size.
   // All values are specified over the range [0,1].
@@ -68,7 +73,7 @@ class Camera {
   // Contains the latched pose and vp matrices latched out of pose_buffer_.
   // See pose_buffer_latching_shader.h for details on buffer layout.
   BufferPtr latched_pose_buffer_;
-  uint32_t latched_pose_buffer_vp_matrix_offset_ = 0;
+  CameraEye latched_camera_eye_ = CameraEye::kLeft;
 
   Viewport viewport_;
 };

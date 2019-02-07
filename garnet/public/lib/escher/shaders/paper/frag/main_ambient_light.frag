@@ -10,7 +10,7 @@
 layout(location = 0) out vec4 outColor;
 layout(location = 0) in vec2 inUV;
 
-#define USE_PAPER_SHADER_CAMERA_AMBIENT 1
+#define USE_PAPER_SHADER_SCENE_DATA 1
 #define USE_PAPER_SHADER_MESH_INSTANCE 1
 #define USE_PAPER_SHADER_MESH_MATERIAL 1
 #include "shaders/paper/common/use.glsl"

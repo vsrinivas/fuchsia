@@ -466,6 +466,7 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
     const auto b = GetDescriptorBindingInfo(set_bindings, binding);
     FXL_DCHECK(b->buffer.buffer)
         << "No buffer for uniform binding " << set_index << "," << binding;
+    FXL_DCHECK(set_bindings->uids[binding]);
 
     h.u64(set_bindings->uids[binding]);
     h.u32(b->buffer.range);
@@ -476,6 +477,7 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
   ForEachBitIndex(set_layout.storage_buffer_mask, [&](uint32_t binding) {
     const auto b = GetDescriptorBindingInfo(set_bindings, binding);
     FXL_DCHECK(b->buffer.buffer);
+    FXL_DCHECK(set_bindings->uids[binding]);
 
     h.u64(set_bindings->uids[binding]);
     h.u32(b->buffer.offset);
@@ -486,6 +488,7 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
   ForEachBitIndex(set_layout.sampled_buffer_mask, [&](uint32_t binding) {
     const auto b = GetDescriptorBindingInfo(set_bindings, binding);
     FXL_DCHECK(b->buffer_view);
+    FXL_DCHECK(set_bindings->uids[binding]);
 
     h.u64(set_bindings->uids[binding]);
   });
@@ -495,6 +498,7 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
     const auto b = GetDescriptorBindingInfo(set_bindings, binding);
     FXL_DCHECK(b->image.fp.imageView);
     FXL_DCHECK(b->image.fp.sampler);
+    FXL_DCHECK(set_bindings->uids[binding]);
 
     h.u64(set_bindings->uids[binding]);
     h.u64(set_bindings->secondary_uids[binding]);
@@ -505,6 +509,7 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
   ForEachBitIndex(set_layout.storage_image_mask, [&](uint32_t binding) {
     const auto b = GetDescriptorBindingInfo(set_bindings, binding);
     FXL_DCHECK(b->image.fp.imageView);
+    FXL_DCHECK(set_bindings->uids[binding]);
 
     h.u64(set_bindings->uids[binding]);
     h.u32(EnumCast(b->image.fp.imageLayout));
@@ -514,6 +519,7 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
   ForEachBitIndex(set_layout.input_attachment_mask, [&](uint32_t binding) {
     const auto b = GetDescriptorBindingInfo(set_bindings, binding);
     FXL_DCHECK(b->image.fp.imageView);
+    FXL_DCHECK(set_bindings->uids[binding]);
 
     h.u64(set_bindings->uids[binding]);
     h.u32(EnumCast(b->image.fp.imageLayout));

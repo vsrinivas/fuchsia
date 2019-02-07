@@ -57,12 +57,17 @@ struct PaperShaderSceneData {
 };
 
 // Struct that defines a grepable common layout for C++ and GLSL code.
-struct PaperShaderCamera {
-  mat4 vp_matrix;
+struct PaperShaderLatchedPoseBuffer {
+  static constexpr size_t kNumPoseFloats = 8;
+  float padding[kNumPoseFloats];
+  mat4 vp_matrix[2];
 
   static constexpr size_t kDescriptorSet = 0;
   static constexpr size_t kDescriptorBinding = 1;
 };
+
+static_assert(sizeof(hmd::Pose) ==
+              PaperShaderLatchedPoseBuffer::kNumPoseFloats * sizeof(float));
 
 // Struct that defines a grepable common layout for C++ and GLSL code.
 struct PaperShaderPointLight {
@@ -80,6 +85,7 @@ struct PaperShaderPointLight {
 // Struct that defines common layout for C++ and GLSL code.
 struct PaperShaderPushConstants {
   uint32_t light_index;
+  uint32_t eye_index;
 };
 
 }  // namespace escher
