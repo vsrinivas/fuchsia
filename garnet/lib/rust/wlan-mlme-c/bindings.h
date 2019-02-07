@@ -41,7 +41,7 @@ typedef struct {
    * to this crate. The buffer will be returned via the `free_buffer` callback
    * when it's no longer used.
    */
-  rust_mlme_in_buf_t (*take_buffer)(uintptr_t min_len);
+  rust_mlme_in_buf_t (*get_buffer)(uintptr_t min_len);
 } rust_mlme_buffer_provider_ops_t;
 
 /**

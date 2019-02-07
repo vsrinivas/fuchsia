@@ -16,13 +16,13 @@ pub struct BufferProvider {
     /// Acquire a `InBuf` with a given minimum length from the provider.
     /// The provider must release the underlying buffer's ownership and transfer it to this crate.
     /// The buffer will be returned via the `free_buffer` callback when it's no longer used.
-    take_buffer: unsafe extern "C" fn(min_len: usize) -> InBuf,
+    get_buffer: unsafe extern "C" fn(min_len: usize) -> InBuf,
 }
 
 impl BufferProvider {
-    pub fn take_buffer(&self, min_len: usize) -> Result<InBuf, Error> {
+    pub fn get_buffer(&self, min_len: usize) -> Result<InBuf, Error> {
         // Resulting buffer is checked for null pointers.
-        let buf = unsafe { (self.take_buffer)(min_len) };
+        let buf = unsafe { (self.get_buffer)(min_len) };
         ensure!(!buf.raw.is_null(), "buffer's raw ptr must not be null");
         ensure!(!buf.data.is_null(), "buffer's data ptr must not be null");
         Ok(buf)

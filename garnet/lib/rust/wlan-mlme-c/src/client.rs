@@ -22,7 +22,7 @@ pub extern "C" fn rust_mlme_write_keep_alive_resp_frame(
 ) -> i32 {
     let frame_len =
         mac::DataHdr::len(mac::Addr4::ABSENT, mac::QosControl::ABSENT, mac::HtControl::ABSENT);
-    let buf_result = provider.take_buffer(frame_len);
+    let buf_result = provider.get_buffer(frame_len);
     let mut buf = unwrap_or_bail!(buf_result, zx::ZX_ERR_NO_RESOURCES);
     let write_result =
         client::write_keep_alive_resp_frame(&mut buf[..], *bssid, *client_addr, seq_ctrl);
