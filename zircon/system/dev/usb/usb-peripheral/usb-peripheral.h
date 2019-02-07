@@ -112,7 +112,7 @@ public:
     zx_status_t AllocInterface(fbl::RefPtr<UsbFunction> function, uint8_t* out_intf_num);
     zx_status_t AllocEndpoint(fbl::RefPtr<UsbFunction> function, uint8_t direction,
                               uint8_t* out_address);
-    zx_status_t AllocStringDesc(const char* string, uint8_t* out_index);
+    zx_status_t AllocStringDesc(fbl::String desc, uint8_t* out_index);
     zx_status_t ValidateFunction(fbl::RefPtr<UsbFunction> function, void* descriptors, size_t length,
                                  uint8_t* out_num_interfaces);
     zx_status_t FunctionRegistered();

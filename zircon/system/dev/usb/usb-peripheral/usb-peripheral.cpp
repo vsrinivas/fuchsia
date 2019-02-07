@@ -105,15 +105,22 @@ zx_status_t UsbPeripheral::Init() {
     }
     device_desc_.idVendor = config->vid;
     device_desc_.idProduct = config->pid;
-    status = AllocStringDesc(config->manufacturer, &device_desc_.iManufacturer);
+
+    size_t max_str_len = strnlen(config->manufacturer, sizeof(config->manufacturer));
+    status = AllocStringDesc(fbl::String(config->manufacturer, max_str_len),
+                             &device_desc_.iManufacturer);
     if (status != ZX_OK) {
         return status;
     }
-    status = AllocStringDesc(config->product, &device_desc_.iProduct);
+
+    max_str_len = strnlen(config->product, sizeof(config->product));
+    status = AllocStringDesc(fbl::String(config->product, max_str_len), &device_desc_.iProduct);
     if (status != ZX_OK) {
         return status;
     }
-    status = AllocStringDesc(config->serial, &device_desc_.iSerialNumber);
+
+    max_str_len = strnlen(config->serial, sizeof(config->serial));
+    status = AllocStringDesc(fbl::String(config->serial, max_str_len), &device_desc_.iSerialNumber);
     if (status != ZX_OK) {
         return status;
     }
@@ -122,13 +129,13 @@ zx_status_t UsbPeripheral::Init() {
     return ZX_OK;
 }
 
-zx_status_t UsbPeripheral::AllocStringDesc(const char* string, uint8_t* out_index) {
+zx_status_t UsbPeripheral::AllocStringDesc(fbl::String desc, uint8_t* out_index) {
     fbl::AutoLock lock(&lock_);
 
     if (strings_.size() >= MAX_STRINGS) {
         return ZX_ERR_NO_RESOURCES;
     }
-    strings_.push_back(string);
+    strings_.push_back(std::move(desc));
 
     // String indices are 1-based.
     *out_index = static_cast<uint8_t>(strings_.size());
@@ -682,7 +689,7 @@ zx_status_t UsbPeripheral::MsgSetDeviceDescriptor( const DeviceDescriptor* desc,
 zx_status_t UsbPeripheral::MsgAllocStringDesc(const char* name_data, size_t name_size,
                                               fidl_txn_t* txn) {
     uint8_t index = 0;
-    auto status = AllocStringDesc(name_data, &index);
+    auto status = AllocStringDesc(fbl::String(name_data, name_size), &index);
     return fuchsia_hardware_usb_peripheral_DeviceAllocStringDesc_reply(txn, status, index);
 }
 
