@@ -44,9 +44,7 @@ fn run_server(ip: &str) -> Result<(), Error> {
         return Err(format_err!("Got unexpected request from client: {}", req));
     }
     println!("Got request {}", req);
-    stream
-        .write(HELLO_MSG_RSP.as_bytes())
-        .context("write failed")?;
+    stream.write(HELLO_MSG_RSP.as_bytes()).context("write failed")?;
     stream.flush().context("flush failed")?;
     Ok(())
 }
@@ -80,31 +78,30 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
 
     // retrieve the created endpoint:
     let ep = await!(epm.get_endpoint(&opt.endpoint))?;
-    let ep = ep
-        .ok_or_else(|| format_err!("can't find endpoint {}", opt.endpoint))?
-        .into_proxy()?;
+    let ep = ep.ok_or_else(|| format_err!("can't find endpoint {}", opt.endpoint))?.into_proxy()?;
     // and the ethernet device:
     let eth = await!(ep.get_ethernet_device())?;
 
     let if_name = format!("eth-{}", opt.endpoint);
     // connect to netstack:
     let netstack = client::connect_to_service::<NetstackMarker>()?;
+    let static_ip =
+        opt.ip.parse::<fidl_fuchsia_net_ext::Subnet>().expect("must be able to parse ip");
+    println!("static ip = {:?}", static_ip);
+
+    let use_ip = match opt.ip.split("/").next() {
+        Some(v) => String::from(v),
+        None => opt.ip,
+    };
+
     let mut cfg = InterfaceConfig {
         name: if_name.to_string(),
-        ip_address_config: fidl_fuchsia_netstack_ext::IpAddressConfig::StaticIp(
-            opt.ip
-                .parse::<fidl_fuchsia_net_ext::Subnet>()
-                .expect("must be able to parse ip"),
-        )
-        .into(),
+        ip_address_config: fidl_fuchsia_netstack_ext::IpAddressConfig::StaticIp(static_ip).into(),
     };
 
     let mut if_changed = netstack.take_event_stream().try_filter_map(
         |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-            let iface = interfaces
-                .iter()
-                .filter(|iface| iface.name == if_name)
-                .next();
+            let iface = interfaces.iter().filter(|iface| iface.name == if_name).next();
             match iface {
                 None => futures::future::ok(None),
                 Some(a) => futures::future::ok(Some((a.id, a.hwaddr.clone()))),
@@ -124,6 +121,6 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
     if let Some(remote) = opt.connect_ip {
         run_client(&remote)
     } else {
-        run_server(&opt.ip)
+        run_server(&use_ip)
     }
 }

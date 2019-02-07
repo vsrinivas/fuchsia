@@ -23,7 +23,7 @@ struct Opt {
     /// Endpoint name to retrieve from network.EndpointManager
     endpoint: String,
     #[structopt(short = "i")]
-    /// Static ip address to assign. Omit to use DHCP.
+    /// Static ip address to assign (don't forget /prefix termination). Omit to use DHCP.
     ip: Option<String>,
 }
 
@@ -40,9 +40,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
 
     // retrieve the created endpoint:
     let ep = await!(epm.get_endpoint(&opt.endpoint))?;
-    let ep = ep
-        .ok_or_else(|| format_err!("can't find endpoint {}", opt.endpoint))?
-        .into_proxy()?;
+    let ep = ep.ok_or_else(|| format_err!("can't find endpoint {}", opt.endpoint))?.into_proxy()?;
     // and the ethernet device:
     let eth = await!(ep.get_ethernet_device())?;
 
@@ -54,8 +52,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         InterfaceConfig {
             name: if_name.to_string(),
             ip_address_config: fidl_fuchsia_netstack_ext::IpAddressConfig::StaticIp(
-                ip.parse::<fidl_fuchsia_net_ext::Subnet>()
-                    .expect("Can't parse provided ip"),
+                ip.parse::<fidl_fuchsia_net_ext::Subnet>().expect("Can't parse provided ip"),
             )
             .into(),
         }
@@ -68,10 +65,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
 
     let mut if_changed = netstack.take_event_stream().try_filter_map(
         |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-            let iface = interfaces
-                .iter()
-                .filter(|iface| iface.name == if_name)
-                .next();
+            let iface = interfaces.iter().filter(|iface| iface.name == if_name).next();
             match iface {
                 None => futures::future::ok(None),
                 Some(a) => futures::future::ok(Some((a.id, a.hwaddr.clone()))),

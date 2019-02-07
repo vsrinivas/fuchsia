@@ -183,14 +183,17 @@ async fn create_network() -> Result<NetworkProxy, Error> {
 
 async fn prepare_env() -> Result<(), Error> {
     let net = await!(create_network())?;
+    let server_ip_cfg = "192.168.0.1/24";
     let server_ip = "192.168.0.1";
-    let client_ip = "192.168.0.2";
+    let client_ip_cfg = "192.168.0.2/24";
 
     let bus = common::BusConnection::new("root")?;
 
     println!("Starting server...");
-    let server =
-        await!(spawn_env(&net, SpawnOptions { env_name: "server", ip: server_ip, remote: None }))?;
+    let server = await!(spawn_env(
+        &net,
+        SpawnOptions { env_name: "server", ip: server_ip_cfg, remote: None }
+    ))?;
 
     let () = await!(bus
         .wait_for_event(common::SERVER_READY)
@@ -201,7 +204,7 @@ async fn prepare_env() -> Result<(), Error> {
 
     let client = await!(spawn_env(
         &net,
-        SpawnOptions { env_name: "client", ip: client_ip, remote: Some(server_ip) }
+        SpawnOptions { env_name: "client", ip: client_ip_cfg, remote: Some(server_ip) }
     ))?;
     let () = await!(wait_for_component(&client.controller)
         .on_timeout(TIMEOUT.seconds().after_now(), || Err(format_err!(
