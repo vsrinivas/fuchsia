@@ -9,7 +9,7 @@ The reference section provides the following material:
 * [Grammar](grammar.md) &mdash; the FIDL grammar
 * [JSON IR](json-ir.md) &mdash; a tour of the JSON Intermediate Representation (**JSON IR**) generator
 * [Language](language.md) &mdash; defines the syntax of the FIDL language
-* [Wire Format](wire-format/index.md) &mdash; details the byte-by-byte organization of data
+* [Wire Format](wire-format/README.md) &mdash; details the byte-by-byte organization of data
 * [Host](host.md) &mdash; summary of the parts of FIDL that are allowed on host
 
 ### Readability rubric

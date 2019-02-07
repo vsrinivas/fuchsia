@@ -196,7 +196,7 @@ the parameter description specifies `"nullable": true` (line `[25]` and `[40]`).
 The `size` members might be confusing at first; it's important here to note
 that the size refers to the size of the *container* and not the *contents*.
 
-> You may wish to refer to the [on-wire](wire-format/index.md) format document when
+> You may wish to refer to the [on-wire](wire-format/README.md) format document when
 > reading this part.
 
 Lines `[36]` through `[47]`, for example, define the `response` string container.
@@ -210,14 +210,14 @@ For the data field, two interpretations are possible.
 In the "wire format" version (that is, as the data is encoded for transmission),
 the data field has one of two values: zero indicates the string is null,
 and `UINTPTR_MAX` indicates that the data is present.
-(See the [Wire Format](wire-format/index.md) chapter for details).
+(See the [Wire Format](wire-format/README.md) chapter for details).
 
 However, when this field has been read into memory and is decoded for consumption,
 it contains a 0 (if the string is null), otherwise it's a pointer
 to where the string content is stored.
 
 The other fields, like `alignment` and `offset`, also relate to the
-[on-wire](wire-format/index.md) data marshalling.
+[on-wire](wire-format/README.md) data marshalling.
 
 ## Of structs, tables, and unions
 

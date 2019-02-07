@@ -16,7 +16,7 @@ This document is a description of the Fuchsia Interface Definition Language
 
 <!-- Reference links because these are used again below. -->
 
-[Wire Format Specification]: ../reference/wire-format/index.md
+[Wire Format Specification]: ../reference/wire-format/README.md
 [Language Specification]: ../reference/language.md
 [Compiler Specification]: ../reference/compiler.md
 [API Readability / Style Guide]: ../../../api/fidl.md

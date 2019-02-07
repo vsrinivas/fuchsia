@@ -119,7 +119,7 @@ Typically the generated code will contain the following types of code:
 * Data structure definitions that represent the data structures defined in the
   [FIDL language](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/language.md).
 * A codec that can serialize and deserialize these data structure into and from
-  the [FIDL wire format](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/wire-format/index.md).
+  the [FIDL wire format](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/wire-format/README.md).
 * Stub objects that represent the server end of a FIDL interfaces. Typically,
   stub object have a *dispatch* method that deserializes a message read from a
   Zircon channel and perform an indirect jump into an implementation of the
