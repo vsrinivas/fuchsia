@@ -323,15 +323,11 @@ func (ios *iostate) loopRead() error {
 }
 
 func (ios *iostate) loopControl() error {
-	synthesizeClose := true
 	defer func() {
-		if synthesizeClose {
-			if code, err := ios.Close(); err != nil {
-				log.Printf("synethsize close failed: %s", err)
-			} else if code != 0 {
-				log.Printf("synethsize close failed: %s", syscall.Errno(code))
-
-			}
+		if code, err := ios.Close(); err != nil {
+			log.Printf("SocketControl.Close failed: %s", err)
+		} else if code != 0 {
+			log.Printf("SocketControl.Close failed: %s", syscall.Errno(code))
 		}
 
 		if err := ios.dataHandle.Close(); err != nil {
@@ -389,7 +385,6 @@ func (ios *iostate) loopControl() error {
 				case obs&zx.SignalSocketControlReadable != 0:
 					continue
 				case obs&localSignalClosing != 0:
-					synthesizeClose = false
 					return nil
 				case obs&zx.SignalSocketPeerClosed != 0:
 					return nil
@@ -725,21 +720,27 @@ func decodeAddr(addr []uint8) (tcpip.FullAddress, error) {
 }
 
 func (ios *iostate) Close() (int16, error) {
-	// Signal that we're about to close. This tells the various message loops to finish
-	// processing, and let us know when they're done.
-	if err := ios.dataHandle.Handle().Signal(0, localSignalClosing); err != nil {
-		panic(err)
+	select {
+	case <-ios.closing:
+		// Don't double close the channel.
+	default:
+		// Signal that we're about to close. This tells the various message loops to finish
+		// processing, and let us know when they're done.
+		if err := ios.dataHandle.Handle().Signal(0, localSignalClosing); err != nil {
+			panic(err)
+		}
+
+		close(ios.closing)
+
+		if ios.loopWriteDone != nil {
+			<-ios.loopWriteDone
+		}
+
+		ios.ep.Close()
+
+		// NB: we can't wait for loopRead to finish here because the dataHandle
+		// may be full, and loopRead will never exit.
 	}
-
-	close(ios.closing)
-	if ios.loopWriteDone != nil {
-		<-ios.loopWriteDone
-	}
-
-	ios.ep.Close()
-
-	// NB: we can't wait for loopRead to finish here because the dataHandle
-	// may be full, and loopRead will never exit.
 
 	return 0, nil
 }
