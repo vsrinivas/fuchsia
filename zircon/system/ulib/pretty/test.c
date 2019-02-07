@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <pretty/hexdump.h>
 #include <pretty/sizes.h>
 #include <unittest/unittest.h>
 
@@ -209,12 +210,52 @@ bool format_size_empty_null_str_succeeds(void) {
     END_TEST;
 }
 
+bool hexdump_very_ex_test(void) {
+    BEGIN_TEST;
+
+    static const uint8_t input[] = { 0, 1, 2, 3, 'a', 'b', 'c', 'd' };
+    const uint64_t kTestDisplayAddr = 0x1000;
+    static const char expected[] =
+        "0x00001000: 03020100 64636261                   |....abcd........|\n";
+
+    char output_buffer[sizeof(expected)];
+    FILE* f = fmemopen(output_buffer, sizeof(output_buffer), "w");
+    ASSERT_NONNULL(f, "");
+    hexdump_very_ex(input, sizeof(input), kTestDisplayAddr,
+                    hexdump_stdio_printf, f);
+    fclose(f);
+    EXPECT_STR_EQ(output_buffer, expected, "");
+
+    END_TEST;
+}
+
+bool hexdump8_very_ex_test(void) {
+    BEGIN_TEST;
+
+    static const uint8_t input[] = { 0, 1, 2, 3, 'a', 'b', 'c', 'd' };
+    const uint64_t kTestDisplayAddr = 0x1000;
+    static const char expected[] =
+        "0x00001000: 00 01 02 03 61 62 63 64                         |....abcd\n";
+
+    char output_buffer[sizeof(expected)];
+    FILE* f = fmemopen(output_buffer, sizeof(output_buffer), "w");
+    ASSERT_NONNULL(f, "");
+    hexdump8_very_ex(input, sizeof(input), kTestDisplayAddr,
+                     hexdump_stdio_printf, f);
+    fclose(f);
+    EXPECT_STR_EQ(output_buffer, expected, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(pretty_tests)
 RUN_TEST(format_size_fixed_test)
 RUN_TEST(format_size_short_buf_truncates)
 RUN_TEST(format_size_bad_unit_short_buf_truncates)
 RUN_TEST(format_size_empty_str_succeeds)
 RUN_TEST(format_size_empty_null_str_succeeds)
+RUN_TEST(hexdump_very_ex_test)
+RUN_TEST(hexdump8_very_ex_test)
 END_TEST_CASE(pretty_tests)
 
 int main(int argc, char** argv) {
