@@ -228,38 +228,38 @@ A simple example of using Scenic is the [bouncing ball](https://fuchsia.googleso
 The following files define and document the collection of FIDL interfaces that
 make up Scenic.
 
-* [Scenic top-level interfaces](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.scenic) (`fuchsia.ui.scenic`)
-  * [scenic.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.scenic/scenic.fidl)
-  * [session.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.scenic/session.fidl)
-  * [commands.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.scenic/commands.fidl)
-  * [events.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.scenic/events.fidl)
+* [Scenic top-level interfaces](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.scenic) (`fuchsia.ui.scenic`)
+  * [scenic.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.scenic/scenic.fidl)
+  * [session.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.scenic/session.fidl)
+  * [commands.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.scenic/commands.fidl)
+  * [events.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.scenic/events.fidl)
 
-* [Gfx](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.gfx) (`fuchsia.ui.gfx`)
-  * [commands.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.gfx/commands.fidl)
-  * [events.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.gfx/events.fidl)
-  * [resources.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.gfx/resources.fidl)
-  * [nodes.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.gfx/nodes.fidl)
-  * [shapes.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.gfx/shapes.fidl)
-  * [...](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.gfx)
+* [Gfx](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.gfx) (`fuchsia.ui.gfx`)
+  * [commands.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.gfx/commands.fidl)
+  * [events.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.gfx/events.fidl)
+  * [resources.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.gfx/resources.fidl)
+  * [nodes.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.gfx/nodes.fidl)
+  * [shapes.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.gfx/shapes.fidl)
+  * [...](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.gfx)
 
-* [Views](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.views) (`fuchsia.ui.views`)
-  * [commands.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.views/commands.fidl)
-  * [events.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.views/events.fidl)
+* [Views](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.views) (`fuchsia.ui.views`)
+  * [commands.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.views/commands.fidl)
+  * [events.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.views/events.fidl)
 
-* [Input](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.input) (`fuchsia.ui.input`)
-  * [commands.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.input/commands.fidl)
-  * [input_events.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.input/input_events.fidl)
+* [Input](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input) (`fuchsia.ui.input`)
+  * [commands.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/commands.fidl)
+  * [input_events.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_events.fidl)
 
-* [Policy](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.policy) (`fuchsia.ui.policy`)
-  * [presenter.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.policy/presenter.fidl)
-  * [presentation.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.policy/presentation.fidl)
-  * [...](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.policy)
+* [Policy](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.policy) (`fuchsia.ui.policy`)
+  * [presenter.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.policy/presenter.fidl)
+  * [presentation.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.policy/presentation.fidl)
+  * [...](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.policy)
 
-* [App](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.app) (`fuchsia.ui.app`)
-  * [view_provider.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.app/view_provider.fidl)
+* [App](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.app) (`fuchsia.ui.app`)
+  * [view_provider.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.app/view_provider.fidl)
 
-* [experimental] [Sketchy](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.sketchy) (`fuchsia.ui.sketchy`)
-* [experimental] [Vectorial](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.vectorial) (`fuchsia.ui.vectorial`)
+* [experimental] [Sketchy](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.sketchy) (`fuchsia.ui.sketchy`)
+* [experimental] [Vectorial](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.vectorial) (`fuchsia.ui.vectorial`)
 
 ## TODO
 

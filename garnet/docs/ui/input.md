@@ -40,14 +40,14 @@ consumption by Scenic or other entities.
 
 It also instructs Scenic to create the top-level (or "root") elements of the
 scene graph, and vends the
-[Presenter API](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.policy/presenter.fidl)
+[Presenter API](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.policy/presenter.fidl)
 that UI clients use to attach their visual content to the scene graph.
 
 The general transformation for an input event through RootPresenter is from HID
 report, to
-[`InputReport`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.input/input_reports.fidl),
+[`InputReport`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_reports.fidl),
 to
-[`InputEvent`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.input/input_events.fidl).
+[`InputEvent`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_events.fidl).
 The `InputEvent` is sent to Scenic.
 
 ### Implementation
@@ -61,11 +61,11 @@ new events for processing to other parts of RootPresenter.
 For each new peripheral (an input device), `InputReader` assigns a new
 `InputInterpreter` object that reads the HID descriptor report for a single
 input device, and performs bookkeeping by pushing a
-[`DeviceDescriptor`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.input/input_reports.fidl)
+[`DeviceDescriptor`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_reports.fidl)
 and its designated event forwarding channel, an
-[`InputDevice`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.input/input_device_registry.fidl#17),
+[`InputDevice`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_device_registry.fidl#17),
 to the
-[`InputDeviceRegistry`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.input/input_device_registry.fidl#12)
+[`InputDeviceRegistry`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_device_registry.fidl#12)
 FIDL interface. (The `InputDeviceRegistry` interface also enables programmatic
 input injection from outside RootPresenter.) The `InputDeviceRegistry` interface
 is vended by RootPresenter, and in addition to bookkeeping (details below),
@@ -122,7 +122,7 @@ We outline some representative event flows below.
 
 Pointer events, such as touch, typically follow an ADD &rarr; DOWN &rarr; MOVE\*
 &rarr; UP &rarr; REMOVE state sequence, encoded as
-[`PointerEventPhase`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.input/input_events.fidl).
+[`PointerEventPhase`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_events.fidl).
 
 On ADD, we identify the set of potential clients by performing a hit test, and
 forward this event to these clients. To associate future touch events by the

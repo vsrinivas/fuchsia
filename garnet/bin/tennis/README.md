@@ -58,4 +58,4 @@ it will build.
 
 The example is in Rust, but you can definitely build an AI in any FIDL-supported
 language! The FIDL service definition is available at
-`garnet/public/fidl/fuchsia.game.tennis/tennis.fidl`.
+`sdk/fidl/fuchsia.game.tennis/tennis.fidl`.

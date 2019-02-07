@@ -46,7 +46,7 @@ the future.
 
 # API
 
-## [FIDL](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.inspect/inspect.fidl)
+## [FIDL](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/fidl/fuchsia-inspect/inspect.fidl)
 
 The FIDL interface, `fuchsia.inspect.Inspect`, exposes the following
 operations on an object:

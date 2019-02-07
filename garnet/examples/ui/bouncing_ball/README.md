@@ -21,7 +21,7 @@ In garnet, `Alt`+`Esc` toggles back and forth between the console and graphics.
 ## Getting Started: Exposing a ViewProvider
 
 For an application to draw any UI, it first needs to implement a service to
-expose that UI externally. That interface is called [`ViewProvider`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.app/view_provider.fidl).
+expose that UI externally. That interface is called [`ViewProvider`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.app/view_provider.fidl).
 
 First, let's publish our `ViewProvider` interface to our outgoing services. We don't
 do anything with incoming request for a `ViewProvider` yet.
