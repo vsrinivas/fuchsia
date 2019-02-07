@@ -403,6 +403,107 @@ TEST(SdmmcTest, ReadPolled) {
     mock_regs.VerifyAll();
 }
 
+TEST(SdmmcTest, WritePolled) {
+    ddk_mock::MockMmioReg reg_array[kRegisterCount];
+    ddk_mock::MockMmioRegRegion mock_regs(reg_array, sizeof(uint32_t), kRegisterCount);
+    MtkSdmmcTest sdmmc(mock_regs);
+
+    auto thread_ac = fbl::MakeAutoCall([&sdmmc] { sdmmc.StopIrqThread(); });
+
+    GetMockReg<MsdcCfg>(mock_regs).ReadReturns(MsdcCfg().set_card_ck_stable(1).reg_value());
+    sdmmc.Init();
+    mock_regs.VerifyAll();
+
+    // Single block read.
+    uint8_t single_block_data[16] = {0x12, 0xc2, 0x1c, 0x63, 0x54, 0x51, 0x7e, 0xf3,
+                                     0x0a, 0x1b, 0xa5, 0x2a, 0xca, 0x23, 0x02, 0x82};
+
+    sdmmc_req_t req;
+    memset(&req, 0, sizeof(req));
+    req.cmd_idx = 8;
+    req.cmd_flags = SDMMC_RESP_R1 | SDMMC_CMD_TYPE_NORMAL | SDMMC_RESP_DATA_PRESENT;
+    req.arg = 0x72b2af17;
+    req.status = 1;
+    req.blockcount = 1;
+    req.blocksize = sizeof(single_block_data);
+    req.virt_buffer = single_block_data;
+    req.virt_size = sizeof(single_block_data);
+    req.buf_offset = 0;
+
+    GetMockReg<MsdcInt>(mock_regs).ExpectRead(MsdcInt().set_cmd_ready(1).reg_value());
+    GetMockReg<SdcArg>(mock_regs).ExpectWrite(req.arg);
+    GetMockReg<SdcCmd>(mock_regs).ExpectWrite(SdcCmd().set_cmd(req.cmd_idx)
+                                                  .set_resp_type(SdcCmd::kRespTypeR1)
+                                                  .set_block_type(SdcCmd::kBlockTypeSingle)
+                                                  .set_block_size(sizeof(single_block_data))
+                                                  .set_write(1)
+                                                  .reg_value());
+    GetMockReg<SdcBlockNum>(mock_regs).ExpectWrite(1);
+    GetMockReg<SdcResponse>(0, mock_regs).ExpectRead(0x80dcd8ff);
+    GetMockReg<MsdcCfg>(mock_regs).ExpectWrite(MsdcCfg().set_pio_mode(1).reg_value());
+    GetMockReg<MsdcFifoCs>(mock_regs)
+        .ExpectRead()
+        .ExpectWrite()
+        .ExpectRead(0);
+
+    for (size_t i = 0; i < sizeof(single_block_data); i++) {
+        GetMockReg<MsdcTxData>(mock_regs).ExpectWrite(single_block_data[i]);
+    }
+
+    EXPECT_EQ(sdmmc.SdmmcRequest(&req), ZX_OK);
+    EXPECT_EQ(req.status, ZX_OK);
+    EXPECT_EQ(req.response[0], 0x80dcd8ff);
+    ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
+
+    // Multi block read.
+    uint8_t multi_block_data[64] = {0x99, 0x5b, 0xd9, 0x80, 0x35, 0x5e, 0xb9, 0x92,
+                                    0x07, 0xd2, 0x11, 0xd7, 0x72, 0xb3, 0x61, 0x7b,
+                                    0xf8, 0x5a, 0x65, 0xf1, 0x43, 0x4d, 0x43, 0x78,
+                                    0x67, 0x67, 0xd6, 0xd4, 0x3f, 0x0a, 0x1a, 0x93,
+                                    0x0f, 0x77, 0x71, 0x1b, 0xc6, 0x5a, 0x38, 0xc0,
+                                    0xcd, 0x5f, 0x03, 0x63, 0x5f, 0xa6, 0x78, 0xb2,
+                                    0xf6, 0xdb, 0x00, 0x0e, 0xd4, 0xf3, 0xe3, 0x69,
+                                    0xf2, 0x8e, 0x25, 0xaa, 0x6f, 0xbc, 0xe6, 0xba};
+
+    req.cmd_idx = 36;
+    req.cmd_flags = SDMMC_RESP_R1 |
+                    SDMMC_CMD_TYPE_NORMAL |
+                    SDMMC_RESP_DATA_PRESENT |
+                    SDMMC_CMD_MULTI_BLK;
+    req.arg = 0x954887c8;
+    req.status = 1;
+    req.blockcount = 4;
+    req.blocksize = sizeof(multi_block_data) / 4;
+    req.virt_buffer = multi_block_data;
+    req.virt_size = sizeof(multi_block_data);
+
+    GetMockReg<MsdcInt>(mock_regs).ExpectRead(MsdcInt().set_cmd_ready(1).reg_value());
+    GetMockReg<SdcArg>(mock_regs).ExpectWrite(req.arg);
+    GetMockReg<SdcCmd>(mock_regs).ExpectWrite(SdcCmd().set_cmd(req.cmd_idx)
+                                                  .set_resp_type(SdcCmd::kRespTypeR1)
+                                                  .set_block_type(SdcCmd::kBlockTypeMulti)
+                                                  .set_block_size(sizeof(multi_block_data) / 4)
+                                                  .set_auto_cmd(SdcCmd::kAutoCmd12)
+                                                  .set_write(1)
+                                                  .reg_value());
+    GetMockReg<SdcBlockNum>(mock_regs).ExpectWrite(4);
+    GetMockReg<SdcResponse>(0, mock_regs).ExpectRead(0xaa30091e);
+    GetMockReg<MsdcCfg>(mock_regs).ExpectWrite(MsdcCfg().set_pio_mode(1).reg_value());
+    GetMockReg<MsdcFifoCs>(mock_regs)
+        .ExpectRead()
+        .ExpectWrite()
+        .ExpectRead(0);
+
+    for (size_t i = 0; i < sizeof(multi_block_data); i++) {
+        GetMockReg<MsdcTxData>(mock_regs).ExpectWrite(multi_block_data[i]);
+    }
+
+    EXPECT_EQ(sdmmc.SdmmcRequest(&req), ZX_OK);
+    EXPECT_EQ(req.status, ZX_OK);
+    EXPECT_EQ(req.response[0], 0xaa30091e);
+    mock_regs.VerifyAll();
+}
+
 TEST(SdmmcTest, Protocol) {
     ddk_mock::MockMmioReg reg_array[kRegisterCount];
     ddk_mock::MockMmioRegRegion mock_regs(reg_array, sizeof(uint32_t), kRegisterCount);

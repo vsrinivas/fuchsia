@@ -690,14 +690,23 @@ zx_status_t MtkSdmmc::RequestPreparePolled(sdmmc_req_t* req) {
 zx_status_t MtkSdmmc::RequestFinishPolled(sdmmc_req_t* req) {
     uint32_t bytes_remaining = req->blockcount * req->blocksize;
     uint8_t* data_ptr = reinterpret_cast<uint8_t*>(req->virt_buffer) + req->buf_offset;
-    while (bytes_remaining > 0) {
-        uint32_t fifo_count = MsdcFifoCs::Get().ReadFrom(&mmio_).rx_fifo_count();
 
-        for (uint32_t i = 0; i < fifo_count; i++) {
-            *data_ptr++ = MsdcRxData::Get().ReadFrom(&mmio_).data();
+    if (req->cmd_flags & SDMMC_CMD_READ) {
+        while (bytes_remaining > 0) {
+            uint32_t fifo_count = MsdcFifoCs::Get().ReadFrom(&mmio_).rx_fifo_count();
+
+            for (uint32_t i = 0; i < fifo_count; i++) {
+                *data_ptr++ = MsdcRxData::Get().ReadFrom(&mmio_).data();
+            }
+
+            bytes_remaining -= fifo_count;
         }
+    } else {
+        while (MsdcFifoCs::Get().ReadFrom(&mmio_).tx_fifo_count() != 0) {}
 
-        bytes_remaining -= fifo_count;
+        for (uint32_t i = 0; i < bytes_remaining; i++) {
+            MsdcTxData::Get().FromValue(*data_ptr++).WriteTo(&mmio_);
+        }
     }
 
     return ZX_OK;
@@ -708,11 +717,13 @@ zx_status_t MtkSdmmc::SdmmcRequest(sdmmc_req_t* req) {
 }
 
 RequestStatus MtkSdmmc::SdmmcRequestWithStatus(sdmmc_req_t* req) {
-    uint32_t is_data_request = req->cmd_flags & SDMMC_RESP_DATA_PRESENT;
-    if (is_data_request && !req->use_dma && !(req->cmd_flags & SDMMC_CMD_READ)) {
-        // TODO(bradenkell): Implement polled block writes.
+    if ((req->blockcount * req->blocksize) > config_.fifo_depth && !req->use_dma &&
+        !(req->cmd_flags & SDMMC_CMD_READ)) {
+        // TODO(bradenkell): Implement polled block writes greater than the FIFO size.
         return RequestStatus(ZX_ERR_NOT_SUPPORTED);
     }
+
+    uint32_t is_data_request = req->cmd_flags & SDMMC_RESP_DATA_PRESENT;
 
     zx_status_t status = ZX_OK;
 
@@ -743,7 +754,7 @@ RequestStatus MtkSdmmc::SdmmcRequestWithStatus(sdmmc_req_t* req) {
             .set_cmd_ready_enable(1)
             .WriteTo(&mmio_);
 
-        SdcCmd::FromRequest(req).WriteTo(&mmio_);
+        SdcCmd::FromRequest(req, dev_info_.did == PDEV_DID_MEDIATEK_SDIO).WriteTo(&mmio_);
     }
 
     sync_completion_wait(&req_completion_, ZX_TIME_INFINITE);

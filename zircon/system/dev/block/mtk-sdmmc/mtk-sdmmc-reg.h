@@ -88,6 +88,13 @@ public:
     DEF_FIELD(7, 0, rx_fifo_count);
 };
 
+class MsdcTxData : public hwreg::RegisterBase<MsdcTxData, uint8_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<MsdcTxData>(0x18); }
+
+    DEF_FIELD(7, 0, data);
+};
+
 class MsdcRxData : public hwreg::RegisterBase<MsdcRxData, uint8_t> {
 public:
     static auto Get() { return hwreg::RegisterAddr<MsdcRxData>(0x1c); }
@@ -127,7 +134,7 @@ public:
 
     static auto Get() { return hwreg::RegisterAddr<SdcCmd>(0x34); }
 
-    static SdcCmd FromRequest(const sdmmc_req_t* req) {
+    static SdcCmd FromRequest(const sdmmc_req_t* req, bool is_sdio) {
         SdcCmd cmd = Get().FromValue(0);
 
         cmd.set_cmd(req->cmd_idx);
@@ -148,7 +155,11 @@ public:
         cmd.set_block_size(req->blocksize);
 
         if (req->cmd_flags & SDMMC_RESP_DATA_PRESENT) {
-            if (req->cmd_flags & SDMMC_CMD_MULTI_BLK) {
+            if (req->blockcount > 1) {
+                if (!is_sdio) {
+                    cmd.set_auto_cmd(kAutoCmd12);
+                }
+
                 cmd.set_block_type(kBlockTypeMulti);
             } else {
                 cmd.set_block_type(kBlockTypeSingle);
@@ -157,13 +168,9 @@ public:
             if (!(req->cmd_flags & SDMMC_CMD_READ)) {
                 cmd.set_write(1);
             }
-
-            if (req->blockcount > 1) {
-                cmd.set_auto_cmd(kAutoCmd12);
-            }
         }
 
-        if (req->cmd_flags & SDMMC_CMD_TYPE_ABORT) {
+        if ((req->cmd_flags & SDMMC_CMD_TYPE_ABORT) && !is_sdio) {
             cmd.set_stop(1);
         }
 
