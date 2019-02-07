@@ -37,6 +37,14 @@ fuchsia/tools/breakpad/linux-amd64
 	git_revision:9eac2058b70615519b2c4d8c6bdbfca1bd079e39
 	06a7be742e031741bedb5fc71b5fc389374aabfd
 
+fuchsia/tools/dev_finder/linux-amd64
+	git_revision:cf8c6700b13d636d2af8c5f84bec9f8add3584ef
+	iUF4_68EwpArDqVFw-pZgwEZMoZ5Ch9htb-gYVncCMwC
+
+fuchsia/tools/dev_finder/mac-amd64
+	git_revision:cf8c6700b13d636d2af8c5f84bec9f8add3584ef
+	Ap20ACCkDoFfSKwIHgmtci9RiPwraNfgrjyhQZ8glsMC
+
 fuchsia/tools/dump_breakpad_symbols/linux-amd64
 	git_revision:078c34aaee784ec4737e5fe71c0392d54de0f02d
 	Ydzhx1QSmK9d8IG83TVY_cPQmYkk2dMY3vjmA5yNy64C

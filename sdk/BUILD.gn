@@ -101,10 +101,10 @@ sdk("garnet") {
 
   deps = [
     "docs",
+    "tools:dev_finder_sdk($host_toolchain)",
     "tools:symbolize_sdk($host_toolchain)",
     "//build/images:images_sdk",
     "//garnet/bin/cmc:cmc_sdk($host_toolchain)",
-    "//garnet/bin/dev_finder:dev_finder_sdk($host_toolchain)",
     "//garnet/bin/far:bin_sdk($host_toolchain)",
     "//garnet/bin/zxdb:zxdb_sdk($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_sdk($host_toolchain)",

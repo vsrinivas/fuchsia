@@ -1,7 +1,8 @@
 # `dev_finder`
 
-`dev_finder` is the command line tool for device discovery. It uses mDNS to find
-Fuchsia devices. You can find it under `//garnet/bin/dev_finder`.
+`dev_finder` is the command line tool for device discovery. It uses mDNS to
+find Fuchsia devices. You can find it at
+[fuchsia.googlesource.com/tools/cmd/dev_finder](https://fuchsia.googlesource.com/tools/+/master/cmd/dev_finder/).
 
 Currently only Linux is supported. For Mac users see the "For Mac Users"
 section.
