@@ -24,8 +24,7 @@ class PacketLink : public Link, private PacketProtocol::PacketSender {
 
  private:
   void SchedulePacket();
-  void SendPacket(SeqNum seq, LazySlice data,
-                  Callback<void> done) override final;
+  void SendPacket(SeqNum seq, LazySlice packet) override final;
   Status ProcessBody(TimeStamp received, Slice packet);
   Slice BuildPacket(LazySliceArgs args);
 
@@ -56,6 +55,10 @@ class PacketLink : public Link, private PacketProtocol::PacketSender {
   std::vector<Slice> send_slices_;
 
   std::queue<Message> outgoing_;
+
+  // Pointer to a queue that's being used to queue pending sends.
+  // This queue is held on the stack within SendPacket().
+  std::queue<LazySlice>* send_packet_queue_ = nullptr;
 };
 
 }  // namespace overnet

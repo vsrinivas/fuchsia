@@ -348,8 +348,7 @@ class DatagramStream : private Router::StreamHandler,
 
  private:
   void HandleMessage(SeqNum seq, TimeStamp received, Slice data) override final;
-  void SendPacket(SeqNum seq, LazySlice data,
-                  Callback<void> done) override final;
+  void SendPacket(SeqNum seq, LazySlice packet) override final;
   void SendCloseAndFlushQuiesced(int retry_number);
   void FinishClosing();
   void MaybeFinishClosing();

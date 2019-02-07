@@ -37,8 +37,7 @@ class PacketProtocol {
   // PacketSender defines how a packet protocol sends it's data.
   class PacketSender {
    public:
-    virtual void SendPacket(SeqNum seq, LazySlice data,
-                            Callback<void> done) = 0;
+    virtual void SendPacket(SeqNum seq, LazySlice send) = 0;
   };
 
   // Codec describes the transformation to apply to *payload* bytes that are
@@ -117,6 +116,49 @@ class PacketProtocol {
     SendRequest* req_;
   };
 
+  // A smart pointer to prevent a PacketProtocol from quiescing until it's
+  // either explicitly dropped or destroyed.
+  class ProtocolRef {
+   public:
+    ProtocolRef(PacketProtocol* protocol) : protocol_(protocol) {
+      protocol_->refs_++;
+    }
+    ~ProtocolRef() {
+      if (protocol_) {
+        Drop();
+      }
+    }
+
+    void Drop() {
+      assert(protocol_ != nullptr);
+      auto protocol = protocol_;
+      protocol_ = nullptr;
+      if (0 == --protocol->refs_) {
+        auto cb = std::move(protocol->quiesce_);
+        cb();
+      }
+    }
+
+    ProtocolRef(const ProtocolRef& other) = delete;
+    ProtocolRef& operator=(const ProtocolRef& other) = delete;
+
+    ProtocolRef(ProtocolRef&& other) : protocol_(other.protocol_) {
+      other.protocol_ = nullptr;
+    }
+    ProtocolRef& operator=(ProtocolRef&& other) {
+      std::swap(protocol_, other.protocol_);
+      return *this;
+    }
+
+    PacketProtocol* operator->() const { return protocol_; }
+    PacketProtocol* get() const { return protocol_; }
+
+    bool has_value() const { return protocol_ != nullptr; }
+
+   private:
+    PacketProtocol* protocol_;
+  };
+
   /////////////////////////////////////////////////////////////////////////////
   // Internal interfaces.
 
@@ -124,8 +166,9 @@ class PacketProtocol {
   enum class ProcessMessageResult : uint8_t {
     NOT_PROCESSED,
     NACK,
-    ACK,
     OPTIONAL_ACK,
+    ACK,
+    ACK_URGENTLY,
   };
 
   friend std::ostream& operator<<(std::ostream& out, ProcessMessageResult pmr) {
@@ -136,6 +179,8 @@ class PacketProtocol {
         return out << "NACK";
       case ProcessMessageResult::ACK:
         return out << "ACK";
+      case ProcessMessageResult::ACK_URGENTLY:
+        return out << "ACK_URGENTLY";
       case ProcessMessageResult::OPTIONAL_ACK:
         return out << "OPTIONAL_ACK";
     }
@@ -362,47 +407,6 @@ class PacketProtocol {
     PacketProtocol* const protocol_;
     bool schedule_send_queue_ = false;
     bool quiesce_ = false;
-  };
-
-  class ProtocolRef {
-   public:
-    ProtocolRef(PacketProtocol* protocol) : protocol_(protocol) {
-      protocol_->refs_++;
-    }
-    ~ProtocolRef() {
-      if (protocol_) {
-        Drop();
-      }
-    }
-
-    void Drop() {
-      assert(protocol_ != nullptr);
-      auto protocol = protocol_;
-      protocol_ = nullptr;
-      if (0 == --protocol->refs_) {
-        auto cb = std::move(protocol->quiesce_);
-        cb();
-      }
-    }
-
-    ProtocolRef(const ProtocolRef& other) = delete;
-    ProtocolRef& operator=(const ProtocolRef& other) = delete;
-
-    ProtocolRef(ProtocolRef&& other) : protocol_(other.protocol_) {
-      other.protocol_ = nullptr;
-    }
-    ProtocolRef& operator=(ProtocolRef&& other) {
-      std::swap(protocol_, other.protocol_);
-      return *this;
-    }
-
-    PacketProtocol* operator->() const { return protocol_; }
-    PacketProtocol* get() const { return protocol_; }
-
-    bool has_value() const { return protocol_ != nullptr; }
-
-   private:
-    PacketProtocol* protocol_;
   };
 
   class PacketSend final {

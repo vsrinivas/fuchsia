@@ -47,11 +47,13 @@ class AckFrame {
   AckFrame& operator=(const AckFrame&) = delete;
 
   AckFrame(AckFrame&& other)
-      : ack_to_seq_(other.ack_to_seq_),
+      : partial_(other.partial_),
+        ack_to_seq_(other.ack_to_seq_),
         ack_delay_us_(other.ack_delay_us_),
         nack_seqs_(std::move(other.nack_seqs_)) {}
 
   AckFrame& operator=(AckFrame&& other) {
+    partial_ = other.partial_;
     ack_to_seq_ = other.ack_to_seq_;
     ack_delay_us_ = other.ack_delay_us_;
     nack_seqs_ = std::move(other.nack_seqs_);

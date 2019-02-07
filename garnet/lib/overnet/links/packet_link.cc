@@ -196,17 +196,37 @@ Slice PacketLink::BuildPacket(LazySliceArgs args) {
   return send;
 }
 
-void PacketLink::SendPacket(SeqNum seq, LazySlice data, Callback<void> done) {
-  const auto prefix_length = 1 + seq.wire_length();
-  auto data_slice =
-      data(LazySliceArgs{Border::Prefix(prefix_length),
-                         protocol_.maximum_send_size() - prefix_length, false});
-  auto send_slice = data_slice.WithPrefix(prefix_length, [seq](uint8_t* p) {
-    *p++ = 0;
-    seq.Write(p);
-  });
-  OVERNET_TRACE(DEBUG) << "Emit " << send_slice;
-  Emit(std::move(send_slice));
+void PacketLink::SendPacket(SeqNum seq, LazySlice data) {
+  if (send_packet_queue_ != nullptr) {
+    send_packet_queue_->emplace(std::move(data));
+    return;
+  }
+
+  PacketProtocol::ProtocolRef protocol_ref(&protocol_);
+  std::queue<LazySlice> send_packet_queue;
+  send_packet_queue_ = &send_packet_queue;
+
+  for (;;) {
+    const auto prefix_length = 1 + seq.wire_length();
+    auto data_slice = data(
+        LazySliceArgs{Border::Prefix(prefix_length),
+                      protocol_.maximum_send_size() - prefix_length, false});
+    auto send_slice = data_slice.WithPrefix(prefix_length, [seq](uint8_t* p) {
+      *p++ = 0;
+      seq.Write(p);
+    });
+    OVERNET_TRACE(DEBUG) << "Emit " << send_slice;
+    Emit(std::move(send_slice));
+
+    if (send_packet_queue.empty()) {
+      break;
+    }
+
+    data = std::move(send_packet_queue.front());
+    send_packet_queue.pop();
+  }
+
+  send_packet_queue_ = nullptr;
 }
 
 void PacketLink::Process(TimeStamp received, Slice packet) {

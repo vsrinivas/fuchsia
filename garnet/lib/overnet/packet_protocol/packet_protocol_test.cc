@@ -28,15 +28,10 @@ static const uint64_t kMSS = 1500;
 
 class MockPacketSender : public PacketProtocol::PacketSender {
  public:
-  MockPacketSender(Timer* timer) : timer_(timer) {}
-
   MOCK_METHOD2(SendPacketMock, void(SeqNum, Slice));
 
-  void SendPacket(SeqNum seq, LazySlice slice, Callback<void> done) override {
-    TimeStamp now = timer_->Now();
-    TimeStamp when = now;
+  void SendPacket(SeqNum seq, LazySlice slice) override {
     SendPacketMock(seq, slice(LazySliceArgs{Border::None(), kMSS, false}));
-    EXPECT_GE(when, now);
   }
 
   MOCK_METHOD1(SendCallback, void(const Status&));
@@ -44,9 +39,6 @@ class MockPacketSender : public PacketProtocol::PacketSender {
   auto NewSendCallback() {
     return [this](const Status& status) { this->SendCallback(status); };
   }
-
- private:
-  Timer* const timer_;
 };
 
 class DummyCodec final : public PacketProtocol::Codec {
@@ -103,10 +95,10 @@ TEST_P(PacketProtocolTest, NoOp) {
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
 
-  StrictMock<MockPacketSender> ps(&timer);
+  StrictMock<MockPacketSender> ps;
   std::mt19937 rng{123};
-  MakeClosedPtr<PacketProtocol>(
-      &timer, [&rng] { return rng(); }, &ps, GetParam(), kMSS);
+  MakeClosedPtr<PacketProtocol>(&timer, [&rng] { return rng(); }, &ps,
+                                GetParam(), kMSS);
 }
 
 TEST_P(PacketProtocolTest, SendOnePacket) {
@@ -114,7 +106,7 @@ TEST_P(PacketProtocolTest, SendOnePacket) {
   TraceCout trace(&timer);
   ScopedRenderer scoped_renderer(&trace);
 
-  StrictMock<MockPacketSender> ps(&timer);
+  StrictMock<MockPacketSender> ps;
   std::mt19937 rng{123};
   auto packet_protocol = MakeClosedPtr<PacketProtocol>(
       &timer, [&rng] { return rng(); }, &ps, GetParam(), kMSS);

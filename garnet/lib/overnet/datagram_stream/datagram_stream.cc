@@ -126,9 +126,8 @@ DatagramStream::DatagramStream(
       reliability_and_ordering_(reliability_and_ordering),
       receive_mode_(reliability_and_ordering),
       // TODO(ctiller): What should mss be? Hardcoding to 2048 for now.
-      packet_protocol_(
-          timer_, [router] { return (*router->rng())(); }, this,
-          PacketProtocol::NullCodec(), 2048) {}
+      packet_protocol_(timer_, [router] { return (*router->rng())(); }, this,
+                       PacketProtocol::NullCodec(), 2048) {}
 
 void DatagramStream::Register() {
   ScopedModule<DatagramStream> scoped_module(this);
@@ -479,8 +478,7 @@ void DatagramStream::MaybeContinueReceive() {
   }
 }
 
-void DatagramStream::SendPacket(SeqNum seq, LazySlice data,
-                                Callback<void> done) {
+void DatagramStream::SendPacket(SeqNum seq, LazySlice data) {
   router_->Forward(
       Message{std::move(RoutableMessage(router_->node_id())
                             .AddDestination(peer_, stream_id_, seq)),

@@ -173,8 +173,7 @@ void PacketProtocol::OutstandingMessages::Send(BBR::TransmitRequest bbr_request,
       std::max(outstanding_.size(), size_t(max_outstanding_size_));
 
   protocol_->packet_sender_->SendPacket(
-      seq_num, PacketSend(protocol_, seq_idx, std::move(bbr_request)),
-      [protocol = ProtocolRef(protocol_)] {});
+      seq_num, PacketSend(protocol_, seq_idx, std::move(bbr_request)));
 }
 
 PacketProtocol::PacketSend::PacketSend(PacketProtocol* protocol,
@@ -470,6 +469,11 @@ PacketProtocol::AckUrgency PacketProtocol::ReceivedQueue::Received(
       // Got some data, make sure there's an ack scheduled soon.
       return AckUrgency::SEND_SOON;
     }
+    case ProcessMessageResult::ACK_URGENTLY: {
+      optional_ack_run_length_ = 0;
+      *received_packet = ReceivedPacket{ReceiveState::RECEIVED, received};
+      return AckUrgency::SEND_IMMEDIATELY;
+    }
   }
 }
 
@@ -528,7 +532,7 @@ PacketProtocol::ProcessMessageResult PacketProtocol::ProcessMessage(
 
   Optional<AckFrame> ack;
 
-  bool ack_is_optional = true;
+  ProcessMessageResult ack_result = ProcessMessageResult::OPTIONAL_ACK;
   if (ack_length > 0) {
     auto ack_status = AckFrame::Parse(slice.TakeUntilOffset(ack_length));
     if (ack_status.is_error()) {
@@ -546,7 +550,7 @@ PacketProtocol::ProcessMessageResult PacketProtocol::ProcessMessage(
                          << " got-ack:" << *ack_status;
     ack = std::move(*ack_status);
     if (ack->partial()) {
-      ack_is_optional = false;
+      ack_result = ProcessMessageResult::ACK_URGENTLY;
     }
   }
 
@@ -559,8 +563,8 @@ PacketProtocol::ProcessMessageResult PacketProtocol::ProcessMessage(
     if (msg.was_nacked()) {
       // Note: ack not processed
       return ProcessMessageResult::NACK;
-    } else {
-      ack_is_optional = false;
+    } else if (ack_result != ProcessMessageResult::ACK_URGENTLY) {
+      ack_result = ProcessMessageResult::ACK;
     }
   } else {
     // Handle no message:
@@ -569,8 +573,7 @@ PacketProtocol::ProcessMessageResult PacketProtocol::ProcessMessage(
   if (ack.has_value()) {
     state_->outstanding_messages.ProcessValidAck(ack.Take(), received);
   }
-  return ack_is_optional ? ProcessMessageResult::OPTIONAL_ACK
-                         : ProcessMessageResult::ACK;
+  return ack_result;
 }
 
 Status PacketProtocol::OutstandingMessages::ValidateAck(

@@ -67,8 +67,7 @@ Optional<PacketProtocol*> PacketProtocolFuzzer::packet_protocol(uint8_t idx) {
   }
 }
 
-void PacketProtocolFuzzer::Sender::SendPacket(SeqNum seq, LazySlice data,
-                                              Callback<void> done) {
+void PacketProtocolFuzzer::Sender::SendPacket(SeqNum seq, LazySlice data) {
   pending_sends_.emplace(next_send_id_++, PendingSend{seq, std::move(data)});
 }
 

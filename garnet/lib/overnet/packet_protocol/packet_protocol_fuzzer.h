@@ -40,7 +40,7 @@ class PacketProtocolFuzzer {
 
   class Sender final : public PacketProtocol::PacketSender {
    public:
-    void SendPacket(SeqNum seq, LazySlice data, Callback<void> done) override;
+    void SendPacket(SeqNum seq, LazySlice data) override;
 
     struct PendingSend {
       SeqNum seq;
