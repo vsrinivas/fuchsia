@@ -18,6 +18,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl \
+    system/ulib/fidl \
     system/ulib/pretty \
 
 MODULE_LIBS := \
@@ -27,5 +28,8 @@ MODULE_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-hidbus \
+
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-hardware-hidctl \
 
 include make/module.mk

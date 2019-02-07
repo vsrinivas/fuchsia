@@ -7,29 +7,36 @@
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/hidbus.h>
+#include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <threads.h>
 #include <zircon/compiler.h>
-#include <zircon/device/hidctl.h>
 #include <zircon/types.h>
 #include <lib/zx/socket.h>
 
+#include <fuchsia/hardware/hidctl/c/fidl.h>
+
 namespace hidctl {
 
-class HidCtl : public ddk::Device<HidCtl, ddk::Ioctlable> {
+class HidCtl : public ddk::Device<HidCtl, ddk::Messageable> {
   public:
     HidCtl(zx_device_t* device);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
     void DdkRelease();
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                         size_t out_len, size_t* out_actual);
+  private:
+    static zx_status_t FidlMakeHidDevice(void* ctx,
+                                         const fuchsia_hardware_hidctl_HidCtlConfig* config,
+                                         const uint8_t* rpt_desc_data, size_t rpt_desc_count,
+                                         fidl_txn_t* txn);
 };
 
 class HidDevice : public ddk::Device<HidDevice, ddk::Unbindable>,
                   public ddk::HidbusProtocol<HidDevice, ddk::base_protocol> {
   public:
-    HidDevice(zx_device_t* device, const hid_ioctl_config* config, zx::socket data);
+    HidDevice(zx_device_t* device, const fuchsia_hardware_hidctl_HidCtlConfig* config,
+              fbl::Array<const uint8_t> report_desc, zx::socket data);
 
     void DdkRelease();
     void DdkUnbind();
@@ -54,8 +61,7 @@ class HidDevice : public ddk::Device<HidDevice, ddk::Unbindable>,
 
     bool boot_device_;
     uint8_t dev_class_;
-    fbl::unique_ptr<uint8_t[]> report_desc_;
-    size_t report_desc_len_ = 0;
+    fbl::Array<const uint8_t> report_desc_;
     uint32_t mtu_ = 256;  // TODO: set this based on report_desc_
 
     fbl::Mutex lock_;
