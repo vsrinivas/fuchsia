@@ -65,6 +65,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fidl \
     system/ulib/fidl-async \
     system/ulib/fidl-utils \
+    system/ulib/ldmsg \
     system/ulib/zx \
     system/ulib/zxcpp \
 

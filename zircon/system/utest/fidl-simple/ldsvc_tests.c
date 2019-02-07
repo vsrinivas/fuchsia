@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ldsvc/c/fidl.h>
+#include <ldmsg/ldmsg.h>
+#include <lib/fidl/coding.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/fidl.h>
@@ -215,6 +217,113 @@ static bool loader_test(void) {
     END_TEST;
 }
 
+// This doesn't really need to be a separate test.  But for documentation: we
+// hardcode the ordinals in ldmsg.h.  They need to be the same as the generated
+// ordinals.
+//
+// If you need to make a change in how ordinals are calculated, first change
+// GenOrdinal, then change LDMSG_*, and then change Ordinal.
+static bool ordinals_are_consistent(void) {
+    BEGIN_TEST;
+    static_assert(LDMSG_OP_DONE == fuchsia_ldsvc_LoaderDoneOrdinal ||
+                      LDMSG_OP_DONE == fuchsia_ldsvc_LoaderDoneGenOrdinal,
+                  "Done ordinals need to match");
+    static_assert(LDMSG_OP_LOAD_OBJECT == fuchsia_ldsvc_LoaderLoadObjectOrdinal ||
+                      LDMSG_OP_LOAD_OBJECT == fuchsia_ldsvc_LoaderLoadObjectGenOrdinal,
+                  "LoadObject ordinals need to match");
+    static_assert(LDMSG_OP_LOAD_SCRIPT_INTERPRETER == fuchsia_ldsvc_LoaderLoadScriptInterpreterOrdinal ||
+                      LDMSG_OP_LOAD_SCRIPT_INTERPRETER == fuchsia_ldsvc_LoaderLoadScriptInterpreterGenOrdinal,
+                  "LoadScript ordinals need to match");
+    static_assert(LDMSG_OP_CONFIG == fuchsia_ldsvc_LoaderConfigOrdinal ||
+                      LDMSG_OP_CONFIG == fuchsia_ldsvc_LoaderConfigGenOrdinal,
+                  "Config ordinals need to match");
+    static_assert(LDMSG_OP_CLONE == fuchsia_ldsvc_LoaderCloneOrdinal ||
+                      LDMSG_OP_CLONE == fuchsia_ldsvc_LoaderCloneGenOrdinal,
+                  "Clone ordinals need to match");
+    static_assert(LDMSG_OP_DEBUG_PUBLISH_DATA_SINK == fuchsia_ldsvc_LoaderDebugPublishDataSinkOrdinal ||
+                      LDMSG_OP_DEBUG_PUBLISH_DATA_SINK == fuchsia_ldsvc_LoaderDebugPublishDataSinkGenOrdinal,
+                  "DebugPublishDataSink ordinals need to match");
+    static_assert(LDMSG_OP_DEBUG_LOAD_CONFIG == fuchsia_ldsvc_LoaderDebugLoadConfigOrdinal ||
+                      LDMSG_OP_DEBUG_LOAD_CONFIG == fuchsia_ldsvc_LoaderDebugLoadConfigGenOrdinal,
+                  "DebugLoad ordinals need to match");
+    END_TEST;
+}
+
+// Assumes that the ordinal_value is an interface method that takes a single
+// string.  Encodes some data with the ldmsg encoder, and then decodes it with
+// the fidl decoder.  Then, encodes some data with the fidl encoder, and decodes
+// it with the ldmsg decoder.
+static void check_string_round_trip(uint32_t ordinal_value, const fidl_type_t* table) {
+    ldmsg_req_t req;
+    memset(&req.header, 0, sizeof(req.header));
+    size_t req_len_out;
+    req.header.ordinal = ordinal_value;
+    const char* data = "ld.so.1";
+    ldmsg_req_encode(&req, &req_len_out, data, sizeof(data));
+    EXPECT_EQ((uintptr_t)req.common.string.data, FIDL_ALLOC_PRESENT, "");
+    const char* err_msg = NULL;
+    zx_status_t res = fidl_decode(table,
+                                  (void*)&req,
+                                  (uint32_t)req_len_out,
+                                  NULL,
+                                  0, &err_msg);
+    EXPECT_EQ(ZX_OK, res, "result of fidl_decode incorrect");
+    EXPECT_EQ(0, strcmp(req.common.string.data, data),
+              "data not decoded correctly");
+    EXPECT_EQ(err_msg, NULL, err_msg);
+    uint32_t out_actual_handles;
+    res = fidl_encode(table,
+                      (void*)&req,
+                      (uint32_t)req_len_out,
+                      NULL,
+                      0,
+                      &out_actual_handles,
+                      &err_msg);
+    EXPECT_EQ(ZX_OK, res, "Encoding failure");
+    EXPECT_EQ(err_msg, NULL, err_msg);
+    size_t len_out;
+    const char* data_out;
+    ldmsg_req_decode(&req, req_len_out, &data_out, &len_out);
+    EXPECT_EQ(0, strcmp(data_out, data), "data from decoder not correct value");
+    // strlen(data) + 1 because decode includes the nul char
+    EXPECT_EQ(len_out, strlen(data) + 1, "len from decoder not correct length");
+}
+
+// Checks that the ldmsg encoder and decoder behave consistently with the C
+// binding's default encoder and decoder.
+static bool ldmsg_functions_are_consistent(void) {
+    BEGIN_TEST;
+    {
+        ldmsg_req_t done_req;
+        memset(&done_req.header, 0, sizeof(done_req.header));
+        size_t req_len_out;
+        done_req.header.ordinal = fuchsia_ldsvc_LoaderDoneOrdinal;
+        ldmsg_req_encode(&done_req, &req_len_out, NULL, 0);
+        const char* err_msg = NULL;
+        zx_status_t res = fidl_decode(&fuchsia_ldsvc_LoaderDoneRequestTable,
+                                      (void*)&done_req,
+                                      (uint32_t)req_len_out,
+                                      NULL,
+                                      0, &err_msg);
+        EXPECT_EQ(ZX_OK, res, "fidl_decode return value not ZX_OK");
+        EXPECT_EQ(err_msg, NULL, err_msg);
+        // Don't bother with the round-trip here because there is no data to
+        // encode.
+    }
+
+    check_string_round_trip(fuchsia_ldsvc_LoaderLoadObjectOrdinal,
+                            &fuchsia_ldsvc_LoaderLoadObjectRequestTable);
+    check_string_round_trip(fuchsia_ldsvc_LoaderLoadScriptInterpreterOrdinal,
+                            &fuchsia_ldsvc_LoaderLoadScriptInterpreterRequestTable);
+    check_string_round_trip(fuchsia_ldsvc_LoaderConfigOrdinal,
+                            &fuchsia_ldsvc_LoaderConfigRequestTable);
+    check_string_round_trip(fuchsia_ldsvc_LoaderDebugLoadConfigOrdinal,
+                            &fuchsia_ldsvc_LoaderDebugLoadConfigRequestTable);
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(ldsvc_tests)
 RUN_NAMED_TEST("fuchsia.ldsvc.Loader test", loader_test)
+RUN_NAMED_TEST("fuchsia.ldsvc.Loader ordinals", ordinals_are_consistent)
+RUN_NAMED_TEST("fuchsia.ldsvc.Loader same as fidl", ldmsg_functions_are_consistent)
 END_TEST_CASE(ldsvc_tests);
