@@ -127,6 +127,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     // We launch the test binary.
     debug_ipc::LaunchRequest launch_request = {};
     launch_request.argv.push_back(kTestExecutablePath);
+    launch_request.inferior_type = debug_ipc::InferiorType::kBinary;
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
     ASSERT_EQ(launch_reply.status, static_cast<uint32_t>(ZX_OK))
@@ -182,13 +183,14 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     EXPECT_TRUE(breakpoint.should_delete);
   }
 }
+// TODO(DX-909): Some HW capabilities (like HW breakpoints) are not well
+//               emulated by QEMU without KVM. This will sometimes make tests
+//               fail or even crash QEMU.
+//               The tests will be re-enabled when there is way to express
+//               that these test must not run on QEMU.
+#if 0
 
 TEST(BreakpointIntegration, HWBreakpoint) {
-#if defined(__aarch64__)
-  // TODO(donosoc): QEMU doesn't handle arm64 debug capabilities corectly.
-  //                Need to test this on hardware.
-  return;
-#endif
   // We attempt to load the pre-made .so.
   SoWrapper so_wrapper;
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;
@@ -277,5 +279,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
         << "Got: " << debug_ipc::ThreadRecord::StateToString(record.state);
   }
 }
+
+#endif
 
 }  // namespace debug_agent
