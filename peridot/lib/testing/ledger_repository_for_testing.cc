@@ -53,8 +53,8 @@ void LedgerRepositoryForTesting::Terminate(std::function<void()> done) {
   if (ledger_app_client_) {
     ledger_app_client_->Teardown(kBasicTimeout, [this, done] {
       ledger_repo_factory_.Unbind();
-      ledger_app_client_.reset();
       done();
+      ledger_app_client_.reset();
     });
 
   } else {
