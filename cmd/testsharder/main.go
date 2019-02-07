@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 
-	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/testsharder"
 )
 
@@ -37,21 +36,10 @@ func main() {
 		log.Fatal("must specify a Fuchsia build output directory")
 	}
 
-	// Load spec files.
-	pkgs, err := build.LoadPackages(buildDir)
+	specs, err := testsharder.LoadTestSpecs(buildDir)
 	if err != nil {
 		log.Fatal(err)
 	}
-	hostTests, err := build.LoadHostTests(buildDir)
-	if err != nil {
-		log.Fatal(err)
-	}
-	specs, err := testsharder.LoadTestSpecs(buildDir, pkgs, hostTests)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Load test platform environments.
 	platforms, err := testsharder.LoadPlatforms(buildDir)
 	if err != nil {
 		log.Fatal(err)

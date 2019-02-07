@@ -4,25 +4,13 @@
 package testsharder
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"fuchsia.googlesource.com/tools/build"
-)
-
-const (
-	// TestSpecSuffix is the file suffix identifying a test spec.
-	TestSpecSuffix = ".spec.json"
-
-	// TestDepsSuffix is the file suffix identifying a file giving the runtime
-	// depedencies of a test.
-	TestDepsSuffix = ".spec.data"
 )
 
 // OS is an operating system that a test may run in.
@@ -63,9 +51,13 @@ type Test struct {
 	// Command is the command line to run to execute this test.
 	Command []string `json:"command,omitempty"`
 
-	// Deps is the list of paths to the test's runtime dependencies,
-	// relative to the build directory.
+	// DepsFile is a relative path within the build directory to a file containing a JSON
+	// list of the test's runtime dependencies,
 	// Currently this field only makes sense for Linux and Mac tests.
+	DepsFile string `json:"deps_file,omitempty"`
+
+	// Deps is the list of paths to the test's runtime dependencies within the build
+	// directory. It is read out of DepFile.
 	Deps []string `json:"deps,omitempty"`
 }
 
@@ -119,116 +111,31 @@ func ValidateTestSpecs(specs []TestSpec, platforms []DimensionSet) error {
 	return nil
 }
 
-// PkgTestSpecDir returns the directory where associated test specs may be written,
-// given a package target.
-func PkgTestSpecDir(fuchsiaBuildDir string, pkg build.Target) string {
-	return filepath.Join(fuchsiaBuildDir, pkg.BuildDir, pkg.Name)
-}
-
-// HostTestSpecDir returns the directory where associated test specs may be written,
-// given a host test target.
-func HostTestSpecDir(fuchsiaBuildDir string, hostTest build.Target) string {
-	return filepath.Join(fuchsiaBuildDir, hostTest.BuildDir)
-}
-
-func readLinesFromFile(path string) ([]string, error) {
-	fd, err := os.Open(path)
-	defer fd.Close()
+// LoadTestSpecs loads a set of test specifications from a build.
+func LoadTestSpecs(fuchsiaBuildDir string) ([]TestSpec, error) {
+	manifestPath := filepath.Join(fuchsiaBuildDir, build.TestSpecManifestName)
+	bytes, err := ioutil.ReadFile(manifestPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open %s: %v", path, err)
-	}
-
-	reader := bufio.NewReader(fd)
-	lines := []string{}
-	for {
-		line, err := reader.ReadString('\n')
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, fmt.Errorf("failed to read line from %s: %v", path, err)
-		}
-		line = strings.TrimRight(line, "\n")
-		lines = append(lines, line)
-	}
-	return lines, nil
-}
-
-// LoadTestSpecs loads a set of test specifications from a list of Fuchsia
-// package targets and a list of host test targets.
-func LoadTestSpecs(fuchsiaBuildDir string, pkgs, hostTests []build.Target) ([]TestSpec, error) {
-	// First, load the test specs associated to the given packages.
-	//
-	// It is guaranteed that a test spec will be written to the build directory of the
-	// corresponding package its test was defined in: specifically, it will be put in
-	// <target_out_dir of the test package>/<test package name>.
-	specs := []TestSpec{}
-	processedDirs := make(map[string]bool)
-
-	decodeTestSpecs := func(targets []build.Target, testSpecDir func(string, build.Target) string) error {
-		for _, target := range targets {
-			specDir := testSpecDir(fuchsiaBuildDir, target)
-			if _, ok := processedDirs[specDir]; ok {
-				continue
-			}
-			processedDirs[specDir] = true
-
-			// If the associated test spec directory does not exist, the package specified no
-			// tests.
-			if _, err := os.Stat(specDir); os.IsNotExist(err) {
-				continue
-			}
-
-			// Non-recursively enumerate the files in this directory; it's guaranteed that
-			// the test specs will be found here if generated.
-			entries, err := ioutil.ReadDir(specDir)
-			if err != nil {
-				return err
-			}
-
-			for _, entry := range entries {
-				if entry.IsDir() {
-					continue
-				}
-
-				// Open, read, and parse any test spec found. Look for any associated
-				// runtime depedencies.
-				path := filepath.Join(specDir, entry.Name())
-				if strings.HasSuffix(path, TestSpecSuffix) {
-					specFile, err := os.Open(path)
-					defer specFile.Close()
-					if err != nil {
-						return fmt.Errorf("failed to open %s: %v", path, err)
-					}
-
-					var spec TestSpec
-					if err := json.NewDecoder(specFile).Decode(&spec); err != nil {
-						return fmt.Errorf("failed to decode %s: %v", path, err)
-					}
-
-					testDepsPath := strings.Replace(path, TestSpecSuffix, TestDepsSuffix, 1)
-					_, err = os.Stat(testDepsPath)
-					if err == nil {
-						deps, err := readLinesFromFile(testDepsPath)
-						if err != nil {
-							return err
-						}
-						spec.Test.Deps = deps
-					} else if !os.IsNotExist(err) {
-						return err
-					}
-					specs = append(specs, spec)
-				}
-			}
-		}
-		return nil
-	}
-
-	if err := decodeTestSpecs(pkgs, PkgTestSpecDir); err != nil {
 		return nil, err
 	}
-	if err := decodeTestSpecs(hostTests, HostTestSpecDir); err != nil {
+	var specs []TestSpec
+	if err = json.Unmarshal(bytes, &specs); err != nil {
 		return nil, err
 	}
 
+	for i, _ := range specs {
+		if specs[i].DepsFile == "" {
+			continue
+		}
+		path := filepath.Join(fuchsiaBuildDir, specs[i].DepsFile)
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		if err = json.NewDecoder(f).Decode(&specs[i].Deps); err != nil {
+			return nil, err
+		}
+		specs[i].DepsFile = "" // No longer needed.
+	}
 	return specs, nil
 }
