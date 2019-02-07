@@ -738,13 +738,23 @@ static void brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
 
     fill_with_broadcast_addr(params_le->bssid);
     params_le->bss_type = DOT11_BSSTYPE_ANY;
-    params_le->scan_type = BRCMF_SCANTYPE_ACTIVE;
+    if (request->scan_type == WLAN_SCAN_TYPE_ACTIVE) {
+        params_le->scan_type = BRCMF_SCANTYPE_ACTIVE;
+    } else {
+        params_le->scan_type = BRCMF_SCANTYPE_PASSIVE;
+    }
     params_le->channel_num = 0;
     params_le->nprobes = -1;
     params_le->active_time = -1;
     params_le->passive_time = -1;
     params_le->home_time = -1;
-    memset(&params_le->ssid_le, 0, sizeof(params_le->ssid_le));
+    params_le->ssid_le.SSID_len = request->ssid.len;
+    if (request->ssid.len <= sizeof(params_le->ssid_le.SSID)) {
+        memcpy(params_le->ssid_le.SSID, request->ssid.data, request->ssid.len);
+    } else {
+        memcpy(params_le->ssid_le.SSID, request->ssid.data, sizeof(params_le->ssid_le.SSID));
+        brcmf_err("Scan request SSID size too large\n");
+    }
 
     n_ssids = request->num_ssids;
     n_channels = request->num_channels;
@@ -768,25 +778,27 @@ static void brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
     /* Copy ssid array if applicable */
     brcmf_dbg(SCAN, "### List of SSIDs to scan ### %d\n", n_ssids);
     if (n_ssids > 0) {
-        offset = offsetof(struct brcmf_scan_params_le, channel_list) +
-                 n_channels * sizeof(uint16_t);
-        offset = roundup(offset, sizeof(uint32_t));
-        ptr = (char*)params_le + offset;
-        for (i = 0; i < (int32_t)n_ssids; i++) {
-            memset(&ssid_le, 0, sizeof(ssid_le));
-            ssid_le.SSID_len = request->ssid_list[i].len;
-            memcpy(ssid_le.SSID, request->ssid_list[i].data, request->ssid_list[i].len);
-            if (!ssid_le.SSID_len) {
-                brcmf_dbg(SCAN, "%d: Broadcast scan\n", i);
-            } else {
-                brcmf_dbg(SCAN, "%d: scan for  %.32s size=%d\n", i, ssid_le.SSID, ssid_le.SSID_len);
+        if (params_le->scan_type == BRCMF_SCANTYPE_ACTIVE) {
+            offset = offsetof(struct brcmf_scan_params_le, channel_list) +
+                     n_channels * sizeof(uint16_t);
+            offset = roundup(offset, sizeof(uint32_t));
+            ptr = (char*)params_le + offset;
+            for (i = 0; i < (int32_t)n_ssids; i++) {
+                memset(&ssid_le, 0, sizeof(ssid_le));
+                ssid_le.SSID_len = request->ssid_list[i].len;
+                memcpy(ssid_le.SSID, request->ssid_list[i].data, request->ssid_list[i].len);
+                if (!ssid_le.SSID_len) {
+                    brcmf_dbg(SCAN, "%d: Broadcast scan\n", i);
+                } else {
+                    brcmf_dbg(SCAN, "%d: scan for  %.32s size=%d\n", i, ssid_le.SSID,
+                              ssid_le.SSID_len);
+                }
+                memcpy(ptr, &ssid_le, sizeof(ssid_le));
+                ptr += sizeof(ssid_le);
             }
-            memcpy(ptr, &ssid_le, sizeof(ssid_le));
-            ptr += sizeof(ssid_le);
+        } else {
+            brcmf_err("SSID list received for passive scan\n");
         }
-    } else {
-        brcmf_dbg(SCAN, "Performing passive scan\n");
-        params_le->scan_type = BRCMF_SCANTYPE_PASSIVE;
     }
     /* Adding mask to channel numbers */
     params_le->channel_num = (n_ssids << BRCMF_SCAN_PARAMS_NSSID_SHIFT) |
