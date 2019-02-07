@@ -10,7 +10,7 @@ MODULE_TYPE := usertest
 
 MODULE_NAME := namespace-test
 
-MODULE_SRCS += $(LOCAL_DIR)/namespace-test.c
+MODULE_SRCS += $(LOCAL_DIR)/namespace-test.cpp
 
 MODULE_LIBS := \
     system/ulib/launchpad \

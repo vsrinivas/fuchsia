@@ -13,12 +13,15 @@ __BEGIN_CDECLS;
 
 typedef struct fdio_namespace fdio_ns_t;
 
-
 // Create a new, empty namespace
 zx_status_t fdio_ns_create(fdio_ns_t** out);
 
-// Destroy and deallocate a namespace
-// Will fail (ZX_ERR_BAD_STATE) if the namespace is in use.
+// Destroy and deallocate a namespace.
+//
+// If the namespace is in-use, it will be destroyed once it is
+// no longer referenced.
+//
+// This function always returns |ZX_OK|.
 zx_status_t fdio_ns_destroy(fdio_ns_t* ns);
 
 // Create a new directory within a namespace, bound to the
@@ -27,7 +30,7 @@ zx_status_t fdio_ns_destroy(fdio_ns_t* ns);
 // no "." nor ".." entries.  It is relative to the root of the
 // namespace.
 //
-// The handle is not closed on failure.
+// Ownership of |h| is transferred to |ns|: it is closed on error.
 //
 // Will fail with ZX_ERR_BAD_STATE if the namespace is in use.
 zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t h);
@@ -38,7 +41,7 @@ zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t h);
 // no "." nor ".." entries.  It is relative to the root of the
 // namespace.
 //
-// The fd is not closed on success or failure.
+// |fd| is borrowed by this function, but is not closed on success or error.
 // Closing the fd after success does not affect namespace.
 //
 // Failures:

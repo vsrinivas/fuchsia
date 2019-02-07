@@ -17,7 +17,10 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/debug.c \
     $(LOCAL_DIR)/get-vmo.c \
     $(LOCAL_DIR)/fdio.c \
-    $(LOCAL_DIR)/namespace.cpp \
+    $(LOCAL_DIR)/namespace/local-connection.cpp \
+    $(LOCAL_DIR)/namespace/local-filesystem.cpp \
+    $(LOCAL_DIR)/namespace/local-vnode.cpp \
+    $(LOCAL_DIR)/namespace/namespace.cpp \
     $(LOCAL_DIR)/null.c \
     $(LOCAL_DIR)/remoteio.c \
     $(LOCAL_DIR)/socket.c \
@@ -41,10 +44,12 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-process
 
 MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
     system/ulib/fidl \
     system/ulib/zxio \
     system/ulib/zxs \
-    system/ulib/zx
+    system/ulib/zx \
+    system/ulib/zxcpp \
 
 MODULE_LIBS := \
     system/ulib/zircon \

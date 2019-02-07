@@ -87,7 +87,6 @@ zx_status_t memfs_install_at_with_page_limit(async_dispatcher_t* dispatcher,
     status = fdio_ns_bind(ns, path, root);
     if (status != ZX_OK) {
         memfs_free_filesystem(fs, nullptr);
-        zx_handle_close(root);
         return status;
     }
 
