@@ -62,3 +62,13 @@ package("mediasession") {
     },
   ]
 }
+
+package("mediasession_config") {
+  deprecated_system_image = true
+  resources = [
+    {
+      dest = "sysmgr/mediasession.config"
+      path = rebase_path("service.config")
+    },
+  ]
+}
