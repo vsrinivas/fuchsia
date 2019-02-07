@@ -38,6 +38,8 @@ ktrace_header_t* Reader::ReadNextRecord() {
   record = reinterpret_cast<ktrace_header_t*>(current_);
   current_ += KTRACE_LEN(record->tag);
 
+  number_bytes_read_ += KTRACE_LEN(record->tag);
+  number_records_read_ += 1;
   return record;
 }
 

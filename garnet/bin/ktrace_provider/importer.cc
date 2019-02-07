@@ -93,8 +93,13 @@ bool Importer::Import(Reader& reader) {
     }
   }
 
-  FXL_VLOG(2) << "Import of ktrace records took: "
-              << (fxl::TimePoint::Now() - start).ToMicroseconds() << " us";
+  size_t nr_bytes_read = reader.number_bytes_read();
+  size_t nr_records_read = reader.number_records_read();
+
+  // This is an INFO and not VLOG() as we currently always want to see this.
+  FXL_LOG(INFO) << "Import of " << nr_records_read << " ktrace records"
+                << "(" << nr_bytes_read << " bytes) took: "
+                << (fxl::TimePoint::Now() - start).ToMicroseconds() << "us";
 
   return true;
 }

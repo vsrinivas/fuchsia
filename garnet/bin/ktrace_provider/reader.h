@@ -18,6 +18,9 @@ class Reader {
 
   ktrace_header_t* ReadNextRecord();
 
+  size_t number_bytes_read() const { return number_bytes_read_; }
+  size_t number_records_read() const { return number_records_read_; }
+
  private:
   static constexpr size_t kChunkSize{16 * 4 * 1024};
 
@@ -32,6 +35,8 @@ class Reader {
   char* current_ = buffer_;
   char* marker_ = buffer_;
   char* end_ = buffer_ + kChunkSize;
+  size_t number_bytes_read_ = 0;
+  size_t number_records_read_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Reader);
 };
