@@ -67,7 +67,9 @@ public:
         magma_submit_command_buffer(connection_, command_buffer, context_id);
 
         magma::InflightList list;
-        EXPECT_TRUE(list.WaitForCompletion(connection_, kOneSecondInNs));
+        magma::Status status = list.WaitForCompletion(connection_, kOneSecondInNs);
+        EXPECT_TRUE(status.get() == MAGMA_STATUS_OK ||
+                    status.get() == MAGMA_STATUS_CONNECTION_LOST);
 
         magma_release_context(connection_, context_id);
         magma_release_buffer(connection_, batch_buffer);
