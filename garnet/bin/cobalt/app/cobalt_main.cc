@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 
+#include <fcntl.h>
 #include <chrono>
 #include <fstream>
 #include <memory>
@@ -12,8 +13,12 @@
 #include <utility>
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fdio/util.h>
+#include <lib/zx/channel.h>
+#include <zircon/boot/image.h>
 
 #include "garnet/bin/cobalt/app/cobalt_app.h"
 #include "garnet/bin/cobalt/app/product_hack.h"
@@ -47,6 +52,42 @@ const std::chrono::minutes kInitialIntervalDefault(1);
 // is a safety parameter. We do not make two attempts within a period of this
 // specified length.
 const std::chrono::seconds kMinIntervalDefault(10);
+
+// ReadBoardName returns the board name of the currently running device.
+//
+// At the time of this writing, this will either be 'pc' for x86 devices, or an
+// appropriate board name for ARM devices (hikey960, sherlock, qemu).
+//
+// This uses the fuchsia-sysinfo fidl service to read the board_name field out
+// of the ZBI. This string will never exceed a length of 32.
+//
+// If the reading of the board name fails for any reason, this will return "".
+std::string ReadBoardName() {
+  const char kSysInfoPath[] = "/dev/misc/sysinfo";
+  const int fd = open(kSysInfoPath, O_RDWR);
+  if (fd < 0) {
+    return "";
+  }
+
+  // Connect to the fuchsia-sysinfo service through the file system API.
+  zx::channel channel;
+  zx_status_t status =
+      fdio_get_service_handle(fd, channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    return "";
+  }
+
+  // Read the board name out of the ZBI.
+  char board_name[ZBI_BOARD_NAME_LEN];
+  size_t actual_size = 0;
+  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(
+      channel.get(), &status, board_name, sizeof(board_name), &actual_size);
+  if (fidl_status != ZX_OK || status != ZX_OK) {
+    return "";
+  }
+
+  return std::string(board_name, actual_size);
+}
 
 int main(int argc, const char** argv) {
   setenv("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", "/config/ssl/cert.pem", 1);
@@ -107,7 +148,8 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   cobalt::CobaltApp app(loop.dispatcher(), schedule_interval, min_interval,
-                        initial_interval, cobalt::hack::GetLayer());
+                        initial_interval, cobalt::hack::GetLayer(),
+                        ReadBoardName());
   loop.Run();
   return 0;
 }

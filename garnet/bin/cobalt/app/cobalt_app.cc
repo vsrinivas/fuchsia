@@ -57,8 +57,9 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
                      std::chrono::seconds target_interval,
                      std::chrono::seconds min_interval,
                      std::chrono::seconds initial_interval,
-                     const std::string& product_name)
-    : system_data_(product_name),
+                     const std::string& product_name,
+                     const std::string& board_name)
+    : system_data_(product_name, board_name),
       context_(component::StartupContext::CreateFromStartupInfo()),
       shuffler_client_(kCloudShufflerUri, true),
       send_retryer_(&shuffler_client_),

@@ -3,6 +3,9 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "dev": [
+            "misc/sysinfo"
+        ],
         "features": [
             "root-ssl-certificates",
             "persistent-storage"

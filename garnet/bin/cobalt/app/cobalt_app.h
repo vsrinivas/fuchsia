@@ -54,6 +54,9 @@ class CobaltApp {
   // |product_name| A product name used in the ObservationMetadata sent with
   //                every upload to the Cobalt server.
   //
+  // |board_name| A board name that may be used in the ObservationMetadata sent
+  //              with every upload to the Cobalt server.
+  //
   // REQUIRED:
   //   0 <= min_interval <= target_interval <= kMaxSeconds
   //   0 <= initial_interval <= target_interval
@@ -61,7 +64,7 @@ class CobaltApp {
             std::chrono::seconds target_interval,
             std::chrono::seconds min_interval,
             std::chrono::seconds initial_interval,
-            const std::string& product_name);
+            const std::string& product_name, const std::string& board_name);
 
  private:
   static encoder::ClientSecret getClientSecret();

@@ -58,6 +58,7 @@ source_set("lib") {
     "//third_party/protobuf:protobuf_lite",
     "//zircon/public/fidl/fuchsia-cobalt",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
   ]
 }
 
