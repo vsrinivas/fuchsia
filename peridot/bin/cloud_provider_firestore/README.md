@@ -22,7 +22,8 @@ and obtain the sync parameters.
 Then, run the validation tests as follows:
 
 ```sh
-fx run-test -t validation_firestore ledger_tests
+fx push-package ledger_tests
+fx shell run-test-component validation_firestore
 ```
 
 Note that `validation_firestore` is only a launcher for the actual tests,

@@ -136,7 +136,8 @@ parameters (server ID and API key) as command line parameters.
 You can now run the tests from the host as follows:
 
 ```sh
-fx run-test -t ledger_e2e_sync ledger_tests
+fx push-package ledger_tests
+fx shell run-test-component ledger_e2e_sync
 ```
 
 ## Performance tests
