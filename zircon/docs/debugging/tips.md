@@ -96,4 +96,9 @@ start of symbolized stack:
 #03: start_main at ./third_party/ulib/musl/src/env/__libc_start_main.c:49
 #04: unknown, can't find pc, sp or app/library in line
 end of symbolized stack
+``
 ```
+
+## Kernel commands
+Zircon has a number of shell commands related to the kernel and debugging accessible via the `k`
+command. More information on them can be found through `k help`.
