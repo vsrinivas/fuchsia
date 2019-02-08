@@ -8,7 +8,7 @@ using zx;
 using fuchsia.media;
 using fuchsia.mediaplayer;
 
-/// |ReadOnlySession| is a handle for media playback, allowing clients to observe
+/// `ReadOnlySession` is a handle for media playback, allowing clients to observe
 /// a playback session.
 [FragileBase]
 protocol ReadOnlySession {
@@ -22,9 +22,9 @@ protocol ReadOnlySession {
     -> OnMetadataChanged(fuchsia.mediaplayer.Metadata media_metadata);
 };
 
-/// |Session| is a handle for media playback, allowing clients to observe
+/// `Session` is a handle for media playback, allowing clients to observe
 /// and control a media playback session. Unsupported commands are no-ops.
-/// Consult |PlaybackCapabilities|, sent by |OnPlaybackCapabilities|, to learn
+/// Consult `PlaybackCapabilities`, sent by `OnPlaybackCapabilities`, to learn
 /// which commands are supported.
 protocol Session {
     compose ReadOnlySession;
@@ -42,12 +42,12 @@ protocol Session {
     Stop();
     /// Seeks to a specific position in media. Implementations are free to
     /// to treat this as a no-op or enter an error state if the position
-    /// is out of bounds. |position| is an offset from the beginning of the media.
+    /// is out of bounds. `position` is an offset from the beginning of the media.
     SeekToPosition(zx.duration position);
-    /// Skips forward in media. Uses the default skip interval if |skip_amount|
+    /// Skips forward in media. Uses the default skip interval if `skip_amount`
     /// is 0.
     SkipForward(zx.duration skip_amount);
-    /// Skips in reverse in media. Uses the default skip interval if |skip_amount|
+    /// Skips in reverse in media. Uses the default skip interval if `skip_amount`
     /// is 0.
     SkipReverse(zx.duration skip_amount);
     /// Changes media to the next item (e.g. next song in playlist).
@@ -57,9 +57,9 @@ protocol Session {
     /// Sets the playback rate of the media. This may imply a change of
     /// playback mode.
     SetPlaybackRate(float32 playback_rate);
-    /// Sets through supported repeat modes.
+    /// Sets repeat mode to any of the supported repeat modes.
     SetRepeatMode(RepeatMode repeat_mode);
-    /// Sets through supported shuffle modes.
+    /// Sets shuffle mode.
     SetShuffleMode(bool shuffle_on);
     /// Binds to the session's gain control for control and notifications.
     BindGainControl(request<fuchsia.media.GainControl> gain_control_request);
