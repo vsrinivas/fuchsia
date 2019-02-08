@@ -483,8 +483,7 @@ bool vmar_remap_test() {
     zx::vmo tmp;
     ASSERT_EQ(zx::vmo::create(kNumPages * ZX_PAGE_SIZE, 0, &tmp), ZX_OK);
     ASSERT_EQ(tmp.op_range(ZX_VMO_OP_COMMIT, 0, kNumPages * ZX_PAGE_SIZE, nullptr, 0), ZX_OK);
-    ASSERT_EQ(zx_pager_supply_pages(pager.pager(), old_vmo.get(),
-                                    0, kNumPages * ZX_PAGE_SIZE, tmp.get(), 0), ZX_OK);
+    ASSERT_EQ(pager.pager().supply_pages(old_vmo, 0, kNumPages * ZX_PAGE_SIZE, tmp, 0), ZX_OK);
 
     for (unsigned i = 0; i < kNumPages; i++) {
         uint64_t offset, length;
@@ -1440,8 +1439,8 @@ bool invalid_pager_create() {
 bool invalid_pager_create_vmo() {
     BEGIN_TEST;
 
-    zx_handle_t pager;
-    ASSERT_EQ(zx_pager_create(0, &pager), ZX_OK);
+    zx::pager pager;
+    ASSERT_EQ(zx::pager::create(0, &pager), ZX_OK);
 
     zx::port port;
     ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
@@ -1449,19 +1448,19 @@ bool invalid_pager_create_vmo() {
     zx_handle_t vmo;
 
     // bad options
-    ASSERT_EQ(zx_pager_create_vmo(pager, ~0u, port.get(), 0, ZX_PAGE_SIZE, &vmo),
+    ASSERT_EQ(zx_pager_create_vmo(pager.get(), ~0u, port.get(), 0, ZX_PAGE_SIZE, &vmo),
               ZX_ERR_INVALID_ARGS);
 
     // bad handles for pager and port
     ASSERT_EQ(zx_pager_create_vmo(ZX_HANDLE_INVALID, 0, port.get(), 0, ZX_PAGE_SIZE, &vmo),
               ZX_ERR_BAD_HANDLE);
-    ASSERT_EQ(zx_pager_create_vmo(pager, 0, ZX_HANDLE_INVALID, 0, ZX_PAGE_SIZE, &vmo),
+    ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, ZX_HANDLE_INVALID, 0, ZX_PAGE_SIZE, &vmo),
               ZX_ERR_BAD_HANDLE);
 
     // missing write right on port
     zx::port ro_port;
     ASSERT_EQ(port.duplicate(ZX_DEFAULT_PORT_RIGHTS & ~ZX_RIGHT_WRITE, &ro_port), ZX_OK);
-    ASSERT_EQ(zx_pager_create_vmo(pager, 0, ro_port.get(), 0, ZX_PAGE_SIZE, &vmo),
+    ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, ro_port.get(), 0, ZX_PAGE_SIZE, &vmo),
               ZX_ERR_ACCESS_DENIED);
 
     // bad handle types for pager and port
@@ -1469,65 +1468,62 @@ bool invalid_pager_create_vmo() {
               ZX_ERR_WRONG_TYPE);
     zx::vmo tmp_vmo; // writability handle 2 is checked before the type, so use a new vmo
     ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &tmp_vmo), ZX_OK);
-    ASSERT_EQ(zx_pager_create_vmo(pager, 0, tmp_vmo.get(), 0, ZX_PAGE_SIZE, &vmo),
+    ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, tmp_vmo.get(), 0, ZX_PAGE_SIZE, &vmo),
               ZX_ERR_WRONG_TYPE);
 
     // invalid size
     static constexpr uint64_t kBadSize = fbl::round_down(UINT64_MAX, ZX_PAGE_SIZE) + 1;
-    ASSERT_EQ(zx_pager_create_vmo(pager, 0, port.get(), 0, kBadSize, &vmo),
+    ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, kBadSize, &vmo),
               ZX_ERR_OUT_OF_RANGE);
 
-    zx_handle_close(pager);
     END_TEST;
 }
 
 // Tests API violations for pager_detach_vmo.
 bool invalid_pager_detach_vmo() {
     BEGIN_TEST;
-    zx_handle_t pager;
-    ASSERT_EQ(zx_pager_create(0, &pager), ZX_OK);
+    zx::pager pager;
+    ASSERT_EQ(zx::pager::create(0, &pager), ZX_OK);
 
     zx::port port;
     ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
 
     zx::vmo vmo;
-    ASSERT_EQ(zx_pager_create_vmo(pager, 0, port.get(), 0,
+    ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, port.get(), 0,
                                   ZX_PAGE_SIZE, vmo.reset_and_get_address()), ZX_OK);
 
     // bad handles
     ASSERT_EQ(zx_pager_detach_vmo(ZX_HANDLE_INVALID, vmo.get()), ZX_ERR_BAD_HANDLE);
-    ASSERT_EQ(zx_pager_detach_vmo(pager, ZX_HANDLE_INVALID), ZX_ERR_BAD_HANDLE);
+    ASSERT_EQ(zx_pager_detach_vmo(pager.get(), ZX_HANDLE_INVALID), ZX_ERR_BAD_HANDLE);
 
     // wrong handle types
     ASSERT_EQ(zx_pager_detach_vmo(vmo.get(), vmo.get()), ZX_ERR_WRONG_TYPE);
-    ASSERT_EQ(zx_pager_detach_vmo(pager, pager), ZX_ERR_WRONG_TYPE);
+    ASSERT_EQ(zx_pager_detach_vmo(pager.get(), pager.get()), ZX_ERR_WRONG_TYPE);
 
     // detaching a non-paged vmo
     zx::vmo tmp_vmo;
     ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &tmp_vmo), ZX_OK);
-    ASSERT_EQ(zx_pager_detach_vmo(pager, tmp_vmo.get()), ZX_ERR_INVALID_ARGS);
+    ASSERT_EQ(zx_pager_detach_vmo(pager.get(), tmp_vmo.get()), ZX_ERR_INVALID_ARGS);
 
     // detaching with the wrong pager
-    zx_handle_t pager2;
-    ASSERT_EQ(zx_pager_create(0, &pager2), ZX_OK);
-    ASSERT_EQ(zx_pager_detach_vmo(pager2, vmo.get()), ZX_ERR_INVALID_ARGS);
-    zx_handle_close(pager2);
+    zx::pager pager2;
+    ASSERT_EQ(zx::pager::create(0, &pager2), ZX_OK);
+    ASSERT_EQ(zx_pager_detach_vmo(pager2.get(), vmo.get()), ZX_ERR_INVALID_ARGS);
 
-    zx_handle_close(pager);
     END_TEST;
 }
 
 // Tests API violations for supply_pages.
 bool invalid_pager_supply_pages() {
     BEGIN_TEST;
-    zx_handle_t pager;
-    ASSERT_EQ(zx_pager_create(0, &pager), ZX_OK);
+    zx::pager pager;
+    ASSERT_EQ(zx::pager::create(0, &pager), ZX_OK);
 
     zx::port port;
     ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
 
     zx::vmo vmo;
-    ASSERT_EQ(zx_pager_create_vmo(pager, 0, port.get(), 0,
+    ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, port.get(), 0,
                                   ZX_PAGE_SIZE, vmo.reset_and_get_address()), ZX_OK);
 
     zx::vmo aux_vmo;
@@ -1536,44 +1532,45 @@ bool invalid_pager_supply_pages() {
     // bad handles
     ASSERT_EQ(zx_pager_supply_pages(ZX_HANDLE_INVALID, vmo.get(), 0, 0, aux_vmo.get(), 0),
               ZX_ERR_BAD_HANDLE);
-    ASSERT_EQ(zx_pager_supply_pages(pager, ZX_HANDLE_INVALID, 0, 0, aux_vmo.get(), 0),
+    ASSERT_EQ(zx_pager_supply_pages(pager.get(), ZX_HANDLE_INVALID, 0, 0, aux_vmo.get(), 0),
               ZX_ERR_BAD_HANDLE);
-    ASSERT_EQ(zx_pager_supply_pages(pager, vmo.get(), 0, 0, ZX_HANDLE_INVALID, 0),
+    ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), 0, 0, ZX_HANDLE_INVALID, 0),
               ZX_ERR_BAD_HANDLE);
 
     // wrong handle types
     ASSERT_EQ(zx_pager_supply_pages(vmo.get(), vmo.get(), 0, 0, aux_vmo.get(), 0),
               ZX_ERR_WRONG_TYPE);
-    ASSERT_EQ(zx_pager_supply_pages(pager, pager, 0, 0, aux_vmo.get(), 0), ZX_ERR_WRONG_TYPE);
-    ASSERT_EQ(zx_pager_supply_pages(pager, vmo.get(), 0, 0, port.get(), 0), ZX_ERR_WRONG_TYPE);
+    ASSERT_EQ(zx_pager_supply_pages(pager.get(), pager.get(), 0, 0, aux_vmo.get(), 0),
+              ZX_ERR_WRONG_TYPE);
+    ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), 0, 0, port.get(), 0),
+              ZX_ERR_WRONG_TYPE);
 
     // using a non-paged vmo
-    ASSERT_EQ(zx_pager_supply_pages(pager, aux_vmo.get(), 0, 0, aux_vmo.get(), 0),
+    ASSERT_EQ(zx_pager_supply_pages(pager.get(), aux_vmo.get(), 0, 0, aux_vmo.get(), 0),
               ZX_ERR_INVALID_ARGS);
 
     // using a pager vmo from another pager
-    zx_handle_t pager2;
-    ASSERT_EQ(zx_pager_create(0, &pager2), ZX_OK);
-    ASSERT_EQ(zx_pager_supply_pages(pager2, vmo.get(), 0, 0, ZX_HANDLE_INVALID, 0),
+    zx::pager pager2;
+    ASSERT_EQ(zx::pager::create(0, &pager2), ZX_OK);
+    ASSERT_EQ(zx_pager_supply_pages(pager2.get(), vmo.get(), 0, 0, ZX_HANDLE_INVALID, 0),
               ZX_ERR_INVALID_ARGS);
-    zx_handle_close(pager2);
 
     // missing permissions on the aux vmo
     zx::vmo ro_vmo;
     ASSERT_EQ(vmo.duplicate(ZX_DEFAULT_VMO_RIGHTS & ~ZX_RIGHT_WRITE, &ro_vmo), ZX_OK);
-    ASSERT_EQ(zx_pager_supply_pages(pager, vmo.get(),
+    ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(),
                                     0, 0, ro_vmo.get(), 0), ZX_ERR_ACCESS_DENIED);
     zx::vmo wo_vmo;
     ASSERT_EQ(vmo.duplicate(ZX_DEFAULT_VMO_RIGHTS & ~ZX_RIGHT_READ, &wo_vmo), ZX_OK);
-    ASSERT_EQ(zx_pager_supply_pages(pager, vmo.get(),
+    ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(),
                                     0, 0, wo_vmo.get(), 0), ZX_ERR_ACCESS_DENIED);
 
     // misaligned offset, size, or aux alignment
-    ASSERT_EQ(zx_pager_supply_pages(pager, vmo.get(), 1, 0, aux_vmo.get(), 0),
+    ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), 1, 0, aux_vmo.get(), 0),
               ZX_ERR_INVALID_ARGS);
-    ASSERT_EQ(zx_pager_supply_pages(pager, vmo.get(), 0, 1, aux_vmo.get(), 0),
+    ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), 0, 1, aux_vmo.get(), 0),
               ZX_ERR_INVALID_ARGS);
-    ASSERT_EQ(zx_pager_supply_pages(pager, vmo.get(),
+    ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(),
                                     0, 0, aux_vmo.get(), 1), ZX_ERR_INVALID_ARGS);
 
 #ifdef BUILD_COMBINED_TESTS
@@ -1584,7 +1581,7 @@ bool invalid_pager_supply_pages() {
     ASSERT_EQ(zx_vmo_create_physical(get_root_resource(), 0, ZX_PAGE_SIZE,
                                      physical_vmo.reset_and_get_address()),
               ZX_OK);
-    ASSERT_EQ(zx_pager_supply_pages(pager, vmo.get(),
+    ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(),
                                     0, ZX_PAGE_SIZE, physical_vmo.get(), 0), ZX_ERR_NOT_SUPPORTED);
 #endif // BUILD_COMBINED_TESTS
 
@@ -1608,7 +1605,7 @@ bool invalid_pager_supply_pages() {
             ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &alt_vmo), ZX_OK);
             ASSERT_EQ(alt_vmo.clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &aux_vmo), ZX_OK);
         } else if (i == kFromPager) {
-            ASSERT_EQ(zx_pager_create_vmo(pager, 0, port.get(), 0, ZX_PAGE_SIZE,
+            ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, ZX_PAGE_SIZE,
                                           aux_vmo.reset_and_get_address()), ZX_OK);
         } else {
             ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &aux_vmo), ZX_OK);
@@ -1627,7 +1624,7 @@ bool invalid_pager_supply_pages() {
             if (i == kFromPager) {
                 ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &alt_vmo), ZX_OK);
                 ASSERT_EQ(alt_vmo.op_range(ZX_VMO_OP_COMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_OK);
-                ASSERT_EQ(zx_pager_supply_pages(pager, aux_vmo.get(),
+                ASSERT_EQ(zx_pager_supply_pages(pager.get(), aux_vmo.get(),
                                                 0, ZX_PAGE_SIZE, alt_vmo.get(), 0), ZX_OK);
             } else {
                 ASSERT_EQ(aux_vmo.op_range(ZX_VMO_OP_COMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_OK);
@@ -1649,7 +1646,7 @@ bool invalid_pager_supply_pages() {
         }
 #endif // BUILD_COMBINED_TESTS
 
-        ASSERT_EQ(zx_pager_supply_pages(pager, vmo.get(),
+        ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(),
                                         0, ZX_PAGE_SIZE, aux_vmo.get(), 0), ZX_ERR_BAD_STATE);
 
 #ifdef BUILD_COMBINED_TESTS
@@ -1661,13 +1658,13 @@ bool invalid_pager_supply_pages() {
 
     // out of range pager_vmo region
     ASSERT_EQ(aux_vmo.op_range(ZX_VMO_OP_COMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_OK);
-    ASSERT_EQ(zx_pager_supply_pages(pager, vmo.get(), ZX_PAGE_SIZE, ZX_PAGE_SIZE,
+    ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), ZX_PAGE_SIZE, ZX_PAGE_SIZE,
                                     aux_vmo.get(), 0), ZX_ERR_OUT_OF_RANGE);
 
     // out of range aux_vmo region
     ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &aux_vmo), ZX_OK);
     ASSERT_EQ(aux_vmo.op_range(ZX_VMO_OP_COMMIT, 0, ZX_PAGE_SIZE, nullptr, 0), ZX_OK);
-    ASSERT_EQ(zx_pager_supply_pages(pager, vmo.get(), 0, ZX_PAGE_SIZE,
+    ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(), 0, ZX_PAGE_SIZE,
                                     aux_vmo.get(), ZX_PAGE_SIZE), ZX_ERR_OUT_OF_RANGE);
 
     END_TEST;
@@ -1677,21 +1674,18 @@ bool invalid_pager_supply_pages() {
 bool resize_nonresizable_vmo() {
     BEGIN_TEST;
 
-    zx_handle_t pager;
-    ASSERT_EQ(zx_pager_create(0, &pager), ZX_OK);
+    zx::pager pager;
+    ASSERT_EQ(zx::pager::create(0, &pager), ZX_OK);
 
     zx::port port;
     ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
 
     zx::vmo vmo;
 
-    ASSERT_EQ(zx_pager_create_vmo(pager, ZX_VMO_NON_RESIZABLE, port.get(), 0, ZX_PAGE_SIZE,
-                                  vmo.reset_and_get_address()),
-              ZX_OK);
+    ASSERT_EQ(pager.create_vmo(ZX_VMO_NON_RESIZABLE, port, 0, ZX_PAGE_SIZE, &vmo), ZX_OK);
 
     ASSERT_EQ(vmo.set_size(2 * ZX_PAGE_SIZE), ZX_ERR_UNAVAILABLE);
 
-    zx_handle_close(pager);
     END_TEST;
 }
 

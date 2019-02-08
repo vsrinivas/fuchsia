@@ -21,6 +21,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/iommu.cpp \
     $(LOCAL_DIR)/interrupt.cpp \
     $(LOCAL_DIR)/job.cpp \
+    $(LOCAL_DIR)/pager.cpp \
     $(LOCAL_DIR)/port.cpp \
     $(LOCAL_DIR)/process.cpp \
     $(LOCAL_DIR)/profile.cpp \
