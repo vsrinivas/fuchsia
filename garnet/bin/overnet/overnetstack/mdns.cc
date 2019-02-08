@@ -31,6 +31,7 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
     std::cerr << "Querying mDNS for overnet services [" << kServiceName
               << "]\n";
     auto svc = Connect(startup_context, "Introducer");
+    svc->SetVerbose(true);
     svc->SubscribeToService(kServiceName, subscription_.NewRequest());
     RunLoop(0);
   }
