@@ -155,12 +155,17 @@ executable("unit_tests") {
   ]
 }
 
+executable("debug_test_true") {
+  sources = ["true.c"]
+}
+
 package("debug_agent_tests") {
   testonly = true
 
   package_name = "debug_agent_tests"
 
   deps = [
+    ":debug_test_true",
     "//garnet/bin/debug_agent/test_data:breakpoint_test_exe",
     "//garnet/bin/debug_agent/test_data:debug_agent_test_loadable_module",
     "//garnet/bin/debug_agent/test_data:process_loop",
@@ -180,14 +185,21 @@ package("debug_agent_tests") {
   }]
 
   # Test binaries
-  binaries = [{
-    shell = true
-    name = "breakpoint_test_exe"
-  }, {
-    name = "process_loop"
-  }, {
-    name = "process_spawner"
-  }]
+  binaries = [
+    {
+      shell = true
+      name = "breakpoint_test_exe"
+    },
+    {
+      name = "debug_test_true"
+    },
+    {
+      name = "process_loop"
+    },
+    {
+      name = "process_spawner"
+    },
+  ]
 
   # Add the platform specific test binaries
   if (current_cpu == "x64") {

@@ -99,7 +99,7 @@ TEST_F(JobDebuggerTest, OneProcess) {
   zx_handle_t proc = ZX_HANDLE_INVALID;
   int pipefd[2];
   ASSERT_EQ(0, pipe(pipefd));
-  const std::vector<const char*> args = {"/system/bin/true"};
+  const std::vector<const char*> args = {"/pkg/bin/debug_test_true"};
   LaunchProcess(job_, args, "true", pipefd[0], &proc);
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] {
     return processes_.size() == 1;
@@ -124,7 +124,7 @@ TEST_F(JobDebuggerTest, DebuggedJobKilled) {
     zx_handle_t proc = ZX_HANDLE_INVALID;
     int pipefd[2];
     ASSERT_EQ(0, pipe(pipefd));
-    const std::vector<const char*> args = {"/system/bin/true"};
+    const std::vector<const char*> args = {"/pkg/bin/debug_test_true"};
     LaunchProcess(job_, args, "true", pipefd[0], &proc);
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] {
       return processes_.size() == 1;
@@ -139,7 +139,7 @@ TEST_F(JobDebuggerTest, DebuggedJobKilled) {
   zx_handle_t proc = ZX_HANDLE_INVALID;
   int pipefd[2];
   ASSERT_EQ(0, pipe(pipefd));
-  const std::vector<const char*> args = {"/system/bin/true"};
+  const std::vector<const char*> args = {"/pkg/bin/debug_test_true"};
   LaunchProcess(job_, args, "true", pipefd[0], &proc);
   WaitForProcToExit(proc, 0);
   ASSERT_EQ(0u, processes_.size());
@@ -156,7 +156,7 @@ TEST_F(JobDebuggerTest, MultipleProcesses) {
 
   int pipefd[2];
   ASSERT_EQ(0, pipe(pipefd));
-  const std::vector<const char*> args = {"/system/bin/true"};
+  const std::vector<const char*> args = {"/pkg/bin/debug_test_true"};
   zx_handle_t proc1 = ZX_HANDLE_INVALID;
   zx_handle_t proc2 = ZX_HANDLE_INVALID;
 
@@ -192,7 +192,7 @@ TEST_F(JobDebuggerTest, ProcessInNestedJob) {
   zx_handle_t proc = ZX_HANDLE_INVALID;
   int pipefd[2];
   ASSERT_EQ(0, pipe(pipefd));
-  const std::vector<const char*> args = {"/system/bin/true"};
+  const std::vector<const char*> args = {"/pkg/bin/debug_test_true"};
   LaunchProcess(child_job, args, "true", pipefd[0], &proc);
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] {
     return processes_.size() == 1;
@@ -215,7 +215,7 @@ TEST_F(JobDebuggerTest, FilterFullName) {
   zx_handle_t proc = ZX_HANDLE_INVALID;
   int pipefd[2];
   ASSERT_EQ(0, pipe(pipefd));
-  const std::vector<const char*> args = {"/system/bin/true"};
+  const std::vector<const char*> args = {"/pkg/bin/debug_test_true"};
   LaunchProcess(job_, args, name, pipefd[0], &proc);
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] {
     return processes_.size() == 1;
@@ -237,7 +237,7 @@ TEST_F(JobDebuggerTest, FilterMultipleProcess) {
 
   int pipefd[2];
   ASSERT_EQ(0, pipe(pipefd));
-  const std::vector<const char*> args = {"/system/bin/true"};
+  const std::vector<const char*> args = {"/pkg/bin/debug_test_true"};
   zx_handle_t proc1 = ZX_HANDLE_INVALID;
   zx_handle_t proc2 = ZX_HANDLE_INVALID;
 
@@ -270,7 +270,7 @@ TEST_F(JobDebuggerTest, MultipleFilters) {
 
   int pipefd[2];
   ASSERT_EQ(0, pipe(pipefd));
-  const std::vector<const char*> args = {"/system/bin/true"};
+  const std::vector<const char*> args = {"/pkg/bin/debug_test_true"};
   zx_handle_t proc1 = ZX_HANDLE_INVALID;
   zx_handle_t proc2 = ZX_HANDLE_INVALID;
 
