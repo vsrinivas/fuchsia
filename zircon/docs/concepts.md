@@ -83,7 +83,9 @@ There are two special koid values:
 
 Kernel generated koids only use 63 bits (which is plenty).
 This leaves space for artificially allocated koids by having the most
-significant bit set.
+significant bit set. The sequence in which kernel generated koids are allocated
+is unspecified and subject to change.
+
 Artificial koids exist to support things like identifying artificial objects,
 like virtual threads in tracing, for consumption by tools.
 How artificial koids are allocated is left to each program,
