@@ -11,9 +11,6 @@ disabled_for_asan = [
   # DNO-409
   "/pkgfs/packages/garnet_lib_tests/0/test/garnet_lib_unittests",
 
-  # MAC-243
-  "/pkgfs/packages/guest_integration_tests/0/test/guest_integration_tests",
-
   # TC-351
   "/pkgfs/packages/libc-tests/0/test/libc-tests",
 
