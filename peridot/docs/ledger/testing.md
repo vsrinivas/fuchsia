@@ -48,7 +48,7 @@ logic under test linked into a single Google Test binary.
 You can run it from the host with:
 
 ```sh
-fx run-test -t ledger_unittests ledger_tests
+fx run-test ledger_tests -t ledger_unittests
 ```
 
 ## Integration tests
@@ -63,7 +63,7 @@ All integration tests in the Ledger tree are built into a single
 `ledger_integration_tests` binary. You can run it from the host:
 
 ```sh
-fx run-test -t ledger_integration_tests ledger_tests
+fx run-test ledger_tests -t ledger_integration_tests
 ```
 
 *** aside
@@ -89,7 +89,7 @@ end-to-end tests are built into a single `ledger_e2e_local` binary. You can run
 it from the host:
 
 ```sh
-fx run-test -t ledger_e2e_local ledger_tests
+fx run-test ledger_tests -t ledger_e2e_local
 ```
 
 ### Synchronization tests {#sync-e2e}

@@ -12,7 +12,7 @@ The tests are packaged with Ledger tests.
 In order to run the unit tests:
 
 ```sh
-fx run-test -t cloud_provider_firestore_unittests ledger_tests
+fx run-test ledger_tests -t cloud_provider_firestore_unittests
 ```
 
 In order to run the [validation tests], follow the [cloud sync set-up
