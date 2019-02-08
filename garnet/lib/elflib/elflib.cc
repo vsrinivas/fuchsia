@@ -14,19 +14,19 @@ namespace {
 
 // Pull a null-terminated string out of an array of bytes at an offset. Returns
 // empty string if there is no null terminator.
-std::string GetNullTerminatedStringAt(const std::vector<uint8_t>& data,
+std::string GetNullTerminatedStringAt(const uint8_t* data, size_t data_length,
                                       size_t offset) {
   size_t check = offset;
 
-  while (check < data.size() && data[check]) {
+  while (check < data_length && data[check]) {
     check++;
   }
 
-  if (check >= data.size()) {
+  if (check >= data_length) {
     return std::string();
   }
 
-  const char* start = reinterpret_cast<const char*>(data.data()) + offset;
+  const char* start = reinterpret_cast<const char*>(data) + offset;
 
   return std::string(start);
 }
@@ -40,7 +40,7 @@ std::optional<Elf64_Ehdr> ElfLib::MemoryAccessorForFile::GetHeader() {
     return std::nullopt;
   }
 
-  return *reinterpret_cast<const Elf64_Ehdr*>(data->data());
+  return *reinterpret_cast<const Elf64_Ehdr*>(data);
 }
 
 std::optional<std::vector<Elf64_Shdr>>
@@ -52,7 +52,7 @@ ElfLib::MemoryAccessorForFile::GetSectionHeaders(uint64_t offset,
     return std::nullopt;
   }
 
-  auto array = reinterpret_cast<const Elf64_Shdr*>(data->data());
+  auto array = reinterpret_cast<const Elf64_Shdr*>(data);
 
   return std::vector<Elf64_Shdr>(array, array + count);
 }
@@ -66,7 +66,7 @@ ElfLib::MemoryAccessorForFile::GetProgramHeaders(uint64_t offset,
     return std::nullopt;
   }
 
-  auto array = reinterpret_cast<const Elf64_Phdr*>(data->data());
+  auto array = reinterpret_cast<const Elf64_Phdr*>(data);
 
   return std::vector<Elf64_Phdr>(array, array + count);
 }
@@ -138,34 +138,21 @@ bool ElfLib::LoadProgramHeaders() {
   return true;
 }
 
-const std::vector<uint8_t>* ElfLib::GetSegmentData(size_t segment) {
-  const auto& iter = segment_data_.find(segment);
-  if (iter != segment_data_.end()) {
-    return &iter->second;
-  }
-
+ElfLib::MemoryRegion ElfLib::GetSegmentData(size_t segment) {
   LoadProgramHeaders();
 
   if (segment > segments_.size()) {
-    return nullptr;
+    return {};
   }
 
   const Elf64_Phdr* header = &segments_[segment];
 
-  auto data = memory_->GetLoadableMemory(header->p_offset, header->p_vaddr,
-                                         header->p_filesz, header->p_memsz);
-
-  if (!data) {
-    return nullptr;
-  }
-
-  segment_data_[segment] = *data;
-
-  return &segment_data_[segment];
+  return memory_->GetLoadableMemory(header->p_offset, header->p_vaddr,
+                                    header->p_filesz, header->p_memsz);
 }
 
-const std::optional<std::vector<uint8_t>> ElfLib::GetNote(
-    const std::string& name, uint64_t type) {
+std::optional<std::vector<uint8_t>> ElfLib::GetNote(const std::string& name,
+                                                    uint64_t type) {
   LoadProgramHeaders();
 
   for (size_t idx = 0; idx < segments_.size(); idx++) {
@@ -179,7 +166,7 @@ const std::optional<std::vector<uint8_t>> ElfLib::GetNote(
     size_t namesz_padded;
     size_t descsz_padded;
 
-    for (const uint8_t* pos = data->data(); pos < data->data() + data->size();
+    for (const uint8_t* pos = data.ptr; pos < data.ptr + data.size;
          pos += sizeof(Elf64_Nhdr) + namesz_padded + descsz_padded) {
       header = reinterpret_cast<const Elf64_Nhdr*>(pos);
       namesz_padded = (header->n_namesz + 3) & ~3UL;
@@ -204,44 +191,30 @@ const std::optional<std::vector<uint8_t>> ElfLib::GetNote(
   return std::nullopt;
 }
 
-const std::vector<uint8_t>* ElfLib::GetSectionData(size_t section) {
-  const auto& iter = section_data_.find(section);
-  if (iter != section_data_.end()) {
-    return &iter->second;
-  }
-
+ElfLib::MemoryRegion ElfLib::GetSectionData(size_t section) {
   const Elf64_Shdr* header = GetSectionHeader(section);
 
   if (!header) {
-    return nullptr;
+    return {};
   }
 
-  auto data = memory_->GetLoadableMemory(header->sh_offset, header->sh_addr,
-                                         header->sh_size, header->sh_size);
-
-  if (!data) {
-    return nullptr;
-  }
-
-  section_data_[section] = *data;
-
-  return &section_data_[section];
+  return memory_->GetLoadableMemory(header->sh_offset, header->sh_addr,
+                                    header->sh_size, header->sh_size);
 }
 
-const std::vector<uint8_t>* ElfLib::GetSectionData(const std::string& name) {
+ElfLib::MemoryRegion ElfLib::GetSectionData(const std::string& name) {
   if (section_names_.size() == 0) {
-    const std::vector<uint8_t>* section_name_data =
-        GetSectionData(header_.e_shstrndx);
+    auto section_name_data = GetSectionData(header_.e_shstrndx);
 
-    if (!section_name_data) {
-      return nullptr;
+    if (!section_name_data.ptr) {
+      return {};
     }
 
     size_t idx = 0;
     // We know sections_ is populated from the GetSectionData above
     for (const auto& section : sections_) {
-      auto name =
-          GetNullTerminatedStringAt(*section_name_data, section.sh_name);
+      auto name = GetNullTerminatedStringAt(
+          section_name_data.ptr, section_name_data.size, section.sh_name);
       section_names_[name] = idx;
 
       idx++;
@@ -251,7 +224,7 @@ const std::vector<uint8_t>* ElfLib::GetSectionData(const std::string& name) {
   const auto& iter = section_names_.find(name);
 
   if (iter == section_names_.end()) {
-    return nullptr;
+    return {};
   }
 
   return GetSectionData(iter->second);
@@ -271,12 +244,12 @@ bool ElfLib::LoadDynamicSymbols() {
 
     auto data = GetSegmentData(idx);
 
-    if (!data) {
+    if (!data.ptr) {
       return false;
     }
 
-    const Elf64_Dyn* start = reinterpret_cast<const Elf64_Dyn*>(data->data());
-    const Elf64_Dyn* end = start + (data->size() / sizeof(Elf64_Dyn));
+    const Elf64_Dyn* start = reinterpret_cast<const Elf64_Dyn*>(data.ptr);
+    const Elf64_Dyn* end = start + (data.size / sizeof(Elf64_Dyn));
 
     dynamic_strtab_size_ = 0;
     dynamic_symtab_size_ = 0;
@@ -327,7 +300,7 @@ bool ElfLib::LoadDynamicSymbols() {
           continue;
         }
 
-        header = *reinterpret_cast<Header*>(data->data());
+        header = *reinterpret_cast<const Header*>(data);
 
         addr += sizeof(header);
         addr += 8 * header.bloom_size;
@@ -339,7 +312,8 @@ bool ElfLib::LoadDynamicSymbols() {
           continue;
         }
 
-        uint32_t* buckets = reinterpret_cast<uint32_t*>(bucket_data->data());
+        const uint32_t* buckets =
+            reinterpret_cast<const uint32_t*>(bucket_data);
         uint32_t max_bucket =
             *std::max_element(buckets, buckets + header.nbuckets);
 
@@ -359,7 +333,7 @@ bool ElfLib::LoadDynamicSymbols() {
           }
 
           uint32_t chain_entry =
-              *reinterpret_cast<uint32_t*>(chain_entry_data->data());
+              *reinterpret_cast<const uint32_t*>(chain_entry_data);
 
           if (chain_entry & 1) {
             dynamic_symtab_size_ = nsyms;
@@ -376,10 +350,9 @@ bool ElfLib::LoadDynamicSymbols() {
 }
 
 std::optional<std::string> ElfLib::GetString(size_t index) {
-  std::vector<uint8_t> tmp;
-  const std::vector<uint8_t>* string_data = GetSectionData(".strtab");
+  auto string_data = GetSectionData(".strtab");
 
-  if (!string_data) {
+  if (!string_data.ptr) {
     if (!LoadDynamicSymbols()) {
       return std::nullopt;
     }
@@ -391,57 +364,51 @@ std::optional<std::string> ElfLib::GetString(size_t index) {
       return std::nullopt;
     }
 
-    tmp = *data;
-    string_data = &tmp;
+    string_data =
+        ElfLib::MemoryRegion{.ptr = data, .size = dynamic_strtab_size_};
   }
 
-  return GetNullTerminatedStringAt(*string_data, index);
+  return GetNullTerminatedStringAt(string_data.ptr, string_data.size, index);
 }
 
-bool ElfLib::LoadSymbols() {
-  if (symbols_.empty()) {
-    std::vector<uint8_t> tmp;
-    const std::vector<uint8_t>* symbol_data = GetSectionData(".symtab");
+std::pair<const Elf64_Sym*, size_t> ElfLib::GetSymtab() {
+  ElfLib::MemoryRegion symtab = GetSectionData(".symtab");
 
-    if (!symbol_data) {
-      if (!LoadDynamicSymbols()) {
-        return false;
-      }
+  if (symtab.ptr) {
+    const Elf64_Sym* symbols = reinterpret_cast<const Elf64_Sym*>(symtab.ptr);
 
-      if (!dynamic_symtab_offset_) {
-        return false;
-      }
-
-      size_t size = dynamic_symtab_size_ * sizeof(Elf64_Sym);
-      auto data = memory_->GetLoadedMemory(*dynamic_symtab_offset_, size);
-
-      if (!data) {
-        return false;
-      }
-
-      tmp = *data;
-      symbol_data = &tmp;
-    }
-
-    const Elf64_Sym* start =
-        reinterpret_cast<const Elf64_Sym*>(symbol_data->data());
-    const Elf64_Sym* end = start + (symbol_data->size() / sizeof(Elf64_Sym));
-    std::copy(start, end, std::back_inserter(symbols_));
+    return std::make_pair(symbols, symtab.size / sizeof(Elf64_Sym));
   }
 
-  return true;
+  if (!LoadDynamicSymbols()) {
+    return std::make_pair(nullptr, 0);
+  }
+
+  if (!dynamic_symtab_offset_) {
+    return std::make_pair(nullptr, 0);
+  }
+  auto memory = memory_->GetLoadedMemory(
+      *dynamic_symtab_offset_, dynamic_symtab_size_ * sizeof(Elf64_Sym));
+
+  return std::make_pair(reinterpret_cast<const Elf64_Sym*>(memory),
+                        dynamic_symtab_size_);
 }
 
 const Elf64_Sym* ElfLib::GetSymbol(const std::string& name) {
-  if (!LoadSymbols()) {
+  auto symtab = GetSymtab();
+
+  if (!symtab.first) {
     return nullptr;
   }
 
-  for (const auto& symbol : symbols_) {
-    auto got_name = GetString(symbol.st_name);
+  const Elf64_Sym* symbols = symtab.first;
+  const Elf64_Sym* end = symtab.first + symtab.second;
+
+  for (auto symbol = symbols; symbol <= end; symbol++) {
+    auto got_name = GetString(symbol->st_name);
 
     if (got_name && *got_name == name) {
-      return &symbol;
+      return symbol;
     }
   }
 
@@ -449,17 +416,22 @@ const Elf64_Sym* ElfLib::GetSymbol(const std::string& name) {
 }
 
 std::optional<std::map<std::string, Elf64_Sym>> ElfLib::GetAllSymbols() {
-  if (!LoadSymbols()) {
+  auto symtab = GetSymtab();
+
+  if (!symtab.first) {
     return std::nullopt;
   }
 
   std::map<std::string, Elf64_Sym> out;
 
-  for (const auto& symbol : symbols_) {
-    auto got_name = GetString(symbol.st_name);
+  const Elf64_Sym* symbols = symtab.first;
+  const Elf64_Sym* end = symtab.first + symtab.second;
+
+  for (auto symbol = symbols; symbol != end; symbol++) {
+    auto got_name = GetString(symbol->st_name);
 
     if (got_name) {
-      out[*got_name] = symbol;
+      out[*got_name] = *symbol;
     }
   }
 

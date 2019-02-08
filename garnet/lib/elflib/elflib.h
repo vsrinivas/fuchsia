@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <utility>
 #include <vector>
 
 #include "garnet/public/lib/fxl/macros.h"
@@ -19,6 +20,12 @@ using namespace llvm::ELF;
 
 class ElfLib {
  public:
+  // Essentially just a pointer with a bound.
+  struct MemoryRegion {
+    const uint8_t* ptr;
+    size_t size;
+  };
+
   // Proxy object for whatever address space we're exploring.
   class MemoryAccessor {
    public:
@@ -40,33 +47,41 @@ class ElfLib {
 
     // Get memory for a mapped area as specified by a section or segment. We're
     // given the dimensions both as we'd find them in the file and as we'd find
-    // them in address space.
-    virtual std::optional<std::vector<uint8_t>> GetLoadableMemory(
-        uint64_t offset, uint64_t mapped_address, size_t file_size,
-        size_t mapped_size) = 0;
+    // them in address space. The returned pointer can be nullptr on error, and
+    // is otherwise expected to be valid for the lifetime of the MemoryAccessor
+    // object. The size_t in the returned pair should be the size of the
+    // addressable range at the returned pointer, and should be equal to either
+    // mapped_address or file_size when the pointer is not nullptr. It is
+    // otherwise undefined.
+    virtual MemoryRegion GetLoadableMemory(uint64_t offset,
+                                           uint64_t mapped_address,
+                                           size_t file_size,
+                                           size_t mapped_size) = 0;
 
     // Get memory for a mapped area specified by a segment. The memory is
     // assumed to only be accessible at the desired address after loading and
     // you should return std::nullopt if this isn't a loaded ELF object.
-    virtual std::optional<std::vector<uint8_t>> GetLoadedMemory(
-        uint64_t mapped_address, size_t mapped_size) = 0;
+    // The returned pointer can be nullptr on error, and is otherwise expected
+    // to be valid for the lifetime of the address space.
+    virtual const uint8_t* GetLoadedMemory(uint64_t mapped_address,
+                                           size_t mapped_size) = 0;
   };
 
   class MemoryAccessorForFile : public MemoryAccessor {
    public:
     // Get memory from the file based on its offset.
-    virtual std::optional<std::vector<uint8_t>> GetMemory(uint64_t offset,
-                                                          size_t size) = 0;
+    virtual const uint8_t* GetMemory(uint64_t offset, size_t size) = 0;
 
-    std::optional<std::vector<uint8_t>> GetLoadedMemory(
-        uint64_t mapped_address, size_t mapped_size) override {
-      return std::nullopt;
+    const uint8_t* GetLoadedMemory(uint64_t mapped_address,
+                                   size_t mapped_size) override {
+      return nullptr;
     }
 
-    std::optional<std::vector<uint8_t>> GetLoadableMemory(
-        uint64_t offset, uint64_t mapped_address, size_t file_size,
-        size_t mapped_size) override {
-      return GetMemory(offset, file_size);
+    MemoryRegion GetLoadableMemory(uint64_t offset, uint64_t mapped_address,
+                                   size_t file_size,
+                                   size_t mapped_size) override {
+      return MemoryRegion{.ptr = GetMemory(offset, file_size),
+                          .size = file_size};
     }
 
     std::optional<Elf64_Ehdr> GetHeader() override;
@@ -78,10 +93,11 @@ class ElfLib {
 
   class MemoryAccessorForAddressSpace : public MemoryAccessor {
    public:
-    std::optional<std::vector<uint8_t>> GetLoadableMemory(
-        uint64_t offset, uint64_t mapped_address, size_t file_size,
-        size_t mapped_size) override {
-      return GetLoadedMemory(mapped_address, mapped_size);
+    MemoryRegion GetLoadableMemory(uint64_t offset, uint64_t mapped_address,
+                                   size_t file_size,
+                                   size_t mapped_size) override {
+      return MemoryRegion{.ptr = GetLoadedMemory(mapped_address, mapped_size),
+                          .size = file_size};
     }
 
     std::optional<std::vector<Elf64_Shdr>> GetSectionHeaders(
@@ -97,11 +113,11 @@ class ElfLib {
 
   // Get the contents of a section by its name. Return nullptr if there is no
   // section by that name.
-  const std::vector<uint8_t>* GetSectionData(const std::string& name);
+  MemoryRegion GetSectionData(const std::string& name);
 
   // Get a note from the notes section.
-  const std::optional<std::vector<uint8_t>> GetNote(const std::string& name,
-                                                    uint64_t type);
+  std::optional<std::vector<uint8_t>> GetNote(const std::string& name,
+                                              uint64_t type);
 
   // Get the stored value of a given symbol. Returns nullopt if the lookup
   // failed.
@@ -126,11 +142,15 @@ class ElfLib {
 
   // Get the contents of a section by its index. Return nullptr if the index is
   // invalid.
-  const std::vector<uint8_t>* GetSectionData(size_t section);
+  MemoryRegion GetSectionData(size_t section);
 
   // Get the contents of a segment by its index. Return nullptr if the index is
   // invalid.
-  const std::vector<uint8_t>* GetSegmentData(size_t segment);
+  MemoryRegion GetSegmentData(size_t segment);
+
+  // Get the contents of the symbol table. Return nullptr if it is not present
+  // or we do not have the means to locate it. Size is in elements.
+  std::pair<const Elf64_Sym*, size_t> GetSymtab();
 
   // Get a string from the .strtab section. Return nullptr if the index is
   // invalid.
@@ -139,9 +159,6 @@ class ElfLib {
   // Get a symbol from the symbol table. Return nullptr if there is no such
   // symbol.
   const Elf64_Sym* GetSymbol(const std::string& name);
-
-  // Load all symbols from the target. Returns true unless an error occurred.
-  bool LoadSymbols();
 
   // Load symbols from the dynamic segment of the target. We only do this when
   // the section data isn't available and we can't use the regular .symtab
@@ -156,9 +173,7 @@ class ElfLib {
   std::optional<uint64_t> dynamic_symtab_offset_;
   std::vector<Elf64_Shdr> sections_;
   std::vector<Elf64_Phdr> segments_;
-  std::vector<Elf64_Sym> symbols_;
   std::map<size_t, std::vector<uint8_t>> section_data_;
-  std::map<size_t, std::vector<uint8_t>> segment_data_;
   std::map<std::string, size_t> section_names_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ElfLib);

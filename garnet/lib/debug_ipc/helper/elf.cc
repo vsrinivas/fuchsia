@@ -27,16 +27,15 @@ class Accessor : public ElfLib::MemoryAccessorForAddressSpace {
       std::function<bool(uint64_t offset, void* buffer, size_t length)> read_fn)
       : read_fn_(std::move(read_fn)) {}
 
-  std::optional<std::vector<uint8_t>> GetLoadedMemory(uint64_t offset,
-                                                      size_t size) override {
-    std::vector<uint8_t> out;
+  const uint8_t* GetLoadedMemory(uint64_t offset, size_t size) override {
+    auto& out = data_.emplace_back();
     out.resize(size);
 
     if (read_fn_(offset, out.data(), size)) {
-      return out;
+      return out.data();
     }
 
-    return std::nullopt;
+    return nullptr;
   }
 
   std::optional<Elf64_Ehdr> GetHeader() override {
@@ -46,7 +45,7 @@ class Accessor : public ElfLib::MemoryAccessorForAddressSpace {
       return std::nullopt;
     }
 
-    return *reinterpret_cast<const Elf64_Ehdr*>(data->data());
+    return *reinterpret_cast<const Elf64_Ehdr*>(data);
   }
 
   std::optional<std::vector<Elf64_Phdr>> GetProgramHeaders(
@@ -57,7 +56,7 @@ class Accessor : public ElfLib::MemoryAccessorForAddressSpace {
       return std::nullopt;
     }
 
-    auto array = reinterpret_cast<const Elf64_Phdr*>(data->data());
+    auto array = reinterpret_cast<const Elf64_Phdr*>(data);
 
     return std::vector<Elf64_Phdr>(array, array + count);
   }
@@ -68,6 +67,7 @@ class Accessor : public ElfLib::MemoryAccessorForAddressSpace {
   }
 
  private:
+  std::vector<std::vector<uint8_t>> data_;
   std::function<bool(uint64_t offset, void* buffer, size_t length)> read_fn_;
 };
 

@@ -15,6 +15,8 @@
 #include <zircon/syscalls/object.h>
 
 #include <algorithm>
+#include <iterator>
+#include <map>
 
 #include "garnet/bin/debug_agent/arch.h"
 #include "garnet/bin/debug_agent/object_util.h"
@@ -37,22 +39,17 @@ class ProcessMemoryAccessor : public ElfLib::MemoryAccessorForAddressSpace {
       : process_(process), base_(base) {}
   virtual ~ProcessMemoryAccessor() = default;
 
-  std::optional<std::vector<uint8_t>> GetLoadedMemory(uint64_t offset,
-                                                      size_t size) override {
-    std::vector<uint8_t> out;
-    out.resize(size);
+  const uint8_t* GetLoadedMemory(uint64_t offset, size_t size) override {
+    auto& vec = data_.emplace_back(size, 0);
+
     size_t got;
-
-    if (process_->read_memory(base_ + offset, out.data(), out.size(), &got) !=
-        ZX_OK) {
-      return std::nullopt;
+    if (process_->read_memory(base_ + offset, vec.data(), size, &got) !=
+            ZX_OK ||
+        got != size) {
+      return nullptr;
     }
 
-    if (got != size) {
-      return std::nullopt;
-    }
-
-    return out;
+    return vec.data();
   }
 
   std::optional<Elf64_Ehdr> GetHeader() override {
@@ -62,7 +59,7 @@ class ProcessMemoryAccessor : public ElfLib::MemoryAccessorForAddressSpace {
       return std::nullopt;
     }
 
-    return *reinterpret_cast<const Elf64_Ehdr*>(data->data());
+    return *reinterpret_cast<const Elf64_Ehdr*>(data);
   }
 
   std::optional<std::vector<Elf64_Phdr>> GetProgramHeaders(
@@ -73,7 +70,7 @@ class ProcessMemoryAccessor : public ElfLib::MemoryAccessorForAddressSpace {
       return std::nullopt;
     }
 
-    auto array = reinterpret_cast<const Elf64_Phdr*>(data->data());
+    auto array = reinterpret_cast<const Elf64_Phdr*>(data);
 
     return std::vector<Elf64_Phdr>(array, array + count);
   }
@@ -86,6 +83,7 @@ class ProcessMemoryAccessor : public ElfLib::MemoryAccessorForAddressSpace {
  private:
   const zx::process* process_;
   uint64_t base_;
+  std::vector<std::vector<uint8_t>> data_;
 };
 
 zx_status_t WalkModules(

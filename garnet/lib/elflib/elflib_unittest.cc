@@ -73,23 +73,21 @@ class StrippedExampleAccessor : public ElfLib::MemoryAccessorForFile {
     }
   }
 
-  std::optional<std::vector<uint8_t>> GetMemory(uint64_t offset,
-                                                size_t size) override {
-    std::vector<uint8_t> ret;
+  const uint8_t* GetMemory(uint64_t offset, size_t size) override {
+    auto& ret = data_.emplace_back();
     ret.resize(size);
 
     fseek(file_, offset, SEEK_SET);
     if (fread(ret.data(), size, 1, file_) != 1) {
-      return std::nullopt;
+      return nullptr;
     }
 
-    return ret;
+    return ret.data();
   }
 
   // Addresses will still point us to the right location in the file when we do
   // symbol table lookups.
-  std::optional<std::vector<uint8_t>> GetLoadedMemory(uint64_t offset,
-                                                      size_t size) override {
+  const uint8_t* GetLoadedMemory(uint64_t offset, size_t size) override {
     return GetMemory(offset, size);
   }
 
@@ -101,6 +99,7 @@ class StrippedExampleAccessor : public ElfLib::MemoryAccessorForFile {
 
  private:
   FILE* file_ = nullptr;
+  std::vector<std::vector<uint8_t>> data_;
 };
 
 class TestMemoryAccessor : public ElfLib::MemoryAccessorForFile {
@@ -213,18 +212,12 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessorForFile {
 
   size_t Pos() { return content_.size(); }
 
-  std::optional<std::vector<uint8_t>> GetMemory(uint64_t offset, size_t size) {
-    const auto& start_iter = content_.begin() + offset;
-    std::vector<uint8_t> out;
-    out.clear();
-    out.resize(size);
-
-    if (content_.size() < offset + out.size()) {
-      return std::nullopt;
+  const uint8_t* GetMemory(uint64_t offset, size_t size) {
+    if (offset + size > content_.size()) {
+      return nullptr;
     }
 
-    std::copy(start_iter, start_iter + out.size(), out.begin());
-    return out;
+    return content_.data() + offset;
   }
 
  private:
@@ -249,10 +242,13 @@ TEST(ElfLib, GetSection) {
   auto data = elf->GetSectionData(".stuff");
   const uint8_t* expected_content =
       reinterpret_cast<const uint8_t*>("This is a test.");
-  auto test = std::vector<uint8_t>(expected_content, expected_content + 15);
 
-  ASSERT_NE(data, nullptr);
-  EXPECT_EQ(test, *data);
+  ASSERT_NE(data.ptr, nullptr);
+
+  auto expect = std::vector<uint8_t>(expected_content, expected_content + 15);
+  auto got = std::vector<uint8_t>(data.ptr, data.ptr + data.size);
+
+  EXPECT_EQ(expect, got);
 }
 
 TEST(ElfLib, GetSymbolValue) {
