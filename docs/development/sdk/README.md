@@ -2,6 +2,7 @@
 
 This folder contains information about developing the Fuchsia SDK.
 
+> [Download the Fuchsia SDK](download.md)
 
 ## What belongs in an SDK?
 
