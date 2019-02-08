@@ -16,5 +16,9 @@ package("garnet_benchmarks") {
       name = rebase_path("gfx_benchmarks.sh")
       dest = "gfx_benchmarks.sh"
     },
+    {
+      name = rebase_path("benchmarks_perfcompare.sh")
+      dest = "benchmarks_perfcompare.sh"
+    },
   ]
 }
