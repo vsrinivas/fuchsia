@@ -12,6 +12,12 @@ namespace zxdb {
 MockRemoteAPI::MockRemoteAPI() = default;
 MockRemoteAPI::~MockRemoteAPI() = default;
 
+int MockRemoteAPI::GetAndResetResumeCount() {
+  int result = resume_count_;
+  resume_count_ = 0;
+  return result;
+}
+
 void MockRemoteAPI::AddOrChangeBreakpoint(
     const debug_ipc::AddOrChangeBreakpointRequest& request,
     std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) {

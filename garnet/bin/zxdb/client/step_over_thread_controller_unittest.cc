@@ -57,14 +57,14 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
 
   // It should have been able to step without doing any further async work.
   EXPECT_TRUE(continued);
-  EXPECT_EQ(1, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Issue a stop in the range. This should get transparently resumed. In
   // general the backend won't issue this since it will continue stepping in
   // the given range, but it could, and we should resume anyway.
   exception.thread.frames[0].ip += 4;
   InjectException(exception);
-  EXPECT_EQ(2, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Issue a stop in a new stack frame. The base pointer will be the same as
   // the outer function since the prologue hasn't executed yet. The previous
@@ -79,7 +79,7 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
 
   // That should have sent a resume + a breakpoint set at the frame 1 IP (this
   // breakpoint is implementing the "finish" to step out of the function call).
-  EXPECT_EQ(3, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
   EXPECT_EQ(0, mock_remote_api()->breakpoint_remove_count());
   EXPECT_EQ(exception.thread.frames[1].ip,
             mock_remote_api()->last_breakpoint_address());
@@ -97,7 +97,7 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
 
   // That should have removed the breakpoint and resumed the thread.
   EXPECT_EQ(1, mock_remote_api()->breakpoint_remove_count());
-  EXPECT_EQ(4, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Last exception is outside the range (the end is non-inclusive).
   exception.hit_breakpoints.clear();
@@ -105,7 +105,7 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
   InjectException(exception);
 
   // Should have stopped.
-  EXPECT_EQ(4, mock_remote_api()->resume_count());  // Same value as above.
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped.
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
 }
 
@@ -133,7 +133,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   thread()->ContinueWith(
       std::make_unique<StepOverThreadController>(AddressRanges(step_range1)),
       [](const Err& err) {});
-  EXPECT_EQ(1, mock_remote_api()->resume_count());  // Continued.
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continued.
 
   // Issue a stop at the beginning of the inline function. We provide the
   // full stack (including the inline function) because that's where the
@@ -141,7 +141,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
                            MockFrameVectorToFrameVector(GetStack()), true);
-  EXPECT_EQ(1, mock_remote_api()->resume_count());  // Unchanged (stopped).
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped.
 
   // The "step over" controller should have reported "stop" and fixed up the
   // stack to be at the call point of the inline function.
@@ -151,7 +151,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   thread()->ContinueWith(std::make_unique<StepOverThreadController>(
                              AddressRanges(kTopFunctionRange)),
                          [](const Err& err) {});
-  EXPECT_EQ(2, mock_remote_api()->resume_count());  // Continued.
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continued.
 
   // Pretend that immediately following that inline call is another inline
   // call. This is as if two inline functions are back-to-back in the source

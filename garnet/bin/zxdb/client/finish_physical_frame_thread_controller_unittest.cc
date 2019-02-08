@@ -133,7 +133,7 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, BottomStackFrame) {
   // Since the return address is null, we should not have attempted to create
   // a breakpoint, and the thread should have been resumed.
   ASSERT_EQ(0, mock_remote_api()->breakpoint_add_count());
-  ASSERT_EQ(1, mock_remote_api()->resume_count());
+  ASSERT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 }
 
 }  // namespace zxdb

@@ -21,7 +21,7 @@ class MockRemoteAPI : public RemoteAPI {
   ~MockRemoteAPI();
 
   // Resume.
-  int resume_count() const { return resume_count_; }
+  int GetAndResetResumeCount();  // Zeroes out internal value.
 
   // Thread status.
   void set_thread_status_reply(const debug_ipc::ThreadStatusReply& reply) {

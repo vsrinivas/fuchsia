@@ -58,7 +58,7 @@ TEST_F(StepThreadControllerTest, SofwareException) {
 
   // It should have been able to step without doing any further async work.
   EXPECT_TRUE(continued);
-  EXPECT_EQ(1, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Issue a software exception in the range.
   exception.type = debug_ipc::NotifyException::Type::kSoftware;
@@ -66,7 +66,7 @@ TEST_F(StepThreadControllerTest, SofwareException) {
   InjectException(exception);
 
   // It should have stayed stopped despite being in range.
-  EXPECT_EQ(1, mock_remote_api()->resume_count());  // Same count as above.
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
 }
 
@@ -126,23 +126,23 @@ TEST_F(StepThreadControllerTest, Line0) {
 
   // It should have been able to step without doing any further async work.
   EXPECT_TRUE(continued);
-  EXPECT_EQ(1, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Stop on 2nd instruction (line 0). This should be automatically resumed.
   exception.thread.frames[0].ip = kAddr2;
   InjectException(exception);
-  EXPECT_EQ(2, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Stop on 3rd instruction (line 10). Since this matches the original line,
   // it should be automatically resumed.
   exception.thread.frames[0].ip = kAddr3;
   InjectException(exception);
-  EXPECT_EQ(3, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Stop on 4th instruction. Since this is line 11, we should stay stopped.
   exception.thread.frames[0].ip = kAddr4;
   InjectException(exception);
-  EXPECT_EQ(3, mock_remote_api()->resume_count());  // Same count as above.
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
 }
 
@@ -199,7 +199,7 @@ void StepThreadControllerTest::DoSharedLibThunkTest(bool stop_on_no_symbols) {
 
   // It should have been able to step without doing any further async work.
   EXPECT_TRUE(continued);
-  EXPECT_EQ(1, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Stop on the thunk instruction with no line info. This is a separate
   // function so we push an entry on the stack.
@@ -211,19 +211,19 @@ void StepThreadControllerTest::DoSharedLibThunkTest(bool stop_on_no_symbols) {
   if (stop_on_no_symbols) {
     // For this variant of the test, the unsymbolized thunk should have stopped
     // stepping.
-    EXPECT_EQ(1, mock_remote_api()->resume_count());
+    EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped.
     EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
     return;
   }
 
   // The rest of this test is the "step over unsymbolized thunks" case. It
   // should have automatically resumed from the previous exception.
-  EXPECT_EQ(2, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Stop on dest instruction. Since it's a different line, we should now stop.
   exception.thread.frames[0].ip = kAddrDest;
   InjectException(exception);
-  EXPECT_EQ(2, mock_remote_api()->resume_count());  // Unchanged from previous.
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
 }
 
@@ -276,7 +276,7 @@ void StepThreadControllerTest::DoUnsymbolizedFunctionTest(
 
   // It should have been able to step without doing any further async work.
   EXPECT_TRUE(continued);
-  EXPECT_EQ(1, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Stop on the destination unsymbolized address.
   debug_ipc::NotifyException dest_exception(src_exception);
@@ -291,14 +291,14 @@ void StepThreadControllerTest::DoUnsymbolizedFunctionTest(
   if (stop_on_no_symbols) {
     // For this variant of the test, the unsymbolized thunk should have stopped
     // stepping.
-    EXPECT_EQ(1, mock_remote_api()->resume_count());
+    EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped
     EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
     return;
   }
 
   // The rest of this test is the "step over unsymbolized thunks" case. It
   // should have automatically resumed from the previous exception.
-  EXPECT_EQ(2, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Send a breakpoint completion notification at the previous stack frame.
   // Breakpoint exceptions are "software".
@@ -312,12 +312,12 @@ void StepThreadControllerTest::DoUnsymbolizedFunctionTest(
 
   // This should have continued since the return address is still in the
   // original address range.
-  EXPECT_EQ(3, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Stop on dest instruction, this is still in range so we should continue.
   src_exception.thread.frames[0].ip = kAddrOutOfRange;
   InjectException(src_exception);
-  EXPECT_EQ(3, mock_remote_api()->resume_count());  // Unchanged from previous.
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
 }
 

@@ -42,7 +42,7 @@ TEST_F(FinishThreadControllerTest, FinishInline) {
 
   // It should have been able to step without doing any further async work.
   EXPECT_TRUE(continued);
-  EXPECT_EQ(1, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Do one step inside the inline function (add 4 to the address).
   mock_frames = GetStack();
@@ -53,7 +53,7 @@ TEST_F(FinishThreadControllerTest, FinishInline) {
                            true);
 
   // That's still inside the frame's range, so it should continue.
-  EXPECT_EQ(2, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Set exception at the first instruction after the inline frame.
   mock_frames = GetStack();
@@ -67,7 +67,7 @@ TEST_F(FinishThreadControllerTest, FinishInline) {
                            true);
 
   // Should not have resumed.
-  EXPECT_EQ(2, mock_remote_api()->resume_count());
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
 }
 
@@ -97,7 +97,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   // That should have sent a resume + a breakpoint set at the frame 2 IP (this
   // breakpoint is implementing the "finish" to step out of the frame 1
   // physical frame).
-  EXPECT_EQ(1, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
   EXPECT_EQ(0, mock_remote_api()->breakpoint_remove_count());
   EXPECT_EQ(frame_2_ip, mock_remote_api()->last_breakpoint_address());
 
@@ -120,7 +120,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
 
   // The breakpoint should have been cleared and the thread should have been
   // resumed.
-  EXPECT_EQ(2, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
   EXPECT_EQ(1, mock_remote_api()->breakpoint_remove_count());
 
   // Do another stop 4 bytes later in the inline frame 2 which should get
@@ -132,7 +132,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
                            debug_ipc::NotifyException::Type::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)),
                            true);
-  EXPECT_EQ(3, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Stop in inline frame 1. This leaves inline frame 2 (right after its
   // address range) but should still continue since we haven't reached the
@@ -144,7 +144,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
                            debug_ipc::NotifyException::Type::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)),
                            true);
-  EXPECT_EQ(4, mock_remote_api()->resume_count());
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Stop in middle frame which is the target (right after the inline 1 range).
   mock_frames = GetStack();
@@ -154,7 +154,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
                            debug_ipc::NotifyException::Type::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)),
                            true);
-  EXPECT_EQ(4, mock_remote_api()->resume_count());  // Unchanged
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped.
 }
 
 }  // namespace zxdb
