@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/storage/fake/fake_db.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fxl/strings/string_view.h>
 
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
 
@@ -23,8 +24,8 @@ Status MakeEmptySyncCallAndCheck(async_dispatcher_t* dispatcher,
 }
 
 bool HasPrefix(const std::string& key, convert::ExtendedStringView prefix) {
-  return key.size() >= prefix.size() &&
-         key.compare(0, prefix.size(), prefix.ToString());
+  return fxl::StringView(key.data(), std::min(key.size(), prefix.size())) ==
+         prefix;
 }
 
 class FakeBatch : public Db::Batch {
@@ -206,6 +207,7 @@ Status FakeDb::GetByPrefix(coroutine::CoroutineHandler* handler,
   auto it = key_value_store_.lower_bound(prefix.ToString());
   while (it != key_value_store_.end() && HasPrefix(it->first, prefix)) {
     keys_with_prefix.push_back(it->first.substr(prefix.size()));
+    ++it;
   }
   key_suffixes->swap(keys_with_prefix);
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
@@ -215,10 +217,11 @@ Status FakeDb::GetEntriesByPrefix(
     coroutine::CoroutineHandler* handler, convert::ExtendedStringView prefix,
     std::vector<std::pair<std::string, std::string>>* entries) {
   std::vector<std::pair<std::string, std::string>> entries_with_prefix;
-
   auto it = key_value_store_.lower_bound(prefix.ToString());
   while (it != key_value_store_.end() && HasPrefix(it->first, prefix)) {
-    entries_with_prefix.emplace_back(it->first, it->second);
+    entries_with_prefix.emplace_back(it->first.substr(prefix.size()),
+                                     it->second);
+    ++it;
   }
   entries->swap(entries_with_prefix);
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
