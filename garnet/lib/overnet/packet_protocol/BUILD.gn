@@ -73,6 +73,7 @@ source_set("bbr_test") {
   deps = [
     ":bbr",
     "//garnet/lib/overnet/testing:csv_writer",
+    "//garnet/lib/overnet/testing:flags",
     "//garnet/lib/overnet/testing:test_timer",
     "//garnet/lib/overnet/testing:trace_cout",
     "//third_party/googletest:gmock",

@@ -62,6 +62,7 @@ source_set("router_endpoint_integration_test") {
     ":router_endpoint",
     "//garnet/lib/overnet/links:packet_link",
     "//garnet/lib/overnet/protocol:fidl",
+    "//garnet/lib/overnet/testing:flags",
     "//garnet/lib/overnet/testing:test_timer",
     "//garnet/lib/overnet/testing:trace_cout",
     "//third_party/googletest:gtest",

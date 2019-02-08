@@ -9,12 +9,24 @@ source_set("tests") {
   ]
 }
 
+source_set("flags") {
+  testonly = true
+  sources = [
+    "flags.cc",
+    "flags.h",
+  ]
+  public_deps = [
+    "//third_party/gflags",
+  ]
+}
+
 source_set("run_all_tests") {
   testonly = true
   sources = [
     "run_all_tests.cc",
   ]
   deps = [
+    "//third_party/gflags",
     "//third_party/googletest:gtest",
   ]
 }

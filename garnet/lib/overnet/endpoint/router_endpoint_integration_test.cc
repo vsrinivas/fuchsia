@@ -7,6 +7,7 @@
 #include "garnet/lib/overnet/endpoint/router_endpoint.h"
 #include "garnet/lib/overnet/links/packet_link.h"
 #include "garnet/lib/overnet/protocol/fidl.h"
+#include "garnet/lib/overnet/testing/flags.h"
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"
 #include "gtest/gtest.h"
@@ -16,8 +17,6 @@
 
 namespace overnet {
 namespace router_endpoint2node {
-
-static const bool kTraceEverything = false;
 
 struct LinkState {
   uint64_t id;
@@ -216,8 +215,8 @@ class Env {
   TestTimer test_timer_;
   TraceCout trace_cout_{&test_timer_};
   ScopedRenderer scoped_renderer{&trace_cout_};
-  ScopedSeverity scoped_severity{kTraceEverything ? Severity::DEBUG
-                                                  : Severity::INFO};
+  ScopedSeverity scoped_severity{FLAGS_verbose ? Severity::DEBUG
+                                               : Severity::INFO};
 };
 
 class TwoNode final : public Env {

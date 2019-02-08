@@ -8,6 +8,7 @@
 #include <queue>
 #include <random>
 #include "garnet/lib/overnet/testing/csv_writer.h"
+#include "garnet/lib/overnet/testing/flags.h"
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"
 #include "gmock/gmock.h"
@@ -19,8 +20,6 @@ using testing::Le;
 
 namespace overnet {
 namespace bbr_test {
-
-static constexpr bool kTraceOutput = false;
 
 // Toggle to true to generate CSV files for each simulation run
 enum class CsvOutput {
@@ -100,7 +99,7 @@ class Simulator : private TestTimer,
   Simulator(uint32_t mss, Optional<TimeDelta> srtt)
       : TraceCout(this),
         ScopedRenderer(this),
-        ScopedSeverity(kTraceOutput ? Severity::DEBUG : Severity::INFO),
+        ScopedSeverity(FLAGS_verbose ? Severity::DEBUG : Severity::INFO),
         bbr_(
             this, [this] { return rng_(); }, mss, srtt),
         outgoing_meter_(TimeDelta::FromSeconds(5)) {}
