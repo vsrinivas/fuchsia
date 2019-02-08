@@ -32,14 +32,19 @@ struct MeshProxyInfo {
 
 class PathTable {
    public:
+    typedef std::unordered_map<uint64_t, std::unique_ptr<MeshPath>> PathTableByTarget;
+    typedef std::unordered_map<uint64_t, std::unique_ptr<MeshProxyInfo>> ProxyInfoByDest;
+
     const MeshPath* GetPath(const common::MacAddr& mesh_target) const;
     const MeshPath* AddOrUpdatePath(const common::MacAddr& mesh_target, const MeshPath& path);
 
     const MeshProxyInfo* GetProxyInfo(const common::MacAddr& target) const;
 
+    const PathTableByTarget& GetMeshPathTable() const { return path_by_mesh_target_; }
+
    private:
-    std::unordered_map<uint64_t, std::unique_ptr<MeshPath>> path_by_mesh_target_;
-    std::unordered_map<uint64_t, std::unique_ptr<MeshProxyInfo>> proxy_info_by_dest_;
+    PathTableByTarget path_by_mesh_target_;
+    ProxyInfoByDest proxy_info_by_dest_;
 };
 
 }  // namespace wlan

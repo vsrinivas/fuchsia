@@ -11,6 +11,7 @@
 #include "test_utils.h"
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
+namespace wlan_mesh = ::fuchsia::wlan::mesh;
 
 namespace wlan {
 
@@ -40,6 +41,15 @@ struct MeshMlmeTest : public ::testing::Test {
         auto msgs = device.GetServiceMsgs<wlan_mlme::StopConfirm>();
         EXPECT_EQ(msgs.size(), 1ULL);
         return msgs[0].body()->result_code;
+    }
+
+    auto GetPathTable() {
+        wlan_mlme::GetMeshPathTableRequest params;
+        zx_status_t status =
+            mlme.HandleMlmeMsg(MlmeMsg<wlan_mlme::GetMeshPathTableRequest>(std::move(params), 123));
+        EXPECT_EQ(ZX_OK, status);
+
+        return device.GetServiceMsgs<wlan_mesh::MeshPathTable>();
     }
 
     MockDevice device;
@@ -103,6 +113,13 @@ TEST_F(MeshMlmeTest, HandleMpmOpen) {
     }
 }
 
+TEST_F(MeshMlmeTest, GetPathTable) {
+    EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+    auto path_table_msgs = GetPathTable();
+    EXPECT_EQ(path_table_msgs.size(), 1ULL);
+    EXPECT_EQ(0UL, path_table_msgs[0].body()->paths.size());
+}
+
 TEST_F(MeshMlmeTest, DeliverProxiedData) {
     EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
 
@@ -153,7 +170,7 @@ TEST_F(MeshMlmeTest, DeliverProxiedData) {
 }
 
 TEST_F(MeshMlmeTest, DoNotDeliverWhenNotJoined) {
-    auto packet = [] (uint8_t mesh_seq) {
+    auto packet = [](uint8_t mesh_seq) {
         return test_utils::MakeWlanPacket({
             // clang-format off
             // Data header

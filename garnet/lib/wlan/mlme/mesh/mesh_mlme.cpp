@@ -21,6 +21,7 @@ static constexpr size_t kMaxMeshMgmtFrameSize = 1024;
 static constexpr size_t kMaxReceivedFrameCacheSize = 500;
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
+namespace wlan_mesh = ::fuchsia::wlan::mesh;
 
 static wlan_channel_t GetChannel(uint8_t requested_channel) {
     return wlan_channel_t{
@@ -83,6 +84,19 @@ zx_status_t MeshMlme::Init() {
     return ZX_OK;
 }
 
+static wlan_mesh::MeshPathTable ConvertMeshTable(const PathTable::PathTableByTarget& table) {
+    wlan_mesh::MeshPathTable fidl_table;
+    for (const auto& it : table) {
+        wlan_mesh::MeshPath entry;
+        common::MacAddr dest(it.first);
+        dest.CopyTo(entry.dest_address.data());
+        it.second->next_hop.CopyTo(entry.next_hop.data());
+        entry.metric = it.second->metric;
+        fidl_table.paths.push_back(entry);
+    }
+    return fidl_table;
+}
+
 zx_status_t MeshMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     if (auto start_req = msg.As<wlan_mlme::StartRequest>()) {
         auto code = Start(*start_req);
@@ -99,6 +113,14 @@ zx_status_t MeshMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     } else if (auto params = msg.As<wlan_mlme::MeshPeeringParams>()) {
         ConfigurePeering(*params);
         return ZX_OK;
+    } else if (auto params = msg.As<wlan_mlme::GetMeshPathTableRequest>()) {
+        wlan_mesh::MeshPathTable mesh_table;
+        mesh_table.paths.resize(0);
+        if (state_) {
+            const auto& table = state_->path_table.GetMeshPathTable();
+            mesh_table = ConvertMeshTable(table);
+        }
+        return service::SendMeshPathTable(device_, mesh_table, msg.ordinal(), msg.txid());
     } else {
         return ZX_ERR_NOT_SUPPORTED;
     }

@@ -14,6 +14,7 @@ fidl("fuchsia.wlan.mlme") {
 
   deps = [
     "//sdk/fidl/fuchsia.wlan.common",
+    "//sdk/fidl/fuchsia.wlan.mesh",
     "//sdk/fidl/fuchsia.wlan.minstrel",
     "//sdk/fidl/fuchsia.wlan.stats",
   ]

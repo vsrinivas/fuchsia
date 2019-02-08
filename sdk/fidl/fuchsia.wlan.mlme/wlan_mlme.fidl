@@ -5,6 +5,7 @@
 library fuchsia.wlan.mlme;
 
 using fuchsia.wlan.common;
+using fuchsia.wlan.mesh;
 
 // Stub types for communicating between the wlan service and the MLME drivers. Based on the 802.11
 // MLME SAP interface (IEEE Std 802.11-2016 section 6.3).
@@ -854,6 +855,10 @@ struct MeshPeeringParams {
     // TODO(gbonik): HT/VHT caps
 };
 
+struct GetMeshPathTableRequest {
+    uint8 dummy;
+};
+
 // Because these methods rely on an external entity to provide a response, events are used instead
 // of return values.
 interface MLME {
@@ -933,6 +938,8 @@ interface MLME {
     SendMpConfirmAction(MeshPeeringConfirmAction action);
 
     MeshPeeringEstablished(MeshPeeringParams peering);
+
+    GetMeshPathTableReq(GetMeshPathTableRequest req) -> (fuchsia.wlan.mesh.MeshPathTable table);
 
     -> SignalReport(SignalReportIndication ind);
 

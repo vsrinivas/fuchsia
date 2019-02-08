@@ -597,6 +597,10 @@ void Device::MeshPeeringEstablished(wlan_mlme::MeshPeeringParams params) {
     errorf("MeshPeeringEstablished is not implemented\n");
 }
 
+void Device::GetMeshPathTableReq(::fuchsia::wlan::mlme::GetMeshPathTableRequest req, GetMeshPathTableReqCallback cb) {
+    errorf("GetMeshPathTable is not implemented\n");
+}
+
 void Device::SetControlledPort(wlan_mlme::SetControlledPortRequest req) {
     switch (req.state) {
     case wlan_mlme::ControlledPortState::OPEN:

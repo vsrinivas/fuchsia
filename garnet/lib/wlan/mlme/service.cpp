@@ -10,6 +10,7 @@ namespace wlan {
 namespace service {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
+namespace wlan_mesh = ::fuchsia::wlan::mesh;
 
 std::optional<common::MacAddr> GetPeerAddr(const BaseMlmeMsg& msg) {
     if (auto auth_req = msg.As<wlan_mlme::AuthenticateRequest>()) {
@@ -155,6 +156,11 @@ zx_status_t SendStopConfirm(DeviceInterface* device, wlan_mlme::StopResultCodes 
     wlan_mlme::StopConfirm msg;
     msg.result_code = code;
     return SendServiceMsg(device, &msg, fuchsia_wlan_mlme_MLMEStopConfOrdinal);
+}
+
+zx_status_t SendMeshPathTable(DeviceInterface* device, wlan_mesh::MeshPathTable& table,
+                              uint32_t ordinal, zx_txid_t txid) {
+    return SendServiceMsg(device, &table, ordinal, txid);
 }
 
 }  // namespace service

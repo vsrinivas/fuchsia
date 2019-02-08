@@ -57,6 +57,8 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
     void SetControlledPort(::fuchsia::wlan::mlme::SetControlledPortRequest req) override;
     void SendMpConfirmAction(::fuchsia::wlan::mlme::MeshPeeringConfirmAction req) override;
     void MeshPeeringEstablished(::fuchsia::wlan::mlme::MeshPeeringParams params) override;
+    void GetMeshPathTableReq(::fuchsia::wlan::mlme::GetMeshPathTableRequest req,
+                             GetMeshPathTableReqCallback cb) override;
 
     // wlanif_impl_ifc (wlanif-impl -> ::fuchsia::wlan::mlme)
     void OnScanResult(wlanif_scan_result_t* result);

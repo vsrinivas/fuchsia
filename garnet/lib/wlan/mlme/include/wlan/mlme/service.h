@@ -164,6 +164,8 @@ zx_status_t SendEapolIndication(DeviceInterface* device, const EapolHdr& eapol,
 
 zx_status_t SendStartConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::StartResultCodes code);
 zx_status_t SendStopConfirm(DeviceInterface* device, ::fuchsia::wlan::mlme::StopResultCodes code);
+zx_status_t SendMeshPathTable(DeviceInterface* device, ::fuchsia::wlan::mesh::MeshPathTable& table,
+                              uint32_t ordinal, zx_txid_t txid);
 
 }  // namespace service
 
