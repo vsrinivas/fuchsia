@@ -67,6 +67,7 @@ class SemanticTree : public fuchsia::accessibility::SemanticsRoot {
   void DeleteSemanticNodes(zx_koid_t view_id,
                            std::vector<int32_t> node_ids) override;
   void Commit(zx_koid_t view_id) override;
+  void LogSemanticTree(zx_koid_t view_id);
 
   // Internal recursive hit-test function using the cached tree. Returns a
   // null pointer if no hit nodes were found. Public functions that query

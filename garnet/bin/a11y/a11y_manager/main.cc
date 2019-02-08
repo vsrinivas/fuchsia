@@ -6,8 +6,10 @@
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/a11y/a11y_manager/app.h"
+#include "lib/syslog/cpp/logger.h"
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger();
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
   a11y_manager::App app;

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fxl/logging.h>
+#include <lib/syslog/cpp/logger.h>
+
 #include "garnet/bin/a11y/a11y_manager/semantic_tree.h"
 
 namespace a11y_manager {
@@ -118,6 +121,15 @@ void SemanticTree::Commit(zx_koid_t view_id) {
     nodes_it->second.erase(u_delete);
   }
   u_delete_it->second.clear();
+}
+
+void SemanticTree::LogSemanticTree(zx_koid_t view_id) {
+  // TODO(ankitdave): Add logic to create log message from the semantic tree.
+  // TODO(ankitdave): Modify this function, once FIDL api's are finalized and
+  //                  create a client so that this function can be called from
+  //                  command line.
+  std::string tree_log = "Semantic Tree Log Message";
+  FX_LOGS(INFO) << tree_log;
 }
 
 fuchsia::accessibility::Node* SemanticTree::HitTest(
