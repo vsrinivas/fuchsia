@@ -81,3 +81,11 @@ func (o *SummaryOutput) Record(result testrunner.TestResult) {
 		Result:     result.Result,
 	})
 }
+
+// AddFile registers a file on disk as a file to include in the summary.
+func (o *SummaryOutput) AddFile(name, path string) {
+		if o.Summary.Outputs == nil {
+			o.Summary.Outputs = make(map[string]string)
+		}
+		o.Summary.Outputs[name] = path
+}

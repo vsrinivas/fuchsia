@@ -251,10 +251,12 @@ func runFuchsiaTests(tests []testsharder.Test, output *TestRunnerOutput, nodenam
 		if err := output.Tar.TarFile(stdoutBytes, syslogStdoutFilename); err != nil {
 			log.Println(err)
 		}
+		output.Summary.AddFile("syslog-stdout", syslogStdoutFilename)
 
 		if err := output.Tar.TarFile(stderrBytes, syslogStderrFilename); err != nil {
 			log.Println(err)
 		}
+		output.Summary.AddFile("syslog-stderr", syslogStderrFilename)
 	}()
 
 	return runTests(tests, tester.Test, output)
