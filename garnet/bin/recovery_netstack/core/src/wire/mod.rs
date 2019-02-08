@@ -51,12 +51,17 @@ macro_rules! debug_err_fn {
     )
 }
 
+#[macro_use]
+mod macros;
+
 pub mod arp;
 pub mod ethernet;
 pub mod icmp;
+pub mod igmp;
 pub mod ipv4;
 pub mod ipv6;
 pub mod tcp;
+
 #[cfg(test)]
 pub mod testdata;
 pub mod udp;

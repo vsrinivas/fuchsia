@@ -6,6 +6,7 @@
 
 mod forwarding;
 mod icmp;
+mod igmp;
 #[cfg(test)]
 mod testdata;
 mod types;
@@ -47,6 +48,7 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddr, B: BufferMut>(
     increment_counter!(ctx, "dispatch_receive_ip_packet");
     match proto {
         IpProto::Icmp | IpProto::Icmpv6 => icmp::receive_icmp_packet(ctx, src_ip, dst_ip, buffer),
+        IpProto::Igmp => igmp::receive_igmp_packet(ctx, src_ip, dst_ip, buffer),
         IpProto::Tcp | IpProto::Udp => {
             crate::transport::receive_ip_packet(ctx, src_ip, dst_ip, proto, buffer)
         }

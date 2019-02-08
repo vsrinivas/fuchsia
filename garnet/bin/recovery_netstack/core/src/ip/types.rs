@@ -373,6 +373,7 @@ impl<A: IpAddr> Debug for Subnet<A> {
 #[derive(Copy, Clone, Hash, Eq, PartialEq)]
 pub enum IpProto {
     Icmp,
+    Igmp,
     Tcp,
     Udp,
     Icmpv6,
@@ -381,6 +382,7 @@ pub enum IpProto {
 
 impl IpProto {
     const ICMP: u8 = 1;
+    const IGMP: u8 = 2;
     const TCP: u8 = 6;
     const UDP: u8 = 17;
     const ICMPV6: u8 = 58;
@@ -390,6 +392,7 @@ impl From<u8> for IpProto {
     fn from(u: u8) -> IpProto {
         match u {
             Self::ICMP => IpProto::Icmp,
+            Self::IGMP => IpProto::Igmp,
             Self::TCP => IpProto::Tcp,
             Self::UDP => IpProto::Udp,
             Self::ICMPV6 => IpProto::Icmpv6,
@@ -402,6 +405,7 @@ impl Into<u8> for IpProto {
     fn into(self) -> u8 {
         match self {
             IpProto::Icmp => Self::ICMP,
+            IpProto::Igmp => Self::IGMP,
             IpProto::Tcp => Self::TCP,
             IpProto::Udp => Self::UDP,
             IpProto::Icmpv6 => Self::ICMPV6,
@@ -417,6 +421,7 @@ impl Display for IpProto {
             "{}",
             match self {
                 IpProto::Icmp => "ICMP",
+                IpProto::Igmp => "IGMP",
                 IpProto::Tcp => "TCP",
                 IpProto::Udp => "UDP",
                 IpProto::Icmpv6 => "ICMPv6",

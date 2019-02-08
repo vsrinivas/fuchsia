@@ -1,0 +1,24 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+//! Internet Group Management Protocol.
+//!
+//! The Internet Group Management Protocol (IGMP) is a communications protocol used
+//! by hosts and adjacent routers on IPv4 networks to establish multicast group memberships.
+//! IGMP is an integral part of IP multicast.
+
+use crate::ip::IpAddr;
+use crate::{Context, EventDispatcher};
+use log::trace;
+use packet::BufferMut;
+
+/// Receive an IGMP message in an IP packet.
+pub fn receive_igmp_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
+    ctx: &mut Context<D>,
+    src_ip: A,
+    dst_ip: A,
+    buffer: B,
+) -> bool {
+    log_unimplemented!(false, "ip::igmp::receive_igmp_packet: Not implemented.")
+}
