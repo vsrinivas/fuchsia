@@ -5,12 +5,7 @@
 package pdu
 
 import (
-	"net/http"
-	"strconv"
-
 	"fuchsia.googlesource.com/tools/pdu/amt"
-	"fuchsia.googlesource.com/tools/pdu/arduinorelay"
-	"fuchsia.googlesource.com/tools/pdu/webcardlx"
 	"fuchsia.googlesource.com/tools/pdu/wol"
 )
 
@@ -52,29 +47,8 @@ func RebootDevice(cfg *Config) error {
 	switch cfg.Type {
 	case "amt":
 		return amt.Reboot(cfg.Host, cfg.Username, cfg.Password)
-	case "arduinorelay":
-		return arduinorelay.Reboot(cfg.DevicePath, cfg.DevicePort)
 	case "wol":
 		return wol.Reboot(botBroadcastAddr, botInterface, cfg.HostMACAddr)
-	case "webcardlx":
-		fallthrough
-	default:
-		// TODO(mknyszek): Require a type to be specified for this.
-		wc := webcardlx.Webcardlx{
-			Client:   &http.Client{},
-			Host:     cfg.Host,
-			Username: cfg.Username,
-			Password: cfg.Password,
-		}
-		if err := wc.Login(); err != nil {
-			return err
-		}
-		defer wc.Logout()
-
-		port, err := strconv.Atoi(cfg.DevicePort)
-		if err != nil {
-			return err
-		}
-		return wc.Loads(port, webcardlx.Cycle)
 	}
+	return nil
 }
