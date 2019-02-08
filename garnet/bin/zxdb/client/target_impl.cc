@@ -233,11 +233,11 @@ void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err,
     state_ = State::kNone;
     if (status == debug_ipc::kZxErrIO) {
       issue_err = Err("Error launching: Binary not found [%s]",
-                      debug_ipc::ZxStatusToString(status).data());
+                      debug_ipc::ZxStatusToString(status));
     } else {
       issue_err =
           Err(fxl::StringPrintf("Error launching, status = %s.",
-                                debug_ipc::ZxStatusToString(status).data()));
+                                debug_ipc::ZxStatusToString(status)));
     }
   } else {
     Process::StartType start_type = state_ == State::kAttaching

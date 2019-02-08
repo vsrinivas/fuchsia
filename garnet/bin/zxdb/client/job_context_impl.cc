@@ -173,7 +173,7 @@ void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters,
                    const Err& err, debug_ipc::JobFilterReply reply) {
         if (reply.status != 0) {
           printf("Error adding filter, error: %s.",
-                 debug_ipc::ZxStatusToString(reply.status).data());
+                 debug_ipc::ZxStatusToString(reply.status));
           if (weak_job_context) {
             // Agent failed, reset filters in settings.
             // This will also trigger another callback but would be a no-op

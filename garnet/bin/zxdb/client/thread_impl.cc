@@ -160,8 +160,7 @@ void ThreadImpl::JumpTo(uint64_t new_address,
       cb(Err("Could not set thread instruction pointer. Error %" PRIu64
              " (%s).",
              reply.status,
-             debug_ipc::ZxStatusToString(static_cast<uint32_t>(reply.status))
-                 .c_str()));
+             debug_ipc::ZxStatusToString(static_cast<uint32_t>(reply.status))));
     } else if (!thread) {
       cb(Err("Thread destroyed."));
     } else {

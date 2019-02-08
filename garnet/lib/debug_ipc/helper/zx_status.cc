@@ -9,36 +9,106 @@
 
 namespace debug_ipc {
 
-std::string ZxStatusToString(uint32_t status) {
-  const char* status_name = nullptr;
+const char* ZxStatusToString(uint32_t status) {
   switch (status) {
     case kZxOK:
-      status_name = "ZX_OK";
-      break;
+      return "ZX_OK";
     case kZxErrInternal:
-      status_name = "ZX_ERR_INTERNAL";
-      break;
+      return "ZX_ERR_INTERNAL";
     case kZxErrNotSupported:
-      status_name = "ZX_ERR_NOT_SUPPORTED";
-      break;
-    case kZxErrInvalidArgs:
-      status_name = "ZX_ERR_INVALID_ARGS";
-      break;
+      return "ZX_ERR_NOT_SUPPORTED";
     case kZxErrNoResources:
-      status_name = "ZX_ERR_NO_RESOURCES";
-      break;
+      return "ZX_ERR_NO_RESOURCES";
+    case kZxErrNoMemory:
+      return "ZX_ERR_NO_MEMORY";
+    case kZxErrInternalIntrRetry:
+      return "ZX_ERR_INTERNAL_INTR_RETRY";
+    case kZxErrInvalidArgs:
+      return "ZX_ERR_INVALID_ARGS";
+    case kZxErrBadHandle:
+      return "ZX_ERR_BAD_HANDLE";
+    case kZxErrWrongType:
+      return "ZX_ERR_WRONG_TYPE";
+    case kZxErrBadSyscall:
+      return "ZX_ERR_BAD_SYSCALL";
     case kZxErrOutOfRange:
-      status_name = "ZX_ERR_OUT_OF_RANGE";
-      break;
+      return "ZX_ERR_OUT_OF_RANGE";
+    case kZxErrBufferTooSmall:
+      return "ZX_ERR_BUFFER_TOO_SMALL";
+    case kZxErrBadState:
+      return "ZX_ERR_BAD_STATE";
+    case kZxErrTimedOut:
+      return "ZX_ERR_TIMED_OUT";
+    case kZxErrShouldWait:
+      return "ZX_ERR_SHOULD_WAIT";
+    case kZxErrCanceled:
+      return "ZX_ERR_CANCELED";
+    case kZxErrPeerClosed:
+      return "ZX_ERR_PEER_CLOSED";
+    case kZxErrNotFound:
+      return "ZX_ERR_NOT_FOUND";
+    case kZxErrAlreadyExists:
+      return "ZX_ERR_ALREADY_EXISTS";
+    case kZxErrAlreadyBound:
+      return "ZX_ERR_ALREADY_BOUND";
+    case kZxErrUnavailable:
+      return "ZX_ERR_UNAVAILABLE";
+    case kZxErrAccessDenied:
+      return "ZX_ERR_ACCESS_DENIED";
     case kZxErrIO:
-      status_name = "ZX_ERR_IO";
-      break;
+      return "ZX_ERR_IO";
+    case kZxErrIoRefused:
+      return "ZX_ERR_REFUSED";
+    case kZxErrIoDataIntegrity:
+      return "ZX_ERR_IO_DATA_INTEGRITY";
+    case kZxErrIoDataLoss:
+      return "ZX_ERR_IO_DATA_LOSS";
+    case kZxErrIoNotPresent:
+      return "ZX_ERR_IO_NOT_PRESENT";
+    case kZxErrIoOverrun:
+      return "ZX_ERR_IO_OVERRUN";
+    case kZxErrIoMissedDeadline:
+      return "ZX_ERR_IO_MISSED_DEADLINE";
+    case kZxErrIoInvalid:
+      return "ZX_ERR_IO_INVALID";
+    case kZxErrBadPath:
+      return "ZX_ERR_BAD_PATH";
+    case kZxErrNotDir:
+      return "ZX_ERR_NOT_DIR";
+    case kZxErrNotFile:
+      return "ZX_ERR_NOT_FILE";
+    case kZxErrFileBig:
+      return "ZX_ERR_FILE_BIG";
+    case kZxErrNoSpace:
+      return "ZX_ERR_NO_SPACE";
+    case kZxErrNotEmpty:
+      return "ZX_ERR_NOT_EMPTY";
+    case kZxErrStop:
+      return "ZX_ERR_STOP";
+    case kZxErrNext:
+      return "ZX_ERR_NEXT";
+    case kZxErrAsync:
+      return "ZX_ERR_ASYNC";
+    case kZxErrProtocolNotSupported:
+      return "ZX_ERR_PROTOCOL_NOT_SUPPORTED";
+    case kZxErrAddressUnreachable:
+      return "ZX_ERR_ADDRESS_UNREACHABLE";
+    case kZxErrAddressInUse:
+      return "ZX_ERR_ADDRESS_IN_USE";
+    case kZxErrNotConnected:
+      return "ZX_ERR_NOT_CONNECTED";
+    case kZxErrConnectionRefused:
+      return "ZX_ERR_CONNECTION_REFUSED";
+    case kZxErrConnectionReset:
+      return "ZX_ERR_CONNECTION_RESET";
+    case kZxErrConnectionAborted:
+      return "ZX_ERR_CONNECTION_ABORTED";
     default:
-      status_name = "<unsupported status>";
       break;
   }
-  FXL_DCHECK(status_name);
-  return fxl::StringPrintf("%s (%d)", status_name, status);
+
+  FXL_NOTREACHED();
+  return nullptr;
 }
 
 }  // namespace debug_ipc

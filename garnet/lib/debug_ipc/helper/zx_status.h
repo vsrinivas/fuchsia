@@ -6,13 +6,11 @@
 
 #include <stdint.h>
 
-#include <string>
-
 #include "garnet/lib/debug_ipc/helper/zx_status_definitions.h"
 
 namespace debug_ipc {
 
-std::string ZxStatusToString(uint32_t status);
+const char* ZxStatusToString(uint32_t status);
 
 }  // namespace debug_ipc
 
