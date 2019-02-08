@@ -6,9 +6,15 @@ library fuchsia.hardware.usb.device;
 
 using zx;
 
-const uint32 DEVICE_DESC_SIZE = 18; /// sizeof(usb_device_descriptor_t)
-const uint32 MAX_CONFIG_DESC_SIZE = 65536; /// UINT16_MAX
-const uint32 MAX_STRING_DESC_SIZE = 384; /// See GetStringDescriptor description below
+/// sizeof(usb_device_descriptor_t)
+const uint32 DEVICE_DESC_SIZE = 18;
+
+/// UINT16_MAX
+const uint32 MAX_CONFIG_DESC_SIZE = 65536;
+
+/// See GetStringDescriptor description below
+const uint32 MAX_STRING_DESC_SIZE = 384;
+
 [Layout = "Simple"]
 protocol Device {
     /// Returns the speed of the USB device as a usb_speed_t value.
