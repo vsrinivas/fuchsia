@@ -178,7 +178,10 @@ constexpr zx::duration Device::kDefaultBusyWait;
 
 Device::Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
                std::vector<uint8_t>&& bulk_out, size_t parent_req_size)
-    : parent_(device), usb_(usb), parent_req_size_(parent_req_size), rx_endpt_(bulk_in),
+    : parent_(device),
+      usb_(usb),
+      parent_req_size_(parent_req_size),
+      rx_endpt_(bulk_in),
       tx_endpts_(std::move(bulk_out)) {
     debugf("Device dev=%p bulk_in=%u\n", parent_, rx_endpt_);
     used_wcid_bitmap_.Reset(kMaxValidWcid);
@@ -609,7 +612,8 @@ zx_status_t Device::LoadFirmware() {
     CHECK_WRITE(H2M_MAILBOX_CSR, status);
 
     SysCtrl sc;
-    status = BusyWait(&sc, [&sc]() { return sc.mcu_ready(); }, zx::msec(1));
+    status = BusyWait(
+        &sc, [&sc]() { return sc.mcu_ready(); }, zx::msec(1));
     if (status != ZX_OK) {
         if (status == ZX_ERR_TIMED_OUT) { errorf("system MCU not ready\n"); }
         return status;
@@ -693,8 +697,8 @@ zx_status_t Device::EnableRadio() {
 
     // Wait for MAC status ready
     MacStatusReg msr;
-    status =
-        BusyWait(&msr, [&msr]() { return !msr.tx_status() && !msr.rx_status(); }, zx::msec(10));
+    status = BusyWait(
+        &msr, [&msr]() { return !msr.tx_status() && !msr.rx_status(); }, zx::msec(10));
     if (status != ZX_OK) {
         if (status == ZX_ERR_TIMED_OUT) { errorf("BBP busy\n"); }
         return status;
@@ -1932,8 +1936,9 @@ zx_status_t Device::DisableWpdma() {
 
 zx_status_t Device::DetectAutoRun(bool* autorun) {
     uint32_t fw_mode = 0;
-    zx_status_t status = usb_control_in(&usb_, (USB_DIR_IN | USB_TYPE_VENDOR), kDeviceMode, kAutorun,
-                                        0, ZX_TIME_INFINITE, &fw_mode, sizeof(fw_mode), nullptr);
+    zx_status_t status =
+        usb_control_in(&usb_, (USB_DIR_IN | USB_TYPE_VENDOR), kDeviceMode, kAutorun, 0,
+                       ZX_TIME_INFINITE, &fw_mode, sizeof(fw_mode), nullptr);
     if (status < 0) {
         errorf("DeviceMode error: %d\n", status);
         return status;
@@ -1951,7 +1956,8 @@ zx_status_t Device::DetectAutoRun(bool* autorun) {
 
 zx_status_t Device::WaitForMacCsr() {
     AsicVerId avi;
-    return BusyWait(&avi, [&avi]() { return avi.val() && avi.val() != ~0u; }, zx::msec(1));
+    return BusyWait(
+        &avi, [&avi]() { return avi.val() && avi.val() != ~0u; }, zx::msec(1));
 }
 
 zx_status_t Device::SetRxFilter() {
@@ -3276,7 +3282,8 @@ void Device::HandleRxComplete(usb_request_t* request) {
             .callback = &Device::ReadRequestComplete,
             .ctx = this,
         };
-        usb_request_queue(&usb_, request, &complete); });
+        usb_request_queue(&usb_, request, &complete);
+    });
 
     if (request->response.status == ZX_OK) {
         // Total bytes received is (request->response.actual) bytes
@@ -3648,8 +3655,7 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     // Initialize queues
     for (size_t i = 0; i < kReadReqCount; i++) {
         usb_request_t* req;
-        zx_status_t status =
-            usb_request_alloc(&req, kReadBufSize, rx_endpt_, parent_req_size_);
+        zx_status_t status = usb_request_alloc(&req, kReadBufSize, rx_endpt_, parent_req_size_);
         if (status != ZX_OK) {
             errorf("failed to allocate rx usb request\n");
             return status;
@@ -3664,8 +3670,7 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     auto tx_endpt = tx_endpts_.front();
     for (size_t i = 0; i < kWriteReqCount; i++) {
         usb_request_t* req;
-        zx_status_t status =
-            usb_request_alloc(&req, kWriteBufSize, tx_endpt, parent_req_size_);
+        zx_status_t status = usb_request_alloc(&req, kWriteBufSize, tx_endpt, parent_req_size_);
         if (status != ZX_OK) {
             errorf("failed to allocate tx usb request\n");
             return status;
