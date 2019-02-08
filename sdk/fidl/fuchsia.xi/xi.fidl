@@ -5,7 +5,7 @@
 library fuchsia.xi;
 
 [Discoverable]
-interface Json {
+protocol Json {
     // Connect a socket, which then has the same behavior as stdin/stdout in
     // Unix/Windows. Note that this used to also have a ledger connection (for
     // multi-device sync), but that needs to be handled a different way.

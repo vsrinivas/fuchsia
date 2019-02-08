@@ -47,7 +47,7 @@ enum Status {
 // This is only meant to be used by the Framework and will be replaced with
 // |AccountManager| in the near future.
 [Discoverable]
-interface AccountProvider {
+protocol AccountProvider {
     // Adds a new user account. This involves talking to the identity provider and
     // fetching profile attributes.
     AddAccount(IdentityProvider identity_provider)

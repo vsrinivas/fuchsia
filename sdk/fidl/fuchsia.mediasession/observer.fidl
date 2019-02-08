@@ -10,7 +10,7 @@ using fuchsia.mediaplayer;
 /// |Observer| is a handle for media playback, allowing clients to observe
 /// a playback session.
 [FragileBase]
-interface Observer {
+protocol Observer {
     /// Sent on first connection and when playback
     /// status changes.
     -> OnPlaybackStatusChanged(PlaybackStatus playback_status);

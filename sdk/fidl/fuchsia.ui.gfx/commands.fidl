@@ -203,7 +203,7 @@ struct AddPartCmd {
     uint32 part_id;
 };
 
-interface SnapshotCallbackHACK {
+protocol SnapshotCallbackHACK {
     OnData(fuchsia.mem.Buffer data);
 };
 

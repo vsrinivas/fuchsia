@@ -6,7 +6,7 @@ library fuchsia.guest;
 
 // A |InstanceController| provides access to services of a guest instance.
 [Discoverable]
-interface InstanceController {
+protocol InstanceController {
     // Get the socket for the primary serial device of the guest. The details
     // regarding what output is produced and what input is accepted are
     // determined by each guest.

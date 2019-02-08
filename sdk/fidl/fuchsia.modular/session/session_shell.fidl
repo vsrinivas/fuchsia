@@ -13,7 +13,7 @@ using fuchsia.ui.viewsv1token;
 // sessionmgr to hand to the session shell views of stories, or to notify that
 // the view of a story is about to be closed.
 [Discoverable]
-interface SessionShell {
+protocol SessionShell {
     // Displays the given story view. The story this view belongs to is
     // identified by |view_id.story_id|.
     AttachView(ViewIdentifier view_id, fuchsia.ui.viewsv1token.ViewOwner view_owner);
@@ -51,7 +51,7 @@ struct ViewIdentifier {
 // creator in a way that is more explicit about the services that are
 // offered than a generic |ServiceProvider|.
 [Discoverable]
-interface SessionShellContext {
+protocol SessionShellContext {
     // The account associated with the currently logged-in user. It's NULL if
     // logged into GUEST mode.
     GetAccount() -> (fuchsia.modular.auth.Account? account);
@@ -80,7 +80,7 @@ interface SessionShellContext {
 // shell. This allows story shell implementations to coordinate event and focus
 // handling. An analog mechanism exists between BaseShell and SessionShell.
 [Discoverable] // Created by session shell components.
-interface SessionShellPresentationProvider {
+protocol SessionShellPresentationProvider {
     // When a StoryShell calls StoryShellContext.GetPresentation(), this request
     // arrives here.
     GetPresentation(string story_id, request<fuchsia.ui.policy.Presentation> request);

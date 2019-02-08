@@ -42,18 +42,18 @@ union Value {
 
 // The iterator returned when a series of keys are being listed. Returns an
 // empty vector when there are no more remaining ListItems.
-interface ListIterator {
+protocol ListIterator {
     GetNext() -> (vector<ListItem> keys);
 };
 
 // The iterator returned when a series of keys are being read. Returns an
 // empty vector when there are no more remaining KeyValues.
-interface GetIterator {
+protocol GetIterator {
     GetNext() -> (vector<KeyValue> kvs);
 };
 
 // The interface returned when a new accessor is created.
-interface StoreAccessor {
+protocol StoreAccessor {
     // Gets a single value from the store.
     GetValue(string:MAX_KEY_SIZE key) -> (Value? val);
 
@@ -81,7 +81,7 @@ interface StoreAccessor {
 
 // Interface used to interact with a given client's key/value store
 [Discoverable, FragileBase]
-interface Store {
+protocol Store {
     // Identify should be called at the beginning of a connection to identify
     // which client service's store is to be accessed. In the future this will
     // be deprecated in favor of component monikers, and each client will only
@@ -96,5 +96,6 @@ interface Store {
 // Interface used to interact with a given client's key/value store. The bytes
 // type is disabled in this store.
 [Discoverable]
-interface SecureStore : Store {
+protocol SecureStore {
+    compose Store;
 };

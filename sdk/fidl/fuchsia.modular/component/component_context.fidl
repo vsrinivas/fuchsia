@@ -11,7 +11,7 @@ using fuchsia.sys;
 // information by the framework. For example, a Module gets it from its
 // ModuleContext and an Agent gets it from its AgentContext.
 [Discoverable]
-interface ComponentContext {
+protocol ComponentContext {
     // Gets the Ledger associated with this component. This ledger instance is
     // unique to this component (nb. not the component instance) under this user.
     GetLedger(request<fuchsia.ledger.Ledger> request);

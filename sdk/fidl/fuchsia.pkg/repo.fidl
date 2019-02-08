@@ -12,7 +12,7 @@ using zx;
 /// This interface is intended to be implemented by package resolver components, and used by
 /// repository administration tools.
 [Discoverable]
-interface RepositoryManager {
+protocol RepositoryManager {
     /// Add a repository. This will overwrite the repository if it already exists.
     ///
     /// Arguments:
@@ -155,7 +155,7 @@ struct OAuth2DeviceCode {
 };
 
 /// The iterator over all the repositories defined in a |PackageResolver|.
-interface RepositoryIterator {
+protocol RepositoryIterator {
     /// Advance the iterator and return the next batch of repositories.
     ///
     /// Return Values:

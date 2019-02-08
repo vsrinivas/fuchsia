@@ -52,7 +52,7 @@ struct SystemStatus {
 };
 
 [Discoverable]
-interface SystemController {
+protocol SystemController {
     GetDvfsInfo(uint32 power_domain) -> (Status err, vector<DvfsOpp> opps);
     GetSystemStatus() -> (Status err, SystemStatus sys_status);
 };

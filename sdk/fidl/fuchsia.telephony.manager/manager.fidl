@@ -8,7 +8,7 @@ using fuchsia.telephony.ril;
 
 /// Primary Telephony management interface
 [Discoverable]
-interface Manager {
+protocol Manager {
   /// Returns whether or not a modem is currently available on the system.
   IsAvailable() -> (bool available);
 

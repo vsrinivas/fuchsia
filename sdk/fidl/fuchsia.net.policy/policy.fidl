@@ -40,7 +40,7 @@ union EthernetControllerRequest {
 };
 
 [FragileBase]
-interface BaseInterfaceController {
+protocol BaseInterfaceController {
     /// Retrieve info about an interface.
     GetInterfaceInfo() -> (InterfaceInfo info);
 
@@ -65,18 +65,20 @@ interface BaseInterfaceController {
 };
 
 /// Controller of physical and virtual interfaces.
-interface StandardInterfaceController : BaseInterfaceController {
+protocol StandardInterfaceController {
+    compose BaseInterfaceController;
 };
 
 /// Controller of  bridging interfaces.
-interface BridgeInterfaceController : BaseInterfaceController {
+protocol BridgeInterfaceController {
+    compose BaseInterfaceController;
 };
 
 [Discoverable]
 // Observer receives events from all interfaces and queries interface info.
 // It is used by clients like mdns which only care about interface change events
 // and the first-class clients like sysUI and net_ctl.
-interface Observer {
+protocol Observer {
     /// Retrieve info of all the interfaces.
     ListInterfaces() -> (vector<InterfaceInfo>? infos, zx.status status);
 
@@ -87,7 +89,7 @@ interface Observer {
 };
 
 [Discoverable]
-interface BasePolicy {
+protocol BasePolicy {
     /// Add virtual interfaces.
     // Physical interfaces are added by watching the events in /dev/class/ethernet directory.
     // The networking interface added through this API are tied to the lifetime of the fidl channel.
@@ -105,6 +107,6 @@ interface BasePolicy {
 // Infrastructure team is working on capability control mechanism and details can be found:
 // https://docs.google.com/document/d/1pOPFRfdh6AnWt2d37F1k7YH0AhJ1AnrGEdUU3zyzCkQ/edit#
 // That said, the component infrastrastructure will block unqualified client from accessing the PrivilegedPolicy interface.
-interface PrivilegedPolicy {
+protocol PrivilegedPolicy {
     GetInterfaceController(string interface, EthernetControllerRequest controller)-> (zx.status status);
 };

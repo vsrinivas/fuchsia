@@ -8,7 +8,7 @@ using fuchsia.netstack;
 
 // Primary mDNS service interface.
 [Discoverable]
-interface Controller {
+protocol Controller {
     // Gets the addresses for the specified host name. |host_name| may not end in
     // a '.'.
     ResolveHostName(string host_name, uint32 timeout_ms)
@@ -90,7 +90,7 @@ const uint64 kInitialInstances = 0;
 // Represents a subscription.
 // TODO(dalesat): Replace this with ServiceSubscriber, a client-implemented
 // interface that is not susceptible to channel overrun.
-interface ServiceSubscription {
+protocol ServiceSubscription {
     // Gets the known service instances. To get the list immediately, call
     // |GetInstances(kInitialInstances)|. To get updates thereafter, pass the
     // version sent in the previous callback.
@@ -108,7 +108,7 @@ struct ServiceInstance {
 };
 
 // Client-supplied responder interface.
-interface Responder {
+protocol Responder {
     // Updates the status of the instance publication.
     UpdateStatus(Result result);
 

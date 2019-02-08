@@ -6,7 +6,7 @@ library fuchsia.modular;
 
 // Gives access to the device map of the logged in user.
 [Discoverable] // Exposed in user environment.
-interface DeviceMap {
+protocol DeviceMap {
     // HACK(mesch): Just exposes all Device/* entries in the ledger.
     // We'll need something better, possibly with access policy.
     Query() -> (vector<DeviceMapEntry> devices);
@@ -51,7 +51,7 @@ struct DeviceMapEntry {
 };
 
 // Implemented by the client calling DeviceMap.Watch().
-interface DeviceMapWatcher {
+protocol DeviceMapWatcher {
     // Called with the current state right after registration, and subsequently
     // when the state changes.
     OnDeviceMapChange(DeviceMapEntry entry);

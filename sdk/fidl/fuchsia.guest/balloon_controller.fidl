@@ -14,7 +14,7 @@ struct MemStat {
 
 // A |BalloonController| controls a guest instance's memory balloon.
 [Discoverable]
-interface BalloonController {
+protocol BalloonController {
     // Get the number of pages in the memory balloon.
     GetNumPages() -> (uint32 num_pages);
 

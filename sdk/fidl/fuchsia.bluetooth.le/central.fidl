@@ -8,7 +8,7 @@ using fuchsia.bluetooth;
 using fuchsia.bluetooth.gatt;
 
 [Discoverable]
-interface Central {
+protocol Central {
     // Returns the list of peripherals that are known to the system from previous scan, connection,
     // and/or bonding procedures. The results can be filtered based on service UUIDs that are known to
     // be present on the peripheral.

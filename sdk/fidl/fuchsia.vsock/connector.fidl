@@ -19,7 +19,7 @@ struct ConnectionTransport {
 };
 
 /// Interface for manipulating the state of an active connection.
-interface Connection {
+protocol Connection {
     /// Trigger asynchronous shutdown. The underlying channel will be closed
     /// once shutdown is complete. Shutdown has an implicit barrier as any already
     /// queued sends will complete, but any additional sends will generate errors
@@ -30,7 +30,7 @@ interface Connection {
 };
 
 /// Interface presented by a listener to accept or reject connections
-interface Acceptor {
+protocol Acceptor {
     /// The response is either a |ConnectionTransport| to indicate that the connection
     /// is accepted, or none to indicate that it should be rejected.
     Accept(fuchsia.hardware.vsock.Addr addr) -> (ConnectionTransport? con);
@@ -40,7 +40,7 @@ interface Acceptor {
 /// provides the ability for listeners to be multiplexed by port and manages dynamic
 /// port allocation for outbound connections.
 [Discoverable]
-interface Connector {
+protocol Connector {
     /// Attempt to establish a connection to the specified remote cid/port pair.
     /// No local port is specified as an ephemeral one will automatically be allocated.
     Connect(uint32 remote_cid, uint32 remote_port, ConnectionTransport con) -> (zx.status status, uint32 local_port);

@@ -26,7 +26,7 @@ struct InstanceInfo {
 };
 
 [Discoverable]
-interface EnvironmentManager {
+protocol EnvironmentManager {
     // Create a new environment in which guests can be launched.
     //
     // The |label| is a string that is used for diagnostic purposes, such as

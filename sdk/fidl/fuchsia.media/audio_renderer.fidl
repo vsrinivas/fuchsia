@@ -18,7 +18,10 @@ library fuchsia.media;
 //
 
 [FragileBase]
-interface AudioRenderer : StreamBufferSet, StreamSink {
+protocol AudioRenderer {
+    compose StreamBufferSet;
+    compose StreamSink;
+
     // Sets the type of the stream to be delivered by the client. Using this
     // method implies that the stream encoding is AUDIO_ENCODING_LPCM.
     SetPcmStreamType(AudioStreamType type);

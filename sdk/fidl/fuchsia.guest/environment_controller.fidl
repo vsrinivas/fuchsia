@@ -41,7 +41,7 @@ struct BlockDevice {
 
 // An interface that will receive channels for Wayland connections.
 [Discoverable]
-interface WaylandDispatcher {
+protocol WaylandDispatcher {
     // Inform dispatcher of new connection.
     //
     // When a client opens a new connection to the virtio_wl device, a new
@@ -90,7 +90,7 @@ struct LaunchInfo {
     WaylandDevice? wayland_device;
 };
 
-interface EnvironmentController {
+protocol EnvironmentController {
     // Launch a new guest instance into this environment. The |cid| of the
     // instance is returned so that it can be uniquely identified.
     LaunchInstance(LaunchInfo launch_info,

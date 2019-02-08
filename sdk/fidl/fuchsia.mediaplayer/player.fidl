@@ -12,7 +12,8 @@ using fuchsia.ui.viewsv1token;
 
 // Plays media.
 [Discoverable]
-interface Player : SourceManager {
+protocol Player {
+    compose SourceManager;
     /////////////////////////////////////////////////////////////////////////////
     // Player methods
     // These methods will remain in Player.

@@ -35,7 +35,7 @@ using fuchsia.sys;
 ///   capabilities an agent has.
 /// - fuchsia.modular.Lifecycle for how Components get lifecycle events.
 [Discoverable] // Created by each agent.
-interface Agent {
+protocol Agent {
     /// Called when some component tries to connect to this agent. |requestor_url|
     /// is the identifier for the component which called
     /// |ComponentContext.ConnectToAgent()|. The |services| are provided to that

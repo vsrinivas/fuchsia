@@ -7,7 +7,7 @@ library fuchsia.bluetooth.gatt;
 using fuchsia.bluetooth;
 
 // Interface for responding to requests on a local service.
-interface LocalServiceDelegate {
+protocol LocalServiceDelegate {
     // Notifies the delegate when a remote device with |peer_id| enables or
     // disables notifications or indications on the characteristic with the given
     // |characteristic_id|.
@@ -33,7 +33,7 @@ interface LocalServiceDelegate {
 };
 
 // Interface for communicating with a published service.
-interface LocalService {
+protocol LocalService {
     // Removes the service that this interface instance corresponds to. Does
     // nothing if the service is already removed.
     RemoveService();
@@ -51,7 +51,7 @@ interface LocalService {
 };
 
 [Discoverable]
-interface Server {
+protocol Server {
     // Publishes the given service so that it is available to all remote peers.
     // A LocalServiceDelegate must be provided over which to receive service requests.
     //

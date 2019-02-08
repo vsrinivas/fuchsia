@@ -6,7 +6,7 @@ library fuchsia.tracing;
 
 // The controller interface used by the trace tool to start/stop tracing.
 [Discoverable]
-interface TraceController {
+protocol TraceController {
     // Requests to start tracing with the specified |options|.
     //
     // The trace controller acknowledges the request when all

@@ -17,7 +17,7 @@ struct TestResult {
 // The empty return acknowledges that the connection to TestRunner was
 // successful.
 [Discoverable]
-interface TestRunner {
+protocol TestRunner {
     // Tells the test runner how to identify this test program.
     Identify(string program_name) -> ();
 
@@ -76,7 +76,7 @@ interface TestRunner {
 // a test module that requested the agent can Get() that "connected" key to
 // assert that it was able to connect to the right agent.
 [Discoverable]
-interface TestRunnerStore {
+protocol TestRunnerStore {
     // This will store |key| with value |value| and respond back. Subsequent
     // Put()s to |key| are queued up until they are read by a |Get()|.
     Put(string key, string value) -> ();

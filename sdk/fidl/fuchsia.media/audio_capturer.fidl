@@ -252,7 +252,10 @@ library fuchsia.media;
 // ++ Consider allowing the mixer to produce compressed audio.
 //
 [FragileBase]
-interface AudioCapturer : StreamBufferSet, StreamSource {
+protocol AudioCapturer {
+    compose StreamBufferSet;
+    compose StreamSource;
+
     // Sets the stream type of the stream to be delivered.  Causes the source
     // material to be reformatted/resampled if needed in order to produce the
     // requested stream type.  Note that the stream type may not be changed after

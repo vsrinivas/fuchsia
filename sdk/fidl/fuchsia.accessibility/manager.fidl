@@ -22,7 +22,7 @@ using fuchsia.ui.viewsv1;
 //  2. View id: Owned by Scenic. Maps to view corresponding to a front-end.
 //  3. Node id: Owned by front-end. Maps to semantic node local to a front-end.
 [Discoverable]
-interface Manager {
+protocol Manager {
     // Returns the deepest node that the input touches. We currently need to
     // pass the view tree token for the current view manager implementation to
     // know which view tree to search.

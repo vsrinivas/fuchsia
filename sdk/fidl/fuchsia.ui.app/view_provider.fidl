@@ -21,7 +21,7 @@ using fuchsia.sys;
 // ViewProvider is given for the convenience of clients that don't require
 // a more complex implementation.
 [Discoverable]
-interface ViewProvider {
+protocol ViewProvider {
     // Creates a new View under the control of the ViewProvider.
     //
     // |token| is one half of the shared eventpair which will bind the new View

@@ -9,7 +9,7 @@ library fuchsia.accessibility;
 // be implemented solely by the accessibility manager, and called solely by a privileged
 // client, such as the session shell.
 [Discoverable]
-interface Toggler {
+protocol Toggler {
     // Allows for enabling or disabling accessibility support in services connected to the
     // accessibility toggle broadcaster.
     ToggleAccessibilitySupport(bool enabled);
@@ -22,7 +22,7 @@ interface Toggler {
 // - Root presenter, which needs to re-route raw input to an accessibility input dispatch.
 // - Accessibility touch dispatcher, which should only be enabled when accessibility is turned on.
 [Discoverable]
-interface ToggleBroadcaster {
+protocol ToggleBroadcaster {
     // Notify the client that accessibility support has been enabled or disabled. Clients should
     // use this to enable or disable their own custom accessibility support.
     -> OnAccessibilityToggle(bool enabled);

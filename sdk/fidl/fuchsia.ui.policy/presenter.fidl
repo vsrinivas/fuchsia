@@ -13,7 +13,7 @@ using fuchsia.ui.viewsv1token;
 //
 // TODO(SCN-599): this will be replaced by Presenter2
 [Discoverable]
-interface Presenter {
+protocol Presenter {
     Present2(handle<eventpair> view_owner_token, request<Presentation>? presentation_request);
 
     // Sets new default renderer params and forces them on for the duration of the
@@ -29,7 +29,7 @@ interface Presenter {
 // TODO(SCN-595): this is the new presenter interface, which will be renamed
 // to Presenter after the original is deleted.
 [Discoverable]
-interface Presenter2 {
+protocol Presenter2 {
     // Usage: the client creates a pair of eventpairs and uses one to create a
     // View in their Scenic session.  The other eventpair is passed to this
     // method as |view_holder_token|; the Presenter2 service will use this to

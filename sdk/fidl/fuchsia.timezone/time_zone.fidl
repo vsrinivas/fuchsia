@@ -11,7 +11,7 @@ library fuchsia.timezone;
 // For more information on the ICU timezone ID format, see:
 // http://userguide.icu-project.org/datetime
 [Discoverable]
-interface Timezone {
+protocol Timezone {
     // Returns local timezone offset (in minutes from UTC. Can be negative) for
     // the supplied number of milliseconds since the Unix epoch. Returns a
     // non-zero DST offset when appropriate.
@@ -28,7 +28,7 @@ interface Timezone {
     Watch(TimezoneWatcher watcher);
 };
 
-interface TimezoneWatcher {
+protocol TimezoneWatcher {
     // When the timezone changes, returns the new timezone ID.
     OnTimezoneOffsetChange(string timezone_id);
 };

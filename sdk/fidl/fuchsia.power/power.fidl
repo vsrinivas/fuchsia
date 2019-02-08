@@ -41,7 +41,7 @@ struct BatteryStatus {
 
 // Manager Interface used to manage power
 [Discoverable]
-interface PowerManager {
+protocol PowerManager {
     // Gets battery status
     GetBatteryStatus() -> (BatteryStatus status);
 
@@ -50,6 +50,6 @@ interface PowerManager {
 };
 
 // Watcher on battery status
-interface PowerManagerWatcher {
+protocol PowerManagerWatcher {
     OnChangeBatteryStatus(BatteryStatus battery_status);
 };

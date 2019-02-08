@@ -28,7 +28,7 @@ using fuchsia.mem;
 // messages within each device. For example, modules can use sender tokens on
 // different devices and see those messages delivered to the agent instance on
 // the same device. However, individual messages are local to a device.
-interface MessageQueue {
+protocol MessageQueue {
     // Gets a sender token associated with this queue. It can be used by other
     // components to send messages to this queue.
     GetToken() -> (string queue_token);
@@ -45,7 +45,7 @@ interface MessageQueue {
 // MessageQueue. The queue token is obtained by the component that created the
 // message queue and is then passed to the other component through services
 // specific to either component.
-interface MessageSender {
+protocol MessageSender {
     Send(fuchsia.mem.Buffer message);
 };
 
@@ -54,7 +54,7 @@ interface MessageSender {
 // they are sent to MessageReader.OnReceive(). TODO(vardhan): There is a
 // conflict with C++ fidl bindings for 'MessageReceiver'. After that is fixed,
 // rename this interface to MessageReceiver.
-interface MessageReader {
+protocol MessageReader {
     // Called when there is a new message to be received. Once an OnReceive()
     // responds back, the message is acknowledged as having been received and the
     // next one is sent when available. If a client's OnReceive() does not respond

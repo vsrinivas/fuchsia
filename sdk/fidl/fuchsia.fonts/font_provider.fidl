@@ -98,7 +98,7 @@ struct FamilyInfo {
 };
 
 [Discoverable]
-interface Provider {
+protocol Provider {
     // Returns font that matches specified |request|.
     GetFont(Request request) -> (Response? response);
 

@@ -15,7 +15,7 @@ using fuchsia.ui.viewsv1token;
 // user.
 // TODO(alexmin): Re-word this bit once the Sessionmgr implementation is landed.
 [Discoverable] // Created by sessionmgr application.
-interface Sessionmgr {
+protocol Sessionmgr {
     // Launches a sessionmgr instance for a user identified by |user_id| and
     // specific TokenManager handles for ledger and agent_runner.
     // TODO(alhaad): Fold paramters into |UserContext|.
@@ -31,7 +31,7 @@ interface Sessionmgr {
 };
 
 // This interface is provided by basemgr to |Sessionmgr|.
-interface UserContext {
+protocol UserContext {
     // See detailed comments in SessionShellContext.Logout().
     Logout();
 

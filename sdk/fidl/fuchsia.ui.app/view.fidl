@@ -42,7 +42,7 @@ library fuchsia.ui.app;
 ///
 ///  TODO(SCN-1198): Migrate all implementations of |ViewProvider| to use |View|.
 [Discoverable]
-interface View {
+protocol View {
     /// Updates the View's configuration.
     ///
     /// To prevent triggering UI changes shortly after a client starts up, the

@@ -9,7 +9,7 @@ library fuchsia.modular;
 // on contextual changes, as well as Suggestions derived from user-driven
 // "Asks".
 [Discoverable]
-interface SuggestionProvider {
+protocol SuggestionProvider {
     // Creates a subscription to the "interruptions" category of Suggestions.
     // Interruptions are delivered immediately once they become available, and are
     // potentially unlimited in number.
@@ -60,17 +60,17 @@ enum NavigationAction {
     SETTINGS = 3;
 };
 
-interface NavigationListener {
+protocol NavigationListener {
     // Notifies the user interface to perform the navigation requested
     OnNavigation(NavigationAction action);
 };
 
-interface InterruptionListener {
+protocol InterruptionListener {
     // Notifies the user interface to interrupt the user
     OnInterrupt(Suggestion suggestion);
 };
 
-interface NextListener {
+protocol NextListener {
     // Notifies the user interface that the passive suggestion results have been
     // updated. This is called every time the suggestion results change.
     OnNextResults(vector<Suggestion> suggestions);
@@ -81,7 +81,7 @@ interface NextListener {
     OnProcessingChange(bool processing);
 };
 
-interface QueryListener {
+protocol QueryListener {
     // Notifies the user interface that new suggestion results are available.
     // This may be called multiple times if the suggestion results are updated.
     OnQueryResults(vector<Suggestion> suggestions);
@@ -163,7 +163,7 @@ enum SpeechStatus {
 // will be split between the |TranscriptionListener| lifecycle and
 // |SuggestionListener|'s |onProcessingChanged|. |OnTextResponse will probably
 // be part of the callback on |Query|.
-interface FeedbackListener {
+protocol FeedbackListener {
     // Called every time the internal |SpeechStatus| changes.
     OnStatusChanged(SpeechStatus status);
 

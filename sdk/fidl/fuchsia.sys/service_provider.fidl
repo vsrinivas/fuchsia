@@ -12,7 +12,7 @@ library fuchsia.sys;
 // This interface is deprecated.  Services should be published as directory
 // entries instead, just like files.
 // TODO(ZX-1358): Point to the FIDL interface for file I/O once RIO is migrated.
-interface ServiceProvider {
+protocol ServiceProvider {
     // Asks the host to provide the service identified by |service_name| through
     // the |channel| endpoint supplied by the caller. If the host is not willing
     // or able to provide the requested service, it should close the |channel|.

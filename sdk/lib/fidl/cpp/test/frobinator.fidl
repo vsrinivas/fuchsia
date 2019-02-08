@@ -4,7 +4,7 @@
 
 library fidl.test.frobinator;
 
-interface Frobinator {
+protocol Frobinator {
     Frob(string value);
     Grob(string value) -> (string value);
     -> Hrob(string value);

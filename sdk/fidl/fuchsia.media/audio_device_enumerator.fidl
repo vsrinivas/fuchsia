@@ -34,7 +34,7 @@ const uint32 SetAudioGainFlag_MuteValid = 0x02;
 const uint32 SetAudioGainFlag_AgcValid = 0x04;
 
 [Discoverable]
-interface AudioDeviceEnumerator {
+protocol AudioDeviceEnumerator {
     // Obtain the list of currently active audio devices.
     GetDevices() -> (vector<AudioDeviceInfo> devices);
 

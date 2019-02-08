@@ -10,7 +10,7 @@ library fuchsia.modular;
 // service in their application's outgoing services, so that agents can provide
 // data for |Entity|s that they create. This interface is available through an
 // agent's |AgentContext|.
-interface EntityReferenceFactory {
+protocol EntityReferenceFactory {
     // Agents call this to manufacture a reference for an Entity they will
     // provide. Returns an opaque, persistable |entity_reference| that components
     // can resolve into an |Entity| interface using |EntityResolver|. When data is

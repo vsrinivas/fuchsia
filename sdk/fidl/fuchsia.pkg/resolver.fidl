@@ -12,7 +12,7 @@ using zx;
 /// This interface is intended to be implemented by package resolver components, and used by
 /// repository administration tools.
 [Discoverable]
-interface PackageResolver {
+protocol PackageResolver {
     /// Populates or updates the cache of a package with the given selectors as specified by the
     /// update policy.
     ///

@@ -9,7 +9,7 @@ library fuchsia.sys2;
 // instance to exercise limited discretionary control over its own
 // lifecycle.
 [Discoverable]
-interface LifecycleHandler {
+protocol LifecycleHandler {
     // Called by the component manager when the instance is being stopped
     // to give it an opportunity to close client connections, finish pending
     // work, record its state, and terminate.

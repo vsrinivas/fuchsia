@@ -11,7 +11,7 @@ using fuchsia.ui.input;
 /// interface are proxied through the TextManager to batch edits together,
 /// and to ensure requests aren't sent to unfocused TextFields.
 [Discoverable]
-interface TextInputContext {
+protocol TextInputContext {
   /// Tells anyone listening to ImeVisibilityService (usually a shell) to hide
   /// the onscreen keyboard.
   HideKeyboard();

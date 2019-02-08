@@ -46,7 +46,7 @@ using fuchsia.ui.viewsv1token;
 // The container must set properties for each of its children after adding
 // them, as otherwise the children cannot be rendered (since they lack enough
 // context to know what to draw).
-interface ViewContainer {
+protocol ViewContainer {
     // Sets the view container listener, or null to remove.
     SetListener(ViewContainerListener? listener);
 
@@ -162,7 +162,7 @@ interface ViewContainer {
 };
 
 // An interface clients may implement to receive events from a view container.
-interface ViewContainerListener {
+protocol ViewContainerListener {
     // Called when a child view is attached along with embedding information.
     //
     // This method will be called at most once after the child is added.

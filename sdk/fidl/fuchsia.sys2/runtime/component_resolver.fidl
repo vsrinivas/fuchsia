@@ -19,7 +19,7 @@ using zx;
 // Note: The component manager is the only intended direct client of this
 // interface.
 [Discoverable]
-interface ComponentResolver {
+protocol ComponentResolver {
     // Resolves a component with the given URI.
     //
     // |component_uri| is the unescaped URI of the component to resolve.

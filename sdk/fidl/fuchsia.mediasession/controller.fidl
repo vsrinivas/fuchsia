@@ -12,7 +12,9 @@ using fuchsia.media;
 /// Consult |PlaybackCapabilities|, sent by |OnPlaybackCapabilities|, to learn
 /// which commands are supported.
 [FragileBase]
-interface Controller : Observer {
+protocol Controller {
+    compose Observer;
+
     /// Sent on first connection and when supported
     /// playback capabilities change.
     -> OnPlaybackCapabilitiesChanged(PlaybackCapabilities playback_capabilities);

@@ -38,7 +38,7 @@ struct TextInputState {
 };
 
 // A interface for interacting with a text input control.
-interface InputMethodEditor {
+protocol InputMethodEditor {
     SetKeyboardType(KeyboardType keyboard_type);
     SetState(TextInputState state);
     InjectInput(InputEvent event);
@@ -50,7 +50,7 @@ interface InputMethodEditor {
 };
 
 // An interface to receive information from |TextInputService|.
-interface InputMethodEditorClient {
+protocol InputMethodEditorClient {
     DidUpdateState(TextInputState state, InputEvent? event);
     OnAction(InputMethodAction action);
 };

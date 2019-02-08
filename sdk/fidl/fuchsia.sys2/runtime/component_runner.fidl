@@ -21,7 +21,7 @@ using zx;
 // Note: The component manager is the only intended direct client of this
 // interface.
 [Discoverable]
-interface ComponentRunner {
+protocol ComponentRunner {
     // Starts running a new component instance described by |start_info|.
     //
     // The caller of this method takes responsibility for binding client
@@ -74,7 +74,7 @@ table ComponentStartInfo {
 // of the component runner itself.  The component manager may respond to such
 // failures by terminating the component runner's job to ensure system
 // stability.
-interface ComponentController {
+protocol ComponentController {
     // Stops the controlled component instance.
     //
     // After stopping the component instance, the server should report

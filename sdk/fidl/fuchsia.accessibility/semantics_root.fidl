@@ -13,7 +13,7 @@ using koid = uint64;
 //
 // This is a stub implementation and is currently a work in progress.
 [Discoverable]
-interface SemanticsRoot {
+protocol SemanticsRoot {
     // Registers a frontend with a view id to the root. To correlate views with their associated
     // clients, the semantic root uses view KOIDs as unique identifiers. All future updates that a
     // frontend makes need to include the view id. The frontend is required to pass a
@@ -45,7 +45,7 @@ interface SemanticsRoot {
 
 // A semantic provider is the client-side interface that the manager can use to
 // ask clients to perform accessibility actions.
-interface SemanticsProvider {
+protocol SemanticsProvider {
     // Asks the semantics provider to perform an accessibility action on the
     // node with node id in the front-end.
     PerformAccessibilityAction(int32 node_id, Action action);

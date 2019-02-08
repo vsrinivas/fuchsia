@@ -5,7 +5,7 @@
 library fuchsia.modular;
 
 [Discoverable]
-interface ContextDebug {
+protocol ContextDebug {
     // The watch will stay active until the |listener| handle is closed.
     Watch(ContextDebugListener listener);
 
@@ -14,7 +14,7 @@ interface ContextDebug {
     WaitUntilIdle() -> ();
 };
 
-interface ContextDebugListener {
+protocol ContextDebugListener {
     // Called any time a value is added, updated or removed. Each element in
     // |values| represents a single add, update or remove operation.  Values are
     // guaranteed to appear before their children in the case that a parent and

@@ -77,7 +77,7 @@ struct VideoFormat {
 // These are the original interfaces, which are being used for compatibility.
 // The names are preserved from the ones in camera.h for porting ease.
 [Discoverable]
-interface Control {
+protocol Control {
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
     // GetFormats need to be issued until total_format_count are received
@@ -98,7 +98,7 @@ interface Control {
     GetDeviceInfo() -> (DeviceInfo device_info);
 };
 
-interface Stream {
+protocol Stream {
     // Starts the streaming of frames.
     Start();
 

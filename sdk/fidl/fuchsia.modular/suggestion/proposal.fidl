@@ -74,7 +74,7 @@ struct ModuleAffinity {
 
 // An interface that allows Proposal creators to be notified when a proposal
 // is accepted by the system.
-interface ProposalListener {
+protocol ProposalListener {
     // Indicates that a proposal was accepted by the system.
     //
     // |proposal_id| The identifier of the accepted proposal.

@@ -46,7 +46,7 @@ using fuchsia.mem;
 // Link connection.
 //
 // No service name: returned from ModuleContext.GetLink().
-interface Link {
+protocol Link {
     // Gets the value at the given |path|, which is represented using the JSON
     // Pointer specification (https://tools.ietf.org/html/rfc6901).
     //
@@ -116,6 +116,6 @@ interface Link {
 // document "null".
 //
 // No service name: created by Module.
-interface LinkWatcher {
+protocol LinkWatcher {
     Notify(fuchsia.mem.Buffer json);
 };

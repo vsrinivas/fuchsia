@@ -9,5 +9,5 @@ library fuchsia.modular;
 //
 // The system counts AgentController connections and terminates this Agent if
 // the count goes to zero.
-interface AgentController {
+protocol AgentController {
 };

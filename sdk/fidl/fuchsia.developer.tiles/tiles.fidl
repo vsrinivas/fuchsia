@@ -8,7 +8,7 @@ using fuchsia.math;
 using fuchsia.ui.app;
 
 [Discoverable]
-interface Controller {
+protocol Controller {
     // Instantiates a component by its URL and adds a tile backed by that component's ViewProvider.
     // Returns a key for the tile that can be used for resizing or removing the tile, or 0 on failure.
     AddTileFromURL(string url, bool allow_focus, vector<string>? args) -> (uint32 key);

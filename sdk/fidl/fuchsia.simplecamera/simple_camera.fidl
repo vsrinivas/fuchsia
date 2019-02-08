@@ -9,7 +9,7 @@ using fuchsia.images;
 // Simple camera interface.  This will be deprecated when
 // CameraManager replaces it.
 [Discoverable]
-interface SimpleCamera {
+protocol SimpleCamera {
     // Connect to a camera using the first enumerated format.
     // The device opened will be /dev/class/camera/camera_id
     ConnectToCamera(uint32 camera_id, fuchsia.images.ImagePipe image_pipe);

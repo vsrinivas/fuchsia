@@ -87,7 +87,7 @@ struct AccountAuthState {
 // The AccountManager is the most powerful interface in the authentication
 // system and is intended only for use by the most trusted parts of the system.
 [Discoverable]
-interface AccountManager {
+protocol AccountManager {
     // Returns a vector of all unlocked accounts provisioned on the current
     // device.
     GetAccountIds()
@@ -209,7 +209,7 @@ struct AccountListenerOptions {
 //
 // All methods include an empty response to follow the "Throttle push using
 // acknowledgements" FIDL design pattern.
-interface AccountListener {
+protocol AccountListener {
     // A method that is called to communicate the initial set of accounts and
     // their authentication states. OnInitialize is called exactly once if and
     // only if AccountListenerOptions.initial_state was set when creating the
@@ -245,7 +245,7 @@ interface AccountListener {
 //
 // All methods include an empty response to follow the "Throttle push using
 // acknowledgements" FIDL design pattern.
-interface AuthListener {
+protocol AuthListener {
     // A method that is called when the AccountListener is first connected.
     OnInitialize(fuchsia.auth.AuthState auth_state) -> ();
 
@@ -261,7 +261,7 @@ interface AuthListener {
 // AuthTarget defines a set of methods to monitor the current authentication
 // state of an entity and to request changes in that authentication state.
 [FragileBase]
-interface AuthTarget {
+protocol AuthTarget {
     // Returns the current |AuthState| of the target.
     GetAuthState()
         -> (Status status, fuchsia.auth.AuthState? auth_state);
@@ -294,7 +294,9 @@ interface AuthTarget {
 //
 // An Account provides access to sensitive long term identifiers and is only
 // intended only for use by a small number of trusted system components.
-interface Account : AuthTarget {
+protocol Account {
+    compose AuthTarget;
+
     // TODO(jsankey): Add account ID accessor if and when the first valid
     // use case arrives.
 
@@ -366,7 +368,9 @@ interface Account : AuthTarget {
 // for the persona. This is to support components in the system that work with
 // short lived identifiers (e.g. SessionManager), but note that long term
 // identifiers can usually still be derived via the TokenManger interface.
-interface Persona : AuthTarget {
+protocol Persona {
+    compose AuthTarget;
+
     // Connects an interface to acquire and revoke authentication tokens for
     // service provider (aka cloud service) accounts that are visible through
     // this persona.

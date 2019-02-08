@@ -75,7 +75,7 @@ struct ServiceList {
 //
 // Typically obtained via |Environment.GetLauncher|.
 [Discoverable]
-interface Launcher {
+protocol Launcher {
     // Creates a new instance of the component described by |launch_info|.
     //
     // The component instance is created in the |Environment|

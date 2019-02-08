@@ -19,7 +19,7 @@ enum ValueType : uint8 {
 
 // Manager interface used to manage settings
 [Discoverable]
-interface DeviceSettingsManager {
+protocol DeviceSettingsManager {
     GetInteger(string key) -> (int64 val, Status s);
 
     GetString(string key) -> (string val, Status s);
@@ -36,6 +36,6 @@ interface DeviceSettingsManager {
 };
 
 // A watcher for device settings changes
-interface DeviceSettingsWatcher {
+protocol DeviceSettingsWatcher {
     OnChangeSettings(ValueType type);
 };

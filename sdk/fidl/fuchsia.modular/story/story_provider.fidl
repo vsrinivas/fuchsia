@@ -11,7 +11,7 @@ library fuchsia.modular;
 // Closing a |StoryProvider| connection has no effect on the state of the
 // framework.
 [Discoverable]
-interface StoryProvider {
+protocol StoryProvider {
     // Returns a list of existing stories. If |watcher| is provided, the client will
     // be notified of story changes (new stories, deleted stories, runtime
     // state changes).
@@ -41,7 +41,7 @@ interface StoryProvider {
 };
 
 // Implemented by clients of StoryProvider.
-interface StoryProviderWatcher {
+protocol StoryProviderWatcher {
     // Called in three different situations:
     //
     //  * Immediately when a new watcher is registered with one OnChange()
@@ -92,7 +92,7 @@ interface StoryProviderWatcher {
 // ongoing activity, as well as when the client first registers for updates
 // via StoryProvider.WatchActivity(). |activities| can contain duplicate
 // OngoingActivityType's, ex. if a story is playing 2 videos at once.
-interface StoryActivityWatcher {
+protocol StoryActivityWatcher {
     OnStoryActivityChange(string story_id,
                           vector<OngoingActivityType> activities);
 };

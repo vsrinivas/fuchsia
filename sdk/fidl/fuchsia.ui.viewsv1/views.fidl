@@ -29,7 +29,7 @@ using fuchsia.ui.viewsv1token;
 // Use |GetContainer()| to obtain an interface for manipulating child views.
 //
 // See |ViewContainer| for more information.
-interface View {
+protocol View {
     // Gets a service provider to access services which are associated with
     // the view.
     // The view service provider is private to the view and should not be
@@ -55,7 +55,7 @@ interface View {
 };
 
 // An interface clients may implement to receive events from a view.
-interface ViewListener {
+protocol ViewListener {
     // Called when the view receives new properties from its ancestors.
     // Initially the view has no properties so this method will be called
     // as soon as properties first become available and whenever they change

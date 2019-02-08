@@ -144,7 +144,7 @@ struct UserProfileInfo {
 
 // This interface is implemented by base shell. It is used to notify the
 // base shell that a view for login needs to be started / stopped.
-interface AuthenticationUIContext {
+protocol AuthenticationUIContext {
     // Requests base shell to display |view_owner| for authentication. Another
     // call to StartOverlay() will not be made until StopOverlay() has been
     // called.
@@ -164,7 +164,7 @@ interface AuthenticationUIContext {
 // tokens for the currently enrolled users. Some common Auth Providers are
 // Google, Facebook, Spotify and Twitter.
 [Discoverable]
-interface AuthProvider {
+protocol AuthProvider {
     // Authenticates and authorizes a user against an auth provider backend system
     // using the OAuth protocol and returns the persistent credential such as
     // Google's refresh token or Facebook's access token for this user. These

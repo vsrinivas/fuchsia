@@ -6,7 +6,7 @@ library fuchsia.modular;
 
 // An interface implemented by applications that wish to terminate gracefully.
 [Discoverable]
-interface Lifecycle {
+protocol Lifecycle {
     // The client of this application has requested that this application
     // terminate gracefully.
     //

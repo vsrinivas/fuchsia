@@ -13,7 +13,7 @@ using zx;
 // Note: The component manager exposes this interface to components
 // that import the "fuchsia.sys2.Realm" service.
 [Discoverable]
-interface Realm {
+protocol Realm {
     // Binds to a child component instance, causing it to start running if
     // it is not already running.
     //
@@ -61,7 +61,7 @@ interface Realm {
 //
 // Other status codes (e.g. |ZX_ERR_PEER_CLOSED|) may indicate a failure
 // of the component manager itself.
-interface ComponentBinding {
+protocol ComponentBinding {
     // Gets a directory containing objects exported by the child.
     GetExports(request<fuchsia.io.Directory> exports);
 

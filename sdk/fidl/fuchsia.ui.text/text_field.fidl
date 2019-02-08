@@ -75,7 +75,7 @@ enum TextError {
 /// number passed to BeginEdit is still valid. TextField implementations can
 /// assume that there will only be one client at a time; they don't need to
 /// keep track of a separate transaction list for each client.
-interface TextField {
+protocol TextField {
   /// Any time the revision number increments, this event fires, with the latest version of
   /// the state. It also fires when a new client connects to the service, so it can get an
   /// initial state without waiting for an edit.

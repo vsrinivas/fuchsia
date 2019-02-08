@@ -33,7 +33,7 @@ enum TerminationReason {
 // If the component exits, this interface will be closed.
 //
 // Typically obtained via |Launcher.CreateComponent|.
-interface ComponentController {
+protocol ComponentController {
     // Terminates the component.
     //
     // This ComponentController connection is closed when the component has

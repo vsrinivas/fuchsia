@@ -45,7 +45,7 @@ struct SnoopPacket {
 /// Packets are received by the client as datagrams through the fidl channel as |OnPacket|
 /// events.
 [Discoverable]
-interface Snoop {
+protocol Snoop {
     /// Subscribe to receive packets from the server. Packets that have been recorded are sent
     /// first.
     ///

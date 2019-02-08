@@ -10,7 +10,7 @@ using fuchsia.mem;
 /// This interface is exposed to all Module instances in a story. It allows to
 /// create Link instances and run more Module instances.
 [Discoverable]
-interface ModuleContext {
+protocol ModuleContext {
     /// Gets a Link instance with the given name.
     ///
     /// The Link instance has a name so that it can be recognized when the story
@@ -130,7 +130,7 @@ enum StartModuleStatus {
 /// This interface defines the protocol over which a Module can communicate about
 /// an ongoing activity to the framework. It is provided to Modules via
 /// ModuleContext.StartOngoingActivity().
-interface OngoingActivity {
+protocol OngoingActivity {
 };
 
 enum OngoingActivityType {

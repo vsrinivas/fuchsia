@@ -17,7 +17,7 @@ const uint32 HOST_CID = 2;
 // accepting connections, the implementation should return |ZX_OK|.
 //
 // Also see |GuestVsockEndpoint|.
-interface GuestVsockAcceptor {
+protocol GuestVsockAcceptor {
     Accept(uint32 src_cid, uint32 src_port, uint32 port, handle? handle)
         -> (zx.status status);
 };
@@ -26,7 +26,7 @@ interface GuestVsockAcceptor {
 // |GuestVsockAcceptor| that is responsible for creating the |handle| with which
 // to communicate. The |handle| will be either a socket or a channel, depending
 // on the current configuration.
-interface HostVsockAcceptor {
+protocol HostVsockAcceptor {
     Accept(uint32 src_cid, uint32 src_port, uint32 port)
         -> (zx.status status, handle? handle);
 };
@@ -36,7 +36,7 @@ interface HostVsockAcceptor {
 // {cid, port}. The host should return |ZX_OK|, and create a handle with which
 // to communicate. The |handle| will be either a socket or a channel, depending
 // on the current configuration.
-interface HostVsockConnector {
+protocol HostVsockConnector {
     Connect(uint32 src_cid, uint32 src_port, uint32 cid, uint32 port)
         -> (zx.status status, handle? handle);
 };
@@ -47,7 +47,7 @@ interface HostVsockConnector {
 // connections. The implementation should provide a |GuestVsockAcceptor|
 // implementation that can handle any inbound connection requests.
 [Discoverable]
-interface GuestVsockEndpoint {
+protocol GuestVsockEndpoint {
     SetContextId(uint32 cid, HostVsockConnector connector,
                  request<GuestVsockAcceptor> acceptor);
     -> OnShutdown(uint32 src_cid, uint32 src_port, uint32 dst_cid, uint32 dst_port);
@@ -55,7 +55,7 @@ interface GuestVsockEndpoint {
 
 // Exposed by a host to provide the ability for listeners to be multiplexed by
 // port and to manage dynamic port allocation for outbound connections.
-interface HostVsockEndpoint {
+protocol HostVsockEndpoint {
     // Register |acceptor| to be invoked for any connection requests to |port|.
     Listen(uint32 port, HostVsockAcceptor acceptor)
         -> (zx.status status);

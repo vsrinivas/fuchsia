@@ -39,7 +39,7 @@ table AccessibilityOptions {
 // The accessibility settings manager enables clients to get/set and watch settings values
 // for accessibility services.
 [Discoverable]
-interface AccessibilitySettingsManager {
+protocol AccessibilitySettingsManager {
     GetAccessibilitySettings()
         -> (AccessibilitySettingsManagerStatus status, AccessibilityOptions accessibility_options);
 
@@ -74,7 +74,7 @@ interface AccessibilitySettingsManager {
         -> (AccessibilitySettingsManagerStatus status);
 };
 
-interface AccessibilitySettingsWatcher {
+protocol AccessibilitySettingsWatcher {
     // Called when accessibility settings elections change.
     OnAccessibilitySettingsChange(AccessibilityOptions accessibility_options);
 };

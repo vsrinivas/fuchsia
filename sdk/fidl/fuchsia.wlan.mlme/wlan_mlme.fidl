@@ -861,7 +861,7 @@ struct GetMeshPathTableRequest {
 
 // Because these methods rely on an external entity to provide a response, events are used instead
 // of return values.
-interface MLME {
+protocol MLME {
     // ==== 01xxxx: scanning ====
     // We deviate from the spec here in order to support incremental scan
     // results easily. We could stay closer to 802.11ai, but the protocol

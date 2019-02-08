@@ -17,7 +17,7 @@ enum SecurityLevel {
 };
 
 [Discoverable]
-interface Profile {
+protocol Profile {
     // Register a service. This service will be registered and discoverable with
     // the Service Discovery Protocol server.
     // The |security_level| provided here will be required before a connection is

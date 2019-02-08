@@ -6,7 +6,7 @@ library fuchsia.media;
 
 // Manages a set of payload buffers for a stream.
 [FragileBase]
-interface StreamBufferSet {
+protocol StreamBufferSet {
     // Adds a payload buffer for stream packets. StreamPacket structs reference
     // a payload buffer by ID using the StreamPacket.payload_buffer_id field.
     AddPayloadBuffer(uint32 id, handle<vmo> payload_buffer);
@@ -17,7 +17,7 @@ interface StreamBufferSet {
 
 // Consumes a stream of packets.
 [FragileBase]
-interface StreamSink {
+protocol StreamSink {
     // Sends a packet to this object. The response is sent when this object is
     // done with the associated payload memory.
     SendPacket(StreamPacket packet) -> ();
@@ -37,7 +37,7 @@ interface StreamSink {
 
 // Produces a stream of packets.
 [FragileBase]
-interface StreamSource {
+protocol StreamSource {
     // Delivers a packet produced by this object. Each packet delivered via this
     // event must be released with a call to ReleasePacket.
     -> OnPacketProduced(StreamPacket packet);
@@ -54,12 +54,9 @@ interface StreamSource {
 };
 
 // A StreamSink that uses StreamBufferSet for buffer management.
-interface SimpleStreamSink : StreamSink, StreamBufferSet {
-    ////////////////////////////////////////////////////////////////////////////
-    // StreamBufferSet methods
-
-    ////////////////////////////////////////////////////////////////////////////
-    // StreamSink methods
+protocol SimpleStreamSink {
+    compose StreamBufferSet;
+    compose StreamSink;
 };
 
 // Describes a packet consumed by StreamSink or produced by StreamSource.

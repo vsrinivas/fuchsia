@@ -18,7 +18,7 @@ struct URLLoaderStatus {
     // "resolving host") that happen prior to receiving bytes.
 };
 
-interface URLLoader {
+protocol URLLoader {
     // Loads the given |request|, asynchronously producing |response|. Consult
     // |response| to determine if the request resulted in an error, was
     // redirected, or has a response body to be consumed.

@@ -9,12 +9,12 @@ library fuchsia.ui.input;
 // Input devices can describe their capabilities using |DeviceDescriptor|
 // and register themselves with the |InputDeviceRegistry|.
 [Discoverable]
-interface InputDeviceRegistry {
+protocol InputDeviceRegistry {
     // Register a device with the capabilities described by |DeviceDescriptor|
     RegisterDevice(DeviceDescriptor descriptor, request<InputDevice> input_device);
 };
 
-interface InputDevice {
+protocol InputDevice {
     // Dispatch an |InputReport| from the device |token|
     DispatchReport(InputReport report);
 };

@@ -19,7 +19,7 @@ using fuchsia.ui.policy;
 // Teardown may be initiated by the base shell calling
 // BaseShellContext.Shutdown(), or by the system shutting down.
 [Discoverable]
-interface BaseShell {
+protocol BaseShell {
     Initialize(BaseShellContext base_shell_context,
                BaseShellParams base_shell_params);
 
@@ -33,7 +33,7 @@ interface BaseShell {
 // This interface allows the |BaseShell| to request capabilities from the
 // |Basemgr| in a way that is more explicit about the services that are
 // offered than a generic |ServiceProvider|.
-interface BaseShellContext {
+protocol BaseShellContext {
     GetUserProvider(request<UserProvider> request);
 
     // This requests the shutdown of the basemgr.

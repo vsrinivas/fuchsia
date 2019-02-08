@@ -10,7 +10,7 @@ library fuchsia.modular;
 // This interface is meant to be used in the scope of a single Fuchsia
 // component.
 [Discoverable]
-interface ContextReader {
+protocol ContextReader {
     // When any conditions that would cause the resulting set of context values
     // selected by |query| to change, a ContextUpdate is sent to |listener|.
     //
@@ -56,7 +56,7 @@ struct ContextSelector {
     ContextValueType type;
 };
 
-interface ContextListener {
+protocol ContextListener {
     // Receives a full snapshot of context state every time context is updated
     // in such a way that results in a changed set of values for the ContextQuery
     // used in the subscription for this listener.

@@ -27,7 +27,7 @@ struct MutationResponse {
 // settings are scoped to the device, but will eventually be scoped to the user
 // as is applicable.
 [Discoverable]
-interface SetUiService {
+protocol SetUiService {
     // Begins listening to changes to a given settings object. This may cause the
     // SetUiService to connect to any applicable device services until all listeners
     // for a given type are closed.
@@ -44,6 +44,6 @@ interface SetUiService {
     InteractiveMutate(SettingType settingType, Mutation mutation, MutationHandles mutation_handles) -> (MutationResponse response);
 };
 
-interface SettingListener {
+protocol SettingListener {
     Notify(SettingsObject object);
 };

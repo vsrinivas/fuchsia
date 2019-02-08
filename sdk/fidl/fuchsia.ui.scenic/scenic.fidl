@@ -15,7 +15,7 @@ struct ScreenshotData {
 };
 
 [Discoverable]
-interface Scenic {
+protocol Scenic {
     // Create a new Session, which is the primary way to interact with Mozart.
     CreateSession(request<Session> session, SessionListener? listener);
 

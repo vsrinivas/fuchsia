@@ -8,18 +8,18 @@ using fuchsia.net;
 using fuchsia.wlan.common;
 
 [Discoverable]
-interface ApPolicy {
+protocol ApPolicy {
   OpenControlChannels(Requests requests, request<StateUpdates> updates);
 };
 
 
-interface Requests {
+protocol Requests {
   StartAccessPoint(AccessPointParams params) -> (Status request_status);
   StopAccessPoint(vector<uint8> ssid) -> (Status request_status);
 };
 
 
-interface StateUpdates {
+protocol StateUpdates {
   -> OnAccessPointStatusChange(ApState ap_state, ApState previous_ap_state);
   -> OnAccessPointClientUpdate(ApBand ap_band, int32 frequency, vector<ApClient> clients);
 };

@@ -12,7 +12,7 @@ enum AudioRamp : uint16 {
     // including logarithmic (i.e. linear wrt dB), cubic (in/out/inout) or others.
 };
 
-interface GainControl {
+protocol GainControl {
     // Sets the gain in decibels.
     SetGain(float32 gain_db);
 

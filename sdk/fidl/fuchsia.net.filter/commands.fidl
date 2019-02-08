@@ -12,7 +12,7 @@ enum Status {
 };
 
 [Discoverable]
-interface Filter {
+protocol Filter {
     /// Enable enables the filter if true is passed.
     /// It disables the filter if false is passed.
     Enable(bool enabled) -> (Status status);

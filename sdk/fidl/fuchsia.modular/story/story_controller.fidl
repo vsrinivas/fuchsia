@@ -11,7 +11,7 @@ using fuchsia.ui.viewsv1token;
 //
 // If |StoryController| is closed, the |StoryState| associated with this story
 // does not change.
-interface StoryController {
+protocol StoryController {
     // Gets information associated with the story.
     GetInfo() -> (StoryInfo info, StoryState state);
 
@@ -57,7 +57,7 @@ interface StoryController {
 };
 
 // Implemented by the client calling StoryController.Watch().
-interface StoryWatcher {
+protocol StoryWatcher {
     // Called with the current state right after registration, and subsequently
     // when the state changes.
     OnStateChange(StoryState new_state);
@@ -73,7 +73,7 @@ interface StoryWatcher {
 //
 // DEPRECATED: StoryController is only to be used for Story concepts
 // (metadata about, and requesting changes to runtime state).
-interface StoryLinksWatcher {
+protocol StoryLinksWatcher {
     // Called when a link becomes active in the story, i.e. when it is loaded into
     // memory and connected with modules and watchers. After this notification,
     // the Link can be obtained with GetLink() and further notifications can be

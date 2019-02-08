@@ -158,7 +158,7 @@ struct SocketAddress {
 };
 
 [Discoverable]
-interface Netstack {
+protocol Netstack {
     // Finds the port number from a given service name and protocol. [service] can be a
     // number like "42", or a service name like "http". If [protocol] is UNSPECIFIED,
     // the service is checked for TCP first, then UDP.
@@ -218,7 +218,7 @@ interface Netstack {
 };
 
 [Discoverable]
-interface RouteTableTransaction {
+protocol RouteTableTransaction {
     AddRoute(RouteTableEntry2 r) -> (zx.status status);
     DelRoute(RouteTableEntry2 r) -> (zx.status status);
 };

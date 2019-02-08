@@ -48,7 +48,7 @@ struct PublicKey {
 };
 
 [Discoverable]
-interface KeyManager {
+protocol KeyManager {
     // Seal data to an encrypted form.
     //
     // Seal data to an encrypted form. The sealed data can only be unsealed by the same KMS instance
@@ -128,12 +128,14 @@ interface KeyManager {
 };
 
 [FragileBase]
-interface Key {
+protocol Key {
     // Get the key origin (generated/imported).
     GetKeyOrigin() -> (Status status, KeyOrigin key_origin);
 };
 
-interface AsymmetricPrivateKey : Key {
+protocol AsymmetricPrivateKey {
+    compose Key;
+
     // Sign |data| using the current key.
     Sign(mem.Buffer data) -> (Status status, Signature? signature);
     // Get the DER format public key for the current private key.

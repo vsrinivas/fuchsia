@@ -13,7 +13,7 @@ using fuchsia.ui.viewsv1;
 // through the regular input dispatch. For now, we only allow a single
 // client to connect.
 [Discoverable]
-interface TouchDispatcher {
+protocol TouchDispatcher {
     // Sends the client a touch pointer event received from the current active
     // fuchsia.ui.policy.Presentation.
     -> OnInputEvent(fuchsia.ui.input.PointerEvent event);
@@ -36,7 +36,7 @@ interface TouchDispatcher {
 //
 // The input receiver accepts all input types, despite only supporting TouchDispatcher, to allow
 // for support of other event dispatchers in the future.
-interface InputReceiver {
+protocol InputReceiver {
     // Register the current presentation with its ViewTreeToken to the input receiver.
     // The InputReceiver currently only keeps connection to a single client at a time.
     // When a presentation client becomes active, it should connect to the InputReceiver service

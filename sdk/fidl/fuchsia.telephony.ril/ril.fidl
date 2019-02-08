@@ -28,7 +28,7 @@ union GetDeviceIdentityReturn {
     RilError error;
 };
 
-interface NetworkConnection {
+protocol NetworkConnection {
     Stop() -> (bool success);
 };
 
@@ -52,7 +52,7 @@ union GetNetworkSettingsReturn {
 };
 
 /// The Standard Fuchsia RIL (FRIL)
-interface RadioInterfaceLayer {
+protocol RadioInterfaceLayer {
     /// Hand a transport |channel| to the RIL service connecting it to the modem. Most
     /// modems will require this to be the first method called, since they are dependent
     /// on this. If a connection is already active, it will return false. If the channel

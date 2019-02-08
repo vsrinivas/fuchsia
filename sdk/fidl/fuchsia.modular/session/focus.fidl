@@ -20,7 +20,7 @@ library fuchsia.modular;
 // user.
 
 // Implemented by sessionmgr. Given to session shell through its namespace.
-interface FocusController {
+protocol FocusController {
     // Sets the focus on this device.
     Set(string? focused_story_id);
     WatchRequest(FocusRequestWatcher watcher);
@@ -29,14 +29,14 @@ interface FocusController {
 // Implemented by session shell. OnFocusRequest() gets called whenever there
 // is a new request to change focus on this device. Requests can be
 // made via FocusProvider.Request().
-interface FocusRequestWatcher {
+protocol FocusRequestWatcher {
     OnFocusRequest(string story_id);
 };
 
 // Implemented by sessionmgr. Given to session shell and session agents through
 // their namespace. Focus is persisted on the ledger.
 [Discoverable]
-interface FocusProvider {
+protocol FocusProvider {
     // Returns the stories that are focused across all devices.
     Query() -> (vector<FocusInfo> focused_stories);
 
@@ -56,7 +56,7 @@ interface FocusProvider {
 
 // Implemented by anyone who is interested in getting updates when focus
 // changes.
-interface FocusWatcher {
+protocol FocusWatcher {
     OnFocusChange(FocusInfo? focus_info);
 };
 
@@ -74,14 +74,14 @@ struct FocusInfo {
 };
 
 // Implemented by sessionmgr. Given to session shell through its namespace.
-interface VisibleStoriesController {
+protocol VisibleStoriesController {
     Set(vector<string>? visible_story_ids);
 };
 
 // Implemented by sessionmgr. Given to story info through its namespace.
 // Visible stories are NOT stored on the ledger.
 [Discoverable] // Maxwell apps request this from environment.
-interface VisibleStoriesProvider {
+protocol VisibleStoriesProvider {
     // Returns the |story_ids| that are currently visible.
     Query() -> (vector<string> story_id);
 
@@ -91,6 +91,6 @@ interface VisibleStoriesProvider {
 
 // Implemented by anyone (maxwell) who is interested in getting updates when
 // stories that are currently visible change.
-interface VisibleStoriesWatcher {
+protocol VisibleStoriesWatcher {
     OnVisibleStoriesChange(vector<string>? visible_story_ids);
 };

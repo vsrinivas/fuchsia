@@ -52,7 +52,7 @@ enum PairingKeypressType {
     PASSKEY_ENTERED = 3;
 };
 
-interface PairingDelegate {
+protocol PairingDelegate {
     // Called for most pairing requests. The delegate must respond with “true” or “false” to
     // either accept or reject the pairing request. If the pairing method requires a passkey
     // this is returned as well.

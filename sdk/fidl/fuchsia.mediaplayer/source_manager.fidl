@@ -9,7 +9,7 @@ using fuchsia.net.oldhttp;
 
 // Manages sources on behalf of a Player.
 [FragileBase]
-interface SourceManager {
+protocol SourceManager {
     // Creates a source that reads from a URL.
     CreateHttpSource(string http_url,
                      vector<fuchsia.net.oldhttp.HttpHeader>? headers,
@@ -51,14 +51,16 @@ interface SourceManager {
 };
 
 [FragileBase]
-interface Source {
+protocol Source {
     // Provides current status immediately after binding and whenever status
     // changes thereafter.
     -> OnStatusChanged(SourceStatus source_status);
 };
 
 // Source variant for providing elementary streams directly.
-interface StreamSource : Source {
+protocol StreamSource {
+    compose Source;
+
     // Adds an elementary stream. The elementary stream can be removed by
     // closing the SimpleStreamSink. ticks_per_second_numerator and
     // ticks_per_second_denominator indicate the units that will be used for

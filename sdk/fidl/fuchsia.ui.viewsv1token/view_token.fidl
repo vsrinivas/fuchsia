@@ -8,5 +8,5 @@ library fuchsia.ui.viewsv1token;
 //
 // This interface is only intended to be used as a token, analogous to how
 // Scenic View/ViewHolder resources use eventpairs as tokens.
-interface ViewOwner {
+protocol ViewOwner {
 };

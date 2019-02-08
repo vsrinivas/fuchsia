@@ -9,20 +9,20 @@ using fuchsia.ui.input;
 
 // |Presentation.CaptureKeyboardEvent| will consume this listener interface and
 // call |OnEvent| when the registered keyboard event occurs.
-interface KeyboardCaptureListenerHACK {
+protocol KeyboardCaptureListenerHACK {
     OnEvent(fuchsia.ui.input.KeyboardEvent event);
 };
 
 // |Presentation.CapturePointerEvent| will consume this listener interface and
 // call |OnEvent| when a pointer event occurs.
-interface PointerCaptureListenerHACK {
+protocol PointerCaptureListenerHACK {
     OnPointerEvent(fuchsia.ui.input.PointerEvent event);
 };
 
 // Allows clients of Presenter.Present() to control a presentation.
 // Experimental.
 [Discoverable]
-interface Presentation {
+protocol Presentation {
     // Enable or disable clipping for the Scenic renderer associated with the
     // presentation.
     EnableClipping(bool enabled);
@@ -79,6 +79,6 @@ enum PresentationMode {
 // N.B. There can be a race where the actual mode continues to change, after
 // the listener has been notified. The client must call GetPresentationMode(),
 // which will return the latest detected mode.
-interface PresentationModeListener {
+protocol PresentationModeListener {
     OnModeChanged();
 };

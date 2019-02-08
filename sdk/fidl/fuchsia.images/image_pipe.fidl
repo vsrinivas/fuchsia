@@ -61,7 +61,7 @@ library fuchsia.images;
 // (or one of its delegates) has crashed.  The safest course of action is to
 // close the image pipe, release all resources which were shared with the
 // other party, and re-establish the connection to recover.
-interface ImagePipe {
+protocol ImagePipe {
     // Adds an image resource to image pipe.
     //
     // The |memory| is the handle of a memory object which contains the image

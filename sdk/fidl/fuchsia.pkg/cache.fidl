@@ -12,7 +12,7 @@ using zx;
 /// This interface is intended to be implemented by the package manager component and used by
 /// package resolver components.
 [Discoverable]
-interface PackageCache {
+protocol PackageCache {
     /// Fetches the package using the provided |fetcher|, unless it is already
     /// present on the local system.
     ///
@@ -59,7 +59,7 @@ interface PackageCache {
 
 /// The |BlobFetcher| is an abstract interface that is provided by a |PackageResolver| to the
 /// |PackageCache| to fetch one or more blobs.
-interface BlobFetcher {
+protocol BlobFetcher {
     /// Fetches a blob.
     ///
     /// Arugments:

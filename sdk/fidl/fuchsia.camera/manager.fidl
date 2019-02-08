@@ -25,7 +25,7 @@ struct VideoStream {
 //    wish to connect.
 // 3) You request a Stream interface using CreateStream.
 [Discoverable]
-interface Manager {
+protocol Manager {
     // Returns a list of all the video devices that are currently plugged in
     // and enumerated.  The camera_id field of the DeviceInfo is used to specify
     // a device in GetFormats, GetStream and GetStreamAndBufferCollection.

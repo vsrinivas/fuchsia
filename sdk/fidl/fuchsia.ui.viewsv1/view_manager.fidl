@@ -21,7 +21,7 @@ const uint32 kLabelMaxLength = 32;
 //
 // Refer to |View| and |ViewTree| for more information about these objects.
 [Discoverable]
-interface ViewManager {
+protocol ViewManager {
 
     // Gets the scenic instance associated with this view manager.
     // All graphical content for this view manager's views and view trees

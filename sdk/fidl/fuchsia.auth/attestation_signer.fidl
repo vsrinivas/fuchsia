@@ -20,7 +20,7 @@ enum AttestationSignerStatus {
     SIGNING_ERROR = 2;
 };
 
-interface AttestationSigner {
+protocol AttestationSigner {
     // Cryptographically signs the |plaintext| data sent in request using a
     // crypto key configured at initialization.
     //

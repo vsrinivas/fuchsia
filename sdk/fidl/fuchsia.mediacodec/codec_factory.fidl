@@ -227,7 +227,7 @@ struct CodecDescription {
 // Each create request is self-contained, in the sense that the interface is not
 // stateful between create requests.
 [Discoverable]
-interface CodecFactory {
+protocol CodecFactory {
     // Driver-based local CodecFactory(s) will send this once shortly after the
     // main CodecFactory connects to the driver-local CodecFactory.
     //

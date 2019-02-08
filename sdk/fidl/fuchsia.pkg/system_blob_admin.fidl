@@ -7,7 +7,7 @@ using zx;
 
 /// Administrates the critical system blobs on the system.
 [Discoverable]
-interface SystemBlobAdmin {
+protocol SystemBlobAdmin {
     /// Allows blobs from old system versions to be garbage collected. The current system blobs
     /// will not be collected.
     ReleaseRetainedBlobs();

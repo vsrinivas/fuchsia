@@ -6,7 +6,7 @@ library fuchsia.bluetooth.gatt;
 
 using fuchsia.bluetooth;
 
-interface RemoteService {
+protocol RemoteService {
     // Returns the characteristics and characteristic descriptors that belong to
     // this service.
     DiscoverCharacteristics() -> (fuchsia.bluetooth.Status status, vector<Characteristic> characteristics);
@@ -105,7 +105,7 @@ interface RemoteService {
     -> OnCharacteristicValueUpdated(uint64 id, vector<uint8> value);
 };
 
-interface Client {
+protocol Client {
     // Enumerates services found on the peer that this Client represents. Results
     // can be restricted by specifying a list of UUIDs in |uuids|. The returned
     // ServiceInfo structures will contain only basic information about each

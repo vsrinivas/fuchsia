@@ -92,7 +92,7 @@ struct AppConfig {
 // used for any subsequent authorize calls. The UI contexts created by this
 // interface are used to display OAuth login and permission screens to the end
 // user.
-interface AuthenticationContextProvider {
+protocol AuthenticationContextProvider {
     GetAuthenticationUIContext(request<AuthenticationUIContext> request);
 };
 
@@ -100,7 +100,7 @@ interface AuthenticationContextProvider {
 // instances for each user, and to supply auth provider configuration
 // information using the structs defined in |auth_provider.fidl|.
 [Discoverable]
-interface TokenManagerFactory {
+protocol TokenManagerFactory {
     // Creates an OAuth TokenManager instance scoped for the component specified
     // by |application_url|, the Fuchsia user specified by |user_id|, and the list
     // of auth providers specified in |auth_provider_configs|.
@@ -124,7 +124,7 @@ interface TokenManagerFactory {
 // Framework to components like Ledger and Agents. These components fetch
 // OAuth tokens from any configured auth provider, and use the
 // |auth_context_provider| initialized above for new authorizations.
-interface TokenManager {
+protocol TokenManager {
     // The first step of OAuth is to get authorization from the user. For Fuchsia
     // components, this is accomplished by displaying OAuth permissions in a view
     // provided by the caller. This view will use |auth_ui_context| if supplied,

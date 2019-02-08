@@ -19,7 +19,7 @@ using fuchsia.ui.viewsv1token;
 // Teardown may be initiated by the session shell calling StoryController.Stop(),
 // by the sessionmgr being terminated, or by the system shutting down.
 [Discoverable] // Created by story shell applications.
-interface StoryShell {
+protocol StoryShell {
     Initialize(StoryShellContext story_shell_context);
 
     // Adds a new Surface and its corresponding view to be displayed by the
@@ -140,7 +140,7 @@ struct ContainerView2 {
 // This interface provides the StoryShell instance with everything it needs to
 // know or be able to do about the Story. Not much right now, but we expect this
 // to increase.
-interface StoryShellContext {
+protocol StoryShellContext {
     // Requests a Presentation connection from the SessionShell. See
     // SessionShellPresenationProvider in session_shell.fidl.
     GetPresentation(request<fuchsia.ui.policy.Presentation> request);
@@ -161,7 +161,7 @@ interface StoryShellContext {
 };
 
 // Implemented by StoryShell to get notified about visual state changes.
-interface StoryVisualStateWatcher {
+protocol StoryVisualStateWatcher {
     OnVisualStateChange(StoryVisualState visual_state);
 };
 

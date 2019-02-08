@@ -5,6 +5,6 @@
 library fuchsia.net.oldhttp;
 
 [Discoverable]
-interface HttpService {
+protocol HttpService {
     CreateURLLoader(request<URLLoader> loader);
 };

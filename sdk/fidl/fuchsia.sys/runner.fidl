@@ -62,7 +62,7 @@ struct Package {
 // particular classes of programs. For example, the Dart virtual machine exposes
 // this interface to run Dart programs.
 [Discoverable]
-interface Runner {
+protocol Runner {
     // Execute the given component.
     //
     // Upon startup, the component is to be given the information in

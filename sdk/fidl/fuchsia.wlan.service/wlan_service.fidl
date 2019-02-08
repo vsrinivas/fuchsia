@@ -79,7 +79,7 @@ struct WlanStats {
 // Stub interface; eventually to be replaced by something based on the 802.11
 // SME / MSGCF.
 [Discoverable]
-interface Wlan {
+protocol Wlan {
     Scan(ScanRequest req) -> (ScanResult result);
     Connect(ConnectConfig req) -> (Error error);
     Disconnect() -> (Error error);

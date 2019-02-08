@@ -44,7 +44,7 @@ struct ExecuteResult {
 // within them, any agents that run to support the mods and the various UI
 // shells (session and story shells).
 [Discoverable]
-interface PuppetMaster {
+protocol PuppetMaster {
     // Requests a capability to control a story by name. The name acts as the
     // story's unique ID.  Calling ControlStory() for the same story name will
     // control the same story.
@@ -69,7 +69,7 @@ interface PuppetMaster {
 struct WatchSessionOptions {
 };
 
-interface StoryPuppetMaster {
+protocol StoryPuppetMaster {
     // Enqueues the given |commands| in the order they are given.
     // Can be called as many times as necessary to specify the full
     // set of changes to the story.

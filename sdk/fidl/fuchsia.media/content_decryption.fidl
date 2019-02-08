@@ -103,7 +103,7 @@ struct DecryptorParams {
     FormatDetails input_details;
 };
 
-interface LicenseSession {
+protocol LicenseSession {
     /// Generate a license request for a session based on the |init_data|. When
     /// the LicenseMessage has been created, the |OnLicenseMessageGenerated|
     /// event will be triggered with the message to be sent to the license
@@ -138,7 +138,7 @@ interface LicenseSession {
 };
 
 [FragileBase]
-interface ContentDecryptionModule {
+protocol ContentDecryptionModule {
     /// Set the certificate to be used for encrypting outgoing messages.
     SetServerCertificate(vector<uint8> certificate);
 
@@ -215,19 +215,22 @@ interface ContentDecryptionModule {
 // isolated to distinct origins/providers.
 
 [Discoverable]
-interface ClearKeyContentDecryptionModule : ContentDecryptionModule {
+protocol ClearKeyContentDecryptionModule {
+    compose ContentDecryptionModule;
 };
 
 [Discoverable]
-interface WidevineContentDecryptionModule : ContentDecryptionModule {
+protocol WidevineContentDecryptionModule {
+    compose ContentDecryptionModule;
 };
 
 [Discoverable]
-interface PlayReadyContentDecryptionModule : ContentDecryptionModule {
+protocol PlayReadyContentDecryptionModule {
+    compose ContentDecryptionModule;
 };
 
 [Discoverable]
-interface ContentDecryptionModuleFactory {
+protocol ContentDecryptionModuleFactory {
     /// The Factory interface should only be used if the client needs to inject
     /// the storage to be used by the CDM. The storage must be a unique location
     /// per origin/ provider.

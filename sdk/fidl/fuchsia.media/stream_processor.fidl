@@ -868,7 +868,7 @@ struct Packet {
 // While the picture for HW-based decoders looks somewhat different and is out
 // of scope of this paragraph, the client should always use separate
 // StreamProcessor instances for security-separate client-side contexts.
-interface StreamProcessor {
+protocol StreamProcessor {
     // EnableOnStreamFailed()
     //
     // Permit the server to use OnStreamFailed() instead of the server just

@@ -152,7 +152,7 @@ struct Response {
 // the outstanding requests and will cancel them all if the client closes the
 // loader interface.
 [Discoverable]
-interface Loader {
+protocol Loader {
     // Initiate the given HTTP request, follow redirects, and return the final
     // response.
     //
@@ -174,7 +174,7 @@ interface Loader {
 // A client interface used with |Loader.Start|.
 //
 // Closing the underlying channel will cancel the associated HTTP transaction.
-interface LoaderClient {
+protocol LoaderClient {
     // Called by the loader when the loader receives an HTTP response.
     //
     // If the server has requested a redirect, then |redirect| will be non-null

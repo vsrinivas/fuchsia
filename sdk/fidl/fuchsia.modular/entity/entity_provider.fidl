@@ -18,7 +18,7 @@ using fuchsia.mem;
 /// earlier or remote app instance. Entity providers should attempt to resolve
 /// unfamiliar cookies or else treat the entities as empty and read-only.
 [Discoverable]
-interface EntityProvider {
+protocol EntityProvider {
     /// Returns the types associated with the requested entity. Each entry in
     /// |type| references a well-known content type.
     ///

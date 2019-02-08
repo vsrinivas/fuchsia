@@ -6,7 +6,7 @@ library fuchsia.modular;
 
 // Administrative interface for Suggestion Engine.
 [Discoverable]
-interface SuggestionEngine {
+protocol SuggestionEngine {
     // Registers a component that produces suggestions.
     RegisterProposalPublisher(string url, request<ProposalPublisher> publisher);
 

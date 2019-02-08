@@ -131,7 +131,7 @@ enum Status {
 };
 
 [Discoverable]
-interface Control {
+protocol Control {
     // simple no-op that can be used to test the connection
     DoTest(int32 input) -> (string output);
 
@@ -184,7 +184,7 @@ interface Control {
 };
 
 [Discoverable]
-interface Events {
+protocol Events {
     // Event that is triggered when an update failed because blobfs is out of
     // storage.
     -> OnOutOfSpace();

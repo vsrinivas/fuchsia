@@ -44,7 +44,7 @@ using fuchsia.sys;
 // 2. Ask the service provider for its |InputDispatcher|.
 //
 // 3. Send input events to the dispatcher for delivery to views.
-interface ViewTree {
+protocol ViewTree {
     // Gets the view tree's token.
     GetToken() -> (ViewTreeToken token);
 
@@ -61,7 +61,7 @@ interface ViewTree {
 };
 
 // An interface clients may implement to receive events from a view tree.
-interface ViewTreeListener {
+protocol ViewTreeListener {
     // There are currently no events defined but we have preserved the
     // plumbing for the future when ViewContainer will merge into ViewTree
     // along with its listener.

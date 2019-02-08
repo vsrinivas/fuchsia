@@ -46,7 +46,7 @@ struct AdapterState {
 
 /// Primary Bluetooth control service to access bluetooth
 [Discoverable]
-interface Control {
+protocol Control {
     /// Returns whether or not Bluetooth is currently available on the system.
     IsBluetoothAvailable() -> (bool available);
 
