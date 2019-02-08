@@ -20,7 +20,7 @@ CameraManagerImpl::CameraManagerImpl(async::Loop* loop) {
   device_watcher_ = fsl::DeviceWatcher::CreateWithIdleCallback(
       kCameraDevicePath,
       // Function to be called when adding a camera:
-      fbl::BindMember(this, &CameraManagerImpl::OnDeviceAdded),
+      fbl::BindMember(this, &CameraManagerImpl::OnDeviceFound),
       // Function to be called when all existing devices have been found:
       // This function captures the local variable idle_seen
       // because it will only be called while we are in this constructor.
@@ -45,6 +45,10 @@ CameraManagerImpl::CameraManagerImpl(async::Loop* loop) {
       return;
     }
   }
+
+  // Add the fake camera to the list of available devices
+  AddDevice(VideoDeviceClient::CreateFakeCamera(loop));
+
   // Now bind our context, and publish the public service:
   // Note that CreateFromStartupInfo must be called after we do our looping
   // above, or the request for the CameraManager may fail.
@@ -66,20 +70,25 @@ CameraManagerImpl::~CameraManagerImpl() {
   active_devices_.clear();
 }
 
-void CameraManagerImpl::OnDeviceAdded(int dir_fd, std::string filename) {
+void CameraManagerImpl::OnDeviceFound(int dir_fd, std::string filename) {
   auto video_device = VideoDeviceClient::Create(dir_fd, filename);
   if (video_device) {
-    // Initially add the device to the inactive devices until we get all
-    // the information we need from it.
-    inactive_devices_.push_back(std::move(video_device));
-    inactive_devices_.back()->Startup(
-        [this, id = inactive_devices_.back()->id()](zx_status_t status) {
-          OnDeviceStartupComplete(id, status);
-        });
+    AddDevice(std::move(video_device));
   } else {
     // If we can't create the device, drop it.
     FXL_LOG(ERROR) << "Failed to create device " << filename;
   }
+}
+
+void CameraManagerImpl::AddDevice(
+    std::unique_ptr<VideoDeviceClient> video_device) {
+  // Initially add the device to the inactive devices until we get all
+  // the information we need from it.
+  inactive_devices_.push_back(std::move(video_device));
+  inactive_devices_.back()->Startup(
+      [this, id = inactive_devices_.back()->id()](zx_status_t status) {
+        OnDeviceStartupComplete(id, status);
+      });
 }
 
 void CameraManagerImpl::OnDeviceStartupComplete(uint64_t camera_id,
@@ -120,7 +129,8 @@ void CameraManagerImpl::GetFormats(uint64_t camera_id, uint32_t index,
     }
   }
 
-  size_t min_index = std::max((size_t)0, std::min((size_t)index, formats->size() - 1));
+  size_t min_index =
+      std::max((size_t)0, std::min((size_t)index, formats->size() - 1));
   size_t max_index =
       std::min(min_index + fuchsia::camera::MAX_FORMATS_PER_RESPONSE - 1,
                formats->size() - 1);

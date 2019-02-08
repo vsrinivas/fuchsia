@@ -35,6 +35,8 @@ static const std::string kSimpleCameraServiceUrl =
     "fuchsia-pkg://fuchsia.com/simple_camera_server_cpp#meta/"
     "simple_camera_server_cpp.cmx";
 
+static const bool camera_id = 0;  // 0 -> real camera, 1 -> fake
+
 SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
     : V1BaseView(std::move(view_context), "Video Display Example"),
       node_(session()) {
@@ -63,7 +65,7 @@ SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
       fuchsia::simplecamera::SimpleCamera::Name_);
 
   // Now pass the other end of the image pipe to the simple camera interface:
-  simple_camera_->ConnectToCamera(0, std::move(image_pipe_handle));
+  simple_camera_->ConnectToCamera(camera_id, std::move(image_pipe_handle));
 
   // Create a rounded-rect shape to display the camera image on.
   scenic::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80, 80,

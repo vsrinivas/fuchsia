@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <garnet/lib/media/camera/simple_camera_lib/fake-control-impl.h>
 #include <garnet/lib/media/camera/simple_camera_lib/video_display.h>
 
 #include <fcntl.h>
@@ -14,8 +13,6 @@
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 
 namespace simple_camera {
-
-const bool use_fake_camera = false;
 
 // When a buffer is released, signal that it is available to the writer
 // In this case, that means directly write to the buffer then re-present it
@@ -101,7 +98,6 @@ bool ConvertFormat(fuchsia::sysmem::PixelFormat driver_format,
 
 zx_status_t VideoDisplay::SetupBuffers(
     const fuchsia::sysmem::BufferCollectionInfo& buffer_collection) {
-  // auto image_info = fuchsia::images::ImageInfo::New();
   fuchsia::images::ImageInfo image_info;
   image_info.stride = buffer_collection.format.image().planes[0].bytes_per_row;
   image_info.tiling = fuchsia::images::Tiling::LINEAR;
@@ -143,76 +139,9 @@ zx_status_t VideoDisplay::SetupBuffers(
   return ZX_OK;
 }
 
-zx_status_t VideoDisplay::OpenCamera(int dev_id) {
-  std::string dev_path = fxl::StringPrintf("/dev/class/camera/%03u", dev_id);
-  fxl::UniqueFD dev_node(::open(dev_path.c_str(), O_RDONLY));
-  if (!dev_node.is_valid()) {
-    FXL_LOG(ERROR) << "Client::Open failed to open device node at \""
-                   << dev_path << "\". (" << strerror(errno) << " : " << errno
-                   << ")";
-    return ZX_ERR_IO;
-  }
-
-  zx::channel channel;
-  ssize_t res =
-      ioctl_camera_get_channel(dev_node.get(), channel.reset_and_get_address());
-  if (res < 0) {
-    FXL_LOG(ERROR) << "Failed to obtain channel (res " << res << ")";
-    return static_cast<zx_status_t>(res);
-  }
-
-  camera_client_->control_.Bind(std::move(channel));
-
-  return ZX_OK;
-}
-
-zx_status_t VideoDisplay::OpenFakeCamera() {
-  // CameraStream FIDL interface
-  static fbl::unique_ptr<simple_camera::FakeControlImpl>
-      fake_camera_control_server_ = nullptr;
-  // Loop used to run the FIDL server
-  static fbl::unique_ptr<async::Loop> fidl_dispatch_loop_;
-
-  FXL_LOG(INFO) << "Opening Fake Camera";
-
-  if (fake_camera_control_server_ != nullptr) {
-    FXL_LOG(ERROR) << "Camera Control already running";
-    // TODO(CAM-XXX): support multiple concurrent clients.
-    return ZX_ERR_ACCESS_DENIED;
-  }
-
-  if (fidl_dispatch_loop_ == nullptr) {
-    fidl_dispatch_loop_ =
-        fbl::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
-    fidl_dispatch_loop_->StartThread();
-  }
-
-  fidl::InterfaceHandle<fuchsia::camera::Control> control_handle;
-  fidl::InterfaceRequest<fuchsia::camera::Control> control_interface =
-      control_handle.NewRequest();
-
-  if (control_interface.is_valid()) {
-    FXL_LOG(INFO) << "Starting Fake Camera Server";
-    fake_camera_control_server_ =
-        fbl::make_unique<simple_camera::FakeControlImpl>(
-            std::move(control_interface), fidl_dispatch_loop_->dispatcher(),
-            [] {
-              FXL_LOG(INFO) << "Deleting Fake Camera Server";
-              fake_camera_control_server_.reset();
-            });
-
-    FXL_LOG(INFO) << "Binding camera_control_ to control_handle";
-    camera_client_->control_.Bind(control_handle.TakeChannel());
-
-    return ZX_OK;
-  } else {
-    return ZX_ERR_NO_RESOURCES;
-  }
-}
-
 // TODO(CAM-9): Clean up this function after major changes land.
 zx_status_t VideoDisplay::ConnectToCamera(
-    uint32_t camera_id,
+    component::StartupContext* context, uint32_t camera_id,
     ::fidl::InterfaceHandle<::fuchsia::images::ImagePipe> image_pipe,
     OnShutdownCallback callback) {
   if (!callback) {
@@ -230,8 +159,8 @@ zx_status_t VideoDisplay::ConnectToCamera(
   camera_client_ = std::make_unique<CameraClient>();
 
   camera_client_->stream_.events().OnFrameAvailable =
-      [video_display = this](fuchsia::camera::FrameAvailableEvent frame) {
-        video_display->IncomingBufferFilled(frame);
+      [this](fuchsia::camera::FrameAvailableEvent frame) {
+        IncomingBufferFilled(frame);
       };
 
   camera_client_->stream_.set_error_handler([this](zx_status_t status) {
@@ -239,28 +168,23 @@ zx_status_t VideoDisplay::ConnectToCamera(
     on_shut_down_callback_();
   });
 
-  // Open a connection to the Camera
-  zx_status_t status =
-      use_fake_camera ? OpenFakeCamera() : OpenCamera(camera_id);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Couldn't open camera client (status " << status << ")";
-    DisconnectFromCamera();
-    return status;
-  }
+  // Open a connection to the Camera Manager
+  context->ConnectToEnvironmentService(camera_client_->manager_.NewRequest());
+
+  zx_status_t status = ZX_OK;
 
   // Figure out a format
   std::vector<fuchsia::camera::VideoFormat> formats;
   {
-    zx_status_t driver_status;
     uint32_t total_format_count;
     uint32_t format_index = 0;
     do {
       std::vector<fuchsia::camera::VideoFormat> formats_ptr;
-      status = camera_client_->control_->GetFormats(
-          format_index, &formats_ptr, &total_format_count, &driver_status);
-      if (status != ZX_OK || driver_status != ZX_OK) {
+      status = camera_client_->manager_->GetFormats(
+          camera_id, format_index, &formats_ptr, &total_format_count);
+      if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Couldn't get camera formats (status " << status
-                       << " : " << driver_status << ")";
+                       << ")";
         DisconnectFromCamera();
         return status;
       }
@@ -313,8 +237,12 @@ zx_status_t VideoDisplay::ConnectToCamera(
       DisconnectFromCamera();
       return status;
     }
-    status = camera_client_->control_->CreateStream(
-        std::move(buffer_collection), chosen_format.rate,
+
+    fuchsia::camera::VideoStream request = {.camera_id = camera_id,
+                                            .format = chosen_format};
+
+    status = camera_client_->manager_->CreateStream(
+        request, std::move(buffer_collection),
         camera_client_->stream_.NewRequest(), std::move(driver_token));
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Couldn't set camera format. status: " << status;
@@ -325,8 +253,6 @@ zx_status_t VideoDisplay::ConnectToCamera(
 
   // Start streaming
   camera_client_->stream_->Start();
-
-  FXL_LOG(INFO) << "Camera Client Initialization Successful!";
 
   return ZX_OK;
 }

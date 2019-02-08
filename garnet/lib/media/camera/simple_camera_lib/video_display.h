@@ -5,16 +5,15 @@
 #ifndef GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_VIDEO_DISPLAY_H_
 #define GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_VIDEO_DISPLAY_H_
 
-#include <deque>
-#include <list>
-
-#include <fbl/vector.h>
+#include <fuchsia/camera/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl.h>
 #include <garnet/lib/media/camera/simple_camera_lib/buffer_fence.h>
 #include <garnet/lib/media/camera/simple_camera_lib/frame_scheduler.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/zx/eventpair.h>
 
-#include <garnet/drivers/usb_video/usb-video-camera.h>
+#include <deque>
+#include <list>
 
 namespace simple_camera {
 
@@ -31,7 +30,7 @@ class VideoDisplay {
   // returned, termination of communication is signalled by calling |callback|,
   // which may be done on an arbitrary thread.
   zx_status_t ConnectToCamera(
-      uint32_t camera_id,
+      component::StartupContext* context, uint32_t camera_id,
       ::fidl::InterfaceHandle<::fuchsia::images::ImagePipe> image_pipe,
       OnShutdownCallback callback);
 
@@ -51,10 +50,6 @@ class VideoDisplay {
   zx_status_t SetupBuffers(
       const fuchsia::sysmem::BufferCollectionInfo& buffer_collection);
 
-  zx_status_t OpenCamera(int dev_id);
-
-  zx_status_t OpenFakeCamera();
-
   // The number of buffers to allocate while setting up the camera stream.
   // This number has to be at least 2, since scenic will hold onto one buffer
   // at all times.
@@ -72,7 +67,7 @@ class VideoDisplay {
 
   class CameraClient {
    public:
-    fuchsia::camera::ControlSyncPtr control_;
+    fuchsia::camera::ManagerSyncPtr manager_;
     fuchsia::camera::StreamPtr stream_;
   };
   std::unique_ptr<CameraClient> camera_client_;

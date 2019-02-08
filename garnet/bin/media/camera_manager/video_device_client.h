@@ -33,6 +33,8 @@ class VideoDeviceClient : public fbl::RefCounted<VideoDeviceClient> {
   static std::unique_ptr<VideoDeviceClient> Create(int dir_fd,
                                                    const std::string &name);
 
+  static std::unique_ptr<VideoDeviceClient> CreateFakeCamera(async::Loop *loop);
+
   // Load all information to identify the device, as well as available formats.
   // Will call |callback| when everything is loaded.
   void Startup(StartupCallback callback);

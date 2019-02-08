@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FAKE_CONTROL_IMPL_H_
-#define GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FAKE_CONTROL_IMPL_H_
+#ifndef GARNET_BIN_MEDIA_CAMERA_MANAGER_FAKE_CONTROL_IMPL_H_
+#define GARNET_BIN_MEDIA_CAMERA_MANAGER_FAKE_CONTROL_IMPL_H_
 
 #include <fbl/unique_ptr.h>
 #include <fuchsia/camera/cpp/fidl.h>
@@ -111,4 +111,4 @@ class FakeControlImpl : public fuchsia::camera::Control {
 
 }  // namespace simple_camera
 
-#endif  // GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FAKE_CONTROL_IMPL_H_
+#endif  // GARNET_BIN_MEDIA_CAMERA_MANAGER_FAKE_CONTROL_IMPL_H_

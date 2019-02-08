@@ -56,7 +56,9 @@ class CameraManagerImpl : public fuchsia::camera::Manager {
  private:
   // Called when a device is enumerated, or when this class starts, and
   // discovers all the current devices in the system.
-  void OnDeviceAdded(int dir_fd, std::string filename);
+  void OnDeviceFound(int dir_fd, std::string filename);
+
+  void AddDevice(std::unique_ptr<VideoDeviceClient> device);
 
   // Called by the device once it finishes initializing.
   void OnDeviceStartupComplete(uint64_t camera_id, zx_status_t status);

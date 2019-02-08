@@ -18,9 +18,9 @@ void SimpleCameraApp::ConnectToCamera(
     ::fidl::InterfaceHandle<::fuchsia::images::ImagePipe> image_pipe) {
   // If we fail to connect, disconnect from the client.  We only have one
   // client, so we just call CloseAll.
-  zx_status_t status =
-      video_display_.ConnectToCamera(camera_id, std::move(image_pipe),
-                                     [this]() { this->bindings_.CloseAll(); });
+  zx_status_t status = video_display_.ConnectToCamera(
+      context_.get(), camera_id, std::move(image_pipe),
+      [this]() { this->bindings_.CloseAll(); });
   if (status != ZX_OK) {
     bindings_.CloseAll();
   }
