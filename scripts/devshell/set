@@ -178,6 +178,8 @@ function guess_config_within_layer {
       petal_order="${petal_order},garnet"
       ;;
   esac
+  # Look in the top-level directories last.
+  petal_order="${petal_order},"
   readonly petal_order
 
   # Look through petals in this order to find configs with matching names.
