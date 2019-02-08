@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# DEPRECATED - this import path is deprecated, please use //products/terminal.gni.
+monolith = [
+    "build/packages/netboot",
+]
 
-import("//products/router.gni")
+preinstall = []
+
+available = []

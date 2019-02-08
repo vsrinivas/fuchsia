@@ -1,0 +1,22 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//products/terminal.gni")
+
+monolith -= [
+    "garnet/packages/config/terminal",
+]
+
+monolith += [
+    "src/modular/bundles/framework",
+    "topaz/packages/config/ermine",
+    "topaz/packages/prod/ermine",
+    "topaz/packages/prod/text_input_mod",
+]
+
+preinstall += []
+
+available += [
+    "src/modular/bundles/tools"
+]

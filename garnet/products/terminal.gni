@@ -2,21 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("base.gni")
+# DEPRECATED - this import path is deprecated, please use //products/terminal.gni.
 
-monolith += [
-  "garnet/packages/config/terminal",
-  "garnet/packages/prod/scenic",
-]
-
-preinstall += [
-  "garnet/packages/prod/fonts",
-  "garnet/packages/prod/terminal",
-  "garnet/packages/prod/tiles",
-  "garnet/packages/tools/tiles",
-]
-
-available += [
-  "garnet/packages/prod/media_audio",
-  "garnet/packages/tools/audio",
-]
+import("//products/terminal.gni")

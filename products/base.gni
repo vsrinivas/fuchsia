@@ -2,11 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-monolith = [ "garnet/packages/products/base" ]
+import("//products/bringup.gni")
 
-preinstall = []
+monolith -= [ "build/packages/netboot" ]
+monolith += [ "garnet/packages/products/base" ]
 
-available = [
-  "garnet/packages/prod/vboot_reference",
-  "garnet/packages/tools/bluetooth",
+preinstall += []
+
+available += [
+    "garnet/packages/prod/vboot_reference",
 ]
