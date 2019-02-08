@@ -9,7 +9,7 @@ use {
     serde_derive::Serialize,
     std::fmt,
     std::{
-        collections::{HashMap, HashSet, VecDeque},
+        collections::{BTreeMap, HashMap, HashSet, VecDeque},
         str::FromStr,
     },
 };
@@ -447,16 +447,19 @@ impl Method {
                             e => return Err(ParseError::UnexpectedToken(e)),
                         }
                     }
-                    let inner_params = fields.remove(1);
-                    for in_pair in inner_params.into_inner() {
-                        match in_pair.as_rule() {
-                            Rule::parameter => {
-                                let mut param = in_pair.into_inner();
-                                let ty = Ty::from_pair(&param.next().unwrap())?;
-                                let name = String::from(param.next().unwrap().as_str());
-                                out_params.push((name, ty));
+                    // might not have any return paramaters
+                    if fields.len() > 1 {
+                        let inner_params = fields.remove(1);
+                        for in_pair in inner_params.into_inner() {
+                            match in_pair.as_rule() {
+                                Rule::parameter => {
+                                    let mut param = in_pair.into_inner();
+                                    let ty = Ty::from_pair(&param.next().unwrap())?;
+                                    let name = String::from(param.next().unwrap().as_str());
+                                    out_params.push((name, ty));
+                                }
+                                e => return Err(ParseError::UnexpectedToken(e)),
                             }
-                            e => return Err(ParseError::UnexpectedToken(e)),
                         }
                     }
                 }
@@ -480,7 +483,7 @@ pub enum Decl {
 #[derive(PartialEq, Serialize, Debug)]
 pub struct BanjoAst {
     pub primary_namespace: String,
-    pub namespaces: HashMap<String, Vec<Decl>>,
+    pub namespaces: BTreeMap<String, Vec<Decl>>,
 }
 
 impl BanjoAst {
@@ -597,7 +600,7 @@ impl BanjoAst {
 
     pub fn parse_decl(
         pair: Pair<'_, Rule>,
-        _namespaces: &HashMap<String, Vec<Decl>>,
+        _namespaces: &BTreeMap<String, Vec<Decl>>,
     ) -> Result<Decl, ParseError> {
         match pair.as_rule() {
             Rule::struct_declaration => {
@@ -854,7 +857,7 @@ impl BanjoAst {
 
     pub fn parse(pair_vec: Vec<Pairs<'_, Rule>>) -> Result<Self, ParseError> {
         let mut primary_namespace = None;
-        let mut namespaces = HashMap::default();
+        let mut namespaces = BTreeMap::default();
 
         for pairs in pair_vec {
             for pair in pairs {

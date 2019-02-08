@@ -1,0 +1,55 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.libraryb",
+    namespaces: {
+        "banjo.examples.librarya": [
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "Point",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Float32,
+                        ident: "x"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Float32,
+                        ident: "y"
+                    }
+                ]
+            }
+        ],
+        "banjo.examples.libraryb": [
+            Interface {
+                attributes: Attrs(
+                    []
+                ),
+                name: "View",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "MoveTo",
+                        in_params: [
+                            (
+                                "p",
+                                Ident {
+                                    id: "banjo.examples.librarya.Point",
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: []
+                    }
+                ]
+            }
+        ]
+    }
+}

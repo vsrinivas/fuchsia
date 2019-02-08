@@ -23,6 +23,5 @@ interface Drawing {
     Draw(Point p, Direction d);
     DrawLots(handle<vmo> commands) -> (int32 result, Point p);
     DrawArray(array<Point>:4 points) -> (zx.status rv);
-    -> DrawSucceeded(uint32 draws);
     Describe(string:64 one) -> (string:128 two);
 };

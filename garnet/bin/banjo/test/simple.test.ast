@@ -1,0 +1,239 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.simple",
+    namespaces: {
+        "banjo.examples.simple": [
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "Point",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int32,
+                        ident: "x"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int32,
+                        ident: "y"
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "Direction",
+                ty: UInt32,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Up",
+                        size: SizedRaw(
+                            0
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Down",
+                        size: SizedRaw(
+                            1
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Left",
+                        size: SizedRaw(
+                            2
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Right",
+                        size: SizedRaw(
+                            3
+                        )
+                    }
+                ]
+            },
+            Interface {
+                attributes: Attrs(
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                " \"Simple\""
+                            )
+                        }
+                    ]
+                ),
+                name: "Drawing",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Draw",
+                        in_params: [
+                            (
+                                "p",
+                                Ident {
+                                    id: "Point",
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "d",
+                                Ident {
+                                    id: "Direction",
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: []
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "DrawLots",
+                        in_params: [
+                            (
+                                "commands",
+                                Handle {
+                                    ty: Vmo,
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "result",
+                                Int32
+                            ),
+                            (
+                                "p",
+                                Ident {
+                                    id: "Point",
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "DrawArray",
+                        in_params: [
+                            (
+                                "points",
+                                Array {
+                                    ty: Ident {
+                                        id: "Point",
+                                        reference: false
+                                    },
+                                    size: SizedRaw(
+                                        4
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "rv",
+                                Ident {
+                                    id: "zx.status",
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Describe",
+                        in_params: [
+                            (
+                                "one",
+                                Str {
+                                    size: Some(
+                                        SizedRaw(
+                                            64
+                                        )
+                                    ),
+                                    nullable: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "two",
+                                Str {
+                                    size: Some(
+                                        SizedRaw(
+                                            128
+                                        )
+                                    ),
+                                    nullable: false
+                                }
+                            )
+                        ]
+                    }
+                ]
+            }
+        ],
+        "zx": [
+            Alias(
+                "status",
+                "int32"
+            ),
+            Alias(
+                "time",
+                "int64"
+            ),
+            Alias(
+                "duration",
+                "int64"
+            ),
+            Alias(
+                "koid",
+                "uint64"
+            ),
+            Alias(
+                "vaddr",
+                "uint64"
+            ),
+            Alias(
+                "paddr",
+                "uint64"
+            ),
+            Alias(
+                "paddr32",
+                "uint32"
+            ),
+            Alias(
+                "gpaddr",
+                "uint64"
+            ),
+            Alias(
+                "off",
+                "uint64"
+            )
+        ]
+    }
+}
