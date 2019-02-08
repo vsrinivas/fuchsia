@@ -1,0 +1,8 @@
+{
+    "imports": [
+        "garnet/packages/prod/setui_service"
+    ],
+    "packages": [
+        "//garnet/bin/setui:setui_service_tests"
+    ]
+}

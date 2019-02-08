@@ -1,0 +1,13 @@
+{
+    "program": {
+        "data": "data/setui_service"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.Connectivity",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}
