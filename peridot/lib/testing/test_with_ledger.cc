@@ -12,19 +12,14 @@
 namespace modular {
 namespace testing {
 
-TestWithLedger::TestWithLedger() = default;
-TestWithLedger::~TestWithLedger() = default;
-
-void TestWithLedger::SetUp() {
-  RealLoopFixture::SetUp();
-
+TestWithLedger::TestWithLedger() {
   ledger_app_ = std::make_unique<testing::LedgerRepositoryForTesting>();
 
   ledger_client_ = std::make_unique<LedgerClient>(
       ledger_app_->ledger_repository(), __FILE__, [] { ASSERT_TRUE(false); });
-}
+};
 
-void TestWithLedger::TearDown() {
+TestWithLedger::~TestWithLedger() {
   ledger_client_.reset();
 
   bool terminated = false;
@@ -34,9 +29,7 @@ void TestWithLedger::TearDown() {
   }
 
   ledger_app_.reset();
-
-  RealLoopFixture::TearDown();
-}
+};
 
 bool TestWithLedger::RunLoopWithTimeout(zx::duration timeout) {
   return RealLoopFixture::RunLoopWithTimeout(timeout);

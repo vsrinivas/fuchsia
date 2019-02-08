@@ -44,7 +44,6 @@ disabled_for_asan = [
 
   # MF-196
   "/pkgfs/packages/sessionctl_integration_tests/0/test/sessionctl_test",
-  "/pkgfs/packages/sessionctl_unittests/0/test/sessionctl_unittest",
 
   # MF-198
   "/pkgfs/packages/story_model_unittests/0/test/ledger_story_model_storage_unittest",

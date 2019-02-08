@@ -17,19 +17,18 @@ namespace {
 
 class SessionCtlAppTest : public testing::TestWithSessionStorage {
  public:
-  void SetUp() override {
-    TestWithSessionStorage::SetUp();
+  SessionCtlAppTest() {
     session_storage_ = MakeSessionStorage("page");
     puppet_master_impl_ = std::make_unique<PuppetMasterImpl>(
         session_storage_.get(), &test_executor_);
-    puppet_master_impl_->Connect(puppet_master.NewRequest());
+    puppet_master_impl_->Connect(puppet_master_.NewRequest());
     done_ = false;
   }
 
  protected:
-  fuchsia::modular::PuppetMasterPtr puppet_master;
   std::unique_ptr<SessionStorage> session_storage_;
   std::unique_ptr<PuppetMasterImpl> puppet_master_impl_;
+  fuchsia::modular::PuppetMasterPtr puppet_master_;
   std::unique_ptr<Logger> logger_;
   testing::TestStoryCommandExecutor test_executor_;
   bool done_;

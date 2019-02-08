@@ -18,23 +18,15 @@ class LedgerClient;
 namespace testing {
 
 // A test fixture class for a test case that needs a ledger repository, ledger,
-// ledger client, or ledger page. This fixture sets up a ledger repository and a
-// ledger client in SetUp() and erases the repository and stops the ledger in
-// TearDown(). This also runs a message loop, which is required to interact with
-// the ledger through fidl calls.
+// ledger client, or ledger page. This runs a message loop, which is required to
+// interact with the ledger through fidl calls.
 //
 // The ledger client is available to the test case and its fixture through the
 // ledger_client() getter, the ledger repository through ledger_repository().
-//
-// A fixture class that extends this fixture and has its own SetUp() and
-// TearDown() must call this fixture's SetUp() and TearDown().
 class TestWithLedger : public gtest::RealLoopFixture {
  public:
   TestWithLedger();
   ~TestWithLedger() override;
-
-  void SetUp() override;
-  void TearDown() override;
 
  protected:
   fuchsia::ledger::internal::LedgerRepository* ledger_repository() {
