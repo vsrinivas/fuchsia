@@ -12,9 +12,14 @@ extern crate serde;
 mod error;
 /// More ergonomic wrapper types for FIDL account and persona identifiers.
 mod identifiers;
+/// More ergonomic wrapper types for FIDL auth states.
+mod auth_state;
 
 pub use crate::error::{AccountManagerError, ResultExt};
 pub use crate::identifiers::{
     FidlGlobalAccountId, FidlLocalAccountId, FidlLocalPersonaId, GlobalAccountId, LocalAccountId,
     LocalPersonaId,
+};
+pub use crate::auth_state::{
+    FidlAccountAuthState, AccountAuthState
 };

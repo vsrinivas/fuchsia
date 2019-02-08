@@ -14,6 +14,7 @@
 #![deny(missing_docs)]
 #![feature(async_await, await_macro, futures_api)]
 
+mod account_event_emitter;
 mod account_handler_connection;
 mod account_handler_context;
 mod account_manager;
