@@ -7,7 +7,4 @@ disabled_for_asan = [
 
   # CF-585
   "/pkgfs/packages/run_tests/0/test/run_return_value_shell_test",
-
-  # MTWN-236
-  "/pkgfs/packages/use_aac_decoder_test/0/test/use_aac_decoder_test",
 ]

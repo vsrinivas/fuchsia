@@ -40,6 +40,7 @@ class Vector {
 
  private:
   std::vector<T> vector_;
+  T dummy_{};
 };
 
 template <typename T>
@@ -79,6 +80,18 @@ inline void Vector<T>::push(const T& item) {
 
 template <typename T>
 inline T& Vector<T>::editItemAt(size_t index) {
+  if (index >= vector_.size()) {
+    // SoftAAC2.cpp:987 can attempt a read via a reference returned from
+    // editItemAt(0) despite there being zero items in the vector (for an
+    // ALOGV).  For now, we have editItemAt() provide a reference to a dummy
+    // here if the caller is asking for a reference to an entry that doesn't
+    // exist.
+    //
+    // TODO(dustingreen): Either fix SoftAAC2.cpp to not do that read, or stop
+    // using SoftAAC2.cpp.  For now we're avoiding making any modifications to
+    // SoftAAC2.cpp.
+    return dummy_;
+  }
   return vector_[index];
 }
 
