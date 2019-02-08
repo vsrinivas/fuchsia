@@ -18,6 +18,8 @@
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
+#define USEC_TO_MSEC(x) (float(x) / 1000.0)
+
 const int MAX_PAYLOAD_SIZE_BYTES = 1400;
 
 typedef struct {
@@ -143,26 +145,32 @@ struct Options {
 };
 
 struct PingStatistics {
-    uint64_t min_rtt_msec = UINT64_MAX;
-    uint64_t max_rtt_msec = 0;
-    uint64_t sum_rtt_msec = 0;
+    uint64_t min_rtt_usec = UINT64_MAX;
+    uint64_t max_rtt_usec = 0;
+    uint64_t sum_rtt_usec = 0;
     uint16_t num_sent = 0;
     uint16_t num_lost = 0;
 
-    void Update(uint64_t rtt_msec) {
-        if (rtt_msec < min_rtt_msec)
-            min_rtt_msec = rtt_msec;
-        if (rtt_msec > max_rtt_msec)
-            max_rtt_msec = rtt_msec;
-        sum_rtt_msec += rtt_msec;
+    void Update(uint64_t rtt_usec) {
+        if (rtt_usec < min_rtt_usec) {
+            min_rtt_usec = rtt_usec;
+        }
+        if (rtt_usec > max_rtt_usec) {
+            max_rtt_usec = rtt_usec;
+        }
+        sum_rtt_usec += rtt_usec;
         num_sent++;
     }
 
     void Print() const {
-        if (num_sent == 0)
+        if (num_sent == 0) {
+            printf("No echo request sent\n");
             return;
-        printf("Min RTT: %" PRIu64 " us, Max RTT: %" PRIu64 " us, Avg RTT: %" PRIu64 " us\n",
-               min_rtt_msec, max_rtt_msec, (sum_rtt_msec / num_sent));
+        }
+        printf("RTT Min/Max/Avg = [ %.3f / %.3f / %.3f ] ms\n",
+               USEC_TO_MSEC(min_rtt_usec),
+               USEC_TO_MSEC(max_rtt_usec),
+               USEC_TO_MSEC(sum_rtt_usec / num_sent));
     }
 };
 
@@ -304,7 +312,8 @@ int main(int argc, char** argv) {
         int seq = ntohs(packet.hdr.un.echo.sequence);
         uint64_t usec = (after - before) / ticks_per_usec;
         stats.Update(usec);
-        printf("%" PRIu64 " bytes: icmp_seq=%d RTT=%" PRIu64 " us\n", r, seq, usec);
+        printf("%" PRIu64 " bytes from %s : icmp_seq=%d rtt=%.3f ms\n",
+               r, options.host, seq, (float)usec / 1000.0);
         if (options.count > 0) {
             usleep(static_cast<unsigned int>(options.interval_msec * 1000));
         }
