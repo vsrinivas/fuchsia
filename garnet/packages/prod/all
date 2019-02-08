@@ -91,6 +91,7 @@
         "garnet/packages/prod/terminal",
         "garnet/packages/prod/test_runner",
         "garnet/packages/prod/thermd",
+        "garnet/packages/prod/tiles",
         "garnet/packages/prod/timezone",
         "garnet/packages/prod/tracing",
         "garnet/packages/prod/tz-util",

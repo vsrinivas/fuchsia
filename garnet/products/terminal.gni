@@ -12,6 +12,7 @@ monolith += [
 preinstall += [
   "garnet/packages/prod/fonts",
   "garnet/packages/prod/terminal",
+  "garnet/packages/prod/tiles",
   "garnet/packages/tools/tiles",
 ]
 
