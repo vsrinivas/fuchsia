@@ -5,6 +5,7 @@
 library fuchsia.modular;
 
 using fuchsia.modular.auth;
+using fuchsia.ui.gfx;
 using fuchsia.ui.viewsv1token;
 using fuchsia.sys;
 
@@ -43,7 +44,7 @@ interface UserProvider {
     PreviousUsers() -> (vector<fuchsia.modular.auth.Account> accounts);
 };
 
-// Used to specify arguments to log into a user session.
+// DEPRECATED, for backwards compatibility only
 struct UserLoginParams {
     // |account_id| is received from either AddUser() or PreviousUsers(). It
     // can be NULL which means logging-in in an incognito mode.
@@ -52,6 +53,24 @@ struct UserLoginParams {
     // |view_owner| is the view given to the |SessionShell| started for the newly
     // logged-in user.
     request<fuchsia.ui.viewsv1token.ViewOwner> view_owner;
+
+    // Services provided by the |BaseShell| that can be offered to the
+    // |SessionShell| that is being logged into.
+    fuchsia.sys.ServiceProvider? services;
+
+    // If login fails, |user_controller| is closed.
+    request<UserController> user_controller;
+};
+
+// Used to specify arguments to log into a user session.
+struct UserLoginParams2 {
+    // |account_id| is received from either AddUser() or PreviousUsers(). It
+    // can be NULL which means logging-in in an incognito mode.
+    string? account_id;
+
+    // |view_token| is the view given to the |SessionShell| started for the newly
+    // logged-in user.
+    fuchsia.ui.gfx.ExportToken view_token;
 
     // Services provided by the |BaseShell| that can be offered to the
     // |SessionShell| that is being logged into.

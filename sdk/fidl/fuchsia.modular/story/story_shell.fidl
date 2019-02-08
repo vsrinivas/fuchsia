@@ -4,6 +4,7 @@
 
 library fuchsia.modular;
 
+using fuchsia.ui.gfx;
 using fuchsia.ui.policy;
 using fuchsia.ui.viewsv1token;
 
@@ -79,13 +80,22 @@ interface StoryShell {
     UpdateSurface(ViewConnection view_connection, SurfaceInfo surface_info);
 };
 
-// A pair mapping the view owner to surface ID
+// DEPRECATED, for backwards compatibility only.
 struct ViewConnection {
     // The new view corresponding to the surface.
     fuchsia.ui.viewsv1token.ViewOwner owner;
 
     // The ID for the surface
     string surface_id;
+};
+
+// A pair mapping the view owner to surface ID
+struct ViewConnection2 {
+    // The ID for the surface
+    string surface_id;
+
+    // Token for the new view corresponding to the surface.
+    fuchsia.ui.gfx.ImportToken view_holder_token;
 };
 
 // Contain metadata for a Surface
@@ -105,8 +115,7 @@ struct SurfaceInfo {
     ModuleSource module_source;
 };
 
-// Maps the node_name to the specific mozart view resulting from resolving and
-// launching the intent specified in a Container node
+// DEPRECATED, for backwards compatbility only.
 struct ContainerView {
     // Name by which this container node is referenced in container layout and
     // surface relationship specifications (cf. container.fidl)
@@ -114,6 +123,18 @@ struct ContainerView {
 
     // The new view resolved from the intent corresponding to node_name
     fuchsia.ui.viewsv1token.ViewOwner owner;
+};
+
+// Maps the node_name to the specific scenic view resulting from resolving and
+// launching the intent specified in a Container node
+struct ContainerView2 {
+    // Name by which this container node is referenced in container layout and
+    // surface relationship specifications (cf. container.fidl)
+    string node_name;
+
+    // Token for the new view resolved from the intent corresponding to
+    // node_name
+    fuchsia.ui.gfx.ImportToken view_holder_token;
 };
 
 // This interface provides the StoryShell instance with everything it needs to
