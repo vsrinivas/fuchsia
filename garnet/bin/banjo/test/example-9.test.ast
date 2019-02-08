@@ -1,0 +1,209 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.example9",
+    namespaces: {
+        "banjo.examples.example9": [
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "EchoMe",
+                ty: UInt16,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "zero",
+                        size: SizedRaw(
+                            0
+                        )
+                    },
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "one",
+                        size: SizedRaw(
+                            1
+                        )
+                    }
+                ]
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "EchoMore",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: UInt32,
+                        ident: "first"
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: UInt64,
+                        ident: "second"
+                    }
+                ]
+            },
+            Interface {
+                attributes: Attrs(
+                    []
+                ),
+                name: "Echo",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Echo32",
+                        in_params: [
+                            (
+                                "uint32",
+                                UInt32
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "response",
+                                UInt32
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Echo64",
+                        in_params: [
+                            (
+                                "uint64",
+                                UInt64
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "response",
+                                UInt64
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "EchoEnum",
+                        in_params: [
+                            (
+                                "req",
+                                Ident {
+                                    id: "EchoMe",
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "response",
+                                Ident {
+                                    id: "EchoMe",
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "EchoHandle",
+                        in_params: [
+                            (
+                                "req",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "response",
+                                Handle {
+                                    ty: Handle,
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "EchoChannel",
+                        in_params: [
+                            (
+                                "req",
+                                Handle {
+                                    ty: Channel,
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "response",
+                                Handle {
+                                    ty: Channel,
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "EchoStruct",
+                        in_params: [
+                            (
+                                "req",
+                                Ident {
+                                    id: "EchoMore",
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "response",
+                                Ident {
+                                    id: "EchoMore",
+                                    reference: false
+                                }
+                            )
+                        ]
+                    }
+                ]
+            },
+            Constant {
+                attributes: Attrs(
+                    []
+                ),
+                name: "favorite_echo",
+                ty: Ident {
+                    id: "EchoMe",
+                    reference: false
+                },
+                value: SizedConstant(
+                    "zero"
+                )
+            }
+        ]
+    }
+}

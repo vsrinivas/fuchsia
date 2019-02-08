@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![cfg(test)]
-#![allow(warnings)]
 
 use {
     banjo_lib::{
@@ -47,5 +46,6 @@ codegen_test!(example_4, "example-4.test.banjo", "example-4.test.ast");
 codegen_test!(example_6, "example-6.test.banjo", "example-6.test.ast");
 codegen_test!(example_7, "example-7.test.banjo", "example-7.test.ast");
 codegen_test!(example_8, "example-8.test.banjo", "example-8.test.ast");
+codegen_test!(example_9, "example-9.test.banjo", "example-9.test.ast");
 codegen_test!(point, "point.test.banjo", "point.test.ast");
 codegen_test!(table, "tables.test.banjo", "tables.test.ast");
