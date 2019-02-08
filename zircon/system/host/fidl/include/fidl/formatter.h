@@ -312,12 +312,14 @@ private:
         }
 
     private:
+        // RequiresWSBeforeChar is called 1st.
         bool RequiresWSBeforeChar(char ch) {
             return (ch == '{') ||
                    (ch == '=') ||
                    (visitor_->blank_space_before_colon_ && ch == ':');
         }
 
+        // NoSpacesBeforeChar is called 2nd (after RequiresWSBeforeChar).
         bool NoSpacesBeforeChar(char ch) {
             return NoWSBeforeChar(ch) ||
                    (ch == ')') ||
@@ -326,16 +328,17 @@ private:
                    (visitor_->nested_type_depth_ > 0 && ch == '>');
         }
 
-        bool NoWSBeforeChar(char ch) {
-            return (ch == ';');
-        }
-
+        // RequiresWSAfterChar is called 3rd (after NoSpacesBeforeChar).
         bool RequiresWSAfterChar(char ch) {
             return (ch == '=') ||
                    (ch == ',') ||
                    (ch == ')') ||
                    (ch == '>' && (visitor_->nested_type_depth_ <= 1)) ||
                    (ch == ':' && visitor_->blank_space_after_colon_);
+        }
+
+        bool NoWSBeforeChar(char ch) {
+            return (ch == ';');
         }
 
         bool NoWSAfterChar(char ch) {
