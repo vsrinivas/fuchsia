@@ -8,7 +8,7 @@ using fuchsia.overnet.protocol;
 
 [Discoverable]
 interface Overnet {
-    ListPeers() -> (vector<Peer> peers);
+    ListPeers(uint64 last_seen_version) -> (uint64 version, vector<Peer> peers);
     // TODO(ctiller): remove this, and move to something that looks way more like an explicit registry.
     RegisterService(string service_name, ServiceProvider provider);
     ConnectToService(fuchsia.overnet.protocol.NodeId node,

@@ -70,6 +70,7 @@ void RouterEndpoint::Close(Callback<void> done) {
       ALLOCATED_CALLBACK, [this, it, done = std::move(done)]() mutable {
         OVERNET_TRACE(INFO) << "Closed peer " << it->first;
         connection_streams_.erase(it);
+        NewNodeDescriptionTableVersion();
         Close(std::move(done));
       });
   it->second.Close(Status::Cancelled(), std::move(after_close));
@@ -154,6 +155,7 @@ RouterEndpoint::ConnectionStream* RouterEndpoint::GetOrCreateConnectionStream(
                         << BuildDescription();
     stream->proxy()->UpdateNodeDescription(BuildDescription());
   }
+  NewNodeDescriptionTableVersion();
   return stream;
 }
 
@@ -401,6 +403,21 @@ void RouterEndpoint::ConnectionStream::Stub::UpdateNodeDescription(
                        << " update node description for "
                        << connection_stream_->peer() << ": " << description;
   connection_stream_->description_ = std::move(description);
+  connection_stream_->endpoint_->NewNodeDescriptionTableVersion();
+}
+
+void RouterEndpoint::OnNodeDescriptionTableChange(uint64_t last_seen_version,
+                                                  Callback<void> on_change) {
+  if (last_seen_version == node_description_table_version_) {
+    on_node_description_table_change_.emplace_back(std::move(on_change));
+  }
+  // else don't store on_change, forcing its destructor to be called, forcing it
+  // to be called.
+}
+
+void RouterEndpoint::NewNodeDescriptionTableVersion() {
+  ++node_description_table_version_;
+  std::vector<Callback<void>>().swap(on_node_description_table_change_);
 }
 
 }  // namespace overnet

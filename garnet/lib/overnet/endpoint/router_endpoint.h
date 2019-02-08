@@ -149,13 +149,17 @@ class RouterEndpoint : public Router {
     }
   }
 
+  void OnNodeDescriptionTableChange(uint64_t last_seen_version,
+                                    Callback<void> on_change);
+
   template <class F>
-  void ForEachNodeDescription(F f) {
+  uint64_t ForEachNodeDescription(F f) {
     for (const auto& peer : connection_streams_) {
       OVERNET_TRACE(DEBUG) << node_id() << " query desc on " << peer.first
                            << " = " << peer.second.description_;
       f(peer.first, peer.second.description_);
     }
+    return node_description_table_version_;
   }
 
   StatusOr<NewStream> InitiateStream(
@@ -170,6 +174,7 @@ class RouterEndpoint : public Router {
   void Unbind(Service* service);
   void UpdatedDescription();
   fuchsia::overnet::protocol::PeerDescription BuildDescription() const;
+  void NewNodeDescriptionTableVersion();
 
   class ConnectionStream final : public DatagramStream {
     friend class RouterEndpoint;
@@ -256,6 +261,8 @@ class RouterEndpoint : public Router {
   void SendGossipTo(NodeId target);
 
   std::unordered_map<NodeId, ConnectionStream> connection_streams_;
+  uint64_t node_description_table_version_ = 1;
+  std::vector<Callback<void>> on_node_description_table_change_;
   Optional<Timeout> gossip_timer_;
   Optional<Timeout> description_timer_;
   TimeDelta gossip_interval_ = InitialGossipInterval();

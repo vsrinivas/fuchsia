@@ -15,20 +15,26 @@ overnet::Status Service::Start() {
   return overnet::Status::Ok();
 }
 
-void Service::ListPeers(ListPeersCallback callback) {
+void Service::ListPeers(uint64_t last_seen_version,
+                        ListPeersCallback callback) {
   using Peer = fuchsia::overnet::Peer;
-  std::vector<Peer> response;
-  app_->endpoint()->ForEachNodeDescription(
-      [&response, self_node = app_->endpoint()->node_id()](
-          overnet::NodeId id,
-          const fuchsia::overnet::protocol::PeerDescription& m) {
-        Peer peer;
-        peer.id = id.as_fidl();
-        peer.is_self = id == self_node;
-        peer.description = fidl::Clone(m);
-        response.emplace_back(std::move(peer));
-      });
-  callback(std::move(response));
+  app_->endpoint()->OnNodeDescriptionTableChange(
+      last_seen_version,
+      overnet::Callback<void>(
+          overnet::ALLOCATED_CALLBACK, [this, callback = std::move(callback)] {
+            std::vector<Peer> response;
+            auto new_version = app_->endpoint()->ForEachNodeDescription(
+                [&response, self_node = app_->endpoint()->node_id()](
+                    overnet::NodeId id,
+                    const fuchsia::overnet::protocol::PeerDescription& m) {
+                  Peer peer;
+                  peer.id = id.as_fidl();
+                  peer.is_self = id == self_node;
+                  peer.description = fidl::Clone(m);
+                  response.emplace_back(std::move(peer));
+                });
+            callback(new_version, std::move(response));
+          }));
 }
 
 void Service::RegisterService(

@@ -1,4 +1,4 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -6,12 +6,13 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
-  name = "interface_passing_server"
+  name = "overnet_interface_passing"
   edition = "2018"
 
   deps = [
     "//garnet/examples/fidl/services:echo2-rustc",
     "//garnet/examples/overnet/interface_passing/service:interface_passing-rustc",
+    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
@@ -24,17 +25,17 @@ rustc_binary("bin") {
   ]
 }
 
-package("overnet-interface-passing-server") {
+package("overnet-interface-passing") {
   deps = [
     ":bin",
   ]
 
-  binary = "rust_crates/interface_passing_server"
+  binary = "rust_crates/overnet_interface_passing"
 
   meta = [
     {
-      path = rebase_path("../../meta/overnet_example.cmx")
-      dest = "interface_passing_server.cmx"
+      path = rebase_path("../meta/overnet_example.cmx")
+      dest = "overnet_interface_passing.cmx"
     },
   ]
 }

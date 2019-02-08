@@ -1,4 +1,4 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -6,7 +6,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
-  name = "echo_client"
+  name = "overnet_echo"
   edition = "2018"
 
   deps = [
@@ -21,20 +21,30 @@ rustc_binary("bin") {
     "//third_party/rust-crates/rustc_deps:clap",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//garnet/examples/fidl/services:echo2-rustc",
+    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:clap",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
   ]
 }
 
-package("overnet-echo-client") {
+package("overnet-echo") {
   deps = [
     ":bin",
   ]
 
-  binary = "rust_crates/echo_client"
+  binary = "rust_crates/overnet_echo"
 
   meta = [
     {
-      path = rebase_path("../../meta/overnet_example.cmx")
-      dest = "echo_client.cmx"
+      path = rebase_path("../meta/overnet_example.cmx")
+      dest = "echo.cmx"
     },
   ]
 }

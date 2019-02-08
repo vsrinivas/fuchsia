@@ -27,12 +27,17 @@ fn app<'a, 'b>() -> App<'a, 'b> {
 }
 
 fn ls_peers(svc: OvernetProxy) -> impl Future<Output = Result<(), Error>> {
-    svc.list_peers()
-        .map(|peers| {
-            for peer in peers {
-                println!("PEER: {:?}", peer);
+    svc.list_peers(0)
+        .map(|result| -> Result<(), Error> {
+            match result {
+                Ok((_, peers)) => {
+                    for peer in peers {
+                        println!("PEER: {:?}", peer);
+                    }
+                    Ok(())
+                }
+                Err(e) => Err(e.into())
             }
-            Ok(())
         })
 }
 

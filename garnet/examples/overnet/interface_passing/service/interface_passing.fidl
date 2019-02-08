@@ -9,5 +9,4 @@ using fidl.examples.echo;
 [Discoverable]
 interface Example {
     Request(request<fidl.examples.echo.Echo> iface);
-    //  Push(fidl.examples.echo.Echo iface) -> ();
 };
