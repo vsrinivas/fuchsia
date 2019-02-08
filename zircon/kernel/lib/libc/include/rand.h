@@ -17,4 +17,9 @@ __BEGIN_CDECLS
 int rand(void);
 void srand(unsigned int seed);
 
+// Note; rand_r deviates a small amount from the typical glibc definition.
+// Instead of taking an unsigned int as the core state, it demands a 64 bit
+// integer state/seed instead.
+int rand_r(uint64_t* seed);
+
 __END_CDECLS
