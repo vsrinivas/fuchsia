@@ -74,8 +74,8 @@ zx_status_t GetBootdata(const fbl::Vector<board_test::DeviceEntry>& device_list,
 } // namespace
 
 zx_status_t IsolatedDevmgr::Create(IsolatedDevmgr::Args args,
-                                   fbl::unique_ptr<IsolatedDevmgr>* out) {
-    auto devmgr = fbl::make_unique<IsolatedDevmgr>();
+                                   IsolatedDevmgr* out) {
+    IsolatedDevmgr devmgr;
 
     devmgr_launcher::Args devmgr_args;
     devmgr_args.sys_device_driver = "/boot/driver/platform-bus.so";
@@ -88,7 +88,7 @@ zx_status_t IsolatedDevmgr::Create(IsolatedDevmgr::Args args,
     }
 
     status = devmgr_integration_test::IsolatedDevmgr::Create(std::move(devmgr_args),
-                                                             &devmgr->devmgr_);
+                                                             &devmgr.devmgr_);
     if (status != ZX_OK) {
         return status;
     }

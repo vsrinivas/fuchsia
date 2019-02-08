@@ -44,14 +44,14 @@ RootMockDevice::~RootMockDevice() {
 // bound to.  This is provided so we can trigger unbinding of the mock device.
 // |*control_out| will be a channel for fulfilling requests from the mock
 // device.
-zx_status_t RootMockDevice::Create(const std::unique_ptr<IsolatedDevmgr>& devmgr,
+zx_status_t RootMockDevice::Create(const IsolatedDevmgr& devmgr,
                                    async_dispatcher_t* dispatcher,
                                    std::unique_ptr<MockDeviceHooks> hooks,
                                    std::unique_ptr<RootMockDevice>* mock_out) {
     // Wait for /dev/test/test to appear
     fbl::unique_fd fd;
     zx_status_t status = devmgr_integration_test::RecursiveWaitForFile(
-            devmgr->devfs_root(), "test/test", zx::deadline_after(zx::sec(5)), &fd);
+            devmgr.devfs_root(), "test/test", zx::deadline_after(zx::sec(5)), &fd);
     if (status != ZX_OK) {
         return status;
     }
@@ -80,7 +80,7 @@ zx_status_t RootMockDevice::Create(const std::unique_ptr<IsolatedDevmgr>& devmgr
         return ZX_ERR_BAD_STATE;
     }
     std::string relative_devpath(devpath.get(), strlen(kDevPrefix));
-    fd.reset(openat(devmgr->devfs_root().get(), relative_devpath.c_str(), O_RDWR));
+    fd.reset(openat(devmgr.devfs_root().get(), relative_devpath.c_str(), O_RDWR));
     if (!fd.is_valid()) {
         return ZX_ERR_NOT_FOUND;
     }
@@ -112,7 +112,7 @@ zx_status_t RootMockDevice::Create(const std::unique_ptr<IsolatedDevmgr>& devmgr
     // happen before the bind(), since ioctl_device_bind() will cause us to get
     // blocked in the mock device driver waiting for input on what to do.
     zx::channel test_device_channel;
-    fbl::unique_fd new_connection(openat(devmgr->devfs_root().get(), relative_devpath.c_str(),
+    fbl::unique_fd new_connection(openat(devmgr.devfs_root().get(), relative_devpath.c_str(),
                                          O_RDWR));
     status = fdio_get_service_handle(new_connection.release(),
                                      test_device_channel.reset_and_get_address());

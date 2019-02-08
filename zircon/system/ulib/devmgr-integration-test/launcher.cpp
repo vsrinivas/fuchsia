@@ -35,11 +35,11 @@ IsolatedDevmgr::~IsolatedDevmgr() {
 }
 
 zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args,
-                                   fbl::unique_ptr<IsolatedDevmgr>* out) {
-    auto devmgr = fbl::make_unique<IsolatedDevmgr>();
+                                   IsolatedDevmgr* out) {
+    IsolatedDevmgr devmgr;
 
     zx::channel devfs;
-    zx_status_t status = devmgr_launcher::Launch(std::move(args), &devmgr->job_, &devfs);
+    zx_status_t status = devmgr_launcher::Launch(std::move(args), &devmgr.job_, &devfs);
     if (status != ZX_OK) {
         return status;
     }
@@ -55,7 +55,7 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args,
     if (status != ZX_OK) {
         return status;
     }
-    devmgr->devfs_root_.reset(fd);
+    devmgr.devfs_root_.reset(fd);
 
     *out = std::move(devmgr);
     return ZX_OK;

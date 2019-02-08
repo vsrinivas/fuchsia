@@ -28,14 +28,14 @@ public:
 
     // Launch a new isolated devmgr.  The instance will be destroyed when
     // |*out|'s dtor runs.
-    static zx_status_t Create(Args args, fbl::unique_ptr<IsolatedDevmgr>* out);
+    static zx_status_t Create(Args args, IsolatedDevmgr* out);
 
     // Get a fd to the root of the isolate devmgr's devfs.  This fd
     // may be used with openat() and fdio_watch_directory().
-    const fbl::unique_fd& devfs_root() const { return devmgr_->devfs_root(); }
+    const fbl::unique_fd& devfs_root() const { return devmgr_.devfs_root(); }
 
 private:
-    fbl::unique_ptr<devmgr_integration_test::IsolatedDevmgr> devmgr_;
+    devmgr_integration_test::IsolatedDevmgr devmgr_;
 };
 
 } // namespace driver_integration_test

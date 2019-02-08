@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 
+#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fuchsia/device/test/cpp/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
@@ -33,7 +34,7 @@ public:
                    async_dispatcher_t* dispatcher, std::string path);
     ~RootMockDevice();
 
-    static zx_status_t Create(const std::unique_ptr<IsolatedDevmgr>& devmgr,
+    static zx_status_t Create(const IsolatedDevmgr& devmgr,
                               async_dispatcher_t* dispatcher,
                               std::unique_ptr<MockDeviceHooks> hooks,
                               std::unique_ptr<RootMockDevice>* mock_out);

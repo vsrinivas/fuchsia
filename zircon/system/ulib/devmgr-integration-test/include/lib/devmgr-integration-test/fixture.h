@@ -14,7 +14,21 @@ namespace devmgr_integration_test {
 
 class IsolatedDevmgr {
 public:
+    IsolatedDevmgr() = default;
     ~IsolatedDevmgr();
+
+    IsolatedDevmgr(const IsolatedDevmgr&) = delete;
+    IsolatedDevmgr& operator=(const IsolatedDevmgr&) = delete;
+
+    IsolatedDevmgr(IsolatedDevmgr&& other)
+            : job_(std::move(other.job_)), devfs_root_(std::move(other.devfs_root_)) {
+    }
+
+    IsolatedDevmgr& operator=(IsolatedDevmgr&& other) {
+        job_ = std::move(other.job_);
+        devfs_root_ = std::move(other.devfs_root_);
+        return *this;
+    }
 
     // Path to the test sysdev driver
     static const char* kSysdevDriver;
@@ -25,8 +39,7 @@ public:
 
     // Launch a new isolated devmgr.  The instance will be destroyed when
     // |*out|'s dtor runs.
-    static zx_status_t Create(devmgr_launcher::Args args,
-                              fbl::unique_ptr<IsolatedDevmgr>* out);
+    static zx_status_t Create(devmgr_launcher::Args args, IsolatedDevmgr* out);
 
     // Get a fd to the root of the isolate devmgr's devfs.  This fd
     // may be used with openat() and fdio_watch_directory().
@@ -35,6 +48,10 @@ public:
     // Borrow the handle to the job containing the isolated devmgr.  This may be
     // used for things like binding to an exception port.
     const zx::job& containing_job() const { return job_; }
+
+    void reset() {
+        *this = IsolatedDevmgr();
+    }
 private:
     // Job that contains the devmgr environment
     zx::job job_;

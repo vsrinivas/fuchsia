@@ -31,7 +31,7 @@ using devmgr_integration_test::IsolatedDevmgr;
 
 namespace {
 
-void do_one_test(const fbl::unique_ptr<IsolatedDevmgr>& devmgr, const zx::channel& test_root,
+void do_one_test(const IsolatedDevmgr& devmgr, const zx::channel& test_root,
                  const char* drv_libname, const zx::socket& output,
                  fuchsia_device_test_TestReport* report) {
     // Initialize the report with a failure state to handle early returns
@@ -71,7 +71,7 @@ void do_one_test(const fbl::unique_ptr<IsolatedDevmgr>& devmgr, const zx::channe
     fbl::unique_fd fd;
     int retry = 0;
     do {
-        fd.reset(openat(devmgr->devfs_root().get(), relative_devpath, O_RDWR));
+        fd.reset(openat(devmgr.devfs_root().get(), relative_devpath, O_RDWR));
         if (fd.is_valid()) {
             break;
         }
@@ -158,7 +158,7 @@ int output_thread(void* arg) {
 int main(int argc, char** argv) {
     auto args = IsolatedDevmgr::DefaultArgs();
 
-    fbl::unique_ptr<IsolatedDevmgr> devmgr;
+    IsolatedDevmgr devmgr;
     zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
     if (status != ZX_OK) {
         printf("driver-tests: failed to create isolated devmgr\n");
@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
 
     // Wait for /dev/test/test to appear
     fbl::unique_fd fd;
-    status = devmgr_integration_test::RecursiveWaitForFile(devmgr->devfs_root(), "test/test",
+    status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/test",
                                                            zx::deadline_after(zx::sec(5)), &fd);
     if (status != ZX_OK) {
         printf("driver-tests: failed to find /dev/test/test\n");

@@ -60,35 +60,35 @@ bool enumeration_test() {
     args.driver_search_paths.push_back("/boot/driver");
     ASSERT_TRUE(GetBootData(&args.bootdata));
 
-    fbl::unique_ptr<IsolatedDevmgr> devmgr;
+    IsolatedDevmgr devmgr;
     ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr), ZX_OK);
 
     fbl::unique_fd fd;
-    ASSERT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform",
+    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
 
-    EXPECT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/test-board",
+    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/test-board",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
 
-    EXPECT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/11:01:1",
+    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
 
-    EXPECT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/11:01:1/child-1",
+    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
 
-    EXPECT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/11:01:1/child-1/child-2",
+    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1/child-2",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
 
-    EXPECT_EQ(RecursiveWaitForFile(devmgr->devfs_root(), "sys/platform/11:01:1/child-1/child-3",
+    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1/child-3",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
 
-    const int dirfd = devmgr->devfs_root().get();
+    const int dirfd = devmgr.devfs_root().get();
     struct stat st;
     EXPECT_EQ(fstatat(dirfd, "sys/platform/test-board", &st, 0), 0);
     EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1", &st, 0), 0);

@@ -125,7 +125,7 @@ public:
     void RunPromise(Promise<void> promise);
 protected:
     using IsolatedDevmgr = devmgr_integration_test::IsolatedDevmgr;
-    static std::unique_ptr<IsolatedDevmgr> devmgr_;
+    static IsolatedDevmgr devmgr_;
 
     async::Loop loop_;
     fidl::InterfacePtr<fuchsia::io::Directory> devfs_;

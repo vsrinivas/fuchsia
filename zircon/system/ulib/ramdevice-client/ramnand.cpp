@@ -34,7 +34,7 @@ zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
     args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
     args.driver_search_paths.push_back("/boot/driver");
 
-    fbl::unique_ptr<devmgr_integration_test::IsolatedDevmgr> devmgr;
+    devmgr_integration_test::IsolatedDevmgr devmgr;
     zx_status_t st = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr);
     if (st != ZX_OK) {
         fprintf(stderr, "Could not create ram_nand_ctl device, %d\n", st);
@@ -42,7 +42,7 @@ zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
     }
 
     fbl::unique_fd ctl;
-    st = devmgr_integration_test::RecursiveWaitForFile(devmgr->devfs_root(), "misc/nand-ctl",
+    st = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "misc/nand-ctl",
                                                        zx::deadline_after(zx::sec(5)), &ctl);
     if (st != ZX_OK) {
         fprintf(stderr, "ram_nand_ctl device failed enumerated, %d\n", st);

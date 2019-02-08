@@ -14,7 +14,7 @@
 
 namespace libdriver_integration_test {
 
-std::unique_ptr<IntegrationTest::IsolatedDevmgr> IntegrationTest::devmgr_;
+IntegrationTest::IsolatedDevmgr IntegrationTest::devmgr_;
 const zx::duration IntegrationTest::kDefaultTimeout = zx::sec(5);
 
 void IntegrationTest::SetUpTestCase() {
@@ -24,13 +24,11 @@ void IntegrationTest::SetUpTestCase() {
     auto args = IsolatedDevmgr::DefaultArgs();
     args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
 
-    fbl::unique_ptr<IsolatedDevmgr> tmp;
-    zx_status_t status = IsolatedDevmgr::Create(std::move(args), &tmp);
+    zx_status_t status = IsolatedDevmgr::Create(std::move(args), &IntegrationTest::devmgr_);
     if (status != ZX_OK) {
         printf("libdriver-integration-tests: failed to create isolated devmgr\n");
         return;
     }
-    IntegrationTest::devmgr_.reset(tmp.release());
 }
 
 void IntegrationTest::TearDownTestCase() {
@@ -39,7 +37,7 @@ void IntegrationTest::TearDownTestCase() {
 
 IntegrationTest::IntegrationTest()
     : loop_(&kAsyncLoopConfigNoAttachToThread),
-      devmgr_exception_(this, devmgr_->containing_job().get(), 0) {
+      devmgr_exception_(this, devmgr_.containing_job().get(), 0) {
 
     zx_status_t status = devmgr_exception_.Bind(loop_.dispatcher());
     if (status != ZX_OK) {
@@ -48,7 +46,7 @@ IntegrationTest::IntegrationTest()
         return;
     }
 
-    fdio_t* io = fdio_unsafe_fd_to_io(IntegrationTest::devmgr_->devfs_root().get());
+    fdio_t* io = fdio_unsafe_fd_to_io(IntegrationTest::devmgr_.devfs_root().get());
     status = devfs_.Bind(zx::channel(fdio_service_clone(fdio_unsafe_borrow_channel(io))),
                          loop_.dispatcher());
     fdio_unsafe_release(io);

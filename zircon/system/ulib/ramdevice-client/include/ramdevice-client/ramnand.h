@@ -28,14 +28,14 @@ public:
     ~RamNandCtl() = default;
 
     const fbl::unique_fd& fd() { return ctl_; }
-    const fbl::unique_fd& devfs_root() { return devmgr_->devfs_root(); }
+    const fbl::unique_fd& devfs_root() { return devmgr_.devfs_root(); }
 
 private:
-    RamNandCtl(fbl::unique_ptr<devmgr_integration_test::IsolatedDevmgr> devmgr,
+    RamNandCtl(devmgr_integration_test::IsolatedDevmgr devmgr,
                fbl::unique_fd ctl)
         : devmgr_(std::move(devmgr)), ctl_(std::move(ctl)) {}
 
-    fbl::unique_ptr<devmgr_integration_test::IsolatedDevmgr> devmgr_;
+    devmgr_integration_test::IsolatedDevmgr devmgr_;
     fbl::unique_fd ctl_;
 };
 
