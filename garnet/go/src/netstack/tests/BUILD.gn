@@ -35,7 +35,6 @@ package("netstack_manual_tests") {
     "//garnet/go/src/netstack/tests/manual:closetest",
     "//garnet/go/src/netstack/tests/manual:getaddrinfo_test",
     "//garnet/go/src/netstack/tests/manual:gethostbyname_test",
-    "//garnet/go/src/netstack/tests/manual:ifinfotest",
     "//garnet/go/src/netstack/tests/manual:keepalivetest",
     "//garnet/go/src/netstack/tests/manual:mctest",
     "//garnet/go/src/netstack/tests/manual:nbiotest",
@@ -105,11 +104,6 @@ package("netstack_manual_tests") {
 
     {
       name = "udptest"
-      shell = true
-    },
-
-    {
-      name = "ifinfotest"
       shell = true
     },
   ]

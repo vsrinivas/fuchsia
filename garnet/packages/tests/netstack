@@ -5,6 +5,7 @@
     "packages": [
         "//garnet/bin/netstack_tests:netstack_integration_tests",
         "//garnet/bin/netstack_tests/test_filter_client:test_filter_client",
+        "//garnet/bin/netstack_tests/test_ioctl_client:test_ioctl_client",
         "//garnet/go/src/netstack:netstack_gotests",
         "//garnet/go/src/netstack:netstack_non_component_gotests",
         "//garnet/go/src/netstack/dns:netstack_dns_gotests",
