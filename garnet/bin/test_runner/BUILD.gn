@@ -4,9 +4,10 @@
 
 import("//build/package.gni")
 
-package("run_integration_tests") {
-  deprecated_system_image = true
+# TODO(MF-206): all of the following should be moved to components. In the
+# future, only run-integration-tests should remain as a shell=true binary.
 
+package("run_integration_tests") {
   deps = [
     "report_result",
     "run_integration_tests",
@@ -15,16 +16,16 @@ package("run_integration_tests") {
   binaries = [
     {
       name = "report_result"
+      shell = true
     },
     {
       name = "run_integration_tests"
+      shell = true
     },
   ]
 }
 
 package("run_test") {
-  deprecated_system_image = true
-
   deps = [
     "run_test",
   ]
@@ -32,27 +33,30 @@ package("run_test") {
   binaries = [
     {
       name = "run_test"
+      shell = true
     },
   ]
 }
 
 package("test_runner_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     "test",
   ]
 
-  tests = [
+  binaries = [
     {
       name = "fake_command"
+      shell = true
     },
     {
       name = "fake_failing_test"
+      shell = true
     },
     {
       name = "fake_passing_test"
+      shell = true
     },
   ]
 }
