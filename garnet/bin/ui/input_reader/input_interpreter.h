@@ -152,27 +152,56 @@ class InputInterpreter {
 
   void NotifyRegistry();
 
-  void ParseKeyboardReport(uint8_t* report, size_t len);
-  void ParseMouseReport(uint8_t* report, size_t len);
-  bool ParseHidMouseReport(const Mouse::Report* report);
-  void ParseGamepadMouseReport(const HidGamepadSimple* gamepad);
-  bool ParseTouchscreenReport(Touchscreen::Report* report);
-  bool ParseTouchpadReport(Touchscreen::Report* report);
-  bool ParseAcer12TouchscreenReport(uint8_t* report, size_t len);
-  bool ParseAcer12StylusReport(uint8_t* report, size_t len);
-  bool ParseSamsungTouchscreenReport(uint8_t* report, size_t len);
+  void ParseKeyboardReport(uint8_t* report, size_t len,
+                           fuchsia::ui::input::InputReport* keyboard_report);
+  void ParseMouseReport(uint8_t* report, size_t len,
+                        fuchsia::ui::input::InputReport* mouse_report);
+  bool ParseHidMouseReport(uint8_t* report, size_t len,
+                           fuchsia::ui::input::InputReport* mouse_report);
+  bool ParseGamepadMouseReport(uint8_t* report, size_t len,
+                               fuchsia::ui::input::InputReport* mouse_report);
+  bool ParseTouchscreenReport(
+      uint8_t* report, size_t len,
+      fuchsia::ui::input::InputReport* touchscreen_report);
+  bool ParseTouchpadReport(uint8_t* report, size_t len,
+                           fuchsia::ui::input::InputReport* mouse_report);
+  bool ParseAcer12TouchscreenReport(
+      uint8_t* report, size_t len,
+      fuchsia::ui::input::InputReport* touchscreen_report);
+  bool ParseAcer12StylusReport(uint8_t* report, size_t len,
+                               fuchsia::ui::input::InputReport* stylus_report);
+  bool ParseSamsungTouchscreenReport(
+      uint8_t* report, size_t len,
+      fuchsia::ui::input::InputReport* touchscreen_report);
   template <typename ReportT>
-  bool ParseParadiseTouchscreenReport(uint8_t* report, size_t len);
-  bool ParseEGalaxTouchscreenReport(uint8_t* report, size_t len);
+  bool ParseParadiseTouchscreenReport(
+      uint8_t* report, size_t len,
+      fuchsia::ui::input::InputReport* touchscreen_report);
+  bool ParseEGalaxTouchscreenReport(
+      uint8_t* report, size_t len,
+      fuchsia::ui::input::InputReport* touchscreen_report);
   template <typename ReportT>
-  bool ParseParadiseTouchpadReport(uint8_t* report, size_t len);
-  bool ParseParadiseSensorReport(uint8_t* report, size_t len);
-  bool ParseParadiseStylusReport(uint8_t* report, size_t len);
-  bool ParseEyoyoTouchscreenReport(uint8_t* report, size_t len);
-  bool ParseFt3x27TouchscreenReport(uint8_t* r, size_t len);
+  bool ParseParadiseTouchpadReport(
+      uint8_t* report, size_t len,
+      fuchsia::ui::input::InputReport* mouse_report);
+  bool ParseParadiseSensorReport(
+      uint8_t* report, size_t len, uint8_t* sensor_idx,
+      fuchsia::ui::input::InputReport* sensor_report);
+  bool ParseParadiseStylusReport(
+      uint8_t* report, size_t len,
+      fuchsia::ui::input::InputReport* stylus_report);
+  bool ParseEyoyoTouchscreenReport(
+      uint8_t* report, size_t len,
+      fuchsia::ui::input::InputReport* touchscreen_report);
+  bool ParseFt3x27TouchscreenReport(
+      uint8_t* r, size_t len,
+      fuchsia::ui::input::InputReport* touchscreen_report);
 
-  bool ParseAmbientLightSensorReport(const uint8_t* report, size_t len);
-  bool ParseButtonsReport(const uint8_t* report, size_t len);
+  bool ParseAmbientLightSensorReport(
+      const uint8_t* report, size_t len, uint8_t* sensor_idx,
+      fuchsia::ui::input::InputReport* sensor_report);
+  bool ParseButtonsReport(const uint8_t* report, size_t len,
+                          fuchsia::ui::input::InputReport* buttons_report);
 
   fuchsia::ui::input::InputDeviceRegistry* registry_;
 
