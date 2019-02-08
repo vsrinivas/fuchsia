@@ -622,23 +622,36 @@ public:
                 const Size* size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
-        TypeShape typeshape;
-        if (type_decl_->kind == Decl::Kind::kInterface) {
-            typeshape = HandleType::Shape();
-        } else {
-            if (!type_decl_->compiled) {
-                if (type_decl_->compiling) {
-                    type_decl_->recursive = true;
-                } else {
-                    if (!library_->CompileDecl(type_decl_)) {
-                        return false;
-                    }
+        if (!type_decl_->compiled && type_decl_->kind != Decl::Kind::kInterface) {
+            if (type_decl_->compiling) {
+                type_decl_->recursive = true;
+            } else {
+                if (!library_->CompileDecl(type_decl_)) {
+                    return false;
                 }
             }
-            typeshape = type_decl_->typeshape;
+        }
+        auto typeshape = type_decl_->typeshape;
+        switch (type_decl_->kind) {
+        case Decl::Kind::kInterface:
+            typeshape = HandleType::Shape();
+            break;
+
+        case Decl::Kind::kXUnion:
+            // Do nothing here: nullable XUnions have the same encoding
+            // representation as non-optional XUnions (i.e. nullable XUnions are
+            // inlined).
+            break;
+
+        // TODO(FIDL-477): Disallow optional tables via "case
+        // Decl::Kind::kTable".
+
+        default:
             if (nullability == types::Nullability::kNullable)
                 typeshape = PointerTypeShape(typeshape);
+            break;
         }
+
         *out_type = std::make_unique<IdentifierType>(
             // TODO(FIDL-447): We have to create a copy because IdentifierType
             // has an owned name. Fix this.

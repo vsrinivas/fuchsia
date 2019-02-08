@@ -16,7 +16,7 @@ class OlderSimpleUnion {
  public:
  static const fidl_type_t* FidlType;
 
- OlderSimpleUnion();
+  OlderSimpleUnion();
   ~OlderSimpleUnion();
 
   OlderSimpleUnion(OlderSimpleUnion&&);
@@ -24,8 +24,8 @@ class OlderSimpleUnion {
 
   enum Tag : fidl_xunion_tag_t {
     Empty = 0,
-    kI = 1026732503,
-    kF = 1362546558,
+    kI = 1026732503,  // 0x3d32b1d7
+    kF = 1362546558,  // 0x5136cf7e
   };
 
   static inline ::std::unique_ptr<OlderSimpleUnion> New() { return ::std::make_unique<OlderSimpleUnion>(); }
@@ -34,20 +34,20 @@ class OlderSimpleUnion {
   static void Decode(::fidl::Decoder* decoder, OlderSimpleUnion* value, size_t offset);
   zx_status_t Clone(OlderSimpleUnion* result) const;
 
-  bool is_i() const { return tag_ == 1026732503; }
+  bool is_i() const { return tag_ == Tag::kI; }
   
   int64_t& i() {
-    EnsureStorageInitialized(1026732503);
+    EnsureStorageInitialized(Tag::kI);
     return i_;
   }
   
   const int64_t& i() const { return i_; }
   void set_i(int64_t value);
 
-  bool is_f() const { return tag_ == 1362546558; }
+  bool is_f() const { return tag_ == Tag::kF; }
   
   float& f() {
-    EnsureStorageInitialized(1362546558);
+    EnsureStorageInitialized(Tag::kF);
     return f_;
   }
   
@@ -84,7 +84,7 @@ class NewerSimpleUnion {
  public:
  static const fidl_type_t* FidlType;
 
- NewerSimpleUnion();
+  NewerSimpleUnion();
   ~NewerSimpleUnion();
 
   NewerSimpleUnion(NewerSimpleUnion&&);
@@ -92,9 +92,9 @@ class NewerSimpleUnion {
 
   enum Tag : fidl_xunion_tag_t {
     Empty = 0,
-    kI = 693944286,
-    kS = 473666119,
-    kV = 1815655055,
+    kI = 693944286,  // 0x295cbfde
+    kS = 473666119,  // 0x1c3b9247
+    kV = 1815655055,  // 0x6c38b28f
   };
 
   static inline ::std::unique_ptr<NewerSimpleUnion> New() { return ::std::make_unique<NewerSimpleUnion>(); }
@@ -103,30 +103,30 @@ class NewerSimpleUnion {
   static void Decode(::fidl::Decoder* decoder, NewerSimpleUnion* value, size_t offset);
   zx_status_t Clone(NewerSimpleUnion* result) const;
 
-  bool is_i() const { return tag_ == 693944286; }
+  bool is_i() const { return tag_ == Tag::kI; }
   
   int64_t& i() {
-    EnsureStorageInitialized(693944286);
+    EnsureStorageInitialized(Tag::kI);
     return i_;
   }
   
   const int64_t& i() const { return i_; }
   void set_i(int64_t value);
 
-  bool is_s() const { return tag_ == 473666119; }
+  bool is_s() const { return tag_ == Tag::kS; }
   
   ::std::string& s() {
-    EnsureStorageInitialized(473666119);
+    EnsureStorageInitialized(Tag::kS);
     return s_;
   }
   
   const ::std::string& s() const { return s_; }
   void set_s(::std::string value);
 
-  bool is_v() const { return tag_ == 1815655055; }
+  bool is_v() const { return tag_ == Tag::kV; }
   
   ::std::vector<::std::string>& v() {
-    EnsureStorageInitialized(1815655055);
+    EnsureStorageInitialized(Tag::kV);
     return v_;
   }
   
@@ -164,7 +164,7 @@ class EmptyUnion {
  public:
  static const fidl_type_t* FidlType;
 
- EmptyUnion();
+  EmptyUnion();
   ~EmptyUnion();
 
   EmptyUnion(EmptyUnion&&);
@@ -211,6 +211,32 @@ template <>
 struct CodingTraits<::test::name::OlderSimpleUnion>
     : public EncodableCodingTraits<::test::name::OlderSimpleUnion, 24> {};
 
+template <>
+struct CodingTraits<std::unique_ptr<::test::name::OlderSimpleUnion>> {
+  static constexpr size_t encoded_size = 24;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::name::OlderSimpleUnion>* value, size_t offset) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    } else {
+      ::test::name::OlderSimpleUnion empty;
+      empty.Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* decoder, std::unique_ptr<::test::name::OlderSimpleUnion>* value, size_t offset) {
+    value->reset(new ::test::name::OlderSimpleUnion);
+
+    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      return;
+    }
+
+    ::test::name::OlderSimpleUnion::Decode(decoder, value->get(), offset);
+  }
+};
+
 inline zx_status_t Clone(const ::test::name::OlderSimpleUnion& value,
                          ::test::name::OlderSimpleUnion* result) {
   return ::test::name::Clone(value, result);
@@ -219,6 +245,32 @@ template <>
 struct CodingTraits<::test::name::NewerSimpleUnion>
     : public EncodableCodingTraits<::test::name::NewerSimpleUnion, 24> {};
 
+template <>
+struct CodingTraits<std::unique_ptr<::test::name::NewerSimpleUnion>> {
+  static constexpr size_t encoded_size = 24;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::name::NewerSimpleUnion>* value, size_t offset) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    } else {
+      ::test::name::NewerSimpleUnion empty;
+      empty.Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* decoder, std::unique_ptr<::test::name::NewerSimpleUnion>* value, size_t offset) {
+    value->reset(new ::test::name::NewerSimpleUnion);
+
+    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      return;
+    }
+
+    ::test::name::NewerSimpleUnion::Decode(decoder, value->get(), offset);
+  }
+};
+
 inline zx_status_t Clone(const ::test::name::NewerSimpleUnion& value,
                          ::test::name::NewerSimpleUnion* result) {
   return ::test::name::Clone(value, result);
@@ -226,6 +278,32 @@ inline zx_status_t Clone(const ::test::name::NewerSimpleUnion& value,
 template <>
 struct CodingTraits<::test::name::EmptyUnion>
     : public EncodableCodingTraits<::test::name::EmptyUnion, 24> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::name::EmptyUnion>> {
+  static constexpr size_t encoded_size = 24;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::name::EmptyUnion>* value, size_t offset) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    } else {
+      ::test::name::EmptyUnion empty;
+      empty.Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* decoder, std::unique_ptr<::test::name::EmptyUnion>* value, size_t offset) {
+    value->reset(new ::test::name::EmptyUnion);
+
+    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      return;
+    }
+
+    ::test::name::EmptyUnion::Decode(decoder, value->get(), offset);
+  }
+};
 
 inline zx_status_t Clone(const ::test::name::EmptyUnion& value,
                          ::test::name::EmptyUnion* result) {

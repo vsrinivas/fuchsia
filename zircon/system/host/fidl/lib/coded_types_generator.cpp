@@ -134,15 +134,11 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type) {
             return coded_types_.back().get();
         }
         case coded::Type::Kind::kXUnion: {
-            // XUnions were compiled as part of decl compilation,
-            // but we may now need to generate the XUnionPointer.
-            if (identifier_type->nullability != types::Nullability::kNullable)
-                break;
-            auto coded_xunion_type = static_cast<coded::XUnionType*>(coded_type);
-            coded_xunion_type->referenced_by_pointer = true;
-            coded_types_.push_back(std::make_unique<coded::XUnionPointerType>(
-                coded_xunion_type->pointer_name, coded_xunion_type));
-            return coded_types_.back().get();
+            // Do nothing here: there's no need to generate a XUnionPointer,
+            // since nullable XUnions (for which we'd normally use a
+            // XUnionPointer) have the same encoding representation as
+            // non-optional XUnions.
+            break;
         }
         case coded::Type::Kind::kInterface: {
             auto iter = interface_type_map_.find(identifier_type);
@@ -163,7 +159,6 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type) {
         case coded::Type::Kind::kStructPointer:
         case coded::Type::Kind::kTablePointer:
         case coded::Type::Kind::kUnionPointer:
-        case coded::Type::Kind::kXUnionPointer:
         case coded::Type::Kind::kMessage:
         case coded::Type::Kind::kRequestHandle:
         case coded::Type::Kind::kHandle:
@@ -384,8 +379,9 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         std::string pointer_name = NamePointer(xunion_name);
         named_coded_types_.emplace(
             &decl->name, std::make_unique<coded::XUnionType>(
-                             std::move(xunion_name), std::vector<coded::XUnionField>(),
-                             std::move(pointer_name), NameName(xunion_decl->name, ".", "/")));
+                             std::move(xunion_name),
+                             std::vector<coded::XUnionField>(),
+                             NameName(xunion_decl->name, ".", "/")));
         break;
     }
     }

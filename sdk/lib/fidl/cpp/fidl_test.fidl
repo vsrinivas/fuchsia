@@ -42,6 +42,10 @@ table SimpleTable {
     5: int64 y;
 };
 
+struct OptionalTableInStruct {
+    SimpleTable? t;
+};
+
 // A variant of SimpleTable that has just the first few fields.
 // Think of this as an older variant of that type!
 table OlderSimpleTable {
@@ -67,8 +71,20 @@ xunion SampleXUnion {
     SimpleTable st;
 };
 
-struct XUnionContainer {
+struct InlineXUnionInStruct {
+    string before;
+    SampleXUnion xu;
+    string after;
+};
+
+struct OptionalXUnionInStruct {
     string before;
     SampleXUnion? xu;
     string after;
+};
+
+table XUnionInTable {
+    1: string before;
+    2: SampleXUnion xu;
+    3: string after;
 };

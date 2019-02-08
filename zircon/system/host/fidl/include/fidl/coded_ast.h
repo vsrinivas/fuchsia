@@ -86,7 +86,6 @@ struct Type {
         kUnion,
         kUnionPointer,
         kXUnion,
-        kXUnionPointer,
         kMessage,
         kInterface,
         kArray,
@@ -201,24 +200,15 @@ struct UnionPointerType : public Type {
 };
 
 struct XUnionType : public Type {
-    XUnionType(std::string name, std::vector<XUnionField> fields,
-               std::string pointer_name, std::string qname)
-        : Type(Kind::kXUnion, std::move(name), 24u, CodingNeeded::kNeeded), fields(std::move(fields)),
-          pointer_name(std::move(pointer_name)), qname(std::move(qname)) {
+    XUnionType(std::string name, std::vector<XUnionField> fields, std::string qname)
+        : Type(Kind::kXUnion, std::move(name), 24u, CodingNeeded::kNeeded),
+          fields(std::move(fields)),
+          qname(std::move(qname)) {
     }
 
     std::vector<XUnionField> fields;
-    const std::string pointer_name;
     const std::string qname;
     bool referenced_by_pointer = false;
-};
-
-struct XUnionPointerType : public Type {
-    XUnionPointerType(std::string name, const XUnionType* xunion_type)
-        : Type(Kind::kXUnionPointer, std::move(name), 8u, CodingNeeded::kNeeded),
-          xunion_type(xunion_type) {}
-
-    const XUnionType* const xunion_type;
 };
 
 struct MessageType : public Type {

@@ -17,7 +17,7 @@ class {{ .Name }} {
  public:
  static const fidl_type_t* FidlType;
 
- {{ .Name }}();
+  {{ .Name }}();
   ~{{ .Name }}();
 
   {{ .Name }}({{ .Name }}&&);
@@ -26,7 +26,7 @@ class {{ .Name }} {
   enum Tag : fidl_xunion_tag_t {
     Empty = 0,
   {{- range .Members }}
-    {{ .TagName }} = {{ .Ordinal }},
+    {{ .TagName }} = {{ .Ordinal }},  // {{ .Ordinal | printf "%#x" }}
   {{- end }}
   };
 
@@ -38,12 +38,12 @@ class {{ .Name }} {
 
   {{- range .Members }}
 
-  bool is_{{ .Name }}() const { return tag_ == {{ .Ordinal }}; }
+  bool is_{{ .Name }}() const { return tag_ == Tag::{{ .TagName }}; }
   {{range .DocComments}}
   //{{ . }}
   {{- end}}
   {{ .Type.Decl }}& {{ .Name }}() {
-    EnsureStorageInitialized({{ .Ordinal }});
+    EnsureStorageInitialized(Tag::{{ .TagName }});
     return {{ .StorageName }};
   }
   {{range .DocComments}}
@@ -94,7 +94,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 {{ .Name }}::{{ .Name }}({{ .Name }}&& other) : tag_(other.tag_) {
   switch (tag_) {
   {{- range .Members }}
-   case {{ .Ordinal }}:
+   case Tag::{{ .TagName }}:
     {{- if .Type.Dtor }}
     new (&{{ .StorageName }}) {{ .Type.Decl }}();
     {{- end }}
@@ -112,7 +112,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
     tag_ = other.tag_;
     switch (tag_) {
     {{- range .Members }}
-     case {{ .Ordinal }}:
+     case Tag::{{ .TagName }}:
       {{- if .Type.Dtor }}
       new (&{{ .StorageName }}) {{ .Type.Decl }}();
       {{- end }}
@@ -134,7 +134,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   switch (tag_) {
     {{- range .Members }}
-    case {{ .Ordinal }}: {
+    case Tag::{{ .TagName }}: {
       envelope_offset = encoder->Alloc(::fidl::CodingTraits<{{ .Type.Decl }}>::encoded_size);
       ::fidl::Encode(encoder, &{{ .StorageName }}, envelope_offset);
       break;
@@ -175,7 +175,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
 
   switch (value->tag_) {
   {{- range .Members }}
-   case {{ .Ordinal }}:
+   case Tag::{{ .TagName }}:
     {{- if .Type.Dtor }}
     new (&value->{{ .StorageName }}) {{ .Type.Decl }}();
     {{- end }}
@@ -197,7 +197,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   result->tag_ = tag_;
   switch (tag_) {
     {{- range .Members }}
-    case {{ .Ordinal }}:
+    case Tag::{{ .TagName }}:
       {{- if .Type.Dtor }}
       new (&result->{{ .StorageName }}) {{ .Type.Decl }}();
       {{- end }}
@@ -212,22 +212,25 @@ bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
   if (lhs.tag_ != rhs.tag_) {
     return false;
   }
+
+  {{ with $xunion := . -}}
   switch (lhs.tag_) {
     {{- range .Members }}
-    case {{ .Ordinal }}:
+    case {{ $xunion.Name }}::Tag::{{ .TagName }}:
       return ::fidl::Equals(lhs.{{ .StorageName }}, rhs.{{ .StorageName }});
     {{- end }}
-    case {{ .Name }}::Tag::Empty:
+    case {{ $xunion.Name }}::Tag::Empty:
       return true;
     default:
       return false;
   }
+  {{end -}}
 }
 
 {{- range $member := .Members }}
 
 void {{ $.Name }}::set_{{ .Name }}({{ .Type.Decl }} value) {
-  EnsureStorageInitialized({{ .Ordinal }});
+  EnsureStorageInitialized(Tag::{{ .TagName }});
   {{ .StorageName }} = std::move(value);
 }
 
@@ -236,7 +239,7 @@ void {{ $.Name }}::set_{{ .Name }}({{ .Type.Decl }} value) {
 void {{ .Name }}::Destroy() {
   switch (tag_) {
   {{- range .Members }}
-   case {{ .Ordinal }}:
+   case Tag::{{ .TagName }}:
     {{- if .Type.Dtor }}
     {{ .StorageName }}.{{ .Type.Dtor }}();
     {{- end }}
@@ -255,7 +258,7 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     switch (tag_) {
       {{- range .Members }}
       {{- if .Type.Dtor }}
-      case {{ .Ordinal }}:
+      case Tag::{{ .TagName }}:
         new (&{{ .StorageName }}) {{ .Type.Decl }}();
         break;
       {{- end }}
@@ -272,6 +275,38 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
     : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .Size }}> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<{{ .Namespace }}::{{ .Name }}>> {
+  static constexpr size_t encoded_size = {{ .Size }};
+
+  static void Encode(Encoder* encoder, std::unique_ptr<{{ .Namespace }}::{{ .Name }}>* value, size_t offset) {
+    {{/* TODO(FIDL-481): Disallow empty xunions (but permit nullable/optional
+         xunions). */ -}}
+
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    } else {
+      {{/* |empty| is explicitly a non-static variable so that we don't use
+           binary space, and sacrifice a little runtime overhead instead to
+           construct the empty xunion on the stack. */ -}}
+      {{ .Namespace }}::{{ .Name }} empty;
+      empty.Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* decoder, std::unique_ptr<{{ .Namespace }}::{{ .Name }}>* value, size_t offset) {
+    value->reset(new {{ .Namespace }}::{{ .Name }});
+
+    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      return;
+    }
+
+    {{ .Namespace }}::{{ .Name }}::Decode(decoder, value->get(), offset);
+  }
+};
 
 inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
                          {{ .Namespace }}::{{ .Name }}* result) {

@@ -17,10 +17,10 @@ OlderSimpleUnion::~OlderSimpleUnion() {
 
 OlderSimpleUnion::OlderSimpleUnion(OlderSimpleUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
-   case 1026732503:
+   case Tag::kI:
     i_ = std::move(other.i_);
     break;
-   case 1362546558:
+   case Tag::kF:
     f_ = std::move(other.f_);
     break;
    default:
@@ -33,10 +33,10 @@ OlderSimpleUnion& OlderSimpleUnion::operator=(OlderSimpleUnion&& other) {
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-     case 1026732503:
+     case Tag::kI:
       i_ = std::move(other.i_);
       break;
-     case 1362546558:
+     case Tag::kF:
       f_ = std::move(other.f_);
       break;
      default:
@@ -53,12 +53,12 @@ void OlderSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
   size_t envelope_offset = 0;
 
   switch (tag_) {
-    case 1026732503: {
+    case Tag::kI: {
       envelope_offset = encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size);
       ::fidl::Encode(encoder, &i_, envelope_offset);
       break;
     }
-    case 1362546558: {
+    case Tag::kF: {
       envelope_offset = encoder->Alloc(::fidl::CodingTraits<float>::encoded_size);
       ::fidl::Encode(encoder, &f_, envelope_offset);
       break;
@@ -93,10 +93,10 @@ void OlderSimpleUnion::Decode(::fidl::Decoder* decoder, OlderSimpleUnion* value,
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-   case 1026732503:
+   case Tag::kI:
     ::fidl::Decode(decoder, &value->i_, envelope_offset);
     break;
-   case 1362546558:
+   case Tag::kF:
     ::fidl::Decode(decoder, &value->f_, envelope_offset);
     break;
    default:
@@ -109,9 +109,9 @@ zx_status_t OlderSimpleUnion::Clone(OlderSimpleUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case 1026732503:
+    case Tag::kI:
       return ::fidl::Clone(i_, &result->i_);
-    case 1362546558:
+    case Tag::kF:
       return ::fidl::Clone(f_, &result->f_);
     default:
       return ZX_OK;
@@ -122,33 +122,34 @@ bool operator==(const OlderSimpleUnion& lhs, const OlderSimpleUnion& rhs) {
   if (lhs.tag_ != rhs.tag_) {
     return false;
   }
+
   switch (lhs.tag_) {
-    case 1026732503:
+    case OlderSimpleUnion::Tag::kI:
       return ::fidl::Equals(lhs.i_, rhs.i_);
-    case 1362546558:
+    case OlderSimpleUnion::Tag::kF:
       return ::fidl::Equals(lhs.f_, rhs.f_);
     case OlderSimpleUnion::Tag::Empty:
       return true;
     default:
       return false;
   }
-}
+  }
 
 void OlderSimpleUnion::set_i(int64_t value) {
-  EnsureStorageInitialized(1026732503);
+  EnsureStorageInitialized(Tag::kI);
   i_ = std::move(value);
 }
 
 void OlderSimpleUnion::set_f(float value) {
-  EnsureStorageInitialized(1362546558);
+  EnsureStorageInitialized(Tag::kF);
   f_ = std::move(value);
 }
 
 void OlderSimpleUnion::Destroy() {
   switch (tag_) {
-   case 1026732503:
+   case Tag::kI:
     break;
-   case 1362546558:
+   case Tag::kF:
     break;
    default:
     break;
@@ -177,13 +178,13 @@ NewerSimpleUnion::~NewerSimpleUnion() {
 
 NewerSimpleUnion::NewerSimpleUnion(NewerSimpleUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
-   case 693944286:
+   case Tag::kI:
     i_ = std::move(other.i_);
     break;
-   case 473666119:
+   case Tag::kS:
     s_ = std::move(other.s_);
     break;
-   case 1815655055:
+   case Tag::kV:
     v_ = std::move(other.v_);
     break;
    default:
@@ -196,13 +197,13 @@ NewerSimpleUnion& NewerSimpleUnion::operator=(NewerSimpleUnion&& other) {
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-     case 693944286:
+     case Tag::kI:
       i_ = std::move(other.i_);
       break;
-     case 473666119:
+     case Tag::kS:
       s_ = std::move(other.s_);
       break;
-     case 1815655055:
+     case Tag::kV:
       v_ = std::move(other.v_);
       break;
      default:
@@ -219,17 +220,17 @@ void NewerSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
   size_t envelope_offset = 0;
 
   switch (tag_) {
-    case 693944286: {
+    case Tag::kI: {
       envelope_offset = encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size);
       ::fidl::Encode(encoder, &i_, envelope_offset);
       break;
     }
-    case 473666119: {
+    case Tag::kS: {
       envelope_offset = encoder->Alloc(::fidl::CodingTraits<::std::string>::encoded_size);
       ::fidl::Encode(encoder, &s_, envelope_offset);
       break;
     }
-    case 1815655055: {
+    case Tag::kV: {
       envelope_offset = encoder->Alloc(::fidl::CodingTraits<::std::vector<::std::string>>::encoded_size);
       ::fidl::Encode(encoder, &v_, envelope_offset);
       break;
@@ -264,13 +265,13 @@ void NewerSimpleUnion::Decode(::fidl::Decoder* decoder, NewerSimpleUnion* value,
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-   case 693944286:
+   case Tag::kI:
     ::fidl::Decode(decoder, &value->i_, envelope_offset);
     break;
-   case 473666119:
+   case Tag::kS:
     ::fidl::Decode(decoder, &value->s_, envelope_offset);
     break;
-   case 1815655055:
+   case Tag::kV:
     ::fidl::Decode(decoder, &value->v_, envelope_offset);
     break;
    default:
@@ -283,11 +284,11 @@ zx_status_t NewerSimpleUnion::Clone(NewerSimpleUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case 693944286:
+    case Tag::kI:
       return ::fidl::Clone(i_, &result->i_);
-    case 473666119:
+    case Tag::kS:
       return ::fidl::Clone(s_, &result->s_);
-    case 1815655055:
+    case Tag::kV:
       return ::fidl::Clone(v_, &result->v_);
     default:
       return ZX_OK;
@@ -298,42 +299,43 @@ bool operator==(const NewerSimpleUnion& lhs, const NewerSimpleUnion& rhs) {
   if (lhs.tag_ != rhs.tag_) {
     return false;
   }
+
   switch (lhs.tag_) {
-    case 693944286:
+    case NewerSimpleUnion::Tag::kI:
       return ::fidl::Equals(lhs.i_, rhs.i_);
-    case 473666119:
+    case NewerSimpleUnion::Tag::kS:
       return ::fidl::Equals(lhs.s_, rhs.s_);
-    case 1815655055:
+    case NewerSimpleUnion::Tag::kV:
       return ::fidl::Equals(lhs.v_, rhs.v_);
     case NewerSimpleUnion::Tag::Empty:
       return true;
     default:
       return false;
   }
-}
+  }
 
 void NewerSimpleUnion::set_i(int64_t value) {
-  EnsureStorageInitialized(693944286);
+  EnsureStorageInitialized(Tag::kI);
   i_ = std::move(value);
 }
 
 void NewerSimpleUnion::set_s(::std::string value) {
-  EnsureStorageInitialized(473666119);
+  EnsureStorageInitialized(Tag::kS);
   s_ = std::move(value);
 }
 
 void NewerSimpleUnion::set_v(::std::vector<::std::string> value) {
-  EnsureStorageInitialized(1815655055);
+  EnsureStorageInitialized(Tag::kV);
   v_ = std::move(value);
 }
 
 void NewerSimpleUnion::Destroy() {
   switch (tag_) {
-   case 693944286:
+   case Tag::kI:
     break;
-   case 473666119:
+   case Tag::kS:
     break;
-   case 1815655055:
+   case Tag::kV:
     break;
    default:
     break;
@@ -428,13 +430,14 @@ bool operator==(const EmptyUnion& lhs, const EmptyUnion& rhs) {
   if (lhs.tag_ != rhs.tag_) {
     return false;
   }
+
   switch (lhs.tag_) {
     case EmptyUnion::Tag::Empty:
       return true;
     default:
       return false;
   }
-}
+  }
 
 void EmptyUnion::Destroy() {
   switch (tag_) {

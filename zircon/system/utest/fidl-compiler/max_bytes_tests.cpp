@@ -207,6 +207,10 @@ xunion XUnionWithUnboundedOutOfLineObject {
   string s;
 };
 
+struct StructWithOptionalEmptyXUnion {
+  EmptyXUnion? opt_empty;
+};
+
 interface SomeInterface {};
 
 struct UsingSomeInterface {
@@ -502,7 +506,9 @@ static bool xunions() {
     EXPECT_EQ(unbounded->typeshape.Size(), 24);
     EXPECT_EQ(unbounded->typeshape.MaxOutOfLine(), std::numeric_limits<uint32_t>::max());
 
-    // TODO(apang): More tests here
+    auto opt_empty = test_library.LookupStruct("StructWithOptionalEmptyXUnion");
+    EXPECT_EQ(opt_empty->typeshape.Size(), 24);
+    EXPECT_EQ(opt_empty->typeshape.MaxOutOfLine(), 0);
 
     END_TEST;
 }

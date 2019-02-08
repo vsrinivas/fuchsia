@@ -333,16 +333,6 @@ void TablesGenerator::GeneratePointerIfNeeded(const coded::UnionType& union_type
     }
 }
 
-void TablesGenerator::GeneratePointerIfNeeded(const coded::XUnionType& xunion_type) {
-    if (xunion_type.referenced_by_pointer) {
-        Emit(&tables_file_, "static const fidl_type_t ");
-        Emit(&tables_file_, NameTable(xunion_type.pointer_name));
-        Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedXUnionPointer(&");
-        Emit(&tables_file_, NameTable(xunion_type.coded_name));
-        Emit(&tables_file_, ".coded_xunion));\n");
-    }
-}
-
 void TablesGenerator::GenerateForward(const coded::StructType& struct_type) {
     Emit(&tables_file_, "extern const fidl_type_t ");
     Emit(&tables_file_, NameTable(struct_type.coded_name));
@@ -411,7 +401,10 @@ std::ostringstream TablesGenerator::Produce() {
             GeneratePointerIfNeeded(*static_cast<const coded::UnionType*>(coded_type));
             break;
         case coded::Type::Kind::kXUnion:
-            GeneratePointerIfNeeded(*static_cast<const coded::XUnionType*>(coded_type));
+            // Do nothing here: there's no need to generate a XUnionPointer,
+            // since nullable XUnions (for which we'd normally use a
+            // XUnionPointer) have the same encoding representation as
+            // non-optional XUnions.
             break;
         default:
             break;
@@ -432,7 +425,6 @@ std::ostringstream TablesGenerator::Produce() {
         case coded::Type::Kind::kUnion:
         case coded::Type::Kind::kUnionPointer:
         case coded::Type::Kind::kXUnion:
-        case coded::Type::Kind::kXUnionPointer:
             // These are generated in the next phase.
             break;
         case coded::Type::Kind::kInterface:

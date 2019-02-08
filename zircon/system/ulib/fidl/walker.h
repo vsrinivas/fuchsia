@@ -43,7 +43,6 @@ constexpr uint32_t TypeSize(const fidl_type_t* type) {
     case fidl::kFidlTypeStructPointer:
     case fidl::kFidlTypeTablePointer:
     case fidl::kFidlTypeUnionPointer:
-    case fidl::kFidlTypeXUnionPointer:
         return sizeof(uint64_t);
     case fidl::kFidlTypeHandle:
         return sizeof(zx_handle_t);
@@ -143,10 +142,6 @@ private:
                 xunion_state.fields = fidl_type->coded_xunion.fields;
                 xunion_state.field_count = fidl_type->coded_xunion.field_count;
                 xunion_state.inside_envelope = false;
-                break;
-            case fidl::kFidlTypeXUnionPointer:
-                state = kStateXUnionPointer;
-                xunion_pointer_state.xunion_type = fidl_type->coded_xunion_pointer.xunion_type;
                 break;
             case fidl::kFidlTypeArray:
                 state = kStateArray;
@@ -252,7 +247,6 @@ private:
             kStateUnion,
             kStateUnionPointer,
             kStateXUnion,
-            kStateXUnionPointer,
             kStateArray,
             kStateString,
             kStateHandle,
@@ -315,9 +309,6 @@ private:
                 // |EnterEnvelope| was successful.
                 bool inside_envelope;
             } xunion_state;
-            struct {
-                const fidl::FidlCodedXUnion* xunion_type;
-            } xunion_pointer_state;
             struct {
                 const fidl_type_t* element;
                 // Size of the entire array in bytes
@@ -640,20 +631,6 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                                          &position);
                 FIDL_STATUS_GUARD_NO_POP(status);
             }
-            continue;
-        }
-        case Frame::kStateXUnionPointer: {
-            if (*PtrTo<Ptr<fidl_xunion_t>>(frame->position) == nullptr) {
-                Pop();
-                continue;
-            }
-            auto status = visitor.VisitPointer(frame->position,
-                                               PtrTo<Ptr<void>>(frame->position),
-                                               static_cast<uint32_t>(sizeof(fidl_xunion_t)),
-                                               &frame->position);
-            FIDL_STATUS_GUARD(status);
-            const fidl::FidlCodedXUnion* coded_xunion = frame->xunion_pointer_state.xunion_type;
-            *frame = Frame(coded_xunion, frame->position);
             continue;
         }
         case Frame::kStateArray: {

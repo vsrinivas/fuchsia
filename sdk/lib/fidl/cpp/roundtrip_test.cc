@@ -200,6 +200,45 @@ TEST(EmptyStructSandwich, CheckBytes) {
   EXPECT_TRUE(ValueToBytes(input, expected));
 }
 
+TEST(OptionalTableInStruct, VerifyWireFormatTableAbsent) {
+  OptionalTableInStruct input;
+
+  auto expected = std::vector<uint8_t>{
+      // TODO(FIDL-477): The following pointer (8 bytes) should be an absent
+      // vector instead, because a nullable table contained inside a struct
+      // should be inlined, rather than pointed-to.
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // table is absent
+  };
+  EXPECT_TRUE(ValueToBytes(input, expected));
+}
+
+TEST(OptionalTableInStruct, VerifyWireFormatTablePresent) {
+  auto table = std::make_unique<SimpleTable>();
+  table->set_x(0xdeadbeef);
+
+  OptionalTableInStruct input;
+  input.t = std::move(table);
+
+  auto expected = std::vector<uint8_t>{
+      // TODO(FIDL-477): The following pointer (8 bytes) should not be present,
+      // because a nullable table contained inside a struct should be inlined,
+      // rather than pointed-to.
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // table is present
+
+      // secondary object 0: vector<envelope>
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope vector size/max ordinal
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope vector is present
+
+      // seconddary object 1: vector<envelope> data
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope size/handle count
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope vector is present
+
+      // secondary object 1: data for .x
+      0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00,  // envelope content (0xdeadbeef) + padding
+  };
+  EXPECT_TRUE(ValueToBytes(input, expected));
+}
+
 TEST(XUnion, Empty) {
   SampleXUnion input;
 
@@ -300,11 +339,11 @@ TEST(XUnion, SerializeAndDeserializeSimpleTable) {
   EXPECT_EQ(input, RoundTrip<SampleXUnion>(input));
 }
 
-TEST(XUnionContainer, XUnionPointer) {
-  auto xu = std::make_unique<SampleXUnion>();
-  xu->set_i(0xdeadbeef);
+TEST(InlineXUnionInStruct, VerifyWireFormatXUnionIsPresent) {
+  SampleXUnion xu;
+  xu.set_i(0xdeadbeef);
 
-  XUnionContainer input;
+  InlineXUnionInStruct input;
   input.before = "before";
   input.after = "after";
   input.xu = std::move(xu);
@@ -313,7 +352,9 @@ TEST(XUnionContainer, XUnionPointer) {
       0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // "before" length
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" presence
 
-      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // xunion is present
+      0xa5, 0x47, 0xdf, 0x29, 0x00, 0x00, 0x00, 0x00,  // xunion discriminator + padding
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes + num handles
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope data is present
 
       0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // "after" length
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" presence
@@ -321,31 +362,198 @@ TEST(XUnionContainer, XUnionPointer) {
       // secondary object 1: "before"
       'b',  'e',  'f',  'o',  'r',  'e',  0x00, 0x00,
 
-      // secondary object 2: xunion
-      0xa5, 0x47, 0xdf, 0x29, 0x00, 0x00, 0x00, 0x00,  // xunion discriminator + padding
-      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes + num handles
-      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope data is present
-
-      // secondary object 3: xunion content
+      // secondary object 2: xunion content
       0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00,  // xunion envelope content (0xdeadbeef) + padding
 
-      // secondary object 4: "after"
+      // secondary object 3: "after"
       'a',  'f',  't',  'e',  'r',  0x00, 0x00, 0x00,
   };
 
   EXPECT_TRUE(ValueToBytes(input, expected));
 }
 
-TEST(XUnionContainer, SerializeAndDeserialize) {
+TEST(OptionalXUnionInStruct, VerifyWireFormatXUnionIsAbsent) {
+  OptionalXUnionInStruct input;
+  input.before = "before";
+  input.after = "after";
+
+  auto expected = std::vector<uint8_t>{
+      0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // "before" length
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" presence
+
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // xunion discriminator + padding
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes + num handles
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope data is absent
+
+      0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // "after" length
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" presence
+
+      // secondary object 1: "before"
+      'b',  'e',  'f',  'o',  'r',  'e',  0x00, 0x00,
+
+      // secondary object 2: "after"
+      'a',  'f',  't',  'e',  'r',  0x00, 0x00, 0x00,
+  };
+
+  EXPECT_TRUE(ValueToBytes(input, expected));
+}
+
+TEST(OptionalXUnionInStruct, VerifyWireFormatXUnionIsPresent) {
   auto xu = std::make_unique<SampleXUnion>();
   xu->set_i(0xdeadbeef);
 
-  XUnionContainer input;
+  OptionalXUnionInStruct input;
   input.before = "before";
   input.after = "after";
   input.xu = std::move(xu);
 
-  EXPECT_EQ(input, RoundTrip<XUnionContainer>(input));
+  auto expected = std::vector<uint8_t>{
+      0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // "before" length
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" presence
+
+      0xa5, 0x47, 0xdf, 0x29, 0x00, 0x00, 0x00, 0x00,  // xunion discriminator + padding
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes + num handles
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope data is present
+
+      0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // "after" length
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" presence
+
+      // secondary object 1: "before"
+      'b',  'e',  'f',  'o',  'r',  'e',  0x00, 0x00,
+
+      // secondary object 2: xunion content
+      0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00,  // xunion envelope content (0xdeadbeef) + padding
+
+      // secondary object 3: "after"
+      'a',  'f',  't',  'e',  'r',  0x00, 0x00, 0x00,
+  };
+
+  EXPECT_TRUE(ValueToBytes(input, expected));
+}
+
+TEST(OptionalXUnionInStruct, SerializeAndDeserializeAbsent) {
+  OptionalXUnionInStruct input;
+  input.before = "before";
+  input.after = "after";
+
+  OptionalXUnionInStruct output = RoundTrip<OptionalXUnionInStruct>(input);
+
+  // We cannot byte-wise compare |input| with |output|, since both xunions will
+  // have uninitialized memory in their internal xunions, and are not guaranteed
+  // to be zeroed.
+  EXPECT_EQ(output.xu->Which(), SampleXUnion::Tag::Empty);
+}
+
+TEST(OptionalXUnionInStruct, SerializeAndDeserializePresent) {
+  auto xu = std::make_unique<SampleXUnion>();
+  xu->set_i(0xdeadbeef);
+
+  OptionalXUnionInStruct input;
+  input.before = "before";
+  input.after = "after";
+  input.xu = std::move(xu);
+
+  EXPECT_EQ(input, RoundTrip<OptionalXUnionInStruct>(input));
+}
+
+TEST(XUnionInTable, VerifyWireFormatXUnionIsAbsent) {
+  XUnionInTable input;
+  input.set_before("before");
+  input.set_after("after");
+
+  auto expected = std::vector<uint8_t>{
+      // primary object
+      0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // vector<envelope> element count
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // vector<envelope> present
+
+      // secondary object 1: vector data
+      // vector[0]: envelope<string before>
+      0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // size + handle count
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" is present
+      // vector[1]: envelope<SampleXUnion xu>
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // size + handle count
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // xunion is absent
+      // vector[2]: envelope<string after>
+      0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // size + handle count
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "after" is present
+
+      // secondary object 2: "before" length + pointer
+      0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // "before" length
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" present
+
+      // secondary object 3: "before"
+      'b',  'e',  'f',  'o',  'r',  'e',  0x00, 0x00,  // "before"
+
+      // secondary object 4: "after" length + pointer
+      0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // "after" length
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "after" present
+
+      // secondary object 5: "before"
+      'a',  'f',  't',  'e',  'r',  0x00, 0x00, 0x00,  // "after"
+  };
+
+  EXPECT_TRUE(ValueToBytes(input, expected));
+}
+
+TEST(XUnionInTable, VerifyWireFormatXUnionIsPresent) {
+  SampleXUnion xu;
+  xu.set_i(0xdeadbeef);
+
+  XUnionInTable input;
+  input.set_before("before");
+  input.set_xu(std::move(xu));
+  input.set_after("after");
+
+  auto expected = std::vector<uint8_t>{
+      // primary object
+      0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // vector<envelope> element count
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // vector<envelope> present
+
+      // secondary object 1: vector data
+      // vector[0]: envelope<string before>
+      0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // size + handle count
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" is present
+      // vector[1]: envelope<SampleXUnion xu>
+      0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // size + handle count
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // xunion is present
+      // vector[2]: envelope<string after>
+      0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // size + handle count
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "after" is present
+
+      // secondary object 2: "before" length + pointer
+      0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // "before" length
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" present
+
+      // secondary object 3: "before"
+      'b',  'e',  'f',  'o',  'r',  'e',  0x00, 0x00,  // "before"
+
+      // secondary object 4: xunion
+      0xa5, 0x47, 0xdf, 0x29, 0x00, 0x00, 0x00, 0x00,  // xunion discriminator + padding
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes + num handles
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope data is present
+
+      // secondary object 5: xunion content
+      0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00,  // 0xdeadbeef + padding
+
+      // secondary object 6: "after" length + pointer
+      0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // "after" length
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "after" present
+
+      // secondary object 7: "before"
+      'a',  'f',  't',  'e',  'r',  0x00, 0x00, 0x00,  // "after"
+  };
+
+  EXPECT_TRUE(ValueToBytes(input, expected));
+}
+
+TEST(XUnionInTable, SerializeAndDeserialize) {
+  SampleXUnion xu;
+  xu.set_i(0xdeadbeef);
+
+  XUnionInTable input;
+  input.set_xu(std::move(xu));
+
+  EXPECT_EQ(input, RoundTrip<XUnionInTable>(input));
 }
 
 }  // namespace

@@ -98,7 +98,6 @@ enum FidlTypeTag : uint32_t {
     kFidlTypeTable,
     kFidlTypeTablePointer,
     kFidlTypeXUnion,
-    kFidlTypeXUnionPointer,
 };
 
 // Though the |size| is implied by the fields, computing that information is not the purview of this
@@ -169,13 +168,6 @@ struct FidlCodedXUnion {
 
     constexpr FidlCodedXUnion(uint32_t field_count, const FidlXUnionField* fields, const char* name)
         : field_count(field_count), fields(fields), name(name) {}
-};
-
-struct FidlCodedXUnionPointer {
-    const FidlCodedXUnion* const xunion_type;
-
-    constexpr explicit FidlCodedXUnionPointer(const FidlCodedXUnion* xunion_type)
-        : xunion_type(xunion_type) {}
 };
 
 // An array is essentially a struct with |array_size / element_size| of the same field, named at
@@ -256,7 +248,6 @@ struct fidl_type {
         const fidl::FidlCodedUnion coded_union;
         const fidl::FidlCodedUnionPointer coded_union_pointer;
         const fidl::FidlCodedXUnion coded_xunion;
-        const fidl::FidlCodedXUnionPointer coded_xunion_pointer;
         const fidl::FidlCodedHandle coded_handle;
         const fidl::FidlCodedString coded_string;
         const fidl::FidlCodedArray coded_array;
@@ -283,9 +274,6 @@ struct fidl_type {
 
     constexpr fidl_type(fidl::FidlCodedXUnion coded_xunion)
         : type_tag(fidl::kFidlTypeXUnion), coded_xunion(coded_xunion) {}
-
-    constexpr fidl_type(fidl::FidlCodedXUnionPointer coded_xunion_pointer)
-        : type_tag(fidl::kFidlTypeXUnionPointer), coded_xunion_pointer(coded_xunion_pointer) {}
 
     constexpr fidl_type(fidl::FidlCodedHandle coded_handle)
         : type_tag(fidl::kFidlTypeHandle), coded_handle(coded_handle) {}
