@@ -8,11 +8,63 @@ import (
 	"fmt"
 	"net"
 	"runtime"
+	"sync"
+	"syscall"
+	"syscall/zx"
+	"syscall/zx/fdio"
+	"syscall/zx/fidl"
+	"syscall/zx/mxerror"
+	zxnet "syscall/zx/net"
 	"testing"
 )
 
 const loopbackAddr = "127.0.0.1:1234"
 const msg = "hello"
+
+func TestMultipleCloseCalls(t *testing.T) {
+	c0, c1, err := zx.NewChannel(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := fdio.ServiceConnect("/svc/"+zxnet.SocketProviderName, zx.Handle(c0)); err != nil {
+		t.Fatal(err)
+	}
+	sp := zxnet.SocketProviderInterface(fidl.ChannelProxy{Channel: c1})
+	code, s, err := sp.Socket(syscall.AF_INET, syscall.SOCK_STREAM, syscall.IPPROTO_IP)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if code != 0 {
+		t.Fatal(syscall.Errno(code))
+	}
+	si := zxnet.SocketControlInterface{Socket: s}
+
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			<-start
+			for {
+				code, err := si.Close()
+				switch mxerror.Status(err) {
+				case zx.ErrOk, zx.ErrPeerClosed:
+				case zx.ErrShouldWait:
+					continue
+				default:
+					t.Errorf("%T: %+v", err, err)
+				}
+				if code != 0 {
+					t.Error(syscall.Errno(code))
+				}
+				break
+			}
+			wg.Done()
+		}()
+	}
+	close(start)
+	wg.Wait()
+}
 
 func TestLoopbackStreamConnectRead(t *testing.T) {
 	ln, err := net.Listen("tcp", loopbackAddr)
