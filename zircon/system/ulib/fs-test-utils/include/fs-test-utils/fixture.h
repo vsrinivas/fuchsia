@@ -163,6 +163,9 @@ public:
     // Checks the disk with fsck.
     zx_status_t Fsck() const;
 
+    // Format (or reformat) the device.
+    zx_status_t Format() const;
+
     // Sets up MemFs and Ramdisk, allocating resources for the tests.
     zx_status_t SetUpTestCase();
 
