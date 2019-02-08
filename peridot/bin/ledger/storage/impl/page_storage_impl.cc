@@ -338,6 +338,10 @@ void PageStorageImpl::IsEmpty(fit::function<void(Status, bool)> callback) {
         // Compare the root node of the head commit to that of the empty node.
         std::unique_ptr<const Commit> commit;
         status = SynchronousGetCommit(handler, commit_ids[0], &commit);
+        if (status != Status::OK) {
+          callback(status, false);
+          return;
+        }
         ObjectIdentifier* empty_node_id;
         status = SynchronousGetEmptyNodeIdentifier(handler, &empty_node_id);
         if (status != Status::OK) {
