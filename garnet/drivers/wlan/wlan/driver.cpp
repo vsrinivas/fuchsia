@@ -4,6 +4,7 @@
 
 #include "device.h"
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
@@ -12,7 +13,7 @@
 
 #include "lib/component/cpp/environment_services_helper.h"
 
-extern "C" zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
+zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
     std::printf("%s\n", __func__);
 
     wlanmac_protocol_t wlanmac_proto;
@@ -34,3 +35,13 @@ extern "C" zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
     }
     return status;
 }
+
+static zx_driver_ops_t wlan_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = wlan_bind,
+};
+
+// clang-format: off
+ZIRCON_DRIVER_BEGIN(wlan, wlan_driver_ops, "zircon", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_WLANMAC),
+ZIRCON_DRIVER_END(wlan)

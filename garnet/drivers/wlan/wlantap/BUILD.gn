@@ -9,7 +9,6 @@ driver_module("wlantap_driver") {
   output_name = "wlantap"
 
   sources = [
-    "binding.c",
     "utils.cpp",
     "utils.h",
     "wlantap-ctl.cpp",

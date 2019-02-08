@@ -1,5 +1,6 @@
 #include "wlan_phy.h"
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <zircon/assert.h>
@@ -7,11 +8,6 @@
 #include <zircon/status.h>
 
 #include "bus.h"
-
-zx_status_t rtl88xx_bind_wlan_phy(void* ctx, zx_device_t* device) {
-    // Forward to the actual implementation in C++.
-    return ::wlan::rtl88xx::WlanPhy::Create(device);
-}
 
 namespace wlan {
 namespace rtl88xx {
@@ -122,3 +118,26 @@ zx_status_t WlanPhy::DestroyIface(uint16_t id) {
 
 }  // namespace rtl88xx
 }  // namespace wlan
+
+zx_status_t rtl88xx_bind_wlan_phy(void* ctx, zx_device_t* device) {
+    // Forward to the actual implementation in C++.
+    return ::wlan::rtl88xx::WlanPhy::Create(device);
+}
+
+static zx_driver_ops_t rtl88xx_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = &rtl88xx_bind_wlan_phy;
+    return ops;
+}();
+
+ZIRCON_DRIVER_BEGIN(rtl88xx, rtl88xx_driver_ops, "zircon", "0.1", 8)
+    BI_GOTO_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI, 0),
+    BI_ABORT_IF(NE, BIND_PCI_VID, 0x10ec),  // Realtek PCI VID
+    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x0000),
+    BI_ABORT(),
+    BI_LABEL(0),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_USB_VID, 0x0bda),  // Realtek USB VID
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0xc820),  // UM821C04_3V3 test board
+ZIRCON_DRIVER_END(rtl88xx)

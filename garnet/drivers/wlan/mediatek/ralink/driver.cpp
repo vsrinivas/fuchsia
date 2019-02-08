@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -15,7 +16,7 @@
 
 #include "device.h"
 
-extern "C" zx_status_t ralink_bind(void* ctx, zx_device_t* device) {
+zx_status_t ralink_bind(void* ctx, zx_device_t* device) {
     zxlogf(TRACE, "%s\n", __func__);
 
     usb_protocol_t usb;
@@ -61,3 +62,19 @@ extern "C" zx_status_t ralink_bind(void* ctx, zx_device_t* device) {
 
     return status;
 }
+
+static zx_driver_ops_t ralink_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = ralink_bind;
+    return ops;
+}();
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(ralink, ralink_driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_USB_VID, 0x148f),
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x5370),  // RT5370
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x5572),  // RT5572
+ZIRCON_DRIVER_END(ralink)
+    // clang-format on

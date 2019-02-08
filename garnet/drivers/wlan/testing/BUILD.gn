@@ -13,7 +13,6 @@ group("testing") {
 
 driver_module("wlanphy-testdev") {
   sources = [
-    "binding.c",
     "driver.cpp",
     "iface-device.cpp",
     "iface-device.h",

@@ -8,7 +8,6 @@ import("//build/package.gni")
 driver_module("wlanif_driver") {
   output_name = "wlanif"
   sources = [
-    "binding.c",
     "convert.cpp",
     "convert.h",
     "device.cpp",

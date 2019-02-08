@@ -6,6 +6,7 @@
 
 #include "phy-device.h"
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -18,7 +19,7 @@
 // exist outside those two calls.
 static async::Loop* loop = nullptr;
 
-extern "C" zx_status_t wlanphy_test_init(void** out_ctx) {
+zx_status_t wlanphy_test_init(void** out_ctx) {
     zxlogf(INFO, "%s\n", __func__);
     loop = new async::Loop(&kAsyncLoopConfigNoAttachToThread);
     zx_status_t status = loop->StartThread("wlan-test-loop");
@@ -31,7 +32,7 @@ extern "C" zx_status_t wlanphy_test_init(void** out_ctx) {
     return status;
 }
 
-extern "C" zx_status_t wlanphy_test_bind(void* ctx, zx_device_t* device) {
+zx_status_t wlanphy_test_bind(void* ctx, zx_device_t* device) {
     zxlogf(INFO, "%s\n", __func__);
 
     test_protocol_t proto;
@@ -51,7 +52,7 @@ extern "C" zx_status_t wlanphy_test_bind(void* ctx, zx_device_t* device) {
     return status;
 }
 
-extern "C" void wlanphy_test_release(void* ctx) {
+void wlanphy_test_release(void* ctx) {
     if (loop != nullptr) { loop->Shutdown(); }
     delete loop;
     loop = nullptr;
@@ -60,3 +61,18 @@ extern "C" void wlanphy_test_release(void* ctx) {
 async_dispatcher_t* wlanphy_async_t() {
     return loop->dispatcher();
 }
+
+static zx_driver_ops_t wlanphy_test_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.init = wlanphy_test_init;
+    ops.bind = wlanphy_test_bind;
+    ops.release = wlanphy_test_release;
+    return ops;
+}();
+
+// clang-format: off
+ZIRCON_DRIVER_BEGIN(wlanphy_test, wlanphy_test_driver_ops, "fuchsia", "0.1", 2)
+    BI_ABORT_IF_AUTOBIND,
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST),
+ZIRCON_DRIVER_END(wlanphy_test)

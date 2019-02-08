@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
@@ -113,12 +114,12 @@ struct WlantapCtl {
 
 }  // namespace
 
-extern "C" zx_status_t wlantapctl_init(void** out_ctx) {
+zx_status_t wlantapctl_init(void** out_ctx) {
     *out_ctx = new WlantapDriver();
     return ZX_OK;
 }
 
-extern "C" zx_status_t wlantapctl_bind(void* ctx, zx_device_t* parent) {
+zx_status_t wlantapctl_bind(void* ctx, zx_device_t* parent) {
     auto driver = static_cast<WlantapDriver*>(ctx);
     auto wlantapctl = std::make_unique<WlantapCtl>(driver);
     static zx_protocol_device_t device_ops = {
@@ -140,6 +141,19 @@ extern "C" zx_status_t wlantapctl_bind(void* ctx, zx_device_t* parent) {
     return ZX_OK;
 }
 
-extern "C" void wlantapctl_release(void* ctx) {
+void wlantapctl_release(void* ctx) {
     delete static_cast<WlantapDriver*>(ctx);
 }
+
+static zx_driver_ops_t wlantapctl_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.init = wlantapctl_init;
+    ops.bind = wlantapctl_bind;
+    ops.release = wlantapctl_release;
+    return ops;
+}();
+
+ZIRCON_DRIVER_BEGIN(wlantapctl, wlantapctl_driver_ops, "fuchsia", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
+ZIRCON_DRIVER_END(wlantapctl)

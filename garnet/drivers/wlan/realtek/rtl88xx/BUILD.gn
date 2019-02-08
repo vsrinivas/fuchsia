@@ -9,7 +9,6 @@ driver_module("rtl88xx_driver") {
   output_name = "rtl88xx"
 
   sources = [
-    "binding.c",
     "bus.cc",
     "bus.h",
     "bus_util.h",

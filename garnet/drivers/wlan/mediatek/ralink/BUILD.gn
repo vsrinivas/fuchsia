@@ -10,7 +10,6 @@ driver_module("ralink_driver") {
   output_name = "ralink"
 
   sources = [
-    "binding.c",
     "device.cpp",
     "device.h",
     "driver.cpp",

@@ -12,7 +12,6 @@ config("wlan_config") {
 driver_module("wlan_driver") {
   output_name = "wlan"
   sources = [
-    "binding.c",
     "device.cpp",
     "device.h",
     "driver.cpp",

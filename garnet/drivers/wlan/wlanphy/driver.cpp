@@ -4,6 +4,7 @@
 
 #include "driver.h"
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -15,7 +16,7 @@
 // exist outside those two calls.
 static async::Loop* loop = nullptr;
 
-extern "C" zx_status_t wlanphy_init(void** out_ctx) {
+zx_status_t wlanphy_init(void** out_ctx) {
     loop = new async::Loop(&kAsyncLoopConfigNoAttachToThread);
     zx_status_t status = loop->StartThread("wlanphy-loop");
     if (status != ZX_OK) {
@@ -28,7 +29,7 @@ extern "C" zx_status_t wlanphy_init(void** out_ctx) {
     return status;
 }
 
-extern "C" zx_status_t wlanphy_bind(void* ctx, zx_device_t* device) {
+zx_status_t wlanphy_bind(void* ctx, zx_device_t* device) {
     zxlogf(INFO, "%s\n", __func__);
 
     wlanphy_impl_protocol_t wlanphy_impl_proto;
@@ -56,3 +57,16 @@ extern "C" zx_status_t wlanphy_bind(void* ctx, zx_device_t* device) {
 async_dispatcher_t* wlanphy_async_t() {
     return loop->dispatcher();
 }
+
+static zx_driver_ops_t wlanphy_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.init = wlanphy_init;
+    ops.bind = wlanphy_bind;
+    return ops;
+}();
+
+// clang-format: off
+ZIRCON_DRIVER_BEGIN(wlan, wlanphy_driver_ops, "zircon", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_WLANPHY_IMPL),
+ZIRCON_DRIVER_END(wlan)
