@@ -452,7 +452,7 @@ func (ios *iostate) buildIfInfos() *C.netc_get_if_info_t {
 	for nicid, ifs := range ios.ns.mu.ifStates {
 		ifs.mu.Lock()
 		if ifs.mu.nic.Addr == ipv4Loopback {
-
+			ifs.mu.Unlock()
 			continue
 		}
 		name := ifs.mu.nic.Name

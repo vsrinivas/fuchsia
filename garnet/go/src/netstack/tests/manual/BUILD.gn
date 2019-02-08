@@ -183,3 +183,13 @@ executable("getaddrinfo_test") {
     "//zircon/public/lib/fdio",
   ]
 }
+
+executable("ifinfotest") {
+  sources = [
+    "netstack_ifinfo_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/netstack/c",
+  ]
+}
