@@ -11,7 +11,6 @@ import (
 	"io"
 	"path"
 
-	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/testrunner"
 	"fuchsia.googlesource.com/tools/testsharder"
 	"golang.org/x/crypto/ssh"
@@ -54,10 +53,10 @@ type SSHTester struct {
 	client *ssh.Client
 }
 
-func NewSSHTester(devCtx botanist.DeviceContext) (*SSHTester, error) {
-	client, err := sshIntoNode(devCtx.Nodename, devCtx.SSHKey)
+func NewSSHTester(nodename, sshKey string) (*SSHTester, error) {
+	client, err := sshIntoNode(nodename, sshKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to node %q: %v", devCtx.Nodename, err)
+		return nil, fmt.Errorf("failed to connect to node %q: %v", nodename, err)
 	}
 	return &SSHTester{client: client}, nil
 }
@@ -94,8 +93,8 @@ type FuchsiaTester struct {
 
 // NewFuchsiaTester creates a FuchsiaTester object and starts a log_listener process on
 // the remote device. The log_listener output can be read from SysLogOutput().
-func NewFuchsiaTester(devCtx botanist.DeviceContext) (*FuchsiaTester, error) {
-	delegate, err := NewSSHTester(devCtx)
+func NewFuchsiaTester(nodename, sshKey string) (*FuchsiaTester, error) {
+	delegate, err := NewSSHTester(nodename, sshKey)
 	if err != nil {
 		return nil, err
 	}

@@ -93,9 +93,9 @@ func usage() {
 	fmt.Println(`testrunner [flags] tests-file
 
 Executes all tests found in the JSON [tests-file]
-Fuchsia tests require botanist.DeviceContext to have been registered and in the current
-environment; for more details see
-https://fuchsia.googlesource.com/tools/+/master/botanist/context.go.`)
+Fuchsia tests require both the nodename of the fuchsia instance and a private
+SSH key corresponding to a authorized key to be set in the environment under
+NODENAME and SSH_KEY respectively.`)
 }
 
 func init() {
@@ -136,20 +136,22 @@ func main() {
 		}
 	}
 
-	// Prepare the Fuchsia DeviceContext, which will be nil if the testrunner is
-	// not run by botanist, which is not a failure mode.
-	devCtx, err := botanist.GetDeviceContext()
-	if err != nil {
-		log.Print(err)
+	nodename := os.Getenv("NODENAME")
+	if nodename == "" {
+		log.Printf("NODENAME not set")
+	}
+	sshKey := os.Getenv("SSH_KEY")
+	if sshKey == "" {
+		log.Printf("SSH_KEY not set")
 	}
 
 	// Execute.
-	if err := execute(tests, output, devCtx); err != nil {
+	if err := execute(tests, output, nodename, sshKey); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func execute(tests []testsharder.Test, output *TestRunnerOutput, devCtx *botanist.DeviceContext) error {
+func execute(tests []testsharder.Test, output *TestRunnerOutput, nodename, sshKey string) error {
 	var linux, mac, fuchsia, unknown []testsharder.Test
 	for _, test := range tests {
 		switch test.OS {
@@ -171,9 +173,19 @@ func execute(tests []testsharder.Test, output *TestRunnerOutput, devCtx *botanis
 	localTester := &SubprocessTester{
 		wd: localWD,
 	}
-	if devCtx != nil {
-		localTester.env = []string{devCtx.EnvironEntry()}
+	if nodename != "" {
+		localTester.env = append(
+			localTester.env,
+			fmt.Sprintf("NODENAME=%s", nodename),
+		)
 	}
+	if sshKey != "" {
+		localTester.env = append(
+			localTester.env,
+			fmt.Sprintf("SSH_KEY=%s", sshKey),
+		)
+	}
+
 
 	if err := runTests(linux, localTester.Test, output); err != nil {
 		return err
@@ -183,7 +195,7 @@ func execute(tests []testsharder.Test, output *TestRunnerOutput, devCtx *botanis
 		return err
 	}
 
-	return runFuchsiaTests(fuchsia, output, devCtx)
+	return runFuchsiaTests(fuchsia, output, nodename, sshKey)
 }
 
 func sshIntoNode(nodename, privateKey string) (*ssh.Client, error) {
@@ -204,12 +216,14 @@ func sshIntoNode(nodename, privateKey string) (*ssh.Client, error) {
 	return botanist.SSHIntoNode(context.Background(), nodename, config)
 }
 
-func runFuchsiaTests(tests []testsharder.Test, output *TestRunnerOutput, devCtx *botanist.DeviceContext) error {
-	if devCtx == nil {
-		return errors.New("no DeviceContext set; cannot execute fuchsia tests")
+func runFuchsiaTests(tests []testsharder.Test, output *TestRunnerOutput, nodename, sshKey string) error {
+	if nodename == "" {
+		return errors.New("NODENAME must be set")
+	} else if sshKey == "" {
+		return errors.New("SSH_KEY must be set")
 	}
 
-	tester, err := NewFuchsiaTester(*devCtx)
+	tester, err := NewFuchsiaTester(nodename, sshKey)
 	if err != nil {
 		return fmt.Errorf("failed to initialize fuchsia tester: %v", err)
 	}

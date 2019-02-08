@@ -142,15 +142,12 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		return err
 	}
 
-	// Set device information in the environment for access within subprocesses.
-	devCtx := botanist.DeviceContext{
-		Nodename: nodename,
-		SSHKey:   string(privKey),
-	}
-	if err = devCtx.Register(); err != nil {
-		return fmt.Errorf("failed to set the device context: %v", err)
-	}
-	defer devCtx.Unregister()
+	env := os.Environ()
+	env = append(
+		env,
+		fmt.Sprintf("NODENAME=%s", nodename),
+		fmt.Sprintf("SSH_KEY=%s", string(privKey)),
+	)
 
 	// Run command.
 	// The subcommand is put in its own process group so that no subprocesses it spins up
@@ -160,7 +157,7 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 	cmd := exec.Cmd{
 		Path:        args[0],
 		Args:        args,
-		Env:         append(os.Environ(), devCtx.EnvironEntry()),
+		Env:         env,
 		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
