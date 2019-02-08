@@ -165,8 +165,7 @@ userspace HWRNG driver. Can test the VMO-rewriting mechanism first.*
 Test data is saved in `/boot/kernel/debug/entropy.bin` in the Zircon system
 under test. So far I've usually exported the data file manually via `netcp`.
 Other options include `scp` if you build with the correct Fuchsia packages, or
-saving to persistent storage (probably using the Fuchsia `thinfs` FAT
-filesystem, so you can read the files on a non-Zircon computer).
+saving to persistent storage.
 
 ## Running the NIST test suite
 

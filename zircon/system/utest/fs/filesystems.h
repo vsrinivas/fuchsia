@@ -134,14 +134,12 @@ inline bool can_execute_test(const fs_info_t* info, const test_disk_t* requested
 
 #define RUN_FOR_ALL_FILESYSTEMS_TYPE(case_name, disk, test_type, CASE_TESTS)     \
     FS_TEST_CASE(case_name, disk, CASE_TESTS, test_type, memfs, 0)  \
-    FS_TEST_CASE(case_name, disk, CASE_TESTS, test_type, minfs, 1)  \
-    FS_TEST_CASE(case_name, disk, CASE_TESTS, test_type, thinfs, 2)
+    FS_TEST_CASE(case_name, disk, CASE_TESTS, test_type, minfs, 1)
 
 #define RUN_FOR_ALL_FILESYSTEMS_SIZE(case_name, disk, CASE_TESTS)          \
     FS_TEST_CASE(case_name, disk, CASE_TESTS, FS_TEST_NORMAL, memfs, 0)    \
     FS_TEST_CASE(case_name, disk, CASE_TESTS, FS_TEST_NORMAL, minfs, 1)    \
-    FS_TEST_CASE(case_name##_fvm, disk, CASE_TESTS, FS_TEST_FVM, minfs, 1) \
-    FS_TEST_CASE(case_name, disk, CASE_TESTS, FS_TEST_NORMAL, thinfs, 2)
+    FS_TEST_CASE(case_name##_fvm, disk, CASE_TESTS, FS_TEST_FVM, minfs, 1)
 
 #define RUN_FOR_ALL_FILESYSTEMS(case_name, CASE_TESTS)                     \
     RUN_FOR_ALL_FILESYSTEMS_SIZE(case_name, default_test_disk, CASE_TESTS)

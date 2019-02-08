@@ -221,22 +221,11 @@ zx_status_t Mounter::MountFat(unique_fd device, const mount_options_t& options, 
         return status;
     }
 
-    char readonly_arg[64];
-    snprintf(readonly_arg, sizeof(readonly_arg), "-readonly=%s",
-             options.readonly ? "true" : "false");
-    char blockfd_arg[64];
-    snprintf(blockfd_arg, sizeof(blockfd_arg), "-blockFD=%d", FS_FD_BLOCKDEVICE);
-
     if (options.verbose_mount) {
-        printf("fs_mount: Launching ThinFS\n");
+        printf("fs_mount: FAT not presently supported\n");
     }
-    const char* argv[] = {
-        "/system/bin/thinfs",
-        readonly_arg,
-        blockfd_arg,
-        "mount",
-    };
-    return LaunchAndMount(cb, options, argv, fbl::count_of(argv));
+
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Mounter::Mount(unique_fd device, disk_format_t format, const mount_options_t& options,

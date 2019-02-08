@@ -34,7 +34,6 @@ static char fvm_disk_path[PATH_MAX];
 
 constexpr const char minfs_name[] = "minfs";
 constexpr const char memfs_name[] = "memfs";
-constexpr const char thinfs_name[] = "FAT";
 
 const fsck_options_t test_fsck_options = {
     .verbose = false,
@@ -317,27 +316,6 @@ int unmount_minfs(const char* mount_path) {
     return unmount_common(mount_path);
 }
 
-bool should_test_thinfs(void) {
-    struct stat buf;
-    return (stat("/system/bin/thinfs", &buf) == 0) && should_test_filesystem<thinfs_name>();
-}
-
-int mkfs_thinfs(const char* disk_path) {
-    return mkfs_common(disk_path, DISK_FORMAT_FAT);
-}
-
-int fsck_thinfs(const char* disk_path) {
-    return fsck_common(disk_path, DISK_FORMAT_FAT);
-}
-
-int mount_thinfs(const char* disk_path, const char* mount_path) {
-    return mount_common(disk_path, mount_path, DISK_FORMAT_FAT);
-}
-
-int unmount_thinfs(const char* mount_path) {
-    return unmount_common(mount_path);
-}
-
 fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
     {memfs_name,
         should_test_filesystem<memfs_name>, mkfs_memfs, mount_memfs, unmount_memfs, fsck_memfs,
@@ -360,16 +338,5 @@ fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
         .supports_mmap = false,
         .supports_resize = true,
         .nsec_granularity = 1,
-    },
-    {thinfs_name,
-        should_test_thinfs, mkfs_thinfs, mount_thinfs, unmount_thinfs, fsck_thinfs,
-        .can_be_mounted = true,
-        .can_mount_sub_filesystems = false,
-        .supports_hardlinks = false,
-        .supports_watchers = false,
-        .supports_create_by_vmo = false,
-        .supports_mmap = false,
-        .supports_resize = false,
-        .nsec_granularity = ZX_SEC(2),
     },
 };
