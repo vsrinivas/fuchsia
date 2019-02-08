@@ -184,6 +184,13 @@ bool ValidateReceivedPacket(const packet_t& sent_packet, size_t sent_packet_size
                 received_packet.hdr.code);
         return false;
     }
+
+    // Do not match identifier.
+    // RFC 792 and RFC 1122 3.2.2.6 require the echo reply carries the same value
+    // from the echo request, implementations honor that. But the requester side
+    // NAT may rewrite the identifier on echo request, which makes impossible
+    // for the host to match.
+
     if (received_packet.hdr.un.echo.sequence != sent_packet.hdr.un.echo.sequence) {
         fprintf(stderr, "Incorrect Header sequence in received packet: %d expected: %d\n",
                 received_packet.hdr.un.echo.sequence, sent_packet.hdr.un.echo.sequence);
