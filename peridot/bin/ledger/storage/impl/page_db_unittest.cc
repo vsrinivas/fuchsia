@@ -64,8 +64,6 @@ class PageDbTest : public ledger::TestWithEnvironment {
 
   // Test:
   void SetUp() override {
-    std::srand(0);
-
     Status status;
     bool called;
     page_storage_.Init(

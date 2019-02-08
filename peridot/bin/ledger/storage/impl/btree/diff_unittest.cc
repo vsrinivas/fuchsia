@@ -49,12 +49,6 @@ class DiffTest : public StorageTest {
 
   ~DiffTest() override {}
 
-  // Test:
-  void SetUp() override {
-    StorageTest::SetUp();
-    std::srand(0);
-  }
-
  protected:
   PageStorage* GetStorage() override { return &fake_storage_; }
 

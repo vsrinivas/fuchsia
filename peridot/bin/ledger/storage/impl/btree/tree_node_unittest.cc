@@ -35,12 +35,6 @@ class TreeNodeTest : public StorageTest {
 
   ~TreeNodeTest() override {}
 
-  // Test:
-  void SetUp() override {
-    ::testing::Test::SetUp();
-    std::srand(0);
-  }
-
  protected:
   PageStorage* GetStorage() override { return &fake_storage_; }
 

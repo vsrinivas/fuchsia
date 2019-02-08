@@ -75,12 +75,6 @@ class BTreeUtilsTest : public StorageTest {
 
   ~BTreeUtilsTest() override {}
 
-  // Test:
-  void SetUp() override {
-    ::testing::Test::SetUp();
-    std::srand(0);
-  }
-
  protected:
   PageStorage* GetStorage() override { return &fake_storage_; }
 
