@@ -79,12 +79,6 @@ size_t PDU::Copy(common::MutableByteBuffer* out_buffer, size_t pos,
   return offset;
 }
 
-const common::BufferView PDU::ViewFirstFragment(size_t size) const {
-  ZX_DEBUG_ASSERT(is_valid());
-  return fragments_.begin()->view().payload_data().view(sizeof(BasicHeader),
-                                                        size);
-}
-
 PDU::FragmentList PDU::ReleaseFragments() {
   auto out_list = std::move(fragments_);
   fragment_count_ = 0u;

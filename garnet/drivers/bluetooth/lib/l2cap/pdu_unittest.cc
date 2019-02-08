@@ -284,47 +284,6 @@ TEST(L2CAP_PduTest, ReadMultipleFragments) {
   EXPECT_EQ("is a tesXXXXXXX", pdu_data.AsString());
 }
 
-TEST(L2CAP_PduTest, ViewFirstFragment) {
-  Recombiner recombiner;
-
-  // clang-format off
-
-  // Partial initial fragment
-  auto packet0 = PacketFromBytes(
-    // ACL data header (PBF: initial fragment)
-    0x01, 0x00, 0x06, 0x00,
-
-    // Basic L2CAP header
-    0x04, 0x00, 0xFF, 0xFF, 'T', 'e'
-  );
-
-  // Continuation fragment
-  auto packet1 = PacketFromBytes(
-    // ACL data header (PBF: continuing fragment)
-    0x01, 0x10, 0x02, 0x00,
-
-    // L2CAP PDU fragment
-    's', 't'
-  );
-
-  // clang-format on
-
-  EXPECT_TRUE(recombiner.AddFragment(std::move(packet0)));
-  EXPECT_TRUE(recombiner.AddFragment(std::move(packet1)));
-
-  PDU pdu;
-  EXPECT_TRUE(recombiner.Release(&pdu));
-  ASSERT_TRUE(pdu.is_valid());
-
-  auto view = pdu.ViewFirstFragment(1);
-  EXPECT_EQ("T", view.AsString());
-
-  // Passing a large number for size. |view| should not exceed the size of the
-  // first fragment.
-  view = pdu.ViewFirstFragment(100);
-  EXPECT_EQ("Te", view.AsString());
-}
-
 }  // namespace
 }  // namespace l2cap
 }  // namespace btlib

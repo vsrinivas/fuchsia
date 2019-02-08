@@ -83,12 +83,6 @@ class PDU final {
   size_t Copy(common::MutableByteBuffer* out_buffer, size_t pos = 0,
               size_t size = std::numeric_limits<std::size_t>::max()) const;
 
-  // Helper for directly reading the contents of the first ACL data fragment of
-  // this PDU without copying. If the PDU contains multiple ACL data fragments
-  // and |size| is larger than the first fragment, the returned view will only
-  // contain the first fragment.
-  const common::BufferView ViewFirstFragment(size_t size) const;
-
   // Release ownership of the current fragments, moving them to the caller. Once
   // this is called, the PDU will become invalid.
   FragmentList ReleaseFragments();
