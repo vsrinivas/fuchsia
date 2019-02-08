@@ -11,29 +11,34 @@ namespace {
 
 class AnnoyanceRankingFeatureTest : public ::testing::Test {
  protected:
-  RankedSuggestion GetSuggestion(fuchsia::modular::AnnoyanceType annoyance) {
+  SuggestionPrototype GetSuggestionPrototype(
+      fuchsia::modular::AnnoyanceType annoyance) {
     fuchsia::modular::SuggestionDisplay display;
     display.annoyance = annoyance;
     fuchsia::modular::Proposal proposal;
     proposal.display = std::move(display);
     SuggestionPrototype prototype;
     prototype.proposal = std::move(proposal);
-    RankedSuggestion suggestion;
-    suggestion.prototype = &prototype;
-    return suggestion;
+    return prototype;
   }
   AnnoyanceRankingFeature annoyance_ranking_feature;
   fuchsia::modular::UserInput query;
 };
 
 TEST_F(AnnoyanceRankingFeatureTest, ComputeFeatureAnnoyance) {
-  auto suggestion = GetSuggestion(fuchsia::modular::AnnoyanceType::INTERRUPT);
+  auto prototype =
+      GetSuggestionPrototype(fuchsia::modular::AnnoyanceType::INTERRUPT);
+  RankedSuggestion suggestion;
+  suggestion.prototype = &prototype;
   double value = annoyance_ranking_feature.ComputeFeature(query, suggestion);
   EXPECT_EQ(value, kMaxConfidence);
 }
 
 TEST_F(AnnoyanceRankingFeatureTest, ComputeFeatureNonAnnoyance) {
-  auto suggestion = GetSuggestion(fuchsia::modular::AnnoyanceType::NONE);
+  auto prototype =
+      GetSuggestionPrototype(fuchsia::modular::AnnoyanceType::NONE);
+  RankedSuggestion suggestion;
+  suggestion.prototype = &prototype;
   double value = annoyance_ranking_feature.ComputeFeature(query, suggestion);
   EXPECT_EQ(value, kMinConfidence);
 }

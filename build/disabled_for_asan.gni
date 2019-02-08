@@ -25,10 +25,6 @@ disabled_for_asan = [
   # MF-196
   "/pkgfs/packages/sessionctl_integration_tests/0/test/sessionctl_test",
 
-  # MI4-1803
-  "/pkgfs/packages/suggestion_engine_unittests/0/test/annoyance_ranking_feature_unittest",
-  "/pkgfs/packages/suggestion_engine_unittests/0/test/suggestion_engine_impl_unittest",
-
   # MTWN-236
   "/pkgfs/packages/use_aac_decoder_test/0/test/use_aac_decoder_test",
 
