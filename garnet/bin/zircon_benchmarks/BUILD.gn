@@ -11,9 +11,11 @@ executable("bin") {
   sources = [
     "channels.cc",
     "events.cc",
+    "expose.cc",
     "fifos.cc",
     "filesystem.cc",
     "handle.cc",
+    "inspect.cc",
     "lazy_dir.cc",
     "mmu.cc",
     "ports.cc",
@@ -30,6 +32,8 @@ executable("bin") {
   ]
   deps = [
     ":fidl_interface",
+    "//garnet/public/lib/component/cpp",
+    "//zircon/public/lib/inspect-vmo",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fbl",

@@ -120,9 +120,6 @@ bool TestProperty(perftest::RepeatState* state, int size) {
   return true;
 }
 
-
-// /pkgfs/packages/instrumentation_benchmarks/0/test/instrumentation_benchmarks -p
-
 void RegisterTests() {
   perftest::RegisterTest("Inspect/IntMetric/Lifecycle", TestIntMetricLifecycle);
   perftest::RegisterTest("Inspect/IntMetric/Modify", TestIntMetricModify);

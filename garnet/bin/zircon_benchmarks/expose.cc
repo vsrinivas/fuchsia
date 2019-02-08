@@ -523,8 +523,6 @@ bool TestObjectToFidl(perftest::RepeatState* state) {
   return true;
 }
 
-// /pkgfs/packages/instrumentation_benchmarks/0/test/instrumentation_benchmarks -p
-
 void RegisterTests() {
   perftest::RegisterTest("Expose/ExposedObject/Lifecycle", TestExposedObjectLifecycle);
   perftest::RegisterTest("Expose/ExposedObject/Increment", TestExposedObjectIncrement);
