@@ -51,9 +51,6 @@ disabled_for_asan = [
   "/pkgfs/packages/suggestion_engine_unittests/0/test/annoyance_ranking_feature_unittest",
   "/pkgfs/packages/suggestion_engine_unittests/0/test/suggestion_engine_impl_unittest",
 
-  # PT-97
-  "/pkgfs/packages/trace_tests/0/test/trace_integration_tests",
-
   # MTWN-236
   "/pkgfs/packages/use_aac_decoder_test/0/test/use_aac_decoder_test",
 

@@ -5,13 +5,14 @@
 #ifndef GARNET_BIN_TRACE_TRACER_H_
 #define GARNET_BIN_TRACE_TRACER_H_
 
+#include <array>
 #include <string>
-#include <vector>
 
 #include <fuchsia/tracing/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/socket.h>
+#include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
 
 #include "lib/fxl/macros.h"
@@ -39,6 +40,10 @@ class Tracer {
   void Stop();
 
  private:
+  // Note: Buffer needs to be big enough to store records of maximum size.
+  static constexpr size_t kReadBufferSize =
+    trace::RecordFields::kMaxRecordSizeBytes * 4;
+
   void OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                      zx_status_t status, const zx_packet_signal_t* signal);
   void OnHandleError(zx_status_t status);
@@ -58,7 +63,10 @@ class Tracer {
   async_dispatcher_t* dispatcher_;
   async::WaitMethod<Tracer, &Tracer::OnHandleReady> wait_;
   std::unique_ptr<trace::TraceReader> reader_;
-  std::vector<uint8_t> buffer_;
+  // We don't use a vector here to avoid the housekeeping necessary to keep
+  // checkers happy (e.g., asan). We use this buffer in an atypical way.
+  std::array<uint8_t, kReadBufferSize> buffer_;
+  // The amount of space in use in |buffer_|.
   size_t buffer_end_ = 0u;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Tracer);

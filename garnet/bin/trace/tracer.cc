@@ -13,12 +13,6 @@
 #include "lib/fxl/logging.h"
 
 namespace tracing {
-namespace {
-
-// Note: Buffer needs to be big enough to store records of maximum size.
-constexpr size_t kReadBufferSize = trace::RecordFields::kMaxRecordSizeBytes * 4;
-
-}  // namespace
 
 Tracer::Tracer(fuchsia::tracing::TraceController* controller)
     : controller_(controller), dispatcher_(nullptr), wait_(this) {
@@ -48,7 +42,6 @@ void Tracer::Start(fuchsia::tracing::TraceOptions options,
   controller_->StartTracing(std::move(options), std::move(outgoing_socket),
                             [this]() { start_callback_(); });
 
-  buffer_.reserve(kReadBufferSize);
   reader_.reset(new trace::TraceReader(std::move(record_consumer),
                                        std::move(error_handler)));
 
@@ -90,7 +83,7 @@ void Tracer::DrainSocket(async_dispatcher_t* dispatcher) {
     size_t actual;
     zx_status_t status =
         socket_.read(0u, buffer_.data() + buffer_end_,
-                     buffer_.capacity() - buffer_end_, &actual);
+                     buffer_.size() - buffer_end_, &actual);
     if (status == ZX_ERR_SHOULD_WAIT) {
       status = wait_.Begin(dispatcher);
       if (status != ZX_OK) {
