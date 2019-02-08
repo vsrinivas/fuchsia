@@ -125,8 +125,9 @@ TEST_F(InterceptorsTest, LatencyControlledRand) {
   auto diff = (after - bef).to_msecs();
   std::cout << "measured latency = " << diff << "ms" << std::endl;
   // the "diff" time should be ~10ms based on the value set on NextRand.
-  // check that it's between 5 and 15.
-  EXPECT_TRUE(diff >= 5 && diff <= 15);
+  // check that it's at least the 10ms that was set:
+  // (upper-bound cecking is not very CQ-friendly)
+  EXPECT_TRUE(diff >= 10);
 }
 
 TEST_F(InterceptorsTest, LatencyFlush) {
