@@ -27,6 +27,13 @@ ShadertoyEmbedderView::ShadertoyEmbedderView(scenic::ViewContext context,
   scenic::Material background_material(session());
   background_material.SetColor(30, 30, 120, 255);
   background_.SetMaterial(background_material);
+
+  fuchsia::ui::input::SetHardKeyboardDeliveryCmd cmd;
+  cmd.delivery_request = true;
+  fuchsia::ui::input::Command input_cmd;
+  input_cmd.set_set_hard_keyboard_delivery(std::move(cmd));
+  session()->Enqueue(std::move(input_cmd));
+  // Consider breaking out into a discrete initializer if more work is added.
 }
 
 void ShadertoyEmbedderView::LaunchShadertoyClient() {
