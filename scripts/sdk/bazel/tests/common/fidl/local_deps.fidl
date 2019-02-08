@@ -7,5 +7,5 @@ library bazel.examples.localdeps;
 using bazel.examples.simple;
 
 interface Foobar {
-  1: DoSomething(bazel.examples.simple.Hello world);
+    DoSomething(bazel.examples.simple.Hello world);
 };

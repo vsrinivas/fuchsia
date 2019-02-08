@@ -7,5 +7,5 @@ library bazel.examples.fuchsiadeps;
 using fuchsia.sys;
 
 interface Fuchsia {
-  1: UseThat(request<fuchsia.sys.Loader> loader);
+    UseThat(request<fuchsia.sys.Loader> loader);
 };
