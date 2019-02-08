@@ -74,26 +74,26 @@ fbl::String ToHex(const void* ptr, size_t size);
 
 // Specializations exist for primitive types, pointers and |fbl::String|.
 template <typename T>
-fbl::String PrintValue(T value) {
+fbl::String PrintValue(const T& value) {
     // TODO(gevalentino): By default generate a hex represetation of the memory contents of value.
     return internal::ToHex(&value, sizeof(value));
 }
 
 // Template Specialization for integers and char pointers.
 template <>
-fbl::String PrintValue(int32_t value);
+fbl::String PrintValue(const int32_t& value);
 template <>
-fbl::String PrintValue(uint32_t value);
+fbl::String PrintValue(const uint32_t& value);
 template <>
-fbl::String PrintValue(int64_t value);
+fbl::String PrintValue(const int64_t& value);
 template <>
-fbl::String PrintValue(uint64_t value);
+fbl::String PrintValue(const uint64_t& value);
 template <>
 fbl::String PrintValue(const fbl::String& value);
 
 // For pointers just print the address.
 template <typename T>
-fbl::String PrintValue(T* value) {
+fbl::String PrintValue(const T* value) {
     if (value == nullptr) {
         return "<nullptr>";
     }

@@ -4,6 +4,13 @@
 
 #pragma once
 
+#include <cstdlib>
+#include <type_traits>
+
+#include <fbl/string.h>
+#include <fbl/string_printf.h>
+
+#include <zxtest/base/assertion.h>
 #include <zxtest/base/runner.h>
 #include <zxtest/base/test.h>
 
@@ -63,6 +70,118 @@
 
 #define _ZXTEST_STRCMP(actual, expected) zxtest::StrCmp(actual, expected)
 
-#define _ZXTEST_AUTO_VAR_TYPE(var) auto
+#define _ZXTEST_AUTO_VAR_TYPE(var) decltype(var)
 
 #define _ZXTEST_TEST_HAS_ERRORS zxtest::Runner::GetInstance()->CurrentTestHasFailures()
+
+#define _ZXTEST_SEL_N(_0, _1, _2, FN, ...) FN
+
+#define _RETURN_IF_FATAL(fatal)                                                                    \
+    if (fatal && _ZXTEST_ABORT_IF_ERROR) {                                                         \
+        return;                                                                                    \
+    }
+namespace zxtest {
+namespace internal {
+
+// Returns true if the assertion condition is satisfied, and false otherwise. This should not
+// be called directly by the user. This function allows performing the operations on values
+// by reference, preventing any attempts to either copy or move a value.
+template <typename Op, typename Desc, typename Printer, typename Actual, typename Expected>
+bool EvalCondition(const Actual& actual, const Expected& expected, const char* actual_str,
+                   const char* expected_str, const zxtest::SourceLocation& location, bool is_fatal,
+                   bool force_hex, const Op& op, const Desc& desc, const Printer& printer) {
+    // Happy case we do nothing.
+    if (op(expected, actual)) {
+        return true;
+    }
+
+    // Generate the string representation of the variables.
+    fbl::String actual_value = printer(actual);
+    fbl::String expected_value = printer(expected);
+    Assertion assertion(desc(), expected_str, expected_value, actual_str, actual_value, location,
+                        is_fatal);
+    zxtest::Runner::GetInstance()->NotifyAssertion(assertion);
+    return false;
+}
+
+// Promote integers to a common type when possible. This allows safely comparing different
+// integer types and sizes, as long as a bigger int exists.
+template <typename Actual, typename Expected>
+bool EqHelper(const Actual& actual, const Expected& expected) {
+    if constexpr (std::is_integral<Actual>::value && std::is_integral<Expected>::value) {
+        return static_cast<typename std::common_type<Actual, Expected>::type>(actual) ==
+               static_cast<typename std::common_type<Actual, Expected>::type>(expected);
+    } else {
+        return actual == expected;
+    }
+}
+
+} // namespace internal
+} // namespace zxtest
+
+// Basic assert macro implementation.
+#define _EQ(actual, expected) zxtest::internal::EqHelper(actual, expected)
+#define _NE(actual, expected) !_EQ(actual, expected)
+#define _BOOL(actual, expected) (static_cast<bool>(actual) == static_cast<bool>(expected))
+#define _LT(actual, expected) actual < expected
+#define _LE(actual, expected) actual <= expected
+#define _GT(actual, expected) actual > expected
+#define _GE(actual, expected) actual >= expected
+#define _STREQ(actual, expected) (strcmp(actual, expected) == 0)
+#define _STRNE(actual, expected) !_STREQ(actual, expected)
+#define _BYTEEQ(actual, expected, size) memcmp(actual, expected, size) == 0
+#define _BYTENE(actual, expected, size) memcmp(actual, expected, size) != 0
+
+#define _GEN_ASSERT_DESC_0(desc) desc
+
+#define _GEN_ASSERT_DESC_1(desc, msg, ...) fbl::StringPrintf(desc " " msg, ##__VA_ARGS__)
+
+#define _GEN_ASSERT_DESC(desc, ...)                                                                \
+    _ZXTEST_SEL_N(_0, ##__VA_ARGS__, _GEN_ASSERT_DESC_1, _GEN_ASSERT_DESC_1, _GEN_ASSERT_DESC_0)   \
+    (desc, ##__VA_ARGS__)
+
+#define _ASSERT_VAR(op, expected, actual, fatal, file, line, desc, ...)                            \
+    do {                                                                                           \
+        auto buffer_compare = [](const auto& expected_, const auto& actual_) {                     \
+            return op(actual_, expected_);                                                         \
+        };                                                                                         \
+        auto desc_gen = []() { return _GEN_ASSERT_DESC(desc, ##__VA_ARGS__); };                    \
+        auto print = [](const auto& val) { return zxtest::PrintValue(val); };                      \
+        if (!zxtest::internal::EvalCondition(actual, expected, #actual, #expected,                 \
+                                             {.filename = file, .line_number = line}, fatal,       \
+                                             false, buffer_compare, desc_gen, print)) {            \
+            _RETURN_IF_FATAL(fatal);                                                               \
+        }                                                                                          \
+    } while (0)
+
+#define _ASSERT_VAR_COERCE(op, expected, actual, type, fatal, file, line, desc, ...)               \
+    do {                                                                                           \
+        auto buffer_compare = [](const auto& expected_, const auto& actual_) {                     \
+            return op(static_cast<type>(actual_), static_cast<type>(expected_));                   \
+        };                                                                                         \
+        auto desc_gen = []() { return _GEN_ASSERT_DESC(desc, ##__VA_ARGS__); };                    \
+        auto print = [](const auto& val) { return zxtest::PrintValue(val); };                      \
+        if (!zxtest::internal::EvalCondition(actual, expected, #actual, #expected,                 \
+                                             {.filename = file, .line_number = line}, fatal,       \
+                                             false, buffer_compare, desc_gen, print)) {            \
+            _RETURN_IF_FATAL(fatal);                                                               \
+        }                                                                                          \
+    } while (0)
+
+#define _ASSERT_VAR_BYTES(op, expected, actual, size, fatal, file, line, desc, ...)                \
+    do {                                                                                           \
+        size_t byte_count = size;                                                                  \
+        auto buffer_compare = [byte_count](const auto& expected_, const auto& actual_) {           \
+            return op(static_cast<const void*>(actual_), static_cast<const void*>(expected_),      \
+                      byte_count);                                                                 \
+        };                                                                                         \
+        auto desc_gen = []() { return _GEN_ASSERT_DESC(desc, ##__VA_ARGS__); };                    \
+        auto print = [byte_count](const auto& val) {                                               \
+            return zxtest::internal::ToHex(static_cast<const void*>(val), byte_count);             \
+        };                                                                                         \
+        if (!zxtest::internal::EvalCondition(actual, expected, #actual, #expected,                 \
+                                             {.filename = file, .line_number = line}, fatal,       \
+                                             false, buffer_compare, desc_gen, print)) {            \
+            _RETURN_IF_FATAL(fatal);                                                               \
+        }                                                                                          \
+    } while (0)

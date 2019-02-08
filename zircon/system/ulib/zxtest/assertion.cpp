@@ -47,22 +47,22 @@ fbl::String ToHex(const void* ptr, size_t size) {
 } // namespace internal
 
 template <>
-fbl::String PrintValue(uint32_t value) {
+fbl::String PrintValue(const uint32_t& value) {
     return fbl::StringPrintf("%" PRIu32, value);
 }
 
 template <>
-fbl::String PrintValue(int32_t value) {
+fbl::String PrintValue(const int32_t& value) {
     return fbl::StringPrintf("%" PRIi32, value);
 }
 
 template <>
-fbl::String PrintValue(int64_t value) {
+fbl::String PrintValue(const int64_t& value) {
     return fbl::StringPrintf("%" PRIi64, value);
 }
 
 template <>
-fbl::String PrintValue(uint64_t value) {
+fbl::String PrintValue(const uint64_t& value) {
     return fbl::StringPrintf("%" PRIu64, value);
 }
 
