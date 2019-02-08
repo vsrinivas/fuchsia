@@ -50,27 +50,26 @@ int8_t signed_bit_cast(uint8_t src) {
   return dest;
 }
 
-// Extracts a up to 8 bits unsigned number from a byte vector |v|.
+// Extracts up to 8 bits unsigned number from a byte array |v|.
 // Both |begin| and |count| are in bits units. This function does not
-// check for the vector being long enough.
-static uint8_t extract_uint8(const std::vector<uint8_t>& v, uint32_t begin,
-                             uint32_t count) {
+// check for the array being long enough.
+static uint8_t extract_uint8(const uint8_t* v, uint32_t begin, uint32_t count) {
   uint8_t val = v[begin / 8u] >> (begin % 8u);
   return (count < 8) ? (val & ~(1u << count)) : val;
 }
 
-// Extracts a 16 bits unsigned number from a byte vector |v|.
-// |begin| is in bits units. This function does not check for the vector
+// Extracts a 16 bits unsigned number from a byte array |v|.
+// |begin| is in bits units. This function does not check for the array
 // being long enough.
-static uint16_t extract_uint16(const std::vector<uint8_t>& v, uint32_t begin) {
+static uint16_t extract_uint16(const uint8_t* v, uint32_t begin) {
   return static_cast<uint16_t>(extract_uint8(v, begin, 8)) |
          static_cast<uint16_t>(extract_uint8(v, begin + 8, 8)) << 8;
 }
 
-// Extracts up to 8 bits sign extended to int32_t from a byte vector |v|.
+// Extracts up to 8 bits sign extended to int32_t from a byte array |v|.
 // Both |begin| and |count| are in bits units. This function does not
-// check for the vector being long enough.
-static int32_t extract_int8_ext(const std::vector<uint8_t>& v, uint32_t begin,
+// check for the array being long enough.
+static int32_t extract_int8_ext(const uint8_t* v, uint32_t begin,
                                 uint32_t count) {
   uint8_t val = extract_uint8(v, begin, count);
   return signed_bit_cast(val);
@@ -589,11 +588,7 @@ bool InputInterpreter::Read(bool discard) {
   // If positive |rc| is the number of bytes read. If negative the error
   // while reading.
   int rc = 1;
-  auto report =
-      use_legacy_mode() ? hid_decoder_->Read(&rc) : std::vector<uint8_t>(1, 1);
-
-  // TODO(cpu): remove legacy mode, so no raw HidDecoder::Read(int*) is
-  // issued from this code.
+  auto report = hid_decoder_->Read(&rc);
 
   if (rc < 1) {
     FXL_LOG(ERROR) << "Failed to read from input: " << rc << " for " << name();
@@ -610,7 +605,7 @@ bool InputInterpreter::Read(bool discard) {
   }
 
   if (has_buttons_) {
-    if (!ParseButtonsReport())
+    if (!ParseButtonsReport(report.data(), rc))
       return false;
 
     if (!discard) {
@@ -627,7 +622,7 @@ bool InputInterpreter::Read(bool discard) {
       break;
     case MouseDeviceType::TOUCH:
       Touchscreen::Report touch_report;
-      if (!Read(&touch_report)) {
+      if (!ParseReport(report.data(), rc, &touch_report)) {
         FXL_LOG(ERROR) << " failed reading from touchpad";
         return false;
       }
@@ -640,7 +635,7 @@ bool InputInterpreter::Read(bool discard) {
       break;
     case MouseDeviceType::HID:
       Mouse::Report mouse_report;
-      if (!Read(&mouse_report)) {
+      if (!ParseReport(report.data(), rc, &mouse_report)) {
         FXL_LOG(ERROR) << " failed reading from mouse";
         return false;
       }
@@ -670,7 +665,7 @@ bool InputInterpreter::Read(bool discard) {
     case MouseDeviceType::GAMEPAD:
       // TODO(cpu): remove this once we have a good way to test gamepad.
       HidGamepadSimple gamepad;
-      if (!Read(&gamepad)) {
+      if (!ParseReport(report.data(), rc, &gamepad)) {
         FXL_LOG(ERROR) << " failed reading from gamepad ";
         return false;
       }
@@ -686,7 +681,7 @@ bool InputInterpreter::Read(bool discard) {
   switch (touch_device_type_) {
     case TouchDeviceType::HID:
       Touchscreen::Report touch_report;
-      if (!Read(&touch_report)) {
+      if (!ParseReport(report.data(), rc, &touch_report)) {
         FXL_LOG(ERROR) << " failed reading from touchscreen ";
         return false;
       }
@@ -810,7 +805,7 @@ bool InputInterpreter::Read(bool discard) {
       }
       break;
     case SensorDeviceType::AMBIENT_LIGHT:
-      if (ParseAmbientLightSensorReport()) {
+      if (ParseAmbientLightSensorReport(report.data(), rc)) {
         if (!discard) {
           FXL_DCHECK(sensor_idx_ < kMaxSensorCount);
           FXL_DCHECK(sensor_devices_[sensor_idx_]);
@@ -1232,9 +1227,10 @@ bool InputInterpreter::ParseParadiseStylusReport(uint8_t* r, size_t len) {
 }
 
 // Writes out result to sensor_report_ and sensor_idx_.
-bool InputInterpreter::ParseAmbientLightSensorReport() {
+bool InputInterpreter::ParseAmbientLightSensorReport(const uint8_t* report,
+                                                     size_t len) {
   HidAmbientLightSimple data;
-  if (!Read(&data)) {
+  if (!ParseReport(report, len, &data)) {
     FXL_LOG(ERROR) << " failed reading from ambient light sensor";
     return false;
   }
@@ -1248,9 +1244,9 @@ bool InputInterpreter::ParseAmbientLightSensorReport() {
   return true;
 }
 
-bool InputInterpreter::ParseButtonsReport() {
+bool InputInterpreter::ParseButtonsReport(const uint8_t* report, size_t len) {
   HidButtons data;
-  if (!Read(&data)) {
+  if (!ParseReport(report, len, &data)) {
     FXL_LOG(ERROR) << " failed reading from buttons";
     return false;
   }
@@ -1668,16 +1664,10 @@ bool InputInterpreter::ParseButtonsDescriptor(const hid::ReportField* fields,
   return true;
 }
 
-bool InputInterpreter::Read(HidGamepadSimple* gamepad) {
+bool InputInterpreter::ParseReport(const uint8_t* report, size_t len,
+                                   HidGamepadSimple* gamepad) {
   if (protocol_ != InputInterpreter::Protocol::Gamepad)
     return false;
-
-  int rc;
-  auto report = hid_decoder_->Read(&rc);
-  if (rc < 1) {
-    FXL_LOG(ERROR) << "Failed to read from input: " << rc;
-    return false;
-  }
 
   auto cur = &decoder_[0];
   if ((cur->match != 0) && (cur->count == 8u)) {
@@ -1703,16 +1693,10 @@ bool InputInterpreter::Read(HidGamepadSimple* gamepad) {
   return true;
 }
 
-bool InputInterpreter::Read(HidAmbientLightSimple* data) {
+bool InputInterpreter::ParseReport(const uint8_t* report, size_t len,
+                                   HidAmbientLightSimple* data) {
   if (protocol_ != InputInterpreter::Protocol::LightSensor)
     return false;
-
-  int rc;
-  auto report = hid_decoder_->Read(&rc);
-  if (rc < 1) {
-    FXL_LOG(ERROR) << "Failed to read from input: " << rc;
-    return false;
-  }
 
   auto cur = &decoder_[0];
   if ((cur->match != 0) && (cur->count == 8u)) {
@@ -1734,16 +1718,10 @@ bool InputInterpreter::Read(HidAmbientLightSimple* data) {
   return true;
 }
 
-bool InputInterpreter::Read(HidButtons* data) {
+bool InputInterpreter::ParseReport(const uint8_t* report, size_t len,
+                                   HidButtons* data) {
   if (protocol_ != InputInterpreter::Protocol::Buttons)
     return false;
-
-  int rc;
-  auto report = hid_decoder_->Read(&rc);
-  if (rc < 1) {
-    FXL_LOG(ERROR) << "Failed to read from input: " << rc;
-    return false;
-  }
 
   auto cur = &decoder_[0];
   if ((cur->match != 0) && (cur->count == 8u)) {
@@ -1779,56 +1757,34 @@ bool InputInterpreter::Read(HidButtons* data) {
   return true;
 }
 
-bool InputInterpreter::Read(Touchscreen::Report* report) {
-  int rc;
-  auto r = hid_decoder_->Read(&rc);
-
-  if (rc < 1) {
-    FXL_LOG(ERROR) << "Failed to read from input: " << rc;
-    return false;
-  }
-
-  if (r[0] != ts_.report_id()) {
+bool InputInterpreter::ParseReport(const uint8_t* report, size_t len,
+                                   Touchscreen::Report* touchscreen) {
+  if (report[0] != ts_.report_id()) {
     FXL_VLOG(0) << name() << " Touchscreen report "
-                << static_cast<uint32_t>(r[0]) << " does not match report id "
+                << static_cast<uint32_t>(report[0])
+                << " does not match report id "
                 << static_cast<uint32_t>(ts_.report_id());
     return false;
   }
 
-  return ts_.ParseReport(r.data(), rc, report);
+  return ts_.ParseReport(report, len, touchscreen);
 }
 
-bool InputInterpreter::Read(Mouse::Report* report) {
-  int rc;
-  auto r = hid_decoder_->Read(&rc);
-
-  if (rc < 1) {
-    FXL_LOG(ERROR) << "Failed to read from input: " << rc;
-    return false;
-  }
-
-  if (r[0] != mouse_.report_id()) {
-    FXL_VLOG(0) << name() << " Mouse report " << static_cast<uint32_t>(r[0])
+bool InputInterpreter::ParseReport(const uint8_t* report, size_t len,
+                                   Mouse::Report* mouse) {
+  if (report[0] != mouse_.report_id()) {
+    FXL_VLOG(0) << name() << " Mouse report "
+                << static_cast<uint32_t>(report[0])
                 << " does not match report id "
                 << static_cast<uint32_t>(mouse_.report_id());
     return false;
   }
 
-  return mouse_.ParseReport(r.data(), rc, report);
+  return mouse_.ParseReport(report, len, mouse);
 }
 
 bool InputInterpreter::SetDescriptor(Touchscreen::Descriptor* touch_desc) {
   return ts_.SetDescriptor(touch_desc);
-}
-
-bool InputInterpreter::use_legacy_mode() const {
-  InputInterpreter::Protocol p = protocol_;
-  return p != InputInterpreter::Protocol::Gamepad &&
-         p != InputInterpreter::Protocol::Buttons &&
-         p != InputInterpreter::Protocol::LightSensor &&
-         p != InputInterpreter::Protocol::Touch &&
-         p != InputInterpreter::Protocol::Touchpad &&
-         p != InputInterpreter::Protocol::Mouse;
 }
 
 }  // namespace mozart

@@ -134,12 +134,14 @@ class InputInterpreter {
   // set correctly.
   bool ParseProtocol();
 
-  bool use_legacy_mode() const;
-  bool Read(HidGamepadSimple* gamepad);
-  bool Read(HidAmbientLightSimple* light);
-  bool Read(HidButtons* data);
-  bool Read(Touchscreen::Report* report);
-  bool Read(Mouse::Report* report);
+  bool ParseReport(const uint8_t* report, size_t len,
+                   HidGamepadSimple* gamepad);
+  bool ParseReport(const uint8_t* report, size_t len,
+                   HidAmbientLightSimple* light);
+  bool ParseReport(const uint8_t* report, size_t len, HidButtons* data);
+  bool ParseReport(const uint8_t* report, size_t len,
+                   Touchscreen::Report* touchscreen);
+  bool ParseReport(const uint8_t* report, size_t len, Mouse::Report* mouse);
 
   bool SetDescriptor(Touchscreen::Descriptor* touch_desc);
 
@@ -169,8 +171,8 @@ class InputInterpreter {
   bool ParseEyoyoTouchscreenReport(uint8_t* report, size_t len);
   bool ParseFt3x27TouchscreenReport(uint8_t* r, size_t len);
 
-  bool ParseAmbientLightSensorReport();
-  bool ParseButtonsReport();
+  bool ParseAmbientLightSensorReport(const uint8_t* report, size_t len);
+  bool ParseButtonsReport(const uint8_t* report, size_t len);
 
   fuchsia::ui::input::InputDeviceRegistry* registry_;
 
