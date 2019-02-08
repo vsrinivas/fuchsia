@@ -1481,7 +1481,7 @@ macro_rules! fidl_table {
                             let bytes_before = decoder.remaining_out_of_line();
                             let handles_before = decoder.remaining_handles();
                             match present {
-                                ALLOC_PRESENT_U64 => {
+                                $crate::encoding::ALLOC_PRESENT_U64 => {
                                     decoder.read_out_of_line(fidl_inline_size!($member_ty), |d| {
                                         let val_ref =
                                            self.$member_name.get_or_insert_with(
