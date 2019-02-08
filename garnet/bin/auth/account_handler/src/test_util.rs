@@ -6,7 +6,7 @@
 //! modules within the crate.
 
 use account_common::{LocalAccountId, LocalPersonaId};
-use fidl::endpoints::{ClientEnd, create_endpoints};
+use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::AppConfig;
 use fidl_fuchsia_auth_account_internal::{
     AccountHandlerContextMarker, AccountHandlerContextRequest, AccountHandlerContextRequestStream,
@@ -70,14 +70,13 @@ pub struct FakeAccountHandlerContext {
 impl FakeAccountHandlerContext {
     /// Creates new fake account handler context
     pub fn new(account_dir_parent: &str) -> Self {
-        Self {
-            account_dir_parent: account_dir_parent.to_string(),
-        }
+        Self { account_dir_parent: account_dir_parent.to_string() }
     }
 
     /// Asynchronously handles the supplied stream of `AccountHandlerContextRequest` messages.
     pub async fn handle_requests_from_stream(
-        &self, mut stream: AccountHandlerContextRequestStream,
+        &self,
+        mut stream: AccountHandlerContextRequestStream,
     ) -> Result<(), fidl::Error> {
         while let Some(req) = await!(stream.try_next())? {
             await!(self.handle_request(req))?;

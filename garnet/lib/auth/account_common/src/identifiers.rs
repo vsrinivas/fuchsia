@@ -40,19 +40,13 @@ macro_rules! wrapper_type {
         impl $name {
             /// Construct a new instance from the supplied id.
             pub fn new(id: $type) -> Self {
-                $name {
-                    inner: $fidl_crate::$name { id: id },
-                }
+                $name { inner: $fidl_crate::$name { id: id } }
             }
         }
 
         impl Clone for $name {
             fn clone(&self) -> $name {
-                $name {
-                    inner: $fidl_crate::$name {
-                        id: self.inner.id.clone(),
-                    },
-                }
+                $name { inner: $fidl_crate::$name { id: self.inner.id.clone() } }
             }
         }
 
@@ -127,9 +121,7 @@ macro_rules! wrapper_type {
                 D: Deserializer<'a>,
             {
                 let id = Deserialize::deserialize(deserializer)?;
-                Ok($name {
-                    inner: $fidl_crate::$name { id },
-                })
+                Ok($name { inner: $fidl_crate::$name { id } })
             }
         }
     };

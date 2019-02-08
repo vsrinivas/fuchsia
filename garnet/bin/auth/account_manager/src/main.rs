@@ -57,9 +57,7 @@ fn main() -> Result<(), Error> {
         .start()
         .context("Error starting AccountManager server")?;
 
-    executor
-        .run_singlethreaded(fut)
-        .context("Failed to execute AccountManager future")?;
+    executor.run_singlethreaded(fut).context("Failed to execute AccountManager future")?;
     info!("Stopping account manager");
     Ok(())
 }

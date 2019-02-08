@@ -5,7 +5,7 @@
 use failure::format_err;
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::{AuthProviderMarker, Status};
-use fidl_fuchsia_auth_account_internal::{AccountHandlerContextProxy};
+use fidl_fuchsia_auth_account_internal::AccountHandlerContextProxy;
 use futures::future::{ready as fready, FutureObj};
 use token_manager::TokenManagerError;
 
@@ -22,12 +22,8 @@ pub struct AuthProviderSupplier {
 
 impl AuthProviderSupplier {
     /// Creates a new `AuthProviderSupplier` from the supplied `AccountHandlerContextProxy`.
-    pub fn new(
-        account_handler_context: AccountHandlerContextProxy,
-    ) -> Self {
-        AuthProviderSupplier {
-            account_handler_context
-        }
+    pub fn new(account_handler_context: AccountHandlerContextProxy) -> Self {
+        AuthProviderSupplier { account_handler_context }
     }
 }
 
@@ -35,7 +31,8 @@ impl token_manager::AuthProviderSupplier for AuthProviderSupplier {
     /// Asynchronously creates an `AuthProvider` for the requested `auth_provider_type` and
     /// returns the `ClientEnd` for communication with it.
     fn get<'a>(
-        &'a self, auth_provider_type: &'a str,
+        &'a self,
+        auth_provider_type: &'a str,
     ) -> FutureObj<'a, Result<ClientEnd<AuthProviderMarker>, TokenManagerError>> {
         let (client_end, server_end) = match create_endpoints() {
             Ok((client_end, server_end)) => (client_end, server_end),
@@ -52,10 +49,8 @@ impl token_manager::AuthProviderSupplier for AuthProviderSupplier {
                     .get_auth_provider(auth_provider_type, server_end))
                 {
                     Ok(fidl_fuchsia_auth_account::Status::Ok) => Ok(client_end),
-                    Ok(stat) => Err(
-                        TokenManagerError::new(Status::AuthProviderServiceUnavailable)
-                            .with_cause(format_err!("AccountHandlerContext returned {:?}", stat)),
-                    ),
+                    Ok(stat) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
+                        .with_cause(format_err!("AccountHandlerContext returned {:?}", stat))),
                     Err(err) => Err(TokenManagerError::new(Status::UnknownError).with_cause(err)),
                 }
             },
@@ -68,7 +63,8 @@ mod tests {
     use super::*;
     use fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd};
     use fidl_fuchsia_auth_account_internal::{
-        AccountHandlerContextRequest, AccountHandlerContextMarker};
+        AccountHandlerContextMarker, AccountHandlerContextRequest,
+    };
     use fuchsia_async as fasync;
     use futures::TryStreamExt;
     use token_manager::AuthProviderSupplier as AuthProviderSupplierTrait;
@@ -78,7 +74,8 @@ mod tests {
     /// Runs a asynchronous test on the supplied executor to contruct a new AuthProviderSupplier
     /// and request TEST_AUTH_PROVIDER.
     fn do_get_test(
-        mut executor: fasync::Executor, client_end: ClientEnd<AccountHandlerContextMarker>,
+        mut executor: fasync::Executor,
+        client_end: ClientEnd<AccountHandlerContextMarker>,
         expected_error: Option<Status>,
     ) {
         let proxy = client_end.into_proxy().unwrap();
@@ -116,9 +113,7 @@ mod tests {
                 })) = await!(request_stream.try_next())
                 {
                     if auth_provider_type == TEST_AUTH_PROVIDER_TYPE {
-                        responder
-                            .send(status)
-                            .expect("Failed to send test response");
+                        responder.send(status).expect("Failed to send test response");
                     }
                 }
             },
@@ -143,10 +138,6 @@ mod tests {
             server_end,
             fidl_fuchsia_auth_account::Status::NotFound,
         );
-        do_get_test(
-            executor,
-            client_end,
-            Some(Status::AuthProviderServiceUnavailable),
-        );
+        do_get_test(executor, client_end, Some(Status::AuthProviderServiceUnavailable));
     }
 }

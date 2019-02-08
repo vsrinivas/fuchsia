@@ -83,15 +83,14 @@ impl AccountHandlerConnection {
     /// Launches a new AccountHandler component instance, establishes a connection to its control
     /// channel, and requests that it loads an existing account.
     pub async fn load_account(
-        account_id: &LocalAccountId, context: Arc<AccountHandlerContext>,
+        account_id: &LocalAccountId,
+        context: Arc<AccountHandlerContext>,
     ) -> Result<Self, AccountManagerError> {
         let connection = Self::new()?;
         let context_client_end = Self::spawn_context_channel(context)?;
         let mut fidl_account_id = account_id.clone().into();
-        match await!(connection
-            .proxy
-            .load_account(context_client_end, &mut fidl_account_id))
-        .account_manager_status(Status::IoError)?
+        match await!(connection.proxy.load_account(context_client_end, &mut fidl_account_id))
+            .account_manager_status(Status::IoError)?
         {
             Status::Ok => Ok(connection),
             stat => Err(AccountManagerError::new(stat)

@@ -45,13 +45,11 @@ pub struct Persona {
 impl Persona {
     /// Constructs a new Persona.
     pub fn new(
-        id: LocalPersonaId, account_id: LocalAccountId, token_manager: Arc<TokenManager>,
+        id: LocalPersonaId,
+        account_id: LocalAccountId,
+        token_manager: Arc<TokenManager>,
     ) -> Persona {
-        Self {
-            id,
-            _account_id: account_id,
-            token_manager,
-        }
+        Self { id, _account_id: account_id, token_manager }
     }
 
     /// Returns the device-local identifier for this persona.
@@ -61,7 +59,9 @@ impl Persona {
 
     /// Asynchronously handles the supplied stream of `PersonaRequest` messages.
     pub async fn handle_requests_from_stream<'a>(
-        &'a self, context: &'a PersonaContext, mut stream: PersonaRequestStream,
+        &'a self,
+        context: &'a PersonaContext,
+        mut stream: PersonaRequestStream,
     ) -> Result<(), Error> {
         while let Some(req) = await!(stream.try_next())? {
             self.handle_request(context, req)?;
@@ -72,7 +72,9 @@ impl Persona {
     /// Dispatches a `PersonaRequest` message to the appropriate handler method
     /// based on its type.
     pub fn handle_request<'a>(
-        &self, context: &'a PersonaContext, req: PersonaRequest,
+        &self,
+        context: &'a PersonaContext,
+        req: PersonaRequest,
     ) -> Result<(), fidl::Error> {
         match req {
             PersonaRequest::GetAuthState { responder } => {
@@ -88,11 +90,7 @@ impl Persona {
                 let response = self.register_auth_listener(listener, initial_state, granularity);
                 responder.send(response)?;
             }
-            PersonaRequest::GetTokenManager {
-                application_url,
-                token_manager,
-                responder,
-            } => {
+            PersonaRequest::GetTokenManager { application_url, token_manager, responder } => {
                 let response = self.get_token_manager(context, application_url, token_manager);
                 responder.send(response)?;
             }
@@ -106,7 +104,9 @@ impl Persona {
     }
 
     fn register_auth_listener(
-        &self, _listener: ClientEnd<AuthListenerMarker>, _initial_state: bool,
+        &self,
+        _listener: ClientEnd<AuthListenerMarker>,
+        _initial_state: bool,
         _granularity: AuthChangeGranularity,
     ) -> Status {
         // TODO(jsankey): Implement this method.
@@ -115,7 +115,9 @@ impl Persona {
     }
 
     fn get_token_manager<'a>(
-        &'a self, context: &'a PersonaContext, application_url: String,
+        &'a self,
+        context: &'a PersonaContext,
+        application_url: String,
         token_manager_server_end: ServerEnd<TokenManagerMarker>,
     ) -> Status {
         let token_manager_clone = Arc::clone(&self.token_manager);
@@ -152,7 +154,7 @@ mod tests {
     use fidl::endpoints::create_endpoints;
     use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
     use fidl_fuchsia_auth_account::{PersonaMarker, PersonaProxy};
-    use fidl_fuchsia_auth_account_internal::{AccountHandlerContextMarker};
+    use fidl_fuchsia_auth_account_internal::AccountHandlerContextMarker;
     use fuchsia_async as fasync;
 
     /// Type to hold the common state require during construction of test objects and execution
@@ -173,15 +175,12 @@ mod tests {
                 TokenManager::new(
                     &location.test_path(),
                     AuthProviderSupplier::new(
-                        account_handler_context_client_end.into_proxy().unwrap()),
+                        account_handler_context_client_end.into_proxy().unwrap(),
+                    ),
                 )
                 .unwrap(),
             );
-            Test {
-                executor,
-                _location: location,
-                token_manager,
-            }
+            Test { executor, _location: location, token_manager }
         }
 
         fn create_persona(&self) -> Persona {
@@ -217,9 +216,7 @@ mod tests {
                 },
             );
 
-            self.executor
-                .run_singlethreaded(test_fn(persona_proxy))
-                .expect("Executor run failed.")
+            self.executor.run_singlethreaded(test_fn(persona_proxy)).expect("Executor run failed.")
         }
     }
 
@@ -235,10 +232,7 @@ mod tests {
         test.run(test.create_persona(), async move |proxy| {
             assert_eq!(
                 await!(proxy.get_auth_state())?,
-                (
-                    Status::Ok,
-                    Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE))
-                )
+                (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
             );
             Ok(())
         });
@@ -253,9 +247,7 @@ mod tests {
                 await!(proxy.register_auth_listener(
                     auth_listener_client_end,
                     true, /* include initial state */
-                    &mut AuthChangeGranularity {
-                        summary_changes: true
-                    }
+                    &mut AuthChangeGranularity { summary_changes: true }
                 ))?,
                 Status::InternalError
             );

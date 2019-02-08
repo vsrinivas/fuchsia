@@ -25,10 +25,7 @@ where
 /// contains the fuchsia.auth.account.Status that should be reported back to the client and an
 /// indication of whether it is fatal.
 #[derive(Debug, Fail)]
-#[fail(
-    display = "AccountManager error, returning {:?}. ({:?})",
-    status, cause
-)]
+#[fail(display = "AccountManager error, returning {:?}. ({:?})", status, cause)]
 pub struct AccountManagerError {
     /// The most appropriate `fuchsia.auth.account.Status` to describe this problem.
     pub status: Status,
@@ -42,11 +39,7 @@ pub struct AccountManagerError {
 impl AccountManagerError {
     /// Constructs a new non-fatal error based on the supplied `Status`.
     pub fn new(status: Status) -> Self {
-        AccountManagerError {
-            status,
-            fatal: false,
-            cause: None,
-        }
+        AccountManagerError { status, fatal: false, cause: None }
     }
 
     /// Sets a cause on the current error.

@@ -20,7 +20,7 @@ use fidl_fuchsia_auth::{
 use fidl_fuchsia_auth_account::{
     AccountRequest, AccountRequestStream, AuthListenerMarker, PersonaMarker, Status,
 };
-use fidl_fuchsia_auth_account_internal::{AccountHandlerContextProxy};
+use fidl_fuchsia_auth_account_internal::AccountHandlerContextProxy;
 use fuchsia_async as fasync;
 use futures::prelude::*;
 use log::{error, warn};
@@ -68,14 +68,15 @@ pub struct Account {
 }
 
 impl Account {
-
     /// A fixed string returned as the name of all accounts until account names are fully
     /// implemented.
     const DEFAULT_ACCOUNT_NAME: &'static str = "Unnamed account";
 
     /// Manually construct an account object, shouldn't normally be called directly.
     fn new(
-        account_id: LocalAccountId, persona_id: LocalPersonaId, account_dir: &Path,
+        account_id: LocalAccountId,
+        persona_id: LocalPersonaId,
+        account_dir: &Path,
         context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
         let token_db_path = account_dir.join(TOKEN_DB);
@@ -92,7 +93,8 @@ impl Account {
 
     /// Creates a new Fuchsia account and persist it on disk.
     pub fn create(
-        account_id: LocalAccountId, account_dir: &Path,
+        account_id: LocalAccountId,
+        account_dir: &Path,
         context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
         fs::create_dir(account_dir).map_err(|err| {
@@ -116,19 +118,15 @@ impl Account {
 
     /// Loads an existing Fuchsia account from disk.
     pub fn load(
-        account_id: LocalAccountId, account_dir: &Path,
+        account_id: LocalAccountId,
+        account_dir: &Path,
         context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
         if !account_dir.exists() {
-            return Err(AccountManagerError::new(Status::NotFound))
+            return Err(AccountManagerError::new(Status::NotFound));
         };
         let stored_account = StoredAccount::load(account_dir)?;
-        Self::new(
-            account_id,
-            stored_account.default_persona_id,
-            account_dir,
-            context_proxy,
-        )
+        Self::new(account_id, stored_account.default_persona_id, account_dir, context_proxy)
     }
 
     /// Removes the account from disk.
@@ -146,7 +144,9 @@ impl Account {
 
     /// Asynchronously handles the supplied stream of `AccountRequest` messages.
     pub async fn handle_requests_from_stream<'a>(
-        &'a self, context: &'a AccountContext, mut stream: AccountRequestStream,
+        &'a self,
+        context: &'a AccountContext,
+        mut stream: AccountRequestStream,
     ) -> Result<(), Error> {
         while let Some(req) = await!(stream.try_next())? {
             self.handle_request(context, req)?;
@@ -157,7 +157,9 @@ impl Account {
     /// Dispatches an `AccountRequest` message to the appropriate handler method
     /// based on its type.
     pub fn handle_request(
-        &self, context: &AccountContext, req: AccountRequest,
+        &self,
+        context: &AccountContext,
+        req: AccountRequest,
     ) -> Result<(), fidl::Error> {
         match req {
             AccountRequest::GetAccountName { responder } => {
@@ -185,11 +187,7 @@ impl Account {
                 let mut response = self.get_default_persona(context, persona);
                 responder.send(response.0, response.1.as_mut().map(OutOfLine))?;
             }
-            AccountRequest::GetPersona {
-                id,
-                persona,
-                responder,
-            } => {
+            AccountRequest::GetPersona { id, persona, responder } => {
                 let response = self.get_persona(context, id.into(), persona);
                 responder.send(response)?;
             }
@@ -217,7 +215,9 @@ impl Account {
     }
 
     fn register_auth_listener(
-        &self, _listener: ClientEnd<AuthListenerMarker>, _initial_state: bool,
+        &self,
+        _listener: ClientEnd<AuthListenerMarker>,
+        _initial_state: bool,
         _granularity: AuthChangeGranularity,
     ) -> Status {
         // TODO(jsankey): Implement this method.
@@ -230,12 +230,13 @@ impl Account {
     }
 
     fn get_default_persona(
-        &self, context: &AccountContext, persona_server_end: ServerEnd<PersonaMarker>,
+        &self,
+        context: &AccountContext,
+        persona_server_end: ServerEnd<PersonaMarker>,
     ) -> (Status, Option<FidlLocalPersonaId>) {
         let persona_clone = Arc::clone(&self.default_persona);
-        let persona_context = PersonaContext {
-            auth_ui_context_provider: context.auth_ui_context_provider.clone(),
-        };
+        let persona_context =
+            PersonaContext { auth_ui_context_provider: context.auth_ui_context_provider.clone() };
         match persona_server_end.into_stream() {
             Ok(stream) => {
                 fasync::spawn(
@@ -254,7 +255,9 @@ impl Account {
     }
 
     fn get_persona(
-        &self, context: &AccountContext, id: LocalPersonaId,
+        &self,
+        context: &AccountContext,
+        id: LocalPersonaId,
         persona_server_end: ServerEnd<PersonaMarker>,
     ) -> Status {
         if &id == self.default_persona.id() {
@@ -348,7 +351,7 @@ mod tests {
     use fidl::endpoints::create_endpoints;
     use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
     use fidl_fuchsia_auth_account::{AccountMarker, AccountProxy};
-    use fidl_fuchsia_auth_account_internal::{AccountHandlerContextMarker};
+    use fidl_fuchsia_auth_account_internal::AccountHandlerContextMarker;
     use fuchsia_async as fasync;
 
     /// Type to hold the common state require during construction of test objects and execution
@@ -411,9 +414,7 @@ mod tests {
                 },
             );
 
-            self.executor
-                .run_singlethreaded(test_fn(account_proxy))
-                .expect("Executor run failed.")
+            self.executor.run_singlethreaded(test_fn(account_proxy)).expect("Executor run failed.")
         }
     }
 
@@ -424,10 +425,7 @@ mod tests {
         let account_1 = test.create_account().unwrap();
         test.location = TempLocation::new();
         let account_2 = test.create_account().unwrap();
-        assert_ne!(
-            account_1.default_persona.id(),
-            account_2.default_persona.id()
-        );
+        assert_ne!(account_1.default_persona.id(), account_2.default_persona.id());
     }
 
     #[test]
@@ -444,11 +442,8 @@ mod tests {
         let test = Test::new();
         let account_1 = test.create_account().unwrap(); // Persists the account on disk
         let account_2 = test.load_account().unwrap(); // Reads from same location
-        // Since persona ids are random, we can check that loading worked successfully here
-        assert_eq!(
-            account_1.default_persona.id(),
-            account_2.default_persona.id()
-        );
+                                                      // Since persona ids are random, we can check that loading worked successfully here
+        assert_eq!(account_1.default_persona.id(), account_2.default_persona.id());
     }
 
     #[test]
@@ -470,10 +465,7 @@ mod tests {
         test.run(test.create_account().unwrap(), async move |proxy| {
             assert_eq!(
                 await!(proxy.get_auth_state())?,
-                (
-                    Status::Ok,
-                    Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE))
-                )
+                (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
             );
             Ok(())
         });
@@ -488,9 +480,7 @@ mod tests {
                 await!(proxy.register_auth_listener(
                     auth_listener_client_end,
                     true, /* include initial state */
-                    &mut AuthChangeGranularity {
-                        summary_changes: true
-                    }
+                    &mut AuthChangeGranularity { summary_changes: true }
                 ))?,
                 Status::InternalError
             );
@@ -530,10 +520,7 @@ mod tests {
             let persona_proxy = persona_client_end.into_proxy().unwrap();
             assert_eq!(
                 await!(persona_proxy.get_auth_state())?,
-                (
-                    Status::Ok,
-                    Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE))
-                )
+                (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
             );
 
             Ok(())
@@ -549,10 +536,8 @@ mod tests {
         test.run(account, async move |account_proxy| {
             let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
             assert_eq!(
-                await!(account_proxy.get_persona(
-                    &mut FidlLocalPersonaId::from(persona_id),
-                    persona_server_end
-                ))?,
+                await!(account_proxy
+                    .get_persona(&mut FidlLocalPersonaId::from(persona_id), persona_server_end))?,
                 Status::Ok
             );
 
@@ -560,10 +545,7 @@ mod tests {
             let persona_proxy = persona_client_end.into_proxy().unwrap();
             assert_eq!(
                 await!(persona_proxy.get_auth_state())?,
-                (
-                    Status::Ok,
-                    Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE))
-                )
+                (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
             );
 
             Ok(())

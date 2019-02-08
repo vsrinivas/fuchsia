@@ -54,9 +54,7 @@ fn main() -> Result<(), Error> {
         .start()
         .context("Error starting AccountHandlerControl server")?;
 
-    executor
-        .run_singlethreaded(fut)
-        .context("Failed to execute AccountHandlerControl future")?;
+    executor.run_singlethreaded(fut).context("Failed to execute AccountHandlerControl future")?;
 
     info!("Stopping account handler");
     Ok(())
