@@ -126,6 +126,15 @@ protocol PCol
     -> End();
 };
 
+// following example pulled from sample FIDL library
+// which used to crash the formatter
+const uint32 MAX_STRING_DESC_SIZE = 384;
+
+/// See GetStringDescriptor description below
+[Layout = "Simple"]
+protocol Device {
+};
+
 /// POfMany!
 protocol POfMany
 {

@@ -257,7 +257,14 @@ private:
     }
 
     static bool IsStartOfComment(std::string str, int i) {
-        return (i < str.size() - 1) && str[i] == '/' && str[i + 1] == '/';
+        if ((i < str.size() - 1) && str[i] == '/' && str[i + 1] == '/') {
+            // doc comments, which start with three slashes, should not
+            // be treated as comments since they get internally converted
+            // to attributes
+            return (i < str.size() - 2) && str[i + 2] != '/';
+        } else {
+            return false;
+        }
     }
 
     // If the string str at offset pos is the beginning of a comment, pos is
