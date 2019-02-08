@@ -9,11 +9,11 @@
 
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
-#include "garnet/public/lib/ui/scenic/cpp/session.h"
 #include "gtest/gtest.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/gtest/test_loop_fixture.h"
+#include "lib/ui/scenic/cpp/session.h"
 
 namespace scenic_impl {
 namespace test {
