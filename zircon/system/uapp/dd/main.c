@@ -14,6 +14,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fuchsia/hardware/skipblock/c/fidl.h>
+#include <lib/fdio/util.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+
 int usage(void) {
     fprintf(stderr, "usage: dd [OPTIONS]\n");
     fprintf(stderr, "dd can be used to convert and copy files\n");
@@ -139,6 +144,32 @@ int parse_args(int argc, const char** argv, dd_options_t* options) {
 #define MIN(x,y) ((x) < (y) ? (x) : (y))
 #define MAX(x,y) ((x) < (y) ? (y) : (x))
 
+bool is_skip_block(const char* path, fuchsia_hardware_skipblock_PartitionInfo* partition_info) {
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) {
+        return false;
+    }
+
+    zx_handle_t channel;
+    zx_status_t status = fdio_get_service_handle(fd, &channel);
+    if (status != ZX_OK) {
+        return false;
+    }
+
+    // |status| is used for the status of the whole FIDL request. We expect
+    // |status| to be ZX_OK if the channel connects to a skip-block driver.
+    // |op_status| refers to the status of the underlying read/write operation
+    // and will be ZX_OK only if the read/write succeeds. It is NOT set if
+    // the channel is not connected to a skip-block driver.
+    zx_status_t op_status;
+
+    status = fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(
+        channel, &op_status, partition_info);
+
+    close(fd);
+    return status == ZX_OK;
+}
+
 int main(int argc, const char** argv) {
     dd_options_t options;
     memset(&options, 0, sizeof(dd_options_t));
@@ -156,6 +187,7 @@ int main(int argc, const char** argv) {
 
     options.input_skip *= options.input_bs;
     options.output_seek *= options.output_bs;
+    size_t buf_size = MAX(options.output_bs, options.input_bs);
 
     // Input and output fds
     int in = -1;
@@ -170,6 +202,13 @@ int main(int argc, const char** argv) {
     // Size of remaining "partial" transfer from input / to output.
     size_t record_in_partial = 0;
     size_t record_out_partial = 0;
+    // Logic for skip-block devices.
+    fuchsia_hardware_skipblock_PartitionInfo partition_info = {};
+    bool in_is_skip_block = false;
+    bool out_is_skip_block = false;
+    zx_handle_t vmo = ZX_HANDLE_INVALID;
+    zx_handle_t channel_in = ZX_HANDLE_INVALID;
+    zx_handle_t channel_out = ZX_HANDLE_INVALID;
 
     if (*options.input == '\0') {
         in = STDIN_FILENO;
@@ -191,13 +230,47 @@ int main(int argc, const char** argv) {
         }
     }
 
-    buf = malloc(MAX(options.output_bs, options.input_bs));
-    if (buf == NULL) {
-        fprintf(stderr, "No memory\n");
-        goto done;
+    if (is_skip_block(options.input, &partition_info)) {
+        if (options.input_bs % partition_info.block_size_bytes) {
+            fprintf(stderr, "BS must be a multiple of %lu\n", partition_info.block_size_bytes);
+            return false;
+            goto done;
+        }
+
+        in_is_skip_block = true;
+        fdio_get_service_handle(in, &channel_in);
     }
 
-    if (options.input_skip != 0) {
+    if (is_skip_block(options.output, &partition_info)) {
+        if (options.output_bs % partition_info.block_size_bytes) {
+            fprintf(stderr, "BS must be a multiple of %lu\n", partition_info.block_size_bytes);
+            return false;
+            goto done;
+        }
+
+        out_is_skip_block = true;
+        fdio_get_service_handle(out, &channel_out);
+    }
+
+    if (in_is_skip_block || out_is_skip_block) {
+        if (zx_vmo_create(buf_size, 0, &vmo) != ZX_OK) {
+            fprintf(stderr, "No memory\n");
+            goto done;
+        }
+        if (zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                        0, vmo, 0, buf_size, (zx_vaddr_t*)&buf) != ZX_OK) {
+            fprintf(stderr, "Failed to map vmo\n");
+            goto done;
+        }
+    } else {
+        buf = malloc(buf_size);
+        if (buf == NULL) {
+            fprintf(stderr, "No memory\n");
+            goto done;
+        }
+    }
+
+    if (options.input_skip != 0 && !in_is_skip_block) {
         // Try seeking first; if that doesn't work, try reading to an input buffer.
         if (lseek(in, options.input_skip, SEEK_SET) != (off_t) options.input_skip) {
             while (options.input_skip) {
@@ -210,7 +283,7 @@ int main(int argc, const char** argv) {
         }
     }
 
-    if (options.output_seek != 0) {
+    if (options.output_seek != 0 && !out_is_skip_block) {
         if (lseek(out, options.output_seek, SEEK_SET) != (off_t) options.output_seek) {
             fprintf(stderr, "Failed to seek on output\n");
             goto done;
@@ -233,17 +306,44 @@ int main(int argc, const char** argv) {
         }
 
         // Read as much as we can (up to input_bs) into our target buffer
-        ssize_t rout;
-        if ((rout = read(in, buf, options.input_bs)) != (ssize_t) options.input_bs) {
-            terminating = true;
-        }
-        if (rout == (ssize_t) options.input_bs) {
+        if (in_is_skip_block) {
+            zx_handle_t dup;
+            if (zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
+                fprintf(stderr, "Cannot duplicate handle\n");
+                goto done;
+            }
+            const uint32_t block_count = (uint32_t)(options.input_bs /
+                                                    partition_info.block_size_bytes);
+            fuchsia_hardware_skipblock_ReadWriteOperation op = {
+                .vmo = dup,
+                .vmo_offset = 0,
+                .block = (uint32_t)((options.input_skip / partition_info.block_size_bytes) +
+                                    (records_in * block_count)),
+                .block_count = block_count,
+            };
+
+            zx_status_t status;
+            fuchsia_hardware_skipblock_SkipBlockRead(channel_in, &op, &status);
+
+            if (status != ZX_OK) {
+                fprintf(stderr, "Failed to read\n");
+                goto done;
+            }
             records_in++;
-        } else if (rout > 0) {
-            record_in_partial = rout;
-        }
-        if (rout > 0) {
-            rlen += rout;
+            rlen += options.input_bs;
+        } else {
+            ssize_t rout;
+            if ((rout = read(in, buf, options.input_bs)) != (ssize_t) options.input_bs) {
+                terminating = true;
+            }
+            if (rout == (ssize_t) options.input_bs) {
+                records_in++;
+            } else if (rout > 0) {
+                record_in_partial = rout;
+            }
+            if (rout > 0) {
+                rlen += rout;
+            }
         }
         if (options.use_count) {
             --options.count;
@@ -255,19 +355,49 @@ int main(int argc, const char** argv) {
         // If we can (or should, due to impending termination), dump the read
         // buffer into the output file.
         if (rlen >= options.output_bs || terminating) {
-            size_t off = 0;
-            while (off != rlen) {
-                size_t wlen = MIN(options.output_bs, rlen - off);
-                if (write(out, buf + off, wlen) != (ssize_t) wlen) {
-                    fprintf(stderr, "Couldn't write %zu bytes to output\n", wlen);
+            if (out_is_skip_block) {
+                zx_handle_t dup;
+                if (zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
+                    fprintf(stderr, "Cannot duplicate handle\n");
                     goto done;
                 }
-                if (wlen == options.output_bs) {
-                    records_out++;
-                } else {
-                    record_out_partial = wlen;
+                const uint32_t block_count = (uint32_t)(options.output_bs /
+                                                        partition_info.block_size_bytes);
+
+                fuchsia_hardware_skipblock_ReadWriteOperation op = {
+                    .vmo = dup,
+                    .vmo_offset = 0,
+                    .block = (uint32_t)((options.output_seek / partition_info.block_size_bytes) +
+                                        (records_out * block_count)),
+                    .block_count = block_count,
+                };
+
+                zx_status_t status;
+                bool bad_block_grown;
+                fuchsia_hardware_skipblock_SkipBlockWrite(
+                    channel_out, &op, &status, &bad_block_grown);
+
+                if (status != ZX_OK) {
+                    fprintf(stderr, "Failed to write\n");
+                    goto done;
                 }
-                off += wlen;
+
+                records_out++;
+            } else {
+                size_t off = 0;
+                while (off != rlen) {
+                    size_t wlen = MIN(options.output_bs, rlen - off);
+                    if (write(out, buf + off, wlen) != (ssize_t) wlen) {
+                        fprintf(stderr, "Couldn't write %zu bytes to output\n", wlen);
+                        goto done;
+                    }
+                    if (wlen == options.output_bs) {
+                        records_out++;
+                    } else {
+                        record_out_partial = wlen;
+                    }
+                    off += wlen;
+                }
             }
             rlen = 0;
         }
@@ -283,12 +413,22 @@ done:
     printf("%zu+%u records out\n", records_out, record_out_partial ? 1 : 0);
     printf("%zu bytes copied\n", records_out * options.output_bs + record_out_partial);
 
+    if (buf) {
+        if (in_is_skip_block || out_is_skip_block) {
+            zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)*buf, buf_size);
+        } else {
+            free(buf);
+        }
+    }
+    if (vmo != ZX_HANDLE_INVALID) {
+        zx_handle_close(vmo);
+    }
+
     if (in != -1) {
         close(in);
     }
     if (out != -1) {
         close(out);
     }
-    free(buf);
     return r;
 }
