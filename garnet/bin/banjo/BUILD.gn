@@ -49,7 +49,7 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust-crates/rustc_deps:pretty_assertions",
       ":banjo_lib($host_toolchain)",
     ]
-    source_root = "test/ast_tests.rs"
+    source_root = "test/tests.rs"
   }
 
   copy("banjo_host_tests") {
