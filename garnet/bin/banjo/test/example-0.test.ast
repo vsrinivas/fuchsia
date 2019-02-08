@@ -1,0 +1,43 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.example0",
+    namespaces: {
+        "banjo.examples.example0": [
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "Foo",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Ident {
+                            id: "Bar",
+                            reference: false
+                        },
+                        ident: "b"
+                    }
+                ]
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "Bar",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Ident {
+                            id: "Foo",
+                            reference: true
+                        },
+                        ident: "f"
+                    }
+                ]
+            }
+        ]
+    }
+}

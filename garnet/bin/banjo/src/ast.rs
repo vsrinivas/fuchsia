@@ -163,8 +163,8 @@ pub enum Ty {
     Struct,
     Union,
     Enum,
-    Handle { ty: HandleTy, nullable: bool },
-    Ident { id: String, nullable: bool },
+    Handle { ty: HandleTy, reference: bool },
+    Ident { id: String, reference: bool },
 }
 
 impl fmt::Display for Ty {
@@ -190,12 +190,13 @@ impl Ty {
             _ => true,
         }
     }
-    pub fn is_nullable(&self) -> bool {
+    pub fn is_reference(&self) -> bool {
+        // TODO(bwb) intent to remove all nullable
         match self {
             Ty::Str { nullable, .. } => *nullable,
             Ty::Vector { nullable, .. } => *nullable,
-            Ty::Ident { nullable, .. } => *nullable,
-            Ty::Handle { nullable, .. } => *nullable,
+            Ty::Ident { reference, .. } => *reference,
+            Ty::Handle { reference, .. } => *reference,
             _ => false,
         }
     }
@@ -221,7 +222,7 @@ impl Ty {
             },
             Rule::handle_type => {
                 let mut ty = HandleTy::Handle;
-                let mut nullable = false;
+                let mut reference = false;
                 for inner_pair in pair.clone().into_inner() {
                     match inner_pair.as_rule() {
                         Rule::handle_subtype => {
@@ -251,8 +252,8 @@ impl Ty {
                                 }
                             }
                         }
-                        Rule::nullable => {
-                            nullable = true;
+                        Rule::reference => {
+                            reference = true;
                         }
                         _e => {
                             return Err(ParseError::UnrecognizedType(
@@ -261,7 +262,7 @@ impl Ty {
                         }
                     }
                 }
-                Ok(Ty::Handle { ty, nullable })
+                Ok(Ty::Handle { ty, reference })
             }
             Rule::integer_type => match pair.as_str() {
                 "usize" => Ok(Ty::USize),
@@ -284,9 +285,9 @@ impl Ty {
             Rule::identifier_type => {
                 let mut iter = pair.clone().into_inner();
                 let id = String::from(iter.next().unwrap().as_str());
-                let nullable = if let Some(pair) = iter.next() {
+                let reference = if let Some(pair) = iter.next() {
                     match pair.as_rule() {
-                        Rule::nullable => true,
+                        Rule::reference => true,
                         e => {
                             return Err(ParseError::UnexpectedToken(e));
                         }
@@ -294,7 +295,7 @@ impl Ty {
                 } else {
                     false
                 };
-                Ok(Ty::Ident { id, nullable })
+                Ok(Ty::Ident { id, reference })
             }
             Rule::string_type => {
                 let mut size = None;
@@ -304,7 +305,7 @@ impl Ty {
                         Rule::constant => {
                             size = Some(Constant::from_str(inner_pair.as_str())?);
                         }
-                        Rule::nullable => {
+                        Rule::reference => {
                             nullable = true;
                         }
                         e => {
@@ -324,7 +325,7 @@ impl Ty {
                         Rule::constant => {
                             size = Some(Constant::from_str(inner_pair.as_str())?);
                         }
-                        Rule::nullable => {
+                        Rule::reference => {
                             nullable = true;
                         }
                         e => {
@@ -708,7 +709,11 @@ impl BanjoAst {
         match ty {
             Ty::Array { ref ty, .. } => self.type_to_decl(ty),
             Ty::Vector { ref ty, .. } => self.type_to_decl(ty),
-            Ty::Ident { id, .. } => {
+            Ty::Ident { id, reference } => {
+                // don't add edge for a reference
+                if *reference {
+                    return None
+                }
                 // check if FQ
                 let v: Vec<&str> = id.rsplitn(2, '.').collect();
                 let (namespace, ident) = if v.len() > 1 {

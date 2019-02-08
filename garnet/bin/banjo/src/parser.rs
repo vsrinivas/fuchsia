@@ -53,18 +53,18 @@ interface_declaration = { attributes ~ "interface" ~ ident ~ ( ":" ~ super_inter
 
 type_ = _{ string_type | primitive_type | vector_type | array_type | handle_type | identifier_type }
 
-identifier_type = { compound_ident ~ nullable? }
+identifier_type = { compound_ident ~ reference? }
 array_type = { "array" ~ "<" ~ type_ ~ ">" ~ ":" ~ constant }
-vector_type = { "vector" ~ "<" ~ type_ ~ ">" ~ (":" ~ constant )? ~ nullable? }
+vector_type = { "vector" ~ "<" ~ type_ ~ ">" ~ (":" ~ constant )? ~ reference? }
 
-string_type = { "string" ~ ( ":" ~ constant )? ~ nullable? }
+string_type = { "string" ~ ( ":" ~ constant )? ~ reference? }
 
 primitive_type = { integer_type | "voidptr" | "bool" | "float32" | "float64" }
 
 integer_type = { "usize" | "int8" | "int16" | "int32" | "int64" |
                "uint8" | "uint16" | "uint32" | "uint64" }
 
-handle_type = { "handle" ~ ( "<" ~ handle_subtype ~ ">" )? ~ nullable? }
+handle_type = { "handle" ~ ( "<" ~ handle_subtype ~ ">" )? ~ reference? }
 
 handle_subtype = { "process" | "thread" | "vmo" | "channel" | "eventpair" | "port" |
                  "interrupt" | "debuglog" | "socket" | "resource" | "event" |
@@ -77,6 +77,6 @@ digit = { '0'..'9' }
 string = { "\"" ~ ("-" | SYMBOL | alpha)* ~ "\"" }
 numeric = { ("-" | digit)* }
 constant = { compound_ident | numeric }
-nullable = { "?" }
+reference = { "?" }
 "#]
 pub struct BanjoParser;

@@ -169,7 +169,7 @@ fn get_in_params(m: &ast::Method, transform: bool, ast: &BanjoAst) -> Result<Vec
                         ast::Ty::Struct | ast::Ty::Union => {
                             let ty_name = ty_to_c_str(ast, ty).unwrap();
                             // TODO: Using nullability to determine whether param is mutable is a hack.
-                            let prefix = if ty.is_nullable() { "" } else { "const " };
+                            let prefix = if ty.is_reference() { "" } else { "const " };
                             Ok(format!("{}{}* {}", prefix, ty_name, to_c_name(name)))
                         }
                         ast::Ty::Enum => {
@@ -230,7 +230,7 @@ fn get_out_params(
     let skip_amt = if skip { 1 } else { 0 };
 
     Ok((m.out_params.iter().skip(skip_amt).map(|(name, ty)| {
-        let nullable = if ty.is_nullable() { "*" } else { "" };
+        let nullable = if ty.is_reference() { "*" } else { "" };
         let ty_name = ty_to_c_str(ast, ty).unwrap();
         match ty {
             ast::Ty::Interface => format!("const {}* {}", ty_name, to_c_name(name)),
@@ -239,7 +239,7 @@ fn get_out_params(
                 format!("{}{}{} out_{}", ty_name, star, nullable, to_c_name(name))
             },
             ast::Ty::Vector {..} => {
-                if ty.is_nullable() {
+                if ty.is_reference() {
                     format!("{ty}** out_{name}_{buffer}, size_t* {name}_{size}",
                             buffer = name_buffer(&ty_name),
                             size = name_size(&ty_name),
@@ -291,7 +291,7 @@ fn get_out_args(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, bool), 
                 ast::Ty::Interface { .. } => format!("{}", to_c_name(name)),
                 ast::Ty::Vector { .. } => {
                     let ty_name = ty_to_c_str(ast, ty).unwrap();
-                    if ty.is_nullable() {
+                    if ty.is_reference() {
                         format!(
                             "out_{name}_{buffer}, {name}_{size}",
                             buffer = name_buffer(&ty_name),

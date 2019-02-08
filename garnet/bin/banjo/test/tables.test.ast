@@ -14,7 +14,7 @@ BanjoAst {
                         ),
                         ty: Ident {
                             id: "B",
-                            nullable: true
+                            reference: true
                         },
                         ident: "foo"
                     }
@@ -32,7 +32,7 @@ BanjoAst {
                         ),
                         ty: Ident {
                             id: "A",
-                            nullable: true
+                            reference: true
                         },
                         ident: "bar"
                     }
@@ -50,7 +50,7 @@ BanjoAst {
                         ),
                         ty: Handle {
                             ty: Handle,
-                            nullable: false
+                            reference: false
                         },
                         ident: "baz"
                     }
@@ -68,7 +68,7 @@ BanjoAst {
                         ),
                         ty: Ident {
                             id: "C",
-                            nullable: false
+                            reference: false
                         },
                         ident: "qux"
                     }
