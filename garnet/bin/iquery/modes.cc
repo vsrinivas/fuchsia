@@ -194,8 +194,8 @@ bool FindObjects(const std::string& base_directory, bool recursive,
     });
 
     if (dir == nullptr) {
-      FXL_LOG(WARNING) << fxl::StringPrintf("Could not open %s (errno=%d)",
-                                            path.c_str(), errno);
+      FXL_LOG(INFO) << fxl::StringPrintf("Could not open %s (errno=%d)",
+                                         path.c_str(), errno);
       continue;
     }
 
