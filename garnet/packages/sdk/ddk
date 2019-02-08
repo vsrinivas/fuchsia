@@ -1,5 +1,5 @@
 {
     "labels": [
-        "//garnet/public/sdk:ddk"
+        "//sdk:ddk"
     ]
 }

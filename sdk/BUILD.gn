@@ -1,0 +1,190 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/banjo/toolchain.gni")
+import("//build/fidl/toolchain.gni")
+import("//build/sdk/sdk.gni")
+import("//build/sdk/sdk_documentation.gni")
+
+declare_args() {
+  # Identifier for the Garnet SDK.
+  sdk_id = ""
+}
+
+sdk("zircon_sysroot") {
+  category = "partner"
+
+  export = true
+
+  deps = [
+    "//zircon/public/sysroot:sysroot_sdk",
+  ]
+}
+
+sdk("ddk") {
+  category = "partner"
+
+  deps = [
+    "//zircon/public/banjo/ddk-driver:ddk-driver_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-acpi:ddk-protocol-acpi_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-amlogiccanvas:ddk-protocol-amlogiccanvas_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-badblock:ddk-protocol-badblock_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-block:ddk-protocol-block_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-bt-gattsvc:ddk-protocol-bt-gattsvc_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-bt-hci:ddk-protocol-bt-hci_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-clk:ddk-protocol-clk_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-display-controller:ddk-protocol-display-controller_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-ethernet:ddk-protocol-ethernet_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-ethernet-board:ddk-protocol-ethernet-board_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-ethernet-mac:ddk-protocol-ethernet-mac_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-gpio:ddk-protocol-gpio_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-gpioimpl:ddk-protocol-gpioimpl_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-hidbus:ddk-protocol-hidbus_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-i2c:ddk-protocol-i2c_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-i2cimpl:ddk-protocol-i2cimpl_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-intelgpucore:ddk-protocol-intelgpucore_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-intelhda-codec:ddk-protocol-intelhda-codec_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-intelhda-dsp:ddk-protocol-intelhda-dsp_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-iommu:ddk-protocol-iommu_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-mailbox:ddk-protocol-mailbox_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-mipicsi:ddk-protocol-mipicsi_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-nand:ddk-protocol-nand_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-pci:ddk-protocol-pci_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-pciroot:ddk-protocol-pciroot_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-platform-bus:ddk-protocol-platform-bus_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-platform-device:ddk-protocol-platform-device_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-platform-proxy:ddk-protocol-platform-proxy_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-rawnand:ddk-protocol-rawnand_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-scpi:ddk-protocol-scpi_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-sdhci:ddk-protocol-sdhci_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-sdio:ddk-protocol-sdio_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-sdmmc:ddk-protocol-sdmmc_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-serial:ddk-protocol-serial_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-serialimpl:ddk-protocol-serialimpl_sdk($banjo_toolchain)",
+    "//zircon/public/banjo/ddk-protocol-test:ddk-protocol-test_sdk($banjo_toolchain)",
+    "//zircon/public/lib/ddk:ddk_sdk",
+    "//zircon/public/lib/ddktl:ddktl_sdk",
+    "//zircon/public/lib/driver:driver_sdk",
+    "//zircon/public/sysroot:sysroot_sdk",
+    "//zircon/public/tool/banjo-format:banjo-format_sdk($host_toolchain)",
+    "//zircon/public/tool/banjoc:banjoc_sdk($host_toolchain)",
+    "//zircon/public/tool/fidl-format:fidl-format_sdk($host_toolchain)",
+    "//zircon/public/tool/fidlc:fidlc_sdk($host_toolchain)",
+  ]
+}
+
+has_sdk_id = sdk_id != ""
+
+if (has_sdk_id) {
+  sdk_id_file = "$target_gen_dir/sdk_id.txt"
+  write_file(sdk_id_file, sdk_id)
+
+  sdk_documentation("sdk_id") {
+    name = "sdk_id"
+
+    category = "partner"
+
+    files = [
+      {
+        source = sdk_id_file
+        dest = "meta/id.txt"
+      },
+    ]
+  }
+}
+
+sdk("garnet") {
+  category = "partner"
+
+  testonly = true
+
+  deps = [
+    "docs",
+    "tools:symbolize_sdk($host_toolchain)",
+    "//build/images:images_sdk",
+    "//garnet/bin/cmc:cmc_sdk($host_toolchain)",
+    "//garnet/bin/dev_finder:dev_finder_sdk($host_toolchain)",
+    "//garnet/bin/far:bin_sdk($host_toolchain)",
+    "//garnet/bin/zxdb:zxdb_sdk($host_toolchain)",
+    "//garnet/go/src/fidl:fidlgen_sdk($host_toolchain)",
+    "//garnet/go/src/pm:pm_bin_sdk($host_toolchain)",
+    "//garnet/lib/vulkan:vulkan_layers",
+    "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.camera:fuchsia.camera_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.images:fuchsia.images_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.math:fuchsia.math_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.mediaplayer:fuchsia.mediaplayer_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.net.http:fuchsia.net.http_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.net.oldhttp:fuchsia.net.oldhttp_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.simplecamera:fuchsia.simplecamera_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.ui.viewsv1:fuchsia.ui.viewsv1_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.ui.viewsv1token:fuchsia.ui.viewsv1token_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service_sdk($fidl_toolchain)",
+    "//sdk/lib/fidl/cpp:cpp_sdk",
+    "//garnet/public/lib/svc:svc_sdk",
+    "//garnet/public/lib/ui/scenic/cpp:cpp_sdk",
+    "//third_party/vulkan_loader_and_validation_layers/loader:loader_sdk",
+    "//zircon/public/fidl/fuchsia-cobalt:fuchsia-cobalt_sdk($fidl_toolchain)",
+    "//zircon/public/fidl/fuchsia-logger:fuchsia-logger_sdk($fidl_toolchain)",
+    "//zircon/public/fidl/fuchsia-mem:fuchsia-mem_sdk($fidl_toolchain)",
+    "//zircon/public/fidl/fuchsia-process:fuchsia-process_sdk($fidl_toolchain)",
+    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_sdk($fidl_toolchain)",
+    "//zircon/public/lib/async:async_sdk",
+    "//zircon/public/lib/async-default:async-default_sdk",
+    "//zircon/public/lib/async-loop:async-loop_sdk",
+    "//zircon/public/lib/async-loop-cpp:async-loop-cpp_sdk",
+    "//zircon/public/lib/fdio:fdio_sdk",
+    "//zircon/public/lib/memfs:memfs_sdk",
+    "//zircon/public/lib/sync:sync_sdk",
+    "//zircon/public/lib/syslog:syslog_sdk",
+    "//zircon/public/sysroot:sysroot_sdk",
+    "//zircon/public/tool/bootserver:bootserver_sdk($host_toolchain)",
+    "//zircon/public/tool/fidl-format:fidl-format_sdk($host_toolchain)",
+    "//zircon/public/tool/fidlc:fidlc_sdk($host_toolchain)",
+    "//zircon/public/tool/fvm:fvm_sdk($host_toolchain)",
+    "//zircon/public/tool/loglistener:loglistener_sdk($host_toolchain)",
+    "//zircon/public/tool/merkleroot:merkleroot_sdk($host_toolchain)",
+    "//zircon/public/tool/minfs:minfs_sdk($host_toolchain)",
+    "//zircon/public/tool/zbi:zbi_sdk($host_toolchain)",
+  ]
+
+  if (has_sdk_id) {
+    deps += [ ":sdk_id" ]
+  }
+
+  # We explicitly do not want to pull these dependencies into the SDK.
+  #
+  # These libraries are common dependencies in the Fuchsia source tree, but they
+  # are not stable enough to expose in the SDK.
+  #
+  # See <https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/sdk/standards.md#dependencies>
+  # for more information.
+  assert_no_deps = [
+    "//garnet/public/lib/fsl:fsl_sdk",
+    "//garnet/public/lib/fxl:fxl_sdk",
+    "//zircon/public/lib/fbl:fbl_sdk",
+    "//zircon/public/lib/fs:fs_sdk",
+  ]
+
+  if (target_cpu != "arm64") {
+    deps += [
+      "//build/images:fvm.sparse.blk_sdk",
+      "//build/images:local.esp.blk_sdk",
+      "//build/images:zircon.vboot_sdk",
+    ]
+  }
+}

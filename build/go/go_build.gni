@@ -114,7 +114,7 @@ template("go_build") {
       deps += [ "//third_party/go:go_runtime" ]
 
       deps += [
-        "//garnet/public/sdk:zircon_sysroot_export",
+        "//sdk:zircon_sysroot_export",
         "//zircon/public/lib/fdio",
       ]
 
