@@ -77,9 +77,6 @@ def find_variant(info, build_dir=os.path.curdir):
                        if (subdir.startswith(variant_prefix) and
                            os.path.exists(os.path.join(subdir, rel_filename)))]
             files = [os.path.join(subdir, rel_filename) for subdir in subdirs]
-            assert all(os.path.samestat(os.stat(file), file_stat)
-                       for file in files), (
-                "Not all %r matches are hard links: %r" % (info, files))
             # Rust binaries have multiple links but are not variants.
             # So just ignore a multiply-linked file with no matches.
             if files:
@@ -95,14 +92,17 @@ def find_variant(info, build_dir=os.path.curdir):
                         "Multiple hard links to %r: %r" % (info, files))
                     [subdir] = subdirs
                 name = subdir[len(variant_prefix):]
-                variant_file = os.path.relpath(
+                file = os.path.relpath(
                     os.path.join(subdir, rel_filename), build_dir)
-                if name != 'shared':
-                    # loadable_module and driver_module targets are linked
-                    # to the variant-shared toolchain.
-                    if name[-7:] == '-shared':
-                        name = name[:-7]
-                    variant = make_variant(name, info)
+                if os.path.samestat(os.stat(file), file_stat):
+                    # Ensure that this is actually the same file.
+                    variant_file = file
+                    if name != 'shared':
+                        # loadable_module and driver_module targets are linked
+                        # to the variant-shared toolchain.
+                        if name[-7:] == '-shared':
+                            name = name[:-7]
+                        variant = make_variant(name, info)
     else:
         # It's from an auxiliary.
         asan = make_variant('asan', info)
