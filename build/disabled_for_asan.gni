@@ -60,9 +60,6 @@ disabled_for_asan = [
   # MTWN-236
   "/pkgfs/packages/use_aac_decoder_test/0/test/use_aac_decoder_test",
 
-  # MAC-242
-  "/pkgfs/packages/vmm_tests/0/test/device_unittests",
-
   # MA-553
   "/pkgfs/packages/vulkan-tests/0/test/vkext",
 
