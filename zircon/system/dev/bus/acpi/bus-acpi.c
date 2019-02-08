@@ -29,6 +29,7 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/iommu.h>
+#include <zircon/threads.h>
 
 #include "acpi-private.h"
 #include "cpu-trace.h"
@@ -547,6 +548,8 @@ static zx_status_t publish_acpi_devices(zx_device_t* sys_root, zx_device_t* acpi
 typedef struct {
     pbus_protocol_t pbus;
     zx_device_t* parent;
+    zx_device_t* sys_root;
+    zx_device_t* acpi_root;
 } pbus_acpi_t;
 
 static void acpi_root_release(void* ctx) {
@@ -559,6 +562,20 @@ static zx_protocol_device_t acpi_root_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .release = acpi_root_release,
 };
+
+static int acpi_start_thread(void* arg) {
+    pbus_acpi_t* acpi = arg;
+    zx_status_t status = publish_sysmem(&acpi->pbus);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "publish_sysmem failed: %d\n", status);
+        goto fail;
+    }
+
+    return publish_acpi_devices(acpi->sys_root, acpi->acpi_root);
+
+fail:
+    return status;
+}
 
 static zx_status_t acpi_bus_bind(void* ctx, zx_device_t* parent) {
     root_resource_handle = get_root_resource();
@@ -594,21 +611,6 @@ static zx_status_t acpi_bus_bind(void* ctx, zx_device_t* parent) {
     if (status != ZX_OK) {
         free(acpi);
         zxlogf(ERROR, "%s: error %d in iommu_manager_get_dummy_iommu()\n", __func__, status);
-        return status;
-    }
-
-    // Sysmem is started early so zx_vmo_create_contiguous() works.
-    zx_handle_t sysmem_bti;
-    status = zx_bti_create(dummy_iommu_handle, 0, SYSMEM_BTI_ID, &sysmem_bti);
-    if (status != ZX_OK) {
-        free(acpi);
-        zxlogf(ERROR, "acpi: error %d in bti_create(sysmem_bti)\n", status);
-        return status;
-    }
-    status = publish_sysmem(sysmem_bti, sys_root);
-    if (status != ZX_OK) {
-        free(acpi);
-        zxlogf(ERROR, "publish_sysmem failed: %d\n", status);
         return status;
     }
 
@@ -655,7 +657,16 @@ static zx_status_t acpi_bus_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "device_publish_metadata(board_name) failed: %d\n", status);
     }
 
-    publish_acpi_devices(sys_root, acpi_root);
+    acpi->sys_root = sys_root;
+    acpi->acpi_root = acpi_root;
+    acpi->parent = parent;
+    thrd_t t;
+    int thrd_rc = thrd_create_with_name(&t, acpi_start_thread, acpi, "acpi_start_thread");
+    if (thrd_rc != thrd_success) {
+        status = thrd_status_to_zx_status(thrd_rc);
+        zxlogf(ERROR, "%s: Failed to create start thread: %d\n", __func__, status);
+        goto fail;
+    }
 
     // Set the "sys" suspend op in platform-bus.
     // The devmgr coordinator code that arranges ordering in which the suspend hooks
@@ -670,6 +681,8 @@ static zx_status_t acpi_bus_bind(void* ctx, zx_device_t* parent) {
     }
 
     return ZX_OK;
+fail:
+    return status;
 }
 
 static zx_driver_ops_t acpi_bus_driver_ops = {

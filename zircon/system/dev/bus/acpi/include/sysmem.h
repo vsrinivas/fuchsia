@@ -5,16 +5,11 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <ddk/protocol/platform/bus.h>
 #include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
-// This value is passed to bti_create as a marker; it does not have a particular
-// meaning to anything in the system.
-#define SYSMEM_BTI_ID 0x1234123412341234ULL
-
-// Publish a pbus device under sysroot, with access to the given BTI handle.
-// Unconditionally takes ownership of the BTI handle.
-zx_status_t publish_sysmem(zx_handle_t bti, zx_device_t* sys_root);
+zx_status_t publish_sysmem(pbus_protocol_t* pbus);
 
 __END_CDECLS
