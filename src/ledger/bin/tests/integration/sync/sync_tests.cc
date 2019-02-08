@@ -220,7 +220,6 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
                    page2_initial_state_change_count &&
                page2_state_watcher->Equals(SyncState::IDLE, SyncState::IDLE);
       }));
-  page2_initial_state_change_count = page2_state_watcher->state_change_count;
 
   PageSnapshotPtr snapshot;
   loop_waiter = NewWaiter();
@@ -254,6 +253,7 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   ASSERT_EQ(Status::OK, status);
 
+  page2_initial_state_change_count = page2_state_watcher->state_change_count;
   // Wait until page1 finishes uploading the changes.
   EXPECT_TRUE(WaitUntilSyncIsIdle(page1_state_watcher.get()));
 

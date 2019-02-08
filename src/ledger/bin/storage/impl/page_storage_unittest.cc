@@ -18,6 +18,9 @@
 #include <lib/fxl/macros.h>
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/fxl/strings/string_printf.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -124,13 +127,21 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
                  fit::function<void(Status, ChangeSource, IsObjectSynced,
                                     std::unique_ptr<DataSource::DataChunk>)>
                      callback) override {
-    std::string& value = digest_to_value_[object_identifier];
+    auto value_found = digest_to_value_.find(object_identifier);
+    if (value_found == digest_to_value_.end()) {
+      callback(Status::NOT_FOUND, ChangeSource::CLOUD, IsObjectSynced::NO,
+               nullptr);
+      return;
+    }
+    std::string& value = value_found->second;
     object_requests.insert(std::move(object_identifier));
     on_get_object_([callback = std::move(callback), value] {
       callback(Status::OK, ChangeSource::CLOUD, IsObjectSynced::YES,
                DataSource::DataChunk::Create(value));
     });
   }
+
+  size_t GetNumberOfObjectsStored() { return digest_to_value_.size(); }
 
   std::set<ObjectIdentifier> object_requests;
 
@@ -1386,6 +1397,53 @@ TEST_F(PageStorageTest, GetObjectPartFromSync) {
                    PageStorage::Location::NETWORK, Status::NOT_CONNECTED_ERROR);
 }
 
+TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
+  std::string data_str = RandomString(environment_.random(), 2 * 65536 + 1);
+  int64_t offset = 28672;
+  int64_t size = 128;
+
+  FakeSyncDelegate sync;
+  ObjectIdentifier object_identifier = MakeSplitMap(
+      data_str,
+      [&sync](ObjectIdentifier object_identifier, std::string content) {
+        sync.AddObject(std::move(object_identifier), std::move(content));
+      });
+  ASSERT_EQ(PieceType::INDEX,
+            GetObjectDigestInfo(object_identifier.object_digest()).piece_type);
+  storage_->SetSyncDelegate(&sync);
+
+  fsl::SizedVmo object_part = TryGetObjectPart(object_identifier, offset, size,
+                                               PageStorage::Location::NETWORK);
+  std::string object_part_data;
+  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  EXPECT_EQ(data_str.substr(offset, size), convert::ToString(object_part_data));
+  EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
+}
+
+TEST_F(PageStorageTest, GetHugeObjectPartFromSyncNegativeOffset) {
+  std::string data_str = RandomString(environment_.random(), 2 * 65536 + 1);
+  int64_t offset = -28672;
+  int64_t size = 128;
+
+  FakeSyncDelegate sync;
+  ObjectIdentifier object_identifier = MakeSplitMap(
+      data_str,
+      [&sync](ObjectIdentifier object_identifier, std::string content) {
+        sync.AddObject(std::move(object_identifier), std::move(content));
+      });
+  ASSERT_EQ(PieceType::INDEX,
+            GetObjectDigestInfo(object_identifier.object_digest()).piece_type);
+  storage_->SetSyncDelegate(&sync);
+
+  fsl::SizedVmo object_part = TryGetObjectPart(object_identifier, offset, size,
+                                               PageStorage::Location::NETWORK);
+  std::string object_part_data;
+  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  EXPECT_EQ(data_str.substr(data_str.size() + offset, size),
+            convert::ToString(object_part_data));
+  EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
+}
+
 TEST_F(PageStorageTest, GetObjectFromSync) {
   ObjectData data("Some data", InlineBehavior::PREVENT);
   FakeSyncDelegate sync;
@@ -1405,6 +1463,38 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
                Status::NOT_FOUND);
   TryGetObject(other_data.object_identifier, PageStorage::Location::NETWORK,
                Status::NOT_CONNECTED_ERROR);
+}
+
+TEST_F(PageStorageTest, FullDownloadAfterPartial) {
+  std::string data_str = RandomString(environment_.random(), 2 * 65536 + 1);
+  int64_t offset = 0;
+  int64_t size = 128;
+
+  FakeSyncDelegate sync;
+  ObjectIdentifier object_identifier = MakeSplitMap(
+      data_str,
+      [&sync](ObjectIdentifier object_identifier, std::string content) {
+        sync.AddObject(std::move(object_identifier), std::move(content));
+      });
+  ASSERT_EQ(PieceType::INDEX,
+            GetObjectDigestInfo(object_identifier.object_digest()).piece_type);
+  storage_->SetSyncDelegate(&sync);
+
+  fsl::SizedVmo object_part = TryGetObjectPart(object_identifier, offset, size,
+                                               PageStorage::Location::NETWORK);
+  std::string object_part_data;
+  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  EXPECT_EQ(data_str.substr(offset, size), convert::ToString(object_part_data));
+  EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
+  TryGetObject(object_identifier, PageStorage::LOCAL, Status::NOT_FOUND);
+
+  std::unique_ptr<const Object> object =
+      TryGetObject(object_identifier, PageStorage::Location::NETWORK);
+  fxl::StringView object_data;
+  ASSERT_EQ(Status::OK, object->GetData(&object_data));
+  EXPECT_EQ(data_str, convert::ToString(object_data));
+  EXPECT_EQ(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
+  TryGetObject(object_identifier, PageStorage::LOCAL, Status::OK);
 }
 
 TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {

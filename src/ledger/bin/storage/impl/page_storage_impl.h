@@ -147,14 +147,6 @@ class PageStorageImpl : public PageStorage {
                 std::unique_ptr<DataSource::DataChunk> data,
                 fit::function<void(Status)> callback);
 
-  // Download all the chunks of the object with the given id.
-  void DownloadFullObject(ObjectIdentifier object_identifier,
-                          fit::function<void(Status)> callback);
-
-  void GetObjectPartFromSync(
-      ObjectIdentifier object_identifier, size_t offset, size_t size,
-      fit::function<void(Status, fsl::SizedVmo)> callback);
-
   // Reads the content of an object into a provided VMO. Takes into
   // account the global offset and size in order to be able to read only the
   // requested part of an object.
@@ -163,16 +155,38 @@ class PageStorageImpl : public PageStorage {
   // |current_position| is the position of the currently read piece (defined by
   // |object_identifier|) in the full object. |object_size| is the size of the
   // currently read piece.
+  // |location| is either LOCAL and NETWORK and defines the behavior in the case
+  // where the object is not found locally. If set to NETWORK,
+  // DownloadObjectPart will be called in order to download the missing piece
+  // and possibly some or all of its children.
   void FillBufferWithObjectContent(ObjectIdentifier object_identifier,
                                    fsl::SizedVmo vmo, int64_t global_offset,
-                                   size_t global_size, int64_t current_position,
-                                   size_t object_size,
+                                   int64_t global_size,
+                                   int64_t current_position,
+                                   int64_t object_size, Location location,
                                    fit::function<void(Status)> callback);
   void FillBufferWithObjectContent(std::unique_ptr<const Object> object,
                                    fsl::SizedVmo vmo, int64_t global_offset,
-                                   size_t global_size, int64_t current_position,
-                                   size_t object_size,
+                                   int64_t global_size,
+                                   int64_t current_position,
+                                   int64_t object_size, Location location,
                                    fit::function<void(Status)> callback);
+
+  // Downloads the parts of the object needed to make a partial fetch.
+  // Global size and offset are denoting the start and size of the part the
+  // caller is interested in. They are expected to not go over the bounds of the
+  // object (offset >= 0, offset + size <= size of the object), except for the
+  // case of the root node, where offset and size have a special interpretation
+  // (see |FetchPartial| in ledger.fidl). |current_position| denotes the end of
+  // the part of an object already processed. It is independent of
+  // |global_offset| and |global_size| and meant to use in recursive calls to
+  // the child nodes. If called from the outside, the expected value is 0.
+  // |page_sync_| must be set prior to the calling this method as it is used for
+  // downloading.
+  void DownloadObjectPart(ObjectIdentifier object_identifier,
+                          int64_t global_offset, int64_t global_size,
+                          int64_t current_position,
+                          fit::function<void(Status)> callback);
 
   // Notifies the registered watchers of |new_commits|.
   void NotifyWatchersOfNewCommits(

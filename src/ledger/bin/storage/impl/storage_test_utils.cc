@@ -107,6 +107,30 @@ ObjectIdentifier MakeObjectIdentifier(std::string content,
   return data.object_identifier;
 }
 
+ObjectIdentifier MakeSplitMap(
+    std::string content,
+    fit::function<void(ObjectIdentifier object_identifier, std::string)>
+        callback) {
+  ObjectDigest result;
+  auto data_source = DataSource::Create(std::move(content));
+  SplitDataSource(
+      data_source.get(), ObjectType::BLOB,
+      [](ObjectDigest object_digest) {
+        return encryption::MakeDefaultObjectIdentifier(
+            std::move(object_digest));
+      },
+      [&result, callback = std::move(callback)](
+          IterationStatus status, ObjectIdentifier object_identifier,
+          const std::vector<ObjectIdentifier>& children,
+          std::unique_ptr<DataSource::DataChunk> chunk) {
+        callback(object_identifier, chunk->Get().ToString());
+        if (status == IterationStatus::DONE) {
+          result = object_identifier.object_digest();
+        }
+      });
+  return encryption::MakeDefaultObjectIdentifier(std::move(result));
+}
+
 std::string RandomString(rng::Random* random, size_t size) {
   std::string value;
   value.resize(size);

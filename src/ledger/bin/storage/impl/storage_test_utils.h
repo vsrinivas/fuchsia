@@ -59,6 +59,13 @@ ObjectIdentifier MakeObjectIdentifier(
     std::string content,
     InlineBehavior inline_behavior = InlineBehavior::ALLOW);
 
+// Splits the given content in chunks and calls the callback on each of them.
+// Returns the object identifier for the root piece.
+ObjectIdentifier MakeSplitMap(
+    std::string content,
+    fit::function<void(ObjectIdentifier object_identifier, std::string)>
+        callback);
+
 // Returns a random string of the given length.
 std::string RandomString(rng::Random* random, size_t size);
 
