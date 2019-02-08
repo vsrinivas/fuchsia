@@ -18,6 +18,7 @@
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 
+#include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
 
 static bool GetChildKoids(const zx::job& job, zx_object_info_topic_t child_kind,
@@ -92,8 +93,11 @@ static void HandOffException(const crash_ctx& ctx, const zx_port_packet_t& packe
     }
 
     zx::thread thread;
-    if (process.get_child(packet.exception.tid, ZX_RIGHT_SAME_RIGHTS, &thread) != ZX_OK) {
-        fprintf(stderr, "crashsvc: failed to find thread for tid=%zu\n", packet.exception.tid);
+    const zx_status_t thread_status =
+        process.get_child(packet.exception.tid, ZX_RIGHT_SAME_RIGHTS, &thread);
+    if (thread_status != ZX_OK) {
+        fprintf(stderr, "crashsvc: failed to find thread for tid=%zu: %s (%d)\n",
+                packet.exception.tid, zx_status_get_string(thread_status), thread_status);
         return;
     }
 
@@ -104,8 +108,10 @@ static void HandOffException(const crash_ctx& ctx, const zx_port_packet_t& packe
         inspector_print_debug_info(process.get(), thread.get());
 
         zx::port port;
-        if (ctx.exception_port.duplicate(ZX_RIGHT_SAME_RIGHTS, &port) != ZX_OK) {
-            fprintf(stderr, "crashsvc: failed to duplicate exception port\n");
+        const zx_status_t port_status = ctx.exception_port.duplicate(ZX_RIGHT_SAME_RIGHTS, &port);
+        if (port_status != ZX_OK) {
+            fprintf(stderr, "crashsvc: failed to duplicate exception port: %s (%d)\n",
+                    zx_status_get_string(port_status), port_status);
             return;
         }
         // The resume_thread is only needed if the FIDL call fails.
@@ -113,22 +119,23 @@ static void HandOffException(const crash_ctx& ctx, const zx_port_packet_t& packe
         thread.duplicate(ZX_RIGHT_SAME_RIGHTS, &resume_thread);
 
         zx_status_t analyzer_status = ZX_ERR_INTERNAL;
-        auto status = fuchsia_crash_AnalyzerHandleNativeException(
+        const zx_status_t exception_status = fuchsia_crash_AnalyzerHandleNativeException(
             ctx.svc_request.get(), process.release(), thread.release(), port.release(),
             &analyzer_status);
 
-        if ((status != ZX_OK) || (analyzer_status != ZX_OK)) {
-            fprintf(stderr, "crashsvc: analyzer failed, err (%d | %d)\n", status, analyzer_status);
+        if ((exception_status != ZX_OK) || (analyzer_status != ZX_OK)) {
+            fprintf(stderr, "crashsvc: analyzer failed, err (%d | %d)\n", exception_status,
+                    analyzer_status);
             if (resume_thread) {
-                zx_task_resume_from_exception(
-                    resume_thread.get(), ctx.exception_port.get(), ZX_RESUME_TRY_NEXT);
+                zx_task_resume_from_exception(resume_thread.get(), ctx.exception_port.get(),
+                                              ZX_RESUME_TRY_NEXT);
             }
         }
     } else {
         // Use the zircon built-in analyzer. Does not return status so we presume
         // that upon failure it resumes the thread.
-        inspector_print_debug_info_and_resume_thread(
-            process.get(), thread.get(), ctx.exception_port.get());
+        inspector_print_debug_info_and_resume_thread(process.get(), thread.get(),
+                                                     ctx.exception_port.get());
     }
 }
 
