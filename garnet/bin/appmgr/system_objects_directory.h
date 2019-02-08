@@ -16,16 +16,12 @@ namespace component {
 
 class SystemObjectsDirectory : public component::ExposedObject {
  public:
-  explicit SystemObjectsDirectory(zx::process process)
-      : ExposedObject("system_objects"),
-        process_(std::move(process)),
-        threads_(std::make_unique<ThreadsDirectory>(&process_)),
-        memory_(std::make_unique<MemoryDirectory>(&process_)) {
-    add_child(threads_.get());
-    add_child(memory_.get());
-  }
+  explicit SystemObjectsDirectory(zx::process process);
 
  private:
+  zx_status_t GetProcessHandleStats(
+      zx_info_process_handle_stats_t* process_handle_stats);
+
   class ThreadsDirectory : public component::ExposedObject {
    public:
     ThreadsDirectory(const zx::process* process);

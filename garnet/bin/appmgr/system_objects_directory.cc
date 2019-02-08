@@ -11,7 +11,100 @@
 
 using fxl::StringPrintf;
 
+namespace {
+
+const char* obj_type_get_name(zx_obj_type_t type) {
+  switch (type) {
+    case ZX_OBJ_TYPE_NONE:
+      return "none";
+    case ZX_OBJ_TYPE_PROCESS:
+      return "process";
+    case ZX_OBJ_TYPE_THREAD:
+      return "thread";
+    case ZX_OBJ_TYPE_VMO:
+      return "vmo";
+    case ZX_OBJ_TYPE_CHANNEL:
+      return "channel";
+    case ZX_OBJ_TYPE_EVENT:
+      return "event";
+    case ZX_OBJ_TYPE_PORT:
+      return "port";
+    case ZX_OBJ_TYPE_INTERRUPT:
+      return "interrupt";
+    case ZX_OBJ_TYPE_PCI_DEVICE:
+      return "pci_device";
+    case ZX_OBJ_TYPE_LOG:
+      return "log";
+    case ZX_OBJ_TYPE_SOCKET:
+      return "socket";
+    case ZX_OBJ_TYPE_RESOURCE:
+      return "resource";
+    case ZX_OBJ_TYPE_EVENTPAIR:
+      return "eventpair";
+    case ZX_OBJ_TYPE_JOB:
+      return "job";
+    case ZX_OBJ_TYPE_VMAR:
+      return "vmar";
+    case ZX_OBJ_TYPE_FIFO:
+      return "fifo";
+    case ZX_OBJ_TYPE_GUEST:
+      return "guest";
+    case ZX_OBJ_TYPE_VCPU:
+      return "vcpu";
+    case ZX_OBJ_TYPE_TIMER:
+      return "timer";
+    case ZX_OBJ_TYPE_IOMMU:
+      return "iommu";
+    case ZX_OBJ_TYPE_BTI:
+      return "bti";
+    case ZX_OBJ_TYPE_PROFILE:
+      return "profile";
+    default:
+      return "unknown";
+  }
+}
+
+}  // namespace
+
 namespace component {
+
+SystemObjectsDirectory::SystemObjectsDirectory(zx::process process)
+    : ExposedObject("system_objects"),
+      process_(std::move(process)),
+      threads_(std::make_unique<ThreadsDirectory>(&process_)),
+      memory_(std::make_unique<MemoryDirectory>(&process_)) {
+  add_child(threads_.get());
+  add_child(memory_.get());
+  object_dir().set_children_callback(
+      [this](component::Object::ObjectVector* out_children) {
+        zx_info_process_handle_stats_t process_handle_stats;
+        if (GetProcessHandleStats(&process_handle_stats) != ZX_OK)
+          return;
+        auto handle_count_dir = component::ObjectDir::Make("handle_count");
+
+        for (zx_obj_type_t obj_type = ZX_OBJ_TYPE_NONE;
+             obj_type < ZX_OBJ_TYPE_LAST; ++obj_type) {
+          handle_count_dir.set_metric(
+              obj_type_get_name(obj_type),
+              component::UIntMetric(
+                  process_handle_stats.handle_count[obj_type]));
+        }
+        out_children->push_back(handle_count_dir.object());
+      });
+}
+
+zx_status_t SystemObjectsDirectory::GetProcessHandleStats(
+    zx_info_process_handle_stats_t* process_handle_stats) {
+  zx_status_t status =
+      process_.get_info(ZX_INFO_PROCESS_HANDLE_STATS, process_handle_stats,
+                        sizeof(zx_info_process_handle_stats), nullptr, nullptr);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "zx_object_get_info failed, status: " << status;
+    return status;
+  }
+
+  return ZX_OK;
+}
 
 SystemObjectsDirectory::ThreadsDirectory::ThreadsDirectory(
     const zx::process* process)
@@ -95,13 +188,6 @@ zx_status_t SystemObjectsDirectory::ThreadsDirectory::GetThreadStats(
 SystemObjectsDirectory::MemoryDirectory::MemoryDirectory(
     const zx::process* process)
     : ExposedObject("memory"), process_(process) {
-  zx_info_task_stats_t task_stats;
-  if (process_->get_info(ZX_INFO_TASK_STATS, &task_stats,
-                         sizeof(zx_info_task_stats_t), nullptr,
-                         nullptr) != ZX_OK) {
-    return;
-  }
-
   object_dir().set_metric(
       "mapped_bytes", component::CallbackMetric([this](component::Metric* out) {
         zx_info_task_stats_t task_stats;

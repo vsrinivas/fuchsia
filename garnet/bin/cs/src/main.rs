@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use failure::{err_msg, Error};
-use fidl_fuchsia_inspect::{MetricValue, PropertyValue};
+use fidl_fuchsia_inspect::{InspectMarker, MetricValue, PropertyValue};
 use inspect::{generate_inspect_object_tree, InspectObject};
 use std::{
     fmt, fs,
@@ -136,7 +136,10 @@ fn find_id_directory(dir: &Path) -> DirEntryResult {
 }
 
 fn visit_system_objects(component_path: &Path, exclude_objects: &Vec<String>) -> TraversalResult {
-    let channel_path = component_path.join("system_objects/.channel");
+    let channel_path = component_path.join(format!(
+        "system_objects/{}",
+        <InspectMarker as fidl::endpoints::ServiceMarker>::NAME
+    ));
     let inspect_object = generate_inspect_object_tree(&channel_path, &exclude_objects)?;
     visit_inspect_object(1, &inspect_object);
     Ok(())
