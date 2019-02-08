@@ -79,27 +79,6 @@ const uint32 OPEN_FLAG_NODE_REFERENCE = 0x00400000;
 // a non-null NodeInfo (if the open is successful).
 const uint32 OPEN_FLAG_DESCRIBE = 0x00800000;
 
-// TODO(yifeit): The next two flags are defined as part of a soft-transition to hierarchcal permissions.
-// They are no-op at this point, but a future patch will start respecting the flags.
-
-// Specify this flag to request POSIX-compatible permission handling, specifically, during Open:
-// - If the target is a directory, the new connection inherits the maximum parent permissions,
-//   disregarding the rights flags passed to Open.
-// - Otherwise, the new connection inherits the requested permissions if permitted.
-//   It is an access denied error to request more permissions than those from the parent.
-// During Clone, the new connection inherits the maximum parent permissions, regardless if it is a
-// file or directory, and disregarding the rights flags passed to Clone.
-//
-// If the posix compatibility flag is not specified, opening/cloning always uses the requested
-// permissions, failing the corresponding operation with access denied error if not possible.
-//
-// In a chain of proxied Open calls, this flag may be dropped along the way to implement the above
-// This may manifest in tracing/debugging but does not affect the behavior.
-const uint32 OPEN_FLAG_POSIX_PERMISSION_COMPATIBILITY = 0x01000000;
-// Assert that the object to be opened is not a directory.
-// Return an error if the target object is a directory.
-const uint32 OPEN_FLAG_NOT_DIRECTORY = 0x02000000;
-
 // Node defines the minimal interface for entities which can be accessed in a filesystem.
 [Layout="Simple", FragileBase]
 interface Node {
