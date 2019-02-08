@@ -3,7 +3,6 @@
 #include <poll.h>
 #include <sys/select.h>
 #include <sys/stat.h>
-#include <sys/statfs.h>
 #include <sys/uio.h>
 #include <sys/utsname.h>
 #include <unistd.h>
@@ -566,31 +565,3 @@ static int stub__fd_open_max(void) {
     return -1;
 }
 weak_alias (stub__fd_open_max, _fd_open_max);
-
-static int stub_statfs(const char* path, struct statfs* buf) {
-    libc_io_functions_not_implemented_use_fdio_instead();
-    errno = ENOSYS;
-    return -1;
-}
-weak_alias (stub_statfs, statfs);
-
-static int stub_fstatfs(int fd, struct statfs* buf) {
-    libc_io_functions_not_implemented_use_fdio_instead();
-    errno = ENOSYS;
-    return -1;
-}
-weak_alias (stub_fstatfs, fstatfs);
-
-static int stub_statvfs(const char* restrict path, struct statvfs* restrict buf) {
-    libc_io_functions_not_implemented_use_fdio_instead();
-    errno = ENOSYS;
-    return -1;
-}
-weak_alias (stub_statvfs, statvfs);
-
-static int stub_fstatvfs(int fd, struct statvfs* buf) {
-    libc_io_functions_not_implemented_use_fdio_instead();
-    errno = ENOSYS;
-    return -1;
-}
-weak_alias (stub_fstatvfs, fstatvfs);

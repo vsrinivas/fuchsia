@@ -628,6 +628,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/stat/lchmod.c \
     $(LOCAL_DIR)/src/stat/mkfifoat.c \
     $(LOCAL_DIR)/src/stat/mknodat.c \
+    $(LOCAL_DIR)/src/stat/statvfs.c \
     $(LOCAL_DIR)/src/stdio/__fclose_ca.c \
     $(LOCAL_DIR)/src/stdio/__fdopen.c \
     $(LOCAL_DIR)/src/stdio/__fmodeflags.c \
