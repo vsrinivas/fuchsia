@@ -8,6 +8,7 @@
 #include <fidl/flat_ast.h>
 #include <fidl/json_generator.h>
 #include <fidl/lexer.h>
+#include <fidl/linter.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
 
@@ -65,6 +66,15 @@ public:
         return parser_.Ok() &&
                library_->ConsumeFile(std::move(ast)) &&
                library_->Compile();
+    }
+
+    bool Lint() {
+        auto ast = parser_.Parse();
+        if (!parser_.Ok())
+            return false;
+        LintingTreeVisitor visitor(error_reporter_);
+        visitor.OnFile(ast);
+        return true;
     }
 
     std::string GenerateJSON() {

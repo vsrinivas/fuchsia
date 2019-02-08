@@ -15,6 +15,7 @@ if (defined(zx)) {
       "lib/json_generator.cpp",
       "lib/lexer.cpp",
       "lib/library_zx.cpp",
+      "lib/linter.cpp",
       "lib/names.cpp",
       "lib/ordinals.cpp",
       "lib/parser.cpp",
@@ -64,6 +65,7 @@ if (defined(zx)) {
   group("tools") {
     deps = [
       ":fidl-format",
+      ":fidl-lint",
       ":fidlc",
     ]
   }
@@ -80,6 +82,15 @@ if (defined(zx)) {
   host_tool("fidl-format") {
     sources = [
       "formatter/main.cpp",
+    ]
+    deps = [
+      ":fidl",
+    ]
+  }
+
+  host_tool("fidl-lint") {
+    sources = [
+      "linter/main.cpp",
     ]
     deps = [
       ":fidl",
@@ -104,6 +115,7 @@ if (defined(zx)) {
       "lib/json_generator.cpp",
       "lib/lexer.cpp",
       "lib/library_zx.cpp",
+      "lib/linter.cpp",
       "lib/names.cpp",
       "lib/parser.cpp",
       "lib/raw_ast.cpp",
