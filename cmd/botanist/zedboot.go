@@ -209,11 +209,6 @@ func (cmd *ZedbootCommand) runHostCmd(ctx context.Context) error {
 }
 
 func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, nodename string, cmdlineArgs []string) error {
-	// Find the node address UDP address.
-	n := netboot.NewClient(time.Second)
-	var addr *net.UDPAddr
-	var err error
-
 	// Set up log listener and dump kernel output to stdout.
 	l, err := netboot.NewLogListener(nodename)
 	if err != nil {
@@ -236,17 +231,11 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 		}
 	}()
 
-	// We need to retry here because botanist might try to discover before
-	// zedboot is fully ready, so the packet that's sent out doesn't result
-	// in any reply. We don't need to wait between calls because Discover
-	// already has a 1 minute timeout for reading a UDP packet from zedboot.
-	err = retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 60), func() error {
-		addr, err = n.Discover(nodename, false)
-		return err
-	}, nil)
+	addr, err := botanist.GetNodeAddress(ctx, nodename)
 	if err != nil {
-		return fmt.Errorf("cannot find node \"%s\": %v", nodename, err)
+		return err
 	}
+
 
 	// Boot fuchsia.
 	var bootMode int

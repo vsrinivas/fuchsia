@@ -13,7 +13,6 @@ import (
 	"net"
 	"time"
 
-	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/retry"
 
 	"golang.org/x/crypto/ssh"
@@ -67,20 +66,12 @@ func ConnectSSH(ctx context.Context, address net.Addr, config *ssh.ClientConfig)
 
 // SSHIntoNode connects to the device with the given nodename.
 func SSHIntoNode(ctx context.Context, nodename string, config *ssh.ClientConfig) (*ssh.Client, error) {
-	// Retry discovering the address of the node, as the netstack might not yet be up.
-	netbootClient := netboot.NewClient(defaultIOTimeout)
-	var address *net.UDPAddr
-	var err error
-	err = retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 60), func() error {
-		address, err = netbootClient.Discover(nodename, true)
-		return err
-	}, nil)
+	addr, err := GetNodeAddress(ctx, nodename)
 	if err != nil {
-		return nil, fmt.Errorf("cannot find node %q: %v", nodename, err)
+		return nil, err
 	}
-
-	address.Port = SSHPort
-	return ConnectSSH(ctx, address, config)
+	addr.Port = SSHPort
+	return ConnectSSH(ctx, addr, config)
 }
 
 // Returns the network to use to SSH into a device.

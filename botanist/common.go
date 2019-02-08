@@ -5,11 +5,17 @@
 package botanist
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"net"
 	"os"
 	"strings"
+	"time"
 
+	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/pdu"
+	"fuchsia.googlesource.com/tools/retry"
 )
 
 // StringsFlag implements flag.Value so it may be treated as a flag type.
@@ -27,6 +33,22 @@ func (s *StringsFlag) String() string {
 		return ""
 	}
 	return strings.Join([]string(*s), ", ")
+}
+
+// GetNodeAddress returns the UDP address corresponding to a given node.
+func GetNodeAddress(ctx context.Context, nodename string) (*net.UDPAddr, error) {
+	// Retry, as the netstack might not yet be up.
+	var addr *net.UDPAddr
+	var err error
+	n := netboot.NewClient(time.Second)
+	err = retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 60), func() error {
+		addr, err = n.Discover(nodename, false)
+		return err
+	}, nil)
+	if err != nil {
+		return nil, fmt.Errorf("cannot find node %q: %v", nodename, err)
+	}
+	return addr, nil
 }
 
 // DeviceProperties contains static properties of a hardware device.
