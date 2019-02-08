@@ -22,7 +22,7 @@ static void PrintUsage() {
           "it defaults to /boot/bin/sh.\n"
           "Examples:\n"
           "chrealm /hub/r/myrealm/<koid> (assume services of myrealm)\n"
-          "chrealm /hub/r/myrealm/<koid> -- /system/bin/ls /svc "
+          "chrealm /hub/r/myrealm/<koid> -- /bin/ls /svc "
           "(list services of myrealm from inside myrealm)\n");
 }
 

@@ -141,12 +141,12 @@ TEST_F(ChrealmTest, ConnectToService) {
     // only finds the built-in services.
     std::string svc_contents;
     std::string hub_contents;
-    const std::vector<const char*> lssvc_args = {"/system/bin/chrealm",
+    const std::vector<const char*> lssvc_args = {"/bin/chrealm",
                                                  realm_path.c_str(), "--",
-                                                 "/system/bin/ls", "/svc"};
-    const std::vector<const char*> lshub_args = {"/system/bin/chrealm",
+                                                 "/bin/ls", "/svc"};
+    const std::vector<const char*> lshub_args = {"/bin/chrealm",
                                                  realm_path.c_str(), "--",
-                                                 "/system/bin/ls", "/hub/svc"};
+                                                 "/bin/ls", "/hub/svc"};
     RunCommand(lssvc_args, &svc_contents);
     RunCommand(lshub_args, &hub_contents);
     EXPECT_EQ(svc_contents, hub_contents);
@@ -157,7 +157,7 @@ TEST_F(ChrealmTest, ConnectToService) {
   {
     std::string out;
     const std::vector<const char*> args = {
-        "/system/bin/chrealm", realm_path.c_str(), "--", "/pkgfs/packages/run/0/bin/run",
+        "/bin/chrealm", realm_path.c_str(), "--", "/bin/run",
         "fuchsia-pkg://fuchsia.com/chrealm_test_get_message#meta/chrealm_test_get_message.cmx"};
     RunCommand(args, &out);
     EXPECT_EQ(kMessage, out);
@@ -170,7 +170,7 @@ TEST_F(ChrealmTest, CreatedUnderRealmJob) {
 
   zx_handle_t proc = ZX_HANDLE_INVALID;
   const std::vector<const char*> args = {
-      "/system/bin/chrealm", realm_path.c_str(), "--", "/system/bin/yes"};
+      "/bin/chrealm", realm_path.c_str(), "--", "/bin/yes"};
   int pipefd[2];
   ASSERT_EQ(0, pipe(pipefd));
   RunCommandAsync(args, pipefd[1], &proc);

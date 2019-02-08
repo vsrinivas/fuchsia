@@ -18,8 +18,6 @@ executable("bin") {
 }
 
 package("chrealm") {
-  deprecated_system_image = true
-
   deps = [
     ":bin",
   ]
@@ -27,6 +25,7 @@ package("chrealm") {
   binaries = [
     {
       name = "chrealm"
+      shell = true
     },
   ]
 }

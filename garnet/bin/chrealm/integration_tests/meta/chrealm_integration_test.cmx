@@ -6,9 +6,10 @@
         "features": [ "shell" ],
         "services": [
             "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver",
+            "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
             "fuchsia.sys.Environment"
-        ],
-        "system": [ "bin" ]
+        ]
     }
 }
