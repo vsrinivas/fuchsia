@@ -42,6 +42,6 @@ fidl("sandbox") {
 
   deps = [
     ":environment",
-    "$garnet_sdk_fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys",
   ]
 }

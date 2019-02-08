@@ -981,8 +981,3 @@ template("component") {
 set_defaults("component") {
   configs = default_common_binary_configs
 }
-
-# These variables are to ease the transition to storing these FIDL definitions
-# in //sdk/fidl. After the transition, they will be removed.
-garnet_sdk_fidl = "//sdk/fidl"
-peridot_sdk_fidl = "//sdk/fidl"
