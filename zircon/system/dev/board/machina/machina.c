@@ -20,6 +20,7 @@
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+#include <zircon/threads.h>
 
 #include "machina.h"
 
@@ -96,33 +97,9 @@ static const pbus_dev_t pl031_dev = {
     .mmio_count = countof(pl031_mmios),
 };
 
-static zx_status_t machina_board_bind(void* ctx, zx_device_t* parent) {
-    machina_board_t* bus = calloc(1, sizeof(machina_board_t));
-    if (!bus) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    if (device_get_protocol(parent, ZX_PROTOCOL_PBUS, &bus->pbus) != ZX_OK) {
-        free(bus);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    zx_status_t status = machina_pci_init();
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "machina_pci_init failed: %d\n", status);
-    }
-
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "machina",
-        .ops = &machina_board_device_protocol,
-        .flags = DEVICE_ADD_NON_BINDABLE,
-    };
-
-    status = device_add(parent, &args, NULL);
-    if (status != ZX_OK) {
-        goto fail;
-    }
+static int machina_start_thread(void* arg) {
+    machina_board_t* bus = arg;
+    zx_status_t status;
 
     status = machina_sysmem_init(bus);
     if (status != ZX_OK) {
@@ -157,6 +134,46 @@ static zx_status_t machina_board_bind(void* ctx, zx_device_t* parent) {
     }
 
     return ZX_OK;
+
+fail:
+    zxlogf(ERROR, "machina_start_thread failed, not all devices have been initialized\n");
+    return status;
+}
+
+static zx_status_t machina_board_bind(void* ctx, zx_device_t* parent) {
+    machina_board_t* bus = calloc(1, sizeof(machina_board_t));
+    if (!bus) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    if (device_get_protocol(parent, ZX_PROTOCOL_PBUS, &bus->pbus) != ZX_OK) {
+        free(bus);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zx_status_t status = machina_pci_init();
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "machina_pci_init failed: %d\n", status);
+    }
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "machina",
+        .ops = &machina_board_device_protocol,
+        .flags = DEVICE_ADD_NON_BINDABLE,
+    };
+
+    status = device_add(parent, &args, NULL);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+
+    thrd_t t;
+    int thrd_rc = thrd_create_with_name(&t, machina_start_thread, bus, "machina_start_thread");
+    if (thrd_rc != thrd_success) {
+        status = thrd_status_to_zx_status(thrd_rc);
+        goto fail;
+    }
 
 fail:
     printf("machina_board_bind failed %d\n", status);
