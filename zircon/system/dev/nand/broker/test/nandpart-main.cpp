@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "parent.h"
-
 #include <lib/devmgr-integration-test/fixture.h>
-#include <unittest/unittest.h>
 #include <zircon/hw/gpt.h>
+#include <zxtest/zxtest.h>
+
+#include "parent.h"
 
 constexpr fuchsia_hardware_nand_Info kNandInfo = {
     .page_size = 4096,
@@ -85,5 +85,5 @@ int main(int argc, char** argv) {
 
     g_parent_device_ = &nandpart_parent;
 
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+    return RUN_ALL_TESTS(argc, argv);
 }

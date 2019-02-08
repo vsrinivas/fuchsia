@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "parent.h"
-
 #include <getopt.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
+
+#include "parent.h"
 
 constexpr char kUsageMessage[] = R"""(
 Basic functionality test for a nand device.
@@ -120,5 +120,5 @@ int main(int argc, char** argv) {
 
     g_parent_device_ = &parent;
 
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+    return RUN_ALL_TESTS(argc, argv);
 }

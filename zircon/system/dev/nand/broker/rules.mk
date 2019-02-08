@@ -58,12 +58,12 @@ MODULE_STATIC_LIBS := \
     system/ulib/fzl \
     system/ulib/zx \
     system/ulib/zxcpp \
+    system/ulib/zxtest \
 
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/ramdevice-client \
-    system/ulib/unittest \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
@@ -92,12 +92,12 @@ MODULE_STATIC_LIBS := \
     system/ulib/fzl \
     system/ulib/zx \
     system/ulib/zxcpp \
+    system/ulib/zxtest \
 
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/ramdevice-client \
-    system/ulib/unittest \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
