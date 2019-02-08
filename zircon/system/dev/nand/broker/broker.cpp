@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "broker.h"
-
 #include <stdio.h>
 #include <string.h>
 
@@ -192,9 +190,7 @@ zx_status_t Broker::Queue(uint32_t command, const fuchsia_nand_BrokerRequest& re
     return status;
 }
 
-}  // namespace
-
-zx_status_t nand_broker_bind(void* ctx, zx_device_t* parent) {
+zx_status_t NandBrokerBind(void* ctx, zx_device_t* parent) {
     zxlogf(INFO, "nand-broker: binding\n");
     fbl::AllocChecker checker;
     fbl::unique_ptr<Broker> device(new (&checker) Broker(parent));
@@ -209,3 +205,17 @@ zx_status_t nand_broker_bind(void* ctx, zx_device_t* parent) {
     }
     return status;
 }
+
+static constexpr zx_driver_ops_t nand_broker_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = NandBrokerBind;
+    return ops;
+}();
+
+}  // namespace
+
+ZIRCON_DRIVER_BEGIN(nand-broker, nand_broker_ops, "zircon", "0.1", 2)
+    BI_ABORT_IF_AUTOBIND,
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_NAND)
+ZIRCON_DRIVER_END(nand-broker)

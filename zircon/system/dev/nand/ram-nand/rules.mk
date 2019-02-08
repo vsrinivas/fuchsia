@@ -9,7 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/ram-nand.c \
+    $(LOCAL_DIR)/bind.cpp \
     $(LOCAL_DIR)/ram-nand.cpp \
     $(LOCAL_DIR)/ram-nand-ctl.cpp \
 

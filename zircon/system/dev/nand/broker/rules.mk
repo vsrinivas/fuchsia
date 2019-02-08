@@ -11,7 +11,6 @@ MODULE_TYPE := driver
 MODULE_NAME := nand-broker
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/bind.c \
     $(LOCAL_DIR)/broker.cpp \
 
 MODULE_STATIC_LIBS := \

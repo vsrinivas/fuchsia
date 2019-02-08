@@ -75,7 +75,7 @@ zx_status_t RamNandCtl::CreateDevice(const fuchsia_hardware_nand_RamNandInfo* in
 
 }  // namespace
 
-zx_status_t ram_nand_driver_bind(void* ctx, zx_device_t* parent) {
+zx_status_t RamNandDriverBind(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker checker;
     fbl::unique_ptr<RamNandCtl> device(new (&checker) RamNandCtl(parent));
     if (!checker.check()) {

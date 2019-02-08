@@ -7,8 +7,4 @@
 #include <ddk/device.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
-zx_status_t ram_nand_driver_bind(void* ctx, zx_device_t* parent);
-
-__END_CDECLS
+zx_status_t RamNandDriverBind(void* ctx, zx_device_t* parent);
