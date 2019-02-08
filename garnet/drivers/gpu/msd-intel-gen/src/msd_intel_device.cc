@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "msd_intel_device.h"
+#include "platform_trace.h"
 #include "device_id.h"
 #include "forcewake.h"
 #include "global_context.h"
@@ -518,7 +519,7 @@ bool MsdIntelDevice::InitContextForRender(MsdIntelContext* context)
 magma::Status MsdIntelDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch)
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
-    TRACE_DURATION("magma", "ProcessCommandBuffer");
+    TRACE_DURATION("magma", "Device::ProcessBatch");
 
     DLOG("preparing command buffer for execution");
 
@@ -533,9 +534,22 @@ magma::Status MsdIntelDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch)
             return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to initialize context");
     }
 
-    TRACE_DURATION_BEGIN("magma", "SubmitCommandBuffer");
-    render_engine_cs_->SubmitBatch(std::move(batch));
-    TRACE_DURATION_END("magma", "SubmitCommandBuffer");
+    uint64_t buffer_id = batch->GetBatchBufferId();
+    {
+      TRACE_DURATION("magma", "Device::SubmitBatch");
+      TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
+      render_engine_cs_->SubmitBatch(std::move(batch));
+    }
+
+    uint64_t client_id;
+    {
+      auto connection = context->connection().lock();
+      client_id = connection ? connection->client_id() : 0;
+    }
+
+    // Create a virtual flow event to the GPU vthread.
+    uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
+    TRACE_VTHREAD_FLOW_STEP("magma", "command_buffer", "GPU", client_id, buffer_id, current_ticks);
 
     RequestMaxFreq();
 

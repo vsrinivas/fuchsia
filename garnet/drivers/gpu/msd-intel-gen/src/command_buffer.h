@@ -43,7 +43,7 @@ public:
 
     bool GetGpuAddress(gpu_addr_t* gpu_addr_out) override;
 
-    uint64_t GetBatchBufferId();
+    uint64_t GetBatchBufferId() override;
 
     uint32_t GetPipeControlFlags() override;
 

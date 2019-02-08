@@ -28,6 +28,9 @@
 #define TRACE_FLOW_END(category, name, id, args...)
 #define TRACE_VTHREAD_DURATION_BEGIN(category, name, vthread_name, vthread_id, timestamp, args...)
 #define TRACE_VTHREAD_DURATION_END(category, name, vthread_name, vthread_id, timestamp, args...)
+#define TRACE_VTHREAD_FLOW_BEGIN(category, name, vthread_name, vthread_id, timestamp, args...)
+#define TRACE_VTHREAD_FLOW_STEP(category, name, vthread_name, vthread_id, timestamp, args...)
+#define TRACE_VTHREAD_FLOW_END(category, name, vthread_name, vthread_id, timestamp, args...)
 #endif
 
 namespace magma {

@@ -18,6 +18,7 @@ public:
     virtual std::weak_ptr<MsdIntelContext> GetContext() = 0;
     virtual bool GetGpuAddress(gpu_addr_t* gpu_addr_out) = 0;
     virtual void SetSequenceNumber(uint32_t sequence_number) = 0;
+    virtual uint64_t GetBatchBufferId() { return 0; }
     virtual uint32_t GetPipeControlFlags() { return 0; }
     virtual bool IsCommandBuffer() { return false; }
     virtual GpuMapping* GetBatchMapping() = 0;
