@@ -48,6 +48,7 @@
 # 3. Add an entry for the test to modular_tests.json.
 
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 package("modular_tests") {
   testonly = true
@@ -56,6 +57,7 @@ package("modular_tests") {
     {
       name = rebase_path("run_modular_tests.sh")
       dest = "run_modular_tests.sh"
+      environments = basic_envs
     },
   ]
 

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/environments.gni")
 import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
 sandbox_test_package("some_services") {
@@ -11,11 +12,12 @@ sandbox_test_package("some_services") {
 
   deps = [
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
-    "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/fxl/test:gtest_main",
+    "//sdk/fidl/fuchsia.sys",
     "//third_party/googletest:gmock",
     "//zircon/public/fidl/fuchsia-process",
   ]
+  environments = basic_envs
 }
 
 sandbox_test_package("no_services") {
@@ -28,6 +30,7 @@ sandbox_test_package("no_services") {
     "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]
+  environments = basic_envs
 }
 
 sandbox_test_package("multiple_components") {
@@ -42,4 +45,5 @@ sandbox_test_package("multiple_components") {
     "//sdk/lib/component2/cpp",
     "//third_party/googletest:gmock",
   ]
+  environments = basic_envs
 }

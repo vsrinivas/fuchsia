@@ -4,6 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 source_set("cm_schema_json") {
   inputs = [
@@ -36,6 +37,7 @@ test_package("cm_json_tests") {
     {
       name = "cm_json_lib_test"
       dest = "cm_json_tests"
+      environments = basic_envs
     },
   ]
 }

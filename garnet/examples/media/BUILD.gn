@@ -4,6 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 # We have a separate package for each example to clarify the dependencies of
 # each example.
@@ -144,6 +145,7 @@ package("use_aac_decoder_test") {
   tests = [
     {
       name = "use_aac_decoder_test"
+      environments = basic_envs
     },
   ]
 
@@ -180,6 +182,7 @@ package("use_h264_decoder_test") {
     {
       # Should pass when run manually on VIM2, fails otherwise.
       name = "use_h264_decoder_test"
+      environments = basic_envs
     },
   ]
 

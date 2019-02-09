@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/package/component.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 executable("bin") {
   output_name = "inspect_unittests"
@@ -45,6 +46,7 @@ test_package("inspect_unittests") {
   tests = [
     {
       name = "inspect_unittests"
+      environments = basic_envs
     },
   ]
 }

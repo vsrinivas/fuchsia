@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/environments.gni")
 import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
 
@@ -34,11 +35,11 @@ source_set("clipboard_sources") {
   ]
 
   deps = [
-    "//sdk/lib/fidl/cpp",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/ledger_client:page_client",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 
@@ -62,4 +63,5 @@ tests_package("clipboard_unittests") {
   deps = [
     ":clipboard_impl_unittest",
   ]
+  environments = basic_envs
 }

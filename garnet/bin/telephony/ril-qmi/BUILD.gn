@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "ril_qmi"
@@ -12,12 +13,12 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/telephony/qmi-protocol",
-    "//sdk/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
     "//third_party/rust-crates/rustc_deps:bytes",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
@@ -56,6 +57,7 @@ package("ril-qmi-tests") {
     {
       name = "ril_qmi_bin_test"
       dest = "ril-qmi-tests"
+      environments = basic_envs
     },
   ]
 }

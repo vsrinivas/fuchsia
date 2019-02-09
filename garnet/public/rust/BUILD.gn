@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 package("rust-crates-tests") {
   testonly = true
@@ -33,54 +34,71 @@ package("rust-crates-tests") {
   tests = [
     {
       name = "fdio_lib_test"
+      environments = basic_envs
     },
     {
       name = "fuchsia_archive_lib_test"
+      environments = basic_envs
     },
     {
       name = "fuchsia_async_lib_test"
+      environments = basic_envs
     },
     {
       name = "fuchsia_cobalt_lib_test"
+      environments = basic_envs
     },
     {
       name = "fuchsia_cprng_lib_test"
+      environments = basic_envs
     },
     {
       name = "fuchsia_hyper_lib_test"
+      environments = basic_envs
     },
     {
       name = "fuchsia_inspect_lib_test"
+      environments = basic_envs
     },
     {
       name = "fuchsia_merkle_lib_test"
+      environments = basic_envs
     },
     {
       name = "fuchsia_syslog_lib_test"
+      environments = basic_envs
     },
     {
       name = "fuchsia_trace_lib_test"
+      environments = basic_envs
     },
     {
       name = "fuchsia_vfs_pseudo_fs_lib_test"
+      environments = basic_envs
     },
     {
       name = "fuchsia_zircon_lib_test"
+      environments = basic_envs
     },
     {
       name = "mapped_vmo_lib_test"
+      environments = basic_envs
     },
     {
       name = "mundane_lib_test"
+      environments = basic_envs
     },
     {
       name = "packet_lib_test"
+      environments = basic_envs
     },
     {
       name = "shared_buffer_lib_test"
+      environments = basic_envs
     },
     {
       name = "zerocopy_lib_test"
+      environments = basic_envs
     },
   ]
 }

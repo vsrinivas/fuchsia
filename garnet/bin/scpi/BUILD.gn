@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 source_set("lib") {
   sources = [
@@ -11,8 +12,8 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.scpi",
     "//garnet/public/lib/component/cpp",
+    "//sdk/fidl/fuchsia.scpi",
     "//sdk/lib/fidl/cpp",
     "//zircon/public/banjo/ddk-protocol-scpi",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
@@ -71,6 +72,7 @@ package("scpi_server_tests") {
     {
       name = "scpi_unittests"
       disabled = true
+      environments = basic_envs
     },
   ]
 }

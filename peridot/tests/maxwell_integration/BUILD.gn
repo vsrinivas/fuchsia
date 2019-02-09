@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/environments.gni")
 import("//peridot/build/tests_package.gni")
 
 hermetic_tests_package("maxwell_integration_tests") {
@@ -9,6 +10,7 @@ hermetic_tests_package("maxwell_integration_tests") {
     ":context_engine_test",
     ":suggestion_engine_test",
   ]
+  environments = basic_envs
 }
 
 executable("context_engine_test") {
@@ -25,9 +27,9 @@ executable("context_engine_test") {
     "//garnet/public/lib/fsl",
     "//peridot/bin/context_engine:scope_utils",
     "//peridot/lib/testing:entity_resolver_fake",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
+    "//sdk/fidl/fuchsia.modular",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -48,8 +50,8 @@ executable("suggestion_engine_test") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:story_provider_mock",
     "//peridot/lib/testing:wait_until_idle",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
+    "//sdk/fidl/fuchsia.modular",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -119,8 +121,8 @@ source_set("test_suggestion_listener") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/fostr/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 
   public_deps = [

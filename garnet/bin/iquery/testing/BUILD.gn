@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 executable("bin") {
   output_name = "iquery_example_component"
@@ -56,6 +57,7 @@ test_package("iquery_golden_test") {
   tests = [
     {
       name = "iquery_golden_test"
+      environments = basic_envs
     },
   ]
 

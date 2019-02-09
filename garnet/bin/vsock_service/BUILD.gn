@@ -6,6 +6,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "vsock_service"
@@ -13,13 +14,13 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.vsock:fuchsia.vsock-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.vsock:fuchsia.vsock-rustc",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//zircon/public/fidl/fuchsia-hardware-vsock:fuchsia-hardware-vsock-rustc",
@@ -31,11 +32,11 @@ rustc_library("lib") {
   edition = "2018"
   with_unit_tests = true
   deps = [
-    "//sdk/fidl/fuchsia.vsock:fuchsia.vsock-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.vsock:fuchsia.vsock-rustc",
     "//third_party/rust-crates/rustc_deps:crossbeam",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
@@ -68,6 +69,7 @@ test_package("vsock_service-tests") {
   tests = [
     {
       name = "vsock_service_lib_lib_test"
+      environments = basic_envs
     },
   ]
 }

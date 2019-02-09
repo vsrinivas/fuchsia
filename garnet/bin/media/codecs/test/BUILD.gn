@@ -4,6 +4,7 @@
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 source_set("raw_frames") {
   sources = [
@@ -50,6 +51,7 @@ test_package("raw_frames_test") {
   tests = [
     {
       name = "raw_frames_test"
+      environments = basic_envs
     },
   ]
 

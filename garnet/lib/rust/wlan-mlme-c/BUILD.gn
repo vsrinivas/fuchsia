@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_staticlib.gni")
+import("//build/testing/environments.gni")
 
 rustc_staticlib("wlan-mlme-c") {
   name = "wlan_mlme_c"
@@ -35,6 +36,7 @@ package("wlan-mlme-c-tests") {
   tests = [
     {
       name = "wlan_mlme_c_staticlib_test"
+      environments = basic_envs
     },
   ]
 }

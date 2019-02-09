@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/environments.gni")
 import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
 
@@ -10,6 +11,7 @@ hermetic_tests_package("story_runner_unittests") {
     ":link_impl_unittest",
     ":story_controller_impl_unittest",  # incomplete, for now.
   ]
+  environments = basic_envs
 }
 
 # NOTE: We are in the process of deconstructing story_runner into its
@@ -102,13 +104,13 @@ executable_package("dev_story_shell") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

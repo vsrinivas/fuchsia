@@ -6,16 +6,17 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 go_library("lib") {
   name = "system_updater"
 
   deps = [
     "//garnet/go/src/amber:metrics_lib",
-    "//sdk/fidl/fuchsia.amber($go_toolchain)",
-    "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
+    "//sdk/fidl/fuchsia.amber($go_toolchain)",
+    "//sdk/fidl/fuchsia.sys($go_toolchain)",
   ]
 }
 
@@ -47,6 +48,7 @@ package("system_updater_tests") {
   tests = [
     {
       name = "system_updater_test"
+      environments = basic_envs
     },
   ]
 }

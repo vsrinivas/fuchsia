@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
@@ -36,11 +37,6 @@ executable_package("basemgr") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.auth",
-    "//sdk/fidl/fuchsia.devicesettings",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/bin/basemgr/cobalt",
@@ -53,10 +49,15 @@ executable_package("basemgr") {
     "//peridot/lib/ledger_client:constants",
     "//peridot/bin/basemgr/session_shell_settings",
     "//peridot/lib/util:filesystem",
+    "//peridot/public/lib/async/cpp:future",
+    "//sdk/fidl/fuchsia.auth",
+    "//sdk/fidl/fuchsia.devicesettings",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.modular.internal",
-    "//peridot/public/lib/async/cpp:future",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
@@ -81,6 +82,7 @@ tests_package("basemgr_unittests") {
     ":user_controller_impl_unittest",
     "//peridot/bin/basemgr/session_shell_settings:session_shell_settings_unittest",
   ]
+  environments = basic_envs
 }
 
 source_set("lib") {
@@ -93,10 +95,6 @@ source_set("lib") {
 
   deps = [
     ":users",
-    "//sdk/fidl/fuchsia.auth",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -108,9 +106,13 @@ source_set("lib") {
     "//peridot/lib/fidl:environment",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/util:filesystem",
+    "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/trace",
   ]
 
@@ -132,13 +134,13 @@ executable_package("dev_base_shell") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/integration_testing/cpp",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

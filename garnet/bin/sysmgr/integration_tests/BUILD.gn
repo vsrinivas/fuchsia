@@ -4,6 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 fidl("interface") {
   name = "test.sysmgr"
@@ -37,10 +38,10 @@ executable("mock_resolver") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.pkg",
     "//garnet/public/lib/component/cpp",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
+    "//sdk/fidl/fuchsia.pkg",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zx",
@@ -108,9 +109,11 @@ package("integration_tests") {
   tests = [
     {
       name = "service_startup_test"
+      environments = basic_envs
     },
     {
       name = "package_updating_loader_test"
+      environments = basic_envs
     },
   ]
 

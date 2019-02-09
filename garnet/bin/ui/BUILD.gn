@@ -29,6 +29,7 @@ package("scenic_tests") {
   tests = [
     {
       name = "gfx_apptests"
+      environments = basic_envs
     },
     {
       name = "gfx_pixeltests"
@@ -40,27 +41,35 @@ package("scenic_tests") {
     },
     {
       name = "gfx_unittests"
+      environments = basic_envs
     },
     {
       name = "geometry_util_unittests"
+      environments = basic_envs
     },
     {
       name = "input_apptests"
+      environments = basic_envs
     },
     {
       name = "input_unittests"
+      environments = basic_envs
     },
     {
       name = "input_tool_unittests"
+      environments = basic_envs
     },
     {
       name = "presentation_mode_unittests"
+      environments = basic_envs
     },
     {
       name = "scenic_unittests"
+      environments = basic_envs
     },
     {
       name = "view_manager_apptests"
+      environments = basic_envs
     },
   ]
 

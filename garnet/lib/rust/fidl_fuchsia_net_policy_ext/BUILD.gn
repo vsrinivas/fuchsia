@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/testing/environments.gni")
 
 rustc_library("fidl_fuchsia_net_policy_ext") {
   with_unit_tests = true
@@ -25,6 +26,7 @@ package("fidl_fuchsia_net_policy_ext_tests") {
   tests = [
     {
       name = "fidl_fuchsia_net_policy_ext_lib_test"
+      environments = basic_envs
     },
   ]
 }

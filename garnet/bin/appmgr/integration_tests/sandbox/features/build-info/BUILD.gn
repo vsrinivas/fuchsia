@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/environments.gni")
 import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
 sandbox_test_package("build_info_tests") {
@@ -13,4 +14,5 @@ sandbox_test_package("build_info_tests") {
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
     "//garnet/public/lib/fxl/test:gtest_main",
   ]
+  environments = basic_envs
 }

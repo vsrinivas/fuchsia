@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 source_set("lib") {
   testonly = true
@@ -19,11 +20,11 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/lib/cmx",
-    "//sdk/fidl/fuchsia.netstack",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/json",
     "//garnet/public/lib/pkg_url",
+    "//sdk/fidl/fuchsia.netstack",
     "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-net",
     "//zircon/public/fidl/fuchsia-net-stack",
@@ -44,6 +45,7 @@ executable("bin") {
     "//sdk/lib/component2/cpp",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
+    "//sdk/fidl/fuchsia.sys",
     "//zircon/public/fidl/fuchsia-logger",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -102,6 +104,7 @@ test_package("run_test_component_unittests") {
   tests = [
     {
       name = "run_test_component_unittests"
+      environments = basic_envs
     },
   ]
 }

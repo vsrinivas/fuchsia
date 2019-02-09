@@ -5,6 +5,7 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 go_library("syslog_tests_lib") {
   name = "syslog_tests"
@@ -29,6 +30,7 @@ package("syslog_gotests") {
   tests = [
     {
       name = "syslog_go_tests"
+      environments = basic_envs
     },
   ]
 }

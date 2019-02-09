@@ -7,6 +7,7 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 package("netstack") {
   deps = [
@@ -75,21 +76,27 @@ test_package("netstack_gotests") {
   tests = [
     {
       name = "netstack_connectivity_test"
+      environments = basic_envs
     },
     {
       name = "netstack_fidlconv_test"
+      environments = basic_envs
     },
     {
       name = "netstack_filter_test"
+      environments = basic_envs
     },
     {
       name = "netstack_link_eth_test"
+      environments = basic_envs
     },
     {
       name = "netstack_test"
+      environments = basic_envs
     },
     {
       name = "netstack_util_test"
+      environments = basic_envs
     },
   ]
 }
@@ -105,9 +112,11 @@ package("netstack_non_component_gotests") {
   tests = [
     {
       name = "netstack_ifconfig_test"
+      environments = basic_envs
     },
     {
       name = "netstack_netstat_test"
+      environments = basic_envs
     },
   ]
 }
@@ -116,16 +125,16 @@ go_library("netstack_lib") {
   name = "netstack"
 
   deps = [
-    "//sdk/fidl/fuchsia.devicesettings($go_toolchain)",
-    "//sdk/fidl/fuchsia.net.filter($go_toolchain)",
-    "//sdk/fidl/fuchsia.netstack($go_toolchain)",
-    "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/go/src/fidlext/fuchsia/hardware/ethernet:fidlext_fuchsia_hardware_ethernet_fake_lib($go_toolchain)",
     "//garnet/public/go/third_party:github.com/google/btree",
     "//garnet/public/go/third_party:github.com/google/go-cmp",
     "//garnet/public/go/third_party:github.com/google/netstack",
     "//garnet/public/go/third_party:golang.org/x/net",
     "//garnet/public/lib/component/go/src/app",
+    "//sdk/fidl/fuchsia.devicesettings($go_toolchain)",
+    "//sdk/fidl/fuchsia.net.filter($go_toolchain)",
+    "//sdk/fidl/fuchsia.netstack($go_toolchain)",
+    "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//zircon/public/fidl/fuchsia-hardware-ethernet($go_toolchain)",
     "//zircon/public/fidl/fuchsia-inspect($go_toolchain)",
     "//zircon/public/fidl/fuchsia-net($go_toolchain)",

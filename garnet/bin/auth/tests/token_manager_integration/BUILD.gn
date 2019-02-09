@@ -5,6 +5,7 @@
 visibility = [ "//garnet/bin/auth/*" ]
 
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 package("token_manager_integration_tests") {
   testonly = true
@@ -27,6 +28,7 @@ package("token_manager_integration_tests") {
   tests = [
     {
       name = "dev_token_mgr_e2e_test"
+      environments = basic_envs
     },
   ]
 
@@ -57,12 +59,12 @@ executable("e2e_dev") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.auth",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/test_runner/cpp/reporting",
+    "//sdk/fidl/fuchsia.auth",
     "//third_party/googletest:gtest",
   ]
 }

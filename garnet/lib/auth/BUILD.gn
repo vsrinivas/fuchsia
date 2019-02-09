@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 package("auth_lib_unittests") {
   testonly = true
@@ -15,9 +16,11 @@ package("auth_lib_unittests") {
   tests = [
     {
       name = "auth_cache_lib_test"
+      environments = basic_envs
     },
     {
       name = "auth_store_lib_test"
+      environments = basic_envs
     },
   ]
 }

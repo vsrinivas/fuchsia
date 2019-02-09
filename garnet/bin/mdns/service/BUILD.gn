@@ -6,6 +6,7 @@ import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 executable("bin") {
   output_name = "mdns"
@@ -66,9 +67,6 @@ executable("bin") {
   deps = [
     "//garnet/bin/media/util",
     "//garnet/lib/inet",
-    "//sdk/fidl/fuchsia.mdns",
-    "//sdk/fidl/fuchsia.netstack",
-    "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fsl",
@@ -76,6 +74,9 @@ executable("bin") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
+    "//sdk/fidl/fuchsia.mdns",
+    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.sys",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
   ]
@@ -137,6 +138,7 @@ test_package("mdns_tests") {
   tests = [
     {
       name = "mdns_tests"
+      environments = basic_envs
     },
   ]
 }

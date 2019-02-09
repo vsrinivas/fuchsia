@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/test.gni")
+import("//build/testing/environments.gni")
 
 source_set("fostr") {
   sources = [
@@ -61,9 +62,9 @@ test("tests") {
 
   deps = [
     ":fostr",
+    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
-    "//garnet/public/lib/fsl",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -82,6 +83,7 @@ package("tests_package") {
   tests = [
     {
       name = "fostr_unittests"
+      environments = basic_envs
     },
   ]
 }

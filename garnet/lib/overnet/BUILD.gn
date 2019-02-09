@@ -5,6 +5,7 @@
 import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
 import("//build/test.gni")
+import("//build/testing/environments.gni")
 
 source_set("overnet") {
   public_deps = [
@@ -51,6 +52,7 @@ package("overnet_tests") {
   tests = [
     {
       name = "overnet_unittests"
+      environments = basic_envs
     },
   ]
 }

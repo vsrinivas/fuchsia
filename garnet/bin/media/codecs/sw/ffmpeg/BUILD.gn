@@ -4,6 +4,7 @@
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 executable("codec_runner_sw_ffmpeg") {
   visibility = [
@@ -31,8 +32,8 @@ executable("codec_runner_sw_ffmpeg") {
   deps = [
     "//garnet/lib/media/codec_impl",
     "//garnet/lib/media/ffmpeg",
-    "//sdk/fidl/fuchsia.mediacodec",
     "//garnet/public/lib/component/cpp",
+    "//sdk/fidl/fuchsia.mediacodec",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -74,6 +75,7 @@ test_package("codec_runner_sw_ffmpeg_tests") {
   tests = [
     {
       name = "codec_runner_sw_ffmpeg_tests"
+      environments = basic_envs
     },
   ]
 }

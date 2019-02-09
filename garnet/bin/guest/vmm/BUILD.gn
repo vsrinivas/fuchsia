@@ -4,6 +4,7 @@
 
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//build/testing/environments.gni")
 
 source_set("lib") {
   visibility = [ ":*" ]
@@ -96,6 +97,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.guest",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/base_view/cpp",
+    "//sdk/fidl/fuchsia.guest",
     "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-sysinfo",
     "//zircon/public/lib/fbl",
@@ -206,13 +208,18 @@ test_package("vmm_tests") {
   tests = [
     {
       name = "device_tests"
-      environments = [nuc_env, vim2_env]
+      environments = [
+        nuc_env,
+        vim2_env,
+      ]
     },
     {
       name = "device_unittests"
+      environments = basic_envs
     },
     {
       name = "vmm_unittests"
+      environments = basic_envs
     },
   ]
 }

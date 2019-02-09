@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 executable("tests") {
   testonly = true
@@ -17,11 +18,11 @@ executable("tests") {
   deps = [
     "fidl/fuchsia.testing.chrealm",
     "//garnet/bin/appmgr:lib",
-    "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.sys",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
   ]
@@ -36,9 +37,9 @@ executable("get_message_client_bin") {
 
   deps = [
     "fidl/fuchsia.testing.chrealm",
-    "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.sys",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zx",
   ]
@@ -66,6 +67,7 @@ test_package("chrealm_integrationtests") {
   tests = [
     {
       name = "chrealm_integration_test"
+      environments = basic_envs
     },
   ]
 }

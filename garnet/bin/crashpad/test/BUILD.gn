@@ -3,14 +3,17 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 test_package("crashpad_analyzer_tests") {
   tests = [
     {
       name = "config_unittest"
+      environments = basic_envs
     },
     {
       name = "crashpad_analyzer_impl_unittest"
+      environments = basic_envs
     },
     {
       name = "crashpad_analyzer_integration_test"

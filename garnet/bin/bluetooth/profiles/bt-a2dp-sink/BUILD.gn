@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "bt_a2dp_sink"
@@ -14,15 +15,15 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/bt-avdtp",
     "//garnet/lib/rust/fuchsia-bluetooth",
-    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
     "//third_party/rust-crates/rustc_deps:bitfield",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
@@ -56,6 +57,7 @@ test_package("bt-a2dp-sink-tests") {
     {
       name = "bt_a2dp_sink_bin_test"
       dest = "bt-a2dp-sink-unittests"
+      environments = basic_envs
     },
   ]
 }

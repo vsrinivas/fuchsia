@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 source_set("cpp") {
   sources = [
@@ -43,6 +44,7 @@ package("tests") {
   tests = [
     {
       name = "syslog_cpp_unittests"
+      environments = basic_envs
     },
   ]
 }

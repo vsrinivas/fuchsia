@@ -4,6 +4,7 @@
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 import("//build/testing/secret_spec.gni")
 import("//peridot/bin/ledger/testing/sync_params.gni")
 
@@ -99,18 +100,23 @@ package("ledger_tests") {
   tests = [
     {
       name = "ledger_unittests"
+      environments = basic_envs
     },
     {
       name = "ledger_integration_tests"
+      environments = basic_envs
     },
     {
       name = "ledger_e2e_local"
+      environments = basic_envs
     },
     {
       name = "cloud_provider_firestore_unittests"
+      environments = basic_envs
     },
     {
       name = "launch_validation_tests_in_memory"
+      environments = basic_envs
     },
     {
       name = "ledger_e2e_sync"
@@ -119,6 +125,7 @@ package("ledger_tests") {
       # Marking it as disabled puts the binary in `test/disabled/` under the
       # package directory.
       disabled = true
+      environments = basic_envs
     },
     {
       name = "launch_validation_tests_firestore"
@@ -127,6 +134,7 @@ package("ledger_tests") {
       # Marking it as disabled puts the binary in `test/disabled/` under the
       # package directory.
       disabled = true
+      environments = basic_envs
     },
     {
       name = "cloud_provider_validation_tests"
@@ -135,6 +143,7 @@ package("ledger_tests") {
       # Marking it as disabled puts the binary in `test/disabled/` under the
       # package directory.
       disabled = true
+      environments = basic_envs
     },
   ]
 

@@ -4,6 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
 sandbox_test_package("has_persistent_storage") {
@@ -15,6 +16,7 @@ sandbox_test_package("has_persistent_storage") {
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
     "//garnet/public/lib/fxl/test:gtest_main",
   ]
+  environments = basic_envs
 }
 
 sandbox_test_package("no_persistent_storage") {
@@ -26,6 +28,7 @@ sandbox_test_package("no_persistent_storage") {
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
     "//garnet/public/lib/fxl/test:gtest_main",
   ]
+  environments = basic_envs
 }
 
 sandbox_test_package("has_isolated_persistent_storage") {
@@ -40,6 +43,7 @@ sandbox_test_package("has_isolated_persistent_storage") {
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
     "//garnet/public/lib/fxl/test:gtest_main",
   ]
+  environments = basic_envs
 }
 
 fidl("data_file_reader_writer") {
@@ -87,6 +91,7 @@ test_package("isolated_persistent_storage") {
   tests = [
     {
       name = "isolated_persistent_storage"
+      environments = basic_envs
     },
   ]
 

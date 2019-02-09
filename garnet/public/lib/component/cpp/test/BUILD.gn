@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 executable("lib_component_unittest") {
   testonly = true
@@ -30,8 +31,8 @@ executable("helper_proc") {
   deps = [
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/component/cpp",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -59,6 +60,7 @@ test_package("lib_component_test") {
   tests = [
     {
       name = "lib_component_unittest"
+      environments = basic_envs
     },
   ]
 }

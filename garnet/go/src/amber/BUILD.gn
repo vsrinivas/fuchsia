@@ -8,6 +8,7 @@ import("//build/go/toolchain.gni")
 import("//build/host.gni")
 import("//build/images/manifest.gni")
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 import("//third_party/cobalt_config/metrics_registry.gni")
 
 go_library("metrics_lib") {
@@ -26,13 +27,13 @@ go_library("lib") {
   deps = [
     "//garnet/go/src/merkle",
     "//garnet/go/src/sse",
-    "//sdk/fidl/fuchsia.amber($go_toolchain)",
-    "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/go/third_party:github.com/flynn/go-tuf",
     "//garnet/public/go/third_party:github.com/rjw57/oauth2device",
     "//garnet/public/go/third_party:golang.org/x/oauth2",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
+    "//sdk/fidl/fuchsia.amber($go_toolchain)",
+    "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//zircon/public/fidl/fuchsia-cobalt($go_toolchain)",
     "//zircon/public/fidl/fuchsia-mem($go_toolchain)",
   ]
@@ -188,10 +189,12 @@ package("test_config") {
     {
       dest = "amber/test_sources/test1/config.json"
       path = rebase_path("etc/sources/test1/config.json")
+      environments = basic_envs
     },
     {
       dest = "amber/test_sources/test2/config.json"
       path = rebase_path("etc/sources/test2/config.json")
+      environments = basic_envs
     },
   ]
 }

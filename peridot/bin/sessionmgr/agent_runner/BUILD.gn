@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/environments.gni")
 import("//peridot/build/tests_package.gni")
 
 source_set("agent_runner") {
@@ -18,9 +19,7 @@ source_set("agent_runner") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/sessionmgr:component_context",
@@ -32,10 +31,12 @@ source_set("agent_runner") {
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
+    "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
-    "//peridot/public/lib/async/cpp:operation",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 
@@ -49,7 +50,6 @@ executable("agent_runner_unittest") {
   deps = [
     ":agent_runner",
     ":public",
-    "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing:fake_launcher",
     "//garnet/public/lib/fsl",
@@ -63,6 +63,7 @@ executable("agent_runner_unittest") {
     "//peridot/lib/testing:test_with_ledger",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
+    "//sdk/fidl/fuchsia.sys",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/trace",
   ]
@@ -72,6 +73,7 @@ tests_package("agent_runner_unittests") {
   deps = [
     ":agent_runner_unittest",
   ]
+  environments = basic_envs
 }
 
 # Broken out for component to depend on w/o creating circles.
@@ -83,14 +85,14 @@ source_set("public") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/sessionmgr/entity_provider_runner",
+    "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
-    "//peridot/public/lib/async/cpp:operation",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/fidl/cpp",
   ]
 }

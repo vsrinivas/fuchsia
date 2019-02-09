@@ -5,6 +5,7 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 go_library("benchmarking") {
   name = "fuchsia.googlesource.com/benchmarking"
@@ -28,6 +29,7 @@ package("go_benchmarking_tests") {
   tests = [
     {
       name = "go_benchmarking_test"
+      environments = basic_envs
     },
   ]
 }

@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "recovery_netstack"
@@ -59,9 +60,11 @@ package("recovery_netstack_tests") {
   tests = [
     {
       name = "recovery_netstack_bin_test"
+      environments = basic_envs
     },
     {
       name = "netstack_core_lib_test"
+      environments = basic_envs
     },
   ]
 }

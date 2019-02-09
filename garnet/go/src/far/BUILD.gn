@@ -5,6 +5,7 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 go_library("far") {
   name = "fuchsia.googlesource.com/far"
@@ -28,6 +29,7 @@ package("go_far_tests") {
   tests = [
     {
       name = "go_far_test"
+      environments = basic_envs
     },
   ]
 }

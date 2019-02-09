@@ -5,6 +5,7 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_library("account_manager_integration") {
   edition = "2018"
@@ -15,13 +16,13 @@ rustc_library("account_manager_integration") {
 
   deps = [
     "//garnet/lib/auth/account_common",
-    "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
-    "//sdk/fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
+    "//sdk/fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:log",
@@ -37,6 +38,7 @@ test_package("account_manager_integration_test_pkg") {
   tests = [
     {
       name = "account_manager_integration_lib_test"
+      environments = basic_envs
     },
   ]
 }

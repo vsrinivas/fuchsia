@@ -15,6 +15,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 import("//garnet/tools/cipd.gni")
 
 driver_module("ath10k_driver") {
@@ -194,9 +195,11 @@ package("ath10k_test") {
   tests = [
     {
       name = "sparse_array_tests"
+      environments = basic_envs
     },
     {
       name = "bitarr_tests"
+      environments = basic_envs
     },
   ]
 }

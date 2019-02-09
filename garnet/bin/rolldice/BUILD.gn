@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "rolldice"
@@ -55,6 +56,7 @@ package("rolldice-tests") {
   tests = [
     {
       name = "rolldice_lib_lib_test"
+      environments = basic_envs
     },
   ]
 }

@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/testing/environments.gni")
 import("//third_party/cobalt_config/metrics_registry.gni")
 
 metrics_registry("wlan_metrics_registry") {
@@ -29,11 +30,6 @@ rustc_binary("bin") {
     "//garnet/lib/wlan/fidl:service-rustc",
     "//garnet/lib/wlan/fidl:sme-rustc",
     "//garnet/lib/wlan/fidl:wlantap-rustc",
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
-    "//sdk/fidl/fuchsia.wlan.mesh:fuchsia.wlan.mesh-rustc",
-    "//sdk/fidl/fuchsia.wlan.minstrel:fuchsia.wlan.minstrel-rustc",
-    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
-    "//sdk/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
@@ -41,6 +37,15 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-cobalt",
     "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
+    "//sdk/fidl/fuchsia.wlan.mesh:fuchsia.wlan.mesh-rustc",
+    "//sdk/fidl/fuchsia.wlan.minstrel:fuchsia.wlan.minstrel-rustc",
+    "//sdk/fidl/fuchsia.wlan.minstrel:fuchsia.wlan.minstrel-rustc",
+    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
+    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
+    "//sdk/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats-rustc",
+    "//sdk/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats-rustc",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:log",
@@ -87,6 +92,7 @@ package("wlanstack2-tests") {
     {
       name = "wlanstack2_bin_test"
       dest = "wlanstack2_bin_test"
+      environments = basic_envs
     },
   ]
 }

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/environments.gni")
 import("//peridot/build/tests_package.gni")
 
 # Convenience dep for most Systems.
@@ -19,6 +20,7 @@ hermetic_tests_package("story_model_unittests") {
     ":ledger_story_model_storage_unittest",
     ":story_model_owner_unittest",
   ]
+  environments = basic_envs
 }
 
 source_set("story_observer") {
@@ -38,8 +40,8 @@ source_set("story_mutator") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.modular.storymodel",
     "//garnet/public/lib/fxl",
+    "//sdk/fidl/fuchsia.modular.storymodel",
   ]
 }
 
@@ -62,8 +64,8 @@ source_set("apply_mutations") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.modular.storymodel",
     "//peridot/public/lib/fostr/fidl/fuchsia.modular.storymodel",
+    "//sdk/fidl/fuchsia.modular.storymodel",
   ]
 
   deps = [

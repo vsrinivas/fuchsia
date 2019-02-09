@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 source_set("lib") {
   sources = [
@@ -86,6 +87,7 @@ test_package("iquery_test") {
   tests = [
     {
       name = "iquery_test"
+      environments = basic_envs
     },
   ]
 }

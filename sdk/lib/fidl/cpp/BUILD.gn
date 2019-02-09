@@ -6,6 +6,7 @@ import("//build/cpp/sdk_source_set.gni")
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/test.gni")
+import("//build/testing/environments.gni")
 
 sdk_source_set("cpp") {
   category = "partner"
@@ -229,6 +230,7 @@ package("fidl_tests") {
   tests = [
     {
       name = "fidl_cpp_unittests"
+      environments = basic_envs
     },
   ]
 }
@@ -237,8 +239,8 @@ if (is_linux || is_mac) {
   test("fidl_cpp_host_unittests") {
     deps = [
       ":host_test_sources",
-      "//third_party/googletest:gtest_main",
       "//third_party/googletest:gtest",
+      "//third_party/googletest:gtest_main",
     ]
   }
 }

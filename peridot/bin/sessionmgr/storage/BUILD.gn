@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/environments.gni")
 import("//peridot/build/tests_package.gni")
 
 tests_package("storage_unittests") {
@@ -10,6 +11,7 @@ tests_package("storage_unittests") {
     ":session_storage_unittest",
     ":story_storage_unittest",
   ]
+  environments = basic_envs
 }
 
 group("storage") {
@@ -26,9 +28,9 @@ source_set("constants_and_utils") {
   ]
 
   deps = [
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/util",
+    "//sdk/lib/fidl/cpp",
   ]
 
   public_deps = [
@@ -69,9 +71,9 @@ source_set("session_storage") {
   public_deps = [
     ":story_storage",
     "//peridot/lib/ledger_client:page_client",
+    "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
-    "//peridot/public/lib/async/cpp:future",
   ]
 }
 
@@ -100,8 +102,8 @@ executable("session_storage_unittest") {
     ":session_storage",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/testing:test_with_ledger",
-    "//sdk/fidl/fuchsia.ledger",
     "//peridot/public/lib/async/cpp:future",
+    "//sdk/fidl/fuchsia.ledger",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -118,10 +120,10 @@ source_set("story_storage") {
     "//peridot/lib/fidl:clone",
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:page_client",
+    "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
-    "//peridot/public/lib/async/cpp:future",
   ]
 }
 
@@ -151,8 +153,8 @@ executable("story_storage_unittest") {
     ":story_storage",
     "//peridot/lib/entity:entity_watcher",
     "//peridot/lib/testing:test_with_ledger",
-    "//sdk/fidl/fuchsia.ledger",
     "//peridot/public/lib/async/cpp:future",
+    "//sdk/fidl/fuchsia.ledger",
     "//third_party/googletest:gtest_main",
   ]
 }

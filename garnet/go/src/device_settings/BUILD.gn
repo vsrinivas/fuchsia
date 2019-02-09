@@ -6,6 +6,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 go_library("device_settings") {
   name = "device_settings"
@@ -16,9 +17,9 @@ go_test("device_settings_integration_test") {
 
   deps = [
     ":device_settings",
+    "//garnet/public/lib/component/go/src/app",
     "//sdk/fidl/fuchsia.devicesettings($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
-    "//garnet/public/lib/component/go/src/app",
   ]
 }
 
@@ -31,6 +32,7 @@ package("device_settings_gotests") {
   tests = [
     {
       name = "device_settings_integration_test"
+      environments = basic_envs
     },
   ]
 }

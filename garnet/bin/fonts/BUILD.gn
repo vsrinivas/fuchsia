@@ -6,6 +6,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_binary("font_server") {
   name = "font_server"
@@ -100,9 +101,11 @@ test_package("font_provider_tests") {
   tests = [
     {
       name = "font_provider_test_lib_test"
+      environments = basic_envs
     },
     {
       name = "font_server_bin_test"
+      environments = basic_envs
     },
   ]
 

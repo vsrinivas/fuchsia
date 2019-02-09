@@ -4,6 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 executable("tests") {
   testonly = true
@@ -15,9 +16,9 @@ executable("tests") {
     "basic-lifecycle-test.cc",
     "integration-test.cc",
     "main.cc",
-    "mock-device.cc",
     "mock-device-hooks.cc",
     "mock-device-thread.cc",
+    "mock-device.cc",
     "root-mock-device.cc",
   ]
 
@@ -45,6 +46,7 @@ package("libdriver-integration-test") {
   tests = [
     {
       name = "libdriver-integration-test"
+      environments = basic_envs
     },
   ]
 }

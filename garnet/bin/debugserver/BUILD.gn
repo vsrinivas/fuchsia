@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 executable("bin") {
   # This is called debugserver and not gdbserver because it is not intended
@@ -102,6 +103,7 @@ package("debugserver_tests") {
   tests = [
     {
       name = "debugserver-unittests"
+      environments = basic_envs
     },
   ]
 

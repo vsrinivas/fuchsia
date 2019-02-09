@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/environments.gni")
 import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
 
@@ -20,8 +21,8 @@ executable_package("context_engine") {
   deps = [
     ":context_engine_impl",
     "//garnet/public/lib/component/cpp",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
+    "//sdk/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -31,6 +32,7 @@ hermetic_tests_package("context_engine_unittests") {
     ":context_index_unittest",
     ":context_repository_unittest",
   ]
+  environments = basic_envs
 }
 
 source_set("context_index") {
@@ -55,8 +57,8 @@ executable("context_index_unittest") {
   deps = [
     ":context_index",
     "//garnet/public/lib/fsl",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
+    "//sdk/fidl/fuchsia.modular",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -90,8 +92,8 @@ source_set("context_repository") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/bound_set",
     "//peridot/lib/rapidjson",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/fostr/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
     "//third_party/rapidjson",
   ]
 }
@@ -106,9 +108,9 @@ executable("context_repository_unittest") {
   deps = [
     ":context_repository",
     "//garnet/public/lib/fsl",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
+    "//sdk/fidl/fuchsia.modular",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -123,10 +125,10 @@ source_set("context_writer_impl") {
     ":context_repository",
     "//garnet/public/lib/fxl",
     "//peridot/lib/bound_set",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:future",
     "//peridot/public/lib/entity/cpp",
     "//peridot/public/lib/entity/cpp:json",
+    "//sdk/fidl/fuchsia.modular",
     "//third_party/rapidjson",
   ]
 }
@@ -145,8 +147,8 @@ source_set("context_engine_impl") {
     ":context_reader_impl",
     ":context_repository",
     ":context_writer_impl",
-    "//sdk/lib/fidl/cpp",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 

@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 # TODO(BLD-338): Rename target to the less-redundant "tests" when target names
 # no longer have to match package names.
@@ -16,14 +17,17 @@ test_package("bluetooth-tests") {
   tests = [
     {
       name = "bt-host-unittests"
+      environments = basic_envs
     },
     {
       name = "rust_crates/host_integration"
       dest = "bt-host-integration-tests"
+      environments = basic_envs
     },
     {
       name = "rust_crates/host_lifecycle"
       dest = "bt-host-lifecycle-tests"
+      environments = basic_envs
     },
   ]
 }

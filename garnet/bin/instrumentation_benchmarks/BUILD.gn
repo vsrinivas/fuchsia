@@ -7,33 +7,14 @@ import("//build/package.gni")
 import("//build/testing/environments.gni")
 
 executable("bin") {
-  output_name = "zircon_benchmarks"
+  output_name = "instrumentation_benchmarks"
   testonly = true
   sources = [
-    "channels.cc",
-    "events.cc",
-    "expose.cc",
-    "fifos.cc",
-    "filesystem.cc",
-    "handle.cc",
     "inspect.cc",
-    "lazy_dir.cc",
-    "mmu.cc",
-    "ports.cc",
-    "prng.cc",
-    "pseudo_dir.cc",
-    "pthreads.cc",
-    "random_memcpy.cc",
-    "round_trips.cc",
-    "slab_alloc_static.cc",
-    "sockets.cc",
+    "inspector.cc",
     "test_runner.cc",
-    "threads.cc",
-    "util.cc",
-    "vmo.cc",
   ]
   deps = [
-    ":fidl_interface",
     "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/inspect-vmo",
     "//garnet/public/lib/fsl",
@@ -49,15 +30,7 @@ executable("bin") {
   libs = [ "zircon" ]
 }
 
-fidl("fidl_interface") {
-  testonly = true
-  name = "fuchsia.zircon.benchmarks"
-  sources = [
-    "round_trip_service.fidl",
-  ]
-}
-
-package("zircon_benchmarks") {
+package("instrumentation_benchmarks") {
   testonly = true
 
   deps = [
@@ -66,7 +39,7 @@ package("zircon_benchmarks") {
 
   tests = [
     {
-      name = "zircon_benchmarks"
+      name = "instrumentation_benchmarks"
       environments = basic_envs
     },
   ]

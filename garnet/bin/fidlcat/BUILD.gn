@@ -5,6 +5,7 @@
 import("//build/cpp/sdk_executable.gni")
 import("//build/host.gni")
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 # Not a thing yet.
 # if (current_toolchain == host_toolchain) {
@@ -41,6 +42,7 @@ package("fidlcat_tests") {
   tests = [
     {
       name = "fidlcat_lib_tests"
+      environments = basic_envs
     },
   ]
 }

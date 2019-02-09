@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 # this has to match the binary name in examples/ui/Build.gn
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 source_set("simple_camera_lib") {
   output_name = "simple_camera_lib"
@@ -69,6 +70,7 @@ package("camera_tests") {
   tests = [
     {
       name = "simple_camera_unittests"
+      environments = basic_envs
     },
   ]
   meta = [

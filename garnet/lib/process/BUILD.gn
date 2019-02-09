@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 source_set("process") {
   sources = [
@@ -46,6 +47,7 @@ package("process_unittests") {
   tests = [
     {
       name = "process_unittests"
+      environments = basic_envs
     },
   ]
 }

@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_library("fuchsia-bluetooth") {
   name = "fuchsia_bluetooth"
@@ -36,6 +37,7 @@ test_package("bluetooth-crate-tests") {
     {
       name = "fuchsia_bluetooth_lib_test"
       dest = "bluetooth-crate-unittests"
+      environments = basic_envs
     },
   ]
 }

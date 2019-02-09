@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_library("bt-avdtp") {
   name = "bt_avdtp"
@@ -33,6 +34,7 @@ test_package("bt-avdtp-tests") {
     {
       name = "bt_avdtp_lib_test"
       dest = "bt-avdtp-unittests"
+      environments = basic_envs
     },
   ]
 }

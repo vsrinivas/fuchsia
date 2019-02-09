@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "stash_ctl"
@@ -11,13 +12,13 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//third_party/rust-crates/rustc_deps:bytes",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
@@ -61,6 +62,7 @@ package("stash_ctl_tests") {
   tests = [
     {
       name = "stash_ctl_bin_test"
+      environments = basic_envs
     },
   ]
 }

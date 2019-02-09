@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "component_manager"
@@ -12,23 +13,25 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:lazy_static",
     "//third_party/rust-crates/rustc_deps:tempfile",
     "//third_party/rust-crates/rustc_deps:url",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
-    "//zircon/public/fidl/fuchsia-process:fuchsia-process-rustc",
     "//zircon/public/fidl/fuchsia-ldsvc:fuchsia-ldsvc-rustc",
+    "//zircon/public/fidl/fuchsia-process:fuchsia-process-rustc",
   ]
 }
 
@@ -61,6 +64,7 @@ test_package("component_manager_tests") {
     {
       name = "component_manager_bin_test"
       dest = "component_manager_tests"
+      environments = basic_envs
     },
   ]
 }

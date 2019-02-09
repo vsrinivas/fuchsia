@@ -5,6 +5,7 @@
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 executable("realm_tests") {
   testonly = true
@@ -23,12 +24,12 @@ executable("realm_tests") {
     "mock_runner:appmgr_mock_runner",
     "//garnet//examples/fidl/services:echo",
     "//garnet/bin/appmgr:lib",
-    "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.sys",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
@@ -63,9 +64,11 @@ test_package("appmgr_integration_tests") {
   tests = [
     {
       name = "appmgr_realm_integration_tests"
+      environments = basic_envs
     },
     {
       name = "appmgr_hub_integration_tests"
+      environments = basic_envs
     },
   ]
 }

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 package("network_time") {
   deps = [
@@ -36,6 +37,7 @@ package("network_time_tests") {
   tests = [
     {
       name = "network_time_tests"
+      environments = basic_envs
     },
   ]
 }

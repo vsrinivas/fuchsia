@@ -13,6 +13,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 executable("workqueue_test") {
   output_name = "workqueue_test"
@@ -74,9 +75,11 @@ package("brcmfmac_test") {
   tests = [
     {
       name = "workqueue_test"
+      environments = basic_envs
     },
     {
       name = "netbuf_test"
+      environments = basic_envs
     },
   ]
 }
