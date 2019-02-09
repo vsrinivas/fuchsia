@@ -413,7 +413,7 @@ void RspServer::OnThreadExiting(inferior_control::Process* process,
   thread->ResumeForExit();
 }
 
-void RspServer::OnProcessExit(inferior_control::Process* process) {
+void RspServer::OnProcessTermination(inferior_control::Process* process) {
   std::vector<char> packet;
   FXL_LOG(INFO) << "Process " << process->GetName() << " exited";
   SetCurrentThread(nullptr);

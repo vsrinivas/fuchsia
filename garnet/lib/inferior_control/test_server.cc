@@ -150,7 +150,7 @@ void TestServer::OnThreadExiting(Process* process, Thread* thread,
   thread->ResumeForExit();
 }
 
-void TestServer::OnProcessExit(Process* process) {
+void TestServer::OnProcessTermination(Process* process) {
   FXL_DCHECK(process);
 
   // Save the exit code for later testing.

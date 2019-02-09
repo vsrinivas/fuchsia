@@ -438,7 +438,7 @@ bool Process::Kill() {
   FXL_LOG(INFO) << "Killing process " << id();
 
   // There's a few issues with sequencing here that we need to consider.
-  // - OnProcessExit, called when we receive an exception indicating
+  // - OnProcessTermination, called when we receive an exception indicating
   //   the process has exited, will send back a stop reply which we don't want
   // - we don't want to unbind the exception port before killing the process
   //   because we don't want to accidentally cause the process to resume before
@@ -725,7 +725,7 @@ void Process::OnExceptionOrSignal(const zx_port_packet_t& packet,
                 << packet.signal.trigger;
     if (packet.signal.trigger & ZX_TASK_TERMINATED) {
       set_state(Process::State::kGone);
-      delegate_->OnProcessExit(this);
+      delegate_->OnProcessTermination(this);
       if (!Detach()) {
         // This is not a fatal error, just log it.
         FXL_LOG(ERROR) << "Unexpected failure to detach (already detached)";

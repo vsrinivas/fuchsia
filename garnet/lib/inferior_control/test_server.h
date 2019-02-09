@@ -51,7 +51,7 @@ class TestServer : public Server, public ::testing::Test {
                         const zx_exception_context_t& context) override;
   void OnThreadExiting(Process* process, Thread* thread,
                        const zx_exception_context_t& context) override;
-  void OnProcessExit(Process* process) override;
+  void OnProcessTermination(Process* process) override;
   void OnArchitecturalException(Process* process, Thread* thread,
                                 const zx_excp_type_t type,
                                 const zx_exception_context_t& context) override;

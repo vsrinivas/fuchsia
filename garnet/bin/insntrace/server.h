@@ -106,7 +106,7 @@ class IptServer final : public inferior_control::Server {
   void OnThreadExiting(inferior_control::Process* process,
                        inferior_control::Thread* thread,
                        const zx_exception_context_t& context) override;
-  void OnProcessExit(inferior_control::Process* process) override;
+  void OnProcessTermination(inferior_control::Process* process) override;
   void OnArchitecturalException(inferior_control::Process* process,
                                 inferior_control::Thread* thread,
                                 const zx_excp_type_t type,

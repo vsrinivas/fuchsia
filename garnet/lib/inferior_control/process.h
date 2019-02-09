@@ -48,7 +48,7 @@ class Process final {
                                  const zx_exception_context_t& context) = 0;
 
     // Called when |process| has exited.
-    virtual void OnProcessExit(Process* process) = 0;
+    virtual void OnProcessTermination(Process* process) = 0;
 
     // Called when the kernel reports an architectural exception.
     virtual void OnArchitecturalException(

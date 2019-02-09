@@ -242,7 +242,7 @@ void IptServer::OnThreadExiting(inferior_control::Process* process,
   thread->ResumeForExit();
 }
 
-void IptServer::OnProcessExit(inferior_control::Process* process) {
+void IptServer::OnProcessTermination(inferior_control::Process* process) {
   FXL_DCHECK(process);
 
   printf("Process %s is gone, rc %d\n", process->GetName().c_str(),
