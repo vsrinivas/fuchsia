@@ -135,7 +135,7 @@ void TestServer::OnThreadStarting(Process* process, Thread* thread,
       FXL_DCHECK(false);
   }
 
-  thread->Resume();
+  thread->ResumeFromException();
 }
 
 void TestServer::OnThreadExiting(Process* process, Thread* thread,

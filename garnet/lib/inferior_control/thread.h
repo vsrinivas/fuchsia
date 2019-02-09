@@ -25,7 +25,7 @@ class Thread final {
  public:
   enum class State {
     kNew,
-    kStopped,
+    kInException,
     kRunning,
     kStepping,
     kExiting,
@@ -75,7 +75,7 @@ class Thread final {
 
   // Resumes the thread from a "stopped in exception" state. Returns true on
   // success, false on failure. The thread state on return is kRunning.
-  bool Resume();
+  bool ResumeFromException();
 
   // Resumes the thread from an ZX_EXCP_THREAD_EXITING exception.
   // The thread state on entry must one of kNew, kStopped, kExiting.

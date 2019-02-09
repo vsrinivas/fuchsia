@@ -217,7 +217,7 @@ void IptServer::OnThreadStarting(inferior_control::Process* process,
   }
 
 Fail:
-  thread->Resume();
+  thread->ResumeFromException();
 }
 
 void IptServer::OnThreadExiting(inferior_control::Process* process,

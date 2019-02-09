@@ -28,7 +28,7 @@ const char* Thread::StateName(Thread::State state) {
     return #x
   switch (state) {
     CASE_TO_STR(kNew);
-    CASE_TO_STR(kStopped);
+    CASE_TO_STR(kInException);
     CASE_TO_STR(kRunning);
     CASE_TO_STR(kStepping);
     CASE_TO_STR(kExiting);
@@ -78,7 +78,7 @@ void Thread::set_state(State state) {
 bool Thread::IsLive() const {
   switch (state_) {
     case State::kNew:
-    case State::kStopped:
+    case State::kInException:
     case State::kRunning:
     case State::kStepping:
       return true;
@@ -119,7 +119,7 @@ void Thread::OnException(const zx_excp_type_t type,
   *exception_context_ = context;
 
   State prev_state = state_;
-  set_state(State::kStopped);
+  set_state(State::kInException);
 
   // If we were singlestepping turn it off.
   // If the user wants to try the singlestep again it must be re-requested.
@@ -135,8 +135,8 @@ void Thread::OnException(const zx_excp_type_t type,
   }
 }
 
-bool Thread::Resume() {
-  if (state() != State::kStopped && state() != State::kNew) {
+bool Thread::ResumeFromException() {
+  if (state() != State::kInException && state() != State::kNew) {
     FXL_LOG(ERROR) << "Cannot resume a thread while in state: "
                    << StateName(state());
     return false;
@@ -145,7 +145,7 @@ bool Thread::Resume() {
   // This is printed here before resuming the task so that this is always
   // printed before any subsequent exception report (which is read by another
   // thread).
-  FXL_VLOG(2) << "Thread " << GetName() << " is now running";
+  FXL_VLOG(2) << "Resuming thread " << GetName() << " after an exception";
 
   zx_status_t status =
       zx_task_resume_from_exception(handle_, GetExceptionPortHandle(), 0);
@@ -162,7 +162,7 @@ bool Thread::Resume() {
 void Thread::ResumeForExit() {
   switch (state()) {
     case State::kNew:
-    case State::kStopped:
+    case State::kInException:
     case State::kExiting:
       break;
     default:
@@ -199,7 +199,7 @@ void Thread::ResumeForExit() {
 }
 
 bool Thread::Step() {
-  if (state() != State::kStopped) {
+  if (state() != State::kInException) {
     FXL_LOG(ERROR) << "Cannot resume a thread while in state: "
                    << StateName(state());
     return false;

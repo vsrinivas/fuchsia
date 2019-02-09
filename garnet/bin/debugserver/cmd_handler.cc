@@ -234,7 +234,7 @@ bool CommandHandler::Handle_c(const fxl::StringView& packet,
 
   // If there is a current thread, then tell it to continue.
   if (current_thread) {
-    if (!current_thread->Resume())
+    if (!current_thread->ResumeFromException())
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
 
     return ReplyOK(std::move(callback));
@@ -332,7 +332,7 @@ bool CommandHandler::Handle_C(const fxl::StringView& packet,
     // a failure condition below?
   }
 
-  if (!current_thread->Resume()) {
+  if (!current_thread->ResumeFromException()) {
     FXL_LOG(ERROR) << "Failed to resume thread";
     return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
@@ -1191,15 +1191,15 @@ bool CommandHandler::Handle_vCont(const fxl::StringView& packet,
           case ThreadActionList::Action::kContinue:
             switch (thread->state()) {
               case inferior_control::Thread::State::kNew:
-              case inferior_control::Thread::State::kStopped:
-                thread->Resume();
+              case inferior_control::Thread::State::kInException:
+                thread->ResumeFromException();
                 break;
               default:
                 break;
             }
           case ThreadActionList::Action::kStep:
             switch (thread->state()) {
-              case inferior_control::Thread::State::kStopped:
+              case inferior_control::Thread::State::kInException:
                 thread->Step();
                 break;
               default:
