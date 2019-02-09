@@ -200,12 +200,8 @@ The set of currently known features are as follows:
 
 - `shell`, which requests access to the resources appropriate for an interactive
   command line. Typically, shells are granted access to all the resources
-  available in the current environment. Currently, when a package requests the
-  `shell` feature, the package loads shared libraries from `/system/lib` instead
-  of from its own package. This behavior will probably change over time, but we
-  do this currently so that programs that are run from the shell can find their
-  shared libraries. The `shell` feature also implies the `root-ssl-certificates`
-  feature.
+  available in the current environment. The `shell` feature also implies the
+  `root-ssl-certificates` feature.
 
 - `shell-commands`, which requests access to the currently available shell
   binaries (note: not "installed", but "available"). Binaries are mapped into

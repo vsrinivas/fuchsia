@@ -792,13 +792,6 @@ void Realm::CreateComponentFromPackage(
     const auto& sandbox = cmx.sandbox_meta();
     service_whitelist = &sandbox.services();
 
-    // If an app has the "shell" feature, then we use the libraries from the
-    // system rather than from the package because programs spawned from the
-    // shell will need the system-provided libraries to run.
-    if (sandbox.HasFeature("shell")) {
-      loader_service.reset();
-    }
-
     builder.AddSandbox(
         sandbox,
         /*hub_directory_factory=*/[this] { return OpenInfoDir(); },
