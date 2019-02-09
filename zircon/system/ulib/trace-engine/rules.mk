@@ -82,25 +82,18 @@ MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 MODULE_COMPILEFLAGS += -DDDK_TRACING
 
-# trace_generate_nonce() exists even when driver tracing is disabled
 MODULE_SRCS := \
+    $(LOCAL_DIR)/context.cpp \
+    $(LOCAL_DIR)/context_api.cpp \
+    $(LOCAL_DIR)/engine.cpp \
     $(LOCAL_DIR)/nonce.cpp
 
 MODULE_STATIC_LIBS := \
-    system/ulib/fbl
-
-ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
-MODULE_SRCS += \
-    $(LOCAL_DIR)/context.cpp \
-    $(LOCAL_DIR)/context_api.cpp \
-    $(LOCAL_DIR)/engine.cpp
-
-MODULE_STATIC_LIBS += \
     system/ulib/async.cpp \
     system/ulib/async \
+    system/ulib/fbl \
     system/ulib/zx \
     system/ulib/zxcpp
-endif
 
 MODULE_LIBS := $(LOCAL_LIBS)
 

@@ -32,9 +32,8 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-sdio \
     system/banjo/ddk-protocol-sdmmc \
 
-ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
+# Driver tracing additions.
 MODULE_STATIC_LIBS += system/ulib/trace.driver
-endif
 MODULE_HEADER_DEPS += system/ulib/trace system/ulib/trace-engine
 
 include make/module.mk

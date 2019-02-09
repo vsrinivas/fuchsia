@@ -62,35 +62,21 @@ unrelated data from a different trace provider.
 The event name is included in the trace to describe what the event
 is about. It is typically unique for each event.
 
-Note that currently the default is that no code will be generated
-by the addition of these `TRACE_*()` macros. Akin to <assert.h>'s use of
-`#define NDEBUG` to disable `assert()`s, tracing uses `#define NTRACE` to
-disable tracing. `NTRACE` is currently defined by default unless
-`ENABLE_DRIVER_TRACING=true` is passed to `make`. See below.
-
 ### Makefile additions
 
 The following addition to your driver's `rules.mk` file is needed to
 pick up tracing support:
 
 ```make
-ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
 MODULE_STATIC_LIBS += system/ulib/trace.driver
-endif
 MODULE_HEADER_DEPS += system/ulib/trace system/ulib/trace-engine
 ```
 
 ## Booting with tracing
 
-To be super conservative, not only does tracing currently require a special
-compile flag to enable it: `ENABLE_DRIVER_TRACING=true`,
-it also requires an extra kernel command line flag to enable it:
-`driver.tracing.enable=1`
-
-`ENABLE_DRIVER_TRACING=true` is now the default. To disable compiling in
-driver tracing support, pass `ENABLE_DRIVER_TRACING=false` to make.
-
-`driver.tracing.enable=1` is also now the default. To disable partipation
+To be conservative, tracing uses a kernel command line flag to enable it:
+`driver.tracing.enable=1`.
+`driver.tracing.enable=1` is the default. To disable partipation
 of drivers in Fuchsia tracing, boot the kernel with `driver.tracing.enable=0`.
 
 Example:

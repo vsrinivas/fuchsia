@@ -29,8 +29,6 @@ ENABLE_LOCK_DEP ?= false
 ENABLE_LOCK_DEP_TESTS ?= $(ENABLE_LOCK_DEP)
 DISABLE_UTEST ?= false
 ENABLE_ULIB_ONLY ?= false
-ENABLE_DRIVER_TRACING ?= true
-ENABLE_DRIVER_TRACING := $(call TOBOOL,$(ENABLE_DRIVER_TRACING))
 USE_ASAN ?= false
 USE_SANCOV ?= false
 USE_PROFILE ?= false
@@ -217,11 +215,6 @@ USER_COMPILEFLAGS := -include $(USER_CONFIG_HEADER) -fPIC -D_ALL_SOURCE=1
 USER_CFLAGS :=
 USER_CPPFLAGS :=
 USER_ASMFLAGS :=
-
-# Allow driver tracing to be completely disabled (as if it didn't exist).
-ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
-USER_COMPILEFLAGS += -DENABLE_DRIVER_TRACING=1
-endif
 
 # Additional flags for dynamic linking, both for dynamically-linked
 # executables and for shared libraries.

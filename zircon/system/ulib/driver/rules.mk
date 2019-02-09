@@ -26,12 +26,10 @@ MODULE_SRCS := \
 	$(LOCAL_DEVHOST_SRCS)/zx-device.cpp \
 	$(LOCAL_DEVMGR_ROOT)/shared/env.cpp \
 
-ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
 MODULE_SRCS += \
     $(LOCAL_DEVHOST_SRCS)/tracing.cpp
 MODULE_HEADER_DEPS := \
     system/ulib/trace-provider
-endif
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-device \
@@ -61,8 +59,6 @@ MODULE_STATIC_LIBS := \
 MODULE_STATIC_LIBS += \
     system/ulib/trace-engine.driver
 
-ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
-
 MODULE_FIDL_LIBS += \
     system/fidl/fuchsia-tracelink \
 
@@ -73,14 +69,6 @@ MODULE_STATIC_LIBS += \
 # Since the tracing support is brought in via an archive, we need explicit
 # references to ensure everything is present.
 MODULE_EXTRA_OBJS := system/ulib/trace-engine/ddk-exports.ld
-
-else
-
-# Some symbols still need to be present even if tracing is disabled.
-# See the linker script for details.
-MODULE_EXTRA_OBJS := system/ulib/trace-engine/ddk-disabled-exports.ld
-
-endif
 
 MODULE_LIBS := system/ulib/fdio system/ulib/zircon system/ulib/c
 

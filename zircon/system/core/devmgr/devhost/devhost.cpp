@@ -42,9 +42,7 @@
 
 #include "../shared/async-loop-owned-rpc-handler.h"
 #include "main.h"
-#if ENABLE_DRIVER_TRACING
 #include "tracing.h"
-#endif
 #include "../shared/env.h"
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"
@@ -1209,17 +1207,14 @@ __EXPORT int device_host_main(int argc, char** argv) {
 
     zx_status_t r;
 
-#if ENABLE_DRIVER_TRACING
-    {
-        if (getenv_bool("driver.tracing.enable", true)) {
-            r = devhost_start_trace_provider();
-            if (r != ZX_OK) {
-                log(INFO, "devhost: error registering as trace provider: %d\n", r);
-                // This is not a fatal error.
-            }
+    if (getenv_bool("driver.tracing.enable", true)) {
+        r = devhost_start_trace_provider();
+        if (r != ZX_OK) {
+            log(INFO, "devhost: error registering as trace provider: %d\n", r);
+            // This is not a fatal error.
         }
     }
-#endif
+
     if ((r = SetupRootDevcoordinatorConnection(std::move(root_conn_channel))) != ZX_OK) {
         log(ERROR, "devhost: could not watch rpc channel: %d\n", r);
         return -1;

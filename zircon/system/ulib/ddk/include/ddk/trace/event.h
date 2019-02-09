@@ -23,13 +23,6 @@
 #ifndef DDK_TRACE_EVENT_H_
 #define DDK_TRACE_EVENT_H_
 
-// While driver tracing support is under development,
-// one must pass ENABLE_DRIVER_TRACING=true to make.
-#if !ENABLE_DRIVER_TRACING
-#undef NTRACE
-#define NTRACE
-#endif
-
 // For now userspace and DDK tracing share the same API and implementation.
 #include <trace/internal/event_common.h>
 
