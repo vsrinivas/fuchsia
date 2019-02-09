@@ -99,8 +99,8 @@ TEST_F(SystemMonitorDockyardTest, RawPastEndResponse) {
   ASSERT_EQ(SAMPLE_COUNT, _response.data_sets[0].size());
   // Check the samples themselves.
   EXPECT_EQ(8ULL, _response.data_sets[0][0]);
-  EXPECT_EQ(10ULL, _response.data_sets[0][1]);
-  EXPECT_EQ(15ULL, _response.data_sets[0][2]);
+  EXPECT_EQ(dockyard::NO_DATA, _response.data_sets[0][1]);
+  EXPECT_EQ(10ULL, _response.data_sets[0][2]);
   EXPECT_EQ(20ULL, _response.data_sets[0][3]);
   EXPECT_EQ(dockyard::NO_DATA, _response.data_sets[0][4]);
   EXPECT_EQ(dockyard::NO_DATA, _response.data_sets[0][5]);
@@ -138,7 +138,7 @@ TEST_F(SystemMonitorDockyardTest, RawSparseResponse) {
   EXPECT_EQ(10ULL, _response.data_sets[0][6]);
   EXPECT_EQ(dockyard::NO_DATA, _response.data_sets[0][7]);
   EXPECT_EQ(dockyard::NO_DATA, _response.data_sets[0][8]);
-  EXPECT_EQ(20ULL, _response.data_sets[0][9]);
+  EXPECT_EQ(dockyard::NO_DATA, _response.data_sets[0][9]);
 }
 
 TEST_F(SystemMonitorDockyardTest, RawDataSetsCpu1) {
@@ -193,10 +193,10 @@ TEST_F(SystemMonitorDockyardTest, RawDataSetsCpu2) {
   ASSERT_EQ(1UL, _response.data_sets.size());
   ASSERT_EQ(SAMPLE_COUNT, _response.data_sets[0].size());
   // Check the samples themselves.
-  EXPECT_EQ(30ULL, _response.data_sets[0][0]);
-  EXPECT_EQ(71ULL, _response.data_sets[0][1]);
-  EXPECT_EQ(31ULL, _response.data_sets[0][2]);
-  EXPECT_EQ(7ULL, _response.data_sets[0][3]);
+  EXPECT_EQ(15ULL, _response.data_sets[0][0]);
+  EXPECT_EQ(78ULL, _response.data_sets[0][1]);
+  EXPECT_EQ(38ULL, _response.data_sets[0][2]);
+  EXPECT_EQ(8ULL, _response.data_sets[0][3]);
   EXPECT_EQ(18ULL, _response.data_sets[0][4]);
 }
 
@@ -226,10 +226,10 @@ TEST_F(SystemMonitorDockyardTest, RawDataSetsCpus012) {
   // Check the samples themselves.
   // CPU 0.
   EXPECT_EQ(dockyard::NO_DATA, _response.data_sets[0][0]);
-  EXPECT_EQ(10ULL, _response.data_sets[0][1]);
+  EXPECT_EQ(dockyard::NO_DATA, _response.data_sets[0][1]);
   // CPU 1.
   EXPECT_EQ(10ULL, _response.data_sets[1][0]);
-  EXPECT_EQ(100ULL, _response.data_sets[1][1]);
+  EXPECT_EQ(dockyard::NO_DATA, _response.data_sets[1][1]);
   // CPU 2.
   EXPECT_EQ(46ULL, _response.data_sets[2][0]);
   EXPECT_EQ(17ULL, _response.data_sets[2][1]);
@@ -314,10 +314,10 @@ TEST_F(SystemMonitorDockyardTest, NormalizedDataSetsCpu2) {
   ASSERT_EQ(1UL, _response.data_sets.size());
   ASSERT_EQ(SAMPLE_COUNT, _response.data_sets[0].size());
   // Check the samples themselves.
-  EXPECT_EQ(278350ULL, _response.data_sets[0][0]);
-  EXPECT_EQ(701030ULL, _response.data_sets[0][1]);
-  EXPECT_EQ(288659ULL, _response.data_sets[0][2]);
-  EXPECT_EQ(41237ULL, _response.data_sets[0][3]);
+  EXPECT_EQ(123711ULL, _response.data_sets[0][0]);
+  EXPECT_EQ(773195ULL, _response.data_sets[0][1]);
+  EXPECT_EQ(360824ULL, _response.data_sets[0][2]);
+  EXPECT_EQ(51546ULL, _response.data_sets[0][3]);
   EXPECT_EQ(154639ULL, _response.data_sets[0][4]);
 }
 
@@ -341,9 +341,9 @@ TEST_F(SystemMonitorDockyardTest, SmoothDataSetsCpu2) {
   ASSERT_EQ(1UL, _response.data_sets.size());
   ASSERT_EQ(SAMPLE_COUNT, _response.data_sets[0].size());
   // Check the samples themselves.
-  EXPECT_EQ(46ULL, _response.data_sets[0][0]);
-  EXPECT_EQ(41ULL, _response.data_sets[0][1]);
-  EXPECT_EQ(38ULL, _response.data_sets[0][2]);
+  EXPECT_EQ(47ULL, _response.data_sets[0][0]);
+  EXPECT_EQ(44ULL, _response.data_sets[0][1]);
+  EXPECT_EQ(42ULL, _response.data_sets[0][2]);
   EXPECT_EQ(20ULL, _response.data_sets[0][3]);
   EXPECT_EQ(13ULL, _response.data_sets[0][4]);
 }
@@ -370,8 +370,8 @@ TEST_F(SystemMonitorDockyardTest, SculptedDataSetsCpu2) {
   // Check the samples themselves.
   EXPECT_EQ(3ULL, _response.data_sets[0][0]);
   EXPECT_EQ(100ULL, _response.data_sets[0][1]);
-  EXPECT_EQ(12ULL, _response.data_sets[0][2]);
-  EXPECT_EQ(3ULL, _response.data_sets[0][3]);
+  EXPECT_EQ(30ULL, _response.data_sets[0][2]);
+  EXPECT_EQ(5ULL, _response.data_sets[0][3]);
   EXPECT_EQ(3ULL, _response.data_sets[0][4]);
 }
 
@@ -407,10 +407,10 @@ TEST_F(SystemMonitorDockyardTest, RandomSamples) {
   ASSERT_EQ(1UL, _response.data_sets.size());
   ASSERT_EQ(SAMPLE_COUNT, _response.data_sets[0].size());
   // Check the samples themselves.
-  EXPECT_EQ(59ULL, _response.data_sets[0][0]);
-  EXPECT_EQ(97ULL, _response.data_sets[0][9]);
-  EXPECT_EQ(26ULL, _response.data_sets[0][19]);
-  EXPECT_EQ(33ULL, _response.data_sets[0][29]);
+  EXPECT_EQ(55ULL, _response.data_sets[0][0]);
+  EXPECT_EQ(99ULL, _response.data_sets[0][9]);
+  EXPECT_EQ(29ULL, _response.data_sets[0][19]);
+  EXPECT_EQ(29ULL, _response.data_sets[0][29]);
   EXPECT_EQ(99ULL, _response.data_sets[0][39]);
 }
 

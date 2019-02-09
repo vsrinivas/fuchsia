@@ -103,6 +103,10 @@ constexpr SampleTimeNs CalcStride(const StreamSetsRequest& request) {
 
 }  // namespace
 
+bool StreamSetsRequest::HasFlag(StreamSetsRequestFlags flag) const {
+  return (flags & flag) != 0;
+}
+
 Dockyard::Dockyard()
     : server_thread_(nullptr),
       stream_name_handler_(nullptr),
@@ -238,7 +242,7 @@ void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
         default:
           break;
       }
-      if ((request.flags & StreamSetsRequest::NORMALIZE) != 0) {
+      if (request.HasFlag(StreamSetsRequest::NORMALIZE)) {
         NormalizeResponse(*stream_id, sample_stream, request, &samples);
       }
     }
@@ -258,9 +262,13 @@ void Dockyard::ComputeAveragePerColumn(
   for (uint64_t sample_n = 0; sample_n < request.sample_count; ++sample_n) {
     auto start_time = request.start_time_ns + sample_n * stride;
     auto begin = sample_stream.lower_bound(start_time);
-    auto end = sample_stream.upper_bound(start_time + stride);
+    if (begin == sample_stream.end()) {
+      samples->push_back(NO_DATA);
+      continue;
+    }
+    auto end = sample_stream.lower_bound(start_time + stride);
     SampleValue accumulator = 0ULL;
-    SampleValue count = 0ULL;
+    uint_fast32_t count = 0ULL;
     for (auto i = begin; i != end; ++i) {
       accumulator += i->second;
       ++count;
@@ -268,7 +276,7 @@ void Dockyard::ComputeAveragePerColumn(
     if (count) {
       samples->push_back(accumulator / count);
     } else {
-      samples->push_back(-2ULL);
+      samples->push_back(NO_DATA);
     }
   }
 }
@@ -280,9 +288,13 @@ void Dockyard::ComputeHighestPerColumn(
   for (uint64_t sample_n = 0; sample_n < request.sample_count; ++sample_n) {
     auto start_time = request.start_time_ns + sample_n * stride;
     auto begin = sample_stream.lower_bound(start_time);
-    auto end = sample_stream.upper_bound(start_time + stride);
+    if (begin == sample_stream.end()) {
+      samples->push_back(NO_DATA);
+      continue;
+    }
+    auto end = sample_stream.lower_bound(start_time + stride);
     SampleValue highest = 0ULL;
-    SampleValue count = 0ULL;
+    uint_fast32_t count = 0ULL;
     for (auto i = begin; i != end; ++i) {
       if (highest < i->second) {
         highest = i->second;
@@ -292,7 +304,7 @@ void Dockyard::ComputeHighestPerColumn(
     if (count) {
       samples->push_back(highest);
     } else {
-      samples->push_back(-2ULL);
+      samples->push_back(NO_DATA);
     }
   }
 }
@@ -305,9 +317,13 @@ void Dockyard::ComputeLowestPerColumn(SampleStreamId stream_id,
   for (uint64_t sample_n = 0; sample_n < request.sample_count; ++sample_n) {
     auto start_time = request.start_time_ns + sample_n * stride;
     auto begin = sample_stream.lower_bound(start_time);
-    auto end = sample_stream.upper_bound(start_time + stride);
+    if (begin == sample_stream.end()) {
+      samples->push_back(NO_DATA);
+      continue;
+    }
+    auto end = sample_stream.lower_bound(start_time + stride);
     SampleValue lowest = SAMPLE_MAX_VALUE;
-    SampleValue count = 0ULL;
+    uint_fast32_t count = 0ULL;
     for (auto i = begin; i != end; ++i) {
       if (lowest > i->second) {
         lowest = i->second;
@@ -317,7 +333,7 @@ void Dockyard::ComputeLowestPerColumn(SampleStreamId stream_id,
     if (count) {
       samples->push_back(lowest);
     } else {
-      samples->push_back(-2ULL);
+      samples->push_back(NO_DATA);
     }
   }
 }
@@ -352,11 +368,15 @@ void Dockyard::ComputeSculpted(SampleStreamId stream_id,
   for (uint64_t sample_n = 0; sample_n < request.sample_count; ++sample_n) {
     auto start_time = request.start_time_ns + sample_n * stride;
     auto begin = sample_stream.lower_bound(start_time);
-    auto end = sample_stream.upper_bound(start_time + stride);
+    if (begin == sample_stream.end()) {
+      samples->push_back(NO_DATA);
+      continue;
+    }
+    auto end = sample_stream.lower_bound(start_time + stride);
     SampleValue accumulator = 0ULL;
     SampleValue highest = 0ULL;
     SampleValue lowest = SAMPLE_MAX_VALUE;
-    SampleValue count = 0ULL;
+    uint_fast32_t count = 0ULL;
     for (auto i = begin; i != end; ++i) {
       auto value = i->second;
       accumulator += value;
@@ -373,7 +393,7 @@ void Dockyard::ComputeSculpted(SampleStreamId stream_id,
       auto final = average >= overall_average ? highest : lowest;
       samples->push_back(final);
     } else {
-      samples->push_back(-2ULL);
+      samples->push_back(NO_DATA);
     }
   }
 }
@@ -386,9 +406,13 @@ void Dockyard::ComputeSmoothed(SampleStreamId stream_id,
   for (uint64_t sample_n = 0; sample_n < request.sample_count; ++sample_n) {
     auto start_time = request.start_time_ns + sample_n * stride;
     auto begin = sample_stream.lower_bound(start_time - stride);
-    auto end = sample_stream.upper_bound(start_time + stride * 2);
+    if (begin == sample_stream.end()) {
+      samples->push_back(NO_DATA);
+      continue;
+    }
+    auto end = sample_stream.lower_bound(start_time + stride * 2);
     SampleValue accumulator = 0ULL;
-    SampleValue count = 0ULL;
+    uint_fast32_t count = 0ULL;
     for (auto i = begin; i != end; ++i) {
       accumulator += i->second;
       ++count;
@@ -396,7 +420,7 @@ void Dockyard::ComputeSmoothed(SampleStreamId stream_id,
     if (count) {
       samples->push_back(accumulator / count);
     } else {
-      samples->push_back(-2ULL);
+      samples->push_back(NO_DATA);
     }
   }
 }

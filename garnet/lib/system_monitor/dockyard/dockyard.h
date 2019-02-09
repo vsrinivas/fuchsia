@@ -112,6 +112,8 @@ struct StreamSetsRequest {
 
   // A StreamInfo::id for each stream of interest.
   std::vector<SampleStreamId> stream_ids;
+
+  bool HasFlag(StreamSetsRequestFlags flag) const;
 };
 
 struct StreamSetsResponse {
