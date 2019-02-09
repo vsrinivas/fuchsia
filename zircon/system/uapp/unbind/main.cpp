@@ -7,8 +7,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <fbl/unique_fd.h>
-#include <zircon/device/device.h>
+#include <fuchsia/device/c/fidl.h>
+#include <lib/fdio/util.h>
+#include <lib/zx/channel.h>
 
 namespace {
 
@@ -70,13 +71,24 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    fbl::unique_fd device(open(config.path, O_WRONLY));
-    if (!device) {
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+        printf("Could not create channel\n");
+        return -1;
+    }
+    status = fdio_service_connect(config.path, remote.release());
+    if (status != ZX_OK) {
         printf("Unable to open device\n");
         return -1;
     }
 
-    if (ioctl_device_unbind(device.get()) < 0) {
+    zx_status_t call_status;
+    status = fuchsia_device_ControllerUnbind(local.get(), &call_status);
+    if (status == ZX_OK) {
+        status = call_status;
+    }
+    if (status != ZX_OK) {
         printf("Failed to unbind device\n");
         return -1;
     }

@@ -17,4 +17,7 @@ MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/c
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device \
+
 include make/module.mk

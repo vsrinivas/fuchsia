@@ -33,6 +33,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device \
     system/fidl/fuchsia-device-manager \
     system/fidl/fuchsia-hardware-ethernet \
 

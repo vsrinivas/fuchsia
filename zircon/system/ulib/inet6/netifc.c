@@ -16,8 +16,8 @@
 
 #include "eth-client.h"
 
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/ethernet/c/fidl.h>
-#include <zircon/device/device.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
@@ -263,15 +263,28 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
         goto finish;
     }
 
+    zx_status_t status = fdio_get_service_handle(fd, &netsvc);
+    if (status != ZX_OK) {
+        goto fail_close_svc;
+    }
+
     // If an interface was specified, check the topological path of this device and reject it if it
     // doesn't match.
     if (cookie != NULL) {
         const char* interface = cookie;
         char buf[1024];
-        if (ioctl_device_get_topo_path(fd, buf, sizeof(buf)) < 0) {
-            close(fd);
-            goto finish;
+        zx_status_t call_status;
+        size_t actual_len;
+        status = fuchsia_device_ControllerGetTopologicalPath(netsvc, &call_status,
+                                                             buf, sizeof(buf) - 1, &actual_len);
+        if (status == ZX_OK) {
+            status = call_status;
         }
+        if (status != ZX_OK) {
+            goto fail_close_svc;
+        }
+        buf[actual_len] = 0;
+
         const char* topo_path = buf;
         // Skip the instance sigil if it's present in either the topological path or the given
         // interface path.
@@ -279,14 +292,8 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
         if (interface[0] == '@') interface++;
 
         if (strncmp(topo_path, interface, sizeof(buf))) {
-            close(fd);
-            goto finish;
+            goto fail_close_svc;
         }
-    }
-
-    zx_status_t status = fdio_get_service_handle(fd, &netsvc);
-    if (status != ZX_OK) {
-        goto finish;
     }
 
     fuchsia_hardware_ethernet_Info info;

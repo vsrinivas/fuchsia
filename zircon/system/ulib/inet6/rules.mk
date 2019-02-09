@@ -21,6 +21,8 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS += system/ulib/fdio system/ulib/zircon system/ulib/c
 
-MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-ethernet
+MODULE_FIDL_LIBS := \
+	system/fidl/fuchsia-device \
+	system/fidl/fuchsia-hardware-ethernet \
 
 include make/module.mk

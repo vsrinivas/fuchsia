@@ -14,6 +14,7 @@
 
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/test/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/util.h>
@@ -21,7 +22,6 @@
 #include <lib/zx/socket.h>
 #include <lib/zx/time.h>
 #include <unittest/unittest.h>
-#include <zircon/device/device.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
@@ -83,20 +83,23 @@ void do_one_test(const IsolatedDevmgr& devmgr, const zx::channel& test_root,
         return;
     }
 
-    char libpath[PATH_MAX];
-    int n = snprintf(libpath, sizeof(libpath), "%s/%s", DRIVER_TEST_DIR, drv_libname);
-    ssize_t rc = ioctl_device_bind(fd.get(), libpath, n);
-    if (rc < 0) {
-        printf("driver-tests: error %zd binding to %s\n", rc, libpath);
-        // TODO(teisenbe): I think fuchsia_device_test_DeviceDestroy() should be called
-        // here?
-        return;
-    }
-
     zx::channel test_channel;
     status = fdio_get_service_handle(fd.release(), test_channel.reset_and_get_address());
     if (status != ZX_OK) {
         printf("driver-tests: failed to get channel %s\n", zx_status_get_string(status));
+        return;
+    }
+
+    char libpath[PATH_MAX];
+    int n = snprintf(libpath, sizeof(libpath), "%s/%s", DRIVER_TEST_DIR, drv_libname);
+    status = fuchsia_device_ControllerBind(test_channel.get(), libpath, n, &call_status);
+    if (status == ZX_OK) {
+        status = call_status;
+    }
+    if (status != ZX_OK) {
+        printf("driver-tests: error %d binding to %s\n", status, libpath);
+        // TODO(teisenbe): I think fuchsia_device_test_DeviceDestroy() should be called
+        // here?
         return;
     }
 
