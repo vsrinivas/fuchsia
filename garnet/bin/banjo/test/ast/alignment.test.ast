@@ -13,21 +13,30 @@ BanjoAst {
                             []
                         ),
                         ty: Int16,
-                        ident: "i16_0"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_0"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: Int32,
-                        ident: "i32_0"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_0"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: Int16,
-                        ident: "i16_1"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_1"
+                        }
                     }
                 ]
             },
@@ -42,28 +51,40 @@ BanjoAst {
                             []
                         ),
                         ty: Int16,
-                        ident: "i16_0"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_0"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: Int8,
-                        ident: "i8_0"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_0"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: Int16,
-                        ident: "i16_1"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_1"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: Int8,
-                        ident: "i8_1"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_1"
+                        }
                     }
                 ]
             },
@@ -78,28 +99,40 @@ BanjoAst {
                             []
                         ),
                         ty: Int16,
-                        ident: "i16_0"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_0"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: Int8,
-                        ident: "i8_0"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_0"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: Int8,
-                        ident: "i8_1"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_1"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: Int16,
-                        ident: "i16_1"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_1"
+                        }
                     }
                 ]
             },
@@ -114,35 +147,50 @@ BanjoAst {
                             []
                         ),
                         ty: Int32,
-                        ident: "i32_0"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_0"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: Int64,
-                        ident: "i64_0"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64_0"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: Int16,
-                        ident: "i16_0"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_0"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: Int32,
-                        ident: "i32_1"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_1"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: Int16,
-                        ident: "i16_1"
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_1"
+                        }
                     }
                 ]
             }

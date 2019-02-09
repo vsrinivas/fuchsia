@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::ast::{self, BanjoAst},
+    crate::ast::{self, BanjoAst, Ident},
     crate::backends::Backend,
     failure::{format_err, Error},
     heck::SnakeCase,
@@ -89,13 +89,13 @@ fn ty_to_cpp_str(ast: &ast::BanjoAst, wrappers: bool, ty: &ast::Ty) -> Result<St
         ast::Ty::Voidptr => Ok(String::from("void*")),
         ast::Ty::Str { .. } => Ok(String::from("const char*")),
         ast::Ty::Vector { ref ty, .. } => ty_to_cpp_str(ast, wrappers, ty),
-        ast::Ty::Ident { id, .. } => {
-            if id == "zx.status" {
-                Ok("zx_status_t".to_string())
+        ast::Ty::Identifier { id, .. } => {
+            if id.is_base_type() {
+                Ok(id.to_string())
             } else {
                 match ast.id_to_type(id) {
                     ast::Ty::Struct | ast::Ty::Union | ast::Ty::Interface | ast::Ty::Enum => {
-                        return Ok(to_c_name(id.clone().as_str()) + "_t");
+                        return Ok(to_c_name(&id.to_string()) + "_t");
                     }
                     t => Err(format_err!("unknown ident type in ty_to_cpp_str {:?}", t)),
                 }
@@ -113,19 +113,19 @@ fn ty_to_cpp_str(ast: &ast::BanjoAst, wrappers: bool, ty: &ast::Ty) -> Result<St
 }
 
 fn interface_to_ops_cpp_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
-    if let ast::Ty::Ident { id, .. } = ty {
+    if let ast::Ty::Identifier { id, .. } = ty {
         if ast.id_to_type(id) == ast::Ty::Interface {
-            return Ok(to_c_name(id.clone().as_str()) + "_ops_t");
+            return Ok(to_c_name(&id.to_string()) + "_ops_t");
         }
     }
     Err(format_err!("unknown ident type in interface_to_ops_cpp_str {:?}", ty))
 }
 
-fn not_callback(ast: &ast::BanjoAst, id: &str) -> bool {
+fn not_callback(ast: &ast::BanjoAst, id: &Ident) -> bool {
     if let Some(attributes) = ast.id_to_attributes(id) {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == " \"ddk-callback\"" {
-            return false;
+                return false;
             }
         }
     }
@@ -155,12 +155,17 @@ fn get_first_param(ast: &BanjoAst, method: &ast::Method) -> Result<(bool, String
         Ok((false, "void".to_string()))
     }
 }
-fn get_in_params(m: &ast::Method, wrappers: bool, transform: bool, ast: &BanjoAst) -> Result<Vec<String>, Error> {
+fn get_in_params(
+    m: &ast::Method,
+    wrappers: bool,
+    transform: bool,
+    ast: &BanjoAst,
+) -> Result<Vec<String>, Error> {
     m.in_params
         .iter()
         .map(|(name, ty)| {
             match ty {
-                ast::Ty::Ident { id, .. } => {
+                ast::Ty::Identifier { id, .. } => {
                     match ast.id_to_type(id) {
                         ast::Ty::Interface => {
                             let ty_name = ty_to_cpp_str(ast, wrappers, ty).unwrap();
@@ -168,8 +173,11 @@ fn get_in_params(m: &ast::Method, wrappers: bool, transform: bool, ast: &BanjoAs
                                 Ok(format!("{} {}", ty_name, to_c_name(name)))
                             } else if transform && not_callback(ast, id) {
                                 let ty_name = interface_to_ops_cpp_str(ast, ty).unwrap();
-                                Ok(format!("void* {name}_ctx, {ty_name}* {name}_ops",
-                                           ty_name=ty_name, name=to_c_name(name)))
+                                Ok(format!(
+                                    "void* {name}_ctx, {ty_name}* {name}_ops",
+                                    ty_name = ty_name,
+                                    name = to_c_name(name)
+                                ))
                             } else {
                                 Ok(format!("const {}* {}", ty_name, to_c_name(name)))
                             }
@@ -237,7 +245,7 @@ fn get_out_params(
         let ty_name = ty_to_cpp_str(ast, wrappers, ty).unwrap();
         match ty {
             ast::Ty::Interface => format!("const {}* {}", ty_name, to_c_name(name)),
-            ast::Ty::Ident {..} => {
+            ast::Ty::Identifier {..} => {
                 let star = if ty_name == "zx_status_t" { "" } else { "*" };
                 format!("{}{}{} out_{}", ty_name, star, nullable, to_c_name(name))
             },
@@ -623,17 +631,30 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                 let (out_args, skip) = get_out_args(&m, true, ast)?;
                 let in_args = get_in_args(&m, false, ast)?;
 
-                let proto_args = m.in_params.iter().filter_map(|(name, ty)| {
-                    if let ast::Ty::Ident { id, .. } =  ty {
-                        if ast.id_to_type(id) == ast::Ty::Interface && not_callback(ast, id) {
-                            return Some((to_c_name(name), ty_to_cpp_str(ast, true, ty).unwrap()));
+                let proto_args = m
+                    .in_params
+                    .iter()
+                    .filter_map(|(name, ty)| {
+                        if let ast::Ty::Identifier { id, .. } = ty {
+                            if ast.id_to_type(id) == ast::Ty::Interface && not_callback(ast, id) {
+                                return Some((
+                                    to_c_name(name),
+                                    ty_to_cpp_str(ast, true, ty).unwrap(),
+                                ));
+                            }
                         }
-                    }
-                    None
-                }).collect::<Vec<_>>();
+                        None
+                    })
+                    .collect::<Vec<_>>();
                 for (name, ty) in proto_args.iter() {
-                    accum.push_str(format!(include_str!("templates/cpp/proto_transform.h"),
-                                    ty = ty, name = name).as_str());
+                    accum.push_str(
+                        format!(
+                            include_str!("templates/cpp/proto_transform.h"),
+                            ty = ty,
+                            name = name
+                        )
+                        .as_str(),
+                    );
                 }
 
                 let args = iter::once("ctx_".to_string())

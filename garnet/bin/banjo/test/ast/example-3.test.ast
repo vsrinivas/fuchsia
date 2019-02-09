@@ -13,14 +13,20 @@ BanjoAst {
                             []
                         ),
                         ty: Int64,
-                        ident: "x"
+                        ident: Ident {
+                            namespace: None,
+                            name: "x"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: Int64,
-                        ident: "y"
+                        ident: Ident {
+                            namespace: None,
+                            name: "y"
+                        }
                     }
                 ]
             }

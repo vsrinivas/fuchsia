@@ -12,11 +12,17 @@ BanjoAst {
                         attributes: Attrs(
                             []
                         ),
-                        ty: Ident {
-                            id: "Bar",
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: None,
+                                name: "Bar"
+                            },
                             reference: false
                         },
-                        ident: "b"
+                        ident: Ident {
+                            namespace: None,
+                            name: "b"
+                        }
                     }
                 ]
             },
@@ -30,11 +36,17 @@ BanjoAst {
                         attributes: Attrs(
                             []
                         ),
-                        ty: Ident {
-                            id: "Foo",
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: None,
+                                name: "Foo"
+                            },
                             reference: true
                         },
-                        ident: "f"
+                        ident: Ident {
+                            namespace: None,
+                            name: "f"
+                        }
                     }
                 ]
             }

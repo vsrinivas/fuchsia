@@ -13,7 +13,10 @@ BanjoAst {
                             []
                         ),
                         ty: UInt64,
-                        ident: "x"
+                        ident: Ident {
+                            namespace: None,
+                            name: "x"
+                        }
                     }
                 ]
             },

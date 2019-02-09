@@ -13,14 +13,20 @@ BanjoAst {
                             []
                         ),
                         ty: Float32,
-                        ident: "x"
+                        ident: Ident {
+                            namespace: None,
+                            name: "x"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: Float32,
-                        ident: "y"
+                        ident: Ident {
+                            namespace: None,
+                            name: "y"
+                        }
                     }
                 ]
             }
@@ -40,8 +46,13 @@ BanjoAst {
                         in_params: [
                             (
                                 "p",
-                                Ident {
-                                    id: "banjo.examples.librarya.Point",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "banjo.examples.librarya"
+                                        ),
+                                        name: "Point"
+                                    },
                                     reference: false
                                 }
                             )

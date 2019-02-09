@@ -40,7 +40,41 @@ pub struct Attr {
 
 #[derive(PartialEq, Eq, Serialize, Default, Debug, Hash)]
 pub struct Attrs(pub Vec<Attr>);
-pub type Ident = String;
+
+// namespace is only populated if it's not the current/default one
+// TODO(bwb) consider populating it or renaming to be more explicit
+#[derive(PartialEq, Debug, Eq, Serialize, Clone, Hash)]
+pub struct Ident {
+    namespace: Option<String>,
+    name: String,
+}
+
+impl Ident {
+    pub fn new(raw_name: &str) -> Ident {
+        let v: Vec<&str> = raw_name.rsplitn(2, '.').collect();
+        if v.len() > 1 {
+            Ident { namespace: Some(v[1].to_string()), name: v[0].to_string() }
+        } else {
+            Ident { namespace: None, name: raw_name.to_string() }
+        }
+    }
+
+    pub fn fq(&self) -> (Option<String>, String) {
+        (self.namespace.clone(), self.name.clone())
+    }
+
+    pub fn is_base_type(&self) -> bool {
+        // TODO add more of zx.banjo
+        self.name == "zx.status"
+    }
+}
+
+impl ToString for Ident {
+    fn to_string(&self) -> String {
+        let ns = self.namespace.clone().unwrap_or("".to_string());
+        format!("{}{}", ns, self.name)
+    }
+}
 
 impl Attrs {
     #[allow(dead_code)]
@@ -106,7 +140,7 @@ impl Attrs {
 #[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash)]
 pub enum Constant {
     SizedRaw(usize),
-    SizedConstant(Ident),
+    SizedConstant(String),
 }
 
 impl Constant {
@@ -164,7 +198,8 @@ pub enum Ty {
     Union,
     Enum,
     Handle { ty: HandleTy, reference: bool },
-    Ident { id: String, reference: bool },
+    // TODO rename this to something less confusing
+    Identifier { id: Ident, reference: bool },
 }
 
 impl fmt::Display for Ty {
@@ -179,13 +214,7 @@ impl fmt::Display for Ty {
 impl Ty {
     pub fn is_primitive(&self) -> bool {
         match self {
-            Ty::Ident { id, .. } => {
-                if id == "zx.status" {
-                    return true;
-                } else {
-                    return false;
-                }
-            }
+            Ty::Identifier { id, .. } => id.is_base_type(),
             Ty::Str { .. } | Ty::Vector { .. } | Ty::Array { .. } | Ty::Handle { .. } => false,
             _ => true,
         }
@@ -195,7 +224,7 @@ impl Ty {
         match self {
             Ty::Str { nullable, .. } => *nullable,
             Ty::Vector { nullable, .. } => *nullable,
-            Ty::Ident { reference, .. } => *reference,
+            Ty::Identifier { reference, .. } => *reference,
             Ty::Handle { reference, .. } => *reference,
             _ => false,
         }
@@ -284,7 +313,7 @@ impl Ty {
             }
             Rule::identifier_type => {
                 let mut iter = pair.clone().into_inner();
-                let id = String::from(iter.next().unwrap().as_str());
+                let id = iter.next().unwrap().as_str();
                 let reference = if let Some(pair) = iter.next() {
                     match pair.as_rule() {
                         Rule::reference => true,
@@ -295,7 +324,7 @@ impl Ty {
                 } else {
                     false
                 };
-                Ok(Ty::Ident { id, reference })
+                Ok(Ty::Identifier { id: Ident::new(id), reference })
             }
             Rule::string_type => {
                 let mut size = None;
@@ -340,13 +369,13 @@ impl Ty {
     }
 }
 
-// TODO string should be an Ident type
 #[derive(PartialEq, Eq, Serialize, Debug, Hash)]
 pub struct StructField {
     pub attributes: Attrs,
     pub ty: Ty,
-    pub ident: String,
+    pub ident: Ident,
 }
+
 impl StructField {
     pub fn from_pair(pair: Pair<'_, Rule>) -> Result<Self, ParseError> {
         let mut attributes = Attrs::default();
@@ -366,21 +395,15 @@ impl StructField {
             }
         }
         // TODO use the val field in structs
-        Ok(StructField {
-            attributes: attributes,
-            ty: ty.unwrap(),
-            ident: ident,
-            //            val: String::from(fields[2].as_str()),
-        })
+        Ok(StructField { attributes: attributes, ty: ty.unwrap(), ident: Ident::new(ident.as_str()) })
     }
 }
 
-// TODO string should be an Ident type
 #[derive(PartialEq, Eq, Serialize, Debug, Hash)]
 pub struct UnionField {
     pub attributes: Attrs,
     pub ty: Ty,
-    pub ident: String,
+    pub ident: Ident,
 }
 impl UnionField {
     pub fn from_pair(pair: Pair<'_, Rule>) -> Result<Self, ParseError> {
@@ -389,12 +412,11 @@ impl UnionField {
         Ok(UnionField {
             attributes: Attrs::from_pair(fields[0].clone())?,
             ty: Ty::from_pair(ty)?,
-            ident: String::from(fields[2].as_str()),
+            ident: Ident::new(fields[2].as_str()),
         })
     }
 }
 
-// TODO string should be an Ident type
 #[derive(PartialEq, Eq, Serialize, Debug, Hash)]
 pub struct EnumVariant {
     pub attributes: Attrs,
@@ -474,7 +496,7 @@ impl Method {
 pub enum Decl {
     Struct { attributes: Attrs, name: String, fields: Vec<StructField> },
     Interface { attributes: Attrs, name: String, methods: Vec<Method> },
-    Alias(String, String),
+    Alias(Ident, Ident),
     Constant { attributes: Attrs, name: String, ty: Ty, value: Constant },
     Union { attributes: Attrs, name: String, fields: Vec<UnionField> },
     Enum { attributes: Attrs, name: String, ty: Ty, variants: Vec<EnumVariant> },
@@ -487,17 +509,9 @@ pub struct BanjoAst {
 }
 
 impl BanjoAst {
-    pub fn id_to_type(&self, fq_ident: &str) -> Ty {
-        // check if FQ
-        let v: Vec<&str> = fq_ident.rsplitn(2, '.').collect();
-        let mut namespace = self.primary_namespace.as_str();
-        let mut ident = fq_ident;
-        if v.len() > 1 {
-            namespace = v[1];
-            ident = v[0];
-        }
-
-        match ident {
+    pub fn id_to_type(&self, fq_ident: &Ident) -> Ty {
+        let (_, ident) = fq_ident.fq();
+        match ident.as_str() {
             "usize" => return Ty::USize,
             "bool" => return Ty::Bool,
             "int8" => return Ty::Int8,
@@ -514,82 +528,74 @@ impl BanjoAst {
             _ => {}
         };
 
-        for decl in self.namespaces[namespace].iter() {
+        for decl in self.namespaces[&self.primary_namespace].iter() {
             match decl {
                 Decl::Interface { name, .. } => {
-                    if name == ident {
+                    if *name == ident {
                         return Ty::Interface;
                     }
                 }
                 Decl::Struct { name, .. } => {
-                    if name == ident {
+                    if *name == ident {
                         return Ty::Struct;
                     }
                 }
                 Decl::Union { name, .. } => {
-                    if name == ident {
+                    if *name == ident {
                         return Ty::Union;
                     }
                 }
                 Decl::Enum { name, .. } => {
-                    if name == ident {
+                    if *name == ident {
                         return Ty::Enum;
                     }
                 }
                 Decl::Alias(to, from) => {
-                    if to == ident {
+                    if to == fq_ident {
                         return self.id_to_type(from);
                     }
                 }
                 Decl::Constant { name, ty, .. } => {
-                    if name == ident {
+                    if *name == ident {
                         return (*ty).clone();
                     }
                 }
             }
         }
-        panic!("Unidentified {}", fq_ident);
+        panic!("Unidentified {:?}", fq_ident);
     }
 
-    pub fn id_to_attributes(&self, fq_ident: &str) -> Option<&Attrs> {
-        // check if FQ
-        let v: Vec<&str> = fq_ident.rsplitn(2, '.').collect();
-        let mut namespace = self.primary_namespace.as_str();
-        let mut ident = fq_ident;
-        if v.len() > 1 {
-            namespace = v[1];
-            ident = v[0];
-        }
-
-        for decl in self.namespaces[namespace].iter() {
+    pub fn id_to_attributes(&self, fq_ident: &Ident) -> Option<&Attrs> {
+        let (namespace, ident) = fq_ident.fq();
+        for decl in self.namespaces[&namespace.unwrap()].iter() {
             match decl {
                 Decl::Interface { name, attributes, .. } => {
-                    if name == ident {
+                    if *name == ident {
                         return Some(attributes);
                     }
                 }
                 Decl::Struct { name, attributes, .. } => {
-                    if name == ident {
+                    if *name == ident {
                         return Some(attributes);
                     }
                 }
                 Decl::Union { name, attributes, .. } => {
-                    if name == ident {
+                    if *name == ident {
                         return Some(attributes);
                     }
                 }
                 Decl::Enum { name, attributes, .. } => {
-                    if name == ident {
+                    if *name == ident {
                         return Some(attributes);
                     }
                 }
                 Decl::Alias(to, from) => {
-                    if to == ident {
+                    if *to == *fq_ident {
                         return self.id_to_attributes(from);
                     }
                 }
                 Decl::Constant { name, attributes, .. } => {
-                    if name == ident {
+                    if *name == ident {
                         return Some(attributes);
                     }
                 }
@@ -712,31 +718,26 @@ impl BanjoAst {
         match ty {
             Ty::Array { ref ty, .. } => self.type_to_decl(ty),
             Ty::Vector { ref ty, .. } => self.type_to_decl(ty),
-            Ty::Ident { id, reference } => {
+            Ty::Identifier { id, reference } => {
                 // don't add edge for a reference
                 if *reference {
-                    return None
+                    return None;
                 }
-                // check if FQ
-                let v: Vec<&str> = id.rsplitn(2, '.').collect();
-                let (namespace, ident) = if v.len() > 1 {
-                    (v[1], v[0])
-                } else {
-                    (self.primary_namespace.as_str(), id.as_str())
-                };
-                for decl in self.namespaces[namespace].iter() {
+
+                let (_, ident) = id.fq();
+                for decl in self.namespaces[&self.primary_namespace].iter() {
                     match decl {
                         Decl::Interface { name, .. }
                         | Decl::Struct { name, .. }
                         | Decl::Union { name, .. }
                         | Decl::Enum { name, .. }
                         | Decl::Constant { name, .. } => {
-                            if name == ident {
+                            if *name == ident {
                                 return Some(decl);
                             }
                         }
                         Decl::Alias(to, from) => {
-                            if to == ident {
+                            if to == id {
                                 return self.type_to_decl(&self.id_to_type(from));
                             }
                         }
@@ -882,8 +883,8 @@ impl BanjoAst {
                             let contents: Vec<&str> =
                                 inner_pair.clone().into_inner().map(|p| p.as_str()).collect();
                             namespace.push(Decl::Alias(
-                                contents[0].to_string(),
-                                contents[1].to_string(),
+                                Ident::new(contents[0]),
+                                Ident::new(contents[1]),
                             ));
                         }
                         Rule::using => {

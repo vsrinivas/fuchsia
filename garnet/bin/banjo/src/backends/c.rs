@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::ast::{self, BanjoAst, Constant},
+    crate::ast::{self, BanjoAst, Constant, Ident},
     crate::backends::Backend,
     failure::{format_err, Error},
     heck::SnakeCase,
@@ -66,17 +66,20 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
         ast::Ty::UInt32 => Ok(String::from("uint32_t")),
         ast::Ty::UInt64 => Ok(String::from("uint64_t")),
         ast::Ty::USize => Ok(String::from("size_t")),
+        ast::Ty::Float32 => Ok(String::from("float")),
+        ast::Ty::Float64 => Ok(String::from("double")),
         ast::Ty::Voidptr => Ok(String::from("void*")),
         ast::Ty::Str { .. } => Ok(String::from("const char*")),
         ast::Ty::Vector { ref ty, .. } => ty_to_c_str(ast, ty),
         ast::Ty::Array { ref ty, .. } => ty_to_c_str(ast, ty),
-        ast::Ty::Ident { id, .. } => {
-            if id == "zx.status" {
-                Ok("zx_status_t".to_string())
+        ast::Ty::Identifier { id, reference } => {
+            let ptr = if *reference { "*" } else { "" };
+            if id.is_base_type() {
+                Ok(id.to_string())
             } else {
                 match ast.id_to_type(id) {
                     ast::Ty::Struct | ast::Ty::Union | ast::Ty::Interface | ast::Ty::Enum => {
-                        return Ok(to_c_name(id.clone().as_str()) + "_t");
+                        return Ok(format!("{}_t{}", to_c_name(id.to_string().as_str()), ptr));
                     }
                     t => return ty_to_c_str(ast, &t),
                 }
@@ -88,15 +91,15 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
 }
 
 fn interface_to_ops_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
-    if let ast::Ty::Ident { id, .. } = ty {
+    if let ast::Ty::Identifier { id, .. } = ty {
         if ast.id_to_type(id) == ast::Ty::Interface {
-            return Ok(to_c_name(id.clone().as_str()) + "_ops_t");
+            return Ok(to_c_name(id.to_string().as_str()) + "_ops_t");
         }
     }
     Err(format_err!("unknown ident type in interface_to_ops_c_str {:?}", ty))
 }
 
-fn not_callback(ast: &ast::BanjoAst, id: &str) -> bool {
+fn not_callback(ast: &ast::BanjoAst, id: &Ident) -> bool {
     if let Some(attributes) = ast.id_to_attributes(id) {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == " \"ddk-callback\"" {
@@ -152,7 +155,7 @@ fn get_in_params(m: &ast::Method, transform: bool, ast: &BanjoAst) -> Result<Vec
         .iter()
         .map(|(name, ty)| {
             match ty {
-                ast::Ty::Ident { id, .. } => {
+                ast::Ty::Identifier { id, .. } => {
                     match ast.id_to_type(id) {
                         ast::Ty::Interface => {
                             let ty_name = ty_to_c_str(ast, ty).unwrap();
@@ -160,8 +163,11 @@ fn get_in_params(m: &ast::Method, transform: bool, ast: &BanjoAst) -> Result<Vec
                                 Ok(format!("{} {}", ty_name, to_c_name(name)))
                             } else if transform && not_callback(ast, id) {
                                 let ty_name = interface_to_ops_c_str(ast, ty).unwrap();
-                                Ok(format!("void* {name}_ctx, {ty_name}* {name}_ops",
-                                           ty_name=ty_name, name=to_c_name(name)))
+                                Ok(format!(
+                                    "void* {name}_ctx, {ty_name}* {name}_ops",
+                                    ty_name = ty_name,
+                                    name = to_c_name(name)
+                                ))
                             } else {
                                 Ok(format!("const {}* {}", ty_name, to_c_name(name)))
                             }
@@ -234,7 +240,7 @@ fn get_out_params(
         let ty_name = ty_to_c_str(ast, ty).unwrap();
         match ty {
             ast::Ty::Interface => format!("const {}* {}", ty_name, to_c_name(name)),
-            ast::Ty::Ident {..} => {
+            ast::Ty::Identifier {..} => {
                 let star = if ty_name == "zx_status_t" { "" } else { "*" };
                 format!("{}{}{} out_{}", ty_name, star, nullable, to_c_name(name))
             },
@@ -459,7 +465,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                         accum.push_str(
                             format!(
                                 "    {ty} {c_name};",
-                                c_name = to_c_name(f.ident.as_str()),
+                                c_name = to_c_name(f.ident.to_string().as_str()),
                                 ty = ty_to_c_str(ast, &f.ty)?
                             )
                             .as_str(),
@@ -490,18 +496,19 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         namespace: &Vec<ast::Decl>,
         _ast: &BanjoAst,
     ) -> Result<String, Error> {
-        Ok(namespace
+        let mut struct_decls = namespace
             .iter()
             .filter_map(|decl| {
                 if let ast::Decl::Struct { ref name, .. } = *decl {
-                    Some(name)
-                } else {
-                    None
+                    return Some(name);
                 }
+                None
             })
             .map(|name| format!("typedef struct {c_name} {c_name}_t;", c_name = to_c_name(name)))
-            .collect::<Vec<_>>()
-            .join("\n"))
+            .collect::<Vec<_>>();
+        // deterministic output
+        struct_decls.sort();
+        Ok(struct_decls.join("\n"))
     }
 
     fn codegen_struct_defs(
@@ -526,8 +533,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                         accum.push_str(get_doc_comment(&f.attributes, 1).as_str());
                         accum.push_str(
                             format!(
-                                "    {ty} {c_name};",
-                                c_name = to_c_name(f.ident.as_str()),
+                                "    {ty}{ptr} {c_name};",
+                                c_name = to_c_name(f.ident.to_string().as_str()),
+                                ptr = if false { "*" } else { "" },
                                 ty = ty_to_c_str(ast, &f.ty)?
                             )
                             .as_str(),
@@ -628,17 +636,27 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 let (out_args, skip) = get_out_args(&m, ast)?;
                 let in_args = get_in_args(&m, ast)?;
 
-                let proto_args = m.in_params.iter().filter_map(|(name, ty)| {
-                    if let ast::Ty::Ident { id, .. } =  ty {
-                        if ast.id_to_type(id) == ast::Ty::Interface && not_callback(ast, id) {
-                            return Some((to_c_name(name), ty_to_c_str(ast, ty).unwrap()));
+                let proto_args = m
+                    .in_params
+                    .iter()
+                    .filter_map(|(name, ty)| {
+                        if let ast::Ty::Identifier { id, .. } = ty {
+                            if ast.id_to_type(id) == ast::Ty::Interface && not_callback(ast, id) {
+                                return Some((to_c_name(name), ty_to_c_str(ast, ty).unwrap()));
+                            }
                         }
-                    }
-                    None
-                }).collect::<Vec<_>>();
+                        None
+                    })
+                    .collect::<Vec<_>>();
                 for (name, ty) in proto_args.iter() {
-                    accum.push_str(format!(include_str!("templates/c/proto_transform.h"),
-                                    ty = ty, name = name).as_str());
+                    accum.push_str(
+                        format!(
+                            include_str!("templates/c/proto_transform.h"),
+                            ty = ty,
+                            name = name
+                        )
+                        .as_str(),
+                    );
                 }
 
                 let args = iter::once("proto->ctx".to_string())

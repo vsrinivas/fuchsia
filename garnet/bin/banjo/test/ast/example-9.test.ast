@@ -40,14 +40,20 @@ BanjoAst {
                             []
                         ),
                         ty: UInt32,
-                        ident: "first"
+                        ident: Ident {
+                            namespace: None,
+                            name: "first"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: UInt64,
-                        ident: "second"
+                        ident: Ident {
+                            namespace: None,
+                            name: "second"
+                        }
                     }
                 ]
             },
@@ -101,8 +107,11 @@ BanjoAst {
                         in_params: [
                             (
                                 "req",
-                                Ident {
-                                    id: "EchoMe",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "EchoMe"
+                                    },
                                     reference: false
                                 }
                             )
@@ -110,8 +119,11 @@ BanjoAst {
                         out_params: [
                             (
                                 "response",
-                                Ident {
-                                    id: "EchoMe",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "EchoMe"
+                                    },
                                     reference: false
                                 }
                             )
@@ -173,8 +185,11 @@ BanjoAst {
                         in_params: [
                             (
                                 "req",
-                                Ident {
-                                    id: "EchoMore",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "EchoMore"
+                                    },
                                     reference: false
                                 }
                             )
@@ -182,8 +197,11 @@ BanjoAst {
                         out_params: [
                             (
                                 "response",
-                                Ident {
-                                    id: "EchoMore",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "EchoMore"
+                                    },
                                     reference: false
                                 }
                             )
@@ -196,8 +214,11 @@ BanjoAst {
                     []
                 ),
                 name: "favorite_echo",
-                ty: Ident {
-                    id: "EchoMe",
+                ty: Identifier {
+                    id: Ident {
+                        namespace: None,
+                        name: "EchoMe"
+                    },
                     reference: false
                 },
                 value: SizedConstant(

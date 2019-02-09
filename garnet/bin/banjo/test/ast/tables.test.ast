@@ -12,11 +12,17 @@ BanjoAst {
                         attributes: Attrs(
                             []
                         ),
-                        ty: Ident {
-                            id: "B",
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: None,
+                                name: "B"
+                            },
                             reference: true
                         },
-                        ident: "foo"
+                        ident: Ident {
+                            namespace: None,
+                            name: "foo"
+                        }
                     }
                 ]
             },
@@ -30,11 +36,17 @@ BanjoAst {
                         attributes: Attrs(
                             []
                         ),
-                        ty: Ident {
-                            id: "A",
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: None,
+                                name: "A"
+                            },
                             reference: true
                         },
-                        ident: "bar"
+                        ident: Ident {
+                            namespace: None,
+                            name: "bar"
+                        }
                     }
                 ]
             },
@@ -52,7 +64,10 @@ BanjoAst {
                             ty: Handle,
                             reference: false
                         },
-                        ident: "baz"
+                        ident: Ident {
+                            namespace: None,
+                            name: "baz"
+                        }
                     }
                 ]
             },
@@ -66,11 +81,17 @@ BanjoAst {
                         attributes: Attrs(
                             []
                         ),
-                        ty: Ident {
-                            id: "C",
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: None,
+                                name: "C"
+                            },
                             reference: false
                         },
-                        ident: "qux"
+                        ident: Ident {
+                            namespace: None,
+                            name: "qux"
+                        }
                     }
                 ]
             }

@@ -13,21 +13,30 @@ BanjoAst {
                             []
                         ),
                         ty: UInt8,
-                        ident: "u8_0"
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_0"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: UInt64,
-                        ident: "u64_0"
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64_0"
+                        }
                     },
                     StructField {
                         attributes: Attrs(
                             []
                         ),
                         ty: UInt8,
-                        ident: "u8_1"
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_1"
+                        }
                     }
                 ]
             }
