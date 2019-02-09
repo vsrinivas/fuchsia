@@ -30,13 +30,6 @@ group("default") {
   }
 }
 
-# Instantiate the packages synthesized from the build argument.
-foreach(pkg, synthesize_packages) {
-  package(pkg.name) {
-    forward_variables_from(pkg, "*", [ "name" ])
-  }
-}
-
 # Copy host test binaries to $root_build_dir/host_tests.
 # TODO(IN-819): Delete this copy target once host tests are no longer run out
 # of a single directory.

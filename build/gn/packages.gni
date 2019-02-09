@@ -37,19 +37,6 @@ declare_args() {
 
   # Legacy product definitions.
   fuchsia_products = []
-
-  # List of extra packages to synthesize on the fly.  This is only for
-  # things that do not appear normally in the source tree.  Synthesized
-  # packages can contain build artifacts only if they already exist in some
-  # part of the build.  They can contain arbitrary verbatim files.
-  # Synthesized packages can't express dependencies on other packages.
-  #
-  # Each element of this list is a scope that is very much like the body of
-  # a package() template invocation (see //build/package.gni).  That scope
-  # must set `name` to the string naming the package, as would be the name
-  # in the package() target written in a GN file.  This must be unique
-  # among all package names.
-  synthesize_packages = []
 }
 
 monolith += board_packages
@@ -132,18 +119,3 @@ package_host_tests = []
 foreach(label, _preprocessed_products.host_tests) {
   package_host_tests += [ get_label_info(label, "label_no_toolchain") ]
 }
-
-# Synthesized packages are instantiated in //build/gn/BUILD.gn,
-# so the package() target is //build/gn:package_name.
-_synthesized_packages = []
-foreach(pkg, synthesize_packages) {
-  pkg = "//build/gn:${pkg.name}"
-  _synthesized_packages += [ get_label_info(pkg, "label_no_toolchain") ]
-}
-
-# Note: currently the infrastructure recipes require infra synthesized
-# packages to become members of the monolith set. The +,-,+ dance is to ensure
-# the list contains no duplicates.
-monolith_packages += _synthesized_packages
-monolith_packages -= _synthesized_packages
-monolith_packages += _synthesized_packages
