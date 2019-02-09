@@ -231,7 +231,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 		}
 	}()
 
-	addr, err := botanist.GetNodeAddress(ctx, nodename)
+	addr, err := botanist.GetNodeAddress(ctx, nodename, false)
 	if err != nil {
 		return err
 	}

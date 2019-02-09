@@ -66,7 +66,7 @@ func ConnectSSH(ctx context.Context, address net.Addr, config *ssh.ClientConfig)
 
 // SSHIntoNode connects to the device with the given nodename.
 func SSHIntoNode(ctx context.Context, nodename string, config *ssh.ClientConfig) (*ssh.Client, error) {
-	addr, err := GetNodeAddress(ctx, nodename)
+	addr, err := GetNodeAddress(ctx, nodename, true)
 	if err != nil {
 		return nil, err
 	}

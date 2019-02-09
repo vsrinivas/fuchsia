@@ -107,7 +107,7 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		}
 	}()
 
-	addr, err := botanist.GetNodeAddress(ctx, nodename)
+	addr, err := botanist.GetNodeAddress(ctx, nodename, false)
 	if err != nil {
 		return err
 	}
