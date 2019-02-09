@@ -194,7 +194,6 @@ TEST_F(AudioRendererTest, EnableMinLeadTimeEvents) {
       kDurationResponseExpected, kDurationGranularity))
       << kTimeoutErr;
 
-  EXPECT_FALSE(error_occurred_) << kConnectionErr;
   EXPECT_EQ(min_lead_time, 0);
 
   // FYI: after setting format, MinLeadTime should change to be greater than 0
@@ -220,7 +219,6 @@ TEST_F(AudioRendererTest, DisableMinLeadTimeEvents) {
       },
       kDurationTimeoutExpected));
 
-  EXPECT_FALSE(error_occurred_) << kConnectionErr;
   EXPECT_EQ(min_lead_time, -1) << "Received unexpected MinLeadTime update";
 }
 
@@ -278,16 +276,15 @@ TEST_F(AudioRendererTest, BindGainControl) {
   // Validate that AudioRenderer2 persists without GainControl2.
   gain_control_2.Unbind();
 
-  // ...give interfaces a chance to disconnect...
+  // ...give the two interfaces a chance to completely unbind...
   EXPECT_FALSE(RunLoopWithTimeoutOrUntil(
       [this, &ar2_error_occurred, &gc2_error_occurred]() {
         return (error_occurred_ || ar2_error_occurred || gc2_error_occurred);
       },
-      kDurationTimeoutExpected));
+      kDurationTimeoutExpected * 2));
 
   // Explicitly unbinding audio_renderer_ should not trigger its disconnect
   // (error_occurred_), but should trigger gain_control_'s disconnect.
-  EXPECT_FALSE(error_occurred_);
   EXPECT_TRUE(gc_error_occurred);
   EXPECT_FALSE(gain_control_.is_bound());
 

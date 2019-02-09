@@ -1,7 +1,4 @@
 disabled_for_asan = [
-  # MTWN-233 (flaky)
-  "/pkgfs/packages/audio_fidl_tests/0/test/audio_fidl_tests",
-
   # DNO-408 (flaky)
   "/pkgfs/packages/debugger_utils_tests/0/test/debugger_utils_tests",
 

@@ -166,7 +166,7 @@ TEST_F(AudioCapturerTest, DiscardAllWithNone) {
   EXPECT_TRUE(ExpectDisconnect());
 }
 
-// TODO(mpuryear): DiscardAllPacketsNoReply() w/no pkt, when started, post-stop
+// TODO(mpuryear): DiscardAllPacketsNoReply() when started, post-stop
 TEST_F(AudioCapturerTest, DiscardAllNoReplyWithNone) {
   SetNegativeExpectations();
 
@@ -209,6 +209,60 @@ TEST_F(AudioCapturerTest, StopNoReplyWhenStoppedCausesDisconnect) {
   EXPECT_TRUE(ExpectDisconnect());
 }
 // Also before format set, before packets submitted
+
+// Test creation and interface independence of GainControl.
+// In a number of tests below, we run the message loop to give the AudioCapturer
+// or GainControl binding a chance to disconnect, if an error occurred.
+TEST_F(AudioCapturerTest, BindGainControl) {
+  // Validate AudioCapturers can create GainControl interfaces.
+  audio_capturer_->BindGainControl(gain_control_.NewRequest());
+  bool gc_error_occurred = false;
+  auto gc_err_handler = [&gc_error_occurred](zx_status_t error) {
+    gc_error_occurred = true;
+  };
+  gain_control_.set_error_handler(gc_err_handler);
+
+  fuchsia::media::AudioCapturerPtr audio_capturer_2;
+  audio_->CreateAudioCapturer(audio_capturer_2.NewRequest(), true);
+  bool ac2_error_occurred = false;
+  auto ac2_err_handler = [&ac2_error_occurred](zx_status_t error) {
+    ac2_error_occurred = true;
+  };
+  audio_capturer_2.set_error_handler(ac2_err_handler);
+
+  fuchsia::media::GainControlPtr gain_control_2;
+  audio_capturer_2->BindGainControl(gain_control_2.NewRequest());
+  bool gc2_error_occurred = false;
+  auto gc2_err_handler = [&gc2_error_occurred](zx_status_t error) {
+    gc2_error_occurred = true;
+  };
+  gain_control_2.set_error_handler(gc2_err_handler);
+
+  // Validate GainControl does NOT persist after AudioCapturer is unbound.
+  expect_capturer_ = false;
+  audio_capturer_.Unbind();
+
+  // Validate that AudioCapturer2 persists without GainControl2.
+  gain_control_2.Unbind();
+
+  // ...give the two interfaces a chance to completely unbind...
+  EXPECT_FALSE(RunLoopWithTimeoutOrUntil(
+      [this, &ac2_error_occurred, &gc2_error_occurred]() {
+        return (error_occurred_ || ac2_error_occurred || gc2_error_occurred);
+      },
+      kDurationTimeoutExpected * 2));
+
+  // Explicitly unbinding audio_capturer_ should not trigger its disconnect
+  // (error_occurred_), but should trigger gain_control_'s disconnect.
+  EXPECT_TRUE(gc_error_occurred);
+  EXPECT_FALSE(gain_control_.is_bound());
+
+  // Explicitly unbinding gain_control_2 should not trigger its disconnect, nor
+  // its parent audio_capturer_2's.
+  EXPECT_FALSE(ac2_error_occurred);
+  EXPECT_FALSE(gc2_error_occurred);
+  EXPECT_TRUE(audio_capturer_2.is_bound());
+}
 
 // Null/malformed requests to BindGainControl should have no effect.
 TEST_F(AudioCapturerTest, BindGainControlNull) {

@@ -240,8 +240,9 @@ TEST_F(AudioTest, CreateAudioRenderer) {
   audio_renderer_2.Unbind();
   audio_3.Unbind();
 
-  // Give time for Disconnect to occur, if it must.
-  ASSERT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
+  // ...give the two interfaces a chance to completely unbind...
+  ASSERT_FALSE(RunLoopWithTimeoutOrUntil([this]() { return (error_occurred_); },
+                                         kDurationTimeoutExpected * 2));
 
   // Validate Audio can create AudioRenderer interface.
   EXPECT_TRUE(audio_.is_bound());
@@ -326,8 +327,9 @@ TEST_F(AudioTest, CreateAudioCapturer) {
   audio_capturer_2.Unbind();
   audio_3.Unbind();
 
-  // Give time for Disconnect to occur, if it must.
-  ASSERT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
+  // ...give the two interfaces a chance to completely unbind...
+  ASSERT_FALSE(RunLoopWithTimeoutOrUntil([this]() { return (error_occurred_); },
+                                         kDurationTimeoutExpected * 2));
 
   // Validate Audio can create AudioCapturer interfaces.
   EXPECT_TRUE(audio_.is_bound());

@@ -87,14 +87,12 @@ void AudioCapturerImpl::Shutdown() {
 
   // Deactivate our mixing domain and synchronize with any in-flight operations.
   mix_domain_->Deactivate();
-  state_.store(State::Shutdown);
 
   // Release our buffer resources.
   //
-  // TODO(johngro): Change this to use the DriverRingBuffer utility class (and
-  // perhaps rename the DriverRingBuffer class to something more generic, like
-  // RingBufferHelper or something, since this would be a use which is not
-  // driver specific).
+  // TODO(mpuryear): Change AudioCapturer to use the DriverRingBuffer utility
+  // class (and perhaps rename DriverRingBuffer to something more generic like
+  // RingBufferHelper, since this would be a use which is not driver specific).
   if (payload_buf_virt_ != nullptr) {
     FXL_DCHECK(payload_buf_size_ != 0);
     zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(payload_buf_virt_),
@@ -110,6 +108,8 @@ void AudioCapturerImpl::Shutdown() {
   if (InContainer()) {
     owner_->GetDeviceManager().RemoveAudioCapturer(this);
   }
+
+  state_.store(State::Shutdown);
 }
 
 zx_status_t AudioCapturerImpl::InitializeSourceLink(const AudioLinkPtr& link) {
@@ -427,6 +427,10 @@ void AudioCapturerImpl::ReleasePacket(fuchsia::media::StreamPacket packet) {
 }
 
 void AudioCapturerImpl::DiscardAllPacketsNoReply() {
+  DiscardAllPackets(nullptr);
+}
+
+void AudioCapturerImpl::DiscardAllPackets(DiscardAllPacketsCallback cbk) {
   // It is illegal to call Flush unless we are currently operating in
   // synchronous mode.
   State state = state_.load();
@@ -456,11 +460,8 @@ void AudioCapturerImpl::DiscardAllPacketsNoReply() {
     FinishBuffers(finished);
     binding_.events().OnEndOfStream();
   }
-}
 
-void AudioCapturerImpl::DiscardAllPackets(DiscardAllPacketsCallback cbk) {
-  DiscardAllPacketsNoReply();
-  if (binding_.is_bound()) {
+  if (cbk != nullptr && binding_.is_bound()) {
     cbk();
   }
 }
