@@ -17,9 +17,6 @@ disabled_for_asan = [
   # TC-351
   "/pkgfs/packages/libc-tests/0/test/libc-tests",
 
-  # CF-568
-  "/pkgfs/packages/libdriver-integration-test/0/test/libdriver-integration-test",
-
   # MTWN-234
   "/pkgfs/packages/mediaplayer_tests/0/test/mediaplayer_core_tests",
 
