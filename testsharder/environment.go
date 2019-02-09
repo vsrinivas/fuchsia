@@ -45,6 +45,9 @@ type DimensionSet struct {
 
 	// The OS to run the test on (e.g., "Linux" or "Mac"). Used for host-side testing.
 	OS string `json:"os,omitempty"`
+
+	// The CPU type that the test is meant to run on.
+	CPU string `json:"cpu,omitempty"`
 }
 
 // ResolvesTo gives a partial ordering on DimensionSets in which one resolves to
