@@ -1,0 +1,65 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.device;
+
+using zx;
+
+/// Maxmium length for a device name
+const uint64 MAX_DEVICE_NAME_LEN = 32;
+/// Maximum length of a device path
+const uint64 MAX_DEVICE_PATH_LEN = 1024;
+/// Maxmium length for a driver name
+const uint64 MAX_DRIVER_NAME_LEN = 32;
+/// Maximum length for a driver path
+const uint64 MAX_DRIVER_PATH_LEN = 1024;
+
+/// Signal that will be active on a device event handle if the device's read() method
+/// will return data.
+const uint32 DEVICE_SIGNAL_READABLE = 0x01000000; // ZX_USER_SIGNAL_0
+/// Signal that will be active on a device event handle if the device has some out-of-band
+/// mechanism that needs attention.
+/// This is primarily used by the PTY support.
+const uint32 DEVICE_SIGNAL_OOB = 0x02000000; // ZX_USER_SIGNAL_1
+/// Signal that will be active on a device event handle if the device's write() method
+/// will accept data.
+const uint32 DEVICE_SIGNAL_WRITEABLE = 0x04000000; // ZX_USER_SIGNAL_2
+/// Signal that will be active on a device event handle if the device has encountered an error.
+/// This is primarily used by the PTY support.
+const uint32 DEVICE_SIGNAL_ERROR = 0x08000000; // ZX_USER_SIGNAL_3
+/// Signal that will be active on a device event handle if the device has been disconnected.
+/// This is primarily used by the PTY support.
+const uint32 DEVICE_SIGNAL_HANGUP = 0x10000000; // ZX_USER_SIGNAL_4
+
+/// Interface for manipulating a device in a devhost
+[Layout = "Simple"]
+interface Controller {
+    /// Attempt to bind the requested driver to this device
+    Bind(string:MAX_DRIVER_PATH_LEN driver) -> (zx.status status);
+    /// Disconnect this device and allow its parent to be bound again.
+    Unbind() -> (zx.status status);
+
+    /// Return the name of the driver managing this the device
+    GetDriverName() -> (zx.status status, string:MAX_DRIVER_NAME_LEN? name);
+    /// Return the name of the device
+    GetDeviceName() -> (string:MAX_DEVICE_NAME_LEN name);
+
+    /// Return the topological path for this device
+    GetTopologicalPath() -> (zx.status status, string:MAX_DEVICE_PATH_LEN? path);
+
+    /// Get an event for monitoring device conditions (see DEVICE_SIGNAL_* constants)
+    GetEventHandle() -> (zx.status status, handle<event>? event);
+
+    /// Return the current logging flags for this device's driver
+    GetDriverLogFlags() -> (zx.status status, uint32 flags);
+    /// Set the logging flags for this device's driver.
+    /// Each set bit in |clear_flags| will be cleared in the log flags state.
+    /// Each set bit in |set_flags| will then be set in the log flags state.
+    SetDriverLogFlags(uint32 clear_flags, uint32 set_flags) -> (zx.status status);
+
+    /// Debug command: execute the device's suspend hook
+    DebugSuspend() -> (zx.status status);
+    /// Debug command: execute the device's resume hook
+    DebugResume() -> (zx.status status);
+};
