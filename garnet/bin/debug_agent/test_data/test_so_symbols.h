@@ -19,6 +19,7 @@ EXPORT extern bool gTestPassed;
 // Breakpoint Test -------------------------------------------------------------
 
 EXPORT void InsertBreakpointFunction();
+EXPORT void AnotherFunctionForKicks();
 
 // Write Register Symbols ------------------------------------------------------
 

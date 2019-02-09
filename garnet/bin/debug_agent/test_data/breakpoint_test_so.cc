@@ -9,3 +9,5 @@
 void InsertBreakpointFunction() {
   printf("Breakpoint function!\n");
 }
+
+void AnotherFunctionForKicks() {}
