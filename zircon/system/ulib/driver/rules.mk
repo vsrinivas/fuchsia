@@ -34,6 +34,7 @@ MODULE_HEADER_DEPS := \
 endif
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device \
     system/fidl/fuchsia-device-manager \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-mem \
