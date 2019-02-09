@@ -251,7 +251,7 @@ class Device {
     struct TxStatsFifoEntry;
     TxStatsFifoEntry RemoveTxStatsFifoEntry(int packet_id) __TA_REQUIRES(lock_);
     int AddTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt);
-    zx_status_t BuildTxStatusReport(int packet_id, const TxStatFifo& stat_fifo,
+    zx_status_t BuildTxStatusReport(const TxStatsFifoEntry& entry, const TxStatFifo& stat_fifo,
                                     const TxStatFifoExt& stat_fifo_ext, wlan_tx_status* report)
         __TA_REQUIRES(lock_);
 
@@ -347,6 +347,7 @@ class Device {
     static constexpr int kTxStatsFifoSize = 16;
     TxStatsFifoEntry tx_stats_fifo_[kTxStatsFifoSize] __TA_GUARDED(lock_);
     int tx_stats_fifo_counter_ __TA_GUARDED(lock_) = 0;
+    size_t tx_status_report_pending_ __TA_GUARDED(lock_) = 0;
 
     // Thread which periodically reads interrupt registers.
     // Required because the device doesn't support USB interrupt endpoints.

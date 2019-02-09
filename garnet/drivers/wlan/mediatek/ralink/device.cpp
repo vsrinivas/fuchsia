@@ -3832,15 +3832,35 @@ zx_status_t Device::OnTxReportInterruptTimer() {
         if (packet_id == kInvalidTxPacketId) { continue; }
 
         std::lock_guard<std::mutex> guard(lock_);
+        // MAC addr and tx vector instructed from upper layer was put in the queue, get them
+        auto entry = RemoveTxStatsFifoEntry(packet_id);
+        // Sometimes ralink may use non-zero packet_id on its own. Do not proceed. (WLAN-964)
+        // A report is spurious if (1) We are not expecting any report. (2) the |packet_id| is not
+        // among the ones we are expecting.
+        // Note: If a spurious |packet_id| coincides with one that is expected, it will not be
+        // detected. Instead it may render the valid tx status report (that comes later) spurious.
+        bool spurious = tx_status_report_pending_ == 0 || !entry.in_use;
+        if (spurious) {
+            warnf(
+                "spurious tx report: ralink [packet_id: %d, stat_fifo: %u, stat_fifo_ext: %u] "
+                "memory [pending_rerport: %zu, entry.in_use: %d]\n",
+                packet_id, stat_fifo.val(), stat_fifo_ext.val(), tx_status_report_pending_,
+                entry.in_use);
+            return ZX_ERR_NOT_FOUND;
+        }
+
+        --tx_status_report_pending_;
         if (wlanmac_proxy_ != nullptr) {
             wlan_tx_status report{};
-            status = BuildTxStatusReport(packet_id, stat_fifo, stat_fifo_ext, &report);
+            status = BuildTxStatusReport(entry, stat_fifo, stat_fifo_ext, &report);
             if (status == ZX_OK) {
                 wlanmac_proxy_->ReportTxStatus(&report);
             } else {
                 warnf("cannot build tx status report: %s.\n", zx_status_get_string(status));
             }
         }
+        // As a driver, we did our job of keeping track of packet tx status, regardless whether the
+        // report is sent to |wlanmac_proxy_|.
         tracked_tx_packet_count++;
     }
 
@@ -4219,27 +4239,27 @@ int Device::AddTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
     static size_t num_overrun = 0;
     static size_t max_overrun = 0;
     TxStatsFifoEntry& tx_stats = tx_stats_fifo_[packet_id];
-    if (!tx_stats_fifo_[packet_id].in_use) {
-        if (num_overrun > 0) {
-            if (num_overrun > max_overrun) {
-                debugmstl(
-                    "Recovered from a tx_stats_fifo_ overrun. max backlog increased: %zu -> %zu\n",
-                    max_overrun, num_overrun);
-                max_overrun = num_overrun;
-            }
-            num_overrun = 0;
-        }
-        tx_stats_fifo_counter_ = (tx_stats_fifo_counter_ + 1) % (kTxStatsFifoSize - 1);
-        const auto bytes = static_cast<const uint8_t*>(wlan_pkt.packet_head.data_buffer);
-        auto addr1_offset = bytes + kMacHdrAddr1Offset;
-        std::copy(addr1_offset, addr1_offset + wlan::common::kMacAddrLen, tx_stats.peer_addr);
-        tx_stats.tx_vector_idx = wlan_pkt.info.tx_vector_idx;
-        tx_stats.in_use = true;
-        return packet_id;
-    } else {
+    if (tx_stats_fifo_[packet_id].in_use) {
         ++num_overrun;
         return kInvalidTxPacketId;
     }
+    if (num_overrun > 0) {
+        if (num_overrun > max_overrun) {
+            debugmstl(
+                "Recovered from a tx_stats_fifo_ overrun. max backlog increased: %zu -> %zu\n",
+                max_overrun, num_overrun);
+            max_overrun = num_overrun;
+        }
+        num_overrun = 0;
+    }
+    tx_stats_fifo_counter_ = (tx_stats_fifo_counter_ + 1) % (kTxStatsFifoSize - 1);
+    const auto bytes = static_cast<const uint8_t*>(wlan_pkt.packet_head.data_buffer);
+    auto addr1_offset = bytes + kMacHdrAddr1Offset;
+    std::copy(addr1_offset, addr1_offset + wlan::common::kMacAddrLen, tx_stats.peer_addr);
+    tx_stats.tx_vector_idx = wlan_pkt.info.tx_vector_idx;
+    tx_stats.in_use = true;
+    ++tx_status_report_pending_;
+    return packet_id;
 }
 
 ::wlan::TxVector FromStatFifoRegister(const TxStatFifo& stat_fifo) {
@@ -4296,7 +4316,7 @@ zx_status_t FillTxStatusEntries(tx_vec_idx_t vec_idx_first, tx_vec_idx_t vec_idx
     return ZX_OK;
 }
 
-zx_status_t Device::BuildTxStatusReport(int packet_id, const TxStatFifo& stat_fifo,
+zx_status_t Device::BuildTxStatusReport(const TxStatsFifoEntry& entry, const TxStatFifo& stat_fifo,
                                         const TxStatFifoExt& stat_fifo_ext,
                                         wlan_tx_status* report) {
     if (report == nullptr) { return ZX_ERR_INVALID_ARGS; }
@@ -4305,9 +4325,6 @@ zx_status_t Device::BuildTxStatusReport(int packet_id, const TxStatFifo& stat_fi
     tx_vec_idx_t idx_last;
     zx_status_t status = vec_last.ToIdx(&idx_last);
     ZX_DEBUG_ASSERT(status == ZX_OK);
-
-    // MAC addr and tx vector instructed from upper layer was put in the queue, retrieve them
-    TxStatsFifoEntry entry = RemoveTxStatsFifoEntry(packet_id);
 
     tx_vec_idx_t idx_first = entry.tx_vector_idx;
     ::wlan::TxVector vec_first;
