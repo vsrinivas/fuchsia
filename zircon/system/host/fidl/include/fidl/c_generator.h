@@ -120,6 +120,8 @@ private:
         kNonmessage,
     };
 
+    uint32_t GetMaxHandlesFor(Transport transport, const TypeShape& typeshape);
+
     void GeneratePrologues();
     void GenerateEpilogues();
 

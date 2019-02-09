@@ -596,6 +596,18 @@ void GetMethodParameters(const flat::Library* library,
 
 } // namespace
 
+uint32_t CGenerator::GetMaxHandlesFor(Transport transport,
+                                      const TypeShape& typeshape) {
+    switch (transport) {
+        case Transport::Channel:
+            return std::min(ZX_CHANNEL_MAX_MSG_HANDLES, typeshape.MaxHandles());
+        case Transport::SocketControl:
+            return 0u;
+    }
+    assert(false && "what transport?");
+    return 0u;
+}
+
 void CGenerator::GeneratePrologues() {
     EmitFileComment(&file_);
     EmitHeaderGuard(&file_);
@@ -1021,8 +1033,16 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
         GetMethodParameters(library_, method_info, &request, &response);
 
         size_t count = CountSecondaryObjects(request);
-        size_t hcount = method_info.request->typeshape.MaxHandles();
-        bool encode = ((count > 0) || (hcount > 0));
+        size_t request_hcount = GetMaxHandlesFor(named_interface.transport,
+                                                 method_info.request->typeshape);
+        size_t response_hcount = 0;
+        if (method_info.response) {
+            response_hcount = GetMaxHandlesFor(named_interface.transport,
+                                               method_info.response->typeshape);
+        }
+        size_t max_hcount = std::max(request_hcount, response_hcount);
+
+        bool encode_request = ((count > 0) || (request_hcount > 0));
 
         EmitClientMethodDecl(&file_, method_info.c_name, request, response);
         file_ << " {\n";
@@ -1033,22 +1053,18 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
         file_ << kIndent << "FIDL_ALIGNDECL char _wr_bytes[_wr_num_bytes];\n";
         file_ << kIndent << method_info.request->c_name << "* _request = (" << method_info.request->c_name << "*)_wr_bytes;\n";
         file_ << kIndent << "memset(_wr_bytes, 0, sizeof(_wr_bytes));\n";
-        file_ << kIndent << "_request->hdr.ordinal = " << method_info.ordinal << ";\n";
+        file_ << kIndent << "_request->hdr.ordinal = " << method_info.ordinal_name << ";\n";
         EmitLinearizeMessage(&file_, "_request", "_wr_bytes", request);
-        if (encode) {
+        const char* handles_value = "NULL";
+        if (max_hcount > 0) {
+            file_ << kIndent << "zx_handle_t _handles[" << max_hcount << "];\n";
+            handles_value = "_handles";
+        }
+        if (encode_request) {
             file_ << kIndent << "uint32_t _wr_num_handles = 0u;\n";
-            switch (named_interface.transport) {
-            case Transport::Channel:
-                file_ << kIndent << "zx_handle_t _handles[ZX_CHANNEL_MAX_MSG_HANDLES];\n";
-                file_ << kIndent << "zx_status_t _status = fidl_encode(&" << method_info.request->coded_name
-                      << ", _wr_bytes, _wr_num_bytes, _handles, ZX_CHANNEL_MAX_MSG_HANDLES"
-                      << ", &_wr_num_handles, NULL);\n";
-                break;
-            case Transport::SocketControl:
-                file_ << kIndent << "zx_status_t _status = fidl_encode(&" << method_info.request->coded_name
-                      << ", _wr_bytes, _wr_num_bytes, NULL, 0, &_wr_num_handles, NULL);\n";
-                break;
-            }
+            file_ << kIndent << "zx_status_t _status = fidl_encode(&" << method_info.request->coded_name
+                    << ", _wr_bytes, _wr_num_bytes, " << handles_value << ", " << request_hcount
+                    << ", &_wr_num_handles, NULL);\n";
             file_ << kIndent << "if (_status != ZX_OK)\n";
             file_ << kIndent << kIndent << "return _status;\n";
         } else {
@@ -1057,8 +1073,8 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
         if (!method_info.response) {
             switch (named_interface.transport) {
             case Transport::Channel:
-                if (encode) {
-                    file_ << kIndent << "return zx_channel_write(_channel, 0u, _wr_bytes, _wr_num_bytes, _handles, _wr_num_handles);\n";
+                if (encode_request) {
+                    file_ << kIndent << "return zx_channel_write(_channel, 0u, _wr_bytes, _wr_num_bytes, " << handles_value << ", _wr_num_handles);\n";
                 } else {
                     file_ << kIndent << "return zx_channel_write(_channel, 0u, _wr_bytes, _wr_num_bytes, NULL, 0);\n";
                 }
@@ -1076,31 +1092,24 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                 file_ << kIndent << method_info.response->c_name << "* _response = (" << method_info.response->c_name << "*)_rd_bytes;\n";
             switch (named_interface.transport) {
             case Transport::Channel:
-                if (!encode) {
-                    file_ << kIndent << "zx_handle_t _handles[ZX_CHANNEL_MAX_MSG_HANDLES];\n";
-                }
                 file_ << kIndent << "zx_channel_call_args_t _args = {\n";
                 file_ << kIndent << kIndent << ".wr_bytes = _wr_bytes,\n";
-                if (encode) {
-                    file_ << kIndent << kIndent << ".wr_handles = _handles,\n";
-                } else {
-                    file_ << kIndent << kIndent << ".wr_handles = NULL,\n";
-                }
+                file_ << kIndent << kIndent << ".wr_handles = " << handles_value << ",\n";
                 file_ << kIndent << kIndent << ".rd_bytes = _rd_bytes,\n";
-                file_ << kIndent << kIndent << ".rd_handles = _handles,\n";
+                file_ << kIndent << kIndent << ".rd_handles = " << handles_value << ",\n";
                 file_ << kIndent << kIndent << ".wr_num_bytes = _wr_num_bytes,\n";
-                if (encode) {
+                if (encode_request) {
                     file_ << kIndent << kIndent << ".wr_num_handles = _wr_num_handles,\n";
                 } else {
                     file_ << kIndent << kIndent << ".wr_num_handles = 0,\n";
                 }
                 file_ << kIndent << kIndent << ".rd_num_bytes = _rd_num_bytes,\n";
-                file_ << kIndent << kIndent << ".rd_num_handles = ZX_CHANNEL_MAX_MSG_HANDLES,\n";
+                file_ << kIndent << kIndent << ".rd_num_handles = " << response_hcount << ",\n";
                 file_ << kIndent << "};\n";
 
                 file_ << kIndent << "uint32_t _actual_num_bytes = 0u;\n";
                 file_ << kIndent << "uint32_t _actual_num_handles = 0u;\n";
-                if (encode) {
+                if (encode_request) {
                     file_ << kIndent;
                 } else {
                     file_ << kIndent << "zx_status_t ";
@@ -1109,7 +1118,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                 break;
             case Transport::SocketControl:
                 file_ << kIndent << "size_t _actual_num_bytes = 0u;\n";
-                if (encode) {
+                if (encode_request) {
                     file_ << kIndent;
                 } else {
                     file_ << kIndent << "zx_status_t ";
@@ -1148,28 +1157,21 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                 if (count > 1u)
                     file_ << ")";
                 file_ << " {\n";
-                if (named_interface.transport == Transport::Channel) {
+                if (response_hcount > 0) {
                     file_ << kIndent << kIndent << "zx_handle_close_many(_handles, _actual_num_handles);\n";
                 }
                 file_ << kIndent << kIndent << "return ZX_ERR_BUFFER_TOO_SMALL;\n";
                 file_ << kIndent << "}\n";
             }
 
-            hcount = method_info.response->typeshape.MaxHandles();
-            if ((count == 0) && (hcount == 0)) {
+            if ((count == 0) && (response_hcount == 0)) {
                 file_ << kIndent << "// OPTIMIZED AWAY fidl_decode() of POD-only response\n";
-                if (named_interface.transport == Transport::Channel) {
-                    file_ << kIndent << "if (_actual_num_handles > 0) {\n";
-                    file_ << kIndent << kIndent << "zx_handle_close_many(_handles, _actual_num_handles);\n";
-                    file_ << kIndent << kIndent << "return ZX_ERR_INTERNAL;\n"; // WHAT ERROR?
-                    file_ << kIndent << "}\n";
-                }
             } else {
                 // TODO(FIDL-162): Validate the response ordinal. C++ bindings also need to do that.
                 switch (named_interface.transport) {
                 case Transport::Channel:
                     file_ << kIndent << "_status = fidl_decode(&" << method_info.response->coded_name
-                          << ", _rd_bytes, _actual_num_bytes, _handles, _actual_num_handles, NULL);\n";
+                          << ", _rd_bytes, _actual_num_bytes, " << handles_value << ", _actual_num_handles, NULL);\n";
                     break;
                 case Transport::SocketControl:
                     file_ << kIndent << "_status = fidl_decode(&" << method_info.response->coded_name
@@ -1387,8 +1389,7 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
         std::vector<Member> response;
         GetMethodParameters(library_, method_info, nullptr, &response);
 
-        size_t hcount = method_info.response->typeshape.MaxHandles();
-        bool encode = ((CountSecondaryObjects(response) > 0) || (hcount > 0));
+        size_t hcount = GetMaxHandlesFor(named_interface.transport, method_info.response->typeshape);
 
         EmitServerReplyDecl(&file_, method_info.c_name, response);
         file_ << " {\n";
@@ -1398,26 +1399,20 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
         file_ << kIndent << "char _wr_bytes[_wr_num_bytes];\n";
         file_ << kIndent << method_info.response->c_name << "* _response = (" << method_info.response->c_name << "*)_wr_bytes;\n";
         file_ << kIndent << "memset(_wr_bytes, 0, sizeof(_wr_bytes));\n";
-        file_ << kIndent << "_response->hdr.ordinal = " << method_info.ordinal << ";\n";
+        file_ << kIndent << "_response->hdr.ordinal = " << method_info.ordinal_name << ";\n";
         EmitLinearizeMessage(&file_, "_response", "_wr_bytes", response);
-        if (encode) {
-            file_ << kIndent << "zx_handle_t _handles[ZX_CHANNEL_MAX_MSG_HANDLES];\n";
+        const char* handle_value = "NULL";
+        if (hcount > 0) {
+            file_ << kIndent << "zx_handle_t _handles[" << hcount << "];\n";
+            handle_value = "_handles";
         }
         file_ << kIndent << "fidl_msg_t _msg = {\n";
         file_ << kIndent << kIndent << ".bytes = _wr_bytes,\n";
-        if (encode) {
-            file_ << kIndent << kIndent << ".handles = _handles,\n";
-        } else {
-            file_ << kIndent << kIndent << ".handles = NULL,\n";
-        }
+        file_ << kIndent << kIndent << ".handles = " << handle_value << ",\n";
         file_ << kIndent << kIndent << ".num_bytes = _wr_num_bytes,\n";
-        if (encode) {
-            file_ << kIndent << kIndent << ".num_handles = ZX_CHANNEL_MAX_MSG_HANDLES,\n";
-        } else {
-            file_ << kIndent << kIndent << ".num_handles = 0,\n";
-        }
+        file_ << kIndent << kIndent << ".num_handles = " << hcount << ",\n";
         file_ << kIndent << "};\n";
-        if (encode) {
+        if (hcount > 0 || CountSecondaryObjects(response) > 0) {
             file_ << kIndent << "zx_status_t _status = fidl_encode_msg(&"
                   << method_info.response->coded_name << ", &_msg, &_msg.num_handles, NULL);\n";
             file_ << kIndent << "if (_status != ZX_OK)\n";
