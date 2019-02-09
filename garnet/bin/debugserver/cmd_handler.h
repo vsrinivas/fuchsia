@@ -81,11 +81,10 @@ class CommandHandler final {
   bool Handle_vRun(const fxl::StringView& packet, ResponseCallback callback);
 
   // Breakpoints
-  bool InsertSoftwareBreakpoint(uintptr_t addr, size_t kind,
+  bool InsertSoftwareBreakpoint(uintptr_t addr,
                                 const fxl::StringView& optional_params,
                                 ResponseCallback callback);
-  bool RemoveSoftwareBreakpoint(uintptr_t addr, size_t kind,
-                                ResponseCallback callback);
+  bool RemoveSoftwareBreakpoint(uintptr_t addr, ResponseCallback callback);
 
   // The root Server instance that owns us.
   RspServer* server_;  // weak

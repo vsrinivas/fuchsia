@@ -780,9 +780,14 @@ bool CommandHandler::Handle_zZ(bool insert, const fxl::StringView& packet,
 
   switch (type) {
     case 0:
-      if (insert)
-        return InsertSoftwareBreakpoint(addr, kind, optional_params, std::move(callback));
-      return RemoveSoftwareBreakpoint(addr, kind, std::move(callback));
+      if (kind != inferior_control::SoftwareBreakpoint::Size()) {
+        FXL_LOG(ERROR) << "zZ0: unsupported kind field: "  << kind;
+        return ReplyWithError(ErrorCode::INVAL, std::move(callback));
+      }
+      if (insert) {
+        return InsertSoftwareBreakpoint(addr, optional_params, std::move(callback));
+      }
+      return RemoveSoftwareBreakpoint(addr, std::move(callback));
     default:
       break;
   }
@@ -1306,10 +1311,10 @@ bool CommandHandler::Handle_vRun(const fxl::StringView& packet,
 }
 
 bool CommandHandler::InsertSoftwareBreakpoint(
-    uintptr_t addr, size_t kind, const fxl::StringView& optional_params,
+    uintptr_t addr, const fxl::StringView& optional_params,
     ResponseCallback callback) {
   FXL_VLOG(1) << fxl::StringPrintf(
-      "Insert software breakpoint at %" PRIxPTR ", kind: %lu", addr, kind);
+      "Insert software breakpoint at 0x%lx", addr);
 
   inferior_control::Process* current_process = server_->current_process();
   if (!current_process) {
@@ -1319,7 +1324,7 @@ bool CommandHandler::InsertSoftwareBreakpoint(
 
   // TODO(armansito): Handle |optional_params|.
 
-  if (!current_process->breakpoints()->InsertSoftwareBreakpoint(addr, kind)) {
+  if (!current_process->breakpoints()->InsertSoftwareBreakpoint(addr)) {
     FXL_LOG(ERROR) << "Failed to insert software breakpoint";
     return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
@@ -1327,10 +1332,10 @@ bool CommandHandler::InsertSoftwareBreakpoint(
   return ReplyOK(std::move(callback));
 }
 
-bool CommandHandler::RemoveSoftwareBreakpoint(uintptr_t addr, size_t kind,
+bool CommandHandler::RemoveSoftwareBreakpoint(uintptr_t addr,
                                               ResponseCallback callback) {
-  FXL_VLOG(1) << fxl::StringPrintf("Remove software breakpoint at %" PRIxPTR,
-                                   addr);
+  FXL_VLOG(1) << fxl::StringPrintf(
+      "Remove software breakpoint at 0x%lx", addr);
 
   inferior_control::Process* current_process = server_->current_process();
   if (!current_process) {

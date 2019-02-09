@@ -6,27 +6,86 @@
 
 #include <cinttypes>
 
+#include "garnet/lib/debugger_utils/breakpoints.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
+#include "process.h"
+
 namespace inferior_control {
 
-Breakpoint::Breakpoint(uintptr_t address, size_t kind)
-    : address_(address), kind_(kind) {}
+Breakpoint::Breakpoint(uintptr_t address, size_t size)
+    : address_(address), size_(size) {}
 
-ProcessBreakpoint::ProcessBreakpoint(uintptr_t address, size_t kind,
+ProcessBreakpoint::ProcessBreakpoint(uintptr_t address, size_t size,
                                      ProcessBreakpointSet* owner)
-    : Breakpoint(address, kind), owner_(owner) {
+    : Breakpoint(address, size), owner_(owner) {
   FXL_DCHECK(owner_);
 }
 
-SoftwareBreakpoint::SoftwareBreakpoint(uintptr_t address, size_t kind,
+SoftwareBreakpoint::SoftwareBreakpoint(uintptr_t address,
                                        ProcessBreakpointSet* owner)
-    : ProcessBreakpoint(address, kind, owner) {}
+    : ProcessBreakpoint(address, Size(), owner) {}
 
 SoftwareBreakpoint::~SoftwareBreakpoint() {
   if (IsInserted())
     Remove();
+}
+
+size_t SoftwareBreakpoint::Size() {
+  return debugger_utils::GetBreakpointInstructionSize();
+}
+
+bool SoftwareBreakpoint::Insert() {
+  // TODO(PT-103): Handle breakpoints in unloaded solibs.
+
+  if (IsInserted()) {
+    FXL_LOG(WARNING) << "Breakpoint already inserted";
+    return false;
+  }
+
+  // Read the current contents at the address that we're about to overwrite, so
+  // that it can be restored later.
+  size_t num_bytes = Size();
+  std::vector<uint8_t> orig;
+  orig.resize(num_bytes);
+  if (!owner()->process()->ReadMemory(address(), orig.data(), num_bytes)) {
+    FXL_LOG(ERROR) << "Failed to obtain current contents of memory";
+    return false;
+  }
+
+  // Insert the breakpoint instruction.
+  const uint8_t* insn = debugger_utils::GetBreakpointInstruction();
+  if (!owner()->process()->WriteMemory(address(), insn, num_bytes)) {
+    FXL_LOG(ERROR) << "Failed to insert software breakpoint";
+    return false;
+  }
+
+  original_bytes_ = std::move(orig);
+  return true;
+}
+
+bool SoftwareBreakpoint::Remove() {
+  if (!IsInserted()) {
+    FXL_LOG(WARNING) << "Breakpoint not inserted";
+    return false;
+  }
+
+  FXL_DCHECK(original_bytes_.size() == Size());
+
+  // Restore the original contents.
+  if (!owner()->process()->WriteMemory(
+        address(), original_bytes_.data(), Size())) {
+    FXL_LOG(ERROR) << "Failed to restore original instructions";
+    return false;
+  }
+
+  original_bytes_.clear();
+  return true;
+}
+
+bool SoftwareBreakpoint::IsInserted() const {
+  return !original_bytes_.empty();
 }
 
 ProcessBreakpointSet::ProcessBreakpointSet(Process* process)
@@ -34,8 +93,7 @@ ProcessBreakpointSet::ProcessBreakpointSet(Process* process)
   FXL_DCHECK(process_);
 }
 
-bool ProcessBreakpointSet::InsertSoftwareBreakpoint(uintptr_t address,
-                                                    size_t kind) {
+bool ProcessBreakpointSet::InsertSoftwareBreakpoint(uintptr_t address) {
   if (breakpoints_.find(address) != breakpoints_.end()) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
         "Breakpoint already inserted at address: 0x%" PRIxPTR, address);
@@ -43,7 +101,7 @@ bool ProcessBreakpointSet::InsertSoftwareBreakpoint(uintptr_t address,
   }
 
   std::unique_ptr<ProcessBreakpoint> breakpoint(
-      new SoftwareBreakpoint(address, kind, this));
+      new SoftwareBreakpoint(address, this));
   if (!breakpoint->Insert()) {
     FXL_LOG(ERROR) << "Failed to insert software breakpoint";
     return false;
@@ -70,9 +128,9 @@ bool ProcessBreakpointSet::RemoveSoftwareBreakpoint(uintptr_t address) {
   return true;
 }
 
-ThreadBreakpoint::ThreadBreakpoint(uintptr_t address, size_t kind,
+ThreadBreakpoint::ThreadBreakpoint(uintptr_t address, size_t size,
                                    ThreadBreakpointSet* owner)
-    : Breakpoint(address, kind), owner_(owner) {
+    : Breakpoint(address, size), owner_(owner) {
   FXL_DCHECK(owner_);
 }
 

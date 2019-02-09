@@ -23,7 +23,7 @@ class ThreadBreakpointSet;
 // Represents a breakpoint.
 class Breakpoint {
  public:
-  Breakpoint(uintptr_t address, size_t kind);
+  Breakpoint(uintptr_t address, size_t size);
   virtual ~Breakpoint() = default;
 
   // Inserts the breakpoint at the memory address it was initialized with.
@@ -38,20 +38,20 @@ class Breakpoint {
   virtual bool IsInserted() const = 0;
 
   uintptr_t address() const { return address_; }
-  size_t kind() const { return kind_; }
+  size_t size() const { return size_; }
 
  private:
   Breakpoint() = default;
 
   uintptr_t address_;
-  size_t kind_;
+  size_t size_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Breakpoint);
 };
 
 class ProcessBreakpoint : public Breakpoint {
  protected:
-  ProcessBreakpoint(uintptr_t address, size_t kind,
+  ProcessBreakpoint(uintptr_t address, size_t size,
                     ProcessBreakpointSet* owner);
   ProcessBreakpointSet* owner() const { return owner_; }
 
@@ -64,8 +64,10 @@ class ProcessBreakpoint : public Breakpoint {
 // Represents a software breakpoint.
 class SoftwareBreakpoint final : public ProcessBreakpoint {
  public:
-  SoftwareBreakpoint(uintptr_t address, size_t kind,
-                     ProcessBreakpointSet* owner);
+  // Return the size in bytes of a s/w breakpoint.
+  static size_t Size();
+
+  SoftwareBreakpoint(uintptr_t address, ProcessBreakpointSet* owner);
   ~SoftwareBreakpoint() override;
 
   // Breakpoint overrides
@@ -92,11 +94,9 @@ class ProcessBreakpointSet final {
   // Returns a pointer to the process that this object belongs to.
   Process* process() const { return process_; }
 
-  // Inserts a software breakpoint at the specified memory address with the
-  // given kind. |kind| is an architecture dependent parameter that specifies
-  // how many bytes the software breakpoint spans. Returns true on success or
-  // false on failure.
-  bool InsertSoftwareBreakpoint(uintptr_t address, size_t kind);
+  // Inserts a software breakpoint at the specified memory address.
+  // Returns true on success or false on failure.
+  bool InsertSoftwareBreakpoint(uintptr_t address);
 
   // Removes the software breakpoint that was previously inserted at the given
   // address. Returns false if there is an error of a breakpoint was not
@@ -114,7 +114,7 @@ class ProcessBreakpointSet final {
 
 class ThreadBreakpoint : public Breakpoint {
  protected:
-  ThreadBreakpoint(uintptr_t address, size_t kind, ThreadBreakpointSet* owner);
+  ThreadBreakpoint(uintptr_t address, size_t size, ThreadBreakpointSet* owner);
   ThreadBreakpointSet* owner() const { return owner_; }
 
  private:
@@ -151,8 +151,8 @@ class ThreadBreakpointSet final {
   // Returns a pointer to the thread that this object belongs to.
   Thread* thread() const { return thread_; }
 
-  // Inserts a single-step breakpoint at the specified memory address with the
-  // given kind. |address| is recorded as the current pc value, at the moment
+  // Inserts a single-step breakpoint at the specified memory address.
+  // |address| is recorded as the current pc value, at the moment
   // for bookkeeping purposes.
   // Returns true on success or false on failure.
   bool InsertSingleStepBreakpoint(uintptr_t address);

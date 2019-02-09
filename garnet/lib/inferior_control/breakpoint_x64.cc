@@ -4,6 +4,7 @@
 
 #include "breakpoint.h"
 
+#include "garnet/lib/debugger_utils/breakpoints.h"
 #include "lib/fxl/logging.h"
 
 #include "process.h"
@@ -11,65 +12,6 @@
 #include "thread.h"
 
 namespace inferior_control {
-
-namespace {
-
-// The i386 Int3 instruction.
-const uint8_t kInt3 = 0xCC;
-
-}  // namespace
-
-bool SoftwareBreakpoint::Insert() {
-  // TODO: Handle breakpoints in unloaded solibs.
-
-  if (IsInserted()) {
-    FXL_LOG(WARNING) << "Breakpoint already inserted";
-    return false;
-  }
-
-  // We only support inserting the single byte Int3 instruction.
-  if (kind() != 1) {
-    FXL_LOG(ERROR) << "Software breakpoint kind must be 1 on X64";
-    return false;
-  }
-
-  // Read the current contents at the address that we're about to overwrite, so
-  // that it can be restored later.
-  uint8_t orig;
-  if (!owner()->process()->ReadMemory(address(), &orig, 1)) {
-    FXL_LOG(ERROR) << "Failed to obtain current contents of memory";
-    return false;
-  }
-
-  // Insert the Int3 instruction.
-  if (!owner()->process()->WriteMemory(address(), &kInt3, 1)) {
-    FXL_LOG(ERROR) << "Failed to insert software breakpoint";
-    return false;
-  }
-
-  original_bytes_.push_back(orig);
-  return true;
-}
-
-bool SoftwareBreakpoint::Remove() {
-  if (!IsInserted()) {
-    FXL_LOG(WARNING) << "Breakpoint not inserted";
-    return false;
-  }
-
-  FXL_DCHECK(original_bytes_.size() == 1);
-
-  // Restore the original contents.
-  if (!owner()->process()->WriteMemory(address(), original_bytes_.data(), 1)) {
-    FXL_LOG(ERROR) << "Failed to restore original instructions";
-    return false;
-  }
-
-  original_bytes_.clear();
-  return true;
-}
-
-bool SoftwareBreakpoint::IsInserted() const { return !original_bytes_.empty(); }
 
 namespace {
 
