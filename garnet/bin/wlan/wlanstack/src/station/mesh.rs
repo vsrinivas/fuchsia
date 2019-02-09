@@ -5,6 +5,7 @@
 use {
     crate::{stats_scheduler::StatsRequest, Never},
     failure::bail,
+    fidl_fuchsia_wlan_mesh as fidl_mesh, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy},
     fidl_fuchsia_wlan_sme as fidl_sme,
     futures::{
@@ -40,14 +41,14 @@ where
     let sme = Arc::new(Mutex::new(sme));
     let time_stream = stream::poll_fn::<TimeEntry<()>, _>(|_| Poll::Pending);
     let mlme_sme = super::serve_mlme_sme(
-        proxy,
+        proxy.clone(),
         event_stream,
         Arc::clone(&sme),
         mlme_stream,
         stats_requests,
         time_stream,
     );
-    let sme_fidl = serve_fidl(&sme, new_fidl_clients);
+    let sme_fidl = serve_fidl(&sme, new_fidl_clients, &proxy);
     pin_mut!(mlme_sme);
     pin_mut!(sme_fidl);
     select! {
@@ -57,16 +58,17 @@ where
     Ok(())
 }
 
-async fn serve_fidl(
-    sme: &Mutex<Sme>,
+async fn serve_fidl<'a>(
+    sme: &'a Mutex<Sme>,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
+    proxy: &'a MlmeProxy,
 ) -> Result<Never, failure::Error> {
     let mut fidl_clients = FuturesUnordered::new();
     let mut new_fidl_clients = new_fidl_clients.fuse();
     loop {
         select! {
             new_fidl_client = new_fidl_clients.next() => match new_fidl_client {
-                Some(c) => fidl_clients.push(serve_fidl_endpoint(sme, c)),
+                Some(c) => fidl_clients.push(serve_fidl_endpoint(proxy, sme, c)),
                 None => bail!("New FIDL client stream unexpectedly ended"),
             },
             // Drive clients towards completion
@@ -75,7 +77,7 @@ async fn serve_fidl(
     }
 }
 
-async fn serve_fidl_endpoint(sme: &Mutex<Sme>, endpoint: Endpoint) {
+async fn serve_fidl_endpoint<'a>(proxy: &'a MlmeProxy, sme: &'a Mutex<Sme>, endpoint: Endpoint) {
     const MAX_CONCURRENT_REQUESTS: usize = 1000;
     let stream = match endpoint.into_stream() {
         Ok(s) => s,
@@ -85,15 +87,16 @@ async fn serve_fidl_endpoint(sme: &Mutex<Sme>, endpoint: Endpoint) {
         }
     };
     let r = await!(stream.try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |request| {
-        handle_fidl_request(&sme, request)
+        handle_fidl_request(proxy, &sme, request)
     }));
     if let Err(e) = r {
         error!("Error serving a FIDL client of Mesh SME: {}", e);
     }
 }
 
-async fn handle_fidl_request(
-    sme: &Mutex<Sme>,
+async fn handle_fidl_request<'a>(
+    proxy: &'a MlmeProxy,
+    sme: &'a Mutex<Sme>,
     request: fidl_sme::MeshSmeRequest,
 ) -> Result<(), ::fidl::Error> {
     match request {
@@ -104,6 +107,28 @@ async fn handle_fidl_request(
         fidl_sme::MeshSmeRequest::Leave { responder } => {
             let code = await!(leave_mesh(sme));
             responder.send(code)
+        }
+        fidl_sme::MeshSmeRequest::GetMeshPathTable { responder } => {
+            let (code, mut table) = await!(get_mesh_path_table(proxy, sme));
+            responder.send(code, &mut table)
+        }
+    }
+}
+
+async fn get_mesh_path_table<'a>(
+    proxy: &'a MlmeProxy,
+    _sme: &'a Mutex<Sme>,
+) -> (fidl_sme::GetMeshPathTableResultCode, fidl_mesh::MeshPathTable) {
+    let mut dummy = fidl_mlme::GetMeshPathTableRequest { dummy: 0 };
+    let table = await!(proxy.get_mesh_path_table_req(&mut dummy));
+    match table {
+        Ok(tbl) => (fidl_sme::GetMeshPathTableResultCode::Success, tbl),
+        Err(err) => {
+            error!("Error received in getting mesh path table from MLME: {}", err);
+            (
+                fidl_sme::GetMeshPathTableResultCode::InternalError,
+                fidl_mesh::MeshPathTable { paths: Vec::new() },
+            )
         }
     }
 }

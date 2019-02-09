@@ -271,6 +271,18 @@ async fn do_mesh(cmd: opts::MeshCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             let r = await!(sme.leave());
             println!("{:?}", r);
         }
+        opts::MeshCmd::Paths { iface_id } => {
+            let sme = await!(get_mesh_sme(wlan_svc, iface_id))?;
+            let (code, table) = await!(sme.get_mesh_path_table())?;
+            match code {
+                fidl_sme::GetMeshPathTableResultCode::Success => {
+                    println!("{:?}", table);
+                }
+                fidl_sme::GetMeshPathTableResultCode::InternalError => {
+                    println!("Internal Error in getting the Mesh Path Table.");
+                }
+            }
+        }
     }
     Ok(())
 }

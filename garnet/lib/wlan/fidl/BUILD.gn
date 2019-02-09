@@ -26,6 +26,7 @@ fidl("sme") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.wlan.common",
+    "//sdk/fidl/fuchsia.wlan.mesh",
   ]
 }
 

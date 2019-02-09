@@ -273,4 +273,9 @@ pub enum MeshCmd {
         #[structopt(raw(required = "true"))]
         iface_id: u16,
     },
+    #[structopt(name = "paths")]
+    Paths {
+        #[structopt(raw(required = "true"))]
+        iface_id: u16,
+    },
 }
