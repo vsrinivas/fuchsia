@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "garnet/bin/ui/input_reader/hardcoded.h"
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 #include "garnet/bin/ui/input_reader/protocols.h"
 
@@ -54,108 +55,30 @@ class InputInterpreter {
   static const uint8_t kMaxSensorCount = 16;
   static const uint8_t kNoSuchSensor = 0xFF;
 
-  struct HidGamepadSimple {
-    int32_t left_x;
-    int32_t left_y;
-    int32_t right_x;
-    int32_t right_y;
-    uint32_t hat_switch;
-  };
-
-  struct HidAmbientLightSimple {
-    int16_t illuminance;
-  };
-
-  struct HidButtons {
-    int8_t volume;
-    bool mic_mute;
-  };
-
-  struct DataLocator {
-    uint32_t begin;
-    uint32_t count;
-    uint32_t match;
-  };
-
   // Helper function called during Init() that determines which protocol
   // is going to be used. If it returns true then |protocol_| has been
   // set correctly.
   bool ParseProtocol();
 
   bool ParseReport(const uint8_t* report, size_t len,
-                   HidGamepadSimple* gamepad);
-  bool ParseReport(const uint8_t* report, size_t len,
-                   HidAmbientLightSimple* light);
-  bool ParseReport(const uint8_t* report, size_t len, HidButtons* data);
-  bool ParseReport(const uint8_t* report, size_t len,
                    Touchscreen::Report* touchscreen);
   bool ParseReport(const uint8_t* report, size_t len, Mouse::Report* mouse);
 
   bool SetDescriptor(Touchscreen::Descriptor* touch_desc);
 
-  bool ParseGamepadDescriptor(const hid::ReportField* fields, size_t count);
-  bool ParseAmbientLightDescriptor(const hid::ReportField* fields,
-                                   size_t count);
-  bool ParseButtonsDescriptor(const hid::ReportField* fields, size_t count);
-
   void NotifyRegistry();
 
-  void ParseKeyboardReport(uint8_t* report, size_t len,
-                           fuchsia::ui::input::InputReport* keyboard_report);
-  void ParseMouseReport(uint8_t* report, size_t len,
-                        fuchsia::ui::input::InputReport* mouse_report);
   bool ParseHidMouseReport(uint8_t* report, size_t len,
                            fuchsia::ui::input::InputReport* mouse_report);
-  bool ParseGamepadMouseReport(uint8_t* report, size_t len,
-                               fuchsia::ui::input::InputReport* mouse_report);
   bool ParseTouchscreenReport(
       uint8_t* report, size_t len,
       fuchsia::ui::input::InputReport* touchscreen_report);
   bool ParseTouchpadReport(uint8_t* report, size_t len,
                            fuchsia::ui::input::InputReport* mouse_report);
-  bool ParseAcer12TouchscreenReport(
-      uint8_t* report, size_t len,
-      fuchsia::ui::input::InputReport* touchscreen_report);
-  bool ParseAcer12StylusReport(uint8_t* report, size_t len,
-                               fuchsia::ui::input::InputReport* stylus_report);
-  bool ParseSamsungTouchscreenReport(
-      uint8_t* report, size_t len,
-      fuchsia::ui::input::InputReport* touchscreen_report);
-  template <typename ReportT>
-  bool ParseParadiseTouchscreenReport(
-      uint8_t* report, size_t len,
-      fuchsia::ui::input::InputReport* touchscreen_report);
-  bool ParseEGalaxTouchscreenReport(
-      uint8_t* report, size_t len,
-      fuchsia::ui::input::InputReport* touchscreen_report);
-  template <typename ReportT>
-  bool ParseParadiseTouchpadReport(
-      uint8_t* report, size_t len,
-      fuchsia::ui::input::InputReport* mouse_report);
-  bool ParseParadiseSensorReport(
-      uint8_t* report, size_t len, uint8_t* sensor_idx,
-      fuchsia::ui::input::InputReport* sensor_report);
-  bool ParseParadiseStylusReport(
-      uint8_t* report, size_t len,
-      fuchsia::ui::input::InputReport* stylus_report);
-  bool ParseEyoyoTouchscreenReport(
-      uint8_t* report, size_t len,
-      fuchsia::ui::input::InputReport* touchscreen_report);
-  bool ParseFt3x27TouchscreenReport(
-      uint8_t* r, size_t len,
-      fuchsia::ui::input::InputReport* touchscreen_report);
-
-  bool ParseAmbientLightSensorReport(
-      const uint8_t* report, size_t len, uint8_t* sensor_idx,
-      fuchsia::ui::input::InputReport* sensor_report);
-  bool ParseButtonsReport(const uint8_t* report, size_t len,
-                          fuchsia::ui::input::InputReport* buttons_report);
 
   fuchsia::ui::input::InputDeviceRegistry* registry_;
 
   zx::event event_;
-
-  acer12_touch_t acer12_touch_reports_[2];
 
   bool has_keyboard_ = false;
   fuchsia::ui::input::KeyboardDescriptorPtr keyboard_descriptor_;
@@ -210,9 +133,9 @@ class InputInterpreter {
   std::unique_ptr<HidDecoder> hid_decoder_;
 
   Protocol protocol_;
-  std::vector<DataLocator> decoder_;
   Touchscreen ts_;
   Mouse mouse_;
+  Hardcoded hardcoded_;
 };
 
 }  // namespace mozart
