@@ -14,9 +14,6 @@
 #include "garnet/bin/zxdb/symbols/line_details.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
 
-// ERASEME
-#include "lib/fxl/strings/string_printf.h"
-
 namespace zxdb {
 
 StepThreadController::StepThreadController(StepMode mode) : step_mode_(mode) {}
@@ -153,7 +150,7 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
         // to the destination. The destination of the indirect jump is what's
         // filled in by the dynamic loader when imports are resolved.
         //
-        // LLVM indexes ELF imports in the symbol database (type
+        // LLDB indexes ELF imports in the symbol database (type
         // eSymbolTypeTrampoline) and can then compare to see if the current
         // code is a trampoline. See
         // DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan.

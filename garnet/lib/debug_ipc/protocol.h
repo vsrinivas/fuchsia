@@ -353,6 +353,12 @@ struct NotifyException {
     // when the debugged program manually issues a breakpoint instruction.
     kSoftware,
 
+    // Indicates this exception is not a real CPU exception but was generated
+    // internally for the purposes of sending a stop notification. The frontend
+    // uses this value when the thread didn't actually do anything, but the
+    // should be updated as if it hit an exception.
+    kSynthetic,
+
     kLast  // Not an actual exception type, for range checking.
   };
   static const char* TypeToString(Type);

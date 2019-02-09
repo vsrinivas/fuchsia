@@ -95,9 +95,22 @@ void ThreadImpl::Continue() {
     // isn't necessarily bad.
     controllers_.back()->Log("Continuing with this controller as primary.");
     ThreadController::ContinueOp op = controllers_.back()->GetContinueOp();
-    request.how = op.how;
-    request.range_begin = op.range.begin();
-    request.range_end = op.range.end();
+    if (op.synthetic_stop_) {
+      // Synthetic stop. Skip notifying the backend and broadcast a stop
+      // notification for the current state.
+      controllers_.back()->Log("Synthetic stop, controller done.");
+      controllers_.pop_back();  // Remove controller.
+      for (auto& observer : observers()) {
+        observer.OnThreadStopped(
+            this, debug_ipc::NotifyException::Type::kSynthetic, {});
+      }
+      return;
+    } else {
+      // Dispatch the continuation message.
+      request.how = op.how;
+      request.range_begin = op.range.begin();
+      request.range_end = op.range.end();
+    }
   }
 
   session()->remote_api()->Resume(
@@ -113,8 +126,8 @@ void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller,
   controllers_.push_back(std::move(controller));
 
   controller_ptr->InitWithThread(
-      this, [ this, controller_ptr,
-              on_continue = std::move(on_continue) ](const Err& err) {
+      this, [this, controller_ptr,
+             on_continue = std::move(on_continue)](const Err& err) {
         if (err.has_error()) {
           controller_ptr->Log("InitWithThread failed.");
           NotifyControllerDone(controller_ptr);  // Remove the controller.
@@ -151,23 +164,24 @@ void ThreadImpl::JumpTo(uint64_t new_address,
   //
   // Another approach is to make the register request message able to
   // optionally request a stack backtrace and include that in the reply.
-  session()->remote_api()->WriteRegisters(request, [
-    thread = weak_factory_.GetWeakPtr(), cb = std::move(cb)
-  ](const Err& err, debug_ipc::WriteRegistersReply reply) {
-    if (err.has_error()) {
-      cb(err);  // Transport error.
-    } else if (reply.status != 0) {
-      cb(Err("Could not set thread instruction pointer. Error %" PRIu64
-             " (%s).",
-             reply.status,
-             debug_ipc::ZxStatusToString(static_cast<uint32_t>(reply.status))));
-    } else if (!thread) {
-      cb(Err("Thread destroyed."));
-    } else {
-      // Success, update the current stack before issuing the callback.
-      thread->SyncFramesForStack(std::move(cb));
-    }
-  });
+  session()->remote_api()->WriteRegisters(
+      request, [thread = weak_factory_.GetWeakPtr(), cb = std::move(cb)](
+                   const Err& err, debug_ipc::WriteRegistersReply reply) {
+        if (err.has_error()) {
+          cb(err);  // Transport error.
+        } else if (reply.status != 0) {
+          cb(Err("Could not set thread instruction pointer. Error %" PRIu64
+                 " (%s).",
+                 reply.status,
+                 debug_ipc::ZxStatusToString(
+                     static_cast<uint32_t>(reply.status))));
+        } else if (!thread) {
+          cb(Err("Thread destroyed."));
+        } else {
+          // Success, update the current stack before issuing the callback.
+          thread->SyncFramesForStack(std::move(cb));
+        }
+      });
 }
 
 void ThreadImpl::NotifyControllerDone(ThreadController* controller) {
@@ -205,7 +219,7 @@ void ThreadImpl::ReadRegisters(
   request.categories = std::move(cats_to_get);
 
   session()->remote_api()->ReadRegisters(
-      request, [ thread = weak_factory_.GetWeakPtr(), callback ](
+      request, [thread = weak_factory_.GetWeakPtr(), callback](
                    const Err& err, debug_ipc::ReadRegistersReply reply) {
         thread->registers_ = std::make_unique<RegisterSet>(
             thread->session()->arch(), std::move(reply.categories));
@@ -304,16 +318,17 @@ void ThreadImpl::SyncFramesForStack(std::function<void(const Err&)> callback) {
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
 
-  session()->remote_api()->ThreadStatus(request, [
-    callback = std::move(callback), thread = weak_factory_.GetWeakPtr()
-  ](const Err& err, debug_ipc::ThreadStatusReply reply) {
-    if (!thread) {
-      callback(Err("Thread destroyed."));
-      return;
-    }
-    thread->SetMetadata(reply.record);
-    callback(Err());
-  });
+  session()->remote_api()->ThreadStatus(
+      request,
+      [callback = std::move(callback), thread = weak_factory_.GetWeakPtr()](
+          const Err& err, debug_ipc::ThreadStatusReply reply) {
+        if (!thread) {
+          callback(Err("Thread destroyed."));
+          return;
+        }
+        thread->SetMetadata(reply.record);
+        callback(Err());
+      });
 }
 
 std::unique_ptr<Frame> ThreadImpl::MakeFrameForStack(
@@ -323,8 +338,8 @@ std::unique_ptr<Frame> ThreadImpl::MakeFrameForStack(
 
 Location ThreadImpl::GetSymbolizedLocationForStackFrame(
     const debug_ipc::StackFrame& input) {
-  auto vect = GetProcess()->GetSymbols()->ResolveInputLocation(
-      InputLocation(input.ip));
+  auto vect =
+      GetProcess()->GetSymbols()->ResolveInputLocation(InputLocation(input.ip));
 
   // Symbolizing an address should always give exactly one result.
   FXL_DCHECK(vect.size() == 1u);

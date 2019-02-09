@@ -44,7 +44,7 @@ class FinishPhysicalFrameThreadController : public ThreadController {
   StopOp OnThreadStop(
       debug_ipc::NotifyException::Type stop_type,
       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
-  const char* GetName() const override { return "FinishPhysical"; }
+  const char* GetName() const override { return "Finish Physical"; }
 
  private:
   // Called when both the frame fingerprint and the thread are known. Does

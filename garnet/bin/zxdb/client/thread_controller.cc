@@ -12,31 +12,6 @@
 
 namespace zxdb {
 
-namespace {
-
-// Returns true if the given address is at the beginning of any of the ranges
-// defined by the inline function for the given location. If there isn't an
-// inline function in the symbols, it counts as "false".
-bool AddressAtBeginningOfInlineRange(const Location& loc) {
-  // Extract the inline function.
-  if (!loc.symbol())
-    return false;
-  const Function* function = loc.symbol().Get()->AsFunction();
-  if (!function)
-    return false;
-  if (!function->is_inline())
-    return false;
-
-  for (const auto& cur :
-       function->GetAbsoluteCodeRanges(loc.symbol_context())) {
-    if (loc.address() == cur.begin())
-      return true;
-  }
-  return false;
-}
-
-}  // namespace
-
 ThreadController::ThreadController() = default;
 
 ThreadController::~ThreadController() = default;
@@ -65,6 +40,24 @@ void ThreadController::LogRaw(const char* format, ...) {
   va_end(ap);
 }
 #endif
+
+bool ThreadController::AddressAtBeginningOfInlineRange(const Location& loc) {
+  // Extract the inline function.
+  if (!loc.symbol())
+    return false;
+  const Function* function = loc.symbol().Get()->AsFunction();
+  if (!function)
+    return false;
+  if (!function->is_inline())
+    return false;
+
+  for (const auto& cur :
+       function->GetAbsoluteCodeRanges(loc.symbol_context())) {
+    if (loc.address() == cur.begin())
+      return true;
+  }
+  return false;
+}
 
 void ThreadController::SetInlineFrameIfAmbiguous(FrameFingerprint fingerprint) {
   Stack& stack = thread()->GetStack();

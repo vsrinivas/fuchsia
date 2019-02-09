@@ -91,6 +91,8 @@ const char* NotifyException::TypeToString(NotifyException::Type type) {
       return "Single Step";
     case NotifyException::Type::kSoftware:
       return "Software";
+    case NotifyException::Type::kSynthetic:
+      return "Synthetic";
     case NotifyException::Type::kLast:
       return "kLast";
   }

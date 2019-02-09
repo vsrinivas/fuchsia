@@ -14,9 +14,15 @@ namespace zxdb {
 
 class FinishThreadController;
 
-// Implements "step into". This single-steps a thread until the instruction
-// pointer is in a different region (line/range/instruction as defined by the
-// StepMode).
+// Implements stepping the processor over some known range of code. This is
+// implemented by single-stepping the thread until the instruction pointer is
+// in a different region (line/range/instruction as defined by the StepMode).
+//
+// This is the main low-level thread controller used by other ones. Generally
+// programmatic uses (e.g. from with "step over") will use this class. User-
+// level "step into" should use the StepIntoThreadController as there are
+// some subtle differences around expectations for inlined subroutine calls
+// (see that class for more).
 class StepThreadController : public ThreadController {
  public:
   // Constructor for kSourceLine and kInstruction modes. It will initialize

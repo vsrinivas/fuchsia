@@ -17,6 +17,7 @@ namespace zxdb {
 
 class Breakpoint;
 class Err;
+class Location;
 class Thread;
 
 // Uncomment to enable detailed thread controller logging.
@@ -57,7 +58,31 @@ class ThreadController {
       result.range = range;
       return result;
     }
+    static ContinueOp SyntheticStop() {
+      ContinueOp result;
+      result.synthetic_stop_ = true;
+      return result;
+    }
 
+    // A synthetic stop means that the thread remains stopped but a synthetic
+    // stop notification is broadcast to the frontend to make it look like the
+    // thread did continued and stopped again.
+    //
+    // This is useful when modifying the stack for inline routines, where the
+    // code didn't execute but from a user perspective they stepped into an
+    // inline subroutine. In this case the thread controller will update the
+    // Stack to reflect the new state, and return ContinueOp::SyntheticStop().
+    //
+    // Synthetic stops are not dispatched to ThreadControllers.
+    //
+    // Why isn't this a StopOp instead? This only makes sense as the initial
+    // state of the ThreadController that decides it doesn't need to do
+    // anything but wants to pretend that it did. When a ThreadController is in
+    // OnThreadStop and about to return a StopOp, returning kStop is a real
+    // thread stop and nothing needs to be synthetic.
+    bool synthetic_stop_ = false;
+
+    // Valid when synthetic_stop = true.
     debug_ipc::ResumeRequest::How how =
         debug_ipc::ResumeRequest::How::kContinue;
 
@@ -86,14 +111,20 @@ class ThreadController {
   virtual void InitWithThread(Thread* thread,
                               std::function<void(const Err&)> cb) = 0;
 
-  // Returns how to continue the thread when running this controller.
+  // Returns how to continue the thread when running this controller. This
+  // will be called after InitWithThread and after every subsequent kContinue
+  // response from OnThreadStop to see how the controller wishes to run.
   virtual ContinueOp GetContinueOp() = 0;
 
   // Notification that the thread has stopped. The return value indicates what
   // the thread should do in response.
   //
   // If the ThreadController returns |kStop|, its assumed the controller has
-  // completed its job and it will be deleted.
+  // completed its job and it will be deleted. |kContinue| doesn't necessarily
+  // mean the thread will continue, as there could be multiple controllers
+  // active and any of them can report "stop". When a thread is being
+  // continued, the main controller will get GetContinueOp() called to see what
+  // type of continuation it wants.
   virtual StopOp OnThreadStop(
       debug_ipc::NotifyException::Type stop_type,
       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) = 0;
@@ -119,6 +150,11 @@ class ThreadController {
   // Returns the name of this thread controller. This will be visible in logs.
   // This should be something simple and short like "Step" or "Step Over".
   virtual const char* GetName() const = 0;
+
+  // Returns true if the given address is at the beginning of any of the ranges
+  // defined by the inline function for the given location. If there isn't an
+  // inline function in the symbols, it counts as "false".
+  bool AddressAtBeginningOfInlineRange(const Location&);
 
   // The beginning of an inline function is ambiguous about whether you're at
   // the beginning of the function or about to call it (see Stack object for
