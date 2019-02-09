@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//garnet/public/lib/svc:package"
+        "//sdk/lib/svc:svc_tests"
     ]
 }

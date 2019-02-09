@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/cpp/sdk_shared_library.gni")
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/test.gni")
 
 sdk_shared_library("svc") {
@@ -23,9 +23,9 @@ sdk_shared_library("svc") {
     "//zircon/public/lib/fs",
   ]
 
-  include_base = "//garnet/public"
+  include_base = "//sdk"
 
-  public_configs = [ "//garnet/public:config" ]
+  public_configs = [ "//sdk/config" ]
 
   runtime_deps = [
     "//zircon/public/lib/fdio:fdio_sdk",
@@ -47,12 +47,7 @@ test("svc_unittests") {
   ]
 }
 
-package("package") {
-  testonly = true
-  deprecated_system_image = true
-
-  package_name = "svc"
-
+test_package("svc_tests") {
   deps = [
     ":svc_unittests",
   ]
