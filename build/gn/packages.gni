@@ -37,6 +37,10 @@ declare_args() {
 
   # Legacy product definitions.
   fuchsia_products = []
+
+  # List of GN labels of extra packages to included in OTA images, base system
+  # images, and the distribution repository.
+  extra_package_labels = []
 }
 
 monolith += board_packages
@@ -104,6 +108,11 @@ foreach(pkg, _preprocessed_products.preinstall) {
 available_packages = []
 foreach(pkg, _preprocessed_products.available) {
   available_packages += [ get_label_info(pkg, "label_no_toolchain") ]
+}
+
+# Additional packages that are specified using labels.
+foreach(pkg, extra_package_labels) {
+  monolith_package += [ get_label_info(pkg, "label_no_toolchain") ]
 }
 
 # Every extra GN target the package JSON requests be built on the side.
