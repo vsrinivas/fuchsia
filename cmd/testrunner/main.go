@@ -217,6 +217,10 @@ func sshIntoNode(nodename, privateKey string) (*ssh.Client, error) {
 }
 
 func runFuchsiaTests(tests []testsharder.Test, output *TestRunnerOutput, nodename, sshKey string) error {
+	if len(tests) == 0 {
+		return nil
+	}
+
 	if nodename == "" {
 		return errors.New("NODENAME must be set")
 	} else if sshKey == "" {
