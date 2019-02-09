@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-object_get_cookie - Get an object's cookie.
+Get an object's cookie.
 
 ## SYNOPSIS
 

@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vmar_unmap - unmap virtual memory pages
+Unmap virtual memory pages.
 
 ## SYNOPSIS
 

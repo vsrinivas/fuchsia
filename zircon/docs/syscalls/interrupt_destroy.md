@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-interrupt_destroy - destroys an interrupt object
+Destroys an interrupt object.
 
 ## SYNOPSIS
 

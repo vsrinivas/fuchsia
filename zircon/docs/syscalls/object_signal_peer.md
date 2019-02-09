@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-object_signal_peer - signal an object's peer
+Signal an object's peer.
 
 ## SYNOPSIS
 

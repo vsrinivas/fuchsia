@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-futex_wake_single_owner - Wake some number of threads waiting on a futex, optionally transferring ownership to the thread which was woken in the process.
+Wake some number of threads waiting on a futex, optionally transferring ownership to the thread which was woken in the process.
 
 ## SYNOPSIS
 

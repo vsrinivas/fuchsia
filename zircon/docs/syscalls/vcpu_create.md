@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vcpu_create - create a VCPU
+Create a VCPU.
 
 ## SYNOPSIS
 

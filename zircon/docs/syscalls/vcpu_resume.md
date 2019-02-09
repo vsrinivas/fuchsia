@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vcpu_resume - resume execution of a VCPU
+Resume execution of a VCPU.
 
 ## SYNOPSIS
 

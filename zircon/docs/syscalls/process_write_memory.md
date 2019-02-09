@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-process_write_memory - Write into the given process's address space.
+Write into the given process's address space.
 
 ## SYNOPSIS
 

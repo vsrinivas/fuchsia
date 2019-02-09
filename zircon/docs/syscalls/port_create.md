@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-port_create - create an IO port
+Create an IO port.
 
 ## SYNOPSIS
 

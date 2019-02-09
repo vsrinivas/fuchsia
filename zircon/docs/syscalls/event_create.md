@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-event_create - create an event
+Create an event.
 
 ## SYNOPSIS
 

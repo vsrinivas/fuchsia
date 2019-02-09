@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-eventpair_create - create an event pair
+Create an event pair.
 
 ## SYNOPSIS
 

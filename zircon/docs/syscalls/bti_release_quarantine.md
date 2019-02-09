@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-bti_release_quarantine - releases all quarantined PMTs
+Releases all quarantined PMTs.
 
 ## SYNOPSIS
 

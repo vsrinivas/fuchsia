@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-process_create - create a new process
+Create a new process.
 
 ## SYNOPSIS
 

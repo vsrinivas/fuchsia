@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-socket_write - write data to a socket
+Write data to a socket.
 
 ## SYNOPSIS
 

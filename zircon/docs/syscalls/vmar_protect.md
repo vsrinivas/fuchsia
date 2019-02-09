@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vmar_protect - set protection of virtual memory pages
+Set protection of virtual memory pages.
 
 ## SYNOPSIS
 

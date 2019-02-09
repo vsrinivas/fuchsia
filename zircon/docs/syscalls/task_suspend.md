@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-task_suspend - suspend the given task. Currently only thread or process handles may be suspended.
+Suspend the given task. Currently only thread or process handles may be suspended.
 
 ## SYNOPSIS
 

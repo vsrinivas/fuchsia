@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-object_get_info - query information about an object
+Query information about an object.
 
 ## SYNOPSIS
 

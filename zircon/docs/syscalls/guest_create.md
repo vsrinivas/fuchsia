@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-guest_create - create a guest
+Create a guest.
 
 ## SYNOPSIS
 

@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-handle_duplicate - duplicate a handle
+Duplicate a handle.
 
 ## SYNOPSIS
 

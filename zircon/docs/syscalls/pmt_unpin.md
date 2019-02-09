@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-pmt_unpin - unpin pages and revoke device access to them
+Unpin pages and revoke device access to them.
 
 ## SYNOPSIS
 

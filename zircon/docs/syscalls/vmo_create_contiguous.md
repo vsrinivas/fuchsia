@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vmo_create_contiguous - TODO(ZX-3106)
+TODO(ZX-3106)
 
 ## SYNOPSIS
 

@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-socket_read - read data from a socket
+Read data from a socket.
 
 ## SYNOPSIS
 

@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-object_set_profile - TODO(ZX-3106)
+TODO(ZX-3106)
 
 ## SYNOPSIS
 

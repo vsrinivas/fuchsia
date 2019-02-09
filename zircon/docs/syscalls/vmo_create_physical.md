@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vmo_create_physical - create a VM object referring to a specific contiguous range of physical memory
+Create a VM object referring to a specific contiguous range of physical memory.
 
 ## SYNOPSIS
 

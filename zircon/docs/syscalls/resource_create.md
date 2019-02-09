@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-resource_create - create a resource object
+Create a resource object.
 
 ## SYNOPSIS
 

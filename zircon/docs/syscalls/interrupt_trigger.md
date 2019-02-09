@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-interrupt_trigger - triggers a virtual interrupt object
+Triggers a virtual interrupt object.
 
 ## SYNOPSIS
 

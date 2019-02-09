@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-object_signal - signal an object
+Signal an object.
 
 ## SYNOPSIS
 

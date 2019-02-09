@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-ticks_get - Read the number of high-precision timer ticks since boot.
+Read the number of high-precision timer ticks since boot.
 
 ## SYNOPSIS
 

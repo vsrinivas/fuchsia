@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vmo_read - read bytes from the VMO
+Read bytes from the VMO.
 
 ## SYNOPSIS
 

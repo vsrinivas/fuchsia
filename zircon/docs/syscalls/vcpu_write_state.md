@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vcpu_write_state - write the state of a VCPU
+Write the state of a VCPU.
 
 ## SYNOPSIS
 

@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-guest_set_trap - sets a trap within a guest
+Sets a trap within a guest.
 
 ## SYNOPSIS
 

@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-interrupt_bind_vcpu - bind an interrupt object to a VCPU
+Bind an interrupt object to a VCPU.
 
 ## SYNOPSIS
 

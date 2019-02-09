@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-interrupt_bind - Bind an interrupt object to a port
+Bind an interrupt object to a port.
 
 ## SYNOPSIS
 

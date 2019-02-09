@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-pager_detach_vmo - detaches a vmo from a pager
+Detaches a vmo from a pager.
 
 ## SYNOPSIS
 

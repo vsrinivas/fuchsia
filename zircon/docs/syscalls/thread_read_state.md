@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-thread_read_state - Read one aspect of thread state.
+Read one aspect of thread state.
 
 ## SYNOPSIS
 

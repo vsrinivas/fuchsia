@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vcpu_interrupt - raise an interrupt on a VCPU
+Raise an interrupt on a VCPU.
 
 ## SYNOPSIS
 

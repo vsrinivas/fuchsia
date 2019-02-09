@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vmo_op_range - perform an operation on a range of a VMO
+Perform an operation on a range of a VMO.
 
 ## SYNOPSIS
 

@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-port_cancel - cancels async port notifications on an object
+Cancels async port notifications on an object.
 
 ## SYNOPSIS
 

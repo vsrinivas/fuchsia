@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-object_get_child - Given a kernel object with children objects, obtain a handle to the child specified by the provided kernel object id.
+Given a kernel object with children objects, obtain a handle to the child specified by the provided kernel object id.
 
 ## SYNOPSIS
 

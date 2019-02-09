@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vmar_allocate - allocate a new subregion
+Allocate a new subregion.
 
 ## SYNOPSIS
 

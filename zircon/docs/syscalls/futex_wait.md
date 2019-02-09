@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-futex_wait - Wait on a futex.
+Wait on a futex.
 
 ## SYNOPSIS
 

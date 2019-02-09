@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-process_exit - Exits the currently running process.
+Exits the currently running process.
 
 ## SYNOPSIS
 

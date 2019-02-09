@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-ticks_per_second - Read the number of high-precision timer ticks in a second.
+Read the number of high-precision timer ticks in a second.
 
 ## SYNOPSIS
 

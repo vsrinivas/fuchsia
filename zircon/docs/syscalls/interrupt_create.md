@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-interrupt_create - create an interrupt object
+Create an interrupt object.
 
 ## SYNOPSIS
 

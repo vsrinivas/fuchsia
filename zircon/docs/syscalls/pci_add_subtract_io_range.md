@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-pci_add_subtract_io_range - TODO(ZX-3106)
+TODO(ZX-3106)
 
 ## SYNOPSIS
 

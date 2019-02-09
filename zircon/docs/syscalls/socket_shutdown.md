@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-socket_shutdown - prevent reading or writing
+Prevent reading or writing.
 
 ## SYNOPSIS
 

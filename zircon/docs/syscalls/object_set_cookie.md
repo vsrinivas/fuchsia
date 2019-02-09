@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-object_set_cookie - Set an object's cookie.
+Set an object's cookie.
 
 ## SYNOPSIS
 

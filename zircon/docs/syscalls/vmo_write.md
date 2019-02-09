@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vmo_write - write bytes to the VMO
+Write bytes to the VMO.
 
 ## SYNOPSIS
 

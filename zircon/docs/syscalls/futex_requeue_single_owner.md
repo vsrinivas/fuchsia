@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-futex_requeue_single_owner - Wake some number of threads waiting on a futex, and move more waiters to another wait queue.
+Wake some number of threads waiting on a futex, and move more waiters to another wait queue.
 
 ## SYNOPSIS
 

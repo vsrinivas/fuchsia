@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-timer_cancel - cancel a timer
+Cancel a timer.
 
 ## SYNOPSIS
 

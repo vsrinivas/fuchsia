@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-thread_start - start execution on a thread
+Start execution on a thread.
 
 ## SYNOPSIS
 

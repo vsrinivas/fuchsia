@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-timer_set - start a timer
+Start a timer.
 
 ## SYNOPSIS
 

@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-fifo_create - create a fifo
+Create a fifo.
 
 ## SYNOPSIS
 

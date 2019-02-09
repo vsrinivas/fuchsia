@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-channel_create - create a channel
+Create a channel.
 
 ## SYNOPSIS
 

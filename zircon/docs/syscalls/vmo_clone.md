@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vmo_clone - create a clone of a VM Object
+Create a clone of a VM Object.
 
 ## SYNOPSIS
 

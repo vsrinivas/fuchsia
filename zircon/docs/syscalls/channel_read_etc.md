@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-channel_read_etc - read a message from a channel
+Read a message from a channel.
 
 ## SYNOPSIS
 

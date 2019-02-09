@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-clock_adjust - TODO(ZX-3106)
+TODO(ZX-3106)
 
 ## SYNOPSIS
 

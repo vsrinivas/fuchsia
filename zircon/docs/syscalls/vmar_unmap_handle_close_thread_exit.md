@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vmar_unmap_handle_close_thread_exit - unmap memory, close handle, exit
+Unmap memory, close handle, exit.
 
 ## SYNOPSIS
 

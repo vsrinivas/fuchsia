@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-thread_write_state - Write one aspect of thread state.
+Write one aspect of thread state.
 
 ## SYNOPSIS
 

@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-handle_close - close a handle
+Close a handle.
 
 ## SYNOPSIS
 

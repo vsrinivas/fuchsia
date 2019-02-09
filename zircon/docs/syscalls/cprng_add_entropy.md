@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-cprng_add_entropy - Add entropy to the kernel CPRNG
+Add entropy to the kernel CPRNG.
 
 ## SYNOPSIS
 

@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vmo_set_size - resize a VMO object
+Resize a VMO object.
 
 ## SYNOPSIS
 

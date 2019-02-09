@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-interrupt_wait - wait for an interrupt
+Wait for an interrupt.
 
 ## SYNOPSIS
 

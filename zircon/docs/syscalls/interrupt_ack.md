@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-interrupt_ack - Acknowledge an interrupt and re-arm it.
+Acknowledge an interrupt and re-arm it.
 
 ## SYNOPSIS
 

@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vmo_create - create a VM object
+Create a VM object.
 
 ## SYNOPSIS
 

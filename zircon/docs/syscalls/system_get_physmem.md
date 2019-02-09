@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-system_get_physmem - get amount of physical memory on the system
+Get amount of physical memory on the system.
 
 ## SYNOPSIS
 

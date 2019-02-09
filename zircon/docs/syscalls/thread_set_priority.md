@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-thread_set_priority - TODO(ZX-3106)
+TODO(ZX-3106)
 
 ## SYNOPSIS
 

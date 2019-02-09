@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-nanosleep - high resolution sleep
+High resolution sleep.
 
 ## SYNOPSIS
 

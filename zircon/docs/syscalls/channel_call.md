@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-channel_call - send a message to a channel and await a reply
+Send a message to a channel and await a reply.
 
 ## SYNOPSIS
 

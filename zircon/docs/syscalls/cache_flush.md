@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-cache_flush - Flush CPU data and/or instruction caches
+Flush CPU data and/or instruction caches.
 
 ## SYNOPSIS
 

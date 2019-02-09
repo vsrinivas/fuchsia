@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-pager_create - create a new pager object
+Create a new pager object.
 
 ## SYNOPSIS
 

@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-timer_create - create a timer
+Create a timer.
 
 ## SYNOPSIS
 

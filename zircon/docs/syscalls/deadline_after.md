@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-deadline_after - Convert a time relative to now to an absolute deadline
+Convert a time relative to now to an absolute deadline.
 
 ## SYNOPSIS
 

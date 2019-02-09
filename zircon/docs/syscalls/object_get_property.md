@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-object_get_property - Ask for various properties of various kernel objects.
+Ask for various properties of various kernel objects.
 
 ## SYNOPSIS
 

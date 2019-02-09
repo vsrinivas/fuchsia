@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-object_wait_async - subscribe for signals on an object
+Subscribe for signals on an object.
 
 ## SYNOPSIS
 

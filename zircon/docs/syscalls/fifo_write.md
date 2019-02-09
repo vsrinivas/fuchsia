@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-fifo_write - write data to a fifo
+Write data to a fifo.
 
 ## SYNOPSIS
 

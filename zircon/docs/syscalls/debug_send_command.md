@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-debug_send_command - TODO(ZX-3106)
+TODO(ZX-3106)
 
 ## SYNOPSIS
 

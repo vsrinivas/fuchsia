@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-handle_replace - replace a handle
+Replace a handle.
 
 ## SYNOPSIS
 

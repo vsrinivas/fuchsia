@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-system_get_features - get supported hardware capabilities
+Get supported hardware capabilities.
 
 ## SYNOPSIS
 

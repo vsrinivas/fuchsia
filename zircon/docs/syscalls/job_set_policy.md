@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-job_set_policy - Set job security and resource policies.
+Set job security and resource policies.
 
 ## SYNOPSIS
 

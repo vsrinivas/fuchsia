@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-pager_create_vmo - create a pager owned vmo
+Create a pager owned vmo.
 
 ## SYNOPSIS
 

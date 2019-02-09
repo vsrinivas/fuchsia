@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-socket_accept - receive another socket object via a socket
+Receive another socket object via a socket.
 
 ## SYNOPSIS
 

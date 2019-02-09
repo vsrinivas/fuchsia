@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-process_start - start execution on a process
+Start execution on a process.
 
 ## SYNOPSIS
 

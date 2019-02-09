@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-job_create - create a new job
+Create a new job.
 
 ## SYNOPSIS
 

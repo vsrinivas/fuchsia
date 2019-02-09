@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-handle_close_many - close a number of handles
+Close a number of handles.
 
 ## SYNOPSIS
 

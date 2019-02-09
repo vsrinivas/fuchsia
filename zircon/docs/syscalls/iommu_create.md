@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-iommu_create - create a new IOMMU object in the kernel
+Create a new IOMMU object in the kernel.
 
 ## SYNOPSIS
 

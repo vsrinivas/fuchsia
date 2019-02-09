@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-socket_share - send another socket object via a socket
+Send another socket object via a socket.
 
 ## SYNOPSIS
 

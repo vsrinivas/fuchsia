@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-clock_get_monotonic - Acquire the current monotonic time.
+Acquire the current monotonic time.
 
 ## SYNOPSIS
 

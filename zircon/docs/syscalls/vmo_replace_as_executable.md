@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vmo_replace_as_executable - add execute rights to a vmo
+Add execute rights to a VMO.
 
 ## SYNOPSIS
 

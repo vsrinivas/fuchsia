@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-port_wait - wait for a packet arrival in a port
+Wait for a packet arrival in a port.
 
 ## SYNOPSIS
 

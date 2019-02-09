@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-pci_cfg_pio_rw - TODO(ZX-3106)
+TODO(ZX-3106)
 
 ## SYNOPSIS
 

@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-socket_create - create a socket
+Create a socket.
 
 ## SYNOPSIS
 

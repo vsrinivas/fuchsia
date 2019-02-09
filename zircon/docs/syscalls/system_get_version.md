@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-system_get_version - get version string for system
+Get version string for system.
 
 ## SYNOPSIS
 

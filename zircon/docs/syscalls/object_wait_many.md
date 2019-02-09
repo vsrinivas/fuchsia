@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-object_wait_many - wait for signals on multiple objects
+Wait for signals on multiple objects.
 
 ## SYNOPSIS
 

@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-task_kill - Kill the provided task (job, process, or thread).
+Kill the provided task (job, process, or thread).
 
 ## SYNOPSIS
 

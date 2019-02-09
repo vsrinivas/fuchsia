@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-system_mexec - Soft reboot the system with a new kernel and bootimage
+Soft reboot the system with a new kernel and bootimage.
 
 ## SYNOPSIS
 

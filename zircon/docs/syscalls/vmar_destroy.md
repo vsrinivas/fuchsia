@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vmar_destroy - destroy a virtual memory address region
+Destroy a virtual memory address region.
 
 ## SYNOPSIS
 

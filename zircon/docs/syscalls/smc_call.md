@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-smc_call - Make Secure Monitor Call (SMC) from user space
+Make Secure Monitor Call (SMC) from user space.
 
 ## SYNOPSIS
 

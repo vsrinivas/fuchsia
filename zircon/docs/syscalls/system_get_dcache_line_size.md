@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-system_get_dcache_line_size - TODO(ZX-3106)
+TODO(ZX-3106)
 
 ## SYNOPSIS
 

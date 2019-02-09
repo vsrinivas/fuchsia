@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-thread_create - create a thread
+Create a thread.
 
 ## SYNOPSIS
 

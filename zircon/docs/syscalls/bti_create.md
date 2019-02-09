@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-bti_create - create a new bus transaction initiator
+Create a new bus transaction initiator.
 
 ## SYNOPSIS
 

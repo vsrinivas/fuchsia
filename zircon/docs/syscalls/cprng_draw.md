@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-cprng_draw - Draw from the kernel's CPRNG
+Draw from the kernel's CPRNG.
 
 ## SYNOPSIS
 

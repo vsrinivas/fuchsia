@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-pager_supply_pages - supply pages into a pager owned vmo
+Supply pages into a pager owned vmo.
 
 ## SYNOPSIS
 

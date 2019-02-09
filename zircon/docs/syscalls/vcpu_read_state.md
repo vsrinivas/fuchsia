@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vcpu_read_state - read the state of a VCPU
+Read the state of a VCPU.
 
 ## SYNOPSIS
 

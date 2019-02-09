@@ -308,8 +308,7 @@ def update_rights(lines, syscall_data, warn):
         syscall_data['requirements'], syscall_data['arguments'], warn)
 
 
-def make_name_block(syscall_data):
-    start = syscall_data['name'] + ' - '
+def make_name_block(syscall_data, warn):
     desc = ''
     for x in syscall_data['top_description']:
         # TODO(scottmg): This is gross, we should change the abigen parser to
@@ -322,7 +321,12 @@ def make_name_block(syscall_data):
             desc += x
     if not desc:
         desc = 'TODO(ZX-3106)'
-    return STANDARD_BLOCK_HEADER + [start + desc, '']
+    else:
+        if desc[0].upper() != desc[0]:
+            warn('short description (#^) should start with a capital')
+        if desc[-1] != '.':
+            warn('short description (#^) should end with a period')
+    return STANDARD_BLOCK_HEADER + [desc, '']
 
 
 def update_name(lines, syscall_data, warn):
@@ -333,7 +337,7 @@ def update_name(lines, syscall_data, warn):
         warn('did not find NAME section, skipping update')
         return
 
-    lines[name_start_index:name_end_index] = make_name_block(syscall_data)
+    lines[name_start_index:name_end_index] = make_name_block(syscall_data, warn)
 
 
 def make_synopsis_block(syscall_data, warn):
@@ -471,6 +475,7 @@ SEE_ALSO_CONCEPTS = {
     'futex objects': '../objects/futex.md',
     'timer slack': '../timer_slack.md'
 }
+
 
 def make_see_also_block(referenced_syscalls, concepts, extra):
     """Makes a formatted SEE ALSO block given a list of syscall names.

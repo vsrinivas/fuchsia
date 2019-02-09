@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-bti_pin - pin pages and grant devices access to them
+Pin pages and grant devices access to them.
 
 ## SYNOPSIS
 

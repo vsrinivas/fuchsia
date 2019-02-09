@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-clock_get_new - Acquire the current time.
+Acquire the current time.
 
 ## SYNOPSIS
 

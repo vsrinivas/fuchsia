@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-fifo_read - read data from a fifo
+Read data from a fifo.
 
 ## SYNOPSIS
 

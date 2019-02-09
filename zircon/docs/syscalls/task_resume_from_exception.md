@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-task_resume_from_exception - resume the given task after an exception has been reported
+Resume the given task after an exception has been reported.
 
 ## SYNOPSIS
 

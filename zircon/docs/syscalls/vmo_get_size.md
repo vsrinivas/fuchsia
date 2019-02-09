@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-vmo_get_size - read the current size of a VMO object
+Read the current size of a VMO object.
 
 ## SYNOPSIS
 

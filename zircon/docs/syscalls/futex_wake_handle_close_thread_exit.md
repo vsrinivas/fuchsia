@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-futex_wake_handle_close_thread_exit - write to futex, wake futex, close handle, exit
+Write to futex, wake futex, close handle, exit.
 
 ## SYNOPSIS
 

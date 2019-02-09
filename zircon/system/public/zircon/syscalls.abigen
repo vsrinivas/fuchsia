@@ -64,7 +64,7 @@ syscall clock_get_monotonic
     ()
     returns (zx_time_t);
 
-#^ high resolution sleep
+#^ High resolution sleep.
 #! None.
 syscall nanosleep blocking
     (deadline: zx_time_t)
@@ -80,7 +80,7 @@ syscall ticks_per_second vdsocall const
     ()
     returns (zx_ticks_t);
 
-#^ Convert a time relative to now to an absolute deadline
+#^ Convert a time relative to now to an absolute deadline.
 syscall deadline_after vdsocall
     (nanoseconds: zx_duration_t)
     returns (zx_time_t);
@@ -96,54 +96,54 @@ syscall system_get_dcache_line_size vdsocall const
     ()
     returns (uint32_t);
 
-#^ get number of logical processors on the system
+#^ Get number of logical processors on the system.
 syscall system_get_num_cpus vdsocall const
     ()
     returns (uint32_t);
 
-#^ get version string for system
+#^ Get version string for system.
 syscall system_get_version vdsocall
     (version: char[version_size] OUT, version_size: size_t)
     returns (zx_status_t);
 
-#^ get amount of physical memory on the system
+#^ Get amount of physical memory on the system.
 syscall system_get_physmem vdsocall
     ()
     returns (uint64_t);
 
-#^ get supported hardware capabilities
+#^ Get supported hardware capabilities.
 syscall system_get_features vdsocall
     (kind: uint32_t)
     returns (zx_status_t, features: uint32_t features);
 
 # Abstraction of machine operations
 
-#^ Flush CPU data and/or instruction caches
+#^ Flush CPU data and/or instruction caches.
 syscall cache_flush vdsocall
     (addr: any[size] IN, size: size_t, options: uint32_t)
     returns (zx_status_t);
 
 # Generic handle operations
 
-#^ close a handle
+#^ Close a handle.
 #! None.
 syscall handle_close
     (handle: zx_handle_t handle_release_always)
     returns (zx_status_t);
 
-#^ close a number of handles
+#^ Close a number of handles.
 #! None.
 syscall handle_close_many
     (handles: zx_handle_t[num_handles] IN, num_handles: size_t)
     returns (zx_status_t);
 
-#^ duplicate a handle
+#^ Duplicate a handle.
 #! handle must have ZX_RIGHT_DUPLICATE.
 syscall handle_duplicate
     (handle: zx_handle_t, rights: zx_rights_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-#^ replace a handle
+#^ Replace a handle.
 #! None.
 syscall handle_replace
     (handle: zx_handle_t handle_release_always, rights: zx_rights_t)
@@ -151,19 +151,19 @@ syscall handle_replace
 
 # Generic object operations
 
-#^ wait for signals on an object
+#^ Wait for signals on an object.
 #! handle must have ZX_RIGHT_WAIT.
 syscall object_wait_one blocking
     (handle: zx_handle_t, signals: zx_signals_t, deadline: zx_time_t)
     returns (zx_status_t, observed: zx_signals_t optional);
 
-#^ wait for signals on multiple objects
+#^ Wait for signals on multiple objects.
 #! Every entry of items must have a handle field with ZX_RIGHT_WAIT.
 syscall object_wait_many blocking
     (items: zx_wait_item_t[count] INOUT, count: size_t, deadline: zx_time_t)
     returns (zx_status_t);
 
-#^ subscribe for signals on an object
+#^ Subscribe for signals on an object.
 #! handle must have ZX_RIGHT_WAIT.
 #! port must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
 syscall object_wait_async
@@ -171,13 +171,13 @@ syscall object_wait_async
         signals: zx_signals_t, options: uint32_t)
     returns (zx_status_t);
 
-#^ signal an object
+#^ Signal an object.
 #! handle must have ZX_RIGHT_SIGNAL.
 syscall object_signal
     (handle: zx_handle_t, clear_mask: uint32_t, set_mask: uint32_t)
     returns (zx_status_t);
 
-#^ signal an object's peer
+#^ Signal an object's peer.
 #! handle must have ZX_RIGHT_SIGNAL_PEER.
 syscall object_signal_peer
     (handle: zx_handle_t, clear_mask: uint32_t, set_mask: uint32_t)
@@ -216,7 +216,7 @@ syscall object_get_cookie
     (handle: zx_handle_t, scope: zx_handle_t)
     returns (zx_status_t, cookie: uint64_t);
 
-#^ query information about an object
+#^ Query information about an object.
 #! If topic is ZX_INFO_PROCESS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_INSPECT.
 #! If topic is ZX_INFO_PROCESS_THREADS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_ENUMERATE.
 #! If topic is ZX_INFO_JOB_CHILDREN, handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_ENUMERATE.
@@ -256,13 +256,13 @@ syscall object_set_profile
 
 # IPC: Channels
 
-#^ create a channel
+#^ Create a channel.
 syscall channel_create
     (options: uint32_t)
     returns (zx_status_t, out0: zx_handle_t handle_acquire,
         out1: zx_handle_t handle_acquire);
 
-#^ read a message from a channel
+#^ Read a message from a channel.
 #! handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ.
 syscall channel_read
     (handle: zx_handle_t, options: uint32_t,
@@ -272,7 +272,7 @@ syscall channel_read
         num_handles: uint32_t)
     returns (zx_status_t, actual_bytes: uint32_t optional, actual_handles: uint32_t optional);
 
-#^ read a message from a channel
+#^ Read a message from a channel.
 #! handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ.
 syscall channel_read_etc
     (handle: zx_handle_t, options: uint32_t,
@@ -282,7 +282,7 @@ syscall channel_read_etc
         num_handles: uint32_t)
     returns (zx_status_t, actual_bytes: uint32_t optional, actual_handles: uint32_t optional);
 
-#^ write a message to a channel
+#^ Write a message to a channel.
 #! handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_WRITE.
 #! Every entry of handles must have ZX_RIGHT_TRANSFER.
 syscall channel_write
@@ -302,7 +302,7 @@ syscall channel_call_finish internal
     (deadline: zx_time_t, args: zx_channel_call_args_t[1] IN)
     returns (zx_status_t, actual_bytes: uint32_t, actual_handles: uint32_t);
 
-#^ send a message to a channel and await a reply
+#^ Send a message to a channel and await a reply.
 #! handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
 #! All wr_handles of args must have ZX_RIGHT_TRANSFER.
 syscall channel_call blocking vdsocall
@@ -312,38 +312,38 @@ syscall channel_call blocking vdsocall
 
 # IPC: Sockets
 
-#^ create a socket
+#^ Create a socket.
 syscall socket_create
     (options: uint32_t)
     returns (zx_status_t, out0: zx_handle_t handle_acquire,
         out1: zx_handle_t handle_acquire);
 
-#^ write data to a socket
+#^ Write data to a socket.
 #! handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.
 syscall socket_write
     (handle: zx_handle_t, options: uint32_t, buffer: any[buffer_size] IN, buffer_size: size_t)
     returns (zx_status_t, actual: size_t optional);
 
-#^ read data from a socket
+#^ Read data from a socket.
 #! handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_READ.
 syscall socket_read
     (handle: zx_handle_t, options: uint32_t, buffer: any[buffer_size] OUT, buffer_size: size_t)
     returns (zx_status_t, actual: size_t optional);
 
-#^ send another socket object via a socket
+#^ Send another socket object via a socket.
 #! handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.
 #! socket_to_share must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_TRANSFER.
 syscall socket_share
     (handle: zx_handle_t, socket_to_share: zx_handle_t)
     returns (zx_status_t);
 
-#^ receive another socket object via a socket
+#^ Receive another socket object via a socket.
 #! handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_READ.
 syscall socket_accept
     (handle: zx_handle_t)
     returns (zx_status_t, out_socket: zx_handle_t handle_acquire);
 
-#^ prevent reading or writing
+#^ Prevent reading or writing.
 #! handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.
 syscall socket_shutdown
     (handle: zx_handle_t, options: uint32_t)
@@ -351,16 +351,16 @@ syscall socket_shutdown
 
 # Threads
 
-#^ terminate the current running thread
+#^ Terminate the current running thread.
 syscall thread_exit noreturn ();
 
-#^ create a thread
+#^ Create a thread.
 #! process must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_MANAGE_THREAD.
 syscall thread_create
     (process: zx_handle_t, name: char[name_size] IN, name_size: size_t, options: uint32_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-#^ start execution on a thread
+#^ Start execution on a thread.
 #! handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_MANAGE_THREAD.
 syscall thread_start
     (handle: zx_handle_t, thread_entry: zx_vaddr_t,
@@ -392,7 +392,7 @@ syscall thread_set_priority
 syscall process_exit noreturn
     (retcode: int64_t);
 
-#^ create a new process
+#^ Create a new process.
 #! job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_PROCESS.
 # TODO(ZX-2967): job with ZX_RIGHT_WRITE is also accepted.
 syscall process_create
@@ -400,7 +400,7 @@ syscall process_create
     returns (zx_status_t, proc_handle: zx_handle_t handle_acquire,
         vmar_handle: zx_handle_t handle_acquire);
 
-#^ start execution on a process
+#^ Start execution on a process.
 #! handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
 #! thread must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_WRITE.
 #! arg1 must have ZX_RIGHT_TRANSFER.
@@ -423,7 +423,7 @@ syscall process_write_memory
 
 # Jobs
 
-#^ create a new job
+#^ Create a new job.
 #! parent_job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_JOB.
 # TODO(ZX-2967): parent_job with ZX_RIGHT_WRITE is also accepted.
 syscall job_create
@@ -445,19 +445,19 @@ syscall task_bind_exception_port
     (handle: zx_handle_t, port: zx_handle_t, key: uint64_t, options: uint32_t)
     returns (zx_status_t);
 
-#^ suspend the given task. Currently only thread or process handles may be suspended.
+#^ Suspend the given task. Currently only thread or process handles may be suspended.
 #! handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
 syscall task_suspend
     (handle: zx_handle_t)
     returns (zx_status_t, token: zx_handle_t handle_acquire);
 
-#^ suspend the given task. Currently only thread or process handles may be suspended.
+#^ Suspend the given task. Currently only thread or process handles may be suspended.
 #! handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
 syscall task_suspend_token
     (handle: zx_handle_t)
     returns (zx_status_t, token: zx_handle_t handle_acquire);
 
-#^ resume the given task after an exception has been reported
+#^ Resume the given task after an exception has been reported.
 #! handle must be of type ZX_OBJ_TYPE_THREAD.
 #! port must be of type ZX_OBJ_TYPE_PORT.
 # TODO(ZX-2967): No rights required on either?
@@ -473,12 +473,12 @@ syscall task_kill
 
 # Synchronization
 
-#^ create an event
+#^ Create an event.
 syscall event_create
     (options: uint32_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-#^ create an event pair
+#^ Create an event pair.
 syscall eventpair_create
     (options: uint32_t)
     returns (zx_status_t,
@@ -536,24 +536,24 @@ syscall futex_requeue_deprecated
 
 # Ports
 
-#^ create an IO port
+#^ Create an IO port.
 syscall port_create
     (options: uint32_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-#^ queue a packet to an port
+#^ Queue a packet to an port.
 #! handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
 syscall port_queue
     (handle: zx_handle_t, packet: zx_port_packet_t[1] IN)
     returns (zx_status_t);
 
-#^ wait for a packet arrival in a port
+#^ Wait for a packet arrival in a port.
 #! handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_READ.
 syscall port_wait blocking
     (handle: zx_handle_t, deadline: zx_time_t, packet: zx_port_packet_t[1] OUT)
     returns (zx_status_t);
 
-#^ cancels async port notifications on an object
+#^ Cancels async port notifications on an object.
 #! handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
 syscall port_cancel
     (handle: zx_handle_t, source: zx_handle_t, key: uint64_t)
@@ -561,18 +561,18 @@ syscall port_cancel
 
 # Timers
 
-#^ create a timer
+#^ Create a timer.
 syscall timer_create
     (options: uint32_t, clock_id: zx_clock_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-#^ start a timer
+#^ Start a timer.
 #! handle must be of type ZX_OBJ_TYPE_TIMER and have ZX_RIGHT_WRITE.
 syscall timer_set
     (handle: zx_handle_t, deadline: zx_time_t, slack: zx_duration_t)
     returns (zx_status_t);
 
-#^ cancel a timer
+#^ Cancel a timer.
 #! handle must be of type ZX_OBJ_TYPE_TIMER and have ZX_RIGHT_WRITE.
 syscall timer_cancel
     (handle: zx_handle_t)
@@ -580,36 +580,36 @@ syscall timer_cancel
 
 # Memory management
 
-#^ create a VM object
+#^ Create a VM object.
 syscall vmo_create
     (size: uint64_t, options: uint32_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-#^ read bytes from the VMO
+#^ Read bytes from the VMO.
 #! handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
 syscall vmo_read
     (handle: zx_handle_t, buffer: any[buffer_size] OUT, offset: uint64_t, buffer_size: size_t)
     returns (zx_status_t);
 
-#^ write bytes to the VMO
+#^ Write bytes to the VMO.
 #! handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
 syscall vmo_write
     (handle: zx_handle_t, buffer: any[buffer_size] IN, offset: uint64_t, buffer_size: size_t)
     returns (zx_status_t);
 
-#^ read the current size of a VMO object
+#^ Read the current size of a VMO object.
 # TODO(ZX-2967): No rights required?
 syscall vmo_get_size
     (handle: zx_handle_t)
     returns (zx_status_t, size: uint64_t);
 
-#^ resize a VMO object
+#^ Resize a VMO object.
 #! handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
 syscall vmo_set_size
     (handle: zx_handle_t, size: uint64_t)
     returns (zx_status_t);
 
-#^ perform an operation on a range of a VMO
+#^ Perform an operation on a range of a VMO.
 #! If op is ZX_VMO_OP_COMMIT, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
 #! If op is ZX_VMO_OP_DECOMMIT, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
 #! If op is ZX_VMO_OP_CACHE_SYNC, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
@@ -621,19 +621,19 @@ syscall vmo_op_range
         buffer: any[buffer_size] INOUT, buffer_size: size_t)
     returns (zx_status_t);
 
-#^ create a clone of a VM Object
+#^ Create a clone of a VM Object.
 #! handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_READ.
 syscall vmo_clone
     (handle: zx_handle_t, options: uint32_t, offset: uint64_t, size: uint64_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-#^ set the caching policy for pages held by a VMO.
+#^ Set the caching policy for pages held by a VMO.
 #! handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_MAP.
 syscall vmo_set_cache_policy
     (handle: zx_handle_t, cache_policy: uint32_t)
     returns (zx_status_t);
 
-#^ add execute rights to a vmo
+#^ Add execute rights to a VMO.
 #! handle must be of type ZX_OBJ_TYPE_VMO.
 # TODO(ZX-2967): handle: No rights required, ZX_RIGHT_EXECUTE added to dup out
 #! vmex must have resource kind ZX_RSRC_KIND_VMEX.
@@ -663,7 +663,7 @@ syscall vmar_protect_old
     (handle: zx_handle_t, addr: zx_vaddr_t, len: uint64_t, prot_flags: uint32_t)
     returns (zx_status_t);
 
-#^ allocate a new subregion
+#^ Allocate a new subregion.
 #! If options & ZX_VM_CAN_MAP_READ, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.
 #! If options & ZX_VM_CAN_MAP_WRITE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.
 #! If options & ZX_VM_CAN_MAP_EXECUTE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.
@@ -672,13 +672,13 @@ syscall vmar_allocate
     returns (zx_status_t,
         child_vmar: zx_handle_t handle_acquire, child_addr: zx_vaddr_t);
 
-#^ destroy a virtual memory address region
+#^ Destroy a virtual memory address region.
 # TODO(ZX-2967): handle No rights required?
 syscall vmar_destroy
     (handle: zx_handle_t)
     returns (zx_status_t);
 
-#^ add a memory mapping
+#^ Add a memory mapping.
 #! handle must be of type ZX_OBJ_TYPE_VMAR.
 #! vmo must be of type ZX_OBJ_TYPE_VMO.
 # TODO(ZX-2399): TODO handle and vmo and options must all match, and options can't specify them.
@@ -688,13 +688,13 @@ syscall vmar_map
         len: uint64_t)
     returns (zx_status_t, mapped_addr: zx_vaddr_t);
 
-#^ unmap virtual memory pages
+#^ Unmap virtual memory pages.
 # TODO(ZX-2967): handle No rights required?
 syscall vmar_unmap
     (handle: zx_handle_t, addr: zx_vaddr_t, len: uint64_t)
     returns (zx_status_t);
 
-#^ set protection of virtual memory pages
+#^ Set protection of virtual memory pages.
 #! If options & ZX_VM_PERM_READ, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.
 #! If options & ZX_VM_PERM_WRITE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.
 #! If options & ZX_VM_PERM_EXECUTE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.
@@ -708,31 +708,31 @@ syscall cprng_draw_once internal
     (buffer: any[buffer_size] OUT, buffer_size: size_t)
     returns (zx_status_t);
 
-#^ Draw from the kernel's CPRNG
+#^ Draw from the kernel's CPRNG.
 syscall cprng_draw vdsocall
     (buffer: any[buffer_size] OUT, buffer_size: size_t)
     returns ();
 
-#^ Add entropy to the kernel CPRNG
+#^ Add entropy to the kernel CPRNG.
 syscall cprng_add_entropy
     (buffer: any[buffer_size] IN, buffer_size: size_t)
     returns (zx_status_t);
 
 # IPC: Fifos
 
-#^ create a fifo
+#^ Create a fifo.
 syscall fifo_create
     (elem_count: size_t, elem_size: size_t, options: uint32_t)
     returns (zx_status_t,
         out0: zx_handle_t handle_acquire, out1: zx_handle_t handle_acquire);
 
-#^ read data from a fifo
+#^ Read data from a fifo.
 #! handle must be of type ZX_OBJ_TYPE_FIFO and have ZX_RIGHT_READ.
 syscall fifo_read
     (handle: zx_handle_t, elem_size: size_t, data: any[count * elem_size] OUT, count: size_t)
     returns (zx_status_t, actual_count: size_t optional);
 
-#^ write data to a fifo
+#^ Write data to a fifo.
 #! handle must be of type ZX_OBJ_TYPE_FIFO and have ZX_RIGHT_WRITE.
 syscall fifo_write
     (handle: zx_handle_t, elem_size: size_t, data: any[count * elem_size] IN, count: size_t)
@@ -747,13 +747,13 @@ syscall profile_create
 
 # Multi-function
 
-#^ unmap memory, close handle, exit
+#^ Unmap memory, close handle, exit.
 # TODO(ZX-2399): ???
 syscall vmar_unmap_handle_close_thread_exit vdsocall
     (vmar_handle: zx_handle_t, addr: zx_vaddr_t, size: size_t, close_handle: zx_handle_t handle_release)
     returns (zx_status_t);
 
-#^ write to futex, wake futex, close handle, exit
+#^ Write to futex, wake futex, close handle, exit.
 # TODO(ZX-2399): ???
 syscall futex_wake_handle_close_thread_exit vdsocall noreturn
     (value_ptr: zx_futex_t[1] IN, wake_count: uint32_t, new_value: int32_t,
@@ -819,26 +819,26 @@ syscall debug_send_command
 
 # DDK Syscalls: Interrupts
 
-#^ create an interrupt object
+#^ Create an interrupt object.
 #! src_obj must have resource kind ZX_RSRC_KIND_IRQ.
 syscall interrupt_create
     (src_obj: zx_handle_t, src_num: uint32_t, options: uint32_t)
     returns (zx_status_t, out_handle: zx_handle_t);
 
-#^ Bind an interrupt object to a port
+#^ Bind an interrupt object to a port.
 #! handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_READ.
 #! port_handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
 syscall interrupt_bind
     (handle: zx_handle_t, port_handle: zx_handle_t, key: uint64_t, options: uint32_t)
     returns (zx_status_t);
 
-#^ wait for an interrupt
+#^ Wait for an interrupt.
 #! handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_WAIT.
 syscall interrupt_wait blocking
     (handle: zx_handle_t)
     returns (zx_status_t, out_timestamp: zx_time_t optional);
 
-#^ destroys an interrupt object
+#^ Destroys an interrupt object.
 # TODO(ZX-2967): No DESTROY rights here.
 syscall interrupt_destroy
     (handle: zx_handle_t)
@@ -850,13 +850,13 @@ syscall interrupt_ack
     (handle: zx_handle_t)
     returns (zx_status_t);
 
-#^ triggers a virtual interrupt object
+#^ Triggers a virtual interrupt object.
 #! handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_SIGNAL.
 syscall interrupt_trigger
     (handle: zx_handle_t, options: uint32_t, timestamp: zx_time_t)
     returns (zx_status_t);
 
-#^ bind an interrupt object to a VCPU
+#^ Bind an interrupt object to a VCPU.
 #! handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_READ.
 #! vcpu must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_WRITE.
 syscall interrupt_bind_vcpu
@@ -875,7 +875,7 @@ syscall vmo_create_contiguous
     (bti: zx_handle_t, size: size_t, alignment_log2: uint32_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-#^ create a VM object referring to a specific contiguous range of physical memory
+#^ Create a VM object referring to a specific contiguous range of physical memory.
 #! resource must have resource kind ZX_RSRC_KIND_MMIO.
 syscall vmo_create_physical
     (resource: zx_handle_t, paddr: zx_paddr_t, size: size_t)
@@ -883,20 +883,20 @@ syscall vmo_create_physical
 
 # DDK Syscalls: Device Memory Access
 
-#^ create a new IOMMU object in the kernel
+#^ Create a new IOMMU object in the kernel.
 #! resource must have resource kind ZX_RSRC_KIND_ROOT.
 syscall iommu_create
     (resource: zx_handle_t, type: uint32_t, desc: any[desc_size] IN, desc_size: size_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-#^ create a new bus transaction initiator
+#^ Create a new bus transaction initiator.
 #! iommu must be of type ZX_OBJ_TYPE_IOMMU and have ZX_RIGHT_NONE.
 # TODO(ZX-2967): This is unusual.
 syscall bti_create
     (iommu: zx_handle_t, options: uint32_t, bti_id: uint64_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-#^ pin pages and grant devices access to them
+#^ Pin pages and grant devices access to them.
 #! handle must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_MAP.
 #! vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_MAP.
 #! If options & ZX_BTI_PERM_READ, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
@@ -908,13 +908,13 @@ syscall bti_pin
         addrs: zx_paddr_t[addrs_count] OUT, addrs_count: size_t)
     returns (zx_status_t, pmt: zx_handle_t handle_acquire);
 
-#^ releases all quarantined PMTs
+#^ Releases all quarantined PMTs.
 #! handle must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_WRITE.
 syscall bti_release_quarantine
     (handle: zx_handle_t)
     returns (zx_status_t);
 
-#^ unpin pages and revoke device access to them
+#^ Unpin pages and revoke device access to them.
 # TODO(ZX-2967): handle ZX_OBJ_TYPE_PMT; No rights required?
 syscall pmt_unpin
     (handle: zx_handle_t handle_release_always)
@@ -1006,7 +1006,7 @@ syscall pc_firmware_tables
 
 # DDK Syscalls: SMC Calls
 
-#^ Make Secure Monitor Call (SMC) from user space
+#^ Make Secure Monitor Call (SMC) from user space.
 # TODO(ZX-2967): handle No rights required?
 syscall smc_call
     (handle: zx_handle_t, parameters: zx_smc_parameters_t[1] IN)
@@ -1014,7 +1014,7 @@ syscall smc_call
 
 # Resources
 
-#^ create a resource object
+#^ Create a resource object.
 #! parent_rsrc must be of type ZX_OBJ_TYPE_RESOURCE and have ZX_RIGHT_WRITE.
 syscall resource_create
     (parent_rsrc: zx_handle_t, options: uint32_t, base: uint64_t, size: size_t,
@@ -1023,14 +1023,14 @@ syscall resource_create
 
 # Hypervisor
 
-#^ create a guest
+#^ Create a guest.
 #! resource must have resource kind ZX_RSRC_KIND_HYPERVISOR.
 syscall guest_create
     (resource: zx_handle_t, options: uint32_t)
     returns (zx_status_t, guest_handle: zx_handle_t handle_acquire,
         vmar_handle: zx_handle_t handle_acquire);
 
-#^ sets a trap within a guest
+#^ Sets a trap within a guest.
 #! handle must be of type ZX_OBJ_TYPE_GUEST and have ZX_RIGHT_WRITE.
 #! port_handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
 syscall guest_set_trap
@@ -1038,31 +1038,31 @@ syscall guest_set_trap
         key: uint64_t)
     returns (zx_status_t);
 
-#^ create a VCPU
+#^ Create a VCPU.
 #! guest must be of type ZX_OBJ_TYPE_GUEST and have ZX_RIGHT_MANAGE_PROCESS.
 syscall vcpu_create
     (guest: zx_handle_t, options: uint32_t, entry: zx_vaddr_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-#^ resume execution of a VCPU
+#^ Resume execution of a VCPU.
 #! handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_EXECUTE.
 syscall vcpu_resume blocking
     (handle: zx_handle_t)
     returns (zx_status_t, packet: zx_port_packet_t OUT);
 
-#^ raise an interrupt on a VCPU
+#^ Raise an interrupt on a VCPU.
 #! handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_SIGNAL.
 syscall vcpu_interrupt
     (handle: zx_handle_t, vector: uint32_t)
     returns (zx_status_t);
 
-#^ read the state of a VCPU
+#^ Read the state of a VCPU.
 #! handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_READ.
 syscall vcpu_read_state
     (handle: zx_handle_t, kind: uint32_t, buffer: any[buffer_size] OUT, buffer_size: size_t)
     returns (zx_status_t);
 
-#^ write the state of a VCPU
+#^ Write the state of a VCPU.
 #! handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_WRITE.
 syscall vcpu_write_state
     (handle: zx_handle_t, kind: uint32_t, buffer: any[buffer_size] IN, buffer_size: size_t)
@@ -1070,7 +1070,7 @@ syscall vcpu_write_state
 
 # System Control
 
-#^ Soft reboot the system with a new kernel and bootimage
+#^ Soft reboot the system with a new kernel and bootimage.
 #! resource must have resource kind ZX_RSRC_KIND_ROOT.
 #! kernel_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
 #! bootimage_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
@@ -1078,7 +1078,7 @@ syscall system_mexec
     (resource: zx_handle_t, kernel_vmo: zx_handle_t, bootimage_vmo: zx_handle_t)
     returns (zx_status_t);
 
-#^ Return a ZBI containing ZBI entries necessary to boot this system
+#^ Return a ZBI containing ZBI entries necessary to boot this system.
 #! resource must have resource kind ZX_RSRC_KIND_ROOT.
 syscall system_mexec_payload_get
     (resource: zx_handle_t, buffer: any[buffer_size] OUT, buffer_size: size_t)
@@ -1091,27 +1091,27 @@ syscall system_powerctl
 
 # User pager
 
-#^ create a new pager object
+#^ Create a new pager object.
 #! None.
 syscall pager_create
     (options: uint32_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-#^ create a pager owned vmo
+#^ Create a pager owned vmo.
 #! pager must be of type ZX_OBJ_TYPE_PAGER.
 #! port must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
 syscall pager_create_vmo
     (pager: zx_handle_t, options: uint32_t, port: zx_handle_t, key: uint64_t, size: uint64_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-#^ detaches a vmo from a pager
+#^ Detaches a vmo from a pager.
 #! pager must be of type ZX_OBJ_TYPE_PAGER.
 #! vmo must be of type ZX_OBJ_TYPE_VMO.
 syscall pager_detach_vmo
     (pager: zx_handle_t, vmo: zx_handle_t)
     returns (zx_status_t);
 
-#^ supply pages into a pager owned vmo
+#^ Supply pages into a pager owned vmo.
 #! pager must be of type ZX_OBJ_TYPE_PAGER.
 #! pager_vmo must be of type ZX_OBJ_TYPE_VMO.
 #! aux_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.

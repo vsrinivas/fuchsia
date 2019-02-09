@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-system_mexec_payload_get - Return a ZBI containing ZBI entries necessary to boot this system
+Return a ZBI containing ZBI entries necessary to boot this system.
 
 ## SYNOPSIS
 

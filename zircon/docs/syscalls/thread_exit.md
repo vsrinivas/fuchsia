@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-thread_exit - terminate the current running thread
+Terminate the current running thread.
 
 ## SYNOPSIS
 

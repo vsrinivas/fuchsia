@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-pci_enable_bus_master - TODO(ZX-3106)
+TODO(ZX-3106)
 
 ## SYNOPSIS
 

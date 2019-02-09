@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-port_queue - queue a packet to an port
+Queue a packet to an port.
 
 ## SYNOPSIS
 

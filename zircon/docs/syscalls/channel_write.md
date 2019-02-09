@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-channel_write - write a message to a channel
+Write a message to a channel.
 
 ## SYNOPSIS
 
