@@ -86,8 +86,6 @@ source_set("unittests") {
 }
 
 package("trace") {
-  deprecated_system_image = true
-
   deps = [
     ":bin",
   ]
@@ -95,6 +93,14 @@ package("trace") {
   binaries = [
     {
       name = "trace"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/trace.cmx")
+      dest = "trace.cmx"
     },
   ]
 

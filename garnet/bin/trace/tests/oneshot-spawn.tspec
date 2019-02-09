@@ -3,7 +3,7 @@
 // done for circular or streaming: They test launching components.
 {
   "test_name": "fill-buffer",
-  "app": "/pkg/bin/basic_integration_test_app",
+  "app": "/pkgfs/packages/trace_tests/0/bin/basic_integration_test_app",
   "spawn": true,
   "categories": [ "trace:test" ],
   "buffer_size_in_mb": 1,

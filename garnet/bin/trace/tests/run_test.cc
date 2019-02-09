@@ -24,8 +24,15 @@
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tests/run_test.h"
 
-// The path of the trace program.
-const char kTraceProgramPath[] = "/system/bin/trace";
+// The "path" of the trace program from outside the trace package.
+const char kTraceProgramUrl[] = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
+// The path of the trace program from within the trace package.
+//const char kTracePackageProgramPath[] = "/pkg/bin/trace";
+
+// Package path to use for spawned processes.
+const char kSystemPackageTestPrefix[] = "/pkgfs/packages/trace_tests/0/";
+// Package path to use for launched processes.
+const char kPackageTestPrefix[] = "/pkg/";
 
 void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix) {
   // Transfer our log settings to the subprogram.
@@ -57,25 +64,47 @@ static void StringArgvToCArgv(const std::vector<std::string>& argv,
   c_argv->push_back(nullptr);
 }
 
-static void BuildTraceProgramArgv(const std::string& tspec_path,
+static bool ReadTspec(const std::string& tspec_path, tracing::Spec* spec) {
+  std::string tspec_contents;
+  if (!files::ReadFileToString(tspec_path, &tspec_contents)) {
+    FXL_LOG(ERROR) << "Can't read test spec: " << tspec_path;
+    return false;
+  }
+
+  if (!tracing::DecodeSpec(tspec_contents, spec)) {
+    FXL_LOG(ERROR) << "Error decoding test spec: " << tspec_path;
+    return false;
+  }
+  return true;
+}
+
+static void BuildTraceProgramArgv(const std::string& relative_tspec_path,
                                   const std::string& output_file_path,
                                   std::vector<std::string>* argv) {
-  argv->push_back(kTraceProgramPath);
+  tracing::Spec spec;
+  if (!ReadTspec(kPackageTestPrefix + relative_tspec_path, &spec))
+    return;
+
+  argv->push_back(kTraceProgramUrl);
   AppendLoggingArgs(argv, "");
   argv->push_back("record");
-  argv->push_back(fxl::StringPrintf("--spec-file=%s", tspec_path.c_str()));
+  argv->push_back(fxl::StringPrintf(
+      "--spec-file=%s",
+      (kSystemPackageTestPrefix + relative_tspec_path).c_str()));
   argv->push_back(
       fxl::StringPrintf("--output-file=%s", output_file_path.c_str()));
 
   AppendLoggingArgs(argv, "--append-args=");
 
-  // Note that |tspec_path| cannot have a comma.
-  argv->push_back(
-      fxl::StringPrintf("--append-args=run,%s", tspec_path.c_str()));
+  // Note that |relative_tspec_path| cannot have a comma.
+  argv->push_back(fxl::StringPrintf(
+      "--append-args=run,%s",
+      ((spec.spawn ? kSystemPackageTestPrefix : kPackageTestPrefix) +
+       relative_tspec_path).c_str()));
 }
 
 static void BuildVerificationProgramArgv(const std::string& program_path,
-                                         const std::string& tspec_path,
+                                         const std::string& relative_tspec_path,
                                          const std::string& output_file_path,
                                          std::vector<std::string>* argv) {
   argv->push_back(program_path);
@@ -83,7 +112,7 @@ static void BuildVerificationProgramArgv(const std::string& program_path,
   AppendLoggingArgs(argv, "");
 
   argv->push_back("verify");
-  argv->push_back(tspec_path);
+  argv->push_back(relative_tspec_path);
   argv->push_back(output_file_path);
 }
 
@@ -110,7 +139,8 @@ zx_status_t SpawnProgram(const zx::job& job,
                      nullptr, action_count, &spawn_actions[0],
                      out_process->reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Spawning " << c_argv[0] << " failed: " << err_msg;
+    FXL_LOG(ERROR) << "Spawning " << c_argv[0] << " failed: " << err_msg
+                   << ", " << status;
     return status;
   }
 
@@ -201,7 +231,7 @@ static bool LaunchApp(component::StartupContext* context,
   component_controller.events().OnTerminated =
       [&loop, &return_code](
           int64_t rc, fuchsia::sys::TerminationReason termination_reason) {
-        FXL_LOG(INFO) << "Application exited with return code "
+        FXL_LOG(INFO) << "Application exited with return reason/code "
                       << static_cast<int>(termination_reason) << "/" << rc;
         switch (termination_reason) {
           case fuchsia::sys::TerminationReason::UNKNOWN:
@@ -227,29 +257,24 @@ static bool LaunchApp(component::StartupContext* context,
   return return_code == 0;
 }
 
-bool RunTspec(const std::string& tspec_path,
+bool RunTspec(component::StartupContext* context,
+              const std::string& relative_tspec_path,
               const std::string& output_file_path) {
   std::vector<std::string> argv;
-  BuildTraceProgramArgv(tspec_path, output_file_path, &argv);
+  BuildTraceProgramArgv(relative_tspec_path, output_file_path, &argv);
 
-  FXL_LOG(INFO) << "Running tspec " << tspec_path << ", output file "
+  FXL_LOG(INFO) << "Running tspec " << relative_tspec_path << ", output file "
                 << output_file_path;
 
-  return LaunchTool(argv);
+  return LaunchApp(context, argv[0],
+                   std::vector<std::string>(argv.begin() + 1, argv.end()));
 }
 
 bool VerifyTspec(component::StartupContext* context,
-                 const std::string& tspec_path,
+                 const std::string& relative_tspec_path,
                  const std::string& output_file_path) {
-  std::string tspec_contents;
-  if (!files::ReadFileToString(tspec_path, &tspec_contents)) {
-    FXL_LOG(ERROR) << "Can't read test spec: " << tspec_path;
-    return false;
-  }
-
   tracing::Spec spec;
-  if (!tracing::DecodeSpec(tspec_contents, &spec)) {
-    FXL_LOG(ERROR) << "Error decoding test spec: " << tspec_path;
+  if (!ReadTspec(kPackageTestPrefix + relative_tspec_path, &spec)) {
     return false;
   }
 
@@ -257,11 +282,14 @@ bool VerifyTspec(component::StartupContext* context,
   const std::string& program_path = *spec.app;
 
   std::vector<std::string> argv;
-  BuildVerificationProgramArgv(program_path, tspec_path, output_file_path,
-                               &argv);
+  BuildVerificationProgramArgv(
+    program_path,
+    ((spec.spawn ? kSystemPackageTestPrefix : kPackageTestPrefix) +
+     relative_tspec_path),
+    output_file_path, &argv);
 
-  FXL_LOG(INFO) << "Verifying tspec " << tspec_path << ", output file "
-                << output_file_path;
+  FXL_LOG(INFO) << "Verifying tspec " << relative_tspec_path
+                << ", output file " << output_file_path;
 
   // For consistency we do the exact same thing that the trace program does.
   // We also use the same function names for easier comparison.

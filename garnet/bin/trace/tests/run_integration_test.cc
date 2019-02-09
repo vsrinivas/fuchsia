@@ -21,7 +21,9 @@ const char kOutputFilePath[] = "/tmp/test.trace";
 const char kUsageString[] = {
     "Usage: run "
     "fuchsia-pkg://fuchsia.com/trace_tests#meta/run_integration_test.cmx\n"
-    "  [options] /pkg/data/<test>.tspec\n"
+    "  [options] data/<test>.tspec\n"
+    "\n"
+    "Note that the tspec path is relative to /pkg.\n"
     "\n"
     "Options:\n"
     "  --quiet[=LEVEL]    set quietness level (opposite of verbose)\n"
@@ -46,11 +48,7 @@ int main(int argc, char *argv[]) {
     FXL_LOG(ERROR) << "Missing tspec file";
     return EXIT_FAILURE;
   }
-  auto tspec_path = args[0];
-
-  if (!RunTspec(tspec_path, kOutputFilePath)) {
-    return EXIT_FAILURE;
-  }
+  auto relative_tspec_path = args[0];
 
   // |CreateFromStartupInfo()| needs a loop, it uses the default dispatcher.
   std::unique_ptr<component::StartupContext> context;
@@ -60,7 +58,11 @@ int main(int argc, char *argv[]) {
     FXL_DCHECK(context);
   }
 
-  if (!VerifyTspec(context.get(), tspec_path, kOutputFilePath)) {
+  if (!RunTspec(context.get(), relative_tspec_path, kOutputFilePath)) {
+    return EXIT_FAILURE;
+  }
+
+  if (!VerifyTspec(context.get(), relative_tspec_path, kOutputFilePath)) {
     return EXIT_FAILURE;
   }
 

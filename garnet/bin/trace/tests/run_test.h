@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_TRACE_TESTS_RUN_TEST_H
-#define GARNET_BIN_TRACE_TESTS_RUN_TEST_H
+#ifndef GARNET_BIN_TRACE_TESTS_RUN_TEST_H_
+#define GARNET_BIN_TRACE_TESTS_RUN_TEST_H_
 
 #include <string>
 #include <vector>
@@ -32,14 +32,15 @@ zx_status_t WaitAndGetExitCode(const std::string& program_name,
 // We don't need to pass a context to RunTspec because the trace program
 // is currently a system app. If that changes then we will need a context
 // to run the trace too.
-bool RunTspec(const std::string& tspec_file_path,
+bool RunTspec(component::StartupContext* context,
+              const std::string& relative_tspec_path,
               const std::string& output_file_path);
 
 // N.B. This is a synchronous call that uses the default async dispatcher
 // ("synchronous" meaning that it waits for the verifier to complete).
 // Therefore the caller cannot currently be using it.
 bool VerifyTspec(component::StartupContext* context,
-                 const std::string& tspec_file_path,
+                 const std::string& relative_tspec_path,
                  const std::string& output_file_path);
 
-#endif  // GARNET_BIN_TRACE_TESTS_RUN_TEST_H
+#endif  // GARNET_BIN_TRACE_TESTS_RUN_TEST_H_

@@ -19,16 +19,15 @@
     "sandbox": {
         "features": [
             "persistent-storage",
+            "shell",
             "system-temp"
         ],
         "services": [
             "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver",
             "fuchsia.sys.Launcher",
             "fuchsia.tracelink.Registry",
             "fuchsia.tracing.TraceController"
-        ],
-        "system": [
-            "bin"
         ]
     }
 }

@@ -20,16 +20,18 @@ const char kOutputFilePath[] = "/tmp/test.trace";
 
 static std::unique_ptr<component::StartupContext> g_context;
 
-static void RunAndVerify(const char* tspec_path) {
-  ASSERT_TRUE(RunTspec(tspec_path, kOutputFilePath));
-  ASSERT_TRUE(VerifyTspec(g_context.get(), tspec_path, kOutputFilePath));
+// |relative_tspec_path| is a relative path, from /pkg.
+static void RunAndVerify(const char* relative_tspec_path) {
+  ASSERT_TRUE(RunTspec(g_context.get(), relative_tspec_path, kOutputFilePath));
+  ASSERT_TRUE(VerifyTspec(g_context.get(), relative_tspec_path,
+                          kOutputFilePath));
 }
 
-TEST(Oneshot, FillBuffer) { RunAndVerify("/pkg/data/oneshot.tspec"); }
+TEST(Oneshot, FillBuffer) { RunAndVerify("data/oneshot-spawn.tspec"); }
 
-TEST(Circular, FillBuffer) { RunAndVerify("/pkg/data/circular.tspec"); }
+TEST(Circular, FillBuffer) { RunAndVerify("data/circular.tspec"); }
 
-TEST(Streaming, FillBuffer) { RunAndVerify("/pkg/data/streaming.tspec"); }
+TEST(Streaming, FillBuffer) { RunAndVerify("data/streaming.tspec"); }
 
 // A class for adding an extra provider to the test.
 
@@ -112,16 +114,16 @@ class TwoProvidersOneEngine : public ExtraProvider {
 TEST_F(TwoProvidersOneEngine, ErrorHandling) {
   ASSERT_TRUE(provider_process().is_valid());
 
-  RunAndVerify("/pkg/data/simple.tspec");
+  RunAndVerify("data/simple.tspec");
 
   // Running this test twice should work.
   // DX-448: Providers didn't properly reset themselves after a previous
   // trace was prematurely aborted.
-  RunAndVerify("/pkg/data/simple.tspec");
+  RunAndVerify("data/simple.tspec");
 }
 
 TEST(TwoProvidersTwoEngines, Test) {
-  RunAndVerify("/pkg/data/two_providers_two_engines.tspec");
+  RunAndVerify("data/two_providers_two_engines.tspec");
 }
 
 // Provide our own main so that --verbose,etc. are recognized.
