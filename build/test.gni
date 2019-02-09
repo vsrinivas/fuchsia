@@ -11,16 +11,8 @@ import("//build/testing/test_spec.gni")
 template("test") {
   if (is_linux || is_mac) {
     test_spec("${target_name}_spec") {
-      testonly = true
       name = invoker.target_name
       location = "$root_out_dir/${invoker.target_name}"
-      deps = []
-      if (defined(invoker.deps)) {
-        deps += invoker.deps
-      }
-      if (defined(invoker.data_deps)) {
-        deps += invoker.data_deps
-      }
     }
   }
 
@@ -28,7 +20,13 @@ template("test") {
     forward_variables_from(invoker, "*")
     testonly = true
     if (is_linux || is_mac) {
-      deps += [ ":${target_name}_spec" ]
+      # Write runtime dependencies to the root out dir of the base host
+      # toolchain so that the file may be found by cross-referencing with
+      # $root_build_dir/host_tests.json.
+      test_name = get_path_info(target_name, "name")
+      host_out_dir = get_label_info(":$target_name(${toolchain_variant.base})",
+                                    "target_out_dir")
+      write_runtime_deps = "$host_out_dir/$test_name.$test_data_ext"
     }
   }
 }

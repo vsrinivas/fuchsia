@@ -53,25 +53,6 @@ template("go_build") {
   }
   output_path = "${root_out_dir}/${output_name}"
 
-  # Test specs are used for linux and mac tests to record metadata for testing
-  # instruction; this happens within package.gni for fuchsia tests.
-  test_spec_target_name = "${target_name}_spec"
-  if (defined(invoker.test) && invoker.test && (is_linux || is_mac)) {
-    test_spec(test_spec_target_name) {
-      name = invoker.target_name
-      location = output_path
-      deps = []
-      if (defined(invoker.deps)) {
-        deps += invoker.deps
-      }
-      if (defined(invoker.non_go_deps)) {
-        deps += invoker.non_go_deps
-      }
-    }
-  } else {
-    not_needed([ "test_spec_target_name" ])
-  }
-
   action(main_target_name) {
     deps = []
     if (defined(invoker.non_go_deps)) {
@@ -162,10 +143,6 @@ template("go_build") {
 
     if (defined(invoker.test) && invoker.test) {
       args += [ "--is-test=true" ]
-
-      if (is_linux || is_mac) {
-        deps += [ ":$test_spec_target_name" ]
-      }
     }
 
     if (defined(invoker.deps)) {
@@ -182,6 +159,14 @@ template("go_build") {
       "--package",
       invoker.gopackage,
     ]
+  }
+
+  # For linux and mac tests, record metadata for testing instruction.
+  if (is_linux || is_mac) {
+    test_spec("${target_name}_spec") {
+      name = invoker.target_name
+      location = output_path
+    }
   }
 
   # Allow host binaries to be published in SDKs.

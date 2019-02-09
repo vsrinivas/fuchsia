@@ -139,23 +139,12 @@ template("rustc_artifact") {
 
   with_unit_tests = defined(invoker.with_unit_tests) && invoker.with_unit_tests
 
-  # Test specs are used for linux and mac tests to record metadata for testing
-  # instruction; this happens within package.gni for fuchsia tests.
-  test_spec_target_name = "${target_name}_spec"
+  # If host-side tests are present, record metadata for testing instruction.
   if (with_unit_tests && (is_linux || is_mac)) {
-    test_spec(test_spec_target_name) {
+    test_spec("${target_name}_spec") {
       name = invoker.target_name
       location = test_output_file
-      deps = []
-      if (defined(invoker.deps)) {
-        deps += invoker.deps
-      }
-      if (defined(invoker.non_rust_deps)) {
-        deps += invoker.non_rust_deps
-      }
     }
-  } else {
-    not_needed([ "test_spec_target_name" ])
   }
 
   # Iterate through the deps collecting a list of the outputs
@@ -261,10 +250,6 @@ template("rustc_artifact") {
     ]
     if (with_unit_tests) {
       outputs += [ test_output_file ]
-
-      if (is_linux || is_mac) {
-        deps += [ ":$test_spec_target_name" ]
-      }
     }
   }
 
@@ -277,7 +262,6 @@ template("rustc_artifact") {
     output_path = "${root_out_dir}/${prefix}${crate_name}${extension}"
     copy(copy_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
-
       deps = [
         ":${build_target_name}",
       ]

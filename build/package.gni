@@ -453,7 +453,6 @@ template("package") {
 
     foreach(test, pkg.tests) {
       is_disabled = defined(test.disabled) && test.disabled
-      test_spec_name = "${test.name}_test_spec"
       pkg_manifest += [
         {
           if (defined(test.dest)) {
@@ -476,7 +475,7 @@ template("package") {
                                  [ location ] != disabled_for_asan
           is_disabled = is_disabled || (is_asan && is_disabled_for_asan)
           if (!is_disabled) {
-            test_spec(test_spec_name) {
+            test_spec("${test.name}.spec") {
               name = test.name
               location = location
 
@@ -488,14 +487,9 @@ template("package") {
 
               forward_variables_from(test, [ "environments" ])
             }
-          } else {
-            not_needed([ "test_spec_name" ])
           }
         },
       ]
-      if (!is_disabled) {
-        pkg.deps += [ ":$test_spec_name" ]
-      }
     }
     foreach(module, pkg.loadable_modules) {
       pkg_manifest += [
