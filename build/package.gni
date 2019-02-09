@@ -453,50 +453,59 @@ template("package") {
 
     foreach(test, pkg.tests) {
       is_disabled = defined(test.disabled) && test.disabled
-      test_spec_name = "${test.name}_test_spec"
+
+      if (defined(test.dest)) {
+        dest = test.dest
+      } else {
+        dest = test.name
+      }
+      if (is_disabled) {
+        dest = "disabled/${dest}"
+      }
+      dest = "test/${dest}"
+
+      if (pkg.deprecated_system_image) {
+        path = "/system/$dest"
+      } else {
+        path =
+            "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
+      }
+
+      # TODO(TC-359): Remove this block once no more tests remain in
+      # disabled_for_asan.
+      is_asan = select_variant + [ "asan" ] - [ "asan" ] != select_variant
+      is_disabled_for_asan =
+          disabled_for_asan + [ path ] - [ path ] != disabled_for_asan
+      is_disabled = is_disabled || (is_asan && is_disabled_for_asan)
+      # In case of short-circuit evaluation, these values might go unused.
+      not_needed(["is_asan", "is_disabled_for_asan"])
+
+      if (!is_disabled) {
+        test_spec_name = "${test.name}_test_spec"
+        pkg.deps += [ ":$test_spec_name" ]
+
+        test_spec(test_spec_name) {
+          name = test.name
+          location = path
+
+          # Encode the package name in the output directory to disambiguate
+          # during post-processing - cross-referencing with packages.json -
+          # whether a given test spec came from a package that was actually
+          # included in the build.
+          output_dir = "$target_out_dir/$pkg_target_name"
+
+          forward_variables_from(test, [ "environments" ])
+        }
+      }
+
       pkg_manifest += [
         {
-          if (defined(test.dest)) {
-            dest = test.dest
-          } else {
-            dest = test.name
-          }
-          if (is_disabled) {
-            dest = "disabled/${dest}"
-          }
-          dest = "test/${dest}"
-          if (pkg.deprecated_system_image) {
-            location = "/system/$dest"
-          } else {
-            location = "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
-          }
+          dest = dest
           source = rebase_path(test.name, "", root_out_dir)
-          is_asan = select_variant + [ "asan" ] - [ "asan" ] != select_variant
-          is_disabled_for_asan = disabled_for_asan + [ location ] -
-                                 [ location ] != disabled_for_asan
-          is_disabled = is_disabled || (is_asan && is_disabled_for_asan)
-          if (!is_disabled) {
-            test_spec(test_spec_name) {
-              name = test.name
-              location = location
-
-              # Encode the package name in the output directory to disambiguate
-              # during post-processing - cross-referencing with packages.json -
-              # whether a given test spec came from a package that was actually
-              # included in the build.
-              output_dir = "$target_out_dir/$pkg_target_name"
-
-              forward_variables_from(test, [ "environments" ])
-            }
-          } else {
-            not_needed([ "test_spec_name" ])
-          }
         },
       ]
-      if (!is_disabled) {
-        pkg.deps += [ ":$test_spec_name" ]
-      }
     }
+
     foreach(module, pkg.loadable_modules) {
       pkg_manifest += [
         {
