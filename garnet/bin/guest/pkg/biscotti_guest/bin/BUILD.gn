@@ -50,11 +50,11 @@ source_set("lib") {
   public_configs = [ ":biscotti_net_config" ]
   public_deps = [
     ":protos",
-    "//garnet/bin/wayland/fidl:fuchsia.wayland",
     "//sdk/fidl/fuchsia.guest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.wayland",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
