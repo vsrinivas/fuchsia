@@ -14,7 +14,7 @@ BanjoAst {
                             []
                         ),
                         name: "kNegativeOne",
-                        size: SizedConstant(
+                        size: Constant(
                             "-1"
                         )
                     },
@@ -23,8 +23,8 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: SizedRaw(
-                            1
+                        size: Constant(
+                            "1"
                         )
                     }
                 ]
@@ -41,7 +41,7 @@ BanjoAst {
                             []
                         ),
                         name: "kNegativeOne",
-                        size: SizedConstant(
+                        size: Constant(
                             "-1"
                         )
                     },
@@ -50,8 +50,8 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: SizedRaw(
-                            1
+                        size: Constant(
+                            "1"
                         )
                     },
                     EnumVariant {
@@ -59,8 +59,8 @@ BanjoAst {
                             []
                         ),
                         name: "kTwo",
-                        size: SizedRaw(
-                            2
+                        size: Constant(
+                            "2"
                         )
                     }
                 ]
@@ -77,7 +77,7 @@ BanjoAst {
                             []
                         ),
                         name: "kNegativeOne",
-                        size: SizedConstant(
+                        size: Constant(
                             "-1"
                         )
                     },
@@ -86,8 +86,8 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: SizedRaw(
-                            1
+                        size: Constant(
+                            "1"
                         )
                     },
                     EnumVariant {
@@ -95,8 +95,8 @@ BanjoAst {
                             []
                         ),
                         name: "kTwo",
-                        size: SizedRaw(
-                            2
+                        size: Constant(
+                            "2"
                         )
                     },
                     EnumVariant {
@@ -104,8 +104,8 @@ BanjoAst {
                             []
                         ),
                         name: "kThree",
-                        size: SizedRaw(
-                            3
+                        size: Constant(
+                            "3"
                         )
                     }
                 ]
@@ -122,7 +122,7 @@ BanjoAst {
                             []
                         ),
                         name: "kNegativeOne",
-                        size: SizedConstant(
+                        size: Constant(
                             "-1"
                         )
                     },
@@ -131,8 +131,8 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: SizedRaw(
-                            1
+                        size: Constant(
+                            "1"
                         )
                     },
                     EnumVariant {
@@ -140,8 +140,8 @@ BanjoAst {
                             []
                         ),
                         name: "kTwo",
-                        size: SizedRaw(
-                            2
+                        size: Constant(
+                            "2"
                         )
                     },
                     EnumVariant {
@@ -149,8 +149,8 @@ BanjoAst {
                             []
                         ),
                         name: "kThree",
-                        size: SizedRaw(
-                            3
+                        size: Constant(
+                            "3"
                         )
                     },
                     EnumVariant {
@@ -158,8 +158,8 @@ BanjoAst {
                             []
                         ),
                         name: "kFour",
-                        size: SizedRaw(
-                            4
+                        size: Constant(
+                            "4"
                         )
                     }
                 ]
@@ -176,8 +176,8 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: SizedRaw(
-                            1
+                        size: Constant(
+                            "1"
                         )
                     },
                     EnumVariant {
@@ -185,8 +185,8 @@ BanjoAst {
                             []
                         ),
                         name: "kTwo",
-                        size: SizedRaw(
-                            2
+                        size: Constant(
+                            "2"
                         )
                     },
                     EnumVariant {
@@ -194,8 +194,8 @@ BanjoAst {
                             []
                         ),
                         name: "kThree",
-                        size: SizedRaw(
-                            3
+                        size: Constant(
+                            "3"
                         )
                     },
                     EnumVariant {
@@ -203,8 +203,8 @@ BanjoAst {
                             []
                         ),
                         name: "kFour",
-                        size: SizedRaw(
-                            4
+                        size: Constant(
+                            "4"
                         )
                     },
                     EnumVariant {
@@ -212,8 +212,8 @@ BanjoAst {
                             []
                         ),
                         name: "kFive",
-                        size: SizedRaw(
-                            5
+                        size: Constant(
+                            "5"
                         )
                     }
                 ]
@@ -230,8 +230,8 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: SizedRaw(
-                            1
+                        size: Constant(
+                            "1"
                         )
                     },
                     EnumVariant {
@@ -239,8 +239,8 @@ BanjoAst {
                             []
                         ),
                         name: "kTwo",
-                        size: SizedRaw(
-                            2
+                        size: Constant(
+                            "2"
                         )
                     },
                     EnumVariant {
@@ -248,8 +248,8 @@ BanjoAst {
                             []
                         ),
                         name: "kThree",
-                        size: SizedRaw(
-                            3
+                        size: Constant(
+                            "3"
                         )
                     },
                     EnumVariant {
@@ -257,8 +257,8 @@ BanjoAst {
                             []
                         ),
                         name: "kFour",
-                        size: SizedRaw(
-                            4
+                        size: Constant(
+                            "4"
                         )
                     },
                     EnumVariant {
@@ -266,8 +266,8 @@ BanjoAst {
                             []
                         ),
                         name: "kFive",
-                        size: SizedRaw(
-                            5
+                        size: Constant(
+                            "5"
                         )
                     },
                     EnumVariant {
@@ -275,8 +275,8 @@ BanjoAst {
                             []
                         ),
                         name: "kSix",
-                        size: SizedRaw(
-                            6
+                        size: Constant(
+                            "6"
                         )
                     }
                 ]
@@ -293,8 +293,8 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: SizedRaw(
-                            1
+                        size: Constant(
+                            "1"
                         )
                     },
                     EnumVariant {
@@ -302,8 +302,8 @@ BanjoAst {
                             []
                         ),
                         name: "kTwo",
-                        size: SizedRaw(
-                            2
+                        size: Constant(
+                            "2"
                         )
                     },
                     EnumVariant {
@@ -311,8 +311,8 @@ BanjoAst {
                             []
                         ),
                         name: "kThree",
-                        size: SizedRaw(
-                            3
+                        size: Constant(
+                            "3"
                         )
                     },
                     EnumVariant {
@@ -320,8 +320,8 @@ BanjoAst {
                             []
                         ),
                         name: "kFour",
-                        size: SizedRaw(
-                            4
+                        size: Constant(
+                            "4"
                         )
                     },
                     EnumVariant {
@@ -329,8 +329,8 @@ BanjoAst {
                             []
                         ),
                         name: "kFive",
-                        size: SizedRaw(
-                            5
+                        size: Constant(
+                            "5"
                         )
                     },
                     EnumVariant {
@@ -338,8 +338,8 @@ BanjoAst {
                             []
                         ),
                         name: "kSix",
-                        size: SizedRaw(
-                            6
+                        size: Constant(
+                            "6"
                         )
                     },
                     EnumVariant {
@@ -347,8 +347,8 @@ BanjoAst {
                             []
                         ),
                         name: "kSeven",
-                        size: SizedRaw(
-                            7
+                        size: Constant(
+                            "7"
                         )
                     }
                 ]
@@ -365,8 +365,8 @@ BanjoAst {
                             []
                         ),
                         name: "kOne",
-                        size: SizedRaw(
-                            1
+                        size: Constant(
+                            "1"
                         )
                     },
                     EnumVariant {
@@ -374,8 +374,8 @@ BanjoAst {
                             []
                         ),
                         name: "kTwo",
-                        size: SizedRaw(
-                            2
+                        size: Constant(
+                            "2"
                         )
                     },
                     EnumVariant {
@@ -383,8 +383,8 @@ BanjoAst {
                             []
                         ),
                         name: "kThree",
-                        size: SizedRaw(
-                            3
+                        size: Constant(
+                            "3"
                         )
                     },
                     EnumVariant {
@@ -392,8 +392,8 @@ BanjoAst {
                             []
                         ),
                         name: "kFour",
-                        size: SizedRaw(
-                            4
+                        size: Constant(
+                            "4"
                         )
                     },
                     EnumVariant {
@@ -401,8 +401,8 @@ BanjoAst {
                             []
                         ),
                         name: "kFive",
-                        size: SizedRaw(
-                            5
+                        size: Constant(
+                            "5"
                         )
                     },
                     EnumVariant {
@@ -410,8 +410,8 @@ BanjoAst {
                             []
                         ),
                         name: "kSix",
-                        size: SizedRaw(
-                            6
+                        size: Constant(
+                            "6"
                         )
                     },
                     EnumVariant {
@@ -419,8 +419,8 @@ BanjoAst {
                             []
                         ),
                         name: "kSeven",
-                        size: SizedRaw(
-                            7
+                        size: Constant(
+                            "7"
                         )
                     },
                     EnumVariant {
@@ -428,8 +428,8 @@ BanjoAst {
                             []
                         ),
                         name: "kEight",
-                        size: SizedRaw(
-                            8
+                        size: Constant(
+                            "8"
                         )
                     }
                 ]

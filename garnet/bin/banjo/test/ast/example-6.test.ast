@@ -8,8 +8,8 @@ BanjoAst {
                 ),
                 name: "x ",
                 ty: Int32,
-                value: SizedRaw(
-                    23
+                value: Constant(
+                    "23"
                 )
             },
             Interface {

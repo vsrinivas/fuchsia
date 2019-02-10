@@ -25,22 +25,29 @@ BanjoAst {
                     []
                 ),
                 name: "Enum",
-                ty: UInt16,
+                ty: UInt32,
                 variants: [
                     EnumVariant {
                         attributes: Attrs(
                             []
                         ),
                         name: "x ",
-                        size: SizedRaw(
-                            23
+                        size: Constant(
+                            "23"
                         )
                     }
                 ]
             },
             Interface {
                 attributes: Attrs(
-                    []
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                " \"ddk-protocol\""
+                            )
+                        }
+                    ]
                 ),
                 name: "Interface",
                 methods: [

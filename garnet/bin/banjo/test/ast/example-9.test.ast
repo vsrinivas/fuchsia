@@ -7,15 +7,15 @@ BanjoAst {
                     []
                 ),
                 name: "EchoMe",
-                ty: UInt16,
+                ty: UInt32,
                 variants: [
                     EnumVariant {
                         attributes: Attrs(
                             []
                         ),
                         name: "zero",
-                        size: SizedRaw(
-                            0
+                        size: Constant(
+                            "0"
                         )
                     },
                     EnumVariant {
@@ -23,8 +23,8 @@ BanjoAst {
                             []
                         ),
                         name: "one",
-                        size: SizedRaw(
-                            1
+                        size: Constant(
+                            "1"
                         )
                     }
                 ]
@@ -221,7 +221,7 @@ BanjoAst {
                     },
                     reference: false
                 },
-                value: SizedConstant(
+                value: Constant(
                     "zero"
                 )
             }

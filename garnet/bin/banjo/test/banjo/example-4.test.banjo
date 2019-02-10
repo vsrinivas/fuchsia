@@ -12,6 +12,7 @@ enum Enum {
     x = 23;
 };
 
+[Layout = "ddk-protocol"]
 interface Interface {
     func(bool x) -> ();
 };

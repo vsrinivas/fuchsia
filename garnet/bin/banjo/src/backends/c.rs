@@ -111,19 +111,17 @@ fn not_callback(ast: &ast::BanjoAst, id: &Ident) -> bool {
 }
 
 fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant) -> String {
-    match cons {
-        Constant::SizedConstant(size) => match ty {
-            ast::Ty::Int8 => String::from(format!("INT8_C({})", size)),
-            ast::Ty::Int16 => String::from(format!("INT16_C({})", size)),
-            ast::Ty::Int32 => String::from(format!("INT32_C({})", size)),
-            ast::Ty::Int64 => String::from(format!("INT32_C({})", size)),
-            ast::Ty::UInt8 => String::from(format!("UINT8_C({})", size)),
-            ast::Ty::UInt16 => String::from(format!("UINT16_C({})", size)),
-            ast::Ty::UInt32 => String::from(format!("UINT32_C({})", size)),
-            ast::Ty::UInt64 => String::from(format!("UINT32_C({})", size)),
-            s => panic!("don't handles this sized const: {}", s),
-        },
-        Constant::SizedRaw(size) => size.to_string(),
+    let Constant(size) = cons;
+    match ty {
+        ast::Ty::Int8 => String::from(format!("INT8_C({})", size)),
+        ast::Ty::Int16 => String::from(format!("INT16_C({})", size)),
+        ast::Ty::Int32 => String::from(format!("INT32_C({})", size)),
+        ast::Ty::Int64 => String::from(format!("INT32_C({})", size)),
+        ast::Ty::UInt8 => String::from(format!("UINT8_C({})", size)),
+        ast::Ty::UInt16 => String::from(format!("UINT16_C({})", size)),
+        ast::Ty::UInt32 => String::from(format!("UINT32_C({})", size)),
+        ast::Ty::UInt64 => String::from(format!("UINT64_C({})", size)),
+        s => panic!("don't handles this sized const: {}", s),
     }
 }
 

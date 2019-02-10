@@ -42,8 +42,8 @@ BanjoAst {
                             []
                         ),
                         name: "Up",
-                        size: SizedRaw(
-                            0
+                        size: Constant(
+                            "0"
                         )
                     },
                     EnumVariant {
@@ -51,8 +51,8 @@ BanjoAst {
                             []
                         ),
                         name: "Down",
-                        size: SizedRaw(
-                            1
+                        size: Constant(
+                            "1"
                         )
                     },
                     EnumVariant {
@@ -60,8 +60,8 @@ BanjoAst {
                             []
                         ),
                         name: "Left",
-                        size: SizedRaw(
-                            2
+                        size: Constant(
+                            "2"
                         )
                     },
                     EnumVariant {
@@ -69,8 +69,8 @@ BanjoAst {
                             []
                         ),
                         name: "Right",
-                        size: SizedRaw(
-                            3
+                        size: Constant(
+                            "3"
                         )
                     }
                 ]
@@ -164,8 +164,8 @@ BanjoAst {
                                         },
                                         reference: false
                                     },
-                                    size: SizedRaw(
-                                        4
+                                    size: Constant(
+                                        "4"
                                     )
                                 }
                             )
@@ -195,8 +195,8 @@ BanjoAst {
                                 "one",
                                 Str {
                                     size: Some(
-                                        SizedRaw(
-                                            64
+                                        Constant(
+                                            "64"
                                         )
                                     ),
                                     nullable: false
@@ -208,8 +208,8 @@ BanjoAst {
                                 "two",
                                 Str {
                                     size: Some(
-                                        SizedRaw(
-                                            128
+                                        Constant(
+                                            "128"
                                         )
                                     ),
                                     nullable: false

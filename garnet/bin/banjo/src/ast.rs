@@ -10,7 +10,6 @@ use {
     std::fmt,
     std::{
         collections::{BTreeMap, HashMap, HashSet, VecDeque},
-        str::FromStr,
     },
 };
 
@@ -138,17 +137,11 @@ impl Attrs {
 }
 
 #[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash)]
-pub enum Constant {
-    SizedRaw(usize),
-    SizedConstant(String),
-}
+pub struct Constant(pub String);
 
 impl Constant {
-    pub fn from_str(string: &str) -> Result<Self, ParseError> {
-        match usize::from_str(string) {
-            Ok(s) => Ok(Constant::SizedRaw(s)),
-            Err(_) => Ok(Constant::SizedConstant(string.to_string())),
-        }
+    pub fn from_str(string: &str) -> Self {
+        Constant(string.to_string())
     }
 }
 
@@ -308,7 +301,7 @@ impl Ty {
             Rule::array_type => {
                 let vec_contents: Vec<Pair<'_, Rule>> = pair.clone().into_inner().collect();
                 let ty = Box::new(Ty::from_pair(&vec_contents[0])?);
-                let size = Constant::from_str(vec_contents[1].as_str())?;
+                let size = Constant::from_str(vec_contents[1].as_str());
                 Ok(Ty::Array { ty, size })
             }
             Rule::identifier_type => {
@@ -332,7 +325,7 @@ impl Ty {
                 for inner_pair in pair.clone().into_inner() {
                     match inner_pair.as_rule() {
                         Rule::constant => {
-                            size = Some(Constant::from_str(inner_pair.as_str())?);
+                            size = Some(Constant::from_str(inner_pair.as_str()));
                         }
                         Rule::reference => {
                             nullable = true;
@@ -352,7 +345,7 @@ impl Ty {
                 for inner_pair in iter {
                     match inner_pair.as_rule() {
                         Rule::constant => {
-                            size = Some(Constant::from_str(inner_pair.as_str())?);
+                            size = Some(Constant::from_str(inner_pair.as_str()));
                         }
                         Rule::reference => {
                             nullable = true;
@@ -429,7 +422,7 @@ impl EnumVariant {
         Ok(EnumVariant {
             attributes: Attrs::from_pair(fields[0].clone())?,
             name: String::from(fields[1].as_str()),
-            size: Constant::from_str(fields[2].as_str())?,
+            size: Constant::from_str(fields[2].as_str()),
         })
     }
 }
@@ -631,7 +624,7 @@ impl BanjoAst {
                 let mut attributes = Attrs::default();
                 let mut name = String::default();
                 let mut variants = Vec::default();
-                let mut ty = Ty::UInt16;
+                let mut ty = Ty::UInt32;
                 for inner_pair in pair.into_inner() {
                     match inner_pair.as_rule() {
                         Rule::attributes => {
@@ -690,7 +683,7 @@ impl BanjoAst {
                 let mut attributes = Attrs::default();
                 let mut name = String::default();
                 let mut ty = Ty::UInt32;
-                let mut value = Constant::SizedRaw(0);
+                let mut value = Constant(String::from(""));
                 for inner_pair in pair.into_inner() {
                     match inner_pair.as_rule() {
                         Rule::attributes => {
@@ -703,7 +696,7 @@ impl BanjoAst {
                             ty = Ty::from_pair(&inner_pair)?;
                         }
                         Rule::constant => {
-                            value = Constant::from_str(inner_pair.clone().into_span().as_str())?;
+                            value = Constant::from_str(inner_pair.clone().into_span().as_str());
                         }
                         e => return Err(ParseError::UnexpectedToken(e)),
                     }
