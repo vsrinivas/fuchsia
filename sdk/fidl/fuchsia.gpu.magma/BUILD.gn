@@ -4,13 +4,6 @@
 
 import("//build/fidl/fidl.gni")
 
-group("fidl") {
-  public_deps = [
-    ":fuchsia.gpu.magma",
-    ":fuchsia.gpu.magma_c",
-  ]
-}
-
 fidl("fuchsia.gpu.magma") {
   sources = [
     "magma.fidl",

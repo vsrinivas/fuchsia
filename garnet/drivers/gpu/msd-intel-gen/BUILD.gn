@@ -41,11 +41,11 @@ source_set("msd_intel_entry") {
 
   deps = [
     "src",
-    "//garnet/lib/magma/fidl",
-    "//garnet/lib/magma/src/magma_util",
     "//garnet/lib/magma/src/magma_util:command_buffer",
+    "//garnet/lib/magma/src/magma_util",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/zx",
@@ -64,11 +64,11 @@ source_set("msd_intel_test_entry") {
 
   deps = [
     "src",
-    "//garnet/lib/magma/fidl",
-    "//garnet/lib/magma/src/magma_util",
     "//garnet/lib/magma/src/magma_util:command_buffer",
+    "//garnet/lib/magma/src/magma_util",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/zx",

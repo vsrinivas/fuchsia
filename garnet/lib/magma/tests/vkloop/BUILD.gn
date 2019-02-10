@@ -13,8 +13,8 @@ executable("vkloop") {
   ]
 
   deps = [
-    "//garnet/lib/magma/fidl",
     "//garnet/lib/magma/include:magma_abi",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
     "//zircon/public/lib/fdio",
   ]
   public_deps = [
