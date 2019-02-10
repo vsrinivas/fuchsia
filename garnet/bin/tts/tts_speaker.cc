@@ -74,7 +74,7 @@ zx_status_t TtsSpeaker::Init(
   format.channels = kFliteChannelCount;
   format.frames_per_second = kFliteFrameRate;
 
-  audio_renderer_->SetPcmStreamType(std::move(format));
+  audio_renderer_->SetPcmStreamType(format);
   audio_renderer_->AddPayloadBuffer(0, std::move(shared_vmo));
 
   return ZX_OK;
@@ -140,17 +140,17 @@ void TtsSpeaker::SendPendingAudio() {
 
     if (eos && (todo == bytes_to_send)) {
       audio_renderer_->SendPacket(
-          std::move(pkt),
+          pkt,
           [speak_complete_cbk = std::move(speak_complete_cbk_)]() {
             speak_complete_cbk();
           });
     } else if (todo == bytes_till_low_water) {
       audio_renderer_->SendPacket(
-          std::move(pkt), [thiz = shared_from_this(), new_rd_pos = tx_ptr_]() {
+          pkt, [thiz = shared_from_this(), new_rd_pos = tx_ptr_]() {
             thiz->UpdateRdPtr(new_rd_pos);
           });
     } else {
-      audio_renderer_->SendPacketNoReply(std::move(pkt));
+      audio_renderer_->SendPacketNoReply(pkt);
     }
 
     FXL_DCHECK(todo <= bytes_to_send);

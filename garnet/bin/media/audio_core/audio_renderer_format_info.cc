@@ -11,7 +11,7 @@ namespace media::audio {
 
 AudioRendererFormatInfo::AudioRendererFormatInfo(
     fuchsia::media::AudioStreamType format)
-    : format_(std::move(format)) {
+    : format_(format) {
   // Precompute some useful timing/format stuff.
   //
   // Start with the ratio between frames and nanoseconds.
@@ -53,7 +53,7 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(
 // static
 fbl::RefPtr<AudioRendererFormatInfo> AudioRendererFormatInfo::Create(
     fuchsia::media::AudioStreamType format) {
-  return fbl::AdoptRef(new AudioRendererFormatInfo(std::move(format)));
+  return fbl::AdoptRef(new AudioRendererFormatInfo(format));
 }
 
 }  // namespace media::audio

@@ -519,8 +519,8 @@ class AudioResult {
   static void DumpThresholdValues();
 
  private:
-  static void DumpFreqRespValues(double* freq_resp_vals, std::string arr_name);
-  static void DumpSinadValues(double* sinad_vals, std::string arr_name);
+  static void DumpFreqRespValues(double* freq_resp_vals, const std::string& arr_name);
+  static void DumpSinadValues(double* sinad_vals, const std::string& arr_name);
   static void DumpNoiseFloorValues();
   static void DumpLevelValues();
   static void DumpLevelToleranceValues();

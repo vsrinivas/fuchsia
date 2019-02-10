@@ -241,7 +241,7 @@ void AudioRendererImpl::SetPcmStreamType(
   cfg.sample_format = format.sample_format;
   cfg.channels = format.channels;
   cfg.frames_per_second = format.frames_per_second;
-  format_info_ = AudioRendererFormatInfo::Create(std::move(cfg));
+  format_info_ = AudioRendererFormatInfo::Create(cfg);
 
   // Have the audio output manager initialize our set of outputs. Note; there
   // is currently no need for a lock here. Methods called from our user-facing
@@ -455,7 +455,7 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
 
   // Create the packet.
   auto packet_ref = fbl::AdoptRef(new AudioPacketRef(
-      payload_buffer_, std::move(callback), std::move(packet), owner_,
+      payload_buffer_, std::move(callback), packet, owner_,
       frame_count << kPtsFractionalBits, start_pts));
 
   // The end pts is the value we will use for the next packet's start PTS, if
@@ -472,7 +472,7 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
 }
 
 void AudioRendererImpl::SendPacketNoReply(fuchsia::media::StreamPacket packet) {
-  SendPacket(std::move(packet), nullptr);
+  SendPacket(packet, nullptr);
 }
 
 void AudioRendererImpl::EndOfStream() {

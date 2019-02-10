@@ -16,7 +16,7 @@ AudioPacketRef::AudioPacketRef(
     uint32_t frac_frame_len, int64_t start_pts)
     : vmo_ref_(std::move(vmo_ref)),
       callback_(std::move(callback)),
-      packet_(std::move(packet)),
+      packet_(packet),
       service_(service),
       frac_frame_len_(frac_frame_len),
       start_pts_(start_pts),

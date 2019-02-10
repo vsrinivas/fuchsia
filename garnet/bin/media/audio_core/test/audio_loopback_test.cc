@@ -93,7 +93,7 @@ void AudioLoopbackTest::SetUpRenderer(unsigned int index, int16_t data) {
   for (int32_t i = 0; i < kSampleRate * kSampleSeconds; i++)
     buffer[i] = data;
 
-  audio_renderer_[index]->SetPcmStreamType(std::move(format));
+  audio_renderer_[index]->SetPcmStreamType(format);
   audio_renderer_[index]->AddPayloadBuffer(0, std::move(payload_vmo));
 }
 
@@ -155,7 +155,7 @@ void AudioLoopbackTest::SetUpCapturer(unsigned int index, int16_t data) {
   for (int32_t i = 0; i < kSampleRate * kSampleSeconds; i++)
     buffer[i] = data;
 
-  audio_capturer_[index]->SetPcmStreamType(std::move(format));
+  audio_capturer_[index]->SetPcmStreamType(format);
   audio_capturer_[index]->AddPayloadBuffer(0, std::move(capture_vmo));
 }
 
@@ -206,7 +206,7 @@ TEST_F(AudioLoopbackTest, SingleStream) {
       [this, &captured, &produced_packet](fuchsia::media::StreamPacket packet) {
         // We only care about the first set of captured samples
         if (captured.payload_size == 0) {
-          captured = std::move(packet);
+          captured = packet;
           audio_capturer_[0]->StopAsyncCaptureNoReply();
           produced_packet = true;
         }
@@ -230,7 +230,7 @@ TEST_F(AudioLoopbackTest, SingleStream) {
   packet.payload_offset = 0;
   packet.payload_size = playback_size_[0];
 
-  audio_renderer_[0]->SendPacketNoReply(std::move(packet));
+  audio_renderer_[0]->SendPacketNoReply(packet);
 
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
@@ -304,7 +304,7 @@ TEST_F(AudioLoopbackTest, DualStream) {
       [this, &captured, &produced_packet](fuchsia::media::StreamPacket packet) {
         // We only care about the first set of captured samples
         if (captured.payload_size == 0) {
-          captured = std::move(packet);
+          captured = packet;
           audio_capturer_[0]->StopAsyncCaptureNoReply();
           produced_packet = true;
         }
@@ -331,7 +331,7 @@ TEST_F(AudioLoopbackTest, DualStream) {
   for (int i = 0; i < 2; i++) {
     packet[i].payload_offset = 0;
     packet[i].payload_size = playback_size_[i];
-    audio_renderer_[i]->SendPacketNoReply(std::move(packet[i]));
+    audio_renderer_[i]->SendPacketNoReply(packet[i]);
   }
 
   int64_t ref_time_received = -1;

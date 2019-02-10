@@ -177,7 +177,7 @@ void AudioObject::UnlinkCleanup(AudioLinkSet* links) {
   // calling RemoveLinks. This will make a future transition to using intrusive
   // containers a bit easier. Explanations available on request.
   while (!links->empty()) {
-    auto link = std::move(*links->begin());
+    auto link = *links->begin();
     links->erase(links->begin());
     RemoveLink(link);
   }

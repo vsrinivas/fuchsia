@@ -357,7 +357,7 @@ class VolApp {
                 << std::setprecision(2) << cmd.gain_db << " dB" << std::endl;
     }
 
-    audio_->SetDeviceGain(control_token_, std::move(cmd),
+    audio_->SetDeviceGain(control_token_, cmd,
                           ::fuchsia::media::SetAudioGainFlag_GainValid);
   }
 
@@ -390,7 +390,7 @@ class VolApp {
                 << ((cmd.flags & flag) ? "on" : "off") << "." << std::endl;
     }
 
-    audio_->SetDeviceGain(control_token_, std::move(cmd),
+    audio_->SetDeviceGain(control_token_, cmd,
                           ::fuchsia::media::SetAudioGainFlag_MuteValid);
   }
 
@@ -431,7 +431,7 @@ class VolApp {
                 << ((cmd.flags & flag) ? "on" : "off") << "." << std::endl;
     }
 
-    audio_->SetDeviceGain(control_token_, std::move(cmd),
+    audio_->SetDeviceGain(control_token_, cmd,
                           ::fuchsia::media::SetAudioGainFlag_AgcValid);
   }
 
@@ -592,7 +592,7 @@ class VolApp {
       return;
     }
 
-    iter->second.gain_info = std::move(info);
+    iter->second.gain_info = info;
     if (control_token_ == dev_token) {
       RedrawInteractiveState();
     }

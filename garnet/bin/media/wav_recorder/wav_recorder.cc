@@ -204,7 +204,7 @@ void WavRecorder::SendCaptureJob() {
       capture_frame_offset_,
       capture_frames_per_chunk_,
       [this](fuchsia::media::StreamPacket packet) {
-        OnPacketProduced(std::move(packet));
+        OnPacketProduced(packet);
       });
   // clang-format on
 
@@ -389,7 +389,7 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
     FXL_DCHECK((payload_buf_frames_ % capture_frames_per_chunk_) == 0);
     audio_capturer_.events().OnPacketProduced =
         [this](fuchsia::media::StreamPacket pkt) {
-          OnPacketProduced(std::move(pkt));
+          OnPacketProduced(pkt);
         };
     audio_capturer_->StartAsyncCapture(capture_frames_per_chunk_);
   }

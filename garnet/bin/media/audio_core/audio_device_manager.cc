@@ -328,9 +328,9 @@ void AudioDeviceManager::GetDeviceGain(uint64_t device_token,
   if (dev.IsValid()) {
     FXL_DCHECK(dev->device_settings() != nullptr);
     dev->device_settings()->GetGainInfo(&info);
-    cbk(device_token, std::move(info));
+    cbk(device_token, info);
   } else {
-    cbk(ZX_KOID_INVALID, std::move(info));
+    cbk(ZX_KOID_INVALID, info);
   }
 }
 
@@ -422,12 +422,12 @@ void AudioDeviceManager::LinkOutputToAudioRenderer(
   if ((link != nullptr) && (output == throttle_output_.get())) {
     FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
     audio_renderer->SetThrottleOutput(
-        std::static_pointer_cast<AudioLinkPacketSource>(std::move(link)));
+        std::static_pointer_cast<AudioLinkPacketSource>(link));
   }
 }
 
 void AudioDeviceManager::AddAudioCapturer(
-    fbl::RefPtr<AudioCapturerImpl> audio_capturer) {
+    const fbl::RefPtr<AudioCapturerImpl>& audio_capturer) {
   FXL_DCHECK(audio_capturer != nullptr);
   FXL_DCHECK(!audio_capturer->InContainer());
   audio_capturers_.push_back(audio_capturer);
@@ -444,7 +444,7 @@ void AudioDeviceManager::AddAudioCapturer(
     auto initial_format = source->driver()->GetSourceFormat();
 
     if (initial_format) {
-      audio_capturer->SetInitialFormat(std::move(*initial_format));
+      audio_capturer->SetInitialFormat(*initial_format);
     }
 
     if (source->plugged()) {

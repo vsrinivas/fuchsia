@@ -80,7 +80,7 @@ TEST_F(AudioRendererSyncTest, SetPcmFormat) {
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
   format.frames_per_second = 48000;
-  EXPECT_EQ(ZX_OK, audio_renderer_sync_->SetPcmStreamType(std::move(format)));
+  EXPECT_EQ(ZX_OK, audio_renderer_sync_->SetPcmStreamType(format));
 
   int64_t min_lead_time = -1;
   ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time))
@@ -91,7 +91,7 @@ TEST_F(AudioRendererSyncTest, SetPcmFormat) {
   format2.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   format2.channels = 1;
   format2.frames_per_second = 44100;
-  EXPECT_EQ(ZX_OK, audio_renderer_sync_->SetPcmStreamType(std::move(format2)));
+  EXPECT_EQ(ZX_OK, audio_renderer_sync_->SetPcmStreamType(format2));
 
   min_lead_time = -1;
   EXPECT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time));

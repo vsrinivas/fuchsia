@@ -572,7 +572,7 @@ void AudioResult::DumpThresholdValues() {
 
 // Display a single frequency response results array, for import and processing.
 void AudioResult::DumpFreqRespValues(double* freq_resp_vals,
-                                     std::string arr_name) {
+                                     const std::string& arr_name) {
   printf("\n\n %s", arr_name.c_str());
   for (size_t freq = 0; freq < FrequencySet::kReferenceFreqs.size(); ++freq) {
     if (freq % 6 == 0) {
@@ -583,7 +583,7 @@ void AudioResult::DumpFreqRespValues(double* freq_resp_vals,
 }
 
 // Display a single sinad results array, for import and processing.
-void AudioResult::DumpSinadValues(double* sinad_vals, std::string arr_name) {
+void AudioResult::DumpSinadValues(double* sinad_vals, const std::string& arr_name) {
   printf("\n\n %s", arr_name.c_str());
   for (size_t freq = 0; freq < FrequencySet::kReferenceFreqs.size(); ++freq) {
     if (freq % 6 == 0) {

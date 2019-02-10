@@ -56,7 +56,7 @@ zx_status_t AudioPlugDetector::Start(AudioDeviceManager* manager) {
   for (const auto& devnode : AUDIO_DEVNODES) {
     auto watcher = fsl::DeviceWatcher::Create(
         devnode.path,
-        [this, is_input = devnode.is_input](int dir_fd, std::string filename) {
+        [this, is_input = devnode.is_input](int dir_fd, const std::string& filename) {
           AddAudioDevice(dir_fd, filename, is_input);
         });
 
@@ -119,7 +119,7 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
                      << (is_input ? "input" : "output") << " for \"" << name
                      << "\"";
   } else {
-    manager_->AddDevice(std::move(new_device));
+    manager_->AddDevice(new_device);
   }
 }
 

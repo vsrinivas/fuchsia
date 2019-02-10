@@ -138,13 +138,13 @@ TEST_F(AudioRendererTest, SetPcmStreamType) {
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 2;
   format.frames_per_second = 48000;
-  audio_renderer_->SetPcmStreamType(std::move(format));
+  audio_renderer_->SetPcmStreamType(format);
 
   fuchsia::media::AudioStreamType format2;
   format2.sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8;
   format2.channels = 1;
   format2.frames_per_second = 44100;
-  audio_renderer_->SetPcmStreamType(std::move(format2));
+  audio_renderer_->SetPcmStreamType(format2);
 
   // Allow an error Disconnect callback, but we expect a timeout instead.
   EXPECT_FALSE(RunLoopWithTimeoutOrUntil([this]() { return error_occurred_; },
@@ -351,7 +351,7 @@ TEST_F(AudioRendererTest, PlayWithoutBuffers) {
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 1;
   format.frames_per_second = 32000;
-  audio_renderer_->SetPcmStreamType(std::move(format));
+  audio_renderer_->SetPcmStreamType(format);
 
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
@@ -408,7 +408,7 @@ TEST_F(AudioRendererTest, PauseWithoutBuffers) {
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 1;
   format.frames_per_second = 32000;
-  audio_renderer_->SetPcmStreamType(std::move(format));
+  audio_renderer_->SetPcmStreamType(format);
 
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;

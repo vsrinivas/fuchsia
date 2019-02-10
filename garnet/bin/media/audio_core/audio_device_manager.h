@@ -74,7 +74,7 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
                                  AudioRendererImpl* audio_renderer);
 
   // Add/remove an AudioCapturer to/from the set of active AudioCapturers.
-  void AddAudioCapturer(fbl::RefPtr<AudioCapturerImpl> audio_capturer);
+  void AddAudioCapturer(const fbl::RefPtr<AudioCapturerImpl>& audio_capturer);
   void RemoveAudioCapturer(AudioCapturerImpl* audio_capturer);
 
   // Schedule a closure to run on our encapsulating service's main message loop.

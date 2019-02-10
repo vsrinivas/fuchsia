@@ -36,7 +36,7 @@ class TtsServiceImpl {
     void Say(std::string words, uint64_t token, SayCallback cbk) override;
 
    private:
-    void OnSpeakComplete(std::shared_ptr<TtsSpeaker> speaker, uint64_t token,
+    void OnSpeakComplete(const std::shared_ptr<TtsSpeaker>& speaker, uint64_t token,
                          SayCallback cbk);
 
     TtsServiceImpl* const owner_;

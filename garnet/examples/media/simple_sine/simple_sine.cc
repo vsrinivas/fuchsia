@@ -79,7 +79,7 @@ void MediaApp::SetStreamType() {
   stream_type.channels = 1;
   stream_type.frames_per_second = kFrameRate;
 
-  audio_renderer_->SetPcmStreamType(std::move(stream_type));
+  audio_renderer_->SetPcmStreamType(stream_type);
 }
 
 // Create a Virtual Memory Object, and map enough memory for audio buffers.
@@ -137,7 +137,7 @@ fuchsia::media::StreamPacket MediaApp::CreatePacket(size_t payload_num) {
 // b. if all expected packets have completed, begin closing down the system.
 void MediaApp::SendPacket(fuchsia::media::StreamPacket packet) {
   ++num_packets_sent_;
-  audio_renderer_->SendPacket(std::move(packet),
+  audio_renderer_->SendPacket(packet,
                               [this]() { OnSendPacketComplete(); });
 }
 

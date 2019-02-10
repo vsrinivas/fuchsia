@@ -84,7 +84,7 @@ Tones::Tones(bool interactive, fit::closure quit_callback)
   stream_type.sample_format = kSampleFormat;
   stream_type.channels = kChannelCount;
   stream_type.frames_per_second = kFramesPerSecond;
-  audio_renderer_->SetPcmStreamType(std::move(stream_type));
+  audio_renderer_->SetPcmStreamType(stream_type);
 
   // Fetch minimum lead time; allocate payload buffer; start the synthesis loop.
   audio_renderer_.events().OnMinLeadTimeChanged = [this](int64_t nsec) {
@@ -283,9 +283,9 @@ void Tones::SendPackets() {
         active_packets_in_flight_--;
         SendPackets();
       };
-      audio_renderer_->SendPacket(std::move(packet), std::move(on_complete));
+      audio_renderer_->SendPacket(packet, std::move(on_complete));
     } else {
-      audio_renderer_->SendPacket(std::move(packet), [this] { Quit(); });
+      audio_renderer_->SendPacket(packet, [this] { Quit(); });
     }
 
     active_packets_in_flight_++;

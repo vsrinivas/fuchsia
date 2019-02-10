@@ -1223,7 +1223,7 @@ void AudioCapturerImpl::FinishAsyncStopThunk() {
   }
 
   if (!finished.is_empty()) {
-    FinishBuffers(std::move(finished));
+    FinishBuffers(finished);
   }
 
   binding_.events().OnEndOfStream();
@@ -1272,9 +1272,9 @@ void AudioCapturerImpl::FinishBuffers(const PcbList& finished_buffers) {
     pkt.payload_size = finished_buffer.filled_frames * bytes_per_frame_;
 
     if (finished_buffer.cbk != nullptr) {
-      finished_buffer.cbk(std::move(pkt));
+      finished_buffer.cbk(pkt);
     } else {
-      binding_.events().OnPacketProduced(std::move(pkt));
+      binding_.events().OnPacketProduced(pkt);
     }
   }
 }

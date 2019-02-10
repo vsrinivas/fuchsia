@@ -156,7 +156,7 @@ bool MediaApp::SetStreamType() {
   stream_type.channels = kNumChannels;
   stream_type.frames_per_second = kFrameRate;
 
-  if (audio_renderer_sync_->SetPcmStreamType(std::move(stream_type)) != ZX_OK) {
+  if (audio_renderer_sync_->SetPcmStreamType(stream_type) != ZX_OK) {
     FXL_LOG(ERROR) << "Could not set stream type";
     return false;
   }
@@ -231,7 +231,7 @@ bool MediaApp::SendAudioPacket(fuchsia::media::StreamPacket packet) {
   ++num_packets_sent_;
 
   // Note: SendPacketNoReply returns immediately, before packet is consumed.
-  return audio_renderer_sync_->SendPacketNoReply(std::move(packet)) == ZX_OK;
+  return audio_renderer_sync_->SendPacketNoReply(packet) == ZX_OK;
 }
 
 // Stay ahead of the presentation timeline, by the amount high_water_mark_.

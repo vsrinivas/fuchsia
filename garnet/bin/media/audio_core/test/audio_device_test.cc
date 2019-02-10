@@ -8,6 +8,7 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <cmath>
 #include <cstring>
+#include <utility>
 
 #include "garnet/bin/media/audio_core/test/audio_tests_shared.h"
 #include "gtest/gtest.h"
@@ -115,7 +116,7 @@ void AudioDeviceTest::SetOnDeviceAddedEvent() {
   audio_dev_enum_.events().OnDeviceAdded =
       [this](fuchsia::media::AudioDeviceInfo dev) {
         received_callback_ = true;
-        received_device_ = dev;
+        received_device_ = std::move(dev);
       };
 }
 
@@ -162,7 +163,7 @@ uint32_t AudioDeviceTest::SetFlagsFromBools(bool set_gain, bool set_mute,
 
 void AudioDeviceTest::RetrieveDefaultDevInfoUsingGetDevices(bool get_input) {
   audio_dev_enum_->GetDevices(
-      [this, get_input](std::vector<fuchsia::media::AudioDeviceInfo> devices) {
+      [this, get_input](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
         received_callback_ = true;
 
         for (auto& dev : devices) {
@@ -177,7 +178,7 @@ void AudioDeviceTest::RetrieveDefaultDevInfoUsingGetDevices(bool get_input) {
 
 bool AudioDeviceTest::RetrieveGainInfoUsingGetDevices(uint64_t token) {
   audio_dev_enum_->GetDevices(
-      [this, token](std::vector<fuchsia::media::AudioDeviceInfo> devices) {
+      [this, token](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
         received_callback_ = true;
 
         for (auto& dev : devices) {
@@ -231,7 +232,7 @@ void AudioDeviceTest::RetrievePreExistingDevices() {
   EXPECT_TRUE(audio_dev_enum_.is_bound());
 
   audio_dev_enum_->GetDevices(
-      [this](std::vector<fuchsia::media::AudioDeviceInfo> devices) {
+      [this](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
         received_callback_ = true;
         AudioDeviceTest::initial_input_device_count_ = 0;
         AudioDeviceTest::initial_output_device_count_ = 0;
@@ -277,7 +278,7 @@ bool AudioDeviceTest::HasPreExistingDevices() {
 // GetDevices().
 TEST_F(AudioDeviceTest, ReceivesGetDevicesCallback) {
   audio_dev_enum_->GetDevices(
-      [this](std::vector<fuchsia::media::AudioDeviceInfo> devices) {
+      [this](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
         received_callback_ = true;
       });
 
@@ -292,7 +293,7 @@ TEST_F(AudioDeviceTest, GetDevicesHandlesLackOfDevices) {
 
   uint16_t num_devs = kInvalidDeviceCount;
   audio_dev_enum_->GetDevices(
-      [this, &num_devs](std::vector<fuchsia::media::AudioDeviceInfo> devices) {
+      [this, &num_devs](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
         received_callback_ = true;
         num_devs = devices.size();
       });

@@ -85,7 +85,7 @@ void TtsServiceImpl::Client::Say(std::string words, uint64_t token,
 }
 
 void TtsServiceImpl::Client::OnSpeakComplete(
-    std::shared_ptr<TtsSpeaker> speaker, uint64_t token, SayCallback cbk) {
+    const std::shared_ptr<TtsSpeaker>& speaker, uint64_t token, SayCallback cbk) {
   auto iter = active_speakers_.find(speaker);
 
   if (iter == active_speakers_.end()) {

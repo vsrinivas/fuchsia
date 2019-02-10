@@ -266,7 +266,7 @@ void MediaApp::SetStreamType() {
   format.channels = num_channels_;
   format.frames_per_second = frame_rate_;
 
-  audio_renderer_->SetPcmStreamType(std::move(format));
+  audio_renderer_->SetPcmStreamType(format);
 
   // Set stream gain and mute, if specified.
   if (set_stream_mute_) {
@@ -413,7 +413,7 @@ void MediaApp::SendPacket(uint64_t payload_num) {
   }
 
   ++num_packets_sent_;
-  audio_renderer_->SendPacket(std::move(packet),
+  audio_renderer_->SendPacket(packet,
                               [this]() { OnSendPacketComplete(); });
 }
 

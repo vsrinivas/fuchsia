@@ -7,6 +7,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 
+#include <utility>
+
 #include "lib/component/cpp/connect.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
@@ -37,7 +39,7 @@ TtsClient::TtsClient(fit::closure quit_callback)
 }
 
 void TtsClient::Say(std::string words) {
-  tts_service_->Say(words, 0, [this](uint64_t token) { quit_callback_(); });
+  tts_service_->Say(std::move(words), 0, [this](uint64_t token) { quit_callback_(); });
 }
 
 }  // namespace
