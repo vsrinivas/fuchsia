@@ -4,9 +4,9 @@
 
 #include "zircon_platform_trace.h"
 
-#include <memory>
-
 #include <lib/fit/function.h>
+#include <memory>
+#include <zircon/syscalls.h>
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"

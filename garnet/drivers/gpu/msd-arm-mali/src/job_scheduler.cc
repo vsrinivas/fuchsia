@@ -21,7 +21,7 @@ void JobScheduler::EnqueueAtom(std::shared_ptr<MsdArmAtom> atom)
 
 // Use different names for different slots so they'll line up cleanly in the
 // trace viewer.
-static const char* AtomRunningString(uint32_t slot)
+[[maybe_unused]] static const char* AtomRunningString(uint32_t slot)
 {
     switch (slot) {
         case 0:
@@ -201,7 +201,8 @@ void JobScheduler::ScheduleRunnableAtoms()
         executing_atoms_[slot] = atom;
         runnable.erase(runnable.begin());
         std::shared_ptr<MsdArmConnection> connection = atom->connection().lock();
-        msd_client_id_t id = connection ? connection->client_id() : 0;
+        [[maybe_unused]] msd_client_id_t id =
+            connection ? connection->client_id() : 0;
         TRACE_ASYNC_BEGIN("magma", AtomRunningString(slot), executing_atoms_[slot]->trace_nonce(),
                           "id", id);
         owner_->RunAtom(executing_atoms_[slot].get());
