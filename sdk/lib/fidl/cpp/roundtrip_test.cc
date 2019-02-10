@@ -200,45 +200,6 @@ TEST(EmptyStructSandwich, CheckBytes) {
   EXPECT_TRUE(ValueToBytes(input, expected));
 }
 
-TEST(OptionalTableInStruct, VerifyWireFormatTableAbsent) {
-  OptionalTableInStruct input;
-
-  auto expected = std::vector<uint8_t>{
-      // TODO(FIDL-477): The following pointer (8 bytes) should be an absent
-      // vector instead, because a nullable table contained inside a struct
-      // should be inlined, rather than pointed-to.
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // table is absent
-  };
-  EXPECT_TRUE(ValueToBytes(input, expected));
-}
-
-TEST(OptionalTableInStruct, VerifyWireFormatTablePresent) {
-  auto table = std::make_unique<SimpleTable>();
-  table->set_x(0xdeadbeef);
-
-  OptionalTableInStruct input;
-  input.t = std::move(table);
-
-  auto expected = std::vector<uint8_t>{
-      // TODO(FIDL-477): The following pointer (8 bytes) should not be present,
-      // because a nullable table contained inside a struct should be inlined,
-      // rather than pointed-to.
-      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // table is present
-
-      // secondary object 0: vector<envelope>
-      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope vector size/max ordinal
-      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope vector is present
-
-      // seconddary object 1: vector<envelope> data
-      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope size/handle count
-      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope vector is present
-
-      // secondary object 1: data for .x
-      0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00,  // envelope content (0xdeadbeef) + padding
-  };
-  EXPECT_TRUE(ValueToBytes(input, expected));
-}
-
 TEST(XUnion, Empty) {
   SampleXUnion input;
 

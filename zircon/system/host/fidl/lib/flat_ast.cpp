@@ -643,8 +643,10 @@ public:
             // inlined).
             break;
 
-        // TODO(FIDL-477): Disallow optional tables via "case
-        // Decl::Kind::kTable".
+        case Decl::Kind::kTable:
+            if (nullability == types::Nullability::kNullable)
+                return CannotBeNullable(location);
+            break;
 
         default:
             if (nullability == types::Nullability::kNullable)

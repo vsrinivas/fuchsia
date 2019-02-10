@@ -42,10 +42,6 @@ table SimpleTable {
     5: int64 y;
 };
 
-struct OptionalTableInStruct {
-    SimpleTable? t;
-};
-
 // A variant of SimpleTable that has just the first few fields.
 // Think of this as an older variant of that type!
 table OlderSimpleTable {

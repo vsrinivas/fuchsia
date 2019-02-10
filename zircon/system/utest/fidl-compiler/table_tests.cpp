@@ -13,12 +13,21 @@
 
 namespace {
 
-static bool Compiles(const std::string& source_code) {
-    return TestLibrary("test.fidl", source_code).Compile();
+static bool Compiles(const std::string& source_code, std::vector<std::string>* out_errors = nullptr) {
+    auto library = TestLibrary("test.fidl", source_code);
+    const bool success = library.Compile();
+
+    if (out_errors) {
+        *out_errors = library.errors();
+    }
+
+    return success;
 }
 
 static bool compiling(void) {
     BEGIN_TEST;
+
+    std::vector<std::string> errors;
 
     // Populated fields.
     EXPECT_TRUE(Compiles(R"FIDL(
@@ -163,6 +172,66 @@ table Foo {
     3: uint32 uint32;
     4: struct member;
 };
+)FIDL"));
+
+    // Optional tables in structs are invalid.
+    EXPECT_FALSE(Compiles(R"FIDL(
+library fidl.test.tables;
+
+table Foo {
+    1: int64 t;
+};
+
+struct OptionalTableContainer {
+    Foo? foo;
+};
+
+)FIDL", &errors));
+    EXPECT_EQ(errors.size(), 1u);
+    EXPECT_NE(errors.at(0).find("cannot be nullable"), std::string::npos);
+
+    // Optional tables in (static) unions are invalid.
+    EXPECT_FALSE(Compiles(R"FIDL(
+library fidl.test.tables;
+
+table Foo {
+    1: int64 t;
+};
+
+union OptionalTableContainer {
+    Foo? foo;
+};
+
+)FIDL", &errors));
+    EXPECT_EQ(errors.size(), 1u);
+    EXPECT_NE(errors.at(0).find("cannot be nullable"), std::string::npos);
+
+    // Tables in tables are valid.
+    EXPECT_TRUE(Compiles(R"FIDL(
+library fidl.test.tables;
+
+table Foo {
+    1: int64 t;
+};
+
+table Bar {
+    1: Foo foo;
+};
+
+)FIDL"));
+
+    // Tables in xunions are valid.
+    EXPECT_TRUE(Compiles(R"FIDL(
+library fidl.test.tables;
+
+table Foo {
+    1: int64 t;
+};
+
+xunion OptionalTableContainer {
+    Foo foo;
+};
+
 )FIDL"));
 
     END_TEST;
