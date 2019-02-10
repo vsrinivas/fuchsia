@@ -4,6 +4,7 @@
 
 import("$zx/public/gn/build_api_module.gni")
 import("$zx/public/gn/config/standard.gni")
+import("$zx/public/gn/legacy_pkg.gni")  # TODO(BLD-353): temporary hack
 import("$zx/public/gn/toolchain/c_utils.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
 import("$zx/public/gn/zbi.gni")
@@ -118,6 +119,25 @@ if (current_toolchain == default_toolchain) {
         ":ids-$cpu",
         ":tools",
         "$zx/system/ulib:asan-manifest-$cpu",
+      ]
+    }
+
+    legacy_pkg("manifest-$cpu") {
+      testonly = true
+      data_keys = [ "legacy_pkg_manifest" ]
+      deps = [
+        ":legacy-$cpu",
+        ":tools",
+
+        # Separately listed because they're reached by dependencies only on x64.
+        "$zx/system/banjo/ddk-protocol-acpi",
+        "$zx/system/banjo/ddk-protocol-intelgpucore",
+        "$zx/system/banjo/ddk-protocol-intelhda-codec",
+        "$zx/system/banjo/ddk-protocol-intelhda-dsp",
+
+        # Separately listed because they're not reached by any dependencies.
+        "$zx/system/fidl/fuchsia-inspect",
+        "$zx/system/fidl/fuchsia-tracelink",
       ]
     }
   }

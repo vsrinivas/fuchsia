@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/fidl/fidlc.gni")
+import("$zx/public/gn/legacy_pkg.gni")  # TODO(BLD-353): temporary hack
 
 # List of FIDL support modules.  Each of these defines its own version of
 # $fidl_support_fidlc and $fidl_support_templates.
@@ -211,6 +212,33 @@ template("fidl_library") {
         # up a single FIDL library (all have identical `library ...;` lines).
         fidl_rspfile =
             [ "--files" ] + rebase_path(invoker.sources, root_build_dir)
+      }
+
+      # TODO(BLD-353): temporary hack
+      data_deps = [
+        ":$fidl_target.pkg",
+      ]
+    }
+
+    # TODO(BLD-353): temporary hack
+    legacy_pkg("$fidl_target.pkg") {
+      contents = [
+        "[package]",
+        "name=$fidl_target",
+        "library=$fidl_name",
+        "arch=fidl",
+        "type=fidl",
+        "[fidl]",
+      ]
+      foreach(file, invoker.sources) {
+        contents += [ "$file=SOURCE/" + rebase_path(file, "//") ]
+      }
+      if (defined(invoker.public_deps)) {
+        contents += [ "[fidl-deps]" ]
+        foreach(label, invoker.public_deps) {
+          contents += [ get_label_info(label, "name") + "=SOURCE/" +
+                        rebase_path(get_label_info(label, "dir"), "//") ]
+        }
       }
     }
 
