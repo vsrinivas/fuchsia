@@ -9,9 +9,9 @@
 #include "platform_connection_client.h"
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <fuchsia/gpu/magma/cpp/fidl.h>
-#include <lib/fidl/cpp/vector.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/fidl/cpp/vector.h>
 #include <lib/zx/channel.h>
 
 namespace {
@@ -236,12 +236,6 @@ public:
         std::lock_guard<std::mutex> lock(get_error_lock_);
         if (!error_)
             error_ = DRET_MSG(error, "ZirconPlatformConnectionClient encountered dispatcher error");
-    }
-
-    int GetNotificationChannelFd() override
-    {
-        return fdio_handle_fd(notification_channel_.get(),
-                              ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0, true);
     }
 
     uint32_t GetNotificationChannelHandle() override { return notification_channel_.get(); }

@@ -10,6 +10,7 @@
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
 #include "gtest/gtest.h"
+#include <array>
 #include <thread>
 
 extern "C" {
@@ -68,33 +69,30 @@ public:
         EXPECT_NE(magma_get_error(connection_), 0);
     }
 
-    void NotificationFd()
-    {
-        int fd1 = magma_get_notification_channel_fd(connection_);
-        EXPECT_LE(0, fd1);
-
-        int fd2 = magma_get_notification_channel_fd(connection_);
-        EXPECT_LE(0, fd1);
-        EXPECT_NE(fd1, fd2);
-
-        struct pollfd fds[2] = {{fd1, POLLIN, 0}, {fd2, POLLOUT, 0}};
-        int result = poll(fds, 2, 0);
-
-        // No events should exist.
-        EXPECT_EQ(0, result);
-        EXPECT_EQ(0, fds[0].revents);
-        EXPECT_EQ(0, fds[1].revents);
-        close(fd1);
-        close(fd2);
-    }
-
-    void NotificationChannel()
+    void NotificationChannelHandle()
     {
         uint32_t handle = magma_get_notification_channel_handle(connection_);
         EXPECT_NE(0u, handle);
 
         uint32_t handle2 = magma_get_notification_channel_handle(connection_);
         EXPECT_EQ(handle, handle2);
+    }
+
+    void WaitNotificationChannel()
+    {
+        constexpr uint64_t kOneSecondInNs = 1000000000;
+        magma_status_t status = magma_wait_notification_channel(connection_, kOneSecondInNs);
+        EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, status);
+    }
+
+    void ReadNotificationChannel()
+    {
+        std::array<unsigned char, 1024> buffer;
+        uint64_t buffer_size = ~0;
+        magma_status_t status = magma_read_notification_channel(connection_, buffer.data(),
+                                                                buffer.size(), &buffer_size);
+        EXPECT_EQ(MAGMA_STATUS_OK, status);
+        EXPECT_EQ(0u, buffer_size);
     }
 
     void Buffer()
@@ -262,16 +260,16 @@ TEST(MagmaAbi, Context)
     test.Context();
 }
 
-TEST(MagmaAbi, NotificationFd)
+TEST(MagmaAbi, NotificationChannelHandle)
 {
     TestConnection test;
-    test.NotificationFd();
+    test.NotificationChannelHandle();
 }
 
-TEST(MagmaAbi, NotificationChannel)
+TEST(MagmaAbi, ReadNotificationChannel)
 {
     TestConnection test;
-    test.NotificationChannel();
+    test.ReadNotificationChannel();
 }
 
 TEST(MagmaAbi, BufferMap)

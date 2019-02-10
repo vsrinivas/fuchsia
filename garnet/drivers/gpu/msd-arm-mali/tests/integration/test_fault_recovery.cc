@@ -96,10 +96,8 @@ public:
         command_buffer.semaphore_count = 0;
         magma_execute_immediate_commands(connection_, context_id_, 1, &command_buffer);
 
-        int notification_fd = magma_get_notification_channel_fd(connection_);
-
-        pollfd poll_fd = {notification_fd, POLLIN, 0};
-        ASSERT_EQ(1, poll(&poll_fd, 1, -1));
+        constexpr uint64_t kOneSecondPerNs = 1000000000;
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_wait_notification_channel(connection_, kOneSecondPerNs));
 
         magma_arm_mali_status status;
         uint64_t status_size;

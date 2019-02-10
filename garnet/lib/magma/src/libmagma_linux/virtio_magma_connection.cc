@@ -457,17 +457,6 @@ magma_status_t VirtioMagmaConnection::ImportSemaphore(uint32_t semaphore_handle,
     return args.status_return;
 }
 
-int32_t VirtioMagmaConnection::GetNotificationChannelFD()
-{
-    virtmagma_ioctl_args_get_notification_channel_fd args{};
-    args.connection = connection_fd_;
-    if (ioctl(virtio_fd_, VIRTMAGMA_IOCTL_GET_NOTIFICATION_CHANNEL_FD, &args)) {
-        DRET_MSG(-1, "ioctl(GET_NOTIFICATION_CHANNEL_FD) failed: %d", errno);
-    }
-
-    return args.fd_return;
-}
-
 magma_status_t VirtioMagmaConnection::ReadNotificationChannel(void* buffer, uint64_t buffer_size,
                                                               uint64_t* buffer_size_out)
 {

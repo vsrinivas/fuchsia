@@ -174,11 +174,6 @@ magma_status_t magma_export_semaphore(magma_connection_t connection, magma_semap
 magma_status_t magma_import_semaphore(magma_connection_t connection, uint32_t semaphore_handle,
                                       magma_semaphore_t* semaphore_out);
 
-// Creates a new file descriptor representing the notification channel for the |connection|.
-// This file descriptor can be polled to determine when data is available.
-// Deprecated, use magma_wait_notification_channel or magma_get_notification_channel_handle.
-int32_t magma_get_notification_channel_fd(magma_connection_t connection);
-
 // Returns a uint32_t (zx_handle_t) that can be waited on to determine when the connection has data
 // in the notification channel. This channel has the same lifetime as the connection and must not be
 // closed by the client.

@@ -116,24 +116,23 @@ public:
 
     void TestNotificationChannel()
     {
-        pollfd pfd = {.fd = client_connection_->GetNotificationChannelFd(), .events = POLLIN};
-
-        int poll_status = poll(&pfd, 1, 5000);
-        EXPECT_EQ(1, poll_status);
+        constexpr uint64_t kFiveSecondsInNs = 5000000000;
+        magma_status_t status = client_connection_->WaitNotificationChannel(kFiveSecondsInNs);
+        EXPECT_EQ(MAGMA_STATUS_OK, status);
 
         uint32_t out_data;
         uint64_t out_data_size;
         // Data was written when the channel was created, so it should be
         // available.
-        magma_status_t status = client_connection_->ReadNotificationChannel(
-            &out_data, sizeof(out_data), &out_data_size);
+        status = client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data),
+                                                             &out_data_size);
         EXPECT_EQ(MAGMA_STATUS_OK, status);
         EXPECT_EQ(sizeof(out_data), out_data_size);
         EXPECT_EQ(5u, out_data);
 
         // No more data to read.
-        poll_status = poll(&pfd, 1, 0);
-        EXPECT_EQ(0, poll_status);
+        status = client_connection_->WaitNotificationChannel(0);
+        EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, status);
 
         status = client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data),
                                                              &out_data_size);
@@ -147,8 +146,8 @@ public:
         EXPECT_TRUE(got_null_notification);
 
         // Poll should still terminate early.
-        poll_status = poll(&pfd, 1, 5000);
-        EXPECT_EQ(1, poll_status);
+        status = client_connection_->WaitNotificationChannel(kFiveSecondsInNs);
+        EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, status);
 
         status = client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data),
                                                              &out_data_size);

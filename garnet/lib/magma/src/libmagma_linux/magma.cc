@@ -221,12 +221,6 @@ magma_status_t magma_import_semaphore(magma_connection_t connection, uint32_t se
     return conn->ImportSemaphore(semaphore_handle, semaphore_out);
 }
 
-int32_t magma_get_notification_channel_fd(magma_connection_t connection)
-{
-    auto conn = magma::VirtioMagmaConnection::cast(connection);
-    return conn->GetNotificationChannelFD();
-}
-
 magma_status_t magma_read_notification_channel(magma_connection_t connection, void* buffer,
                                                uint64_t buffer_size, uint64_t* buffer_size_out)
 {

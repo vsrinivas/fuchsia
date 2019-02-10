@@ -45,7 +45,6 @@ enum virtio_magma_ctrl_type {
     VIRTIO_MAGMA_CMD_WAIT_SEMAPHORES,
     VIRTIO_MAGMA_CMD_EXPORT_SEMAPHORE,
     VIRTIO_MAGMA_CMD_IMPORT_SEMAPHORE,
-    VIRTIO_MAGMA_CMD_GET_NOTIFICATION_CHANNEL_FD,
     VIRTIO_MAGMA_CMD_READ_NOTIFICATION_CHANNEL,
     /* magma success responses */
     VIRTIO_MAGMA_RESP_QUERY = 0x1180,
@@ -81,7 +80,6 @@ enum virtio_magma_ctrl_type {
     VIRTIO_MAGMA_RESP_WAIT_SEMAPHORES,
     VIRTIO_MAGMA_RESP_EXPORT_SEMAPHORE,
     VIRTIO_MAGMA_RESP_IMPORT_SEMAPHORE,
-    VIRTIO_MAGMA_RESP_GET_NOTIFICATION_CHANNEL_FD,
     VIRTIO_MAGMA_RESP_READ_NOTIFICATION_CHANNEL,
     /* magma error responses */
     VIRTIO_MAGMA_RESP_ERR_UNIMPLEMENTED = 0x1280,
@@ -461,16 +459,6 @@ typedef struct virtio_magma_import_semaphore_resp {
     uint64_t semaphore_out;
     uint32_t status_return;
 } __PACKED virtio_magma_import_semaphore_resp_t;
-
-typedef struct virtio_magma_get_notification_channel_fd {
-    virtio_magma_ctrl_hdr_t hdr;
-    uint64_t connection;
-} __PACKED virtio_magma_get_notification_channel_fd_t;
-
-typedef struct virtio_magma_get_notification_channel_fd_resp {
-    virtio_magma_ctrl_hdr_t hdr;
-    int32_t fd_return;
-} __PACKED virtio_magma_get_notification_channel_fd_resp_t;
 
 typedef struct virtio_magma_read_notification_channel {
     virtio_magma_ctrl_hdr_t hdr;
