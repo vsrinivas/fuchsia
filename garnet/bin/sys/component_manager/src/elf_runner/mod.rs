@@ -102,7 +102,7 @@ impl ElfRunner {
             .add_names(&mut name_infos.iter_mut())
             .map_err(|_| RunnerError::ComponentNotAvailable)?;
 
-        let launch_res = await!(launcher.launch(&mut fproc::LaunchInfo {
+        let (status, _process) = await!(launcher.launch(&mut fproc::LaunchInfo {
             executable: executable_vmo,
             job: child_job_dup,
             name: name.to_string(),
@@ -112,8 +112,8 @@ impl ElfRunner {
             RunnerError::ComponentNotAvailable
         })?;
 
-        if launch_res.status != zx::sys::ZX_OK {
-            println!("failed to launch! {}", launch_res.status);
+        if status != zx::sys::ZX_OK {
+            println!("failed to launch! {}", status);
             return Err(RunnerError::ComponentNotAvailable);
         }
 

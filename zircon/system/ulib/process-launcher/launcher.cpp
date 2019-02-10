@@ -96,11 +96,10 @@ zx_status_t LauncherImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
     // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-372
     uint32_t ordinal = message.ordinal();
     if (ordinal == fuchsia_process_LauncherLaunchOrdinal ||
-        ordinal == fuchsia_process_LauncherLaunchGenOrdinal) {
-        return Launch(buffer, std::move(message));
-    } else if (ordinal == fuchsia_process_LauncherLaunch2Ordinal ||
+        ordinal == fuchsia_process_LauncherLaunchGenOrdinal ||
+        ordinal == fuchsia_process_LauncherLaunch2Ordinal ||
         ordinal == fuchsia_process_LauncherLaunch2GenOrdinal) {
-        return Launch2(buffer, std::move(message));
+        return Launch(buffer, std::move(message));
     } else if (ordinal == fuchsia_process_LauncherCreateWithoutStartingOrdinal ||
                ordinal == fuchsia_process_LauncherCreateWithoutStartingGenOrdinal) {
         return CreateWithoutStarting(buffer, std::move(message));
@@ -137,48 +136,7 @@ zx_status_t LauncherImpl::Launch(fidl::MessageBuffer* buffer, fidl::Message mess
     PrepareLaunchpad(message, &lp);
 
     fidl::Builder builder = buffer->CreateBuilder();
-    fidl_message_header_t* header = builder.New<fidl_message_header_t>();
-    header->txid = txid;
-    header->ordinal = ordinal;
-    fuchsia_process_LaunchResult* result = builder.New<fuchsia_process_LaunchResult>();
-
-    status = launchpad_go(lp, &result->process, &error_msg);
-
-    result->status = status;
-    if (status != ZX_OK && error_msg) {
-        uint32_t len = static_cast<uint32_t>(strlen(error_msg));
-        result->error_message.size = len;
-        result->error_message.data = builder.NewArray<char>(len);
-        strncpy(result->error_message.data, error_msg, len);
-    }
-
-    message.set_bytes(builder.Finalize());
-    Reset();
-
-    status = message.Encode(&fuchsia_process_LauncherLaunchResponseTable, &error_msg);
-    if (status != ZX_OK) {
-        fprintf(stderr, "launcher: error: Launch: %s\n", error_msg);
-        return status;
-    }
-    return message.Write(channel_.get(), 0);
-}
-
-zx_status_t LauncherImpl::Launch2(fidl::MessageBuffer* buffer, fidl::Message message) {
-    const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(&fuchsia_process_LauncherLaunch2RequestTable, &error_msg);
-    if (status != ZX_OK) {
-        fprintf(stderr, "launcher: error: Launch: %s\n", error_msg);
-        return status;
-    }
-
-    zx_txid_t txid = message.txid();
-    uint32_t ordinal = message.ordinal();
-
-    launchpad_t* lp = nullptr;
-    PrepareLaunchpad(message, &lp);
-
-    fidl::Builder builder = buffer->CreateBuilder();
-    auto* response = builder.New<fuchsia_process_LauncherLaunch2Response>();
+    auto* response = builder.New<fuchsia_process_LauncherLaunchResponse>();
     response->hdr.txid = txid;
     response->hdr.ordinal = ordinal;
     response->status = launchpad_go(lp, &response->process, &error_msg);
@@ -190,7 +148,7 @@ zx_status_t LauncherImpl::Launch2(fidl::MessageBuffer* buffer, fidl::Message mes
     message.set_bytes(builder.Finalize());
     Reset();
 
-    status = message.Encode(&fuchsia_process_LauncherLaunch2ResponseTable, &error_msg);
+    status = message.Encode(&fuchsia_process_LauncherLaunchResponseTable, &error_msg);
     if (status != ZX_OK) {
         fprintf(stderr, "launcher: error: Launch: %s\n", error_msg);
         return status;

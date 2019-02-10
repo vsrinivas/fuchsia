@@ -628,14 +628,14 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
 
         struct {
             FIDL_ALIGNDECL
-            fuchsia_process_LauncherLaunch2Request req;
+            fuchsia_process_LauncherLaunchRequest req;
             uint8_t process_name[FIDL_ALIGN(ZX_MAX_NAME_LEN)];
         } msg;
 
         memset(&msg, 0, sizeof(msg));
-        size_t msg_len = sizeof(fuchsia_process_LauncherLaunch2Request) + FIDL_ALIGN(process_name_size);
+        size_t msg_len = sizeof(fuchsia_process_LauncherLaunchRequest) + FIDL_ALIGN(process_name_size);
 
-        msg.req.hdr.ordinal = fuchsia_process_LauncherLaunch2Ordinal;
+        msg.req.hdr.ordinal = fuchsia_process_LauncherLaunchOrdinal;
         msg.req.info.executable = FIDL_HANDLE_PRESENT;
         msg.req.info.job = FIDL_HANDLE_PRESENT;
         msg.req.info.name.size = process_name_size;
@@ -651,7 +651,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
             goto cleanup;
         }
 
-        fuchsia_process_LauncherLaunch2Response reply;
+        fuchsia_process_LauncherLaunchResponse reply;
 
         zx_handle_t process = ZX_HANDLE_INVALID;
 

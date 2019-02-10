@@ -58,26 +58,6 @@ struct LaunchInfo {
     string name;
 };
 
-// The result of attempting to launch a process.
-//
-// TODO(REVIEW): Remove this struct
-struct LaunchResult {
-    // A status code describing the result of the launch.
-    zx.status status;
-
-    // A string describing the failure.
-    //
-    // Non-null when |status| is an error.
-    //
-    // TODO(REVIEW): Remove this error message.
-    string? error_message;
-
-    // The process that was launched.
-    //
-    // Present when |status| is ZX_OK.
-    handle<process>? process;
-};
-
 // The information required to start a process.
 //
 // To start the process, call |zx_process_start| with the arguments provided.
@@ -142,7 +122,7 @@ interface Launcher {
     // state and is ready to launch another process.
     //
     // |process| is present if, and only if, |status| is ZX_OK.
-    Launch(LaunchInfo info) -> (LaunchResult result);
+    Launch(LaunchInfo info) -> (zx.status status, handle<process>? process);
     Launch2(LaunchInfo info) -> (zx.status status, handle<process>? process);
 
     // Creates the process described by |info| but does not start it.
