@@ -104,11 +104,16 @@ zx_koid_t GetRelatedKoid(zx_handle_t handle);
 zx_koid_t GetRelatedKoid(const zx::object_base& object);
 
 // Return the name of exception |type| as a C string.
-const char* ExceptionName(zx_excp_type_t type);
+// Returns nullptr if |type| is invalid.
+// This does not take a |zx_excp_type_t| value because it also handles
+// invalid values.
+const char* ExceptionName(uint32_t type);
 
-// Return the string representation of an exception.
-std::string ExceptionToString(zx_excp_type_t type,
-                              const zx_exception_context_t& context);
+// Return the string form of the exception's name.
+// Returns "UNKNOWN(value)" for bad |type|.
+// This does not take a |zx_excp_type_t| value because it also handles
+// invalid values.
+std::string ExceptionNameAsString(uint32_t type);
 
 bool ReadString(const ByteBlock& m, zx_vaddr_t vaddr, char* ptr, size_t max);
 

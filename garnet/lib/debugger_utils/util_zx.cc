@@ -51,7 +51,7 @@ std::string ZxErrorString(zx_status_t status) {
   return fxl::StringPrintf("%s(%d)", zx_status_get_string(status), status);
 }
 
-const char* ExceptionName(zx_excp_type_t type) {
+const char* ExceptionName(uint32_t type) {
 #define CASE_TO_STR(x) \
   case x:              \
     return #x
@@ -66,16 +66,17 @@ const char* ExceptionName(zx_excp_type_t type) {
     CASE_TO_STR(ZX_EXCP_THREAD_EXITING);
     CASE_TO_STR(ZX_EXCP_POLICY_ERROR);
     default:
-      return "UNKNOWN";
+      return nullptr;
   }
 #undef CASE_TO_STR
 }
 
-std::string ExceptionToString(zx_excp_type_t type,
-                              const zx_exception_context_t& context) {
-  std::string result(ExceptionName(type));
-  // TODO(dje): Add more info to the string.
-  return result;
+std::string ExceptionNameAsString(uint32_t type) {
+  const char* name = ExceptionName(type);
+  if (name) {
+    return std::string(name);
+  }
+  return fxl::StringPrintf("UNKNOWN(%u)", type);
 }
 
 bool ReadString(const ByteBlock& m, zx_vaddr_t vaddr, char* ptr, size_t max) {

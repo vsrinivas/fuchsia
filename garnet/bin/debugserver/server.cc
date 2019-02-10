@@ -448,10 +448,10 @@ void RspServer::ExceptionHelper(inferior_control::Process* process,
 
   if (ZX_EXCP_IS_ARCH(type)) {
     FXL_VLOG(1) << "Architectural Exception: "
-                << debugger_utils::ExceptionToString(type, context);
+                << debugger_utils::ExceptionNameAsString(type);
   } else {
     FXL_VLOG(1) << "Synthetic Exception: "
-                << debugger_utils::ExceptionToString(type, context);
+                << debugger_utils::ExceptionNameAsString(type);
   }
 
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.

@@ -285,7 +285,7 @@ void PrintException(FILE* out, const Thread* thread, zx_excp_type_t type,
   if (ZX_EXCP_IS_ARCH(type)) {
     fprintf(out, "Thread %s: received exception %s\n",
             thread->GetDebugName().c_str(),
-            debugger_utils::ExceptionToString(type, context).c_str());
+            debugger_utils::ExceptionNameAsString(type).c_str());
     zx_vaddr_t pc = thread->registers()->GetPC();
     fprintf(out, "PC 0x%" PRIxPTR "\n", pc);
   } else {
