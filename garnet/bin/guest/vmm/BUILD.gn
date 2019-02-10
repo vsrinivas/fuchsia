@@ -91,8 +91,8 @@ source_set("lib") {
 
   deps = [
     "//garnet/bin/guest/third_party/fdt",
-    "//garnet/bin/guest/vmm/fidl:fuchsia.guest.device",
-    "//garnet/bin/guest/vmm/fidl:fuchsia.guest.vmm",
+    "//sdk/fidl/fuchsia.guest.device",
+    "//sdk/fidl/fuchsia.guest.vmm",
     "//sdk/fidl/fuchsia.guest",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/base_view/cpp",

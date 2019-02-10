@@ -23,7 +23,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/bin/guest/vmm/fidl:fuchsia.guest.vmm",
+    "//sdk/fidl/fuchsia.guest.vmm",
     "//sdk/fidl/fuchsia.guest",
     "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",

@@ -16,8 +16,8 @@ source_set("device") {
   ]
   defines = [ "_ALL_SOURCE=1" ]
   public_deps = [
-    "//garnet/bin/guest/vmm/fidl:fuchsia.guest.device",
     "//garnet/public/lib/fxl",
+    "//sdk/fidl/fuchsia.guest.device",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/virtio",
@@ -33,9 +33,9 @@ source_set("virtio") {
   ]
   public_deps = [
     ":device",
-    "//garnet/bin/guest/vmm/fidl:fuchsia.guest.device",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.guest.device",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
@@ -297,9 +297,9 @@ executable("device_tests") {
 
   deps = [
     ":device",
-    "//garnet/bin/guest/vmm/fidl:fuchsia.guest.device",
-    "//sdk/fidl/fuchsia.netstack",
     "//garnet/public/lib/component/cpp/testing",
+    "//sdk/fidl/fuchsia.guest.device",
+    "//sdk/fidl/fuchsia.netstack",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace-provider",
