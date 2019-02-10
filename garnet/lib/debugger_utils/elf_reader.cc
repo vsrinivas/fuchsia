@@ -37,6 +37,8 @@ ElfError ElfReader::Create(const std::string& file_name,
                            uint32_t options, uint64_t base,
                            std::unique_ptr<ElfReader>* out) {
   FXL_DCHECK(options == 0);
+  FXL_VLOG(1) << "Creating ELF reader for: " << file_name
+              << ": base 0x" << std::hex << base;
   ElfReader* er = new ElfReader(file_name, byte_block, base);
   if (!ReadHeader(*byte_block, base, &er->header_)) {
     delete er;
@@ -66,15 +68,27 @@ bool ElfReader::ReadHeader(const ByteBlock& m, uint64_t base, ElfHeader* hdr) {
 
 // static
 bool ElfReader::VerifyHeader(const ElfHeader* hdr) {
-  if (memcmp(hdr->e_ident, ELFMAG, SELFMAG))
+  if (memcmp(hdr->e_ident, ELFMAG, SELFMAG)) {
+    FXL_VLOG(2) << fxl::StringPrintf("Bad ELF magic: %02x %02x %02x %02x",
+                                     hdr->e_ident[0], hdr->e_ident[1],
+                                     hdr->e_ident[2], hdr->e_ident[3]);
     return false;
+  }
   // TODO(dje): Support larger entries.
-  if (hdr->e_ehsize != sizeof(ElfHeader))
+  if (hdr->e_ehsize != sizeof(ElfHeader)) {
+    FXL_VLOG(2) << "Bad ELF header size";
     return false;
-  if (hdr->e_phentsize != sizeof(ElfSegmentHeader))
+  }
+  // It's possible the entry size is zero if there are no entries.
+  if (hdr->e_phnum > 0 && hdr->e_phentsize != sizeof(ElfSegmentHeader)) {
+    FXL_VLOG(2) << "Bad ELF segment size";
     return false;
-  if (hdr->e_shentsize != sizeof(ElfSectionHeader))
+  }
+  if (hdr->e_shnum > 0 && hdr->e_shentsize != sizeof(ElfSectionHeader)) {
+    FXL_VLOG(2) << "Bad ELF section size";
     return false;
+  }
+
   // TODO(dje): Could add more checks.
   return true;
 }
