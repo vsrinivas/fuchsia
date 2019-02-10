@@ -1,0 +1,119 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/fidl/fidlc.gni")
+import("$zx/public/gn/subtarget_aliases.gni")
+
+# This is the $banjo_support module for C++ bindings.  See banjo_library() for
+# details.  This file should not normally be imported by other code.
+
+# This tells banjo_library() to invoke banjo_cpp_library().
+banjo_support_templates = [
+  {
+    import = "$zx/public/gn/banjo/cpp.gni"
+    target = "banjo_cpp_library"
+  },
+]
+
+# Provide C++ bindings for banjo_library().  **Do not use directly!**
+#
+# This is never used directly, but only indirectly by banjo_library().
+# See there for details.
+template("banjo_cpp_library") {
+  not_needed([ "target_name" ])
+  not_needed(invoker, "*")
+
+  banjo_target = target_name
+  library_target = "$banjo_target.cpp"
+  gen_target = "_banjo_cpp_library.generate.$library_target"
+  gen_dir = get_label_info(":$gen_target($default_toolchain)",
+                           "target_gen_dir") + "/$library_target"
+
+  gen_backends = [
+    {
+      backend = "cpp"
+      sources = [
+        "$gen_dir/include/ddktl/protocol/${invoker.banjo_name}.h",
+      ]
+    },
+    {
+      backend = "cpp_i"
+      sources = [
+        "$gen_dir/include/ddktl/protocol/${invoker.banjo_name}-internal.h",
+      ]
+    },
+  ]
+  gen_deps = []
+  gen_sources = []
+  foreach(gen, gen_backends) {
+    gen_deps += [ ":$gen_target.${gen.backend}($default_toolchain)" ]
+    gen_sources += gen.sources
+    fidlc("$gen_target.${gen.backend}") {
+      visibility = [ ":*" ]
+      forward_variables_from(invoker, [ "testonly" ])
+
+      tool = "$zx/system/host/banjo/compiler"
+      deps = [
+        ":$banjo_target",
+      ]
+      outputs = gen.sources
+      args = [
+        "--backend",
+        gen.backend,
+        "--output",
+        rebase_path(outputs[0], root_build_dir),
+      ]
+    }
+  }
+
+  if (current_toolchain != default_toolchain) {
+    config("_banjo_cpp_library.config.$library_target") {
+      visibility = [
+        ":$library_target.headers",
+        ":$library_target.static",
+      ]
+      forward_variables_from(invoker, [ "testonly" ])
+      include_dirs = [ "$gen_dir/include" ]
+    }
+
+    library(library_target) {
+      forward_variables_from(invoker,
+                             [
+                               "visibility",
+                               "testonly",
+                             ])
+
+      deps = gen_deps
+      sources = gen_sources
+
+      # Users of the bindings library need the generated headers.
+      public_configs = [ ":_banjo_cpp_library.config.$library_target" ]
+
+      # The generated headers of a dependent banjo_library() will #include the
+      # generated headers for its dependencies' bindings libraries, so those
+      # headers are needed in public_deps.  The generated bindings code may
+      # call into its dependencies' bindings code, so the libraries
+      # themselves are needed in deps too.
+      public_deps = gen_deps
+      foreach(dep, invoker.banjo_deps) {
+        deps += [ "$dep.cpp" ]
+        public_deps += [ "$dep.cpp.headers" ]
+      }
+    }
+
+    # Things normally depend on "banjo/foo:cpp" rather than "banjo/foo:foo.cpp".
+    subtarget_aliases(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "visibility",
+                               "testonly",
+                             ])
+      outputs = [
+        "cpp",
+        "cpp.headers",
+        "cpp.static",
+      ]
+    }
+  }
+}

@@ -1,0 +1,209 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(mcgrathr): This is heavily based on fidl.gni though they don't
+# share much code.  Try to converge these more in the future.
+
+import("$zx/public/gn/fidl/fidlc.gni")
+
+# List of BANJO support modules.  Each of these defines its own version of
+# $banjo_support_templates:
+
+# Type: list of scopes
+#
+#   import
+#     Required: Source-absolute path to the .gni file that defines $target.
+#     Type: file
+#
+#   target
+#     Required: Name of a template to invoke, defined in the $import file.
+#     Type: string
+#
+# The $target template is invoked with the $target_name from banjo_library()
+# and these parameters:
+#
+#   banjo_deps
+#     Required: $public_deps list from banjo_library() after canonicalization.
+#     Type: list(label_no_toolchain)
+#
+#   banjo_name
+#     Required: The Banjo library name (with dots).
+#     Type: string
+#
+#   banjo_path
+#     Required: $banjo_name with each `.` replaced by a `/`.
+#     Type: string
+#
+#   visibility, testonly
+#     Optional: Forwarded from banjo_library().
+#
+# TODO(mcgrathr): Add more language generators.  For language support from
+# a different petal, add a build argument to contribute to this list via
+# default_overrides.
+banjo_support = [
+  "$zx/public/gn/banjo/c.gni",
+  "$zx/public/gn/banjo/cpp.gni",
+]
+
+# Each support module defines $banjo_support_templates lists in its .gni file.
+_banjo_generators = []
+foreach(module, banjo_support) {
+  _banjo_generators += [
+    {
+      import(module)
+    },
+  ]
+}
+
+# Collect all the generation templates to invoke, and deduplicate.  All
+# these templates will be invoked by banjo_library() to define their targets.
+_banjo_gen_templates = []
+foreach(gen, _banjo_generators) {
+  _banjo_gen_templates += gen.banjo_support_templates
+  _banjo_gen_templates -= gen.banjo_support_templates
+  _banjo_gen_templates += gen.banjo_support_templates
+}
+
+# Define a Banjo library and implicitly generate bindings targets.
+#
+# The $banjo_support global determines what targets this actually produces.
+#
+# Parameters
+#
+#   sources
+#     Required: List of `.banjo` source files.
+#
+#   deps
+#     Optional: This is *not* the way to express dependencies on other Banjo
+#     libraries.  Use $public_deps for that.  The only use for $deps is if
+#     some of $sources are generated, to depend on the targets generating them.
+#     Type: list(label)
+#
+#   public_deps
+#     Optional: Other banjo_library() targets this library depends on.
+#     If `using foo;` appears in a $sources file, then the label of the
+#     banjo_library() target should be listed here.  This must list only
+#     other banjo_library() targets and may not use a "(toolchain)" suffix.
+#     Type: list(label_no_toolchain)
+#
+template("banjo_library") {
+  assert(defined(invoker.sources),
+         "banjo_library(\"$target_name\") must set `sources`")
+
+  banjo_target = target_name
+
+  # TODO(mcgrathr): temporary until everything is renamed with . names
+  banjo_library_name = string_replace(banjo_target, "-", ".")
+
+  banjo_path = string_replace(banjo_library_name, ".", "/")
+  banjo_name = string_replace(banjo_path, "ddk/protocol/", "")
+
+  # Collect the dependencies on other Banjo libraries, and canonicalize them.
+  banjo_library_deps = []
+  if (defined(invoker.public_deps)) {
+    foreach(label, invoker.public_deps) {
+      assert(get_label_info(label, "toolchain") == current_toolchain,
+             "banjo_library() `deps` must be banjo_library() target labels")
+      banjo_library_deps += [ get_label_info(label, "label_no_toolchain") ]
+    }
+  }
+
+  # This is called _fidl_library... to share the fidlc() code.
+  files_rspfile_target = "_fidl_library.files.$banjo_target.rsp"
+  banjo_gen_dir =
+      get_label_info(":$banjo_target($default_toolchain)", "target_gen_dir")
+  files_rspfile = "$banjo_gen_dir/$banjo_target.rsp"
+
+  if (current_toolchain == default_toolchain) {
+    # This just groups the dependencies together with the metadata listing
+    # the input files.
+    group(banjo_target) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "public_deps",
+                               "visibility",
+                               "testonly",
+                             ])
+      if (defined(visibility)) {
+        visibility += [ ":$files_rspfile_target" ]
+      }
+
+      metadata = {
+        # These inputs are needed both here and in every dependent library.
+        # Each --files switch introduces a group of source files that make
+        # up a single Banjo library (all have identical `library ...;` lines).
+        banjo_rspfile =
+            [ "--files" ] + rebase_path(invoker.sources, root_build_dir)
+      }
+    }
+
+    # Produce a metadata response file from all the banjo_rspfile lists.
+    # fidlc() uses this file.
+    generated_file(files_rspfile_target) {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [
+        ":$banjo_target",
+      ]
+      outputs = [
+        files_rspfile,
+      ]
+      output_conversion = "list lines"
+      data_keys = [ "banjo_rspfile" ]
+    }
+  } else {
+    not_needed(invoker, "*")
+
+    # TODO(mcgrathr): Remove this when all deps are migrated to
+    # bindings-specific targets.  For now, banjo_library() label
+    # itself implies the C and C++ bindings.
+    group(banjo_target) {
+      forward_variables_from(invoker,
+                             [
+                               "visibility",
+                               "testonly",
+                             ])
+      public_deps = [
+        ":$banjo_target.c",
+        ":$banjo_target.cpp",
+      ]
+    }
+  }
+
+  # Subroutine used in the _banjo_gen_templates loop in banjo_library().
+  # The inner template provides a local scope for the import so it
+  # won't clobber the outer template scope.
+  template("_banjo_gen_subtarget") {
+    import(invoker.import)
+    target(invoker.target, target_name) {
+      forward_variables_from(invoker.args, "*")
+    }
+  }
+
+  # Invoke each template.
+  foreach(gen, _banjo_gen_templates) {
+    # The target_name for the template is the main BANJO target name.
+    # The template will define its targets using appropriate suffixes.
+    _banjo_gen_subtarget(banjo_target) {
+      import = gen.import
+      target = gen.target
+      args = {
+        forward_variables_from(invoker,
+                               [
+                                 "visibility",
+                                 "testonly",
+                               ])
+
+        # The bindings-library template can map these to corresponding
+        # bindings-library targets.
+        banjo_deps = banjo_library_deps
+
+        # Provide these for convenience.  They're derived from target_name
+        # but every generator will be doing it the same way.
+        banjo_name = banjo_name
+        banjo_path = banjo_path
+      }
+    }
+  }
+}
