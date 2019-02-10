@@ -135,6 +135,28 @@ void Thread::OnException(const zx_excp_type_t type,
   }
 }
 
+bool Thread::TryNext() {
+  if (state() != State::kInException && state() != State::kNew) {
+    FXL_LOG(ERROR) << "Cannot try-next a thread " << GetName()
+                   << " while in state: " << StateName(state());
+    return false;
+  }
+
+  FXL_VLOG(2) << "Thread " << GetName() << ": trying next exception handler";
+
+  zx_status_t status =
+      zx_task_resume_from_exception(handle_, GetExceptionPortHandle(),
+                                    ZX_RESUME_TRY_NEXT);
+  if (status < 0) {
+    FXL_LOG(ERROR) << "Failed to try-next thread "
+                   << GetName() << ": "
+                   << debugger_utils::ZxErrorString(status);
+    return false;
+  }
+
+  return true;
+}
+
 bool Thread::ResumeFromException() {
   if (state() != State::kInException && state() != State::kNew) {
     FXL_LOG(ERROR) << "Cannot resume a thread while in state: "

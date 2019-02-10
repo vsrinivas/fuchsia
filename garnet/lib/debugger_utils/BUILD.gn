@@ -9,6 +9,7 @@ import("//build/testing/environments.gni")
 
 static_library("debugger_utils") {
   sources = [
+    "breakpoints.h",
     "build_ids.cc",
     "build_ids.h",
     "byte_block.h",
@@ -28,10 +29,13 @@ static_library("debugger_utils") {
 
   if (is_fuchsia) {
     sources += [
+      "breakpoints.cc",
       "dso_list.cc",
       "dso_list.h",
       "jobs.cc",
       "jobs.h",
+      "registers.cc",
+      "registers.h",
       "sysinfo.cc",
       "sysinfo.h",
       "threads.cc",

@@ -73,6 +73,9 @@ class Thread final {
   void OnException(const zx_excp_type_t type,
                    const zx_exception_context_t& context);
 
+  // Pass the exception on to the next handler.
+  bool TryNext();
+
   // Resumes the thread from a "stopped in exception" state. Returns true on
   // success, false on failure. The thread state on return is kRunning.
   bool ResumeFromException();

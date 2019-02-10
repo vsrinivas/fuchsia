@@ -76,6 +76,7 @@ executable("tests") {
     "process_unittest.cc",
     "test_server.cc",
     "test_server.h",
+    "thread_unittest.cc",
   ]
 
   deps = [
@@ -94,6 +95,10 @@ executable("test_helper") {
 
   sources = [
     "test_helper.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/debugger_utils",
   ]
 
   libs = [ "zircon" ]
