@@ -5,10 +5,15 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.bluetooth.host") {
+  # Internal-only
+  #
+  # Do not add to partner SDK.
+
   sources = [
     "bonding.fidl",
     "host.fidl",
   ]
+
   public_deps = [
     "//sdk/fidl/fuchsia.bluetooth",
     "//sdk/fidl/fuchsia.bluetooth.bredr",

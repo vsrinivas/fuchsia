@@ -4,7 +4,7 @@ implementation are:
 - [HostDevice](host_device.rs):
   - Receives FIDL events from `bt-host`, and relays them to mods via
     HostDispatcher.
-  - Provides thin wrappers over some of the [private Bluetooth API](../../../lib/bluetooth/fidl), for use by HostDispatcher.
+  - Provides thin wrappers over some of the [private Bluetooth API](/sdk/fidl/fuchsia.bluetooth.host), for use by HostDispatcher.
 - [ControlService](control_service.rs): Implements the `fuchsia.bluetooth.control.Control`
   interface, calling into HostDispatcher for help.
 - [HostDispatcher](host_dispatcher.rs):

@@ -77,7 +77,7 @@ time. This bt-host is represented as the "active Adapter".
 [control.fidl](../public/fidl/fuchsia.bluetooth.control.fidl) provides a management
 interface to designate an active adapter when multiple adapters are present.
 
-bt-host devices implement the [host.fidl](../lib/bluetooth/fidl/host.fidl)
+bt-host devices implement the [host.fidl](/sdk/fidl/fuchsia.bluetooth.host/host.fidl)
 management interface to communicate with the Bluetooth system service (accessed
 via [ioctl](../lib/bluetooth/fidl/c/bt_host.h).
 

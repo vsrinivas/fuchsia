@@ -13,11 +13,11 @@ rustc_library("fuchsia-bluetooth") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/lib/bluetooth/fidl:fuchsia.bluetooth.host-rustc",
-    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.host:fuchsia.bluetooth.host-rustc",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:lazy_static",
     "//third_party/rust-crates/rustc_deps:rand",
