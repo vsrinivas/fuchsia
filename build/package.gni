@@ -481,13 +481,6 @@ template("package") {
         test_spec(test_spec_name) {
           name = test.name
           location = path
-
-          # Encode the package name in the output directory to disambiguate
-          # during post-processing - cross-referencing with packages.json -
-          # whether a given test spec came from a package that was actually
-          # included in the build.
-          output_dir = "$target_out_dir/$pkg_target_name"
-
           forward_variables_from(test, [ "environments" ])
         }
       }

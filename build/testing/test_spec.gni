@@ -5,9 +5,6 @@
 import("//build/testing/environments.gni")
 import("//build/testing/platforms.gni")
 
-# Extension identifying a test spec JSON file.
-_test_spec_ext = "spec.json"
-
 # Describes the target device environment in which a test should run. This
 # specification is written in JSON to the build directory, to be aggregated
 # at test-time.
@@ -15,14 +12,11 @@ _test_spec_ext = "spec.json"
 # Parameters
 #
 #   name (required)
-#     [string] The test's name.
+#     [string] The test's target name.
 #
 #   location (required)
 #     [string]: Unique reference to a test, e.g., a filesystem path or a
 #     fuchsia URI.
-#
-#   output_dir (required for fuchsia; else is optional)
-#     [string]: Directory where the test spec will be written.
 #
 #   deps (optional)
 #     [list of labels]: List of labels that the test depends on.
@@ -49,7 +43,6 @@ template("test_spec") {
   forward_variables_from(invoker,
                          [
                            "environments",
-                           "output_dir",
 
                            # Not all test-defining targets have testonly = true
                            # (e.g., rust library targets with unit tests)
@@ -59,8 +52,6 @@ template("test_spec") {
   # Set default environments: QEMU for a fuchsia test, and VMs for linux and mac
   # tests.
   if (is_fuchsia) {
-    assert(defined(invoker.output_dir), "output_dir must be defined.")
-
     envs_specified = defined(environments)
     if (!envs_specified) {
       environments = [ qemu_env ]
@@ -77,13 +68,6 @@ template("test_spec") {
       environments += [ vim2_env ]
     }
   } else if (is_linux || is_mac) {
-    if (defined(output_dir)) {
-      assert(output_dir == target_out_dir,
-             "tests specs must be written to target_out_dir")
-    } else {
-      output_dir = target_out_dir
-    }
-
     if (!defined(environments)) {
       if (is_linux) {
         environments = [ linux_env ]
@@ -186,9 +170,6 @@ template("test_spec") {
     }
   }
 
-  # We take the basename just to make sure no other path components are given
-  # in the name, for which we have no guarantees.
-  test_name = get_path_info(invoker.name, "name")
 
   target_name_deps = []
 
@@ -196,6 +177,7 @@ template("test_spec") {
   # dependencies of the test; record them to a file.
   runtime_deps_file = ""
   if (defined(invoker.deps) && invoker.deps != []) {
+    test_name = get_path_info(invoker.name, "name")
     runtime_deps_file = "$target_gen_dir/${test_name}.deps.json"
     runtime_deps_target_name = "${target_name}_deps"
 
@@ -253,8 +235,6 @@ template("test_spec") {
              "Linux VMs or Macs may not yet be targeted for tests.")
     }
   }
-
-  write_file("${output_dir}/${test_name}.${_test_spec_ext}", test_spec, "json")
 
   group(target_name) {
     metadata = {
