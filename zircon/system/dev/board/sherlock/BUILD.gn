@@ -42,6 +42,6 @@ driver("sherlock") {
     "$zx/system/ulib/zxcpp",
   ]
   data_deps = [
-    # TODO: "$zx/kernel/target/arm64/boot-shim:sherlock",
+    "$zx/kernel/target/arm64/boot-shim:sherlock",
   ]
 }

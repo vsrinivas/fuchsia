@@ -25,6 +25,6 @@ driver("imx8mevk") {
     "$zx/system/ulib/zircon",
   ]
   data_deps = [
-    # TODO: "$zx/kernel/target/arm64/boot-shim:imx8mevk",
+    "$zx/kernel/target/arm64/boot-shim:imx8mevk",
   ]
 }

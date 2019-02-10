@@ -15,7 +15,7 @@ driver("qemu") {
   ]
   if (current_cpu == "arm64") {
     data_deps = [
-      # TODO: "$zx/kernel/target/arm64/boot-shim:qemu",
+      "$zx/kernel/target/arm64/boot-shim:qemu",
     ]
   }
 }

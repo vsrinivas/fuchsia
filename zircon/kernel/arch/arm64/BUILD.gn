@@ -22,7 +22,6 @@ if (current_toolchain == default_toolchain) {
       "$zx/kernel:headers",
       "$zx/kernel:standalone",
       "$zx/kernel:warnings",
-      "$zx/kernel/lib/libc:headers.config",
       "$zx/public/gn/config:no_sanitizers",
     ]
 
