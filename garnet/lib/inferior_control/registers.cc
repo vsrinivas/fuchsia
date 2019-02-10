@@ -52,7 +52,7 @@ bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
     return false;
   }
 
-  FXL_VLOG(1) << "Regset " << regset << " refreshed";
+  FXL_VLOG(2) << "Regset " << regset << " refreshed";
   return true;
 }
 
@@ -66,7 +66,7 @@ bool Registers::WriteRegsetHelper(int regset, const void* buf,
     return false;
   }
 
-  FXL_VLOG(1) << "Regset " << regset << " written";
+  FXL_VLOG(2) << "Regset " << regset << " written";
   return true;
 }
 
