@@ -47,6 +47,20 @@ zx_koid_t GetRelatedKoid(const zx::object_base& object) {
   return GetRelatedKoid(object.get());
 }
 
+std::string GetObjectName(zx_handle_t handle) {
+  char name[ZX_MAX_NAME_LEN];
+  zx_status_t status = zx_object_get_property(handle, ZX_PROP_NAME,
+                                              name, sizeof(name));
+  if (status < 0) {
+    return "";
+  }
+  return name;
+}
+
+std::string GetObjectName(const zx::object_base& object) {
+  return GetObjectName(object.get());
+}
+
 std::string ZxErrorString(zx_status_t status) {
   return fxl::StringPrintf("%s(%d)", zx_status_get_string(status), status);
 }

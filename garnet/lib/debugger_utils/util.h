@@ -103,6 +103,12 @@ zx_koid_t GetRelatedKoid(zx_handle_t handle);
 // Convenience wrapper that takes an object.
 zx_koid_t GetRelatedKoid(const zx::object_base& object);
 
+// Return the ZX_PROP_NAME property of |handle|.
+// Returns "" if the object doesn't have a name (not all objects have names).
+std::string GetObjectName(zx_handle_t handle);
+// Convenience wrapper that takes an object.
+std::string GetObjectName(const zx::object_base& object);
+
 // Return the name of exception |type| as a C string.
 // Returns nullptr if |type| is invalid.
 // This does not take a |zx_excp_type_t| value because it also handles
