@@ -153,7 +153,7 @@ class Registers {
                                  const fxl::StringView& value);
 
  private:
-  Thread* thread_;  // weak
+  Thread* thread_;  // non-owning
 
   // Helper function for GetPC,GetSP,GetFP.
   zx_vaddr_t GetIntRegister(int regno);

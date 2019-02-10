@@ -20,7 +20,7 @@ class ProcessMemory final : public debugger_utils::ByteBlock {
              size_t length) const override;
 
  private:
-  Process* process_;  // weak
+  Process* process_;  // non-owning
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ProcessMemory);
 };

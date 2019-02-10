@@ -104,8 +104,8 @@ class Thread final {
 
   zx_handle_t GetExceptionPortHandle();
 
-  // The owning process.
-  Process* process_;  // weak
+  // Our process (non-owning pointer).
+  Process* process_;
 
   // The debug-capable handle that we use to invoke zx_debug_* syscalls.
   zx_handle_t handle_;

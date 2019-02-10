@@ -234,11 +234,11 @@ class Process final {
   // Called after all other processing of a process exit has been done.
   void Clear();
 
-  // The server that owns us.
-  Server* server_;  // weak
+  // The server that owns us (non-owning).
+  Server* server_;
 
-  // The delegate that we send life-cycle notifications to.
-  Delegate* delegate_;  // weak
+  // The delegate that we send life-cycle notifications to (non-owning).
+  Delegate* delegate_;
 
   // Handle containing services available to this process.
   std::shared_ptr<sys::ServiceDirectory> services_;

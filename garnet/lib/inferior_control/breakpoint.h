@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <stddef.h>
+#include <stdint.h>
+
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -53,7 +56,7 @@ class ProcessBreakpoint : public Breakpoint {
   ProcessBreakpointSet* owner() const { return owner_; }
 
  private:
-  ProcessBreakpointSet* owner_;  // weak
+  ProcessBreakpointSet* owner_;  // non-owning
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ProcessBreakpoint);
 };
@@ -101,7 +104,7 @@ class ProcessBreakpointSet final {
   bool RemoveSoftwareBreakpoint(uintptr_t address);
 
  private:
-  Process* process_;  // weak
+  Process* process_;  // non-owning
 
   // All currently inserted breakpoints.
   std::unordered_map<uintptr_t, std::unique_ptr<Breakpoint>> breakpoints_;
@@ -115,7 +118,7 @@ class ThreadBreakpoint : public Breakpoint {
   ThreadBreakpointSet* owner() const { return owner_; }
 
  private:
-  ThreadBreakpointSet* owner_;  // weak
+  ThreadBreakpointSet* owner_;  // non-owning
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ThreadBreakpoint);
 };
@@ -162,7 +165,7 @@ class ThreadBreakpointSet final {
   bool SingleStepBreakpointInserted();
 
  private:
-  Thread* thread_;  // weak
+  Thread* thread_;  // non-owning
 
   // All currently inserted breakpoints.
   std::unordered_map<uintptr_t, std::unique_ptr<ThreadBreakpoint>> breakpoints_;
