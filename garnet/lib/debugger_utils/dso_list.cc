@@ -26,9 +26,6 @@ const char kDebugSuffix[] = ".debug";
 
 static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name,
                               uintptr_t base) {
-  if (!strcmp(name, "libc.so")) {
-    name = "libmusl.so";
-  }
   size_t len = strlen(name);
   size_t alloc_bytes = sizeof(dsoinfo_t) + len + 1;
   auto dso = reinterpret_cast<dsoinfo_t*>(calloc(1, alloc_bytes));
@@ -79,7 +76,8 @@ dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap_addr,
     std::unique_ptr<ElfReader> elf_reader;
     ElfError rc = ElfReader::Create(file_name, bb, 0, dso->base, &elf_reader);
     if (rc != ElfError::OK) {
-      FXL_LOG(ERROR) << "Unable to read ELF file: " << ElfErrorName(rc);
+      FXL_LOG(ERROR) << "Unable to read ELF file: " << file_name
+                     << ": " << ElfErrorName(rc);
       break;
     }
 
