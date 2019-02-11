@@ -280,6 +280,9 @@ class ChildrenCallback final {
 // An object under which properties, metrics, and other objects may be nested.
 class Object final {
  public:
+  // Default construct an empty Object that does nothing until assigned to.
+  Object() = default;
+
   // Construct an Object with the given name.
   explicit Object(std::string name);
 
@@ -289,7 +292,9 @@ class Object final {
   ~Object() = default;
 
   // Get the name of this object.
-  const char* name() const { return object_.object()->name().c_str(); }
+  const char* name() const {
+    return object_ ? object_->object()->name().c_str() : "";
+  }
 
   // Output the contents of this object as a FIDL struct.
   fuchsia::inspect::Object object() const;
@@ -340,8 +345,8 @@ class Object final {
 
   // Create a new |LazyMetric| with the given name that is a child of this
   // object.
-  [[nodiscard]] LazyMetric CreateLazyMetric(
-      std::string name, component::Metric::ValueCallback);
+  [[nodiscard]] LazyMetric CreateLazyMetric(std::string name,
+                                            component::Metric::ValueCallback);
 
   // Create a new |ChildrenCallback| that dynamically adds children to the
   // object at runtime.
@@ -352,9 +357,10 @@ class Object final {
   // Internal constructor for creating an Object facade in front of an
   // ExposedObject.
   explicit Object(component::ExposedObject object)
-      : object_(std::move(object)) {}
+      : object_(std::make_unique<component::ExposedObject>(std::move(object))) {
+  }
 
-  component::ExposedObject object_;
+  std::unique_ptr<component::ExposedObject> object_;
 };
 
 // Generate a unique name with the given prefix.

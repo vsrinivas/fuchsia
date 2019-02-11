@@ -37,8 +37,7 @@ void internal::RemoveEntity<component::Metric>(component::Object* object,
 
 LazyMetric::LazyMetric() {}
 
-LazyMetric::LazyMetric(
-    internal::EntityWrapper<component::Metric> entity)
+LazyMetric::LazyMetric(internal::EntityWrapper<component::Metric> entity)
     : entity_(std::move(entity)) {}
 void LazyMetric::Set(MetricCallback callback) {
   if (entity_) {
@@ -90,82 +89,116 @@ ChildrenCallback& ChildrenCallback::operator=(ChildrenCallback&& other) {
   return *this;
 }
 
-Object::Object(std::string name) : object_(std::move(name)) {}
+Object::Object(std::string name)
+    : object_(std::make_unique<component::ExposedObject>(std::move(name))) {}
 
-Object::Object(ObjectDir object_dir) : object_(std::move(object_dir)) {}
+Object::Object(ObjectDir object_dir)
+    : object_(
+          std::make_unique<component::ExposedObject>(std::move(object_dir))) {}
 
 fuchsia::inspect::Object Object::object() const {
-  return object_.object()->ToFidl();
+  return object_ ? object_->object()->ToFidl() : fuchsia::inspect::Object();
 }
 
 component::Object::StringOutputVector Object::children() const {
-  return object_.object()->GetChildren();
+  return object_ ? object_->object()->GetChildren()
+                 : component::Object::StringOutputVector();
 }
 
 Object Object::CreateChild(std::string name) {
+  if (!object_) {
+    return Object();
+  }
   component::ExposedObject child(std::move(name));
-  object_.add_child(&child);
+  object_->add_child(&child);
   return Object(std::move(child));
 }
 
 IntMetric Object::CreateIntMetric(std::string name, int64_t value) {
-  object_.object()->SetMetric(name, component::IntMetric(value));
+  if (!object_) {
+    return IntMetric();
+  }
+  object_->object()->SetMetric(name, component::IntMetric(value));
   return IntMetric(internal::EntityWrapper<component::Metric>(
-      std::move(name), object_.object()));
+      std::move(name), object_->object()));
 }
 
 UIntMetric Object::CreateUIntMetric(std::string name, uint64_t value) {
-  object_.object()->SetMetric(name, component::UIntMetric(value));
+  if (!object_) {
+    return UIntMetric();
+  }
+  object_->object()->SetMetric(name, component::UIntMetric(value));
   return UIntMetric(internal::EntityWrapper<component::Metric>(
-      std::move(name), object_.object()));
+      std::move(name), object_->object()));
 }
 
 DoubleMetric Object::CreateDoubleMetric(std::string name, double value) {
-  object_.object()->SetMetric(name, component::DoubleMetric(value));
+  if (!object_) {
+    return DoubleMetric();
+  }
+  object_->object()->SetMetric(name, component::DoubleMetric(value));
   return DoubleMetric(internal::EntityWrapper<component::Metric>(
-      std::move(name), object_.object()));
+      std::move(name), object_->object()));
 }
 
-LazyMetric Object::CreateLazyMetric(
-    std::string name, component::Metric::ValueCallback callback) {
-  object_.object()->SetMetric(name,
-                              component::CallbackMetric(std::move(callback)));
+LazyMetric Object::CreateLazyMetric(std::string name,
+                                    component::Metric::ValueCallback callback) {
+  if (!object_) {
+    return LazyMetric();
+  }
+  object_->object()->SetMetric(name,
+                               component::CallbackMetric(std::move(callback)));
   return LazyMetric(internal::EntityWrapper<component::Metric>(
-      std::move(name), object_.object()));
+      std::move(name), object_->object()));
 }
 
 StringProperty Object::CreateStringProperty(std::string name,
                                             std::string value) {
-  object_.object()->SetProperty(name, component::Property(std::move(value)));
+  if (!object_) {
+    return StringProperty();
+  }
+  object_->object()->SetProperty(name, component::Property(std::move(value)));
   return StringProperty(internal::EntityWrapper<component::Property>(
-      std::move(name), object_.object()));
+      std::move(name), object_->object()));
 }
 
 ByteVectorProperty Object::CreateByteVectorProperty(std::string name,
                                                     VectorValue value) {
-  object_.object()->SetProperty(name, component::Property(std::move(value)));
+  if (!object_) {
+    return ByteVectorProperty();
+  }
+  object_->object()->SetProperty(name, component::Property(std::move(value)));
   return ByteVectorProperty(internal::EntityWrapper<component::Property>(
-      std::move(name), object_.object()));
+      std::move(name), object_->object()));
 }
 
 LazyStringProperty Object::CreateLazyStringProperty(std::string name,
                                                     StringValueCallback value) {
-  object_.object()->SetProperty(name, component::Property(std::move(value)));
+  if (!object_) {
+    return LazyStringProperty();
+  }
+  object_->object()->SetProperty(name, component::Property(std::move(value)));
   return LazyStringProperty(internal::EntityWrapper<component::Property>(
-      std::move(name), object_.object()));
+      std::move(name), object_->object()));
 }
 
 LazyByteVectorProperty Object::CreateLazyByteVectorProperty(
     std::string name, VectorValueCallback value) {
-  object_.object()->SetProperty(name, component::Property(std::move(value)));
+  if (!object_) {
+    return LazyByteVectorProperty();
+  }
+  object_->object()->SetProperty(name, component::Property(std::move(value)));
   return LazyByteVectorProperty(internal::EntityWrapper<component::Property>(
-      std::move(name), object_.object()));
+      std::move(name), object_->object()));
 }
 
 ChildrenCallback Object::CreateChildrenCallback(
     ChildrenCallbackFunction callback) {
-  object_.object()->SetChildrenCallback(std::move(callback));
-  return ChildrenCallback(object_.object());
+  if (!object_) {
+    return ChildrenCallback();
+  }
+  object_->object()->SetChildrenCallback(std::move(callback));
+  return ChildrenCallback(object_->object());
 }
 
 std::string UniqueName(const std::string& prefix) {

@@ -17,6 +17,33 @@ using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 using namespace inspect::testing;
 
+TEST(Inspect, EmptyObject) {
+  Object obj;
+  EXPECT_STREQ("", obj.name());
+
+  auto child = obj.CreateChild("child");
+  auto int_metric = obj.CreateIntMetric("int", 0);
+  auto uint_metric = obj.CreateUIntMetric("uint", 0);
+  auto double_metric = obj.CreateDoubleMetric("double", 0);
+  auto str = obj.CreateStringProperty("str", "test");
+  auto bytes =
+      obj.CreateByteVectorProperty("bytes", inspect::VectorValue(3, 'a'));
+  auto lazy_metric = obj.CreateLazyMetric(
+      "lazy metric", [](component::Metric* out) { out->SetInt(0); });
+  auto lazy_string =
+      obj.CreateLazyStringProperty("lazy string", [] { return "test"; });
+  auto lazy_bytes = obj.CreateLazyByteVectorProperty(
+      "lazy bytes", [] { return inspect::VectorValue(3, 'a'); });
+  auto lazy_children =
+      obj.CreateChildrenCallback([](component::Object::ObjectVector* out) {});
+
+  auto output = obj.object();
+  EXPECT_STREQ("", output.name.c_str());
+  EXPECT_EQ(0u, output.properties->size());
+  EXPECT_EQ(0u, output.metrics->size());
+  EXPECT_EQ(0u, obj.children()->size());
+}
+
 TEST(Inspect, Object) {
   Object obj("test");
   EXPECT_STREQ("test", obj.name());
