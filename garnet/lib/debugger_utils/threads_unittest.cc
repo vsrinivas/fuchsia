@@ -68,26 +68,12 @@ bool CreateThreads(size_t num_threads, std::vector<thrd_t>* threads,
   return false;
 }
 
-zx_status_t GetThreadState(const zx::thread& thread, uint32_t* state) {
-  zx_info_thread_t info;
-  auto status = thread.get_info(ZX_INFO_THREAD, &info, sizeof(info),
-                                nullptr, nullptr);
-  if (status != ZX_OK) {
-    return status;
-  }
-  *state = info.state;
-  return ZX_OK;
-}
-
 void CheckThreadSuspended(const zx::thread& thread, const char* msg) {
-  uint32_t state;
-  EXPECT_EQ(ZX_OK, GetThreadState(thread, &state)) << msg;
-  EXPECT_EQ(ZX_THREAD_STATE_SUSPENDED, state) << msg;
+  EXPECT_EQ(GetThreadOsState(thread), ZX_THREAD_STATE_SUSPENDED) << msg;
 }
 
 void CheckThreadRunning(const zx::thread& thread, const char* msg) {
-  uint32_t state;
-  EXPECT_EQ(ZX_OK, GetThreadState(thread, &state)) << msg;
+  uint32_t state = GetThreadOsState(thread);
   // Our threads are either running or sleeping.
   EXPECT_TRUE(state == ZX_THREAD_STATE_RUNNING ||
               state == ZX_THREAD_STATE_BLOCKED_SLEEPING) << msg;

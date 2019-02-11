@@ -6,6 +6,7 @@
 #define GARNET_LIB_DEBUGGER_UTILS_THREADS_H_
 
 #include <functional>
+#include <string>
 #include <vector>
 
 #include <lib/zx/job.h>
@@ -16,6 +17,22 @@ namespace debugger_utils {
 
 using WithThreadSuspendedFunction =
     std::function<zx_status_t(const zx::thread& thread)>;
+
+// Return the thread's current state according to the o/s.
+// The result is one if ZX_THREAD_STATE_*.
+uint32_t GetThreadOsState(zx_handle_t thread);
+
+// Return the thread's current state according to the o/s.
+// The result is one if ZX_THREAD_STATE_*.
+uint32_t GetThreadOsState(const zx::thread& thread);
+
+// Return the name of ZX_THREAD_STATE_* value |state|.
+// Returns nullptr if |state| is invalid.
+const char* ThreadOsStateName(uint32_t state);
+
+// Return the name of ZX_THREAD_STATE_* value |state|.
+// Returns UNKNOWN(value) if |state| is invalid.
+const std::string ThreadOsStateNameAsString(uint32_t state);
 
 // Suspend |thread| and then run |function|.
 // If waiting for |thread| to suspend times out then |function| is not called,

@@ -6,11 +6,59 @@
 
 #include <algorithm>
 #include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
 
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/util.h"
 
 namespace debugger_utils {
+
+uint32_t GetThreadOsState(zx_handle_t thread) {
+    zx_info_thread_t info;
+    zx_status_t status =
+      zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info),
+                         nullptr, nullptr);
+    FXL_CHECK(status == ZX_OK) << status;
+    return info.state;
+}
+
+uint32_t GetThreadOsState(const zx::thread& thread) {
+  return GetThreadOsState(thread.get());
+}
+
+const char* ThreadOsStateName(uint32_t state) {
+#define CASE_TO_STR(x) \
+  case x:              \
+    return #x
+  switch (state) {
+    CASE_TO_STR(ZX_THREAD_STATE_NEW);
+    CASE_TO_STR(ZX_THREAD_STATE_RUNNING);
+    CASE_TO_STR(ZX_THREAD_STATE_SUSPENDED);
+    CASE_TO_STR(ZX_THREAD_STATE_BLOCKED);
+    CASE_TO_STR(ZX_THREAD_STATE_DYING);
+    CASE_TO_STR(ZX_THREAD_STATE_DEAD);
+    CASE_TO_STR(ZX_THREAD_STATE_BLOCKED_EXCEPTION);
+    CASE_TO_STR(ZX_THREAD_STATE_BLOCKED_SLEEPING);
+    CASE_TO_STR(ZX_THREAD_STATE_BLOCKED_FUTEX);
+    CASE_TO_STR(ZX_THREAD_STATE_BLOCKED_PORT);
+    CASE_TO_STR(ZX_THREAD_STATE_BLOCKED_CHANNEL);
+    CASE_TO_STR(ZX_THREAD_STATE_BLOCKED_WAIT_ONE);
+    CASE_TO_STR(ZX_THREAD_STATE_BLOCKED_WAIT_MANY);
+    CASE_TO_STR(ZX_THREAD_STATE_BLOCKED_INTERRUPT);
+    CASE_TO_STR(ZX_THREAD_STATE_BLOCKED_PAGER);
+    default:
+      return nullptr;
+  }
+#undef CASE_TO_STR
+}
+
+const std::string ThreadOsStateNameAsString(uint32_t state) {
+  const char* name = ThreadOsStateName(state);
+  if (name) {
+    return std::string(name);
+  }
+  return fxl::StringPrintf("UNKNOWN(%u)", state);
+}
 
 zx_status_t WithThreadSuspended(
     const zx::thread& thread, zx::duration thread_suspend_timeout,
