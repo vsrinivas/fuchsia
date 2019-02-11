@@ -20,8 +20,8 @@ namespace {
 
 using debug_ipc::MessageLoop;
 
-constexpr char* kElfSymbolBuildID = "e1ff11e";
-constexpr char* kElfSymbolName = "test_elf_sym";
+const char kElfSymbolBuildID[] = "e1ff11e";
+const char kElfSymbolName[] = "test_elf_sym";
 constexpr uint64_t kElfSymbolAddress = 42;
 
 class BreakpointSink : public RemoteAPI {

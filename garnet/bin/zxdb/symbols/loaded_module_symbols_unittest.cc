@@ -25,11 +25,11 @@ TEST(LoadedModuleSymbols, ElfLookup) {
   auto elf_resolve = mod.ResolveInputLocation(elf_loc);
   auto normal_resolve = mod.ResolveInputLocation(normal_loc);
 
-  ASSERT_EQ(1, elf_resolve.size());
-  ASSERT_EQ(1, normal_resolve.size());
+  ASSERT_EQ(1u, elf_resolve.size());
+  ASSERT_EQ(1u, normal_resolve.size());
 
-  EXPECT_EQ(720, elf_resolve[0].address());
-  EXPECT_EQ(720, normal_resolve[0].address());
+  EXPECT_EQ(720u, elf_resolve[0].address());
+  EXPECT_EQ(720u, normal_resolve[0].address());
 }
 
 }  // namespace zxdb
