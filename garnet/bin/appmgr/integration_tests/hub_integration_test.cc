@@ -60,38 +60,27 @@ class HubTest : public component::testing::TestWithEnvironment {
 };
 
 TEST(ProbeHub, Component) {
-  constexpr char kGlob[] = "/hub/c/sysmgr.cmx/*/out/debug";
+  constexpr char kGlob[] = "/hub/c/*/*/out/debug";
   files::Glob glob(kGlob);
-  EXPECT_EQ(glob.size(), 1u) << kGlob << " expected to match once.";
+  EXPECT_GE(glob.size(), 1u) << kGlob << " expected to match at least once.";
 }
 
 TEST(ProbeHub, Realm) {
-  constexpr char kGlob[] = "/hub/r/sys/*/c/";
+  constexpr char kGlob[] = "/hub/c/";
   files::Glob glob(kGlob);
   EXPECT_EQ(glob.size(), 1u) << kGlob << " expected to match once.";
 }
 
 TEST(ProbeHub, RealmSvc) {
-  constexpr char kGlob[] = "/hub/r/sys/*/svc/fuchsia.sys.Environment";
+  constexpr char kGlob[] = "/hub/svc/fuchsia.sys.Environment";
   files::Glob glob(kGlob);
   EXPECT_EQ(glob.size(), 1u);
 }
 
 TEST_F(HubTest, Services) {
-  // Services for root.
-  {
-    std::vector<std::string> files;
-    ASSERT_TRUE(files::ReadDirContents("/hub/svc", &files));
-    EXPECT_THAT(files,
-                ::testing::UnorderedElementsAre(
-                    ".", "fuchsia.process.Resolver", "fuchsia.process.Launcher",
-                    "fuchsia.sys.Environment", "fuchsia.sys.Launcher",
-                    "fuchsia.sys.Loader"));
-  }
-
   // Services for sys.
   {
-    constexpr char kGlob[] = "/hub/r/sys/*/svc";
+    constexpr char kGlob[] = "/hub/svc";
     files::Glob glob(kGlob);
     EXPECT_EQ(glob.size(), 1u) << kGlob << " expected to match once.";
     const std::string path = *glob.begin();

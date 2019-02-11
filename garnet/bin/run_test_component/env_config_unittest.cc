@@ -46,32 +46,19 @@ TEST_F(EnvironmentConfigTest, InvalidJson) {
               ::testing::HasSubstr("Missing a name for object member."));
 }
 
-TEST_F(EnvironmentConfigTest, NoRootElement) {
-  const std::string json = R"JSON({
-  "sys": ["url2", "url4"]
-  })JSON";
-  EnvironmentConfig config;
-  EXPECT_FALSE(ParseFrom(&config, json));
-  EXPECT_THAT(config.error_str(),
-              ::testing::HasSubstr("Environment 'root' not found."));
-  EXPECT_EQ(2u, config.url_map().size());
-}
-
 TEST_F(EnvironmentConfigTest, NoSysElement) {
   const std::string json = R"JSON({
-  "root": ["url2", "url4"]
   })JSON";
   EnvironmentConfig config;
   EXPECT_FALSE(ParseFrom(&config, json));
   EXPECT_THAT(config.error_str(),
               ::testing::HasSubstr("Environment 'sys' not found."));
-  EXPECT_EQ(2u, config.url_map().size());
+  EXPECT_EQ(0u, config.url_map().size());
 }
 
 TEST_F(EnvironmentConfigTest, InvalidSection) {
   {
     const std::string json = R"JSON({
-    "root": ["url2", "url4"],
     "sys": 3
     })JSON";
     EnvironmentConfig config;
@@ -79,36 +66,18 @@ TEST_F(EnvironmentConfigTest, InvalidSection) {
     EXPECT_THAT(config.error_str(),
                 ::testing::HasSubstr("'sys' section should be an array."));
   }
-  {
-    const std::string json = R"JSON({
-    "root": ["url2", 42],
-    "sys": ["url1"]
-    })JSON";
-    EnvironmentConfig config;
-    EXPECT_FALSE(ParseFrom(&config, json));
-    EXPECT_THAT(
-        config.error_str(),
-        ::testing::HasSubstr("'root' section should be a string array."));
-  }
 }
 
 TEST_F(EnvironmentConfigTest, ValidConfig) {
   const std::string json = R"JSON({
-  "root": ["url1", "url3", "url5"],
-  "sys": ["url2", "url4"]
+  "sys": ["url1", "url2"]
   })JSON";
   EnvironmentConfig config;
   EXPECT_TRUE(ParseFrom(&config, json));
   EXPECT_FALSE(config.HasError());
-  ASSERT_EQ(5u, config.url_map().size());
-  std::vector<std::string> root_urls = {"url1", "url3", "url5"};
-  for (auto& url : root_urls) {
-    auto map_entry = config.url_map().find(url);
-    ASSERT_NE(map_entry, config.url_map().end());
-    EXPECT_EQ(map_entry->second, run::EnvironmentType::ROOT);
-  }
+  ASSERT_EQ(2u, config.url_map().size());
 
-  std::vector<std::string> sys_urls = {"url2", "url4"};
+  std::vector<std::string> sys_urls = {"url1", "url2"};
   for (auto& url : sys_urls) {
     auto map_entry = config.url_map().find(url);
     ASSERT_NE(map_entry, config.url_map().end());

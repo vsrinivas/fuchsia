@@ -14,7 +14,7 @@
 
 namespace run {
 
-enum EnvironmentType { ROOT, SYS };
+enum EnvironmentType { SYS };
 
 class EnvironmentConfig {
  public:

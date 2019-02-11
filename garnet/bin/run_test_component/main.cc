@@ -53,15 +53,6 @@ bool ConnectToRequiredEnvironment(const run::EnvironmentType& env_type,
   files::ReadFileToString("/hub/name", &current_env);
   std::string svc_path = "/hub/svc";
   switch (env_type) {
-    case run::EnvironmentType::ROOT:
-      if (current_env != "app") {
-        fprintf(stderr,
-                "Cannot run test in root environment as this utility was "
-                "started in '%s' environment",
-                current_env.c_str());
-        return false;
-      }
-      break;
     case run::EnvironmentType::SYS:
       if (current_env == "app") {
         files::Glob glob("/hub/r/sys/*/svc");

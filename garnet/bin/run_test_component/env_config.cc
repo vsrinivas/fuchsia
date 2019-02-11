@@ -44,7 +44,6 @@ bool EnvironmentConfig::ParseFromFile(const std::string& file_path) {
   if (json_parser_.HasError()) {
     return false;
   }
-  CreateMap("root", EnvironmentType::ROOT, document);
   CreateMap("sys", EnvironmentType::SYS, document);
   return !json_parser_.HasError();
 }
