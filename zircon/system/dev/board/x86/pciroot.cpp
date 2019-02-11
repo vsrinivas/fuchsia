@@ -6,6 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/auxdata.h>
 #include <ddk/protocol/pciroot.h>
+#include <ddk/protocol/sysmem.h>
 #include <pci/pio.h>
 #include <zircon/hw/i2c.h>
 #include <zircon/types.h>
@@ -199,6 +200,17 @@ static zx_status_t pciroot_op_get_bti(void* context,
     return zx_bti_create(iommu_handle, 0, bdf, bti);
 }
 
+static zx_status_t pciroot_op_connect_sysmem(void* context, zx_handle_t handle) {
+    acpi_device_t* dev = (acpi_device_t*)context;
+    sysmem_protocol_t sysmem;
+    zx_status_t status = device_get_protocol(dev->platform_bus, ZX_PROTOCOL_SYSMEM, &sysmem);
+    if (status != ZX_OK) {
+        zx_handle_close(handle);
+        return status;
+    }
+    return sysmem_connect(&sysmem, handle);
+}
+
 #ifdef ENABLE_USER_PCI
 zx_status_t Pciroot::PcirootGetAuxdata(const char* args, void* data, size_t bytes, size_t* actual) {
     return pciroot_op_get_auxdata(c_context(), args, data, bytes, actual);
@@ -206,6 +218,15 @@ zx_status_t Pciroot::PcirootGetAuxdata(const char* args, void* data, size_t byte
 
 zx_status_t Pciroot::PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
     return pciroot_op_get_bti(c_context(), bdf, index, bti->reset_and_get_address());
+}
+
+zx_status_t Pciroot::PcirootConnectSysmem(zx::handle handle) {
+    sysmem_protocol_t sysmem;
+    zx_status_t status = device_get_protocol(platform_bus_, ZX_PROTOCOL_SYSMEM, &sysmem);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return sysmem_connect(&sysmem, handle.release());
 }
 
 zx_status_t Pciroot::PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
@@ -282,9 +303,10 @@ zx_status_t Pciroot::PcirootFreeAddressSpace(uint64_t base, size_t len, pci_addr
 
 zx_status_t Pciroot::Create(fbl::unique_ptr<pciroot_ctx_t> ctx,
                             zx_device_t* parent,
+                            zx_device_t* platform_bus,
                             const char* name) {
     fbl::AllocChecker ac;
-    auto pciroot = new (&ac) Pciroot(std::move(ctx), parent, name);
+    auto pciroot = new (&ac) Pciroot(std::move(ctx), parent, platform_bus, name);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -355,6 +377,7 @@ static zx_status_t pciroot_op_free_address_space(void*, uint64_t, size_t, pci_ad
 static pciroot_protocol_ops_t pciroot_proto = {
     .get_auxdata = pciroot_op_get_auxdata,
     .get_bti = pciroot_op_get_bti,
+    .connect_sysmem = pciroot_op_connect_sysmem,
     .get_pci_platform_info = pciroot_op_get_pci_platform_info,
     .get_pci_irq_info = pciroot_op_get_pci_irq_info,
     .driver_should_proxy_config = pciroot_op_driver_should_proxy_config,

@@ -33,6 +33,7 @@ typedef struct acpi_device_irq {
 
 typedef struct acpi_device {
     zx_device_t* zxdev;
+    zx_device_t* platform_bus;
 
     mtx_t lock;
 
@@ -52,7 +53,8 @@ typedef struct acpi_device {
 
 typedef struct {
     zx_device_t* sys_root;
-    zx_device_t* acpi_root;    
+    zx_device_t* acpi_root;
+    zx_device_t* platform_bus;
     bool found_pci;
     uint8_t last_pci; // bus number of the last PCI root seen
 } publish_acpi_device_ctx_t;
@@ -65,11 +67,8 @@ typedef struct {
 
 // TODO(cja): this is here because of kpci.c and can be removed once
 // kernel pci is out of the tree.
-zx_device_t* publish_device(zx_device_t* parent,
-                            ACPI_HANDLE handle,
-                            ACPI_DEVICE_INFO* info,
-                            const char* name,
-                            uint32_t protocol_id,
+zx_device_t* publish_device(zx_device_t* parent, zx_device_t* platform_bus, ACPI_HANDLE handle,
+                            ACPI_DEVICE_INFO* info, const char* name, uint32_t protocol_id,
                             void* protocol_ops);
 
 zx_protocol_device_t* get_acpi_root_device_proto(void);

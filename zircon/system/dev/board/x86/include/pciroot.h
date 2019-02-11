@@ -25,14 +25,14 @@ class Pciroot;
 using PcirootType = ddk::Device<Pciroot>;
 class Pciroot : public PcirootType, public ddk::PcirootProtocol<Pciroot, ddk::base_protocol> {
 public:
-    static zx_status_t Create(fbl::unique_ptr<pciroot_ctx_t> ctx,
-                              zx_device_t* parent,
-                              const char* name);
+    static zx_status_t Create(fbl::unique_ptr<pciroot_ctx_t> ctx, zx_device_t* parent,
+                              zx_device_t* platform_bus, const char* name);
     zx_status_t PcirootGetAuxdata(const char* args,
                                   void* out_data,
                                   size_t data_size,
                                   size_t* out_data_actual);
     zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti);
+    zx_status_t PcirootConnectSysmem(zx::handle handle);
     zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info);
     zx_status_t PcirootGetPciIrqInfo(pci_irq_info_t* info);
 
@@ -79,9 +79,11 @@ public:
     void* c_context(void) { return static_cast<void*>(ctx_.get()); }
 
 private:
-    Pciroot(fbl::unique_ptr<pciroot_ctx_t> ctx, zx_device_t* parent, const char* name)
-        : PcirootType(parent), ctx_(std::move(ctx)) {}
+    Pciroot(fbl::unique_ptr<pciroot_ctx_t> ctx, zx_device_t* parent, zx_device_t* platform_bus,
+            const char* name)
+        : PcirootType(parent), ctx_(std::move(ctx)), platform_bus_(platform_bus) {}
     fbl::unique_ptr<pciroot_ctx_t> ctx_;
+    zx_device_t* platform_bus_;
 };
 
 #endif

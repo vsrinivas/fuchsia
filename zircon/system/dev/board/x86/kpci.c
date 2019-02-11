@@ -588,8 +588,8 @@ zx_status_t pci_init(zx_device_t* sysdev, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
         // Publish PCI root as /dev/sys/ level.
         // Only publish one PCI root device for all PCI roots
         // TODO: store context for PCI root protocol
-        zx_device_t* pcidev = publish_device(sysdev, object, info, "pci",
-                ZX_PROTOCOL_PCIROOT, get_pciroot_ops());
+        zx_device_t* pcidev = publish_device(sysdev, ctx->platform_bus, object, info, "pci",
+                                             ZX_PROTOCOL_PCIROOT, get_pciroot_ops());
         ctx->found_pci = (pcidev != NULL);
     }
     // Get the PCI base bus number

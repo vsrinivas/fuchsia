@@ -341,11 +341,8 @@ static const char* hid_from_acpi_devinfo(ACPI_DEVICE_INFO* info) {
     return hid;
 }
 
-zx_device_t* publish_device(zx_device_t* parent,
-                            ACPI_HANDLE handle,
-                            ACPI_DEVICE_INFO* info,
-                            const char* name,
-                            uint32_t protocol_id,
+zx_device_t* publish_device(zx_device_t* parent, zx_device_t* platform_bus, ACPI_HANDLE handle,
+                            ACPI_DEVICE_INFO* info, const char* name, uint32_t protocol_id,
                             void* protocol_ops) {
     zx_device_prop_t props[4];
     int propcount = 0;
@@ -407,6 +404,7 @@ zx_device_t* publish_device(zx_device_t* parent,
     if (!dev) {
         return NULL;
     }
+    dev->platform_bus = platform_bus;
 
     dev->ns_node = handle;
 
@@ -444,7 +442,8 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
 
     publish_acpi_device_ctx_t* ctx = (publish_acpi_device_ctx_t*)context;
     zx_device_t* acpi_root = ctx->acpi_root;
-    zx_device_t* sys_root = ctx->sys_root;    
+    zx_device_t* sys_root = ctx->sys_root;
+    zx_device_t* platform_bus = ctx->platform_bus;
 
     // TODO: This is a temporary workaround until we have full ACPI device
     // enumeration. If this is the I2C1 bus, we run _PS0 so the controller
@@ -506,10 +505,11 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
         thermal_init(acpi_root, info, object);
     } else if (!memcmp(hid, I8042_HID_STRING, HID_LENGTH) ||
                (cid && !memcmp(cid, I8042_HID_STRING, HID_LENGTH))) {
-        publish_device(acpi_root, object, info, "i8042", ZX_PROTOCOL_ACPI, &acpi_proto);
+        publish_device(acpi_root, platform_bus, object, info, "i8042", ZX_PROTOCOL_ACPI,
+                       &acpi_proto);
     } else if (!memcmp(hid, RTC_HID_STRING, HID_LENGTH) ||
                (cid && !memcmp(cid, RTC_HID_STRING, HID_LENGTH))) {
-        publish_device(acpi_root, object, info, "rtc", ZX_PROTOCOL_ACPI, &acpi_proto);
+        publish_device(acpi_root, platform_bus, object, info, "rtc", ZX_PROTOCOL_ACPI, &acpi_proto);
     }
 
 out:
@@ -518,8 +518,9 @@ out:
     return AE_OK;
 }
 
-static zx_status_t publish_acpi_devices(zx_device_t* sys_root, zx_device_t* acpi_root) {
-    zx_status_t status = pwrbtn_init(acpi_root);        
+static zx_status_t publish_acpi_devices(zx_device_t* sys_root, zx_device_t* acpi_root,
+                                        zx_device_t* platform_bus) {
+    zx_status_t status = pwrbtn_init(acpi_root);
 
     if (status != ZX_OK) {
         zxlogf(ERROR, "acpi: failed to initialize pwrbtn device: %d\n", status);
@@ -530,6 +531,7 @@ static zx_status_t publish_acpi_devices(zx_device_t* sys_root, zx_device_t* acpi
     publish_acpi_device_ctx_t ctx = {
         .acpi_root = acpi_root,
         .sys_root = sys_root,
+        .platform_bus = platform_bus,
         .found_pci = false,
         .last_pci = 0xFF,
     };
@@ -571,7 +573,7 @@ static int acpi_start_thread(void* arg) {
         goto fail;
     }
 
-    return publish_acpi_devices(acpi->sys_root, acpi->acpi_root);
+    return publish_acpi_devices(acpi->sys_root, acpi->acpi_root, acpi->parent);
 
 fail:
     return status;

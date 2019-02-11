@@ -416,7 +416,7 @@ zx_status_t pci_init(zx_device_t* parent,
     uint8_t last_pci_bbn = dev_ctx->info.start_bus_num;
     memcpy(name, dev_ctx->name, sizeof(name));
 
-    status = Pciroot::Create(std::move(dev_ctx), parent, name);
+    status = Pciroot::Create(std::move(dev_ctx), parent, ctx->platform_bus, name);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s failed to add pciroot device for '%s': %d\n",
                kLogTag, dev_ctx->name, status);
