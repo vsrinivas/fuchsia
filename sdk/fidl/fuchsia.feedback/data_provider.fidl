@@ -1,0 +1,35 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.feedback;
+
+using fuchsia.mem;
+
+/// Provides data useful to attach in feedback reports (crash or user feedback).
+[Discoverable]
+interface DataProvider {
+    /// Returns a PNG image of the current view.
+    GetPngScreenshot() -> (Status status, PngImage? screenshot);
+};
+
+/// The return status to check whether to expect a payload (on OK) or not (otherwise).
+enum Status {
+    UNKNOWN = 0;
+    OK = 1;
+    ERROR = 2;
+    UNIMPLEMENTED = 3;
+};
+
+/// The PNG image payload needed to recreate the image.
+struct PngImage {
+    fuchsia.mem.Buffer data;
+    ImageDimensions dimensions;
+};
+
+/// The dimensions of an image in pixels.
+struct ImageDimensions {
+    uint32 width_in_px;
+    uint32 height_in_px;
+};
+

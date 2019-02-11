@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/feedback_agent"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

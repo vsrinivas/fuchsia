@@ -34,6 +34,7 @@
         "garnet/packages/prod/dhcpd_test_client",
         "garnet/packages/prod/drivers",
         "garnet/packages/prod/far",
+        "garnet/packages/prod/feedback_agent",
         "garnet/packages/prod/fonts",
         "garnet/packages/prod/fortune",
         "garnet/packages/prod/guest_runner",

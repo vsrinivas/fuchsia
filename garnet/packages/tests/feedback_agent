@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/bin/feedback_agent/tests:feedback_agent_tests"
+    ]
+}

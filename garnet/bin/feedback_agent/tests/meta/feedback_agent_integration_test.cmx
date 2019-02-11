@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/feedback_agent_integration_test"
+    },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx"
+            }
+        }
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.feedback.DataProvider"
+        ]
+    }
+}
