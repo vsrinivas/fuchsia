@@ -4,7 +4,6 @@
 
 #include "exception_port.h"
 
-#include <cinttypes>
 #include <string>
 
 #include <lib/async/cpp/task.h>
@@ -21,32 +20,7 @@
 
 #include "thread.h"
 
-using std::lock_guard;
-using std::mutex;
-
 namespace inferior_control {
-
-namespace {
-
-std::string IOPortPacketTypeToString(const zx_port_packet_t& pkt) {
-  if (ZX_PKT_IS_EXCEPTION(pkt.type)) {
-    return "ZX_PKT_TYPE_EXCEPTION";
-  }
-#define CASE_TO_STR(x) \
-  case x:              \
-    return #x
-  switch (pkt.type) {
-    CASE_TO_STR(ZX_PKT_TYPE_USER);
-    CASE_TO_STR(ZX_PKT_TYPE_SIGNAL_ONE);
-    CASE_TO_STR(ZX_PKT_TYPE_SIGNAL_REP);
-    default:
-      break;
-  }
-#undef CASE_TO_STR
-  return "(unknown)";
-}
-
-}  // namespace
 
 // static
 ExceptionPort::Key ExceptionPort::g_key_counter = 0;
@@ -65,7 +39,9 @@ bool ExceptionPort::Run() {
   FXL_DCHECK(!eport_);
   FXL_DCHECK(!keep_running_);
 
-  // Create an I/O port.
+  // Create the port used to bind to the inferior's exception port.
+  // TODO(dje): We can use a provided async loop once ports are no longer
+  // used to bind to exception ports.
   zx_status_t status = zx::port::create(0, &eport_);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to create the exception port: "
@@ -76,7 +52,7 @@ bool ExceptionPort::Run() {
   FXL_DCHECK(eport_);
 
   keep_running_ = true;
-  io_thread_ = std::thread(fit::bind_member(this, &ExceptionPort::Worker));
+  port_thread_ = std::thread(fit::bind_member(this, &ExceptionPort::Worker));
 
   return true;
 }
@@ -85,25 +61,21 @@ void ExceptionPort::Quit() {
   FXL_DCHECK(eport_);
   FXL_DCHECK(keep_running_);
 
-  FXL_LOG(INFO) << "Quitting exception port I/O loop";
+  FXL_LOG(INFO) << "Quitting exception port loop";
 
-  // Close the I/O port. This should cause zx_port_wait to return if one is
-  // pending.
   keep_running_ = false;
-  {
-    lock_guard<mutex> lock(eport_mutex_);
 
-    // The only way it seems possible to make the I/O thread return from
-    // zx_port_wait is to queue a dummy packet on the port.
-    zx_port_packet_t packet;
-    memset(&packet, 0, sizeof(packet));
-    packet.type = ZX_PKT_TYPE_USER;
-    eport_.queue(&packet);
-  }
+  // This is called from a different thread than |port_thread_|.
+  // Send it a packet waking it up. It will notice |keep_running_ == false|
+  // and exit.
+  zx_port_packet_t packet{};
+  // We don't use USER packets for anything else yet.
+  packet.type = ZX_PKT_TYPE_USER;
+  eport_.queue(&packet);
 
-  io_thread_.join();
+  port_thread_.join();
 
-  FXL_LOG(INFO) << "Exception port I/O loop exited";
+  FXL_LOG(INFO) << "Exception port loop exited";
 }
 
 ExceptionPort::Key ExceptionPort::Bind(zx_handle_t process_handle,
@@ -185,23 +157,18 @@ void ExceptionPort::Worker() {
   // Give this thread an identifiable name for debugging purposes.
   fsl::SetCurrentThreadName("exception port reader");
 
-  FXL_VLOG(1) << "ExceptionPort I/O thread started";
+  FXL_VLOG(1) << "Exception port thread started";
 
-  zx_handle_t eport;
-  {
-    lock_guard<mutex> lock(eport_mutex_);
-    eport = eport_.get();
-  }
   while (keep_running_) {
     zx_port_packet_t packet;
-    zx_status_t status = zx_port_wait(eport, ZX_TIME_INFINITE, &packet);
+    zx_status_t status = eport_.wait(zx::time::infinite(), &packet);
     if (status < 0) {
       FXL_LOG(ERROR) << "zx_port_wait returned error: "
                      << debugger_utils::ZxErrorString(status);
+      // We're no longer running, record it.
+      keep_running_ = false;
+      break;
     }
-
-    FXL_VLOG(2) << "IO port packet received - key: " << packet.key
-                << " type: " << IOPortPacketTypeToString(packet);
 
     if (ZX_PKT_IS_EXCEPTION(packet.type)) {
       FXL_VLOG(1) << "Exception received: "
@@ -268,11 +235,7 @@ void ExceptionPort::Worker() {
     });
   }
 
-  // Close the I/O port.
-  {
-    lock_guard<mutex> lock(eport_mutex_);
-    eport_.reset();
-  }
+  eport_.reset();
 }
 
 }  // namespace inferior_control

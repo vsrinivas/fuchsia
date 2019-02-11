@@ -93,24 +93,20 @@ class ExceptionPort final {
   // The worker function.
   void Worker();
 
-  // Set to false by Quit(). This tells |io_thread_| whether it should terminate
-  // its loop as soon as zx_port_wait returns.
+  // Set to false by Quit(). This tells |port_thread_| whether it should
+  // terminate its loop as soon as zx_port_wait returns.
   std::atomic_bool keep_running_;
 
   // The origin dispatcher to post observer callback events to the thread
   // that created this object.
   async_dispatcher_t* const origin_dispatcher_;
 
-  // The exception port handle and a mutex for synchronizing access to it.
-  // |io_thread_| only ever reads from |eport_| but a call to Quit() can set it
-  // to 0. This can really only happen if Quit() is called before Worker() even
-  // runs on the |io_thread_| which is extremely unlikely. But we play safe
-  // anyway.
-  std::mutex eport_mutex_;
+  // The exception port used to bind to the inferior.
+  // Once created it stays valid until |port_thread_| exits.
   zx::port eport_;
 
   // The thread on which we wait on the exception port.
-  std::thread io_thread_;
+  std::thread port_thread_;
 
   // All callbacks that are currently bound to this port.
   std::unordered_map<Key, BindData> callbacks_;
