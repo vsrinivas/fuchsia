@@ -22,6 +22,7 @@
         "garnet/packages/tests/device_settings",
         "garnet/packages/tests/dhcp_tests",
         "garnet/packages/tests/display_capture_test",
+        "garnet/packages/tests/e2e_input_tests",
         "garnet/packages/tests/elflib",
         "garnet/packages/tests/escher",
         "garnet/packages/tests/examples",

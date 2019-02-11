@@ -17,12 +17,16 @@ namespace input {
 
 std::ostream& operator<<(std::ostream& os,
                          const fuchsia::ui::input::InputEvent& value) {
-  if (value.is_pointer()) {
-    return os << value.pointer();
-  } else if (value.is_keyboard()) {
-    return os << value.keyboard();
-  } else {
-    return os;
+  using fuchsia::ui::input::InputEvent;
+  switch(value.Which()) {
+    case InputEvent::Tag::kPointer:
+      return os << value.pointer();
+    case InputEvent::Tag::kKeyboard:
+      return os << value.keyboard();
+    case InputEvent::Tag::kFocus:
+      return os << value.focus();
+    case InputEvent::Tag::Invalid:
+      return os << "Invalid";
   }
 }
 

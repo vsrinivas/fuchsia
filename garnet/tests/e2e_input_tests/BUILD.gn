@@ -1,0 +1,61 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("e2e_input_tests") {
+  testonly = true
+
+  deps = [
+    ":minimal_input_test",
+  ]
+
+  tests = [
+    {
+      name = "minimal_input_test"
+      environments = [
+        {
+          dimensions = {
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
+        },
+      ]
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/minimal_input_test.cmx")
+      dest = "minimal_input_test.cmx"
+    },
+  ]
+}
+
+executable("minimal_input_test") {
+  testonly = true
+
+  sources = [
+    "minimal_input_test.cc",
+  ]
+
+  output_name = "minimal_input_test"
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//garnet/public/lib/ui/input/cpp",
+    "//garnet/public/lib/ui/scenic/cpp",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+}

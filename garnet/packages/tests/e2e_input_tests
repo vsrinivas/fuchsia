@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/tests/e2e_input_tests:e2e_input_tests"
+    ]
+}
