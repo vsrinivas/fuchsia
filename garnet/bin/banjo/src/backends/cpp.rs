@@ -150,7 +150,7 @@ fn name_size(ty: &str) -> &'static str {
 
 fn get_first_param(ast: &BanjoAst, method: &ast::Method) -> Result<(bool, String), Error> {
     // Return parameter if a primitive type.
-    if method.out_params.get(0).map_or(false, |p| p.1.is_primitive()) {
+    if method.out_params.get(0).map_or(false, |p| p.1.is_primitive(&ast)) {
         Ok((true, ty_to_cpp_str(ast, false, &method.out_params[0].1)?))
     } else {
         Ok((false, "void".to_string()))

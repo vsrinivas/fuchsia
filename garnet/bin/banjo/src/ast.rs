@@ -203,15 +203,25 @@ impl fmt::Display for Ty {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Ty::UInt32 => write!(f, "UInt32"),
-            _ => panic!("unknown type in Display conversion"),
+            Ty::Identifier {..} => write!(f, "<Ident>"),
+            t => panic!("unknown type in Display conversion: {:?}", t),
         }
     }
 }
 
 impl Ty {
-    pub fn is_primitive(&self) -> bool {
+    pub fn is_primitive(&self, ast: &BanjoAst) -> bool {
         match self {
-            Ty::Identifier { id, .. } => id.is_base_type(),
+            Ty::Identifier { id, .. } => {
+                if id.is_base_type() {
+                    return true
+                } else {
+                    let resolved_type = ast.id_to_type(id);
+                    return resolved_type.is_primitive(&ast);
+                }
+            }
+            Ty::Struct { .. } => false,
+            Ty::Enum { .. } => true,
             Ty::Str { .. } | Ty::Vector { .. } | Ty::Array { .. } | Ty::Handle { .. } => false,
             _ => true,
         }
