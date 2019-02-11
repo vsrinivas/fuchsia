@@ -193,7 +193,12 @@ zx_status_t Mt8167::AudioInit() {
     // Input pin assignments.
     gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO100_CMDAT0, MT8167_GPIO100_TDM_RX_MCK_FN);
     gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO101_CMDAT1, MT8167_GPIO101_TDM_RX_BCK_FN);
-    gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO16_EINT16, MT8167_GPIO16_TDM_RX_LRCK_FN);
+    if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+        gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO16_EINT16, MT8167_GPIO16_TDM_RX_LRCK_FN);
+    } else {
+        gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO102_CMMCLK,
+                                   MT8167_GPIO102_TDM_RX_LRCK_FN);
+    }
     gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO103_CMPCLK, MT8167_GPIO103_TDM_RX_DI_FN);
 
     // ~ADC_RESET.
@@ -227,12 +232,10 @@ zx_status_t Mt8167::AudioInit() {
         zxlogf(ERROR, "%s: pbus_.DeviceAdd failed %d\n", __FUNCTION__, status);
         return status;
     }
-    if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
-        status = pbus_.DeviceAdd(&dev_in);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "%s: pbus_.DeviceAdd failed %d\n", __FUNCTION__, status);
-            return status;
-        }
+    status = pbus_.DeviceAdd(&dev_in);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: pbus_.DeviceAdd failed %d\n", __FUNCTION__, status);
+        return status;
     }
     return ZX_OK;
 }
