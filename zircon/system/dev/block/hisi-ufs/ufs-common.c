@@ -13,6 +13,22 @@
 
 #include "ufs.h"
 
+static void ufs_get_cmd(uint32_t opcode, uint32_t lba, uint32_t size, uint8_t* cmd) {
+    memset(cmd, 0x0, UPIU_CDB_MAX_LEN);
+    switch (opcode) {
+    case TEST_UNIT_OPCODE:
+        cmd[0] = opcode;
+        break;
+    case INQUIRY_OPCODE:
+        cmd[0] = opcode;
+        cmd[3] = (uint8_t)((size & 0xFF00) >> 8);
+        cmd[4] = (uint8_t)(size & 0xff);
+        break;
+    default:
+        break;
+    };
+}
+
 zx_status_t ufshc_send_uic_command(volatile void* regs,
                                    uint32_t command,
                                    uint32_t arg1,
@@ -119,6 +135,75 @@ static void ufshc_flush_and_invalidate_descs(ufs_hba_t* hba) {
                                      sizeof(utp_task_req_desc_t) * hba->nutmrs);
     io_buffer_cache_flush_invalidate(&hba->ucdl_dma_buf, 0,
                                      sizeof(utp_tfr_cmd_desc_t) * hba->nutrs);
+}
+
+static void ufs_create_cmd_upiu(ufs_hba_t* hba, uint8_t opcode,
+                                enum dma_direction dirn,
+                                uint32_t size, uint8_t free_slot) {
+    ufs_utp_cmd_upiu_t* cmd_upiu;
+    utp_tfr_req_desc_t* utrd;
+    utp_tfr_cmd_desc_t* ucmd;
+    ufshcd_prd_t* prdt;
+    zx_paddr_t req_buf_phys;
+    uint32_t data_dirn;
+    uint32_t off;
+    uint8_t upiu_flags;
+
+    ucmd = hba->cmd_desc;
+    ucmd += free_slot;
+    cmd_upiu = (ufs_utp_cmd_upiu_t*)ucmd->cmd_upiu;
+    utrd = hba->tfr_desc;
+    utrd += free_slot;
+
+    if (dirn == UFS_DMA_FROM_DEVICE) {
+        data_dirn = UTP_DEVICE_TO_HOST;
+        upiu_flags = UPIU_CMD_FLAGS_READ;
+    } else if (dirn == UFS_DMA_TO_DEVICE) {
+        data_dirn = UTP_HOST_TO_DEVICE;
+        upiu_flags = UPIU_CMD_FLAGS_WRITE;
+    } else {
+        data_dirn = UTP_NO_DATA_TFR;
+        upiu_flags = UPIU_CMD_FLAGS_NONE;
+    }
+
+    utrd->ct_flags = (uint8_t)(data_dirn | UTP_UFS_STORAGE_CMD);
+    utrd->resp_upiu_len = LE16((uint16_t)(sizeof(ufs_utp_resp_upiu_t) >> 2));
+    utrd->ocs = 0x0f;
+    utrd->crypt_en = (uint8_t)0x0;
+
+    cmd_upiu->trans_type = UPIU_TYPE_CMD;
+    cmd_upiu->flags = upiu_flags;
+    cmd_upiu->lun = hba->active_lun;
+    cmd_upiu->task_tag = free_slot;
+    cmd_upiu->res1_0 = 0x0;
+    cmd_upiu->res1_1 = 0x0;
+    cmd_upiu->res1_2 = 0x0;
+    cmd_upiu->tot_ehs_len = 0x0;
+    cmd_upiu->res2 = 0x0;
+    cmd_upiu->data_seg_len = 0x0;
+    cmd_upiu->exp_data_xfer_len = BE32(size);
+    ufs_get_cmd(opcode, 0, size, cmd_upiu->cdb);
+
+    utrd->prd_table_len = (uint16_t)((size & (PRDT_BUF_SIZE - 1)) ?
+                          ((size / PRDT_BUF_SIZE) + 1 ) :
+                          (size / PRDT_BUF_SIZE));
+
+    if (dirn != UFS_DMA_NONE) {
+        prdt = hba->lrb_buf[free_slot].prdt;
+        off = hba->active_lun * size;
+        req_buf_phys = io_buffer_phys(&hba->req_dma_buf) + off;
+
+        for (uint32_t i = 0; size; i++) {
+            prdt[i].base_addr = LOWER_32_BITS(req_buf_phys + (i * PRDT_BUF_SIZE));
+            prdt[i].upper_addr = UPPER_32_BITS(req_buf_phys + (i * PRDT_BUF_SIZE));
+            prdt[i].res1 = 0x0;
+            prdt[i].size = ((PRDT_BUF_SIZE < size) ? PRDT_BUF_SIZE : size) - 1;
+            size -= (PRDT_BUF_SIZE < size) ? PRDT_BUF_SIZE : size;
+        }
+    }
+
+    // Use this transfer slot
+    hba->outstanding_xfer_reqs |= (1 << free_slot);
 }
 
 static void ufs_create_nop_out_upiu(ufs_hba_t* hba, uint8_t free_slot) {
@@ -285,6 +370,23 @@ static zx_status_t ufshc_link_startup(volatile void* regs) {
     return ZX_ERR_TIMED_OUT;
 }
 
+static zx_status_t ufs_request_alloc(ufshc_dev_t* dev) {
+    ufs_hba_t* hba = &dev->ufs_hba;
+    zx_status_t status;
+
+    // Allocate memory for UFS data request buffer
+    status = io_buffer_init(&hba->req_dma_buf, dev->bti, DATA_REQ_SIZE,
+                            IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (status != ZX_OK) {
+        UFS_ERROR("Failed to allocate request buffer!\n");
+        return status;
+    }
+    hba->req_buf = io_buffer_virt(&hba->req_dma_buf);
+    memset(hba->req_buf, 0, DATA_REQ_SIZE);
+
+    return ZX_OK;
+}
+
 static zx_status_t ufshc_memory_alloc(ufshc_dev_t* dev) {
     ufs_hba_t* hba = &dev->ufs_hba;
     uint32_t utmrl_size, utrl_size, ucdl_size, lrb_size;
@@ -338,6 +440,12 @@ static zx_status_t ufshc_memory_alloc(ufshc_dev_t* dev) {
     if (!hba->lrb_buf) {
         UFS_ERROR("Failed to allocate LRB!\n");
         return ZX_ERR_NO_MEMORY;
+    }
+
+    status = ufs_request_alloc(dev);
+    if (status != ZX_OK) {
+        UFS_ERROR("Failed to allocate request buffer!\n");
+        return status;
     }
 
     return ZX_OK;
@@ -480,6 +588,42 @@ static zx_status_t ufshc_wait_for_cmd_completion(ufs_hba_t* hba,
     }
 
     return ZX_OK;
+}
+
+static zx_status_t ufs_handle_scsi_completion(ufs_hba_t* hba) {
+    utp_tfr_req_desc_t* utrd;
+    ufs_utp_resp_upiu_t* resp_upiu;
+    zx_status_t status = ZX_OK;
+    uint8_t resp_status;
+    uint8_t slot_idx;
+
+    for (slot_idx = 0; slot_idx < hba->nutrs; slot_idx++) {
+        if (hba->outstanding_xfer_reqs & UFS_BIT(slot_idx)) {
+            resp_upiu = hba->lrb_buf[slot_idx].resp_upiu;
+            utrd = hba->lrb_buf[slot_idx].utrd;
+
+            // Release xfer request
+            hba->outstanding_xfer_reqs &= ~(1 << slot_idx);
+            if (utrd->ocs == 0x0) {
+                resp_status = resp_upiu->status;
+                if (resp_status == SCSI_CMD_STATUS_CHK_COND) {
+                    UFS_ERROR("Resp Fail! Check condition!\n");
+                    status = UPIU_RESP_COND_FAIL;
+                    // TODO: Read error information from sense data
+                    // We do not return here so as to continue reading all slots.
+                } else if (resp_status != SCSI_CMD_STATUS_GOOD) {
+                    UFS_ERROR("Resp Fail! resp_status=0x%x\n", resp_status);
+                    status = UPIU_RESP_STAT_FAIL;
+                    // TODO: Read error information from sense data
+                }
+            } else {
+                UFS_ERROR("Resp Fail! utrd->ocs=0x%x\n", utrd->ocs);
+                status = ZX_ERR_BAD_STATE;
+            }
+        }
+    }
+
+    return status;
 }
 
 static int32_t ufs_read_query_resp(ufs_hba_t* hba,
@@ -870,6 +1014,112 @@ static void ufshc_release(ufshc_dev_t* dev) {
     io_buffer_release(&hba->ucdl_dma_buf);
     io_buffer_release(&hba->utrl_dma_buf);
     io_buffer_release(&hba->utmrl_dma_buf);
+}
+
+static zx_status_t ufs_send_inquiry(ufshc_dev_t* dev) {
+    uint8_t* inq_data[UFS_MAX_WLUN];
+    ufs_hba_t* hba = &dev->ufs_hba;
+    volatile void* regs = dev->ufshc_mmio.vaddr;
+    uint32_t lun;
+    uint32_t slot_mask = 0;
+    zx_status_t status;
+    uint8_t free_slot;
+
+    memset(hba->req_buf, 0, UFS_MAX_WLUN * UFS_INQUIRY_TFR_LEN);
+    for (lun = 0; lun < UFS_MAX_WLUN; lun++) {
+        inq_data[lun] = (uint8_t*)hba->req_buf + (lun * UFS_INQUIRY_TFR_LEN);
+    }
+
+    for (lun = 0; lun < UFS_MAX_WLUN; lun++) {
+        free_slot = ufshc_get_xfer_free_slot(hba);
+        if (BAD_SLOT == free_slot) {
+            if (slot_mask) {
+                // Release xfer requests
+                hba->outstanding_xfer_reqs &= ~(slot_mask);
+            }
+            return ZX_ERR_NO_RESOURCES;
+        }
+
+        slot_mask |= UFS_BIT(free_slot);
+        hba->active_lun = (uint8_t)lun;
+        ufs_create_cmd_upiu(hba, INQUIRY_OPCODE, UFS_DMA_FROM_DEVICE,
+                            UFS_INQUIRY_TFR_LEN, free_slot);
+    }
+
+    // Flush and invalidate cache before we start transfer
+    ufshc_flush_and_invalidate_descs(hba);
+    io_buffer_cache_flush_invalidate(&hba->req_dma_buf, 0, DATA_REQ_SIZE);
+
+    status = ufshc_wait_for_cmd_completion(hba, slot_mask, regs);
+    if (status != ZX_OK)
+        return status;
+
+    status = ufs_handle_scsi_completion(hba);
+    if (status != ZX_OK)
+        return status;
+
+    for (lun = 0; lun < UFS_MAX_WLUN; lun++) {
+        UFS_DBG("UFS device vendor:%s model:%s\n",
+                inq_data[lun] + UFS_INQUIRY_VENDOR_OFF,
+                inq_data[lun] + UFS_INQUIRY_MODEL_OFF);
+        dump_buffer(inq_data[lun], UFS_INQUIRY_TFR_LEN, "inquiry");
+    }
+
+    return status;
+}
+
+static zx_status_t ufs_check_luns_ready(ufshc_dev_t* dev) {
+    ufs_hba_t* hba = &dev->ufs_hba;
+    volatile void* regs = dev->ufshc_mmio.vaddr;
+    uint32_t slot_mask = 0;
+    zx_status_t status;
+    uint8_t free_slot;
+
+    for (uint32_t lun = 0; lun < UFS_MAX_WLUN; lun++) {
+        hba->active_lun = (uint8_t)lun;
+
+        free_slot = ufshc_get_xfer_free_slot(hba);
+        if (BAD_SLOT == free_slot) {
+            if (slot_mask) {
+                // Release xfer requests
+                hba->outstanding_xfer_reqs &= ~(slot_mask);
+            }
+            return ZX_ERR_NO_RESOURCES;
+        }
+
+        slot_mask |= UFS_BIT(free_slot);
+        ufs_create_cmd_upiu(hba, TEST_UNIT_OPCODE,
+                            UFS_DMA_NONE, 0x0, free_slot);
+    }
+
+    // Flush and invalidate cache before we start transfer
+    ufshc_flush_and_invalidate_descs(hba);
+    io_buffer_cache_flush_invalidate(&hba->req_dma_buf, 0, DATA_REQ_SIZE);
+
+    status = ufshc_wait_for_cmd_completion(hba, slot_mask, regs);
+    if (status != ZX_OK)
+        return status;
+
+    return ufs_handle_scsi_completion(hba);
+}
+
+zx_status_t ufs_activate_luns(ufshc_dev_t* dev) {
+    zx_status_t status;
+
+    status = ufs_send_inquiry(dev);
+    if (status != ZX_OK) {
+        UFS_ERROR("Failed to inqure LUN, status = %d\n", status);
+        return status;
+    }
+
+    status = ufs_check_luns_ready(dev);
+    if (status != ZX_OK) {
+        UFS_ERROR("Failed to inqure LUN, status = %d\n", status);
+        return status;
+    }
+
+    // TODO: Add block device for all identified LUNs
+    return status;
 }
 
 zx_status_t ufshc_init(ufshc_dev_t* dev,

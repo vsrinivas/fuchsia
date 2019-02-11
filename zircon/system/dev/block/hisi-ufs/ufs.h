@@ -9,6 +9,7 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/platform/bus.h>
 
+#include <threads.h>
 #include <zircon/compiler.h>
 
 #ifndef __BYTE_ORDER__
@@ -83,10 +84,14 @@ static inline uint16_t SWAP_16(uint16_t x) {
 #define UFS_SCTRL_SYSCTRL         0x5C
 
 // UFS Command codes
-#define READ_DESC_OPCODE  0x01
-#define WRITE_DESC_OPCODE 0x02
-#define READ_FLAG_OPCODE  0x05
-#define SET_FLAG_OPCODE   0x06
+#define READ_DESC_OPCODE   0x01
+#define WRITE_DESC_OPCODE  0x02
+#define READ_FLAG_OPCODE   0x05
+#define SET_FLAG_OPCODE    0x06
+
+// UFS SCSI command codes
+#define TEST_UNIT_OPCODE   0x00
+#define INQUIRY_OPCODE     0x12
 
 #define FLAG_ID_FDEVICE_INIT 0x01
 
@@ -95,8 +100,15 @@ static inline uint16_t SWAP_16(uint16_t x) {
 #define STANDARD_WR_REQ 0x81
 #define DEVICE_DESC_IDN 0x00
 #define DEVICE_DESC_LEN 0x40
+#define UPIU_CDB_MAX_LEN 16
+#define UFS_MAX_WLUN 0x04
 
 #define ALIGNED_UPIU_SIZE 512
+#define PRDT_BUF_SIZE 0x40000
+#define DATA_REQ_SIZE 4096
+#define UFS_INQUIRY_TFR_LEN 36
+#define UFS_INQUIRY_VENDOR_OFF 8
+#define UFS_INQUIRY_MODEL_OFF 16
 
 // UFSHC UPRO configurations
 #define UPRO_MPHY_CTRL      0xD0C10000
@@ -136,6 +148,9 @@ static inline uint16_t SWAP_16(uint16_t x) {
 #define UFS_DEV_DESC_MANF_ID_H 0x18
 #define UFS_DEV_DESC_MANF_ID_L 0x19
 #define UFS_READ_DESC_MIN_LEN  0x02
+
+#define SCSI_CMD_STATUS_GOOD 0x0
+#define SCSI_CMD_STATUS_CHK_COND 0x02
 
 // UFS HC Register Offsets
 enum {
@@ -178,6 +193,9 @@ enum {
     UFS_NOP_RESP_FAIL         = -0x03,
     UFS_NOP_OUT_OCS_FAIL      = -0x04,
     UFS_INVALID_NOP_IN        = -0x05,
+    // UPIU response error codes
+    UPIU_RESP_COND_FAIL       = -0x06,
+    UPIU_RESP_STAT_FAIL       = -0x07,
 };
 
 enum {
@@ -212,16 +230,25 @@ enum utp_data_tfr_dirn {
 };
 
 enum upiu_cmd_flags {
-    UPIU_CMD_FLAGS_NONE,
+    UPIU_CMD_FLAGS_NONE  = 0x00,
+    UPIU_CMD_FLAGS_WRITE = 0x20,
+    UPIU_CMD_FLAGS_READ  = 0x40,
     UPIU_CMD_FLAGS_MAX,
 };
 
 // UFS UPIU transaction type
 enum upiu_trans_type {
     UPIU_TYPE_NOP_OUT   = 0x00,
+    UPIU_TYPE_CMD       = 0x01,
     UPIU_TYPE_QUERY_REQ = 0x16,
     UPIU_TYPE_NOP_IN    = 0x20,
     UPIU_TYPE_REJECT    = 0x3F,
+};
+
+enum dma_direction {
+    UFS_DMA_TO_DEVICE      = 0x01,
+    UFS_DMA_FROM_DEVICE    = 0x02,
+    UFS_DMA_NONE           = 0x03,
 };
 
 enum ufs_link_change_stage {
@@ -304,7 +331,7 @@ typedef struct {
     uint8_t res2;
     uint16_t data_seg_len;
     uint32_t exp_data_xfer_len;
-    uint8_t cdb[16];
+    uint8_t cdb[UPIU_CDB_MAX_LEN];
 } ufs_utp_cmd_upiu_t;
 
 // Response UPIU structure
@@ -432,6 +459,7 @@ typedef struct ufs_hba {
     uint32_t caps;
     uint32_t ufs_version;
     uint8_t num_lun;
+    uint8_t active_lun;
     uint16_t manufacturer_id;
 
     // UFS Command descriptor
@@ -440,10 +468,13 @@ typedef struct ufs_hba {
     io_buffer_t utrl_dma_buf;
     // UTP Task management descriptor
     io_buffer_t utmrl_dma_buf;
+    // UFS request buffer
+    io_buffer_t req_dma_buf;
     utp_tfr_cmd_desc_t* cmd_desc;
     utp_tfr_req_desc_t* tfr_desc;
     utp_task_req_desc_t* req_desc;
     ufs_hcd_lrb_t* lrb_buf;
+    void* req_buf;
     ulong outstanding_xfer_reqs;
     ulong outstanding_tm_tasks;
     zx_time_t timeout;
@@ -457,6 +488,7 @@ typedef struct {
     mmio_buffer_t ufshc_mmio;
     zx_handle_t bti;
     ufs_hba_t ufs_hba;
+    thrd_t worker_thread;
 } ufshc_dev_t;
 
 static inline int32_t find_first_zero_bit(ulong* addr, uint8_t bits) {
@@ -471,6 +503,20 @@ static inline int32_t find_first_zero_bit(ulong* addr, uint8_t bits) {
     return -1;
 }
 
+#ifdef UFS_DEBUG
+static inline void dump_buffer(uint8_t* buf, uint32_t len, const char* name) {
+    zxlogf(INFO, "%s_buffer:\n", name);
+    for (uint32_t index = 0; index < len; index++) {
+        zxlogf(INFO, "buf[%d]=0x%x ", index, buf[index]);
+        if (index && !(index % 10))
+            zxlogf(INFO, "\n");
+    }
+    zxlogf(INFO, "\n");
+}
+#else
+static inline void dump_buffer(uint8_t* buf, uint32_t len, const char* name) {}
+#endif
+
 zx_status_t ufshc_send_uic_command(volatile void* regs,
                                    uint32_t command,
                                    uint32_t arg1,
@@ -479,3 +525,4 @@ uint32_t ufshc_uic_cmd_read(volatile void* regs, uint32_t command, uint32_t arg1
 void ufshc_disable_auto_h8(volatile void* regs);
 void ufshc_check_h8(volatile void* regs);
 zx_status_t ufshc_init(ufshc_dev_t* dev, ufs_hba_variant_ops_t* ufs_hi3660_vops);
+zx_status_t ufs_activate_luns(ufshc_dev_t* dev);
