@@ -534,12 +534,19 @@ void Process::EnsureThreadMapFresh() {
 }
 
 Thread* Process::FindThreadById(zx_koid_t thread_id) {
-  FXL_DCHECK(handle_);
   if (thread_id == ZX_HANDLE_INVALID) {
     FXL_LOG(ERROR) << "Invalid thread ID given: " << thread_id;
     return nullptr;
   }
 
+  // If process is dead all its threads have been removed.
+  if (state_ == State::kGone) {
+    FXL_VLOG(1) << "FindThreadById: Process " << id_ << " is gone, thread "
+                << thread_id << " is gone";
+    return nullptr;
+  }
+
+  FXL_DCHECK(handle_);
   EnsureThreadMapFresh();
 
   const auto iter = threads_.find(thread_id);

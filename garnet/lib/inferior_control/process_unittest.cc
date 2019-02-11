@@ -89,5 +89,43 @@ TEST_F(AttachTest, Attach) {
   EXPECT_TRUE(TestSuccessfulExit());
 }
 
+class FindThreadByIdTest : public TestServer {
+ public:
+  FindThreadByIdTest() = default;
+
+  void OnThreadStarting(Process* process, Thread* thread,
+                        const zx_exception_context_t& context) override {
+    thread_koid_ = thread->id();
+    Thread* lookup_thread = process->FindThreadById(thread_koid_);
+    if (lookup_thread) {
+      found_thread_by_id_ = true;
+    }
+    TestServer::OnThreadStarting(process, thread, context);
+  }
+
+  zx_koid_t thread_koid() const { return thread_koid_; }
+  bool found_thread_by_id() const { return found_thread_by_id_; }
+
+ private:
+  bool found_thread_by_id_ = false;
+  zx_koid_t thread_koid_ = ZX_KOID_INVALID;
+};
+
+TEST_F(FindThreadByIdTest, FindThreadById) {
+  std::vector<std::string> argv{
+      helper_program,
+  };
+  ASSERT_TRUE(SetupInferior(argv));
+
+  EXPECT_TRUE(RunHelperProgram(zx::channel{}));
+
+  EXPECT_TRUE(Run());
+  EXPECT_TRUE(TestSuccessfulExit());
+  EXPECT_TRUE(found_thread_by_id());
+  Process* process = current_process();
+  ASSERT_NE(process, nullptr);
+  EXPECT_EQ(process->FindThreadById(thread_koid()), nullptr);
+}
+
 }  // namespace
 }  // namespace inferior_control
