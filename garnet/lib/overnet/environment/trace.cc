@@ -44,6 +44,19 @@ std::ostream& operator<<(std::ostream& out, Module module) {
   }
 }
 
+std::ostream& operator<<(std::ostream& out, Severity type) {
+  switch (type) {
+    case Severity::DEBUG:
+      return out << "DEBUG";
+    case Severity::INFO:
+      return out << "INFO";
+    case Severity::WARNING:
+      return out << "WARNING";
+    case Severity::ERROR:
+      return out << "ERROR";
+  }
+}
+
 std::ostream& operator<<(std::ostream& out, OpType type) {
   switch (type) {
     case OpType::INVALID:

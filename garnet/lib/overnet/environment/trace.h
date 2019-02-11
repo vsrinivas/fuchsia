@@ -72,6 +72,8 @@ enum class Severity : uint8_t {
   ERROR,
 };
 
+std::ostream& operator<<(std::ostream& out, Severity type);
+
 enum class OpType : uint8_t {
   INVALID,
   OUTGOING_REQUEST,

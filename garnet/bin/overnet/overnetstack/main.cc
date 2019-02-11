@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fxl/log_settings.h>
 #include "garnet/bin/overnet/overnetstack/fuchsia_port.h"
 #include "garnet/bin/overnet/overnetstack/mdns.h"
 #include "garnet/bin/overnet/overnetstack/overnet_app.h"
@@ -55,7 +56,7 @@ class FuchsiaLog final : public overnet::TraceRenderer {
     auto severity = [sev = output.severity] {
       switch (sev) {
         case overnet::Severity::DEBUG:
-          return fxl::LOG_INFO;
+          return -1;
         case overnet::Severity::INFO:
           return fxl::LOG_INFO;
         case overnet::Severity::WARNING:
@@ -73,6 +74,11 @@ class FuchsiaLog final : public overnet::TraceRenderer {
 }  // namespace overnetstack
 
 int main(int argc, const char** argv) {
+  {
+    auto settings = fxl::GetLogSettings();
+    settings.min_log_level = -1;
+    fxl::SetLogSettings(settings);
+  }
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   overnetstack::FuchsiaLog fuchsia_log;
   overnet::ScopedRenderer scoped_renderer(&fuchsia_log);
