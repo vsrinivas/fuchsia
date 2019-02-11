@@ -125,8 +125,6 @@ void TestServer::OnThreadStarting(Process* process, Thread* thread,
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 
-  PrintException(stdout, thread, ZX_EXCP_THREAD_STARTING, context);
-
   switch (process->state()) {
     case Process::State::kStarting:
     case Process::State::kRunning:
@@ -142,8 +140,6 @@ void TestServer::OnThreadExiting(Process* process, Thread* thread,
                                  const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
-
-  PrintException(stdout, thread, ZX_EXCP_THREAD_EXITING, context);
 
   // We still have to "resume" the thread so that the o/s will complete the
   // termination of the thread.
@@ -169,8 +165,6 @@ void TestServer::OnArchitecturalException(
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 
-  PrintException(stdout, thread, type, context);
-
   QuitMessageLoop(true);
 }
 
@@ -179,8 +173,6 @@ void TestServer::OnSyntheticException(Process* process, Thread* thread,
                                       const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
-
-  PrintException(stdout, thread, type, context);
 
   QuitMessageLoop(true);
 }

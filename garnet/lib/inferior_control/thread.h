@@ -89,6 +89,17 @@ class Thread final {
   // success, false on failure.
   bool Step();
 
+  // Convert an exception to a user-friendly description.
+  // This is for log messages and interactive programs that wish to report
+  // the exception.
+  std::string ExceptionToString(zx_excp_type_t type,
+                                const zx_exception_context_t& context) const;
+
+  // Convert a thread signal (or signals) to a user-friendly description.
+  // This is for log messages and interactive programs that wish to report
+  // the signal.
+  std::string SignalsToString(zx_signals_t signals) const;
+
 #ifdef __x86_64__
   // Intel PT buffer access
   int32_t ipt_buffer() const { return ipt_buffer_; }

@@ -133,6 +133,8 @@ void Thread::OnException(const zx_excp_type_t type,
       FXL_VLOG(2) << "Single-step bkpt cleared";
     }
   }
+
+  FXL_VLOG(1) << ExceptionToString(type, context);
 }
 
 bool Thread::TryNext() {
@@ -252,6 +254,42 @@ bool Thread::Step() {
 
   state_ = State::kStepping;
   return true;
+}
+
+std::string Thread::ExceptionToString(
+    zx_excp_type_t type, const zx_exception_context_t& context) const {
+  std::string description = fxl::StringPrintf(
+    "Thread %s: received exception %s",
+    GetDebugName().c_str(),
+    debugger_utils::ExceptionNameAsString(type).c_str());
+
+  if (ZX_EXCP_IS_ARCH(type)) {
+    Registers* regs = registers();
+    if (regs->RefreshGeneralRegisters()) {
+      zx_vaddr_t pc = regs->GetPC();
+      description += fxl::StringPrintf(", @PC 0x%lx", pc);
+    }
+  }
+
+  return description;
+}
+
+std::string Thread::SignalsToString(zx_signals_t signals) const {
+  std::string description;
+  if (signals & ZX_THREAD_RUNNING)
+    description += ", running";
+  if (signals & ZX_THREAD_SUSPENDED)
+    description += ", suspended";
+  if (signals & ZX_THREAD_TERMINATED)
+    description += ", terminated";
+  zx_signals_t mask =
+      (ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED | ZX_THREAD_TERMINATED);
+  if (signals & ~mask)
+    description += fxl::StringPrintf(", unknown (0x%x)", signals & ~mask);
+  if (description.length() == 0)
+    description = ", none";
+  return fxl::StringPrintf("Thread %s got signals: %s",
+                           GetDebugName().c_str(), description.c_str() + 2);
 }
 
 }  // namespace inferior_control

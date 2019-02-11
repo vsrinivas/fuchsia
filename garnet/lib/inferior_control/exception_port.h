@@ -112,17 +112,4 @@ class ExceptionPort final {
   FXL_DISALLOW_COPY_AND_ASSIGN(ExceptionPort);
 };
 
-// Print an exception in user-friendly form.
-// This is for log messages and interactive programs that wish to report
-// the exception.
-// This doesn't have a better place at the moment.
-void PrintException(FILE* out, const Thread* thread, zx_excp_type_t type,
-                    const zx_exception_context_t& context);
-
-// Print a signal (or signals) in user-friendly form.
-// This is for log messages and interactive programs that wish to report
-// the exception.
-// This doesn't have a better place at the moment.
-void PrintSignal(FILE* out, const Thread* thread, zx_signals_t signals);
-
 }  // namespace inferior_control

@@ -197,8 +197,6 @@ void IptServer::OnThreadStarting(inferior_control::Process* process,
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 
-  PrintException(stdout, thread, ZX_EXCP_THREAD_STARTING, context);
-
   switch (process->state()) {
     case inferior_control::Process::State::kStarting:
     case inferior_control::Process::State::kRunning:
@@ -225,8 +223,6 @@ void IptServer::OnThreadExiting(inferior_control::Process* process,
                                 const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
-
-  PrintException(stdout, thread, ZX_EXCP_THREAD_EXITING, context);
 
   // Dump any collected trace.
   if (config_.mode == IPT_MODE_THREADS) {
@@ -261,8 +257,6 @@ void IptServer::OnArchitecturalException(
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.
   FXL_DCHECK(process == current_process());
 
-  PrintException(stdout, thread, type, context);
-
   // This is generally a segv or some such. Not much we can do.
   QuitMessageLoop(true);
 }
@@ -273,8 +267,6 @@ void IptServer::OnSyntheticException(inferior_control::Process* process,
                                      const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
-
-  PrintException(stdout, thread, type, context);
 
   // Program is crashing.
   QuitMessageLoop(true);
