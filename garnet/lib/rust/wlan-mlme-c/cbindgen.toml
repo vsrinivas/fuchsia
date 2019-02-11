@@ -12,6 +12,10 @@ autogen_warning = """
 include_guard = "GARNET_LIB_RUST_WLAN_MLME_ABI_H_"
 language = "C"
 
+[parse]
+parse_deps = true
+include = ["wlan_mlme"]
+
 [export]
 # These types are not used yet but we want to generate
 # bindings for them already.

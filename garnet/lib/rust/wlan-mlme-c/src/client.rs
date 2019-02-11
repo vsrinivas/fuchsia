@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::buffer::{BufferProvider, InBuf, OutBuf},
     crate::utils,
     fuchsia_zircon::sys as zx,
     wlan_mlme::{
+        buffer::{BufferProvider, InBuf, OutBuf},
         client,
         common::mac::{self, OptionalField},
     },

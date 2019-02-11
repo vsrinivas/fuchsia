@@ -9,10 +9,11 @@
 
 #[macro_use]
 extern crate log;
+// Explicitly declare usage for cbindgen.
+extern crate wlan_mlme;
 
 #[macro_use]
 pub mod utils;
 
 pub mod auth;
-pub mod buffer;
 pub mod client;
