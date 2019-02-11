@@ -49,7 +49,7 @@ std::string GetSmallTestElfFileName() {
   } else {
     path.resize(last_slash + 1);
   }
-  path += "test_data/elf_unittests/small_test_file.elf";
+  path += "test_data/debug_ipc/small_test_file.elf";
   return path;
 }
 

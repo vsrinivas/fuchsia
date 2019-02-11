@@ -70,8 +70,12 @@ if (current_toolchain == host_toolchain) {
       "testdata/small_test_file.elf",
     ]
     outputs = [
-      "$root_out_dir/test_data/elf_unittests/small_test_file.elf",
+      "$root_out_dir/test_data/debug_ipc/small_test_file.elf",
     ]
+
+    metadata = {
+      test_runtime_deps = outputs
+    }
   }
 
   # TODO(IN-819): Delete once zxdb_tests is no longer being run out of
@@ -81,7 +85,7 @@ if (current_toolchain == host_toolchain) {
       "testdata/small_test_file.elf",
     ]
     outputs = [
-      "$root_build_dir/host_tests/test_data/elf_unittests/small_test_file.elf",
+      "$root_build_dir/host_tests/test_data/debug_ipc/small_test_file.elf",
     ]
   }
 }

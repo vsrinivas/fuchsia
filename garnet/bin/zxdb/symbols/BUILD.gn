@@ -226,6 +226,7 @@ source_set("tests") {
     ":symbols",
     ":test_support",
     "//garnet/bin/zxdb/common:test_support",
+    "//garnet/lib/debug_ipc/helper:copy_test_file($host_toolchain)",
     "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
     "//third_party/googletest:gtest",
   ]

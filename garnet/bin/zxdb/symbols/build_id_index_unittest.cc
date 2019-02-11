@@ -17,7 +17,7 @@ const char kSmallTestBuildID[] = "763feb38b0e37a89964c330c5cf7f7af2ce79e54";
 std::filesystem::path GetTestDataDir() {
   std::filesystem::path path(GetSelfPath());
   path.remove_filename();
-  path.append("../../../garnet/lib/debug_ipc/helper/testdata/");
+  path.append("test_data/debug_ipc/");
   return path;
 }
 
@@ -30,7 +30,7 @@ std::filesystem::path GetSmallTestFile() {
 // Index one individual file.
 TEST(BuildIDIndex, IndexFile) {
   BuildIDIndex index;
-  std::string test_file = GetSmallTestFile(); 
+  std::string test_file = GetSmallTestFile();
   index.AddSymbolSource(test_file);
 
   // The known file should be found.
