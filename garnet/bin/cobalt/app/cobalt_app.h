@@ -38,19 +38,27 @@ class CobaltApp {
  public:
   // |dispatcher| The async_t to be used for all asynchronous operations.
   //
-  // |schedule_interval| The scheduling interval provided to
-  //                     encoder::UploadScheduler.
+  // |target_interval| How frequently should the upload scheduler perform
+  //                   periodic updates.
   //
-  // |min_interval| The minimum interval provided to encoder::UploadScheduler.
+  // |min_interval| Because of expedited sends, the upload scheduler thread may
+  //                sometimes upload more frequently than |target_interval|.
+  //                This parameter is a safety setting. We will never perform
+  //                two uploads within a single |min_interval|.
   //
-  // |initial_interval| The scheduling interval that is the starting point for
-  //                    the exponentially increasing interval value used in
-  //                    encoder::UploadScheduler.
+  // |initial_interval| The upload scheduler thread will initially perform more
+  //                    frequent uploads at this interval and then exponentially
+  //                    back off until it reaches a periodic rhythm of
+  //                    |target_interval|.
   //
-  // |product_name| A product name to override the one used in the
-  //                ObservationMetadata.
+  // |product_name| A product name used in the ObservationMetadata sent with
+  //                every upload to the Cobalt server.
+  //
+  // REQUIRED:
+  //   0 <= min_interval <= target_interval <= kMaxSeconds
+  //   0 <= initial_interval <= target_interval
   CobaltApp(async_dispatcher_t* dispatcher,
-            std::chrono::seconds schedule_interval,
+            std::chrono::seconds target_interval,
             std::chrono::seconds min_interval,
             std::chrono::seconds initial_interval,
             const std::string& product_name);

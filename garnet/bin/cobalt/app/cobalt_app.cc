@@ -54,7 +54,7 @@ constexpr char kLocalAggregateProtoStorePath[] =
 constexpr char kObsHistoryProtoStorePath[] = "/data/cobalt_obs_history_store";
 
 CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
-                     std::chrono::seconds schedule_interval,
+                     std::chrono::seconds target_interval,
                      std::chrono::seconds min_interval,
                      std::chrono::seconds initial_interval,
                      const std::string& product_name)
@@ -91,14 +91,14 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
       encrypt_to_shuffler_("", EncryptedMessage::NONE),
 
       legacy_shipping_manager_(
-          UploadScheduler(schedule_interval, min_interval, initial_interval),
+          UploadScheduler(target_interval, min_interval, initial_interval),
           &legacy_observation_store_, &legacy_encrypt_to_shuffler_,
           LegacyShippingManager::SendRetryerParams(kInitialRpcDeadline,
                                                    kDeadlinePerSendAttempt),
           &send_retryer_),
 
       clearcut_shipping_manager_(
-          UploadScheduler(schedule_interval, min_interval, initial_interval),
+          UploadScheduler(target_interval, min_interval, initial_interval),
           &observation_store_, &encrypt_to_shuffler_,
           std::make_unique<clearcut::ClearcutUploader>(
               kClearcutEndpoint, std::make_unique<FuchsiaHTTPClient>(
