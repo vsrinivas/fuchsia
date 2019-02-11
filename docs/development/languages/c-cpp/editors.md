@@ -79,12 +79,10 @@ IDE.
 
 ## Compilation Database (fx compdb)
 
-A [Compilation Database](https://clang.llvm.org/docs/JSONCompilationDatabase.html)
-file can be generated using `fx compdb` (or `fx compdb -z` to also
-include Zircon sources). This will create/update the file
-`compile_commands.json` in the fuchsia directory.
+A [Compilation
+Database](https://clang.llvm.org/docs/JSONCompilationDatabase.html) file
+can be generated using `fx compdb`. This will create/update the file
+`compile_commands.json` in the `fuchsia` directory.
 
 When you add, delete, or rename source files the command needs to be
 rerun to update the `compile_commands.json` file.
-
-
