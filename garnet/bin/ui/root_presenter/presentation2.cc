@@ -652,6 +652,7 @@ void Presentation2::OnEvent(fuchsia::ui::input::InputEvent event) {
             fuchsia::ui::input::KeyboardEvent clone;
             fidl::Clone(kbd, &clone);
             captured_keybindings_[i].listener->OnEvent(std::move(clone));
+            dispatch_event = false;
           }
         }
       }
