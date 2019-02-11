@@ -742,12 +742,12 @@ the interface to that channel:
 ```
 GOOD:
 interface Foo {
-    1: GetBar(string name, request<Bar> bar);
+    GetBar(string name, request<Bar> bar);
 };
 
 BAD:
 interface Foo {
-    1: GetBar(string name) -> (Bar bar);
+    GetBar(string name) -> (Bar bar);
 };
 ```
 
@@ -764,7 +764,7 @@ that describes whether the operation succeeded:
 
 ```
 interface CodecProvider {
-    1: TryToCreateCodec(CodecParams params, request<Codec> codec) -> (bool succeed);
+    TryToCreateCodec(CodecParams params, request<Codec> codec) -> (bool succeed);
 };
 ```
 
@@ -774,11 +774,11 @@ event that the server sends at the start of the protocol:
 
 ```
 interface Codec2 {
-    1: -> OnReady();
+    -> OnReady();
 };
 
 interface CodecProvider2 {
-    1: TryToCreateCodec(CodecParams params, request<Codec2> codec);
+    TryToCreateCodec(CodecParams params, request<Codec2> codec);
 };
 ```
 
@@ -841,7 +841,7 @@ generic listener interface:
 
 ```
 interface Listener {
-    1: OnBar(...) -> ();
+    OnBar(...) -> ();
 };
 ```
 
@@ -865,7 +865,7 @@ need any flow control for the event:
 
 ```
 interface DeathWish {
-    1: -> OnFatalError(status error_code);
+    -> OnFatalError(status error_code);
 };
 ```
 
@@ -877,9 +877,9 @@ times (rather than just once):
 
 ```
 interface NetworkScanner {
-    1: ScanForNetworks();
-    2: -> OnNetworkDiscovered(string network);
-    3: -> OnScanFinished();
+    ScanForNetworks();
+    -> OnNetworkDiscovered(string network);
+    -> OnScanFinished();
 };
 ```
 
@@ -892,8 +892,8 @@ events:
 
 ```
 interface View {
-    1: -> OnInputEvent(InputEvent event);
-    2: NotifyInputEventHandled();
+    -> OnInputEvent(InputEvent event);
+    NotifyInputEventHandled();
 };
 ```
 
@@ -906,9 +906,9 @@ event types:
 
 ```
 interface View {
-    1: -> OnInputEvent(InputEvent event, uint64 seq);
-    2: -> OnFocusChangedEvent(FocusChangedEvent event, uint64 seq);
-    3: NotifyEventsHandled(uint64 last_seq);
+    -> OnInputEvent(InputEvent event, uint64 seq);
+    -> OnFocusChangedEvent(FocusChangedEvent event, uint64 seq);
+    NotifyEventsHandled(uint64 last_seq);
 };
 ```
 
@@ -953,13 +953,13 @@ Example:
 
 ```
 interface Canvas {
-    1: Flush() -> (status code);
-    2: Clear();
-    3: UploadImage(uint32 image_id, Image image);
-    4: PaintImage(uint32 image_id, float x, float y);
-    5: DiscardImage(uint32 image_id);
-    6: PaintSmileyFace(float x, float y);
-    7: PaintMoustache(float x, float y);
+    Flush() -> (status code);
+    Clear();
+    UploadImage(uint32 image_id, Image image);
+    PaintImage(uint32 image_id, float x, float y);
+    DiscardImage(uint32 image_id);
+    PaintSmileyFace(float x, float y);
+    PaintMoustache(float x, float y);
 };
 ```
 
@@ -1062,8 +1062,8 @@ server to process the sent data:
 
 ```
 interface Foo {
-    1: AddBars(vector<Bar> bars);
-    2: UseTheBars() -> (...);
+    AddBars(vector<Bar> bars);
+    UseTheBars() -> (...);
 };
 ```
 
@@ -1075,12 +1075,12 @@ represents the transaction, often called a _tear-off interface_:
 
 ```
 interface BarTransaction {
-    1: Add(vector<Bar> bars);
-    2: Commit() -> (...);
+    Add(vector<Bar> bars);
+    Commit() -> (...);
 };
 
 interface Foo {
-    1: StartBarTransaction(request<BarTransaction> transaction);
+    StartBarTransaction(request<BarTransaction> transaction);
 };
 ```
 
@@ -1097,9 +1097,9 @@ multiple responses to a single request using events:
 
 ```
 interface EventBasedGetter {
-    1: GetBars();
-    2: -> OnBars(vector<Bar> bars);
-    3: -> OnBarsDone();
+    GetBars();
+    -> OnBars(vector<Bar> bars);
+    -> OnBarsDone();
 };
 ```
 
@@ -1114,11 +1114,11 @@ A more robust approach uses a tear-off interface to create an iterator:
 
 ```
 interface BarIterator {
-    1: GetNext() -> (vector<Bar> bars);
+    GetNext() -> (vector<Bar> bars);
 };
 
 interface ChannelBasedGetter {
-    1: GetBars(request<BarIterator> iterator);
+    GetBars(request<BarIterator> iterator);
 };
 ```
 
@@ -1136,9 +1136,9 @@ and the client returns the token to the server with each partial read:
 ```
 struct Token { array<uint8>:16 opaque; }
 interface TokenBasedGetter {
-  // If  token  is null, fetch the first N entries. If  token  is not null, return the N items starting at  token
-  // Returns as many entries as it can in  results  and populates  next_token  if more entries are available.
-  1: GetEntries(Token? token) -> (vector<Entry> entries, Token? next_token);
+    // If  token  is null, fetch the first N entries. If  token  is not null, return the N items starting at  token
+    // Returns as many entries as it can in  results  and populates  next_token  if more entries are available.
+    GetEntries(Token? token) -> (vector<Entry> entries, Token? next_token);
 }
 ```
 
@@ -1170,11 +1170,11 @@ identifier for the now-shared object:
 
 ```
 interface Foo {
-    1: ExportThing(uint32 client_assigned_id, ..., handle<eventpair> export_token);
+    ExportThing(uint32 client_assigned_id, ..., handle<eventpair> export_token);
 };
 
 interface Bar {
-    1: ImportThing(uint32 some_other_client_assigned_id, ..., handle<eventpair> import_token);
+    ImportThing(uint32 some_other_client_assigned_id, ..., handle<eventpair> import_token);
 };
 ```
 
@@ -1277,10 +1277,10 @@ number of other interfaces, typically with explicit names:
 BAD:
 [Discoverable]
 interface ServiceHub {
-    1: GetFoo(request<Foo> foo);
-    2: GetBar(request<Bar> bar);
-    3: GetBaz(request<Baz> baz);
-    4: GetQux(request<Qux> qux);
+    GetFoo(request<Foo> foo);
+    GetBar(request<Bar> bar);
+    GetBaz(request<Baz> baz);
+    GetQux(request<Qux> qux);
 };
 ```
 

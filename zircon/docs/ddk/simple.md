@@ -508,7 +508,7 @@ library zircon.sample.number;
 interface Number {
 
     // set the number to a given value
-    1: SetNumber(uint32 value) -> (uint32 previous);
+    SetNumber(uint32 value) -> (uint32 previous);
 };
 ```
 

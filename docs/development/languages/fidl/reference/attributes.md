@@ -67,7 +67,7 @@ To clarify with an example, the following is valid:
 ```fidl
 [Layout = "Simple"]
 interface MyInterface {
-    1: DynamicCountOfFixedArguments(vector<uint8>:1024 inputs);
+    DynamicCountOfFixedArguments(vector<uint8>:1024 inputs);
 };
 ```
 
