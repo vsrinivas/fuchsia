@@ -39,7 +39,10 @@ test_package("system_time_updater_test") {
 
   tests = [
     {
+      # TODO(CF-579): This test reliably crashes the session when testing over
+      # SSH.
       name = "system_time_updater_test"
+      disabled = true
     },
   ]
 }
