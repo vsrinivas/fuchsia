@@ -30,8 +30,8 @@ class RoutingTableFuzzer {
     if (parse_status.is_error()) {
       return;
     }
-    auto nodes = TakeVector(parse_status->mutable_nodes());
-    auto links = TakeVector(parse_status->mutable_links());
+    auto nodes = std::move(*parse_status->mutable_nodes());
+    auto links = std::move(*parse_status->mutable_links());
     auto validation_status =
         routing_table_.ValidateIncomingUpdate(nodes, links);
     OVERNET_TRACE(INFO) << "Validate: " << validation_status;
@@ -52,14 +52,6 @@ class RoutingTableFuzzer {
   };
   std::unique_ptr<Logging> logging_;
   RoutingTable routing_table_{NodeId(1), &timer_, false};
-
-  template <class T>
-  static std::vector<T> TakeVector(fidl::VectorPtr<T>* vec) {
-    if (vec == nullptr) {
-      return {};
-    }
-    return vec->take();
-  }
 };
 
 class InputStream {
