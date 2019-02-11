@@ -22,8 +22,6 @@ import pytoml
 # that use the output cargo.tomls, we use `= "*"` as the version
 # for these libraries, causing them to resolve via the patch section.
 IN_TREE_THIRD_PARTY_PACKAGES = [
-    "fuchsia-zircon",
-    "fuchsia-zircon-sys",
 ]
 
 CARGO_TOML_CONTENTS = '''\
