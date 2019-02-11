@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/assert_cmx.gni")
 import("//build/cmx/cmx.gni")
 import("//build/compiled_action.gni")
 import("//build/disabled_for_asan.gni")
@@ -335,11 +334,6 @@ template("package") {
       }
       if (!defined(package_name)) {
         package_name = pkg_target_name
-      }
-      if (components == []) {
-        assert_cmx(package_name) {
-          forward_variables_from(invoker, "*")
-        }
       }
       foreach(component, components) {
         deps += [ component ]
