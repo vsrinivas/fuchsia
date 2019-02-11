@@ -134,6 +134,8 @@ class Process final {
 
   Server* server() { return server_; }
 
+  Delegate* delegate() const { return delegate_; }
+
   // Returns a mutable handle to the set of breakpoints managed by this process.
   ProcessBreakpointSet* breakpoints() { return &breakpoints_; }
 
@@ -209,6 +211,9 @@ class Process final {
   // has been clobbered).
   const debugger_utils::dsoinfo_t* GetExecDso();
 
+  // Called when ZX_PROCESS_TERMINATED is received, update our internal state.
+  void OnTermination();
+
  private:
   // Cause ld.so to execute a s/w breakpoint instruction after all dsos have
   // been loaded at startup. Returns true on success.
@@ -232,8 +237,10 @@ class Process final {
   void TryBuildLoadedDsosList(Thread* thread);
 
   // The exception handler invoked by ExceptionPort.
-  void OnExceptionOrSignal(const zx_port_packet_t& packet,
-                           const zx_exception_context_t& context);
+  // TODO(dje): Friend is temporary, pending completion of the refactor moving
+  // the exception/signal handler to |Server|.
+  friend class Server;
+  void OnExceptionOrSignal(const zx_port_packet_t& packet);
 
   // Debug handle mgmt.
   bool AllocDebugHandle(process::ProcessBuilder* builder);
@@ -302,8 +309,8 @@ class Process final {
   // The entry point of the dynamic linker.
   zx_vaddr_t entry_address_ = 0;
 
-  // The key we receive after binding an exception port.
-  ExceptionPort::Key eport_key_ = 0;
+  // True if the debugging exception port has been to.
+  bool eport_bound_ = false;
 
   // True if we attached, or will attach, to a running program.
   // Otherwise we're launching a program from scratch.

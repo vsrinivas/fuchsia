@@ -71,6 +71,9 @@ class Server : public Process::Delegate {
   void PostQuitMessageLoop(bool status);
 
  private:
+  void OnProcessException(const zx_port_packet_t& packet);
+  void OnProcessSignal(const zx_port_packet_t& packet);
+
   // Returns a borrowed handle of the job whose processes we may attach to.
   // If this is ZX_HANDLE_INVALID then we may not attach to any process.
   zx::job job_for_search_;

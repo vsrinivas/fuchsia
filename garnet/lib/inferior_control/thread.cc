@@ -272,6 +272,19 @@ bool Thread::Step() {
   return true;
 }
 
+zx_status_t Thread::GetExceptionReport(zx_exception_report_t* report) const {
+  zx_status_t status =
+    zx_object_get_info(handle_, ZX_INFO_THREAD_EXCEPTION_REPORT,
+                       report, sizeof(*report), nullptr, nullptr);
+  // This could fail if the process terminates before we get a chance to
+  // look at it.
+  if (status == ZX_ERR_BAD_STATE) {
+    FXL_LOG(WARNING) << "No exception report for thread " << id_;
+  }
+
+  return status;
+}
+
 std::string Thread::ExceptionToString(
     zx_excp_type_t type, const zx_exception_context_t& context) const {
   std::string description = fxl::StringPrintf(

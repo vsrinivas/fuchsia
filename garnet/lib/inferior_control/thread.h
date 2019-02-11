@@ -90,6 +90,12 @@ class Thread final {
   // success, false on failure.
   bool Step();
 
+  // Assuming the thread is stopped in an exception, return the exception
+  // report.
+  // Normally this returns ZX_OK, but it can return ZX_ERR_BAD_STATE if the
+  // process has terminated before we read the report.
+  zx_status_t GetExceptionReport(zx_exception_report_t* report) const;
+
   // Convert an exception to a user-friendly description.
   // This is for log messages and interactive programs that wish to report
   // the exception.

@@ -6,7 +6,6 @@
 
 #include <fcntl.h>
 #include <lib/fdio/io.h>
-#include <lib/fit/function.h>
 #include <link.h>
 #include <zircon/dlfcn.h>
 #include <zircon/processargs.h>
@@ -192,7 +191,7 @@ bool Process::Initialize() {
 
   FXL_DCHECK(!builder_);
   FXL_DCHECK(!handle_);
-  FXL_DCHECK(!eport_key_);
+  FXL_DCHECK(!eport_bound_);
 
   zx_status_t status;
 
@@ -269,7 +268,7 @@ fail:
   if (handle_ != ZX_HANDLE_INVALID) {
     CloseDebugHandle();
   }
-  if (eport_key_) {
+  if (eport_bound_) {
     UnbindExceptionPort();
   }
   id_ = ZX_KOID_INVALID;
@@ -291,7 +290,7 @@ bool Process::Attach(zx_koid_t pid) {
 
   FXL_DCHECK(!builder_);
   FXL_DCHECK(!handle_);
-  FXL_DCHECK(!eport_key_);
+  FXL_DCHECK(!eport_bound_);
 
   // The Process object survives run-after-run. Switch Gone back to New.
   switch (state_) {
@@ -382,19 +381,22 @@ void Process::CloseDebugHandle() {
 }
 
 bool Process::BindExceptionPort() {
-  ExceptionPort::Key key = server_->exception_port().Bind(
-      handle_, fit::bind_member(this, &Process::OnExceptionOrSignal));
-  if (!key)
+  if (!server_->exception_port().Bind(handle_, id_)) {
+    FXL_LOG(ERROR) << "Unable to bind process " << id_ << " to exception port";
     return false;
-  eport_key_ = key;
+  }
+  FXL_VLOG(1) << "Process " << id_ << " bound to exception port";
+  eport_bound_ = true;
   return true;
 }
 
 void Process::UnbindExceptionPort() {
-  FXL_DCHECK(eport_key_);
-  if (!server_->exception_port().Unbind(eport_key_))
-    FXL_LOG(WARNING) << "Failed to unbind exception port; ignoring";
-  eport_key_ = 0;
+  FXL_DCHECK(eport_bound_);
+  if (!server_->exception_port().Unbind(handle_, id_)) {
+    FXL_LOG(WARNING) << "Failed to unbind exception port for process " << id_;
+  } else {
+    eport_bound_ = false;
+  }
 }
 
 void Process::RawDetach() {
@@ -537,7 +539,7 @@ bool Process::IsLive() const {
 }
 
 bool Process::IsAttached() const {
-  if (eport_key_) {
+  if (eport_bound_) {
     FXL_DCHECK(handle_ != ZX_HANDLE_INVALID);
     return true;
   } else {
@@ -806,101 +808,6 @@ bool Process::CheckDsosList(Thread* thread) {
   return true;
 }
 
-void Process::OnExceptionOrSignal(const zx_port_packet_t& packet,
-                                  const zx_exception_context_t& context) {
-  // Process exit is sent as a regular signal.
-  if (packet.type == ZX_PKT_TYPE_SIGNAL_ONE) {
-    FXL_VLOG(1) << "Received ZX_PKT_TYPE_SIGNAL_ONE, trigger 0x" << std::hex
-                << packet.signal.trigger;
-    if (packet.signal.trigger & ZX_TASK_TERMINATED) {
-      set_state(Process::State::kGone);
-      delegate_->OnProcessTermination(this);
-      if (!Detach()) {
-        // This is not a fatal error, just log it.
-        FXL_LOG(ERROR) << "Unexpected failure to detach (already detached)";
-        Clear();
-      }
-    }
-    return;
-  }
-
-  zx_excp_type_t type = static_cast<zx_excp_type_t>(packet.type);
-  zx_koid_t tid = packet.exception.tid;
-  Thread* thread = nullptr;
-  if (tid != ZX_KOID_INVALID) {
-    thread = FindThreadById(tid);
-    // TODO(dje): handle process exit
-  }
-
-  // If |thread| is nullptr then the thread must have just terminated,
-  // and there's nothing to do. The process itself could also have terminated.
-  if (thread == nullptr) {
-    // Alas there's no robust test to verify it just terminated,
-    // we just have to assume it.
-    FXL_LOG(WARNING) << "Thread " << tid << " not found, terminated";
-    return;
-  }
-
-  // At this point the thread is either an existing thread or a new thread
-  // which has been fully registered in our database.
-
-  // Manage loading of dso info.
-  // At present this is only done at startup. TODO(dje): dlopen.
-  // This is done by setting ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET which causes
-  // a s/w breakpoint instruction to be executed after all dsos are loaded.
-  // TODO(dje): Handle case of hitting a breakpoint before then (highly
-  // unlikely, but technically possible).
-  if (type == ZX_EXCP_SW_BREAKPOINT) {
-    if (CheckDsosList(thread)) {
-      zx_status_t status =
-        debugger_utils::ResumeAfterSoftwareBreakpointInstruction(
-            thread->handle(), server_->exception_port().handle());
-      if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Unable to resume thread " << thread->GetName()
-                       << ", status: "
-                       << debugger_utils::ZxErrorString(status);
-      }
-      // This is a breakpoint we introduced. No point in passing it on to
-      // other handlers. If resumption fails there's not much we can do.
-      return;
-    }
-  }
-
-  // |type| could either map to an architectural exception or Zircon-defined
-  // synthetic exceptions.
-  if (ZX_EXCP_IS_ARCH(type)) {
-    thread->OnException(type, context);
-    delegate_->OnArchitecturalException(this, thread, type, context);
-    return;
-  }
-
-  switch (type) {
-    case ZX_EXCP_THREAD_STARTING:
-      FXL_DCHECK(thread->state() == Thread::State::kNew);
-      FXL_VLOG(1) << "Received ZX_EXCP_THREAD_STARTING exception for thread "
-                  << thread->GetName();
-      thread->OnException(type, context);
-      delegate_->OnThreadStarting(this, thread, context);
-      break;
-    case ZX_EXCP_THREAD_EXITING:
-      FXL_VLOG(1) << "Received ZX_EXCP_THREAD_EXITING exception for thread "
-                  << tid << ", " << thread->GetName();
-      thread->OnException(type, context);
-      delegate_->OnThreadExiting(this, thread, context);
-      break;
-    case ZX_EXCP_POLICY_ERROR:
-      FXL_VLOG(1) << "Received ZX_EXCP_POLICY_ERROR exception for thread "
-                  << thread->GetName();
-      thread->OnException(type, context);
-      delegate_->OnSyntheticException(this, thread, type, context);
-      break;
-    default:
-      FXL_LOG(ERROR) << "Ignoring unrecognized synthetic exception for thread "
-                     << tid << ": " << type;
-      break;
-  }
-}
-
 int Process::ExitCode() {
   FXL_DCHECK(state_ == State::kGone);
   zx_info_process_t info;
@@ -922,6 +829,23 @@ const debugger_utils::dsoinfo_t* Process::GetExecDso() {
 
 debugger_utils::dsoinfo_t* Process::LookupDso(zx_vaddr_t pc) const {
   return dso_lookup(dsos_, pc);
+}
+
+void Process::OnTermination() {
+  set_state(Process::State::kGone);
+  delegate_->OnProcessTermination(this);
+
+  // After detaching the process's state is cleared.
+  zx_koid_t pid = id_;
+
+  if (!Detach()) {
+    // This is not a fatal error, just log it.
+    FXL_LOG(ERROR) << "Unexpected failure to detach (already detached)";
+    // The process is still dead, make sure it's fully marked so.
+    Clear();
+  }
+
+  FXL_LOG(INFO) << "Process " << pid << " now marked as dead";
 }
 
 }  // namespace inferior_control

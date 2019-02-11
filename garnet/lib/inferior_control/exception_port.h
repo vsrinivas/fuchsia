@@ -32,13 +32,12 @@ class ExceptionPort final {
   // A Key is vended as a result of a call to Bind()
   using Key = uint64_t;
 
-  // Handler callback invoked when the kernel reports an exception. For more
-  // information about the possible values and fields of the |type| and
-  // |context| parameters, see <zircon/syscalls/exception.h>.
-  using Callback = fit::function<void(const zx_port_packet_t& packet,
-                                      const zx_exception_context_t& context)>;
+  // Callback invoked when a packet is received.
+  using PacketCallback = fit::function<void(const zx_port_packet_t& packet)>;
 
-  explicit ExceptionPort(async_dispatcher_t* dispatcher);
+  explicit ExceptionPort(async_dispatcher_t* dispatcher,
+                         PacketCallback exception_callback,
+                         PacketCallback signal_callback);
   ~ExceptionPort();
 
   // Creates an exception port and starts waiting for events on it in a special
@@ -49,44 +48,24 @@ class ExceptionPort final {
   // underlying thread. This must be called AFTER a successful call to Run().
   void Quit();
 
-  // Binds an exception port to |process_handle| and associates |callback|
-  // with it. The returned key can be used to unbind this process later.
-  // On success, a positive Key value will be returned. On failure, 0 will be
-  // returned.
+  // Binds an exception port to |process| using key |key|.
+  // Returns true on success.
   //
-  // The |callback| will be posted on the origin thread's message loop, where
-  // the origin thread is the thread on which this ExceptionPort instance was
-  // created.
+  // The callbacks will be posted on |dispatcher| (args to our constructor).
   //
   // This must be called AFTER a successful call to Run().
-  Key Bind(const zx_handle_t process_handle, Callback callback);
+  bool Bind(zx_handle_t process, Key key);
 
   // Unbinds a previously bound exception port and returns true on success.
   // This must be called AFTER a successful call to Run().
-  bool Unbind(const Key key);
+  bool Unbind(zx_handle_t process, Key key);
 
  private:
-  struct BindData {
-    BindData() = default;
-    BindData(zx_handle_t process_handle, zx_koid_t process_koid,
-             Callback callback)
-        : process_handle(process_handle),
-          process_koid(process_koid),
-          callback(std::move(callback)) {}
-
-    zx_handle_t process_handle;
-    zx_koid_t process_koid;
-    Callback callback;
-  };
-
-  // Counter used for generating keys.
-  static Key g_key_counter;
-
   // Currently resuming from exceptions requires the exception port handle.
-  // This is solely for the benefit of |Process,Thread|.
+  // This is solely for the benefit of |Server,Thread|.
   // TODO(PT-105): Delete when resuming from exceptions no longer requires the
   // eport handle.
-  friend class Process;
+  friend class Server;
   friend class Thread;
   zx_handle_t handle() const { return eport_.get(); }
 
@@ -108,8 +87,9 @@ class ExceptionPort final {
   // The thread on which we wait on the exception port.
   std::thread port_thread_;
 
-  // All callbacks that are currently bound to this port.
-  std::unordered_map<Key, BindData> callbacks_;
+  // The functions to handle exceptions and signals.
+  PacketCallback exception_callback_;
+  PacketCallback signal_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ExceptionPort);
 };
