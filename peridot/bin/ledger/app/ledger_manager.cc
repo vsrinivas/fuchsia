@@ -446,11 +446,13 @@ void LedgerManager::DeletePageStorage(convert::ExtendedStringView page_id,
   // Block all page requests until deletion is complete.
   page_availability_manager_.MarkPageBusy(page_id);
   storage_->DeletePageStorage(
-      page_id, [this, page_id = page_id.ToString(),
-                callback = std::move(callback)](storage::Status status) {
-        page_availability_manager_.MarkPageAvailable(page_id);
-        callback(PageUtils::ConvertStatus(status));
-      });
+      page_id, callback::MakeScoped(
+                   weak_factory_.GetWeakPtr(),
+                   [this, page_id = page_id.ToString(),
+                    callback = std::move(callback)](storage::Status status) {
+                     page_availability_manager_.MarkPageAvailable(page_id);
+                     callback(PageUtils::ConvertStatus(status));
+                   }));
 }
 
 void LedgerManager::GetPage(storage::PageIdView page_id, PageState page_state,
