@@ -46,8 +46,6 @@ struct default_values {
     uint16 u16 = 348;
     uint32 u32 = 9038;
     uint64 u64 = 19835;
-    float32 f32 = 1.30;
-    float64 f64 = 0.0000054;
     string s = "hello";
 };
 

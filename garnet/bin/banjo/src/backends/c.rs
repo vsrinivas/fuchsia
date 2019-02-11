@@ -102,7 +102,7 @@ fn interface_to_ops_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, E
 fn not_callback(ast: &ast::BanjoAst, id: &Ident) -> bool {
     if let Some(attributes) = ast.id_to_attributes(id) {
         if let Some(layout) = attributes.get_attribute("Layout") {
-            if layout == " \"ddk-callback\"" {
+            if layout == "ddk-callback" {
                 return false;
             }
         }
@@ -121,6 +121,7 @@ fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant) -> String {
         ast::Ty::UInt16 => String::from(format!("UINT16_C({})", size)),
         ast::Ty::UInt32 => String::from(format!("UINT32_C({})", size)),
         ast::Ty::UInt64 => String::from(format!("UINT64_C({})", size)),
+        ast::Ty::USize | ast::Ty::Bool | ast::Ty::Str { .. } => size.clone(),
         s => panic!("don't handles this sized const: {}", s),
     }
 }
@@ -324,7 +325,7 @@ fn filter_interface<'a>(
 ) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
     if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
-            if layout == "\"ddk-interface\"" {
+            if layout == "ddk-interface" {
                 return Some((name, methods, attributes));
             }
         }
@@ -338,7 +339,7 @@ fn filter_protocol<'a>(
 ) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
     if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
-            if layout == "\"ddk-callback\"" || layout == "\"ddk-interface\"" {
+            if layout == "ddk-callback" || layout == "ddk-interface" {
                 None
             } else {
                 Some((name, methods, attributes))

@@ -1,0 +1,4587 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.types",
+    namespaces: {
+        "banjo.examples.types": [
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "this_is_a_struct",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Str {
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "s"
+                        },
+                        val: None
+                    }
+                ]
+            },
+            Union {
+                attributes: Attrs(
+                    []
+                ),
+                name: "this_is_a_union",
+                fields: [
+                    UnionField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Str {
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "s"
+                        }
+                    }
+                ]
+            },
+            Interface {
+                attributes: Attrs(
+                    []
+                ),
+                name: "this_is_an_interface",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Copy",
+                        in_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: None,
+                                    nullable: false
+                                }
+                            ),
+                            (
+                                "count",
+                                UInt32
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: None,
+                                    nullable: false
+                                }
+                            )
+                        ]
+                    }
+                ]
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "interfaces",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: None,
+                                name: "this_is_an_interface"
+                            },
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nonnullable_interface"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: None,
+                                name: "this_is_an_interface"
+                            },
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_interface"
+                        },
+                        val: None
+                    }
+                ]
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "primitive_types",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Bool,
+                        ident: Ident {
+                            namespace: None,
+                            name: "b"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int8,
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int16,
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int64,
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: UInt8,
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: UInt16,
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: UInt32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: UInt64,
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Float32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Float64,
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64"
+                        },
+                        val: None
+                    }
+                ]
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "default_values",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Bool,
+                        ident: Ident {
+                            namespace: None,
+                            name: "b1"
+                        },
+                        val: Some(
+                            Constant(
+                                "true"
+                            )
+                        )
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Bool,
+                        ident: Ident {
+                            namespace: None,
+                            name: "b2"
+                        },
+                        val: Some(
+                            Constant(
+                                "false"
+                            )
+                        )
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int8,
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8"
+                        },
+                        val: Some(
+                            Constant(
+                                "-23"
+                            )
+                        )
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int16,
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16"
+                        },
+                        val: Some(
+                            Constant(
+                                "34"
+                            )
+                        )
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32"
+                        },
+                        val: Some(
+                            Constant(
+                                "-34595"
+                            )
+                        )
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Int64,
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64"
+                        },
+                        val: Some(
+                            Constant(
+                                "3948038"
+                            )
+                        )
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: UInt8,
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8"
+                        },
+                        val: Some(
+                            Constant(
+                                "0"
+                            )
+                        )
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: UInt16,
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16"
+                        },
+                        val: Some(
+                            Constant(
+                                "348"
+                            )
+                        )
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: UInt32,
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32"
+                        },
+                        val: Some(
+                            Constant(
+                                "9038"
+                            )
+                        )
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: UInt64,
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64"
+                        },
+                        val: Some(
+                            Constant(
+                                "19835"
+                            )
+                        )
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Str {
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "s "
+                        },
+                        val: Some(
+                            Constant(
+                                "\"hello\""
+                            )
+                        )
+                    }
+                ]
+            },
+            Constant {
+                attributes: Attrs(
+                    []
+                ),
+                name: "arrays_size",
+                ty: UInt32,
+                value: Constant(
+                    "32"
+                )
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "arrays",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Bool,
+                            size: Constant(
+                                "1"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "b_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Int8,
+                            size: Constant(
+                                "1"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Int16,
+                            size: Constant(
+                                "1"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Int32,
+                            size: Constant(
+                                "1"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Int64,
+                            size: Constant(
+                                "1"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: UInt8,
+                            size: Constant(
+                                "1"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: UInt16,
+                            size: Constant(
+                                "1"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: UInt32,
+                            size: Constant(
+                                "1"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: UInt64,
+                            size: Constant(
+                                "1"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Float32,
+                            size: Constant(
+                                "1"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Float64,
+                            size: Constant(
+                                "1"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Handle {
+                                ty: Handle,
+                                reference: false
+                            },
+                            size: Constant(
+                                "1"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "handle_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Bool,
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "b_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Int8,
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Int16,
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Int32,
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Int64,
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: UInt8,
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: UInt16,
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: UInt32,
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: UInt64,
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Float32,
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Float64,
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Handle {
+                                ty: Handle,
+                                reference: false
+                            },
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "handle_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Bool,
+                                size: Constant(
+                                    "4"
+                                )
+                            },
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "b_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Int8,
+                                size: Constant(
+                                    "4"
+                                )
+                            },
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Int16,
+                                size: Constant(
+                                    "4"
+                                )
+                            },
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Int32,
+                                size: Constant(
+                                    "4"
+                                )
+                            },
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Int64,
+                                size: Constant(
+                                    "4"
+                                )
+                            },
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: UInt8,
+                                size: Constant(
+                                    "4"
+                                )
+                            },
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: UInt16,
+                                size: Constant(
+                                    "4"
+                                )
+                            },
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: UInt32,
+                                size: Constant(
+                                    "4"
+                                )
+                            },
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: UInt64,
+                                size: Constant(
+                                    "4"
+                                )
+                            },
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Float32,
+                                size: Constant(
+                                    "4"
+                                )
+                            },
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Float64,
+                                size: Constant(
+                                    "4"
+                                )
+                            },
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Array {
+                            ty: Array {
+                                ty: Handle {
+                                    ty: Handle,
+                                    reference: false
+                                },
+                                size: Constant(
+                                    "4"
+                                )
+                            },
+                            size: Constant(
+                                "arrays_size"
+                            )
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "handle_2"
+                        },
+                        val: None
+                    }
+                ]
+            },
+            Constant {
+                attributes: Attrs(
+                    []
+                ),
+                name: "vectors_size",
+                ty: UInt32,
+                value: Constant(
+                    "32"
+                )
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "vectors",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Bool,
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "b_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int8,
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int16,
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int32,
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int64,
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt8,
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt16,
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt32,
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt64,
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Float32,
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Float64,
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Handle {
+                                ty: Handle,
+                                reference: false
+                            },
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "handle_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Bool,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "b_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int8,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int16,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int32,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int64,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt8,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt16,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt32,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt64,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Float32,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Float64,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Handle {
+                                    ty: Handle,
+                                    reference: false
+                                },
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "handle_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Bool,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "b_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int8,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int16,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int32,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int64,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt8,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt16,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt32,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt64,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Float32,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Float64,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Handle {
+                                ty: Handle,
+                                reference: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "handle_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Bool,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "b_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int8,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int16,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int32,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int64,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt8,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt16,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt32,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt64,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Float32,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Float64,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Handle {
+                                ty: Handle,
+                                reference: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "handle_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Bool,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "b_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int8,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int16,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int32,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int64,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt8,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt16,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt32,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt64,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Float32,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Float64,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Handle {
+                                    ty: Handle,
+                                    reference: false
+                                },
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "handle_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Bool,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "b_nullable_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int8,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_nullable_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int16,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_nullable_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int32,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_nullable_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int64,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64_nullable_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt8,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_nullable_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt16,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16_nullable_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt32,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32_nullable_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt64,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64_nullable_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Float32,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32_nullable_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Float64,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64_nullable_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Handle {
+                                ty: Handle,
+                                reference: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "handle_nullable_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Bool,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "b_nullable_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int8,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_nullable_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int16,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_nullable_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int32,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_nullable_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int64,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64_nullable_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt8,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_nullable_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt16,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16_nullable_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt32,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32_nullable_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt64,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64_nullable_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Float32,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32_nullable_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Float64,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64_nullable_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Handle {
+                                    ty: Handle,
+                                    reference: false
+                                },
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: None,
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "handle_nullable_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Bool,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "b_nullable_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int8,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_nullable_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int16,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_nullable_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int32,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_nullable_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int64,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64_nullable_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt8,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_nullable_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt16,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16_nullable_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt32,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32_nullable_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt64,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64_nullable_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Float32,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32_nullable_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Float64,
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64_nullable_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Handle {
+                                ty: Handle,
+                                reference: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "1"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "handle_nullable_sized_0"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Bool,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "b_nullable_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int8,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_nullable_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int16,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_nullable_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int32,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_nullable_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Int64,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64_nullable_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt8,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_nullable_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt16,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16_nullable_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt32,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32_nullable_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: UInt64,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64_nullable_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Float32,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32_nullable_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Float64,
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64_nullable_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Handle {
+                                ty: Handle,
+                                reference: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "handle_nullable_sized_1"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Bool,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "b_nullable_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int8,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i8_nullable_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int16,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i16_nullable_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int32,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i32_nullable_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Int64,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i64_nullable_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt8,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u8_nullable_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt16,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u16_nullable_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt32,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u32_nullable_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: UInt64,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "u64_nullable_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Float32,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f32_nullable_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Float64,
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "f64_nullable_sized_2"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Vector {
+                            ty: Vector {
+                                ty: Handle {
+                                    ty: Handle,
+                                    reference: false
+                                },
+                                size: Some(
+                                    Constant(
+                                        "4"
+                                    )
+                                ),
+                                nullable: false
+                            },
+                            size: Some(
+                                Constant(
+                                    "vectors_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "handle_nullable_sized_2"
+                        },
+                        val: None
+                    }
+                ]
+            },
+            Struct {
+                attributes: Attrs(
+                    [
+                        Attr {
+                            key: "Awesome",
+                            val: None
+                        }
+                    ]
+                ),
+                name: "handles",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Handle,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "handle_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Process,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "process_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Thread,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "thread_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Vmo,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "vmo_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Channel,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "channel_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Event,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "event_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Port,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "port_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Interrupt,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "interrupt_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: DebugLog,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "debuglog_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Socket,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "socket_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Resource,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "resource_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: EventPair,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "eventpair_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Job,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "job_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Vmar,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "vmar_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Fifo,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "fifo_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Guest,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "guest_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Timer,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "timer_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Profile,
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "profile_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Handle,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_handle_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Process,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_process_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Thread,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_thread_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Vmo,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_vmo_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Channel,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_channel_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Event,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_event_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Port,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_port_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Interrupt,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_interrupt_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: DebugLog,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_debuglog_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Socket,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_socket_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Resource,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_resource_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: EventPair,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_eventpair_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Job,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_job_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Vmar,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_vmar_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Fifo,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_fifo_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Guest,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_guest_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Timer,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_timer_handle"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Handle {
+                            ty: Profile,
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_profile_handle"
+                        },
+                        val: None
+                    }
+                ]
+            },
+            Constant {
+                attributes: Attrs(
+                    []
+                ),
+                name: "strings_size",
+                ty: UInt32,
+                value: Constant(
+                    "32"
+                )
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "strings",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Str {
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "s"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Str {
+                            size: None,
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_s"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Str {
+                            size: Some(
+                                Constant(
+                                    "4"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "size_0_s"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Str {
+                            size: Some(
+                                Constant(
+                                    "strings_size"
+                                )
+                            ),
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "size_1_s"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Str {
+                            size: Some(
+                                Constant(
+                                    "4"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_size_0_s"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Str {
+                            size: Some(
+                                Constant(
+                                    "strings_size"
+                                )
+                            ),
+                            nullable: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_size_1_s"
+                        },
+                        val: None
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "default_enum",
+                ty: UInt32,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "x ",
+                        size: Constant(
+                            "23"
+                        )
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "i8_enum",
+                ty: Int8,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "x ",
+                        size: Constant(
+                            "23"
+                        )
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "i16_enum",
+                ty: Int16,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "x ",
+                        size: Constant(
+                            "23"
+                        )
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "i32_enum",
+                ty: Int32,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "x ",
+                        size: Constant(
+                            "23"
+                        )
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "i64_enum",
+                ty: Int64,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "x ",
+                        size: Constant(
+                            "23"
+                        )
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "u8_enum",
+                ty: UInt8,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "x ",
+                        size: Constant(
+                            "23"
+                        )
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "u16_enum",
+                ty: UInt16,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "x ",
+                        size: Constant(
+                            "23"
+                        )
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "u32_enum",
+                ty: UInt32,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "x ",
+                        size: Constant(
+                            "23"
+                        )
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "u64_enum",
+                ty: UInt64,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "x ",
+                        size: Constant(
+                            "23"
+                        )
+                    }
+                ]
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "structs",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: None,
+                                name: "this_is_a_struct"
+                            },
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "s"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: None,
+                                name: "this_is_a_struct"
+                            },
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_s"
+                        },
+                        val: None
+                    }
+                ]
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "unions",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: None,
+                                name: "this_is_a_union"
+                            },
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "s"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: None,
+                                name: "this_is_a_union"
+                            },
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_u"
+                        },
+                        val: None
+                    }
+                ]
+            },
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "interfaces",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: None,
+                                name: "this_is_an_interface"
+                            },
+                            reference: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "i"
+                        },
+                        val: None
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: None,
+                                name: "this_is_an_interface"
+                            },
+                            reference: true
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_i"
+                        },
+                        val: None
+                    }
+                ]
+            }
+        ]
+    }
+}

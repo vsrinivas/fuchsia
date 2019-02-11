@@ -7,10 +7,9 @@ use {
     failure::Fail,
     pest::iterators::{Pair, Pairs},
     serde_derive::Serialize,
+    std::collections::{BTreeMap, HashMap, HashSet, VecDeque},
     std::fmt,
-    std::{
-        collections::{BTreeMap, HashMap, HashSet, VecDeque},
-    },
+    std::str::FromStr,
 };
 
 #[derive(Debug, Fail)]
@@ -29,6 +28,8 @@ pub enum ParseError {
     NotAnInteger(Rule),
     #[fail(display = "Invalid dependencies: {}", 0)]
     InvalidDeps(String),
+    #[fail(display = "Expected {:?} to resolve to a {:?}.", 0, 1)]
+    InvalidConstType(Constant, Ty),
 }
 
 #[derive(PartialEq, Eq, Serialize, Default, Debug, Hash)]
@@ -119,10 +120,12 @@ impl Attrs {
                             attrs.0.push(Attr { key: String::from(ap.trim()), val: None });
                         } else {
                             let split: Vec<&str> = ap.split("=").collect();
-                            attrs.0.push(Attr {
-                                key: String::from(split[0].trim()),
-                                val: Some(String::from(split[1])),
-                            });
+                            // Strip whitespace and quotes.
+                            let val = split[1].trim();
+                            let val = val.chars().skip(1).take(val.len() - 2).collect();
+                            attrs
+                                .0
+                                .push(Attr { key: String::from(split[0].trim()), val: Some(val) });
                         }
                     }
                 }
@@ -166,6 +169,7 @@ pub enum HandleTy {
     Timer,
     Bti,
     Profile,
+    DebugLog,
 }
 
 #[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash)]
@@ -267,6 +271,7 @@ impl Ty {
                                 "timer" => HandleTy::Timer,
                                 "bti" => HandleTy::Bti,
                                 "profile" => HandleTy::Profile,
+                                "debuglog" => HandleTy::DebugLog,
                                 _e => {
                                     return Err(ParseError::UnrecognizedType(
                                         inner_pair.as_str().to_string(),
@@ -367,6 +372,7 @@ pub struct StructField {
     pub attributes: Attrs,
     pub ty: Ty,
     pub ident: Ident,
+    pub val: Option<Constant>,
 }
 
 impl StructField {
@@ -374,21 +380,21 @@ impl StructField {
         let mut attributes = Attrs::default();
         let mut ty = None;
         let mut ident = String::default();
+        let mut val = None;
         for inner_pair in pair.into_inner() {
             match inner_pair.as_rule() {
-                Rule::attributes => {
-                    attributes = Attrs::from_pair(inner_pair)?;
-                }
-                Rule::ident => {
-                    ident = String::from(inner_pair.as_str());
-                }
-                _ => {
-                    ty = Some(Ty::from_pair(&inner_pair)?);
-                }
-            }
+                Rule::attributes => attributes = Attrs::from_pair(inner_pair)?,
+                Rule::ident => ident = String::from(inner_pair.as_str()),
+                Rule::constant => val = Some(Constant::from_str(inner_pair.as_str())),
+                _ => ty = Some(Ty::from_pair(&inner_pair)?),
+            };
         }
-        // TODO use the val field in structs
-        Ok(StructField { attributes: attributes, ty: ty.unwrap(), ident: Ident::new(ident.as_str()) })
+        Ok(StructField {
+            attributes: attributes,
+            ty: ty.unwrap(),
+            ident: Ident::new(ident.as_str()),
+            val: val,
+        })
     }
 }
 
@@ -538,9 +544,14 @@ impl BanjoAst {
                         return Ty::Union;
                     }
                 }
-                Decl::Enum { name, .. } => {
+                Decl::Enum { name, variants, .. } => {
                     if *name == ident {
                         return Ty::Enum;
+                    }
+                    for variant in variants.iter() {
+                        if variant.name == ident {
+                            return Ty::Identifier { id: Ident::new(name), reference: false };
+                        }
                     }
                 }
                 Decl::Alias(to, from) => {
@@ -849,6 +860,73 @@ impl BanjoAst {
         Ok(())
     }
 
+    // Validates that the constants are of the right type.
+    fn validate_constants(&self) -> Result<(), ParseError> {
+        // Search ast for constants.
+        for (ty, constant) in
+            self.namespaces.iter().flat_map(|(_, decls)| decls.iter()).filter_map(|decl| match decl
+            {
+                Decl::Constant { ty, value, .. } => Some((ty, value)),
+                _ => None,
+            })
+        {
+            let Constant(string) = constant;
+            match ty {
+                Ty::Int8 => {
+                    i8::from_str(string)
+                        .map_err(|_| ParseError::InvalidConstType(constant.clone(), ty.clone()))?;
+                }
+                Ty::Int16 => {
+                    i16::from_str(string)
+                        .map_err(|_| ParseError::InvalidConstType(constant.clone(), ty.clone()))?;
+                }
+                Ty::Int32 => {
+                    i32::from_str(string)
+                        .map_err(|_| ParseError::InvalidConstType(constant.clone(), ty.clone()))?;
+                }
+                Ty::Int64 => {
+                    i64::from_str(string)
+                        .map_err(|_| ParseError::InvalidConstType(constant.clone(), ty.clone()))?;
+                }
+                Ty::USize => {
+                    usize::from_str(string)
+                        .map_err(|_| ParseError::InvalidConstType(constant.clone(), ty.clone()))?;
+                }
+                Ty::UInt8 => {
+                    u8::from_str(string)
+                        .map_err(|_| ParseError::InvalidConstType(constant.clone(), ty.clone()))?;
+                }
+                Ty::UInt16 => {
+                    u16::from_str(string)
+                        .map_err(|_| ParseError::InvalidConstType(constant.clone(), ty.clone()))?;
+                }
+                Ty::UInt32 | Ty::UInt64 => {
+                    u32::from_str(string)
+                        .map_err(|_| ParseError::InvalidConstType(constant.clone(), ty.clone()))?;
+                }
+                Ty::Bool => {
+                    bool::from_str(string)
+                        .map_err(|_| ParseError::InvalidConstType(constant.clone(), ty.clone()))?;
+                }
+                Ty::Str { .. } => {
+                    if !string.starts_with("\"") || !string.ends_with("\"") {
+                        return Err(ParseError::InvalidConstType(constant.clone(), ty.clone()));
+                    }
+                }
+                _ => {
+                    let ident_ty = self.id_to_type(&Ident::new(string));
+                    if *ty != ident_ty {
+                        return Err(ParseError::InvalidConstType(constant.clone(), ty.clone()));
+                    }
+                }
+            };
+        }
+
+        // TODO(surajmalhotra): Find every bound array, string, and validate their bound is a valid
+        // usize.
+        Ok(())
+    }
+
     pub fn parse(pair_vec: Vec<Pairs<'_, Rule>>) -> Result<Self, ParseError> {
         let mut primary_namespace = None;
         let mut namespaces = BTreeMap::default();
@@ -914,6 +992,7 @@ impl BanjoAst {
 
         let ast = BanjoAst { primary_namespace: primary_namespace.unwrap(), namespaces };
         ast.validate_declaration_deps()?;
+        ast.validate_constants()?;
 
         Ok(ast)
     }

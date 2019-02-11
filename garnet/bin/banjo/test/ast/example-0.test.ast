@@ -22,7 +22,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "b"
-                        }
+                        },
+                        val: None
                     }
                 ]
             },
@@ -46,7 +47,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "f"
-                        }
+                        },
+                        val: None
                     }
                 ]
             }

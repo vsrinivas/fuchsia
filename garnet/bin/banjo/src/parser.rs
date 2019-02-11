@@ -31,7 +31,7 @@ attribute_list = { "[" ~ ( (attribute) ~ (",")? )* ~ "]" }
 attributes = !{ (doc_comment_block)? ~ (attribute_list)? }
 
 struct_declaration = { attributes ~ "struct" ~ ident ~ "{" ~ (struct_field ~ ";")* ~ "}" }
-struct_field  = { attributes? ~ type_ ~ ident ~ ("=" ~ ident)? }
+struct_field  = { attributes? ~ type_ ~ ident ~ ("=" ~  constant)? }
 
 union_declaration = { attributes ~ "union" ~ ident ~ "{" ~ (union_field ~ ";")* ~ "}" }
 union_field  = { attributes? ~ type_ ~ ident }
@@ -68,15 +68,15 @@ handle_type = { "handle" ~ ( "<" ~ handle_subtype ~ ">" )? ~ reference? }
 
 handle_subtype = { "process" | "thread" | "vmo" | "channel" | "eventpair" | "port" |
                  "interrupt" | "debuglog" | "socket" | "resource" | "event" |
-                 "job" | "vmar" | "fifo" | "guest" | "timer" | "bti" }
+                 "job" | "vmar" | "fifo" | "guest" | "timer" | "bti" | "profile" }
 
 compound_ident = ${ ident ~ ("." ~ ident)* }
-ident = { ("@")? ~ (alpha | digit| "_")+ }
+ident = { ("@")? ~ (alpha | digit | "_")+ }
 alpha = { 'a'..'z' | 'A'..'Z' }
 digit = { '0'..'9' }
 string = { "\"" ~ ("-" | SYMBOL | alpha)* ~ "\"" }
 numeric = { ("-" | digit)* }
-constant = { compound_ident | numeric }
+constant = { compound_ident | string | numeric }
 reference = { "?" }
 "#]
 pub struct BanjoParser;

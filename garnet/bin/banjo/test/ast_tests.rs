@@ -18,6 +18,7 @@ codegen_test!(example_6, AstBackend, ["banjo/example-6.test.banjo"], "ast/exampl
 codegen_test!(example_7, AstBackend, ["banjo/example-7.test.banjo"], "ast/example-7.test.ast");
 codegen_test!(example_8, AstBackend, ["banjo/example-8.test.banjo"], "ast/example-8.test.ast");
 codegen_test!(example_9, AstBackend, ["banjo/example-9.test.banjo"], "ast/example-9.test.ast");
+codegen_test!(types, AstBackend, ["banjo/types.test.banjo"], "ast/types.test.ast");
 codegen_test!(point, AstBackend, ["banjo/point.test.banjo"], "ast/point.test.ast");
 codegen_test!(tables, AstBackend, ["banjo/tables.test.banjo"], "ast/tables.test.ast");
 codegen_test!(

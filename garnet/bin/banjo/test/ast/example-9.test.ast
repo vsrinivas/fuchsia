@@ -43,7 +43,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "first"
-                        }
+                        },
+                        val: None
                     },
                     StructField {
                         attributes: Attrs(
@@ -53,7 +54,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "second"
-                        }
+                        },
+                        val: None
                     }
                 ]
             },

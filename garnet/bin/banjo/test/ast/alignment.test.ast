@@ -16,7 +16,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i16_0"
-                        }
+                        },
+                        val: None
                     },
                     StructField {
                         attributes: Attrs(
@@ -26,7 +27,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i32_0"
-                        }
+                        },
+                        val: None
                     },
                     StructField {
                         attributes: Attrs(
@@ -36,7 +38,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i16_1"
-                        }
+                        },
+                        val: None
                     }
                 ]
             },
@@ -54,7 +57,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i16_0"
-                        }
+                        },
+                        val: None
                     },
                     StructField {
                         attributes: Attrs(
@@ -64,7 +68,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i8_0"
-                        }
+                        },
+                        val: None
                     },
                     StructField {
                         attributes: Attrs(
@@ -74,7 +79,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i16_1"
-                        }
+                        },
+                        val: None
                     },
                     StructField {
                         attributes: Attrs(
@@ -84,7 +90,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i8_1"
-                        }
+                        },
+                        val: None
                     }
                 ]
             },
@@ -102,7 +109,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i16_0"
-                        }
+                        },
+                        val: None
                     },
                     StructField {
                         attributes: Attrs(
@@ -112,7 +120,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i8_0"
-                        }
+                        },
+                        val: None
                     },
                     StructField {
                         attributes: Attrs(
@@ -122,7 +131,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i8_1"
-                        }
+                        },
+                        val: None
                     },
                     StructField {
                         attributes: Attrs(
@@ -132,7 +142,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i16_1"
-                        }
+                        },
+                        val: None
                     }
                 ]
             },
@@ -150,7 +161,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i32_0"
-                        }
+                        },
+                        val: None
                     },
                     StructField {
                         attributes: Attrs(
@@ -160,7 +172,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i64_0"
-                        }
+                        },
+                        val: None
                     },
                     StructField {
                         attributes: Attrs(
@@ -170,7 +183,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i16_0"
-                        }
+                        },
+                        val: None
                     },
                     StructField {
                         attributes: Attrs(
@@ -180,7 +194,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i32_1"
-                        }
+                        },
+                        val: None
                     },
                     StructField {
                         attributes: Attrs(
@@ -190,7 +205,8 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "i16_1"
-                        }
+                        },
+                        val: None
                     }
                 ]
             }

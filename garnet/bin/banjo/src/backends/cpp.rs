@@ -71,6 +71,7 @@ fn handle_ty_to_cpp_str(_ast: &ast::BanjoAst, ty: &ast::HandleTy) -> Result<Stri
         ast::HandleTy::Timer => Ok(String::from("zx::timer")),
         ast::HandleTy::Bti => Ok(String::from("zx::bti")),
         ast::HandleTy::Profile => Ok(String::from("zx::profile")),
+        ast::HandleTy::DebugLog => Ok(String::from("zx::debuglog")),
     }
 }
 
@@ -124,7 +125,7 @@ fn interface_to_ops_cpp_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String,
 fn not_callback(ast: &ast::BanjoAst, id: &Ident) -> bool {
     if let Some(attributes) = ast.id_to_attributes(id) {
         if let Some(layout) = attributes.get_attribute("Layout") {
-            if layout == " \"ddk-callback\"" {
+            if layout == "ddk-callback" {
                 return false;
             }
         }
@@ -349,7 +350,7 @@ fn filter_interface<'a>(
 ) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
     if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
-            if layout == " \"ddk-interface\"" {
+            if layout == "ddk-interface" {
                 return Some((name, methods, attributes));
             }
         }
@@ -363,7 +364,7 @@ fn filter_protocol<'a>(
 ) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
     if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
-            if layout == " \"ddk-protocol\"" {
+            if layout == "ddk-protocol" {
                 return Some((name, methods, attributes));
             }
         } else {
