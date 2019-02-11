@@ -7,156 +7,157 @@ library fuchsia.process;
 using fuchsia.io;
 using zx;
 
-// Information about a handle provided to a process at startup.
-//
-// Processes are given a set of initial handles as part of the bootstrapping
-// sequence. Some of these handles are associated with zx.procarg identifiers
-// that designate their intended use by the new process.
-//
-// This structure represents one such handle and its associated zx.procarg
-// identifier.
+/// Information about a handle provided to a process at startup.
+///
+/// Processes are given a set of initial handles as part of the bootstrapping
+/// sequence. Some of these handles are associated with zx.procarg identifiers
+/// that designate their intended use by the new process.
+///
+/// This structure represents one such handle and its associated zx.procarg
+/// identifier.
 struct HandleInfo {
-    // The handle to use for this process argument.
+    /// The handle to use for this process argument.
     handle handle;
 
-    // Process argument identifier.
-    //
-    // See <zircon/processargs.h> for definitions of well-known process
-    // arguments.
+    /// Process argument identifier.
+    ///
+    /// See <zircon/processargs.h> for definitions of well-known process
+    /// arguments.
     zx.procarg id;
 };
 
-// A namespace entry provided to a process at startup.
-//
-// Processes are given a set of initial handles as part of the bootstrapping
-// sequence. Some of these handles are associated with paths that designate
-// their intended use by the new process as namespace entries.
-//
-// This structure represents one such handle and its associated namespace path.
+/// A namespace entry provided to a process at startup.
+///
+/// Processes are given a set of initial handles as part of the bootstrapping
+/// sequence. Some of these handles are associated with paths that designate
+/// their intended use by the new process as namespace entries.
+///
+/// This structure represents one such handle and its associated namespace path.
 struct NameInfo {
-    // Path at which to install the associated directory.
-    //
-    // Must be an absolute path (i.e., start with '/').
+    /// Path at which to install the associated directory.
+    ///
+    /// Must be an absolute path (i.e., start with '/').
     string:fuchsia.io.MAX_PATH path;
 
-    // The associated directory.
+    /// The associated directory.
     fuchsia.io.Directory directory;
 };
 
-// The information needed to launch a process.
+/// The information needed to launch a process.
 struct LaunchInfo {
-    // The executable to run in the process.
+    /// The executable to run in the process.
     handle<vmo> executable;
 
-    // The job in which to create the process.
+    /// The job in which to create the process.
     handle<job> job;
 
-    // The name to assign to the created process.
-    //
-    // TODO(REVIEW): Define a zx.MAX_NAME_SIZE constant (i.e., 32) and limit
-    // this string to that size.
+    /// The name to assign to the created process.
+    ///
+    /// TODO(REVIEW): Define a zx.MAX_NAME_SIZE constant (i.e., 32) and limit
+    /// this string to that size.
     string name;
 };
 
-// The information required to start a process.
-//
-// To start the process, call |zx_process_start| with the arguments provided.
+/// The information required to start a process.
+///
+/// To start the process, call |zx_process_start| with the arguments provided.
 struct ProcessStartData {
-    // The process that was created.
+    /// The process that was created.
     handle<process> process;
 
-    // The vmar object that was created when the process was created.
-    //
-    // See <https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/process_create.md>.
+    /// The vmar object that was created when the process was created.
+    ///
+    /// See <https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/process_create.md>.
     handle<vmar> root_vmar;
 
-    // The initial thread for the process.
-    //
-    // Should be passed to |zx_process_start| when starting the process.
+    /// The initial thread for the process.
+    ///
+    /// Should be passed to |zx_process_start| when starting the process.
     handle<thread> thread;
 
-    // The address of the initial entry point in the process.
-    //
-    // Should be passed to |zx_process_start| when starting the process.
+    /// The address of the initial entry point in the process.
+    ///
+    /// Should be passed to |zx_process_start| when starting the process.
     zx.vaddr entry;
 
-    // The stack pointer value for the initial thread of the process.
-    //
-    // Should be passed to |zx_process_start| when starting the process.
+    /// The stack pointer value for the initial thread of the process.
+    ///
+    /// Should be passed to |zx_process_start| when starting the process.
     zx.vaddr stack;
 
-    // The bootstrap channel to pass to the process on startup.
-    //
-    // Should be passed to |zx_process_start| when starting the process.
+    /// The bootstrap channel to pass to the process on startup.
+    ///
+    /// Should be passed to |zx_process_start| when starting the process.
     handle<channel> bootstrap;
 
-    // The base address of the vDSO to pass to the process on startup.
-    //
-    // Should be passed to |zx_process_start| when starting the process.
+    /// The base address of the vDSO to pass to the process on startup.
+    ///
+    /// Should be passed to |zx_process_start| when starting the process.
     zx.vaddr vdso_base;
 
-    // The base load address of the ELF file loaded.
-    //
-    // Most often used by debuggers or other tools that inspect the process.
+    /// The base load address of the ELF file loaded.
+    ///
+    /// Most often used by debuggers or other tools that inspect the process.
     zx.vaddr base;
 };
 
-// A low-level interface for launching processes.
-//
-// This interface is used for manually assembling a process. The caller supplies
-// all the capabilities for the newly created process.
-//
-// That create processes typically use |fdio_spawn| or |fdio_spawn_etc| rather
-// than using this interface directly. The |fdio_spawn| and |fdio_spawn_etc|
-// functions are implemented using this interface.
-//
-// Debuggers and other clients that need to create processes in a suspended
-// state often use this interface directly. These clients use the
-// |CreateWithoutStarting| method to create the process without actually
-// starting it.
+/// A low-level interface for launching processes.
+///
+/// This interface is used for manually assembling a process. The caller supplies
+/// all the capabilities for the newly created process.
+///
+/// That create processes typically use |fdio_spawn| or |fdio_spawn_etc| rather
+/// than using this interface directly. The |fdio_spawn| and |fdio_spawn_etc|
+/// functions are implemented using this interface.
+///
+/// Debuggers and other clients that need to create processes in a suspended
+/// state often use this interface directly. These clients use the
+/// |CreateWithoutStarting| method to create the process without actually
+/// starting it.
 [Discoverable]
 interface Launcher {
-    // Creates and starts the process described by |info|.
-    //
-    // After processing this message, the |Launcher| is reset to its initial
-    // state and is ready to launch another process.
-    //
-    // |process| is present if, and only if, |status| is ZX_OK.
+    /// Creates and starts the process described by |info|.
+    ///
+    /// After processing this message, the |Launcher| is reset to its initial
+    /// state and is ready to launch another process.
+    ///
+    /// |process| is present if, and only if, |status| is ZX_OK.
     Launch(LaunchInfo info) -> (zx.status status, handle<process>? process);
     Launch2(LaunchInfo info) -> (zx.status status, handle<process>? process);
 
-    // Creates the process described by |info| but does not start it.
-    //
-    // After processing this message, the |Launcher| is reset to its initial
-    // state and is ready to launch another process.
-    //
-    // The caller is responsible for calling |zx_process_start| using the data
-    // in |ProcessStartData| to actually start the process.
-    //
-    // |data| is present if, and only if, |status| is ZX_OK.
+    /// Creates the process described by |info| but does not start it.
+    ///
+    /// After processing this message, the |Launcher| is reset to its initial
+    /// state and is ready to launch another process.
+    ///
+    /// The caller is responsible for calling |zx_process_start| using the data
+    /// in |ProcessStartData| to actually start the process.
+    ///
+    /// |data| is present if, and only if, |status| is ZX_OK.
     CreateWithoutStarting(LaunchInfo info) -> (zx.status status,
                                                ProcessStartData? data);
 
-    // Adds the given arguments to the command-line for the process.
-    //
-    // Calling this method multiple times concatenattes the arguments.
+    /// Adds the given arguments to the command-line for the process.
+    ///
+    /// Calling this method multiple times concatenattes the arguments.
     AddArgs(vector<vector<uint8>> args);
 
-    // Adds the given variables to the environment variables for the process.
-    //
-    // Calling this method multiple times concatenates the variables.
+    /// Adds the given variables to the environment variables for the process.
+    ///
+    /// Calling this method multiple times concatenates the variables.
     AddEnvirons(vector<vector<uint8>> environ);
 
-    // Adds the given names to the namespace for the process.
-    //
-    // The paths in the namespace must be non-overlapping. See
-    // <https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/namespaces.md> for details.
-    //
-    // Calling this method multiple times concatenates the names.
+    /// Adds the given names to the namespace for the process.
+    ///
+    /// The paths in the namespace must be non-overlapping. See
+    /// <https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/namespaces.md>
+    /// for details.
+    ///
+    /// Calling this method multiple times concatenates the names.
     AddNames(vector<NameInfo> names);
 
-    // Adds the given handles to the startup handles for the process.
-    //
-    // Calling this method multiple times concatenates the handles.
+    /// Adds the given handles to the startup handles for the process.
+    ///
+    /// Calling this method multiple times concatenates the handles.
     AddHandles(vector<HandleInfo> handles);
 };
