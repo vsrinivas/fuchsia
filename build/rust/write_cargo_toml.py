@@ -100,9 +100,18 @@ def main():
                 return -1
             dep_data = json.load(open(data_path))
             if dep_data["third_party"]:
-                crate = dep_data["package_name"]
-                crate_data = third_party_json["crates"][crate]
-                deps[crate] = crate_data["cargo_dependency_toml"]
+                package_name = dep_data["package_name"]
+                if package_name not in third_party_json["crates"]:
+                    print(TERM_COLOR_RED)
+                    print("Missing Rust target dependency:" + data_path)
+                    print("Package is present in the third_party/ but is absent"
+                          " from dependency data: " + args.third_party_deps_data)
+                    print("Maybe this package is conditionally disabled for the"
+                          " current configuration of '%s'?" % args.crate_name)
+                    print(TERM_COLOR_END)
+                    return -1
+                crate_data = third_party_json["crates"][package_name]
+                deps[package_name] = crate_data["cargo_dependency_toml"]
             else:
                 package_name = dep_data["package_name"]
                 if package_name in IN_TREE_THIRD_PARTY_PACKAGES:
