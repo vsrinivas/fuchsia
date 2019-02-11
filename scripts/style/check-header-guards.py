@@ -39,6 +39,7 @@ PUBLIC_PREFIXES = [
     'GARNET_PUBLIC',
     'PERIDOT_PUBLIC',
     'TOPAZ_PUBLIC',
+    'SDK'
 ]
 public_prefix = re.compile('^(' + string.join(PUBLIC_PREFIXES, '|') + ')_')
 
