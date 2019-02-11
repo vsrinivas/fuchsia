@@ -105,9 +105,9 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 extern "C" const fidl_type_t {{ .TableType }};
 const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 
-{{ .Name }}::{{ .Name }}() :
-{{- range $index, $element := .Members }}
-  {{if $index}},{{end}}
+{{ .Name }}::{{ .Name }}(){{- if len .Members }} : {{- end -}}
+{{- range $index, $element := .Members -}}
+  {{ if $index }},{{ end }}
   {{ $element.FieldPresenceName }}(false)
 {{- end }} {
 }
@@ -153,7 +153,9 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   {{- end }}
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
+  {{- if len .Members }}
   size_t base = _encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
+  {{- end }}
   {{- range .Members }}
   if ({{ .FieldPresenceName }}) {
     const size_t length_before = _encoder->CurrentLength();

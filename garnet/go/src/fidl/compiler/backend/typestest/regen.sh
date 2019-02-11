@@ -20,7 +20,7 @@ fi
 EXAMPLE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 GOLDENS_DIR="${EXAMPLE_DIR}/../goldens"
 GOLDENS=()
-for src_path in `find -s "${EXAMPLE_DIR}" -name '*.fidl'`; do
+for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     src_name="$( basename "${src_path}" )"
     json_name=${src_name}.json
     cpp_header_name=${json_name}.h
@@ -87,4 +87,4 @@ for src_path in `find -s "${EXAMPLE_DIR}" -name '*.fidl'`; do
 done
 
 > "${GOLDENS_DIR}/goldens.txt"
-printf "%s\n" "${GOLDENS[@]//,}" >> "${GOLDENS_DIR}/goldens.txt"
+printf "%s\n" "${GOLDENS[@]//,}" | sort >> "${GOLDENS_DIR}/goldens.txt"

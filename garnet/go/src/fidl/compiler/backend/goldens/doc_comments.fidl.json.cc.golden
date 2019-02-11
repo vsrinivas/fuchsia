@@ -194,7 +194,6 @@ extern "C" const fidl_type_t test_name_TableTable;
 const fidl_type_t* Table::FidlType = &test_name_TableTable;
 
 Table::Table() :
-  
   has_Field_(false) {
 }
 

@@ -15,6 +15,16 @@ use std::ops::Deref;
 
 
 #[derive(Debug, PartialEq)]
+pub struct EmptyTable {
+}
+
+fidl_table! {
+  name: EmptyTable,
+  members: {
+  },
+}
+
+#[derive(Debug, PartialEq)]
 pub struct SimpleTable {
   pub x: Option<i64>,
   pub y: Option<i64>,

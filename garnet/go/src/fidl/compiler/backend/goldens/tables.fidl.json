@@ -8,6 +8,14 @@
   "struct_declarations": [],
   "table_declarations": [
     {
+      "name": "test.name/EmptyTable",
+      "members": [],
+      "size": 16,
+      "max_out_of_line": 0,
+      "alignment": 8,
+      "max_handles": 0
+    },
+    {
       "name": "test.name/SimpleTable",
       "members": [
         {
@@ -150,9 +158,11 @@
   "declaration_order": [
     "test.name/OlderSimpleTable",
     "test.name/NewerSimpleTable",
-    "test.name/SimpleTable"
+    "test.name/SimpleTable",
+    "test.name/EmptyTable"
   ],
   "declarations": {
+    "test.name/EmptyTable": "table",
     "test.name/SimpleTable": "table",
     "test.name/OlderSimpleTable": "table",
     "test.name/NewerSimpleTable": "table"

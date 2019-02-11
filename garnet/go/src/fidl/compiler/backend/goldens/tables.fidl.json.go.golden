@@ -7,6 +7,20 @@ package name
 
 
 
+type EmptyTable struct {
+	_ struct{} `fidl2:"t,16,8"`
+}
+
+// Implements Payload.
+func (_ *EmptyTable) InlineAlignment() int {
+	return 8
+}
+
+// Implements Payload.
+func (_ *EmptyTable) InlineSize() int {
+	return 16
+}
+
 type SimpleTable struct {
 	_ struct{} `fidl2:"t,16,8"`
 	X int64 `fidl:"1" fidl2:"1"`

@@ -10,7 +10,6 @@ extern "C" const fidl_type_t test_name_OlderSimpleTableTable;
 const fidl_type_t* OlderSimpleTable::FidlType = &test_name_OlderSimpleTableTable;
 
 OlderSimpleTable::OlderSimpleTable() :
-  
   has_x_(false) {
 }
 
@@ -124,11 +123,8 @@ extern "C" const fidl_type_t test_name_NewerSimpleTableTable;
 const fidl_type_t* NewerSimpleTable::FidlType = &test_name_NewerSimpleTableTable;
 
 NewerSimpleTable::NewerSimpleTable() :
-  
-  has_x_(false)
-  ,
-  has_y_(false)
-  ,
+  has_x_(false),
+  has_y_(false),
   has_z_(false) {
 }
 
@@ -370,9 +366,7 @@ extern "C" const fidl_type_t test_name_SimpleTableTable;
 const fidl_type_t* SimpleTable::FidlType = &test_name_SimpleTableTable;
 
 SimpleTable::SimpleTable() :
-  
-  has_x_(false)
-  ,
+  has_x_(false),
   has_y_(false) {
 }
 
@@ -544,6 +538,53 @@ bool operator==(const SimpleTable& _lhs, const SimpleTable& _rhs) {
   } else if (_rhs.has_y()) {
     return false;
   }
+  return true;
+}
+extern "C" const fidl_type_t test_name_EmptyTableTable;
+const fidl_type_t* EmptyTable::FidlType = &test_name_EmptyTableTable;
+
+EmptyTable::EmptyTable() {
+}
+
+EmptyTable::EmptyTable(EmptyTable&& other) {
+}
+
+EmptyTable::~EmptyTable() {
+}
+
+EmptyTable& EmptyTable::operator=(EmptyTable&& other) {
+  return *this;
+}
+
+void EmptyTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+  size_t max_ordinal = 0;
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+}
+
+void EmptyTable::Decode(::fidl::Decoder* _decoder, EmptyTable* _value, size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  size_t base;
+  size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+
+  return;
+
+  // Clear unset values.
+clear_all:
+  return;
+}
+
+zx_status_t EmptyTable::Clone(EmptyTable* result) const {
+  return ZX_OK;
+}
+
+bool operator==(const EmptyTable& _lhs, const EmptyTable& _rhs) {
   return true;
 }
 }  // namespace name

@@ -11,6 +11,7 @@ namespace name {
 class OlderSimpleTable;
 class NewerSimpleTable;
 class SimpleTable;
+class EmptyTable;
 
 class OlderSimpleTable  {
  public:
@@ -341,6 +342,40 @@ inline bool operator!=(const SimpleTable& _lhs, const SimpleTable& _rhs) {
 }
 
 using SimpleTablePtr = ::std::unique_ptr<SimpleTable>;
+
+class EmptyTable  {
+ public:
+  static const fidl_type_t* FidlType;
+
+  EmptyTable();
+  EmptyTable(EmptyTable&& other);
+  ~EmptyTable();
+  EmptyTable& operator=(EmptyTable&& other);
+
+  static inline ::std::unique_ptr<EmptyTable> New() { return ::std::make_unique<EmptyTable>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, EmptyTable* _value, size_t _offset);
+  zx_status_t Clone(EmptyTable* _result) const;
+
+ private:
+  template <class T, class... Args>
+  void Construct(T* p, Args&&... args) {
+    new (p) T(std::forward<Args>(args)...);
+  }
+
+  template <class T>
+  void Destruct(T* p) {
+    p->~T();
+  }
+};
+
+bool operator==(const EmptyTable& _lhs, const EmptyTable& _rhs);
+inline bool operator!=(const EmptyTable& _lhs, const EmptyTable& _rhs) {
+  return !(_lhs == _rhs);
+}
+
+using EmptyTablePtr = ::std::unique_ptr<EmptyTable>;
 }  // namespace name
 }  // namespace test
 namespace fidl {
@@ -367,5 +402,13 @@ struct CodingTraits<::test::name::SimpleTable>
 
 inline zx_status_t Clone(const ::test::name::SimpleTable& _value,
                          ::test::name::SimpleTable* result) {
+  return _value.Clone(result);
+}
+template <>
+struct CodingTraits<::test::name::EmptyTable>
+    : public EncodableCodingTraits<::test::name::EmptyTable, 16> {};
+
+inline zx_status_t Clone(const ::test::name::EmptyTable& _value,
+                         ::test::name::EmptyTable* result) {
   return _value.Clone(result);
 }}  // namespace fidl
