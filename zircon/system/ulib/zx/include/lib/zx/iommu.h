@@ -10,7 +10,7 @@
 
 namespace zx {
 
-class iommu : public object<iommu> {
+class iommu final : public object<iommu> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_IOMMU;
 

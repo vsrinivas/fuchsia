@@ -10,7 +10,7 @@
 
 namespace zx {
 
-class fifo : public object<fifo> {
+class fifo final : public object<fifo> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_FIFO;
 

@@ -12,7 +12,7 @@
 
 namespace zx {
 
-class duration {
+class duration final {
 public:
     constexpr duration() = default;
 
@@ -92,7 +92,7 @@ private:
     zx_duration_t value_ = 0;
 };
 
-class ticks {
+class ticks final {
 public:
     constexpr ticks() = default;
 
@@ -159,7 +159,7 @@ private:
 };
 
 template <zx_clock_t kClockId>
-class basic_time {
+class basic_time final {
 public:
     constexpr basic_time() = default;
 
@@ -214,7 +214,7 @@ using time = basic_time<ZX_CLOCK_MONOTONIC>;
 using time_utc = basic_time<ZX_CLOCK_UTC>;
 using time_thread = basic_time<ZX_CLOCK_THREAD>;
 
-class clock {
+class clock final {
 public:
     clock() = delete;
 

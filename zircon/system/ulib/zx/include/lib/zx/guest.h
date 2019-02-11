@@ -13,7 +13,7 @@
 
 namespace zx {
 
-class guest : public object<guest> {
+class guest final : public object<guest> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_GUEST;
 

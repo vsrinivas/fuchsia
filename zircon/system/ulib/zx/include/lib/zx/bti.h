@@ -13,7 +13,7 @@
 
 namespace zx {
 
-class bti : public object<bti> {
+class bti final : public object<bti> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_BTI;
 

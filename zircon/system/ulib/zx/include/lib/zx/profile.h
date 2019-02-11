@@ -11,7 +11,7 @@
 
 namespace zx {
 
-class profile : public object<profile> {
+class profile final : public object<profile> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_PROFILE;
 

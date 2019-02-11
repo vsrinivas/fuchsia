@@ -12,7 +12,7 @@
 
 namespace zx {
 
-class vcpu : public object<vcpu> {
+class vcpu final : public object<vcpu> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_VCPU;
 

@@ -15,7 +15,7 @@ namespace zx {
 class job;
 class thread;
 
-class process : public task<process> {
+class process final : public task<process> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_PROCESS;
 
@@ -46,7 +46,8 @@ public:
         return zx_process_read_memory(get(), vaddr, buffer, len, actual);
     }
 
-    zx_status_t write_memory(uintptr_t vaddr, const void* buffer, size_t len, size_t* actual) {
+    zx_status_t write_memory(uintptr_t vaddr, const void* buffer, size_t len,
+                             size_t* actual) const {
         return zx_process_write_memory(get(), vaddr, buffer, len, actual);
     }
 

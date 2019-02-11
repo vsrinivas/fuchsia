@@ -10,7 +10,7 @@
 
 namespace zx {
 
-class pmt : public object<pmt> {
+class pmt final : public object<pmt> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_PMT;
 

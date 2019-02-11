@@ -10,7 +10,7 @@
 
 namespace zx {
 
-class socket : public object<socket> {
+class socket final : public object<socket> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_SOCKET;
 

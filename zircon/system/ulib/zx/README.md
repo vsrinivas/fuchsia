@@ -4,6 +4,10 @@ The intention of this library is to provide an idiomatic C++ interface
 to using Zircon handles and syscalls. This library provides type
 safety and move semantics on top of the C calls.
 
+Within this library, const is used to indicate that a method does not
+modify the object's handle. Methods marked as const may still mutate
+the underlying kernel object.
+
 This library does not do more than that. In particular, thread and
 process creation involve a lot more than simply creating the
 underlying kernel structures. For thread creation you likely want to

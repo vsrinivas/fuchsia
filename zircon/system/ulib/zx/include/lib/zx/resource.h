@@ -10,7 +10,7 @@
 
 namespace zx {
 
-class resource : public object<resource> {
+class resource final : public object<resource> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_RESOURCE;
 

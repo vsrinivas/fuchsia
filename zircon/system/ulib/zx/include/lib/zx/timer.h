@@ -12,7 +12,7 @@
 
 namespace zx {
 
-class timer : public object<timer> {
+class timer final : public object<timer> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_TIMER;
 

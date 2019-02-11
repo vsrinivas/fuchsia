@@ -13,7 +13,7 @@ namespace zx {
 
 // A wrapper for handles to VMARs.  Note that vmar::~vmar() does not execute
 // vmar::destroy(), it just closes the handle.
-class vmar : public object<vmar> {
+class vmar final : public object<vmar> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_VMAR;
 

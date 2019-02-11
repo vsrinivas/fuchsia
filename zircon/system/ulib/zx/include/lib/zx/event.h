@@ -10,7 +10,7 @@
 
 namespace zx {
 
-class event : public object<event> {
+class event final : public object<event> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_EVENT;
 

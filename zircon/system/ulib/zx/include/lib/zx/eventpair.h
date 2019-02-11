@@ -10,7 +10,7 @@
 
 namespace zx {
 
-class eventpair : public object<eventpair> {
+class eventpair final : public object<eventpair> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_EVENTPAIR;
 

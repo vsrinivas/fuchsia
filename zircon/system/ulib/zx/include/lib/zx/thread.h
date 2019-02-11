@@ -12,7 +12,7 @@
 namespace zx {
 class process;
 
-class thread : public task<thread> {
+class thread final : public task<thread> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_THREAD;
 
@@ -47,7 +47,7 @@ public:
         return zx_thread_start(get(), thread_entry, stack, arg1, arg2);
     }
     zx_status_t start(void (*thread_entry)(uintptr_t arg1, uintptr_t arg2),
-                      void* stack, uintptr_t arg1, uintptr_t arg2) {
+                      void* stack, uintptr_t arg1, uintptr_t arg2) const {
         return zx_thread_start(get(),
                                reinterpret_cast<uintptr_t>(thread_entry),
                                reinterpret_cast<uintptr_t>(stack), arg1, arg2);
@@ -56,7 +56,7 @@ public:
     zx_status_t read_state(uint32_t kind, void* buffer, size_t len) const {
         return zx_thread_read_state(get(), kind, buffer, len);
     }
-    zx_status_t write_state(uint32_t kind, const void* buffer, size_t len) {
+    zx_status_t write_state(uint32_t kind, const void* buffer, size_t len) const {
         return zx_thread_write_state(get(), kind, buffer, len);
     }
 

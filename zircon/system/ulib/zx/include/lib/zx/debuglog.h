@@ -11,7 +11,7 @@
 
 namespace zx {
 
-class debuglog : public object<debuglog> {
+class debuglog final : public object<debuglog> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_LOG;
 

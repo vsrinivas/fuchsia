@@ -14,7 +14,7 @@
 
 namespace zx {
 
-class interrupt : public object<interrupt> {
+class interrupt final : public object<interrupt> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_INTERRUPT;
 

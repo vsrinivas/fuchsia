@@ -13,7 +13,7 @@ namespace zx {
 
 class bti;
 
-class vmo : public object<vmo> {
+class vmo final : public object<vmo> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_VMO;
 
@@ -67,7 +67,7 @@ public:
         return zx_vmo_op_range(get(), op, offset, size, buffer, buffer_size);
     }
 
-    zx_status_t set_cache_policy(uint32_t cache_policy) {
+    zx_status_t set_cache_policy(uint32_t cache_policy) const {
         return zx_vmo_set_cache_policy(get(), cache_policy);
     }
 

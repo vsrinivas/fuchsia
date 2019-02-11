@@ -12,7 +12,7 @@ namespace zx {
 
 class process;
 
-class job : public task<job> {
+class job final : public task<job> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_JOB;
 

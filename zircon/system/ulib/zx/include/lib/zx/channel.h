@@ -11,7 +11,7 @@
 
 namespace zx {
 
-class channel : public object<channel> {
+class channel final : public object<channel> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_CHANNEL;
 

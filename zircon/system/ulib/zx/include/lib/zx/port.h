@@ -11,7 +11,7 @@
 
 namespace zx {
 
-class port : public object<port> {
+class port final : public object<port> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_PORT;
 

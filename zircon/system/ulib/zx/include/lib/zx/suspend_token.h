@@ -12,7 +12,7 @@ namespace zx {
 
 // The only thing you can do with a suspend token is close it (which will
 // resume the thread).
-class suspend_token : public object<suspend_token> {
+class suspend_token final : public object<suspend_token> {
 public:
     static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_SUSPEND_TOKEN;
 
