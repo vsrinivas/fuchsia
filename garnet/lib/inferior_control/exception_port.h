@@ -83,9 +83,10 @@ class ExceptionPort final {
   static Key g_key_counter;
 
   // Currently resuming from exceptions requires the exception port handle.
-  // This is solely for the benefit of |Thread|.
-  // TODO(dje): Delete when resuming from exceptions no longer requires the
+  // This is solely for the benefit of |Process,Thread|.
+  // TODO(PT-105): Delete when resuming from exceptions no longer requires the
   // eport handle.
+  friend class Process;
   friend class Thread;
   zx_handle_t handle() const { return eport_.get(); }
 

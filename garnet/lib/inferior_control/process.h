@@ -184,16 +184,12 @@ class Process final {
 
   bool attached_running() const { return attached_running_; }
 
-  // Build list of loaded dsos.
-  // This must be called at a point where it is safe to read the list.
-  // If |check_ldso_bkpt| is true then verify |thread| is stopped at the
-  // dynamic linker breakpoint. If not then skip trying. Otherwise |thread|
-  // must be nullptr.
-  // TODO(dje): Maybe just pass |thread|, later.
-  // TODO(dje): For the rsp server this is only called once, after the main
-  // executable has been loaded. Therefore this list will not contain
-  // subsequently loaded dsos.
-  void TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt);
+  // See if the list of loaded dsos has been built, and if not build it.
+  // This is called when |thread| is stopped at s/w breakpoints (and thus
+  // potentially dynamic linker breakpoints).
+  // Returns true if the thread was stopped at a dynamic linker breakpoint,
+  // and thus the caller should immediately resume the thread.
+  bool CheckDsosList(Thread* thread);
 
   // Return true if dsos, including the main executable, have been loaded
   // into the inferior.
@@ -214,6 +210,27 @@ class Process final {
   const debugger_utils::dsoinfo_t* GetExecDso();
 
  private:
+  // Cause ld.so to execute a s/w breakpoint instruction after all dsos have
+  // been loaded at startup. Returns true on success.
+  bool SetLdsoDebugTrigger();
+
+  // Fetch the value of ZX_PROP_PROCESS_DEBUG_ADDR.
+  // Returns true the value if it has been set (by the dynamic linker) or
+  // zero if it has not been set yet (or there's an error).
+  // The value is cached in |debug_addr_|.
+  zx_vaddr_t GetDebugAddr();
+
+  // Assuming the inferior is stopped at a s/w breakpoint, check if it's
+  // stopped at the ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET breakpoint.
+  // If so, update |ldso_debug_break_addr_| and
+  // |seen_ldso_debug_addr_break_| and return true.
+  // Otherwise return false.
+  bool CheckLdsoDebugAddrBreak();
+
+  // Try to build the list of loaded dsos.
+  // This must be called at a point where it is safe to read the list.
+  void TryBuildLoadedDsosList(Thread* thread);
+
   // The exception handler invoked by ExceptionPort.
   void OnExceptionOrSignal(const zx_port_packet_t& packet,
                            const zx_exception_context_t& context);
@@ -260,6 +277,24 @@ class Process final {
 
   // The process ID (also the kernel object ID).
   zx_koid_t id_ = ZX_KOID_INVALID;
+
+  // The value of ZX_PROP_PROCESS_DEBUG_ADDR or zero if not known yet.
+  // The value is never legitimately zero.
+  zx_vaddr_t debug_addr_property_ = 0;
+
+  // True if we've seen the ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET dynamic
+  // linker breakpoint.
+  bool seen_ldso_debug_addr_breakpoint_ = false;
+
+  // The address of the "standard" dynamic linker breakpoint.
+  // I.e., the contents of |r_debug.r_brk|.
+  // Zero if not known yet.
+  zx_vaddr_t ldso_debug_break_addr_ = 0;
+
+  // The address of the dynamic linker's list of loaded shared libraries.
+  // I.e., the contents of |r_debug.r_map|.
+  // Zero if not known yet.
+  zx_vaddr_t ldso_debug_map_addr_ = 0;
 
   // The base load address of the dynamic linker.
   zx_vaddr_t base_address_ = 0;

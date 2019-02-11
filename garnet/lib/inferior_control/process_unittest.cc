@@ -4,6 +4,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/zx/channel.h>
+#include <string.h>
 
 #include "garnet/lib/inferior_control/process.h"
 #include "garnet/lib/inferior_control/test_server.h"
@@ -125,6 +126,71 @@ TEST_F(FindThreadByIdTest, FindThreadById) {
   Process* process = current_process();
   ASSERT_NE(process, nullptr);
   EXPECT_EQ(process->FindThreadById(thread_koid()), nullptr);
+}
+
+class LdsoBreakpointTest : public TestServer {
+ public:
+  LdsoBreakpointTest() = default;
+
+  bool dsos_loaded() const { return dsos_loaded_; }
+  bool libc_present() const { return libc_present_; }
+  bool exec_present() const { return exec_present_; }
+
+  void OnArchitecturalException(
+      Process* process, Thread* thread, const zx_excp_type_t type,
+      const zx_exception_context_t& context) {
+    FXL_LOG(INFO) << "Got exception 0x" << std::hex << type;
+    if (type == ZX_EXCP_SW_BREAKPOINT) {
+      // The shared libraries should have been loaded by now.
+      if (process->DsosLoaded()) {
+        dsos_loaded_ = true;
+        // Libc and the main executable should be present.
+        for (debugger_utils::dsoinfo_t* dso = process->GetDsos(); dso;
+             dso = dso->next) {
+          FXL_VLOG(1) << "Have dso " << dso->name;
+          // The main executable's name might either be recorded as "" or
+          // a potentially clipped version of the path in which case
+          // "inferior_control_tests" should still be present.
+          if (strcmp(dso->name, "") == 0 ||
+              strstr(dso->name, "inferior_control_tests") != nullptr) {
+            exec_present_ = true;
+          } else if (strcmp(dso->name, "libc.so") == 0) {
+            libc_present_ = true;
+          }
+        }
+      }
+
+      // Terminate the inferior, we don't want the exception propagating to
+      // the system exception handler.
+      zx_task_kill(process->handle());
+    }
+  }
+
+ private:
+  bool dsos_loaded_ = false;
+  bool libc_present_ = false;
+  bool exec_present_ = false;
+};
+
+TEST_F(LdsoBreakpointTest, LdsoBreakpoint) {
+  std::vector<std::string> argv{
+    helper_program,
+    "test-try-next",
+  };
+  ASSERT_TRUE(SetupInferior(argv));
+
+  zx::channel our_channel, their_channel;
+  auto status = zx::channel::create(0, &our_channel, &their_channel);
+  ASSERT_EQ(status, ZX_OK);
+  EXPECT_TRUE(RunHelperProgram(std::move(their_channel)));
+
+  // The inferior is waiting for us to close our side of the channel.
+  our_channel.reset();
+
+  EXPECT_TRUE(Run());
+  EXPECT_TRUE(dsos_loaded());
+  EXPECT_TRUE(libc_present());
+  EXPECT_TRUE(exec_present());
 }
 
 }  // namespace

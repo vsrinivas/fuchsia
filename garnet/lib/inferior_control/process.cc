@@ -10,10 +10,12 @@
 #include <link.h>
 #include <zircon/dlfcn.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 #include <cinttypes>
 
+#include "garnet/lib/debugger_utils/breakpoints.h"
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/util.h"
 #include "lib/fxl/logging.h"
@@ -158,6 +160,19 @@ void Process::AddStartupHandle(fuchsia::process::HandleInfo handle) {
   extra_handles_.push_back(std::move(handle));
 }
 
+bool Process::SetLdsoDebugTrigger() {
+  const intptr_t kMagicValue = ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET;
+  zx_status_t status =
+    zx_object_set_property(handle_, ZX_PROP_PROCESS_DEBUG_ADDR,
+                           &kMagicValue, sizeof(kMagicValue));
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to set ld.so debug-addr trigger: "
+                   << debugger_utils::ZxErrorString(status);
+    return false;
+  }
+  return true;
+}
+
 bool Process::Initialize() {
   if (IsAttached()) {
     FXL_LOG(ERROR) << "Cannot initialize, already attached to a process";
@@ -225,6 +240,10 @@ bool Process::Initialize() {
   }
 
   if (!AllocDebugHandle(builder_.get())) {
+    goto fail;
+  }
+
+  if (!SetLdsoDebugTrigger()) {
     goto fail;
   }
 
@@ -662,57 +681,80 @@ bool Process::WriteMemory(uintptr_t address, const void* data, size_t length) {
   return memory_->Write(address, data, length);
 }
 
-void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
-  FXL_DCHECK(dsos_ == nullptr);
+zx_vaddr_t Process::GetDebugAddr() {
+  if (debug_addr_property_ != 0)
+    return debug_addr_property_;
 
-  FXL_VLOG(2) << "Building dso list";
-
-  uintptr_t debug_addr;
-  zx_handle_t process_handle = thread->process()->handle();
+  zx_vaddr_t debug_addr;
   zx_status_t status =
-      zx_object_get_property(process_handle, ZX_PROP_PROCESS_DEBUG_ADDR,
+      zx_object_get_property(handle_, ZX_PROP_PROCESS_DEBUG_ADDR,
                              &debug_addr, sizeof(debug_addr));
   if (status != ZX_OK) {
     FXL_LOG(ERROR)
-        << "zx_object_get_property failed, unable to fetch dso list: "
+        << "zx_object_get_property failed, unable to fetch DEBUG_ADDR: "
         << debugger_utils::ZxErrorString(status);
-    return;
+    return 0;
   }
-
-  struct r_debug debug;
-  if (!ReadMemory(debug_addr, &debug, sizeof(debug))) {
-    FXL_VLOG(2) << "unable to read _dl_debug_addr";
-    // Don't set dsos_build_failed_ here, it may be too early to try.
-    return;
-  }
-
   // Since we could, theoretically, stop in the dynamic linker before we get
   // that far check to see if it has been filled in.
-  // TODO(dje): Document our test in dynlink.c.
+  if (debug_addr == 0 ||
+      debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET) {
+    FXL_VLOG(2) << "Ld.so hasn't loaded symbols yet";
+    return 0;
+  }
+
+  debug_addr_property_ = debug_addr;
+  return debug_addr;
+}
+
+bool Process::CheckLdsoDebugAddrBreak() {
+  FXL_DCHECK(!seen_ldso_debug_addr_breakpoint_);
+  FXL_DCHECK(debug_addr_property_ != 0);
+
+  // The address isn't recorded in r_debug like the "standard" dynamic linker
+  // breakpoint so we have to use a heuristic. The heuristic is reasonably
+  // robust: If this is the first s/w breakpoint we've seen after
+  // |r_debug.r_version| becomes non-zero, then we're stopped at the
+  // ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET breakpoint. We have to assume
+  // the user doesn't stop ld.so before it issues its s/w breakpoint.
+  // This assumption can be removed when we know the address of that s/w
+  // breakpoint instruction.
+
+  struct r_debug debug;
+  if (!ReadMemory(debug_addr_property_, &debug, sizeof(debug))) {
+    FXL_LOG(ERROR) << "unable to read _dl_debug_addr";
+    return false;
+  }
   if (debug.r_version == 0) {
     FXL_VLOG(2) << "debug.r_version is 0";
-    // Don't set dsos_build_failed_ here, it may be too early to try.
-    return;
+    return false;
   }
 
-  if (check_ldso_bkpt) {
-    FXL_DCHECK(thread);
-    bool success = thread->registers()->RefreshGeneralRegisters();
-    FXL_DCHECK(success);
-    zx_vaddr_t pc = thread->registers()->GetPC();
-    // TODO(dje): -1: adjust_pc_after_break
-    if (pc - 1 != debug.r_brk) {
-      FXL_VLOG(2) << "not stopped at dynamic linker debug breakpoint";
-      return;
-    }
-  } else {
-    FXL_DCHECK(!thread);
+  if (debug.r_brk == 0 || debug.r_map == 0) {
+    // Sigh. We could have stopped after r_version was set but before
+    // these were set. Technically, this could also happen due to an
+    // incompatible ld.so change or even a bug, but these are rare enough
+    // that we don't consider them here.
+    FXL_VLOG(2) << "debug.r_brk or r_map is 0";
+    return false;
   }
 
-  auto lmap_vaddr = reinterpret_cast<zx_vaddr_t>(debug.r_map);
-  dsos_ = dso_fetch_list(memory_, lmap_vaddr, "app");
+  ldso_debug_break_addr_ = debug.r_brk;
+  ldso_debug_map_addr_ = reinterpret_cast<zx_vaddr_t>(debug.r_map);
+  seen_ldso_debug_addr_breakpoint_ = true;
+  return true;
+}
+
+void Process::TryBuildLoadedDsosList(Thread* thread) {
+  FXL_DCHECK(thread);
+  FXL_DCHECK(dsos_ == nullptr);
+  FXL_DCHECK(ldso_debug_map_addr_ != 0);
+
+  FXL_VLOG(2) << "Building dso list";
+
+  dsos_ = dso_fetch_list(memory_, ldso_debug_map_addr_, "app");
   // We should have fetched at least one since this is not called until the
-  // dl_debug_state breakpoint is hit.
+  // dl_debug_state (or debug_break) breakpoint is hit.
   if (dsos_ == nullptr) {
     // Don't keep trying.
     FXL_VLOG(2) << "dso_fetch_list failed";
@@ -722,6 +764,46 @@ void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
     // This may already be false, but set it any for documentation purposes.
     dsos_build_failed_ = false;
   }
+}
+
+bool Process::CheckDsosList(Thread* thread) {
+  // TODO(dje): dlopen
+  if (DsosLoaded() || dsos_build_failed_) {
+    return false;
+  }
+
+  // There are a few issues to consider here, we handle them in order of
+  // potential occurrence.
+
+  // Has the dynamic linker sufficiently initialized yet?
+  zx_vaddr_t debug_addr = GetDebugAddr();
+  if (debug_addr == 0) {
+    return false;
+  }
+
+  // Are we stopped at the ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET breakpoint?
+  if (!seen_ldso_debug_addr_breakpoint_) {
+    if (!CheckLdsoDebugAddrBreak()) {
+      return false;
+    }
+    FXL_DCHECK(seen_ldso_debug_addr_breakpoint_);
+    TryBuildLoadedDsosList(thread);
+    return true;
+  }
+
+  // Are we stopped at the "standard" dynamic linker breakpoint?
+  // Note that this is (currently) a different location than the
+  // ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET, but fortunately we know its location.
+  bool success = thread->registers()->RefreshGeneralRegisters();
+  FXL_DCHECK(success);
+  zx_vaddr_t pc = thread->registers()->GetPC();
+  pc = debugger_utils::DecrementPcAfterBreak(pc);
+  if (pc != ldso_debug_break_addr_) {
+    FXL_VLOG(2) << "not stopped at dynamic linker debug breakpoint";
+    return false;
+  }
+  TryBuildLoadedDsosList(thread);
+  return true;
 }
 
 void Process::OnExceptionOrSignal(const zx_port_packet_t& packet,
@@ -750,20 +832,43 @@ void Process::OnExceptionOrSignal(const zx_port_packet_t& packet,
     // TODO(dje): handle process exit
   }
 
-  // Finding the load address of the main executable requires a few steps.
-  // It's not loaded until the first time we hit the _dl_debug_state
-  // breakpoint. For now gdb sets that breakpoint. What we do is watch for
-  // s/w breakpoint exceptions.
+  // If |thread| is nullptr then the thread must have just terminated,
+  // and there's nothing to do. The process itself could also have terminated.
+  if (thread == nullptr) {
+    // Alas there's no robust test to verify it just terminated,
+    // we just have to assume it.
+    FXL_LOG(WARNING) << "Thread " << tid << " not found, terminated";
+    return;
+  }
+
+  // At this point the thread is either an existing thread or a new thread
+  // which has been fully registered in our database.
+
+  // Manage loading of dso info.
+  // At present this is only done at startup. TODO(dje): dlopen.
+  // This is done by setting ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET which causes
+  // a s/w breakpoint instruction to be executed after all dsos are loaded.
+  // TODO(dje): Handle case of hitting a breakpoint before then (highly
+  // unlikely, but technically possible).
   if (type == ZX_EXCP_SW_BREAKPOINT) {
-    FXL_DCHECK(thread);
-    if (!DsosLoaded() && !dsos_build_failed_)
-      TryBuildLoadedDsosList(thread, true);
+    if (CheckDsosList(thread)) {
+      zx_status_t status =
+        debugger_utils::ResumeAfterSoftwareBreakpointInstruction(
+            thread->handle(), server_->exception_port().handle());
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Unable to resume thread " << thread->GetName()
+                       << ", status: "
+                       << debugger_utils::ZxErrorString(status);
+      }
+      // This is a breakpoint we introduced. No point in passing it on to
+      // other handlers. If resumption fails there's not much we can do.
+      return;
+    }
   }
 
   // |type| could either map to an architectural exception or Zircon-defined
   // synthetic exceptions.
   if (ZX_EXCP_IS_ARCH(type)) {
-    FXL_DCHECK(thread);
     thread->OnException(type, context);
     delegate_->OnArchitecturalException(this, thread, type, context);
     return;
@@ -771,7 +876,6 @@ void Process::OnExceptionOrSignal(const zx_port_packet_t& packet,
 
   switch (type) {
     case ZX_EXCP_THREAD_STARTING:
-      FXL_DCHECK(thread);
       FXL_DCHECK(thread->state() == Thread::State::kNew);
       FXL_VLOG(1) << "Received ZX_EXCP_THREAD_STARTING exception for thread "
                   << thread->GetName();
@@ -779,19 +883,12 @@ void Process::OnExceptionOrSignal(const zx_port_packet_t& packet,
       delegate_->OnThreadStarting(this, thread, context);
       break;
     case ZX_EXCP_THREAD_EXITING:
-      // If the process also exited, then the thread may be gone.
-      if (thread) {
-        FXL_VLOG(1) << "Received ZX_EXCP_THREAD_EXITING exception for thread "
-                    << tid << ", " << thread->GetName();
-        thread->OnException(type, context);
-        delegate_->OnThreadExiting(this, thread, context);
-      } else {
-        FXL_VLOG(1) << "Received ZX_EXCP_THREAD_EXITING exception for thread "
-                    << tid;
-      }
+      FXL_VLOG(1) << "Received ZX_EXCP_THREAD_EXITING exception for thread "
+                  << tid << ", " << thread->GetName();
+      thread->OnException(type, context);
+      delegate_->OnThreadExiting(this, thread, context);
       break;
     case ZX_EXCP_POLICY_ERROR:
-      FXL_DCHECK(thread);
       FXL_VLOG(1) << "Received ZX_EXCP_POLICY_ERROR exception for thread "
                   << thread->GetName();
       thread->OnException(type, context);
