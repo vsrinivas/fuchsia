@@ -5,6 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/sysmem.h>
 #include <hw/pci.h>
 #include <string.h>
 
@@ -22,6 +23,8 @@ zx_status_t pci_rpc_request(kpci_device_t* dev, uint32_t op, zx_handle_t* handle
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    uint32_t in_handle_cnt = (op == PCI_OP_CONNECT_SYSMEM) ? 1 : 0;
+
     uint32_t handle_cnt = 0;
     if (handle) {
         // Since only the caller knows if they expected a valid handle back, make
@@ -38,6 +41,8 @@ zx_status_t pci_rpc_request(kpci_device_t* dev, uint32_t op, zx_handle_t* handle
         .wr_num_bytes = sizeof(*req),
         .rd_num_bytes = sizeof(*resp),
         .rd_num_handles = handle_cnt,
+        .wr_handles = in_handle_cnt ? &req->handle : NULL,
+        .wr_num_handles = in_handle_cnt,
     };
 
     uint32_t actual_bytes;
@@ -310,11 +315,40 @@ static pci_protocol_ops_t _pci_protocol = {
     .get_bti = pci_op_get_bti,
 };
 
+static zx_status_t pci_sysmem_connect(void* ctx, zx_handle_t handle) {
+    kpci_device_t* dev = ctx;
+    pci_msg_t req = {
+        .handle = handle,
+    };
+    pci_msg_t resp = {};
+    return pci_rpc_request(dev, PCI_OP_CONNECT_SYSMEM, NULL, &req, &resp);
+};
+
+static sysmem_protocol_ops_t sysmem_protocol = {
+    .connect = pci_sysmem_connect
+};
+
+static zx_status_t get_protocol(void* ctx, uint32_t proto_id, void* protocol) {
+    if (proto_id == ZX_PROTOCOL_SYSMEM) {
+        sysmem_protocol_t *proto = protocol;
+        proto->ctx = ctx;
+        proto->ops = &sysmem_protocol;
+        return ZX_OK;
+    } else if (proto_id == ZX_PROTOCOL_PCI) {
+        pci_protocol_t *proto = protocol;
+        proto->ctx = ctx;
+        proto->ops = &_pci_protocol;
+        return ZX_OK;
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 // A device ops structure appears to be required still, but does not need
 // to have any of the methods implemented. All of the proxy's work is done
 // in its protocol methods.
 static zx_protocol_device_t device_ops = {
     .version = DEVICE_OPS_VERSION,
+    .get_protocol = get_protocol,
 };
 
 static zx_status_t pci_proxy_create(void* ctx, zx_device_t* parent,

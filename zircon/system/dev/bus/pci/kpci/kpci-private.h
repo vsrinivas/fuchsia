@@ -41,6 +41,7 @@ typedef enum {
     PCI_OP_GET_DEVICE_INFO,
     PCI_OP_GET_AUXDATA,
     PCI_OP_GET_BTI,
+    PCI_OP_CONNECT_SYSMEM,
     PCI_OP_MAX,
 } pci_op_t;
 
@@ -79,5 +80,6 @@ typedef struct {
         zx_pcie_device_info_t info;
         uint8_t data[PCI_MAX_DATA - 24u];
         uint32_t bti_index;
+        zx_handle_t handle;
     };
 } pci_msg_t;

@@ -53,7 +53,8 @@ MODULE_LIBS := \
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-pci \
     system/banjo/ddk-protocol-pciroot \
-    system/banjo/ddk-protocol-platform-device
+    system/banjo/ddk-protocol-platform-device \
+    system/banjo/ddk-protocol-sysmem
 include make/module.mk
 
 MODULE := $(LOCAL_DIR).proxy
@@ -69,6 +70,7 @@ MODULE_LIBS := \
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-pci \
     system/banjo/ddk-protocol-pciroot \
-    system/banjo/ddk-protocol-platform-device
+    system/banjo/ddk-protocol-platform-device \
+    system/banjo/ddk-protocol-sysmem
 include make/module.mk
 endif
