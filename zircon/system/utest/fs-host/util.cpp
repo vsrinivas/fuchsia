@@ -70,7 +70,7 @@ int run_fsck() {
     size_t size = stats.st_size /= minfs::kMinfsBlockSize;
 
     fbl::unique_ptr<minfs::Bcache> block_cache;
-    if (minfs::Bcache::Create(&block_cache, std::move(disk), size) < 0) {
+    if (minfs::Bcache::Create(&block_cache, std::move(disk), static_cast<uint32_t>(size)) < 0) {
         fprintf(stderr, "error: cannot create block cache\n");
         return -1;
     }
