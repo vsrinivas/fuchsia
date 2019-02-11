@@ -22,6 +22,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/pdu.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/rx_engine.h"
 #include "garnet/drivers/bluetooth/lib/sm/status.h"
 #include "garnet/drivers/bluetooth/lib/sm/types.h"
 #include "lib/fxl/macros.h"
@@ -218,6 +219,10 @@ class ChannelImpl : public Channel {
   // associated channels by calling OnLinkClosed() which sets |link_| to
   // nullptr.
   fbl::RefPtr<internal::LogicalLink> link_ __TA_GUARDED(mtx_);
+
+  // The engine which processes received PDUs, and converts them to SDUs for
+  // upper layers.
+  std::unique_ptr<RxEngine> rx_engine_ __TA_GUARDED(mtx_);
 
   // The pending SDUs on this channel. Received PDUs are buffered if |rx_cb_| is
   // currently not set.

@@ -17,6 +17,8 @@ source_set("definitions") {
 
 static_library("l2cap") {
   sources = [
+    "basic_mode_rx_engine.cc",
+    "basic_mode_rx_engine.h",
     "bredr_command_handler.cc",
     "bredr_command_handler.h",
     "bredr_dynamic_channel.cc",
@@ -41,6 +43,7 @@ static_library("l2cap") {
     "pdu.h",
     "recombiner.cc",
     "recombiner.h",
+    "rx_engine.h",
     "scoped_channel.cc",
     "scoped_channel.h",
     "signaling_channel.cc",
@@ -81,6 +84,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "basic_mode_rx_engine_unittest.cc",
     "bredr_command_handler_unittest.cc",
     "bredr_dynamic_channel_unittest.cc",
     "bredr_signaling_channel_unittest.cc",

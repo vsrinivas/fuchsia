@@ -8,6 +8,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/run_or_post.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/basic_mode_rx_engine.h"
 #include "lib/fxl/strings/string_printf.h"
 
 #include "logical_link.h"
@@ -42,7 +43,8 @@ ChannelImpl::ChannelImpl(ChannelId id, ChannelId remote_id,
     : Channel(id, remote_id, link->type(), link->handle()),
       active_(false),
       dispatcher_(nullptr),
-      link_(link) {
+      link_(link),
+      rx_engine_(std::make_unique<BasicModeRxEngine>()) {
   ZX_DEBUG_ASSERT(link_);
   for (const auto& pdu : buffered_pdus) {
     auto sdu = std::make_unique<common::DynamicByteBuffer>(pdu.length());
@@ -118,6 +120,7 @@ void ChannelImpl::Deactivate() {
   dispatcher_ = nullptr;
   rx_cb_ = {};
   closed_cb_ = {};
+  rx_engine_ = {};
 
   // Tell the link to release this channel on its thread.
   async::PostTask(link_->dispatcher(), [this, link = link_] {
@@ -218,17 +221,25 @@ void ChannelImpl::HandleRxPdu(PDU&& pdu) {
   fit::closure task;
 
   {
-    // TODO(armansito): This is the point where the channel mode implementation
-    // should take over the PDU. Since we only support basic mode: SDU == PDU.
-
     std::lock_guard<std::mutex> lock(mtx_);
 
     // This will only be called on a live link.
     ZX_DEBUG_ASSERT(link_);
+    ZX_DEBUG_ASSERT(rx_engine_);
+
+    common::ByteBufferPtr sdu = rx_engine_->ProcessPdu(std::move(pdu));
+    if (!sdu) {
+      // The PDU may have been invalid, out-of-sequence, or part of a segmented
+      // SDU.
+      // * If invalid, we drop the PDU (per Core Spec Ver 5, Vol 3, Part A,
+      //   Secs. 3.3.6 and/or 3.3.7).
+      // * If out-of-sequence or part of a segmented SDU, we expect that some
+      //   later call to ProcessPdu() will return us an SDU containing this
+      //   PDU's data.
+      return;
+    }
 
     // Buffer the packets if the channel hasn't been activated.
-    auto sdu = std::make_unique<common::DynamicByteBuffer>(pdu.length());
-    pdu.Copy(sdu.get());
     if (!active_) {
       pending_rx_sdus_.emplace(std::move(sdu));
       return;
