@@ -31,6 +31,12 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
     parent_env_.set_error_handler([this](zx_status_t err) {
       FXL_LOG(ERROR) << "Lost connection to parent environment";
     });
+
+    if (loop_->StartThread("sandbox-thread") != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to start thread for sandbox";
+      parent_->BindingClosed(this);
+      return;
+    }
   }
 
   ~SandboxBinding() {
@@ -123,10 +129,6 @@ SandboxService::GetHandler() {
         // makes a bit more sense to service everything independently.
         auto loop =
             std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
-        if (loop->StartThread("sandbox-thread") != ZX_OK) {
-          FXL_LOG(ERROR) << "Failed to start thread for sandbox";
-          return;
-        }
 
         bindings_.push_back(std::make_unique<SandboxBinding>(
             std::move(req), std::move(loop), this));

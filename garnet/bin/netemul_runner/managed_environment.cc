@@ -114,6 +114,8 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   env_->SetRunningChangedCallback([this](bool running) {
     if (running && running_callback_) {
       running_callback_();
+    } else if (!running) {
+      FXL_LOG(ERROR) << "Underlying enclosed Environment stopped running";
     }
   });
 
