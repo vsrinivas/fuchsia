@@ -98,7 +98,7 @@ class RegistersX64 final : public Registers {
     auto greg_bytes = reinterpret_cast<const uint8_t*>(&gregs_);
     greg_bytes += regno * sizeof(uint64_t);
     std::memcpy(buffer, greg_bytes, buf_size);
-    FXL_VLOG(1) << "Get register " << regno << " = "
+    FXL_VLOG(1) << "Get register " << regno << " = (raw) "
                 << debugger_utils::EncodeByteArrayString(greg_bytes, buf_size);
     return true;
   }
