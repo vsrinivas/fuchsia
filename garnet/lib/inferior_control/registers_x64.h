@@ -8,7 +8,7 @@ namespace inferior_control {
 
 // The x86-64 general register names.
 
-enum class Amd64Register {
+enum class X64Register {
   RAX = 0,
   RBX,
   RCX,

@@ -29,7 +29,7 @@ bool SoftwareBreakpoint::Insert() {
 
   // We only support inserting the single byte Int3 instruction.
   if (kind() != 1) {
-    FXL_LOG(ERROR) << "Software breakpoint kind must be 1 on amd64";
+    FXL_LOG(ERROR) << "Software breakpoint kind must be 1 on X64";
     return false;
   }
 

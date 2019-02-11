@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "registers_amd64.h"
+#include "registers_x64.h"
 #include "registers.h"
 
 #include <cinttypes>
@@ -16,16 +16,16 @@
 
 #include "garnet/lib/debugger_utils/util.h"
 
-#include "arch_x86.h"
+#include "arch_x64.h"
 #include "thread.h"
 
 namespace inferior_control {
 
-int GetPCRegisterNumber() { return static_cast<int>(Amd64Register::RIP); }
+int GetPCRegisterNumber() { return static_cast<int>(X64Register::RIP); }
 
-int GetFPRegisterNumber() { return static_cast<int>(Amd64Register::RBP); }
+int GetFPRegisterNumber() { return static_cast<int>(X64Register::RBP); }
 
-int GetSPRegisterNumber() { return static_cast<int>(Amd64Register::RSP); }
+int GetSPRegisterNumber() { return static_cast<int>(X64Register::RSP); }
 
 namespace {
 
@@ -34,7 +34,7 @@ namespace {
 std::string GetRegisterAsStringHelper(const zx_thread_state_general_regs& gregs,
                                       int regno) {
   FXL_DCHECK(regno >= -1 &&
-             regno < static_cast<int>(Amd64Register::NUM_REGISTERS));
+             regno < static_cast<int>(X64Register::NUM_REGISTERS));
 
   // Based on the value of |regno|, we either need to fit in all
   // registers or just a single one.
@@ -46,13 +46,13 @@ std::string GetRegisterAsStringHelper(const zx_thread_state_general_regs& gregs,
   return debugger_utils::EncodeByteArrayString(greg_bytes, kDataSize);
 }
 
-class RegistersAmd64 final : public Registers {
+class RegistersX64 final : public Registers {
  public:
-  RegistersAmd64(Thread* thread) : Registers(thread) {
+  RegistersX64(Thread* thread) : Registers(thread) {
     memset(&gregs_, 0, sizeof(gregs_));
   }
 
-  ~RegistersAmd64() = default;
+  ~RegistersX64() = default;
 
   bool IsSupported() override { return true; }
 
@@ -77,7 +77,7 @@ class RegistersAmd64 final : public Registers {
   }
 
   std::string GetRegisterAsString(int regno) override {
-    if (regno < 0 || regno >= static_cast<int>(Amd64Register::NUM_REGISTERS)) {
+    if (regno < 0 || regno >= static_cast<int>(X64Register::NUM_REGISTERS)) {
       FXL_LOG(ERROR) << "Bad register number: " << regno;
       return "";
     }
@@ -86,7 +86,7 @@ class RegistersAmd64 final : public Registers {
   }
 
   bool GetRegister(int regno, void* buffer, size_t buf_size) override {
-    if (regno < 0 || regno >= static_cast<int>(Amd64Register::NUM_REGISTERS)) {
+    if (regno < 0 || regno >= static_cast<int>(X64Register::NUM_REGISTERS)) {
       FXL_LOG(ERROR) << "Bad register_number: " << regno;
       return false;
     }
@@ -104,13 +104,13 @@ class RegistersAmd64 final : public Registers {
   }
 
   bool SetRegister(int regno, const void* value, size_t value_size) override {
-    if (regno < 0 || regno >= static_cast<int>(Amd64Register::NUM_REGISTERS)) {
-      FXL_LOG(ERROR) << "Invalid x86_64 register number: " << regno;
+    if (regno < 0 || regno >= static_cast<int>(X64Register::NUM_REGISTERS)) {
+      FXL_LOG(ERROR) << "Invalid X64 register number: " << regno;
       return false;
     }
-    // On x86_64 all general register values are 64-bit.
+    // On X64 all general register values are 64-bit.
     if (value_size != sizeof(uint64_t)) {
-      FXL_LOG(ERROR) << "Invalid x86_64 register value size: " << value_size;
+      FXL_LOG(ERROR) << "Invalid X64 register value size: " << value_size;
       return false;
     }
 
@@ -169,7 +169,7 @@ class RegistersAmd64 final : public Registers {
 
 // static
 std::unique_ptr<Registers> Registers::Create(Thread* thread) {
-  return std::unique_ptr<Registers>(new RegistersAmd64(thread));
+  return std::unique_ptr<Registers>(new RegistersX64(thread));
 }
 
 // static

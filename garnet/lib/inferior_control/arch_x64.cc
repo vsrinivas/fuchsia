@@ -10,7 +10,7 @@
 #include "garnet/lib/debugger_utils/x86_cpuid.h"
 #include "garnet/lib/debugger_utils/x86_pt.h"
 
-#include "arch_x86.h"
+#include "arch_x64.h"
 #include "thread.h"
 
 namespace inferior_control {
@@ -82,7 +82,7 @@ GdbSignal ComputeGdbSignal(const zx_exception_context_t& context) {
       break;
   }
 
-  FXL_VLOG(1) << "x86 (AMD64) exception (" << arch_exception
+  FXL_VLOG(1) << "X64 exception (" << arch_exception
               << ") mapped to: " << static_cast<int>(sigval);
 
   return sigval;

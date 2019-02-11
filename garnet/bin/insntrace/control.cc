@@ -32,7 +32,7 @@
 #include "garnet/lib/debugger_utils/x86_pt.h"
 
 #include "garnet/lib/inferior_control/arch.h"
-#include "garnet/lib/inferior_control/arch_x86.h"
+#include "garnet/lib/inferior_control/arch_x64.h"
 
 #include "server.h"
 

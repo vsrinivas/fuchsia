@@ -30,11 +30,11 @@ static_library("inferior_control") {
 
   if (current_cpu == "x64") {
     sources += [
-      "arch_amd64.cc",
-      "arch_x86.h",
-      "breakpoint_amd64.cc",
-      "registers_amd64.cc",
-      "registers_amd64.h",
+      "arch_x64.cc",
+      "arch_x64.h",
+      "breakpoint_x64.cc",
+      "registers_x64.cc",
+      "registers_x64.h",
     ]
   } else if (current_cpu == "arm64") {
     sources += [
