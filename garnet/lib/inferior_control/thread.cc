@@ -139,9 +139,11 @@ void Thread::OnException(const zx_excp_type_t type,
   if (prev_state == State::kStepping && type != ZX_EXCP_THREAD_EXITING) {
     FXL_DCHECK(breakpoints_.SingleStepBreakpointInserted());
     if (!breakpoints_.RemoveSingleStepBreakpoint()) {
-      FXL_LOG(ERROR) << "Unable to clear single-step bkpt";
+      FXL_LOG(ERROR) << "Unable to clear single-step bkpt for thread "
+                     << GetName();
     } else {
-      FXL_VLOG(2) << "Single-step bkpt cleared";
+      FXL_VLOG(2) << "Single-step bkpt cleared for thread "
+                  << GetDebugName();
     }
   }
 
@@ -150,12 +152,13 @@ void Thread::OnException(const zx_excp_type_t type,
 
 bool Thread::TryNext() {
   if (state() != State::kInException && state() != State::kNew) {
-    FXL_LOG(ERROR) << "Cannot try-next a thread " << GetName()
-                   << " while in state: " << StateName(state());
+    FXL_LOG(ERROR) << "Cannot try-next thread " << GetName()
+                   << " while in state " << StateName(state());
     return false;
   }
 
-  FXL_VLOG(2) << "Thread " << GetName() << ": trying next exception handler";
+  FXL_VLOG(2) << "Thread " << GetDebugName()
+              << ": trying next exception handler";
 
   zx_status_t status =
       zx_task_resume_from_exception(handle_, GetExceptionPortHandle(),
@@ -172,20 +175,20 @@ bool Thread::TryNext() {
 
 bool Thread::ResumeFromException() {
   if (state() != State::kInException && state() != State::kNew) {
-    FXL_LOG(ERROR) << "Cannot resume a thread while in state: "
-                   << StateName(state());
+    FXL_LOG(ERROR) << "Cannot resume thread " << GetName()
+                   << " while in state: " << StateName(state());
     return false;
   }
 
   // This is printed here before resuming the task so that this is always
   // printed before any subsequent exception report (which is read by another
   // thread).
-  FXL_VLOG(2) << "Resuming thread " << GetName() << " after an exception";
+  FXL_VLOG(2) << "Resuming thread " << GetDebugName() << " after an exception";
 
   zx_status_t status =
       zx_task_resume_from_exception(handle_, GetExceptionPortHandle(), 0);
   if (status < 0) {
-    FXL_LOG(ERROR) << "Failed to resume thread: "
+    FXL_LOG(ERROR) << "Failed to resume thread " << GetName() << ": "
                    << debugger_utils::ZxErrorString(status);
     return false;
   }
@@ -205,7 +208,7 @@ void Thread::ResumeForExit() {
       break;
   }
 
-  FXL_VLOG(2) << "Thread " << GetName() << " is exiting";
+  FXL_VLOG(2) << "Thread " << GetDebugName() << " is exiting";
 
   auto status =
       zx_task_resume_from_exception(handle_, GetExceptionPortHandle(), 0);
@@ -218,13 +221,15 @@ void Thread::ResumeForExit() {
         zx_object_get_info(process()->handle(), ZX_INFO_PROCESS, &info,
                            sizeof(info), nullptr, nullptr);
     if (info_status != ZX_OK) {
-      FXL_LOG(ERROR) << "error getting process info: "
+      FXL_LOG(ERROR) << "Error getting process info for thread "
+                     << GetName() << ": "
                      << debugger_utils::ZxErrorString(info_status);
     }
     if (info_status == ZX_OK && info.exited) {
       FXL_VLOG(2) << "Process " << process()->GetName() << " exited too";
     } else {
-      FXL_LOG(ERROR) << "Failed to resume thread for exit: "
+      FXL_LOG(ERROR) << "Failed to resume thread " << GetName()
+                     << " for exit: "
                      << debugger_utils::ZxErrorString(status);
     }
   }
@@ -235,13 +240,13 @@ void Thread::ResumeForExit() {
 
 bool Thread::Step() {
   if (state() != State::kInException) {
-    FXL_LOG(ERROR) << "Cannot resume a thread while in state: "
+    FXL_LOG(ERROR) << "Cannot step thread " << GetName() << " while in state: "
                    << StateName(state());
     return false;
   }
 
   if (!registers_->RefreshGeneralRegisters()) {
-    FXL_LOG(ERROR) << "Failed refreshing gregs";
+    FXL_LOG(ERROR) << "Failed refreshing gregs for thread " << GetName();
     return false;
   }
   zx_vaddr_t pc = registers_->GetPC();
@@ -258,7 +263,7 @@ bool Thread::Step() {
       zx_task_resume_from_exception(handle_, GetExceptionPortHandle(), 0);
   if (status < 0) {
     breakpoints_.RemoveSingleStepBreakpoint();
-    FXL_LOG(ERROR) << "Failed to resume thread for step: "
+    FXL_LOG(ERROR) << "Failed to resume thread " << GetName() << " for step: "
                    << debugger_utils::ZxErrorString(status);
     return false;
   }

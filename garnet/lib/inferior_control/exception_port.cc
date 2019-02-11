@@ -171,20 +171,25 @@ void ExceptionPort::Worker() {
     }
 
     if (ZX_PKT_IS_EXCEPTION(packet.type)) {
-      FXL_VLOG(1) << "Exception received: "
+      FXL_VLOG(2) << "Received exception: "
                   << debugger_utils::ExceptionName(
                          static_cast<const zx_excp_type_t>(packet.type))
-                  << " (" << packet.type << "), pid: " << packet.exception.pid
-                  << ", tid: " << packet.exception.tid;
+                  << " (" << packet.type << "), key=" << packet.key
+                  << " pid=" << packet.exception.pid
+                  << " tid=" << packet.exception.tid;
     } else if (packet.type == ZX_PKT_TYPE_SIGNAL_ONE) {
-      FXL_VLOG(1) << "Signal received:"
+      FXL_VLOG(2) << "Received signal:"
+                  << " key=" << packet.key
                   << " trigger=0x" << std::hex << packet.signal.trigger
                   << " observed=0x" << std::hex << packet.signal.observed;
     } else if (packet.type == ZX_PKT_TYPE_USER) {
-      // Sent when exiting loop, just ignore.
+      // Sent to wake up the port wait because we're exiting.
+      FXL_VLOG(2) << "Received user packet";
+      FXL_DCHECK(!keep_running_);
       continue;
     } else {
-      FXL_LOG(WARNING) << "Unexpected packet type: " << packet.type;
+      FXL_LOG(WARNING) << "Received unexpected packet: type="
+                       << packet.type << ", key=" << packet.key;
       continue;
     }
 
