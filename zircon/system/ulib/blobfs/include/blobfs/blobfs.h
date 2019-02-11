@@ -32,6 +32,7 @@
 #include <fs/vnode.h>
 #include <fuchsia/blobfs/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
@@ -40,8 +41,8 @@
 #include <trace/event.h>
 
 #include <blobfs/allocator.h>
-#include <blobfs/blob.h>
 #include <blobfs/blob-cache.h>
+#include <blobfs/blob.h>
 #include <blobfs/common.h>
 #include <blobfs/directory.h>
 #include <blobfs/extent-reserver.h>
@@ -176,7 +177,6 @@ public:
     // Acts as a special-case to bootstrap filesystem mounting.
     zx_status_t OpenRootNode(fbl::RefPtr<Directory>* out);
 
-
     BlobCache& Cache() {
         return blob_cache_;
     }
@@ -244,6 +244,10 @@ private:
     // Enqueues an update for allocated inode/block counts.
     void WriteInfo(WritebackWork* wb);
 
+    // When will flush the metrics in the calling thread and will schedule itself
+    // to flush again in the future.
+    void ScheduleMetricFlush();
+
     // Creates an unique identifier for this instance. This is to be called only during
     // "construction".
     zx_status_t CreateFsId();
@@ -276,6 +280,7 @@ private:
 
     // TODO(gevalentino): clean up old metrics and update this to inspect API.
     fs::Metrics cobalt_metrics_;
+    async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToThread);
 };
 
 zx_status_t Initialize(fbl::unique_fd blockfd, const MountOptions& options,

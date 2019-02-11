@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <limits>
@@ -42,33 +43,16 @@ using digest::MerkleTree;
 namespace blobfs {
 namespace {
 
+// Time between each Cobalt flush.
+constexpr zx::duration kCobaltFlushTimer = zx::min(5);
+
+constexpr int64_t kFsProjectId = 107;
+
 cobalt_client::CollectorOptions MakeCollectorOptions() {
     cobalt_client::CollectorOptions options = cobalt_client::CollectorOptions::Debug();
 #ifdef __Fuchsia__
-    // Reads from boot the cobalt_filesystem.pb
-    options.load_config = [](zx::vmo* out_vmo, size_t* out_size) -> bool {
-        fbl::unique_fd config_fd(open("/boot/config/cobalt_filesystem.pb", O_RDONLY));
-        if (!config_fd) {
-            return false;
-        }
-        *out_size = lseek(config_fd.get(), 0L, SEEK_END);
-        if (*out_size <= 0) {
-            return false;
-        }
-        zx_status_t result = zx::vmo::create(*out_size, 0, out_vmo);
-        if (result != ZX_OK) {
-            return false;
-        }
-        fbl::Array<uint8_t> buffer(new uint8_t[*out_size], *out_size);
-        memset(buffer.get(), 0, *out_size);
-        if (lseek(config_fd.get(), 0L, SEEK_SET) < 0) {
-            return false;
-        }
-        if (static_cast<uint32_t>(read(config_fd.get(), buffer.get(), buffer.size())) < *out_size) {
-            return false;
-        }
-        return out_vmo->write(buffer.get(), 0, *out_size) == ZX_OK;
-    };
+    // Filesystems project id.
+    options.project_id = kFsProjectId;
     options.initial_response_deadline = zx::usec(0);
     options.response_deadline = zx::nsec(0);
 #endif // __Fuchsia__
@@ -286,6 +270,7 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
                 }
 
                 metrics_.Dump();
+                flush_loop_.Shutdown();
 
                 auto on_unmount = std::move(on_unmount_);
 
@@ -567,6 +552,12 @@ Blobfs::~Blobfs() {
     }
 }
 
+void Blobfs::ScheduleMetricFlush() {
+    cobalt_metrics_.mutable_collector()->Flush();
+    async::PostDelayedTask(
+        flush_loop_.dispatcher(), [this]() { ScheduleMetricFlush(); }, kCobaltFlushTimer);
+}
+
 zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options, const Superblock* info,
                            fbl::unique_ptr<Blobfs>* out) {
     TRACE_DURATION("blobfs", "Blobfs::Create");
@@ -575,12 +566,19 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options, const
         FS_TRACE_ERROR("blobfs: Check info failure\n");
         return status;
     }
-
     auto fs = fbl::unique_ptr<Blobfs>(new Blobfs(std::move(fd), info));
     fs->SetReadonly(options.readonly);
     fs->Cache().SetCachePolicy(options.cache_policy);
     if (options.metrics) {
         fs->LocalMetrics().Collect();
+        fs->cobalt_metrics_.EnableMetrics(true);
+        // TODO(gevalentino): Once we have async llcpp bindings, instead pass a dispatcher for
+        // handling collector IPCs.
+        fs->flush_loop_.StartThread("blobfs-metric-flusher");
+        Blobfs* fsptr = fs.get();
+        async::PostDelayedTask(
+            fs->flush_loop_.dispatcher(), [fsptr]() { fsptr->ScheduleMetricFlush(); },
+            kCobaltFlushTimer);
     }
 
     zx::fifo fifo;
