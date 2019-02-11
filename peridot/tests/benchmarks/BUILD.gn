@@ -55,6 +55,18 @@ package("modular_benchmarks") {
   ]
 }
 
+executable("peridot_benchmarks_bin") {
+  output_name = "peridot_benchmarks"
+
+  sources = [
+    "benchmarks.cc",
+  ]
+
+  deps = [
+    "//garnet/testing/benchmarking:benchmarking",
+  ]
+}
+
 package("peridot_benchmarks") {
   testonly = true
 
@@ -63,5 +75,13 @@ package("peridot_benchmarks") {
       name = rebase_path("benchmarks.sh")
       dest = "benchmarks.sh"
     },
+    {
+      shell = true
+      name = "peridot_benchmarks"
+    },
+  ]
+
+  deps = [
+    ":peridot_benchmarks_bin",
   ]
 }

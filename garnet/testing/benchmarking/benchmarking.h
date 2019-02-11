@@ -34,8 +34,9 @@ class BenchmarksRunner {
   //   $ trace record \
   //       --spec-file=<tspec_file> \
   //       --benchmark-results-file=/tmp/example.json
-  void AddTspecBenchmark(const std::string& name,
-                         const std::string& tspec_file);
+  //       --test-suite=<test_suite> (optional)
+  void AddTspecBenchmark(const std::string& name, const std::string& tspec_file,
+                         const std::string& test_suite = "");
 
   // Add a benchmark of name |name|, specified by |libperftest_binary|, which
   // is a path to the binary that runs a libperftest benchmark.  |extra_args|

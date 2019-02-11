@@ -92,12 +92,16 @@ std::optional<BenchmarksRunner> BenchmarksRunner::Create(int argc,
 }
 
 void BenchmarksRunner::AddTspecBenchmark(const std::string& name,
-                                         const std::string& tspec_file) {
+                                         const std::string& tspec_file,
+                                         const std::string& test_suite) {
   std::string out_file = JoinPaths({out_dir_, name + ".json"});
-  AddCustomBenchmark(name,
-                     {"/bin/trace", "record", "--spec-file=" + tspec_file,
-                      "--benchmark-results-file=" + out_file},
-                     out_file);
+  std::vector<std::string> command = {"/bin/trace", "record",
+                                      "--spec-file=" + tspec_file,
+                                      "--benchmark-results-file=" + out_file};
+  if (!test_suite.empty()) {
+    command.push_back("--test-suite=" + test_suite);
+  }
+  AddCustomBenchmark(name, command, out_file);
 }
 
 void BenchmarksRunner::AddLibPerfTestBenchmark(
