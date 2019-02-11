@@ -16,7 +16,7 @@ std::string GetSelector(const raw::AttributeList* attributes,
                         SourceLocation name) {
     if (attributes != nullptr) {
         const size_t size = attributes->attributes.size();
-        for (int i = 0; i < size; i++) {
+        for (size_t i = 0; i < size; i++) {
             if (attributes->attributes[i]->name == "Selector") {
                 return attributes->attributes[i]->value;
             }

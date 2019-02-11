@@ -11,7 +11,7 @@ SourceLocation VirtualSourceFile::AddLine(const std::string& line) {
 }
 
 StringView VirtualSourceFile::LineContaining(StringView view, Position* position_out) const {
-    for (int i = 0; i < virtual_lines_.size(); i++) {
+    for (int i = 0; i < static_cast<int>(virtual_lines_.size()); i++) {
         const std::string& line = *virtual_lines_[i];
         const char* line_begin = &*line.cbegin();
         const char* line_end = &*line.cend();
@@ -20,7 +20,7 @@ StringView VirtualSourceFile::LineContaining(StringView view, Position* position
         if (position_out != nullptr) {
             auto column = view.data() - line_begin;
             assert(column < std::numeric_limits<int>::max());
-            *position_out = {i + 1, (int)column};
+            *position_out = {i + 1, static_cast<int>(column)};
         }
         return StringView(line);
     }
