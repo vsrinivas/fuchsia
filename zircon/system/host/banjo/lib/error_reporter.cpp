@@ -15,6 +15,7 @@ std::string MakeSquiggle(const std::string& surrounding_line, int column) {
         switch (surrounding_line[i]) {
         case '\t':
             squiggle.push_back('\t');
+            break;
         default:
             squiggle.push_back(' ');
         }
