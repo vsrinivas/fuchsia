@@ -522,9 +522,11 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(
   pSurfaceCapabilities->maxImageCount = 0;
   pSurfaceCapabilities->minImageExtent = {1, 1};
 
+  auto image_pipe_surface = reinterpret_cast<ImagePipeSurface*>(surface);
+
   uint32_t width = 0;
   uint32_t height = 0;
-  if (reinterpret_cast<ImagePipeSurface*>(surface)->GetSize(&width, &height)) {
+  if (image_pipe_surface->GetSize(&width, &height)) {
     pSurfaceCapabilities->maxImageExtent = {width, height};
     pSurfaceCapabilities->currentExtent = pSurfaceCapabilities->maxImageExtent;
   } else {
@@ -538,8 +540,7 @@ VKAPI_ATTR VkResult VKAPI_CALL GetPhysicalDeviceSurfaceCapabilitiesKHR(
   pSurfaceCapabilities->currentTransform =
       VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
   pSurfaceCapabilities->maxImageArrayLayers = 1;
-  pSurfaceCapabilities->supportedUsageFlags =
-      VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+  pSurfaceCapabilities->supportedUsageFlags = image_pipe_surface->SupportedUsage();
   pSurfaceCapabilities->supportedCompositeAlpha =
       VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
   return VK_SUCCESS;

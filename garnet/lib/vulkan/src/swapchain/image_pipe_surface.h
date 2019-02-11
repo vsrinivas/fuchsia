@@ -33,20 +33,21 @@ class ImagePipeSurface {
     return supported_image_properties_;
   }
 
-  VkFlags DetermineUsage(VkFlags requestedUsage) {
-    VkFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | requestedUsage;
+  VkFlags SupportedUsage() {
     VkFlags supportedUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                              VK_IMAGE_USAGE_TRANSFER_DST_BIT |
                              VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-
     if (UseScanoutExtension()) {
-      usage &= supportedUsage;
-      usage |= VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE;
+      supportedUsage |= VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE;
     } else {
       supportedUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;
-      usage &= supportedUsage;
     }
-    return usage;
+    return supportedUsage;
+  }
+
+  VkFlags DetermineUsage(VkFlags requestedUsage) {
+   requestedUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SCANOUT_BIT_GOOGLE;
+   return requestedUsage & SupportedUsage();
   }
 
   virtual bool CanPresentPendingImage() { return true; }
