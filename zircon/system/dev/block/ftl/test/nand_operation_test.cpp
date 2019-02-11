@@ -5,46 +5,40 @@
 #include "nand_operation.h"
 
 #include <ddktl/protocol/nand.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
-bool TrivialLifetimeTest() {
-    BEGIN_TEST;
+TEST(NandOperationTest, TrivialLifetime) {
     ftl::NandOperation operation(sizeof(nand_operation_t));
-    END_TEST;
 }
 
-bool SetDataVmoTest() {
-    BEGIN_TEST;
+TEST(NandOperationTest, SetDataVmo) {
     ftl::NandOperation operation(sizeof(nand_operation_t));
 
     nand_operation_t* op = operation.GetOperation();
     EXPECT_EQ(0, op->rw.data_vmo);
 
-    ASSERT_EQ(ZX_OK, operation.SetDataVmo(55));
+    ASSERT_OK(operation.SetDataVmo(55));
 
     EXPECT_NE(0, op->rw.data_vmo);
     EXPECT_NE(ZX_HANDLE_INVALID, op->rw.data_vmo);
     EXPECT_EQ(55, operation.buffer_size());
     EXPECT_NE(nullptr, operation.buffer());
-    END_TEST;
 }
 
-bool SetOobVmoTest() {
-    BEGIN_TEST;
+TEST(NandOperationTest, SetOobVmo) {
     ftl::NandOperation operation(sizeof(nand_operation_t));
 
     nand_operation_t* op = operation.GetOperation();
     EXPECT_EQ(0, op->rw.oob_vmo);
 
-    ASSERT_EQ(ZX_OK, operation.SetOobVmo(66));
+    ASSERT_OK(operation.SetOobVmo(66));
 
     EXPECT_NE(0, op->rw.oob_vmo);
     EXPECT_NE(ZX_HANDLE_INVALID, op->rw.oob_vmo);
     EXPECT_EQ(66, operation.buffer_size());
     EXPECT_NE(nullptr, operation.buffer());
-    END_TEST;
 }
 
 class NandTester : public ddk::NandProtocol<NandTester> {
@@ -78,20 +72,17 @@ class NandTester : public ddk::NandProtocol<NandTester> {
     zx_status_t result_ = ZX_OK;
 };
 
-bool ExecuteSuccessTest() {
-    BEGIN_TEST;
+TEST(NandOperationTest, ExecuteSuccess) {
     ftl::NandOperation operation(sizeof(nand_operation_t));
     nand_operation_t* op = operation.GetOperation();
 
     NandTester tester;
-    ASSERT_EQ(ZX_OK, operation.Execute(tester.doubler()));
+    ASSERT_OK(operation.Execute(tester.doubler()));
 
     EXPECT_EQ(op, tester.operation());
-    END_TEST;
 }
 
-bool ExecuteFailureTest() {
-    BEGIN_TEST;
+TEST(NandOperationTest, ExecuteFailure) {
     ftl::NandOperation operation(sizeof(nand_operation_t));
     nand_operation_t* op = operation.GetOperation();
 
@@ -100,15 +91,6 @@ bool ExecuteFailureTest() {
     ASSERT_EQ(ZX_HANDLE_INVALID, operation.Execute(tester.doubler()));
 
     EXPECT_EQ(op, tester.operation());
-    END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(NandOperationTests)
-RUN_TEST_SMALL(TrivialLifetimeTest)
-RUN_TEST_SMALL(SetDataVmoTest)
-RUN_TEST_SMALL(SetOobVmoTest)
-RUN_TEST_SMALL(ExecuteSuccessTest)
-RUN_TEST_SMALL(ExecuteFailureTest)
-END_TEST_CASE(NandOperationTests)

@@ -12,7 +12,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/ftl/volume.h>
 #include <lib/fzl/owned-vmo-mapper.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -121,18 +121,15 @@ class FakeVolume : public ftl::Volume {
     bool trimmed_ = false;
 };
 
-bool TrivialLifetimeTest() {
-    BEGIN_TEST;
+TEST(BlockDeviceTest, TrivialLifetime) {
     FakeNand nand;
     ftl::BlockDevice device;
     device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
     device.SetNandParentForTest(*nand.proto());
-    ASSERT_EQ(ZX_OK, device.Init());
-    END_TEST;
+    ASSERT_OK(device.Init());
 }
 
-bool DdkLifetimeTest() {
-    BEGIN_TEST;
+TEST(BlockDeviceTest, DdkLifetime) {
     ftl::BlockDevice* device(new ftl::BlockDevice(fake_ddk::kFakeParent));
     device->SetVolumeForTest(std::make_unique<FakeVolume>(device));
 
@@ -142,63 +139,55 @@ bool DdkLifetimeTest() {
     protocols[0] = {ZX_PROTOCOL_NAND, {nand.proto()->ops, nand.proto()->ctx}};
     ddk.SetProtocols(std::move(protocols));
 
-    ASSERT_EQ(ZX_OK, device->Bind());
+    ASSERT_OK(device->Bind());
     device->DdkUnbind();
     EXPECT_TRUE(ddk.Ok());
 
     // This should delete the object, which means this test should not leak.
     device->DdkRelease();
-    END_TEST;
 }
 
-bool GetSizeTest() {
-    BEGIN_TEST;
+TEST(BlockDeviceTest, GetSize) {
     FakeNand nand;
     ftl::BlockDevice device;
     device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
     device.SetNandParentForTest(*nand.proto());
-    ASSERT_EQ(ZX_OK, device.Init());
+    ASSERT_OK(device.Init());
     EXPECT_EQ(kPageSize * kNumPages, device.DdkGetSize());
-    END_TEST;
 }
 
-bool GetNameTest() {
-    BEGIN_TEST;
+TEST(BlockDeviceTest, GetName) {
     FakeNand nand;
     ftl::BlockDevice device;
     device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
     device.SetNandParentForTest(*nand.proto());
-    ASSERT_EQ(ZX_OK, device.Init());
+    ASSERT_OK(device.Init());
 
     char name[20];
-    ASSERT_EQ(ZX_OK, device.BlockPartitionGetName(name, sizeof(name)));
+    ASSERT_OK(device.BlockPartitionGetName(name, sizeof(name)));
 
     EXPECT_GT(strlen(name), 0);
-    END_TEST;
 }
 
-bool GetTypeTest() {
-    BEGIN_TEST;
+TEST(BlockDeviceTest, GetType) {
     FakeNand nand;
     ftl::BlockDevice device;
     device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
     device.SetNandParentForTest(*nand.proto());
-    ASSERT_EQ(ZX_OK, device.Init());
+    ASSERT_OK(device.Init());
 
     guid_t guid;
-    ASSERT_EQ(ZX_OK, device.BlockPartitionGetGuid(GUIDTYPE_TYPE, &guid));
+    ASSERT_OK(device.BlockPartitionGetGuid(GUIDTYPE_TYPE, &guid));
 
     EXPECT_EQ(0, memcmp(&guid, kGuid, sizeof(guid)));
-    END_TEST;
 }
 
-bool QueryTest() {
-    BEGIN_TEST;
+TEST(BlockDeviceTest, Query) {
     FakeNand nand;
     ftl::BlockDevice device;
     device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
     device.SetNandParentForTest(*nand.proto());
-    ASSERT_EQ(ZX_OK, device.Init());
+    ASSERT_OK(device.Init());
 
     block_info_t info;
     size_t operation_size;
@@ -206,7 +195,6 @@ bool QueryTest() {
 
     ASSERT_EQ(0, memcmp(&info, &kInfo, sizeof(info)));
     ASSERT_GT(operation_size, sizeof(block_op_t));
-    END_TEST;
 }
 
 class BlockDeviceTest;
@@ -279,14 +267,14 @@ zx_handle_t Operation::GetVmo() {
 }
 
 // Provides control primitives for tests that issue IO requests to the device.
-class BlockDeviceTest {
+class BlockDeviceTest : public zxtest::Test {
   public:
     BlockDeviceTest();
     ~BlockDeviceTest() {}
 
-    ftl::BlockDevice* device() { return device_.get(); }
+    ftl::BlockDevice* GetDevice() { return device_.get(); }
     size_t op_size() const { return op_size_; }
-    FakeVolume* volume() { return volume_; }
+    FakeVolume* GetVolume() { return volume_; }
 
     static void CompletionCb(void* cookie, zx_status_t status, block_op_t* op) {
         Operation* operation = reinterpret_cast<Operation*>(cookie);
@@ -336,13 +324,11 @@ BlockDeviceTest::BlockDeviceTest() : device_(new ftl::BlockDevice()) {
 }
 
 // Tests trivial attempts to queue one operation.
-bool QueueOneTest() {
-    BEGIN_TEST;
-    BlockDeviceTest test;
-    ftl::BlockDevice* device = test.device();
+TEST_F(BlockDeviceTest, QueueOne) {
+    ftl::BlockDevice* device = GetDevice();
     ASSERT_TRUE(device);
 
-    Operation operation(test.op_size(), &test);
+    Operation operation(op_size(), this);
 
     block_op_t* op = operation.GetOperation();
     ASSERT_TRUE(op);
@@ -350,35 +336,32 @@ bool QueueOneTest() {
     op->rw.command = BLOCK_OP_READ;
     device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
 
-    ASSERT_TRUE(test.Wait());
+    ASSERT_TRUE(Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     op->rw.length = 1;
     device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
-    ASSERT_TRUE(test.Wait());
+    ASSERT_TRUE(Wait());
     ASSERT_EQ(ZX_ERR_INVALID_ARGS, operation.status());
 
     op->rw.offset_dev = kNumPages;
     device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
-    ASSERT_TRUE(test.Wait());
+    ASSERT_TRUE(Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     ASSERT_TRUE(operation.SetVmo());
 
     op->rw.offset_dev = kNumPages - 1;
     device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
-    END_TEST;
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
 }
 
-bool ReadWriteTest() {
-    BEGIN_TEST;
-    BlockDeviceTest test;
-    ftl::BlockDevice* device = test.device();
+TEST_F(BlockDeviceTest, ReadWrite) {
+    ftl::BlockDevice* device = GetDevice();
     ASSERT_TRUE(device);
 
-    Operation operation(test.op_size(), &test);
+    Operation operation(op_size(), this);
     ASSERT_TRUE(operation.SetVmo());
 
     block_op_t* op = operation.GetOperation();
@@ -390,10 +373,10 @@ bool ReadWriteTest() {
     ASSERT_TRUE(operation.SetVmo());
     device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
 
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
 
-    FakeVolume* volume = test.volume();
+    FakeVolume* volume = GetVolume();
     EXPECT_FALSE(volume->written());
     EXPECT_EQ(2, volume->num_pages());
     EXPECT_EQ(3, volume->first_page());
@@ -405,80 +388,71 @@ bool ReadWriteTest() {
     memset(operation.buffer(), kMagic, kPageSize * 5);
     device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
 
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
 
     EXPECT_TRUE(volume->written());
     EXPECT_EQ(4, volume->num_pages());
     EXPECT_EQ(5, volume->first_page());
-    END_TEST;
 }
 
-bool TrimTest() {
-    BEGIN_TEST;
-    BlockDeviceTest test;
-    ftl::BlockDevice* device = test.device();
+TEST_F(BlockDeviceTest, Trim) {
+    ftl::BlockDevice* device = GetDevice();
     ASSERT_TRUE(device);
 
-    Operation operation(test.op_size(), &test);
+    Operation operation(op_size(), this);
     block_op_t* op = operation.GetOperation();
     ASSERT_TRUE(op);
 
     op->trim.command = BLOCK_OP_TRIM;
     device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
 
-    ASSERT_TRUE(test.Wait());
+    ASSERT_TRUE(Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     op->trim.length = 2;
     op->trim.offset_dev = kNumPages - 1;
     device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
 
-    ASSERT_TRUE(test.Wait());
+    ASSERT_TRUE(Wait());
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
 
     op->trim.offset_dev = 3;
     device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
 
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
 
-    EXPECT_TRUE(test.volume()->trimmed());
-    EXPECT_EQ(2, test.volume()->num_pages());
-    EXPECT_EQ(3, test.volume()->first_page());
-    END_TEST;
+    EXPECT_TRUE(GetVolume()->trimmed());
+    EXPECT_EQ(2, GetVolume()->num_pages());
+    EXPECT_EQ(3, GetVolume()->first_page());
 }
 
-bool FlushTest() {
-    BEGIN_TEST;
-    BlockDeviceTest test;
-    ftl::BlockDevice* device = test.device();
+TEST_F(BlockDeviceTest, Flush) {
+    ftl::BlockDevice* device = GetDevice();
     ASSERT_TRUE(device);
 
-    Operation operation(test.op_size(), &test);
+    Operation operation(op_size(), this);
     block_op_t* op = operation.GetOperation();
     ASSERT_TRUE(op);
 
     op->rw.command = BLOCK_OP_FLUSH;
     device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
 
-    ASSERT_TRUE(test.Wait());
-    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_TRUE(Wait());
+    ASSERT_OK(operation.status());
 
-    EXPECT_TRUE(test.volume()->flushed());
-    END_TEST;
+    EXPECT_TRUE(GetVolume()->flushed());
 }
 
 // Tests serialization of multiple operations.
-bool QueueMultipleTest() {
-    BEGIN_TEST;
-    BlockDeviceTest test;
-    ftl::BlockDevice* device = test.device();
+TEST_F(BlockDeviceTest, QueueMultiple) {
+    ftl::BlockDevice* device = GetDevice();
     ASSERT_TRUE(device);
 
     std::unique_ptr<Operation> operations[10];
     for (int i = 0; i < 10; i++) {
-        operations[i].reset(new Operation(test.op_size(), &test));
+        operations[i].reset(new Operation(op_size(), this));
         Operation& operation = *(operations[i].get());
         block_op_t* op = operation.GetOperation();
         ASSERT_TRUE(op);
@@ -490,52 +464,29 @@ bool QueueMultipleTest() {
         device->BlockImplQueue(op, &BlockDeviceTest::CompletionCb, &operation);
     }
 
-    ASSERT_TRUE(test.WaitFor(10));
+    ASSERT_TRUE(WaitFor(10));
 
     for (const auto& operation : operations) {
-        ASSERT_EQ(ZX_OK, operation->status());
+        ASSERT_OK(operation->status());
         ASSERT_TRUE(operation->completed());
     }
 
-    END_TEST;
 }
 
-bool FormatTest() {
-    BEGIN_TEST;
-    BlockDeviceTest test;
-    ftl::BlockDevice* device = test.device();
+TEST_F(BlockDeviceTest, Format) {
+    ftl::BlockDevice* device = GetDevice();
     ASSERT_TRUE(device);
 
-    EXPECT_EQ(ZX_OK, device->Format());
-    EXPECT_TRUE(test.volume()->formatted());
-    END_TEST;
+    EXPECT_OK(device->Format());
+    EXPECT_TRUE(GetVolume()->formatted());
 }
 
-bool SuspendTest() {
-    BEGIN_TEST;
-    BlockDeviceTest test;
-    ftl::BlockDevice* device = test.device();
+TEST_F(BlockDeviceTest, Suspend) {
+    ftl::BlockDevice* device = GetDevice();
     ASSERT_TRUE(device);
 
-    EXPECT_EQ(ZX_OK, device->DdkSuspend(0));
-    EXPECT_TRUE(test.volume()->flushed());
-    END_TEST;
+    EXPECT_OK(device->DdkSuspend(0));
+    EXPECT_TRUE(GetVolume()->flushed());
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(BlockDeviceTests)
-RUN_TEST_SMALL(TrivialLifetimeTest)
-RUN_TEST_SMALL(DdkLifetimeTest)
-RUN_TEST_SMALL(GetSizeTest)
-RUN_TEST_SMALL(GetNameTest)
-RUN_TEST_SMALL(GetTypeTest)
-RUN_TEST_SMALL(QueryTest)
-RUN_TEST_SMALL(QueueOneTest)
-RUN_TEST_SMALL(ReadWriteTest)
-RUN_TEST_SMALL(TrimTest)
-RUN_TEST_SMALL(FlushTest)
-RUN_TEST_SMALL(QueueMultipleTest)
-RUN_TEST_SMALL(FormatTest)
-RUN_TEST_SMALL(SuspendTest)
-END_TEST_CASE(BlockDeviceTests)

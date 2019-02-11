@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+    return RUN_ALL_TESTS(argc, argv);
 }

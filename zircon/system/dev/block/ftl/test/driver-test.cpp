@@ -4,7 +4,7 @@
 
 #include "ndm-ram-driver.h"
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -14,16 +14,13 @@ constexpr uint32_t kOobSize = 16;
 // 20 blocks of 32 pages, 4 bad blocks max.
 constexpr ftl::VolumeOptions kDefaultOptions = {20, 4, 32 * kPageSize, kPageSize, kOobSize, 0};
 
-bool TrivialLifetimeTest() {
-    BEGIN_TEST;
+TEST(DriverTest, TrivialLifetime) {
     NdmRamDriver driver({});
-    END_TEST;
 }
 
 // Basic smoke tests for NdmRamDriver:
 
-bool ReadWriteTest() {
-    BEGIN_TEST;
+TEST(DriverTest, ReadWrite) {
     ASSERT_TRUE(ftl::InitModules());
 
     NdmRamDriver driver(kDefaultOptions);
@@ -48,23 +45,19 @@ bool ReadWriteTest() {
     for (uint32_t i = 0; i < oob.size(); i++) {
         ASSERT_EQ(0x66, oob[i]);
     }
-    END_TEST;
 }
 
 // Writes a fixed pattern to the desired page.
 bool WritePage(NdmRamDriver* driver, uint32_t page_num) {
-    BEGIN_TEST;
     fbl::Array<uint8_t> data(new uint8_t[kPageSize], kPageSize);
     fbl::Array<uint8_t> oob(new uint8_t[kOobSize], kOobSize);
     memset(data.get(), 0x55, data.size());
     memset(oob.get(), 0, oob.size());
 
-    ASSERT_EQ(ftl::kNdmOk, driver->NandWrite(page_num, 1, data.get(), oob.get()));
-    END_TEST;
+    return driver->NandWrite(page_num, 1, data.get(), oob.get()) == ftl::kNdmOk;
 }
 
-bool IsEmptyTest() {
-    BEGIN_TEST;
+TEST(DriverTest, IsEmpty) {
     ASSERT_TRUE(ftl::InitModules());
 
     NdmRamDriver driver(kDefaultOptions);
@@ -86,11 +79,9 @@ bool IsEmptyTest() {
     memset(oob.get(), 0xff, oob.size());
 
     ASSERT_TRUE(driver.IsEmptyPage(0, data.get(), oob.get()));
-    END_TEST;
 }
 
-bool EraseTest() {
-    BEGIN_TEST;
+TEST(DriverTest, Erase) {
     ASSERT_TRUE(ftl::InitModules());
 
     NdmRamDriver driver(kDefaultOptions);
@@ -100,11 +91,9 @@ bool EraseTest() {
 
     ASSERT_EQ(ftl::kNdmOk, driver.NandErase(0));
     ASSERT_TRUE(driver.IsEmptyPage(0, nullptr, nullptr));
-    END_TEST;
 }
 
-bool IsBadBlockTest() {
-    BEGIN_TEST;
+TEST(DriverTest, IsBadBlock) {
     ASSERT_TRUE(ftl::InitModules());
 
     NdmRamDriver driver(kDefaultOptions);
@@ -114,22 +103,18 @@ bool IsBadBlockTest() {
 
     ASSERT_TRUE(WritePage(&driver, 0));
     ASSERT_EQ(ftl::kTrue, driver.IsBadBlock(0));
-    END_TEST;
 }
 
-bool CreateVolumeTest() {
-    BEGIN_TEST;
+TEST(DriverTest, CreateVolume) {
     ASSERT_TRUE(ftl::InitModules());
 
     NdmRamDriver driver(kDefaultOptions);
     ASSERT_EQ(nullptr, driver.Init());
     ASSERT_EQ(nullptr, driver.Attach(nullptr));
     ASSERT_TRUE(driver.Detach());
-    END_TEST;
 }
 
-bool ReAttachTest() {
-    BEGIN_TEST;
+TEST(DriverTest, ReAttach) {
     ASSERT_TRUE(ftl::InitModules());
 
     NdmRamDriver driver(kDefaultOptions);
@@ -146,13 +131,11 @@ bool ReAttachTest() {
     ASSERT_EQ(ftl::kNdmOk, driver.NandRead(5, 1, data.get(), oob.get()));
 
     ASSERT_FALSE(driver.IsEmptyPage(5, data.get(), oob.get()));
-    END_TEST;
 }
 
 // NdmRamDriver is supposed to inject failures periodically. This tests that it
 // does.
-bool WriteBadBlockTest() {
-    BEGIN_TEST;
+TEST(DriverTest, WriteBadBlock) {
     ASSERT_TRUE(ftl::InitModules());
 
     NdmRamDriver driver(kDefaultOptions);
@@ -169,13 +152,11 @@ bool WriteBadBlockTest() {
     }
 
     ASSERT_EQ(ftl::kNdmError, driver.NandWrite(0, 1, data.get(), oob.get()));
-    END_TEST;
 }
 
 // NdmRamDriver is supposed to inject failures periodically. This tests that it
 // does.
-bool ReadUnsafeEccTest() {
-    BEGIN_TEST;
+TEST(DriverTest, ReadUnsafeEcc) {
     ASSERT_TRUE(ftl::InitModules());
 
     NdmRamDriver driver(kDefaultOptions);
@@ -194,19 +175,6 @@ bool ReadUnsafeEccTest() {
 
     ASSERT_EQ(ftl::kNdmUnsafeEcc, driver.NandRead(0, 1, data.get(), oob.get()));
     ASSERT_EQ(ftl::kNdmOk, driver.NandRead(0, 1, data.get(), oob.get()));
-    END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(DriverTests)
-RUN_TEST_SMALL(TrivialLifetimeTest)
-RUN_TEST_SMALL(ReadWriteTest)
-RUN_TEST_SMALL(IsEmptyTest)
-RUN_TEST_SMALL(EraseTest)
-RUN_TEST_SMALL(IsBadBlockTest)
-RUN_TEST_SMALL(CreateVolumeTest)
-RUN_TEST_SMALL(ReAttachTest)
-RUN_TEST_SMALL(WriteBadBlockTest)
-RUN_TEST_SMALL(ReadUnsafeEccTest)
-END_TEST_CASE(DriverTests)

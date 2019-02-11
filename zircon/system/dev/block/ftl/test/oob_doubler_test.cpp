@@ -5,7 +5,7 @@
 #include "oob_doubler.h"
 
 #include <ddktl/protocol/nand.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -48,15 +48,12 @@ class NandTester : public ddk::NandProtocol<NandTester> {
     nand_operation_t operation_ = {};
 };
 
-bool TrivialLifetimeTest() {
-    BEGIN_TEST;
+TEST(OobDoublerTest, TrivialLifetime) {
     NandTester tester;
     ftl::OobDoubler doubler(tester.proto(), false);
-    END_TEST;
 }
 
-bool QueryDisabledTest() {
-    BEGIN_TEST;
+TEST(OobDoublerTest, QueryDisabled) {
     NandTester tester;
     ftl::OobDoubler doubler(tester.proto(), false);
 
@@ -69,11 +66,9 @@ bool QueryDisabledTest() {
     EXPECT_EQ(kUnchanged, info.num_blocks);
     EXPECT_EQ(kUnchanged, info.ecc_bits);
     EXPECT_EQ(kOpSize, op_size);
-    END_TEST;
 }
 
-bool QueryEnabledTest() {
-    BEGIN_TEST;
+TEST(OobDoublerTest, QueryEnabled) {
     NandTester tester;
     ftl::OobDoubler doubler(tester.proto(), true);
 
@@ -86,11 +81,9 @@ bool QueryEnabledTest() {
     EXPECT_EQ(kUnchanged, info.num_blocks);
     EXPECT_EQ(kUnchanged, info.ecc_bits);
     EXPECT_EQ(kOpSize, op_size);
-    END_TEST;
 }
 
-bool QueueDisabledTest() {
-    BEGIN_TEST;
+TEST(OobDoublerTest, QueueDisabled) {
     NandTester tester;
     ftl::OobDoubler doubler(tester.proto(), false);
 
@@ -108,11 +101,9 @@ bool QueueDisabledTest() {
     EXPECT_EQ(6, result->rw.offset_nand);
     EXPECT_EQ(7, result->rw.offset_data_vmo);
     EXPECT_EQ(8, result->rw.offset_oob_vmo);
-    END_TEST;
 }
 
-bool QueueEnabledTest() {
-    BEGIN_TEST;
+TEST(OobDoublerTest, QueueEnabled) {
     NandTester tester;
     ftl::OobDoubler doubler(tester.proto(), true);
 
@@ -130,15 +121,6 @@ bool QueueEnabledTest() {
     EXPECT_EQ(12, result->rw.offset_nand);
     EXPECT_EQ(14, result->rw.offset_data_vmo);
     EXPECT_EQ(16, result->rw.offset_oob_vmo);
-    END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(OobDoublerTests)
-RUN_TEST_SMALL(TrivialLifetimeTest)
-RUN_TEST_SMALL(QueryDisabledTest)
-RUN_TEST_SMALL(QueryEnabledTest)
-RUN_TEST_SMALL(QueueDisabledTest)
-RUN_TEST_SMALL(QueueEnabledTest)
-END_TEST_CASE(OobDoublerTests)
