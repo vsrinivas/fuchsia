@@ -132,7 +132,7 @@ public:
     // Returns true if the function has a non-empty target.
     explicit operator bool() const {
         return ops_ != &null_target_type::ops;
-    };
+    }
 
     // Invokes the function's target.
     // Aborts if the function's target is empty.
