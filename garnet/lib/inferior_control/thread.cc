@@ -95,7 +95,7 @@ void Thread::Clear() {
 }
 
 zx_handle_t Thread::GetExceptionPortHandle() {
-  return process_->server()->exception_port().GetUnownedExceptionPort()->get();
+  return process_->server()->exception_port().handle();
 }
 
 fxl::WeakPtr<Thread> Thread::AsWeakPtr() {

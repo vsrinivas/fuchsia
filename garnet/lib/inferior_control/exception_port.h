@@ -65,8 +65,6 @@ class ExceptionPort final {
   // This must be called AFTER a successful call to Run().
   bool Unbind(const Key key);
 
-  zx::unowned_port GetUnownedExceptionPort();
-
  private:
   struct BindData {
     BindData() = default;
@@ -83,6 +81,13 @@ class ExceptionPort final {
 
   // Counter used for generating keys.
   static Key g_key_counter;
+
+  // Currently resuming from exceptions requires the exception port handle.
+  // This is solely for the benefit of |Thread|.
+  // TODO(dje): Delete when resuming from exceptions no longer requires the
+  // eport handle.
+  friend class Thread;
+  zx_handle_t handle() const { return eport_.get(); }
 
   // The worker function.
   void Worker();

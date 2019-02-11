@@ -179,11 +179,6 @@ bool ExceptionPort::Unbind(const Key key) {
   return true;
 }
 
-zx::unowned_port ExceptionPort::GetUnownedExceptionPort() {
-  lock_guard<mutex> lock(eport_mutex_);
-  return zx::unowned_port(eport_.get());
-}
-
 void ExceptionPort::Worker() {
   FXL_DCHECK(eport_);
 
