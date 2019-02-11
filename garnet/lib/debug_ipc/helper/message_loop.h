@@ -56,7 +56,7 @@ class MessageLoop {
 
   // Exits the message loop immediately, not running pending functions. This
   // must be called only on the MessageLoop thread.
-  void QuitNow();
+  virtual void QuitNow();
 
   // Starts watching the given file descriptor in the given mode. Returns
   // a WatchHandle that scopes the watch operation (when the handle is

@@ -47,12 +47,17 @@ static_library("helper") {
     sources += [
       "buffered_zx_socket.cc",
       "buffered_zx_socket.h",
+      "message_loop_async.cc",
+      "message_loop_async.h",
       "message_loop_zircon.cc",
       "message_loop_zircon.h",
     ]
+
     public_deps += [
       "//zircon/public/lib/fdio",
       "//zircon/public/lib/zx",
+      "//zircon/public/lib/async-cpp",
+      "//zircon/public/lib/async-loop-cpp",
     ]
   }
 }
