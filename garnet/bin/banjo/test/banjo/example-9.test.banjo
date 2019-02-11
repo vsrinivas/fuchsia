@@ -14,6 +14,7 @@ struct EchoMore {
     uint64 second;
 };
 
+[Layout = "ddk-protocol"]
 interface Echo {
     Echo32(uint32 uint32) -> (uint32 response);
     Echo64(uint64 uint64) -> (uint64 response);

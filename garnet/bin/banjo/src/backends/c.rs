@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::ast::{self, BanjoAst, Constant, Ident},
+    crate::ast::{self, BanjoAst, Constant, Decl, Ident},
     crate::backends::Backend,
     failure::{format_err, Error},
     heck::SnakeCase,
@@ -110,7 +110,7 @@ fn not_callback(ast: &ast::BanjoAst, id: &Ident) -> bool {
     true
 }
 
-fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant) -> String {
+fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant, ast: &ast::BanjoAst) -> String {
     let Constant(size) = cons;
     match ty {
         ast::Ty::Int8 => String::from(format!("INT8_C({})", size)),
@@ -122,6 +122,17 @@ fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant) -> String {
         ast::Ty::UInt32 => String::from(format!("UINT32_C({})", size)),
         ast::Ty::UInt64 => String::from(format!("UINT64_C({})", size)),
         ast::Ty::USize | ast::Ty::Bool | ast::Ty::Str { .. } => size.clone(),
+        ast::Ty::Identifier { id, reference: _ } => {
+            let decl = ast.id_to_decl(id).unwrap();
+            if let Decl::Enum { ty: enum_ty, variants, ..} = decl {
+                for variant in variants {
+                    if variant.name == *size {
+                        return size_to_c_str(enum_ty, &variant.size, ast);
+                    }
+                }
+            }
+            panic!("don't handle this kind of identifier: {:?}", id);
+        }
         s => panic!("don't handles this sized const: {}", s),
     }
 }
@@ -384,7 +395,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                             "#define {c_name}_{v_name} {c_size}",
                             c_name = to_c_name(name).to_uppercase(),
                             v_name = to_c_name(v.name.as_str()).to_uppercase(),
-                            c_size = size_to_c_str(ty, &v.size)
+                            c_size = size_to_c_str(ty, &v.size, ast)
                         ))
                     })
                     .collect::<Result<Vec<_>, Error>>()?
@@ -403,7 +414,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     fn codegen_constant_defs(
         &self,
         namespace: &Vec<ast::Decl>,
-        _ast: &BanjoAst,
+        ast: &BanjoAst,
     ) -> Result<String, Error> {
         namespace
             .iter()
@@ -421,7 +432,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                     format!(
                         "#define {name} {value}",
                         name = name.trim(),
-                        value = size_to_c_str(ty, value)
+                        value = size_to_c_str(ty, value, ast)
                     )
                     .as_str(),
                 );

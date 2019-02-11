@@ -6,6 +6,7 @@ library banjo.examples.example7;
 
 // ¡🇷🇸🇷
 
+[Layout = "ddk-protocol"]
 interface Hello {
     Say(string req) -> (string response);
 };

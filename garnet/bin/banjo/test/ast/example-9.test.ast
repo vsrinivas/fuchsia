@@ -61,7 +61,14 @@ BanjoAst {
             },
             Interface {
                 attributes: Attrs(
-                    []
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                "ddk-protocol"
+                            )
+                        }
+                    ]
                 ),
                 name: "Echo",
                 methods: [

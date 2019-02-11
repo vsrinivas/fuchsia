@@ -4,7 +4,14 @@ BanjoAst {
         "banjo.examples.example7": [
             Interface {
                 attributes: Attrs(
-                    []
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                "ddk-protocol"
+                            )
+                        }
+                    ]
                 ),
                 name: "Hello",
                 methods: [

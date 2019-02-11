@@ -6,7 +6,7 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "A ",
+                name: "A",
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -31,7 +31,7 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "B ",
+                name: "B",
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -56,7 +56,7 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "C ",
+                name: "C",
                 fields: [
                     StructField {
                         attributes: Attrs(
@@ -78,7 +78,7 @@ BanjoAst {
                 attributes: Attrs(
                     []
                 ),
-                name: "D ",
+                name: "D",
                 fields: [
                     StructField {
                         attributes: Attrs(

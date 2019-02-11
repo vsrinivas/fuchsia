@@ -13,14 +13,14 @@ macro_rules! assert_eq_trim {
     ($left:expr , $right:expr,) => {{
         let left_val_trim: String = $left.chars().filter(|c| *c != '\n').collect();
         let right_val_trim: String = $right.chars().filter(|c| *c != '\n').collect();
-        pretty_assertions::assert_eq!(left_val_trim, right_val_trim);
+        assert_eq!(left_val_trim, right_val_trim);
     }};
     ($left:expr , $right:expr) => {{
         match (&($left), &($right)) {
             (left_val, right_val) => {
                 let left_val_trim: String = left_val.chars().filter(|c| *c != '\n').collect();
                 let right_val_trim: String = right_val.chars().filter(|c| *c != '\n').collect();
-                pretty_assertions::assert_eq!(left_val_trim, right_val_trim);
+                assert_eq!(left_val_trim, right_val_trim);
             }
         }
     }};
@@ -30,7 +30,7 @@ macro_rules! assert_eq_trim {
                 if !(*left_val == *right_val) {
                     let left_val_trim: String = left_val.chars().filter(|c| *c != '\n').collect();
                     let right_val_trim: String = right_val.chars().filter(|c| *c != '\n').collect();
-                    pretty_assertions::assert_eq!(left_val_trim, right_val_trim);
+                    assert_eq!(left_val_trim, right_val_trim);
                 }
             }
         }

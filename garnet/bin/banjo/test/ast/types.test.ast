@@ -418,7 +418,7 @@ BanjoAst {
                         },
                         ident: Ident {
                             namespace: None,
-                            name: "s "
+                            name: "s"
                         },
                         val: Some(
                             Constant(

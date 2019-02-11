@@ -30,6 +30,8 @@ pub enum ParseError {
     InvalidDeps(String),
     #[fail(display = "Expected {:?} to resolve to a {:?}.", 0, 1)]
     InvalidConstType(Constant, Ty),
+    #[fail(display = "Declaration not found in namespace")]
+    UnknownDecl,
 }
 
 #[derive(PartialEq, Eq, Serialize, Default, Debug, Hash)]
@@ -53,9 +55,9 @@ impl Ident {
     pub fn new(raw_name: &str) -> Ident {
         let v: Vec<&str> = raw_name.rsplitn(2, '.').collect();
         if v.len() > 1 {
-            Ident { namespace: Some(v[1].to_string()), name: v[0].to_string() }
+            Ident { namespace: Some(v[1].trim().to_string()), name: v[0].trim().to_string() }
         } else {
-            Ident { namespace: None, name: raw_name.to_string() }
+            Ident { namespace: None, name: raw_name.trim().to_string() }
         }
     }
 
@@ -204,7 +206,7 @@ impl fmt::Display for Ty {
         match self {
             Ty::UInt32 => write!(f, "UInt32"),
             Ty::Identifier {..} => write!(f, "<Ident>"),
-            t => panic!("unknown type in Display conversion: {:?}", t),
+            _ => Err(fmt::Error)
         }
     }
 }
@@ -518,6 +520,45 @@ pub struct BanjoAst {
 }
 
 impl BanjoAst {
+    pub fn id_to_decl(&self, fq_ident: &Ident) -> Result<&Decl, ParseError> {
+        let (namespace, ident) = fq_ident.fq();
+        for decl in self.namespaces[&namespace.unwrap_or(self.primary_namespace.clone())].iter() {
+            match decl {
+                Decl::Interface { name, .. } => {
+                    if *name == ident {
+                        return Ok(decl);
+                    }
+                }
+                Decl::Struct { name, .. } => {
+                    if *name == ident {
+                        return Ok(decl);
+                    }
+                }
+                Decl::Union { name, .. } => {
+                    if *name == ident {
+                        return Ok(decl);
+                    }
+                }
+                Decl::Enum { name, .. } => {
+                    if *name == ident {
+                        return Ok(decl);
+                    }
+                }
+                Decl::Alias(to, _from) => {
+                    if to == fq_ident {
+                        return Ok(decl);
+                    }
+                }
+                Decl::Constant { name, .. } => {
+                    if *name == ident {
+                        return Ok(decl);
+                    }
+                }
+            }
+        }
+        return Err(ParseError::UnknownDecl);
+    }
+
     pub fn id_to_type(&self, fq_ident: &Ident) -> Ty {
         let (_, ident) = fq_ident.fq();
         match ident.as_str() {
@@ -633,7 +674,7 @@ impl BanjoAst {
                             attributes = Attrs::from_pair(inner_pair)?;
                         }
                         Rule::ident => {
-                            name = String::from(inner_pair.as_str());
+                            name = String::from(inner_pair.as_str().trim());
                         }
                         Rule::struct_field => fields.push(StructField::from_pair(inner_pair)?),
                         e => return Err(ParseError::UnexpectedToken(e)),
@@ -652,7 +693,7 @@ impl BanjoAst {
                             attributes = Attrs::from_pair(inner_pair)?;
                         }
                         Rule::ident => {
-                            name = String::from(inner_pair.as_str());
+                            name = String::from(inner_pair.as_str().trim());
                         }
                         Rule::integer_type => {
                             ty = Ty::from_pair(&inner_pair)?;
@@ -673,7 +714,7 @@ impl BanjoAst {
                             attributes = Attrs::from_pair(inner_pair)?;
                         }
                         Rule::ident => {
-                            name = String::from(inner_pair.as_str());
+                            name = String::from(inner_pair.as_str().trim());
                         }
                         Rule::union_field => fields.push(UnionField::from_pair(inner_pair)?),
                         e => return Err(ParseError::UnexpectedToken(e)),
