@@ -7,6 +7,8 @@
 #include <assert.h>
 #include <map>
 
+#include <zircon/compiler.h>
+
 namespace fidl {
 
 namespace {
@@ -203,7 +205,7 @@ Token Lexer::LexStringLiteral() {
             // This escaping logic is incorrect for the input: "\\"
             if (last != '\\')
                 return Finish(Token::Kind::kStringLiteral);
-        // Fall through.
+        __FALLTHROUGH;
         default:
             last = next;
         }
@@ -285,7 +287,7 @@ Token Lexer::Lex() {
                 Consume();
                 return Finish(Token::Kind::kArrow);
             }
-        // Fallthrough
+        __FALLTHROUGH;
         case '0':
         case '1':
         case '2':
