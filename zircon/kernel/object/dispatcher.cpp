@@ -90,10 +90,14 @@ Dispatcher::~Dispatcher() {
 // can control the lifetime of others. For example events do
 // not fall in this category.
 void Dispatcher::fbl_recycle() {
+    canary_.Assert();
+
     SafeDeleter::Delete(this);
 }
 
 zx_status_t Dispatcher::add_observer(StateObserver* observer) {
+    canary_.Assert();
+
     if (!is_waitable())
         return ZX_ERR_NOT_SUPPORTED;
     AddObserver(observer, nullptr);
@@ -142,6 +146,7 @@ template <typename LockType>
 void Dispatcher::AddObserverHelper(StateObserver* observer,
                                    const StateObserver::CountInfo* cinfo,
                                    Lock<LockType>* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
+    canary_.Assert();
     ZX_DEBUG_ASSERT(is_waitable());
     DEBUG_ASSERT(observer != nullptr);
 
@@ -160,10 +165,14 @@ void Dispatcher::AddObserverHelper(StateObserver* observer,
 }
 
 void Dispatcher::AddObserver(StateObserver* observer, const StateObserver::CountInfo* cinfo) {
+    canary_.Assert();
+
     AddObserverHelper(observer, cinfo, get_lock());
 }
 
 void Dispatcher::AddObserverLocked(StateObserver* observer, const StateObserver::CountInfo* cinfo) {
+    canary_.Assert();
+
     // Type tag and local NullLock to make lockdep happy.
     struct DispatcherAddObserverLocked {};
     DECLARE_LOCK(DispatcherAddObserverLocked, fbl::NullLock) lock;
@@ -172,6 +181,7 @@ void Dispatcher::AddObserverLocked(StateObserver* observer, const StateObserver:
 }
 
 void Dispatcher::RemoveObserver(StateObserver* observer) {
+    canary_.Assert();
     ZX_DEBUG_ASSERT(is_waitable());
 
     Guard<fbl::Mutex> guard{get_lock()};
@@ -180,6 +190,7 @@ void Dispatcher::RemoveObserver(StateObserver* observer) {
 }
 
 void Dispatcher::Cancel(const Handle* handle) {
+    canary_.Assert();
     ZX_DEBUG_ASSERT(is_waitable());
 
     CancelWithFunc(&observers_, get_lock(), [handle](StateObserver* obs) {
@@ -190,6 +201,7 @@ void Dispatcher::Cancel(const Handle* handle) {
 }
 
 bool Dispatcher::CancelByKey(const Handle* handle, const void* port, uint64_t key) {
+    canary_.Assert();
     ZX_DEBUG_ASSERT(is_waitable());
 
     StateObserver::Flags flags = CancelWithFunc(&observers_, get_lock(),
@@ -210,6 +222,8 @@ template <typename LockType>
 void Dispatcher::UpdateStateHelper(zx_signals_t clear_mask,
                                    zx_signals_t set_mask,
                                    Lock<LockType>* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
+    canary_.Assert();
+
     Dispatcher::ObserverList obs_to_remove;
     {
         Guard<LockType> guard{lock};
@@ -231,11 +245,15 @@ void Dispatcher::UpdateStateHelper(zx_signals_t clear_mask,
 
 void Dispatcher::UpdateState(zx_signals_t clear_mask,
                              zx_signals_t set_mask) {
+    canary_.Assert();
+
     UpdateStateHelper(clear_mask, set_mask, get_lock());
 }
 
 void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask,
                                    zx_signals_t set_mask) {
+    canary_.Assert();
+
     // Type tag and local NullLock to make lockdep happy.
     struct DispatcherUpdateStateLocked {};
     DECLARE_LOCK(DispatcherUpdateStateLocked, fbl::NullLock) lock;
@@ -243,6 +261,7 @@ void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask,
 }
 
 void Dispatcher::UpdateInternalLocked(ObserverList* obs_to_remove, zx_signals_t signals) {
+    canary_.Assert();
     ZX_DEBUG_ASSERT(is_waitable());
 
     for (auto it = observers_.begin(); it != observers_.end();) {
@@ -258,6 +277,8 @@ void Dispatcher::UpdateInternalLocked(ObserverList* obs_to_remove, zx_signals_t 
 }
 
 zx_status_t Dispatcher::SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t cookie) {
+    canary_.Assert();
+
     if (cookiejar == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
 
@@ -282,6 +303,8 @@ zx_status_t Dispatcher::SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_
 }
 
 zx_status_t Dispatcher::GetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t* cookie) {
+    canary_.Assert();
+
     if (cookiejar == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
 
@@ -296,6 +319,8 @@ zx_status_t Dispatcher::GetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_
 }
 
 zx_status_t Dispatcher::InvalidateCookieLocked(CookieJar* cookiejar) {
+    canary_.Assert();
+
     if (cookiejar == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
 
@@ -304,6 +329,8 @@ zx_status_t Dispatcher::InvalidateCookieLocked(CookieJar* cookiejar) {
 }
 
 zx_status_t Dispatcher::InvalidateCookie(CookieJar* cookiejar) {
+    canary_.Assert();
+
     Guard<fbl::Mutex> guard{get_lock()};
     return InvalidateCookieLocked(cookiejar);
 }

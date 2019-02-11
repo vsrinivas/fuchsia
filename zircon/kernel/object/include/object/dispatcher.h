@@ -221,6 +221,8 @@ private:
     void UpdateInternalLocked(ObserverList* obs_to_remove,
                               zx_signals_t signals) TA_REQ(get_lock());
 
+    fbl::Canary<fbl::magic("DISP")> canary_;
+
     const zx_koid_t koid_;
     uint32_t handle_count_ TA_GUARDED(Handle::ArenaLock::Get());
 
