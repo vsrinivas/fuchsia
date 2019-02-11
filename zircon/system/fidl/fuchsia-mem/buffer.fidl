@@ -4,11 +4,18 @@
 
 library fuchsia.mem;
 
+/// A Buffer for data whose size is not necessarily a multiple of the page
+/// size.
+///
+/// VMO objects have a physical size that is always a multiple of the page
+/// size. As such, VMO alone cannot serve as a buffer for arbitrarly sized
+/// data. |fuchsia.mem.Buffer| is a standard struct that aggregate the VMO
+/// and its size.
 struct Buffer {
-    // The vmo.
+    /// The vmo.
     handle<vmo> vmo;
 
-    // The size of the data in the vmo. This size must be smaller than the
-    // physical size of the vmo.
+    /// The size of the data in the vmo in bytes. This size must be smaller
+    /// than the physical size of the vmo.
     uint64 size;
 };
