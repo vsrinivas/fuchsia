@@ -41,7 +41,6 @@ config("compiler") {
     "dl",
     "pthread",
   ]
-  lib_dirs = [ rebase_path("//buildtools/${host_platform}/clang/lib") ]
   asmflags = cflags + cflags_c
 }
 
