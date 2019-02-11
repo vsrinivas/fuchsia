@@ -51,6 +51,8 @@ Thread::Thread(Process* process, zx_handle_t handle, zx_koid_t id)
   FXL_DCHECK(handle_ != ZX_HANDLE_INVALID);
   FXL_DCHECK(id_ != ZX_KOID_INVALID);
 
+  name_ = debugger_utils::GetObjectName(handle_);
+
   registers_ = Registers::Create(this);
   FXL_DCHECK(registers_.get());
 }
@@ -62,12 +64,21 @@ Thread::~Thread() {
 }
 
 std::string Thread::GetName() const {
-  return fxl::StringPrintf("%" PRId64 ".%" PRId64, process_->id(), id());
+  if (name_.empty()) {
+    return fxl::StringPrintf("%lu.%lu", process_->id(), id_);
+  }
+  return fxl::StringPrintf("%lu.%lu(%s)",
+                           process_->id(), id_, name_.c_str());
 }
 
 std::string Thread::GetDebugName() const {
-  return fxl::StringPrintf("%" PRId64 ".%" PRId64 "(%" PRIx64 ".%" PRIx64 ")",
-                           process_->id(), id(), process_->id(), id());
+  if (name_.empty()) {
+    return fxl::StringPrintf("%lu.%lu(%lx.%lx)",
+                             process_->id(), id_, process_->id(), id_);
+  }
+  return fxl::StringPrintf("%lu.%lu(%lx.%lx)(%s)",
+                           process_->id(), id_, process_->id(), id_,
+                           name_.c_str());
 }
 
 void Thread::set_state(State state) {

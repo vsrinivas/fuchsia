@@ -38,6 +38,7 @@ class Thread final {
   Process* process() const { return process_; }
   zx_handle_t handle() const { return handle_; }
   zx_koid_t id() const { return id_; }
+  const std::string& name() const { return name_; }
 
   std::string GetName() const;
 
@@ -126,6 +127,9 @@ class Thread final {
 
   // The thread ID (also the kernel object ID) of this thread.
   zx_koid_t id_;
+
+  // The name of the thread, from ZX_PROP_NAME.
+  std::string name_;
 
   // The arch::Registers object associated with this thread.
   std::unique_ptr<Registers> registers_;
