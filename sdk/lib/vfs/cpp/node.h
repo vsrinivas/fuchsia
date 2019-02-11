@@ -55,6 +55,11 @@ class Node {
   virtual zx_status_t SetAttr(uint32_t flags,
                               const fuchsia::io::NodeAttributes& attributes);
 
+  // Implementation of |fuchsia.io.Node/Clone|.
+  virtual void Clone(uint32_t flags, uint32_t parent_flags,
+                     fidl::InterfaceRequest<fuchsia::io::Node> object,
+                     async_dispatcher_t* dispatcher);
+
   // Validate flags on |Serve|.
   //
   // Returns |ZX_ERR_NOT_DIR| if |OPEN_FLAG_DIRECTORY| is set and |IsDirectory|
@@ -109,12 +114,12 @@ class Node {
 
  protected:
   // Called by |Serve| after validating flags and modes.
-  // This should be implemented by sub classes which doesn't create a connection
-  // class.
+  // This should be implemented by sub classes which doesn't create a
+  // connection class.
   //
   // Default implementation:
-  // Uses |CreateConnection| to create a connection appropriate for the concrete
-  // type of this object.
+  // Uses |CreateConnection| to create a connection appropriate for the
+  // concrete type of this object.
   virtual zx_status_t Connect(uint32_t flags, zx::channel request,
                               async_dispatcher_t* dispatcher);
 

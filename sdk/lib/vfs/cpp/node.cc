@@ -18,6 +18,8 @@ namespace {
 constexpr uint32_t kCommonAllowedFlags =
     fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_FLAG_NODE_REFERENCE;
 
+constexpr uint32_t FS_RIGHTS = 0x0000FFFF;
+
 }  // namespace
 
 bool IsValidName(const std::string& name) {
@@ -43,6 +45,16 @@ zx_status_t Node::Sync() { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t Node::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {
   return ZX_ERR_NOT_SUPPORTED;
+}
+
+void Node::Clone(uint32_t flags, uint32_t parent_flags,
+                 fidl::InterfaceRequest<fuchsia::io::Node> object,
+                 async_dispatcher_t* dispatcher) {
+  // TODO(ZX-3417): This is how libfs clones a node, we should fix this once we
+  // have clear picture what clone should do.
+  flags |= (parent_flags & (FS_RIGHTS | fuchsia::io::OPEN_FLAG_NODE_REFERENCE |
+                            fuchsia::io::OPEN_FLAG_APPEND));
+  Serve(flags, object.TakeChannel(), dispatcher);
 }
 
 zx_status_t Node::ValidateFlags(uint32_t flags) const {

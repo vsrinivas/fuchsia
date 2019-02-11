@@ -561,4 +561,54 @@ TEST_F(BufferedPseudoFileTest, CantReadNodeReferenceFile) {
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, file->Read(100, &status, &buffer));
 }
 
+TEST_F(BufferedPseudoFileTest, CanCloneFileConnectionAndReadAndWrite) {
+  const std::string str = "this is a test string";
+  auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
+  auto file = OpenReadWrite(file_wrapper.file(), file_wrapper.dispatcher());
+
+  fuchsia::io::FileSyncPtr cloned_file;
+  file->Clone(0, fidl::InterfaceRequest<fuchsia::io::Node>(
+                     cloned_file.NewRequest().TakeChannel()));
+
+  CloseFile(file);
+
+  AssertWrite(cloned_file, "It");
+
+  const std::string updated_str = "Itis is a test string";
+
+  AssertReadAt(cloned_file, 0, 100, updated_str);
+
+  // make sure file was not updated before conenction was closed.
+  ASSERT_EQ(file_wrapper.buffer(), str);
+
+  CloseFile(cloned_file);
+
+  // make sure file was updated
+  AssertFileWrapperState(file_wrapper, updated_str);
+}
+
+TEST_F(BufferedPseudoFileTest, NodeReferenceIsClonedAsNodeReference) {
+  const std::string str = "this is a test string";
+  auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
+  auto file =
+      OpenFile(file_wrapper.file(), fuchsia::io::OPEN_FLAG_NODE_REFERENCE,
+               file_wrapper.dispatcher());
+
+  fuchsia::io::FileSyncPtr cloned_file;
+  file->Clone(0, fidl::InterfaceRequest<fuchsia::io::Node>(
+                     cloned_file.NewRequest().TakeChannel()));
+
+  CloseFile(file);
+
+  // make sure node reference was opened
+  zx_status_t status;
+  fuchsia::io::NodeAttributes attr;
+  ASSERT_EQ(ZX_OK, cloned_file->GetAttr(&status, &attr));
+  ASSERT_EQ(ZX_OK, status);
+  ASSERT_NE(0u, attr.mode | fuchsia::io::MODE_TYPE_FILE);
+
+  std::vector<uint8_t> buffer;
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED, cloned_file->Read(100, &status, &buffer));
+}
+
 }  // namespace

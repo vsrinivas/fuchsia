@@ -79,6 +79,24 @@ TEST_F(ServiceTest, CanOpenAsNodeReferenceAndTestGetAttr) {
             attr.mode & fuchsia::io::MODE_TYPE_SERVICE);
 }
 
+TEST_F(ServiceTest, CanCloneNodeReference) {
+  fuchsia::io::NodeSyncPtr cloned_ptr;
+  {
+    fuchsia::io::NodeSyncPtr ptr;
+    dir_ptr()->Open(fuchsia::io::OPEN_FLAG_NODE_REFERENCE, 0, service_name(),
+                    ptr.NewRequest());
+
+    ptr->Clone(0, cloned_ptr.NewRequest());
+  }
+
+  zx_status_t s;
+  fuchsia::io::NodeAttributes attr;
+  cloned_ptr->GetAttr(&s, &attr);
+  EXPECT_EQ(ZX_OK, s);
+  EXPECT_EQ(fuchsia::io::MODE_TYPE_SERVICE,
+            attr.mode & fuchsia::io::MODE_TYPE_SERVICE);
+}
+
 TEST_F(ServiceTest, TestDescribe) {
   fuchsia::io::NodeSyncPtr ptr;
   dir_ptr()->Open(fuchsia::io::OPEN_FLAG_NODE_REFERENCE, 0, service_name(),

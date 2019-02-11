@@ -4,6 +4,7 @@
 
 #include <lib/vfs/cpp/connection.h>
 
+#include <lib/fdio/vfs.h>
 #include <lib/vfs/cpp/node.h>
 
 namespace vfs {
@@ -15,8 +16,7 @@ Connection::~Connection() = default;
 void Connection::Clone(Node* vn, uint32_t flags,
                        fidl::InterfaceRequest<fuchsia::io::Node> object,
                        async_dispatcher_t* dispatcher) {
-  // TODO: Check flags.
-  vn->Serve(flags, object.TakeChannel(), dispatcher);
+  vn->Clone(flags, flags_, std::move(object), dispatcher);
 }
 
 void Connection::Close(Node* vn, fuchsia::io::Node::CloseCallback callback) {

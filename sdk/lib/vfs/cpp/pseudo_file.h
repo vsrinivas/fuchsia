@@ -84,6 +84,10 @@ class BufferedPseudoFile : public File {
     // |Node| implementations:
     std::unique_ptr<Connection> Close(Connection* connection) override;
 
+    void Clone(uint32_t flags, uint32_t parent_flags,
+               fidl::InterfaceRequest<fuchsia::io::Node> object,
+               async_dispatcher_t* dispatcher) override;
+
     zx_status_t GetAttr(
         fuchsia::io::NodeAttributes* out_attributes) const override;
 

@@ -941,4 +941,35 @@ TEST_F(PseudoDirConnection, OpenFileWithInCorrectMode) {
   }
 }
 
+TEST_F(PseudoDirConnection, CanCloneDirectoryConnection) {
+  dir_.AddReadOnlyFile("file1", "file1");
+  auto ptr = dir_.Serve();
+  fuchsia::io::DirectorySyncPtr cloned_ptr;
+  ptr->Clone(0, fidl::InterfaceRequest<fuchsia::io::Node>(
+                    cloned_ptr.NewRequest().TakeChannel()));
+
+  fuchsia::io::NodeSyncPtr node_ptr;
+  AssertOpenPath(cloned_ptr, "file1", node_ptr, 0, 0);
+}
+
+TEST_F(PseudoDirConnection, NodeReferenceIsClonedAsNodeReference) {
+  fuchsia::io::DirectorySyncPtr cloned_ptr;
+  {
+    auto ptr = dir_.Serve(fuchsia::io::OPEN_FLAG_NODE_REFERENCE);
+
+    ptr->Clone(0, fidl::InterfaceRequest<fuchsia::io::Node>(
+                      cloned_ptr.NewRequest().TakeChannel()));
+  }
+  // make sure node reference was cloned
+  zx_status_t status;
+  fuchsia::io::NodeAttributes attr;
+  ASSERT_EQ(ZX_OK, cloned_ptr->GetAttr(&status, &attr));
+  ASSERT_EQ(ZX_OK, status);
+  ASSERT_NE(0u, attr.mode | fuchsia::io::MODE_TYPE_DIRECTORY);
+
+  std::vector<uint8_t> out_dirents;
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED,
+            cloned_ptr->ReadDirents(100, &status, &out_dirents));
+}
+
 }  // namespace
