@@ -18,11 +18,17 @@ struct acpi_hpet_descriptor {
     uint8_t sequence;
 };
 
+constexpr uint8_t kAcpiMaxNumaRegions = 5;
+
 struct AcpiNumaRegion {
-    bool initialized = false;
-    uint32_t domain;
     uint64_t base_address;
     uint64_t length;
+};
+
+struct AcpiNumaDomain {
+    uint32_t domain = 0xFF;
+    AcpiNumaRegion memory[kAcpiMaxNumaRegions];
+    uint8_t memory_count = 0;
 };
 
 // Wraps ACPICA functions (except init) to allow testing.
@@ -118,10 +124,10 @@ zx_status_t AcpiTables::VisitCpuNumaPairs(V visitor) const {
     ACPI_TABLE_SRAT* srat = (ACPI_TABLE_SRAT*)table;
 
     static constexpr size_t kSratHeaderSize = 48;
-    static constexpr size_t kMaxNumaRegions = 10;
-    AcpiNumaRegion regions[kMaxNumaRegions];
+    static constexpr size_t kMaxNumaDomains = 10;
+    AcpiNumaDomain domains[kMaxNumaDomains];
 
-    // First find all numa regions.
+    // First find all numa domains.
     size_t offset = kSratHeaderSize;
     while (offset < srat->Header.Length) {
         ACPI_SUBTABLE_HEADER* sub_header = (ACPI_SUBTABLE_HEADER*)((uint64_t)table + offset);
@@ -134,16 +140,16 @@ zx_status_t AcpiTables::VisitCpuNumaPairs(V visitor) const {
                 continue;
             }
 
-            DEBUG_ASSERT(mem->ProximityDomain < kMaxNumaRegions);
+            DEBUG_ASSERT(mem->ProximityDomain < kMaxNumaDomains);
 
-            auto& region = regions[mem->ProximityDomain];
-            region.base_address = mem->BaseAddress;
-            region.length = mem->Length;
-            region.domain = mem->ProximityDomain;
-            region.initialized = true;
+            auto& domain = domains[mem->ProximityDomain];
+            domain.memory[domain.memory_count++] = {
+                .base_address = mem->BaseAddress,
+                .length = mem->Length,
+            };
 
-            printf("Numa Region:{ domain: %u base: %#lx length: %lx }\n",
-                   mem->ProximityDomain, region.base_address, region.length);
+            printf("Numa Region:{ domain: %u base: %#llx length: %#llx (%llu) }\n",
+                   mem->ProximityDomain, mem->BaseAddress, mem->Length, mem->Length);
         }
     }
 
@@ -161,9 +167,9 @@ zx_status_t AcpiTables::VisitCpuNumaPairs(V visitor) const {
             }
             const auto domain = cpu->ProximityDomainLo |
                                 (*((uint32_t*)cpu->ProximityDomainHi) & 0xFFFFFF) << 8;
-            DEBUG_ASSERT(domain < kMaxNumaRegions);
-            DEBUG_ASSERT(regions[domain].initialized);
-            visitor(regions[domain], cpu->ApicId);
+            DEBUG_ASSERT_MSG(domain < kMaxNumaDomains, "%u < %lu", domain, kMaxNumaDomains);
+            domains[domain].domain = domain;
+            visitor(domains[domain], cpu->ApicId);
 
         } else if (type == ACPI_SRAT_TYPE_X2APIC_CPU_AFFINITY) {
             const auto* cpu = (acpi_srat_x2apic_cpu_affinity*)sub_header;
@@ -172,9 +178,8 @@ zx_status_t AcpiTables::VisitCpuNumaPairs(V visitor) const {
                 continue;
             }
 
-            DEBUG_ASSERT(cpu->ProximityDomain < kMaxNumaRegions);
-            DEBUG_ASSERT(regions[cpu->ProximityDomain].initialized);
-            visitor(regions[cpu->ProximityDomain], cpu->ApicId);
+            DEBUG_ASSERT(cpu->ProximityDomain < kMaxNumaDomains);
+            visitor(domains[cpu->ProximityDomain], cpu->ApicId);
         }
     }
 

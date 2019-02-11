@@ -103,23 +103,59 @@ bool test_hpet() {
     END_TEST;
 }
 
-bool test_numa() {
+bool test_numa_z840() {
     BEGIN_TEST;
     AcpiTables tables(&acpi_test_data::kZ840TableProvider);
     size_t domain_counts[2] = {0, 0};
-    AcpiNumaRegion regions[2];
-    EXPECT_EQ(ZX_OK, tables.VisitCpuNumaPairs([&](const AcpiNumaRegion& region, uint32_t apic_id) {
+    AcpiNumaDomain domains[2];
+    EXPECT_EQ(ZX_OK, tables.VisitCpuNumaPairs([&](const AcpiNumaDomain& region, uint32_t apic_id) {
         domain_counts[region.domain]++;
-        regions[region.domain] = region;
+        domains[region.domain] = region;
     }),
               "");
 
     ASSERT_EQ(28u, domain_counts[0], "");
     ASSERT_EQ(28u, domain_counts[1], "");
-    EXPECT_EQ(0u, regions[0].base_address, "");
-    EXPECT_EQ(0x1030000000u, regions[0].length, "");
-    EXPECT_EQ(0x1030000000u, regions[1].base_address, "");
-    EXPECT_EQ(0x1000000000u, regions[1].length, "");
+    ASSERT_EQ(1u, domains[0].memory_count, "");
+    ASSERT_EQ(1u, domains[1].memory_count, "");
+
+    EXPECT_EQ(0u, domains[0].memory[0].base_address, "");
+    EXPECT_EQ(0x1030000000u, domains[0].memory[0].length, "");
+
+    EXPECT_EQ(0x1030000000u, domains[1].memory[0].base_address, "");
+    EXPECT_EQ(0x1000000000u, domains[1].memory[0].length, "");
+    END_TEST;
+}
+
+bool test_numa_2970wx() {
+    BEGIN_TEST;
+    AcpiTables tables(&acpi_test_data::k2970wxTableProvider);
+    size_t domain_counts[4] = {0};
+    AcpiNumaDomain domains[4];
+    EXPECT_EQ(ZX_OK, tables.VisitCpuNumaPairs([&](const AcpiNumaDomain& region, uint32_t apic_id) {
+        domain_counts[region.domain]++;
+        domains[region.domain] = region;
+    }),"");
+
+    ASSERT_EQ(12u, domain_counts[0], "");
+    ASSERT_EQ(12u, domain_counts[1], "");
+    ASSERT_EQ(12u, domain_counts[2], "");
+    ASSERT_EQ(12u, domain_counts[3], "");
+    ASSERT_EQ(3u, domains[0].memory_count, "");
+    ASSERT_EQ(0u, domains[1].memory_count, "");
+    ASSERT_EQ(1u, domains[2].memory_count, "");
+    ASSERT_EQ(0u, domains[3].memory_count, "");
+
+    EXPECT_EQ(0x0u, domains[0].memory[0].base_address, "");
+    EXPECT_EQ(0xa0000u, domains[0].memory[0].length, "");
+    EXPECT_EQ(0x100000u, domains[0].memory[1].base_address, "");
+    EXPECT_EQ(0x7ff00000u, domains[0].memory[1].length, "");
+    EXPECT_EQ(0x100000000u, domains[0].memory[2].base_address, "");
+    EXPECT_EQ(0x180000000u, domains[0].memory[2].length, "");
+
+    EXPECT_EQ(0x280000000u, domains[2].memory[0].base_address, "");
+    EXPECT_EQ(0x200000000u, domains[2].memory[0].length, "");
+
     END_TEST;
 }
 
@@ -129,5 +165,6 @@ UNITTEST("Enumerate cpus using HP z840 data.", test_cpus_z840)
 UNITTEST("Enumerate io_apic_ids.", test_io)
 UNITTEST("Enumerate interrupt_source_overrides.", test_interrupt_source_overrides)
 UNITTEST("Lookup HPET.", test_hpet)
-UNITTEST("Enumerate NUMA regions.", test_numa)
+UNITTEST("Enumerate NUMA regions using HP z840 data.", test_numa_z840)
+UNITTEST("Enumerate NUMA regions using Threadripper 2970 data.", test_numa_2970wx)
 UNITTEST_END_TESTCASE(acpi_tables_tests, "acpi_tables", "Test parsing of acpi tables.");

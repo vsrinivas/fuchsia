@@ -5,10 +5,10 @@
 #ifndef KERNEL_ARCH_X86_CPUID_H_
 #define KERNEL_ARCH_X86_CPUID_H_
 
+#include <assert.h>
 #include <cstdint>
 #include <cstring>
 #include <optional>
-#include <assert.h>
 
 namespace cpu_id {
 
@@ -36,10 +36,10 @@ struct Registers {
     uint32_t reg[4];
 };
 
-template<size_t count>
+template <size_t count>
 struct SubLeaves {
-  Registers subleaf[count];
-  static constexpr size_t size = count;
+    Registers subleaf[count];
+    static constexpr size_t size = count;
 };
 
 // Extracts the manufacturer id string from call with EAX=0.
@@ -54,7 +54,7 @@ public:
     // How many chars are in a manufacturer id.
     static constexpr size_t kManufacturerIdLength = 12;
 
-    ManufacturerInfo(Registers leaf0);
+    ManufacturerInfo(Registers leaf0, Registers leaf8_0);
 
     Manufacturer manufacturer() const;
 
@@ -66,8 +66,13 @@ public:
     // Highest leaf (EAX parameter to cpuid) that this processor supports.
     size_t highest_cpuid_leaf() const;
 
+    // Highest leaf (EAX parameter to cpuid) that this processor supports in the
+    // extended range (> 0x80000000);
+    size_t highest_extended_cpuid_leaf() const;
+
 private:
-    const Registers registers_;
+    const Registers leaf0_;
+    const Registers leaf8_0_;
 };
 
 // Extracts the processor signature/id from call with EAX=1.
@@ -260,7 +265,7 @@ public:
         INVALID,
         SMT,
         CORE,
-        PACKAGE
+        DIE,
     };
     struct Level {
         LevelType type = LevelType::INVALID;
@@ -288,11 +293,12 @@ public:
         uint64_t size_bytes = 0;
     };
 
-    // Leaf4 being provided should represent the highest level of cache.
+    // Leaf4 and 8_1D being provided should represent the highest level of cache.
     // Intel labels leaf 4 as "Deterministic Cache Parameters" and leaf 0xB as
     // "Processor Topology".
     Topology(ManufacturerInfo info, Features features,
-             Registers leaf4, SubLeaves<kEaxBSubleaves> leafB);
+             Registers leaf4, SubLeaves<kEaxBSubleaves> leafB,
+             Registers leaf8_1, Registers leaf8_1D, Registers leaf8_1E);
 
     // Provides details for each level of this system's topology.
     // Returns nullopt if unable to parse topology from cpuid data.
@@ -304,17 +310,20 @@ public:
 protected:
     // Used for testing.
     Topology()
-        : info_({}), features_({}, {}, {}) {}
+        : info_({}, {}), features_({}, {}, {}) {}
 
 private:
     std::optional<Levels> IntelLevels() const;
-
+    std::optional<Levels> AmdLevels() const;
 
     ManufacturerInfo info_;
     Features features_;
 
     Registers leaf4_;
     SubLeaves<kEaxBSubleaves> leafB_;
+    Registers leaf8_8_;
+    Registers leaf8_1D_;
+    Registers leaf8_1E_;
 };
 
 // Wraps the CPUID instruction on x86, provides helpers to parse the output and

@@ -8,13 +8,14 @@
 
 #include <algorithm>
 
+#include <ktl/unique_ptr.h>
 #include <lib/system-topology.h>
 #include <pow2.h>
 #include <printf.h>
 #include <trace.h>
-#include <ktl/unique_ptr.h>
 
 #define LOCAL_TRACE 0
+
 namespace x86 {
 namespace {
 
@@ -126,6 +127,24 @@ public:
         return ZX_OK;
     }
 
+    zx_status_t GetCore(int index, Core** core, fbl::AllocChecker* checker) {
+        auto status = GrowVector(index + 1, &cores_, checker);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        if (!cores_[index]) {
+            cores_[index].reset(new (checker) Core());
+            if (!checker->check()) {
+                return ZX_ERR_NO_MEMORY;
+            }
+        }
+
+        *core = cores_[index].get();
+
+        return ZX_OK;
+    }
+
     void SetFlatParent(uint16_t parent_index) {
         node_.parent_index = parent_index;
     }
@@ -134,30 +153,34 @@ public:
 
     fbl::Vector<ktl::unique_ptr<SharedCache>>& caches() { return caches_; }
 
-    void SetNuma(const AcpiNumaRegion& numa) {
+    fbl::Vector<ktl::unique_ptr<Core>>& cores() { return cores_; }
+
+    void SetNuma(const AcpiNumaDomain& numa) {
         numa_ = {numa};
     }
 
-    const std::optional<AcpiNumaRegion>& numa() const { return numa_; }
+    const std::optional<AcpiNumaDomain>& numa() const { return numa_; }
 
 private:
     zbi_topology_node_t node_;
     fbl::Vector<ktl::unique_ptr<SharedCache>> caches_;
-    std::optional<AcpiNumaRegion> numa_;
+    fbl::Vector<ktl::unique_ptr<Core>> cores_;
+    std::optional<AcpiNumaDomain> numa_;
 };
 
 class ApicDecoder {
 public:
-    ApicDecoder(uint8_t smt, uint8_t core, uint8_t cache)
-        : smt_bits_(smt), core_bits_(core), cache_shift_(cache){}
+    ApicDecoder(uint8_t smt, uint8_t core, uint8_t die, uint8_t cache)
+        : smt_bits_(smt), core_bits_(core), die_bits_(die), cache_shift_(cache) {}
 
     static std::optional<ApicDecoder> From(const cpu_id::CpuId& cpuid) {
-        uint8_t smt_bits = 0, core_bits = 0, cache_shift = 0;
+        uint8_t smt_bits = 0, core_bits = 0, die_bits = 0, cache_shift = 0;
 
         const auto topology = cpuid.ReadTopology();
         const auto cache = topology.highest_level_cache();
         cache_shift = cache.shift_width;
-        LTRACEF("Top cache level: %u size: %lu\n", cache.level, cache.size_bytes);
+        LTRACEF("Top cache level: %u shift: %u size: %lu\n",
+                cache.level, cache.shift_width, cache.size_bytes);
 
         const auto levels_opt = topology.levels();
         if (!levels_opt) {
@@ -174,13 +197,16 @@ public:
             case Topology::LevelType::CORE:
                 core_bits = level.id_bits;
                 break;
+            case Topology::LevelType::DIE:
+                die_bits = level.id_bits;
+                break;
             default:
                 break;
             }
         }
-        LTRACEF("smt_bits: %u core_bits: %u cache_shift: %u \n",
-                smt_bits, core_bits, cache_shift);
-        return {ApicDecoder(smt_bits, core_bits, cache_shift)};
+        LTRACEF("smt_bits: %u core_bits: %u die_bits: %u cache_shift: %u \n",
+                smt_bits, core_bits, die_bits, cache_shift);
+        return {ApicDecoder(smt_bits, core_bits, die_bits, cache_shift)};
     }
 
     uint32_t smt_id(uint32_t apic_id) const {
@@ -192,13 +218,22 @@ public:
     }
 
     uint32_t die_id(uint32_t apic_id) const {
-        // The die (or package) is defined by Intel as being what is left over
-        // after all other level ids are extracted.
-        return apic_id >> (smt_bits_ + core_bits_);
+        if (die_bits_ == 0) {
+            // The die (or package) is defined by Intel as being what is left over
+            // after all other level ids are extracted.
+            return apic_id >> (smt_bits_ + core_bits_);
+        } else {
+            // AMD can explicitly define a die.
+            return (apic_id >> (smt_bits_ + core_bits_)) & ToMask(die_bits_);
+        }
     }
 
     uint32_t cache_id(uint32_t apic_id) const {
-        return apic_id >> cache_shift_;
+        return (cache_shift_ == 0) ? 0 : apic_id >> cache_shift_;
+    }
+
+    bool has_cache_info() const {
+        return cache_shift_ > 0;
     }
 
 private:
@@ -208,6 +243,7 @@ private:
 
     const uint8_t smt_bits_;
     const uint8_t core_bits_;
+    const uint8_t die_bits_;
     const uint8_t cache_shift_;
 };
 
@@ -254,13 +290,17 @@ zx_status_t GenerateTree(const cpu_id::CpuId& cpuid, const AcpiTables& acpi_tabl
         }
 
         SharedCache* cache = nullptr;
-        status = die->GetCache(decoder.cache_id(apic_id), &cache, &checker);
-        if (status != ZX_OK) {
-            return status;
+        if (decoder.has_cache_info()) {
+            status = die->GetCache(decoder.cache_id(apic_id), &cache, &checker);
+            if (status != ZX_OK) {
+                return status;
+            }
         }
 
         Core* core = nullptr;
-        status = cache->GetCore(decoder.core_id(apic_id), &core, &checker);
+        status = (cache != nullptr)
+                     ? cache->GetCore(decoder.core_id(apic_id), &core, &checker)
+                     : die->GetCore(decoder.core_id(apic_id), &core, &checker);
         if (status != ZX_OK) {
             return status;
         }
@@ -269,7 +309,8 @@ zx_status_t GenerateTree(const cpu_id::CpuId& cpuid, const AcpiTables& acpi_tabl
         core->SetPrimary(is_primary);
         core->AddThread(logical_id, apic_id);
 
-        LTRACEF("apic: %X logical: %u package: %u \n", apic_id, logical_id, die_id);
+        LTRACEF("apic: %X logical: %u die: %u cache: %u core: %u \n",
+                apic_id, logical_id, die_id, decoder.cache_id(apic_id), decoder.core_id(apic_id));
     }
 
     return ZX_OK;
@@ -278,20 +319,23 @@ zx_status_t GenerateTree(const cpu_id::CpuId& cpuid, const AcpiTables& acpi_tabl
 zx_status_t AttachNumaInformation(const AcpiTables& acpi_tables, const ApicDecoder& decoder,
                                   fbl::Vector<ktl::unique_ptr<Die>>* dies) {
     return acpi_tables.VisitCpuNumaPairs(
-        [&decoder, dies](const AcpiNumaRegion& region, uint32_t apic_id) {
+        [&decoder, dies](const AcpiNumaDomain& domain, uint32_t apic_id) {
             auto& die = (*dies)[decoder.die_id(apic_id)];
             if (die && !die->numa()) {
-                die->SetNuma(region);
+                die->SetNuma(domain);
             }
         });
 }
 
-zbi_topology_node_t ToFlatNode(const AcpiNumaRegion& numa) {
+zbi_topology_node_t ToFlatNode(const AcpiNumaDomain& numa) {
     zbi_topology_node_t flat;
     flat.entity_type = ZBI_TOPOLOGY_ENTITY_NUMA_REGION;
     flat.parent_index = ZBI_TOPOLOGY_NO_PARENT;
-    flat.entity.numa_region.start_address = numa.base_address;
-    flat.entity.numa_region.end_address = numa.base_address + numa.length;
+    if (numa.memory_count > 0) {
+        const auto& mem = numa.memory[0];
+        flat.entity.numa_region.start_address = mem.base_address;
+        flat.entity.numa_region.end_address = mem.base_address + mem.length;
+    }
     return flat;
 }
 
@@ -318,6 +362,18 @@ zx_status_t FlattenTree(const fbl::Vector<ktl::unique_ptr<Die>>& dies,
             return ZX_ERR_NO_MEMORY;
         }
 
+        auto insert_core = [&](const ktl::unique_ptr<Core>& core) {
+            if (!core) {
+                return ZX_OK;
+            }
+
+            flat->push_back(core->node(), &checker);
+            if (!checker.check()) {
+                return ZX_ERR_NO_MEMORY;
+            }
+            return ZX_OK;
+        };
+
         for (auto& cache : die->caches()) {
             if (!cache) {
                 continue;
@@ -330,16 +386,26 @@ zx_status_t FlattenTree(const fbl::Vector<ktl::unique_ptr<Die>>& dies,
                 return ZX_ERR_NO_MEMORY;
             }
 
+            // Add cores that are on a die with shared cache.
             for (auto& core : cache->cores()) {
                 if (!core) {
                     continue;
                 }
 
                 core->SetFlatParent(cache_flat_index);
-                flat->push_back(core->node(), &checker);
-                if (!checker.check()) {
-                    return ZX_ERR_NO_MEMORY;
+                auto status = insert_core(core);
+                if (status != ZX_OK) {
+                    return status;
                 }
+            }
+        }
+
+        // Add cores directly attached to die.
+        for (auto& core : die->cores()) {
+            core->SetFlatParent(die_flat_index);
+            auto status = insert_core(core);
+            if (status != ZX_OK) {
+                return status;
             }
         }
     }
@@ -354,6 +420,7 @@ zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid, const AcpiTables& a
     if (!decoder_opt) {
         return ZX_ERR_INTERNAL;
     }
+
     const auto& decoder = *decoder_opt;
     fbl::Vector<ktl::unique_ptr<Die>> dies;
     auto status = GenerateTree(cpuid, acpi_tables, decoder, &dies);
