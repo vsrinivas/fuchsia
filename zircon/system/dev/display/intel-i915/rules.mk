@@ -35,13 +35,16 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
-MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-backlight
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-hardware-backlight \
+    system/fidl/fuchsia-sysmem
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-display-controller \
     system/banjo/ddk-protocol-i2cimpl \
     system/banjo/ddk-protocol-intelgpucore \
     system/banjo/ddk-protocol-pci \
+    system/banjo/ddk-protocol-sysmem \
 
 include make/module.mk
 
