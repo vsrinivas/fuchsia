@@ -1,4 +1,7 @@
 disabled_for_asan = [
+  # CF-584
+  "/pkgfs/packages/components_binary_test/0/test/components_binary_argv_test",
+
   # DNO-408 (flaky)
   "/pkgfs/packages/debugger_utils_tests/0/test/debugger_utils_tests",
 
@@ -7,6 +10,9 @@ disabled_for_asan = [
 
   # DNO-409
   "/pkgfs/packages/garnet_lib_tests/0/test/garnet_lib_unittests",
+
+  # CF-586
+  "/pkgfs/packages/iquery_golden_test/0/test/iquery_golden_test",
 
   # TC-351
   "/pkgfs/packages/libc-tests/0/test/libc-tests",
@@ -27,6 +33,9 @@ disabled_for_asan = [
   "/pkgfs/packages/puppet_master_unittests/0/test/remove_mod_command_runner_unittest",
   "/pkgfs/packages/puppet_master_unittests/0/test/set_kind_of_proto_story_option_command_runner_unittest",
   "/pkgfs/packages/puppet_master_unittests/0/test/set_link_value_command_runner_unittest",
+
+  # CF-585
+  "/pkgfs/packages/run_tests/0/test/run_return_value_shell_test",
 
   # SCN-1250
   "/pkgfs/packages/scenic_tests/0/test/input_unittests",
