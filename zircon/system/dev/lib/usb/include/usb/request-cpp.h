@@ -39,6 +39,12 @@ namespace usb {
 // usb::RequestQueue provides a queue interface for tracking usb::Request and
 // usb::UnownedRequest objects.
 //
+// usb::RequestList provides a list interface for tracking usb::Request and
+// usb::UnownedRequest objects.
+//
+// A Request or UnownedRequest cannot be stored simultaneously in both a
+// usb::RequestQueue and usb::RequestList in the same driver layer.
+//
 // Available methods for both Request and UnownedRequest include:
 //
 //   usb_request_t* request(); // accessor for inner type.
@@ -91,6 +97,24 @@ namespace usb {
 // }
 //
 ///////////////////////////////////////////////////////////////////////////////
+// Example: Add incoming requests into a usb::RequestList:
+//
+// class Driver {
+// public:
+//     <...>
+// private:
+//     usb::UnownedRequestList<> request_;
+//     const size_t parent_req_size_;
+// };
+//
+// void Driver::UsbRequestQueue(usb_request_t* req, const usb_request_callback_t* completion_cb) {
+//     auto opt_unowned = usb::UnownedRequest<>(op, cb, parent_req_size);
+//     auto unowned = *std::move(opt_unowned);
+//     request_.push_back(&unowned);
+//     // Pass unowned_.take() to next layer.
+// }
+//
+///////////////////////////////////////////////////////////////////////////////
 // Example: Using private context only visible to your driver:
 //
 // struct PrivateStorage {
@@ -100,8 +124,8 @@ namespace usb {
 //
 // using UsbRequest = usb::UnownedRequest<PrivateStorage>;
 //
-// void Driver::UsbReqeustQueue(usb_request_t* req, const usb_request_t* completion_cb) {
-//     UsbReqeust usb_req(op, cb, parent_req_size_));
+// void Driver::UsbRequestQueue(usb_request_t* req, const usb_request_t* completion_cb) {
+//     UsbRequest usb_req(op, cb, parent_req_size_));
 //     ZX_DEBUG_ASSERT(usb_req.request()->command == USB_ERASE);
 //     usb_req.private_storage()->valid = true;
 //     usb_req.private_storage()->count_metric += 1;
@@ -287,8 +311,9 @@ public:
                                                   OperationTraits, CallbackTraits, Storage>;
 
     UnownedRequest(usb_request_t* request, const usb_request_complete_t& complete_cb,
-                   size_t parent_req_size)
-        : BaseClass(request, complete_cb.callback, complete_cb.ctx, parent_req_size) {}
+                   size_t parent_req_size, bool allow_destruct = true)
+        : BaseClass(request, complete_cb.callback, complete_cb.ctx, parent_req_size,
+                    allow_destruct) {}
 
     UnownedRequest(usb_request_t* request, size_t parent_req_size, bool allow_destruct = true)
         : BaseClass(request, parent_req_size, allow_destruct) {}
@@ -352,5 +377,13 @@ using UnownedRequestQueue = operation::UnownedOperationQueue<UnownedRequest<Stor
 
 template <typename Storage = void>
 using RequestQueue = operation::OperationQueue<Request<Storage>, OperationTraits, Storage>;
+
+template <typename Storage = void>
+using UnownedRequestList = operation::UnownedOperationList<UnownedRequest<Storage>,
+                                                           OperationTraits,
+                                                           CallbackTraits, Storage>;
+
+template <typename Storage = void>
+using RequestList = operation::OperationList<Request<Storage>, OperationTraits, Storage>;
 
 } // namespace usb

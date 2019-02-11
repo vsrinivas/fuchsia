@@ -550,6 +550,8 @@ public:
     BaseList& operator=(BaseList&& other) {
         list_.clear();
         list_.swap(other.list_);
+        size_ = other.size_;
+        other.size_ = 0;
         return *this;
     }
 

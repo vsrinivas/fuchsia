@@ -12,6 +12,7 @@ MODULE_NAME := usb-unittest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.cpp \
+    $(LOCAL_DIR)/usb-request-list-test.cpp \
     $(LOCAL_DIR)/usb-request-pool-test.cpp \
     $(LOCAL_DIR)/usb-request-queue-test.cpp \
     $(LOCAL_DIR)/usb-request-test.cpp \
