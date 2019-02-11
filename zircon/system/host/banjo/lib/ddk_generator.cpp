@@ -265,6 +265,7 @@ void EmitMethodOutParamDecl(std::ostream* file, const DdkGenerator::Member& memb
         for (uint32_t array_count : member.array_counts) {
             *file << "[" << array_count << "]";
         }
+        break;
     case flat::Type::Kind::kVector: {
         const auto buffer_name = emit_name ? " out_" + NameBuffer(member) : "";
         const auto count_name = emit_name ? " " + NameCount(member) : "";
