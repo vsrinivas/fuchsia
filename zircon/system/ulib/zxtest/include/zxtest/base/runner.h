@@ -9,6 +9,7 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <zxtest/base/assertion.h>
+#include <zxtest/base/environment.h>
 #include <zxtest/base/event-broadcaster.h>
 #include <zxtest/base/observer.h>
 #include <zxtest/base/reporter.h>
@@ -177,6 +178,11 @@ public:
         return test_cases_[test_ref.test_case_index].GetTestInfo(test_ref.test_index);
     }
 
+    // Adds an environment to be set up and tear down for each iteration.
+    void AddGlobalTestEnvironment(std::unique_ptr<Environment> environment) {
+        environments_.push_back(std::move(environment));
+    }
+
     // Provides an entry point for asertions. The runner will propagate the assertion to the
     // interested parties. This is needed in a global scope, because helper methods do not have
     // access to a |Test| instance and legacy tests are not part of a Fixture, but wrapped by one.
@@ -196,6 +202,9 @@ private:
                          internal::SetUpTestCaseFn set_up, internal::TearDownTestCaseFn tear_down);
 
     void EnforceOptions(const Runner::Options& options);
+
+    // List of registered environments.
+    fbl::Vector<std::unique_ptr<Environment>> environments_;
 
     // List of registered test cases.
     fbl::Vector<TestCase> test_cases_;

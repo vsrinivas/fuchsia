@@ -102,6 +102,11 @@ int Runner::Run(const Runner::Options& options) {
     for (int i = 0; i < options.repeat && !end_execution; ++i) {
         event_broadcaster_.OnIterationStart(*this, i);
         event_broadcaster_.OnEnvironmentSetUp(*this);
+        // Set them up in order.
+        for (auto& environment : environments_) {
+            environment->SetUp();
+        }
+
         for (auto& test_case : test_cases_) {
             if (options.shuffle) {
                 test_case.Shuffle(options.seed);
@@ -122,6 +127,11 @@ int Runner::Run(const Runner::Options& options) {
             }
         }
         event_broadcaster_.OnEnvironmentTearDown(*this);
+
+        // Tear them down in reverse order
+        for (size_t i = environments_.size(); i > 0; --i) {
+            environments_[i - 1]->TearDown();
+        }
         event_broadcaster_.OnIterationEnd(*this, i);
     }
     event_broadcaster_.OnProgramEnd(*this);

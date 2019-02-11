@@ -12,6 +12,7 @@
 #include <utility>
 
 #include <zircon/assert.h>
+#include <zxtest/base/environment.h>
 #include <zxtest/base/reporter.h>
 #include <zxtest/base/runner.h>
 #include <zxtest/base/test-driver.h>
@@ -144,6 +145,59 @@ void RunnerRunAllTests() {
     // Check that both tests were executed once.
     ZX_ASSERT_MSG(test_counter == 1, "test was not executed.\n");
     ZX_ASSERT_MSG(test_2_counter == 1, "test_2 was not executed.\n");
+}
+
+class FakeEnv : public zxtest::Environment {
+public:
+    FakeEnv(int* curr_setup, int* curr_tear_down) {
+        this->curr_setup_ = curr_setup;
+        this->curr_tear_down_ = curr_tear_down;
+    }
+    ~FakeEnv() final {}
+
+    void SetUp() final {
+        set_up_order_ = *curr_setup_;
+        ++(*curr_setup_);
+    }
+
+    void TearDown() final {
+        tear_down_order_ = *curr_tear_down_;
+        ++(*curr_tear_down_);
+    }
+
+    int set_up_order() const { return set_up_order_; }
+    int tear_down_order() const { return tear_down_order_; }
+
+private:
+    int set_up_order_ = 0;
+    int tear_down_order_ = 0;
+    int* curr_setup_ = nullptr;
+    int* curr_tear_down_ = nullptr;
+};
+
+void RunnerSetUpAndTearDownEnvironmentsTests() {
+    Runner runner(Reporter(/*stream*/ nullptr));
+    int test_counter = 0;
+    int tear_down_counter = 1;
+    int set_up_counter = 1;
+    std::unique_ptr<FakeEnv> first = std::make_unique<FakeEnv>(&set_up_counter, &tear_down_counter);
+    std::unique_ptr<FakeEnv> second =
+        std::make_unique<FakeEnv>(&set_up_counter, &tear_down_counter);
+    FakeEnv* first_ptr = first.get();
+    FakeEnv* second_ptr = second.get();
+
+    [[maybe_unused]] TestRef ref = runner.RegisterTest<Test, FakeTest>(
+        kTestCaseName, kTestName, kFileName, kLineNumber, FakeTest::MakeFactory(&test_counter));
+
+    runner.AddGlobalTestEnvironment(std::move(first));
+    runner.AddGlobalTestEnvironment(std::move(second));
+
+    ZX_ASSERT_MSG(runner.Run(Runner::kDefaultOptions) == 0, "Runner::Run encountered test errors.");
+
+    ZX_ASSERT_MSG(first_ptr->set_up_order() < second_ptr->set_up_order(),
+                  "Environment::SetUp is not following registration order.");
+    ZX_ASSERT_MSG(first_ptr->tear_down_order() > second_ptr->tear_down_order(),
+                  "Enironment::TearDown is not following reverse registration order.");
 }
 
 void RunnerRunOnlyFilteredTests() {

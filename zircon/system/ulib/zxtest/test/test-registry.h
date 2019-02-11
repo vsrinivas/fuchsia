@@ -99,6 +99,7 @@ void RunnerRegisterTest();
 void RunnerRegisterTestWithCustomFactory();
 void RunnerRunAllTests();
 void RunnerRunAllTestsSameTestCase();
+void RunnerSetUpAndTearDownEnvironmentsTests();
 void RunnerRunOnlyFilteredTests();
 void RunnerRepeatTests();
 void RunnerListTests();
@@ -168,6 +169,7 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(RunnerRegisterTestWithCustomFactory),
     RUN_TEST(RunnerRunAllTests),
     RUN_TEST(RunnerRunAllTestsSameTestCase),
+    RUN_TEST(RunnerSetUpAndTearDownEnvironmentsTests),
     RUN_TEST(RunnerRunOnlyFilteredTests),
     RUN_TEST(RunnerListTests),
     RUN_TEST(TestDriverImplFatalFailureEndsTest),
