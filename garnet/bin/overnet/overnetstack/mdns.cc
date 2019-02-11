@@ -13,6 +13,16 @@ namespace overnetstack {
 static const char* kServiceName =
     "__overnet__mdns__test__1db2_6473_a3b1_500c__._udp.";
 
+static fuchsia::mdns::ControllerPtr Connect(
+    component::StartupContext* startup_context, const char* why) {
+  auto svc =
+      startup_context->ConnectToEnvironmentService<fuchsia::mdns::Controller>();
+  svc.set_error_handler([why](zx_status_t status) {
+    FXL_LOG(DFATAL) << why << " mdns failure: " << zx_status_get_string(status);
+  });
+  return svc;
+}
+
 class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
  public:
   Impl(UdpNub* nub) : nub_(nub) {}
@@ -20,8 +30,7 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
   void Begin(component::StartupContext* startup_context) {
     std::cerr << "Querying mDNS for overnet services [" << kServiceName
               << "]\n";
-    auto svc = startup_context
-                   ->ConnectToEnvironmentService<fuchsia::mdns::Controller>();
+    auto svc = Connect(startup_context, "Introducer");
     svc->SubscribeToService(kServiceName, subscription_.NewRequest());
     RunLoop(0);
   }
@@ -198,9 +207,7 @@ MdnsIntroducer::~MdnsIntroducer() {}
 class MdnsAdvertisement::Impl {
  public:
   Impl(component::StartupContext* startup_context, UdpNub* nub)
-      : controller_(
-            startup_context
-                ->ConnectToEnvironmentService<fuchsia::mdns::Controller>()),
+      : controller_(Connect(startup_context, "Advertisement")),
         node_id_(nub->node_id()) {
     std::cerr << "Requesting mDNS advertisement for " << node_id_ << " on port "
               << nub->port() << "\n";
