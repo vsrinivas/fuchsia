@@ -6,15 +6,16 @@ use failure::{Error, ResultExt};
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_mediaplayer::TimelineFunction;
 use fidl_fuchsia_mediasession::{
-    ActiveSession, ControllerControlHandle, ControllerEvent, ControllerMarker,
-    ControllerRegistryEvent, ControllerRegistryEventStream, ControllerRegistryMarker,
-    ControllerRegistryProxy, ControllerRequest, ControllerRequestStream, PlaybackState,
-    PlaybackStatus, PublisherMarker, PublisherProxy, RepeatMode,
+    ControllerControlHandle, ControllerEvent, ControllerMarker, ControllerRegistryEvent,
+    ControllerRegistryEventStream, ControllerRegistryMarker, ControllerRegistryProxy,
+    ControllerRequest, ControllerRequestStream, PlaybackState, PlaybackStatus, PublisherMarker,
+    PublisherProxy, RepeatMode,
 };
 use fuchsia_app as app;
 use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use futures::stream::{FusedStream, TryStreamExt};
-use std::collections::HashMap;
+use zx::AsHandleRef;
 
 const MEDIASESSION_URL: &str = "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cmx";
 
@@ -81,13 +82,16 @@ impl TestService {
         Ok(Self { app: mediasession, publisher, controller_registry, active_session_changes })
     }
 
-    async fn expect_active_session(&mut self, expected: Option<u64>) {
+    async fn expect_active_session(&mut self, expected: Option<zx::Koid>) {
         assert!(!self.active_session_changes.is_terminated());
         let ControllerRegistryEvent::OnActiveSession { active_session: actual } =
             await!(self.active_session_changes.try_next())
                 .expect("Reported active session.")
                 .expect("Active session stream");
-        assert_eq!(actual, expected.map(|session_id| Box::new(ActiveSession { session_id })));
+        let actual = actual.map(|active_session| {
+            active_session.session_id.as_handle_ref().get_koid().expect("Handle actual KOID")
+        });
+        assert_eq!(actual, expected);
     }
 }
 
@@ -165,7 +169,9 @@ async fn service_reports_published_active_session() {
         .control_handle
         .send_on_playback_status_changed(&mut default_playback_status())
         .expect("To update playback status.");
-    await!(test_service.expect_active_session(Some(our_session_id)));
+    await!(test_service.expect_active_session(Some(
+        our_session_id.as_handle_ref().get_koid().expect("Handle expected KOID")
+    )));
 }
 
 #[fasync::run_singlethreaded]
@@ -185,7 +191,9 @@ async fn service_reports_changed_active_session() {
             .control_handle
             .send_on_playback_status_changed(&mut default_playback_status())
             .expect("To update playback status.");
-        await!(test_service.expect_active_session(Some(session_id)));
+        await!(test_service.expect_active_session(Some(
+            session_id.as_handle_ref().get_koid().expect("Handle expected KOID")
+        )));
         keep_alive.push(test_session.control_handle);
     }
 }
@@ -207,7 +215,9 @@ async fn service_broadcasts_events() {
         .expect("To update playback status.");
 
     // Ensure we wait for the service to accept the session.
-    await!(test_service.expect_active_session(Some(session_id)));
+    await!(test_service.expect_active_session(Some(
+        session_id.as_handle_ref().get_koid().expect("Handle expected KOID")
+    )));
 
     // Connect many clients and ensure they all receive the event.
     let client_count: usize = 100;
@@ -216,7 +226,14 @@ async fn service_broadcasts_events() {
             create_endpoints::<ControllerMarker>().expect("Controller endpoints.");
         test_service
             .controller_registry
-            .connect_to_controller_by_id(session_id, server_end)
+            .connect_to_controller_by_id(
+                session_id
+                    .as_handle_ref()
+                    .duplicate(zx::Rights::INSPECT | zx::Rights::TRANSFER)
+                    .expect("Duplicate session handle.")
+                    .into(),
+                server_end,
+            )
             .expect("To connect to session.");
         let mut event_stream =
             client_end.into_proxy().expect("Controller proxy").take_event_stream();
@@ -259,33 +276,40 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
     }
 
     // Set up expectations.
-    let mut expectations = HashMap::new();
+    let mut expectations = Vec::new();
     let mut control_handles_to_keep_sessions_alive = Vec::new();
     for (i, (session_id, control_handle)) in test_sessions.into_iter().enumerate() {
         let should_drop = i % 3 == 0;
-        expectations.insert(
-            session_id,
-            if should_drop {
-                control_handle.shutdown();
-                Expectation::SessionIsDropped
-            } else {
-                control_handles_to_keep_sessions_alive.push(control_handle);
-                Expectation::SessionReportsPlaybackStatus(numbered_playback_status(i as i64))
-            },
-        );
+        expectations.push(if should_drop {
+            control_handle.shutdown();
+            (Expectation::SessionIsDropped, session_id)
+        } else {
+            control_handles_to_keep_sessions_alive.push(control_handle);
+            (
+                Expectation::SessionReportsPlaybackStatus(numbered_playback_status(i as i64)),
+                session_id,
+            )
+        });
     }
 
     // Check all expectations.
-    for (session_id, expectation) in expectations.into_iter() {
+    for (expectation, session_id) in expectations.into_iter() {
         let (client_end, server_end) =
             create_endpoints::<ControllerMarker>().expect("Fidl endpoints.");
         test_service
             .controller_registry
-            .connect_to_controller_by_id(session_id, server_end)
-            .expect(&format!("To make connection request to session {}", session_id));
+            .connect_to_controller_by_id(
+                session_id
+                    .as_handle_ref()
+                    .duplicate(zx::Rights::INSPECT | zx::Rights::TRANSFER)
+                    .expect("Duplicate session handle.")
+                    .into(),
+                server_end,
+            )
+            .expect(&format!("To make connection request to session {:?}", session_id));
         let mut event_stream = client_end
             .into_proxy()
-            .expect(&format!("Controller proxy for session {}.", session_id))
+            .expect(&format!("Controller proxy for session {:?}.", session_id))
             .take_event_stream();
         let maybe_event = await!(event_stream.try_next()).expect("Next session event.");
         match expectation {

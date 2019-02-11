@@ -8,6 +8,7 @@ use fidl::endpoints::{ServerEnd, ServiceMarker};
 use fidl_fuchsia_mediasession::{ControllerRegistryMarker, ControllerRegistryRequest};
 use fuchsia_app::server::ServiceFactory;
 use fuchsia_async as fasync;
+use fuchsia_zircon::AsHandleRef;
 use futures::channel::mpsc::Sender;
 use futures::{SinkExt, TryStreamExt};
 
@@ -42,8 +43,9 @@ impl ControllerRegistry {
                 ..
             } = request;
 
+            let koid = trylog!(session_id.as_handle_ref().get_koid());
             trylog!(await!(self.fidl_sink.send(ServiceEvent::NewControllerRequest {
-                session_id,
+                session_id: koid,
                 request: controller_request
             })));
         }

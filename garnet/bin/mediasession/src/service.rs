@@ -2,23 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::log_error::log_error_discard_result;
 use crate::session::Session;
+use crate::session_id_rights;
 use crate::Result;
+use crate::CHANNEL_BUFFER_SIZE;
 use fidl::{encoding::OutOfLine, endpoints::ServerEnd};
 use fidl_fuchsia_mediasession::{ActiveSession, ControllerMarker, ControllerRegistryControlHandle};
 use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use futures::{
     channel::mpsc::{channel, Receiver, Sender},
     SinkExt, StreamExt,
 };
 use std::collections::{HashMap, VecDeque};
-
-use crate::log_error::log_error_discard_result;
-use crate::CHANNEL_BUFFER_SIZE;
+use zx::AsHandleRef;
 
 /// Tracks which session most recently reported an active status.
 struct ActiveSessionQueue {
-    active_sessions: VecDeque<u64>,
+    active_sessions: VecDeque<zx::Koid>,
 }
 
 impl ActiveSessionQueue {
@@ -28,13 +30,13 @@ impl ActiveSessionQueue {
 
     /// Returns session which most recently reported an active status if it
     /// exists.
-    pub fn active_session(&self) -> Option<u64> {
+    pub fn active_session(&self) -> Option<zx::Koid> {
         self.active_sessions.front().cloned()
     }
 
     /// Promotes a session to the front of the queue and returns whether
     /// the front of the queue was changed.
-    pub fn promote_session(&mut self, session_id: u64) -> bool {
+    pub fn promote_session(&mut self, session_id: zx::Koid) -> bool {
         if self.active_session() == Some(session_id) {
             return false;
         }
@@ -46,7 +48,7 @@ impl ActiveSessionQueue {
 
     /// Removes a session from the queue and returns whether the front of the
     /// queue was changed.
-    pub fn remove_session(&mut self, session_id: u64) -> bool {
+    pub fn remove_session(&mut self, session_id: zx::Koid) -> bool {
         if self.active_session() == Some(session_id) {
             self.active_sessions.pop_front();
             true
@@ -60,16 +62,16 @@ impl ActiveSessionQueue {
 }
 
 pub enum ServiceEvent {
-    NewSession(Session),
-    SessionClosed(u64),
-    SessionActivity(u64),
-    NewControllerRequest { session_id: u64, request: ServerEnd<ControllerMarker> },
+    NewSession((Session, zx::Event)),
+    SessionClosed(zx::Koid),
+    SessionActivity(zx::Koid),
+    NewControllerRequest { session_id: zx::Koid, request: ServerEnd<ControllerMarker> },
     NewActiveSessionChangeListener(ControllerRegistryControlHandle),
 }
 
 /// The Media Session service.
 pub struct Service {
-    published_sessions: HashMap<u64, Sender<ServerEnd<ControllerMarker>>>,
+    published_sessions: HashMap<zx::Koid, (Sender<ServerEnd<ControllerMarker>>, zx::Event)>,
     active_session_listeners: Vec<ControllerRegistryControlHandle>,
     /// The most recent sessions to broadcast activity.
     active_session_queue: ActiveSessionQueue,
@@ -87,10 +89,10 @@ impl Service {
     pub async fn serve(mut self, mut fidl_stream: Receiver<ServiceEvent>) -> Result<()> {
         while let Some(service_event) = await!(fidl_stream.next()) {
             match service_event {
-                ServiceEvent::NewSession(session) => {
+                ServiceEvent::NewSession((session, session_id_handle)) => {
                     let session_id = session.id();
                     let (request_sink, request_stream) = channel(CHANNEL_BUFFER_SIZE);
-                    self.published_sessions.insert(session_id, request_sink);
+                    self.published_sessions.insert(session_id, (request_sink, session_id_handle));
                     fasync::spawn(session.serve(request_stream));
                 }
                 ServiceEvent::SessionClosed(session_id) => {
@@ -98,19 +100,16 @@ impl Service {
                     let active_session_changed =
                         self.active_session_queue.remove_session(session_id);
                     if active_session_changed {
-                        self.broadcast_active_session();
+                        self.broadcast_active_session()?;
                     }
                 }
                 ServiceEvent::NewControllerRequest { session_id, request } => {
-                    if let Some(request_sink) = self.published_sessions.get_mut(&session_id) {
+                    if let Some((request_sink, _)) = self.published_sessions.get_mut(&session_id) {
                         log_error_discard_result(await!(request_sink.send(request)));
                     }
                 }
                 ServiceEvent::NewActiveSessionChangeListener(listener) => {
-                    if let Ok(_) = Self::send_active_session(
-                        self.active_session_queue.active_session(),
-                        &listener,
-                    ) {
+                    if self.send_active_session(&listener).is_ok() {
                         self.active_session_listeners.push(listener);
                     }
                 }
@@ -118,7 +117,7 @@ impl Service {
                     let active_session_changed =
                         self.active_session_queue.promote_session(session_id);
                     if active_session_changed {
-                        self.broadcast_active_session();
+                        self.broadcast_active_session()?;
                     }
                 }
             }
@@ -128,20 +127,40 @@ impl Service {
 
     /// Broadcasts the active session to all listeners and drops those which are
     /// no longer connected.
-    fn broadcast_active_session(&mut self) {
-        let active_session = self.active_session_queue.active_session();
+    fn broadcast_active_session(&mut self) -> Result<()> {
+        let mut update = self.active_session_update()?;
         self.active_session_listeners
-            .retain(move |listener| Self::send_active_session(active_session, listener).is_ok());
+            .retain(move |listener| listener.send_on_active_session(update.render()).is_ok());
+        Ok(())
     }
 
-    fn send_active_session(
-        active_session: Option<u64>,
-        recipient: &ControllerRegistryControlHandle,
-    ) -> Result<()> {
-        let mut update_out_of_line = ActiveSession { session_id: active_session.unwrap_or(0) };
+    fn send_active_session(&self, recipient: &ControllerRegistryControlHandle) -> Result<()> {
+        recipient.send_on_active_session(self.active_session_update()?.render()).map_err(Into::into)
+    }
 
-        recipient
-            .send_on_active_session(active_session.map(|_| OutOfLine(&mut update_out_of_line)))
-            .map_err(Into::into)
+    fn active_session_update(&self) -> Result<ActiveSessionUpdate> {
+        Ok(ActiveSessionUpdate {
+            update: self
+                .active_session_queue
+                .active_session()
+                .and_then(|koid| self.published_sessions.get(&koid))
+                .map(|(_, session_id)| -> Result<zx::Event> {
+                    Ok(session_id.as_handle_ref().duplicate(session_id_rights())?.into())
+                })
+                .transpose()?
+                .map(|session_id| ActiveSession { session_id }),
+        })
+    }
+}
+
+/// A struct that holds the active session update we need to send just so it
+/// can own the out of line value.
+struct ActiveSessionUpdate {
+    update: Option<ActiveSession>,
+}
+
+impl ActiveSessionUpdate {
+    fn render<'a>(&'a mut self) -> Option<OutOfLine<'a, ActiveSession>> {
+        self.update.as_mut().map(OutOfLine)
     }
 }

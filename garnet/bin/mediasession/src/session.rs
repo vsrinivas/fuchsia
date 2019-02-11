@@ -12,6 +12,7 @@ use fidl_fuchsia_mediasession::{
     ControllerProxy, ControllerRequest, PlaybackState,
 };
 use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use futures::{
     channel::mpsc::{channel, Receiver, Sender},
     future, select, Future, FutureExt, SinkExt, StreamExt, TryFutureExt, TryStreamExt,
@@ -20,7 +21,7 @@ use futures::{
 /// `Session` multiplexes the `fuchsia.mediasession.Controller` implementation of
 /// a published media session.
 pub struct Session {
-    id: u64,
+    id: zx::Koid,
     event_broadcaster: EventBroadcaster,
     request_forwarder: RequestForwarder,
     service_event_sink: Sender<ServiceEvent>,
@@ -32,7 +33,7 @@ impl Session {
     /// `Session` should not be used after it sends a `SessionClosed`
     /// `ServiceEvent`.
     pub fn new(
-        id: u64,
+        id: zx::Koid,
         controller_proxy: ControllerProxy,
         service_event_sink: Sender<ServiceEvent>,
     ) -> Result<Self> {
@@ -45,7 +46,7 @@ impl Session {
         })
     }
 
-    pub fn id(&self) -> u64 {
+    pub fn id(&self) -> zx::Koid {
         self.id
     }
 
@@ -185,14 +186,14 @@ impl SessionState {
 /// clients and, if it is qualifying activity, to the Media Session service so it
 /// can track active sessions.
 struct EventBroadcaster {
-    id: u64,
+    id: zx::Koid,
     service_event_sink: Sender<ServiceEvent>,
     source: ControllerEventStream,
 }
 
 impl EventBroadcaster {
     fn new(
-        id: u64,
+        id: zx::Koid,
         service_event_sink: Sender<ServiceEvent>,
         source: ControllerEventStream,
     ) -> Self {

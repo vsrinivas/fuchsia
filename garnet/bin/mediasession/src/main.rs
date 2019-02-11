@@ -20,12 +20,17 @@ use self::service::Service;
 use failure::{Error, ResultExt};
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use futures::channel::mpsc::channel;
 use futures::prelude::TryFutureExt;
 
 type Result<T> = std::result::Result<T, Error>;
 
 const CHANNEL_BUFFER_SIZE: usize = 100;
+
+fn session_id_rights() -> zx::Rights {
+    zx::Rights::DUPLICATE | zx::Rights::TRANSFER | zx::Rights::INSPECT
+}
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<()> {
