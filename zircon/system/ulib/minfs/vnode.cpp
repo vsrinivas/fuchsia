@@ -1234,7 +1234,7 @@ zx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
     }
 #else
     void* start = data;
-    uint32_t n = off / kMinfsBlockSize;
+    uint32_t n = static_cast<uint32_t>(off / kMinfsBlockSize);
     size_t adjust = off % kMinfsBlockSize;
 
     while ((len > 0) && (n < kMinfsMaxFileBlock)) {
