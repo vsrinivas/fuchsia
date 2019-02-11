@@ -25,6 +25,7 @@ constexpr uint32_t kHiu = 0;
 constexpr uint32_t kPowerDomain = 1;
 constexpr uint32_t kMemoryDomain = 2;
 constexpr uint32_t kReset = 3;
+constexpr uint32_t kIsp = 4;
 
 } // namespace
 
@@ -127,6 +128,12 @@ zx_status_t ArmIspDevice::InitPdev(zx_device_t* parent) {
     }
 
     status = pdev_.MapMmio(kReset, &reset_mmio_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
+        return status;
+    }
+
+    status = pdev_.MapMmio(kIsp, &isp_mmio_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;

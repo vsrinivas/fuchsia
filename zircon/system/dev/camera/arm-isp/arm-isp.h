@@ -57,6 +57,7 @@ private:
     std::optional<ddk::MmioBuffer> memory_pd_mmio_;
     std::optional<ddk::MmioBuffer> hiu_mmio_;
     std::optional<ddk::MmioBuffer> reset_mmio_;
+    std::optional<ddk::MmioBuffer> isp_mmio_;
 
     ddk::PDev pdev_;
     zx::interrupt isp_irq_;

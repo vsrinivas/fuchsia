@@ -123,6 +123,10 @@
 #define T931_USBPHY21_BASE              0xff63a000
 #define T931_USBPHY21_LENGTH            0x2000
 
+// ISP
+#define T931_ISP_BASE                   0xff140000
+#define T931_ISP_LENGTH                 0x00040000
+
 // eMMC/SD register blocks
 #define T931_SD_EMMC_A_BASE             0xffE03000
 #define T931_SD_EMMC_A_LENGTH           0x2000
