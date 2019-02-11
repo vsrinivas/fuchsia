@@ -181,28 +181,22 @@ const Type& Type::get_illegal() {
 }
 
 Type Type::ScalarTypeFromName(const std::string& type_name) {
-  if (type_name == "bool") {
-    return Type(BoolPrint, DummyEq);
-  } else if (type_name == "float32") {
-    return Type(PrimitivePrint<float>, DummyEq);
-  } else if (type_name == "float64") {
-    return Type(PrimitivePrint<double>, DummyEq);
-  } else if (type_name == "int8") {
-    return Type(PrimitivePrint<int8_t>, PrimitiveEq<int8_t>);
-  } else if (type_name == "int16") {
-    return Type(PrimitivePrint<int16_t>, PrimitiveEq<int16_t>);
-  } else if (type_name == "int32") {
-    return Type(PrimitivePrint<int32_t>, PrimitiveEq<int32_t>);
-  } else if (type_name == "int64") {
-    return Type(PrimitivePrint<int64_t>, PrimitiveEq<int64_t>);
-  } else if (type_name == "uint8") {
-    return Type(PrimitivePrint<uint8_t>, PrimitiveEq<uint8_t>);
-  } else if (type_name == "uint16") {
-    return Type(PrimitivePrint<uint16_t>, PrimitiveEq<uint16_t>);
-  } else if (type_name == "uint32") {
-    return Type(PrimitivePrint<uint32_t>, PrimitiveEq<uint32_t>);
-  } else if (type_name == "uint64") {
-    return Type(PrimitivePrint<uint64_t>, PrimitiveEq<uint64_t>);
+  static std::map<std::string, Type> scalar_type_map_ {
+    { "bool", Type(BoolPrint, DummyEq) },
+    { "float32", Type(PrimitivePrint<float>, DummyEq) },
+    { "float64", Type(PrimitivePrint<double>, DummyEq) },
+    { "int8", Type(PrimitivePrint<int8_t>, PrimitiveEq<int8_t>) },
+    { "int16", Type(PrimitivePrint<int16_t>, PrimitiveEq<int16_t>) },
+    { "int32", Type(PrimitivePrint<int32_t>, PrimitiveEq<int32_t>) },
+    { "int64", Type(PrimitivePrint<int64_t>, PrimitiveEq<int64_t>) },
+    { "uint8", Type(PrimitivePrint<uint8_t>, PrimitiveEq<uint8_t>) },
+    { "uint16", Type(PrimitivePrint<uint16_t>, PrimitiveEq<uint16_t>) },
+    { "uint32", Type(PrimitivePrint<uint32_t>, PrimitiveEq<uint32_t>) },
+    { "uint64", Type(PrimitivePrint<uint64_t>, PrimitiveEq<uint64_t>) },
+  };
+  auto it = scalar_type_map_.find(type_name);
+  if (it != scalar_type_map_.end()) {
+    return it->second;
   }
   return Type::get_illegal();
 }
