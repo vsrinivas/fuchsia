@@ -717,7 +717,7 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolMethod(
                                                   std::move(maybe_error));
 }
 
-bool Parser::ParseProtocolMember(
+void Parser::ParseProtocolMember(
     std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
     std::vector<std::unique_ptr<raw::ComposeProtocol>>* composed_protocols,
     std::vector<std::unique_ptr<raw::InterfaceMethod>>* methods) {
@@ -726,30 +726,32 @@ bool Parser::ParseProtocolMember(
         case Token::Kind::kArrow: {
             auto event = ParseProtocolEvent(std::move(attributes), scope, nullptr /* ordinal */);
             methods->push_back(std::move(event));
-            return true;
+            break;
         }
         case Token::Kind::kIdentifier: {
             auto identifier = ParseIdentifier();
             if (!Ok())
-                return false;
+                break;
             if (Peek().kind() == Token::Kind::kLeftParen) {
                 auto method = ParseProtocolMethod(
                     std::move(attributes), scope, nullptr /* ordinal */, std::move(identifier));
                 methods->push_back(std::move(method));
+                break;
             } else if (identifier->location().data() == "compose") {
                 auto protocol_name = ParseCompoundIdentifier();
                 if (!Ok())
-                    return false;
+                    break;
                 composed_protocols->push_back(std::make_unique<raw::ComposeProtocol>(
                     raw::SourceElement(identifier->start_, protocol_name->end_),
                     std::move(protocol_name)));
+                break;
             } else {
                 Fail("unrecognized protocol member");
-                return false;
+                break;
             }
         }
         default:
-            return false;
+            break;
     }
 }
 
