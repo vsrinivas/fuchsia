@@ -69,7 +69,7 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
         ast::Ty::Float32 => Ok(String::from("float")),
         ast::Ty::Float64 => Ok(String::from("double")),
         ast::Ty::Voidptr => Ok(String::from("void*")),
-        ast::Ty::Str { .. } => Ok(String::from("const char*")),
+        ast::Ty::Str { .. } => Ok(String::from("char*")),
         ast::Ty::Vector { ref ty, .. } => ty_to_c_str(ast, ty),
         ast::Ty::Array { ref ty, .. } => ty_to_c_str(ast, ty),
         ast::Ty::Identifier { id, reference } => {
@@ -116,7 +116,7 @@ fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant) -> String {
         ast::Ty::Int8 => String::from(format!("INT8_C({})", size)),
         ast::Ty::Int16 => String::from(format!("INT16_C({})", size)),
         ast::Ty::Int32 => String::from(format!("INT32_C({})", size)),
-        ast::Ty::Int64 => String::from(format!("INT32_C({})", size)),
+        ast::Ty::Int64 => String::from(format!("INT64_C({})", size)),
         ast::Ty::UInt8 => String::from(format!("UINT8_C({})", size)),
         ast::Ty::UInt16 => String::from(format!("UINT16_C({})", size)),
         ast::Ty::UInt32 => String::from(format!("UINT32_C({})", size)),
@@ -196,6 +196,9 @@ fn get_in_params(m: &ast::Method, transform: bool, ast: &BanjoAst) -> Result<Vec
                         e => Err(format_err!("unsupported: {}", e)),
                     }
                 }
+                ast::Ty::Str { .. } => {
+                    Ok(format!("const {} {}", ty_to_c_str(ast, ty).unwrap(), to_c_name(name)))
+                }
                 ast::Ty::Vector { .. } => {
                     let ty = ty_to_c_str(ast, ty).unwrap();
                     Ok(format!(
@@ -258,6 +261,9 @@ fn get_out_params(
                             name = to_c_name(name))
                 }
             },
+            ast::Ty::Str {..} => {
+                format!("{}{} out_{}, size_t response_capacity", ty_name, nullable, to_c_name(name))
+            }
             _ => format!("{}{}* out_{}", ty_name, nullable, to_c_name(name))
         }
     }).collect(), return_param))
@@ -311,7 +317,10 @@ fn get_out_args(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, bool), 
                             name = to_c_name(name)
                         )
                     }
-                }
+                },
+                ast::Ty::Str {..} => {
+                    format!("out_{}, response_capacity", to_c_name(name))
+                },
                 _ => format!("out_{}", to_c_name(name)),
             })
             .collect(),
@@ -411,7 +420,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 accum.push_str(
                     format!(
                         "#define {name} {value}",
-                        name = name,
+                        name = name.trim(),
                         value = size_to_c_str(ty, value)
                     )
                     .as_str(),
