@@ -620,53 +620,23 @@ void __libc_extensions_init(uint32_t handle_count,
         unsigned arg_fd = arg & (~FDIO_FLAG_USE_FOR_STDIO);
 
         switch (PA_HND_TYPE(handle_info[n])) {
-        case PA_FDIO_REMOTE: {
-            // remote objects may have a second handle
-            // which is for signaling events
-            zx_handle_t event = ZX_HANDLE_INVALID;
-            if (((n + 1) < handle_count) &&
-                (handle_info[n] == handle_info[n + 1])) {
-                // TODO: Remove this case once all clients migrate to providing
-                // a single handle for PA_FDIO_REMOTE.
-                event = handle[n + 1];
-                handle_info[n + 1] = ZX_HANDLE_INVALID;
-                fdio_fdtab[arg_fd] = fdio_remote_create(h, event);
-                fdio_dupcount_acquire(fdio_fdtab[arg_fd]);
-                LOG(1, "fdio: inherit fd=%d (channel)\n", arg_fd);
-            } else {
-                fdio_t* io = NULL;
-                zx_status_t status = fdio_from_channel(h, &io);
-                if (status != ZX_OK) {
-                    LOG(1, "fdio: Failed to acquire for fd=%d (channel) status=%d (%s)\n",
-                        arg_fd, status, zx_status_get_string(status));
-                    zx_handle_close(h);
-                    continue;
-                }
-                fdio_fdtab[arg_fd] = io;
-                fdio_dupcount_acquire(fdio_fdtab[arg_fd]);
-                LOG(1, "fdio: inherit fd=%d (channel)\n", arg_fd);
-            }
-            break;
-        }
-        case PA_FDIO_SOCKET: {
+        case PA_FDIO_REMOTE:
+        case PA_FDIO_SOCKET:
+        case PA_FDIO_LOGGER:
+        case PA_FD: {
             fdio_t* io = NULL;
-            zx_status_t status = fdio_from_socket(h, &io);
+            zx_status_t status = fdio_create(h, &io);
             if (status != ZX_OK) {
-                LOG(1, "fdio: Failed to acquire for fd=%d (socket) status=%d (%s)\n",
+                LOG(1, "fdio: Failed to acquire for fd=%d status=%d (%s)\n",
                     arg_fd, status, zx_status_get_string(status));
                 zx_handle_close(h);
                 continue;
             }
             fdio_fdtab[arg_fd] = io;
             fdio_dupcount_acquire(fdio_fdtab[arg_fd]);
-            LOG(1, "fdio: inherit fd=%d (socket)\n", arg_fd);
+            LOG(1, "fdio: inherit fd=%d\n", arg_fd);
             break;
         }
-        case PA_FDIO_LOGGER:
-            fdio_fdtab[arg_fd] = fdio_logger_create(h);
-            fdio_dupcount_acquire(fdio_fdtab[arg_fd]);
-            LOG(1, "fdio: inherit fd=%d (log)\n", arg_fd);
-            break;
         case PA_NS_DIR:
             // we always continue here to not steal the
             // handles from higher level code that may

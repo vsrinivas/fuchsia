@@ -22,10 +22,10 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
     zx_status_t io_status, status;
     if ((io_status = fuchsia_io_FileSeek(control, seek, fuchsia_io_SeekOrigin_START,
                                          &status, &seek)) != ZX_OK) {
-        return io_status;
+        return ZX_ERR_BAD_STATE;
     }
     if (status != ZX_OK) {
-        return status;
+        return ZX_ERR_BAD_STATE;
     }
 
     mtx_lock(&file->lock);

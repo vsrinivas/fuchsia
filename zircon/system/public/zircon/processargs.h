@@ -136,10 +136,10 @@ struct zx_proc_args {
 #define PA_NS_DIR                0x20u
 
 
-// --- FDIO Handles ---
-// Used by libfdio for passing fdtable, fsroot, etc
+// --- File Descriptor Handles ---
 
-// Handle types the fdio library uses
+// A handle which will be used as a file descriptor.
+#define PA_FD                    0x30u
 #define PA_FDIO_REMOTE           0x32u
 #define PA_FDIO_LOGGER           0x35u
 #define PA_FDIO_SOCKET           0x36u

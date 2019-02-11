@@ -99,6 +99,7 @@ static zx_status_t zxrio_connect(zx_handle_t svc, zx_handle_t cnxn,
     size_t len = strlen(name);
     if (len >= PATH_MAX) {
         zx_handle_close(cnxn);
+        // TODO: Some clients expect ZX_ERR_INVALID_ARGS in this case.
         return ZX_ERR_BAD_PATH;
     }
     if (flags & ZX_FS_FLAG_DESCRIBE) {
@@ -240,14 +241,14 @@ static zx_status_t zxrio_process_open_response(zx_handle_t h, fdio_on_open_msg_t
 }
 
 __EXPORT
-zx_status_t fdio_service_connect(const char* svcpath, zx_handle_t h) {
-    if (svcpath == NULL) {
+zx_status_t fdio_service_connect(const char* path, zx_handle_t h) {
+    if (path == NULL) {
         zx_handle_close(h);
         return ZX_ERR_INVALID_ARGS;
     }
     // Otherwise attempt to connect through the root namespace
     if (fdio_root_ns != NULL) {
-        return fdio_ns_connect(fdio_root_ns, svcpath,
+        return fdio_ns_connect(fdio_root_ns, path,
                                ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, h);
     }
     // Otherwise we fail
@@ -328,7 +329,14 @@ zx_status_t fdio_service_clone_to(zx_handle_t svc, zx_handle_t srv) {
                          ZX_FS_RIGHT_WRITABLE, 0755, "");
 }
 
-zx_status_t fdio_from_channel(zx_handle_t channel, fdio_t** out_io) {
+// Creates an |fdio_t| from a Zircon channel object.
+//
+// The |channel| must implement the |fuchsia.io.Node| protocol. Uses the
+// |Describe| method from the |fuchsia.io.Node| protocol to determine whether to
+// create a remoteio or a vmofile.
+//
+// Always consumes |channel|.
+static zx_status_t fdio_from_channel(zx_handle_t channel, fdio_t** out_io) {
     fuchsia_io_NodeInfo info;
     memset(&info, 0, sizeof(info));
     zx_status_t status = fuchsia_io_NodeDescribe(channel, &info);
@@ -371,7 +379,13 @@ zx_status_t fdio_from_channel(zx_handle_t channel, fdio_t** out_io) {
     return ZX_OK;
 }
 
-zx_status_t fdio_from_socket(zx_handle_t socket, fdio_t** out_io) {
+// Creates an |fdio_t| from a Zircon socket object.
+//
+// Examines |socket| and determines whether to create a pipe, stream socket, or
+// datagram socket.
+//
+// Always consumes |socket|.
+static zx_status_t fdio_from_socket(zx_handle_t socket, fdio_t** out_io) {
     zx_info_socket_t info;
     memset(&info, 0, sizeof(info));
     zx_status_t status = zx_object_get_info(socket, ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL);
@@ -397,6 +411,33 @@ zx_status_t fdio_from_socket(zx_handle_t socket, fdio_t** out_io) {
     }
     *out_io = io;
     return ZX_OK;
+}
+
+__EXPORT
+zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) {
+    zx_info_handle_basic_t info;
+    zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
+                                            sizeof(info), NULL, NULL);
+    if (status != ZX_OK)
+        return status;
+    switch (info.type) {
+        case ZX_OBJ_TYPE_CHANNEL:
+            return fdio_from_channel(handle, out_io);
+        case ZX_OBJ_TYPE_SOCKET:
+            return fdio_from_socket(handle, out_io);
+        case ZX_OBJ_TYPE_LOG: {
+            fdio_t* io = fdio_logger_create(handle);
+            if (io == NULL) {
+                return ZX_ERR_NO_MEMORY;
+            }
+            *out_io = io;
+            return ZX_OK;
+        }
+        default: {
+            zx_handle_close(handle);
+            return ZX_ERR_INVALID_ARGS;
+        }
+    }
 }
 
 // Create a fdio (if possible) from handles and info.

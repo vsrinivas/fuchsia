@@ -10,6 +10,7 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/fdio_fd.cpp \
     $(LOCAL_DIR)/fdio_handle_fd.c \
     $(LOCAL_DIR)/fdio_open_max.c \
     $(LOCAL_DIR)/fdio_root.c \
@@ -18,6 +19,10 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/fdio_socketpair.c
 
 MODULE_NAME := fdio-test
+
+MODULE_STATIC_LIBS := \
+    system/ulib/zx \
+    system/ulib/zxcpp \
 
 MODULE_LIBS := \
     system/ulib/zircon \

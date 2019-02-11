@@ -15,6 +15,7 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 MODULE_SRCS += \
     $(LOCAL_DIR)/bsdsocket.c \
     $(LOCAL_DIR)/debug.c \
+    $(LOCAL_DIR)/fd.cpp \
     $(LOCAL_DIR)/get-vmo.c \
     $(LOCAL_DIR)/fdio.c \
     $(LOCAL_DIR)/namespace/local-connection.cpp \

@@ -31,8 +31,9 @@ void SetupStdout() {
     if (zx::debuglog::create(zx::resource(), 0, &h) < 0) {
         return;
     }
-    fdio_t* logger;
-    if ((logger = fdio_logger_create(h.release())) == nullptr) {
+    fdio_t* logger = nullptr;
+    zx_status_t status = fdio_create(h.release(), &logger);
+    if (status != ZX_OK) {
         return;
     }
     close(1);

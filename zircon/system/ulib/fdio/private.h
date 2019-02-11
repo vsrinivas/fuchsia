@@ -147,6 +147,15 @@ zx_status_t fdio_close(fdio_t* io);
 zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx_time_t deadline,
                       uint32_t* out_pending);
 
+// Wraps a channel with an fdio_t using remote io.
+// Takes ownership of h and e.
+fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t event);
+
+// creates a fdio that wraps a log object
+// this will allocate a buffer (on demand) to assemble
+// entire log-lines and flush them on newline or buffer full.
+fdio_t* fdio_logger_create(zx_handle_t);
+
 // Creates an |fdio_t| from a remote directory connection.
 //
 // Takes ownership of |control|.
@@ -177,23 +186,6 @@ fdio_t* fdio_socketpair_create(zx_handle_t h);
 // Always consumes |h| and |vmo|.
 fdio_t* fdio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
                             zx_off_t offset, zx_off_t length, zx_off_t seek);
-
-// Creates an |fdio_t| from a Zircon socket object.
-//
-// Examines |socket| and determines whether to create a pipe, stream socket, or
-// datagram socket.
-//
-// Always consumes |socket|.
-zx_status_t fdio_from_socket(zx_handle_t socket, fdio_t** out_io);
-
-// Creates an |fdio_t| from a Zircon channel object.
-//
-// The |channel| must implement the |fuchsia.io.Node| protocol. Uses the
-// |Describe| method from the |fuchsia.io.Node| protocol to determine whether to
-// create a remoteio or a vmofile.
-//
-// Always consumes |channel|.
-zx_status_t fdio_from_channel(zx_handle_t channel, fdio_t** out_io);
 
 // Wraps a socket with an fdio_t using socket io.
 fdio_t* fdio_socket_create_stream(zx_handle_t s, int flags);

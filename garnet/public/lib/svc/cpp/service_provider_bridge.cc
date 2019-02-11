@@ -55,10 +55,11 @@ int ServiceProviderBridge::OpenAsFileDescriptor() {
     return -1;
   if (!ServeDirectory(std::move(h1)))
     return -1;
-  fdio_t* io = fdio_remote_create(h2.release(), ZX_HANDLE_INVALID);
-  if (!io)
+  int fd = -1;
+  zx_status_t status = fdio_fd_create(h2.release(), &fd);
+  if (status != ZX_OK)
     return -1;
-  return fdio_bind_to_fd(io, -1, 0);
+  return fd;
 }
 
 void ServiceProviderBridge::ConnectToService(std::string service_name,
