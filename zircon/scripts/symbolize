@@ -61,25 +61,26 @@ done
 shift $((OPTIND-1))
 
 if [[ -z "$IDSTXT" ]]; then
-    if [[ -n "$BUILDDIR" ]]; then
-        IDSTXT="${BUILDDIR}/ids.txt"
-    else
-        BUILD_SUFFIX=
+    if [[ -z "$BUILDDIR" ]]; then
+        VARIANT=gcc
         if (( $ASAN )); then
-            BUILD_SUFFIX=-asan
+            VARIANT=asan
         elif (( $CLANG )); then
-            BUILD_SUFFIX=-clang
+            VARIANT=clang
         elif (( $LTO )); then
-            BUILD_SUFFIX=-lto
+            VARIANT=lto
         elif (( $THINLTO )); then
-            BUILD_SUFFIX=-thinlto
+            VARIANT=thinlto
         elif (( $PROFILE )); then
-            BUILD_SUFFIX=-profile
+            VARIANT=profile
         elif (( $XRAY )); then
-            BUILD_SUFFIX=-xray
+            VARIANT=xray
         fi
-        IDSTXT="${ZIRCON_ROOT}/build-${ARCH}${BUILD_SUFFIX}/ids.txt"
+        BUILDDIR="${ZIRCON_ROOT}/build-$VARIANT"
     fi
+    IDARGS=(-build-id-dir "$BUILDDIR/.build-id")
+else
+    IDARGS=(-ids "$IDSTXT")
 fi
 
-exec "$SYMBOLIZE" -llvm-symbolizer "$LLVM_SYMBOLIZER" -ids "$IDSTXT" "$@"
+exec "$SYMBOLIZE" -llvm-symbolizer "$LLVM_SYMBOLIZER" "${IDARGS[@]}" "$@"

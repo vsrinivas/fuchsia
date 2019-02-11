@@ -53,13 +53,10 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 AHCI=()
 ARCH=
-ASAN=0
 AUDIO=
 AUDIO_WAVFILE="/tmp/qemu.wav"
 BUILD=0
-CLANG=0
 DEBUGGER=0
-BUILD_DEBUG=0
 DISK=0
 DISKFILE="blk.bin"
 DISKTYPE=
@@ -78,6 +75,7 @@ NET=0
 QEMUDIR=
 RELEASE=0
 UPSCRIPT=no
+VARIANT=gcc
 VNC=
 VIRTIO=0
 SERIAL=1
@@ -108,33 +106,36 @@ abspath() {
   esac
 }
 
+VARIANT=gcc
+BUILD_SWITCH=
+
 while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:Pq:rs:t::u:VXz:h-:" FLAG; do
     case $FLAG in
-        A) ASAN=1;;
+        A) VARIANT=asan ;;
         a) ARCH=$OPTARG;;
         b) BUILD=1;;
         c) CMDLINE+="$OPTARG ";;
-        C) CLANG=1;;
+        C) VARIANT=clang BUILD_SWITCH=-C ;;
         d) DISK=1;;
         D) DISKFILE="$(abspath "$OPTARG")";;
         g) GRAPHICS=1;;
         G) GIC=$OPTARG;;
         I) IFNAME=$OPTARG;;
         k) DO_KVM=1;;
-        L) LTO=1;;
-        l) THINLTO=1;;
+        L) VARIANT=lto BUILD_SWITCH=-L ;;
+        l) VARIANT=thinlto BUILD_SWITCH=-l ;;
         m) MEMSIZE=$OPTARG;;
         n) NET=1;;
         N) NET=2;;
         o) BUILDDIR=$OPTARG;;
-        P) PROFILE=1;;
+        P) VARIANT=profile BUILD_SWITCH=-P ;;
         q) QEMUDIR=${OPTARG}/;;
         r) RELEASE=1;;
         s) SMP=$OPTARG;;
         t) QEMU_KERNEL="$(abspath "$OPTARG")";;
         u) UPSCRIPT="$(abspath "$OPTARG")";;
         V) VIRTIO=1;;
-        X) XRAY=1;;
+        X) VARIANT=xray BUILD_SWITCH=-X ;;
         z) QEMU_INITRD="$(abspath "$OPTARG")";;
         h) HELP;;
         \?)
@@ -147,7 +148,7 @@ while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:Pq:rs:t::u:VXz:h-:" FLAG; do
             audio) AUDIO=none;;
             audio=*) AUDIO=${OPTARG#*=};;
             wavfile=*) AUDIO_WAVFILE="$(abspath "${OPTARG#*=}")";;
-            build-debug) BUILD_DEBUG=1;;
+            build-debug) BUILD=1 VARIANT=noopt BUILD_SWITCH=-d;;
             debugger) DEBUGGER=1;;
             disktype=*) DISKTYPE=${OPTARG#*=};;
             diskfmt=*) DISKFMT=${OPTARG#*=};;
@@ -169,45 +170,13 @@ if [[ -z $ARCH ]]; then
     HELP
 fi
 
-PROJECT="$ARCH"
-
-BUILDDIR_SUFFIX=
-BUILD_ARGS=
-
-if (( $ASAN )); then
-    BUILDDIR_SUFFIX+=-asan
-    BUILD_ARGS+=' -A'
-elif (( $LTO )); then
-    BUILDDIR_SUFFIX+=-lto
-    BUILD_ARGS+=' -L'
-elif (( $THINLTO )); then
-    BUILDDIR_SUFFIX+=-thinlto
-    BUILD_ARGS+=' -l'
-elif (( $PROFILE )); then
-    BUILDDIR_SUFFIX+=-profile
-    BUILD_ARGS+=' -P'
-elif (( $XRAY )); then
-    BUILDDIR_SUFFIX+=-xray
-    BUILD_ARGS+=' -X'
-elif (( $CLANG )); then
-    BUILDDIR_SUFFIX+=-clang
-    BUILD_ARGS+=' -C'
-fi
-
-if (( $RELEASE )); then
-    BUILDDIR_SUFFIX+=-release
-    BUILD_ARGS+=' -r'
-fi
-
-if (( $BUILD_DEBUG )); then
-    BUILD=1
-    BUILD_ARGS+=' -d'
+if [[ -z "$BUILDDIR" ]]; then
+    BUILDDIR="$(dirname "$DIR")/build-$VARIANT"
 fi
 
 # build the project if asked for
 if (( $BUILD )); then
-    # DIR is zircon/scripts, we need to make inside zircon.
-    $DIR/build-zircon -a $ARCH $BUILD_ARGS -- -C "$DIR/.." || exit 1
+    "$DIR/build-zircon" -a "$ARCH" $BUILD_SWITCH -o "$BUILDDIR" || exit
 fi
 
 # by default use the qemu binary located in the fuchsia buildtools
@@ -226,12 +195,8 @@ if [[ -z $QEMUDIR && -d "$DIR/../prebuilt/downloads/qemu/bin" ]]; then
     QEMUDIR="$DIR/../prebuilt/downloads/qemu/bin/"
 fi
 
-if [[ -z $BUILDDIR ]]; then
-  BUILDDIR="$(dirname "$DIR")/build-$PROJECT$BUILDDIR_SUFFIX"
-fi
-
 if [[ -z "$QEMU_INITRD" ]]; then
-    QEMU_INITRD="$(abspath "$BUILDDIR/zircon.zbi")"
+    QEMU_INITRD="$(abspath "$BUILDDIR/$ARCH.zbi")"
 fi
 
 if [[ -z "$QEMU_KERNEL" ]]; then

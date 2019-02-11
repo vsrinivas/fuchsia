@@ -9,32 +9,34 @@
 
 function HELP {
     echo "help:"
-    echo "-a arg              : Pass arg to make"
+    echo "-a arg=value        : Extra GN build argument"
     echo "-f                  : Exit on first failure"
     echo "-r                  : Also build release mode builds"
     echo "-c                  : Also build with clang"
     echo "-A                  : Also build with ASan"
     echo "-q                  : Build quietly"
+    echo "-j N                : Passed through to Ninja"
     echo "-h for help"
     exit 1
 }
 
+BUILD_ARGS=()
+BUILD_SWITCHES=()
+EXTRA_BUILDS=()
 FAIL_FAST=0
 DO_RELEASE=0
-DO_CLANG=0
-DO_ASAN=0
-MAKE_ARGS=
 QUIET=0
 
-while getopts Aa:fhrcq FLAG; do
+while getopts Aa:fhj:rcq FLAG; do
     case $FLAG in
-        A) DO_ASAN=1;;
-        a) MAKE_ARGS="${MAKE_ARGS} ${OPTARG}";;
+        a) BUILD_ARGS+=("$OPTARG") ;;
+        A) EXTRA_BUILDS+=(-A) ;;
+        c) EXTRA_BUILDS+=(-C) ;;
         f) FAIL_FAST=1;;
         h) HELP;;
         r) DO_RELEASE=1;;
-        c) DO_CLANG=1;;
-        q) QUIET=1;;
+        q) BUILD_SWITCHES+=(-q) ;;
+        j) BUILD_SWITCHES+=(-j "$OPTARG") ;;
         \?)
             echo unrecognized option
             HELP
@@ -42,86 +44,30 @@ while getopts Aa:fhrcq FLAG; do
 done
 shift $((OPTIND-1))
 
-PROJECTS=
-# build everything in the projects directory
-for p in kernel/project/*.mk; do
-    p=${p##*/}
-    p=${p%.mk}
-    case "$p" in
-    user-*|zircon-*) ;;
-    *) PROJECTS="$PROJECTS $p"
-    esac
-done
-
-FAILED=""
-
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+FAILED=()
 STATUS=0
-export QUIET
 
-for p in $PROJECTS; do
-  echo building $p
-  nice $DIR/make-parallel $p ${MAKE_ARGS}
-  STATUS=$?
-  if [ "$STATUS" -ne 0 ]; then
-    FAILED="$FAILED $p"
-    if [ "$FAIL_FAST" -eq 1 ]; then
-      break
-    fi
-  fi
-
-  if [ "$DO_CLANG" -eq 1 ]; then
-    echo building $p with clang
-    nice $DIR/make-parallel $p ${MAKE_ARGS} USE_CLANG=true
+build_one() {
+  "$DIR/build-zircon" "${BUILD_SWITCHES[@]}" "$@" -- "${BUILD_ARGS[@]}" || {
     STATUS=$?
-    if [ "$STATUS" -ne 0 ]; then
-      FAILED="$FAILED $p-clang"
-      if [ "$FAIL_FAST" -eq 1 ]; then
-        break
-      fi
-    fi
-  fi
+    FAILED+=("build-zircon $*")
+  }
+}
 
-  if [ "$DO_ASAN" -eq 1 ]; then
-    echo building $p with ASan
-    nice $DIR/make-parallel $p ${MAKE_ARGS} USE_ASAN=true
-    STATUS=$?
-    if [ "$STATUS" -ne 0 ]; then
-      FAILED="$FAILED $p-asan"
-      if [ "$FAIL_FAST" -eq 1 ]; then
-        break
-      fi
-    fi
-  fi
-
-  if [ "$DO_RELEASE" -eq 1 ]; then
-    echo building $p with release
-    nice $DIR/make-release $p ${MAKE_ARGS}
-    STATUS=$?
-    if [ "$STATUS" -ne 0 ]; then
-      FAILED="$FAILED $p-release"
-      if [ "$FAIL_FAST" -eq 1 ]; then
-        break
-      fi
-    fi
-    if [ "$DO_CLANG" -eq 1 ]; then
-      echo building $p with release and clang
-      nice $DIR/make-release $p ${MAKE_ARGS} USE_CLANG=true
-      STATUS=$?
-      if [ "$STATUS" -ne 0 ]; then
-        FAILED="$FAILED $p-clang-release"
-        if [ "$FAIL_FAST" -eq 1 ]; then
-          break
-        fi
-      fi
-    fi
-  fi
+build_one
+for extra in "${EXTRA_BUILDS[@]}"; do
+  ((FAIL_FAST == 0 || STATUS == 0)) || break
+  build_one "$extra"
 done
 
-if [ "$FAILED" != "" ]; then
+if [ ${#FAILED[@]} -ne 0 ]; then
   echo
   echo some projects have failed to build:
-  echo $FAILED
+  for failed in "${FAILED[@]}"; do
+    echo "$failed"
+  done
 fi
 
 exit $STATUS
