@@ -26,13 +26,13 @@ void FormattingTreeVisitor::Segment::RemoveExtraBlankLines(bool respects_trailin
     // First, find all of the blank lines and comment lines.
     int line_num = 0;
     line_offsets[line_num++] = 0;
-    for (int i = 0; i < output_.size(); i++) {
-        if (output_[i] == '\n' && i + 1 != output_.size()) {
+    for (int i = 0; i < static_cast<int>(output_.size()); i++) {
+        if (output_[i] == '\n' && i + 1 != static_cast<int>(output_.size())) {
             line_offsets[line_num] = i + 1;
             bool is_blank = true;
             bool is_comment = false;
             for (int j = i + 1;
-                 j < output_.size() && output_[j] != '\n'; j++) {
+                 j < static_cast<int>(output_.size()) && output_[j] != '\n'; j++) {
                 if (!IsNonNewlineWS(output_[j])) {
                     is_blank = false;
                 }
@@ -87,16 +87,16 @@ void FormattingTreeVisitor::Segment::RemoveExtraBlankLines(bool respects_trailin
 //  - newlines before top-level decls (unless after a comment).
 void FormattingTreeVisitor::Segment::InsertRequiredNewlines(bool is_top_level) {
     // Insert lines after ';' and '{', if not already present
-    for (int i = 0; i < output_.size(); i++) {
+    for (int i = 0; i < static_cast<int>(output_.size()); i++) {
         MaybeWindPastComment(output_, i);
         char ch = output_[i];
         if (ch == ';' || ch == '{') {
-            if (i == output_.size() - 1) {
+            if (i == static_cast<int>(output_.size()) - 1) {
                 output_.append("\n");
             } else {
                 size_t j = output_.find_first_not_of(kWsCharactersNoNewline, i + 1);
                 // Unless the next thing is a comment.
-                if (j != std::string::npos && !IsStartOfComment(output_, j)) {
+                if (j != std::string::npos && !IsStartOfComment(output_, static_cast<int>(j))) {
                     // Make the next thing a newline.
                     if (IsNonNewlineWS(output_[i + 1])) {
                         output_[i + 1] = '\n';
@@ -129,8 +129,8 @@ void FormattingTreeVisitor::Segment::InsertRequiredNewlines(bool is_top_level) {
             // From the end of the list of lines, find the first line
             // that isn't a comment, and insert a blank line (if it
             // isn't already blank).
-            int i = lines.size() - 1;
-            while (i >= 0 && IsStartOfComment(lines[i], 0)) {
+            int i = static_cast<int>(lines.size()) - 1;
+            while (i >= 0 && IsStartOfComment(lines[i], 0)) {  // TODO: This condition seems wrong?
                 i--;
             }
 
@@ -194,7 +194,7 @@ void FormattingTreeVisitor::Segment::RegularizeSpaces(bool& ws_required_next) {
         ws_required_next = false;
     }
 
-    for (int i = 0; i < output_.size(); i++) {
+    for (int i = 0; i < static_cast<int>(output_.size()); i++) {
         // If it is a comment, jump to EOL.
         MaybeWindPastComment(output_, i);
 
@@ -238,7 +238,7 @@ void FormattingTreeVisitor::Segment::RegularizeSpaces(bool& ws_required_next) {
         // comment after the WS.
         int j;
         for (j = i + 1;
-             j < output_.size() && IsNonNewlineWS(output_[j]);
+             j < static_cast<int>(output_.size()) && IsNonNewlineWS(output_[j]);
              j++)
             ;
         if (NoWSAfterChar(output_[i]) &&
@@ -250,7 +250,7 @@ void FormattingTreeVisitor::Segment::RegularizeSpaces(bool& ws_required_next) {
         // iteration requires ws, so we need to keep it past anything
         // that uses that information in the loop.
         if (RequiresWSAfterChar(output_[i])) {
-            if (i != output_.size() - 1 && !isspace(output_[i + 1])) {
+            if (i != static_cast<int>(output_.size()) - 1 && !isspace(output_[i + 1])) {
                 output_.insert(i + 1, " ");
                 i++;
             }
@@ -268,7 +268,7 @@ void FormattingTreeVisitor::Segment::RegularizeSpaces(bool& ws_required_next) {
 // Precondition: By now, everything should have had its leading ws
 // stripped, and } characters are the first things on their own lines.
 void FormattingTreeVisitor::Segment::Indent(int& current_nesting) {
-    for (int i = 0; i < output_.size(); i++) {
+    for (int i = 0; i < static_cast<int>(output_.size()); i++) {
         if (output_[i] == '\n') {
             // Don't indent a blank line.
             if (output_[i + 1] == '\n') {
@@ -325,7 +325,7 @@ void FormattingTreeVisitor::Segment::Indent(int& current_nesting) {
 //    align at the same vertical column as that parameter.
 void FormattingTreeVisitor::TrackInterfaceMethodAlignment(const std::string& str) {
     if (interface_method_alignment_) {
-        for (int i = 0; i < str.size(); i++) {
+        for (int i = 0; i < static_cast<int>(str.size()); i++) {
             MaybeWindPastComment(str, i);
 
             char ch = str[i];
@@ -339,7 +339,7 @@ void FormattingTreeVisitor::TrackInterfaceMethodAlignment(const std::string& str
             // method name.
             if (ch == '(') {
                 bool align_on_oparen = false;
-                for (int j = i + 1; j < str.size(); j++) {
+                for (int j = i + 1; j < static_cast<int>(str.size()); j++) {
                     MaybeWindPastComment(str, j);
                     if (str[j] == '\n')
                         break;
@@ -375,7 +375,7 @@ void FormattingTreeVisitor::OnFile(std::unique_ptr<banjo::raw::File> const& elem
     banjo::Token real_start = element->start_;
     banjo::StringView start_view = real_start.previous_end().data();
     const char* start_ptr = start_view.data();
-    int initial_length = start_view.size();
+    size_t initial_length = start_view.size();
     size_t offset = strspn(start_ptr, kWsCharacters);
     banjo::StringView processed_file_start(
         start_ptr + offset, initial_length - offset);
