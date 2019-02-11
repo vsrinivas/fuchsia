@@ -4,7 +4,8 @@
 # found in the LICENSE file.
 
 ### build zircon, then build fuchsia
-## build zircon, then build fuchsia
+## Runs exactly `fx build-zircon` followed by `fx build`.
+## Arguments are ignored.  To pass arguments, run each step separately.
 
 set -e
 

@@ -134,8 +134,8 @@
 ##                         build.
 ##                         This flag is deprecated, please use one of
 ##                         --available, --preinstall, or --monolith.
-##   --zircon-arg ARG      Additional arguments to pass to Zircon make. Can be given
-##                         multiple times.
+##   --zircon-arg ARG      Additional arguments to pass to build-zircon.sh.
+##                         Can be given multiple times.
 ##
 ## Example:
 ##
@@ -238,7 +238,7 @@ function main {
   local preinstall=()
   local monolith=()
   local packages=()
-  local zircon_args=()
+  local zircon_args=(-v -g -t "$arch")
   local extra_packages=()
   local build_dir=
   local variant=
@@ -501,6 +501,7 @@ function main {
   # Add goma or ccache settings as appropriate.
   if [[ "${use_goma}" -eq 1 ]]; then
     gn_args+=" use_goma=true goma_dir=\"${goma_dir}\""
+    zircon_args+=(use_goma=true "goma_dir=\"${goma_dir}\"")
   elif [[ "${ccache}" -eq 1 ]]; then
     gn_args+=" use_ccache=true"
   fi
@@ -545,14 +546,14 @@ function main {
     gn_args+=" select_variant=[${variant}]"
   fi
 
-  mkdir -p "${build_dir}"
-  echo "${zircon_args[@]}" > "${build_dir}.zircon-args"
-
   # Using a subshell with -x prints out the gn command precisely with shell
   # quoting so a cut&paste to the command line works.  Always show the real
   # meaning of what this script does so everyone learns how GN works.
   (
-    set -x
+    set -x -e
+    # Zircon's `gn gen` phase has to be done before Fuchsia's `gn gen`.
+    # The former produces the legacy-$cpu.json file consumed by the latter.
+    "${FUCHSIA_DIR}/scripts/build-zircon.sh" "${zircon_args[@]}"
     "${FUCHSIA_DIR}/buildtools/gn" ${gn_cmd} "${build_dir}" \
                                    "${gn_switches[@]}" --args="${gn_args}" "$@"
   # If GN failed, don't update .config.

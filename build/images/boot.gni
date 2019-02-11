@@ -65,7 +65,11 @@ template("vboot") {
     # The Multiboot trampoline is the "kernel" (`--vmlinuz` switch) and the
     # ZBI is the RAM disk (`--bootloader` switch).
     assert(current_cpu == "x64")
-    kernel = "${zircon_build_dir}/multiboot.bin"
+    foreach(image, zircon_images) {
+      if (image.name == "multiboot-kernel" && image.cpu == target_cpu) {
+        kernel = "$zircon_root_build_dir/${image.path}"
+      }
+    }
     inputs += [ kernel ]
 
     args = [
@@ -182,7 +186,12 @@ template("esp") {
     }
 
     if (target_cpu == "x64") {
-      gigaboot_bin = "${zircon_build_dir}/bootloader/bootx64.efi"
+      foreach(image, zircon_images) {
+        if (image.name == "bootloader" && image.type == "efi" &&
+            image.cpu == target_cpu) {
+          gigaboot_bin = "$zircon_root_build_dir/${image.path}"
+        }
+      }
       args += [
         "--efi-bootloader",
         rebase_path(gigaboot_bin),

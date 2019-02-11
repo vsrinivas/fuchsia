@@ -40,7 +40,7 @@ function main {
   done
 
   if [[ $ZIRCON -eq 1 ]]; then
-    host_test_dir="${ZIRCON_BUILD_DIR}/host_tests"
+    host_test_dir="${ZIRCON_BUILDROOT}/host_tests"
     fx-command-run build-zircon "-v"
   else
     host_test_dir="${FUCHSIA_BUILD_DIR}/host_tests"

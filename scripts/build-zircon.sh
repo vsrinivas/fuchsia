@@ -6,31 +6,40 @@
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 readonly ROOT_DIR="$(dirname "${SCRIPT_DIR}")"
 
-JOBS=`getconf _NPROCESSORS_ONLN` || {
-  Cannot get number of processors
-  exit 1
-}
-
 set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
 usage() {
-  echo "$0 <options> <extra-make-arguments>"
+  echo "$0 <options> [<gn_build_arg>=<value> ...] [<ninja_arg> ...]"
   echo ""
   echo "Options:"
   echo "  -c: Clean before building"
+  echo "  -g: Run GN but not Ninja"
+  echo "  -G: Run Ninja but not GN (Ninja will re-run GN as needed)"
   echo "  -v: Level 1 verbosity"
   echo "  -V: Level 2 verbosity"
   echo "  -A: Build with ASan"
   echo "  -H: Build host tools with ASan"
-  echo "  -n: Just print make recipes to STDOUT."
+  echo "  -n: Just print build commands to STDOUT."
   echo "  -l: Only build tools; do not build zircon."
   echo "  -j N: Passed along to make (number of parallel jobs)"
   echo "  -t <target>: Architecture (GN style) to build, instead of all"
   echo "  -o <outdir>: Directory in which to put the build-zircon directory."
   echo ""
-  echo "Additional arguments may be passed to make using standard FOO=bar syntax."
-  echo "E.g., build-zircon.sh USE_CLANG=true"
+  echo 'Additional arguments containing `=` will be used as GN build arguments.'
+  echo "Other additional arguments will be passed as extra Ninja arguments."
+  echo "e.g., $0 use_goma=true core-tests-x64"
+  echo ""
+  echo 'Note that -A and -H translate into a `variants=...` build argument.'
+  echo "You can't use those switches and also such a build argument."
+  echo "Note that if GN no build arguments (nor -c) are specified and the file"
+  echo "<outdir>/build-zircon/args.gn already exists, it will be reused."
+  echo "For nontrivial configuration changes, edit the args.gn file by hand"
+  echo "either from scratch or after a run of this script with switches;"
+  echo "then run this script with neither build arguments nor -A or -H."
 }
+
+readonly GN="${ROOT_DIR}/zircon/prebuilt/downloads/gn"
+readonly NINJA="${ROOT_DIR}/zircon/prebuilt/downloads/ninja"
 
 declare ASAN="false"
 declare CLEAN="false"
@@ -40,11 +49,16 @@ declare TOOLS_ONLY="false"
 declare OUTDIR="${ROOT_DIR}/out"
 declare VERBOSE="0"
 declare -a ARCHLIST=(arm64 x64)
+declare JOBS=0
+declare RUN_GN="true"
+declare RUN_NINJA="true"
 
-while getopts "AcHhlnj:t:p:o:vV" opt; do
+while getopts "AcgGHhlnj:t:p:o:vV" opt; do
   case "${opt}" in
     A) ASAN="true" ;;
     c) CLEAN="true" ;;
+    g) RUN_NINJA="false" ;;
+    G) RUN_GN="false" ;;
     H) HOST_ASAN="true" ;;
     h) usage ; exit 0 ;;
     n) DRY_RUN="true" ;;
@@ -67,51 +81,90 @@ if [[ "${CLEAN}" = "true" ]]; then
   rm -rf -- "${ZIRCON_BUILDROOT}"
 fi
 
-# These variables are picked up by make from the environment.
-case "${VERBOSE}" in
-  1) QUIET=0 ; V=0 ;;
-  2) QUIET=0 ; V=1 ;;
-  *) QUIET=1 ; V=0 ;;
-esac
-export QUIET V
+GN_CMD=("$GN" gen "$ZIRCON_BUILDROOT" --root="${ROOT_DIR}/zircon")
+NINJA_CMD=("$NINJA" -C "$ZIRCON_BUILDROOT")
+VARIANTS=()
+GN_ARGS=()
 
-if [[ "${ASAN}" = "true" ]]; then
-  readonly NOT_ASAN=false
+if $ASAN; then
+  VARIANTS+=(asan)
+fi
+if $HOST_ASAN; then
+  VARIANTS+=(host_asan)
+fi
+if [ ${#VARIANTS[@]} -gt 0 ]; then
+  VARIANTS_ARG='variants = ['
+  for variant in "${VARIANTS[@]}"; do
+    VARIANTS_ARG+="\"${variant}\", "
+  done
+  VARIANTS_ARG+=']'
+  GN_ARGS+=("$VARIANTS_ARG")
+fi
+
+if [[ $VERBOSE -lt 1 ]]; then
+  GN_CMD+=(-q)
+  # Ninja doesn't have a --quiet switch.
+fi
+if [[ $VERBOSE -ge 2 ]]; then
+  NINJA_CMD+=(-v)
+fi
+
+if $DRY_RUN; then
+  NINJA_CMD+=(-n)
+fi
+
+if [[ "$JOBS" != 0 ]]; then
+   NINJA_CMD+=(-j "$JOBS")
+fi
+
+if $TOOLS_ONLY; then
+  NINJA_CMD+=(tools)
 else
-  readonly NOT_ASAN=true
+  NINJA_CMD+=(legacy-host_tests)
+  for arch in "${ARCHLIST[@]}"; do
+    NINJA_CMD+=("manifest-$arch")
+  done
 fi
 
-if [[ "${DRY_RUN}" = "true" ]]; then
-  readonly DRY_RUN_ARGS="-Bnwk"
+for arg in "$@"; do
+  # TODO(BLD-325): Special case for argument used by bot recipes.
+  # Remove this after infra transitions.
+  if [[ "$arg" == GOMACC=* ]]; then
+    goma_dir="$(dirname "${arg#GOMACC=}")"
+    GN_ARGS+=(use_goma=true "goma_dir=\"$goma_dir\"")
+  elif [[ "$arg" == *=* ]]; then
+    GN_ARGS+=("$arg")
+  elif $RUN_NINJA; then
+    NINJA_CMD+=("$arg")
+  else
+    echo >&2 "Extra Ninja arguments given when -g says not to run Ninja"
+    exit 2
+  fi
+done
+
+if [[ ${#GN_ARGS[@]} -gt 0 ]]; then
+  if ! $RUN_GN; then
+    echo >&2 "GN build arguments specified when -G says not to run GN"
+    echo >&2 "Consider editting $ZIRCON_BUILDROOT/args.gn by hand instead."
+    exit 2
+  fi
+  GN_CMD+=("--args=${GN_ARGS[*]}")
+elif $RUN_GN && [[ $VERBOSE -gt 0 && -r "$ZIRCON_BUILDROOT/args.gn" ]]; then
+  echo >&2 "Reusing existing $ZIRCON_BUILDROOT/args.gn file."
 fi
 
-make_zircon_common() {
-  (test $QUIET -ne 0 || set -x
-   exec make ${DRY_RUN_ARGS} --no-print-directory -C "${ROOT_DIR}/zircon" \
-             -j ${JOBS} DEBUG_BUILDROOT=../../zircon "$@")
+run_cmd() {
+  if [[ $VERBOSE -gt 0 ]]; then
+    (set -x; "$@")
+  else
+    "$@"
+  fi
 }
 
-# Build host tools.
-make_zircon_common \
-  BUILDDIR=${OUTDIR}/build-zircon HOST_USE_ASAN="${HOST_ASAN}" tools "$@"
-
-if [[ "${TOOLS_ONLY}" = "true" ]]; then
+if ! $RUN_GN && ! $RUN_NINJA; then
+  echo >&2 "Doing nothing since -g and -G say not to."
   exit 0
 fi
 
-make_zircon_target() {
-  make_zircon_common \
-    BUILDROOT=${ZIRCON_BUILDROOT} TOOLS=${OUTDIR}/build-zircon/tools "$@"
-}
-
-for ARCH in "${ARCHLIST[@]}"; do
-    # Build without ASan for sysroot.  If all of userland will be ASan,
-    # then this build is only user libraries.
-    make_zircon_target PROJECT="${ARCH}" \
-        BUILDDIR_SUFFIX= ENABLE_ULIB_ONLY="${ASAN}" "$@"
-
-    # Always build at least the libraries with ASan, but never the sysroot.
-    make_zircon_target PROJECT="${ARCH}" \
-        BUILDDIR_SUFFIX=-asan USE_ASAN=true ENABLE_BUILD_SYSROOT=false \
-        ENABLE_ULIB_ONLY="${NOT_ASAN}"
-done
+! $RUN_GN || run_cmd "${GN_CMD[@]}"
+! $RUN_NINJA || run_cmd "${NINJA_CMD[@]}"
