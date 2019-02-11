@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
+#include "garnet/bin/ui/input_reader/protocols.h"
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 
@@ -28,30 +29,6 @@ namespace mozart {
 
 class InputInterpreter {
  public:
-  enum class Protocol : uint32_t {
-    Other,
-    Keyboard,
-    Mouse,
-    Touch,
-    Touchpad,
-    Gamepad,
-    LightSensor,
-    Buttons,
-    // The ones below are hacks that need to be removed.
-    BootMouse,
-    Acer12Touch,
-    SamsungTouch,
-    ParadiseV1Touch,
-    ParadiseV2Touch,
-    ParadiseV3Touch,
-    EgalaxTouch,
-    ParadiseV1TouchPad,
-    ParadiseV2TouchPad,
-    ParadiseSensor,
-    EyoyoTouch,
-    Ft3x27Touch,
-  };
-
   enum ReportType {
     kKeyboard,
     kMouse,
@@ -76,35 +53,6 @@ class InputInterpreter {
  private:
   static const uint8_t kMaxSensorCount = 16;
   static const uint8_t kNoSuchSensor = 0xFF;
-
-  enum class TouchDeviceType {
-    NONE,
-    HID,
-    ACER12,
-    PARADISEv1,
-    PARADISEv2,
-    PARADISEv3,
-    SAMSUNG,
-    EGALAX,
-    EYOYO,
-    FT3X27,
-  };
-
-  enum class MouseDeviceType {
-    NONE,
-    BOOT,
-    HID,
-    TOUCH,
-    PARADISEv1,
-    PARADISEv2,
-    GAMEPAD
-  };
-
-  enum class SensorDeviceType {
-    NONE,
-    PARADISE,
-    AMBIENT_LIGHT,
-  };
 
   struct HidGamepadSimple {
     int32_t left_x;

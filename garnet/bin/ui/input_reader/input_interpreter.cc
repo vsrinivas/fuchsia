@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
+#include "garnet/bin/ui/input_reader/protocols.h"
 
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <hid-parser/parser.h>
@@ -113,7 +114,7 @@ bool InputInterpreter::Initialize() {
 
   auto protocol = protocol_;
 
-  if (protocol == InputInterpreter::Protocol::Keyboard) {
+  if (protocol == Protocol::Keyboard) {
     FXL_VLOG(2) << "Device " << name() << " has keyboard";
     has_keyboard_ = true;
     keyboard_descriptor_ = fuchsia::ui::input::KeyboardDescriptor::New();
@@ -126,7 +127,7 @@ bool InputInterpreter::Initialize() {
 
     keyboard_report_ = fuchsia::ui::input::InputReport::New();
     keyboard_report_->keyboard = fuchsia::ui::input::KeyboardReport::New();
-  } else if (protocol == InputInterpreter::Protocol::Buttons) {
+  } else if (protocol == Protocol::Buttons) {
     FXL_VLOG(2) << "Device " << name() << " has buttons";
     has_buttons_ = true;
     buttons_descriptor_ = fuchsia::ui::input::ButtonsDescriptor::New();
@@ -135,7 +136,7 @@ bool InputInterpreter::Initialize() {
     buttons_descriptor_->buttons |= fuchsia::ui::input::kMicMute;
     buttons_report_ = fuchsia::ui::input::InputReport::New();
     buttons_report_->buttons = fuchsia::ui::input::ButtonsReport::New();
-  } else if (protocol == InputInterpreter::Protocol::Mouse) {
+  } else if (protocol == Protocol::Mouse) {
     FXL_VLOG(2) << "Device " << name() << " has mouse";
     has_mouse_ = true;
     mouse_device_type_ = MouseDeviceType::HID;
@@ -157,11 +158,10 @@ bool InputInterpreter::Initialize() {
 
     mouse_report_ = fuchsia::ui::input::InputReport::New();
     mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
-  } else if (protocol == InputInterpreter::Protocol::BootMouse ||
-             protocol == InputInterpreter::Protocol::Gamepad) {
+  } else if (protocol == Protocol::BootMouse || protocol == Protocol::Gamepad) {
     FXL_VLOG(2) << "Device " << name() << " has mouse";
     has_mouse_ = true;
-    mouse_device_type_ = (protocol == InputInterpreter::Protocol::BootMouse)
+    mouse_device_type_ = (protocol == Protocol::BootMouse)
                              ? MouseDeviceType::BOOT
                              : MouseDeviceType::GAMEPAD;
 
@@ -180,7 +180,7 @@ bool InputInterpreter::Initialize() {
 
     mouse_report_ = fuchsia::ui::input::InputReport::New();
     mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
-  } else if (protocol == InputInterpreter::Protocol::Touch) {
+  } else if (protocol == Protocol::Touch) {
     FXL_VLOG(2) << "Device " << name() << " has hid touch";
 
     has_touchscreen_ = true;
@@ -202,7 +202,7 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::HID;
-  } else if (protocol == InputInterpreter::Protocol::Touchpad) {
+  } else if (protocol == Protocol::Touchpad) {
     FXL_VLOG(2) << "Device " << name() << " has hid touchpad";
 
     has_mouse_ = true;
@@ -221,7 +221,7 @@ bool InputInterpreter::Initialize() {
 
     mouse_report_ = fuchsia::ui::input::InputReport::New();
     mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
-  } else if (protocol == InputInterpreter::Protocol::Acer12Touch) {
+  } else if (protocol == Protocol::Acer12Touch) {
     FXL_VLOG(2) << "Device " << name() << " has stylus";
     has_stylus_ = true;
     stylus_descriptor_ = fuchsia::ui::input::StylusDescriptor::New();
@@ -261,7 +261,7 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::ACER12;
-  } else if (protocol == InputInterpreter::Protocol::SamsungTouch) {
+  } else if (protocol == Protocol::SamsungTouch) {
     FXL_VLOG(2) << "Device " << name() << " has touchscreen";
     has_touchscreen_ = true;
     touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
@@ -282,7 +282,7 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::SAMSUNG;
-  } else if (protocol == InputInterpreter::Protocol::ParadiseV1Touch) {
+  } else if (protocol == Protocol::ParadiseV1Touch) {
     // TODO(cpu): Add support for stylus.
     FXL_VLOG(2) << "Device " << name() << " has touchscreen";
     has_touchscreen_ = true;
@@ -304,7 +304,7 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::PARADISEv1;
-  } else if (protocol == InputInterpreter::Protocol::ParadiseV2Touch) {
+  } else if (protocol == Protocol::ParadiseV2Touch) {
     FXL_VLOG(2) << "Device " << name() << " has stylus";
     has_stylus_ = true;
     stylus_descriptor_ = fuchsia::ui::input::StylusDescriptor::New();
@@ -344,7 +344,7 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::PARADISEv2;
-  } else if (protocol == InputInterpreter::Protocol::ParadiseV3Touch) {
+  } else if (protocol == Protocol::ParadiseV3Touch) {
     FXL_VLOG(2) << "Device " << name() << " has stylus";
     has_stylus_ = true;
     stylus_descriptor_ = fuchsia::ui::input::StylusDescriptor::New();
@@ -384,7 +384,7 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::PARADISEv3;
-  } else if (protocol == InputInterpreter::Protocol::ParadiseV1TouchPad) {
+  } else if (protocol == Protocol::ParadiseV1TouchPad) {
     FXL_VLOG(2) << "Device " << name() << " has touchpad";
     has_mouse_ = true;
     mouse_device_type_ = MouseDeviceType::PARADISEv1;
@@ -403,7 +403,7 @@ bool InputInterpreter::Initialize() {
 
     mouse_report_ = fuchsia::ui::input::InputReport::New();
     mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
-  } else if (protocol == InputInterpreter::Protocol::ParadiseV2TouchPad) {
+  } else if (protocol == Protocol::ParadiseV2TouchPad) {
     FXL_VLOG(2) << "Device " << name() << " has touchpad";
     has_mouse_ = true;
     mouse_device_type_ = MouseDeviceType::PARADISEv2;
@@ -422,7 +422,7 @@ bool InputInterpreter::Initialize() {
 
     mouse_report_ = fuchsia::ui::input::InputReport::New();
     mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
-  } else if (protocol == InputInterpreter::Protocol::EgalaxTouch) {
+  } else if (protocol == Protocol::EgalaxTouch) {
     FXL_VLOG(2) << "Device " << name() << " has touchscreen";
     has_touchscreen_ = true;
     touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
@@ -442,7 +442,7 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::EGALAX;
-  } else if (protocol == InputInterpreter::Protocol::ParadiseSensor) {
+  } else if (protocol == Protocol::ParadiseSensor) {
     FXL_VLOG(2) << "Device " << name() << " has motion sensors";
     sensor_device_type_ = SensorDeviceType::PARADISE;
     has_sensors_ = true;
@@ -461,7 +461,7 @@ bool InputInterpreter::Initialize() {
 
     sensor_report_ = fuchsia::ui::input::InputReport::New();
     sensor_report_->sensor = fuchsia::ui::input::SensorReport::New();
-  } else if (protocol == InputInterpreter::Protocol::EyoyoTouch) {
+  } else if (protocol == Protocol::EyoyoTouch) {
     FXL_VLOG(2) << "Device " << name() << " has touchscreen";
     has_touchscreen_ = true;
     touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
@@ -482,7 +482,7 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::EYOYO;
-  } else if (protocol == InputInterpreter::Protocol::LightSensor) {
+  } else if (protocol == Protocol::LightSensor) {
     FXL_VLOG(2) << "Device " << name() << " has an ambient light sensor";
     sensor_device_type_ = SensorDeviceType::AMBIENT_LIGHT;
     has_sensors_ = true;
@@ -495,7 +495,7 @@ bool InputInterpreter::Initialize() {
 
     sensor_report_ = fuchsia::ui::input::InputReport::New();
     sensor_report_->sensor = fuchsia::ui::input::SensorReport::New();
-  } else if (protocol == InputInterpreter::Protocol::EyoyoTouch) {
+  } else if (protocol == Protocol::EyoyoTouch) {
     FXL_VLOG(2) << "Device " << name() << " has touchscreen";
     has_touchscreen_ = true;
     touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
@@ -516,7 +516,7 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::EYOYO;
-  } else if (protocol == InputInterpreter::Protocol::Ft3x27Touch) {
+  } else if (protocol == Protocol::Ft3x27Touch) {
     FXL_VLOG(2) << "Device " << name() << " has a touchscreen";
     has_touchscreen_ = true;
     touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
@@ -1355,7 +1355,7 @@ bool InputInterpreter::ParseFt3x27TouchscreenReport(
   return true;
 }
 
-InputInterpreter::Protocol ExtractProtocol(hid::Usage input) {
+Protocol ExtractProtocol(hid::Usage input) {
   using ::hid::usage::Consumer;
   using ::hid::usage::Digitizer;
   using ::hid::usage::GenericDesktop;
@@ -1363,23 +1363,23 @@ InputInterpreter::Protocol ExtractProtocol(hid::Usage input) {
   using ::hid::usage::Sensor;
   struct {
     hid::Usage usage;
-    InputInterpreter::Protocol protocol;
+    Protocol protocol;
   } usage_to_protocol[] = {
       {{static_cast<uint16_t>(Page::kSensor),
         static_cast<uint32_t>(Sensor::kAmbientLight)},
-       InputInterpreter::Protocol::LightSensor},
+       Protocol::LightSensor},
       {{static_cast<uint16_t>(Page::kConsumer),
         static_cast<uint32_t>(Consumer::kConsumerControl)},
-       InputInterpreter::Protocol::Buttons},
+       Protocol::Buttons},
       {{static_cast<uint16_t>(Page::kDigitizer),
         static_cast<uint32_t>(Digitizer::kTouchScreen)},
-       InputInterpreter::Protocol::Touch},
+       Protocol::Touch},
       {{static_cast<uint16_t>(Page::kDigitizer),
         static_cast<uint32_t>(Digitizer::kTouchPad)},
-       InputInterpreter::Protocol::Touchpad},
+       Protocol::Touchpad},
       {{static_cast<uint16_t>(Page::kGenericDesktop),
         static_cast<uint32_t>(GenericDesktop::kMouse)},
-       InputInterpreter::Protocol::Mouse},
+       Protocol::Mouse},
       // Add more sensors here
   };
   for (auto& j : usage_to_protocol) {
@@ -1387,7 +1387,7 @@ InputInterpreter::Protocol ExtractProtocol(hid::Usage input) {
       return j.protocol;
     }
   }
-  return InputInterpreter::Protocol::Other;
+  return Protocol::Other;
 }
 
 bool InputInterpreter::ParseProtocol() {
@@ -1395,11 +1395,11 @@ bool InputInterpreter::ParseProtocol() {
   // For most keyboards and mouses Zircon requests the boot protocol
   // which has a fixed layout. This covers the following two cases:
   if (boot_mode == HidDecoder::BootMode::KEYBOARD) {
-    protocol_ = InputInterpreter::Protocol::Keyboard;
+    protocol_ = Protocol::Keyboard;
     return true;
   }
   if (boot_mode == HidDecoder::BootMode::MOUSE) {
-    protocol_ = InputInterpreter::Protocol::BootMouse;
+    protocol_ = Protocol::BootMouse;
     return true;
   }
 
@@ -1414,54 +1414,54 @@ bool InputInterpreter::ParseProtocol() {
   }
 
   if (is_acer12_touch_report_desc(desc.data(), desc.size())) {
-    protocol_ = InputInterpreter::Protocol::Acer12Touch;
+    protocol_ = Protocol::Acer12Touch;
     return true;
   }
   if (is_samsung_touch_report_desc(desc.data(), desc.size())) {
     hid_decoder_->SetupDevice(HidDecoder::Device::SAMSUNG);
-    protocol_ = InputInterpreter::Protocol::SamsungTouch;
+    protocol_ = Protocol::SamsungTouch;
     return true;
   }
   if (is_paradise_touch_report_desc(desc.data(), desc.size())) {
-    protocol_ = InputInterpreter::Protocol::ParadiseV1Touch;
+    protocol_ = Protocol::ParadiseV1Touch;
     return true;
   }
   if (is_paradise_touch_v2_report_desc(desc.data(), desc.size())) {
-    protocol_ = InputInterpreter::Protocol::ParadiseV2Touch;
+    protocol_ = Protocol::ParadiseV2Touch;
     return true;
   }
   if (is_paradise_touch_v3_report_desc(desc.data(), desc.size())) {
-    protocol_ = InputInterpreter::Protocol::ParadiseV3Touch;
+    protocol_ = Protocol::ParadiseV3Touch;
     return true;
   }
   if (USE_TOUCHPAD_HARDCODED_REPORTS) {
     if (is_paradise_touchpad_v1_report_desc(desc.data(), desc.size())) {
-      protocol_ = InputInterpreter::Protocol::ParadiseV1TouchPad;
+      protocol_ = Protocol::ParadiseV1TouchPad;
       return true;
     }
     if (is_paradise_touchpad_v2_report_desc(desc.data(), desc.size())) {
-      protocol_ = InputInterpreter::Protocol::ParadiseV2TouchPad;
+      protocol_ = Protocol::ParadiseV2TouchPad;
       return true;
     }
   }
   if (is_egalax_touchscreen_report_desc(desc.data(), desc.size())) {
-    protocol_ = InputInterpreter::Protocol::EgalaxTouch;
+    protocol_ = Protocol::EgalaxTouch;
     return true;
   }
   if (is_paradise_sensor_report_desc(desc.data(), desc.size())) {
-    protocol_ = InputInterpreter::Protocol::ParadiseSensor;
+    protocol_ = Protocol::ParadiseSensor;
     return true;
   }
   if (is_eyoyo_touch_report_desc(desc.data(), desc.size())) {
     hid_decoder_->SetupDevice(HidDecoder::Device::EYOYO);
-    protocol_ = InputInterpreter::Protocol::EyoyoTouch;
+    protocol_ = Protocol::EyoyoTouch;
     return true;
   }
   // TODO(SCN-867) Use HID parsing for all touch devices
   // will remove the need for this
   if (is_ft3x27_touch_report_desc(desc.data(), desc.size())) {
     hid_decoder_->SetupDevice(HidDecoder::Device::FT3X27);
-    protocol_ = InputInterpreter::Protocol::Ft3x27Touch;
+    protocol_ = Protocol::Ft3x27Touch;
     return true;
   }
 
@@ -1521,21 +1521,21 @@ bool InputInterpreter::ParseProtocol() {
       collection->usage.usage == hid::usage::GenericDesktop::kJoystick &&
       ParseGamepadDescriptor(input_desc->input_fields,
                              input_desc->input_count)) {
-    protocol_ = InputInterpreter::Protocol::Gamepad;
+    protocol_ = Protocol::Gamepad;
   } else {
     protocol_ = ExtractProtocol(collection->usage);
     switch (protocol_) {
-      case InputInterpreter::Protocol::LightSensor:
+      case Protocol::LightSensor:
         ParseAmbientLightDescriptor(input_desc->input_fields,
                                     input_desc->input_count);
         break;
-      case InputInterpreter::Protocol::Buttons:
+      case Protocol::Buttons:
         ParseButtonsDescriptor(input_desc->input_fields,
                                input_desc->input_count);
         break;
-      case InputInterpreter::Protocol::Touchpad:
+      case Protocol::Touchpad:
         // Fallthrough
-      case InputInterpreter::Protocol::Touch: {
+      case Protocol::Touch: {
         bool success = ts_.ParseTouchscreenDescriptor(input_desc);
         if (!success) {
           FXL_LOG(ERROR) << "invalid touchscreen descriptor for " << name();
@@ -1543,7 +1543,7 @@ bool InputInterpreter::ParseProtocol() {
         }
         break;
       }
-      case InputInterpreter::Protocol::Mouse: {
+      case Protocol::Mouse: {
         bool success = mouse_.ParseDescriptor(input_desc);
         if (!success) {
           FXL_LOG(ERROR) << "invalid mouse descriptor for " << name();
@@ -1697,7 +1697,7 @@ bool InputInterpreter::ParseButtonsDescriptor(const hid::ReportField* fields,
 
 bool InputInterpreter::ParseReport(const uint8_t* report, size_t len,
                                    HidGamepadSimple* gamepad) {
-  if (protocol_ != InputInterpreter::Protocol::Gamepad)
+  if (protocol_ != Protocol::Gamepad)
     return false;
 
   auto cur = &decoder_[0];
@@ -1726,7 +1726,7 @@ bool InputInterpreter::ParseReport(const uint8_t* report, size_t len,
 
 bool InputInterpreter::ParseReport(const uint8_t* report, size_t len,
                                    HidAmbientLightSimple* data) {
-  if (protocol_ != InputInterpreter::Protocol::LightSensor)
+  if (protocol_ != Protocol::LightSensor)
     return false;
 
   auto cur = &decoder_[0];
@@ -1751,7 +1751,7 @@ bool InputInterpreter::ParseReport(const uint8_t* report, size_t len,
 
 bool InputInterpreter::ParseReport(const uint8_t* report, size_t len,
                                    HidButtons* data) {
-  if (protocol_ != InputInterpreter::Protocol::Buttons)
+  if (protocol_ != Protocol::Buttons)
     return false;
 
   auto cur = &decoder_[0];
