@@ -51,9 +51,16 @@ public:
         // Create batch buffer
         auto batch_buffer =
             std::shared_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "batch"));
-        auto batch_mapping = AddressSpace::GetSharedGpuMapping(
-            address_space, batch_buffer, 0, batch_buffer->platform_buffer()->size());
-        ASSERT_NE(batch_mapping, nullptr);
+        std::shared_ptr<GpuMapping> batch_mapping;
+        if (kUseGlobalGtt) {
+            batch_mapping = AddressSpace::MapBufferGpu(address_space, batch_buffer);
+        } else {
+            EXPECT_TRUE(AddressSpace::MapBufferGpu(
+                address_space, batch_buffer, 0x1000, 0,
+                batch_buffer->platform_buffer()->size() / PAGE_SIZE, &batch_mapping));
+        }
+        ASSERT_TRUE(batch_mapping);
+        EXPECT_TRUE(address_space->AddMapping(batch_mapping));
 
         // Send a no-op batch to get the context initialized.
         {
@@ -111,9 +118,15 @@ public:
 
         // Map the first buffer
         std::vector<std::shared_ptr<GpuMapping>> dst_mapping(2);
-        dst_mapping[0] = AddressSpace::GetSharedGpuMapping(
-            address_space, dst_buffer[0], 0, dst_buffer[0]->platform_buffer()->size());
-        ASSERT_NE(dst_mapping[0], nullptr);
+        if (kUseGlobalGtt) {
+            dst_mapping[0] = AddressSpace::MapBufferGpu(address_space, dst_buffer[0]);
+        } else {
+            EXPECT_TRUE(AddressSpace::MapBufferGpu(
+                address_space, dst_buffer[0], 0x10000, 0,
+                dst_buffer[0]->platform_buffer()->size() / PAGE_SIZE, &dst_mapping[0]));
+        }
+        ASSERT_TRUE(dst_mapping[0]);
+        EXPECT_TRUE(address_space->AddMapping(dst_mapping[0]));
 
         // Initialize the batch buffer
         constexpr uint32_t kExpectedVal = 12345678;
@@ -191,9 +204,16 @@ public:
                 connection->ReleaseBuffer(dst_buffer[0]->platform_buffer());
             }
 
-            dst_mapping[1] = AddressSpace::GetSharedGpuMapping(
-                address_space, dst_buffer[1], 0, dst_buffer[1]->platform_buffer()->size());
-            ASSERT_NE(dst_mapping[1], nullptr);
+            if (kUseGlobalGtt) {
+                dst_mapping[1] = AddressSpace::MapBufferGpu(address_space, dst_buffer[1]);
+            } else {
+                EXPECT_TRUE(AddressSpace::MapBufferGpu(
+                    address_space, dst_buffer[1], gpu_addr, 0,
+                    dst_buffer[1]->platform_buffer()->size() / PAGE_SIZE, &dst_mapping[1]));
+            }
+            ASSERT_TRUE(dst_mapping[1]);
+            EXPECT_TRUE(address_space->AddMapping(dst_mapping[1]));
+
             ASSERT_EQ(gpu_addr, dst_mapping[1]->gpu_addr());
         }
 

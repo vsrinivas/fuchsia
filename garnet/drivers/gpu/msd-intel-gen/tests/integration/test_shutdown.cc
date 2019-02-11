@@ -11,6 +11,7 @@
 #include "magma.h"
 #include "magma_util/inflight_list.h"
 #include "magma_util/macros.h"
+#include "msd_intel_gen_query.h"
 #include "gtest/gtest.h"
 
 namespace {
@@ -29,7 +30,17 @@ private:
 
 class TestConnection : public TestBase {
 public:
-    TestConnection() { magma_create_connection(fd(), &connection_); }
+    TestConnection()
+    {
+        magma_create_connection(fd(), &connection_);
+
+        magma_status_t status =
+            magma_query(fd(), kMsdIntelGenQueryExtraPageCount, &extra_page_count_);
+        if (status != MAGMA_STATUS_OK) {
+            DLOG("Failed to query kMsdIntelGenQueryExtraPageCount: %d", status);
+            extra_page_count_ = 0;
+        }
+    }
 
     ~TestConnection()
     {
@@ -56,6 +67,9 @@ public:
         result = magma_create_buffer(connection_, PAGE_SIZE, &size, &batch_buffer);
         if (result != 0)
             return DRET(result);
+
+        magma_map_buffer_gpu(connection_, batch_buffer, 0, 1, gpu_addr_, 0);
+        gpu_addr_ += (1 + extra_page_count_) * PAGE_SIZE;
 
         result = magma_create_command_buffer(connection_, PAGE_SIZE, &command_buffer);
         if (result != 0)
@@ -120,6 +134,8 @@ public:
 
 private:
     magma_connection_t connection_;
+    uint64_t extra_page_count_ = 0;
+    uint64_t gpu_addr_ = 0;
 };
 
 constexpr uint32_t kMaxCount = 100;

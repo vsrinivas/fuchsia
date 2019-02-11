@@ -54,6 +54,8 @@ public:
 
     msd_context_t* ctx() { return ctx_->msd_ctx(); }
     MagmaSystemDevice* dev() { return dev_.get(); }
+    MagmaSystemConnection* connection() { return connection_.get(); }
+
     magma::PlatformBuffer* buffer()
     {
         DASSERT(buffer_);

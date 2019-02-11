@@ -73,8 +73,10 @@ public:
         connection->SetNotificationCallback(KillCallbackStatic, this);
 
         std::shared_ptr<MsdIntelBuffer> buffer = MsdIntelBuffer::Create(PAGE_SIZE, "test");
-        std::shared_ptr<GpuMapping> mapping =
-            AddressSpace::MapBufferGpu(connection->per_process_gtt(), buffer);
+        std::shared_ptr<GpuMapping> mapping;
+        EXPECT_TRUE(AddressSpace::MapBufferGpu(connection->per_process_gtt(), buffer, 0x10000, 0, 1,
+                                               &mapping));
+        ASSERT_TRUE(mapping);
         EXPECT_TRUE(connection->per_process_gtt()->AddMapping(mapping));
 
         mapping.reset();
@@ -94,8 +96,10 @@ public:
         connection->SetNotificationCallback(KillCallbackStatic, this);
 
         std::shared_ptr<MsdIntelBuffer> buffer = MsdIntelBuffer::Create(PAGE_SIZE, "test");
-        std::shared_ptr<GpuMapping> mapping =
-            AddressSpace::MapBufferGpu(connection->per_process_gtt(), buffer);
+        std::shared_ptr<GpuMapping> mapping;
+        EXPECT_TRUE(AddressSpace::MapBufferGpu(connection->per_process_gtt(), buffer, 0x10000, 0, 1,
+                                               &mapping));
+        ASSERT_TRUE(mapping);
         EXPECT_TRUE(connection->per_process_gtt()->AddMapping(mapping));
 
         // Release the buffer while holding the mapping triggers the killed callback

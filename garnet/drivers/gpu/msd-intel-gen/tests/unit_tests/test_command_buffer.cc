@@ -10,6 +10,7 @@
 #include "mock/mock_bus_mapper.h"
 #include "msd_intel_context.h"
 #include "msd_intel_device.h"
+#include "ppgtt.h"
 #include "gtest/gtest.h"
 
 class Test {
@@ -38,6 +39,16 @@ public:
         auto address_space_owner = std::make_unique<AddressSpaceOwner>();
         auto addr_space =
             std::make_shared<MockAddressSpace>(address_space_owner.get(), 0, 1024 * PAGE_SIZE);
+
+        {
+            std::vector<MagmaSystemBuffer*>& resources = helper_->resources();
+            for (auto& resource : resources) {
+                std::shared_ptr<GpuMapping> mapping = addr_space->MapBufferGpu(
+                    addr_space, MsdIntelAbiBuffer::cast(resource->msd_buf())->ptr());
+                ASSERT_TRUE(mapping);
+                EXPECT_TRUE(addr_space->AddMapping(mapping));
+            }
+        }
 
         std::vector<std::shared_ptr<GpuMapping>> mappings;
         ASSERT_TRUE(TestCommandBuffer::MapResourcesGpu(cmd_buf_.get(), addr_space, mappings));
@@ -72,6 +83,16 @@ public:
         auto address_space_owner = std::make_unique<AddressSpaceOwner>();
         auto addr_space =
             std::make_shared<MockAddressSpace>(address_space_owner.get(), 0, 1024 * PAGE_SIZE);
+
+        {
+            std::vector<MagmaSystemBuffer*>& resources = helper_->resources();
+            for (auto& resource : resources) {
+                std::shared_ptr<GpuMapping> mapping = addr_space->MapBufferGpu(
+                    addr_space, MsdIntelAbiBuffer::cast(resource->msd_buf())->ptr());
+                ASSERT_TRUE(mapping);
+                EXPECT_TRUE(addr_space->AddMapping(mapping));
+            }
+        }
 
         auto batch_buf_index = TestCommandBuffer::batch_buffer_resource_index(cmd_buf_.get());
         auto batch_res = TestCommandBuffer::exec_resources(cmd_buf_.get())[batch_buf_index];
@@ -109,6 +130,22 @@ public:
 
     void TestPrepareForExecution()
     {
+        {
+            gpu_addr_t gpu_addr = 0;
+            std::vector<MagmaSystemBuffer*>& resources = helper_->resources();
+            for (auto& resource : resources) {
+                auto buffer = MsdIntelAbiBuffer::cast(resource->msd_buf())->ptr();
+                std::shared_ptr<GpuMapping> mapping;
+                EXPECT_TRUE(AddressSpace::MapBufferGpu(
+                    exec_address_space(), buffer, gpu_addr, 0,
+                    buffer->platform_buffer()->size() / PAGE_SIZE, &mapping));
+                ASSERT_TRUE(mapping);
+                EXPECT_TRUE(exec_address_space()->AddMapping(mapping));
+                gpu_addr +=
+                    buffer->platform_buffer()->size() + PerProcessGtt::ExtraPageCount() * PAGE_SIZE;
+            }
+        }
+
         auto device = MsdIntelDevice::cast(helper_->dev()->msd_dev());
         auto engine = TestCommandBuffer::render_engine(device);
 
@@ -144,12 +181,30 @@ public:
 
     void TestExecute()
     {
-        auto context = MsdIntelAbiContext::cast(helper_->ctx())->ptr();
-        auto addr_space = exec_address_space();
+        gpu_addr_t gpu_addr = 0;
+        {
+            std::vector<MagmaSystemBuffer*>& resources = helper_->resources();
+            for (auto& resource : resources) {
+                auto buffer = MsdIntelAbiBuffer::cast(resource->msd_buf())->ptr();
+                std::shared_ptr<GpuMapping> mapping;
+                EXPECT_TRUE(AddressSpace::MapBufferGpu(
+                    exec_address_space(), buffer, gpu_addr, 0,
+                    buffer->platform_buffer()->size() / PAGE_SIZE, &mapping));
+                ASSERT_TRUE(mapping);
+                EXPECT_TRUE(exec_address_space()->AddMapping(mapping));
+                gpu_addr +=
+                    buffer->platform_buffer()->size() + PerProcessGtt::ExtraPageCount() * PAGE_SIZE;
+            }
+        }
 
-        auto target_buffer_mapping =
-            AddressSpace::MapBufferGpu(addr_space, MsdIntelBuffer::Create(PAGE_SIZE, "test"));
-        ASSERT_NE(target_buffer_mapping, nullptr);
+        // Create target buffer and mapping
+        auto buffer = std::shared_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
+        std::shared_ptr<GpuMapping> target_buffer_mapping;
+        EXPECT_TRUE(AddressSpace::MapBufferGpu(exec_address_space(), buffer, gpu_addr, 0,
+                                               buffer->platform_buffer()->size() / PAGE_SIZE,
+                                               &target_buffer_mapping));
+        ASSERT_TRUE(target_buffer_mapping);
+        EXPECT_TRUE(exec_address_space()->AddMapping(target_buffer_mapping));
 
         void* target_cpu_addr;
         ASSERT_TRUE(target_buffer_mapping->buffer()->platform_buffer()->MapCpu(&target_cpu_addr));

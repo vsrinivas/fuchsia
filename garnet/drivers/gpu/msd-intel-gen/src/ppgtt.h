@@ -6,7 +6,6 @@
 #define PPGTT_H
 
 #include "address_space.h"
-#include "magma_util/address_space_allocator.h"
 #include "magma_util/register_io.h"
 #include "platform_buffer.h"
 
@@ -285,7 +284,6 @@ private:
     bool ClearLocked(uint64_t start, uint64_t length) override;
 
     std::unique_ptr<Pml4Table> pml4_table_;
-    std::unique_ptr<magma::AddressSpaceAllocator> allocator_;
 
     // For testing
     friend class TestPerProcessGtt;

@@ -11,6 +11,7 @@
 #include "magma_util/dlog.h"
 #include "magma_util/inflight_list.h"
 #include "magma_util/macros.h"
+#include "msd_intel_gen_query.h"
 #include "gtest/gtest.h"
 
 namespace {
@@ -35,6 +36,13 @@ public:
     {
         magma_create_connection(fd(), &connection_);
         DASSERT(connection_);
+
+        magma_status_t status =
+            magma_query(fd(), kMsdIntelGenQueryExtraPageCount, &extra_page_count_);
+        if (status != MAGMA_STATUS_OK) {
+            DLOG("Failed to query kMsdIntelGenQueryExtraPageCount: %d", status);
+            extra_page_count_ = 0;
+        }
 
         magma_create_context(connection_, &context_id_);
     }
@@ -61,7 +69,10 @@ public:
 
         ASSERT_EQ(magma_create_buffer(connection_, PAGE_SIZE, &size, &batch_buffer), 0);
         void* vaddr;
-        ASSERT_EQ(0, magma_map(connection_, batch_buffer, &vaddr));
+        ASSERT_EQ(MAGMA_STATUS_OK, magma_map(connection_, batch_buffer, &vaddr));
+
+        magma_map_buffer_gpu(connection_, batch_buffer, 0, 1, gpu_addr_, 0);
+        gpu_addr_ += (1 + extra_page_count_) * PAGE_SIZE;
 
         ASSERT_TRUE(InitBatchBuffer(vaddr, size, how == HANG));
 
@@ -230,6 +241,8 @@ public:
 private:
     magma_connection_t connection_;
     uint32_t context_id_;
+    uint64_t extra_page_count_ = 0;
+    uint64_t gpu_addr_ = 0;
 };
 
 } // namespace

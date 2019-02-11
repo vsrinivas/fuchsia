@@ -142,8 +142,7 @@ bool MagmaSystemConnection::MapBufferGpu(uint64_t id, uint64_t gpu_va, uint64_t 
         return DRETF(false, "Attempting to gpu map invalid buffer id");
     if (msd_connection_map_buffer_gpu(msd_connection(), iter->second.buffer->msd_buf(), gpu_va,
                                       page_offset, page_count, flags) != MAGMA_STATUS_OK)
-        // TODO(MA-465) restore DRETF here
-        return false;
+        return DRETF(false, "msd_connection_map_buffer_gpu failed");
 
     return true;
 }

@@ -6,12 +6,19 @@
 #include <vector>
 
 #include "helper/platform_device_helper.h"
+#include "msd_intel_gen_query.h"
 #include "sys_driver/magma_driver.h"
 #include "sys_driver/magma_system_connection.h"
 #include "sys_driver/magma_system_context.h"
 #include "sys_driver/magma_system_device.h"
 #include "gtest/gtest.h"
 
+// This test is meant to run on all devices and exercise
+// the execution of command buffers from multiple connections
+// simultaneously.  So doing requires some device specific knowledge
+// (for example what instructions to put into the command buffer);
+// and that may not be easily achieved so in practice this test
+// may bail out early on some devices.
 class TestMultithread {
 public:
     static std::unique_ptr<TestMultithread> Create()
@@ -59,10 +66,17 @@ public:
             device_, MsdConnectionUniquePtr(msd_device_open(device_->msd_dev(), 0)));
         ASSERT_NE(connection, nullptr);
 
+        uint64_t extra_page_count;
+        EXPECT_EQ(MAGMA_STATUS_OK,
+                  msd_device_query(device_->msd_dev(), kMsdIntelGenQueryExtraPageCount,
+                                   &extra_page_count));
+
         uint32_t context_id = ++context_id_;
         EXPECT_TRUE(connection->CreateContext(context_id));
         auto context = connection->LookupContext(context_id);
         ASSERT_NE(context, nullptr);
+
+        uint64_t gpu_addr = 0;
 
         for (uint32_t i = 0; i < num_iterations; i++) {
             auto batch_buffer = magma::PlatformBuffer::Create(PAGE_SIZE, "test");
@@ -76,6 +90,10 @@ public:
 
             if (!InitBatchBuffer(batch_buffer.get()))
                 break; // Abort the test
+
+            EXPECT_TRUE(
+                connection->MapBufferGpu(id, gpu_addr, 0, batch_buffer->size() / PAGE_SIZE, 0));
+            gpu_addr += batch_buffer->size() + extra_page_count * PAGE_SIZE;
 
             auto command_buffer = magma::PlatformBuffer::Create(PAGE_SIZE, "test");
 

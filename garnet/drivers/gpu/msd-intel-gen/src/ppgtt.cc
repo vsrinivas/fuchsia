@@ -4,7 +4,6 @@
 
 #include "ppgtt.h"
 #include "magma_util/macros.h"
-#include "magma_util/simple_allocator.h"
 #include "platform_buffer.h"
 #include "registers.h"
 
@@ -136,9 +135,6 @@ std::unique_ptr<PerProcessGtt> PerProcessGtt::Create(Owner* owner)
 PerProcessGtt::PerProcessGtt(Owner* owner, std::unique_ptr<Pml4Table> pml4_table)
     : AddressSpace(owner, ADDRESS_SPACE_PPGTT), pml4_table_(std::move(pml4_table))
 {
-    // TODO(MA-465): remove this
-    allocator_ = magma::SimpleAllocator::Create(0, Size());
-    DASSERT(allocator_);
 }
 
 bool PerProcessGtt::ClearLocked(uint64_t start, uint64_t page_count)
@@ -196,20 +192,11 @@ bool PerProcessGtt::ClearLocked(uint64_t start, uint64_t page_count)
 
 bool PerProcessGtt::AllocLocked(size_t size, uint8_t align_pow2, uint64_t* addr_out)
 {
-    DASSERT(allocator_);
-    // allocate an extra page on the end to avoid page faults from over fetch
-    // see
-    // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-skl-vol02a-commandreference-instructions.pdf
-    // page 908
-    size_t alloc_size = size + (kOverfetchPageCount + kGuardPageCount) * PAGE_SIZE;
-    return allocator_->Alloc(alloc_size, align_pow2, addr_out);
+    DASSERT(false);
+    return false;
 }
 
-bool PerProcessGtt::FreeLocked(uint64_t addr)
-{
-    DASSERT(allocator_);
-    return allocator_->Free(addr);
-}
+bool PerProcessGtt::FreeLocked(uint64_t addr) { return true; }
 
 bool PerProcessGtt::InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping)
 {

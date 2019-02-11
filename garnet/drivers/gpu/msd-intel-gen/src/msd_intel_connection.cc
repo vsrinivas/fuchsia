@@ -28,15 +28,28 @@ void msd_connection_set_notification_callback(struct msd_connection_t* connectio
     MsdIntelAbiConnection::cast(connection)->ptr()->SetNotificationCallback(callback, token);
 }
 
-magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* connection, msd_buffer_t* buffer,
-                                             uint64_t gpu_va, uint64_t page_offset,
-                                             uint64_t page_count, uint64_t flags)
+magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
+                                             msd_buffer_t* abi_buffer, uint64_t gpu_addr,
+                                             uint64_t page_offset, uint64_t page_count,
+                                             uint64_t flags)
 {
-    return MAGMA_STATUS_UNIMPLEMENTED;
+    auto connection = MsdIntelAbiConnection::cast(abi_connection)->ptr();
+
+    std::shared_ptr<GpuMapping> mapping;
+    magma::Status status = AddressSpace::MapBufferGpu(connection->per_process_gtt(),
+                                                      MsdIntelAbiBuffer::cast(abi_buffer)->ptr(),
+                                                      gpu_addr, page_offset, page_count, &mapping);
+    if (!status.ok())
+        return DRET_MSG(status.get(), "MapBufferGpu failed");
+
+    if (!connection->per_process_gtt()->AddMapping(std::move(mapping)))
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to add mapping");
+
+    return MAGMA_STATUS_OK;
 }
 
-magma_status_t msd_connection_unmap_buffer_gpu(msd_connection_t* connection, msd_buffer_t* buffer,
-                                               uint64_t gpu_va)
+magma_status_t msd_connection_unmap_buffer_gpu(msd_connection_t* abi_connection,
+                                               msd_buffer_t* abi_buffer, uint64_t gpu_va)
 {
     return MAGMA_STATUS_UNIMPLEMENTED;
 }

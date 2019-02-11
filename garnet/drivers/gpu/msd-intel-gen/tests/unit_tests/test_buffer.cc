@@ -36,7 +36,7 @@ public:
         EXPECT_GE(buffer->platform_buffer()->size(), size);
     }
 
-    static void MapGpu()
+    static void AllocatingMapGpu()
     {
         uint64_t base = PAGE_SIZE;
         uint64_t size = PAGE_SIZE * 10;
@@ -62,6 +62,97 @@ public:
         EXPECT_TRUE(address_space->is_clear(gpu_addr));
     }
 
+    static void NonAllocatingMapGpuFail()
+    {
+        constexpr uint64_t kAddressSpaceSize = PAGE_SIZE * 10;
+        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
+        auto address_space = std::make_shared<MockNonAllocatingAddressSpace>(
+            address_space_owner.get(), kAddressSpaceSize);
+
+        constexpr uint64_t kBufferSizeInPages = 2;
+        auto buffer = std::shared_ptr<MsdIntelBuffer>(
+            MsdIntelBuffer::Create(kBufferSizeInPages * PAGE_SIZE, "test"));
+        ASSERT_TRUE(buffer);
+
+        std::shared_ptr<GpuMapping> mapping;
+        // Gpu address misaligned
+        EXPECT_FALSE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                                PAGE_SIZE + 1,          // gpu addr
+                                                0,                      // page offset
+                                                kBufferSizeInPages - 1, // page count
+                                                &mapping));
+        // Bad page offset
+        EXPECT_FALSE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                                PAGE_SIZE,          // gpu addr
+                                                kBufferSizeInPages, // page offset
+                                                1,                  // page count
+                                                &mapping));
+        // Bad page count
+        EXPECT_FALSE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                                PAGE_SIZE,              // gpu addr
+                                                0,                      // page offset
+                                                kBufferSizeInPages + 1, // page count
+                                                &mapping));
+        // Bad page offset + count
+        EXPECT_FALSE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                                PAGE_SIZE,          // gpu addr
+                                                1,                  // page offset
+                                                kBufferSizeInPages, // page count
+                                                &mapping));
+        // Won't fit
+        EXPECT_FALSE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                                kAddressSpaceSize - PAGE_SIZE, // gpu addr
+                                                0,                             // page offset
+                                                kBufferSizeInPages,            // page count
+                                                &mapping));
+    }
+
+    static void NonAllocatingMapGpu()
+    {
+        constexpr uint64_t kAddressSpaceSize = PAGE_SIZE * 10;
+        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
+        auto address_space = std::make_shared<MockNonAllocatingAddressSpace>(
+            address_space_owner.get(), kAddressSpaceSize);
+
+        constexpr uint64_t kBufferSizeInPages = 2;
+        auto buffer = std::shared_ptr<MsdIntelBuffer>(
+            MsdIntelBuffer::Create(kBufferSizeInPages * PAGE_SIZE, "test"));
+        ASSERT_TRUE(buffer);
+
+        std::shared_ptr<GpuMapping> mapping;
+        // Start
+        EXPECT_TRUE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                               0,                  // gpu addr
+                                               0,                  // page offset
+                                               kBufferSizeInPages, // page count
+                                               &mapping));
+        // End
+        EXPECT_TRUE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                               kAddressSpaceSize -
+                                                   kBufferSizeInPages * PAGE_SIZE, // gpu addr
+                                               0,                                  // page offset
+                                               kBufferSizeInPages,                 // page count
+                                               &mapping));
+        // Middle
+        EXPECT_TRUE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                               PAGE_SIZE * 5,      // gpu addr
+                                               0,                  // page offset
+                                               kBufferSizeInPages, // page count
+                                               &mapping));
+        // Partial from start
+        EXPECT_TRUE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                               PAGE_SIZE * 5,          // gpu addr
+                                               1,                      // page offset
+                                               kBufferSizeInPages - 1, // page count
+                                               &mapping));
+        // Partial from end
+        EXPECT_TRUE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                               PAGE_SIZE * 5,          // gpu addr
+                                               kBufferSizeInPages - 1, // page offset
+                                               1,                      // page count
+                                               &mapping));
+    }
+
     static void SharedMapping(uint64_t size)
     {
         auto address_space_owner = std::make_unique<AddressSpaceOwner>();
@@ -73,13 +164,20 @@ public:
         ASSERT_NE(buffer, nullptr);
         EXPECT_EQ(1u, buffer.use_count());
 
-        auto mapping = AddressSpace::GetSharedGpuMapping(address_space, buffer, 0,
-                                                         buffer->platform_buffer()->size());
+        std::shared_ptr<GpuMapping> mapping =
+            address_space->FindGpuMapping(buffer, 0, buffer->platform_buffer()->size());
+        EXPECT_FALSE(mapping);
+
+        mapping = AddressSpace::MapBufferGpu(address_space, buffer);
+        ASSERT_TRUE(mapping);
+
+        EXPECT_EQ(1u, mapping.use_count());
         EXPECT_EQ(2u, buffer.use_count());
+
+        EXPECT_TRUE(address_space->AddMapping(mapping));
         EXPECT_EQ(2u, mapping.use_count());
 
-        auto mapping2 = AddressSpace::GetSharedGpuMapping(address_space, buffer, 0,
-                                                          buffer->platform_buffer()->size());
+        auto mapping2 = address_space->FindGpuMapping(buffer, 0, buffer->platform_buffer()->size());
         EXPECT_EQ(mapping, mapping2);
         EXPECT_EQ(2u, buffer.use_count());
         EXPECT_EQ(3u, mapping.use_count());
@@ -110,39 +208,46 @@ public:
         EXPECT_EQ(1u, buffer.use_count());
 
         std::shared_ptr<GpuMapping> mapping_low =
-            AddressSpace::GetSharedGpuMapping(address_space, buffer, 0, kBufferSize / 2);
-        ASSERT_NE(mapping_low, nullptr);
+            AddressSpace::MapBufferGpu(address_space, buffer, 0, kBufferSize / 2);
+        ASSERT_TRUE(mapping_low);
+        EXPECT_TRUE(address_space->AddMapping(mapping_low));
         EXPECT_EQ(2u, buffer.use_count());
 
-        std::shared_ptr<GpuMapping> mapping_high = AddressSpace::GetSharedGpuMapping(
-            address_space, buffer, kBufferSize / 2, kBufferSize / 2);
-        ASSERT_NE(mapping_high, nullptr);
+        std::shared_ptr<GpuMapping> mapping_high =
+            AddressSpace::MapBufferGpu(address_space, buffer, kBufferSize / 2, kBufferSize / 2);
+        ASSERT_TRUE(mapping_high);
+        EXPECT_TRUE(address_space->AddMapping(mapping_high));
         EXPECT_EQ(3u, buffer.use_count());
 
         // not the same mapping
         EXPECT_NE(mapping_low.get(), mapping_high.get());
 
         std::shared_ptr<GpuMapping> mapping_full =
-            AddressSpace::GetSharedGpuMapping(address_space, buffer, 0, kBufferSize);
-        ASSERT_NE(mapping_full, nullptr);
+            AddressSpace::MapBufferGpu(address_space, buffer, 0, kBufferSize);
+        ASSERT_TRUE(mapping_full);
+
         EXPECT_NE(mapping_full.get(), mapping_low.get());
         EXPECT_NE(mapping_full.get(), mapping_high.get());
         EXPECT_EQ(4u, buffer.use_count());
 
-        mapping_low = AddressSpace::GetSharedGpuMapping(address_space, buffer, 0, kBufferSize / 2);
-        ASSERT_NE(mapping_low, nullptr);
-        EXPECT_NE(mapping_low.get(), mapping_full.get());
+        auto found_mapping_low = address_space->FindGpuMapping(buffer, 0, kBufferSize / 2);
+        ASSERT_TRUE(found_mapping_low);
+        EXPECT_EQ(found_mapping_low.get(), mapping_low.get());
 
-        mapping_high = AddressSpace::GetSharedGpuMapping(
-            address_space, buffer, kBufferSize - kBufferSize / 2, kBufferSize / 2);
-        ASSERT_NE(mapping_high, nullptr);
-        EXPECT_NE(mapping_high.get(), mapping_full.get());
+        auto found_mapping_high =
+            address_space->FindGpuMapping(buffer, kBufferSize - kBufferSize / 2, kBufferSize / 2);
+        ASSERT_TRUE(found_mapping_high);
+        EXPECT_EQ(found_mapping_high.get(), mapping_high.get());
     }
 };
 
 TEST(MsdIntelBuffer, CreateAndDestroy) { TestMsdIntelBuffer::CreateAndDestroy(); }
 
-TEST(MsdIntelBuffer, MapGpu) { TestMsdIntelBuffer::MapGpu(); }
+TEST(MsdIntelBuffer, AllocatingMapGpu) { TestMsdIntelBuffer::AllocatingMapGpu(); }
+
+TEST(MsdIntelBuffer, NonAllocatingMapGpuFail) { TestMsdIntelBuffer::NonAllocatingMapGpuFail(); }
+
+TEST(MsdIntelBuffer, NonAllocatingMapGpu) { TestMsdIntelBuffer::NonAllocatingMapGpu(); }
 
 TEST(MsdIntelBuffer, SharedMapping)
 {

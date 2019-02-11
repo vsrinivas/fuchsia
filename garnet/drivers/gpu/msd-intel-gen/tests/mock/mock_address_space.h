@@ -9,9 +9,9 @@
 #include "magma_util/macros.h"
 #include <map>
 
-class MockAddressSpace : public AddressSpace {
+class MockAllocatingAddressSpace : public AddressSpace {
 public:
-    MockAddressSpace(AddressSpace::Owner* owner, uint64_t base, uint64_t size)
+    MockAllocatingAddressSpace(AddressSpace::Owner* owner, uint64_t base, uint64_t size)
         : AddressSpace(owner, ADDRESS_SPACE_PPGTT), size_(size), next_addr_(base)
     {
     }
@@ -55,6 +55,34 @@ private:
         bool clear;
     };
     std::map<uint64_t, Allocation> allocations_;
+};
+
+using MockAddressSpace = MockAllocatingAddressSpace;
+
+class MockNonAllocatingAddressSpace : public AddressSpace {
+public:
+    MockNonAllocatingAddressSpace(AddressSpace::Owner* owner, uint64_t size)
+        : AddressSpace(owner, ADDRESS_SPACE_PPGTT), size_(size)
+    {
+    }
+
+    uint64_t Size() const override { return size_; }
+
+    bool AllocLocked(size_t size, uint8_t align_pow2, uint64_t* addr_out) override { return false; }
+    bool FreeLocked(uint64_t addr) override { return true; }
+
+    bool ClearLocked(uint64_t addr, uint64_t page_count) override
+    {
+        return addr + page_count * PAGE_SIZE <= Size();
+    }
+
+    bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override
+    {
+        return addr + bus_mapping->page_count() * PAGE_SIZE <= Size();
+    }
+
+private:
+    uint64_t size_;
 };
 
 #endif // MOCK_ADDRESS_SPACE_H

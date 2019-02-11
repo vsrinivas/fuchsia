@@ -111,15 +111,11 @@ public:
         std::vector<std::unique_ptr<MockBusMapping>> bus_mapping(2);
 
         // Placeholder occupies most of the first page directory
-        uint64_t placeholder_addr;
-        auto placeholder = magma::PlatformBuffer::Create(512 * 511 * PAGE_SIZE, "placeholder");
-        EXPECT_TRUE(ppgtt->Alloc(placeholder->size(), 0, &placeholder_addr));
-
+        addr[0] = 512 * 511 * PAGE_SIZE + PerProcessGtt::ExtraPageCount() * PAGE_SIZE;
         buffer[0] = magma::PlatformBuffer::Create(513 * PAGE_SIZE, "test");
-        EXPECT_TRUE(ppgtt->Alloc(buffer[0]->size(), 0, &addr[0]));
 
+        addr[1] = addr[0] + buffer[0]->size() + PerProcessGtt::ExtraPageCount() * PAGE_SIZE;
         buffer[1] = magma::PlatformBuffer::Create(10000, "test");
-        EXPECT_TRUE(ppgtt->Alloc(buffer[1]->size(), 0, &addr[1]));
 
         bus_mapping[0] = std::make_unique<MockBusMapping>(0, buffer[0]->size() / PAGE_SIZE);
         uint64_t phys_addr_base = 0xabcd1000;
