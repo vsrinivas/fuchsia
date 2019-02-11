@@ -53,11 +53,11 @@ private:
 // Provides more useful context for string diff than EXPECT_STR_EQ, which shows
 // a limited prefix.  When the string is long, and the difference is buried
 // past the limited prefix, the limited prefix doesn't give useful information.
-std::string targeted_diff(const char* expected, const char* actual, int size) {
+std::string targeted_diff(const char* expected, const char* actual, size_t size) {
     // We want two lines of useful context:
-    int i = 0;
-    int last_nl = 0;
-    int last_last_nl = 0;
+    size_t i = 0;
+    size_t last_nl = 0;
+    size_t last_last_nl = 0;
     while (i <= size && expected[i] == actual[i]) {
         if (expected[i] == '\n') {
             last_last_nl = last_nl;
@@ -66,9 +66,9 @@ std::string targeted_diff(const char* expected, const char* actual, int size) {
         i++;
     }
 
-    int start = last_last_nl;
-    int expected_end = (i + 10 < strlen(expected)) ? i + 10 : strlen(expected) - 1;
-    int actual_end = (i + 10 < strlen(actual)) ? i + 10 : strlen(actual) - 1;
+    size_t start = last_last_nl;
+    size_t expected_end = (i + 10 < strlen(expected)) ? i + 10 : strlen(expected) - 1;
+    size_t actual_end = (i + 10 < strlen(actual)) ? i + 10 : strlen(actual) - 1;
     std::string s("Expected contains \"");
     s.append(std::string(expected + start, expected_end - start));
     s.append("\" and actual contains \"");
