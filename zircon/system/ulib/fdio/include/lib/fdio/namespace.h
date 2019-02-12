@@ -31,9 +31,15 @@ zx_status_t fdio_ns_destroy(fdio_ns_t* ns);
 // namespace.
 //
 // Ownership of |h| is transferred to |ns|: it is closed on error.
-//
-// Will fail with ZX_ERR_BAD_STATE if the namespace is in use.
 zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t h);
+
+// Unbinds |path| from a namespace, closing the handle within |ns| that
+// corresponds to that path when all references to the node go out of scope.
+//
+// Returns ZX_ERR_NOT_FOUND if |path| is not a remote.
+// Returns ZX_ERR_NOT_SUPPORTED if |path| is the root of the namespace.
+// Returns ZX_ERR_INVALID_ARGS if |path| is otherwise invalid.
+zx_status_t fdio_ns_unbind(fdio_ns_t* ns, const char* path);
 
 // Create a new directory within a namespace, bound to the
 // directory referenced by the file descriptor fd.

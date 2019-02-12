@@ -218,6 +218,78 @@ zx_status_t fdio_namespace::Connect(const char* path, uint32_t flags,
     return fdio_open_at(vn->Remote().get(), path, flags, channel.release());
 }
 
+zx_status_t fdio_namespace::Unbind(const char* path) {
+    if ((path == nullptr) || (path[0] != '/')) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Skip leading slash.
+    path++;
+
+    if (path[0] == 0) {
+        // The path was "/" so we're trying to unbind to the root vnode.
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    fbl::AutoLock lock(&lock_);
+    fbl::RefPtr<LocalVnode> vn = root_;
+    // If we remove a vnode, we may create one or more childless intermediate parent nodes.
+    // This node denotes the "highest" such node in the filesystem hierarchy.
+    fbl::RefPtr<LocalVnode> removable_origin_vn;
+
+    for (;;) {
+        const char* next = strchr(path, '/');
+        fbl::StringPiece name(path, next ? (next - path) : strlen(path));
+        zx_status_t status = ValidateName(name);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        if (vn->Remote().is_valid()) {
+            // Since shadowing is disallowed, this must refer to an invalid path.
+            return ZX_ERR_NOT_FOUND;
+        }
+
+        size_t children_count = 0;
+        vn->ForAllChildren([&children_count](const LocalVnode& vn) {
+            if (++children_count > 1) {
+                return ZX_ERR_STOP;
+            }
+            return ZX_OK;
+        });
+
+        if (children_count > 1) {
+            // If this node has multiple children (including something OTHER than the node
+            // we're potentially unbinding), we shouldn't try to remove it while deleting
+            // childless intermediate nodes.
+            removable_origin_vn = nullptr;
+        } else if (removable_origin_vn == nullptr) {
+            // If this node has one or fewer children, it's a viable candidate for removal.
+            // Only set this if it's the "highest" node we've seen satisfying this property.
+            removable_origin_vn = vn;
+        }
+
+        vn = vn->Lookup(name);
+        if (vn == nullptr) {
+            return ZX_ERR_NOT_FOUND;
+        }
+
+        if (!next) {
+            // This is the last segment; we must match.
+            if (!vn->Remote().is_valid()) {
+                return ZX_ERR_NOT_FOUND;
+            }
+            // This assertion must hold without shadowing: |vn| should
+            // have no children, so at minimum, |removable_origin_vn| = |vn|.
+            ZX_DEBUG_ASSERT(removable_origin_vn != nullptr);
+            removable_origin_vn->Unlink();
+            return ZX_OK;
+        }
+
+        path = next + 1;
+    }
+}
+
 zx_status_t fdio_namespace::Bind(const char* path, zx::channel remote) {
     if (!remote.is_valid()) {
         return ZX_ERR_BAD_HANDLE;

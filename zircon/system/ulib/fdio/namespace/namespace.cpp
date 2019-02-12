@@ -67,6 +67,11 @@ zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t remote_raw
 }
 
 __EXPORT
+zx_status_t fdio_ns_unbind(fdio_ns_t* ns, const char* path) {
+    return ns->Unbind(path);
+}
+
+__EXPORT
 zx_status_t fdio_ns_bind_fd(fdio_ns_t* ns, const char* path, int fd) {
     zx_handle_t handle[FDIO_MAX_HANDLES];
     uint32_t type[FDIO_MAX_HANDLES];

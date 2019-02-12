@@ -252,6 +252,117 @@ bool ChdirTest() {
     END_TEST;
 }
 
+// Tests that we can unbind nodes from the namespace.
+bool UnbindNonRootTest() {
+    BEGIN_TEST;
+
+    fdio_ns_t* old_ns;
+    ASSERT_EQ(fdio_ns_get_installed(&old_ns), ZX_OK);
+
+
+    // Create a namespace with a single entry.
+    fdio_ns_t* ns;
+    ASSERT_EQ(fdio_ns_create(&ns), ZX_OK);
+    int fd = open("/boot/bin", O_RDONLY | O_DIRECTORY);
+    ASSERT_GT(fd, 0);
+    ASSERT_EQ(fdio_ns_bind_fd(ns, "/my/local/path", fd), ZX_OK);
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(fdio_ns_chdir(ns), ZX_OK);
+
+    struct stat st;
+    ASSERT_EQ(stat("my", &st), 0);
+    ASSERT_EQ(stat("my/local", &st), 0);
+    ASSERT_EQ(stat("my/local/path", &st), 0);
+
+    ASSERT_EQ(fdio_ns_unbind(ns, "/"), ZX_ERR_NOT_SUPPORTED);
+    ASSERT_EQ(fdio_ns_unbind(ns, "/my"), ZX_ERR_NOT_FOUND);
+    ASSERT_EQ(fdio_ns_unbind(ns, "/my/local"), ZX_ERR_NOT_FOUND);
+    ASSERT_EQ(fdio_ns_unbind(ns, "/my/local/path/okay/too/much/though"), ZX_ERR_NOT_FOUND);
+    ASSERT_EQ(fdio_ns_unbind(ns, "/my/local/path"), ZX_OK);
+
+    // Removing the namespace entry should remove all nodes back up to the root.
+    ASSERT_EQ(stat("my", &st), -1);
+    ASSERT_EQ(stat("my/local", &st), -1);
+    ASSERT_EQ(stat("my/local/path", &st), -1);
+
+    ASSERT_EQ(fdio_ns_chdir(old_ns), ZX_OK);
+    fdio_ns_destroy(ns);
+
+    END_TEST;
+}
+
+// Tests that we cannot unbind the root of the namespace.
+bool UnbindRootTest() {
+    BEGIN_TEST;
+
+    fdio_ns_t* old_ns;
+    ASSERT_EQ(fdio_ns_get_installed(&old_ns), ZX_OK);
+
+
+    // Create a namespace with a single entry.
+    fdio_ns_t* ns;
+    ASSERT_EQ(fdio_ns_create(&ns), ZX_OK);
+    int fd = open("/boot/bin", O_RDONLY | O_DIRECTORY);
+    ASSERT_GT(fd, 0);
+    ASSERT_EQ(fdio_ns_bind_fd(ns, "/", fd), ZX_OK);
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(fdio_ns_chdir(ns), ZX_OK);
+
+    struct stat st;
+    ASSERT_EQ(stat("/", &st), 0);
+
+    // We should not be able to unbind the root.
+    ASSERT_EQ(fdio_ns_unbind(ns, "/"), ZX_ERR_NOT_SUPPORTED);
+    ASSERT_EQ(stat("/", &st), 0);
+
+    ASSERT_EQ(fdio_ns_chdir(old_ns), ZX_OK);
+    fdio_ns_destroy(ns);
+
+    END_TEST;
+}
+
+// Tests that intermediate nodes are unbound up to an ancestor that
+// has other children.
+bool UnbindAncestorTest() {
+    BEGIN_TEST;
+
+    fdio_ns_t* old_ns;
+    ASSERT_EQ(fdio_ns_get_installed(&old_ns), ZX_OK);
+
+
+    // Create a namespace with a single entry.
+    fdio_ns_t* ns;
+    ASSERT_EQ(fdio_ns_create(&ns), ZX_OK);
+    int fd = open("/boot/bin", O_RDONLY | O_DIRECTORY);
+    ASSERT_GT(fd, 0);
+    ASSERT_EQ(fdio_ns_bind_fd(ns, "/my/local/path", fd), ZX_OK);
+    ASSERT_EQ(fdio_ns_bind_fd(ns, "/my/other/path", fd), ZX_OK);
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(fdio_ns_chdir(ns), ZX_OK);
+
+    struct stat st;
+    ASSERT_EQ(stat("my", &st), 0);
+    ASSERT_EQ(stat("my/local", &st), 0);
+    ASSERT_EQ(stat("my/local/path", &st), 0);
+    ASSERT_EQ(stat("my/other", &st), 0);
+    ASSERT_EQ(stat("my/other/path", &st), 0);
+
+    ASSERT_EQ(fdio_ns_unbind(ns, "/my/local/path"), ZX_OK);
+
+    // Removing the namespace entry should remove all nodes back up to a common
+    // ancestor, but not other subtrees.
+    ASSERT_EQ(stat("my", &st), 0);
+    ASSERT_EQ(stat("my/local", &st), -1); // Removed
+    ASSERT_EQ(stat("my/local/path", &st), -1); // Removed
+    ASSERT_EQ(stat("my/other", &st), 0);
+    ASSERT_EQ(stat("my/other/path", &st), 0);
+
+    ASSERT_EQ(fdio_ns_chdir(old_ns), ZX_OK);
+    fdio_ns_destroy(ns);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(namespace_tests)
 RUN_TEST_MEDIUM(DestroyTest)
 RUN_TEST_MEDIUM(DestroyWhileInUseTest)
@@ -262,6 +373,9 @@ RUN_TEST_MEDIUM(ExportEmptyTest)
 RUN_TEST_MEDIUM(ExportRootTest)
 RUN_TEST_MEDIUM(ExportTest)
 RUN_TEST_MEDIUM(ChdirTest)
+RUN_TEST_MEDIUM(UnbindNonRootTest)
+RUN_TEST_MEDIUM(UnbindRootTest)
+RUN_TEST_MEDIUM(UnbindAncestorTest)
 END_TEST_CASE(namespace_tests)
 
 } // namespace

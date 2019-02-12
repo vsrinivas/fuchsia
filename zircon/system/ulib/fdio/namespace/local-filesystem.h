@@ -55,6 +55,13 @@ public:
     // Attaches |remote| to |path| within the current namespace.
     zx_status_t Bind(const char* path, zx::channel remote);
 
+    // Detaches a remote object from |path| within the current namespace.
+    //
+    // Returns ZX_ERR_NOT_FOUND if |path| does not correspond with a bound remote.
+    // Returns ZX_ERR_NOT_SUPPORTED if |path| is the root of the namespace.
+    // Returns ZX_ERR_INVALID_ARGS for an unsupported |path|.
+    zx_status_t Unbind(const char* path);
+
 private:
     fdio_namespace();
 
