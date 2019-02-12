@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include <launchpad/launchpad.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
@@ -40,16 +42,36 @@ namespace devmgr {
 #define FS_DIR_FLAGS                                                                               \
     (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE)
 
+// If |executable| is invalid, then argv[0] is used as the path to the binary
+// If |loader| is invalid, the default loader service is used.
+zx_status_t devmgr_launch_with_loader(const zx::job& job, const char* name, zx::vmo executable,
+                                      zx::channel loader, const char* const* argv,
+                                      const char** initial_envp, int stdiofd,
+                                      const zx_handle_t* handles, const uint32_t* types,
+                                      size_t hcount, zx::process* out_proc, uint32_t flags);
 zx_status_t devmgr_launch(const zx::job& job, const char* name,
-                          zx_status_t (*load)(void* ctx, launchpad_t*, const char* file), void* ctx,
-                          int argc, const char* const* argv, const char** envp, int stdiofd,
+                          const char* const* argv, const char** envp, int stdiofd,
                           const zx_handle_t* handles, const uint32_t* types, size_t hcount,
                           zx::process* proc_out, uint32_t flags);
-zx_status_t devmgr_launch_cmdline(const char* me, const zx::job& job, const char* name,
-                                  zx_status_t (*load)(void* ctx, launchpad_t*, const char* file),
-                                  void* ctx, const char* cmdline, const zx_handle_t* handles,
-                                  const uint32_t* types, size_t hcount, zx::process* proc_out,
-                                  uint32_t flags);
+
+// Returns the result of splitting |args| into an argument vector.
+class ArgumentVector {
+public:
+    static ArgumentVector FromCmdline(const char* cmdline);
+
+    // Returns a nullptr-terminated list of arguments.  Only valid for the
+    // lifetime of |this|.
+    const char* const* argv() const { return argv_; }
+
+    void Print(const char* prefix) const;
+private:
+    ArgumentVector() = default;
+
+    static constexpr size_t kMaxArgs = 8;
+    const char* argv_[kMaxArgs + 1];
+    std::unique_ptr<char[]> raw_bytes_;
+};
+
 
 void devmgr_disable_appmgr_services();
 

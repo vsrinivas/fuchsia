@@ -77,10 +77,6 @@ private:
 // BlockWatcher instance, this global should be removed.
 zx::unowned_job g_job;
 
-zx_status_t fshost_launch_load(void* ctx, launchpad_t* lp, const char* file) {
-    return launchpad_load_from_file(lp, file);
-}
-
 void pkgfs_finish(BlockWatcher* watcher, zx::process proc, zx::channel pkgfs_root) {
     auto deadline = zx::deadline_after(zx::sec(5));
     zx_signals_t observed;
@@ -154,7 +150,7 @@ void old_launch_blob_init(BlockWatcher* watcher) {
     }
 
     // TODO: make blob-init a /fs/blob relative path
-    const char* argv[2];
+    const char* argv[3];
     char binary[strlen(blob_init) + 4];
     sprintf(binary, "/fs%s", blob_init);
     argv[0] = binary;
@@ -164,10 +160,11 @@ void old_launch_blob_init(BlockWatcher* watcher) {
         argc++;
         argv[1] = blob_init_arg;
     }
+    argv[argc] = nullptr;
 
     const zx_handle_t raw_handle = handle.release();
     zx_status_t status =
-        devmgr_launch(*watcher->Job(), "pkgfs", &fshost_launch_load, nullptr, argc, &argv[0],
+        devmgr_launch(*watcher->Job(), "pkgfs", argv,
                       nullptr, -1, &raw_handle, &type, 1, &proc, FS_DATA | FS_BLOB | FS_SVC);
 
     if (status != ZX_OK) {
@@ -231,48 +228,25 @@ const loader_service_ops_t pkgfs_ldsvc_ops = {
 };
 
 // Create a local loader service with a fixed mapping of names to blobs.
-// Always consumes fs_blob_fd.
-zx_status_t pkgfs_ldsvc_start(int fs_blob_fd, zx_handle_t* ldsvc) {
+zx_status_t pkgfs_ldsvc_start(fbl::unique_fd fs_blob_fd, zx::channel* ldsvc) {
     loader_service_t* service;
     zx_status_t status =
-        loader_service_create(nullptr, &pkgfs_ldsvc_ops, (void*)(intptr_t)fs_blob_fd, &service);
+        loader_service_create(nullptr, &pkgfs_ldsvc_ops,
+                              reinterpret_cast<void*>(static_cast<intptr_t>(fs_blob_fd.get())),
+                              &service);
     if (status != ZX_OK) {
         printf("fshost: cannot create pkgfs loader service: %d (%s)\n", status,
                zx_status_get_string(status));
-        close(fs_blob_fd);
         return status;
     }
-    status = loader_service_connect(service, ldsvc);
+    // The loader service now owns this FD
+    __UNUSED auto fd = fs_blob_fd.release();
+
+    status = loader_service_connect(service, ldsvc->reset_and_get_address());
     loader_service_release(service);
     if (status != ZX_OK) {
         printf("fshost: cannot connect pkgfs loader service: %d (%s)\n", status,
                zx_status_get_string(status));
-    }
-    return status;
-}
-
-// This is the callback to load the file via launchpad.  First look up the
-// file itself.  Then get the loader service started so it can service
-// launchpad's request for the PT_INTERP file.  Then load it up.
-zx_status_t pkgfs_launch_load(void* ctx, launchpad_t* lp, const char* file) {
-    while (file[0] == '/') {
-        ++file;
-    }
-    zx_handle_t vmo;
-    zx_status_t status = pkgfs_ldsvc_load_blob(ctx, "", file, &vmo);
-    const int fs_blob_fd = static_cast<int>(reinterpret_cast<intptr_t>(ctx));
-    if (status == ZX_OK) {
-        // The service takes ownership of fs_blob_fd.
-        zx_handle_t ldsvc;
-        status = pkgfs_ldsvc_start(fs_blob_fd, &ldsvc);
-        if (status == ZX_OK) {
-            launchpad_use_loader_service(lp, ldsvc);
-            launchpad_load_from_vmo(lp, vmo);
-        } else {
-            zx_handle_close(vmo);
-        }
-    } else {
-        close(fs_blob_fd);
     }
     return status;
 }
@@ -297,12 +271,38 @@ bool pkgfs_launch(BlockWatcher* watcher) {
         return false;
     }
 
+    auto args = ArgumentVector::FromCmdline(cmd);
+    auto argv = args.argv();
+    // Remove leading slashes before asking pkgfs_ldsvc_load_blob to load the
+    // file.
+    const char* file = argv[0];
+    while (file[0] == '/') {
+        ++file;
+    }
+    zx::vmo executable;
+    status = pkgfs_ldsvc_load_blob(reinterpret_cast<void*>(static_cast<intptr_t>(fs_blob_fd.get())),
+                                   "", argv[0], executable.reset_and_get_address());
+    if (status != ZX_OK) {
+        printf("fshost: cannot load pkgfs executable: %d (%s)\n", status,
+               zx_status_get_string(status));
+        return false;
+    }
+
+    zx::channel loader;
+    status = pkgfs_ldsvc_start(std::move(fs_blob_fd), &loader);
+    if (status != ZX_OK) {
+        printf("fshost: cannot pkgfs loader: %d (%s)\n", status, zx_status_get_string(status));
+        return false;
+    }
+
     const zx_handle_t raw_h1 = h1.release();
     zx::process proc;
-    status = devmgr_launch_cmdline("fshost", *watcher->Job(), "pkgfs", &pkgfs_launch_load,
-                                   (void*)(intptr_t)fs_blob_fd.release(), cmd, &raw_h1,
-                                   (const uint32_t[]){PA_HND(PA_USER0, 0)}, 1, &proc,
-                                   FS_DATA | FS_BLOB | FS_SVC);
+    args.Print("fshost");
+    status = devmgr_launch_with_loader(*watcher->Job(), "pkgfs",
+                                       std::move(executable), std::move(loader),
+                                       argv, nullptr, -1, &raw_h1,
+                                       (const uint32_t[]){PA_HND(PA_USER0, 0)}, 1, &proc,
+                                       FS_DATA | FS_BLOB | FS_SVC);
     if (status != ZX_OK) {
         printf("fshost: failed to launch %s: %d (%s)\n", cmd, status, zx_status_get_string(status));
         return false;
@@ -321,17 +321,17 @@ void launch_blob_init(BlockWatcher* watcher) {
 
 zx_status_t launch_blobfs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
                           size_t len) {
-    return devmgr_launch(*g_job, "blobfs:/blob", &fshost_launch_load, nullptr, argc, argv, nullptr,
+    return devmgr_launch(*g_job, "blobfs:/blob", argv, nullptr,
                          -1, hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
 zx_status_t launch_minfs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len) {
-    return devmgr_launch(*g_job, "minfs:/data", &fshost_launch_load, nullptr, argc, argv, nullptr,
+    return devmgr_launch(*g_job, "minfs:/data", argv, nullptr,
                          -1, hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
 zx_status_t launch_fat(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len) {
-    return devmgr_launch(*g_job, "fatfs:/volume", &fshost_launch_load, nullptr, argc, argv, nullptr,
+    return devmgr_launch(*g_job, "fatfs:/volume", argv, nullptr,
                          -1, hnd, ids, len, nullptr, FS_FOR_FSPROC);
 }
 
@@ -391,7 +391,7 @@ zx_status_t BlockWatcher::CheckFilesystem(const char* device_path, disk_format_t
     auto launch_fsck = [](int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
                           size_t len) {
         zx::process proc;
-        zx_status_t status = devmgr_launch(*g_job, "fsck", &fshost_launch_load, nullptr, argc, argv,
+        zx_status_t status = devmgr_launch(*g_job, "fsck", argv,
                                            nullptr, -1, hnd, ids, len, &proc, FS_FOR_FSPROC);
         if (status != ZX_OK) {
             fprintf(stderr, "fshost: Couldn't launch fsck\n");

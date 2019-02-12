@@ -107,15 +107,13 @@ zx_status_t wait_for_file(const char* path, zx::time deadline) {
     return status;
 }
 
-zx_status_t devmgr_launch_load(void* ctx, launchpad_t* lp, const char* file) {
-    return launchpad_load_from_file(lp, file);
-}
-
 void do_autorun(const char* name, const char* env) {
     const char* cmd = getenv(env);
     if (cmd != nullptr) {
-        devmgr::devmgr_launch_cmdline(env, g_handles.svc_job, name, &devmgr_launch_load, nullptr,
-                                      cmd, nullptr, nullptr, 0, nullptr, FS_ALL);
+        auto args = devmgr::ArgumentVector::FromCmdline(cmd);
+        args.Print(env);
+        devmgr::devmgr_launch(g_handles.svc_job, name, args.argv(), nullptr, -1,
+                              nullptr, nullptr, 0, nullptr, FS_ALL);
     }
 }
 
@@ -181,7 +179,7 @@ int fuchsia_starter(void* arg) {
             drivers_loaded = true;
         }
 
-        const char* argv_appmgr[] = {"/system/bin/appmgr"};
+        const char* argv_appmgr[] = {"/system/bin/appmgr", nullptr};
         struct stat s;
         if (!appmgr_started && stat(argv_appmgr[0], &s) == 0) {
             unsigned int appmgr_hnd_count = 0;
@@ -193,9 +191,9 @@ int fuchsia_starter(void* arg) {
                 appmgr_ids[appmgr_hnd_count] = PA_DIRECTORY_REQUEST;
                 appmgr_hnd_count++;
             }
-            devmgr::devmgr_launch(g_handles.fuchsia_job, "appmgr", &devmgr_launch_load, nullptr,
-                                  fbl::count_of(argv_appmgr), argv_appmgr, nullptr, -1, appmgr_hnds,
-                                  appmgr_ids, appmgr_hnd_count, nullptr, FS_FOR_APPMGR);
+            devmgr::devmgr_launch(g_handles.fuchsia_job, "appmgr",
+                                  argv_appmgr, nullptr, -1, appmgr_hnds, appmgr_ids,
+                                  appmgr_hnd_count, nullptr, FS_FOR_APPMGR);
             appmgr_started = true;
         }
         if (!autorun_started) {
@@ -240,10 +238,9 @@ int console_starter(void* arg) {
         return 1;
     }
 
-    const char* argv_sh[] = {"/boot/bin/sh"};
-    devmgr::devmgr_launch(g_handles.svc_job, "sh:console", &devmgr_launch_load, nullptr,
-                          fbl::count_of(argv_sh), argv_sh, envp, fd.release(), nullptr, nullptr, 0,
-                          nullptr, FS_ALL);
+    const char* argv_sh[] = {"/boot/bin/sh", nullptr};
+    devmgr::devmgr_launch(g_handles.svc_job, "sh:console", argv_sh,
+                          envp, fd.release(), nullptr, nullptr, 0, nullptr, FS_ALL);
     return 0;
 }
 
@@ -513,11 +510,11 @@ void fshost_start(devmgr::Coordinator* coordinator) {
         }
     }
 
-    const char* argv[] = {"/boot/bin/fshost", "--netboot"};
-    int argc = (devmgr::getenv_bool("netsvc.netboot", false) ||
-                devmgr::getenv_bool("zircon.system.disable-automount", false))
-                   ? 2
-                   : 1;
+    const char* argv[] = {"/boot/bin/fshost", "--netboot", nullptr};
+    if (!devmgr::getenv_bool("netsvc.netboot", false) &&
+        !devmgr::getenv_bool("zircon.system.disable-automount", false)) {
+        argv[1] = nullptr;
+    }
 
     // Pass zircon.system.* options to the fshost as environment variables
     const char* envp[16];
@@ -531,8 +528,8 @@ void fshost_start(devmgr::Coordinator* coordinator) {
     }
     envp[envc] = nullptr;
 
-    devmgr::devmgr_launch(g_handles.svc_job, "fshost", &devmgr_launch_load, nullptr, argc, argv,
-                          envp, -1, handles, types, n, nullptr, FS_BOOT | FS_DEV);
+    devmgr::devmgr_launch(g_handles.svc_job, "fshost", argv, envp, -1, handles, types, n,
+                          nullptr, FS_BOOT | FS_DEV | FS_SVC);
 
     // switch to system loader service provided by fshost
     zx_handle_close(dl_set_loader_service(ldsvc));
@@ -598,7 +595,8 @@ int service_starter(void* arg) {
     bool netboot = false;
     bool vruncmd = false;
     if (!devmgr::getenv_bool("netsvc.disable", false)) {
-        const char* args[] = {"/boot/bin/netsvc", nullptr, nullptr, nullptr, nullptr, nullptr};
+        const char* args[] = {"/boot/bin/netsvc", nullptr, nullptr, nullptr, nullptr, nullptr,
+            nullptr};
         int argc = 1;
 
         if (devmgr::getenv_bool("netsvc.netboot", false)) {
@@ -623,8 +621,8 @@ int service_starter(void* arg) {
         }
 
         zx::process proc;
-        if (devmgr::devmgr_launch(g_handles.svc_job, "netsvc", &devmgr_launch_load, nullptr, argc,
-                                  args, nullptr, -1, nullptr, nullptr, 0, &proc, FS_ALL) == ZX_OK) {
+        if (devmgr::devmgr_launch(g_handles.svc_job, "netsvc", args, nullptr, -1, nullptr,
+                                  nullptr, 0, &proc, FS_ALL) == ZX_OK) {
             if (vruncmd) {
                 zx_info_handle_basic_t info = {};
                 proc.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
@@ -674,10 +672,13 @@ int service_starter(void* arg) {
             ++handle_count;
         }
 
-        const char* args[] = {"/boot/bin/virtual-console", "--shells", num_shells, "--run", vcmd};
-        devmgr::devmgr_launch(g_handles.svc_job, "virtual-console", &devmgr_launch_load, nullptr,
-                              vruncmd ? 5 : 3, args, envp, -1, handles, types, handle_count,
-                              nullptr, FS_ALL);
+        const char* args[] = {"/boot/bin/virtual-console", "--shells", num_shells,
+                              "--run", vcmd, nullptr};
+        if (!vruncmd) {
+            args[3] = nullptr;
+        }
+        devmgr::devmgr_launch(g_handles.svc_job, "virtual-console", args, envp, -1, handles, types,
+                              handle_count, nullptr, FS_ALL);
     }
 
     const char* epoch = getenv("devmgr.epoch");
