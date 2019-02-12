@@ -169,9 +169,6 @@ void BufferedPseudoFile::Content::SetInputLength(size_t length) {
 
 zx_status_t BufferedPseudoFile::Content::Bind(zx::channel request,
                                               async_dispatcher_t* dispatcher) {
-  // only one connection allowed per content
-  ZX_DEBUG_ASSERT(connections().size() == 0);
-
   std::unique_ptr<Connection> connection;
   zx_status_t status = CreateConnection(flags_, &connection);
   if (status != ZX_OK) {
@@ -179,7 +176,13 @@ zx_status_t BufferedPseudoFile::Content::Bind(zx::channel request,
     return status;
   }
   status = connection->Bind(std::move(request), dispatcher);
+
   AddConnection(std::move(connection));
+
+  std::lock_guard<std::mutex> guard(mutex_);
+  // only one connection allowed per content
+  ZX_DEBUG_ASSERT(connections_.size() == 1);
+
   return status;
 }
 
@@ -197,9 +200,9 @@ void BufferedPseudoFile::Content::Clone(
 }
 
 void BufferedPseudoFile::Content::SendOnOpenEvent(zx_status_t status) {
-  ZX_DEBUG_ASSERT(connections().size() == 1);
-
-  connections()[0]->SendOnOpenEvent(status);
+  std::lock_guard<std::mutex> guard(mutex_);
+  ZX_DEBUG_ASSERT(connections_.size() == 1);
+  connections_[0]->SendOnOpenEvent(status);
 }
 
 }  // namespace vfs

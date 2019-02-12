@@ -27,6 +27,8 @@ class Connection;
 //
 //  * File, which is a subclass for file objects.
 //  * Directory, which is a subclass for directory objects.
+//
+// This class is thread safe.
 class Node {
  public:
   Node();
@@ -123,10 +125,6 @@ class Node {
   virtual zx_status_t Connect(uint32_t flags, zx::channel request,
                               async_dispatcher_t* dispatcher);
 
-  const std::vector<std::unique_ptr<Connection>>& connections() const {
-    return connections_;
-  }
-
   // Filters out flags that are invalid when combined with
   // |OPEN_FLAG_NODE_REFERENCE|.
   // Allowed flags are |OPEN_FLAG_DIRECTORY| and |OPEN_FLAG_DESCRIBE|.
@@ -165,9 +163,10 @@ class Node {
   // See documentation of  |ValidateFlags| for exact details.
   virtual uint32_t GetProhibitiveFlags() const;
 
- private:
+  // guards connection_
+  mutable std::mutex mutex_;
   // The active connections associated with this object.
-  std::vector<std::unique_ptr<Connection>> connections_;
+  std::vector<std::unique_ptr<Connection>> connections_ __TA_GUARDED(mutex_);
 };
 
 }  // namespace vfs

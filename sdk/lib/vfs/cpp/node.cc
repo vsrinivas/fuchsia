@@ -33,6 +33,8 @@ Node::Node() = default;
 Node::~Node() = default;
 
 std::unique_ptr<Connection> Node::Close(Connection* connection) {
+  std::lock_guard<std::mutex> guard(mutex_);
+
   auto connection_iterator = std::find_if(
       connections_.begin(), connections_.end(),
       [connection](const auto& entry) { return entry.get() == connection; });
@@ -175,6 +177,7 @@ void Node::SendOnOpenEventOnError(uint32_t flags, zx::channel request,
 }
 
 void Node::AddConnection(std::unique_ptr<Connection> connection) {
+  std::lock_guard<std::mutex> guard(mutex_);
   connections_.push_back(std::move(connection));
 }
 
