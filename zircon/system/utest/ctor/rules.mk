@@ -17,4 +17,7 @@ MODULE_STATIC_LIBS := system/ulib/zxcpp
 MODULE_LIBS := system/ulib/unittest system/ulib/fdio system/ulib/c
 MODULE_LIBS += system/utest/ctor/dso-ctor
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device
+
 include make/module.mk

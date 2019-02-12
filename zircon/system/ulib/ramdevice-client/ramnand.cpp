@@ -12,10 +12,10 @@
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fzl/fdio.h>
-#include <zircon/device/device.h>
 #include <zircon/types.h>
 
 #include <utility>
@@ -143,10 +143,20 @@ zx_status_t RamNand::CreateIsolated(const fuchsia_hardware_nand_RamNandInfo* con
 
 RamNand::~RamNand() {
     if (unbind && fd_) {
-      zx_status_t status = static_cast<zx_status_t>(ioctl_device_unbind(fd_.get()));
-      if (status != ZX_OK) {
-          fprintf(stderr, "Could not unbind ram_nand, %d\n", status);
-      }
+        zx::channel dev;
+        zx_status_t status = fdio_get_service_handle(fd_.release(), dev.reset_and_get_address());
+        if (status != ZX_OK) {
+            fprintf(stderr, "Could not get service handle when unbinding ram_nand, %d\n", status);
+            return;
+        }
+        zx_status_t call_status;
+        status = fuchsia_device_ControllerUnbind(dev.get(), &call_status);
+        if (status == ZX_OK) {
+            status = call_status;
+        }
+        if (status != ZX_OK) {
+            fprintf(stderr, "Could not unbind ram_nand, %d\n", status);
+        }
     }
 }
 

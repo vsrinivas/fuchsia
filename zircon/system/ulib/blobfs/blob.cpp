@@ -28,10 +28,11 @@
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
 #include <fs/metrics.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/vfs.h>
 #include <lib/sync/completion.h>
-#include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -898,11 +899,29 @@ zx_status_t Blob::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
 }
 
 zx_status_t Blob::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
-    ssize_t len = ioctl_device_get_topo_path(blobfs_->Fd(), out_name, buffer_len);
-    if (len < 0) {
-        return static_cast<zx_status_t>(len);
+    fdio_t* io = fdio_unsafe_fd_to_io(blobfs_->Fd());
+    if (io == NULL) {
+        return ZX_ERR_INTERNAL;
     }
-    *out_len = len;
+    if (buffer_len == 0) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    zx_handle_t channel = fdio_unsafe_borrow_channel(io);
+    zx_status_t call_status;
+    zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(channel, &call_status,
+                                                                     out_name, buffer_len - 1,
+                                                                     out_len);
+    fdio_unsafe_release(io);
+    if (status == ZX_OK) {
+        status = call_status;
+    }
+    if (status != ZX_OK) {
+        return status;
+    }
+    // Ensure null-terminated
+    out_name[*out_len] = 0;
+    // Account for the null byte in the length, since callers expect it.
+    (*out_len)++;
     return ZX_OK;
 }
 #endif

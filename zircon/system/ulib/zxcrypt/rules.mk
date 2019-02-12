@@ -34,6 +34,7 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-block
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device \
     system/fidl/fuchsia-hardware-ramdisk \
 
 MODULE_COMPILEFLAGS := -fsanitize=integer-divide-by-zero,signed-integer-overflow -fsanitize-undefined-trap-on-error

@@ -20,6 +20,7 @@
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
@@ -28,7 +29,6 @@
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
-#include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -206,15 +206,12 @@ private:
           block_fd_(std::move(block_fd)) {}
 
     static zx_status_t DestroyByHandle(zx::channel ramdisk) {
-        zx_handle_t ramdisk_raw = ramdisk.release();
-        uint32_t type = PA_FDIO_REMOTE;
-        int raw_fd = 0;
-        zx_status_t status = fdio_create_fd(&ramdisk_raw, &type, 1, &raw_fd);
+        zx_status_t call_status;
+        zx_status_t status = fuchsia_device_ControllerUnbind(ramdisk.get(), &call_status);
         if (status != ZX_OK) {
             return status;
         }
-        fbl::unique_fd fd(raw_fd);
-        return static_cast<zx_status_t>(ioctl_device_unbind(fd.get()));
+        return call_status;
     }
 
     fbl::String path_;

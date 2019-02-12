@@ -47,6 +47,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-cobalt \
+    system/fidl/fuchsia-device \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-mem \
     system/fidl/fuchsia-blobfs \

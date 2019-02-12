@@ -25,7 +25,9 @@ MODULE_PACKAGE_INCS := \
 MODULE_SO_NAME := tee-client-api
 MODULE_EXPORT := so
 
-MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-tee
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device \
+    system/fidl/fuchsia-hardware-tee \
 
 MODULE_STATIC_LIBS := system/ulib/fidl
 

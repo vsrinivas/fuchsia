@@ -27,6 +27,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device \
     system/fidl/fuchsia-hardware-nand \
 
 include make/module.mk

@@ -13,13 +13,14 @@
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
-#include <ramdevice-client/ramdisk.h>
 #include <fs-test-utils/fixture.h>
+#include <fuchsia/device/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
+#include <ramdevice-client/ramdisk.h>
 #include <zircon/assert.h>
-#include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
 #include <zircon/errors.h>
 
@@ -135,7 +136,18 @@ zx_status_t MakeFvm(const fbl::String& block_device_path, uint64_t fvm_slice_siz
     *fvm_mounted = true;
     fbl::String fvm_device_path = fbl::StringPrintf("%s/fvm", block_device_path.c_str());
     // Bind FVM Driver.
-    result = ToStatus(ioctl_device_bind(fd.get(), kFvmDriverLibPath, strlen(kFvmDriverLibPath)));
+    fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
+    if (io == NULL) {
+        return ZX_ERR_INTERNAL;
+    }
+    zx_status_t call_status;
+    result = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io),
+                                           kFvmDriverLibPath, strlen(kFvmDriverLibPath),
+                                           &call_status);
+    fdio_unsafe_release(io);
+    if (result == ZX_OK) {
+        result = call_status;
+    }
     if (result != ZX_OK) {
         LOG_ERROR(result, "Failed to bind fvm driver to block device.\nblock_device:%s\n",
                   block_device_path.c_str());

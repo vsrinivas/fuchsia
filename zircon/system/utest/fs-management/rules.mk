@@ -36,6 +36,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/zxcpp \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device \
     system/fidl/fuchsia-hardware-ramdisk \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-mem \

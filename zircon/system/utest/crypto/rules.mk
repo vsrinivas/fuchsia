@@ -29,6 +29,9 @@ MODULE_LIBS := \
     system/ulib/crypto \
     system/ulib/unittest \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device \
+
 MODULE_STATIC_LIBS := \
     system/ulib/zxcpp \
     system/ulib/fbl \

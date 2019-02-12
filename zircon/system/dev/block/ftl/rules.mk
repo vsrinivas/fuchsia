@@ -135,6 +135,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-hardware-block \
+    system/fidl/fuchsia-device \
     system/fidl/fuchsia-hardware-nand \
 
 MODULE_BANJO_LIBS := \

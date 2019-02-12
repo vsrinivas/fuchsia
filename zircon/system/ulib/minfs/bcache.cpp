@@ -11,8 +11,11 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#ifdef __Fuchsia__
+#include <fuchsia/device/c/fidl.h>
+#endif
 #include <fs/trace.h>
-#include <zircon/device/device.h>
+#include <lib/fdio/unsafe.h>
 
 #include <minfs/format.h>
 
@@ -93,13 +96,30 @@ zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint
 
 #ifdef __Fuchsia__
 zx_status_t Bcache::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
-    ssize_t r = ioctl_device_get_topo_path(fd_.get(), out_name, buffer_len);
-    if (r < 0) {
-        return static_cast<zx_status_t>(r);
+    fdio_t* io = fdio_unsafe_fd_to_io(fd_.get());
+    if (io == NULL) {
+        return ZX_ERR_INTERNAL;
     }
-    *out_len = r;
+    if (buffer_len == 0) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    zx_handle_t channel = fdio_unsafe_borrow_channel(io);
+    zx_status_t call_status;
+    zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(channel, &call_status,
+                                                                     out_name, buffer_len - 1,
+                                                                     out_len);
+    fdio_unsafe_release(io);
+    if (status == ZX_OK) {
+        status = call_status;
+    }
+    if (status != ZX_OK) {
+        return status;
+    }
+    // Ensure null-terminated
+    out_name[*out_len] = 0;
+    // Account for the null byte in the length, since callers expect it.
+    (*out_len)++;
     return ZX_OK;
-
 }
 
 zx_status_t Bcache::AttachVmo(const zx::vmo& vmo, vmoid_t* out) const {

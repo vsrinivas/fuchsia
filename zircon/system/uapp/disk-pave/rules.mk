@@ -47,6 +47,7 @@ MODULE_LIBS := \
 MODULE_PACKAGE := src
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-mem \
     system/fidl/fuchsia-hardware-block \
@@ -100,6 +101,7 @@ MODULE_LIBS := \
     system/ulib/zxcrypt \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device \
     system/fidl/fuchsia-hardware-nand \
     system/fidl/fuchsia-hardware-block \
     system/fidl/fuchsia-hardware-ramdisk \
