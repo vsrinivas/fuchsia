@@ -20,16 +20,20 @@ inline std::string Indent(int indent) {
   return std::string(indent * INDENT_SIZE, ' ');
 }
 
-// This version exists so we can pass in the indentation.
-std::string RecursiveFormatCat(const Options& options, const ObjectNode& root,
-                               int indent) {
+// This version exists so we can pass in the indentation and path from the entry
+// point.
+std::string RecursiveFormatCat(const Options& options,
+                               const ObjectSource& entry_point,
+                               const inspect::ObjectHierarchy& root,
+                               std::vector<std::string>* path) {
   // In each step of the indentation we output the path formatting. This is not
   // equivalent to what formatters as JSON do, which will introduce a path
   // entry under each object.
   // This is mainly because this formatter is intended for human examination and
   // it's not intended for easier parsing.
   std::ostringstream ss;
-  const auto& object = root.object;
+  size_t indent = path->size() + 1;
+  const auto& object = root.object();
   for (const auto& property : *object.properties) {
     ss << Indent(indent) << FormatStringHexFallback(property.key) << " = ";
 
@@ -47,46 +51,63 @@ std::string RecursiveFormatCat(const Options& options, const ObjectNode& root,
        << FormatMetricValue(metric) << std::endl;
   }
 
-  // We print recursively. The recursion nature of the cat called is already
+  // We print recursively. The recursive nature of the cat called is already
   // taken care of by now.
-  for (const auto& child : root.children) {
+  for (const auto& child : root.children()) {
+    path->push_back(child.object().name);
     ss << Indent(indent)
-       << FormatPath(options.path_format, child.basepath, child.object.name)
+       << FormatPath(options.path_format, entry_point.FormatRelativePath(*path),
+                     child.object().name)
        << ":" << std::endl;
-    ss << RecursiveFormatCat(options, child, indent + 1);
+    ss << RecursiveFormatCat(options, entry_point, child, path);
+    path->pop_back();
   }
 
   return ss.str();
 }
 
 std::string FormatFind(const Options& options,
-                       const std::vector<ObjectNode>& results) {
+                       const std::vector<ObjectSource>& results) {
   std::stringstream ss;
-  for (const auto& node : results) {
-    ss << FormatPath(options.path_format, node.basepath, node.object.name)
-       << std::endl;
+  for (const auto& entry_point : results) {
+    entry_point.VisitObjectsInHierarchy(
+        [&](const std::vector<std::string>& path,
+            const inspect::ObjectHierarchy& hierarchy) {
+          ss << FormatPath(options.path_format,
+                           entry_point.FormatRelativePath(path),
+                           hierarchy.object().name)
+             << std::endl;
+        });
   }
   return ss.str();
 }
 
 std::string FormatLs(const Options& options,
-                     const std::vector<ObjectNode>& results) {
+                     const std::vector<ObjectSource>& results) {
   std::stringstream ss;
-  for (const auto& node : results) {
-    ss << FormatPath(options.path_format, node.basepath, node.object.name)
-       << std::endl;
+  for (const auto& entry_point : results) {
+    const auto& hierarchy = entry_point.GetRootHierarchy();
+
+    for (const auto& child : hierarchy.children()) {
+      ss << FormatPath(options.path_format,
+                       entry_point.FormatRelativePath({child.object().name}),
+                       child.object().name)
+         << std::endl;
+    }
   }
   return ss.str();
 }
 
 std::string FormatCat(const Options& options,
-                      const std::vector<ObjectNode>& results) {
+                      const std::vector<ObjectSource>& results) {
   std::ostringstream ss;
-  for (const auto& root_node : results) {
-    ss << FormatPath(options.path_format, root_node.basepath,
-                     root_node.object.name)
+  for (const auto& entry_point : results) {
+    const auto& hierarchy = entry_point.GetRootHierarchy();
+    ss << FormatPath(options.path_format, entry_point.FormatRelativePath(),
+                     hierarchy.object().name)
        << ":" << std::endl;
-    ss << RecursiveFormatCat(options, root_node, 1);
+    std::vector<std::string> path_holder;
+    ss << RecursiveFormatCat(options, entry_point, hierarchy, &path_holder);
   }
 
   return ss.str();
@@ -95,7 +116,7 @@ std::string FormatCat(const Options& options,
 }  // namespace
 
 std::string TextFormatter::Format(const Options& options,
-                                  const std::vector<ObjectNode>& results) {
+                                  const std::vector<ObjectSource>& results) {
   switch (options.mode) {
     case Options::Mode::CAT:
       return FormatCat(options, results);

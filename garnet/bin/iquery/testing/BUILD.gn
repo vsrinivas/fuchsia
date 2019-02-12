@@ -130,5 +130,13 @@ test_package("iquery_golden_test") {
       path = rebase_path("goldens/ls-json-absolute.txt")
       dest = "iquery_goldens/ls-json-absolute.txt"
     },
+    {
+      path = rebase_path("goldens/explicit-file.txt")
+      dest = "iquery_goldens/explicit-file.txt"
+    },
+    {
+      path = rebase_path("goldens/explicit-file-full.txt")
+      dest = "iquery_goldens/explicit-file-full.txt"
+    },
   ]
 }

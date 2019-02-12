@@ -1,4 +1,4 @@
-iquery --ls --format=json objects/table0x0
+iquery --ls --format=json objects#table0x0
 [
     "row0x1",
     "row0x11",

@@ -1,4 +1,4 @@
-iquery --ls objects/table0x0
+iquery --ls objects#table0x0
 row0x1
 row0x11
 row0x5

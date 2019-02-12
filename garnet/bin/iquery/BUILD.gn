@@ -8,8 +8,6 @@ import("//build/testing/environments.gni")
 
 source_set("lib") {
   sources = [
-    "connect.cc",
-    "connect.h",
     "formatter.h",
     "formatters/json.cc",
     "formatters/json.h",
@@ -27,6 +25,7 @@ source_set("lib") {
 
   deps = [
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/inspect:reader",
     "//third_party/cobalt/util/crypto_util",
     "//third_party/rapidjson",
   ]
@@ -35,6 +34,7 @@ source_set("lib") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fostr",
     "//zircon/public/fidl/fuchsia-inspect",
+    "//zircon/public/fidl/fuchsia-io",
   ]
 }
 
@@ -47,8 +47,10 @@ executable("bin") {
 
   deps = [
     ":lib",
+    "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#include <lib/inspect/reader.h>
+#include "garnet/bin/iquery/modes.h"
 #include "garnet/bin/iquery/options.h"
 #include "garnet/bin/iquery/utils.h"
 
@@ -17,7 +19,7 @@ class Formatter {
  public:
   virtual ~Formatter() = default;
   virtual std::string Format(const Options&,
-                             const std::vector<ObjectNode>&) = 0;
+                             const std::vector<ObjectSource>&) = 0;
 };
 
 }  // namespace iquery

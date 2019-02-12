@@ -11,7 +11,7 @@ namespace iquery {
 
 class JsonFormatter : public Formatter {
  public:
-  std::string Format(const Options&, const std::vector<ObjectNode>&) override;
+  std::string Format(const Options&, const std::vector<ObjectSource>&) override;
 };
 
 }  // namespace iquery

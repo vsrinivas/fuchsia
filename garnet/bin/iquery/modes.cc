@@ -6,290 +6,346 @@
 
 #include <stack>
 
+#include <fuchsia/io/cpp/fidl.h>
+#include <lib/fdio/util.h>
 #include <lib/fit/defer.h>
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/files/path.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/join_strings.h>
+#include <lib/fxl/strings/split_string.h>
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/fxl/strings/substitute.h>
+#include <lib/inspect/reader.h>
 
-#include "garnet/bin/iquery/connect.h"
 #include "garnet/bin/iquery/modes.h"
 
 #include <iostream>
 
 namespace iquery {
+namespace {
+
+// Consult the file system to find out how to open an inspect endpoint at the
+// given path.
+//
+// Returns the parsed location on success.
+//
+// Note: This function uses synchronous filesystem operations and may block
+// execution.
+fit::result<ObjectLocation> ParseToLocation(const std::string& path) {
+  auto parts =
+      fxl::SplitStringCopy(path, "#", fxl::kKeepWhitespace, fxl::kSplitWantAll);
+  if (parts.size() > 2) {
+    FXL_LOG(WARNING) << "Error parsing " << path;
+    return fit::error();
+  }
+
+  std::vector<std::string> inspect_parts;
+  if (parts.size() == 2) {
+    inspect_parts = fxl::SplitStringCopy(parts[1], "/", fxl::kKeepWhitespace,
+                                         fxl::kSplitWantAll);
+  }
+
+  if (files::IsFile(parts[0])) {
+    // Entry point is a file, split out the directory and base name.
+    return fit::ok(
+        ObjectLocation{.directory_path = files::GetDirectoryName(parts[0]),
+                       .file_name = files::GetBaseName(parts[0]),
+                       .inspect_path_components = std::move(inspect_parts)});
+  } else if (files::IsFile(
+                 files::JoinPath(parts[0], fuchsia::inspect::Inspect::Name_))) {
+    return fit::ok(
+        ObjectLocation{.directory_path = std::move(parts[0]),
+                       .file_name = fuchsia::inspect::Inspect::Name_,
+                       .inspect_path_components = std::move(inspect_parts)});
+  } else {
+    FXL_LOG(WARNING) << "No inspect entry point found at " << parts[0];
+    return fit::error();
+  }
+}
+
+// Synchronously recurse down the filesystem from the given path to find
+// inspect endpoints.
+std::vector<ObjectLocation> SyncFindPaths(const std::string& path) {
+  FXL_VLOG(1) << "Synchronously listing paths under " << path;
+  if (path.find("#") != std::string::npos) {
+    // This path refers to something nested inside an inspect hierarchy, return
+    // it directly.
+    FXL_VLOG(1) << " Path is inside inspect hierarchy, returning directly";
+    auto location = ParseToLocation(path);
+    if (location.is_ok()) {
+      return {location.take_value()};
+    }
+  }
+
+  std::vector<ObjectLocation> ret;
+
+  std::vector<std::string> search_paths;
+  search_paths.push_back(path);
+
+  while (!search_paths.empty()) {
+    std::string path = std::move(search_paths.back());
+    search_paths.pop_back();
+    FXL_VLOG(1) << " Reading " << path;
+    DIR* dir = opendir(path.c_str());
+    if (!dir) {
+      FXL_VLOG(1) << " Failed to open";
+      continue;
+    }
+
+    FXL_VLOG(1) << " Opened";
+
+    struct dirent* de;
+    while ((de = readdir(dir)) != nullptr) {
+      if (strcmp(de->d_name, ".") == 0) {
+        continue;
+      }
+      if (de->d_type == DT_DIR) {
+        FXL_VLOG(1) << " Adding child " << de->d_name;
+        search_paths.push_back(fxl::Concatenate({path, "/", de->d_name}));
+      } else {
+        if (strcmp(de->d_name, fuchsia::inspect::Inspect::Name_) == 0) {
+          FXL_VLOG(1) << " Found fuchsia.inspect.Inspect";
+          ret.push_back(ObjectLocation{.directory_path = path,
+                                       .file_name = de->d_name,
+                                       .inspect_path_components = {}});
+        }
+      }
+    }
+
+    closedir(dir);
+    FXL_VLOG(1) << " Closed";
+  }
+
+  FXL_VLOG(1) << "Done listing, found " << ret.size() << " inspect endpoints";
+
+  return ret;
+}
+
+fit::promise<inspect::ObjectReader> OpenPathInsideRoot(
+    inspect::ObjectReader reader, std::vector<std::string> path_components,
+    size_t index = 0) {
+  if (index >= path_components.size()) {
+    return fit::make_promise([reader]() -> fit::result<inspect::ObjectReader> {
+      return fit::ok(reader);
+    });
+  }
+
+  return reader.OpenChild(path_components[index])
+      .and_then([=](inspect::ObjectReader& child) {
+        return OpenPathInsideRoot(child, path_components, index + 1);
+      });
+}
+
+fit::result<fidl::InterfaceHandle<fuchsia::inspect::Inspect>> OpenInspectAtPath(
+    const std::string& path) {
+  fuchsia::inspect::InspectPtr inspect;
+  auto endpoint = files::AbsolutePath(path);
+  zx_status_t status = fdio_service_connect(
+      endpoint.c_str(), inspect.NewRequest().TakeChannel().get());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to connect at " << endpoint << " with " << status;
+    return fit::error();
+  }
+
+  return fit::ok(inspect.Unbind());
+}
+
+}  // namespace
+
+fit::promise<ObjectSource> ObjectSource::Make(ObjectLocation location,
+                                              inspect::ObjectReader root_reader,
+                                              int depth) {
+  return OpenPathInsideRoot(root_reader, location.inspect_path_components)
+      .then([depth](fit::result<inspect::ObjectReader>& reader)
+                -> fit::promise<inspect::ObjectHierarchy> {
+        if (!reader.is_ok()) {
+          return fit::make_promise(
+              []() -> fit::result<inspect::ObjectHierarchy> {
+                return fit::error();
+              });
+        }
+        return inspect::ObjectHierarchy::Make(reader.take_value(), depth);
+      })
+      .then([root_reader, location = std::move(location)](
+                fit::result<inspect::ObjectHierarchy>& result)
+                -> fit::result<ObjectSource> {
+        if (!result.is_ok()) {
+          FXL_LOG(ERROR) << fxl::Substitute(
+              "Failed to read $0$1$2",
+              files::JoinPath(location.directory_path, location.file_name),
+              std::string(location.inspect_path_components.empty() ? "" : "#"),
+              fxl::JoinStrings(location.inspect_path_components, "/"));
+          return fit::error();
+        }
+
+        ObjectSource ret;
+        ret.location_ = std::move(location);
+        ret.type_ = ObjectSource::Type::INSPECT_FIDL;
+        ret.hierarchy_ = result.take_value();
+        return fit::ok(std::move(ret));
+      });
+}
+
+std::string ObjectSource::FormatRelativePath() const {
+  return FormatRelativePath({});
+}
+
+std::string ObjectSource::FormatRelativePath(
+    const std::vector<std::string>& suffix) const {
+  std::string ret = location_.directory_path;
+  // TODO(CF-218): Handle file name for the VMO case here.
+  if (location_.inspect_path_components.empty() && suffix.empty()) {
+    return ret;
+  }
+  ret.append("#");
+  bool has_inspect_path = !location_.inspect_path_components.empty();
+  if (has_inspect_path) {
+    ret += fxl::JoinStrings(location_.inspect_path_components, "/");
+  }
+  if (!suffix.empty()) {
+    if (has_inspect_path) {
+      ret += "/";
+    }
+    ret += fxl::JoinStrings(suffix, "/");
+  }
+
+  return ret;
+}
+
+void ObjectSource::VisitObjectsInHierarchyRecursively(
+    const Visitor& visitor, const inspect::ObjectHierarchy& current,
+    std::vector<std::string>* path) const {
+  visitor(*path, current);
+
+  for (const auto& child : current.children()) {
+    path->push_back(child.object().name);
+    VisitObjectsInHierarchyRecursively(visitor, child, path);
+    path->pop_back();
+  }
+}
+
+void ObjectSource::VisitObjectsInHierarchy(Visitor visitor) const {
+  std::vector<std::string> path;
+  VisitObjectsInHierarchyRecursively(visitor, GetRootHierarchy(), &path);
+}
 
 // RunCat ----------------------------------------------------------------------
 
-namespace {
-
-// Joins the basepath and the relative path together.
-std::string GetCurrentPath(const std::string& basepath,
-                           const std::vector<std::string>& rel_path) {
-  if (rel_path.empty())
-    return basepath;
-  return fxl::Concatenate({basepath, "/", fxl::JoinStrings(rel_path, "/")});
-}
-
-bool RecursiveRunCat(const fuchsia::inspect::InspectSyncPtr& channel_ptr,
-                     ObjectNode* current_node, const std::string& basepath,
-                     std::vector<std::string>* rel_path) {
-  std::string current_path = GetCurrentPath(basepath, *rel_path);
-  FXL_VLOG(1) << fxl::Substitute("Finding in $0", current_path);
-
-  // We check one level.
-  FXL_VLOG(1) << "  attempting to list children";
-  fidl::VectorPtr<std::string> children;
-  auto status = channel_ptr->ListChildren(&children);
-  if (status != ZX_OK) {
-    FXL_LOG(WARNING) << "Failed listing children for " << current_path;
-    return false;
-  }
-
-  FXL_VLOG(1) << "  successfully listed children";
-  current_node->children.reserve(children->size());
-  for (const std::string& child_name : *children) {
-    FXL_VLOG(1) << "  attempting to open " << child_name;
-    bool success;
-    fuchsia::inspect::InspectSyncPtr child_channel;
-    channel_ptr->OpenChild(child_name, child_channel.NewRequest(), &success);
-    if (!success) {
-      FXL_LOG(WARNING) << "Could not open child for " << current_path << "/"
-                       << child_name;
-      continue;
-    }
-    FXL_VLOG(1) << "    successfully opened";
-    FXL_VLOG(1) << "    reading data";
-
-    // Fill out the data.
-    ObjectNode child_node;
-    child_channel->ReadData(&child_node.object);
-    child_node.basepath = fxl::Concatenate({current_path, "/", child_name});
-
-    FXL_VLOG(1) << "    recursing down";
-    // We create the relative path stack.
-    rel_path->push_back(child_name);
-    RecursiveRunCat(child_channel, &child_node, basepath, rel_path);
-    rel_path->pop_back();
-
-    // Add it to the tree.
-    current_node->children.emplace_back(std::move(child_node));
-  }
-
-  return true;
-}
-
-}  // namespace
-
-bool RunCat(const Options& options, std::vector<ObjectNode>* out) {
-  for (const auto& path : options.paths) {
+fit::promise<std::vector<ObjectSource>> RunCat(const Options* options) {
+  std::vector<fit::promise<ObjectSource>> promises;
+  for (const auto& path : options->paths) {
     FXL_VLOG(1) << fxl::Substitute("Running cat in $0", path);
-    // Get the root. The rest of tree will be obtained through ListChildren.
-    FXL_VLOG(1) << "  opening a connection";
-    Connection connection(path);
-    auto channel_ptr = connection.SyncOpen();
-    if (!channel_ptr) {
-      FXL_LOG(ERROR) << "Failed opening " << path;
+
+    auto location_result = ParseToLocation(path);
+    if (!location_result.is_ok()) {
+      FXL_LOG(ERROR) << path << " not found";
       continue;
     }
 
-    // We open the first node outside the recursion in case there is no need to
-    // step down for children.
-    FXL_VLOG(1) << "  reading root node";
-    ObjectNode root;
-    root.basepath = path;
-    auto status = channel_ptr->ReadData(&(root.object));
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed reading " << path;
+    auto location = location_result.take_value();
+    auto handle = OpenInspectAtPath(
+        files::JoinPath(location.directory_path, location.file_name));
+
+    if (!handle.is_ok()) {
+      FXL_LOG(ERROR) << "Failed to open " << path;
       continue;
     }
 
-    if (options.recursive) {
-      FXL_VLOG(1) << "  recursing for " << path;
-      std::vector<std::string> path_stack;
-      RecursiveRunCat(channel_ptr, &root, path, &path_stack);
-    }
-
-    out->push_back(std::move(root));
+    promises.emplace_back(ObjectSource::Make(
+        std::move(location), inspect::ObjectReader(handle.take_value()),
+        options->recursive ? -1 : 0));
   }
 
-  return true;
-}
+  return fit::join_promise_vector(std::move(promises))
+      .and_then([](std::vector<fit::result<ObjectSource>>& result) {
+        std::vector<ObjectSource> ret;
 
-// RunFind ---------------------------------------------------------------------
-
-namespace {
-
-// Depth-first search for children within the Inspect API, utilizing
-// ListChildren and OpenChild on the API for traversal.
-void ListFromInspectHierarchy(std::string in_path,
-                              fuchsia::inspect::InspectSyncPtr in_root,
-                              std::vector<ObjectNode>* out, bool recurse) {
-  FXL_VLOG(1) << fxl::Substitute("Opened Inspect hierarchy at $0", in_path);
-
-  if (!recurse) {
-    FXL_VLOG(1) << "  processing " << in_path;
-    auto it = out->emplace(out->end());
-    in_root->ReadData(&(it->object));
-    it->basepath = in_path;
-  } else {
-    std::stack<std::pair<std::string, fuchsia::inspect::InspectSyncPtr>> search;
-    search.push(std::make_pair(std::move(in_path), std::move(in_root)));
-
-    while (!search.empty()) {
-      auto pair = std::move(search.top());
-      search.pop();
-      FXL_VLOG(1) << "  processing " << pair.first;
-      auto it = out->emplace(out->end());
-      pair.second->ReadData(&(it->object));
-      it->basepath = pair.first;
-
-      // Continue a DFS search of children underneath the root if recurse is
-      // true.
-      fidl::VectorPtr<std::string> children;
-      pair.second->ListChildren(&children);
-
-      for (const auto& child : *children) {
-        fuchsia::inspect::InspectSyncPtr ptr;
-        bool opened;
-        pair.second->OpenChild(child, ptr.NewRequest(), &opened);
-        if (opened) {
-          FXL_VLOG(1) << "  opened child " << child;
-          search.push(std::make_pair(fxl::Concatenate({pair.first, "/", child}),
-                                     std::move(ptr)));
-        } else {
-          FXL_VLOG(1) << "  failed to open child " << child;
-        }
-      }
-    }
-  }
-
-  FXL_VLOG(1) << "Done reading inspect hierarchy";
-}
-
-// Makes a DFS search for candidate channels under the |base_directory|.
-// If |recursive| is not set, it will stop the decent of a particular branch
-// upon finding a valid channel. When it set it will search the whole tree.
-// This is used for being able to chain the results of the non-recursive result
-// of find with a new call of iquery with cat.
-bool FindObjects(const std::string& base_directory, bool recursive,
-                 std::vector<ObjectNode>* out) {
-  assert(out);
-
-  std::vector<std::string> candidates;
-  std::stack<std::string> search;
-  search.emplace(base_directory);
-
-  while (search.size() > 0) {
-    std::string path = std::move(search.top());
-    search.pop();
-
-    FXL_VLOG(1) << fxl::Substitute("Finding in $0", path);
-
-    auto* dir = opendir(path.c_str());
-    auto cleanup = fit::defer([dir] {
-      if (dir != nullptr) {
-        closedir(dir);
-      }
-    });
-
-    if (dir == nullptr) {
-      FXL_LOG(INFO) << fxl::StringPrintf("Could not open %s (errno=%d)",
-                                         path.c_str(), errno);
-      continue;
-    }
-
-    // By default we continue to search. If we find a good candidate, we need
-    // to define then if we're going to continue recursing.
-    std::vector<std::string> current_level_dirs;
-    while (auto* dirent = readdir(dir)) {
-      FXL_VLOG(1) << "  checking " << dirent->d_name;
-      if (strcmp(".", dirent->d_name) == 0) {
-        FXL_VLOG(1) << "  skipping";
-        continue;
-      }
-
-      // We check all the possible directories in this level.
-      // If recursive was not set as an option, we must stop at any level where
-      // we find a suitable candidate.
-      if (dirent->d_type == DT_DIR) {
-        // Another candidate.
-        FXL_VLOG(1) << fxl::Substitute("  will queue", path);
-        current_level_dirs.emplace_back(
-            fxl::Concatenate({path, "/", dirent->d_name}));
-      } else if (strcmp(fuchsia::inspect::Inspect::Name_, dirent->d_name) ==
-                 0) {
-        // We found a candidate, we check if it's a valid one.
-        FXL_VLOG(1) << fxl::Substitute("  is a candidate path", path);
-        Connection c(path);
-        if (c.Validate()) {
-          // This is valid candidate, so we try to open it.
-          auto ptr = c.SyncOpen();
-          if (ptr) {
-            FXL_VLOG(1) << "  accepted";
-
-            ListFromInspectHierarchy(path, std::move(ptr), out, recursive);
-          } else {
-            FXL_LOG(WARNING) << "Could not open "
-                             << fxl::Concatenate({path, "/", dirent->d_name});
+        for (auto& entry : result) {
+          if (entry.is_ok()) {
+            ret.emplace_back(entry.take_value());
           }
         }
-      }
-    }
 
-    // Now that we checked all the candidates within this directory, we
-    // continue the recursion through directories.
-    FXL_VLOG(1) << fxl::Substitute("Recursing from $0", path);
-    for (const auto& child_dir : current_level_dirs) {
-      search.emplace(std::move(child_dir));
-    }
-  }
-
-  return true;
+        return fit::ok(std::move(ret));
+      });
 }
 
-}  // namespace
+// RunFind
+// ---------------------------------------------------------------------
 
-bool RunFind(const Options& options, std::vector<ObjectNode>* out) {
-  for (const auto& path : options.paths) {
-    if (!FindObjects(path, options.recursive, out)) {
-      FXL_LOG(WARNING) << "Failed searching " << path;
-    }
-  }
+fit::promise<std::vector<ObjectSource>> RunFind(const Options* options) {
+  return fit::make_promise([options] {
+           std::vector<fit::promise<ObjectSource>> promises;
+           for (const auto& path : options->paths) {
+             for (auto& location : SyncFindPaths(path)) {
+               auto handle = OpenInspectAtPath(files::JoinPath(
+                   location.directory_path, location.file_name));
 
-  return true;
+               if (!handle.is_ok()) {
+                 continue;
+               }
+
+               promises.emplace_back(ObjectSource::Make(
+                   std::move(location),
+                   inspect::ObjectReader(handle.take_value()),
+                   options->recursive ? -1 : 0 /* depth */));
+             }
+           }
+           return fit::join_promise_vector(std::move(promises));
+         })
+      .and_then([](std::vector<fit::result<ObjectSource>>& entry_points) {
+        std::vector<ObjectSource> ret;
+        for (auto& entry : entry_points) {
+          if (entry.is_ok()) {
+            ret.push_back(entry.take_value());
+          }
+        }
+
+        return fit::ok(std::move(ret));
+      });
 }
 
-// RunLs -----------------------------------------------------------------------
+// RunLs
+// -----------------------------------------------------------------------
 
-bool RunLs(const Options& options, std::vector<ObjectNode>* out) {
-  for (const auto& path : options.paths) {
+fit::promise<std::vector<ObjectSource>> RunLs(const Options* options) {
+  std::vector<fit::promise<ObjectSource>> promises;
+  for (const auto& path : options->paths) {
     FXL_VLOG(1) << fxl::Substitute("Running ls in $0", path);
-    iquery::Connection connection(path);
-    auto ptr = connection.SyncOpen();
-    if (!ptr) {
-      FXL_LOG(WARNING) << "Failed listing " << path;
-      return 1;
+
+    auto location_result = ParseToLocation(path);
+
+    if (!location_result.is_ok()) {
+      FXL_LOG(ERROR) << path << " not found";
     }
 
-    FXL_VLOG(1) << "  listing children";
+    auto location = location_result.take_value();
+    auto handle = OpenInspectAtPath(
+        files::JoinPath(location.directory_path, location.file_name));
 
-    ::fidl::VectorPtr<std::string> result;
-    auto status = ptr->ListChildren(&result);
-    if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "Failed listing children for " << path;
-      return false;
+    if (!handle.is_ok()) {
+      FXL_LOG(ERROR) << "Failed to open " << path;
+      continue;
     }
 
-    for (const std::string& child_name : *result) {
-      ObjectNode child_node;
-      child_node.object.name = child_name;
-      child_node.basepath = fxl::Concatenate({path, "/", child_name});
-      out->emplace_back(std::move(child_node));
-    }
+    promises.emplace_back(ObjectSource::Make(
+        std::move(location), inspect::ObjectReader(handle.take_value()),
+        1 /* depth */));
   }
 
-  return true;
+  return fit::join_promise_vector(std::move(promises))
+      .and_then([](std::vector<fit::result<ObjectSource>>& result) {
+        std::vector<ObjectSource> ret;
+
+        for (auto& entry : result) {
+          if (entry.is_ok()) {
+            ret.emplace_back(entry.take_value());
+          }
+        }
+
+        return fit::ok(std::move(ret));
+      });
 }
 
 }  // namespace iquery

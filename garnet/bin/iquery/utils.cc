@@ -33,15 +33,6 @@ std::string HexDump(fxl::StringView contents) {
 
 }  // namespace
 
-ObjectNode::ObjectNode() = default;
-ObjectNode::ObjectNode(std::string name) { object.name = std::move(name); }
-
-ObjectNode::ObjectNode(fuchsia::inspect::Object object)
-    : object(std::move(object)) {}
-
-ObjectNode::ObjectNode(ObjectNode&&) = default;
-ObjectNode& ObjectNode::operator=(ObjectNode&&) = default;
-
 // TODO(donosoc): Cleanup artifacts like "//" or ending in '/'
 std::string FormatPath(Options::PathFormatting path_format,
                        const std::string& path, const std::string& name) {

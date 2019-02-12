@@ -16,25 +16,6 @@
 
 namespace iquery {
 
-// Helper wrapper over objects that enables us to represent the tree
-// relationship between them.
-struct ObjectNode {
-  ObjectNode();
-  ObjectNode(std::string name);
-  ObjectNode(fuchsia::inspect::Object);
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ObjectNode);
-
-  // Move and assign.
-  ObjectNode(ObjectNode&&);
-  ObjectNode& operator=(ObjectNode&&);
-
-  // Used in the output stage for formatting.
-  std::string basepath;
-  fuchsia::inspect::Object object;
-  std::vector<ObjectNode> children;
-};
-
 // If option is none, will return the provided name,
 // full_paths return the given path and absolute will create the absolute path.
 std::string FormatPath(Options::PathFormatting, const std::string& path,

@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
 #include <unistd.h>
+#include <iostream>
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async_promise/executor.h>
+#include <lib/fit/promise.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
 
@@ -12,6 +15,9 @@
 #include "garnet/bin/iquery/modes.h"
 
 int main(int argc, const char** argv) {
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Executor executor(loop.dispatcher());
+
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
     return 1;
@@ -33,26 +39,34 @@ int main(int argc, const char** argv) {
     return 0;
   }
 
-  std::vector<iquery::ObjectNode> results;
-  bool success = false;
+  fit::promise<std::vector<iquery::ObjectSource>> results;
   // Dispatch to the correct mode.
   if (options.mode == iquery::Options::Mode::CAT) {
-    success = iquery::RunCat(options, &results);
+    results = iquery::RunCat(&options);
   } else if (options.mode == iquery::Options::Mode::FIND) {
-    success = iquery::RunFind(options, &results);
+    results = iquery::RunFind(&options);
   } else if (options.mode == iquery::Options::Mode::LS) {
-    success = iquery::RunLs(options, &results);
+    results = iquery::RunLs(&options);
   } else {
     FXL_LOG(ERROR) << "Unsupported mode";
     return 1;
   }
 
-  if (!success) {
-    FXL_LOG(ERROR) << "Failed running mode. Exiting.";
-    return 1;
-  }
+  executor.schedule_task(
+      results
+          .and_then([&options,
+                     &loop](const std::vector<iquery::ObjectSource>& results) {
+            // Formatter will handle the correct case according to the
+            // options values.
+            std::cout << options.formatter->Format(options, results);
+            loop.Quit();
+          })
+          .or_else([&loop] {
+            FXL_LOG(ERROR) << "An error occurred";
+            loop.Quit();
+          }));
 
-  // Formatter will handle the correct case according to the options values.
-  std::cout << options.formatter->Format(options, results);
+  loop.Run();
+
   return 0;
 }
