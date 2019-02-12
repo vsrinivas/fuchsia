@@ -34,10 +34,12 @@ class FidlServer {
             // error handler is never ZX_OK.
             ZX_DEBUG_ASSERT(status != ZX_OK);
 
-            // We call FailAsync() just for its logging output (including the
-            // "fail" text).  At this point !error_handler, so nothing actually
-            // happens async due to this call.
-            stub->FailAsync(status, "FidlServer::error_handler_() - status: %d", status);
+            if (status != ZX_ERR_PEER_CLOSED) {
+                // We call FailAsync() just for its logging output (including the
+                // "fail" text).  At this point !error_handler, so nothing actually
+                // happens async due to this call.
+                stub->FailAsync(status, "FidlServer::error_handler_() - status: %d", status);
+            }
 
             // Now delete stub.
             std::unique_ptr<Stub> local_owner =
