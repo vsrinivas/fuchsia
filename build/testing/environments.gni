@@ -6,7 +6,7 @@ declare_args() {
   # TODO(IN-819): Delete after bring-up.
   # This can be overridden to ensure that only select builders run linux/mac
   # tests in their own shards.
-  linux_and_mac_test_label = "host"
+  linux_and_mac_test_label = ""
 }
 
 ### Individual test environments ###
