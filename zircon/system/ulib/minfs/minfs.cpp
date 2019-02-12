@@ -248,13 +248,13 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc) {
 BlockOffsets::BlockOffsets(const Bcache& bc, const SuperblockManager& sb) {
     if (bc.extent_lengths_.size() > 0) {
         ZX_ASSERT(bc.extent_lengths_.size() == kExtentCount);
-        ibm_block_count_ = bc.extent_lengths_[1] / kMinfsBlockSize;
-        abm_block_count_ = bc.extent_lengths_[2] / kMinfsBlockSize;
-        ino_block_count_ = bc.extent_lengths_[3] / kMinfsBlockSize;
-        journal_block_count_ = bc.extent_lengths_[4] / kMinfsBlockSize;
-        dat_block_count_ = bc.extent_lengths_[5] / kMinfsBlockSize;
+        ibm_block_count_ = static_cast<blk_t>(bc.extent_lengths_[1] / kMinfsBlockSize);
+        abm_block_count_ = static_cast<blk_t>(bc.extent_lengths_[2] / kMinfsBlockSize);
+        ino_block_count_ = static_cast<blk_t>(bc.extent_lengths_[3] / kMinfsBlockSize);
+        journal_block_count_ = static_cast<blk_t>(bc.extent_lengths_[4] / kMinfsBlockSize);
+        dat_block_count_ = static_cast<blk_t>(bc.extent_lengths_[5] / kMinfsBlockSize);
 
-        ibm_start_block_ = bc.extent_lengths_[0] / kMinfsBlockSize;
+        ibm_start_block_ = static_cast<blk_t>(bc.extent_lengths_[0] / kMinfsBlockSize);
         abm_start_block_ = ibm_start_block_ + ibm_block_count_;
         ino_start_block_ = abm_start_block_ + abm_block_count_;
         journal_start_block_ = ino_start_block_ + ino_block_count_;
