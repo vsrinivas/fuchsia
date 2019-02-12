@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <lib/fdio/io.h>
 #include <link.h>
-#include <zircon/dlfcn.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -43,51 +42,7 @@ std::unique_ptr<process::ProcessBuilder> CreateProcessBuilder(
   builder->AddArgs(argv);
   builder->CloneAll();
 
-  // Also clone the loader since we call LoadVMO rather than use the resolver
-  // path of the ProcessBuilder.
-  zx::handle ldsvc;
-  dl_clone_loader_service(ldsvc.reset_and_get_address());
-  builder->AddHandle(PA_LDSVC_LOADER, std::move(ldsvc));
-
   return builder;
-}
-
-zx_status_t LoadPath(const char* path, zx_handle_t* vmo) {
-  int fd = open(path, O_RDONLY);
-  if (fd < 0)
-    return ZX_ERR_IO;
-  zx_status_t status = fdio_get_vmo_clone(fd, vmo);
-  close(fd);
-
-  if (status == ZX_OK) {
-    if (strlen(path) >= ZX_MAX_NAME_LEN) {
-      const char* p = strrchr(path, '/');
-      if (p != NULL) {
-        path = p + 1;
-      }
-    }
-
-    zx_object_set_property(*vmo, ZX_PROP_NAME, path, strlen(path));
-  }
-
-  return status;
-}
-
-bool LoadBinary(process::ProcessBuilder* builder,
-                const std::string& binary_path) {
-  FXL_DCHECK(builder);
-
-  zx::vmo vmo;
-  zx_status_t status =
-      LoadPath(binary_path.c_str(), vmo.reset_and_get_address());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not load binary: "
-                   << debugger_utils::ZxErrorString(status);
-    return false;
-  }
-
-  builder->LoadVMO(std::move(vmo));
-  return true;
 }
 
 zx_koid_t GetProcessId(zx_handle_t process) {
@@ -95,7 +50,7 @@ zx_koid_t GetProcessId(zx_handle_t process) {
   zx_status_t status = zx_object_get_info(process, ZX_INFO_HANDLE_BASIC, &info,
                                           sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_object_get_info_failed: "
+    FXL_LOG(ERROR) << "zx_object_get_info failed: "
                    << debugger_utils::ZxErrorString(status);
     return ZX_KOID_INVALID;
   }
@@ -219,12 +174,16 @@ bool Process::Initialize() {
   builder_ = CreateProcessBuilder(job, argv_, services_);
 
   if (!builder_) {
+    FXL_LOG(ERROR) << "Failed to create process builder";
     return false;
   }
 
   builder_->AddHandles(std::move(extra_handles_));
 
-  if (!LoadBinary(builder_.get(), argv_[0])) {
+  status = builder_->LoadPath(argv_[0]);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to load binary: " << argv_[0]
+                   << ": " << debugger_utils::ZxErrorString(status);
     goto fail;
   }
 
