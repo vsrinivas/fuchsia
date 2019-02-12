@@ -197,7 +197,7 @@ zx_status_t Mounter::MountNativeFs(const char* binary, unique_fd device,
     // 3. (optional) verbose
     // 4. (optional) metrics
     // 5. command
-    const char* argv[5] = {binary};
+    const char* argv[6] = {binary};
     int argc = 1;
     if (options.readonly) {
         argv[argc++] = "--readonly";
@@ -212,6 +212,7 @@ zx_status_t Mounter::MountNativeFs(const char* binary, unique_fd device,
         argv[argc++] = "--journal";
     }
     argv[argc++] = "mount";
+    argv[argc] = nullptr;
     return LaunchAndMount(cb, options, argv, argc);
 }
 

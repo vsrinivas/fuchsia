@@ -53,13 +53,15 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
         argv.push_back(fvm_data_slices.c_str());
     }
     argv.push_back("mkfs");
-    status = static_cast<zx_status_t>(cb(static_cast<int>(argv.size()), argv.get(), hnd, ids, n));
+    argv.push_back(nullptr);
+    status = static_cast<zx_status_t>(cb(static_cast<int>(argv.size() - 1), argv.get(),
+                                         hnd, ids, n));
     return status;
 }
 
 zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const mkfs_options_t* options) {
-    const char* argv[] = {"/boot/bin/mkfs-msdosfs", device_path};
-    return cb(fbl::count_of(argv), argv, NULL, NULL, 0);
+    const char* argv[] = {"/boot/bin/mkfs-msdosfs", device_path, nullptr};
+    return cb(fbl::count_of(argv) - 1, argv, NULL, NULL, 0);
 }
 
 } // namespace

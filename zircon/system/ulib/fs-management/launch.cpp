@@ -24,15 +24,8 @@
 
 namespace {
 
-void InitArgvAndActions(int argc, const char** argv, zx_handle_t* handles,
-                        uint32_t* types, size_t len,
-                        const char** null_terminated_argv_out,
+void InitArgvAndActions(zx_handle_t* handles, uint32_t* types, size_t len,
                         fdio_spawn_action_t* actions_out) {
-    for (int i = 0; i < argc; ++i) {
-        null_terminated_argv_out[i] = argv[i];
-    }
-    null_terminated_argv_out[argc] = nullptr;
-
     for (size_t i = 0; i < len; ++i) {
         actions_out[i].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
         actions_out[i].h.id = types[i];
@@ -123,15 +116,14 @@ zx_status_t Spawn(ProcessAction proc_action, uint32_t flags, const char** argv,
 
 zx_status_t Launch(StdioType stdio, ProcessAction proc_action, int argc,
                    const char** argv, zx_handle_t* handles, uint32_t* types, size_t len) {
-    const char* null_terminated_argv[argc + 1];
     fdio_spawn_action_t actions[len + kMaxStdioActions];
-    InitArgvAndActions(argc, argv, handles, types, len, null_terminated_argv, actions);
+    InitArgvAndActions(handles, types, len, actions);
 
     size_t action_count = len;
     uint32_t flags = FDIO_SPAWN_CLONE_ALL;
     InitStdio(stdio, actions, &action_count, &flags);
 
-    return Spawn(proc_action, flags, null_terminated_argv, action_count, actions);
+    return Spawn(proc_action, flags, argv, action_count, actions);
 }
 
 }  // namespace

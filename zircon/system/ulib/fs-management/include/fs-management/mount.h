@@ -110,6 +110,8 @@ typedef struct fsck_options {
 
 extern const fsck_options_t default_fsck_options;
 
+// Callback that will launch the requested program.  |argv[argc]| is guaranteed
+// to be accessible and set to nullptr.
 typedef zx_status_t (*LaunchCallback)(int argc, const char** argv,
                                       zx_handle_t* hnd, uint32_t* ids, size_t len);
 
