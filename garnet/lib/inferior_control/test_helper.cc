@@ -71,7 +71,7 @@ static int PerformWaitPeerClosed(zx_handle_t channel) {
   return 0;
 }
 
-static int TestTryNext(zx_handle_t channel) {
+static int TriggerSoftwareBreakpoint(zx_handle_t channel) {
   zx::port eport;
   zx_status_t status = zx::port::create(0, &eport);
   FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
@@ -93,13 +93,13 @@ static int TestTryNext(zx_handle_t channel) {
 
   WaitPeerClosed(channel);
 
-  // The the exception thread to exit.
+  // Tell the exception thread to exit.
   zx_port_packet_t packet{};
   status = eport.queue(&packet);
   FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
   exception_thread.join();
 
-  printf("test-try-next complete\n");
+  printf("trigger-sw-bkpt complete\n");
   return 0;
 }
 
@@ -120,8 +120,8 @@ int main(int argc, char* argv[]) {
     if (strcmp(cmd, "wait-peer-closed") == 0) {
       return PerformWaitPeerClosed(channel);
     }
-    if (strcmp(cmd, "test-try-next") == 0) {
-      return TestTryNext(channel);
+    if (strcmp(cmd, "trigger-sw-bkpt") == 0) {
+      return TriggerSoftwareBreakpoint(channel);
     }
     fprintf(stderr, "Unrecognized command: %s\n", cmd);
     return 1;

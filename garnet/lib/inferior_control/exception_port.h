@@ -24,9 +24,9 @@ namespace inferior_control {
 
 class Thread;
 
-// Maintains a dedicated thread for listening to exceptions from multiple
-// processes and provides an interface that processes can use to subscribe to
-// exception notifications.
+// Maintains a dedicated thread for listening for exceptions and signals
+// from multiple processes and provides an interface that processes can use
+// to subscribe to exception/signal notifications (including their threads).
 class ExceptionPort final {
  public:
   // A Key is vended as a result of a call to Bind()
@@ -59,6 +59,12 @@ class ExceptionPort final {
   // Unbinds a previously bound exception port and returns true on success.
   // This must be called AFTER a successful call to Run().
   bool Unbind(zx_handle_t process, Key key);
+
+  // Async-wait for signals on |thread|.
+  // The signals we wait for is determined by the thread's current state.
+  // If it's running we wait for it to be suspended (or terminated).
+  // If it's suspended we wait for it to be running (or terminated).
+  void WaitAsync(Thread* thread);
 
  private:
   // Currently resuming from exceptions requires the exception port handle.

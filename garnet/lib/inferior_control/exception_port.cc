@@ -22,6 +22,20 @@
 
 namespace inferior_control {
 
+namespace {
+
+// TODO(dje): There's no real need to wait for threads to become running.
+constexpr zx_signals_t kThreadSuspendedSignals = (ZX_THREAD_SUSPENDED |
+                                                  ZX_THREAD_TERMINATED);
+constexpr zx_signals_t kThreadRunningSignals = (ZX_THREAD_RUNNING |
+                                                ZX_THREAD_TERMINATED);
+constexpr zx_signals_t kThreadTerminatedSignals = ZX_THREAD_TERMINATED;
+constexpr zx_signals_t kThreadAllSignals = (ZX_THREAD_SUSPENDED |
+                                            ZX_THREAD_RUNNING |
+                                            ZX_THREAD_TERMINATED);
+
+}  // namespace
+
 ExceptionPort::ExceptionPort(async_dispatcher_t* dispatcher,
                              PacketCallback exception_callback,
                              PacketCallback signal_callback)
@@ -124,6 +138,39 @@ bool ExceptionPort::Unbind(zx_handle_t process, Key key) {
                    << debugger_utils::ZxErrorString(status);
   }
   return status == ZX_OK;
+}
+
+void ExceptionPort::WaitAsync(Thread* thread) {
+  zx_signals_t signals;
+  switch (thread->state()) {
+  case Thread::State::kNew:
+  case Thread::State::kInException:
+    signals = kThreadAllSignals;
+    break;
+  case Thread::State::kSuspended:
+    signals = kThreadRunningSignals;
+    break;
+  case Thread::State::kRunning:
+  case Thread::State::kStepping:
+    signals = kThreadSuspendedSignals;
+    break;
+  case Thread::State::kExiting:
+    signals = kThreadTerminatedSignals;
+    break;
+  case Thread::State::kGone:
+    // Nothing to do here.
+    return;
+  }
+  zx_status_t status = zx_object_wait_async(thread->handle(), eport_.get(),
+                                            thread->id(), signals,
+                                            ZX_WAIT_ASYNC_ONCE);
+  if (status != ZX_OK) {
+    FXL_DCHECK(status == ZX_ERR_BAD_HANDLE);
+    // The only time this should fail is if the I/O loop has terminated,
+    // which means we're shutting down. This isn't fatal, just log it.
+    FXL_LOG(WARNING) << "Failed to async-wait for thread " << thread->id()
+                     << ": " << debugger_utils::ZxErrorString(status);
+  }
 }
 
 void ExceptionPort::Worker() {

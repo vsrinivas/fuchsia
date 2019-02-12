@@ -17,6 +17,7 @@
 #include "lib/fxl/strings/string_printf.h"
 
 #include "garnet/lib/debugger_utils/breakpoints.h"
+#include "garnet/lib/debugger_utils/threads.h"
 #include "garnet/lib/debugger_utils/util.h"
 
 namespace inferior_control {
@@ -47,6 +48,10 @@ void Server::QuitMessageLoop(bool status) {
 void Server::PostQuitMessageLoop(bool status) {
   run_status_ = status;
   async::PostTask(message_loop_.dispatcher(), [this] { message_loop_.Quit(); });
+}
+
+void Server::WaitAsync(Thread* thread) {
+  exception_port_.WaitAsync(thread);
 }
 
 void Server::OnProcessException(const zx_port_packet_t& packet) {
@@ -106,32 +111,25 @@ void Server::OnProcessException(const zx_port_packet_t& packet) {
 
   Delegate* delegate = process->delegate();
 
+  // First update our internal state for the thread.
+  thread->OnException(type, context);
+
   // |type| could either map to an architectural exception or Zircon-defined
   // synthetic exceptions.
   if (ZX_EXCP_IS_ARCH(type)) {
-    thread->OnException(type, context);
     delegate->OnArchitecturalException(process, thread, type, context);
     return;
   }
 
+  // Must be a synthetic exception.
   switch (type) {
     case ZX_EXCP_THREAD_STARTING:
-      FXL_DCHECK(thread->state() == Thread::State::kNew);
-      FXL_VLOG(1) << "Received ZX_EXCP_THREAD_STARTING exception for thread "
-                  << thread->GetName();
-      thread->OnException(type, context);
       delegate->OnThreadStarting(process, thread, context);
       break;
     case ZX_EXCP_THREAD_EXITING:
-      FXL_VLOG(1) << "Received ZX_EXCP_THREAD_EXITING exception for thread "
-                  << tid << ", " << thread->GetName();
-      thread->OnException(type, context);
       delegate->OnThreadExiting(process, thread, context);
       break;
     case ZX_EXCP_POLICY_ERROR:
-      FXL_VLOG(1) << "Received ZX_EXCP_POLICY_ERROR exception for thread "
-                  << thread->GetName();
-      thread->OnException(type, context);
       delegate->OnSyntheticException(process, thread, type, context);
       break;
     default:
@@ -156,6 +154,17 @@ void Server::OnProcessSignal(const zx_port_packet_t& packet) {
       process->OnTermination();
       // No point in installing another async-wait, process is dead.
     }
+  }
+
+  Thread* thread = process->FindThreadById(key);
+  if (thread == nullptr) {
+    FXL_LOG(WARNING) << "Unexpected signal key: " << key;
+    return;
+  }
+  thread->OnSignal(packet.signal.observed);
+  // Async-waits must be continually re-registered.
+  if (!(packet.signal.observed & ZX_THREAD_TERMINATED)) {
+    WaitAsync(thread);
   }
 }
 

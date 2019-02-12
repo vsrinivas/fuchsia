@@ -11,6 +11,8 @@
 
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
+#include <lib/zx/suspend_token.h>
+#include <lib/zx/time.h>
 
 #include "garnet/lib/debugger_utils/dso_list.h"
 #include "garnet/lib/debugger_utils/util.h"
@@ -46,6 +48,13 @@ class Process final {
     // Called when |thread| has exited (ZX_EXCP_THREAD_EXITING).
     virtual void OnThreadExiting(Process* process, Thread* thread,
                                  const zx_exception_context_t& context) = 0;
+
+    // Called when |thread| suspends, resumes, and terminates.
+    // Some apps don't need to do anything with these so they're not
+    // pure-virtual.
+    virtual void OnThreadSuspension(Thread* thread);
+    virtual void OnThreadResumption(Thread* thread);
+    virtual void OnThreadTermination(Thread* thread);
 
     // Called when |process| has exited.
     virtual void OnProcessTermination(Process* process) = 0;
@@ -128,6 +137,15 @@ class Process final {
   // ZX_PROCESS_TERMINATED signal when that happens.
   bool Kill();
 
+  // Request all threads in the process to suspend.
+  // This doesn't wait for them to suspend, just requests it.
+  // It is up to the app's server loop to wait for threads to suspend if
+  // it wants to.
+  bool RequestSuspend();
+
+  // Resume the process after having been suspended.
+  void ResumeFromSuspension();
+
   // Returns true if the process is running or has been running.
   bool IsLive() const;
 
@@ -171,6 +189,7 @@ class Process final {
 
   // Refreshes the complete Thread list for this process. Returns false if an
   // error is returned from a syscall.
+  // Pointers to existing threads are maintained.
   bool RefreshAllThreads();
 
   // Iterates through all cached threads and invokes |callback| for each of
@@ -178,7 +197,7 @@ class Process final {
   // returns, so it is safe to bind local variables to |callback|.
   using ThreadCallback = fit::function<void(Thread*)>;
   void ForEachThread(const ThreadCallback& callback);
-  // Same as ForEachThread except ignores State::Gone threads.
+  // Same as ForEachThread except ignores State::kGone threads.
   void ForEachLiveThread(const ThreadCallback& callback);
 
   // Reads the block of memory of length |length| bytes starting at address
@@ -288,6 +307,9 @@ class Process final {
   // Called after all other processing of a process exit has been done.
   void Clear();
 
+  // Record new thread |thread_handle,thread_id|.
+  Thread* AddThread(zx_handle_t thread_handle, zx_koid_t thread_id);
+
   // The server that owns us (non-owning).
   Server* server_;
 
@@ -339,12 +361,15 @@ class Process final {
   // The entry point of the dynamic linker.
   zx_vaddr_t entry_address_ = 0;
 
-  // True if the debugging exception port has been to.
+  // True if the debugging exception port has been bound.
   bool eport_bound_ = false;
 
   // True if we attached, or will attach, to a running program.
   // Otherwise we're launching a program from scratch.
   bool attached_running_ = false;
+
+  // Suspend token when entire process is suspended.
+  zx::suspend_token suspend_token_;
 
   // The API to access memory.
   std::shared_ptr<debugger_utils::ByteBlock> memory_;

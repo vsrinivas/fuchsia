@@ -70,6 +70,9 @@ class Server : public Process::Delegate {
   // subsequently posted tasks will be dropped.
   void PostQuitMessageLoop(bool status);
 
+  // Register an async-wait for |thread| on the exception port loop.
+  void WaitAsync(Thread* thread);
+
  private:
   void OnProcessException(const zx_port_packet_t& packet);
   void OnProcessSignal(const zx_port_packet_t& packet);

@@ -13,6 +13,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
+#include "garnet/lib/debugger_utils/breakpoints.h"
+#include "garnet/lib/debugger_utils/threads.h"
 #include "garnet/lib/debugger_utils/util.h"
 
 #include "arch.h"
@@ -29,6 +31,7 @@ const char* Thread::StateName(Thread::State state) {
   switch (state) {
     CASE_TO_STR(kNew);
     CASE_TO_STR(kInException);
+    CASE_TO_STR(kSuspended);
     CASE_TO_STR(kRunning);
     CASE_TO_STR(kStepping);
     CASE_TO_STR(kExiting);
@@ -90,6 +93,7 @@ bool Thread::IsLive() const {
   switch (state_) {
     case State::kNew:
     case State::kInException:
+    case State::kSuspended:
     case State::kRunning:
     case State::kStepping:
       return true;
@@ -148,6 +152,73 @@ void Thread::OnException(const zx_excp_type_t type,
   }
 
   FXL_VLOG(1) << ExceptionToString(type, context);
+}
+
+void Thread::OnTermination() {
+  set_state(State::kGone);
+  process_->delegate()->OnThreadTermination(this);
+  FXL_VLOG(1) << SignalsToString(ZX_THREAD_TERMINATED);
+}
+
+void Thread::OnSuspension() {
+  set_state(State::kSuspended);
+  process_->delegate()->OnThreadSuspension(this);
+  FXL_VLOG(1) << SignalsToString(ZX_THREAD_SUSPENDED);
+}
+
+void Thread::OnResumption() {
+  set_state(State::kRunning);
+  process_->delegate()->OnThreadResumption(this);
+  FXL_VLOG(1) << SignalsToString(ZX_THREAD_RUNNING);
+}
+
+void Thread::OnSignal(zx_signals_t signals) {
+    if (signals & ZX_THREAD_TERMINATED) {
+      OnTermination();
+      return;
+    }
+
+    switch (signals & (ZX_THREAD_SUSPENDED | ZX_THREAD_RUNNING)) {
+    case 0:
+      break;
+    case ZX_THREAD_SUSPENDED:
+      OnSuspension();
+      break;
+    case ZX_THREAD_RUNNING:
+      OnResumption();
+      break;
+    case ZX_THREAD_SUSPENDED | ZX_THREAD_RUNNING: {
+      // These signals can get folded together.
+      uint32_t state = debugger_utils::GetThreadOsState(handle_);
+      switch (ZX_THREAD_STATE_BASIC(state)) {
+      case ZX_THREAD_STATE_RUNNING:
+        OnResumption();
+        break;
+      case ZX_THREAD_STATE_SUSPENDED:
+        OnSuspension();
+        break;
+      case ZX_THREAD_STATE_BLOCKED:
+        // If we're blocked in a syscall or some such we're still running
+        // as far as we're concerned.
+        OnResumption();
+        break;
+      case ZX_THREAD_STATE_DYING:
+      case ZX_THREAD_STATE_DEAD:
+        // These are handled elsewhere, e.g., on receipt of ZX_THREAD_TERMINATED.
+        // But if we were suspended we no longer are.
+        if (state_ == State::kSuspended) {
+          // The transition to kExiting or kGone is handled elsewhere.
+          // Here we just process the fact that we got SUSPENDED|RUNNING signals.
+          OnResumption();
+        }
+        break;
+      default:
+        FXL_NOTREACHED();
+        break;
+      }
+      break;
+    }
+    }
 }
 
 bool Thread::TryNext() {
@@ -238,9 +309,38 @@ void Thread::ResumeForExit() {
   Clear();
 }
 
+bool Thread::RequestSuspend() {
+  FXL_DCHECK(!suspend_token_);
+
+  switch (state_) {
+    case State::kGone:
+      FXL_VLOG(1) << "Thread " << GetDebugName() << " is not live";
+      return false;
+    default:
+      break;
+  }
+
+  FXL_LOG(INFO) << "Suspending thread " << id_;
+
+  FXL_DCHECK(handle_ != ZX_HANDLE_INVALID);
+  auto status = zx_task_suspend(handle_, suspend_token_.reset_and_get_address());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to suspend thread " << GetName() << ": "
+                   << debugger_utils::ZxErrorString(status);
+    return false;
+  }
+
+  return true;
+}
+
+void Thread::ResumeFromSuspension() {
+  FXL_DCHECK(suspend_token_);
+  suspend_token_.reset();
+}
+
 bool Thread::Step() {
   if (state() != State::kInException) {
-    FXL_LOG(ERROR) << "Cannot step thread " << GetName() << " while in state: "
+    FXL_LOG(ERROR) << "Cannot step thread " << GetName() << " while in state "
                    << StateName(state());
     return false;
   }

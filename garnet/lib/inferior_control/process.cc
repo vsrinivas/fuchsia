@@ -61,6 +61,18 @@ zx_koid_t GetProcessId(zx_handle_t process) {
 
 }  // namespace
 
+void Process::Delegate::OnThreadSuspension(Thread* thread) {
+  // nothing to do by default
+}
+
+void Process::Delegate::OnThreadResumption(Thread* thread) {
+  // nothing to do by default
+}
+
+void Process::Delegate::OnThreadTermination(Thread* thread) {
+  // nothing to do by default
+}
+
 // static
 const char* Process::StateName(Process::State state) {
 #define CASE_TO_STR(x)    \
@@ -439,6 +451,36 @@ bool Process::Kill() {
   return true;
 }
 
+bool Process::RequestSuspend() {
+  FXL_DCHECK(!suspend_token_);
+
+  switch (state_) {
+    case Process::State::kGone:
+      FXL_VLOG(1) << "Process " << id() << " is not live";
+      return false;
+    default:
+      break;
+  }
+
+  FXL_LOG(INFO) << "Suspending process " << id();
+
+  FXL_DCHECK(handle_ != ZX_HANDLE_INVALID);
+  auto status = zx_task_suspend(handle_, suspend_token_.reset_and_get_address());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to suspend process " << id() << ": "
+                   << debugger_utils::ZxErrorString(status);
+    return false;
+  }
+
+  return true;
+}
+
+void Process::ResumeFromSuspension() {
+  FXL_CHECK(suspend_token_);
+  FXL_LOG(INFO) << "Resuming process " << id();
+  suspend_token_.reset();
+}
+
 void Process::set_state(State new_state) {
   switch (new_state) {
     case State::kNew:
@@ -480,8 +522,20 @@ void Process::Clear() {
 
   builder_.reset();
 
-  // The process may just exited or whatever. Force the state to kGone.
+  // The process may have just exited or whatever. Force the state to kGone.
   set_state(State::kGone);
+}
+
+Thread* Process::AddThread(zx_handle_t thread_handle, zx_koid_t thread_id) {
+  Thread* thread = new Thread(this, thread_handle, thread_id);
+  threads_[thread_id] = std::unique_ptr<Thread>(thread);
+
+  // Begin watching for thread signals we care about.
+  // There's no need for an explicit cancellation, that'll happen when the
+  // thread's handle is closed.
+  server_->WaitAsync(thread);
+
+  return thread;
 }
 
 bool Process::IsLive() const {
@@ -546,9 +600,7 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
     return nullptr;
   }
 
-  Thread* thread = new Thread(this, thread_handle, thread_id);
-  threads_[thread_id] = std::unique_ptr<Thread>(thread);
-  return thread;
+  return AddThread(thread_handle, thread_id);
 }
 
 Thread* Process::PickOneThread() {
@@ -592,6 +644,10 @@ bool Process::RefreshAllThreads() {
   ThreadMap new_threads;
   for (size_t i = 0; i < num_threads; ++i) {
     zx_koid_t thread_id = koids[i];
+    if (threads_.find(thread_id) != threads_.end()) {
+      // We already have this thread.
+      continue;
+    }
     zx_handle_t thread_handle = ZX_HANDLE_INVALID;
     status = zx_object_get_child(handle_, thread_id, ZX_RIGHT_SAME_RIGHTS,
                                  &thread_handle);
@@ -600,12 +656,9 @@ bool Process::RefreshAllThreads() {
                      << debugger_utils::ZxErrorString(status);
       continue;
     }
-    new_threads[thread_id] =
-        std::make_unique<Thread>(this, thread_handle, thread_id);
+    __UNUSED Thread* thread = AddThread(thread_handle, thread_id);
   }
 
-  // Just clear the existing list and repopulate it.
-  threads_ = std::move(new_threads);
   thread_map_stale_ = false;
 
   return true;

@@ -4,10 +4,12 @@
 
 #pragma once
 
+#include <string>
 #include <memory>
 
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
+#include <lib/zx/suspend_token.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -26,6 +28,7 @@ class Thread final {
   enum class State {
     kNew,
     kInException,
+    kSuspended,
     kRunning,
     kStepping,
     kExiting,
@@ -74,17 +77,29 @@ class Thread final {
   void OnException(const zx_excp_type_t type,
                    const zx_exception_context_t& context);
 
+  // Called when the thread gets a signal.
+  void OnSignal(zx_signals_t signal);
+
   // Pass the exception on to the next handler.
   bool TryNext();
 
-  // Resumes the thread from a "stopped in exception" state. Returns true on
-  // success, false on failure. The thread state on return is kRunning.
+  // Resumes the thread from a "stopped in exception" state.
+  // The thread state on successful return is kRunning.
   bool ResumeFromException();
 
   // Resumes the thread from an ZX_EXCP_THREAD_EXITING exception.
-  // The thread state on entry must one of kNew, kStopped, kExiting.
+  // The thread state on entry must one of kNew, kInException, kExiting.
   // The thread state on return is kGone.
   void ResumeForExit();
+
+  // Request the thread to suspend.
+  // This doesn't wait for it to suspend, just requests it.
+  // It is up to the app's server loop to wait for the thread to suspend if
+  // it wants to.
+  bool RequestSuspend();
+
+  // Resume after having been suspended.
+  void ResumeFromSuspension();
 
   // Steps the thread from a "stopped in exception" state. Returns true on
   // success, false on failure.
@@ -125,6 +140,11 @@ class Thread final {
 
   zx_handle_t GetExceptionPortHandle();
 
+  // Handlers for individual signals.
+  void OnTermination();
+  void OnSuspension();
+  void OnResumption();
+
   // Our process (non-owning pointer).
   Process* process_;
 
@@ -142,6 +162,9 @@ class Thread final {
 
   // The current state of the this thread.
   State state_;
+
+  // Suspend token when thread is suspended.
+  zx::suspend_token suspend_token_;
 
 #ifdef __x86_64__
   // The Intel Processor Trace buffer descriptor attached to this thread,

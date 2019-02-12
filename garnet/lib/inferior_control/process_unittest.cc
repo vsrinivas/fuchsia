@@ -206,7 +206,7 @@ class LdsoBreakpointTest : public TestServer {
 TEST_F(LdsoBreakpointTest, LdsoBreakpoint) {
   std::vector<std::string> argv{
     helper_program,
-    "test-try-next",
+    "trigger-sw-bkpt",
   };
   ASSERT_TRUE(SetupInferior(argv));
 
