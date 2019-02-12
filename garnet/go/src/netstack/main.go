@@ -80,23 +80,12 @@ func Main() {
 
 	var netstackService netstack.NetstackService
 
-	ns.OnInterfacesChanged = func(interfaces2 []netstack.NetInterface2) {
-		connectivity.InferAndNotify(interfaces2)
-		// Handle deprecated version OnInterfacesChanged first.
-		interfaces := interfaces2ListToInterfacesList(interfaces2)
+	ns.OnInterfacesChanged = func(interfaces []netstack.NetInterface) {
+		connectivity.InferAndNotify(interfaces)
 		for _, key := range netstackService.BindingKeys() {
 			if p, ok := netstackService.EventProxyFor(key); ok {
 				if err := p.OnInterfacesChanged(interfaces); err != nil {
 					log.Printf("OnInterfacesChanged failed: %v", err)
-				}
-			}
-		}
-		// Now the new OnInterfacesChanged2 version.
-		// TODO(NET-2078): Remove this once Chromium stops using netstack.fidl.
-		for _, key := range netstackService.BindingKeys() {
-			if p, ok := netstackService.EventProxyFor(key); ok {
-				if err := p.OnInterfacesChanged2(interfaces2); err != nil {
-					log.Printf("OnInterfacesChanged2 failed: %v", err)
 				}
 			}
 		}
@@ -123,15 +112,11 @@ func Main() {
 		// Prevents clients from having to race GetInterfaces / InterfacesChanged.
 		if p, ok := netstackService.EventProxyFor(k); ok {
 			ns.mu.Lock()
-			interfaces2 := ns.getNetInterfaces2Locked()
-			interfaces := interfaces2ListToInterfacesList(interfaces2)
+			interfaces := ns.getInterfacesLocked()
 			ns.mu.Unlock()
 
 			if err := p.OnInterfacesChanged(interfaces); err != nil {
 				log.Printf("OnInterfacesChanged failed: %v", err)
-			}
-			if err := p.OnInterfacesChanged2(interfaces2); err != nil {
-				log.Printf("OnInterfacesChanged2 failed: %v", err)
 			}
 		}
 		return nil

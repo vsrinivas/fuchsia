@@ -100,19 +100,13 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
     };
 
     let mut if_changed = netstack.take_event_stream().try_filter_map(
-        |event| match event {
-            fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged2 { interfaces } => {
-                let iface = interfaces
-                    .iter()
-                    .filter(|iface| iface.name == if_name)
-                    .next();
-                match iface {
-                    None => futures::future::ok(None),
-                    Some(a) => futures::future::ok(Some((a.id, a.hwaddr.clone()))),
-                }
-            },
-            _ => futures::future::ok(None),
-        }
+        |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+            let iface = interfaces.iter().filter(|iface| iface.name == if_name).next();
+            match iface {
+                None => futures::future::ok(None),
+                Some(a) => futures::future::ok(Some((a.id, a.hwaddr.clone()))),
+            }
+        },
     );
     let _nicid =
         await!(netstack.add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth))

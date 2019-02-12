@@ -54,7 +54,7 @@ impl Config {
     }
 }
 
-fn derive_device_name(interfaces: Vec<fidl_fuchsia_netstack::NetInterface2>) -> Option<String> {
+fn derive_device_name(interfaces: Vec<fidl_fuchsia_netstack::NetInterface>) -> Option<String> {
     interfaces
         .iter()
         .filter(|iface| {
@@ -102,12 +102,9 @@ fn main() -> Result<(), failure::Error> {
 
     let mut device_name_stream = futures::stream::iter(default_device_name).chain(
         netstack.take_event_stream().try_filter_map(
-            |event| match event {
-                fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged2 { interfaces } => {
-                    futures::future::ok(derive_device_name(interfaces).map(Cow::Owned))
-                },
-                _ => futures::future::ok(None),
-            }
+            |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+                futures::future::ok(derive_device_name(interfaces).map(Cow::Owned))
+            },
         ),
     );
 

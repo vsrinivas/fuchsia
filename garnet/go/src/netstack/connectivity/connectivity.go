@@ -11,7 +11,7 @@ import (
 
 	"app/context"
 	"netstack/fidlconv"
-	"netstack/util"
+	"netstack/netiface"
 
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
@@ -37,7 +37,7 @@ func AddOutgoingService(ctx *context.Context) error {
 
 // TODO(NET-1001): extract into a separate reachability service based on a
 // better network reachability signal.
-func InferAndNotify(ifs []netstack.NetInterface2) {
+func InferAndNotify(ifs []netstack.NetInterface) {
 	if debug {
 		log.Printf("inferring network reachability")
 	}
@@ -53,11 +53,11 @@ func InferAndNotify(ifs []netstack.NetInterface2) {
 	mu.Unlock()
 }
 
-func hasDHCPAddress(nic netstack.NetInterface2) bool {
-	return nic.Flags&netstack.NetInterfaceFlagDhcp != 0 && nic.Flags&netstack.NetInterfaceFlagUp != 0 && !util.IsAny(fidlconv.ToTCPIPAddress(nic.Addr))
+func hasDHCPAddress(nic netstack.NetInterface) bool {
+	return nic.Flags&netstack.NetInterfaceFlagDhcp != 0 && nic.Flags&netstack.NetInterfaceFlagUp != 0 && !netiface.IsAny(fidlconv.ToTCPIPAddress(nic.Addr))
 }
 
-func inferReachability(ifs []netstack.NetInterface2) bool {
+func inferReachability(ifs []netstack.NetInterface) bool {
 	for _, nic := range ifs {
 		if hasDHCPAddress(nic) {
 			return true

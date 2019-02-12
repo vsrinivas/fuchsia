@@ -118,7 +118,7 @@ func (o *statsOutput) add(stats netstack.NetInterfaceStats) {
 }
 
 func dumpStats(a *netstatApp) {
-	nics, err := a.netstack.GetInterfaces2()
+	nics, err := a.netstack.GetInterfaces()
 	if err != nil {
 		errorf("Failed to get interfaces: %v\n.", err)
 		return
@@ -141,26 +141,22 @@ func dumpStats(a *netstatApp) {
 }
 
 func dumpRouteTables(a *netstatApp) {
-	entries, err := a.netstack.GetRouteTable2()
+	entries, err := a.netstack.GetRouteTable()
 	if err != nil {
 		errorf("Failed to get route table: %v\n", err)
 		return
 	}
 	for _, entry := range entries {
 		if netAddressZero(entry.Destination) {
-			if entry.Gateway != nil && !netAddressZero(*entry.Gateway) {
-				fmt.Printf("default via %s, ", netAddressToString(*entry.Gateway))
-			} else {
-				fmt.Printf("default through ")
-			}
+			fmt.Printf("default via %s, ", netAddressToString(entry.Gateway))
 		} else {
 			fmt.Printf("Destination: %s, ", netAddressToString(entry.Destination))
 			fmt.Printf("Mask: %s, ", netAddressToString(entry.Netmask))
-			if entry.Gateway != nil && !netAddressZero(*entry.Gateway) {
-				fmt.Printf("Gateway: %s, ", netAddressToString(*entry.Gateway))
+			if !netAddressZero(entry.Gateway) {
+				fmt.Printf("Gateway: %s, ", netAddressToString(entry.Gateway))
 			}
 		}
-		fmt.Printf("NICID: %d Metric: %v\n", entry.Nicid, entry.Metric)
+		fmt.Printf("NICID: %d\n", entry.Nicid)
 	}
 }
 

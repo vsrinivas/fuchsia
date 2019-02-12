@@ -14,7 +14,6 @@ import (
 
 	"netstack/fidlconv"
 	"netstack/link"
-	"netstack/routes"
 
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"
@@ -38,32 +37,12 @@ func toSubnets(addrs []tcpip.Address) []net.Subnet {
 	return out
 }
 
-// interfaces2ListToInterfacesList converts a NetInterface2 list into a
-// NetInterface one.
-func interfaces2ListToInterfacesList(ifs2 []netstack.NetInterface2) []netstack.NetInterface {
-	ifs := make([]netstack.NetInterface, 0, len(ifs2))
-	for _, e2 := range ifs2 {
-		ifs = append(ifs, netstack.NetInterface{
-			Id:        e2.Id,
-			Flags:     e2.Flags,
-			Features:  e2.Features,
-			Name:      e2.Name,
-			Addr:      e2.Addr,
-			Netmask:   e2.Netmask,
-			Broadaddr: e2.Broadaddr,
-			Hwaddr:    e2.Hwaddr,
-			Ipv6addrs: e2.Ipv6addrs,
-		})
-	}
-	return ifs
-}
-
-func (ns *Netstack) getNetInterfaces2Locked() []netstack.NetInterface2 {
+func (ns *Netstack) getNetInterfacesLocked() []netstack.NetInterface {
 	ifStates := ns.mu.ifStates
-	interfaces := make([]netstack.NetInterface2, 0, len(ifStates))
+	interfaces := make([]netstack.NetInterface, 0, len(ifStates))
 	for _, ifs := range ifStates {
 		ifs.mu.Lock()
-		netinterface, err := ifs.toNetInterface2Locked()
+		netinterface, err := ifs.toNetInterfaceLocked()
 		ifs.mu.Unlock()
 		if err != nil {
 			log.Print(err)
@@ -73,11 +52,11 @@ func (ns *Netstack) getNetInterfaces2Locked() []netstack.NetInterface2 {
 	return interfaces
 }
 
-func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
+func (ifs *ifState) toNetInterfaceLocked() (netstack.NetInterface, error) {
 	// Long-hand for: broadaddr = ifs.mu.nic.Addr | ^ifs.mu.nic.Netmask
 	broadaddr := []byte(ifs.mu.nic.Addr)
 	if len(ifs.mu.nic.Netmask) != len(ifs.mu.nic.Addr) {
-		return netstack.NetInterface2{}, fmt.Errorf("address length doesn't match netmask: %+v\n", ifs.mu.nic)
+		return netstack.NetInterface{}, fmt.Errorf("address length doesn't match netmask: %+v\n", ifs.mu.nic)
 	}
 
 	for i := range broadaddr {
@@ -92,11 +71,10 @@ func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
 		flags |= netstack.NetInterfaceFlagDhcp
 	}
 
-	return netstack.NetInterface2{
+	return netstack.NetInterface{
 		Id:        uint32(ifs.mu.nic.ID),
 		Flags:     flags,
 		Features:  ifs.mu.nic.Features,
-		Metric:    uint32(ifs.mu.nic.Metric),
 		Name:      ifs.mu.nic.Name,
 		Addr:      fidlconv.ToNetIpAddress(ifs.mu.nic.Addr),
 		Netmask:   fidlconv.ToNetIpAddress(tcpip.Address(ifs.mu.nic.Netmask)),
@@ -106,8 +84,8 @@ func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
 	}, nil
 }
 
-func (ns *Netstack) getInterfaces2Locked() []netstack.NetInterface2 {
-	out := ns.getNetInterfaces2Locked()
+func (ns *Netstack) getInterfacesLocked() []netstack.NetInterface {
+	out := ns.getNetInterfacesLocked()
 
 	sort.Slice(out, func(i, j int) bool {
 		return out[i].Id < out[j].Id
@@ -148,119 +126,88 @@ func (ni *netstackImpl) GetAddress(name string, port uint16) ([]netstack.SocketA
 	return out, netstack.NetErr{Status: netstack.StatusOk}, nil
 }
 
-// GetInterfaces2 returns a list of interfaces.
-// TODO(NET-2078): Move this to GetInterfaces once Chromium stops using
-// netstack.fidl.
-func (ni *netstackImpl) GetInterfaces2() ([]netstack.NetInterface2, error) {
-	ni.ns.mu.Lock()
-	defer ni.ns.mu.Unlock()
-	return ni.ns.getInterfaces2Locked(), nil
-}
-
-// GetInterfaces is a deprecated version that returns a list of interfaces in a
-// format that Chromium supports. The new version is GetInterfaces2 which
-// eventually will be renamed once Chromium is not using netstack.fidl anymore
-// and this deprecated version can be removed.
 func (ni *netstackImpl) GetInterfaces() ([]netstack.NetInterface, error) {
 	ni.ns.mu.Lock()
 	defer ni.ns.mu.Unlock()
-	// Get the new interface list and convert to the old one.
-	return interfaces2ListToInterfacesList(ni.ns.getInterfaces2Locked()), nil
+	return ni.ns.getInterfacesLocked(), nil
 }
 
-// TODO(NET-2078): Move this to GetRouteTable once Chromium stops using
-// netstack.fidl.
-func (ni *netstackImpl) GetRouteTable2() ([]netstack.RouteTableEntry2, error) {
-	return nsToRouteTable2(ni.ns.GetExtendedRouteTable()), nil
-}
-
-// GetRouteTable is a deprecated version that returns the route table in a
-// format that Chromium supports. The new version is GetRouteTable2 which will
-// eventually be renamed once Chromium is not using netstack.fidl anymore and
-// this deprecated version can be removed.
 func (ni *netstackImpl) GetRouteTable() ([]netstack.RouteTableEntry, error) {
-	rt2 := nsToRouteTable2(ni.ns.GetExtendedRouteTable())
-	rt := make([]netstack.RouteTableEntry, 0, len(rt2))
-	for _, r2 := range rt2 {
-		var gateway net.IpAddress
-		if r2.Gateway != nil {
-			gateway = *r2.Gateway
-		}
-		rt = append(rt, netstack.RouteTableEntry{
-			Destination: r2.Destination,
-			Netmask:     r2.Netmask,
-			Gateway:     gateway,
-			Nicid:       r2.Nicid,
-		})
-	}
-	return rt, nil
+	ni.ns.mu.Lock()
+	defer ni.ns.mu.Unlock()
+	table := ni.ns.mu.stack.GetRouteTable()
+	return nsToRouteTable(table)
 }
 
-func nsToRouteTable2(table []routes.ExtendedRoute) (out []netstack.RouteTableEntry2) {
-	for _, e := range table {
+func nsToRouteTable(table []tcpip.Route) ([]netstack.RouteTableEntry, error) {
+	out := []netstack.RouteTableEntry{}
+	for _, route := range table {
 		// Ensure that if any of the returned addresses are "empty",
 		// they still have the appropriate length.
 		l := 0
-		if len(e.Route.Destination) > 0 {
-			l = len(e.Route.Destination)
-		} else if len(e.Route.Mask) > 0 {
-			l = len(e.Route.Destination)
+		if len(route.Destination) > 0 {
+			l = len(route.Destination)
+		} else if len(route.Mask) > 0 {
+			l = len(route.Destination)
+		} else if len(route.Gateway) > 0 {
+			l = len(route.Gateway)
 		}
-		dest := e.Route.Destination
-		mask := e.Route.Mask
+		dest := route.Destination
+		mask := route.Mask
+		gateway := route.Gateway
 		if len(dest) == 0 {
 			dest = tcpip.Address(strings.Repeat("\x00", l))
 		}
 		if len(mask) == 0 {
 			mask = tcpip.AddressMask(strings.Repeat("\x00", l))
 		}
-
-		var gatewayPtr *net.IpAddress
-		if len(e.Route.Gateway) != 0 {
-			gateway := fidlconv.ToNetIpAddress(e.Route.Gateway)
-			gatewayPtr = &gateway
+		if len(gateway) == 0 {
+			gateway = tcpip.Address(strings.Repeat("\x00", l))
 		}
-		out = append(out, netstack.RouteTableEntry2{
+
+		out = append(out, netstack.RouteTableEntry{
 			Destination: fidlconv.ToNetIpAddress(dest),
 			Netmask:     fidlconv.ToNetIpAddress(tcpip.Address(mask)),
-			Gateway:     gatewayPtr,
-			Nicid:       uint32(e.Route.NIC),
-			Metric:      uint32(e.Metric),
+			Gateway:     fidlconv.ToNetIpAddress(gateway),
+			Nicid:       uint32(route.NIC),
 		})
 	}
-	return out
+	return out, nil
 }
 
-func routeToNs(r netstack.RouteTableEntry2) tcpip.Route {
-	var gateway tcpip.Address
-	if r.Gateway != nil {
-		gateway = fidlconv.ToTCPIPAddress(*r.Gateway)
+func routeTableToNs(rt []netstack.RouteTableEntry) []tcpip.Route {
+	routes := make([]tcpip.Route, 0, len(rt))
+	for _, r := range rt {
+		routes = append(routes, tcpip.Route{
+			Destination: fidlconv.ToTCPIPAddress(r.Destination),
+			Mask:        tcpip.AddressMask(fidlconv.ToTCPIPAddress(r.Netmask)),
+			Gateway:     fidlconv.ToTCPIPAddress(r.Gateway),
+			NIC:         tcpip.NICID(r.Nicid),
+		})
 	}
-	return tcpip.Route{
-		Destination: fidlconv.ToTCPIPAddress(r.Destination),
-		Mask:        tcpip.AddressMask(fidlconv.ToTCPIPAddress(r.Netmask)),
-		Gateway:     gateway,
-		NIC:         tcpip.NICID(r.Nicid),
-	}
+
+	return routes
 }
 
 type routeTableTransactionImpl struct {
-	ni *netstackImpl
+	ni              *netstackImpl
+	routeTableCache []tcpip.Route
 }
 
-func (i *routeTableTransactionImpl) AddRoute(r netstack.RouteTableEntry2) (int32, error) {
-	err := i.ni.ns.AddRoute(routeToNs(r), routes.Metric(r.Metric), false /* not dynamic */)
-	if err != nil {
-		return int32(zx.ErrInvalidArgs), err
-	}
-	return int32(zx.ErrOk), nil
+func (i *routeTableTransactionImpl) GetRouteTable() ([]netstack.RouteTableEntry, error) {
+	return nsToRouteTable(i.routeTableCache)
 }
 
-func (i *routeTableTransactionImpl) DelRoute(r netstack.RouteTableEntry2) (int32, error) {
-	err := i.ni.ns.DelRoute(routeToNs(r))
-	if err != nil {
-		return int32(zx.ErrInvalidArgs), err
-	}
+func (i *routeTableTransactionImpl) SetRouteTable(rt []netstack.RouteTableEntry) error {
+	routes := routeTableToNs(rt)
+	i.routeTableCache = routes
+	return nil
+}
+
+func (i *routeTableTransactionImpl) Commit() (int32, error) {
+	i.ni.ns.mu.Lock()
+	defer i.ni.ns.mu.Unlock()
+	i.ni.ns.mu.stack.SetRouteTable(i.routeTableCache)
 	return int32(zx.ErrOk), nil
 }
 
@@ -287,7 +234,10 @@ func (ni *netstackImpl) StartRouteTableTransaction(req netstack.RouteTableTransa
 		ni.ns.mu.transactionRequest = &req
 	}
 	var routeTableService netstack.RouteTableTransactionService
-	transaction := routeTableTransactionImpl{ni: ni}
+	transaction := routeTableTransactionImpl{
+		ni:              ni,
+		routeTableCache: ni.ns.mu.stack.GetRouteTable(),
+	}
 	// We don't use the error handler to free the channel because it's
 	// possible that the peer closes the channel before our service has
 	// finished processing.
@@ -328,14 +278,6 @@ func (ni *netstackImpl) RemoveInterfaceAddress(nicid uint32, address net.IpAddre
 	}
 
 	return netstack.NetErr{Status: netstack.StatusOk, Message: ""}, nil
-}
-
-// SetInterfaceMetric updates the metric of an interface.
-func (ni *netstackImpl) SetInterfaceMetric(nicid uint32, metric uint32) (result netstack.NetErr, err error) {
-	if err := ni.ns.UpdateInterfaceMetric(tcpip.NICID(nicid), routes.Metric(metric)); err != nil {
-		return netstack.NetErr{Status: netstack.StatusUnknownInterface, Message: err.Error()}, nil
-	}
-	return netstack.NetErr{Status: netstack.StatusOk}, nil
 }
 
 func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (netstack.NetErr, error) {

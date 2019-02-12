@@ -13,7 +13,6 @@
     "host_tests": [
         "//garnet/go/src/netstack/dns:netstack_dns_test",
         "//garnet/go/src/netstack/link/bridge:netstack_link_bridge_test",
-        "//garnet/go/src/netstack/routes:netstack_routes_test",
         "//garnet/go/src/netstack/util:netstack_util_test"
     ]
 }

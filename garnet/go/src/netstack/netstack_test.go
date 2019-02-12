@@ -190,7 +190,7 @@ func TestWLANStaticIPConfiguration(t *testing.T) {
 			arp.ProtocolName,
 		}, nil, stack.Options{})
 
-	ns.OnInterfacesChanged = func([]netstack.NetInterface2) {}
+	ns.OnInterfacesChanged = func([]netstack.NetInterface) {}
 	ipAddressConfig := netstack.IpAddressConfig{}
 	addr := fidlconv.ToNetIpAddress(testIpAddress)
 	subnet := net.Subnet{Addr: addr, PrefixLen: 32}
@@ -222,7 +222,7 @@ func newNetstack(t *testing.T) *Netstack {
 			arp.ProtocolName,
 		}, nil, stack.Options{})
 
-	ns.OnInterfacesChanged = func([]netstack.NetInterface2) {}
+	ns.OnInterfacesChanged = func([]netstack.NetInterface) {}
 	return ns
 }
 

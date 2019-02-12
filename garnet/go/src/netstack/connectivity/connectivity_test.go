@@ -23,12 +23,12 @@ func newV4Address(a, b, c, d uint8) netfidl.IpAddress {
 func TestHasDHCPAddress(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
-		iface netstack.NetInterface2
+		iface netstack.NetInterface
 		want  bool
 	}{
 		{
 			name: "DHCPEnabledNoAddress",
-			iface: netstack.NetInterface2{
+			iface: netstack.NetInterface{
 				Flags:     netstack.NetInterfaceFlagDhcp | netstack.NetInterfaceFlagUp,
 				Addr:      newV4Address(0, 0, 0, 0),
 				Netmask:   newV4Address(0, 0, 0, 0),
@@ -39,7 +39,7 @@ func TestHasDHCPAddress(t *testing.T) {
 		},
 		{
 			name: "StaticAddress",
-			iface: netstack.NetInterface2{
+			iface: netstack.NetInterface{
 				Flags:     netstack.NetInterfaceFlagUp,
 				Addr:      newV4Address(192, 168, 42, 10),
 				Netmask:   newV4Address(255, 255, 255, 0),
@@ -50,7 +50,7 @@ func TestHasDHCPAddress(t *testing.T) {
 		},
 		{
 			name: "DHCPEnabledWithAddress",
-			iface: netstack.NetInterface2{
+			iface: netstack.NetInterface{
 				Flags:     netstack.NetInterfaceFlagDhcp | netstack.NetInterfaceFlagUp,
 				Addr:      newV4Address(10, 0, 0, 1),
 				Netmask:   newV4Address(255, 255, 255, 0),
