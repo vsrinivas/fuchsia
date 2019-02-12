@@ -4,6 +4,8 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
 
 rustc_binary("font_server") {
   name = "font_server"
@@ -11,12 +13,12 @@ rustc_binary("font_server") {
   edition = "2018"
 
   deps = [
-    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:getopts",
@@ -70,29 +72,26 @@ package("fonts") {
   }
 }
 
-rustc_binary("font_provider_test") {
+# Integration tests without a `main()` function.
+rustc_library("font_provider_test") {
   testonly = true
+  with_unit_tests = true
   edition = "2018"
 
   deps = [
-    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
   ]
   source_root = "tests/font_provider_test.rs"
 }
 
-package("font_provider_tests") {
-  testonly = true
-
-  # Necessary to work around ZX-2727.
-  deprecated_system_image = true
-
+test_package("font_provider_tests") {
   deps = [
     ":font_provider_test",
     ":font_server",
@@ -100,7 +99,7 @@ package("font_provider_tests") {
 
   tests = [
     {
-      name = "font_provider_test"
+      name = "font_provider_test_lib_test"
     },
     {
       name = "font_server_bin_test"

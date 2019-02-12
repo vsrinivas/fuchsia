@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro, futures_api)]
+// This is only needed because GN's invocation of the Rust compiler doesn't recognize the test_
+// methods as entry points, so it complains about the helper methods being "dead code".
+#![cfg(test)]
 
 use failure::{format_err, Error, ResultExt};
 use fidl_fuchsia_fonts as fonts;
 use fuchsia_app::client::{App, LaunchOptions, Launcher};
-use fuchsia_async::Executor;
+use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use fuchsia_zircon::AsHandleRef;
 
@@ -66,6 +69,8 @@ fn start_provider_with_default_fonts() -> Result<(App, fonts::ProviderProxy), Er
     Ok((app, font_provider))
 }
 
+#[fasync::run_singlethreaded]
+#[test]
 async fn test_basic() -> Result<(), Error> {
     let (_app, font_provider) = start_provider_with_default_fonts()?;
 
@@ -92,6 +97,8 @@ async fn test_basic() -> Result<(), Error> {
     Ok(())
 }
 
+#[fasync::run_singlethreaded]
+#[test]
 async fn test_aliases() -> Result<(), Error> {
     let (_app, font_provider) = start_provider_with_default_fonts()?;
 
@@ -115,7 +122,7 @@ fn start_provider_with_test_fonts() -> Result<(App, fonts::ProviderProxy), Error
     let mut launch_options = LaunchOptions::new();
     launch_options.add_dir_to_namespace(
         "/test_fonts".to_string(),
-        std::fs::File::open("/system/data/testdata/test_fonts")?,
+        std::fs::File::open("/pkg/data/testdata/test_fonts")?,
     )?;
 
     let launcher = Launcher::new().context("Failed to open launcher service")?;
@@ -137,6 +144,8 @@ fn start_provider_with_test_fonts() -> Result<(App, fonts::ProviderProxy), Error
     Ok((app, font_provider))
 }
 
+#[fasync::run_singlethreaded]
+#[test]
 async fn test_font_collections() -> Result<(), Error> {
     let (_app, font_provider) = start_provider_with_test_fonts()?;
 
@@ -164,6 +173,8 @@ async fn test_font_collections() -> Result<(), Error> {
     Ok(())
 }
 
+#[fasync::run_singlethreaded]
+#[test]
 async fn test_fallback() -> Result<(), Error> {
     let (_app, font_provider) = start_provider_with_test_fonts()?;
 
@@ -190,6 +201,8 @@ async fn test_fallback() -> Result<(), Error> {
 }
 
 // Verify that the fallback group of the requested font is taken into account for fallback.
+#[fasync::run_singlethreaded]
+#[test]
 async fn test_fallback_group() -> Result<(), Error> {
     let (_app, font_provider) = start_provider_with_test_fonts()?;
 
@@ -217,6 +230,8 @@ async fn test_fallback_group() -> Result<(), Error> {
     Ok(())
 }
 
+#[fasync::run_singlethreaded]
+#[test]
 async fn test_get_family_info() -> Result<(), Error> {
     let (_app, font_provider) = start_provider_with_default_fonts()?;
 
@@ -229,21 +244,4 @@ async fn test_get_family_info() -> Result<(), Error> {
     assert!(family_info.styles.len() > 0);
 
     Ok(())
-}
-
-async fn run_tests() -> Result<(), Error> {
-    await!(test_basic())?;
-    await!(test_aliases())?;
-    await!(test_font_collections())?;
-    await!(test_fallback())?;
-    await!(test_fallback_group())?;
-    await!(test_get_family_info())?;
-
-    Ok(())
-}
-
-fn main() -> Result<(), Error> {
-    let mut executor = Executor::new().context("Error creating executor")?;
-
-    executor.run_singlethreaded(run_tests())
 }

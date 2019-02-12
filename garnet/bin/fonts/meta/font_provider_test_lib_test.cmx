@@ -1,0 +1,10 @@
+{
+  "program": {
+    "binary": "test/font_provider_test_lib_test"
+  },
+  "sandbox": {
+    "services": [
+      "fuchsia.sys.Launcher"
+    ]
+  }
+}
