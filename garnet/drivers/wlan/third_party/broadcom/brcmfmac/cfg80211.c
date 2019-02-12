@@ -1381,14 +1381,14 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, wlanif_assoc_req_t* 
         return ZX_ERR_IO;
     }
 
-    if (ifp->vif == cfg->p2p.bss_idx[P2PAPI_BSSCFG_PRIMARY].vif) {
-        /* A normal (non P2P) connection request setup. */
-        ie_len = req->rsne_len;
-        ie = (req->rsne_len > 0) ? req->rsne : NULL;
-        brcmf_fil_iovar_data_set(ifp, "wpaie", ie, ie_len);
-    }
+    // Pass RSNE to firmware
+    ie_len = req->rsne_len;
+    ie = (req->rsne_len > 0) ? req->rsne : NULL;
+    brcmf_fil_iovar_data_set(ifp, "wpaie", ie, ie_len);
 
-    err = brcmf_vif_set_mgmt_ie(ifp->vif, BRCMF_VNDR_IE_ASSOCREQ_FLAG, NULL, 0); //sme->ie, sme->ie_len);
+    // TODO(WLAN-733): We should be getting the IEs from SME. Passing a null entry seems
+    // to work for now, presumably because the firmware uses its defaults.
+    err = brcmf_vif_set_mgmt_ie(ifp->vif, BRCMF_VNDR_IE_ASSOCREQ_FLAG, NULL, 0);
     if (err != ZX_OK) {
         brcmf_err("Set Assoc REQ IE Failed\n");
     } else {
@@ -1399,7 +1399,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, wlanif_assoc_req_t* 
     chanspec = channel_to_chanspec(&cfg->d11inf, &ifp->bss.chan);
     cfg->channel = chanspec;
 
-    // TODO(NET-988): Currently fails if a network only supports TKIP for its pairwise cipher
+    // TODO(WLAN-733): Currently fails if a network only supports TKIP for its pairwise cipher
     bool using_wpa = req->rsne_len != 0;
 
     err = brcmf_set_wpa_version(ndev, using_wpa); // wpa_auth
@@ -1408,56 +1408,18 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, wlanif_assoc_req_t* 
         goto done;
     }
 
-    err = brcmf_set_auth_type_open(ndev); // TODO(cphoenix): Correct this for PSK if necessary
+    // Open because we are using WPA2-PSK. With SAE support, this will need to change.
+    err = brcmf_set_auth_type_open(ndev);
     if (err != ZX_OK) {
         brcmf_err("wl_set_auth_type failed (%d)\n", err);
         goto done;
     }
 
-    err = brcmf_set_wsec_mode(ndev, using_wpa); // wsec
+    err = brcmf_set_wsec_mode(ndev, using_wpa);
     if (err != ZX_OK) {
         brcmf_err("wl_set_set_cipher failed (%d)\n", err);
         goto done;
     }
-
-#ifdef FIGURE_THIS_OUT_LATER
-    err = brcmf_set_key_mgmt(ndev, sme);
-    if (err != ZX_OK) {
-        brcmf_err("wl_set_key_mgmt failed (%d)\n", err);
-        goto done;
-    }
-
-    err = brcmf_set_sharedkey(ndev, sme);
-    if (err != ZX_OK) {
-        brcmf_err("brcmf_set_sharedkey failed (%d)\n", err);
-        goto done;
-    }
-
-    if (sme->crypto.psk) {
-        if (WARN_ON(profile->use_fwsup != BRCMF_PROFILE_FWSUP_NONE)) {
-            err = ZX_ERR_INVALID_ARGS;
-            goto done;
-        }
-        brcmf_dbg(INFO, "using PSK offload\n");
-        profile->use_fwsup = BRCMF_PROFILE_FWSUP_PSK;
-    }
-
-    if (profile->use_fwsup != BRCMF_PROFILE_FWSUP_NONE) {
-        /* enable firmware supplicant for this interface */
-        err = brcmf_fil_iovar_int_set(ifp, "sup_wpa", 1);
-        if (err != ZX_OK) {
-            brcmf_err("failed to enable fw supplicant\n");
-            goto done;
-        }
-    }
-
-    if (profile->use_fwsup == BRCMF_PROFILE_FWSUP_PSK) {
-        err = brcmf_set_pmk(ifp, sme->crypto.psk, BRCMF_WSEC_MAX_PSK_LEN);
-        if (err != ZX_OK) {
-            goto done;
-        }
-    }
-#endif // FIGURE_THIS_OUT_LATER
 
     ssid_len = min_t(uint32_t, ifp->bss.ssid.len, WLAN_MAX_SSID_LEN);
     join_params_size = sizeof(join_params);
@@ -4379,7 +4341,7 @@ void brcmf_hook_set_keys_req(void* ctx, wlanif_set_keys_req_t* req) {
     struct wiphy* wiphy = ndev_to_wiphy(ndev);
     zx_status_t result;
 
-    // TODO(NET-988)
+    // TODO(WLAN-733)
     if (req->num_keys != 1) {
         brcmf_err("Help! num_keys needs to be 1! But it's %ld.", req->num_keys);
         return;
@@ -5304,7 +5266,7 @@ static zx_status_t brcmf_dongle_roam(struct brcmf_if* ifp) {
     uint32_t roam_delta[2];
 
     if (brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_IS_4359)) {
-        return ZX_OK; // TODO(NET-988) Find out why, and document.
+        return ZX_OK; // TODO(WLAN-733) Find out why, and document.
     }
     /* Configure beacon timeout value based upon roaming setting */
     if (ifp->drvr->settings->roamoff) {
