@@ -36,7 +36,14 @@ BanjoAst {
         "banjo.examples.libraryb": [
             Interface {
                 attributes: Attrs(
-                    []
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                "ddk-protocol"
+                            )
+                        }
+                    ]
                 ),
                 name: "View",
                 methods: [

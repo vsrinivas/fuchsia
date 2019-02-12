@@ -18,10 +18,10 @@ enum Direction : uint32 {
     Right = 3;
 };
 
-[Layout = "Simple"]
+[Layout = "ddk-protocol"]
 interface Drawing {
-    Draw(Point p, Direction d);
-    DrawLots(handle<vmo> commands) -> (int32 result, Point p);
+    Draw(Point p, Direction d) -> ();
+    DrawLots(handle<vmo> commands) -> (zx.status result, Point p);
     DrawArray(array<Point>:4 points) -> (zx.status rv);
     Describe(string:64 one) -> (string:128 two);
 };

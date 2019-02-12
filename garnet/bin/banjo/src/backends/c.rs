@@ -75,11 +75,11 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
         ast::Ty::Identifier { id, reference } => {
             let ptr = if *reference { "*" } else { "" };
             if id.is_base_type() {
-                Ok(id.to_string())
+                Ok(format!("zx_{}_t", id.name()))
             } else {
                 match ast.id_to_type(id) {
                     ast::Ty::Struct | ast::Ty::Union | ast::Ty::Interface | ast::Ty::Enum => {
-                        return Ok(format!("{}_t{}", to_c_name(id.to_string().as_str()), ptr));
+                        return Ok(format!("{}_t{}", to_c_name(id.name()), ptr));
                     }
                     t => return ty_to_c_str(ast, &t),
                 }
@@ -210,6 +210,15 @@ fn get_in_params(m: &ast::Method, transform: bool, ast: &BanjoAst) -> Result<Vec
                 ast::Ty::Str { .. } => {
                     Ok(format!("const {} {}", ty_to_c_str(ast, ty).unwrap(), to_c_name(name)))
                 }
+                ast::Ty::Array { size, .. } => {
+                    let ty = ty_to_c_str(ast, ty).unwrap();
+                    Ok(format!(
+                        "const {ty} {name}[{size}]",
+                        size = size.0,
+                        ty = ty,
+                        name = to_c_name(name)
+                    ))
+                }
                 ast::Ty::Vector { .. } => {
                     let ty = ty_to_c_str(ast, ty).unwrap();
                     Ok(format!(
@@ -273,7 +282,7 @@ fn get_out_params(
                 }
             },
             ast::Ty::Str {..} => {
-                format!("{}{} out_{}, size_t response_capacity", ty_name, nullable, to_c_name(name))
+                format!("{ty}{null} out_{c_name}, size_t {c_name}_capacity", ty = ty_name, null = nullable, c_name = to_c_name(name))
             }
             _ => format!("{}{}* out_{}", ty_name, nullable, to_c_name(name))
         }
@@ -330,7 +339,7 @@ fn get_out_args(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, bool), 
                     }
                 },
                 ast::Ty::Str {..} => {
-                    format!("out_{}, response_capacity", to_c_name(name))
+                    format!("out_{c_name}, {c_name}_capacity", c_name = to_c_name(name))
                 },
                 _ => format!("out_{}", to_c_name(name)),
             })

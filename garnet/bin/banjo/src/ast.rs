@@ -65,9 +65,16 @@ impl Ident {
         (self.namespace.clone(), self.name.clone())
     }
 
+    pub fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
     pub fn is_base_type(&self) -> bool {
         // TODO add more of zx.banjo
-        self.name == "zx.status"
+        match self.namespace {
+            Some(ref n) => n == "zx",
+            None => false,
+        }
     }
 }
 
@@ -560,7 +567,7 @@ impl BanjoAst {
     }
 
     pub fn id_to_type(&self, fq_ident: &Ident) -> Ty {
-        let (_, ident) = fq_ident.fq();
+        let (ns, ident) = fq_ident.fq();
         match ident.as_str() {
             "usize" => return Ty::USize,
             "bool" => return Ty::Bool,
@@ -578,7 +585,12 @@ impl BanjoAst {
             _ => {}
         };
 
-        for decl in self.namespaces[&self.primary_namespace].iter() {
+        let namespace = match ns {
+            Some(ref n) => n,
+            None => &self.primary_namespace
+        };
+
+        for decl in self.namespaces[namespace].iter() {
             match decl {
                 Decl::Interface { name, .. } => {
                     if *name == ident {

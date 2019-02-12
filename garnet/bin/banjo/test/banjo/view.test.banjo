@@ -6,6 +6,7 @@ library banjo.examples.libraryb;
 
 using banjo.examples.librarya;
 
+[Layout = "ddk-protocol"]
 interface View {
-    MoveTo(banjo.examples.librarya.Point p);
+    MoveTo(banjo.examples.librarya.Point p) -> ();
 };

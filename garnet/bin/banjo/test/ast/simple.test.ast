@@ -83,7 +83,7 @@ BanjoAst {
                         Attr {
                             key: "Layout",
                             val: Some(
-                                "Simple"
+                                "ddk-protocol"
                             )
                         }
                     ]
@@ -136,7 +136,15 @@ BanjoAst {
                         out_params: [
                             (
                                 "result",
-                                Int32
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "status"
+                                    },
+                                    reference: false
+                                }
                             ),
                             (
                                 "p",
