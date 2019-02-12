@@ -118,6 +118,8 @@ static int netboot_send_query(int socket, unsigned port, const char* ifname) {
         }
     }
 
+    freeifaddrs(ifa);
+
     if (!success) {
         fprintf(stderr, "error: failed to find interface for sending query\n");
         return -1;
