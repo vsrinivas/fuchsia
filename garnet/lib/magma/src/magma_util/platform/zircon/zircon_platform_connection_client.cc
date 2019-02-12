@@ -165,14 +165,14 @@ public:
             //               interface without copying.
             std::vector<uint8_t> command_vec;
             command_vec.reserve(command_bytes);
-            fidl::VectorPtr<uint64_t> semaphore_vec;
-            semaphore_vec->reserve(num_semaphores);
+            std::vector<uint64_t> semaphore_vec;
+            semaphore_vec.reserve(num_semaphores);
             for (int i = 0; i < buffers_to_send; ++i) {
                 const auto& buffer = buffers[buffers_sent + i];
                 const auto buffer_data = static_cast<uint8_t*>(buffer.data);
                 std::copy(buffer_data, buffer_data + buffer.size, std::back_inserter(command_vec));
                 std::copy(buffer.semaphores, buffer.semaphores + buffer.semaphore_count,
-                          std::back_inserter(*semaphore_vec));
+                          std::back_inserter(semaphore_vec));
             }
             magma_status_t result = MagmaChannelStatus(magma_fidl_->ExecuteImmediateCommandsFIDL(
                 context_id, std::move(command_vec), std::move(semaphore_vec)));

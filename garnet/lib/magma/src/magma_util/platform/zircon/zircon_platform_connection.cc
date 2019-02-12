@@ -458,10 +458,9 @@ private:
     }
 
     void ExecuteImmediateCommandsFIDL(uint32_t context_id, ::std::vector<uint8_t> command_data_vec,
-                                      ::fidl::VectorPtr<uint64_t> semaphores) override
+                                      ::std::vector<uint64_t> semaphore_vec) override
     {
         DLOG("ZirconPlatformConnection: ExecuteImmediateCommandsFIDL");
-        std::vector<uint64_t> semaphore_vec(semaphores.take());
         magma::Status status = delegate_->ExecuteImmediateCommands(
             context_id, command_data_vec.size(), command_data_vec.data(), semaphore_vec.size(),
             semaphore_vec.data());
