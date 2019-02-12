@@ -37,7 +37,6 @@
 #include "peridot/bin/sessionmgr/story_runner/link_impl.h"
 #include "peridot/bin/sessionmgr/story_runner/story_provider_impl.h"
 #include "peridot/lib/common/teardown.h"
-#include "peridot/lib/common/xdr.h"
 #include "peridot/lib/device_info/device_info.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/environment.h"

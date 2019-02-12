@@ -101,7 +101,6 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
-    "//peridot/lib/common:xdr",
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:clone",

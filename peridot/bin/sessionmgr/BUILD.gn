@@ -47,7 +47,6 @@ executable_package("sessionmgr") {
     "//peridot/bin/sessionmgr/story_runner",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
-    "//peridot/lib/common:xdr",
     "//peridot/lib/device_info",
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/fidl:array_to_string",

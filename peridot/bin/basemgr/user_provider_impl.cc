@@ -13,7 +13,6 @@
 #include <lib/fxl/strings/string_printf.h>
 
 #include "peridot/bin/basemgr/users_generated.h"
-#include "peridot/lib/common/xdr.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
