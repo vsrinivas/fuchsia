@@ -39,6 +39,42 @@ source_set("asan_default_options") {
   }
 }
 
+if (is_fuchsia) {
+  asan_runtime_manifest = "$target_gen_dir/asan.manifest"
+}
+
+# This is included in ${toolchain.implicit_deps} for asan variants.  It
+# ensures that the runtime library is visible in the filesystem image.
+group("asan_deps") {
+  if (is_fuchsia) {
+    deps = [
+      ":asan_runtime_manifest",
+    ]
+    metadata = {
+      zbi_input_args = [
+        "--files",
+        rebase_path(asan_runtime_manifest, root_build_dir),
+      ]
+    }
+  }
+}
+
+if (is_fuchsia) {
+  # TODO(TC-366): Ideally we'd get JSON from the toolchain that we could
+  # massage directly here into a resource() target or the like.
+  action("asan_runtime_manifest") {
+    visibility = [ ":asan_deps" ]
+    script = "asan-runtime-manifest.sh"
+    outputs = [
+      asan_runtime_manifest,
+    ]
+    sources = [
+      "${toolchain.tool_dir}/../lib/${toolchain.target_tuple}.manifest",
+    ]
+    args = rebase_path(sources + outputs, root_build_dir)
+  }
+}
+
 config("ubsan") {
   compiler_flags = [ "-fsanitize=undefined" ]
   asmflags = compiler_flags

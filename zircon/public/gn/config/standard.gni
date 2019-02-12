@@ -188,6 +188,7 @@ standard_variants = [
         },
       ]
       implicit_deps = [
+        "$zx/public/gn/config/instrumentation:asan_deps",
         {
           types = [
             "executable",
