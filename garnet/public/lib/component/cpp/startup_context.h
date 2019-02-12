@@ -40,12 +40,6 @@ class StartupContext {
   // The returned unique_ptr is never null.
   static std::unique_ptr<StartupContext> CreateFromStartupInfo();
 
-  // DEPRECATED: Same as CreateFromStartupInfo().
-  //
-  // TODO(geb): Remove this method once users in higher layers have been
-  // converted, it's obsolete.
-  static std::unique_ptr<StartupContext> CreateFromStartupInfoNotChecked();
-
   static std::unique_ptr<StartupContext> CreateFrom(
       fuchsia::sys::StartupInfo startup_info);
 

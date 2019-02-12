@@ -35,12 +35,6 @@ std::unique_ptr<StartupContext> StartupContext::CreateFromStartupInfo() {
       subtle::CreateStaticServiceRootHandle(), zx::channel(directory_request));
 }
 
-// static
-std::unique_ptr<StartupContext>
-StartupContext::CreateFromStartupInfoNotChecked() {
-  return CreateFromStartupInfo();
-}
-
 std::unique_ptr<StartupContext> StartupContext::CreateFrom(
     fuchsia::sys::StartupInfo startup_info) {
   fuchsia::sys::FlatNamespace& flat = startup_info.flat_namespace;
