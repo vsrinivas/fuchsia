@@ -57,9 +57,7 @@ typedef struct launchpad launchpad_t;
 // If the job handle is 0 (ZX_HANDLE_INVALID), the default job for
 // the running process is used, if it exists (zx_job_default()).
 //
-// Unless the new process is provided with a job handle, at time
-// of launch or later, it will not be able to create any more
-// processes.
+// The job used will be cloned and given to the new process.
 zx_status_t launchpad_create(zx_handle_t job, const char* name,
                              launchpad_t** lp);
 
