@@ -11,6 +11,7 @@
 #include <lib/fxl/logging.h>
 #include "peridot/bin/context_engine/scope_utils.h"
 #include "peridot/tests/maxwell_integration/context_engine_test_base.h"
+#include "peridot/tests/maxwell_integration/maxwell_service_provider_bridge.h"
 
 namespace maxwell {
 namespace {

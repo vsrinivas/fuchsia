@@ -20,6 +20,7 @@ executable("context_engine_test") {
 
   deps = [
     ":context_common",
+    ":maxwell_service_provider_bridge",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/bin/context_engine:scope_utils",
@@ -41,6 +42,7 @@ executable("suggestion_engine_test") {
   deps = [
     ":context_common",
     ":test_suggestion_listener",
+    ":maxwell_service_provider_bridge",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/lib/rapidjson",
@@ -74,6 +76,18 @@ source_set("context_common") {
   ]
 }
 
+source_set("maxwell_service_provider_bridge") {
+  sources = [
+    "maxwell_service_provider_bridge.cc",
+    "maxwell_service_provider_bridge.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/svc/cpp",
+  ]
+}
+
 source_set("common") {
   testonly = true
 
@@ -83,7 +97,7 @@ source_set("common") {
   ]
 
   deps = [
-    "//peridot/lib/environment_host",
+    ":maxwell_service_provider_bridge",
     "//peridot/lib/testing:component_context_fake",
     "//peridot/lib/testing:entity_resolver_fake",
   ]
