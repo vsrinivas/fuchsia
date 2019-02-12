@@ -5,6 +5,7 @@
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <trace/event.h>
 #include <zircon/syscalls.h>
 #include "fuchsia/ui/scenic/cpp/fidl.h"
@@ -12,7 +13,15 @@
 namespace scenic_impl {
 namespace gfx {
 
-DisplayManager::DisplayManager() = default;
+DisplayManager::DisplayManager() {
+  zx_status_t status = fdio_service_connect(
+      "/svc/fuchsia.sysmem.Allocator",
+      sysmem_allocator_.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    sysmem_allocator_.Unbind();
+    FXL_LOG(ERROR) << "Unable to connect to sysmem: " << status;
+  }
+}
 
 DisplayManager::~DisplayManager() {
   if (wait_.object() != ZX_HANDLE_INVALID) {
@@ -175,13 +184,6 @@ void DisplayManager::ReleaseEvent(uint64_t id) {
   display_controller_->ReleaseEvent(id);
 }
 
-uint32_t DisplayManager::FetchLinearStride(uint32_t width,
-                                           zx_pixel_format_t format) {
-  uint32_t stride = 0;
-  display_controller_->ComputeLinearImageStride(width, format, &stride);
-  return stride;
-}
-
 void DisplayManager::SetImageConfig(int32_t width, int32_t height,
                                     zx_pixel_format_t format) {
   image_config_.height = height;
@@ -200,30 +202,84 @@ void DisplayManager::SetImageConfig(int32_t width, int32_t height,
   display_controller_->SetLayerPrimaryConfig(layer_id_, image_config_);
 }
 
-uint64_t DisplayManager::ImportImage(const zx::vmo& vmo) {
-  zx::vmo vmo_dup;
-  uint64_t id;
-  zx_status_t status;
-  if (vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup) == ZX_OK &&
-      display_controller_->ImportVmoImage(image_config_, std::move(vmo_dup), 0,
-                                          &status, &id) == ZX_OK &&
-      status == ZX_OK) {
-    return id;
+uint64_t DisplayManager::ImportImage(
+    const fuchsia::sysmem::BufferCollectionSyncPtr& collection,
+    uint64_t collection_id, uint32_t index) {
+  zx_status_t status, result_status = ZX_OK;
+  fuchsia::sysmem::BufferCollectionInfo_2 info;
+
+  // TODO(ZX-3355): Import into the display controller directly, using the
+  // collection id.
+  status = collection->WaitForBuffersAllocated(&result_status, &info);
+  if (status != ZX_OK || result_status != ZX_OK) {
+    FXL_LOG(ERROR) << "Waiting for buffers failed:" << status << " "
+                   << result_status;
+    return fuchsia::hardware::display::invalidId;
   }
-  return fuchsia::hardware::display::invalidId;
+
+  uint64_t id;
+  status = display_controller_->ImportVmoImage(
+      image_config_, std::move(info.buffers[index].vmo), 0, &result_status,
+      &id);
+  if (status != ZX_OK || result_status != ZX_OK) {
+    return fuchsia::hardware::display::invalidId;
+  }
+  return id;
 }
 
 void DisplayManager::ReleaseImage(uint64_t id) {
   display_controller_->ReleaseImage(id);
 }
 
-zx::vmo DisplayManager::AllocateDisplayMemory(int32_t size) {
-  zx::vmo vmo;
-  zx_status_t status = display_controller_->AllocateVmo(size, &status, &vmo);
-  if (status != ZX_OK)
-    FXL_DLOG(ERROR) << "AllocateDisplayMemory failed.";
+fuchsia::sysmem::BufferCollectionTokenSyncPtr
+DisplayManager::CreateBufferCollection() {
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
+  zx_status_t status =
+      sysmem_allocator_->AllocateSharedCollection(local_token.NewRequest());
+  if (status != ZX_OK) {
+    FXL_DLOG(ERROR) << "CreateBufferCollection failed " << status;
+    return nullptr;
+  }
+  return local_token;
+}
 
-  return vmo;
+fuchsia::sysmem::BufferCollectionSyncPtr DisplayManager::GetCollectionFromToken(
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr token) {
+  fuchsia::sysmem::BufferCollectionSyncPtr collection;
+  zx_status_t status = sysmem_allocator_->BindSharedCollection(
+      std::move(token), collection.NewRequest());
+  if (status != ZX_OK) {
+    FXL_DLOG(ERROR) << "BindSharedCollection failed " << status;
+    return nullptr;
+  }
+  return collection;
+}
+
+uint64_t DisplayManager::ImportBufferCollection(
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr token) {
+  uint64_t buffer_collection_id = next_buffer_collection_id_++;
+  zx_status_t status;
+  if (display_controller_->ImportBufferCollection(buffer_collection_id,
+                                                  token.Unbind().TakeChannel(),
+                                                  &status) != ZX_OK ||
+      status != ZX_OK) {
+    FXL_DLOG(ERROR) << "ImportBufferCollection failed";
+    return 0;
+  }
+
+  if (display_controller_->SetBufferCollectionConstraints(
+          buffer_collection_id, image_config_, &status) != ZX_OK ||
+      status != ZX_OK) {
+    FXL_DLOG(ERROR) << "SetBufferCollectionConstraints failed.";
+    display_controller_->ReleaseBufferCollection(buffer_collection_id);
+    return 0;
+  }
+
+  return buffer_collection_id;
+}
+
+void DisplayManager::ReleaseBufferCollection(uint64_t id) {
+  display_controller_->ReleaseBufferCollection(id);
 }
 
 void DisplayManager::Flip(Display* display, uint64_t buffer,
