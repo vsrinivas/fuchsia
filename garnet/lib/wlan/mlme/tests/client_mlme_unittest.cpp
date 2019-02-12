@@ -155,7 +155,6 @@ struct ClientTest : public ::testing::Test {
         EXPECT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
         EXPECT_EQ(frame.body()->auth_txn_seq_number, 1);
         EXPECT_EQ(frame.body()->status_code, 0);
-        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
     }
 
     void AssertDeauthFrame(WlanPacket pkt, wlan_mlme::ReasonCode reason_code) {
@@ -164,7 +163,6 @@ struct ClientTest : public ::testing::Test {
         EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
         EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
         EXPECT_EQ(frame.body()->reason_code, static_cast<uint16_t>(reason_code));
-        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
     }
 
     void AssertAssocReqFrame(WlanPacket pkt, bool rsn) {
@@ -192,7 +190,6 @@ struct ClientTest : public ::testing::Test {
         }
         EXPECT_TRUE(has_ssid);
         EXPECT_EQ(has_rsne, rsn);
-        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
     }
 
     void AssertKeepAliveFrame(WlanPacket pkt) {
@@ -203,8 +200,6 @@ struct ClientTest : public ::testing::Test {
         EXPECT_EQ(std::memcmp(data_frame.hdr()->addr2.byte, kClientAddress, 6), 0);
         EXPECT_EQ(std::memcmp(data_frame.hdr()->addr3.byte, kBssid1, 6), 0);
         EXPECT_EQ(data_frame.body_len(), static_cast<size_t>(0));
-
-        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, 0);
     }
 
     struct DataFrameAssert {
@@ -224,14 +219,6 @@ struct ClientTest : public ::testing::Test {
 
         auto llc_frame = frame.NextFrame();
         EXPECT_RANGES_EQ(llc_frame.body_data(), expected_payload);
-
-        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, 0);
-    }
-
-    void AssertSendRate(WlanPacket pkt, CBW cbw, PHY phy, uint32_t flags) {
-        EXPECT_EQ(pkt.cbw, cbw);
-        EXPECT_EQ(pkt.phy, phy);
-        EXPECT_EQ(pkt.flags, flags);
     }
 
     MockDevice device;
@@ -375,7 +362,7 @@ TEST_F(ClientTest, ExchangeEapolFrames) {
     ASSERT_TRUE(llc_eapol_frame);
     EXPECT_EQ(llc_eapol_frame.body_len(), static_cast<size_t>(5));
     EXPECT_RANGES_EQ(llc_eapol_frame.body_data(), kEapolPdu);
-    AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
+    EXPECT_EQ(pkt.flags, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
     device.wlan_queue.clear();
 
     // Verify EAPOL.confirm message was sent to SME

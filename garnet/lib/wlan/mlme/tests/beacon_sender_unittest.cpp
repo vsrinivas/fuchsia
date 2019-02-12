@@ -117,8 +117,6 @@ TEST_F(BeaconSenderTest, ProbeRequest) {
     auto beacon_frame = checked.CheckLength();
     ASSERT_TRUE(beacon_frame);
 
-    EXPECT_EQ(pkt.cbw, CBW20);
-    EXPECT_EQ(pkt.phy, WLAN_PHY_OFDM);
     EXPECT_EQ(pkt.flags, 0u);
 }
 

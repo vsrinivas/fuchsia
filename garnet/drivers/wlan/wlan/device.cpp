@@ -474,7 +474,7 @@ zx_status_t Device::DeliverEthernet(Span<const uint8_t> eth_frame) {
 }
 
 TxVector GetTxVector(const fbl::unique_ptr<MinstrelRateSelector>& minstrel,
-                     const fbl::unique_ptr<Packet>& packet, CBW cbw, PHY phy, uint32_t flags) {
+                     const fbl::unique_ptr<Packet>& packet, uint32_t flags) {
     const auto fc = packet->field<FrameControl>(0);
 
     constexpr size_t kAddr1Offset = 4;
@@ -489,11 +489,11 @@ TxVector GetTxVector(const fbl::unique_ptr<MinstrelRateSelector>& minstrel,
         return tv;
     } else {
         // TODO(NET-645): Choose an optimal MCS for management frames
-        uint8_t mcs = fc->type() == FrameType::kData ? 7 : 3;
+        const bool is_data_frame = fc->type() == FrameType::kData;
         return {
-            .phy = static_cast<PHY>(phy),
-            .cbw = static_cast<CBW>(cbw),
-            .mcs_idx = mcs,
+            .phy = is_data_frame ? WLAN_PHY_HT : WLAN_PHY_ERP,
+            .cbw = CBW20,
+            .mcs_idx = static_cast<uint8_t>(is_data_frame ? 7 : 3),
             .nss = 1,
             .gi = WLAN_GI_800NS,
         };
@@ -523,11 +523,11 @@ wlan_tx_info_t MakeTxInfo(const fbl::unique_ptr<Packet>& packet, const TxVector&
     };
 }
 
-zx_status_t Device::SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy, uint32_t flags) {
+zx_status_t Device::SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags) {
     ZX_DEBUG_ASSERT(packet->len() <= std::numeric_limits<uint16_t>::max());
     ZX_DEBUG_ASSERT(ValidateFrame("Transmitting a malformed frame", *packet));
 
-    auto tv = GetTxVector(minstrel_, packet, cbw, phy, flags);
+    auto tv = GetTxVector(minstrel_, packet, flags);
     packet->CopyCtrlFrom(MakeTxInfo(packet, tv, minstrel_ != nullptr, flags));
     wlan_tx_packet_t tx_pkt = packet->AsWlanTxPacket();
     auto status = wlanmac_proxy_.QueueTx(0u, &tx_pkt);

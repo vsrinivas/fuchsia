@@ -28,12 +28,6 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 constexpr uint8_t kTestPayload[] = "Hello Fuchsia";
 
-void AssertSendRate(WlanPacket pkt, CBW cbw, PHY phy, uint32_t flags) {
-    EXPECT_EQ(pkt.cbw, cbw);
-    EXPECT_EQ(pkt.phy, phy);
-    EXPECT_EQ(pkt.flags, flags);
-}
-
 struct Context {
     Context(MockDevice* device, ApMlme* ap, const common::MacAddr& client_addr)
         : device(device), ap(ap), client_addr(client_addr) {}
@@ -171,7 +165,6 @@ struct Context {
         EXPECT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
         EXPECT_EQ(frame.body()->auth_txn_seq_number, 2);
         EXPECT_EQ(frame.body()->status_code, status_code::kSuccess);
-        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
     }
 
     void AssertAssocFrame(WlanPacket pkt) {
@@ -181,7 +174,6 @@ struct Context {
         EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
         EXPECT_EQ(frame.body()->status_code, status_code::kSuccess);
         EXPECT_EQ(frame.body()->aid, kAid);
-        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
     }
 
     struct DataFrameAssert {
@@ -202,8 +194,6 @@ struct Context {
 
         auto llc_frame = frame.NextFrame();
         EXPECT_RANGES_EQ(llc_frame.body_data(), expected_payload);
-
-        AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, 0);
     }
 
     void AssertEthFrame(Span<const uint8_t> pkt, Span<const uint8_t> expected_payload) {
@@ -289,7 +279,6 @@ TEST_F(ApInfraBssTest, Authenticate_SmeRefuses) {
     EXPECT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
     EXPECT_EQ(frame.body()->auth_txn_seq_number, 2);
     EXPECT_EQ(frame.body()->status_code, status_code::kRefused);
-    AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
 }
 
 TEST_F(ApInfraBssTest, Authenticate_Timeout) {
@@ -478,7 +467,6 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
     EXPECT_EQ(frame.body()->status_code, status_code::kRefusedCapabilitiesMismatch);
     EXPECT_EQ(frame.body()->aid, 0);
-    AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
 
     device.wlan_queue.clear();
     // Sending frame should be a no-op since association fails
@@ -680,7 +668,7 @@ TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {
     ASSERT_TRUE(llc_eapol_frame);
     EXPECT_EQ(llc_eapol_frame.body_len(), static_cast<size_t>(5));
     EXPECT_RANGES_EQ(llc_eapol_frame.body_data(), kEapolPdu);
-    AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_HT, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
+    EXPECT_EQ(pkt.flags, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
 }
 
 TEST_F(ApInfraBssTest, SendFrameAfterAssociation) {
@@ -744,7 +732,6 @@ TEST_F(ApInfraBssTest, MlmeDeauthReqWhileAssociated) {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
     EXPECT_EQ(frame.body()->reason_code, static_cast<uint16_t>(reason_code));
-    AssertSendRate(std::move(pkt), CBW20, WLAN_PHY_OFDM, 0);
 }
 
 TEST_F(ApInfraBssTest, SetKeys) {

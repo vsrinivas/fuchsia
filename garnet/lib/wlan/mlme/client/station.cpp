@@ -1027,28 +1027,16 @@ void Station::DumpDataFrame(const DataFrameView<>& frame) {
 
 zx_status_t Station::SendCtrlFrame(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy) {
     chan_sched_->EnsureOnChannel(timer_mgr_.Now() + kOnChannelTimeAfterSend);
-    return SendWlan(std::move(packet), cbw, phy);
+    return SendWlan(std::move(packet));
 }
 
 zx_status_t Station::SendMgmtFrame(fbl::unique_ptr<Packet> packet) {
     chan_sched_->EnsureOnChannel(timer_mgr_.Now() + kOnChannelTimeAfterSend);
-    return SendWlan(std::move(packet), CBW20, WLAN_PHY_OFDM);
+    return SendWlan(std::move(packet));
 }
 
 zx_status_t Station::SendDataFrame(fbl::unique_ptr<Packet> packet, bool unicast, uint32_t flags) {
-    CBW cbw = CBW20;
-    PHY phy = WLAN_PHY_OFDM;
-    if (assoc_ctx_.phy == WLAN_PHY_HT) {
-        if (assoc_ctx_.is_cbw40_tx && unicast) {
-            // 40 MHz direction does not matter here.
-            // Radio uses the operational channel setting. This indicates the bandwidth without
-            // direction.
-            cbw = CBW40;
-        }
-        phy = WLAN_PHY_HT;
-    }
-
-    return SendWlan(std::move(packet), cbw, phy, flags);
+    return SendWlan(std::move(packet), flags);
 }
 
 zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
@@ -1137,9 +1125,9 @@ zx_status_t Station::SendDeauthFrame(wlan_mlme::ReasonCode reason_code) {
     return SendMgmtFrame(std::move(packet));
 }
 
-zx_status_t Station::SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy, uint32_t flags) {
+zx_status_t Station::SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags) {
     auto packet_bytes = packet->len();
-    zx_status_t status = device_->SendWlan(std::move(packet), cbw, phy, flags);
+    zx_status_t status = device_->SendWlan(std::move(packet), flags);
     if (status == ZX_OK) {
         WLAN_STATS_INC(tx_frame.out);
         WLAN_STATS_ADD(packet_bytes, tx_frame.out_bytes);

@@ -103,7 +103,7 @@ class Station : public ClientInterface {
     zx_status_t SetPowerManagementMode(bool ps_mode);
     zx_status_t SendPsPoll();
     zx_status_t SendDeauthFrame(::fuchsia::wlan::mlme::ReasonCode reason_code);
-    zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy, uint32_t flags = 0);
+    zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags = 0);
     void DumpDataFrame(const DataFrameView<>&);
 
     zx::time deadline_after_bcn_period(size_t bcn_count);

@@ -373,24 +373,13 @@ zx_status_t InfraBss::BufferFrame(fbl::unique_ptr<Packet> packet) {
 
 zx_status_t InfraBss::SendDataFrame(DataFrame<>&& data_frame, uint32_t flags) {
     if (ShouldBufferFrame(data_frame.hdr()->addr1)) { return BufferFrame(data_frame.Take()); }
-
-    // Ralink appears to setup BlockAck session AND AMPDU handling
-    // TODO(porce): Use a separate sequence number space in that case
-    CBW cbw = CBW20;
-    if (Ht().cbw_40_tx_ready && data_frame.hdr()->addr3.IsUcast()) {
-        // 40MHz direction does not matter here.
-        // Radio uses the operational channel setting. This indicates the
-        // bandwidth without direction.
-        cbw = CBW40;
-    }
-
-    return device_->SendWlan(data_frame.Take(), cbw, WLAN_PHY_HT, flags);
+    return device_->SendWlan(data_frame.Take(), flags);
 }
 
 zx_status_t InfraBss::SendMgmtFrame(MgmtFrame<>&& mgmt_frame) {
     if (ShouldBufferFrame(mgmt_frame.hdr()->addr1)) { return BufferFrame(mgmt_frame.Take()); }
 
-    return device_->SendWlan(mgmt_frame.Take(), CBW20, WLAN_PHY_OFDM);
+    return device_->SendWlan(mgmt_frame.Take());
 }
 
 zx_status_t InfraBss::DeliverEthernet(Span<const uint8_t> frame) {
@@ -409,7 +398,7 @@ zx_status_t InfraBss::SendNextBu() {
         // IEEE Std 802.11-2016, 9.2.4.1.8
         fc->set_more_data(bu_queue_.size() > 0);
         debugps("[infra-bss] [%s] sent group addressed BU\n", bssid_.ToString().c_str());
-        return device_->SendWlan(std::move(packet), CBW20, WLAN_PHY_OFDM);
+        return device_->SendWlan(std::move(packet));
     } else {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }

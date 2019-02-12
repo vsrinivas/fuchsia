@@ -73,12 +73,9 @@ struct MockDevice : public DeviceInterface {
         return ZX_OK;
     }
 
-    zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy,
-                         uint32_t flags) override final {
+    zx_status_t SendWlan(fbl::unique_ptr<Packet> packet, uint32_t flags) override final {
         WlanPacket wlan_packet;
         wlan_packet.pkt = std::move(packet);
-        wlan_packet.cbw = cbw;
-        wlan_packet.phy = phy;
         wlan_packet.flags = flags;
         wlan_queue.push_back(std::move(wlan_packet));
         return ZX_OK;

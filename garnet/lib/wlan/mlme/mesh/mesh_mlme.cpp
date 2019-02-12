@@ -222,7 +222,7 @@ void MeshMlme::ConfigurePeering(const MlmeMsg<wlan_mlme::MeshPeeringParams>& req
 }
 
 void MeshMlme::SendMgmtFrame(fbl::unique_ptr<Packet> packet) {
-    zx_status_t status = device_->SendWlan(std::move(packet), CBW20, WLAN_PHY_OFDM);
+    zx_status_t status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
         errorf("[mesh-mlme] failed to send a mgmt frame: %s\n", zx_status_get_string(status));
     }
@@ -232,7 +232,7 @@ void MeshMlme::SendDataFrame(fbl::unique_ptr<Packet> packet) {
     // TODO(gbonik): select appropriate CBW and PHY per peer.
     // For ath10k, this probably doesn't matter since the driver/firmware should pick
     // the appropriate settings automatically based on the configure_assoc data
-    zx_status_t status = device_->SendWlan(std::move(packet), CBW20, WLAN_PHY_OFDM);
+    zx_status_t status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
         errorf("[mesh-mlme] failed to send a data frame: %s\n", zx_status_get_string(status));
     }
