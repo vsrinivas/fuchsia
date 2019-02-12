@@ -19,6 +19,7 @@ rustc_staticlib("wlan-mlme-c") {
     "//garnet/public/rust/zerocopy",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:num-traits",
   ]
   non_rust_deps = []
 

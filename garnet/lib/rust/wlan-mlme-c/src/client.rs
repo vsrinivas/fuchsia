@@ -5,6 +5,7 @@
 use {
     crate::utils,
     fuchsia_zircon::sys as zx,
+    num_traits::FromPrimitive,
     wlan_mlme::{
         buffer::{BufferProvider, InBuf, OutBuf},
         client,
@@ -25,6 +26,28 @@ pub extern "C" fn mlme_write_open_auth_frame(
     let buf_result = provider.get_buffer(frame_len);
     let mut buf = unwrap_or_bail!(buf_result, zx::ZX_ERR_NO_RESOURCES);
     let write_result = client::write_open_auth_frame(&mut buf[..], *bssid, *client_addr, seq_mgr);
+    let written_bytes = unwrap_or_bail!(write_result, zx::ZX_ERR_INTERNAL).written_bytes();
+    *out_buf = OutBuf::from(buf, written_bytes);
+    zx::ZX_OK
+}
+
+#[no_mangle]
+pub extern "C" fn mlme_write_deauth_frame(
+    provider: BufferProvider,
+    seq_mgr: &mut SequenceManager,
+    bssid: &[u8; 6],
+    client_addr: &[u8; 6],
+    reason_code: u16,
+    out_buf: &mut OutBuf,
+) -> i32 {
+    let frame_len = frame_len!(mac::MgmtHdr, mac::DeauthHdr);
+    let buf_result = provider.get_buffer(frame_len);
+    let mut buf = unwrap_or_bail!(buf_result, zx::ZX_ERR_NO_RESOURCES);
+    let reason_code = mac::ReasonCode::from_u16(reason_code)
+        .ok_or_else(|| format!("invalid reason code {}", reason_code));
+    let reason_code = unwrap_or_bail!(reason_code, zx::ZX_ERR_INVALID_ARGS);
+    let write_result =
+        client::write_deauth_frame(&mut buf[..], *bssid, *client_addr, reason_code, seq_mgr);
     let written_bytes = unwrap_or_bail!(write_result, zx::ZX_ERR_INTERNAL).written_bytes();
     *out_buf = OutBuf::from(buf, written_bytes);
     zx::ZX_OK
