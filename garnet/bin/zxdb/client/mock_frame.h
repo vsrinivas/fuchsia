@@ -27,7 +27,8 @@ class MockFrame : public Frame {
   // Stack). A null physical frame indicates that this is not inline.
   MockFrame(Session* session, Thread* thread,
             const debug_ipc::StackFrame& stack_frame, const Location& location,
-            const Frame* physical_frame = nullptr);
+            const Frame* physical_frame = nullptr,
+            bool is_ambiguous_inline = false);
 
   ~MockFrame() override;
 
@@ -41,6 +42,10 @@ class MockFrame : public Frame {
   // about the location including the stack or symbols.
   void SetAddress(uint64_t address);
 
+  void set_is_ambiguous_inline(bool ambiguous) {
+    is_ambiguous_inline_ = ambiguous;
+  }
+
   // Frame implementation.
   Thread* GetThread() const override;
   bool IsInline() const override;
@@ -53,6 +58,7 @@ class MockFrame : public Frame {
   uint64_t GetStackPointer() const override;
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
   fxl::RefPtr<ExprEvalContext> GetExprEvalContext() const override;
+  bool IsAmbiguousInlineLocation() const override;
 
  private:
   Thread* thread_;
@@ -62,6 +68,7 @@ class MockFrame : public Frame {
   Location location_;
   mutable fxl::RefPtr<MockSymbolDataProvider> symbol_data_provider_;  // Lazy.
   mutable fxl::RefPtr<SymbolEvalContext> symbol_eval_context_;        // Lazy.
+  bool is_ambiguous_inline_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MockFrame);
 };

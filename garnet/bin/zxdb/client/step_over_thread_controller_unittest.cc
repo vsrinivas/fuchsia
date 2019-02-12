@@ -145,7 +145,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
 
   // The "step over" controller should have reported "stop" and fixed up the
   // stack to be at the call point of the inline function.
-  EXPECT_EQ(1u, thread()->GetStack().hide_top_inline_frame_count());
+  EXPECT_EQ(1u, thread()->GetStack().hide_ambiguous_inline_frame_count());
 
   // Now step over the inline call.
   thread()->ContinueWith(std::make_unique<StepOverThreadController>(
@@ -171,7 +171,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
       SymbolContext::ForRelativeAddresses(), LazySymbol(second_inline_func));
 
   // Clear so we can tell in the next step that it was actually changed.
-  thread()->GetStack().SetHideTopInlineFrameCount(0);
+  thread()->GetStack().SetHideAmbiguousInlineFrameCount(0);
 
   // Replace the inline function at the top with our new one.
   mock_frames = GetStack();
@@ -181,7 +181,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
       std::make_unique<MockFrame>(
           nullptr, nullptr,
           debug_ipc::StackFrame(second_inline_range.begin(), kTopSP, kTopSP),
-          second_inline_loc, mock_frames[0].get()));
+          second_inline_loc, mock_frames[0].get(), true));
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)),
@@ -189,7 +189,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
 
   // The step controller should have fixed the stack to look like the call
   // to the second inline.
-  EXPECT_EQ(1u, thread()->GetStack().hide_top_inline_frame_count());
+  EXPECT_EQ(1u, thread()->GetStack().hide_ambiguous_inline_frame_count());
 }
 
 }  // namespace zxdb

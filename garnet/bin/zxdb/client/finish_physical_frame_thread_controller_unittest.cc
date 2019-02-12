@@ -5,9 +5,10 @@
 #include "garnet/bin/zxdb/client/finish_physical_frame_thread_controller.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/client/thread_controller_test.h"
+#include "garnet/bin/zxdb/client/inline_thread_controller_test.h"
 #include "garnet/bin/zxdb/client/thread_impl_test_support.h"
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/symbols/function.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {
@@ -19,7 +20,7 @@ constexpr uint64_t kInitialBase = 0x1000;
 constexpr uint64_t kReturnAddress = 0x34567890;
 constexpr uint64_t kReturnBase = 0x1010;
 
-class FinishPhysicalFrameThreadControllerTest : public ThreadControllerTest {
+class FinishPhysicalFrameThreadControllerTest : public InlineThreadControllerTest {
  public:
   // Creates a break notification with two stack frames using the constants
   // above.
@@ -135,5 +136,77 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, BottomStackFrame) {
   ASSERT_EQ(0, mock_remote_api()->breakpoint_add_count());
   ASSERT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 }
+
+// Finishing a physical frame should leave the stack at the calling frame. But
+// the instruction after the function call being finished could be the first
+// instruction of an inlined function (an ambiguous location -- see discussions
+// in Stack class).
+//
+// In the case of ambiguity, the finish controller should leave the frame at
+// the one that called the function being finished, not an inline frame that
+// starts right atfer the call.
+
+/* TODO(brettw) re-enable when the code in OnThreadStop is uncommented and
+   returning to an address that beings an inline call works.
+TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
+  auto mock_frames = GetStack();
+
+  // Save the return address from frame 1 (frame 2's IP).
+  const uint64_t return_address = mock_frames[2]->GetAddress();
+
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
+  Stack& stack = thread()->GetStack();
+
+  // Finish stack frame #1 (top physical frame).
+  thread()->ContinueWith(
+      std::make_unique<FinishPhysicalFrameThreadController>(stack, 1),
+      [](const Err& err) {});
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continued.
+
+  // Should have added a breakpoint to catch completion of function
+  ASSERT_EQ(1, mock_remote_api()->breakpoint_add_count());
+  ASSERT_EQ(return_address, mock_remote_api()->last_breakpoint_address());
+  ASSERT_EQ(0, mock_remote_api()->breakpoint_remove_count());
+
+  // Make breakpoint hit notification.
+  std::vector<debug_ipc::BreakpointStats> hit_breakpoints;
+  hit_breakpoints.emplace_back();
+  hit_breakpoints[0].breakpoint_id = mock_remote_api()->last_breakpoint_id();
+
+  // Make an inline function starting at the return address of the function.
+  AddressRange second_inline_range(return_address, return_address + 4);
+  auto second_inline_func =
+      fxl::MakeRefCounted<Function>(Symbol::kTagInlinedSubroutine);
+  second_inline_func->set_assigned_name("Second");
+  second_inline_func->set_code_ranges(AddressRanges(second_inline_range));
+
+  Location second_inline_loc(
+      second_inline_range.begin(), FileLine("file.cc", 21), 0,
+      SymbolContext::ForRelativeAddresses(), LazySymbol(second_inline_func));
+
+  // Construct the stack of the address after the call. In this case the frame
+  // being returned to immediately calls an inline subroutine, so execution
+  // will be in a new inline function off of the returned-to frame.
+  mock_frames = GetStack();
+  mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 2);
+  mock_frames.insert(
+      mock_frames.begin(),
+      std::make_unique<MockFrame>(
+          nullptr, nullptr,
+          debug_ipc::StackFrame(second_inline_range.begin(), kMiddleSP, kMiddleSP),
+          second_inline_loc, mock_frames[0]->GetPhysicalFrame()));
+
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true,
+                           hit_breakpoints);
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped.
+
+  EXPECT_EQ(1u, thread()->GetStack().hide_ambiguous_inline_frame_count());
+}
+*/
 
 }  // namespace zxdb

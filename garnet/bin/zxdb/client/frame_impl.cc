@@ -99,6 +99,11 @@ fxl::RefPtr<ExprEvalContext> FrameImpl::GetExprEvalContext() const {
   return symbol_eval_context_;
 }
 
+bool FrameImpl::IsAmbiguousInlineLocation() const {
+  // This object always represents physical frames which aren't ambiguous.
+  return false;
+}
+
 bool FrameImpl::EnsureBasePointer() {
   if (computed_base_pointer_)
     return true;  // Already have it available synchronously.

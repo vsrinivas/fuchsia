@@ -92,7 +92,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   // that the stack is in a subframe of the function we're stepping in and then
   // try to step out. The "finish" controller will then step out of the inline
   // frame, which will skip over it from the context of the user.
-  SetInlineFrameIfAmbiguous(frame_fingerprint_);
+  SetInlineFrameIfAmbiguous(InlineFrameIs::kEqual, frame_fingerprint_);
 
   // If we get here the thread is no longer in range but could be in a sub-
   // frame that we need to step out of.

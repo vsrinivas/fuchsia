@@ -26,7 +26,7 @@ TEST_F(StepIntoThreadControllerTest, Basic) {
 
   // Hide the inline frame at the top so we're about to step into it.
   Stack& stack = thread()->GetStack();
-  stack.SetHideTopInlineFrameCount(1);
+  stack.SetHideAmbiguousInlineFrameCount(1);
 
   // Do the "step into".
   auto step_into_controller =
@@ -42,7 +42,7 @@ TEST_F(StepIntoThreadControllerTest, Basic) {
   // The operation should have unhidden the inline stack frame rather than
   // actually affecting the backend.
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());
-  EXPECT_EQ(0u, stack.hide_top_inline_frame_count());
+  EXPECT_EQ(0u, stack.hide_ambiguous_inline_frame_count());
 
   // Now that we're at the top of the inline stack, do a subsequent "step into"
   // which this time should resume the backend.
@@ -56,7 +56,7 @@ TEST_F(StepIntoThreadControllerTest, Basic) {
                          });
   EXPECT_TRUE(continued);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
-  EXPECT_EQ(0u, stack.hide_top_inline_frame_count());
+  EXPECT_EQ(0u, stack.hide_ambiguous_inline_frame_count());
 }
 
 }  // namespace zxdb

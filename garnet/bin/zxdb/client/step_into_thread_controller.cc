@@ -70,7 +70,7 @@ bool StepIntoThreadController::TrySteppingIntoInline() {
 
   Stack& stack = thread()->GetStack();
 
-  size_t hidden_frame_count = stack.hide_top_inline_frame_count();
+  size_t hidden_frame_count = stack.hide_ambiguous_inline_frame_count();
   if (hidden_frame_count == 0) {
     // The Stack object always contains all inline functions nested at the
     // current address. When it's not logically in one or more of them, they
@@ -80,17 +80,16 @@ bool StepIntoThreadController::TrySteppingIntoInline() {
   }
 
   // Examine the closest hidden frame.
-  const Location& loc =
-      stack.FrameAtIndexIncludingHiddenInline(hidden_frame_count - 1)
-          ->GetLocation();
-  if (!AddressAtBeginningOfInlineRange(loc))
+  const Frame* frame =
+      stack.FrameAtIndexIncludingHiddenInline(hidden_frame_count - 1);
+  if (!frame->IsAmbiguousInlineLocation())
     return false;  // No inline or not ambiguous.
 
   // Do the synthetic step into by unhiding an inline frame.
   size_t new_hide_count = hidden_frame_count - 1;
   Log("Synthetically stepping into inline frame, new hide count = %zu.",
       new_hide_count);
-  stack.SetHideTopInlineFrameCount(new_hide_count);
+  stack.SetHideAmbiguousInlineFrameCount(new_hide_count);
   return true;
 }
 

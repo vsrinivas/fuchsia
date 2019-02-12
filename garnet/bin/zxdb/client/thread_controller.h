@@ -144,17 +144,24 @@ class ThreadController {
 #endif
 
  protected:
+  // How the frame argument to SetInlineFrameIfAmbiguous() is interpreted.
+  enum class InlineFrameIs {
+    // Set the inline frame equal to the given one.
+    kEqual,
+
+    // Set the inline frame to the frame immediately before the given one. This
+    // exists so that calling code can reference the previuos frame without
+    // actually having to compute the fingerprint of the previous frame (it may
+    // not be available if previous stack frames haven't been synced).
+    kOneBefore
+  };
+
   Thread* thread() { return thread_; }
   void set_thread(Thread* thread) { thread_ = thread; }
 
   // Returns the name of this thread controller. This will be visible in logs.
   // This should be something simple and short like "Step" or "Step Over".
   virtual const char* GetName() const = 0;
-
-  // Returns true if the given address is at the beginning of any of the ranges
-  // defined by the inline function for the given location. If there isn't an
-  // inline function in the symbols, it counts as "false".
-  bool AddressAtBeginningOfInlineRange(const Location&);
 
   // The beginning of an inline function is ambiguous about whether you're at
   // the beginning of the function or about to call it (see Stack object for
@@ -173,7 +180,8 @@ class ThreadController {
   // If there is no ambiguity or one of the possibly ambiguous frames doesn't
   // match the given fingerprint, the inline frame hide count will be reset to
   // zero.
-  void SetInlineFrameIfAmbiguous(FrameFingerprint fingerprint);
+  void SetInlineFrameIfAmbiguous(InlineFrameIs comparison,
+                                 FrameFingerprint fingerprint);
 
   // Tells the owner of this class that this ThreadController has completed
   // its work. Normally returning kStop from OnThreadStop() will do this, but

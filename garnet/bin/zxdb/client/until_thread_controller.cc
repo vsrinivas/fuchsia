@@ -107,6 +107,14 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
     return kStop;
   }
 
+  // If inline frames are ambiguous and the one we want is one of the ambiguous
+  // ones, use it.
+  if (comparison_ == kRunUntilEqualOrOlderFrame)
+    SetInlineFrameIfAmbiguous(InlineFrameIs::kEqual, threshold_frame_);
+  else
+    SetInlineFrameIfAmbiguous(InlineFrameIs::kOneBefore, threshold_frame_);
+
+  // Check frames.
   FrameFingerprint current_frame = *stack.GetFrameFingerprint(0);
   if (FrameFingerprint::Newer(current_frame, threshold_frame_)) {
     Log("In newer frame, ignoring.");

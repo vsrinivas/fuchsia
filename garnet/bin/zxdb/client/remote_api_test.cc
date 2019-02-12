@@ -93,7 +93,8 @@ void RemoteAPITest::InjectExceptionWithStack(
 void RemoteAPITest::InjectExceptionWithStack(
     uint64_t process_koid, uint64_t thread_koid,
     debug_ipc::NotifyException::Type exception_type,
-    std::vector<std::unique_ptr<Frame>> frames, bool has_all_frames) {
+    std::vector<std::unique_ptr<Frame>> frames, bool has_all_frames,
+    const std::vector<debug_ipc::BreakpointStats>& breakpoints) {
   // Need to supply at least one stack frame to get the address from.
   FXL_CHECK(!frames.empty());
 
@@ -102,6 +103,7 @@ void RemoteAPITest::InjectExceptionWithStack(
   exception.type = exception_type;
   exception.thread.koid = thread_koid;
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+  exception.hit_breakpoints = breakpoints;
 
   InjectExceptionWithStack(exception, std::move(frames), has_all_frames);
 }

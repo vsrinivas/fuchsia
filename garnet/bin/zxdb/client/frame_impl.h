@@ -38,6 +38,7 @@ class FrameImpl final : public Frame {
   uint64_t GetStackPointer() const override;
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
   fxl::RefPtr<ExprEvalContext> GetExprEvalContext() const override;
+  bool IsAmbiguousInlineLocation() const override;
 
  private:
   void EnsureSymbolized() const;

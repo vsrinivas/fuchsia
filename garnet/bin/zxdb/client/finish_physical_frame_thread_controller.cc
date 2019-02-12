@@ -31,8 +31,34 @@ FinishPhysicalFrameThreadController::StopOp
 FinishPhysicalFrameThreadController::OnThreadStop(
     debug_ipc::NotifyException::Type stop_type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
-  if (until_controller_)
-    return until_controller_->OnThreadStop(stop_type, hit_breakpoints);
+  if (until_controller_) {
+    if (until_controller_->OnThreadStop(stop_type, hit_breakpoints) ==
+        kContinue)
+      return kContinue;
+
+    // The until controller said to stop. The CPU is now at the address
+    // immediately following the function call. The tricky part is that this
+    // could be the first instruction of a new inline function following the
+    // call and the stack will now contain that inline expansion. Our caller
+    // expects to be in the frame that called the function being stepped out
+    // of.
+    //
+    // Rolling ambiguous frames back to "one before" the frame fingerprint
+    // being finished might sound right but isn't because that fingerprint
+    // won't exist any more (we just exited it).
+    //
+    // For a frame to be ambiguous the IP must be at the first instruction
+    // of a range of that inline. By virtue of just returning from a function
+    // call, we know any inline functions that start immediately after the
+    // call weren't in the stack of the original call.
+
+    // TODO(brettw) enable this code. This currently messes up the tests
+    // because the mock test data doesn't quite match what really happens.
+    // Stack& stack = thread()->GetStack();
+    // stack.SetHideAmbiguousInlineFrameCount(
+    //     stack.GetAmbiguousInlineFrameCount());
+    return kStop;
+  }
 
   // When there's no "until" controller, this controller just said "continue"
   // to step out of the oldest stack frame. Therefore, any stops at this level
@@ -63,7 +89,7 @@ void FinishPhysicalFrameThreadController::InitWithThread(
     // available. That's not allowed and any code doing that should be fixed.
     FXL_NOTREACHED();
     cb(Err("Trying to step out of a frame with insufficient context.\n"
-            "Please file a bug with a repro."));
+           "Please file a bug with a repro."));
     return;
   }
   InitWithFingerprint(*found_fingerprint);

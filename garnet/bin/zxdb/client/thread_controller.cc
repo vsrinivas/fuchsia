@@ -41,31 +41,14 @@ void ThreadController::LogRaw(const char* format, ...) {
 }
 #endif
 
-bool ThreadController::AddressAtBeginningOfInlineRange(const Location& loc) {
-  // Extract the inline function.
-  if (!loc.symbol())
-    return false;
-  const Function* function = loc.symbol().Get()->AsFunction();
-  if (!function)
-    return false;
-  if (!function->is_inline())
-    return false;
-
-  for (const auto& cur :
-       function->GetAbsoluteCodeRanges(loc.symbol_context())) {
-    if (loc.address() == cur.begin())
-      return true;
-  }
-  return false;
-}
-
-void ThreadController::SetInlineFrameIfAmbiguous(FrameFingerprint fingerprint) {
+void ThreadController::SetInlineFrameIfAmbiguous(InlineFrameIs comparison,
+                                                 FrameFingerprint fingerprint) {
   Stack& stack = thread()->GetStack();
 
   // Reset any hidden inline frames so we can iterate through all of them
   // (and we'll leave this reset to 0 if the requested one isn't found).
-  if (stack.hide_top_inline_frame_count())
-    stack.SetHideTopInlineFrameCount(0);
+  if (stack.hide_ambiguous_inline_frame_count())
+    stack.SetHideAmbiguousInlineFrameCount(0);
 
   for (size_t i = 0; i < stack.size(); i++) {
     const Frame* frame = stack[i];
@@ -78,13 +61,21 @@ void ThreadController::SetInlineFrameIfAmbiguous(FrameFingerprint fingerprint) {
     // (the physical frame also needs matching but its range doesn't count).
     bool is_inline = frame->IsInline();
     if (is_inline) {
-      if (!AddressAtBeginningOfInlineRange(frame->GetLocation()))
+      if (!frame->IsAmbiguousInlineLocation())
         break;  // Not an ambiguous address.
     }
 
     if (*found == fingerprint) {
-      // Found it, make this one the top of the stack.
-      stack.SetHideTopInlineFrameCount(i);
+      // Found it.
+      if (comparison == InlineFrameIs::kEqual) {
+        // Make this one the top of the stack.
+        stack.SetHideAmbiguousInlineFrameCount(i);
+      } else {  // comparison == InlineFrameIs::kOneBefore.
+        // Make the one below this frame topmost. That requires the current
+        // frame be inline since it will be hidden.
+        if (is_inline)
+          stack.SetHideAmbiguousInlineFrameCount(i + 1);
+      }
       break;
     }
 

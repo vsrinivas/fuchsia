@@ -82,6 +82,13 @@ class Frame : public ClientObject {
   // the context of this frame.
   virtual fxl::RefPtr<ExprEvalContext> GetExprEvalContext() const = 0;
 
+  // Determines if the code location this frame's address corresponds to is
+  // potentially ambiguous. This happens when the instruction is the beginning
+  // of an inlined routine, and the address could be considered either the
+  // imaginary call to the inlined routine, or its first code instruction.
+  // See the Stack class declaration for more details about this case.
+  virtual bool IsAmbiguousInlineLocation() const = 0;
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Frame);
 };

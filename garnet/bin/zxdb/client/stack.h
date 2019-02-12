@@ -80,16 +80,16 @@ class Stack {
   // the top 1-2 (see class-level comment above).
   bool has_all_frames() const { return has_all_frames_; }
 
-  size_t size() const { return frames_.size() - hide_top_inline_frame_count_; }
+  size_t size() const { return frames_.size() - hide_ambiguous_inline_frame_count_; }
   bool empty() const { return frames_.empty(); }
 
   // Access into the individual frames. The topmost stack frame is index 0.
   // There may be hidden inline frames above index 0.
   Frame* operator[](size_t index) {
-    return frames_[index + hide_top_inline_frame_count_].get();
+    return frames_[index + hide_ambiguous_inline_frame_count_].get();
   }
   const Frame* operator[](size_t index) const {
-    return frames_[index + hide_top_inline_frame_count_].get();
+    return frames_[index + hide_ambiguous_inline_frame_count_].get();
   }
 
   // Returns the index of the frame pointer in this stack if it is there.
@@ -133,11 +133,11 @@ class Stack {
   //
   // From 0 to "top inline frame count" of inline frames can be hidden or
   // unhidden. By default they are all visible (hide count = 0).
-  size_t GetTopInlineFrameCount() const;
-  size_t hide_top_inline_frame_count() const {
-    return hide_top_inline_frame_count_;
+  size_t GetAmbiguousInlineFrameCount() const;
+  size_t hide_ambiguous_inline_frame_count() const {
+    return hide_ambiguous_inline_frame_count_;
   }
-  void SetHideTopInlineFrameCount(size_t hide_count);
+  void SetHideAmbiguousInlineFrameCount(size_t hide_count);
 
   // Queries the size and for frames at indices ignoring any hidden inline
   // frames. With FrameAtIndexIndcludingHiddenInline(), the 0th index is always
@@ -186,7 +186,7 @@ class Stack {
 
   // Number of frames to hide from size() and operator[] that are inline frames
   // at the top of the stack that shouldn't be exposed right now.
-  size_t hide_top_inline_frame_count_ = 0;
+  size_t hide_ambiguous_inline_frame_count_ = 0;
 
   fxl::WeakPtrFactory<Stack> weak_factory_;
 

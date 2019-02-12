@@ -350,9 +350,9 @@ TEST_F(StackTest, InlineHiding) {
 
   // Top frame has two inline functions expanded on top of it.
   frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, phys_top_record, top_location, phys_top.get()));
+      nullptr, nullptr, phys_top_record, top_location, phys_top.get(), true));
   frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, phys_top_record, top_location, phys_top.get()));
+      nullptr, nullptr, phys_top_record, top_location, phys_top.get(), true));
 
   // Physical top frame below those.
   frames.push_back(std::move(phys_top));
@@ -365,18 +365,18 @@ TEST_F(StackTest, InlineHiding) {
   delegate.set_stack(&stack);
 
   // With no frames, there should be no inline frames.
-  EXPECT_EQ(0u, stack.GetTopInlineFrameCount());
+  EXPECT_EQ(0u, stack.GetAmbiguousInlineFrameCount());
 
   // Setting the frames should give the two inline ones, followed by two
   // physical ones.
   stack.SetFramesForTest(std::move(frames), true);
   EXPECT_EQ(4u, stack.size());
-  EXPECT_EQ(2u, stack.GetTopInlineFrameCount());
+  EXPECT_EQ(2u, stack.GetAmbiguousInlineFrameCount());
 
   // Hide both inline frames, the top frame should now be the physical one.
-  stack.SetHideTopInlineFrameCount(2);
+  stack.SetHideAmbiguousInlineFrameCount(2);
   EXPECT_EQ(2u, stack.size());
-  EXPECT_EQ(2u, stack.GetTopInlineFrameCount());
+  EXPECT_EQ(2u, stack.GetAmbiguousInlineFrameCount());
 }
 
 }  // namespace zxdb

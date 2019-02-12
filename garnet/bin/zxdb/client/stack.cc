@@ -57,6 +57,27 @@ class InlineFrame final : public Frame {
   fxl::RefPtr<ExprEvalContext> GetExprEvalContext() const override {
     return physical_frame_->GetExprEvalContext();
   }
+  bool IsAmbiguousInlineLocation() const override {
+    const Location& loc = GetLocation();
+
+    // Extract the inline function.
+    if (!loc.symbol())
+      return false;
+    const Function* function = loc.symbol().Get()->AsFunction();
+    if (!function)
+      return false;
+    if (!function->is_inline())
+      return false;
+
+    // There could be multiple code ranges for the inlined function, consider
+    // any of them as being a candidate.
+    for (const auto& cur :
+         function->GetAbsoluteCodeRanges(loc.symbol_context())) {
+      if (loc.address() == cur.begin())
+        return true;
+    }
+    return false;
+  }
 
  private:
   Frame* physical_frame_;  // Non-owning.
@@ -120,7 +141,7 @@ size_t Stack::InlineDepthForIndex(size_t index) const {
 
 std::optional<FrameFingerprint> Stack::GetFrameFingerprint(
     size_t virtual_frame_index) const {
-  size_t frame_index = virtual_frame_index + hide_top_inline_frame_count_;
+  size_t frame_index = virtual_frame_index + hide_ambiguous_inline_frame_count_;
 
   // Should reference a valid index in the array.
   if (frame_index >= frames_.size()) {
@@ -152,7 +173,7 @@ std::optional<FrameFingerprint> Stack::GetFrameFingerprint(
 void Stack::GetFrameFingerprint(
     size_t virtual_frame_index,
     std::function<void(const Err&, FrameFingerprint)> cb) {
-  size_t frame_index = virtual_frame_index + hide_top_inline_frame_count_;
+  size_t frame_index = virtual_frame_index + hide_ambiguous_inline_frame_count_;
   FXL_DCHECK(frame_index < frames_.size());
 
   // Identify the frame in question across the async call by its combination of
@@ -204,12 +225,12 @@ void Stack::GetFrameFingerprint(
   }
 }
 
-size_t Stack::GetTopInlineFrameCount() const {
+size_t Stack::GetAmbiguousInlineFrameCount() const {
   // This can't be InlineDepthForIndex() because that takes an index relative
-  // to the hide_top_inline_frame_count_ and this function always wants to
-  // return the same thing regardless of the hide count.
+  // to the hide_ambiguous_inline_frame_count_ and this function always wants
+  // to return the same thing regardless of the hide count.
   for (size_t i = 0; i < frames_.size(); i++) {
-    if (!frames_[i]->IsInline())
+    if (!frames_[i]->IsAmbiguousInlineLocation())
       return i;
   }
 
@@ -218,9 +239,9 @@ size_t Stack::GetTopInlineFrameCount() const {
   return 0;
 }
 
-void Stack::SetHideTopInlineFrameCount(size_t hide_count) {
-  FXL_DCHECK(hide_count <= GetTopInlineFrameCount());
-  hide_top_inline_frame_count_ = hide_count;
+void Stack::SetHideAmbiguousInlineFrameCount(size_t hide_count) {
+  FXL_DCHECK(hide_count <= GetAmbiguousInlineFrameCount());
+  hide_ambiguous_inline_frame_count_ = hide_count;
 }
 
 void Stack::SyncFrames(std::function<void(const Err&)> callback) {

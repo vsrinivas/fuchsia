@@ -13,12 +13,14 @@ namespace zxdb {
 MockFrame::MockFrame(Session* session, Thread* thread,
                      const debug_ipc::StackFrame& stack_frame,
                      const Location& location,
-                     const Frame* physical_frame)
+                     const Frame* physical_frame,
+                     bool is_ambiguous_inline)
     : Frame(session),
       thread_(thread),
       stack_frame_(stack_frame),
       physical_frame_(physical_frame),
-      location_(location) {}
+      location_(location),
+      is_ambiguous_inline_(is_ambiguous_inline) {}
 MockFrame::~MockFrame() = default;
 
 void MockFrame::SetAddress(uint64_t address) {
@@ -64,6 +66,10 @@ fxl::RefPtr<ExprEvalContext> MockFrame::GetExprEvalContext() const {
         fxl::WeakPtr<const ProcessSymbols>(), GetSymbolDataProvider(), location_);
   }
   return symbol_eval_context_;
+}
+
+bool MockFrame::IsAmbiguousInlineLocation() const {
+  return is_ambiguous_inline_;
 }
 
 }  // namespace zxdb

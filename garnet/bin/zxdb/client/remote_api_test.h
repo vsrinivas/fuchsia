@@ -63,7 +63,8 @@ class RemoteAPITest : public testing::Test {
       uint64_t thread_koid,
       debug_ipc::NotifyException::Type exception_type,
       std::vector<std::unique_ptr<Frame>> frames,
-      bool has_all_frames);
+      bool has_all_frames,
+      const std::vector<debug_ipc::BreakpointStats>& breakpoints = {});
 
  protected:
   // Derived classes implement this to provide their own IPC mocks. Ownership
