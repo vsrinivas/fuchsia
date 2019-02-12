@@ -154,27 +154,19 @@ zx_status_t Station::Authenticate(wlan_mlme::AuthenticationTypes auth_type, uint
 
     debugjoin("authenticating to %s\n", join_ctx_->bssid().ToString().c_str());
 
-    constexpr size_t max_frame_len = MgmtFrameHeader::max_len() + Authentication::max_len();
-    auto packet = GetWlanPacket(max_frame_len);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    BufferWriter w(*packet);
-    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
-    mgmt_hdr->fc.set_type(FrameType::kManagement);
-    mgmt_hdr->fc.set_subtype(ManagementSubtype::kAuthentication);
-    mgmt_hdr->addr1 = join_ctx_->bssid();
-    mgmt_hdr->addr2 = self_addr();
-    mgmt_hdr->addr3 = join_ctx_->bssid();
-    SetSeqNo(mgmt_hdr, &seq_);
-
-    // This assumes Open System authentication.
-    auto auth = w.Write<Authentication>();
-    auth->auth_algorithm_number = auth_alg_;
-    auth->auth_txn_seq_number = 1;
-    auth->status_code = 0;  // Reserved: explicitly set to 0
+    seq_t seq_num = seq_.Sns1(join_ctx_->bssid())->Next();
+    rust_mlme_out_buf_t out_buf;
+    auto status = rust_mlme_write_open_auth_frame(rust_buffer_provider, &join_ctx_->bssid().byte,
+                                                  &self_addr().byte, seq_num, &out_buf);
+    if (status != ZX_OK) {
+        errorf("could not write open auth frame: %d\n", status);
+        service::SendAuthConfirm(device_, join_ctx_->bssid(),
+                                 wlan_mlme::AuthenticateResultCodes::REFUSED);
+        return status;
+    }
 
     zx::time deadline = deadline_after_bcn_period(timeout);
-    auto status = timer_mgr_.Schedule(deadline, {}, &auth_timeout_);
+    status = timer_mgr_.Schedule(deadline, {}, &auth_timeout_);
     if (status != ZX_OK) {
         errorf("could not set authentication timeout event: %s\n", zx_status_get_string(status));
         // This is the wrong result code, but we need to define our own codes at some later time.
@@ -183,10 +175,7 @@ zx_status_t Station::Authenticate(wlan_mlme::AuthenticationTypes auth_type, uint
         return status;
     }
 
-    packet->set_len(w.WrittenBytes());
-
-    finspect("Outbound Mgmt Frame(Auth): %s\n", debug::Describe(*mgmt_hdr).c_str());
-    status = SendMgmtFrame(std::move(packet));
+    status = SendMgmtFrame(FromRustOutBuf(out_buf));
     if (status != ZX_OK) {
         errorf("could not send authentication frame: %d\n", status);
         service::SendAuthConfirm(device_, join_ctx_->bssid(),

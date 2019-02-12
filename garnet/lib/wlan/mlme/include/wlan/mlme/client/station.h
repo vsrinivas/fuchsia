@@ -147,7 +147,6 @@ class Station : public ClientInterface {
     zx::time auto_deauth_last_accounted_;
 
     common::MovingAverageDbm<20> avg_rssi_dbm_;
-    AuthAlgorithm auth_alg_ = AuthAlgorithm::kOpenSystem;
     eapol::PortState controlled_port_ = eapol::PortState::kBlocked;
 
     common::WlanStats<common::ClientMlmeStats, ::fuchsia::wlan::stats::ClientMlmeStats> stats_;
