@@ -18,6 +18,7 @@
 
 class Event;
 
+// Helper class for Waiting on the wait_one and wait_many syscalls.
 class WaitStateObserver final : public StateObserver {
 public:
     WaitStateObserver() : StateObserver() { }
@@ -43,8 +44,9 @@ private:
 
     fbl::Canary<fbl::magic("WTSO")> canary_;
 
+    // handle_ only used as a cookie and no methods should be called on it.
+    const void* handle_ = nullptr;
     Event* event_ = nullptr;
-    Handle* handle_ = nullptr;
     zx_signals_t watched_signals_ = 0u;
     zx_signals_t wakeup_reasons_;
     fbl::RefPtr<Dispatcher> dispatcher_;  // Non-null only between Begin() and End().
