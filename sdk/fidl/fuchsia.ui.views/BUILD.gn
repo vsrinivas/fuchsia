@@ -10,12 +10,12 @@ fidl("fuchsia.ui.views") {
   sources = [
     "commands.fidl",
     "events.fidl",
+    "view.fidl",
+    "view_config.fidl",
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.math",
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.ui.gfx",
-    "//sdk/fidl/fuchsia.ui.input",
   ]
 }
