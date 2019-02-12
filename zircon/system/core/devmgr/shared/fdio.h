@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include <launchpad/launchpad.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 

@@ -161,7 +161,6 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := \
     system/ulib/async.default \
-    system/ulib/launchpad \
     system/ulib/fdio \
     system/ulib/fs-management \
     system/ulib/ramdevice-client \

@@ -7,7 +7,6 @@
 #include <fbl/function.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_fd.h>
-#include <launchpad/launchpad.h>
 #include <lib/bootfs/parser.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/util.h>

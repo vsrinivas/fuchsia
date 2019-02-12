@@ -32,6 +32,7 @@
 #include <lib/devmgr-launcher/processargs.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
+#include <lib/fdio/spawn.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/debuglog.h>
@@ -246,62 +247,59 @@ int console_starter(void* arg) {
 
 int pwrbtn_monitor_starter(void* arg) {
     const char* name = "pwrbtn-monitor";
-    const char* argv[] = {"/boot/bin/pwrbtn-monitor"};
-    int argc = 1;
+    const char* argv[] = {"/boot/bin/pwrbtn-monitor", nullptr};
 
     zx::job job_copy;
     zx_status_t status =
         g_handles.svc_job.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &job_copy);
     if (status != ZX_OK) {
-        printf("svc_job.duplicate failed %s\n", zx_status_get_string(status));
+        printf("devmgr: svc_job.duplicate failed %s\n", zx_status_get_string(status));
         return 1;
     }
 
-    launchpad_t* lp;
-    launchpad_create(job_copy.get(), name, &lp);
-
-    status = launchpad_load_from_file(lp, argv[0]);
-    if (status != ZX_OK) {
-        launchpad_abort(lp, status, "cannot load file");
-    }
-    launchpad_set_args(lp, argc, argv);
-
-    // create a namespace containing /dev/class/input and /dev/misc
-    const char* nametable[2] = {};
-    uint32_t count = 0;
-    zx::channel fs_handle = devmgr::fs_clone("dev/class/input");
-    if (fs_handle.is_valid()) {
-        nametable[count] = "/input";
-        launchpad_add_handle(lp, fs_handle.release(), PA_HND(PA_NS_DIR, count++));
-    } else {
-        launchpad_abort(lp, ZX_ERR_BAD_STATE, "devmgr: failed to clone /dev/class/input");
-    }
-
-    // Ideally we'd only expose /dev/misc/dmctl, but we do not support exposing
-    // single files
-    fs_handle = devmgr::fs_clone("dev/misc");
-    if (fs_handle.is_valid()) {
-        nametable[count] = "/misc";
-        launchpad_add_handle(lp, fs_handle.release(), PA_HND(PA_NS_DIR, count++));
-    } else {
-        launchpad_abort(lp, ZX_ERR_BAD_STATE, "devmgr: failed to clone /dev/misc");
-    }
-    launchpad_set_nametable(lp, count, nametable);
-
     zx::debuglog debuglog;
-    if ((status = zx::debuglog::create(zx::resource(), 0, &debuglog) < 0)) {
-        launchpad_abort(lp, status, "devmgr: cannot create debuglog handle");
-    } else {
-        launchpad_add_handle(lp, debuglog.release(),
-                             PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO | 0));
+    if ((status = zx::debuglog::create(zx::resource(), 0, &debuglog) != ZX_OK)) {
+        printf("devmgr: cannot create debuglog handle\n");
+        return 1;
     }
 
-    const char* errmsg;
-    if ((status = launchpad_go(lp, nullptr, &errmsg)) < 0) {
-        printf("devmgr: launchpad %s (%s) failed: %s: %d\n", argv[0], name, errmsg, status);
-    } else {
-        printf("devmgr: launch %s (%s) OK\n", argv[0], name);
+    zx::channel input_handle = devmgr::fs_clone("dev/class/input");
+    if (!input_handle.is_valid()) {
+        printf("devmgr: failed to clone /dev/input\n");
+        return 1;
     }
+
+    zx::channel misc_handle = devmgr::fs_clone("dev/misc");
+    if (!misc_handle.is_valid()) {
+        printf("devmgr: failed to clone /dev/misc\n");
+        return 1;
+    }
+
+    fdio_spawn_action_t actions[] = {
+        { .action = FDIO_SPAWN_ACTION_SET_NAME, .name = { .data = name } },
+        { .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+          .ns = { .prefix = "/input", .handle = input_handle.release() } },
+        // Ideally we'd only expose /dev/misc/dmctl, but we do not support exposing
+        // single files
+        { .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+          .ns = { .prefix = "/misc", .handle = misc_handle.release() } },
+        { .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = { .id = PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO | 0),
+                 .handle = debuglog.release() } },
+    };
+
+    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+    uint32_t spawn_flags = FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC;
+    status = fdio_spawn_etc(job_copy.get(), spawn_flags, argv[0], argv,
+                            nullptr, fbl::count_of(actions), actions,
+                            nullptr, err_msg);
+    if (status != ZX_OK) {
+        printf("devmgr: spawn %s (%s) failed: %s: %s\n", argv[0], name, err_msg,
+               zx_status_get_string(status));
+        return 1;
+    }
+
+    printf("devmgr: launch %s (%s) OK\n", argv[0], name);
     return 0;
 }
 

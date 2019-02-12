@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <launchpad/launchpad.h>
-#include <launchpad/vmo.h>
-
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/vector.h>

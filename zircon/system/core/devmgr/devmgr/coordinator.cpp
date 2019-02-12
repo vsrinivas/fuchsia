@@ -18,12 +18,12 @@
 #include <fbl/unique_ptr.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
-#include <launchpad/launchpad.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/receiver.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/io.h>
+#include <lib/fdio/spawn.h>
 #include <lib/fidl/coding.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -34,6 +34,7 @@
 #include <zircon/assert.h>
 #include <zircon/boot/bootdata.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/policy.h>
 #include <zircon/syscalls/system.h>
@@ -576,51 +577,25 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
                                      const char* devhost_bin, const char* name, zx_handle_t hrpc,
                                      const zx::resource& root_resource, const zx::job& sysinfo_job,
                                      zx::unowned_job devhost_job) {
-    launchpad_t* lp;
-    launchpad_create_with_jobs(devhost_job->get(), 0, name, &lp);
-    launchpad_load_from_file(lp, devhost_bin);
-    launchpad_set_args(lp, 1, &devhost_bin);
-
+    zx::channel loader_connection;
     if (loader_service != nullptr) {
-        zx::channel connection;
-        zx_status_t status = loader_service->Connect(&connection);
-        if (status == ZX_OK) {
-            launchpad_use_loader_service(lp, connection.release());
+        zx_status_t status = loader_service->Connect(&loader_connection);
+        if (status != ZX_OK) {
+            log(ERROR, "devcoord: failed to use loader service: %s\n",
+                zx_status_get_string(status));
+            return status;
         }
     }
 
-    launchpad_add_handle(lp, hrpc, PA_HND(PA_USER0, 0));
-
     // Give devhosts the root resource if we have it (in tests, we may not)
     // TODO: limit root resource to root devhost only
+    zx::resource resource;
     if (root_resource.is_valid()) {
-        zx::resource resource;
         zx_status_t status = root_resource.duplicate(ZX_RIGHT_SAME_RIGHTS, &resource);
         if (status != ZX_OK) {
             log(ERROR, "devcoord: failed to duplicate root resource: %d\n", status);
         }
-        launchpad_add_handle(lp, resource.release(), PA_HND(PA_RESOURCE, 0));
     }
-
-    // Inherit devmgr's environment (including kernel cmdline)
-    launchpad_clone(lp, LP_CLONE_ENVIRON);
-
-    const char* nametable[2] = {
-        "/boot",
-        "/svc",
-    };
-    uint32_t name_count = 0;
-
-    // TODO: eventually devhosts should not have vfs access
-    launchpad_add_handle(lp, fs_clone("boot").release(), PA_HND(PA_NS_DIR, name_count++));
-
-    // TODO: constrain to /svc/device
-    zx::channel svc_channel = fs_clone("svc");
-    if (svc_channel.is_valid()) {
-        launchpad_add_handle(lp, svc_channel.release(), PA_HND(PA_NS_DIR, name_count++));
-    }
-
-    launchpad_set_nametable(lp, name_count, nametable);
 
     // TODO: limit sysinfo job access to root devhost only
     zx::job sysinfo_job_duplicate;
@@ -628,16 +603,68 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
     if (status != ZX_OK) {
         log(ERROR, "devcoord: failed to duplicate sysinfo job: %d\n", status);
     }
-    launchpad_add_handle(lp, sysinfo_job_duplicate.release(), PA_HND(PA_USER0, kIdHJobRoot));
 
-    const char* errmsg;
-    zx_handle_t proc;
-    status = launchpad_go(lp, &proc, &errmsg);
-    if (status < 0) {
-        log(ERROR, "devcoord: launch devhost '%s': failed: %d: %s\n", name, status, errmsg);
+    constexpr size_t kMaxActions = 7;
+    fdio_spawn_action_t actions[kMaxActions];
+    size_t actions_count = 0;
+    actions[actions_count++] = (fdio_spawn_action_t){
+        .action = FDIO_SPAWN_ACTION_SET_NAME,
+        .name = { .data = name }
+    };
+    // TODO: eventually devhosts should not have vfs access
+    actions[actions_count++] = (fdio_spawn_action_t){
+        .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+        .ns = { .prefix = "/boot", .handle = fs_clone("boot").release() },
+    };
+    // TODO: constrain to /svc/device
+    actions[actions_count++] = (fdio_spawn_action_t){
+        .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+        .ns = { .prefix = "/svc", .handle = fs_clone("svc").release() },
+    };
+    actions[actions_count++] = (fdio_spawn_action_t){
+        .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+        .h = { .id = PA_HND(PA_USER0, 0), .handle = hrpc },
+    };
+    if (resource.is_valid()) {
+        actions[actions_count++] = (fdio_spawn_action_t){
+            .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+            .h = { .id = PA_HND(PA_RESOURCE, 0), .handle = resource.release() },
+        };
+    }
+    if (sysinfo_job_duplicate.is_valid()) {
+        actions[actions_count++] = (fdio_spawn_action_t){
+            .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+            .h = { .id = PA_HND(PA_USER0, kIdHJobRoot), .handle = sysinfo_job_duplicate.release() },
+        };
+    }
+
+    uint32_t spawn_flags = FDIO_SPAWN_CLONE_ENVIRON;
+    if (loader_connection.is_valid()) {
+        actions[actions_count++] = (fdio_spawn_action_t){
+            .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+            .h = { .id = PA_HND(PA_LDSVC_LOADER, 0), .handle = loader_connection.release() },
+        };
+    } else {
+        spawn_flags |= FDIO_SPAWN_DEFAULT_LDSVC;
+    }
+    ZX_ASSERT(actions_count <= kMaxActions);
+
+    zx::process proc;
+    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+    // Inherit devmgr's environment (including kernel cmdline)
+    const char* const argv[] = {
+        devhost_bin,
+        nullptr,
+    };
+    status = fdio_spawn_etc(devhost_job->get(), spawn_flags, argv[0], argv, nullptr,
+                            actions_count, actions, proc.reset_and_get_address(), err_msg);
+    if (status != ZX_OK) {
+        log(ERROR, "devcoord: launch devhost '%s': failed: %s: %s\n", name,
+            zx_status_get_string(status), err_msg);
         return status;
     }
-    host->set_proc(proc);
+
+    host->set_proc(std::move(proc));
 
     zx_info_handle_basic_t info;
     if (host->proc()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) ==

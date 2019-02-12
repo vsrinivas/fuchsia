@@ -54,7 +54,7 @@ public:
     zx_handle_t hrpc() const { return hrpc_; }
     void set_hrpc(zx_handle_t hrpc) { hrpc_ = hrpc; }
     zx::unowned_process proc() const { return zx::unowned_process(proc_); }
-    void set_proc(zx_handle_t proc) { proc_.reset(proc); }
+    void set_proc(zx::process proc) { proc_ = std::move(proc); }
     zx_koid_t koid() const { return koid_; }
     void set_koid(zx_koid_t koid) { koid_ = koid; }
     // Note: this is a non-const reference to make |= etc. ergonomic.
