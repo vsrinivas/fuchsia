@@ -29,6 +29,7 @@ const std::map<std::string, std::string> kServices = {
     {"fuchsia.ui.policy.Presenter2", "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"},
     {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
     {"fuchsia.vulkan.loader.Loader", "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"},
+    {"fuchsia.sysmem.Allocator2", "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"},
 };
 // clang-format on
 
