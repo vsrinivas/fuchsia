@@ -57,7 +57,12 @@ package("catapult_converter") {
     },
   ]
 
-  binary = "catapult_converter"
+  binaries = [
+    {
+      name = "catapult_converter"
+      shell = true
+    },
+  ]
 
   tests = [
     {

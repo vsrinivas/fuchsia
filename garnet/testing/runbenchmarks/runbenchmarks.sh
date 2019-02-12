@@ -117,7 +117,7 @@ runbench_exec() {
     # Convert the results file to a Catapult Histogram JSON file.
     local base_name="$(basename ${results_file} .json).catapult_json"
     local catapult_file="$(dirname ${results_file})/$base_name"
-    /pkgfs/packages/catapult_converter/0/bin/app \
+    /bin/catapult_converter \
         --input ${results_file} \
         --output ${catapult_file} \
         ${_catapult_converter_args}
