@@ -4,6 +4,7 @@
 
 pub(crate) use self::checksum::*;
 pub(crate) use self::options::*;
+pub(crate) use self::records::*;
 
 /// Whether `size` fits in a `u16`.
 pub(crate) fn fits_in_u16(size: usize) -> bool {
