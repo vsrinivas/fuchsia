@@ -30,8 +30,17 @@ class ArmIspDevice : public IspDeviceType,
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ArmIspDevice);
 
-    explicit ArmIspDevice(zx_device_t* parent)
-        : IspDeviceType(parent), pdev_(parent) {}
+    explicit ArmIspDevice(zx_device_t* parent,
+                          ddk ::MmioBuffer hiu_mmio,
+                          ddk ::MmioBuffer power_mmio,
+                          ddk ::MmioBuffer memory_pd_mmio,
+                          ddk ::MmioBuffer reset_mmio,
+                          ddk ::MmioBuffer isp_mmio,
+                          zx::interrupt isp_irq)
+        : IspDeviceType(parent), pdev_(parent),
+          hiu_mmio_(std::move(hiu_mmio)), power_mmio_(std::move(power_mmio)),
+          memory_pd_mmio_(std::move(memory_pd_mmio)), reset_mmio_(std::move(reset_mmio)),
+          isp_mmio_(std::move(isp_mmio)), isp_irq_(std::move(isp_irq)) {}
 
     ~ArmIspDevice();
 
@@ -46,20 +55,19 @@ public:
 
 private:
     void ShutDown();
-    zx_status_t InitPdev(zx_device_t* parent);
-
     void PowerUpIsp();
     void IspHWReset(bool reset);
     zx_status_t InitIsp();
     int IspIrqHandler();
 
-    std::optional<ddk::MmioBuffer> power_mmio_;
-    std::optional<ddk::MmioBuffer> memory_pd_mmio_;
-    std::optional<ddk::MmioBuffer> hiu_mmio_;
-    std::optional<ddk::MmioBuffer> reset_mmio_;
-    std::optional<ddk::MmioBuffer> isp_mmio_;
-
     ddk::PDev pdev_;
+
+    ddk::MmioBuffer hiu_mmio_;
+    ddk::MmioBuffer power_mmio_;
+    ddk::MmioBuffer memory_pd_mmio_;
+    ddk::MmioBuffer reset_mmio_;
+    ddk::MmioBuffer isp_mmio_;
+
     zx::interrupt isp_irq_;
     thrd_t irq_thread_;
     std::atomic<bool> running_;

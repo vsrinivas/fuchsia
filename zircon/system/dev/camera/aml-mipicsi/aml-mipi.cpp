@@ -38,13 +38,6 @@ constexpr uint32_t kClkEnableShift = 8;
 
 void AmlMipiDevice::InitMipiClock() {
     // clear existing values
-    hiu_mmio_->ClearBits32(kClkMuxMask, HHI_MIPI_ISP_CLK_CNTL);
-    // set the divisor = 1 (writing (1-1) to div field)
-    // source for the unused mux = S905D2_FCLK_DIV3   = 3 // 666.7 MHz
-    hiu_mmio_->SetBits32(((1 << kClkEnableShift) | 4 << 9),
-                         HHI_MIPI_ISP_CLK_CNTL);
-
-    // clear existing values
     hiu_mmio_->ClearBits32(kClkMuxMask, HHI_MIPI_CSI_PHY_CLK_CNTL);
     // set the divisor = 2 (writing (2-1) to div field)
     // source for the unused mux = S905D2_FCLK_DIV5   = 6 // 400 MHz

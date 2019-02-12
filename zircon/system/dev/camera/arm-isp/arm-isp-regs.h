@@ -19,6 +19,7 @@
 #define HHI_CSI_PHY_CNTL0 (0xD3 << 2)
 #define HHI_CSI_PHY_CNTL1 (0x114 << 2)
 
+#define HHI_MIPI_ISP_CLK_CNTL (0x70 << 2)
+
 // Reset
 #define RESET4_LEVEL 0x90
-

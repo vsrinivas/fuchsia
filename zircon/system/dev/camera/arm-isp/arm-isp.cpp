@@ -27,13 +27,17 @@ constexpr uint32_t kMemoryDomain = 2;
 constexpr uint32_t kReset = 3;
 constexpr uint32_t kIsp = 4;
 
+// CLK Shifts & Masks
+constexpr uint32_t kClkMuxMask = 0xfff;
+constexpr uint32_t kClkEnableShift = 8;
+
 } // namespace
 
 void ArmIspDevice::IspHWReset(bool reset) {
     if (reset) {
-        reset_mmio_->ClearBits32(1 << 1, RESET4_LEVEL);
+        reset_mmio_.ClearBits32(1 << 1, RESET4_LEVEL);
     } else {
-        reset_mmio_->SetBits32(1 << 1, RESET4_LEVEL);
+        reset_mmio_.SetBits32(1 << 1, RESET4_LEVEL);
     }
     // Reference code has a sleep in this path.
     // TODO(braval@) Double check to look into if
@@ -43,22 +47,30 @@ void ArmIspDevice::IspHWReset(bool reset) {
 
 void ArmIspDevice::PowerUpIsp() {
     // set bit[18-19]=0
-    power_mmio_->ClearBits32(1 << 18 | 1 << 19, AO_RTI_GEN_PWR_SLEEP0);
     // TODO(braval@) Double check to look into if
     // this sleep is really necessary.
+    power_mmio_.ClearBits32(1 << 18 | 1 << 19, AO_RTI_GEN_PWR_SLEEP0);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
 
     // set bit[18-19]=0
-    power_mmio_->ClearBits32(1 << 18 | 1 << 19, AO_RTI_GEN_PWR_ISO0);
+    power_mmio_.ClearBits32(1 << 18 | 1 << 19, AO_RTI_GEN_PWR_ISO0);
 
     // MEM_PD_REG0 set 0
-    memory_pd_mmio_->Write32(0, HHI_ISP_MEM_PD_REG0);
+    memory_pd_mmio_.Write32(0, HHI_ISP_MEM_PD_REG0);
     // MEM_PD_REG1 set 0
-    memory_pd_mmio_->Write32(0, HHI_ISP_MEM_PD_REG1);
+    memory_pd_mmio_.Write32(0, HHI_ISP_MEM_PD_REG1);
 
     // Refer to reference source code
-    hiu_mmio_->Write32(0x5b446585, HHI_CSI_PHY_CNTL0);
-    hiu_mmio_->Write32(0x803f4321, HHI_CSI_PHY_CNTL1);
+    hiu_mmio_.Write32(0x5b446585, HHI_CSI_PHY_CNTL0);
+    hiu_mmio_.Write32(0x803f4321, HHI_CSI_PHY_CNTL1);
+
+    // Setup Clocks.
+    // clear existing values
+    hiu_mmio_.ClearBits32(kClkMuxMask, HHI_MIPI_ISP_CLK_CNTL);
+    // set the divisor = 1 (writing (1-1) to div field)
+    // source for the unused mux = S905D2_FCLK_DIV3   = 3 // 666.7 MHz
+    hiu_mmio_.SetBits32(((1 << kClkEnableShift) | 4 << 9),
+                         HHI_MIPI_ISP_CLK_CNTL);
 }
 
 // Interrupt handler for the ISP.
@@ -104,62 +116,68 @@ zx_status_t ArmIspDevice::InitIsp() {
     return ZX_OK;
 }
 
-zx_status_t ArmIspDevice::InitPdev(zx_device_t* parent) {
-    if (!pdev_.is_valid()) {
+// static
+zx_status_t ArmIspDevice::Create(zx_device_t* parent) {
+
+    ddk::PDev pdev(parent);
+    if (!pdev.is_valid()) {
+        zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
         return ZX_ERR_NO_RESOURCES;
     }
-
-    zx_status_t status = pdev_.MapMmio(kHiu, &hiu_mmio_);
+    std::optional<ddk::MmioBuffer> hiu_mmio;
+    zx_status_t status = pdev.MapMmio(kHiu, &hiu_mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;
     }
 
-    status = pdev_.MapMmio(kPowerDomain, &power_mmio_);
+    std::optional<ddk::MmioBuffer> power_mmio;
+    status = pdev.MapMmio(kPowerDomain, &power_mmio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
+        return status;
+    }
+    std::optional<ddk::MmioBuffer> memory_pd_mmio;
+    status = pdev.MapMmio(kMemoryDomain, &memory_pd_mmio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
+        return status;
+    }
+    std::optional<ddk::MmioBuffer> reset_mmio;
+    status = pdev.MapMmio(kReset, &reset_mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;
     }
 
-    status = pdev_.MapMmio(kMemoryDomain, &memory_pd_mmio_);
+    std::optional<ddk::MmioBuffer> isp_mmio;
+    status = pdev.MapMmio(kIsp, &isp_mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;
     }
 
-    status = pdev_.MapMmio(kReset, &reset_mmio_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
-        return status;
-    }
-
-    status = pdev_.MapMmio(kIsp, &isp_mmio_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
-        return status;
-    }
-
-    status = pdev_.GetInterrupt(0, &isp_irq_);
+    zx::interrupt isp_irq;
+    status = pdev.GetInterrupt(0, &isp_irq);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_.GetInterrupt failed %d\n", __func__, status);
         return status;
     }
 
-    return status;
-}
-
-// static
-zx_status_t ArmIspDevice::Create(zx_device_t* parent) {
     fbl::AllocChecker ac;
-    auto isp_device = std::unique_ptr<ArmIspDevice>(new (&ac) ArmIspDevice(parent));
+    auto isp_device = std::unique_ptr<ArmIspDevice>(new (&ac) ArmIspDevice(
+        parent,
+        std::move(*hiu_mmio),
+        std::move(*power_mmio),
+        std::move(*memory_pd_mmio),
+        std::move(*reset_mmio),
+        std::move(*isp_mmio),
+        std::move(isp_irq)));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = isp_device->InitPdev(parent);
-    if (status != ZX_OK) {
-        return status;
-    }
+    isp_device->InitIsp();
 
     status = isp_device->DdkAdd("arm-isp");
     if (status != ZX_OK) {

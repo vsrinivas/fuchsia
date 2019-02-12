@@ -119,6 +119,5 @@
 #define MISC_BASE                           0x00005000
 
 // CLK offsets.
-#define HHI_MIPI_ISP_CLK_CNTL               (0x70 << 2)
-#define HHI_MIPI_CSI_PHY_CLK_CNTL           (0xD0 << 2)
+#define HHI_MIPI_CSI_PHY_CLK_CNTL (0xD0 << 2)
 
