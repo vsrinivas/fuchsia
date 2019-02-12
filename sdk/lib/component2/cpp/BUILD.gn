@@ -1,0 +1,72 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_source_set.gni")
+import("//build/package/component.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+sdk_source_set("cpp") {
+  category = "internal"
+
+  sdk_name = "component_cpp"
+
+  include_base = "//sdk"
+  sources = [
+    "startup_context.cc",
+    "startup_context.h",
+    "outgoing.cc",
+    "outgoing.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/vfs/cpp",
+    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+
+  public_configs = [ "//sdk/config" ]
+}
+
+test("component_cpp_unittests") {
+  sources = [
+    "outgoing_unittest.cc",
+    "startup_context_unittest.cc",
+  ]
+
+  deps = [
+    ":cpp",
+    "//garnet/examples/fidl/services:echo2",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
+  ]
+}
+
+fuchsia_test_component("component_cpp_unittests_component") {
+  deps = [
+    ":component_cpp_unittests",
+  ]
+  binary = "component_cpp_unittests"
+}
+
+# TODO(IN-933): Convert back to package
+test_package("component_cpp_tests") {
+  deps = [
+    ":component_cpp_unittests",
+  ]
+
+  tests = [
+    {
+      name = "component_cpp_unittests"
+    },
+  ]
+}

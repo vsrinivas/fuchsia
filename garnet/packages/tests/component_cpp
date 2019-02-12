@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//sdk/lib/component2/cpp:component_cpp_tests"
+    ]
+}
