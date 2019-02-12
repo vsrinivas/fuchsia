@@ -219,8 +219,9 @@ struct DevmgrArgs {
     // Use this driver as the sys_device driver.  If nullptr, the default will
     // be used.
     const char* sys_device_driver = nullptr;
-    // Select whether or not to launch svchost
-    bool launch_svchost = true;
+    // Select whether to launch a new svchost or to just use the system provided
+    // /svc directory.
+    bool use_system_svchost = false;
 };
 
 struct CoordinatorConfig {

@@ -60,6 +60,26 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
         }
     }
 
+    // Create a new client to /svc to maybe give to devmgr
+    zx::channel svc_client;
+    {
+        zx::channel svc_server;
+        status = zx::channel::create(0, &svc_client, &svc_server);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        fdio_ns_t* ns;
+        status = fdio_ns_get_installed(&ns);
+        if (status != ZX_OK) {
+            return status;
+        }
+        status = fdio_ns_connect(ns, "/svc", ZX_FS_RIGHT_READABLE, svc_server.release());
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+
     // Create channel to connect to devfs
     zx::channel devfs_client, devfs_server;
     status = zx::channel::create(0, &devfs_client, &devfs_server);
@@ -83,8 +103,8 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
         argv.push_back("--sys-device-driver");
         argv.push_back(args.sys_device_driver);
     }
-    if (!args.launch_svchost) {
-        argv.push_back("--no-launch-svchost");
+    if (args.use_system_svchost) {
+        argv.push_back("--use-system-svchost");
     }
     argv.push_back(nullptr);
 
@@ -105,6 +125,12 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
         .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
         .ns = { .prefix = "/boot", .handle = bootfs_client.release() },
     });
+    if (args.use_system_svchost) {
+        actions.push_back(fdio_spawn_action_t{
+            .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+                    .ns = { .prefix = "/svc", .handle = svc_client.release() },
+        });
+    }
     if (args.bootdata) {
         actions.push_back(fdio_spawn_action_t{
             .action = FDIO_SPAWN_ACTION_ADD_HANDLE,

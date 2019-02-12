@@ -347,12 +347,12 @@ zx_status_t fuchsia_create_job() {
 zx_status_t svchost_start(bool require_system) {
     printf("devmgr: svc init\n");
 
-    zx::channel dir_request;
+    zx::channel dir_request, svchost_local;
     zx::debuglog logger;
     zx::channel appmgr_svc_req;
     zx::channel appmgr_svc;
 
-    zx_status_t status = zx::channel::create(0, &dir_request, &g_handles.svchost_outgoing);
+    zx_status_t status = zx::channel::create(0, &dir_request, &svchost_local);
     if (status != ZX_OK) {
         return status;
     }
@@ -426,12 +426,21 @@ zx_status_t svchost_start(bool require_system) {
     launchpad_set_nametable(lp, count, nametable);
 
     const char* errmsg = nullptr;
-    if ((status = launchpad_go(lp, nullptr, &errmsg)) < 0) {
+    if ((status = launchpad_go(lp, nullptr, &errmsg)) != ZX_OK) {
         printf("devmgr: launchpad %s (%s) failed: %s: %d\n", argv[0], name, errmsg, status);
+        return status;
     } else {
         printf("devmgr: launch %s (%s) OK\n", argv[0], name);
     }
-    return ZX_OK;
+
+    zx::channel svchost_public_remote;
+    status = zx::channel::create(0, &svchost_public_remote, &g_handles.svchost_outgoing);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return fdio_service_connect_at(svchost_local.get(), "public",
+                                   svchost_public_remote.release());
 }
 
 void fshost_start(devmgr::Coordinator* coordinator) {
@@ -546,7 +555,7 @@ zx::channel bootfs_root_clone() {
     return boot;
 }
 
-void devmgr_vfs_init(devmgr::Coordinator* coordinator) {
+void devmgr_vfs_init(devmgr::Coordinator* coordinator, bool needs_svc_mount) {
     printf("devmgr: vfs init\n");
 
     fdio_ns_t* ns;
@@ -556,6 +565,12 @@ void devmgr_vfs_init(devmgr::Coordinator* coordinator) {
     r = fdio_ns_bind(ns, "/dev", devmgr::fs_clone("dev").release());
     ZX_ASSERT_MSG(r == ZX_OK, "devmgr: cannot bind /dev to namespace: %s\n",
                   zx_status_get_string(r));
+
+    if (needs_svc_mount) {
+        r = fdio_ns_bind(ns, "/svc", devmgr::fs_clone("svc").release());
+        ZX_ASSERT_MSG(r == ZX_OK, "devmgr: cannot bind /svc to namespace: %s\n",
+                      zx_status_get_string(r));
+    }
 
     // Start fshost before binding /system, since it publishes it.
     fshost_start(coordinator);
@@ -687,13 +702,13 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
         kDriverSearchPath,
         kLoadDriver,
         kSysDeviceDriver,
-        kNoLaunchSvchost,
+        kUseSystemSvchost,
     };
     option options[] = {
         {"driver-search-path", required_argument, nullptr, kDriverSearchPath},
         {"load-driver", required_argument, nullptr, kLoadDriver},
         {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
-        {"no-launch-svchost", no_argument, nullptr, kNoLaunchSvchost},
+        {"use-system-svchost", no_argument, nullptr, kUseSystemSvchost},
     };
 
     auto print_usage_and_exit = [options]() {
@@ -727,8 +742,8 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
             check_not_duplicated(out->sys_device_driver);
             out->sys_device_driver = optarg;
             break;
-        case kNoLaunchSvchost:
-            out->launch_svchost = false;
+        case kUseSystemSvchost:
+            out->use_system_svchost = true;
             break;
         default:
             print_usage_and_exit();
@@ -786,7 +801,7 @@ zx::channel fs_clone(const char* path) {
     } else if (!strcmp(path, "svc")) {
         flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
         fs = zx::unowned_channel(g_handles.svchost_outgoing);
-        path = "public";
+        path = ".";
     } else if (!strncmp(path, "dev/", 4)) {
         fs = devfs_root_borrow();
         path += 4;
@@ -884,7 +899,19 @@ int main(int argc, char** argv) {
 
     zx::channel::create(0, &g_handles.appmgr_client, &g_handles.appmgr_server);
 
-    if (args.launch_svchost) {
+    if (args.use_system_svchost) {
+        zx::channel dir_request;
+        zx_status_t status = zx::channel::create(0, &dir_request, &g_handles.svchost_outgoing);
+        if (status != ZX_OK) {
+            fprintf(stderr, "devmgr: failed to create svchost_outgoing channel\n");
+            return 1;
+        }
+        status = fdio_service_connect("/svc", dir_request.release());
+        if (status != ZX_OK) {
+            fprintf(stderr, "devmgr: failed to connect to /svc\n");
+            return 1;
+        }
+    } else {
         status = svchost_start(require_system);
         if (status != ZX_OK) {
             fprintf(stderr, "devmgr: failed to start svchost: %d", status);
@@ -892,7 +919,8 @@ int main(int argc, char** argv) {
         }
     }
 
-    devmgr_vfs_init(&coordinator);
+    const bool needs_svc_mount = !args.use_system_svchost;
+    devmgr_vfs_init(&coordinator, needs_svc_mount);
 
     // If this is not a full Fuchsia build, do not setup appmgr services, as
     // this will delay startup.

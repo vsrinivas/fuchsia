@@ -23,7 +23,7 @@ devmgr_launcher::Args IsolatedDevmgr::DefaultArgs() {
     args.sys_device_driver = kSysdevDriver;
     args.load_drivers.push_back("/boot/driver/test.so");
     args.driver_search_paths.push_back("/boot/driver/test");
-    args.launch_svchost = false;
+    args.use_system_svchost = true;
     return args;
 }
 

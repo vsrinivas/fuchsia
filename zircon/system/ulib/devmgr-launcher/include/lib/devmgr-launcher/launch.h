@@ -32,8 +32,8 @@ struct Args {
     // If valid, the FD to give to devmgr as stdin/stdout/stderr.  Otherwise
     // inherits from the caller of Launch().
     fbl::unique_fd stdio;
-    // Select whether or not to launch svchost
-    bool launch_svchost = true;
+    // Select whether to use the system svchost or to launch a new one
+    bool use_system_svchost = false;
 };
 
 // Launches an isolated devmgr, passing the given |args| to it.
