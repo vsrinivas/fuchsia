@@ -94,7 +94,7 @@ int worker_rw(worker_t* w, bool do_read) {
         xfer = 3000 + (rand32(&w->rops) % (xfer - 3000));
     }
 
-    int r;
+    ssize_t r;
     if (do_read) {
         uint8_t buffer[FBUFSIZE];
         if ((r = emu_read(w->fd, buffer, xfer)) < 0) {
