@@ -6,6 +6,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/host.gni")
+import("//build/images/manifest.gni")
 import("//build/package.gni")
 import("//third_party/cobalt_config/metrics_registry.gni")
 
@@ -42,9 +43,23 @@ metrics_registry("cobalt_sw_delivery_registry") {
   use_target_name = true
 }
 
+# Include install-disk-image in the build, which comes from Zircon
+generate_manifest("install-disk-image.manifest") {
+  visibility = [ ":*" ]
+  args = []
+  foreach(pattern, ["bin/install-disk-image"]) {
+    args += [ "--binary=" + pattern ]
+  }
+}
+manifest_outputs = get_target_outputs(":install-disk-image.manifest")
+manifest_file = manifest_outputs[0]
+
 package("amber") {
+  extra = [ manifest_file ]
+
   deps = [
     ":cobalt_sw_delivery_registry",
+    ":install-disk-image.manifest",
     "//garnet/go/src/grand_unified_binary",
   ]
 

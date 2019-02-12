@@ -142,7 +142,7 @@ func fetchPackage(p *Package, amber *amber.ControlInterface) error {
 	return nil
 }
 
-var diskImagerPath = filepath.Join("/boot", "bin", "install-disk-image")
+var diskImagerPath = filepath.Join("/pkg", "bin", "install-disk-image")
 
 func WriteImgs(imgs []string, imgsPath string) error {
 	logger.Infof("Writing images %+v from %q", imgs, imgsPath)
