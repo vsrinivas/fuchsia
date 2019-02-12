@@ -24,7 +24,6 @@
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/user_provider_impl.h"
 #include "peridot/lib/common/async_holder.h"
-#include "peridot/lib/common/names.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/clone.h"
@@ -39,6 +38,21 @@ constexpr bool kAutoLoginToGuest = true;
 #else
 constexpr bool kAutoLoginToGuest = false;
 #endif
+
+// The service name of the Presentation service that is routed between
+// BaseShell and SessionShell. The same service exchange between SessionShell
+// and StoryShell uses the SessionShellPresentationProvider service, which is
+// discoverable.
+// NOTE: This is defined in user_controller_impl.cc as well.
+// TODO(SCN-595): mozart.Presentation is being renamed to ui.Presenter.
+constexpr char kPresentationService[] = "mozart.Presentation";
+
+// TODO(MF-134): This key is duplicated in
+// topaz/lib/settings/lib/device_info.dart. Remove this key once factory reset
+// is provided to topaz as a service.
+// The key for factory reset toggles.
+constexpr char kFactoryResetKey[] = "FactoryReset";
+
 }  // namespace
 
 BasemgrImpl::BasemgrImpl(

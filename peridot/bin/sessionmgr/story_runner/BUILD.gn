@@ -51,7 +51,6 @@ source_set("story_runner") {
     "//peridot/bin/sessionmgr:component_context",
     "//peridot/bin/sessionmgr:focus",
     "//peridot/bin/sessionmgr:presentation_provider",
-    "//peridot/lib/common:names",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/fidl:array_to_string",

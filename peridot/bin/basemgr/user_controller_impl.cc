@@ -10,11 +10,20 @@
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 
 #include "peridot/lib/common/async_holder.h"
-#include "peridot/lib/common/names.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
 
 namespace modular {
+
+namespace {
+// The service name of the Presentation service that is routed between
+// BaseShell and SessionShell. The same service exchange between SessionShell
+// and StoryShell uses the SessionShellPresentationProvider service, which is
+// discoverable.
+// NOTE: This is defined in basemgr_impl.cc as well.
+// TODO(SCN-595): mozart.Presentation is being renamed to ui.Presenter.
+constexpr char kPresentationService[] = "mozart.Presentation";
+}
 
 UserControllerImpl::UserControllerImpl(
     fuchsia::sys::Launcher* const launcher,

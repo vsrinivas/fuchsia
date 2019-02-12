@@ -20,7 +20,6 @@
 #include <lib/fxl/tasks/task_runner.h>
 #include <lib/fxl/time/time_delta.h>
 
-#include "peridot/lib/common/names.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_main.h"

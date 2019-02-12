@@ -43,7 +43,6 @@ executable_package("modular_benchmark_story_session_shell") {
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/lib/common:names",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_main",

@@ -25,7 +25,6 @@
 #include <lib/fxl/macros.h>
 #include <zx/eventpair.h>
 
-#include "peridot/lib/common/names.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
 #include "peridot/lib/rapidjson/rapidjson.h"

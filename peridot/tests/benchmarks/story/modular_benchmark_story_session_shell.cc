@@ -21,7 +21,6 @@
 #include <trace/event.h>
 #include <trace/observer.h>
 
-#include "peridot/lib/common/names.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/testing/component_main.h"
 #include "peridot/lib/testing/session_shell_impl.h"
@@ -32,6 +31,7 @@
 namespace {
 
 const char kStoryNamePrefix[] = "story-";
+const char kRootModuleName[] = "root";
 
 class Settings {
  public:
@@ -222,7 +222,7 @@ class TestApp : public modular::ViewApp {
 
     fuchsia::modular::LinkPath link_path = fuchsia::modular::LinkPath();
     std::vector<std::string> root_module_path;
-    root_module_path.push_back(modular::kRootModuleName);
+    root_module_path.push_back(kRootModuleName);
     link_path.module_path = std::move(root_module_path);
     link_path.link_name = nullptr;
     story_controller_->GetLink(std::move(link_path), link_.NewRequest());

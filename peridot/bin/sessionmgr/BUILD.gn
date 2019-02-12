@@ -46,7 +46,6 @@ executable_package("sessionmgr") {
     "//peridot/bin/sessionmgr/storage:constants_and_utils",
     "//peridot/bin/sessionmgr/story_runner",
     "//peridot/lib/common:async_holder",
-    "//peridot/lib/common:names",
     "//peridot/lib/common:teardown",
     "//peridot/lib/common:xdr",
     "//peridot/lib/device_info",
@@ -106,7 +105,6 @@ executable_package("dev_session_shell") {
   deps = [
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//peridot/lib/common:names",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",

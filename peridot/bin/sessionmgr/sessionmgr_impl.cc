@@ -36,7 +36,6 @@
 #include "peridot/bin/sessionmgr/storage/session_storage.h"
 #include "peridot/bin/sessionmgr/story_runner/link_impl.h"
 #include "peridot/bin/sessionmgr/story_runner/story_provider_impl.h"
-#include "peridot/lib/common/names.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/common/xdr.h"
 #include "peridot/lib/device_info/device_info.h"

@@ -5,7 +5,6 @@
 source_set("common") {
   deps = [
     ":async_holder",
-    ":names",
     ":story_provider_watcher_base",
     ":teardown",
   ]
@@ -20,12 +19,6 @@ source_set("async_holder") {
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-  ]
-}
-
-source_set("names") {
-  sources = [
-    "names.h",
   ]
 }
 

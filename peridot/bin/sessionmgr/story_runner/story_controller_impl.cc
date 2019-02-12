@@ -47,7 +47,6 @@
 #include "peridot/bin/sessionmgr/story_runner/ongoing_activity_impl.h"
 #include "peridot/bin/sessionmgr/story_runner/story_provider_impl.h"
 #include "peridot/bin/sessionmgr/story_runner/story_shell_context_impl.h"
-#include "peridot/lib/common/names.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
