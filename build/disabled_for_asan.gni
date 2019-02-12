@@ -8,9 +8,6 @@ disabled_for_asan = [
   # ES-180
   "/pkgfs/packages/escher_tests/0/test/escher_unittests",
 
-  # DNO-409
-  "/pkgfs/packages/garnet_lib_tests/0/test/garnet_lib_unittests",
-
   # CF-586
   "/pkgfs/packages/iquery_golden_test/0/test/iquery_golden_test",
 

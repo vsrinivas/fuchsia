@@ -49,8 +49,8 @@ TEST(EnsureCalled, DestructorCall) {
 }
 
 TEST(EnsureCalled, MoveAssign) {
-  bool called_internal;
-  bool called_external;
+  bool called_internal = false;
+  bool called_external = false;
 
   auto make_callback = [](bool* called) {
     return [called]() { *called = true; };
