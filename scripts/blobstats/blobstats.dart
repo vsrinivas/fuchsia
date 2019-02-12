@@ -11,11 +11,13 @@ import 'package:args/args.dart';
 ArgResults argResults;
 const lz4Compression = "lz4-compression";
 const zstdCompression = "zstd-compression";
+const humanReadable = "human-readable";
 const output = "output";
 
 class Blob {
   String hash;
   String sourcePath = "Unknown";
+  String buildPath;
   int size;
   int sizeOnHost;
   int estimatedCompressedSize;
@@ -31,12 +33,19 @@ class Blob {
 }
 
 class Package {
+  String path;
   String name;
   int size;
   int proportional;
   int private;
   int blobCount;
   Map<String, Blob> blobsByPath;
+}
+
+class DartPackage {
+  String name;
+  Map<Blob, List<String>> blobs = new Map<Blob, List<String>>();
+  DartPackage(this.name);
 }
 
 String pathJoin(String part1, String part2, [String part3]) {
@@ -49,6 +58,25 @@ String pathJoin(String part1, String part2, [String part3]) {
     buffer.write(part3);
   }
   return buffer.toString();
+}
+
+String removeSuffix(String s, String suffix) {
+  if (s.endsWith(suffix)) {
+    return s.substring(0, s.length - suffix.length);
+  }
+  return s;
+}
+
+String formatSize(num size) {
+  if (!argResults[humanReadable]) return "${size}";
+
+  if (size < 1024) return "${size}";
+  size /= 1024;
+  if (size < 1024) return "${size.toStringAsFixed(1)}K";
+  size /= 1024.0;
+  if (size < 1024) return "${size.toStringAsFixed(1)}M";
+  size /= 1024;
+  return "${size.toStringAsFixed(1)}G";
 }
 
 class BlobStats {
@@ -91,6 +119,7 @@ class BlobStats {
       if (blob == null) {
         var blob = new Blob();
         blob.hash = hash;
+        blob.buildPath = path;
         blob.sizeOnHost = stat.size;
         blob.estimatedCompressedSize =
             await estimateCompressedBlobSize(stat.size, hash, path);
@@ -147,24 +176,26 @@ class BlobStats {
       var parts = line.split("=");
       var hash = parts[0];
       var blob = blobsByHash[hash];
-      blob.size = int.parse(parts[1]);
+      if (blob != null) {
+        blob.size = int.parse(parts[1]);
+      }
     }
   }
 
   void printBlobList(List<Blob> blobs, int limit) {
-    print("     Size Share      Prop     Saved Hash");
+    print("     Size Share      Prop     Saved Path");
     var n = 0;
     for (var blob in blobs) {
       if (n++ > limit) return;
 
       var sb = new StringBuffer();
-      sb.write(blob.size.toString().padLeft(9));
+      sb.write(formatSize(blob.size).padLeft(9));
       sb.write(" ");
       sb.write(blob.count.toString().padLeft(5));
       sb.write(" ");
-      sb.write(blob.proportional.toString().padLeft(9));
+      sb.write(formatSize(blob.proportional).padLeft(9));
       sb.write(" ");
-      sb.write(blob.saved.toString().padLeft(9));
+      sb.write(formatSize(blob.saved).padLeft(9));
       sb.write(" ");
       sb.write(blob.sourcePath);
       print(sb);
@@ -188,12 +219,13 @@ class BlobStats {
     print("Top deduplicated blobs by saved ($limit of ${blobs.length})");
     blobs.sort((a, b) => b.saved.compareTo(a.saved));
     printBlobList(blobs, limit);
+  }
 
+  void printOverallSavings() {
     var percent = (duplicatedSize - deduplicatedSize) * 100 ~/ duplicatedSize;
-
     print("");
     print("Total savings from deduplication:");
-    print("   $percent% $deduplicatedSize / $duplicatedSize");
+    print("   $percent% ${formatSize(deduplicatedSize)} / ${formatSize(duplicatedSize)}");
   }
 
   String metaFarToBlobsJson(String farPath) {
@@ -204,8 +236,7 @@ class BlobStats {
     if (!farPath.endsWith(".meta/meta.far")) {
       throw "Build details have changed";
     }
-    return farPath.substring(0, farPath.length - "meta.far".length) +
-        "blobs.json";
+    return removeSuffix(farPath, "meta.far") + "blobs.json";
   }
 
   Future computePackagesInParallel(int jobs) async {
@@ -221,7 +252,9 @@ class BlobStats {
       File far = pendingPackages.removeLast();
 
       var package = new Package();
-      package.name = far.path.substring(buildDir.path.length);
+      package.path = far.path.substring(buildDir.path.length);
+      var parts = package.path.split("/");
+      package.name = removeSuffix(parts.length > 1 ? parts[parts.length - 2] : parts.last, ".meta");
       package.size = 0;
       package.proportional = 0;
       package.private = 0;
@@ -295,14 +328,14 @@ class BlobStats {
     packages.sort((a, b) => b.proportional.compareTo(a.proportional));
     print("");
     print("Packages by proportional (${packages.length})");
-    print("     Size      Prop   Private Path");
+    print("     Size      Prop   Private Name");
     for (var package in packages) {
       var sb = new StringBuffer();
-      sb.write(package.size.toString().padLeft(9));
+      sb.write(formatSize(package.size).padLeft(9));
       sb.write(" ");
-      sb.write(package.proportional.toString().padLeft(9));
+      sb.write(formatSize(package.proportional).padLeft(9));
       sb.write(" ");
-      sb.write(package.private.toString().padLeft(9));
+      sb.write(formatSize(package.private).padLeft(9));
       sb.write(" ");
       sb.write(package.name);
       print(sb);
@@ -315,10 +348,8 @@ class BlobStats {
     rootTree["children"] = new List();
     rootTree["k"] = "p"; // kind=path
     for (var pkg in packages) {
-      var parts = pkg.name.split("/");
-      var pkgName = parts.length > 1 ? parts[parts.length - 2] : parts.last;
       var pkgTree = {};
-      pkgTree["n"] = pkgName;
+      pkgTree["n"] = pkg.name;
       pkgTree["children"] = new List();
       pkgTree["k"] = "p"; // kind=path
       rootTree["children"].add(pkgTree);
@@ -373,16 +404,75 @@ class BlobStats {
     print("  Wrote visualization to file://" +
         pathJoin(outputDir.path, "index.html"));
   }
+
+  void printDartPackages() async {
+    var dartPackagesMap = new Map<String, DartPackage>();
+    for (var fuchsiaPackage in packages) {
+      fuchsiaPackage.blobsByPath.forEach((path, blob) {
+        if (!path.endsWith(".dilp")) return;
+
+        var dartPackageName = removeSuffix(path.split('/').last, ".dilp");
+        if (dartPackageName == "main") return;
+
+        var dartPackage = dartPackagesMap
+            .putIfAbsent(dartPackageName,
+                         () => new DartPackage(dartPackageName));
+
+        dartPackage.blobs
+            .putIfAbsent(blob, () => new List<String>())
+            .add(fuchsiaPackage.name);
+      });
+    }
+
+    var dartPackagesList = dartPackagesMap.values.toList();
+    dartPackagesList.sort((a, b) => a.name.compareTo(b.name));
+    dartPackagesList.sort((a, b) => a.blobs.length.compareTo(b.blobs.length));
+
+    print("");
+    print("Dart packages:");
+    for (var dartPackage in dartPackagesList) {
+      print("package:${dartPackage.name} (${dartPackage.blobs.length} blobs)");
+      if (dartPackage.blobs.length == 1) {
+        continue;
+      }
+
+      for (var blob in dartPackage.blobs.keys) {
+        var fuchsiaPackages = dartPackage.blobs[blob];
+
+        var result = await Process.run(Platform.executable,
+            ["../../third_party/dart/pkg/vm/bin/list_libraries.dart",
+             blob.buildPath]);
+        if (result.exitCode != 0) {
+          print(result.stdout);
+          print(result.stderr);
+          throw "Failed to list libraries in kernel file";
+        }
+        var libraries = result.stdout.split('\n');
+        libraries.remove("");
+
+        print("  ${blob.hash} ${blob.buildPath}");
+        print("    ${fuchsiaPackages.join(' ')}");
+        for (var library in libraries) {
+          print("    $library");
+        }
+      }
+      print("");
+    }
+  }
 }
 
 Future main(List<String> args) async {
   final parser = new ArgParser()
-    ..addFlag("help", abbr: "h", help: "give this help")
+    ..addFlag("help", help: "give this help")
     ..addOption(output, abbr: "o", help: "Directory to output report to")
     ..addFlag(lz4Compression,
         abbr: "l", defaultsTo: false, help: "Use (lz4) compressed size")
     ..addFlag(zstdCompression,
-        abbr: "z", defaultsTo: false, help: "Use (zstd) compressed size");
+        abbr: "z", defaultsTo: false, help: "Use (zstd) compressed size")
+    ..addFlag(humanReadable, abbr: "h", defaultsTo: false,
+        help: "Print human readable sizes (e.g., 1K 2M 3G)")
+    ..addFlag("dart-packages",
+        defaultsTo: false, help: "Describe duplication of Dart packages");
 
   argResults = parser.parse(args);
   if (argResults["help"]) {
@@ -407,5 +497,9 @@ Future main(List<String> args) async {
   stats.computeStats();
   stats.printBlobs(40);
   stats.printPackages();
+  stats.printOverallSavings();
   await stats.packagesToChromiumBinarySizeTree();
+  if (argResults["dart-packages"]) {
+    await stats.printDartPackages();
+  }
 }
