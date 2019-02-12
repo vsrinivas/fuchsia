@@ -39,7 +39,7 @@ class KoidTable {
 
   ~KoidTable() {
     if (koids_ != &initial_buf_[0]) {
-      delete[] koids_;
+      free(koids_);
     }
   }
 
