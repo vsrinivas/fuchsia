@@ -268,6 +268,27 @@ bool Thread::ResumeFromException() {
   return true;
 }
 
+bool Thread::ResumeAfterSoftwareBreakpointInstruction() {
+  FXL_DCHECK(state() == State::kInException);
+  if (!registers_->RefreshGeneralRegisters()) {
+    return false;
+  }
+  zx_vaddr_t pc = registers_->GetPC();
+  zx_vaddr_t new_pc = debugger_utils::IncrementPcAfterBreak(pc);
+  FXL_VLOG(2) << "Changing pc 0x" << std::hex << pc << " -> 0x" << new_pc;
+  int pc_regno = GetPCRegisterNumber();
+  if (!registers_->SetRegister(pc_regno, &new_pc, sizeof(new_pc))) {
+    return false;
+  }
+  if (!registers_->WriteGeneralRegisters()) {
+    return false;
+  }
+  if (!ResumeFromException()) {
+    return false;
+  }
+  return true;
+}
+
 void Thread::ResumeForExit() {
   switch (state()) {
     case State::kNew:

@@ -53,7 +53,7 @@ class TryNextThreadTest : public TestServer {
 TEST_F(TryNextThreadTest, ResumeTryNextTest) {
   std::vector<std::string> argv{
     helper_program,
-    "trigger-sw-bkpt",
+    "trigger-sw-bkpt-with-handler",
   };
   ASSERT_TRUE(SetupInferior(argv));
 
@@ -160,6 +160,60 @@ class SuspendResumeThreadTest : public TestServer {
 TEST_F(SuspendResumeThreadTest, SuspendResumeTest) {
   std::vector<std::string> argv{
     helper_program,
+    "trigger-sw-bkpt-with-handler",
+  };
+  ASSERT_TRUE(SetupInferior(argv));
+
+  zx::channel our_channel, their_channel;
+  auto status = zx::channel::create(0, &our_channel, &their_channel);
+  ASSERT_EQ(status, ZX_OK);
+  EXPECT_TRUE(RunHelperProgram(std::move(their_channel)));
+
+  // The inferior is waiting for us to close our side of the channel.
+  our_channel.reset();
+
+  EXPECT_TRUE(Run());
+  EXPECT_TRUE(TestSuccessfulExit());
+  EXPECT_TRUE(got_sw_breakpoint());
+  EXPECT_FALSE(got_unexpected_exception());
+}
+
+class ResumeAfterSwBreakThreadTest : public TestServer {
+ public:
+  ResumeAfterSwBreakThreadTest() = default;
+
+  bool got_sw_breakpoint() const { return got_sw_breakpoint_; }
+  bool got_unexpected_exception() const { return got_unexpected_exception_; }
+  bool resume_after_break_succeeded() const {
+    return resume_after_break_succeeded_;
+  }
+
+  void OnArchitecturalException(
+      Process* process, Thread* thread, zx_excp_type_t type,
+      const zx_exception_context_t& context) {
+    FXL_LOG(INFO) << "Got exception 0x" << std::hex << type;
+    if (type == ZX_EXCP_SW_BREAKPOINT) {
+      got_sw_breakpoint_ = true;
+      resume_after_break_succeeded_ =
+          thread->ResumeAfterSoftwareBreakpointInstruction();
+    } else {
+      // We shouldn't get here, test has failed.
+      // Record the fact for the test, and terminate the inferior, we don't
+      // want the exception propagating to the system exception handler.
+      got_unexpected_exception_ = true;
+      zx_task_kill(process->handle());
+    }
+  }
+
+ private:
+  bool got_sw_breakpoint_ = false;
+  bool got_unexpected_exception_ = false;
+  bool resume_after_break_succeeded_ = false;
+};
+
+TEST_F(ResumeAfterSwBreakThreadTest, ResumeAfterSwBreakTest) {
+  std::vector<std::string> argv{
+    helper_program,
     "trigger-sw-bkpt",
   };
   ASSERT_TRUE(SetupInferior(argv));
@@ -174,6 +228,7 @@ TEST_F(SuspendResumeThreadTest, SuspendResumeTest) {
 
   EXPECT_TRUE(Run());
   EXPECT_TRUE(TestSuccessfulExit());
+  EXPECT_TRUE(resume_after_break_succeeded());
   EXPECT_TRUE(got_sw_breakpoint());
   EXPECT_FALSE(got_unexpected_exception());
 }

@@ -87,6 +87,13 @@ class Thread final {
   // The thread state on successful return is kRunning.
   bool ResumeFromException();
 
+  // Assuming the thread stopped at a s/w breakpoint instruction, advance the
+  // pc to after the instruction and resume.
+  // Note that this is not for resuming after a tool-introduced s/w breakpoint.
+  // This is for resuming after a s/w breakpoint instruction that is part of
+  // the program itself.
+  bool ResumeAfterSoftwareBreakpointInstruction();
+
   // Resumes the thread from an ZX_EXCP_THREAD_EXITING exception.
   // The thread state on entry must one of kNew, kInException, kExiting.
   // The thread state on return is kGone.

@@ -71,35 +71,44 @@ static int PerformWaitPeerClosed(zx_handle_t channel) {
   return 0;
 }
 
-static int TriggerSoftwareBreakpoint(zx_handle_t channel) {
+static int TriggerSoftwareBreakpoint(zx_handle_t channel, bool with_handler) {
   zx::port eport;
   zx_status_t status = zx::port::create(0, &eport);
   FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
 
-  zx::event event;
-  status = zx::event::create(0, &event);
-  FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
+  if (with_handler) {
+    zx::event event;
+    status = zx::event::create(0, &event);
+    FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
 
-  zx_handle_t self_thread = zx_thread_self();
-  std::thread exception_thread(
+    zx_handle_t self_thread = zx_thread_self();
+    std::thread exception_thread(
       &ExceptionHandlerThreadFunc, self_thread, &eport, &event);
 
-  // Don't trigger the s/w breakpoint until the exception loop is ready
-  // to handle it.
-  status = event.wait_one(ZX_EVENT_SIGNALED, zx::time::infinite(), nullptr);
-  FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
+    // Don't trigger the s/w breakpoint until the exception loop is ready
+    // to handle it.
+    status = event.wait_one(ZX_EVENT_SIGNALED, zx::time::infinite(), nullptr);
+    FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
 
-  debugger_utils::TriggerSoftwareBreakpoint();
+    debugger_utils::TriggerSoftwareBreakpoint();
 
-  WaitPeerClosed(channel);
+    WaitPeerClosed(channel);
 
-  // Tell the exception thread to exit.
-  zx_port_packet_t packet{};
-  status = eport.queue(&packet);
-  FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
-  exception_thread.join();
+    // Tell the exception thread to exit.
+    zx_port_packet_t packet{};
+    status = eport.queue(&packet);
+    FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
+    exception_thread.join();
 
-  printf("trigger-sw-bkpt complete\n");
+    printf("trigger-sw-bkpt-with-handler complete\n");
+  } else {
+    debugger_utils::TriggerSoftwareBreakpoint();
+
+    WaitPeerClosed(channel);
+
+    printf("trigger-sw-bkpt complete\n");
+  }
+
   return 0;
 }
 
@@ -121,7 +130,10 @@ int main(int argc, char* argv[]) {
       return PerformWaitPeerClosed(channel);
     }
     if (strcmp(cmd, "trigger-sw-bkpt") == 0) {
-      return TriggerSoftwareBreakpoint(channel);
+      return TriggerSoftwareBreakpoint(channel, false);
+    }
+    if (strcmp(cmd, "trigger-sw-bkpt-with-handler") == 0) {
+      return TriggerSoftwareBreakpoint(channel, true);
     }
     fprintf(stderr, "Unrecognized command: %s\n", cmd);
     return 1;
