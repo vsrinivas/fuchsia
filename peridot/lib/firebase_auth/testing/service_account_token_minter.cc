@@ -339,7 +339,7 @@ void ServiceAccountTokenMinter::ResolveCallbacks(const std::string& api_key,
   auto callbacks = std::move(in_progress_callbacks_[api_key]);
   in_progress_callbacks_[api_key].clear();
   for (const auto& callback : callbacks) {
-    callback(std::move(response));
+    callback(response);
   }
 }
 
