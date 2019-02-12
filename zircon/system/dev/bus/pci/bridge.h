@@ -36,9 +36,8 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Bridge);
 
     // UpstreamNode overrides
+    PciAllocator& mmio_regions() final { return mmio_regions_; }
     PciAllocator& pf_mmio_regions() final { return pf_mmio_regions_; }
-    PciAllocator& mmio_lo_regions() final { return mmio_lo_regions_; }
-    PciAllocator& mmio_hi_regions() final { return mmio_hi_regions_; }
     PciAllocator& pio_regions() final { return pio_regions_; }
 
     // Property accessors
@@ -65,9 +64,8 @@ private:
 
     zx_status_t ParseBusWindowsLocked() TA_REQ(dev_lock_);
 
+    PciRegionAllocator mmio_regions_;
     PciRegionAllocator pf_mmio_regions_;
-    PciRegionAllocator mmio_lo_regions_;
-    PciRegionAllocator mmio_hi_regions_;
     PciRegionAllocator pio_regions_;
 
     // TODO(cja): RegionAllocator::Region::UPtr pf_mmio_window_;

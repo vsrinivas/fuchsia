@@ -45,8 +45,7 @@ public:
     uint32_t managed_bus_id() const { return managed_bus_id_; }
 
     virtual PciAllocator& pf_mmio_regions() = 0;
-    virtual PciAllocator& mmio_lo_regions() = 0;
-    virtual PciAllocator& mmio_hi_regions() = 0;
+    virtual PciAllocator& mmio_regions() = 0;
     virtual PciAllocator& pio_regions() = 0;
 
     void LinkDevice(pci::Device* device) { downstream_.push_back(device); }
