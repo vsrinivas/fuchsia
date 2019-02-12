@@ -86,17 +86,6 @@ SysmemConnector::SysmemConnector(const char* sysmem_device_path)
 }
 
 zx_status_t SysmemConnector::Start() {
-    ZX_DEBUG_ASSERT(!sysmem_dir_fd_);
-    {
-        int fd = open(sysmem_device_path_, O_DIRECTORY | O_RDONLY);
-        if (fd < 0) {
-            printf("sysmem-connector: Failed to open %s: %d\n", sysmem_device_path_, errno);
-            return ZX_ERR_INTERNAL;
-        }
-        sysmem_dir_fd_.reset(fd);
-    }
-    ZX_DEBUG_ASSERT(sysmem_dir_fd_);
-
     // The process_queue_thrd_ is filled out before any code that checks it runs on the thread, because the current
     // thread is the only thread that triggers anything to happen on the thread being created here, and that is only
     // done after process_queue_thrd_ is filled out by the current thread.
@@ -189,6 +178,18 @@ zx_status_t SysmemConnector::DeviceAdded(int dirfd, int event, const char* filen
 zx_status_t SysmemConnector::ConnectToSysmemDriver() {
     ZX_DEBUG_ASSERT(thrd_current() == process_queue_thrd_);
     ZX_DEBUG_ASSERT(!driver_connector_client_);
+
+    ZX_DEBUG_ASSERT(!sysmem_dir_fd_);
+    {
+        int fd = open(sysmem_device_path_, O_DIRECTORY | O_RDONLY);
+        if (fd < 0) {
+            printf("sysmem-connector: Failed to open %s: %d\n", sysmem_device_path_, errno);
+            return ZX_ERR_INTERNAL;
+        }
+        sysmem_dir_fd_.reset(fd);
+    }
+    ZX_DEBUG_ASSERT(sysmem_dir_fd_);
+
     // Returns ZX_ERR_STOP as soon as one of the 000, 001 device instances is
     // found.  We rely on those to go away if the corresponding sysmem instance
     // is no longer operational, so that we don't find them when we call
