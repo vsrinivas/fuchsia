@@ -21,11 +21,11 @@ public:
     {protocol_name}Client(const {protocol_name_snake}_t* proto)
         : ops_(proto->ops), ctx_(proto->ctx) {{}}
 
-    void GetProto({protocol_name_snake}_t* proto) {{
+    void GetProto({protocol_name_snake}_t* proto) const {{
         proto->ctx = ctx_;
         proto->ops = ops_;
     }}
-    bool is_valid() {{
+    bool is_valid() const {{
         return ops_ != nullptr;
     }}
     void clear() {{

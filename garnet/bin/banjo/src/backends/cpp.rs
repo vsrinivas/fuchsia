@@ -88,15 +88,16 @@ fn ty_to_cpp_str(ast: &ast::BanjoAst, wrappers: bool, ty: &ast::Ty) -> Result<St
         ast::Ty::UInt64 => Ok(String::from("uint64_t")),
         ast::Ty::USize => Ok(String::from("size_t")),
         ast::Ty::Voidptr => Ok(String::from("void*")),
-        ast::Ty::Str { .. } => Ok(String::from("const char*")),
+        ast::Ty::Str { .. } => Ok(String::from("char*")),
+        ast::Ty::Array { ref ty, .. } => ty_to_cpp_str(ast, wrappers, ty),
         ast::Ty::Vector { ref ty, .. } => ty_to_cpp_str(ast, wrappers, ty),
         ast::Ty::Identifier { id, .. } => {
             if id.is_base_type() {
-                Ok(id.to_string())
+                Ok(format!("zx_{}_t", id.name()))
             } else {
                 match ast.id_to_type(id) {
                     ast::Ty::Struct | ast::Ty::Union | ast::Ty::Interface | ast::Ty::Enum => {
-                        return Ok(to_c_name(&id.to_string()) + "_t");
+                        return Ok(to_c_name(&id.name()) + "_t");
                     }
                     t => Err(format_err!("unknown ident type in ty_to_cpp_str {:?}", t)),
                 }
@@ -170,7 +171,7 @@ fn get_in_params(
                     match ast.id_to_type(id) {
                         ast::Ty::Interface => {
                             let ty_name = ty_to_cpp_str(ast, wrappers, ty).unwrap();
-                            if ty_name == "zx_status_t" {
+                            if id.is_base_type() {
                                 Ok(format!("{} {}", ty_name, to_c_name(name)))
                             } else if transform && not_callback(ast, id) {
                                 let ty_name = interface_to_ops_cpp_str(ast, ty).unwrap();
@@ -199,6 +200,20 @@ fn get_in_params(
                             Ok(format!("{} {}", ty_name, to_c_name(name)))
                         }
                     }
+                }
+                ast::Ty::Str { .. } => Ok(format!(
+                    "const {} {}",
+                    ty_to_cpp_str(ast, false, ty).unwrap(),
+                    to_c_name(name)
+                )),
+                ast::Ty::Array { size, .. } => {
+                    let ty = ty_to_cpp_str(ast, wrappers, ty).unwrap();
+                    Ok(format!(
+                        "const {ty} {name}[{size}]",
+                        size = size.0,
+                        ty = ty,
+                        name = to_c_name(name)
+                    ))
                 }
                 ast::Ty::Vector { .. } => {
                     let ty = ty_to_cpp_str(ast, wrappers, ty).unwrap();
@@ -246,10 +261,14 @@ fn get_out_params(
         let ty_name = ty_to_cpp_str(ast, wrappers, ty).unwrap();
         match ty {
             ast::Ty::Interface => format!("const {}* {}", ty_name, to_c_name(name)),
-            ast::Ty::Identifier {..} => {
-                let star = if ty_name == "zx_status_t" { "" } else { "*" };
+            ast::Ty::Identifier { id, ..} => {
+                let star = if id.is_base_type() { "" } else { "*" };
                 format!("{}{}{} out_{}", ty_name, star, nullable, to_c_name(name))
             },
+            ast::Ty::Str {..} => {
+                format!("{}{} out_{name}, size_t {name}_capacity", ty_name, nullable,
+                        name=to_c_name(name))
+            }
             ast::Ty::Vector {..} => {
                 if ty.is_reference() {
                     format!("{ty}** out_{name}_{buffer}, size_t* {name}_{size}",
@@ -312,6 +331,9 @@ fn get_out_args(
             .skip(skip_amt)
             .map(|(name, ty)| match ty {
                 ast::Ty::Interface { .. } => format!("{}", to_c_name(name)),
+                ast::Ty::Str { .. } => {
+                    format!("out_{name}, {name}_capacity", name = to_c_name(name))
+                }
                 ast::Ty::Vector { .. } => {
                     let ty_name = ty_to_cpp_str(ast, false, ty).unwrap();
                     if ty.is_reference() {
@@ -497,7 +519,8 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
             .into_iter()
             .map(|m| {
                 format!(
-                    "        {c_name}_protocol_ops_.{c_name} = {protocol_name}{cpp_name};",
+                    "        {protocol_name_c}_protocol_ops_.{c_name} = {protocol_name}{cpp_name};",
+                    protocol_name_c = to_c_name(&name),
                     protocol_name = to_cpp_name(&name),
                     c_name = to_c_name(&m.name),
                     cpp_name = to_cpp_name(&m.name)
@@ -509,6 +532,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
         Ok(format!(
             include_str!("templates/cpp/base_protocol.h"),
             assignments = assignments,
+            protocol_name = to_c_name(name),
             protocol_name_uppercase = to_c_name(name).to_uppercase(),
         )
         .trim_end()
@@ -621,7 +645,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
                 accum.push_str(
                     format!(
-                        "    {return_param} {function_name}({params}) {{\n",
+                        "    {return_param} {function_name}({params}) const {{\n",
                         return_param = return_param,
                         params = params,
                         function_name = to_cpp_name(m.name.as_str())
@@ -717,6 +741,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                 Ok(format!(
                     include_str!("templates/cpp/protocol.h"),
                     protocol_name = to_cpp_name(name),
+                    protocol_name_uppercase = to_c_name(name).to_uppercase(),
                     protocol_name_snake = to_c_name(name).as_str(),
                     protocol_docs = get_doc_comment(attributes, 0),
                     constructor_definition =
@@ -731,6 +756,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
     fn codegen_includes(&self, ast: &BanjoAst) -> Result<String, Error> {
         let mut includes = vec![
+            "ddk/driver".to_string(),
             "ddktl/device-internal".to_string(),
             "zircon/assert".to_string(),
             "zircon/compiler".to_string(),
@@ -816,7 +842,6 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                     include_str!("templates/cpp/example.h"),
                     protocol_name = to_cpp_name(name),
                     protocol_name_snake = to_c_name(name),
-                    protocol_name_lisp = to_c_name(name).replace('_', "-"),
                     protocol_name_uppercase = to_c_name(name).to_uppercase(),
                     example_decls = example_decls
                 ))
@@ -833,7 +858,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CppBackend<'a, W> {
             include_str!("templates/cpp/header.h"),
             includes = self.codegen_includes(&ast)?,
             examples = self.codegen_examples(namespace, &ast)?,
-            namespace = &ast.primary_namespace.replace('.', "-").as_str(),
+            namespace = &ast.primary_namespace,
             primary_namespace = to_c_name(&ast.primary_namespace).as_str()
         ))?;
 

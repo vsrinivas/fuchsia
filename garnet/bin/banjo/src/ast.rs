@@ -212,8 +212,8 @@ impl fmt::Display for Ty {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Ty::UInt32 => write!(f, "UInt32"),
-            Ty::Identifier {..} => write!(f, "<Ident>"),
-            _ => Err(fmt::Error)
+            Ty::Identifier { .. } => write!(f, "<Ident>"),
+            _ => Err(fmt::Error),
         }
     }
 }
@@ -223,7 +223,7 @@ impl Ty {
         match self {
             Ty::Identifier { id, .. } => {
                 if id.is_base_type() {
-                    return true
+                    return true;
                 } else {
                     let resolved_type = ast.id_to_type(id);
                     return resolved_type.is_primitive(&ast);
@@ -587,7 +587,7 @@ impl BanjoAst {
 
         let namespace = match ns {
             Some(ref n) => n,
-            None => &self.primary_namespace
+            None => &self.primary_namespace,
         };
 
         for decl in self.namespaces[namespace].iter() {

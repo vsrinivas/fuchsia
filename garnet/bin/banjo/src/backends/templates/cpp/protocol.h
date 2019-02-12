@@ -21,11 +21,22 @@ public:
     {protocol_name}ProtocolClient(const {protocol_name_snake}_protocol_t* proto)
         : ops_(proto->ops), ctx_(proto->ctx) {{}}
 
-    void GetProto({protocol_name_snake}_protocol_t* proto) {{
+    {protocol_name}ProtocolClient(zx_device_t* parent) {{
+        {protocol_name_snake}_protocol_t proto;
+        if (device_get_protocol(parent, ZX_PROTOCOL_{protocol_name_uppercase}, &proto) == ZX_OK) {{
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        }} else {{
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }}
+    }}
+
+    void GetProto({protocol_name_snake}_protocol_t* proto) const {{
         proto->ctx = ctx_;
         proto->ops = ops_;
     }}
-    bool is_valid() {{
+    bool is_valid() const {{
         return ops_ != nullptr;
     }}
     void clear() {{

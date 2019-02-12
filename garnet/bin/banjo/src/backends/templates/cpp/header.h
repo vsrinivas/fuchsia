@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-//          MODIFY system/banjo/{namespace}/{primary_namespace}.banjo INSTEAD.
+// Generated from the {namespace} banjo file
 
 #pragma once
 
