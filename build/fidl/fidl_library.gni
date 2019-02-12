@@ -151,6 +151,11 @@ template("fidl_library") {
                              "visibility",
                            ])
 
+    # Metadata to allow us to query all FIDL IR files.
+    metadata = {
+      fidl_json = [ rebase_path(json_representation, root_build_dir) ]
+    }
+
     public_deps = [
       ":$compilation_target_name",
       ":$response_file_target_name",
