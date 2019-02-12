@@ -3,16 +3,15 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the {namespace} banjo file
+// Generated from the banjo.examples.empty banjo file
 
 #pragma once
 
-#include <{namespace_include}.h>
+#include <banjo/examples/empty.h>
 #include <type_traits>
 
-namespace ddk {{
-namespace internal {{
+namespace ddk {
+namespace internal {
 
-{protocol_static_asserts}
-}} // namespace internal
-}} // namespace ddk
+} // namespace internal
+} // namespace ddk

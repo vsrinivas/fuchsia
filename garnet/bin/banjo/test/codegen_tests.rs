@@ -55,23 +55,43 @@ mod cpp {
 }
 
 mod cpp_internal {
-    //use super::*;
+    use super::*;
 
-    //codegen_test!(empty, CppInternalBackend, ["banjo/empty.test.banjo"], "cpp/empty-internal.h");
-    //codegen_test!(example_4, CppInternalBackend, ["banjo/example-4.test.banjo"], "cpp/example-4-internal.h");
-    //codegen_test!(example_6, CppInternalBackend, ["banjo/example-6.test.banjo"], "cpp/example-6-internal.h");
-    //codegen_test!(example_7, CppInternalBackend, ["banjo/example-7.test.banjo"], "cpp/example-7-internal.h");
-    //codegen_test!(example_9, CppInternalBackend, ["banjo/example-9.test.banjo"], "cpp/example-9-internal.h");
-    //codegen_test!(
-    //    simple,
-    //    CppInternalBackend,
-    //    ["../zx.banjo", "banjo/simple.test.banjo"],
-    //    "cpp/simple-internal.h"
-    //);
-    //codegen_test!(
-    //    view,
-    //    CppInternalBackend,
-    //    ["banjo/point.test.banjo", "banjo/view.test.banjo"],
-    //    "cpp/view-internal.h"
-    //);
+    codegen_test!(empty, CppInternalBackend, ["banjo/empty.test.banjo"], "cpp/empty-internal.h");
+    codegen_test!(
+        example_4,
+        CppInternalBackend,
+        ["banjo/example-4.test.banjo"],
+        "cpp/example-4-internal.h"
+    );
+    codegen_test!(
+        example_6,
+        CppInternalBackend,
+        ["banjo/example-6.test.banjo"],
+        "cpp/example-6-internal.h"
+    );
+    codegen_test!(
+        example_7,
+        CppInternalBackend,
+        ["banjo/example-7.test.banjo"],
+        "cpp/example-7-internal.h"
+    );
+    codegen_test!(
+        example_9,
+        CppInternalBackend,
+        ["banjo/example-9.test.banjo"],
+        "cpp/example-9-internal.h"
+    );
+    codegen_test!(
+        simple,
+        CppInternalBackend,
+        ["../zx.banjo", "banjo/simple.test.banjo"],
+        "cpp/simple-internal.h"
+    );
+    codegen_test!(
+        view,
+        CppInternalBackend,
+        ["banjo/point.test.banjo", "banjo/view.test.banjo"],
+        "cpp/view-internal.h"
+    );
 }

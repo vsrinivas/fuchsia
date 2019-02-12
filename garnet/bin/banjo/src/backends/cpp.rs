@@ -488,9 +488,8 @@ impl<'a, W: io::Write> Backend<'a, W> for CppInternalBackend<'a, W> {
         self.w.write_fmt(format_args!(
             include_str!("templates/cpp/internal.h"),
             protocol_static_asserts = self.codegen_protocol(&ast)?,
-            namespace = &ast.primary_namespace.replace('.', "-").as_str(),
+            namespace = &ast.primary_namespace,
             namespace_include = namespace_include,
-            primary_namespace = to_c_name(&ast.primary_namespace).as_str()
         ))?;
 
         Ok(())
