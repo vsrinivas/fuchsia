@@ -337,6 +337,35 @@ TEST_F(LedgerManagerTest, OnEmptyCalled) {
   EXPECT_TRUE(on_empty_called);
 }
 
+// Verifies that the LedgerManager does not call its callback while a page is
+// being deleted.
+TEST_F(LedgerManagerTest, NonEmptyDuringDeletion) {
+  bool on_empty_called;
+  ledger_manager_->set_on_empty(callback::SetWhenCalled(&on_empty_called));
+
+  PageId id = RandomId();
+  bool delete_page_called;
+  Status delete_page_status;
+  ledger_manager_->DeletePageStorage(
+      id.id, callback::Capture(callback::SetWhenCalled(&delete_page_called),
+                               &delete_page_status));
+
+  // Empty the Ledger manager.
+  ledger_.Unbind();
+  ledger_debug_.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_called);
+
+  // Complete the deletion successfully.
+  ASSERT_TRUE(storage_ptr->delete_page_storage_callback);
+  storage_ptr->delete_page_storage_callback(storage::Status::OK);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(delete_page_called);
+  EXPECT_EQ(Status::OK, delete_page_status);
+  EXPECT_TRUE(on_empty_called);
+}
+
 TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckNotFound) {
   bool called;
   Status status;

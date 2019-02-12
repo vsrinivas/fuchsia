@@ -109,9 +109,20 @@ class LedgerManager : public LedgerImpl::Delegate,
     void OnPageAvailable(convert::ExtendedStringView page_id,
                          fit::closure on_page_available);
 
+    // Checks whether there are no busy pages.
+    bool IsEmpty();
+
+    void set_on_empty(fit::closure on_empty_callback);
+
    private:
+    // Checks if the object is empty, if it is empty an an on_empty callback is
+    // set, calls it.
+    void CheckEmpty();
+
     // For each busy page, stores the list of pending callbacks.
     std::map<storage::PageId, std::vector<fit::closure>> busy_pages_;
+
+    fit::closure on_empty_callback_;
   };
 
   // Requests a PageStorage object for the given |container|. If the page is not

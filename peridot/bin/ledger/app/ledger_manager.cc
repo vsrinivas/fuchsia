@@ -173,6 +173,7 @@ void LedgerManager::PageAvailabilityManager::MarkPageAvailable(
     page_callback();
   }
   busy_pages_.erase(it);
+  CheckEmpty();
 }
 
 void LedgerManager::PageAvailabilityManager::OnPageAvailable(
@@ -184,6 +185,21 @@ void LedgerManager::PageAvailabilityManager::OnPageAvailable(
     return;
   }
   it->second.push_back(std::move(on_page_available));
+}
+
+void LedgerManager::PageAvailabilityManager::set_on_empty(
+    fit::closure on_empty_callback) {
+  on_empty_callback_ = std::move(on_empty_callback);
+}
+
+bool LedgerManager::PageAvailabilityManager::IsEmpty() {
+  return busy_pages_.empty();
+}
+
+void LedgerManager::PageAvailabilityManager::CheckEmpty() {
+  if (IsEmpty() && on_empty_callback_) {
+    on_empty_callback_();
+  }
 }
 
 // Container for a PageManager that keeps tracks of in-flight page requests and
@@ -405,6 +421,7 @@ LedgerManager::LedgerManager(
   bindings_.set_empty_set_handler([this] { CheckEmpty(); });
   page_managers_.set_on_empty([this] { CheckEmpty(); });
   ledger_debug_bindings_.set_empty_set_handler([this] { CheckEmpty(); });
+  page_availability_manager_.set_on_empty([this] { CheckEmpty(); });
 }
 
 LedgerManager::~LedgerManager() {}
@@ -450,6 +467,7 @@ void LedgerManager::DeletePageStorage(convert::ExtendedStringView page_id,
                    weak_factory_.GetWeakPtr(),
                    [this, page_id = page_id.ToString(),
                     callback = std::move(callback)](storage::Status status) {
+                     // This may destruct the |LedgerManager|.
                      page_availability_manager_.MarkPageAvailable(page_id);
                      callback(PageUtils::ConvertStatus(status));
                    }));
@@ -685,7 +703,8 @@ void LedgerManager::MaybeMarkPageOpened(storage::PageIdView page_id) {
 
 void LedgerManager::CheckEmpty() {
   if (on_empty_callback_ && bindings_.size() == 0 && page_managers_.empty() &&
-      ledger_debug_bindings_.size() == 0 && tracked_pages_ == 0) {
+      ledger_debug_bindings_.size() == 0 && tracked_pages_ == 0 &&
+      page_availability_manager_.IsEmpty()) {
     on_empty_callback_();
   }
 }
