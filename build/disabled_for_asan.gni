@@ -20,14 +20,6 @@ disabled_for_asan = [
   # MF-193
   "/pkgfs/packages/modular_tests/0/test/run_modular_tests.sh",
 
-  # MF-195
-  "/pkgfs/packages/puppet_master_unittests/0/test/add_mod_command_runner_unittest",
-  "/pkgfs/packages/puppet_master_unittests/0/test/dispatch_story_command_executor_unittest",
-  "/pkgfs/packages/puppet_master_unittests/0/test/puppet_master_impl_unittest",
-  "/pkgfs/packages/puppet_master_unittests/0/test/remove_mod_command_runner_unittest",
-  "/pkgfs/packages/puppet_master_unittests/0/test/set_kind_of_proto_story_option_command_runner_unittest",
-  "/pkgfs/packages/puppet_master_unittests/0/test/set_link_value_command_runner_unittest",
-
   # CF-585
   "/pkgfs/packages/run_tests/0/test/run_return_value_shell_test",
 
