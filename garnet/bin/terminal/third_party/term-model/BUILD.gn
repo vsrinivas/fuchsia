@@ -8,6 +8,7 @@ rustc_library("term-model") {
   name = "term_model"
   version = "0.1.0"
   edition = "2015"
+  with_unit_tests = true
 
   deps = [
     "//third_party/rust-crates/rustc_deps:base64",

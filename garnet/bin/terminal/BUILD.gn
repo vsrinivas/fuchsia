@@ -59,3 +59,15 @@ package("tiles_with_terminal_config") {
     },
   ]
 }
+
+package("terminal_tests") {
+  testonly = true
+  deps = [
+    "third_party/term-model"
+  ]
+  tests = [
+    {
+      name = "term_model_lib_test"
+    }
+  ]
+}

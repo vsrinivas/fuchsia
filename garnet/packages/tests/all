@@ -95,6 +95,7 @@
         "garnet/packages/tests/sysmgr",
         "garnet/packages/tests/system_monitor",
         "garnet/packages/tests/telephony",
+        "garnet/packages/tests/terminal",
         "garnet/packages/tests/tiles",
         "garnet/packages/tests/timezone",
         "garnet/packages/tests/tracing",
