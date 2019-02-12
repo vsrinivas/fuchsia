@@ -66,18 +66,8 @@ zx_status_t SpawnBinaryInRealmAsync(
     return ZX_ERR_INVALID_ARGS;
   }
   error->clear();
-  fdio_ns_t* ns = nullptr;
-  fdio_flat_namespace_t* flat_ns = nullptr;
-  auto cleanup = fit::defer([&]() {
-    if (ns != nullptr) {
-      fdio_ns_destroy(ns);
-    }
-    if (flat_ns != nullptr) {
-      fdio_ns_free_flat_ns(flat_ns);
-    }
-  });
-
   // Get the process's namespace.
+  fdio_ns_t* ns = nullptr;
   zx_status_t status = fdio_ns_get_installed(&ns);
   if (status != ZX_OK) {
     *error = "Could not obtain namespace";
@@ -129,11 +119,16 @@ zx_status_t SpawnBinaryInRealmAsync(
   }
 
   // Convert 'ns' to a flat namespace and replace /svc and /hub.
+  fdio_flat_namespace_t* flat_ns = nullptr;
   status = fdio_ns_export(ns, &flat_ns);
   if (status != ZX_OK) {
     *error = "Could not flatten namespace";
     return status;
   }
+  auto cleanup = fit::defer([&flat_ns]() {
+    fdio_ns_free_flat_ns(flat_ns);
+  });
+
   size_t action_count = flat_ns->count + additional_actions.size();
   fdio_spawn_action_t actions[action_count];
   for (size_t i = 0; i < flat_ns->count; ++i) {
