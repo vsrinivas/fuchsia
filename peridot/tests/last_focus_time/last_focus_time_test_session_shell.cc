@@ -12,7 +12,6 @@
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 
-#include "peridot/lib/common/story_provider_watcher_base.h"
 #include "peridot/lib/testing/component_main.h"
 #include "peridot/lib/testing/session_shell_base.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
@@ -29,16 +28,27 @@ constexpr char kStoryName[] = "story1";
 // A simple story provider watcher implementation. It confirms that it sees an
 // increase in the last_focus_time in the fuchsia::modular::StoryInfo it
 // receives, and pushes the test through to the next step.
-class StoryProviderWatcherImpl : public modular::StoryProviderWatcherBase {
+class StoryProviderWatcherImpl : public fuchsia::modular::StoryProviderWatcher {
  public:
-  StoryProviderWatcherImpl() = default;
+  StoryProviderWatcherImpl() : continue_([] {}), binding_(this) {}
   ~StoryProviderWatcherImpl() override = default;
+
+  void Continue(std::function<void()> at) { continue_ = std::move(at); }
+
+  void Watch(fuchsia::modular::StoryProvider* const story_provider) {
+    story_provider->Watch(binding_.NewBinding());
+  }
+
+  void Reset() { binding_.Unbind(); }
 
  private:
   TestPoint last_focus_time_created_{
       "StoryInfo::last_focus_time increased after create"};
   TestPoint last_focus_time_focused_{
       "StoryInfo::last_focus_time increased after focus"};
+
+  // |fuchsia::modular::StoryProviderWatcher|
+  void OnDelete(::std::string story_id) override {}
 
   // |fuchsia::modular::StoryProviderWatcher|
   void OnChange(
@@ -79,6 +89,9 @@ class StoryProviderWatcherImpl : public modular::StoryProviderWatcherBase {
 
   int change_count_{};
   int64_t last_focus_time_{-1};
+
+  std::function<void()> continue_;
+  fidl::Binding<fuchsia::modular::StoryProviderWatcher> binding_;
 };
 
 class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
