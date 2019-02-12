@@ -87,7 +87,6 @@ class RealmTest : public TestWithEnvironment {
 };
 
 constexpr char kRealm[] = "realmintegrationtest";
-const auto kTimeout = zx::sec(5);
 
 TEST_F(RealmTest, Resolve) {
   auto enclosing_environment =
@@ -123,7 +122,7 @@ TEST_F(RealmTest, Resolve) {
 
         ASSERT_EQ(expect, actual);
       });
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
+  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
 }
 
 TEST_F(RealmTest, LaunchNonExistentComponent) {
@@ -141,7 +140,7 @@ TEST_F(RealmTest, LaunchNonExistentComponent) {
         wait = true;
         EXPECT_EQ(reason, fuchsia::sys::TerminationReason::PACKAGE_NOT_FOUND);
       };
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
+  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
 
   // try to launch pkg url.
   auto controller2 =
@@ -153,7 +152,7 @@ TEST_F(RealmTest, LaunchNonExistentComponent) {
         wait = true;
         EXPECT_EQ(reason, fuchsia::sys::TerminationReason::PACKAGE_NOT_FOUND);
       };
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
+  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
 }
 
 // This test exercises the fact that two components should be in separate jobs,
@@ -182,8 +181,7 @@ TEST_F(RealmTest, CreateTwoKillOne) {
   fidl::StringPtr ret_msg = "";
   echo->EchoString(message,
                    [&](::fidl::StringPtr retval) { ret_msg = retval; });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return std::string(ret_msg) == message; }, kTimeout));
+  ASSERT_TRUE(RunLoopUntil([&] { return std::string(ret_msg) == message; }));
 
   // Kill one of the two components, make sure it's exited via Wait
   bool wait = false;
@@ -192,14 +190,13 @@ TEST_F(RealmTest, CreateTwoKillOne) {
         wait = true;
       };
   controller1->Kill();
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
+  EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
 
   // Make sure the second component is still running.
   ret_msg = "";
   echo->EchoString(message,
                    [&](::fidl::StringPtr retval) { ret_msg = retval; });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return std::string(ret_msg) == message; }, kTimeout));
+  ASSERT_TRUE(RunLoopUntil([&] { return std::string(ret_msg) == message; }));
 }
 
 TEST_F(RealmTest, KillRealmKillsComponent) {
@@ -220,18 +217,17 @@ TEST_F(RealmTest, KillRealmKillsComponent) {
   fidl::StringPtr ret_msg = "";
   echo->EchoString(message,
                    [&](::fidl::StringPtr retval) { ret_msg = retval; });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return std::string(ret_msg) == message; }, kTimeout));
+  ASSERT_TRUE(RunLoopUntil([&] { return std::string(ret_msg) == message; }));
 
   bool killed = false;
   echo.set_error_handler([&](zx_status_t status) { killed = true; });
   enclosing_environment->Kill();
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return enclosing_environment->is_running(); }, kTimeout));
+  EXPECT_TRUE(
+      RunLoopUntil([&] { return enclosing_environment->is_running(); }));
   // send a msg, without that error handler won't be called.
   echo->EchoString(message,
                    [&](::fidl::StringPtr retval) { ret_msg = retval; });
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return killed; }, kTimeout));
+  EXPECT_TRUE(RunLoopUntil([&] { return killed; }));
 }
 
 TEST_F(RealmTest, EnvironmentControllerRequired) {
@@ -243,8 +239,7 @@ TEST_F(RealmTest, EnvironmentControllerRequired) {
   zx_status_t env_status = ZX_OK;
   env.set_error_handler([&](zx_status_t status) { env_status = status; });
 
-  EXPECT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return env_status != ZX_OK; }, kTimeout));
+  EXPECT_TRUE(RunLoopUntil([&] { return env_status != ZX_OK; }));
 }
 
 TEST_F(RealmTest, EnvironmentLabelMustBeUnique) {
@@ -269,10 +264,9 @@ TEST_F(RealmTest, EnvironmentLabelMustBeUnique) {
       env.NewRequest(), env_controller.NewRequest(), kRealm, nullptr,
       fuchsia::sys::EnvironmentOptions{});
 
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return env_status == ZX_ERR_BAD_STATE; }, kTimeout));
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return env_controller_status == ZX_ERR_BAD_STATE; }, kTimeout));
+  EXPECT_TRUE(RunLoopUntil([&] { return env_status == ZX_ERR_BAD_STATE; }));
+  EXPECT_TRUE(
+      RunLoopUntil([&] { return env_controller_status == ZX_ERR_BAD_STATE; }));
 }
 
 using LabelAndValidity = std::tuple<std::string, bool>;
@@ -301,14 +295,12 @@ TEST_P(EnvironmentLabelTest, CheckLabelValidity) {
       /* additional_services = */ nullptr, fuchsia::sys::EnvironmentOptions{});
 
   if (label_valid) {
-    EXPECT_TRUE(
-        RunLoopWithTimeoutOrUntil([&] { return env_created; }, kTimeout));
+    EXPECT_TRUE(RunLoopUntil([&] { return env_created; }));
   } else {
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-        [&] { return env_status == ZX_ERR_INVALID_ARGS; }, kTimeout));
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-        [&] { return env_controller_status == ZX_ERR_INVALID_ARGS; },
-        kTimeout));
+    EXPECT_TRUE(
+        RunLoopUntil([&] { return env_status == ZX_ERR_INVALID_ARGS; }));
+    EXPECT_TRUE(RunLoopUntil(
+        [&] { return env_controller_status == ZX_ERR_INVALID_ARGS; }));
     EXPECT_FALSE(env_created);
   }
 }
@@ -353,8 +345,7 @@ class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
   }
 
   bool WaitForComponentLoad() {
-    return RunLoopWithTimeoutOrUntil([this] { return !component_url_.empty(); },
-                                     kTimeout);
+    return RunLoopUntil([this] { return !component_url_.empty(); });
   }
 
   const std::string& component_url() const { return component_url_; }
@@ -404,8 +395,7 @@ TEST_F(RealmFakeLoaderTest, CreateInvalidComponent) {
     return_code = err;
     reason = r;
   };
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return return_code < INT64_MAX; },
-                                        kTimeout));
+  ASSERT_TRUE(RunLoopUntil([&] { return return_code < INT64_MAX; }));
   EXPECT_EQ(TerminationReason::URL_INVALID, reason);
   EXPECT_EQ(-1, return_code);
 }
