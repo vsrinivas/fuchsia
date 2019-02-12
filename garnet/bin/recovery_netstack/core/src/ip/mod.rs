@@ -54,6 +54,7 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddr, B: BufferMut>(
         IpProto::Tcp | IpProto::Udp => {
             crate::transport::receive_ip_packet(ctx, src_ip, dst_ip, proto, buffer)
         }
+        IpProto::Other(_) => false, // TODO(joshlf)
     }
 }
 
@@ -83,16 +84,12 @@ pub fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
         // TODO(joshlf):
         // - Do something with ICMP if we don't have a handler for that protocol?
         // - Check for already-expired TTL?
-        let handled = if let Ok(proto) = packet.proto() {
-            let src_ip = packet.src_ip();
-            let dst_ip = packet.dst_ip();
-            // drop packet so we can re-use the underlying buffer
-            mem::drop(packet);
-            dispatch_receive_ip_packet(ctx, proto, src_ip, dst_ip, buffer)
-        } else {
-            // TODO(joshlf): Log unrecognized protocol number
-            false
-        };
+        let proto = packet.proto();
+        let src_ip = packet.src_ip();
+        let dst_ip = packet.dst_ip();
+        // drop packet so we can re-use the underlying buffer
+        mem::drop(packet);
+        dispatch_receive_ip_packet(ctx, proto, src_ip, dst_ip, buffer);
     } else if let Some(dest) = forward(ctx, packet.dst_ip()) {
         let ttl = packet.ttl();
         if ttl > 1 {
@@ -367,7 +364,7 @@ impl<B: ByteSlice> IpExt<B> for Ipv6 {
 trait IpPacket<B: ByteSlice, I: Ip>: Sized + Debug + ParsablePacket<B, ()> {
     fn src_ip(&self) -> I::Addr;
     fn dst_ip(&self) -> I::Addr;
-    fn proto(&self) -> Result<IpProto, u8>;
+    fn proto(&self) -> IpProto;
     fn ttl(&self) -> u8;
     fn set_ttl(&mut self, ttl: u8)
     where
@@ -381,7 +378,7 @@ impl<B: ByteSlice> IpPacket<B, Ipv4> for Ipv4Packet<B> {
     fn dst_ip(&self) -> Ipv4Addr {
         Ipv4Packet::dst_ip(self)
     }
-    fn proto(&self) -> Result<IpProto, u8> {
+    fn proto(&self) -> IpProto {
         Ipv4Packet::proto(self)
     }
     fn ttl(&self) -> u8 {
@@ -402,7 +399,7 @@ impl<B: ByteSlice> IpPacket<B, Ipv6> for Ipv6Packet<B> {
     fn dst_ip(&self) -> Ipv6Addr {
         Ipv6Packet::dst_ip(self)
     }
-    fn proto(&self) -> Result<IpProto, u8> {
+    fn proto(&self) -> IpProto {
         Ipv6Packet::proto(self)
     }
     fn ttl(&self) -> u8 {

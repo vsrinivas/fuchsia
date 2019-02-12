@@ -4,7 +4,7 @@
 
 //! The Ethernet protocol.
 
-use std::fmt::{self, Display, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 
 use log::debug;
 use packet::{Buf, ParseBuffer, Serializer};
@@ -102,19 +102,18 @@ impl Mac {
 
 /// An EtherType number.
 #[allow(missing_docs)]
-#[derive(Eq, PartialEq, Debug)]
-#[repr(u16)]
+#[derive(Copy, Clone, Hash, Eq, PartialEq)]
 pub enum EtherType {
-    Ipv4 = EtherType::IPV4,
-    Arp = EtherType::ARP,
-    Ipv6 = EtherType::IPV6,
+    Ipv4,
+    Arp,
+    Ipv6,
+    Other(u16),
 }
 
 impl EtherType {
     const IPV4: u16 = 0x0800;
     const ARP: u16 = 0x0806;
     const IPV6: u16 = 0x86DD;
-
     /// Construct an `EtherType` from a `u16`.
     ///
     /// `from_u16` returns the `EtherType` with the numerical value `u`, or
@@ -129,6 +128,28 @@ impl EtherType {
     }
 }
 
+impl From<u16> for EtherType {
+    fn from(u: u16) -> EtherType {
+        match u {
+            Self::IPV4 => EtherType::Ipv4,
+            Self::ARP => EtherType::Arp,
+            Self::IPV6 => EtherType::Ipv6,
+            u => EtherType::Other(u),
+        }
+    }
+}
+
+impl Into<u16> for EtherType {
+    fn into(self) -> u16 {
+        match self {
+            EtherType::Ipv4 => Self::IPV4,
+            EtherType::Arp => Self::ARP,
+            EtherType::Ipv6 => Self::IPV6,
+            EtherType::Other(u) => u,
+        }
+    }
+}
+
 impl Display for EtherType {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(
@@ -138,8 +159,15 @@ impl Display for EtherType {
                 EtherType::Ipv4 => "IPv4",
                 EtherType::Arp => "ARP",
                 EtherType::Ipv6 => "IPv6",
+                EtherType::Other(u) => return write!(f, "EtherType {}", u),
             }
         )
+    }
+}
+
+impl Debug for EtherType {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        Display::fmt(self, f)
     }
 }
 
@@ -252,6 +280,7 @@ pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64, b
             }
             EtherType::Ipv4 => crate::ip::receive_ip_packet::<D, _, Ipv4>(ctx, device, buffer),
             EtherType::Ipv6 => crate::ip::receive_ip_packet::<D, _, Ipv6>(ctx, device, buffer),
+            EtherType::Other(_) => {} // TODO(joshlf)
         }
     } else {
         // TODO(joshlf): Do something else?

@@ -67,7 +67,7 @@ impl Header {
     }
 
     fn set_network_protocol(&mut self, ptype: EtherType, plen: u8) -> &mut Self {
-        NetworkEndian::write_u16(&mut self.ptype, ptype as u16);
+        NetworkEndian::write_u16(&mut self.ptype, ptype.into());
         self.plen = plen;
         self
     }
@@ -252,7 +252,7 @@ where
         buffer.take_rest_front();
 
         if header.hardware_protocol() != <HwAddr as HType>::htype() as u16
-            || header.network_protocol() != <ProtoAddr as PType>::ptype() as u16
+            || header.network_protocol() != <ProtoAddr as PType>::ptype().into()
         {
             return debug_err!(
                 Err(ParseError::NotExpected),

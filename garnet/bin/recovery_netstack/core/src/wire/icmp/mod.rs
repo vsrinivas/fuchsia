@@ -437,7 +437,7 @@ impl<I: IcmpIpExt, B, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
             NetworkEndian::write_u32(&mut len_bytes, icmpv6_len as u32);
             c.add_bytes(&len_bytes[..]);
             c.add_bytes(&[0, 0, 0]);
-            c.add_bytes(&[IpProto::Icmpv6 as u8]);
+            c.add_bytes(&[IpProto::Icmpv6.into()]);
         }
         c.add_bytes(&[header.msg_type, header.code]);
         c.add_bytes(message);

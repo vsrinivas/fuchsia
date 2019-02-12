@@ -208,8 +208,8 @@ impl<B: ByteSlice> Ipv4Packet<B> {
     /// `proto` returns the `IpProto` from the protocol field. If the protocol
     /// number is unrecognized, the `Err` value returned contains the numerical
     /// protocol number.
-    pub fn proto(&self) -> Result<IpProto, u8> {
-        IpProto::from_u8(self.hdr_prefix.proto).ok_or(self.hdr_prefix.proto)
+    pub fn proto(&self) -> IpProto {
+        IpProto::from(self.hdr_prefix.proto)
     }
 
     /// The source IP address.
@@ -315,7 +315,7 @@ impl Ipv4PacketBuilder {
             flags: 0,
             frag_off: 0,
             ttl,
-            proto: proto as u8,
+            proto: proto.into(),
             src_ip,
             dst_ip,
         }
@@ -496,7 +496,7 @@ mod tests {
 
         let mut body = frame.body();
         let packet = body.parse::<Ipv4Packet<_>>().unwrap();
-        assert_eq!(packet.proto(), Ok(IpProto::Tcp));
+        assert_eq!(packet.proto(), IpProto::Tcp);
         assert_eq!(packet.dscp(), IP_DSCP);
         assert_eq!(packet.ecn(), IP_ECN);
         assert_eq!(packet.df_flag(), IP_DONT_FRAGMENT);
@@ -527,7 +527,7 @@ mod tests {
 
         let mut body = frame.body();
         let packet = body.parse::<Ipv4Packet<_>>().unwrap();
-        assert_eq!(packet.proto(), Ok(IpProto::Udp));
+        assert_eq!(packet.proto(), IpProto::Udp);
         assert_eq!(packet.dscp(), IP_DSCP);
         assert_eq!(packet.ecn(), IP_ECN);
         assert_eq!(packet.df_flag(), IP_DONT_FRAGMENT);
@@ -563,7 +563,7 @@ mod tests {
         NetworkEndian::write_u16(&mut hdr_prefix.total_len[..], 20);
         NetworkEndian::write_u16(&mut hdr_prefix.id[..], 0x0102);
         hdr_prefix.ttl = 0x03;
-        hdr_prefix.proto = IpProto::Tcp as u8;
+        hdr_prefix.proto = IpProto::Tcp.into();
         hdr_prefix.src_ip = DEFAULT_SRC_IP.ipv4_bytes();
         hdr_prefix.dst_ip = DEFAULT_DST_IP.ipv4_bytes();
         hdr_prefix.hdr_checksum = [0xa6, 0xcf];
@@ -576,7 +576,7 @@ mod tests {
         let packet = bytes.parse::<Ipv4Packet<_>>().unwrap();
         assert_eq!(packet.id(), 0x0102);
         assert_eq!(packet.ttl(), 0x03);
-        assert_eq!(packet.proto(), Ok(IpProto::Tcp));
+        assert_eq!(packet.proto(), IpProto::Tcp);
         assert_eq!(packet.src_ip(), DEFAULT_SRC_IP);
         assert_eq!(packet.dst_ip(), DEFAULT_DST_IP);
         assert_eq!(packet.body(), []);

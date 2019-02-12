@@ -140,9 +140,9 @@ impl<B: ByteSlice> Ipv6Packet<B> {
     }
 
     /// The IP Protocol.
-    pub fn proto(&self) -> Result<IpProto, u8> {
+    pub fn proto(&self) -> IpProto {
         // TODO(tkilbourn): support extension headers
-        IpProto::from_u8(self.fixed_hdr.next_hdr).ok_or(self.fixed_hdr.next_hdr)
+        IpProto::from(self.fixed_hdr.next_hdr)
     }
 
     /// The source IP address.
@@ -225,7 +225,7 @@ impl Ipv6PacketBuilder {
             ecn: 0,
             flowlabel: 0,
             hop_limit,
-            proto: proto as u8,
+            proto: proto.into(),
             src_ip,
             dst_ip,
         }
@@ -335,7 +335,7 @@ mod tests {
         let mut fixed_hdr = FixedHeader::default();
         NetworkEndian::write_u32(&mut fixed_hdr.version_tc_flowlabel[..], 0x60200077);
         NetworkEndian::write_u16(&mut fixed_hdr.payload_len[..], 0);
-        fixed_hdr.next_hdr = IpProto::Tcp as u8;
+        fixed_hdr.next_hdr = IpProto::Tcp.into();
         fixed_hdr.hop_limit = 64;
         fixed_hdr.src_ip = DEFAULT_SRC_IP.ipv6_bytes();
         fixed_hdr.dst_ip = DEFAULT_DST_IP.ipv6_bytes();
@@ -350,7 +350,7 @@ mod tests {
         assert_eq!(packet.ecn(), 2);
         assert_eq!(packet.flowlabel(), 0x77);
         assert_eq!(packet.hop_limit(), 64);
-        assert_eq!(packet.proto(), Ok(IpProto::Tcp));
+        assert_eq!(packet.proto(), IpProto::Tcp);
         assert_eq!(packet.src_ip(), DEFAULT_SRC_IP);
         assert_eq!(packet.dst_ip(), DEFAULT_DST_IP);
         assert_eq!(packet.body(), []);

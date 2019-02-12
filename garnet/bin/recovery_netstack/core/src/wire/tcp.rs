@@ -158,7 +158,7 @@ impl<B: ByteSlice> TcpSegment<B> {
         checksum.add_bytes(dst_ip.bytes());
         let total_len = self.total_segment_len();
         if A::Version::VERSION.is_v4() {
-            checksum.add_bytes(&[0, IpProto::Tcp as u8]);
+            checksum.add_bytes(&[0, IpProto::Tcp.into()]);
             // For IPv4, the "TCP length" field in the pseudo-header is 16 bits.
             if !fits_in_u16(total_len) {
                 return None;
@@ -174,7 +174,7 @@ impl<B: ByteSlice> TcpSegment<B> {
             let mut l = [0; 4];
             NetworkEndian::write_u32(&mut l, total_len as u32);
             checksum.add_bytes(&l);
-            checksum.add_bytes(&[0, 0, 0, IpProto::Tcp as u8]);
+            checksum.add_bytes(&[0, 0, 0, IpProto::Tcp.into()]);
         }
         // the checksum is at bytes 16 and 17; skip it
         checksum.add_bytes(&self.hdr_prefix.bytes()[..16]);
@@ -522,7 +522,7 @@ mod tests {
 
         let mut body = frame.body();
         let packet = body.parse::<Ipv4Packet<_>>().unwrap();
-        assert_eq!(packet.proto(), Ok(IpProto::Tcp));
+        assert_eq!(packet.proto(), IpProto::Tcp);
         assert_eq!(packet.dscp(), IP_DSCP);
         assert_eq!(packet.ecn(), IP_ECN);
         assert_eq!(packet.df_flag(), IP_DONT_FRAGMENT);

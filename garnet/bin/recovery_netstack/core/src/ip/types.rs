@@ -366,13 +366,13 @@ impl<A: IpAddr> Debug for Subnet<A> {
 /// For IPv4, this is the protocol number. For IPv6, this is the next header
 /// number.
 #[allow(missing_docs)]
-#[derive(Copy, Clone, Eq, PartialEq)]
-#[repr(u8)]
+#[derive(Copy, Clone, Hash, Eq, PartialEq)]
 pub enum IpProto {
-    Icmp = IpProto::ICMP,
-    Tcp = IpProto::TCP,
-    Udp = IpProto::UDP,
-    Icmpv6 = IpProto::ICMPV6,
+    Icmp,
+    Tcp,
+    Udp,
+    Icmpv6,
+    Other(u8),
 }
 
 impl IpProto {
@@ -380,18 +380,28 @@ impl IpProto {
     const TCP: u8 = 6;
     const UDP: u8 = 17;
     const ICMPV6: u8 = 58;
+}
 
-    /// Construct an `IpProto` from a `u8`.
-    ///
-    /// `from_u8` returns the `IpProto` with the numerical value `u`, or `None`
-    /// if the value is unrecognized.
-    pub fn from_u8(u: u8) -> Option<IpProto> {
+impl From<u8> for IpProto {
+    fn from(u: u8) -> IpProto {
         match u {
-            Self::ICMP => Some(IpProto::Icmp),
-            Self::TCP => Some(IpProto::Tcp),
-            Self::UDP => Some(IpProto::Udp),
-            Self::ICMPV6 => Some(IpProto::Icmpv6),
-            _ => None,
+            Self::ICMP => IpProto::Icmp,
+            Self::TCP => IpProto::Tcp,
+            Self::UDP => IpProto::Udp,
+            Self::ICMPV6 => IpProto::Icmpv6,
+            u => IpProto::Other(u),
+        }
+    }
+}
+
+impl Into<u8> for IpProto {
+    fn into(self) -> u8 {
+        match self {
+            IpProto::Icmp => Self::ICMP,
+            IpProto::Tcp => Self::TCP,
+            IpProto::Udp => Self::UDP,
+            IpProto::Icmpv6 => Self::ICMPV6,
+            IpProto::Other(u) => u,
         }
     }
 }
@@ -406,6 +416,7 @@ impl Display for IpProto {
                 IpProto::Tcp => "TCP",
                 IpProto::Udp => "UDP",
                 IpProto::Icmpv6 => "ICMPv6",
+                IpProto::Other(u) => return write!(f, "IP protocol {}", u),
             }
         )
     }

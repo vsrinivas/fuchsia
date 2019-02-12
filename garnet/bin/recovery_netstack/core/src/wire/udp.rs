@@ -167,7 +167,7 @@ impl<B: ByteSlice> UdpPacket<B> {
         c.add_bytes(src_ip.bytes());
         c.add_bytes(dst_ip.bytes());
         if A::Version::VERSION.is_v4() {
-            c.add_bytes(&[0, IpProto::Udp as u8]);
+            c.add_bytes(&[0, IpProto::Udp.into()]);
             c.add_bytes(&self.header.length);
         } else {
             let len = self.total_packet_len();
@@ -178,7 +178,7 @@ impl<B: ByteSlice> UdpPacket<B> {
             let mut len_bytes = [0; 4];
             NetworkEndian::write_u32(&mut len_bytes, len as u32);
             c.add_bytes(&len_bytes);
-            c.add_bytes(&[0, 0, 0, IpProto::Udp as u8]);
+            c.add_bytes(&[0, 0, 0, IpProto::Udp.into()]);
         }
         c.add_bytes(&self.header.src_port);
         c.add_bytes(&self.header.dst_port);
@@ -361,7 +361,7 @@ mod tests {
 
         let mut body = frame.body();
         let ip_packet = body.parse::<Ipv4Packet<_>>().unwrap();
-        assert_eq!(ip_packet.proto(), Ok(IpProto::Udp));
+        assert_eq!(ip_packet.proto(), IpProto::Udp);
         assert_eq!(ip_packet.dscp(), IP_DSCP);
         assert_eq!(ip_packet.ecn(), IP_ECN);
         assert_eq!(ip_packet.df_flag(), IP_DONT_FRAGMENT);

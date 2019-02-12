@@ -177,7 +177,7 @@ pub struct EthernetFrameBuilder {
 impl EthernetFrameBuilder {
     /// Construct a new `EthernetFrameBuilder`.
     pub fn new(src_mac: Mac, dst_mac: Mac, ethertype: EtherType) -> EthernetFrameBuilder {
-        EthernetFrameBuilder { src_mac, dst_mac, ethertype: ethertype as u16 }
+        EthernetFrameBuilder { src_mac, dst_mac, ethertype: ethertype.into() }
     }
 }
 
@@ -252,7 +252,7 @@ mod tests {
         for i in 0..60 {
             buf[i] = i as u8;
         }
-        NetworkEndian::write_u16(&mut buf[12..14], EtherType::Arp as u16);
+        NetworkEndian::write_u16(&mut buf[12..14], EtherType::Arp.into());
         let mut body = [0; 46];
         (&mut body).copy_from_slice(&buf[14..]);
         (buf, body)
@@ -289,7 +289,7 @@ mod tests {
             const TPID_OFFSET: usize = 12;
             NetworkEndian::write_u16(&mut buf[TPID_OFFSET..], *tpid);
             // write a valid EtherType
-            NetworkEndian::write_u16(&mut buf[TPID_OFFSET + 4..], EtherType::Arp as u16);
+            NetworkEndian::write_u16(&mut buf[TPID_OFFSET + 4..], EtherType::Arp.into());
 
             let frame = buf.parse::<EthernetFrame<_>>().unwrap();
             assert_eq!(frame.hdr_prefix.dst_mac, DEFAULT_DST_MAC.bytes());
