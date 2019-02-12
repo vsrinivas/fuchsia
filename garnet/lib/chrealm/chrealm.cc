@@ -72,7 +72,9 @@ zx_status_t SpawnBinaryInRealmAsync(
     if (ns != nullptr) {
       fdio_ns_destroy(ns);
     }
-    free(flat_ns);
+    if (flat_ns != nullptr) {
+      fdio_ns_free_flat_ns(flat_ns);
+    }
   });
 
   // Get the process's namespace.
