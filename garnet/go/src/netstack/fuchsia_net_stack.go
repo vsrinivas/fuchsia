@@ -5,8 +5,9 @@
 package netstack
 
 import (
-	"log"
 	"sort"
+
+	"syslog/logger"
 
 	"netstack/fidlconv"
 	"netstack/link"
@@ -31,7 +32,7 @@ func getInterfaceInfo(ifs *ifState) *stack.InterfaceInfo {
 	// Long-hand for: broadaddr = ifs.mu.nic.Addr | ^ifs.mu.nic.Netmask
 	broadaddr := []byte(ifs.mu.nic.Addr)
 	if len(ifs.mu.nic.Netmask) != len(ifs.mu.nic.Addr) {
-		log.Printf("warning: mismatched netmask and address length for nic: %+v", ifs.mu.nic)
+		logger.Errorf("mismatched netmask and address length for nic: %+v", ifs.mu.nic)
 		return nil
 	}
 
@@ -108,7 +109,7 @@ func (ns *Netstack) delInterface(id uint64) *stack.Error {
 
 	if ok {
 		if err := ifs.eth.Close(); err != nil {
-			log.Printf("ifs.eth.Close() failed (NIC: %d): %v", id, err)
+			logger.Errorf("ifs.eth.Close() failed (NIC: %d): %v", id, err)
 			return &stack.Error{Type: stack.ErrorTypeInternal}
 		}
 		return nil
@@ -138,12 +139,12 @@ func (ns *Netstack) setInterfaceState(id uint64, enabled bool) *stack.Error {
 
 	if enabled {
 		if err := ifs.eth.Up(); err != nil {
-			log.Printf("ifs.eth.Up() failed (NIC %d): %v", id, err)
+			logger.Errorf("ifs.eth.Up() failed (NIC %d): %v", id, err)
 			return &stack.Error{Type: stack.ErrorTypeInternal}
 		}
 	} else {
 		if err := ifs.eth.Down(); err != nil {
-			log.Printf("ifs.eth.Down() failed (NIC %d): %v", id, err)
+			logger.Errorf("ifs.eth.Down() failed (NIC %d): %v", id, err)
 			return &stack.Error{Type: stack.ErrorTypeInternal}
 		}
 	}
@@ -178,7 +179,7 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *
 	}
 
 	if err := ns.setInterfaceAddress(nicid, protocol, fidlconv.ToTCPIPAddress(ifAddr.IpAddress), ifAddr.PrefixLen); err != nil {
-		log.Printf("(*Netstack).setInterfaceAddress(...) failed (NIC %d): %v", nicid, err)
+		logger.Errorf("(*Netstack).setInterfaceAddress(...) failed (NIC %d): %v", nicid, err)
 		return &stack.Error{Type: stack.ErrorTypeBadState}
 	}
 	return nil

@@ -7,11 +7,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
 	"app/context"
+
 	"netstack/fidlconv"
 
 	"fidl/fuchsia/net"
@@ -58,7 +58,7 @@ func (a *testApp) getAddr(name string) {
 	port, _ := a.netstack.GetPortForService("http", netstack.ProtocolTcp)
 	resp, netErr, _ := a.netstack.GetAddress(name, port)
 	if netErr.Status != netstack.StatusOk {
-		log.Printf("failed: %v\n", netErr)
+		fmt.Fprintf(os.Stderr, "failed: %v\n", netErr)
 	} else {
 		fmt.Printf("%v entries found\n", len(resp))
 		for _, addr := range resp {

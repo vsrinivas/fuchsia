@@ -5,19 +5,18 @@
 package connectivity
 
 import (
-	"log"
 	"sync"
 	"syscall/zx"
 
 	"app/context"
+	"syslog/logger"
+
 	"netstack/fidlconv"
 	"netstack/util"
 
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 )
-
-const debug = false
 
 var service *net.ConnectivityService = &net.ConnectivityService{}
 var reachable bool = false
@@ -38,15 +37,11 @@ func AddOutgoingService(ctx *context.Context) error {
 // TODO(NET-1001): extract into a separate reachability service based on a
 // better network reachability signal.
 func InferAndNotify(ifs []netstack.NetInterface2) {
-	if debug {
-		log.Printf("inferring network reachability")
-	}
+	logger.VLogf(logger.TraceVerbosity, "inferring network reachability")
 	mu.Lock()
 	current := inferReachability(ifs)
 	if current != reachable {
-		if debug {
-			log.Printf("notifying clients of new reachability status: %t", current)
-		}
+		logger.VLogf(logger.TraceVerbosity, "notifying clients of new reachability status: %t", current)
 		reachable = current
 		notify(reachable)
 	}

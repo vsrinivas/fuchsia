@@ -11,8 +11,9 @@
 package stats
 
 import (
-	"log"
 	"time"
+
+	"syslog/logger"
 
 	nsfidl "fidl/fuchsia/netstack"
 	"netstack/netiface"
@@ -22,8 +23,6 @@ import (
 	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/stack"
 )
-
-const debug = false
 
 type StatsEndpoint struct {
 	dispatcher stack.NetworkDispatcher
@@ -115,9 +114,7 @@ func (e *StatsEndpoint) analyzeIPv4(ts *nsfidl.NetTrafficStats, ipPkt header.IPv
 
 	// Add conditions not to collect stats in.
 	if mcastToSelf {
-		if debug {
-			log.Printf("[stats] detected multicast-to-self at NICID %v: %v -> %v", e.Nic.ID, ipPkt.SourceAddress(), ipPkt.DestinationAddress())
-		}
+		logger.VLogf(logger.TraceVerbosity, "[stats] detected multicast-to-self at NICID %v: %v -> %v", e.Nic.ID, ipPkt.SourceAddress(), ipPkt.DestinationAddress())
 		return
 	}
 
@@ -141,9 +138,7 @@ func (e *StatsEndpoint) analyzeIPv6(ts *nsfidl.NetTrafficStats, ipPkt header.IPv
 
 	// Add conditions not to collect stats in.
 	if mcastToSelf {
-		if debug {
-			log.Printf("[stats] detected multicast-to-self at NICID %v: %v -> %v", e.Nic.ID, ipPkt.SourceAddress(), ipPkt.DestinationAddress())
-		}
+		logger.VLogf(logger.TraceVerbosity, "[stats] detected multicast-to-self at NICID %v: %v -> %v", e.Nic.ID, ipPkt.SourceAddress(), ipPkt.DestinationAddress())
 		return
 	}
 

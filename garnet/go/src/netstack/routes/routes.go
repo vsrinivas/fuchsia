@@ -6,18 +6,17 @@ package routes
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 	"sync"
+
+	"syslog/logger"
 
 	"netstack/util"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/header"
 )
-
-const debug = false
 
 type Action uint32
 
@@ -26,6 +25,8 @@ const (
 	ActionDeleteDynamicDisableStatic
 	ActionEnableStatic
 )
+
+const tag = "routes"
 
 // Metric is the metric used for sorting the route table. It acts as a
 // priority with a lower value being better.
@@ -117,7 +118,7 @@ func (rt *RouteTable) String() string {
 
 // For debugging.
 func (rt *RouteTable) Dump() {
-	fmt.Printf("Current Route Table:\n%v", rt)
+	logger.VLogTf(logger.TraceVerbosity, tag, "Current Route Table:\n%v", rt)
 }
 
 // For testing.
@@ -131,9 +132,7 @@ func (rt *RouteTable) Set(r []ExtendedRoute) {
 // route already exists, it simply updates that route's metric, dynamic and
 // enabled fields.
 func (rt *RouteTable) AddRoute(route tcpip.Route, metric Metric, tracksInterface bool, dynamic bool, enabled bool) {
-	if debug {
-		log.Printf("RouteTable:Adding route %+v with metric:%d, trackIf=%v, dynamic=%v, enabled=%v", route, metric, tracksInterface, dynamic, enabled)
-	}
+	logger.VLogTf(logger.TraceVerbosity, tag, "RouteTable:Adding route %+v with metric:%d, trackIf=%v, dynamic=%v, enabled=%v", route, metric, tracksInterface, dynamic, enabled)
 
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
@@ -171,16 +170,12 @@ func (rt *RouteTable) AddRoute(route tcpip.Route, metric Metric, tracksInterface
 		rt.mu.routes[targetIdx] = newEr
 	}
 
-	if debug {
-		rt.Dump()
-	}
+	rt.Dump()
 }
 
 // DelRoute removes the given route from the route table.
 func (rt *RouteTable) DelRoute(route tcpip.Route) error {
-	if debug {
-		log.Printf("RouteTable:Deleting route %+v", route)
-	}
+	logger.VLogTf(logger.TraceVerbosity, tag, "RouteTable:Deleting route %+v", route)
 
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
@@ -206,9 +201,7 @@ func (rt *RouteTable) DelRoute(route tcpip.Route) error {
 		return fmt.Errorf("no such route")
 	}
 
-	if debug {
-		rt.Dump()
-	}
+	rt.Dump()
 	return nil
 }
 
@@ -217,9 +210,7 @@ func (rt *RouteTable) GetExtendedRouteTable() []ExtendedRoute {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
 
-	if debug {
-		rt.Dump()
-	}
+	rt.Dump()
 
 	return append([]ExtendedRoute(nil), rt.mu.routes...)
 }
@@ -238,9 +229,7 @@ func (rt *RouteTable) GetNetstackTable() []tcpip.Route {
 		}
 	}
 
-	if debug {
-		log.Printf("RouteTable:Netstack route table: %+v", t)
-	}
+	logger.VLogTf(logger.TraceVerbosity, tag, "RouteTable:Netstack route table: %+v", t)
 
 	return t
 }
@@ -248,9 +237,7 @@ func (rt *RouteTable) GetNetstackTable() []tcpip.Route {
 // UpdateMetricByInterface changes the metric for all routes that track a
 // given interface.
 func (rt *RouteTable) UpdateMetricByInterface(nicid tcpip.NICID, metric Metric) {
-	if debug {
-		log.Printf("RouteTable:Update route table on nic-%d metric change to %d", nicid, metric)
-	}
+	logger.VLogf(logger.TraceVerbosity, "RouteTable:Update route table on nic-%d metric change to %d", nicid, metric)
 
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
@@ -263,16 +250,12 @@ func (rt *RouteTable) UpdateMetricByInterface(nicid tcpip.NICID, metric Metric) 
 
 	rt.sortRouteTableLocked()
 
-	if debug {
-		rt.Dump()
-	}
+	rt.Dump()
 }
 
 // UpdateRoutesByInterface applies an action to the routes pointing to an interface.
 func (rt *RouteTable) UpdateRoutesByInterface(nicid tcpip.NICID, action Action) {
-	if debug {
-		log.Printf("RouteTable:Update route table for routes to nic-%d with action:%d", nicid, action)
-	}
+	logger.VLogTf(logger.TraceVerbosity, tag, "RouteTable:Update route table for routes to nic-%d with action:%d", nicid, action)
 
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
@@ -301,9 +284,7 @@ func (rt *RouteTable) UpdateRoutesByInterface(nicid tcpip.NICID, action Action) 
 
 	rt.sortRouteTableLocked()
 
-	if debug {
-		rt.Dump()
-	}
+	rt.Dump()
 }
 
 // FindNIC returns the NIC-ID that the given address is routed on. This requires

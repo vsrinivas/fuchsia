@@ -5,10 +5,10 @@
 package filter
 
 import (
-	"log"
+	"syscall/zx"
 
 	"app/context"
-	"syscall/zx"
+	"syslog/logger"
 
 	"fidl/fuchsia/net/filter"
 )
@@ -43,7 +43,7 @@ func (fi *filterImpl) GetRules() ([]filter.Rule, uint32, filter.Status, error) {
 	fi.filter.rulesetMain.RUnlock()
 	if err != nil {
 		// This error should not happen.
-		log.Printf("GetRules error %v", err)
+		logger.Errorf("GetRules error %v", err)
 		return []filter.Rule{}, 0, filter.StatusErrInternal, nil
 	}
 	return nrs, generation, filter.StatusOk, nil
@@ -71,7 +71,7 @@ func (fi *filterImpl) GetNatRules() ([]filter.Nat, uint32, filter.Status, error)
 	fi.filter.rulesetNAT.RUnlock()
 	if err != nil {
 		// This error should not happen.
-		log.Printf("GetNATRules error %v", err)
+		logger.Errorf("GetNATRules error %v", err)
 		return []filter.Nat{}, 0, filter.StatusErrInternal, nil
 	}
 	return nns, generation, filter.StatusOk, nil
@@ -99,7 +99,7 @@ func (fi *filterImpl) GetRdrRules() ([]filter.Rdr, uint32, filter.Status, error)
 	fi.filter.rulesetRDR.RUnlock()
 	if err != nil {
 		// This error should not happen.
-		log.Printf("GetRdrRules error %v", err)
+		logger.Errorf("GetRdrRules error %v", err)
 		return []filter.Rdr{}, 0, filter.StatusErrInternal, nil
 	}
 	return nrs, generation, filter.StatusOk, nil

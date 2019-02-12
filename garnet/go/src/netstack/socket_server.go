@@ -7,7 +7,6 @@ package netstack
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"reflect"
 	"runtime"
 	"sync"
@@ -17,6 +16,8 @@ import (
 	"syscall/zx/mxerror"
 	"syscall/zx/mxnet"
 	"syscall/zx/zxwait"
+
+	"syslog/logger"
 
 	"fidl/fuchsia/net"
 
@@ -37,8 +38,6 @@ import (
 // #include <netinet/tcp.h>
 // #include <lib/netstack/c/netconfig.h>
 import "C"
-
-const debug = false
 
 const localSignalClosing = zx.SignalUser5
 
@@ -330,13 +329,13 @@ func (ios *iostate) loopRead() error {
 func (ios *iostate) loopControl() error {
 	defer func() {
 		if code, err := ios.Close(); err != nil {
-			log.Printf("SocketControl.Close failed: %s", err)
+			logger.Errorf("SocketControl.Close failed: %s", err)
 		} else if code != 0 {
-			log.Printf("SocketControl.Close failed: %s", syscall.Errno(code))
+			logger.Errorf("SocketControl.Close failed: %s", syscall.Errno(code))
 		}
 
 		if err := ios.dataHandle.Close(); err != nil {
-			log.Printf("dataHandle.Close() failed: %s", err)
+			logger.Errorf("dataHandle.Close() failed: %s", err)
 		}
 	}()
 
@@ -429,33 +428,29 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 
 	go func() {
 		if err := ios.loopControl(); err != nil {
-			log.Printf("%p: loopControl: %s", ios, err)
+			logger.Errorf("%p: loopControl: %s", ios, err)
 		}
 	}()
 	go func() {
 		if err := ios.loopRead(); err != nil {
-			if debug {
-				log.Printf("%p: loopRead: %s", ios, err)
-			}
+			logger.VLogf(logger.DebugVerbosity, "%p: loopRead: %s", ios, err)
 		}
 		switch err := ios.dataHandle.Shutdown(zx.SocketShutdownWrite); mxerror.Status(err) {
 		case zx.ErrOk, zx.ErrBadHandle:
 		default:
-			log.Printf("%p: %s", ios, err)
+			logger.Warnf("%p: %s", ios, err)
 		}
 	}()
 	go func() {
 		defer close(ios.loopWriteDone)
 
 		if err := ios.loopWrite(); err != nil {
-			if debug {
-				log.Printf("%p: loopWrite: %s", ios, err)
-			}
+			logger.VLogf(logger.DebugVerbosity, "%p: loopWrite: %s", ios, err)
 		}
 		switch err := ios.dataHandle.Shutdown(zx.SocketShutdownRead); mxerror.Status(err) {
 		case zx.ErrOk, zx.ErrBadHandle:
 		default:
-			log.Printf("%p: %s", ios, err)
+			logger.Warnf("%p: %s", ios, err)
 		}
 	}()
 
@@ -524,14 +519,12 @@ var lastIfInfo *C.netc_get_if_info_t
 var _ net.SocketControl = (*iostate)(nil)
 
 func tcpipErrorToCode(err *tcpip.Error) int16 {
-	if debug && err != tcpip.ErrConnectStarted {
+	if err != tcpip.ErrConnectStarted {
 		errStr := err.String()
 		if pc, _, _, ok := runtime.Caller(1); ok {
 			errStr = runtime.FuncForPC(pc).Name() + ": " + errStr
 		}
-		if err := log.Output(2, err.String()); err != nil {
-			panic(err)
-		}
+		logger.VLogf(logger.DebugVerbosity, err.String())
 	}
 	switch err {
 	case tcpip.ErrUnknownProtocol:
@@ -731,16 +724,16 @@ func (ios *iostate) Ioctl(req int16, in []uint8) (int16, []uint8, error) {
 	// TODO(ZX-766): remove when dart/runtime/bin/socket_base_fuchsia.cc uses getifaddrs().
 	case ioctlNetcGetIfInfoAt:
 		if lastIfInfo == nil {
-			log.Printf("ioctlNetcGetIfInfoAt: called before ioctlNetcGetNumIfs")
+			logger.Infof("ioctlNetcGetIfInfoAt: called before ioctlNetcGetNumIfs")
 			return tcpipErrorToCode(tcpip.ErrInvalidEndpointState), nil, nil
 		}
 		if len(in) != 4 {
-			log.Printf("ioctlNetcGetIfInfoAt: bad input length %d", len(in))
+			logger.Errorf("ioctlNetcGetIfInfoAt: bad input length %d", len(in))
 			return tcpipErrorToCode(tcpip.ErrInvalidOptionValue), nil, nil
 		}
 		requestedIndex := binary.LittleEndian.Uint32(in)
 		if requestedIndex >= uint32(lastIfInfo.n_info) {
-			log.Printf("ioctlNetcGetIfInfoAt: index out of range (%d vs %d)", requestedIndex, lastIfInfo.n_info)
+			logger.Infof("ioctlNetcGetIfInfoAt: index out of range (%d vs %d)", requestedIndex, lastIfInfo.n_info)
 			return tcpipErrorToCode(tcpip.ErrInvalidOptionValue), nil, nil
 		}
 		return 0, lastIfInfo.info[requestedIndex].Marshal(), nil

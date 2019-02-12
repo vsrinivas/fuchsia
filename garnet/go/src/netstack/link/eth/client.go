@@ -42,12 +42,13 @@ package eth
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"sync"
 	"syscall/zx"
 	"syscall/zx/zxwait"
 	"unsafe"
+
+	"syslog/logger"
 
 	"netstack/link"
 	"netstack/trace"
@@ -216,10 +217,10 @@ func (c *Client) closeLocked() error {
 	}
 
 	if err := c.fifos.Tx.Close(); err != nil {
-		log.Printf("eth: failed to close tx fifo: %s", err)
+		logger.Warnf("eth: failed to close tx fifo: %s", err)
 	}
 	if err := c.fifos.Rx.Close(); err != nil {
-		log.Printf("eth: failed to close rx fifo: %s", err)
+		logger.Warnf("eth: failed to close rx fifo: %s", err)
 	}
 	c.tmpbuf = c.tmpbuf[:0]
 	c.recvbuf = c.recvbuf[:0]
@@ -415,7 +416,7 @@ func (c *Client) WaitRecv() {
 			// TODO(): The wired Ethernet should receive this signal upon being
 			// hooked up with a (an active) Ethernet cable.
 			if status, err := c.GetStatus(); err != nil {
-				log.Printf("eth status error: %v", err)
+				logger.Warnf("eth status error: %v", err)
 			} else {
 				trace.DebugTraceDeep(5, "status %d", status)
 

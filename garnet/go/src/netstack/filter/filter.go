@@ -6,16 +6,15 @@
 package filter
 
 import (
-	"log"
 	"sync/atomic"
+
+	"syslog/logger"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/ports"
 )
-
-const debug = false
 
 type Filter struct {
 	enabled     atomic.Value // bool
@@ -25,6 +24,8 @@ type Filter struct {
 	rulesetRDR  RulesetRDR
 	states      *States
 }
+
+const tag = "filter"
 
 func New(pm *ports.PortManager) *Filter {
 	f := &Filter{
@@ -38,9 +39,9 @@ func New(pm *ports.PortManager) *Filter {
 // Enable enables or disables the packet filter.
 func (f *Filter) Enable(b bool) {
 	if b {
-		log.Printf("packet filter: enabled")
+		logger.InfoTf(tag, "packet filter: enabled")
 	} else {
-		log.Printf("packet filter: disabled")
+		logger.InfoTf(tag, "packet filter: disabled")
 	}
 	f.enabled.Store(b)
 }
@@ -70,9 +71,7 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 	case header.IPv4ProtocolNumber:
 		ipv4 := header.IPv4(hdr.View())
 		if !ipv4.IsValid(hdr.UsedLength() + payload.Size()) {
-			if debug {
-				log.Printf("packet filter: ipv4 packet is not valid")
-			}
+			logger.VLogTf(logger.TraceVerbosity, tag, "packet filter: ipv4 packet is not valid")
 			return Drop
 		}
 		transProto = ipv4.TransportProtocol()
@@ -83,9 +82,7 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 	case header.IPv6ProtocolNumber:
 		ipv6 := header.IPv6(hdr.View())
 		if !ipv6.IsValid(hdr.UsedLength() + payload.Size()) {
-			if debug {
-				log.Printf("packet filter: ipv6 packet is not valid")
-			}
+			logger.VLogTf(logger.TraceVerbosity, tag, "packet filter: ipv6 packet is not valid")
 			return Drop
 		}
 		transProto = ipv6.TransportProtocol()
@@ -97,9 +94,7 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 		// TODO: Anything?
 		return Pass
 	default:
-		if debug {
-			log.Printf("packet filter: drop unknown network protocol: %v (%s)", netProto, dir)
-		}
+		logger.VLogTf(logger.TraceVerbosity, tag, "packet filter: drop unknown network protocol: %v (%s)", netProto, dir)
 		return Drop
 	}
 
@@ -118,18 +113,14 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 	case header.TCPProtocolNumber:
 		return f.runForTCP(dir, netProto, srcAddr, dstAddr, payloadLength, hdr, transportHeader, payload)
 	default:
-		if debug {
-			log.Printf("packet filter: %d: drop unknown transport protocol: %d", dir, transProto)
-		}
+		logger.VLogTf(logger.TraceVerbosity, tag, "packet filter: %d: drop unknown transport protocol: %d", dir, transProto)
 		return Drop
 	}
 }
 
 func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, payloadLength uint16, hdr buffer.Prependable, transportHeader []byte, payload buffer.VectorisedView) Action {
 	if s, err := f.states.findStateICMPv4(dir, header.IPv4ProtocolNumber, header.ICMPv4ProtocolNumber, srcAddr, dstAddr, payloadLength, transportHeader, payload); s != nil {
-		if debug {
-			log.Printf("packet filter: icmp state found: %v", s)
-		}
+		logger.VLogTf(logger.TraceVerbosity, tag, "packet filter: icmp state found: %v", s)
 
 		// If NAT or RDR is in effect, rewrite address and port.
 		// Note that findStateICMPv4 may return a state for a different transport protocol.
@@ -167,9 +158,7 @@ func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, pay
 
 		return Pass
 	} else if err != nil {
-		if debug {
-			log.Printf("packet filter: %v", err)
-		}
+		logger.VLogTf(logger.DebugVerbosity, tag, "packet filter: %v", err)
 		return Drop
 	}
 
@@ -191,7 +180,7 @@ func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, pay
 	if rm != nil {
 		if rm.log {
 			// TODO: Improve the log format.
-			log.Printf("packet filter: Rule matched: %+v", rm)
+			logger.VLogTf(logger.TraceVerbosity, tag, "packet filter: Rule matched: %+v", rm)
 		}
 		if rm.action == DropReset {
 			if nat != nil {
@@ -213,9 +202,7 @@ func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, pay
 
 func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, srcAddr, dstAddr tcpip.Address, payloadLength uint16, hdr buffer.Prependable, transportHeader []byte, payload buffer.VectorisedView) Action {
 	if len(transportHeader) < header.UDPMinimumSize {
-		if debug {
-			log.Printf("packet filter: udp packet too short")
-		}
+		logger.VLogTf(logger.DebugVerbosity, tag, "packet filter: udp packet too short")
 		return Drop
 	}
 	udp := header.UDP(transportHeader)
@@ -223,9 +210,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 	dstPort := udp.DestinationPort()
 
 	if s, err := f.states.findStateUDP(dir, netProto, header.UDPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, payloadLength, transportHeader); s != nil {
-		if debug {
-			log.Printf("packet filter: udp state found: %v", s)
-		}
+		logger.VLogTf(logger.DebugVerbosity, tag, "packet filter: udp state found: %v", s)
 		// If NAT or RDR is in effect, rewrite address and port.
 		if s.lanAddr != s.gwyAddr || s.lanPort != s.gwyPort {
 			switch netProto {
@@ -248,9 +233,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 
 		return Pass
 	} else if err != nil {
-		if debug {
-			log.Printf("packet filter: %v", err)
-		}
+		logger.VLogTf(logger.DebugVerbosity, tag, "packet filter: %v", err)
 		return Drop
 	}
 
@@ -264,18 +247,14 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 	switch dir {
 	case Incoming:
 		if rdr = f.matchRDR(header.UDPProtocolNumber, dstAddr, dstPort); rdr != nil {
-			if debug {
-				log.Printf("packet filter: RDR rule matched: proto: %d, dstAddr: %s, dstPort: %d, newDstAddr: %s, newDstPort: %d, nic: %d", rdr.transProto, rdr.dstAddr, rdr.dstPort, rdr.newDstAddr, rdr.newDstPort, rdr.nic)
-			}
+			logger.VLogTf(logger.DebugVerbosity, tag, "packet filter: RDR rule matched: proto: %d, dstAddr: %s, dstPort: %d, newDstAddr: %s, newDstPort: %d, nic: %d", rdr.transProto, rdr.dstAddr, rdr.dstPort, rdr.newDstAddr, rdr.newDstPort, rdr.nic)
 			// Rewrite dstAddr and dstPort in the packet.
 			// The original values are saved in origAddr and origPort.
 			origAddr = dstAddr
 			dstAddr = rdr.newDstAddr
 			origPort = dstPort
 			dstPort = rdr.newDstPort
-			if debug {
-				log.Printf("packet filter: RDR: rewrite orig(%s:%d) with new(%s:%d)", origAddr, origPort, dstAddr, dstPort)
-			}
+			logger.VLogTf(logger.TraceVerbosity, tag, "packet filter: RDR: rewrite orig(%s:%d) with new(%s:%d)", origAddr, origPort, dstAddr, dstPort)
 			switch netProto {
 			case header.IPv4ProtocolNumber:
 				rewritePacketUDPv4(dstAddr, dstPort, false, hdr, transportHeader)
@@ -285,18 +264,14 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 		}
 	case Outgoing:
 		if nat = f.matchNAT(header.UDPProtocolNumber, srcAddr); nat != nil {
-			if debug {
-				log.Printf("packet filter: NAT rule matched: proto: %d, srcNet: %s(%s), srcAddr: %s, nic: %d", nat.transProto, nat.srcSubnet.ID(), tcpip.Address(nat.srcSubnet.Mask()), nat.newSrcAddr, nat.nic)
-			}
+			logger.VLogTf(logger.TraceVerbosity, tag, "packet filter: NAT rule matched: proto: %d, srcNet: %s(%s), srcAddr: %s, nic: %d", nat.transProto, nat.srcSubnet.ID(), tcpip.Address(nat.srcSubnet.Mask()), nat.newSrcAddr, nat.nic)
 			newAddr = nat.newSrcAddr
 			// Reserve a new port.
 			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
 			var e *tcpip.Error
 			newPort, e = f.portManager.ReservePort(netProtos, header.UDPProtocolNumber, newAddr, 0, false)
 			if e != nil {
-				if debug {
-					log.Printf("packet filter: ReservePort: %v", e)
-				}
+				logger.VLogTf(logger.TraceVerbosity, tag, "packet filter: ReservePort: %v", e)
 				return Drop
 			}
 			// Rewrite srcAddr and srcPort in the packet.
@@ -305,9 +280,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			srcAddr = newAddr
 			origPort = srcPort
 			srcPort = newPort
-			if debug {
-				log.Printf("packet filter: NAT: rewrite orig(%s:%d) with new(%s:%d)", origAddr, origPort, srcAddr, srcPort)
-			}
+			logger.VLogTf(logger.TraceVerbosity, tag, "packet filter: NAT: rewrite orig(%s:%d) with new(%s:%d)", origAddr, origPort, srcAddr, srcPort)
 			switch netProto {
 			case header.IPv4ProtocolNumber:
 				rewritePacketUDPv4(srcAddr, srcPort, true, hdr, transportHeader)
@@ -322,7 +295,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 	if rm != nil {
 		if rm.log {
 			// TODO: Improve the log format.
-			log.Printf("packet filter: Rule matched: %+v", rm)
+			logger.VLogTf(logger.TraceVerbosity, tag, "packet filter: Rule matched: %+v", rm)
 		}
 		if rm.action == DropReset {
 			if nat != nil {
@@ -358,9 +331,7 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 
 func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, srcAddr, dstAddr tcpip.Address, payloadLength uint16, hdr buffer.Prependable, transportHeader []byte, payload buffer.VectorisedView) Action {
 	if len(transportHeader) < header.TCPMinimumSize {
-		if debug {
-			log.Printf("packet filter: tcp packet too short")
-		}
+		logger.VLogTf(logger.DebugVerbosity, tag, "packet filter: tcp packet too short")
 		return Drop
 	}
 	tcp := header.TCP(transportHeader)
@@ -368,9 +339,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 	dstPort := tcp.DestinationPort()
 
 	if s, err := f.states.findStateTCP(dir, netProto, header.TCPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, payloadLength, transportHeader); s != nil {
-		if debug {
-			log.Printf("packet filter: tcp state found: %v", s)
-		}
+		logger.VLogTf(logger.TraceVerbosity, tag, "packet filter: tcp state found: %v", s)
 
 		// If NAT or RDR is in effect, rewrite address and port.
 		if s.lanAddr != s.gwyAddr || s.lanPort != s.gwyPort {
@@ -394,9 +363,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 
 		return Pass
 	} else if err != nil {
-		if debug {
-			log.Printf("packet filter: %v", err)
-		}
+		logger.VLogTf(logger.DebugVerbosity, tag, "packet filter: %v", err)
 		return Drop
 	}
 
@@ -431,9 +398,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			var e *tcpip.Error
 			newPort, e = f.portManager.ReservePort(netProtos, header.TCPProtocolNumber, newAddr, 0, false)
 			if e != nil {
-				if debug {
-					log.Printf("packet filter: ReservePort: %v", e)
-				}
+				logger.VLogTf(logger.DebugVerbosity, tag, "packet filter: ReservePort: %v", e)
 				return Drop
 			}
 			// Rewrite srcAddr and srcPort in the packet.
@@ -456,7 +421,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 	if rm != nil {
 		if rm.log {
 			// TODO: Improve the log format.
-			log.Printf("packet filter: Rule matched: %+v", rm)
+			logger.VLogTf(logger.TraceVerbosity, tag, "packet filter: Rule matched: %+v", rm)
 		}
 		if rm.action == DropReset {
 			if nat != nil {

@@ -5,13 +5,17 @@
 package netstack
 
 import (
+	"bytes"
 	"flag"
+	"fmt"
 	"log"
 	"reflect"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
 	"app/context"
+	"syslog/logger"
+
 	"netstack/connectivity"
 	"netstack/dns"
 	"netstack/filter"
@@ -33,13 +37,40 @@ import (
 	"github.com/google/netstack/tcpip/transport/udp"
 )
 
+type logWriter struct{}
+
+func (*logWriter) Write(data []byte) (n int, err error) {
+	origLen := len(data)
+
+	// Strip out the trailing newline the `log` library adds because the
+	// logging service also adds a trailing newline.
+	data = bytes.TrimSuffix(data, []byte("\n"))
+
+	if err := logger.VLogf(logger.TraceVerbosity, "%s", data); err != nil {
+		return 0, err
+	}
+
+	return origLen, nil
+}
+
 func Main() {
 	flag.Parse()
-	log.SetFlags(log.Lshortfile)
-	log.SetPrefix("netstack: ")
-	log.Print("started")
 
 	ctx := context.CreateFromStartupInfo()
+
+	options := logger.LogInitOptions{
+		Loglevel:  logger.TraceLevel,
+		Connector: ctx.Connector(),
+		Tags:      []string{"netstack"},
+		MinSeverityForFileAndLineInfo: logger.InfoLevel,
+	}
+	if err := logger.InitDefaultLoggerWithConfig(options); err != nil {
+		panic(fmt.Sprintf("netstack: failed to initialize syslog interface: %s", err))
+	}
+
+	log.SetOutput((*logWriter)(nil))
+	log.SetFlags(log.Lshortfile)
+	logger.Infof("started")
 
 	stk := tcpipstack.New([]string{
 		ipv4.ProtocolName,
@@ -51,17 +82,17 @@ func Main() {
 		udp.ProtocolName,
 	}, tcpipstack.Options{})
 	if err := stk.SetTransportProtocolOption(tcp.ProtocolNumber, tcp.SACKEnabled(true)); err != nil {
-		log.Fatalf("method SetTransportProtocolOption(%v, tcp.SACKEnabled(true)) failed: %v", tcp.ProtocolNumber, err)
+		logger.Fatalf("method SetTransportProtocolOption(%v, tcp.SACKEnabled(true)) failed: %v", tcp.ProtocolNumber, err)
 	}
 
 	arena, err := eth.NewArena()
 	if err != nil {
-		log.Fatalf("ethernet: %s", err)
+		logger.Fatalf("ethernet: %s", err)
 	}
 
 	req, ds, err := devicesettings.NewDeviceSettingsManagerInterfaceRequest()
 	if err != nil {
-		log.Fatalf("could not connect to device settings service: %s", err)
+		logger.Fatalf("could not connect to device settings service: %s", err)
 	}
 
 	ctx.ConnectToEnvService(req)
@@ -75,7 +106,7 @@ func Main() {
 	ns.mu.stack = stk
 
 	if err := ns.addLoopback(); err != nil {
-		log.Fatalf("loopback: %s", err)
+		logger.Fatalf("loopback: %s", err)
 	}
 
 	var netstackService netstack.NetstackService
@@ -88,7 +119,7 @@ func Main() {
 		for _, key := range netstackService.BindingKeys() {
 			if p, ok := netstackService.EventProxyFor(key); ok {
 				if err := p.OnInterfacesChanged(interfaces); err != nil {
-					log.Printf("OnInterfacesChanged failed: %v", err)
+					logger.Warnf("OnInterfacesChanged failed: %v", err)
 				}
 			}
 		}
@@ -109,7 +140,7 @@ func Main() {
 			ns: ns,
 		}, c, nil)
 		if err != nil {
-			log.Fatal(err)
+			logger.Fatalf("%v", err)
 		}
 		// Send a synthetic InterfacesChanged event to each client when they join
 		// Prevents clients from having to race GetInterfaces / InterfacesChanged.
@@ -120,7 +151,7 @@ func Main() {
 			ns.mu.Unlock()
 
 			if err := p.OnInterfacesChanged(interfaces); err != nil {
-				log.Printf("OnInterfacesChanged failed: %v", err)
+				logger.Warnf("OnInterfacesChanged failed: %v", err)
 			}
 		}
 		return nil
@@ -146,12 +177,12 @@ func Main() {
 		return err
 	})
 	if err := connectivity.AddOutgoingService(ctx); err != nil {
-		log.Fatal(err)
+		logger.Fatalf("%v", err)
 	}
 
 	f := filter.New(stk.PortManager)
 	if err := filter.AddOutgoingService(ctx, f); err != nil {
-		log.Fatal(err)
+		logger.Fatalf("%v", err)
 	}
 	ns.filter = f
 

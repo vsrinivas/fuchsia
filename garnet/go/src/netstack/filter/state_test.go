@@ -5,15 +5,12 @@
 package filter
 
 import (
-	"log"
 	"testing"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
 )
-
-const debugStateTest = false
 
 const (
 	testStateLocalAddrV4  = "\x0a\x00\x00\x00"
@@ -559,9 +556,7 @@ func TestFindStateTCPv4(t *testing.T) {
 			if got, want := s.dstEp.state, test.remoteState; got != want {
 				t.Errorf("remoteState=%s, want=%s", got, want)
 			}
-			if debugStateTest {
-				log.Printf("s: %s\n", s)
-			}
+			t.Logf("s: %s", s)
 		}
 	}
 }

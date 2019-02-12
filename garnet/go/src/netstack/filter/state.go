@@ -7,10 +7,11 @@ package filter
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"syslog/logger"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
@@ -173,10 +174,7 @@ func (s *State) updateStateUDP(dir Direction, dataLen uint16) error {
 		s.expireTime = time.Now().Add(UDPExpireDefault)
 	}
 
-	if debug {
-		log.Printf("packet filter: updated state: %v", s)
-	}
-
+	logger.VLogf(logger.TraceVerbosity, "packet filter: updated state: %v", s)
 	return nil
 }
 
@@ -416,9 +414,7 @@ func (ss *States) purgeExpiredEntries(pm *ports.PortManager) {
 		now := time.Now()
 		for k, s := range ss.extToGwy {
 			if s.expireTime.After(now) {
-				if debug {
-					log.Printf("packet filter: delete state: %v (ExtToGwy)", s)
-				}
+				logger.VLogf(logger.TraceVerbosity, "packet filter: delete state: %v (ExtToGwy)", s)
 				delete(ss.lockKeyToMut, StatesLockKey{Addr: k.srcAddr, Port: k.srcPort})
 				delete(ss.extToGwy, k)
 			}
@@ -430,9 +426,7 @@ func (ss *States) purgeExpiredEntries(pm *ports.PortManager) {
 		}
 		for k, s := range ss.lanToExt {
 			if s.expireTime.After(now) {
-				if debug {
-					log.Printf("packet filter: delete state: %v (LanToExt)", s)
-				}
+				logger.VLogf(logger.TraceVerbosity, "packet filter: delete state: %v (LanToExt)", s)
 				delete(ss.lanToExt, k)
 			}
 		}
@@ -592,9 +586,7 @@ func (ss *States) createState(dir Direction, transProto tcpip.TransportProtocolN
 	ss.lanToExt[kLanToExt] = s
 	ss.extToGwy[kExtToGwy] = s
 
-	if debug {
-		log.Printf("packet filter: new state: %v", s)
-	}
+	logger.VLogf(logger.TraceVerbosity, "packet filter: new state: %v", s)
 
 	return s
 }

@@ -6,10 +6,11 @@ package dns
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"sync"
 	"time"
+
+	"syslog/logger"
 
 	"golang.org/x/net/dns/dnsmessage"
 )
@@ -17,9 +18,8 @@ import (
 const (
 	// TODO: Think about a good value. dnsmasq defaults to 150 names.
 	maxEntries = 1024
+	tag        = "DNS"
 )
-
-const debug = false
 
 var testHookNow = func() time.Time { return time.Now() }
 
@@ -136,22 +136,18 @@ func (cache *cacheInfo) insert(rr dnsmessage.Resource) {
 				existing.ttd = newEntry.ttd
 			}
 		}
-		if debug {
-			log.Printf("DNS cache update: %v(%v) expires %v", h.Name, h.Type, existing.ttd)
-		}
+		logger.VLogTf(logger.TraceVerbosity, tag, "DNS cache update: %v(%v) expires %v", h.Name, h.Type, existing.ttd)
 		return
 	}
 	if cache.numEntries+1 <= maxEntries {
-		if debug {
-			log.Printf("DNS cache insert: %v(%v) expires %v", h.Name, h.Type, newEntry.ttd)
-		}
+		logger.VLogTf(logger.TraceVerbosity, tag, "DNS cache insert: %v(%v) expires %v", h.Name, h.Type, newEntry.ttd)
 		cache.m[h.Name] = append(entries, newEntry)
 		cache.numEntries++
 	} else {
 		// TODO(mpcomplete): might be better to evict the LRU entry instead.
 		// TODO(mpcomplete): RFC 1035 7.4 says that if we can't cache this RR, we
 		// shouldn't cache any other RRs for the same name in this response.
-		log.Printf("DNS cache is full; insert failed: %v(%v)", h.Name, h.Type)
+		logger.WarnTf(tag, "DNS cache is full; insert failed: %v(%v)", h.Name, h.Type)
 	}
 }
 
@@ -222,16 +218,16 @@ func newCachedResolver(fallback Resolver) Resolver {
 		rrs := cache.lookup(question)
 		cache.mu.Unlock()
 		if len(rrs) != 0 {
-			if debug {
-				log.Printf("DNS cache hit %v(%v) => %v", question.Name, question.Type, rrs)
-			}
+			logger.VLogTf(logger.TraceVerbosity, tag, "DNS cache hit %v(%v) => %v", question.Name, question.Type, rrs)
 			return dnsmessage.Name{}, rrs, dnsmessage.Message{}, nil
 		}
 
+		logger.VLogTf(logger.TraceVerbosity, tag, "DNS cache miss for the message %v(%v)", question.Name, question.Type)
 		cname, rrs, msg, err := fallback(c, question)
-		if debug {
-			log.Printf("DNS cache miss, server returned %v(%v) => %v; err=%v", question.Name, question.Type, rrs, err)
+		if err != nil {
+			logger.WarnTf(tag, "DNS cache miss, server returned %v(%v) => err=%v", question.Name, question.Type, err)
 		}
+
 		cache.mu.Lock()
 		if err == nil {
 			cache.insertAll(msg.Answers)

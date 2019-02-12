@@ -5,9 +5,10 @@
 package eth
 
 import (
-	"log"
 	"syscall/zx"
 	"syscall/zx/mxerror"
+
+	"syslog/logger"
 
 	"netstack/trace"
 
@@ -16,8 +17,6 @@ import (
 	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/stack"
 )
-
-const debug = false
 
 var _ stack.LinkEndpoint = (*endpoint)(nil)
 
@@ -115,7 +114,7 @@ func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 				}
 			}
 		}(); err != nil {
-			log.Printf("dispatch error: %v", err)
+			logger.Warnf("dispatch error: %v", err)
 		}
 	}()
 

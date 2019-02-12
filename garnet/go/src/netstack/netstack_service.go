@@ -6,11 +6,12 @@ package netstack
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 	"syscall/zx"
 	"syscall/zx/zxwait"
+
+	"syslog/logger"
 
 	"netstack/fidlconv"
 	"netstack/link"
@@ -66,7 +67,7 @@ func (ns *Netstack) getNetInterfaces2Locked() []netstack.NetInterface2 {
 		netinterface, err := ifs.toNetInterface2Locked()
 		ifs.mu.Unlock()
 		if err != nil {
-			log.Print(err)
+			logger.Warnf("failed to call ifs.toNetInterfaceLocked: %v", err)
 		}
 		interfaces = append(interfaces, netinterface)
 	}
@@ -303,7 +304,7 @@ func (ni *netstackImpl) StartRouteTableTransaction(req netstack.RouteTableTransa
 
 // Add address to the given network interface.
 func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address net.IpAddress, prefixLen uint8) (netstack.NetErr, error) {
-	log.Printf("net address %+v", address)
+	logger.Infof("net address %+v", address)
 
 	nic := tcpip.NICID(nicid)
 	protocol, addr, neterr := ni.ns.validateInterfaceAddress(address, prefixLen)
