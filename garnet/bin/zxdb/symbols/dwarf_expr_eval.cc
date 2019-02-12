@@ -55,11 +55,11 @@ DwarfExprEval::Completion DwarfExprEval::Eval(
         true, kTargetPointerSize);
   }
 
-  ContinueEval();
-  return is_complete_ ? Completion::kSync : Completion::kAsync;
+  // Note: ContinueEval() may call callback, which may delete |this|
+  return ContinueEval() ? Completion::kSync : Completion::kAsync;
 }
 
-void DwarfExprEval::ContinueEval() {
+bool DwarfExprEval::ContinueEval() {
   // To allow interruption, only a certain number of instructions will be
   // executed in sequence without posting back to the message loop. This
   // gives calling code the chance to cancel long or hung executions. Since
@@ -82,10 +82,12 @@ void DwarfExprEval::ContinueEval() {
       }
 
       // The callback may delete |this| but we also want to clear the value to
-      // prevent accidental future use.
+      // prevent accidental future use. So we need to copy members to local
+      // variables in case |this| goes away.
+      auto is_complete = is_complete_;
       auto cb = std::move(completion_callback_);
       cb(this, err);
-      return;
+      return is_complete;
     }
 
     if (instruction_count == kMaxInstructionsAtOnce) {
@@ -96,10 +98,11 @@ void DwarfExprEval::ContinueEval() {
             if (weak_eval)
               weak_eval->ContinueEval();
           });
-      return;
+      return is_complete_;
     }
     instruction_count++;
   } while (!is_complete_ && EvalOneOp() == Completion::kSync);
+  return is_complete_;
 }
 
 DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
@@ -285,7 +288,7 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(
 
   // Must request async.
   data_provider_->GetRegisterAsync(
-      dwarf_register_number, [ weak_eval = weak_factory_.GetWeakPtr(), offset ](
+      dwarf_register_number, [weak_eval = weak_factory_.GetWeakPtr(), offset](
                                  const Err& err, uint64_t value) {
         if (!weak_eval)
           return;
@@ -489,9 +492,8 @@ DwarfExprEval::Completion DwarfExprEval::OpFbreg() {
   }
 
   // Must request async.
-  data_provider_->GetFrameBaseAsync([
-    weak_eval = weak_factory_.GetWeakPtr(), offset
-  ](const Err& err, uint64_t value) {
+  data_provider_->GetFrameBaseAsync([weak_eval = weak_factory_.GetWeakPtr(),
+                                     offset](const Err& err, uint64_t value) {
     if (!weak_eval)
       return;
     if (err.has_error()) {
@@ -549,8 +551,9 @@ DwarfExprEval::Completion DwarfExprEval::OpDeref() {
   uint64_t addr = stack_.back();
   stack_.pop_back();
   data_provider_->GetMemoryAsync(
-      addr, 8, [ addr, weak_eval = weak_factory_.GetWeakPtr() ](
-                   const Err& err, std::vector<uint8_t> value) {
+      addr, 8,
+      [addr, weak_eval = weak_factory_.GetWeakPtr()](
+          const Err& err, std::vector<uint8_t> value) {
         if (!weak_eval) {
           return;
         } else if (err.has_error()) {

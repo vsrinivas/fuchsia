@@ -18,8 +18,7 @@
 
 namespace zxdb {
 
-FrameImpl::FrameImpl(Thread* thread,
-                     const debug_ipc::StackFrame& stack_frame,
+FrameImpl::FrameImpl(Thread* thread, const debug_ipc::StackFrame& stack_frame,
                      Location location)
     : Frame(thread->session()),
       thread_(thread),
@@ -119,9 +118,8 @@ bool FrameImpl::EnsureBasePointer() {
 
   const Function* function = loc.symbol().Get()->AsFunction();
   const VariableLocation::Entry* location_entry = nullptr;
-  if (!function ||
-      !(location_entry = function->frame_base().EntryForIP(loc.symbol_context(),
-                                                           GetAddress()))) {
+  if (!function || !(location_entry = function->frame_base().EntryForIP(
+                         loc.symbol_context(), GetAddress()))) {
     // No frame base declared for this function.
     computed_base_pointer_ = stack_frame_.bp;
     return true;
@@ -156,10 +154,9 @@ bool FrameImpl::EnsureBasePointer() {
     base_pointer_eval_.reset();
   };
 
-  auto eval_result = base_pointer_eval_->Eval(GetSymbolDataProvider(),
-                                              loc.symbol_context(),
-                                              location_entry->expression,
-                                              std::move(save_result));
+  auto eval_result = base_pointer_eval_->Eval(
+      GetSymbolDataProvider(), loc.symbol_context(), location_entry->expression,
+      std::move(save_result));
 
   // In the common case this will complete synchronously and the above callback
   // will have put the result into base_pointer_requests_ before this code is

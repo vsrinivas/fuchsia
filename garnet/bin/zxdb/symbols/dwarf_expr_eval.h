@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_ZXDB_SYMBOLS_DWARF_EXPR_EVAL_H_
+#define GARNET_BIN_ZXDB_SYMBOLS_DWARF_EXPR_EVAL_H_
 
 #include <stdint.h>
 
@@ -92,7 +93,9 @@ class DwarfExprEval {
  private:
   // Evaluates the next phases of the expression until an asynchronous operation
   // is required.
-  void ContinueEval();
+  // Returns the value of |is_complete| because |this| could be deleted
+  // by the time this method returns.
+  bool ContinueEval();
 
   // Evaluates a single operation.
   Completion EvalOneOp();
@@ -200,3 +203,5 @@ class DwarfExprEval {
 };
 
 }  // namespace zxdb
+
+#endif  // GARNET_BIN_ZXDB_SYMBOLS_DWARF_EXPR_EVAL_H_
