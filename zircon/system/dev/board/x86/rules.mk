@@ -12,7 +12,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_NAME := platform-bus-acpi
+MODULE_NAME := platform-bus-x86
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 MODULE_COMPILEFLAGS += -Wno-null-pointer-arithmetic
@@ -24,18 +24,18 @@ MODULE_COMPILEFLAGS += -Ithird_party/lib/acpica/source/include \
 					   -I$($LOCAL_DIR)/include
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/bus-acpi.c \
+    $(LOCAL_DIR)/x86.c \
     $(LOCAL_DIR)/cpu-trace.c \
     $(LOCAL_DIR)/sysmem.c \
     $(LOCAL_DIR)/debug.c \
-    $(LOCAL_DIR)/dev/dev-battery.c \
-    $(LOCAL_DIR)/dev/dev-cros-ec/dev.cpp \
-    $(LOCAL_DIR)/dev/dev-cros-ec/motion.cpp \
-    $(LOCAL_DIR)/dev/dev-ec.c \
-    $(LOCAL_DIR)/dev/dev-pwrbtn.cpp \
-    $(LOCAL_DIR)/dev/dev-pwrsrc.c \
-    $(LOCAL_DIR)/dev/dev-tbmc.cpp \
-    $(LOCAL_DIR)/dev/dev-thermal.c \
+    $(LOCAL_DIR)/acpi-dev/dev-battery.c \
+    $(LOCAL_DIR)/acpi-dev/dev-cros-ec/dev.cpp \
+    $(LOCAL_DIR)/acpi-dev/dev-cros-ec/motion.cpp \
+    $(LOCAL_DIR)/acpi-dev/dev-ec.c \
+    $(LOCAL_DIR)/acpi-dev/dev-pwrbtn.cpp \
+    $(LOCAL_DIR)/acpi-dev/dev-pwrsrc.c \
+    $(LOCAL_DIR)/acpi-dev/dev-tbmc.cpp \
+    $(LOCAL_DIR)/acpi-dev/dev-thermal.c \
     $(LOCAL_DIR)/init.c \
     $(LOCAL_DIR)/iommu.c \
     $(LOCAL_DIR)/methods.cpp \
