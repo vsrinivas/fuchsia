@@ -421,7 +421,7 @@ interface Controller {
     ImportBufferCollection(uint64 collection_id, handle collection_token) -> (zx.status res);
 
     // Release an imported buffer collection.
-    ReleaseBufferCollection(uint64 collection_id) -> (zx.status res);
+    ReleaseBufferCollection(uint64 collection_id);
 
     // Takes an imported buffer collection and sets the constraints
     // on it so that it can be imported with a specific config.
