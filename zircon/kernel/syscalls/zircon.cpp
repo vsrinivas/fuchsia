@@ -204,8 +204,7 @@ zx_status_t sys_debuglog_write(zx_handle_t log_handle, uint32_t options,
                                user_in_ptr<const void> ptr, size_t len) {
     LTRACEF("log handle %x, opt %x, ptr 0x%p, len %zu\n", log_handle, options, ptr.get(), len);
 
-    if (len > DLOG_MAX_DATA)
-        return ZX_ERR_OUT_OF_RANGE;
+    len = len > DLOG_MAX_DATA ? DLOG_MAX_DATA : len;
 
     if (options & (~ZX_LOG_FLAGS_MASK))
         return ZX_ERR_INVALID_ARGS;
