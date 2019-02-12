@@ -32,7 +32,9 @@ include_directories(
         ${PROJECT_SOURCE_DIR}/out/x64/fidling/gen/
         ${PROJECT_SOURCE_DIR}/out/x64/gen
         ${PROJECT_SOURCE_DIR}/garnet/public
-        ${PROJECT_SOURCE_DIR}/peridot/public)
+        ${PROJECT_SOURCE_DIR}/peridot/public
+        ${PROJECT_SOURCE_DIR}/sdk
+)
 
 include_directories(${INCLUDE_DIRS})
 
