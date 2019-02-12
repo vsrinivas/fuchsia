@@ -177,7 +177,6 @@ zx_status_t Sherlock::AudioInit() {
     // PDM pin assignments.
     gpio_impl_.SetAltFunction(T931_GPIOA(7), T931_GPIOA_7_PDM_DCLK_FN);
     gpio_impl_.SetAltFunction(T931_GPIOA(8), T931_GPIOA_8_PDM_DIN0_FN);
-    gpio_impl_.SetAltFunction(T931_GPIOA(9), T931_GPIOA_9_PDM_DIN1_FN);
 
     gpio_impl_.ConfigOut(T931_GPIOH(7), 1); // SOC_AUDIO_EN.
 

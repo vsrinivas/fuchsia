@@ -15,8 +15,8 @@
 namespace audio {
 namespace sherlock {
 
-// Expects 4 mics.
-constexpr size_t kNumberOfChannels = 4;
+// Expects 2 mics.
+constexpr size_t kNumberOfChannels = 2;
 // Calculate ring buffer size for 1 second of 16-bit, 48kHz.
 constexpr size_t kRingBufferSize = fbl::round_up<size_t, size_t>(48000 * 2 * kNumberOfChannels,
                                                                  ZX_PAGE_SIZE);
