@@ -79,6 +79,7 @@ __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const cha
 #define BRCMF_FIL_ON()   (brcmf_msg_filter & BRCMF_FIL_VAL)
 #define BRCMF_FWCON_ON() (brcmf_msg_filter & BRCMF_FWCON_VAL)
 #define BRCMF_SCAN_ON()  (brcmf_msg_filter & BRCMF_SCAN_VAL)
+#define BRCMF_INFO_ON()  (brcmf_msg_filter & BRCMF_INFO_VAL)
 
 #else /* defined(DEBUG) || defined(CONFIG_BRCMFMAC_DBG) */
 
@@ -93,6 +94,7 @@ __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const cha
 #define BRCMF_FIL_ON()   0
 #define BRCMF_FWCON_ON() 0
 #define BRCMF_SCAN_ON()  0
+#define BRCMF_INFO_ON()  0
 
 // clang-format on
 

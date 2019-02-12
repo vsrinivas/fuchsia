@@ -4453,6 +4453,88 @@ wlan_vht_caps_t brcmf_get_vht_cap() {
     return vht_caps;
 }
 
+static void brcmf_dump_ht_caps(wlan_ht_caps_t* caps) {
+    zxlogf(INFO, "brcmfmac:     ht_capability_info: %#x\n", caps->ht_capability_info);
+    zxlogf(INFO, "brcmfmac:     ampdu_params: %#x\n", caps->ampdu_params);
+
+    char mcs_set_str[countof(caps->supported_mcs_set) * 5 + 1];
+    char* str = mcs_set_str;
+    for (unsigned i = 0; i < countof(caps->supported_mcs_set); i++) {
+        str += sprintf(str, "%s0x%02hhx", i > 0 ? " " : "", caps->supported_mcs_set[i]);
+    }
+
+    zxlogf(INFO, "brcmfmac:     mcs_set: %s\n", mcs_set_str);
+    zxlogf(INFO, "brcmfmac:     ht_ext_capabilities: %#x\n", caps->ht_ext_capabilities);
+    zxlogf(INFO, "brcmfmac:     asel_capabilities: %#x\n", caps->asel_capabilities);
+}
+
+static void brcmf_dump_vht_caps(wlan_vht_caps_t* caps) {
+    zxlogf(INFO, "brcmfmac:     vht_capability_info: %#x\n", caps->vht_capability_info);
+    zxlogf(INFO, "brcmfmac:     supported_vht_mcs_and_nss_set: %#" PRIx64 "\n",
+           caps->supported_vht_mcs_and_nss_set);
+}
+
+static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
+    char band_id_str[32];
+    switch (band->band_id) {
+    case WLAN_BAND_2GHZ:
+        sprintf(band_id_str, "2GHz");
+        break;
+    case WLAN_BAND_5GHZ:
+        sprintf(band_id_str, "5GHz");
+        break;
+    default:
+        sprintf(band_id_str, "unknown (%d)", band->band_id);
+        break;
+    }
+    zxlogf(INFO, "brcmfmac:   band_id: %s\n", band_id_str);
+
+    ZX_ASSERT(band->num_basic_rates <= WLAN_BASIC_RATES_MAX_LEN);
+    char basic_rates_str[WLAN_BASIC_RATES_MAX_LEN * 6 + 1];
+    char* str = basic_rates_str;
+    for (unsigned i = 0; i < band->num_basic_rates; i++) {
+        str += sprintf(str, "%s%d", i > 0 ? " " : "", band->basic_rates[i]);
+    }
+    zxlogf(INFO, "brcmfmac:     basic_rates: %s\n", basic_rates_str);
+
+    zxlogf(INFO, "brcmfmac:     base_frequency: %d\n", band->base_frequency);
+
+    ZX_ASSERT(band->num_channels <= WLAN_CHANNELS_MAX_LEN);
+    char channels_str[WLAN_CHANNELS_MAX_LEN * 4 + 1];
+    str = channels_str;
+    for (unsigned i = 0; i < band->num_channels; i++) {
+        str += sprintf(str, "%s%d", i > 0 ? " " : "", band->channels[i]);
+    }
+    zxlogf(INFO, "brcmfmac:     channels: %s\n", channels_str);
+
+    zxlogf(INFO, "brcmfmac:     ht_supported: %s\n", band->ht_supported ? "true" : "false");
+    if (band->ht_supported) {
+        brcmf_dump_ht_caps(&band->ht_caps);
+    }
+
+    zxlogf(INFO, "brcmfmac:     vht_supported: %s\n", band->vht_supported ? "true" : "false");
+    if (band->vht_supported) {
+        brcmf_dump_vht_caps(&band->vht_caps);
+    }
+}
+
+static void brcmf_dump_query_info(wlanif_query_info_t* info) {
+    zxlogf(INFO, "brcmfmac: Device capabilities as reported to wlanif:\n");
+    zxlogf(INFO, "brcmfmac:   mac_addr: %02X:%02X:%02X:%02X:%02X:%02X\n",
+           info->mac_addr[0], info->mac_addr[1], info->mac_addr[2],
+           info->mac_addr[3], info->mac_addr[4], info->mac_addr[5]);
+    zxlogf(INFO, "brcmfmac:   role(s): %s%s%s\n",
+           info->role & WLAN_MAC_ROLE_CLIENT ? "client " : "",
+           info->role & WLAN_MAC_ROLE_AP ? "ap " : "",
+           info->role & WLAN_MAC_ROLE_MESH ? "mesh " : "");
+    zxlogf(INFO, "brcmfmac:   feature(s): %s%s\n",
+           info->features & WLANIF_FEATURE_DMA ? "DMA " : "",
+           info->features & WLANIF_FEATURE_SYNTH ? "SYNTH " : "");
+    for (unsigned i = 0; i < info->num_bands; i++) {
+        brcmf_dump_band_caps(&info->bands[i]);
+    }
+}
+
 void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
     struct net_device* ndev = ctx;
     struct brcmf_if* ifp = ndev_to_if(ndev);
@@ -4497,6 +4579,10 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
     band->ht_caps = brcmf_get_ht_cap();
     band->vht_supported = true;
     band->vht_caps = brcmf_get_vht_cap();
+
+    if (BRCMF_INFO_ON()) {
+        brcmf_dump_query_info(info);
+    }
 }
 
 void brcmf_hook_stats_query_req(void* ctx) {
