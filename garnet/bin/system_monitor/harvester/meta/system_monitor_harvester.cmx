@@ -1,0 +1,9 @@
+{
+    "program": {
+        "binary": "bin/system_monitor_harvester"
+    },
+    "sandbox": {
+        "dev": [ "misc/sysinfo" ],
+        "services": [ "fuchsia.net.SocketProvider" ]
+    }
+}

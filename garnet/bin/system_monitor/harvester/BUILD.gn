@@ -29,7 +29,13 @@ package("system_monitor_harvester") {
   binaries = [
     {
       name = "system_monitor_harvester"
-      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/system_monitor_harvester.cmx")
+      dest = "system_monitor_harvester.cmx"
     },
   ]
 }
