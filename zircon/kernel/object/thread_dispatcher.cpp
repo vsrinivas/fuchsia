@@ -621,7 +621,14 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
             // Can't send the request to the exception handler. Report the error, which will
             // probably kill the process.
             LTRACEF("SendPacket returned %d\n", status);
-            ExitException();
+
+            Guard<fbl::Mutex> guard{get_lock()};
+
+            // The report didn't go out, but we're in an exception here so a
+            // buggy handler could have tried to respond. Clear any event out.
+            event_unsignal(&exception_event_);
+
+            ExitExceptionLocked();
             return status;
         }
 
@@ -641,12 +648,6 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
     // ThreadState::Exception::UNPROCESSED.
     switch (status) {
     case ZX_OK:
-        // It's critical that at this point the event no longer be armed.
-        // Otherwise the next time we get an exception we'll fall right through
-        // without waiting for an exception response.
-        // Note: The event could be signaled after event_wait_deadline returns
-        // if the thread was killed while the event was signaled.
-        DEBUG_ASSERT(!event_signaled(&exception_event_));
         // Fetch TRY_NEXT/RESUME status.
         *out_estatus = state_.exception();
         DEBUG_ASSERT(*out_estatus == ThreadState::Exception::TRY_NEXT ||
@@ -654,6 +655,8 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
         break;
     case ZX_ERR_INTERNAL_INTR_KILLED:
         // Thread was killed.
+        // Ensure |exception_event_| is no longer signaled.
+        event_unsignal(&exception_event_);
         break;
     default:
         ASSERT_MSG(false, "unexpected exception result: %d\n", status);
@@ -672,6 +675,9 @@ void ThreadDispatcher::EnterException(fbl::RefPtr<ExceptionPort> eport,
                                       const arch_exception_context_t* arch_context) {
     Guard<fbl::Mutex> guard{get_lock()};
 
+    // |exception_event_| can't be signaled yet, we're not in an exception yet.
+    DEBUG_ASSERT(!event_signaled(&exception_event_));
+
     // Mark that we're in an exception.
     thread_.exception_context = arch_context;
 
@@ -685,12 +691,14 @@ void ThreadDispatcher::EnterException(fbl::RefPtr<ExceptionPort> eport,
     state_.set(ThreadState::Exception::UNPROCESSED);
 }
 
-void ThreadDispatcher::ExitException() {
-    Guard<fbl::Mutex> guard{get_lock()};
-    ExitExceptionLocked();
-}
-
 void ThreadDispatcher::ExitExceptionLocked() {
+    // It's critical that at this point the event no longer be armed.
+    // Otherwise the next time we get an exception we'll fall right through
+    // without waiting for an exception response.
+    // Note: The event could be signaled after event_wait_with_mask returns
+    // if the thread was killed while the event was signaled.
+    DEBUG_ASSERT(!event_signaled(&exception_event_));
+
     exception_wait_port_.reset();
     exception_report_ = nullptr;
     thread_.exception_context = nullptr;
@@ -701,7 +709,7 @@ zx_status_t ThreadDispatcher::MarkExceptionHandledWorker(PortDispatcher* eport,
                                                          ThreadState::Exception handled_state) {
     canary_.Assert();
 
-    LTRACEF("obj %p\n", this);
+    LTRACEF("obj %p, handled_state %d\n", this, static_cast<int>(handled_state));
 
     Guard<fbl::Mutex> guard{get_lock()};
     if (!InExceptionLocked())

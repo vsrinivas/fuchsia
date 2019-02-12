@@ -1572,10 +1572,49 @@ static bool unbind_while_stopped_test()
     END_TEST;
 }
 
-static bool kill_while_stopped_at_start_test()
+static bool kill_process_while_stopped_at_start_test()
 {
     BEGIN_TEST;
-    unittest_printf("kill_while_stopped_at_start tests\n");
+
+    zx_handle_t child, eport, our_channel;
+    start_test_child_with_eport(zx_job_default(), test_child_name,
+                                &child, &eport, &our_channel);
+
+    zx_koid_t tid;
+    if (read_and_verify_exception(eport, child, ZX_EXCP_THREAD_STARTING, &tid)) {
+        zx_handle_t thread = tu_process_get_thread(child, tid);
+
+        tu_task_kill(child);
+
+        // Even though we just killed the process, respond to the exception
+        // to exercise ThreadDispatcher's unsignaling of the exception event.
+        zx_status_t status = zx_task_resume_from_exception(thread, eport, 0);
+        // Ideally we could control how the kernel schedules us and the
+        // inferior, but we can't from userspace. Thus there's a race here,
+        // either we get ZX_OK or we get ZX_ERR_BAD_STATE.
+        // We want a failure here to print the value of |status|, without
+        // getting excessively clever. That is why it is written this way.
+        if (status != ZX_OK && status != ZX_ERR_BAD_STATE) {
+            EXPECT_EQ(status, ZX_OK, "");
+        }
+
+        tu_process_wait_signaled(child);
+
+        // Keep the thread handle open until after we know the process has exited
+        // to ensure the thread's handle lifetime doesn't affect process lifetime.
+        tu_handle_close(thread);
+    }
+
+    tu_handle_close(child);
+    tu_handle_close(eport);
+    tu_handle_close(our_channel);
+
+    END_TEST;
+}
+
+static bool kill_thread_while_stopped_at_start_test()
+{
+    BEGIN_TEST;
 
     zx_handle_t child, eport, our_channel;
     start_test_child_with_eport(zx_job_default(), test_child_name,
@@ -1591,7 +1630,7 @@ static bool kill_while_stopped_at_start_test()
         zx_status_t status = zx_object_get_child(child, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
         if (status < 0)
             tu_fatal("zx_object_get_child", status);
-        zx_task_kill(thread);
+        tu_task_kill(thread);
         tu_process_wait_signaled(child);
 
         // Keep the thread handle open until after we know the process has exited
@@ -1835,7 +1874,8 @@ RUN_TEST_ENABLE_CRASH_HANDLER(trigger_test);
 RUN_TEST(unbind_walkthrough_by_reset_test);
 RUN_TEST(unbind_walkthrough_by_close_test);
 RUN_TEST(unbind_while_stopped_test);
-RUN_TEST(kill_while_stopped_at_start_test);
+RUN_TEST(kill_process_while_stopped_at_start_test);
+RUN_TEST(kill_thread_while_stopped_at_start_test);
 RUN_TEST(death_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(self_death_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(multiple_threads_registered_death_test);
