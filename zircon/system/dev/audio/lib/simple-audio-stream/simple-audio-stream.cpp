@@ -71,6 +71,7 @@ zx_status_t SimpleAudioStream::CreateInternal() {
 zx_status_t SimpleAudioStream::PublishInternal() {
     device_name_[sizeof(device_name_) - 1] = 0;
     if (!strlen(device_name_)) {
+        zxlogf(ERROR, "Zero-length device name in %s\n", __PRETTY_FUNCTION__);
         return ZX_ERR_BAD_STATE;
     }
 
@@ -158,12 +159,14 @@ zx_status_t SimpleAudioStream::DdkIoctl(uint32_t op, const void* in_buf, size_t 
                                         void* out_buf, size_t out_len, size_t* out_actual) {
     // The only IOCTL we support is get channel.
     if (op != AUDIO_IOCTL_GET_CHANNEL) {
+        zxlogf(ERROR, "Unsupported IOCTL in %s\n", __PRETTY_FUNCTION__);
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     if ((out_buf == nullptr) ||
         (out_actual == nullptr) ||
         (out_len != sizeof(zx_handle_t))) {
+        zxlogf(ERROR, "Invalid args in %s\n", __PRETTY_FUNCTION__);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -175,8 +178,10 @@ zx_status_t SimpleAudioStream::DdkIoctl(uint32_t op, const void* in_buf, size_t 
     // formats).
     bool privileged = (stream_channel_ == nullptr);
     auto channel = dispatcher::Channel::Create<AudioStreamChannel>();
-    if (channel == nullptr)
+    if (channel == nullptr) {
+        zxlogf(ERROR, "Could not allocate dispatcher::channel in %s\n", __PRETTY_FUNCTION__);
         return ZX_ERR_NO_MEMORY;
+    }
 
     dispatcher::Channel::ProcessHandler phandler(
         [ stream = fbl::WrapRefPtr(this), privileged ](dispatcher::Channel * channel)->zx_status_t {
@@ -245,8 +250,10 @@ zx_status_t SimpleAudioStream::ProcessStreamChannel(dispatcher::Channel* channel
         return res;
 
     if ((req_size < sizeof(req.hdr) ||
-         (req.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID)))
+         (req.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID))) {
+        zxlogf(ERROR, "Bad request in %s\n", __PRETTY_FUNCTION__);
         return ZX_ERR_INVALID_ARGS;
+    }
 
     // Strip the NO_ACK flag from the request before selecting the dispatch target.
     auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
@@ -284,8 +291,10 @@ zx_status_t SimpleAudioStream::ProcessRingBufferChannel(dispatcher::Channel* cha
         return res;
 
     if ((req_size < sizeof(req.hdr) ||
-         (req.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID)))
+         (req.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID))) {
+        zxlogf(ERROR, "Bad request in %s\n", __PRETTY_FUNCTION__);
         return ZX_ERR_INVALID_ARGS;
+    }
 
     // Strip the NO_ACK flag from the request before selecting the dispatch target.
     auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
@@ -376,6 +385,7 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(dispatcher::Channel* channel,
 
     // Only the privileged stream channel is allowed to change the format.
     if (!privileged) {
+        zxlogf(ERROR, "Unprivileged channel cannot SetStreamFormat\n");
         resp.result = ZX_ERR_ACCESS_DENIED;
         goto finished;
     }
@@ -392,6 +402,7 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(dispatcher::Channel* channel,
     }
 
     if (!found_one) {
+        zxlogf(ERROR, "Could not find a suitable format in %s\n", __PRETTY_FUNCTION__);
         resp.result = ZX_ERR_INVALID_ARGS;
         goto finished;
     }
@@ -419,6 +430,7 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(dispatcher::Channel* channel,
     // Actually attempt to change the format.
     resp.result = ChangeFormat(req);
     if (resp.result != ZX_OK) {
+        zxlogf(ERROR, "Could not ChangeFormat in %s\n", __PRETTY_FUNCTION__);
         goto finished;
     }
 
@@ -428,6 +440,7 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(dispatcher::Channel* channel,
         fbl::AutoLock channel_lock(&channel_lock_);
         rb_channel_ = dispatcher::Channel::Create();
         if (rb_channel_ == nullptr) {
+            zxlogf(ERROR, "Failed to create rb_channel in %s\n", __PRETTY_FUNCTION__);
             resp.result = ZX_ERR_NO_MEMORY;
         } else {
             dispatcher::Channel::ProcessHandler phandler(
@@ -448,6 +461,7 @@ zx_status_t SimpleAudioStream::OnSetStreamFormat(dispatcher::Channel* channel,
                                                 std::move(phandler),
                                                 std::move(chandler));
             if (resp.result != ZX_OK) {
+                zxlogf(ERROR, "rb_channel Activate failed in %s\n", __PRETTY_FUNCTION__);
                 rb_channel_.reset();
             }
         }
