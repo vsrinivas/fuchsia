@@ -24,8 +24,6 @@
 namespace inferior_control {
 namespace {
 
-constexpr zx_time_t kill_timeout = ZX_MSEC(10 * 1000);
-
 std::unique_ptr<process::ProcessBuilder> CreateProcessBuilder(
     zx_handle_t job, const debugger_utils::Argv& argv,
     std::shared_ptr<sys::ServiceDirectory>& services) {
@@ -417,38 +415,17 @@ bool Process::Kill() {
 
   FXL_LOG(INFO) << "Killing process " << id();
 
-  // There's a few issues with sequencing here that we need to consider.
-  // - OnProcessTermination, called when we receive an exception indicating
-  //   the process has exited, will send back a stop reply which we don't want
-  // - we don't want to unbind the exception port before killing the process
-  //   because we don't want to accidentally cause the process to resume before
-  //   we kill it
-  // - we need the debug handle to kill the process
+  // Request the process be killed. Cleanup is handled by the async loop
+  // when it receives ZX_PROCESS_TERMINATED.
 
   FXL_DCHECK(handle_ != ZX_HANDLE_INVALID);
   auto status = zx_task_kill(handle_);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to kill process: "
+    FXL_LOG(ERROR) << "Kill request failed for process " << id() << ": "
                    << debugger_utils::ZxErrorString(status);
     return false;
   }
 
-  UnbindExceptionPort();
-
-  zx_signals_t signals;
-  // If something goes wrong we don't want to wait forever.
-  status = zx_object_wait_one(handle_, ZX_TASK_TERMINATED,
-                              zx_deadline_after(kill_timeout), &signals);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error waiting for process to die, ignoring: "
-                   << debugger_utils::ZxErrorString(status);
-  } else {
-    FXL_DCHECK(signals & ZX_TASK_TERMINATED);
-  }
-
-  CloseDebugHandle();
-
-  Clear();
   return true;
 }
 

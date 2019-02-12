@@ -120,6 +120,33 @@ bool TestServer::TestSuccessfulExit() {
   return true;
 }
 
+// This method is intended to be called at the end of tests.
+// There are several things we check for successful exit, and it's easier
+// to have them all in one place. Note that we use gtest macros instead of
+// FXL_DCHECK because these all verify test conditions.
+bool TestServer::TestFailureExit() {
+  auto inferior = current_process();
+  if (inferior == nullptr) {
+    FXL_LOG(ERROR) << "inferior == nullptr";
+    return false;
+  }
+  if (inferior->IsAttached()) {
+    FXL_LOG(ERROR) << "inferior still attached";
+    return false;
+  }
+  if (inferior->IsLive()) {
+    FXL_LOG(ERROR) << "inferior still live";
+    return false;
+  }
+  // We can't get the exit code from |inferior| as we've detached. Instead
+  // we save it on process exit.
+  if (exit_code_set_ && exit_code_ == 0) {
+    FXL_LOG(ERROR) << "inferior successfully exited";
+    return false;
+  }
+  return true;
+}
+
 void TestServer::OnThreadStarting(Process* process, Thread* thread,
                                   const zx_exception_context_t& context) {
   FXL_DCHECK(process);
@@ -155,7 +182,7 @@ void TestServer::OnProcessTermination(Process* process) {
 
   printf("Process %s is gone, rc %d\n", process->GetName().c_str(), exit_code_);
 
-  // If the process is gone exit main loop.
+  // Process is gone, exit main loop.
   QuitMessageLoop(true);
 }
 

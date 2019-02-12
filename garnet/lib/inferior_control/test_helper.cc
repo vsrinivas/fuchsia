@@ -60,9 +60,9 @@ static void WaitPeerClosed() {
   FXL_CHECK(status == ZX_OK) << "status: " << ZxErrorString(status);
 }
 
-static int TestAttach() {
+static int PerformWaitPeerClosed() {
   WaitPeerClosed();
-  printf("test-attach complete\n");
+  printf("wait-peer-closed complete\n");
   return 0;
 }
 
@@ -106,8 +106,8 @@ int main(int argc, char* argv[]) {
 
   if (argc == 2) {
     const char* cmd = argv[1];
-    if (strcmp(cmd, "test-attach") == 0) {
-      return TestAttach();
+    if (strcmp(cmd, "wait-peer-closed") == 0) {
+      return PerformWaitPeerClosed();
     }
     if (strcmp(cmd, "test-try-next") == 0) {
       return TestTryNext();

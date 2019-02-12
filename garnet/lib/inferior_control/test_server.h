@@ -41,6 +41,7 @@ class TestServer : public Server, public ::testing::Test {
   bool SetupInferior(const std::vector<std::string>& argv);
   bool RunHelperProgram(zx::channel channel);
   bool TestSuccessfulExit();
+  bool TestFailureExit();
 
   int exit_code() const { return exit_code_; }
   bool exit_code_set() const { return exit_code_set_; }

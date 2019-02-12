@@ -117,6 +117,8 @@ class Process final {
   bool Start();
 
   // Terminate the process.
+  // This doesn't wait for the process to die. The server loop will get a
+  // ZX_PROCESS_TERMINATED signal when that happens.
   bool Kill();
 
   // Returns true if the process is running or has been running.

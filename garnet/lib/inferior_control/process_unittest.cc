@@ -76,13 +76,14 @@ class AttachTest : public TestServer {
 TEST_F(AttachTest, Attach) {
   std::vector<std::string> argv{
       helper_program,
-      "test-attach",
+      "wait-peer-closed",
   };
   ASSERT_TRUE(SetupInferior(argv));
 
   zx::channel our_channel, their_channel;
   auto status = zx::channel::create(0, &our_channel, &their_channel);
   ASSERT_EQ(status, ZX_OK);
+
   EXPECT_TRUE(RunHelperProgram(std::move(their_channel)));
   set_channel(std::move(our_channel));
 
@@ -182,6 +183,7 @@ TEST_F(LdsoBreakpointTest, LdsoBreakpoint) {
   zx::channel our_channel, their_channel;
   auto status = zx::channel::create(0, &our_channel, &their_channel);
   ASSERT_EQ(status, ZX_OK);
+
   EXPECT_TRUE(RunHelperProgram(std::move(their_channel)));
 
   // The inferior is waiting for us to close our side of the channel.
@@ -191,6 +193,43 @@ TEST_F(LdsoBreakpointTest, LdsoBreakpoint) {
   EXPECT_TRUE(dsos_loaded());
   EXPECT_TRUE(libc_present());
   EXPECT_TRUE(exec_present());
+}
+
+class KillTest : public TestServer {
+ public:
+  KillTest() = default;
+
+  void OnThreadStarting(Process* process, Thread* thread,
+                        const zx_exception_context_t& context) override {
+    kill_requested_ = process->Kill();
+    TestServer::OnThreadStarting(process, thread, context);
+  }
+
+  bool kill_requested() const { return kill_requested_; }
+
+  void set_channel(zx::channel channel) { channel_ = std::move(channel); }
+
+ private:
+  bool kill_requested_ = false;
+  zx::channel channel_;
+};
+
+TEST_F(KillTest, Kill) {
+  std::vector<std::string> argv{
+      helper_program,
+      "wait-peer-closed",
+  };
+  ASSERT_TRUE(SetupInferior(argv));
+
+  zx::channel our_channel, their_channel;
+  auto status = zx::channel::create(0, &our_channel, &their_channel);
+  ASSERT_EQ(status, ZX_OK);
+
+  EXPECT_TRUE(RunHelperProgram(std::move(their_channel)));
+
+  EXPECT_TRUE(Run());
+  EXPECT_TRUE(TestFailureExit());
+  EXPECT_TRUE(kill_requested());
 }
 
 }  // namespace
