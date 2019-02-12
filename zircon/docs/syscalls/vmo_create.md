@@ -38,8 +38,6 @@ The following rights will be set on the handle by default:
 
 **ZX_RIGHT_WRITE** - May be written to or mapped with write permissions.
 
-**ZX_RIGHT_EXECUTE** - May be mapped with execute permissions.
-
 **ZX_RIGHT_MAP** - May be mapped.
 
 **ZX_RIGHT_GET_PROPERTY** - May get its properties using
@@ -83,6 +81,7 @@ In a future build this error will no longer occur.
  - [`zx_vmo_get_size()`]
  - [`zx_vmo_op_range()`]
  - [`zx_vmo_read()`]
+ - [`zx_vmo_replace_as_executable()`]
  - [`zx_vmo_set_size()`]
  - [`zx_vmo_write()`]
 
