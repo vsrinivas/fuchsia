@@ -157,7 +157,8 @@ class Process final {
   Thread* PickOneThread();
 
   // If the thread map might be stale, refresh it.
-  void EnsureThreadMapFresh();
+  // Returns true on success.
+  bool EnsureThreadMapFresh();
 
   // Refreshes the complete Thread list for this process. Returns false if an
   // error is returned from a syscall.

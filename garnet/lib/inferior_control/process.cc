@@ -507,10 +507,11 @@ bool Process::IsAttached() const {
   }
 }
 
-void Process::EnsureThreadMapFresh() {
+bool Process::EnsureThreadMapFresh() {
   if (thread_map_stale_) {
-    RefreshAllThreads();
+    return RefreshAllThreads();
   }
+  return true;
 }
 
 Thread* Process::FindThreadById(zx_koid_t thread_id) {
@@ -527,7 +528,8 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
   }
 
   FXL_DCHECK(handle_);
-  EnsureThreadMapFresh();
+  bool fresh = EnsureThreadMapFresh();
+  FXL_DCHECK(fresh);
 
   const auto iter = threads_.find(thread_id);
   if (iter != threads_.end()) {
@@ -559,7 +561,8 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
 }
 
 Thread* Process::PickOneThread() {
-  EnsureThreadMapFresh();
+  bool fresh = EnsureThreadMapFresh();
+  FXL_DCHECK(fresh);
 
   if (threads_.empty())
     return nullptr;
@@ -618,14 +621,16 @@ bool Process::RefreshAllThreads() {
 }
 
 void Process::ForEachThread(const ThreadCallback& callback) {
-  EnsureThreadMapFresh();
+  bool fresh = EnsureThreadMapFresh();
+  FXL_DCHECK(fresh);
 
   for (const auto& iter : threads_)
     callback(iter.second.get());
 }
 
 void Process::ForEachLiveThread(const ThreadCallback& callback) {
-  EnsureThreadMapFresh();
+  bool fresh = EnsureThreadMapFresh();
+  FXL_DCHECK(fresh);
 
   for (const auto& iter : threads_) {
     Thread* thread = iter.second.get();
