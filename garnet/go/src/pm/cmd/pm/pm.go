@@ -19,7 +19,6 @@ import (
 	"fuchsia.googlesource.com/pm/cmd/pm/expand"
 	"fuchsia.googlesource.com/pm/cmd/pm/genkey"
 	initcmd "fuchsia.googlesource.com/pm/cmd/pm/init"
-	"fuchsia.googlesource.com/pm/cmd/pm/install"
 	"fuchsia.googlesource.com/pm/cmd/pm/newrepo"
 	"fuchsia.googlesource.com/pm/cmd/pm/publish"
 	"fuchsia.googlesource.com/pm/cmd/pm/seal"
@@ -36,7 +35,6 @@ Package Commands:
     init     - initialize a package meta directory in the standard form
     genkey   - generate a new private key
     build    - perform update, sign and seal in order
-    install  - install a package from an archive
     update   - update the merkle roots in meta/contents
     sign     - sign a package with the given key
     seal     - seal package metadata into a signed meta.far
@@ -106,9 +104,6 @@ func doMain() int {
 
 	case "init":
 		err = initcmd.Run(cfg, flag.Args()[1:])
-
-	case "install":
-		err = install.Run(cfg, flag.Args()[1:])
 
 	case "publish":
 		err = publish.Run(cfg, flag.Args()[1:])
