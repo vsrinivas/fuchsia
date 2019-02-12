@@ -3,8 +3,23 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/package/component.gni")
 
-executable("bin") {
+package("kernel_crash_checker") {
+  components = [ ":component" ]
+}
+
+fuchsia_component("component") {
+  binary = "kernel_crash_checker"
+
+  manifest = "meta/kernel_crash_checker.cmx"
+
+  deps = [
+    ":main",
+  ]
+}
+
+executable("main") {
   output_name = "kernel_crash_checker"
 
   sources = [
@@ -24,28 +39,15 @@ executable("bin") {
   ]
 }
 
-package("kernel_crash_checker") {
-  deps = [
-    ":bin",
-  ]
-
-  binary = "kernel_crash_checker"
-
-  meta = [
-    {
-      path = rebase_path("meta/kernel_crash_checker.cmx")
-      dest = "kernel_crash_checker.cmx"
-    },
-  ]
-}
-
 package("config") {
-  deprecated_system_image = true
   package_name = "kernel_crash_checker_config"
+
+  deprecated_system_image = true
+
   resources = [
     {
+      path = "kernel_crash_checker.config"
       dest = "sysmgr/kernel_crash_checker.config"
-      path = rebase_path("kernel_crash_checker.config")
     },
   ]
 }

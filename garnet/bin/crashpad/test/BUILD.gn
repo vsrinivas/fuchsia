@@ -4,55 +4,7 @@
 
 import("//build/test/test_package.gni")
 
-executable("config_unittest") {
-  testonly = true
-
-  sources = [
-    "config_unittest.cc",
-  ]
-
-  deps = [
-    "//garnet/bin/crashpad:crashpad_analyzer_files",
-    "//garnet/public/lib/syslog/cpp",
-    "//third_party/googletest:gtest_main",
-  ]
-}
-
-executable("crasher_exe") {
-  testonly = true
-
-  sources = [
-    "crasher_exe.cc",
-  ]
-}
-
-executable("crashpad_analyzer_impl_unittest") {
-  testonly = true
-
-  sources = [
-    "crashpad_analyzer_impl_unittest.cc",
-  ]
-
-  deps = [
-    "//garnet/bin/crashpad:crashpad_analyzer_files",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/syslog/cpp",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest_main",
-    "//zircon/public/fidl/fuchsia-crash",
-    "//zircon/public/fidl/fuchsia-mem",
-    "//zircon/public/lib/zx",
-  ]
-}
-
 test_package("crashpad_analyzer_tests") {
-  deps = [
-    ":config_unittest",
-    ":crasher_exe",
-    ":crashpad_analyzer_impl_unittest",
-  ]
-
   tests = [
     {
       name = "config_unittest"
@@ -105,5 +57,53 @@ test_package("crashpad_analyzer_tests") {
       path = "configs/bad_schema_missing_server.json"
       dest = "bad_schema_missing_server_config.json"
     },
+  ]
+
+  deps = [
+    ":config_unittest",
+    ":crasher_exe",
+    ":crashpad_analyzer_impl_unittest",
+  ]
+}
+
+executable("config_unittest") {
+  testonly = true
+
+  sources = [
+    "config_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/crashpad:src",
+    "//garnet/public/lib/syslog/cpp",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+executable("crasher_exe") {
+  testonly = true
+
+  sources = [
+    "crasher_exe.cc",
+  ]
+}
+
+executable("crashpad_analyzer_impl_unittest") {
+  testonly = true
+
+  sources = [
+    "crashpad_analyzer_impl_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/crashpad:src",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/syslog/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/fidl/fuchsia-crash",
+    "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/public/lib/zx",
   ]
 }
