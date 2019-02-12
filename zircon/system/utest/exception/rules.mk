@@ -8,7 +8,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := usertest
 
-MODULE_SRCS += $(LOCAL_DIR)/exception.c
+MODULE_SRCS += $(LOCAL_DIR)/exception.cpp
 
 MODULE_NAME := exception-test
 

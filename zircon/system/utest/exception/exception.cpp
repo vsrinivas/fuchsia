@@ -9,8 +9,6 @@
 
 #include <assert.h>
 #include <inttypes.h>
-#include <stdatomic.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -57,7 +55,7 @@ enum message {
     MSG_SHUTDOWN_AUX_THREAD
 };
 
-static void crash_me(void)
+static void crash_me()
 {
     unittest_printf("Attempting to crash.");
     volatile int* p = 0;
@@ -72,14 +70,14 @@ static void send_msg_new_thread_handle(zx_handle_t handle, zx_handle_t thread)
     tu_channel_write(handle, 0, &data, sizeof(data), &thread, 1);
 }
 
-static void send_msg(zx_handle_t handle, enum message msg)
+static void send_msg(zx_handle_t handle, message msg)
 {
     uint64_t data = msg;
     unittest_printf("sending message %d on handle %u\n", msg, handle);
     tu_channel_write(handle, 0, &data, sizeof(data), NULL, 0);
 }
 
-static bool recv_msg(zx_handle_t handle, enum message* msg)
+static bool recv_msg(zx_handle_t handle, message* msg)
 {
     uint64_t data;
     uint32_t num_bytes = sizeof(data);
@@ -98,7 +96,7 @@ static bool recv_msg(zx_handle_t handle, enum message* msg)
         return false;
     }
 
-    *msg = data;
+    *msg = static_cast<message>(data);
     unittest_printf("received message %d\n", *msg);
     return true;
 }
@@ -119,8 +117,7 @@ static bool recv_msg_new_thread_handle(zx_handle_t handle, zx_handle_t* thread)
     ASSERT_EQ(num_bytes, sizeof(data), "unexpected message size");
     ASSERT_EQ(num_handles, 1u, "expected one returned handle");
 
-    enum message msg = data;
-    ASSERT_EQ(msg, MSG_AUX_THREAD_HANDLE, "expected MSG_AUX_THREAD_HANDLE");
+    ASSERT_EQ(data, MSG_AUX_THREAD_HANDLE, "expected MSG_AUX_THREAD_HANDLE");
 
     unittest_printf("received thread handle %d\n", *thread);
     return true;
@@ -324,7 +321,7 @@ static bool wait_process_exit_from_debugger(zx_handle_t eport, zx_handle_t proce
 static bool ensure_child_running(zx_handle_t channel) {
     // Note: This function is called from external threads and thus does
     // not use EXPECT_*/ASSERT_*.
-    enum message msg;
+    message msg;
     send_msg(channel, MSG_PING);
     if (!recv_msg(channel, &msg)) {
         unittest_printf("ensure_child_running: Error while receiving msg\n");
@@ -344,7 +341,7 @@ static void msg_loop(zx_handle_t channel)
 
     while (!my_done_tests)
     {
-        enum message msg;
+        message msg;
         if (!recv_msg(channel, &msg)) {
             unittest_printf("Error while receiving msg\n");
             return;
@@ -413,7 +410,7 @@ static int thread_func(void* arg)
     return 0;
 }
 
-static void __NO_RETURN test_child(void)
+static void __NO_RETURN test_child()
 {
     unittest_printf("Test child starting.\n");
     zx_handle_t channel = zx_take_startup_handle(PA_USER0);
@@ -431,7 +428,8 @@ static launchpad_t* setup_test_child(zx_handle_t job, const char* arg,
     zx_handle_t our_channel, their_channel;
     tu_channel_create(&our_channel, &their_channel);
     const char* test_child_path = program_path;
-    const char verbosity_string[] = { 'v', '=', utest_verbosity_level + '0', '\0' };
+    const char verbosity_string[] =
+        { 'v', '=', static_cast<char>(utest_verbosity_level + '0'), '\0' };
     const char* const argv[] = {
         test_child_path,
         arg,
@@ -517,7 +515,7 @@ static bool test_set_close_set(zx_handle_t object, bool debugger) {
     return true;
 }
 
-static bool job_set_close_set_test(void)
+static bool job_set_close_set_test()
 {
     BEGIN_TEST;
     zx_handle_t job = tu_job_create(zx_job_default());
@@ -526,21 +524,21 @@ static bool job_set_close_set_test(void)
     END_TEST;
 }
 
-static bool process_set_close_set_test(void)
+static bool process_set_close_set_test()
 {
     BEGIN_TEST;
     test_set_close_set(zx_process_self(), /* debugger */ false);
     END_TEST;
 }
 
-static bool process_debugger_set_close_set_test(void)
+static bool process_debugger_set_close_set_test()
 {
     BEGIN_TEST;
     test_set_close_set(zx_process_self(), /* debugger */ true);
     END_TEST;
 }
 
-static bool thread_set_close_set_test(void)
+static bool thread_set_close_set_test()
 {
     BEGIN_TEST;
     zx_handle_t our_channel, their_channel;
@@ -556,10 +554,10 @@ static bool thread_set_close_set_test(void)
     END_TEST;
 }
 
-typedef struct {
+struct proc_handles {
     zx_handle_t proc;
     zx_handle_t vmar;
-} proc_handles;
+};
 
 // Creates but does not start a process, returning its handles in |*ph|.
 // Returns false if an assertion fails.
@@ -584,7 +582,7 @@ static void close_proc_handles(proc_handles *ph) {
     }
 }
 
-static bool non_running_process_set_close_set_test(void) {
+static bool non_running_process_set_close_set_test() {
     BEGIN_TEST;
 
     // Create but do not start a process.
@@ -598,7 +596,7 @@ static bool non_running_process_set_close_set_test(void) {
     END_TEST;
 }
 
-static bool non_running_process_debugger_set_close_set_test(void) {
+static bool non_running_process_debugger_set_close_set_test() {
     BEGIN_TEST;
 
     // Create but do not start a process.
@@ -612,7 +610,7 @@ static bool non_running_process_debugger_set_close_set_test(void) {
     END_TEST;
 }
 
-static bool non_running_thread_set_close_set_test(void) {
+static bool non_running_thread_set_close_set_test() {
     BEGIN_TEST;
 
     // Create but do not start a process.
@@ -685,7 +683,7 @@ static bool dead_process_unbind_helper(bool debugger, bool bind_while_alive) {
     return true;
 }
 
-static bool dead_process_matched_unbind_succeeds_test(void) {
+static bool dead_process_matched_unbind_succeeds_test() {
     BEGIN_TEST;
     // If an eport is bound while a process is alive, it should be
     // valid to unbind it after the process is dead.
@@ -694,7 +692,7 @@ static bool dead_process_matched_unbind_succeeds_test(void) {
     END_TEST;
 }
 
-static bool dead_process_mismatched_unbind_fails_test(void) {
+static bool dead_process_mismatched_unbind_fails_test() {
     BEGIN_TEST;
     // If an eport was not bound while a process was alive, it should be
     // invalid to unbind it after the process is dead.
@@ -703,7 +701,7 @@ static bool dead_process_mismatched_unbind_fails_test(void) {
     END_TEST;
 }
 
-static bool dead_process_debugger_matched_unbind_succeeds_test(void) {
+static bool dead_process_debugger_matched_unbind_succeeds_test() {
     BEGIN_TEST;
     // If a debugger port is bound while a process is alive, it should be
     // valid to unbind it after the process is dead.
@@ -712,7 +710,7 @@ static bool dead_process_debugger_matched_unbind_succeeds_test(void) {
     END_TEST;
 }
 
-static bool dead_process_debugger_mismatched_unbind_fails_test(void) {
+static bool dead_process_debugger_mismatched_unbind_fails_test() {
     BEGIN_TEST;
     // If an eport was not bound while a process was alive, it should be
     // invalid to unbind it after the process is dead.
@@ -768,7 +766,7 @@ static bool dead_thread_unbind_helper(bool bind_while_alive) {
     return true;
 }
 
-static bool dead_thread_matched_unbind_succeeds_test(void) {
+static bool dead_thread_matched_unbind_succeeds_test() {
     BEGIN_TEST;
     // If an eport is bound while a thread is alive, it should be
     // valid to unbind it after the thread is dead.
@@ -776,7 +774,7 @@ static bool dead_thread_matched_unbind_succeeds_test(void) {
     END_TEST;
 }
 
-static bool dead_thread_mismatched_unbind_fails_test(void) {
+static bool dead_thread_mismatched_unbind_fails_test() {
     BEGIN_TEST;
     // If an eport was not bound while a thread was alive, it should be
     // invalid to unbind it after the thread is dead.
@@ -786,7 +784,7 @@ static bool dead_thread_mismatched_unbind_fails_test(void) {
 
 static void finish_basic_test(zx_handle_t child,
                               zx_handle_t eport, zx_handle_t our_channel,
-                              enum message crash_msg, uint32_t excp_port_type)
+                              message crash_msg, uint32_t excp_port_type)
 {
     send_msg(our_channel, crash_msg);
 
@@ -801,7 +799,7 @@ static void finish_basic_test(zx_handle_t child,
     tu_handle_close(our_channel);
 }
 
-static bool job_handler_test(void)
+static bool job_handler_test()
 {
     BEGIN_TEST;
 
@@ -864,7 +862,7 @@ bool job_debug_handler_test_helper(zx_handle_t job, zx_handle_t eport_job_handle
     return true;
 }
 
-static bool nested_job_debug_handler_test(void)
+static bool nested_job_debug_handler_test()
 {
     BEGIN_TEST;
 
@@ -877,7 +875,7 @@ static bool nested_job_debug_handler_test(void)
     END_TEST;
 }
 
-static bool job_debug_handler_test(void)
+static bool job_debug_handler_test()
 {
     BEGIN_TEST;
 
@@ -888,7 +886,7 @@ static bool job_debug_handler_test(void)
     END_TEST;
 }
 
-static bool grandparent_job_handler_test(void)
+static bool grandparent_job_handler_test()
 {
     BEGIN_TEST;
 
@@ -908,7 +906,7 @@ static bool grandparent_job_handler_test(void)
     END_TEST;
 }
 
-static bool process_handler_test(void)
+static bool process_handler_test()
 {
     BEGIN_TEST;
     unittest_printf("process exception handler basic test\n");
@@ -923,7 +921,7 @@ static bool process_handler_test(void)
     END_TEST;
 }
 
-static bool thread_handler_test(void)
+static bool thread_handler_test()
 {
     BEGIN_TEST;
     unittest_printf("thread exception handler basic test\n");
@@ -947,7 +945,7 @@ static bool thread_handler_test(void)
     END_TEST;
 }
 
-static bool debugger_handler_test(void)
+static bool debugger_handler_test()
 {
     BEGIN_TEST;
     unittest_printf("debugger exception handler basic test\n");
@@ -967,7 +965,7 @@ static bool debugger_handler_test(void)
     END_TEST;
 }
 
-static bool packet_pid_test(void)
+static bool packet_pid_test()
 {
     BEGIN_TEST;
 
@@ -1003,7 +1001,7 @@ static bool packet_pid_test(void)
 // thread is paused in the ZX_EXCP_THREAD_STARTING or or
 // ZX_EXCP_THREAD_EXITING states.
 static bool check_read_or_write_regs_is_rejected(zx_handle_t process,
-                                                 zx_handle_t tid)
+                                                 zx_koid_t tid)
 {
     zx_handle_t thread;
     ASSERT_EQ(zx_object_get_child(process, tid, ZX_RIGHT_SAME_RIGHTS, &thread), ZX_OK, "");
@@ -1022,7 +1020,7 @@ static bool check_read_or_write_regs_is_rejected(zx_handle_t process,
 //
 // For ZX_EXCP_THREAD_EXITING, this tests the case where a thread is
 // exiting without the whole process also exiting.
-static bool thread_state_when_starting_or_exiting_test(void)
+static bool thread_state_when_starting_or_exiting_test()
 {
     BEGIN_TEST;
 
@@ -1073,7 +1071,7 @@ static bool thread_state_when_starting_or_exiting_test(void)
     END_TEST;
 }
 
-static bool process_start_test(void)
+static bool process_start_test()
 {
     BEGIN_TEST;
     unittest_printf("process start test\n");
@@ -1099,7 +1097,7 @@ static bool process_start_test(void)
 // Verify ZX_PROCESS_TERMINATED comes through bound exception port
 // via async wait.
 
-static bool process_exit_notification_test(void)
+static bool process_exit_notification_test()
 {
     BEGIN_TEST;
     unittest_printf("process exit notification test\n");
@@ -1125,7 +1123,7 @@ static bool process_exit_notification_test(void)
 // Verify ZX_THREAD_TERMINATED comes through bound exception port
 // via async wait.
 
-static bool thread_exit_notification_test(void)
+static bool thread_exit_notification_test()
 {
     BEGIN_TEST;
     unittest_printf("thread exit notification test\n");
@@ -1163,7 +1161,7 @@ static bool thread_exit_notification_test(void)
     END_TEST;
 }
 
-static void __NO_RETURN trigger_unsupported(void)
+static void __NO_RETURN trigger_unsupported()
 {
     unittest_printf("unsupported exception\n");
     // An unsupported exception is not a failure.
@@ -1172,7 +1170,7 @@ static void __NO_RETURN trigger_unsupported(void)
     exit(0);
 }
 
-static void __NO_RETURN trigger_general(void)
+static void __NO_RETURN trigger_general()
 {
 #if defined(__x86_64__)
 #elif defined(__aarch64__)
@@ -1180,13 +1178,13 @@ static void __NO_RETURN trigger_general(void)
     trigger_unsupported();
 }
 
-static void __NO_RETURN trigger_fatal_page_fault(void)
+static void __NO_RETURN trigger_fatal_page_fault()
 {
     *(volatile int*) 0 = 42;
     trigger_unsupported();
 }
 
-static void __NO_RETURN trigger_undefined_insn(void)
+static void __NO_RETURN trigger_undefined_insn()
 {
 #if defined(__x86_64__)
     __asm__("ud2");
@@ -1198,7 +1196,7 @@ static void __NO_RETURN trigger_undefined_insn(void)
     trigger_unsupported();
 }
 
-static void __NO_RETURN trigger_sw_bkpt(void)
+static void __NO_RETURN trigger_sw_bkpt()
 {
 #if defined(__x86_64__)
     __asm__("int3");
@@ -1208,7 +1206,7 @@ static void __NO_RETURN trigger_sw_bkpt(void)
     trigger_unsupported();
 }
 
-static void __NO_RETURN trigger_hw_bkpt(void)
+static void __NO_RETURN trigger_hw_bkpt()
 {
 #if defined(__x86_64__)
     // We can't set the debug regs from user space, support for setting the
@@ -1221,7 +1219,7 @@ static void __NO_RETURN trigger_hw_bkpt(void)
 
 // ARM does not trap on integer divide-by-zero.
 #if defined(__x86_64__)
-static void __NO_RETURN trigger_integer_divide_by_zero(void)
+static void __NO_RETURN trigger_integer_divide_by_zero()
 {
     // Use an x86 division instruction (rather than doing division from C)
     // to ensure that the compiler does not convert the division into
@@ -1233,7 +1231,7 @@ static void __NO_RETURN trigger_integer_divide_by_zero(void)
     trigger_unsupported();
 }
 
-static void __NO_RETURN trigger_sse_divide_by_zero(void)
+static void __NO_RETURN trigger_sse_divide_by_zero()
 {
     // Unmask all exceptions for SSE operations.
     uint32_t mxcsr = 0;
@@ -1258,7 +1256,7 @@ static void __NO_RETURN trigger_sse_divide_by_zero(void)
     trigger_integer_divide_by_zero();
 }
 
-static void __NO_RETURN trigger_x87_divide_by_zero(void)
+static void __NO_RETURN trigger_x87_divide_by_zero()
 {
     // Unmask all exceptions for x87 operations.
     uint16_t control_word = 0;
@@ -1279,7 +1277,7 @@ static const struct {
     zx_excp_type_t type;
     const char* name;
     bool crashes;
-    void __NO_RETURN (*trigger_function) (void);
+    void __NO_RETURN (*trigger_function) ();
 } exceptions[] = {
     { ZX_EXCP_GENERAL, "general", false, trigger_general },
     { ZX_EXCP_FATAL_PAGE_FAULT, "page-fault", true, trigger_fatal_page_fault },
@@ -1313,7 +1311,7 @@ static void __NO_RETURN test_child_trigger(const char* excp_name)
     /* NOTREACHED */
 }
 
-static bool trigger_test(void)
+static bool trigger_test()
 {
     BEGIN_TEST;
     unittest_printf("exception trigger tests\n");
@@ -1373,7 +1371,7 @@ static bool trigger_test(void)
     END_TEST;
 }
 
-typedef struct {
+struct walkthrough_state_t {
     // The walkthrough stops at the grandparent job as we don't want
     // crashlogger to see the exception: causes excessive noise in test output.
     // It doesn't stop at the parent job as we want to exercise finding threads
@@ -1398,7 +1396,7 @@ typedef struct {
 
     // the communication channel to the test process
     zx_handle_t our_channel;
-} walkthrough_state_t;
+};
 
 static bool walkthrough_setup(walkthrough_state_t* state)
 {
@@ -1477,7 +1475,7 @@ static void walkthrough_read_and_verify_exception(const walkthrough_state_t* sta
 // verify unbinding an exception port walks through each handler in the search
 // list (except the system exception handler which we can't touch).
 
-static bool unbind_walkthrough_by_reset_test(void)
+static bool unbind_walkthrough_by_reset_test()
 {
     BEGIN_TEST;
 
@@ -1512,7 +1510,7 @@ Fail:
 // verify closing an exception port walks through each handler in the search
 // list (except the system exception handler which we can't touch).
 
-static bool unbind_walkthrough_by_close_test(void)
+static bool unbind_walkthrough_by_close_test()
 {
     BEGIN_TEST;
 
@@ -1546,7 +1544,7 @@ Fail:
 // This test is different than the walkthrough tests in that it tests
 // successful resumption of the child after the debugger port closes.
 
-static bool unbind_while_stopped_test(void)
+static bool unbind_while_stopped_test()
 {
     BEGIN_TEST;
     unittest_printf("unbind_while_stopped tests\n");
@@ -1574,7 +1572,7 @@ static bool unbind_while_stopped_test(void)
     END_TEST;
 }
 
-static bool kill_while_stopped_at_start_test(void)
+static bool kill_while_stopped_at_start_test()
 {
     BEGIN_TEST;
     unittest_printf("kill_while_stopped_at_start tests\n");
@@ -1613,7 +1611,7 @@ static void write_to_addr(void* addr)
     *(int*) addr = 42;
 }
 
-static bool death_test(void)
+static bool death_test()
 {
     BEGIN_TEST;
 
@@ -1623,7 +1621,7 @@ static bool death_test(void)
     END_TEST;
 }
 
-static bool self_death_test(void)
+static bool self_death_test()
 {
     BEGIN_TEST;
 
@@ -1633,12 +1631,12 @@ static bool self_death_test(void)
     END_TEST;
 }
 
-typedef struct thread_info {
+struct thread_info_t {
     zx_handle_t our_channel, their_channel;
     zx_handle_t thread_handle;
-} thread_info_t;
+};
 
-static bool multiple_threads_registered_death_test(void)
+static bool multiple_threads_registered_death_test()
 {
     BEGIN_TEST;
 
@@ -1681,7 +1679,7 @@ static bool multiple_threads_registered_death_test(void)
     END_TEST;
 }
 
-static void __NO_RETURN test_child_exit_closing_excp_handle(void)
+static void __NO_RETURN test_child_exit_closing_excp_handle()
 {
     unittest_printf("Exit closing excp handle starting.\n");
 
@@ -1694,14 +1692,15 @@ static void __NO_RETURN test_child_exit_closing_excp_handle(void)
     /* NOTREACHED */
 }
 
-static bool exit_closing_excp_handle_test(void)
+static bool exit_closing_excp_handle_test()
 {
     BEGIN_TEST;
 
     unittest_printf("Starting test child.\n");
 
     const char* test_child_path = program_path;
-    const char verbosity_string[] = { 'v', '=', utest_verbosity_level + '0', '\0' };
+    const char verbosity_string[] =
+        { 'v', '=', static_cast<char>(utest_verbosity_level + '0'), '\0' };
     const char* const argv[] = {
         test_child_path,
         exit_closing_excp_handle_child_name,
@@ -1726,7 +1725,7 @@ static bool exit_closing_excp_handle_test(void)
     END_TEST;
 }
 
-static bool full_queue_sending_exception_packet_test(void)
+static bool full_queue_sending_exception_packet_test()
 {
     BEGIN_TEST;
 
@@ -1753,9 +1752,9 @@ static bool full_queue_sending_exception_packet_test(void)
 
     // Fill the port with packets thus preventing us from receiving the
     // segfault exception.
-    const zx_port_packet_t pkt = {
-        .key = USER_PACKET_KEY,
-    };
+    zx_port_packet_t pkt = {};
+    pkt.key = USER_PACKET_KEY;
+
     zx_status_t status;
     size_t packet_count = 0;
     while ((status = zx_port_queue(eport, &pkt)) == ZX_OK) {
