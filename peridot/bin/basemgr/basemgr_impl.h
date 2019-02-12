@@ -27,7 +27,7 @@
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/basemgr/user_provider_impl.h"
 #include "peridot/lib/fidl/clone.h"
-#include "peridot/lib/session_shell_settings/session_shell_settings.h"
+#include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"
 
 namespace modular {
 

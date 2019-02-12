@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/session_shell_settings/session_shell_settings.h"
+#include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"
 
 #include <cmath>
 

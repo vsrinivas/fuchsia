@@ -16,7 +16,7 @@
 #include "peridot/bin/basemgr/basemgr_impl.h"
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
-#include "peridot/lib/session_shell_settings/session_shell_settings.h"
+#include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"
 
 fit::deferred_action<fit::closure> SetupCobalt(
     modular::BasemgrSettings& settings, async_dispatcher_t* dispatcher,

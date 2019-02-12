@@ -51,7 +51,7 @@ executable_package("basemgr") {
     "//peridot/lib/fidl:clone",
     "//peridot/lib/fidl:environment",
     "//peridot/lib/ledger_client:constants",
-    "//peridot/lib/session_shell_settings",
+    "//peridot/bin/basemgr/session_shell_settings",
     "//peridot/lib/util:filesystem",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
@@ -79,6 +79,7 @@ executable_package("basemgr") {
 tests_package("basemgr_unittests") {
   deps = [
     ":user_controller_impl_unittest",
+    "//peridot/bin/basemgr/session_shell_settings:session_shell_settings_unittest",
   ]
 }
 
