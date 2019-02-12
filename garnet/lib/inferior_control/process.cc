@@ -881,4 +881,13 @@ void Process::OnTermination() {
   FXL_LOG(INFO) << "Process " << pid << " now marked as dead";
 }
 
+void Process::Dump() {
+  FXL_CHECK(EnsureThreadMapFresh());
+  FXL_LOG(INFO) << "Dump of threads for process " << id_;
+
+  ForEachLiveThread([](Thread* thread) {
+    thread->Dump();
+  });
+}
+
 }  // namespace inferior_control

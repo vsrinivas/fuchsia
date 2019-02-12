@@ -406,6 +406,17 @@ zx_status_t Thread::GetExceptionReport(zx_exception_report_t* report) const {
   return status;
 }
 
+void Thread::Dump() {
+  if (state_ == State::kInException ||
+      state_ == State::kSuspended) {
+    FXL_LOG(INFO) << "Thread " << GetDebugName() << " dump";
+    debugger_utils::DumpThread(process()->handle(), handle(),
+                               state_ == State::kInException);
+  } else {
+    FXL_LOG(INFO) << "Thread " << id_ << " not stopped, skipping dump";
+  }
+}
+
 std::string Thread::ExceptionToString(
     zx_excp_type_t type, const zx_exception_context_t& context) const {
   std::string description = fxl::StringPrintf(

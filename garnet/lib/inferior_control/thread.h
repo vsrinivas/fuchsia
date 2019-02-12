@@ -118,6 +118,12 @@ class Thread final {
   // process has terminated before we read the report.
   zx_status_t GetExceptionReport(zx_exception_report_t* report) const;
 
+  // Print an Inspector-style dump of the thread.
+  // Threads that are not currently in an exception or suspended are ignored.
+  // It is the caller's responsibility to stop threads first (and wait for them
+  // to stop).
+  void Dump();
+
   // Convert an exception to a user-friendly description.
   // This is for log messages and interactive programs that wish to report
   // the exception.

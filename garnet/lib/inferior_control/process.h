@@ -243,6 +243,12 @@ class Process final {
   // Called when ZX_PROCESS_TERMINATED is received, update our internal state.
   void OnTermination();
 
+  // Print an Inspector-style dump of each thread.
+  // Threads that are not currently in an exception or suspended are ignored.
+  // It is the caller's responsibility to stop desired threads first (and wait
+  // for them to stop).
+  void Dump();
+
   zx_vaddr_t debug_addr_property() const { return debug_addr_property_; }
 
   bool ldso_debug_data_has_initialized() const {

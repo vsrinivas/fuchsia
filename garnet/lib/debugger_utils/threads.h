@@ -57,6 +57,12 @@ zx_status_t WithAllThreadsSuspended(
     zx::duration thread_suspend_timeout,
     const WithThreadSuspendedFunction& function);
 
+// Print a dump of |thread| suitable for use with the symbolizer.
+// If |in_exception| is true then the thread is in an exception and extra
+// information related to the exception is printed.
+// If |in_exception| is false then the thread must be suspended.
+void DumpThread(zx_handle_t process, zx_handle_t thread, bool in_exception);
+
 }  // namespace debugger_utils
 
 #endif  // GARNET_LIB_DEBUGGER_UTILS_THREADS_H_
