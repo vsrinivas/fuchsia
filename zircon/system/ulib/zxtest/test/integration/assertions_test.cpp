@@ -621,6 +621,67 @@ TEST(ZxTestAssertionTest, CoerceTypeToBoolNonMoveable) {
     TEST_CHECKPOINT();
 }
 
+int SomeFn() {
+    return 0;
+}
+
+TEST(ZXTestAssertionTest, FunctionPointerNotNull) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify false.");
+    int (*some_fn)() = &SomeFn;
+    ASSERT_NOT_NULL(some_fn);
+    EXPECT_NOT_NULL(some_fn);
+    ASSERT_EQ(some_fn, &SomeFn);
+    ASSERT_NE(some_fn, nullptr);
+    TEST_CHECKPOINT();
+}
+
+TEST(ZXTestAssertionTest, FunctionPointerNull) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify nullptr.");
+    int (*some_fn)() = nullptr;
+    ASSERT_NULL(some_fn);
+    EXPECT_NULL(some_fn);
+    ASSERT_NE(some_fn, &SomeFn);
+    ASSERT_EQ(some_fn, nullptr);
+    TEST_CHECKPOINT();
+}
+
+TEST(ZXTestAssertionTest, FunctionPointerNotNullFail) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to identify nullptr.");
+    int (*some_fn)() = &SomeFn;
+    ASSERT_NULL(some_fn);
+    TEST_CHECKPOINT();
+}
+
+TEST(ZXTestAssertionTest, FunctionPointerNullFail) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to identify nullptr.");
+    int (*some_fn)() = nullptr;
+    ASSERT_NOT_NULL(some_fn);
+    TEST_CHECKPOINT();
+}
+
+class MyClassWithMethods {
+public:
+    int MyMethod() const { return 0; }
+};
+
+TEST(ZXTestAssertionTest, MemberMethodFunctionNull) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify false.");
+    int (MyClassWithMethods::*method)() const = &MyClassWithMethods::MyMethod;
+    ASSERT_NOT_NULL(method);
+    EXPECT_NOT_NULL(method);
+    ASSERT_EQ(method, &MyClassWithMethods::MyMethod);
+    ASSERT_NE(method, nullptr);
+    TEST_CHECKPOINT();
+}
+
+TEST(ZXTestAssertionTest, MemberMethodFunctionNullFail) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "Failed to identify false.");
+    int (MyClassWithMethods::*method)() const = nullptr;
+    EXPECT_EQ(method, &MyClassWithMethods::MyMethod);
+    ASSERT_NOT_NULL(method);
+    TEST_CHECKPOINT();
+}
+
 } // namespace
 
 class ConverToBoolExplicit {

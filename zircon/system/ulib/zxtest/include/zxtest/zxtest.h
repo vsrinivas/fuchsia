@@ -12,7 +12,8 @@
 #endif
 
 #define _ASSERT_PTR(op, expected, actual, fatal, file, line, desc, ...)                            \
-    _ASSERT_VAR_COERCE(op, expected, actual, void*, fatal, file, line, desc, ##__VA_ARGS__)
+    _ASSERT_VAR_COERCE(op, expected, actual, _ZXTEST_AUTO_VAR_TYPE(actual), fatal, file, line,     \
+                       desc, ##__VA_ARGS__)
 
 #define ASSERT_EQ(val2, val1, ...)                                                                 \
     _ASSERT_VAR(_EQ, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " == " #val2 ".",     \

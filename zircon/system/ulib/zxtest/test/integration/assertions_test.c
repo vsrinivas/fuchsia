@@ -556,3 +556,27 @@ TEST(ZxTestCAssertionTest, AssertFalseCoerceTypeToBoolFailure) {
     ASSERT_FALSE(a, "1 coerced to true.");
     TEST_CHECKPOINT();
 }
+
+static int SomeFn(void) {
+    return 0;
+}
+
+TEST(ZXTestCAssertionTest, FunctionPointerNotNull) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify false.");
+    int (*some_fn)(void) = &SomeFn;
+    ASSERT_NOT_NULL(some_fn);
+    EXPECT_NOT_NULL(some_fn);
+    ASSERT_EQ(some_fn, &SomeFn);
+    ASSERT_NE(some_fn, NULL);
+    TEST_CHECKPOINT();
+}
+
+TEST(ZXTestCAssertionTest, FunctionPointerNull) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Failed to identify nullptr.");
+    int (*some_fn)(void) = NULL;
+    ASSERT_NULL(some_fn);
+    EXPECT_NULL(some_fn);
+    ASSERT_NE(some_fn, &SomeFn);
+    ASSERT_EQ(some_fn, NULL);
+    TEST_CHECKPOINT();
+}
