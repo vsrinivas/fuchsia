@@ -152,6 +152,9 @@ fn main() -> Result<(), Error> {
         ("client", Some(cmd)) => {
             executor.run_singlethreaded(exec_client(svc, cmd.value_of("text")))
         }
+        ("", None) => {
+            executor.run_singlethreaded(exec_client(svc, None))
+        }
         (_, _) => unimplemented!(),
     }
     .map_err(Into::into)

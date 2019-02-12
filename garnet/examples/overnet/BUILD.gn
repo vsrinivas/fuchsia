@@ -7,6 +7,7 @@ import("//build/test/test_package.gni")
 test_package("overnet_examples_tests") {
     deps = [
         "echo:bin",
+        "interface_passing:bin",
     ]
 
     meta = [
@@ -14,11 +15,18 @@ test_package("overnet_examples_tests") {
             path = rebase_path("meta/overnet_echo_run.cmx")
             dest = "overnet_echo_run.cmx"
         },
+        {
+            path = rebase_path("meta/overnet_interface_passing_run.cmx")
+            dest = "overnet_interface_passing_run.cmx"
+        },
     ]
 
     tests = [
         {
             name = "overnet_echo"
+        },
+        {
+            name = "overnet_interface_passing"
         },
     ]
 }
