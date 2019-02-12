@@ -15,8 +15,6 @@
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/fxl/strings/trim.h>
 
-#include "peridot/lib/util/filesystem.h"
-
 namespace modular {
 
 constexpr char kDeviceInfoDirectory[] = "/data/device";

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_UTIL_FILESYSTEM_H_
-#define PERIDOT_LIB_UTIL_FILESYSTEM_H_
+#ifndef PERIDOT_BIN_BASEMGR_WAIT_FOR_MINFS_H_
+#define PERIDOT_BIN_BASEMGR_WAIT_FOR_MINFS_H_
 
 namespace modular {
 
@@ -12,4 +12,4 @@ void WaitForMinfs();
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_UTIL_FILESYSTEM_H_
+#endif  // PERIDOT_BIN_BASEMGR_WAIT_FOR_MINFS_H_

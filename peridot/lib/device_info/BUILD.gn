@@ -10,7 +10,6 @@ source_set("device_info") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/lib/util:filesystem",
   ]
 }
 
