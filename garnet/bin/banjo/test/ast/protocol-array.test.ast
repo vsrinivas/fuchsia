@@ -1,0 +1,1300 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.protocol.array",
+    namespaces: {
+        "banjo.examples.protocol.array": [
+            Interface {
+                attributes: Attrs(
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                "ddk-protocol"
+                            )
+                        }
+                    ]
+                ),
+                name: "Array",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Bool",
+                        in_params: [
+                            (
+                                "b",
+                                Array {
+                                    ty: Bool,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "b",
+                                Array {
+                                    ty: Bool,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Int8",
+                        in_params: [
+                            (
+                                "i8",
+                                Array {
+                                    ty: Int8,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "i8",
+                                Array {
+                                    ty: Int8,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Int16",
+                        in_params: [
+                            (
+                                "i16",
+                                Array {
+                                    ty: Int16,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "i16",
+                                Array {
+                                    ty: Int16,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Int32",
+                        in_params: [
+                            (
+                                "i32",
+                                Array {
+                                    ty: Int32,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "i32",
+                                Array {
+                                    ty: Int32,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Int64",
+                        in_params: [
+                            (
+                                "i64",
+                                Array {
+                                    ty: Int64,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "i64",
+                                Array {
+                                    ty: Int64,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Uint8",
+                        in_params: [
+                            (
+                                "u8",
+                                Array {
+                                    ty: UInt8,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u8",
+                                Array {
+                                    ty: UInt8,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Uint16",
+                        in_params: [
+                            (
+                                "u16",
+                                Array {
+                                    ty: UInt16,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u16",
+                                Array {
+                                    ty: UInt16,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Uint32",
+                        in_params: [
+                            (
+                                "u32",
+                                Array {
+                                    ty: UInt32,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u32",
+                                Array {
+                                    ty: UInt32,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Uint64",
+                        in_params: [
+                            (
+                                "u64",
+                                Array {
+                                    ty: UInt64,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u64",
+                                Array {
+                                    ty: UInt64,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Float32",
+                        in_params: [
+                            (
+                                "f32",
+                                Array {
+                                    ty: Float32,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "f32",
+                                Array {
+                                    ty: Float32,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Float64",
+                        in_params: [
+                            (
+                                "u64",
+                                Array {
+                                    ty: Float64,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "f64",
+                                Array {
+                                    ty: Float64,
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Handle",
+                        in_params: [
+                            (
+                                "u64",
+                                Array {
+                                    ty: Handle {
+                                        ty: Handle,
+                                        reference: false
+                                    },
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "f64",
+                                Array {
+                                    ty: Handle {
+                                        ty: Handle,
+                                        reference: false
+                                    },
+                                    size: Constant(
+                                        "1"
+                                    )
+                                }
+                            )
+                        ]
+                    }
+                ]
+            },
+            Constant {
+                attributes: Attrs(
+                    []
+                ),
+                name: "array_size",
+                ty: UInt32,
+                value: Constant(
+                    "32"
+                )
+            },
+            Interface {
+                attributes: Attrs(
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                "ddk-protocol"
+                            )
+                        }
+                    ]
+                ),
+                name: "Array2",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Bool",
+                        in_params: [
+                            (
+                                "b",
+                                Array {
+                                    ty: Bool,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "b",
+                                Array {
+                                    ty: Bool,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Int8",
+                        in_params: [
+                            (
+                                "i8",
+                                Array {
+                                    ty: Int8,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "i8",
+                                Array {
+                                    ty: Int8,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Int16",
+                        in_params: [
+                            (
+                                "i16",
+                                Array {
+                                    ty: Int16,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "i16",
+                                Array {
+                                    ty: Int16,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Int32",
+                        in_params: [
+                            (
+                                "i32",
+                                Array {
+                                    ty: Int32,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "i32",
+                                Array {
+                                    ty: Int32,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Int64",
+                        in_params: [
+                            (
+                                "i64",
+                                Array {
+                                    ty: Int64,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "i64",
+                                Array {
+                                    ty: Int64,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Uint8",
+                        in_params: [
+                            (
+                                "u8",
+                                Array {
+                                    ty: UInt8,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u8",
+                                Array {
+                                    ty: UInt8,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Uint16",
+                        in_params: [
+                            (
+                                "u16",
+                                Array {
+                                    ty: UInt16,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u16",
+                                Array {
+                                    ty: UInt16,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Uint32",
+                        in_params: [
+                            (
+                                "u32",
+                                Array {
+                                    ty: UInt32,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u32",
+                                Array {
+                                    ty: UInt32,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Uint64",
+                        in_params: [
+                            (
+                                "u64",
+                                Array {
+                                    ty: UInt64,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u64",
+                                Array {
+                                    ty: UInt64,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Float32",
+                        in_params: [
+                            (
+                                "f32",
+                                Array {
+                                    ty: Float32,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "f32",
+                                Array {
+                                    ty: Float32,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Float64",
+                        in_params: [
+                            (
+                                "u64",
+                                Array {
+                                    ty: Float64,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "f64",
+                                Array {
+                                    ty: Float64,
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Handle",
+                        in_params: [
+                            (
+                                "u64",
+                                Array {
+                                    ty: Handle {
+                                        ty: Handle,
+                                        reference: false
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "f64",
+                                Array {
+                                    ty: Handle {
+                                        ty: Handle,
+                                        reference: false
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    }
+                ]
+            },
+            Interface {
+                attributes: Attrs(
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                "ddk-protocol"
+                            )
+                        }
+                    ]
+                ),
+                name: "ArrayofArrays",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Bool",
+                        in_params: [
+                            (
+                                "b",
+                                Array {
+                                    ty: Array {
+                                        ty: Bool,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "b",
+                                Array {
+                                    ty: Array {
+                                        ty: Bool,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Int8",
+                        in_params: [
+                            (
+                                "i8",
+                                Array {
+                                    ty: Array {
+                                        ty: Int8,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "i8",
+                                Array {
+                                    ty: Array {
+                                        ty: Int8,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Int16",
+                        in_params: [
+                            (
+                                "i16",
+                                Array {
+                                    ty: Array {
+                                        ty: Int16,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "i16",
+                                Array {
+                                    ty: Array {
+                                        ty: Int16,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Int32",
+                        in_params: [
+                            (
+                                "i32",
+                                Array {
+                                    ty: Array {
+                                        ty: Int32,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "i32",
+                                Array {
+                                    ty: Array {
+                                        ty: Int32,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Int64",
+                        in_params: [
+                            (
+                                "i64",
+                                Array {
+                                    ty: Array {
+                                        ty: Int64,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "i64",
+                                Array {
+                                    ty: Array {
+                                        ty: Int64,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Uint8",
+                        in_params: [
+                            (
+                                "u8",
+                                Array {
+                                    ty: Array {
+                                        ty: UInt8,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u8",
+                                Array {
+                                    ty: Array {
+                                        ty: UInt8,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Uint16",
+                        in_params: [
+                            (
+                                "u16",
+                                Array {
+                                    ty: Array {
+                                        ty: UInt16,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u16",
+                                Array {
+                                    ty: Array {
+                                        ty: UInt16,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Uint32",
+                        in_params: [
+                            (
+                                "u32",
+                                Array {
+                                    ty: Array {
+                                        ty: UInt32,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u32",
+                                Array {
+                                    ty: Array {
+                                        ty: UInt32,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Uint64",
+                        in_params: [
+                            (
+                                "u64",
+                                Array {
+                                    ty: Array {
+                                        ty: UInt64,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u64",
+                                Array {
+                                    ty: Array {
+                                        ty: UInt64,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Float32",
+                        in_params: [
+                            (
+                                "f32",
+                                Array {
+                                    ty: Array {
+                                        ty: Float32,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "f32",
+                                Array {
+                                    ty: Array {
+                                        ty: Float32,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Float64",
+                        in_params: [
+                            (
+                                "u64",
+                                Array {
+                                    ty: Array {
+                                        ty: Float64,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "f64",
+                                Array {
+                                    ty: Array {
+                                        ty: Float64,
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Handle",
+                        in_params: [
+                            (
+                                "u64",
+                                Array {
+                                    ty: Array {
+                                        ty: Handle {
+                                            ty: Handle,
+                                            reference: false
+                                        },
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "f64",
+                                Array {
+                                    ty: Array {
+                                        ty: Handle {
+                                            ty: Handle,
+                                            reference: false
+                                        },
+                                        size: Constant(
+                                            "4"
+                                        )
+                                    },
+                                    size: Constant(
+                                        "array_size"
+                                    )
+                                }
+                            )
+                        ]
+                    }
+                ]
+            }
+        ],
+        "zx": [
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "status"
+                },
+                Ident {
+                    namespace: None,
+                    name: "int32"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "time"
+                },
+                Ident {
+                    namespace: None,
+                    name: "int64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "duration"
+                },
+                Ident {
+                    namespace: None,
+                    name: "int64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "koid"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "vaddr"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "paddr"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "paddr32"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint32"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "gpaddr"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "off"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint64"
+                }
+            )
+        ]
+    }
+}

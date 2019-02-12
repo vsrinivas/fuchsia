@@ -87,6 +87,8 @@ fn ty_to_cpp_str(ast: &ast::BanjoAst, wrappers: bool, ty: &ast::Ty) -> Result<St
         ast::Ty::UInt32 => Ok(String::from("uint32_t")),
         ast::Ty::UInt64 => Ok(String::from("uint64_t")),
         ast::Ty::USize => Ok(String::from("size_t")),
+        ast::Ty::Float32 => Ok(String::from("float")),
+        ast::Ty::Float64 => Ok(String::from("double")),
         ast::Ty::Voidptr => Ok(String::from("void*")),
         ast::Ty::Str { .. } => Ok(String::from("char*")),
         ast::Ty::Array { ref ty, .. } => ty_to_cpp_str(ast, wrappers, ty),
@@ -112,6 +114,17 @@ fn ty_to_cpp_str(ast: &ast::BanjoAst, wrappers: bool, ty: &ast::Ty) -> Result<St
         }
         t => Err(format_err!("unknown type in ty_to_cpp_str {:?}", t)),
     }
+}
+
+fn array_bounds(ast: &ast::BanjoAst, ty: &ast::Ty) -> Option<String> {
+    if let ast::Ty::Array { ref ty, size, .. } = ty {
+        return if let Some(bounds) = array_bounds(ast, ty) {
+            Some(format!("[{}]{}", size.0, bounds))
+        } else {
+            Some(format!("[{}]", size.0))
+        };
+    }
+    None
 }
 
 fn interface_to_ops_cpp_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
@@ -168,12 +181,14 @@ fn get_in_params(
         .map(|(name, ty)| {
             match ty {
                 ast::Ty::Identifier { id, .. } => {
+                    if id.is_base_type() {
+                        let ty_name = ty_to_cpp_str(ast, wrappers, ty).unwrap();
+                        return Ok(format!("{} {}", ty_name, to_c_name(name)));
+                    }
                     match ast.id_to_type(id) {
                         ast::Ty::Interface => {
                             let ty_name = ty_to_cpp_str(ast, wrappers, ty).unwrap();
-                            if id.is_base_type() {
-                                Ok(format!("{} {}", ty_name, to_c_name(name)))
-                            } else if transform && not_callback(ast, id) {
+                            if transform && not_callback(ast, id) {
                                 let ty_name = interface_to_ops_cpp_str(ast, ty).unwrap();
                                 Ok(format!(
                                     "void* {name}_ctx, {ty_name}* {name}_ops",
@@ -206,11 +221,12 @@ fn get_in_params(
                     ty_to_cpp_str(ast, false, ty).unwrap(),
                     to_c_name(name)
                 )),
-                ast::Ty::Array { size, .. } => {
+                ast::Ty::Array { .. } => {
+                    let bounds = array_bounds(ast, ty).unwrap();
                     let ty = ty_to_cpp_str(ast, wrappers, ty).unwrap();
                     Ok(format!(
-                        "const {ty} {name}[{size}]",
-                        size = size.0,
+                        "const {ty} {name}{bounds}",
+                        bounds = bounds,
                         ty = ty,
                         name = to_c_name(name)
                     ))
@@ -261,13 +277,19 @@ fn get_out_params(
         let ty_name = ty_to_cpp_str(ast, wrappers, ty).unwrap();
         match ty {
             ast::Ty::Interface => format!("const {}* {}", ty_name, to_c_name(name)),
-            ast::Ty::Identifier { id, ..} => {
-                let star = if id.is_base_type() { "" } else { "*" };
-                format!("{}{}{} out_{}", ty_name, star, nullable, to_c_name(name))
-            },
             ast::Ty::Str {..} => {
-                format!("{}{} out_{name}, size_t {name}_capacity", ty_name, nullable,
+                format!("{} out_{name}, size_t {name}_capacity", ty_name,
                         name=to_c_name(name))
+            }
+            ast::Ty::Array { .. } => {
+                let bounds = array_bounds(ast, ty).unwrap();
+                let ty = ty_to_cpp_str(ast, wrappers, ty).unwrap();
+                format!(
+                    "{ty} out_{name}{bounds}",
+                    bounds = bounds,
+                    ty = ty,
+                    name = to_c_name(name)
+                )
             }
             ast::Ty::Vector {..} => {
                 if ty.is_reference() {
@@ -841,6 +863,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                     include_str!("templates/cpp/example.h"),
                     protocol_name = to_cpp_name(name),
                     protocol_name_snake = to_c_name(name),
+                    protocol_name_lisp = to_c_name(name).replace('_', "-"),
                     protocol_name_uppercase = to_c_name(name).to_uppercase(),
                     example_decls = example_decls
                 ))

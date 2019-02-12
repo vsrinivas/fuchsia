@@ -90,6 +90,17 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
     }
 }
 
+fn array_bounds(ast: &ast::BanjoAst, ty: &ast::Ty) -> Option<String> {
+    if let ast::Ty::Array { ref ty, size, .. } = ty {
+        return if let Some(bounds) = array_bounds(ast, ty) {
+            Some(format!("[{}]{}", size.0, bounds))
+        } else {
+            Some(format!("[{}]", size.0))
+        };
+    }
+    None
+}
+
 fn interface_to_ops_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
     if let ast::Ty::Identifier { id, .. } = ty {
         if ast.id_to_type(id) == ast::Ty::Interface {
@@ -124,7 +135,7 @@ fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant, ast: &ast::BanjoAst) -> Str
         ast::Ty::USize | ast::Ty::Bool | ast::Ty::Str { .. } => size.clone(),
         ast::Ty::Identifier { id, reference: _ } => {
             let decl = ast.id_to_decl(id).unwrap();
-            if let Decl::Enum { ty: enum_ty, variants, ..} = decl {
+            if let Decl::Enum { ty: enum_ty, variants, .. } = decl {
                 for variant in variants {
                     if variant.name == *size {
                         return size_to_c_str(enum_ty, &variant.size, ast);
@@ -166,12 +177,14 @@ fn get_in_params(m: &ast::Method, transform: bool, ast: &BanjoAst) -> Result<Vec
         .map(|(name, ty)| {
             match ty {
                 ast::Ty::Identifier { id, .. } => {
+                    if id.is_base_type() {
+                        let ty_name = ty_to_c_str(ast, ty).unwrap();
+                        return Ok(format!("{} {}", ty_name, to_c_name(name)));
+                    }
                     match ast.id_to_type(id) {
                         ast::Ty::Interface => {
                             let ty_name = ty_to_c_str(ast, ty).unwrap();
-                            if ty_name == "zx_status_t" {
-                                Ok(format!("{} {}", ty_name, to_c_name(name)))
-                            } else if transform && not_callback(ast, id) {
+                            if transform && not_callback(ast, id) {
                                 let ty_name = interface_to_ops_c_str(ast, ty).unwrap();
                                 Ok(format!(
                                     "void* {name}_ctx, {ty_name}* {name}_ops",
@@ -210,11 +223,12 @@ fn get_in_params(m: &ast::Method, transform: bool, ast: &BanjoAst) -> Result<Vec
                 ast::Ty::Str { .. } => {
                     Ok(format!("const {} {}", ty_to_c_str(ast, ty).unwrap(), to_c_name(name)))
                 }
-                ast::Ty::Array { size, .. } => {
+                ast::Ty::Array { .. } => {
+                    let bounds = array_bounds(ast, ty).unwrap();
                     let ty = ty_to_c_str(ast, ty).unwrap();
                     Ok(format!(
-                        "const {ty} {name}[{size}]",
-                        size = size.0,
+                        "const {ty} {name}{bounds}",
+                        bounds = bounds,
                         ty = ty,
                         name = to_c_name(name)
                     ))
@@ -262,10 +276,16 @@ fn get_out_params(
         let ty_name = ty_to_c_str(ast, ty).unwrap();
         match ty {
             ast::Ty::Interface => format!("const {}* {}", ty_name, to_c_name(name)),
-            ast::Ty::Identifier {..} => {
-                let star = if ty_name == "zx_status_t" { "" } else { "*" };
-                format!("{}{}{} out_{}", ty_name, star, nullable, to_c_name(name))
-            },
+            ast::Ty::Array { .. } => {
+                let bounds = array_bounds(ast, ty).unwrap();
+                let ty = ty_to_c_str(ast, ty).unwrap();
+                format!(
+                    "{ty} out_{name}{bounds}",
+                    bounds = bounds,
+                    ty = ty,
+                    name = to_c_name(name)
+                )
+            }
             ast::Ty::Vector {..} => {
                 if ty.is_reference() {
                     format!("{ty}** out_{name}_{buffer}, size_t* {name}_{size}",
@@ -337,10 +357,10 @@ fn get_out_args(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, bool), 
                             name = to_c_name(name)
                         )
                     }
-                },
-                ast::Ty::Str {..} => {
+                }
+                ast::Ty::Str { .. } => {
                     format!("out_{c_name}, {c_name}_capacity", c_name = to_c_name(name))
-                },
+                }
                 _ => format!("out_{}", to_c_name(name)),
             })
             .collect(),
@@ -784,6 +804,44 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .join("\n"))
     }
 
+    fn codegen_async_decl(
+        &self,
+        namespace: &Vec<ast::Decl>,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        Ok(namespace
+            .into_iter()
+            .filter_map(|decl| {
+                if let ast::Decl::Interface { ref name, ref methods, .. } = *decl {
+                    return Some((name, methods));
+                }
+                None
+            })
+            .flat_map(|(name, methods)| iter::repeat(name).zip(methods.iter()))
+            .filter(|(_, method)| method.attributes.has_attribute("Async"))
+            .map(|(name, method)| {
+                let method = ast::Method {
+                    attributes: method.attributes.clone(),
+                    name: method.name.clone(),
+                    in_params: method.out_params.clone(),
+                    out_params: Vec::new(),
+                };
+                let in_params = get_in_params(&method, true, ast)?;
+                let params = iter::once("void* ctx".to_string())
+                    .chain(in_params)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                Ok(format!(
+                    "typedef void (*{protocol_name}_{method_name}_callback)({params});",
+                    protocol_name = to_c_name(name),
+                    method_name = to_c_name(method.name.as_str()),
+                    params = params
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+            .join("\n"))
+    }
+
     fn codegen_includes(&self, ast: &BanjoAst) -> Result<String, Error> {
         Ok(ast
             .namespaces
@@ -812,6 +870,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
             struct_decls = self.codegen_struct_decl(namespace, &ast)?,
             interface_decls = self.codegen_interface_decl(namespace, &ast)?,
             protocol_decls = self.codegen_protocol_decl(namespace, &ast)?,
+            async_decls = self.codegen_async_decl(namespace, &ast)?,
             constant_definitions = self.codegen_constant_defs(namespace, &ast)?,
             union_definitions = self.codegen_union_defs(namespace, &ast)?,
             struct_definitions = self.codegen_struct_defs(namespace, &ast)?,

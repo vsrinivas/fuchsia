@@ -33,3 +33,39 @@ codegen_test!(
     ["banjo/point.test.banjo", "banjo/view.test.banjo"],
     "ast/view.test.ast"
 );
+codegen_test!(
+    protocol_primative,
+    AstBackend,
+    ["../zx.banjo", "banjo/protocol-primative.test.banjo"],
+    "ast/protocol-primative.test.ast"
+);
+codegen_test!(
+    protocol_base,
+    AstBackend,
+    ["../zx.banjo", "banjo/protocol-base.test.banjo"],
+    "ast/protocol-base.test.ast"
+);
+codegen_test!(
+    protocol_handle,
+    AstBackend,
+    ["../zx.banjo", "banjo/protocol-handle.test.banjo"],
+    "ast/protocol-handle.test.ast"
+);
+codegen_test!(
+    protocol_array,
+    AstBackend,
+    ["../zx.banjo", "banjo/protocol-array.test.banjo"],
+    "ast/protocol-array.test.ast"
+);
+codegen_test!(
+    protocol_vector,
+    AstBackend,
+    ["../zx.banjo", "banjo/protocol-vector.test.banjo"],
+    "ast/protocol-vector.test.ast"
+);
+codegen_test!(
+    protocol_other_types,
+    AstBackend,
+    ["../zx.banjo", "banjo/protocol-other-types.test.banjo"],
+    "ast/protocol-other-types.test.ast"
+);

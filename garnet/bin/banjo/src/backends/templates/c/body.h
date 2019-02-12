@@ -12,6 +12,8 @@ __BEGIN_CDECLS;
 
 {protocol_decls}
 
+{async_decls}
+
 // Declarations
 
 {constant_definitions}

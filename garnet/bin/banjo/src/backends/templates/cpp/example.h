@@ -6,7 +6,7 @@
 // :: Mixins ::
 //
 // ddk::{protocol_name}Protocol is a mixin class that simplifies writing DDK drivers
-// that implement the {protocol_name_snake} protocol. It doesn't set the base protocol.
+// that implement the {protocol_name_lisp} protocol. It doesn't set the base protocol.
 //
 // :: Examples ::
 //

@@ -34,13 +34,13 @@ pub enum ParseError {
     UnknownDecl,
 }
 
-#[derive(PartialEq, Eq, Serialize, Default, Debug, Hash)]
+#[derive(PartialEq, Eq, Serialize, Default, Debug, Clone, Hash)]
 pub struct Attr {
     pub key: String,
     pub val: Option<String>,
 }
 
-#[derive(PartialEq, Eq, Serialize, Default, Debug, Hash)]
+#[derive(PartialEq, Eq, Serialize, Default, Debug, Clone, Hash)]
 pub struct Attrs(pub Vec<Attr>);
 
 // namespace is only populated if it's not the current/default one
@@ -230,6 +230,8 @@ impl Ty {
                 }
             }
             Ty::Struct { .. } => false,
+            Ty::Union { .. } => false,
+            Ty::Interface { .. } => false,
             Ty::Enum { .. } => true,
             Ty::Str { .. } | Ty::Vector { .. } | Ty::Array { .. } | Ty::Handle { .. } => false,
             _ => true,
@@ -618,7 +620,7 @@ impl BanjoAst {
                     }
                 }
                 Decl::Alias(to, from) => {
-                    if to == fq_ident {
+                    if to.name == ident {
                         return self.id_to_type(from);
                     }
                 }
@@ -633,8 +635,14 @@ impl BanjoAst {
     }
 
     pub fn id_to_attributes(&self, fq_ident: &Ident) -> Option<&Attrs> {
-        let (namespace, ident) = fq_ident.fq();
-        for decl in self.namespaces[&namespace.unwrap()].iter() {
+        let (ns, ident) = fq_ident.fq();
+
+        let namespace = match ns {
+            Some(ref n) => n,
+            None => &self.primary_namespace,
+        };
+
+        for decl in self.namespaces[namespace].iter() {
             match decl {
                 Decl::Interface { name, attributes, .. } => {
                     if *name == ident {
@@ -657,7 +665,7 @@ impl BanjoAst {
                     }
                 }
                 Decl::Alias(to, from) => {
-                    if *to == *fq_ident {
+                    if to.name == ident {
                         return self.id_to_attributes(from);
                     }
                 }

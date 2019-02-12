@@ -1,0 +1,1082 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.protocol.other.types",
+    namespaces: {
+        "banjo.examples.protocol.other.types": [
+            Struct {
+                attributes: Attrs(
+                    []
+                ),
+                name: "ThisIsAStruct",
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Str {
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "s"
+                        },
+                        val: None
+                    }
+                ]
+            },
+            Union {
+                attributes: Attrs(
+                    []
+                ),
+                name: "ThisIsAUnion",
+                fields: [
+                    UnionField {
+                        attributes: Attrs(
+                            []
+                        ),
+                        ty: Str {
+                            size: None,
+                            nullable: false
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "s"
+                        }
+                    }
+                ]
+            },
+            Enum {
+                attributes: Attrs(
+                    []
+                ),
+                name: "ThisIsAnEnum",
+                ty: UInt32,
+                variants: [
+                    EnumVariant {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "x ",
+                        size: Constant(
+                            "23"
+                        )
+                    }
+                ]
+            },
+            Constant {
+                attributes: Attrs(
+                    []
+                ),
+                name: "strings_size",
+                ty: UInt32,
+                value: Constant(
+                    "32"
+                )
+            },
+            Interface {
+                attributes: Attrs(
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                "ddk-protocol"
+                            )
+                        }
+                    ]
+                ),
+                name: "OtherTypes",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Struct",
+                        in_params: [
+                            (
+                                "s",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAStruct"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAStruct"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Union",
+                        in_params: [
+                            (
+                                "u",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAUnion"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAUnion"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Enum",
+                        in_params: [
+                            (
+                                "e",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAnEnum"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "e",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAnEnum"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "String",
+                        in_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: None,
+                                    nullable: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: None,
+                                    nullable: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "StringSized",
+                        in_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "4"
+                                        )
+                                    ),
+                                    nullable: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "4"
+                                        )
+                                    ),
+                                    nullable: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "StringSized2",
+                        in_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "strings_size"
+                                        )
+                                    ),
+                                    nullable: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "strings_size"
+                                        )
+                                    ),
+                                    nullable: false
+                                }
+                            )
+                        ]
+                    }
+                ]
+            },
+            Interface {
+                attributes: Attrs(
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                "ddk-protocol"
+                            )
+                        }
+                    ]
+                ),
+                name: "OtherTypesAsync",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "Struct",
+                        in_params: [
+                            (
+                                "s",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAStruct"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAStruct"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "Union",
+                        in_params: [
+                            (
+                                "u",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAUnion"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAUnion"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "Enum",
+                        in_params: [
+                            (
+                                "e",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAnEnum"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "e",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAnEnum"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "String",
+                        in_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: None,
+                                    nullable: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: None,
+                                    nullable: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "StringSized",
+                        in_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "4"
+                                        )
+                                    ),
+                                    nullable: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "4"
+                                        )
+                                    ),
+                                    nullable: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "StringSized2",
+                        in_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "strings_size"
+                                        )
+                                    ),
+                                    nullable: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "strings_size"
+                                        )
+                                    ),
+                                    nullable: false
+                                }
+                            )
+                        ]
+                    }
+                ]
+            },
+            Interface {
+                attributes: Attrs(
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                "ddk-protocol"
+                            )
+                        }
+                    ]
+                ),
+                name: "OtherTypesReference",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Struct",
+                        in_params: [
+                            (
+                                "s",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAStruct"
+                                    },
+                                    reference: true
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAStruct"
+                                    },
+                                    reference: true
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Union",
+                        in_params: [
+                            (
+                                "u",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAUnion"
+                                    },
+                                    reference: true
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAUnion"
+                                    },
+                                    reference: true
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "String",
+                        in_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: None,
+                                    nullable: true
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: None,
+                                    nullable: true
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "StringSized",
+                        in_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "4"
+                                        )
+                                    ),
+                                    nullable: true
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "4"
+                                        )
+                                    ),
+                                    nullable: true
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "StringSized2",
+                        in_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "strings_size"
+                                        )
+                                    ),
+                                    nullable: true
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "strings_size"
+                                        )
+                                    ),
+                                    nullable: true
+                                }
+                            )
+                        ]
+                    }
+                ]
+            },
+            Interface {
+                attributes: Attrs(
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                "ddk-protocol"
+                            )
+                        }
+                    ]
+                ),
+                name: "OtherTypesAsyncReference",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "Struct",
+                        in_params: [
+                            (
+                                "s",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAStruct"
+                                    },
+                                    reference: true
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAStruct"
+                                    },
+                                    reference: true
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "Union",
+                        in_params: [
+                            (
+                                "u",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAUnion"
+                                    },
+                                    reference: true
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "u",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "ThisIsAUnion"
+                                    },
+                                    reference: true
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "String",
+                        in_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: None,
+                                    nullable: true
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: None,
+                                    nullable: true
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "StringSized",
+                        in_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "4"
+                                        )
+                                    ),
+                                    nullable: true
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "4"
+                                        )
+                                    ),
+                                    nullable: true
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "StringSized2",
+                        in_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "strings_size"
+                                        )
+                                    ),
+                                    nullable: true
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "s",
+                                Str {
+                                    size: Some(
+                                        Constant(
+                                            "strings_size"
+                                        )
+                                    ),
+                                    nullable: true
+                                }
+                            )
+                        ]
+                    }
+                ]
+            },
+            Interface {
+                attributes: Attrs(
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                "ddk-protocol"
+                            )
+                        }
+                    ]
+                ),
+                name: "Interface",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Value",
+                        in_params: [
+                            (
+                                "intf",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "OtherTypes"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "intf",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "OtherTypes"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Reference",
+                        in_params: [
+                            (
+                                "intf",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "OtherTypes"
+                                    },
+                                    reference: true
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "intf",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "OtherTypes"
+                                    },
+                                    reference: true
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "Async",
+                        in_params: [
+                            (
+                                "intf",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "OtherTypes"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "intf",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "OtherTypes"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "AsyncRefernce",
+                        in_params: [
+                            (
+                                "intf",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "OtherTypes"
+                                    },
+                                    reference: true
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "intf",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: None,
+                                        name: "OtherTypes"
+                                    },
+                                    reference: true
+                                }
+                            )
+                        ]
+                    }
+                ]
+            }
+        ],
+        "zx": [
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "status"
+                },
+                Ident {
+                    namespace: None,
+                    name: "int32"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "time"
+                },
+                Ident {
+                    namespace: None,
+                    name: "int64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "duration"
+                },
+                Ident {
+                    namespace: None,
+                    name: "int64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "koid"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "vaddr"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "paddr"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "paddr32"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint32"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "gpaddr"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "off"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint64"
+                }
+            )
+        ]
+    }
+}

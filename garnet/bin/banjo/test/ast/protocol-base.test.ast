@@ -1,0 +1,1002 @@
+BanjoAst {
+    primary_namespace: "banjo.examples.protocol.base",
+    namespaces: {
+        "banjo.examples.protocol.base": [
+            Interface {
+                attributes: Attrs(
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                "ddk-protocol"
+                            )
+                        }
+                    ]
+                ),
+                name: "SynchronousBase",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Status",
+                        in_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "status"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "status"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "status_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "status"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Time",
+                        in_params: [
+                            (
+                                "time",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "time"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "time",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "time"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "time_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "time"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Duration",
+                        in_params: [
+                            (
+                                "duration",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "duration"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "duration",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "duration"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "duration_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "duration"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Koid",
+                        in_params: [
+                            (
+                                "koid",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "koid"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "koid",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "koid"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "koid_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "koid"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Vaddr",
+                        in_params: [
+                            (
+                                "vaddr",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "vaddr"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "vaddr",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "vaddr"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "vaddr_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "vaddr"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Paddr",
+                        in_params: [
+                            (
+                                "paddr",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "paddr"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "paddr",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "paddr"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "paddr_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "paddr"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Paddr32",
+                        in_params: [
+                            (
+                                "paddr32",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "paddr32"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "paddr32",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "paddr32"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "paddr32_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "paddr32"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Gpaddr",
+                        in_params: [
+                            (
+                                "gpaddr",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "gpaddr"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "gpaddr",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "gpaddr"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "gpaddr_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "gpaddr"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            []
+                        ),
+                        name: "Off",
+                        in_params: [
+                            (
+                                "off",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "off"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "off",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "off"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "off_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "off"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    }
+                ]
+            },
+            Interface {
+                attributes: Attrs(
+                    [
+                        Attr {
+                            key: "Layout",
+                            val: Some(
+                                "ddk-protocol"
+                            )
+                        }
+                    ]
+                ),
+                name: "AsyncBase",
+                methods: [
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "Status",
+                        in_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "status"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "status",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "status"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "status_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "status"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "Time",
+                        in_params: [
+                            (
+                                "time",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "time"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "time",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "time"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "time_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "time"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "Duration",
+                        in_params: [
+                            (
+                                "duration",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "duration"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "duration",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "duration"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "duration_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "duration"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "Koid",
+                        in_params: [
+                            (
+                                "koid",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "koid"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "koid",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "koid"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "koid_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "koid"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "Vaddr",
+                        in_params: [
+                            (
+                                "vaddr",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "vaddr"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "vaddr",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "vaddr"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "vaddr_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "vaddr"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "Paddr",
+                        in_params: [
+                            (
+                                "paddr",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "paddr"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "paddr",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "paddr"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "paddr_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "paddr"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "Paddr32",
+                        in_params: [
+                            (
+                                "paddr32",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "paddr32"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "paddr32",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "paddr32"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "paddr32_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "paddr32"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "Gpaddr",
+                        in_params: [
+                            (
+                                "gpaddr",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "gpaddr"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "gpaddr",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "gpaddr"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "gpaddr_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "gpaddr"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    },
+                    Method {
+                        attributes: Attrs(
+                            [
+                                Attr {
+                                    key: "Async",
+                                    val: None
+                                }
+                            ]
+                        ),
+                        name: "Off",
+                        in_params: [
+                            (
+                                "off",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "off"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ],
+                        out_params: [
+                            (
+                                "off",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "off"
+                                    },
+                                    reference: false
+                                }
+                            ),
+                            (
+                                "off_2",
+                                Identifier {
+                                    id: Ident {
+                                        namespace: Some(
+                                            "zx"
+                                        ),
+                                        name: "off"
+                                    },
+                                    reference: false
+                                }
+                            )
+                        ]
+                    }
+                ]
+            }
+        ],
+        "zx": [
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "status"
+                },
+                Ident {
+                    namespace: None,
+                    name: "int32"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "time"
+                },
+                Ident {
+                    namespace: None,
+                    name: "int64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "duration"
+                },
+                Ident {
+                    namespace: None,
+                    name: "int64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "koid"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "vaddr"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "paddr"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "paddr32"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint32"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "gpaddr"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint64"
+                }
+            ),
+            Alias(
+                Ident {
+                    namespace: None,
+                    name: "off"
+                },
+                Ident {
+                    namespace: None,
+                    name: "uint64"
+                }
+            )
+        ]
+    }
+}

@@ -23,17 +23,43 @@ mod c {
     codegen_test!(example_9, CBackend, ["banjo/example-9.test.banjo"], "c/example-9.h");
     codegen_test!(point, CBackend, ["banjo/point.test.banjo"], "c/point.h");
     codegen_test!(table, CBackend, ["banjo/tables.test.banjo"], "c/tables.h");
+    codegen_test!(simple, CBackend, ["../zx.banjo", "banjo/simple.test.banjo"], "c/simple.h");
+    codegen_test!(view, CBackend, ["banjo/point.test.banjo", "banjo/view.test.banjo"], "c/view.h");
     codegen_test!(
-        simple,
+        protocol_primative,
         CBackend,
-        ["../zx.banjo", "banjo/simple.test.banjo"],
-        "c/simple.h"
+        ["../zx.banjo", "banjo/protocol-primative.test.banjo"],
+        "c/protocol-primative.h"
     );
     codegen_test!(
-        view,
+        protocol_base,
         CBackend,
-        ["banjo/point.test.banjo", "banjo/view.test.banjo"],
-        "c/view.h"
+        ["../zx.banjo", "banjo/protocol-base.test.banjo"],
+        "c/protocol-base.h"
+    );
+    codegen_test!(
+        protocol_handle,
+        CBackend,
+        ["../zx.banjo", "banjo/protocol-handle.test.banjo"],
+        "c/protocol-handle.h"
+    );
+    codegen_test!(
+        protocol_array,
+        CBackend,
+        ["../zx.banjo", "banjo/protocol-array.test.banjo"],
+        "c/protocol-array.h"
+    );
+    codegen_test!(
+        protocol_vector,
+        CBackend,
+        ["../zx.banjo", "banjo/protocol-vector.test.banjo"],
+        "c/protocol-vector.h"
+    );
+    codegen_test!(
+        protocol_other_types,
+        CBackend,
+        ["../zx.banjo", "banjo/protocol-other-types.test.banjo"],
+        "c/protocol-other-types.h"
     );
 }
 
@@ -51,6 +77,42 @@ mod cpp {
         CppBackend,
         ["banjo/point.test.banjo", "banjo/view.test.banjo"],
         "cpp/view.h"
+    );
+    codegen_test!(
+        protocol_primative,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-primative.test.banjo"],
+        "cpp/protocol-primative.h"
+    );
+    codegen_test!(
+        protocol_base,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-base.test.banjo"],
+        "cpp/protocol-base.h"
+    );
+    codegen_test!(
+        protocol_handle,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-handle.test.banjo"],
+        "cpp/protocol-handle.h"
+    );
+    codegen_test!(
+        protocol_array,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-array.test.banjo"],
+        "cpp/protocol-array.h"
+    );
+    codegen_test!(
+        protocol_vector,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-vector.test.banjo"],
+        "cpp/protocol-vector.h"
+    );
+    codegen_test!(
+        protocol_other_types,
+        CppBackend,
+        ["../zx.banjo", "banjo/protocol-other-types.test.banjo"],
+        "cpp/protocol-other-types.h"
     );
 }
 
@@ -93,5 +155,41 @@ mod cpp_internal {
         CppInternalBackend,
         ["banjo/point.test.banjo", "banjo/view.test.banjo"],
         "cpp/view-internal.h"
+    );
+    codegen_test!(
+        protocol_primative,
+        CppInternalBackend,
+        ["../zx.banjo", "banjo/protocol-primative.test.banjo"],
+        "cpp/protocol-primative-internal.h"
+    );
+    codegen_test!(
+        protocol_base,
+        CppInternalBackend,
+        ["../zx.banjo", "banjo/protocol-base.test.banjo"],
+        "cpp/protocol-base-internal.h"
+    );
+    codegen_test!(
+        protocol_handle,
+        CppInternalBackend,
+        ["../zx.banjo", "banjo/protocol-handle.test.banjo"],
+        "cpp/protocol-handle-internal.h"
+    );
+    codegen_test!(
+        protocol_array,
+        CppInternalBackend,
+        ["../zx.banjo", "banjo/protocol-array.test.banjo"],
+        "cpp/protocol-array-internal.h"
+    );
+    codegen_test!(
+        protocol_vector,
+        CppInternalBackend,
+        ["../zx.banjo", "banjo/protocol-vector.test.banjo"],
+        "cpp/protocol-vector-internal.h"
+    );
+    codegen_test!(
+        protocol_other_types,
+        CppInternalBackend,
+        ["../zx.banjo", "banjo/protocol-other-types.test.banjo"],
+        "cpp/protocol-other-types-internal.h"
     );
 }
