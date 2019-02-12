@@ -728,7 +728,7 @@ mod tests {
         // As our clients are async generators, we need to pin this future explicitly.
         // All async generators are !Unpin by default.
         pin_mut!(future);
-        exec.run_until_stalled(&mut future);
+        let _ = exec.run_until_stalled(&mut future);
     }
 
     type OpenRequestArgs<'path> = (
@@ -773,7 +773,7 @@ mod tests {
         // As our clients are async generators, we need to pin this future explicitly.
         // All async generators are !Unpin by default.
         pin_mut!(future);
-        exec.run_until_stalled(&mut future);
+        let _ = exec.run_until_stalled(&mut future);
     }
 
     /// A helper to build the "expected" output for a read_dirents call.

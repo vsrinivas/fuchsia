@@ -73,7 +73,7 @@ fn test_handle_client_request() {
     // unrecognized device returns an error to the client
     let (proxy, mut request_stream) = fidl_endpoints();
     let mut client_fut = proxy.start(true, Some(""));
-    exec.run_until_stalled(&mut client_fut);
+    let _ = exec.run_until_stalled(&mut client_fut);
     let request = unwrap_request(exec.run_until_stalled(&mut request_stream.next()));
     let request = (ClientId(0), (Some(Ok(request)), request_stream));
     handle_client_request(request, &mut requests, &mut subscribers, &mut logs).unwrap();
@@ -85,7 +85,7 @@ fn test_handle_client_request() {
     let (proxy, mut request_stream) = fidl_endpoints();
     logs.add_device(String::new());
     let mut client_fut = proxy.start(true, Some(""));
-    exec.run_until_stalled(&mut client_fut);
+    let _ = exec.run_until_stalled(&mut client_fut);
     let request = unwrap_request(exec.run_until_stalled(&mut request_stream.next()));
     let request = (ClientId(1), (Some(Ok(request)), request_stream));
     handle_client_request(request, &mut requests, &mut subscribers, &mut logs).unwrap();
@@ -96,7 +96,7 @@ fn test_handle_client_request() {
     // valid device returns no errors to a client subscribed globally
     let (proxy, mut request_stream) = fidl_endpoints();
     let mut client_fut = proxy.start(true, None);
-    exec.run_until_stalled(&mut client_fut);
+    let _ = exec.run_until_stalled(&mut client_fut);
     let request = unwrap_request(exec.run_until_stalled(&mut request_stream.next()));
     let request = (ClientId(2), (Some(Ok(request)), request_stream));
     handle_client_request(request, &mut requests, &mut subscribers, &mut logs).unwrap();
@@ -108,7 +108,7 @@ fn test_handle_client_request() {
     // second request by the same client returns an error
     let (proxy, mut request_stream) = fidl_endpoints();
     let mut client_fut = proxy.start(true, None);
-    exec.run_until_stalled(&mut client_fut);
+    let _ = exec.run_until_stalled(&mut client_fut);
     let request = unwrap_request(exec.run_until_stalled(&mut request_stream.next()));
     let request = (ClientId(2), (Some(Ok(request)), request_stream));
     handle_client_request(request, &mut requests, &mut subscribers, &mut logs).unwrap();
@@ -120,7 +120,7 @@ fn test_handle_client_request() {
     // valid device returns no errors to a client requesting a dump
     let (proxy, mut request_stream) = fidl_endpoints();
     let mut client_fut = proxy.start(false, None);
-    exec.run_until_stalled(&mut client_fut);
+    let _ = exec.run_until_stalled(&mut client_fut);
     let request = unwrap_request(exec.run_until_stalled(&mut request_stream.next()));
     let request = (ClientId(3), (Some(Ok(request)), request_stream));
     handle_client_request(request, &mut requests, &mut subscribers, &mut logs).unwrap();

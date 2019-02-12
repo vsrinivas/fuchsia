@@ -74,7 +74,7 @@ mod tests {
             counter += 100;
             future::ready(req.reply(fake_iface_stats(counter)))
         });
-        exec.run_until_stalled(&mut server);
+        let _ = exec.run_until_stalled(&mut server);
 
         let res1 = exec.run_until_stalled(&mut fut1);
         match res1 {
@@ -91,7 +91,7 @@ mod tests {
         }
 
         let mut fut3 = sched.get_stats();
-        exec.run_until_stalled(&mut server);
+        let _ = exec.run_until_stalled(&mut server);
         let res3 = exec.run_until_stalled(&mut fut3);
         match res3 {
             Poll::Ready(Ok(r)) => assert_eq!(fake_iface_stats(200), *r.lock()),

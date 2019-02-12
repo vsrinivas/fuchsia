@@ -741,7 +741,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
         send_scan_error_response(&mut exec, &mut client_sme_req);
-        exec.run_until_stalled(&mut fut)?;
+        let _ = exec.run_until_stalled(&mut fut)?;
         Ok(())
     }
 

@@ -899,7 +899,7 @@ mod tests {
         // As our clients are async generators, we need to pin this future explicitly.
         // All async generators are !Unpin by default.
         pin_mut!(future);
-        exec.run_until_stalled(&mut future);
+        let _ = exec.run_until_stalled(&mut future);
     }
 
     fn run_server_client_with_open_requests_channel_and_executor<GetClientRes>(
@@ -954,7 +954,7 @@ mod tests {
             server,
             get_client,
             |run_until_stalled| {
-                run_until_stalled();
+                let _ = run_until_stalled();
             },
         );
     }

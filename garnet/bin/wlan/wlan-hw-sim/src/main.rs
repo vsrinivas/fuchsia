@@ -694,7 +694,7 @@ mod simulation_tests {
             }
         }
         // Send any packets that are still in the buffer
-        poll!(client_stream.next());
+        let _ = poll!(client_stream.next());
         Ok(())
     }
 
