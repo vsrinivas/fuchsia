@@ -284,7 +284,7 @@ typedef struct {
 #define ZBI_BOOTFS_PAGE_SIZE            (4096u)
 
 #define ZBI_BOOTFS_PAGE_ALIGN(size) \
-    (((size) + ZBI_BOOTFS_PAGE_SIZE - 1) & -ZBI_BOOTFS_PAGE_SIZE)
+    (((size) + ZBI_BOOTFS_PAGE_SIZE - 1) & ~(ZBI_BOOTFS_PAGE_SIZE - 1))
 
 #ifndef __ASSEMBLER__
 typedef struct {
