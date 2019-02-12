@@ -27,11 +27,11 @@ source_set("testing") {
     ":fake_component",
     ":fake_launcher",
     ":test_util",
-    "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp:environment_services",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/svc/cpp",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/fs",
   ]
 }
@@ -79,12 +79,15 @@ source_set("enclosing_environment") {
   sources = [
     "enclosing_environment.cc",
     "enclosing_environment.h",
+    "component_interceptor.cc",
+    "component_interceptor.h",
     "launcher_impl.cc",
     "launcher_impl.h",
   ]
 
   deps = [
     ":test_util",
+    "//garnet/public/lib/component/cpp/testing/environment_delegating_runner:bin",
   ]
 
   public_configs = [ "//garnet/public:config" ]

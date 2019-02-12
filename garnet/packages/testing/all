@@ -1,7 +1,8 @@
 {
     "imports": [
-        "garnet/packages/testing/run_test_component",
+        "garnet/packages/testing/environment_delegating_runner",
         "garnet/packages/testing/netemul_runner",
+        "garnet/packages/testing/run_test_component",
         "garnet/packages/testing/views"
     ]
 }

@@ -12,12 +12,14 @@ executable("lib_component_unittest") {
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/component/cpp/testing:enclosing_environment",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
   ]
 
   sources = [
     "enclosing_environment_test.cc",
+    "component_interceptor_unittest.cc",
   ]
 }
 
