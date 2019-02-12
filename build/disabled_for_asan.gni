@@ -8,9 +8,6 @@ disabled_for_asan = [
   # CF-586
   "/pkgfs/packages/iquery_golden_test/0/test/iquery_golden_test",
 
-  # MTWN-234
-  "/pkgfs/packages/mediaplayer_tests/0/test/mediaplayer_core_tests",
-
   # MF-193
   "/pkgfs/packages/modular_tests/0/test/run_modular_tests.sh",
 
