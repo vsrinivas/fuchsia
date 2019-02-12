@@ -19,7 +19,7 @@ class ModuleFacetReader {
   // declared in the module's component manifest. A null |manifest| is returned
   // if the module does not have a module facet declared.
   using GetModuleManifestCallback =
-      std::function<void(fuchsia::modular::ModuleManifestPtr manifest)>;
+      fit::function<void(fuchsia::modular::ModuleManifestPtr manifest)>;
   virtual void GetModuleManifest(const std::string& module_url,
                                  GetModuleManifestCallback callback) = 0;
 

@@ -77,7 +77,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // Returns a list of the ongoing activities in this story.
   fidl::VectorPtr<fuchsia::modular::OngoingActivityType> GetOngoingActivities();
 
-  void Sync(const std::function<void()>& done);
+  void Sync(fit::function<void()> done);
 
   // Called by ModuleControllerImpl and ModuleContextImpl.
   void FocusModule(const std::vector<std::string>& module_path);
@@ -87,7 +87,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Called by ModuleControllerImpl.
   void StopModule(const std::vector<std::string>& module_path,
-                  const std::function<void()>& done);
+                  fit::function<void()> done);
 
   // Called by ModuleControllerImpl.
   //
@@ -116,14 +116,14 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
           module_controller_request,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
-      std::function<void(fuchsia::modular::StartModuleStatus)> callback);
+      fit::function<void(fuchsia::modular::StartModuleStatus)> callback);
 
   // Called by ModuleContextImpl.
   void AddModuleToStory(
       AddModParams add_mod_params,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController>
           module_controller_request,
-      std::function<void(fuchsia::modular::StartModuleStatus)> callback);
+      fit::function<void(fuchsia::modular::StartModuleStatus)> callback);
 
   // Stops the module at |module_path| in response to a call to
   // |ModuleContext.RemoveSelfFromStory|.
@@ -138,7 +138,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void CreateEntity(
       std::string type, fuchsia::mem::Buffer data,
       fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
-      std::function<void(std::string /* entity_reference */)> callback);
+      fit::function<void(std::string /* entity_reference */)> callback);
 
   // Stops the story as part of a story provider operation. The story provider
   // can indicate whether this is part of an operation where all stories are
@@ -216,7 +216,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Communicates with SessionShell.
   void StartStoryShell();
-  void DetachView(std::function<void()> done);
+  void DetachView(fit::function<void()> done);
 
   // Called whenever |story_storage_| sees an updated ModuleData from another
   // device.

@@ -34,14 +34,14 @@ class TestApp {
 
   // Called by AgentDriver.
   void RunTask(fidl::StringPtr /*task_id*/,
-               const std::function<void()>& /*callback*/) {}
+               fit::function<void()> /*callback*/) {}
 
   TestPoint stopped_{"Unstoppable agent stopped"};
 
   // Called by AgentDriver.
-  void Terminate(const std::function<void()>& done) {
+  void Terminate(fit::function<void()> done) {
     stopped_.Pass();
-    modular::testing::Done(done);
+    modular::testing::Done(std::move(done));
   }
 
  private:

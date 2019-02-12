@@ -17,7 +17,6 @@
 #include <lib/component/cpp/connect.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fsl/types/type_converters.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -99,18 +98,18 @@ std::string GetAccountId(const fuchsia::modular::auth::AccountPtr& account) {
 // which when called invokes the reset() method on the object pointed to by the
 // argument. Used to reset() fidl pointers and std::unique_ptr<>s fields.
 template <typename X>
-std::function<void(std::function<void()>)> Reset(
+fit::function<void(fit::function<void()>)> Reset(
     std::unique_ptr<X>* const field) {
-  return [field](std::function<void()> cont) {
+  return [field](fit::function<void()> cont) {
     field->reset();
     cont();
   };
 }
 
 template <typename X>
-std::function<void(std::function<void()>)> Reset(
+fit::function<void(fit::function<void()>)> Reset(
     fidl::InterfacePtr<X>* const field) {
-  return [field](std::function<void()> cont) {
+  return [field](fit::function<void()> cont) {
     field->Unbind();
     cont();
   };
@@ -121,11 +120,11 @@ std::function<void(std::function<void()>)> Reset(
 // pointed to by the argument. Used to teardown AppClient and AsyncHolder
 // members.
 template <typename X>
-std::function<void(std::function<void()>)> Teardown(const zx::duration timeout,
+fit::function<void(fit::function<void()>)> Teardown(const zx::duration timeout,
                                                     const char* const message,
                                                     X* const field) {
-  return [timeout, message, field](std::function<void()> cont) {
-    field->Teardown(timeout, [message, cont] {
+  return [timeout, message, field](fit::function<void()> cont) {
+    field->Teardown(timeout, [message, cont = std::move(cont)] {
       if (message) {
         FXL_DLOG(INFO) << "- " << message << " down.";
       }
@@ -217,8 +216,8 @@ void SessionmgrImpl::Initialize(
                                     std::move(story_shell_config),
                                     use_session_shell_for_story_shell_factory);
         ConnectSessionShellToStoryProvider();
-        AtEnd([this](std::function<void()> cont) {
-          TerminateSessionShell(cont);
+        AtEnd([this](fit::function<void()> cont) {
+          TerminateSessionShell(std::move(cont));
         });
         InitializeClipboard();
         ReportEvent(ModularEvent::BOOTED_TO_SESSIONMGR);
@@ -788,8 +787,8 @@ void SessionmgrImpl::RunSessionShell(
       zx::eventpair(view_owner.TakeChannel().release())));
 }
 
-void SessionmgrImpl::TerminateSessionShell(const std::function<void()>& done) {
-  session_shell_app_->Teardown(kBasicTimeout, [this, done] {
+void SessionmgrImpl::TerminateSessionShell(fit::function<void()> done) {
+  session_shell_app_->Teardown(kBasicTimeout, [this, done = std::move(done)] {
     done();
     session_shell_app_.reset();
   });
@@ -826,10 +825,10 @@ void SessionmgrImpl::SwapSessionShell(
     fuchsia::modular::AppConfig session_shell_config,
     SwapSessionShellCallback callback) {
   operation_queue_.Add(new SwapSessionShellOperation(
-      this, std::move(session_shell_config), callback));
+      this, std::move(session_shell_config), std::move(callback)));
 }
 
-void SessionmgrImpl::Terminate(std::function<void()> done) {
+void SessionmgrImpl::Terminate(fit::function<void()> done) {
   FXL_LOG(INFO) << "Sessionmgr::Terminate()";
   terminating_ = true;
   at_end_done_ = std::move(done);
@@ -838,7 +837,7 @@ void SessionmgrImpl::Terminate(std::function<void()> done) {
 }
 
 void SessionmgrImpl::GetAccount(
-    std::function<void(::std::unique_ptr<::fuchsia::modular::auth::Account>)>
+    fit::function<void(::std::unique_ptr<::fuchsia::modular::auth::Account>)>
         callback) {
   callback(fidl::Clone(account_));
 }
@@ -854,7 +853,7 @@ void SessionmgrImpl::GetComponentContext(
 }
 
 void SessionmgrImpl::GetDeviceName(
-    std::function<void(::std::string)> callback) {
+    fit::function<void(::std::string)> callback) {
   callback(device_name_);
 }
 
@@ -963,7 +962,7 @@ fuchsia::ledger::cloud::CloudProviderPtr SessionmgrImpl::LaunchCloudProvider(
   return cloud_provider;
 }
 
-void SessionmgrImpl::AtEnd(std::function<void(std::function<void()>)> action) {
+void SessionmgrImpl::AtEnd(fit::function<void(fit::function<void()>)> action) {
   at_end_.emplace_back(std::move(action));
 }
 

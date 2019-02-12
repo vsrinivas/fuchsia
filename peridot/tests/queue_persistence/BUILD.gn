@@ -68,8 +68,6 @@ executable_package("queue_persistence_test_agent") {
 
 fidl("queue_persistence_test_service") {
   name = "test.peridot.tests.queuepersistence"
-  cpp_legacy_callbacks = true
-
   sources = [
     "queue_persistence_test_service.fidl",
   ]

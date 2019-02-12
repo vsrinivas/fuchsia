@@ -14,7 +14,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/strings/string_printf.h>
-#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
 namespace modular {

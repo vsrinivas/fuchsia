@@ -34,18 +34,19 @@ class EntityProviderController::EntityImpl : fuchsia::modular::Entity {
  private:
   // |fuchsia::modular::Entity|
   void GetTypes(GetTypesCallback callback) override {
-    entity_provider_->GetTypes(cookie_, callback);
+    entity_provider_->GetTypes(cookie_, std::move(callback));
   }
 
   // |fuchsia::modular::Entity|
   void GetData(std::string type, GetDataCallback callback) override {
-    entity_provider_->GetData(cookie_, type, callback);
+    entity_provider_->GetData(cookie_, type, std::move(callback));
   }
 
   // |fuchsia::modular::Entity|
   void WriteData(std::string type, fuchsia::mem::Buffer data,
                  WriteDataCallback callback) override {
-    entity_provider_->WriteData(cookie_, type, std::move(data), callback);
+    entity_provider_->WriteData(cookie_, type, std::move(data),
+                                std::move(callback));
   }
 
   // |fuchsia::modular::Entity|
@@ -72,10 +73,10 @@ class EntityProviderController::EntityImpl : fuchsia::modular::Entity {
 EntityProviderController::EntityProviderController(
     fuchsia::modular::EntityProviderPtr entity_provider,
     fuchsia::modular::AgentControllerPtr agent_controller,
-    std::function<void()> done)
+    fit::function<void()> done)
     : entity_provider_(std::move(entity_provider)),
       agent_controller_(std::move(agent_controller)),
-      done_(done) {
+      done_(std::move(done)) {
   FXL_DLOG(INFO) << "Running fuchsia::modular::EntityProvider";
   if (agent_controller_) {
     agent_controller_.set_error_handler([this](zx_status_t status) {

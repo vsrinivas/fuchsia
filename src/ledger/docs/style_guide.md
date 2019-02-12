@@ -39,9 +39,9 @@ cases not covered there, we choose a convention.
 If there is a need to distinguish callback parameters of a method or a class,
 call them `on_<event>`.
 
-**Do**: `std::function<void(int)> on_done`
+**Do**: `fit::function<void(int)> on_done`
 
-**Don't**: ~~`std::function<void(int)> done_callback`~~
+**Don't**: ~~`fit::function<void(int)> done_callback`~~
 
 ### Usage of fxl::StringView vs std::string
 

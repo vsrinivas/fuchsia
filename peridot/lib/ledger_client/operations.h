@@ -48,7 +48,7 @@ namespace modular {
 template <typename... Args>
 class PageOperation : public Operation<Args...> {
  public:
-  using ResultCall = std::function<void(Args...)>;
+  using ResultCall = fit::function<void(Args...)>;
 
   PageOperation(const char* const trace_name, fuchsia::ledger::Page* const page,
                 ResultCall result_call, const std::string& trace_info = "")
@@ -58,7 +58,7 @@ class PageOperation : public Operation<Args...> {
  protected:
   fuchsia::ledger::Page* page() const { return page_; }
 
-  using PageCallback = std::function<void(fuchsia::ledger::Status)>;
+  using PageCallback = fit::function<void(fuchsia::ledger::Status)>;
 
   PageCallback Protect(PageCallback callback) {
     return [weak_this = this->GetWeakPtr(),
@@ -82,7 +82,7 @@ class PageOperation : public Operation<Args...> {
 template <typename... Args>
 class LedgerOperation : public Operation<Args...> {
  public:
-  using ResultCall = std::function<void(Args...)>;
+  using ResultCall = fit::function<void(Args...)>;
 
   LedgerOperation(const char* const trace_name, fuchsia::ledger::Ledger* ledger,
                   fuchsia::ledger::Page* const page, ResultCall result_call,
@@ -95,7 +95,7 @@ class LedgerOperation : public Operation<Args...> {
   fuchsia::ledger::Ledger* ledger() const { return ledger_; }
   fuchsia::ledger::Page* page() const { return page_; }
 
-  using LedgerCallback = std::function<void(fuchsia::ledger::Status)>;
+  using LedgerCallback = fit::function<void(fuchsia::ledger::Status)>;
 
   LedgerCallback Protect(LedgerCallback callback) {
     return [weak_this = this->GetWeakPtr(),
@@ -115,7 +115,7 @@ template <typename Data, typename DataPtr = std::unique_ptr<Data>,
           typename DataFilter = XdrFilterList<Data>>
 class ReadDataCall : public PageOperation<DataPtr> {
  public:
-  using ResultCall = std::function<void(DataPtr)>;
+  using ResultCall = fit::function<void(DataPtr)>;
   using FlowToken = typename Operation<DataPtr>::FlowToken;
 
   ReadDataCall(fuchsia::ledger::Page* const page, const std::string& key,
@@ -192,7 +192,7 @@ template <typename Data, typename DataArray = std::vector<Data>,
           typename DataFilter = XdrFilterList<Data>>
 class ReadAllDataCall : public PageOperation<DataArray> {
  public:
-  using ResultCall = std::function<void(DataArray)>;
+  using ResultCall = fit::function<void(DataArray)>;
   using FlowToken = typename Operation<DataArray>::FlowToken;
 
   ReadAllDataCall(fuchsia::ledger::Page* const page, std::string prefix,

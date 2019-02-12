@@ -52,7 +52,7 @@ class AgentRunner : fuchsia::modular::AgentProvider,
 
   // |callback| is called after - (1) all agents have been shutdown and (2)
   // no new tasks are scheduled to run.
-  void Teardown(const std::function<void()>& callback);
+  void Teardown(fit::function<void()> callback);
 
   // Connects to an agent (and starts it up if it doesn't exist) through
   // |fuchsia::modular::Agent.Connect|. Called using
@@ -95,7 +95,7 @@ class AgentRunner : fuchsia::modular::AgentProvider,
   // could be not running or in the middle of terminating). Once the agent is in
   // a running state, calls |done|.
   void EnsureAgentIsRunning(const std::string& agent_url,
-                            const std::function<void()>& done);
+                            fit::function<void()> done);
 
   // Actually starts up an agent (used by |EnsureAgentIsRunning()| above).
   void RunAgent(const std::string& agent_url);
@@ -187,7 +187,7 @@ class AgentRunner : fuchsia::modular::AgentProvider,
   // agent URL -> done callbacks to invoke once agent has started.
   // Holds requests to start an agent; in case an agent is already in a
   // terminating state, we pend those requests here until the agent terminates.
-  std::map<std::string, std::vector<std::function<void()>>>
+  std::map<std::string, std::vector<fit::function<void()>>>
       run_agent_callbacks_;
 
   // agent URL -> modular.fuchsia::modular::AgentContext

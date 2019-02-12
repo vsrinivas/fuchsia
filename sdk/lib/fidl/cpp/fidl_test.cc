@@ -145,12 +145,12 @@ std::vector<fidl::VectorPtr<A>> BuildSortedVector(
 }
 
 TEST(FidlTest, TestBuildSortedVector) {
-  EXPECT_EQ(2u,
-            BuildSortedVector<uint64_t>(0, [](uint64_t i) { return i; }).size());
-  EXPECT_EQ(5u,
-            BuildSortedVector<uint64_t>(1, [](uint64_t i) { return i; }).size());
-  EXPECT_EQ(14u,
-            BuildSortedVector<uint64_t>(2, [](uint64_t i) { return i; }).size());
+  EXPECT_EQ(
+      2u, BuildSortedVector<uint64_t>(0, [](uint64_t i) { return i; }).size());
+  EXPECT_EQ(
+      5u, BuildSortedVector<uint64_t>(1, [](uint64_t i) { return i; }).size());
+  EXPECT_EQ(
+      14u, BuildSortedVector<uint64_t>(2, [](uint64_t i) { return i; }).size());
 }
 
 TEST(FidlTest, VectorOfIntComparison) {
@@ -176,8 +176,7 @@ TEST(FidlTest, VectorOfOptionalStructComparison) {
 
 // Build a vector of arrays containing distincts values.
 template <typename A>
-std::vector<fidl::Array<A, 3>> BuildArray(
-    const fit::function<A(int32_t)>& generator) {
+std::vector<fidl::Array<A, 3>> BuildArray(fit::function<A(int32_t)> generator) {
   std::vector<fidl::Array<A, 3>> arrays;
   for (int32_t i = 0; i < 3; ++i) {
     for (int32_t j = 0; j < 3; ++j) {

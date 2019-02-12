@@ -29,7 +29,7 @@ class PageClient;
 class LedgerClient : fuchsia::ledger::ConflictResolverFactory {
  public:
   LedgerClient(fuchsia::ledger::internal::LedgerRepository* ledger_repository,
-               const std::string& name, std::function<void()> error);
+               const std::string& name, fit::function<void()> error);
   LedgerClient(fuchsia::ledger::LedgerPtr ledger);
   ~LedgerClient() override;
 
@@ -37,7 +37,7 @@ class LedgerClient : fuchsia::ledger::ConflictResolverFactory {
 
   // A callback that is invoked every time one conflict resolution completes.
   // Used only for testing so far.
-  void add_watcher(std::function<void()> watcher) {
+  void add_watcher(fit::function<void()> watcher) {
     watchers_.emplace_back(std::move(watcher));
   }
 
@@ -78,7 +78,7 @@ class LedgerClient : fuchsia::ledger::ConflictResolverFactory {
   std::vector<std::unique_ptr<PageEntry>> pages_;
 
   // Notified whenever a conflict resolution cycle finishes.
-  std::vector<std::function<void()>> watchers_;
+  std::vector<fit::function<void()>> watchers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerClient);
 };

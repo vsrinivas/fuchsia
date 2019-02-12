@@ -10,7 +10,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/svc/cpp/services.h>
 
 #include "peridot/lib/convert/convert.h"
@@ -131,14 +130,14 @@ void CloudProviderFactory::MakeCloudProvider(
 void CloudProviderFactory::MakeTokenManager(
     UserId user_id,
     fidl::InterfaceRequest<fuchsia::auth::TokenManager> request) {
-  async::PostTask(services_loop_.dispatcher(),
-                  fxl::MakeCopyable([this, user_id = std::move(user_id),
-                                     request = std::move(request)]() mutable {
-                    token_managers_.emplace(
-                        startup_context_, services_loop_.dispatcher(), random_,
-                        credentials_->Clone(), std::move(user_id.user_id()),
-                        std::move(request));
-                  }));
+  async::PostTask(
+      services_loop_.dispatcher(), [this, user_id = std::move(user_id),
+                                    request = std::move(request)]() mutable {
+        token_managers_.emplace(startup_context_, services_loop_.dispatcher(),
+                                random_, credentials_->Clone(),
+                                std::move(user_id.user_id()),
+                                std::move(request));
+      });
 }
 
 }  // namespace cloud_provider_firestore

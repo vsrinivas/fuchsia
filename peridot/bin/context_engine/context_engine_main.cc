@@ -9,6 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fit/function.h>
 
 #include "peridot/bin/context_engine/context_engine_impl.h"
 
@@ -31,7 +32,7 @@ class ContextEngineApp {
         });
   }
 
-  void Terminate(std::function<void()> done) { done(); }
+  void Terminate(fit::function<void()> done) { done(); }
 
   fxl::WeakPtr<ContextDebugImpl> debug() {
     return context_engine_impl_->debug();

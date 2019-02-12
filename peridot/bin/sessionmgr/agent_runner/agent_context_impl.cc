@@ -7,7 +7,6 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/fxl/functional/make_copyable.h>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "peridot/lib/common/teardown.h"
@@ -206,7 +205,7 @@ void AgentContextImpl::NewAgentConnection(
     fidl::InterfaceRequest<fuchsia::modular::AgentController>
         agent_controller_request) {
   // Queue adding the connection
-  operation_queue_.Add(new SyncCall(fxl::MakeCopyable(
+  operation_queue_.Add(new SyncCall(
       [this, requestor_url,
        incoming_services_request = std::move(incoming_services_request),
        agent_controller_request =
@@ -219,7 +218,7 @@ void AgentContextImpl::NewAgentConnection(
         // the agent will stop.
         agent_controller_bindings_.AddBinding(
             this, std::move(agent_controller_request));
-      })));
+      }));
 }
 
 void AgentContextImpl::NewEntityProviderConnection(
@@ -227,7 +226,7 @@ void AgentContextImpl::NewEntityProviderConnection(
         entity_provider_request,
     fidl::InterfaceRequest<fuchsia::modular::AgentController>
         agent_controller_request) {
-  operation_queue_.Add(new SyncCall(fxl::MakeCopyable(
+  operation_queue_.Add(new SyncCall(
       [this, entity_provider_request = std::move(entity_provider_request),
        agent_controller_request =
            std::move(agent_controller_request)]() mutable {
@@ -236,7 +235,7 @@ void AgentContextImpl::NewEntityProviderConnection(
             std::move(entity_provider_request));
         agent_controller_bindings_.AddBinding(
             this, std::move(agent_controller_request));
-      })));
+      }));
 }
 
 void AgentContextImpl::NewTask(const std::string& task_id) {
@@ -352,16 +351,17 @@ void AgentContextImpl::StopAgentIfIdle() {
                                     }));
 }
 
-void AgentContextImpl::StopForTeardown(const std::function<void()>& callback) {
+void AgentContextImpl::StopForTeardown(fit::function<void()> callback) {
   FXL_DLOG(INFO) << "AgentContextImpl::StopForTeardown() " << url_;
-  operation_queue_.Add(new StopCall(true /* is agent runner terminating? */,
-                                    this, [this, callback](bool stopped) {
-                                      FXL_DCHECK(stopped);
-                                      agent_runner_->RemoveAgent(url_);
-                                      callback();
-                                      // |this| is no longer valid at this
-                                      // point.
-                                    }));
+  operation_queue_.Add(
+      new StopCall(true /* is agent runner terminating? */, this,
+                   [this, callback = std::move(callback)](bool stopped) {
+                     FXL_DCHECK(stopped);
+                     agent_runner_->RemoveAgent(url_);
+                     callback();
+                     // |this| is no longer valid at this
+                     // point.
+                   }));
 }
 
 }  // namespace modular

@@ -7,7 +7,6 @@
 #include <lib/fostr/fidl/fuchsia/modular/formatting.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/type_converter.h>
 
@@ -170,7 +169,7 @@ void AddFindModulesOperation(
     fuchsia::modular::EntityResolver* const entity_resolver,
     fuchsia::modular::IntentPtr intent,
     std::vector<std::string> requesting_module_path,
-    std::function<void(fuchsia::modular::ExecuteResult,
+    fit::function<void(fuchsia::modular::ExecuteResult,
                        fuchsia::modular::FindModulesResponse)>
         result_call) {
   operation_container->Add(new FindModulesCall(

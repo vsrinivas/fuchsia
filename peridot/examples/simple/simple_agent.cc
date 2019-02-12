@@ -28,13 +28,12 @@ class SimpleAgent {
   }
 
   // Called by |AgentDriver| to perform the task with |task_id|.
-  void RunTask(const fidl::StringPtr& task_id,
-               const std::function<void()>& done) {
+  void RunTask(const fidl::StringPtr& task_id, fit::function<void()> done) {
     done();
   }
 
   // Called by |AgentDriver| when the agent is to terminate.
-  void Terminate(const std::function<void()>& done) { done(); }
+  void Terminate(fit::function<void()> done) { done(); }
 
  private:
   // The services namespace that the `Simple` service is added to.

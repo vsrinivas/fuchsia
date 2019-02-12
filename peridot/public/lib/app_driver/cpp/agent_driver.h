@@ -39,10 +39,10 @@ class AgentHost {
 //
 //   // Called by AgentDriver.
 //   void RunTask(const fidl::StringPtr& task_id,
-//                const std::function<void()>& done) { done(); }
+//                fit::function<void()> done) { done(); }
 //
 //   // Called by AgentDriver.
-//   void Terminate(const std::function<void()>& done) { done(); }
+//   void Terminate(fit::function<void()> done) { done(); }
 // };
 //
 // int main(int argc, const char** argv) {
@@ -57,7 +57,7 @@ template <typename Impl>
 class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
  public:
   AgentDriver(component::StartupContext* const context,
-              std::function<void()> on_terminated)
+              fit::function<void()> on_terminated)
       : context_(context),
         lifecycle_impl_(context->outgoing().deprecated_services(), this),
         agent_impl_(std::make_unique<AgentImpl>(
@@ -85,8 +85,8 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
   };
   // |AgentImpl::Delegate|
   void RunTask(const fidl::StringPtr& task_id,
-               const std::function<void()>& done) override {
-    impl_->RunTask(task_id, done);
+               fit::function<void()> done) override {
+    impl_->RunTask(task_id, std::move(done));
   };
 
   // |LifecycleImpl::Delegate|
@@ -108,7 +108,7 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
   component::StartupContext* const context_;
   LifecycleImpl lifecycle_impl_;
   std::unique_ptr<AgentImpl> agent_impl_;
-  std::function<void()> on_terminated_;
+  fit::function<void()> on_terminated_;
   fuchsia::modular::AgentContextPtr agent_context_;
   std::unique_ptr<Impl> impl_;
 

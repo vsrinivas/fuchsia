@@ -33,12 +33,12 @@ class TestModule {
 
   // Called from ModuleDriver.
   TestPoint stopped_{"Child module 2 stopped"};
-  void Terminate(const std::function<void()>& done) {
+  void Terminate(fit::function<void()> done) {
     FXL_LOG(INFO) << "Child module 2 exiting.";
     stopped_.Pass();
 
     Signal("child_module_2_stop");
-    modular::testing::Done(done);
+    modular::testing::Done(std::move(done));
   }
 
  private:

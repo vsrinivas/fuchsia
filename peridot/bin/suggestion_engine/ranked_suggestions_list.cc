@@ -47,8 +47,8 @@ void RankedSuggestionsList::SetRanker(std::unique_ptr<Ranker> ranker) {
 
 RankedSuggestion* RankedSuggestionsList::GetMatchingSuggestion(
     MatchPredicate matchFunction) const {
-  auto findIter =
-      std::find_if(suggestions_.begin(), suggestions_.end(), matchFunction);
+  auto findIter = std::find_if(suggestions_.begin(), suggestions_.end(),
+                               std::move(matchFunction));
   if (findIter != suggestions_.end()) {
     return findIter->get();
   }
@@ -57,8 +57,8 @@ RankedSuggestion* RankedSuggestionsList::GetMatchingSuggestion(
 
 bool RankedSuggestionsList::RemoveMatchingSuggestion(
     MatchPredicate matchFunction) {
-  auto remove_iter =
-      std::remove_if(suggestions_.begin(), suggestions_.end(), matchFunction);
+  auto remove_iter = std::remove_if(suggestions_.begin(), suggestions_.end(),
+                                    std::move(matchFunction));
   if (remove_iter == suggestions_.end()) {
     return false;
   } else {

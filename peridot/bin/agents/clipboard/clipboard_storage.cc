@@ -4,8 +4,8 @@
 
 #include "peridot/bin/agents/clipboard/clipboard_storage.h"
 
+#include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/functional/make_copyable.h>
 
 namespace modular {
 namespace {
@@ -63,7 +63,7 @@ class ClipboardStorage::PushCall : public Operation<> {
 class ClipboardStorage::PeekCall : public Operation<fidl::StringPtr> {
  public:
   PeekCall(ClipboardStorage* const impl,
-           std::function<void(fidl::StringPtr)> result)
+           fit::function<void(fidl::StringPtr)> result)
       : Operation("ClipboardStorage::PeekCall", std::move(result)),
         impl_(impl) {
     // No error checking: Absent ledger value yields "", not
@@ -109,9 +109,8 @@ void ClipboardStorage::Push(const fidl::StringPtr& text) {
   operation_queue_.Add(new PushCall(this, text));
 }
 
-void ClipboardStorage::Peek(
-    const std::function<void(fidl::StringPtr)>& callback) {
-  operation_queue_.Add(new PeekCall(this, callback));
+void ClipboardStorage::Peek(fit::function<void(fidl::StringPtr)> callback) {
+  operation_queue_.Add(new PeekCall(this, std::move(callback)));
 }
 
 }  // namespace modular

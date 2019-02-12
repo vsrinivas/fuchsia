@@ -20,8 +20,8 @@ MessageQueueClient::NewRequest() {
 }
 
 void MessageQueueClient::GetToken(
-    std::function<void(fidl::StringPtr)> callback) {
-  queue_->GetToken(callback);
+    fit::function<void(fidl::StringPtr)> callback) {
+  queue_->GetToken(std::move(callback));
 }
 
 void MessageQueueClient::RegisterReceiver(ReceiverCallback receiver) {
@@ -39,7 +39,7 @@ void MessageQueueClient::RegisterReceiver(ReceiverCallback receiver) {
 
 // |fuchsia::modular::MessageReader|
 void MessageQueueClient::OnReceive(fuchsia::mem::Buffer message,
-                                   std::function<void()> ack) {
+                                   fit::function<void()> ack) {
   FXL_DCHECK(reader_.is_bound());
 
   std::string str;

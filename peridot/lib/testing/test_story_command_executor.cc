@@ -21,7 +21,7 @@ void TestStoryCommandExecutor::Reset() {
 void TestStoryCommandExecutor::ExecuteCommandsInternal(
     fidl::StringPtr story_id,
     std::vector<fuchsia::modular::StoryCommand> commands,
-    std::function<void(fuchsia::modular::ExecuteResult)> done) {
+    fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   ++execute_count_;
   last_story_id_ = story_id;
   last_commands_ = std::move(commands);

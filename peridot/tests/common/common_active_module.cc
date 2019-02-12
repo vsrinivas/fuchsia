@@ -49,15 +49,16 @@ class ActiveModule {
 
   // Called by ModuleDriver.
   TestPoint stopped_{"Active module stopped"};
-  void Terminate(const std::function<void()>& done) {
+  void Terminate(fit::function<void()> done) {
     Signal(kCommonActiveModuleStopped);
     stopped_.Pass();
-    modular::testing::Done(done);
+    modular::testing::Done(std::move(done));
   }
 
  private:
   modular::ModuleHost* const module_host_;
   fxl::WeakPtrFactory<ActiveModule> weak_ptr_factory_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(ActiveModule);
 };
 

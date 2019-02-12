@@ -10,7 +10,6 @@
 #include <lib/component/cpp/expose.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/string_view.h>
 #include <lib/gtest/test_loop_fixture.h>

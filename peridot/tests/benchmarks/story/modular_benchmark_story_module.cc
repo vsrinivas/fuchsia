@@ -33,7 +33,7 @@ class NullModule : fuchsia::modular::LinkWatcher {
   }
 
   // Called by ModuleDriver.
-  void Terminate(const std::function<void()>& done) { done(); }
+  void Terminate(fit::function<void()> done) { done(); }
 
  private:
   // |fuchsia::modular::LinkWatcher|

@@ -109,7 +109,6 @@ executable_package("component_context_test_unstoppable_agent") {
 
 fidl("component_context_test_service") {
   testonly = true
-  cpp_legacy_callbacks = true
 
   name = "test.peridot.tests.componentcontext"
 

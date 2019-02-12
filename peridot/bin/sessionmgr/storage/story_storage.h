@@ -61,7 +61,7 @@ class StoryStorage : public PageClient {
   // in underlying storage. Excludes notifications for changes (such as with
   // WriteModuleData() or UpdateModuleData()) made on this instance of
   // StoryStorage.
-  void set_on_module_data_updated(std::function<void(ModuleData)> callback) {
+  void set_on_module_data_updated(fit::function<void(ModuleData)> callback) {
     on_module_data_updated_ = std::move(callback);
   }
 
@@ -87,7 +87,7 @@ class StoryStorage : public PageClient {
   // It is illegal to change ModuleDataPtr->module_path in |mutate_fn| or to
   // reset to null an otherwise initialized ModuleDataPtr.
   FuturePtr<> UpdateModuleData(const std::vector<std::string>& module_path,
-                               std::function<void(ModuleDataPtr*)> mutate_fn);
+                               fit::function<void(ModuleDataPtr*)> mutate_fn);
 
   // Returns all ModuleData entries for all mods.
   FuturePtr<std::vector<ModuleData>> ReadAllModuleData();
@@ -103,8 +103,8 @@ class StoryStorage : public PageClient {
   // the new value did not originate from a call on *this, |context| will be
   // given the special value of nullptr.
   using LinkUpdatedCallback =
-      std::function<void(const fidl::StringPtr& value, const void* context)>;
-  using LinkWatcherAutoCancel = fit::deferred_action<std::function<void()>>;
+      fit::function<void(const fidl::StringPtr& value, const void* context)>;
+  using LinkWatcherAutoCancel = fit::deferred_action<fit::function<void()>>;
 
   // Registers |callback| to be invoked whenever a change to the link value at
   // |link_path| occurs. See documentation for LinkUpdatedCallback above. The
@@ -134,7 +134,7 @@ class StoryStorage : public PageClient {
   // of nullptr for |context| is illegal.
   FuturePtr<Status> UpdateLinkValue(
       const LinkPath& link_path,
-      std::function<void(fidl::StringPtr* value)> mutate_fn,
+      fit::function<void(fidl::StringPtr* value)> mutate_fn,
       const void* context);
 
   // Sets the type and data for the Entity stored under |cookie|.
@@ -223,7 +223,7 @@ class StoryStorage : public PageClient {
   OperationQueue operation_queue_;
 
   // Called when new ModuleData is encountered from the Ledger.
-  std::function<void(ModuleData)> on_module_data_updated_;
+  fit::function<void(ModuleData)> on_module_data_updated_;
 
   // A map of link ledger key -> watcher callback. Multiple clients can watch
   // the same Link.

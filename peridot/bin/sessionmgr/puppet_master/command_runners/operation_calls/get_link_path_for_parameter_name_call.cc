@@ -61,7 +61,7 @@ void AddGetLinkPathForParameterNameOperation(
     OperationContainer* const operation_container,
     StoryStorage* const story_storage, std::vector<std::string> module_name,
     std::string link_name,
-    std::function<void(fuchsia::modular::LinkPathPtr)> result_call) {
+    fit::function<void(fuchsia::modular::LinkPathPtr)> result_call) {
   operation_container->Add(new GetLinkPathForParameterNameCall(
       story_storage, std::move(module_name), std::move(link_name),
       std::move(result_call)));

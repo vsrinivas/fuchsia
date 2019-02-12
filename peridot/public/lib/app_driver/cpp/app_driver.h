@@ -33,7 +33,7 @@ namespace modular {
 //
 //     // Called by AppDriver. Call |done| once shutdown sequence is complete
 //     // and |this| will be scheduled for deletion on the current MessageLoop.
-//     void Terminate(const std::function<void()>& done);
+//     void Terminate(fit::function<void()> done);
 //
 // Example:
 //
@@ -43,7 +43,7 @@ namespace modular {
 //     context->outgoing().AddPublicService<..>(...);
 //   }
 //
-//   void Terminate(const std::function<void()>& done) {
+//   void Terminate(fit::function<void()> done) {
 //     done();
 //   }
 // };
@@ -62,7 +62,7 @@ template <typename Impl>
 class AppDriver : LifecycleImpl::Delegate {
  public:
   AppDriver(component::ServiceNamespace* const outgoing_services,
-            std::unique_ptr<Impl> impl, std::function<void()> on_terminated)
+            std::unique_ptr<Impl> impl, fit::function<void()> on_terminated)
       : lifecycle_impl_(outgoing_services, this),
         impl_(std::move(impl)),
         on_terminated_(std::move(on_terminated)) {}
@@ -84,7 +84,7 @@ class AppDriver : LifecycleImpl::Delegate {
 
   LifecycleImpl lifecycle_impl_;
   std::unique_ptr<Impl> impl_;
-  std::function<void()> on_terminated_;
+  fit::function<void()> on_terminated_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AppDriver);
 };

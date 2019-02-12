@@ -23,7 +23,7 @@ class ValidationTestsLauncher {
   // |factory| is called to produce instances of the cloud provider under test.
   ValidationTestsLauncher(
       component::StartupContext* startup_context,
-      std::function<
+      fit::function<
           void(fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
           factory);
 
@@ -33,16 +33,16 @@ class ValidationTestsLauncher {
   // |callback| is called after the tests are finished and passed the exit code
   //     of the test binary.
   void Run(const std::vector<std::string>& arguments,
-           std::function<void(int32_t)> callback);
+           fit::function<void(int32_t)> callback);
 
  private:
   component::StartupContext* const startup_context_;
-  std::function<void(
+  fit::function<void(
       fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
       factory_;
   component::ServiceProviderImpl service_provider_impl_;
   fuchsia::sys::ComponentControllerPtr validation_tests_controller_;
-  std::function<void(int32_t)> callback_;
+  fit::function<void(int32_t)> callback_;
 };
 
 }  // namespace cloud_provider

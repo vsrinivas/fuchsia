@@ -4,6 +4,7 @@
 
 #include <lib/app_driver/cpp/agent_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
 
 #include "peridot/bin/agents/clipboard/clipboard_impl.h"
 #include "peridot/bin/agents/clipboard/clipboard_storage.h"
@@ -40,12 +41,11 @@ class ClipboardAgent {
     services_.AddBinding(std::move(outgoing_services));
   }
 
-  void RunTask(const fidl::StringPtr& task_id,
-               const std::function<void()>& done) {
+  void RunTask(const fidl::StringPtr& task_id, fit::function<void()> done) {
     done();
   }
 
-  void Terminate(const std::function<void()>& done) { done(); }
+  void Terminate(fit::function<void()> done) { done(); }
 
  private:
   // The ledger client that is provided to the ClipboardImpl.

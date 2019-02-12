@@ -58,7 +58,7 @@ class StoryShellFactoryImpl : fuchsia::modular::StoryShellFactory {
                    StoryShellRequest story_shell) override;
 
   // |StoryShellFactory|
-  void DetachStory(std::string story_id, std::function<void()> done) override;
+  void DetachStory(std::string story_id, fit::function<void()> done) override;
 
   fidl::BindingSet<fuchsia::modular::StoryShellFactory> bindings_;
   fit::function<void(std::string story_id, StoryShellRequest request)>

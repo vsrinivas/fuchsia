@@ -99,12 +99,12 @@ void QueryRunner::Run(const std::vector<QueryHandlerRecord>& query_handlers) {
   }
 }
 
-void QueryRunner::SetEndRequestCallback(std::function<void()> callback) {
+void QueryRunner::SetEndRequestCallback(fit::function<void()> callback) {
   on_end_request_callback_ = std::move(callback);
 }
 
 void QueryRunner::SetResponseCallback(
-    std::function<void(std::string, fuchsia::modular::QueryResponse)>
+    fit::function<void(std::string, fuchsia::modular::QueryResponse)>
         callback) {
   on_query_response_callback_ = std::move(callback);
 }

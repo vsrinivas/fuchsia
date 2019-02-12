@@ -37,7 +37,7 @@ class TodoApp : public fuchsia::ledger::PageWatcher,
 
   void List(fuchsia::ledger::PageSnapshotPtr snapshot);
 
-  void GetKeys(std::function<void(std::vector<Key>)> callback);
+  void GetKeys(fit::function<void(std::vector<Key>)> callback);
 
   void AddNew();
 

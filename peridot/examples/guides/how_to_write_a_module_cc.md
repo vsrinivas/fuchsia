@@ -80,10 +80,10 @@ component_context->ObtainMessageQueue("agent_queue",
                                       message_queue.NewRequest());
 
 // Get the token for the message queue and send it to the agent.
-message_queue.GetToken(fxl::MakeCopyable(
+message_queue.GetToken(
     [agent_service = std::move(agent_service)](fidl::StringPtr token) {
       agent_service->SetMessageQueue(token);
-    }));
+    });
 ```
 
 ### Communicating with `SimpleAgent
@@ -121,7 +121,7 @@ when the `Module` exits. `ModuleDriver` requires `SimpleModule` to implement the
 constructor shown above, as well as a `Terminate`:
 
 ```c++
-void Terminate(const std::function<void()>& done);
+void Terminate(fit::function<void()> done);
 ```
 
 The module is responsible for calling `done` once its shutdown sequence is complete.

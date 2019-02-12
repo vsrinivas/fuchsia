@@ -33,9 +33,9 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
           ModuleManifestSource::RemovedEntryFn removed_fn,
           fxl::WeakPtr<FirebaseModuleManifestSource> owner)
       : dispatcher_(dispatcher),
-        idle_fn_(idle_fn),
-        new_fn_(new_fn),
-        removed_fn_(removed_fn),
+        idle_fn_(std::move(idle_fn)),
+        new_fn_(std::move(new_fn)),
+        removed_fn_(std::move(removed_fn)),
         reconnect_wait_seconds_(0),
         owner_(owner) {}
   ~Watcher() override = default;
@@ -146,7 +146,7 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
 
 FirebaseModuleManifestSource::FirebaseModuleManifestSource(
     async_dispatcher_t* dispatcher,
-    std::function<http::HttpServicePtr()> network_service_factory,
+    fit::function<http::HttpServicePtr()> network_service_factory,
     std::string db_id, std::string prefix)
     : db_id_(db_id),
       prefix_(prefix),

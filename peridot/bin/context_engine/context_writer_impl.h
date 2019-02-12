@@ -44,7 +44,7 @@ class ContextWriterImpl : fuchsia::modular::ContextWriter {
   // Used by ContextValueWriterImpl.
   void GetEntityTypesFromEntityReference(
       const fidl::StringPtr& reference,
-      std::function<void(const std::vector<std::string>&)> done);
+      fit::function<void(const std::vector<std::string>&)> done);
 
  private:
   // |fuchsia::modular::ContextWriter|

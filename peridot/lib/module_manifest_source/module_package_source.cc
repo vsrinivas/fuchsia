@@ -9,13 +9,12 @@
 
 #include <fs/service.h>
 #include <lib/async/cpp/task.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/memory/weak_ptr.h>
 #include <lib/fxl/strings/split_string.h>
 #include <lib/fxl/strings/string_printf.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
 
 #include "peridot/lib/module_manifest_source/json.h"
 #include "peridot/lib/module_manifest_source/package_util.h"
@@ -64,21 +63,20 @@ void ModulePackageSource::IndexManifest(std::string package_name,
     return;
   }
 
-  async::PostTask(
-      dispatcher_,
-      fxl::MakeCopyable([weak_this = weak_factory_.GetWeakPtr(), package_name,
-                         entry = std::move(entry)]() mutable {
-        if (!weak_this) {
-          return;
-        }
+  async::PostTask(dispatcher_,
+                  [weak_this = weak_factory_.GetWeakPtr(), package_name,
+                   entry = std::move(entry)]() mutable {
+                    if (!weak_this) {
+                      return;
+                    }
 
-        weak_this->new_entry_fn_(entry.binary, std::move(entry));
-      }));
+                    weak_this->new_entry_fn_(entry.binary, std::move(entry));
+                  });
 }
 
 // TODO(vardhan): Move this into garnet's fxl.
 void IterateDirectory(fxl::StringView dirname,
-                      std::function<void(fxl::StringView)> callback) {
+                      fit::function<void(fxl::StringView)> callback) {
   DIR* fd = opendir(dirname.data());
   if (fd == nullptr) {
     perror("Could not open module package index directory: ");
@@ -96,7 +94,7 @@ void IterateDirectory(fxl::StringView dirname,
 void ModulePackageSource::Watch(async_dispatcher_t* dispatcher, IdleFn idle_fn,
                                 NewEntryFn new_fn, RemovedEntryFn removed_fn) {
   dispatcher_ = dispatcher;
-  new_entry_fn_ = new_fn;
+  new_entry_fn_ = std::move(new_fn);
 
   IterateDirectory(
       kInitialModulePackagesIndexDir, [this](fxl::StringView filename) {

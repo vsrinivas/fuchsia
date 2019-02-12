@@ -7,7 +7,6 @@
 #include <string>
 
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/strings/join_strings.h>
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
@@ -82,9 +81,9 @@ void ModuleContextImpl::EmbedModule(
   params.module_source = fuchsia::modular::ModuleSource::INTERNAL;
   params.surface_relation = nullptr;
   params.is_embedded = true;
-  story_controller_impl_->EmbedModule(std::move(params),
-                                      std::move(module_controller),
-                                      std::move(view_owner), callback);
+  story_controller_impl_->EmbedModule(
+      std::move(params), std::move(module_controller), std::move(view_owner),
+      std::move(callback));
 }
 
 void ModuleContextImpl::AddModuleToStory(
@@ -101,7 +100,7 @@ void ModuleContextImpl::AddModuleToStory(
   params.surface_relation = std::move(surface_relation);
   params.is_embedded = false;
   story_controller_impl_->AddModuleToStory(
-      std::move(params), std::move(module_controller), callback);
+      std::move(params), std::move(module_controller), std::move(callback));
 }
 
 void ModuleContextImpl::StartContainerInShell(

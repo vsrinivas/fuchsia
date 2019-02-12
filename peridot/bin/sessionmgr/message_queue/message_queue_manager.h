@@ -59,7 +59,7 @@ class MessageQueueManager : PageClient {
                           const std::string& queue_name);
 
   void DeleteNamespace(const std::string& component_namespace,
-                       std::function<void()> done);
+                       fit::function<void()> done);
 
   void GetMessageSender(
       const std::string& queue_token,
@@ -80,7 +80,7 @@ class MessageQueueManager : PageClient {
   void RegisterMessageWatcher(const std::string& component_namespace,
                               const std::string& component_instance_id,
                               const std::string& queue_name,
-                              const std::function<void()>& watcher);
+                              fit::function<void()> watcher);
 
   // Registers a watcher that gets notified when a message queue with
   // |queue_token| is deleted.
@@ -100,7 +100,7 @@ class MessageQueueManager : PageClient {
   void RegisterDeletionWatcher(const std::string& component_namespace,
                                const std::string& component_instance_id,
                                const std::string& queue_token,
-                               const std::function<void()>& watcher);
+                               fit::function<void()> watcher);
 
   // Drops the watcher for |component_namespace| x |component_instance_id| x
   // |queue_name|.
@@ -124,7 +124,7 @@ class MessageQueueManager : PageClient {
       std::map<ComponentInstanceId, std::map<ComponentQueueName, Value>>>;
 
   using DeletionWatchers =
-      std::map<std::string, std::map<std::string, std::function<void()>>>;
+      std::map<std::string, std::map<std::string, fit::function<void()>>>;
 
   // Returns the |MessageQueueStorage| for the queue_token. Creates it
   // if it doesn't exist yet.
@@ -137,13 +137,30 @@ class MessageQueueManager : PageClient {
   // component namespace.
   void ClearMessageQueueStorage(const std::string& component_namespace);
 
-  // |FindQueueName()| and |EraseQueueName()| are helpers used to operate on
-  // component (namespace, id, queue name) mappings.
-  // If the given message queue |info| is found the stored pointer value, or
+  // |FindQueueName()|, |ReMoveByQueueName()|, and |EraseQueueName()|
+  // are helpers used to operate on component (namespace, id, queue name)
+  // mappings.
+
+  // |FindComponentQueues()| is used by both |FindQueueName()| and
+  // |ReMoveByQueueName()|.
+  template <typename ValueType>
+  typename std::map<std::string, ValueType>* FindComponentQueues(
+      ComponentQueueNameMap<ValueType>& queue_map,
+      const MessageQueueInfo& info);
+
+  // If the given message queue |info| is found, the stored pointer value, or
   // nullptr otherwise.
   template <typename ValueType>
-  const ValueType* FindQueueName(
-      const ComponentQueueNameMap<ValueType>& queue_map,
+  const ValueType* FindQueueName(ComponentQueueNameMap<ValueType>& queue_map,
+                                 const MessageQueueInfo& info);
+
+  // If the given message queue |info| is found, the stored pointer value, or
+  // nullptr otherwise. Since this is a private function, and fit::function
+  // is the only queue-name map value type using move-only semantics, it's
+  // overkill to add the complexity of conditional template resolution.
+  template <typename Callable>
+  fit::function<Callable> ReMoveByQueueName(
+      ComponentQueueNameMap<fit::function<Callable>>& queue_map,
       const MessageQueueInfo& info);
 
   // Erases the |ValueType| stored under the provided |info|.
@@ -175,7 +192,7 @@ class MessageQueueManager : PageClient {
   // callbacks. If a watcher is registered before a
   // |MessageQueueStorage| exists then it is stashed here until a
   // |MessageQueueStorage| is available.
-  ComponentQueueNameMap<std::function<void()>> pending_watcher_callbacks_;
+  ComponentQueueNameMap<fit::function<void()>> pending_watcher_callbacks_;
 
   // A map containing watchers that are to be notified when the described
   // message queue is deleted.

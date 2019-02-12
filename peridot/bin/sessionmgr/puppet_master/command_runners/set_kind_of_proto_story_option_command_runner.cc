@@ -58,7 +58,7 @@ SetKindOfProtoStoryOptionCommandRunner::
 void SetKindOfProtoStoryOptionCommandRunner::Execute(
     fidl::StringPtr story_id, StoryStorage* const story_storage,
     fuchsia::modular::StoryCommand command,
-    std::function<void(fuchsia::modular::ExecuteResult)> done) {
+    fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_set_kind_of_proto_story_option());
 
   operation_queue_.Add(new SetKindOfProtoStoryOptionCall(

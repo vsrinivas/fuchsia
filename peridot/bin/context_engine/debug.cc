@@ -88,7 +88,7 @@ void ContextDebugImpl::Watch(
 }
 
 void ContextDebugImpl::WaitUntilIdle(WaitUntilIdleCallback callback) {
-  idle_waiter_.WaitUntilIdle(callback);
+  idle_waiter_.WaitUntilIdle(std::move(callback));
 }
 
 void ContextDebugImpl::DispatchOneValue(

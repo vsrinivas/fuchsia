@@ -31,7 +31,7 @@ class TestStoryCommandExecutor : public StoryCommandExecutor {
   // |StoryCommandExecutor|
   void ExecuteCommandsInternal(
       fidl::StringPtr story_id, std::vector<StoryCommand> commands,
-      std::function<void(ExecuteResult)> done) override {
+      fit::function<void(ExecuteResult)> done) override {
     ++execute_count;
     last_story_id = story_id;
     last_commands = std::move(commands);

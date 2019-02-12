@@ -55,16 +55,17 @@ class TestContainer : public OperationContainer {
 template <typename... Args>
 class TestOperation : public Operation<Args...> {
  public:
-  using ResultCall = std::function<void(Args...)>;
-  TestOperation(std::function<void()> task, ResultCall done)
-      : Operation<Args...>("Test Operation", std::move(done)), task_(task) {}
+  using ResultCall = fit::function<void(Args...)>;
+  TestOperation(fit::function<void()> task, ResultCall done)
+      : Operation<Args...>("Test Operation", std::move(done)),
+        task_(std::move(task)) {}
 
   void SayDone(Args... args) { this->Done(args...); }
 
  private:
   void Run() override { task_(); }
 
-  std::function<void()> task_;
+  fit::function<void()> task_;
 };
 
 class OperationTest : public gtest::TestLoopFixture {};
@@ -188,14 +189,15 @@ class TestFlowTokenOperation : public Operation<int> {
 
   // |call_before_flow_dies| is invoked before the FlowToken goes out of scope.
   void SayDone(
-      int result, std::function<void()> call_before_flow_dies = [] {}) {
+      int result, fit::function<void()> call_before_flow_dies = [] {}) {
     // When |flow| goes out of scope, it will call Done() for us.
     FlowToken flow{this, &result_};
 
     // Post the continuation of the operation to an async loop so that we
     // exercise the refcounting of FlowTokens.
     async::PostTask(async_get_default_dispatcher(),
-                    [this, flow, result, call_before_flow_dies] {
+                    [this, flow, result,
+                     call_before_flow_dies = std::move(call_before_flow_dies)] {
                       result_ = result;
                       call_before_flow_dies();
                     });
@@ -403,7 +405,7 @@ class TestQueueNotNullPtr : public Operation<> {
   void Run() override {
     // When |flow| goes out of scope, it will call Done() for us.
     FlowToken flow{this};
-    operation_queue_.Add(new TestOperationNotNullPtr(flow));
+    operation_queue_.Add(new TestOperationNotNullPtr(flow /* by ref */));
   }
 
   OperationQueue operation_queue_;
@@ -418,7 +420,7 @@ class TestCollectionNotNullPtr : public Operation<> {
   void Run() override {
     // When |flow| goes out of scope, it will call Done() for us.
     FlowToken flow{this};
-    operation_collection_.Add(new TestOperationNotNullPtr(flow));
+    operation_collection_.Add(new TestOperationNotNullPtr(flow /* by ref */));
   }
 
   OperationCollection operation_collection_;
@@ -473,7 +475,7 @@ TEST_F(OperationTest, WrapFutureAsOperation_WithResult) {
 
   OperationCollection container;
   container.Add(WrapFutureAsOperation(__PRETTY_FUNCTION__, on_run, done,
-                                      std::function<void(int)>([&](int result) {
+                                      fit::function<void(int)>([&](int result) {
                                         EXPECT_EQ(10, result);
                                         op_did_finish = true;
                                       })));
@@ -497,7 +499,7 @@ TEST_F(OperationTest, WrapFutureAsOperation_WithoutResult) {
   OperationCollection container;
   container.Add(WrapFutureAsOperation(
       __PRETTY_FUNCTION__, on_run, done,
-      std::function<void()>([&] { op_did_finish = true; })));
+      fit::function<void()>([&] { op_did_finish = true; })));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(op_did_start);

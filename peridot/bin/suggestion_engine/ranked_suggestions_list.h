@@ -19,7 +19,7 @@
 
 namespace modular {
 using MatchPredicate =
-    std::function<bool(const std::unique_ptr<RankedSuggestion>& suggestion)>;
+    fit::function<bool(const std::unique_ptr<RankedSuggestion>& suggestion)>;
 
 // Stores a list of RankedSuggestion objects and the features by which they
 // should be ranked.  Ranking must be explicitly triggered via the Rank

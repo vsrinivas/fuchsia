@@ -110,8 +110,8 @@ void DeviceMapImpl::Connect(
 }
 
 void DeviceMapImpl::Query(QueryCallback callback) {
-  operation_queue_.Add(new ReadAllDeviceDataCall(page(), kDeviceKeyPrefix,
-                                                 XdrDeviceMapEntry, callback));
+  operation_queue_.Add(new ReadAllDeviceDataCall(
+      page(), kDeviceKeyPrefix, XdrDeviceMapEntry, std::move(callback)));
 }
 
 void DeviceMapImpl::GetCurrentDevice(GetCurrentDeviceCallback callback) {

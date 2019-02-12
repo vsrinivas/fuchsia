@@ -55,12 +55,12 @@ class MessageQueueClient : public fuchsia::modular::MessageReader {
 
   // Returns a token for this message queue, which is used to send messages
   // to this message queue.
-  void GetToken(std::function<void(fidl::StringPtr)> callback);
+  void GetToken(fit::function<void(fidl::StringPtr)> callback);
 
  private:
   // |fuchsia::modular::MessageReader|
   void OnReceive(fuchsia::mem::Buffer message,
-                 std::function<void()> ack) override;
+                 fit::function<void()> ack) override;
 
   fuchsia::modular::MessageQueuePtr queue_;
   fidl::Binding<fuchsia::modular::MessageReader> reader_;

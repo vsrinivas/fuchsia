@@ -8,7 +8,9 @@
 #include <string>
 
 #include <fuchsia/testing/runner/cpp/fidl.h>
+#include <lib/async/cpp/future.h>
 #include <lib/component/cpp/startup_context.h>
+#include <lib/fit/function.h>
 
 namespace modular {
 namespace testing {
@@ -45,7 +47,7 @@ void Fail(const std::string& log_msg);
 // there is a race between the teardown request and the close of the connection
 // to the application controller. If the close of the application controller is
 // noticed first by the test runner, it terminates the test as failed.
-void Done(const std::function<void()>& ack);
+void Done(fit::function<void()> ack);
 
 // A test may call Teardown() to finish the test run and tear down the service.
 // Unless Fail() is called, the TestRunner will consider the test run as having
@@ -56,16 +58,22 @@ void Done(const std::function<void()>& ack);
 // there is a race between the teardown request and the close of the connection
 // to the application controller. If the close of the application controller is
 // noticed first by the test runner, it terminates the test as failed.
-void Teardown(const std::function<void()>& ack);
+void Teardown(fit::function<void()> ack);
 
 // Returns the TestRunnerStore interface from the caller's
 // Environment. Init() must be called before GetStore().
 fuchsia::testing::runner::TestRunnerStore* GetStore();
 
-// Creates function that invokes the |proceed| callback after being called
-// |limit| times.
-std::function<void(fidl::StringPtr)> NewBarrierClosure(
-    const int limit, std::function<void()> proceed);
+// Creates a new |Future|, adds it to the given vector (to wait for all
+// futures in the vector later), and returns a |Completer| callback to be
+// passed to a function that requires a callback.
+template <typename... Results>
+fit::function<void(Results...)> AddBarrierFuture(
+    std::vector<FuturePtr<Results...>> futures) {
+  auto f = Future<Results...>::Create("some barrier future");
+  futures.push_back(f);
+  return f->Completer();
+}
 
 // Defined for convenience of using GetStore().
 void Put(const fidl::StringPtr& key, const fidl::StringPtr& value);
@@ -73,7 +81,7 @@ void Put(const fidl::StringPtr& key, const fidl::StringPtr& value);
 // Defined for convenience of using GetStore(). Listens for the |key|; the value
 // is passed to the |callback| function.
 void Get(const fidl::StringPtr& key,
-         std::function<void(fidl::StringPtr)> callback);
+         fit::function<void(fidl::StringPtr)> callback);
 
 // Defined for convenience of using GetStore(). The |condition| is used as both
 // the key and the value. When listening for the key using Get(), the value is
@@ -85,7 +93,7 @@ void Signal(const fidl::StringPtr& condition);
 // Defined for convenience of using GetStore(). Waits for |condition| to be
 // present as a key in the TestRunnerStore before calling |cont|. The value on
 // that key is not exposed to the receiver function |cont|.
-void Await(const fidl::StringPtr& condition, std::function<void()> cont);
+void Await(const fidl::StringPtr& condition, fit::function<void()> cont);
 
 // Registers a test point that should pass for a test to be considered
 // successful.

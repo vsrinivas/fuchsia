@@ -33,12 +33,12 @@ class StoryCommandExecutor {
   void ExecuteCommands(
       fidl::StringPtr story_id,
       std::vector<fuchsia::modular::StoryCommand> commands,
-      std::function<void(fuchsia::modular::ExecuteResult)> done);
+      fit::function<void(fuchsia::modular::ExecuteResult)> done);
 
   using ListenerCallback = fit::function<void(
       const std::vector<fuchsia::modular::StoryCommand>& commands,
       fuchsia::modular::ExecuteResult result)>;
-  using ListenerAutoCancel = fit::deferred_action<std::function<void()>>;
+  using ListenerAutoCancel = fit::deferred_action<fit::function<void()>>;
 
   // Calls |listener| whenever StoryCommands are executed with the commands and
   // the execution result. Returns a scoped auto-cancel value. The returned
@@ -50,7 +50,7 @@ class StoryCommandExecutor {
   virtual void ExecuteCommandsInternal(
       fidl::StringPtr story_id,
       std::vector<fuchsia::modular::StoryCommand> commands,
-      std::function<void(fuchsia::modular::ExecuteResult)> done) = 0;
+      fit::function<void(fuchsia::modular::ExecuteResult)> done) = 0;
 
   std::list<ListenerCallback> listeners_;
   fxl::WeakPtrFactory<StoryCommandExecutor> weak_factory_;

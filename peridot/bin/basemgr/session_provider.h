@@ -23,7 +23,7 @@ class SessionProvider {
   class Delegate {
    public:
     // Called when SessionProvider wants to logout all users.
-    virtual void LogoutUsers(std::function<void()> callback) = 0;
+    virtual void LogoutUsers(fit::function<void()> callback) = 0;
 
     // Called when a session provided by SessionProvider wants to acquire
     // presentation.
@@ -52,7 +52,7 @@ class SessionProvider {
 
   // Asynchronously tears down the sessionmgr process. |callback| is invoked
   // once teardown is complete or has timed out.
-  void Teardown(const std::function<void()>& callback);
+  void Teardown(fit::function<void()> callback);
 
   // Stops the active session shell, and starts the session shell specified in
   // |session_shell_config|. If no session shells are running, this has no
@@ -62,7 +62,7 @@ class SessionProvider {
 
   // Shuts down the running session without logging any users out, which will
   // effectively restart a new session with the same users.
-  void RestartSession(const std::function<void()>& on_restart_complete);
+  void RestartSession(fit::function<void()> on_restart_complete);
 
  private:
   Delegate* const delegate_;                       // Neither owned nor copied.

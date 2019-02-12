@@ -11,7 +11,6 @@
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "src/ledger/lib/firebase_auth/testing/test_token_manager.h"

@@ -18,7 +18,7 @@
 namespace modular {
 
 using SpeechStatusCallback =
-    std::function<void(fuchsia::modular::SpeechStatus)>;
+    fit::function<void(fuchsia::modular::SpeechStatus)>;
 
 // Class in charge of playing media (speech) responses coming from query
 // responses.

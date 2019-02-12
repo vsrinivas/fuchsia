@@ -126,7 +126,6 @@ source_set("view_host") {
 
 fidl("app_client_unittest_fidl") {
   testonly = true
-  cpp_legacy_callbacks = true
 
   name = "test.peridot.lib.fidl.appclient"
 
@@ -165,7 +164,6 @@ source_set("app_client_unittest") {
 
 fidl("json_xdr_unittest_fidl") {
   testonly = true
-  cpp_legacy_callbacks = true
 
   name = "test.peridot.lib.fidl.jsonxdr"
 

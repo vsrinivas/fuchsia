@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include <lib/fxl/functional/make_copyable.h>
+#include <lib/fit/function.h>
 #include <lib/fxl/strings/string_printf.h>
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -196,28 +196,29 @@ void UserProviderImpl::PreviousUsers(PreviousUsersCallback callback) {
   callback(std::move(accounts));
 }
 
-void UserProviderImpl::RemoveAllUsers(std::function<void()> callback) {
-  PreviousUsers([this, callback](
-                    std::vector<fuchsia::modular::auth::Account> accounts) {
-    std::vector<FuturePtr<>> did_remove_users;
-    did_remove_users.reserve(accounts.size());
+void UserProviderImpl::RemoveAllUsers(fit::function<void()> callback) {
+  PreviousUsers(
+      [this, callback = std::move(callback)](
+          std::vector<fuchsia::modular::auth::Account> accounts) mutable {
+        std::vector<FuturePtr<>> did_remove_users;
+        did_remove_users.reserve(accounts.size());
 
-    for (const auto& account : accounts) {
-      auto did_remove_user =
-          Future<>::Create("UserProviderImpl::RemoveAllUsers.did_remove_user");
-      RemoveUser(account.id, [did_remove_user](fidl::StringPtr error_code) {
-        if (error_code) {
-          FXL_LOG(WARNING) << "Account was not removed. Error code: "
-                           << error_code;
+        for (const auto& account : accounts) {
+          auto did_remove_user = Future<>::Create(
+              "UserProviderImpl::RemoveAllUsers.did_remove_user");
+          RemoveUser(account.id, [did_remove_user](fidl::StringPtr error_code) {
+            if (error_code) {
+              FXL_LOG(WARNING)
+                  << "Account was not removed. Error code: " << error_code;
+            }
+            did_remove_user->Complete();
+          });
+          did_remove_users.emplace_back(did_remove_user);
         }
-        did_remove_user->Complete();
-      });
-      did_remove_users.emplace_back(did_remove_user);
-    }
 
-    Wait("UserProviderImpl::RemoveAllUsers.Wait", did_remove_users)
-        ->Then([callback] { callback(); });
-  });
+        Wait("UserProviderImpl::RemoveAllUsers.Wait", did_remove_users)
+            ->Then([callback = std::move(callback)] { callback(); });
+      });
 }
 
 void UserProviderImpl::AddUser(
@@ -244,8 +245,9 @@ void UserProviderImpl::AddUser(
       std::move(fuchsia_app_config), nullptr, std::move(scopes), "", "",
       [this, identity_provider, account_id,
        token_manager = std::move(token_manager),
-       callback](fuchsia::auth::Status status,
-                 fuchsia::auth::UserProfileInfoPtr user_profile_info) {
+       callback = std::move(callback)](
+          fuchsia::auth::Status status,
+          fuchsia::auth::UserProfileInfoPtr user_profile_info) {
         if (status != fuchsia::auth::Status::OK) {
           FXL_LOG(ERROR) << "Authorize() call returned error for user: "
                          << account_id;
@@ -373,7 +375,7 @@ void UserProviderImpl::RemoveUserInternal(
   token_manager->DeleteAllTokens(
       fuchsia_app_config, account->profile_id,
       [this, account_id, token_manager = std::move(token_manager),
-       callback](fuchsia::auth::Status status) {
+       callback = std::move(callback)](fuchsia::auth::Status status) {
         if (status != fuchsia::auth::Status::OK) {
           FXL_LOG(ERROR) << "Token Manager Authorize() call returned error";
         }

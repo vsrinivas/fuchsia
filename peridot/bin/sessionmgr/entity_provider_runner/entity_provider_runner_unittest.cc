@@ -16,8 +16,8 @@
 #include <lib/component/cpp/testing/fake_launcher.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fsl/vmo/strings.h>
-#include "src/lib/files/scoped_temp_dir.h"
 #include <lib/fxl/macros.h>
+#include "src/lib/files/scoped_temp_dir.h"
 
 #include "gtest/gtest.h"
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
@@ -161,7 +161,7 @@ class MyEntityProvider : AgentImpl::Delegate,
   }
   // |AgentImpl::Delegate|
   void RunTask(const fidl::StringPtr& task_id,
-               const std::function<void()>& done) override {
+               fit::function<void()> done) override {
     ++counts["RunTask"];
     done();
   }

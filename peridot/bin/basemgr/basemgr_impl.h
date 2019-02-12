@@ -63,7 +63,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
       fuchsia::sys::Launcher* const launcher,
       fuchsia::ui::policy::PresenterPtr presenter,
       fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
-      fuchsia::wlan::service::WlanPtr wlan, std::function<void()> on_shutdown);
+      fuchsia::wlan::service::WlanPtr wlan, fit::function<void()> on_shutdown);
 
   ~BasemgrImpl() override;
 
@@ -116,7 +116,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   void LoginAsGuest() override;
 
   // |SessionProvider::Delegate|
-  void LogoutUsers(std::function<void()> callback) override;
+  void LogoutUsers(fit::function<void()> callback) override;
 
   // |SessionProvider::Delegate| and |fuchsia::modular::BaseShellContext|
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
@@ -146,7 +146,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // Used to reset Wi-Fi during factory reset.
   fuchsia::wlan::service::WlanPtr wlan_;
 
-  std::function<void()> on_shutdown_;
+  fit::function<void()> on_shutdown_;
 
   // Holds the presentation service.
   std::unique_ptr<PresentationContainer> presentation_container_;

@@ -8,6 +8,7 @@
 #include <functional>
 #include <string>
 
+#include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 
 namespace modular {
@@ -67,18 +68,18 @@ class AgentRunnerStorage {
   //
   // Ownership of |delegate| is not taken and it must out-live *this.
   virtual void Initialize(NotificationDelegate* delegate,
-                          std::function<void()> done) = 0;
+                          fit::function<void()> done) = 0;
 
   // Writes a new task to storage. |NotificationDelegate| will be notified of
   // the new task.
   virtual void WriteTask(const std::string& agent_url, TriggerInfo info,
-                         std::function<void(bool)> done) = 0;
+                         fit::function<void(bool)> done) = 0;
 
   // Deletes existing task on the storage. |NotificationDelegate| will be
   // notified of the deleted task.
   virtual void DeleteTask(const std::string& agent_url,
                           const std::string& task_id,
-                          std::function<void(bool)> done) = 0;
+                          fit::function<void(bool)> done) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerStorage);

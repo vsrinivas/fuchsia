@@ -13,12 +13,12 @@ SessionCtlApp::SessionCtlApp(
     fuchsia::modular::internal::BasemgrDebug* const basemgr,
     fuchsia::modular::PuppetMaster* const puppet_master,
     const modular::Logger& logger, async_dispatcher_t* const dispatcher,
-    const std::function<void()>& on_command_executed)
+    fit::function<void()> on_command_executed)
     : basemgr_(basemgr),
       puppet_master_(puppet_master),
       logger_(logger),
       dispatcher_(dispatcher),
-      on_command_executed_(on_command_executed) {}
+      on_command_executed_(std::move(on_command_executed)) {}
 
 std::string SessionCtlApp::ExecuteCommand(
     std::string cmd, const fxl::CommandLine& command_line) {
@@ -107,7 +107,7 @@ std::string SessionCtlApp::ExecuteAddModCommand(
     std::cout << "Using auto-generated --mod_name value of " << mod_name
               << std::endl;
   }
-  
+
   auto commands = MakeAddModCommands(mod_url, mod_name);
 
   // Focus the mod and story by default
@@ -274,7 +274,7 @@ modular::FuturePtr<bool, std::string> SessionCtlApp::ExecuteStoryCommand(
   auto fut = modular::Future<bool, std::string>::Create(
       "Sessionctl StoryPuppetMaster::Execute");
 
-  story_puppet_master_->Execute(fxl::MakeCopyable(
+  story_puppet_master_->Execute(
       [this, fut](fuchsia::modular::ExecuteResult result) mutable {
         if (result.status == fuchsia::modular::ExecuteStatus::OK) {
           fut->Complete(false, result.story_id->c_str());
@@ -286,7 +286,7 @@ modular::FuturePtr<bool, std::string> SessionCtlApp::ExecuteStoryCommand(
           FXL_LOG(WARNING) << error << std::endl;
           fut->Complete(true, std::move(error));
         }
-      }));
+      });
 
   return fut;
 }

@@ -27,7 +27,6 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/join_strings.h>
 #include <lib/fxl/strings/split_string.h>
@@ -268,11 +267,11 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
  public:
   KillModuleCall(StoryControllerImpl* const story_controller_impl,
                  fuchsia::modular::ModuleData module_data,
-                 const std::function<void()>& done)
+                 fit::function<void()> done)
       : Operation("StoryControllerImpl::KillModuleCall", [] {}),
         story_controller_impl_(story_controller_impl),
         module_data_(std::move(module_data)),
-        done_(done) {}
+        done_(std::move(done)) {}
 
  private:
   void Run() override {
@@ -336,18 +335,13 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
 
     // We must guard against the possibility that done_() causes this to be
     // deleted (happens when called from StopCall).
-    auto weak_this = GetWeakPtr();
-
-    done_();
-
-    if (weak_this) {
-      done_ = nullptr;
-    }
+    auto done = std::move(done_);
+    done();
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   fuchsia::modular::ModuleData module_data_;
-  std::function<void()> done_;
+  fit::function<void()> done_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(KillModuleCall);
 };
@@ -490,8 +484,8 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 class StoryControllerImpl::StopCall : public Operation<> {
  public:
   StopCall(StoryControllerImpl* const story_controller_impl, const bool bulk,
-           std::function<void()> done)
-      : Operation("StoryControllerImpl::StopCall", done),
+           fit::function<void()> done)
+      : Operation("StoryControllerImpl::StopCall", std::move(done)),
         story_controller_impl_(story_controller_impl),
         bulk_(bulk) {}
 
@@ -528,39 +522,37 @@ class StoryControllerImpl::StopCall : public Operation<> {
     //
     // The argument from_timeout informs whether the invocation was from the
     // timeout or from the method callback. It's used only to log diagnostics.
-    // If we would not want to have this diagnostic, we could use this callback
-    // directly to schedule it twice. In that case, it would be important that
-    // passing it to DetachView() has copy semantics, as it does now passing it
-    // to the capture list of two separate lambdas, and not move semantics, i.e.
-    // that the argument is of DetachView() is NOT a fit::function but a
-    // std::function.
-    //
-    // Both weak and shared pointers are copyable, so we don't need to do
-    // anything to make this lambda copyable. (But it will be copied when used
-    // below.)
-    auto cont = [this, weak_this = GetWeakPtr(),
-                 did_run = std::make_shared<bool>(false),
-                 story_id = story_controller_impl_->story_id_](
-                    const bool from_timeout) {
-      if (*did_run) {
-        return;
-      }
+    fit::function<void(const bool)> cont =
+        [this, weak_this = GetWeakPtr(),
+         did_run = std::make_shared<bool>(false),
+         story_id =
+             story_controller_impl_->story_id_](const bool from_timeout) {
+          if (*did_run) {
+            return;
+          }
 
-      *did_run = true;
+          *did_run = true;
 
-      if (from_timeout) {
-        FXL_LOG(INFO) << "DetachView() timed out: story_id=" << story_id;
-      }
+          if (from_timeout) {
+            FXL_LOG(INFO) << "DetachView() timed out: story_id=" << story_id;
+          }
 
-      if (weak_this) {
-        StopStory();
-      }
-    };
+          if (weak_this) {
+            StopStory();
+          }
+        };
 
-    story_controller_impl_->DetachView([cont] { cont(false); });
+    // We need to attach the callback to both DetachView() and to the timeout
+    // (PostDelayedTask(), below). |fit::function| is move-only, not copyable,
+    // but we can use the share() method to get a reference-counted copy.
+    // Note the fit::function will not be destructed until all callers have
+    // released their reference, so don't pass a |FlowToken| to the callback,
+    // or it might keep the |Operation| alive longer than you might expect.
+    story_controller_impl_->DetachView([cont = cont.share()] { cont(false); });
 
     async::PostDelayedTask(
-        async_get_default_dispatcher(), [cont] { cont(true); }, kBasicTimeout);
+        async_get_default_dispatcher(),
+        [cont = std::move(cont)] { cont(true); }, kBasicTimeout);
   }
 
   void StopStory() {
@@ -630,8 +622,8 @@ class StoryControllerImpl::StopModuleCall : public Operation<> {
  public:
   StopModuleCall(StoryStorage* const story_storage,
                  const std::vector<std::string>& module_path,
-                 const std::function<void()>& done)
-      : Operation("StoryControllerImpl::StopModuleCall", done),
+                 fit::function<void()> done)
+      : Operation("StoryControllerImpl::StopModuleCall", std::move(done)),
         story_storage_(story_storage),
         module_path_(module_path) {}
 
@@ -660,9 +652,9 @@ class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
  public:
   StopModuleAndStoryIfEmptyCall(
       StoryControllerImpl* const story_controller_impl,
-      const std::vector<std::string>& module_path,
-      const std::function<void()>& done)
-      : Operation("StoryControllerImpl::StopModuleAndStoryIfEmptyCall", done),
+      const std::vector<std::string>& module_path, fit::function<void()> done)
+      : Operation("StoryControllerImpl::StopModuleAndStoryIfEmptyCall",
+                  std::move(done)),
         story_controller_impl_(story_controller_impl),
         module_path_(module_path) {}
 
@@ -948,8 +940,8 @@ class StoryControllerImpl::StartCall : public Operation<> {
 class StoryControllerImpl::UpdateSnapshotCall : public Operation<> {
  public:
   UpdateSnapshotCall(StoryControllerImpl* const story_controller_impl,
-                     std::function<void()> done)
-      : Operation("StoryControllerImpl::UpdateSnapshotCall", done),
+                     fit::function<void()> done)
+      : Operation("StoryControllerImpl::UpdateSnapshotCall", std::move(done)),
         story_controller_impl_(story_controller_impl) {}
 
  private:
@@ -1126,8 +1118,8 @@ StoryControllerImpl::GetOngoingActivities() {
   return ongoing_activities;
 }
 
-void StoryControllerImpl::Sync(const std::function<void()>& done) {
-  operation_queue_.Add(new SyncCall(done));
+void StoryControllerImpl::Sync(fit::function<void()> done) {
+  operation_queue_.Add(new SyncCall(std::move(done)));
 }
 
 void StoryControllerImpl::FocusModule(
@@ -1141,9 +1133,9 @@ void StoryControllerImpl::DefocusModule(
 }
 
 void StoryControllerImpl::StopModule(
-    const std::vector<std::string>& module_path,
-    const std::function<void()>& done) {
-  operation_queue_.Add(new StopModuleCall(story_storage_, module_path, done));
+    const std::vector<std::string>& module_path, fit::function<void()> done) {
+  operation_queue_.Add(
+      new StopModuleCall(story_storage_, module_path, std::move(done)));
 }
 
 void StoryControllerImpl::ReleaseModule(
@@ -1220,7 +1212,7 @@ void StoryControllerImpl::EmbedModule(
         module_controller_request,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
-    std::function<void(fuchsia::modular::StartModuleStatus)> callback) {
+    fit::function<void(fuchsia::modular::StartModuleStatus)> callback) {
   operation_queue_.Add(new AddIntentCall(
       this, std::move(add_mod_params), std::move(module_controller_request),
       fuchsia::ui::views::ViewToken({
@@ -1233,7 +1225,7 @@ void StoryControllerImpl::AddModuleToStory(
     AddModParams add_mod_params,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController>
         module_controller_request,
-    std::function<void(fuchsia::modular::StartModuleStatus)> callback) {
+    fit::function<void(fuchsia::modular::StartModuleStatus)> callback) {
   operation_queue_.Add(new AddIntentCall(
       this, std::move(add_mod_params), std::move(module_controller_request),
       fuchsia::ui::views::ViewToken() /* view_token */, std::move(callback)));
@@ -1317,7 +1309,7 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
   //
   // If this call enters a race with a StoryProvider.DeleteStory() call,
   // resulting in |this| being destroyed, |callback| will be dropped.
-  operation_queue_.Add(new SyncCall([this, callback] {
+  operation_queue_.Add(new SyncCall([this, callback = std::move(callback)] {
     auto story_info = story_provider_impl_->GetCachedStoryInfo(story_id_);
     FXL_CHECK(story_info);
     callback(std::move(*story_info), *story_observer_->model().runtime_state());
@@ -1329,11 +1321,11 @@ void StoryControllerImpl::RequestStart() {
 }
 
 void StoryControllerImpl::Stop(StopCallback done) {
-  operation_queue_.Add(new StopCall(this, false /* bulk */, done));
+  operation_queue_.Add(new StopCall(this, false /* bulk */, std::move(done)));
 }
 
 void StoryControllerImpl::StopBulk(const bool bulk, StopCallback done) {
-  operation_queue_.Add(new StopCall(this, bulk, done));
+  operation_queue_.Add(new StopCall(this, bulk, std::move(done)));
 }
 
 void StoryControllerImpl::TakeAndLoadSnapshot(
@@ -1343,7 +1335,7 @@ void StoryControllerImpl::TakeAndLoadSnapshot(
   // invocation. We can optimize later by connecting the snapshot loader on
   // start and re-using it for the lifetime of the story.
   operation_queue_.Add(new StartSnapshotLoaderCall(this, std::move(request)));
-  operation_queue_.Add(new UpdateSnapshotCall(this, done));
+  operation_queue_.Add(new UpdateSnapshotCall(this, std::move(done)));
 }
 
 void StoryControllerImpl::Watch(
@@ -1358,7 +1350,7 @@ void StoryControllerImpl::GetActiveModules(GetActiveModulesCallback callback) {
   // crack between a module being created and inserted in the connections
   // collection during some Operation.
   operation_queue_.Add(
-      new SyncCall(fxl::MakeCopyable([this, callback]() mutable {
+      new SyncCall([this, callback = std::move(callback)]() mutable {
         std::vector<fuchsia::modular::ModuleData> result;
 
         result.resize(running_mod_infos_.size());
@@ -1366,7 +1358,7 @@ void StoryControllerImpl::GetActiveModules(GetActiveModulesCallback callback) {
           running_mod_infos_[i].module_data->Clone(&result.at(i));
         }
         callback(std::move(result));
-      })));
+      }));
 }
 
 void StoryControllerImpl::GetModules(GetModulesCallback callback) {
@@ -1374,26 +1366,24 @@ void StoryControllerImpl::GetModules(GetModulesCallback callback) {
   auto done =
       on_run->AsyncMap([this] { return story_storage_->ReadAllModuleData(); });
   operation_queue_.Add(WrapFutureAsOperation(
-      "StoryControllerImpl.GetModules.op", on_run, done, callback));
+      "StoryControllerImpl.GetModules.op", on_run, done, std::move(callback)));
 }
 
 void StoryControllerImpl::GetModuleController(
     std::vector<std::string> module_path,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) {
-  operation_queue_.Add(new SyncCall(
-      fxl::MakeCopyable([this, module_path = std::move(module_path),
-                         request = std::move(request)]() mutable {
-        for (auto& running_mod_info : running_mod_infos_) {
-          if (module_path == running_mod_info.module_data->module_path) {
-            running_mod_info.module_controller_impl->Connect(
-                std::move(request));
-            return;
-          }
-        }
+  operation_queue_.Add(new SyncCall([this, module_path = std::move(module_path),
+                                     request = std::move(request)]() mutable {
+    for (auto& running_mod_info : running_mod_infos_) {
+      if (module_path == running_mod_info.module_data->module_path) {
+        running_mod_info.module_controller_impl->Connect(std::move(request));
+        return;
+      }
+    }
 
-        // Trying to get a controller for a module that is not active just
-        // drops the connection request.
-      })));
+    // Trying to get a controller for a module that is not active just
+    // drops the connection request.
+  }));
 }
 
 void StoryControllerImpl::GetLink(
@@ -1417,7 +1407,7 @@ void StoryControllerImpl::StartStoryShell() {
       fit::bind_member(this, &StoryControllerImpl::OnSurfaceFocused);
 }
 
-void StoryControllerImpl::DetachView(std::function<void()> done) {
+void StoryControllerImpl::DetachView(fit::function<void()> done) {
   story_provider_impl_->DetachView(story_id_, std::move(done));
 }
 
@@ -1532,7 +1522,7 @@ void StoryControllerImpl::StartOngoingActivity(
 void StoryControllerImpl::CreateEntity(
     std::string type, fuchsia::mem::Buffer data,
     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
-    std::function<void(std::string /* entity_reference */)> callback) {
+    fit::function<void(std::string /* entity_reference */)> callback) {
   story_provider_impl_->CreateEntity(story_id_, type, std::move(data),
                                      std::move(entity_request),
                                      std::move(callback));

@@ -42,7 +42,7 @@ class ModuleHost {
 //
 //       // Called by ModuleDriver. Call |done| once shutdown sequence is
 //       // complete, at which point |this| will be deleted.
-//       void Terminate(const std::function<void()>& done);
+//       void Terminate(fit::function<void()> done);
 //
 // Example:
 //
@@ -54,7 +54,7 @@ class ModuleHost {
 //      view_provider_request) {}
 //
 //   // Called by ModuleDriver.
-//   void Terminate(const std::function<void()>& done) { done(); }
+//   void Terminate(fit::function<void()> done) { done(); }
 // };
 //
 // int main(int argc, const char** argv) {
@@ -69,7 +69,7 @@ template <typename Impl>
 class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
  public:
   ModuleDriver(component::StartupContext* const context,
-               std::function<void()> on_terminated)
+               fit::function<void()> on_terminated)
       : context_(context),
         lifecycle_impl_(context->outgoing().deprecated_services(), this),
         on_terminated_(std::move(on_terminated)) {
@@ -114,7 +114,7 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
 
   component::StartupContext* const context_;
   LifecycleImpl lifecycle_impl_;
-  std::function<void()> on_terminated_;
+  fit::function<void()> on_terminated_;
   fuchsia::modular::ModuleContextPtr module_context_;
 
   std::unique_ptr<Impl> impl_;

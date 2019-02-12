@@ -7,14 +7,14 @@
 #include <fcntl.h>
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/fdio/limits.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/limits.h>
 #include <lib/fsl/io/fd.h>
+#include <zircon/processargs.h>
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
-#include <zircon/processargs.h>
 
 namespace modular {
 AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
@@ -61,7 +61,7 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
 
 AppClientBase::~AppClientBase() = default;
 
-void AppClientBase::ImplTeardown(std::function<void()> done) {
+void AppClientBase::ImplTeardown(fit::function<void()> done) {
   ServiceTerminate(std::move(done));
 }
 
@@ -70,20 +70,19 @@ void AppClientBase::ImplReset() {
   ServiceUnbind();
 }
 
-void AppClientBase::SetAppErrorHandler(
-    const std::function<void()>& error_handler) {
-  app_.set_error_handler(
-      [error_handler](zx_status_t status) { error_handler(); });
+void AppClientBase::SetAppErrorHandler(fit::function<void()> error_handler) {
+  app_.set_error_handler([error_handler = std::move(error_handler)](
+                             zx_status_t status) { error_handler(); });
 }
 
-void AppClientBase::ServiceTerminate(const std::function<void()>& /* done */) {}
+void AppClientBase::ServiceTerminate(fit::function<void()> /* done */) {}
 
 void AppClientBase::ServiceUnbind() {}
 
 template <>
 void AppClient<fuchsia::modular::Lifecycle>::ServiceTerminate(
-    const std::function<void()>& done) {
-  SetAppErrorHandler(done);
+    fit::function<void()> done) {
+  SetAppErrorHandler(std::move(done));
   if (primary_service())
     primary_service()->Terminate();
 }

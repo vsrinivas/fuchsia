@@ -25,8 +25,8 @@ namespace testing {
 template <typename Component>
 class ComponentBase : protected SingleServiceApp<Component> {
  public:
-  void Terminate(std::function<void()> done) override {
-    modular::testing::Done(done);
+  void Terminate(fit::function<void()> done) override {
+    modular::testing::Done(std::move(done));
   }
 
  protected:
@@ -55,7 +55,7 @@ class ComponentBase : protected SingleServiceApp<Component> {
   // Wraps the callback function into a layer that protects executing the
   // callback in the argument against execution after this instance is deleted,
   // using the weak pointer factory.
-  std::function<void()> Protect(std::function<void()> callback) {
+  fit::function<void()> Protect(fit::function<void()> callback) {
     return [ptr = weak_factory_.GetWeakPtr(), callback = std::move(callback)] {
       if (ptr) {
         callback();
@@ -76,8 +76,8 @@ class ComponentBase : protected SingleServiceApp<Component> {
 template <>
 class ComponentBase<void> : protected ViewApp {
  public:
-  void Terminate(std::function<void()> done) override {
-    modular::testing::Done(done);
+  void Terminate(fit::function<void()> done) override {
+    modular::testing::Done(std::move(done));
   }
 
  protected:
@@ -96,7 +96,7 @@ class ComponentBase<void> : protected ViewApp {
   // Wraps the callback function into a layer that protects executing the
   // callback in the argument against execution after this instance is deleted,
   // using the weak pointer factory.
-  std::function<void()> Protect(std::function<void()> callback) {
+  fit::function<void()> Protect(fit::function<void()> callback) {
     return [ptr = weak_factory_.GetWeakPtr(), callback = std::move(callback)] {
       if (ptr) {
         callback();

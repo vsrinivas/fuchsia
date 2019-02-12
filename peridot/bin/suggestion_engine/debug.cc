@@ -100,7 +100,7 @@ void SuggestionDebugImpl::WatchNextProposals(
 }
 
 void SuggestionDebugImpl::WaitUntilIdle(WaitUntilIdleCallback callback) {
-  idle_waiter_.WaitUntilIdle(callback);
+  idle_waiter_.WaitUntilIdle(std::move(callback));
 }
 
 void SuggestionDebugImpl::RunUntilIdle(RunUntilIdleCallback callback) {

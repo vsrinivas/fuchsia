@@ -399,7 +399,6 @@ TEST_F(StoryStorageTest, WatchingOtherStorageInstance) {
         ++notified_count;
         notified_value = value;
         notified_context = context;
-        return true;
       });
 
   int context;

@@ -50,11 +50,11 @@ LedgerRepositoryForTesting::ledger_repository() {
   return ledger_repo_.get();
 }
 
-void LedgerRepositoryForTesting::Terminate(std::function<void()> callback) {
+void LedgerRepositoryForTesting::Terminate(fit::function<void()> callback) {
   if (ledger_app_client_) {
     ledger_app_client_->Teardown(
-        kBasicTimeout,
-        [this, weak_this = weak_ptr_factory_.GetWeakPtr(), callback] {
+        kBasicTimeout, [this, weak_this = weak_ptr_factory_.GetWeakPtr(),
+                        callback = std::move(callback)] {
           ledger_repo_factory_.Unbind();
           callback();
           if (weak_this) {

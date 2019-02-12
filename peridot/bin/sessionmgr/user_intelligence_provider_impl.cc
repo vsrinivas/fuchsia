@@ -10,7 +10,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
 #include "src/lib/files/file.h"
-#include <lib/fxl/functional/make_copyable.h>
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/intelligence_services_impl.h"
@@ -239,28 +238,27 @@ std::vector<std::string> UserIntelligenceProviderImpl::AddAgentServices(
   std::vector<std::string> service_names;
 
   service_names.push_back(fuchsia::modular::ContextWriter::Name_);
-  agent_host->AddService<fuchsia::modular::ContextWriter>(fxl::MakeCopyable(
+  agent_host->AddService<fuchsia::modular::ContextWriter>(
       [this, client_info = CloneScope(agent_info),
        url](fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
         context_engine_->GetWriter(CloneScope(client_info), std::move(request));
-      }));
+      });
 
   service_names.push_back(fuchsia::modular::ContextReader::Name_);
-  agent_host->AddService<fuchsia::modular::ContextReader>(fxl::MakeCopyable(
+  agent_host->AddService<fuchsia::modular::ContextReader>(
       [this, client_info = CloneScope(agent_info),
        url](fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) {
         context_engine_->GetReader(CloneScope(client_info), std::move(request));
-      }));
+      });
 
   service_names.push_back(fuchsia::modular::IntelligenceServices::Name_);
   agent_host->AddService<fuchsia::modular::IntelligenceServices>(
-      fxl::MakeCopyable(
-          [this, client_info = CloneScope(agent_info),
-           url](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices>
-                    request) {
-            this->GetComponentIntelligenceServices(CloneScope(client_info),
-                                                   std::move(request));
-          }));
+      [this, client_info = CloneScope(agent_info),
+       url](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices>
+                request) {
+        this->GetComponentIntelligenceServices(CloneScope(client_info),
+                                               std::move(request));
+      });
 
   service_names.push_back(fuchsia::modular::ProposalPublisher::Name_);
   agent_host->AddService<fuchsia::modular::ProposalPublisher>(

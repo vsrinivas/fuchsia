@@ -19,7 +19,7 @@ class SetFocusStateCommandRunner : public CommandRunner {
   void Execute(
       fidl::StringPtr story_id, StoryStorage* story_storage,
       fuchsia::modular::StoryCommand command,
-      std::function<void(fuchsia::modular::ExecuteResult)> done) override;
+      fit::function<void(fuchsia::modular::ExecuteResult)> done) override;
 
  private:
   fuchsia::modular::FocusProviderPtr focus_provider_;

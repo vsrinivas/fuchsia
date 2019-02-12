@@ -216,7 +216,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
   // |SessionShell|
   void DetachView(fuchsia::modular::ViewIdentifier view_id,
-                  std::function<void()> done) override {
+                  fit::function<void()> done) override {
     FXL_LOG(INFO) << "DevSessionShell DetachView(): " << view_id.story_id;
     done();
   }

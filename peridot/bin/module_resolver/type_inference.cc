@@ -49,7 +49,7 @@ class ParameterTypeInferenceHelper::GetParameterTypesCall
 
 void ParameterTypeInferenceHelper::GetParameterTypes(
     const fuchsia::modular::ResolverParameterConstraint& parameter_constraint,
-    const std::function<void(std::vector<std::string>)>& result_callback) {
+    fit::function<void(std::vector<std::string>)> result_callback) {
   if (parameter_constraint.is_entity_type()) {
     result_callback(
         std::vector<std::string>(parameter_constraint.entity_type()->begin(),

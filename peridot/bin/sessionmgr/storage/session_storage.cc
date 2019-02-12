@@ -5,9 +5,8 @@
 #include "peridot/bin/sessionmgr/storage/session_storage.h"
 
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fxl/functional/make_copyable.h>
-#include "src/lib/uuid/uuid.h"
 #include <unordered_set>
+#include "src/lib/uuid/uuid.h"
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
 #include "peridot/bin/sessionmgr/storage/session_storage_xdr.h"
@@ -46,7 +45,7 @@ fidl::StringPtr StoryNameToStorySnapshotKey(fidl::StringPtr story_name) {
 
 OperationBase* MakeGetStoryDataCall(
     fuchsia::ledger::Page* const page, fidl::StringPtr story_name,
-    std::function<void(fuchsia::modular::internal::StoryDataPtr)> result_call) {
+    fit::function<void(fuchsia::modular::internal::StoryDataPtr)> result_call) {
   return new ReadDataCall<fuchsia::modular::internal::StoryData>(
       page, StoryNameToStoryDataKey(story_name), true /* not_found_is_ok */,
       XdrStoryData, std::move(result_call));
@@ -55,7 +54,7 @@ OperationBase* MakeGetStoryDataCall(
 OperationBase* MakeWriteStoryDataCall(
     fuchsia::ledger::Page* const page,
     fuchsia::modular::internal::StoryDataPtr story_data,
-    std::function<void()> result_call) {
+    fit::function<void()> result_call) {
   return new WriteDataCall<fuchsia::modular::internal::StoryData>(
       page, StoryNameToStoryDataKey(story_data->story_info()->id), XdrStoryData,
       std::move(story_data), std::move(result_call));
@@ -256,7 +255,7 @@ class MutateStoryDataCall : public Operation<> {
  public:
   MutateStoryDataCall(
       fuchsia::ledger::Page* const page, fidl::StringPtr story_name,
-      std::function<bool(fuchsia::modular::internal::StoryData* story_data)>
+      fit::function<bool(fuchsia::modular::internal::StoryData* story_data)>
           mutate,
       ResultCall result_call)
       : Operation("SessionStorage::MutateStoryDataCall",
@@ -288,7 +287,7 @@ class MutateStoryDataCall : public Operation<> {
 
   fuchsia::ledger::Page* const page_;  // not owned
   const fidl::StringPtr story_name_;
-  std::function<bool(fuchsia::modular::internal::StoryData* story_data)>
+  fit::function<bool(fuchsia::modular::internal::StoryData* story_data)>
       mutate_;
 
   OperationQueue operation_queue_;
@@ -337,15 +336,14 @@ SessionStorage::GetAllStoryData() {
 FuturePtr<> SessionStorage::UpdateStoryOptions(
     fidl::StringPtr story_name, fuchsia::modular::StoryOptions story_options) {
   auto ret = Future<>::Create("SessionStorage.SetOptions.ret");
-  auto mutate = fxl::MakeCopyable(
-      [story_options = std::move(story_options)](
-          fuchsia::modular::internal::StoryData* story_data) mutable {
-        if (*story_data->story_options() != story_options) {
-          story_data->set_story_options(std::move(story_options));
-          return true;
-        }
-        return false;
-      });
+  auto mutate = [story_options = std::move(story_options)](
+                    fuchsia::modular::internal::StoryData* story_data) mutable {
+    if (*story_data->story_options() != story_options) {
+      story_data->set_story_options(std::move(story_options));
+      return true;
+    }
+    return false;
+  };
   operation_queue_.Add(new MutateStoryDataCall(
       page(), story_name, std::move(mutate), ret->Completer()));
   return ret;

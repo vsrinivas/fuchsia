@@ -53,7 +53,7 @@ class AgentRunnerStorageImpl::InitializeCall : public Operation<> {
  public:
   InitializeCall(NotificationDelegate* const delegate,
                  fuchsia::ledger::PageSnapshotPtr snapshot,
-                 std::function<void()> done)
+                 fit::function<void()> done)
       : Operation("AgentRunnerStorageImpl::InitializeCall", std::move(done)),
         delegate_(delegate),
         snapshot_(std::move(snapshot)) {}
@@ -102,14 +102,15 @@ class AgentRunnerStorageImpl::InitializeCall : public Operation<> {
   NotificationDelegate* const delegate_;
   fuchsia::ledger::PageSnapshotPtr snapshot_;
   std::vector<fuchsia::ledger::Entry> entries_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
 
 class AgentRunnerStorageImpl::WriteTaskCall : public Operation<bool> {
  public:
   WriteTaskCall(AgentRunnerStorageImpl* storage, std::string agent_url,
-                TriggerInfo data, std::function<void(bool)> done)
-      : Operation("AgentRunnerStorageImpl::WriteTaskCall", done),
+                TriggerInfo data, fit::function<void(bool)> done)
+      : Operation("AgentRunnerStorageImpl::WriteTaskCall", std::move(done)),
         storage_(storage),
         agent_url_(std::move(agent_url)),
         data_(std::move(data)) {}
@@ -147,8 +148,8 @@ class AgentRunnerStorageImpl::WriteTaskCall : public Operation<bool> {
 class AgentRunnerStorageImpl::DeleteTaskCall : public Operation<bool> {
  public:
   DeleteTaskCall(AgentRunnerStorageImpl* storage, std::string agent_url,
-                 std::string task_id, std::function<void(bool)> done)
-      : Operation("AgentRunnerStorageImpl::DeleteTaskCall", done),
+                 std::string task_id, fit::function<void(bool)> done)
+      : Operation("AgentRunnerStorageImpl::DeleteTaskCall", std::move(done)),
         storage_(storage),
         agent_url_(std::move(agent_url)),
         task_id_(std::move(task_id)) {}
@@ -189,7 +190,7 @@ AgentRunnerStorageImpl::AgentRunnerStorageImpl(LedgerClient* ledger_client,
 AgentRunnerStorageImpl::~AgentRunnerStorageImpl() = default;
 
 void AgentRunnerStorageImpl::Initialize(NotificationDelegate* const delegate,
-                                        std::function<void()> done) {
+                                        fit::function<void()> done) {
   FXL_DCHECK(!delegate_);
   delegate_ = delegate;
   operation_queue_.Add(
@@ -198,14 +199,14 @@ void AgentRunnerStorageImpl::Initialize(NotificationDelegate* const delegate,
 
 void AgentRunnerStorageImpl::WriteTask(const std::string& agent_url,
                                        const TriggerInfo data,
-                                       std::function<void(bool)> done) {
+                                       fit::function<void(bool)> done) {
   operation_queue_.Add(
       new WriteTaskCall(this, agent_url, data, std::move(done)));
 }
 
 void AgentRunnerStorageImpl::DeleteTask(const std::string& agent_url,
                                         const std::string& task_id,
-                                        std::function<void(bool)> done) {
+                                        fit::function<void(bool)> done) {
   operation_queue_.Add(
       new DeleteTaskCall(this, agent_url, task_id, std::move(done)));
 }

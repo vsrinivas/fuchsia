@@ -23,10 +23,10 @@ AsyncHolderBase::~AsyncHolderBase() {
 }
 
 void AsyncHolderBase::Teardown(zx::duration timeout,
-                               std::function<void()> done) {
-  auto cont = [this, down = down_,
-               done = std::move(done)](const bool from_timeout) {
-    if (*down) {
+                               fit::function<void()> done) {
+  fit::function<void(bool)> cont = [this, down = down_, done = std::move(done)](
+                                       const bool from_timeout) mutable {
+    if (*down) {  // |down| shared_ptr prevents using |this| after destruct
       return;
     }
 
@@ -39,33 +39,35 @@ void AsyncHolderBase::Teardown(zx::duration timeout,
     ImplReset();
 
     done();
+    done = nullptr;  // make sure we release any captured resources
   };
 
-  auto cont_timeout = [cont] { cont(true); };
+  auto cont_timeout = [cont = cont.share()] { cont(true); };
 
-  auto cont_normal = [cont] { cont(false); };
+  auto cont_normal = [cont = std::move(cont)] { cont(false); };
 
-  async::PostDelayedTask(async_get_default_dispatcher(), cont_timeout, timeout);
-  ImplTeardown(cont_normal);
+  async::PostDelayedTask(async_get_default_dispatcher(),
+                         std::move(cont_timeout), timeout);
+  ImplTeardown(std::move(cont_normal));
 }
 
 ClosureAsyncHolder::ClosureAsyncHolder(
-    std::string name, std::function<void(DoneCallback)> on_teardown)
+    std::string name, fit::function<void(DoneCallback)> on_teardown)
     : AsyncHolderBase(name),
       on_teardown_(std::move(on_teardown)),
       on_reset_([]() {}) {}
 
 ClosureAsyncHolder::ClosureAsyncHolder(
-    std::string name, std::function<void(DoneCallback)> on_teardown,
-    std::function<void()> on_reset)
+    std::string name, fit::function<void(DoneCallback)> on_teardown,
+    fit::function<void()> on_reset)
     : AsyncHolderBase(name),
       on_teardown_(std::move(on_teardown)),
       on_reset_(std::move(on_reset)) {}
 
 ClosureAsyncHolder::~ClosureAsyncHolder() = default;
 
-void ClosureAsyncHolder::ImplTeardown(std::function<void()> done) {
-  on_teardown_(done);
+void ClosureAsyncHolder::ImplTeardown(fit::function<void()> done) {
+  on_teardown_(std::move(done));
 };
 
 void ClosureAsyncHolder::ImplReset() { on_reset_(); };

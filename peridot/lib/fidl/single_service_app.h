@@ -47,7 +47,7 @@ class ViewApp : private fuchsia::ui::app::ViewProvider,
 
   ~ViewApp() override = default;
 
-  virtual void Terminate(std::function<void()> done) { done(); }
+  virtual void Terminate(fit::function<void()> done) { done(); }
 
  protected:
   component::StartupContext* startup_context() const {

@@ -29,12 +29,12 @@ class QueryRunner {
   void Run(const std::vector<QueryHandlerRecord>& query_handlers);
 
   // Sets a callback that will be executed when a query request ends.
-  void SetEndRequestCallback(std::function<void()> callback);
+  void SetEndRequestCallback(fit::function<void()> callback);
 
   // Sets a callback that will be executed when a response for the query in
   // execution is received.
   void SetResponseCallback(
-      std::function<void(std::string, fuchsia::modular::QueryResponse)>
+      fit::function<void(std::string, fuchsia::modular::QueryResponse)>
           callback);
 
   fuchsia::modular::QueryListener* listener() const { return listener_.get(); }
@@ -53,9 +53,9 @@ class QueryRunner {
   bool request_ended_;
   fxl::WeakPtrFactory<QueryRunner> weak_ptr_factory_;
 
-  std::function<void(std::string, fuchsia::modular::QueryResponse)>
+  fit::function<void(std::string, fuchsia::modular::QueryResponse)>
       on_query_response_callback_;
-  std::function<void()> on_end_request_callback_;
+  fit::function<void()> on_end_request_callback_;
 
   std::multiset<std::string> outstanding_handlers_;
 };

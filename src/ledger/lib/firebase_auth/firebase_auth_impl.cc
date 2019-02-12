@@ -11,7 +11,6 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/file.h>
 #include <lib/fxl/functional/closure.h>
-#include <lib/fxl/functional/make_copyable.h>
 
 namespace firebase_auth {
 namespace {
@@ -114,9 +113,9 @@ void FirebaseAuthImpl::GetToken(
   token_manager_->GetFirebaseToken(
       std::move(oauth_config), config_.user_profile_id, /*audience*/ "",
       config_.api_key,
-      fxl::MakeCopyable([this, max_retries, callback = std::move(callback)](
-                            fuchsia::auth::Status status,
-                            fuchsia::auth::FirebaseTokenPtr token) mutable {
+      [this, max_retries, callback = std::move(callback)](
+          fuchsia::auth::Status status,
+          fuchsia::auth::FirebaseTokenPtr token) mutable {
         if (!token || status != fuchsia::auth::Status::OK) {
           if (!token && status == fuchsia::auth::Status::OK) {
             FXL_LOG(ERROR)
@@ -147,7 +146,7 @@ void FirebaseAuthImpl::GetToken(
                       static_cast<uint32_t>(status));
           callback(AuthStatus::ERROR, std::move(token));
         }
-      }));
+      });
 }
 
 void FirebaseAuthImpl::ReportError(int32_t metric_id, uint32_t status) {

@@ -58,7 +58,7 @@ class PageClient : fuchsia::ledger::PageWatcher {
   // ordering is guaranteed to be the same, ignoring changes to the writes
   // caused by conflict resolution which can cause some writes to disappear.
   fuchsia::ledger::PageSnapshotPtr NewSnapshot(
-      std::function<void()> on_error = nullptr);
+      fit::function<void()> on_error = nullptr);
 
   const fuchsia::ledger::PageId& page_id() const { return page_id_; }
   const std::string& prefix() const { return prefix_; }
@@ -147,7 +147,7 @@ class PageClient : fuchsia::ledger::PageWatcher {
 // |callback| is invoked.
 void GetEntries(fuchsia::ledger::PageSnapshot* snapshot,
                 std::vector<fuchsia::ledger::Entry>* entries,
-                std::function<void(fuchsia::ledger::Status)> done);
+                fit::function<void(fuchsia::ledger::Status)> done);
 
 }  // namespace modular
 

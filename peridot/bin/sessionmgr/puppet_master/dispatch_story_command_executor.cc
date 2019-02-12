@@ -8,7 +8,6 @@
 
 #include <lib/async/cpp/future.h>
 #include <lib/async/cpp/operation.h>
-#include <lib/fxl/functional/make_copyable.h>
 
 namespace modular {
 
@@ -168,7 +167,7 @@ DispatchStoryCommandExecutor::~DispatchStoryCommandExecutor() {}
 void DispatchStoryCommandExecutor::ExecuteCommandsInternal(
     fidl::StringPtr story_id,
     std::vector<fuchsia::modular::StoryCommand> commands,
-    std::function<void(fuchsia::modular::ExecuteResult)> done) {
+    fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   operation_queues_[story_id].Add(new ExecuteStoryCommandsCall(
       this, std::move(story_id), std::move(commands), std::move(done)));
 }

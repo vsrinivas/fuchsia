@@ -7,6 +7,7 @@
 #include <set>
 
 #include <fuchsia/testing/runner/cpp/fidl.h>
+#include <lib/fit/function.h>
 #include <lib/fxl/logging.h>
 
 using fuchsia::testing::runner::TestRunner;
@@ -51,9 +52,9 @@ void Fail(const std::string& log_msg) {
   }
 }
 
-void Done(const std::function<void()>& ack) {
+void Done(fit::function<void()> ack) {
   if (g_test_runner.is_bound()) {
-    g_test_runner->Done([ack] {
+    g_test_runner->Done([ack = std::move(ack)] {
       ack();
       g_test_runner.Unbind();
     });
@@ -66,9 +67,9 @@ void Done(const std::function<void()>& ack) {
   }
 }
 
-void Teardown(const std::function<void()>& ack) {
+void Teardown(fit::function<void()> ack) {
   if (g_test_runner.is_bound()) {
-    g_test_runner->Teardown([ack] {
+    g_test_runner->Teardown([ack = std::move(ack)] {
       ack();
       g_test_runner.Unbind();
     });
@@ -86,23 +87,12 @@ TestRunnerStore* GetStore() {
   return g_test_runner_store.get();
 }
 
-std::function<void(fidl::StringPtr)> NewBarrierClosure(
-    const int limit, std::function<void()> proceed) {
-  return [limit, count = std::make_shared<int>(0),
-          proceed = std::move(proceed)](fidl::StringPtr value) {
-    ++*count;
-    if (*count == limit) {
-      proceed();
-    }
-  };
-}
-
 void Put(const fidl::StringPtr& key, const fidl::StringPtr& value) {
   modular::testing::GetStore()->Put(key, value, [] {});
 }
 
 void Get(const fidl::StringPtr& key,
-         std::function<void(fidl::StringPtr)> callback) {
+         fit::function<void(fidl::StringPtr)> callback) {
   modular::testing::GetStore()->Get(key, std::move(callback));
 }
 
@@ -110,7 +100,7 @@ void Signal(const fidl::StringPtr& condition) {
   modular::testing::GetStore()->Put(condition, condition, [] {});
 }
 
-void Await(const fidl::StringPtr& condition, std::function<void()> cont) {
+void Await(const fidl::StringPtr& condition, fit::function<void()> cont) {
   modular::testing::GetStore()->Get(
       condition, [cont = std::move(cont)](fidl::StringPtr) { cont(); });
 }

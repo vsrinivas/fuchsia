@@ -135,8 +135,8 @@ class LocalModuleResolver::FindModulesCall
     }
 
     // 3. For each parameter in the FindModulesQuery, try to filter
-    // |candidates_| to only the modules that provide the types in the parameter
-    // constraints.
+    // |candidates_| to only the modules that provide the types in the
+    // parameter constraints.
     if (!candidates_.empty()) {
       for (const auto& parameter_entry : query_.parameter_constraints) {
         ProcessParameterTypes(parameter_entry.param_name,
@@ -309,8 +309,8 @@ class LocalModuleResolver::FindModulesByTypesCall
         return modules;
       }
 
-      // Map each parameter in |intent_filter| to the query parameter names that
-      // could be used to populate the |intent_filter| parameter.
+      // Map each parameter in |intent_filter| to the query parameter names
+      // that could be used to populate the |intent_filter| parameter.
       std::map<ParameterName, std::vector<ParameterName>>
           intent_filter_params_to_query_constraints =
               MapManifestParametersToCompatibleQueryParameters(intent_filter);
@@ -345,9 +345,9 @@ class LocalModuleResolver::FindModulesByTypesCall
     return modules;
   }
 
-  // Returns a map where the keys are the |intent_filter|'s parameter names, and
-  // the values are all the |query_| parameter names that are type-compatible
-  // with that |intent_filter| parameter name.
+  // Returns a map where the keys are the |intent_filter|'s parameter names,
+  // and the values are all the |query_| parameter names that are
+  // type-compatible with that |intent_filter| parameter name.
   std::map<std::string, std::vector<std::string>>
   MapManifestParametersToCompatibleQueryParameters(
       const fuchsia::modular::IntentFilter& intent_filter) {
@@ -374,8 +374,8 @@ class LocalModuleResolver::FindModulesByTypesCall
   }
 
   // Returns a collection of valid mappings where the key is the query
-  // parameter, and the value is the manifest parameter to be populated with the
-  // query parameters contents.
+  // parameter, and the value is the manifest parameter to be populated with
+  // the query parameters contents.
   //
   // |remaining_intent_filter_params| are all the manifest parameters that are
   // yet to be matched. |used_query_constraints| are all the query parameters
@@ -461,13 +461,15 @@ class LocalModuleResolver::FindModulesByTypesCall
 
 void LocalModuleResolver::FindModules(fuchsia::modular::FindModulesQuery query,
                                       FindModulesCallback callback) {
-  operations_.Add(new FindModulesCall(this, std::move(query), callback));
+  operations_.Add(
+      new FindModulesCall(this, std::move(query), std::move(callback)));
 }
 
 void LocalModuleResolver::FindModulesByTypes(
     fuchsia::modular::FindModulesByTypesQuery query,
     FindModulesByTypesCallback callback) {
-  operations_.Add(new FindModulesByTypesCall(this, std::move(query), callback));
+  operations_.Add(
+      new FindModulesByTypesCall(this, std::move(query), std::move(callback)));
 }
 
 void LocalModuleResolver::GetModuleManifest(

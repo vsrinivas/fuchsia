@@ -88,7 +88,7 @@ class UserIntelligenceProviderImpl
     modular::RateLimitedRetry restart;
   };
 
-  using ServiceProviderInitializer = std::function<void(
+  using ServiceProviderInitializer = fit::function<void(
       const std::string& url, component::ServiceNamespace* agent_host)>;
   // A ServiceProviderInitializer that adds standard agent services, including
   // attributed context and suggestion service entry points. Returns the names

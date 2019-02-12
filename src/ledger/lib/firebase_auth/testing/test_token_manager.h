@@ -9,7 +9,6 @@
 
 #include <fuchsia/auth/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/memory/ref_ptr.h>
 
 using fuchsia::auth::AppConfig;

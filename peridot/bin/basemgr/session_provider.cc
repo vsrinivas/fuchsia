@@ -60,7 +60,7 @@ void SessionProvider::StartSession(
       done);
 }
 
-void SessionProvider::Teardown(const std::function<void()>& callback) {
+void SessionProvider::Teardown(fit::function<void()> callback) {
   if (!session_context_) {
     callback();
     return;
@@ -69,7 +69,7 @@ void SessionProvider::Teardown(const std::function<void()>& callback) {
   // Shutdown will execute the given |callback|, then destroy
   // |session_context_|. Here we do not logout any users because this is part of
   // teardown (device shutting down, going to sleep, etc.).
-  session_context_->Shutdown(/* logout_users= */ false, callback);
+  session_context_->Shutdown(/* logout_users= */ false, std::move(callback));
 }
 
 FuturePtr<> SessionProvider::SwapSessionShell(
@@ -82,14 +82,15 @@ FuturePtr<> SessionProvider::SwapSessionShell(
 }
 
 void SessionProvider::RestartSession(
-    const std::function<void()>& on_restart_complete) {
+    fit::function<void()> on_restart_complete) {
   if (!session_context_) {
     return;
   }
 
   // Shutting down a session and preserving the users effectively restarts the
   // session.
-  session_context_->Shutdown(/* logout_users= */ false, on_restart_complete);
+  session_context_->Shutdown(/* logout_users= */ false,
+                             std::move(on_restart_complete));
 }
 
 }  // namespace modular

@@ -28,10 +28,10 @@ class NullModule {
   }
 
   // Called by ModuleDriver.
-  void Terminate(const std::function<void()>& done) {
+  void Terminate(fit::function<void()> done) {
     Signal(kCommonNullModuleStopped);
     stopped_.Pass();
-    modular::testing::Done(done);
+    modular::testing::Done(std::move(done));
   }
 
  private:

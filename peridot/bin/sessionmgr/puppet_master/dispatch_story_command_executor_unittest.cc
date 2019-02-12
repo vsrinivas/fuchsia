@@ -21,16 +21,16 @@ namespace {
 
 class TestCommandRunner : public CommandRunner {
  public:
-  using ExecuteFunc = std::function<fuchsia::modular::ExecuteStatus(
+  using ExecuteFunc = fit::function<fuchsia::modular::ExecuteStatus(
       fidl::StringPtr, fuchsia::modular::StoryCommand)>;
   TestCommandRunner(ExecuteFunc func, bool delay_done = false)
-      : func_(func), delay_done_(delay_done) {}
+      : func_(std::move(func)), delay_done_(delay_done) {}
   ~TestCommandRunner() override = default;
 
   void Execute(
       fidl::StringPtr story_id, StoryStorage* const story_storage,
       fuchsia::modular::StoryCommand command,
-      std::function<void(fuchsia::modular::ExecuteResult)> done) override {
+      fit::function<void(fuchsia::modular::ExecuteResult)> done) override {
     // Post the task on the dispatcher loop to simulate a long-running task.
     async::PostTask(async_get_default_dispatcher(),
                     [this, story_id, command = std::move(command),
@@ -84,7 +84,8 @@ class DispatchStoryCommandExecutorTest
   void AddCommandRunner(fuchsia::modular::StoryCommand::Tag tag,
                         TestCommandRunner::ExecuteFunc func,
                         bool delay_done = false) {
-    command_runners_.emplace(tag, new TestCommandRunner(func, delay_done));
+    command_runners_.emplace(
+        tag, new TestCommandRunner(std::move(func), delay_done));
   }
 
   std::unique_ptr<SessionStorage> session_storage_;

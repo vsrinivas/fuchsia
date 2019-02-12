@@ -27,7 +27,7 @@ class AgentImpl : public fuchsia::modular::Agent {
     virtual void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                              outgoing_services) = 0;
     virtual void RunTask(const fidl::StringPtr& task_id,
-                         const std::function<void()>& done) = 0;
+                         fit::function<void()> done) = 0;
   };
 
   AgentImpl(component::ServiceNamespace* service_namespace, Delegate* delegate);

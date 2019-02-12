@@ -55,24 +55,25 @@ class TestApp : QueuePersistenceTestService {
 
   // Called by AgentDriver.
   void RunTask(const fidl::StringPtr& /*task_id*/,
-               const std::function<void()>& /*callback*/) {}
+               fit::function<void()> /*callback*/) {}
 
   // Called by AgentDriver.
-  void Terminate(const std::function<void()>& done) {
+  void Terminate(fit::function<void()> done) {
     // Stop processing messages, since we do async operations below and don't
     // want our receiver to fire.
     msg_queue_.RegisterReceiver(nullptr);
 
     modular::testing::GetStore()->Put("queue_persistence_test_agent_stopped",
-                                      "",
-                                      [done] { modular::testing::Done(done); });
+                                      "", [done = std::move(done)]() mutable {
+                                        modular::testing::Done(std::move(done));
+                                      });
   }
 
  private:
   // |QueuePersistenceTestService|
   void GetMessageQueueToken(GetMessageQueueTokenCallback callback) override {
-    msg_queue_.GetToken(
-        [callback](const fidl::StringPtr& token) { callback(token); });
+    msg_queue_.GetToken([callback = std::move(callback)](
+                            const fidl::StringPtr& token) { callback(token); });
   }
 
   TestPoint initialized_{"Queue persistence test agent initialized"};

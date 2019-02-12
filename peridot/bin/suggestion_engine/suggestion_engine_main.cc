@@ -38,7 +38,7 @@ class SuggestionEngineApp {
         });
   }
 
-  void Terminate(const std::function<void()>& done) { done(); }
+  void Terminate(fit::function<void()> done) { done(); }
 
   fxl::WeakPtr<SuggestionDebugImpl> debug() { return engine_impl_->debug(); }
 

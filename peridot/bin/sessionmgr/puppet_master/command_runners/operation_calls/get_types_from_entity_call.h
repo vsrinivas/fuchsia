@@ -14,7 +14,7 @@ void AddGetTypesFromEntityOperation(
     OperationContainer* operation_container,
     fuchsia::modular::EntityResolver* entity_resolver,
     const fidl::StringPtr& entity_reference,
-    std::function<void(std::vector<std::string>)> result_call);
+    fit::function<void(std::vector<std::string>)> result_call);
 
 }  // namespace modular
 

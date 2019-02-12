@@ -40,7 +40,7 @@ void AddAddModOperation(OperationContainer* container,
                         fuchsia::modular::ModuleResolver* module_resolver,
                         fuchsia::modular::EntityResolver* entity_resolver,
                         AddModParams add_mod_params,
-                        std::function<void(fuchsia::modular::ExecuteResult,
+                        fit::function<void(fuchsia::modular::ExecuteResult,
                                            fuchsia::modular::ModuleData)>
                             done);
 

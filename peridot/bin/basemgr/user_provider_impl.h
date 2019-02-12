@@ -48,7 +48,7 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
 
   // Removes all the users in storage. |callback| is invoked after all users
   // have been removed.
-  void RemoveAllUsers(std::function<void()> callback);
+  void RemoveAllUsers(fit::function<void()> callback);
 
  private:
   // |fuchsia::modular::UserProvider|

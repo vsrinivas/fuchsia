@@ -70,7 +70,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   void Connect(fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request);
 
   // Used when the session shell is swapped.
-  void StopAllStories(const std::function<void()>& callback);
+  void StopAllStories(fit::function<void()> callback);
 
   // The session shell to send story views to. It is not a constructor argument
   // because it is updated when the session shell is swapped.
@@ -78,7 +78,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
 
   // Stops serving the fuchsia::modular::StoryProvider interface and stops all
   // stories.
-  void Teardown(const std::function<void()>& callback);
+  void Teardown(fit::function<void()> callback);
 
   // Called by StoryControllerImpl.
   const Environment* user_environment() const { return user_environment_; }
@@ -141,7 +141,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // Called by StoryControllerImpl. Notifies, using DetachView(), the current
   // session shell that the view of the story identified by |story_id| is about
   // to close.
-  void DetachView(fidl::StringPtr story_id, std::function<void()> done);
+  void DetachView(fidl::StringPtr story_id, fit::function<void()> done);
 
   // Called by StoryControllerImpl.
   void NotifyStoryActivityChange(
@@ -181,7 +181,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       const std::string& story_id, fidl::StringPtr type,
       fuchsia::mem::Buffer data,
       fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
-      std::function<void(std::string /* entity_reference */)> callback);
+      fit::function<void(std::string /* entity_reference */)> callback);
 
   // Creates an entity with the specified |type| and |data| in the story with
   // |story_id|.

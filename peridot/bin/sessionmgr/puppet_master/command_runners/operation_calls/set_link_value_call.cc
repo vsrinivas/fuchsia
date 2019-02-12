@@ -11,7 +11,7 @@ class SetLinkValueCall : public Operation<fuchsia::modular::ExecuteResult> {
  public:
   SetLinkValueCall(StoryStorage* const story_storage,
                    fuchsia::modular::LinkPath link_path,
-                   std::function<void(fidl::StringPtr*)> mutate_fn,
+                   fit::function<void(fidl::StringPtr*)> mutate_fn,
                    ResultCall done)
       : Operation("SetLinkValueCall", std::move(done)),
         story_storage_(story_storage),
@@ -21,8 +21,8 @@ class SetLinkValueCall : public Operation<fuchsia::modular::ExecuteResult> {
  private:
   void Run() override {
     FlowToken flow{this, &result_};
-    auto did_update = story_storage_->UpdateLinkValue(link_path_, mutate_fn_,
-                                                      this /* context */);
+    auto did_update = story_storage_->UpdateLinkValue(
+        link_path_, std::move(mutate_fn_), this /* context */);
     did_update->Then([this, flow](StoryStorage::Status status) {
       if (status == StoryStorage::Status::OK) {
         result_.status = fuchsia::modular::ExecuteStatus::OK;
@@ -38,7 +38,7 @@ class SetLinkValueCall : public Operation<fuchsia::modular::ExecuteResult> {
   fidl::StringPtr story_id_;
   StoryStorage* const story_storage_;
   fuchsia::modular::LinkPath link_path_;
-  std::function<void(fidl::StringPtr*)> mutate_fn_;
+  fit::function<void(fidl::StringPtr*)> mutate_fn_;
   fuchsia::modular::ExecuteResult result_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SetLinkValueCall);
@@ -49,8 +49,8 @@ class SetLinkValueCall : public Operation<fuchsia::modular::ExecuteResult> {
 void AddSetLinkValueOperation(
     OperationContainer* const operation_container,
     StoryStorage* const story_storage, fuchsia::modular::LinkPath link_path,
-    std::function<void(fidl::StringPtr*)> mutate_fn,
-    std::function<void(fuchsia::modular::ExecuteResult)> done) {
+    fit::function<void(fidl::StringPtr*)> mutate_fn,
+    fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   operation_container->Add(
       new SetLinkValueCall(story_storage, std::move(link_path),
                            std::move(mutate_fn), std::move(done)));

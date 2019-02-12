@@ -146,7 +146,7 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
       std::string url, fidl::InterfaceHandle<fuchsia::modular::QueryHandler>
                            query_handler_handle) override;
 
-  void Terminate(std::function<void()> done) { done(); }
+  void Terminate(fit::function<void()> done) { done(); }
 
  private:
   friend class NavigationProcessor;

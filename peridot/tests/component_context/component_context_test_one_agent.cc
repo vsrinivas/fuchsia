@@ -48,21 +48,21 @@ class TestApp : ComponentContextTestService {
 
   // Called by AgentDriver.
   void RunTask(const fidl::StringPtr& /*task_id*/,
-               const std::function<void()>& /*callback*/) {}
+               fit::function<void()> /*callback*/) {}
 
   TestPoint two_agent_connected_{"Two agent accepted connection"};
 
   // Called by AgentDriver.
-  void Terminate(const std::function<void()>& done) {
+  void Terminate(fit::function<void()> done) {
     FXL_LOG(INFO) << "TestOneAgent::Terminate()";
     // Before reporting that we stop, we wait until two_agent has connected.
-    Await("two_agent_connected", [this, done] {
+    Await("two_agent_connected", [this, done = std::move(done)]() mutable {
       FXL_LOG(INFO) << "TestOneAgent::Terminate() GET";
       // Killing the agent controller should stop it.
       two_agent_controller_.Unbind();
       two_agent_connected_.Pass();
       Signal("one_agent_stopped");
-      modular::testing::Done(done);
+      modular::testing::Done(std::move(done));
     });
   }
 

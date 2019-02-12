@@ -10,7 +10,6 @@
 #include <lib/context/cpp/context_helper.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/time/time_delta.h>
 #include <lib/fxl/time/time_point.h>
 #include "lib/fidl/cpp/clone.h"
@@ -103,25 +102,24 @@ void SuggestionEngineImpl::AddProposalWithRichSuggestion(
       "SuggestionEngine::AddProposalWithRichSuggestion.fut");
   story_puppet_master->Enqueue(std::move(proposal.on_selected));
   story_puppet_master->Execute(fut->Completer());
-  fut->Then(fxl::MakeCopyable(
-      [this, fut, source_url = source->component_url(),
-       proposal = std::move(proposal), sp = std::move(story_puppet_master),
-       existing_story](fuchsia::modular::ExecuteResult result) mutable {
-        if (result.status != fuchsia::modular::ExecuteStatus::OK) {
-          FXL_LOG(WARNING) << "Preloading of rich suggestion actions resulted "
-                           << "non successful status="
-                           << (uint32_t)result.status
-                           << " message=" << result.error_message;
-        }
-        if (proposal.story_name->empty()) {
-          proposal.story_name = result.story_id;
-        }
+  fut->Then([this, fut, source_url = source->component_url(),
+             proposal = std::move(proposal),
+             sp = std::move(story_puppet_master),
+             existing_story](fuchsia::modular::ExecuteResult result) mutable {
+    if (result.status != fuchsia::modular::ExecuteStatus::OK) {
+      FXL_LOG(WARNING) << "Preloading of rich suggestion actions resulted "
+                       << "non successful status=" << (uint32_t)result.status
+                       << " message=" << result.error_message;
+    }
+    if (proposal.story_name->empty()) {
+      proposal.story_name = result.story_id;
+    }
 
-        if (existing_story.empty()) {
-          next_processor_.AddProposal(source_url, result.story_id,
-                                      std::move(proposal));
-        }
-      }));
+    if (existing_story.empty()) {
+      next_processor_.AddProposal(source_url, result.story_id,
+                                  std::move(proposal));
+    }
+  });
 }
 
 void SuggestionEngineImpl::RemoveNextProposal(const std::string& component_url,
@@ -381,20 +379,20 @@ void SuggestionEngineImpl::HandleSelectedInteraction(
   // FIDL message.
   story_puppet_master->Enqueue(std::move(proposal.on_selected));
   story_puppet_master->Execute(fut->Completer());
-  fut->Then(fxl::MakeCopyable(
-      [this, proposal_id = proposal.id, suggestion_in_ask, component_url,
-       listener = std::move(listener), sp = std::move(story_puppet_master),
-       fut](fuchsia::modular::ExecuteResult result) mutable {
-        // TODO(miguelfrde): check status.
-        if (listener) {
-          listener->OnProposalAccepted(proposal_id, result.story_id);
-        }
-        if (suggestion_in_ask) {
-          query_processor_.CleanUpPreviousQuery();
-        } else {
-          next_processor_.RemoveProposal(component_url, proposal_id);
-        }
-      }));
+  fut->Then([this, proposal_id = proposal.id, suggestion_in_ask, component_url,
+             listener = std::move(listener),
+             sp = std::move(story_puppet_master),
+             fut](fuchsia::modular::ExecuteResult result) mutable {
+    // TODO(miguelfrde): check status.
+    if (listener) {
+      listener->OnProposalAccepted(proposal_id, result.story_id);
+    }
+    if (suggestion_in_ask) {
+      query_processor_.CleanUpPreviousQuery();
+    } else {
+      next_processor_.RemoveProposal(component_url, proposal_id);
+    }
+  });
 }
 
 }  // namespace modular

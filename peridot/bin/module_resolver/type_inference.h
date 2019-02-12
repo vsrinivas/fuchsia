@@ -23,7 +23,7 @@ class ParameterTypeInferenceHelper {
   // correct process for type extraction based on the type of Parameter.
   void GetParameterTypes(
       const fuchsia::modular::ResolverParameterConstraint& parameter_constraint,
-      const std::function<void(std::vector<std::string>)>& result_callback);
+      fit::function<void(std::vector<std::string>)> result_callback);
 
  private:
   class GetParameterTypesCall;

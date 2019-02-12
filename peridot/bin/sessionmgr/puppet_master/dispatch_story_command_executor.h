@@ -30,7 +30,7 @@ class DispatchStoryCommandExecutor : public StoryCommandExecutor {
   void ExecuteCommandsInternal(
       fidl::StringPtr story_id,
       std::vector<fuchsia::modular::StoryCommand> commands,
-      std::function<void(fuchsia::modular::ExecuteResult)> done) override;
+      fit::function<void(fuchsia::modular::ExecuteResult)> done) override;
 
   class ExecuteStoryCommandsCall;
 

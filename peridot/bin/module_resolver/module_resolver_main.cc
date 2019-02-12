@@ -13,7 +13,6 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fxl/command_line.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 
@@ -41,7 +40,7 @@ class ModuleResolverApp {
         });
   }
 
-  void Terminate(const std::function<void()>& done) { done(); }
+  void Terminate(fit::function<void()> done) { done(); }
 
  private:
   std::unique_ptr<LocalModuleResolver> resolver_impl_;

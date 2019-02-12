@@ -9,14 +9,14 @@
 namespace modular {
 
 void ModuleFacetReaderFake::SetGetModuleManifestSink(
-    std::function<void(const std::string&, GetModuleManifestCallback)> sink) {
-  sink_ = sink;
+    fit::function<void(const std::string&, GetModuleManifestCallback)> sink) {
+  sink_ = std::move(sink);
 }
 
 void ModuleFacetReaderFake::GetModuleManifest(
     const std::string& module_url, GetModuleManifestCallback callback) {
   if (sink_) {
-    sink_(module_url, callback);
+    sink_(module_url, std::move(callback));
   } else {
     callback({});
   }

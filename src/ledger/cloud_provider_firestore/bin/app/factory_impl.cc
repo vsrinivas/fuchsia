@@ -6,7 +6,6 @@
 
 #include <grpc++/grpc++.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 
 #include "src/ledger/cloud_provider_firestore/bin/firestore/firestore_service_impl.h"
@@ -80,7 +79,7 @@ void FactoryImpl::GetFirebaseCloudProvider(
   FXL_DCHECK(firebase_auth);
 
   auto token_request =
-      firebase_auth->GetFirebaseUserId(fxl::MakeCopyable(
+      firebase_auth->GetFirebaseUserId(
           [this, config = std::move(config),
            firebase_auth = std::move(firebase_auth),
            cloud_provider_request = std::move(cloud_provider_request),
@@ -100,7 +99,7 @@ void FactoryImpl::GetFirebaseCloudProvider(
                                std::move(firestore_service),
                                std::move(cloud_provider_request));
             callback(cloud_provider::Status::OK);
-          }));
+          });
   token_requests_.emplace(token_request);
 }
 

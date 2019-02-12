@@ -4,7 +4,6 @@
 
 #include "peridot/bin/sessionmgr/puppet_master/story_puppet_master_impl.h"
 
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 
 #include "peridot/bin/sessionmgr/puppet_master/story_command_executor.h"
@@ -95,9 +94,9 @@ void StoryPuppetMasterImpl::Enqueue(
 
 void StoryPuppetMasterImpl::Execute(ExecuteCallback done) {
   // First ensure that the story is created.
-  operations_->Add(new ExecuteOperation(session_storage_, executor_,
-                                        story_name_, std::move(story_options_),
-                                        std::move(enqueued_commands_), done));
+  operations_->Add(new ExecuteOperation(
+      session_storage_, executor_, story_name_, std::move(story_options_),
+      std::move(enqueued_commands_), std::move(done)));
 }
 
 void StoryPuppetMasterImpl::SetCreateOptions(

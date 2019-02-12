@@ -56,9 +56,9 @@ class TestModule {
 
   // Called by ModuleDriver.
   TestPoint stopped_{"Parent module stopped"};
-  void Terminate(const std::function<void()>& done) {
+  void Terminate(fit::function<void()> done) {
     stopped_.Pass();
-    modular::testing::Done(done);
+    modular::testing::Done(std::move(done));
   }
 
  private:

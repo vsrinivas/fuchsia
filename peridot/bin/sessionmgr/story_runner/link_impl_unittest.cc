@@ -34,7 +34,8 @@ namespace {
 
 class TestLinkWatcher : public LinkWatcher {
  public:
-  TestLinkWatcher(std::function<void(fidl::StringPtr)> fn) : fn_(fn) {}
+  TestLinkWatcher(fit::function<void(fidl::StringPtr)> fn)
+      : fn_(std::move(fn)) {}
 
  private:
   void Notify(fuchsia::mem::Buffer json) override {
@@ -43,7 +44,7 @@ class TestLinkWatcher : public LinkWatcher {
     fn_(json_string);
   }
 
-  std::function<void(fidl::StringPtr)> fn_;
+  fit::function<void(fidl::StringPtr)> fn_;
 };
 
 class LinkImplTest : public testing::TestWithLedger {
@@ -63,15 +64,15 @@ class LinkImplTest : public testing::TestWithLedger {
     return ptr;
   }
 
-  void Watch(Link* link, std::function<void(fidl::StringPtr)> fn) {
-    auto watcher = std::make_unique<TestLinkWatcher>(fn);
+  void Watch(Link* link, fit::function<void(fidl::StringPtr)> fn) {
+    auto watcher = std::make_unique<TestLinkWatcher>(std::move(fn));
     LinkWatcherPtr ptr;
     watchers_.AddBinding(std::move(watcher), ptr.NewRequest());
     link->Watch(std::move(ptr));
   }
 
-  void WatchAll(Link* link, std::function<void(fidl::StringPtr)> fn) {
-    auto watcher = std::make_unique<TestLinkWatcher>(fn);
+  void WatchAll(Link* link, fit::function<void(fidl::StringPtr)> fn) {
+    auto watcher = std::make_unique<TestLinkWatcher>(std::move(fn));
     LinkWatcherPtr ptr;
     watchers_.AddBinding(std::move(watcher), ptr.NewRequest());
     link->WatchAll(std::move(ptr));

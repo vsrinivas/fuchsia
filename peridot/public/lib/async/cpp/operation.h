@@ -123,7 +123,7 @@ class OperationQueue : public OperationContainer {
 // itself. Used to implement asynchronous operations that need to hold on to
 // handles until the operation asynchronously completes and returns a value.
 //
-// Held by a unique_ptr<> in the OperationContainer, so instances of derived
+// Held by a unique_ptr<> in the OperationContainer. Instances of derived
 // classes need to be created with new.
 //
 // Advantages of using an Operation instance to implement asynchronous fidl
@@ -137,10 +137,7 @@ class OperationQueue : public OperationContainer {
 //  2. The capture list of the callbacks only holds this, everything else that
 //     needs to be passed on is in the instance.
 //
-//  3. Completion callbacks don't need to be made copyable and don't need to be
-//     mutable, because no move only pointer is pulled from their capture list.
-//
-//  4. Conversion of Handle to Ptr can be done by Bind() because the Ptr is
+//  3. Conversion of Handle to Ptr can be done by Bind() because the Ptr is
 //     already there.
 //
 // Use of Operation instances must adhere to invariants:
@@ -155,6 +152,7 @@ class OperationQueue : public OperationContainer {
 //   pointers are called, close their channels, and cancel all pending method
 //   callbacks. If a method is invoked on a fidl pointer that lives on beyond
 //   the lifetime of the operation container, this is not guaranteed.
+//
 class OperationBase {
  public:
   virtual ~OperationBase();
@@ -207,11 +205,12 @@ class OperationBase {
 
   // Called only by Operation<...>.
   template <typename... Args,
-            typename ResultCall = std::function<void(Args...)>>
+            typename ResultCall = fit::function<void(Args...)>>
   void DispatchCallback(ResultCall result_call, Args... result_args) {
     // Move |container| pointer out of this, because |this| gets deleted before
     // we stop using |container|.
     auto container = std::move(container_);
+    container_.reset();  // just make sure
     if (container) {
       // Deletes |this|.
       container->Drop(this);
@@ -257,7 +256,7 @@ class Operation : public OperationBase {
  public:
   ~Operation() override = default;
 
-  using ResultCall = std::function<void(Args...)>;
+  using ResultCall = fit::function<void(Args...)>;
 
  protected:
   Operation(const char* const trace_name, ResultCall result_call,
@@ -288,18 +287,10 @@ class Operation : public OperationBase {
 // It is an inner class of Operation so that it has access to Done(), which is
 // protected.
 //
-// Why this is ref counted, not moved:
-//
-// 1. Some flows of control branch into multiple parallel branches, and then its
-//    subtle to figure out which one to move it along.
-//
-// 2. To move something onto a capture list is more verbose than to just copy
-//    it, so it would defeat the purpose of being simpler to write than the
-//    status quo.
-//
-// 3. A lambda with something that is moveonly on its capture list is not
-//    copyable anymore, and one of the points of Operation was to only have
-//    copyable continuations.
+// FlowToken is ref counted so it can be copied to multiple scopes as required,
+// to indicate that, as long as a copy of the FlowToken is alive, it's
+// Operation is not yet done. But when the last FlowToken goes out of scope,
+// the FlowToken destructor automatically invokes Done().
 //
 // NOTE: You cannot mix flow tokens and explicit Done() calls. Once an Operation
 // uses a flow token, this is how Done() is called, and calling Done()
@@ -393,6 +384,14 @@ class Operation<Args...>::FlowToken : OperationBase::FlowTokenBase {
 //   StopAgent(kill_agent);
 //   SetTimeout(kill_agent, 1);
 //
+///////////
+// TODO(richkadel): There isn't a unit test for the above use case, nor for the
+// FlowTokenHolder class (and probably should be, likely in
+// operation_unittest.cc. But since this whole approach to modular calls is
+// deprecated (see go/fit-promise-guide), I'm just making a note of this; not
+// adding the test.
+///////////
+//
 template <typename... Args>
 class Operation<Args...>::FlowTokenHolder {
  public:
@@ -422,7 +421,7 @@ class Operation<Args...>::FlowTokenHolder {
 template <typename... Args>
 class FutureOperation : public Operation<Args...> {
  public:
-  using ResultCall = std::function<void(Args...)>;
+  using ResultCall = fit::function<void(Args...)>;
 
   FutureOperation(const char* trace_name, FuturePtr<> on_run,
                   FuturePtr<Args...> done, ResultCall result_call)
@@ -468,7 +467,7 @@ template <typename... ResultArgs, typename... FutureArgs>
 OperationBase* WrapFutureAsOperation(
     const char* const trace_name, FuturePtr<> on_run,
     FuturePtr<FutureArgs...> done,
-    std::function<void(ResultArgs...)> result_call) {
+    fit::function<void(ResultArgs...)> result_call) {
   return new FutureOperation<ResultArgs...>(
       trace_name, std::move(on_run), std::move(done), std::move(result_call));
 }
@@ -476,12 +475,13 @@ OperationBase* WrapFutureAsOperation(
 template <typename... Args>
 class FutureOperation2 : public Operation<Args...> {
  public:
-  using ResultCall = std::function<void(Args...)>;
-  using RunOpCall = std::function<FuturePtr<Args...>(OperationBase*)>;
+  using ResultCall = fit::function<void(Args...)>;
+  using RunOpCall = fit::function<FuturePtr<Args...>(OperationBase*)>;
 
   FutureOperation2(const char* const trace_name, RunOpCall run_op,
                    ResultCall done)
-      : Operation<Args...>(trace_name, std::move(done)), run_op_(run_op) {}
+      : Operation<Args...>(trace_name, std::move(done)),
+        run_op_(std::move(run_op)) {}
 
  private:
   // |OperationBase|

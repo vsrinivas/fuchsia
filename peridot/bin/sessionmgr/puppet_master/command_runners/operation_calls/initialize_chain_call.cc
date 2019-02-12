@@ -99,7 +99,7 @@ void AddInitializeChainOperation(
     OperationContainer* const operation_container,
     StoryStorage* const story_storage, std::vector<std::string> module_path,
     fuchsia::modular::CreateModuleParameterMapInfoPtr create_parameter_map_info,
-    std::function<void(fuchsia::modular::ExecuteResult,
+    fit::function<void(fuchsia::modular::ExecuteResult,
                        fuchsia::modular::ModuleParameterMapPtr)>
         result_call) {
   operation_container->Add(new InitializeChainCall(

@@ -11,13 +11,14 @@ namespace modular {
 TracingWaiter::TracingWaiter() = default;
 TracingWaiter::~TracingWaiter() = default;
 
-void TracingWaiter::WaitForTracing(std::function<void()> cont) {
+void TracingWaiter::WaitForTracing(fit::function<void()> cont) {
   // Cf. RunWithTracing() used by ledger benchmarks.
   trace_provider_ =
       std::make_unique<trace::TraceProvider>(async_get_default_dispatcher());
   trace_observer_ = std::make_unique<trace::TraceObserver>();
 
-  std::function<void()> on_trace_state_changed = [this, cont] {
+  fit::function<void()> on_trace_state_changed = [this,
+                                                  cont = std::move(cont)] {
     if (TRACE_CATEGORY_ENABLED("benchmark") && !started_) {
       started_ = true;
       cont();
@@ -29,7 +30,7 @@ void TracingWaiter::WaitForTracing(std::function<void()> cont) {
 
   if (!started_) {
     trace_observer_->Start(async_get_default_dispatcher(),
-                           on_trace_state_changed);
+                           std::move(on_trace_state_changed));
   }
 }
 

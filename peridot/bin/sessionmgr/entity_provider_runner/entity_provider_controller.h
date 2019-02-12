@@ -34,7 +34,7 @@ class EntityProviderController {
   EntityProviderController(
       fuchsia::modular::EntityProviderPtr entity_provider,
       fuchsia::modular::AgentControllerPtr agent_controller,
-      std::function<void()> done);
+      fit::function<void()> done);
 
   ~EntityProviderController();
 
@@ -65,7 +65,7 @@ class EntityProviderController {
   fuchsia::modular::AgentControllerPtr agent_controller_;
 
   // The callback which is called when the entity provider finishes running.
-  std::function<void()> done_;
+  fit::function<void()> done_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EntityProviderController);
 };

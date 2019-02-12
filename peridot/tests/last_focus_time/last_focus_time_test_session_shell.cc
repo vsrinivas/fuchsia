@@ -32,7 +32,7 @@ class StoryProviderWatcherImpl : public fuchsia::modular::StoryProviderWatcher {
   StoryProviderWatcherImpl() : continue_([] {}), binding_(this) {}
   ~StoryProviderWatcherImpl() override = default;
 
-  void Continue(std::function<void()> at) { continue_ = std::move(at); }
+  void Continue(fit::function<void()> at) { continue_ = std::move(at); }
 
   void Watch(fuchsia::modular::StoryProvider* const story_provider) {
     story_provider->Watch(binding_.NewBinding());
@@ -89,7 +89,7 @@ class StoryProviderWatcherImpl : public fuchsia::modular::StoryProviderWatcher {
   int change_count_{};
   int64_t last_focus_time_{-1};
 
-  std::function<void()> continue_;
+  fit::function<void()> continue_;
   fidl::Binding<fuchsia::modular::StoryProviderWatcher> binding_;
 };
 
@@ -109,7 +109,7 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
 
   // Sets the function where to continue when the story is observed to be
   // running.
-  void Continue(std::function<void()> at) { continue_ = at; }
+  void Continue(fit::function<void()> at) { continue_ = std::move(at); }
 
  private:
   // |fuchsia::modular::StoryWatcher|
@@ -129,7 +129,8 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
   void OnModuleFocused(std::vector<std::string> /*module_path*/) override {}
 
   fidl::Binding<fuchsia::modular::StoryWatcher> binding_;
-  std::function<void()> continue_;
+  fit::function<void()> continue_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };
 

@@ -8,6 +8,7 @@
 #include <string>
 
 #include "peridot/lib/testing/test_with_ledger.h"
+#include "trace/internal/event_common.h"
 
 namespace modular {
 
@@ -30,8 +31,8 @@ class ClipboardImplTest : public testing::TestWithLedger {
  protected:
   void Push(const std::string& text) { clipboard_->Push(text); }
 
-  void Peek(const fuchsia::modular::Clipboard::PeekCallback& callback) {
-    clipboard_->Peek(callback);
+  void Peek(fuchsia::modular::Clipboard::PeekCallback callback) {
+    clipboard_->Peek(std::move(callback));
   }
 
   std::unique_ptr<ClipboardImpl> clipboard_;

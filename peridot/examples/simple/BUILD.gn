@@ -54,8 +54,6 @@ executable_package("simple_module") {
 }
 
 fidl("interfaces") {
-  cpp_legacy_callbacks = true
-
   name = "fuchsia.modular.examples.simple"
 
   sources = [

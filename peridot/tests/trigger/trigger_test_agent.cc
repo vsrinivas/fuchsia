@@ -54,22 +54,23 @@ class TestApp : TriggerTestService {
   }
 
   // Called by AgentDriver.
-  void RunTask(fidl::StringPtr task_id, const std::function<void()>& callback) {
-    modular::testing::GetStore()->Put(task_id, "", callback);
+  void RunTask(fidl::StringPtr task_id, fit::function<void()> callback) {
+    modular::testing::GetStore()->Put(task_id, "", std::move(callback));
   }
 
   // Called by AgentDriver.
-  void Terminate(const std::function<void()>& done) {
+  void Terminate(fit::function<void()> done) {
     modular::testing::GetStore()->Put("trigger_test_agent_stopped", "",
-                                      [done] { done(); });
-    modular::testing::Done(done);
+                                      [done = std::move(done)]() mutable {
+                                        modular::testing::Done(std::move(done));
+                                      });
   }
 
  private:
   // |TriggerTestService|
   void GetMessageQueueToken(GetMessageQueueTokenCallback callback) override {
-    msg_queue_->GetToken(
-        [callback](fidl::StringPtr token) { callback(token); });
+    msg_queue_->GetToken([callback = std::move(callback)](
+                             fidl::StringPtr token) { callback(token); });
   }
 
   // |TriggerTestService|

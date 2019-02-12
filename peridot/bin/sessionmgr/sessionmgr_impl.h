@@ -91,7 +91,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   ~SessionmgrImpl() override;
 
   // |AppDriver| calls this.
-  void Terminate(std::function<void()> done);
+  void Terminate(fit::function<void()> done);
 
  private:
   // |Sessionmgr|
@@ -130,7 +130,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void RunSessionShell(fuchsia::modular::AppConfig session_shell_config);
   // This is a termination sequence that may be used with |AtEnd()|, but also
   // may be executed to terminate the currently running session shell.
-  void TerminateSessionShell(const std::function<void()>& done);
+  void TerminateSessionShell(fit::function<void()> done);
 
   // Returns the file descriptor that backs the ledger repository directory for
   // the user.
@@ -138,14 +138,14 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   // |fuchsia::modular::SessionShellContext|
   void GetAccount(
-      std::function<void(::std::unique_ptr<::fuchsia::modular::auth::Account>)>
+      fit::function<void(::std::unique_ptr<::fuchsia::modular::auth::Account>)>
           callback) override;
   void GetAgentProvider(
       fidl::InterfaceRequest<fuchsia::modular::AgentProvider> request) override;
   void GetComponentContext(
       fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request)
       override;
-  void GetDeviceName(std::function<void(::std::string)> callback) override;
+  void GetDeviceName(fit::function<void(::std::string)> callback) override;
   void GetFocusController(
       fidl::InterfaceRequest<fuchsia::modular::FocusController> request)
       override;
@@ -207,7 +207,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   //    agents that are not started when runnign a test).
   //
   // See also the Reset() and Teardown() functions in the .cc file.
-  void AtEnd(std::function<void(std::function<void()>)> action);
+  void AtEnd(fit::function<void(fit::function<void()>)> action);
 
   // Recursively execute the termiation steps scheduled by AtEnd(). The
   // execution steps are stored in at_end_.
@@ -300,12 +300,12 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       session_shell_link_bindings_;
 
   // Holds the actions scheduled by calls to the AtEnd() method.
-  std::vector<std::function<void(std::function<void()>)>> at_end_;
+  std::vector<fit::function<void(fit::function<void()>)>> at_end_;
 
   // Holds the done callback of Terminate() while the at_end_ actions are being
   // executed. We can rely on Terminate() only being called once. (And if not,
   // this could simply be made a vector as usual.)
-  std::function<void()> at_end_done_;
+  fit::function<void()> at_end_done_;
 
   // The service provider used to connect to services advertised by the
   // clipboard agent.

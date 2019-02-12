@@ -10,7 +10,6 @@
 #include <lib/callback/cancellable_helper.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/functional/closure.h>
-#include <lib/fxl/functional/make_copyable.h>
 
 namespace firebase_auth {
 

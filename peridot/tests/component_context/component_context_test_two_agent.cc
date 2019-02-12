@@ -32,14 +32,14 @@ class TestApp {
 
   // Called by AgentDriver.
   void RunTask(fidl::StringPtr /*task_id*/,
-               const std::function<void()>& /*callback*/) {}
+               fit::function<void()> /*callback*/) {}
 
   TestPoint terminate_called_{"Terminate() called."};
 
   // Called by AgentDriver.
-  void Terminate(const std::function<void()>& done) {
+  void Terminate(fit::function<void()> done) {
     terminate_called_.Pass();
-    modular::testing::Done(done);
+    modular::testing::Done(std::move(done));
   }
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);

@@ -41,7 +41,7 @@ class SessionStorage : public PageClient {
   // a) The story being deleted on another device.
   // b) The story having been deleted locally with DeleteStory().
   void set_on_story_deleted(
-      std::function<void(fidl::StringPtr story_id)> callback) {
+      fit::function<void(fidl::StringPtr story_id)> callback) {
     on_story_deleted_ = std::move(callback);
   }
 
@@ -52,7 +52,7 @@ class SessionStorage : public PageClient {
   // The update could be the result of a local modification (ie, through
   // Update*()) or a modification on another device.
   void set_on_story_updated(
-      std::function<void(fidl::StringPtr story_id,
+      fit::function<void(fidl::StringPtr story_id,
                          fuchsia::modular::internal::StoryData story_data)>
           callback) {
     on_story_updated_ = std::move(callback);
@@ -143,8 +143,8 @@ class SessionStorage : public PageClient {
   LedgerClient* const ledger_client_;
   OperationQueue operation_queue_;
 
-  std::function<void(fidl::StringPtr story_id)> on_story_deleted_;
-  std::function<void(fidl::StringPtr story_id,
+  fit::function<void(fidl::StringPtr story_id)> on_story_deleted_;
+  fit::function<void(fidl::StringPtr story_id,
                      fuchsia::modular::internal::StoryData story_data)>
       on_story_updated_;
 

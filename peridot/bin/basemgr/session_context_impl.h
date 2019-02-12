@@ -37,10 +37,10 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   // (and deletion of our instance) to our owner, we do it using a callback
   // supplied to us in our constructor. (The alternative is to take in a
   // SessionProvider*, which seems a little specific and overscoped).
-  using OnSessionShutdownCallback = std::function<void(bool logout_users)>;
+  using OnSessionShutdownCallback = fit::function<void(bool logout_users)>;
 
   // Called when sessionmgr requests to acquire the presentation.
-  using GetPresentationCallback = std::function<void(
+  using GetPresentationCallback = fit::function<void(
       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request)>;
 
   SessionContextImpl(

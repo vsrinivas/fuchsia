@@ -11,7 +11,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/functional/make_copyable.h>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_context_impl.h"
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage_impl.h"
@@ -50,7 +49,7 @@ void AgentRunner::Connect(
   agent_provider_bindings_.AddBinding(this, std::move(request));
 }
 
-void AgentRunner::Teardown(const std::function<void()>& callback) {
+void AgentRunner::Teardown(fit::function<void()> callback) {
   // No new agents will be scheduled to run.
   *terminating_ = true;
 
@@ -65,55 +64,61 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
 
   // This is called when agents are done being removed
   auto called = std::make_shared<bool>(false);
-  auto termination_callback = [this, called,
-                               callback](const bool from_timeout) {
-    if (*called) {
-      return;
-    }
+  fit::function<void(const bool)> termination_callback =
+      [this, called,
+       callback = std::move(callback)](const bool from_timeout) mutable {
+        if (*called) {
+          return;
+        }
 
-    *called = true;
+        *called = true;
 
-    if (from_timeout) {
-      FXL_LOG(ERROR) << "AgentRunner::Teardown() timed out";
-    }
+        if (from_timeout) {
+          FXL_LOG(ERROR) << "AgentRunner::Teardown() timed out";
+        }
 
-    callback();
-  };
+        callback();
+        callback = nullptr;  // make sure we release any captured resources
+      };
 
+  // Pass a shared copy of "termination_callback" fit::function so
+  // we can give it to multiple running_agents. Only the last remaining
+  // running_agent will call it.
   for (auto& it : running_agents_) {
     // The running agent will call |AgentRunner::RemoveAgent()| to remove itself
     // from the agent runner. When all agents are done being removed,
     // |termination_callback| will be executed.
-    it.second->StopForTeardown([this, termination_callback]() {
-      if (running_agents_.empty()) {
-        termination_callback(/* from_timeout= */ false);
-      }
-    });
+    it.second->StopForTeardown(
+        [this, termination_callback = termination_callback.share()]() mutable {
+          if (running_agents_.empty()) {
+            termination_callback(/* from_timeout= */ false);
+          }
+        });
   }
 
   async::PostDelayedTask(
       async_get_default_dispatcher(),
-      [termination_callback] {
+      [termination_callback = std::move(termination_callback)]() mutable {
         termination_callback(/* from_timeout= */ true);
       },
       kTeardownTimeout);
 }
 
 void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url,
-                                       const std::function<void()>& done) {
+                                       fit::function<void()> done) {
   auto agent_it = running_agents_.find(agent_url);
   if (agent_it != running_agents_.end()) {
     if (agent_it->second->state() == AgentContextImpl::State::TERMINATING) {
-      run_agent_callbacks_[agent_url].push_back(done);
-      return;
+      run_agent_callbacks_[agent_url].push_back(std::move(done));
+    } else {
+      // fuchsia::modular::Agent is already running, so we can issue the
+      // callback immediately.
+      done();
     }
-    // fuchsia::modular::Agent is already running, so we can issue the callback
-    // immediately.
-    done();
     return;
   }
 
-  run_agent_callbacks_[agent_url].push_back(done);
+  run_agent_callbacks_[agent_url].push_back(std::move(done));
 
   RunAgent(agent_url);
 }

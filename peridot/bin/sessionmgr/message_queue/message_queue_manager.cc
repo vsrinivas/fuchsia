@@ -144,8 +144,8 @@ class MessageQueueStorage : fuchsia::modular::MessageSender {
         std::make_unique<MessageQueueConnection>(this), std::move(request));
   }
 
-  void RegisterWatcher(const std::function<void()>& watcher) {
-    watcher_ = watcher;
+  void RegisterWatcher(fit::function<void()> watcher) {
+    watcher_ = std::move(watcher);
     if (watcher_ && !queue_data_.IsEmpty()) {
       watcher_();
     }
@@ -185,7 +185,7 @@ class MessageQueueStorage : fuchsia::modular::MessageSender {
   const std::string queue_name_;
   const std::string queue_token_;
 
-  std::function<void()> watcher_;
+  fit::function<void()> watcher_;
 
   PersistentQueue queue_data_;
 
@@ -615,7 +615,7 @@ class MessageQueueManager::DeleteNamespaceCall : public PageOperation<> {
   DeleteNamespaceCall(MessageQueueManager* const message_queue_manager,
                       fuchsia::ledger::Page* const page,
                       const std::string& component_namespace,
-                      std::function<void()> done)
+                      fit::function<void()> done)
       : PageOperation("MessageQueueManager::DeleteNamespaceCall", page,
                       std::move(done), component_namespace),
         message_queue_manager_(message_queue_manager),
@@ -710,20 +710,46 @@ void MessageQueueManager::ObtainMessageQueue(
 }
 
 template <typename ValueType>
-const ValueType* MessageQueueManager::FindQueueName(
-    const ComponentQueueNameMap<ValueType>& queue_map,
-    const MessageQueueInfo& info) {
+typename std::map<std::string, ValueType>*
+MessageQueueManager::FindComponentQueues(
+    ComponentQueueNameMap<ValueType>& queue_map, const MessageQueueInfo& info) {
   auto it1 = queue_map.find(info.component_namespace);
   if (it1 != queue_map.end()) {
     auto it2 = it1->second.find(info.component_instance_id);
     if (it2 != it1->second.end()) {
-      auto it3 = it2->second.find(info.queue_name);
-      if (it3 != it2->second.end()) {
-        return &(it3->second);
-      }
+      return &(it2->second);
     }
   }
 
+  return nullptr;
+}
+
+template <typename ValueType>
+const ValueType* MessageQueueManager::FindQueueName(
+    ComponentQueueNameMap<ValueType>& queue_map, const MessageQueueInfo& info) {
+  auto map = FindComponentQueues(queue_map, info);
+  if (map) {
+    auto it3 = map->find(info.queue_name);
+    if (it3 != map->end()) {
+      return &(it3->second);
+    }
+  }
+  return nullptr;
+}
+
+template <typename Callable>
+fit::function<Callable> MessageQueueManager::ReMoveByQueueName(
+    ComponentQueueNameMap<fit::function<Callable>>& queue_map,
+    const MessageQueueInfo& info) {
+  auto map = FindComponentQueues(queue_map, info);
+  if (map) {
+    auto it3 = map->find(info.queue_name);
+    if (it3 != map->end()) {
+      auto found = std::move(it3->second);
+      map->erase(info.queue_name);
+      return found;
+    }
+  }
   return nullptr;
 }
 
@@ -770,11 +796,11 @@ MessageQueueStorage* MessageQueueManager::GetMessageQueueStorage(
     message_queue_tokens_[info.component_namespace][info.component_instance_id]
                          [info.queue_name] = info.queue_token;
 
-    const std::function<void()>* const watcher =
-        FindQueueName(pending_watcher_callbacks_, info);
+    fit::function<void()> watcher =
+        ReMoveByQueueName(pending_watcher_callbacks_, info);
     if (watcher) {
-      it->second->RegisterWatcher(*watcher);
       EraseQueueName(pending_watcher_callbacks_, info);
+      it->second->RegisterWatcher(std::move(watcher));
     }
   }
   return it->second.get();
@@ -806,7 +832,7 @@ void MessageQueueManager::ClearMessageQueueStorage(
 
 void MessageQueueManager::ClearMessageQueueStorage(
     const std::string& component_namespace) {
-  auto namespace_to_delete = deletion_watchers_[component_namespace];
+  const auto& namespace_to_delete = deletion_watchers_[component_namespace];
   for (const auto& instances_in_namespace : namespace_to_delete) {
     for (const auto& queue_names : instances_in_namespace.second) {
       for (const auto& watcher_namespace : queue_names.second) {
@@ -830,7 +856,7 @@ void MessageQueueManager::DeleteMessageQueue(
 }
 
 void MessageQueueManager::DeleteNamespace(
-    const std::string& component_namespace, std::function<void()> done) {
+    const std::string& component_namespace, fit::function<void()> done) {
   operation_collection_.Add(new DeleteNamespaceCall(
       this, page(), component_namespace, std::move(done)));
 }
@@ -852,26 +878,26 @@ void MessageQueueManager::GetMessageSender(
 void MessageQueueManager::RegisterMessageWatcher(
     const std::string& component_namespace,
     const std::string& component_instance_id, const std::string& queue_name,
-    const std::function<void()>& watcher) {
+    fit::function<void()> watcher) {
   const std::string* const token =
       FindQueueName(message_queue_tokens_,
                     MessageQueueInfo{component_namespace, component_instance_id,
                                      queue_name, ""});
   if (!token) {
     pending_watcher_callbacks_[component_namespace][component_instance_id]
-                              [queue_name] = watcher;
+        .emplace(queue_name, std::move(watcher));
     return;
   }
 
   auto msq_it = message_queues_.find(*token);
   FXL_DCHECK(msq_it != message_queues_.end());
-  msq_it->second->RegisterWatcher(watcher);
+  msq_it->second->RegisterWatcher(std::move(watcher));
 }
 
 void MessageQueueManager::RegisterDeletionWatcher(
     const std::string& component_namespace,
     const std::string& component_instance_id, const std::string& queue_token,
-    const std::function<void()>& watcher) {
+    fit::function<void()> watcher) {
   auto it = message_queue_infos_.find(queue_token);
   if (it == message_queue_infos_.end()) {
     return;
@@ -881,7 +907,8 @@ void MessageQueueManager::RegisterDeletionWatcher(
 
   deletion_watchers_[queue_info.component_namespace]
                     [queue_info.component_instance_id][queue_info.queue_name]
-                    [component_namespace][component_instance_id] = watcher;
+                    [component_namespace]
+                        .emplace(component_instance_id, std::move(watcher));
 }
 
 void MessageQueueManager::DropMessageWatcher(

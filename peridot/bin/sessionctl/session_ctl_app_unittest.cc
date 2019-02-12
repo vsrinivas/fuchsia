@@ -43,7 +43,7 @@ class SessionCtlAppTest : public testing::TestWithSessionStorage {
   }
 
   std::string RunLoopUntilCommandExecutes(
-      std::function<std::string()> command) {
+      fit::function<std::string()> command) {
     done_ = false;
     std::string error = command();
 

@@ -51,7 +51,7 @@ class ModuleControllerImpl : fuchsia::modular::ModuleController {
   //
   // Multiple calls to Teardown() are allowed, and all |done| callbacks are run
   // in order when teardown is complete.
-  void Teardown(std::function<void()> done);
+  void Teardown(fit::function<void()> done);
 
   component::Services& services() { return app_client_.services(); }
 
@@ -89,7 +89,7 @@ class ModuleControllerImpl : fuchsia::modular::ModuleController {
 
   // Callbacks passed to Teardown() calls. If there is one Stop() request
   // pending, a second one is only queued, no second call to Stop() is made.
-  std::vector<std::function<void()>> teardown_done_callbacks_;
+  std::vector<fit::function<void()>> teardown_done_callbacks_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleControllerImpl);
 };

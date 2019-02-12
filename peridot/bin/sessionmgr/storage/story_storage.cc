@@ -7,7 +7,6 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/strings/string_view.h>
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
@@ -49,19 +48,18 @@ StoryStorage::StoryStorage(LedgerClient* ledger_client,
 
 FuturePtr<> StoryStorage::WriteModuleData(ModuleData module_data) {
   auto module_path = fidl::Clone(module_data.module_path);
-  return UpdateModuleData(
-      module_path, fxl::MakeCopyable([module_data = std::move(module_data)](
-                                         ModuleDataPtr* module_data_ptr) {
-        *module_data_ptr = ModuleData::New();
-        module_data.Clone(module_data_ptr->get());
-      }));
+  return UpdateModuleData(module_path, [module_data = std::move(module_data)](
+                                           ModuleDataPtr* module_data_ptr) {
+    *module_data_ptr = ModuleData::New();
+    module_data.Clone(module_data_ptr->get());
+  });
 }
 
 namespace {
 
 struct UpdateModuleDataState {
   std::vector<std::string> module_path;
-  std::function<void(ModuleDataPtr*)> mutate_fn;
+  fit::function<void(ModuleDataPtr*)> mutate_fn;
   OperationQueue sub_operations;
 };
 
@@ -69,7 +67,7 @@ struct UpdateModuleDataState {
 
 FuturePtr<> StoryStorage::UpdateModuleData(
     const std::vector<std::string>& module_path,
-    std::function<void(ModuleDataPtr*)> mutate_fn) {
+    fit::function<void(ModuleDataPtr*)> mutate_fn) {
   auto op_state = std::make_shared<UpdateModuleDataState>();
   op_state->module_path = module_path;
   op_state->mutate_fn = std::move(mutate_fn);
@@ -438,10 +436,13 @@ class SetEntityDataCall : public PageOperation<StoryStorage::Status> {
       : PageOperation(
             "StoryStorage::SetEntityDataCall", page_client->page(),
             [result_call = std::move(result_call),
-             page = page_client->page()](StoryStorage::Status status) {
-              // The result callback is wrapped in order to commit/rollback the
-              // transaction. It's important to note that the operation instance
-              // will be deleted by the time this callback is executed.
+             page = page_client->page()](StoryStorage::Status status) mutable {
+              // The result_call may be std::moved again, and cannot be
+              // const to do so, so we declare the lambda mutable.
+              // The result callback is wrapped in order to commit/rollback
+              // the transaction. It's important to note that the operation
+              // instance will be deleted by the time this callback is
+              // executed.
               if (status == StoryStorage::Status::OK) {
                 page->Commit([result_call = std::move(result_call)](
                                  fuchsia::ledger::Status status) {
@@ -452,9 +453,12 @@ class SetEntityDataCall : public PageOperation<StoryStorage::Status> {
                   }
                 });
               } else {
-                page->Rollback([result_call = std::move(result_call)](
-                                   fuchsia::ledger::Status status) {});
-                result_call(status);
+                page->Rollback(
+                    [result_call = std::move(result_call),
+                     story_status = status](fuchsia::ledger::Status status) {
+                      // Note, ledger status from rollback is ignored
+                      result_call(story_status);
+                    });
               }
             }),
         page_client_(page_client),
@@ -553,8 +557,8 @@ class UpdateLinkCall
  public:
   UpdateLinkCall(
       PageClient* page_client, std::string key,
-      std::function<void(fidl::StringPtr*)> mutate_fn,
-      std::function<FuturePtr<>(const std::string&, const std::string&)>
+      fit::function<void(fidl::StringPtr*)> mutate_fn,
+      fit::function<FuturePtr<>(const std::string&, const std::string&)>
           wait_for_write_fn,
       ResultCall done)
       : Operation("StoryStorage::UpdateLinkCall", std::move(done)),
@@ -615,8 +619,8 @@ class UpdateLinkCall
   // Input parameters.
   PageClient* const page_client_;
   const std::string key_;
-  std::function<void(fidl::StringPtr*)> mutate_fn_;
-  std::function<FuturePtr<>(const std::string&, const std::string&)>
+  fit::function<void(fidl::StringPtr*)> mutate_fn_;
+  fit::function<FuturePtr<>(const std::string&, const std::string&)>
       wait_for_write_fn_;
 
   // Operation runtime state.
@@ -633,7 +637,7 @@ class UpdateLinkCall
 }  // namespace
 
 FuturePtr<StoryStorage::Status> StoryStorage::UpdateLinkValue(
-    const LinkPath& link_path, std::function<void(fidl::StringPtr*)> mutate_fn,
+    const LinkPath& link_path, fit::function<void(fidl::StringPtr*)> mutate_fn,
     const void* context) {
   // nullptr is reserved for updates that came from other instances of
   // StoryStorage.
@@ -706,17 +710,16 @@ void StoryStorage::WatchEntity(
     fuchsia::modular::EntityWatcherPtr entity_watcher) {
   operation_queue_.Add(new GetEntityDataCall(
       this, cookie, type,
-      fxl::MakeCopyable(
-          [this, cookie, entity_watcher = std::move(entity_watcher)](
-              StoryStorage::Status status,
-              std::unique_ptr<fuchsia::mem::Buffer> value) mutable {
-            // Send the current value as the initial update.
-            entity_watcher->OnUpdated(std::move(value));
+      [this, cookie, entity_watcher = std::move(entity_watcher)](
+          StoryStorage::Status status,
+          std::unique_ptr<fuchsia::mem::Buffer> value) mutable {
+        // Send the current value as the initial update.
+        entity_watcher->OnUpdated(std::move(value));
 
-            auto existing_watchers_it = entity_watchers_.try_emplace(cookie);
-            existing_watchers_it.first->second.AddInterfacePtr(
-                std::move(entity_watcher));
-          })));
+        auto existing_watchers_it = entity_watchers_.try_emplace(cookie);
+        existing_watchers_it.first->second.AddInterfacePtr(
+            std::move(entity_watcher));
+      }));
 }
 
 FuturePtr<StoryStorage::Status> StoryStorage::SetEntityName(
@@ -758,12 +761,12 @@ StoryStorage::GetEntityCookieForName(const std::string& entity_name) {
 
 FuturePtr<> StoryStorage::Sync() {
   auto ret = Future<>::Create("StoryStorage::Sync.ret");
-  operation_queue_.Add(NewCallbackOperation("StoryStorage::Sync",
-                                            [](OperationBase* op) {
-                                              return Future<>::CreateCompleted(
-                                                  "StoryStorage::Sync");
-                                            },
-                                            ret->Completer()));
+  operation_queue_.Add(NewCallbackOperation(
+      "StoryStorage::Sync",
+      [](OperationBase* op) {
+        return Future<>::CreateCompleted("StoryStorage::Sync");
+      },
+      ret->Completer()));
   return ret;
 }
 

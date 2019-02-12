@@ -33,7 +33,7 @@ class SessionShellImpl : fuchsia::modular::SessionShell {
 
   // Whenever SessionShell.AttachView() is called, the supplied callback is
   // invoked with the view ID. The ImportToken is dropped.
-  void set_on_attach_view(std::function<void(ViewId view_id)> callback) {
+  void set_on_attach_view(fit::function<void(ViewId view_id)> callback) {
     on_attach_view_ = std::move(callback);
   }
 
@@ -41,7 +41,7 @@ class SessionShellImpl : fuchsia::modular::SessionShell {
   // invoked with the view ID. The return callback of DetachView() is invoked
   // asynchronously after a delay that can be configured by the client with
   // set_detach_delay().
-  void set_on_detach_view(std::function<void(ViewId view_id)> callback) {
+  void set_on_detach_view(fit::function<void(ViewId view_id)> callback) {
     on_detach_view_ = std::move(callback);
   }
 
@@ -59,11 +59,11 @@ class SessionShellImpl : fuchsia::modular::SessionShell {
 
   // |SessionShell|
   void DetachView(fuchsia::modular::ViewIdentifier view_id,
-                  std::function<void()> done) override;
+                  fit::function<void()> done) override;
 
   fidl::BindingSet<fuchsia::modular::SessionShell> bindings_;
-  std::function<void(ViewId view_id)> on_attach_view_{[](ViewId) {}};
-  std::function<void(ViewId view_id)> on_detach_view_{[](ViewId) {}};
+  fit::function<void(ViewId view_id)> on_attach_view_{[](ViewId) {}};
+  fit::function<void(ViewId view_id)> on_detach_view_{[](ViewId) {}};
   zx::duration detach_delay_{};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionShellImpl);

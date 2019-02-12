@@ -3,7 +3,7 @@
 ## Description
 This coroutine library can help you write highly asynchronous code, and avoid
 "callback hell". It does so by allowing a function (or method) to be paused and
-resumed by swapping [execution contexts](context/context.h). It makes the code  
+resumed by swapping [execution contexts](context/context.h). It makes the code
 *look* synchronous, while remaining asynchronous under the hood, with all the
 usual concurrency pitfalls, such as race conditions and deadlocks.
 
@@ -57,7 +57,7 @@ asynchronous call, so that you don't have to use `CoroutineHandler` methods
 directly.
 
 If you have an asynchronous function with the signature
-`AsynchronousCall(Argument, std::function<void(Status, Result)>)`, then you can
+`AsynchronousCall(Argument, fit::function<void(Status, Result)>)`, then you can
 wrap it such as:
 ``` cpp
 Argument argument(...)

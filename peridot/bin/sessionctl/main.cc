@@ -17,14 +17,13 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/future.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/fxl/command_line.h>
-#include "src/lib/files/file.h"
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/fxl/strings/string_printf.h>
-#include "lib/fxl/functional/make_copyable.h"
+#include "src/lib/files/file.h"
 
 #include "peridot/bin/sessionctl/logger.h"
 #include "peridot/bin/sessionctl/session_ctl_app.h"

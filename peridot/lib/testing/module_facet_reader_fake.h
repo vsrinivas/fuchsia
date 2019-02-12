@@ -21,14 +21,14 @@ class ModuleFacetReaderFake : public ModuleFacetReader {
   // Call this method to supply a sink for
   // ModuleFacetReader.GetModuleManifest().
   void SetGetModuleManifestSink(
-      std::function<void(const std::string&, GetModuleManifestCallback)> sink);
+      fit::function<void(const std::string&, GetModuleManifestCallback)> sink);
 
  private:
   // |modular::ModuleFacetReader|
   void GetModuleManifest(const std::string& module_url,
                          GetModuleManifestCallback) override;
 
-  std::function<void(const std::string&, GetModuleManifestCallback)> sink_;
+  fit::function<void(const std::string&, GetModuleManifestCallback)> sink_;
 };
 
 }  // namespace modular

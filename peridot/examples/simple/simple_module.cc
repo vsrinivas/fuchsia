@@ -10,7 +10,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/message_queue/cpp/message_queue_client.h>
 
 using ::fuchsia::modular::examples::simple::SimplePtr;
@@ -50,10 +49,10 @@ class SimpleModule : public fuchsia::ui::app::ViewProvider {
         });
 
     // Get the token for the message queue and send it to the agent.
-    message_queue_.GetToken(fxl::MakeCopyable(
+    message_queue_.GetToken(
         [agent_service = std::move(agent_service)](fidl::StringPtr token) {
           agent_service->SetMessageQueue(token);
-        }));
+        });
     FXL_LOG(INFO) << "Initialized Simple Module.";
   }
 
@@ -65,7 +64,7 @@ class SimpleModule : public fuchsia::ui::app::ViewProvider {
   }
 
   // Called by ModuleDriver.
-  void Terminate(const std::function<void()>& done) { done(); }
+  void Terminate(fit::function<void()> done) { done(); }
 
  private:
   // |fuchsia::ui::app::ViewProvider|

@@ -148,11 +148,11 @@ The other two are:
 
 ```c++
 void RunTask(const fidl::StringPtr& task_id,
-             const std::function<void()>& done) {
+             fit::function<void()> done) {
   done();
 }
 
-void Terminate(const std::function<void()>& done) { done(); }
+void Terminate(fit::function<void()> done) { done(); }
 ```
 
 `RunTask` is called when a task, scheduled through `fuchsia::modular::AgentContext`'s

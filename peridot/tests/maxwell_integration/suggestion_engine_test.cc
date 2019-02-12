@@ -102,7 +102,7 @@ class AskProposinator : public Proposinator,
   void OnQuery(fuchsia::modular::UserInput query,
                OnQueryCallback callback) override {
     query_ = fidl::MakeOptional(query);
-    query_callback_ = callback;
+    query_callback_ = std::move(callback);
     query_proposals_.resize(0);
 
     if (waiting_for_query_) {

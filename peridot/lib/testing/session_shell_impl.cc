@@ -27,7 +27,7 @@ void SessionShellImpl::AttachView(
 
 // |SessionShell|
 void SessionShellImpl::DetachView(fuchsia::modular::ViewIdentifier view_id,
-                                  std::function<void()> done) {
+                                  fit::function<void()> done) {
   on_detach_view_(std::move(view_id));
 
   // Used to simulate a sluggish shell that hits the timeout.

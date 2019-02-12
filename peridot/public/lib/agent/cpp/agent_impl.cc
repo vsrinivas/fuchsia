@@ -37,7 +37,7 @@ void AgentImpl::Connect(
 
 // |fuchsia::modular::Agent|
 void AgentImpl::RunTask(std::string task_id, RunTaskCallback callback) {
-  delegate_->RunTask(task_id, callback);
+  delegate_->RunTask(task_id, std::move(callback));
 }
 
 }  // namespace modular

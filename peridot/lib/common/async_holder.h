@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 
+#include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 #include <lib/zx/time.h>
 
@@ -28,13 +29,13 @@ class AsyncHolderBase {
   // long, and it's incongruent to have the timeout dangling after it, (2) the
   // timeout happens first, the done callback after that, so this ordering is
   // actually quite natural.
-  void Teardown(zx::duration timeout, std::function<void()> done);
+  void Teardown(zx::duration timeout, fit::function<void()> done);
 
  private:
   // Called by Teardown(). A timeout callback is scheduled simultaneously.
   // Eventually ImplReset() is called, either when done() is invoked, or when
   // the timeout elapses.
-  virtual void ImplTeardown(std::function<void()> done) = 0;
+  virtual void ImplTeardown(fit::function<void()> done) = 0;
 
   // Called after either the done callback of ImplTeardown() is invoked, or the
   // timeout elapses. The timeout is the reason ImplReset() is separate from
@@ -72,38 +73,37 @@ class AsyncHolder : public AsyncHolderBase {
   Impl* get() { return impl_.get(); }
 
  private:
-  void ImplTeardown(std::function<void()> done) override {
+  void ImplTeardown(fit::function<void()> done) override {
     FXL_DCHECK(impl_.get());
-    impl_->Teardown(done);
+    impl_->Teardown(std::move(done));
   }
 
   void ImplReset() override { impl_.reset(); }
 
   std::unique_ptr<Impl> impl_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(AsyncHolder);
 };
 
 // ClosureAsyncHolder is a lightweight AsyncHolder that lets the client provide
 // the teardown and reset implementation as callbacks.
-//
-// TODO(MF-251): Replace std::function with fit::function
 class ClosureAsyncHolder : public AsyncHolderBase {
  public:
-  using DoneCallback = std::function<void()>;
+  using DoneCallback = fit::function<void()>;
 
   ClosureAsyncHolder(std::string name,
-                     std::function<void(DoneCallback)> on_teardown);
+                     fit::function<void(DoneCallback)> on_teardown);
   ClosureAsyncHolder(std::string name,
-                     std::function<void(DoneCallback)> on_teardown,
-                     std::function<void()> on_reset);
+                     fit::function<void(DoneCallback)> on_teardown,
+                     fit::function<void()> on_reset);
   ~ClosureAsyncHolder() override;
 
  private:
-  std::function<void(DoneCallback)> on_teardown_;
-  std::function<void()> on_reset_;
+  fit::function<void(DoneCallback)> on_teardown_;
+  fit::function<void()> on_reset_;
 
   // Implementation of |AsyncHolderBase|
-  void ImplTeardown(std::function<void()> done) override;
+  void ImplTeardown(fit::function<void()> done) override;
   void ImplReset() override;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ClosureAsyncHolder);

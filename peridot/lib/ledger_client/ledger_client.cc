@@ -7,7 +7,6 @@
 #include <algorithm>
 
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/functional/make_copyable.h>
 
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
@@ -244,7 +243,7 @@ LedgerClient::LedgerClient(fuchsia::ledger::LedgerPtr ledger)
 
 LedgerClient::LedgerClient(
     fuchsia::ledger::internal::LedgerRepository* const ledger_repository,
-    const std::string& name, std::function<void()> error) {
+    const std::string& name, fit::function<void()> error) {
   ledger_.set_error_handler([](zx_status_t status) {
     if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
       FXL_LOG(ERROR) << "Ledger error: " << LedgerEpitaphToString(status);
@@ -258,7 +257,8 @@ LedgerClient::LedgerClient(
   // This must be the first call after GetLedger, otherwise the Ledger
   // starts with one reconciliation strategy, then switches to another.
   ledger_->SetConflictResolverFactory(
-      bindings_.AddBinding(this), [error](fuchsia::ledger::Status status) {
+      bindings_.AddBinding(this),
+      [error = std::move(error)](fuchsia::ledger::Status status) {
         if (status != fuchsia::ledger::Status::OK) {
           FXL_LOG(ERROR) << "Ledger.SetConflictResolverFactory() failed: "
                          << LedgerStatusToString(status);

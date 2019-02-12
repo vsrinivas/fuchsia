@@ -13,6 +13,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 
 #include "garnet/public/lib/fxl/functional/apply.h"
 #include "garnet/public/lib/fxl/macros.h"
@@ -162,7 +163,7 @@ namespace modular {
 // ## Use Completer() to integrate with functions requiring callbacks
 //
 // Use the Completer() method to integrate with existing code that uses callback
-// functions. Completer() returns an std::function<void(Result)> that, when
+// functions. Completer() returns a fit::function<void(Result)> that, when
 // called, calls Complete() on the future. Re-visiting the first example:
 //
 // Without Completer():
@@ -388,7 +389,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     CompleteWithTuple(std::forward_as_tuple(std::forward<Result>(result)...));
   }
 
-  // Returns a std::function<void(Result)> that, when called, calls Complete()
+  // Returns a fit::function<void(Result)> that, when called, calls Complete()
   // on this future. For example:
   //
   // FuturePtr<Bytes> MakeNetworkRequest(NetworkRequest& request) {
@@ -409,7 +410,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   //     // f will now go out of scope, but f->Completer() owns it, so it's
   //     // still kept alive.
   //   }
-  std::function<void(Result...)> Completer() {
+  fit::function<void(Result...)> Completer() {
     return [shared_this = FuturePtr<Result...>(this)](Result&&... result) {
       shared_this->Complete(std::forward<Result>(result)...);
     };
@@ -437,7 +438,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   //
   // The type of this function looks complex, but is basically:
   //
-  //   FuturePtr<> Then(std::function<void(Result...)> callback);
+  //   FuturePtr<> Then(fit::function<void(Result...)> callback);
   template <typename Callback,
             typename = typename std::enable_if_t<
                 internal::is_void_v<std::result_of_t<Callback(Result...)>>>>
@@ -467,7 +468,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // * |const_callback| must take in the completed result via a const&,
   // * multiple callbacks can be attached,
   // * |const_callback| is called _before_ the Then() callback.
-  FuturePtr<> ConstThen(std::function<void(const Result&...)> const_callback) {
+  FuturePtr<> ConstThen(fit::function<void(const Result&...)> const_callback) {
     FuturePtr<> subfuture = Future<>::Create(trace_name_ + "(ConstThen)");
     AddConstCallback(SubfutureCallback<const Result&...>(
         subfuture,
@@ -480,7 +481,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   template <typename T>
   FuturePtr<> WeakConstThen(
       fxl::WeakPtr<T> weak_ptr,
-      std::function<void(const Result&...)> const_callback) {
+      fit::function<void(const Result&...)> const_callback) {
     FuturePtr<> subfuture = Future<>::Create(trace_name_ + "(WeakConstThen)");
     AddConstCallback(SubfutureCallback<const Result&...>(
         subfuture,
@@ -511,7 +512,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // The type of this method looks terrifying, but is basically:
   //
   //   FuturePtr<CallbackResult>
-  //     AsyncMap(std::function<FuturePtr<CallbackResult>(Result...)> callback);
+  //     AsyncMap(fit::function<FuturePtr<CallbackResult>(Result...)> callback);
   template <typename Callback,
             typename AsyncMapResult = std::result_of_t<Callback(Result...)>,
             typename MapResult =
@@ -597,20 +598,20 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
 
   Future() : result_{}, weak_factory_(this) {}
 
-  void SetCallback(std::function<void(Result...)>&& callback) {
-    callback_ = callback;
+  void SetCallback(fit::function<void(Result...)> callback) {
+    callback_ = std::move(callback);
 
     MaybeInvokeCallbacks();
   }
 
   void SetCallbackWithTuple(
-      std::function<void(std::tuple<Result...>)>&& callback) {
-    SetCallback([callback](Result&&... result) {
+      fit::function<void(std::tuple<Result...>)> callback) {
+    SetCallback([callback = std::move(callback)](Result&&... result) {
       callback(std::forward_as_tuple(std::forward<Result>(result)...));
     });
   }
 
-  void AddConstCallback(std::function<void(const Result&...)>&& callback) {
+  void AddConstCallback(fit::function<void(const Result&...)> callback) {
     if (!callback) {
       return;
     }
@@ -626,7 +627,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
              "already moved into Then() callback.";
     }
 
-    const_callbacks_.emplace_back(callback);
+    const_callbacks_.emplace_back(std::move(callback));
 
     MaybeInvokeCallbacks();
   }
@@ -695,8 +696,8 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   auto SubfutureCallback(Subfuture subfuture, Callback&& callback,
                          SubfutureCompleter&& subfuture_completer,
                          Guard&& guard) {
-    return [this, subfuture, callback, subfuture_completer,
-            guard](CoercedResult&&... result) {
+    return [this, subfuture, callback = std::move(callback),
+            subfuture_completer, guard](CoercedResult&&... result) mutable {
       if (!guard())
         return;
 
@@ -718,7 +719,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // |std::tuple<T...>|).
   template <typename... CoercedResult, typename Callback>
   auto SubfutureVoidCallback(Callback&& callback) {
-    return [callback](CoercedResult&&... result) {
+    return [callback = std::move(callback)](CoercedResult&&... result) mutable {
       callback(std::forward<CoercedResult>(result)...);
       return std::make_tuple();
     };
@@ -780,14 +781,12 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   internal::FutureStatus status_ = internal::FutureStatus::kAwaiting;
   std::tuple<Result...> result_;
 
-  // TODO(MI4-1102): Convert std::function to fit::function here & everywhere.
-
   // The callback attached to this future.
-  std::function<void(Result...)> callback_;
+  fit::function<void(Result...)> callback_;
 
   // Callbacks that have attached with the Const*() methods, such as
   // ConstThen().
-  std::vector<std::function<void(const Result&...)>> const_callbacks_;
+  std::vector<fit::function<void(const Result&...)>> const_callbacks_;
 
   // Keep this last in the list of members. (See WeakPtrFactory documentation
   // for more info.)

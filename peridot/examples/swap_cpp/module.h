@@ -37,7 +37,7 @@ class ModuleView : public scenic::BaseView {
 class ModuleApp : public modular::ViewApp {
  public:
   using CreateViewCallback =
-      std::function<scenic::BaseView*(scenic::ViewContext view_context)>;
+      fit::function<scenic::BaseView*(scenic::ViewContext view_context)>;
 
   explicit ModuleApp(component::StartupContext* const startup_context,
                      CreateViewCallback create);

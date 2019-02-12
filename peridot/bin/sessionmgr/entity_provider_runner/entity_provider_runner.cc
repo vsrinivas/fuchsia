@@ -104,15 +104,16 @@ class EntityProviderRunner::EntityReferenceFactoryImpl
     bindings_.AddBinding(this, std::move(request));
   }
 
-  void set_empty_set_handler(const std::function<void()>& handler) {
-    bindings_.set_empty_set_handler(handler);
+  void set_empty_set_handler(fit::function<void()> handler) {
+    bindings_.set_empty_set_handler(std::move(handler));
   }
 
  private:
   // |fuchsia::modular::EntityReferenceFactory|
   void CreateReference(std::string cookie,
                        CreateReferenceCallback callback) override {
-    entity_provider_runner_->CreateReference(agent_url_, cookie, callback);
+    entity_provider_runner_->CreateReference(agent_url_, cookie,
+                                             std::move(callback));
   }
 
   // The agent url if the entity reference factory produces references to

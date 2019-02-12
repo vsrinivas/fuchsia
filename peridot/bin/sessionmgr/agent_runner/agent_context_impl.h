@@ -49,7 +49,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // Stops the running agent, irrespective of whether there are active
   // AgentControllers or outstanding tasks. Calls into
   // |AgentRunner::RemoveAgent()| to remove itself.
-  void StopForTeardown(const std::function<void()>& callback);
+  void StopForTeardown(fit::function<void()> callback);
 
   // Called by AgentRunner when a component wants to connect to this agent.
   // Connections will pend until fuchsia::modular::Agent::Initialize() responds

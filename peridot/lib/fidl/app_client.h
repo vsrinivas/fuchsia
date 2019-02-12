@@ -53,19 +53,20 @@ class AppClientBase : public AsyncHolderBase {
   // connection encounters an error. This typically happens when this
   // application stops or crashes. |error_handler| will be deregistered when
   // attempting graceful termination via |AsyncHolderBase::Teardown()|.
-  void SetAppErrorHandler(const std::function<void()>& error_handler);
+  void SetAppErrorHandler(fit::function<void()> error_handler);
 
  private:
   // The termination sequence as prescribed by AsyncHolderBase.
-  void ImplTeardown(std::function<void()> done) override;
+  void ImplTeardown(fit::function<void()> done) override;
   void ImplReset() override;
 
   // Service specific parts of the termination sequence.
-  virtual void ServiceTerminate(const std::function<void()>& done);
+  virtual void ServiceTerminate(fit::function<void()> done);
   virtual void ServiceUnbind();
 
   fuchsia::sys::ComponentControllerPtr app_;
   component::Services services_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(AppClientBase);
 };
 
@@ -87,22 +88,24 @@ class AppClient : public AppClientBase {
   fidl::InterfacePtr<Service>& primary_service() { return service_; }
 
  private:
-  void ServiceTerminate(const std::function<void()>& done) override {
+  void ServiceTerminate(fit::function<void()> done) override {
     // The service is expected to acknowledge the Terminate() request by
     // closing its connection within the timeout set in Teardown().
-    service_.set_error_handler([done](zx_status_t status) { done(); });
+    service_.set_error_handler(
+        [done = std::move(done)](zx_status_t status) { done(); });
     service_->Terminate();
   }
 
   void ServiceUnbind() override { service_.Unbind(); }
 
   fidl::InterfacePtr<Service> service_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(AppClient);
 };
 
 template <>
 void AppClient<fuchsia::modular::Lifecycle>::ServiceTerminate(
-    const std::function<void()>& done);
+    fit::function<void()> done);
 
 }  // namespace modular
 

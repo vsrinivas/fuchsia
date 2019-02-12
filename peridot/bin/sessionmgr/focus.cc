@@ -69,7 +69,8 @@ void FocusHandler::AddControllerBinding(
 void FocusHandler::Query(QueryCallback callback) {
   operation_queue_.Add(new ReadAllDataCall<fuchsia::modular::FocusInfo>(
       page(), kFocusKeyPrefix, XdrFocusInfo,
-      [callback](std::vector<fuchsia::modular::FocusInfo> infos) {
+      [callback = std::move(callback)](
+          std::vector<fuchsia::modular::FocusInfo> infos) {
         callback(std::move(infos));
       }));
 }

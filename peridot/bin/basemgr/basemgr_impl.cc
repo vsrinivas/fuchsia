@@ -18,6 +18,7 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
+#include <lib/fit/function.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -59,7 +60,7 @@ BasemgrImpl::BasemgrImpl(
     fuchsia::sys::Launcher* const launcher,
     fuchsia::ui::policy::PresenterPtr presenter,
     fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
-    fuchsia::wlan::service::WlanPtr wlan, std::function<void()> on_shutdown)
+    fuchsia::wlan::service::WlanPtr wlan, fit::function<void()> on_shutdown)
     : settings_(settings),
       session_shell_settings_(session_shell_settings),
       launcher_(launcher),
@@ -407,7 +408,7 @@ void BasemgrImpl::ShowSetupOrLogin() {
 }
 
 void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
-  session_provider_->RestartSession(on_restart_complete);
+  session_provider_->RestartSession(std::move(on_restart_complete));
 }
 
 void BasemgrImpl::LoginAsGuest() {
@@ -415,7 +416,7 @@ void BasemgrImpl::LoginAsGuest() {
   user_provider_impl_->Login(std::move(params));
 }
 
-void BasemgrImpl::LogoutUsers(std::function<void()> callback) {
+void BasemgrImpl::LogoutUsers(fit::function<void()> callback) {
   user_provider_impl_->RemoveAllUsers(std::move(callback));
 }
 

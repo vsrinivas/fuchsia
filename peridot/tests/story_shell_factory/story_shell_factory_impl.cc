@@ -26,7 +26,7 @@ void StoryShellFactoryImpl::AttachStory(std::string story_id,
 
 // |StoryShellFactory|
 void StoryShellFactoryImpl::DetachStory(std::string story_id,
-                                        std::function<void()> done) {
+                                        fit::function<void()> done) {
   on_detach_story_();
 
   // Used to simulate a sluggish shell that hits the timeout.

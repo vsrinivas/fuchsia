@@ -42,7 +42,7 @@ class PageClientImpl : public PageClient {
                   << " " << change_count_ << " " << key << " " << value;
   }
 
-  void SetConflictResolver(std::function<void(Conflict*)> conflict_resolver) {
+  void SetConflictResolver(fit::function<void(Conflict*)> conflict_resolver) {
     conflict_resolver_ = std::move(conflict_resolver);
   }
 
@@ -67,7 +67,7 @@ class PageClientImpl : public PageClient {
   int change_count_{};
   int conflict_count_{};
 
-  std::function<void(Conflict*)> conflict_resolver_;
+  fit::function<void(Conflict*)> conflict_resolver_;
 };
 
 class PageClientTest : public TestWithLedger {
@@ -107,7 +107,7 @@ class PageClientTest : public TestWithLedger {
   }
 
   // Factory for a ledger callback function that just logs errors.
-  std::function<void(fuchsia::ledger::Status)> log(std::string context) {
+  fit::function<void(fuchsia::ledger::Status)> log(std::string context) {
     return [context](fuchsia::ledger::Status status) {
       EXPECT_EQ(fuchsia::ledger::Status::OK, status) << context;
     };

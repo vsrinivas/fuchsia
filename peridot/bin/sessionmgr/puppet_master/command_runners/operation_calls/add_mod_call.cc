@@ -117,7 +117,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
   // On success, populates |parameter_info_|. On failure, |out_result_| contains
   // error reason. Calls |done()| on completion in either case.
   void CreateModuleParameterMapInfo(FlowToken flow,
-                                    std::function<void()> done) {
+                                    fit::function<void()> done) {
     parameter_info_ = fuchsia::modular::CreateModuleParameterMapInfo::New();
 
     std::vector<FuturePtr<fuchsia::modular::CreateModuleParameterMapEntry>>
@@ -174,7 +174,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
     }
 
     Wait("AddModCommandRunner::AddModCall::Wait", did_get_entries)
-        ->Then([this, done, flow](
+        ->Then([this, done = std::move(done), flow](
                    std::vector<fuchsia::modular::CreateModuleParameterMapEntry>
                        entries) {
           parameter_info_->property_info.reset(std::move(entries));
@@ -219,7 +219,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
   OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AddModCall);
-};  // namespace
+};
 
 }  // namespace
 
@@ -228,7 +228,7 @@ void AddAddModOperation(OperationContainer* const container,
                         fuchsia::modular::ModuleResolver* const module_resolver,
                         fuchsia::modular::EntityResolver* const entity_resolver,
                         AddModParams add_mod_params,
-                        std::function<void(fuchsia::modular::ExecuteResult,
+                        fit::function<void(fuchsia::modular::ExecuteResult,
                                            fuchsia::modular::ModuleData)>
                             done) {
   container->Add(new AddModCall(story_storage, module_resolver, entity_resolver,

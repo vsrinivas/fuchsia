@@ -15,7 +15,7 @@ FocusModCommandRunner::~FocusModCommandRunner() = default;
 void FocusModCommandRunner::Execute(
     fidl::StringPtr story_id, StoryStorage* const story_storage,
     fuchsia::modular::StoryCommand command,
-    std::function<void(fuchsia::modular::ExecuteResult)> done) {
+    fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   fuchsia::modular::ExecuteResult result;
 
   auto focus_mod_command = command.focus_mod();

@@ -14,7 +14,7 @@ namespace modular {
 void AddGetLinkPathForParameterNameOperation(
     OperationContainer* operation_container, StoryStorage* const story_storage,
     std::vector<std::string> module_name, std::string link_name,
-    std::function<void(fuchsia::modular::LinkPathPtr)> result_call);
+    fit::function<void(fuchsia::modular::LinkPathPtr)> result_call);
 
 }  // namespace modular
 

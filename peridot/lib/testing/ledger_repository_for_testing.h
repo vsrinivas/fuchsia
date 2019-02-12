@@ -30,7 +30,7 @@ class LedgerRepositoryForTesting {
   fuchsia::ledger::internal::LedgerRepository* ledger_repository();
 
   // Terminates the ledger repository app.
-  void Terminate(std::function<void()> callback);
+  void Terminate(fit::function<void()> callback);
 
  private:
   std::unique_ptr<component::StartupContext> startup_context_;

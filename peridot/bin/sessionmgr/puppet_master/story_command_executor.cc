@@ -4,8 +4,6 @@
 
 #include "peridot/bin/sessionmgr/puppet_master/story_command_executor.h"
 
-#include <lib/fxl/functional/make_copyable.h>
-
 namespace modular {
 
 namespace {
@@ -28,7 +26,7 @@ StoryCommandExecutor::~StoryCommandExecutor() = default;
 void StoryCommandExecutor::ExecuteCommands(
     fidl::StringPtr story_id,
     std::vector<fuchsia::modular::StoryCommand> commands,
-    std::function<void(fuchsia::modular::ExecuteResult)> done) {
+    fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   // TODO(thatguy): Cloning the commands here is unforunate. We will want to
   // create a shared datastructure at some point, such as a
   // ExecuteCommandsContext struct that contains the commands, and also allows
@@ -52,7 +50,7 @@ void StoryCommandExecutor::ExecuteCommands(
       };
 
   ExecuteCommandsInternal(std::move(story_id), std::move(commands),
-                          fxl::MakeCopyable(std::move(on_execute_done)));
+                          std::move(on_execute_done));
 }
 
 StoryCommandExecutor::ListenerAutoCancel StoryCommandExecutor::AddListener(

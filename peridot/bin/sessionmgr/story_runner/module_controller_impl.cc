@@ -84,15 +84,15 @@ void ModuleControllerImpl::SetState(
   NotifyStateChange();
 }
 
-void ModuleControllerImpl::Teardown(std::function<void()> done) {
-  teardown_done_callbacks_.push_back(done);
+void ModuleControllerImpl::Teardown(fit::function<void()> done) {
+  teardown_done_callbacks_.push_back(std::move(done));
 
   if (teardown_done_callbacks_.size() != 1) {
     // Not the first request, Stop() in progress.
     return;
   }
 
-  auto cont = [this] {
+  fit::function<void()> cont = [this] {
     SetState(fuchsia::modular::ModuleState::STOPPED);
 
     // We take ownership of *this from |story_controller_impl_| so that
@@ -127,7 +127,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   app_client_.SetAppErrorHandler(nullptr);
 
   // Tear down the module application through the normal procedure with timeout.
-  app_client_.Teardown(kBasicTimeout, cont);
+  app_client_.Teardown(kBasicTimeout, std::move(cont));
 }
 
 void ModuleControllerImpl::Focus() {
@@ -139,7 +139,8 @@ void ModuleControllerImpl::Defocus() {
 }
 
 void ModuleControllerImpl::Stop(StopCallback done) {
-  story_controller_impl_->StopModule(module_data_->module_path, done);
+  story_controller_impl_->StopModule(module_data_->module_path,
+                                     std::move(done));
 }
 
 void ModuleControllerImpl::NotifyStateChange() {

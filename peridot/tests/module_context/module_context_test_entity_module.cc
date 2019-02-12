@@ -9,7 +9,6 @@
 #include <lib/async/default.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <test/peridot/tests/trigger/cpp/fidl.h>
 
 #include "peridot/lib/entity/entity_watcher_impl.h"
@@ -49,14 +48,14 @@ class TestApp {
     fsl::VmoFromString(kTestString, &vmo);
     module_context_->CreateEntity(
         kTestType, std::move(vmo).ToTransport(), entity_.NewRequest(),
-        fxl::MakeCopyable([this](fidl::StringPtr entity_reference) mutable {
+        [this](fidl::StringPtr entity_reference) mutable {
           if (!entity_reference || entity_reference->empty()) {
             modular::testing::Fail("Failed to create entity.");
             return;
           } else {
             created_entity_.Pass();
           }
-        }));
+        });
 
     // Register a watcher and make sure it is notified with the correct data
     // when the entity value is updated.
@@ -77,60 +76,57 @@ class TestApp {
 
     // Fetch the data and verify that it matches the data used to create the
     // entity.
-    entity_->GetData(
-        kTestType,
-        fxl::MakeCopyable([this, kTestString](fuchsia::mem::BufferPtr data) {
-          if (data) {
-            std::string data_string;
-            fsl::StringFromVmo(*data, &data_string);
-            if (data_string == kTestString) {
-              entity_data_correct_.Pass();
-            }
-          }
-          Signal(kEntityModuleDoneFirstTask);
-        }));
+    entity_->GetData(kTestType,
+                     [this, kTestString](fuchsia::mem::BufferPtr data) {
+                       if (data) {
+                         std::string data_string;
+                         fsl::StringFromVmo(*data, &data_string);
+                         if (data_string == kTestString) {
+                           entity_data_correct_.Pass();
+                         }
+                       }
+                       Signal(kEntityModuleDoneFirstTask);
+                     });
 
     // Fetch the reference from the entity to verify the round-trip
     // resolution.
-    entity_->GetReference(
-        fxl::MakeCopyable([this, kTestString, kTestType,
+    entity_->GetReference([this, kTestString, kTestType,
                            kUpdatedString](fidl::StringPtr entity_reference) {
-          // Grab the entity resolver from the component context.
-          fuchsia::modular::EntityResolverPtr entity_resolver;
-          fuchsia::modular::ComponentContextPtr component_context;
-          module_context_->GetComponentContext(component_context.NewRequest());
-          component_context->GetEntityResolver(entity_resolver.NewRequest());
+      // Grab the entity resolver from the component context.
+      fuchsia::modular::EntityResolverPtr entity_resolver;
+      fuchsia::modular::ComponentContextPtr component_context;
+      module_context_->GetComponentContext(component_context.NewRequest());
+      component_context->GetEntityResolver(entity_resolver.NewRequest());
 
-          // Resolve the entity and verify the data is correct.
-          fuchsia::modular::EntityPtr resolved_entity;
-          entity_resolver->ResolveEntity(entity_reference,
-                                         resolved_entity.NewRequest());
-          resolved_entity->GetData(
-              kTestType,
-              fxl::MakeCopyable([this, kTestString, kTestType, kUpdatedString,
-                                 resolved_entity = std::move(resolved_entity)](
-                                    fuchsia::mem::BufferPtr data) {
-                if (data) {
-                  std::string data_string;
-                  fsl::StringFromVmo(*data, &data_string);
-                  if (data_string == kTestString) {
-                    entity_data_correct_after_resolution_.Pass();
-                  }
-                }
+      // Resolve the entity and verify the data is correct.
+      fuchsia::modular::EntityPtr resolved_entity;
+      entity_resolver->ResolveEntity(entity_reference,
+                                     resolved_entity.NewRequest());
+      resolved_entity->GetData(
+          kTestType, [this, kTestString, kTestType, kUpdatedString,
+                      resolved_entity = std::move(resolved_entity)](
+                         fuchsia::mem::BufferPtr data) {
+            if (data) {
+              std::string data_string;
+              fsl::StringFromVmo(*data, &data_string);
+              if (data_string == kTestString) {
+                entity_data_correct_after_resolution_.Pass();
+              }
+            }
 
-                fsl::SizedVmo vmo;
-                fsl::VmoFromString(kUpdatedString, &vmo);
-                entity_->WriteData(
-                    kTestType, std::move(vmo).ToTransport(),
-                    [](fuchsia::modular::EntityWriteStatus status) {});
-              }));
-        }));
+            fsl::SizedVmo vmo;
+            fsl::VmoFromString(kUpdatedString, &vmo);
+            entity_->WriteData(
+                kTestType, std::move(vmo).ToTransport(),
+                [](fuchsia::modular::EntityWriteStatus status) {});
+          });
+    });
   }
 
   TestPoint stopped_{"Entity module stopped"};
-  void Terminate(const std::function<void()>& done) {
+  void Terminate(fit::function<void()> done) {
     stopped_.Pass();
-    modular::testing::Done(done);
+    modular::testing::Done(std::move(done));
   }
 
  private:

@@ -10,7 +10,6 @@
 #include <lib/entity/cpp/json.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/defer.h>
-#include <lib/fxl/functional/make_copyable.h>
 
 #include "peridot/bin/context_engine/debug.h"
 #include "rapidjson/document.h"
@@ -164,7 +163,7 @@ void ContextWriterImpl::WriteEntityTopic(std::string topic,
 
 void ContextWriterImpl::GetEntityTypesFromEntityReference(
     const fidl::StringPtr& reference,
-    std::function<void(const std::vector<std::string>&)> done) {
+    fit::function<void(const std::vector<std::string>&)> done) {
   auto activity =
       repository_->debug()->GetIdleWaiter()->RegisterOngoingActivity();
 
@@ -174,20 +173,19 @@ void ContextWriterImpl::GetEntityTypesFromEntityReference(
       std::make_unique<fuchsia::modular::EntityPtr>();
   entity_resolver_->ResolveEntity(reference, entity->NewRequest());
 
-  auto fallback = fit::defer([done, reference] {
+  auto fallback = fit::defer([done = done.share(), reference] {
     // The contents of the fuchsia::modular::Entity value could be a deprecated
     // JSON fuchsia::modular::Entity, not an fuchsia::modular::Entity reference.
     done(Deprecated_GetTypesFromJsonEntity(reference));
   });
 
-  (*entity)->GetTypes(fxl::MakeCopyable(
-      [this, activity, id = entities_.GetId(&entity), done = std::move(done),
-       fallback =
-           std::move(fallback)](const std::vector<std::string>& types) mutable {
-        done(types);
-        fallback.cancel();
-        entities_.erase(id);
-      }));
+  (*entity)->GetTypes([this, activity, id = entities_.GetId(&entity),
+                       done = std::move(done), fallback = std::move(fallback)](
+                          const std::vector<std::string>& types) mutable {
+    done(types);
+    fallback.cancel();
+    entities_.erase(id);
+  });
 
   entities_.emplace(std::move(entity));
 }
@@ -229,14 +227,13 @@ void ContextValueWriterImpl::CreateChildValue(
     fidl::InterfaceRequest<fuchsia::modular::ContextValueWriter> request,
     fuchsia::modular::ContextValueType type) {
   // We can't create a child value until this value has an ID.
-  value_id_->WeakConstThen(
-      weak_factory_.GetWeakPtr(),
-      fxl::MakeCopyable([this, request = std::move(request),
-                         type](const ContextRepository::Id& value_id) mutable {
-        auto ptr = new ContextValueWriterImpl(writer_, value_id, type,
-                                              std::move(request));
-        writer_->AddContextValueWriter(ptr);
-      }));
+  value_id_->WeakConstThen(weak_factory_.GetWeakPtr(),
+                           [this, request = std::move(request), type](
+                               const ContextRepository::Id& value_id) mutable {
+                             auto ptr = new ContextValueWriterImpl(
+                                 writer_, value_id, type, std::move(request));
+                             writer_->AddContextValueWriter(ptr);
+                           });
 }
 
 void ContextValueWriterImpl::Set(
@@ -300,12 +297,12 @@ void ContextValueWriterImpl::Set(
       };
 
   if (type_ != fuchsia::modular::ContextValueType::ENTITY || !content) {
-    // Avoid an extra round-trip to fuchsia::modular::EntityResolver that won't
-    // get us anything.
+    // Avoid an extra round-trip to fuchsia::modular::EntityResolver that
+    // won't get us anything.
     done_getting_types({});
   } else {
-    writer_->GetEntityTypesFromEntityReference(
-        content, fxl::MakeCopyable(std::move(done_getting_types)));
+    writer_->GetEntityTypesFromEntityReference(content,
+                                               std::move(done_getting_types));
   }
 }
 

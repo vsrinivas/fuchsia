@@ -124,9 +124,9 @@ class TestModule {
 
   TestPoint stopped_{"Root module stopped"};
   // Called by ModuleDriver.
-  void Terminate(const std::function<void()>& done) {
+  void Terminate(fit::function<void()> done) {
     stopped_.Pass();
-    modular::testing::Done(done);
+    modular::testing::Done(std::move(done));
   }
 
  private:

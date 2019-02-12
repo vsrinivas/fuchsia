@@ -70,9 +70,9 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
   void Reset() { binding_.Unbind(); }
 
   // Sets the function where to continue when the story is observed to be done.
-  void Continue(fuchsia::modular::StoryState state, std::function<void()> at) {
+  void Continue(fuchsia::modular::StoryState state, fit::function<void()> at) {
     continue_state_ = state;
-    continue_ = at;
+    continue_ = std::move(at);
   }
 
  private:
@@ -95,7 +95,7 @@ class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
 
   fuchsia::modular::StoryState continue_state_{
       fuchsia::modular::StoryState::STOPPED};
-  std::function<void()> continue_{[] {}};
+  fit::function<void()> continue_{[] {}};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };
@@ -117,7 +117,9 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
   void Reset() { binding_.Unbind(); }
 
   // Sets the function where to continue when the story is observed to be done.
-  void Continue(std::function<void(fidl::StringPtr)> at) { continue_ = at; }
+  void Continue(fit::function<void(fidl::StringPtr)> at) {
+    continue_ = std::move(at);
+  }
 
  private:
   // |fuchsia::modular::LinkWatcher|
@@ -129,7 +131,7 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
 
   fidl::Binding<fuchsia::modular::LinkWatcher> binding_;
 
-  std::function<void(fidl::StringPtr)> continue_{[](fidl::StringPtr) {}};
+  fit::function<void(fidl::StringPtr)> continue_{[](fidl::StringPtr) {}};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
 };
@@ -159,7 +161,7 @@ class TestApp : public modular::ViewApp {
   // Called by AppDriver in ComponentMain(). NOTE(mesch): Even though it
   // overrides SingleServiceApp::Terminate(), it is called directly on TestApp
   // by AppDriver, so it must not be private.
-  void Terminate(std::function<void()> done) override {
+  void Terminate(fit::function<void()> done) override {
     // The corresponding BEGIN() call is in Loop(), below.
     TRACE_ASYNC_END("benchmark", "user/logout", 0);
     done();

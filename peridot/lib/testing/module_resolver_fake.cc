@@ -52,12 +52,12 @@ void ModuleResolverFake::AddFindModulesResult(
 }
 
 void ModuleResolverFake::SetFindModulesValidation(
-    std::function<void(const fuchsia::modular::FindModulesQuery&)> fn) {
+    fit::function<void(const fuchsia::modular::FindModulesQuery&)> fn) {
   find_modules_validate_fn_ = std::move(fn);
 }
 
 void ModuleResolverFake::SetGetModuleManifestValidation(
-    std::function<void(const fidl::StringPtr&)> fn) {
+    fit::function<void(const fidl::StringPtr&)> fn) {
   get_module_manifest_validate_fn_ = std::move(fn);
 }
 

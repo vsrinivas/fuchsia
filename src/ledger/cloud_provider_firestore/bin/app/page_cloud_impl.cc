@@ -10,7 +10,6 @@
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/strings/concatenate.h>
 
 #include "peridot/lib/convert/convert.h"

@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <lib/callback/scoped_callback.h>
+#include <lib/fit/function.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/string_view.h>

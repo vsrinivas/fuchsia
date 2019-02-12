@@ -4,9 +4,8 @@
 
 #include "peridot/bin/sessionmgr/story_runner/story_entity_provider.h"
 
-#include <lib/fxl/functional/make_copyable.h>
-#include "src/lib/uuid/uuid.h"
 #include <utility>
+#include "src/lib/uuid/uuid.h"
 
 namespace modular {
 
@@ -17,7 +16,7 @@ StoryEntityProvider::~StoryEntityProvider() = default;
 
 void StoryEntityProvider::CreateEntity(
     const std::string& type, fuchsia::mem::Buffer data,
-    std::function<void(std::string /* cookie */)> callback) {
+    fit::function<void(std::string /* cookie */)> callback) {
   const std::string cookie = uuid::Generate();
   story_storage_->SetEntityData(cookie, type, std::move(data))
       ->Then([this, cookie,

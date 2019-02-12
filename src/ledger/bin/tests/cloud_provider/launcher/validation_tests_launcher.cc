@@ -17,7 +17,7 @@ constexpr char kValidationTestsUrl[] =
 
 ValidationTestsLauncher::ValidationTestsLauncher(
     component::StartupContext* startup_context,
-    std::function<
+    fit::function<
         void(fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
         factory)
     : startup_context_(startup_context), factory_(std::move(factory)) {
@@ -27,7 +27,7 @@ ValidationTestsLauncher::ValidationTestsLauncher(
 }
 
 void ValidationTestsLauncher::Run(const std::vector<std::string>& arguments,
-                                  std::function<void(int32_t)> callback) {
+                                  fit::function<void(int32_t)> callback) {
   callback_ = std::move(callback);
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kValidationTestsUrl;

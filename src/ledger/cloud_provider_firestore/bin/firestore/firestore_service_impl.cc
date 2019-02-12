@@ -48,7 +48,8 @@ void MakeCall(
   call->response_reader = std::move(response_reader);
 
   call->on_complete = [call, callback = std::move(callback)](bool ok) {
-    ResponseVariant<ResponseType>::Call(callback, std::move(call->status),
+    ResponseVariant<ResponseType>::Call(std::move(callback),
+                                        std::move(call->status),
                                         std::move(call->response));
     if (call->on_empty) {
       call->on_empty();

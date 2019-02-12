@@ -4,7 +4,6 @@
 
 #include "src/ledger/bin/storage/impl/btree/encoding.h"
 
-#include <lib/fit/function.h>
 #include <lib/fxl/strings/string_printf.h>
 
 #include "gtest/gtest.h"

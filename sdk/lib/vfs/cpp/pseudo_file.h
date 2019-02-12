@@ -116,7 +116,7 @@ class BufferedPseudoFile : public File {
   ReadHandler const read_handler_;
   WriteHandler const write_handler_;
   const size_t buffer_capacity_;
-};  // namespace vfs
+};
 
 }  // namespace vfs
 

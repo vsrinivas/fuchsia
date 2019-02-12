@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 
+#include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
@@ -23,7 +24,7 @@ class TracingWaiter {
   TracingWaiter();
   ~TracingWaiter();
 
-  void WaitForTracing(std::function<void()>);
+  void WaitForTracing(fit::function<void()>);
 
  private:
   bool started_{};

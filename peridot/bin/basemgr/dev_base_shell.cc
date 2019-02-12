@@ -16,6 +16,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/component/cpp/startup_context.h>
+#include <lib/fit/function.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
@@ -88,9 +89,9 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
   ~DevBaseShellApp() override = default;
 
   // |SingleServiceApp|
-  void Terminate(std::function<void()> done) override {
+  void Terminate(fit::function<void()> done) override {
     if (settings_.use_test_runner) {
-      testing::Teardown(done);
+      testing::Teardown(std::move(done));
     } else {
       done();
     }
@@ -180,6 +181,7 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
   fuchsia::modular::BaseShellContextPtr base_shell_context_;
   fuchsia::modular::UserProviderPtr user_provider_;
   fxl::WeakPtrFactory<DevBaseShellApp> weak_ptr_factory_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(DevBaseShellApp);
 };
 

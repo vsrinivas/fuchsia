@@ -17,7 +17,7 @@ SetFocusStateCommandRunner::~SetFocusStateCommandRunner() = default;
 void SetFocusStateCommandRunner::Execute(
     fidl::StringPtr story_id, StoryStorage* const story_storage,
     fuchsia::modular::StoryCommand command,
-    std::function<void(fuchsia::modular::ExecuteResult)> done) {
+    fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   FXL_CHECK(command.is_set_focus_state());
 
   fuchsia::modular::ExecuteResult result;

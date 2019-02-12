@@ -24,8 +24,6 @@ executable("peridot_lib_unittests") {
 }
 
 fidl("maxwell_internal") {
-  cpp_legacy_callbacks = true
-
   name = "fuchsia.maxwell.internal"
 
   sources = [

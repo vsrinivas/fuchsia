@@ -43,7 +43,7 @@ class StoryActivityWatcherImpl : fuchsia::modular::StoryActivityWatcher {
   }
 
   void OnNotify(
-      std::function<void(std::string,
+      fit::function<void(std::string,
                          std::vector<fuchsia::modular::OngoingActivityType>)>
           on_notify) {
     on_notify_ = std::move(on_notify);
@@ -58,7 +58,7 @@ class StoryActivityWatcherImpl : fuchsia::modular::StoryActivityWatcher {
   }
 
   fidl::Binding<fuchsia::modular::StoryActivityWatcher> binding_;
-  std::function<void(std::string,
+  fit::function<void(std::string,
                      std::vector<fuchsia::modular::OngoingActivityType>)>
       on_notify_;
 
@@ -301,12 +301,12 @@ class TestApp : public modular::testing::SessionShellBase {
 
   // Verifies that the story is stopped when the last module that is part of the
   // story calls ModuleContext.Done and is stopped.
-  void IsStoryRunning(std::function<void(bool)> callback) {
-    story_controller_->GetInfo(
-        [this, callback](fuchsia::modular::StoryInfo story_info,
-                         fuchsia::modular::StoryState state) {
-          callback(state == fuchsia::modular::StoryState::RUNNING);
-        });
+  void IsStoryRunning(fit::function<void(bool)> callback) {
+    story_controller_->GetInfo([this, callback = std::move(callback)](
+                                   fuchsia::modular::StoryInfo story_info,
+                                   fuchsia::modular::StoryState state) {
+      callback(state == fuchsia::modular::StoryState::RUNNING);
+    });
   }
 
   // Creates an intent with one parameter, kLinkName, with the following

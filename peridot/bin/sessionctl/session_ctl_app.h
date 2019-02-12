@@ -15,7 +15,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/strings/string_printf.h>
-#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/sessionctl/logger.h"
 
 using ::fuchsia::modular::PuppetMaster;
@@ -37,7 +36,7 @@ class SessionCtlApp {
       fuchsia::modular::internal::BasemgrDebug* const basemgr,
       fuchsia::modular::PuppetMaster* const puppet_master,
       const modular::Logger& logger, async_dispatcher_t* const dispatcher,
-      const std::function<void()>& on_command_executed);
+      fit::function<void()> on_command_executed);
 
   // Dispatches the |cmd| and returns an empty string on success, "GetUsage" if
   // |cmd| is not valid, and a string of missing flags on failure.
@@ -93,7 +92,7 @@ class SessionCtlApp {
   const fxl::CommandLine command_line_;
   const modular::Logger logger_;
   async_dispatcher_t* const dispatcher_;
-  const std::function<void()> on_command_executed_;
+  fit::function<void()> on_command_executed_;
 };
 
 }  // namespace modular

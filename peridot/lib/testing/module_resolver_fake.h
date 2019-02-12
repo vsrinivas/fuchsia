@@ -42,18 +42,18 @@ class ModuleResolverFake : fuchsia::modular::ModuleResolver {
   // Sets a function for validation of the query when calling FindModules. This
   // is useful to intercept the query and ensure it was built as expected.
   void SetFindModulesValidation(
-      std::function<void(const fuchsia::modular::FindModulesQuery&)> fn);
+      fit::function<void(const fuchsia::modular::FindModulesQuery&)> fn);
 
   // Sets a function for validation of the query when calling GetModuleManifest.
   // This is useful to intercept the query and ensure it was built as expected.
   void SetGetModuleManifestValidation(
-      std::function<void(const fidl::StringPtr&)> fn);
+      fit::function<void(const fidl::StringPtr&)> fn);
 
  private:
   fidl::BindingSet<fuchsia::modular::ModuleResolver> bindings_;
-  std::function<void(const fuchsia::modular::FindModulesQuery&)>
+  fit::function<void(const fuchsia::modular::FindModulesQuery&)>
       find_modules_validate_fn_;
-  std::function<void(const fidl::StringPtr&)> get_module_manifest_validate_fn_;
+  fit::function<void(const fidl::StringPtr&)> get_module_manifest_validate_fn_;
   fuchsia::modular::ModuleManifestPtr manifest_;
   fuchsia::modular::FindModulesResponse find_modules_response_;
 };

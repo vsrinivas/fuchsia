@@ -28,7 +28,7 @@ class StoryEntityProvider : public fuchsia::modular::EntityProvider {
   // |callback| will be called with the entity cookie, or an empty string if the
   //  creation failed.
   void CreateEntity(const std::string& type, fuchsia::mem::Buffer data,
-                    std::function<void(std::string /* cookie */)> callback);
+                    fit::function<void(std::string /* cookie */)> callback);
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::EntityProvider>
                    provider_request);

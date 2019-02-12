@@ -71,13 +71,13 @@ class TestModule {
 
   // Called by ModuleDriver.
   TestPoint stopped_{"Root module stopped"};
-  void Terminate(const std::function<void()>& done) {
+  void Terminate(fit::function<void()> done) {
     stopped_.Pass();
     std::string terminated = module_name_ == kFirstModuleName
                                  ? kFirstModuleTerminated
                                  : kSecondModuleTerminated;
     Signal(terminated);
-    modular::testing::Done(done);
+    modular::testing::Done(std::move(done));
   }
 
  private:

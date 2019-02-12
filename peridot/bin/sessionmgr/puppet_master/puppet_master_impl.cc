@@ -4,7 +4,6 @@
 
 #include "peridot/bin/sessionmgr/puppet_master/puppet_master_impl.h"
 
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
 
 #include "peridot/bin/sessionmgr/puppet_master/story_puppet_master_impl.h"

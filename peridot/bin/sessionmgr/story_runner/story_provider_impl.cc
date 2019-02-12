@@ -18,7 +18,6 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/handles/object_info.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/functional/make_copyable.h>
 #include <lib/zx/time.h>
 #include "src/lib/uuid/uuid.h"
 
@@ -143,50 +142,48 @@ class StoryProviderImpl::LoadStoryRuntimeCall
   void Cont(fuchsia::modular::internal::StoryDataPtr story_data,
             FlowToken flow) {
     session_storage_->GetStoryStorage(story_id_)->WeakThen(
-        GetWeakPtr(),
-        fxl::MakeCopyable(
-            [this, story_data = std::move(story_data),
-             flow](std::unique_ptr<StoryStorage> story_storage) mutable {
-              struct StoryRuntimeContainer container {
-                .executor = std::make_unique<async::Executor>(
-                    async_get_default_dispatcher()),
-                .storage = std::move(story_storage),
-                .current_data = std::move(story_data),
-              };
+        GetWeakPtr(), [this, story_data = std::move(story_data), flow](
+                          std::unique_ptr<StoryStorage> story_storage) mutable {
+          struct StoryRuntimeContainer container {
+            .executor = std::make_unique<async::Executor>(
+                async_get_default_dispatcher()),
+            .storage = std::move(story_storage),
+            .current_data = std::move(story_data),
+          };
 
-              container.model_owner = std::make_unique<StoryModelOwner>(
-                  story_id_, container.executor.get(),
-                  std::make_unique<NoopStoryModelStorage>());
-              container.model_observer = container.model_owner->NewObserver();
+          container.model_owner = std::make_unique<StoryModelOwner>(
+              story_id_, container.executor.get(),
+              std::make_unique<NoopStoryModelStorage>());
+          container.model_observer = container.model_owner->NewObserver();
 
-              // Create systems that are part of this story.
-              auto story_visibility_system =
-                  std::make_unique<StoryVisibilitySystem>(
-                      container.model_owner->NewMutator());
+          // Create systems that are part of this story.
+          auto story_visibility_system =
+              std::make_unique<StoryVisibilitySystem>(
+                  container.model_owner->NewMutator());
 
-              container.controller_impl = std::make_unique<StoryControllerImpl>(
-                  session_storage_, container.storage.get(),
-                  container.model_owner->NewMutator(),
-                  container.model_owner->NewObserver(),
-                  story_visibility_system.get(), story_provider_impl_);
-              container.entity_provider = std::make_unique<StoryEntityProvider>(
-                  container.storage.get());
+          container.controller_impl = std::make_unique<StoryControllerImpl>(
+              session_storage_, container.storage.get(),
+              container.model_owner->NewMutator(),
+              container.model_owner->NewObserver(),
+              story_visibility_system.get(), story_provider_impl_);
+          container.entity_provider =
+              std::make_unique<StoryEntityProvider>(container.storage.get());
 
-              // Hand ownership of systems over to |container|.
-              container.systems.push_back(std::move(story_visibility_system));
+          // Hand ownership of systems over to |container|.
+          container.systems.push_back(std::move(story_visibility_system));
 
-              // Register a listener on the StoryModel so that we can signal
-              // our watchers when relevant data changes.
-              container.model_observer->RegisterListener(
-                  [id = story_id_, story_provider = story_provider_impl_](
-                      const fuchsia::modular::storymodel::StoryModel& model) {
-                    story_provider->NotifyStoryStateChange(id);
-                  });
+          // Register a listener on the StoryModel so that we can signal
+          // our watchers when relevant data changes.
+          container.model_observer->RegisterListener(
+              [id = story_id_, story_provider = story_provider_impl_](
+                  const fuchsia::modular::storymodel::StoryModel& model) {
+                story_provider->NotifyStoryStateChange(id);
+              });
 
-              auto it = story_provider_impl_->story_runtime_containers_.emplace(
-                  story_id_, std::move(container));
-              story_runtime_container_ = &it.first->second;
-            }));
+          auto it = story_provider_impl_->story_runtime_containers_.emplace(
+              story_id_, std::move(container));
+          story_runtime_container_ = &it.first->second;
+        });
   }
 
   StoryProviderImpl* const story_provider_impl_;  // not owned
@@ -364,8 +361,8 @@ void StoryProviderImpl::Connect(
   bindings_.AddBinding(this, std::move(request));
 }
 
-void StoryProviderImpl::StopAllStories(const std::function<void()>& callback) {
-  operation_queue_.Add(new StopAllStoriesCall(this, callback));
+void StoryProviderImpl::StopAllStories(fit::function<void()> callback) {
+  operation_queue_.Add(new StopAllStoriesCall(this, std::move(callback)));
 }
 
 void StoryProviderImpl::SetSessionShell(
@@ -384,14 +381,14 @@ void StoryProviderImpl::SetSessionShell(
   session_shell_ = std::move(session_shell);
 }
 
-void StoryProviderImpl::Teardown(const std::function<void()>& callback) {
+void StoryProviderImpl::Teardown(fit::function<void()> callback) {
   // Closing all binding to this instance ensures that no new messages come
   // in, though previous messages need to be processed. The stopping of
   // stories is done on |operation_queue_| since that must strictly happen
   // after all pending messgages have been processed.
   bindings_.CloseAll();
   operation_queue_.Add(new StopAllStoriesCall(this, [] {}));
-  operation_queue_.Add(new StopStoryShellCall(this, callback));
+  operation_queue_.Add(new StopStoryShellCall(this, std::move(callback)));
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -433,7 +430,7 @@ std::unique_ptr<AsyncHolderBase> StoryProviderImpl::StartStoryShell(
     story_shell_factory_->AttachStory(story_id, std::move(story_shell_request));
 
     auto on_teardown =
-        [this, story_id = std::move(story_id)](std::function<void()> done) {
+        [this, story_id = std::move(story_id)](fit::function<void()> done) {
           story_shell_factory_->DetachStory(story_id, std::move(done));
         };
 
@@ -530,8 +527,8 @@ void StoryProviderImpl::GetStoryInfo(std::string story_id,
                     return fidl::MakeOptional(
                         std::move(*story_data->mutable_story_info()));
                   });
-  operation_queue_.Add(WrapFutureAsOperation("StoryProviderImpl::GetStoryInfo",
-                                             on_run, done, callback));
+  operation_queue_.Add(WrapFutureAsOperation(
+      "StoryProviderImpl::GetStoryInfo", on_run, done, std::move(callback)));
 }
 
 // Called by StoryControllerImpl on behalf of ModuleContextImpl
@@ -550,7 +547,7 @@ void StoryProviderImpl::AttachView(
 }
 
 void StoryProviderImpl::DetachView(fidl::StringPtr story_id,
-                                   std::function<void()> done) {
+                                   fit::function<void()> done) {
   FXL_CHECK(session_shell_);
   fuchsia::modular::ViewIdentifier view_id;
   view_id.story_id = std::move(story_id);
@@ -584,14 +581,13 @@ void StoryProviderImpl::GetController(
     fidl::InterfaceRequest<fuchsia::modular::StoryController> request) {
   operation_queue_.Add(new LoadStoryRuntimeCall(
       this, session_storage_, story_id,
-      fxl::MakeCopyable(
-          [request = std::move(request)](
-              StoryRuntimeContainer* story_controller_container) mutable {
-            if (story_controller_container) {
-              story_controller_container->controller_impl->Connect(
-                  std::move(request));
-            }
-          })));
+      [request = std::move(request)](
+          StoryRuntimeContainer* story_controller_container) mutable {
+        if (story_controller_container) {
+          story_controller_container->controller_impl->Connect(
+              std::move(request));
+        }
+      }));
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -602,30 +598,28 @@ void StoryProviderImpl::GetStories(
   auto on_run = Future<>::Create("StoryProviderImpl.GetStories.on_run");
   auto done =
       on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
-          ->Map(fxl::MakeCopyable(
-              [this, watcher_ptr = std::move(watcher_ptr)](
-                  std::vector<fuchsia::modular::internal::StoryData>
-                      all_story_data) mutable {
-                std::vector<fuchsia::modular::StoryInfo> result;
+          ->Map([this, watcher_ptr = std::move(watcher_ptr)](
+                    std::vector<fuchsia::modular::internal::StoryData>
+                        all_story_data) mutable {
+            std::vector<fuchsia::modular::StoryInfo> result;
 
-                for (auto& story_data : all_story_data) {
-                  if (!story_data.story_options()->kind_of_proto_story) {
-                    if (!story_data.story_info()) {
-                      continue;
-                    }
-                    result.push_back(
-                        std::move(*story_data.mutable_story_info()));
-                  }
+            for (auto& story_data : all_story_data) {
+              if (!story_data.story_options()->kind_of_proto_story) {
+                if (!story_data.story_info()) {
+                  continue;
                 }
+                result.push_back(std::move(*story_data.mutable_story_info()));
+              }
+            }
 
-                if (watcher_ptr) {
-                  watchers_.AddInterfacePtr(std::move(watcher_ptr));
-                }
-                return result;
-              }));
+            if (watcher_ptr) {
+              watchers_.AddInterfacePtr(std::move(watcher_ptr));
+            }
+            return result;
+          });
 
-  operation_queue_.Add(WrapFutureAsOperation("StoryProviderImpl::GetStories",
-                                             on_run, done, callback));
+  operation_queue_.Add(WrapFutureAsOperation(
+      "StoryProviderImpl::GetStories", on_run, done, std::move(callback)));
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -648,7 +642,7 @@ void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
             return result;
           });
   operation_queue_.Add(WrapFutureAsOperation(
-      "StoryProviderImpl::PreviousStories", on_run, done, callback));
+      "StoryProviderImpl::PreviousStories", on_run, done, std::move(callback)));
 }
 
 void StoryProviderImpl::OnStoryStorageUpdated(
@@ -683,35 +677,33 @@ void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
 
 // |fuchsia::modular::FocusWatcher|
 void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
-  operation_queue_.Add(
-      new SyncCall(fxl::MakeCopyable([this, info = std::move(info)]() {
-        if (info->device_id != device_id_) {
-          return;
-        }
+  operation_queue_.Add(new SyncCall([this, info = std::move(info)]() {
+    if (info->device_id != device_id_) {
+      return;
+    }
 
-        if (info->focused_story_id.is_null()) {
-          return;
-        }
+    if (info->focused_story_id.is_null()) {
+      return;
+    }
 
-        auto i = story_runtime_containers_.find(info->focused_story_id.get());
-        if (i == story_runtime_containers_.end()) {
-          FXL_LOG(ERROR) << "Story controller not found for focused story "
-                         << info->focused_story_id;
-          return;
-        }
+    auto i = story_runtime_containers_.find(info->focused_story_id.get());
+    if (i == story_runtime_containers_.end()) {
+      FXL_LOG(ERROR) << "Story controller not found for focused story "
+                     << info->focused_story_id;
+      return;
+    }
 
-        // Last focus time is recorded in the ledger, and story provider
-        // watchers are notified through watching SessionStorage.
-        auto on_run =
-            Future<>::Create("StoryProviderImpl.OnFocusChange.on_run");
-        auto done = on_run->AsyncMap([this, story_id = info->focused_story_id] {
-          return session_storage_->UpdateLastFocusedTimestamp(
-              story_id, zx_clock_get(ZX_CLOCK_UTC));
-        });
-        std::function<void()> callback = [] {};
-        operation_queue_.Add(WrapFutureAsOperation(
-            "StoryProviderImpl::OnFocusChange", on_run, done, callback));
-      })));
+    // Last focus time is recorded in the ledger, and story provider
+    // watchers are notified through watching SessionStorage.
+    auto on_run = Future<>::Create("StoryProviderImpl.OnFocusChange.on_run");
+    auto done = on_run->AsyncMap([this, story_id = info->focused_story_id] {
+      return session_storage_->UpdateLastFocusedTimestamp(
+          story_id, zx_clock_get(ZX_CLOCK_UTC));
+    });
+    fit::function<void()> callback = [] {};
+    operation_queue_.Add(WrapFutureAsOperation(
+        "StoryProviderImpl::OnFocusChange", on_run, done, std::move(callback)));
+  }));
 }
 
 void StoryProviderImpl::NotifyStoryWatchers(
@@ -734,20 +726,20 @@ void StoryProviderImpl::CreateEntity(
     const std::string& story_id, fidl::StringPtr type,
     fuchsia::mem::Buffer data,
     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
-    std::function<void(std::string /* entity_reference */)> callback) {
+    fit::function<void(std::string /* entity_reference */)> callback) {
   operation_queue_.Add(new GetStoryEntityProviderCall(
       this, story_id,
-      fxl::MakeCopyable([this, type, story_id, data = std::move(data),
-                         callback = std::move(callback),
-                         entity_request = std::move(entity_request)](
-                            StoryEntityProvider* entity_provider) mutable {
+      [this, type, story_id, data = std::move(data),
+       callback = std::move(callback),
+       entity_request = std::move(entity_request)](
+          StoryEntityProvider* entity_provider) mutable {
         // Once the entity provider for the given story is available, create
         // the entity.
         entity_provider->CreateEntity(
             type, std::move(data),
-            fxl::MakeCopyable([this, entity_request = std::move(entity_request),
-                               callback = std::move(callback),
-                               story_id](std::string cookie) mutable {
+            [this, story_id, callback = std::move(callback),
+             entity_request =
+                 std::move(entity_request)](std::string cookie) mutable {
               if (cookie.empty()) {
                 // Return nullptr to indicate the entity creation failed.
                 callback(nullptr);
@@ -767,8 +759,8 @@ void StoryProviderImpl::CreateEntity(
                                       std::move(entity_request));
 
               callback(entity_reference);
-            }));
-      })));
+            });
+      }));
 }
 
 void StoryProviderImpl::ConnectToStoryEntityProvider(
@@ -777,11 +769,10 @@ void StoryProviderImpl::ConnectToStoryEntityProvider(
         entity_provider_request) {
   operation_queue_.Add(new GetStoryEntityProviderCall(
       this, story_id,
-      fxl::MakeCopyable(
-          [entity_provider_request = std::move(entity_provider_request)](
-              StoryEntityProvider* entity_provider) mutable {
-            entity_provider->Connect(std::move(entity_provider_request));
-          })));
+      [entity_provider_request = std::move(entity_provider_request)](
+          StoryEntityProvider* entity_provider) mutable {
+        entity_provider->Connect(std::move(entity_provider_request));
+      }));
 }
 
 void StoryProviderImpl::GetPresentation(

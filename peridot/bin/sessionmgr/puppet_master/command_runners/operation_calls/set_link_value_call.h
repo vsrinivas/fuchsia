@@ -14,8 +14,8 @@ namespace modular {
 void AddSetLinkValueOperation(
     OperationContainer* const operation_container,
     StoryStorage* const story_storage, fuchsia::modular::LinkPath link_path,
-    std::function<void(fidl::StringPtr*)> mutate_fn,
-    std::function<void(fuchsia::modular::ExecuteResult)> done);
+    fit::function<void(fidl::StringPtr*)> mutate_fn,
+    fit::function<void(fuchsia::modular::ExecuteResult)> done);
 
 }  // namespace modular
 

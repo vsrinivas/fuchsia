@@ -36,8 +36,8 @@ class TestModule {
     StartChildModule();
   }
 
-  void Terminate(const std::function<void()>& done) {
-    modular::testing::Done(done);
+  void Terminate(fit::function<void()> done) {
+    modular::testing::Done(std::move(done));
   }
 
  private:

@@ -8,7 +8,6 @@
 #include <utility>
 
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/functional/make_copyable.h>
 
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
@@ -40,7 +39,7 @@ PageClient::~PageClient() {
 }
 
 fuchsia::ledger::PageSnapshotPtr PageClient::NewSnapshot(
-    std::function<void()> on_error) {
+    fit::function<void()> on_error) {
   fuchsia::ledger::PageSnapshotPtr ptr;
   page_->GetSnapshot(
       ptr.NewRequest(), to_array(prefix_), nullptr /* page_watcher */,
@@ -102,12 +101,12 @@ namespace {
 void GetEntriesRecursive(fuchsia::ledger::PageSnapshot* const snapshot,
                          std::vector<fuchsia::ledger::Entry>* const entries,
                          std::unique_ptr<fuchsia::ledger::Token> next_token,
-                         std::function<void(fuchsia::ledger::Status)> done) {
+                         fit::function<void(fuchsia::ledger::Status)> done) {
   snapshot->GetEntries(
       std::vector<uint8_t>{} /* key_start */, std::move(next_token),
-      fxl::MakeCopyable([snapshot, entries, done = std::move(done)](
-                            fuchsia::ledger::Status status, auto new_entries,
-                            auto next_token) mutable {
+      [snapshot, entries, done = std::move(done)](
+          fuchsia::ledger::Status status, auto new_entries,
+          auto next_token) mutable {
         if (status != fuchsia::ledger::Status::OK &&
             status != fuchsia::ledger::Status::PARTIAL_RESULT) {
           done(status);
@@ -125,14 +124,14 @@ void GetEntriesRecursive(fuchsia::ledger::PageSnapshot* const snapshot,
 
         GetEntriesRecursive(snapshot, entries, std::move(next_token),
                             std::move(done));
-      }));
+      });
 }
 
 }  // namespace
 
 void GetEntries(fuchsia::ledger::PageSnapshot* const snapshot,
                 std::vector<fuchsia::ledger::Entry>* const entries,
-                std::function<void(fuchsia::ledger::Status)> done) {
+                fit::function<void(fuchsia::ledger::Status)> done) {
   GetEntriesRecursive(snapshot, entries, nullptr /* next_token */,
                       std::move(done));
 }

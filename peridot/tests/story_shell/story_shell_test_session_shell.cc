@@ -9,6 +9,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <lib/async/cpp/future.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/component/cpp/startup_context.h>
@@ -143,21 +144,26 @@ class TestApp : public modular::testing::SessionShellBase,
     story_provider()->GetController(kStoryName1,
                                     story_controller_.NewRequest());
 
-    // TODO(jphsiao|vardhan): remodel this |proceed_after_6| style of
-    // continuation to use Futures instead.
-    auto proceed_after_6 = modular::testing::NewBarrierClosure(6, [this] {
-      story1_run1_.Pass();
-      Story1_Stop1();
-    });
+    std::vector<modular::FuturePtr<fidl::StringPtr>> fgets;
 
-    Get("story link data: null", proceed_after_6);
-    Get("root:one", proceed_after_6);
-    Get("root:one manifest", proceed_after_6);
-    Get("root:one:two", proceed_after_6);
-    Get("root:one:two manifest", proceed_after_6);
-    Get("root:one:two ordering", proceed_after_6);
+    Get("story link data: null", modular::testing::AddBarrierFuture(fgets));
+    Get("story link data: null", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one manifest", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one:two", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one:two manifest", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one:two ordering", modular::testing::AddBarrierFuture(fgets));
 
     story_controller_->RequestStart();
+
+    // |Wait| can execute its |Future| elements immediately, so to make
+    // sure the "Stop" calls happen after the "Start", position the Wait
+    // call accordingly.
+    Wait("future Get results", fgets)
+        ->Then([this](std::vector<fidl::StringPtr> all_results) {
+          story1_run1_.Pass();
+          Story1_Stop1();
+        });
   }
 
   void Story1_Stop1() {
@@ -167,19 +173,24 @@ class TestApp : public modular::testing::SessionShellBase,
   TestPoint story1_run2_{"Story1 Run2"};
 
   void Story1_Run2() {
-    auto proceed_after_6 = modular::testing::NewBarrierClosure(6, [this] {
-      story1_run2_.Pass();
-      Story1_Stop2();
-    });
+    std::vector<modular::FuturePtr<fidl::StringPtr>> fgets;
 
-    Get("story link data: {\"label\":\"value\"}", proceed_after_6);
-    Get("root:one", proceed_after_6);
-    Get("root:one manifest", proceed_after_6);
-    Get("root:one:two", proceed_after_6);
-    Get("root:one:two manifest", proceed_after_6);
-    Get("root:one:two ordering", proceed_after_6);
+    Get("story link data: {\"label\":\"value\"}",
+        modular::testing::AddBarrierFuture(fgets));
+    Get("root:one", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one manifest", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one:two", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one:two manifest", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one:two ordering", modular::testing::AddBarrierFuture(fgets));
 
     story_controller_->RequestStart();
+
+    // |Wait| can call |Story1Stop2| immediately and must AFTER |RequestStart|
+    Wait("future Get results", fgets)
+        ->Then([this](std::vector<fidl::StringPtr> all_results) {
+          story1_run2_.Pass();
+          Story1_Stop2();
+        });
   }
 
   void Story1_Stop2() {
@@ -226,20 +237,24 @@ class TestApp : public modular::testing::SessionShellBase,
   TestPoint story2_run1_{"Story2 Run1"};
 
   void Story2_Run1() {
-    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
-      story2_run1_.Pass();
-      Story2_Stop1();
-    });
+    std::vector<modular::FuturePtr<fidl::StringPtr>> fgets;
 
-    Get("root:one", proceed_after_5);
-    Get("root:one manifest", proceed_after_5);
-    Get("root:one:two", proceed_after_5);
-    Get("root:one:two manifest", proceed_after_5);
-    Get("root:one:two ordering", proceed_after_5);
+    Get("root:one", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one manifest", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one:two", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one:two manifest", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one:two ordering", modular::testing::AddBarrierFuture(fgets));
 
     story_provider()->GetController(kStoryName2,
                                     story_controller_.NewRequest());
     story_controller_->RequestStart();
+
+    // |Wait| can call |Story1Stop2| immediately and must AFTER |RequestStart|
+    Wait("future Get results", fgets)
+        ->Then([this](std::vector<fidl::StringPtr> all_results) {
+          story2_run1_.Pass();
+          Story2_Stop1();
+        });
   }
 
   void Story2_Stop1() {
@@ -249,18 +264,22 @@ class TestApp : public modular::testing::SessionShellBase,
   TestPoint story2_run2_{"Story2 Run2"};
 
   void Story2_Run2() {
-    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
-      story2_run2_.Pass();
-      Story2_Stop2();
-    });
+    std::vector<modular::FuturePtr<fidl::StringPtr>> fgets;
 
-    Get("root:one", proceed_after_5);
-    Get("root:one manifest", proceed_after_5);
-    Get("root:one:two", proceed_after_5);
-    Get("root:one:two manifest", proceed_after_5);
-    Get("root:one:two ordering", proceed_after_5);
+    Get("root:one", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one manifest", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one:two", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one:two manifest", modular::testing::AddBarrierFuture(fgets));
+    Get("root:one:two ordering", modular::testing::AddBarrierFuture(fgets));
 
     story_controller_->RequestStart();
+
+    // |Wait| can call |Story1Stop2| immediately and must AFTER |RequestStart|
+    Wait("future Get results", fgets)
+        ->Then([this](std::vector<fidl::StringPtr> all_results) {
+          story2_run2_.Pass();
+          Story2_Stop2();
+        });
   }
 
   bool end_of_story2_{};

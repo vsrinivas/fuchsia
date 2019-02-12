@@ -31,7 +31,7 @@ class ClipboardStorage : public PageClient {
 
   // Returns the most recent value that was passed to |Push()|, or "" if nothing
   // has been pushed yet.
-  void Peek(const std::function<void(fidl::StringPtr)>& callback);
+  void Peek(fit::function<void(fidl::StringPtr)> callback);
 
  private:
   OperationQueue operation_queue_;
