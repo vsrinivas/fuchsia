@@ -46,17 +46,16 @@ bool control_interrupt_test(size_t transfer_size) {
     randomize();
 
     // Send data to device via OUT control request.
-    int ret = usb_device_control_transfer(dev,
-                            USB_DIR_OUT | USB_TYPE_VENDOR | USB_TYPE_VENDOR | USB_RECIP_INTERFACE,
-                            USB_PERIPHERAL_TEST_SET_DATA, 0, 0, send_buf, transfer_size, TIMEOUT);
-    EXPECT_EQ(ret, transfer_size);
+    int ret = usb_device_control_transfer(
+        dev, USB_DIR_OUT | USB_TYPE_VENDOR | USB_TYPE_VENDOR | USB_RECIP_INTERFACE,
+        USB_PERIPHERAL_TEST_SET_DATA, 0, 0, send_buf, static_cast<int>(transfer_size), TIMEOUT);
+    EXPECT_EQ(ret, static_cast<int>(transfer_size));
 
     // Receive data back from device via IN control request.
-    ret = usb_device_control_transfer(dev,
-                            USB_DIR_IN | USB_TYPE_VENDOR | USB_TYPE_VENDOR | USB_RECIP_INTERFACE,
-                            USB_PERIPHERAL_TEST_GET_DATA, 0, 0, receive_buf, transfer_size,
-                            TIMEOUT);
-    EXPECT_EQ(ret, transfer_size);
+    ret = usb_device_control_transfer(
+        dev, USB_DIR_IN | USB_TYPE_VENDOR | USB_TYPE_VENDOR | USB_RECIP_INTERFACE,
+        USB_PERIPHERAL_TEST_GET_DATA, 0, 0, receive_buf, static_cast<int>(transfer_size), TIMEOUT);
+    EXPECT_EQ(ret, static_cast<int>(transfer_size));
 
     // Sent and received data should match.
     EXPECT_EQ(memcmp(send_buf, receive_buf, transfer_size), 0);
