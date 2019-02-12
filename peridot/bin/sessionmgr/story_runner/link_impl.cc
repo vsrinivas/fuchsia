@@ -17,7 +17,6 @@
 #include <lib/fxl/logging.h>
 
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "peridot/lib/util/debug.h"
 
 using fuchsia::modular::LinkWatcherPtr;
 

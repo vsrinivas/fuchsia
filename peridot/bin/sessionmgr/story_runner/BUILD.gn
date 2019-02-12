@@ -65,7 +65,6 @@ source_set("story_runner") {
     "//peridot/lib/module_manifest:module_facet_reader",
     "//peridot/lib/rapidjson",
     "//peridot/lib/util",
-    "//peridot/lib/util:debug",
     "//peridot/public/lib/async/cpp:future",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/context/cpp:context_helper",
