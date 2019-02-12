@@ -256,4 +256,6 @@ struct InputReport {
     StylusReport? stylus;
     TouchscreenReport? touchscreen;
     SensorReport? sensor;
+
+    uint64 trace_id = 0;  // Unique ID to connect trace async begin/end events.
 };
