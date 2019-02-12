@@ -738,6 +738,10 @@ void Parser::ParseProtocolMember(
                 methods->push_back(std::move(method));
                 break;
             } else if (identifier->location().data() == "compose") {
+                if (attributes) {
+                    Fail("Cannot attach attributes to compose stanza");
+                    break;
+                }
                 auto protocol_name = ParseCompoundIdentifier();
                 if (!Ok())
                     break;

@@ -191,6 +191,25 @@ protocol Child : Parent {};
     END_TEST;
 }
 
+bool invalid_cannot_attach_attributes_to_compose() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+protocol Child {
+    [NoCantDo] compose Parent;
+};
+
+)FIDL");
+    ASSERT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "Cannot attach attributes to compose stanza");
+
+    END_TEST;
+};
+
 bool invalid_cannot_compose_yourself() {
     BEGIN_TEST;
 
@@ -423,6 +442,7 @@ RUN_TEST(valid_compose_method);
 RUN_TEST(valid_protocol_composition);
 RUN_TEST(valid_mix_and_match_protocols_and_interfaces);
 RUN_TEST(invalid_colon_syntax_is_not_supported);
+RUN_TEST(invalid_cannot_attach_attributes_to_compose);
 RUN_TEST(invalid_cannot_compose_yourself);
 RUN_TEST(invalid_cannot_compose_twice_the_same_protocol);
 RUN_TEST(invalid_cannot_use_compose_in_interface_declaration);

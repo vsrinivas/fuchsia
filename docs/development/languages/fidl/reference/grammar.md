@@ -66,7 +66,7 @@ compound-identifier = IDENTIFIER ( "." , IDENTIFIER )* ;
 
 using = "using" , compound-identifier , ( "as" , IDENTIFIER ) , ";" ;
 
-declaration = const-declaration | enum-declaration | interface-declaration
+declaration = const-declaration | enum-declaration | protocol-declaration
             | struct-declaration | table-declaration | union-declaration | xunion-declaration ;
 
 const-declaration = ( attribute-list ) , "const" , type-constructor , IDENTIFIER , "=" , constant ;
@@ -78,21 +78,21 @@ enum-member = ( attribute-list ) , IDENTIFIER , ( "=" , enum-member-value ) ;
 
 enum-member-value = IDENTIFIER | literal ; [NOTE 3]
 
-interface-declaration = ( attribute-list ) , "interface" , IDENTIFIER ,
-                        ( ":" , super-interface-list ) , "{" , ( interface-method , ";" )*  , "}" ;
+protocol-declaration = ( attribute-list ) , "protocol" , IDENTIFIER ,
+                       "{" , ( protocol-member , ";" )*  , "}" ;
 
-super-interface-list = compound-identifier
-                     | compound-identifier , "," , super-interface-list ;
+protocol-member = protocol-method | protocol-event | protocol-compose ;
 
-interface-method = ( attribute-list ) , ordinal , ":" , interface-parameters ,
-                   ( "error" , type-constructor );
+protocol-method = ( attribute-list ) , IDENTIFIER , parameter-list,
+                  ( "->" , parameter-list ) ;
 
-interface-parameters = IDENTIFIER , parameter-list , ( "->" , parameter-list )
-                     | "->" , IDENTIFIER , parameter-list ;
+protocol-event = ( attribute-list ) , "->" , IDENTIFIER , parameter-list ;
 
-parameter-list = "(" , ( parameter ( "," , parameter )+ ) , ")" ; 
+parameter-list = "(" , ( parameter ( "," , parameter )+ ) , ")" ;
 
 parameter = type-constructor , IDENTIFIER ;
+
+protocol-compose = "compose" , compound-identifier ;
 
 struct-declaration = ( attribute-list ) , "struct" , IDENTIFIER , "{" , ( struct-field , ";" )* , "}" ;
 
