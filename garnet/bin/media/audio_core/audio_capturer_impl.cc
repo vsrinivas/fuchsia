@@ -691,8 +691,7 @@ zx_status_t AudioCapturerImpl::Process() {
       mix_frames = max_frames_per_capture_;
     }
 
-    // Now figure out what time it will be when we can finish this job If this
-    // time is in the future, wait until then.
+    // Figure out when we can finish the job. If in the future, wait until then.
     int64_t last_frame_time =
         frames_to_clock_mono_.Apply(frame_count_ + mix_frames);
     if (last_frame_time == TimelineRate::kOverflow) {
@@ -712,7 +711,13 @@ zx_status_t AudioCapturerImpl::Process() {
       // a new source shows up and pushes the largest fence time out, the next
       // time we wake up, it will be early. We will need to recognize this
       // condition and go back to sleep for a little bit before actually mixing.
-      mix_timer_->Arm(last_frame_time + kAssumedWorstSourceFenceTime);
+      if (mix_timer_->Arm(last_frame_time + kAssumedWorstSourceFenceTime) !=
+          ZX_OK) {
+        FXL_LOG(ERROR)
+            << "Could not arm mix timer for capture, shutting down capture.";
+        ShutdownFromMixDomain();
+        return ZX_ERR_INTERNAL;
+      }
       return ZX_OK;
     }
 

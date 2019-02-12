@@ -64,7 +64,7 @@ class AudioDriver {
   };
 
   AudioDriver(AudioDevice* owner);
-  virtual ~AudioDriver() {}
+  virtual ~AudioDriver() = default;
 
   zx_status_t Init(zx::channel stream_channel);
   void Cleanup();

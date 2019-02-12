@@ -24,11 +24,10 @@ class DriverOutput : public StandardOutputBase {
                                          AudioDeviceManager* manager);
   ~DriverOutput();
 
+ protected:
   // AudioOutput implementation
   zx_status_t Init() override;
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) override;
-
-  void Cleanup() override;
 
   // StandardOutputBase implementation
   bool StartMixJob(MixJob* job, fxl::TimePoint process_start)
@@ -36,8 +35,7 @@ class DriverOutput : public StandardOutputBase {
   bool FinishMixJob(const MixJob& job)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) override;
 
- protected:
-  // AudioDevice impl
+  // AudioDevice implementation
   void ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
                        uint32_t set_flags) override;
 

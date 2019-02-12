@@ -248,14 +248,14 @@ void AudioRendererImpl::SetPcmStreamType(
   // interfaces are serialized by nature of the fidl framework, and none of the
   // output manager's threads should ever need to manipulate the set. Cleanup
   // of outputs which have gone away is currently handled in a lazy fashion when
-  // the audio out fails to promote its weak reference during an operation
+  // the audio renderer fails to promote its weak reference during an operation
   // involving its outputs.
   //
   // TODO(johngro): someday, we will need to deal with recalculating properties
-  // which depend on a audio out's current set of outputs (for example, the
+  // which depend on a audio renderer's current set of outputs (for example, the
   // minimum latency). This will probably be done using a dirty flag in the
-  // audio out implementations, and scheduling a job to recalculate the
-  // properties for the dirty audio outs and notify the users as appropriate.
+  // audio renderer implementations, and scheduling a job to recalculate the
+  // properties for dirty audio renderers and notifying users as appropriate.
 
   // If we cannot promote our own weak pointer, something is seriously wrong.
   owner_->GetDeviceManager().SelectOutputsForAudioRenderer(this);
@@ -454,9 +454,9 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   start_pts &= mask;
 
   // Create the packet.
-  auto packet_ref = fbl::AdoptRef(new AudioPacketRef(
-      payload_buffer_, std::move(callback), packet, owner_,
-      frame_count << kPtsFractionalBits, start_pts));
+  auto packet_ref = fbl::AdoptRef(
+      new AudioPacketRef(payload_buffer_, std::move(callback), packet, owner_,
+                         frame_count << kPtsFractionalBits, start_pts));
 
   // The end pts is the value we will use for the next packet's start PTS, if
   // the user does not provide an explicit PTS.

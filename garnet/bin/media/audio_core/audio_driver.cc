@@ -187,7 +187,7 @@ zx_status_t AudioDriver::GetDriverInfo() {
 
     zx_status_t res = stream_channel_->Write(&req, sizeof(req));
     if (res != ZX_OK) {
-      ShutdownSelf("Failed to request unique ID.", res);
+      ShutdownSelf("Failed to request string.", res);
       return res;
     }
   }
@@ -970,9 +970,7 @@ void AudioDriver::ShutdownSelf(const char* debug_reason,
                   << "\" (status = " << debug_status << ")";
   }
 
-  // Release all of our resources.
-  Cleanup();
-
+  // Our owner will call our Cleanup function within this call.
   owner_->ShutdownSelf();
   state_ = State::Shutdown;
 }

@@ -76,11 +76,6 @@ void DriverOutput::OnWakeup() {
   state_ = State::FetchingFormats;
 }
 
-void DriverOutput::Cleanup() {
-  driver_->Cleanup();
-  StandardOutputBase::Cleanup();
-}
-
 bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   if (state_ != State::Started) {
     FXL_LOG(ERROR) << "Bad state during StartMixJob "

@@ -112,7 +112,13 @@ zx_status_t AudioDevice::Init() {
   return ZX_OK;
 }
 
-void AudioDevice::Cleanup() {}
+void AudioDevice::Cleanup() {
+  // ThrottleOutput devices have no driver, so check for that.
+  if (driver_ != nullptr) {
+    // Instruct the driver to release all its resources (channels, timer).
+    driver_->Cleanup();
+  }
+}
 
 void AudioDevice::ActivateSelf() {
   // If we aren't shutting down, tell DeviceManager we are ready for work.
@@ -183,7 +189,7 @@ void AudioDevice::Shutdown() {
   // Unlink ourselves from everything we are currently attached to.
   Unlink();
 
-  // Give our derived class a chance to clean up its resources.
+  // Give our derived class, and our driver, a chance to clean up resources.
   Cleanup();
 
   // We are now completely shut down.  The only reason we have this flag is to

@@ -28,8 +28,6 @@ StandardOutputBase::StandardOutputBase(AudioDeviceManager* manager)
   source_link_refs_.reserve(16u);
 }
 
-StandardOutputBase::~StandardOutputBase() = default;
-
 zx_status_t StandardOutputBase::Init() {
   zx_status_t res = AudioOutput::Init();
   if (res != ZX_OK) {
@@ -137,7 +135,7 @@ void StandardOutputBase::Process() {
 
   zx_time_t next_time =
       static_cast<zx_time_t>(next_sched_time_.ToEpochDelta().ToNanoseconds());
-  if (mix_timer_->Arm(next_time)) {
+  if (mix_timer_->Arm(next_time) != ZX_OK) {
     ShutdownSelf();
   }
 }

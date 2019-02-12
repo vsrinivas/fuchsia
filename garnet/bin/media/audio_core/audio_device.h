@@ -50,11 +50,10 @@ class AudioDevice : public AudioObject,
   // Currently this information is used in the Audio Service to implement simple
   // routing policies for AudioRenderers and AudioCapturers.
   //
-  // plugged   : true when an audio output stream is either hardwired, or
+  // plugged   : true when an audio output/input stream is either hardwired, or
   //             believes that it has something connected to its plug.
-  // plug_time : The last time (according to zx_clock_get(ZX_CLOCK_MONOTONIC) at
-  //             which the plugged/unplugged state of the output stream last
-  //             changed.
+  // plug_time : The time (per zx_clock_get(ZX_CLOCK_MONOTONIC) at which the
+  //             plugged/unplugged state of this output or input last changed.
   bool plugged() const { return plugged_; }
   zx_time_t plug_time() const { return plug_time_; }
   const std::unique_ptr<AudioDriver>& driver() const { return driver_; }
@@ -122,11 +121,11 @@ class AudioDevice : public AudioObject,
 
   // Cleanup
   //
-  // Called at shutdown on the AudioCore's main message loop thread to allow
-  // derived classes to clean up any allocated resources.  All pending
-  // processing callbacks have either been nerfed or run till completion.  All
-  // audio other objects have been disconnected/unlinked.  No locks are being
-  // held.
+  // Called at shutdown on AudioCore's main message loop thread to allow derived
+  // classes to clean up any allocated resources. All pending processing
+  // callbacks have either been nerfed or run to completion. All other audio
+  // objects have been disconnected/unlinked. No locks are being held. The
+  // analogous AudioDriver::Cleanup is only ever called by this function.
   virtual void Cleanup();
 
   // ApplyGainLimits
@@ -161,11 +160,10 @@ class AudioDevice : public AudioObject,
 
   // ShutdownSelf
   //
-  // Kick off the process of shooting ourselves in the head.  Note, after this
-  // method has been called, no new callbacks may be scheduled.  As soon as the
-  // main message loop finds out about our shutdown request, it will complete
-  // the process of shutting us down, unlinking us from our audio outs and
-  // calling the Cleanup method.
+  // Kick off the process of shooting ourselves in the head. Note: after this
+  // method is called, no new callbacks may be scheduled. When the main message
+  // loop finds out about our shutdown request, it completes this process by
+  // unlinking us from our audio renderers/capturers and calling our Cleanup.
   void ShutdownSelf() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   // Check the shutting down flag.  We are in the process of shutting down when
@@ -202,11 +200,10 @@ class AudioDevice : public AudioObject,
 
   // UpdatePlugState
   //
-  // Called by the audio output manager on the main message loop when it has
-  // been notified of a plug state change for the output.  Used to update the
-  // internal bookkeeping about the current plugged/unplugged state.  This
-  // method may also be used by derived classes during Init to set an initial
-  // plug state.
+  // Called by the audio device manager on the main message loop when it is
+  // notified of a plug state change for a device. Used to update the internal
+  // bookkeeping about the current plugged/unplugged state. This method may also
+  // be used by derived classes during Init to set an initial plug state.
   //
   // Returns true if the plug state has changed, or false otherwise.
   bool UpdatePlugState(bool plugged, zx_time_t plug_time);
@@ -225,8 +222,7 @@ class AudioDevice : public AudioObject,
   fbl::RefPtr<::dispatcher::ExecutionDomain> mix_domain_;
   fbl::RefPtr<::dispatcher::WakeupEvent> mix_wakeup_;
 
-  // Driver object which will manage most interactions with the low level driver
-  // for us.
+  // This object manages most interactions with the low-level driver for us.
   std::unique_ptr<AudioDriver> driver_;
 
   // Persistable settings.  Note, this is instantiated by the audio device
@@ -246,7 +242,7 @@ class AudioDevice : public AudioObject,
 
   // DeactivateDomain
   //
-  // deactivate our execution domain (if it exists) and synchronize with any
+  // Deactivate our execution domain (if it exists) and synchronize with any
   // operations taking place in the domain.
   void DeactivateDomain() FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
@@ -256,11 +252,10 @@ class AudioDevice : public AudioObject,
   // processing callback immediately in order to get the process running.
   zx_status_t Startup();
 
-  // Called from the AudioDeviceManager on the main message loop
-  // thread.  Makes certain that the process of shutdown has started,
-  // synchronizes with any processing tasks which were executing at the time,
-  // then finishes the shutdown process by unlinking from all audio outs and
-  // cleaning up all resources.
+  // Called from the AudioDeviceManager on the main message loop thread.  Makes
+  // certain that the shutdown process has started, synchronizes with processing
+  // tasks which were executing at the time, then finishes the shutdown by
+  // unlinking from all renderers/capturers and cleaning up all resources.
   void Shutdown();
 
   // Called from the AudioDeviceManager when it moves an audio device from its
@@ -270,13 +265,11 @@ class AudioDevice : public AudioObject,
     activated_ = true;
   }
 
-  // Accessor used by the AudioDeviceManager for accessing the device_settings
-  // object.
+  // Accessor used by AudioDeviceManager to access the device_settings object.
   //
-  // Note: it is certainly possible for the AudioDeviceManager to simply access
-  // the device_settings_ pointer directly.  Code should use this accessor
-  // instead, however, to avoid accidentally releasing the device_settings
-  // object.
+  // Note: it is certainly possible for AudioDeviceManager to simply access the
+  // device_settings_ pointer directly. Code should use this accessor instead,
+  // however, to avoid accidentally releasing the device_settings object.
   const fbl::RefPtr<AudioDeviceSettings>& device_settings() const {
     return device_settings_;
   }

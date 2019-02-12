@@ -25,7 +25,7 @@ class AudioPacketRef;
 
 class StandardOutputBase : public AudioOutput {
  public:
-  ~StandardOutputBase() override;
+  ~StandardOutputBase() override = default;
 
  protected:
   struct MixJob {
