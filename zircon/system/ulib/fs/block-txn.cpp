@@ -90,9 +90,9 @@ void BlockTxn::EnqueueOperation(uint32_t op, const void* id, uint64_t vmo_offset
     for (size_t b = 0; b < nblocks; b++) {
         void* data = GetBlock(handler_->FsBlockSize(), id, vmo_offset + b);
         if (op == BLOCKIO_WRITE) {
-            handler_->Writeblk(dev_offset + b, data);
+            handler_->Writeblk(static_cast<uint32_t>(dev_offset + b), data);
         } else if (op == BLOCKIO_READ) {
-            handler_->Readblk(dev_offset + b, data);
+            handler_->Readblk(static_cast<uint32_t>(dev_offset + b), data);
         } else if (op == BLOCKIO_FLUSH) {
             // No-op.
         } else {
