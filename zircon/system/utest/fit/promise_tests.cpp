@@ -721,35 +721,35 @@ bool or_else_combinator() {
                 .or_else([&](char error)
                              -> fit::result<int, char> {
                     run_count++;
-                    return fit::error(error + 1);
+                    return fit::error(static_cast<char>(error + 1));
                 })
                 .or_else([&](char& error)
                              -> fit::result<int, char> {
                     run_count++;
-                    return fit::error(error + 1);
+                    return fit::error(static_cast<char>(error + 1));
                 })
                 .or_else([&](const char& error)
                              -> fit::result<int, char> {
                     run_count++;
-                    return fit::error(error + 1);
+                    return fit::error(static_cast<char>(error + 1));
                 })
                 .or_else([&](fit::context& context, char error)
                              -> fit::result<int, char> {
                     ASSERT_CRITICAL(&context == &fake_context);
                     run_count++;
-                    return fit::error(error + 1);
+                    return fit::error(static_cast<char>(error + 1));
                 })
                 .or_else([&](fit::context& context, char& error)
                              -> fit::result<int, char> {
                     ASSERT_CRITICAL(&context == &fake_context);
                     run_count++;
-                    return fit::error(error + 1);
+                    return fit::error(static_cast<char>(error + 1));
                 })
                 .or_else([&](fit::context& context, const char& error)
                              -> fit::result<int, char> {
                     ASSERT_CRITICAL(&context == &fake_context);
                     run_count++;
-                    return fit::error(error + 1);
+                    return fit::error(static_cast<char>(error + 1));
                 });
 
         fit::result<int, char> result = p(fake_context);
