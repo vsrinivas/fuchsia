@@ -444,6 +444,10 @@ void ModuleSymbolIndex::IndexCompileUnitSourceFiles(llvm::DWARFContext* context,
                                                     unsigned unit_index) {
   const llvm::DWARFDebugLine::LineTable* line_table =
       context->getLineTableForUnit(unit);
+  if (!line_table) {
+    return;  // No line table for this unit.
+  }
+
   const char* compilation_dir = unit->getCompilationDir();
 
   // This table is the size of the file name table. Entries are set to 1 when
