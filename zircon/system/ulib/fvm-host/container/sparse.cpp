@@ -202,7 +202,7 @@ zx_status_t SparseContainer::Verify() const {
         }
     }
 
-    if (end != disk_size_) {
+    if (end < 0 || static_cast<size_t>(end) != disk_size_) {
         fprintf(stderr, "Header + extent sizes (%" PRIu64 ") do not match sparse file size "
                 "(%zu)\n", end, disk_size_);
         return ZX_ERR_IO_DATA_INTEGRITY;
@@ -438,7 +438,7 @@ zx_status_t SparseContainer::AllocatePartition(fbl::unique_ptr<Format> format) {
     partition.descriptor.magic = fvm::kPartitionDescriptorMagic;
     partition.descriptor.extent_count = 0;
     image_.header_length += sizeof(fvm::partition_descriptor_t);
-    uint32_t part_index = image_.partition_count;
+    uint32_t part_index = static_cast<uint32_t>(image_.partition_count);
 
     zx_status_t status;
     if ((status = format->MakeFvmReady(SliceSize(), part_index)) != ZX_OK) {
@@ -509,7 +509,10 @@ zx_status_t SparseContainer::PrepareWrite(size_t max_len) {
 zx_status_t SparseContainer::WriteData(const void* data, size_t length) {
     if ((flags_ & fvm::kSparseFlagLz4) != 0) {
         return compression_.Compress(data, length);
-    } else if (write(fd_.get(), data, length) != length) {
+    }
+
+    ssize_t result = write(fd_.get(), data, length);
+    if (result < 0 || static_cast<size_t>(result) != length) {
         return ZX_ERR_IO;
     }
 
@@ -527,8 +530,8 @@ zx_status_t SparseContainer::CompleteWrite() {
         return status;
     }
 
-    if (write(fd_.get(), compression_.GetData(), compression_.GetLength())
-        != compression_.GetLength()) {
+    ssize_t result = write(fd_.get(), compression_.GetData(), compression_.GetLength());
+    if (result < 0 || static_cast<size_t>(result) != compression_.GetLength()) {
         return ZX_ERR_IO;
     }
 
