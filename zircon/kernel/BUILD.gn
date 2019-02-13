@@ -15,34 +15,38 @@ if (current_toolchain == default_toolchain) {
       globals = {
         is_kernel = true
       }
-      configs += standard_fuchsia_configs
-      configs += [
-        ":kernel_config",
 
-        # <stdio.h> has #include <lib/io.h>.
-        "$zx/kernel/lib/io:headers.config",
+      # Put the kernel's include_dirs ahead of the defaults so
+      # it can override libc++ headers.
+      common_configs = configs + standard_fuchsia_configs
+      configs = []
+      configs = [
+                  ":kernel_config",
 
-        # <malloc.h> has #include <lib/heap.h>.
-        "$zx/kernel/lib/heap:headers.config",
+                  # <stdio.h> has #include <lib/io.h>.
+                  "$zx/kernel/lib/io:headers.config",
 
-        # <kernel/spinlock.h> has #include <lockdep/lock_policy.h>.
-        "$zx/system/ulib/lockdep:headers.config",
+                  # <malloc.h> has #include <lib/heap.h>.
+                  "$zx/kernel/lib/heap:headers.config",
 
-        # <kernel/thread.h> has #include <vm/kstack.h>.
-        "vm:headers.config",
+                  # <kernel/spinlock.h> has #include <lockdep/lock_policy.h>.
+                  "$zx/system/ulib/lockdep:headers.config",
 
-        # <lib/ktrace.h> has #include <lib/zircon-internal/ktrace.h>.
-        "$zx/system/ulib/zircon-internal:headers.config",
+                  # <kernel/thread.h> has #include <vm/kstack.h>.
+                  "vm:headers.config",
 
-        # <kernel/thread.h> has #include <fbl/macros.h>
-        "$zx/system/ulib/fbl:headers.config",
+                  # <lib/ktrace.h> has #include <lib/zircon-internal/ktrace.h>.
+                  "$zx/system/ulib/zircon-internal:headers.config",
 
-        # <dev/iommu.h> has #include <fbl/name.h>
-        "lib/fbl:headers.config",
+                  # <kernel/thread.h> has #include <fbl/macros.h>
+                  "$zx/system/ulib/fbl:headers.config",
 
-        # <lib/mtrace.h> has #include <lib/user_copy/user_ptr.h>
-        "lib/user_copy:headers.config",
-      ]
+                  # <dev/iommu.h> has #include <fbl/name.h>
+                  "lib/fbl:headers.config",
+
+                  # <lib/mtrace.h> has #include <lib/user_copy/user_ptr.h>
+                  "lib/user_copy:headers.config",
+                ] + common_configs
     }
   }
 } else if (is_kernel) {
@@ -290,7 +294,10 @@ if (current_toolchain == default_toolchain) {
   # and the generated fixups.
   executable("image") {
     visibility = [ ":*" ]
-    configs += [ ":kernel_defsym" ]
+    configs += [
+      ":image_config",
+      ":kernel_defsym",
+    ]
     deps = [
       ":fixups",
       ":kernel_image.h",
@@ -298,13 +305,13 @@ if (current_toolchain == default_toolchain) {
       ":zircon",
       ":zircon.elf.rsp",
     ]
-    include_dirs = [ target_gen_dir ]
-    defines = image_defines
     sources = [
       "arch/$zircon_cpu/image.S",
     ]
+
+    # These need to be here rather than in the config() below because they
+    # refer directly to inputs related to deps.
     ldflags = [
-      "-Wl,--build-id=none",
       "-Wl,-T," + rebase_path("image.ld", root_build_dir),
       "-Wl,--just-symbols,@" + rebase_path(zircon_elf_rspfile, root_build_dir),
     ]
@@ -312,6 +319,17 @@ if (current_toolchain == default_toolchain) {
       "image.ld",
       zircon_elf_rspfile,
     ]
+  }
+
+  # This needs to be in a config() rather than directly in the executable()
+  # so that these switches come after the ones provided by configs.  In
+  # some cases, these switches may be overriding settings done by another
+  # config(), e.g. --build-id in the GCC build.
+  config("image_config") {
+    visibility = [ ":*" ]
+    include_dirs = [ target_gen_dir ]
+    defines = image_defines
+    ldflags = [ "-Wl,--build-id=none" ]
   }
 
   # Finally, extract the raw image (no ELF headers), which includes its own

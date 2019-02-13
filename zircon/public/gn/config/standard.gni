@@ -71,7 +71,13 @@ standard_fuchsia_configs = [
 ]
 
 # Additional configs apply to normal userland Fuchsia code.
-standard_fuchsia_user_configs = [ "$zx/public/gn/config:user" ]
+standard_fuchsia_user_configs = [
+  "$zx/public/gn/config:user",
+  {
+    shlib = false
+    add = [ "$zx/public/gn/config:user_executable" ]
+  },
+]
 
 # See environment().  These are the environments that are
 # vanilla bases to make derived environments from.
@@ -152,7 +158,17 @@ standard_variants = [
 # environment_redirect(),
 default_variants = [
   {
+    # The EFI toolchain is only supported using Clang.
+    # For host default to Clang.
+    environment = [
+      "efi",
+      "host",
+    ]
     variant = "clang"
+  },
+  {
+    # Otherwise default to gcc.
+    variant = "gcc"
   },
 ]
 

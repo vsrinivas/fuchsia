@@ -83,7 +83,10 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
 
     # This library should not depend on libc.
     cflags = [ "-ffreestanding" ]
-    configs = [ "$zx/public/gn/config:no_sanitizers" ]
+    configs = [
+      "$zx/public/gn/config:no_sanitizers",
+      "$zx/public/gn/config:rodso",
+    ]
 
     include_dirs = [ target_gen_dir ]
   }

@@ -497,6 +497,22 @@ config("user") {
   configs = [ "$zx/third_party/ulib/musl:headers" ]
 }
 
+config("user_executable") {
+  # Fuchsia userland code is compiled as PIE by default.
+  # In Clang, this is the default in the compiler driver for *-fuchsia targets.
+  # For GCC, it must be explicit.
+  if (is_gcc) {
+    compiler_flags = [ "-fPIE" ]
+    asmflags = compiler_flags
+    cflags = compiler_flags
+    ldflags = compiler_flags
+    ldflags += [
+      "-Wl,-pie",
+      "-Wl,-dynamic-linker,ld.so.1",
+    ]
+  }
+}
+
 config("integer-paranoia") {
   cflags = [
     "-fsanitize=integer-divide-by-zero,signed-integer-overflow",
@@ -512,5 +528,15 @@ config("static-libc++") {
       "dl",
       "pthread",
     ]
+  }
+}
+
+config("rodso") {
+  if (is_gcc) {
+    # TODO(mcgrathr): Move the file to this dir?
+    inputs = [
+      "$zx/scripts/rodso.ld",
+    ]
+    ldflags = [ "-Wl,-T," + rebase_path(inputs[0], root_build_dir) ]
   }
 }

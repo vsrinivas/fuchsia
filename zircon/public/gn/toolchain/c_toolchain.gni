@@ -416,6 +416,12 @@ template("c_toolchain") {
           default_output_extension = ".so"
 
           switches = "-shared $switches"
+          if (use_gcc && tc.tool_prefix == "${tc_cpu}-elf-") {
+            # The *-elf-gcc driver doesn't handle -shared properly.
+            # Just force it through to the linker.
+            switches = "-Wl,$switches"
+          }
+
           command = "$ld $switches $link_inputs$strip_command"
         },
       ]

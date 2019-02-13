@@ -39,9 +39,12 @@ if (current_toolchain == default_toolchain) {
       "$zx/public/gn/config:user",
     ]
 
-    # Everything is statically linked together with no PLT or GOT.
-    # No $inputs needed here since the depfile will list it.
     cflags = [
+      # -fPIE is the default in Clang, but not in GCC.
+      "-fpie",
+
+      # Everything is statically linked together with no PLT or GOT.
+      # No $inputs needed here since the depfile will list it.
       "-include",
       rebase_path("$zx/kernel/include/hidden.h", root_build_dir),
     ]
@@ -68,6 +71,8 @@ if (current_toolchain == default_toolchain) {
       "userboot-elf.c",
       "util.c",
     ]
+    configs += [ "$zx/public/gn/config:rodso" ]
+    ldflags = [ "-Wl,-e,_start" ]
     libs = [ vdso_syms_ld ]
     deps = [
       ":gen-vdso-syms-ld",

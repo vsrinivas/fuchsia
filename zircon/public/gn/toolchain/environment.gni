@@ -267,6 +267,19 @@ declare_args() {
 #     Required: List of config() labels or scopes.
 #     These are the default $configs preset in all compiling targets.
 #     Elements are the same as $configs in a $variant scope in $variants.
+#     Each element is usually a label (string), which means it's
+#     in the preset $configs for all target scopes.  It can instead
+#     be a scope that defines:
+#       shlib
+#         Optional: Boolean.  If defined, this element only takes effect
+#         in the ${toolchain.shlib} toolchain (if true) or in the non-shlib
+#         toolchain if false.
+#       types
+#         Optional: List of strings,  e.g. ["driver", "source_set"].
+#         This element only takes effect for targets of these types.
+#       add, remove
+#         Optional: List of labels, usually config() targets.
+#         The preset $configs gets `+=` and then `-=` these, respectively.
 #
 #   implicit_deps
 #     Optional: List of labels or scopes.  This controls the list forcibly
@@ -651,28 +664,33 @@ template("environment") {
       foreach(config, invoker.configs + variant.configs) {
         if (config == "$config") {
           tc_configs += [ get_label_info(config, "label_no_toolchain") ]
-        } else if (!defined(config.shlib) || !config.shlib ||
-                   (defined(tc.shlib_name) && tc.name == tc.shlib_name)) {
-          # It's actually a scope.
-          # Expand its add and remove lists.
-          tc_configs += [
-            {
-              forward_variables_from(config, [ "types" ])
-              add = []
-              if (defined(config.add)) {
-                foreach(label, config.add) {
-                  add += [ get_label_info(label, "label_no_toolchain") ]
+        } else {
+          # It's actually a scope.  Check if its shlib constraint matches.
+          # Testing the inverted expression against !config.shlib
+          # constitutes an assert that config.shlib is a proper Boolean.
+          if (!defined(config.shlib) ||
+              !config.shlib ==
+              !(defined(tc.shlib_name) && tc.name == tc.shlib_name)) {
+            # Expand its add and remove lists.
+            tc_configs += [
+              {
+                forward_variables_from(config, [ "types" ])
+                add = []
+                if (defined(config.add)) {
+                  foreach(label, config.add) {
+                    add += [ get_label_info(label, "label_no_toolchain") ]
+                  }
                 }
-              }
-              remove = []
-              if (defined(config.remove)) {
-                foreach(label, config.remove) {
-                  remove += [ get_label_info(label, "label_no_toolchain") ]
+                remove = []
+                if (defined(config.remove)) {
+                  foreach(label, config.remove) {
+                    remove += [ get_label_info(label, "label_no_toolchain") ]
+                  }
                 }
-              }
-              assert(add != [] || remove != [], "useless $config")
-            },
-          ]
+                assert(add != [] || remove != [], "useless $config")
+              },
+            ]
+          }
         }
       }
 
