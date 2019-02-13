@@ -302,7 +302,9 @@ bool AddFileMinfs(const char* path, size_t size) {
     ASSERT_GT(fd, 0);
     fbl::unique_ptr<uint8_t[]> data;
     ASSERT_TRUE(GenerateData(size, &data));
-    ASSERT_EQ(emu_write(fd, data.get(), size), size, "Failed to write data to file");
+    ssize_t result = emu_write(fd, data.get(), size);
+    ASSERT_GE(result, 0, "Failed to write data to file");
+    ASSERT_EQ(static_cast<size_t>(result), size, "Failed to write data to file");
     ASSERT_EQ(emu_close(fd), 0);
     END_HELPER;
 }
@@ -339,7 +341,9 @@ bool AddFileBlobfs(blobfs::Blobfs* bs, size_t size) {
     ASSERT_TRUE(datafd, "Unable to create new file");
     fbl::unique_ptr<uint8_t[]> data;
     ASSERT_TRUE(GenerateData(size, &data));
-    ASSERT_EQ(write(datafd.get(), data.get(), size), size, "Failed to write data to file");
+    ssize_t result = write(datafd.get(), data.get(), size);
+    ASSERT_GE(result, 0, "Failed to write data to file");
+    ASSERT_EQ(static_cast<size_t>(result), size, "Failed to write data to file");
     ASSERT_EQ(blobfs::blobfs_add_blob(bs, nullptr, datafd.get()), ZX_OK, "Failed to add blob");
     ASSERT_EQ(unlink(new_file), 0);
     END_HELPER;
@@ -707,7 +711,7 @@ bool GeneratePartitionPath(fs_type_t fs_type, guid_type_t guid_type) {
 bool Setup(uint32_t num_dirs, uint32_t num_files, uint32_t max_size) {
     BEGIN_HELPER;
     // Generate test directory
-    srand(time(0));
+    srand(static_cast<unsigned int>(time(0)));
     GenerateDirectory("/tmp/", 20, test_dir);
     ASSERT_EQ(mkdir(test_dir, 0755), 0, "Failed to create test path");
     unittest_printf("Created test path %s\n", test_dir);
