@@ -116,17 +116,17 @@ uint32_t AlignTo(uint64_t size, uint64_t alignment) {
     if (size > std::numeric_limits<uint32_t>::max()) {
         size = std::numeric_limits<uint32_t>::max();
     }
-    return size;
+    return static_cast<uint32_t>(size);
 }
 
 uint32_t ClampedMultiply(uint32_t a, uint32_t b) {
     uint64_t product = (uint64_t)a * b;
-    return std::min(product, (uint64_t)std::numeric_limits<uint32_t>::max());
+    return static_cast<uint32_t>(std::min(product, (uint64_t)std::numeric_limits<uint32_t>::max()));
 }
 
 uint32_t ClampedAdd(uint32_t a, uint32_t b) {
     uint64_t sum = (uint64_t)a + b;
-    return std::min(sum, (uint64_t)std::numeric_limits<uint32_t>::max());
+    return static_cast<uint32_t>(std::min(sum, (uint64_t)std::numeric_limits<uint32_t>::max()));
 }
 
 TypeShape CStructTypeShape(std::vector<FieldShape*>* fields, uint32_t extra_handles = 0u) {
