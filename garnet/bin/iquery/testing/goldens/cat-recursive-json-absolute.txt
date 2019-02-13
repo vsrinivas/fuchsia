@@ -1,4 +1,4 @@
-iquery --recursive --format=json --absolute_paths objects > /tmp/t; sed 's/\/\d*\//\/*\//g' /tmp/t;
+iquery --recursive --format=json --absolute_paths objects
 [
     {
         "path": "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects",
@@ -98,4 +98,3 @@ iquery --recursive --format=json --absolute_paths objects > /tmp/t; sed 's/\/\d*
         }
     }
 ]
-

@@ -1,4 +1,4 @@
-iquery --ls --format=json --absolute_paths objects/table0x0 > /tmp/t; sed 's/\/\d*\//\/*\//g' /tmp/t;
+iquery --ls --format=json --absolute_paths objects/table0x0
 [
     "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/table0x0/row0x1",
     "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/table0x0/row0x11",

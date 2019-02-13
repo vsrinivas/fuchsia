@@ -20,7 +20,7 @@ namespace {
 
 std::set<std::string> kKnownOptions = {
     "cat", "absolute_paths", "find",    "format", "full_paths", "help",
-    "ls",  "recursive",      "verbose", "quiet",  "log-file",
+    "ls",  "recursive",      "verbose", "quiet",  "log-file",   "dir"
 };
 
 // Validate whether the option is within the defined ones.
@@ -65,6 +65,8 @@ Options::Options(const fxl::CommandLine& command_line) {
       return;
   }
 
+  command_line.GetOptionValue("dir", &chdir);
+
   if (command_line.HasOption("cat") && !SetMode(command_line, Mode::CAT))
     return;
   else if (command_line.HasOption("find") && !SetMode(command_line, Mode::FIND))
@@ -103,10 +105,13 @@ Options::Options(const fxl::CommandLine& command_line) {
 void Options::Usage(const std::string& argv0) {
   std::cout << fxl::Substitute(
       R"txt(Usage: $0 (--cat|--find|--ls) [--recursive]
-      [--format=<FORMAT>] [(--full_paths|--absolute_paths)]
+      [--format=<FORMAT>] [(--full_paths|--absolute_paths)] [--dir=<PATH>]
       PATH [...PATH]
 
   Utility for querying exposed object directories.
+
+  Global options:
+  --dir:     Change directory to the given PATH before executing commands.
 
   Mode options:
   --cat:  [DEFAULT] Print the data for the object(s) given by each PATH.
@@ -119,6 +124,7 @@ void Options::Usage(const std::string& argv0) {
   --recursive: Whether iquery should continue inside an object. See each mode's
                description to see how it modifies their behaviors.
 
+  Formatting:
   --format: What formatter to use for output. Available options are:
     - text: [DEFAULT] Simple text output meant for manual inspection.
     - json: JSON format meant for machine consumption.

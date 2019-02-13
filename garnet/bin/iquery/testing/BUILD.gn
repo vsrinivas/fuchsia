@@ -39,11 +39,15 @@ test_package("iquery_golden_test") {
   deps = [
     ":bin",
     ":test",
+    "//garnet/bin/iquery:bin",
   ]
 
   binaries = [
     {
       name = "iquery_example_component"
+    },
+    {
+      name = "iquery"
     },
   ]
 

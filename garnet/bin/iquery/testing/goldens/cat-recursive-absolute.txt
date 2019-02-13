@@ -1,4 +1,4 @@
-iquery --recursive --absolute_paths objects > /tmp/t; sed 's/\/\d*\//\/*\//g' /tmp/t;
+iquery --recursive --absolute_paths objects
 /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects:
   /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/table0x0:
     Binary: 

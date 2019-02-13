@@ -7,6 +7,7 @@
 #include <lib/async/default.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/util.h>
+#include <regex>
 
 #include "gmock/gmock.h"
 #include "lib/component/cpp/environment_services_helper.h"
@@ -22,6 +23,7 @@
 namespace {
 
 constexpr char kGoldenPath[] = "/pkg/data/iquery_goldens";
+constexpr char kBinPrefix[] = "/pkg/bin";
 
 using component::testing::EnclosingEnvironment;
 using ::testing::StartsWith;
@@ -111,14 +113,22 @@ class IqueryGoldenTest : public component::testing::TestWithEnvironment,
     };
 
     // Run:
-    // /boot/bin/sh -c "cd <hub>; /system/bin/iquery <args>"
-    command_line =
-        fxl::Substitute("cd $0; /bin/$1", hub_directory_path_, command_line);
-    const char* argv[] = {"sh", "-c", command_line.c_str(), nullptr};
+    // iquery --dir=<hub> <args>
+    auto args = fxl::SplitStringCopy(command_line, " ", fxl::kKeepWhitespace,
+                                     fxl::kSplitWantAll);
+    args.insert(args.begin() + 1,
+                fxl::Substitute("--dir=$0", hub_directory_path_));
+    auto command = fxl::Substitute("$0/$1", kBinPrefix, args[0]);
+
+    const char* argv[args.size() + 1];
+    argv[args.size()] = nullptr;
+    for (size_t i = 0; i < args.size(); i++) {
+      argv[i] = args[i].c_str();
+    }
 
     zx_handle_t proc = ZX_HANDLE_INVALID;
     auto status =
-        fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, "/boot/bin/sh",
+        fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, command.c_str(),
                        argv, NULL, 2, actions, &proc, nullptr);
     ASSERT_EQ(status, ZX_OK);
 
@@ -129,6 +139,12 @@ class IqueryGoldenTest : public component::testing::TestWithEnvironment,
 
     std::string output;
     ASSERT_TRUE(files::ReadFileDescriptorToString(out_fd, &output));
+
+    // Replace path components containing ids with "/*/" so the test does not
+    // need to know specific process or realm ids.
+    std::regex match_ids("\\/\\d+\\/");
+    output = std::regex_replace(output, match_ids, "/*/");
+
     auto output_lines = fxl::SplitStringCopy(output, "\n", fxl::kKeepWhitespace,
                                              fxl::kSplitWantAll);
 

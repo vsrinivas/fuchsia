@@ -32,20 +32,34 @@ class Options {
     ABSOLUTE,  // Absolute path starting from root "/".
   };
 
+  // Directory to change to before executing commands.
+  std::string chdir;
+
+  // The mode of operation.
   Options::Mode mode = Options::Mode::UNSET;
 
+  // Path formatting mode.
   PathFormatting path_format = Options::PathFormatting::NONE;
 
+  // If true, execute mode recursively.
   bool recursive = false;
 
+  // List of paths specified on the command line.
   std::vector<std::string> paths;
 
+  // The type of formatter to use.
   FormatterType formatter_type;
+
+  // Instance of the formatter.
   std::unique_ptr<iquery::Formatter> formatter;
 
+  // Create |Options| by parsing the given command line.
   Options(const fxl::CommandLine& command_line);
 
+  // Returns true if the command line was parsed correctly.
   bool Valid() { return valid_; }
+
+  // Print out usage string to stdout.
   void Usage(const std::string& argv0);
 
  private:

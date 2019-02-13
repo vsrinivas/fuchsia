@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <iostream>
+#include <unistd.h>
 
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
@@ -19,6 +20,12 @@ int main(int argc, const char** argv) {
   iquery::Options options(command_line);
   if (!options.Valid()) {
     return 1;
+  }
+
+  if (!options.chdir.empty()) {
+    if (chdir(options.chdir.c_str()) != 0) {
+      FXL_LOG(ERROR) << "Failed to chdir to " << options.chdir;
+    }
   }
 
   if (command_line.HasOption("help") || options.paths.size() == 0) {
