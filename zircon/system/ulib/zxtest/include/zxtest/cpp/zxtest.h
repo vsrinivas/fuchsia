@@ -74,8 +74,6 @@
 
 #define _ZXTEST_TEST_HAS_ERRORS zxtest::Runner::GetInstance()->CurrentTestHasFailures()
 
-#define _ZXTEST_SEL_N(_0, _1, _2, FN, ...) FN
-
 #define _RETURN_IF_FATAL(fatal)                                                                    \
     if (fatal && _ZXTEST_ABORT_IF_ERROR) {                                                         \
         return;                                                                                    \
@@ -143,20 +141,22 @@ bool CompareHelper(const Actual& actual, const Expected& expected, const Compare
 #define _BYTEEQ(actual, expected, size) memcmp(actual, expected, size) == 0
 #define _BYTENE(actual, expected, size) memcmp(actual, expected, size) != 0
 
-#define _GEN_ASSERT_DESC_0(desc) desc
-
-#define _GEN_ASSERT_DESC_1(desc, msg, ...) fbl::StringPrintf(desc " " msg, ##__VA_ARGS__)
-
-#define _GEN_ASSERT_DESC(desc, ...)                                                                \
-    _ZXTEST_SEL_N(_0, ##__VA_ARGS__, _GEN_ASSERT_DESC_1, _GEN_ASSERT_DESC_1, _GEN_ASSERT_DESC_0)   \
-    (desc, ##__VA_ARGS__)
+#define _GEN_ASSERT_DESC(out_desc, desc, ...)                                                      \
+    fbl::String out_desc;                                                                          \
+    do {                                                                                           \
+        auto format_msg = fbl::StringPrintf(" " __VA_ARGS__);                                      \
+        out_desc = fbl::String::Concat({fbl::String(desc), format_msg});                           \
+    } while (0)
 
 #define _ASSERT_VAR(op, expected, actual, fatal, file, line, desc, ...)                            \
     do {                                                                                           \
-        auto buffer_compare = [](const auto& expected_, const auto& actual_) {                     \
+        auto buffer_compare = [&](const auto& expected_, const auto& actual_) {                    \
             return op(actual_, expected_);                                                         \
         };                                                                                         \
-        auto desc_gen = []() { return _GEN_ASSERT_DESC(desc, ##__VA_ARGS__); };                    \
+        auto desc_gen = [&]() -> fbl::String {                                                     \
+            _GEN_ASSERT_DESC(out_desc, desc, __VA_ARGS__);                                         \
+            return out_desc;                                                                       \
+        };                                                                                         \
         auto print = [](const auto& val) { return zxtest::PrintValue(val); };                      \
         if (!zxtest::internal::EvalCondition(actual, expected, #actual, #expected,                 \
                                              {.filename = file, .line_number = line}, fatal,       \
@@ -167,10 +167,13 @@ bool CompareHelper(const Actual& actual, const Expected& expected, const Compare
 
 #define _ASSERT_VAR_COERCE(op, expected, actual, type, fatal, file, line, desc, ...)               \
     do {                                                                                           \
-        auto buffer_compare = [](const auto& expected_, const auto& actual_) {                     \
+        auto buffer_compare = [&](const auto& expected_, const auto& actual_) {                    \
             return op(static_cast<type>(actual_), static_cast<type>(expected_));                   \
         };                                                                                         \
-        auto desc_gen = []() { return _GEN_ASSERT_DESC(desc, ##__VA_ARGS__); };                    \
+        auto desc_gen = [&]() -> fbl::String {                                                     \
+            _GEN_ASSERT_DESC(out_desc, desc, __VA_ARGS__);                                         \
+            return out_desc;                                                                       \
+        };                                                                                         \
         auto print = [](const auto& val) { return zxtest::PrintValue(val); };                      \
         if (!zxtest::internal::EvalCondition(actual, expected, #actual, #expected,                 \
                                              {.filename = file, .line_number = line}, fatal,       \
@@ -186,7 +189,10 @@ bool CompareHelper(const Actual& actual, const Expected& expected, const Compare
             return op(static_cast<const void*>(actual_), static_cast<const void*>(expected_),      \
                       byte_count);                                                                 \
         };                                                                                         \
-        auto desc_gen = []() { return _GEN_ASSERT_DESC(desc, ##__VA_ARGS__); };                    \
+        auto desc_gen = [&]() -> fbl::String {                                                     \
+            _GEN_ASSERT_DESC(out_desc, desc, __VA_ARGS__);                                         \
+            return out_desc;                                                                       \
+        };                                                                                         \
         auto print = [byte_count](const auto& val) {                                               \
             return zxtest::internal::ToHex(static_cast<const void*>(val), byte_count);             \
         };                                                                                         \

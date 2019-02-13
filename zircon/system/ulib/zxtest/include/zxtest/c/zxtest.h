@@ -167,24 +167,17 @@ static void zxtest_clean_buffer(char** buffer) {
     free(*buffer);
 }
 
-// Used for selecting right macro impl.
-#define _ZXTEST_SEL_N(_0, _1, _2, FN, ...) FN
-
-#define _GEN_ASSERT_DESC_0(buffer, buffer_size, desc) snprintf(buffer, buffer_size, desc)
-
-#define _GEN_ASSERT_DESC_1(buffer, buffer_size, desc, msg, ...)                                    \
-    snprintf(buffer, buffer_size, desc " " msg, ##__VA_ARGS__)
-
-#define _GEN_ASSERT_DESC(buffer, buffer_size, desc, ...)                                           \
-    _ZXTEST_SEL_N(_0, ##__VA_ARGS__, _GEN_ASSERT_DESC_1, _GEN_ASSERT_DESC_1, _GEN_ASSERT_DESC_0)   \
-    (buffer, buffer_size, desc, ##__VA_ARGS__)
-
-#define _LOAD_BUFFER(buffer_name, desc, ...)                                                       \
-    char tmp;                                                                                      \
-    size_t req_size = _GEN_ASSERT_DESC(&tmp, 1, desc, ##__VA_ARGS__) + 1;                          \
-    char* buffer_name __attribute__((cleanup(zxtest_clean_buffer))) =                              \
-        (char*)malloc(req_size * sizeof(char));                                                    \
-    memset(buffer_name, '\0', req_size);
+#define _GEN_ASSERT_DESC(out_desc, desc, ...)                                                      \
+    char* out_desc __attribute__((cleanup(zxtest_c_clean_buffer))) = NULL;                         \
+    do {                                                                                           \
+        char tmp;                                                                                  \
+        size_t req_size = snprintf(&tmp, 1, " " __VA_ARGS__) + 1;                                  \
+        out_desc = (char*)malloc(sizeof(char) * (req_size + strlen(desc) + 2));                    \
+        memset(out_desc, '\0', sizeof(char) * (req_size + strlen(desc) + 2));                      \
+        memcpy(out_desc, desc, strlen(desc));                                                      \
+        out_desc[strlen(desc)] = ' ';                                                              \
+        snprintf(out_desc + strlen(desc) + 1, req_size, " "__VA_ARGS__);                           \
+    } while (0)
 
 #define _RETURN_IF_FATAL(fatal)                                                                    \
     if (fatal && _ZXTEST_ABORT_IF_ERROR) {                                                         \
@@ -196,8 +189,7 @@ static void zxtest_clean_buffer(char** buffer) {
         const void* _actual = (const void*)(actual);                                               \
         const void* _expected = (const void*)(expected);                                           \
         if (!(op(_actual, _expected, size))) {                                                     \
-            _LOAD_BUFFER(msg_buffer, desc, __VA_ARGS__);                                           \
-            _GEN_ASSERT_DESC(msg_buffer, req_size, desc, ##__VA_ARGS__);                           \
+            _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                                     \
             _ZXTEST_LOAD_PRINT_HEX(_actual, size, act, line);                                      \
             _ZXTEST_LOAD_PRINT_HEX(_expected, size, exptd, line);                                  \
             _ZXTEST_ASSERT(msg_buffer, #expected, _ZXTEST_GET_PRINT_VAR(_expected, exptd, line),   \
@@ -211,8 +203,7 @@ static void zxtest_clean_buffer(char** buffer) {
         const type _actual = (const type)(actual);                                                 \
         const type _expected = (const type)(expected);                                             \
         if (!(op(_actual, _expected))) {                                                           \
-            _LOAD_BUFFER(msg_buffer, desc, __VA_ARGS__);                                           \
-            _GEN_ASSERT_DESC(msg_buffer, req_size, desc, ##__VA_ARGS__);                           \
+            _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                                     \
             _ZXTEST_LOAD_PRINT_VAR(_actual, act, line);                                            \
             _ZXTEST_LOAD_PRINT_VAR(_expected, exptd, line);                                        \
             _ZXTEST_ASSERT(msg_buffer, #expected, _ZXTEST_GET_PRINT_VAR(_expected, exptd, line),   \

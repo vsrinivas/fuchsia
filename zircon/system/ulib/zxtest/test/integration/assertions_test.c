@@ -621,3 +621,15 @@ TEST(ZxTestCAssertionTest, PromoteLiteralIntegersOnComp) {
     ASSERT_GT(g, 2);
     ASSERT_GE(g, 3);
 }
+
+TEST(ZxTestCAssertionTest, PrintfLikeDescs) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Failed to identify true.");
+    int a = 1;
+    EXPECT_FALSE(a, "Message ");
+    EXPECT_FALSE(a, "One %d ", a);
+    EXPECT_FALSE(a, "More than one %d %d.", a, a);
+    EXPECT_FALSE(a, "More than one %d %d %d %d %d.", a, a, a, a, a);
+    EXPECT_FALSE(a, "More than one %d %d %d %d %d %d %d %d %d %d %d %d %d %d.", a, a, a, a, a, a, a,
+                 a, a, a, a, a, a, a);
+    TEST_CHECKPOINT();
+}
