@@ -245,9 +245,17 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
             break;
         case 'o':
             offset_ = atoll(optarg);
+            if (offset_ < 0) {
+                fprintf(stderr, "error: offset < 0\n");
+                return ZX_ERR_INVALID_ARGS;
+            }
             break;
         case 'l':
             length_ = atoll(optarg);
+            if (length_ < 0) {
+                fprintf(stderr, "error: length < 0\n");
+                return ZX_ERR_INVALID_ARGS;
+            }
             break;
         case 'c':
             compress_ = true;
@@ -433,7 +441,8 @@ zx_status_t FsCreator::AppendDepfile(const char* str) {
 
     // this code makes assumptions about the size of atomic writes on target
     // platforms which currently hold true, but are not part of e.g. POSIX.
-    if (write(depfile_.get(), buf, len) != len) {
+    ssize_t result = write(depfile_.get(), buf, len);
+    if (result < 0 || static_cast<size_t>(result) != len) {
         fprintf(stderr, "error: depfile append error\n");
         return ZX_ERR_IO;
     }
@@ -496,7 +505,7 @@ zx_status_t FsCreator::ParseSize(char* device, size_t* out) {
             return ZX_ERR_INVALID_ARGS;
         }
 
-        if (length_ && offset_ + length_ > size) {
+        if (length_ && static_cast<size_t>(offset_ + length_) > size) {
             fprintf(stderr, "Must specify size > offset + length\n");
             return ZX_ERR_INVALID_ARGS;
         }
