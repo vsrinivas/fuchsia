@@ -392,13 +392,8 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
                   static_cast<float>(touch.y - descriptor->y.range.min)) /
               y_denominator;
 
-    uint32_t width = 2 * touch.width;
-    uint32_t height = 2 * touch.height;
-
     pt.x = x;
     pt.y = y;
-    pt.radius_major = width > height ? width : height;
-    pt.radius_minor = width > height ? height : width;
     pointers_.push_back(pt);
 
     // For now when we get DOWN we need to fake trigger ADD first.
