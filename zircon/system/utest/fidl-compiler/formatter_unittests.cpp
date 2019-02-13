@@ -80,13 +80,14 @@ bool basic_formatting_rules_test() {
 
         // RULE: Separate top-level declarations for struct, enum, and union with one
         // blank line.
-        for (int i = 0; i < lines.size(); i++) {
+        for (size_t i = 0; i < lines.size(); i++) {
             if (std::regex_search(lines[i], top_level_decl)) {
-                int line_to_check = i - 1;
                 // Just means there is a top-level decl on the first line.
-                if (line_to_check < 0) {
+                if (i == 0) {
                     continue;
                 }
+
+                size_t line_to_check = i - 1;
                 // Back up to before attributes and comments.
                 while (std::regex_search(lines[line_to_check], attribute) ||
                        std::regex_search(lines[line_to_check], comment)) {
