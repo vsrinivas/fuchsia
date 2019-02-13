@@ -2129,57 +2129,6 @@ static zx_status_t brcmf_inform_bss(struct brcmf_cfg80211_info* cfg) {
     return err;
 }
 
-static zx_status_t brcmf_update_bss_info(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp) {
-    struct brcmf_bss_info_le* bi;
-    const struct brcmf_tlv* tim;
-    uint16_t beacon_interval;
-    uint8_t dtim_period;
-    size_t ie_len;
-    uint8_t* ie;
-    zx_status_t err = ZX_OK;
-
-    brcmf_dbg(TRACE, "Enter\n");
-
-    *(uint32_t*)cfg->extra_buf = WL_EXTRA_BUF_MAX;
-    err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BSS_INFO, cfg->extra_buf, WL_EXTRA_BUF_MAX);
-    if (err != ZX_OK) {
-        brcmf_err("Could not get bss info %d\n", err);
-        goto update_bss_info_out;
-    }
-
-    bi = (struct brcmf_bss_info_le*)(cfg->extra_buf + 4);
-    err = brcmf_inform_single_bss(cfg, bi);
-    if (err != ZX_OK) {
-        goto update_bss_info_out;
-    }
-
-    ie = ((uint8_t*)bi) + bi->ie_offset;
-    ie_len = bi->ie_length;
-    beacon_interval = bi->beacon_period;
-
-    tim = brcmf_parse_tlvs(ie, ie_len, WLAN_EID_TIM);
-    if (tim) {
-        dtim_period = tim->data[1];
-    } else {
-        /*
-         * active scan was done so we could not get dtim
-         * information out of probe response.
-         * so we speficially query dtim information to dongle.
-         */
-        uint32_t var;
-        err = brcmf_fil_iovar_int_get(ifp, "dtim_assoc", &var);
-        if (err != ZX_OK) {
-            brcmf_err("wl dtim_assoc failed (%d)\n", err);
-            goto update_bss_info_out;
-        }
-        dtim_period = (uint8_t)var;
-    }
-
-update_bss_info_out:
-    brcmf_dbg(TRACE, "Exit");
-    return err;
-}
-
 void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
     struct escan_info* escan = &cfg->escan_info;
 
@@ -4841,73 +4790,6 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
     return err;
 }
 
-static zx_status_t brcmf_bss_roaming_done(struct brcmf_cfg80211_info* cfg, struct net_device* ndev,
-                                          const struct brcmf_event_msg* e) {
-    struct brcmf_if* ifp = ndev_to_if(ndev);
-    struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
-    struct brcmf_cfg80211_connect_info* conn_info = cfg_to_conn(cfg);
-    struct wiphy* wiphy = cfg_to_wiphy(cfg);
-    struct ieee80211_channel* notify_channel = NULL;
-    struct ieee80211_supported_band* band;
-    struct brcmf_bss_info_le* bi;
-    struct brcmu_chan ch;
-    struct cfg80211_roam_info roam_info = {};
-    uint32_t freq;
-    zx_status_t err = ZX_OK;
-    uint8_t* buf;
-
-    brcmf_dbg(TRACE, "Enter\n");
-
-    brcmf_get_assoc_ies(cfg, ifp);
-    memcpy(profile->bssid, e->addr, ETH_ALEN);
-    brcmf_update_bss_info(cfg, ifp);
-
-    buf = calloc(1, WL_BSS_INFO_MAX);
-    if (buf == NULL) {
-        err = ZX_ERR_NO_MEMORY;
-        goto done;
-    }
-
-    /* data sent to dongle has to be little endian */
-    *(uint32_t*)buf = WL_BSS_INFO_MAX;
-    err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BSS_INFO, buf, WL_BSS_INFO_MAX);
-
-    if (err != ZX_OK) {
-        brcmf_err("GET_BSS_INFO failed: %s\n", zx_status_get_string(err));
-        goto done;
-    }
-
-    bi = (struct brcmf_bss_info_le*)(buf + 4);
-    ch.chspec = bi->chanspec;
-    cfg->d11inf.decchspec(&ch);
-
-    if (ch.band == BRCMU_CHAN_BAND_2G) {
-        band = wiphy->bands[NL80211_BAND_2GHZ];
-    } else {
-        band = wiphy->bands[NL80211_BAND_5GHZ];
-    }
-
-    freq = ieee80211_channel_to_frequency(ch.control_ch_num, band->band);
-    notify_channel = ieee80211_get_channel(wiphy, freq);
-
-done:
-    free(buf);
-
-    roam_info.channel = notify_channel;
-    roam_info.bssid = profile->bssid;
-    roam_info.req_ie = conn_info->req_ie;
-    roam_info.req_ie_len = conn_info->req_ie_len;
-    roam_info.resp_ie = conn_info->resp_ie;
-    roam_info.resp_ie_len = conn_info->resp_ie_len;
-
-    cfg80211_roamed(ndev, &roam_info);
-    brcmf_dbg(CONN, "Report roaming result\n");
-
-    brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
-    brcmf_dbg(TRACE, "Exit\n");
-    return err;
-}
-
 static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struct net_device* ndev,
                                           const struct brcmf_event_msg* e, bool completed) {
     struct brcmf_if* ifp = ndev_to_if(ndev);
@@ -4917,7 +4799,6 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
     if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
         if (completed) {
             brcmf_get_assoc_ies(cfg, ifp);
-            brcmf_update_bss_info(cfg, ifp);
             brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
         }
         // Connected bssid is in profile->bssid.
@@ -5073,7 +4954,7 @@ static zx_status_t brcmf_notify_roaming_status(struct brcmf_if* ifp,
 
     if (event == BRCMF_E_ROAM && status == BRCMF_E_STATUS_SUCCESS) {
         if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
-            brcmf_bss_roaming_done(cfg, ifp->ndev, e);
+            brcmf_err("Received roaming notification - unsupported\n");
         } else {
             brcmf_bss_connect_done(cfg, ifp->ndev, e, true);
             brcmf_net_setcarrier(ifp, true);
