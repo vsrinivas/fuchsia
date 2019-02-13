@@ -41,7 +41,7 @@ table Table {
 /// interface comment #1
 ///
 /// interface comment #3
-interface Interface {
+protocol Interface {
     /// method comment #1
     ///
     /// method comment #3

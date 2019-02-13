@@ -30,7 +30,7 @@ struct ScanError {
     string message;
 };
 
-interface ScanTransaction {
+protocol ScanTransaction {
     // Can be called several times to deliver incremental scan results
     -> OnResult(vector<EssInfo> aps);
     -> OnFinished();
@@ -54,7 +54,7 @@ enum ConnectResultCode {
     // TODO(hahnr): Add result code for attempting to join an incompatible network
 };
 
-interface ConnectTransaction {
+protocol ConnectTransaction {
     // Could add more events here to notify the client of the progress
     -> OnFinished(ConnectResultCode code);
 };
@@ -82,7 +82,7 @@ struct ClientStatusResponse {
     vector<uint8>:32 connecting_to_ssid;
 };
 
-interface ClientSme {
+protocol ClientSme {
     Scan(ScanRequest req, request<ScanTransaction> txn);
     Connect(ConnectRequest req, request<ConnectTransaction>? txn);
     Disconnect() -> ();
@@ -107,7 +107,7 @@ enum StartApResultCode {
     DFS_UNSUPPORTED = 7;
 };
 
-interface ApSme {
+protocol ApSme {
     Start(ApConfig config) -> (StartApResultCode code);
     Stop() -> ();
 };
@@ -135,7 +135,7 @@ enum GetMeshPathTableResultCode {
     INTERNAL_ERROR = 1;
 };
 
-interface MeshSme {
+protocol MeshSme {
     Join(MeshConfig config) -> (JoinMeshResultCode code);
     Leave() -> (LeaveMeshResultCode code);
     GetMeshPathTable() -> (GetMeshPathTableResultCode code, fuchsia.wlan.mesh.MeshPathTable path);

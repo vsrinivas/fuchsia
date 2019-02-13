@@ -105,7 +105,7 @@ struct DestroyIfaceResponse {
     int32 status;
 };
 
-interface Phy {
+protocol Phy {
     Query() -> (QueryResponse resp);
     CreateIface(CreateIfaceRequest req) -> (CreateIfaceResponse resp);
     DestroyIface(DestroyIfaceRequest req) -> (DestroyIfaceResponse resp);

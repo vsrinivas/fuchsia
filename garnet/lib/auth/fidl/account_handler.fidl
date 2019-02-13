@@ -19,7 +19,7 @@ using fuchsia.auth.account;
 // * Account information is already present on the local disk but is not yet
 //   readable because the disk is not yet decrypted.
 [Discoverable]
-interface AccountHandlerControl {
+protocol AccountHandlerControl {
     // Creates a completely new Fuchsia account.
     //
     // |context| An |AccountHandlerContext| that can supply account and
@@ -89,7 +89,7 @@ interface AccountHandlerControl {
 // namespace of AccountHandler by the component that launches it (i.e. the
 // AccountManager).  Until then an AccountHandlerContext is supplied explicitly
 // in the initialization calls on the AccountHandlerControl interface.
-interface AccountHandlerContext {
+protocol AccountHandlerContext {
     // Connects an interface to a particular AuthProvider, launching it if
     // necessary.
     //

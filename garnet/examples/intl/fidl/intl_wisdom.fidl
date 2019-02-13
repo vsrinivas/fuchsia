@@ -9,7 +9,7 @@ using fuchsia.intl;
 /// Interface for a service that, given a |fuchsia.intl.Profile| and some basic parameters, can
 /// provide pithy strings of wisdom to demonstrate the use of |Profile|.
 [Discoverable]
-interface IntlWisdomServer {
+protocol IntlWisdomServer {
     /// Asks for a wisdom string.
     ///
     /// Params:

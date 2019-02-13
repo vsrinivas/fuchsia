@@ -7,6 +7,6 @@ library fuchsia.guest.vmm;
 using fuchsia.guest;
 
 [Discoverable]
-interface LaunchInfoProvider {
+protocol LaunchInfoProvider {
     GetLaunchInfo() -> (fuchsia.guest.LaunchInfo launch_info);
 };

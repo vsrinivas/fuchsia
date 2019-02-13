@@ -5,6 +5,6 @@
 library test.sysmgr;
 
 [Discoverable]
-interface Interface {
+protocol Interface {
     Ping() -> (string magic);
 };

@@ -51,7 +51,7 @@ struct StartInfo {
 };
 
 [FragileBase]
-interface VirtioDevice {
+protocol VirtioDevice {
     // Configure a |queue| for the device. This specifies the |size| and the
     // guest physical addresses of the queue: |desc|, |avail|, and |used|.
     ConfigureQueue(uint16 queue, uint16 size, zx.gpaddr desc, zx.gpaddr avail,
@@ -66,7 +66,9 @@ interface VirtioDevice {
 };
 
 [Discoverable]
-interface VirtioBalloon : VirtioDevice {
+protocol VirtioBalloon {
+    compose VirtioDevice;
+
     // Start the balloon device.
     Start(StartInfo start_info) -> ();
 
@@ -76,7 +78,9 @@ interface VirtioBalloon : VirtioDevice {
 };
 
 [Discoverable]
-interface VirtioBlock : VirtioDevice {
+protocol VirtioBlock {
+    compose VirtioDevice;
+
     // Start the block device.
     Start(StartInfo start_info,
           string:fuchsia.guest.MAX_BLOCK_DEVICE_ID_SIZE id,
@@ -85,14 +89,16 @@ interface VirtioBlock : VirtioDevice {
 };
 
 [Discoverable]
-interface VirtioConsole : VirtioDevice {
+protocol VirtioConsole {
+    compose VirtioDevice;
+
     // Start the console device. This uses |socket| to handle input and output.
     Start(StartInfo start_info, handle<socket> socket) -> ();
 };
 
 // Provides a way for VirtioInput to listen to view events.
 [Discoverable]
-interface ViewListener {
+protocol ViewListener {
     // Called when a View's size is changed.
     OnSizeChanged(fuchsia.ui.gfx.vec3 size);
 
@@ -101,7 +107,9 @@ interface ViewListener {
 };
 
 [Discoverable]
-interface VirtioGpu : VirtioDevice {
+protocol VirtioGpu {
+    compose VirtioDevice;
+
     // Start the GPU device.
     Start(StartInfo start_info, ViewListener? view_listener) -> ();
 
@@ -110,25 +118,33 @@ interface VirtioGpu : VirtioDevice {
 };
 
 [Discoverable]
-interface VirtioInput : VirtioDevice {
+protocol VirtioInput {
+    compose VirtioDevice;
+
     // Start the input device.
     Start(StartInfo start_info) -> ();
 };
 
 [Discoverable]
-interface VirtioNet : VirtioDevice {
+protocol VirtioNet {
+    compose VirtioDevice;
+
     // Start the net device.
     Start(StartInfo start_info) -> ();
 };
 
 [Discoverable]
-interface VirtioRng : VirtioDevice {
+protocol VirtioRng {
+    compose VirtioDevice;
+
     // Start the RNG device.
     Start(StartInfo start_info) -> ();
 };
 
 [Discoverable]
-interface VirtioWayland : VirtioDevice {
+protocol VirtioWayland {
+    compose VirtioDevice;
+
     // Start the wayland device.
     Start(StartInfo start_info,
           handle<vmar> vmar,

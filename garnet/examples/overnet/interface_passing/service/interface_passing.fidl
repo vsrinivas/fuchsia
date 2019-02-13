@@ -7,6 +7,6 @@ library fuchsia.overnet.examples.interfacepassing;
 using fidl.examples.echo;
 
 [Discoverable]
-interface Example {
+protocol Example {
     Request(request<fidl.examples.echo.Echo> iface);
 };

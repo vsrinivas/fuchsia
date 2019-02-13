@@ -9,7 +9,7 @@ using fuchsia.mem;
 [Discoverable]
 // Snapshot loader exported by |ViewProvider| to load snapshots into views
 // created from it.
-interface Loader {
+protocol Loader {
     // Load the snapshot from the Vmo buffer payload.
     Load(fuchsia.mem.Buffer payload);
 };

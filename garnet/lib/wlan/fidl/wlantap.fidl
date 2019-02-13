@@ -73,7 +73,7 @@ struct WlanTxStatus {
     bool success;
 };
 
-interface WlantapPhy {
+protocol WlantapPhy {
     // wlanmac_ifc_t callbacks
     Rx(uint16 wlanmac_id, vector<uint8> data, WlanRxInfo info);
     Status(uint16 wlanmac_id, uint32 st);

@@ -10,7 +10,7 @@ using fuchsia.ui.viewsv1token;
 // ShadertoyFactory provides a number of methods for creating |Shadertoy|
 // instances.
 [Discoverable]
-interface ShadertoyFactory {
+protocol ShadertoyFactory {
     // Create a new Shadertoy that will present its rendered content to
     // |image_pipe|.
     NewImagePipeShadertoy(request<Shadertoy> toy, fuchsia.images.ImagePipe image_pipe);

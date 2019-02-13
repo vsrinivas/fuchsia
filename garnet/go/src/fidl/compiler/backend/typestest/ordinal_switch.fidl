@@ -1,6 +1,6 @@
 library test.name;
 
-interface SwitchingOrdinals {
+protocol SwitchingOrdinals {
     OrdinalFive(); // ordinal and generated_ordinal are different
     OnlyGeneratedOrdinal(); // ordinal and generated_ordinal are the same
     -> EventOrdinalFifteen(); // ordinal and generated_ordinal are different

@@ -11,7 +11,7 @@ using fuchsia.bluetooth.le;
 using fuchsia.bluetooth.bredr;
 
 // Interface for interacting with a Bluetooth host device (bt-host)
-interface Host {
+protocol Host {
     // The following methods fulfill a given interface request. bt-host device
     // will start processing FIDL messages. If the request cannot be fulfilled,
     // the bt-host device will close its end of the given channel.

@@ -5,6 +5,6 @@
 library fidl.examples.heartbeat;
 
 [Discoverable]
-interface Heartbeat {
+protocol Heartbeat {
     -> Heartbeat(bool shutting_down);
 };

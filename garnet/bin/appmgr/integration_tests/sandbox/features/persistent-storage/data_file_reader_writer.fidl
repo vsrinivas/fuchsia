@@ -9,7 +9,7 @@ using zx;
 // A simple interface implemented by isolated_storage_test_util and used to test persistent storage
 // isolation.
 [Discoverable]
-interface DataFileReaderWriter {
+protocol DataFileReaderWriter {
     // Read the file at /data/<path> in the util's namespace and return its contents. If the file
     // does not exist, returns null.
     ReadFile(string path) -> (string? contents);

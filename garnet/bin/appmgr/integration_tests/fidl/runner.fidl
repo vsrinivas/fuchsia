@@ -10,7 +10,7 @@ struct ComponentInfo {
 };
 
 // interface to control the fake component created by MockRunner.
-interface MockComponent {
+protocol MockComponent {
     Kill(uint64 errorcode);
     ConnectToService(string service_name, handle<channel> channel);
 
@@ -23,7 +23,7 @@ interface MockComponent {
     PublishService(string service_name) -> ();
 };
 
-interface MockRunner {
+protocol MockRunner {
     Crash();
     ConnectToComponent(uint64 id, request<MockComponent> req);
 
@@ -36,6 +36,6 @@ interface MockRunner {
 //
 // Mock runners should register to this service when started.
 [Discoverable]
-interface MockRunnerRegistry {
+protocol MockRunnerRegistry {
     Register(MockRunner runner);
 };

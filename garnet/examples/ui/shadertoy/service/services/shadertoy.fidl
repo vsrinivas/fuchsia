@@ -21,7 +21,7 @@ using fuchsia.ui.gfx;
 // This interface does not concern itself with how to display the images
 // rendered by the GLSL code; this is the responsibility of |ShadertoyFactory|,
 // which is used to create Shadertoy instances.
-interface Shadertoy {
+protocol Shadertoy {
     // Set whether rendering is paused or not.
     SetPaused(bool paused);
 

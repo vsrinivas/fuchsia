@@ -6,14 +6,14 @@ library fuchsia.testing.appmgr;
 
 // An interface for a test service.
 [Discoverable]
-interface TestService {
+protocol TestService {
     // Returns a nice message.
     GetMessage() -> (string message);
 };
 
 // Another interface for a test service.
 [Discoverable]
-interface TestService2 {
+protocol TestService2 {
     // Returns a nice message.
     GetMessage() -> (string message);
 };

@@ -6,7 +6,7 @@ library fuchsia.netemul.example;
 
 /// Sample interface that keeps a stateful integer counter starting at zero
 [Discoverable]
-interface Counter {
+protocol Counter {
     /// Increments internal counter by one and returns new counter value
     Increment() -> (uint32 value);
 };
