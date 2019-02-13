@@ -20,7 +20,7 @@ namespace http = ::fuchsia::net::oldhttp;
 using clearcut::HTTPClient;
 using clearcut::HTTPRequest;
 using clearcut::HTTPResponse;
-using tensorflow_statusor::StatusOr;
+using statusor::StatusOr;
 
 namespace {
 

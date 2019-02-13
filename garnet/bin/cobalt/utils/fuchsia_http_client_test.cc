@@ -18,7 +18,7 @@ using clearcut::HTTPRequest;
 using clearcut::HTTPResponse;
 using network_wrapper::FakeNetworkWrapper;
 using network_wrapper::NetworkWrapper;
-using tensorflow_statusor::StatusOr;
+using statusor::StatusOr;
 
 class CVBool {
  public:
