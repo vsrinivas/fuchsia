@@ -106,13 +106,13 @@ bool EvalCondition(const Actual& actual, const Expected& expected, const char* a
 
 // Promote integers to a common type when possible. This allows safely comparing different
 // integer types and sizes, as long as a bigger int exists.
-template <typename Actual, typename Expected>
-bool EqHelper(const Actual& actual, const Expected& expected) {
+template <typename Actual, typename Expected, typename Compare>
+bool CompareHelper(const Actual& actual, const Expected& expected, const Compare& comp) {
     if constexpr (std::is_integral<Actual>::value && std::is_integral<Expected>::value) {
-        return static_cast<typename std::common_type<Actual, Expected>::type>(actual) ==
-               static_cast<typename std::common_type<Actual, Expected>::type>(expected);
+        return comp(static_cast<typename std::common_type<Actual, Expected>::type>(actual),
+                    static_cast<typename std::common_type<Actual, Expected>::type>(expected));
     } else {
-        return actual == expected;
+        return comp(actual, expected);
     }
 }
 
@@ -120,13 +120,24 @@ bool EqHelper(const Actual& actual, const Expected& expected) {
 } // namespace zxtest
 
 // Basic assert macro implementation.
-#define _EQ(actual, expected) zxtest::internal::EqHelper(actual, expected)
+#define _EQ(actual, expected)                                                                      \
+    zxtest::internal::CompareHelper(actual, expected,                                              \
+                                    [](const auto& a, const auto& b) { return a == b; })
 #define _NE(actual, expected) !_EQ(actual, expected)
 #define _BOOL(actual, expected) (static_cast<bool>(actual) == static_cast<bool>(expected))
-#define _LT(actual, expected) actual < expected
-#define _LE(actual, expected) actual <= expected
-#define _GT(actual, expected) actual > expected
-#define _GE(actual, expected) actual >= expected
+#define _LT(actual, expected)                                                                      \
+    zxtest::internal::CompareHelper(actual, expected,                                              \
+                                    [](const auto& a, const auto& b) { return a < b; })
+#define _LE(actual, expected)                                                                      \
+    zxtest::internal::CompareHelper(actual, expected,                                              \
+                                    [](const auto& a, const auto& b) { return a <= b; })
+#define _GT(actual, expected)                                                                      \
+    zxtest::internal::CompareHelper(actual, expected,                                              \
+                                    [](const auto& a, const auto& b) { return a > b; })
+#define _GE(actual, expected)                                                                      \
+    zxtest::internal::CompareHelper(actual, expected,                                              \
+                                    [](const auto& a, const auto& b) { return a >= b; })
+
 #define _STREQ(actual, expected) (strcmp(actual, expected) == 0)
 #define _STRNE(actual, expected) !_STREQ(actual, expected)
 #define _BYTEEQ(actual, expected, size) memcmp(actual, expected, size) == 0

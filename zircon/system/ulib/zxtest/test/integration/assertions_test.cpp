@@ -744,4 +744,46 @@ TEST(ZxTestAssertionTest, CoerceTypeToBoolExplicitNonMoveable) {
     ASSERT_TRUE(val);
     TEST_CHECKPOINT();
 }
+
+TEST(ZxTestAssertionTest, PromoteLiteralIntegersOnComp) {
+    int32_t a = -1;
+    int64_t b = 2;
+    int16_t c = -1;
+    int64_t d = 1;
+
+    uint32_t e = 1;
+    uint64_t f = 2;
+    uint64_t g = 3;
+    uint16_t h = 1;
+
+    // Signed to wider ints.
+    ASSERT_EQ(a, b);
+    ASSERT_GE(b, a);
+    ASSERT_LE(a, b);
+    ASSERT_GT(b, c);
+    ASSERT_LT(b, a);
+    ASSERT_GT(b, d);
+
+    // Signed comparison with literals.
+    ASSERT_EQ(-1, a);
+    ASSERT_EQ(1, d);
+    ASSERT_LT(c, 3);
+    ASSERT_GT(b, 1);
+    ASSERT_GE(b, 2);
+
+    // Unsigned to wider ints.
+    ASSERT_EQ(e, h);
+    ASSERT_GE(g, f);
+    ASSERT_LE(f, g);
+    ASSERT_GT(g, e);
+    ASSERT_LT(h, f);
+
+    // Unsigned comparison with literals.
+    ASSERT_EQ(1, e);
+    ASSERT_LT(f, 4);
+    ASSERT_LE(f, 2);
+    ASSERT_GT(g, 2);
+    ASSERT_GE(g, 3);
+}
+
 } // namespace
