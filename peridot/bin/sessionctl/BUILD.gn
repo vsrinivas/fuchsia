@@ -6,12 +6,8 @@ import("//build/testing/environments.gni")
 import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
 
-executable_package("sessionctl") {
-  # We do this only to have `sessionctl` appear in the shell's
-  # PATH. When a solution to this is available, remove this line
-  # and uncomment the "meta =" stanza below.
-  deprecated_system_image = true
-
+executable("sessionctl_bin") {
+  output_name = "sessionctl"
   sources = [
     "main.cc",
   ]
@@ -26,13 +22,25 @@ executable_package("sessionctl") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
   ]
+}
 
-  # meta = [
-  #   {
-  #     path = "meta/sessionctl.cmx"
-  #     dest = "sessionctl.cmx"
-  #   },
-  # ]
+package("sessionctl") {
+  deps = [
+    ":sessionctl_bin",
+  ]
+  binaries = [
+    {
+      name = "sessionctl"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/sessionctl.cmx"
+      dest = "sessionctl.cmx"
+    },
+  ]
 }
 
 source_set("lib") {
