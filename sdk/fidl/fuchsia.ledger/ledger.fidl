@@ -85,12 +85,12 @@ protocol Ledger {
 
 /// A reference to a value.
 struct Reference {
-    vector<uint8> opaque_id;
+    bytes opaque_id;
 };
 
 /// A continuation token for paginated requests.
 struct Token {
-    vector<uint8> opaque_id;
+    bytes opaque_id;
 };
 
 /// The result of a wait for conflict resolution. See
@@ -117,7 +117,7 @@ protocol Page {
     /// Change notifications will only contain the entries matching |key_prefix|.
     /// To receive all changes, use an empty |key_prefix|.
     GetSnapshot(request<PageSnapshot> snapshot_request,
-                vector<uint8>:256 key_prefix, PageWatcher? watcher) -> (Status status);
+                bytes:256 key_prefix, PageWatcher? watcher) -> (Status status);
 
     // Mutation operations.
 
@@ -139,12 +139,12 @@ protocol Page {
     /// parameter managing the synchronization policy for this value. |Put()| uses
     /// a default priority of |Priority.EAGER|. For the list of available
     /// priorities and their definition, see |Priority|.
-    Put(vector<uint8>:256 key, vector<uint8> value) -> (Status status);
-    PutWithPriority(vector<uint8>:256 key, vector<uint8> value,
+    Put(bytes:256 key, bytes value) -> (Status status);
+    PutWithPriority(bytes:256 key, bytes value,
                     Priority priority) -> (Status status);
-    PutReference(vector<uint8>:256 key, Reference reference, Priority priority)
+    PutReference(bytes:256 key, Reference reference, Priority priority)
         -> (Status status);
-    Delete(vector<uint8>:256 key) -> (Status status);
+    Delete(bytes:256 key) -> (Status status);
 
     // Page level operations.
 
@@ -232,7 +232,7 @@ enum Priority {
 
 /// A pair of key and value.
 struct Entry {
-    vector<uint8>:256 key;
+    bytes:256 key;
     /// |value| is null and |size| is 0 if the value requested has the LAZY
     /// priority and is not present on the device. Clients must use a Fetch call
     /// to retrieve the contents.
@@ -242,12 +242,12 @@ struct Entry {
 
 /// A value inlined in a message.
 struct InlinedValue {
-    vector<uint8> value;
+    bytes value;
 };
 
 /// A pair of key and an inlined value.
 struct InlinedEntry {
-    vector<uint8>:256 key;
+    bytes:256 key;
     /// |value| is null if the value requested has the LAZY priority and is not
     /// present on the device. Clients must use a Fetch call to retrieve the
     /// contents.
@@ -272,12 +272,12 @@ protocol PageSnapshot {
     /// Only |EAGER| values are guaranteed to be returned inside |entries|.
     /// Missing |LAZY| values can be retrieved over the network using Fetch().
     /// The returned |entries| are sorted by |key|.
-    GetEntries(vector<uint8>:256 key_start, Token? token)
+    GetEntries(bytes:256 key_start, Token? token)
         -> (Status status, vector<Entry> entries, Token? next_token);
 
     /// Same as |GetEntries()|. |VALUE_TOO_LARGE| is returned if a value does not
     /// fit in a FIDL message.
-    GetEntriesInline(vector<uint8>:256 key_start, Token? token)
+    GetEntriesInline(bytes:256 key_start, Token? token)
         -> (Status status, vector<InlinedEntry> entries,
             Token? next_token);
 
@@ -291,25 +291,25 @@ protocol PageSnapshot {
     /// returned in the previous call.
     /// The returned |keys| are sorted. |status| will be |PARTIAL_RESULT| as long
     /// as there are more results and |OK| once finished.
-    GetKeys(vector<uint8>:256 key_start, Token? token)
-        -> (Status status, vector<vector<uint8>:256> keys,
+    GetKeys(bytes:256 key_start, Token? token)
+        -> (Status status, vector<bytes:256> keys,
             Token? next_token);
 
     /// Returns the value of a given key.
     /// Only |EAGER| values are guaranteed to be returned. Calls when the value is
     /// |LAZY| and not available will return a |NEEDS_FETCH| status. The value can
     /// be retrieved over the network using a Fetch() call.
-    Get(vector<uint8>:256 key) -> (Status status, fuchsia.mem.Buffer? buffer);
+    Get(bytes:256 key) -> (Status status, fuchsia.mem.Buffer? buffer);
 
     /// Returns the value of a given key if it fits in a FIDL message.
     /// |VALUE_TOO_LARGE| is returned if the value does not fit in a FIDL message.
     /// See |Get()| for additional information.
-    GetInline(vector<uint8>:256 key) -> (Status status, InlinedValue? value);
+    GetInline(bytes:256 key) -> (Status status, InlinedValue? value);
 
     /// Fetches the value of a given key, over the network if not already present
     /// locally. |NETWORK_ERROR| is returned if the download fails (e.g.: network
     /// is not available).
-    Fetch(vector<uint8>:256 key) -> (Status status, fuchsia.mem.Buffer? buffer);
+    Fetch(bytes:256 key) -> (Status status, fuchsia.mem.Buffer? buffer);
 
     /// Fetches the value of a given key, over the network if not already present
     /// locally, and returns a shared handle of a part of the value of a given
@@ -317,7 +317,7 @@ protocol PageSnapshot {
     /// is less than 0, starts at |-offset| from the end of the value.
     /// Returns at most |max_size| bytes. If |max_size| is less than 0, returns
     /// everything.
-    FetchPartial(vector<uint8>:256 key, int64 offset, int64 max_size)
+    FetchPartial(bytes:256 key, int64 offset, int64 max_size)
         -> (Status status, fuchsia.mem.Buffer? buffer);
 };
 
@@ -338,7 +338,7 @@ struct PageChange {
     /// List of new and modified entries. |changed_entries| are sorted by |key|.
     vector<Entry> changed_entries;
     /// List of deleted keys, in sorted order.
-    vector<vector<uint8>:256> deleted_keys;
+    vector<bytes:256> deleted_keys;
 };
 
 /// Interface to watch changes to a page. The client will receive changes made by
@@ -400,7 +400,7 @@ enum MergePolicy {
 /// A value that is either small enough to be directly embedded in |bytes| or
 /// that is referenced by |reference|.
 union BytesOrReference {
-    vector<uint8> bytes;
+    bytes bytes;
     Reference reference;
 };
 
@@ -420,7 +420,7 @@ enum ValueSource {
 /// to the new value. If |source| is not |NEW|, |new_value| and |priority| are
 /// ignored.
 struct MergedValue {
-    vector<uint8>:256 key;
+    bytes:256 key;
     ValueSource source;
     BytesOrReference? new_value;
     Priority priority;
@@ -432,7 +432,7 @@ struct MergedValue {
 /// was not present in the base, left or right (respectively) branch of the
 /// page.
 struct DiffEntry {
-    vector<uint8>:256 key;
+    bytes:256 key;
 
     Value? base;
     Value? left;

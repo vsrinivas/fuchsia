@@ -23,7 +23,7 @@ struct SignalReportIndication {
 struct EapolIndication {
     array<uint8>:6 src_addr;
     array<uint8>:6 dst_addr;
-    vector<uint8> data;
+    bytes data;
 };
 
 enum MacRole {
@@ -36,9 +36,9 @@ enum MacRole {
 // This grouping is the industry's de factor standard.
 struct BandCapabilities {
     fuchsia.wlan.common.Band band_id;
-    vector<uint8> basic_rates;
+    bytes basic_rates;
     uint16 base_frequency;
-    vector<uint8> channels;
+    bytes channels;
 
     CapabilityInfo cap;
     HtCapabilities? ht_cap;

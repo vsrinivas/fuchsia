@@ -21,10 +21,10 @@ struct Error {
 // An HTTP header field.
 struct Header {
     // The name of the header field.
-    vector<uint8> name;
+    bytes name;
 
     // The value of the header field.
-    vector<uint8> value;
+    bytes value;
 };
 
 // The body of either an HTTP request or an HTTP response.
@@ -78,7 +78,7 @@ struct Request {
     string method = "GET";
 
     // The URL to load.
-    vector<uint8> url;
+    bytes url;
 
     // Additional HTTP request headers.
     vector<Header>? headers;
@@ -111,10 +111,10 @@ struct RedirectTarget {
     string method;
 
     // The URL the server suggested for the redirect.
-    vector<uint8> url;
+    bytes url;
 
     // The referrer the server suggested for the redirect.
-    vector<uint8> referrer;
+    bytes referrer;
 };
 
 // A response to an HTTP request.
@@ -126,7 +126,7 @@ struct Response {
     Body? body;
 
     // The final URL of the response, after redirects have been followed.
-    vector<uint8>? url;
+    bytes? url;
 
     // The HTTP status code.
     //

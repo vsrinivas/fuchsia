@@ -93,7 +93,7 @@ enum WpaCipher {
 
 struct WirelessAccessPoint {
     /// The associated bssid.
-    vector<uint8> bssid;
+    bytes bssid;
 
     // Frequency
     int32 frequency;
@@ -154,7 +154,7 @@ enum TemperatureUnit {
 /// Collection of internationalization-related settings stored in Stash.
 // TODO(SU-106): Consider switching to FIDL table.
 struct IntlSettings {
-    /// An ordered list of the user's preferred locales, encoded as Unicode BCP-47 locale 
+    /// An ordered list of the user's preferred locales, encoded as Unicode BCP-47 locale
     /// identifiers _without extensions_.
     /// Supports language-Script-REGION-variant.
     ///

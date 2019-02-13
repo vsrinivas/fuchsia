@@ -637,12 +637,12 @@ guide your decision making:
    `FrobinateResult` struct defined above contains values that are always null
    at the same time when `error` is not `MyError.OK`.
 
-### Should I use string or vector?
+### Should I use string or bytes?
 
 In FIDL, `string` data must be valid UTF-8, which means strings can represent
 sequences of Unicode code points but cannot represent arbitrary binary data.  In
-contrast, `vector` or `array` can represent arbitrary binary data and do not
-imply Unicode.
+contrast, `bytes` or `array<uint8>` can represent arbitrary binary data and do
+not imply Unicode.
 
 Use `string` for text data:
 
@@ -659,9 +659,9 @@ Use `string` for text data:
  * Use `string` to represent HTTP methods because HTTP methods are comprised of
    a fixed selection of characters that are always valid UTF-8.
 
-Use `vector` or `array` for small non-text data:
+Use `bytes` or `array<uint8>` for small non-text data:
 
- * Use `vector<uint8>` for HTTP header fields because HTTP header fields do not
+ * Use `bytes` for HTTP header fields because HTTP header fields do not
    specify an encoding and therefore cannot necessarily be represented in UTF-8.
 
  * Use `array<uint8>:6` for MAC addresses because MAC address are binary data.

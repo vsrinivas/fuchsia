@@ -13,7 +13,7 @@ union Value {
     int64 int64_value;
     string string_value;
     // Prefer using oob_bytes instead.
-    vector<uint8> bytes_value;
+    bytes bytes_value;
 };
 
 // Parameter
@@ -464,7 +464,7 @@ struct FormatDetails {
     // could potentially increase this restriction some, but this interface isn't
     // designed to support OOB config blobs that approach
     // ZX_CHANNEL_MAX_MSG_BYTES.
-    vector<uint8>? oob_bytes;
+    bytes? oob_bytes;
 
     // Decoder input format:
     //

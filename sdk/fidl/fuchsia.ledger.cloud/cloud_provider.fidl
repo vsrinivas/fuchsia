@@ -33,7 +33,7 @@ protocol CloudProvider {
     GetDeviceSet(request<DeviceSet> device_set) -> (Status status);
 
     /// Retrieves the controller for cloud sync of a particular page.
-    GetPageCloud(vector<uint8> app_id, vector<uint8> page_id, request<PageCloud> page_cloud)
+    GetPageCloud(bytes app_id, bytes page_id, request<PageCloud> page_cloud)
         -> (Status status);
 };
 
@@ -44,10 +44,10 @@ protocol CloudProvider {
 protocol DeviceSet {
     /// Verifies that the device fingerprint in the cloud is still in the list of
     /// devices, ensuring that the cloud was not erased since the last sync.
-    CheckFingerprint(vector<uint8> fingerprint) -> (Status status);
+    CheckFingerprint(bytes fingerprint) -> (Status status);
 
     /// Adds the device fingerprint to the list of devices in the cloud.
-    SetFingerprint(vector<uint8> fingerprint) -> (Status status);
+    SetFingerprint(bytes fingerprint) -> (Status status);
 
     /// Watches the given |fingerprint| in the cloud so that |watcher| is notified
     /// when the fingerprint is erased.
@@ -63,7 +63,7 @@ protocol DeviceSet {
     ///
     /// If the returned status is not OK, the corresponding error call is also made
     /// on the watcher.
-    SetWatcher(vector<uint8> fingerprint, DeviceSetWatcher watcher)
+    SetWatcher(bytes fingerprint, DeviceSetWatcher watcher)
         -> (Status status);
 
     /// Erases the entire registry of devices. This makes all devices detect that
@@ -93,7 +93,7 @@ struct CommitPack {
 
 /// A continuation token for paginated requests.
 struct Token {
-    vector<uint8> opaque_id;
+    bytes opaque_id;
 };
 
 /// Handler for cloud sync of a single page.
@@ -131,13 +131,13 @@ protocol PageCloud {
     /// Uploads the given object to the cloud under the given id.
     ///
     /// If the object already exists in the cloud this method returns OK.
-    AddObject(vector<uint8> id, fuchsia.mem.Buffer buffer) -> (Status status);
+    AddObject(bytes id, fuchsia.mem.Buffer buffer) -> (Status status);
 
     /// Retrieves the object of the given id from the cloud.
     ///
     /// If the resulting |status| is |OK|, |buffer| will contain the object
     /// content. If the resulting |status| is not |OK|, |buffer| will be null.
-    GetObject(vector<uint8> id)
+    GetObject(bytes id)
         -> (Status status, fuchsia.mem.Buffer? buffer);
 
     /// Watches the cloud for push notifications.
@@ -171,7 +171,7 @@ protocol PageCloudWatcher {
     ///
     /// No subsequent calls are made until the client calls the callback of the
     /// previous one.
-    OnNewObject(vector<uint8> id, fuchsia.mem.Buffer buffer) -> ();
+    OnNewObject(bytes id, fuchsia.mem.Buffer buffer) -> ();
 
     /// Called when an error occurs.
     ///

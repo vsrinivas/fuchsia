@@ -22,7 +22,7 @@ struct Error {
 };
 
 struct AP {
-    vector<uint8> bssid;
+    bytes bssid;
     string ssid; // TODO(NET-698, NET-1474): Make this as vector<uint8:32>
     int8 rssi_dbm;
     bool is_secure;

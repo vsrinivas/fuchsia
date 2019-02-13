@@ -9,12 +9,12 @@ using fuchsia.bluetooth.gatt;
 
 struct ServiceDataEntry {
     string uuid;
-    vector<uint8> data;
+    bytes data;
 };
 
 struct ManufacturerSpecificDataEntry {
     uint16 company_id;
-    vector<uint8> data;
+    bytes data;
 };
 
 // Represents advertising and scan response data advertised by a broadcaster or peripheral.

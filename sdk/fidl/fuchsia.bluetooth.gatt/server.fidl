@@ -20,16 +20,16 @@ protocol LocalServiceDelegate {
     // read request resulted in an error it should be returned in |error_code|.
     // On success, |error_code| should be set to NO_ERROR and a |value| should be
     // provided.
-    OnReadValue(uint64 id, int32 offset) -> (vector<uint8>? value, ErrorCode status);
+    OnReadValue(uint64 id, int32 offset) -> (bytes? value, ErrorCode status);
 
     // Called when a remote device issues a request to write the value of the
     // characteristic or descriptor with the given identifier.
-    OnWriteValue(uint64 id, uint16 offset, vector<uint8> value) -> (ErrorCode status);
+    OnWriteValue(uint64 id, uint16 offset, bytes value) -> (ErrorCode status);
 
     // Called when a remote device issues a request to write the value of the
     // characteristic with the given identifier. This can be called on a
     // characteristic with the WRITE_WITHOUT_RESPONSE property.
-    OnWriteWithoutResponse(uint64 id, uint16 offset, vector<uint8> value);
+    OnWriteWithoutResponse(uint64 id, uint16 offset, bytes value);
 };
 
 // Interface for communicating with a published service.
@@ -47,7 +47,7 @@ protocol LocalService {
     //
     // This method has no effect if the peer has not enabled notifications or
     // indications on the requested characteristic.
-    NotifyValue(uint64 characteristic_id, string peer_id, vector<uint8> value, bool confirm);
+    NotifyValue(uint64 characteristic_id, string peer_id, bytes value, bool confirm);
 };
 
 [Discoverable]

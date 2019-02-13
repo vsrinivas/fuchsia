@@ -51,7 +51,7 @@ interface Primary {
 
     // Submits a series of commands for execution on the GPU without using a command buffer.
     ExecuteImmediateCommandsFIDL(uint32 context_id,
-                                 vector<uint8>:kReceiveBufferSize command_data,
+                                 bytes:kReceiveBufferSize command_data,
                                  vector<zx.koid> semaphores);
 
     // Retrieve the current magma error status.

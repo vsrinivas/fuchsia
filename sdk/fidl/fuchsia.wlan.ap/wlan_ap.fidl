@@ -15,7 +15,7 @@ protocol ApPolicy {
 
 protocol Requests {
   StartAccessPoint(AccessPointParams params) -> (Status request_status);
-  StopAccessPoint(vector<uint8> ssid) -> (Status request_status);
+  StopAccessPoint(bytes ssid) -> (Status request_status);
 };
 
 
@@ -31,8 +31,8 @@ struct Status {
 
 
 struct AccessPointParams {
-  vector<uint8> ssid; // 0 - 32 bytes
-  vector<uint8> passphrase; // 8 - 63 char
+  bytes ssid; // 0 - 32 bytes
+  bytes passphrase; // 8 - 63 char
   ApBand band;
 };
 

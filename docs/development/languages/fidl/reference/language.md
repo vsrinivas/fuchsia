@@ -211,6 +211,8 @@ The following primitive types are supported:
 Numbers are suffixed with their size in bits, **`bool`** is 1
 byte.
 
+We also alias **`byte`** to mean `uint8`.
+
 ##### Use
 
 ```fidl
@@ -323,7 +325,7 @@ struct Record {
 ```
 
 > Strings should not be used to pass arbitrary binary data since bindings enforce
-> valid UTF-8. Instead, consider `vector<uint8>` for small data or
+> valid UTF-8. Instead, consider `bytes` for small data or
 > [`fuchsia.mem.Buffer`](../../../api/fidl.md#consider-using-fuchsia_mem_buffer)
 > for blobs. See
 > [Should I use string or vector?](../../../api/fidl.md#should-i-use-string-or-vector)
@@ -337,6 +339,8 @@ struct Record {
     maximum 40 element vector.
 *   There is no special case for vectors of bools. Each bool element takes one
     byte as usual.
+*   We alias **`bytes`** to mean `vector<uint8>`, and it can be size bound in a
+    similar fashion e.g. `bytes:1024`.
 
 ##### Use
 
@@ -358,7 +362,7 @@ struct Record {
     vector<int32>:10 params;
 
     // a vector of bytes, no upper bound on size
-    vector<uint8> blob;
+    bytes blob;
 
     // a nullable vector of up to 24 strings
     vector<string>:24? nullable_vector_of_strings;

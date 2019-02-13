@@ -103,7 +103,7 @@ struct RepositoryKeyConfig {
     string type;
 
     /// The value of the key.
-    vector<uint8> value;
+    bytes value;
 };
 
 /// Descibes the configuration necessary to connect to a mirror.

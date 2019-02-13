@@ -22,7 +22,7 @@ union DataElementData {
     string? str;
     string? uuid;
     bool b;
-    vector<uint8>? bytes;
+    bytes? bytes;
     vector<DataElement?> sequence;
 };
 

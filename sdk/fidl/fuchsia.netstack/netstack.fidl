@@ -110,7 +110,7 @@ struct NetInterface {
     fuchsia.net.IpAddress netmask;
     fuchsia.net.IpAddress broadaddr;
     vector<fuchsia.net.Subnet> ipv6addrs;
-    vector<uint8> hwaddr;
+    bytes hwaddr;
 };
 
 // New version that includes a metric value.
@@ -127,7 +127,7 @@ struct NetInterface2 {
     fuchsia.net.IpAddress netmask;
     fuchsia.net.IpAddress broadaddr;
     vector<fuchsia.net.Subnet> ipv6addrs;
-    vector<uint8> hwaddr;
+    bytes hwaddr;
 };
 
 // Flags for NetInterface.flags.

@@ -40,11 +40,11 @@ enum KeyOrigin {
 };
 
 struct Signature {
-    vector<uint8>:512 bytes;
+    bytes:512 bytes;
 };
 
 struct PublicKey {
-    vector<uint8>:256 bytes;
+    bytes:256 bytes;
 };
 
 [Discoverable]
@@ -106,7 +106,7 @@ protocol KeyManager {
     // EcdsaSha512P384
     // EcdsaSha512P521
     ImportAsymmetricPrivateKey(
-        vector<uint8> data,
+        bytes data,
         string:MAX_KEY_NAME_SIZE key_name,
         AsymmetricKeyAlgorithm key_algorithm,
         request<AsymmetricPrivateKey> key) -> (Status status);

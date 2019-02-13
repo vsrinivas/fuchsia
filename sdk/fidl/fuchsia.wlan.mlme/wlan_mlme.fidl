@@ -33,14 +33,14 @@ struct ScanRequest {
     uint64 txn_id;
     BSSTypes bss_type;
     array<uint8>:6 bssid;
-    vector<uint8>:32 ssid;
+    bytes:32 ssid;
     ScanTypes scan_type;
     uint32 probe_delay; // in TimeUnits
     vector<uint8>? channel_list;
     uint32 min_channel_time; // in TimeUnits
     uint32 max_channel_time; // in TimeUnits
     // RequestInformation
-    vector<vector<uint8>:32>? ssid_list;
+    vector<bytes:32>? ssid_list;
     // ChannelUsage
     // AccessNetworkType
     // HESSID
@@ -355,7 +355,7 @@ struct VhtOperation {
 struct BSSDescription {
     array<uint8>:6 bssid;
 
-    vector<uint8>:32 ssid;
+    bytes:32 ssid;
 
     BSSTypes bss_type;
     uint16 beacon_period; // in TU
@@ -366,10 +366,10 @@ struct BSSDescription {
     CapabilityInfo cap;
     vector<uint8> basic_rate_set; // in 0.5 Mbps, valid value: 1-127. See Table 9-78 for 126, 127.
     vector<uint8> op_rate_set; // in 0.5 Mbps, valid value: 1-127. See Table 9-78 for 126, 127.
-    vector<uint8>? country;
+    bytes? country;
 
     // TODO(hahnr): This field represents an IE and should thus be named RSNE.
-    vector<uint8>? rsn;
+    bytes? rsn;
 
     int16 rcpi_dbmh; // 0.5 step dBm. Do not use encoding from IEEE Std 802.11-2016 9.4.2.38.
     int16 rsni_dbh; // 0.5 step dB.  Do not use encoding from IEEE Std 802.11-2016 9.4.2.41.
@@ -588,7 +588,7 @@ struct DeauthenticateIndication {
 struct AssociateRequest {
     array<uint8>:6 peer_sta_address;
     // TODO(hahnr): This field represents an IE and should thus be named RSNE.
-    vector<uint8>? rsn;
+    bytes? rsn;
 
     // etc
 };
@@ -621,10 +621,10 @@ struct AssociateIndication {
     array<uint8>:6 peer_sta_address;
     // CapabilityInformation
     uint16 listen_interval;
-    vector<uint8>? ssid;
+    bytes? ssid;
     // OperationalRateSet
     // BSSMembershipSelectorSet
-    vector<uint8>? rsn;
+    bytes? rsn;
 
     // etc
 };
@@ -688,7 +688,7 @@ struct Country {
 };
 
 struct StartRequest {
-    vector<uint8>:32 ssid;
+    bytes:32 ssid;
     BSSTypes bss_type;
     uint16 beacon_period; // in TU
     uint8 dtim_period;
@@ -700,7 +700,7 @@ struct StartRequest {
     // See also dot11MultiDomainCapabilityActivated.
     Country country;
 
-    vector<uint8>:32 mesh_id;
+    bytes:32 mesh_id;
 
     // TODO(hahnr): Add additional elements.
 
@@ -708,7 +708,7 @@ struct StartRequest {
     // primitive. However, IEEE doesn't define any other primitive to configure the RSN after its
     // BSS was started. The RSNE must be available when the BSS is started, and thus, this is the
     // right place to transfer the RSNE to the MLME.
-    vector<uint8>? rsne;
+    bytes? rsne;
 
     // Combined with what MLME knows about the device capabilities,
     // following parameters determine what to be advertised to the peer
@@ -742,7 +742,7 @@ struct StartConfirm {
 // MLME-STOP.request (IEEE Std 802.11-2016, 6.3.12.2)
 
 struct StopRequest {
-    vector<uint8>:32 ssid;
+    bytes:32 ssid;
 };
 
 enum StopResultCodes {
@@ -766,7 +766,7 @@ enum KeyType {
 
 struct SetKeyDescriptor {
     // Specs specify a bit string, we use byte array.
-    vector<uint8> key;
+    bytes key;
     uint16 key_id;
     KeyType key_type;
     array<uint8>:6 address;
@@ -796,7 +796,7 @@ struct DeleteKeysRequest {
 struct EapolRequest {
     array<uint8>:6 src_addr;
     array<uint8>:6 dst_addr;
-    vector<uint8> data;
+    bytes data;
 };
 
 // MLME-EAPOL.confirm (IEEE Std 802.11-2016 6.3.22.2)
@@ -827,7 +827,7 @@ struct MeshPeeringCommon {
     array<uint8>:6 peer_sta_address;
     uint16 protocol_id;
     uint16 local_link_id;
-    vector<uint8>:32 mesh_id;
+    bytes:32 mesh_id;
     vector<uint8> rates;
     MeshConfiguration mesh_config;
     HtCapabilities? ht_cap;

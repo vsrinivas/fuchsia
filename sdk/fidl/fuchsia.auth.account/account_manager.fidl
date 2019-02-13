@@ -52,7 +52,7 @@ enum Status {
 // the devices that the account is provisioned on. Identifiers are not human
 // readable.
 struct GlobalAccountId {
-    vector<uint8>:MAX_ID_SIZE id;
+    bytes:MAX_ID_SIZE id;
 };
 
 // A unique identifier for a Fuchsia account on the current device. If the

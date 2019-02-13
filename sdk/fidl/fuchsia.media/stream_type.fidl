@@ -15,7 +15,7 @@ struct StreamType {
     string encoding;
 
     // Encoding-specific parameters.
-    vector<uint8>? encoding_parameters;
+    bytes? encoding_parameters;
 };
 
 // A union of all medium-specific stream type structs.
