@@ -119,7 +119,7 @@ executable("tests") {
   deps = [
     ":appmgr_for_test",
     ":lib",
-    "//garnet/examples/fidl/services:echo2",
+    "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",

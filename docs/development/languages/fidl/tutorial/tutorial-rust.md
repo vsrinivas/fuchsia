@@ -12,9 +12,9 @@ design and implementation of FIDL, as well as the
 
 ## Getting started
 
-We'll use the `echo2.fidl` sample that we discussed in the [FIDL Tutorial](README.md)
+We'll use the `echo.fidl` sample that we discussed in the [FIDL Tutorial](README.md)
 introduction section, by opening
-[//garnet/examples/fidl/services/echo2.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/services/echo2.fidl).
+[//garnet/examples/fidl/services/echo.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/services/echo.fidl).
 
 <!-- NOTE: the code snippets here need to be kept up to date manually by
      copy-pasting from the actual source code. Please update a snippet
@@ -37,7 +37,7 @@ interface Echo {
 ## `Echo` server
 
 The echo server implementation can be found at:
-[//garnet/examples/fidl/echo2_server_rust/src/main.rs](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo2_server_rust/src/main.rs).
+[//garnet/examples/fidl/echo_server_rust/src/main.rs](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo_server_rust/src/main.rs).
 
 This file has two functions: `main()`, and `spawn_echo_server`:
 
@@ -99,7 +99,7 @@ use futures::prelude::*;
 -   `fidl::endpoints2::ServiceMarker` is the trait implemented by `XXXMarker`
     types. It provides the associated string `NAME`.
 -   `fidl_fidl_examples_echo` contains bindings for the `Echo` interface.
-    This file is generated from the interface defined in `echo2.fidl`.
+    This file is generated from the interface defined in `echo.fidl`.
     These bindings include:
     -   The `EchoMarker` type, a [zero-sized type] used to hold compile-time
         metadata about the `Echo` service (such as `NAME`)
@@ -241,7 +241,7 @@ to handle the case in which an error occurred.
 
 The echo client implementation can be found at:
 
-[//garnet/examples/fidl/echo2_client_rust/src/main.rs](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo2_client_rust/src/main.rs)
+[//garnet/examples/fidl/echo_client_rust/src/main.rs](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo_client_rust/src/main.rs)
 
 Our simple client does everything in `main()`.
 
@@ -270,7 +270,7 @@ async fn main() -> Result<(), Error> {
     #[structopt(name = "echo_client_rust")]
     struct Opt {
         #[structopt(long = "server", help = "URL of echo server",
-                    default_value = "fuchsia-pkg://fuchsia.com/echo2_server_rust#meta/echo2_server_rust.cmx")]
+                    default_value = "fuchsia-pkg://fuchsia.com/echo_server_rust#meta/echo_server_rust.cmx")]
         server_url: String,
     }
 
@@ -295,6 +295,6 @@ async fn main() -> Result<(), Error> {
 You can run the echo example like this:
 
 ```sh
-$ run fuchsia-pkg://fuchsia.com/echo2_client_rust#meta/echo2_client_rust.cmx
+$ run fuchsia-pkg://fuchsia.com/echo_client_rust#meta/echo_client_rust.cmx
 ```
 

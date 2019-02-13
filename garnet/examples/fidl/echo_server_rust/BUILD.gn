@@ -5,32 +5,32 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("echo2_client_rust_synchronous_bin") {
-  name = "echo2_client_rust_synchronous"
+rustc_binary("echo_server_rust_bin") {
+  name = "echo_server_rust"
   edition = "2018"
 
   deps = [
-    "//garnet/examples/fidl/services:echo2-rustc",
+    "//garnet/examples/fidl/services:echo-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:structopt",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
   ]
 }
 
-package("echo2_client_rust_synchronous") {
+package("echo_server_rust") {
   deps = [
-    ":echo2_client_rust_synchronous_bin",
+    ":echo_server_rust_bin",
   ]
 
-  binary = "rust_crates/echo2_client_rust_synchronous"
+  binary = "rust_crates/echo_server_rust"
 
   meta = [
     {
-      path = rebase_path("../meta/echo2_client.cmx")
-      dest = "echo2_client_rust_synchronous.cmx"
+      path = rebase_path("../meta/echo_server.cmx")
+      dest = "echo_server_rust.cmx"
     },
   ]
 }

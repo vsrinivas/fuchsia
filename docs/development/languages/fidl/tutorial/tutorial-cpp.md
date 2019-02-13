@@ -12,9 +12,9 @@ design and implementation of FIDL, as well as the
 
 # Getting started
 
-We'll use the `echo2.fidl` sample that we discussed in the [FIDL Tutorial](README.md)
+We'll use the `echo.fidl` sample that we discussed in the [FIDL Tutorial](README.md)
 introduction section, by opening
-[//garnet/examples/fidl/services/echo2.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/services/echo2.fidl).
+[//garnet/examples/fidl/services/echo.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/services/echo.fidl).
 
 <!-- NOTE: the code snippets here need to be kept up to date manually by
      copy-pasting from the actual source code. Please update a snippet
@@ -53,7 +53,7 @@ Below are the implementation files created for C++, assuming that your build fla
 ## `Echo` server
 
 The echo server implementation can be found at:
-[//garnet/examples/fidl/echo2_server_cpp/](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo2_server_cpp/).
+[//garnet/examples/fidl/echo_server_cpp/](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo_server_cpp/).
 
 Find the implementation of the main function, and that of the `Echo` interface.
 
@@ -83,20 +83,20 @@ First the namespace definition. This matches the namespace defined in the FIDL
 file in its "library" declaration, but that's incidental:
 
 ```cpp
-namespace echo2 {
+namespace echo {
 ```
 
 Here are the #include files used in the server implementation:
 
 ```cpp
-#include <fuchsia/cpp/echo2.h>
+#include <fidl/examples/echo/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
 
-#include "lib/app/cpp/startup_context.h"
+#include "lib/component/cpp/startup_context.h"
 ```
 
--   `echo2.h` contains the generated C++ definition of our `Echo` FIDL
+-   `fidl.h` contains the generated C++ definition of our `Echo` FIDL
     interface.
 -   `startup_context.h` is used by `EchoServerApp` to expose service
     implementations.
@@ -187,7 +187,7 @@ component might close, crash, be busy, etc.
 
 Let's take a look at the client implementation:
 
-[//garnet/examples/fidl/echo2_client_cpp/](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo2_client_cpp/)
+[//garnet/examples/fidl/echo_client_cpp/](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo_client_cpp/)
 
 The structure of the client is similar to that of the server, with a `main`
 function and an `async::Loop`. The difference is that the client immediately
@@ -223,7 +223,7 @@ the server response.
 
 ```cpp
 int main(int argc, const char** argv) {
-  std::string server_url = "fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx";
+  std::string server_url = "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx";
   std::string msg = "hello world";
   for (int i = 1; i < argc - 1; ++i) {
     if (!strcmp("--server", argv[i])) {
@@ -233,7 +233,7 @@ int main(int argc, const char** argv) {
     }
   }
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  echo2::EchoClientApp app;
+  echo::EchoClientApp app;
   app.Start(server_url);
   app.echo()->EchoString(msg, [&loop](fidl::StringPtr value) {
     printf("***** Response: %s\n", value->data());
@@ -283,7 +283,7 @@ allowing `main()` to return and the program to terminate.
 You can run the Hello World example like this:
 
 ```sh
-$ run fuchsia-pkg://fuchsia.com/echo2_client_cpp#meta/echo2_client_cpp.cmx
+$ run fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx
 ```
 
 You do not need to specifically run the server because the call to

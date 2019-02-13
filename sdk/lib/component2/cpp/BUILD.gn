@@ -42,7 +42,7 @@ test("component_cpp_unittests") {
 
   deps = [
     ":cpp",
-    "//garnet/examples/fidl/services:echo2",
+    "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest_main",
     "//zircon/public/fidl/fuchsia-io",

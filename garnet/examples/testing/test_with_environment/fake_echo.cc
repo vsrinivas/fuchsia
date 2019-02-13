@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
     return 1;
   }
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  echo2::testing::FakeEcho echo;
+  echo::testing::FakeEcho echo;
   echo.SetAnswer(argv[1]);
   auto context = component::StartupContext::CreateFromStartupInfo();
   context->outgoing().AddPublicService(echo.GetHandler());

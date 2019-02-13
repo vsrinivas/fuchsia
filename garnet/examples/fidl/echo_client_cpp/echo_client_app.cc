@@ -6,7 +6,7 @@
 
 #include "lib/component/cpp/startup_context.h"
 
-namespace echo2 {
+namespace echo {
 
 EchoClientApp::EchoClientApp()
     : EchoClientApp(component::StartupContext::CreateFromStartupInfo()) {}
@@ -25,4 +25,4 @@ void EchoClientApp::Start(std::string server_url) {
                                   fidl::examples::echo::Echo::Name_);
 }
 
-}  // namespace echo2
+}  // namespace echo

@@ -74,7 +74,7 @@ executable("package_updating_loader_test") {
   deps = [
     ":interface",
     "//garnet/bin/sysmgr:lib",
-    "//garnet/examples/fidl/services:echo2",
+    "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl",

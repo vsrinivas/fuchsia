@@ -8,7 +8,7 @@ executable("lib_component_unittest") {
   testonly = true
 
   deps = [
-    "//garnet/examples/fidl/services:echo2",
+    "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
@@ -28,7 +28,7 @@ executable("helper_proc") {
   ]
 
   deps = [
-    "//garnet/examples/fidl/services:echo2",
+    "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",

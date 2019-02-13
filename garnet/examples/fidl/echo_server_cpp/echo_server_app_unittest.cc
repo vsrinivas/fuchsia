@@ -5,7 +5,7 @@
 #include "echo_server_app.h"
 #include "lib/component/cpp/testing/test_with_context.h"
 
-namespace echo2 {
+namespace echo {
 namespace testing {
 
 using namespace fidl::examples::echo;
@@ -60,4 +60,4 @@ TEST_F(EchoServerAppTest, EchoString_Empty) {
 }
 
 }  // namespace testing
-}  // namespace echo2
+}  // namespace echo

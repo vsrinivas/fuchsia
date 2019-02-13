@@ -10,7 +10,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/examples/fidl/services:echo2-rustc",
+    "//garnet/examples/fidl/services:echo-rustc",
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
@@ -21,7 +21,7 @@ rustc_binary("bin") {
     "//third_party/rust-crates/rustc_deps:clap",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
-    "//garnet/examples/fidl/services:echo2-rustc",
+    "//garnet/examples/fidl/services:echo-rustc",
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",

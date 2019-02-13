@@ -21,7 +21,7 @@ executable("realm_tests") {
   deps = [
     "fidl:test.component.mockrunner",
     "mock_runner:appmgr_mock_runner",
-    "//garnet//examples/fidl/services:echo2",
+    "//garnet//examples/fidl/services:echo",
     "//garnet/bin/appmgr:lib",
     "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",

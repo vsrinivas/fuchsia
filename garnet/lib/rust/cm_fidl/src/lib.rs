@@ -439,7 +439,7 @@ mod tests {
                         "targets": [
                             {
                                 "target_path": "/data/realm_assets",
-                                "child_name": "echo2_server"
+                                "child_name": "echo_server"
                             },
                             {
                                 "target_path": "/data/assets",
@@ -470,7 +470,7 @@ mod tests {
                         "targets": [
                             {
                                 "target_path": "/svc/fuchsia.logger.SysLog",
-                                "child_name": "echo2_server"
+                                "child_name": "echo_server"
                             }
                         ]
                     }
@@ -488,7 +488,7 @@ mod tests {
                         targets: Some(vec![
                             OfferTarget{
                                 target_path: Some("/data/realm_assets".to_string()),
-                                child_name: Some("echo2_server".to_string()),
+                                child_name: Some("echo_server".to_string()),
                             },
                             OfferTarget{
                                 target_path: Some("/data/assets".to_string()),
@@ -520,7 +520,7 @@ mod tests {
                         targets: Some(vec![
                             OfferTarget{
                                 target_path: Some("/svc/fuchsia.logger.SysLog".to_string()),
-                                child_name: Some("echo2_server".to_string()),
+                                child_name: Some("echo_server".to_string()),
                             },
                         ]),
                     },
@@ -538,8 +538,8 @@ mod tests {
                         "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                     },
                     {
-                        "name": "echo2_server",
-                        "uri": "fuchsia-pkg://fuchsia.com/echo2_server/stable#meta/echo2_server.cm"
+                        "name": "echo_server",
+                        "uri": "fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm"
                     }
                 ]
             }),
@@ -550,8 +550,8 @@ mod tests {
                         uri: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                     },
                     ChildDecl{
-                        name: Some("echo2_server".to_string()),
-                        uri: Some("fuchsia-pkg://fuchsia.com/echo2_server/stable#meta/echo2_server.cm".to_string()),
+                        name: Some("echo_server".to_string()),
+                        uri: Some("fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm".to_string()),
                     },
                 ];
                 let mut decl = new_component_decl();
