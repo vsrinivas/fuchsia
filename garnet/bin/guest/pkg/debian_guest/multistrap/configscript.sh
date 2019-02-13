@@ -24,6 +24,12 @@ mkdir -p ${user_home}
 chown -R ${username}:${username} ${user_home}
 chsh -s /bin/bash ${username}
 
+# Squelch MOTD.
+touch ${user_home}/.hushlogin
+
+# Make the prompt as simple as possible (useful for testing).
+echo "PS1='$ '" > ${user_home}/.profile
+
 # Setup hostname.
 echo "machina-guest" > /etc/hostname
 echo "127.0.1.1    machina-guest" >> /etc/hosts
@@ -37,6 +43,19 @@ virtio_gpu
 EOF
 
 update-initramfs -u
+
+# Enable automatic login for serial getty, most importantly on hvc0. This
+# overrides the default configuration at
+# /lib/systemd/system/serial-getty@.service. The first ExecStart line is to
+# reset in the case where the default configuration is set up to append
+# ExecStart lines. Note: We use `--skip-login --login-options "-f ${username}"`
+# instead of `--autologin` to make agetty quieter.
+mkdir -p /etc/systemd/system/serial-getty@.service.d
+cat >> /etc/systemd/system/serial-getty@.service.d/override.conf << EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --skip-login --login-options "-f ${username}" --noissue --noclear %I $TERM
+EOF
 
 # Expose a simple telnet interface over vsock port 23.
 #
