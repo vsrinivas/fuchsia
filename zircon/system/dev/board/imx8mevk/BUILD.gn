@@ -27,4 +27,10 @@ driver("imx8mevk") {
   data_deps = [
     "$zx/kernel/target/arm64/boot-shim:imx8mevk",
   ]
+
+  # TODO(BLD-353): Temporary hacks for integrating with the legacy Fuchsia
+  # GN build.
+  metadata = {
+    legacy_pkg_boards = [ target_name ]
+  }
 }

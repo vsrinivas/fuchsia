@@ -140,6 +140,17 @@ if (current_toolchain == default_toolchain) {
         "$zx/system/fidl/fuchsia-tracelink",
       ]
     }
+
+    generated_file("boards-$cpu.list") {
+      testonly = true
+      outputs = [
+        "$root_build_dir/export/$target_name",
+      ]
+      data_keys = [ "legacy_pkg_boards" ]
+      deps = [
+        ":$cpu",
+      ]
+    }
   }
 }
 
