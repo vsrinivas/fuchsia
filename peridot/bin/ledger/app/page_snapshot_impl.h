@@ -23,8 +23,7 @@ class PageSnapshotImpl : public PageSnapshot {
 
  private:
   // PageSnapshot:
-  void GetEntries(std::vector<uint8_t> key_start,
-                  std::unique_ptr<Token> token,
+  void GetEntries(std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
                   GetEntriesCallback callback) override;
   void GetEntriesInline(std::vector<uint8_t> key_start,
                         std::unique_ptr<Token> token,
@@ -32,11 +31,10 @@ class PageSnapshotImpl : public PageSnapshot {
   void GetKeys(std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
                GetKeysCallback callback) override;
   void Get(std::vector<uint8_t> key, GetCallback callback) override;
-  void GetInline(std::vector<uint8_t> key,
-                 GetInlineCallback callback) override;
+  void GetInline(std::vector<uint8_t> key, GetInlineCallback callback) override;
   void Fetch(std::vector<uint8_t> key, FetchCallback callback) override;
-  void FetchPartial(std::vector<uint8_t> key, int64_t offset,
-                    int64_t max_size, FetchPartialCallback callback) override;
+  void FetchPartial(std::vector<uint8_t> key, int64_t offset, int64_t max_size,
+                    FetchPartialCallback callback) override;
 
   storage::PageStorage* page_storage_;
   std::unique_ptr<const storage::Commit> commit_;

@@ -31,13 +31,13 @@ source_set("public") {
 
   public_deps = [
     "//garnet/public/lib/callback",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/coroutine",
     "//peridot/bin/ledger/filesystem",
     "//peridot/lib/convert",
     "//peridot/lib/util:ptr",
+    "//sdk/lib/fidl/cpp",
     "//third_party/flatbuffers",
     "//zircon/public/lib/zx",
   ]

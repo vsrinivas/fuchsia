@@ -57,7 +57,6 @@ source_set("unittests") {
 
   deps = [
     ":impl",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/p2p_provider/impl",
@@ -65,6 +64,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/storage/testing",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/bin/ledger/testing/netconnector",
+    "//sdk/lib/fidl/cpp",
 
     # gtest matchers are in gmock.
     "//third_party/googletest:gmock",

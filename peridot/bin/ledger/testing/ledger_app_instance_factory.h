@@ -38,8 +38,7 @@ class LedgerAppInstanceFactory {
   class LedgerAppInstance {
    public:
     LedgerAppInstance(
-        LoopController* loop_controller,
-        std::vector<uint8_t> test_ledger_name,
+        LoopController* loop_controller, std::vector<uint8_t> test_ledger_name,
         ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory);
     virtual ~LedgerAppInstance();
 

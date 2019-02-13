@@ -51,8 +51,7 @@ void ComputeThreeWayDiff(
     storage::PageStorage* storage, const storage::Commit& base,
     const storage::Commit& left, const storage::Commit& right,
     std::string prefix_key, std::string min_key, DiffType diff_type,
-    fit::function<void(Status,
-                       std::pair<std::vector<DiffEntry>, std::string>)>
+    fit::function<void(Status, std::pair<std::vector<DiffEntry>, std::string>)>
         callback);
 
 }  // namespace diff_utils

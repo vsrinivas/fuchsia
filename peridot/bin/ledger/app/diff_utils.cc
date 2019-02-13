@@ -196,8 +196,7 @@ void ComputeThreeWayDiff(
     storage::PageStorage* storage, const storage::Commit& base,
     const storage::Commit& left, const storage::Commit& right,
     std::string prefix_key, std::string min_key, DiffType diff_type,
-    fit::function<void(Status,
-                       std::pair<std::vector<DiffEntry>, std::string>)>
+    fit::function<void(Status, std::pair<std::vector<DiffEntry>, std::string>)>
         callback) {
   struct Context {
     // The array to be returned through the callback.
@@ -276,8 +275,7 @@ void ComputeThreeWayDiff(
       return;
     }
     if (context->changes.empty()) {
-      callback(Status::OK,
-               std::make_pair(std::vector<DiffEntry>(), ""));
+      callback(Status::OK, std::make_pair(std::vector<DiffEntry>(), ""));
       return;
     }
 
@@ -292,8 +290,7 @@ void ComputeThreeWayDiff(
         FXL_LOG(ERROR)
             << "Error while reading changed values when computing PageChange: "
             << fidl::ToUnderlying(status);
-        callback(status,
-                 std::make_pair(std::vector<DiffEntry>(), ""));
+        callback(status, std::make_pair(std::vector<DiffEntry>(), ""));
         return;
       }
       FXL_DCHECK(results.size() == 3 * context->changes.size());

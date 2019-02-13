@@ -99,13 +99,12 @@ storage::Status FillSingleEntry(const storage::Object& object,
 // |fill_value| is a callback that fills the entry pointer with the content of
 // the provided object.
 template <typename EntryType>
-void FillEntries(storage::PageStorage* page_storage,
-                 const std::string& key_prefix, const storage::Commit* commit,
-                 std::vector<uint8_t> key_start,
-                 std::unique_ptr<Token> token,
-                 fit::function<void(Status, std::vector<EntryType>,
-                                    std::unique_ptr<Token>)>
-                     callback) {
+void FillEntries(
+    storage::PageStorage* page_storage, const std::string& key_prefix,
+    const storage::Commit* commit, std::vector<uint8_t> key_start,
+    std::unique_ptr<Token> token,
+    fit::function<void(Status, std::vector<EntryType>, std::unique_ptr<Token>)>
+        callback) {
   // |token| represents the first key to be returned in the list of entries.
   // Initially, all entries starting from |token| are requested from storage.
   // Iteration stops if either all entries were found, or if the estimated
@@ -219,7 +218,8 @@ void FillEntries(storage::PageStorage* page_storage,
                 storage::Status read_status =
                     FillSingleEntry(*results[i], &entry);
                 if (read_status != storage::Status::OK) {
-                  callback(PageUtils::ConvertStatus(read_status), std::vector<EntryType>(), nullptr);
+                  callback(PageUtils::ConvertStatus(read_status),
+                           std::vector<EntryType>(), nullptr);
                   return;
                 }
                 size_t entry_size = ComputeEntrySize(entry);
@@ -231,7 +231,8 @@ void FillEntries(storage::PageStorage* page_storage,
               }
               if (i != results.size()) {
                 if (i == 0) {
-                  callback(Status::VALUE_TOO_LARGE, std::vector<EntryType>(), nullptr);
+                  callback(Status::VALUE_TOO_LARGE, std::vector<EntryType>(),
+                           nullptr);
                   return;
                 }
                 // We had to bail out early because the result would be too big
@@ -318,8 +319,7 @@ void PageSnapshotImpl::GetKeys(std::vector<uint8_t> key_start,
                       std::move(timed_callback)](storage::Status status) {
     if (status != storage::Status::OK) {
       FXL_LOG(ERROR) << "Error while reading: " << status;
-      callback(Status::IO_ERROR,
-               std::vector<std::vector<uint8_t>>(), nullptr);
+      callback(Status::IO_ERROR, std::vector<std::vector<uint8_t>>(), nullptr);
       return;
     }
     if (context->next_token) {
@@ -400,8 +400,7 @@ void PageSnapshotImpl::GetInline(std::vector<uint8_t> key,
       });
 }
 
-void PageSnapshotImpl::Fetch(std::vector<uint8_t> key,
-                             FetchCallback callback) {
+void PageSnapshotImpl::Fetch(std::vector<uint8_t> key, FetchCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_fetch");
 
@@ -425,8 +424,8 @@ void PageSnapshotImpl::Fetch(std::vector<uint8_t> key,
       });
 }
 
-void PageSnapshotImpl::FetchPartial(std::vector<uint8_t> key,
-                                    int64_t offset, int64_t max_size,
+void PageSnapshotImpl::FetchPartial(std::vector<uint8_t> key, int64_t offset,
+                                    int64_t max_size,
                                     FetchPartialCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_fetch_partial");

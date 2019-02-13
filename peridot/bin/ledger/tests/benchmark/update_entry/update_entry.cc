@@ -171,8 +171,7 @@ void UpdateEntryBenchmark::RunSingle(int i, std::vector<uint8_t> key) {
              });
 }
 
-void UpdateEntryBenchmark::CommitAndRunNext(int i,
-                                            std::vector<uint8_t> key) {
+void UpdateEntryBenchmark::CommitAndRunNext(int i, std::vector<uint8_t> key) {
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
   page_->Commit([this, i, key = std::move(key)](Status status) mutable {
     if (QuitOnError(QuitLoopClosure(), status, "Page::Commit")) {

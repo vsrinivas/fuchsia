@@ -23,11 +23,12 @@ namespace coroutine {
 template <typename A, typename... Args>
 FXL_WARN_UNUSED_RESULT ContinuationStatus
 Wait(coroutine::CoroutineHandler* handler, A waiter, Args... parameters) {
-  return coroutine::SyncCall(handler,
-                             [waiter = std::move(waiter)](auto callback) {
-                               waiter->Finalize(std::move(callback));
-                             },
-                             std::forward<Args>(parameters)...);
+  return coroutine::SyncCall(
+      handler,
+      [waiter = std::move(waiter)](auto callback) {
+        waiter->Finalize(std::move(callback));
+      },
+      std::forward<Args>(parameters)...);
 }
 
 }  // namespace coroutine

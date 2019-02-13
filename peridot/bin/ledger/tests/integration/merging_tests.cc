@@ -255,7 +255,6 @@ class ConflictResolverImpl : public ConflictResolver {
     LoopController* loop_controller_;
   };
 
-
   void RunUntilResolveCalled() {
     ASSERT_TRUE(resolve_waiter_->RunUntilCalled());
   }

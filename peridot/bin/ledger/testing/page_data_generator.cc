@@ -143,8 +143,8 @@ void PageDataGenerator::PutInTransaction(
 }
 
 void PageDataGenerator::PutMultipleEntries(
-    PagePtr* page, std::vector<std::vector<uint8_t>> keys,
-    size_t value_size, ReferenceStrategy ref_strategy, Priority priority,
+    PagePtr* page, std::vector<std::vector<uint8_t>> keys, size_t value_size,
+    ReferenceStrategy ref_strategy, Priority priority,
     fit::function<void(Status)> callback) {
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   for (auto& key : keys) {

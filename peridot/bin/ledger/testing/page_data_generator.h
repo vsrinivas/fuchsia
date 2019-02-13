@@ -50,8 +50,7 @@ class PageDataGenerator {
   // number |curent_key_index|. After commiting a transaction, run a next one
   // recursively. Call |callback| with Status::OK once all keys have been put,
   // or with a first encountered status that is different from Status::OK.
-  void PutInTransaction(PagePtr* page,
-                        std::vector<std::vector<uint8_t>> keys,
+  void PutInTransaction(PagePtr* page, std::vector<std::vector<uint8_t>> keys,
                         size_t current_key_index, size_t value_size,
                         size_t transaction_size, ReferenceStrategy ref_strategy,
                         Priority priority,
@@ -59,8 +58,7 @@ class PageDataGenerator {
 
   // Run PutEntry on all the provided keys in |keys| with random value of size
   // |value_size|.
-  void PutMultipleEntries(PagePtr* page,
-                          std::vector<std::vector<uint8_t>> keys,
+  void PutMultipleEntries(PagePtr* page, std::vector<std::vector<uint8_t>> keys,
                           size_t value_size, ReferenceStrategy ref_strategy,
                           Priority priority,
                           fit::function<void(Status)> /*callback*/);

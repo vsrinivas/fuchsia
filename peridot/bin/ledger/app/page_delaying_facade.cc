@@ -33,8 +33,7 @@ void PageDelayingFacade::GetId(Page::GetIdCallback callback) {
 
 void PageDelayingFacade::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-    std::vector<uint8_t> key_prefix,
-    fidl::InterfaceHandle<PageWatcher> watcher,
+    std::vector<uint8_t> key_prefix, fidl::InterfaceHandle<PageWatcher> watcher,
     Page::GetSnapshotCallback callback) {
   delaying_facade_.EnqueueCall(
       &PageDelegate::GetSnapshot, std::move(snapshot_request),
@@ -49,8 +48,8 @@ void PageDelayingFacade::Put(std::vector<uint8_t> key,
 }
 
 void PageDelayingFacade::PutWithPriority(
-    std::vector<uint8_t> key, std::vector<uint8_t> value,
-    Priority priority, Page::PutWithPriorityCallback callback) {
+    std::vector<uint8_t> key, std::vector<uint8_t> value, Priority priority,
+    Page::PutWithPriorityCallback callback) {
   delaying_facade_.EnqueueCall(&PageDelegate::PutWithPriority, std::move(key),
                                std::move(value), priority, std::move(callback));
 }

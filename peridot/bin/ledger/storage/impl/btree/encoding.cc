@@ -27,7 +27,7 @@ KeyPriority ToKeyPriority(KeyPriorityStorage priority_storage) {
 
 bool IsKeyPriorityStorageValid(KeyPriorityStorage priority_storage) {
   return priority_storage == KeyPriorityStorage_EAGER ||
-    priority_storage == KeyPriorityStorage_LAZY;
+         priority_storage == KeyPriorityStorage_LAZY;
 }
 
 KeyPriorityStorage ToKeyPriorityStorage(KeyPriority priority) {

@@ -18,7 +18,6 @@ executable("ledger_benchmark_convergence") {
   deps = [
     "//garnet/public/lib/callback",
     "//garnet/public/lib/component/cpp",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firestore/testing",
@@ -26,6 +25,7 @@ executable("ledger_benchmark_convergence") {
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/convert",
     "//sdk/fidl/fuchsia.ledger",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/trace-provider",

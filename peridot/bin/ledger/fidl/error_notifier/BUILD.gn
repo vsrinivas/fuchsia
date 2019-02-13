@@ -11,9 +11,9 @@ source_set("error_notifier") {
   ]
 
   public_deps = [
-    "//sdk/lib/fidl/cpp",
     "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/sync_helper",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/fit",
   ]
 

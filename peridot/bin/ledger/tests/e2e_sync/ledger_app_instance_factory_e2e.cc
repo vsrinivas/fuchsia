@@ -62,8 +62,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
       cloud_provider_factory_(startup_context_.get(), random,
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
-      user_id_(std::move(user_id)) {
-}
+      user_id_(std::move(user_id)) {}
 
 void LedgerAppInstanceImpl::Init(
     fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>

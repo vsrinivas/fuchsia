@@ -17,11 +17,8 @@ executable("app") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.net.oldhttp",
-    "//sdk/fidl/fuchsia.netconnector",
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/component/cpp",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/cobalt",
@@ -33,6 +30,9 @@ executable("app") {
     "//peridot/bin/ledger/storage/impl:lib",
     "//peridot/bin/ledger/storage/public",
     "//sdk/fidl/fuchsia.modular.auth",
+    "//sdk/fidl/fuchsia.net.oldhttp",
+    "//sdk/fidl/fuchsia.netconnector",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
@@ -104,9 +104,7 @@ source_set("lib") {
 
   deps = [
     ":serialization_version",
-    "//sdk/fidl/fuchsia.netconnector",
     "//garnet/public/lib/callback",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/cloud_sync/impl",
@@ -132,6 +130,8 @@ source_set("lib") {
     "//peridot/lib/socket",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular.auth",
+    "//sdk/fidl/fuchsia.netconnector",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/trace",
   ]
 
@@ -177,7 +177,6 @@ source_set("unittests") {
     ":lib",
     "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/component/cpp:cpp",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/cloud_sync/impl",
@@ -195,6 +194,7 @@ source_set("unittests") {
     "//peridot/lib/convert",
     "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.modular.auth",
+    "//sdk/lib/fidl/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

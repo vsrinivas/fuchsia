@@ -60,11 +60,10 @@ class ConflictResolverClient
           callback);
 
   // MergeResultProviderNotifierDelegate:
-  void GetFullDiff(
-      std::unique_ptr<Token> token,
-      fit::function<void(Status, Status, std::vector<DiffEntry>,
-                         std::unique_ptr<Token>)>
-          callback) override;
+  void GetFullDiff(std::unique_ptr<Token> token,
+                   fit::function<void(Status, Status, std::vector<DiffEntry>,
+                                      std::unique_ptr<Token>)>
+                       callback) override;
   void GetFullDiffNew(
       std::unique_ptr<Token> token,
       fit::function<void(Status, IterationStatus, std::vector<DiffEntry>,

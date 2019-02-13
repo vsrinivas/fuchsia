@@ -257,8 +257,7 @@ TEST_F(SerializationSizeTest, GetEntries) {
   fidl::Binding<PageSnapshot> binding(&snapshot_impl);
   binding.Bind(std::move(writer));
 
-  auto client_callback = [](Status /*status*/,
-                            std::vector<Entry> /*entries*/,
+  auto client_callback = [](Status /*status*/, std::vector<Entry> /*entries*/,
                             std::unique_ptr<Token> /*next_token*/) {};
   // FakeSnapshot saves the callback instead of running it.
   snapshot_proxy->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr,

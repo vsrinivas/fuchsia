@@ -47,8 +47,8 @@ template("error_notifier_fidl") {
 
     public_deps = [
       "$fidl_target",
-      "//sdk/lib/fidl/cpp",
       "//peridot/bin/ledger/fidl/error_notifier",
+      "//sdk/lib/fidl/cpp",
     ]
 
     if (defined(invoker.public_deps)) {

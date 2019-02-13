@@ -19,7 +19,7 @@ namespace ledger {
 // Builds an array of length |size|, starting with |prefix| and completed with
 // random data.
 std::vector<uint8_t> RandomArray(rng::Random* random, size_t size,
-                                     const std::vector<uint8_t>& prefix = {});
+                                 const std::vector<uint8_t>& prefix = {});
 
 // Extracts the content of |vmo| as a std::string.
 std::string ToString(const fuchsia::mem::BufferPtr& vmo);

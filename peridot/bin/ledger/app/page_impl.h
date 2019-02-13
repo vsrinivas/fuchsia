@@ -30,8 +30,8 @@ class PageImpl : public Page {
   void Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
            PutCallback callback) override;
 
-  void PutWithPriority(std::vector<uint8_t> key,
-                       std::vector<uint8_t> value, Priority priority,
+  void PutWithPriority(std::vector<uint8_t> key, std::vector<uint8_t> value,
+                       Priority priority,
                        PutWithPriorityCallback callback) override;
 
   void PutReference(std::vector<uint8_t> key, Reference reference,

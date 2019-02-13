@@ -76,8 +76,7 @@ class TestPageCloud : public cloud_provider::PageCloud {
                   GetCommitsCallback callback) override;
   void AddObject(std::vector<uint8_t> id, fuchsia::mem::Buffer data,
                  AddObjectCallback callback) override;
-  void GetObject(std::vector<uint8_t> id,
-                 GetObjectCallback callback) override;
+  void GetObject(std::vector<uint8_t> id, GetObjectCallback callback) override;
   void SetWatcher(
       std::unique_ptr<cloud_provider::Token> min_position_token,
       fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,

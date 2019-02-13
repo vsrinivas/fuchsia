@@ -16,7 +16,6 @@ executable("e2e_local") {
 
   deps = [
     "//garnet/public/lib/component/cpp",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/bin/cloud_provider_in_memory:lib",
     "//peridot/bin/ledger/app:serialization_version",
@@ -26,6 +25,7 @@ executable("e2e_local") {
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.ledger",
+    "//sdk/lib/fidl/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",
   ]

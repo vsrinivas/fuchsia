@@ -64,8 +64,7 @@ void PageDelegate::Init(fit::function<void(Status)> on_done) {
 
 void PageDelegate::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-    std::vector<uint8_t> key_prefix,
-    fidl::InterfaceHandle<PageWatcher> watcher,
+    std::vector<uint8_t> key_prefix, fidl::InterfaceHandle<PageWatcher> watcher,
     Page::GetSnapshotCallback callback) {
   // TODO(qsr): Update this so that only |GetCurrentCommitId| is done in a the
   // operation serializer.
@@ -101,8 +100,7 @@ void PageDelegate::GetSnapshot(
       });
 }
 
-void PageDelegate::Put(std::vector<uint8_t> key,
-                       std::vector<uint8_t> value,
+void PageDelegate::Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
                        Page::PutCallback callback) {
   PutWithPriority(std::move(key), std::move(value), Priority::EAGER,
                   std::move(callback));
@@ -144,8 +142,8 @@ void PageDelegate::PutWithPriority(std::vector<uint8_t> key,
       });
 }
 
-void PageDelegate::PutReference(std::vector<uint8_t> key,
-                                Reference reference, Priority priority,
+void PageDelegate::PutReference(std::vector<uint8_t> key, Reference reference,
+                                Priority priority,
                                 Page::PutReferenceCallback callback) {
   FXL_DCHECK(key.size() <= kMaxKeySize);
   // |ResolveReference| also makes sure that the reference was created for this

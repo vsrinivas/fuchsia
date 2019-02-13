@@ -40,10 +40,10 @@ source_set("lib") {
   ]
 
   deps = [
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/bin/ledger/encryption/fake",
     "//peridot/bin/ledger/encryption/primitives",
+    "//sdk/lib/fidl/cpp",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

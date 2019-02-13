@@ -1282,8 +1282,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
 
   // Call GetKeys with the previous token and receive the remaining results.
   std::vector<std::vector<uint8_t>> actual_next_keys;
-  snapshot->GetKeys(std::vector<uint8_t>(),
-                    std::move(actual_next_token),
+  snapshot->GetKeys(std::vector<uint8_t>(), std::move(actual_next_token),
                     callback::Capture(callback::SetWhenCalled(&called), &status,
                                       &actual_next_keys, &actual_next_token));
 

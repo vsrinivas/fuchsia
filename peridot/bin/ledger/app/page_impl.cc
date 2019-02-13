@@ -25,8 +25,8 @@ void PageImpl::GetId(GetIdCallback callback) {
 
 void PageImpl::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-    std::vector<uint8_t> key_prefix,
-    fidl::InterfaceHandle<PageWatcher> watcher, GetSnapshotCallback callback) {
+    std::vector<uint8_t> key_prefix, fidl::InterfaceHandle<PageWatcher> watcher,
+    GetSnapshotCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_get_snapshot");
   delaying_facade_->GetSnapshot(std::move(snapshot_request),
@@ -41,8 +41,7 @@ void PageImpl::Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
 }
 
 void PageImpl::PutWithPriority(std::vector<uint8_t> key,
-                               std::vector<uint8_t> value,
-                               Priority priority,
+                               std::vector<uint8_t> value, Priority priority,
                                PutWithPriorityCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_put_with_priority");

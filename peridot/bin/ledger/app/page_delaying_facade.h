@@ -46,8 +46,8 @@ class PageDelayingFacade {
                    Page::GetSnapshotCallback callback);
   void Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
            Page::PutCallback callback);
-  void PutWithPriority(std::vector<uint8_t> key,
-                       std::vector<uint8_t> value, Priority priority,
+  void PutWithPriority(std::vector<uint8_t> key, std::vector<uint8_t> value,
+                       Priority priority,
                        Page::PutWithPriorityCallback callback);
   void PutReference(std::vector<uint8_t> key, Reference reference,
                     Priority priority, Page::PutReferenceCallback callback);

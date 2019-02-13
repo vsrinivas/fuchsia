@@ -24,7 +24,7 @@
 namespace ledger {
 
 std::vector<uint8_t> RandomArray(rng::Random* random, size_t size,
-                                     const std::vector<uint8_t>& prefix) {
+                                 const std::vector<uint8_t>& prefix) {
   EXPECT_TRUE(size >= prefix.size());
   std::vector<uint8_t> array(size);
   for (size_t i = 0; i < prefix.size(); ++i) {

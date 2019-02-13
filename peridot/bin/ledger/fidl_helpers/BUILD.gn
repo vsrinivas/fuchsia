@@ -14,8 +14,8 @@ source_set("fidl_helpers") {
   ]
 
   public_deps = [
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
+    "//sdk/lib/fidl/cpp",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

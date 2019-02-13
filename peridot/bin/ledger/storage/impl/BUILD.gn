@@ -98,7 +98,6 @@ source_set("lib") {
     ":file_index",
     ":object_identifier_lib",
     "//garnet/public/lib/callback",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/cobalt",
     "//peridot/bin/ledger/encryption/impl",
@@ -110,6 +109,7 @@ source_set("lib") {
     "//peridot/bin/ledger/storage/impl/btree:lib",
     "//peridot/bin/ledger/storage/public",
     "//peridot/lib/base64url",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/trace",
   ]
 

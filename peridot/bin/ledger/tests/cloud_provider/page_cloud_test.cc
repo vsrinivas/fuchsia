@@ -112,8 +112,7 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
     on_new_commits_commits_callback_ = std::move(callback);
   }
 
-  void OnNewObject(std::vector<uint8_t> /*id*/,
-                   fuchsia::mem::Buffer /*data*/,
+  void OnNewObject(std::vector<uint8_t> /*id*/, fuchsia::mem::Buffer /*data*/,
                    OnNewObjectCallback /*callback*/) override {
     // We don't have any implementations yet that support this API.
     // TODO(ppi): add tests for the OnNewObject notifications.

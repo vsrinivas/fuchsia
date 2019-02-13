@@ -77,10 +77,7 @@ TEST(CoroutineManager, DeleteInCallback) {
 
   manager->StartCoroutine([&manager] { manager.reset(); },
                           [](CoroutineHandler* current_handler,
-                                     fit::function<void()> callback) {
-                            callback();
-                          });
-
+                             fit::function<void()> callback) { callback(); });
 }
 
 }  // namespace

@@ -39,10 +39,9 @@ class NetConnectorFactory : public FakeNetConnector::Delegate {
   void UpdatedHostList();
 
   // FakeNetConnector::Delegate:
-  void GetDevicesNames(
-      uint64_t last_version,
-      fit::function<void(uint64_t, std::vector<std::string>)> callback)
-      override;
+  void GetDevicesNames(uint64_t last_version,
+                       fit::function<void(uint64_t, std::vector<std::string>)>
+                           callback) override;
   void ConnectToServiceProvider(
       std::string device_name,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) override;

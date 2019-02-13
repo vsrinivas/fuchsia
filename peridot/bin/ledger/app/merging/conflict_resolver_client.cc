@@ -236,16 +236,15 @@ void ConflictResolverClient::GetDiff(
               Status status,
               std::pair<std::vector<DiffEntry>, std::string> page_change) {
             if (cancelled_) {
-              callback(Status::INTERNAL_ERROR, IterationStatus::OK,
-                       {}, nullptr);
+              callback(Status::INTERNAL_ERROR, IterationStatus::OK, {},
+                       nullptr);
               Finalize(Status::INTERNAL_ERROR);
               return;
             }
             if (status != Status::OK) {
               FXL_LOG(ERROR) << "Unable to compute diff due to error "
                              << fidl::ToUnderlying(status) << ", aborting.";
-              callback(status, IterationStatus::OK,
-                       {}, nullptr);
+              callback(status, IterationStatus::OK, {}, nullptr);
               Finalize(status);
               return;
             }
@@ -264,9 +263,8 @@ void ConflictResolverClient::GetDiff(
           }));
 }
 
-void ConflictResolverClient::MergeNew(
-    std::vector<MergedValue> merged_values,
-    fit::function<void(Status)> callback) {
+void ConflictResolverClient::MergeNew(std::vector<MergedValue> merged_values,
+                                      fit::function<void(Status)> callback) {
   has_merged_values_ = true;
   operation_serializer_.Serialize<Status>(
       std::move(callback), [this, weak_this = weak_factory_.GetWeakPtr(),
@@ -281,35 +279,35 @@ void ConflictResolverClient::MergeNew(
         for (const MergedValue& merged_value : merged_values) {
           OnNextMergeResult(merged_value, waiter);
         }
-        waiter->Finalize([this, weak_this,
-                          merged_values = std::move(merged_values),
-                          callback = std::move(callback)](
-                             storage::Status status,
-                             std::vector<storage::ObjectIdentifier>
-                                 object_identifiers) mutable {
-          if (!IsInValidStateAndNotify(weak_this, callback, status)) {
-            return;
-          }
+        waiter->Finalize(
+            [this, weak_this, merged_values = std::move(merged_values),
+             callback = std::move(callback)](
+                storage::Status status, std::vector<storage::ObjectIdentifier>
+                                            object_identifiers) mutable {
+              if (!IsInValidStateAndNotify(weak_this, callback, status)) {
+                return;
+              }
 
-          auto waiter =
-              fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
-                  storage::Status::OK);
-          for (size_t i = 0; i < object_identifiers.size(); ++i) {
-            // DELETE is encoded with an invalid digest in OnNextMergeResult.
-            if (!object_identifiers[i].object_digest().IsValid()) {
-              continue;
-            }
-            journal_->Put(merged_values.at(i).key, object_identifiers[i],
-                          merged_values.at(i).priority == Priority::EAGER
-                              ? storage::KeyPriority::EAGER
-                              : storage::KeyPriority::LAZY,
-                          waiter->NewCallback());
-          }
-          waiter->Finalize(
-              [callback = std::move(callback)](storage::Status status) {
-                callback(PageUtils::ConvertStatus(status));
-              });
-        });
+              auto waiter =
+                  fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
+                      storage::Status::OK);
+              for (size_t i = 0; i < object_identifiers.size(); ++i) {
+                // DELETE is encoded with an invalid digest in
+                // OnNextMergeResult.
+                if (!object_identifiers[i].object_digest().IsValid()) {
+                  continue;
+                }
+                journal_->Put(merged_values.at(i).key, object_identifiers[i],
+                              merged_values.at(i).priority == Priority::EAGER
+                                  ? storage::KeyPriority::EAGER
+                                  : storage::KeyPriority::LAZY,
+                              waiter->NewCallback());
+              }
+              waiter->Finalize(
+                  [callback = std::move(callback)](storage::Status status) {
+                    callback(PageUtils::ConvertStatus(status));
+                  });
+            });
       });
 }
 

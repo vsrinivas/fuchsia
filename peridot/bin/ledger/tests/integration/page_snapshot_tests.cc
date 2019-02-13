@@ -308,8 +308,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   // Get keys matching the prefix "0" and starting with the key "010".
   snapshot =
       PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
-  result = SnapshotGetKeys(
-      &snapshot, std::vector<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
+  result = SnapshotGetKeys(&snapshot,
+                           std::vector<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
   EXPECT_EQ(2u, result.size());
 }
 
@@ -321,8 +321,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   // returns empty results.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
-  std::vector<std::vector<uint8_t>> result = SnapshotGetKeys(
-      &snapshot, std::vector<uint8_t>(), &num_queries);
+  std::vector<std::vector<uint8_t>> result =
+      SnapshotGetKeys(&snapshot, std::vector<uint8_t>(), &num_queries);
   EXPECT_EQ(0u, result.size());
   EXPECT_EQ(1, num_queries);
 
