@@ -44,14 +44,10 @@ constexpr char kShufflerPublicKeyPemPath[] =
     "/pkg/data/certs/cobaltv0.1/shuffler_public.pem";
 constexpr char kMetricsRegistryPath[] = "/pkg/data/global_metrics_registry.pb";
 
-constexpr char kLegacyObservationStorePath[] =
-    "/data/cobalt_legacy_observation_store";
-
-constexpr char kObservationStorePath[] = "/data/cobalt_observation_store";
-
-constexpr char kLocalAggregateProtoStorePath[] =
-    "/data/cobalt_local_aggregate_store";
-constexpr char kObsHistoryProtoStorePath[] = "/data/cobalt_obs_history_store";
+constexpr char kLegacyObservationStorePath[] = "/data/legacy_observation_store";
+constexpr char kObservationStorePath[] = "/data/observation_store";
+constexpr char kLocalAggregateProtoStorePath[] = "/data/local_aggregate_store";
+constexpr char kObsHistoryProtoStorePath[] = "/data/obs_history_store";
 
 CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
                      std::chrono::seconds target_interval,

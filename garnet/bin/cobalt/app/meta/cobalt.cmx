@@ -8,7 +8,7 @@
         ],
         "features": [
             "root-ssl-certificates",
-            "persistent-storage"
+            "isolated-persistent-storage"
         ],
         "pkgfs": [
             "packages"
