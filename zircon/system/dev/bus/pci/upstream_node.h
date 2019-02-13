@@ -30,8 +30,7 @@ namespace pci {
 class PciAllocator;
 class UpstreamNode {
 public:
-    enum class Type { ROOT,
-                      BRIDGE };
+    enum class Type { ROOT, BRIDGE };
     // UpstreamNode must have refcounting implemented by its derived classes Root or Bridge
     PCI_REQUIRE_REFCOUNTED;
 
@@ -52,9 +51,7 @@ public:
     void UnlinkDevice(pci::Device* device) { downstream_.erase(*device); }
 
 protected:
-    UpstreamNode(Type type, uint32_t mbus_id)
-        : type_(type),
-          managed_bus_id_(mbus_id) {}
+    UpstreamNode(Type type, uint32_t mbus_id) : type_(type), managed_bus_id_(mbus_id) {}
     virtual ~UpstreamNode() = default;
 
     virtual void AllocateDownstreamBars();
@@ -96,91 +93,16 @@ protected:
     PciAllocation() = default;
 };
 
-class PciRootAllocation final : public PciAllocation {
-public:
-    PciRootAllocation(zx_paddr_t base, size_t size)
-        : base_(base), size_(size) {}
-    virtual ~PciRootAllocation() {}
-    zx_paddr_t base() final { return base_; }
-    size_t size() final { return size_; }
-
-private:
-    const zx_paddr_t base_;
-    const size_t size_;
-};
-
-class PciRegionAllocation final : public PciAllocation {
-public:
-    PciRegionAllocation(RegionAllocator::Region::UPtr&& region)
-        : region_(std::move(region)){};
-    zx_paddr_t base() final { return region_->base; }
-    size_t size() final { return region_->size; }
-
-private:
-    RegionAllocator::Region::UPtr region_;
-};
-
 class PciAllocator {
 public:
     virtual ~PciAllocator() = default;
     virtual zx_status_t GetRegion(zx_paddr_t base,
                                   size_t size,
-                                  fbl::unique_ptr<PciAllocation> out_alloc) = 0;
+                                  fbl::unique_ptr<PciAllocation>* out_alloc) = 0;
     virtual zx_status_t AddAddressSpace(fbl::unique_ptr<PciAllocation> alloc) = 0;
 
 protected:
     PciAllocator() = default;
-};
-
-// PciRootAllocators are an implementation of PciAllocator designed
-// to use the Pciroot protocol for allocation, fulfilling the requirements
-// for a PciRoot to implement the UpstreamNode interface.
-class PciRootAllocator : public PciAllocator {
-public:
-    PciRootAllocator(ddk::PcirootProtocolClient* proto, pci_address_space_t type, bool low)
-        : pciroot_(proto), type_(type), low_(low) {}
-    // These should not be copied, assigned, or moved
-    PciRootAllocator(const PciRootAllocator&) = delete;
-    PciRootAllocator(PciRootAllocator&&) = delete;
-    PciRootAllocator& operator=(const PciRootAllocator&) = delete;
-    PciRootAllocator& operator=(PciRootAllocator&&) = delete;
-
-    zx_status_t GetRegion(zx_paddr_t base,
-                          size_t size,
-                          fbl::unique_ptr<PciAllocation> alloc) final;
-    zx_status_t AddAddressSpace(fbl::unique_ptr<PciAllocation> alloc) final;
-
-private:
-    // The bus driver outlives allocator objects.
-    ddk::PcirootProtocolClient* const pciroot_;
-    const pci_address_space_t type_;
-    // This denotes whether this allocator requests memory < 4GB. More detail
-    // can be found in the explanation for mmio_lo in root.h.
-    const bool low_;
-};
-
-// PciRegionAllocators are a wrapper around RegionAllocators to allow
-// Bridge objects to implement the UpstreamNode interface by using regions
-// they get other bridges & the root upstream..
-//
-// TODO(cja) implement this when bridge is ported over in the near future.
-class PciRegionAllocator : public PciAllocator {
-public:
-    PciRegionAllocator() = default;
-    // These should not be copied, assigned, or moved
-    PciRegionAllocator(const PciRegionAllocator&) = delete;
-    PciRegionAllocator(PciRegionAllocator&&) = delete;
-    PciRegionAllocator& operator=(const PciRegionAllocator&) = delete;
-    PciRegionAllocator& operator=(PciRegionAllocator&&) = delete;
-
-    zx_status_t GetRegion(zx_paddr_t base,
-                          size_t size,
-                          fbl::unique_ptr<PciAllocation> alloc) final {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    zx_status_t AddAddressSpace(fbl::unique_ptr<PciAllocation> alloc) final {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
 };
 
 } // namespace pci

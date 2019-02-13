@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 #pragma once
 #include <ddk/protocol/pciroot.h>
+#include <region-alloc/region-alloc.h>
+#include <string.h>
 
 __BEGIN_CDECLS;
 
@@ -64,10 +66,12 @@ public:
 
     // These methods correspond to address space reservations needed by the bus
     // driver for providing a place to map bridges and bars.
-    zx_status_t PcirootGetAddressSpace(size_t len,
+    zx_status_t PcirootGetAddressSpace(zx_paddr_t in_base,
+                                       size_t len,
                                        pci_address_space_t type,
                                        bool low,
-                                       uint64_t* out_base);
+                                       uint64_t* out_base,
+                                       zx::resource* resource);
     zx_status_t PcirootFreeAddressSpace(uint64_t base, size_t len, pci_address_space_t type);
 
     // DDK mix-in impls
@@ -77,6 +81,7 @@ public:
     // TODO(cja): Remove this when we no longer share get_auxdata/get_bti with
     // the kernel pci bus driver's C interface.
     void* c_context(void) { return static_cast<void*>(ctx_.get()); }
+    char name_[8];
 
 private:
     Pciroot(fbl::unique_ptr<pciroot_ctx_t> ctx, zx_device_t* parent, zx_device_t* platform_bus,

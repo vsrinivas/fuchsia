@@ -35,6 +35,10 @@ RegionAllocator kMmio32Alloc;
 RegionAllocator kMmio64Alloc;
 RegionAllocator kIoAlloc;
 
+const RegionAllocator* Get32BitMmioAllocator() { return &kMmio32Alloc; }
+const RegionAllocator* Get64BitMmioAllocator() { return &kMmio64Alloc; }
+const RegionAllocator* GetIoAllocator() { return &kIoAlloc; }
+
 struct report_current_resources_ctx {
     zx_handle_t pci_handle;
     bool device_is_root_bridge;
@@ -366,6 +370,7 @@ zx_status_t pci_init(zx_device_t* parent,
     // cache it for later pciroot operations and use its information to populate
     // any fields missing via _BBN / _SEG.
     auto& pinfo = dev_ctx->info;
+    memcpy(pinfo.name, dev_ctx->name, sizeof(pinfo.name));
     pci_mcfg_allocation_t mcfg_alloc;
     status = pci_get_segment_mcfg_alloc(dev_ctx->info.segment_group, &mcfg_alloc);
     if (status == ZX_OK) {

@@ -12,6 +12,7 @@
 #include "device.h"
 #include <assert.h>
 #include <err.h>
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/limits.h>
 #include <inttypes.h>
@@ -26,9 +27,7 @@ Bridge::Bridge(fbl::RefPtr<Config>&& config,
                BusLinkInterface* bli,
                uint8_t mbus_id)
     : pci::Device(std::move(config), upstream, bli, true),
-      UpstreamNode(UpstreamNode::Type::BRIDGE, mbus_id) {
-    /* Assign the driver-wide region pool to this bridge's allocators. */
-}
+      UpstreamNode(UpstreamNode::Type::BRIDGE, mbus_id) {}
 
 zx_status_t Bridge::Create(fbl::RefPtr<Config>&& config,
                            UpstreamNode* upstream,
@@ -66,7 +65,7 @@ zx_status_t Bridge::Init() {
 
     // Sanity checks of bus allocation.
     //
-    // TODO(johngro) : Strengthen sanity checks around bridge topology and
+    // TODO(cja) : Strengthen sanity checks around bridge topology and
     // handle the need to reconfigure bridge topology if a bridge happens to be
     // misconfigured.  Right now, we just assume that the BIOS/Bootloader has
     // taken care of bridge configuration.  In the short term, it would be good
@@ -102,12 +101,31 @@ zx_status_t Bridge::Init() {
         return status;
     }
 
+    // Allocate enough space in a region pool to account for the worst case
+    // scenario of having the max number of functions under a bridge. Bridge
+    // window allocations aren't a problem because the max bars per device is 6,
+    // which is larger than the 5 allocations a bridge might need for 2 bars and
+    // 3 window allocations. Presently, this comes out to a a max of ~132 KB of
+    // space if we were to meet that upper bound. RegionPools are slab
+    // allocators that scale up as needed, so the initial allocation is roughly
+    // a page, and will grow as necessary so we won't pay this cost unless we
+    // need to.
+    constexpr uint32_t pool_size =
+        sizeof(RegionAllocator::Region) * (PCI_MAX_FUNCTIONS_PER_BUS * PCI_MAX_BAR_REGS);
+    constexpr uint32_t pool_size_aligned = fbl::round_up(pool_size, PAGE_SIZE * 1u);
+    auto allocator_pool_ = RegionAllocator::RegionPool::Create(pool_size_aligned);
+    if (allocator_pool_ == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    mmio_regions_.SetRegionPool(allocator_pool_);
+    pf_mmio_regions_.SetRegionPool(allocator_pool_);
+    pio_regions_.SetRegionPool(allocator_pool_);
+
     // Things went well and the device is in a good state. Add ourself to the upstream
     // graph and mark as plugged in.
     upstream_->LinkDevice(static_cast<pci::Device*>(this));
     plugged_in_ = true;
-
-    // Release the device lock, then recurse and scan for downstream devices.
     return ZX_OK;
 }
 
@@ -143,10 +161,10 @@ zx_status_t Bridge::ParseBusWindowsLocked() {
     pf_mem_base_ = (base & ~0xF) << 16;
     pf_mem_limit_ = (limit << 16) | 0xFFFFF;
     if (supports_64bit_pf_mem) {
-        pf_mem_base_ |=
-            static_cast<uint64_t>(cfg_->Read(Config::kPrefetchableMemoryBaseUpper)) << 32;
-        pf_mem_limit_ |=
-            static_cast<uint64_t>(cfg_->Read(Config::kPrefetchableMemoryLimitUpper)) << 32;
+        pf_mem_base_ |= static_cast<uint64_t>(cfg_->Read(Config::kPrefetchableMemoryBaseUpper))
+                        << 32;
+        pf_mem_limit_ |= static_cast<uint64_t>(cfg_->Read(Config::kPrefetchableMemoryLimitUpper))
+                         << 32;
     }
 
     return ZX_OK;
@@ -155,10 +173,11 @@ zx_status_t Bridge::ParseBusWindowsLocked() {
 void Bridge::Dump() const {
     pci::Device::Dump();
 
-    printf("\tbridge managed bus id %#02x\n", managed_bus_id());
-    printf("\tio base %#x limit %#x\n", io_base(), io_limit());
-    printf("\tmem base %#x limit %#x\n", mem_base(), mem_limit());
-    printf("\tprefectable base %#" PRIx64 " limit %#" PRIx64 "\n", pf_mem_base(), pf_mem_limit());
+    printf("Bridge Information:\n");
+    printf("    Managed Bus Id: %#02x\n", managed_bus_id());
+    printf("         Io Window: [%#04x-%#04x]\n", io_base(), io_limit());
+    printf("       MMIO Window: [%#08x-%#08x]\n", mem_base(), mem_limit());
+    printf("    PF-MMIO Window: [%#" PRIx64 "-%#" PRIx64 "]\n", pf_mem_base(), pf_mem_limit());
 }
 
 void Bridge::Unplug() {
@@ -168,12 +187,82 @@ void Bridge::Unplug() {
 }
 
 zx_status_t Bridge::AllocateBars() {
-    pci_errorf("%s unimplemented!\n", __PRETTY_FUNCTION__);
+    {
+        fbl::AutoLock dev_lock(&dev_lock_);
+        zx_status_t status = AllocateBridgeWindowsLocked();
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        status = pci::Device::AllocateBarsLocked();
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+
+    AllocateDownstreamBars();
     return ZX_OK;
 }
 
 zx_status_t Bridge::AllocateBridgeWindowsLocked() {
-    pci_errorf("%s unimplemented!\n", __PRETTY_FUNCTION__);
+    ZX_DEBUG_ASSERT(upstream_);
+
+    // We are configuring a bridge.  We need to be able to allocate the MMIO and
+    // PIO regions this bridge is configured to manage.
+    //
+    // Bridges support IO, MMIO, and PF-MMIO routing. Non-prefetchable MMIO is
+    // limited to 32 bit addresses, whereas PF-MMIO can be in a 64 bit window.
+    // Each bridge receives a set of PciAllocation objects from their upstream
+    // that covers their address space windows for transactions, and then add
+    // those ranges to their own allocators. Those are then used to allocate for
+    // bridges and device endpoints further downstream.
+    //
+    // TODO(cja) : support dynamic configuration of bridge windows.  Its going
+    // to be important when we need to support hot-plugging.  See ZX-321
+
+    zx_status_t status;
+    fbl::unique_ptr<PciAllocation> alloc;
+
+    Dump(); // TODO(cja): Remove after a userspace tool exists for inspection
+    // Every window is configured the same butwith different allocators and registers.
+    auto configure_window = [&](auto& upstream_alloc, auto& dest_alloc, auto base, auto limit,
+                                auto label) {
+        if (base <= limit) {
+            uint64_t size = static_cast<uint64_t>(limit) - base + 1;
+            status = upstream_alloc.GetRegion(base, size, &alloc);
+
+            if (status != ZX_OK) {
+                pci_errorf("[%s] Failed to allocate bridge %s window [%016lx-%016lx]\n",
+                           cfg_->addr(), label, static_cast<uint64_t>(base),
+                           static_cast<uint64_t>(limit));
+                return status;
+            }
+
+            ZX_DEBUG_ASSERT(alloc != nullptr);
+            return dest_alloc.AddAddressSpace(std::move(alloc));
+        }
+        return ZX_OK;
+    };
+
+    // Configure the three windows
+    status = configure_window(upstream_->pio_regions(), pio_regions_, io_base_, io_limit_, "io");
+    if (status != ZX_OK) {
+        pci_tracef("%s bailing out after pio\n", cfg_->addr());
+        return status;
+    }
+    status =
+        configure_window(upstream_->mmio_regions(), mmio_regions_, mem_base_, mem_limit_, "mmio");
+    if (status != ZX_OK) {
+        pci_tracef("%s bailing out after mmio\n", cfg_->addr());
+        return status;
+    }
+    status = configure_window(upstream_->pf_mmio_regions(), pf_mmio_regions_, pf_mem_base_,
+                              pf_mem_limit_, "pf_mmio");
+    if (status != ZX_OK) {
+        pci_tracef("%s bailing out after pf-mmio\n", cfg_->addr());
+        return status;
+    }
+
     return ZX_OK;
 }
 
@@ -215,10 +304,6 @@ void Bridge::Disable() {
 
         pf_mem_limit_ = mem_limit_ = io_limit_ = 0u;
         pf_mem_base_ = mem_base_ = io_base_ = 1u;
-
-        // Release our internal bookkeeping
-        // TODO(cja): Free bookkeeping bits here (they're owned by upstream node, but should
-        // be dealt with here.
     }
 }
 

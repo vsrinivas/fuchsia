@@ -20,7 +20,7 @@ struct MsiBlock {
 /// |ecam_vmo|. The VMO's start address will correspond to the base address of
 /// the bus number specified by |start_bus_num|.
 struct PciPlatformInfo {
-    string:32 name;
+    string:8 name;
     uint8 start_bus_num;
     uint8 end_bus_num;
     uint16 segment_group;
@@ -70,8 +70,15 @@ interface Pciroot {
     FreeMsiBlock(MsiBlock block) -> (zx.status s);
     MaskUnmaskMsi(uint64 msi_id, bool mask) -> (zx.status s);
     /// Request address space reservations from platform bus to use for mapping bars / bridges
-    /// TODO(cja): parameters/return are not finalized.
-    GetAddressSpace(usize len, PciAddressSpace type, bool low) -> (zx.status s, zx.paddr base);
+    /// |in_base| is an optional requested start address which should otherwise be 0. |len| is the
+    /// size of the request in bytes. |low| dictates whether the allocation should be an address
+    /// below 4 GB or not.
+    ///
+    /// On success, the base address is provided in |out_base| and the size is |len|.
+    ///
+    /// An error will be returned if |len| cannot be fulfilled, |low| is set with |in_base|+|len|
+    /// being >=4GB, or if a requested |in_base| cannot be provided.
+    GetAddressSpace(zx.paddr in_base, usize len, PciAddressSpace type, bool low) -> (zx.status s, zx.paddr base, handle<resource> resource);
     /// Free address space reserved via GetAddressSpace from platform bus to use for mapping bars / bridges
     /// TODO(cja): parameters/return are not finalized.
     FreeAddressSpace(zx.paddr base, usize len, PciAddressSpace type) -> (zx.status s);

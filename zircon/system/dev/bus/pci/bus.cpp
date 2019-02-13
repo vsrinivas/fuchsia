@@ -86,18 +86,14 @@ zx_status_t Bus::Initialize() {
 
     // Begin our bus scan starting at our root
     ScanDownstream();
+    root_->AllocateDownstreamBars();
     pci_infof("AllDevicesList:\n");
     for (auto& dev : device_list_) {
         pci_infof("\t%s %s\n", dev.config()->addr(), dev.is_bridge() ? "(b)" : "");
     }
 
-    pci_infof("cleaning up devices\n");
-    root_->DisableDownstream();
-    root_->UnplugDownstream();
-    pci_infof("done.\n");
+    pci_infof("%s init done.\n", info_.name);
 
-    // Ensure the topology was cleaned up properly.
-    ZX_DEBUG_ASSERT(device_list_.size() == 0);
     return ZX_OK;
 }
 

@@ -314,7 +314,28 @@ void Device::DisableLocked() {
 }
 
 zx_status_t Device::AllocateBars() {
-    pci_errorf("%s unimplemented!\n", __PRETTY_FUNCTION__);
+    fbl::AutoLock dev_lock(&dev_lock_);
+    return AllocateBarsLocked();
+}
+
+zx_status_t Device::AllocateBarsLocked() {
+    ZX_DEBUG_ASSERT(plugged_in_);
+
+    // Allocate BARs for the device
+    ZX_DEBUG_ASSERT(bar_count_ <= fbl::count_of(bars_));
+    for (size_t i = 0; i < bar_count_; ++i) {
+        if (bars_[i].size) {
+            zx_status_t ret = AllocateBarLocked(bars_[i]);
+            if (ret != ZX_OK)
+                return ret;
+        }
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t Device::AllocateBarLocked(BarInfo& info) {
+    pci_errorf("[%s] %s unimplemented!\n", cfg_->addr(), __PRETTY_FUNCTION__);
     return ZX_OK;
 }
 
@@ -335,7 +356,8 @@ void Device::Unplug() {
 }
 
 void Device::Dump() const {
-    printf("PCI: device at %s vid:did %04x:%04x\n", cfg_->addr(), vendor_id(), device_id());
+    printf("PCI: %s at %s vid:did %04x:%04x\n", (is_bridge()) ? "bridge" : "device", cfg_->addr(),
+           vendor_id(), device_id());
 }
 
 } // namespace pci

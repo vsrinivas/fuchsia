@@ -17,7 +17,9 @@
 namespace pci {
 
 void UpstreamNode::AllocateDownstreamBars() {
-    pci_errorf("%s unimplemented!\n", __PRETTY_FUNCTION__);
+    for (auto& device : downstream_) {
+        device.AllocateBars();
+    }
 }
 
 void UpstreamNode::DisableDownstream() {
@@ -30,7 +32,7 @@ void UpstreamNode::UnplugDownstream() {
     // Unplug our downstream devices and clear them out of the topology.  They
     // will remove themselves from the bus list and their resources will be
     // cleaned up.
-    size_t idx = downstream_.size_slow();;
+    size_t idx = downstream_.size_slow();
     while (!downstream_.is_empty()) {
         // Catch if we've iterated longer than we should have without needing a
         // stable iterator while devices are removing themselves.

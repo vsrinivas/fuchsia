@@ -21,8 +21,66 @@
 
 namespace pci {
 
-class Bridge : public pci::Device,
-               public UpstreamNode {
+class PciRegionAllocation final : public PciAllocation {
+public:
+    PciRegionAllocation(RegionAllocator::Region::UPtr&& region) : region_(std::move(region)){};
+    zx_paddr_t base() final { return region_->base; }
+    size_t size() final { return region_->size; }
+
+private:
+    const RegionAllocator::Region::UPtr region_;
+};
+
+// PciRegionAllocators are a wrapper around RegionAllocators to allow Bridge
+// objects to implement the UpstreamNode interface by using regions that they
+// are provided by nodes further upstream. They hand out PciRegionAllocations
+// which will release allocations back upstream if they go out of scope.
+class PciRegionAllocator : public PciAllocator {
+public:
+    PciRegionAllocator() = default;
+    // These should not be copied, assigned, or moved
+    PciRegionAllocator(const PciRegionAllocator&) = delete;
+    PciRegionAllocator(PciRegionAllocator&&) = delete;
+    PciRegionAllocator& operator=(const PciRegionAllocator&) = delete;
+    PciRegionAllocator& operator=(PciRegionAllocator&&) = delete;
+
+    zx_status_t GetRegion(zx_paddr_t base,
+                          size_t size,
+                          fbl::unique_ptr<PciAllocation>* alloc) final {
+        RegionAllocator::Region::UPtr region_uptr;
+        zx_status_t status = allocator_.GetRegion({.base = base, .size = size}, region_uptr);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        pci_tracef("bridge: assigned [ %#lx-%#lx ] to downstream bridge\n", base, base+size);
+        fbl::AllocChecker ac;
+        *alloc = fbl::unique_ptr(new (&ac) PciRegionAllocation(std::move(region_uptr)));
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+
+        return ZX_OK;
+    }
+
+    zx_status_t AddAddressSpace(fbl::unique_ptr<PciAllocation> alloc) final {
+        backing_alloc_ = std::move(alloc);
+        auto base = backing_alloc_->base();
+        auto size = backing_alloc_->size();
+        return allocator_.AddRegion({.base = base, .size = size});
+    }
+
+    void SetRegionPool(RegionAllocator::RegionPool::RefPtr pool) { allocator_.SetRegionPool(pool); }
+
+private:
+    // This PciAllocation is the object handed to the bridge by the upstream node
+    // and holds a reservation for that address space in the upstream bridge's window
+    // for use downstream this bridge.
+    fbl::unique_ptr<PciAllocation> backing_alloc_;
+    RegionAllocator allocator_;
+};
+
+class Bridge : public pci::Device, public UpstreamNode {
 public:
     static zx_status_t Create(fbl::RefPtr<Config>&& config,
                               UpstreamNode* upstream,
@@ -33,7 +91,10 @@ public:
     PCI_IMPLEMENT_REFCOUNTED;
 
     // Disallow copying, assigning and moving.
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Bridge);
+    Bridge(const Bridge&) = delete;
+    Bridge(Bridge&&) = delete;
+    Bridge& operator=(const Bridge&) = delete;
+    Bridge& operator=(Bridge&&) = delete;
 
     // UpstreamNode overrides
     PciAllocator& mmio_regions() final { return mmio_regions_; }
@@ -67,10 +128,6 @@ private:
     PciRegionAllocator mmio_regions_;
     PciRegionAllocator pf_mmio_regions_;
     PciRegionAllocator pio_regions_;
-
-    // TODO(cja): RegionAllocator::Region::UPtr pf_mmio_window_;
-    // TODO(cja): RegionAllocator::Region::UPtr mmio_window_;
-    // TODO(cja): RegionAllocator::Region::UPtr pio_window_;
 
     uint64_t pf_mem_base_;
     uint64_t pf_mem_limit_;

@@ -224,8 +224,8 @@ protected:
 
     // BAR allocation
     virtual zx_status_t AllocateBars() TA_EXCL(dev_lock_);
-    // TODO(cja): port zx_status_t AllocateBarsLocked();
-    // TODO(cja): port zx_status_t AllocateBarLocked(BarInfo& info);
+    zx_status_t AllocateBarsLocked() TA_REQ(dev_lock_);
+    zx_status_t AllocateBarLocked(BarInfo& info) TA_REQ(dev_lock_);
 
     // Disable a device, and anything downstream of it.  The device will
     // continue to enumerate, but users will only be able to access config (and
