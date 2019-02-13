@@ -705,6 +705,9 @@ void Device::MainLoop() {
                     ethmac_netbuf_t* netbuf = nullptr;
                     auto peer = packet->peer();
                     if (peer == Packet::Peer::kEthernet) {
+                        // ethernet driver somehow decided to send frame after itself is stopped,
+                        // drop them as we cannot return the netbuf via CompleteTx.
+                        if (ethmac_proxy_ == nullptr ) { continue; }
                         netbuf = packet->ext_data();
                         ZX_ASSERT(netbuf != nullptr);
                     }
