@@ -899,38 +899,18 @@ zx_status_t Station::SendEapolFrame(Span<const uint8_t> eapol_frame, const commo
         return ZX_OK;
     }
 
-    const size_t llc_payload_len = eapol_frame.size_bytes();
-    const size_t max_frame_len =
-        DataFrameHeader::max_len() + LlcHeader::max_len() + llc_payload_len;
-    auto packet = GetWlanPacket(max_frame_len);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
     bool needs_protection =
         !join_ctx_->bss()->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen;
-    BufferWriter w(*packet);
+    mlme_out_buf_t out_buf;
+    auto status = mlme_write_eapol_data_frame(rust_buffer_provider, seq_mgr_.get(), &dst.byte,
+                                              &src.byte, needs_protection, eapol_frame.data(),
+                                              eapol_frame.size_bytes(), &out_buf);
+    if (status != ZX_OK) {
+        errorf("could not write eapol frame: %d\n", status);
+        return status;
+    }
 
-    auto data_hdr = w.Write<DataFrameHeader>();
-    data_hdr->fc.set_type(FrameType::kData);
-    data_hdr->fc.set_to_ds(1);
-    data_hdr->fc.set_protected_frame(needs_protection);
-    data_hdr->addr1 = dst;
-    data_hdr->addr2 = src;
-    data_hdr->addr3 = dst;
-    auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &data_hdr->addr1.byte);
-    data_hdr->sc.set_seq(seq_num);
-
-    auto llc_hdr = w.Write<LlcHeader>();
-    llc_hdr->dsap = kLlcSnapExtension;
-    llc_hdr->ssap = kLlcSnapExtension;
-    llc_hdr->control = kLlcUnnumberedInformation;
-    std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
-    llc_hdr->protocol_id = htobe16(kEapolProtocolId);
-    w.Write(eapol_frame);
-
-    packet->set_len(w.WrittenBytes());
-
-    zx_status_t status =
-        SendDataFrame(std::move(packet), true, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
+    status = SendDataFrame(FromRustOutBuf(out_buf), true, WLAN_TX_INFO_FLAGS_FAVOR_RELIABILITY);
     if (status != ZX_OK) {
         errorf("could not send eapol request packet: %d\n", status);
         service::SendEapolConfirm(device_, wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
