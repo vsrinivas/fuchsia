@@ -246,11 +246,40 @@ TEST_F(StackTest, AsyncFingerprintMoved) {
 
 // Tests that stack frames inside inline functions are expanded so that the
 // inline functions have their own "inline" frames.
+//
+// This tests a bottom function calling an inline function which calls a top
+// function. The tricky part is the IP of the bottom frame is actually in a
+// different inline function (the "ambiguous" one) because the address in the
+// bottom frame is immediately following the TopFunc() call and this happens
+// to fall in range of an inlined function. This should be omitted from the
+// stack.
+//
+//   void TopFunc() {
+//     ...                          // <- top_line
+//   }
+//
+//   // Not actually on the stack but looks like it.
+//   inline void bottom_ambig_inline_func() {
+//     ...                          // <- inline_exec_line
+//   }
+//
+//   inline void bottom_inline_func() {
+//     ...
+//     TopFunc();                   // Non-inline
+//     bottom_ambig_inline_func();  // <- inline_ambig_call_line
+//   }
+//
+//   void bottom() {
+//     ...
+//     bottom_inline_func();       // <- inline_call_line
+//     ...
+//   }
 TEST_F(StackTest, InlineExpansion) {
   constexpr uint64_t kBottomAddr = 0x127365;  // IP for bottom stack frame.
   constexpr uint64_t kTopAddr = 0x893746123;  // IP for top stack frale.
 
   const char kFileName[] = "file.cc";
+  FileLine inline_ambig_call_line(kFileName, 5);
   FileLine inline_call_line(kFileName, 10);
   FileLine inline_exec_line(kFileName, 20);
   FileLine top_line(kFileName, 30);
@@ -265,12 +294,22 @@ TEST_F(StackTest, InlineExpansion) {
                         LazySymbol(top_func));
   delegate.AddLocation(top_location);
 
-  // Bottom stack frame has a real function and an inline function.
+  // Bottom stack frame has a real function, an inline function, and an
+  // ambiguous inline location (at the start of an inline range).
+  auto bottom_ambig_inline_func =
+      fxl::MakeRefCounted<Function>(Symbol::kTagInlinedSubroutine);
+  bottom_ambig_inline_func->set_assigned_name("Inline");
+  // Must start exactly at kBottomAddr for the location to be ambiguous.
+  bottom_ambig_inline_func->set_code_ranges(
+      AddressRanges(AddressRange(kBottomAddr, kBottomAddr + 8)));
+  bottom_ambig_inline_func->set_call_line(inline_ambig_call_line);
+
   auto bottom_inline_func =
       fxl::MakeRefCounted<Function>(Symbol::kTagInlinedSubroutine);
   bottom_inline_func->set_assigned_name("Inline");
+  // Must start before at kBottomAddr for the location to not be ambiguous.
   bottom_inline_func->set_code_ranges(
-      AddressRanges(AddressRange(kBottomAddr, kBottomAddr + 8)));
+      AddressRanges(AddressRange(kBottomAddr - 8, kBottomAddr + 8)));
   bottom_inline_func->set_call_line(inline_call_line);
 
   auto bottom_func = fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram);
@@ -282,12 +321,13 @@ TEST_F(StackTest, InlineExpansion) {
   // This is not something you can actually do in C++ and will give a name
   // "Bottom::Inline()". In real life the inline function will reference the
   // actualy function definition in the correct namespace.
+  bottom_ambig_inline_func->set_parent(LazySymbol(bottom_inline_func));
   bottom_inline_func->set_parent(LazySymbol(bottom_func));
 
   // The location returned by the symbol function will have the file/line
   // inside the inline function.
   Location bottom_location(kBottomAddr, inline_exec_line, 0, symbol_context,
-                           LazySymbol(bottom_inline_func));
+                           LazySymbol(bottom_ambig_inline_func));
   delegate.AddLocation(bottom_location);
 
   Stack stack(&delegate);
@@ -311,15 +351,21 @@ TEST_F(StackTest, InlineExpansion) {
   EXPECT_EQ(inline_call_line, loc.file_line());
   EXPECT_EQ(bottom_func.get(), loc.symbol().Get()->AsFunction());
 
-  // Middle stack frame should be the inline bottom function at the same
-  // address, referencing the bottom one as the physical frame.
+  // Middle stack frame should be the inline bottom function, referencing the
+  // bottom one as the physical frame. The location should be the call line
+  // of the ambiguous inline function because it's next, even though that
+  // function was omitted from the stack.
   EXPECT_TRUE(stack[1]->IsInline());
   EXPECT_EQ(stack[2], stack[1]->GetPhysicalFrame());
   EXPECT_EQ(kBottomAddr, stack[1]->GetAddress());
   loc = stack[1]->GetLocation();
   EXPECT_EQ(kBottomAddr, loc.address());
-  EXPECT_EQ(inline_exec_line, loc.file_line());
+  EXPECT_EQ(inline_ambig_call_line, loc.file_line());
   EXPECT_EQ(bottom_inline_func.get(), loc.symbol().Get()->AsFunction());
+
+  // The bottom_ambig_inline_func should be skipped because it's at the
+  // beginning of an inline call and it's not at the top physical frame of the
+  // stack.
 
   // Top stack frame.
   EXPECT_FALSE(stack[0]->IsInline());

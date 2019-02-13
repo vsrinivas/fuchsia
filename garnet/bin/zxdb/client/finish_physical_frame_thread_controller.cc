@@ -51,12 +51,9 @@ FinishPhysicalFrameThreadController::OnThreadStop(
     // of a range of that inline. By virtue of just returning from a function
     // call, we know any inline functions that start immediately after the
     // call weren't in the stack of the original call.
-
-    // TODO(brettw) enable this code. This currently messes up the tests
-    // because the mock test data doesn't quite match what really happens.
-    // Stack& stack = thread()->GetStack();
-    // stack.SetHideAmbiguousInlineFrameCount(
-    //     stack.GetAmbiguousInlineFrameCount());
+    Stack& stack = thread()->GetStack();
+    stack.SetHideAmbiguousInlineFrameCount(
+        stack.GetAmbiguousInlineFrameCount());
     return kStop;
   }
 

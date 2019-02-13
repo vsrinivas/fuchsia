@@ -146,8 +146,6 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, BottomStackFrame) {
 // the one that called the function being finished, not an inline frame that
 // starts right atfer the call.
 
-/* TODO(brettw) re-enable when the code in OnThreadStop is uncommented and
-   returning to an address that beings an inline call works.
 TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
   auto mock_frames = GetStack();
 
@@ -197,7 +195,7 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
       std::make_unique<MockFrame>(
           nullptr, nullptr,
           debug_ipc::StackFrame(second_inline_range.begin(), kMiddleSP, kMiddleSP),
-          second_inline_loc, mock_frames[0]->GetPhysicalFrame()));
+          second_inline_loc, mock_frames[0]->GetPhysicalFrame(), true));
 
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
@@ -207,6 +205,5 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
 
   EXPECT_EQ(1u, thread()->GetStack().hide_ambiguous_inline_frame_count());
 }
-*/
 
 }  // namespace zxdb

@@ -170,9 +170,13 @@ std::vector<std::unique_ptr<MockFrame>> InlineThreadControllerTest::GetStack() {
   frames.push_back(
       GetTopInlineFrame(top_inline_range.begin(), top_frame.get()));
   frames.push_back(std::move(top_frame));
-  frames.push_back(GetMiddleInline2Frame(top_middle_inline2_range.begin(),
+  // These inlined functions in the middle of the stack must not be ambiguous
+  // because the stack will never generate ambiguous inlined functions for
+  // anything but the top frame. To do this, the address bust be after the
+  // beginning of the code range.
+  frames.push_back(GetMiddleInline2Frame(top_middle_inline2_range.begin() + 1,
                                          middle_frame.get()));
-  frames.push_back(GetMiddleInline1Frame(top_middle_inline2_range.begin(),
+  frames.push_back(GetMiddleInline1Frame(top_middle_inline2_range.begin() + 1,
                                          middle_frame.get()));
   frames.push_back(std::move(middle_frame));
   frames.push_back(GetBottomFrame(0x100000000));

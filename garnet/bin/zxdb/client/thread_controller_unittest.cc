@@ -56,9 +56,15 @@ TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
 
   SymbolContext symbol_context = mock_frames[0]->GetLocation().symbol_context();
 
-  // This address is the ambiguous one that's at the beginning of two inline
+  // Make the top two frames have an ambiguous location (address at the
+  // beginning of their code range). This isn't the case in the default test
+  // data.
   // functions.
-  uint64_t address = mock_frames[0]->GetAddress();
+  uint64_t address = kMiddleInline2FunctionRange.begin();
+  mock_frames[0]->SetAddress(address);
+  mock_frames[0]->set_is_ambiguous_inline(true);
+  mock_frames[1]->SetAddress(address);
+  mock_frames[1]->set_is_ambiguous_inline(true);
 
   // The top two frames should have the same start address of the function
   // range, and the same code address (this is testing that the harness has set
@@ -72,8 +78,6 @@ TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
       kMiddleInline1FunctionRange,
       mock_frames[1]->GetLocation().symbol().Get()->AsFunction()->GetFullRange(
           symbol_context));
-  ASSERT_EQ(address, mock_frames[1]->GetAddress());
-  ASSERT_EQ(address, mock_frames[2]->GetAddress());
   ASSERT_EQ(kMiddleInline1FunctionRange.begin(), address);
   ASSERT_EQ(kMiddleInline2FunctionRange.begin(), address);
 

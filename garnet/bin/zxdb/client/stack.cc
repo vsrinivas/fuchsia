@@ -279,6 +279,10 @@ void Stack::AppendFrame(const debug_ipc::StackFrame& record) {
   // is to just save the debug_ipc::StackFrames and only expand the inline
   // frames when the frame list is accessed.
 
+  // Indicates we're adding the newest physical frame and its inlines to the
+  // frame list.
+  bool is_top_physical_frame = frames_.empty();
+
   // The symbols will provide the location for the innermost inlined function.
   Location inner_loc = delegate_->GetSymbolizedLocationForStackFrame(record);
 
@@ -305,12 +309,28 @@ void Stack::AppendFrame(const debug_ipc::StackFrame& record) {
       record, LocationForInlineFrameChain(inline_chain, inline_chain.size() - 1,
                                           inner_loc));
 
-  // Add all inline functions (skipping the last which is the physical frame
+  // Add inline functions (skipping the last which is the physical frame
   // made above).
   for (size_t i = 0; i < inline_chain.size() - 1; i++) {
-    frames_.push_back(std::make_unique<InlineFrame>(
+    auto inline_frame = std::make_unique<InlineFrame>(
         physical_frame.get(),
-        LocationForInlineFrameChain(inline_chain, i, inner_loc)));
+        LocationForInlineFrameChain(inline_chain, i, inner_loc));
+
+    // Only add ambiguous inline frames when they correspond to the top
+    // physical frame of the stack. The reason is that the instruction pointer
+    // of non-topmost stack frames represents the return address. An ambiguous
+    // inline frame means the return address is the beginning of an inlined
+    // function. This implies that the function call itself isn't actually in
+    // that inlined function.
+    //
+    // TODO(brettw) we may want to consider checking the address immediately
+    // before the IP for these frames and using that for inline frame
+    // computation. This may make the stack make more sense when a function
+    // call is the last part of an inline frame, but it also may make the
+    // line numbers for these frames inconsistent with how they're displayed
+    // for non-inlined frames.
+    if (is_top_physical_frame || !inline_frame->IsAmbiguousInlineLocation())
+      frames_.push_back(std::move(inline_frame));
   }
 
   // Physical frame goes last (back in time).
