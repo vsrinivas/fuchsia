@@ -283,6 +283,7 @@ extern bool g_x86_feature_fsgsbase;
 
 enum x86_hypervisor_list {
     X86_HYPERVISOR_UNKNOWN,
+    X86_HYPERVISOR_NONE,
     X86_HYPERVISOR_KVM,
 };
 
