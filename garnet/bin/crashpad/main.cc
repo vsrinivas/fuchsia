@@ -8,7 +8,8 @@
 
 #include <fuchsia/crash/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/component2/cpp/startup_context.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/syslog/cpp/logger.h>
 
 int main(int argc, const char** argv) {
@@ -21,10 +22,10 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  std::unique_ptr<component::StartupContext> app_context(
-      component::StartupContext::CreateFromStartupInfo());
-  fidl::BindingSet<::fuchsia::crash::Analyzer> bindings;
-  app_context->outgoing().AddPublicService(bindings.GetHandler(analyzer.get()));
+  auto startup_context = component2::StartupContext::CreateFromStartupInfo();
+  fidl::BindingSet<fuchsia::crash::Analyzer> bindings;
+  startup_context->outgoing().AddPublicService(
+      bindings.GetHandler(analyzer.get()));
 
   loop.Run();
 
