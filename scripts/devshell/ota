@@ -5,18 +5,15 @@
 
 ### do a system OTA
 
-## usage: fx ota [-d|--device <device_address>] [-h|--help]
+## usage: fx ota [-h|--help]
 ##
 ## Ask the target to do an OTA. The target will use any update server available
 ## to it to do the update. This requires the target have a update server
-## available to it. The 'serve' command is typically used to make your
+## available to it. The 'serve' fx command is typically used to make your
 ## development host available to the target as an update server.
 ##
 ## Arguments:
 ##   -h|--help    Print out this message.
-##   -d|--device  Fuchsia link-local name of the device. If not
-##                specified, will connect to the only available
-##                device on the link-local network.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
