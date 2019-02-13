@@ -28,8 +28,9 @@ class PageDbImpl : public PageDb {
 
   Status StartBatch(coroutine::CoroutineHandler* handler,
                     std::unique_ptr<PageDb::Batch>* batch) override;
-  Status GetHeads(coroutine::CoroutineHandler* handler,
-                  std::vector<CommitId>* heads) override;
+  Status GetHeads(
+      coroutine::CoroutineHandler* handler,
+      std::vector<std::pair<zx::time_utc, CommitId>>* heads) override;
   Status GetMerges(coroutine::CoroutineHandler* handler,
                    CommitIdView parent1_id, CommitIdView parent2_id,
                    std::vector<CommitId>* merges) override;

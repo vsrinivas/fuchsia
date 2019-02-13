@@ -24,6 +24,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "lib/timekeeper/test_clock.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
@@ -976,6 +977,64 @@ TEST_F(PageStorageTest, HeadCommits) {
   heads = GetHeads();
   ASSERT_EQ(1u, heads.size());
   EXPECT_EQ(id, heads[0]);
+}
+
+TEST_F(PageStorageTest, OrderHeadCommitsByTimestampThenId) {
+  timekeeper::TestClock test_clock;
+  // We generate a few timestamps: some random, and a few equal constants to
+  // test ID ordering.
+  std::vector<zx::time_utc> timestamps(7);
+  std::generate(timestamps.begin(), timestamps.end(),
+                [this] { return environment_.random()->Draw<zx::time_utc>(); });
+  timestamps.insert(timestamps.end(), {zx::time_utc(1000), zx::time_utc(1000),
+                                       zx::time_utc(1000)});
+
+  // We first generate the commits. The will be shuffled at a later time.
+  std::vector<std::unique_ptr<const Commit>> commits;
+  std::vector<std::pair<zx::time_utc, CommitId>> sorted_commits;
+
+  for (size_t i = 0; i < timestamps.size(); i++) {
+    std::vector<std::unique_ptr<const Commit>> parent;
+    parent.emplace_back(GetFirstHead());
+
+    test_clock.Set(timestamps[i]);
+    // Adding a new commit with the previous head as its parent should replace
+    // the old head.
+    std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
+        &test_clock, storage_.get(),
+        RandomObjectIdentifier(environment_.random()), std::move(parent));
+
+    sorted_commits.emplace_back(timestamps[i], commit->GetId());
+    commits.push_back(std::move(commit));
+  }
+
+  // Insert the commits in a random order.
+  auto rng = environment_.random()->NewBitGenerator<uint64_t>();
+  std::shuffle(commits.begin(), commits.end(), rng);
+  for (size_t i = 0; i < commits.size(); i++) {
+    bool called;
+    Status status;
+    storage_->AddCommitFromLocal(
+        std::move(commits[i]), {},
+        callback::Capture(callback::SetWhenCalled(&called), &status));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(Status::OK, status);
+  }
+
+  // Check that GetHeadCommitIds returns sorted commits.
+  bool called;
+  std::vector<CommitId> heads;
+  Status status;
+  storage_->GetHeadCommitIds(
+      callback::Capture(callback::SetWhenCalled(&called), &status, &heads));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  std::sort(sorted_commits.begin(), sorted_commits.end());
+  for (size_t i = 0; i < sorted_commits.size(); ++i) {
+    EXPECT_EQ(sorted_commits[i].second, heads[i]);
+  }
 }
 
 TEST_F(PageStorageTest, CreateJournals) {

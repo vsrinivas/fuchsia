@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/storage/impl/page_db_impl.h"
 
 #include <algorithm>
+#include <iterator>
 #include <string>
 
 #include <lib/fxl/strings/concatenate.h>
@@ -30,27 +31,22 @@ using coroutine::CoroutineHandler;
 
 namespace {
 
-// Extracts a sorted list of commit its from |entries|. Entries must be a map
-// from commit ids to serialized |A|.
+// Extracts a sorted list of deserialized |A|'s to commit ids from |entries|.
+// Entries must be a map from commit ids to serialized |A|.
 template <typename A>
 void ExtractSortedCommitsIds(
     std::vector<std::pair<std::string, std::string>>* entries,
-    std::vector<CommitId>* commit_ids) {
-  std::sort(entries->begin(), entries->end(),
-            [&](const std::pair<std::string, std::string>& p1,
-                const std::pair<std::string, std::string>& p2) {
-              auto t1 = DeserializeData<A>(p1.second);
-              auto t2 = DeserializeData<A>(p2.second);
-              if (t1 != t2) {
-                return t1 < t2;
-              }
-              return p1.first < p2.first;
-            });
+    std::vector<std::pair<A, CommitId>>* commit_ids) {
   commit_ids->clear();
   commit_ids->reserve(entries->size());
-  for (std::pair<std::string, std::string>& entry : *entries) {
-    commit_ids->push_back(std::move(entry.first));
-  }
+  std::transform(std::make_move_iterator(entries->begin()),
+                 std::make_move_iterator(entries->end()),
+                 std::back_inserter(*commit_ids),
+                 [](std::pair<std::string, std::string>&& entry) {
+                   auto t = DeserializeData<A>(entry.second);
+                   return std::make_pair(t, std::move(entry.first));
+                 });
+  std::sort(commit_ids->begin(), commit_ids->end());
 }
 
 }  // namespace
@@ -71,8 +67,9 @@ Status PageDbImpl::StartBatch(coroutine::CoroutineHandler* handler,
   return Status::OK;
 }
 
-Status PageDbImpl::GetHeads(CoroutineHandler* handler,
-                            std::vector<CommitId>* heads) {
+Status PageDbImpl::GetHeads(
+    CoroutineHandler* handler,
+    std::vector<std::pair<zx::time_utc, CommitId>>* heads) {
   std::vector<std::pair<std::string, std::string>> entries;
   RETURN_ON_ERROR(db_->GetEntriesByPrefix(
       handler, convert::ToSlice(HeadRow::kPrefix), &entries));
@@ -142,7 +139,16 @@ Status PageDbImpl::GetUnsyncedCommitIds(CoroutineHandler* handler,
   RETURN_ON_ERROR(db_->GetEntriesByPrefix(
       handler, convert::ToSlice(UnsyncedCommitRow::kPrefix), &entries));
   // Unsynced commit row values are the commit's generation.
-  ExtractSortedCommitsIds<uint64_t>(&entries, commit_ids);
+  std::vector<std::pair<uint64_t, CommitId>> extracted_ids;
+  ExtractSortedCommitsIds<uint64_t>(&entries, &extracted_ids);
+  commit_ids->clear();
+  commit_ids->reserve(entries.size());
+  std::transform(std::make_move_iterator(extracted_ids.begin()),
+                 std::make_move_iterator(extracted_ids.end()),
+                 std::back_inserter(*commit_ids),
+                 [](std::pair<uint64_t, CommitId>&& commit_id_pair) {
+                   return std::move(std::get<CommitId>(commit_id_pair));
+                 });
   return Status::OK;
 }
 

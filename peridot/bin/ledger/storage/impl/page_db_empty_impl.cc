@@ -12,8 +12,9 @@ Status PageDbEmptyImpl::StartBatch(CoroutineHandler* /*handler*/,
                                    std::unique_ptr<PageDb::Batch>* /*batch*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetHeads(CoroutineHandler* /*handler*/,
-                                 std::vector<CommitId>* /*heads*/) {
+Status PageDbEmptyImpl::GetHeads(
+    CoroutineHandler* /*handler*/,
+    std::vector<std::pair<zx::time_utc, CommitId>>* /*heads*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetMerges(coroutine::CoroutineHandler* /*handler*/,

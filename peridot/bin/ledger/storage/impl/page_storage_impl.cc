@@ -48,6 +48,8 @@
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/bin/ledger/storage/public/types.h"
+#include "zx/time.h"
 
 namespace storage {
 
@@ -126,14 +128,8 @@ void PageStorageImpl::SetSyncDelegate(PageSyncDelegate* page_sync) {
 
 void PageStorageImpl::GetHeadCommitIds(
     fit::function<void(Status, std::vector<CommitId>)> callback) {
-  coroutine_manager_.StartCoroutine(
-      std::move(callback),
-      [this](CoroutineHandler* handler,
-             fit::function<void(Status, std::vector<CommitId>)> callback) {
-        std::vector<CommitId> commit_ids;
-        Status status = db_->GetHeads(handler, &commit_ids);
-        callback(status, std::move(commit_ids));
-      });
+  // TODO(etiennej): Make this method synchronous.
+  callback(Status::OK, commit_tracker_.GetHeads());
 }
 
 void PageStorageImpl::GetMergeCommitIds(
@@ -285,7 +281,7 @@ void PageStorageImpl::IsEmpty(fit::function<void(Status, bool)> callback) {
       std::move(callback), [this](CoroutineHandler* handler,
                                   fit::function<void(Status, bool)> callback) {
         // Check there is a single head.
-        std::vector<CommitId> commit_ids;
+        std::vector<std::pair<zx::time_utc, CommitId>> commit_ids;
         Status status = db_->GetHeads(handler, &commit_ids);
         if (status != Status::OK) {
           callback(status, false);
@@ -299,7 +295,7 @@ void PageStorageImpl::IsEmpty(fit::function<void(Status, bool)> callback) {
         }
         // Compare the root node of the head commit to that of the empty node.
         std::unique_ptr<const Commit> commit;
-        status = SynchronousGetCommit(handler, commit_ids[0], &commit);
+        status = SynchronousGetCommit(handler, commit_ids[0].second, &commit);
         if (status != Status::OK) {
           callback(status, false);
           return;
@@ -990,7 +986,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
 
 Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
   // Add the default page head if this page is empty.
-  std::vector<CommitId> heads;
+  std::vector<std::pair<zx::time_utc, CommitId>> heads;
   Status s = db_->GetHeads(handler, &heads);
   if (s != Status::OK) {
     return s;
@@ -1000,6 +996,10 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
     if (s != Status::OK) {
       return s;
     }
+    commit_tracker_.AddHeads({std::make_pair<zx::time_utc, CommitId>(
+        zx::time_utc(), kFirstPageCommitId.ToString())});
+  } else {
+    commit_tracker_.AddHeads(heads);
   }
 
   // Cache whether this page is online or not.
@@ -1203,6 +1203,7 @@ Status PageStorageImpl::SynchronousAddCommits(
   std::vector<std::unique_ptr<const Commit>> commits_to_send;
 
   std::map<CommitId, zx::time_utc> heads_to_add;
+  std::vector<CommitId> removed_heads;
 
   int orphaned_commits = 0;
   for (auto& commit : commits) {
@@ -1268,6 +1269,7 @@ Status PageStorageImpl::SynchronousAddCommits(
         if (s != Status::OK) {
           return s;
         }
+        removed_heads.push_back(parent_id.ToString());
       }
     }
 
@@ -1330,6 +1332,17 @@ Status PageStorageImpl::SynchronousAddCommits(
     return s;
   }
 
+  // Only update the cache of heads after a successful update of the PageDb.
+  commit_tracker_.RemoveHeads(std::move(removed_heads));
+  std::vector<std::pair<zx::time_utc, CommitId>> new_heads;
+  std::transform(std::make_move_iterator(heads_to_add.begin()),
+                 std::make_move_iterator(heads_to_add.end()),
+                 std::back_inserter(new_heads),
+                 [](std::pair<CommitId, zx::time_utc>&& head) {
+                   return std::make_pair(std::get<zx::time_utc>(head),
+                                         std::move(std::get<CommitId>(head)));
+                 });
+  commit_tracker_.AddHeads(new_heads);
   NotifyWatchersOfNewCommits(commits_to_send, source);
 
   return s;

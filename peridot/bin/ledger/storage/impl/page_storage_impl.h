@@ -19,6 +19,7 @@
 #include "peridot/bin/ledger/coroutine/coroutine_manager.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/storage/impl/live_commit_tracker.h"
 #include "peridot/bin/ledger/storage/impl/page_db_impl.h"
 #include "peridot/bin/ledger/storage/public/db.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -240,6 +241,7 @@ class PageStorageImpl : public PageStorage {
   PageSyncDelegate* page_sync_;
   bool page_is_online_ = false;
   std::unique_ptr<ObjectIdentifier> empty_node_id_ = nullptr;
+  LiveCommitTracker commit_tracker_;
 
   callback::OperationSerializer commit_serializer_;
   coroutine::CoroutineManager coroutine_manager_;

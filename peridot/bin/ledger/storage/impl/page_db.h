@@ -144,7 +144,8 @@ class PageDb : public PageDbMutator {
   // ordered by the timestamp given at their insertion and if identical, by
   // their id.
   FXL_WARN_UNUSED_RESULT virtual Status GetHeads(
-      coroutine::CoroutineHandler* handler, std::vector<CommitId>* heads) = 0;
+      coroutine::CoroutineHandler* handler,
+      std::vector<std::pair<zx::time_utc, CommitId>>* heads) = 0;
 
   // Merges.
   // Finds all merges of the commits with ids |parent1_id| and |parent2_id|, and

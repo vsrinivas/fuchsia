@@ -79,7 +79,7 @@ class PageDbTest : public ledger::TestWithEnvironment {
 
 TEST_F(PageDbTest, HeadCommits) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    std::vector<CommitId> heads;
+    std::vector<std::pair<zx::time_utc, CommitId>> heads;
     EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
     EXPECT_TRUE(heads.empty());
 
@@ -89,7 +89,7 @@ TEST_F(PageDbTest, HeadCommits) {
                                environment_.random()->Draw<zx::time_utc>()));
     EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
     EXPECT_EQ(1u, heads.size());
-    EXPECT_EQ(cid, heads[0]);
+    EXPECT_EQ(cid, heads[0].second);
 
     EXPECT_EQ(Status::OK, page_db_.RemoveHead(handler, cid));
     EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
@@ -154,11 +154,11 @@ TEST_F(PageDbTest, OrderHeadCommitsByTimestampThenId) {
     }
 
     // Check that GetHeads returns sorted commits.
-    std::vector<CommitId> heads;
+    std::vector<std::pair<zx::time_utc, CommitId>> heads;
     EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
     std::sort(commits.begin(), commits.end());
     for (size_t i = 0; i < commits.size(); ++i) {
-      EXPECT_EQ(commits[i].second, heads[i]);
+      EXPECT_EQ(commits[i].second, heads[i].second);
     }
   });
 }

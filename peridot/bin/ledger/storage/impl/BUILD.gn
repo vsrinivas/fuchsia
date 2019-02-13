@@ -80,6 +80,8 @@ source_set("lib") {
     "leveldb.h",
     "leveldb_factory.cc",
     "leveldb_factory.h",
+    "live_commit_tracker.cc",
+    "live_commit_tracker.h",
     "object_impl.cc",
     "object_impl.h",
     "page_db.h",
