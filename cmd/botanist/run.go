@@ -197,7 +197,10 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}
 
 	// Merge config file and command-line keys.
-	privKeyPaths := append(properties.SSHKeys, r.sshKey)
+	privKeyPaths := properties.SSHKeys
+	if r.sshKey != "" {
+		privKeyPaths = append(privKeyPaths, r.sshKey)
+	}
 	var privKeys [][]byte
 	if len(privKeyPaths) == 0 {
 		p, err := botanist.GeneratePrivateKey()
@@ -209,7 +212,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		for _, keyPath := range privKeyPaths {
 			p, err := ioutil.ReadFile(keyPath)
 			if err != nil {
-				return err
+				return fmt.Errorf("could not read SSH key file %q: %v", keyPath, err)
 			}
 			privKeys = append(privKeys, p)
 		}
