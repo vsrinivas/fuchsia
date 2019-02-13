@@ -63,10 +63,14 @@ void vfs_exit(const zx::event& fshost_event) {
     if ((status = fshost_event.signal(0, FSHOST_SIGNAL_EXIT)) != ZX_OK) {
         printf("devmgr: Failed to signal VFS exit\n");
         return;
-    } else if ((status = fshost_event.wait_one(FSHOST_SIGNAL_EXIT_DONE,
-                                               zx::deadline_after(zx::sec(5)), nullptr)) != ZX_OK) {
-        printf("devmgr: Failed to wait for VFS exit completion\n");
     }
+    if ((status = fshost_event.wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::deadline_after(zx::sec(5)),
+                                        nullptr)) != ZX_OK) {
+        printf("devmgr: Failed to wait for VFS exit completion\n");
+        return;
+    }
+
+    printf("devmgr: Successfully waited for VFS exit completion\n");
 }
 
 zx_status_t suspend_devhost(devmgr::Devhost* dh, devmgr::SuspendContext* ctx) {

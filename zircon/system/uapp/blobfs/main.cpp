@@ -54,9 +54,12 @@ int Mount(fbl::unique_fd fd, blobfs::MountOptions* options) {
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     trace::TraceProvider provider(loop.dispatcher());
-    auto loop_quit = [&loop]() { loop.Quit(); };
-    if (blobfs::Mount(loop.dispatcher(), std::move(fd), *options,
-                            std::move(root), std::move(loop_quit)) != ZX_OK) {
+    auto loop_quit = [&loop]() {
+        loop.Quit();
+        FS_TRACE_WARN("blobfs: Unmounted\n");
+    };
+    if (blobfs::Mount(loop.dispatcher(), std::move(fd), *options, std::move(root),
+                      std::move(loop_quit)) != ZX_OK) {
         return -1;
     }
     loop.Run();

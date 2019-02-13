@@ -42,7 +42,10 @@ int Mount(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options)
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     trace::TraceProvider trace_provider(loop.dispatcher());
 
-    auto loop_quit = [&loop]() { loop.Quit(); };
+    auto loop_quit = [&loop]() {
+        loop.Quit();
+        FS_TRACE_WARN("minfs: Unmounted\n");
+    };
     zx_status_t status;
     if ((status = MountAndServe(&options, loop.dispatcher(), std::move(bc), zx::channel(h),
                                 std::move(loop_quit)) != ZX_OK)) {
