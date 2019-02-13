@@ -11,8 +11,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-extern int some_function(void);
-extern int some_variable;
 // RegionAllocator
 //
 // == Overview ==
