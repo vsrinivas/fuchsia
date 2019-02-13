@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string>
 #include <zx/event.h>
-#include <zx/process.h>
+
+#include <lib/fdio/spawn.h>
 
 #include "garnet/lib/debugger_utils/jobs.h"
+#include "garnet/lib/debugger_utils/test_helper.h"
 #include "garnet/lib/debugger_utils/util.h"
 #include "gtest/gtest.h"
 
@@ -28,11 +29,18 @@ TEST(UtilZx, GetRelatedKoid) {
   // Note we don't exercise all possible objects here. Doing so is the job
   // of a kernel unittest. This test just exercises GetRelatedKoid().
   zx::process process;
-  zx::vmar root_vmar;
   zx::job job{GetDefaultJob()};
-  char name[] = "GetRelatedKoid process";
-  EXPECT_EQ(ZX_OK, zx::process::create(job, name, sizeof(name),
-                                       0u, &process, &root_vmar));
+
+  const char* argv[] = {
+    kTestHelperPath,
+    nullptr,
+  };
+
+  zx_status_t status = fdio_spawn(job.get(), FDIO_SPAWN_CLONE_ALL,
+                                  kTestHelperPath, argv,
+                                  process.reset_and_get_address());
+  EXPECT_EQ(status, ZX_OK);
+
   EXPECT_NE(ZX_KOID_INVALID, GetRelatedKoid(process));
   EXPECT_EQ(GetRelatedKoid(process), GetKoid(job));
   EXPECT_NE(ZX_KOID_INVALID, GetRelatedKoid(process.get()));

@@ -49,11 +49,11 @@ static_library("debugger_utils") {
   }
 
   public_deps = [
+    "//garnet/public/lib/fxl",
     "//zircon/public/lib/zircon-internal",
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
     "//zircon/public/lib/fit",
   ]
 
@@ -93,6 +93,26 @@ executable("tests") {
     ":debugger_utils",
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+
+  libs = [ "zircon" ]
+}
+
+executable("test_helper") {
+  testonly = true
+  # US-142: This binary has a long name because it has to be unique within
+  # the entire system.
+  output_name = "debugger_utils_test_helper"
+
+  sources = [
+    "test_helper.cc",
+  ]
+
+  deps = [
+    ":debugger_utils",
+    "//zircon/public/lib/zx",
   ]
 
   libs = [ "zircon" ]
@@ -102,12 +122,27 @@ package("debugger_utils_tests") {
   testonly = true
 
   deps = [
+    ":test_helper",
     ":tests",
+  ]
+
+  binaries = [
+    {
+      name = "debugger_utils_test_helper"
+      dest = "test_helper"
+    },
   ]
 
   tests = [
     {
       name = "debugger_utils_tests"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/debugger_utils_tests.cmx")
+      dest = "debugger_utils_tests.cmx"
     },
   ]
 }

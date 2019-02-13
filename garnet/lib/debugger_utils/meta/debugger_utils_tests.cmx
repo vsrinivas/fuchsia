@@ -1,0 +1,14 @@
+{
+  "program": {
+    "binary": "test/debugger_utils_tests"
+  },
+  "sandbox": {
+    "dev": [
+      "misc"
+    ],
+    "services": [
+      "fuchsia.process.Launcher",
+      "fuchsia.process.Resolver"
+    ]
+  }
+}
