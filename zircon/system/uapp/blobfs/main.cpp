@@ -40,7 +40,10 @@ int Mount(fbl::unique_fd fd, blobfs::MountOptions* options) {
                            fd.get(), status);
             return -1;
         }
-        options->readonly = block_info.flags & BLOCK_FLAG_READONLY;
+        if (block_info.flags & BLOCK_FLAG_READONLY) {
+            FS_TRACE_WARN("blobfs: Mounting as read-only. WARNING: Journal will not be applied\n");
+            options->readonly = true;
+        }
     }
 
     zx::channel root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
