@@ -65,3 +65,28 @@ func (b *maxTriesBackoff) Reset() {
 func WithMaxRetries(b Backoff, max uint64) Backoff {
 	return &maxTriesBackoff{backOff: b, maxTries: max}
 }
+
+type maxDurationBackoff struct {
+	backOff     Backoff
+	maxDuration time.Duration
+	startTime   time.Time
+	c           clock
+}
+
+func (b *maxDurationBackoff) Next() time.Duration {
+	if b.c.Since(b.startTime) < b.maxDuration {
+		return b.backOff.Next()
+	}
+	return Stop
+}
+
+func (b *maxDurationBackoff) Reset() {
+	b.startTime = b.c.Now()
+	b.backOff.Reset()
+}
+
+// WithMaxDuration wraps a back-off which stops attempting retries after |max|
+// duration.
+func WithMaxDuration(b Backoff, max time.Duration) Backoff {
+	return &maxDurationBackoff{backOff: b, maxDuration: max, c: &systemClock{}}
+}

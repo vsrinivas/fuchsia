@@ -41,7 +41,7 @@ func GetNodeAddress(ctx context.Context, nodename string, fuchsia bool) (*net.UD
 	var addr *net.UDPAddr
 	var err error
 	n := netboot.NewClient(time.Second)
-	err = retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 60), func() error {
+	err = retry.Retry(ctx, retry.WithMaxDuration(&retry.ZeroBackoff{}, time.Minute), func() error {
 		addr, err = n.Discover(nodename, fuchsia)
 		return err
 	}, nil)

@@ -53,7 +53,7 @@ func ConnectSSH(ctx context.Context, address net.Addr, config *ssh.ClientConfig)
 	var client *ssh.Client
 
 	// TODO: figure out optimal backoff time and number of retries
-	if err := retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 10), func() error {
+	if err := retry.Retry(ctx, retry.WithMaxDuration(&retry.ZeroBackoff{}, 10*time.Second), func() error {
 		var err error
 		client, err = ssh.Dial(network, address.String(), config)
 		return err
