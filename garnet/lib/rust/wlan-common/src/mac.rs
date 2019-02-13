@@ -446,8 +446,8 @@ pub enum AuthAlgorithm {
     _VendorSpecific = 65535,
 }
 
-// IEEE Std 802.11-2016, 9.4.1.7
-#[repr(u16)]
+/// IEEE Std 802.11-2016, 9.4.1.7
+#[repr(C)]
 pub enum ReasonCode {
     // 0 Reserved
     UnspecifiedReason = 1,
@@ -489,6 +489,7 @@ pub enum ReasonCode {
     EndTsBaDls = 37,
     UnknownTsBa = 38,
     Timeout = 39,
+    // 40 - 44 Reserved.
     PeerkeyMismatch = 45,
     PeerInitiated = 46,
     ApInitiated = 47,

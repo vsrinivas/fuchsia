@@ -10,6 +10,7 @@
 #[macro_use]
 extern crate log;
 // Explicitly declare usage for cbindgen.
+extern crate wlan_common;
 extern crate wlan_mlme;
 
 #[macro_use]

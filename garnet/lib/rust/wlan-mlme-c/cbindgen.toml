@@ -14,21 +14,25 @@ language = "C"
 
 [parse]
 parse_deps = true
-include = ["wlan_mlme"]
+include = ["wlan_mlme", "wlan_common"]
 
 [export]
 # These types are not used yet but we want to generate
 # bindings for them already.
-include = ["BufferProvider", "InBuf", "OutBuf"]
-prefix = "rust_mlme_"
+include = ["BufferProvider", "InBuf", "OutBuf", "ReasonCode"]
 
 [export.rename]
 # Unfortunately cbindgen's rename machinery is rather simple
 # and doesn't accomodate our needs. As a result we have to
 # explicitly declare the items which should get renamed
-"BufferProvider" = "buffer_provider_ops_t"
-"InBuf" = "in_buf_t"
-"OutBuf" = "out_buf_t"
+"BufferProvider" = "rust_mlme_buffer_provider_ops_t"
+"InBuf" = "rust_mlme_in_buf_t"
+"OutBuf" = "rust_mlme_out_buf_t"
+"ReasonCode" = "wlan_reason_code"
 
 [fn]
 prefix = 'extern "C"'
+
+[enum]
+rename_variants = "ScreamingSnakeCase"
+prefix_with_name = true
