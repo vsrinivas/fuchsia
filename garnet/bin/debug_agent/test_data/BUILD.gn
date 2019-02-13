@@ -90,3 +90,20 @@ executable("process_loop") {
     "process_loop.cc",
   ]
 }
+
+if (current_cpu == "arm64") {
+  executable("hw_breakpointer") {
+    testonly = true
+    output_name = "hw_breakpointer"
+
+    sources = [
+      "hw_breakpointer.cc",
+    ]
+
+    deps = [
+      "//garnet/lib/debug_ipc/helper",
+      "//garnet/public/lib/fxl",
+      "//zircon/public/lib/zx",
+    ]
+  }
+}

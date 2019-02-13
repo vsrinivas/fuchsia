@@ -6,38 +6,63 @@
 
 #include <arch/arm64.h>
 #include <arch/arm64/registers.h>
+#include <kernel/thread.h>
 #include <vm/vm.h>
 
-void arm64_disable_debug_state() {
-    // The KDE bit enables and disables debug exceptions for the current execution.
-    // Instruction Breakpoint Exceptions (software breakpoints) cannot be deactivated.
-    uint32_t mdscr_val = __arm_rsr("mdscr_el1") & ~ARM64_MDSCR_EL1_KDE;
-    __arm_wsr("mdscr_el1", mdscr_val);
+void arm64_set_debug_state_for_thread(thread* thread, bool active) {
+    arm64_iframe_t* iframe = thread->arch.suspended_general_regs;
+    DEBUG_ASSERT(iframe);
+    if (active) {
+        iframe->mdscr |= ARM64_MDSCR_EL1_MDE;   // MDE enables hardware exceptions.
+        iframe->mdscr |= ARM64_MDSCR_EL1_KDE;   // KDE enables local debugging in EL0.
+    } else {
+        iframe->mdscr &= ~ARM64_MDSCR_EL1_MDE;   // MDE enables hardware exceptions.
+        iframe->mdscr &= ~ARM64_MDSCR_EL1_KDE;   // KDE enables local debugging in EL0.
+    }
+}
+
+void arm64_set_debug_state_for_cpu(bool active) {
+    uint32_t mdscr = __arm_rsr("mdscr_el1");
+    if (active) {
+        mdscr |= ARM64_MDSCR_EL1_MDE;   // MDE enables hardware exceptions.
+        mdscr |= ARM64_MDSCR_EL1_KDE;   // KDE enables local debugging in EL0.
+    } else {
+        mdscr &= ~ARM64_MDSCR_EL1_MDE;   // MDE enables hardware exceptions.
+        mdscr &= ~ARM64_MDSCR_EL1_KDE;   // KDE enables local debugging in EL0.
+    }
+    __arm_wsr("mdscr_el1", mdscr);
     __isb(ARM_MB_SY);
 }
 
-void arm64_enable_debug_state() {
-    // The KDE bit enables and disables debug exceptions for the current execution.
-    // Instruction Breakpoint Exceptions (software breakpoints) cannot be deactivated.
-    uint32_t mdscr_val = __arm_rsr("mdscr_el1") | ARM64_MDSCR_EL1_KDE;
-    __arm_wsr("mdscr_el1", mdscr_val);
-    __isb(ARM_MB_SY);
-}
-
-bool arm64_validate_debug_state(arm64_debug_state_t* state) {
+bool arm64_validate_debug_state(arm64_debug_state_t* state, uint32_t* active_breakpoints) {
+    uint32_t breakpoint_count = 0;
     // Validate that the addresses are valid.
     size_t hw_bp_count = arm64_hw_breakpoint_count();
-    for (size_t i = 0; i < hw_bp_count; i++) {
-        uint64_t addr = state->hw_bps[i].dbgbvr;
-        if (addr != 0 && !is_user_address(addr)) {
+    for (size_t i = 0; i < ARM64_MAX_HW_BREAKPOINTS; i++) {
+        uint32_t dbgbcr = state->hw_bps[i].dbgbcr;
+        uint64_t dbgbvr = state->hw_bps[i].dbgbvr;
+
+        // If we're beyond the provided values and a breakpoint is set, we
+        // consider these parameters invalid.
+        if ((i >= hw_bp_count) && (dbgbcr || dbgbvr)) {
             return false;
         }
 
-        // Mask out the fields that userspace is not allowed to modify.
-        uint32_t masked_user_bcr = state->hw_bps[i].dbgbcr & ARM64_DBGBCR_USER_MASK;
-        state->hw_bps[i].dbgbcr = ARM64_DBGBCR_MASK | masked_user_bcr;
+        // Verify that the breakpoint refers to userspace.
+        if (dbgbvr != 0 && !is_user_address(dbgbvr)) {
+            return false;
+        }
+        state->hw_bps[i].dbgbvr &= ARM64_DBGBVR_USER_MASK;
+
+        // If the address is valid and the breakpoint is activated, we mask in
+        // the other necessary value and count it for bookkeepping.
+        if (state->hw_bps[i].dbgbcr & ARM64_DBGBCR_E) {
+            state->hw_bps[i].dbgbcr = ARM64_DBGBCR_ACTIVATED_MASK;
+            breakpoint_count++;
+        }
     }
 
+    *active_breakpoints = breakpoint_count;
     return true;
 }
 
@@ -63,190 +88,86 @@ uint8_t arm64_hw_watchpoint_count() {
 
 // Read Debug State ------------------------------------------------------------------------------
 
-static void arm64_read_hw_breakpoint_by_index(arm64_debug_state_t* debug_state,
-                                              unsigned int index) {
-    DEBUG_ASSERT(index < arm64_hw_breakpoint_count());
+#define READ_HW_BREAKPOINT(index, dbgbcr_val, dbgbvr_val) \
+    dbgbcr_val = __arm_rsr("dbgbcr" #index "_el1");       \
+    dbgbvr_val = __arm_rsr64("dbgbvr" #index "_el1");
+#define READ_HW_BREAKPOINT_CASE(index, dbgbcr_val, dbgbvr_val) \
+    case index:                                                \
+        READ_HW_BREAKPOINT(index, dbgbcr_val, dbgbvr_val);     \
+        break;
 
+static void arm64_read_hw_breakpoint_by_index(unsigned int index, uint32_t* dbgbcr,
+                                              uint64_t* dbgbvr) {
+    uint32_t read_dbgbcr = 0;
+    uint64_t read_dbgbvr = 0;
     switch (index) {
-    case 0:
-        debug_state->hw_bps[0].dbgbcr = __arm_rsr("dbgbcr0_el1");
-        debug_state->hw_bps[0].dbgbvr = __arm_rsr64("dbgbvr0_el1");
-        break;
-    case 1:
-        debug_state->hw_bps[1].dbgbcr = __arm_rsr("dbgbcr1_el1");
-        debug_state->hw_bps[1].dbgbvr = __arm_rsr64("dbgbvr1_el1");
-        break;
-    case 2:
-        debug_state->hw_bps[2].dbgbcr = __arm_rsr("dbgbcr2_el1");
-        debug_state->hw_bps[2].dbgbvr = __arm_rsr64("dbgbvr2_el1");
-        break;
-    case 3:
-        debug_state->hw_bps[3].dbgbcr = __arm_rsr("dbgbcr3_el1");
-        debug_state->hw_bps[3].dbgbvr = __arm_rsr64("dbgbvr3_el1");
-        break;
-    case 4:
-        debug_state->hw_bps[4].dbgbcr = __arm_rsr("dbgbcr4_el1");
-        debug_state->hw_bps[4].dbgbvr = __arm_rsr64("dbgbvr4_el1");
-        break;
-    case 5:
-        debug_state->hw_bps[5].dbgbcr = __arm_rsr("dbgbcr5_el1");
-        debug_state->hw_bps[5].dbgbvr = __arm_rsr64("dbgbvr5_el1");
-        break;
-    case 6:
-        debug_state->hw_bps[6].dbgbcr = __arm_rsr("dbgbcr6_el1");
-        debug_state->hw_bps[6].dbgbvr = __arm_rsr64("dbgbvr6_el1");
-        break;
-    case 7:
-        debug_state->hw_bps[7].dbgbcr = __arm_rsr("dbgbcr7_el1");
-        debug_state->hw_bps[7].dbgbvr = __arm_rsr64("dbgbvr7_el1");
-        break;
-    case 8:
-        debug_state->hw_bps[8].dbgbcr = __arm_rsr("dbgbcr8_el1");
-        debug_state->hw_bps[8].dbgbvr = __arm_rsr64("dbgbvr8_el1");
-        break;
-    case 9:
-        debug_state->hw_bps[9].dbgbcr = __arm_rsr("dbgbcr9_el1");
-        debug_state->hw_bps[9].dbgbvr = __arm_rsr64("dbgbvr9_el1");
-        break;
-    case 10:
-        debug_state->hw_bps[10].dbgbcr = __arm_rsr("dbgbcr10_el1");
-        debug_state->hw_bps[10].dbgbvr = __arm_rsr64("dbgbvr10_el1");
-        break;
-    case 11:
-        debug_state->hw_bps[11].dbgbcr = __arm_rsr("dbgbcr11_el1");
-        debug_state->hw_bps[11].dbgbvr = __arm_rsr64("dbgbvr11_el1");
-        break;
-    case 12:
-        debug_state->hw_bps[12].dbgbcr = __arm_rsr("dbgbcr12_el1");
-        debug_state->hw_bps[12].dbgbvr = __arm_rsr64("dbgbvr12_el1");
-        break;
-    case 13:
-        debug_state->hw_bps[13].dbgbcr = __arm_rsr("dbgbcr13_el1");
-        debug_state->hw_bps[13].dbgbvr = __arm_rsr64("dbgbvr13_el1");
-        break;
-    case 14:
-        debug_state->hw_bps[14].dbgbcr = __arm_rsr("dbgbcr14_el1");
-        debug_state->hw_bps[14].dbgbvr = __arm_rsr64("dbgbvr14_el1");
-        break;
-    case 15:
-        debug_state->hw_bps[15].dbgbcr = __arm_rsr("dbgbcr15_el1");
-        debug_state->hw_bps[15].dbgbvr = __arm_rsr64("dbgbvr15_el1");
-        break;
+        READ_HW_BREAKPOINT_CASE(0, read_dbgbcr, read_dbgbvr);
+        READ_HW_BREAKPOINT_CASE(1, read_dbgbcr, read_dbgbvr);
+        READ_HW_BREAKPOINT_CASE(2, read_dbgbcr, read_dbgbvr);
+        READ_HW_BREAKPOINT_CASE(3, read_dbgbcr, read_dbgbvr);
+        READ_HW_BREAKPOINT_CASE(4, read_dbgbcr, read_dbgbvr);
+        READ_HW_BREAKPOINT_CASE(5, read_dbgbcr, read_dbgbvr);
+        READ_HW_BREAKPOINT_CASE(6, read_dbgbcr, read_dbgbvr);
+        READ_HW_BREAKPOINT_CASE(7, read_dbgbcr, read_dbgbvr);
+        READ_HW_BREAKPOINT_CASE(8, read_dbgbcr, read_dbgbvr);
+        READ_HW_BREAKPOINT_CASE(9, read_dbgbcr, read_dbgbvr);
+        READ_HW_BREAKPOINT_CASE(10, read_dbgbcr, read_dbgbvr);
+        READ_HW_BREAKPOINT_CASE(11, read_dbgbcr, read_dbgbvr);
+        READ_HW_BREAKPOINT_CASE(12, read_dbgbcr, read_dbgbvr);
+        READ_HW_BREAKPOINT_CASE(13, read_dbgbcr, read_dbgbvr);
+        READ_HW_BREAKPOINT_CASE(14, read_dbgbcr, read_dbgbvr);
+        READ_HW_BREAKPOINT_CASE(15, read_dbgbcr, read_dbgbvr);
     default:
         DEBUG_ASSERT(false);
     }
+
+    *dbgbcr = read_dbgbcr;
+    *dbgbvr = read_dbgbvr;
 }
 
 void arm64_read_hw_debug_regs(arm64_debug_state_t* debug_state) {
+    // We clear the state out.
+    *debug_state = {};
+
+    // Only write in the registers that are present in the CPU implementation.
     uint8_t count = arm64_hw_breakpoint_count();
     for (unsigned int i = 0; i < count; i++) {
-        arm64_read_hw_breakpoint_by_index(debug_state, i);
+        uint32_t* dbgbcr = &debug_state->hw_bps[i].dbgbcr;
+        uint64_t* dbgbvr = &debug_state->hw_bps[i].dbgbvr;
+        arm64_read_hw_breakpoint_by_index(i, dbgbcr, dbgbvr);
     }
 }
 
 // Writing Debug State ---------------------------------------------------------------------------
 
-static void arm64_write_hw_breakpoint_by_index(const arm64_debug_state_t* debug_state,
-                                               unsigned int index) {
-    DEBUG_ASSERT(index < arm64_hw_breakpoint_count());
+#define WRITE_HW_BREAKPOINT(index, dbgbcr_val, dbgbvr_val) \
+    __arm_wsr("dbgbcr" #index "_el1", dbgbcr_val);         \
+    __arm_wsr64("dbgbvr" #index "_el1", dbgbvr_val);       \
+    __isb(ARM_MB_SY);
+#define WRITE_HW_BREAKPOINT_CASE(index, dbgbcr_val, dbgbvr_val) \
+    case index:                                                 \
+        WRITE_HW_BREAKPOINT(index, dbgbcr_val, dbgbvr_val);     \
+        break;
 
+static void arm64_write_hw_breakpoint_by_index(unsigned int index, uint32_t dbgbcr,
+                                               uint64_t dbgbvr) {
     switch (index) {
-    case 0:
-        __arm_wsr("dbgbcr0_el1", debug_state->hw_bps[0].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr0_el1", debug_state->hw_bps[0].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
-    case 1:
-        __arm_wsr("dbgbcr1_el1", debug_state->hw_bps[1].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr1_el1", debug_state->hw_bps[1].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
-    case 2:
-        __arm_wsr("dbgbcr2_el1", debug_state->hw_bps[2].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr2_el1", debug_state->hw_bps[2].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
-    case 3:
-        __arm_wsr("dbgbcr3_el1", debug_state->hw_bps[3].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr3_el1", debug_state->hw_bps[3].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
-    case 4:
-        __arm_wsr("dbgbcr4_el1", debug_state->hw_bps[4].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr4_el1", debug_state->hw_bps[4].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
-    case 5:
-        __arm_wsr("dbgbcr5_el1", debug_state->hw_bps[5].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr5_el1", debug_state->hw_bps[5].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
-    case 6:
-        __arm_wsr("dbgbcr6_el1", debug_state->hw_bps[6].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr6_el1", debug_state->hw_bps[6].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
-    case 7:
-        __arm_wsr("dbgbcr7_el1", debug_state->hw_bps[7].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr7_el1", debug_state->hw_bps[7].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
-    case 8:
-        __arm_wsr("dbgbcr8_el1", debug_state->hw_bps[8].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr8_el1", debug_state->hw_bps[8].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
-    case 9:
-        __arm_wsr("dbgbcr9_el1", debug_state->hw_bps[9].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr9_el1", debug_state->hw_bps[9].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
-    case 10:
-        __arm_wsr("dbgbcr10_el1", debug_state->hw_bps[10].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr10_el1", debug_state->hw_bps[10].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
-    case 11:
-        __arm_wsr("dbgbcr11_el1", debug_state->hw_bps[11].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr11_el1", debug_state->hw_bps[11].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
-    case 12:
-        __arm_wsr("dbgbcr12_el1", debug_state->hw_bps[12].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr12_el1", debug_state->hw_bps[12].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
-    case 13:
-        __arm_wsr("dbgbcr13_el1", debug_state->hw_bps[13].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr13_el1", debug_state->hw_bps[13].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
-    case 14:
-        __arm_wsr("dbgbcr14_el1", debug_state->hw_bps[14].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr14_el1", debug_state->hw_bps[14].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
-    case 15:
-        __arm_wsr("dbgbcr15_el1", debug_state->hw_bps[15].dbgbcr);
-        __isb(ARM_MB_SY);
-        __arm_wsr64("dbgbvr15_el1", debug_state->hw_bps[15].dbgbvr);
-        __isb(ARM_MB_SY);
-        break;
+        WRITE_HW_BREAKPOINT_CASE(0, dbgbcr, dbgbvr);
+        WRITE_HW_BREAKPOINT_CASE(1, dbgbcr, dbgbvr);
+        WRITE_HW_BREAKPOINT_CASE(2, dbgbcr, dbgbvr);
+        WRITE_HW_BREAKPOINT_CASE(3, dbgbcr, dbgbvr);
+        WRITE_HW_BREAKPOINT_CASE(4, dbgbcr, dbgbvr);
+        WRITE_HW_BREAKPOINT_CASE(5, dbgbcr, dbgbvr);
+        WRITE_HW_BREAKPOINT_CASE(6, dbgbcr, dbgbvr);
+        WRITE_HW_BREAKPOINT_CASE(7, dbgbcr, dbgbvr);
+        WRITE_HW_BREAKPOINT_CASE(8, dbgbcr, dbgbvr);
+        WRITE_HW_BREAKPOINT_CASE(9, dbgbcr, dbgbvr);
+        WRITE_HW_BREAKPOINT_CASE(10, dbgbcr, dbgbvr);
+        WRITE_HW_BREAKPOINT_CASE(11, dbgbcr, dbgbvr);
+        WRITE_HW_BREAKPOINT_CASE(12, dbgbcr, dbgbvr);
+        WRITE_HW_BREAKPOINT_CASE(13, dbgbcr, dbgbvr);
+        WRITE_HW_BREAKPOINT_CASE(14, dbgbcr, dbgbvr);
+        WRITE_HW_BREAKPOINT_CASE(15, dbgbcr, dbgbvr);
     default:
         DEBUG_ASSERT(false);
     }
@@ -255,6 +176,54 @@ static void arm64_write_hw_breakpoint_by_index(const arm64_debug_state_t* debug_
 void arm64_write_hw_debug_regs(const arm64_debug_state_t* debug_state) {
     uint64_t bps_count = arm64_hw_breakpoint_count();
     for (unsigned int i = 0; i < bps_count; i++) {
-        arm64_write_hw_breakpoint_by_index(debug_state, i);
+        uint32_t dbgbcr = debug_state->hw_bps[i].dbgbcr;
+        uint64_t dbgbvr = debug_state->hw_bps[i].dbgbvr;
+        arm64_write_hw_breakpoint_by_index(i, dbgbcr, dbgbvr);
     }
 }
+
+void arm64_clear_hw_debug_regs() {
+  for (unsigned int i = 0; i < ARM64_MAX_HW_BREAKPOINTS; i++) {
+        arm64_write_hw_breakpoint_by_index(0, 0, i);
+  }
+}
+
+// Debug only.
+void arm64_print_debug_registers(const arm64_debug_state_t* debug_state) {
+    for (size_t i = 0; i < ARM64_MAX_HW_BREAKPOINTS; i++) {
+        uint32_t dbgbcr = debug_state->hw_bps[i].dbgbcr;
+        uint64_t dbgbvr = debug_state->hw_bps[i].dbgbvr;
+
+        printf("%lu. DBGBVR: 0x%lx, DBGBCR: E=%d, PMC=%d, BAS=%d, HMC=%d, SSC=%d, LBN=%d, BT=%d\n",
+               i, dbgbvr,
+               (int)(dbgbcr & ARM64_DBGBCR_E),
+               (int)((dbgbcr & ARM64_DBGBCR_PMC) >> ARM64_DBGBCR_PMC_SHIFT),
+               (int)((dbgbcr & ARM64_DBGBCR_BAS) >> ARM64_DBGGCR_BAS_SHIFT),
+               (int)((dbgbcr & ARM64_DBGBCR_HMC) >> ARM64_DBGBCR_HMC_SHIFT),
+               (int)((dbgbcr & ARM64_DBGBCR_SSC) >> ARM64_DBGBCR_SSC_SHIFT),
+               (int)((dbgbcr & ARM64_DBGBCR_LBN) >> ARM64_DBGBCR_LBN_SHIFT),
+               (int)((dbgbcr & ARM64_DBGBCR_BT) >> ARM64_DBGBCR_BY_SHIFT));
+    }
+}
+
+void print_mdscr() {
+    uint32_t mdscr = __arm_rsr("mdscr_el1");
+    printf("SS=%d, ERR=%d, TDCC=%d, KDE=%d, HDE=%d, MDE=%d, RAZ/WI=%d, "
+           "TDA=%d, INTdis=%d, "
+           "TXU=%d, RXO=%d, TXfull=%d, RXfull=%d\n",
+           (int)((mdscr & ARM64_MDSCR_EL1_SS) >> ARM64_MDSCR_EL1_SS_SHIFT),
+           (int)((mdscr & ARM64_MDSCR_EL1_ERR) >> ARM64_MDSCR_EL1_ERR_SHIFT),
+           (int)((mdscr & ARM64_MDSCR_EL1_TDCC) >> ARM64_MDSCR_EL1_TDCC_SHIFT),
+           (int)((mdscr & ARM64_MDSCR_EL1_KDE) >> ARM64_MDSCR_EL1_KDE_SHIFT),
+           (int)((mdscr & ARM64_MDSCR_EL1_HDE) >> ARM64_MDSCR_EL1_HDE_SHIFT),
+           (int)((mdscr & ARM64_MDSCR_EL1_MDE) >> ARM64_MDSCR_EL1_MDE_SHIFT),
+           (int)((mdscr & ARM64_MDSCR_EL1_RAZ_WI) >> ARM64_MDSCR_EL1_RAZ_WI_SHIFT),
+           (int)((mdscr & ARM64_MDSCR_EL1_TDA) >> ARM64_MDSCR_EL1_TDA_SHIFT),
+           (int)((mdscr & ARM64_MDSCR_EL1_INTDIS) >> ARM64_MDSCR_EL1_INTDIS_SHIFT),
+           (int)((mdscr & ARM64_MDSCR_EL1_TXU) >> ARM64_MDSCR_EL1_TXU_SHIFT),
+           (int)((mdscr & ARM64_MDSCR_EL1_RXO) >> ARM64_MDSCR_EL1_RXO_SHIFT),
+           (int)((mdscr & ARM64_MDSCR_EL1_TXfull) >> ARM64_MDSCR_EL1_TXfull_SHIFT),
+           (int)((mdscr & ARM64_MDSCR_EL1_RXfull) >> ARM64_MDSCR_EL1_RXfull_SHIFT));
+}
+
+

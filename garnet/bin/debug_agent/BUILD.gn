@@ -196,7 +196,6 @@ package("debug_agent_tests") {
   # Test binaries
   binaries = [
     {
-      shell = true
       name = "breakpoint_test_exe"
     },
     {
@@ -216,8 +215,16 @@ package("debug_agent_tests") {
 
     binaries += [
       {
-        shell = true
         name = "write_register_test_exe"
+      },
+    ]
+  } else if (current_cpu == "arm64") {
+    deps += [ "//garnet/bin/debug_agent/test_data:hw_breakpointer" ]
+
+    binaries += [
+      {
+        shell = true
+        name = "hw_breakpointer"
       },
     ]
   }

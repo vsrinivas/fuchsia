@@ -49,6 +49,7 @@ static void dump_iframe(const arm64_iframe_t* iframe) {
 }
 
 KCOUNTER(exceptions_brkpt, "exceptions.breakpoint");
+KCOUNTER(exceptions_hw_brkpt, "exceptions.hw_breakpoint");
 KCOUNTER(exceptions_fpu, "exceptions.fpu");
 KCOUNTER(exceptions_page, "exceptions.page_fault");
 KCOUNTER(exceptions_irq, "exceptions.irq");
@@ -302,6 +303,7 @@ extern "C" void arm64_sync_exception(
         break;
     case 0b110000: /* HW breakpoint from a lower level */
     case 0b110001: /* HW breakpoint from same level */
+        kcounter_add(exceptions_hw_brkpt, 1);
         arm64_hw_breakpoint_handler(iframe, exception_flags, esr);
         break;
     case 0b110010: /* software step from lower level */

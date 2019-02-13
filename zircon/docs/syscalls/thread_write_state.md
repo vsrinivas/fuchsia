@@ -50,6 +50,18 @@ state must be set for the call.
 You can get the current state of the registers by calling
 [`zx_thread_read_state()`](thread_read_state.md#zx_thread_state_debug_regs).
 
+#### ARM Debug Hardware Debug Registers
+
+ARM debug registers are highly configurable via their DBGBCR<n> registers.
+However, Zircon limits that functionality to _Unlinked Address Matching_ HW
+breakpoints. This means that HW breakpoints will only issue exceptions upon
+exception on the given address in the corresponding DBGBVR register.
+
+Because of this, all the values within DBGBCR will be ignored except for the E
+bit, which is used to determine whether that particular breakpoint is activated
+or not. Said in another way, in order to activate a HW breakpoint, all that is
+needed is to set the correct address in DBGBVR and write 1 to DBGBCR.
+
 ## RIGHTS
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
@@ -73,6 +85,7 @@ In the event of failure, a negative error value is returned.
 *buffer_size* doesn't match the size of the structure expected for *kind* or
 the given values to set are not valid.
 
+
 **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
 There is no good way for userspace to handle this (unlikely) error.
 In a future build this error will no longer occur.
@@ -84,6 +97,13 @@ to an exception.
 **ZX_ERR_NOT_SUPPORTED**  *kind* is not supported.
 This can happen, for example, when trying to read a register set that
 is not supported by the hardware the program is currently running on.
+
+#### ARM
+
+**ZX_ERR_INVALID_ARGS**   If the address provided to a DBGBVR register is not
+valid (ie. not addressable from userspace). Also if any value is set for a HW
+breakpoint beyond the number provided by the platform (see above for
+information about retrieving that number).
 
 ## SEE ALSO
 

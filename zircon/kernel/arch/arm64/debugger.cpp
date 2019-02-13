@@ -167,11 +167,21 @@ zx_status_t arch_set_debug_regs(struct thread* thread, const zx_thread_state_deb
         state.hw_bps[i].dbgbvr = in->hw_bps[i].dbgbvr;
     }
 
-    if (!arm64_validate_debug_state(&state)) {
+    uint32_t active_breakpoints = 0;
+    if (!arm64_validate_debug_state(&state, &active_breakpoints)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+    // If the suspended registers are not there, we cannot save the MDSCR values for this thread,
+    // meaning that the debug HW state will be cleared almost immediatelly.
+    // This should always be there.
+    // ZX-563 (registers aren't available in synthetic exceptions)
+    if (!thread->arch.suspended_general_regs) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    arm64_set_debug_state_for_thread(thread, active_breakpoints > 0);
     thread->arch.track_debug_state = true;
     thread->arch.debug_state = state;
 
@@ -208,5 +218,4 @@ uint8_t arch_get_hw_breakpoint_count() {
 
 uint8_t arch_get_hw_watchpoint_count() {
   return arm64_hw_watchpoint_count();
-
 }

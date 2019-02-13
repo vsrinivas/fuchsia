@@ -11,20 +11,31 @@
 // implementation.
 
 #define ARM64_MDSCR_EL1_SS (1u << 0)
+#define ARM64_MDSCR_EL1_SS_SHIFT 0
 #define ARM64_MDSCR_EL1_ERR (1u << 6)
+#define ARM64_MDSCR_EL1_ERR_SHIFT 6
 #define ARM64_MDSCR_EL1_TDCC (1u << 12)
+#define ARM64_MDSCR_EL1_TDCC_SHIFT 12
 #define ARM64_MDSCR_EL1_KDE (1u << 13)
+#define ARM64_MDSCR_EL1_KDE_SHIFT 13
 #define ARM64_MDSCR_EL1_HDE (1u << 14)
+#define ARM64_MDSCR_EL1_HDE_SHIFT 14
 #define ARM64_MDSCR_EL1_MDE (1u << 15)
+#define ARM64_MDSCR_EL1_MDE_SHIFT 15
 #define ARM64_MDSCR_EL1_RAZ_WI 0x000e0000lu
 #define ARM64_MDSCR_EL1_RAZ_WI_SHIFT 16
 #define ARM64_MDSCR_EL1_TDA (1u << 21)
-#define ARM64_MDSCR_EL1_INTDIS = 0x000c0000
+#define ARM64_MDSCR_EL1_TDA_SHIFT 21
+#define ARM64_MDSCR_EL1_INTDIS 0x000c0000u
 #define ARM64_MDSCR_EL1_INTDIS_SHIFT 22
 #define ARM64_MDSCR_EL1_TXU (1u << 26)
+#define ARM64_MDSCR_EL1_TXU_SHIFT 26
 #define ARM64_MDSCR_EL1_RXO (1u << 27)
+#define ARM64_MDSCR_EL1_RXO_SHIFT 27
 #define ARM64_MDSCR_EL1_TXfull (1u << 29)
+#define ARM64_MDSCR_EL1_TXfull_SHIFT 29
 #define ARM64_MDSCR_EL1_RXfull (1u << 30)
+#define ARM64_MDSCR_EL1_RXfull_SHIFT 30
 
 // ID_AA64DFR0
 // Debug Feature Register 0. This register is used to query the system for the debug
@@ -62,6 +73,14 @@
 
 // The user can only activate/deactivate breakpoints.
 #define ARM64_DBGBCR_USER_MASK (ARM64_DBGBCR_E)
+// This mask is applied when a breakpoint is activated. We control the configuration of the
+// breakpoint so the user only needs to set the E bit.
+#define ARM64_DBGBCR_ACTIVATED_MASK (ARM64_DBGBCR_E |                    \
+                                     (0b10u << ARM64_DBGBCR_PMC_SHIFT) | \
+                                     ARM64_DBGBCR_BAS)
+// The actual addresses bits that we will allow the user to write. The rest of the values
+// will be masked.
+#define ARM64_DBGBVR_USER_MASK (0xfffffffffffcu)
 
 // This is the mask that we validate for a breakpoint control.
 // PMC [0b10]
@@ -71,10 +90,6 @@
 // LBN [0]: No breakpoint linking.
 // BT [0]: Unliked instruction address match.
 //
-// The PMC, HMC, SSC values configured here enable debug exceptions to be thrown in EL0.
-#define ARM64_DBGBCR_MASK ((0b10u << ARM64_DBGBCR_PMC_SHIFT) | \
-                           ARM64_DBGBCR_BAS)
-
 // ARMv8 assures at least 2 hw registers.
 #define ARM64_MIN_HW_BREAKPOINTS 2
 #define ARM64_MAX_HW_BREAKPOINTS 16
@@ -100,16 +115,28 @@ typedef struct arm64_debug_state {
   // TODO(donosoc): Do watchpoint integration.
 } arm64_debug_state_t;
 
-
 /* Enable/disable the HW debug functionalities for the current thread. */
-void arm64_disable_debug_state();
-void arm64_enable_debug_state();
+void arm64_set_debug_state_for_thread(thread*, bool active);
+/* Enable/disable mdscr_el1 */
+void arm64_set_debug_state_for_cpu(bool active);
 
 /* Checks whether the given state is valid to install on a running thread.
+ *
+ * Any breakpoint information set beyong the valid breakpoint count given by the platform will
+ * return false.
+ *
+ * Will validate that all the given values within a DBGBVR register are either 0 or a valid
+ * userspace address.
+ *
  * Will mask out reserved values on DBGBCR<n>. This is for the caller convenience, considering
  * that we don't have a good mechanism to communicate back to the user what went wrong with the
- * call. */
-bool arm64_validate_debug_state(arm64_debug_state_t *debug_state);
+ * call.
+ *
+ * If returning true, |active_breakpoints| will be the number of activated breakpoints within
+ * set given |debug_state|.
+ * */
+bool arm64_validate_debug_state(arm64_debug_state_t* debug_state,
+                                uint32_t* active_breakpoints);
 
 /* Returns the amount of HW breakpoints present in this CPU. */
 uint8_t arm64_hw_breakpoint_count();
@@ -124,9 +151,15 @@ void arm64_read_hw_debug_regs(arm64_debug_state_t* debug_state);
  *            In any other context (eg. setting debug values from a syscall), you *MUST* call
  *            arm64_validate_debug_state first. */
 void arm64_write_hw_debug_regs(const arm64_debug_state_t* debug_state);
+// Will zero out the debug registers for the current CPOU.
+void arm64_clear_hw_debug_regs();
 
 /* Handles the context switch for debug HW functionality.
  * Will only copy over state if it's enabled (non-zero) for |new_thread|. */
 void arm64_debug_state_context_switch(thread* old_thread, thread* new_thread);
+
+// Debug only.
+void arm64_print_debug_registers(const arm64_debug_state_t*);
+void arm64_print_mdscr();
 
 __END_CDECLS

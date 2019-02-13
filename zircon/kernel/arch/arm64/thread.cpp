@@ -71,7 +71,7 @@ void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
 
     // Initialize the debug state to a valid initial state.
     for (size_t i = 0; i < ARM64_MAX_HW_BREAKPOINTS; i++) {
-        t->arch.debug_state.hw_bps[i].dbgbcr =(0b10u << ARM64_DBGBCR_PMC_SHIFT) | ARM64_DBGBCR_BAS;
+        t->arch.debug_state.hw_bps[i].dbgbcr = 0;
         t->arch.debug_state.hw_bps[i].dbgbvr = 0;
     }
 }
@@ -132,7 +132,7 @@ void arm64_debug_state_context_switch(thread *old_thread, thread *new_thread) {
     // If the new thread has debug state, then install it, replacing the current contents.
     if (unlikely(new_thread->arch.track_debug_state)) {
         arm64_write_hw_debug_regs(&new_thread->arch.debug_state);
-        arm64_enable_debug_state();
+        arm64_set_debug_state_for_cpu(true);
         return;
     }
 
@@ -140,6 +140,6 @@ void arm64_debug_state_context_switch(thread *old_thread, thread *new_thread) {
     // debug capabilities. We don't need to clear the state because if a new thread being
     // scheduled needs them, then it will overwrite the state.
     if (unlikely(old_thread->arch.track_debug_state)) {
-        arm64_disable_debug_state();
+        arm64_set_debug_state_for_cpu(false);
     }
 }
