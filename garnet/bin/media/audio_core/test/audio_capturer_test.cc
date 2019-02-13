@@ -158,7 +158,9 @@ bool AudioCapturerTest::ExpectDisconnect() {
 // 3) while the capture stream is being closed.
 // This test case verifies the scenario #1 above.
 // TODO(mpuryear): test sequence of pkt return, during Async capture.
-TEST_F(AudioCapturerTest, DiscardAllWithNone) {
+//
+// TODO(FLK-47): Test is disabled because it is flaky.
+TEST_F(AudioCapturerTest, DISABLED_DiscardAllWithNone) {
   SetNegativeExpectations();
 
   audio_capturer_->DiscardAllPackets([this]() { received_callback_ = true; });
