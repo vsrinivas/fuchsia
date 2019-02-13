@@ -22,14 +22,21 @@ def main():
     parser.add_argument('--stamp',
                         help='Path to the victory file',
                         required=True)
+    parser.add_argument('--warn',
+                        help='Whether API changes should only cause warnings',
+                        action='store_true')
     args = parser.parse_args()
 
     if args.reference:
         if not filecmp.cmp(args.reference, args.current):
-            print('Error: API has changed!')
-            print('Please acknowledge this change by copying %s into %s.'
-                  % (args.current, args.reference))
-            return 1
+            type = 'Warning' if args.warn else 'Error'
+            print('%s: API has changed!' % type)
+            print('Please acknowledge this change by copying:')
+            print('  ' + args.current)
+            print('into:')
+            print('  ' + args.reference)
+            if not args.warn:
+                return 1
 
     with open(args.stamp, 'w') as stamp_file:
         stamp_file.write('API is good!\n')

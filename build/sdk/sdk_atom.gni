@@ -4,6 +4,7 @@
 
 import("//build/compiled_action.gni")
 import("//build/json/validate_json.gni")
+import("config.gni")
 
 # Defines an SDK element.
 #
@@ -271,6 +272,10 @@ template("sdk_atom") {
         "--stamp",
         rebase_path(stamp_file),
       ]
+
+      if (warn_on_sdk_changes) {
+        args += [ "--warn" ]
+      }
 
       if (defined(invoker.api_contents)) {
         deps = [

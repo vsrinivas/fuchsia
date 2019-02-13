@@ -20,6 +20,9 @@ def main():
     parser.add_argument('--updated',
                         help='Path to the API file to compute',
                         required=True)
+    parser.add_argument('--warn',
+                        help='Whether API changes should only cause warnings',
+                        action='store_true')
     args = parser.parse_args()
 
     if not args.reference:
@@ -57,10 +60,14 @@ def main():
         for id in sorted(removed_ids):
             print(' - %s' % id)
     if removed_ids or added_ids:
-        print('Error: SDK contents have changed!')
-        print('Please acknowledge this change by copying %s into %s.'
-              % (args.updated, args.reference))
-        return 1
+        type = 'Warning' if args.warn else 'Error'
+        print('%s: SDK contents have changed!' % type)
+        print('Please acknowledge this change by copying:')
+        print('  ' + args.updated)
+        print('into:')
+        print('  ' + args.reference)
+        if not args.warn:
+            return 1
 
     return 0
 

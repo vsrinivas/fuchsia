@@ -4,6 +4,7 @@
 
 import("//build/compiled_action.gni")
 import("//build/json/validate_json.gni")
+import("config.gni")
 import("sdk_molecule.gni")
 
 declare_args() {
@@ -125,6 +126,10 @@ template("sdk") {
         "--reference",
         rebase_path(invoker.api),
       ]
+    }
+
+    if (warn_on_sdk_changes) {
+      args += [ "--warn" ]
     }
 
     public_deps = [
