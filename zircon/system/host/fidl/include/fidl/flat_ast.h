@@ -24,6 +24,12 @@
 #include "type_shape.h"
 #include "virtual_source_file.h"
 
+// TODO(FIDL-487, ZX-3415): Decide if all cases of NumericConstantValue::Convert() are safe.
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-compare"
+#endif
+
 namespace fidl {
 namespace flat {
 
@@ -1196,5 +1202,10 @@ private:
 
 } // namespace flat
 } // namespace fidl
+
+// TODO(FIDL-487, ZX-3415): Decide if all cases of NumericConstantValue::Convert() are safe.
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 #endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_FLAT_AST_H_
