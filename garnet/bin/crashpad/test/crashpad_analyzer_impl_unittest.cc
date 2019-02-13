@@ -32,6 +32,10 @@ namespace fuchsia {
 namespace crash {
 namespace {
 
+// Unit-tests the implementation of the fuchsia.crash.Analyzer FIDL interface.
+//
+// This does not test the environment service. It directly instantiates the
+// class, without connecting through FIDL.
 class CrashpadAnalyzerImplTest : public ::testing::Test {
  public:
   void SetUp() override {

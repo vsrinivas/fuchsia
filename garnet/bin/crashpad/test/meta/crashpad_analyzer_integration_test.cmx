@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "test/crashpad_analyzer_integration_test"
+    },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.crash.Analyzer": "fuchsia-pkg://fuchsia.com/crashpad_analyzer#meta/crashpad_analyzer.cmx"
+            }
+        }
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.crash.Analyzer",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

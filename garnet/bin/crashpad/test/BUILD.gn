@@ -12,6 +12,9 @@ test_package("crashpad_analyzer_tests") {
     {
       name = "crashpad_analyzer_impl_unittest"
     },
+    {
+      name = "crashpad_analyzer_integration_test"
+    },
   ]
 
   binaries = [
@@ -63,6 +66,7 @@ test_package("crashpad_analyzer_tests") {
     ":config_unittest",
     ":crasher_exe",
     ":crashpad_analyzer_impl_unittest",
+    ":crashpad_analyzer_integration_test",
   ]
 }
 
@@ -101,6 +105,25 @@ executable("crashpad_analyzer_impl_unittest") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
     "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/fidl/fuchsia-crash",
+    "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("crashpad_analyzer_integration_test") {
+  testonly = true
+
+  sources = [
+    "crashpad_analyzer_integration_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/syslog/cpp",
     "//third_party/googletest:gtest_main",
     "//zircon/public/fidl/fuchsia-crash",
     "//zircon/public/fidl/fuchsia-mem",
