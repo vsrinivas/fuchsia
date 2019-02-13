@@ -520,7 +520,7 @@ void fshost_start(devmgr::Coordinator* coordinator) {
     const char* envp[16];
     unsigned envc = 0;
     char** e = environ;
-    while (*e && (envc < fbl::count_of(envp))) {
+    while (*e && (envc < fbl::count_of(envp) - 1)) {
         if (!strncmp(*e, "zircon.system", strlen("zircon.system"))) {
             envp[envc++] = *e;
         }
