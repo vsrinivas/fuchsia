@@ -7,9 +7,11 @@
 
 #include <zircon/types.h>
 #include <cstdint>
+#include <vector>
 
 #include "lib/fxl/macros.h"
 #include "lib/zx/event.h"
+#include "zircon/pixelformat.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -18,6 +20,8 @@ namespace gfx {
 // resolution, vsync interval, last vsync time, etc.
 class Display {
  public:
+  Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px,
+          std::vector<zx_pixel_format_t> pixel_formats);
   Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px);
   virtual ~Display() = default;
 
@@ -36,6 +40,9 @@ class Display {
   uint64_t display_id() { return display_id_; };
   uint32_t width_in_px() { return width_in_px_; };
   uint32_t height_in_px() { return height_in_px_; };
+  const std::vector<zx_pixel_format_t>& pixel_formats() const {
+    return pixel_formats_;
+  }
 
   // Event signaled by DisplayManager when ownership of the display
   // changes. This event backs Scenic's GetDisplayOwnershipEvent API.
@@ -55,6 +62,7 @@ class Display {
   const uint32_t width_in_px_;
   const uint32_t height_in_px_;
   zx::event ownership_event_;
+  std::vector<zx_pixel_format_t> pixel_formats_;
 
   bool claimed_ = false;
 

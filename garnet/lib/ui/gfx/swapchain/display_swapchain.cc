@@ -112,12 +112,20 @@ bool DisplaySwapchain::InitializeFramebuffers(
 
   const uint32_t width_in_px = display_->width_in_px();
   const uint32_t height_in_px = display_->height_in_px();
-  zx_pixel_format_t pixel_format;
-#if defined(__aarch64__)
-  pixel_format = ZX_PIXEL_FORMAT_RGB_x888;
-#else
-  pixel_format = ZX_PIXEL_FORMAT_ARGB_8888;
-#endif
+  zx_pixel_format_t pixel_format = ZX_PIXEL_FORMAT_NONE;
+  for (zx_pixel_format_t format : display_->pixel_formats()) {
+    // The formats are in priority order, so pick the first usable one.
+    if (format == ZX_PIXEL_FORMAT_RGB_x888 ||
+        format == ZX_PIXEL_FORMAT_ARGB_8888) {
+      pixel_format = format;
+      break;
+    }
+  }
+
+  if (pixel_format == ZX_PIXEL_FORMAT_NONE) {
+    FXL_LOG(ERROR) << "Unable to find usable pixel format.";
+    return false;
+  }
 
   display_manager_->SetImageConfig(width_in_px, height_in_px, pixel_format);
   for (uint32_t i = 0; i < kSwapchainImageCount; i++) {

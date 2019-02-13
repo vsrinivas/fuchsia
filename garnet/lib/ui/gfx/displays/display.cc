@@ -12,13 +12,17 @@
 namespace scenic_impl {
 namespace gfx {
 
-Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px)
+Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px,
+                 std::vector<zx_pixel_format_t> pixel_formats)
     : last_vsync_time_(dispatcher_clock_now()),
       display_id_(id),
       width_in_px_(width_in_px),
-      height_in_px_(height_in_px) {
+      height_in_px_(height_in_px),
+      pixel_formats_(pixel_formats) {
   zx::event::create(0, &ownership_event_);
 }
+Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px)
+    : Display(id, width_in_px, height_in_px, {ZX_PIXEL_FORMAT_ARGB_8888}) {}
 
 zx_time_t Display::GetLastVsyncTime() {
   // Since listening for frame presentation events is our only way of knowing

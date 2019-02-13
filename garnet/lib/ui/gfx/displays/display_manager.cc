@@ -119,7 +119,8 @@ void DisplayManager::DisplaysChanged(
     }
 
     default_display_ = std::make_unique<Display>(
-        display.id, mode.horizontal_resolution, mode.vertical_resolution);
+        display.id, mode.horizontal_resolution, mode.vertical_resolution,
+        std::move(display.pixel_format));
     ClientOwnershipChange(owns_display_controller_);
 
     // See declare_args() in lib/ui/gfx/BUILD.gn.
