@@ -121,7 +121,7 @@ void PacketProtocol::Send(SendRequestHdl send_request) {
 bool PacketProtocol::SendQueue::Add(SendRequestHdl hdl) {
   ScopedModule<PacketProtocol> in_pp(protocol_);
   OVERNET_TRACE(DEBUG) << "SendQueue.Add";
-  tail_loss_probe_scheduler_.Reset();
+  scheduled_tail_loss_probe_.Reset();
   requests_.push(std::move(hdl));
   return !scheduled_;
 }
@@ -330,9 +330,13 @@ AckFrame PacketProtocol::ReceivedQueue::BuildAck(uint64_t seq_idx,
 }
 
 void PacketProtocol::SendQueue::SentMessage() {
+  ScopedModule<PacketProtocol> in_pp(protocol_);
   OVERNET_TRACE(DEBUG) << "SendQueue.SentMessage: requests=" << requests_.size()
-                       << " tail_loss_probe_scheduler="
-                       << tail_loss_probe_scheduler_.has_value();
+                       << " scheduled_tail_loss_probe="
+                       << scheduled_tail_loss_probe_.Map(
+                              [](const ScheduledTailLossProbe& tlp) {
+                                return tlp.when;
+                              });
   assert(scheduled_);
   scheduled_ = false;
   protocol_->InTransaction([this](Transaction* t) {
@@ -340,8 +344,7 @@ void PacketProtocol::SendQueue::SentMessage() {
       Schedule();
       return;
     }
-    if (!last_send_was_tail_loss_probe_ && !t->Closing() &&
-        !tail_loss_probe_scheduler_.has_value()) {
+    if (!last_send_was_tail_loss_probe_ && !t->Closing()) {
       ScheduleTailLossProbe();
       return;
     }
@@ -350,14 +353,22 @@ void PacketProtocol::SendQueue::SentMessage() {
 }
 
 void PacketProtocol::SendQueue::ScheduleTailLossProbe() {
-  const auto when = protocol_->timer_->Now() + protocol_->QuarterRTT();
+  const auto when = protocol_->timer_->Now() + protocol_->TailLossProbeDelay();
   OVERNET_TRACE(DEBUG) << "SendQueue.ScheduleTailLossProbe: requests="
-                       << requests_.size() << " tail_loss_probe_scheduler="
-                       << tail_loss_probe_scheduler_.has_value()
+                       << requests_.size() << " scheduled_tail_loss_probe="
+                       << scheduled_tail_loss_probe_.Map(
+                              [](const ScheduledTailLossProbe& tlp) {
+                                return tlp.when;
+                              })
                        << " when=" << when;
-  assert(requests_.empty());
-  assert(!tail_loss_probe_scheduler_.has_value());
-  tail_loss_probe_scheduler_.Reset(
+  if (!requests_.empty()) {
+    return;
+  }
+  if (scheduled_tail_loss_probe_.has_value() &&
+      scheduled_tail_loss_probe_->when <= when) {
+    return;
+  }
+  scheduled_tail_loss_probe_.Reset(
       protocol_->timer_, when, [this](const Status& status) {
         ScopedModule<PacketProtocol> in_pp(protocol_);
         OVERNET_TRACE(DEBUG) << "SendQueue.ScheduleTailLossProbe --> " << status
@@ -365,7 +376,7 @@ void PacketProtocol::SendQueue::ScheduleTailLossProbe() {
         if (status.is_error()) {
           return;
         }
-        tail_loss_probe_scheduler_.Reset();
+        scheduled_tail_loss_probe_.Reset();
         ForceSendAck();
       });
 }
@@ -769,7 +780,7 @@ void PacketProtocol::AckSender::NeedAck(AckUrgency urgency) {
     case AckUrgency::NOT_REQUIRED:
       abort();
     case AckUrgency::SEND_SOON:
-      protocol_->state_->send_queue->EnsureTailLossProbe();
+      protocol_->state_->send_queue->ScheduleTailLossProbe();
       break;
     case AckUrgency::SEND_IMMEDIATELY:
       protocol_->state_->send_queue->ForceSendAck();
@@ -791,15 +802,6 @@ void PacketProtocol::AckSender::AckSent(uint64_t seq_idx, bool partial) {
     sent_full_acks_.push_back(seq_idx);
   } else if (sent_full_acks_.empty()) {
     NeedAck(AckUrgency::SEND_SOON);
-  }
-}
-
-void PacketProtocol::SendQueue::EnsureTailLossProbe() {
-  OVERNET_TRACE(DEBUG) << "SendQueue.EnsureTailLossProbe requests="
-                       << requests_.size() << " tail_loss_probe_scheduler="
-                       << tail_loss_probe_scheduler_.has_value();
-  if (requests_.empty() && !tail_loss_probe_scheduler_.has_value()) {
-    ScheduleTailLossProbe();
   }
 }
 
@@ -919,7 +921,7 @@ TimeDelta PacketProtocol::CurrentRTT() const {
 }
 
 TimeDelta PacketProtocol::RetransmitDelay() const {
-  constexpr const auto kMinRetransmitDelay = TimeDelta::FromMilliseconds(200);
+  constexpr const auto kMinRetransmitDelay = TimeDelta::FromSeconds(1);
   constexpr const int kRTTScaling = 4;
   auto rtt = CurrentRTT();
   if (rtt == TimeDelta::PositiveInf() ||
@@ -927,6 +929,17 @@ TimeDelta PacketProtocol::RetransmitDelay() const {
     return kMinRetransmitDelay;
   }
   return kRTTScaling * rtt;
+}
+
+TimeDelta PacketProtocol::TailLossProbeDelay() const {
+  constexpr const auto kMinTailLossProbeDelay = TimeDelta::FromMilliseconds(1);
+  constexpr const int kRTTScaling = 4;
+  auto rtt = CurrentRTT();
+  if (rtt == TimeDelta::PositiveInf() ||
+      rtt < kRTTScaling * kMinTailLossProbeDelay) {
+    return kMinTailLossProbeDelay;
+  }
+  return rtt / kRTTScaling;
 }
 
 PacketProtocol::Codec* PacketProtocol::NullCodec() {

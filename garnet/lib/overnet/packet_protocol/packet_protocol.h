@@ -278,7 +278,7 @@ class PacketProtocol {
 
     // Ensure a tail loss probe is scheduled: used to force acks to be sent on
     // idle connections.
-    void EnsureTailLossProbe();
+    void ScheduleTailLossProbe();
 
     // Force a packet to be sent with an ack.
     void ForceSendAck();
@@ -288,14 +288,19 @@ class PacketProtocol {
     [[nodiscard]] bool Add(SendRequestHdl hdl);
 
    private:
-    void ScheduleTailLossProbe();
-
     PacketProtocol* const protocol_;
     bool scheduled_ = false;
     bool last_send_was_tail_loss_probe_ = false;
     Optional<BBR::TransmitRequest> transmit_request_;
     std::queue<SendRequestHdl> requests_;
-    Optional<Timeout> tail_loss_probe_scheduler_;
+    struct ScheduledTailLossProbe {
+      template <class F>
+      ScheduledTailLossProbe(Timer* timer, TimeStamp when, F f)
+          : when(when), timeout(timer, when, std::move(f)) {}
+      TimeStamp when;
+      Timeout timeout;
+    };
+    Optional<ScheduledTailLossProbe> scheduled_tail_loss_probe_;
   };
 
   enum class AckUrgency { NOT_REQUIRED, SEND_SOON, SEND_IMMEDIATELY };
@@ -481,7 +486,7 @@ class PacketProtocol {
  private:
   TimeDelta CurrentRTT() const;
   TimeDelta RetransmitDelay() const;
-  TimeDelta QuarterRTT() const { return CurrentRTT() / 4; }
+  TimeDelta TailLossProbeDelay() const;
   Slice FormatPacket(uint64_t seq_idx, SendRequest* request,
                      LazySliceArgs args);
   ProcessMessageResult ProcessMessage(uint64_t seq_idx, Slice slice,
