@@ -177,10 +177,8 @@ fbl::RefPtr<ExecutionDomain> EventSource::ScheduleDispatch(
         const zx_port_packet_t& pkt) {
     // Something interesting happened.  Enter the lock and...
     //
-    // 1) Sanity check, then reset wait_pending_.  There is no longer a wait pending.
-    // 2) Assert that something interesting happened.  If none of the
-    //    interesting things which happened are in the process_signal_mask_, then
-    //    just return.  The dispatcher thread will deactive us.
+    // 1) Sanity check our dispatch state.  We should be in "WaitingOnPort.
+    // 2) Assert that something interesting happened.
     // 3) If our domain is still active, add this event source to the pending work
     //    queue.  If we are the first event source to enter the queue, return a
     //    reference to our domain to the dispatcher thread so that it can start
@@ -192,8 +190,13 @@ fbl::RefPtr<ExecutionDomain> EventSource::ScheduleDispatch(
     ZX_DEBUG_ASSERT((pkt.type == ZX_PKT_TYPE_INTERRUPT) ||
                     (pkt.signal.observed & process_signal_mask()));
 
-    if (domain_ == nullptr) {
+    if (!is_active()) {
+        // We have no domain, we must have become deactivated while the thread
+        // from the thread pool was in flight (making it impossible for the
+        // Deactivator to reclaim the kernel's reference to us).  Go ahead and
+        // transition to idle, and close our handle.
         dispatch_state_ = DispatchState::Idle;
+        handle_.reset();
         return nullptr;
     }
 
