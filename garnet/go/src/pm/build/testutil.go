@@ -16,7 +16,7 @@ import (
 )
 
 // TestFiles is the list of files created by the default factories in this package.
-var TestFiles = []string{"a", "b", "dir/c"}
+var TestFiles = []string{"a", "b", "dir/c", "meta/test/t"}
 
 // TestPackage initializes a set of files into a package directory next to the
 // config manifest

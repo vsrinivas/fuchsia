@@ -114,7 +114,7 @@ func newMetaFarDir(name, version, blob string, fs *Filesystem) *metaFarDir {
 
 func newMetaFarDirAt(name, version, blob string, fs *Filesystem, path string) *metaFarDir {
 	mf := newMetaFarDir(name, version, blob, fs)
-	mf.path = filepath.Join("meta", path)
+	mf.path = path
 	return mf
 }
 

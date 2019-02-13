@@ -164,10 +164,6 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 	}
 
 	if strings.HasPrefix(name, "meta/") {
-		if _, found := d.contents[name]; !found {
-			return nil, nil, nil, fs.ErrNotFound
-		}
-
 		mfd := newMetaFarDir(d.name, d.version, d.contents["meta"], d.fs)
 		return mfd.Open(strings.TrimPrefix(name, "meta"), flags)
 	}

@@ -121,12 +121,19 @@ func TestUpdate(t *testing.T) {
 		lines = lines[1:]
 	}
 
-	if len(lines) != len(TestFiles) {
-		t.Fatalf("content lines mismatch: %v\n%v", lines, TestFiles)
+	contentFiles := []string{}
+	for _, s := range TestFiles {
+		if strings.HasPrefix(s, "meta/") {
+			continue
+		}
+		contentFiles = append(contentFiles, s)
+	}
+	if len(lines) != len(contentFiles) {
+		t.Fatalf("content lines mismatch: %v\n%v", lines, contentFiles)
 	}
 
 	files := []string{}
-	files = append(files, TestFiles...)
+	files = append(files, contentFiles...)
 	sort.Strings(files)
 	for i, pf := range files {
 		var tree merkle.Tree
