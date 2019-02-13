@@ -116,7 +116,7 @@ protected:
     }
 
     void GenerateGuid() {
-        srand(time(0));
+        srand(static_cast<unsigned int>(time(0)));
         for (unsigned i = 0; i < FVM_GUID_LEN; i++) {
             guid_[i] = static_cast<uint8_t>(rand());
         }

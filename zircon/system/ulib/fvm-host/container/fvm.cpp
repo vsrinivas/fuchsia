@@ -246,7 +246,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
         }
 
         ssize_t r = read(fd_.get(), data.get(), slice_size_);
-        if (r != slice_size_) {
+        if (r < 0 || static_cast<size_t>(r) != slice_size_) {
             fprintf(stderr, "Failed to read data from FVM: %ld\n", r);
             return ZX_ERR_BAD_STATE;
         }
@@ -257,7 +257,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
         }
 
         r = write(fd.get(), data.get(), slice_size_);
-        if (r != slice_size_) {
+        if (r < 0 || static_cast<size_t>(r) != slice_size_) {
             fprintf(stderr, "Failed to write data to FVM: %ld\n", r);
             return ZX_ERR_BAD_STATE;
         }
@@ -395,7 +395,8 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name) 
             return status;
         }
 
-        uint32_t vslice = vslice_info.vslice_start / format->BlocksPerSlice();
+        uint32_t vslice =
+            static_cast<uint32_t>(vslice_info.vslice_start / format->BlocksPerSlice());
 
         for (unsigned i = 0; i < vslice_info.slice_count; i++) {
             uint32_t pslice;
@@ -537,7 +538,7 @@ zx_status_t FvmContainer::WriteData(uint32_t pslice, uint32_t block_offset, size
     }
 
     ssize_t r = write(fd_.get(), data, block_size);
-    if (r != block_size) {
+    if (r < 0 || static_cast<size_t>(r) != block_size) {
         fprintf(stderr, "Failed to write data to FVM\n");
         return ZX_ERR_BAD_STATE;
     }
