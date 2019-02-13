@@ -488,12 +488,16 @@ TxVector GetTxVector(const fbl::unique_ptr<MinstrelRateSelector>& minstrel,
         ZX_DEBUG_ASSERT(status == ZX_OK);
         return tv;
     } else {
+        // Note: This section has no practical effect on ralink and ath10k. It is only effective if
+        // the underlying device meets both criteria below:
+        // 1. Does not support tx status report. i.e. WLAN_DRIVER_FEATURE_TX_STATUS_REPORT NOT set
+        // 2. Hornors our instruction on tx_vector to use.
         // TODO(NET-645): Choose an optimal MCS for management frames
-        const bool is_data_frame = fc->type() == FrameType::kData;
+        const uint8_t mcs = fc->type() == FrameType::kData ? 7 : 3;
         return {
-            .phy = is_data_frame ? WLAN_PHY_HT : WLAN_PHY_ERP,
+            .phy = WLAN_PHY_ERP,
             .cbw = CBW20,
-            .mcs_idx = static_cast<uint8_t>(is_data_frame ? 7 : 3),
+            .mcs_idx = mcs,
             .nss = 1,
             .gi = WLAN_GI_800NS,
         };
