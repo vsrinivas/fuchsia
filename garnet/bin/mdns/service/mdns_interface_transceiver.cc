@@ -281,21 +281,30 @@ void MdnsInterfaceTransceiver::FixUpAddresses(
   //    inserted its own A/AAAA message(s). Because the mutated message is
   //    reused, we have to allow for this.
 
+  std::string name;
+
   // Move A/AAAA resources to the end of the vector.
-  auto iter = std::remove_if(resources->begin(), resources->end(),
-                             [](const std::shared_ptr<DnsResource>& resource) {
-                               return resource->type_ == DnsType::kA ||
-                                      resource->type_ == DnsType::kAaaa;
-                             });
+  auto iter =
+      std::remove_if(resources->begin(), resources->end(),
+                     [&name](const std::shared_ptr<DnsResource>& resource) {
+                       if (resource->type_ != DnsType::kA &&
+                           resource->type_ != DnsType::kAaaa) {
+                         return false;
+                       }
+
+                       name = resource->name_.dotted_string_;
+                       return true;
+                     });
 
   if (iter == resources->end()) {
     // No address resources found/moved.
     return;
   }
 
-  // Replace the first A/AAAA resource with the address resource for this
-  // interface.
-  auto name = (*iter)->name_.dotted_string_;
+  FXL_DCHECK(!name.empty());
+
+  // There is at least one open slot. Fill it with the first A/AAAA resource
+  // with the address resource for this interface.
   *iter++ = GetAddressResource(name);
 
   if (!alternate_address_.is_valid()) {

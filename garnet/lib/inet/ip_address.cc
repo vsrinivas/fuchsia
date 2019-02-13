@@ -80,7 +80,7 @@ IpAddress::IpAddress(const in_addr& addr) {
 
 IpAddress::IpAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3,
                      uint16_t w4, uint16_t w5, uint16_t w6, uint16_t w7) {
-  family_ = AF_INET;
+  family_ = AF_INET6;
   uint16_t* words = v6_.s6_addr16;
   words[0] = htobe16(w0);
   words[1] = htobe16(w1);
@@ -93,7 +93,7 @@ IpAddress::IpAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3,
 }
 
 IpAddress::IpAddress(uint16_t w0, uint16_t w7) {
-  family_ = AF_INET;
+  family_ = AF_INET6;
   std::memset(&v6_, 0, sizeof(v6_));
   uint16_t* words = v6_.s6_addr16;
   words[0] = htobe16(w0);
