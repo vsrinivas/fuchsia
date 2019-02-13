@@ -484,6 +484,57 @@ pub enum OvernetStreamProtocolRequest {
 		responder: OvernetStreamProtocolMethodBResponder,},
 }
 
+pub struct OvernetStreamProtocolEncoder;
+impl OvernetStreamProtocolEncoder {
+	pub fn encode_method_a_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 411580008,
+		};
+		let mut body = (in_a,in_b,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_event_a_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 530966225,
+		};
+		let mut body = (in_a,in_b,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_method_b_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 1291000979,
+		};
+		let mut body = (in_a,in_b,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_method_b_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,mut in_result: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 1291000979,
+		};
+		let mut body = (in_result,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}}
+
 #[deprecated(note = "use OvernetStreamProtocolRequestStream instead")]
 pub struct OvernetStreamProtocolImpl<
 	State,
@@ -1149,6 +1200,57 @@ pub enum SocketControlProtocolRequest {
 		b: i64,
 		responder: SocketControlProtocolMethodBResponder,},
 }
+
+pub struct SocketControlProtocolEncoder;
+impl SocketControlProtocolEncoder {
+	pub fn encode_method_a_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 1007842318,
+		};
+		let mut body = (in_a,in_b,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_event_a_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 955483393,
+		};
+		let mut body = (in_a,in_b,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_method_b_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 677342235,
+		};
+		let mut body = (in_a,in_b,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_method_b_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,mut in_result: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 677342235,
+		};
+		let mut body = (in_result,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}}
 
 #[deprecated(note = "use SocketControlProtocolRequestStream instead")]
 pub struct SocketControlProtocolImpl<
@@ -1816,6 +1918,57 @@ pub enum ChannelProtocolRequest {
 		responder: ChannelProtocolMethodBResponder,},
 }
 
+pub struct ChannelProtocolEncoder;
+impl ChannelProtocolEncoder {
+	pub fn encode_method_a_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 1432785874,
+		};
+		let mut body = (in_a,in_b,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_event_a_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 477676034,
+		};
+		let mut body = (in_a,in_b,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_method_b_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 180770075,
+		};
+		let mut body = (in_a,in_b,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_method_b_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,mut in_result: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 180770075,
+		};
+		let mut body = (in_result,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}}
+
 #[deprecated(note = "use ChannelProtocolRequestStream instead")]
 pub struct ChannelProtocolImpl<
 	State,
@@ -2481,6 +2634,57 @@ pub enum KitchenSinkRequest {
 		b: i64,
 		responder: KitchenSinkMethodBResponder,},
 }
+
+pub struct KitchenSinkEncoder;
+impl KitchenSinkEncoder {
+	pub fn encode_method_a_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 450577456,
+		};
+		let mut body = (in_a,in_b,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_event_a_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 1795426833,
+		};
+		let mut body = (in_a,in_b,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_method_b_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 1999489700,
+		};
+		let mut body = (in_a,in_b,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_method_b_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,mut in_result: i64,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 1999489700,
+		};
+		let mut body = (in_result,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}}
 
 #[deprecated(note = "use KitchenSinkRequestStream instead")]
 pub struct KitchenSinkImpl<

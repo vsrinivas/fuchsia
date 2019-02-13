@@ -450,6 +450,53 @@ pub enum SwitchingOrdinalsRequest {
 		control_handle: SwitchingOrdinalsControlHandle,},
 }
 
+pub struct SwitchingOrdinalsEncoder;
+impl SwitchingOrdinalsEncoder {
+	pub fn encode_ordinal_five_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 2005164903,
+		};
+		let mut body = ();
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_only_generated_ordinal_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 667506719,
+		};
+		let mut body = ();
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_event_ordinal_fifteen_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 1467258273,
+		};
+		let mut body = ();
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_event_only_generated_ordinal_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 2146190926,
+		};
+		let mut body = ();
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}}
+
 #[deprecated(note = "use SwitchingOrdinalsRequestStream instead")]
 pub struct SwitchingOrdinalsImpl<
 	State,

@@ -451,6 +451,20 @@ pub enum InterfaceRequest {
 		control_handle: InterfaceControlHandle,},
 }
 
+pub struct InterfaceEncoder;
+impl InterfaceEncoder {
+	pub fn encode_method_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
+			ordinal: 1061382220,
+		};
+		let mut body = ();
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}}
+
 #[deprecated(note = "use InterfaceRequestStream instead")]
 pub struct InterfaceImpl<
 	State,

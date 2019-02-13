@@ -629,6 +629,72 @@ pub enum {{ $interface.Name }}Request {
 	{{- end }}
 }
 
+pub struct {{ $interface.Name }}Encoder;
+impl {{ $interface.Name }}Encoder {
+	{{- range $method := $interface.Methods }}
+	{{- if $method.HasRequest }}
+	pub fn encode_{{ $method.Name }}_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		{{- if $method.HasResponse }}
+		tx_id: u32,
+		{{- end -}}
+		{{- range $index, $param := $method.Request -}}
+		mut in_{{ $param.Name -}}: {{ $param.BorrowedType -}},
+		{{- end -}}
+	) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			{{- if $method.HasResponse }}
+			tx_id,
+			{{- else -}}
+			tx_id: 0,
+			{{- end -}}
+			flags: 0,
+			ordinal: {{ $method.Ordinal }},
+		};
+		let mut body = (
+			{{- range $index, $param := $method.Request -}}
+			in_{{ $param.Name -}},
+			{{- end -}}
+		);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	{{- end }}
+	{{- if $method.HasResponse }}
+	pub fn encode_{{ $method.Name }}_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		{{- if $method.HasRequest }}
+		tx_id: u32,
+		{{- end -}}
+		{{- range $param := $method.Response -}}
+		mut in_{{ $param.Name -}}: {{ $param.BorrowedType -}},
+		{{- end -}}
+	) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			{{- if $method.HasRequest }}
+			tx_id,
+			{{- else -}}
+			tx_id: 0,
+			{{- end -}}
+			flags: 0,
+			ordinal: {{ $method.Ordinal }},
+		};
+		let mut body = (
+			{{- range $index, $param := $method.Response -}}
+			in_{{ $param.Name -}},
+			{{- end -}}
+		);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	{{- end }}
+	{{- end -}}
+}
+
 #[deprecated(note = "use {{ $interface.Name }}RequestStream instead")]
 pub struct {{ $interface.Name }}Impl<
 	{{ template "GenerateImplGenerics" $interface }}
@@ -749,6 +815,7 @@ impl {{ $interface.Name }}ControlHandle {
 	}
 	{{ end -}}
 	{{- end -}}
+
 }
 
 /* beginning of response types */
