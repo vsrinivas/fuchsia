@@ -22,9 +22,11 @@
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <ramdevice-client/ramdisk.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <fvm/format.h>
 #include <lib/fdio/debug.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/time.h>
 #include <unittest/unittest.h>
@@ -318,8 +320,16 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
 
     // Format the ramdisk as FVM and bind to it
     ASSERT_OK(fvm_init(ramdisk_get_block_fd(ramdisk_), FVM_BLOCK_SIZE));
-    ASSERT_OK(ToStatus(ioctl_device_bind(ramdisk_get_block_fd(ramdisk_), kFvmDriver,
-                                         strlen(kFvmDriver))));
+
+    fdio_t* io = fdio_unsafe_fd_to_io(ramdisk_get_block_fd(ramdisk_));
+    ASSERT_NONNULL(io);
+    zx_status_t call_status;
+    zx_status_t status = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io),
+                                                       kFvmDriver, strlen(kFvmDriver),
+                                                       &call_status);
+    fdio_unsafe_release(io);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(call_status, ZX_OK);
 
     char path[PATH_MAX];
     fbl::unique_fd fvm_fd;
@@ -339,8 +349,16 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
     ASSERT_TRUE(fvm_part_);
 
     // Save the topological path for rebinding
-    ASSERT_OK(ToStatus(
-        ioctl_device_get_topo_path(fvm_part_.get(), fvm_part_path_, sizeof(fvm_part_path_))));
+    io = fdio_unsafe_fd_to_io(fvm_part_.get());
+    ASSERT_NONNULL(io);
+    size_t out_len;
+    status = fuchsia_device_ControllerGetTopologicalPath(fdio_unsafe_borrow_channel(io),
+                                                         &call_status, fvm_part_path_,
+                                                         sizeof(fvm_part_path_) - 1, &out_len);
+    fdio_unsafe_release(io);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(call_status, ZX_OK);
+    fvm_part_path_[out_len] = 0;
 
     END_HELPER;
 }

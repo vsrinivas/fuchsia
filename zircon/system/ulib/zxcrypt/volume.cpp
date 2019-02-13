@@ -24,9 +24,10 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <memory>
 #include <fs-management/mount.h>
+#include <fuchsia/device/c/fidl.h>
 #include <lib/fdio/debug.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #include <ramdevice-client/ramdisk.h>
@@ -37,6 +38,7 @@
 #include <zircon/types.h>
 #include <zxcrypt/volume.h>
 
+#include <memory>
 #include <utility>
 
 #define ZXDEBUG 0
@@ -286,17 +288,32 @@ zx_status_t Volume::Unlock(const crypto::Secret& key, key_slot_t slot) {
 
 zx_status_t Volume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
     zx_status_t rc;
-    ssize_t res;
+
+    fdio_t* io = fdio_unsafe_fd_to_io(fd_.get());
+    if (io == nullptr) {
+        xprintf("could not convert fd to io\n");
+        return ZX_ERR_BAD_STATE;
+    }
+    auto cleanup_fdio = fbl::MakeAutoCall([io]() {
+        fdio_unsafe_release(io);
+    });
 
     // Get the full device path
     fbl::StringBuffer<PATH_MAX> path;
     path.Resize(path.capacity());
-    if ((res = ioctl_device_get_topo_path(fd_.get(), path.data(), path.capacity())) < 0) {
-        rc = static_cast<zx_status_t>(res);
+    zx_status_t call_status;
+    size_t path_len;
+    rc = fuchsia_device_ControllerGetTopologicalPath(fdio_unsafe_borrow_channel(io),
+                                                     &call_status, path.data(),
+                                                     path.capacity(), &path_len);
+    if (rc == ZX_OK) {
+        rc = call_status;
+    }
+    if (rc != ZX_OK) {
         xprintf("could not find parent device: %s\n", zx_status_get_string(rc));
         return rc;
     }
-    path.Resize(strlen(path.c_str()));
+    path.Resize(path_len);
     path.Append("/zxcrypt/block");
 
     // Early return if already bound
@@ -307,8 +324,12 @@ zx_status_t Volume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
     }
 
     // Bind the device
-    if ((res = ioctl_device_bind(fd_.get(), kDriverLib, strlen(kDriverLib))) < 0) {
-        rc = static_cast<zx_status_t>(res);
+    rc = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io), kDriverLib,
+                                       strlen(kDriverLib), &call_status);
+    if (rc == ZX_OK) {
+        rc = call_status;
+    }
+    if (rc != ZX_OK) {
         xprintf("could not bind zxcrypt driver: %s\n", zx_status_get_string(rc));
         return rc;
     }
