@@ -100,12 +100,19 @@ class UsbDevice : public UsbDeviceType,
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(UsbDevice);
 
+    struct RequestData {
+        // True if the request is ready to be processed by the client during the next callback.
+        bool ready_for_client;
+        bool require_callback;
+    };
+
     using Request = usb::Request<void>;
-    using UnownedRequest = usb::UnownedRequest<void>;
-    using UnownedRequestList = usb::UnownedRequestList<void>;
-    using UnownedRequestQueue = usb::UnownedRequestQueue<void>;
+    using UnownedRequest = usb::UnownedRequest<RequestData>;
+    using UnownedRequestList = usb::UnownedRequestList<RequestData>;
+    using UnownedRequestQueue = usb::UnownedRequestQueue<RequestData>;
 
     struct Endpoint {
+        // Requests that have not yet had an associated callback to the client.
         UnownedRequestList pending_reqs __TA_GUARDED(lock);
         fbl::Mutex lock;
     };
@@ -118,8 +125,12 @@ private:
 
     Endpoint* GetEndpoint(uint8_t ep_address);
     // Updates the endpoint state with the completed request.
+    // As erroneous requests may complete out of order, the request queued prior to it will also
+    // get a callback. If that prior request has also already completed,
+    // |out_additional_callback| will be populated.
     // Returns true if a callback is required.
-    bool UpdateEndpoint(usb_request_t* completed_req);
+    bool UpdateEndpoint(usb_request_t* completed_req,
+                        std::optional<UnownedRequest>* out_additional_callback);
 
     void RequestComplete(usb_request_t* req);
     static void ControlComplete(void* ctx, usb_request_t* req);

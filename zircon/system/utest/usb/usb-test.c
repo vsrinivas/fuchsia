@@ -234,10 +234,123 @@ static bool usb_callbacks_opt_out_test(void) {
     END_TEST;
 }
 
+static bool usb_single_callback_error_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t dev_svc;
+    if (open_test_device(&dev_svc) != ZX_OK) {
+        unittest_printf_critical(" [SKIPPING]");
+        return true;
+    }
+    ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "Invalid device service handle");
+
+    // We should always get a callback on error.
+    fuchsia_hardware_usb_tester_IsochTestParams params = {
+        .data_pattern = fuchsia_hardware_usb_tester_DataPatternType_CONSTANT,
+        .num_packets = 1,
+        .packet_size = 1024,
+        .packet_opts = {
+            { .set_cb = false, .set_error = true, .expect_cb = true }
+        },
+        .packet_opts_len = 1
+    };
+    char err_msg[] = "callbacks on error test failed: set_cb = false, set_error = true";
+    zx_status_t status;
+    fuchsia_hardware_usb_tester_IsochResult result = {};
+    ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result),
+              ZX_OK, "failed to call DeviceIsochLoopback");
+    ASSERT_EQ(status, ZX_OK, err_msg);
+    // Don't need to verify the transfer results since we only care about callbacks for this test.
+
+    close(dev_svc);
+
+    END_TEST;
+}
+
+static bool usb_callbacks_on_error_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t dev_svc;
+    if (open_test_device(&dev_svc) != ZX_OK) {
+        unittest_printf_critical(" [SKIPPING]");
+        return true;
+    }
+    ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "Invalid device service handle");
+
+    // Error on the last packet receiving a callback.
+    fuchsia_hardware_usb_tester_IsochTestParams params = {
+        .data_pattern = fuchsia_hardware_usb_tester_DataPatternType_CONSTANT,
+        .num_packets = 4,
+        .packet_size = 1024,
+        .packet_opts = {
+            { .set_cb = false, .set_error = false, .expect_cb = false },
+            { .set_cb = false, .set_error = false, .expect_cb = false },
+            { .set_cb = false, .set_error = false, .expect_cb = true },
+            { .set_cb = false, .set_error = true, .expect_cb = true }
+        },
+        .packet_opts_len = 4
+    };
+    char err_msg[] = "callbacks on error test failed: error on last packet receiving callback";
+    zx_status_t status;
+    fuchsia_hardware_usb_tester_IsochResult result = {};
+    ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result),
+              ZX_OK, "failed to call DeviceIsochLoopback");
+    ASSERT_EQ(status, ZX_OK, err_msg);
+    // Don't need to verify the transfer results since we only care about callbacks for this test.
+
+    close(dev_svc);
+
+    END_TEST;
+}
+
+static bool usb_callbacks_on_multiple_errors_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t dev_svc;
+    if (open_test_device(&dev_svc) != ZX_OK) {
+        unittest_printf_critical(" [SKIPPING]");
+        return true;
+    }
+    ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "Invalid device service handle");
+
+    fuchsia_hardware_usb_tester_IsochTestParams params = {
+        .data_pattern = fuchsia_hardware_usb_tester_DataPatternType_CONSTANT,
+        .num_packets = 10,
+        .packet_size = 1024,
+        .packet_opts = {
+            { .set_cb = false, .set_error = false, .expect_cb = false },
+            { .set_cb = false, .set_error = false, .expect_cb = true },
+            { .set_cb = false, .set_error = true, .expect_cb = true },
+            { .set_cb = true, .set_error = true, .expect_cb = true },
+            { .set_cb = false, .set_error = true, .expect_cb = true },
+            { .set_cb = false, .set_error = true, .expect_cb = true },
+            { .set_cb = false, .set_error = false, .expect_cb = false },
+            { .set_cb = true, .set_error = false, .expect_cb = true },
+            { .set_cb = false, .set_error = true, .expect_cb = true },
+            { .set_cb = true, .set_error = false, .expect_cb = true }
+        },
+        .packet_opts_len = 10
+    };
+    char err_msg[] = "callbacks on error test failed: multiple errors";
+    zx_status_t status;
+    fuchsia_hardware_usb_tester_IsochResult result = {};
+    ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result),
+              ZX_OK, "failed to call DeviceIsochLoopback");
+    ASSERT_EQ(status, ZX_OK, err_msg);
+    // Don't need to verify the transfer results since we only care about callbacks for this test.
+
+    close(dev_svc);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(usb_tests)
 RUN_TEST(usb_root_hubs_test)
 RUN_TEST(usb_bulk_loopback_test)
 RUN_TEST(usb_bulk_scatter_gather_test)
 RUN_TEST(usb_isoch_loopback_test)
 RUN_TEST(usb_callbacks_opt_out_test)
+RUN_TEST(usb_single_callback_error_test)
+RUN_TEST(usb_callbacks_on_error_test)
+RUN_TEST(usb_callbacks_on_multiple_errors_test)
 END_TEST_CASE(usb_tests)

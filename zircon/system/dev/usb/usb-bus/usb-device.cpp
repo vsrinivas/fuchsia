@@ -100,7 +100,10 @@ UsbDevice::Endpoint* UsbDevice::GetEndpoint(uint8_t ep_address) {
     return index < USB_MAX_EPS ? &eps_[index] : nullptr;
 }
 
-bool UsbDevice::UpdateEndpoint(usb_request_t* completed_req) {
+bool UsbDevice::UpdateEndpoint(usb_request_t* completed_req,
+                               std::optional<UnownedRequest>* out_additional_callback) {
+    *out_additional_callback = std::nullopt;
+
     auto* ep = GetEndpoint(completed_req->header.ep_address);
     if (!ep) {
         zxlogf(ERROR, "could not find endpoint with address 0x%x\n",
@@ -114,34 +117,74 @@ bool UsbDevice::UpdateEndpoint(usb_request_t* completed_req) {
     auto unowned = UnownedRequest(completed_req, parent_req_size_, /* allow_destruct */ false);
 
     std::optional<size_t> idx = ep->pending_reqs.find(&unowned);
-    if (idx.has_value()) {
-        bool erase = ep->pending_reqs.erase(&unowned);
-        if (!erase) {
-            zxlogf(ERROR, "failed to erase req %p\n", unowned.request());
-            // This should never happen, but we should probably still do a callback.
-            return true;
-        }
-    } else {
+    if (!idx.has_value()) {
         zxlogf(ERROR, "could not find completed req %p in pending list of endpoint: 0x%x\n",
                unowned.request(), completed_req->header.ep_address);
         // This should never happen, but we should probably still do a callback.
         return true;
     }
 
-    if (completed_req->cb_on_error_only && completed_req->response.status == ZX_OK) {
+    auto* storage = unowned.private_storage();
+    storage->ready_for_client = true;
+
+    if (!storage->require_callback && completed_req->response.status == ZX_OK) {
+        // Skipping unwanted callback since the request completed successfully.
+        // Don't remove the request from the list until we do the next callback.
         return false;
+    }
+
+    bool completed_in_order = true;
+
+    auto opt_prev = ep->pending_reqs.prev(&unowned);
+    // Erroneous requests may complete out of expected order,
+    // so we need to ensure the request prior to it always gets a callback.
+    if (completed_req->response.status != ZX_OK && opt_prev.has_value()) {
+        opt_prev->private_storage()->require_callback = true;
+        // We already received the completion callback for the previous request but did
+        // not do a callback, so we need to do the callback now.
+        if (opt_prev->private_storage()->ready_for_client) {
+            *out_additional_callback = *std::move(opt_prev);
+        } else {
+            completed_in_order = false;
+        }
+    }
+
+    if (completed_in_order) {
+        // Remove all requests up to the current request from the pending list.
+        auto opt_req = ep->pending_reqs.begin();
+        while (opt_req) {
+            auto req = *std::move(opt_req);
+            auto opt_next = ep->pending_reqs.next(&req);
+
+            ZX_DEBUG_ASSERT(req.private_storage()->ready_for_client);
+
+            ep->pending_reqs.erase(&req);
+            if (req.request() == completed_req) {
+                break;
+            }
+
+            opt_req = std::move(opt_next);
+        }
+    } else {
+        // The request had an error and completed out of order. Only remove the single request.
+        ep->pending_reqs.erase(&unowned);
     }
     return true;
 }
 
 // usb request completion for the requests passed down to the HCI driver
 void UsbDevice::RequestComplete(usb_request_t* req) {
-    bool do_callback = UpdateEndpoint(req);
+    std::optional<UnownedRequest> additional_callback;
+    bool do_callback = UpdateEndpoint(req, &additional_callback);
     if (!do_callback) {
         return;
     }
 
     fbl::AutoLock lock(&callback_lock_);
+
+    if (additional_callback.has_value()) {
+        completed_reqs_.push(*std::move(additional_callback));
+    }
 
     // move original request to completed_reqs list so it can be completed on the callback_thread
     completed_reqs_.push(UnownedRequest(req, parent_req_size_));
@@ -325,6 +368,8 @@ void UsbDevice::UsbRequestQueue(usb_request_t* req, const usb_request_complete_t
 
     // Save client's callback in private storage.
     UnownedRequest request(req, *complete_cb, parent_req_size_);
+    request.private_storage()->ready_for_client = false;
+    request.private_storage()->require_callback = !req->cb_on_error_only;
 
     auto* ep = GetEndpoint(req->header.ep_address);
     if (!ep) {
@@ -576,6 +621,9 @@ zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
 
 zx_status_t UsbDevice::UsbCancelAll(uint8_t ep_address) {
     return hci_.CancelAll(device_id_, ep_address);
+    // TODO(jocelyndang): after cancelling, we should check if the ep pending_reqs has any items.
+    // We may have to do callbacks now if the requests already completed before the cancel
+    // occurred, but the client did not request any callbacks.
 }
 
 uint64_t UsbDevice::UsbGetCurrentFrame() {
