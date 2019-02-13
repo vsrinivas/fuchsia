@@ -97,6 +97,8 @@ if (has_sdk_id) {
 sdk("garnet") {
   category = "partner"
 
+  api = "garnet.api"
+
   testonly = true
 
   deps = [
