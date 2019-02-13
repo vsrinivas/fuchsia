@@ -47,7 +47,7 @@ class Display {
   // Temporary friendship to allow FrameScheduler to feed back the Vsync timings
   // gleaned from EventTimestamper.  This should go away once we receive real
   // VSync times from the display driver.
-  friend class FrameScheduler;
+  friend class DefaultFrameScheduler;
   void set_last_vsync_time(zx_time_t vsync_time);
 
   zx_time_t last_vsync_time_;

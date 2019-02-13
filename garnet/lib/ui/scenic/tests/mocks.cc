@@ -4,6 +4,8 @@
 
 #include "garnet/lib/ui/scenic/tests/mocks.h"
 
+#include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
+
 namespace scenic_impl {
 namespace test {
 
@@ -21,7 +23,7 @@ EngineForTest::EngineForTest(
     gfx::DisplayManager* display_manager,
     std::unique_ptr<escher::ReleaseFenceSignaller> release_signaler,
     escher::EscherWeakPtr escher)
-    : gfx::Engine(std::make_unique<gfx::FrameScheduler>(
+    : gfx::Engine(std::make_unique<gfx::DefaultFrameScheduler>(
                       display_manager->default_display()),
                   display_manager, std::move(release_signaler),
                   std::make_unique<gfx::SessionManager>(), std::move(escher)) {}

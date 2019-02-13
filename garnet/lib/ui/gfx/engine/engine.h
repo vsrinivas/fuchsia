@@ -17,24 +17,26 @@
 #include "lib/escher/vk/image_factory.h"
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
+#include "garnet/lib/ui/gfx/engine/engine_renderer.h"
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/object_linker.h"
 #include "garnet/lib/ui/gfx/engine/resource_linker.h"
 #include "garnet/lib/ui/gfx/engine/scene_graph.h"
 #include "garnet/lib/ui/gfx/engine/session_context.h"
 #include "garnet/lib/ui/gfx/engine/session_manager.h"
-#include "garnet/lib/ui/gfx/engine/update_scheduler.h"
 #include "garnet/lib/ui/gfx/id.h"
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
+#include "lib/escher/renderer/batch_gpu_uploader.h"
 
 namespace scenic_impl {
 namespace gfx {
 
 class Compositor;
-class EngineRenderer;
+class FrameTimings;
+using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
 class Session;
 class SessionHandler;
 class View;
@@ -42,16 +44,34 @@ class ViewHolder;
 
 using ViewLinker = ObjectLinker<ViewHolder, View>;
 
+// Graphical context for a set of session updates.
+// The CommandContext is only valid during RenderFrame() and should not be
+// accessed outside of that.
+class CommandContext {
+ public:
+  CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader);
+
+  escher::BatchGpuUploader* batch_gpu_uploader() const {
+    return batch_gpu_uploader_.get();
+  }
+
+  // Flush any work accumulated during command processing.
+  void Flush();
+
+ private:
+  std::unique_ptr<escher::BatchGpuUploader> batch_gpu_uploader_;
+};
+
 // Owns a group of sessions which can share resources with one another
 // using the same resource linker and which coexist within the same timing
 // domain using the same frame scheduler.  It is not possible for sessions
 // which belong to different engines to communicate with one another.
-class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
+class Engine : public SessionUpdater, public FrameRenderer {
  public:
   Engine(std::unique_ptr<FrameScheduler> frame_scheduler,
          DisplayManager* display_manager, escher::EscherWeakPtr escher);
 
-  ~Engine() override;
+  ~Engine() override = default;
 
   escher::Escher* escher() const { return escher_.get(); }
   escher::EscherWeakPtr GetEscherWeakPtr() const { return escher_; }
@@ -86,27 +106,33 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
                           event_timestamper(),
                           session_manager(),
                           frame_scheduler(),
-                          static_cast<UpdateScheduler*>(this),
                           display_manager_,
                           scene_graph(),
                           resource_linker(),
                           view_linker()};
   }
 
-  // |UpdateScheduler|
-  //
-  // Tell the FrameScheduler to schedule a frame. This is also used for
-  // updates triggered by something other than a Session update i.e. an
-  // ImagePipe with a new Image to present.
-  void ScheduleUpdate(uint64_t presentation_time) override;
-
-  // Dumps the contents of all scene graphs.
-  std::string DumpScenes() const;
-
   // Invoke Escher::Cleanup().  If more work remains afterward, post a delayed
   // task to try again; this is typically because cleanup couldn't finish due
   // to unfinished GPU work.
   void CleanupEscher();
+
+  // Dumps the contents of all scene graphs.
+  std::string DumpScenes() const;
+
+  // |SessionUpdater|
+  //
+  // Applies scheduled updates to a session. If the update fails, the session is
+  // killed. Returns true if a new render is needed, false otherwise.
+  bool UpdateSessions(std::vector<SessionId> sessions, uint64_t frame_number,
+                      uint64_t presentation_time,
+                      uint64_t presentation_interval) override;
+
+  // |FrameRenderer|
+  //
+  // Renders a new frame. Returns true if successful, false otherwise.
+  bool RenderFrame(const FrameTimingsPtr& frame, uint64_t presentation_time,
+                   uint64_t presentation_interval) override;
 
  protected:
   // Only used by subclasses used in testing.
@@ -117,6 +143,11 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
          escher::EscherWeakPtr escher);
 
  private:
+  void InitializeFrameScheduler();
+
+  // Creates a command context.
+  CommandContext CreateCommandContext(uint64_t frame_number_for_tracing);
+
   // Used by GpuMemory to import VMOs from clients.
   uint32_t imported_memory_type_index() const {
     return imported_memory_type_index_;
@@ -138,17 +169,7 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
     return release_fence_signaller_.get();
   }
 
-  // |FrameSchedulerDelegate|:
-  bool RenderFrame(const FrameTimingsPtr& frame, uint64_t presentation_time,
-                   uint64_t presentation_interval, bool force_render) override;
-
   void InitializeShaderFs();
-
-  // Apply updates to all sessions who have updates and have acquired all
-  // fences.  Return true if there were any updates applied.
-  bool UpdateSessions(uint64_t presentation_time,
-                      uint64_t presentation_interval,
-                      uint64_t frame_number_for_tracing);
 
   // Update and deliver metrics for all nodes which subscribe to metrics
   // events.

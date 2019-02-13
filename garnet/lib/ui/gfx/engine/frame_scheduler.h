@@ -5,13 +5,11 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_FRAME_SCHEDULER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_FRAME_SCHEDULER_H_
 
-#include <queue>
+#include <vector>
 
-#include <lib/async/dispatcher.h>
+#include "garnet/lib/ui/gfx/id.h"
+
 #include <lib/zx/time.h>
-
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace scenic_impl {
@@ -20,16 +18,29 @@ namespace gfx {
 class Display;
 class FrameTimings;
 using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
+using PresentationTime = uint64_t;
 
-// Interface implemented by the engine to perform per-frame processing in
-// response to a frame being scheduled.
-class FrameSchedulerDelegate {
+// Interface for performing session updates.
+class SessionUpdater {
  public:
-  virtual ~FrameSchedulerDelegate() = default;
+  virtual ~SessionUpdater() = default;
 
-  // Called when it's time to apply changes to the scene graph and render
-  // a new frame.  The FrameTimings object is used to accumulate timing
-  // for all swapchains that are used as render targets in that frame.
+  // Applies all updates scheduled before or at |presentation_time|, for each
+  // session in |sessions|. Returns true if any updates were applied, false
+  // otherwise.
+  virtual bool UpdateSessions(std::vector<SessionId> sessions,
+                              uint64_t frame_number, uint64_t presentation_time,
+                              uint64_t presentation_interval) = 0;
+};
+
+// Interface for rendering frames.
+class FrameRenderer {
+ public:
+  virtual ~FrameRenderer() = default;
+
+  // Called when it's time to render a new frame.  The FrameTimings object is
+  // used to accumulate timing for all swapchains that are used as render
+  // targets in that frame.
   //
   // If RenderFrame() returns true, the delegate is responsible for calling
   // FrameTimings::OnFrameRendered/Presented/Dropped().  Otherwise, rendering
@@ -37,18 +48,14 @@ class FrameSchedulerDelegate {
   // receive any timing information for that frame.
   // TODO(SCN-1089): these return value semantics are not ideal.  See comments
   // in Engine::RenderFrame() regarding this same issue.
-  //
-  // TODO(MZ-225): We need to track backpressure so that the frame scheduler
-  // doesn't get too far ahead. With that in mind, Renderer::DrawFrame should
-  // have a callback which is invoked when the frame is fully flushed through
-  // the graphics pipeline. Then Engine::RenderFrame itself should have a
-  // callback which is invoked when all renderers finish work for that frame.
-  // Then FrameScheduler should listen to the callback to count how many
-  // frames are in flight and back off.
   virtual bool RenderFrame(const FrameTimingsPtr& frame_timings,
                            uint64_t presentation_time,
-                           uint64_t presentation_interval,
-                           bool force_render) = 0;
+                           uint64_t presentation_interval) = 0;
+};
+
+struct FrameSchedulerDelegate {
+  fxl::WeakPtr<FrameRenderer> frame_renderer;
+  fxl::WeakPtr<SessionUpdater> session_updater;
 };
 
 // The FrameScheduler is responsible for scheduling frames to be drawn in
@@ -61,73 +68,33 @@ class FrameSchedulerDelegate {
 // later Vsync.
 class FrameScheduler {
  public:
-  explicit FrameScheduler(Display* display);
-  ~FrameScheduler();
-
-  void set_delegate(FrameSchedulerDelegate* delegate) { delegate_ = delegate; }
-
-  // Request a frame to be scheduled at or after |presentation_time|, which
-  // may be in the past.
-  void RequestFrame(zx_time_t presentation_time);
-
-  // If |render_continuously|, we keep rendering frames regardless of whether
-  // they're requested using RequestFrame().
-  void SetRenderContinuously(bool render_continuously);
+  virtual ~FrameScheduler() = default;
 
   // Helper method for ScheduleFrame().  Returns the target presentation time
   // for the requested presentation time, and a wake-up time that is early
   // enough to start rendering in order to hit the target presentation time.
-  std::pair<zx_time_t, zx_time_t> ComputeTargetPresentationAndWakeupTimes(
-      zx_time_t requested_presentation_time) const;
+  virtual std::pair<zx_time_t, zx_time_t>
+  ComputeTargetPresentationAndWakeupTimes(
+      zx_time_t requested_presentation_time) const = 0;
 
- private:
-  // Update the global scene and then draw it... maybe.  There are multiple
-  // reasons why this might not happen.  For example, the swapchain might apply
-  // back-pressure if we can't hit our target frame rate.  Or, after this frame
-  // was scheduled, another frame was scheduled to be rendered at an earlier
-  // time, and not enough time has elapsed to render this frame.  Etc.
-  void MaybeRenderFrame(zx_time_t presentation_time, zx_time_t wakeup_time);
+  virtual void SetDelegate(FrameSchedulerDelegate delegate) = 0;
 
-  // Schedule a frame for the earliest of |requested_presentation_times_|.  The
-  // scheduled time will be the earliest achievable time, such that rendering
-  // can start early enough to hit the next Vsync.
-  void ScheduleFrame();
+  // If |render_continuously|, we keep scheduling new frames immediately after
+  // each presented frame, regardless of whether they're explicitly requested
+  // using RequestFrame().
+  virtual void SetRenderContinuously(bool render_continuously) = 0;
 
-  // Returns true to apply back-pressure when we cannot hit our target frame
-  // rate.  Otherwise, return false to indicate that it is OK to immediately
-  // render a frame.
-  bool TooMuchBackPressure();
+  // Tell the FrameScheduler to schedule a frame. This is also used for
+  // updates triggered by something other than a Session update i.e. an
+  // ImagePipe with a new Image to present.
+  virtual void ScheduleUpdateForSession(uint64_t presentation_time,
+                                        scenic_impl::SessionId session) = 0;
 
-  // Helper method for ScheduleFrame().  Returns the target presentation time
-  // for the next frame, and a wake-up time that is early enough to start
-  // rendering in order to hit the target presentation time.
-  std::pair<zx_time_t, zx_time_t> ComputeNextPresentationAndWakeupTimes() const;
-
-  // Return the predicted amount of time required to render a frame.
-  zx_time_t PredictRequiredFrameRenderTime() const;
-
-  // Called by the delegate when the frame drawn by RenderFrame() has been
+ protected:
+  // Called when the frame drawn by RenderFrame() has been
   // presented to the display.
   friend class FrameTimings;
-  void OnFramePresented(FrameTimings* timings);
-
-  async_dispatcher_t* const dispatcher_;
-  FrameSchedulerDelegate* delegate_;
-  Display* const display_;
-
-  std::priority_queue<zx_time_t, std::vector<zx_time_t>,
-                      std::greater<zx_time_t>>
-      requested_presentation_times_;
-
-  uint64_t frame_number_ = 0;
-  constexpr static size_t kMaxOutstandingFrames = 2;
-  std::vector<FrameTimingsPtr> outstanding_frames_;
-  bool back_pressure_applied_ = false;
-  bool render_continuously_ = false;
-
-  fxl::WeakPtrFactory<FrameScheduler> weak_factory_;  // must be last
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FrameScheduler);
+  virtual void OnFramePresented(FrameTimings* timings) = 0;
 };
 
 }  // namespace gfx

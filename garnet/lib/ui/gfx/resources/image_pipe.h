@@ -32,10 +32,10 @@ class ImagePipe : public ImageBase {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ImagePipe(Session* session, ResourceId id, UpdateScheduler* update_scheduler);
+  ImagePipe(Session* session, ResourceId id, FrameScheduler* frame_scheduler);
   ImagePipe(Session* session, ResourceId id,
             ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
-            UpdateScheduler* update_scheduler);
+            FrameScheduler* frame_scheduler);
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
   void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
@@ -112,7 +112,7 @@ class ImagePipe : public ImageBase {
   std::unordered_map<ResourceId, ImagePtr> images_;
   bool is_valid_ = true;
 
-  UpdateScheduler* update_scheduler_;
+  FrameScheduler* frame_scheduler_;
 
   fxl::WeakPtrFactory<ImagePipe> weak_ptr_factory_;  // must be last
 

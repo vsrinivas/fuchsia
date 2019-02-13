@@ -1,8 +1,8 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
+#include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -17,16 +17,16 @@
 namespace scenic_impl {
 namespace gfx {
 
-FrameScheduler::FrameScheduler(Display* display)
+DefaultFrameScheduler::DefaultFrameScheduler(Display* display)
     : dispatcher_(async_get_default_dispatcher()),
       display_(display),
       weak_factory_(this) {
   outstanding_frames_.reserve(kMaxOutstandingFrames);
 }
 
-FrameScheduler::~FrameScheduler() {}
+DefaultFrameScheduler::~DefaultFrameScheduler() {}
 
-void FrameScheduler::RequestFrame(zx_time_t presentation_time) {
+void DefaultFrameScheduler::RequestFrame(zx_time_t presentation_time) {
   const bool should_schedule_frame =
       requested_presentation_times_.empty() ||
       requested_presentation_times_.top() > presentation_time;
@@ -36,14 +36,14 @@ void FrameScheduler::RequestFrame(zx_time_t presentation_time) {
   }
 }
 
-void FrameScheduler::SetRenderContinuously(bool render_continuously) {
+void DefaultFrameScheduler::SetRenderContinuously(bool render_continuously) {
   render_continuously_ = render_continuously;
   if (render_continuously_) {
     RequestFrame(0);
   }
 }
 
-zx_time_t FrameScheduler::PredictRequiredFrameRenderTime() const {
+zx_time_t DefaultFrameScheduler::PredictRequiredFrameRenderTime() const {
   // TODO(MZ-400): more sophisticated prediction.  This might require more info,
   // e.g. about how many compositors will be rendering scenes, at what
   // resolutions, etc.
@@ -52,14 +52,14 @@ zx_time_t FrameScheduler::PredictRequiredFrameRenderTime() const {
 }
 
 std::pair<zx_time_t, zx_time_t>
-FrameScheduler::ComputeNextPresentationAndWakeupTimes() const {
+DefaultFrameScheduler::ComputeNextPresentationAndWakeupTimes() const {
   FXL_DCHECK(!requested_presentation_times_.empty());
   return ComputeTargetPresentationAndWakeupTimes(
       requested_presentation_times_.top());
 }
 
 std::pair<zx_time_t, zx_time_t>
-FrameScheduler::ComputeTargetPresentationAndWakeupTimes(
+DefaultFrameScheduler::ComputeTargetPresentationAndWakeupTimes(
     const zx_time_t requested_presentation_time) const {
   const zx_time_t last_vsync_time = display_->GetLastVsyncTime();
   const zx_time_t vsync_interval = display_->GetVsyncInterval();
@@ -140,7 +140,7 @@ FrameScheduler::ComputeTargetPresentationAndWakeupTimes(
 #endif
 }
 
-void FrameScheduler::ScheduleFrame() {
+void DefaultFrameScheduler::ScheduleFrame() {
   FXL_DCHECK(!requested_presentation_times_.empty());
 
   auto times = ComputeNextPresentationAndWakeupTimes();
@@ -156,8 +156,8 @@ void FrameScheduler::ScheduleFrame() {
       zx::time(0) + zx::nsec(wakeup_time));
 }
 
-void FrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
-                                      zx_time_t wakeup_time) {
+void DefaultFrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
+                                             zx_time_t wakeup_time) {
   if (requested_presentation_times_.empty()) {
     // No frame was requested, so none needs to be rendered.  More precisely, a
     // frame must have been requested (otherwise ScheduleFrame() would not
@@ -169,8 +169,9 @@ void FrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
   if (TooMuchBackPressure()) {
     // No need to request another frame; ScheduleFrame() will be called
     // when the back-pressure is relieved.
-    FXL_VLOG(2) << "FrameScheduler::MaybeRenderFrame(): dropping frame, too "
-                   "much back-pressure.";
+    FXL_VLOG(2)
+        << "DefaultFrameScheduler::MaybeRenderFrame(): dropping frame, too "
+           "much back-pressure.";
     return;
   }
 
@@ -193,14 +194,24 @@ void FrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
     requested_presentation_times_.pop();
   }
 
-  // Go render the frame.
-  if (delegate_) {
+  if (delegate_.frame_renderer && delegate_.session_updater) {
     FXL_DCHECK(outstanding_frames_.size() < kMaxOutstandingFrames);
+
     auto frame_timings = fxl::MakeRefCounted<FrameTimings>(
         this, ++frame_number_, presentation_time);
-    if (delegate_->RenderFrame(frame_timings, presentation_time,
-                               display_->GetVsyncInterval(),
-                               render_continuously_)) {
+
+    // Apply all updates
+    bool any_updates_were_applied = ApplyScheduledSessionUpdates(
+        frame_timings->frame_number(), presentation_time,
+        display_->GetVsyncInterval());
+
+    if (!any_updates_were_applied && !render_continuously_) {
+      return;
+    }
+
+    // Render the frame
+    if (delegate_.frame_renderer->RenderFrame(frame_timings, presentation_time,
+                                              display_->GetVsyncInterval())) {
       outstanding_frames_.push_back(frame_timings);
     }
   }
@@ -211,7 +222,40 @@ void FrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
   }
 }
 
-void FrameScheduler::OnFramePresented(FrameTimings* timings) {
+void DefaultFrameScheduler::ScheduleUpdateForSession(
+    uint64_t presentation_time, scenic_impl::SessionId session_id) {
+  updatable_sessions_.push({presentation_time, session_id});
+  RequestFrame(presentation_time);
+}
+
+bool DefaultFrameScheduler::ApplyScheduledSessionUpdates(
+    uint64_t frame_number, uint64_t presentation_time,
+    uint64_t presentation_interval) {
+  FXL_DCHECK(delegate_.session_updater);
+
+  TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time",
+                 presentation_time, "interval", presentation_interval);
+
+  std::vector<scenic_impl::SessionId> sessions_to_update;
+  while (!updatable_sessions_.empty()) {
+    auto& top = updatable_sessions_.top();
+
+    if (top.first > presentation_time) {
+      break;
+    }
+
+    sessions_to_update.push_back(std::move(top.second));
+    updatable_sessions_.pop();
+  }
+
+  bool needs_render = delegate_.session_updater->UpdateSessions(
+      std::move(sessions_to_update), frame_number, presentation_time,
+      presentation_interval);
+
+  return needs_render;
+}
+
+void DefaultFrameScheduler::OnFramePresented(FrameTimings* timings) {
   FXL_DCHECK(!outstanding_frames_.empty());
   // TODO(MZ-400): how should we handle this case?  It is theoretically
   // possible, but if if it happens then it means that the EventTimestamper is
@@ -267,7 +311,7 @@ void FrameScheduler::OnFramePresented(FrameTimings* timings) {
   }
 }
 
-bool FrameScheduler::TooMuchBackPressure() {
+bool DefaultFrameScheduler::TooMuchBackPressure() {
   if (outstanding_frames_.size() >= kMaxOutstandingFrames) {
     back_pressure_applied_ = true;
     return true;

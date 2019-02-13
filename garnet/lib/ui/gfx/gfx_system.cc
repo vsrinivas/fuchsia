@@ -6,6 +6,7 @@
 
 #include <fs/pseudo-file.h>
 
+#include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
 #include "garnet/lib/ui/gfx/screenshotter.h"
 #include "garnet/lib/ui/gfx/util/vulkan_utils.h"
@@ -54,9 +55,10 @@ std::unique_ptr<CommandDispatcher> GfxSystem::CreateCommandDispatcher(
 }
 
 std::unique_ptr<Engine> GfxSystem::InitializeEngine() {
-  return std::make_unique<Engine>(
-      std::make_unique<FrameScheduler>(display_manager_->default_display()),
-      display_manager_.get(), escher_->GetWeakPtr());
+  return std::make_unique<Engine>(std::make_unique<DefaultFrameScheduler>(
+                                      display_manager_->default_display()),
+                                  display_manager_.get(),
+                                  escher_->GetWeakPtr());
 }
 
 std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {

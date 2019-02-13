@@ -26,10 +26,15 @@ class SessionForTest : public Session {
 class SessionHandlerForTest : public SessionHandler {
  public:
   SessionHandlerForTest(
-      CommandDispatcherContext context, SessionManager* session_manager,
-      SessionContext session_context,
+      SessionManager* session_manager, SessionContext session_context,
+      SessionId session_id, Scenic* scenic,
       EventReporter* event_reporter = EventReporter::Default(),
       ErrorReporter* error_reporter = ErrorReporter::Default());
+
+  SessionHandlerForTest(
+    CommandDispatcherContext command_dispatcher_context,
+    SessionManager* session_manager, SessionContext session_context,
+    EventReporter* event_reporter, ErrorReporter* error_reporter);
 
   // |scenic::CommandDispatcher|
   void DispatchCommand(fuchsia::ui::scenic::Command command) override;
@@ -68,12 +73,14 @@ class ReleaseFenceSignallerForTest : public escher::ReleaseFenceSignaller {
 
 class SessionManagerForTest : public SessionManager {
  public:
-  SessionManagerForTest();
+  SessionManagerForTest() = default;
+  ~SessionManagerForTest() override = default;
 
   // Publicly accessible for tests.
   void InsertSessionHandler(SessionId session_id,
                             SessionHandler* session_handler);
 
+ protected:
   std::unique_ptr<SessionHandler> CreateSessionHandler(
       CommandDispatcherContext context, Engine* engine,
       EventReporter* event_reporter,

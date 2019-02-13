@@ -4,6 +4,7 @@
 
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 
+#include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
 #include "garnet/lib/ui/gfx/tests/session_test.h"
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 
@@ -16,14 +17,24 @@ SessionForTest::SessionForTest(SessionId id, SessionContext context,
                                ErrorReporter* error_reporter)
     : Session(id, std::move(context), event_reporter, error_reporter) {}
 
-SessionHandlerForTest::SessionHandlerForTest(CommandDispatcherContext context,
-                                             SessionManager* session_manager,
+SessionHandlerForTest::SessionHandlerForTest(SessionManager* session_manager,
                                              SessionContext session_context,
+                                             SessionId session_id,
+                                             Scenic* scenic,
                                              EventReporter* event_reporter,
                                              ErrorReporter* error_reporter)
-    : SessionHandler(std::move(context), session_manager,
-                     std::move(session_context), event_reporter,
-                     error_reporter),
+    : SessionHandler(
+          CommandDispatcherContext(scenic, /* session = */ nullptr, session_id),
+          session_manager, std::move(session_context), event_reporter, error_reporter),
+      command_count_(0),
+      present_count_(0) {}
+
+SessionHandlerForTest::SessionHandlerForTest(
+    CommandDispatcherContext command_dispatcher_context,
+    SessionManager* session_manager, SessionContext session_context,
+    EventReporter* event_reporter, ErrorReporter* error_reporter)
+    : SessionHandler(std::move(command_dispatcher_context), session_manager,
+                     std::move(session_context), event_reporter, error_reporter),
       command_count_(0),
       present_count_(0) {}
 
@@ -52,8 +63,6 @@ void ReleaseFenceSignallerForTest::AddCPUReleaseFence(zx::event fence) {
   fence.signal(0u, escher::kFenceSignalled);
 }
 
-SessionManagerForTest::SessionManagerForTest() : SessionManager() {}
-
 void SessionManagerForTest::InsertSessionHandler(
     SessionId session_id, SessionHandler* session_handler) {
   SessionManager::InsertSessionHandler(session_id, session_handler);
@@ -65,12 +74,14 @@ std::unique_ptr<SessionHandler> SessionManagerForTest::CreateSessionHandler(
   return std::make_unique<SessionHandlerForTest>(
       std::move(context), engine->session_manager(), engine->session_context(),
       event_reporter, error_reporter);
-};
+}
 
 EngineForTest::EngineForTest(DisplayManager* display_manager,
                              std::unique_ptr<escher::ReleaseFenceSignaller> r,
                              escher::EscherWeakPtr escher)
-    : Engine(std::unique_ptr<FrameScheduler>(), display_manager, std::move(r),
+    : Engine(std::make_unique<DefaultFrameScheduler>(
+                 display_manager->default_display()),
+             display_manager, std::move(r),
              std::make_unique<SessionManagerForTest>(), std::move(escher)) {}
 
 }  // namespace test

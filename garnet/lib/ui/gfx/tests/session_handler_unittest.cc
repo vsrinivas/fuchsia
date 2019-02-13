@@ -14,15 +14,18 @@ TEST_F(
     SessionHandlerTest,
     WhenSessionHandlerDestroyed_ShouldRemoveSessionHandlerPtrFromSessionManager) {
   InitializeSessionHandler();
-  auto id = session_->id();
+  auto id = session_handler_->session()->id();
+
+  auto session_manager = engine_->session_context().session_manager;
+  ASSERT_NE(session_manager, nullptr);
 
   EXPECT_NE(session_handler_.get(), nullptr);
-  EXPECT_EQ(session_manager_->FindSessionHandler(id), session_handler_.get());
+  EXPECT_EQ(session_manager->FindSessionHandler(id), session_handler_.get());
 
-  ResetSessionHandler();
+  session_handler_.reset();
 
   EXPECT_EQ(session_handler_.get(), nullptr);
-  EXPECT_EQ(session_manager_->FindSessionHandler(id), nullptr);
+  EXPECT_EQ(session_manager->FindSessionHandler(id), nullptr);
 }
 
 }  // namespace test

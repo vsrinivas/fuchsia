@@ -39,7 +39,7 @@ fidl::VectorPtr<::fuchsia::ui::gfx::Hit> WrapHits(
   wrapped_hits.resize(hits.size());
   for (size_t i = 0; i < hits.size(); ++i) {
     const Hit& hit = hits[i];
-    ::fuchsia::ui::gfx::Hit wrapped_hit;
+    fuchsia::ui::gfx::Hit wrapped_hit;
     wrapped_hit.tag_value = hit.tag_value;
     wrapped_hit.ray_origin = Wrap(hit.ray.origin);
     wrapped_hit.ray_direction = Wrap(hit.ray.direction);
@@ -103,8 +103,8 @@ EventReporter* Session::event_reporter() const { return event_reporter_; }
 bool Session::ScheduleUpdate(
     uint64_t requested_presentation_time,
     std::vector<::fuchsia::ui::gfx::Command> commands,
-    ::std::vector<zx::event> acquire_fences,
-    ::std::vector<zx::event> release_events,
+    std::vector<zx::event> acquire_fences,
+    std::vector<zx::event> release_events,
     fuchsia::ui::scenic::Session::PresentCallback callback) {
   uint64_t last_scheduled_presentation_time =
       last_applied_update_presentation_time_;
@@ -157,9 +157,8 @@ bool Session::ScheduleUpdate(
   acquire_fence_set->WaitReadyAsync(
       [weak = GetWeakPtr(), requested_presentation_time] {
         if (weak) {
-          weak->session_context_.session_manager->ScheduleUpdateForSession(
-              weak->session_context_.update_scheduler,
-              requested_presentation_time, std::move(weak));
+          weak->session_context_.frame_scheduler->ScheduleUpdateForSession(
+              requested_presentation_time, weak->id());
         }
       });
 
@@ -177,8 +176,8 @@ void Session::ScheduleImagePipeUpdate(uint64_t presentation_time,
   scheduled_image_pipe_updates_.push(
       {presentation_time, std::move(image_pipe)});
 
-  session_context_.session_manager->ScheduleUpdateForSession(
-      session_context_.update_scheduler, presentation_time, GetWeakPtr());
+  session_context_.frame_scheduler->ScheduleUpdateForSession(presentation_time,
+                                                             id_);
 }
 
 Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
@@ -309,8 +308,8 @@ bool Session::ApplyUpdate(CommandContext* command_context,
   // consumed by the FrameScheduler.
 }
 
-void Session::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
-                      ::fuchsia::ui::gfx::vec3 ray_direction,
+void Session::HitTest(uint32_t node_id, fuchsia::ui::gfx::vec3 ray_origin,
+                      fuchsia::ui::gfx::vec3 ray_direction,
                       fuchsia::ui::scenic::Session::HitTestCallback callback) {
   if (auto node = resources_.FindResource<Node>(node_id)) {
     SessionHitTester hit_tester(node->session());
@@ -330,7 +329,7 @@ void Session::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
 }
 
 void Session::HitTestDeviceRay(
-    ::fuchsia::ui::gfx::vec3 ray_origin, ::fuchsia::ui::gfx::vec3 ray_direction,
+    fuchsia::ui::gfx::vec3 ray_origin, fuchsia::ui::gfx::vec3 ray_direction,
     fuchsia::ui::scenic::Session::HitTestCallback callback) {
   escher::ray4 ray =
       escher::ray4{{Unwrap(ray_origin), 1.f}, {Unwrap(ray_direction), 0.f}};

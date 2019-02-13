@@ -4,6 +4,7 @@
 
 #include "garnet/lib/ui/gfx/tests/session_test.h"
 
+#include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 
 #include "lib/fxl/logging.h"
@@ -12,45 +13,39 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-FakeUpdateScheduler::FakeUpdateScheduler(SessionManager* session_manager)
-    : session_manager_(session_manager) {}
-
-void FakeUpdateScheduler::ScheduleUpdate(uint64_t presentation_time) {
-  CommandContext empty_command_context(nullptr);
-  session_manager_->ApplyScheduledSessionUpdates(&empty_command_context,
-                                                 presentation_time, 0);
-}
-
 void SessionTest::SetUp() { session_ = CreateSession(); }
 
 void SessionTest::TearDown() {
+  session_.reset();
   session_manager_.reset();
-  if (session_) {
-    session_.reset();
-  }
+  frame_scheduler_.reset();
+  display_manager_.reset();
   events_.clear();
 }
 
 SessionContext SessionTest::CreateBarebonesSessionContext() {
   session_manager_ = std::make_unique<SessionManagerForTest>();
-  update_scheduler_ =
-      std::make_unique<FakeUpdateScheduler>(session_manager_.get());
+
+  display_manager_ = std::make_unique<DisplayManager>();
+  display_manager_->SetDefaultDisplayForTests(std::make_unique<Display>(
+      /*id*/ 0, /*px-width*/ 0, /*px-height*/ 0));
+  frame_scheduler_ = std::make_unique<DefaultFrameScheduler>(
+      display_manager_->default_display());
   SessionContext session_context{
       vk::Device(),
-      nullptr,                  // escher::Escher*
-      0,                        // imported_memory_type_index;
-      nullptr,                  // escher::ResourceRecycler
-      nullptr,                  // escher::ImageFactory*
-      nullptr,                  // escher::RoundedRectFactory*
-      nullptr,                  // escher::ReleaseFenceSignaller*
-      nullptr,                  // EventTimestamper*
-      session_manager_.get(),   // SessionManager*
-      nullptr,                  // FrameScheduler*
-      update_scheduler_.get(),  // UpdateScheduler*
-      nullptr,                  // DisplayManager*
-      SceneGraphWeakPtr(),      // SceneGraphWeakPtr
-      nullptr,                  // ResourceLinker*
-      nullptr                   // ViewLinker*
+      nullptr,                 // escher::Escher*
+      0,                       // imported_memory_type_index;
+      nullptr,                 // escher::ResourceRecycler
+      nullptr,                 // escher::ImageFactory*
+      nullptr,                 // escher::RoundedRectFactory*
+      nullptr,                 // escher::ReleaseFenceSignaller*
+      nullptr,                 // EventTimestamper*
+      session_manager_.get(),  // SessionManager*
+      frame_scheduler_.get(),  // FrameScheduler*
+      display_manager_.get(),  // DisplayManager*
+      SceneGraphWeakPtr(),     // SceneGraphWeakPtr
+      nullptr,                 // ResourceLinker*
+      nullptr                  // ViewLinker*
   };
   return session_context;
 }

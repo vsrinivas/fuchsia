@@ -6,8 +6,8 @@
 
 #include <trace/event.h>
 
+#include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
-#include "garnet/lib/ui/gfx/engine/update_scheduler.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
 #include "lib/escher/flib/fence.h"
 
@@ -18,22 +18,22 @@ const ResourceTypeInfo ImagePipe::kTypeInfo = {
     ResourceType::kImagePipe | ResourceType::kImageBase, "ImagePipe"};
 
 ImagePipe::ImagePipe(Session* session, ResourceId id,
-                     UpdateScheduler* update_scheduler)
+                     FrameScheduler* frame_scheduler)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
-      update_scheduler_(update_scheduler),
+      frame_scheduler_(frame_scheduler),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(update_scheduler);
+  FXL_DCHECK(frame_scheduler);
 }
 
 ImagePipe::ImagePipe(
     Session* session, ResourceId id,
     ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
-    UpdateScheduler* update_scheduler)
+    FrameScheduler* frame_scheduler)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
       handler_(std::make_unique<ImagePipeHandler>(std::move(request), this)),
-      update_scheduler_(update_scheduler),
+      frame_scheduler_(frame_scheduler),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(update_scheduler);
+  FXL_DCHECK(frame_scheduler);
 }
 
 void ImagePipe::AddImage(uint32_t image_id,
@@ -87,7 +87,7 @@ void ImagePipe::CloseConnectionAndCleanUp() {
   images_.clear();
 
   // Schedule a new frame.
-  update_scheduler_->ScheduleUpdate(0);
+  frame_scheduler_->ScheduleUpdateForSession(0, session()->id());
 }
 
 void ImagePipe::OnConnectionError() { CloseConnectionAndCleanUp(); }

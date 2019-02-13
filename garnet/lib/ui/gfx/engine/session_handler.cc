@@ -37,8 +37,8 @@ void SessionHandler::CleanUp() {
 }
 
 void SessionHandler::Present(
-    uint64_t presentation_time, ::std::vector<zx::event> acquire_fences,
-    ::std::vector<zx::event> release_fences,
+    uint64_t presentation_time, std::vector<zx::event> acquire_fences,
+    std::vector<zx::event> release_fences,
     fuchsia::ui::scenic::Session::PresentCallback callback) {
   if (!session_->ScheduleUpdate(
           presentation_time, std::move(buffered_commands_),
@@ -51,15 +51,15 @@ void SessionHandler::Present(
 }
 
 void SessionHandler::HitTest(
-    uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
-    ::fuchsia::ui::gfx::vec3 ray_direction,
+    uint32_t node_id, fuchsia::ui::gfx::vec3 ray_origin,
+    fuchsia::ui::gfx::vec3 ray_direction,
     fuchsia::ui::scenic::Session::HitTestCallback callback) {
   session_->HitTest(node_id, std::move(ray_origin), std::move(ray_direction),
                     std::move(callback));
 }
 
 void SessionHandler::HitTestDeviceRay(
-    ::fuchsia::ui::gfx::vec3 ray_origin, ::fuchsia::ui::gfx::vec3 ray_direction,
+    fuchsia::ui::gfx::vec3 ray_origin, fuchsia::ui::gfx::vec3 ray_direction,
     fuchsia::ui::scenic::Session::HitTestDeviceRayCallback callback) {
   session_->HitTestDeviceRay(std::move(ray_origin), std::move(ray_direction),
                              std::move(callback));

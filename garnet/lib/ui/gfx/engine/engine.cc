@@ -13,7 +13,6 @@
 #include <trace/event.h>
 #include <zx/time.h>
 
-#include "garnet/lib/ui/gfx/engine/engine_renderer.h"
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
 #include "garnet/lib/ui/gfx/engine/hardware_layer_assignment.h"
@@ -28,6 +27,19 @@
 
 namespace scenic_impl {
 namespace gfx {
+
+CommandContext::CommandContext(
+    std::unique_ptr<escher::BatchGpuUploader> uploader)
+    : batch_gpu_uploader_(std::move(uploader)) {}
+
+void CommandContext::Flush() {
+  if (batch_gpu_uploader_) {
+    // Submit regardless of whether or not there are updates to release the
+    // underlying CommandBuffer so the pool and sequencer don't stall out.
+    // TODO(ES-115) to remove this restriction.
+    batch_gpu_uploader_->Submit();
+  }
+}
 
 Engine::Engine(std::unique_ptr<FrameScheduler> frame_scheduler,
                DisplayManager* display_manager,
@@ -47,13 +59,11 @@ Engine::Engine(std::unique_ptr<FrameScheduler> frame_scheduler,
           escher()->vk_physical_device(), escher()->vk_device())),
       has_vulkan_(escher_ && escher_->vk_device()),
       weak_factory_(this) {
+  FXL_DCHECK(frame_scheduler_);
   FXL_DCHECK(display_manager_);
   FXL_DCHECK(escher_);
 
-  // TODO(SCN-1092): make |frame_scheduler_| non-nullable.  For testing, this
-  // might entail plugging in a dummy Display.  Relates to SCN-452.
-  if (frame_scheduler_)
-    frame_scheduler_->set_delegate(this);
+  InitializeFrameScheduler();
 }
 
 Engine::Engine(
@@ -73,49 +83,16 @@ Engine::Engine(
                   : 0),
       has_vulkan_(escher_ && escher_->vk_device()),
       weak_factory_(this) {
+  FXL_DCHECK(frame_scheduler_);
   FXL_DCHECK(display_manager_);
 
-  // TODO(SCN-1092): make |frame_scheduler_| non-nullable.  For testing, this
-  // might entail plugging in a dummy Display.  Relates to SCN-452.
-  if (frame_scheduler_)
-    frame_scheduler_->set_delegate(this);
+  InitializeFrameScheduler();
 }
 
-Engine::~Engine() = default;
-
-void Engine::ScheduleUpdate(uint64_t presentation_time) {
-  // TODO(SCN-1092): make |frame_scheduler_| non-nullable.  This is feasible now
-  // that we can use TestLoopFixture::RunLoopFor() to cause the scheduler to
-  // render.
-  if (frame_scheduler_) {
-    frame_scheduler_->RequestFrame(presentation_time);
-  } else {
-    // Apply update immediately.  This is done for tests.
-    FXL_LOG(WARNING)
-        << "No FrameScheduler available; applying update immediately";
-    RenderFrame(FrameTimingsPtr(), presentation_time, 0, false);
-  }
-}
-
-CommandContext InitializeCommandContext(bool has_vulkan,
-                                        escher::EscherWeakPtr escher,
-                                        uint64_t frame_number_for_tracing) {
-  return CommandContext(has_vulkan ? escher::BatchGpuUploader::New(
-                                         escher, frame_number_for_tracing)
-                                   : nullptr);
-}
-
-bool Engine::UpdateSessions(uint64_t presentation_time,
-                            uint64_t presentation_interval,
-                            uint64_t frame_number_for_tracing) {
-  CommandContext command_context =
-      InitializeCommandContext(has_vulkan(), escher_, frame_number_for_tracing);
-  bool any_updates_were_applied =
-      session_manager_->ApplyScheduledSessionUpdates(
-          &command_context, presentation_time, presentation_interval);
-  command_context.Flush();
-
-  return any_updates_were_applied;
+void Engine::InitializeFrameScheduler() {
+  auto weak = weak_factory_.GetWeakPtr();
+  frame_scheduler_->SetDelegate(FrameSchedulerDelegate{
+      /* FrameRenderer */ weak, /* SessionUpdater */ weak});
 }
 
 // Helper for RenderFrame().  Generate a mapping between a Compositor's Layer
@@ -141,9 +118,53 @@ std::optional<HardwareLayerAssignment> GetHardwareLayerAssignment(
   };
 }
 
+CommandContext Engine::CreateCommandContext(uint64_t frame_number_for_tracing) {
+  return CommandContext(has_vulkan() ? escher::BatchGpuUploader::New(
+                                           escher_, frame_number_for_tracing)
+                                     : nullptr);
+}
+
+// Applies scheduled updates to a session. If the update fails, the session is
+// killed. Returns true if a new render is needed, false otherwise.
+bool Engine::UpdateSessions(std::vector<SessionId> sessions,
+                            uint64_t frame_number, uint64_t presentation_time,
+                            uint64_t presentation_interval) {
+  auto command_context = CreateCommandContext(frame_number);
+
+  bool needs_render = false;
+  for (auto session_id : sessions) {
+    auto session_handler = session_manager_->FindSessionHandler(session_id);
+    if (!session_handler) {
+      // This means the session that requested the update died after the
+      // request. Requiring the scene to be re-rendered to reflect the session's
+      // disappearance is probably desirable. ImagePipe also relies on this to
+      // be true, since it calls ScheduleUpdate() in it's destructor.
+      needs_render = true;
+      continue;
+    }
+
+    auto session = session_handler->session();
+
+    auto update_results = session->ApplyScheduledUpdates(
+        &command_context, presentation_time, presentation_interval);
+
+    // If update fails, kill the entire client session.
+    if (!update_results.success) {
+      session_manager_->KillSession(session->id());
+    }
+
+    needs_render |= update_results.needs_render;
+  }
+
+  // Flush work to the gpu
+  command_context.Flush();
+
+  return needs_render;
+}
+
 bool Engine::RenderFrame(const FrameTimingsPtr& timings,
                          uint64_t presentation_time,
-                         uint64_t presentation_interval, bool force_render) {
+                         uint64_t presentation_interval) {
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
   // without also updating the "process_scenic_trace.go" script.
   TRACE_DURATION("gfx", "RenderFrame", "frame_number", timings->frame_number(),
@@ -153,13 +174,6 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
   // timings->frame_number() below.  When this is done, uncomment the following
   // line:
   // FXL_DCHECK(timings);
-
-  // TODO(SCN-1108): consider applying updates as each fence is signalled.
-  if (!UpdateSessions(presentation_time, presentation_interval,
-                      timings ? timings->frame_number() : 0) &&
-      !force_render) {
-    return false;
-  }
   UpdateAndDeliverMetrics(presentation_time);
 
   // Some updates were applied; we interpret this to mean that the scene may
@@ -248,7 +262,7 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
 
   // TODO(MZ-216): Traversing the whole graph just to compute this is pretty
   // inefficient.  We should optimize this.
-  ::fuchsia::ui::gfx::Metrics metrics;
+  fuchsia::ui::gfx::Metrics metrics;
   metrics.scale_x = 1.f;
   metrics.scale_y = 1.f;
   metrics.scale_z = 1.f;
@@ -263,7 +277,7 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
   // have some kind of backpointer from a session to its handler.
   for (auto node : updated_nodes) {
     if (node->session()) {
-      auto event = ::fuchsia::ui::gfx::Event();
+      fuchsia::ui::gfx::Event event;
       event.set_metrics(::fuchsia::ui::gfx::MetricsEvent());
       event.metrics().node_id = node->id();
       event.metrics().metrics = node->reported_metrics();
@@ -273,21 +287,21 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
 }
 
 // TODO(mikejurka): move this to appropriate util file
-bool MetricsEquals(const ::fuchsia::ui::gfx::Metrics& a,
-                   const ::fuchsia::ui::gfx::Metrics& b) {
+bool MetricsEquals(const fuchsia::ui::gfx::Metrics& a,
+                   const fuchsia::ui::gfx::Metrics& b) {
   return a.scale_x == b.scale_x && a.scale_y == b.scale_y &&
          a.scale_z == b.scale_z;
 }
 
 void Engine::UpdateMetrics(Node* node,
-                           const ::fuchsia::ui::gfx::Metrics& parent_metrics,
+                           const fuchsia::ui::gfx::Metrics& parent_metrics,
                            std::vector<Node*>* updated_nodes) {
-  ::fuchsia::ui::gfx::Metrics local_metrics;
+  fuchsia::ui::gfx::Metrics local_metrics;
   local_metrics.scale_x = parent_metrics.scale_x * node->scale().x;
   local_metrics.scale_y = parent_metrics.scale_y * node->scale().y;
   local_metrics.scale_z = parent_metrics.scale_z * node->scale().z;
 
-  if ((node->event_mask() & ::fuchsia::ui::gfx::kMetricsEventMask) &&
+  if ((node->event_mask() & fuchsia::ui::gfx::kMetricsEventMask) &&
       !MetricsEquals(node->reported_metrics(), local_metrics)) {
     node->set_reported_metrics(local_metrics);
     updated_nodes->push_back(node);

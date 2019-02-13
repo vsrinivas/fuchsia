@@ -20,16 +20,6 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-class FakeUpdateScheduler : public UpdateScheduler {
- public:
-  FakeUpdateScheduler(SessionManager* session_manager);
-
-  void ScheduleUpdate(uint64_t presentation_time) override;
-
- private:
-  SessionManager* session_manager_ = nullptr;
-};
-
 class SessionTest : public ErrorReportingTest, public EventReporter {
  protected:
   // | ::testing::Test |
@@ -45,7 +35,7 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
   virtual std::unique_ptr<SessionForTest> CreateSession();
 
   // Creates a SessionContext with only a SessionManager and a
-  // FakeUpdateScheduler.
+  // FrameScheduler.
   SessionContext CreateBarebonesSessionContext();
 
   // Apply the specified Command.  Return true if it was applied successfully,
@@ -60,7 +50,8 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
     return session_->resources()->FindResource<ResourceT>(id);
   }
 
-  std::unique_ptr<UpdateScheduler> update_scheduler_;
+  std::unique_ptr<DisplayManager> display_manager_;
+  std::unique_ptr<FrameScheduler> frame_scheduler_;
   std::unique_ptr<SessionForTest> session_;
   std::unique_ptr<SessionManagerForTest> session_manager_;
   std::vector<fuchsia::ui::scenic::Event> events_;

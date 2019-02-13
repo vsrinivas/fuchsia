@@ -1105,7 +1105,7 @@ bool GfxCommandApplier::ApplyCreateImagePipe(
     Session* session, ResourceId id, fuchsia::ui::gfx::ImagePipeArgs args) {
   auto image_pipe = fxl::MakeRefCounted<ImagePipe>(
       session, id, std::move(args.image_pipe_request),
-      session->session_context().update_scheduler);
+      session->session_context().frame_scheduler);
   return session->resources()->AddResource(id, image_pipe);
 }
 

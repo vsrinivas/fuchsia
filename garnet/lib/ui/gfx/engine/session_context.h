@@ -45,7 +45,6 @@ struct SessionContext {
   EventTimestamper* event_timestamper;
   SessionManager* session_manager;
   FrameScheduler* frame_scheduler;
-  UpdateScheduler* update_scheduler;
   DisplayManager* display_manager;
   SceneGraphWeakPtr scene_graph;
   ResourceLinker* resource_linker;

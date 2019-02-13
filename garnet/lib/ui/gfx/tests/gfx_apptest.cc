@@ -85,14 +85,14 @@ TEST_F(GfxSystemTest, ReleaseFences) {
   // Call Present with release fences.
   session->Present(0u, std::vector<zx::event>(), std::move(release_fences),
                    [](fuchsia::images::PresentationInfo info) {});
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(1));
   EXPECT_EQ(1u, handler->present_count());
   EXPECT_FALSE(IsFenceSignalled(release_fence1));
   EXPECT_FALSE(IsFenceSignalled(release_fence2));
   // Call Present again with no release fences.
   session->Present(0u, std::vector<zx::event>(), std::vector<zx::event>(),
                    [](fuchsia::images::PresentationInfo info) {});
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(1));
   EXPECT_EQ(2u, handler->present_count());
   EXPECT_TRUE(IsFenceSignalled(release_fence2));
 }
@@ -129,20 +129,20 @@ TEST_F(GfxSystemTest, AcquireAndReleaseFences) {
   // Call Present with both the acquire and release fences.
   session->Present(0u, std::move(acquire_fences), std::move(release_fences),
                    [](fuchsia::images::PresentationInfo info) {});
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(1));
   EXPECT_EQ(1u, handler->present_count());
   EXPECT_FALSE(IsFenceSignalled(release_fence));
   // Call Present again with no fences.
   session->Present(0u, std::vector<zx::event>(), std::vector<zx::event>(),
                    [](fuchsia::images::PresentationInfo info) {});
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(1));
   EXPECT_EQ(2u, handler->present_count());
   EXPECT_FALSE(IsFenceSignalled(release_fence));
   // Now signal the acquire fence.
   acquire_fence.signal(0u, escher::kFenceSignalled);
   // Now expect that the first frame was presented, and its release fence was
   // signalled.
-  RunLoopUntilIdle();
+  RunLoopFor(zx::sec(1));
   EXPECT_TRUE(IsFenceSignalled(release_fence));
 }
 
