@@ -248,7 +248,7 @@ private:
     }
 
     static bool IsStartOfBlankLine(const std::string& str, int offset) {
-        for (int i = offset; i < str.size() && str[i] != '\n'; i++) {
+        for (int i = offset; i < static_cast<int>(str.size()) && str[i] != '\n'; i++) {
             if (!IsNonNewlineWS(str[i])) {
                 return false;
             }
@@ -257,11 +257,11 @@ private:
     }
 
     static bool IsStartOfComment(std::string str, int i) {
-        if ((i < str.size() - 1) && str[i] == '/' && str[i + 1] == '/') {
+        if ((i < static_cast<int>(str.size()) - 1) && str[i] == '/' && str[i + 1] == '/') {
             // doc comments, which start with three slashes, should not
             // be treated as comments since they get internally converted
             // to attributes
-            return (i < str.size() - 2) && str[i + 2] != '/';
+            return (i < static_cast<int>(str.size()) - 2) && str[i + 2] != '/';
         } else {
             return false;
         }
@@ -271,7 +271,7 @@ private:
     // modified to be the newline character at EOL.
     static void MaybeWindPastComment(std::string str, int& pos) {
         if (IsStartOfComment(str, pos)) {
-            while (pos < str.size() && str[pos] != '\n') {
+            while (pos < static_cast<int>(str.size()) && str[pos] != '\n') {
                 pos++;
             }
         }
