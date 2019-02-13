@@ -45,6 +45,14 @@ constexpr float kCursorHeight = 20;
 constexpr float kCursorRadius = 10;
 constexpr float kCursorElevation = 800;
 
+// TODO(SCN-1278): Remove this.
+// Turn two floats (high bits, low bits) into a 64-bit uint.
+trace_flow_id_t PointerTraceHACK(float fa, float fb) {
+  uint32_t ia, ib;
+  memcpy(&ia, &fa, sizeof(uint32_t));
+  memcpy(&ib, &fb, sizeof(uint32_t));
+  return (((uint64_t)ia) << 32) | ib;
+}
 }  // namespace
 
 Presentation1::Presentation1(fuchsia::ui::scenic::Scenic* scenic,
@@ -628,6 +636,9 @@ bool Presentation1::GlobalHooksHandleEvent(
 }
 
 void Presentation1::OnEvent(fuchsia::ui::input::InputEvent event) {
+  TRACE_DURATION("input", "presentation_on_event");
+  trace_flow_id_t trace_id = 0;
+
   FXL_VLOG(1) << "OnEvent " << event;
 
   bool invalidate = false;
@@ -642,6 +653,10 @@ void Presentation1::OnEvent(fuchsia::ui::input::InputEvent event) {
   if (dispatch_event) {
     if (event.is_pointer()) {
       const fuchsia::ui::input::PointerEvent& pointer = event.pointer();
+
+      // TODO(SCN-1278): Use proper trace_id for tracing flow.
+      trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
+      TRACE_ASYNC_END("input", "dispatch_event_to_presentation", trace_id);
 
       if (pointer.type == fuchsia::ui::input::PointerEventType::MOUSE) {
         if (cursors_.count(pointer.device_id) == 0) {
@@ -726,6 +741,10 @@ void Presentation1::OnEvent(fuchsia::ui::input::InputEvent event) {
       keyboard_cmd.keyboard_event = std::move(event.keyboard());
       keyboard_cmd.compositor_id = compositor_id_;
       input_cmd.set_send_keyboard_input(std::move(keyboard_cmd));
+    }
+
+    if (trace_id) {
+      TRACE_FLOW_BEGIN("input", "dispatch_event_to_scenic", trace_id);
     }
     session_->Enqueue(std::move(input_cmd));
   }

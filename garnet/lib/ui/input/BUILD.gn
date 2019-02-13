@@ -18,5 +18,6 @@ source_set("input") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/input/cpp",
+    "//zircon/public/lib/trace",
   ]
 }

@@ -8,6 +8,15 @@
 
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/component/cpp/startup_context.h>
+#include <lib/escher/geometry/types.h>
+#include <lib/escher/util/type_utils.h>
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/time/time_point.h>
+#include <lib/ui/geometry/cpp/formatting.h>
+#include <lib/ui/input/cpp/formatting.h>
+#include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/hit.h"
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
@@ -21,14 +30,6 @@
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/session.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/escher/geometry/types.h"
-#include "lib/escher/util/type_utils.h"
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/time/time_point.h"
-#include "lib/ui/geometry/cpp/formatting.h"
-#include "lib/ui/input/cpp/formatting.h"
 
 namespace scenic_impl {
 namespace input {
@@ -52,6 +53,15 @@ namespace {
 // Helper for Dispatch[Touch|Mouse]Command.
 int64_t NowInNs() {
   return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
+}
+
+// TODO(SCN-1278): Remove this.
+// Turn two floats (high bits, low bits) into a 64-bit uint.
+trace_flow_id_t PointerTraceHACK(float fa, float fb) {
+  uint32_t ia, ib;
+  memcpy(&ia, &fa, sizeof(uint32_t));
+  memcpy(&ib, &fb, sizeof(uint32_t));
+  return (((uint64_t)ia) << 32) | ib;
 }
 
 // Helper for Dispatch[Touch|Mouse]Command and PerformGlobalHitTest.
@@ -253,6 +263,7 @@ InputCommandDispatcher::InputCommandDispatcher(CommandDispatcherContext context,
 }
 
 void InputCommandDispatcher::DispatchCommand(ScenicCommand command) {
+  TRACE_DURATION("input", "dispatch_command", "command", "ScenicCmd");
   FXL_DCHECK(command.Which() == ScenicCommand::Tag::kInput);
 
   InputCommand& input = command.input();
@@ -281,6 +292,7 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command) {
 
 void InputCommandDispatcher::DispatchCommand(
     const SendPointerInputCmd command) {
+  TRACE_DURATION("input", "dispatch_command", "command", "PointerCmd");
   const PointerEventType& event_type = command.pointer_event.type;
   if (event_type == PointerEventType::TOUCH) {
     DispatchTouchCommand(std::move(command));
@@ -303,6 +315,11 @@ void InputCommandDispatcher::DispatchCommand(
 //  - Touch REMOVE drops the association between event stream and client.
 void InputCommandDispatcher::DispatchTouchCommand(
     const SendPointerInputCmd command) {
+  TRACE_DURATION("input", "dispatch_command", "command", "TouchCmd");
+  trace_flow_id_t trace_id = PointerTraceHACK(
+      command.pointer_event.radius_major, command.pointer_event.radius_minor);
+  TRACE_FLOW_END("input", "dispatch_event_to_scenic", trace_id);
+
   const uint32_t pointer_id = command.pointer_event.pointer_id;
   const Phase pointer_phase = command.pointer_event.phase;
   const float pointer_x = command.pointer_event.x;
@@ -590,7 +607,12 @@ void InputCommandDispatcher::EnqueueEventToView(GlobalId view_id,
 
 void InputCommandDispatcher::EnqueueEventToView(GlobalId view_id,
                                                 PointerEvent pointer) {
+  TRACE_DURATION("input", "dispatch_event_to_client", "event_type", "pointer");
   if (gfx::Session* session = gfx_system_->GetSession(view_id.session_id)) {
+    trace_flow_id_t trace_id =
+        PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
+    TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
+
     InputEvent event;
     event.set_pointer(std::move(pointer));
 
