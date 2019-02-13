@@ -2,6 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// This tool returns the "Last Known Good Build" for a given Buildbucket builder.
+// Builder ids are often duplicated across Buildbucket buckets, so the id must be
+// fully qualified using the project and bucket.
+//
+// Example Usage:
+//
+// $ lkgb fuchsia/ci/fuchsia-x64-release
+// $ lkgb fuchsia/try/fuchsia-x64-debug
 package main
 
 import (
