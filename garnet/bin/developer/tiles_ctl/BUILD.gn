@@ -12,10 +12,10 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.developer.tiles",
-    "//garnet/public/lib/component/cpp:environment_services",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//sdk/fidl/fuchsia.developer.tiles",
+    "//sdk/lib/component2/cpp",
     "//zircon/public/lib/fdio",
   ]
 }

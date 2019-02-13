@@ -13,7 +13,7 @@
 #include <lib/fdio/util.h>
 
 #include "fuchsia/developer/tiles/cpp/fidl.h"
-#include "lib/component/cpp/environment_services_helper.h"
+#include "lib/component2/cpp/service_directory.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
@@ -104,13 +104,13 @@ ControllerPtr FindTiles() {
 }
 
 bool Start() {
-  auto env_services = component::GetEnvironmentServices();
+  auto services = component2::ServiceDirectory::CreateFromNamespace();
 
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "fuchsia-pkg://fuchsia.com/tiles#meta/tiles.cmx";
 
   fuchsia::sys::LauncherSyncPtr launcher;
-  env_services->ConnectToService(launcher.NewRequest());
+  services->Connect(launcher.NewRequest());
 
   return launcher->CreateComponent(std::move(launch_info), {}) == ZX_OK;
 }
