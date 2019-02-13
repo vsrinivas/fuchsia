@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  status = svc_dir_add_service(dir, "public", "fidl.examples.echo.Echo", NULL, connect);
+  status = svc_dir_add_service(dir, "public", "echo2.Echo", NULL, connect);
   if (status != ZX_OK) {
     printf("error: svc_dir_add_service returned: %d (%s)\n", status,
            zx_status_get_string(status));

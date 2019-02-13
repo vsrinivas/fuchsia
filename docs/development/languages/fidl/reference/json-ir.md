@@ -16,11 +16,11 @@ This section documents the JSON IR.
 ## A simple example
 
 To get started, we can see how a simple example looks.
-We'll use the `echo.fidl` ["Hello World Echo Interface"](../tutorial/README.md)
+We'll use the `echo2.fidl` ["Hello World Echo Interface"](../tutorial/README.md)
 example from the tutorial:
 
 ```fidl
-library fidl.examples.echo;
+library echo2;
 
 [Discoverable]
 interface Echo {
@@ -76,7 +76,7 @@ numbers have been added for reference; they are not part of the generated code):
 ```json
 [01]    {
 [02]      "version": "0.0.1",
-[03]      "name": "fidl.examples.echo;",
+[03]      "name": "echo2",
 [04]      "library_dependencies": [],
 [05]      "const_declarations": [],
 [06]      "enum_declarations": [],
@@ -89,10 +89,10 @@ numbers have been added for reference; they are not part of the generated code):
 [55]      "table_declarations": [],
 [56]      "union_declarations": [],
 [57]      "declaration_order": [
-[58]        "fidl.examples.echo/Echo"
+[58]        "echo2/Echo"
 [59]      ],
 [60]      "declarations": {
-[61]        "fidl.examples.echo/Echo": "interface"
+[61]        "echo2/Echo": "interface"
 [62]      }
 [63]    }
 ```
@@ -110,8 +110,8 @@ as their value ("`[]`").
 Similarly, there are no structs (line `[54]`), tables (`[55]`) or unions (`[56]`).
 The declaration order (`[57]`..`[59]`) isn't that interesting either,
 because there's only the one declaration, and, finally, the
-declarations member (`[60]`..`[62]`) just indicates the declared object (here,
-`fidl.examples.echo/Echo`) and its type (it's an `interface`).
+declarations member (`[60]`..`[62]`) just indicates the declared object (here, `echo2/Echo`)
+and its type (it's an `interface`).
 
 ## The interface
 
@@ -124,7 +124,7 @@ array element:
 ```json
 [07]      "interface_declarations": [
 [08]        {
-[09]          "name": "fidl.examples.echo/Echo",
+[09]          "name": "echo2/Echo",
 [10]          "maybe_attributes": [
 [11]            {
 [12]              "name": "Discoverable",
@@ -173,9 +173,8 @@ array element:
 
 Each interface declaration array element contains:
 
-*   Line `[09]`: the name of the object (`fidl.examples.echo/Echo` &mdash; this
-    gets matched up with the `declarations` member contents starting on line
-    `[60]`),
+*   Line `[09]`: the name of the object (`echo2/Echo` &mdash; this gets matched
+    up with the `declarations` member contents starting on line `[60]`),
 *   Lines `[10]`..`[15]`: an optional list of attributes (we had marked it as
     `Discoverable` &mdash; if we did not specify any attributes then we wouldn't
     see lines `[10]` through `[15]`), and

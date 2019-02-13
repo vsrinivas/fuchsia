@@ -1011,7 +1011,7 @@ mod tests {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#logger",
                         "targets": [
-                            { "to": "#echo_server" },
+                            { "to": "#echo2_server" },
                             { "to": "#scenic", "as": "/svc/fuchsia.logger.SysLog" }
                         ]
                     },
@@ -1019,14 +1019,14 @@ mod tests {
                         "service": "/svc/fuchsia.fonts.Provider",
                         "from": "realm",
                         "targets": [
-                            { "to": "#echo_server" },
+                            { "to": "#echo2_server" },
                         ]
                     },
                     {
                         "directory": "/data/assets",
                         "from": "self",
                         "targets": [
-                            { "to": "#echo_server" },
+                            { "to": "#echo2_server" },
                         ]
                     }
                 ],
@@ -1040,8 +1040,8 @@ mod tests {
                         "uri": "fuchsia-pkg://fuchsia.com/scenic/stable#meta/scenic.cm"
                     },
                     {
-                        "name": "echo_server",
-                        "uri": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
+                        "name": "echo2_server",
+                        "uri": "fuchsia-pkg://fuchsia.com/echo2/stable#meta/echo2_server.cm"
                     }
                 ]
             }),
@@ -1081,7 +1081,7 @@ mod tests {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#missing",
                         "targets": [
-                            { "to": "#echo_server" },
+                            { "to": "#echo2_server" },
                         ]
                     } ]
                 }),
@@ -1093,7 +1093,7 @@ mod tests {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#invalid@",
                         "targets": [
-                            { "to": "#echo_server" },
+                            { "to": "#echo2_server" },
                         ]
                     } ]
                 }),
@@ -1156,7 +1156,7 @@ mod tests {
                         "service": "/svc/logger",
                         "from": "self",
                         "targets": [
-                            { "to": "#echo_server", "as": "/thing" },
+                            { "to": "#echo2_server", "as": "/thing" },
                             { "to": "#scenic" }
                         ]
                     },
@@ -1164,7 +1164,7 @@ mod tests {
                         "directory": "/thing",
                         "from": "realm",
                         "targets": [
-                            { "to": "#echo_server" }
+                            { "to": "#echo2_server" }
                         ]
                     }
                 ],
@@ -1174,12 +1174,12 @@ mod tests {
                         "uri": "fuchsia-pkg://fuchsia.com/scenic/stable#meta/scenic.cm"
                     },
                     {
-                        "name": "echo_server",
-                        "uri": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
+                        "name": "echo2_server",
+                        "uri": "fuchsia-pkg://fuchsia.com/echo2/stable#meta/echo2_server.cm"
                     }
                 ]
             }),
-            result = Err(Error::parse("\"/thing\" is a duplicate \"offer\" target path for \"#echo_server\"")),
+            result = Err(Error::parse("\"/thing\" is a duplicate \"offer\" target path for \"#echo2_server\"")),
         },
 
         // children

@@ -4,16 +4,12 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("echo") {
+fidl("echo2") {
   name = "fidl.examples.echo"
 
   sources = [
-    "echo.fidl",
+    "echo2.fidl",
   ]
-}
-
-group("echo2") {
-  public_deps = [ ":echo" ]
 }
 
 fidl("heartbeat") {

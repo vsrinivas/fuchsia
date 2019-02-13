@@ -13,7 +13,7 @@
 #include "lib/svc/cpp/services.h"
 
 int main(int argc, const char** argv) {
-  std::string server_url = "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx";
+  std::string server_url = "fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx";
   std::string msg = "hello world";
 
   for (int i = 1; i < argc - 1; ++i) {
@@ -26,7 +26,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  echo::EchoClientApp app;
+  echo2::EchoClientApp app;
   app.Start(server_url);
 
   app.echo()->EchoString(msg, [&loop](fidl::StringPtr value) {

@@ -6,5 +6,5 @@ library fidl.examples.heartbeat;
 
 [Discoverable]
 interface Heartbeat {
-    -> Heartbeat(bool shutting_down);
+    -> Heartbeat(bool shuttingDown);
 };

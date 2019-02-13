@@ -12,9 +12,9 @@ design and implementation of FIDL, as well as the
 
 ## Getting started
 
-We'll use the `echo.fidl` sample that we discussed in the [FIDL Tutorial](README.md)
+We'll use the `echo2.fidl` sample that we discussed in the [FIDL Tutorial](README.md)
 introduction section, by opening
-[//garnet/examples/fidl/services/echo.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/services/echo.fidl).
+[//garnet/examples/fidl/services/echo2.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/services/echo2.fidl).
 
 <!-- NOTE: the code snippets here need to be kept up to date manually by
      copy-pasting from the actual source code. Please update a snippet
@@ -233,7 +233,7 @@ see fit. Let's try having the Dart client call the C++ server (from the
 [C++ version of the example](tutorial-cpp.md)).
 
 ```sh
-$ run fuchsia-pkg://fuchsia.com/echo_dart#meta/echo_client_dart.cmx --server fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx
+$ run fuchsia-pkg://fuchsia.com/echo_dart#meta/echo_client_dart.cmx --server fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx
 ```
 
 The Dart client will start the C++ server and connect to it. `EchoString()`

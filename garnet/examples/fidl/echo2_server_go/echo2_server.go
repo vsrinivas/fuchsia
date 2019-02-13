@@ -13,7 +13,7 @@ import (
 	"syscall/zx"
 	"syscall/zx/fidl"
 
-	echo "fidl/fidl/examples/echo"
+	echo2 "fidl/fidl/examples/echo"
 )
 
 type echoImpl struct {
@@ -29,9 +29,9 @@ func (echo *echoImpl) EchoString(inValue *string) (outValue *string, err error) 
 
 func main() {
 	quiet := (len(os.Args) > 1) && os.Args[1] == "-q"
-	echoService := &echo.EchoService{}
+	echoService := &echo2.EchoService{}
 	c := context.CreateFromStartupInfo()
-	c.OutgoingService.AddService(echo.EchoName, func(c zx.Channel) error {
+	c.OutgoingService.AddService(echo2.EchoName, func(c zx.Channel) error {
 		_, err := echoService.Add(&echoImpl{quiet}, c, nil)
 		return err
 	})

@@ -6,7 +6,7 @@
 
 #include "lib/component/cpp/startup_context.h"
 
-namespace echo {
+namespace echo2 {
 
 EchoServerApp::EchoServerApp(bool quiet)
     : EchoServerApp(component::StartupContext::CreateFromStartupInfo(), quiet) {
@@ -26,4 +26,4 @@ void EchoServerApp::EchoString(fidl::StringPtr value,
   callback(std::move(value));
 }
 
-}  // namespace echo
+}  // namespace echo2

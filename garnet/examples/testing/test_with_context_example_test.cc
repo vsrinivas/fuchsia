@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/fidl/echo_client_cpp/echo_client_app.h"
+#include "garnet/examples/fidl/echo2_client_cpp/echo_client_app.h"
 #include "lib/component/cpp/testing/fake_component.h"
 #include "lib/component/cpp/testing/test_with_context.h"
 
 // This test file demostrates how to use |TestWithContext|.
 
-namespace echo {
+namespace echo2 {
 namespace testing {
 
 using fidl::examples::echo::Echo;
@@ -143,4 +143,4 @@ TEST_F(FakeEchoInContextExampleTest, EchoString_HelloWorld_GoodbyeWorld) {
 }
 
 }  // namespace testing
-}  // namespace echo
+}  // namespace echo2

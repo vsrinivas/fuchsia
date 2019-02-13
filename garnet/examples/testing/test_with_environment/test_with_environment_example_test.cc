@@ -10,7 +10,7 @@
 
 // This test file demostrates how to use |TestWithEnvironment|.
 
-namespace echo {
+namespace echo2 {
 namespace testing {
 namespace {
 
@@ -80,4 +80,4 @@ TEST_F(TestWithEnvironmentExampleTest, AddFakeEchoAsServiceComponent) {
 
 }  // namespace
 }  // namespace testing
-}  // namespace echo
+}  // namespace echo2

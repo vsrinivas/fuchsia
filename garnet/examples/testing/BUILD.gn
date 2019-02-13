@@ -13,7 +13,7 @@ executable("test_with_context_example_test_bin") {
   ]
 
   deps = [
-    "//garnet/examples/fidl/echo_client_cpp:lib",
+    "//garnet/examples/fidl/echo2_client_cpp:lib",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl/test:gtest_main",
   ]

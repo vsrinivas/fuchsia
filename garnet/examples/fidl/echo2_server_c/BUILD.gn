@@ -5,7 +5,7 @@
 import("//build/package.gni")
 
 executable("bin") {
-  output_name = "echo_server_c"
+  output_name = "echo2_server_c"
 
   sources = [
     "echo_server.c",
@@ -18,17 +18,17 @@ executable("bin") {
   ]
 }
 
-package("echo_server_c") {
+package("echo2_server_c") {
   deps = [
     ":bin",
   ]
 
-  binary = "echo_server_c"
+  binary = "echo2_server_c"
 
   meta = [
     {
-      path = rebase_path("../meta/echo_server.cmx")
-      dest = "echo_server_c.cmx"
+      path = rebase_path("../meta/echo2_server.cmx")
+      dest = "echo2_server_c.cmx"
     },
   ]
 }

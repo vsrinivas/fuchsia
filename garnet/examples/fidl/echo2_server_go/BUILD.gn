@@ -7,31 +7,31 @@ import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
 
-go_binary("echo_server_go_bin") {
-  output_name = "echo_server_go"
-  gopackage = "echo_server_go"
+go_binary("echo2_server_go_bin") {
+  output_name = "echo2_server_go"
+  gopackage = "echo2_server_go"
   deps = [
-    ":echo_server_go_lib",
+    ":echo2_server_go_lib",
   ]
 }
 
-go_library("echo_server_go_lib") {
-  name = "echo_server_go"
+go_library("echo2_server_go_lib") {
+  name = "echo2_server_go"
   deps = [
-    "//garnet/examples/fidl/services:echo($go_toolchain)",
-    "//garnet/examples/fidl/services:echo($go_toolchain)",
+    "//garnet/examples/fidl/services:echo2($go_toolchain)",
+    "//garnet/examples/fidl/services:echo2($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/svc/go/src/svc",
   ]
 }
 
-package("echo_server_go") {
+package("echo2_server_go") {
   deps = [
-    ":echo_server_go_bin",
+    ":echo2_server_go_bin",
   ]
 
-  binary = "echo_server_go"
+  binary = "echo2_server_go"
 
   meta = [
     {
@@ -39,8 +39,8 @@ package("echo_server_go") {
       dest = "legacy_flat_exported_dir"
     },
     {
-      path = rebase_path("../meta/echo_server.cmx")
-      dest = "echo_server_go.cmx"
+      path = rebase_path("../meta/echo2_server.cmx")
+      dest = "echo2_server_go.cmx"
     },
   ]
 }

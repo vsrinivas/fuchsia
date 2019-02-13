@@ -154,7 +154,7 @@ TEST_F(PackageUpdatingLoaderTest, Success) {
   zx::channel h1, h2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
   auto launch_info = CreateLaunchInfo(
-      "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx",
+      "fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx",
       std::move(h2));
   auto controller = env_->CreateComponent(std::move(launch_info));
   fidl::examples::echo::EchoPtr echo;
@@ -169,7 +169,7 @@ TEST_F(PackageUpdatingLoaderTest, Success) {
   fuchsia::pkg::UpdatePolicy policy;
   policy.fetch_if_absent = true;
   constexpr char kResolvedUrl[] =
-      "fuchsia-pkg://fuchsia.com/echo_server_cpp/0";
+      "fuchsia-pkg://fuchsia.com/echo2_server_cpp/0";
   EXPECT_EQ(resolver_service.args(),
             std::make_tuple(std::string(kResolvedUrl),
                             std::vector<std::string>{}, std::move(policy)));
@@ -186,7 +186,7 @@ TEST_F(PackageUpdatingLoaderTest, Failure) {
   zx::channel h1, h2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
   auto launch_info = CreateLaunchInfo(
-      "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx",
+      "fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx",
       std::move(h2));
   auto controller = env_->CreateComponent(std::move(launch_info));
   fidl::examples::echo::EchoPtr echo;
@@ -205,7 +205,7 @@ TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
   Init(&service_provider);
 
   auto launch_url =
-      "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx";
+      "fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx";
 
   {
     // Launch a component in the environment, and prove it started successfully

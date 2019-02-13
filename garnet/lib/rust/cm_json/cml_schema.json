@@ -297,7 +297,7 @@
             "description": "The parent's local name for the child",
             "$ref": "#/definitions/child-name-clause",
             "examples": [
-              "echo_server",
+              "echo2_server",
               "System-logger"
             ]
           },
