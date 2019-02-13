@@ -50,9 +50,9 @@ StringView SourceFile::LineContaining(StringView view, Position* position_out) c
     if (position_out != nullptr) {
         // Humans number lines from 1. Calculating this from the end
         // accounts for this.
-        int line_number = lines_.crend() - line;
+        int line_number = static_cast<int>(lines_.crend() - line);
         // But columns from 0!
-        int column_number = view.data() - line->data();
+        int column_number = static_cast<int>(view.data() - line->data());
         *position_out = {line_number, column_number};
     }
     return *line;
