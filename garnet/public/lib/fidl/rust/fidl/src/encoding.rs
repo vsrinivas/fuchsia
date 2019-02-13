@@ -884,17 +884,17 @@ macro_rules! fidl_enum {
 
         impl $crate::encoding::Encodable for $name {
             fn inline_align(&self) -> usize {
-                fidl_inline_align!($prim_ty)
+                $crate::fidl_inline_align!($prim_ty)
             }
 
             fn inline_size(&self) -> usize {
-                fidl_inline_size!($prim_ty)
+                $crate::fidl_inline_size!($prim_ty)
             }
 
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder)
                 -> ::std::result::Result<(), $crate::Error>
             {
-                fidl_encode!(&mut (*self as $prim_ty), encoder)
+                $crate::fidl_encode!(&mut (*self as $prim_ty), encoder)
             }
         }
 
@@ -909,18 +909,18 @@ macro_rules! fidl_enum {
             }
 
             fn inline_align() -> usize {
-                fidl_inline_align!($prim_ty)
+                $crate::fidl_inline_align!($prim_ty)
             }
 
             fn inline_size() -> usize {
-                fidl_inline_size!($prim_ty)
+                $crate::fidl_inline_size!($prim_ty)
             }
 
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder)
                 -> ::std::result::Result<(), $crate::Error>
             {
-                let mut prim = fidl_new_empty!($prim_ty);
-                fidl_decode!(&mut prim, decoder)?;
+                let mut prim = $crate::fidl_new_empty!($prim_ty);
+                $crate::fidl_decode!(&mut prim, decoder)?;
                 *self = Self::from_primitive(prim).ok_or($crate::Error::Invalid)?;
                 Ok(())
             }
@@ -1027,7 +1027,7 @@ macro_rules! handle_based_codable {
                 -> $crate::Result<()>
             {
                 let mut handle = $crate::encoding::take_handle(self);
-                fidl_encode!(&mut handle, encoder)
+                $crate::fidl_encode!(&mut handle, encoder)
             }
         }
 
@@ -1041,7 +1041,7 @@ macro_rules! handle_based_codable {
                 -> $crate::Result<()>
             {
                 let mut handle = zx::Handle::invalid();
-                fidl_decode!(&mut handle, decoder)?;
+                $crate::fidl_decode!(&mut handle, decoder)?;
                 *self = <$ty<$($($generic,)*)*> as zx::HandleBased>::from_handle(handle);
                 Ok(())
             }
@@ -1054,8 +1054,8 @@ macro_rules! handle_based_codable {
                 -> $crate::Result<()>
             {
                 match self {
-                    Some(handle) => fidl_encode!(handle, encoder),
-                    None => fidl_encode!(&mut $crate::encoding::ALLOC_ABSENT_U32, encoder),
+                    Some(handle) => $crate::fidl_encode!(handle, encoder),
+                    None => $crate::fidl_encode!(&mut $crate::encoding::ALLOC_ABSENT_U32, encoder),
                 }
             }
         }
@@ -1066,7 +1066,7 @@ macro_rules! handle_based_codable {
             fn inline_size() -> usize { 4 }
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
                 let mut handle: Option<zx::Handle> = None;
-                fidl_decode!(&mut handle, decoder)?;
+                $crate::fidl_decode!(&mut handle, decoder)?;
                 *self = handle.map(Into::into);
                 Ok(())
             }
@@ -1291,8 +1291,8 @@ macro_rules! fidl_struct {
                         // Skip to the start of the next field
                         encoder.next_slice($member_offset - cur_offset)?;
                         cur_offset = $member_offset;
-                        fidl_encode!(&mut self.$member_name, encoder)?;
-                        cur_offset += fidl_inline_size!($member_ty);
+                        $crate::fidl_encode!(&mut self.$member_name, encoder)?;
+                        cur_offset += $crate::fidl_inline_size!($member_ty);
                     )*
                     // Skip to the end of the struct's size
                     encoder.next_slice($size - cur_offset)?;
@@ -1313,7 +1313,7 @@ macro_rules! fidl_struct {
             fn new_empty() -> Self {
                 Self {
                     $(
-                        $member_name: fidl_new_empty!($member_ty),
+                        $member_name: $crate::fidl_new_empty!($member_ty),
                     )*
                 }
             }
@@ -1325,8 +1325,8 @@ macro_rules! fidl_struct {
                         // Skip to the start of the next field
                         decoder.next_slice($member_offset - cur_offset)?;
                         cur_offset = $member_offset;
-                        fidl_decode!(&mut self.$member_name, decoder)?;
-                        cur_offset += fidl_inline_size!($member_ty);
+                        $crate::fidl_decode!(&mut self.$member_name, decoder)?;
+                        cur_offset += $crate::fidl_inline_size!($member_ty);
                     )*
                     // Skip to the end of the struct's size
                     decoder.next_slice($size - cur_offset)?;
@@ -1451,10 +1451,10 @@ macro_rules! fidl_table {
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
                 // Decode envelope vector header
                 let mut len: u64 = 0;
-                fidl_decode!(&mut len, decoder)?;
+                $crate::fidl_decode!(&mut len, decoder)?;
 
                 let mut present: u64 = 0;
-                fidl_decode!(&mut present, decoder)?;
+                $crate::fidl_decode!(&mut present, decoder)?;
 
                 if present != $crate::encoding::ALLOC_PRESENT_U64 {
                     return Err($crate::Error::Invalid);
@@ -1473,22 +1473,25 @@ macro_rules! fidl_table {
                             self.$member_name = None;
                         } else {
                             let mut num_bytes: u32 = 0;
-                            fidl_decode!(&mut num_bytes, decoder)?;
+                            $crate::fidl_decode!(&mut num_bytes, decoder)?;
                             let mut num_handles: u32 = 0;
-                            fidl_decode!(&mut num_handles, decoder)?;
+                            $crate::fidl_decode!(&mut num_handles, decoder)?;
                             let mut present: u64 = 0;
-                            fidl_decode!(&mut present, decoder)?;
+                            $crate::fidl_decode!(&mut present, decoder)?;
                             let bytes_before = decoder.remaining_out_of_line();
                             let handles_before = decoder.remaining_handles();
                             match present {
                                 $crate::encoding::ALLOC_PRESENT_U64 => {
-                                    decoder.read_out_of_line(fidl_inline_size!($member_ty), |d| {
-                                        let val_ref =
-                                           self.$member_name.get_or_insert_with(
-                                                || fidl_new_empty!($member_ty));
-                                        fidl_decode!(val_ref, d)?;
-                                        Ok(())
-                                    })?;
+                                    decoder.read_out_of_line(
+                                        $crate::fidl_inline_size!($member_ty),
+                                        |d| {
+                                            let val_ref =
+                                               self.$member_name.get_or_insert_with(
+                                                    || $crate::fidl_new_empty!($member_ty));
+                                            $crate::fidl_decode!(val_ref, d)?;
+                                            Ok(())
+                                        },
+                                    )?;
                                 }
                                 $crate::encoding::ALLOC_ABSENT_U64 => {
                                     self.$member_name = None;
@@ -1515,11 +1518,11 @@ macro_rules! fidl_table {
                     // messages containing new table fields.
                     while !decoder.is_empty() {
                         let mut num_bytes: u32 = 0;
-                        fidl_decode!(&mut num_bytes, decoder)?;
+                        $crate::fidl_decode!(&mut num_bytes, decoder)?;
                         let mut num_handles: u32 = 0;
-                        fidl_decode!(&mut num_handles, decoder)?;
+                        $crate::fidl_decode!(&mut num_handles, decoder)?;
                         let mut present: u64 = 0;
-                        fidl_decode!(&mut present, decoder)?;
+                        $crate::fidl_decode!(&mut present, decoder)?;
                         if num_bytes != 0 ||
                            num_handles != 0 ||
                            present != $crate::encoding::ALLOC_ABSENT_U64
@@ -1590,7 +1593,7 @@ macro_rules! fidl_union {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
                 let mut member_index = self.member_index();
                 // Encode tag
-                fidl_encode!(&mut member_index, encoder)?;
+                $crate::fidl_encode!(&mut member_index, encoder)?;
 
                 encoder.recurse(|encoder| {
                     match self { $(
@@ -1598,9 +1601,11 @@ macro_rules! fidl_union {
                             // Jump to offset minus 4-byte tag
                             encoder.next_slice($member_offset - 4)?;
                             // Encode value
-                            fidl_encode!(val, encoder)?;
+                            $crate::fidl_encode!(val, encoder)?;
                             // Skip to the end of the union's size
-                            encoder.next_slice($size - (fidl_inline_size!($member_ty) + $member_offset))?;
+                            encoder.next_slice($size - (
+                                $crate::fidl_inline_size!($member_ty) + $member_offset
+                            ))?;
                             Ok(())
                         }
                     )* }
@@ -1620,7 +1625,7 @@ macro_rules! fidl_union {
             fn new_empty() -> Self {
                 #![allow(unreachable_code)]
                 $(
-                    return $name::$member_name(fidl_new_empty!($member_ty));
+                    return $name::$member_name($crate::fidl_new_empty!($member_ty));
                 )*
                 panic!("called new_empty on empty fidl union")
             }
@@ -1628,7 +1633,7 @@ macro_rules! fidl_union {
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
                 #![allow(unused)]
                 let mut tag: u32 = 0;
-                fidl_decode!(&mut tag, decoder)?;
+                $crate::fidl_decode!(&mut tag, decoder)?;
                 decoder.recurse(|decoder| {
                     let mut index = 0;
                     $(
@@ -1640,15 +1645,15 @@ macro_rules! fidl_union {
                             loop {
                                 match self {
                                     $name::$member_name(val) => {
-                                        fidl_decode!(val, decoder)?;
+                                        $crate::fidl_decode!(val, decoder)?;
                                         break;
                                     }
                                     _ => {}
                                 }
-                                *self = $name::$member_name(fidl_new_empty!($member_ty));
+                                *self = $name::$member_name($crate::fidl_new_empty!($member_ty));
                             }
                             // Skip to the end of the union's size
-                            decoder.next_slice($size - (fidl_inline_size!($member_ty) + $member_offset))?;
+                            decoder.next_slice($size - ($crate::fidl_inline_size!($member_ty) + $member_offset))?;
                             return Ok(());
                         }
                         index += 1;

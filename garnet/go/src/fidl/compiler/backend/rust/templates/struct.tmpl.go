@@ -43,7 +43,7 @@ impl fidl::encoding::Encodable for {{ .Name }} {
   fn inline_align(&self) -> usize { 1 }
   fn inline_size(&self) -> usize { 1 }
   fn encode(&mut self, encoder: &mut fidl::encoding::Encoder) -> fidl::Result<()> {
-    fidl_encode!(&mut 0u8, encoder)
+	  ::fidl::fidl_encode!(&mut 0u8, encoder)
   }
 }
 
@@ -53,11 +53,11 @@ impl fidl::encoding::Decodable for {{ .Name }} {
   fn new_empty() -> Self { {{ .Name }} }
   fn decode(&mut self, decoder: &mut fidl::encoding::Decoder) -> fidl::Result<()> {
     let mut x = 0u8;
-    fidl_decode!(&mut x, decoder)?;
+	 ::fidl::fidl_decode!(&mut x, decoder)?;
     if x == 0 {
-      Ok(())
+		 Ok(())
     } else {
-      Err(fidl::Error::Invalid)
+		 Err(::fidl::Error::Invalid)
     }
   }
 }

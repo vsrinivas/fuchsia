@@ -8,6 +8,11 @@
   "struct_declarations": [
     {
       "name": "test.name/Empty",
+      "location": {
+        "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/empty_struct.fidl",
+        "line": 3,
+        "column": 7
+      },
       "anonymous": false,
       "members": [],
       "size": 1,

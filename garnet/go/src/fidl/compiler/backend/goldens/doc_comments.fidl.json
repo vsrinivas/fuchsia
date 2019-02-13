@@ -5,6 +5,11 @@
   "const_declarations": [
     {
       "name": "test.name/C",
+      "location": {
+        "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+        "line": 9,
+        "column": 12
+      },
       "maybe_attributes": [
         {
           "name": "Doc",
@@ -28,6 +33,11 @@
   "interface_declarations": [
     {
       "name": "test.name/Interface",
+      "location": {
+        "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+        "line": 44,
+        "column": 10
+      },
       "maybe_attributes": [
         {
           "name": "Doc",
@@ -39,6 +49,11 @@
           "ordinal": 1061382220,
           "generated_ordinal": 1061382220,
           "name": "Method",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+            "line": 48,
+            "column": 4
+          },
           "has_request": true,
           "maybe_attributes": [
             {
@@ -57,6 +72,11 @@
   "struct_declarations": [
     {
       "name": "test.name/Struct",
+      "location": {
+        "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+        "line": 14,
+        "column": 7
+      },
       "anonymous": false,
       "maybe_attributes": [
         {
@@ -71,6 +91,11 @@
             "subtype": "int32"
           },
           "name": "Field",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+            "line": 18,
+            "column": 10
+          },
           "maybe_attributes": [
             {
               "name": "Doc",
@@ -93,6 +118,11 @@
   "table_declarations": [
     {
       "name": "test.name/Table",
+      "location": {
+        "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+        "line": 34,
+        "column": 6
+      },
       "maybe_attributes": [
         {
           "name": "Doc",
@@ -108,6 +138,11 @@
             "subtype": "int32"
           },
           "name": "Field",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+            "line": 38,
+            "column": 13
+          },
           "maybe_attributes": [
             {
               "name": "Doc",
@@ -129,6 +164,11 @@
   "union_declarations": [
     {
       "name": "test.name/Union",
+      "location": {
+        "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+        "line": 24,
+        "column": 6
+      },
       "maybe_attributes": [
         {
           "name": "Doc",
@@ -142,6 +182,11 @@
             "subtype": "int32"
           },
           "name": "Field",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
+            "line": 28,
+            "column": 10
+          },
           "maybe_attributes": [
             {
               "name": "Doc",

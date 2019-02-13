@@ -542,7 +542,7 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 		p := Parameter{
 			c.compileType(v.Type, false).Decl,
 			c.compileType(v.Type, true).Decl,
-			changeIfReserved(v.Name),
+			compileSnakeIdentifier(v.Name),
 			v.Offset,
 		}
 		r = append(r, p)

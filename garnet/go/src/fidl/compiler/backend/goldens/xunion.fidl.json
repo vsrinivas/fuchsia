@@ -11,6 +11,11 @@
   "xunion_declarations": [
     {
       "name": "test.name/EmptyUnion",
+      "location": {
+        "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+        "line": 3,
+        "column": 7
+      },
       "members": [],
       "size": 24,
       "max_out_of_line": 0,
@@ -19,6 +24,11 @@
     },
     {
       "name": "test.name/OlderSimpleUnion",
+      "location": {
+        "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+        "line": 5,
+        "column": 7
+      },
       "members": [
         {
           "ordinal": 1026732503,
@@ -27,6 +37,11 @@
             "subtype": "int64"
           },
           "name": "i",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+            "line": 6,
+            "column": 8
+          },
           "size": 8,
           "max_out_of_line": 0,
           "alignment": 8,
@@ -39,6 +54,11 @@
             "subtype": "float32"
           },
           "name": "f",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+            "line": 7,
+            "column": 10
+          },
           "size": 4,
           "max_out_of_line": 0,
           "alignment": 4,
@@ -52,6 +72,11 @@
     },
     {
       "name": "test.name/NewerSimpleUnion",
+      "location": {
+        "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+        "line": 10,
+        "column": 7
+      },
       "members": [
         {
           "ordinal": 693944286,
@@ -60,6 +85,11 @@
             "subtype": "int64"
           },
           "name": "i",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+            "line": 13,
+            "column": 8
+          },
           "size": 8,
           "max_out_of_line": 0,
           "alignment": 8,
@@ -72,6 +102,11 @@
             "nullable": false
           },
           "name": "s",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+            "line": 15,
+            "column": 9
+          },
           "size": 16,
           "max_out_of_line": 4294967295,
           "alignment": 8,
@@ -88,6 +123,11 @@
             "nullable": false
           },
           "name": "v",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+            "line": 16,
+            "column": 17
+          },
           "size": 16,
           "max_out_of_line": 4294967295,
           "alignment": 8,

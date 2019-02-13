@@ -10,6 +10,11 @@
   "union_declarations": [
     {
       "name": "test.name/Union",
+      "location": {
+        "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/union.fidl",
+        "line": 3,
+        "column": 6
+      },
       "members": [
         {
           "type": {
@@ -17,6 +22,11 @@
             "subtype": "int32"
           },
           "name": "Primitive",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/union.fidl",
+            "line": 4,
+            "column": 10
+          },
           "size": 4,
           "max_out_of_line": 0,
           "alignment": 4,
@@ -28,6 +38,11 @@
             "nullable": false
           },
           "name": "StringNeedsConstructor",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/union.fidl",
+            "line": 5,
+            "column": 11
+          },
           "size": 16,
           "max_out_of_line": 4294967295,
           "alignment": 8,
@@ -43,6 +58,11 @@
             "nullable": false
           },
           "name": "VectorStringAlsoNeedsConstructor",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/union.fidl",
+            "line": 6,
+            "column": 19
+          },
           "size": 16,
           "max_out_of_line": 4294967295,
           "alignment": 8,

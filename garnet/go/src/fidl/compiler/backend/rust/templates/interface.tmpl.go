@@ -9,7 +9,7 @@ const Interface = `
 {{- $interface := . -}}
 State,
 OnOpen: FnMut(&mut State, {{ $interface.Name }}ControlHandle) -> OnOpenFut,
-OnOpenFut: Future<Output = ()> + Send,
+OnOpenFut: futures::Future<Output = ()> + Send,
 {{- range $method := $interface.Methods }}
 	{{- if $method.HasRequest }}
 	{{ $method.CamelName }}: FnMut(&mut State,
@@ -19,7 +19,7 @@ OnOpenFut: Future<Output = ()> + Send,
 	{{- else -}}
 	{{ $interface.Name -}}ControlHandle
 	{{- end }}) -> {{ $method.CamelName }}Fut,
-	{{ $method.CamelName }}Fut: Future<Output = ()> + Send,
+	{{ $method.CamelName }}Fut: futures::Future<Output = ()> + Send,
 	{{- end }}
 {{- end -}}
 {{- end -}}
@@ -39,7 +39,7 @@ impl fidl::endpoints::ServiceMarker for {{ $interface.Name }}Marker {
 pub trait {{ $interface.Name }}ProxyInterface: Send + Sync {
 	{{- range $method := $interface.Methods }}
 	{{- if $method.HasResponse }}
-	type {{ $method.CamelName }}ResponseFut: Future<Output = Result<(
+	type {{ $method.CamelName }}ResponseFut: futures::Future<Output = Result<(
 		{{- range $index, $response := $method.Response -}}
 		{{- if (eq $index 0) -}} {{ $response.Type }}
 		{{- else -}}, {{ $response.Type }} {{- end -}}
@@ -130,7 +130,7 @@ impl fidl::endpoints::Proxy for {{ $interface.Name }}Proxy {
 	}
 }
 
-impl Deref for {{ $interface.Name }}Proxy {
+impl ::std::ops::Deref for {{ $interface.Name }}Proxy {
 	type Target = fidl::client::Client;
 
 	fn deref(&self) -> &Self::Target {
@@ -140,8 +140,8 @@ impl Deref for {{ $interface.Name }}Proxy {
 
 /// Proxy object for communicating with interface {{ $interface.Name }}
 impl {{ $interface.Name }}Proxy {
-        /// Create a new Proxy for {{ $interface.Name }}
-   pub fn new(channel: ::fuchsia_async::Channel) -> Self {
+	/// Create a new Proxy for {{ $interface.Name }}
+	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
 		Self { client: fidl::client::Client::new(channel) }
 	}
 
@@ -154,7 +154,7 @@ impl {{ $interface.Name }}Proxy {
 		self.client.into_channel().map_err(|client| Self { client })
 	}
 
-        /// Get a Stream of events from the remote end of the {{ $interface.Name }} interface
+	/// Get a Stream of events from the remote end of the {{ $interface.Name }} interface
 	pub fn take_event_stream(&self) -> {{ $interface.Name }}EventStream {
 		{{ $interface.Name }}EventStream {
 			event_receiver: self.client.take_event_receiver(),
@@ -237,18 +237,22 @@ impl futures::stream::FusedStream for {{ $interface.Name }}EventStream {
 	}
 }
 
-impl Stream for {{ $interface.Name }}EventStream {
+impl futures::Stream for {{ $interface.Name }}EventStream {
 	type Item = Result<{{ $interface.Name }}Event, fidl::Error>;
 
 	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::LocalWaker)
 		-> futures::Poll<Option<Self::Item>>
 	{
-		let mut buf = match ready!(self.event_receiver.poll_next_unpin(lw)?) {
+		let mut buf = match futures::ready!(
+			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, lw)?
+		) {
 			Some(buf) => buf,
 			None => return futures::Poll::Ready(None),
 		};
-		let (bytes, handles) = buf.split_mut();
-		let (tx_header, body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+		let (bytes, _handles) = buf.split_mut();
+		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 		futures::Poll::Ready(Some(match tx_header.ordinal {
 			{{- range $method := $interface.Methods }}
 			{{- if not $method.HasRequest }}
@@ -260,7 +264,7 @@ impl Stream for {{ $interface.Name }}EventStream {
 					{{- end -}}
 					{{- end -}}
 				) = fidl::encoding::Decodable::new_empty();
-				fidl::encoding::Decoder::decode_into(body_bytes, handles, &mut out_tuple)?;
+				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
 				Ok((
 					{{ $interface.Name }}Event::{{ $method.CamelName }} {
 						{{- range $index, $param := $method.Response -}}
@@ -298,12 +302,12 @@ pub enum {{ $interface.Name }}Event {
 
 #[deprecated(note = "use {{ $interface.Name }}RequestStream instead")]
 pub trait {{ $interface.Name }} {
-	type OnOpenFut: Future<Output = ()> + Send;
+	type OnOpenFut: futures::Future<Output = ()> + Send;
 	fn on_open(&mut self, control_handle: {{ $interface.Name }}ControlHandle) -> Self::OnOpenFut;
 
 	{{- range $method := $interface.Methods }}
 	{{- if $method.HasRequest }}
-	type {{ $method.CamelName }}Fut: Future<Output = ()> + Send;
+	type {{ $method.CamelName }}Fut: futures::Future<Output = ()> + Send;
 	fn {{ $method.Name }} (&mut self,
 		{{- range $request := $method.Request }}
 		{{ $request.Name }}: {{ $request.Type }},
@@ -342,6 +346,7 @@ pub trait {{ $interface.Name }} {
 }
 
 pub struct {{ $interface.Name }}Server<T: {{ $interface.Name }}> {
+	#[allow(dead_code)] // not used if no methods are present
 	server: T,
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 	msg_buf: zx::MessageBuf,
@@ -373,7 +378,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 
 	fn poll(
 		mut self: ::std::pin::Pin<&mut Self>,
-		lw: &::futures::task::LocalWaker,
+		lw: &futures::task::LocalWaker,
 	) -> futures::Poll<Self::Output> {
 		// safety: the only potentially !Unpin field is on_open_fut, which we make sure
 		// isn't moved below
@@ -388,7 +393,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 		unsafe {
 			// Safety: ensure that on_open isn't moved
 			let completed_on_open = if let Some(on_open_fut) = &mut this.on_open_fut {
-				match Future::poll(::std::pin::Pin::new_unchecked(on_open_fut), lw) {
+				match futures::Future::poll(::std::pin::Pin::new_unchecked(on_open_fut), lw) {
 					futures::Poll::Ready(()) => true,
 					futures::Poll::Pending => false,
 				}
@@ -404,13 +409,16 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 
 		{{- range $method := $interface.Methods }}
 		{{- if $method.HasRequest -}}
-		match this.{{ $method.Name }}_futures.poll_next_unpin(lw) {
+		match futures::stream::StreamExt::poll_next_unpin(
+			&mut this.{{ $method.Name }}_futures, lw
+		) {
 			futures::Poll::Ready(Some(())) => made_progress_this_loop_iter = true,
 			_ => {},
 		}
 		{{- end -}}
 		{{- end }}
 
+		this.msg_buf.clear();
 		match this.inner.channel().recv_from(&mut this.msg_buf, lw) {
 			futures::Poll::Ready(Ok(())) => {},
 			futures::Poll::Pending => {
@@ -429,9 +437,10 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 
 		{
 			// A message has been received from the channel
-			let (bytes, handles) = this.msg_buf.split_mut();
-			let (header, body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+			let (bytes, _handles) = this.msg_buf.split_mut();
+			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
+			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 			match header.ordinal {
 				{{- range $method := $interface.Methods }}
 					{{- if $method.HasRequest }}
@@ -443,7 +452,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 								{{- end -}}
 							{{- end -}}
 						) = fidl::encoding::Decodable::new_empty();
-						fidl::encoding::Decoder::decode_into(body_bytes, handles, &mut req)?;
+						fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
 						let control_handle = {{ $interface.Name }}ControlHandle {
 							inner: this.inner.clone(),
 						};
@@ -477,7 +486,6 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 				})),
 			}
 		}
-		this.msg_buf.clear();
 	}}
 }
 
@@ -504,10 +512,10 @@ impl fidl::endpoints::RequestStream for {{ $interface.Name }}RequestStream {
 		}
 	}
 
-   /// ControlHandle for the remote connection
+	/// ControlHandle for the remote connection
 	type ControlHandle = {{ $interface.Name }}ControlHandle;
 
-   /// ControlHandle for the remote connection
+	/// ControlHandle for the remote connection
 	fn control_handle(&self) -> Self::ControlHandle {
 		{{ $interface.Name }}ControlHandle { inner: self.inner.clone() }
 	}
@@ -516,16 +524,18 @@ impl fidl::endpoints::RequestStream for {{ $interface.Name }}RequestStream {
 		(self.inner, self.msg_buf)
 	}
 
-	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, msg_buf: Option<zx::MessageBuf>) -> Self {
+	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, msg_buf: Option<zx::MessageBuf>)
+		-> Self
+	{
 		Self { inner, msg_buf }
 	}
 }
 
-impl Stream for {{ $interface.Name }}RequestStream {
+impl futures::Stream for {{ $interface.Name }}RequestStream {
 	type Item = Result<{{ $interface.Name }}Request, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &::futures::task::LocalWaker)
-		-> ::futures::Poll<Option<Self::Item>>
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::LocalWaker)
+		-> futures::Poll<Option<Self::Item>>
 	{
 		let this = &mut *self;
 		if this.inner.poll_shutdown(lw) {
@@ -534,6 +544,7 @@ impl Stream for {{ $interface.Name }}RequestStream {
 		}
 		let msg_buf = this.msg_buf.as_mut()
 								.expect("polled {{ $interface.Name }}RequestStream after completion");
+		msg_buf.clear();
 		match this.inner.channel().recv_from(msg_buf, lw) {
 			futures::Poll::Ready(Ok(())) => {},
 			futures::Poll::Pending => return futures::Poll::Pending,
@@ -542,60 +553,56 @@ impl Stream for {{ $interface.Name }}RequestStream {
 				return futures::Poll::Ready(None)
 			},
 			futures::Poll::Ready(Err(e)) =>
-				return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+			return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
 		}
 
-		let res = {
-			// A message has been received from the channel
-			let (bytes, handles) = msg_buf.split_mut();
-			let (header, body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+		// A message has been received from the channel
+		let (bytes, _handles) = msg_buf.split_mut();
+		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-			match header.ordinal {
-				{{- range $method := $interface.Methods }}
-				{{- if $method.HasRequest }}
-				{{ $method.Ordinal }} | {{ $method.GenOrdinal }} => {
-					let mut req: (
-						{{- range $index, $param := $method.Request -}}
-							{{- if ne 0 $index -}}, {{- $param.Type -}}
-							{{- else -}} {{- $param.Type -}}
-							{{- end -}}
+		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+		futures::Poll::Ready(Some(match header.ordinal {
+			{{- range $method := $interface.Methods }}
+			{{- if $method.HasRequest }}
+			{{ $method.Ordinal }} | {{ $method.GenOrdinal }} => {
+				let mut req: (
+					{{- range $index, $param := $method.Request -}}
+						{{- if ne 0 $index -}}, {{- $param.Type -}}
+						{{- else -}} {{- $param.Type -}}
 						{{- end -}}
-					) = fidl::encoding::Decodable::new_empty();
-					fidl::encoding::Decoder::decode_into(body_bytes, handles, &mut req)?;
-					let control_handle = {{ $interface.Name }}ControlHandle {
-						inner: this.inner.clone(),
-					};
+					{{- end -}}
+				) = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
+				let control_handle = {{ $interface.Name }}ControlHandle {
+					inner: this.inner.clone(),
+				};
 
-					{{ $interface.Name }}Request::{{ $method.CamelName }} {
-						{{- range $index, $param := $method.Request -}}
-							{{- if ne 1 (len $method.Request) -}}
-							{{ $param.Name }}: req.{{ $index }},
-							{{- else -}}
-							{{ $param.Name }}: req,
-							{{- end -}}
+				Ok({{ $interface.Name }}Request::{{ $method.CamelName }} {
+					{{- range $index, $param := $method.Request -}}
+						{{- if ne 1 (len $method.Request) -}}
+						{{ $param.Name }}: req.{{ $index }},
+						{{- else -}}
+						{{ $param.Name }}: req,
 						{{- end -}}
-						{{- if $method.HasResponse -}}
-							responder: {{- $interface.Name -}}{{- $method.CamelName -}}Responder {
-								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
-								tx_id: header.tx_id,
-								ordinal: header.ordinal,
-							},
-							{{- else -}}
-							control_handle,
-						{{- end -}}
-					}
-				}
-				{{- end }}
-				{{- end }}
-				_ => return futures::Poll::Ready(Some(Err(fidl::Error::UnknownOrdinal {
-					ordinal: header.ordinal,
-					service_name: <{{ $interface.Name }}Marker as fidl::endpoints::ServiceMarker>::NAME,
-				}))),
+					{{- end -}}
+					{{- if $method.HasResponse -}}
+						responder: {{- $interface.Name -}}{{- $method.CamelName -}}Responder {
+							control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+							tx_id: header.tx_id,
+							ordinal: header.ordinal,
+						},
+						{{- else -}}
+						control_handle,
+					{{- end -}}
+				})
 			}
-		};
-
-		msg_buf.clear();
-		futures::Poll::Ready(Some(Ok(res)))
+			{{- end }}
+			{{- end }}
+			_ => Err(fidl::Error::UnknownOrdinal {
+				ordinal: header.ordinal,
+				service_name: <{{ $interface.Name }}Marker as fidl::endpoints::ServiceMarker>::NAME,
+			}),
+		}))
 	}
 }
 
@@ -695,8 +702,8 @@ pub struct {{ $interface.Name }}ControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
-impl Deref for {{ $interface.Name }}ControlHandle {
-        type Target = ::std::sync::Arc<fidl::ServeInner>;
+impl ::std::ops::Deref for {{ $interface.Name }}ControlHandle {
+	type Target = ::std::sync::Arc<fidl::ServeInner>;
 
 	fn deref(&self) -> &Self::Target {
 		&self.inner
@@ -803,7 +810,7 @@ impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
 
 	/// Similar to "send" but does not shutdown the channel if
 	/// an error occurs.
-	fn send_no_shutdown_on_err(self,
+	pub fn send_no_shutdown_on_err(self,
 		{{- range $param := $method.Response -}}
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}},
 		{{- end -}}
@@ -843,7 +850,8 @@ impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
 
 		let (bytes, handles) = (&mut vec![], &mut vec![]);
 		fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
-		self.control_handle.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+		self.control_handle.inner.channel().write(&*bytes, &mut *handles)
+			.map_err(fidl::Error::ServerResponseWrite)?;
 		Ok(())
 	}
 }

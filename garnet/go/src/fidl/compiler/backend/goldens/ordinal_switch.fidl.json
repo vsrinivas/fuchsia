@@ -7,11 +7,21 @@
   "interface_declarations": [
     {
       "name": "test.name/SwitchingOrdinals",
+      "location": {
+        "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.fidl",
+        "line": 3,
+        "column": 10
+      },
       "methods": [
         {
           "ordinal": 2005164903,
           "generated_ordinal": 2005164903,
           "name": "OrdinalFive",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.fidl",
+            "line": 4,
+            "column": 4
+          },
           "has_request": true,
           "maybe_request": [],
           "maybe_request_size": 16,
@@ -22,6 +32,11 @@
           "ordinal": 667506719,
           "generated_ordinal": 667506719,
           "name": "OnlyGeneratedOrdinal",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.fidl",
+            "line": 5,
+            "column": 4
+          },
           "has_request": true,
           "maybe_request": [],
           "maybe_request_size": 16,
@@ -32,6 +47,11 @@
           "ordinal": 1467258273,
           "generated_ordinal": 1467258273,
           "name": "EventOrdinalFifteen",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.fidl",
+            "line": 6,
+            "column": 7
+          },
           "has_request": false,
           "has_response": true,
           "maybe_response": [],
@@ -42,6 +62,11 @@
           "ordinal": 2146190926,
           "generated_ordinal": 2146190926,
           "name": "EventOnlyGeneratedOrdinal",
+          "location": {
+            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.fidl",
+            "line": 7,
+            "column": 7
+          },
           "has_request": false,
           "has_response": true,
           "maybe_response": [],

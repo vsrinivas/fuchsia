@@ -20,17 +20,12 @@ pub async fn start_setui_service(channel: fasync::Channel) -> Result<(), Error> 
 
 async fn handler(event: SetUiServiceRequest) -> fidl::Result<()> {
     match event {
-        SetUiServiceRequest::Listen { settingType: _, listener: _, control_handle: _ } => {}
-        SetUiServiceRequest::Update { value: _, responder: _ } => {}
-        SetUiServiceRequest::Mutate { settingType: setting_type, mutation, responder: _ } => {
+        SetUiServiceRequest::Listen { .. }
+        | SetUiServiceRequest::Update { .. }
+        | SetUiServiceRequest::InteractiveMutate { .. } => {}
+        SetUiServiceRequest::Mutate { setting_type, mutation, responder: _ } => {
             mutate(setting_type, mutation);
         }
-        SetUiServiceRequest::InteractiveMutate {
-            settingType: _,
-            mutation: _,
-            mutation_handles: _,
-            responder: _,
-        } => {}
     }
 
     Ok(())
