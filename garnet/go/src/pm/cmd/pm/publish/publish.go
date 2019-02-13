@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	usage = `Usage: %s publish (-a|-ps) -f file [-k <keys_dir>] [-r <repo_path>]
+	usage = `Usage: %s publish (-a|-ps) -f file [-r <repo_path>]
 		Pass any one of the mode flags (-a|-ps), and at least one file to pubish.
 `
 	serverBase = "amber-files"
