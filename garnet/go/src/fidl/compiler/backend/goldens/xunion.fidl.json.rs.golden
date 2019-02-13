@@ -16,5 +16,44 @@ use fidl::{
 	fidl_struct,
 	fidl_table,
 	fidl_union,
+	fidl_xunion,
 };
 
+
+fidl_xunion! {
+	name: EmptyUnion,
+	members: [
+	],
+}
+
+fidl_xunion! {
+	name: OlderSimpleUnion,
+	members: [
+		I {
+			ty: i64,
+			ordinal: 1026732503,
+		},
+		F {
+			ty: f32,
+			ordinal: 1362546558,
+		},
+	],
+}
+
+fidl_xunion! {
+	name: NewerSimpleUnion,
+	members: [
+		I {
+			ty: i64,
+			ordinal: 693944286,
+		},
+		S {
+			ty: String,
+			ordinal: 473666119,
+		},
+		V {
+			ty: Vec<String>,
+			ordinal: 1815655055,
+		},
+	],
+}

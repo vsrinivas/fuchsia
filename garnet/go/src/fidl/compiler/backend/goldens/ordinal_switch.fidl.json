@@ -10,7 +10,7 @@
       "location": {
         "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/ordinal_switch.fidl",
         "line": 3,
-        "column": 10
+        "column": 9
       },
       "methods": [
         {

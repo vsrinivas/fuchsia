@@ -24,6 +24,7 @@ use fidl::{
 	fidl_struct,
 	fidl_table,
 	fidl_union,
+	fidl_xunion,
 };
 
 {{ range $const := .Consts -}}
@@ -34,6 +35,9 @@ use fidl::{
 {{ end -}}
 {{ range $union := .Unions -}}
 {{ template "UnionDeclaration" $union }}
+{{ end -}}
+{{ range $xunion := .XUnions -}}
+{{ template "XUnionDeclaration" $xunion }}
 {{ end -}}
 {{ range $struct := .Structs -}}
 {{ template "StructDeclaration" $struct }}

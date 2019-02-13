@@ -1682,39 +1682,41 @@ macro_rules! fidl_union {
     }
 }
 
-/// A macro which declares a new FIDL union as a Rust enum and implements the
+/// A macro which declares a new FIDL xunion as a Rust enum and implements the
 /// FIDL encoding and decoding traits for it.
 #[macro_export]
 macro_rules! fidl_xunion {
     (
         name: $name:ident,
         members: [$(
+            $(#[$member_docs:meta])*
             $member_name:ident {
                 ty: $member_ty:ty,
-                tag: $member_tag:expr,
+                ordinal: $member_ordinal:expr,
             },
         )*],
     ) => {
         #[derive(Debug, PartialEq)]
         pub enum $name {
             $(
+                $(#[$member_docs])*
                 $member_name ( $member_ty ),
             )*
             #[doc(hidden)]
             __UnknownVariant {
-                tag: u32,
+                ordinal: u32,
                 bytes: Vec<u8>,
                 handles: Vec<zx::Handle>,
             },
         }
 
         impl $name {
-            fn member_index(&self) -> u32 {
+            fn ordinal(&self) -> u32 {
                 match *self {
                     $(
-                        $name::$member_name(_) => $member_tag,
+                        $name::$member_name(_) => $member_ordinal,
                     )*
-                    $name::__UnknownVariant { tag, .. } => tag,
+                    $name::__UnknownVariant { ordinal, .. } => ordinal,
                 }
             }
         }
@@ -1724,23 +1726,25 @@ macro_rules! fidl_xunion {
             fn inline_size(&self) -> usize { 24 }
 
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
-                let mut member_index = self.member_index();
+                let mut ordinal = self.ordinal();
                 // Encode tag
-                fidl_encode!(&mut member_index, encoder)?;
+                $crate::fidl_encode!(&mut ordinal, encoder)?;
                 // Reserved
-                fidl_encode!(&mut 0u32, encoder)?;
+                $crate::fidl_encode!(&mut 0u32, encoder)?;
                 encoder.recurse(|encoder| {
                     match self {
                         $(
                             $name::$member_name ( val ) => encode_in_envelope(&mut Some(val), encoder),
                         )*
-                        $name::__UnknownVariant { tag: _, bytes, handles } => {
+                        $name::__UnknownVariant { ordinal: _, bytes, handles } => {
                             // Throw the raw data from the unrecognized variant
                             // back onto the wire. This will allow correct proxies even in
                             // the event that they don't yet recognize this union variant.
-                            fidl_encode!(&mut (bytes.len() as u32), encoder)?;
-                            fidl_encode!(&mut (handles.len() as u32), encoder)?;
-                            fidl_encode!(&mut ALLOC_PRESENT_U64, encoder)?;
+                            $crate::fidl_encode!(&mut (bytes.len() as u32), encoder)?;
+                            $crate::fidl_encode!(&mut (handles.len() as u32), encoder)?;
+                            $crate::fidl_encode!(
+                                &mut $crate::encoding::ALLOC_PRESENT_U64, encoder
+                            )?;
                             encoder.append_bytes(bytes);
                             encoder.append_handles(handles);
                             Ok(())
@@ -1757,56 +1761,58 @@ macro_rules! fidl_xunion {
             fn new_empty() -> Self {
                 #![allow(unreachable_code)]
                 $(
-                    return $name::$member_name(fidl_new_empty!($member_ty));
+                    return $name::$member_name($crate::fidl_new_empty!($member_ty));
                 )*
-                $name::__UnknownVariant { tag: 0, bytes: vec![], handles: vec![] }
+                $name::__UnknownVariant { ordinal: 0, bytes: vec![], handles: vec![] }
             }
 
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
                 #![allow(unused)]
-                let mut tag: u32 = 0;
-                fidl_decode!(&mut tag, decoder)?;
+                let mut ordinal: u32 = 0;
+                $crate::fidl_decode!(&mut ordinal, decoder)?;
 
                 let mut _reserved: u32 = 0;
-                fidl_decode!(&mut _reserved, decoder)?;
+                $crate::fidl_decode!(&mut _reserved, decoder)?;
 
                 let mut num_bytes: u32 = 0;
-                fidl_decode!(&mut num_bytes, decoder)?;
+                $crate::fidl_decode!(&mut num_bytes, decoder)?;
 
                 let mut num_handles: u32 = 0;
-                fidl_decode!(&mut num_handles, decoder)?;
+                $crate::fidl_decode!(&mut num_handles, decoder)?;
 
                 let mut present: u64 = 0;
-                fidl_decode!(&mut present, decoder)?;
+                $crate::fidl_decode!(&mut present, decoder)?;
                 if present != $crate::encoding::ALLOC_PRESENT_U64 {
                     return Err($crate::Error::Invalid);
                 }
 
                 decoder.read_out_of_line(num_bytes as usize, |decoder| {
                     decoder.recurse(|decoder| {
-                        match tag {
+                        match ordinal {
                             $(
-                                $member_tag => {
+                                $member_ordinal => {
                                     if let $name::$member_name(_) = self {
                                         // Do nothing, read the value into the object
                                     } else {
                                         // Initialize `self` to the right variant
-                                        *self = $name::$member_name(fidl_new_empty!($member_ty));
+                                        *self = $name::$member_name(
+                                            $crate::fidl_new_empty!($member_ty)
+                                        );
                                     }
                                     if let $name::$member_name(val) = self {
-                                        fidl_decode!(val, decoder)?;
+                                        $crate::fidl_decode!(val, decoder)?;
                                     } else {
                                         unreachable!()
                                     }
                                 }
                             )*
-                            tag => {
+                            ordinal => {
                                 let bytes = decoder.next_slice(num_bytes as usize)?.to_vec();
                                 let mut handles = Vec::with_capacity(num_handles as usize);
                                 for _ in 0..num_handles {
                                     handles.push(decoder.take_handle()?);
                                 }
-                                *self = $name::__UnknownVariant { tag, bytes, handles };
+                                *self = $name::__UnknownVariant { ordinal, bytes, handles };
                             }
                         }
                         Ok(())
@@ -2666,15 +2672,15 @@ mod test {
         members: [
             U {
                 ty: u32,
-                tag: 0x29df47a5,
+                ordinal: 0x29df47a5,
             },
             Su {
                 ty: SimpleUnion,
-                tag: 0x6f317664,
+                ordinal: 0x6f317664,
             },
             St {
                 ty: SimpleTable,
-                tag: 3,
+                ordinal: 3,
             },
         ],
     }
@@ -2684,7 +2690,7 @@ mod test {
         members: [
             SomethinElse {
                 ty: zx::Handle,
-                tag: 55,
+                ordinal: 55,
             },
         ],
     }

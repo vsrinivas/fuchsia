@@ -36,7 +36,7 @@
       "location": {
         "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/doc_comments.fidl",
         "line": 44,
-        "column": 10
+        "column": 9
       },
       "maybe_attributes": [
         {

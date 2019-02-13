@@ -40,6 +40,19 @@ type EnumMember struct {
 	Value     string
 }
 
+type XUnion struct {
+	types.Attributes
+	Name      string
+	Members   []XUnionMember
+}
+
+type XUnionMember struct {
+	types.Attributes
+	Type string
+	Name string
+	Ordinal  int
+}
+
 type Union struct {
 	types.Attributes
 	Name      string
@@ -119,6 +132,7 @@ type Root struct {
 	Consts       []Const
 	Enums        []Enum
 	Structs      []Struct
+	XUnions      []XUnion
 	Unions       []Union
 	Tables       []Table
 	Interfaces   []Interface
@@ -492,6 +506,16 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 					r = t
 				}
 			}
+		case types.XUnionDeclType:
+			if val.Nullable {
+				r = fmt.Sprintf("Option<%s>", t)
+			} else {
+				if borrowed {
+					r = fmt.Sprintf("&mut %s", t)
+				} else {
+					r = t
+				}
+			}
 		case types.TableDeclType:
 			if val.Nullable {
 				r = fmt.Sprintf("Option<%s>", t)
@@ -615,6 +639,29 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	return r
 }
 
+func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
+	return XUnionMember{
+		Attributes: val.Attributes,
+		Type:       c.compileType(val.Type, false).Decl,
+		Name:       compileCamelIdentifier(val.Name),
+		Ordinal:		val.Ordinal,
+	}
+}
+
+func (c *compiler) compileXUnion(val types.XUnion) XUnion {
+	r := XUnion{
+		Attributes: val.Attributes,
+		Name:       c.compileCamelCompoundIdentifier(val.Name),
+		Members:    []XUnionMember{},
+	}
+
+	for _, v := range val.Members {
+		r.Members = append(r.Members, c.compileXUnionMember(v))
+	}
+
+	return r
+}
+
 func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
 		Attributes: val.Attributes,
@@ -679,6 +726,10 @@ func Compile(r types.Root) Root {
 
 	for _, v := range r.Structs {
 		root.Structs = append(root.Structs, c.compileStruct(v))
+	}
+
+	for _, v := range r.XUnions {
+		root.XUnions = append(root.XUnions, c.compileXUnion(v))
 	}
 
 	for _, v := range r.Unions {
