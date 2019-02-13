@@ -14,10 +14,12 @@ sdk_source_set("cpp") {
 
   include_base = "//sdk"
   sources = [
-    "startup_context.cc",
-    "startup_context.h",
     "outgoing.cc",
     "outgoing.h",
+    "service_directory.cc",
+    "service_directory.h",
+    "startup_context.cc",
+    "startup_context.h",
   ]
 
   public_deps = [
@@ -37,7 +39,7 @@ sdk_source_set("cpp") {
 test("component_cpp_unittests") {
   sources = [
     "outgoing_unittest.cc",
-    "startup_context_unittest.cc",
+    "service_directory_unittest.cc",
   ]
 
   deps = [

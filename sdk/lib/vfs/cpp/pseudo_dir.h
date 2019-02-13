@@ -17,7 +17,7 @@ namespace vfs {
 // implemented) these directory entries but it cannot create, remove, or rename
 // them.
 //
-// This class is thread-safe.
+// Instances of this class are thread-safe.
 class PseudoDir : public Directory {
  public:
   // Creates a directory which is initially empty.

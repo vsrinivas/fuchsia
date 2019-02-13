@@ -18,7 +18,7 @@ namespace internal {
 // This object validates messages before sending them to the remote endpoint,
 // and (optionally) blocks until it receives a reply.
 //
-// This object is thread-safe.
+// Instances of this class are thread-safe.
 class SynchronousProxy {
  public:
   // Creates a |SynchronousProxy| that wraps the given channel.

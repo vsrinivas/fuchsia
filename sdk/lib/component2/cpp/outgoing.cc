@@ -6,6 +6,9 @@
 
 #include <utility>
 
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+
 namespace component2 {
 
 Outgoing::Outgoing() : root_(std::make_unique<vfs::PseudoDir>()) {
@@ -23,7 +26,8 @@ zx_status_t Outgoing::Serve(zx::channel directory_request,
 }
 
 zx_status_t Outgoing::ServeFromStartupInfo(async_dispatcher_t* dispatcher) {
-  return ZX_ERR_NOT_SUPPORTED;
+  return Serve(zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)),
+               dispatcher);
 }
 
 }  // namespace component2

@@ -24,7 +24,7 @@ namespace vfs {
 // buffer which the pseudo-file delivers as a whole to the write handler when
 // the file is closed(if there were any writes).  Truncation is also supported.
 //
-// This class is thread-safe.
+// Instances of this class are thread-safe.
 class BufferedPseudoFile : public File {
  public:
   // Handler called to read from the pseudo-file.
