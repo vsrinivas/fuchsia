@@ -41,40 +41,19 @@
 #define PSCI_DISABLED                       -8
 #define PSCI_INVALID_ADDRESS                -9
 
-__BEGIN_CDECLS
-
 /* TODO NOTE: - currently these routines assume cpu topologies that are described only in AFF0 and AFF1.
             If a system is architected such that AFF2 or AFF3 are non-zero then this code will need
             to be revisited
 */
 
-typedef uint64_t (*psci_call_proc)(uint32_t function, uint64_t arg0, uint64_t arg1, uint64_t arg2);
-
-extern psci_call_proc do_psci_call;
-
-static inline uint32_t psci_get_version(void) {
-
-    return (uint32_t)do_psci_call(PSCI64_PSCI_VERSION,0,0,0);
-}
+uint32_t psci_get_version();
 
 /* powers down the calling cpu - only returns if call fails */
-static inline uint32_t psci_cpu_off(void) {
+uint32_t psci_cpu_off();
+uint32_t psci_cpu_on(uint64_t mpid, paddr_t entry);
+uint32_t psci_get_affinity_info(uint64_t cluster, uint64_t cpuid);
 
-    return (uint32_t)do_psci_call(PSCI64_CPU_OFF,0,0,0);
-}
+void psci_system_off();
 
-static inline uint32_t psci_cpu_on(uint64_t mpid, paddr_t entry) {
-
-    return (uint32_t)do_psci_call(PSCI64_CPU_ON, mpid, entry, 0);
-}
-
-static inline uint32_t psci_get_affinity_info(uint64_t cluster, uint64_t cpuid) {
-
-    return (uint32_t)do_psci_call(PSCI64_AFFINITY_INFO, ARM64_MPID(cluster, cpuid), 0, 0);
-}
-
-void psci_system_off(void);
-
-void psci_system_reset(enum reboot_flags flags);
-
-__END_CDECLS
+/* called from assembly, mark as C external */
+extern "C" void psci_system_reset(enum reboot_flags flags);
