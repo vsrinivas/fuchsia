@@ -6,6 +6,7 @@
 #define LIB_INSPECT_INSPECT_H_
 
 #include <lib/component/cpp/exposed_object.h>
+#include <lib/fit/optional.h>
 #include <zircon/types.h>
 
 #include <string>
@@ -86,6 +87,7 @@ class EntityWrapper final {
 
   ::component::Object* ParentObject() { return parent_obj_.get(); }
 
+ private:
   std::string name_;
   std::shared_ptr<::component::Object> parent_obj_;
 };
@@ -291,11 +293,6 @@ class Object final {
 
   ~Object() = default;
 
-  // Get the name of this object.
-  const char* name() const {
-    return object_ ? object_->object()->name().c_str() : "";
-  }
-
   // Output the contents of this object as a FIDL struct.
   fuchsia::inspect::Object object() const;
 
@@ -360,10 +357,9 @@ class Object final {
   // Internal constructor for creating an Object facade in front of an
   // ExposedObject.
   explicit Object(component::ExposedObject object)
-      : object_(std::make_unique<component::ExposedObject>(std::move(object))) {
-  }
+      : object_(component::ExposedObject(std::move(object))) {}
 
-  std::unique_ptr<component::ExposedObject> object_;
+  fit::optional<component::ExposedObject> object_;
 };
 
 // Generate a unique name with the given prefix.

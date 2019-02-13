@@ -19,7 +19,6 @@ using namespace inspect::testing;
 
 TEST(Inspect, EmptyObject) {
   Object obj;
-  EXPECT_STREQ("", obj.name());
 
   auto child = obj.CreateChild("child");
   auto int_metric = obj.CreateIntMetric("int", 0);
@@ -46,7 +45,6 @@ TEST(Inspect, EmptyObject) {
 
 TEST(Inspect, Object) {
   Object obj("test");
-  EXPECT_STREQ("test", obj.name());
 
   auto output = obj.object();
   EXPECT_STREQ("test", output.name.c_str());
@@ -72,7 +70,6 @@ TEST(Inspect, Child) {
   {
     // Create a child and check it exists.
     auto obj = root.CreateChild("child");
-    EXPECT_STREQ("child", obj.name());
     EXPECT_THAT(*root.children(), UnorderedElementsAre("child"));
 
     auto obj2 = root.CreateChild("child2");

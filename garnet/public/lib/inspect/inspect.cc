@@ -90,11 +90,11 @@ ChildrenCallback& ChildrenCallback::operator=(ChildrenCallback&& other) {
 }
 
 Object::Object(std::string name)
-    : object_(std::make_unique<component::ExposedObject>(std::move(name))) {}
+    : object_(component::ExposedObject(std::move(name))) {}
 
 Object::Object(ObjectDir object_dir)
     : object_(
-          std::make_unique<component::ExposedObject>(std::move(object_dir))) {}
+          component::ExposedObject(std::move(object_dir))) {}
 
 fuchsia::inspect::Object Object::object() const {
   return object_ ? object_->object()->ToFidl() : fuchsia::inspect::Object();
