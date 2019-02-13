@@ -407,6 +407,10 @@ config("thread_safety_annotations") {
   }
 }
 
+config("visibility_hidden") {
+  cflags = [ "-fvisibility=hidden" ]
+}
+
 config("static-libc++") {
   ldflags = [ "-static-libstdc++" ]
   if (current_os == "linux") {

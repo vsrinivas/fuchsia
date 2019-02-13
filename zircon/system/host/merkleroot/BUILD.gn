@@ -2,9 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("banjo") {
+host_tool("merkleroot") {
+  sources = [
+    "merkleroot.cpp",
+  ]
   deps = [
-    "compiler",
-    "formatter",
+    "$zx/system/ulib/digest",
+    "$zx/system/ulib/fbl",
   ]
 }

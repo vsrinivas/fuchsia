@@ -2,9 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("banjo") {
+library("xdc-host-utils") {
+  host = true
+  sources = [
+    "client.cpp",
+  ]
   deps = [
-    "compiler",
-    "formatter",
+    "$zx/system/ulib/fbl",
   ]
 }

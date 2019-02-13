@@ -26,7 +26,7 @@ if (host_os == "mac") {
   ]
 }
 
-# Universal configs apply to all code in the build.
+# Universal configs that apply to all code in the build.
 standard_configs = [
   "$zx/public/gn/config:compiler",
   "$zx/public/gn/config:language",
@@ -42,6 +42,8 @@ standard_configs = [
   "$zx/public/gn/config:no_rtti",
   "$zx/public/gn/config:no_threadsafe_statics",
   "$zx/public/gn/config:thread_safety_annotations",
+
+  # TODO(ZX-1895): "$zx/public/gn/config:symbol_visibility_hidden",
 ]
 
 # This list has the same structure as $variants (see

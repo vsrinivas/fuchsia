@@ -2,9 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("banjo") {
+library("digest") {
+  host = true
+
+  sources = [
+    "digest.cpp",
+    "merkle-tree.cpp",
+  ]
+
   deps = [
-    "compiler",
-    "formatter",
+    "$zx/system/ulib/fbl",
+    "$zx/third_party/ulib/uboringssl",
   ]
 }

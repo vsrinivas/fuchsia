@@ -2,26 +2,116 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-config("fidl_config") {
-  include_dirs = [ "include" ]
-  visibility = [ ":*" ]
-}
+if (defined(zx)) {
+  library("fidl") {
+    host = true
+    sources = [
+      "lib/attributes.cpp",
+      "lib/c_generator.cpp",
+      "lib/coded_types_generator.cpp",
+      "lib/error_reporter.cpp",
+      "lib/flat_ast.cpp",
+      "lib/formatter.cpp",
+      "lib/json_generator.cpp",
+      "lib/lexer.cpp",
+      "lib/library_zx.cpp",
+      "lib/names.cpp",
+      "lib/ordinals.cpp",
+      "lib/parser.cpp",
+      "lib/raw_ast.cpp",
+      "lib/source_file.cpp",
+      "lib/source_location.cpp",
+      "lib/source_manager.cpp",
+      "lib/tables_generator.cpp",
+      "lib/tree_visitor.cpp",
+      "lib/virtual_source_file.cpp",
+    ]
+    public_deps = [
+      # <fidl/flat_ast.h> has #include <lib/fit/function.h>.
+      "$zx/system/ulib/fit:headers",
+    ]
+    deps = [
+      ":json_schema",
+      "$zx/system/ulib/fit",
+      "$zx/third_party/ulib/uboringssl",
+    ]
+  }
 
-source_set("compiler") {
-  public_configs = [ ":fidl_config" ]
-  sources = [
-    "lib/attributes.cpp",
-    "lib/c_generator.cpp",
-    "lib/error_reporter.cpp",
-    "lib/flat_ast.cpp",
-    "lib/identifier_table.cpp",
-    "lib/json_generator.cpp",
-    "lib/lexer.cpp",
-    "lib/library_zx.cpp",
-    "lib/parser.cpp",
-    "lib/source_file.cpp",
-    "lib/source_location.cpp",
-    "lib/source_manager.cpp",
-    "lib/tables_generator.cpp",
-  ]
+  source_set("json_schema") {
+    visibility = [ ":*" ]
+    sources = [
+      "$target_gen_dir/json_schema.cpp",
+    ]
+    deps = [
+      ":gen-json-schema",
+      ":headers",
+    ]
+  }
+
+  action("gen-json-schema") {
+    visibility = [ ":json_schema" ]
+    outputs = [
+      "$target_gen_dir/json_schema.cpp",
+    ]
+    sources = [
+      "schema.json",
+    ]
+    script = "gen-json-schema.sh"
+    args = rebase_path(outputs, root_build_dir) +
+           rebase_path(sources, root_build_dir)
+  }
+
+  group("tools") {
+    deps = [
+      ":fidl-format",
+      ":fidlc",
+    ]
+  }
+
+  host_tool("fidlc") {
+    sources = [
+      "compiler/main.cpp",
+    ]
+    deps = [
+      ":fidl",
+    ]
+  }
+
+  host_tool("fidl-format") {
+    sources = [
+      "formatter/main.cpp",
+    ]
+    deps = [
+      ":fidl",
+    ]
+  }
+} else {
+  # TODO(BLD-353): Referenced by //garnet/public/lib/fidl/fuzz:compiler.
+
+  config("fidl_config") {
+    visibility = [ ":*" ]
+    include_dirs = [ "include" ]
+  }
+
+  source_set("compiler") {
+    public_configs = [ ":fidl_config" ]
+    sources = [
+      "lib/attributes.cpp",
+      "lib/c_generator.cpp",
+      "lib/error_reporter.cpp",
+      "lib/flat_ast.cpp",
+      "lib/formatter.cpp",
+      "lib/json_generator.cpp",
+      "lib/lexer.cpp",
+      "lib/library_zx.cpp",
+      "lib/names.cpp",
+      "lib/parser.cpp",
+      "lib/raw_ast.cpp",
+      "lib/source_file.cpp",
+      "lib/source_location.cpp",
+      "lib/source_manager.cpp",
+      "lib/tables_generator.cpp",
+      "lib/tree_visitor.cpp",
+    ]
+  }
 }

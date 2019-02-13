@@ -1,0 +1,68 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("fbl") {
+  sdk = "source"
+  sdk_headers = [
+    "fbl/algorithm.h",
+    "fbl/alloc_checker.h",
+    "fbl/array.h",
+    "fbl/auto_call.h",
+    "fbl/auto_lock.h",
+    "fbl/canary.h",
+    "fbl/condition_variable.h",
+    "fbl/deleter.h",
+    "fbl/function.h",
+    "fbl/intrusive_container_utils.h",
+    "fbl/intrusive_double_list.h",
+    "fbl/intrusive_hash_table.h",
+    "fbl/intrusive_pointer_traits.h",
+    "fbl/intrusive_single_list.h",
+    "fbl/intrusive_wavl_tree.h",
+    "fbl/intrusive_wavl_tree_internal.h",
+    "fbl/limits.h",
+    "fbl/macros.h",
+    "fbl/mutex.h",
+    "fbl/null_lock.h",
+    "fbl/recycler.h",
+    "fbl/ref_counted.h",
+    "fbl/ref_counted_internal.h",
+    "fbl/ref_counted_upgradeable.h",
+    "fbl/ref_ptr.h",
+    "fbl/slab_allocator.h",
+    "fbl/slab_malloc.h",
+    "fbl/string.h",
+    "fbl/string_buffer.h",
+    "fbl/string_piece.h",
+    "fbl/string_printf.h",
+    "fbl/string_traits.h",
+    "fbl/type_info.h",
+    "fbl/type_support.h",
+    "fbl/unique_fd.h",
+    "fbl/unique_free_ptr.h",
+    "fbl/unique_ptr.h",
+    "fbl/vector.h",
+  ]
+  host = true
+  kernel = true
+  static = true
+
+  sources = [
+    "alloc_checker.cpp",
+  ]
+  if (!is_kernel) {
+    configs += [ "$zx/public/gn/config:visibility_hidden" ]
+    sources += [
+      "string.cpp",
+      "string_buffer.cpp",
+      "string_piece.cpp",
+      "string_printf.cpp",
+    ]
+  }
+
+  if (toolchain.environment == "kernel") {
+    # Avoid circularity.
+    configs -= [ "$zx/kernel/vm:headers" ]
+  }
+}

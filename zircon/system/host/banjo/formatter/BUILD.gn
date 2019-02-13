@@ -2,9 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("banjo") {
+group("formatter") {
   deps = [
-    "compiler",
-    "formatter",
+    ":banjo-format",
+  ]
+}
+
+host_tool("banjo-format") {
+  sources = [
+    "main.cpp",
+  ]
+  deps = [
+    "../lib",
   ]
 }

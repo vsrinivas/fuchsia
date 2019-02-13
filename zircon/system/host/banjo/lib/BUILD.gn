@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("lib") {
+  visibility = [
+    "../*",
+    "$zx/system/utest/banjo-compiler/*",
+  ]
+  host = true
+  sources = [
+    "attributes.cpp",
+    "ddk_generator.cpp",
+    "error_reporter.cpp",
+    "flat_ast.cpp",
+    "formatter.cpp",
+    "identifier_table.cpp",
+    "json_generator.cpp",
+    "lexer.cpp",
+    "library_zx.cpp",
+    "names.cpp",
+    "parser.cpp",
+    "raw_ast.cpp",
+    "source_file.cpp",
+    "source_location.cpp",
+    "source_manager.cpp",
+    "tables_generator.cpp",
+    "tree_visitor.cpp",
+  ]
+
+  # TODO(mcgrathr): Move ../include to lib/include?
+  public_configs = [
+    ":config",
+  ]
+}
+
+config("config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "../include" ]
+}

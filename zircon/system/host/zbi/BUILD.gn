@@ -2,9 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("banjo") {
+host_tool("zbi") {
+  sources = [
+    "zbi.cpp",
+  ]
   deps = [
-    "compiler",
-    "formatter",
+    "$zx/system/ulib/fbl",
+    "$zx/third_party/ulib/cksum",
+    "$zx/third_party/ulib/lz4",
   ]
 }

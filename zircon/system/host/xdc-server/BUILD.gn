@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+host_tool("xdc-server") {
+  sources = [
+    "usb-handler.cpp",
+    "xdc-server.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/xdc-host-utils",
+    "$zx/system/ulib/xdc-server-utils",
+  ]
+}

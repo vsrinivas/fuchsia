@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("lz4") {
+  host = true
+  sources = [
+    "lz4.c",
+    "lz4frame.c",
+    "lz4hc.c",
+    "xxhash.c",
+  ]
+  include_dirs = [ "include/lz4" ]
+  defines = [ "XXH_NAMESPACE=LZ4_" ]
+  cflags = [ "-Wno-implicit-fallthrough" ]
+}
