@@ -9,6 +9,16 @@
 
 #include "fvm-host/format.h"
 
+namespace {
+template <class T> uint32_t ToU32(T in) {
+    if (in > std::numeric_limits<uint32_t>::max()) {
+        fprintf(stderr, "out of range %" PRIu64 "\n", in);
+        exit(-1);
+    }
+    return static_cast<uint32_t>(in);
+}
+} // namespace
+
 MinfsFormat::MinfsFormat(fbl::unique_fd fd, const char* type)
     : Format() {
     if (!strcmp(type, kDataTypeName)) {
@@ -75,17 +85,17 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) {
     uint32_t dat_blocks = info_.block_count;
 
     //TODO(planders): Once blobfs journaling patch is landed, use fvm::BlocksToSlices() here.
-    fvm_info_.ibm_slices = (ibm_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
-    fvm_info_.abm_slices = (abm_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
-    fvm_info_.ino_slices = (ino_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
+    fvm_info_.ibm_slices = ToU32((ibm_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
+    fvm_info_.abm_slices = ToU32((abm_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
+    fvm_info_.ino_slices = ToU32((ino_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
 
     // TODO(planders): Weird things may happen if we grow the journal here while it contains valid
     //                 entries. Make sure to account for this case (or verify that the journal is
     //                 resolved prior to extension).
     minfs::TransactionLimits limits(fvm_info_);
     journal_blocks = fbl::max(journal_blocks, limits.GetRecommendedJournalBlocks());
-    fvm_info_.journal_slices = (journal_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
-    fvm_info_.dat_slices = (dat_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
+    fvm_info_.journal_slices = ToU32((journal_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
+    fvm_info_.dat_slices = ToU32((dat_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
     fvm_info_.vslice_count = 1 + fvm_info_.ibm_slices + fvm_info_.abm_slices +
                              fvm_info_.ino_slices + fvm_info_.journal_slices + fvm_info_.dat_slices;
 
@@ -179,7 +189,7 @@ zx_status_t MinfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* vs
 
 zx_status_t MinfsFormat::GetSliceCount(uint32_t* slices_out) const {
     CheckFvmReady();
-    *slices_out = fvm_info_.vslice_count;
+    *slices_out = ToU32(fvm_info_.vslice_count);
     return ZX_OK;
 }
 
@@ -187,7 +197,7 @@ zx_status_t MinfsFormat::FillBlock(size_t block_offset) {
     CheckFvmReady();
     if (block_offset == 0) {
         memcpy(datablk, fvm_blk_, minfs::kMinfsBlockSize);
-    } else if (bc_->Readblk(block_offset, datablk) != ZX_OK) {
+    } else if (bc_->Readblk(ToU32(block_offset), datablk) != ZX_OK) {
         fprintf(stderr, "minfs: could not read block\n");
         exit(-1);
     }
@@ -214,5 +224,5 @@ uint32_t MinfsFormat::BlockSize() const {
 
 uint32_t MinfsFormat::BlocksPerSlice() const {
     CheckFvmReady();
-    return fvm_info_.slice_size / BlockSize();
+    return ToU32(fvm_info_.slice_size / BlockSize());
 }
