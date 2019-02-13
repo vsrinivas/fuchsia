@@ -165,7 +165,8 @@ TEST_F(NetstackLaunchTest, AddEthernetDevice) {
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return list_ifs; }, zx::sec(5)));
 }
 
-TEST_F(NetstackLaunchTest, DHCPRequestSent) {
+// TODO(FLK-45): Test is flaky.
+TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
   auto services = CreateServices();
 
   // TODO(NET-1818): parameterize this over multiple netstack implementations
