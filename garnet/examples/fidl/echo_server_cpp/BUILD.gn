@@ -11,17 +11,17 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/examples/fidl/services:echo2",
+    "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
   ]
 }
 
 executable("bin") {
-  output_name = "echo2_server_cpp"
+  output_name = "echo_server_cpp"
 
   sources = [
-    "echo2_server.cc",
+    "echo_server.cc",
   ]
 
   deps = [
@@ -31,22 +31,22 @@ executable("bin") {
   ]
 }
 
-package("echo2_server_cpp") {
+package("echo_server_cpp") {
   deps = [
     ":bin",
   ]
 
-  binary = "echo2_server_cpp"
+  binary = "echo_server_cpp"
 
   meta = [
     {
-      path = rebase_path("../meta/echo2_server.cmx")
-      dest = "echo2_server_cpp.cmx"
+      path = rebase_path("../meta/echo_server.cmx")
+      dest = "echo_server_cpp.cmx"
     },
   ]
 }
 
-executable("echo2_server_cpp_unittests") {
+executable("echo_server_cpp_unittests") {
   testonly = true
 
   sources = [
@@ -60,16 +60,16 @@ executable("echo2_server_cpp_unittests") {
   ]
 }
 
-package("echo2_server_cpp_tests") {
+package("echo_server_cpp_tests") {
   testonly = true
 
   deps = [
-    ":echo2_server_cpp_unittests",
+    ":echo_server_cpp_unittests",
   ]
 
   tests = [
     {
-      name = "echo2_server_cpp_unittests"
+      name = "echo_server_cpp_unittests"
     },
   ]
 }

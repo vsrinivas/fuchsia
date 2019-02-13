@@ -23,13 +23,13 @@ for FIDL libraries.
 ### C
 
 - [Documentation](../languages/c.md)
-- [Echo server example](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo2_server_c/)
+- [Echo server example](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo_server_c/)
 
 ### C++
 
 - [Documentation](../languages/cpp.md)
-- [Echo server example](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo2_server_cpp/)
-- [Echo client example](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo2_client_cpp/)
+- [Echo server example](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo_server_cpp/)
+- [Echo client example](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo_client_cpp/)
 
 ### Dart
 
@@ -40,14 +40,14 @@ for FIDL libraries.
 ### Go
 
 - [Documentation](../languages/go.md)
-- [Echo server example](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo2_server_go/)
-- [Echo client example](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo2_client_go/)
+- [Echo server example](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo_server_go/)
+- [Echo client example](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo_client_go/)
 
 ### Rust
 
 - [Documentation](../languages/rust.md)
-- [Echo server example](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo2_server_rust/)
-- [Echo client example](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo2_client_rust/)
+- [Echo server example](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo_server_rust/)
+- [Echo client example](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo_client_rust/)
 
 ## Learning
 

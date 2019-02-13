@@ -29,7 +29,7 @@ more details.
 
 ```
 [zxdb] connect 192.168.3.1:2345
-[zxdb] set filters echo2
+[zxdb] set filters echo
 ```
 
 Launch the component as under normal usage (not from within the debugger). The
@@ -228,18 +228,18 @@ Components are launched by appmgr, so they're always launched in a job that's a
 child of appmgr's job. When zxdb is connected, it attaches itself to appmgr's
 job. To debug a new component you need to add filters to attached jobs.
 
-To add filter (this attaches to any component with a name containing "echo2",
+To add filter (this attaches to any component with a name containing "echo",
 substitute your component name):
 
 ```
-[zxdb] set filters echo2
+[zxdb] set filters echo
 ```
 
 Now run the component from the appropriate environment. For example, to launch
 from the command line (not from within zxdb):
 
 ```
-$ run fuchsia-pkg://fuchsia.com/echo2_client_cpp#meta/echo2_client_cpp.cmx
+$ run fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx
 ```
 
 It should stop in the debugger upon startup and you should see it in the
@@ -248,7 +248,7 @@ process list:
 ```
 [zxdb] process
 # State       Koid Name
-▶ 1 Running 3471 echo2_client_cpp.cmx
+▶ 1 Running 3471 echo_client_cpp.cmx
 ```
 
 At this point the process is still very early in its initialization and
@@ -263,7 +263,7 @@ Pending: No matches for location, it will be pending library loads.
 
 [zxdb] continue
 
-Thread 1 stopped on breakpoint 1 at main(…) • echo2_client.cc:15
+Thread 1 stopped on breakpoint 1 at main(…) • echo_client.cc:15
  ▶ 15 int main(int argc, const char** argv) {
 ```
 

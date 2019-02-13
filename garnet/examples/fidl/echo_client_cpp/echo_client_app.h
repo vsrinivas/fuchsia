@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_FIDL_ECHO2_CLIENT_CPP_ECHO_CLIENT_APP_H_
-#define GARNET_EXAMPLES_FIDL_ECHO2_CLIENT_CPP_ECHO_CLIENT_APP_H_
+#ifndef GARNET_EXAMPLES_FIDL_ECHO_CLIENT_CPP_ECHO_CLIENT_APP_H_
+#define GARNET_EXAMPLES_FIDL_ECHO_CLIENT_CPP_ECHO_CLIENT_APP_H_
 
 #include <fidl/examples/echo/cpp/fidl.h>
 
 #include "lib/component/cpp/startup_context.h"
 
-namespace echo2 {
+namespace echo {
 
 class EchoClientApp {
  public:
@@ -30,6 +30,6 @@ class EchoClientApp {
   fidl::examples::echo::EchoPtr echo_;
 };
 
-}  // namespace echo2
+}  // namespace echo
 
-#endif  // GARNET_EXAMPLES_FIDL_ECHO2_CLIENT_CPP_ECHO_CLIENT_APP_H_
+#endif  // GARNET_EXAMPLES_FIDL_ECHO_CLIENT_CPP_ECHO_CLIENT_APP_H_

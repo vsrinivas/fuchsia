@@ -9,7 +9,7 @@
 
 #include "lib/fidl/cpp/binding_set.h"
 
-namespace echo2 {
+namespace echo {
 namespace testing {
 
 using fidl::examples::echo::Echo;
@@ -34,6 +34,6 @@ class FakeEcho : public Echo {
 };
 
 }  // namespace testing
-}  // namespace echo2
+}  // namespace echo
 
 #endif  // GARNET_EXAMPLES_TESTING_TEST_WITH_ENVIRONMENT_FAKE_ECHO_H_

@@ -11,7 +11,7 @@ import (
 	"app/context"
 	"svc/services"
 
-	echo2 "fidl/fidl/examples/echo"
+	echo "fidl/fidl/examples/echo"
 	"fidl/fuchsia/sys"
 )
 
@@ -19,7 +19,7 @@ type echoClientApp struct {
 	ctx          *context.Context
 	echoProvider *services.Provider
 	controller   *sys.ComponentControllerInterface
-	echo         *echo2.EchoInterface
+	echo         *echo.EchoInterface
 }
 
 func (a *echoClientApp) startApplication(serverURL string) (li *sys.ComponentControllerInterface, err error) {
@@ -56,8 +56,8 @@ func (a *echoClientApp) startApplication(serverURL string) (li *sys.ComponentCon
 	return cp, nil
 }
 
-func (a *echoClientApp) getEchoInterface() (ei *echo2.EchoInterface, err error) {
-	r, p, err := echo2.NewEchoInterfaceRequest()
+func (a *echoClientApp) getEchoInterface() (ei *echo.EchoInterface, err error) {
+	r, p, err := echo.NewEchoInterfaceRequest()
 	if err != nil {
 		return nil, fmt.Errorf("NewEchoInterfaceRequest failed: %v", err)
 	}
@@ -76,7 +76,7 @@ func (a *echoClientApp) getEchoInterface() (ei *echo2.EchoInterface, err error) 
 }
 
 func main() {
-	serverURL := flag.String("server", "fuchsia-pkg://fuchsia.com/echo2_server_go#meta/echo2_server_go.cmx", "server URL")
+	serverURL := flag.String("server", "fuchsia-pkg://fuchsia.com/echo_server_go#meta/echo_server_go.cmx", "server URL")
 	msg := flag.String("m", "Hello, Go World", "message")
 
 	flag.Parse()
