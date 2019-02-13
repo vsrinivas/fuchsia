@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 test_package("feedback_agent_tests") {
   tests = [
@@ -11,6 +12,9 @@ test_package("feedback_agent_tests") {
     },
     {
       name = "feedback_agent_integration_test"
+
+      # We need to also test on real devices as we talk to a real Scenic service.
+      environments = basic_envs
     },
   ]
 
@@ -31,10 +35,16 @@ executable("unittest") {
 
   deps = [
     "//garnet/bin/feedback_agent:src",
+    "//garnet/public/lib/escher",
     "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/sys/cpp/testing",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
   ]
 }
 
@@ -49,6 +59,7 @@ executable("integration_test") {
 
   deps = [
     "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/escher/test:gtest_escher",
     "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//sdk/fidl/fuchsia.feedback",

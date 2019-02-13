@@ -5,13 +5,19 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx"
+                "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx",
+                "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
+                "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
             }
         }
     },
     "sandbox": {
+        "features": [
+            "vulkan"
+        ],
         "services": [
-            "fuchsia.feedback.DataProvider"
+            "fuchsia.feedback.DataProvider",
+            "fuchsia.vulkan.loader.Loader"
         ]
     }
 }
