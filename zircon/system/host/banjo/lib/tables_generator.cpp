@@ -40,7 +40,7 @@ void EmitArrayEnd(std::ostream* file) {
     *file << "}";
 }
 
-void Emit(std::ostream* file, uint32_t value) {
+void Emit(std::ostream* file, uint64_t value) {
     *file << value;
 }
 
