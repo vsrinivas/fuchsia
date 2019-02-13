@@ -152,7 +152,12 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, FileSizeRecorder* siz
 
     Inode* inode = inode_block->GetInode();
     inode->blob_size = mapping.length();
-    inode->block_count = MerkleTreeBlocks(*inode) + info.GetDataBlocks();
+    uint64_t block_count = MerkleTreeBlocks(*inode) + info.GetDataBlocks();
+    if (block_count > std::numeric_limits<uint32_t>::max()) {
+        FS_TRACE_ERROR("error: Block count too large\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    inode->block_count = static_cast<uint32_t>(block_count);
     inode->header.flags |= kBlobFlagAllocated | (info.compressed ? kBlobFlagCompressed : 0);
 
     // TODO(smklein): Currently, host-side tools can only generate single-extent
