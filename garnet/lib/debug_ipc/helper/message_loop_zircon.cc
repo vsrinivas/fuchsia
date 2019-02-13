@@ -68,13 +68,21 @@ void MessageLoopZircon::Init() {
 
   FXL_DCHECK(!current_message_loop_zircon);
   current_message_loop_zircon = this;
+  MessageLoopTarget::current_message_loop_type =
+      MessageLoopTarget::LoopType::kZircon;
 }
 
 void MessageLoopZircon::Cleanup() {
   FXL_DCHECK(current_message_loop_zircon == this);
   current_message_loop_zircon = nullptr;
+  MessageLoopTarget::current_message_loop_type =
+      MessageLoopTarget::LoopType::kLast;
 
   MessageLoop::Cleanup();
+}
+
+void MessageLoopZircon::QuitNow() {
+  MessageLoop::QuitNow();
 }
 
 // static
@@ -222,7 +230,8 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchJobExceptions(
   return WatchHandle(this, watch_id);
 }
 
-zx_status_t MessageLoopZircon::ResumeFromException(zx::thread& thread,
+// |thread_koid| is unused in this message loop.
+zx_status_t MessageLoopZircon::ResumeFromException(zx_koid_t, zx::thread& thread,
                                                    uint32_t options) {
   return thread.resume_from_exception(port_, options);
 }
@@ -509,21 +518,6 @@ void MessageLoopZircon::OnSocketSignal(int watch_id, const WatchInfo& info,
   // Dispatch writable signal.
   if (packet.signal.observed & ZX_SOCKET_WRITABLE)
     info.socket_watcher->OnSocketWritable(info.socket_handle);
-}
-
-const char* MessageLoopZircon::WatchTypeToString(WatchType type) {
-  switch (type) {
-    case WatchType::kFdio:
-      return "FDIO";
-    case WatchType::kJobExceptions:
-      return "Job";
-    case WatchType::kProcessExceptions:
-      return "Process";
-    case WatchType::kSocket:
-      return "Socket";
-  }
-  FXL_NOTREACHED();
-  return "";
 }
 
 }  // namespace debug_ipc

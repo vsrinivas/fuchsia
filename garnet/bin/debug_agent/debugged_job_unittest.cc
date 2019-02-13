@@ -11,6 +11,7 @@
 #include <zircon/processargs.h>
 
 #include "garnet/bin/debug_agent/object_util.h"
+// TODO(DX-952): Move this over once the async loop is stable.
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

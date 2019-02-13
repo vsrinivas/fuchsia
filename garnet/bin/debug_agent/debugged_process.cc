@@ -16,7 +16,7 @@
 #include "garnet/bin/debug_agent/process_memory_accessor.h"
 #include "garnet/bin/debug_agent/process_watchpoint.h"
 #include "garnet/lib/debug_ipc/agent_protocol.h"
-#include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
+#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
@@ -62,7 +62,7 @@ void DebuggedProcess::DetachFromProcess() {
 }
 
 bool DebuggedProcess::Init() {
-  debug_ipc::MessageLoopZircon* loop = debug_ipc::MessageLoopZircon::Current();
+  debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
   FXL_DCHECK(loop);  // Loop must be created on this thread first.
 
   // Register for debug exceptions.
@@ -282,8 +282,8 @@ void DebuggedProcess::OnThreadExiting(zx_koid_t process_koid,
 
   // The thread will currently be in a "Dying" state. For it to complete its
   // lifecycle it must be resumed.
-  debug_ipc::MessageLoopZircon::Current()->ResumeFromException(
-      found_thread->second->thread(), 0);
+  debug_ipc::MessageLoopTarget::Current()->ResumeFromException(
+      thread_koid, found_thread->second->thread(), 0);
 
   threads_.erase(thread_koid);
 

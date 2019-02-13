@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
+#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
 
 #include "garnet/bin/debug_agent/debugged_job.h"
 #include "garnet/bin/debug_agent/object_util.h"
@@ -18,7 +18,7 @@ DebuggedJob::DebuggedJob(ProcessStartHandler* handler, zx_koid_t job_koid,
 DebuggedJob::~DebuggedJob() = default;
 
 bool DebuggedJob::Init() {
-  debug_ipc::MessageLoopZircon* loop = debug_ipc::MessageLoopZircon::Current();
+  debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
   FXL_DCHECK(loop);  // Loop must be created on this thread first.
 
   // Register for debug exceptions.
@@ -59,7 +59,8 @@ void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
   // notification for the initial thread which it can stop or continue as it
   // desires. Therefore, we can always resume the thread in the "new process"
   // exception.
-  debug_ipc::MessageLoopZircon::Current()->ResumeFromException(thread, 0);
+  debug_ipc::MessageLoopTarget::Current()->ResumeFromException(thread_koid,
+                                                               thread, 0);
 }
 
 void DebuggedJob::SetFilters(std::vector<std::string> filters) {

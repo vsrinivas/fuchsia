@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
+#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
 
 namespace debug_agent {
 
@@ -13,10 +13,10 @@ class MessageLoopWrapper {
  public:
   MessageLoopWrapper();
   ~MessageLoopWrapper();
-  debug_ipc::MessageLoop* loop() { return &loop_; }
+  debug_ipc::MessageLoop* loop() { return loop_.get(); }
 
  private:
-  debug_ipc::MessageLoopZircon loop_;
+  std::unique_ptr<debug_ipc::MessageLoopTarget> loop_;
 };
 
 }  // namespace debug_agent

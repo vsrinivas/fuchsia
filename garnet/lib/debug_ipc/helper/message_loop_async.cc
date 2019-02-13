@@ -47,9 +47,15 @@ void MessageLoopAsync::Init() {
 
   FXL_DCHECK(!current_message_loop_async);
   current_message_loop_async = this;
+  MessageLoopTarget::current_message_loop_type =
+      MessageLoopTarget::LoopType::kAsync;
 
   zx::event::create(0, &task_event_);
-  AddSignalHandler(kTaskSignalKey, task_event_.get(), kTaskSignal);
+
+  WatchInfo info;
+  info.type = WatchType::kTask;
+  AddSignalHandler(kTaskSignalKey, task_event_.get(), kTaskSignal, &info);
+  watches_[kTaskSignalKey] = info;
 }
 
 void MessageLoopAsync::Cleanup() {
@@ -60,6 +66,8 @@ void MessageLoopAsync::Cleanup() {
 
   FXL_DCHECK(current_message_loop_async == this);
   current_message_loop_async = nullptr;
+  MessageLoopTarget::current_message_loop_type =
+      MessageLoopTarget::LoopType::kLast;
 
   MessageLoop::Cleanup();
 }
@@ -69,7 +77,8 @@ MessageLoopAsync* MessageLoopAsync::Current() {
   return current_message_loop_async;
 }
 
-const WatchInfo* MessageLoopAsync::FindWatchInfo(int id) const {
+const MessageLoopAsync::WatchInfo* MessageLoopAsync::FindWatchInfo(
+    int id) const {
   auto it = watches_.find(id);
   if (it == watches_.end())
     return nullptr;
@@ -77,11 +86,14 @@ const WatchInfo* MessageLoopAsync::FindWatchInfo(int id) const {
 }
 
 void MessageLoopAsync::AddSignalHandler(int id, zx_handle_t object,
-                                        zx_signals_t signals) {
+                                        zx_signals_t signals,
+                                        WatchInfo* associated_info) {
   SignalHandler handler(id, object, signals);
 
   // The handler should not be there already.
   FXL_DCHECK(signal_handlers_.find(handler.handle()) == signal_handlers_.end());
+
+  associated_info->signal_handler_key = handler.handle();
   signal_handlers_[handler.handle()] = std::move(handler);
 }
 
@@ -134,7 +146,7 @@ MessageLoop::WatchHandle MessageLoopAsync::WatchFD(WatchMode mode, int fd,
     next_watch_id_++;
   }
 
-  AddSignalHandler(watch_id, info.fd_handle, signals);
+  AddSignalHandler(watch_id, info.fd_handle, signals, &info);
   watches_[watch_id] = info;
   return WatchHandle(this, watch_id);
 }
@@ -161,8 +173,7 @@ MessageLoop::WatchHandle MessageLoopAsync::WatchSocket(
   if (mode == WatchMode::kWrite || mode == WatchMode::kReadWrite)
     signals |= ZX_SOCKET_WRITABLE;
 
-  AddSignalHandler(watch_id, socket_handle, ZX_SOCKET_WRITABLE);
-
+  AddSignalHandler(watch_id, socket_handle, ZX_SOCKET_WRITABLE, &info);
   watches_[watch_id] = info;
   return WatchHandle(this, watch_id);
 }
@@ -189,7 +200,7 @@ MessageLoop::WatchHandle MessageLoopAsync::WatchProcessExceptions(
                       &info);
 
   // Watch for the process terminated signal.
-  AddSignalHandler(watch_id, process_handle, ZX_PROCESS_TERMINATED);
+  AddSignalHandler(watch_id, process_handle, ZX_PROCESS_TERMINATED, &info);
 
   watches_[watch_id] = info;
   return WatchHandle(this, watch_id);
@@ -328,6 +339,7 @@ void MessageLoopAsync::RunUntilTimeout(zx::duration timeout) {
 // tasks before handle events and will get signaled if one of them posted a new
 // task.
 void MessageLoopAsync::RunImpl() {
+  FXL_LOG(INFO) << __FUNCTION__;
   // Init should have been called.
   FXL_DCHECK(Current() == this);
   zx_status_t status;
@@ -497,6 +509,7 @@ void MessageLoopAsync::OnJobException(const ExceptionHandler& handler,
 
 void MessageLoopAsync::OnSocketSignal(int watch_id, const WatchInfo& info,
                                       zx_signals_t observed) {
+  FXL_LOG(INFO) << __FUNCTION__;
   // Dispatch readable signal.
   if (observed & ZX_SOCKET_READABLE)
     info.socket_watcher->OnSocketReadable(info.socket_handle);

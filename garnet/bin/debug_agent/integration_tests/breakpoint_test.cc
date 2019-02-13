@@ -8,7 +8,7 @@
 #include "garnet/bin/debug_agent/integration_tests/message_loop_wrapper.h"
 #include "garnet/bin/debug_agent/integration_tests/so_wrapper.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
-#include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
+#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "lib/fxl/logging.h"
 

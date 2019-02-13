@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
 
+#include <lib/fdio/unsafe.h>
 #include <zx/event.h>
 #include <zx/port.h>
 #include <zx/thread.h>
@@ -15,13 +16,14 @@ namespace debug_ipc {
 class ZirconExceptionWatcher;
 class SocketWatcher;
 
-class MessageLoopZircon : public MessageLoop {
+class MessageLoopZircon : public MessageLoopTarget {
  public:
   MessageLoopZircon();
   ~MessageLoopZircon();
 
   void Init() override;
   void Cleanup() override;
+  void QuitNow() override;
 
   // Runs until timeout. Mostly used in tests.
   void RunUntilTimeout(zx::duration timeout);
@@ -32,37 +34,22 @@ class MessageLoopZircon : public MessageLoop {
   // MessageLoop implementation.
   WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) override;
 
-  // Watches the given socket for read/write status. The watcher must outlive
-  // the returned WatchHandle. Must only be called on the message loop thread.
-  //
-  // The FDWatcher must not unregister from a callback. The handle might
-  // become both readable and writable at the same time which will necessitate
-  // calling both callbacks. The code does not expect the FDWatcher to
-  // disappear in between these callbacks.
   WatchHandle WatchSocket(WatchMode mode, zx_handle_t socket_handle,
-                          SocketWatcher* watcher);
+                          SocketWatcher* watcher) override;
 
-  // Attaches to the exception port of the given process and issues callbacks
-  // on the given watcher. The watcher must outlive the returned WatchHandle.
-  // Must only be called on the message loop thread.
   WatchHandle WatchProcessExceptions(zx_handle_t process_handle,
                                      zx_koid_t process_koid,
-                                     ZirconExceptionWatcher* watcher);
+                                     ZirconExceptionWatcher* watcher) override;
 
-  // Attaches to the exception port of the given job and issues callbacks
-  // on the given watcher. The watcher must outlive the returned WatchHandle.
-  // Must only be called on the message loop thread.
   WatchHandle WatchJobExceptions(zx_handle_t job_handle, zx_koid_t job_koid,
-                                 ZirconExceptionWatcher* watcher);
+                                 ZirconExceptionWatcher* watcher) override;
 
-  // When this class issues an exception notification, the code should call
-  // this function to resume the thread from the exception. This is a wrapper
-  // for zx_task_resume_from_exception.
-  zx_status_t ResumeFromException(zx::thread& thread, uint32_t options);
+  zx_status_t ResumeFromException(zx_koid_t thread_koid, zx::thread& thread,
+                                  uint32_t options) override;
 
  private:
-  enum class WatchType { kFdio, kProcessExceptions, kJobExceptions, kSocket };
-  const char* WatchTypeToString(WatchType);
+  // Associated struct to track information about what type of resource a watch
+  // handle is following.
   struct WatchInfo;
 
   // MessageLoop protected implementation.
@@ -75,8 +62,8 @@ class MessageLoopZircon : public MessageLoop {
   // Returns true if there was an event pending to be processed.
   bool CheckAndProcessPendingTasks();
 
-  // Handles WatchHandles event. These are all the events that are not C++ tasks
-  // posted to the message loop.
+  // Handles WatchHandles event. These are all the events that are not C++
+  // tasks posted to the message loop.
   void HandleException(zx_port_packet_t packet);
 
   // Handle an event of the given type.

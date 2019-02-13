@@ -22,15 +22,6 @@ constexpr uint64_t kTaskSignalKey = 0;
 // Group of classes dedicated at handling async events associated with zircon's
 // message loop.
 
-enum class WatchType {
-  kTask,
-  kFdio,
-  kProcessExceptions,
-  kJobExceptions,
-  kSocket
-};
-const char* WatchTypeToString(WatchType);
-
 class SignalHandler {
  public:
   static void Handler(async_dispatcher_t*, async_wait_t*, zx_status_t,

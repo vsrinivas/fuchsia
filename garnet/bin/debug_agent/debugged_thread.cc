@@ -16,7 +16,7 @@
 #include "garnet/bin/debug_agent/process_info.h"
 #include "garnet/bin/debug_agent/unwind.h"
 #include "garnet/lib/debug_ipc/agent_protocol.h"
-#include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
+#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
@@ -39,7 +39,8 @@ DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread,
       suspend_reason_ = SuspendReason::kException;
       break;
     case ThreadCreationOption::kSuspendedShouldRun:
-      debug_ipc::MessageLoopZircon::Current()->ResumeFromException(thread_, 0);
+      debug_ipc::MessageLoopTarget::Current()->ResumeFromException(koid,
+                                                                   thread_, 0);
   }
 }
 
@@ -387,7 +388,8 @@ void DebuggedThread::ResumeForRunMode() {
     }
     suspend_reason_ = SuspendReason::kNone;
 
-    debug_ipc::MessageLoopZircon::Current()->ResumeFromException(thread_, 0);
+    debug_ipc::MessageLoopTarget::Current()->ResumeFromException(koid_, thread_,
+                                                                 0);
   } else if (suspend_reason_ == SuspendReason::kOther) {
     // A breakpoint should only be current when it was hit which will be
     // caused by an exception.

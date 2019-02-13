@@ -16,14 +16,32 @@
 #include "garnet/bin/debug_agent/remote_api_adapter.h"
 #include "garnet/bin/debug_agent/unwind.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
+#include "garnet/lib/debug_ipc/helper/message_loop_async.h"
+#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 #include "lib/component2/cpp/service_directory.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/component2/cpp/service_directory.h"
 
+using namespace debug_ipc;
+
 namespace debug_agent {
 namespace {
+
+std::unique_ptr<debug_ipc::MessageLoop> GetMessageLoop(MessageLoopTarget::LoopType type) {
+  switch (type) {
+    case MessageLoopTarget::LoopType::kAsync:
+      return std::make_unique<debug_ipc::MessageLoopAsync>();
+    case MessageLoopTarget::LoopType::kZircon:
+      return std::make_unique<debug_ipc::MessageLoopZircon>();
+    case MessageLoopTarget::LoopType::kLast:
+      break;
+  }
+
+  FXL_NOTREACHED();
+  return nullptr;
+}
 
 // SocketConnection ------------------------------------------------------------
 
@@ -155,7 +173,14 @@ void PrintUsage() {
 Arguments
 
   --aunwind
-      Use the experimental unwinder from AOSP.
+      [Experimental] Use the unwinder from AOSP.
+
+  --async-message-loop
+      [Experimental] Use async-loop backend message loop.
+
+  --debug-message-loop
+      Run the debug agent's message loop in debug mode.
+      This prints all the enqueued tasks to the message loop.
 
   --help
       Print this help.
@@ -185,6 +210,17 @@ int main(int argc, char* argv[]) {
     debug_agent::SetUnwinderType(debug_agent::UnwinderType::kAndroid);
   }
 
+  // By default use the original agent message loop.
+  auto message_loop_type = MessageLoopTarget::LoopType::kZircon;
+  if (cmdline.HasOption("async-message-loop")) {
+    // Use new async loop.
+    message_loop_type = MessageLoopTarget::LoopType::kAsync;
+  }
+
+  bool debug_mode = false;
+  if (cmdline.HasOption("debug-message-loop"))
+    debug_mode = true;
+
   std::string value;
   if (cmdline.GetOptionValue("port", &value)) {
     // TCP port listen mode.
@@ -197,17 +233,24 @@ int main(int argc, char* argv[]) {
 
     auto services = component2::ServiceDirectory::CreateFromNamespace();
 
-    debug_ipc::MessageLoopZircon message_loop;
-    message_loop.Init();
+    printf("Using %s message loop.\n",
+           MessageLoopTarget::LoopTypeToString(message_loop_type));
+    auto message_loop = debug_agent::GetMessageLoop(message_loop_type);
+    message_loop->Init();
+
+    if (debug_mode) {
+      printf("Running message loop in debug mode.\n");
+      message_loop->set_debug_mode(true);
+    }
 
     // The scope ensures the objects are destroyed before calling Cleanup on the
     // MessageLoop.
     {
       debug_agent::SocketServer server;
-      if (!server.Run(&message_loop, port, services))
+      if (!server.Run(message_loop.get(), port, services))
         return 1;
     }
-    message_loop.Cleanup();
+    message_loop->Cleanup();
   } else {
     fprintf(stderr, "ERROR: Port number required.\n\n");
     debug_agent::PrintUsage();

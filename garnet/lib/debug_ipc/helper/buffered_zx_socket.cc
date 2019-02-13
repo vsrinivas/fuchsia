@@ -4,7 +4,7 @@
 
 #include "garnet/lib/debug_ipc/helper/buffered_zx_socket.h"
 
-#include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
+#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
 #include "garnet/public/lib/fxl/logging.h"
 
 namespace debug_ipc {
@@ -18,7 +18,7 @@ bool BufferedZxSocket::Init(zx::socket socket) {
   stream_.set_writer(this);
 
   // Register for socket updates from the message loop.
-  MessageLoopZircon* loop = MessageLoopZircon::Current();
+  MessageLoopTarget* loop = MessageLoopTarget::Current();
   FXL_DCHECK(loop);
   watch_handle_ = loop->WatchSocket(MessageLoop::WatchMode::kReadWrite,
                                     socket_.get(), this);

@@ -135,23 +135,4 @@ void ExceptionHandler::Handler(async_dispatcher_t*,
   loop->HandleException(exception_handler, std::move(new_packet));
 }
 
-// Utils -----------------------------------------------------------------------
-
-const char* WatchTypeToString(WatchType type) {
-  switch (type) {
-    case WatchType::kTask:
-      return "Task";
-    case WatchType::kFdio:
-      return "FDIO";
-    case WatchType::kJobExceptions:
-      return "Job";
-    case WatchType::kProcessExceptions:
-      return "Process";
-    case WatchType::kSocket:
-      return "Socket";
-  }
-  FXL_NOTREACHED();
-  return "";
-}
-
 }  // namespace debug_ipc

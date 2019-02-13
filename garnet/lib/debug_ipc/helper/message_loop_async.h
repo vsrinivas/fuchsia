@@ -5,13 +5,12 @@
 #pragma once
 
 #include "garnet/lib/debug_ipc/helper/event_handlers.h"
-#include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "garnet/lib/debug_ipc/helper/message_loop_target.h"
 
 #include <vector>
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/unsafe.h>
-
 #include <zx/event.h>
 #include <zx/port.h>
 #include <zx/thread.h>
@@ -23,34 +22,15 @@ class SignalHandler;
 class SocketWatcher;
 class ZirconExceptionWatcher;
 
-// Associated struct to track information about what type of resource a watch
-// handle is following.
-struct WatchInfo {
-  WatchType type = WatchType::kFdio;
-
-  // FDIO-specific watcher parameters.
-  int fd = -1;
-  fdio_t* fdio = nullptr;
-  FDWatcher* fd_watcher = nullptr;
-  zx_handle_t fd_handle = ZX_HANDLE_INVALID;
-
-  // Socket-specific parameters.
-  SocketWatcher* socket_watcher = nullptr;
-  zx_handle_t socket_handle = ZX_HANDLE_INVALID;
-
-  // Task-exception-specific parameters, can be of job or process type.
-  ZirconExceptionWatcher* exception_watcher = nullptr;
-  zx_koid_t task_koid = 0;
-  zx_handle_t task_handle = ZX_HANDLE_INVALID;
-
-  // This makes easier the lookup of the associated ExceptionHandler with this
-  // watch id.
-  const async_wait_t* signal_handler_key = nullptr;
-  const async_exception_t* exception_handler_key = nullptr;
-};
-
-class MessageLoopAsync : public MessageLoop {
+class MessageLoopAsync : public MessageLoopTarget {
  public:
+  // Associated struct to track information about what type of resource a watch
+  // handle is following.
+  // EventHandlers need access to the WatchInfo implementation, hence the reason
+  // for it to be public.
+  // Definition at the end of the header.
+  struct WatchInfo;
+
   using SignalHandlerMap = std::map<const async_wait_t*, SignalHandler>;
   using ExceptionHandlerMap =
       std::map<const async_exception_t*, ExceptionHandler>;
@@ -70,35 +50,28 @@ class MessageLoopAsync : public MessageLoop {
   // MessageLoop implementation.
   WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) override;
 
-  // Watches the given socket for read/write status. The watcher must outlive
-  // the returned WatchHandle. Must only be called on the message loop thread.
-  //
-  // The FDWatcher must not unregister from a callback. The handle might
-  // become both readable and writable at the same time which will necessitate
-  // calling both callbacks. The code does not expect the FDWatcher to
-  // disappear in between these callbacks.
   WatchHandle WatchSocket(WatchMode mode, zx_handle_t socket_handle,
-                          SocketWatcher* watcher);
+                          SocketWatcher* watcher) override;
 
   // Attaches to the exception port of the given process and issues callbacks
   // on the given watcher. The watcher must outlive the returned WatchHandle.
   // Must only be called on the message loop thread.
   WatchHandle WatchProcessExceptions(zx_handle_t process_handle,
                                      zx_koid_t process_koid,
-                                     ZirconExceptionWatcher* watcher);
+                                     ZirconExceptionWatcher* watcher) override;
 
   // Attaches to the exception port of the given job and issues callbacks
   // on the given watcher. The watcher must outlive the returned WatchHandle.
   // Must only be called on the message loop thread.
   WatchHandle WatchJobExceptions(zx_handle_t job_handle, zx_koid_t job_koid,
-                                 ZirconExceptionWatcher* watcher);
+                                 ZirconExceptionWatcher* watcher) override;
 
   // When this class issues an exception notification, the code should call
   // this function to resume the thread from the exception. This is a wrapper
   // for zx_task_resume_from_exception.
   /* zx_status_t ResumeFromException(zx::thread& thread, uint32_t options); */
   zx_status_t ResumeFromException(zx_koid_t thread_koid, zx::thread&,
-                                  uint32_t options);
+                                  uint32_t options) override;
 
   void QuitNow() override;
 
@@ -147,7 +120,9 @@ class MessageLoopAsync : public MessageLoop {
 
   SignalHandlerMap signal_handlers_;
   // See SignalHandler constructor.
-  void AddSignalHandler(int, zx_handle_t, zx_signals_t);
+  // |associated_info| needs to be updated with the fact that it has an
+  // associated SignalHandler.
+  void AddSignalHandler(int, zx_handle_t, zx_signals_t, WatchInfo* info);
   void RemoveSignalHandler(const async_wait_t* id);
 
   ExceptionHandlerMap exception_handlers_;
@@ -172,6 +147,31 @@ class MessageLoopAsync : public MessageLoop {
 
   friend class SignalHandler;
   friend class ExceptionHandler;
+};
+
+// EventHandlers need access to the WatchInfo implementation.
+struct MessageLoopAsync::WatchInfo {
+  WatchType type = WatchType::kFdio;
+
+  // FDIO-specific watcher parameters.
+  int fd = -1;
+  fdio_t* fdio = nullptr;
+  FDWatcher* fd_watcher = nullptr;
+  zx_handle_t fd_handle = ZX_HANDLE_INVALID;
+
+  // Socket-specific parameters.
+  SocketWatcher* socket_watcher = nullptr;
+  zx_handle_t socket_handle = ZX_HANDLE_INVALID;
+
+  // Task-exception-specific parameters, can be of job or process type.
+  ZirconExceptionWatcher* exception_watcher = nullptr;
+  zx_koid_t task_koid = 0;
+  zx_handle_t task_handle = ZX_HANDLE_INVALID;
+
+  // This makes easier the lookup of the associated ExceptionHandler with this
+  // watch id.
+  const async_wait_t* signal_handler_key = nullptr;
+  const async_exception_t* exception_handler_key = nullptr;
 };
 
 }  // namespace debug_ipc

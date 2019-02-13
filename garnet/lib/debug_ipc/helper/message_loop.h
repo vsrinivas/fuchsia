@@ -46,6 +46,10 @@ class MessageLoop {
   virtual void Init();
   virtual void Cleanup();
 
+  // Exits the message loop immediately, not running pending functions. This
+  // must be called only on the MessageLoop thread.
+  virtual void QuitNow();
+
   // Returns the current message loop or null if there isn't one.
   static MessageLoop* Current();
 
@@ -53,10 +57,6 @@ class MessageLoop {
   void Run();
 
   void PostTask(FileLineFunction file_line, std::function<void()> fn);
-
-  // Exits the message loop immediately, not running pending functions. This
-  // must be called only on the MessageLoop thread.
-  virtual void QuitNow();
 
   // Starts watching the given file descriptor in the given mode. Returns
   // a WatchHandle that scopes the watch operation (when the handle is
