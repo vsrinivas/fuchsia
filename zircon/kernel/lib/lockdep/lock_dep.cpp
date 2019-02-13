@@ -145,13 +145,6 @@ void SystemLockValidationError(AcquiredLockEntry* bad_entry,
            LockClassState::GetName(conflicting_entry->id()),
            conflicting_entry->order());
     printf("caller=%p frame=%p\n", caller_address, caller_frame);
-    printf("BUILDID %s\n", version.buildid);
-
-    // Log the ELF build ID in the format the symbolizer scripts understand.
-    if (version.elf_build_id[0] != '\0') {
-        printf("dso: id=%s base=%#lx name=zircon.elf\n",
-               version.elf_build_id, (uintptr_t)__code_start);
-    }
 
     thread_print_current_backtrace_at_frame(caller_frame);
     printf("\n");

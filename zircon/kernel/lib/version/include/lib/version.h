@@ -32,4 +32,7 @@ extern const lk_version_t version;
 
 void print_version(void);
 
+// Prints version info and kernel mappings required to interpret backtraces.
+void print_backtrace_version_info(void);
+
 __END_CDECLS

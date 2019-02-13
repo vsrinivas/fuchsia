@@ -36,6 +36,7 @@
 #include <lib/counters.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
+#include <lib/version.h>
 
 #include <list.h>
 #include <malloc.h>
@@ -1370,6 +1371,8 @@ static zx_status_t _thread_print_backtrace(thread_t* t, void* fp) {
     if (count == 0) {
         return ZX_ERR_BAD_STATE;
     }
+
+    print_backtrace_version_info();
 
     // TODO(jakehehrlich): Remove the legacy format.
     for (size_t n = 0; n < count; n++) {

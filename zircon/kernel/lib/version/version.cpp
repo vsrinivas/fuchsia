@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <vm/vm.h>
 
 /* generated for us */
 #include <config-buildid.h>
@@ -47,6 +48,32 @@ void print_version(void) {
     printf("\tbuildid:  %s\n", version.buildid);
     printf("\tELF build ID: %s\n", version.elf_build_id);
 }
+
+// TODO(eieio): Consider whether it makes sense to locate the logic for printing
+// mappings somewhere else (perhaps in vm/vm.cpp?).
+static void print_mmap(uintptr_t bias, const void* begin, const void* end, const char* perm) {
+  const uintptr_t start = reinterpret_cast<uintptr_t>(begin);
+  const size_t size = reinterpret_cast<uintptr_t>(end) - start;
+  printf("{{{mmap:%#lx:%#lx:load:0:%s:%#lx}}}\n", start, size, perm, start + bias);
+}
+
+void print_backtrace_version_info() {
+    printf("BUILDID %s\n\n", version.buildid);
+
+    // Log the ELF build ID in the format the symbolizer scripts understand.
+    if (version.elf_build_id[0] != '\0') {
+        const uintptr_t bias = KERNEL_BASE - reinterpret_cast<uintptr_t>(__code_start);
+        printf("{{{module:0:kernel:elf:%s}}}\n", version.elf_build_id);
+        // These four mappings match the mappings printed by vm_init().
+        print_mmap(bias, __code_start, __code_end, "rx");
+        print_mmap(bias, __rodata_start, __rodata_end, "r");
+        print_mmap(bias, __data_start, __data_end, "rw");
+        print_mmap(bias, __bss_start, _end, "rw");
+        printf("dso: id=%s base=%#lx name=zircon.elf\n",
+               version.elf_build_id, reinterpret_cast<uintptr_t>(__code_start));
+    }
+}
+
 
 // Standard ELF note layout (Elf{32,64}_Nhdr in <elf.h>).
 // The name and type fields' values are what GNU and GNU-compatible
