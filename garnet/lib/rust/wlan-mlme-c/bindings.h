@@ -268,4 +268,10 @@ extern "C" int32_t mlme_write_open_auth_frame(
     const uint8_t (*bssid)[6], const uint8_t (*client_addr)[6],
     mlme_out_buf_t *out_buf);
 
+extern "C" int32_t mlme_write_eapol_data_frame(
+    mlme_buffer_provider_ops_t provider, mlme_sequence_manager_t *seq_mgr,
+    const uint8_t (*dest)[6], const uint8_t (*src)[6], bool is_protected,
+    const uint8_t *eapol_frame_ptr, uintptr_t eapol_frame_len,
+    mlme_out_buf_t *out_buf);
+
 #endif /* GARNET_LIB_RUST_WLAN_MLME_C_BINDINGS_H_ */

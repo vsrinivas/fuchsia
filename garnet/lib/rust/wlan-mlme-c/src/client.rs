@@ -68,3 +68,31 @@ pub extern "C" fn mlme_deliver_eth_frame(
     let written_bytes = unwrap_or_bail!(write_result, zx::ZX_ERR_IO_OVERRUN).written_bytes();
     device.deliver_ethernet(&buf.as_slice()[0..written_bytes])
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn mlme_write_eapol_data_frame(
+    provider: BufferProvider,
+    seq_mgr: &mut SequenceManager,
+    dest: &[u8; 6],
+    src: &[u8; 6],
+    is_protected: bool,
+    eapol_frame_ptr: *const u8,
+    eapol_frame_len: usize,
+    out_buf: &mut OutBuf,
+) -> i32 {
+    let frame_len = frame_len!(mac::DataHdr, mac::LlcHdr) + eapol_frame_len;
+    let buf_result = provider.get_buffer(frame_len);
+    let mut buf = unwrap_or_bail!(buf_result, zx::ZX_ERR_NO_RESOURCES);
+    let eapol_frame = utils::as_slice(eapol_frame_ptr, eapol_frame_len);
+    let write_result = client::write_eapol_data_frame(
+        &mut buf[..],
+        *dest,
+        *src,
+        seq_mgr,
+        is_protected,
+        eapol_frame,
+    );
+    let written_bytes = unwrap_or_bail!(write_result, zx::ZX_ERR_INTERNAL);
+    *out_buf = OutBuf::from(buf, written_bytes);
+    zx::ZX_OK
+}
