@@ -207,11 +207,11 @@ source_set("user_intelligence_provider") {
   deps = [
     ":focus",
     ":intelligence_services",
+    ":rate_limited_retry",
     "//sdk/fidl/fuchsia.bluetooth.le",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//peridot/bin/basemgr/cobalt",
     "//peridot/lib:maxwell_internal",
-    "//peridot/lib/util:rate_limited_retry",
     "//sdk/fidl/fuchsia.modular",
     "//zircon/public/fidl/fuchsia-cobalt",
   ]
@@ -225,5 +225,16 @@ source_set("intelligence_services") {
 
   deps = [
     "//sdk/fidl/fuchsia.modular",
+  ]
+}
+
+source_set("rate_limited_retry") {
+  sources = [
+    "rate_limited_retry.cc",
+    "rate_limited_retry.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/zx",
   ]
 }

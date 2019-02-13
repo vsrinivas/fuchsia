@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_UTIL_RATE_LIMITED_RETRY_H_
-#define PERIDOT_LIB_UTIL_RATE_LIMITED_RETRY_H_
+#ifndef PERIDOT_BIN_SESSIONMGR_RATE_LIMITED_RETRY_H_
+#define PERIDOT_BIN_SESSIONMGR_RATE_LIMITED_RETRY_H_
 
 #include <lib/zx/time.h>
 
@@ -41,4 +41,4 @@ class RateLimitedRetry {
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_UTIL_RATE_LIMITED_RETRY_H_
+#endif  // PERIDOT_BIN_SESSIONMGR_RATE_LIMITED_RETRY_H_

@@ -2,17 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("rate_limited_retry") {
-  sources = [
-    "rate_limited_retry.cc",
-    "rate_limited_retry.h",
-  ]
-
-  public_deps = [
-    "//zircon/public/lib/zx",
-  ]
-}
-
 source_set("util") {
   sources = [
     "string_escape.cc",

@@ -14,7 +14,7 @@
 #include <lib/svc/cpp/services.h>
 #include <lib/zx/channel.h>
 
-#include "peridot/lib/util/rate_limited_retry.h"
+#include "peridot/bin/sessionmgr/rate_limited_retry.h"
 
 namespace modular {
 
