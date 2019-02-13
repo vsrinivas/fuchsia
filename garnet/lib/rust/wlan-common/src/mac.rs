@@ -44,6 +44,15 @@ pub const DATA_SUBTYPE_NULL_QOS_DATA: u16 = 0x0C;
 pub const BITMASK_NULL: u16 = 1 << 2;
 pub const BITMASK_QOS: u16 = 1 << 3;
 
+// RFC 1042
+pub const LLC_SNAP_EXTENSION: u8 = 0xAA;
+pub const LLC_SNAP_UNNUMBERED_INFO: u8 = 0x03;
+pub const LLC_SNAP_OUI: [u8; 3] = [0, 0, 0];
+
+// RFC 704, Appendix B.2
+// https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml
+pub const ETHER_TYPE_EAPOL: u16 = 0x888E;
+
 // IEEE Std 802.11-2016, 9.2.4.1.1
 bitfield! {
     #[derive(PartialEq)]
@@ -658,17 +667,22 @@ impl<B: ByteSlice> MgmtSubtype<B> {
 // IETF RFC 1042
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
+#[derive(Default)]
 pub struct LlcHdr {
     pub dsap: u8,
     pub ssap: u8,
     pub control: u8,
     pub oui: [u8; 3],
-    pub protocol_id: [u8; 2],
+    pub protocol_id_be: [u8; 2], // In network byte order (big endian).
 }
 
 impl LlcHdr {
     pub fn protocol_id(&self) -> u16 {
-        LittleEndian::read_u16(&self.protocol_id)
+        BigEndian::read_u16(&self.protocol_id_be)
+    }
+
+    pub fn set_protocol_id(&mut self, val: u16) {
+        BigEndian::write_u16(&mut self.protocol_id_be, val);
     }
 }
 
@@ -948,9 +962,9 @@ mod tests {
             // LLC Header
             7, 7, 7, // DSAP, SSAP & control
             8, 8, 8, // OUI
-            9, 9, // eth type
+            9, 10, // eth type
             // Trailing bytes
-            10, 10, 10,
+            11, 11, 11,
         ]);
         bytes
     }
@@ -1067,7 +1081,7 @@ mod tests {
                     }
                 };
                 assert!(ht_ctrl.is_none());
-                assert_eq!(&body[..], &[7, 7, 7, 8, 8, 8, 9, 9, 10, 10, 10]);
+                assert_eq!(&body[..], &[7, 7, 7, 8, 8, 8, 9, 10, 11, 11, 11]);
             }
             _ => panic!("failed parsing data frame"),
         };
@@ -1098,14 +1112,23 @@ mod tests {
                         assert_eq!(7, hdr.ssap);
                         assert_eq!(7, hdr.control);
                         assert_eq!([8, 8, 8], hdr.oui);
-                        assert_eq!([9, 9], hdr.protocol_id);
-                        assert_eq!(&[10, 10, 10], payload);
+                        assert_eq!([9, 10], hdr.protocol_id_be);
+                        assert_eq!(0x090A, hdr.protocol_id());
+                        assert_eq!(&[11, 11, 11], payload);
                     }
                     _ => panic!("failed parsing LLC"),
                 }
             }
             _ => panic!("failed parsing data frame"),
         };
+    }
+
+    #[test]
+    fn test_llc_set_protocol_id() {
+        let mut hdr: LlcHdr = Default::default();
+        hdr.set_protocol_id(0xAABB);
+        assert_eq!([0xAA, 0xBB], hdr.protocol_id_be);
+        assert_eq!(0xAABB, hdr.protocol_id());
     }
 
     #[test]

@@ -88,6 +88,30 @@ pub fn write_eth_frame<B: ByteSliceMut>(
     Ok(w)
 }
 
+pub fn write_eapol_frame<B: ByteSliceMut>(
+    buf: B,
+    dest: MacAddr,
+    src: MacAddr,
+    seq_num: u16,
+    protected: bool,
+    eapol_frame: &[u8],
+) -> Result<usize, Error> {
+    let mut frame_ctrl = mac::FrameControl(0);
+    frame_ctrl.set_frame_subtype(mac::DATA_SUBTYPE_DATA);
+    frame_ctrl.set_protected(protected);
+    let mut seq_ctrl = mac::SequenceControl(0);
+    seq_ctrl.set_seq_num(seq_num);
+    let w = data_writer::write_data_hdr(
+        BufferWriter::new(buf),
+        data_writer::FixedFields::sent_from_client(frame_ctrl, dest, src, seq_ctrl.value()),
+        data_writer::OptionalFields::none(),
+    )?;
+
+    let w = data_writer::write_snap_llc_hdr(w, mac::ETHER_TYPE_EAPOL)?;
+    let w = w.write_bytes(eapol_frame)?;
+    Ok(w.written_bytes())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -205,5 +229,57 @@ mod tests {
             ],
             buf
         );
+    }
+
+    #[test]
+    fn eapol_frame() {
+        let mut buf = [99u8; 35];
+        let written_bytes = write_eapol_frame(&mut buf[..], [1; 6], [2; 6], 42, true, &[4, 5, 6])
+            .expect("failed writing frame");
+        assert_eq!(35, written_bytes);
+        let expected = [
+            // Data header
+            0b00001000, 0b01000001, // Frame Control
+            0, 0, // Duration
+            1, 1, 1, 1, 1, 1, // addr1
+            2, 2, 2, 2, 2, 2, // addr2
+            1, 1, 1, 1, 1, 1, // addr3
+            0b10100000, 0b10, // Sequence Control
+            // LLC header
+            0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+            0, 0, 0, // OUI
+            0x88, 0x8E, // Protocol ID
+            // Payload
+            4, 5, 6,
+        ];
+        assert_eq!(&expected[..], &buf[..]);
+    }
+
+    #[test]
+    fn eapol_frame_empty_payload() {
+        let mut buf = [99u8; 32];
+        let written_bytes = write_eapol_frame(&mut buf[..], [1; 6], [2; 6], 42, true, &[])
+            .expect("failed writing frame");
+        assert_eq!(32, written_bytes);
+        let expected = [
+            // Data header
+            0b00001000, 0b01000001, // Frame Control
+            0, 0, // Duration
+            1, 1, 1, 1, 1, 1, // addr1
+            2, 2, 2, 2, 2, 2, // addr2
+            1, 1, 1, 1, 1, 1, // addr3
+            0b10100000, 0b10, // Sequence Control
+            // LLC header
+            0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+            0, 0, 0, // OUI
+            0x88, 0x8E, // Protocol ID
+        ];
+    }
+
+    #[test]
+    fn eapol_frame_buffer_too_small() {
+        let mut buf = [99u8; 34];
+        let result = write_eapol_frame(&mut buf[..], [1; 6], [2; 6], 42, true, &[4, 5, 6]);
+        assert!(result.is_err(), "expect writing eapol frame to fail");
     }
 }

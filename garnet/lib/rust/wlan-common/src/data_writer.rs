@@ -125,6 +125,19 @@ pub fn write_data_hdr<B: ByteSliceMut>(
     Ok(w)
 }
 
+pub fn write_snap_llc_hdr<B: ByteSliceMut>(
+    w: BufferWriter<B>,
+    protocol_id: u16,
+) -> Result<BufferWriter<B>, Error> {
+    let (mut llc_hdr, w) = w.reserve_zeroed::<mac::LlcHdr>()?;
+    llc_hdr.dsap = mac::LLC_SNAP_EXTENSION;
+    llc_hdr.ssap = mac::LLC_SNAP_EXTENSION;
+    llc_hdr.control = mac::LLC_SNAP_UNNUMBERED_INFO;
+    llc_hdr.oui = mac::LLC_SNAP_OUI;
+    llc_hdr.set_protocol_id(protocol_id);
+    Ok(w)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -327,6 +340,26 @@ mod tests {
                 // Trailing bytes
                 0, 0, 0, 0,
             ][..]
+        );
+    }
+
+    #[test]
+    fn write_llc_hdr() {
+        let mut bytes = vec![0u8; 10];
+        let w = write_snap_llc_hdr(BufferWriter::new(&mut bytes[..]), 0x888E)
+            .expect("Failed writing LLC header");
+
+        assert_eq!(w.written_bytes(), 8);
+        #[rustfmt::skip]
+        assert_eq!(
+            bytes,
+            [
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control
+                0, 0, 0, // OUI
+                0x88, 0x8E, // Protocol ID
+                // Trailing bytes
+                0, 0,
+            ]
         );
     }
 }
