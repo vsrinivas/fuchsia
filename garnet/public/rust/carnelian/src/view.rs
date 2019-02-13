@@ -6,6 +6,7 @@ use crate::app::App;
 use failure::Error;
 use fidl::endpoints::{create_endpoints, create_proxy, ServerEnd};
 use fidl_fuchsia_ui_gfx as gfx;
+use fidl_fuchsia_ui_input;
 use fidl_fuchsia_ui_scenic::{SessionListenerMarker, SessionListenerRequest};
 use fidl_fuchsia_ui_viewsv1::{ViewListenerMarker, ViewListenerRequest};
 use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
@@ -32,6 +33,14 @@ pub struct ViewAssistantContext<'a> {
     pub key: ViewKey,
     pub width: f32,
     pub height: f32,
+    pub messages: Vec<Box<dyn Any>>,
+}
+
+impl<'a> ViewAssistantContext<'a> {
+    /// Queue up a message for delivery
+    pub fn queue_message<A: Any>(&mut self, message: A) {
+        self.messages.push(Box::new(message));
+    }
 }
 
 /// Trait that allows mod developers to customize the behavior of view controllers.
@@ -42,6 +51,15 @@ pub trait ViewAssistant: Send {
 
     /// This method is called when a view controller has been asked to update the view.
     fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error>;
+
+    /// This method is called when input events come from scenic to this view.
+    fn handle_input_event(
+        &mut self,
+        _context: &mut ViewAssistantContext,
+        _event: &fidl_fuchsia_ui_input::InputEvent,
+    ) -> Result<(), Error> {
+        Ok(())
+    }
 
     /// This method is called when `App::send_message` is called with the associated
     /// view controller's `ViewKey` and the view controller does not handle the message.
@@ -78,15 +96,16 @@ pub(crate) enum NewViewParams {
 
 impl ViewController {
     pub(crate) fn new(
-        app: &mut App, req: NewViewParams, key: ViewKey,
+        app: &mut App,
+        req: NewViewParams,
+        key: ViewKey,
     ) -> Result<ViewControllerPtr, Error> {
         let (view, view_server_end) = create_proxy()?;
         let (view_listener, view_listener_request) = create_endpoints()?;
         let (mine, theirs) = zx::EventPair::create()?;
         match req {
             NewViewParams::V1(req) => {
-                app.view_manager
-                    .create_view(view_server_end, req, view_listener, theirs, None)?;
+                app.view_manager.create_view(view_server_end, req, view_listener, theirs, None)?;
             }
             NewViewParams::V2(view_token) => {
                 app.view_manager.create_view2(
@@ -120,6 +139,7 @@ impl ViewController {
             key,
             width: 0.0,
             height: 0.0,
+            messages: Vec::new(),
         };
         view_assistant.lock().borrow_mut().setup(&context)?;
 
@@ -164,20 +184,16 @@ impl ViewController {
     }
 
     fn setup_view_listener(
-        view_controller: &ViewControllerPtr, view_listener_request: ServerEnd<ViewListenerMarker>,
+        view_controller: &ViewControllerPtr,
+        view_listener_request: ServerEnd<ViewListenerMarker>,
     ) -> Result<(), Error> {
         let view_controller = view_controller.clone();
         fasync::spawn(
             view_listener_request
                 .into_stream()?
                 .try_for_each(
-                    move |ViewListenerRequest::OnPropertiesChanged {
-                              properties,
-                              responder,
-                          }| {
-                        view_controller
-                            .lock()
-                            .handle_properties_changed(&properties);
+                    move |ViewListenerRequest::OnPropertiesChanged { properties, responder }| {
+                        view_controller.lock().handle_properties_changed(&properties);
                         futures::future::ready(responder.send())
                     },
                 )
@@ -195,6 +211,7 @@ impl ViewController {
             key: self.key,
             width: self.width,
             height: self.height,
+            messages: Vec::new(),
         };
         self.assistant
             .lock()
@@ -207,6 +224,26 @@ impl ViewController {
     fn handle_session_events(&mut self, events: Vec<fidl_fuchsia_ui_scenic::Event>) {
         events.iter().for_each(|event| match event {
             fidl_fuchsia_ui_scenic::Event::Gfx(gfx::Event::Metrics(_event)) => {
+                self.update();
+            }
+            fidl_fuchsia_ui_scenic::Event::Input(event) => {
+                let mut context = ViewAssistantContext {
+                    view_container: &mut self.view_container,
+                    import_node: &mut self.import_node,
+                    session: &self.session,
+                    key: self.key,
+                    width: self.width,
+                    height: self.height,
+                    messages: Vec::new(),
+                };
+                self.assistant
+                    .lock()
+                    .borrow_mut()
+                    .handle_input_event(&mut context, &event)
+                    .unwrap_or_else(|e| eprintln!("handle_event: {:?}", e));
+                for msg in context.messages {
+                    self.send_message(&msg);
+                }
                 self.update();
             }
             _ => (),

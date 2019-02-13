@@ -16,6 +16,7 @@ rustc_library("carnelian") {
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.viewsv1:fuchsia.ui.viewsv1-rustc",
     "//sdk/fidl/fuchsia.ui.viewsv1token:fuchsia.ui.viewsv1token-rustc",
@@ -92,6 +93,36 @@ rustc_binary("embedding_example") {
   ]
 }
 
+rustc_binary("button_example") {
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "examples/button.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
+    "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//sdk/fidl/fuchsia.ui.viewsv1:fuchsia.ui.viewsv1-rustc",
+    "//sdk/fidl/fuchsia.ui.viewsv1token:fuchsia.ui.viewsv1token-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/carnelian",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-scenic",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//garnet/public/rust/shared-buffer",
+    "//third_party/rust-crates/rustc_deps:euclid",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:itertools",
+    "//third_party/rust-crates/rustc_deps:lazy_static",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
+  ]
+}
+
 package("spinning_square_rs") {
   deps = [
     ":spinning_square_example",
@@ -128,6 +159,26 @@ package("embedding_rs") {
     {
       path = rebase_path("meta/example.cmx")
       dest = "embedding_rs.cmx"
+    },
+  ]
+}
+
+package("button_rs") {
+  deps = [
+    ":button_example",
+  ]
+
+  binaries = [
+    {
+      name = "app"
+      source = "rust_crates/button_example"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/example.cmx")
+      dest = "button_rs.cmx"
     },
   ]
 }

@@ -100,14 +100,10 @@ impl App {
     }
 
     pub(crate) fn create_view_assistant(
-        &mut self, session: &SessionPtr,
+        &mut self,
+        session: &SessionPtr,
     ) -> Result<ViewAssistantPtr, Error> {
-        Ok(self
-            .assistant
-            .as_ref()
-            .unwrap()
-            .lock()
-            .create_view_assistant(session)?)
+        Ok(self.assistant.as_ref().unwrap().lock().create_view_assistant(session)?)
     }
 
     fn create_view(&mut self, req: ServerEnd<ViewOwnerMarker>) -> Result<(), Error> {

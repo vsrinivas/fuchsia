@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use failure::Error;
+use fidl_fuchsia_ui_gfx::ColorRgba;
 use rusttype::{Font, FontCollection, Scale};
 use shared_buffer::SharedBuffer;
 
@@ -14,6 +15,37 @@ pub struct Color {
     pub g: u8,
     pub b: u8,
     pub a: u8,
+}
+
+#[allow(missing_docs)]
+impl Color {
+    pub fn new() -> Color {
+        Color { r: 0, g: 0, b: 0, a: 255 }
+    }
+
+    pub fn white() -> Color {
+        Color { r: 255, g: 255, b: 255, a: 255 }
+    }
+
+    pub fn extract_hex_slice(hash_code: &str, start_index: usize) -> Result<u8, Error> {
+        Ok(u8::from_str_radix(&hash_code[start_index..start_index + 2], 16)?)
+    }
+
+    pub fn to_float_color_component(component: u8) -> f64 {
+        (component as f64 * 100.0 / 255.0).round() / 100.0
+    }
+
+    pub fn from_hash_code(hash_code: &str) -> Result<Color, Error> {
+        let mut new_color = Color::new();
+        new_color.r = Color::extract_hex_slice(&hash_code, 1)?;
+        new_color.g = Color::extract_hex_slice(&hash_code, 3)?;
+        new_color.b = Color::extract_hex_slice(&hash_code, 5)?;
+        Ok(new_color)
+    }
+
+    pub fn make_color_rgba(&self) -> ColorRgba {
+        ColorRgba { red: self.r, green: self.g, blue: self.b, alpha: self.a }
+    }
 }
 
 /// Struct representing an location
@@ -33,7 +65,7 @@ pub struct Size {
 }
 
 /// Struct representing a rectangle area.
-#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
+#[derive(Hash, Eq, PartialEq, Debug, Default, Clone, Copy)]
 #[allow(missing_docs)]
 pub struct Rect {
     pub left: u32,
@@ -48,6 +80,13 @@ pub struct Rect {
 pub struct Paint {
     pub fg: Color,
     pub bg: Color,
+}
+
+impl Paint {
+    #[allow(missing_docs)]
+    pub fn from_hash_codes(fg: &str, bg: &str) -> Result<Paint, Error> {
+        Ok(Paint { fg: Color::from_hash_code(fg)?, bg: Color::from_hash_code(bg)? })
+    }
 }
 
 /// Opaque type representing a glyph ID.
@@ -69,7 +108,7 @@ pub struct FontFace<'a> {
 /// Struct containint font, size and baseline.
 #[allow(missing_docs)]
 pub struct FontDescription<'a, 'b: 'a> {
-    pub face: &'a mut FontFace<'b>,
+    pub face: &'a FontFace<'b>,
     pub size: u32,
     pub baseline: i32,
 }
@@ -123,10 +162,7 @@ impl<T: PixelSink> Canvas<T> {
     /// Create a canvas targetting a shared buffer with stride.
     pub fn new(buffer: SharedBuffer, stride: u32) -> Canvas<SharedBufferPixelSink> {
         let sink = SharedBufferPixelSink { buffer, stride };
-        Canvas {
-            pixel_sink: sink,
-            stride,
-        }
+        Canvas { pixel_sink: sink, stride }
     }
 
     /// Create a canvas targetting a particular pixel sink and
@@ -188,7 +224,11 @@ impl<T: PixelSink> Canvas<T> {
     /// by `paint` and with the typographic characterists in `font`. This method uses
     /// fixed size cells of size `size` for each character.
     pub fn fill_text_cells(
-        &mut self, text: &str, location: Point, size: Size, font: &mut FontDescription,
+        &mut self,
+        text: &str,
+        location: Point,
+        size: Size,
+        font: &mut FontDescription,
         paint: &Paint,
     ) {
         let mut x = location.x;
@@ -205,14 +245,10 @@ impl<T: PixelSink> Canvas<T> {
 
             if scalar != ' ' {
                 let glyph =
-                    font.face
-                        .font
-                        .glyph(scalar)
-                        .scaled(scale)
-                        .positioned(rusttype::Point {
-                            x: x as f32,
-                            y: (location.y + font.baseline as u32) as f32,
-                        });
+                    font.face.font.glyph(scalar).scaled(scale).positioned(rusttype::Point {
+                        x: x as f32,
+                        y: (location.y + font.baseline as u32) as f32,
+                    });
                 if let Some(bounding_box) = glyph.pixel_bounding_box() {
                     glyph.draw(|pixel_x, pixel_y, v| {
                         let value = (v * 255.0) as u8;
@@ -231,12 +267,17 @@ impl<T: PixelSink> Canvas<T> {
     /// Draw line of text `text` at location `point` with foreground and background colors specified
     /// by `paint` and with the typographic characterists in `font`.
     pub fn fill_text(
-        &mut self, text: &str, location: Point, font: &mut FontDescription, paint: &Paint,
+        &mut self,
+        text: &str,
+        location: Point,
+        font: &mut FontDescription,
+        paint: &Paint,
     ) {
         let scale = Scale::uniform(font.size as f32);
         let v_metrics = font.face.font.v_metrics(scale);
         let offset = rusttype::point(location.x as f32, location.y as f32 + v_metrics.ascent);
-        let glyphs: Vec<rusttype::PositionedGlyph<'_>> = font.face.font.layout(text, scale, offset).collect();
+        let glyphs: Vec<rusttype::PositionedGlyph<'_>> =
+            font.face.font.layout(text, scale, offset).collect();
         for glyph in glyphs {
             if let Some(bounding_box) = glyph.pixel_bounding_box() {
                 glyph.draw(|pixel_x, pixel_y, v| {
@@ -253,19 +294,22 @@ impl<T: PixelSink> Canvas<T> {
 
     /// Measure a line of text `text` and with the typographic characterists in `font`.
     /// Returns a tuple containing the measured width and height.
-    pub fn measure_text(&mut self, text: &str, font: &mut FontDescription) -> (i32, i32) {
-        let scale = Scale::uniform(font.size as f32);
-        let v_metrics = font.face.font.v_metrics(scale);
-        let offset = rusttype::point(0.0, v_metrics.ascent);
-        let glyphs: Vec<rusttype::PositionedGlyph<'_>> = font.face.font.layout(text, scale, offset).collect();
-        let width = glyphs
-            .iter()
-            .rev()
-            .map(|g| g.position().x as f32 + g.unpositioned().h_metrics().advance_width)
-            .next()
-            .unwrap_or(0.0)
-            .ceil() as usize;
-
-        (width as i32, font.size as i32)
+    pub fn measure_text(&self, text: &str, font: &mut FontDescription) -> (i32, i32) {
+        measure_text(text, font)
     }
+}
+
+/// Measure a line of text `text` and with the typographic characterists in `font`.
+/// Returns a tuple containing the measured width and height.
+pub fn measure_text(text: &str, font: &mut FontDescription) -> (i32, i32) {
+    let scale = Scale::uniform(font.size as f32);
+    let v_metrics = font.face.font.v_metrics(scale);
+    let offset = rusttype::point(0.0, v_metrics.ascent);
+    let g_opt = font.face.font.layout(text, scale, offset).last();
+    let width = g_opt
+        .map(|g| g.position().x as f32 + g.unpositioned().h_metrics().advance_width)
+        .unwrap_or(0.0)
+        .ceil() as usize;
+
+    (width as i32, font.size as i32)
 }

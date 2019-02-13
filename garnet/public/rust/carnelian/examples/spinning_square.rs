@@ -23,15 +23,13 @@ impl AppAssistant for SpinningSquareAppAssistant {
     }
 
     fn create_view_assistant(&mut self, session: &SessionPtr) -> Result<ViewAssistantPtr, Error> {
-        Ok(Mutex::new(RefCell::new(Box::new(
-            SpinningSquareViewAssistant {
-                background_node: ShapeNode::new(session.clone()),
-                spinning_square_node: ShapeNode::new(session.clone()),
-                width: 0.0,
-                height: 0.0,
-                start: Time::get(ClockId::Monotonic),
-            },
-        ))))
+        Ok(Mutex::new(RefCell::new(Box::new(SpinningSquareViewAssistant {
+            background_node: ShapeNode::new(session.clone()),
+            spinning_square_node: ShapeNode::new(session.clone()),
+            width: 0.0,
+            height: 0.0,
+            start: Time::get(ClockId::Monotonic),
+        }))))
     }
 }
 
@@ -58,28 +56,15 @@ impl SpinningSquareViewAssistant {
 
 impl ViewAssistant for SpinningSquareViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        context
-            .import_node
-            .resource()
-            .set_event_mask(gfx::METRICS_EVENT_MASK);
+        context.import_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
         context.import_node.add_child(&self.background_node);
         let material = Material::new(context.session.clone());
-        material.set_color(ColorRgba {
-            red: 0xb7,
-            green: 0x41,
-            blue: 0x0e,
-            alpha: 0xff,
-        });
+        material.set_color(ColorRgba { red: 0xb7, green: 0x41, blue: 0x0e, alpha: 0xff });
         self.background_node.set_material(&material);
 
         context.import_node.add_child(&self.spinning_square_node);
         let material = Material::new(context.session.clone());
-        material.set_color(ColorRgba {
-            red: 0xff,
-            green: 0x00,
-            blue: 0xff,
-            alpha: 0xff,
-        });
+        material.set_color(ColorRgba { red: 0xff, green: 0x00, blue: 0xff, alpha: 0xff });
         self.spinning_square_node.set_material(&material);
         Self::setup_timer(context.key);
         Ok(())
@@ -98,8 +83,7 @@ impl ViewAssistant for SpinningSquareViewAssistant {
             self.width,
             self.height,
         ));
-        self.background_node
-            .set_translation(center_x, center_y, 0.0);
+        self.background_node.set_translation(center_x, center_y, 0.0);
         let square_size = self.width.min(self.height) * 0.6;
         let t = ((Time::get(ClockId::Monotonic).nanos() - self.start.nanos()) as f32
             * SECONDS_PER_NANOSECOND
@@ -111,10 +95,8 @@ impl ViewAssistant for SpinningSquareViewAssistant {
             square_size,
             square_size,
         ));
-        self.spinning_square_node
-            .set_translation(center_x, center_y, 8.0);
-        self.spinning_square_node
-            .set_rotation(0.0, 0.0, (angle * 0.5).sin(), (angle * 0.5).cos());
+        self.spinning_square_node.set_translation(center_x, center_y, 8.0);
+        self.spinning_square_node.set_rotation(0.0, 0.0, (angle * 0.5).sin(), (angle * 0.5).cos());
         Ok(())
     }
 

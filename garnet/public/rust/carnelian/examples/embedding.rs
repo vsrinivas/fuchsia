@@ -58,11 +58,7 @@ struct ViewData {
 
 impl ViewData {
     pub fn new(key: u32, host_node: EntityNode) -> ViewData {
-        ViewData {
-            key: key,
-            bounds: None,
-            host_node: host_node,
-        }
+        ViewData { key: key, bounds: None, host_node: host_node }
     }
 }
 
@@ -77,8 +73,11 @@ struct EmbeddingViewAssistant {
 
 impl EmbeddingViewAssistant {
     fn create_and_setup_view(
-        &mut self, key: u32, session: &SessionPtr,
-        view_container: &fidl_fuchsia_ui_viewsv1::ViewContainerProxy, import_node: &ImportNode,
+        &mut self,
+        key: u32,
+        session: &SessionPtr,
+        view_container: &fidl_fuchsia_ui_viewsv1::ViewContainerProxy,
+        import_node: &ImportNode,
     ) -> Result<(), Error> {
         let view_provider = self.app.connect_to_service(ViewProviderMarker)?;
         let (view_owner_client, view_owner_server) = create_endpoints::<ViewOwnerMarker>()?;
@@ -100,12 +99,8 @@ impl EmbeddingViewAssistant {
             let rows = (columns + num_tiles - 1) / columns;
             let tile_height = (self.height / rows as f32).floor();
 
-            for (row_index, view_chunk) in self
-                .views
-                .iter_mut()
-                .chunks(columns)
-                .into_iter()
-                .enumerate()
+            for (row_index, view_chunk) in
+                self.views.iter_mut().chunks(columns).into_iter().enumerate()
             {
                 let tiles_in_row = if row_index == rows - 1 && (num_tiles % columns) != 0 {
                     num_tiles % columns
@@ -126,23 +121,14 @@ impl EmbeddingViewAssistant {
                             allow_focus: true,
                         })),
                         view_layout: Some(Box::new(ViewLayout {
-                            inset: InsetF {
-                                bottom: 0.0,
-                                left: 0.0,
-                                right: 0.0,
-                                top: 0.0,
-                            },
-                            size: SizeF {
-                                width: tile_bounds.width,
-                                height: tile_bounds.height,
-                            },
+                            inset: InsetF { bottom: 0.0, left: 0.0, right: 0.0, top: 0.0 },
+                            size: SizeF { width: tile_bounds.width, height: tile_bounds.height },
                         })),
                     };
                     view_container
                         .set_child_properties(view.key, Some(OutOfLine(&mut view_properties)))
                         .unwrap();
-                    view.host_node
-                        .set_translation(tile_bounds.x, tile_bounds.y, 0.0);
+                    view.host_node.set_translation(tile_bounds.x, tile_bounds.y, 0.0);
                     view.bounds = Some(tile_bounds);
                 }
             }
@@ -152,18 +138,10 @@ impl EmbeddingViewAssistant {
 
 impl ViewAssistant for EmbeddingViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        context
-            .import_node
-            .resource()
-            .set_event_mask(gfx::METRICS_EVENT_MASK);
+        context.import_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
         context.import_node.add_child(&self.background_node);
         let material = Material::new(context.session.clone());
-        material.set_color(ColorRgba {
-            red: 0x00,
-            green: 0xc0,
-            blue: 0x00,
-            alpha: 0xff,
-        });
+        material.set_color(ColorRgba { red: 0x00, green: 0xc0, blue: 0x00, alpha: 0xff });
         self.background_node.set_material(&material);
 
         for n in 1..5 {
@@ -189,8 +167,7 @@ impl ViewAssistant for EmbeddingViewAssistant {
             self.width,
             self.height,
         ));
-        self.background_node
-            .set_translation(center_x, center_y, 0.0);
+        self.background_node.set_translation(center_x, center_y, 0.0);
         self.layout(context.view_container);
         Ok(())
     }
