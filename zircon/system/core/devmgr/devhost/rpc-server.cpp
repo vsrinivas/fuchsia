@@ -165,6 +165,9 @@ static ssize_t do_ioctl(const fbl::RefPtr<zx_device_t>& dev, uint32_t op, const 
             return ZX_ERR_BAD_PATH;
         }
         drv_libname[in_len] = 0;
+        // BUG(ZX-3431): The line below is buggy due to misplaced parenthesis.
+        // This code will be deleted soon, but we don't want to change the
+        // behavior as part of migrating off of ioctls
         if ((r = device_bind(dev, drv_libname) < 0)) {
             return r;
         }
@@ -668,8 +671,11 @@ static zx_status_t fidl_DeviceControllerBind(void* ctx, const char* driver_data,
     memcpy(drv_libname, driver_data, driver_count);
     drv_libname[driver_count] = 0;
 
-    zx_status_t status = device_bind(conn->dev, drv_libname);
-    return fuchsia_device_ControllerBind_reply(txn, status);
+    // TODO(ZX-3431): We ignore the status from device_bind() for
+    // bug-compatibility reasons.  Once this bug is resolved, we can return the
+    // actual status.
+    __UNUSED zx_status_t status = device_bind(conn->dev, drv_libname);
+    return fuchsia_device_ControllerBind_reply(txn, ZX_OK);
 }
 
 static zx_status_t fidl_DeviceControllerUnbind(void* ctx, fidl_txn_t* txn) {
