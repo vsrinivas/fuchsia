@@ -54,16 +54,6 @@ class VulkanDeviceQueues
     PFN_vkGetSwapchainImagesKHR GetSwapchainImagesKHR = nullptr;
     PFN_vkAcquireNextImageKHR AcquireNextImageKHR = nullptr;
     PFN_vkQueuePresentKHR QueuePresentKHR = nullptr;
-
-#if defined(OS_FUCHSIA)
-    PFN_vkImportSemaphoreFuchsiaHandleKHR ImportSemaphoreFuchsiaHandleKHR =
-        nullptr;
-    PFN_vkGetSemaphoreFuchsiaHandleKHR GetSemaphoreFuchsiaHandleKHR = nullptr;
-    PFN_vkGetMemoryFuchsiaHandleKHR GetMemoryFuchsiaHandleKHR = nullptr;
-    vk::ResultValueType<uint32_t>::type getMemoryFuchsiaHandleKHR(
-        const vk::Device& device,
-        const vk::MemoryGetFuchsiaHandleInfoKHR& getFuchsiaHandleInfo) const;
-#endif
   };
 
   // Constructor.
@@ -88,6 +78,9 @@ class VulkanDeviceQueues
   vk::Queue vk_transfer_queue() const { return transfer_queue_; }
   uint32_t vk_transfer_queue_family() const { return transfer_queue_family_; }
   vk::SurfaceKHR vk_surface() const { return params_.surface; }
+  const vk::DispatchLoaderDynamic& dispatch_loader() const {
+    return dispatch_loader_;
+  }
 
   // Return the parameters that were used to create this device and queues.
   const Params& params() const { return params_; }
@@ -111,6 +104,7 @@ class VulkanDeviceQueues
 
   vk::Device device_;
   vk::PhysicalDevice physical_device_;
+  vk::DispatchLoaderDynamic dispatch_loader_;
   vk::Queue main_queue_;
   uint32_t main_queue_family_;
   vk::Queue transfer_queue_;

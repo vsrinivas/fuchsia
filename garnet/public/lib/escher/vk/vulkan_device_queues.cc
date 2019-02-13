@@ -12,7 +12,7 @@
 namespace escher {
 
 template <typename FuncT>
-static FuncT GetDeviceProcAddr(vk::Device device, const char* func_name) {
+static FuncT GetDeviceProcAddr(vk::Device device, const char *func_name) {
   FuncT func = reinterpret_cast<FuncT>(device.getProcAddr(func_name));
   FXL_CHECK(func) << "failed to find function address for: " << func_name;
   return func;
@@ -26,7 +26,7 @@ VulkanDeviceQueues::Caps::Caps(vk::PhysicalDeviceProperties props)
       max_image_height(props.limits.maxImageDimension2D) {}
 
 VulkanDeviceQueues::ProcAddrs::ProcAddrs(
-    vk::Device device, const std::set<std::string>& extension_names) {
+    vk::Device device, const std::set<std::string> &extension_names) {
   if (extension_names.find(VK_KHR_SWAPCHAIN_EXTENSION_NAME) !=
       extension_names.end()) {
     GET_DEVICE_PROC_ADDR(CreateSwapchainKHR);
@@ -35,31 +35,7 @@ VulkanDeviceQueues::ProcAddrs::ProcAddrs(
     GET_DEVICE_PROC_ADDR(AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(QueuePresentKHR);
   }
-#if defined(OS_FUCHSIA)
-  if (extension_names.find(VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME) !=
-      extension_names.end()) {
-    GET_DEVICE_PROC_ADDR(ImportSemaphoreFuchsiaHandleKHR);
-    GET_DEVICE_PROC_ADDR(GetSemaphoreFuchsiaHandleKHR);
-    GET_DEVICE_PROC_ADDR(GetMemoryFuchsiaHandleKHR);
-  }
-#endif
 }
-
-#if defined(OS_FUCHSIA)
-vk::ResultValueType<uint32_t>::type
-VulkanDeviceQueues::ProcAddrs::getMemoryFuchsiaHandleKHR(
-    const vk::Device& device,
-    const vk::MemoryGetFuchsiaHandleInfoKHR& getFuchsiaHandleInfo) const {
-  uint32_t fuchsiaHandle;
-  vk::Result result = static_cast<vk::Result>(GetMemoryFuchsiaHandleKHR(
-      device,
-      reinterpret_cast<const VkMemoryGetFuchsiaHandleInfoKHR*>(
-          &getFuchsiaHandleInfo),
-      &fuchsiaHandle));
-  return vk::createResultValue(result, fuchsiaHandle,
-                               "vk::Device::getMemoryFuchsiaHandleKHR");
-}
-#endif
 
 namespace {
 
@@ -73,8 +49,8 @@ struct SuitablePhysicalDeviceAndQueueFamilies {
 
 SuitablePhysicalDeviceAndQueueFamilies
 FindSuitablePhysicalDeviceAndQueueFamilies(
-    const VulkanInstancePtr& instance,
-    const VulkanDeviceQueues::Params& params) {
+    const VulkanInstancePtr &instance,
+    const VulkanDeviceQueues::Params &params) {
   auto physical_devices = ESCHER_CHECKED_VK_RESULT(
       instance->vk_instance().enumeratePhysicalDevices());
 
@@ -88,11 +64,11 @@ FindSuitablePhysicalDeviceAndQueueFamilies(
                                    vk::QueueFlagBits::eGraphics |
                                    vk::QueueFlagBits::eCompute;
 
-  for (auto& physical_device : physical_devices) {
+  for (auto &physical_device : physical_devices) {
     // Look for a physical device that has all required extensions.
-    if (!VulkanDeviceQueues::ValidateExtensions(physical_device,
-                                                params.extension_names, 
-                                                instance->params().layer_names)) {
+    if (!VulkanDeviceQueues::ValidateExtensions(
+            physical_device, params.extension_names,
+            instance->params().layer_names)) {
       continue;
     }
 
@@ -191,8 +167,8 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
   queue_info[1].queueCount = 1;
   queue_info[1].pQueuePriorities = &kQueuePriority;
 
-  std::vector<const char*> extension_names;
-  for (auto& extension : params.extension_names) {
+  std::vector<const char *> extension_names;
+  for (auto &extension : params.extension_names) {
     extension_names.push_back(extension.c_str());
   }
 
@@ -282,6 +258,7 @@ VulkanDeviceQueues::VulkanDeviceQueues(
     uint32_t transfer_queue_family, VulkanInstancePtr instance, Params params)
     : device_(device),
       physical_device_(physical_device),
+      dispatch_loader_(instance->vk_instance(), device_),
       main_queue_(main_queue),
       main_queue_family_(main_queue_family),
       transfer_queue_(transfer_queue),
@@ -295,8 +272,7 @@ VulkanDeviceQueues::~VulkanDeviceQueues() { device_.destroy(); }
 
 // Helper for ValidateExtensions().
 static bool ValidateExtension(
-    vk::PhysicalDevice device,
-    const std::string name,
+    vk::PhysicalDevice device, const std::string name,
     const std::vector<vk::ExtensionProperties> &base_extensions,
     const std::set<std::string> &required_layer_names) {
   auto found =

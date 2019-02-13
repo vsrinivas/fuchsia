@@ -220,9 +220,8 @@ bool DisplaySwapchain::InitializeFramebuffers(
         buffer.device_memory->base(),
         vk::ExternalMemoryHandleTypeFlagBits::eFuchsiaVmoKHR);
 
-    auto export_result =
-        escher_->device()->proc_addrs().getMemoryFuchsiaHandleKHR(
-            device_, export_memory_info);
+    auto export_result = device_.getMemoryFuchsiaHandleKHR(
+        export_memory_info, escher_->device()->dispatch_loader());
 
     if (export_result.result != vk::Result::eSuccess) {
       FXL_LOG(ERROR) << "VkGetMemoryFuchsiaHandleKHR failed: "
@@ -282,8 +281,7 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
       escher::Semaphore::NewExportableSem(device_);
 
   zx::event render_finished_event =
-      GetEventForSemaphore(escher_->device()->proc_addrs(), device_,
-                           render_finished_escher_semaphore);
+      GetEventForSemaphore(escher_->device(), render_finished_escher_semaphore);
   uint64_t render_finished_event_id =
       display_manager_->ImportEvent(render_finished_event);
 

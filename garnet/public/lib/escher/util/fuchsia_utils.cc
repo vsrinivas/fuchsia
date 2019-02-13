@@ -31,10 +31,9 @@ std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(
   info.handle = event_copy.release();
   info.handleType = vk::ExternalSemaphoreHandleTypeFlagBits::eFuchsiaFenceKHR;
 
-  if (VK_SUCCESS !=
-      device->proc_addrs().ImportSemaphoreFuchsiaHandleKHR(
-          device->vk_device(),
-          reinterpret_cast<VkImportSemaphoreFuchsiaHandleInfoKHR*>(&info))) {
+  if (vk::Result::eSuccess !=
+      device->vk_device().importSemaphoreFuchsiaHandleKHR(
+          info, escher->device()->dispatch_loader())) {
     FXL_LOG(ERROR) << "Failed to import event as VkSemaphore.";
     // Don't leak handle.
     zx_handle_close(info.handle);
@@ -44,33 +43,28 @@ std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(
   return std::make_pair(std::move(sema), std::move(event));
 }
 
-zx::event GetEventForSemaphore(
-    const escher::VulkanDeviceQueues::ProcAddrs& proc_addresses,
-    const vk::Device& device, const escher::SemaphorePtr& semaphore) {
-  zx_handle_t semaphore_handle;
-
+zx::event GetEventForSemaphore(VulkanDeviceQueues* device,
+                               const escher::SemaphorePtr& semaphore) {
   vk::SemaphoreGetFuchsiaHandleInfoKHR info(
       semaphore->vk_semaphore(),
       vk::ExternalSemaphoreHandleTypeFlagBits::eFuchsiaFenceKHR);
 
-  VkResult result = proc_addresses.GetSemaphoreFuchsiaHandleKHR(
-      device,
-      reinterpret_cast<const VkSemaphoreGetFuchsiaHandleInfoKHR*>(&info),
-      &semaphore_handle);
+  auto result = device->vk_device().getSemaphoreFuchsiaHandleKHR(
+      info, device->dispatch_loader());
 
-  if (result != VK_SUCCESS) {
+  if (result.result != vk::Result::eSuccess) {
     FXL_LOG(WARNING) << "unable to export semaphore";
     return zx::event();
   }
-  return zx::event(semaphore_handle);
+  return zx::event(result.value);
 }
 
 zx::vmo ExportMemoryAsVmo(escher::Escher* escher,
                           const escher::GpuMemPtr& mem) {
   vk::MemoryGetFuchsiaHandleInfoKHR export_memory_info(
       mem->base(), vk::ExternalMemoryHandleTypeFlagBits::eFuchsiaVmoKHR);
-  auto result = escher->device()->proc_addrs().getMemoryFuchsiaHandleKHR(
-      escher->vulkan_context().device, export_memory_info);
+  auto result = escher->vk_device().getMemoryFuchsiaHandleKHR(
+      export_memory_info, escher->device()->dispatch_loader());
   if (result.result != vk::Result::eSuccess) {
     FXL_LOG(ERROR) << "Failed to export escher::GpuMem as zx::vmo";
     return zx::vmo();
