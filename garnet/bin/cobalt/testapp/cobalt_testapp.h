@@ -10,7 +10,7 @@
 #include <string>
 
 #include "garnet/bin/cobalt/testapp/cobalt_testapp_logger.h"
-#include "lib/component/cpp/startup_context.h"
+#include "lib/component2/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/command_line.h"
@@ -33,7 +33,7 @@ class CobaltTestApp {
   CobaltTestApp(bool use_network, bool do_environment_test,
                 int num_observations_per_batch)
       : do_environment_test_(do_environment_test),
-        context_(component::StartupContext::CreateFromStartupInfo()),
+        context_(component2::StartupContext::CreateFromStartupInfo()),
         logger_(use_network, num_observations_per_batch, &cobalt_controller_) {}
 
   // We have multiple testing strategies based on the method we use to
@@ -79,7 +79,7 @@ class CobaltTestApp {
   bool RequestSendSoonTests();
 
   bool do_environment_test_;
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<component2::StartupContext> context_;
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::cobalt::ControllerSyncPtr cobalt_controller_;
   CobaltTestAppLogger logger_;

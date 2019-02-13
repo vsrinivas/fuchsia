@@ -24,6 +24,10 @@ zx::channel OpenServiceRoot() {
 ServiceDirectory::ServiceDirectory(zx::channel directory)
     : directory_(std::move(directory)) {}
 
+ServiceDirectory::ServiceDirectory(
+    fidl::InterfaceHandle<fuchsia::io::Directory> directory)
+    : ServiceDirectory(directory.TakeChannel()) {}
+
 ServiceDirectory::~ServiceDirectory() = default;
 
 std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateFromNamespace() {

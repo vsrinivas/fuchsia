@@ -15,12 +15,13 @@
 #include <sstream>
 #include <string>
 
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/cobalt/testapp/cobalt_testapp_logger.h"
 #include "garnet/bin/cobalt/testapp/tests.h"
-#include "lib/component/cpp/startup_context.h"
+#include "lib/component2/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fsl/vmo/file.h"
@@ -83,10 +84,10 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
                             CobaltConfigType type,
                             uint32_t initial_interval_seconds) {
   controller_.Unbind();
-  component::Services services;
+  fidl::InterfaceHandle<fuchsia::io::Directory> directory;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx";
-  launch_info.directory_request = services.NewRequest();
+  launch_info.directory_request = directory.NewRequest().TakeChannel();
   {
     std::ostringstream stream;
     stream << "--schedule_interval_seconds=" << schedule_interval_seconds;
@@ -110,14 +111,17 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
     stream << "--verbose=" << fxl::GetVlogVerbosity();
     launch_info.arguments.push_back(stream.str());
   }
-  context_->launcher()->CreateComponent(std::move(launch_info),
-                                        controller_.NewRequest());
+  fuchsia::sys::LauncherPtr launcher;
+  context_->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
   controller_.set_error_handler([](zx_status_t status) {
     FXL_LOG(ERROR) << "Connection error from CobaltTestApp to CobaltClient.";
   });
 
+  component2::ServiceDirectory services(std::move(directory));
+
   fuchsia::cobalt::LoggerFactorySyncPtr logger_factory;
-  services.ConnectToService(logger_factory.NewRequest());
+  services.Connect(logger_factory.NewRequest());
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   logger_factory->CreateLogger(LoadCobaltConfig(type),
@@ -130,7 +134,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLoggerSimple() => " << StatusToString(status);
 
-  services.ConnectToService(cobalt_controller_.NewRequest());
+  services.Connect(cobalt_controller_.NewRequest());
 }
 
 bool CobaltTestApp::RunTestsWithRequestSendSoon() {
@@ -181,7 +185,7 @@ bool CobaltTestApp::RunTestsWithBlockUntilEmpty() {
 bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   // Connect to the Cobalt FIDL service provided by the environment.
   fuchsia::cobalt::LoggerFactorySyncPtr logger_factory;
-  context_->ConnectToEnvironmentService(logger_factory.NewRequest());
+  context_->svc()->Connect(logger_factory.NewRequest());
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   logger_factory->CreateLogger(LoadCobaltConfig(kLegacyCobaltConfig),

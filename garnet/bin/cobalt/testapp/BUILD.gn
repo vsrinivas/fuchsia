@@ -33,10 +33,10 @@ executable("cobalt_testapp") {
 
   deps = [
     ":generate_testapp_metrics_cc",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
+    "//sdk/lib/component2/cpp",
     "//third_party/cobalt/config:id",
     "//zircon/public/fidl/fuchsia-cobalt",
     "//zircon/public/lib/async-loop-cpp",

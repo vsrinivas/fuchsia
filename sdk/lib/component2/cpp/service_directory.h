@@ -5,6 +5,7 @@
 #ifndef LIB_COMPONENT2_CPP_SERVICE_DIRECTORY_H_
 #define LIB_COMPONENT2_CPP_SERVICE_DIRECTORY_H_
 
+#include <fuchsia/io/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/zx/channel.h>
@@ -29,6 +30,8 @@ class ServiceDirectory final {
   //
   // The directory is expected to implement the |fuchsia.io.Directory| protocol.
   explicit ServiceDirectory(zx::channel directory);
+  explicit ServiceDirectory(
+      fidl::InterfaceHandle<fuchsia::io::Directory> directory);
   ~ServiceDirectory();
 
   // ServiceDirectory objects cannot be copied.
@@ -36,7 +39,8 @@ class ServiceDirectory final {
   ServiceDirectory& operator=(const ServiceDirectory&) = delete;
 
   // ServiceDirectory objects can be moved.
-  ServiceDirectory(ServiceDirectory&& other) : directory_(std::move(other.directory_)) {}
+  ServiceDirectory(ServiceDirectory&& other)
+      : directory_(std::move(other.directory_)) {}
   ServiceDirectory& operator=(ServiceDirectory&& other) {
     directory_ = std::move(other.directory_);
     return *this;
@@ -94,8 +98,9 @@ class ServiceDirectory final {
   // directory.Connect(controller.NewRequest());
   // ```
   template <typename Interface>
-  zx_status_t Connect(fidl::InterfaceRequest<Interface> request,
-               const std::string& interface_name = Interface::Name_) const {
+  zx_status_t Connect(
+      fidl::InterfaceRequest<Interface> request,
+      const std::string& interface_name = Interface::Name_) const {
     return Connect(interface_name, request.TakeChannel());
   }
 
@@ -123,7 +128,8 @@ class ServiceDirectory final {
   // }
   // directory.Connect("fuchsia.foo.Controller", std::move(request));
   // ```
-  zx_status_t Connect(const std::string& interface_name, zx::channel request) const;
+  zx_status_t Connect(const std::string& interface_name,
+                      zx::channel request) const;
 
  private:
   // The directory to which connection requests are routed.
