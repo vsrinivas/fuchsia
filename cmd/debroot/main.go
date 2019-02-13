@@ -392,7 +392,7 @@ func installSysroot(list []Lock, installDir, debsCache string) error {
 	}
 
 	// Ensure that we don't have duplicate file names that only differ in case.
-	type rename struct { oldpath, newpath string }
+	type rename struct{ oldpath, newpath string }
 	renames := []rename{}
 
 	for _, d := range []string{"usr/include/linux"} {
@@ -423,7 +423,7 @@ func installSysroot(list []Lock, installDir, debsCache string) error {
 				for i, p := range ps {
 					if i > 0 {
 						ext := filepath.Ext(p)
-						renames = append(renames, rename{ p, p[:len(p)-len(ext)] + strings.Repeat("_", i) + ext })
+						renames = append(renames, rename{p, p[:len(p)-len(ext)] + strings.Repeat("_", i) + ext})
 					}
 				}
 			}

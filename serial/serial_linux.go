@@ -13,7 +13,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var supportedBaudRates = map[int]uint32 {
+var supportedBaudRates = map[int]uint32{
 	50:      unix.B50,
 	75:      unix.B75,
 	110:     unix.B110,
@@ -51,7 +51,7 @@ func open(name string, baudRate int, timeoutSecs int) (io.ReadWriteCloser, error
 	if !ok {
 		return nil, fmt.Errorf("unsupported baud rate: %d", baudRate)
 	}
-	if timeoutSecs < 0 || (timeoutSecs * 10) > (1 << 8) {
+	if timeoutSecs < 0 || (timeoutSecs*10) > (1<<8) {
 		return nil, fmt.Errorf("timeout must be between 0 and 25, got: %d", timeoutSecs)
 	}
 	f, err := os.OpenFile(name, unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0666)
@@ -59,12 +59,12 @@ func open(name string, baudRate int, timeoutSecs int) (io.ReadWriteCloser, error
 		return nil, err
 	}
 	t := unix.Termios{
-		Iflag: unix.IGNPAR,
-		Cflag: unix.CREAD|unix.CLOCAL|unix.CS8|rate,
+		Iflag:  unix.IGNPAR,
+		Cflag:  unix.CREAD | unix.CLOCAL | unix.CS8 | rate,
 		Ispeed: rate,
 		Ospeed: rate,
 	}
-	t.Cc[unix.VTIME] = uint8(timeoutSecs*10)
+	t.Cc[unix.VTIME] = uint8(timeoutSecs * 10)
 	_, _, errno := unix.Syscall6(
 		unix.SYS_IOCTL,
 		uintptr(f.Fd()),

@@ -236,7 +236,6 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 		return err
 	}
 
-
 	// Boot fuchsia.
 	var bootMode int
 	if cmd.netboot {

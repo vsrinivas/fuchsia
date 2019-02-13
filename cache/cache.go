@@ -18,7 +18,7 @@ type Cache interface {
 	Get(key Key) (interface{}, bool)
 
 	// Check if a key exsists in cache.
-	Contains(key Key) (bool)
+	Contains(key Key) bool
 
 	// Removes a key from the cache.
 	Remove(key Key) interface{}

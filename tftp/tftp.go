@@ -38,15 +38,15 @@ const (
 )
 
 const (
-	ErrorUndefined        = uint16(0)     // Not defined, see error message (if any)
-	ErrorFileNotFound     = uint16(1)     // File not found
-	ErrorAccessViolation  = uint16(2)     // Access violation
-	ErrorDiskFull         = uint16(3)     // Disk full or allocation exceeded
-	ErrorIllegalOperation = uint16(4)     // Illegal TFTP operation
-	ErrorUnknownID        = uint16(5)     // Unknown transfer ID
-	ErrorFileExists       = uint16(6)     // File already exists
-	ErrorNoSuchUser       = uint16(7)     // No such user
-	ErrorBadOptions       = uint16(8)     // Bad options
+	ErrorUndefined        = uint16(0) // Not defined, see error message (if any)
+	ErrorFileNotFound     = uint16(1) // File not found
+	ErrorAccessViolation  = uint16(2) // Access violation
+	ErrorDiskFull         = uint16(3) // Disk full or allocation exceeded
+	ErrorIllegalOperation = uint16(4) // Illegal TFTP operation
+	ErrorUnknownID        = uint16(5) // Unknown transfer ID
+	ErrorFileExists       = uint16(6) // File already exists
+	ErrorNoSuchUser       = uint16(7) // No such user
+	ErrorBadOptions       = uint16(8) // Bad options
 
 	// ErrorBusy is a Fuchsia-specific extension to the set of TFTP error
 	// codes, meant to indicate that the server cannot currently handle a

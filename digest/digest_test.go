@@ -9,14 +9,14 @@ import (
 )
 
 var c = &credentials{
-	username:   "admin",
-	realm:      "Digest:4C1F0000000000000000000000000000",
-	nonce:      "GZHoABAHAAAAAAAAtejSfCEQLbW+c/fM",
-	uri:        "/index",
-	algorithm:  "MD5",
-	qop:        "auth",
-	method:     "POST",
-	password:   "password",
+	username:  "admin",
+	realm:     "Digest:4C1F0000000000000000000000000000",
+	nonce:     "GZHoABAHAAAAAAAAtejSfCEQLbW+c/fM",
+	uri:       "/index",
+	algorithm: "MD5",
+	qop:       "auth",
+	method:    "POST",
+	password:  "password",
 }
 
 var cnonce = "0a4f113b"

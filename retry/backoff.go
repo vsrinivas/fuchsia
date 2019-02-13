@@ -33,6 +33,7 @@ type ConstantBackoff struct {
 }
 
 func (b *ConstantBackoff) Reset() {}
+
 func (b *ConstantBackoff) Next() time.Duration { return b.interval }
 
 func NewConstantBackoff(d time.Duration) *ConstantBackoff {
@@ -40,7 +41,7 @@ func NewConstantBackoff(d time.Duration) *ConstantBackoff {
 }
 
 type maxTriesBackoff struct {
-	backOff Backoff
+	backOff  Backoff
 	maxTries uint64
 	numTries uint64
 }
