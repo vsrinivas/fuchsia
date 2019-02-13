@@ -144,7 +144,7 @@ void LastOneWinsMergeStrategy::Merge(
     std::unique_ptr<const storage::Commit> ancestor,
     fit::function<void(Status)> callback) {
   FXL_DCHECK(!in_progress_merge_);
-  FXL_DCHECK(head_1->GetTimestamp() <= head_2->GetTimestamp());
+  FXL_DCHECK(storage::Commit::TimestampOrdered(head_1, head_2));
 
   in_progress_merge_ =
       std::make_unique<LastOneWinsMergeStrategy::LastOneWinsMerger>(

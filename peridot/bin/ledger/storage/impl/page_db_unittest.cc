@@ -126,40 +126,39 @@ TEST_F(PageDbTest, MergeCommits) {
   });
 }
 
-TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
+TEST_F(PageDbTest, OrderHeadCommitsByTimestampThenId) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    std::vector<zx::time_utc> timestamps = {zx::time_utc::infinite_past(),
-                                            zx::time_utc::infinite(),
-                                            zx::time_utc()};
+    // Produce 10 random timestamps and 3 constants.
+    std::vector<zx::time_utc> timestamps(10);
+    std::generate(timestamps.begin(), timestamps.end(), [this] {
+      return environment_.random()->Draw<zx::time_utc>();
+    });
+    timestamps.insert(timestamps.end(),
+                      {zx::time_utc::infinite_past(), zx::time_utc::infinite(),
+                       zx::time_utc()});
 
-    for (size_t i = 0; i < 10; ++i) {
-      zx::time_utc ts;
-      do {
-        ts = environment_.random()->Draw<zx::time_utc>();
-      } while (std::find(timestamps.begin(), timestamps.end(), ts) !=
-               timestamps.end());
-      timestamps.push_back(ts);
+    // Generate 10 commits per timestamp.
+    std::vector<std::pair<zx::time_utc, CommitId>> commits;
+    for (auto ts : timestamps) {
+      for (size_t i = 0; i < 10; ++i) {
+        CommitId id = RandomCommitId(environment_.random());
+        commits.emplace_back(ts, id);
+      }
     }
 
-    auto sorted_timestamps = timestamps;
-    std::sort(sorted_timestamps.begin(), sorted_timestamps.end());
-    auto random_ordered_timestamps = timestamps;
+    // Insert the commits in random order.
     auto rng = environment_.random()->NewBitGenerator<uint64_t>();
-    std::shuffle(random_ordered_timestamps.begin(),
-                 random_ordered_timestamps.end(), rng);
-
-    std::map<zx::time_utc, CommitId> commits;
-    for (auto ts : random_ordered_timestamps) {
-      commits[ts] = RandomCommitId(environment_.random());
-      EXPECT_EQ(Status::OK, page_db_.AddHead(handler, commits[ts], ts));
+    std::shuffle(commits.begin(), commits.end(), rng);
+    for (auto [ts, id] : commits) {
+      EXPECT_EQ(Status::OK, page_db_.AddHead(handler, id, ts));
     }
 
+    // Check that GetHeads returns sorted commits.
     std::vector<CommitId> heads;
     EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
-    EXPECT_EQ(timestamps.size(), heads.size());
-
-    for (size_t i = 0; i < heads.size(); ++i) {
-      EXPECT_EQ(commits[sorted_timestamps[i]], heads[i]);
+    std::sort(commits.begin(), commits.end());
+    for (size_t i = 0; i < commits.size(); ++i) {
+      EXPECT_EQ(commits[i].second, heads[i]);
     }
   });
 }

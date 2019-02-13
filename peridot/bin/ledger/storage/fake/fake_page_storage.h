@@ -107,7 +107,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
   ledger::Environment* const environment_;
   std::map<std::string, std::unique_ptr<FakeJournalDelegate>> journals_;
   std::map<ObjectIdentifier, std::string> objects_;
-  std::set<CommitId> heads_;
+  std::map<CommitId, zx::time_utc> heads_;
   std::map<std::pair<CommitId, CommitId>, std::vector<CommitId>> merges_;
   std::set<CommitWatcher*> watchers_;
   std::vector<fit::closure> object_requests_;

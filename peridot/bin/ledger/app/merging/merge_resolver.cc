@@ -285,8 +285,8 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
               return;
             }
             FXL_DCHECK(commits.size() == 2);
-            FXL_DCHECK(commits[0]->GetTimestamp() <=
-                       commits[1]->GetTimestamp());
+            FXL_DCHECK(
+                storage::Commit::TimestampOrdered(commits[0], commits[1]));
 
             if (commits[0]->GetParentIds().size() == 2 &&
                 commits[1]->GetParentIds().size() == 2) {

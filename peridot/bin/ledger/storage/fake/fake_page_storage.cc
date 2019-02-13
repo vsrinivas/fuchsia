@@ -55,7 +55,15 @@ PageId FakePageStorage::GetId() { return page_id_; }
 
 void FakePageStorage::GetHeadCommitIds(
     fit::function<void(Status, std::vector<CommitId>)> callback) {
-  std::vector<CommitId> commit_ids(heads_.begin(), heads_.end());
+  std::vector<std::pair<CommitId, zx::time_utc>> heads(heads_.begin(),
+                                                       heads_.end());
+  std::sort(heads.begin(), heads.end(), [](const auto& p1, const auto& p2) {
+    return std::tie(p1.second, p1.first) < std::tie(p2.second, p2.first);
+  });
+  std::vector<CommitId> commit_ids;
+  commit_ids.reserve(heads.size());
+  std::transform(heads.begin(), heads.end(), std::back_inserter(commit_ids),
+                 [](auto p) { return p.first; });
   if (commit_ids.empty()) {
     commit_ids.emplace_back();
   }
@@ -138,7 +146,7 @@ void FakePageStorage::CommitJournal(
             heads_.erase(it);
           }
         }
-        heads_.emplace(commit->GetId());
+        heads_.emplace(commit->GetId(), commit->GetTimestamp());
         if (!drop_commit_notifications_) {
           for (CommitWatcher* watcher : watchers_) {
             async::PostTask(

@@ -290,7 +290,7 @@ void AutoMergeStrategy::Merge(storage::PageStorage* storage,
                               std::unique_ptr<const storage::Commit> head_2,
                               std::unique_ptr<const storage::Commit> ancestor,
                               fit::function<void(Status)> callback) {
-  FXL_DCHECK(head_1->GetTimestamp() <= head_2->GetTimestamp());
+  FXL_DCHECK(storage::Commit::TimestampOrdered(head_1, head_2));
   FXL_DCHECK(!in_progress_merge_);
 
   in_progress_merge_ = std::make_unique<AutoMergeStrategy::AutoMerger>(

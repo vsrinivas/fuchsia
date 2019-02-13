@@ -44,6 +44,9 @@ class Commit {
   // the cloud.
   virtual fxl::StringView GetStorageBytes() const = 0;
 
+  static bool TimestampOrdered(const std::unique_ptr<const Commit>& commit1,
+                               const std::unique_ptr<const Commit>& commit2);
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Commit);
 };
