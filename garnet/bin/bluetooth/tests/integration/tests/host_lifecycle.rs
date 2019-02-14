@@ -56,7 +56,7 @@ fn lifecycle_test() -> Result<(), Error> {
 
     // Check the right driver is bound to the device
     let driver_name = hci::get_device_driver_name(&found_device).unwrap();
-    assert_eq!("bt_host", driver_name.to_str().unwrap());
+    assert_eq!("bt_host", driver_name);
 
     // Confirm device topology, host is under bt-hci
     let device_topo = fdio::device_get_topo_path(&found_device).unwrap();

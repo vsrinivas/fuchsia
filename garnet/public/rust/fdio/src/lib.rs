@@ -12,6 +12,7 @@ pub use self::fdio_sys::fdio_ioctl as ioctl_raw;
 
 use {
     ::bitflags::bitflags,
+    fidl_fuchsia_device::ControllerSynchronousProxy,
     fuchsia_zircon::{
         self as zx,
         prelude::*,
@@ -118,21 +119,16 @@ pub fn clone_channel(file: &std::fs::File) -> Result<zx::Channel, zx::Status> {
 
 /// Retrieves the topological path for a device node.
 pub fn device_get_topo_path(dev: &File) -> Result<String, zx::Status> {
-    let mut topo = vec![0; 1024];
+    let channel = clone_channel(dev)?;
+    let mut interface = ControllerSynchronousProxy::new(channel);
+    let (status, topo) = interface.get_topological_path(fuchsia_zircon::Time::INFINITE)
+        .map_err(|_| zx::Status::IO)?;
+    fuchsia_zircon::Status::ok(status)?;
 
-    // This is safe because the length of the output buffer is computed from the vector, and the
-    // callee does not retain any pointers.
-    let size = unsafe {
-        ioctl(
-            dev,
-            IOCTL_DEVICE_GET_TOPO_PATH,
-            ::std::ptr::null(),
-            0,
-            topo.as_mut_ptr() as *mut raw::c_void,
-            topo.len())?
-    };
-    topo.truncate((size - 1) as usize);
-    String::from_utf8(topo).map_err(|_| zx::Status::IO)
+    match topo {
+        Some(topo) => Ok(topo),
+        None => Err(zx::Status::BAD_STATE),
+    }
 }
 
 bitflags! {
@@ -528,9 +524,3 @@ pub fn get_vmo_copy_from_file(file: &File) -> Result<zx::Vmo, zx::Status> {
         }
     }
 }
-
-pub const IOCTL_DEVICE_GET_TOPO_PATH: raw::c_int = make_ioctl(
-    fdio_sys::IOCTL_KIND_DEFAULT,
-    fdio_sys::IOCTL_FAMILY_DEVICE,
-    4
-);

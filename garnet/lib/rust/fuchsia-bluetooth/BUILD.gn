@@ -22,6 +22,7 @@ rustc_library("fuchsia-bluetooth") {
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:lazy_static",
     "//third_party/rust-crates/rustc_deps:rand",
+    "//zircon/public/fidl/fuchsia-device:fuchsia-device-rustc",
     "//zircon/public/fidl/fuchsia-device-test:fuchsia-device-test-rustc",
   ]
 }
