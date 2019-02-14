@@ -43,9 +43,11 @@ public:
 
     zx_status_t SendPacket(ThreadDispatcher* thread, uint32_t type);
 
-    void OnThreadStartForDebugger(ThreadDispatcher* thread);
+    void OnThreadStartForDebugger(ThreadDispatcher* thread,
+                                  const arch_exception_context_t* context);
     void OnThreadExitForDebugger(ThreadDispatcher* thread);
-    void OnProcessStartForDebugger(ThreadDispatcher* thread);
+    void OnProcessStartForDebugger(ThreadDispatcher* thread,
+                                   const arch_exception_context_t* context);
 
     // Records the target that the ExceptionPort is bound to, so it can
     // unbind when the underlying PortDispatcher dies.

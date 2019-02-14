@@ -267,7 +267,8 @@ void ExceptionPort::BuildArchReport(zx_exception_report_t* report, uint32_t type
     arch_fill_in_exception_context(context, report);
 }
 
-void ExceptionPort::OnThreadStartForDebugger(ThreadDispatcher* thread) {
+void ExceptionPort::OnThreadStartForDebugger(ThreadDispatcher* thread,
+                                             const arch_exception_context_t* context) {
     canary_.Assert();
 
     DEBUG_ASSERT(type_ == Type::DEBUGGER);
@@ -276,13 +277,9 @@ void ExceptionPort::OnThreadStartForDebugger(ThreadDispatcher* thread) {
     zx_koid_t tid = thread->get_koid();
     LTRACEF("thread %" PRIu64 ".%" PRIu64 " started\n", pid, tid);
 
-    // There is no iframe at the moment. We'll need one (or equivalent) if/when
-    // we want to make $pc, $sp available.
-    arch_exception_context_t context{};
-
     zx_status_t status = dispatch_debug_exception(fbl::RefPtr<ExceptionPort>(this),
                                                   ZX_EXCP_THREAD_STARTING,
-                                                  &context);
+                                                  context);
     if (status != ZX_OK) {
         // Ignore any errors. There's nothing we can do here, and
         // we still want the thread to run. It's possible the thread was
@@ -291,7 +288,8 @@ void ExceptionPort::OnThreadStartForDebugger(ThreadDispatcher* thread) {
     }
 }
 
-void ExceptionPort::OnProcessStartForDebugger(ThreadDispatcher* thread) {
+void ExceptionPort::OnProcessStartForDebugger(ThreadDispatcher* thread,
+                                              const arch_exception_context_t* context) {
     canary_.Assert();
 
     DEBUG_ASSERT(type_ == Type::JOB_DEBUGGER);
@@ -300,13 +298,9 @@ void ExceptionPort::OnProcessStartForDebugger(ThreadDispatcher* thread) {
     zx_koid_t tid = thread->get_koid();
     LTRACEF("process %" PRIu64 ".%" PRIu64 " started\n", pid, tid);
 
-    // There is no iframe at the moment. We'll need one (or equivalent) if/when
-    // we want to make $pc, $sp available.
-    arch_exception_context_t context{};
-
     zx_status_t status = dispatch_debug_exception(fbl::RefPtr<ExceptionPort>(this),
                                                   ZX_EXCP_PROCESS_STARTING,
-                                                  &context);
+                                                  context);
     if (status != ZX_OK) {
         // Ignore any errors. There's nothing we can do here, and
         // we still want the thread to run. It's possible the thread was

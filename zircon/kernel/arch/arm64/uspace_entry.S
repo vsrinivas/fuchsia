@@ -5,44 +5,37 @@
 // https://opensource.org/licenses/MIT
 
 #include <asm.h>
+#include <arch/arm64/iframe.h>
 
-// void arm64_uspace_entry(uintptr_t arg1, uintptr_t arg2, uintptr_t pc, uintptr_t sp, vaddr_t kstack, uint32_t spsr, uint32_t mdscr) __NO_RETURN;
+// void arm64_uspace_entry(iframe_t* iframe, vaddr_t kstack) __NO_RETURN;
 FUNCTION(arm64_uspace_entry)
-    mov sp, x4
-    msr sp_el0, x3
+    mov sp, x1
+    ldr x2, [x0, ARM64_IFRAME_OFFSET_USP]
+    msr sp_el0, x2
+    ldr x2, [x0, ARM64_IFRAME_OFFSET_ELR]
     msr elr_el1, x2
-    msr spsr_el1, x5
-    msr mdscr_el1, x6
+    ldr x2, [x0, ARM64_IFRAME_OFFSET_SPSR]
+    msr spsr_el1, x2
+    ldr x2, [x0, ARM64_IFRAME_OFFSET_MDSCR]
+    msr mdscr_el1, x2
 
-    mov x2, xzr
-    mov x3, xzr
-    mov x4, xzr
-    mov x5, xzr
-    mov x6, xzr
-    mov x7, xzr
-    mov x8, xzr
-    mov x9, xzr
-    mov x10, xzr
-    mov x11, xzr
-    mov x12, xzr
-    mov x13, xzr
-    mov x14, xzr
-    mov x15, xzr
-    mov x16, xzr
-    mov x17, xzr
-    mov x18, xzr
-    mov x19, xzr
-    mov x20, xzr
-    mov x21, xzr
-    mov x22, xzr
-    mov x23, xzr
-    mov x24, xzr
-    mov x25, xzr
-    mov x26, xzr
-    mov x27, xzr
-    mov x28, xzr
-    mov x29, xzr
-    mov x30, xzr
+    // Setting x0 deferred to last, we're still using it.
+    ldp x1, x2, [x0, ARM64_IFRAME_OFFSET_R + (1 * 8)]
+    ldp x3, x4, [x0, ARM64_IFRAME_OFFSET_R + (3 * 8)]
+    ldp x5, x6, [x0, ARM64_IFRAME_OFFSET_R + (5 * 8)]
+    ldp x7, x8, [x0, ARM64_IFRAME_OFFSET_R + (7 * 8)]
+    ldp x9, x10, [x0, ARM64_IFRAME_OFFSET_R + (9 * 8)]
+    ldp x11, x12, [x0, ARM64_IFRAME_OFFSET_R + (11 * 8)]
+    ldp x13, x14, [x0, ARM64_IFRAME_OFFSET_R + (13 * 8)]
+    ldp x15, x16, [x0, ARM64_IFRAME_OFFSET_R + (15 * 8)]
+    ldp x17, x18, [x0, ARM64_IFRAME_OFFSET_R + (17 * 8)]
+    ldp x19, x20, [x0, ARM64_IFRAME_OFFSET_R + (19 * 8)]
+    ldp x21, x22, [x0, ARM64_IFRAME_OFFSET_R + (21 * 8)]
+    ldp x23, x24, [x0, ARM64_IFRAME_OFFSET_R + (23 * 8)]
+    ldp x25, x26, [x0, ARM64_IFRAME_OFFSET_R + (25 * 8)]
+    ldp x27, x28, [x0, ARM64_IFRAME_OFFSET_R + (27 * 8)]
+    ldp x29, x30, [x0, ARM64_IFRAME_OFFSET_R + (29 * 8)]
+    ldr x0, [x0, ARM64_IFRAME_OFFSET_R + (0 * 8)]
 
     // Lazy loading of the FPU means we don't need to zero the simd registers
     eret

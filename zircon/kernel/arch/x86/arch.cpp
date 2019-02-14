@@ -62,24 +62,39 @@ void arch_init(void) {
     x86_processor_trace_init();
 }
 
-void arch_enter_uspace(uintptr_t entry_point, uintptr_t sp,
-                       uintptr_t arg1, uintptr_t arg2) {
-    LTRACEF("entry %#" PRIxPTR " user stack %#" PRIxPTR "\n", entry_point, sp);
-    LTRACEF("kernel stack %#" PRIxPTR "\n", x86_get_percpu()->default_tss.rsp0);
-
-    arch_disable_ints();
-
+void arch_setup_uspace_iframe(iframe_t* iframe,
+                              uintptr_t pc, uintptr_t sp,
+                              uintptr_t arg1, uintptr_t arg2) {
     /* default user space flags:
      * IOPL 0
      * Interrupts enabled
      */
-    ulong flags = (0 << X86_FLAGS_IOPL_SHIFT) | X86_FLAGS_IF;
+    iframe->flags = (0 << X86_FLAGS_IOPL_SHIFT) | X86_FLAGS_IF;
 
-    /* check that we're probably still pointed at the kernel gs */
+    iframe->cs = USER_CODE_64_SELECTOR;
+    iframe->ip = pc;
+    iframe->user_ss = USER_DATA_SELECTOR;
+    iframe->user_sp = sp;
+
+    iframe->rdi = arg1;
+    iframe->rsi = arg2;
+}
+
+void arch_enter_uspace(iframe_t* iframe) {
+    LTRACEF("entry %#" PRIxPTR " user stack %#" PRIxPTR "\n",
+            iframe->ip, iframe->user_sp);
+    LTRACEF("kernel stack %#" PRIxPTR "\n", x86_get_percpu()->default_tss.rsp0);
+
+    arch_disable_ints();
+
+    /* check that we're still pointed at the kernel gs */
     DEBUG_ASSERT(is_kernel_address(read_msr(X86_MSR_IA32_GS_BASE)));
 
     /* check that the kernel stack is set properly */
     DEBUG_ASSERT(is_kernel_address(x86_get_percpu()->default_tss.rsp0));
+
+    // TODO(dje): FS,GS access is in flux. This will need to be updated
+    // when that work is completed.
 
     /* set up user's fs: gs: base */
     write_msr(X86_MSR_IA32_FS_BASE, 0);
@@ -87,7 +102,7 @@ void arch_enter_uspace(uintptr_t entry_point, uintptr_t sp,
     /* set the KERNEL_GS_BASE msr here, because we're going to swapgs below */
     write_msr(X86_MSR_IA32_KERNEL_GS_BASE, 0);
 
-    x86_uspace_entry(arg1, arg2, sp, entry_point, flags);
+    x86_uspace_entry(iframe);
     __UNREACHABLE;
 }
 

@@ -104,9 +104,12 @@ bool msg_loop(zx_handle_t channel) {
             }
             send_simple_response(channel, RESP_RECOVERED_FROM_CRASH);
             break;
-        case RQST_START_LOOPING_THREADS: {
+        case RQST_START_LOOPING_THREADS:
+        case RQST_START_CAPTURE_REGS_THREADS: {
             extra_thread_count.store(0);
-            thrd_start_t func = looping_thread_func;
+            thrd_start_t func = (rqst.type == RQST_START_LOOPING_THREADS
+                                 ? looping_thread_func
+                                 : capture_regs_thread_func);
             for (int i = 0; i < kNumExtraThreads; ++i) {
                 // For our purposes, we don't need to track the threads.
                 // They'll be terminated when the process exits.
@@ -129,6 +132,14 @@ bool msg_loop(zx_handle_t channel) {
             resp.type = RESP_THREAD_HANDLE;
             unittest_printf("sending handle %d response on channel %u\n", copy, channel);
             send_response_with_handle(channel, resp, copy);
+            break;
+        }
+        case RQST_GET_LOAD_ADDRS: {
+            response_message_t resp{};
+            resp.type = RESP_LOAD_ADDRS;
+            resp.payload.load_addrs.libc_load_addr = get_libc_load_addr();
+            resp.payload.load_addrs.exec_load_addr = get_exec_load_addr();
+            send_response(channel, resp);
             break;
         }
         default:

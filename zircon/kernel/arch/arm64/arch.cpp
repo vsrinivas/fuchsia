@@ -224,11 +224,9 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
         __asm__ volatile("wfi");
 }
 
-// Switch to user mode, set the user stack pointer to user_stack_top, put the svc stack pointer to
-// the top of the kernel stack.
-void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2) {
-    thread_t* ct = get_current_thread();
-
+void arch_setup_uspace_iframe(iframe_t* iframe,
+                              uintptr_t pc, uintptr_t sp,
+                              uintptr_t arg1, uintptr_t arg2) {
     // Set up a default spsr to get into 64bit user space:
     //  - Zeroed NZCV.
     //  - No SS, no IL, no D.
@@ -239,12 +237,28 @@ void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg
     //         SError exception when first switching to uspace.
     uint32_t spsr = 1 << 8;  // Mask SError exceptions (currently unhandled).
 
+    iframe->r[0] = arg1;
+    iframe->r[1] = arg2;
+    iframe->usp = sp;
+    iframe->elr = pc;
+    iframe->spsr = spsr;
+
+    iframe->mdscr = MSDCR_EL1_INITIAL_VALUE;
+}
+
+// Switch to user mode, set the user stack pointer to user_stack_top, put the svc stack pointer to
+// the top of the kernel stack.
+void arch_enter_uspace(iframe_t* iframe) {
+    thread_t* ct = get_current_thread();
+
+    LTRACEF("arm_uspace_entry(%#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR
+            ", %#" PRIxPTR ", %#" PRIxPTR ", 0, %#" PRIxPTR ")\n",
+            iframe->r[0], iframe->r[1], iframe->spsr, ct->stack.top,
+            iframe->usp, iframe->elr);
+
     arch_disable_ints();
 
-    LTRACEF("arm_uspace_entry(%#" PRIxPTR ", %#" PRIxPTR ", %#x, %#" PRIxPTR
-            ", %#" PRIxPTR ", 0, %#" PRIxPTR ")\n",
-            arg1, arg2, spsr, ct->stack.top, sp, pc);
-    arm64_uspace_entry(arg1, arg2, pc, sp, ct->stack.top, spsr, MSDCR_EL1_INITIAL_VALUE);
+    arm64_uspace_entry(iframe, ct->stack.top);
     __UNREACHABLE;
 }
 

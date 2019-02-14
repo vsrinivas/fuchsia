@@ -315,7 +315,8 @@ private:
                                       zx_rights_t* rights);
 
 
-    void OnProcessStartForJobDebugger(ThreadDispatcher *t);
+    void OnProcessStartForJobDebugger(ThreadDispatcher *t,
+                                      const arch_exception_context_t* context);
 
     // Thread lifecycle support.
     //

@@ -998,8 +998,7 @@ static bool packet_pid_test()
 
 // Check that zx_thread_read_state() and zx_thread_write_state() both
 // return ZX_ERR_NOT_SUPPORTED.  This is used for testing the cases where a
-// thread is paused in the ZX_EXCP_THREAD_STARTING or or
-// ZX_EXCP_THREAD_EXITING states.
+// thread is paused in the ZX_EXCP_THREAD_EXITING state.
 static bool check_read_or_write_regs_is_rejected(zx_handle_t process,
                                                  zx_koid_t tid)
 {
@@ -1033,7 +1032,7 @@ static bool thread_state_when_starting_or_exiting_test()
     zx_koid_t initial_tid;
     ASSERT_TRUE(read_and_verify_exception(eport, child, ZX_EXCP_THREAD_STARTING,
                                           &initial_tid), "");
-    EXPECT_TRUE(check_read_or_write_regs_is_rejected(child, initial_tid), "");
+    // Register r/w is verified in utest/debugger.
     resume_thread_from_exception(child, initial_tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, eport, 0);
 
     // Tell the subprocess to create a second thread.
@@ -1043,7 +1042,7 @@ static bool thread_state_when_starting_or_exiting_test()
     ASSERT_TRUE(read_and_verify_exception(eport, child, ZX_EXCP_THREAD_STARTING,
                                           &tid), "");
     EXPECT_NE(tid, initial_tid, "");
-    EXPECT_TRUE(check_read_or_write_regs_is_rejected(child, tid), "");
+    // Register r/w is verified in utest/debugger.
     resume_thread_from_exception(child, tid, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, eport, 0);
 
     // Tell the second thread to exit.

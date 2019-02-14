@@ -466,9 +466,32 @@ int ThreadDispatcher::StartRoutine(void* arg) {
 
     ThreadDispatcher* t = (ThreadDispatcher*)arg;
 
+    // IWBN to dump the values just before calling |arch_enter_uspace()|
+    // but at that point they're in |iframe| and may have been modified by
+    // the debugger user, and fetching them out of the iframe will require
+    // architecture-specific code. Instead just print them here. This is just
+    // for tracing which is generally off, and then only time the values will
+    // have changed is if a debugger user changes them. KISS.
+    LTRACEF("arch_enter_uspace SP: %#" PRIxPTR " PC: %#" PRIxPTR
+            ", ARG1: %#" PRIxPTR ", ARG2: %#" PRIxPTR "\n",
+            t->user_sp_, t->user_entry_, t->user_arg1_, t->user_arg2_);
+
+    // Initialize an iframe for entry into userspace.
+    // We need all registers accessible from the ZX_EXCP_THREAD_STARTING
+    // exception handler (the debugger wants the thread to look as if the
+    // thread is at the first instruction). For architectural exceptions the
+    // general regs are left in the iframe for speed and simplicity. To keep
+    // things simple we use the same scheme.
+    iframe_t iframe{};
+    arch_setup_uspace_iframe(&iframe, t->user_entry_, t->user_sp_,
+                             t->user_arg1_, t->user_arg2_);
+
+    arch_exception_context_t context{};
+    context.frame = &iframe;
+
     // Notify job debugger if attached.
     if (t->is_initial_thread_) {
-      t->process_->OnProcessStartForJobDebugger(t);
+      t->process_->OnProcessStartForJobDebugger(t, &context);
     }
 
     // Notify debugger if attached.
@@ -478,21 +501,14 @@ int ThreadDispatcher::StartRoutine(void* arg) {
     {
         fbl::RefPtr<ExceptionPort> debugger_port(t->process_->debugger_exception_port());
         if (debugger_port) {
-            debugger_port->OnThreadStartForDebugger(t);
+            debugger_port->OnThreadStartForDebugger(t, &context);
         }
     }
 
-    // TODO(ZX-3489): Support reading the thread's registers if we're suspended here.
     thread_process_pending_signals();
 
-    LTRACEF("arch_enter_uspace SP: %#" PRIxPTR " PC: %#" PRIxPTR
-            ", ARG1: %#" PRIxPTR ", ARG2: %#" PRIxPTR "\n",
-            t->user_sp_, t->user_entry_, t->user_arg1_, t->user_arg2_);
-
     // switch to user mode and start the process
-    arch_enter_uspace(t->user_entry_, t->user_sp_,
-                      t->user_arg1_, t->user_arg2_);
-
+    arch_enter_uspace(&iframe);
     __UNREACHABLE;
 }
 

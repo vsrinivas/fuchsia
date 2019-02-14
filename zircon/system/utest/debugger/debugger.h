@@ -12,3 +12,5 @@ constexpr int kNumExtraThreads = 4;
 constexpr int kNumSegvTries = 4;
 
 bool stopped_in_thread_starting_reg_access_test();
+
+int capture_regs_thread_func(void* arg);

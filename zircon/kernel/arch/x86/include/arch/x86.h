@@ -17,6 +17,7 @@
 #include <zircon/types.h>
 
 #include <arch/x86/general_regs.h>
+#include <arch/x86/iframe.h>
 #include <arch/x86/registers.h>
 #include <arch/x86/x86intrin.h>
 #include <syscalls/syscalls.h>
@@ -24,17 +25,6 @@
 __BEGIN_CDECLS
 
 #define X86_8BYTE_MASK 0xFFFFFFFF
-
-struct iframe_t {
-    uint64_t rdi, rsi, rbp, rbx, rdx, rcx, rax;    // pushed by common handler
-    uint64_t r8, r9, r10, r11, r12, r13, r14, r15; // pushed by common handler
-    uint64_t vector;                               // pushed by stub
-    uint64_t err_code;                             // pushed by interrupt or stub
-    uint64_t ip, cs, flags;                        // pushed by interrupt
-    uint64_t user_sp, user_ss;                     // pushed by interrupt
-};
-
-typedef struct iframe_t x86_iframe_t;
 
 void x86_exception_handler(x86_iframe_t* frame);
 void platform_irq(x86_iframe_t* frame);
@@ -54,8 +44,7 @@ struct x86_64_context_switch_frame {
 };
 
 void x86_64_context_switch(vaddr_t* oldsp, vaddr_t newsp);
-void x86_uspace_entry(uintptr_t arg1, uintptr_t arg2, uintptr_t sp,
-                      uintptr_t pc, uint64_t rflags) __NO_RETURN;
+void x86_uspace_entry(const x86_iframe_t* iframe) __NO_RETURN;
 
 void x86_syscall(void);
 

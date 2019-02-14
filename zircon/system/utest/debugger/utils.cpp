@@ -222,3 +222,73 @@ bool get_vdso_exec_range(uintptr_t* start, uintptr_t* end) {
 
     END_HELPER;
 }
+
+struct find_so_callback_arg_t {
+    const char* so_name;
+    dl_phdr_info* info;
+};
+
+static int find_so_callback(dl_phdr_info* info, size_t size, void* argp) {
+    auto arg = reinterpret_cast<find_so_callback_arg_t*>(argp);
+    if (strcmp(info->dlpi_name, arg->so_name) == 0) {
+        *arg->info = *info;
+        return 1;
+    }
+    return 0;
+}
+
+void find_so(const char* so_name, dl_phdr_info* info) {
+    find_so_callback_arg_t callback_arg;
+    callback_arg.so_name = so_name;
+    callback_arg.info = info;
+
+    int ret = dl_iterate_phdr(&find_so_callback, &callback_arg);
+    if (ret != 1) {
+        fatal("dl_iterate_phdr didn't find SO?\n");
+    }
+
+    uint64_t base_addr = info->dlpi_addr;
+    auto ehdr = reinterpret_cast<const Elf64_Ehdr*>(base_addr);
+    if (ehdr->e_ident[0] != 0x7f ||
+        ehdr->e_ident[1] != 'E' ||
+        ehdr->e_ident[2] != 'L' ||
+        ehdr->e_ident[3] != 'F') {
+        fatal("Unexpected executable ELF header contents\n");
+    }
+}
+
+zx_vaddr_t get_exec_load_addr() {
+    dl_phdr_info info;
+    // The executable doesn't have an SO name.
+    find_so("", &info);
+    return info.dlpi_addr;
+}
+
+zx_vaddr_t get_libc_load_addr() {
+    dl_phdr_info info;
+    find_so("libc.so", &info);
+    return info.dlpi_addr;
+}
+
+bool get_inferior_load_addrs(zx_handle_t channel, zx_vaddr_t* libc_load_addr,
+                             zx_vaddr_t* exec_load_addr) {
+    BEGIN_HELPER;
+
+    send_simple_request(channel, RQST_GET_LOAD_ADDRS);
+    response_message_t response;
+    ASSERT_TRUE(recv_response(channel, &response), "");
+    ASSERT_EQ(response.type, RESP_LOAD_ADDRS, "");
+    *libc_load_addr = response.payload.load_addrs.libc_load_addr;
+    *exec_load_addr = response.payload.load_addrs.exec_load_addr;
+
+    END_HELPER;
+}
+
+zx_vaddr_t get_libc_entry_point() {
+    dl_phdr_info info;
+    find_so("libc.so", &info);
+
+    uint64_t base_addr = info.dlpi_addr;
+    auto ehdr = reinterpret_cast<const Elf64_Ehdr*>(base_addr);
+    return ehdr->e_entry;
+}

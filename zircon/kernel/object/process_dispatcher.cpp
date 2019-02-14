@@ -862,12 +862,13 @@ bool ProcessDispatcher::IsHandleValidNoPolicyCheck(zx_handle_t handle_value) {
     return (GetHandleLocked(handle_value, true) != nullptr);
 }
 
-void ProcessDispatcher::OnProcessStartForJobDebugger(ThreadDispatcher *t) {
+void ProcessDispatcher::OnProcessStartForJobDebugger(ThreadDispatcher *t,
+                                                     const arch_exception_context_t* context) {
     auto job = job_;
     while (job) {
       auto port = job->debugger_exception_port();
       if (port) {
-        port->OnProcessStartForDebugger(t);
+        port->OnProcessStartForDebugger(t, context);
         break;
       } else {
         job = job->parent();
