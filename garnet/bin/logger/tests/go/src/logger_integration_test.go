@@ -65,6 +65,20 @@ func TestFullStack(t *testing.T) {
 	t.Run("LogListenerListingAndIgnoringTag", func(t *testing.T) {
 		testListingAndIgnoringTag(t, tag, tagToIgnore, expected)
 	})
+
+	if err := logger.Warnf("integer: %d", 20); err != nil {
+		t.Fatal(err)
+	}
+
+	expected = fmt.Sprintf("[0][%s] WARNING: integer: 20\n", tag)
+
+	t.Run("LogListenerToStdoutWithWarning", func(t *testing.T) {
+		testToStdout(t, tag, expected)
+	})
+
+	t.Run("LogListenerToFileWithWarning", func(t *testing.T) {
+		testToFile(t, tag, expected)
+	})
 }
 
 func genTag() string {

@@ -83,11 +83,12 @@ func (ll LogLevel) String() string {
 }
 
 type LogInitOptions struct {
-	Connector         *context.Connector
-	Loglevel          LogLevel
-	ConsoleWriter     io.Writer
-	LogServiceChannel *zx.Socket
-	Tags              []string
+	Connector                     *context.Connector
+	Loglevel                      LogLevel
+	ConsoleWriter                 io.Writer
+	LogServiceChannel             *zx.Socket
+	Tags                          []string
+	MinSeverityForFileAndLineInfo LogLevel
 }
 
 func GetDefaultInitOptions() LogInitOptions {
@@ -96,18 +97,20 @@ func GetDefaultInitOptions() LogInitOptions {
 		ConsoleWriter:     nil,
 		LogServiceChannel: nil,
 		Tags:              nil,
+		MinSeverityForFileAndLineInfo: ErrorLevel,
 	}
 }
 
 type Logger struct {
-	logLevel    LogLevel
-	tags        []string
-	socket      *zx.Socket
-	writer      atomic.Value
-	tagString   string
-	pid         uint64
-	droppedLogs uint32
-	fallbackMux sync.Mutex
+	logLevel                      LogLevel
+	tags                          []string
+	socket                        *zx.Socket
+	writer                        atomic.Value
+	tagString                     string
+	pid                           uint64
+	droppedLogs                   uint32
+	minSeverityForFileAndLineInfo LogLevel
+	fallbackMux                   sync.Mutex
 }
 
 func (l *Logger) setTags(tags []string) error {
@@ -158,6 +161,7 @@ func NewLogger(options LogInitOptions) (*Logger, error) {
 		logLevel: options.Loglevel,
 		socket:   options.LogServiceChannel,
 		pid:      uint64(os.Getpid()),
+		minSeverityForFileAndLineInfo: options.MinSeverityForFileAndLineInfo,
 	}
 	if options.ConsoleWriter == nil && options.LogServiceChannel == nil {
 		if options.Connector == nil {
@@ -253,7 +257,7 @@ func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format strin
 	}
 	time := zx.Sys_clock_get(0) //MONOTONIC
 	msg := fmt.Sprintf(format, a...)
-	if logLevel >= ErrorLevel {
+	if logLevel >= l.minSeverityForFileAndLineInfo {
 		_, file, line, ok := runtime.Caller(callDepth)
 		if !ok {
 			file = "???"
