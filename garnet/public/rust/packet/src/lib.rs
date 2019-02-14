@@ -415,6 +415,7 @@ pub mod serialize;
 
 pub use crate::serialize::*;
 
+use std::cmp;
 use std::mem;
 use std::ops::{Bound, Range, RangeBounds};
 
@@ -457,6 +458,19 @@ pub trait ParseBuffer: AsRef<[u8]> {
     /// `shrink_front` panics if `n` is larger than the body.
     fn shrink_front(&mut self, n: usize);
 
+    /// Shrinks the buffer to be no larger than `len` bytes, consuming from the
+    /// front.
+    ///
+    /// `shrink_front_to` consumes as many of the left-most bytes of the body as
+    /// necessary to ensure that the buffer is no larger than `len` bytes long.
+    /// It adds any bytes consumed to the prefix. If the buffer is already `len`
+    /// bytes long or shorter, `shrink_front_to` does nothing.
+    fn shrink_front_to(&mut self, len: usize) {
+        let old_len = self.len();
+        let new_len = cmp::min(old_len, len);
+        self.shrink_front(old_len - new_len);
+    }
+
     /// Shrinks the back of the body towards the beginning of the buffer.
     ///
     /// `shrink_back` consumes the `n` right-most bytes of the body, and adds
@@ -466,6 +480,19 @@ pub trait ParseBuffer: AsRef<[u8]> {
     ///
     /// `shrink_back` panics if `n` is larger than the body.
     fn shrink_back(&mut self, n: usize);
+
+    /// Shrinks the buffer to be no larger than `len` bytes, consuming from the
+    /// back.
+    ///
+    /// `shrink_back_to` consumes as many of the right-most bytes of the body as
+    /// necessary to ensure that the buffer is no larger than `len` bytes long.
+    /// It adds any bytes consumed to the suffix. If the buffer is already `len`
+    /// bytes long or shorter, `shrink_back_to` does nothing.
+    fn shrink_back_to(&mut self, len: usize) {
+        let old_len = self.len();
+        let new_len = cmp::min(old_len, len);
+        self.shrink_back(old_len - new_len);
+    }
 
     /// Shrinks the body.
     ///
@@ -1005,6 +1032,7 @@ pub trait BufferViewMut<B: ByteSliceMut>: BufferView<B> + AsMut<[u8]> {
 /// Metadata about a previously-parsed packet used to undo its parsing.
 ///
 /// See [`Buffer::undo_parse`] for more details.
+#[derive(Copy, Clone)]
 pub struct ParseMetadata {
     header_len: usize,
     body_len: usize,
@@ -1018,6 +1046,30 @@ impl ParseMetadata {
 
     pub fn from_inner_packet(len: usize) -> ParseMetadata {
         ParseMetadata { header_len: len, body_len: 0, footer_len: 0 }
+    }
+
+    /// Gets the header length.
+    ///
+    /// `header_len` returns the length of the header of the packet described by
+    /// this `ParseMetadata`.
+    pub fn header_len(&self) -> usize {
+        self.header_len
+    }
+
+    /// Gets the body length.
+    ///
+    /// `body_len` returns the length of the body of the packet described by
+    /// this `ParseMetadata`.
+    pub fn body_len(&self) -> usize {
+        self.body_len
+    }
+
+    /// Gets the footer length.
+    ///
+    /// `footer_len` returns the length of the footer of the packet described by
+    /// this `ParseMetadata`.
+    pub fn footer_len(&self) -> usize {
+        self.footer_len
     }
 }
 
@@ -1448,7 +1500,7 @@ mod tests {
         sfx: usize,
         contents: &'static [u8],
     }
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     const TEST_CASES: &[TestCase] = &[
         TestCase { shrink: 0..10, front: 0, back: 0, cap: 10, len: 10, pfx: 0, sfx: 0, contents: &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], },
         TestCase { shrink: 2..10, front: 2, back: 0, cap: 10, len: 8,  pfx: 2, sfx: 0, contents: &[2, 3, 4, 5, 6, 7, 8, 9], },
@@ -1558,6 +1610,23 @@ mod tests {
             assert_eq!(buffer.prefix_len(), 3);
             assert_eq!(buffer.suffix_len(), 3);
         }
+    }
+
+    #[test]
+    fn test_buf_shrink_to() {
+        // Tests the shrink_front_to and shrink_back_to methods.
+        fn test(buf: &[u8], shrink_to: usize, size_after: usize) {
+            let mut buf0 = &buf[..];
+            buf0.shrink_front_to(shrink_to);
+            assert_eq!(buf0.len(), size_after);
+            let mut buf1 = &buf[..];
+            buf1.shrink_back_to(shrink_to);
+            assert_eq!(buf0.len(), size_after);
+        }
+
+        test(&[0, 1, 2, 3], 2, 2);
+        test(&[0, 1, 2, 3], 4, 4);
+        test(&[0, 1, 2, 3], 8, 4);
     }
 
     // Each panic test case needs to be in its own function, which results in an
