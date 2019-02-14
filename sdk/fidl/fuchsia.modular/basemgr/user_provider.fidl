@@ -57,9 +57,6 @@ struct UserLoginParams {
     // Services provided by the |BaseShell| that can be offered to the
     // |SessionShell| that is being logged into.
     fuchsia.sys.ServiceProvider? services;
-
-    // If login fails, |user_controller| is closed.
-    request<UserController>? user_controller;
 };
 
 // Used to specify arguments to log into a user session.
@@ -75,56 +72,4 @@ struct UserLoginParams2 {
     // Services provided by the |BaseShell| that can be offered to the
     // |SessionShell| that is being logged into.
     fuchsia.sys.ServiceProvider? services;
-
-    // If login fails, |user_controller| is closed.
-    request<UserController>? user_controller;
-};
-
-// Provided by the |Basemgr| to the |BaseShell| when it authenticates a
-// new user. This interface provides control to a logged-in user's life cycle,
-// and the life of this interface is bound to a user being logged in.
-//
-// An interface similar to this one, |UserContext|, is provided to the user
-// shell. It also contains a method to request logout. The difference is of
-// level of ownership and control:
-//
-// - A controller interface to one component instance is given to a component
-//   instance which has control over the life cycle of the first component
-//   instance. As such, the controller interface can be used by the controlling
-//   component to change the life cycle of the controlled component.
-//
-// - A context interface to one component instance is given to a component
-//   instance whose life cycle is controlled by the first component instance. As
-//   such, the context interface can be used by the controlled component to
-//   request a change to its life cycle (among other functions).
-//
-// In general, the separation of a service |Foo| implemented by a component, and
-// the service |FooController| given to the client of that component (rather
-// than |Foo| directly) is a hallmark of inversion of control that pervades the
-// design of our services.
-protocol UserController {
-    // Logs out a user by tearing down its sessionmgr. Returns once the
-    // Sessionmgr has been torn down. This also triggers OnLogout() for
-    // |UserWatcher|s.
-    Logout() -> ();
-
-    // Registers a watcher for the user's life cycle events.
-    Watch(UserWatcher watcher);
-
-    // Stops the currently running session shell and starts the one specified by
-    // |session_shell_config|. This operation stops all stories before starting
-    // the new shell.
-    SwapSessionShell(AppConfig session_shell_config) -> ();
-};
-
-// Implemented by a |BaseShell| implementation in order to receive
-// notification about life cycle changes of a logged in user.
-protocol UserWatcher {
-    // Called when a user has logged out, either by UserController.Logout() or by
-    // UserContext.Logout(). By the time this event is processed by a watcher, the
-    // Sessionmgr may already be torn down.
-    //
-    // TODO(vardhan): Make a guarantee that once OnLogout() is invoked, it is
-    // possible to UserProvider.Login() the same user.
-    OnLogout();
 };

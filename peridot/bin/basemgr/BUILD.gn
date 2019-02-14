@@ -79,7 +79,7 @@ executable_package("basemgr") {
 
 tests_package("basemgr_unittests") {
   deps = [
-    ":user_controller_impl_unittest",
+    ":user_context_impl_unittest",
     "//peridot/bin/basemgr/session_shell_settings:session_shell_settings_unittest",
   ]
   environments = basic_envs
@@ -99,8 +99,8 @@ source_set("wait_for_minfs") {
 
 source_set("lib") {
   sources = [
-    "user_controller_impl.cc",
-    "user_controller_impl.h",
+    "user_context_impl.cc",
+    "user_context_impl.h",
     "user_provider_impl.cc",
     "user_provider_impl.h",
   ]
@@ -155,11 +155,11 @@ executable_package("dev_base_shell") {
   ]
 }
 
-executable("user_controller_impl_unittest") {
+executable("user_context_impl_unittest") {
   testonly = true
 
   sources = [
-    "user_controller_impl_unittest.cc",
+    "user_context_impl_unittest.cc",
   ]
 
   deps = [

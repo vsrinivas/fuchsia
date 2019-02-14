@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/basemgr/user_controller_impl.h"
+#include "peridot/bin/basemgr/user_context_impl.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/component/cpp/testing/fake_launcher.h>
@@ -15,9 +15,9 @@ namespace testing {
 namespace {
 
 using ::component::testing::FakeLauncher;
-using UserControllerImplTest = gtest::TestLoopFixture;
+using UserContextImplTest = gtest::TestLoopFixture;
 
-TEST_F(UserControllerImplTest, StartSessionmgrWithTokenManagers) {
+TEST_F(UserContextImplTest, StartSessionmgrWithTokenManagers) {
   FakeLauncher launcher;
   std::string url = "test_url_string";
   fuchsia::modular::AppConfig app_config;
@@ -33,19 +33,18 @@ TEST_F(UserControllerImplTest, StartSessionmgrWithTokenManagers) {
 
   fuchsia::auth::TokenManagerPtr ledger_token_manager;
   fuchsia::auth::TokenManagerPtr agent_token_manager;
-  fuchsia::modular::UserControllerPtr user_controller;
 
-  UserControllerImpl impl(
+  UserContextImpl impl(
       &launcher, CloneStruct(app_config), CloneStruct(app_config),
       CloneStruct(app_config), std::move(ledger_token_manager),
       std::move(agent_token_manager), nullptr /* account */,
       nullptr /* view_owner_request */, nullptr /* base_shell_services */,
-      user_controller.NewRequest(), nullptr /* done_callback */);
+      nullptr /* done_callback */);
 
   EXPECT_TRUE(callback_called);
 }
 
-TEST_F(UserControllerImplTest, SessionmgrCrashInvokesDoneCallback) {
+TEST_F(UserContextImplTest, SessionmgrCrashInvokesDoneCallback) {
   // Program the fake launcher to drop the CreateComponent request such that
   // the error handler of the sessionmgr_app is invoked. This should invoke the
   // done_callback.
@@ -62,16 +61,14 @@ TEST_F(UserControllerImplTest, SessionmgrCrashInvokesDoneCallback) {
 
   fuchsia::auth::TokenManagerPtr ledger_token_manager;
   fuchsia::auth::TokenManagerPtr agent_token_manager;
-  fuchsia::modular::UserControllerPtr user_controller;
 
   bool done_callback_called = false;
-  UserControllerImpl impl(
+  UserContextImpl impl(
       &launcher, CloneStruct(app_config), CloneStruct(app_config),
       CloneStruct(app_config), std::move(ledger_token_manager),
       std::move(agent_token_manager), nullptr /* account */,
       nullptr /* view_owner_request */, nullptr /* base_shell_services */,
-      user_controller.NewRequest(),
-      /* done_callback = */ [&done_callback_called](UserControllerImpl*) {
+      /* done_callback = */ [&done_callback_called](UserContextImpl*) {
         done_callback_called = true;
       });
 

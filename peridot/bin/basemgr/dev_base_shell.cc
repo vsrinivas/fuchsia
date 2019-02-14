@@ -59,14 +59,12 @@ class Settings {
   bool test{};
 };
 
-class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell>,
-                        fuchsia::modular::UserWatcher {
+class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
  public:
   explicit DevBaseShellApp(component::StartupContext* const startup_context,
                            Settings settings)
       : SingleServiceApp(startup_context),
         settings_(std::move(settings)),
-        user_watcher_binding_(this),
         weak_ptr_factory_(this) {
     if (settings_.test) {
       testing::Init(this->startup_context(), __FILE__);
@@ -132,19 +130,11 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell>,
            " unimplemented.";
   }
 
-  // |fuchsia::modular::UserWatcher|
-  void OnLogout() override {
-    FXL_LOG(INFO) << "fuchsia::modular::UserWatcher::OnLogout()";
-    base_shell_context_->Shutdown();
-  }
-
   void Login(const std::string& account_id) {
     fuchsia::modular::UserLoginParams params;
     params.account_id = account_id;
     params.view_owner = std::move(view_owner_request_);
-    params.user_controller = user_controller_.NewRequest();
     user_provider_->Login(std::move(params));
-    user_controller_->Watch(user_watcher_binding_.NewBinding());
   }
 
   void Connect() {
@@ -186,11 +176,9 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell>,
   }
 
   const Settings settings_;
-  fidl::Binding<fuchsia::modular::UserWatcher> user_watcher_binding_;
   fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
       view_owner_request_;
   fuchsia::modular::BaseShellContextPtr base_shell_context_;
-  fuchsia::modular::UserControllerPtr user_controller_;
   fuchsia::modular::UserProviderPtr user_provider_;
   fxl::WeakPtrFactory<DevBaseShellApp> weak_ptr_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(DevBaseShellApp);

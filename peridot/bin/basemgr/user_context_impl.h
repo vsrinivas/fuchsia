@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_BASEMGR_USER_CONTROLLER_IMPL_H_
-#define PERIDOT_BIN_BASEMGR_USER_CONTROLLER_IMPL_H_
+#ifndef PERIDOT_BIN_BASEMGR_USER_CONTEXT_IMPL_H_
+#define PERIDOT_BIN_BASEMGR_USER_CONTEXT_IMPL_H_
 
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
@@ -19,6 +19,7 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 
 #include "peridot/lib/fidl/app_client.h"
@@ -26,20 +27,19 @@
 
 namespace modular {
 
-// |UserControllerImpl| starts and manages a Sessionmgr. The life time of a
-// Sessionmgr is bound to this class.  |UserControllerImpl| is not self-owned,
+// |UserContextImpl| starts and manages a Sessionmgr. The life time of a
+// Sessionmgr is bound to this class. |UserContextImpl| is not self-owned,
 // but still drives its own deletion: On logout, it signals its
 // owner (BasemgrImpl) to delete it.
-class UserControllerImpl : fuchsia::modular::UserController,
-                           fuchsia::modular::internal::UserContext {
+class UserContextImpl : fuchsia::modular::internal::UserContext {
  public:
   // After perfoming logout, to signal our completion (and deletion of our
   // instance) to our owner, we do it using a callback supplied to us in our
   // constructor. (The alternative is to take in a BasemgrImpl*, which seems
   // a little specific and overscoped).
-  using DoneCallback = std::function<void(UserControllerImpl*)>;
+  using DoneCallback = std::function<void(UserContextImpl*)>;
 
-  UserControllerImpl(
+  UserContextImpl(
       fuchsia::sys::Launcher* const launcher,
       fuchsia::modular::AppConfig sessionmgr,
       fuchsia::modular::AppConfig session_shell,
@@ -50,13 +50,10 @@ class UserControllerImpl : fuchsia::modular::UserController,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> base_shell_services,
-      fidl::InterfaceRequest<fuchsia::modular::UserController>
-          user_controller_request,
       DoneCallback done);
 
-  // This will effectively tear down the entire instance by calling |done|.
-  // |fuchsia::modular::UserController|
-  void Logout(LogoutCallback done) override;
+  // This will effectively tear down the entire instance by calling |done_|.
+  void Logout(fit::function<void()> callback);
 
   // Stops the active session shell, and starts the session shell specified in
   // |session_shell_config|.
@@ -64,18 +61,10 @@ class UserControllerImpl : fuchsia::modular::UserController,
       fuchsia::modular::AppConfig session_shell_config);
 
  private:
-  // |fuchsia::modular::UserController|
-  void SwapSessionShell(fuchsia::modular::AppConfig session_shell_config,
-                        SwapSessionShellCallback callback) override;
-
-  // |fuchsia::modular::UserController|
-  void Watch(
-      fidl::InterfaceHandle<fuchsia::modular::UserWatcher> watcher) override;
-
-  // |UserContext|
+  // |fuchsia::modular::internal::UserContext|
   void Logout() override;
 
-  // |UserContext|
+  // |fuchsia::modular::internal::UserContext|
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                            request) override;
 
@@ -84,19 +73,16 @@ class UserControllerImpl : fuchsia::modular::UserController,
   fuchsia::modular::internal::SessionmgrPtr sessionmgr_;
 
   fidl::Binding<fuchsia::modular::internal::UserContext> user_context_binding_;
-  fidl::Binding<fuchsia::modular::UserController> user_controller_binding_;
 
-  fidl::InterfacePtrSet<fuchsia::modular::UserWatcher> user_watchers_;
-
-  std::vector<LogoutCallback> logout_response_callbacks_;
+  std::vector<fit::function<void()>> logout_response_callbacks_;
 
   fuchsia::sys::ServiceProviderPtr base_shell_services_;
 
   DoneCallback done_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(UserControllerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(UserContextImpl);
 };
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_BASEMGR_USER_CONTROLLER_IMPL_H_
+#endif  // PERIDOT_BIN_BASEMGR_USER_CONTEXT_IMPL_H_

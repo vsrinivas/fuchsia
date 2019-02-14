@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/basemgr/user_controller_impl.h"
+#include "peridot/bin/basemgr/user_context_impl.h"
 
 #include <memory>
 #include <utility>
@@ -25,7 +25,7 @@ namespace {
 constexpr char kPresentationService[] = "mozart.Presentation";
 }  // namespace
 
-UserControllerImpl::UserControllerImpl(
+UserContextImpl::UserContextImpl(
     fuchsia::sys::Launcher* const launcher,
     fuchsia::modular::AppConfig sessionmgr,
     fuchsia::modular::AppConfig session_shell,
@@ -36,11 +36,8 @@ UserControllerImpl::UserControllerImpl(
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> base_shell_services,
-    fidl::InterfaceRequest<fuchsia::modular::UserController>
-        user_controller_request,
     DoneCallback done)
     : user_context_binding_(this),
-      user_controller_binding_(this, std::move(user_controller_request)),
       base_shell_services_(base_shell_services ? base_shell_services.Bind()
                                                : nullptr),
       done_(std::move(done)) {
@@ -75,7 +72,6 @@ UserControllerImpl::UserControllerImpl(
     FXL_LOG(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "
                    << "Calling done_().";
     // This prevents us from receiving any further requests.
-    user_controller_binding_.Unbind();
     user_context_binding_.Unbind();
     // Logout(), which expects a graceful shutdown of sessionmgr, does not
     // apply here because sessionmgr crashed. Just run |done_| directly.
@@ -83,35 +79,28 @@ UserControllerImpl::UserControllerImpl(
   });
 }
 
-// |fuchsia::modular::UserController|
-void UserControllerImpl::Logout(LogoutCallback done) {
+// TODO(MF-120): Replace method in favor of letting sessionmgr launch base
+// shell via SessionUserProvider.
+void UserContextImpl::Logout(fit::function<void()> callback) {
   FXL_LOG(INFO) << "fuchsia::modular::UserController::Logout()";
-  logout_response_callbacks_.push_back(done);
+  logout_response_callbacks_.push_back(std::move(callback));
   if (logout_response_callbacks_.size() > 1) {
     return;
   }
 
   // This should prevent us from receiving any further requests.
-  user_controller_binding_.Unbind();
   user_context_binding_.Unbind();
 
   sessionmgr_app_->Teardown(kSessionmgrTimeout, [this] {
-    for (const auto& done : logout_response_callbacks_) {
-      done();
-    }
-    // We announce |OnLogout| only at point just before deleting ourselves,
-    // so we can avoid any race conditions that may be triggered by |Shutdown|
-    // (which in-turn will call this |Logout| since we have not completed yet).
-    for (auto& watcher : user_watchers_.ptrs()) {
-      (*watcher)->OnLogout();
+    for (const auto& callback : logout_response_callbacks_) {
+      callback();
     }
 
     done_(this);
   });
 }
 
-// |UserContext|
-void UserControllerImpl::GetPresentation(
+void UserContextImpl::GetPresentation(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
   if (base_shell_services_) {
     base_shell_services_->ConnectToService(kPresentationService,
@@ -119,30 +108,15 @@ void UserControllerImpl::GetPresentation(
   }
 }
 
-FuturePtr<> UserControllerImpl::SwapSessionShell(
+FuturePtr<> UserContextImpl::SwapSessionShell(
     fuchsia::modular::AppConfig session_shell_config) {
   auto future = Future<>::Create("SwapSessionShell");
-  SwapSessionShell(std::move(session_shell_config), future->Completer());
+  sessionmgr_->SwapSessionShell(std::move(session_shell_config),
+                                future->Completer());
   return future;
 }
 
-// |fuchsia::modular::UserController|
-void UserControllerImpl::SwapSessionShell(
-    fuchsia::modular::AppConfig session_shell_config,
-    SwapSessionShellCallback callback) {
-  sessionmgr_->SwapSessionShell(std::move(session_shell_config), callback);
-}
-
-// |fuchsia::modular::UserController|
-void UserControllerImpl::Watch(
-    fidl::InterfaceHandle<fuchsia::modular::UserWatcher> watcher) {
-  user_watchers_.AddInterfacePtr(watcher.Bind());
-}
-
-// |UserContext|
-// TODO(alhaad): Reconcile UserContext.Logout() and UserControllerImpl.Logout().
-void UserControllerImpl::Logout() {
-  FXL_LOG(INFO) << "UserContext::Logout()";
+void UserContextImpl::Logout() {
   Logout([] {});
 }
 

@@ -758,12 +758,12 @@ StoryStorage::GetEntityCookieForName(const std::string& entity_name) {
 
 FuturePtr<> StoryStorage::Sync() {
   auto ret = Future<>::Create("StoryStorage::Sync.ret");
-  operation_queue_.Add(NewCallbackOperation(
-      "StoryStorage::Sync",
-      [](OperationBase* op) {
-        return Future<>::CreateCompleted("StoryStorage::Sync");
-      },
-      ret->Completer()));
+  operation_queue_.Add(NewCallbackOperation("StoryStorage::Sync",
+                                            [](OperationBase* op) {
+                                              return Future<>::CreateCompleted(
+                                                  "StoryStorage::Sync");
+                                            },
+                                            ret->Completer()));
   return ret;
 }
 

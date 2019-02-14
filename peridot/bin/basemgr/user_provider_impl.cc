@@ -162,21 +162,20 @@ void UserProviderImpl::Connect(
 }
 
 void UserProviderImpl::Teardown(const std::function<void()>& callback) {
-  if (user_controllers_.empty()) {
+  if (user_contexts_.empty()) {
     callback();
     return;
   }
 
-  for (auto& it : user_controllers_) {
-    auto cont = [this, ptr = it.first, callback] {
-      if (!user_controllers_.empty()) {
-        // Not the last callback.
+  for (auto& it : user_contexts_) {
+    auto cont = [this, callback] {
+      if (user_contexts_.empty()) {
+        callback();
         return;
       }
-
-      callback();
     };
 
+    // Logout will remove the user context from |user_contexts_|.
     it.second->Logout(cont);
   }
 }
@@ -504,39 +503,38 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
   auto service_provider =
       delegate_->GetSessionShellServiceProvider(std::move(params.services));
 
-  auto controller = std::make_unique<UserControllerImpl>(
+  auto context = std::make_unique<UserContextImpl>(
       launcher_, CloneStruct(sessionmgr_), CloneStruct(session_shell_),
       CloneStruct(story_shell_), std::move(ledger_token_manager),
       std::move(agent_token_manager), std::move(account), std::move(view_owner),
-      std::move(service_provider), std::move(params.user_controller),
-      [this](UserControllerImpl* c) {
-        user_controllers_.erase(c);
+      std::move(service_provider), [this](UserContextImpl* c) {
+        user_contexts_.erase(c);
         delegate_->DidLogout();
       });
-  auto controller_ptr = controller.get();
-  user_controllers_[controller_ptr] = std::move(controller);
+  auto context_ptr = context.get();
+  user_contexts_[context_ptr] = std::move(context);
 
   delegate_->DidLogin();
 }
 
 FuturePtr<> UserProviderImpl::SwapSessionShell(
     fuchsia::modular::AppConfig session_shell_config) {
-  if (user_controllers_.size() == 0)
+  if (user_contexts_.size() == 0)
     return Future<>::CreateCompleted("SwapSessionShell(Completed)");
 
-  FXL_CHECK(user_controllers_.size() == 1)
-      << user_controllers_.size()
-      << " user controllers exist, which should be impossible.";
+  FXL_CHECK(user_contexts_.size() == 1)
+      << user_contexts_.size()
+      << " user contexts exist, which should be impossible.";
 
-  auto user_controller = user_controllers_.begin()->first;
-  return user_controller->SwapSessionShell(std::move(session_shell_config));
+  auto user_context = user_contexts_.begin()->first;
+  return user_context->SwapSessionShell(std::move(session_shell_config));
 }
 
 void UserProviderImpl::RestartSession(
     const std::function<void()>& on_restart_complete) {
   // Callback to log the user back in if login is not automatic
   auto login = [this, on_restart_complete]() {
-    if (user_controllers_.size() < 1 && users_storage_) {
+    if (user_contexts_.size() < 1 && users_storage_) {
       auto account = Convert(users_storage_->users()->Get(0));
 
       fuchsia::modular::UserLoginParams params;
@@ -547,7 +545,7 @@ void UserProviderImpl::RestartSession(
   };
 
   // Log the user out to shut down sessionmgr
-  user_controllers_.begin()->first->Logout(login);
+  user_contexts_.begin()->first->Logout(login);
 }
 
 }  // namespace modular

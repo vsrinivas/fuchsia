@@ -43,7 +43,7 @@ constexpr bool kAutoLoginToGuest = false;
 // BaseShell and SessionShell. The same service exchange between SessionShell
 // and StoryShell uses the SessionShellPresentationProvider service, which is
 // discoverable.
-// NOTE: This is defined in user_controller_impl.cc as well.
+// NOTE: This is defined in user_context_impl.cc as well.
 // TODO(SCN-595): mozart.Presentation is being renamed to ui.Presenter.
 constexpr char kPresentationService[] = "mozart.Presentation";
 
