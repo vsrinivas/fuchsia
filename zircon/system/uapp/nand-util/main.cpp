@@ -108,9 +108,14 @@ class NandBroker {
     // Returns true on success.
     bool Initialize();
 
-    // The internal buffer can access a block at a time.
-    const char* data() const { return reinterpret_cast<char*>(mapping_.start()); }
-    const char* oob() const { return data() + info_.page_size * info_.pages_per_block; }
+    // The internal buffer can store up to n pages at a time, where n happens to
+    // be the number of pages on a block. Note that regardless of the number of
+    // pages on a given operation (for example, ReadPages), the data will always
+    // be returned at the start of the buffer |data()|, and oob will be placed
+    // at the end of the buffer (oob()). In other words, these two pointers will
+    // always point to the same location for the lifetime of this object.
+    char* data() const { return reinterpret_cast<char*>(mapping_.start()); }
+    char* oob() const { return data() + info_.page_size * info_.pages_per_block; }
 
     const fuchsia_hardware_nand_Info& Info() const { return info_; }
 
@@ -484,6 +489,34 @@ bool ReadCheck(const NandBroker& nand, uint32_t first_block, uint32_t count) {
     return true;
 }
 
+// Reads a single block page by page, ignoring any read errors.
+void ReadBlockByPage(const NandBroker& nand, uint32_t block_num) {
+    const auto& info = nand.Info();
+    fbl::unique_ptr<char[]> first_page(new char[info.page_size + info.oob_size]);
+
+    uint32_t last_page_num = (block_num + 1) * info.pages_per_block;
+    char* data = nand.data();
+    char* oob = nand.oob();
+    for (uint32_t page = block_num * info.pages_per_block; page < last_page_num; page++) {
+        if (!nand.ReadPages(page, 1)) {
+            printf("\tRead failed for page %u\n", page);
+        }
+        if (page == block_num * info.pages_per_block) {
+            // ReadPages always places data at the beginning of the buffer, so
+            // the second read will overwrite this. Save the data for later.
+            memcpy(first_page.get(), nand.data(), info.page_size);
+            memcpy(first_page.get() + info.page_size, nand.oob(), info.oob_size);
+        } else {
+            memcpy(data, nand.data(), info.page_size);
+            memcpy(oob, nand.oob(), info.oob_size);
+        }
+        data += info.page_size;
+        oob += info.oob_size;
+    }
+    memcpy(nand.data(), first_page.get(), info.page_size);
+    memcpy(nand.oob(), first_page.get() + info.page_size, info.oob_size);
+}
+
 // Saves data from a nand device to a file at |path|.
 bool Save(const NandBroker& nand, uint32_t first_block, uint32_t count, const char* path) {
     fbl::unique_fd out(open(path, O_WRONLY | O_CREAT | O_TRUNC));
@@ -495,7 +528,6 @@ bool Save(const NandBroker& nand, uint32_t first_block, uint32_t count, const ch
     // Attempt to save everything by default.
     count = count ? count : nand.Info().num_blocks;
 
-
     uint32_t block_oob_size = nand.Info().pages_per_block * nand.Info().oob_size;
     uint32_t oob_size = count * block_oob_size;
     fbl::unique_ptr<uint8_t[]> oob(new uint8_t[oob_size]);
@@ -506,7 +538,7 @@ bool Save(const NandBroker& nand, uint32_t first_block, uint32_t count, const ch
         const uint32_t start = block * nand.Info().pages_per_block;
         if (!nand.ReadPages(start, nand.Info().pages_per_block)) {
             printf("\nRead failed for block %u\n", block);
-            return false;
+            ReadBlockByPage(nand, block);
         }
         if (write(out.get(), nand.data(), data_size) != static_cast<ssize_t>(data_size)) {
             printf("\nFailed to write data for block %u\n", block);
