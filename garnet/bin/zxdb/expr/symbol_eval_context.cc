@@ -23,6 +23,19 @@
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
+namespace {
+
+debug_ipc::RegisterID GetRegister(const Identifier& ident) {
+  auto str = ident.GetSingleComponentName();
+
+  if (!str) {
+    return debug_ipc::RegisterID::kUnknown;
+  }
+
+  return debug_ipc::StringToRegisterID(*str);
+}
+
+}  // namespace
 
 SymbolEvalContext::SymbolEvalContext(
     fxl::WeakPtr<const ProcessSymbols> process_symbols,
@@ -63,10 +76,23 @@ void SymbolEvalContext::GetNamedValue(const Identifier& identifier,
   if (auto found = FindVariable(process_symbols_.get(), block_.get(),
                                 &symbol_context_, identifier)) {
     DoResolve(std::move(*found), std::move(cb));
-  } else {
+    return;
+  }
+
+  auto reg = GetRegister(identifier);
+
+  if (reg == debug_ipc::RegisterID::kUnknown ||
+      GetArchForRegisterID(reg) != data_provider_->GetArch()) {
     cb(Err("No variable '%s' found.", identifier.GetFullName().c_str()),
        nullptr, ExprValue());
+    return;
   }
+
+  // Fall back to matching registers when no symbol is found.
+  data_provider_->GetRegisterAsync(
+      reg, [cb = std::move(cb)](const Err& err, uint64_t value) {
+        cb(err, fxl::RefPtr<zxdb::Symbol>(), ExprValue(value));
+      });
 }
 
 SymbolVariableResolver& SymbolEvalContext::GetVariableResolver() {
@@ -80,11 +106,11 @@ fxl::RefPtr<SymbolDataProvider> SymbolEvalContext::GetDataProvider() {
 void SymbolEvalContext::DoResolve(FoundVariable found, ValueCallback cb) const {
   if (!found.is_object_member()) {
     // Simple variable resolution.
-    resolver_.ResolveVariable(symbol_context_, found.variable(), [
-      var = found.variable_ref(), cb = std::move(cb)
-    ](const Err& err, ExprValue value) {
-      cb(err, std::move(var), std::move(value));
-    });
+    resolver_.ResolveVariable(symbol_context_, found.variable(),
+                              [var = found.variable_ref(), cb = std::move(cb)](
+                                  const Err& err, ExprValue value) {
+                                cb(err, std::move(var), std::move(value));
+                              });
     return;
   }
 
@@ -93,27 +119,29 @@ void SymbolEvalContext::DoResolve(FoundVariable found, ValueCallback cb) const {
   // the member later.
   fxl::RefPtr<SymbolEvalContext> eval_context(
       const_cast<SymbolEvalContext*>(this));
-  resolver_.ResolveVariable(symbol_context_, found.object_ptr(), [
-    found, cb = std::move(cb), eval_context = std::move(eval_context)
-  ](const Err& err, ExprValue value) {
-    if (err.has_error()) {
-      // |this| not available, probably optimized out.
-      cb(err, fxl::RefPtr<zxdb::Symbol>(), ExprValue());
-      return;
-    }
+  resolver_.ResolveVariable(
+      symbol_context_, found.object_ptr(),
+      [found, cb = std::move(cb), eval_context = std::move(eval_context)](
+          const Err& err, ExprValue value) {
+        if (err.has_error()) {
+          // |this| not available, probably optimized out.
+          cb(err, fxl::RefPtr<zxdb::Symbol>(), ExprValue());
+          return;
+        }
 
-    // Got |this|, resolve |this-><DataMember>|.
-    ResolveMemberByPointer(std::move(eval_context), value, found.member(), [
-      found = std::move(found), cb = std::move(cb)
-    ](const Err& err, ExprValue value) {
-      if (err.has_error()) {
-        cb(err, fxl::RefPtr<zxdb::Symbol>(), ExprValue());
-      } else {
-        // Found |this->name|.
-        cb(Err(), found.member().data_member_ref(), std::move(value));
-      }
-    });
-  });
+        // Got |this|, resolve |this-><DataMember>|.
+        ResolveMemberByPointer(
+            std::move(eval_context), value, found.member(),
+            [found = std::move(found), cb = std::move(cb)](const Err& err,
+                                                           ExprValue value) {
+              if (err.has_error()) {
+                cb(err, fxl::RefPtr<zxdb::Symbol>(), ExprValue());
+              } else {
+                // Found |this->name|.
+                cb(Err(), found.member().data_member_ref(), std::move(value));
+              }
+            });
+      });
 }
 
 }  // namespace zxdb

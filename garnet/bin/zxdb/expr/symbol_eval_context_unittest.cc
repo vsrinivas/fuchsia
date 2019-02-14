@@ -88,6 +88,7 @@ void GetNamedValue(fxl::RefPtr<ExprEvalContext>& eval_context,
 }
 
 const debug_ipc::RegisterID kDWARFReg0ID = debug_ipc::RegisterID::kARMv8_x0;
+const debug_ipc::RegisterID kDWARFReg1ID = debug_ipc::RegisterID::kARMv8_x1;
 
 }  // namespace
 
@@ -294,6 +295,67 @@ TEST_F(SymbolEvalContextTest, NodeIntegation) {
   EXPECT_TRUE(called);
   EXPECT_FALSE(out_err.has_error());
   EXPECT_EQ(ExprValue(kValue), out_value);
+}
+
+TEST_F(SymbolEvalContextTest, RegisterByName) {
+  ASSERT_EQ(debug_ipc::Arch::kArm64, provider()->GetArch());
+
+  constexpr uint64_t kRegValue = 0xdeadb33f;
+  provider()->AddRegisterValue(kDWARFReg0ID, false, kRegValue);
+  auto context = fxl::MakeRefCounted<SymbolEvalContext>(
+      fxl::WeakPtr<const ProcessSymbols>(),
+      SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
+  fxl::RefPtr<ExprEvalContext> eval_context(context);
+
+  // We've defined no variables*, so this should fall back and give us the
+  // register by name.   *(Except "present" which MakeCodeBlock defines).
+  ValueResult reg;
+  GetNamedValue(eval_context, "x0", kQuitLoop, &reg);
+
+  // Should not have been called yet since retrieving the register is
+  // asynchronous.
+  EXPECT_FALSE(reg.called);
+
+  // Running the message loop should complete the callback.
+  loop().Run();
+  EXPECT_TRUE(reg.called);
+  EXPECT_FALSE(reg.err.has_error()) << reg.err.msg();
+  EXPECT_EQ(ExprValue(static_cast<uint64_t>(kRegValue)), reg.value);
+}
+
+TEST_F(SymbolEvalContextTest, RegisterShadowed) {
+  constexpr uint64_t kRegValue = 0xdeadb33f;
+  constexpr uint64_t kVarValue = 0xf00db4be;
+
+  auto shadow_var = MakeUint64VariableForTest(
+      "x0", 0x1000, 0x2000,
+      {llvm::dwarf::DW_OP_reg1, llvm::dwarf::DW_OP_stack_value});
+
+  auto block = MakeCodeBlock();
+  block->set_variables({LazySymbol(std::move(shadow_var))});
+
+  provider()->set_ip(0x1000);
+  provider()->AddRegisterValue(kDWARFReg0ID, false, kRegValue);
+  provider()->AddRegisterValue(kDWARFReg1ID, false, kVarValue);
+  auto context = fxl::MakeRefCounted<SymbolEvalContext>(
+      fxl::WeakPtr<const ProcessSymbols>(),
+      SymbolContext::ForRelativeAddresses(), provider(), block);
+  fxl::RefPtr<ExprEvalContext> eval_context(context);
+
+  // This should just look up our variable, x0, which is in the register x1. If
+  // It looks up the register x0 something has gone very wrong.
+  ValueResult val;
+  GetNamedValue(eval_context, "x0", kQuitLoop, &val);
+
+  // Should not have been called yet since retrieving the register is
+  // asynchronous.
+  EXPECT_FALSE(val.called);
+
+  // Running the message loop should complete the callback.
+  loop().Run();
+  EXPECT_TRUE(val.called);
+  EXPECT_FALSE(val.err.has_error()) << val.err.msg();
+  EXPECT_EQ(ExprValue(static_cast<uint64_t>(kVarValue)), val.value);
 }
 
 }  // namespace zxdb
