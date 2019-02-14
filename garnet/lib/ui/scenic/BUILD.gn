@@ -19,17 +19,19 @@ source_set("scenic") {
 
   public_deps = [
     "//garnet/lib/ui/scenic/util",
+    "//garnet/public/lib/fxl",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//garnet/public/lib/fxl",
     "//zircon/public/lib/fit",
   ]
 
   deps = [
     "//garnet/public/lib/component/cpp",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/input/cpp",
+    "//sdk/lib/fidl/cpp",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider",
   ]
 }

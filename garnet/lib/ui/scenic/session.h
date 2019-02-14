@@ -118,6 +118,13 @@ class Session final : public fuchsia::ui::scenic::Session,
   fit::function<void(fuchsia::ui::scenic::Event)> event_callback_;
   fit::function<void(std::string)> error_callback_;
 
+  // A flow event trace id for following |Session::Present| calls from client
+  // to scenic.  This will be incremented each |Session::Present| call.  By
+  // convention, the scenic implementation side will also contain its own
+  // trace id that begins at 0, and is incremented each |Session::Present|
+  // call.
+  uint64_t next_present_trace_id_ = 0;
+
   fxl::WeakPtrFactory<Session> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Session);
