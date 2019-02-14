@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_TRACE_CONVERTERS_CHROMIUM_EXPORTER_H_
 #define GARNET_LIB_TRACE_CONVERTERS_CHROMIUM_EXPORTER_H_
 
-#include <ostream>
 #include <memory>
+#include <ostream>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
@@ -46,7 +46,12 @@ class ChromiumExporter {
   double tick_scale_ = 0.001;
 
   std::unordered_map<zx_koid_t, fbl::String> processes_;
-  std::unordered_map<zx_koid_t, std::tuple<zx_koid_t, fbl::String>> threads_;
+  // Virtual threads mean the same thread id can appear in different processes.
+  // Organize threads by process to cope with this.
+  std::unordered_map<zx_koid_t /* process id */,
+                     std::unordered_map<zx_koid_t /* thread id */,
+                                        fbl::String /* thread name */>>
+      threads_;
 
   // The chromium/catapult trace file format doesn't support context switch
   // records, so we can't emit them inline. Save them for later emission to

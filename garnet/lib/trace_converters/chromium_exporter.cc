@@ -105,21 +105,22 @@ void ChromiumExporter::Stop() {
     writer_.EndObject();
   }
 
-  for (const auto& pair : threads_) {
-    const zx_koid_t thread_koid = pair.first;
-    const zx_koid_t process_koid = std::get<0>(pair.second);
-    const fbl::String& name = std::get<1>(pair.second);
-
-    writer_.StartObject();
-    writer_.Key("ph");
-    writer_.String("t");
-    writer_.Key("pid");
-    writer_.Uint64(process_koid);
-    writer_.Key("tid");
-    writer_.Uint64(thread_koid);
-    writer_.Key("name");
-    writer_.String(name.data(), name.size());
-    writer_.EndObject();
+  for (const auto& process_threads : threads_) {
+    const zx_koid_t process_koid = process_threads.first;
+    for (const auto& thread : process_threads.second) {
+      const zx_koid_t thread_koid = thread.first;
+      const fbl::String& name = thread.second;
+      writer_.StartObject();
+      writer_.Key("ph");
+      writer_.String("t");
+      writer_.Key("pid");
+      writer_.Uint64(process_koid);
+      writer_.Key("tid");
+      writer_.Uint64(thread_koid);
+      writer_.Key("name");
+      writer_.String(name.data(), name.size());
+      writer_.EndObject();
+    }
   }
 
   for (const auto& record : context_switch_records_) {
@@ -362,14 +363,21 @@ void ChromiumExporter::ExportKernelObject(
           GetArgumentValue(kernel_object.arguments, kProcessArgKey);
       if (!process_arg || process_arg->type() != trace::ArgumentType::kKoid)
         break;
-      zx_koid_t process_koid = process_arg->GetKoid();
-      auto it = threads_.find(kernel_object.koid);
-      if (it == threads_.end()) {
-        threads_.emplace(kernel_object.koid,
-                         std::make_tuple(process_koid, kernel_object.name));
-      } else if (process_koid == std::get<0>(it->second) &&
-                 kernel_object.name.size() > std::get<1>(it->second).size()) {
-        it->second = std::make_tuple(process_koid, kernel_object.name);
+      const zx_koid_t process_koid = process_arg->GetKoid();
+      auto process_it = threads_.find(process_koid);
+      if (process_it == threads_.end()) {
+        process_it = threads_
+                         .emplace(std::piecewise_construct,
+                                  std::forward_as_tuple(process_koid),
+                                  std::forward_as_tuple())
+                         .first;
+      }
+      auto& threads = process_it->second;
+      auto thread_it = threads.find(kernel_object.koid);
+      if (thread_it == threads.end()) {
+        threads.emplace(kernel_object.koid, kernel_object.name);
+      } else if (kernel_object.name.size() > thread_it->second.size()) {
+        thread_it->second = kernel_object.name;
       }
     }
     default:
