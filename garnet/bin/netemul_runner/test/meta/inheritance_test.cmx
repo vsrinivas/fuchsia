@@ -1,6 +1,7 @@
 {
     "facets": {
         "fuchsia.netemul": {
+            "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/inheritance.cmx",
             "environment": {
                 "children": [
                     {
@@ -33,17 +34,17 @@
                             "serve"
                         ]
                     }
-                }
+                },
+                "test": [
+                    {
+                        "arguments": []
+                    }
+                ]
             }
         }
     },
     "program": {
-        "binary": "test/inheritance"
+        "binary": "bin/app"
     },
-    "sandbox": {
-        "services": [
-            "fuchsia.netemul.example.Counter",
-            "fuchsia.sys.Environment"
-        ]
-    }
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
 }

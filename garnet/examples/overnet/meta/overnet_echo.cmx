@@ -1,6 +1,13 @@
 {
     "program": {
-        "data": "meta/overnet_echo_run.cmx"
+        "binary": "bin/overnet_echo"
     },
-    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+    "sandbox": {
+        "services": [
+            "fuchsia.mdns.Controller",
+            "fuchsia.net.SocketProvider",
+            "fuchsia.netemul.sync.SyncManager",
+            "fuchsia.overnet.Overnet"
+        ]
+    }
 }

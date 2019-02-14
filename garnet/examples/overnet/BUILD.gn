@@ -4,29 +4,44 @@
 
 import("//build/test/test_package.gni")
 
+group("netemul_empty_binaries") {
+  write_file("$root_out_dir/overnet_echo_test", "")
+  write_file("$root_out_dir/overnet_interface_passing_test", "")
+}
+
 test_package("overnet_examples_tests") {
-    deps = [
-        "echo:bin",
-        "interface_passing:bin",
-    ]
+  deps = [
+    ":netemul_empty_binaries",
+    "echo:bin",
+    "interface_passing:bin",
+  ]
 
-    meta = [
-        {
-            path = rebase_path("meta/overnet_echo_run.cmx")
-            dest = "overnet_echo_run.cmx"
-        },
-        {
-            path = rebase_path("meta/overnet_interface_passing_run.cmx")
-            dest = "overnet_interface_passing_run.cmx"
-        },
-    ]
+  meta = [
+    {
+      path = rebase_path("meta/overnet_echo.cmx")
+      dest = "overnet_echo.cmx"
+    },
+    {
+      path = rebase_path("meta/overnet_interface_passing.cmx")
+      dest = "overnet_interface_passing.cmx"
+    },
+  ]
 
-    tests = [
-        {
-            name = "overnet_echo"
-        },
-        {
-            name = "overnet_interface_passing"
-        },
-    ]
+  binaries = [
+    {
+      name = "overnet_echo"
+    },
+    {
+      name = "overnet_interface_passing"
+    },
+  ]
+
+  tests = [
+    {
+      name = "overnet_echo_test"
+    },
+    {
+      name = "overnet_interface_passing_test"
+    },
+  ]
 }

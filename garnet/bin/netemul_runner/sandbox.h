@@ -16,10 +16,12 @@ namespace netemul {
 
 class SandboxArgs {
  public:
-  std::string package;
-  std::vector<std::string> args;
-  // cmx facet override, used for testing.
-  std::string cmx_facet_override;
+  bool ParseFromCmxFileAt(int dir, const std::string& path);
+  bool ParseFromString(const std::string& config);
+  bool ParseFromJSON(const rapidjson::Value& facet,
+                     json::JSONParser* json_parser);
+
+  config::Config config;
 };
 
 class Sandbox {
@@ -27,7 +29,7 @@ class Sandbox {
   using TerminationReason = fuchsia::sys::TerminationReason;
   using TerminationCallback =
       fit::function<void(int64_t code, TerminationReason reason)>;
-  using PackageLoadedCallback = fit::function<void()>;
+  using ServicesCreatedCallback = fit::function<void()>;
   using RootEnvironmentCreatedCallback =
       fit::function<void(ManagedEnvironment*)>;
   explicit Sandbox(SandboxArgs args);
@@ -38,8 +40,8 @@ class Sandbox {
 
   void Start(async_dispatcher_t* dispatcher);
 
-  void SetPackageLoadedCallback(PackageLoadedCallback callback) {
-    package_loaded_callback_ = std::move(callback);
+  void SetServicesCreatedCallback(ServicesCreatedCallback callback) {
+    services_created_callback_ = std::move(callback);
   }
 
   void SetRootEnvironmentCreatedCallback(
@@ -50,7 +52,7 @@ class Sandbox {
   const SandboxEnv::Ptr& sandbox_environment() { return sandbox_env_; }
 
  private:
-  void LoadPackage(fuchsia::sys::PackagePtr package);
+  void StartEnvironments();
   void Terminate(TerminationReason reason);
   void Terminate(int64_t exit_code, TerminationReason reason);
   void PostTerminate(TerminationReason reason);
@@ -77,17 +79,15 @@ class Sandbox {
           env,
       const config::Environment& config, bool root = false);
   bool ConfigureNetworks();
-  bool LoadEnvironmentConfig(const rapidjson::Value& facet,
-                             json::JSONParser* json_parser);
 
   async_dispatcher_t* main_dispatcher_;
   std::unique_ptr<async::Loop> helper_loop_;
   config::Config env_config_;
   bool setup_done_;
-  SandboxArgs args_;
+  bool test_spawned_;
   SandboxEnv::Ptr sandbox_env_;
   TerminationCallback termination_callback_;
-  PackageLoadedCallback package_loaded_callback_;
+  ServicesCreatedCallback services_created_callback_;
   RootEnvironmentCreatedCallback root_environment_created_callback_;
   fuchsia::sys::EnvironmentPtr parent_env_;
   fuchsia::sys::LoaderPtr loader_;

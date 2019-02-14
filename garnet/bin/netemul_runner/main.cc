@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/command_line.h>
@@ -16,12 +17,12 @@ using namespace netemul;
 
 void PrintUsage() {
   fprintf(stderr, R"(
-Usage: netemul_sandbox [--help] [--component=<package_url>] [-- [arguments...]]
+Usage: netemul_sandbox [--help] [--definition=path_to_cmx] [-- [arguments...]]
 
-       if *component* is provided, will start a sandbox and run the provided component within it,
-       passing *arguments* forward. Return code mimics the exit code of the component under test.
+       if *definition* is provided, will start a sandbox and run the provided environment definition.
+       It'll parse the cmx file pointed and create the sandbox following the fuchsia.netemul facet.
 
-       if *component* is not provided, exposes the fuchsia.netemul.sandbox.Sandbox interface.
+       if *definition* is not provided, exposes the fuchsia.netemul.sandbox.Sandbox interface.
 
        *package_url* takes the form of component manifest URL which uniquely
        identifies a component. Example:
@@ -43,12 +44,15 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   async_set_default_dispatcher(loop.dispatcher());
 
-  SandboxArgs args;
-  if (command_line.GetOptionValue("component", &args.package)) {
-    args.args.insert(args.args.end(), command_line.positional_args().begin(),
-                     command_line.positional_args().end());
+  std::string definition;
+  if (command_line.GetOptionValue("definition", &definition)) {
+    SandboxArgs args;
 
-    FXL_LOG(INFO) << "Starting netemul sandbox for " << args.package;
+    int root = open("/", O_RDONLY);
+    if (!args.ParseFromCmxFileAt(root, definition)) {
+      FXL_LOG(ERROR) << "Parsing test definition failed";
+      return 1;
+    }
 
     Sandbox sandbox(std::move(args));
     sandbox.SetTerminationCallback([](int64_t exit_code,

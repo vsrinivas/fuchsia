@@ -4,6 +4,9 @@
             "environment": {
                 "devices": [
                     "ep1"
+                ],
+                "test": [
+                    "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dynamic_devices.cmx"
                 ]
             },
             "networks": [
@@ -25,15 +28,7 @@
         }
     },
     "program": {
-        "binary": "test/dynamic_devices"
+        "binary": "bin/app"
     },
-    "sandbox": {
-        "dev": [
-            "class/ethernet"
-        ],
-        "services": [
-            "fuchsia.netemul.environment.ManagedEnvironment",
-            "fuchsia.netemul.network.NetworkContext"
-        ]
-    }
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
 }

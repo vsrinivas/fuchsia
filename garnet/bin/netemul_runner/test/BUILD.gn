@@ -5,8 +5,27 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+# netemul tests are defined only by their .cmx file.
+# currently, there's a limitation on runtests where every test
+# needs an associated binary. Some changes to how this is set up
+# are on the pipeline but not ready yet, so here we just
+# create some empty files and we'll use them as dummy binaries.
+# If you copy this pattern, try to use the name "netemul_empty_binaries"
+# as well, so when a better approach comes along I can hunt down
+# for this pattern and update it everywhere.
+# TODO(brunodalbo) migrate .cmx file handling
+group("netemul_empty_binaries") {
+  write_file("$root_out_dir/svc_list_test", "")
+  write_file("$root_out_dir/netstack_socks_test", "")
+  write_file("$root_out_dir/env_build_test", "")
+  write_file("$root_out_dir/easy_netstack_cfg_test", "")
+  write_file("$root_out_dir/inheritance_test", "")
+  write_file("$root_out_dir/dynamic_devices_test", "")
+}
+
 test_package("netemul_sandbox_test") {
   deps = [
+    ":netemul_empty_binaries",
     "//garnet/bin/netemul_runner:sandbox_unittest",
     "//garnet/bin/netemul_runner/helpers/mock_device_settings",
     "//garnet/bin/netemul_runner/model:model_unittest",
@@ -22,32 +41,32 @@ test_package("netemul_sandbox_test") {
 
   meta = [
     {
-      path = rebase_path("meta/svc_list_run.cmx")
-      dest = "svc_list_run.cmx"
-    },
-    {
-      path = rebase_path("meta/netstack_socks_run.cmx")
-      dest = "netstack_socks_run.cmx"
-    },
-    {
-      path = rebase_path("meta/env_build_run.cmx")
-      dest = "env_build_run.cmx"
-    },
-    {
       path = rebase_path("meta/dummy_proc.cmx")
       dest = "dummy_proc.cmx"
     },
     {
-      path = rebase_path("meta/easy_netstack_cfg_run.cmx")
-      dest = "easy_netstack_cfg_run.cmx"
+      path = rebase_path("meta/svc_list.cmx")
+      dest = "svc_list.cmx"
     },
     {
-      path = rebase_path("meta/inheritance_run.cmx")
-      dest = "inheritance_run.cmx"
+      path = rebase_path("meta/netstack_socks.cmx")
+      dest = "netstack_socks.cmx"
     },
     {
-      path = rebase_path("meta/dynamic_devices_run.cmx")
-      dest = "dynamic_devices_run.cmx"
+      path = rebase_path("meta/env_build.cmx")
+      dest = "env_build.cmx"
+    },
+    {
+      path = rebase_path("meta/easy_netstack_cfg.cmx")
+      dest = "easy_netstack_cfg.cmx"
+    },
+    {
+      path = rebase_path("meta/inheritance.cmx")
+      dest = "inheritance.cmx"
+    },
+    {
+      path = rebase_path("meta/dynamic_devices.cmx")
+      dest = "dynamic_devices.cmx"
     },
   ]
 
@@ -55,36 +74,33 @@ test_package("netemul_sandbox_test") {
     {
       name = "dummy_proc"
     },
-  ]
-
-  tests = [
     {
       name = "svc_list"
-      environments = basic_envs
     },
     {
       name = "netstack_socks"
-      environments = basic_envs
     },
     {
       name = "env_build"
-      environments = basic_envs
     },
     {
-      name = "model_unittest"
-      environments = basic_envs
+      name = "easy_netstack_cfg"
     },
+    {
+      name = "inheritance"
+    },
+    {
+      name = "dynamic_devices"
+    },
+  ]
+
+  tests = [
     {
       name = "sandbox_unittest"
       environments = basic_envs
     },
     {
-      name = "easy_netstack_cfg"
-      environments = basic_envs
-    },
-    {
-      name = "inheritance"
-      environments = basic_envs
+      name = "model_unittest"
     },
     {
       name = "sandbox_service_bin_test"
@@ -92,7 +108,27 @@ test_package("netemul_sandbox_test") {
       environments = basic_envs
     },
     {
-      name = "dynamic_devices"
+      name = "svc_list_test"
+      environments = basic_envs
+    },
+    {
+      name = "env_build_test"
+      environments = basic_envs
+    },
+    {
+      name = "netstack_socks_test"
+      environments = basic_envs
+    },
+    {
+      name = "easy_netstack_cfg_test"
+      environments = basic_envs
+    },
+    {
+      name = "inheritance_test"
+      environments = basic_envs
+    },
+    {
+      name = "dynamic_devices_test"
       environments = basic_envs
     },
     {

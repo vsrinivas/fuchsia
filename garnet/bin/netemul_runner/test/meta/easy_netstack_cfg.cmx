@@ -1,6 +1,11 @@
 {
     "program": {
-        "data": "meta/easy_netstack_cfg_run.cmx"
+        "binary": "bin/easy_netstack_cfg"
     },
-    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+    "sandbox": {
+        "services": [
+            "fuchsia.net.SocketProvider",
+            "fuchsia.netemul.sync.SyncManager"
+        ]
+    }
 }

@@ -11,7 +11,6 @@ namespace netemul {
 class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
  public:
   using FSandbox = fuchsia::netemul::sandbox::Sandbox;
-  using LaunchOptions = fuchsia::netemul::sandbox::LaunchOptions;
   using OnDestroyedCallback = fit::function<void(const SandboxBinding*)>;
 
   SandboxBinding(fidl::InterfaceRequest<FSandbox> req,
@@ -57,33 +56,6 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
         });
 
     environments_.push_back(std::move(root));
-  }
-
-  void RunTest(
-      LaunchOptions options,
-      fidl::InterfaceRequest<ManagedEnvironment::FManagedEnvironment> root_env,
-      RunTestCallback callback) override {
-    SandboxArgs args = {.package = std::move(options.package_url),
-                        .args = std::move(options.arguments),
-                        .cmx_facet_override = std::move(options.cmx_override)};
-    auto& sandbox = sandboxes_.emplace_back(
-        std::make_unique<::netemul::Sandbox>(std::move(args)));
-
-    if (root_env.is_valid()) {
-      sandbox->SetRootEnvironmentCreatedCallback(
-          [root_env = std::move(root_env)](ManagedEnvironment* root) mutable {
-            root->Bind(std::move(root_env));
-          });
-    }
-
-    sandbox->SetTerminationCallback(
-        [box = sandbox.get(), this, callback = std::move(callback)](
-            int64_t code, ::netemul::Sandbox::TerminationReason reason) {
-          callback(code, reason);
-          DeleteSandbox(box);
-        });
-
-    sandbox->Start(loop_->dispatcher());
   }
 
   void DeleteSandbox(const ::netemul::Sandbox* sandbox) {

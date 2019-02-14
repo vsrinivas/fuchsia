@@ -1,6 +1,14 @@
 {
     "program": {
-        "data": "meta/dynamic_devices_run.cmx"
+        "binary": "bin/dynamic_devices"
     },
-    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+    "sandbox": {
+        "dev": [
+            "class/ethernet"
+        ],
+        "services": [
+            "fuchsia.netemul.environment.ManagedEnvironment",
+            "fuchsia.netemul.network.NetworkContext"
+        ]
+    }
 }

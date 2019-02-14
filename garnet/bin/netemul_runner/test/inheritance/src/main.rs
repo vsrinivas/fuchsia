@@ -22,7 +22,7 @@ use {
     structopt::StructOpt,
 };
 
-const MY_PACKAGE: &str = "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/inheritance_run.cmx";
+const MY_PACKAGE: &str = "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/inheritance.cmx";
 
 #[derive(StructOpt, Debug)]
 enum Ops {
@@ -47,11 +47,7 @@ async fn simple_increment(expect: u32) -> Result<(), Error> {
 
     let value = await!(counter.increment())?;
     if value != expect {
-        return Err(format_err!(
-            "unexpected counter value {}, was expecting {}",
-            value,
-            expect
-        ));
+        return Err(format_err!("unexpected counter value {}, was expecting {}", value, expect));
     }
     return Ok(());
 }
@@ -179,9 +175,7 @@ fn spawn_counter_server(chan: fasync::Channel, data: Arc<Mutex<CounterData>>) {
 async fn run_server() -> Result<(), Error> {
     let data = Arc::new(Mutex::new(CounterData { value: 0 }));
     let fut = ServicesServer::new()
-        .add_service((CounterMarker::NAME, move |chan| {
-            spawn_counter_server(chan, data.clone())
-        }))
+        .add_service((CounterMarker::NAME, move |chan| spawn_counter_server(chan, data.clone())))
         .start()
         .context("Error starting counter server")?;
     let () = await!(fut).context("failed to execute server future")?;

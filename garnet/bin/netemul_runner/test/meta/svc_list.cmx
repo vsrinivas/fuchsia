@@ -1,6 +1,20 @@
 {
     "program": {
-        "data": "meta/svc_list_run.cmx"
+        "binary": "bin/svc_list"
     },
-    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+    "sandbox": {
+        "dev": [
+            "class/ethernet"
+        ],
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.netemul.environment.ManagedEnvironment",
+            "fuchsia.netemul.network.NetworkContext",
+            "fuchsia.netemul.sync.SyncManager",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.some.fake.Service"
+        ]
+    }
 }

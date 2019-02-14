@@ -68,7 +68,7 @@ void ManagedLauncher::CreateComponent(
   // Before launching, we'll check the component's sandbox
   // so we can inject virtual devices
   if (!package) {
-    FXL_LOG(ERROR) << "Can't load package " << launch_info.url;
+    FXL_LOG(ERROR) << "Can't load package \"" << launch_info.url << "\"";
     return;
   }
 

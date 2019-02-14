@@ -6,7 +6,6 @@
 
 #include <lib/async/default.h>
 #include <lib/fsl/io/fd.h>
-#include <lib/fxl/files/unique_fd.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/pkg_url/fuchsia_pkg_url.h>
@@ -16,7 +15,8 @@ namespace netemul {
 using component::StartupContext;
 static const char* kSandbox =
     "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/netemul_sandbox.cmx";
-static const char* kComponentArg = "--component=";
+static const char* kDefinitionArg = "--definition=";
+static const char* kDefinitionRoot = "/definition";
 
 Runner::Runner(async_dispatcher_t* dispatcher) {
   if (dispatcher == nullptr) {
@@ -62,7 +62,6 @@ void Runner::RunComponent(
     fuchsia::sys::PackagePtr package, fuchsia::sys::StartupInfo startup_info,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
   if (!package) {
-    // TODO(brunodalbo) expose errors correctly through interface request
     FXL_LOG(ERROR) << "Can't load package";
     return;
   }
@@ -70,7 +69,6 @@ void Runner::RunComponent(
   component::FuchsiaPkgUrl fp;
   if (!fp.Parse(package->resolved_url)) {
     FXL_LOG(ERROR) << "can't parse fuchsia URL " << package->resolved_url;
-    // TODO(brunodalbo) expose errors correctly through interface request
     return;
   }
 
@@ -79,27 +77,20 @@ void Runner::RunComponent(
     return;
   }
 
-  component::CmxMetadata cmx;
-  fxl::UniqueFD fd =
-      fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
-
-  json::JSONParser json_parser;
-  if (!cmx.ParseFromFileAt(fd.get(), fp.resource_path(), &json_parser)) {
-    FXL_LOG(ERROR) << "cmx file failed to parse: " << json_parser.error_str();
-    // TODO(brunodalbo) expose errors correctly through interface request
-    return;
-  }
-
-  std::stringstream launchpkg;
-  launchpkg << "fuchsia-pkg://fuchsia.com/" << fp.package_name() << "#"
-            << cmx.program_meta().data();
-
   auto linfo = std::move(startup_info.launch_info);
   auto incoming_args = std::move(linfo.arguments);
   linfo.url = kSandbox;
   linfo.arguments->clear();
-  linfo.arguments->push_back(
-      fxl::Concatenate({std::string(kComponentArg), launchpkg.str()}));
+  linfo.arguments->push_back(fxl::Concatenate({std::string(kDefinitionArg),
+                                               std::string(kDefinitionRoot),
+                                               "/", fp.resource_path()}));
+
+  if (!linfo.flat_namespace) {
+    linfo.flat_namespace = fuchsia::sys::FlatNamespace::New();
+  }
+  linfo.flat_namespace->paths.emplace_back(kDefinitionRoot);
+  linfo.flat_namespace->directories.push_back(std::move(package->directory));
+
   if (!incoming_args->empty()) {
     linfo.arguments->push_back("--");
     linfo.arguments->insert(linfo.arguments->end(), incoming_args->begin(),

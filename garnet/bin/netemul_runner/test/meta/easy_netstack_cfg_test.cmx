@@ -1,50 +1,50 @@
 {
     "facets": {
         "fuchsia.netemul": {
+            "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/easy_netstack_cfg.cmx",
             "environment": {
                 "children": [
                     {
-                        "name": "server",
+                        "name": "client",
                         "setup": [
                             {
                                 "arguments": [
                                     "-e",
-                                    "server-ep",
+                                    "client-ep",
                                     "-i",
-                                    "192.168.0.1/24"
+                                    "192.168.0.2/24"
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
                             }
                         ],
-                        "apps": [
+                        "test": [
                             {
                                 "arguments": [
-                                    "server"
+                                    "-c"
                                 ]
                             }
                         ]
                     }
                 ],
-                "name": "client",
+                "name": "server",
                 "services": {
-                    "fuchsia.devicesettings.DeviceSettingsManager": { 
-                        "url" : "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/mock_device_settings.cmx",
-                        "arguments" : ["-s","DeviceName=overnet-device"]
-                    },
-                    "fuchsia.mdns.Controller": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
                     "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                    "fuchsia.overnet.Overnet": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx"
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
                 },
                 "setup": [
                     {
                         "arguments": [
                             "-e",
-                            "client-ep",
+                            "server-ep",
                             "-i",
-                            "192.168.0.2/24"
+                            "192.168.0.1/24"
                         ],
                         "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                    }
+                ],
+                "test": [
+                    {
+                        "arguments": []
                     }
                 ]
             },
@@ -64,14 +64,7 @@
         }
     },
     "program": {
-        "binary": "test/overnet_echo"
+        "binary": "bin/app"
     },
-    "sandbox": {
-        "services": [
-            "fuchsia.mdns.Controller",
-            "fuchsia.net.SocketProvider",
-            "fuchsia.netemul.sync.SyncManager",
-            "fuchsia.overnet.Overnet"
-        ]
-    }
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
 }

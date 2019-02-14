@@ -7,7 +7,7 @@
 namespace netemul {
 namespace config {
 
-static const char* kDefaultName = "test-env";
+static const char* kDefaultName = "";
 static const char* kName = "name";
 static const char* kServices = "services";
 static const char* kDevices = "devices";

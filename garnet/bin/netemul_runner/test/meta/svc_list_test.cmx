@@ -1,0 +1,15 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "environment": {
+                "test": [
+                    "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/svc_list.cmx"
+                ]
+            }
+        }
+    },
+    "program": {
+        "binary": "bin/app"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}

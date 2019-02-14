@@ -1,6 +1,14 @@
 {
     "program": {
-        "data": "meta/netstack_socks_run.cmx"
+        "binary": "bin/netstack_socks"
     },
-    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+    "sandbox": {
+        "services": [
+            "fuchsia.netemul.environment.ManagedEnvironment",
+            "fuchsia.netemul.network.NetworkContext",
+            "fuchsia.netemul.sync.SyncManager",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.net.SocketProvider"
+        ]
+    }
 }

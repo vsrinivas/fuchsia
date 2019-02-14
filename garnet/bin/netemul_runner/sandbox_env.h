@@ -17,24 +17,19 @@ class SandboxEnv {
  public:
   using Ptr = std::shared_ptr<SandboxEnv>;
 
-  // Creates a sandbox environment with empty package (no root component)
+  // Creates a sandbox environment
   SandboxEnv() = default;
 
-  // Creates a sandbox environment with |package_name| and a root component
-  // directory |dir|
-  SandboxEnv(std::string package_name, fxl::UniqueFD dir)
-      : package_name_(std::move(package_name)), package_dir_(std::move(dir)) {}
-
-  const std::string& name() const { return package_name_; }
-
-  const fxl::UniqueFD& dir() const { return package_dir_; }
+  const std::string& default_name() const { return default_name_; }
+  void set_default_name(std::string default_name) {
+    default_name_ = std::move(default_name);
+  }
 
   NetworkContext& network_context() { return net_context_; }
   SyncManager& sync_manager() { return sync_manager_; }
 
  private:
-  std::string package_name_;
-  fxl::UniqueFD package_dir_;
+  std::string default_name_;
   NetworkContext net_context_;
   SyncManager sync_manager_;
 

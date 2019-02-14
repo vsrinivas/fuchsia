@@ -24,12 +24,13 @@ class Config {
                      json::JSONParser* json_parser);
 
   const std::vector<Network>& networks() const;
-
   const Environment& environment() const;
+  const std::string& default_url() const;
 
  private:
   std::vector<Network> networks_;
   Environment environment_;
+  std::string default_url_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Config);
 };

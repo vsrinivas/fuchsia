@@ -1,6 +1,7 @@
 {
     "facets": {
         "fuchsia.netemul": {
+            "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/env_build.cmx",
             "environment": {
                 "children": [
                     {
@@ -13,7 +14,7 @@
                                     "-n",
                                     "child-1-url"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/env_build_run.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/env_build.cmx"
                             },
                             {
                                 "arguments": [
@@ -58,6 +59,11 @@
                             "setup"
                         ]
                     }
+                ],
+                "test": [
+                    {
+                        "arguments": []
+                    }
                 ]
             },
             "networks": [
@@ -79,21 +85,7 @@
         }
     },
     "program": {
-        "binary": "test/env_build"
+        "binary": "bin/app"
     },
-    "sandbox": {
-        "dev": [
-            "class/ethernet"
-        ],
-        "features": [
-            "isolated-persistent-storage"
-        ],
-        "services": [
-            "fuchsia.netemul.environment.ManagedEnvironment",
-            "fuchsia.netemul.network.NetworkContext",
-            "fuchsia.netemul.sync.SyncManager",
-            "fuchsia.netstack.Netstack",
-            "fuchsia.net.SocketProvider"
-        ]
-    }
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
 }

@@ -9,6 +9,7 @@ namespace config {
 
 static const char* kNetworks = "networks";
 static const char* kEnvironment = "environment";
+static const char* kDefaultUrl = "default_url";
 
 const char Config::Facet[] = "fuchsia.netemul";
 
@@ -52,12 +53,19 @@ bool Config::ParseFromJSON(const rapidjson::Value& value,
     }
   }
 
+  auto default_url = value.FindMember(kDefaultUrl);
+  if (default_url != value.MemberEnd()) {
+    default_url_ = default_url->value.GetString();
+  }
+
   return true;
 }
 
 const std::vector<Network>& Config::networks() const { return networks_; }
 
 const Environment& Config::environment() const { return environment_; }
+
+const std::string& Config::default_url() const { return default_url_; }
 
 }  // namespace config
 }  // namespace netemul

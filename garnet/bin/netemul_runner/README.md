@@ -19,19 +19,19 @@ test component's `cmx` manifest to point to another `cmx` file within the same c
 
 `netemul_sandbox` is responsible for creating sandboxed environments that can be configured to
 run integration tests. `netemul_sandbox` has two modes of operation: enclosing process or service
-provider, and it is selected based on its command-line arguments. 
+provider, and it is selected based on its command-line arguments.
 
-In enclosing process mode, `netemul_sandbox` receives a component as a fuchsia package url as a 
-command-line argument and proceeds to create a hermetic environment and then launch the provided 
+In enclosing process mode, `netemul_sandbox` receives a component as a fuchsia package url as a
+command-line argument and proceeds to create a hermetic environment and then launch the provided
 component within it. The exit code of the `netemul_sandbox` process will mimic the component's. When
-using enclosing process, clients will typically setup a layout for the test using the netemul 
+using enclosing process, clients will typically setup a layout for the test using the netemul
 (facet)[#facet] in the component-under-test's cmx manifest.
 
-In service provider mode, `netemul_sandbox` will expose the 
+In service provider mode, `netemul_sandbox` will expose the
 [fuchsia.netemul.sandbox.Sandbox](../../public/lib/netemul/fidl/sandbox.fidl) interface that allows
-users to create netemul's managed environments or run full sandboxes from components. 
+users to create netemul's managed environments or run full sandboxes from components.
 
-In sum, users have two options to use netemul for a given component under test: 
+In sum, users have two options to use netemul for a given component under test:
 * use `netemul_runner`, which will use `netemul_sandbox` in enclosing process mode and spawn the
 component under test *within* a netemul environment. See [Runner sample setup](#runner-sample-setup)
 for an example of how to run a component like this.
@@ -45,29 +45,44 @@ control hermetic environments and emulated networks.
 To have a test run on the sandbox, you'll typically use the following pattern:
 
 * Use the build rule `test_package`
-* For every test, you'll have 2 `.cmx` files:
-* `[my_test].cmx` , where *my_test* matches your binary name. In this metadata file, you'll
-  specify that the test should be run using *netemul_runner* and pass the other metadata file along
-  to the runner, as such:
+* For every test, you'll typically have at least 2 `.cmx` files:
+* `[my_component].cmx`, where *my_component* is the component you want to run inside the hermetic
+environment. It should be indistinguishable from a regular component manifest. You can run multiple
+different components inside a netemul environment by simply using their package url. For this example,
+though, we'll only have the one `[my_component].cmx`.
+* `[my_test].cmx`, in turn will contain a `fuchsia.netemul` [facet](#facet) that defines what environments
+to create and which tests to run and, also, will tell the component launcher to use `netemul` to
+run it:
 ```json
 {
     "program": {
-        "data": "meta/my_test_run.cmx"
+        "binary": "bin/app"
     },
-    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner"
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner",
+    "facets" : {
+      "fuchsia.netemul" : {
+        "environment" : {
+          "test" : [{"url" : "fuchsia-pkg://fuchsia.com/my_component#meta/my_component.cmx"}]
+        }
+      }
+    }
 }
 ```
-* `[my_test]_run.cmx`, in turn will look like a regular `.cmx` file with common fields such as
-  *program*, *sandbox* and *dev*. For a quick multi-environment setup, you can specify a
-   `fuchsia.netemul` [facet](#facet) on your cmx.
-
 
 `netemul_sandbox`'s [tests](test)
 use the pattern thoroughly and can be a good source of examples.
 
+*Note 1*: the `bin/app` entry is just there to match the manifest schema, it is not used nor points
+to anything of importance.
+
+*Note 2*: Make sure to match the build file pattern used [here](test/BUILD.gn) for tests that are
+defined solely by a cmx manifest, otherwise you risk your test being enumerated by the integration
+test framework.
+
+
 ## Sandbox service sample setup
 
-If your component under test doesn't need to (or shouldn't) be *inside* a netemul environment, you 
+If your component under test doesn't need to (or shouldn't) be *inside* a netemul environment, you
 can use the  [fuchsia.netemul.sandbox.Sandbox](../../public/lib/netemul/fidl/sandbox.fidl) service
 by injecting it into your test component's environment. Your component's cmx manifest will look like:
 ```json
@@ -140,7 +155,7 @@ intrusion. This is used to go around the limitation that `/dev` is never hermeti
 Along the same lines as *NetworkContext*, `netemul_sandbox` creates a **single** *Syncmanager* instance
 (see [fuchsia.netemul.sync](../../public/lib/netemul/fidl/sync.fidl))
 that is shared between all created environments. Clients can (and are encouraged to) use the *Bus*
-service or the other provided primitives to synchronize multiple test agents that are spawned 
+service or the other provided primitives to synchronize multiple test agents that are spawned
 across different environments.
 
 For example
@@ -160,10 +175,11 @@ Below is the documentation of the objects accepted. The root object is of type [
 ### Config
 
 
-| Field       | Type                        | Description                     |
-|-------------|-----------------------------|---------------------------------|
-| environment | [Environment](#environment)  | root environment configuration  |
-| networks    | Array of [Network](#network) | collection of networks to setup |
+| Field       | Type                        | Description                                                                    |
+|-------------|-----------------------------|--------------------------------------------------------------------------------|
+| default_url | String                      | Global default URL, will be used by any instance of [LaunchArgs](#launchargs)  |
+| environment | [Environment](#environment) | root environment configuration                                                 |
+| networks    | Array of [Network](#network)| collection of networks to setup                                                |
 
 ### Environment
 
@@ -186,7 +202,7 @@ In that case, it's as if only the *url* field had been specified.
 
 | Field     | Type            | Description                                                                                                                                                                       |
 |-----------|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| url       | String          | Fuchsia package URL to launch. Only valid package URLs will be accepted. If empty or not present, will default to the current package under test, as passed to `netemul_sandbox`. |
+| url       | String          | Fuchsia package URL to launch. Only valid package URLs will be accepted. If empty or not present, will default to the value of [Config](#config)'s `default_url`.                 |
 | arguments | Array of String | Command-line arguments to pass to process.                                                                                                                                        |
 
 
@@ -210,7 +226,7 @@ In that case, it's as if only the *url* field had been specified.
 ## Helpers
 
 `netemul_sandbox` provides helpers that can be launched in sandboxed environments to perform common
-operations. 
+operations.
 
 ### netstack_cfg
 
@@ -218,10 +234,10 @@ The `netstack_cfg` helper is a CLI-like tool that uses the *NetworkContext* serv
 emulated endpoints and attach them to netstack instances in an emulated environment. You can launch
 it by using its package url: `fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx`.
 It receives the command line arguments shown below and is typically used as a "setup" process in an
-[environment's facet definition](#environment). 
+[environment's facet definition](#environment).
 
 ```
-netstack_cfg 
+netstack_cfg
 Configure netstack from emulated environments.
 
 USAGE:
@@ -239,12 +255,12 @@ OPTIONS:
 
 ### mock_device_settings
 
-The `mock_device_settings` helper is a mock implementation of the FIDL interface 
+The `mock_device_settings` helper is a mock implementation of the FIDL interface
 `fuchsia.devicesettings.DeviceSettingsManager`. You can launch it
 by using its package url: `fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/mock_device_settings.cmx`.
 It receives the command line arguments shown below and is intended to be used as a "services" entry in
 [environment's facet definition](#environment). You **must** specify the values for **every** key that your
-tests may want to access as a command-line option. 
+tests may want to access as a command-line option.
 
 
 ```

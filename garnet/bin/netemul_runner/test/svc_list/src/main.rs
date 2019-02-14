@@ -33,7 +33,7 @@ use structopt::StructOpt;
 
 const EP_NAME: &str = "ep0";
 const EP_MOUNT: &str = "class/ethernet/ep0";
-const MY_PACKAGE: &str = "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/svc_list_run.cmx";
+const MY_PACKAGE: &str = "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/svc_list.cmx";
 const NETSTACK_URL: &str = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
 const SKIP_DIRS: &'static [&str] = &["/data", "/pkg"];
 const FAKE_SVC_NAME: &str = "fuchsia.some.fake.Service";
@@ -100,11 +100,7 @@ async fn run_test() -> Result<(), Error> {
     let (epm, epmch) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()?;
     netctx.get_endpoint_manager(epmch)?;
 
-    let mut cfg = EndpointConfig {
-        backing: EndpointBacking::Ethertap,
-        mac: None,
-        mtu: 1500,
-    };
+    let mut cfg = EndpointConfig { backing: EndpointBacking::Ethertap, mac: None, mtu: 1500 };
 
     // create a network endpoint
     let (_, ep) = await!(epm.create_endpoint(EP_NAME, &mut cfg))?;
@@ -127,10 +123,7 @@ async fn run_test() -> Result<(), Error> {
             arguments: None,
         }],
         // pass the endpoint's proxy to create a virtual device
-        devices: vec![VirtualDevice {
-            path: String::from(EP_MOUNT),
-            device: ep_proxy_client,
-        }],
+        devices: vec![VirtualDevice { path: String::from(EP_MOUNT), device: ep_proxy_client }],
         inherit_parent_launch_services: false,
     };
     // launch the child env

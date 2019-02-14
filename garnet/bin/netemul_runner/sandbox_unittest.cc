@@ -8,8 +8,6 @@
 #include <unordered_set>
 #include "lib/gtest/real_loop_fixture.h"
 
-static const char* kDummyProc =
-    "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx";
 static const uint32_t kTimeoutSecs = 5;
 static const char* kBusName = "test-bus";
 static const char* kBusClientName = "sandbox_unittest";
@@ -29,15 +27,13 @@ class SandboxTest : public ::gtest::RealLoopFixture {
  protected:
   using TerminationReason = Sandbox::TerminationReason;
 
-  void SetUp() override { sandbox_args_.package = kDummyProc; }
-
   void RunSandbox(bool expect_success, TerminationReason expect_reason) {
     Sandbox sandbox(std::move(sandbox_args_));
     bool done = false;
     int64_t o_exit_code;
     TerminationReason o_term_reason;
 
-    sandbox.SetPackageLoadedCallback([this, &sandbox]() {
+    sandbox.SetServicesCreatedCallback([this, &sandbox]() {
       if (connect_to_network_) {
         ConnectToNetwork(&sandbox);
       }
@@ -79,12 +75,8 @@ class SandboxTest : public ::gtest::RealLoopFixture {
 
   void RunSandboxFailure() { RunSandbox(false, TerminationReason::EXITED); }
 
-  void SetCmx(std::string cmx) {
-    sandbox_args_.cmx_facet_override = std::move(cmx);
-  }
-
-  void SetArgs(std::vector<std::string> args) {
-    sandbox_args_.args = std::move(args);
+  void SetCmx(const std::string& cmx) {
+    ASSERT_TRUE(sandbox_args_.ParseFromString(cmx));
   }
 
   void EnableEventCollection() { collect_events_ = true; }
@@ -191,20 +183,42 @@ class SandboxTest : public ::gtest::RealLoopFixture {
   network::EndpointManagerPtr endp_manager_;
 };
 
-TEST_F(SandboxTest, SimpleSuccess) { RunSandboxSuccess(); }
+TEST_F(SandboxTest, SimpleSuccess) {
+  SetCmx(R"(
+{
+   "environment" : {
+      "test" : [ "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx" ]
+   }
+})");
+  RunSandboxSuccess();
+}
 
 TEST_F(SandboxTest, MalformedFacet) {
-  SetCmx(R"( {bad, json} )");
-  RunSandboxInternalError();
+  SandboxArgs args;
+  ASSERT_FALSE(args.ParseFromString(R"( {bad, json} )"));
 }
 
 TEST_F(SandboxTest, SimpleFailure) {
-  SetArgs({"-f"});
+  SetCmx(R"(
+{
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+   "environment" : {
+      "test" : [ { "arguments": ["-f"] } ]
+   }
+}
+)");
   RunSandboxFailure();
 }
 
 TEST_F(SandboxTest, ConfirmOnBus) {
-  SetArgs({"-p", "3"});
+  SetCmx(R"(
+{
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+   "environment" : {
+      "test" : [ { "arguments": ["-p", "3"] } ]
+   }
+}
+)");
   EnableEventCollection();
   RunSandboxSuccess();
   CheckEvents({3});
@@ -212,10 +226,11 @@ TEST_F(SandboxTest, ConfirmOnBus) {
 
 TEST_F(SandboxTest, FastChildren) {
   // Make root test wait so children exits first
-  SetArgs({"-p", "1", "-w", "30"});
   SetCmx(R"(
   {
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
     "environment" : {
+      "test" : [ { "arguments": ["-p", "1", "-w", "30"] } ],
       "children" : [
         {
           "test" : [{
@@ -233,10 +248,11 @@ TEST_F(SandboxTest, FastChildren) {
 
 TEST_F(SandboxTest, FastRoot) {
   // Make child test wait so root exits first
-  SetArgs({"-p", "1"});
   SetCmx(R"(
   {
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
     "environment" : {
+      "test" : [ { "arguments": ["-p", "1"] } ],
       "children" : [
         {
           "test" : [{
@@ -253,10 +269,11 @@ TEST_F(SandboxTest, FastRoot) {
 }
 
 TEST_F(SandboxTest, FailedSetupCausesFailure) {
-  SetArgs({"-p", "1"});
   SetCmx(R"(
   {
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
     "environment" : {
+      "test" : [ { "arguments": ["-p", "1"] } ],
       "setup" : [{
         "arguments" : ["-f"]
       }]
@@ -273,11 +290,11 @@ TEST_F(SandboxTest, AppsAreLaunched) {
   // Launch root waiting for event 100, responds with event 4
   // Launch 3 apps and observe that they ran
   // then Signal root with event 100
-
-  SetArgs({"-e", "100", "-p", "4"});
   SetCmx(R"(
   {
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
     "environment" : {
+      "test" : [ { "arguments": ["-e", "100", "-p", "4"] } ],
       "apps" : [
         {
           "arguments" : ["-n", "app1", "-p", "1"]
@@ -314,10 +331,11 @@ TEST_F(SandboxTest, AppExitCodesAreIgnored) {
   // Launch root waiting for event 100, responds with event 2
   // Launch app that published event 1 and will fail
   // sandbox should ignore "app" exit codes
-  SetArgs({"-e", "100", "-p", "2"});
   SetCmx(R"(
   {
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
     "environment" : {
+      "test" : [ { "arguments": ["-e", "100", "-p", "2"] } ],
       "apps" : [
         {
           "arguments" : ["-n", "app1", "-p", "1", "-f"]
@@ -345,10 +363,11 @@ TEST_F(SandboxTest, AppExitCodesAreIgnored) {
 }
 
 TEST_F(SandboxTest, SetupProcsAreOperatedSequentially) {
-  SetArgs({"-p", "4"});
   SetCmx(R"(
   {
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
     "environment" : {
+      "test" : [ { "arguments": ["-p", "4"] } ],
       "setup" : [
         {
           "arguments" : ["-p", "1", "-n", "setup1", "-w", "10"]
@@ -399,19 +418,16 @@ TEST_F(SandboxTest, SetupProcsAreOperatedSequentially) {
 }
 
 TEST_F(SandboxTest, SetupRunsBeforeTest) {
-  SetArgs({"-p", "2"});
   SetCmx(R"(
   {
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
     "environment" : {
       "setup" : [
-        {
-          "arguments" : ["-p", "1", "-n", "setup1", "-w", "2"]
-        }
+        {"arguments" : ["-p", "1", "-n", "setup1", "-w", "2"]}
       ],
       "test" : [
-        {
-          "arguments" : ["-p", "3", "-n", "test1"]
-        }
+        {"arguments" : ["-p", "3", "-n", "test1"]},
+        {"arguments" : ["-p", "2"]}
       ]
     }
   }
@@ -485,9 +501,12 @@ TEST_F(SandboxTest, ValidNetworkSetup) {
   //   created correctly
   // - finally, tries to attach endpoints to network again
   //   to asses that they were correctly put in place
-  SetArgs({"-e", "100", "-p", "1"});
   SetCmx(R"(
   {
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+    "environment" : {
+       "test" : [ { "arguments": ["-e", "100", "-p", "1"] } ]
+    },
     "networks" : [
       {
         "name" : "net1",
@@ -584,7 +603,8 @@ TEST_F(SandboxTest, ValidNetworkSetup) {
 
 TEST_F(SandboxTest, ManyTests) {
   std::stringstream ss;
-  ss << R"({ "environment" : { "test" : [)";
+  ss << R"({ "default_url" : "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+             "environment" : { "test" : [)";
   const int test_count = 10;
   std::vector<int32_t> expect;
   expect.reserve(test_count);
@@ -600,6 +620,23 @@ TEST_F(SandboxTest, ManyTests) {
   EnableEventCollection();
   RunSandboxSuccess();
   CheckEvents(expect);
+}
+
+TEST_F(SandboxTest, NoTestsIsFailedtest) {
+  // Even if we run setup stuff,
+  // if no |tests| are defined in any environments, we consider it a failure.
+  SetCmx(R"(
+  {
+    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+    "environment" : {
+      "setup" : [
+        {"arguments" : ["-n", "setup1"]}
+      ],
+      "test" : []
+    }
+  }
+  )");
+  RunSandboxInternalError();
 }
 
 }  // namespace testing

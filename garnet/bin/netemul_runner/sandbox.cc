@@ -33,7 +33,6 @@ static const int kSetupTimeoutSecs = 10;
 
 STATIC_MSG_STRUCT(kMsgApp, "app");
 STATIC_MSG_STRUCT(kMsgTest, "test");
-STATIC_MSG_STRUCT(kMsgRoot, "root test");
 
 // Sandbox uses two threads to operate:
 // a main thread (which it's initialized with)
@@ -45,7 +44,7 @@ STATIC_MSG_STRUCT(kMsgRoot, "root test");
 #define ASSERT_MAIN_DISPATCHER ASSERT_DISPATCHER(main_dispatcher_)
 #define ASSERT_HELPER_DISPATCHER ASSERT_DISPATCHER(helper_loop_->dispatcher())
 
-Sandbox::Sandbox(SandboxArgs args) : args_(std::move(args)) {
+Sandbox::Sandbox(SandboxArgs args) : env_config_(std::move(args.config)) {
   auto startup_context = component::StartupContext::CreateFromStartupInfo();
   startup_context->ConnectToEnvironmentService(parent_env_.NewRequest());
   startup_context->ConnectToEnvironmentService(loader_.NewRequest());
@@ -62,6 +61,7 @@ void Sandbox::Start(async_dispatcher_t* dispatcher) {
 
   main_dispatcher_ = dispatcher;
   setup_done_ = false;
+  test_spawned_ = false;
 
   helper_loop_ =
       std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
@@ -71,15 +71,14 @@ void Sandbox::Start(async_dispatcher_t* dispatcher) {
     return;
   }
 
-  loader_->LoadUrl(args_.package, [this](fuchsia::sys::PackagePtr package) {
-    if (!package) {
-      Terminate(TerminationReason::PACKAGE_NOT_FOUND);
-      return;
-    } else if (!package->directory) {
-      Terminate(TerminationReason::INTERNAL_ERROR);
-    }
-    LoadPackage(std::move(package));
-  });
+  sandbox_env_ = std::make_shared<SandboxEnv>();
+  sandbox_env_->set_default_name(env_config_.default_url());
+
+  if (services_created_callback_) {
+    services_created_callback_();
+  }
+
+  StartEnvironments();
 }
 
 void Sandbox::Terminate(int64_t exit_code, Sandbox::TerminationReason reason) {
@@ -110,54 +109,8 @@ void Sandbox::Terminate(Sandbox::TerminationReason reason) {
   Terminate(-1, reason);
 }
 
-void Sandbox::LoadPackage(fuchsia::sys::PackagePtr package) {
+void Sandbox::StartEnvironments() {
   ASSERT_MAIN_DISPATCHER;
-  // package is loaded, proceed to parsing cmx and starting child env
-  component::FuchsiaPkgUrl pkgUrl;
-  if (!pkgUrl.Parse(package->resolved_url)) {
-    FXL_LOG(ERROR) << "Can't parse fuchsia url: " << package->resolved_url;
-    Terminate(TerminationReason::INTERNAL_ERROR);
-    return;
-  }
-
-  fxl::UniqueFD dirfd =
-      fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
-
-  sandbox_env_ = std::make_shared<SandboxEnv>(args_.package, std::move(dirfd));
-
-  component::CmxMetadata cmx;
-
-  json::JSONParser json_parser;
-  if (!cmx.ParseFromFileAt(sandbox_env_->dir().get(), pkgUrl.resource_path(),
-                           &json_parser)) {
-    FXL_LOG(ERROR) << "cmx file failed to parse: " << json_parser.error_str();
-    Terminate(TerminationReason::INTERNAL_ERROR);
-    return;
-  }
-
-  bool env_config_ok = false;
-  if (args_.cmx_facet_override.empty()) {
-    env_config_ok = LoadEnvironmentConfig(cmx.GetFacet(config::Config::Facet),
-                                          &json_parser);
-  } else {
-    auto facet =
-        json_parser.ParseFromString(args_.cmx_facet_override, "Facet Override");
-    if (json_parser.HasError()) {
-      FXL_LOG(ERROR) << "netemul facet failed to parse: "
-                     << json_parser.error_str();
-    } else {
-      env_config_ok = LoadEnvironmentConfig(facet, &json_parser);
-    }
-  }
-
-  if (!env_config_ok) {
-    Terminate(TerminationReason::INTERNAL_ERROR);
-    return;
-  }
-
-  if (package_loaded_callback_) {
-    package_loaded_callback_();
-  }
 
   async::PostTask(helper_loop_->dispatcher(), [this]() {
     if (!ConfigureNetworks()) {
@@ -313,7 +266,7 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
   for (const auto& svc : config.services()) {
     auto& ns = services.emplace_back();
     ns.name = svc.name();
-    ns.url = svc.launch().GetUrlOrDefault(sandbox_env_->name());
+    ns.url = svc.launch().GetUrlOrDefault(sandbox_env_->default_name());
     ns.arguments->insert(ns.arguments->end(), svc.launch().arguments().begin(),
                          svc.launch().arguments().end());
   }
@@ -369,33 +322,32 @@ bool Sandbox::ConfigureEnvironment(
   }
 
   for (const auto& setup : config.setup()) {
-    if (!LaunchSetup(&launcher, setup.GetUrlOrDefault(sandbox_env_->name()),
+    if (!LaunchSetup(&launcher,
+                     setup.GetUrlOrDefault(sandbox_env_->default_name()),
                      setup.arguments())) {
       return false;
     }
   }
 
   for (const auto& app : config.apps()) {
-    if (!LaunchProcess<kMsgApp>(&launcher,
-                                app.GetUrlOrDefault(sandbox_env_->name()),
-                                app.arguments(), false)) {
+    if (!LaunchProcess<kMsgApp>(
+            &launcher, app.GetUrlOrDefault(sandbox_env_->default_name()),
+            app.arguments(), false)) {
       return false;
     }
   }
 
   for (const auto& test : config.test()) {
-    if (!LaunchProcess<kMsgTest>(&launcher,
-                                 test.GetUrlOrDefault(sandbox_env_->name()),
-                                 test.arguments(), true)) {
+    if (!LaunchProcess<kMsgTest>(
+            &launcher, test.GetUrlOrDefault(sandbox_env_->default_name()),
+            test.arguments(), true)) {
       return false;
     }
+    // save that at least one test was spawned.
+    test_spawned_ = true;
   }
 
   if (root) {
-    if (!LaunchProcess<kMsgRoot>(&launcher, sandbox_env_->name(), args_.args,
-                                 true)) {
-      return false;
-    }
     EnableTestObservation();
   }
 
@@ -494,6 +446,15 @@ void Sandbox::EnableTestObservation() {
   ASSERT_HELPER_DISPATCHER;
 
   setup_done_ = true;
+
+  // if we're not observing any tests,
+  // consider it a failure.
+  if (!test_spawned_) {
+    FXL_LOG(ERROR) << "No tests were specified";
+    PostTerminate(TerminationReason::INTERNAL_ERROR);
+    return;
+  }
+
   if (tests_.empty()) {
     // all tests finished successfully
     PostTerminate(0, TerminationReason::EXITED);
@@ -516,14 +477,37 @@ void Sandbox::UnregisterTest(size_t ticket) {
   }
 }
 
-bool Sandbox::LoadEnvironmentConfig(const rapidjson::Value& facet,
-                                    json::JSONParser* json_parser) {
-  if (!env_config_.ParseFromJSON(facet, json_parser)) {
+bool SandboxArgs::ParseFromJSON(const rapidjson::Value& facet,
+                                json::JSONParser* json_parser) {
+  if (!config.ParseFromJSON(facet, json_parser)) {
     FXL_LOG(ERROR) << "netemul facet failed to parse: "
                    << json_parser->error_str();
     return false;
   }
   return true;
+}
+
+bool SandboxArgs::ParseFromString(const std::string& config) {
+  json::JSONParser json_parser;
+  auto facet = json_parser.ParseFromString(config, "fuchsia.netemul facet");
+  if (json_parser.HasError()) {
+    FXL_LOG(ERROR) << "netemul facet failed to parse: "
+                   << json_parser.error_str();
+    return false;
+  }
+
+  return ParseFromJSON(facet, &json_parser);
+}
+
+bool SandboxArgs::ParseFromCmxFileAt(int dir, const std::string& path) {
+  component::CmxMetadata cmx;
+  json::JSONParser json_parser;
+  if (!cmx.ParseFromFileAt(dir, path, &json_parser)) {
+    FXL_LOG(ERROR) << "cmx file failed to parse: " << json_parser.error_str();
+    return false;
+  }
+
+  return ParseFromJSON(cmx.GetFacet(config::Config::Facet), &json_parser);
 }
 
 }  // namespace netemul

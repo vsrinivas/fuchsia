@@ -31,6 +31,7 @@ TEST_F(ModelTest, ParseTest) {
   const char* json =
       R"(
     {
+      "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/default.cmx",
       "environment": {
         "children": [
           {
@@ -108,6 +109,9 @@ TEST_F(ModelTest, ParseTest) {
 
   EXPECT_TRUE(config.ParseFromJSON(doc, &parser))
       << "Parse error: " << parser.error_str();
+
+  EXPECT_EQ(config.default_url(),
+            "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/default.cmx");
 
   // sanity check the objects:
   auto& root_env = config.environment();
