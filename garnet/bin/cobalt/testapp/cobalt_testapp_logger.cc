@@ -190,6 +190,31 @@ bool CobaltTestAppLogger::LogStringPairAndSend(uint32_t metric_id,
   return CheckForSuccessfulSend(use_request_send_soon);
 }
 
+bool CobaltTestAppLogger::LogCustomMetricsTestProtoAndSend(
+  uint32_t metric_id, const std::string& query_val, const int64_t wait_time_val,
+  const uint32_t response_code_val, bool use_request_send_soon) {
+  for (int i = 0; i < num_observations_per_batch_; i++) {
+    Status status = Status::INTERNAL_ERROR;
+    std::vector<fuchsia::cobalt::CustomEventValue> parts(3);
+    parts.at(0).dimension_name = "query";
+    parts.at(0).value.set_string_value(query_val);
+    parts.at(1).dimension_name = "wait_time_ms";
+    parts.at(1).value.set_int_value(wait_time_val);
+    parts.at(2).dimension_name = "response_code";
+    parts.at(2).value.set_index_value(response_code_val);
+    logger_->LogCustomEvent(metric_id, std::move(parts), &status);
+    FXL_VLOG(1) << "LogCustomEvent(query=" << query_val << ", wait_time_ms="
+                << wait_time_val << ", response_code=" << response_code_val
+                << ") => " << StatusToString(status);
+    if (status != Status::OK) {
+      FXL_LOG(ERROR) << "LogCustomEvent() => " << StatusToString(status);
+      return false;
+    }
+  }
+
+  return CheckForSuccessfulSend(use_request_send_soon);
+}
+
 bool CobaltTestAppLogger::CheckForSuccessfulSend(bool use_request_send_soon) {
   if (!use_network_) {
     FXL_LOG(INFO) << "Not using the network because --no_network_for_testing "

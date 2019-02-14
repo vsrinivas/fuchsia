@@ -184,9 +184,8 @@ bool TestLogCustomEvent(CobaltTestAppLogger* logger_) {
   FXL_LOG(INFO) << "========================";
   FXL_LOG(INFO) << "TestLogCustomEvent";
   bool use_request_send_soon = true;
-  bool success = logger_->LogStringPairAndSend(
-      metrics::kQueryResponseMetricId, kExistingModulePartName, "ModA",
-      kAddedModulePartName, "ModB", use_request_send_soon);
+  bool success = logger_->LogCustomMetricsTestProtoAndSend(
+      metrics::kQueryResponseMetricId, "test", 100, 1, use_request_send_soon);
   FXL_LOG(INFO) << "TestLogCustomEvent : " << (success ? "PASS" : "FAIL");
   return success;
 }

@@ -66,6 +66,14 @@ class CobaltTestAppLogger {
                             const std::string& val0, const std::string& part1,
                             const std::string& val1,
                             bool use_request_send_soon);
+  // Synchronously invokes LogCustomEvent() for an event of type
+  // cobalt.CobaltMetricsTestProto |num_observations_per_batch_| times, using
+  // the given parameter values. Then invokes CheckForSuccessfulSend().
+  bool LogCustomMetricsTestProtoAndSend(uint32_t metric_id,
+                                        const std::string& query_val,
+                                        const int64_t wait_time_val,
+                                        const uint32_t response_code_val,
+                                        bool use_request_send_soon);
 
   // If |use_network_| is false this method returns true immediately.
   // Otherwise, uses one of two strategies to cause the Observations that
