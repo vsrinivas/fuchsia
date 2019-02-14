@@ -20,7 +20,6 @@ __BEGIN_CDECLS
 // may return up to FDIO_MAX_HANDLES
 //
 // Use fdio_cwd_clone, fdio_fd_clone, and fdio_fd_transfer instead.
-zx_status_t fdio_clone_cwd(zx_handle_t* handles, uint32_t* types);
 zx_status_t fdio_clone_fd(int fd, int newfd, zx_handle_t* handles, uint32_t* types);
 zx_status_t fdio_transfer_fd(int fd, int newfd, zx_handle_t* handles, uint32_t* types);
 
