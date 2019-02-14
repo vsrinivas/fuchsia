@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use cm_json::{self, cm, Error, CM_SCHEMA};
-use crate::validate;
 use crate::cml;
+use crate::validate;
+use cm_json::{self, cm, Error, CM_SCHEMA};
 use serde::ser::Serialize;
-use serde_json::ser::{CompactFormatter, PrettyFormatter, Serializer};
 use serde_json;
+use serde_json::ser::{CompactFormatter, PrettyFormatter, Serializer};
 use std::fs;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::str::from_utf8;
-
 
 /// Read in a CML file and produce the equivalent CM.
 pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<(), Error> {
@@ -87,11 +86,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     for use_ in use_in {
         let (r#type, source_path) = extract_source_capability(use_)?;
         let target_path = extract_target_path(use_, &source_path);
-        out_uses.push(cm::Use {
-            r#type,
-            source_path,
-            target_path,
-        });
+        out_uses.push(cm::Use { r#type, source_path, target_path });
     }
     Ok(out_uses)
 }
@@ -102,12 +97,7 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
         let (r#type, source_path) = extract_source_capability(expose)?;
         let source = extract_source(expose)?;
         let target_path = extract_target_path(expose, &source_path);
-        out_exposes.push(cm::Expose {
-            r#type,
-            source_path,
-            source,
-            target_path,
-        });
+        out_exposes.push(cm::Expose { r#type, source_path, source, target_path });
     }
     Ok(out_exposes)
 }
@@ -118,12 +108,7 @@ fn translate_offer(offer_in: &Vec<cml::Offer>) -> Result<Vec<cm::Offer>, Error> 
         let (r#type, source_path) = extract_source_capability(offer)?;
         let source = extract_source(offer)?;
         let targets = extract_targets(offer, &source_path)?;
-        out_offers.push(cm::Offer {
-            r#type,
-            source_path,
-            source,
-            targets,
-        });
+        out_offers.push(cm::Offer { r#type, source_path, source, targets });
     }
     Ok(out_offers)
 }
@@ -131,10 +116,7 @@ fn translate_offer(offer_in: &Vec<cml::Offer>) -> Result<Vec<cm::Offer>, Error> 
 fn translate_children(children_in: &Vec<cml::Child>) -> Result<Vec<cm::Child>, Error> {
     let mut out_children = vec![];
     for child in children_in.iter() {
-        out_children.push(cm::Child {
-            name: child.name.clone(),
-            uri: child.uri.clone(),
-        });
+        out_children.push(cm::Child { name: child.name.clone(), uri: child.uri.clone() });
     }
     Ok(out_children)
 }
@@ -150,15 +132,9 @@ where
     }
     let ret = if from.starts_with("#") {
         let (_, child_name) = from.split_at(1);
-        cm::Source {
-            relation: "child".to_string(),
-            child_name: Some(child_name.to_string()),
-        }
+        cm::Source { relation: "child".to_string(), child_name: Some(child_name.to_string()) }
     } else {
-        cm::Source {
-            relation: from,
-            child_name: None,
-        }
+        cm::Source { relation: from, child_name: None }
     };
     Ok(ret)
 }
@@ -173,10 +149,7 @@ fn extract_targets(in_obj: &cml::Offer, source_path: &str) -> Result<Vec<cm::Tar
             None => Err(Error::internal(format!("invalid \"to\": {}", target.to))),
         }?;
         let child_name = caps[1].to_string();
-        out_targets.push(cm::Target {
-            target_path,
-            child_name,
-        });
+        out_targets.push(cm::Target { target_path, child_name });
     }
     Ok(out_targets)
 }
@@ -238,17 +211,11 @@ mod tests {
         let tmp_in_path = tmp_dir.path().join("test.cml");
         let tmp_out_path = tmp_dir.path().join("test.cm");
 
-        File::create(&tmp_in_path)
-            .unwrap()
-            .write_all(format!("{}", input).as_bytes())
-            .unwrap();
+        File::create(&tmp_in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
 
         compile(&tmp_in_path, pretty, Some(tmp_out_path.clone())).expect("compilation failed");
         let mut buffer = String::new();
-        fs::File::open(&tmp_out_path)
-            .unwrap()
-            .read_to_string(&mut buffer)
-            .unwrap();
+        fs::File::open(&tmp_out_path).unwrap().read_to_string(&mut buffer).unwrap();
         assert_eq!(buffer, expected_output);
     }
 
@@ -586,15 +553,11 @@ mod tests {
                 { "directory": "/volumes/blobfs", "from": "realm" }
             ]
         });
-        File::create(&tmp_in_path)
-            .unwrap()
-            .write_all(format!("{}", input).as_bytes())
-            .unwrap();
+        File::create(&tmp_in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
         {
             let result = compile(&tmp_in_path, false, Some(tmp_out_path.clone()));
-            let expected_result: Result<(), Error> = Err(Error::parse(
-                "Pattern condition is not met at /expose/0/from",
-            ));
+            let expected_result: Result<(), Error> =
+                Err(Error::parse("Pattern condition is not met at /expose/0/from"));
             assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
         }
         // Compilation failed so output should not exist.

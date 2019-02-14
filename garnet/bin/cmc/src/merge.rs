@@ -84,26 +84,14 @@ mod tests {
             (vec![json!({}), json!({})], Some(json!({}))),
             (vec![json!({"foo": 1}), json!({})], Some(json!({"foo": 1}))),
             (vec![json!({}), json!({"foo": 1})], Some(json!({"foo": 1}))),
-            (
-                vec![json!({"foo": 1}), json!({"bar": 2})],
-                Some(json!({"foo": 1, "bar": 2})),
-            ),
-            (
-                vec![json!({"foo": [1]}), json!({"bar": [2]})],
-                Some(json!({"foo": [1], "bar": [2]})),
-            ),
+            (vec![json!({"foo": 1}), json!({"bar": 2})], Some(json!({"foo": 1, "bar": 2}))),
+            (vec![json!({"foo": [1]}), json!({"bar": [2]})], Some(json!({"foo": [1], "bar": [2]}))),
             (
                 vec![json!({"foo": {"bar": 1}}), json!({"foo": {"baz": 2}})],
                 Some(json!({"foo": {"bar": 1, "baz": 2}})),
             ),
-            (
-                vec![json!({"foo": [1]}), json!({"foo": [2]})],
-                Some(json!({"foo": [1,2]})),
-            ),
-            (
-                vec![json!({"foo": [1]}), json!({"foo": [1]})],
-                Some(json!({"foo": [1]})),
-            ),
+            (vec![json!({"foo": [1]}), json!({"foo": [2]})], Some(json!({"foo": [1,2]}))),
+            (vec![json!({"foo": [1]}), json!({"foo": [1]})], Some(json!({"foo": [1]}))),
             (
                 vec![json!({"foo": [{"bar": 1}]}), json!({"foo": [{"bar": 1}]})],
                 Some(json!({"foo": [{"bar": 1}]})),
@@ -146,10 +134,7 @@ mod tests {
 
             if let Some(expected_json) = expected_results {
                 let mut buffer = String::new();
-                File::open(&output_file_path)
-                    .unwrap()
-                    .read_to_string(&mut buffer)
-                    .unwrap();
+                File::open(&output_file_path).unwrap().read_to_string(&mut buffer).unwrap();
                 assert_eq!(buffer, format!("{:#}", expected_json));
             }
         }
@@ -165,10 +150,7 @@ mod tests {
         ];
         let mut filenames = vec![];
         for (fname, contents) in &input {
-            File::create(fname)
-                .unwrap()
-                .write_all(contents.as_bytes())
-                .unwrap();
+            File::create(fname).unwrap().write_all(contents.as_bytes()).unwrap();
             filenames.push(fname.clone());
         }
 

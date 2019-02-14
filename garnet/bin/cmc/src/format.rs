@@ -69,10 +69,7 @@ mod tests {
         let tmp_dir = TempDir::new().unwrap();
 
         let tmp_file_path = tmp_dir.path().join("input.json");
-        File::create(&tmp_file_path)
-            .unwrap()
-            .write_all(example_json.as_bytes())
-            .unwrap();
+        File::create(&tmp_file_path).unwrap().write_all(example_json.as_bytes()).unwrap();
 
         let output_file_path = tmp_dir.path().join("output.json");
 
@@ -81,10 +78,7 @@ mod tests {
         assert!(result.is_ok());
 
         let mut buffer = String::new();
-        File::open(&output_file_path)
-            .unwrap()
-            .read_to_string(&mut buffer)
-            .unwrap();
+        File::open(&output_file_path).unwrap().read_to_string(&mut buffer).unwrap();
         assert_eq!(0, count_num_newlines(&buffer));
 
         // format as pretty
@@ -92,10 +86,7 @@ mod tests {
         assert!(result.is_ok());
 
         let mut buffer = String::new();
-        File::open(&output_file_path)
-            .unwrap()
-            .read_to_string(&mut buffer)
-            .unwrap();
+        File::open(&output_file_path).unwrap().read_to_string(&mut buffer).unwrap();
         assert_eq!(14, count_num_newlines(&buffer));
     }
 
@@ -105,10 +96,7 @@ mod tests {
         let tmp_dir = TempDir::new().unwrap();
 
         let tmp_file_path = tmp_dir.path().join("input.json");
-        File::create(&tmp_file_path)
-            .unwrap()
-            .write_all(example_json.as_bytes())
-            .unwrap();
+        File::create(&tmp_file_path).unwrap().write_all(example_json.as_bytes()).unwrap();
 
         // format as not-pretty
         let result = format(&tmp_file_path, false, None);

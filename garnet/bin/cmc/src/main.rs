@@ -29,16 +29,10 @@ fn run_cmc() -> Result<(), Error> {
     match opt.cmd {
         opts::Commands::Validate { files } => validate::validate(files)?,
         opts::Commands::Merge { files, output } => merge::merge(files, output)?,
-        opts::Commands::Format {
-            file,
-            pretty,
-            output,
-        } => format::format(&file, pretty, output)?,
-        opts::Commands::Compile {
-            file,
-            pretty,
-            output,
-        } => compile::compile(&file, pretty, output)?,
+        opts::Commands::Format { file, pretty, output } => format::format(&file, pretty, output)?,
+        opts::Commands::Compile { file, pretty, output } => {
+            compile::compile(&file, pretty, output)?
+        }
     }
     if let Some(stamp_path) = opt.stamp {
         stamp(stamp_path)?;

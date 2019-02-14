@@ -48,10 +48,7 @@ pub fn validate_cml(buffer: &str) -> Result<cml::Document, Error> {
     let document: cml::Document = serde_json::from_value(json)
         .map_err(|e| Error::parse(format!("Couldn't read input as struct: {}", e)))?;
 
-    let mut ctx = ValidationContext {
-        document: &document,
-        all_children: HashSet::new(),
-    };
+    let mut ctx = ValidationContext { document: &document, all_children: HashSet::new() };
     ctx.validate()?;
     Ok(document)
 }
@@ -69,10 +66,7 @@ impl<'a> ValidationContext<'a> {
         if let Some(children) = self.document.children.as_ref() {
             for child in children.iter() {
                 if !self.all_children.insert(&child.name) {
-                    return Err(Error::parse(format!(
-                        "Duplicate child name: \"{}\"",
-                        &child.name
-                    )));
+                    return Err(Error::parse(format!("Duplicate child name: \"{}\"", &child.name)));
                 }
             }
         }
@@ -97,20 +91,18 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_expose(
-        &self, expose: &'a cml::Expose, prev_target_paths: &mut PathMap<'a>,
+        &self,
+        expose: &'a cml::Expose,
+        prev_target_paths: &mut PathMap<'a>,
     ) -> Result<(), Error> {
         self.validate_source("expose", expose)?;
-        self.validate_target(
-            "expose",
-            expose,
-            expose,
-            &mut HashSet::new(),
-            prev_target_paths,
-        )
+        self.validate_target("expose", expose, expose, &mut HashSet::new(), prev_target_paths)
     }
 
     fn validate_offer(
-        &self, offer: &'a cml::Offer, prev_target_paths: &mut PathMap<'a>,
+        &self,
+        offer: &'a cml::Offer,
+        prev_target_paths: &mut PathMap<'a>,
     ) -> Result<(), Error> {
         self.validate_source("offer", offer)?;
 
@@ -157,8 +149,12 @@ impl<'a> ValidationContext<'a> {
     /// - |prev_target| holds target names collected for this source capability so far.
     /// - |prev_target_paths| holds target paths collected so far.
     fn validate_target<T, U>(
-        &self, keyword: &str, source_obj: &'a T, target_obj: &'a U,
-        prev_targets: &mut HashSet<&'a str>, prev_target_paths: &mut PathMap<'a>,
+        &self,
+        keyword: &str,
+        source_obj: &'a T,
+        target_obj: &'a U,
+        prev_targets: &mut HashSet<&'a str>,
+        prev_target_paths: &mut PathMap<'a>,
     ) -> Result<(), Error>
     where
         T: cml::CapabilityClause,
@@ -181,9 +177,8 @@ impl<'a> ValidationContext<'a> {
 
         // Check that target path is not a duplicate of another capability.
         let target_name = target_obj.to().unwrap_or("");
-        let paths_for_target = prev_target_paths
-            .entry(target_name.to_string())
-            .or_insert(HashSet::new());
+        let paths_for_target =
+            prev_target_paths.entry(target_name.to_string()).or_insert(HashSet::new());
         if !paths_for_target.insert(target_path) {
             return match target_name {
                 "" => Err(Error::parse(format!(
@@ -274,7 +269,9 @@ mod tests {
     }
 
     fn validate_test(
-        filename: &str, input: serde_json::value::Value, expected_result: Result<(), Error>,
+        filename: &str,
+        input: serde_json::value::Value,
+        expected_result: Result<(), Error>,
     ) {
         let input_str = format!("{}", input);
         validate_json_str(filename, &input_str, expected_result);
@@ -284,10 +281,7 @@ mod tests {
         let tmp_dir = TempDir::new().unwrap();
         let tmp_file_path = tmp_dir.path().join(filename);
 
-        File::create(&tmp_file_path)
-            .unwrap()
-            .write_all(input.as_bytes())
-            .unwrap();
+        File::create(&tmp_file_path).unwrap().write_all(input.as_bytes()).unwrap();
 
         let result = validate(vec![tmp_file_path]);
         assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
@@ -298,10 +292,7 @@ mod tests {
         let tmp_dir = TempDir::new().unwrap();
         let tmp_file_path = tmp_dir.path().join("test.cm");
 
-        File::create(&tmp_file_path)
-            .unwrap()
-            .write_all(b"{,}")
-            .unwrap();
+        File::create(&tmp_file_path).unwrap().write_all(b"{,}").unwrap();
 
         let result = validate(vec![tmp_file_path]);
         let expected_result: Result<(), Error> = Err(Error::parse(
