@@ -145,7 +145,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {
         {{ .Type.Decl }} _member{};
         _status = ::fidl::Clone({{ .Name }}(), &_member);
         if (_status == ZX_OK) {
-	  _result->set_{{ .Name }}(std::move(_member));
+          _result->set_{{ .Name }}(std::move(_member));
         }
       }
       break;

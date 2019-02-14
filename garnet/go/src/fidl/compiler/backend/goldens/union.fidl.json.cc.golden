@@ -77,7 +77,7 @@ zx_status_t Union::Clone(Union* _result) const {
         int32_t _member{};
         _status = ::fidl::Clone(Primitive(), &_member);
         if (_status == ZX_OK) {
-	  _result->set_Primitive(std::move(_member));
+          _result->set_Primitive(std::move(_member));
         }
       }
       break;
@@ -86,7 +86,7 @@ zx_status_t Union::Clone(Union* _result) const {
         ::std::string _member{};
         _status = ::fidl::Clone(StringNeedsConstructor(), &_member);
         if (_status == ZX_OK) {
-	  _result->set_StringNeedsConstructor(std::move(_member));
+          _result->set_StringNeedsConstructor(std::move(_member));
         }
       }
       break;
@@ -95,7 +95,7 @@ zx_status_t Union::Clone(Union* _result) const {
         ::std::vector<::std::string> _member{};
         _status = ::fidl::Clone(VectorStringAlsoNeedsConstructor(), &_member);
         if (_status == ZX_OK) {
-	  _result->set_VectorStringAlsoNeedsConstructor(std::move(_member));
+          _result->set_VectorStringAlsoNeedsConstructor(std::move(_member));
         }
       }
       break;
