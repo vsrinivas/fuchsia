@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/auth/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/startup_context.h>
@@ -18,12 +19,12 @@ namespace fuchsia {
 namespace modular {
 namespace auth {
 
-class AccountProviderImpl : AccountProvider {
+class AccountProviderImpl : AccountProvider, ::fuchsia::modular::Lifecycle {
  public:
   AccountProviderImpl(async::Loop* loop);
 
  private:
-  // |AccountProvider| implementation:
+  // |AccountProvider|
   void Terminate() override;
   void AddAccount(fuchsia::modular::auth::IdentityProvider identity_provider,
                   AddAccountCallback callback) override;
@@ -35,6 +36,7 @@ class AccountProviderImpl : AccountProvider {
   async::Loop* const loop_;
   std::shared_ptr<component::StartupContext> startup_context_;
   fidl::Binding<AccountProvider> binding_;
+  fidl::Binding<::fuchsia::modular::Lifecycle> lifecycle_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AccountProviderImpl);
 };
@@ -42,11 +44,16 @@ class AccountProviderImpl : AccountProvider {
 AccountProviderImpl::AccountProviderImpl(async::Loop* loop)
     : loop_(loop),
       startup_context_(component::StartupContext::CreateFromStartupInfo()),
-      binding_(this) {
+      binding_(this),
+      lifecycle_binding_(this) {
   FXL_DCHECK(loop);
   startup_context_->outgoing().AddPublicService<AccountProvider>(
       [this](fidl::InterfaceRequest<AccountProvider> request) {
         binding_.Bind(std::move(request));
+      });
+  startup_context_->outgoing().AddPublicService<::fuchsia::modular::Lifecycle>(
+      [this](fidl::InterfaceRequest<::fuchsia::modular::Lifecycle> request) {
+        lifecycle_binding_.Bind(std::move(request));
       });
 }
 
