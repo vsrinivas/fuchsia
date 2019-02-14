@@ -5,15 +5,16 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/usb/tester/c/fidl.h>
 #include <fuchsia/hardware/usb/fwloader/c/fidl.h>
 #include <fuchsia/mem/c/fidl.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/device.h>
 #include <zircon/hw/usb.h>
 #include <zircon/types.h>
 
@@ -66,10 +67,20 @@ void usage(const char* prog_name) {
 
 zx_status_t fd_matches_name(const fbl::unique_fd& fd, const char* dev_name, bool* out_match) {
     char path[PATH_MAX];
-    const ssize_t r = ioctl_device_get_topo_path(fd.get(), path, sizeof(path));
-    if (r < 0) {
+    fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
+    if (io == nullptr) {
+        return ZX_ERR_BAD_STATE;
+    }
+    zx_status_t call_status;
+    size_t path_len;
+    zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
+            fdio_unsafe_borrow_channel(io), &call_status, path, sizeof(path) - 1 , &path_len);
+    fdio_unsafe_release(io);
+    if (status != ZX_OK || call_status != ZX_OK) {
         return ZX_ERR_IO;
     }
+    path[path_len] = 0;
+
     *out_match = dev_name == nullptr || strstr(path, dev_name) != nullptr;
     return ZX_OK;
 }

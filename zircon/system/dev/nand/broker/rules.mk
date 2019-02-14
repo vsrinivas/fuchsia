@@ -67,6 +67,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device \
     system/fidl/fuchsia-nand \
     system/fidl/fuchsia-hardware-nand \
 
@@ -101,6 +102,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device \
     system/fidl/fuchsia-nand \
     system/fidl/fuchsia-hardware-nand \
 

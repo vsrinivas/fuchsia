@@ -22,4 +22,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/zxcpp \
     third_party/ulib/cksum \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device \
+
 include make/module.mk

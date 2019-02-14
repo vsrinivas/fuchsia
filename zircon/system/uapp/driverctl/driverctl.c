@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <zircon/device/device.h>
+#include <lib/fdio/directory.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/syscalls.h>
 
 static void usage(void) {
     fprintf(stderr,
@@ -73,17 +75,23 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    int fd = open(path, O_RDWR);
-    if (fd < 0) {
+    zx_handle_t device, device_remote;
+    if (zx_channel_create(0, &device, &device_remote) != ZX_OK) {
+        fprintf(stderr, "could not create channel\n");
+        return -1;
+    }
+    zx_status_t status = fdio_service_connect(path, device_remote);
+    if (status != ZX_OK) {
         fprintf(stderr, "could not open %s\n", path);
         return -1;
     }
 
     if (argc == 3) {
         uint32_t flags;
-        ret = ioctl_device_get_log_flags(fd, &flags);
-        if (ret < 0) {
-            fprintf(stderr, "ioctl_device_get_log_flags failed for %s\n", path);
+        zx_status_t call_status;
+        status = fuchsia_device_ControllerGetDriverLogFlags(device, &call_status, &flags);
+        if (status != ZX_OK || call_status != ZX_OK) {
+            fprintf(stderr, "GetDriverLogFlags failed for %s\n", path);
         } else {
             printf("Log flags:");
             if (flags & DDK_LOG_ERROR) {
@@ -118,7 +126,8 @@ int main(int argc, char **argv) {
         goto out;
     }
 
-    driver_log_flags_t flags = {0, 0};
+    uint32_t clear_flags = 0;
+    uint32_t set_flags = 0;
     char* toggle_arg = NULL;
     char* non_toggle_arg = NULL;
 
@@ -168,25 +177,27 @@ int main(int argc, char **argv) {
         }
 
         if (toggle == '+') {
-            flags.set |= flag;
+            set_flags |= flag;
         } else if (toggle == '-') {
-            flags.clear |= flag;
+            clear_flags |= flag;
         } else {
-            flags.set |= flag;
+            set_flags |= flag;
         }
     }
 
     if (!toggle_arg) {
         // clear all flags not explicitly set if we aren't using flag toggles
-        flags.clear = ~flags.set;
+        clear_flags = ~set_flags;
     }
 
-    ret = ioctl_device_set_log_flags(fd, &flags);
-    if (ret < 0) {
-        fprintf(stderr, "ioctl_device_set_log_flags failed for %s\n", path);
+    zx_status_t call_status;
+    status = fuchsia_device_ControllerSetDriverLogFlags(device, clear_flags, set_flags,
+                                                        &call_status);
+    if (status != ZX_OK || call_status != ZX_OK) {
+        fprintf(stderr, "SetDriverLogFlags failed for %s\n", path);
     }
 
 out:
-    close(fd);
+    zx_handle_close(device);
     return ret;
 }

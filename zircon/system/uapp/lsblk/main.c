@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <limits.h>
 
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <lib/fdio/unsafe.h>
 #include <pretty/hexdump.h>
@@ -56,6 +57,26 @@ typedef struct blkinfo {
     char sizestr[6];
 } blkinfo_t;
 
+static void populate_topo_path(int fd, blkinfo_t* info) {
+    fdio_t* io = fdio_unsafe_fd_to_io(fd);
+    if (io == NULL) {
+        goto fail;
+    }
+    zx_status_t call_status;
+    size_t path_len;
+    zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
+            fdio_unsafe_borrow_channel(io), &call_status, info->topo, sizeof(info->topo) - 1,
+            &path_len);
+    fdio_unsafe_release(io);
+    if (status != ZX_OK || call_status != ZX_OK) {
+        goto fail;
+    }
+    info->topo[path_len] = 0;
+    return;
+fail:
+    strcpy(info->topo, "UNKNOWN");
+}
+
 static int cmd_list_blk(void) {
     struct dirent* de;
     DIR* dir = opendir(DEV_BLOCK);
@@ -80,9 +101,7 @@ static int cmd_list_blk(void) {
             fprintf(stderr, "Error opening %s\n", info.path);
             goto devdone;
         }
-        if (ioctl_device_get_topo_path(fd, info.topo, sizeof(info.topo)) < 0) {
-            strcpy(info.topo, "UNKNOWN");
-        }
+        populate_topo_path(fd, &info);
 
         block_info_t block_info;
         if (ioctl_block_get_info(fd, &block_info) > 0) {
@@ -139,9 +158,7 @@ static int cmd_list_skip_blk(void) {
             fprintf(stderr, "Error opening %s\n", info.path);
             goto devdone;
         }
-        if (ioctl_device_get_topo_path(fd, info.topo, sizeof(info.topo)) < 0) {
-            strcpy(info.topo, "UNKNOWN");
-        }
+        populate_topo_path(fd, &info);
 
         fdio_t* io = fdio_unsafe_fd_to_io(fd);
         zx_handle_t channel = fdio_unsafe_borrow_channel(io);

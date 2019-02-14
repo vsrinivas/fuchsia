@@ -22,6 +22,7 @@ MODULE_LIBS := \
     system/ulib/c \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-device \
     system/fidl/fuchsia-mem \
     system/fidl/fuchsia-hardware-usb-fwloader \
     system/fidl/fuchsia-hardware-usb-tester

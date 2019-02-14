@@ -19,10 +19,12 @@
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <ramdevice-client/ramdisk.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <fvm/fvm-sparse.h>
 #include <fvm/sparse-reader.h>
 #include <lib/cksum.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fzl/fdio.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -30,7 +32,6 @@
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
-#include <zircon/device/device.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zxcrypt/volume.h>
@@ -79,14 +80,38 @@ static Partition PartitionType(const Command command) {
 // TODO(aarongreen): Replace this with a value supplied by ulib/zxcrypt.
 constexpr size_t kZxcryptExtraSlices = 1;
 
+// Looks up the topological path of a device.
+// |buf| is the buffer the path will be written to.  |buf_len| is the total
+// capcity of the buffer, including space for a null byte.
+// Upon success, |buf| will contain the null-terminated topological path.
+zx_status_t GetTopoPathFromFd(const fbl::unique_fd& fd, char* buf, size_t buf_len) {
+    fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
+    if (io == nullptr) {
+        return ZX_ERR_BAD_STATE;
+    }
+    zx_status_t call_status;
+    size_t path_len;
+    zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
+            fdio_unsafe_borrow_channel(io), &call_status, buf, buf_len - 1, &path_len);
+    fdio_unsafe_release(io);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (call_status != ZX_OK) {
+        return call_status;
+    }
+    buf[path_len] = 0;
+    return ZX_OK;
+}
+
 // Confirm that the file descriptor to the underlying partition exists within an
 // FVM, not, for example, a GPT or MBR.
 //
 // |out| is true if |fd| is a VPartition, else false.
 zx_status_t FvmIsVirtualPartition(const fbl::unique_fd& fd, bool* out) {
     char path[PATH_MAX];
-    const ssize_t r = ioctl_device_get_topo_path(fd.get(), path, sizeof(path));
-    if (r < 0) {
+    zx_status_t status = GetTopoPathFromFd(fd, path, sizeof(path));
+    if (status != ZX_OK) {
         return ZX_ERR_IO;
     }
 
@@ -373,15 +398,26 @@ zx_status_t ValidateKernelPayload(const fzl::ResizeableVmoMapper& mapper, size_t
 fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& partition_fd,
                                   zx::duration timeout) {
     char path[PATH_MAX];
-    ssize_t r = ioctl_device_get_topo_path(partition_fd.get(), path, sizeof(path));
-    if (r < 0) {
+    zx_status_t status = GetTopoPathFromFd(partition_fd, path, sizeof(path));
+    if (status != ZX_OK) {
         ERROR("Failed to get topological path\n");
         return fbl::unique_fd();
     }
 
+    fdio_t* io = fdio_unsafe_fd_to_io(partition_fd.get());
+    if (io == nullptr) {
+        ERROR("Failed to convert to io\n");
+        return fbl::unique_fd();
+    }
+    zx_status_t call_status;
     constexpr char kFvmDriverLib[] = "/boot/driver/fvm.so";
-    r = ioctl_device_bind(partition_fd.get(), kFvmDriverLib, sizeof(kFvmDriverLib));
-    if (r < 0) {
+    status = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io), kFvmDriverLib,
+                                           strlen(kFvmDriverLib), &call_status);
+    fdio_unsafe_release(io);
+    if (status == ZX_OK) {
+        status = call_status;
+    }
+    if (status != ZX_OK) {
         ERROR("Could not bind fvm driver\n");
         return fbl::unique_fd();
     }
@@ -464,9 +500,8 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     zx_status_t status;
 
     char path[PATH_MAX];
-    ssize_t r;
-    if ((r = ioctl_device_get_topo_path(part->new_part.get(), path, sizeof(path))) < 0) {
-        status = static_cast<zx_status_t>(r);
+    status = GetTopoPathFromFd(part->new_part, path, sizeof(path));
+    if (status != ZX_OK) {
         ERROR("Failed to get topological path\n");
         return status;
     }
@@ -502,6 +537,7 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     req.offset = allocated - reserved;
     req.length = needed - allocated;
 
+    ssize_t r;
     if ((r = ioctl_block_fvm_extend(part->new_part.get(), &req)) < 0) {
         status = static_cast<zx_status_t>(r);
         ERROR("Failed to extend zxcrypt volume: %s\n", zx_status_get_string(status));
@@ -515,14 +551,13 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
 zx_status_t FvmPartitionIsChild(const fbl::unique_fd& fvm_fd, const fbl::unique_fd& partition_fd) {
     char fvm_path[PATH_MAX];
     char part_path[PATH_MAX];
-    ssize_t r;
-    if ((r = ioctl_device_get_topo_path(fvm_fd.get(), fvm_path, sizeof(fvm_path))) < 0) {
+    zx_status_t status;
+    if ((status = GetTopoPathFromFd(fvm_fd, fvm_path, sizeof(fvm_path))) != ZX_OK) {
         ERROR("Couldn't get topological path of FVM\n");
-        return static_cast<zx_status_t>(r);
-    } else if ((r = ioctl_device_get_topo_path(partition_fd.get(), part_path,
-                                               sizeof(part_path))) < 0) {
+        return status;
+    } else if ((status = GetTopoPathFromFd(partition_fd, part_path, sizeof(part_path))) != ZX_OK) {
         ERROR("Couldn't get topological path of partition\n");
-        return static_cast<zx_status_t>(r);
+        return status;
     }
     if (strncmp(fvm_path, part_path, strlen(fvm_path))) {
         ERROR("Partition does not exist within FVM\n");
@@ -1013,7 +1048,15 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
         return ZX_ERR_NOT_FOUND;
     }
 
-    switch (detect_disk_format(part_fd.get())) {
+    auto disk_format = detect_disk_format(part_fd.get());
+    zx::channel part_dev;
+    status = fdio_get_service_handle(part_fd.release(), part_dev.reset_and_get_address());
+    if (status != ZX_OK) {
+        ERROR("failed to get service handle\n");
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    switch (disk_format) {
     case DISK_FORMAT_MINFS:
         // If the disk we found is actually minfs, we can just use the block
         // device path we were given by open_partition.
@@ -1023,13 +1066,22 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
     case DISK_FORMAT_ZXCRYPT:
         // Compute the topological path of the FVM block driver, and then tack
         // the zxcrypt-device string onto the end. This should be improved.
-        ioctl_device_get_topo_path(part_fd.get(), path, sizeof(path));
+        zx_status_t call_status;
+        size_t path_len;
+        status = fuchsia_device_ControllerGetTopologicalPath(part_dev.get(), &call_status, path,
+                                                             sizeof(path) - 1, &path_len);
+        if (status != ZX_OK || call_status != ZX_OK) {
+            path[0] = 0;
+        } else {
+            path[path_len] = 0;
+        }
         snprintf(minfs_path, sizeof(minfs_path), "%s/zxcrypt/block", path);
 
         // TODO(security): ZX-1130. We need to bind with channel in order to
         // pass a key here. Where does the key come from? We need to determine
         // if this is unattended.
-        ioctl_device_bind(part_fd.get(), ZXCRYPT_DRIVER_LIB, strlen(ZXCRYPT_DRIVER_LIB));
+        fuchsia_device_ControllerBind(part_dev.get(), ZXCRYPT_DRIVER_LIB,
+                                      strlen(ZXCRYPT_DRIVER_LIB), &call_status);
 
         if ((status = wait_for_device(minfs_path, ZX_SEC(5))) != ZX_OK) {
             ERROR("zxcrypt bind error: %s\n", zx_status_get_string(status));

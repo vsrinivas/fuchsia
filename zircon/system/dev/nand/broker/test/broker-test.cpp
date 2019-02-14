@@ -10,12 +10,12 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/nand/c/fidl.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
-#include <zircon/device/device.h>
 #include <zircon/syscalls.h>
 #include <zxtest/zxtest.h>
 
@@ -54,8 +54,8 @@ public:
     NandDevice();
     ~NandDevice() {
         if (linked_) {
-            fbl::unique_fd broker = caller_.release();
-            ioctl_device_unbind(broker.get());
+            zx_status_t call_status;
+            fuchsia_device_ControllerUnbind(channel(), &call_status);
         }
     }
 
@@ -106,8 +106,19 @@ NandDevice::NandDevice() {
     if (parent_->IsBroker()) {
         caller_.reset(fbl::unique_fd(open(parent_->Path(), O_RDWR)));
     } else {
+        fdio_t* io = fdio_unsafe_fd_to_io(parent_->get());
+        if (io == nullptr) {
+            return;
+        }
+        zx_status_t call_status;
         const char kBroker[] = "/boot/driver/nand-broker.so";
-        if (ioctl_device_bind(parent_->get(), kBroker, sizeof(kBroker) - 1) < 0) {
+        zx_status_t status = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io), kBroker,
+                                                           strlen(kBroker), &call_status);
+        fdio_unsafe_release(io);
+        if (status == ZX_OK) {
+            status = call_status;
+        }
+        if (status != ZX_OK) {
             printf("Failed to bind broker\n");
             return;
         }

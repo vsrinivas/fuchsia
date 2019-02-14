@@ -11,9 +11,11 @@
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fs-management/fvm.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <gpt/cros.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
@@ -298,15 +300,27 @@ bool GptDevicePartitioner::FindTargetGptPath(const fbl::unique_fd& devfs_root, f
             continue;
         }
         out->Set(PATH_MAX, '\0');
-        ssize_t r = ioctl_device_get_topo_path(fd.get(), const_cast<char*>(out->data()), PATH_MAX);
-        if (r < 0) {
-            continue;
-        }
 
         block_info_t info;
+        ssize_t r;
         if ((r = ioctl_block_get_info(fd.get(), &info) < 0)) {
             continue;
         }
+
+        zx::channel dev;
+        zx_status_t status = fdio_get_service_handle(fd.release(), dev.reset_and_get_address());
+        if (status != ZX_OK) {
+            continue;
+        }
+        size_t path_len;
+        zx_status_t call_status;
+        char* data = const_cast<char*>(out->data());
+        status = fuchsia_device_ControllerGetTopologicalPath(dev.get(), &call_status, data,
+                                                             PATH_MAX - 1, &path_len);
+        if (status != ZX_OK || call_status != ZX_OK) {
+            continue;
+        }
+        data[path_len] = 0;
 
         // TODO(ZX-1344): This is a hack, but practically, will work for our
         // usage.
@@ -363,9 +377,20 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
             ERROR("Failed to re-read GPT\n");
             return ZX_ERR_BAD_STATE;
         }
+
+        fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
+        if (io == nullptr) {
+            ERROR("Failed to convert to io\n");
+            return ZX_ERR_BAD_STATE;
+        }
+        zx_status_t call_status;
         // Manually re-bind the GPT driver, since it is almost certainly
         // too late to be noticed by the block watcher.
-        if ((rc = ioctl_device_bind(fd.get(), kGptDriverName, strlen(kGptDriverName))) != ZX_OK) {
+        zx_status_t status = fuchsia_device_ControllerBind(
+                fdio_unsafe_borrow_channel(io), kGptDriverName, strlen(kGptDriverName),
+                &call_status);
+        fdio_unsafe_release(io);
+        if (status != ZX_OK || call_status != ZX_OK) {
             ERROR("Failed to bind GPT\n");
             return ZX_ERR_BAD_STATE;
         }
@@ -1047,14 +1072,26 @@ zx_status_t SkipBlockDevicePartitioner::WipePartitions() {
         return ZX_OK;
     }
 
+    zx::channel block_dev;
+    status = fdio_get_service_handle(block_fd.release(), block_dev.reset_and_get_address());
+    if (status != ZX_OK) {
+        ERROR("Warning: Could not get block service handle: %s\n", zx_status_get_string(status));
+        return status;
+    }
     char name[PATH_MAX + 1];
-    ssize_t result;
-    if ((result = ioctl_device_get_topo_path(block_fd.get(), name, PATH_MAX)) < 0) {
-        status = static_cast<zx_status_t>(result);
+    size_t name_len;
+    zx_status_t call_status;
+    status = fuchsia_device_ControllerGetTopologicalPath(block_dev.get(), &call_status, name,
+                                                         sizeof(name) - 1, &name_len);
+    if (status == ZX_OK) {
+        status = call_status;
+    }
+    if (status != ZX_OK) {
         ERROR("Warning: Could not get name for partition: %s\n",
               zx_status_get_string(status));
         return status;
     }
+    name[name_len] = 0;
 
     const char* parent = dirname(name);
 

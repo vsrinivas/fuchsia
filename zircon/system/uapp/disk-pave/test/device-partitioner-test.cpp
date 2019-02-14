@@ -12,13 +12,15 @@
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <ramdevice-client/ramnand.h>
 #include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
 #include <zircon/boot/image.h>
-#include <zircon/device/device.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -149,9 +151,22 @@ static fbl::Vector<fbl::String> test_skip_block_devices;
 
 bool FilterRealBlockDevices(const fbl::unique_fd& fd) {
     char topo_path[PATH_MAX] = {'\0'};
-    if (ioctl_device_get_topo_path(fd.get(), topo_path, PATH_MAX) < 0) {
+
+    fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
+    if (io == nullptr) {
         return false;
     }
+    zx_status_t call_status;
+    size_t path_len;
+    zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
+            fdio_unsafe_borrow_channel(io), &call_status, topo_path, sizeof(topo_path) - 1 ,
+            &path_len);
+    fdio_unsafe_release(io);
+    if (status != ZX_OK || call_status != ZX_OK) {
+        return false;
+    }
+    topo_path[path_len] = 0;
+
     for (const auto& device : test_block_devices) {
         if (strstr(topo_path, device.data()) == topo_path) {
             return false;
@@ -168,12 +183,21 @@ bool Initialize() {
 
 bool InsertTestDevices(fbl::StringPiece path) {
     BEGIN_HELPER;
-    fbl::unique_fd fd(open(path.data(), O_RDWR));
-    ASSERT_TRUE(fd.is_valid());
-    fbl::String topo_path(PATH_MAX, '\0');
-    ASSERT_GE(ioctl_device_get_topo_path(fd.get(), const_cast<char*>(topo_path.data()), PATH_MAX),
-              0);
-    test_block_devices.push_back(std::move(topo_path));
+    zx::channel device, device_remote;
+    ASSERT_EQ(zx::channel::create(0, &device, &device_remote), ZX_OK);
+    ASSERT_EQ(fdio_service_connect(path.data(), device_remote.release()), ZX_OK);
+
+    char topo_path[PATH_MAX] = {};
+    zx_status_t call_status;
+    size_t path_len;
+    ASSERT_EQ(fuchsia_device_ControllerGetTopologicalPath(device.get(), &call_status, topo_path,
+                                                          sizeof(topo_path) - 1, &path_len),
+              ZX_OK);
+    ASSERT_EQ(call_status, ZX_OK);
+    topo_path[path_len] = 0;
+
+    fbl::String topo_path_str(topo_path);
+    test_block_devices.push_back(std::move(topo_path_str));
     END_HELPER;
 }
 

@@ -12,9 +12,11 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <fuchsia/nand/c/fidl.h>
 #include <lib/cksum.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -22,7 +24,6 @@
 #include <lib/zx/vmo.h>
 #include <pretty/hexdump.h>
 #include <zircon/assert.h>
-#include <zircon/device/device.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
@@ -283,11 +284,23 @@ bool NandBroker::LoadBroker() {
         // The passed-in device is already a broker.
         return true;
     }
-    const char kBroker[] = "/boot/driver/nand-broker.so";
-    if (ioctl_device_bind(device_.get(), kBroker, sizeof(kBroker) - 1) < 0) {
-        printf("Failed to issue bind command\n");
+
+    fdio_t* io = fdio_unsafe_fd_to_io(device_.get());
+    if (io == nullptr) {
+        printf("Could not convert fd to io\n");
         return false;
     }
+    zx_status_t call_status;
+    const char kBroker[] = "/boot/driver/nand-broker.so";
+    zx_status_t status = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io),
+                                                       kBroker, sizeof(kBroker) - 1,
+                                                       &call_status);
+    fdio_unsafe_release(io);
+    if (status != ZX_OK || call_status != ZX_OK) {
+        fprintf(stderr, "Failed to issue bind command\n");
+        return false;
+    }
+
     device_ = OpenBroker(path_);
     if (!device_) {
         printf("Failed to bind broker\n");
