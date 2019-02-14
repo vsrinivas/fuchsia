@@ -4,16 +4,22 @@
 
 library zircon.device.block;
 
+/// Flag advertising trim support.
+const uint32 BLOCK_TRIM_SUPPORT = 0x00000001;
+
 [repr = "C"]
 struct BlockInfo {
     /// The number of blocks in this block device.
     uint64 block_count;
+
     /// The size of a single block.
     uint32 block_size;
+
     /// Max size in bytes per transfer.
     /// May be BLOCK_MAXRANSFER_UNBOUNDED if there
     /// is no restriction.
     uint32 max_transfer_size;
+
     uint32 flags;
     uint32 reserved;
 };

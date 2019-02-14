@@ -64,6 +64,7 @@ uint32_t OpcodeToCommand(uint32_t opcode) {
     static_assert(BLOCK_OP_READ == BLOCKIO_READ, "");
     static_assert(BLOCK_OP_WRITE == BLOCKIO_WRITE, "");
     static_assert(BLOCK_OP_FLUSH == BLOCKIO_FLUSH, "");
+    static_assert(BLOCK_OP_TRIM == BLOCKIO_TRIM, "");
     static_assert(BLOCK_FL_BARRIER_BEFORE == BLOCKIO_BARRIER_BEFORE, "");
     static_assert(BLOCK_FL_BARRIER_AFTER == BLOCKIO_BARRIER_AFTER, "");
     const uint32_t shared = BLOCK_OP_READ | BLOCK_OP_WRITE | BLOCK_OP_FLUSH |
@@ -329,9 +330,7 @@ zx_status_t BlockServer::ProcessReadWriteRequest(block_fifo_request_t* request) 
         return ZX_ERR_IO;
     }
 
-    if ((request->length < 1) ||
-        (request->length > std::numeric_limits<uint32_t>::max())) {
-        // Operation which is too small or too large.
+    if (!request->length) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -430,6 +429,23 @@ zx_status_t BlockServer::ProcessFlushRequest(block_fifo_request_t* request) {
     return ZX_OK;
 }
 
+zx_status_t BlockServer::ProcessTrimRequest(block_fifo_request_t* request) {
+    if (!request->length) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    fbl::unique_ptr<BlockMessage> msg;
+    zx_status_t status = BlockMessage::Create(block_op_size_, &msg);
+    if (status != ZX_OK) {
+        return status;
+    }
+    msg->Init(nullptr, this, request);
+    msg->Op()->command = OpcodeToCommand(request->opcode);
+    InQueueAdd(ZX_HANDLE_INVALID, request->length, 0, request->dev_offset,
+               msg.release(), &in_queue_);
+    return ZX_OK;
+}
+
 void BlockServer::ProcessRequest(block_fifo_request_t* request) {
     zx_status_t status;
     switch (request->opcode & BLOCKIO_OP_MASK) {
@@ -439,14 +455,19 @@ void BlockServer::ProcessRequest(block_fifo_request_t* request) {
             TxnComplete(status, request->reqid, request->group);
         }
         break;
-    case BLOCKIO_CLOSE_VMO:
-        status = ProcessCloseVmoRequest(request);
-        TxnComplete(status, request->reqid, request->group);
-        break;
     case BLOCKIO_FLUSH:
         if ((status = ProcessFlushRequest(request)) != ZX_OK) {
             TxnComplete(status, request->reqid, request->group);
         }
+        break;
+    case BLOCKIO_TRIM:
+        if ((status = ProcessTrimRequest(request)) != ZX_OK) {
+            TxnComplete(status, request->reqid, request->group);
+        }
+        break;
+    case BLOCKIO_CLOSE_VMO:
+        status = ProcessCloseVmoRequest(request);
+        TxnComplete(status, request->reqid, request->group);
         break;
     default:
         fprintf(stderr, "Unrecognized Block Server operation: %x\n",
