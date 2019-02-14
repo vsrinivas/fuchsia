@@ -22,8 +22,6 @@ namespace {
 constexpr char kUsageLogUrl[] =
     "fuchsia-pkg://fuchsia.com/usage_log#meta/usage_log.cmx";
 constexpr char kKronkUrl[] = "kronk";
-constexpr char kStoryInfoAgentUrl[] =
-    "fuchsia-pkg://fuchsia.com/story_info#meta/story_info.cmx";
 static constexpr modular::RateLimitedRetry::Threshold kSessionAgentRetryLimit =
     {3, zx::sec(45)};
 
@@ -122,8 +120,6 @@ void UserIntelligenceProviderImpl::StartAgents(
     FXL_LOG(INFO) << " " << agent;
     StartAgent(agent);
   }
-
-  StartAgent(kStoryInfoAgentUrl);
 }
 
 void UserIntelligenceProviderImpl::GetServicesForAgent(
@@ -284,29 +280,6 @@ std::vector<std::string> UserIntelligenceProviderImpl::AddAgentServices(
         [this](
             fidl::InterfaceRequest<fuchsia::modular::SuggestionDebug> request) {
           suggestion_services_.ConnectToService(std::move(request));
-        });
-  }
-
-  if (url == kStoryInfoAgentUrl) {
-    service_names.push_back(fuchsia::modular::VisibleStoriesProvider::Name_);
-    agent_host->AddService<fuchsia::modular::VisibleStoriesProvider>(
-        [this](fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider>
-                   request) {
-          visible_stories_provider_connector_(std::move(request));
-        });
-
-    service_names.push_back(fuchsia::modular::StoryProvider::Name_);
-    agent_host->AddService<fuchsia::modular::StoryProvider>(
-        [this](
-            fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
-          story_provider_connector_(std::move(request));
-        });
-
-    service_names.push_back(fuchsia::modular::FocusProvider::Name_);
-    agent_host->AddService<fuchsia::modular::FocusProvider>(
-        [this](
-            fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
-          focus_provider_connector_(std::move(request));
         });
   }
 

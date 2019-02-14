@@ -7,7 +7,6 @@
         "peridot/packages/prod/maxwell",
         "peridot/packages/prod/modular",
         "peridot/packages/prod/module_resolver",
-        "peridot/packages/prod/sessionctl",
-        "peridot/packages/prod/story_info"
+        "peridot/packages/prod/sessionctl"
     ]
 }
