@@ -9,7 +9,7 @@
 #include <map>
 #include <mutex>
 
-#include "garnet/lib/debug_ipc/helper/file_line_function.h"
+#include "garnet/lib/debug_ipc/debug/file_line_function.h"
 #include "lib/fxl/macros.h"
 
 #if defined(__Fuchsia__)
@@ -72,9 +72,6 @@ class MessageLoop {
   // the same underlying OS handle, so the caller can only watch one of them.
   virtual WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) = 0;
 
-  bool debug_mode() const { return debug_mode_; }
-  void set_debug_mode(bool active) { debug_mode_ = active; }
-
  protected:
   virtual void RunImpl() = 0;
 
@@ -111,9 +108,6 @@ class MessageLoop {
   std::deque<Task> task_queue_;
 
   bool should_quit_ = false;
-
-  // Whether the message loop should output debug information.
-  bool debug_mode_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MessageLoop);
 };

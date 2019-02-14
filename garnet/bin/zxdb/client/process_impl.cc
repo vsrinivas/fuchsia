@@ -15,6 +15,7 @@
 #include "garnet/bin/zxdb/client/thread_impl.h"
 #include "garnet/bin/zxdb/symbols/input_location.h"
 #include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
+#include "garnet/lib/debug_ipc/debug/block_timer.h"
 #include "garnet/public/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -164,6 +165,7 @@ void ProcessImpl::WriteMemory(uint64_t address, std::vector<uint8_t> data,
 }
 
 void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record) {
+  TIME_BLOCK();
   if (threads_.find(record.koid) != threads_.end()) {
     // Duplicate new thread notification. Some legitimate cases could cause
     // this, like the client requesting a thread list (which will add missing
@@ -180,6 +182,7 @@ void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record) {
 }
 
 void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
+  TIME_BLOCK();
   auto found = threads_.find(record.koid);
   if (found == threads_.end()) {
     // Duplicate exit thread notification. Some legitimate cases could cause
@@ -195,6 +198,7 @@ void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
 
 void ProcessImpl::OnModules(const std::vector<debug_ipc::Module>& modules,
                             const std::vector<uint64_t>& stopped_thread_koids) {
+  TIME_BLOCK();
   symbols_.SetModules(modules);
 
   // The threads loading the library will be stopped so we have time to load
@@ -270,6 +274,7 @@ void ProcessImpl::WillUnloadModuleSymbols(LoadedModuleSymbols* module) {
 }
 
 void ProcessImpl::OnSymbolLoadFailure(const Err& err) {
+  TIME_BLOCK();
   for (auto& observer : observers())
     observer.OnSymbolLoadFailure(this, err);
 }

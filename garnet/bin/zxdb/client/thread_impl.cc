@@ -18,6 +18,7 @@
 #include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/bin/zxdb/client/thread_controller.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
+#include "garnet/lib/debug_ipc/debug/block_timer.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "lib/fxl/logging.h"
@@ -241,6 +242,7 @@ void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
 void ThreadImpl::OnException(
     debug_ipc::NotifyException::Type type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+  TIME_BLOCK();
 #if defined(DEBUG_THREAD_CONTROLLERS)
   ThreadController::LogRaw("----------\r\nGot exception @ 0x%" PRIx64,
                            stack_[0]->GetAddress());

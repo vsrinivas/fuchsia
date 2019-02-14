@@ -12,8 +12,6 @@ static_library("helper") {
     "buffered_fd.h",
     "elf.cc",
     "elf.h",
-    "file_line_function.cc",
-    "file_line_function.h",
     "message_loop.cc",
     "message_loop.h",
     "regex.cc",
@@ -28,7 +26,7 @@ static_library("helper") {
   ]
 
   public_deps = [
-    #"//garnet/public/lib/component/cpp",
+    "//garnet/lib/debug_ipc/debug",
     "//garnet/public/lib/fxl",
   ]
 

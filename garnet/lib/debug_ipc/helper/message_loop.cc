@@ -4,6 +4,7 @@
 
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 
+#include "garnet/lib/debug_ipc/debug/block_timer.h"
 #include "garnet/public/lib/fxl/logging.h"
 
 namespace debug_ipc {
@@ -61,11 +62,10 @@ bool MessageLoop::ProcessPendingTask() {
   task_queue_.pop_front();
   {
     mutex_.unlock();
-    if (debug_mode()) {
-      FXL_LOG(INFO) << "Running task from [" << task.file_line.ToString()
-                    << "]";
+    {
+      debug_ipc::BlockTimer(task.file_line);
+      task.task_fn();
     }
-    task.task_fn();
     mutex_.lock();
   }
   return true;

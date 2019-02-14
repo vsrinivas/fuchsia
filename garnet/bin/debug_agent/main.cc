@@ -16,6 +16,7 @@
 #include "garnet/bin/debug_agent/remote_api_adapter.h"
 #include "garnet/bin/debug_agent/unwind.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
+#include "garnet/lib/debug_ipc/debug/debug.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_async.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_target.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
@@ -217,9 +218,10 @@ int main(int argc, char* argv[]) {
     message_loop_type = MessageLoopTarget::LoopType::kAsync;
   }
 
-  bool debug_mode = false;
-  if (cmdline.HasOption("debug-message-loop"))
-    debug_mode = true;
+  if (cmdline.HasOption("debug-message-loop")) {
+    printf("Running message loop in debug mode.\n");
+    debug_ipc::SetDebugMode(true);
+  }
 
   std::string value;
   if (cmdline.GetOptionValue("port", &value)) {
@@ -237,11 +239,6 @@ int main(int argc, char* argv[]) {
            MessageLoopTarget::LoopTypeToString(message_loop_type));
     auto message_loop = debug_agent::GetMessageLoop(message_loop_type);
     message_loop->Init();
-
-    if (debug_mode) {
-      printf("Running message loop in debug mode.\n");
-      message_loop->set_debug_mode(true);
-    }
 
     // The scope ensures the objects are destroyed before calling Cleanup on the
     // MessageLoop.

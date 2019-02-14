@@ -4,12 +4,15 @@
 
 #include "garnet/lib/debug_ipc/helper/message_loop_async.h"
 
+#include <stdio.h>
+
 #include <lib/fdio/io.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <zircon/syscalls/exception.h>
 
+#include "garnet/lib/debug_ipc/debug/block_timer.h"
 #include "garnet/lib/debug_ipc/helper/event_handlers.h"
 #include "garnet/lib/debug_ipc/helper/fd_watcher.h"
 #include "garnet/lib/debug_ipc/helper/socket_watcher.h"
@@ -391,6 +394,8 @@ void MessageLoopAsync::SetHasTasks() { task_event_.signal(0, kTaskSignal); }
 
 void MessageLoopAsync::OnFdioSignal(int watch_id, const WatchInfo& info,
                                     zx_signals_t observed) {
+  TIME_BLOCK();
+
   uint32_t events = 0;
   fdio_unsafe_wait_end(info.fdio, observed, &events);
 
@@ -451,6 +456,8 @@ void MessageLoopAsync::AddException(const ExceptionHandler& handler,
 void MessageLoopAsync::OnProcessException(const ExceptionHandler& handler,
                                           const WatchInfo& info,
                                           const zx_port_packet_t& packet) {
+  TIME_BLOCK();
+
   if (ZX_PKT_IS_EXCEPTION(packet.type)) {
     // All debug exceptions.
     switch (packet.type) {
@@ -492,6 +499,8 @@ void MessageLoopAsync::OnProcessTerminated(const WatchInfo& info,
 void MessageLoopAsync::OnJobException(const ExceptionHandler& handler,
                                       const WatchInfo& info,
                                       const zx_port_packet_t& packet) {
+  TIME_BLOCK();
+
   if (ZX_PKT_IS_EXCEPTION(packet.type)) {
     // All debug exceptions.
     switch (packet.type) {
@@ -509,6 +518,8 @@ void MessageLoopAsync::OnJobException(const ExceptionHandler& handler,
 
 void MessageLoopAsync::OnSocketSignal(int watch_id, const WatchInfo& info,
                                       zx_signals_t observed) {
+  TIME_BLOCK();
+
   FXL_LOG(INFO) << __FUNCTION__;
   // Dispatch readable signal.
   if (observed & ZX_SOCKET_READABLE)

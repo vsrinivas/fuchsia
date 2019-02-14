@@ -31,8 +31,8 @@ SignalHandler::~SignalHandler() {
   if (handle_) {
     async_wait_t* wait = handle_.get();
 
-    zx_status_t res = async_cancel_wait(async_get_default_dispatcher(), wait);
-    FXL_DCHECK(res == ZX_OK);
+    auto status = async_cancel_wait(async_get_default_dispatcher(), wait);
+    FXL_DCHECK(status == ZX_OK) << "Got: " << ZxStatusToString(status);
   }
 }
 

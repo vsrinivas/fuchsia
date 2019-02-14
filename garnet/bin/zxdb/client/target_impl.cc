@@ -11,6 +11,7 @@
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system_impl.h"
 #include "garnet/bin/zxdb/client/target_observer.h"
+#include "garnet/lib/debug_ipc/debug/block_timer.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "garnet/public/lib/fxl/logging.h"
@@ -41,6 +42,7 @@ std::unique_ptr<TargetImpl> TargetImpl::Clone(SystemImpl* system) {
 
 void TargetImpl::ProcessCreatedInJob(uint64_t koid,
                                      const std::string& process_name) {
+  TIME_BLOCK();
   FXL_DCHECK(state_ == State::kNone);
   FXL_DCHECK(!process_.get());  // Shouldn't have a process.
 

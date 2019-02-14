@@ -8,7 +8,7 @@
 
 #include <optional>
 
-#include "garnet/lib/debug_ipc/helper/file_line_function.h"
+#include "garnet/lib/debug_ipc/debug/file_line_function.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "lib/fxl/arraysize.h"
 

@@ -20,6 +20,7 @@
 #include "garnet/bin/debug_agent/process_info.h"
 #include "garnet/bin/debug_agent/system_info.h"
 #include "garnet/lib/debug_ipc/agent_protocol.h"
+#include "garnet/lib/debug_ipc/debug/block_timer.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
@@ -37,6 +38,7 @@ DebugAgent::DebugAgent(debug_ipc::StreamBuffer* stream,
 DebugAgent::~DebugAgent() = default;
 
 void DebugAgent::OnProcessStart(zx::process process) {
+  TIME_BLOCK();
   auto koid = KoidForObject(process);
   auto name = NameForObject(process);
 
@@ -76,12 +78,14 @@ void DebugAgent::RemoveBreakpoint(uint32_t breakpoint_id) {
 
 void DebugAgent::OnHello(const debug_ipc::HelloRequest& request,
                          debug_ipc::HelloReply* reply) {
+  TIME_BLOCK();
   // Version and signature are default-initialized to their current values.
   reply->arch = arch::ArchProvider::Get().GetArch();
 }
 
 void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
                           debug_ipc::LaunchReply* reply) {
+  TIME_BLOCK();
   switch (request.inferior_type) {
     case debug_ipc::InferiorType::kBinary:
       LaunchProcess(request, reply);
@@ -98,6 +102,7 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
 
 void DebugAgent::OnKill(const debug_ipc::KillRequest& request,
                         debug_ipc::KillReply* reply) {
+  TIME_BLOCK();
   auto debug_process = GetDebuggedProcess(request.process_koid);
 
   if (!debug_process || !debug_process->process().is_valid()) {
@@ -108,6 +113,7 @@ void DebugAgent::OnKill(const debug_ipc::KillRequest& request,
 }
 
 void DebugAgent::OnAttach(std::vector<char> serialized) {
+  TIME_BLOCK();
   debug_ipc::MessageReader reader(std::move(serialized));
   debug_ipc::AttachRequest request;
   uint32_t transaction_id = 0;
@@ -203,6 +209,7 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
 
 void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request,
                           debug_ipc::DetachReply* reply) {
+  TIME_BLOCK();
   switch (request.type) {
     case debug_ipc::DetachRequest::Type::kJob: {
       auto debug_job = GetDebuggedJob(request.koid);
@@ -231,6 +238,7 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request,
 
 void DebugAgent::OnPause(const debug_ipc::PauseRequest& request,
                          debug_ipc::PauseReply* reply) {
+  TIME_BLOCK();
   if (request.process_koid) {
     // Single process.
     DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
@@ -245,12 +253,14 @@ void DebugAgent::OnPause(const debug_ipc::PauseRequest& request,
 
 void DebugAgent::OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
                              debug_ipc::QuitAgentReply* reply) {
+  TIME_BLOCK();
   should_quit_ = true;
   debug_ipc::MessageLoop::Current()->QuitNow();
 };
 
 void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request,
                           debug_ipc::ResumeReply* reply) {
+  TIME_BLOCK();
   if (request.process_koid) {
     // Single process.
     DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
@@ -265,6 +275,7 @@ void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request,
 
 void DebugAgent::OnModules(const debug_ipc::ModulesRequest& request,
                            debug_ipc::ModulesReply* reply) {
+  TIME_BLOCK();
   DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
   if (proc)
     proc->OnModules(reply);
@@ -272,11 +283,13 @@ void DebugAgent::OnModules(const debug_ipc::ModulesRequest& request,
 
 void DebugAgent::OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
                                debug_ipc::ProcessTreeReply* reply) {
+  TIME_BLOCK();
   GetProcessTree(&reply->root);
 }
 
 void DebugAgent::OnThreads(const debug_ipc::ThreadsRequest& request,
                            debug_ipc::ThreadsReply* reply) {
+  TIME_BLOCK();
   auto found = procs_.find(request.process_koid);
   if (found == procs_.end())
     return;
@@ -286,6 +299,7 @@ void DebugAgent::OnThreads(const debug_ipc::ThreadsRequest& request,
 
 void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                               debug_ipc::ReadMemoryReply* reply) {
+  TIME_BLOCK();
   DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
   if (proc)
     proc->OnReadMemory(request, reply);
@@ -293,6 +307,7 @@ void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
 
 void DebugAgent::OnReadRegisters(const debug_ipc::ReadRegistersRequest& request,
                                  debug_ipc::ReadRegistersReply* reply) {
+  TIME_BLOCK();
   DebuggedThread* thread =
       GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread) {
@@ -305,6 +320,7 @@ void DebugAgent::OnReadRegisters(const debug_ipc::ReadRegistersRequest& request,
 void DebugAgent::OnWriteRegisters(
     const debug_ipc::WriteRegistersRequest& request,
     debug_ipc::WriteRegistersReply* reply) {
+  TIME_BLOCK();
   DebuggedThread* thread =
       GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread) {
@@ -318,6 +334,7 @@ void DebugAgent::OnWriteRegisters(
 void DebugAgent::OnAddOrChangeBreakpoint(
     const debug_ipc::AddOrChangeBreakpointRequest& request,
     debug_ipc::AddOrChangeBreakpointReply* reply) {
+  TIME_BLOCK();
   uint32_t id = request.breakpoint.breakpoint_id;
 
   auto found = breakpoints_.find(id);
@@ -333,11 +350,13 @@ void DebugAgent::OnAddOrChangeBreakpoint(
 void DebugAgent::OnRemoveBreakpoint(
     const debug_ipc::RemoveBreakpointRequest& request,
     debug_ipc::RemoveBreakpointReply* reply) {
+  TIME_BLOCK();
   RemoveBreakpoint(request.breakpoint_id);
 }
 
 void DebugAgent::OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
                                 debug_ipc::ThreadStatusReply* reply) {
+  TIME_BLOCK();
   DebuggedThread* thread =
       GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread) {
@@ -396,6 +415,7 @@ void DebugAgent::UnregisterWatchpoint(Watchpoint* wp, zx_koid_t process_koid,
 
 void DebugAgent::OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
                                 debug_ipc::AddressSpaceReply* reply) {
+  TIME_BLOCK();
   DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
   if (proc)
     proc->OnAddressSpace(request, reply);
@@ -403,6 +423,7 @@ void DebugAgent::OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
 
 void DebugAgent::OnJobFilter(const debug_ipc::JobFilterRequest& request,
                              debug_ipc::JobFilterReply* reply) {
+  TIME_BLOCK();
   DebuggedJob* job = GetDebuggedJob(request.job_koid);
   if (!job) {
     reply->status = ZX_ERR_INVALID_ARGS;
@@ -414,6 +435,7 @@ void DebugAgent::OnJobFilter(const debug_ipc::JobFilterRequest& request,
 
 void DebugAgent::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
                                debug_ipc::WriteMemoryReply* reply) {
+  TIME_BLOCK();
   DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
   if (proc)
     proc->OnWriteMemory(request, reply);
@@ -423,6 +445,7 @@ void DebugAgent::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
 
 void DebugAgent::OnSymbolTables(const debug_ipc::SymbolTablesRequest& request,
                                 debug_ipc::SymbolTablesReply* reply) {
+  TIME_BLOCK();
   DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
   if (proc)
     proc->OnSymbolTables(request, reply);

@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/lib/debug_ipc/helper/file_line_function.h"
+#include "garnet/lib/debug_ipc/debug/file_line_function.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "garnet/lib/debug_ipc/register_test_support.h"
 

@@ -14,6 +14,7 @@
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
+#include "garnet/lib/debug_ipc/debug/debug.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_poll.h"
 #include "garnet/public/lib/fxl/command_line.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
@@ -92,7 +93,7 @@ int ConsoleMain(int argc, const char* argv[]) {
 
   debug_ipc::MessageLoopPoll loop;
   if (options.debug_info)
-    loop.set_debug_mode(true);
+    debug_ipc::SetDebugMode(true);
 
   loop.Init();
 

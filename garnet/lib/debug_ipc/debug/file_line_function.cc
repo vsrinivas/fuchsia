@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/debug_ipc/helper/file_line_function.h"
+#include "garnet/lib/debug_ipc/debug/file_line_function.h"
 
+#include "lib/fxl/files/path.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace debug_ipc {
@@ -22,9 +23,19 @@ bool operator<(const FileLineFunction& a, const FileLineFunction& b) {
 
 std::string FileLineFunction::ToString() const {
   if (function_.empty()) {
-    return fxl::StringPrintf("%s:%d", file_.data(), line_);
+    return fxl::StringPrintf("[%s:%d]", file_.data(), line_);
   } else {
-    return fxl::StringPrintf("%s:%d (%s)", file_.data(), line_,
+    return fxl::StringPrintf("[%s:%d][%s]", file_.data(), line_,
+                             function_.data());
+  }
+}
+
+std::string FileLineFunction::ToStringWithBasename() const {
+  auto basename = files::GetBaseName(file_.c_str());
+  if (function_.empty()) {
+    return fxl::StringPrintf("[%s:%d]", basename.c_str(), line_);
+  } else {
+    return fxl::StringPrintf("[%s:%d][%s]", basename.data(), line_,
                              function_.data());
   }
 }

@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This library contains utilities useful to debug all clients of the zxdb suite.
+source_set("debug") {
+  public = [
+    "block_timer.h",
+    "file_line_function.h",
+    "debug.h",
+  ]
+
+  sources = [
+    "block_timer.cc",
+    "file_line_function.cc",
+    "debug.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+}

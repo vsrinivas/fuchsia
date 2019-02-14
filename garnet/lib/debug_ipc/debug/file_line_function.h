@@ -9,7 +9,7 @@
 namespace debug_ipc {
 
 #define FROM_HERE \
-  ::debug_ipc::FileLineFunction(__FILE__, __LINE__, __PRETTY_FUNCTION__)
+  ::debug_ipc::FileLineFunction(__FILE__, __LINE__, __FUNCTION__)
 #define FROM_HERE_NO_FUNC ::debug_ipc::FileLineFunction(__FILE__, __LINE__)
 
 class FileLineFunction {
@@ -24,6 +24,8 @@ class FileLineFunction {
   int line() const { return line_; }
 
   std::string ToString() const;
+  // Removes everything up the the filename from the file path.
+  std::string ToStringWithBasename() const;
 
  private:
   std::string file_;

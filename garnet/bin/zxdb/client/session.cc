@@ -24,6 +24,7 @@
 #include "garnet/bin/zxdb/client/thread_impl.h"
 #include "garnet/lib/debug_ipc/client_protocol.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
+#include "garnet/lib/debug_ipc/debug/block_timer.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
@@ -530,6 +531,7 @@ void Session::DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
 void Session::DispatchNotifyException(
     const debug_ipc::NotifyException& notify,
     bool set_metadata) {
+  TIME_BLOCK();
   ThreadImpl* thread =
       ThreadImplFromKoid(notify.process_koid, notify.thread.koid);
   if (!thread) {
