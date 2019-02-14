@@ -65,4 +65,13 @@ library("fbl") {
     # Avoid circularity.
     configs -= [ "$zx/kernel/vm:headers.config" ]
   }
+
+  if (is_fuchsia && !is_kernel) {
+    # TODO(BLD-353): It doesn't really depend on the vDSO, but this is the
+    # way to get the legacy build to use -Isystem/public for host library
+    # builds (go figure).
+    deps = [
+      "$zx/system/ulib/zircon",
+    ]
+  }
 }

@@ -34,8 +34,7 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
   }
 
   library("zircon") {
-    sdk = "shared"
-    sdk_headers = [ "zircon/status.h" ]  # TODO(BLD-353)
+    # TODO(BLD-353): Legacy export for this is handled in $zx/system/ulib/c.
     shared = true
     static = false
 

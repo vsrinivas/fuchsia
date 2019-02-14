@@ -309,20 +309,21 @@ template("library") {
     static = !kernel
   }
   if (defined(invoker.sdk)) {
-    # TODO(BLD-353): This will be used later for the legacy build
-    # integration and/or SDK generated, which isn't implemented yet.  The
-    # parameters are supported (and ignored) now so that library()
-    # invocations can be written now with complete information and not all
-    # need the sdk bits filled in later.
-    not_needed(invoker,
-               [
-                 "sdk",
-                 "sdk_headers",
-               ])
+    # TODO(BLD-353): This is currently used for the legacy build integration.
+    # Eventually it will instead drive the proper SDK production directly, but
+    # it's likely the details will change when that happens.  For now it's not
+    # meant to be very clean, just to do what works in the legacy build.
+    sdk = invoker.sdk
+    sdk_headers = invoker.sdk_headers
+  } else {
+    sdk = false
+    sdk_headers = []
   }
   _library_params = [
     "kernel",
     "host",
+    "sdk",
+    "sdk_headers",
     "shared",
     "static",
   ]
@@ -359,6 +360,16 @@ template("library") {
           public_deps = []
         }
         public_deps += [ ":${_library_name}.headers" ]
+
+        # TODO(BLD-353): temporary hack
+        if (sdk != false && !static && !shared &&
+            toolchain.tags + [ "gcc" ] - [ "gcc" ] == []) {
+          if (!defined(data_deps)) {
+            data_deps = []
+          }
+          data_deps +=
+              [ ":$_library_name-$current_cpu.pkg(${toolchain.label})" ]
+        }
       }
     }
   } else if (is_host) {
@@ -496,6 +507,20 @@ template("library") {
           ":${_library_name}.static",
         ]
       }
+
+      # TODO(BLD-353): temporary hack
+      if (sdk != false && toolchain.environment == "user" &&
+          toolchain.tags + [ "gcc" ] - [ "gcc" ] == []) {
+        if (sdk == "shared") {
+          data_deps = [
+            ":$_library_name-$current_cpu.pkg(${toolchain.shlib})",
+          ]
+        } else {
+          data_deps = [
+            ":$_library_name-$current_cpu.pkg(${toolchain.label})",
+          ]
+        }
+      }
     }
   }
 
@@ -588,6 +613,159 @@ template("library") {
           public_deps = [
             ":${_library_name}.shared",
           ]
+        }
+      }
+    }
+  }
+
+  # TODO(BLD-353): temporary hacks
+  if (sdk != false &&
+      (toolchain.environment == "user" || (!shared && !static))) {
+    if (sdk == "static") {
+      assert(static,
+             "$target_name must have static=true to have sdk=\"static\"")
+    } else if (sdk == "shared") {
+      assert(shared || !defined(toolchain.shlib),
+             "$target_name must have shared=true to have sdk=\"shared\"")
+    } else {
+      assert(sdk == "source",
+             "$target_name sdk=\"$sdk\" not static, shared, or source")
+    }
+    if (toolchain.tags + [ "gcc" ] - [ "gcc" ] != [] ||
+        (defined(toolchain.shlib) &&
+         ((sdk == "shared" && current_toolchain != toolchain.shlib) ||
+          (sdk != "shared" && current_toolchain == toolchain.shlib)))) {
+      sdk = false
+    }
+    if (sdk != false) {
+      import("$zx/public/gn/legacy_pkg.gni")
+      legacy_pkg("$target_name-$current_cpu.pkg") {
+        contents = [
+          "[package]",
+          "name=$_library_name",
+          "type=lib",
+        ]
+        if (sdk == "source") {
+          contents += [
+            "arch=src",
+            "[src]",
+          ]
+          foreach(file, invoker.sources) {
+            contents += [ rebase_path(file, ".") + "=SOURCE/" +
+                          rebase_path(file, "//") ]
+          }
+        } else {
+          contents += [
+            "arch=$zircon_cpu",
+            "[lib]",
+          ]
+          if (sdk == "static") {
+            if (defined(invoker.output_prefix_override) &&
+                invoker.output_prefix_override) {
+              contents += [ "lib/${_library_name}.a=BUILD/" +
+                            rebase_path("$target_out_dir/${_library_name}.a",
+                                        root_build_dir) ]
+            } else {
+              contents += [ "lib/lib${_library_name}.a=BUILD/" +
+                            rebase_path("$target_out_dir/lib${_library_name}.a",
+                                        root_build_dir) ]
+            }
+          } else {
+            soname = "lib${_library_name}.so"
+            contents += [
+              "debug/$soname=BUILD/" +
+                  rebase_path("$target_out_dir/$soname.debug", root_build_dir),
+              "lib/$soname=BUILD/" +
+                  rebase_path("$target_out_dir/$soname.debug", root_build_dir),
+            ]
+            if (defined(invoker.install_path)) {
+              install_path = invoker.install_path
+            } else {
+              install_path = "lib/${toolchain.libprefix}lib${_library_name}.so"
+            }
+            if (install_path != false) {
+              contents +=
+                  [ "dist/$install_path=BUILD/" +
+                    rebase_path("$target_out_dir/$soname", root_build_dir) ]
+            }
+          }
+        }
+        contents += [ "[includes]" ]
+        foreach(file, invoker.sdk_headers) {
+          contents += [ rebase_path(file, ".") + "=SOURCE/" +
+                        rebase_path(file, "//", "include") ]
+        }
+        sdk_deps = []
+        if (defined(invoker.public_deps)) {
+          sdk_deps += invoker.public_deps
+        }
+        if (sdk != "shared" && defined(invoker.deps)) {
+          sdk_deps += invoker.deps
+        }
+        if (sdk_deps != []) {
+          banjo_deps = []
+          fidl_deps = []
+          lib_deps = []
+          foreach(label, sdk_deps) {
+            if (get_path_info(get_label_info(label, "dir"), "dir") ==
+                "$zx/system/banjo") {
+              banjo_deps += [ get_label_info(label, "name") ]
+            } else if (get_label_info(label, "name") == "c.headers" ||
+                       (get_label_info(label, "name") == "c" &&
+                        get_path_info(get_label_info(label, "dir"), "dir") ==
+                        "$zx/system/fidl")) {
+              assert(get_path_info(get_label_info(label, "dir"), "dir") ==
+                     "$zx/system/fidl")
+              fidl_deps +=
+                  [ get_path_info(get_label_info(label, "dir"), "name") ]
+            } else if (get_label_info(label, "name") !=
+                       "generated-public-headers" &&
+                       (get_label_info(label, "dir") != "$zx/system/ulib/fbl" ||
+                        get_label_info(":$target_name", "dir") !=
+                        "$zx/system/ulib/trace-engine")) {
+              if (get_path_info(get_label_info(label, "name"), "extension") ==
+                  "headers") {
+                lib_deps +=
+                    [ get_path_info(get_label_info(label, "name"), "name") ]
+              } else if (get_label_info(label, "name") == "headers") {
+                lib_deps +=
+                    [ get_path_info(get_label_info(label, "dir"), "name") ]
+              } else if (get_path_info(get_label_info(label, "name"), "name") !=
+                         "common" && get_label_info(label, "name") != "static") {
+                lib_deps += [ get_label_info(label, "name") ]
+              }
+            }
+          }
+          if (lib_deps != []) {
+            # Uniquify.
+            unique_lib_deps = []
+            foreach(dep, lib_deps) {
+              unique_lib_deps += [ dep ]
+              unique_lib_deps -= [ dep ]
+              unique_lib_deps += [ dep ]
+            }
+            contents += [ "[deps]" ] + unique_lib_deps
+          }
+          if (banjo_deps != []) {
+            # Uniquify.
+            unique_banjo_deps = []
+            foreach(dep, banjo_deps) {
+              unique_banjo_deps += [ dep ]
+              unique_banjo_deps -= [ dep ]
+              unique_banjo_deps += [ dep ]
+            }
+            contents += [ "[banjo-deps]" ] + unique_banjo_deps
+          }
+          if (fidl_deps != []) {
+            # Uniquify.
+            unique_fidl_deps = []
+            foreach(dep, fidl_deps) {
+              unique_fidl_deps += [ dep ]
+              unique_fidl_deps -= [ dep ]
+              unique_fidl_deps += [ dep ]
+            }
+            contents += [ "[fidl-deps]" ] + unique_fidl_deps
+          }
         }
       }
     }

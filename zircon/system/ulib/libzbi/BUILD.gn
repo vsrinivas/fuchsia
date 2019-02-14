@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 library("libzbi") {
+  output_prefix_override = true
   sdk = "static"
   sdk_headers = [
     "libzbi/zbi-cpp.h",

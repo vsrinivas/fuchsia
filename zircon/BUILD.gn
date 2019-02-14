@@ -122,11 +122,21 @@ if (current_toolchain == default_toolchain) {
       ]
     }
 
+    environment_redirect("all-ulib-$cpu") {
+      testonly = true
+      cpu = cpu
+      environment_label = "$zx/public/gn/toolchain:user"
+      deps = [
+        "$zx/system/ulib",
+      ]
+    }
+
     legacy_pkg("manifest-$cpu") {
       testonly = true
       data_keys = [ "legacy_pkg_manifest" ]
       deps = [
         ":legacy-$cpu",
+        ":all-ulib-$cpu",
         ":tools",
 
         # Separately listed because they're reached by dependencies only on x64.
