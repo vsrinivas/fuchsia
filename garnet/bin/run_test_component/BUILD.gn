@@ -41,6 +41,7 @@ executable("bin") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/component2/cpp",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
     "//zircon/public/fidl/fuchsia-logger",

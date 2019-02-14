@@ -31,10 +31,10 @@ executable("integration_tests") {
   deps = [
     "//garnet/bin/debug_agent:lib",
     "//garnet/lib/debug_ipc:client",
-    "//garnet/public/lib/component/cpp:environment_services",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/svc/cpp",
+    "//sdk/lib/component2/cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]

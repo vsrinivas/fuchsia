@@ -10,7 +10,7 @@
 
 #include <lib/zx/process.h>
 #include "garnet/lib/process/process_builder.h"
-#include "lib/svc/cpp/services.h"
+#include "lib/component2/cpp/service_directory.h"
 
 #include "lib/fxl/macros.h"
 
@@ -27,7 +27,7 @@ namespace debug_agent {
 // executing, and expects to own the handle its using.
 class Launcher {
  public:
-  explicit Launcher(std::shared_ptr<component::Services> env_services);
+  explicit Launcher(std::shared_ptr<component2::ServiceDirectory> env_services);
   ~Launcher() = default;
 
   // Setup will create the process object but not launch the process yet.

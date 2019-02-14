@@ -80,9 +80,9 @@ executable("tests") {
   deps = [
     ":inferior_control",
     "//garnet/lib/debugger_utils",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//sdk/lib/component2/cpp",
     "//third_party/googletest:gtest_main",
   ]
 }

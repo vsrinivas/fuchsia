@@ -17,7 +17,7 @@
 #include "garnet/bin/debug_agent/watchpoint.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "lib/fxl/macros.h"
-#include "lib/svc/cpp/services.h"
+#include "lib/component2/cpp/service_directory.h"
 
 namespace debug_agent {
 
@@ -33,7 +33,7 @@ class DebugAgent : public RemoteAPI,
   // client. It will not be read (that's the job of the provider of the
   // RemoteAPI).
   explicit DebugAgent(debug_ipc::StreamBuffer* stream,
-                      std::shared_ptr<component::Services> services);
+                      std::shared_ptr<component2::ServiceDirectory> services);
   ~DebugAgent();
 
   debug_ipc::StreamBuffer* stream() { return stream_; }
@@ -128,7 +128,7 @@ class DebugAgent : public RemoteAPI,
 
   debug_ipc::StreamBuffer* stream_;
 
-  std::shared_ptr<component::Services> services_;
+  std::shared_ptr<component2::ServiceDirectory> services_;
 
   std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;
 

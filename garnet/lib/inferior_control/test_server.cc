@@ -21,7 +21,7 @@
 
 #include "gtest/gtest.h"
 
-#include "lib/component/cpp/environment_services_helper.h"
+#include "lib/component2/cpp/service_directory.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -30,7 +30,7 @@ namespace inferior_control {
 
 TestServer::TestServer()
     : Server(debugger_utils::GetRootJob(), debugger_utils::GetDefaultJob()),
-      services_(component::GetEnvironmentServices()) {}
+      services_(component2::ServiceDirectory::CreateFromNamespace()) {}
 
 void TestServer::SetUp() {
   ASSERT_TRUE(exception_port_.Run());

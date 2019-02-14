@@ -11,12 +11,12 @@ source_set("process") {
   ]
 
   public_deps = [
+    "//sdk/lib/component2/cpp",
     "//zircon/public/fidl/fuchsia-process",
     "//zircon/public/lib/zx",
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/fdio",
   ]
 }

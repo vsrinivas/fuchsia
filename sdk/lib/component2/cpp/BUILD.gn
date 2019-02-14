@@ -20,6 +20,8 @@ sdk_source_set("cpp") {
     "service_directory.h",
     "startup_context.cc",
     "startup_context.h",
+    "termination_reason.cc",
+    "termination_reason.h",
   ]
 
   public_deps = [

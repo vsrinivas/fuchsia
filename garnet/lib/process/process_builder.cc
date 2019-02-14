@@ -22,7 +22,7 @@
 #include <array>
 #include <string_view>
 
-#include "lib/svc/cpp/services.h"
+#include "lib/component2/cpp/service_directory.h"
 
 namespace process {
 
@@ -39,13 +39,14 @@ constexpr int kFdioMaxResolveDepth = 256;
 
 }  // namespace
 
-ProcessBuilder::ProcessBuilder(std::shared_ptr<component::Services> services)
+ProcessBuilder::ProcessBuilder(
+    std::shared_ptr<component2::ServiceDirectory> services)
     : services_(services) {
-  services_->ConnectToService(launcher_.NewRequest());
+  services_->Connect(launcher_.NewRequest());
 }
 
-ProcessBuilder::ProcessBuilder(zx::job job,
-                               std::shared_ptr<component::Services> services)
+ProcessBuilder::ProcessBuilder(
+    zx::job job, std::shared_ptr<component2::ServiceDirectory> services)
     : ProcessBuilder(services) {
   launch_info_.job = std::move(job);
 }
@@ -73,7 +74,8 @@ zx_status_t ProcessBuilder::LoadPath(const std::string& path) {
   // Resolve VMOs containing #!resolve.
   fuchsia::process::ResolverSyncPtr resolver;  // Lazily bound.
   for (int i = 0; true; i++) {
-    std::array<char, fuchsia::process::MAX_RESOLVE_NAME_SIZE + kFdioResolvePrefixLen>
+    std::array<char,
+               fuchsia::process::MAX_RESOLVE_NAME_SIZE + kFdioResolvePrefixLen>
         head;
     head.fill(0);
     status = executable_vmo.read(head.data(), 0, head.size());
@@ -94,7 +96,7 @@ zx_status_t ProcessBuilder::LoadPath(const std::string& path) {
 
     // The resolver will give us a new VMO and loader to use.
     if (!resolver)
-      services_->ConnectToService(resolver.NewRequest());
+      services_->Connect(resolver.NewRequest());
     resolver->Resolve(fidl::StringPtr(name.data(), name.size()), &status,
                       &executable_vmo, &loader_iface);
     if (status != ZX_OK)
@@ -146,7 +148,7 @@ void ProcessBuilder::AddHandle(uint32_t id, zx::handle handle) {
 void ProcessBuilder::AddHandles(
     std::vector<fuchsia::process::HandleInfo> handles) {
   handles_.insert(handles_.end(), std::make_move_iterator(handles.begin()),
-                   std::make_move_iterator(handles.end()));
+                  std::make_move_iterator(handles.end()));
 }
 
 void ProcessBuilder::SetDefaultJob(zx::job job) {

@@ -45,7 +45,6 @@ source_set("lib") {
   public_deps = [
     "//garnet/lib/cmx",
     "//garnet/lib/loader",
-    "//sdk/fidl/fuchsia.sys",
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
@@ -53,6 +52,8 @@ source_set("lib") {
     "//garnet/public/lib/json",
     "//garnet/public/lib/pkg_url",
     "//garnet/public/lib/svc/cpp",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/component2/cpp",
     "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-process",
     "//zircon/public/lib/async-loop-cpp",

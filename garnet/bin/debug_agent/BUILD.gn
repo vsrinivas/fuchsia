@@ -101,7 +101,7 @@ executable("bin") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/component/cpp:environment_services",
+    "//sdk/lib/component2/cpp",
   ]
 }
 

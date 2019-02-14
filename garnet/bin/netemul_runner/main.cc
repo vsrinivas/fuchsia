@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/component/cpp/termination_reason.h>
+#include <lib/component2/cpp/termination_reason.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/fxl/logging.h>
@@ -54,7 +54,7 @@ int main(int argc, const char** argv) {
     sandbox.SetTerminationCallback([](int64_t exit_code,
                                       Sandbox::TerminationReason reason) {
       FXL_LOG(INFO) << "Sandbox terminated with (" << exit_code << ") reason: "
-                    << component::HumanReadableTerminationReason(reason);
+                    << component2::HumanReadableTerminationReason(reason);
       if (reason != Sandbox::TerminationReason::EXITED) {
         exit_code = 1;
       }

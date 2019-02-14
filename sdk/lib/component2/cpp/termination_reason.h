@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_COMPONENT_CPP_TERMINATION_REASON_H_
-#define LIB_COMPONENT_CPP_TERMINATION_REASON_H_
+#ifndef LIB_COMPONENT2_CPP_TERMINATION_REASON_H_
+#define LIB_COMPONENT2_CPP_TERMINATION_REASON_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <string>
 
-namespace component {
+namespace component2 {
 
 std::string TerminationReasonToString(
     fuchsia::sys::TerminationReason termination_reason);
@@ -16,6 +16,6 @@ std::string TerminationReasonToString(
 std::string HumanReadableTerminationReason(
     fuchsia::sys::TerminationReason termination_reason);
 
-}  // namespace component
+}  // namespace component2
 
-#endif  // LIB_COMPONENT_CPP_TERMINATION_REASON_H_
+#endif  // LIB_COMPONENT2_CPP_TERMINATION_REASON_H_

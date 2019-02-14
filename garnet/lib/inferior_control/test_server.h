@@ -13,7 +13,7 @@
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/svc/cpp/services.h"
+#include "lib/component2/cpp/service_directory.h"
 
 #include "gtest/gtest.h"
 
@@ -68,7 +68,7 @@ class TestServer : public Server, public ::testing::Test {
   // exception_port_.Quit() can only be called after a successful call to
   // exception_port_.Run(), so keep track of whether Run() succeeded.
   bool exception_port_started_ = false;
-  std::shared_ptr<component::Services> services_;
+  std::shared_ptr<component2::ServiceDirectory> services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestServer);
 };

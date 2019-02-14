@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-#include "lib/svc/cpp/services.h"
+#include "lib/component2/cpp/service_directory.h"
 
 namespace process {
 
@@ -26,10 +26,12 @@ class ProcessBuilder {
   // Creates a process builder that uses the |fuchsia.process.Launcher| service.
   //
   // The process is created in zx_job_default().
-  explicit ProcessBuilder(std::shared_ptr<component::Services> services);
+  explicit ProcessBuilder(
+      std::shared_ptr<component2::ServiceDirectory> services);
 
   // Creates a process builder that will build a process in the given |job|.
-  ProcessBuilder(zx::job job, std::shared_ptr<component::Services> services);
+  ProcessBuilder(zx::job job,
+                 std::shared_ptr<component2::ServiceDirectory> services);
   ~ProcessBuilder();
 
   ProcessBuilder(const ProcessBuilder&) = delete;
@@ -125,7 +127,7 @@ class ProcessBuilder {
   const fuchsia::process::ProcessStartData& data() const { return data_; }
 
  private:
-  std::shared_ptr<component::Services> services_;
+  std::shared_ptr<component2::ServiceDirectory> services_;
   fuchsia::process::LauncherSyncPtr launcher_;
   fuchsia::process::LaunchInfo launch_info_;
   fuchsia::process::ProcessStartData data_;

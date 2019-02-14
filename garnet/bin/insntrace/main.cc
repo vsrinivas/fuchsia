@@ -15,7 +15,7 @@
 
 #include <lib/fdio/util.h>
 
-#include "lib/component/cpp/environment_services_helper.h"
+#include "lib/component2/cpp/service_directory.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -429,7 +429,7 @@ static bool ControlIpt(const insntrace::IptConfig& config,
 
 static bool RunProgram(const insntrace::IptConfig& config,
                        const fxl::CommandLine& cl,
-                       std::shared_ptr<component::Services>& services) {
+                       std::shared_ptr<component2::ServiceDirectory>& services) {
   debugger_utils::Argv inferior_argv(cl.positional_args().begin(),
                                      cl.positional_args().end());
 
@@ -479,13 +479,13 @@ int main(int argc, char* argv[]) {
 
   FXL_LOG(INFO) << "insntrace control program starting";
 
-  auto environment_services = component::GetEnvironmentServices();
+  auto services = component2::ServiceDirectory::CreateFromNamespace();
 
   bool success;
   if (cl.HasOption("control", nullptr)) {
     success = ControlIpt(config, cl);
   } else {
-    success = RunProgram(config, cl, environment_services);
+    success = RunProgram(config, cl, services);
   }
 
   if (!success) {

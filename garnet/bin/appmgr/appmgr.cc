@@ -5,7 +5,7 @@
 #include <lib/fxl/strings/string_printf.h>
 
 #include "garnet/bin/appmgr/appmgr.h"
-#include "lib/component/cpp/termination_reason.h"
+#include "lib/component2/cpp/termination_reason.h"
 
 using fuchsia::sys::TerminationReason;
 
@@ -54,7 +54,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
         [this](zx_status_t status, TerminationReason termination_reason) {
           if (termination_reason != TerminationReason::EXITED) {
             FXL_LOG(ERROR) << "sysmgr launch failed: "
-                           << component::TerminationReasonToString(
+                           << component2::TerminationReasonToString(
                                   termination_reason);
             sysmgr_permanently_failed_ = true;
           } else if (status == ZX_ERR_INVALID_ARGS) {

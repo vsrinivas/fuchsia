@@ -7,7 +7,7 @@
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/termination_reason.h>
+#include <lib/component2/cpp/termination_reason.h>
 #include <lib/fdio/util.h>
 
 #include "garnet/bin/run_test_component/env_config.h"
@@ -193,7 +193,7 @@ int main(int argc, const char** argv) {
                                          TerminationReason termination_reason) {
     if (termination_reason != TerminationReason::EXITED) {
       fprintf(stderr, "%s: %s\n", program_name.c_str(),
-              component::HumanReadableTerminationReason(termination_reason)
+              component2::HumanReadableTerminationReason(termination_reason)
                   .c_str());
     }
     zx_process_exit(return_code);

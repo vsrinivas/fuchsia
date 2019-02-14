@@ -1,9 +1,13 @@
-#include "lib/component/cpp/termination_reason.h"
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "lib/component2/cpp/termination_reason.h"
 
 #include <sstream>
 #include <string>
 
-namespace component {
+namespace component2 {
 
 std::string TerminationReasonToString(
     fuchsia::sys::TerminationReason termination_reason) {
@@ -52,4 +56,4 @@ std::string HumanReadableTerminationReason(
   }
 }
 
-}  // namespace component
+}  // namespace component2

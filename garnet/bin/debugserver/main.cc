@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "garnet/lib/inferior_control/process.h"
-#include "lib/component/cpp/environment_services_helper.h"
+#include "lib/component2/cpp/service_directory.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  auto environment_services = component::GetEnvironmentServices();
+  auto services = component2::ServiceDirectory::CreateFromNamespace();
 
   FXL_LOG(INFO) << "Starting server.";
 
@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
   std::vector<std::string> inferior_argv(cl.positional_args().begin() + 1,
                                          cl.positional_args().end());
   auto inferior =
-      new inferior_control::Process(&server, &server, environment_services);
+      new inferior_control::Process(&server, &server, services);
 
   // Are we passed a pid or a program?
   if (attach_pid != ZX_KOID_INVALID && !inferior_argv.empty()) {

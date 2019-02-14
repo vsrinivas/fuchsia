@@ -17,10 +17,10 @@
 #include "garnet/bin/debug_agent/unwind.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
-#include "lib/component/cpp/environment_services_helper.h"
+#include "lib/component2/cpp/service_directory.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
-#include "lib/svc/cpp/services.h"
+#include "lib/component2/cpp/service_directory.h"
 
 namespace debug_agent {
 namespace {
@@ -30,7 +30,7 @@ namespace {
 // Represents one connection to a client.
 class SocketConnection {
  public:
-  SocketConnection(std::shared_ptr<component::Services> services)
+  SocketConnection(std::shared_ptr<component2::ServiceDirectory> services)
       : services_(services) {}
   ~SocketConnection() {}
 
@@ -39,7 +39,7 @@ class SocketConnection {
   const debug_agent::DebugAgent* agent() const { return agent_.get(); }
 
  private:
-  std::shared_ptr<component::Services> services_;
+  std::shared_ptr<component2::ServiceDirectory> services_;
   debug_ipc::BufferedFD buffer_;
 
   std::unique_ptr<debug_agent::DebugAgent> agent_;
@@ -94,7 +94,7 @@ class SocketServer {
  public:
   SocketServer() = default;
   bool Run(debug_ipc::MessageLoop*, int port,
-           std::shared_ptr<component::Services> services);
+           std::shared_ptr<component2::ServiceDirectory> services);
 
  private:
   bool AcceptNextConnection();
@@ -106,7 +106,7 @@ class SocketServer {
 };
 
 bool SocketServer::Run(debug_ipc::MessageLoop* message_loop, int port,
-                       std::shared_ptr<component::Services> services) {
+                       std::shared_ptr<component2::ServiceDirectory> services) {
   server_socket_.reset(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
   if (!server_socket_.is_valid()) {
     FXL_LOG(ERROR) << "Could not create socket.";
@@ -195,8 +195,7 @@ int main(int argc, char* argv[]) {
       return 1;
     }
 
-    auto environment_services = component::GetEnvironmentServices();
-
+    auto services = component2::ServiceDirectory::CreateFromNamespace();
 
     debug_ipc::MessageLoopZircon message_loop;
     message_loop.Init();
@@ -205,7 +204,7 @@ int main(int argc, char* argv[]) {
     // MessageLoop.
     {
       debug_agent::SocketServer server;
-      if (!server.Run(&message_loop, port, environment_services))
+      if (!server.Run(&message_loop, port, services))
         return 1;
     }
     message_loop.Cleanup();

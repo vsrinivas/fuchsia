@@ -4,7 +4,7 @@
 
 #include "garnet/bin/appmgr/integration_tests/sandbox/namespace_test.h"
 
-#include <lib/component/cpp/termination_reason.h>
+#include <lib/component2/cpp/termination_reason.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <vector>
