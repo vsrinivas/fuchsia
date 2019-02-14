@@ -7,6 +7,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include "qemu-virt.h"
+#include <zircon/device/sysmem.h>
 
 static const pbus_bti_t sysmem_btis[] = {
     {
@@ -15,6 +16,19 @@ static const pbus_bti_t sysmem_btis[] = {
     },
 };
 
+static const sysmem_metadata_t sysmem_metadata = {
+    .vid = PDEV_VID_QEMU,
+    .pid = PDEV_PID_QEMU,
+    .protected_memory_size = 0,
+};
+
+static const pbus_metadata_t sysmem_metadata_list[] = {
+    {
+        .type = SYSMEM_METADATA,
+        .data_buffer = &sysmem_metadata,
+        .data_size = sizeof(sysmem_metadata),
+    }};
+
 static const pbus_dev_t sysmem_dev = {
     .name = "sysmem",
     .vid = PDEV_VID_GENERIC,
@@ -22,6 +36,8 @@ static const pbus_dev_t sysmem_dev = {
     .did = PDEV_DID_SYSMEM,
     .bti_list = sysmem_btis,
     .bti_count = countof(sysmem_btis),
+    .metadata_list = sysmem_metadata_list,
+    .metadata_count = countof(sysmem_metadata_list),
 };
 
 zx_status_t qemu_sysmem_init(qemu_bus_t* bus) {

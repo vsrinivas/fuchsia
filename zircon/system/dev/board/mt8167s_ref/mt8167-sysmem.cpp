@@ -6,6 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+#include <zircon/device/sysmem.h>
 
 #include <soc/mt8167/mt8167-hw.h>
 
@@ -22,7 +23,20 @@ zx_status_t Mt8167::SysmemInit() {
         },
     };
 
-    static const pbus_dev_t sysmem_dev = []{
+    static const sysmem_metadata_t sysmem_metadata = {
+        .vid = PDEV_VID_MEDIATEK,
+        .pid = PDEV_PID_MEDIATEK_8167S_REF,
+        .protected_memory_size = 0,
+    };
+
+    static const pbus_metadata_t sysmem_metadata_list[] = {
+        {
+            .type = SYSMEM_METADATA,
+            .data_buffer = &sysmem_metadata,
+            .data_size = sizeof(sysmem_metadata),
+        }};
+
+    static const pbus_dev_t sysmem_dev = [] {
         pbus_dev_t ret;
         ret.name = "sysmem";
         ret.vid = PDEV_VID_GENERIC;
@@ -30,6 +44,8 @@ zx_status_t Mt8167::SysmemInit() {
         ret.did = PDEV_DID_SYSMEM;
         ret.bti_list = sysmem_btis;
         ret.bti_count = countof(sysmem_btis);
+        ret.metadata_list = sysmem_metadata_list;
+        ret.metadata_count = countof(sysmem_metadata_list);
         return ret;
     }();
 

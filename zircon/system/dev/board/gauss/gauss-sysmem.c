@@ -7,6 +7,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include "gauss.h"
+#include <zircon/device/sysmem.h>
 
 static const pbus_bti_t sysmem_btis[] = {
     {
@@ -14,6 +15,18 @@ static const pbus_bti_t sysmem_btis[] = {
         .bti_id = BTI_SYSMEM,
     },
 };
+static const sysmem_metadata_t sysmem_metadata = {
+    .vid = PDEV_VID_AMLOGIC,
+    .pid = PDEV_PID_AMLOGIC_A113,
+    .protected_memory_size = 0,
+};
+
+static const pbus_metadata_t sysmem_metadata_list[] = {
+    {
+        .type = SYSMEM_METADATA,
+        .data_buffer = &sysmem_metadata,
+        .data_size = sizeof(sysmem_metadata),
+    }};
 
 static const pbus_dev_t sysmem_dev = {
     .name = "sysmem",
@@ -22,6 +35,8 @@ static const pbus_dev_t sysmem_dev = {
     .did = PDEV_DID_SYSMEM,
     .bti_list = sysmem_btis,
     .bti_count = countof(sysmem_btis),
+    .metadata_list = sysmem_metadata_list,
+    .metadata_count = countof(sysmem_metadata_list),
 };
 
 zx_status_t gauss_sysmem_init(gauss_bus_t* bus) {

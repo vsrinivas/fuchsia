@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+#include <zircon/device/sysmem.h>
 
 namespace vim {
 static const pbus_bti_t sysmem_btis[] = {
@@ -15,6 +16,18 @@ static const pbus_bti_t sysmem_btis[] = {
         .bti_id = BTI_SYSMEM,
     },
 };
+static const sysmem_metadata_t sysmem_metadata = {
+    .vid = PDEV_VID_AMLOGIC,
+    .pid = PDEV_PID_AMLOGIC_S912,
+    .protected_memory_size = 0,
+};
+
+static const pbus_metadata_t sysmem_metadata_list[] = {
+    {
+        .type = SYSMEM_METADATA,
+        .data_buffer = &sysmem_metadata,
+        .data_size = sizeof(sysmem_metadata),
+    }};
 
 static const pbus_dev_t sysmem_dev = []() {
     pbus_dev_t dev;
@@ -24,6 +37,8 @@ static const pbus_dev_t sysmem_dev = []() {
     dev.did = PDEV_DID_SYSMEM;
     dev.bti_list = sysmem_btis;
     dev.bti_count = countof(sysmem_btis);
+    dev.metadata_list = sysmem_metadata_list;
+    dev.metadata_count = countof(sysmem_metadata_list);
     return dev;
 }();
 
