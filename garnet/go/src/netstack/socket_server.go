@@ -147,7 +147,7 @@ func (ios *iostate) loopWrite() error {
 				continue
 			}
 			if err != nil {
-				optsStr := "..."
+				optsStr := "<TCP>"
 				if to := opts.To; to != nil {
 					optsStr = fmt.Sprintf("%+v", *to)
 				}
@@ -191,7 +191,7 @@ func (ios *iostate) loopRead() error {
 			var err *tcpip.Error
 			v, _, err = ios.ep.Read(&sender)
 			if err == tcpip.ErrClosedForReceive {
-				return ios.dataHandle.Shutdown(zx.SocketShutdownWrite)
+				return nil
 			}
 			if err == tcpip.ErrInvalidEndpointState {
 				if connected {
@@ -429,14 +429,28 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 	}()
 	go func() {
 		if err := ios.loopRead(); err != nil {
-			log.Printf("%p: loopRead: %s", ios, err)
+			if debug {
+				log.Printf("%p: loopRead: %s", ios, err)
+			}
+		}
+		switch err := ios.dataHandle.Shutdown(zx.SocketShutdownWrite); mxerror.Status(err) {
+		case zx.ErrOk, zx.ErrBadHandle:
+		default:
+			log.Printf("%p: %s", ios, err)
 		}
 	}()
 	go func() {
 		defer close(ios.loopWriteDone)
 
 		if err := ios.loopWrite(); err != nil {
-			log.Printf("%p: loopWrite: %s", ios, err)
+			if debug {
+				log.Printf("%p: loopWrite: %s", ios, err)
+			}
+		}
+		switch err := ios.dataHandle.Shutdown(zx.SocketShutdownRead); mxerror.Status(err) {
+		case zx.ErrOk, zx.ErrBadHandle:
+		default:
+			log.Printf("%p: %s", ios, err)
 		}
 	}()
 
