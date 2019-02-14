@@ -81,6 +81,18 @@ TEST(Spec, DecodingErrors) {
   json = R"({"buffer_size_in_mb": 0})";
   EXPECT_FALSE(DecodeSpec(json, &result));
 
+  // Missing name in provider spec.
+  json = R"({"provider_specs": [{"buffer_size_in_mb": 1}]})";
+  EXPECT_FALSE(DecodeSpec(json, &result));
+
+  // Bad buffer size in provider spec.
+  json = R"({"provider_specs": [{"name": "x", "buffer_size_in_mb": 0}]})";
+  EXPECT_FALSE(DecodeSpec(json, &result));
+
+  // Bad field in provider spec.
+  json = R"({"provider_specs": [{"name": "x", "garbage": 0}]})";
+  EXPECT_FALSE(DecodeSpec(json, &result));
+
   // Unknown measurement type.
   json = R"({"measure": [{"type": "unknown"}]})";
   EXPECT_FALSE(DecodeSpec(json, &result));
@@ -188,6 +200,23 @@ TEST(Spec, DecodeBufferSizeInMb) {
   ASSERT_TRUE(DecodeSpec(json, &result));
   EXPECT_EQ(1u, *result.buffer_size_in_mb);
   EXPECT_TRUE(result.buffer_size_in_mb);
+}
+
+TEST(Spec, DecodeProviderSpecs) {
+  std::string json =
+    R"({"provider_specs": [)"
+    R"(  {"name": "x", "buffer_size_in_mb": 1},)"
+    R"(  {"name": "y", "buffer_size_in_mb": 2})"
+    R"(]})";
+
+  Spec result;
+  ASSERT_TRUE(DecodeSpec(json, &result));
+  ASSERT_TRUE(result.provider_specs);
+  ASSERT_EQ(result.provider_specs->size(), 2u);
+  EXPECT_EQ((*result.provider_specs)[0].name, "x");
+  EXPECT_EQ((*result.provider_specs)[0].buffer_size_in_mb, 1u);
+  EXPECT_EQ((*result.provider_specs)[1].name, "y");
+  EXPECT_EQ((*result.provider_specs)[1].buffer_size_in_mb, 2u);
 }
 
 TEST(Spec, DecodeDuration) {

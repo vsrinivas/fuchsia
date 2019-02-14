@@ -15,6 +15,9 @@ trace [options] command [command-specific options]
         those from the spec file, if any
     --buffer-size=[4]: Maximum size of trace buffer for each provider in
         megabytes
+    --provider-buffer-size=[provider-name:buffer-size]:
+        Specify the buffer size that "provider-name" will use.
+        May be specified multiple times, once per provider.
     --buffering-mode=[oneshot]: Specify buffering mode as one of oneshot,
         circular, or streaming
     --categories=[""]: Categories that should be enabled for tracing
@@ -32,3 +35,6 @@ trace [options] command [command-specific options]
         --compress are provided, --compress is ignored.
     --spec-file=[none]: Tracing specification file
 ```
+
+Options provided on the command line override options found in the
+`--spec-file` spec file.

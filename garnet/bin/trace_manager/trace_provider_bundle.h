@@ -8,6 +8,8 @@
 #include <stdint.h>
 
 #include <iosfwd>
+#include <map>
+#include <string>
 
 #include <fuchsia/tracelink/cpp/fidl.h>
 
@@ -19,6 +21,12 @@ struct TraceProviderBundle {
   zx_koid_t pid;
   const std::string name;
 };
+
+struct TraceProviderSpec {
+  uint32_t buffer_size_megabytes;
+};
+
+using TraceProviderSpecMap = std::map<std::string, TraceProviderSpec>;
 
 std::ostream& operator<<(std::ostream& out, const TraceProviderBundle& bundle);
 

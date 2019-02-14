@@ -18,6 +18,15 @@
 
 namespace tracing {
 
+constexpr uint32_t kMinBufferSizeMegabytes = 1;
+constexpr uint32_t kMaxBufferSizeMegabytes = 64;
+
+// Individual providers can be tuned with these parameters.
+struct ProviderSpec {
+  std::string name;
+  size_t buffer_size_in_mb;
+};
+
 // Tracing specification.
 // Every member is a unique_ptr so that we can tell if the object was
 // present in the spec file.
@@ -42,6 +51,9 @@ struct Spec {
 
   // The size of the trace buffer to use, in MB.
   std::unique_ptr<size_t> buffer_size_in_mb;
+
+  // Parameters for individual providers.
+  std::unique_ptr<std::vector<ProviderSpec>> provider_specs;
 
   // Duration of the benchmark.
   std::unique_ptr<fxl::TimeDelta> duration;

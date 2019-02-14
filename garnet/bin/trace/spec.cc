@@ -49,6 +49,23 @@ const char kRootSchema[] = R"({
       "type": "integer",
       "minimum": 1
     },
+    "provider_specs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "buffer_size_in_mb": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": ["name"]
+      }
+    },
     "duration": {
       "type": "integer",
       "minimum": 0
@@ -89,6 +106,8 @@ const char kDurationKey[] = "duration";
 const char kCategoriesKey[] = "categories";
 const char kBufferingModeKey[] = "buffering_mode";
 const char kBufferSizeInMbKey[] = "buffer_size_in_mb";
+const char kProviderSpecsKey[] = "provider_specs";
+const char kNameKey[] = "name";
 const char kMeasurementsKey[] = "measure";
 const char kTypeKey[] = "type";
 const char kOutputTestName[] = "output_test_name";
@@ -173,6 +192,20 @@ const char kArgumentValueSchema[] = R"({
 })";
 const char kArgumentNameKey[] = "argument_name";
 const char kArgumentUnitKey[] = "argument_unit";
+
+bool DecodeProviderSpecs(const rapidjson::Value& specs, Spec* result) {
+  FXL_DCHECK(specs.IsArray());
+  result->provider_specs = std::make_unique<std::vector<ProviderSpec>>();
+  for (const auto& spec : specs.GetArray()) {
+    FXL_DCHECK(spec.HasMember(kNameKey));
+    const auto& name = spec[kNameKey].GetString();
+    if (spec.HasMember(kBufferSizeInMbKey)) {
+      size_t size_in_mb = spec[kBufferSizeInMbKey].GetUint();
+      result->provider_specs->emplace_back(ProviderSpec{name, size_in_mb});
+    }
+  }
+  return true;
+}
 
 bool DecodeMeasureDuration(const rapidjson::Value& value,
                            measure::DurationSpec* result) {
@@ -310,6 +343,12 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   if (document.HasMember(kBufferSizeInMbKey)) {
     result.buffer_size_in_mb =
         std::make_unique<size_t>(document[kBufferSizeInMbKey].GetUint());
+  }
+
+  if (document.HasMember(kProviderSpecsKey)) {
+    if (!DecodeProviderSpecs(document[kProviderSpecsKey], &result)) {
+      return false;
+    }
   }
 
   if (document.HasMember(kDurationKey)) {

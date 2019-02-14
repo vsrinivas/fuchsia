@@ -48,6 +48,7 @@ const char kDecouple[] = "decouple";
 const char kLaunchpad[] = "launchpad";  // deprecated
 const char kSpawn[] = "spawn";
 const char kBufferSize[] = "buffer-size";
+const char kProviderBufferSize[] = "provider-buffer-size";
 const char kBufferingMode[] = "buffering-mode";
 const char kBenchmarkResultsFile[] = "benchmark-results-file";
 const char kTestSuite[] = "test-suite";
@@ -153,6 +154,16 @@ void CheckCommandLineOverride(const char* name, const T& object) {
   CheckCommandLineOverride(name, !!object);
 }
 
+bool CheckBufferSize(uint32_t megabytes) {
+  if (megabytes < kMinBufferSizeMegabytes ||
+      megabytes > kMaxBufferSizeMegabytes) {
+    FXL_LOG(ERROR) << "Buffer size not between " << kMinBufferSizeMegabytes
+                   << "," << kMaxBufferSizeMegabytes << ": " << megabytes;
+    return false;
+  }
+  return true;
+}
+
 }  // namespace
 
 bool Record::Options::Setup(const fxl::CommandLine& command_line) {
@@ -167,6 +178,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
                                                          kLaunchpad,
                                                          kSpawn,
                                                          kBufferSize,
+                                                         kProviderBufferSize,
                                                          kBufferingMode,
                                                          kBenchmarkResultsFile,
                                                          kTestSuite};
@@ -220,6 +232,8 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     }
     if (spec.buffer_size_in_mb)
       buffer_size_megabytes = *spec.buffer_size_in_mb;
+    if (spec.provider_specs)
+      provider_specs = *spec.provider_specs;
     if (spec.duration)
       duration = *spec.duration;
     if (spec.measurements)
@@ -322,8 +336,37 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
                      << ": " << command_line.options()[index].value;
       return false;
     }
+    if (!CheckBufferSize(megabytes)) {
+      return false;
+    }
     buffer_size_megabytes = megabytes;
     CheckCommandLineOverride("buffer-size", spec.buffer_size_in_mb);
+  }
+
+  // --provider-buffer-size=<name:megabytes>
+  if (command_line.HasOption(kProviderBufferSize)) {
+    std::vector<fxl::StringView> args =
+      command_line.GetOptionValues(kProviderBufferSize);
+    for (const auto& arg : args) {
+      size_t colon = arg.rfind(':');
+      if (colon == arg.npos) {
+        FXL_LOG(ERROR) << "Syntax error in " << kProviderBufferSize
+                       << ": should be provider-name:buffer_size_in_mb";
+        return false;
+      }
+      uint32_t megabytes;
+      if (!fxl::StringToNumberWithError(arg.substr(colon + 1), &megabytes)) {
+        FXL_LOG(ERROR) << "Failed to parse buffer size: " << arg;
+        return false;
+      }
+      if (!CheckBufferSize(megabytes)) {
+        return false;
+      }
+      // We can't verify the provider name here, all we can do is pass it on.
+      std::string name = arg.substr(0, colon).ToString();
+      provider_specs.emplace_back(ProviderSpec{name, megabytes});
+      CheckCommandLineOverride("provider-specs", spec.provider_specs);
+    }
   }
 
   // --buffering-mode=oneshot|circular|streaming
@@ -395,6 +438,9 @@ Command::Info Record::Describe() {
         "using this option. May also be spelled --launchpad (deprecated)."},
        {"buffer-size=[4]",
         "Maximum size of trace buffer for each provider in megabytes"},
+       {"provider-buffer-size=[provider-name:buffer-size]",
+        "Specify the buffer size that \"provider-name\" will use. "
+        "May be specified multiple times, once per provider."},
        {"buffering-mode=oneshot|circular|streaming",
         "The buffering mode to use"},
        {"benchmark-results-file=[none]",
@@ -538,11 +584,24 @@ void Record::Start(const fxl::CommandLine& command_line) {
   tracing_ = true;
 
   fuchsia::tracing::TraceOptions trace_options;
-  trace_options.categories =
-      fxl::To<fidl::VectorPtr<std::string>>(options_.categories);
-  trace_options.buffer_size_megabytes_hint = options_.buffer_size_megabytes;
+  trace_options.set_categories(options_.categories);
+  trace_options.set_buffer_size_megabytes_hint(options_.buffer_size_megabytes);
   // TODO(dje): start_timeout_milliseconds
-  trace_options.buffering_mode = options_.buffering_mode;
+  trace_options.set_buffering_mode(options_.buffering_mode);
+
+  // Uniquify the list, with later entries overriding earlier entries.
+  std::map<std::string, uint32_t> provider_specs;
+  for (const auto& it : options_.provider_specs) {
+    provider_specs[it.name] = it.buffer_size_in_mb;
+  }
+  std::vector<fuchsia::tracing::ProviderSpec> uniquified_provider_specs;
+  for (const auto& it : provider_specs) {
+    fuchsia::tracing::ProviderSpec spec;
+    spec.set_name(it.first);
+    spec.set_buffer_size_megabytes_hint(it.second);
+    uniquified_provider_specs.push_back(std::move(spec));
+  }
+  trace_options.set_provider_specs(std::move(uniquified_provider_specs));
 
   tracer_->Start(
       std::move(trace_options),

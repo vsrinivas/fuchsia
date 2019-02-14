@@ -16,8 +16,20 @@ namespace {
 // For large traces or when verbosity is on it can take awhile to write out
 // all the records. E.g., ipm_provider can take 40 seconds with --verbose=2
 constexpr zx::duration kStopTimeout = zx::sec(60);
-static constexpr uint32_t kMinBufferSizeMegabytes = 1;
-static constexpr uint32_t kMaxBufferSizeMegabytes = 64;
+constexpr uint32_t kMinBufferSizeMegabytes = 1;
+constexpr uint32_t kMaxBufferSizeMegabytes = 64;
+
+// These defaults are copied from fuchsia.tracing/trace_controller.fidl.
+constexpr uint32_t kDefaultBufferSizeMegabytesHint = 4;
+constexpr uint32_t kDefaultStartTimeoutMilliseconds = 5000;
+constexpr fuchsia::tracing::BufferingMode kDefaultBufferingMode =
+  fuchsia::tracing::BufferingMode::ONESHOT;
+
+uint32_t ConstrainBufferSize(uint32_t buffer_size_megabytes) {
+  return std::min(
+      std::max(buffer_size_megabytes, kMinBufferSizeMegabytes),
+      kMaxBufferSizeMegabytes);
+}
 
 }  // namespace
 
@@ -41,13 +53,34 @@ void TraceManager::StartTracing(fuchsia::tracing::TraceOptions options,
     return;
   }
 
-  uint32_t buffer_size_megabytes = std::min(
-      std::max(options.buffer_size_megabytes_hint, kMinBufferSizeMegabytes),
-      kMaxBufferSizeMegabytes);
+  uint32_t default_buffer_size_megabytes = kDefaultBufferSizeMegabytesHint;
+  if (options.has_buffer_size_megabytes_hint()) {
+    const uint32_t* buffer_size_mb_hint_ptr =
+      options.buffer_size_megabytes_hint();
+    default_buffer_size_megabytes =
+      ConstrainBufferSize(*buffer_size_mb_hint_ptr);
+  }
 
+  TraceProviderSpecMap provider_specs;
+  if (options.has_provider_specs()) {
+    const std::vector<fuchsia::tracing::ProviderSpec>* provider_specs_ptr =
+      options.provider_specs();
+    for (const auto& it : *provider_specs_ptr) {
+      provider_specs[*it.name()] =
+        TraceProviderSpec{*it.buffer_size_megabytes_hint()};
+    }
+  }
+
+  fuchsia::tracing::BufferingMode tracing_buffering_mode =
+    kDefaultBufferingMode;
+  if (options.has_buffering_mode()) {
+    const fuchsia::tracing::BufferingMode* buffering_mode_ptr =
+      options.buffering_mode();
+    tracing_buffering_mode = *buffering_mode_ptr;
+  }
   fuchsia::tracelink::BufferingMode tracelink_buffering_mode;
   const char* mode_name;
-  switch (options.buffering_mode) {
+  switch (tracing_buffering_mode) {
     case fuchsia::tracing::BufferingMode::ONESHOT:
       tracelink_buffering_mode = fuchsia::tracelink::BufferingMode::ONESHOT;
       mode_name = "oneshot";
@@ -62,16 +95,29 @@ void TraceManager::StartTracing(fuchsia::tracing::TraceOptions options,
       break;
     default:
       FXL_LOG(ERROR) << "Invalid buffering mode: "
-                     << static_cast<unsigned>(options.buffering_mode);
+                     << static_cast<unsigned>(tracing_buffering_mode);
       return;
   }
 
-  FXL_LOG(INFO) << "Starting trace with " << buffer_size_megabytes
+  FXL_LOG(INFO) << "Starting trace with " << default_buffer_size_megabytes
                 << " MB buffers, buffering mode=" << mode_name;
+  if (provider_specs.size() > 0) {
+    FXL_LOG(INFO) << "Provider overrides:";
+    for (const auto& it : provider_specs) {
+      FXL_LOG(INFO) << it.first << ": buffer size "
+                    << it.second.buffer_size_megabytes << " MB";
+    }
+  }
 
+  std::vector<::std::string> categories;
+  const std::vector<::std::string>* categories_ptr = options.categories();
+  if (options.has_categories()) {
+    categories = std::move(*categories_ptr);
+  }
   session_ = fxl::MakeRefCounted<TraceSession>(
-      std::move(output), std::move(options.categories),
-      buffer_size_megabytes * 1024 * 1024, tracelink_buffering_mode,
+      std::move(output), std::move(categories),
+      default_buffer_size_megabytes, tracelink_buffering_mode,
+      std::move(provider_specs),
       [this]() { session_ = nullptr; });
 
   for (auto& bundle : providers_) {
@@ -80,8 +126,14 @@ void TraceManager::StartTracing(fuchsia::tracing::TraceOptions options,
 
   trace_running_ = true;
 
+  uint64_t start_timeout_milliseconds = kDefaultStartTimeoutMilliseconds;
+  if (options.has_start_timeout_milliseconds()) {
+    const uint64_t* start_timeout_milliseconds_ptr =
+      options.start_timeout_milliseconds();
+    start_timeout_milliseconds = *start_timeout_milliseconds_ptr;
+  }
   session_->WaitForProvidersToStart(
-      std::move(start_callback), zx::msec(options.start_timeout_milliseconds));
+      std::move(start_callback), zx::msec(start_timeout_milliseconds));
 }
 
 void TraceManager::StopTracing() {

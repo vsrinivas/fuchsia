@@ -14,13 +14,15 @@ namespace tracing {
 
 TraceSession::TraceSession(zx::socket destination,
                            std::vector<std::string> categories,
-                           size_t trace_buffer_size,
+                           size_t trace_buffer_size_megabytes,
                            fuchsia::tracelink::BufferingMode buffering_mode,
+                           TraceProviderSpecMap&& provider_specs,
                            fit::closure abort_handler)
     : destination_(std::move(destination)),
       categories_(std::move(categories)),
-      trace_buffer_size_(trace_buffer_size),
+      trace_buffer_size_megabytes_(trace_buffer_size_megabytes),
       buffering_mode_(buffering_mode),
+      provider_specs_(std::move(provider_specs)),
       abort_handler_(std::move(abort_handler)),
       weak_ptr_factory_(this) {}
 
@@ -40,13 +42,22 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   if (!(state_ == State::kReady || state_ == State::kStarted))
     return;
 
-  FXL_VLOG(1) << "Adding provider " << *bundle;
+  uint32_t buffer_size_megabytes = trace_buffer_size_megabytes_;
+  auto spec_iter = provider_specs_.find(bundle->name);
+  if (spec_iter != provider_specs_.end()) {
+    const TraceProviderSpec* spec = &spec_iter->second;
+    buffer_size_megabytes = spec->buffer_size_megabytes;
+  }
+  uint64_t buffer_size = buffer_size_megabytes * 1024 * 1024;
+
+  FXL_VLOG(1) << "Adding provider " << *bundle << ", buffer size "
+              << buffer_size_megabytes << "MB";
 
   tracees_.emplace_back(std::make_unique<Tracee>(this, bundle));
   fidl::VectorPtr<std::string> categories_clone;
   fidl::Clone(categories_, &categories_clone);
   if (!tracees_.back()->Start(
-          std::move(categories_clone), trace_buffer_size_, buffering_mode_,
+          std::move(categories_clone), buffer_size, buffering_mode_,
           [weak = weak_ptr_factory_.GetWeakPtr(), bundle]() {
             if (weak)
               weak->CheckAllProvidersStarted();

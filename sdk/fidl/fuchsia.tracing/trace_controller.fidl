@@ -49,16 +49,25 @@ enum BufferingMode : uint8 {
     STREAMING = 2;
 };
 
+// Individual providers can be tuned with this.
+table ProviderSpec {
+    1: string:100 name;
+    2: uint32 buffer_size_megabytes_hint;
+};
+
 // Provides options for the trace.
-struct TraceOptions {
+table TraceOptions {
     // The trace categories to record, or an empty array for all.
-    vector<string:100>:100 categories;
+    1: vector<string:100>:100 categories;
 
     // Suggested size of trace buffer which each provider should receive.
-    uint32 buffer_size_megabytes_hint = 4;
+    2: uint32 buffer_size_megabytes_hint = 4;
 
     // Acknowledge start request after at most |start_timeout_milliseconds|.
-    uint64 start_timeout_milliseconds = 5000;
+    3: uint64 start_timeout_milliseconds = 5000;
 
-    BufferingMode buffering_mode = ONESHOT;
+    4: BufferingMode buffering_mode = ONESHOT;
+
+    // Overrides for particular providers.
+    5: vector<ProviderSpec>:100 provider_specs;
 };
