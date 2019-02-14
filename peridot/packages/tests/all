@@ -9,6 +9,7 @@
         "peridot/packages/tests/modular_integration_tests",
         "peridot/packages/tests/modular_unittests",
         "peridot/packages/tests/peridot_tests",
-        "peridot/packages/tests/re2"
+        "peridot/packages/tests/re2",
+        "peridot/packages/tests/voila"
     ]
 }
