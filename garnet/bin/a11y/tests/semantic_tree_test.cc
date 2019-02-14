@@ -10,21 +10,45 @@
 #include "gtest/gtest.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/component/cpp/testing/test_with_context.h"
+#include "lib/syslog/cpp/logger.h"
 
 namespace a11y_manager_test {
-
+const std::string kSemanticTree1 = "    Node_id: 0, Label:Node-0\n";
+const std::string kSemanticTree7 =
+    "    Node_id: 0, Label:Node-0\n"
+    "        Node_id: 1, Label:Node-1\n"
+    "            Node_id: 3, Label:Node-3\n"
+    "            Node_id: 4, Label:Node-4\n"
+    "        Node_id: 2, Label:Node-2\n"
+    "            Node_id: 5, Label:Node-5\n"
+    "            Node_id: 6, Label:Node-6\n";
+const std::string kSemanticTree8 =
+    "    Node_id: 0, Label:Node-0\n"
+    "        Node_id: 1, Label:Node-1\n"
+    "            Node_id: 3, Label:Node-3\n"
+    "                Node_id: 7, Label:Node-7\n"
+    "            Node_id: 4, Label:Node-4\n"
+    "        Node_id: 2, Label:Node-2\n"
+    "            Node_id: 5, Label:Node-5\n"
+    "            Node_id: 6, Label:Node-6\n";
 // Unit tests for garnet/bin/a11y/a11y_manager/semantic_tree.h
 class SemanticTreeTest : public component::testing::TestWithContext {
  public:
   void SetUp() override {
     TestWithContext::SetUp();
+    syslog::InitLogger();
     controller().AddService<fuchsia::accessibility::SemanticsRoot>(
         [this](fidl::InterfaceRequest<fuchsia::accessibility::SemanticsRoot>
                    request) { tree_.AddBinding(std::move(request)); });
     context_ = TakeContext();
     RunLoopUntilIdle();
   }
-
+  void CreateSemanticTree(
+      int number_of_nodes_per_view,
+      fidl::VectorPtr<fuchsia::accessibility::Node> *nodes_list);
+  void InitializeSemanticProvider(
+      int number_of_nodes_per_view,
+      accessibility_test::MockSemanticsProvider *provider);
   a11y_manager::SemanticTree tree_;
   std::unique_ptr<component::StartupContext> context_;
 };
@@ -44,6 +68,45 @@ fuchsia::accessibility::Node CreateTestNode(int32_t node_id,
   fuchsia::ui::gfx::mat4 transform;
   node.data.transform = std::move(transform);
   return node;
+}
+
+void SemanticTreeTest::CreateSemanticTree(
+    int number_of_nodes_per_view,
+    fidl::VectorPtr<fuchsia::accessibility::Node> *nodes_list) {
+  // Create semantic tree like a Complete Binary Tree for testing purpose.
+  for (int node_id = 0; node_id < number_of_nodes_per_view; node_id++) {
+    // Create individual Node.
+    fuchsia::accessibility::Node node;
+    node.node_id = node_id;
+    fuchsia::accessibility::Data data;
+    data.label = std::string("Node-") + std::to_string(node_id);
+    node.data = data;
+    // Update Child Traversal Information.
+    if ((2 * node_id + 1) < number_of_nodes_per_view) {
+      node.children_traversal_order.push_back(2 * node_id + 1);
+    }
+    if ((2 * node_id + 2) < number_of_nodes_per_view) {
+      node.children_traversal_order.push_back(2 * node_id + 2);
+    }
+    // Add to the list of nodes.
+    nodes_list->push_back(std::move(node));
+  }
+}
+
+void SemanticTreeTest::InitializeSemanticProvider(
+    int number_of_nodes_per_view,
+    accessibility_test::MockSemanticsProvider *provider) {
+  // Create Node List for the current provider.
+  fidl::VectorPtr<fuchsia::accessibility::Node> nodes_list;
+  CreateSemanticTree(number_of_nodes_per_view, &nodes_list);
+
+  // Add nodes list to the current semantic providers list.
+  provider->UpdateSemanticsNodes(std::move(nodes_list));
+  RunLoopUntilIdle();
+
+  // Commit the nodes.
+  provider->Commit();
+  RunLoopUntilIdle();
 }
 
 // Basic test to check that a node can be updated, committed and then deleted.
@@ -83,6 +146,66 @@ TEST_F(SemanticTreeTest, NodeUpdateDelete) {
 
   // No node should be found because we have deleted the node.
   EXPECT_EQ(nullptr, tree_.GetAccessibilityNode(view_id, 0));
+}
+
+// Test for LogSemanticTree() to make sure correct logs are generated,
+// when number of nodes in the tree are odd.
+TEST_F(SemanticTreeTest, LogSemanticTree_OddNumberOfNodes) {
+  zx_koid_t view_id = 0;
+  accessibility_test::MockSemanticsProvider provider(context_.get(), view_id);
+  // Make sure the provider has finished connecting to the root.
+  RunLoopUntilIdle();
+
+  int number_of_nodes = 7;
+  InitializeSemanticProvider(number_of_nodes, &provider);
+
+  std::string result = tree_.LogSemanticTree(view_id);
+  EXPECT_EQ(kSemanticTree7, result);
+}
+// Test for LogSemanticTree() to make sure correct logs are generated,
+// when number of nodes in the tree are even.
+TEST_F(SemanticTreeTest, LogSemanticTree_EvenNumberOfNodes) {
+  zx_koid_t view_id = 0;
+  accessibility_test::MockSemanticsProvider provider(context_.get(), view_id);
+  // Make sure the provider has finished connecting to the root.
+  RunLoopUntilIdle();
+
+  int number_of_nodes = 8;
+  InitializeSemanticProvider(number_of_nodes, &provider);
+
+  std::string result = tree_.LogSemanticTree(view_id);
+  EXPECT_EQ(kSemanticTree8, result);
+}
+
+// Test for LogSemanticTree() to make sure correct logs are generated,
+// when there is just a single node in the tree for a particular view.
+TEST_F(SemanticTreeTest, LogSemanticTree_SingleNode) {
+  zx_koid_t view_id = 0;
+  accessibility_test::MockSemanticsProvider provider(context_.get(), view_id);
+  // Make sure the provider has finished connecting to the root.
+  RunLoopUntilIdle();
+
+  int number_of_nodes = 1;
+  InitializeSemanticProvider(number_of_nodes, &provider);
+
+  std::string result = tree_.LogSemanticTree(view_id);
+  EXPECT_EQ(kSemanticTree1, result);
+}
+
+// Test for LogSemanticTree() to make sure correct logs are generated
+// when view id does not match.
+TEST_F(SemanticTreeTest, LogSemanticTree_ViewNotFound) {
+  zx_koid_t view_id = 0;
+  zx_koid_t view_id_to_search = 1;
+  accessibility_test::MockSemanticsProvider provider(context_.get(), view_id);
+  // Make sure the provider has finished connecting to the root.
+  RunLoopUntilIdle();
+
+  int number_of_nodes = 8;
+  InitializeSemanticProvider(number_of_nodes, &provider);
+
+  std::string result = tree_.LogSemanticTree(view_id_to_search);
+  EXPECT_STREQ("", result.c_str());
 }
 
 }  // namespace a11y_manager_test

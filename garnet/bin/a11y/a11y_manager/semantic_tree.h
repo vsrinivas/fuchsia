@@ -50,6 +50,10 @@ class SemanticTree : public fuchsia::accessibility::SemanticsRoot {
   void PerformAccessibilityAction(zx_koid_t view_id, int32_t node_id,
                                   fuchsia::accessibility::Action action);
 
+  // Function for logging semantic tree, mainly for debugging purposes.
+  // TODO(ankitdave): Make this function private when FIDL API's are defined.
+  std::string LogSemanticTree(zx_koid_t view_id);
+
  private:
   // |fuchsia::accessibility::SemanticRoot|:
 
@@ -67,7 +71,12 @@ class SemanticTree : public fuchsia::accessibility::SemanticsRoot {
   void DeleteSemanticNodes(zx_koid_t view_id,
                            std::vector<int32_t> node_ids) override;
   void Commit(zx_koid_t view_id) override;
-  void LogSemanticTree(zx_koid_t view_id);
+
+  // Helper function to traverse semantic tree with a root node, and for
+  // creating string with tree information.
+  void LogSemanticTreeHelper(zx_koid_t view_id,
+                             fuchsia::accessibility::NodePtr root_node,
+                             std::string* tree_log, int current_level);
 
   // Internal recursive hit-test function using the cached tree. Returns a
   // null pointer if no hit nodes were found. Public functions that query

@@ -8,6 +8,9 @@
 #include "garnet/bin/a11y/a11y_manager/semantic_tree.h"
 
 namespace a11y_manager {
+const std::string kNewLine = "\n";
+const std::string kFourSpace = "    ";
+const int kRootNode = 0;
 
 // Internal helper function to check if a point is within a bounding box.
 bool BoxContainsPoint(fuchsia::ui::gfx::BoundingBox& box, escher::vec2& point) {
@@ -123,13 +126,55 @@ void SemanticTree::Commit(zx_koid_t view_id) {
   u_delete_it->second.clear();
 }
 
-void SemanticTree::LogSemanticTree(zx_koid_t view_id) {
-  // TODO(ankitdave): Add logic to create log message from the semantic tree.
-  // TODO(ankitdave): Modify this function, once FIDL api's are finalized and
+// Helper function to traverse semantic tree and create log message.
+void SemanticTree::LogSemanticTreeHelper(
+    zx_koid_t view_id, fuchsia::accessibility::NodePtr root_node,
+    std::string* tree_log, int current_level) {
+  if (!root_node) {
+    return;
+  }
+
+  // Add constant spaces proportional to the current treel level, so that
+  // child nodes are indented under parent node.
+  for (int level = 0; level <= current_level; level++) {
+    *tree_log += kFourSpace;
+  }
+
+  // Add logs for the current node.
+  *tree_log = *tree_log +
+              "Node_id: " + std::to_string(root_node.get()->node_id) +
+              ", Label:" + root_node.get()->data.label + kNewLine;
+
+  // Iterate through all the children of the current node.
+  for (std::vector<int>::iterator it =
+           root_node.get()->children_traversal_order.begin();
+       it != root_node.get()->children_traversal_order.end(); ++it) {
+    fuchsia::accessibility::NodePtr node_ptr =
+        GetAccessibilityNode(view_id, *it);
+    LogSemanticTreeHelper(view_id, std::move(node_ptr), tree_log,
+                          current_level + 1);
+  }
+}
+
+std::string SemanticTree::LogSemanticTree(zx_koid_t view_id) {
+  // TODO(ankitdave): Modify this function, once FIDL APIs are finalized and
   //                  create a client so that this function can be called from
   //                  command line.
-  std::string tree_log = "Semantic Tree Log Message";
-  FX_LOGS(INFO) << tree_log;
+
+  // Get the root node for given view_id.
+  fuchsia::accessibility::NodePtr node_ptr =
+      GetAccessibilityNode(view_id, kRootNode);
+  if (!node_ptr) {
+    FX_LOGS(INFO) << "Root Node not found for view id:" << view_id;
+    return "";
+  }
+
+  std::string tree_log;
+  // Start with the root node(i.e: Node - 0).
+  LogSemanticTreeHelper(view_id, std::move(node_ptr), &tree_log, 0);
+  FX_LOGS(INFO) << "Semantic Tree for View ID:" << view_id << std::endl
+                << tree_log;
+  return tree_log;
 }
 
 fuchsia::accessibility::Node* SemanticTree::HitTest(
