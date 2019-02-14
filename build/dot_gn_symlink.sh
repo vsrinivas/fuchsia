@@ -3,6 +3,5 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-FUCHSIA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# do nothing
 
-exec ln -snf build/gn/dotfile.gn "${FUCHSIA_DIR}/.gn"
