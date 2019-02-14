@@ -275,7 +275,7 @@ zx_status_t AssociatingState::FinalizeAssociationAttempt(std::optional<uint16_t>
         MoveToState<AssociatedState>(aid.value());
     } else {
         service::SendDisassociateIndication(client_->device(), client_->addr(),
-                                            reason_code::ReasonCode::kUnspecifiedReason);
+                                            WLAN_REASON_CODE_UNSPECIFIED_REASON);
         MoveToState<AuthenticatedState>();
     }
     return status;

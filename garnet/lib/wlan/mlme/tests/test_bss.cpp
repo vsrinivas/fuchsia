@@ -379,7 +379,7 @@ fbl::unique_ptr<Packet> CreateDeauthFrame(common::MacAddr client_addr) {
     mgmt_hdr->addr2 = client_addr;
     mgmt_hdr->addr3 = bssid;
 
-    w.Write<Deauthentication>()->reason_code = reason_code::ReasonCode::kLeavingNetworkDeauth;
+    w.Write<Deauthentication>()->reason_code = WLAN_REASON_CODE_LEAVING_NETWORK_DEAUTH;
 
     packet->set_len(w.WrittenBytes());
 
@@ -491,7 +491,7 @@ fbl::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr) {
     mgmt_hdr->addr2 = client_addr;
     mgmt_hdr->addr3 = bssid;
 
-    w.Write<Disassociation>()->reason_code = reason_code::ReasonCode::kLeavingNetworkDisassoc;
+    w.Write<Disassociation>()->reason_code = WLAN_REASON_CODE_LEAVING_NETWORK_DISASSOC;
 
     packet->set_len(w.WrittenBytes());
 
