@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "platform_handle.h"
 #include "platform_sysmem_connection.h"
 #include "gtest/gtest.h"
 
@@ -9,7 +10,7 @@ class TestPlatformSysmemConnection {
 public:
     static void TestCreateBuffer()
     {
-        auto connection = magma::PlatformSysmemConnection::Create();
+        auto connection = magma_sysmem::PlatformSysmemConnection::Create();
 
         ASSERT_NE(nullptr, connection.get());
 
@@ -21,12 +22,12 @@ public:
 
     static void TestCreate()
     {
-        auto connection = magma::PlatformSysmemConnection::Create();
+        auto connection = magma_sysmem::PlatformSysmemConnection::Create();
 
         ASSERT_NE(nullptr, connection.get());
 
         std::unique_ptr<magma::PlatformBuffer> buffer;
-        std::unique_ptr<magma::PlatformBufferDescription> description;
+        std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
         EXPECT_EQ(MAGMA_STATUS_OK, connection->AllocateTexture(0, MAGMA_FORMAT_R8G8B8A8, 128, 64,
                                                                &buffer, &description));
         EXPECT_TRUE(buffer != nullptr);
@@ -36,13 +37,13 @@ public:
 
     static void TestSetConstraints()
     {
-        auto connection = magma::PlatformSysmemConnection::Create();
+        auto connection = magma_sysmem::PlatformSysmemConnection::Create();
 
         ASSERT_NE(nullptr, connection.get());
 
         uint32_t token;
         EXPECT_EQ(MAGMA_STATUS_OK, connection->CreateBufferCollectionToken(&token).get());
-        std::unique_ptr<magma::PlatformBufferCollection> collection;
+        std::unique_ptr<magma_sysmem::PlatformBufferCollection> collection;
         EXPECT_EQ(MAGMA_STATUS_OK, connection->ImportBufferCollection(token, &collection).get());
 
         magma_buffer_format_constraints_t buffer_constraints;
@@ -51,7 +52,7 @@ public:
         buffer_constraints.usage = 0;
         buffer_constraints.secure_permitted = false;
         buffer_constraints.secure_required = false;
-        std::unique_ptr<magma::PlatformBufferConstraints> constraints;
+        std::unique_ptr<magma_sysmem::PlatformBufferConstraints> constraints;
         EXPECT_EQ(MAGMA_STATUS_OK,
                   connection->CreateBufferConstraints(&buffer_constraints, &constraints).get());
 
@@ -73,17 +74,29 @@ public:
         EXPECT_EQ(MAGMA_STATUS_OK,
                   constraints->SetImageFormatConstraints(1, &image_constraints).get());
         EXPECT_EQ(MAGMA_STATUS_OK, collection->SetConstraints(constraints.get()).get());
+
+        std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
+        EXPECT_EQ(MAGMA_STATUS_OK, collection->GetBufferDescription(&description).get());
+        EXPECT_FALSE(description->is_secure);
+        EXPECT_EQ(1u, description->count);
+
+        uint32_t handle;
+        uint32_t offset;
+        EXPECT_EQ(MAGMA_STATUS_OK, collection->GetBufferHandle(0u, &handle, &offset).get());
+
+        auto platform_handle = magma::PlatformHandle::Create(handle);
+        EXPECT_NE(nullptr, platform_handle);
     }
 
     static void TestIntelTiling()
     {
-        auto connection = magma::PlatformSysmemConnection::Create();
+        auto connection = magma_sysmem::PlatformSysmemConnection::Create();
 
         ASSERT_NE(nullptr, connection.get());
 
         uint32_t token;
         EXPECT_EQ(MAGMA_STATUS_OK, connection->CreateBufferCollectionToken(&token).get());
-        std::unique_ptr<magma::PlatformBufferCollection> collection;
+        std::unique_ptr<magma_sysmem::PlatformBufferCollection> collection;
         EXPECT_EQ(MAGMA_STATUS_OK, connection->ImportBufferCollection(token, &collection).get());
 
         magma_buffer_format_constraints_t buffer_constraints;
@@ -92,7 +105,7 @@ public:
         buffer_constraints.usage = 0;
         buffer_constraints.secure_permitted = false;
         buffer_constraints.secure_required = false;
-        std::unique_ptr<magma::PlatformBufferConstraints> constraints;
+        std::unique_ptr<magma_sysmem::PlatformBufferConstraints> constraints;
         EXPECT_EQ(MAGMA_STATUS_OK,
                   connection->CreateBufferConstraints(&buffer_constraints, &constraints).get());
 
@@ -110,8 +123,8 @@ public:
         EXPECT_EQ(MAGMA_STATUS_OK,
                   constraints->SetImageFormatConstraints(0, &image_constraints).get());
         EXPECT_EQ(MAGMA_STATUS_OK, collection->SetConstraints(constraints.get()).get());
-        std::unique_ptr<magma::PlatformBufferDescription> description;
-        EXPECT_EQ(MAGMA_STATUS_OK, collection->GetBufferDescription(0, &description).get());
+        std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
+        EXPECT_EQ(MAGMA_STATUS_OK, collection->GetBufferDescription(&description).get());
         EXPECT_TRUE(description->has_format_modifier);
         EXPECT_EQ(MAGMA_FORMAT_MODIFIER_INTEL_X_TILED, description->format_modifier);
     }

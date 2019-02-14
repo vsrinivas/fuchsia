@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/magma_abi_conformance_tests"
     },
@@ -6,6 +13,9 @@
         "features": [
             "vulkan",
             "system-temp"
+        ],
+        "services": [
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }

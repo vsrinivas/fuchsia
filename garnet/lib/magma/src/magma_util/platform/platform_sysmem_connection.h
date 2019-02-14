@@ -12,8 +12,10 @@
 
 #include <memory>
 
-namespace magma {
+namespace magma_sysmem {
 struct PlatformBufferDescription {
+    bool is_secure = false;
+    uint32_t count = 0;
     bool has_format_modifier = false;
     uint64_t format_modifier = 0u;
     magma_image_plane_t planes[MAGMA_MAX_IMAGE_PLANES] = {};
@@ -23,7 +25,7 @@ class PlatformBufferConstraints {
 public:
     virtual ~PlatformBufferConstraints() {}
 
-    virtual Status
+    virtual magma::Status
     SetImageFormatConstraints(uint32_t index,
                               const magma_image_format_constraints_t* format_constraints) = 0;
 };
@@ -32,10 +34,11 @@ class PlatformBufferCollection {
 public:
     virtual ~PlatformBufferCollection() {}
 
-    virtual Status SetConstraints(PlatformBufferConstraints* constraints) = 0;
-    virtual Status
-    GetBufferDescription(uint32_t index,
-                         std::unique_ptr<PlatformBufferDescription>* description_out) = 0;
+    virtual magma::Status SetConstraints(PlatformBufferConstraints* constraints) = 0;
+    virtual magma::Status
+    GetBufferDescription(std::unique_ptr<PlatformBufferDescription>* description_out) = 0;
+    virtual magma::Status GetBufferHandle(uint32_t index, uint32_t* handle_out,
+                                          uint32_t* offset_out) = 0;
 };
 
 class PlatformSysmemConnection {
@@ -49,23 +52,23 @@ public:
                             std::unique_ptr<PlatformBufferDescription>* buffer_description_out);
 
     virtual magma_status_t AllocateBuffer(uint32_t flags, size_t size,
-                                          std::unique_ptr<PlatformBuffer>* buffer_out) = 0;
+                                          std::unique_ptr<magma::PlatformBuffer>* buffer_out) = 0;
 
     virtual magma_status_t
     AllocateTexture(uint32_t flags, uint32_t format, uint32_t width, uint32_t height,
-                    std::unique_ptr<PlatformBuffer>* buffer_out,
+                    std::unique_ptr<magma::PlatformBuffer>* buffer_out,
                     std::unique_ptr<PlatformBufferDescription>* buffer_description_out) = 0;
 
-    virtual Status CreateBufferCollectionToken(uint32_t* handle_out) = 0;
-    virtual Status
+    virtual magma::Status CreateBufferCollectionToken(uint32_t* handle_out) = 0;
+    virtual magma::Status
     ImportBufferCollection(uint32_t handle,
                            std::unique_ptr<PlatformBufferCollection>* collection_out) = 0;
 
-    virtual Status
+    virtual magma::Status
     CreateBufferConstraints(const magma_buffer_format_constraints_t* constraints,
                             std::unique_ptr<PlatformBufferConstraints>* constraints_out) = 0;
 };
 
-} // namespace magma
+} // namespace magma_sysmem
 
 #endif // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_SYSMEM_CONNECTION_H_

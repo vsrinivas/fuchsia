@@ -15,7 +15,9 @@
 
 #include "magma_util/macros.h"
 
-namespace magma {
+using magma::Status;
+
+namespace magma_sysmem {
 class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
 public:
     virtual ~ZirconPlatformBufferConstraints() {}
@@ -98,13 +100,14 @@ static Status
 InitializeDescriptionFromSettings(const fuchsia::sysmem::SingleBufferSettings& settings,
                                   PlatformBufferDescription* description_out)
 {
+    description_out->is_secure = settings.buffer_settings.is_secure;
     description_out->has_format_modifier =
         settings.image_format_constraints.pixel_format.has_format_modifier;
     description_out->format_modifier =
         settings.image_format_constraints.pixel_format.format_modifier.value;
     description_out->planes[0].bytes_per_row =
-        round_up(settings.image_format_constraints.min_bytes_per_row,
-                 settings.image_format_constraints.bytes_per_row_divisor);
+        magma::round_up(settings.image_format_constraints.min_bytes_per_row,
+                        settings.image_format_constraints.bytes_per_row_divisor);
     description_out->planes[0].byte_offset = 0;
     if (settings.image_format_constraints.pixel_format.type ==
         fuchsia::sysmem::PixelFormatType::NV12) {
@@ -151,8 +154,31 @@ public:
     }
 
     Status
-    GetBufferDescription(uint32_t index,
-                         std::unique_ptr<PlatformBufferDescription>* description_out) override
+    GetBufferDescription(std::unique_ptr<PlatformBufferDescription>* description_out) override
+    {
+        fuchsia::sysmem::BufferCollectionInfo_2 info;
+        zx_status_t status2;
+        zx_status_t status = collection_->WaitForBuffersAllocated(&status2, &info);
+
+        if (status != ZX_OK || status2 != ZX_OK) {
+            return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed wait for allocation: %d %d",
+                            status, status2);
+        }
+
+        if (!info.settings.has_image_format_constraints) {
+            return DRET(MAGMA_STATUS_INTERNAL_ERROR);
+        }
+        auto description = std::make_unique<PlatformBufferDescription>();
+        Status magma_status = InitializeDescriptionFromSettings(info.settings, description.get());
+        description->count = info.buffer_count;
+        if (!magma_status.ok()) {
+            return DRET(magma_status.get());
+        }
+        *description_out = std::move(description);
+        return MAGMA_STATUS_OK;
+    }
+
+    Status GetBufferHandle(uint32_t index, uint32_t* handle_out, uint32_t* offset_out) override
     {
         fuchsia::sysmem::BufferCollectionInfo_2 info;
         zx_status_t status2;
@@ -166,16 +192,8 @@ public:
         if (info.buffer_count < index) {
             return DRET(MAGMA_STATUS_INVALID_ARGS);
         }
-
-        if (!info.settings.has_image_format_constraints) {
-            return DRET(MAGMA_STATUS_INTERNAL_ERROR);
-        }
-        auto description = std::make_unique<PlatformBufferDescription>();
-        Status magma_status = InitializeDescriptionFromSettings(info.settings, description.get());
-        if (!magma_status.ok()) {
-            return DRET(magma_status.get());
-        }
-        *description_out = std::move(description);
+        *handle_out = info.buffers[index].vmo.release();
+        *offset_out = info.buffers[index].vmo_usable_start;
         return MAGMA_STATUS_OK;
     }
 
@@ -192,7 +210,7 @@ public:
     }
 
     magma_status_t AllocateBuffer(uint32_t flags, size_t size,
-                                  std::unique_ptr<PlatformBuffer>* buffer_out) override
+                                  std::unique_ptr<magma::PlatformBuffer>* buffer_out) override
     {
         fuchsia::sysmem::BufferUsage usage;
         usage.vulkan = fuchsia::sysmem::vulkanUsageTransientAttachment |
@@ -233,7 +251,7 @@ public:
             return DRET(MAGMA_STATUS_INTERNAL_ERROR);
         }
 
-        *buffer_out = PlatformBuffer::Import(info.buffers[0].vmo.release());
+        *buffer_out = magma::PlatformBuffer::Import(info.buffers[0].vmo.release());
         if (!buffer_out) {
             return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "PlatformBuffer::Import failed");
         }
@@ -243,7 +261,7 @@ public:
 
     magma_status_t
     AllocateTexture(uint32_t flags, uint32_t format, uint32_t width, uint32_t height,
-                    std::unique_ptr<PlatformBuffer>* buffer_out,
+                    std::unique_ptr<magma::PlatformBuffer>* buffer_out,
                     std::unique_ptr<PlatformBufferDescription>* buffer_description_out) override
     {
 
@@ -314,6 +332,7 @@ public:
                 return DRET(MAGMA_STATUS_INTERNAL_ERROR);
             }
             *buffer_description_out = std::make_unique<PlatformBufferDescription>();
+            (*buffer_description_out)->count = 1u;
             result = InitializeDescriptionFromSettings(info.settings, buffer_description_out->get())
                          .get();
             if (result != MAGMA_STATUS_OK) {
@@ -321,7 +340,7 @@ public:
             }
         }
 
-        *buffer_out = PlatformBuffer::Import(info.buffers[0].vmo.release());
+        *buffer_out = magma::PlatformBuffer::Import(info.buffers[0].vmo.release());
         if (!buffer_out) {
             return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "PlatformBuffer::Import failed");
         }
@@ -432,7 +451,8 @@ magma_status_t PlatformSysmemConnection::DecodeBufferDescription(
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Buffer is not image");
     }
 
-    auto description = std::make_unique<magma::PlatformBufferDescription>();
+    auto description = std::make_unique<PlatformBufferDescription>();
+    description->count = 1u;
     Status magma_status = InitializeDescriptionFromSettings(buffer_settings, description.get());
     if (!magma_status.ok()) {
         return DRET(magma_status.get());
@@ -442,4 +462,4 @@ magma_status_t PlatformSysmemConnection::DecodeBufferDescription(
     return MAGMA_STATUS_OK;
 }
 
-} // namespace magma
+} // namespace magma_sysmem

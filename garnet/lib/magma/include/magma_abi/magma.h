@@ -54,6 +54,9 @@ void magma_release_buffer(magma_connection_t connection, magma_buffer_t buffer);
 // Duplicates |buffer_handle|, giving another handle that can be imported into a connection.
 magma_status_t magma_duplicate_handle(uint32_t buffer_handle, uint32_t* buffer_handle_out);
 
+// Releases |buffer_handle|.
+magma_status_t magma_release_buffer_handle(uint32_t buffer_handle);
+
 // Returns a unique id for the given |buffer|.
 uint64_t magma_get_buffer_id(magma_buffer_t buffer);
 

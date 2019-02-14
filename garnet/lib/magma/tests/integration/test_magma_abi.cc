@@ -144,6 +144,14 @@ public:
         EXPECT_EQ(magma_export(connection_, buffer, handle_out), 0);
     }
 
+    void BufferRelease()
+    {
+        uint64_t id;
+        uint32_t handle;
+        BufferExport(&handle, &id);
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_release_buffer_handle(handle));
+    }
+
     void BufferImport(uint32_t handle, uint64_t id)
     {
         ASSERT_NE(connection_, nullptr);
@@ -250,8 +258,8 @@ public:
         // Add an extra byte to ensure the size is correct.
         encoded_bytes.push_back(0);
         magma_buffer_format_description_t description;
-        ASSERT_EQ(MAGMA_STATUS_OK, magma_get_buffer_format_description(
-                                       encoded_bytes.data(), real_size, &description));
+        ASSERT_EQ(MAGMA_STATUS_OK, magma_get_buffer_format_description(encoded_bytes.data(),
+                                                                       real_size, &description));
         magma_image_plane_t planes[4];
         EXPECT_EQ(MAGMA_STATUS_OK, magma_get_buffer_format_plane_info(description, planes));
 
@@ -260,12 +268,82 @@ public:
         EXPECT_EQ(256u, planes[1].bytes_per_row);
         EXPECT_EQ(256u * 64u, planes[1].byte_offset);
         magma_buffer_format_description_release(description);
-        EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS,
-                  magma_get_buffer_format_description(encoded_bytes.data(),
-                                                      real_size + 1, &description));
-        EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS,
-                  magma_get_buffer_format_description(encoded_bytes.data(),
-                                                      real_size - 1, &description));
+        EXPECT_EQ(
+            MAGMA_STATUS_INVALID_ARGS,
+            magma_get_buffer_format_description(encoded_bytes.data(), real_size + 1, &description));
+        EXPECT_EQ(
+            MAGMA_STATUS_INVALID_ARGS,
+            magma_get_buffer_format_description(encoded_bytes.data(), real_size - 1, &description));
+    }
+
+    void Sysmem()
+    {
+        magma_sysmem_connection_t connection;
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_sysmem_connection_create(&connection));
+
+        magma_buffer_collection_t collection;
+        EXPECT_EQ(MAGMA_STATUS_OK,
+                  magma_buffer_collection_import(connection, ZX_HANDLE_INVALID, &collection));
+
+        magma_buffer_format_constraints_t buffer_constraints;
+
+        buffer_constraints.count = 1;
+        buffer_constraints.usage = 0;
+        buffer_constraints.secure_permitted = false;
+        buffer_constraints.secure_required = false;
+        magma_sysmem_buffer_constraints_t constraints;
+        EXPECT_EQ(MAGMA_STATUS_OK,
+                  magma_buffer_constraints_create(connection, &buffer_constraints, &constraints));
+
+        // Create a set of basic 512x512 RGBA image constraints.
+        magma_image_format_constraints_t image_constraints;
+        image_constraints.image_format = MAGMA_FORMAT_R8G8B8A8;
+        image_constraints.has_format_modifier = false;
+        image_constraints.format_modifier = 0;
+        image_constraints.width = 512;
+        image_constraints.height = 512;
+        image_constraints.layers = 1;
+        image_constraints.bytes_per_row_divisor = 1;
+        image_constraints.min_bytes_per_row = 0;
+
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_buffer_constraints_set_format(connection, constraints, 0,
+                                                                       &image_constraints));
+
+        EXPECT_EQ(MAGMA_STATUS_OK,
+                  magma_buffer_collection_set_constraints(connection, collection, constraints));
+
+        // Buffer should be allocated now.
+        magma_buffer_format_description_t description;
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_sysmem_get_description_from_collection(
+                                       connection, collection, &description));
+
+        uint32_t buffer_count;
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_get_buffer_count(description, &buffer_count));
+        EXPECT_EQ(1u, buffer_count);
+        magma_bool_t is_secure;
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_get_buffer_is_secure(description, &is_secure));
+        EXPECT_FALSE(is_secure);
+
+        magma_bool_t has_format_modifier;
+        uint64_t format_modifier;
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_get_buffer_format_modifier(
+                                       description, &has_format_modifier, &format_modifier));
+        EXPECT_FALSE(has_format_modifier);
+
+        magma_image_plane_t planes[4];
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_get_buffer_format_plane_info(description, planes));
+        EXPECT_EQ(512 * 4u, planes[0].bytes_per_row);
+        EXPECT_EQ(0u, planes[0].byte_offset);
+
+        uint32_t handle;
+        uint32_t offset;
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_sysmem_get_buffer_handle_from_collection(
+                                       connection, collection, 0, &handle, &offset));
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_release_buffer_handle(handle));
+
+        magma_buffer_collection_release(connection, collection);
+        magma_buffer_constraints_release(connection, constraints);
+        magma_sysmem_connection_release(connection);
     }
 
 private:
@@ -315,6 +393,12 @@ TEST(MagmaAbi, BufferMap)
     test.BufferMap();
 }
 
+TEST(MagmaAbi, BufferRelease)
+{
+    TestConnection test;
+    test.BufferRelease();
+}
+
 TEST(MagmaAbi, BufferImportExport)
 {
     TestConnection test1;
@@ -341,6 +425,12 @@ TEST(MagmaAbi, ImageFormat)
 {
     TestConnection test;
     test.ImageFormat();
+}
+
+TEST(MagmaAbi, Sysmem)
+{
+    TestConnection test;
+    test.Sysmem();
 }
 
 TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c()); }
