@@ -505,7 +505,7 @@ var lastIfInfo *C.netc_get_if_info_t
 var _ net.SocketControl = (*iostate)(nil)
 
 func tcpipErrorToCode(err *tcpip.Error) int16 {
-	if debug {
+	if debug && err != tcpip.ErrConnectStarted {
 		errStr := err.String()
 		if pc, _, _, ok := runtime.Caller(1); ok {
 			errStr = runtime.FuncForPC(pc).Name() + ": " + errStr
