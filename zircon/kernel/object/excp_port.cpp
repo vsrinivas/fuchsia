@@ -262,9 +262,9 @@ void ExceptionPort::BuildReport(zx_exception_report_t* report, uint32_t type) {
 }
 
 void ExceptionPort::BuildArchReport(zx_exception_report_t* report, uint32_t type,
-                                    const arch_exception_context_t* arch_context) {
+                                    const arch_exception_context_t* context) {
     BuildReport(report, type);
-    arch_fill_in_exception_context(arch_context, report);
+    arch_fill_in_exception_context(context, report);
 }
 
 void ExceptionPort::OnThreadStartForDebugger(ThreadDispatcher* thread) {
@@ -276,19 +276,18 @@ void ExceptionPort::OnThreadStartForDebugger(ThreadDispatcher* thread) {
     zx_koid_t tid = thread->get_koid();
     LTRACEF("thread %" PRIu64 ".%" PRIu64 " started\n", pid, tid);
 
-    zx_exception_report_t report;
-    BuildReport(&report, ZX_EXCP_THREAD_STARTING);
-    arch_exception_context_t context;
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.
-    memset(&context, 0, sizeof(context));
-    ThreadState::Exception estatus;
-    auto status = thread->ExceptionHandlerExchange(fbl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
+    arch_exception_context_t context{};
+
+    zx_status_t status = dispatch_debug_exception(fbl::RefPtr<ExceptionPort>(this),
+                                                  ZX_EXCP_THREAD_STARTING,
+                                                  &context);
     if (status != ZX_OK) {
         // Ignore any errors. There's nothing we can do here, and
         // we still want the thread to run. It's possible the thread was
-        // killed (status == ZX_ERR_INTERNAL_INTR_KILLED), the kernel will kill the
-        // thread shortly.
+        // killed (status == ZX_ERR_INTERNAL_INTR_KILLED), the kernel will kill
+        // the thread shortly.
     }
 }
 
@@ -301,19 +300,18 @@ void ExceptionPort::OnProcessStartForDebugger(ThreadDispatcher* thread) {
     zx_koid_t tid = thread->get_koid();
     LTRACEF("process %" PRIu64 ".%" PRIu64 " started\n", pid, tid);
 
-    zx_exception_report_t report;
-    BuildReport(&report, ZX_EXCP_PROCESS_STARTING);
-    arch_exception_context_t context;
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.
-    memset(&context, 0, sizeof(context));
-    ThreadState::Exception estatus;
-    auto status = thread->ExceptionHandlerExchange(fbl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
+    arch_exception_context_t context{};
+
+    zx_status_t status = dispatch_debug_exception(fbl::RefPtr<ExceptionPort>(this),
+                                                  ZX_EXCP_PROCESS_STARTING,
+                                                  &context);
     if (status != ZX_OK) {
         // Ignore any errors. There's nothing we can do here, and
         // we still want the thread to run. It's possible the thread was
-        // killed (status == ZX_ERR_INTERNAL_INTR_KILLED), the kernel will kill the
-        // thread shortly.
+        // killed (status == ZX_ERR_INTERNAL_INTR_KILLED), the kernel will kill
+        // the thread shortly.
     }
 }
 
@@ -329,17 +327,16 @@ void ExceptionPort::OnThreadExitForDebugger(ThreadDispatcher* thread) {
     zx_koid_t tid = thread->get_koid();
     LTRACEF("thread %" PRIu64 ".%" PRIu64 " exited\n", pid, tid);
 
-    zx_exception_report_t report;
-    BuildReport(&report, ZX_EXCP_THREAD_EXITING);
-    arch_exception_context_t context;
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.
-    memset(&context, 0, sizeof(context));
-    ThreadState::Exception estatus;
+    arch_exception_context_t context{};
+
     // N.B. If the process is exiting it will have killed all threads. That
     // means all threads get marked with THREAD_SIGNAL_KILL which means this
     // exchange will return immediately with ZX_ERR_INTERNAL_INTR_KILLED.
-    auto status = thread->ExceptionHandlerExchange(fbl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
+    zx_status_t status = dispatch_debug_exception(fbl::RefPtr<ExceptionPort>(this),
+                                                  ZX_EXCP_THREAD_EXITING,
+                                                  &context);
     if (status != ZX_OK) {
         // Ignore any errors, we still want the thread to continue exiting.
     }

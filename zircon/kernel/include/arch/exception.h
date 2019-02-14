@@ -6,13 +6,13 @@
 
 #pragma once
 
+#include <fbl/ref_ptr.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
 struct thread;
+class ExceptionPort;
 typedef struct arch_exception_context arch_exception_context_t;
 typedef struct zx_exception_report zx_exception_report_t;
 
@@ -21,6 +21,13 @@ typedef struct zx_exception_report zx_exception_report_t;
 // using arch_dump_exception_context(). Implemented by non-arch code.
 zx_status_t dispatch_user_exception(uint exception_type,
                                     const arch_exception_context_t* context);
+
+// Dispatches a debug exception to |eport|.
+// The returned value is the result of calling
+// |ThreadDispatcher::ExceptionHandlerExchange()|.
+zx_status_t dispatch_debug_exception(fbl::RefPtr<ExceptionPort> eport,
+                                     uint exception_type,
+                                     const arch_exception_context_t* context);
 
 // Dispatches an exception that was raised by a syscall using
 // thread_signal_policy_exception() (see <kernel/thread.h>), causing
@@ -46,5 +53,3 @@ void arch_install_context_regs(struct thread* thread, const arch_exception_conte
 
 // Undo a previous call to |arch_install_context_regs()|.
 void arch_remove_context_regs(struct thread* thread);
-
-__END_CDECLS

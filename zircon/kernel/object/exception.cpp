@@ -8,6 +8,7 @@
 #include <arch/exception.h>
 #include <assert.h>
 #include <err.h>
+#include <fbl/auto_call.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <trace.h>
@@ -36,6 +37,12 @@ static const char* excp_type_to_string(uint type) {
         return "alignment fault";
     case ZX_EXCP_POLICY_ERROR:
         return "policy error";
+    case ZX_EXCP_PROCESS_STARTING:
+        return "process starting";
+    case ZX_EXCP_THREAD_STARTING:
+        return "thread starting";
+    case ZX_EXCP_THREAD_EXITING:
+        return "thread exiting";
     default:
         return "unknown fault";
     }
@@ -49,7 +56,6 @@ static const char* excp_type_to_string(uint type) {
 // - thread
 // - process
 // - job (first owning job, then its parent job, and so on up to root job)
-// - system
 class ExceptionPortIterator final {
 public:
     explicit ExceptionPortIterator(ThreadDispatcher* thread)
@@ -274,4 +280,30 @@ zx_status_t dispatch_user_exception(uint exception_type,
     // should not get here
     panic("fell out of thread exit somehow!\n");
     __UNREACHABLE;
+}
+
+zx_status_t dispatch_debug_exception(fbl::RefPtr<ExceptionPort> eport,
+                                     uint exception_type,
+                                     const arch_exception_context_t* context) {
+    LTRACEF("type %u, context %p\n", exception_type, context);
+
+    thread_t* lk_thread = get_current_thread();
+    ThreadDispatcher* thread = lk_thread->user_thread;
+    // This function can only be called on behalf of user threads.
+    DEBUG_ASSERT(thread);
+
+    // From now until the exception is resolved the thread is in an exception.
+    ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::EXCEPTION);
+
+    arch_install_context_regs(lk_thread, context);
+    auto ac = fbl::MakeAutoCall([&lk_thread]() {
+        arch_remove_context_regs(lk_thread);
+    });
+
+    zx_exception_report_t report;
+    ExceptionPort::BuildArchReport(&report, exception_type, context);
+
+    ThreadState::Exception estatus;
+    return thread->ExceptionHandlerExchange(eport, &report, context, &estatus);
+    // We can ignore |estatus| here (TRY_NEXT/RESUME) as they're not used.
 }
