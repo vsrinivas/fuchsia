@@ -224,11 +224,7 @@ impl EventLoop {
         EventLoop {
             ctx: Context::new(
                 StackState::default(),
-                EventLoopInner {
-                    devices: vec![],
-                    timers: vec![],
-                    event_send: event_send.clone(),
-                },
+                EventLoopInner { devices: vec![], timers: vec![], event_send: event_send.clone() },
             ),
             event_recv,
         }
@@ -262,7 +258,13 @@ impl EventLoop {
                     // acks the message, and prevents the device from sending more status changed
                     // messages.
                     // TODO(wesleyac): Error checking on get_device_client - is a race possible?
-                    await!(self.ctx.dispatcher().get_device_client(id.id()).unwrap().client.get_status());
+                    await!(self
+                        .ctx
+                        .dispatcher()
+                        .get_device_client(id.id())
+                        .unwrap()
+                        .client
+                        .get_status());
                 }
                 Some(Event::EthEvent((id, eth::Event::Receive(rx, _flags)))) => {
                     // TODO(wesleyac): Check flags
@@ -281,22 +283,14 @@ impl EventLoop {
 
     async fn handle_fidl_socket_provider_request(&mut self, req: SocketProviderRequest) {
         match req {
-            SocketProviderRequest::Socket {
-                domain,
-                type_,
-                protocol,
-                responder,
-            } => match (domain as i32, type_ as i32) {
-                _ => {
-                    responder.send(libc::ENOSYS as i16, None);
+            SocketProviderRequest::Socket { domain, type_, protocol, responder } => {
+                match (domain as i32, type_ as i32) {
+                    _ => {
+                        responder.send(libc::ENOSYS as i16, None);
+                    }
                 }
-            },
-            SocketProviderRequest::GetAddrInfo {
-                node,
-                service,
-                hints,
-                responder,
-            } => {
+            }
+            SocketProviderRequest::GetAddrInfo { node, service, hints, responder } => {
                 // TODO(wesleyac)
             }
         }
@@ -304,11 +298,7 @@ impl EventLoop {
 
     async fn handle_fidl_stack_request(&mut self, req: StackRequest) {
         match req {
-            StackRequest::AddEthernetInterface {
-                topological_path,
-                device,
-                responder,
-            } => {
+            StackRequest::AddEthernetInterface { topological_path, device, responder } => {
                 self.fidl_add_ethernet_interface(topological_path, device, responder);
             }
             StackRequest::DelEthernetInterface { id, responder } => {
@@ -326,18 +316,10 @@ impl EventLoop {
             StackRequest::DisableInterface { id, responder } => {
                 self.fidl_disable_interface(id, responder);
             }
-            StackRequest::AddInterfaceAddress {
-                id,
-                addr,
-                responder,
-            } => {
+            StackRequest::AddInterfaceAddress { id, addr, responder } => {
                 self.fidl_add_interface_address(id, addr, responder);
             }
-            StackRequest::DelInterfaceAddress {
-                id,
-                addr,
-                responder,
-            } => {
+            StackRequest::DelInterfaceAddress { id, addr, responder } => {
                 self.fidl_del_interface_address(id, addr, responder);
             }
             StackRequest::GetForwardingTable { responder } => {
@@ -353,7 +335,8 @@ impl EventLoop {
     }
 
     fn fidl_add_ethernet_interface(
-        &mut self, topological_path: String,
+        &mut self,
+        topological_path: String,
         device: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker>,
         responder: StackAddEthernetInterfaceResponder,
     ) {
@@ -366,7 +349,9 @@ impl EventLoop {
     }
 
     fn fidl_del_ethernet_interface(
-        &mut self, id: u64, responder: StackDelEthernetInterfaceResponder,
+        &mut self,
+        id: u64,
+        responder: StackDelEthernetInterfaceResponder,
     ) {
     }
 
@@ -380,17 +365,9 @@ impl EventLoop {
                 id: device.id.id(),
                 properties: InterfaceProperties {
                     path: device.path.clone(),
-                    mac: if let Ok(info) = &info {
-                        Some(Box::new(info.mac.into()))
-                    } else {
-                        None
-                    },
+                    mac: if let Ok(info) = &info { Some(Box::new(info.mac.into())) } else { None },
                     mtu: if let Ok(info) = &info { info.mtu } else { 0 },
-                    features: if let Ok(info) = &info {
-                        info.features.bits()
-                    } else {
-                        0
-                    },
+                    features: if let Ok(info) = &info { info.features.bits() } else { 0 },
                     enablement_status: EnablementStatus::Enabled, // TODO(wesleyac) this
                     physical_status: match status {
                         Ok(status) => {
@@ -416,22 +393,18 @@ impl EventLoop {
     fn fidl_disable_interface(&mut self, id: u64, responder: StackDisableInterfaceResponder) {}
 
     fn fidl_add_interface_address(
-        &mut self, id: u64, addr: InterfaceAddress, responder: StackAddInterfaceAddressResponder,
+        &mut self,
+        id: u64,
+        addr: InterfaceAddress,
+        responder: StackAddInterfaceAddressResponder,
     ) {
         let device_id = self.ctx.dispatcher().get_device_client(id).map(|x| x.id);
         // TODO(wesleyac): Constructing this here seems sort of jank
-        let mut err = fidl_net_stack::Error {
-            type_: fidl_net_stack::ErrorType::NotFound,
-        };
+        let mut err = fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::NotFound };
         responder.send(if let Some(device_id) = device_id {
             // TODO(wesleyac): Check for address already existing.
             let ip: std::net::IpAddr = fidl_net_ext::IpAddress::from(addr.ip_address).0;
-            set_ip_addr(
-                &mut self.ctx,
-                device_id,
-                ip,
-                Subnet::new(ip, addr.prefix_len),
-            );
+            set_ip_addr(&mut self.ctx, device_id, ip, Subnet::new(ip, addr.prefix_len));
             None
         } else {
             Some(fidl::encoding::OutOfLine(&mut err)) // Invalid device ID
@@ -439,14 +412,19 @@ impl EventLoop {
     }
 
     fn fidl_del_interface_address(
-        &mut self, id: u64, addr: fidl_net::IpAddress, responder: StackDelInterfaceAddressResponder,
+        &mut self,
+        id: u64,
+        addr: fidl_net::IpAddress,
+        responder: StackDelInterfaceAddressResponder,
     ) {
     }
 
     fn fidl_get_forwarding_table(&self, responder: StackGetForwardingTableResponder) {}
 
     fn fidl_add_forwarding_entry(
-        &mut self, entry: ForwardingEntry, responder: StackAddForwardingEntryResponder,
+        &mut self,
+        entry: ForwardingEntry,
+        responder: StackAddForwardingEntryResponder,
     ) {
         responder.send(match entry.destination {
             fidl_net_stack::ForwardingDestination::DeviceId(id) => {
@@ -470,7 +448,9 @@ impl EventLoop {
     }
 
     fn fidl_del_forwarding_entry(
-        &mut self, subnet: fidl_net::Subnet, responder: StackDelForwardingEntryResponder,
+        &mut self,
+        subnet: fidl_net::Subnet,
+        responder: StackDelForwardingEntryResponder,
     ) {
     }
 }
@@ -495,9 +475,7 @@ struct EventLoopInner {
 
 impl EventLoopInner {
     fn get_device_client(&self, id: u64) -> Option<&DeviceInfo> {
-        self.devices
-            .iter()
-            .find_map(|d| if d.id.id() == id { Some(d) } else { None })
+        self.devices.iter().find(|d| d.id.id() == id)
     }
 }
 
@@ -522,11 +500,7 @@ impl EventDispatcher for EventLoopInner {
         };
 
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
-        self.timers.push(TimerInfo {
-            time: rust_time,
-            id,
-            abort_handle,
-        });
+        self.timers.push(TimerInfo { time: rust_time, id, abort_handle });
 
         let timeout = Abortable::new(timeout, abort_registration);
         let timeout = timeout.unwrap_or_else(|_| ());

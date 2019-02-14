@@ -7,10 +7,10 @@
 
 use failure::{Error, ResultExt};
 use fdio;
+use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
 use fidl_fuchsia_net_stack_ext as pretty;
-use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -98,10 +98,8 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
         }
         IfCmd::Addr(AddrCmd::Add { id, addr, prefix }) => {
             let parsed_addr = parse_ip_addr(&addr)?;
-            let mut fidl_addr = netstack::InterfaceAddress {
-                ip_address: parsed_addr,
-                prefix_len: prefix,
-            };
+            let mut fidl_addr =
+                netstack::InterfaceAddress { ip_address: parsed_addr, prefix_len: prefix };
             let response = await!(stack.add_interface_address(id, &mut fidl_addr))
                 .context("error setting interface address")?;
             if let Some(e) = response {
@@ -131,60 +129,43 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
             }
         }
         FwdCmd::AddDevice { id, addr, prefix } => {
-            let response = await!(stack.add_forwarding_entry(
-                &mut fidl_fuchsia_net_stack::ForwardingEntry {
-                    subnet: net::Subnet {
-                        addr: parse_ip_addr(&addr)?,
-                        prefix_len: prefix,
-                    },
+            let response =
+                await!(stack.add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+                    subnet: net::Subnet { addr: parse_ip_addr(&addr)?, prefix_len: prefix },
                     destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(id),
-                }
-            ))
-            .context("error adding forwarding entry")?;
+                }))
+                .context("error adding forwarding entry")?;
             if let Some(e) = response {
                 println!("Error adding forwarding entry: {:?}", e);
             } else {
-                println!(
-                    "Added forwarding entry for {}/{} to device {}",
-                    addr, prefix, id
-                );
+                println!("Added forwarding entry for {}/{} to device {}", addr, prefix, id);
             }
         }
         FwdCmd::AddHop { next_hop, addr, prefix } => {
-            let response = await!(stack.add_forwarding_entry(
-                &mut fidl_fuchsia_net_stack::ForwardingEntry {
-                    subnet: net::Subnet {
-                        addr: parse_ip_addr(&addr)?,
-                        prefix_len: prefix,
-                    },
-                    destination: fidl_fuchsia_net_stack::ForwardingDestination::NextHop(parse_ip_addr(&next_hop)?),
-                }
-            ))
-            .context("error adding forwarding entry")?;
+            let response =
+                await!(stack.add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+                    subnet: net::Subnet { addr: parse_ip_addr(&addr)?, prefix_len: prefix },
+                    destination: fidl_fuchsia_net_stack::ForwardingDestination::NextHop(
+                        parse_ip_addr(&next_hop)?
+                    ),
+                }))
+                .context("error adding forwarding entry")?;
             if let Some(e) = response {
                 println!("Error adding forwarding entry: {:?}", e);
             } else {
-                println!(
-                    "Added forwarding entry for {}/{} to {}",
-                    addr, prefix, next_hop
-                );
+                println!("Added forwarding entry for {}/{} to {}", addr, prefix, next_hop);
             }
         }
         FwdCmd::Del { addr, prefix } => {
-            let response = await!(stack.del_forwarding_entry(
-                &mut net::Subnet {
-                    addr: parse_ip_addr(&addr)?,
-                    prefix_len: prefix,
-                }
-            ))
+            let response = await!(stack.del_forwarding_entry(&mut net::Subnet {
+                addr: parse_ip_addr(&addr)?,
+                prefix_len: prefix,
+            }))
             .context("error removing forwarding entry")?;
             if let Some(e) = response {
                 println!("Error removing forwarding entry: {:?}", e);
             } else {
-                println!(
-                    "Removed forwarding entry for {}/{}",
-                    addr, prefix
-                );
+                println!("Removed forwarding entry for {}/{}", addr, prefix);
             }
         }
     }
@@ -193,11 +174,11 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
 
 fn parse_ip_addr(addr: &str) -> Result<net::IpAddress, Error> {
     match addr.parse()? {
-        ::std::net::IpAddr::V4(ipv4) => Ok(net::IpAddress::Ipv4(net::IPv4Address {
-            addr: ipv4.octets(),
-        })),
-        ::std::net::IpAddr::V6(ipv6) => Ok(net::IpAddress::Ipv6(net::IPv6Address {
-            addr: ipv6.octets(),
-        })),
+        ::std::net::IpAddr::V4(ipv4) => {
+            Ok(net::IpAddress::Ipv4(net::IPv4Address { addr: ipv4.octets() }))
+        }
+        ::std::net::IpAddr::V6(ipv6) => {
+            Ok(net::IpAddress::Ipv6(net::IPv6Address { addr: ipv6.octets() }))
+        }
     }
 }
