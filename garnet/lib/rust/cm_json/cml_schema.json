@@ -97,7 +97,7 @@
             "$id": "/properties/use/items/properties/service",
             "title": "Used service source path",
             "description": "The path under which a service is offered to this component",
-            "$ref": "#/definitions/path-clause",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "examples": [
               "/svc/fuchsia.logger.Log"
             ]
@@ -106,7 +106,7 @@
             "$id": "/properties/use/items/properties/directory",
             "title": "Used directory source path",
             "description": "The path under which a directory is offered to this component",
-            "$ref": "#/definitions/path-clause",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "examples": [
               "/data/assets/widgets"
             ]
@@ -115,7 +115,7 @@
             "$id": "/properties/use/items/properties/as",
             "title": "Used capability target path",
             "description": "The path to which the capability will be installed in the component's incoming namespace. Defaults to \"service\"/\"directory\".",
-            "$ref": "#/definitions/path-clause",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "examples": [
               "/svc/fuchsia.logger.Log"
             ]
@@ -148,7 +148,7 @@
             "$id": "/properties/expose/items/properties/service",
             "title": "Exposed service source path",
             "description": "The path to the service being exposed. This is either a path in this component's outgoing namespace (if from \"self\"), or the path by which the service was exposed by the child (if from \"#$CHILD\").",
-            "$ref": "#/definitions/path-clause",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "examples": [
               "/svc/fuchsia.ui.Scenic"
             ]
@@ -157,7 +157,7 @@
             "$id": "/properties/expose/items/properties/directory",
             "title": "Exposed directory source path",
             "description": "The path to the directory being exposed. This is either a path in this component's outgoing namespace (if from \"self\"), or the path by which the directory was exposed by the child (if from \"#$CHILD\").",
-            "$ref": "#/definitions/path-clause",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "examples": [
               "/data/assets/widgets"
             ]
@@ -167,7 +167,7 @@
             "title": "Exposed capability source component",
             "pattern": "^(self|#[0-9a-z_\\-\\.]+)$",
             "description": "The component which has the capability to expose. Either \"self\" or \"#$CHILD\".",
-            "$ref": "#/definitions/relative-id-clause",
+            "allOf": [{ "$ref": "#/definitions/relative-id-clause" }],
             "examples": [
               "self",
               "#scenic"
@@ -177,7 +177,7 @@
             "$id": "/properties/expose/items/properties/as",
             "title": "Exposed capability target path",
             "description": "The path under which the capability will be exposed. Defaults to \"service\"/\"directory\"",
-            "$ref": "#/definitions/path-clause",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "examples": [
               "/svc/fuchsia.logger.Log"
             ]
@@ -211,7 +211,7 @@
             "$id": "/properties/offer/items/properties/service",
             "title": "Offered service source path",
             "description": "The path to the service being offered. This is either a path in this component's namespace (if from \"self\"), or the path by which the service was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
-            "$ref": "#/definitions/path-clause",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "examples": [
               "/svc/fuchsia.ui.Scenic"
             ]
@@ -220,7 +220,7 @@
             "$id": "/properties/offer/items/properties/directory",
             "title": "Offered directory source path",
             "description": "The path to the directory being offered. This is either a path in this component's outgoing namespace (if from \"self\"), or the path by which the directory was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
-            "$ref": "#/definitions/path-clause",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "examples": [
               "/svc/fuchsia.ui.Scenic"
             ]
@@ -230,7 +230,7 @@
             "title": "Offered capability source component",
             "description": "The component which has the capability to offer. Either \"realm\", \"self\" or \"#$CHILD\".",
             "pattern": "^(realm|self|#[0-9a-z_\\-\\.]+)$",
-            "$ref": "#/definitions/relative-id-clause",
+            "allOf": [{ "$ref": "#/definitions/relative-id-clause" }],
             "examples": [
               "realm",
               "self",
@@ -256,7 +256,7 @@
                   "title": "Offered capability target component",
                   "description": "The child component to which the capability is being offered, with the syntax \"#$CHILD\".",
                   "pattern": "^#[a-zA-Z0-9_-]+$",
-                  "$ref": "#/definitions/relative-id-clause",
+                  "allOf": [{ "$ref": "#/definitions/relative-id-clause" }],
                   "examples": [
                     "#scenic"
                   ]
@@ -265,7 +265,7 @@
                   "$id": "/properties/offer/items/properties/targets/items/properties/as",
                   "title": "Offered capability target path",
                   "description": "The path by which the capability will be offered. The path is either a path in this component's namespace (if from \"self\"), or the path by which the capability was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
-                  "$ref": "#/definitions/relative-id-clause",
+                  "allOf": [{ "$ref": "#/definitions/relative-id-clause" }],
                   "examples": [
                     "/data/assets/widgets",
                     "/svc/fuchsia.ui.Scenic"
@@ -295,7 +295,7 @@
             "$id": "/properties/children/items/properties/name",
             "title": "Child component name",
             "description": "The parent's local name for the child",
-            "$ref": "#/definitions/child-name-clause",
+            "allOf": [{ "$ref": "#/definitions/child-name-clause" }],
             "examples": [
               "echo_server",
               "System-logger"
@@ -305,7 +305,7 @@
             "$id": "/properties/children/items/properties/uri",
             "title": "Child component URI",
             "description": "The URI that identifies the child component.",
-            "$ref": "#/definitions/uri-clause",
+            "allOf": [{ "$ref": "#/definitions/uri-clause" }],
             "examples": [
               "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server.cml"
             ]

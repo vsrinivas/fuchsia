@@ -1,0 +1,5 @@
+{
+    "host_tests": [
+        "//garnet/bin/cmc:cmc_host_tests"
+    ]
+}

@@ -11,6 +11,7 @@
         "garnet/packages/tests/broadcom",
         "garnet/packages/tests/camera_client",
         "garnet/packages/tests/chrealm",
+        "garnet/packages/tests/cmc",
         "garnet/packages/tests/cmx",
         "garnet/packages/tests/cobalt_client",
         "garnet/packages/tests/component_cpp",

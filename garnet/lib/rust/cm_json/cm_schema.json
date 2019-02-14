@@ -58,12 +58,12 @@
           },
           "source_path": {
             "$id": "/properties/uses/items/properties/source_path",
-            "$ref": "#/definitions/path-clause",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "title": "Used capability source path"
           },
           "target_path": {
             "$id": "/properties/uses/items/properties/target_path",
-            "$ref": "#/definitions/path-clause",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "title": "Used capability target path"
           }
         }
@@ -91,7 +91,7 @@
           },
           "source_path": {
             "$id": "/properties/exposes/items/properties/source_path",
-            "$ref": "#/definitions/path-clause",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "title": "Exposed capability source path"
           },
           "source": {
@@ -101,7 +101,7 @@
             "required": [
               "relation"
             ],
-            "$ref": "#/definitions/has-valid-child",
+            "allOf": [{ "$ref": "#/definitions/has-valid-child" }],
             "properties": {
               "relation": {
                 "$id": "/properties/exposes/items/properties/source/properties/relation",
@@ -111,14 +111,14 @@
               },
               "child_name": {
                 "$id": "/properties/exposes/items/properties/source/properties/child_name",
-                "$ref": "#/definitions/name-clause",
+                "allOf": [{ "$ref": "#/definitions/name-clause" }],
                 "title": "Exposed capability source component child name"
               }
             }
           },
           "target_path": {
             "$id": "/properties/exposes/items/properties/target_path",
-            "$ref": "#/definitions/path-clause",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "title": "Exposed capability target path"
           }
         }
@@ -146,7 +146,7 @@
           },
           "source_path": {
             "$id": "/properties/exposes/items/properties/source_path",
-            "$ref": "#/definitions/path-clause",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "title": "Offered capability source path"
           },
           "source": {
@@ -156,7 +156,7 @@
             "required": [
               "relation"
             ],
-            "$ref": "#/definitions/has-valid-child",
+            "allOf": [{ "$ref": "#/definitions/has-valid-child" }],
             "properties": {
               "relation": {
                 "$id": "/properties/offers/items/properties/source/properties/relation",
@@ -166,7 +166,7 @@
               },
               "child_name": {
                 "$id": "/properties/offers/items/properties/source/properties/child_name",
-                "$ref": "#/definitions/name-clause",
+                "allOf": [{ "$ref": "#/definitions/name-clause" }],
                 "title": "Offered capability source component child name"
               }
             }
@@ -186,12 +186,12 @@
               "properties": {
                 "target_path": {
                   "$id": "/properties/offers/items/properties/targets/items/target_path",
-                  "$ref": "#/definitions/path-clause",
+                  "allOf": [{ "$ref": "#/definitions/path-clause" }],
                   "title": "Offered capability target path"
                 },
                 "child_name": {
                   "$id": "/properties/offers/items/properties/targets/items/child_name",
-                  "$ref": "#/definitions/name-clause",
+                  "allOf": [{ "$ref": "#/definitions/name-clause" }],
                   "title": "Offered capability target child name"
                 }
               }
@@ -215,12 +215,12 @@
         "properties": {
           "name": {
             "$id": "/properties/children/items/properties/name",
-            "$ref": "#/definitions/name-clause",
+            "allOf": [{ "$ref": "#/definitions/name-clause" }],
             "title": "Child component name"
           },
           "uri": {
             "$id": "/properties/children/items/properties/uri",
-            "$ref": "#/definitions/uri-clause",
+            "allOf": [{ "$ref": "#/definitions/uri-clause" }],
             "title": "Child component URI"
           }
         }

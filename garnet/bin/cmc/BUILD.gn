@@ -9,8 +9,7 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("cmc") {
   name = "cmc"
-  # TODO(CF-594): Failing after a rust-crates roll. Set to true when fixed.
-  with_unit_tests = false
+  with_unit_tests = true
   edition = "2018"
 
   sdk_category = "partner"
@@ -29,6 +28,26 @@ rustc_binary("cmc") {
   ]
 
   non_rust_deps = [ "//garnet/lib/rust/cm_json:cm_schema_json" ]
+}
+
+# TODO(IN-819): Delete this copy target once host tests are no longer run out
+# of a single directory.
+if (host_toolchain == current_toolchain) {
+  copy("cmc_host_tests") {
+    testonly = true
+
+    sources = [
+      "$root_out_dir/cmc_bin_test",
+    ]
+
+    outputs = [
+      "$root_out_dir/cmc_host_tests",
+    ]
+
+    public_deps = [
+      ":cmc($host_toolchain)",
+    ]
+  }
 }
 
 rustc_binary("cmc_integration_test_bin") {
