@@ -354,7 +354,7 @@ fbl::unique_ptr<Packet> CreateAuthRespFrame(AuthAlgorithm auth_algo) {
     auto auth = w.Write<Authentication>();
     auth->auth_algorithm_number = auth_algo;
     auth->auth_txn_seq_number = 2;
-    auth->status_code = status_code::kSuccess;
+    auth->status_code = WLAN_STATUS_CODE_SUCCESS;
 
     packet->set_len(w.WrittenBytes());
 
@@ -452,7 +452,7 @@ fbl::unique_ptr<Packet> CreateAssocRespFrame(const AssocContext& ap_assoc_ctx) {
     cap.set_short_preamble(1);
     cap.set_ess(1);
     assoc->cap = cap;
-    assoc->status_code = status_code::kSuccess;
+    assoc->status_code = WLAN_STATUS_CODE_SUCCESS;
 
     BufferWriter elem_w(w.RemainingBuffer());
     if (ap_assoc_ctx.ht_cap.has_value()) {

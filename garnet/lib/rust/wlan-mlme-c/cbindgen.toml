@@ -17,9 +17,9 @@ parse_deps = true
 include = ["wlan_mlme", "wlan_common"]
 
 [export]
-# These types are not used yet but we want to generate
-# bindings for them already.
-include = ["BufferProvider", "InBuf", "OutBuf", "ReasonCode"]
+# Explicitly declare types to export as cbindgen seems to have trouble
+# detecting their usage.
+include = ["BufferProvider", "InBuf", "OutBuf", "ReasonCode", "StatusCode"]
 
 [export.rename]
 # Unfortunately cbindgen's rename machinery is rather simple
@@ -29,6 +29,7 @@ include = ["BufferProvider", "InBuf", "OutBuf", "ReasonCode"]
 "InBuf" = "rust_mlme_in_buf_t"
 "OutBuf" = "rust_mlme_out_buf_t"
 "ReasonCode" = "wlan_reason_code"
+"StatusCode" = "wlan_status_code"
 
 [fn]
 prefix = 'extern "C"'

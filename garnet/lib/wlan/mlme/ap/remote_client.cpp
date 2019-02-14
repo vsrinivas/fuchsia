@@ -71,7 +71,7 @@ void DeauthenticatedState::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
         if (auth_alg != AuthAlgorithm::kOpenSystem) {
             errorf("[client] [%s] received auth attempt with unsupported algorithm: %u\n",
                    client_->addr().ToString().c_str(), auth_alg);
-            FailAuthentication(status_code::kUnsupportedAuthAlgorithm);
+            FailAuthentication(WLAN_STATUS_CODE_UNSUPPORTED_AUTH_ALGORITHM);
             return;
         }
 
@@ -79,7 +79,7 @@ void DeauthenticatedState::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
         if (auth_txn_seq_no != 1) {
             errorf("[client] [%s] received auth attempt with invalid tx seq no: %u\n",
                    client_->addr().ToString().c_str(), auth_txn_seq_no);
-            FailAuthentication(status_code::kRefused);
+            FailAuthentication(WLAN_STATUS_CODE_REFUSED);
             return;
         }
 
@@ -89,7 +89,7 @@ void DeauthenticatedState::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
     }
 }
 
-void DeauthenticatedState::FailAuthentication(const status_code::StatusCode st_code) {
+void DeauthenticatedState::FailAuthentication(const wlan_status_code st_code) {
     client_->SendAuthentication(st_code);
     client_->ReportFailedAuth();
 }
@@ -120,7 +120,7 @@ zx_status_t AuthenticatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
         // Received request which we've been waiting for. Timer can get canceled.
         client_->CancelTimer(auth_timeout_);
 
-        status_code::StatusCode st_code = ToStatusCode(auth_resp->body()->result_code);
+        wlan_status_code st_code = ToStatusCode(auth_resp->body()->result_code);
         return FinalizeAuthenticationAttempt(st_code);
     } else {
         warnf("[client] [%s] unexpected MLME msg type in authenticating state; ordinal: %u\n",
@@ -129,9 +129,8 @@ zx_status_t AuthenticatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     }
 }
 
-zx_status_t AuthenticatingState::FinalizeAuthenticationAttempt(
-    const status_code::StatusCode st_code) {
-    bool auth_success = st_code == status_code::kSuccess;
+zx_status_t AuthenticatingState::FinalizeAuthenticationAttempt(const wlan_status_code st_code) {
+    bool auth_success = st_code == WLAN_STATUS_CODE_SUCCESS;
     auto status = client_->SendAuthentication(st_code);
     if (auth_success && status == ZX_OK) {
         MoveToState<AuthenticatedState>();
@@ -255,10 +254,8 @@ zx_status_t AssociatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
         client_->CancelTimer(assoc_timeout_);
 
         std::optional<uint16_t> aid = {};
-        status_code::StatusCode st_code = ToStatusCode(assoc_resp->body()->result_code);
-        if (st_code == status_code::StatusCode::kSuccess) {
-            aid = {assoc_resp->body()->association_id};
-        }
+        wlan_status_code st_code = ToStatusCode(assoc_resp->body()->result_code);
+        if (st_code == WLAN_STATUS_CODE_SUCCESS) { aid = {assoc_resp->body()->association_id}; }
         return FinalizeAssociationAttempt(aid, st_code);
     } else {
         warnf("[client] [%s] unexpected MLME msg type in associating state; ordinal: %u\n",
@@ -268,8 +265,8 @@ zx_status_t AssociatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
 }
 
 zx_status_t AssociatingState::FinalizeAssociationAttempt(std::optional<uint16_t> aid,
-                                                         status_code::StatusCode st_code) {
-    bool assoc_success = aid.has_value() && st_code == status_code::kSuccess;
+                                                         wlan_status_code st_code) {
+    bool assoc_success = aid.has_value() && st_code == WLAN_STATUS_CODE_SUCCESS;
     auto status = client_->SendAssociationResponse(aid.value_or(0), st_code);
     if (assoc_success && status == ZX_OK) {
         MoveToState<AssociatedState>(aid.value());
@@ -699,10 +696,7 @@ bool AssociatedState::HasBufferedFrames() const {
 
 RemoteClient::RemoteClient(DeviceInterface* device, BssInterface* bss,
                            RemoteClient::Listener* listener, const common::MacAddr& addr)
-    : listener_(listener),
-      device_(device),
-      bss_(bss),
-      addr_(addr) {
+    : listener_(listener), device_(device), bss_(bss), addr_(addr) {
     ZX_DEBUG_ASSERT(device_ != nullptr);
     ZX_DEBUG_ASSERT(bss_ != nullptr);
     debugbss("[client] [%s] spawned\n", addr_.ToString().c_str());
@@ -767,7 +761,7 @@ void RemoteClient::CancelTimer(TimeoutId id) {
     return bss_->CancelTimeout(id);
 }
 
-zx_status_t RemoteClient::SendAuthentication(status_code::StatusCode result) {
+zx_status_t RemoteClient::SendAuthentication(wlan_status_code result) {
     debugfn();
     debugbss("[client] [%s] sending Authentication response\n", addr_.ToString().c_str());
 
@@ -801,7 +795,7 @@ zx_status_t RemoteClient::SendAuthentication(status_code::StatusCode result) {
     return status;
 }
 
-zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::StatusCode result) {
+zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, wlan_status_code result) {
     debugfn();
     debugbss("[client] [%s] sending Association Response\n", addr_.ToString().c_str());
 
@@ -968,7 +962,7 @@ zx_status_t RemoteClient::SendAddBaResponse(const AddBaRequestFrame& req) {
     auto addbaresp_hdr = w.Write<AddBaResponseFrame>();
     addbaresp_hdr->dialog_token = req.dialog_token;
     // TODO(porce): Implement DelBa as a response to AddBar for decline
-    addbaresp_hdr->status_code = status_code::kSuccess;
+    addbaresp_hdr->status_code = WLAN_STATUS_CODE_SUCCESS;
     // TODO(NET-567): Use the outcome of the association negotiation
     addbaresp_hdr->params.set_amsdu(0);
     addbaresp_hdr->params.set_policy(BlockAckParameters::kImmediate);

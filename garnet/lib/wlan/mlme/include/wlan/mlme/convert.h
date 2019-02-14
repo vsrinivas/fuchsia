@@ -6,12 +6,13 @@
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_CONVERT_H_
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <garnet/lib/rust/wlan-mlme-c/bindings.h>
 #include <wlan/common/mac_frame.h>
 
 namespace wlan {
 
-status_code::StatusCode ToStatusCode(const ::fuchsia::wlan::mlme::AuthenticateResultCodes code);
-status_code::StatusCode ToStatusCode(const ::fuchsia::wlan::mlme::AssociateResultCodes code);
+wlan_status_code ToStatusCode(const ::fuchsia::wlan::mlme::AuthenticateResultCodes code);
+wlan_status_code ToStatusCode(const ::fuchsia::wlan::mlme::AssociateResultCodes code);
 
 }  // namespace wlan
 

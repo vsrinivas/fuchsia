@@ -6,6 +6,7 @@
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_AP_REMOTE_CLIENT_H_
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <garnet/lib/rust/wlan-mlme-c/bindings.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/ap/remote_client_interface.h>
@@ -45,8 +46,8 @@ class RemoteClient : public RemoteClientInterface {
     void HandleAnyDataFrame(DataFrame<>&& frame) override;
     void HandleAnyCtrlFrame(CtrlFrame<>&& frame) override;
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& mlme_msg) override;
-    zx_status_t SendAuthentication(status_code::StatusCode result);
-    zx_status_t SendAssociationResponse(aid_t aid, status_code::StatusCode result);
+    zx_status_t SendAuthentication(wlan_status_code result);
+    zx_status_t SendAssociationResponse(aid_t aid, wlan_status_code result);
     zx_status_t SendDeauthentication(::fuchsia::wlan::mlme::ReasonCode reason_code);
     zx_status_t SendAddBaRequest();
     zx_status_t SendAddBaResponse(const AddBaRequestFrame& rx_frame);
@@ -139,7 +140,7 @@ class DeauthenticatedState : public BaseState {
     inline const char* name() const override { return kName; }
 
     void HandleAnyMgmtFrame(MgmtFrame<>&&) override;
-    void FailAuthentication(const status_code::StatusCode st_code);
+    void FailAuthentication(wlan_status_code status_code);
 
    private:
     static constexpr const char* kName = "Deauthenticated";
@@ -164,7 +165,7 @@ class AuthenticatingState : public BaseState {
     static constexpr const char* kName = "Authenticating";
     static constexpr wlan_tu_t kAuthenticatingTimeoutTu = 60000;  // ~1 minute
 
-    zx_status_t FinalizeAuthenticationAttempt(const status_code::StatusCode st_code);
+    zx_status_t FinalizeAuthenticationAttempt(wlan_status_code status_code);
 
     TimeoutId auth_timeout_;
 };
@@ -211,7 +212,7 @@ class AssociatingState : public BaseState {
     static constexpr wlan_tu_t kAssociatingTimeoutTu = 60000;  // ~1 minute
 
     zx_status_t FinalizeAssociationAttempt(std::optional<uint16_t> aid,
-                                           status_code::StatusCode st_code);
+                                           wlan_status_code status_code);
 
     TimeoutId assoc_timeout_;
 };

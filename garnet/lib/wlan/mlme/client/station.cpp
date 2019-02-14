@@ -421,7 +421,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     timer_mgr_.Cancel(assoc_timeout_);
 
     auto assoc = frame.body();
-    if (assoc->status_code != status_code::kSuccess) {
+    if (assoc->status_code != WLAN_STATUS_CODE_SUCCESS) {
         errorf("association failed (status code=%u)\n", assoc->status_code);
         // TODO(tkilbourn): map to the correct result code
         service::SendAssocConfirm(device_,
@@ -551,7 +551,7 @@ zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
 
     // Note: Returning AddBaResponse with status_code::kRefused seems ineffective.
     // ArubaAP is persistent not honoring that.
-    addbaresp_hdr->status_code = status_code::kSuccess;
+    addbaresp_hdr->status_code = WLAN_STATUS_CODE_SUCCESS;
 
     addbaresp_hdr->params.set_amsdu(addbareq.params.amsdu() == 1);
     addbaresp_hdr->params.set_policy(BlockAckParameters::kImmediate);

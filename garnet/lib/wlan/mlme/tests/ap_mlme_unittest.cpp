@@ -164,7 +164,7 @@ struct Context {
         EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
         EXPECT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
         EXPECT_EQ(frame.body()->auth_txn_seq_number, 2);
-        EXPECT_EQ(frame.body()->status_code, status_code::kSuccess);
+        EXPECT_EQ(frame.body()->status_code, WLAN_STATUS_CODE_SUCCESS);
     }
 
     void AssertAssocFrame(WlanPacket pkt) {
@@ -172,7 +172,7 @@ struct Context {
         EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, client_addr.byte, 6), 0);
         EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
         EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-        EXPECT_EQ(frame.body()->status_code, status_code::kSuccess);
+        EXPECT_EQ(frame.body()->status_code, WLAN_STATUS_CODE_SUCCESS);
         EXPECT_EQ(frame.body()->aid, kAid);
     }
 
@@ -278,7 +278,7 @@ TEST_F(ApInfraBssTest, Authenticate_SmeRefuses) {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
     EXPECT_EQ(frame.body()->auth_algorithm_number, AuthAlgorithm::kOpenSystem);
     EXPECT_EQ(frame.body()->auth_txn_seq_number, 2);
-    EXPECT_EQ(frame.body()->status_code, status_code::kRefused);
+    EXPECT_EQ(frame.body()->status_code, WLAN_STATUS_CODE_REFUSED);
 }
 
 TEST_F(ApInfraBssTest, Authenticate_Timeout) {
@@ -465,7 +465,7 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, ctx.client_addr.byte, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-    EXPECT_EQ(frame.body()->status_code, status_code::kRefusedCapabilitiesMismatch);
+    EXPECT_EQ(frame.body()->status_code, WLAN_STATUS_CODE_REFUSED_CAPABILITIES_MISMATCH);
     EXPECT_EQ(frame.body()->aid, 0);
 
     device.wlan_queue.clear();
