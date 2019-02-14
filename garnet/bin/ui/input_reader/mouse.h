@@ -7,12 +7,24 @@
 
 #include <cstddef>
 
+#include "garnet/bin/ui/input_reader/device.h"
+
 #include <hid-parser/parser.h>
 
 namespace mozart {
 
-class Mouse {
+class Mouse : public Device {
  public:
+  // |Device|
+  bool ParseReportDescriptor(const hid::ReportDescriptor& report_descriptor,
+                             Descriptor* device_descriptor) override;
+  // |Device|
+  bool ParseReport(const uint8_t* data, size_t len,
+                   fuchsia::ui::input::InputReport* report) override;
+  // |Device|
+  uint8_t ReportId() const override { return report_id_; }
+
+ private:
   enum Capabilities : uint32_t {
     LEFT_CLICK = 1 << 0,
     MIDDLE_CLICK = 1 << 1,
@@ -32,14 +44,6 @@ class Mouse {
     int32_t rel_x;
     int32_t rel_y;
   };
-
-  bool ParseDescriptor(const hid::ReportDescriptor *desc);
-  bool ParseReport(const uint8_t *data, size_t len, Report *report) const;
-
-  uint8_t report_id() const { return report_id_; }
-  uint32_t capabilities() const { return capabilities_; }
-
- private:
   hid::Attributes x_ = {};
   hid::Attributes y_ = {};
   hid::Attributes left_click_ = {};

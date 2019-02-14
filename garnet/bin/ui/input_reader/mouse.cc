@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/input_reader/mouse.h"
+#include "garnet/bin/ui/input_reader/device.h"
 
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
@@ -16,7 +17,10 @@
 #include <lib/fxl/logging.h>
 
 namespace mozart {
-bool Mouse::ParseDescriptor(const hid::ReportDescriptor *desc) {
+
+bool Mouse::ParseReportDescriptor(
+    const hid::ReportDescriptor& report_descriptor,
+    Descriptor* device_descriptor) {
   hid::Attributes left_click = {};
   hid::Attributes middle_click = {};
   hid::Attributes right_click = {};
@@ -24,8 +28,8 @@ bool Mouse::ParseDescriptor(const hid::ReportDescriptor *desc) {
   hid::Attributes y = {};
   uint32_t caps = 0;
 
-  for (size_t i = 0; i < desc->input_count; i++) {
-    const hid::ReportField field = desc->input_fields[i];
+  for (size_t i = 0; i < report_descriptor.input_count; i++) {
+    const hid::ReportField& field = report_descriptor.input_fields[i];
 
     if (field.attr.usage == hid::USAGE(hid::usage::Page::kButton, 1)) {
       left_click = field.attr;
@@ -66,14 +70,47 @@ bool Mouse::ParseDescriptor(const hid::ReportDescriptor *desc) {
   y_ = y;
   capabilities_ = caps;
 
-  report_size_ = desc->input_byte_sz;
-  report_id_ = desc->report_id;
+  report_size_ = report_descriptor.input_byte_sz;
+  report_id_ = report_descriptor.report_id;
+
+  // Set the device descriptor.
+  device_descriptor->protocol = Protocol::Mouse;
+  device_descriptor->has_mouse = true;
+  device_descriptor->mouse_type = MouseDeviceType::HID;
+  device_descriptor->mouse_descriptor =
+      fuchsia::ui::input::MouseDescriptor::New();
+  // At the moment all mice send relative units, so these min and max values
+  // do not affect anything. Set them to maximum range.
+  device_descriptor->mouse_descriptor->rel_x.range.min = INT32_MIN;
+  device_descriptor->mouse_descriptor->rel_x.range.max = INT32_MAX;
+  device_descriptor->mouse_descriptor->rel_x.resolution = 1;
+
+  device_descriptor->mouse_descriptor->rel_y.range.min = INT32_MIN;
+  device_descriptor->mouse_descriptor->rel_y.range.max = INT32_MAX;
+  device_descriptor->mouse_descriptor->rel_y.resolution = 1;
+
+  device_descriptor->mouse_descriptor->buttons |=
+      fuchsia::ui::input::kMouseButtonPrimary;
+  device_descriptor->mouse_descriptor->buttons |=
+      fuchsia::ui::input::kMouseButtonSecondary;
+  device_descriptor->mouse_descriptor->buttons |=
+      fuchsia::ui::input::kMouseButtonTertiary;
+
   return true;
 }
 
-bool Mouse::ParseReport(const uint8_t *data, size_t len, Report *report) const {
+bool Mouse::ParseReport(const uint8_t* data, size_t len,
+                        fuchsia::ui::input::InputReport* report) {
   FXL_CHECK(report);
+  FXL_CHECK(report->mouse);
 
+  if (data[0] != report_id_) {
+    FXL_VLOG(0) << " Mouse report " << static_cast<uint32_t>(data[0])
+                << " does not match report id "
+                << static_cast<uint32_t>(report_id_);
+  }
+
+  Report mouse_report = {};
   hid::Report hid_report = {data, len};
   if (len != report_size_) {
     FXL_LOG(ERROR) << "Mouse HID Report is not correct size, (" << len
@@ -87,21 +124,21 @@ bool Mouse::ParseReport(const uint8_t *data, size_t len, Report *report) const {
       FXL_LOG(ERROR) << "Mouse report: Failed to parse LEFT_CLICK";
       return false;
     }
-    report->left_click = (clicked == 1);
+    mouse_report.left_click = (clicked == 1);
   }
   if (capabilities_ & Capabilities::MIDDLE_CLICK) {
     if (!hid::ExtractUint(hid_report, middle_click_, &clicked)) {
       FXL_LOG(ERROR) << "Mouse report: Failed to parse MIDDLE_CLICK";
       return false;
     }
-    report->middle_click = (clicked == 1);
+    mouse_report.middle_click = (clicked == 1);
   }
   if (capabilities_ & Capabilities::RIGHT_CLICK) {
     if (!hid::ExtractUint(hid_report, right_click_, &clicked)) {
       FXL_LOG(ERROR) << "Mouse report: Failed to parse RIGHT_CLICK";
       return false;
     }
-    report->right_click = (clicked == 1);
+    mouse_report.right_click = (clicked == 1);
   }
 
   // rel_x and rel_y will have units of 10^-5 meters if the report defines units
@@ -121,7 +158,7 @@ bool Mouse::ParseReport(const uint8_t *data, size_t len, Report *report) const {
     // scan_time is unchanged. Either way we return successfully.
     hid::unit::ConvertUnits(x_.unit, x, length_unit, &x);
 
-    report->rel_x = static_cast<uint32_t>(x);
+    mouse_report.rel_x = static_cast<uint32_t>(x);
   }
   if (capabilities_ & Capabilities::Y) {
     double y;
@@ -134,8 +171,20 @@ bool Mouse::ParseReport(const uint8_t *data, size_t len, Report *report) const {
     // scan_time is unchanged. Either way we return successfully.
     hid::unit::ConvertUnits(y_.unit, y, length_unit, &y);
 
-    report->rel_y = static_cast<uint32_t>(y);
+    mouse_report.rel_y = static_cast<uint32_t>(y);
   }
+
+  // Now that we can't fail, set the real report.
+  report->mouse->rel_x = mouse_report.rel_x;
+  report->mouse->rel_y = mouse_report.rel_y;
+
+  report->mouse->pressed_buttons = 0;
+  report->mouse->pressed_buttons |=
+      mouse_report.left_click ? fuchsia::ui::input::kMouseButtonPrimary : 0;
+  report->mouse->pressed_buttons |=
+      mouse_report.middle_click ? fuchsia::ui::input::kMouseButtonSecondary : 0;
+  report->mouse->pressed_buttons |=
+      mouse_report.right_click ? fuchsia::ui::input::kMouseButtonTertiary : 0;
 
   return true;
 }

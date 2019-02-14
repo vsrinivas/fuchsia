@@ -5,6 +5,8 @@
 #ifndef GARNET_BIN_UI_INPUT_READER_PROTOCOLS_H_
 #define GARNET_BIN_UI_INPUT_READER_PROTOCOLS_H_
 
+#include <zircon/types.h>
+
 namespace mozart {
 enum class Protocol : uint32_t {
   Other,

@@ -55,6 +55,12 @@ class InputInterpreter {
   static const uint8_t kMaxSensorCount = 16;
   static const uint8_t kNoSuchSensor = 0xFF;
 
+  // Helper function called at the end of ParseProtocol. It will set
+  // InputInterpreter's |procotol_| and various device descriptors based
+  // on |descriptor|. It will move the DescriptorPtrs out of |descriptor|, so
+  // |descriptor| should not be used after calling this function.
+  bool ConsumeDescriptor(Device::Descriptor* descriptor);
+
   // Helper function called during Init() that determines which protocol
   // is going to be used. If it returns true then |protocol_| has been
   // set correctly.
@@ -62,14 +68,10 @@ class InputInterpreter {
 
   bool ParseReport(const uint8_t* report, size_t len,
                    Touchscreen::Report* touchscreen);
-  bool ParseReport(const uint8_t* report, size_t len, Mouse::Report* mouse);
-
   bool SetDescriptor(Touchscreen::Descriptor* touch_desc);
 
   void NotifyRegistry();
 
-  bool ParseHidMouseReport(uint8_t* report, size_t len,
-                           fuchsia::ui::input::InputReport* mouse_report);
   bool ParseTouchscreenReport(
       uint8_t* report, size_t len,
       fuchsia::ui::input::InputReport* touchscreen_report);

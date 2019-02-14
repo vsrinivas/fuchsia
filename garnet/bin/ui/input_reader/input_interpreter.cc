@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
+#include "garnet/bin/ui/input_reader/device.h"
 
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
@@ -100,24 +101,6 @@ bool InputInterpreter::Initialize() {
     buttons_report_->buttons = fuchsia::ui::input::ButtonsReport::New();
   } else if (protocol == Protocol::Mouse) {
     FXL_VLOG(2) << "Device " << name() << " has mouse";
-    has_mouse_ = true;
-    mouse_device_type_ = MouseDeviceType::HID;
-
-    mouse_descriptor_ = fuchsia::ui::input::MouseDescriptor::New();
-    // At the moment all mice send relative units, so these min and max values
-    // do not affect anything. Set them to maximum range.
-    mouse_descriptor_->rel_x.range.min = INT32_MIN;
-    mouse_descriptor_->rel_x.range.max = INT32_MAX;
-    mouse_descriptor_->rel_x.resolution = 1;
-
-    mouse_descriptor_->rel_y.range.min = INT32_MIN;
-    mouse_descriptor_->rel_y.range.max = INT32_MAX;
-    mouse_descriptor_->rel_y.resolution = 1;
-
-    mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonPrimary;
-    mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonSecondary;
-    mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonTertiary;
-
     mouse_report_ = fuchsia::ui::input::InputReport::New();
     mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
   } else if (protocol == Protocol::BootMouse || protocol == Protocol::Gamepad) {
@@ -600,10 +583,12 @@ bool InputInterpreter::Read(bool discard) {
       }
       break;
     case MouseDeviceType::HID:
-      if (ParseHidMouseReport(report.data(), rc, mouse_report_.get())) {
+      if (mouse_.ParseReport(report.data(), rc, mouse_report_.get())) {
         if (!discard) {
           TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                             mouse_report_->trace_id, "device_type", "mouse");
+          mouse_report_->event_time = InputEventTimestampNow();
+          mouse_report_->trace_id = TRACE_NONCE();
           input_device_->DispatchReport(CloneReport(*mouse_report_));
         }
       }
@@ -833,25 +818,6 @@ bool InputInterpreter::Read(bool discard) {
   return true;
 }
 
-bool InputInterpreter::ParseHidMouseReport(
-    uint8_t* report, size_t len,
-    fuchsia::ui::input::InputReport* mouse_report) {
-  Mouse::Report mouse;
-  if (!ParseReport(report, len, &mouse))
-    return false;
-
-  mouse_report->event_time = InputEventTimestampNow();
-  mouse_report->trace_id = TRACE_NONCE();
-
-  mouse_report->mouse->rel_x = mouse.rel_x;
-  mouse_report->mouse->rel_y = mouse.rel_y;
-
-  mouse_report->mouse->pressed_buttons = 0;
-  mouse_report->mouse->pressed_buttons |=
-      mouse.left_click ? fuchsia::ui::input::kMouseButtonPrimary : 0;
-  return true;
-}
-
 // This logic converts the multi-finger report from the touchpad into
 // a mouse report. It does this by only tracking the first finger that
 // is placed down, and converting the absolution finger position into
@@ -983,6 +949,59 @@ Protocol ExtractProtocol(hid::Usage input) {
     }
   }
   return Protocol::Other;
+}
+
+bool InputInterpreter::ConsumeDescriptor(Device::Descriptor* descriptor) {
+  protocol_ = descriptor->protocol;
+  if (descriptor->has_keyboard) {
+    if (has_keyboard_) {
+      FXL_LOG(ERROR) << name() << " HID device defines multiple keyboards";
+      return false;
+    }
+    has_keyboard_ = true;
+    keyboard_descriptor_ = std::move(descriptor->keyboard_descriptor);
+  }
+  if (descriptor->has_buttons) {
+    if (has_buttons_) {
+      FXL_LOG(ERROR) << name() << " HID device defines multiple buttons";
+      return false;
+    }
+    has_buttons_ = true;
+    buttons_descriptor_ = std::move(descriptor->buttons_descriptor);
+  }
+  if (descriptor->has_mouse) {
+    if (has_mouse_) {
+      FXL_LOG(ERROR) << name() << " HID device defines multiple mice";
+      return false;
+    }
+    has_mouse_ = true;
+    mouse_device_type_ = descriptor->mouse_type;
+    mouse_descriptor_ = std::move(descriptor->mouse_descriptor);
+  }
+  if (descriptor->has_stylus) {
+    if (has_stylus_) {
+      FXL_LOG(ERROR) << name() << " HID device defines multiple styluses";
+      return false;
+    }
+    has_stylus_ = true;
+    stylus_descriptor_ = std::move(descriptor->stylus_descriptor);
+  }
+  if (descriptor->has_touchscreen) {
+    if (has_touchscreen_) {
+      FXL_LOG(ERROR) << name() << " HID device defines multiple touchscreens";
+      return false;
+    }
+    has_touchscreen_ = true;
+    touch_device_type_ = descriptor->touch_type;
+    touchscreen_descriptor_ = std::move(descriptor->touchscreen_descriptor);
+  }
+  if (descriptor->has_sensor) {
+    has_sensors_ = true;
+    sensor_device_type_ = descriptor->sensor_type;
+    sensor_descriptors_[descriptor->sensor_id] =
+        std::move(descriptor->sensor_descriptor);
+  }
+  return true;
 }
 
 bool InputInterpreter::ParseProtocol() {
@@ -1139,9 +1158,12 @@ bool InputInterpreter::ParseProtocol() {
         break;
       }
       case Protocol::Mouse: {
-        bool success = mouse_.ParseDescriptor(input_desc);
-        if (!success) {
+        Device::Descriptor device_descriptor = {};
+        if (!mouse_.ParseReportDescriptor(*input_desc, &device_descriptor)) {
           FXL_LOG(ERROR) << "invalid mouse descriptor for " << name();
+          return false;
+        }
+        if (!ConsumeDescriptor(&device_descriptor)) {
           return false;
         }
         break;
@@ -1166,19 +1188,6 @@ bool InputInterpreter::ParseReport(const uint8_t* report, size_t len,
   }
 
   return ts_.ParseReport(report, len, touchscreen);
-}
-
-bool InputInterpreter::ParseReport(const uint8_t* report, size_t len,
-                                   Mouse::Report* mouse) {
-  if (report[0] != mouse_.report_id()) {
-    FXL_VLOG(0) << name() << " Mouse report "
-                << static_cast<uint32_t>(report[0])
-                << " does not match report id "
-                << static_cast<uint32_t>(mouse_.report_id());
-    return false;
-  }
-
-  return mouse_.ParseReport(report, len, mouse);
 }
 
 bool InputInterpreter::SetDescriptor(Touchscreen::Descriptor* touch_desc) {

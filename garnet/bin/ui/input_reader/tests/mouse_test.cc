@@ -6,6 +6,7 @@
 #include <hid-parser/usages.h>
 #include <hid/paradise.h>
 
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <gtest/gtest.h>
 #include <lib/fxl/time/time_point.h>
 
@@ -55,14 +56,17 @@ TEST(MouseTest, BootMouse) {
       boot_mouse_desc, sizeof(boot_mouse_desc), &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
 
-  mozart::Mouse mouse;
-  bool success = mouse.ParseDescriptor(&dev_desc->report[0]);
+  mozart::Mouse mouse = {};
+  mozart::Device::Descriptor device_descriptor = {};
+  bool success =
+      mouse.ParseReportDescriptor(dev_desc->report[0], &device_descriptor);
   ASSERT_TRUE(success);
-  EXPECT_EQ(mozart::Mouse::Capabilities::LEFT_CLICK |
-                mozart::Mouse::Capabilities::MIDDLE_CLICK |
-                mozart::Mouse::Capabilities::RIGHT_CLICK |
-                mozart::Mouse::Capabilities::X | mozart::Mouse::Capabilities::Y,
-            mouse.capabilities());
+  EXPECT_EQ(device_descriptor.has_mouse, true);
+  EXPECT_EQ(device_descriptor.mouse_type, mozart::MouseDeviceType::HID);
+  EXPECT_EQ(device_descriptor.mouse_descriptor->buttons,
+            fuchsia::ui::input::kMouseButtonPrimary |
+                fuchsia::ui::input::kMouseButtonSecondary |
+                fuchsia::ui::input::kMouseButtonTertiary);
 
   const uint8_t report_data[] = {
       0xFF,  // Buttons
@@ -70,15 +74,17 @@ TEST(MouseTest, BootMouse) {
       0xFF,  // Y
   };
 
-  mozart::Mouse::Report report;
+  fuchsia::ui::input::InputReport report;
+  report.mouse = fuchsia::ui::input::MouseReport::New();
   success = mouse.ParseReport(report_data, sizeof(report_data), &report);
   EXPECT_EQ(true, success);
 
-  EXPECT_EQ(true, report.left_click);
-  EXPECT_EQ(true, report.middle_click);
-  EXPECT_EQ(true, report.right_click);
-  EXPECT_EQ(100, report.rel_x);
-  EXPECT_EQ(-1, report.rel_y);
+  EXPECT_EQ(fuchsia::ui::input::kMouseButtonPrimary |
+                fuchsia::ui::input::kMouseButtonSecondary |
+                fuchsia::ui::input::kMouseButtonTertiary,
+            report.mouse->pressed_buttons);
+  EXPECT_EQ(100, report.mouse->rel_x);
+  EXPECT_EQ(-1, report.mouse->rel_y);
 }
 }  // namespace test
 }  // namespace input
