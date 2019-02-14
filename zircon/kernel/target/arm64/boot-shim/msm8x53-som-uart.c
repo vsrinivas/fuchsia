@@ -29,7 +29,7 @@ void uart_pputc(char c) {
     while (!(UARTREG(UART_DM_SR) & UART_DM_SR_TXRDY))
         ;
 
-    *((volatile uint32_t*)(0x078af100)) = c;
+    UARTREG(UART_DM_TF) = c;
 
     // wait for TX ready
     while (!(UARTREG(UART_DM_SR) & UART_DM_SR_TXRDY))

@@ -4,8 +4,13 @@
 
 #define HAS_DEVICE_TREE 1
 
+// hack to relocate the kernel and zbi to a fixed address
+#define RELOCATE_KERNEL 1
+#define RELOCATE_KERNEL_ADDRESS (0xa0000000)
+#define RELOCATE_ZBI_ADDRESS    (0xb0000000)
+
 static const zbi_cpu_config_t cpu_config = {
-    .cluster_count = 2,
+    .cluster_count = 1, // enable both clusters when clock tree can upclock cluster 1
     .clusters = {
         {
             .cpu_count = 4,
@@ -19,8 +24,10 @@ static const zbi_cpu_config_t cpu_config = {
 static const zbi_mem_range_t mem_config[] = {
     {
         .type = ZBI_MEM_RANGE_RAM,
-        .paddr = 0x80000000,
-        .length = 0x80000000, // 2GB
+        //.paddr = 0x80000000,
+        //.length = 0x80000000, // 2GB
+        .paddr = 0xa0000000, // workaround for something dangerous about 0x80000000 memory region
+        .length = 0x80000000 - 0x20000000, // <2GB
     },
     {
         .type = ZBI_MEM_RANGE_PERIPHERAL,
@@ -74,7 +81,7 @@ static const dcfg_simple_t uart_driver = {
 static const dcfg_arm_gicv2_driver_t gicv2_driver = {
     .mmio_phys = 0x0b000000,
     .gicd_offset = 0x00000,
-    .gicc_offset = 0x1000,
+    .gicc_offset = 0x2000,
     .ipi_base = 5,
 };
 
@@ -83,8 +90,7 @@ static const dcfg_arm_psci_driver_t psci_driver = {
 };
 
 static const dcfg_arm_generic_timer_driver_t timer_driver = {
-    .irq_phys = 16 + 14,    // PHYS_NONSECURE_PPI: GIC_PPI 14
-    .irq_virt = 16 + 11,    // VIRT_PPI: GIC_PPI 11
+    .irq_virt = 16 + 4,    // VIRT_PPI: GIC_PPI 4
 };
 
 static const zbi_platform_id_t platform_id = {

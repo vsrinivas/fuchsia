@@ -9,6 +9,8 @@
 void uart_puts(const char* str) {
     char ch;
     while ((ch = *str++)) {
+        if (ch == '\n')
+            uart_pputc('\r');
         uart_pputc(ch);
     }
 }

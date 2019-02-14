@@ -298,7 +298,8 @@ static void msm_dputs(const char* str, size_t len,
         while (!(uart_read(UART_DM_SR) & UART_DM_SR_TXEMT)) {
             spin_unlock_irqrestore(&uart_spinlock, state);
             if (block) {
-                // TODO(voydanoff) Enable TX interrupt.
+                // TODO: Enable TX interrupt
+//                UARTREG(UART_IER) |= UART_IER_ETBEI;
                 event_wait(&uart_dputc_event);
             } else {
                 arch_spinloop_pause();
@@ -338,3 +339,46 @@ static void msm_uart_init_early(const void* driver_data, uint32_t length) {
 
 LK_PDEV_INIT(msm_uart_init_early, KDRV_MSM_UART, msm_uart_init_early, LK_INIT_LEVEL_PLATFORM_EARLY);
 LK_PDEV_INIT(msm_uart_init, KDRV_MSM_UART, msm_uart_init, LK_INIT_LEVEL_PLATFORM);
+
+// boot time hacked version to directly print
+#if 0
+#define UART_DM_N0_CHARS_FOR_TX             0x0040
+#define UART_DM_CR_CMD_RESET_TX_READY       (3 << 8)
+
+#define UART_DM_SR                          0x00A4
+#define UART_DM_SR_TXRDY                    (1 << 2)
+#define UART_DM_SR_TXEMT                    (1 << 3)
+
+#define UART_DM_TF                          0x0100
+
+#define UARTREG(reg) (*(volatile uint32_t*)(0x078af000 + (reg)))
+
+extern "C" void msm_putc(char c) {
+    while (!(UARTREG(UART_DM_SR) & UART_DM_SR_TXEMT)) {
+        ;
+    }
+    UARTREG(UART_DM_N0_CHARS_FOR_TX) = UART_DM_CR_CMD_RESET_TX_READY;
+    UARTREG(UART_DM_N0_CHARS_FOR_TX) = 1;
+    __UNUSED uint32_t foo = UARTREG(UART_DM_N0_CHARS_FOR_TX);
+
+    // wait for TX ready
+    while (!(UARTREG(UART_DM_SR) & UART_DM_SR_TXRDY))
+        ;
+
+    UARTREG(UART_DM_TF) = c;
+
+    // wait for TX ready
+    while (!(UARTREG(UART_DM_SR) & UART_DM_SR_TXRDY))
+        ;
+}
+
+extern "C" void msm_print_hex(uint64_t value) {
+    const char digits[16] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                             '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+    for (int i = 60; i >= 0; i -= 4) {
+        msm_putc(digits[(value >> i) & 0xf]);
+    }
+
+    msm_putc(' ');
+}
+#endif // boot hack

@@ -159,6 +159,9 @@ boot_shim("cleo") {
 boot_shim("eagle") {
 }
 
+boot_shim("msm8x53-som") {
+}
+
 boot_shim("mt8167s_ref") {
 }
 
@@ -170,7 +173,4 @@ boot_shim("qemu") {
 }
 
 boot_shim("sherlock") {
-}
-
-boot_shim("msm8x53-som") {
 }

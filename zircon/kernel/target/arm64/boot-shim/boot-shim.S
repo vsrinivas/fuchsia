@@ -40,7 +40,7 @@ FUNCTION(_start)
 header_end:
     // x0 typically points to device tree at entry
 
-   // what EL are we running at?
+    // what EL are we running at?
     mrs     tmp, CurrentEL
     cmp     tmp, #(1 << 2)
     beq     cache_disable_el1
@@ -62,6 +62,9 @@ cache_disable_el1:
     msr     sctlr_el1, tmp
 
 cache_disable_done:
+    dsb     sy
+    isb
+
     // setup stack
     adr     tmp, stack_end
     mov     sp, tmp

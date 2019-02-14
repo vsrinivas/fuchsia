@@ -602,6 +602,10 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
 
     // catch all fallthrough cases
     arch_disable_ints();
+
+    // msm8053: hack touch 0 in physical space which should cause a reboot
+    __UNUSED volatile auto hole = *REG32(PHYSMAP_BASE);
+
     for (;;)
         ;
 }
