@@ -11,6 +11,7 @@
 #include <threads.h>
 
 #include <fbl/auto_call.h>
+#include <fuchsia/device/cpp/fidl.h>
 #include <fuchsia/device/test/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/unsafe.h>
@@ -84,15 +85,14 @@ zx_status_t RootMockDevice::Create(const IsolatedDevmgr& devmgr,
     if (!fd.is_valid()) {
         return ZX_ERR_NOT_FOUND;
     }
+    zx::channel test_dev;
+    status = fdio_get_service_handle(fd.release(), test_dev.reset_and_get_address());
+    if (status != ZX_OK) {
+        return status;
+    }
 
-    fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
-    auto release_fdio = fbl::MakeAutoCall([io]() {
-        fdio_unsafe_release(io);
-    });
-
-    zx::unowned_channel test_channel(fdio_unsafe_borrow_channel(io));
-    auto destroy_device = fbl::MakeAutoCall([&test_channel] {
-        fuchsia_device_test_DeviceDestroy(test_channel->get());
+    auto destroy_device = fbl::MakeAutoCall([&test_dev] {
+        fuchsia_device_test_DeviceDestroy(test_dev.get());
     });
 
     fidl::InterfaceHandle<fuchsia::device::mock::MockDevice> client;
@@ -101,16 +101,16 @@ zx_status_t RootMockDevice::Create(const IsolatedDevmgr& devmgr,
         return ZX_ERR_BAD_STATE;
     }
 
-    status = fuchsia_device_test_DeviceSetChannel(test_channel->get(),
+    status = fuchsia_device_test_DeviceSetChannel(test_dev.get(),
                                                   client.TakeChannel().release());
     if (status != ZX_OK) {
         return status;
     }
 
     // Open a new connection to the test device to return.  We do to simplify
-    // handling around the blocking nature of ioctl_device_bind.  Needs to
-    // happen before the bind(), since ioctl_device_bind() will cause us to get
-    // blocked in the mock device driver waiting for input on what to do.
+    // handling around the blocking nature of fuchsia.device.Controller.Bind.  Needs to
+    // happen before the bind(), since bind() will cause us to get blocked in the mock device
+    // driver waiting for input on what to do.
     zx::channel test_device_channel;
     fbl::unique_fd new_connection(openat(devmgr.devfs_root().get(), relative_devpath.c_str(),
                                          O_RDWR));
@@ -129,11 +129,13 @@ zx_status_t RootMockDevice::Create(const IsolatedDevmgr& devmgr,
     // synchronous.
     thrd_t thrd;
     int ret = thrd_create(&thrd, [](void* ctx) {
-        int fd = static_cast<int>(reinterpret_cast<uintptr_t>(ctx));
-        ioctl_device_bind(fd, MOCK_DEVICE_LIB, sizeof(MOCK_DEVICE_LIB));
-        close(fd);
+        zx::channel test_dev(static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(ctx)));
+        fidl::SynchronousInterfacePtr<fuchsia::device::Controller> controller;
+        controller.Bind(std::move(test_dev));
+        zx_status_t call_status;
+        controller->Bind(MOCK_DEVICE_LIB, &call_status);
         return 0;
-    }, reinterpret_cast<void*>(static_cast<uintptr_t>(fd.release())));
+    }, reinterpret_cast<void*>(static_cast<uintptr_t>(test_dev.release())));
     ZX_ASSERT(ret == thrd_success);
     thrd_detach(thrd);
 

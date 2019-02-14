@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <fbl/auto_call.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <hid/acer12.h>
 #include <hid/egalax.h>
@@ -17,7 +18,6 @@
 #include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
 #include <lib/fzl/fdio.h>
-#include <zircon/device/device.h>
 #include <zircon/status.h>
 
 namespace {
@@ -94,14 +94,21 @@ bool FdioHidDecoder::Init() {
 zx::event FdioHidDecoder::GetEvent() {
   zx::event event;
 
-  ssize_t rc =
-      ioctl_device_get_event_handle(fd_.get(), event.reset_and_get_address());
-  if (rc < 0) {
-    log_err(rc, "event handle", name_);
-    return {};
-  } else {
-    return event;
+  // See comment in Init() about this pattern
+  fzl::FdioCaller caller(fbl::unique_fd(fd_.get()));
+  auto auto_releaser = fbl::MakeAutoCall([&]() { caller.release().release(); });
+
+  zx_status_t call_status;
+  zx_status_t status = fuchsia_device_ControllerGetEventHandle(
+          caller.borrow_channel(), &call_status, event.reset_and_get_address());
+  if (status == ZX_OK) {
+      status = call_status;
   }
+  if (status != ZX_OK) {
+    log_err(status, "event handle", name_);
+    return {};
+  }
+  return event;
 }
 
 void FdioHidDecoder::SetupDevice(Device device) {

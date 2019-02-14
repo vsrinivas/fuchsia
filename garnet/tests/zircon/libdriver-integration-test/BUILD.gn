@@ -27,6 +27,7 @@ executable("tests") {
     ":mock-device",
     "//garnet/public/lib/async_promise",
     "//garnet/public/lib/gtest",
+    "//zircon/public/fidl/fuchsia-device:fuchsia-device",
     "//zircon/public/fidl/fuchsia-device-test:fuchsia-device-test",
     "//zircon/public/fidl/fuchsia-device-test:fuchsia-device-test_c",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io",

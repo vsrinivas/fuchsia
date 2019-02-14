@@ -105,8 +105,8 @@ zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
   // Found it!
   // TODO(tkilbourn): this might not be the test device we created; need a
   // robust way of getting the name of the tap device to check. Note that
-  // ioctl_device_get_device_name just returns "ethernet" since that's the child
-  // of the tap device that we've opened here.
+  // fuchsia.device.Controller.GetDeviceName just returns "ethernet" since
+  // that's the child of the tap device that we've opened here.
   auto svcp = reinterpret_cast<zx_handle_t*>(cookie);
   *svcp = dev.proxy().TakeChannel().release();
   return ZX_ERR_STOP;

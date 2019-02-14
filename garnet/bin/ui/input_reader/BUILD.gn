@@ -45,6 +45,7 @@ source_set("fdio") {
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//zircon/public/fidl/fuchsia-device:fuchsia-device_c",
     "//zircon/public/fidl/fuchsia-hardware-input:fuchsia-hardware-input_c",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hid",
