@@ -44,7 +44,7 @@ zx_status_t DispRdma::Init(zx_device_t* parent) {
         return status;
     }
 
-    // DISP RDMA is read to be used
+    // DISP RDMA is ready to be used
     initialized_ = true;
     return ZX_OK;
 }

@@ -169,7 +169,7 @@ void AmlMipiPhy::Shutdown() {
     }
 
     // Power down DSI
-    dsiimpl_.PowerDownDsi();
+    dsiimpl_.PowerDown();
     WRITE32_REG(DSI_PHY, MIPI_DSI_CHAN_CTRL, 0x1f);
     SET_BIT32(DSI_PHY, MIPI_DSI_PHY_CTRL, 0, 7, 1);
     phy_enabled_ = false;
@@ -183,13 +183,13 @@ zx_status_t AmlMipiPhy::Startup() {
     }
 
     // Power up DSI
-    dsiimpl_.PowerUpDsi();
+    dsiimpl_.PowerUp();
 
     // Setup Parameters of DPHY
     // Below we are sending test code 0x44 with parameter 0x74. This means
     // we are setting up the phy to operate in 1050-1099 Mbps mode
     // TODO(payamm): Find out why 0x74 was selected
-    dsiimpl_.SendPhyCode(0x00010044, 0x00000074);
+    dsiimpl_.PhySendCode(0x00010044, 0x00000074);
 
     // Power up D-PHY
     dsiimpl_.PhyPowerUp();
@@ -199,7 +199,7 @@ zx_status_t AmlMipiPhy::Startup() {
 
     // Wait for PHY to be read
     zx_status_t status;
-    if ((status = dsiimpl_.WaitForPhyReady()) != ZX_OK) {
+    if ((status = dsiimpl_.PhyWaitForReady()) != ZX_OK) {
         // no need to print additional info.
         return status;
     }

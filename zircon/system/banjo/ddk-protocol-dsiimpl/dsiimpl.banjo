@@ -82,24 +82,32 @@ interface DsiImpl {
     /// This function is used to configure all the DSI parameters needed to operated in both
     /// Command and Video Mode
     Config(DsiConfig dsi_config) -> (zx.status s);
+    /// This function is called to power up the DSI interface
+    PowerUp() -> ();
+    /// This function is called to power down the DSI interface
+    PowerDown() -> ();
     /// This function is used to change modes between Video and Command.
     SetMode(DsiMode mode) -> ();
     /// This function is used to send a MIPI-DSI command through the DSI block
     SendCmd(vector<MipiDsiCmd> cmd) -> (zx.status s);
-    /// This function is called to power up the DSI interface
-    PowerUpDsi() -> ();
-    /// This function is called to power down the DSI interface
-    PowerDownDsi() -> ();
-    /// This function is used to communicate the MIPI D-PHY
-    SendPhyCode(uint32 code, uint32 parameter) -> ();
+    /// This function return true if the DSI block is powered on and not in reset
+    IsPoweredUp() -> (bool on);
+    /// This function resets the DSI IP block
+    Reset() -> ();
+
+    /// This function configures the PHY IP (inf within the DSI block)
+    PhyConfig(DsiConfig dsi_config) -> (zx.status s);
     /// This function is used to power up the MIPI D-PHY block
     PhyPowerUp() -> ();
-    /// This function return true if the DSI block is powered on and not in reset
-    IsDsiPoweredUp() -> (bool on);
+    /// This function is used to power up the MIPI D-PHY block
+    PhyPowerDown() -> ();
+    /// This function is used to communicate the MIPI D-PHY
+    PhySendCode(uint32 code, uint32 parameter) -> ();
     /// This function checks two things in order to decide whether the PHY is
     /// ready or not. LOCK Bit and StopStateClk bit. According to spec, once these
     /// are set, PHY has completed initialization
-    WaitForPhyReady() -> (zx.status s);
+    PhyWaitForReady() -> (zx.status s);
+
     /// This function prints the value of all DSI registers
     PrintDsiRegisters() -> ();
 };

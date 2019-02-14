@@ -10,12 +10,13 @@
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define DISP_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define DISP_SPEW(fmt, ...) zxlogf(SPEW, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
-#define DISP_TRACE zxlogf(SPEW, "[%s %d]\n", __func__, __LINE__)
+#define DISP_TRACE zxlogf(INFO, "[%s %d]\n", __func__, __LINE__)
 
 // Should match display_mmios table in board driver
 enum {
     MMIO_DISP_OVL,
     MMIO_DISP_RDMA,
+    MMIO_DISP_MIPITX,
 };
 
 constexpr uint8_t PANEL_DISPLAY_ID = 1;

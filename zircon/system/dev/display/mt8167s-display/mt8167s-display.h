@@ -14,7 +14,8 @@
 #include <ddktl/device.h>
 #include <lib/mmio/mmio.h>
 #include <ddktl/protocol/display/controller.h>
-
+#include <ddktl/protocol/dsiimpl.h>
+#include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
@@ -25,6 +26,7 @@
 
 #include "ovl.h"
 #include "disp-rdma.h"
+#include "mt-mipi-phy.h"
 
 namespace mt8167s_display {
 
@@ -71,7 +73,7 @@ public:
 
 private:
     void PopulateAddedDisplayArgs(added_display_args_t* args);
-
+    void CopyDisplaySettings();
     void Shutdown();
 
     // This function initializes the various components within the display subsytem such as
@@ -99,6 +101,11 @@ private:
     const uint32_t width_;
     const uint32_t height_;
 
+    const display_setting_t* init_disp_table_ = nullptr;
+
+    // Display structure used by various layers of display controller
+    display_setting_t disp_setting_;
+
     // Imported Images
     list_node_t imported_images_ TA_GUARDED(image_lock_);
 
@@ -106,8 +113,9 @@ private:
     ddk::DisplayControllerInterfaceClient dc_intf_ TA_GUARDED(display_lock_);
 
     // Objects
-    fbl::unique_ptr<mt8167s_display::Ovl>                   ovl_;
-    fbl::unique_ptr<mt8167s_display::DispRdma>              disp_rdma_;
+    fbl::unique_ptr<mt8167s_display::Ovl> ovl_;
+    fbl::unique_ptr<mt8167s_display::DispRdma> disp_rdma_;
+    fbl::unique_ptr<mt8167s_display::MtMipiPhy> mipi_phy_;
 };
 
 } // namespace mt8167s_display

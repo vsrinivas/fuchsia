@@ -18,16 +18,38 @@ namespace {
 zx_pixel_format_t kSupportedPixelFormats[3] = {
     ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888, ZX_PIXEL_FORMAT_RGB_565
 };
+
 constexpr uint64_t kDisplayId = PANEL_DISPLAY_ID;
+
+constexpr display_setting_t kDisplaySettingIli9881c = {
+    .lane_num           = 4,
+    .bit_rate_max       = 0, // unused
+    .clock_factor       = 0, // unused
+    .lcd_clock          = 270,
+    .h_active           = 720,
+    .v_active           = 1280,
+    .h_period           = 900,  //Vendor provides front porch of 80. calculate period manually
+    .v_period           = 1340, //Vendor provides front porch of 40. calculate period manually
+    .hsync_width        = 20,
+    .hsync_bp           = 80,
+    .hsync_pol          = 0, // unused
+    .vsync_width        = 4,
+    .vsync_bp           = 16,
+    .vsync_pol          = 0, // unused
+};
 
 struct ImageInfo {
     zx::pmt pmt;
     zx_paddr_t paddr;
-    // TODO(payamm): Use fbl lists instead
     list_node_t node;
 };
 
 } // namespace
+
+void Mt8167sDisplay::CopyDisplaySettings() {
+    ZX_DEBUG_ASSERT(init_disp_table_);
+    disp_setting_ = *init_disp_table_;
+}
 
 void Mt8167sDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
     args->display_id = kDisplayId;
@@ -302,14 +324,30 @@ int Mt8167sDisplay::VSyncThread() {
 
 zx_status_t Mt8167sDisplay::DisplaySubsystemInit() {
 
-    // Create and initialize ovl object
+    // Select the appropriate display table. For now, we only support the lcd
+    // on the mt8167s reference board.
+    init_disp_table_ = &kDisplaySettingIli9881c;
+    CopyDisplaySettings();
+
+    // Create and initialize DSI object
     fbl::AllocChecker ac;
+    mipi_phy_ = fbl::make_unique_checked<mt8167s_display::MtMipiPhy>(&ac, height_, width_);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    zx_status_t status = mipi_phy_->Init(parent_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not initialize DSI object\n");
+        return status;
+    }
+
+    // Create and initialize ovl object
     ovl_ = fbl::make_unique_checked<mt8167s_display::Ovl>(&ac, height_, width_);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
     // Initialize ovl object
-    auto status = ovl_->Init(parent_);
+    status = ovl_->Init(parent_);
     if (status != ZX_OK) {
         DISP_ERROR("Could not initialize OVL object\n");
         return status;
@@ -330,6 +368,10 @@ zx_status_t Mt8167sDisplay::DisplaySubsystemInit() {
     // Reset and start the various subsytems. Order matters
     ovl_->Reset();
     disp_rdma_->Reset();
+
+    // Configure the DSI0 interface
+    mipi_phy_->Config(disp_setting_);
+
     // TODO(payamm): configuring the display RDMA engine does take into account height and width
     // of the display destination frame. However, it is not clear right now how to program
     // these if various layers have different destination dimensions. For now, we will configure
@@ -435,7 +477,7 @@ static zx_driver_ops_t display_ops = [](){
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(mt8167s_display, mt8167s_display::display_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_MEDIATEK_8167S_REF),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_DISPLAY),
 ZIRCON_DRIVER_END(mt8167s_display)

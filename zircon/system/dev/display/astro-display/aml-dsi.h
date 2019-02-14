@@ -72,7 +72,7 @@
 #define PLL_FRAC_RANGE                          (1 << 17)
 
 #define MIPI_DSI_COLOR_24BIT                    (0x5)
-#define VID_MODE_TYPE_BURST_MODE        (2)
+#define VID_MODE_TYPE_BURST_MODE                (2)
 
 // We currently only support 8 bit mode
 #define SUPPORTED_LCD_BITS                      (8)

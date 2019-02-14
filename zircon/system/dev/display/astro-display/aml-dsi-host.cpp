@@ -26,8 +26,8 @@ zx_status_t AmlDsiHost::HostModeInit(const display_setting_t& disp_setting) {
     // setup dsi config
     dsi_config_t dsi_cfg;
     dsi_cfg.display_setting = disp_setting;
-    dsi_cfg.video_mode_type = SUPPORTED_VIDEO_MODE_TYPE;
-    dsi_cfg.color_coding = SUPPORTED_DPI_FORMAT;
+    dsi_cfg.video_mode_type = VIDEO_MODE_BURST;
+    dsi_cfg.color_coding = COLOR_CODE_PACKED_24BIT_888;
 
     designware_config_t dw_cfg;
     dw_cfg.lp_escape_time = phy_->GetLowPowerEscaseTime();

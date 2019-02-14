@@ -15,6 +15,7 @@ group("display") {
     "simple",
     "vim-display",
     "dsi-dw",
+    "dsi-mt",
   ]
   if (current_cpu == "x64") {
     deps += [ "intel-i915" ]

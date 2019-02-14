@@ -30,7 +30,7 @@ constexpr uint32_t kPhyDelay = 6;
 constexpr uint32_t kPhyStopWaitTime = 0x28; // value from vendor
 
 // Generic retry value used for BTA and FIFO related events
-constexpr uint32_t kRetryMax = 3000;
+constexpr uint32_t kRetryMax = 20000;
 
 constexpr uint32_t kMaxPldFifoDepth = 200;
 
@@ -43,19 +43,67 @@ constexpr uint32_t kBitCmdEmpty = 0;
 
 } // namespace
 
-void DsiDw::DsiImplPowerUpDsi() {
+zx_status_t DsiDw::GetColorCode(color_code_t c, bool& packed, uint8_t& code) {
+    zx_status_t status = ZX_OK;
+    switch (c) {
+    case COLOR_CODE_PACKED_16BIT_565:
+        packed = true;
+        code = 0;
+        break;
+    case COLOR_CODE_PACKED_18BIT_666:
+        packed = true;
+        code = 3;
+        break;
+    case COLOR_CODE_LOOSE_24BIT_666:
+        packed = false;
+        code = 3;
+        break;
+    case COLOR_CODE_PACKED_24BIT_888:
+        packed = true;
+        code = 5;
+        break;
+    default:
+        status = ZX_ERR_INVALID_ARGS;
+        break;
+    }
+    return status;
+}
+
+zx_status_t DsiDw::GetVideoMode(video_mode_t v, uint8_t& mode) {
+    zx_status_t status = ZX_OK;
+    switch (v) {
+    case VIDEO_MODE_NON_BURST_PULSE:
+        mode = 0;
+        break;
+    case VIDEO_MODE_NON_BURST_EVENT:
+        mode = 1;
+        break;
+    case VIDEO_MODE_BURST:
+        mode = 2;
+        break;
+    default:
+        status = ZX_ERR_INVALID_ARGS;
+    }
+    return status;
+}
+
+void DsiDw::DsiImplPowerUp() {
     DsiDwPwrUpReg::Get().ReadFrom(&(*dsi_mmio_))
                         .set_shutdown(kPowerOn)
                         .WriteTo(&(*dsi_mmio_));
 }
 
-void DsiDw::DsiImplPowerDownDsi() {
+void DsiDw::DsiImplPowerDown() {
     DsiDwPwrUpReg::Get().ReadFrom(&(*dsi_mmio_))
                         .set_shutdown(kPowerReset)
                         .WriteTo(&(*dsi_mmio_));
 }
 
-void DsiDw::DsiImplSendPhyCode(uint32_t code, uint32_t parameter) {
+bool DsiDw::DsiImplIsPoweredUp() {
+    return (DsiDwPwrUpReg::Get().ReadFrom(&(*dsi_mmio_)).shutdown() == kPowerOn);
+}
+
+void DsiDw::DsiImplPhySendCode(uint32_t code, uint32_t parameter) {
     // Write code
     DsiDwPhyTstCtrl1Reg::Get().FromValue(0)
                               .set_reg_value(code)
@@ -92,12 +140,14 @@ void DsiDw::DsiImplPhyPowerUp() {
                           .WriteTo(&(*dsi_mmio_));
 }
 
-bool DsiDw::DsiImplIsDsiPoweredUp() {
-    return (DsiDwPwrUpReg::Get().ReadFrom(&(*dsi_mmio_)).shutdown() == kPowerOn);
+void DsiDw::DsiImplPhyPowerDown() {
+    DsiDwPhyRstzReg::Get().ReadFrom(&(*dsi_mmio_))
+                          .set_phy_rstz(0)
+                          .set_phy_shutdownz(0)
+                          .WriteTo(&(*dsi_mmio_));
 }
 
-
-zx_status_t DsiDw::DsiImplWaitForPhyReady() {
+zx_status_t DsiDw::DsiImplPhyWaitForReady() {
     int timeout = kDPhyTimeout;
     while ((DsiDwPhyStatusReg::Get().ReadFrom(&(*dsi_mmio_)).phy_lock() == 0) &&
            timeout--) {
@@ -136,6 +186,22 @@ void DsiDw::DsiImplSetMode(dsi_mode_t mode) {
 zx_status_t DsiDw::DsiImplConfig(const dsi_config_t* dsi_config) {
     const display_setting_t disp_setting = dsi_config->display_setting;
     const designware_config_t dw_cfg = *(static_cast<designware_config_t*>(dsi_config->vendor_config_buffer));
+
+    bool packed;
+    uint8_t code;
+    uint8_t video_mode;
+    zx_status_t status = GetColorCode(dsi_config->color_coding, packed, code);
+    if (status != ZX_OK) {
+        DSI_ERROR("Invalid/Unsupported Color Coding\n");
+        return status;
+    }
+
+    status = GetVideoMode(dsi_config->video_mode_type, video_mode);
+    if (status != ZX_OK) {
+        DSI_ERROR("Invalid/Unsupported video mode\n");
+        return status;
+    }
+
     // Enable LP transmission in CMD Mode
     DsiDwCmdModeCfgReg::Get().ReadFrom(&(*dsi_mmio_))
                              .set_max_rd_pkt_size(1)
@@ -173,10 +239,9 @@ zx_status_t DsiDw::DsiImplConfig(const dsi_config_t* dsi_config) {
 
     // 2.2, Configure Color format
     DsiDwDpiColorCodingReg::Get().ReadFrom(&(*dsi_mmio_))
-                                 .set_loosely18_en(0)
-                                 .set_dpi_color_coding(dsi_config->color_coding)
+                                 .set_loosely18_en(!packed)
+                                 .set_dpi_color_coding(code)
                                  .WriteTo(&(*dsi_mmio_));
-
     // 2.3 Configure Signal polarity - Keep as default
     DsiDwDpiCfgPolReg::Get().FromValue(0)
                             .set_reg_value(0)
@@ -194,7 +259,7 @@ zx_status_t DsiDw::DsiImplConfig(const dsi_config_t* dsi_config) {
                              .set_lp_vfp_en(1)
                              .set_lp_vbp_en(1)
                              .set_lp_vsa_en(1)
-                             .set_vid_mode_type(dsi_config->video_mode_type)
+                             .set_vid_mode_type(video_mode)
                              .WriteTo(&(*dsi_mmio_));
 
     // Define the max pkt size during Low Power mode
@@ -768,7 +833,7 @@ zx_status_t DsiDw::Bind() {
     status = device_get_metadata(parent_, DEVICE_METADATA_PRIVATE,
                                  &display_info,
                                  sizeof(display_driver_t),
-                                &actual);
+                                 &actual);
     if (status != ZX_OK || actual != sizeof(display_driver_t)) {
         DSI_ERROR("Could not get display driver metadata %d\n", status);
         return status;

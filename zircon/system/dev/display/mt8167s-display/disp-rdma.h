@@ -60,7 +60,7 @@ public:
     // Configure Display RDMA engine based on display dimensions
     zx_status_t Config();
 
-    // Dumps all the relevant Display Registers
+    // Dumps all the relevant Display RDMA Registers
     void Dump();
 
 private:
