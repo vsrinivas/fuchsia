@@ -3769,7 +3769,7 @@ static void* brcmf_sdio_watchdog_thread(void* data) {
         // Currently we're depending on watchdog for all interrupt handling, so poll quickly
         // instead of waiting for watchdog signal.
         //sync_completion_wait(&bus->watchdog_wait, ZX_TIME_INFINITE);
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(0.5)));
+        zx_nanosleep(zx_deadline_after(ZX_USEC(500)));
 
         //brcmf_sdiod_freezer_count(bus->sdiodev);
         if (atomic_load(&bus->wd_active)) {
