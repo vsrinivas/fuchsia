@@ -27,6 +27,7 @@ namespace test {
 // by checking more frequently than the default 10 ms. The kDurationGranularity
 // constant should only be used in conjunction with kDurationResponseExpected.
 //
+// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 constexpr zx::duration kDurationResponseExpected = zx::sec(5);
 constexpr zx::duration kDurationTimeoutExpected = zx::msec(100);
 constexpr zx::duration kDurationGranularity = zx::msec(1);

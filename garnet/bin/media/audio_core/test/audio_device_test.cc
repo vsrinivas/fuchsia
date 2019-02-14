@@ -17,18 +17,10 @@
 namespace media::audio::test {
 
 //
-// AudioDeviceEnumeratorSync test cases (smoke test)
+// AudioDeviceTest static variables
 //
-// Synchronously connect; verify interface is alive.
-TEST(AudioDeviceSyncTest, Connect) {
-  fuchsia::media::AudioDeviceEnumeratorSyncPtr audio_dev_enum_sync;
-
-  auto environment_services = component::GetEnvironmentServices();
-  environment_services->ConnectToService(audio_dev_enum_sync.NewRequest());
-
-  uint64_t default_input;
-  ASSERT_EQ(ZX_OK, audio_dev_enum_sync->GetDefaultInputDevice(&default_input));
-}
+std::shared_ptr<const ::component::Services>
+    AudioDeviceTest::environment_services_;
 
 uint16_t AudioDeviceTest::initial_input_device_count_ = kInvalidDeviceCount;
 uint16_t AudioDeviceTest::initial_output_device_count_ = kInvalidDeviceCount;
@@ -46,7 +38,6 @@ void AudioDeviceTest::SetUp() {
   ::gtest::RealLoopFixture::SetUp();
 
   auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
-  environment_services_ = component::GetEnvironmentServices();
 
   environment_services_->ConnectToService(audio_dev_enum_.NewRequest());
   audio_dev_enum_.set_error_handler(err_handler);
@@ -83,10 +74,8 @@ bool AudioDeviceTest::ExpectCallback() {
   return return_val;
 }
 
+// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 bool AudioDeviceTest::ExpectTimeout() {
-  EXPECT_EQ(received_old_token_, kInvalidDeviceToken) << "Before ExpectTimeout";
-  EXPECT_TRUE(audio_dev_enum_.is_bound());
-
   received_callback_ = false;
   received_device_ = kInvalidDeviceInfo;
   received_removed_token_ = kInvalidDeviceToken;
@@ -111,6 +100,8 @@ bool AudioDeviceTest::ExpectTimeout() {
         << "Received Remove event";
     EXPECT_EQ(received_default_token_, kInvalidDeviceToken)
         << "Received Default event";
+    EXPECT_EQ(received_old_token_, kInvalidDeviceToken)
+        << "Received Default event";
     EXPECT_EQ(received_gain_token_, kInvalidDeviceToken)
         << "Received Gain event";
   }
@@ -121,8 +112,6 @@ bool AudioDeviceTest::ExpectTimeout() {
 }
 
 void AudioDeviceTest::SetOnDeviceAddedEvent() {
-  received_device_ = kInvalidDeviceInfo;
-
   audio_dev_enum_.events().OnDeviceAdded =
       [this](fuchsia::media::AudioDeviceInfo dev) {
         received_callback_ = true;
@@ -131,8 +120,6 @@ void AudioDeviceTest::SetOnDeviceAddedEvent() {
 }
 
 void AudioDeviceTest::SetOnDeviceRemovedEvent() {
-  received_removed_token_ = kInvalidDeviceToken;
-
   audio_dev_enum_.events().OnDeviceRemoved = [this](uint64_t token_id) {
     received_callback_ = true;
     received_removed_token_ = token_id;
@@ -140,9 +127,6 @@ void AudioDeviceTest::SetOnDeviceRemovedEvent() {
 }
 
 void AudioDeviceTest::SetOnDeviceGainChangedEvent() {
-  received_gain_token_ = kInvalidDeviceToken;
-  received_gain_info_ = kInvalidGainInfo;
-
   audio_dev_enum_.events().OnDeviceGainChanged =
       [this](uint64_t dev_token, fuchsia::media::AudioGainInfo dev_gain_info) {
         received_callback_ = true;
@@ -152,9 +136,6 @@ void AudioDeviceTest::SetOnDeviceGainChangedEvent() {
 }
 
 void AudioDeviceTest::SetOnDefaultDeviceChangedEvent() {
-  received_default_token_ = kInvalidDeviceToken;
-  received_old_token_ = kInvalidDeviceToken;
-
   audio_dev_enum_.events().OnDefaultDeviceChanged =
       [this](uint64_t old_default_token, uint64_t new_default_token) {
         received_callback_ = true;

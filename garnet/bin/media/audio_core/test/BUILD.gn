@@ -1,4 +1,4 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -11,7 +11,7 @@ executable("audio_fidl_tests_bin") {
 
   sources = [
     "audio_capturer_test.cc",
-    "audio_fidl_tests.cc",
+    "audio_fidl_main.cc",
     "audio_renderer_sync_test.cc",
     "audio_renderer_test.cc",
     "audio_sync_test.cc",
@@ -25,7 +25,6 @@ executable("audio_fidl_tests_bin") {
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.media",
-    "//third_party/googletest:gtest_main",
   ]
 }
 
@@ -47,16 +46,16 @@ executable("audio_device_tests_bin") {
   output_name = "audio_device_tests"
 
   sources = [
+    "audio_device_main.cc",
     "audio_device_test.cc",
     "audio_device_test.h",
     "audio_tests_shared.h",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.media",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/gtest",
-    "//third_party/googletest:gtest_main",
+    "//sdk/fidl/fuchsia.media",
   ]
 }
 

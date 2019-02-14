@@ -84,6 +84,7 @@ bool AudioCapturerTest::ExpectCallback() {
   return return_val;
 }
 
+// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 bool AudioCapturerTest::ExpectTimeout() {
   received_callback_ = false;
 
@@ -159,8 +160,7 @@ bool AudioCapturerTest::ExpectDisconnect() {
 // This test case verifies the scenario #1 above.
 // TODO(mpuryear): test sequence of pkt return, during Async capture.
 //
-// TODO(FLK-47): Test is disabled because it is flaky.
-TEST_F(AudioCapturerTest, DISABLED_DiscardAllWithNone) {
+TEST_F(AudioCapturerTest, DiscardAllWithNone) {
   SetNegativeExpectations();
 
   audio_capturer_->DiscardAllPackets([this]() { received_callback_ = true; });
@@ -215,6 +215,8 @@ TEST_F(AudioCapturerTest, StopNoReplyWhenStoppedCausesDisconnect) {
 // Test creation and interface independence of GainControl.
 // In a number of tests below, we run the message loop to give the AudioCapturer
 // or GainControl binding a chance to disconnect, if an error occurred.
+//
+// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 TEST_F(AudioCapturerTest, BindGainControl) {
   // Validate AudioCapturers can create GainControl interfaces.
   audio_capturer_->BindGainControl(gain_control_.NewRequest());

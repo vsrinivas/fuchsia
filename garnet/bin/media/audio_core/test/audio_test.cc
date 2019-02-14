@@ -76,6 +76,8 @@ void AudioBase::TearDown() {
 }
 
 // Expecting NOT to receive a disconnect. Wait, then check for errors.
+//
+// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 bool AudioBase::ReceiveNoDisconnectCallback() {
   bool timed_out = !RunLoopWithTimeoutOrUntil(
       [this]() { return error_occurred_; }, kDurationTimeoutExpected);
@@ -93,6 +95,7 @@ bool AudioBase::ReceiveNoDisconnectCallback() {
 void AudioTest::SetUp() {
   AudioBase::SetUp();
 
+  // TODO(mpuryear): Refactor to eliminate "wait for nothing bad to happen".
   ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
   ASSERT_TRUE(audio_.is_bound());
 }
@@ -209,6 +212,8 @@ bool SystemGainMuteTest::ReceiveNoGainCallback() {
 // 2. Audio persists after created AudioRenderer is destroyed.
 // 3. AudioRenderer persists after Audio is destroyed.
 // 4. Asynchronous Audio can create synchronous AudioCapturers, too.
+//
+// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 TEST_F(AudioTest, CreateAudioRenderer) {
   auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
 
@@ -296,6 +301,8 @@ TEST_F(AudioTest, CreateBadAudioRenderer) {
 // 2. Audio persists after created AudioCapturer is destroyed.
 // 3. AudioCapturer persists after Audio is destroyed.
 // 4. Asynchronous Audio can create synchronous AudioCapturers, too.
+//
+// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 TEST_F(AudioTest, CreateAudioCapturer) {
   auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
 

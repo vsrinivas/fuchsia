@@ -131,6 +131,8 @@ void AudioRendererTest::ExpectDisconnect() {
 // Before renderers are operational, multiple SetPcmStreamTypes should succeed.
 // We test twice because of previous bug, where the first succeeded but any
 // subsequent call (before Play) would cause a FIDL channel disconnect.
+//
+// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 TEST_F(AudioRendererTest, SetPcmStreamType) {
   fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
@@ -202,6 +204,8 @@ TEST_F(AudioRendererTest, EnableMinLeadTimeEvents) {
 }
 
 // Validate MinLeadTime events, when disabled.
+//
+// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 TEST_F(AudioRendererTest, DisableMinLeadTimeEvents) {
   int64_t min_lead_time = -1;
   audio_renderer_.events().OnMinLeadTimeChanged =
@@ -244,6 +248,8 @@ TEST_F(AudioRendererTest, GetMinLeadTime) {
 // Test creation and interface independence of GainControl.
 // In a number of tests below, we run the message loop to give the AudioRenderer
 // or GainControl binding a chance to disconnect, if an error occurred.
+//
+// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 TEST_F(AudioRendererTest, BindGainControl) {
   // Validate AudioRenderers can create GainControl interfaces.
   audio_renderer_->BindGainControl(gain_control_.NewRequest());

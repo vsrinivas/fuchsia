@@ -185,6 +185,8 @@ bool GainControlTestBase::ReceiveGainCallback(float gain_db, bool mute) {
 }
 
 // Tests expect to receive neither gain callback nor error; assert this.
+//
+// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 bool GainControlTestBase::ReceiveNoGainCallback() {
   received_gain_callback_ = false;
 
@@ -421,6 +423,8 @@ bool SiblingGainControlsTest::ReceiveGainCallback(float gain_db, bool mute) {
 }
 
 // Tests expect neither gain interface to receive gain callback nor error.
+//
+// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 bool SiblingGainControlsTest::ReceiveNoGainCallback() {
   received_gain_callback_ = received_gain_callback_2_ = false;
 
@@ -541,6 +545,8 @@ TEST_F(CapturerTwoGainControlsTest, SetGainNaN) { TestSetGainNaN(); }
 
 // Tests expect a gain callback and no error, and neither on the independent
 // API binding and gain_control (thus we wait for timeout below).
+//
+// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 bool IndependentGainControlsTest::ReceiveGainCallback(float gain_db,
                                                       bool mute) {
   received_gain_callback_ = received_gain_callback_2_ = false;
@@ -574,6 +580,8 @@ bool IndependentGainControlsTest::ReceiveGainCallback(float gain_db,
 }
 
 // Tests expect to receive neither gain callback nor error, on both gains.
+//
+// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 bool IndependentGainControlsTest::ReceiveNoGainCallback() {
   received_gain_callback_ = received_gain_callback_2_ = false;
 
@@ -604,6 +612,8 @@ bool IndependentGainControlsTest::ReceiveNoGainCallback() {
 // generates a gain callback, this is unexpected and treated as an error. We
 // still expect nothing from the independent API binding and its gain_control
 // (thus we wait for timeout).
+//
+// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 bool IndependentGainControlsTest::ReceiveDisconnectCallback() {
   received_gain_callback_ = received_gain_callback_2_ = false;
 

@@ -33,6 +33,12 @@ const fuchsia::media::AudioDeviceInfo kInvalidDeviceInfo = {
     .is_default = true};
 
 class AudioDeviceTest : public gtest::RealLoopFixture {
+ public:
+  static void SetEnvironmentServices(
+      std::shared_ptr<const ::component::Services> environment_services) {
+    environment_services_ = environment_services;
+  }
+
  protected:
   void SetUp() override;
   void TearDown() override;
@@ -65,7 +71,7 @@ class AudioDeviceTest : public gtest::RealLoopFixture {
   static uint32_t initial_input_gain_flags_;
   static uint32_t initial_output_gain_flags_;
 
-  std::shared_ptr<component::Services> environment_services_;
+  static std::shared_ptr<const ::component::Services> environment_services_;
   fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
 
   bool error_occurred_ = false;

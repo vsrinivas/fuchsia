@@ -23,22 +23,36 @@ namespace media::audio::test {
 // done on the async interfaces) should not be needed.
 class AudioRendererSyncTest : public gtest::RealLoopFixture {
  protected:
+  // "Regional" per-test-suite set-up. Called before first test in this suite.
+  static void SetUpTestSuite() {
+    std::shared_ptr<component::Services> environment_services =
+        component::GetEnvironmentServices();
+    environment_services->ConnectToService(audio_sync_.NewRequest());
+  }
+
+  // Per-test-suite tear-down. Called after last test in this suite.
+  static void TearDownTestSuite() { audio_sync_.Unbind(); }
+
   void SetUp() override {
     ::gtest::RealLoopFixture::SetUp();
 
-    environment_services_ = component::GetEnvironmentServices();
-    environment_services_->ConnectToService(audio_sync_.NewRequest());
-    ASSERT_TRUE(audio_sync_.is_bound());
-
     ASSERT_EQ(ZX_OK, audio_sync_->CreateAudioRenderer(
                          audio_renderer_sync_.NewRequest()));
-    ASSERT_TRUE(audio_renderer_sync_.is_bound());
   }
 
-  std::shared_ptr<component::Services> environment_services_;
-  fuchsia::media::AudioSyncPtr audio_sync_;
+  void TearDown() override {
+    audio_renderer_sync_.Unbind();
+    ::gtest::RealLoopFixture::TearDown();
+  }
+
+  // Declare singleton resource shared by all test cases.
+  static fuchsia::media::AudioSyncPtr audio_sync_;
+
+  // One of these is created anew, for each test case.
   fuchsia::media::AudioRendererSyncPtr audio_renderer_sync_;
 };
+
+fuchsia::media::AudioSyncPtr AudioRendererSyncTest::audio_sync_ = nullptr;
 
 //
 // AudioRendererSync validation
