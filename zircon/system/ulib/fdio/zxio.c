@@ -493,6 +493,65 @@ zx_handle_t fdio_unsafe_borrow_channel(fdio_t* io) {
     return ZX_HANDLE_INVALID;
 }
 
+// Vmo -------------------------------------------------------------------------
+
+static inline zxio_vmo_t* fdio_get_zxio_vmo(fdio_t* io) {
+    return (zxio_vmo_t*)fdio_get_zxio(io);
+}
+
+static zx_status_t fdio_zxio_vmo_clone(fdio_t* io, zx_handle_t* handles,
+                                       uint32_t* types) {
+    zxio_vmo_t* file = fdio_get_zxio_vmo(io);
+    zx_status_t status = zx_handle_duplicate(file->vmo, ZX_RIGHT_SAME_RIGHTS,
+                                             &handles[0]);
+    if (status != ZX_OK) {
+        return status;
+    }
+    types[0] = PA_FD;
+    return 1;
+}
+
+fdio_ops_t fdio_zxio_vmo_ops = {
+    .close = fdio_zxio_close,
+    .open = fdio_default_open,
+    .clone = fdio_zxio_vmo_clone,
+    .ioctl = fdio_default_ioctl,
+    .wait_begin = fdio_default_wait_begin,
+    .wait_end = fdio_default_wait_end,
+    .unwrap = fdio_zxio_unwrap,
+    .posix_ioctl = fdio_default_posix_ioctl,
+    .get_vmo = fdio_default_get_vmo,
+    .get_token = fdio_default_get_token,
+    .get_attr = fdio_zxio_get_attr,
+    .set_attr = fdio_zxio_set_attr,
+    .readdir = fdio_default_readdir,
+    .rewind = fdio_default_rewind,
+    .unlink = fdio_default_unlink,
+    .truncate = fdio_zxio_truncate,
+    .rename = fdio_default_rename,
+    .link = fdio_default_link,
+    .get_flags = fdio_zxio_get_flags,
+    .set_flags = fdio_zxio_set_flags,
+    .recvfrom = fdio_default_recvfrom,
+    .sendto = fdio_default_sendto,
+    .recvmsg = fdio_default_recvmsg,
+    .sendmsg = fdio_default_sendmsg,
+    .shutdown = fdio_default_shutdown,
+};
+
+fdio_t* fdio_vmo_create(zx_handle_t vmo, zx_off_t seek) {
+    fdio_t* io = fdio_alloc(&fdio_zxio_vmo_ops);
+    if (io == NULL) {
+        zx_handle_close(vmo);
+        return NULL;
+    }
+    zx_status_t status = zxio_vmo_init(fdio_get_zxio_storage(io), vmo, seek);
+    if (status != ZX_OK) {
+        return NULL;
+    }
+    return io;
+}
+
 // Vmofile ---------------------------------------------------------------------
 
 static inline zxio_vmofile_t* fdio_get_zxio_vmofile(fdio_t* io) {
@@ -572,21 +631,6 @@ fdio_t* fdio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
         return NULL;
     }
     return io;
-}
-
-__EXPORT
-int fdio_vmo_fd(zx_handle_t vmo, uint64_t offset, uint64_t length) {
-    fdio_t* io;
-    int fd;
-    if ((io = fdio_vmofile_create(ZX_HANDLE_INVALID, vmo, offset, length, 0u)) == NULL) {
-        return -1;
-    }
-    if ((fd = fdio_bind_to_fd(io, -1, 0)) < 0) {
-        fdio_close(io);
-        fdio_release(io);
-        return -1;
-    }
-    return fd;
 }
 
 // Pipe ------------------------------------------------------------------------

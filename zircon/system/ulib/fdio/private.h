@@ -171,8 +171,15 @@ fdio_t* fdio_file_create(zx_handle_t control, zx_handle_t event);
 // Takes ownership of |socket|.
 fdio_t* fdio_pipe_create(zx_handle_t socket);
 
-// Wraps a socket with an fdio_t using socketpair io.
-fdio_t* fdio_socketpair_create(zx_handle_t h);
+// Creates a socketpair backed by a socket.
+//
+// Takes ownership of |socket|.
+fdio_t* fdio_socketpair_create(zx_handle_t socket);
+
+// Creates an |fdio_t| from a VMO.
+//
+// Takes ownership of |vmo|.
+fdio_t* fdio_vmo_create(zx_handle_t vmo, zx_off_t seek);
 
 // Creates an |fdio_t| for a VMO file.
 //

@@ -41,6 +41,47 @@ zx_status_t zxio_dir_init(zxio_storage_t* remote, zx_handle_t control);
 zx_status_t zxio_file_init(zxio_storage_t* remote, zx_handle_t control,
                            zx_handle_t event);
 
+// vmo -------------------------------------------------------------------------
+
+typedef struct zxio_vmo {
+    // The |zxio_t| control structure for this object.
+    zxio_t io;
+
+    // The underlying VMO that stores the data.
+    zx_handle_t vmo;
+
+    // The size of the VMO in bytes.
+    //
+    // This value is read from the kernel during |zxio_vmo_init|, is always a
+    // multiple of the page size, and is never changed.
+    zx_off_t size;
+
+    // The current seek offset within the file.
+    //
+    // Protected by |lock|.
+    zx_off_t offset;
+
+    // The lock that protects |offset|.
+    //
+    // TODO: Migrate to sync_mutex_t.
+    mtx_t lock;
+} zxio_vmo_t;
+
+static_assert(sizeof(zxio_vmo_t) <= sizeof(zxio_storage_t),
+              "zxio_vmo_t must fit inside zxio_storage_t.");
+
+// Initialize |file| with from a VMO.
+//
+// The file will be sized to match the underlying VMO by reading the size of the
+// VMO from the kernel. The size of a VMO is always a multiple of the page size,
+// which means the size of the file will also be a multiple of the page size.
+//
+// The |offset| is the initial seek offset within the file.
+//
+// Always consumes |vmo|.
+zx_status_t zxio_vmo_init(zxio_storage_t* file, zx_handle_t vmo,
+                          zx_off_t offset);
+
 // vmofile ---------------------------------------------------------------------
 
 typedef struct zxio_vmofile {

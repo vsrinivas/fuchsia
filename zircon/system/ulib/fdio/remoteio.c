@@ -420,24 +420,28 @@ zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) {
                                             sizeof(info), NULL, NULL);
     if (status != ZX_OK)
         return status;
+    fdio_t* io = NULL;
     switch (info.type) {
         case ZX_OBJ_TYPE_CHANNEL:
             return fdio_from_channel(handle, out_io);
         case ZX_OBJ_TYPE_SOCKET:
             return fdio_from_socket(handle, out_io);
-        case ZX_OBJ_TYPE_LOG: {
-            fdio_t* io = fdio_logger_create(handle);
-            if (io == NULL) {
-                return ZX_ERR_NO_MEMORY;
-            }
-            *out_io = io;
-            return ZX_OK;
-        }
+        case ZX_OBJ_TYPE_VMO:
+            io = fdio_vmo_create(handle, 0u);
+            break;
+        case ZX_OBJ_TYPE_LOG:
+            io = fdio_logger_create(handle);
+            break;
         default: {
             zx_handle_close(handle);
             return ZX_ERR_INVALID_ARGS;
         }
     }
+    if (io == NULL) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    *out_io = io;
+    return ZX_OK;
 }
 
 // Create a fdio (if possible) from handles and info.

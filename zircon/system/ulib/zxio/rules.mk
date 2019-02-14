@@ -16,6 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/pipe.cpp \
     $(LOCAL_DIR)/remote.cpp \
     $(LOCAL_DIR)/socket.cpp \
+    $(LOCAL_DIR)/vmo.cpp \
     $(LOCAL_DIR)/vmofile.cpp \
     $(LOCAL_DIR)/zxio.cpp \
 

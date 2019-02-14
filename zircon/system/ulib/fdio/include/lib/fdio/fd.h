@@ -12,7 +12,7 @@ __BEGIN_CDECLS
 
 // Create a file descriptor from a |zx_handle_t|.
 //
-// The |handle| must be to a channel, socket, or debuglog object.
+// The |handle| must be to a channel, socket, vmo, or debuglog object.
 //
 // If the |zx_handle_t| is a channel, then the channel must implement the
 // |fuchsia.io.Node| protocol.
