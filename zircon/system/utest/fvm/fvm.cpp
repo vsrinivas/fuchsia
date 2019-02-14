@@ -34,16 +34,18 @@
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <ramdevice-client/ramdisk.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fvm/format.h>
 #include <fvm/fvm-check.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fzl/fdio.h>
 #include <lib/memfs/memfs.h>
 #include <lib/zx/vmo.h>
 #include <minfs/format.h>
 #include <zircon/device/block.h>
-#include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 #include <zircon/thread_annotations.h>
@@ -51,7 +53,7 @@
 #include <unittest/unittest.h>
 
 #define FVM_DRIVER_LIB "/boot/driver/fvm.so"
-#define STRLEN(s) sizeof(s) / sizeof((s)[0])
+#define STRLEN(s) (sizeof(s) / sizeof((s)[0]))
 
 namespace {
 
@@ -69,7 +71,8 @@ static uint64_t test_block_count;
 int StartFVMTest(uint64_t blk_size, uint64_t blk_count, uint64_t slice_size,
                  char* disk_path_out, char* fvm_driver_out) {
     int fd;
-    ssize_t r;
+    zx::channel fvm_channel;
+    zx_status_t status, call_status;
     disk_path_out[0] = 0;
     if (!use_real_disk) {
         if (ramdisk_create(blk_size, blk_count, &test_ramdisk)) {
@@ -93,12 +96,20 @@ int StartFVMTest(uint64_t blk_size, uint64_t blk_count, uint64_t slice_size,
         goto fail;
     }
 
-    r = ioctl_device_bind(fd, FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB));
-    close(fd);
-    if (r < 0) {
+    if (fdio_get_service_handle(fd, fvm_channel.reset_and_get_address()) != ZX_OK) {
+        fprintf(stderr, "fvm: Could not convert fd to channel\n");
+        exit(-1);
+    }
+    status = fuchsia_device_ControllerBind(fvm_channel.get(), FVM_DRIVER_LIB,
+                                       STRLEN(FVM_DRIVER_LIB), &call_status);
+    if (status == ZX_OK) {
+        status = call_status;
+    }
+    if (status != ZX_OK) {
         fprintf(stderr, "fvm: Error binding to fvm driver\n");
         goto fail;
     }
+    fvm_channel.reset();
 
     char path[PATH_MAX];
     snprintf(path, sizeof(path), "%s/fvm", disk_path_out);
@@ -147,14 +158,22 @@ int FVMRebind(int fvm_fd, char* disk_path, const partition_entry_t* entries,
             return -1;
         }
 
-        disk_fd.reset(open(disk_path, O_RDWR));
-        if (!disk_fd) {
-            fprintf(stderr, "fvm rebind: Could not open disk\n");
+        zx::channel disk_dev, disk_dev_remote;
+        if (zx::channel::create(0, &disk_dev, &disk_dev_remote) != ZX_OK) {
+            fprintf(stderr, "fvm rebind: Could not create channel\n");
             return -1;
         }
-
-        ssize_t r = ioctl_device_bind(disk_fd.get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB));
-        if (r < 0) {
+        if (fdio_service_connect(disk_path, disk_dev_remote.release()) != ZX_OK) {
+            fprintf(stderr, "fvm rebind: Could not connect to disk\n");
+            return -1;
+        }
+        zx_status_t call_status;
+        zx_status_t status = fuchsia_device_ControllerBind(disk_dev.get(), FVM_DRIVER_LIB,
+                                                           STRLEN(FVM_DRIVER_LIB), &call_status);
+        if (status == ZX_OK) {
+            status = call_status;
+        }
+        if (status != ZX_OK) {
             fprintf(stderr, "fvm rebind: Could not bind fvm driver\n");
             return -1;
         }
@@ -163,9 +182,20 @@ int FVMRebind(int fvm_fd, char* disk_path, const partition_entry_t* entries,
             fprintf(stderr, "fvm rebind: Could not rebind ramdisk\n");
             return -1;
         }
-        ssize_t r = ioctl_device_bind(ramdisk_get_block_fd(test_ramdisk), FVM_DRIVER_LIB,
-                                      STRLEN(FVM_DRIVER_LIB));
-        if (r < 0) {
+        fdio_t* io = fdio_unsafe_fd_to_io(ramdisk_get_block_fd(test_ramdisk));
+        if (io == nullptr) {
+            fprintf(stderr, "fvm rebind: could not convert fd to io\n");
+            return -1;
+        }
+        zx_status_t call_status;
+        zx_status_t status = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io),
+                                                           FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB),
+                                                           &call_status);
+        fdio_unsafe_release(io);
+        if (status == ZX_OK) {
+            status = call_status;
+        }
+        if (status != ZX_OK) {
             fprintf(stderr, "fvm rebind: Could not bind fvm driver\n");
             return -1;
         }
@@ -570,8 +600,15 @@ bool TestLarge() {
 
     ASSERT_EQ(fvm_init(fd.get(), slice_size), ZX_OK);
 
-    ASSERT_EQ(ioctl_device_bind(fd.get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)), 0);
-    fd.reset();
+    zx::channel fvm_channel;
+    ASSERT_EQ(fdio_get_service_handle(fd.release(), fvm_channel.reset_and_get_address()),
+              ZX_OK);
+    zx_status_t call_status;
+    zx_status_t status = fuchsia_device_ControllerBind(fvm_channel.get(), FVM_DRIVER_LIB,
+                                                       STRLEN(FVM_DRIVER_LIB), &call_status);
+    ASSERT_EQ(status, ZX_OK, "[FAILED]: Could not send bind to FVM driver");
+    ASSERT_EQ(call_status, ZX_OK, "[FAILED]: Could not bind disk to FVM driver");
+    fvm_channel.reset();
 
     snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", ramdisk_path);
     ASSERT_EQ(wait_for_device(fvm_path, ZX_SEC(3)), ZX_OK);
@@ -3026,10 +3063,26 @@ int main(int argc, char** argv) {
                 if (fd < 0) {
                     fprintf(stderr, "[fs] Could not open block device\n");
                     return -1;
-                } else if (ioctl_device_get_topo_path(fd, test_disk_path, PATH_MAX) < 0) {
+                }
+                fdio_t* io = fdio_unsafe_fd_to_io(fd);
+                if (io == nullptr) {
+                    fprintf(stderr, "[fs] could not convert fd to io\n");
+                    return -1;
+                }
+                zx_status_t call_status;
+                size_t path_len;
+                zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
+                        fdio_unsafe_borrow_channel(io), &call_status, test_disk_path,
+                        PATH_MAX - 1, &path_len);
+                fdio_unsafe_release(io);
+                if (status == ZX_OK) {
+                    status = call_status;
+                }
+                if (status != ZX_OK) {
                     fprintf(stderr, "[fs] Could not acquire topological path of block device\n");
                     return -1;
                 }
+                test_disk_path[path_len] = 0;
 
                 block_info_t block_info;
                 ssize_t rc = ioctl_block_get_info(fd, &block_info);

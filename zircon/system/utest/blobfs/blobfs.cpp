@@ -28,16 +28,18 @@
 #include <fbl/vector.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fvm/format.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fzl/fdio.h>
 #include <lib/memfs/memfs.h>
 #include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
-#include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
@@ -187,7 +189,7 @@ bool TestWrapper(void) {
 }
 
 #define FVM_DRIVER_LIB "/boot/driver/fvm.so"
-#define STRLEN(s) sizeof(s) / sizeof((s)[0])
+#define STRLEN(s) (sizeof(s) / sizeof((s)[0]))
 
 // FVM slice size used for tests
 constexpr size_t kTestFvmSliceSize = blobfs::kBlobfsBlockSize; // 8kb
@@ -253,13 +255,19 @@ bool BlobfsTest::Init(FsTestState state) {
         ASSERT_TRUE(fd, "[FAILED]: Could not open test disk");
         ASSERT_EQ(fvm_init(fd.get(), kTestFvmSliceSize), ZX_OK,
                   "[FAILED]: Could not format disk with FVM");
-        ASSERT_GE(ioctl_device_bind(fd.get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)), 0,
-                  "[FAILED]: Could not bind disk to FVM driver");
+        zx::channel fvm_channel;
+        ASSERT_EQ(fdio_get_service_handle(fd.release(), fvm_channel.reset_and_get_address()),
+                  ZX_OK);
+        zx_status_t call_status;
+        zx_status_t status = fuchsia_device_ControllerBind(fvm_channel.get(), FVM_DRIVER_LIB,
+                                                           STRLEN(FVM_DRIVER_LIB), &call_status);
+        ASSERT_EQ(status, ZX_OK, "[FAILED]: Could not send bind to FVM driver");
+        ASSERT_EQ(call_status, ZX_OK, "[FAILED]: Could not bind disk to FVM driver");
 
         snprintf(fvm_path_, sizeof(fvm_path_), "%s/fvm", device_path_);
         ASSERT_EQ(wait_for_device(fvm_path_, ZX_SEC(3)), ZX_OK,
                   "[FAILED]: FVM driver never appeared");
-        fd.reset();
+        fvm_channel.reset();
 
         // Open "fvm" driver.
         fbl::unique_fd fvm_fd(open(fvm_path_, O_RDWR));
@@ -2828,11 +2836,26 @@ int main(int argc, char** argv) {
             if (!fd) {
                 fprintf(stderr, "[fs] Could not open block device\n");
                 return -1;
-            } else if (ioctl_device_get_topo_path(fd.get(), gRealDiskInfo.disk_path, PATH_MAX)
-                       < 0) {
+            }
+            fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
+            if (io == nullptr) {
+                fprintf(stderr, "[fs] could not convert fd to io\n");
+                return -1;
+            }
+            zx_status_t call_status;
+            size_t path_len;
+            zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
+                    fdio_unsafe_borrow_channel(io), &call_status, gRealDiskInfo.disk_path,
+                    PATH_MAX - 1, &path_len);
+            fdio_unsafe_release(io);
+            if (status == ZX_OK) {
+                status = call_status;
+            }
+            if (status != ZX_OK) {
                 fprintf(stderr, "[fs] Could not acquire topological path of block device\n");
                 return -1;
             }
+            gRealDiskInfo.disk_path[path_len] = 0;
 
             // If we previously tried running tests on this disk, it may
             // have created an FVM and failed. (Try to) clean up from previous state

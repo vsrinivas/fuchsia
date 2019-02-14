@@ -12,12 +12,14 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <fvm/format.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
+#include <fuchsia/device/c/fidl.h>
+#include <fvm/format.h>
+#include <lib/fdio/fdio.h>
+#include <lib/zx/channel.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zircon/device/block.h>
-#include <zircon/device/device.h>
 
 #include "filesystems.h"
 
@@ -43,7 +45,7 @@ const fsck_options_t test_fsck_options = {
 };
 
 #define FVM_DRIVER_LIB "/boot/driver/fvm.so"
-#define STRLEN(s) sizeof(s) / sizeof((s)[0])
+#define STRLEN(s) (sizeof(s) / sizeof((s)[0]))
 
 const test_disk_t default_test_disk = {
     .block_count = TEST_BLOCK_COUNT_DEFAULT,
@@ -89,7 +91,19 @@ void setup_fs_test(test_disk_t disk, fs_test_type_t test_class) {
             fprintf(stderr, "[FAILED]: Could not format disk with FVM\n");
             exit(-1);
         }
-        if (ioctl_device_bind(fd, FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)) < 0) {
+
+        zx::channel fvm_channel;
+        if (fdio_get_service_handle(fd, fvm_channel.reset_and_get_address()) != ZX_OK) {
+            fprintf(stderr, "[FAILED]: Could not convert fd to channel\n");
+            exit(-1);
+        }
+        zx_status_t call_status;
+        zx_status_t status = fuchsia_device_ControllerBind(fvm_channel.get(), FVM_DRIVER_LIB,
+                                                           STRLEN(FVM_DRIVER_LIB), &call_status);
+        if (status == ZX_OK) {
+            status = call_status;
+        }
+        if (status != ZX_OK) {
             fprintf(stderr, "[FAILED]: Could not bind disk to FVM driver\n");
             exit(-1);
         }
@@ -100,7 +114,7 @@ void setup_fs_test(test_disk_t disk, fs_test_type_t test_class) {
         }
 
         // Open "fvm" driver
-        close(fd);
+        fvm_channel.reset();
         int fvm_fd;
         if ((fvm_fd = open(fvm_disk_path, O_RDWR)) < 0) {
             fprintf(stderr, "[FAILED]: Could not open FVM driver\n");

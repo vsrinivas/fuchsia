@@ -26,7 +26,8 @@ MODULE_LIBS := \
     system/ulib/unittest \
     system/ulib/c \
 
-MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-ethernet
+MODULE_FIDL_LIBS := \
+	system/fidl/fuchsia-hardware-ethernet \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-ethernet \
