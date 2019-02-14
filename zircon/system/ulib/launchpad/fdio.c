@@ -64,17 +64,3 @@ zx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
     }
     return launchpad_get_status(lp);
 }
-
-zx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd) {
-    zx_handle_t handles[FDIO_MAX_HANDLES];
-    uint32_t types[FDIO_MAX_HANDLES];
-    return add_fdio(lp, handles, types,
-                    fdio_clone_fd(fd, target_fd, handles, types));
-}
-
-zx_status_t launchpad_transfer_fd(launchpad_t* lp, int fd, int target_fd) {
-    zx_handle_t handles[FDIO_MAX_HANDLES];
-    uint32_t types[FDIO_MAX_HANDLES];
-    return add_fdio(lp, handles, types,
-                    fdio_transfer_fd(fd, target_fd, handles, types));
-}

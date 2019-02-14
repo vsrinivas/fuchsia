@@ -177,9 +177,6 @@ zx_status_t launchpad_get_status(launchpad_t* lp);
 // Load an ELF PIE binary from path
 zx_status_t launchpad_load_from_file(launchpad_t* lp, const char* path);
 
-// Load an ELF PIE binary from fd
-zx_status_t launchpad_load_from_fd(launchpad_t* lp, int fd);
-
 // Load an ELF PIE binary from vmo
 zx_status_t launchpad_load_from_vmo(launchpad_t* lp, zx_handle_t vmo);
 
@@ -228,9 +225,6 @@ zx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
 //
 // It is *not* an error if any of the above requested items don't
 // exist (eg, fd0 is closed)
-//
-// launchpad_clone_fd() and launchpad_transfer_fd() may be used to
-// add additional file descriptors to the launched process.
 #define LP_CLONE_FDIO_NAMESPACE  (0x0001u)
 #define LP_CLONE_FDIO_STDIO      (0x0004u)
 #define LP_CLONE_FDIO_ALL        (0x00FFu)
@@ -239,28 +233,6 @@ zx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
 #define LP_CLONE_ALL             (0xFFFFu)
 
 zx_status_t launchpad_clone(launchpad_t* lp, uint32_t what);
-
-
-// Attempt to duplicate local descriptor fd into target_fd in the
-// new process.  Returns ZX_ERR_BAD_HANDLE if fd is not a valid fd, or
-// ZX_ERR_NOT_SUPPORTED if it's not possible to transfer this fd.
-zx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd);
-
-// Attempt to transfer local descriptor fd into target_fd in the
-// new process.  Returns ZX_ERR_BAD_HANDLE if fd is not a valid fd,
-// ERR_UNAVAILABLE if fd has been duplicated or is in use in an
-// io operation, or ZX_ERR_NOT_SUPPORTED if it's not possible to transfer
-// this fd.
-// Upon success, from the point of view of the calling process, the fd
-// will appear to have been closed.  The underlying "file" will continue
-// to exist until launch succeeds (and it is transferred) or fails (and
-// it is destroyed).
-zx_status_t launchpad_transfer_fd(launchpad_t* lp, int fd, int target_fd);
-
-// Attempt to create a pipe and install one end of that pipe as
-// target_fd in the new process and return the other end (if
-// successful) via the fd_out parameter.
-zx_status_t launchpad_add_pipe(launchpad_t* lp, int* fd_out, int target_fd);
 
 
 // ACCESSORS for internal state

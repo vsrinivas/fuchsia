@@ -49,6 +49,13 @@ static bool stdio_pipe_test(void)
     END_TEST;
 }
 
+static zx_status_t transfer_fd(launchpad_t* lp, int fd, int target_fd) {
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    zx_status_t status = fdio_fd_transfer(fd, &handle);
+    if (status != ZX_OK)
+        return status;
+    return launchpad_add_handle(lp, handle, PA_HND(PA_FD, target_fd));
+}
 
 static bool stdio_launchpad_pipe_test(void)
 {
@@ -93,11 +100,11 @@ static bool stdio_launchpad_pipe_test(void)
     ASSERT_EQ(stdio_pipe(stderr_fds, false), 0, "stderr pipe creation failed");
 
     // Transfer the child's stdio pipes
-    ASSERT_EQ(launchpad_transfer_fd(lp, stdin_fds[1], 0), ZX_OK,
+    ASSERT_EQ(transfer_fd(lp, stdin_fds[1], 0), ZX_OK,
               "failed to transfer stdin pipe to child process");
-    ASSERT_EQ(launchpad_transfer_fd(lp, stdout_fds[1], 1), ZX_OK,
+    ASSERT_EQ(transfer_fd(lp, stdout_fds[1], 1), ZX_OK,
               "failed to transfer stdout pipe to child process");
-    ASSERT_EQ(launchpad_transfer_fd(lp, stderr_fds[1], 2), ZX_OK,
+    ASSERT_EQ(transfer_fd(lp, stderr_fds[1], 2), ZX_OK,
               "failed to transfer stderr pipe to child process");
 
     // Start the process

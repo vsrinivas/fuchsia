@@ -328,31 +328,6 @@ zx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
     return status;
 }
 
-//TODO: use transfer_fd here and eliminate fdio_pipe_half()
-zx_status_t launchpad_add_pipe(launchpad_t* lp, int* fd_out, int target_fd) {
-    zx_handle_t handle;
-    uint32_t id;
-    int fd;
-
-    if (lp->error)
-        return lp->error;
-    if ((target_fd < 0) || (target_fd >= FDIO_MAX_FD)) {
-        return lp_error(lp, ZX_ERR_INVALID_ARGS, "add_pipe: invalid target fd");
-    }
-    zx_status_t status;
-    if ((status = fdio_pipe_half(&handle, &id)) < 0) {
-        return lp_error(lp, status, "add_pipe: failed to create pipe");
-    }
-    fd = status;
-    if ((status = launchpad_add_handle(lp, handle, PA_HND(PA_HND_TYPE(id), target_fd))) < 0) {
-        close(fd);
-        zx_handle_close(handle);
-        return status;
-    }
-    *fd_out = fd;
-    return ZX_OK;
-}
-
 static void check_elf_stack_size(launchpad_t* lp, elf_load_info_t* elf) {
     size_t elf_stack_size = elf_load_get_stack_size(elf);
     if (elf_stack_size > 0)
@@ -1301,16 +1276,6 @@ zx_status_t launchpad_load_from_file(launchpad_t* lp, const char* path) {
         return launchpad_file_load_with_vdso(lp, vmo);
     } else {
         return lp_error(lp, status, "launchpad_vmo_from_file failure");
-    }
-}
-
-zx_status_t launchpad_load_from_fd(launchpad_t* lp, int fd) {
-    zx_handle_t vmo;
-    zx_status_t status = fdio_get_vmo_clone(fd, &vmo);
-    if (status == ZX_OK) {
-        return launchpad_file_load_with_vdso(lp, vmo);
-    } else {
-        return status;
     }
 }
 
