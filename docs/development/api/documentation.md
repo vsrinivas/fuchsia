@@ -137,7 +137,11 @@ Document the concurrency properties of APIs that have internal state.
      (e.g., methods in a class) are atomic with respect to other concurrent
      processes.  There is no need for a caller to use any external
      synchronization (e.g., a caller should not have to acquire a lock for the
-     duration of the method invocation).
+     duration of the method invocation).  You may still describe your API as
+     thread-safe if a caller needs to use external synchronization to make
+     references to instances of the API visible to other threads (e.g., by
+     setting and getting a global pointer to an instance of a class with atomic
+     operations).
    * **Thread-unsafe**: This means that all methods must use external
      synchronization to ensure invariants are maintained (e.g., mutual
      exclusion enforced by a lock).
