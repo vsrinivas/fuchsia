@@ -96,9 +96,7 @@ zx_status_t LauncherImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
     // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-372
     uint32_t ordinal = message.ordinal();
     if (ordinal == fuchsia_process_LauncherLaunchOrdinal ||
-        ordinal == fuchsia_process_LauncherLaunchGenOrdinal ||
-        ordinal == fuchsia_process_LauncherLaunch2Ordinal ||
-        ordinal == fuchsia_process_LauncherLaunch2GenOrdinal) {
+        ordinal == fuchsia_process_LauncherLaunchGenOrdinal) {
         return Launch(buffer, std::move(message));
     } else if (ordinal == fuchsia_process_LauncherCreateWithoutStartingOrdinal ||
                ordinal == fuchsia_process_LauncherCreateWithoutStartingGenOrdinal) {

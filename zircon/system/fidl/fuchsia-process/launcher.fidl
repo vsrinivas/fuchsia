@@ -123,7 +123,6 @@ interface Launcher {
     ///
     /// |process| is present if, and only if, |status| is ZX_OK.
     Launch(LaunchInfo info) -> (zx.status status, handle<process>? process);
-    Launch2(LaunchInfo info) -> (zx.status status, handle<process>? process);
 
     /// Creates the process described by |info| but does not start it.
     ///
