@@ -1491,6 +1491,10 @@ Status PageStorageImpl::SynchronousAddCommits(
 
   s = batch->Execute(handler);
 
+  if (s != Status::OK) {
+    return s;
+  }
+
   NotifyWatchersOfNewCommits(commits_to_send, source);
 
   return s;
