@@ -3,12 +3,37 @@
 # found in the LICENSE file.
 
 import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
+import("//build/package.gni")
+import("//build/testing/environments.gni")
 
 go_library("syslog") {
   name = "syslog"
   deps = [
     "//garnet/public/lib/component/go/src/app($go_toolchain)",
     "//zircon/public/fidl/fuchsia-logger($go_toolchain)",
+  ]
+}
+
+go_test("syslog_logger_test") {
+  gopackage = "syslog/logger"
+  deps = [
+    ":syslog",
+  ]
+}
+
+package("syslog_gotests") {
+  testonly = true
+
+  deps = [
+    ":syslog_logger_test",
+  ]
+
+  tests = [
+    {
+      name = "syslog_logger_test"
+      environments = basic_envs
+    },
   ]
 }
