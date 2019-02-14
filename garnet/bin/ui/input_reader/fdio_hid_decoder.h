@@ -13,7 +13,7 @@
 
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 #include "garnet/bin/ui/input_reader/mouse.h"
-#include "garnet/bin/ui/input_reader/touchscreen.h"
+#include "garnet/bin/ui/input_reader/touch.h"
 
 namespace fzl {
 class FdioCaller;

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_INPUT_READER_TOUCHSCREEN_H_
-#define GARNET_BIN_UI_INPUT_READER_TOUCHSCREEN_H_
+#ifndef GARNET_BIN_UI_INPUT_READER_TOUCH_H_
+#define GARNET_BIN_UI_INPUT_READER_TOUCH_H_
 
 #include <cstddef>
 
@@ -11,7 +11,9 @@
 
 namespace mozart {
 
-class Touchscreen {
+// This reprents a HID device that uses touch. It currently supports both
+// touchscreens and touchpads.
+class Touch {
  public:
   static constexpr size_t MAX_TOUCH_POINTS = 10;
 
@@ -59,7 +61,7 @@ class Touchscreen {
     int32_t max_finger_id;
   };
 
-  Touchscreen()
+  Touch()
       : touch_points_(0),
         scan_time_(),
         contact_count_(),
@@ -70,9 +72,9 @@ class Touchscreen {
     }
   }
 
-  bool ParseTouchscreenDescriptor(const hid::ReportDescriptor *desc);
+  bool ParseTouchDescriptor(const hid::ReportDescriptor *desc);
   bool ParseReport(const uint8_t *data, size_t len, Report *report) const;
-  bool SetDescriptor(Touchscreen::Descriptor *touch_desc);
+  bool SetDescriptor(Touch::Descriptor *touch_desc);
 
   uint8_t report_id() const { return report_id_; }
   size_t touch_points() const { return touch_points_; }
@@ -100,4 +102,4 @@ class Touchscreen {
 };
 }  // namespace mozart
 
-#endif  // GARNET_BIN_UI_INPUT_READER_TOUCHSCREEN_H_
+#endif  // GARNET_BIN_UI_INPUT_READER_TOUCH_H_

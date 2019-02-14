@@ -129,7 +129,7 @@ bool InputInterpreter::Initialize() {
 
     has_touchscreen_ = true;
     touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
-    Touchscreen::Descriptor touch_desc;
+    Touch::Descriptor touch_desc;
     SetDescriptor(&touch_desc);
     touchscreen_descriptor_->x.range.min = touch_desc.x_min;
     touchscreen_descriptor_->x.range.max = touch_desc.x_max;
@@ -812,7 +812,7 @@ bool InputInterpreter::Read(bool discard) {
 bool InputInterpreter::ParseTouchpadReport(
     uint8_t* report, size_t len,
     fuchsia::ui::input::InputReport* mouse_report) {
-  Touchscreen::Report touchpad;
+  Touch::Report touchpad;
   if (!ParseReport(report, len, &touchpad)) {
     return false;
   }
@@ -841,7 +841,7 @@ bool InputInterpreter::ParseTouchpadReport(
   }
 
   // Find the finger we are tracking.
-  Touchscreen::ContactReport* contact = nullptr;
+  Touch::ContactReport* contact = nullptr;
   for (size_t i = 0; i < touchpad.contact_count; i++) {
     if (touchpad.contacts[i].id == tracking_finger_id_) {
       contact = &touchpad.contacts[i];
@@ -880,7 +880,7 @@ bool InputInterpreter::ParseTouchpadReport(
 bool InputInterpreter::ParseTouchscreenReport(
     uint8_t* report, size_t len,
     fuchsia::ui::input::InputReport* touchscreen_report) {
-  Touchscreen::Report touchscreen;
+  Touch::Report touchscreen;
   if (!ParseReport(report, len, &touchscreen)) {
     return false;
   }
@@ -1136,7 +1136,7 @@ bool InputInterpreter::ParseProtocol() {
       case Protocol::Touchpad:
         // Fallthrough
       case Protocol::Touch: {
-        bool success = ts_.ParseTouchscreenDescriptor(input_desc);
+        bool success = ts_.ParseTouchDescriptor(input_desc);
         if (!success) {
           FXL_LOG(ERROR) << "invalid touchscreen descriptor for " << name();
           return false;
@@ -1164,9 +1164,9 @@ bool InputInterpreter::ParseProtocol() {
 }
 
 bool InputInterpreter::ParseReport(const uint8_t* report, size_t len,
-                                   Touchscreen::Report* touchscreen) {
+                                   Touch::Report* touchscreen) {
   if (report[0] != ts_.report_id()) {
-    FXL_VLOG(0) << name() << " Touchscreen report "
+    FXL_VLOG(0) << name() << " Touch report "
                 << static_cast<uint32_t>(report[0])
                 << " does not match report id "
                 << static_cast<uint32_t>(ts_.report_id());
@@ -1176,7 +1176,7 @@ bool InputInterpreter::ParseReport(const uint8_t* report, size_t len,
   return ts_.ParseReport(report, len, touchscreen);
 }
 
-bool InputInterpreter::SetDescriptor(Touchscreen::Descriptor* touch_desc) {
+bool InputInterpreter::SetDescriptor(Touch::Descriptor* touch_desc) {
   return ts_.SetDescriptor(touch_desc);
 }
 

@@ -67,8 +67,8 @@ class InputInterpreter {
   bool ParseProtocol();
 
   bool ParseReport(const uint8_t* report, size_t len,
-                   Touchscreen::Report* touchscreen);
-  bool SetDescriptor(Touchscreen::Descriptor* touch_desc);
+                   Touch::Report* touchscreen);
+  bool SetDescriptor(Touch::Descriptor* touch_desc);
 
   void NotifyRegistry();
 
@@ -135,7 +135,7 @@ class InputInterpreter {
   std::unique_ptr<HidDecoder> hid_decoder_;
 
   Protocol protocol_;
-  Touchscreen ts_;
+  Touch ts_;
   Mouse mouse_;
   Hardcoded hardcoded_;
 };

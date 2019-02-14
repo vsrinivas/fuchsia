@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/input_reader/tests/mock_hid_decoder.h"
-#include "garnet/bin/ui/input_reader/touchscreen.h"
+#include "garnet/bin/ui/input_reader/touch.h"
 
 #include "lib/fxl/logging.h"
 

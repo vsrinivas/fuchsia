@@ -9,14 +9,13 @@
 #include <gtest/gtest.h>
 #include <lib/fxl/time/time_point.h>
 
-#include "garnet/bin/ui/input_reader/touchscreen.h"
+#include "garnet/bin/ui/input_reader/touch.h"
 
 namespace input {
 
 namespace {
 
-void ParseTouchpad(const uint8_t *desc, size_t desc_len,
-                   mozart::Touchscreen *ts) {
+void ParseTouchpad(const uint8_t *desc, size_t desc_len, mozart::Touch *ts) {
   hid::DeviceDescriptor *dev_desc = nullptr;
   auto parse_res = hid::ParseReportDescriptor(desc, desc_len, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
@@ -29,14 +28,14 @@ void ParseTouchpad(const uint8_t *desc, size_t desc_len,
   for (size_t rep = 0; rep < count; rep++) {
     const hid::ReportDescriptor *desc = &dev_desc->report[rep];
     if (desc->input_count != 0) {
-        input_desc = desc;
-        break;
+      input_desc = desc;
+      break;
     }
   }
   ASSERT_NE(nullptr, input_desc);
   ASSERT_LT(0UL, input_desc->input_count);
 
-  auto success = ts->ParseTouchscreenDescriptor(input_desc);
+  auto success = ts->ParseTouchDescriptor(input_desc);
   ASSERT_EQ(true, success);
 }
 }  // namespace
@@ -47,22 +46,21 @@ void ParseTouchpad(const uint8_t *desc, size_t desc_len,
 namespace test {
 
 TEST(TouchpadTest, ParadiseV1) {
-  mozart::Touchscreen ts;
+  mozart::Touch ts;
   size_t desc_size;
   const uint8_t *paradise_touchpad_v1_report_desc =
       get_paradise_touchpad_v1_report_desc(&desc_size);
 
   ParseTouchpad(paradise_touchpad_v1_report_desc, desc_size, &ts);
-  mozart::Touchscreen::Descriptor ts_desc;
+  mozart::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(5UL, ts.touch_points());
-  EXPECT_EQ(mozart::Touchscreen::Capabilities::CONTACT_ID |
-                mozart::Touchscreen::Capabilities::CONTACT_COUNT |
-                mozart::Touchscreen::Capabilities::BUTTON |
-                mozart::Touchscreen::Capabilities::TIP_SWITCH |
-                mozart::Touchscreen::Capabilities::X |
-                mozart::Touchscreen::Capabilities::Y,
+  EXPECT_EQ(mozart::Touch::Capabilities::CONTACT_ID |
+                mozart::Touch::Capabilities::CONTACT_COUNT |
+                mozart::Touch::Capabilities::BUTTON |
+                mozart::Touch::Capabilities::TIP_SWITCH |
+                mozart::Touch::Capabilities::X | mozart::Touch::Capabilities::Y,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
   EXPECT_EQ(1030000, ts_desc.x_max);
@@ -84,7 +82,7 @@ TEST(TouchpadTest, ParadiseV1) {
 
   uint8_t *report_data = reinterpret_cast<uint8_t *>(&touchpad_v1_report);
 
-  mozart::Touchscreen::Report report;
+  mozart::Touch::Report report;
   auto success =
       ts.ParseReport(report_data, sizeof(touchpad_v1_report), &report);
   EXPECT_EQ(true, success);
@@ -103,22 +101,21 @@ TEST(TouchpadTest, ParadiseV1) {
 }
 
 TEST(TouchpadTest, ParadiseV2) {
-  mozart::Touchscreen ts;
+  mozart::Touch ts;
   size_t desc_size;
   const uint8_t *paradise_touchpad_v2_report_desc =
       get_paradise_touchpad_v2_report_desc(&desc_size);
 
   ParseTouchpad(paradise_touchpad_v2_report_desc, desc_size, &ts);
-  mozart::Touchscreen::Descriptor ts_desc;
+  mozart::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(5UL, ts.touch_points());
-  EXPECT_EQ(mozart::Touchscreen::Capabilities::CONTACT_ID |
-                mozart::Touchscreen::Capabilities::CONTACT_COUNT |
-                mozart::Touchscreen::Capabilities::BUTTON |
-                mozart::Touchscreen::Capabilities::TIP_SWITCH |
-                mozart::Touchscreen::Capabilities::X |
-                mozart::Touchscreen::Capabilities::Y,
+  EXPECT_EQ(mozart::Touch::Capabilities::CONTACT_ID |
+                mozart::Touch::Capabilities::CONTACT_COUNT |
+                mozart::Touch::Capabilities::BUTTON |
+                mozart::Touch::Capabilities::TIP_SWITCH |
+                mozart::Touch::Capabilities::X | mozart::Touch::Capabilities::Y,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
   EXPECT_EQ(1030000, ts_desc.x_max);
@@ -140,7 +137,7 @@ TEST(TouchpadTest, ParadiseV2) {
 
   uint8_t *report_data = reinterpret_cast<uint8_t *>(&touchpad_v2_report);
 
-  mozart::Touchscreen::Report report;
+  mozart::Touch::Report report;
   auto success =
       ts.ParseReport(report_data, sizeof(touchpad_v2_report), &report);
   EXPECT_EQ(true, success);

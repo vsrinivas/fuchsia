@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/input_reader/touchscreen.h"
+#include "garnet/bin/ui/input_reader/touch.h"
 
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
@@ -16,8 +16,7 @@
 #include "lib/fxl/logging.h"
 
 namespace mozart {
-bool Touchscreen::ParseTouchscreenDescriptor(
-    const hid::ReportDescriptor *desc) {
+bool Touch::ParseTouchDescriptor(const hid::ReportDescriptor *desc) {
   size_t touch_points = 0;
   TouchPointConfig configs[MAX_TOUCH_POINTS] = {};
   hid::Attributes scan_time = {};
@@ -66,11 +65,11 @@ bool Touchscreen::ParseTouchscreenDescriptor(
 
     if (touch_points < 1) {
       FXL_LOG(ERROR)
-          << "Touchscreen descriptor: No touch points found in a collection";
+          << "Touch descriptor: No touch points found in a collection";
       return false;
     }
     if (touch_points > MAX_TOUCH_POINTS) {
-      FXL_LOG(ERROR) << "Touchscreen descriptor: Current touchscreen has "
+      FXL_LOG(ERROR) << "Touch descriptor: Current touchscreen has "
                      << touch_points
                      << " touch points which is above hardcoded limit of "
                      << MAX_TOUCH_POINTS;
@@ -104,7 +103,7 @@ bool Touchscreen::ParseTouchscreenDescriptor(
   }
 
   if (touch_points == 0) {
-    FXL_LOG(ERROR) << "Touchscreen descriptor: Failed to find any touch points";
+    FXL_LOG(ERROR) << "Touch descriptor: Failed to find any touch points";
     return false;
   }
 
@@ -112,9 +111,9 @@ bool Touchscreen::ParseTouchscreenDescriptor(
   for (size_t i = 1; i < touch_points; i++) {
     if (configs[i].capabilities != configs[0].capabilities) {
       FXL_LOG(ERROR)
-          << "Touchscreen descriptor: Touch point capabilities are different";
+          << "Touch descriptor: Touch point capabilities are different";
       for (size_t j = 0; j < touch_points; j++) {
-        FXL_LOG(ERROR) << "Touchscreen descriptor: touch_point[" << j
+        FXL_LOG(ERROR) << "Touch descriptor: touch_point[" << j
                        << "] = " << configs[i].capabilities;
       }
       return false;
@@ -137,13 +136,12 @@ bool Touchscreen::ParseTouchscreenDescriptor(
   return true;
 }
 
-bool Touchscreen::ParseReport(const uint8_t *data, size_t len,
-                              Report *report) const {
+bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
   assert(report != nullptr);
 
   hid::Report hid_report = {data, len};
   if (len != report_size_) {
-    FXL_LOG(ERROR) << "Touchscreen HID Report is not correct size, (" << len
+    FXL_LOG(ERROR) << "Touch HID Report is not correct size, (" << len
                    << " != " << report_size_ << ")";
     return false;
   }
@@ -172,14 +170,14 @@ bool Touchscreen::ParseReport(const uint8_t *data, size_t len,
     // XXX(konkers): Add 32 bit generic field extraction helpers.
     if (config->capabilities & Capabilities::CONTACT_ID) {
       if (!hid::ExtractUint(hid_report, config->contact_id, &contact->id)) {
-        FXL_LOG(ERROR) << "Touchscreen report: Failed to parse CONTACT_ID";
+        FXL_LOG(ERROR) << "Touch report: Failed to parse CONTACT_ID";
         return false;
       }
     }
     if (config->capabilities & Capabilities::X) {
       double x;
       if (!hid::ExtractAsUnit(hid_report, config->x, &x)) {
-        FXL_LOG(ERROR) << "Touchscreen report: Failed to parse X";
+        FXL_LOG(ERROR) << "Touch report: Failed to parse X";
         return false;
       }
       // If this returns true, x was converted. If it returns false,
@@ -243,7 +241,7 @@ bool Touchscreen::ParseReport(const uint8_t *data, size_t len,
   return true;
 }
 
-bool Touchscreen::SetDescriptor(Touchscreen::Descriptor *touch_desc) {
+bool Touch::SetDescriptor(Touch::Descriptor *touch_desc) {
   // X and Y will have units of 10^-5 meters
   hid::Unit length_unit = {};
   length_unit.exp = -5;

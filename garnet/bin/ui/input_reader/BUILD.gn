@@ -69,8 +69,8 @@ source_set("device") {
     "hid_decoder.h",
     "mouse.cc",
     "mouse.h",
-    "touchscreen.cc",
-    "touchscreen.h",
+    "touch.cc",
+    "touch.h",
   ]
 
   deps = [
