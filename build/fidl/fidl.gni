@@ -30,6 +30,11 @@ import("//build/rust/toolchain.gni")
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
 #
+#   api (optional)
+#     Path to the file representing the API of this library.
+#     This file is used to ensure modifications to the library's API are
+#     explicitly acknowledged.
+#
 #   cpp_legacy_callbacks (optional)
 #     If true, uses std::function instead of fit::function.
 #     Defaults to true while migration is in progress.
@@ -37,6 +42,9 @@ import("//build/rust/toolchain.gni")
 template("fidl") {
   if (defined(invoker.sdk_category)) {
     not_needed(invoker, [ "sdk_category" ])
+  }
+  if (defined(invoker.api)) {
+    not_needed(invoker, [ "api" ])
   }
   if (defined(invoker.cpp_legacy_callbacks)) {
     not_needed(invoker, [ "cpp_legacy_callbacks" ])

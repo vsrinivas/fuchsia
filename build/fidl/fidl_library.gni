@@ -12,6 +12,7 @@ import("//build/sdk/sdk_atom.gni")
 #
 # The parameters for this template are defined in //build/fidl/fidl.gni. The
 # relevant parameters in this template are:
+#   - api;
 #   - name;
 #   - sdk_category;
 #   - sources.
@@ -229,6 +230,12 @@ template("fidl_library") {
       id = "sdk://fidl/$library_name"
 
       category = invoker.sdk_category
+
+      if (defined(invoker.api)) {
+        api = invoker.api
+
+        api_contents = all_files
+      }
 
       meta = {
         source = meta_file
