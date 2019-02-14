@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
-#include "garnet/bin/ui/input_reader/protocols.h"
 
 #include <fuchsia/hardware/input/c/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 #include <hid/acer12.h>
@@ -18,22 +18,20 @@
 #include <hid/paradise.h>
 #include <hid/samsung.h>
 #include <hid/usages.h>
-
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fxl/arraysize.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/time/time_point.h>
+#include <lib/ui/input/cpp/formatting.h>
 #include <sys/types.h>
 #include <sys/uio.h>
+#include <trace/event.h>
 #include <zircon/device/device.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <trace/event.h>
-
-#include <fuchsia/ui/input/cpp/fidl.h>
 #include "garnet/bin/ui/input_reader/fdio_hid_decoder.h"
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/time/time_point.h"
-#include "lib/ui/input/cpp/formatting.h"
+#include "garnet/bin/ui/input_reader/protocols.h"
 
 namespace {
 
@@ -46,9 +44,9 @@ int64_t InputEventTimestampNow() {
 }
 
 fuchsia::ui::input::InputReport CloneReport(
-    const fuchsia::ui::input::InputReportPtr& report) {
+    const fuchsia::ui::input::InputReport& report) {
   fuchsia::ui::input::InputReport result;
-  fidl::Clone(*report, &result);
+  fidl::Clone(report, &result);
   return result;
 }
 
@@ -549,6 +547,8 @@ void InputInterpreter::NotifyRegistry() {
 }
 
 bool InputInterpreter::Read(bool discard) {
+  TRACE_DURATION("input", "hid_read");
+
   // If positive |rc| is the number of bytes read. If negative the error
   // while reading.
   int rc = 1;
@@ -560,11 +560,12 @@ bool InputInterpreter::Read(bool discard) {
     return false;
   }
 
-  TRACE_DURATION("input", "Read");
   if (has_keyboard_) {
     hardcoded_.ParseKeyboardReport(report.data(), rc, keyboard_report_.get());
     if (!discard) {
-      input_device_->DispatchReport(CloneReport(keyboard_report_));
+      TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                        keyboard_report_->trace_id, "device_type", "keyboard");
+      input_device_->DispatchReport(CloneReport(*keyboard_report_));
     }
   }
 
@@ -574,7 +575,9 @@ bool InputInterpreter::Read(bool discard) {
       return false;
 
     if (!discard) {
-      input_device_->DispatchReport(CloneReport(buttons_report_));
+      TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                        buttons_report_->trace_id, "device_type", "buttons");
+      input_device_->DispatchReport(CloneReport(*buttons_report_));
     }
   }
 
@@ -582,20 +585,26 @@ bool InputInterpreter::Read(bool discard) {
     case MouseDeviceType::BOOT:
       hardcoded_.ParseMouseReport(report.data(), rc, mouse_report_.get());
       if (!discard) {
-        input_device_->DispatchReport(CloneReport(mouse_report_));
+        TRACE_ASYNC_BEGIN("inputinput", "dispatch_1_report_to_listener",
+                          mouse_report_->trace_id, "device_type", "mouse");
+        input_device_->DispatchReport(CloneReport(*mouse_report_));
       }
       break;
     case MouseDeviceType::TOUCH:
       if (ParseTouchpadReport(report.data(), rc, mouse_report_.get())) {
         if (!discard) {
-          input_device_->DispatchReport(CloneReport(mouse_report_));
+          TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                            mouse_report_->trace_id, "device_type", "touchpad");
+          input_device_->DispatchReport(CloneReport(*mouse_report_));
         }
       }
       break;
     case MouseDeviceType::HID:
       if (ParseHidMouseReport(report.data(), rc, mouse_report_.get())) {
         if (!discard) {
-          input_device_->DispatchReport(CloneReport(mouse_report_));
+          TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                            mouse_report_->trace_id, "device_type", "mouse");
+          input_device_->DispatchReport(CloneReport(*mouse_report_));
         }
       }
       break;
@@ -603,7 +612,9 @@ bool InputInterpreter::Read(bool discard) {
       if (hardcoded_.ParseParadiseTouchpadReportV1(report.data(), rc,
                                                    mouse_report_.get())) {
         if (!discard) {
-          input_device_->DispatchReport(CloneReport(mouse_report_));
+          TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                            mouse_report_->trace_id, "device_type", "touchpad");
+          input_device_->DispatchReport(CloneReport(*mouse_report_));
         }
       }
       break;
@@ -611,7 +622,9 @@ bool InputInterpreter::Read(bool discard) {
       if (hardcoded_.ParseParadiseTouchpadReportV2(report.data(), rc,
                                                    mouse_report_.get())) {
         if (!discard) {
-          input_device_->DispatchReport(CloneReport(mouse_report_));
+          TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                            mouse_report_->trace_id, "device_type", "touchpad");
+          input_device_->DispatchReport(CloneReport(*mouse_report_));
         }
       }
       break;
@@ -620,7 +633,9 @@ bool InputInterpreter::Read(bool discard) {
       if (hardcoded_.ParseGamepadMouseReport(report.data(), rc,
                                              mouse_report_.get())) {
         if (!discard) {
-          input_device_->DispatchReport(CloneReport(mouse_report_));
+          TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                            mouse_report_->trace_id, "device_type", "gamepad");
+          input_device_->DispatchReport(CloneReport(*mouse_report_));
         }
       }
       break;
@@ -633,7 +648,10 @@ bool InputInterpreter::Read(bool discard) {
       if (ParseTouchscreenReport(report.data(), rc,
                                  touchscreen_report_.get())) {
         if (!discard) {
-          input_device_->DispatchReport(CloneReport(touchscreen_report_));
+          TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                            touchscreen_report_->trace_id, "device_type",
+                            "touchscreen");
+          input_device_->DispatchReport(CloneReport(*touchscreen_report_));
         }
       }
       break;
@@ -642,14 +660,20 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseAcer12StylusReport(report.data(), rc,
                                                stylus_report_.get())) {
           if (!discard) {
-            input_device_->DispatchReport(CloneReport(stylus_report_));
+            TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                              stylus_report_->trace_id, "device_type",
+                              "stylus");
+            input_device_->DispatchReport(CloneReport(*stylus_report_));
           }
         }
       } else if (report[0] == ACER12_RPT_ID_TOUCH) {
         if (hardcoded_.ParseAcer12TouchscreenReport(
                 report.data(), rc, touchscreen_report_.get())) {
           if (!discard) {
-            input_device_->DispatchReport(CloneReport(touchscreen_report_));
+            TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                              touchscreen_report_->trace_id, "device_type",
+                              "touchscreen");
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
       }
@@ -660,7 +684,10 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseSamsungTouchscreenReport(
                 report.data(), rc, touchscreen_report_.get())) {
           if (!discard) {
-            input_device_->DispatchReport(CloneReport(touchscreen_report_));
+            TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                              touchscreen_report_->trace_id, "device_type",
+                              "touchscreen");
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
       }
@@ -671,7 +698,10 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseParadiseTouchscreenReportV1(
                 report.data(), rc, touchscreen_report_.get())) {
           if (!discard) {
-            input_device_->DispatchReport(CloneReport(touchscreen_report_));
+            TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                              touchscreen_report_->trace_id, "device_type",
+                              "touchscreen");
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
       }
@@ -681,14 +711,20 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseParadiseTouchscreenReportV2(
                 report.data(), rc, touchscreen_report_.get())) {
           if (!discard) {
-            input_device_->DispatchReport(CloneReport(touchscreen_report_));
+            TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                              touchscreen_report_->trace_id, "device_type",
+                              "touchscreen");
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
       } else if (report[0] == PARADISE_RPT_ID_STYLUS) {
         if (hardcoded_.ParseParadiseStylusReport(report.data(), rc,
                                                  stylus_report_.get())) {
           if (!discard) {
-            input_device_->DispatchReport(CloneReport(stylus_report_));
+            TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                              stylus_report_->trace_id, "device_type",
+                              "stylus");
+            input_device_->DispatchReport(CloneReport(*stylus_report_));
           }
         }
       }
@@ -699,14 +735,20 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseParadiseTouchscreenReportV1(
                 report.data(), rc, touchscreen_report_.get())) {
           if (!discard) {
-            input_device_->DispatchReport(CloneReport(touchscreen_report_));
+            TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                              touchscreen_report_->trace_id, "device_type",
+                              "touchscreen");
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
       } else if (report[0] == PARADISE_RPT_ID_STYLUS) {
         if (hardcoded_.ParseParadiseStylusReport(report.data(), rc,
                                                  stylus_report_.get())) {
           if (!discard) {
-            input_device_->DispatchReport(CloneReport(stylus_report_));
+            TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                              stylus_report_->trace_id, "device_type",
+                              "stylus");
+            input_device_->DispatchReport(CloneReport(*stylus_report_));
           }
         }
       }
@@ -716,7 +758,10 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseEGalaxTouchscreenReport(
                 report.data(), rc, touchscreen_report_.get())) {
           if (!discard) {
-            input_device_->DispatchReport(CloneReport(touchscreen_report_));
+            TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                              touchscreen_report_->trace_id, "device_type",
+                              "touchscreen");
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
       }
@@ -727,7 +772,10 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseEyoyoTouchscreenReport(report.data(), rc,
                                                    touchscreen_report_.get())) {
           if (!discard) {
-            input_device_->DispatchReport(CloneReport(touchscreen_report_));
+            TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                              touchscreen_report_->trace_id, "device_type",
+                              "touchscreen");
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
       }
@@ -737,7 +785,10 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseFt3x27TouchscreenReport(
                 report.data(), rc, touchscreen_report_.get())) {
           if (!discard) {
-            input_device_->DispatchReport(CloneReport(touchscreen_report_));
+            TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                              touchscreen_report_->trace_id, "device_type",
+                              "touchscreen");
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
       }
@@ -754,8 +805,10 @@ bool InputInterpreter::Read(bool discard) {
         if (!discard) {
           FXL_DCHECK(sensor_idx_ < kMaxSensorCount);
           FXL_DCHECK(sensor_devices_[sensor_idx_]);
+          TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                            sensor_report_->trace_id, "device_type", "sensor");
           sensor_devices_[sensor_idx_]->DispatchReport(
-              CloneReport(sensor_report_));
+              CloneReport(*sensor_report_));
         }
       }
       break;
@@ -765,8 +818,11 @@ bool InputInterpreter::Read(bool discard) {
         if (!discard) {
           FXL_DCHECK(sensor_idx_ < kMaxSensorCount);
           FXL_DCHECK(sensor_devices_[sensor_idx_]);
+          TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
+                            sensor_report_->trace_id, "device_type",
+                            "ambient_light");
           sensor_devices_[sensor_idx_]->DispatchReport(
-              CloneReport(sensor_report_));
+              CloneReport(*sensor_report_));
         }
       }
       break;
@@ -785,6 +841,7 @@ bool InputInterpreter::ParseHidMouseReport(
     return false;
 
   mouse_report->event_time = InputEventTimestampNow();
+  mouse_report->trace_id = TRACE_NONCE();
 
   mouse_report->mouse->rel_x = mouse.rel_x;
   mouse_report->mouse->rel_y = mouse.rel_y;
@@ -808,6 +865,7 @@ bool InputInterpreter::ParseTouchpadReport(
     return false;
   }
   mouse_report->event_time = InputEventTimestampNow();
+  mouse_report->trace_id = TRACE_NONCE();
   mouse_report->mouse->rel_x = 0;
   mouse_report->mouse->rel_y = 0;
   mouse_report->mouse->pressed_buttons = 0;
@@ -875,6 +933,7 @@ bool InputInterpreter::ParseTouchscreenReport(
     return false;
   }
   touchscreen_report->event_time = InputEventTimestampNow();
+  touchscreen_report->trace_id = TRACE_NONCE();
   touchscreen_report->touchscreen->touches.resize(touchscreen.contact_count);
 
   for (size_t i = 0; i < touchscreen.contact_count; ++i) {

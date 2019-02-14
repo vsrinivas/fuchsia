@@ -9,12 +9,12 @@
 #include <string>
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-
-#include "lib/component/cpp/connect.h"
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/logging.h"
-#include "lib/ui/input/cpp/formatting.h"
+#include <lib/component/cpp/connect.h>
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fxl/files/file.h>
+#include <lib/fxl/logging.h>
+#include <lib/ui/input/cpp/formatting.h>
+#include <trace/event.h>
 
 namespace root_presenter {
 
@@ -226,6 +226,9 @@ void App::OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
 
 void App::OnReport(mozart::InputDeviceImpl* input_device,
                    fuchsia::ui::input::InputReport report) {
+  TRACE_DURATION("input", "root_presenter_on_report");
+  TRACE_ASYNC_END("input", "dispatch_2_report_to_presenter", report.trace_id);
+
   FXL_VLOG(3) << "OnReport from " << input_device->id() << " " << report;
   if (devices_by_id_.count(input_device->id()) == 0 ||
       presentations_.size() == 0)
@@ -235,6 +238,8 @@ void App::OnReport(mozart::InputDeviceImpl* input_device,
   FXL_VLOG(3) << "OnReport to " << active_presentation_idx_;
 
   // Input events are only reported to the active presentation.
+  TRACE_ASYNC_BEGIN("input", "dispatch_3_report_to_presentation",
+                    report.trace_id);
   presentations_[active_presentation_idx_]->OnReport(input_device->id(),
                                                      std::move(report));
 }

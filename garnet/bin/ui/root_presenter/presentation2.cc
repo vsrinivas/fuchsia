@@ -21,11 +21,12 @@
 #include <glm/ext.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "lib/component/cpp/connect.h"
-#include "lib/fxl/logging.h"
-#include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/scenic/cpp/id.h"
-#include "lib/ui/views/cpp/formatting.h"
+#include <lib/component/cpp/connect.h>
+#include <lib/fxl/logging.h>
+#include <lib/ui/input/cpp/formatting.h>
+#include <lib/ui/scenic/cpp/id.h>
+#include <lib/ui/views/cpp/formatting.h>
+#include <trace/event.h>
 
 #include "garnet/bin/ui/root_presenter/displays/display_configuration.h"
 
@@ -490,6 +491,10 @@ void Presentation2::OnDeviceRemoved(uint32_t device_id) {
 
 void Presentation2::OnReport(uint32_t device_id,
                              fuchsia::ui::input::InputReport input_report) {
+  TRACE_DURATION("input", "presentation_on_report");
+  TRACE_ASYNC_END("input", "dispatch_3_report_to_presentation",
+                  input_report.trace_id);
+
   FXL_VLOG(2) << "OnReport device=" << device_id
               << ", count=" << device_states_by_id_.count(device_id)
               << ", report=" << input_report;
@@ -506,6 +511,9 @@ void Presentation2::OnReport(uint32_t device_id,
   fuchsia::math::Size size;
   size.width = display_model_actual_.display_info().width_in_px;
   size.height = display_model_actual_.display_info().height_in_px;
+
+  TRACE_ASYNC_BEGIN("input", "dispatch_4_report_to_device_state",
+                    input_report.trace_id);
   state->Update(std::move(input_report), size);
 }
 

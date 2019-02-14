@@ -1,6 +1,7 @@
-#include "lib/ui/input/input_device_impl.h"
+#include <lib/ui/input/input_device_impl.h>
 
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
+#include <trace/event.h>
 
 namespace mozart {
 
@@ -22,6 +23,9 @@ InputDeviceImpl::InputDeviceImpl(
 InputDeviceImpl::~InputDeviceImpl() {}
 
 void InputDeviceImpl::DispatchReport(fuchsia::ui::input::InputReport report) {
+  TRACE_DURATION("input", "input_report_listener");
+  TRACE_ASYNC_END("input", "dispatch_1_report_to_listener", report.trace_id);
+  TRACE_ASYNC_BEGIN("input", "dispatch_2_report_to_presenter", report.trace_id);
   listener_->OnReport(this, std::move(report));
 }
 

@@ -7,11 +7,11 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/time/time_delta.h"
-#include "lib/fxl/time/time_point.h"
+#include <lib/fidl/cpp/clone.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/time/time_delta.h>
+#include <lib/fxl/time/time_point.h>
+#include <trace/event.h>
 
 namespace {
 int64_t InputEventTimestampNow() {
@@ -54,6 +54,10 @@ void KeyboardState::SendEvent(fuchsia::ui::input::KeyboardEventPhase phase,
 }
 
 void KeyboardState::Update(fuchsia::ui::input::InputReport input_report) {
+  TRACE_DURATION("input", "device_state_update", "device_type", "keyboard");
+  TRACE_ASYNC_END("input", "dispatch_4_report_to_device_state",
+                  input_report.trace_id);
+
   FXL_DCHECK(input_report.keyboard);
 
   uint64_t now = input_report.event_time;
@@ -206,6 +210,10 @@ void MouseState::SendEvent(float rel_x, float rel_y, int64_t timestamp,
 
 void MouseState::Update(fuchsia::ui::input::InputReport input_report,
                         fuchsia::math::Size display_size) {
+  TRACE_DURATION("input", "device_state_update", "device_type", "mouse");
+  TRACE_ASYNC_END("input", "dispatch_4_report_to_device_state",
+                  input_report.trace_id);
+
   FXL_DCHECK(input_report.mouse);
   uint64_t now = input_report.event_time;
   uint8_t pressed = (input_report.mouse->pressed_buttons ^ buttons_) &
@@ -262,6 +270,10 @@ void StylusState::SendEvent(int64_t timestamp,
 
 void StylusState::Update(fuchsia::ui::input::InputReport input_report,
                          fuchsia::math::Size display_size) {
+  TRACE_DURATION("input", "device_state_update", "device_type", "stylus");
+  TRACE_ASYNC_END("input", "dispatch_4_report_to_device_state",
+                  input_report.trace_id);
+
   FXL_DCHECK(input_report.stylus);
 
   fuchsia::ui::input::StylusDescriptor* descriptor =
@@ -341,6 +353,10 @@ void StylusState::Update(fuchsia::ui::input::InputReport input_report,
 
 void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
                               fuchsia::math::Size display_size) {
+  TRACE_DURATION("input", "device_state_update", "device_type", "touchscreen");
+  TRACE_ASYNC_END("input", "dispatch_4_report_to_device_state",
+                  input_report.trace_id);
+
   FXL_DCHECK(input_report.touchscreen);
   fuchsia::ui::input::TouchscreenDescriptor* descriptor =
       device_state_->touchscreen_descriptor();
@@ -427,6 +443,10 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
 }
 
 void SensorState::Update(fuchsia::ui::input::InputReport input_report) {
+  TRACE_DURATION("input", "device_state_update", "device_type", "sensor");
+  TRACE_ASYNC_END("input", "dispatch_4_report_to_device_state",
+                  input_report.trace_id);
+
   FXL_DCHECK(input_report.sensor);
   FXL_DCHECK(device_state_->sensor_descriptor());
   // Every sensor report gets routed via unique device_id.

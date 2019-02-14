@@ -13,6 +13,7 @@ source_set("input") {
   deps = [
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
+    "//zircon/public/lib/trace",
   ]
 
   public_deps = [

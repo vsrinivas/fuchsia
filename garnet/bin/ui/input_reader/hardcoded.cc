@@ -5,6 +5,7 @@
 #include "garnet/bin/ui/input_reader/hardcoded.h"
 
 #include <fuchsia/hardware/input/c/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 #include <hid/acer12.h>
@@ -17,18 +18,16 @@
 #include <hid/paradise.h>
 #include <hid/samsung.h>
 #include <hid/usages.h>
-
+#include <lib/fxl/arraysize.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/time/time_point.h>
+#include <lib/ui/input/cpp/formatting.h>
 #include <sys/types.h>
 #include <sys/uio.h>
+#include <trace/event.h>
 #include <zircon/device/device.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
-
-#include <fuchsia/ui/input/cpp/fidl.h>
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/time/time_point.h"
-#include "lib/ui/input/cpp/formatting.h"
 
 namespace {
 
@@ -220,6 +219,7 @@ void Hardcoded::ParseKeyboardReport(
   uint8_t keycode;
   hid_kbd_parse_report(report, &key_state);
   keyboard_report->event_time = InputEventTimestampNow();
+  keyboard_report->trace_id = TRACE_NONCE();
 
   auto& pressed_keys = keyboard_report->keyboard->pressed_keys;
   pressed_keys.resize(0);
@@ -231,6 +231,7 @@ void Hardcoded::ParseMouseReport(
     uint8_t* r, size_t len, fuchsia::ui::input::InputReport* mouse_report) {
   auto report = reinterpret_cast<hid_boot_mouse_report_t*>(r);
   mouse_report->event_time = InputEventTimestampNow();
+  mouse_report->trace_id = TRACE_NONCE();
 
   mouse_report->mouse->rel_x = report->rel_x;
   mouse_report->mouse->rel_y = report->rel_y;
@@ -271,6 +272,7 @@ bool Hardcoded::ParseGamepadMouseReport(
   if (!ParseReport(report, len, &gamepad))
     return false;
   mouse_report->event_time = InputEventTimestampNow();
+  mouse_report->trace_id = TRACE_NONCE();
 
   mouse_report->mouse->rel_x = gamepad.left_x;
   mouse_report->mouse->rel_y = gamepad.left_y;
@@ -295,6 +297,7 @@ bool Hardcoded::ParseAcer12TouchscreenReport(
     acer12_touch_reports_[1] = *report;
   }
   touchscreen_report->event_time = InputEventTimestampNow();
+  touchscreen_report->trace_id = TRACE_NONCE();
 
   size_t index = 0;
   touchscreen_report->touchscreen->touches.resize(index);
@@ -328,6 +331,7 @@ bool Hardcoded::ParseAcer12StylusReport(
 
   auto report = reinterpret_cast<acer12_stylus_t*>(r);
   stylus_report->event_time = InputEventTimestampNow();
+  stylus_report->trace_id = TRACE_NONCE();
 
   stylus_report->stylus->x = report->x;
   stylus_report->stylus->y = report->y;
@@ -363,6 +367,7 @@ bool Hardcoded::ParseSamsungTouchscreenReport(
 
   const auto& report = *(reinterpret_cast<samsung_touch_t*>(r));
   touchscreen_report->event_time = InputEventTimestampNow();
+  touchscreen_report->trace_id = TRACE_NONCE();
 
   size_t index = 0;
   touchscreen_report->touchscreen->touches.resize(index);
@@ -411,6 +416,7 @@ bool Hardcoded::ParseParadiseTouchscreenReport(
 
   const auto& report = *(reinterpret_cast<ReportT*>(r));
   touchscreen_report->event_time = InputEventTimestampNow();
+  touchscreen_report->trace_id = TRACE_NONCE();
 
   size_t index = 0;
   touchscreen_report->touchscreen->touches.resize(index);
@@ -444,6 +450,7 @@ bool Hardcoded::ParseEGalaxTouchscreenReport(
 
   const auto& report = *(reinterpret_cast<egalax_touch_t*>(r));
   touchscreen_report->event_time = InputEventTimestampNow();
+  touchscreen_report->trace_id = TRACE_NONCE();
   if (egalax_pressed_flags(report.button_pad)) {
     fuchsia::ui::input::Touch touch;
     touch.finger_id = 0;
@@ -484,6 +491,7 @@ bool Hardcoded::ParseParadiseTouchpadReport(
   }
 
   mouse_report->event_time = InputEventTimestampNow();
+  mouse_report->trace_id = TRACE_NONCE();
 
   const auto& report = *(reinterpret_cast<ReportT*>(r));
   if (!report.fingers[0].tip_switch) {
@@ -525,6 +533,7 @@ bool Hardcoded::ParseParadiseStylusReport(
 
   auto report = reinterpret_cast<paradise_stylus_t*>(r);
   stylus_report->event_time = InputEventTimestampNow();
+  stylus_report->trace_id = TRACE_NONCE();
 
   stylus_report->stylus->x = report->x;
   stylus_report->stylus->y = report->y;
@@ -560,6 +569,7 @@ bool Hardcoded::ParseEyoyoTouchscreenReport(
 
   const auto& report = *(reinterpret_cast<eyoyo_touch_t*>(r));
   touchscreen_report->event_time = InputEventTimestampNow();
+  touchscreen_report->trace_id = TRACE_NONCE();
 
   size_t index = 0;
   touchscreen_report->touchscreen->touches.resize(index);
@@ -593,6 +603,7 @@ bool Hardcoded::ParseFt3x27TouchscreenReport(
 
   const auto& report = *(reinterpret_cast<ft3x27_touch_t*>(r));
   touchscreen_report->event_time = InputEventTimestampNow();
+  touchscreen_report->trace_id = TRACE_NONCE();
 
   size_t index = 0;
   touchscreen_report->touchscreen->touches.resize(index);
@@ -666,6 +677,7 @@ bool Hardcoded::ParseButtonsReport(
   buttons_report->buttons->set_volume(data.volume);
   buttons_report->buttons->set_mic_mute(data.mic_mute);
   buttons_report->event_time = InputEventTimestampNow();
+  buttons_report->trace_id = TRACE_NONCE();
 
   FXL_VLOG(2) << name() << " parsed buttons: " << *buttons_report
               << " volume: " << static_cast<int32_t>(data.volume)
@@ -685,6 +697,7 @@ bool Hardcoded::ParseParadiseSensorReport(
   }
 
   sensor_report->event_time = InputEventTimestampNow();
+  sensor_report->trace_id = TRACE_NONCE();
   *sensor_idx = r[0];  // We know sensor structs start with sensor ID.
   switch (*sensor_idx) {
     case kParadiseAccLid:
@@ -745,6 +758,7 @@ bool Hardcoded::ParseAmbientLightSensorReport(
   }
   sensor_report->sensor->set_scalar(data.illuminance);
   sensor_report->event_time = InputEventTimestampNow();
+  sensor_report->trace_id = TRACE_NONCE();
   *sensor_idx = kAmbientLight;
 
   FXL_VLOG(2) << name()
