@@ -32,12 +32,10 @@ package("net-cli") {
     ":bin",
   ]
 
-  binary = "net_cli"
-
-  meta = [
+  binaries = [
     {
-      path = rebase_path("meta/net-cli.cmx")
-      dest = "net-cli.cmx"
+      name = "net_cli"
+      shell = true
     },
   ]
 }
