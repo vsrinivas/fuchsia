@@ -67,6 +67,7 @@ class ScopedModule {
 
 enum class Severity : uint8_t {
   DEBUG,
+  TRACE,
   INFO,
   WARNING,
   ERROR,
@@ -197,9 +198,23 @@ inline Op Op::New(OpType type) {
 
 }  // namespace overnet
 
+#ifdef NDEBUG
+// If we have NDEBUG set, we add an if constexpr to eliminate DEBUG level traces
+// entirely from the build.
+#define OVERNET_TRACE(trace_severity)                  \
+  if constexpr (::overnet::Severity::trace_severity == \
+                ::overnet::Severity::DEBUG)            \
+    ;                                                  \
+  else if (::overnet::ScopedSeverity::current() >      \
+           ::overnet::Severity::trace_severity)        \
+    ;                                                  \
+  else                                                 \
+    ::overnet::Trace(__FILE__, __LINE__, ::overnet::Severity::trace_severity)
+#else
 #define OVERNET_TRACE(trace_severity)        \
   if (::overnet::ScopedSeverity::current() > \
       ::overnet::Severity::trace_severity)   \
     ;                                        \
   else                                       \
     ::overnet::Trace(__FILE__, __LINE__, ::overnet::Severity::trace_severity)
+#endif

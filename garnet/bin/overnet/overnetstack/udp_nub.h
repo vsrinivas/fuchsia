@@ -117,8 +117,7 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
       memcpy(addr6_addr_bytes + 12, &addr.ipv4.sin_addr, 4);
       addr = addr6;
     }
-    OVERNET_TRACE(DEBUG) << "sending packet length " << slice.length() << " to "
-                         << addr;
+    OVERNET_TRACE(TRACE) << "sending packet " << slice << " to " << addr;
     int r = sendto(socket_fd_.get(), slice.begin(), slice.length(), 0,
                    &addr.addr, sizeof(addr));
     if (r == -1) {
@@ -183,7 +182,8 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
     assert(inbound.length() == (size_t)result);
     overnet::ScopedOp scoped_op(
         overnet::Op::New(overnet::OpType::INCOMING_PACKET));
-    OVERNET_TRACE(DEBUG) << "Got packet length " << result;
+    OVERNET_TRACE(TRACE) << "Got packet " << inbound << " from "
+                         << source_address;
     Process(now, source_address, std::move(inbound));
 
     WaitForInbound();

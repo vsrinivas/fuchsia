@@ -26,6 +26,7 @@ class FuchsiaTimer final : public overnet::Timer {
 
   static void TaskHandler(async_dispatcher_t* async, async_task_t* task,
                           zx_status_t status) {
+    OVERNET_TRACE(DEBUG) << "FIRE TIMEOUT";
     FireTimeout(static_cast<Task*>(task)->timeout,
                 overnet::Status::FromZx(status));
   }
@@ -56,6 +57,8 @@ class FuchsiaLog final : public overnet::TraceRenderer {
     auto severity = [sev = output.severity] {
       switch (sev) {
         case overnet::Severity::DEBUG:
+          return -2;
+        case overnet::Severity::TRACE:
           return -1;
         case overnet::Severity::INFO:
           return fxl::LOG_INFO;
@@ -90,8 +93,13 @@ int main(int argc, const char** argv) {
   app.InstantiateActor<overnetstack::MdnsIntroducer>(udp_nub);
   app.InstantiateActor<overnetstack::MdnsAdvertisement>(udp_nub);
   auto status = app.Start().Then([&]() {
-    loop.Run();
-    return overnet::Status::Ok();
+    switch (auto status = loop.Run()) {
+      case ZX_OK:
+      case ZX_ERR_CANCELED:
+        return overnet::Status::Ok();
+      default:
+        return overnet::Status::FromZx(status).WithContext("RunLoop");
+    }
   });
   if (status.is_ok()) {
     return 0;

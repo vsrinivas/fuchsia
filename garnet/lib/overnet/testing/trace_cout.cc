@@ -17,6 +17,9 @@ void TraceCout::Render(TraceOutput output) {
     case Severity::DEBUG:
       sev = 'D';
       break;
+    case Severity::TRACE:
+      sev = 'T';
+      break;
     case Severity::INFO:
       sev = 'I';
       break;

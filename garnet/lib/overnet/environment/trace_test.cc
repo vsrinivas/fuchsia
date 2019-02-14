@@ -34,11 +34,26 @@ TEST(Trace, Simple) {
     Mock::VerifyAndClearExpectations(&sink_impl);
   };
 
+#ifdef NDEBUG
+  ScopedSeverity{Severity::DEBUG}, outputs(Nothing, [&] {
+    OVERNET_TRACE(DEBUG) << "Hello "
+                         << "World";
+  });
+#else
   ScopedSeverity{Severity::DEBUG}, outputs("Hello World", [&] {
     OVERNET_TRACE(DEBUG) << "Hello "
                          << "World";
   });
+#endif
   ScopedSeverity{Severity::DEBUG}, outputs("Hello World", [&] {
+    OVERNET_TRACE(ERROR) << "Hello "
+                         << "World";
+  });
+  ScopedSeverity{Severity::DEBUG}, outputs("Hello World", [&] {
+    OVERNET_TRACE(TRACE) << "Hello "
+                         << "World";
+  });
+  ScopedSeverity{Severity::TRACE}, outputs("Hello World", [&] {
     OVERNET_TRACE(ERROR) << "Hello "
                          << "World";
   });

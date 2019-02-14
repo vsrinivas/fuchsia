@@ -48,6 +48,8 @@ std::ostream& operator<<(std::ostream& out, Severity type) {
   switch (type) {
     case Severity::DEBUG:
       return out << "DEBUG";
+    case Severity::TRACE:
+      return out << "TRACE";
     case Severity::INFO:
       return out << "INFO";
     case Severity::WARNING:
