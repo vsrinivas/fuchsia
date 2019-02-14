@@ -88,3 +88,6 @@ done
 
 > "${GOLDENS_DIR}/goldens.txt"
 printf "%s\n" "${GOLDENS[@]//,}" | sort >> "${GOLDENS_DIR}/goldens.txt"
+
+> "${GOLDENS_DIR}/OWNERS"
+find "${EXAMPLE_DIR}/.."  -name 'OWNERS' -exec cat {} \; | sort -u > "${GOLDENS_DIR}/OWNERS"
