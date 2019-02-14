@@ -26,8 +26,8 @@
 
 #define BRCMF_HEXDUMP_WIDTH 16
 
-// Debug level configuration. See debug.h for bits
-int brcmf_msg_filter;
+// Debug level configuration. See debug.h for bits (BRCMF_*_VAL)
+uint32_t brcmf_msg_filter;
 
 static zx_handle_t root_folder;
 
@@ -135,7 +135,7 @@ void brcmf_alphadump(const void* buf, size_t len) {
         next += sprintf(next, ">etc<");
     }
     sprintf(next, "\"\n");
-    brcmf_dbg(INFO, "%s", output);
+    brcmf_dbg(ALL, "%s", output);
 }
 
 zx_status_t brcmf_debug_create_memdump(struct brcmf_bus* bus, const void* data, size_t len) {

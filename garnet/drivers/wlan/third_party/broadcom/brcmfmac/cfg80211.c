@@ -1966,33 +1966,28 @@ static void brcmf_ies_extract_rsne(uint8_t* ie_chain, size_t ie_chain_len, uint8
     }
 }
 
-#ifdef WANTED_FOR_DEBUG
-static void brcmf_iedump(uint8_t* ie, size_t length) {
+static void brcmf_iedump(uint8_t* ies, size_t total_len) {
     size_t offset = 0;
-    char ieinfo[500] = "";
-    char* ieinfoptr = ieinfo;
-    while (offset < length) {
-        uint8_t type = ie[offset];
-        uint8_t length = ie[offset + 1];
-        if (type == 0) {
-            brcmf_dbg(TEMP, " * * ie 0 (name), len %d", length);
-            brcmf_alphadump(ie + offset + 2, length);
-        } else {
-            brcmf_dbg_hex_dump(BRCMF_BYTES_ON(), ie + offset + 2, length,
-                               "IE (length %zd):\n", length);
-            if (ieinfoptr < ieinfo + sizeof(ieinfo)) {
-                ieinfoptr += snprintf(ieinfoptr, sizeof(ieinfo) - (ieinfoptr - ieinfo),
-                    "ie %d, len %d. ", ie[offset], length);
-            }
+    while (offset + TLV_HDR_LEN <= total_len) {
+        uint8_t elem_type = ies[offset];
+        uint8_t elem_len = ies[offset + TLV_LEN_OFF];
+        offset += TLV_HDR_LEN;
+        if (offset + elem_len > total_len) {
+            break;
         }
-        offset += length + 2;
+        if (elem_type == 0) {
+            brcmf_dbg(ALL, "IE 0 (name), len %d:", elem_len);
+            brcmf_alphadump(ies + offset, elem_len);
+        } else {
+            brcmf_dbg_hex_dump(true, ies + offset, elem_len,
+                               "IE %d, len %d:\n", elem_type, elem_len);
+        }
+        offset += elem_len;
     }
-    brcmf_dbg(TEMP, "IEs: %s", ieinfo);
-    if (offset != length) {
-        brcmf_dbg(TEMP, " * * Offset %ld didn't match length %ld", offset, length);
+    if (offset != total_len) {
+        brcmf_dbg(ALL, " * * Offset %ld didn't match length %ld", offset, total_len);
     }
 }
-#endif // WANTED_FOR_DEBUG
 
 #define EAPOL_ETHERNET_TYPE_UINT16 0x8e88
 
@@ -2084,14 +2079,14 @@ static zx_status_t brcmf_inform_single_bss(struct brcmf_cfg80211_info* cfg,
     notify_ielen = bi->ie_length;
     notify_rssi_dbm = (int16_t)bi->RSSI;
 
-    brcmf_dbg(CONN, "bssid: %pM\n", bi->BSSID);
-    brcmf_dbg(CONN, "Channel: %d\n", channel);
-    brcmf_dbg(CONN, "Capability: %X\n", notify_capability);
-    brcmf_dbg(CONN, "Beacon interval: %d\n", notify_interval);
-    brcmf_dbg(CONN, "Signal: %d\n", notify_rssi_dbm);
+    brcmf_dbg(CONN, "Scan result received  BSS: %02x:%02x:%02x:%02x:%02x:%02x"
+                    "  Channel: %3d  Capability: %#6x  Beacon interval: %5d  Signal: %4d\n",
+              bi->BSSID[0], bi->BSSID[1], bi->BSSID[2], bi->BSSID[3], bi->BSSID[4], bi->BSSID[5],
+              channel, notify_capability, notify_interval, notify_rssi_dbm);
+    if (BRCMF_CONN_ON() && BRCMF_BYTES_ON()) {
+        brcmf_iedump(notify_ie, notify_ielen);
+    }
 
-    //brcmf_dbg(TEMP, " * * Got a scan result:");
-    //brcmf_iedump(notify_ie, notify_ielen);
     brcmf_return_scan_result(wiphy, (uint8_t)channel,
                                 (const uint8_t*)bi->BSSID, notify_capability, notify_interval,
                                 notify_ie, notify_ielen, notify_rssi_dbm);
