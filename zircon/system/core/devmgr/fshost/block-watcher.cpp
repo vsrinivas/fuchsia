@@ -9,9 +9,12 @@
 #include <string.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
+#include <fuchsia/device/c/fidl.h>
 #include <gpt/gpt.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/channel.h>
@@ -19,7 +22,6 @@
 #include <lib/zx/time.h>
 #include <loader-service/loader-service.h>
 #include <zircon/device/block.h>
-#include <zircon/device/device.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -344,7 +346,7 @@ zx_status_t BlockWatcher::MountData(fbl::unique_fd fd, mount_options_t* options)
     zx_status_t status =
         mount(fd.release(), "/fs" PATH_DATA, DISK_FORMAT_MINFS, options, launch_minfs);
     if (status != ZX_OK) {
-        printf("devmgr: failed to mount %s: %s.\n", PATH_DATA, zx_status_get_string(status));
+        printf("fshost: failed to mount %s: %s.\n", PATH_DATA, zx_status_get_string(status));
     } else {
         data_mounted_ = true;
     }
@@ -359,7 +361,7 @@ zx_status_t BlockWatcher::MountInstall(fbl::unique_fd fd, mount_options_t* optio
     zx_status_t status =
         mount(fd.release(), "/fs" PATH_INSTALL, DISK_FORMAT_MINFS, options, launch_minfs);
     if (status != ZX_OK) {
-        printf("devmgr: failed to mount %s: %s.\n", PATH_INSTALL, zx_status_get_string(status));
+        printf("fshost: failed to mount %s: %s.\n", PATH_INSTALL, zx_status_get_string(status));
     } else {
         install_mounted_ = true;
     }
@@ -373,7 +375,7 @@ zx_status_t BlockWatcher::MountBlob(fbl::unique_fd fd, mount_options_t* options)
     zx_status_t status =
         mount(fd.release(), "/fs" PATH_BLOB, DISK_FORMAT_BLOBFS, options, launch_blobfs);
     if (status != ZX_OK) {
-        printf("devmgr: failed to mount %s: %s.\n", PATH_BLOB, zx_status_get_string(status));
+        printf("fshost: failed to mount %s: %s.\n", PATH_BLOB, zx_status_get_string(status));
     } else {
         blob_mounted_ = true;
     }
@@ -482,7 +484,7 @@ zx_status_t mount_minfs(BlockWatcher* watcher, fbl::unique_fd fd, mount_options_
         zx_status_t st =
             mount(fd.release(), "/fs" PATH_SYSTEM, DISK_FORMAT_MINFS, options, launch_minfs);
         if (st != ZX_OK) {
-            printf("devmgr: failed to mount %s: %s.\n", PATH_SYSTEM, zx_status_get_string(st));
+            printf("fshost: failed to mount %s: %s.\n", PATH_SYSTEM, zx_status_get_string(st));
         } else {
             watcher->FuchsiaStart();
         }
@@ -502,7 +504,7 @@ zx_status_t mount_minfs(BlockWatcher* watcher, fbl::unique_fd fd, mount_options_
 #define MBR_DRIVER_LIB "/boot/driver/mbr.so"
 #define BOOTPART_DRIVER_LIB "/boot/driver/bootpart.so"
 #define ZXCRYPT_DRIVER_LIB "/boot/driver/zxcrypt.so"
-#define STRLEN(s) sizeof(s) / sizeof((s)[0])
+#define STRLEN(s) (sizeof(s) / sizeof((s)[0]))
 
 zx_status_t block_device_added(int dirfd, int event, const char* name, void* cookie) {
     auto watcher = static_cast<BlockWatcher*>(cookie);
@@ -519,44 +521,58 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
         return ZX_OK;
     }
 
-    block_info_t info;
-    if (ioctl_block_get_info(fd.get(), &info) >= 0 && info.flags & BLOCK_FLAG_BOOTPART) {
-        ioctl_device_bind(fd.get(), BOOTPART_DRIVER_LIB, STRLEN(BOOTPART_DRIVER_LIB));
-        return ZX_OK;
-    }
-
     disk_format_t df = detect_disk_format(fd.get());
-
-    switch (df) {
-    case DISK_FORMAT_GPT: {
-        printf("devmgr: %s: GPT?\n", device_path);
-        // probe for partition table
-        ioctl_device_bind(fd.get(), GPT_DRIVER_LIB, STRLEN(GPT_DRIVER_LIB));
-        return ZX_OK;
-    }
-    case DISK_FORMAT_FVM: {
-        printf("devmgr: /dev/class/block/%s: FVM?\n", name);
-        // probe for partition table
-        ioctl_device_bind(fd.get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB));
-        return ZX_OK;
-    }
-    case DISK_FORMAT_MBR: {
-        printf("devmgr: %s: MBR?\n", device_path);
-        // probe for partition table
-        ioctl_device_bind(fd.get(), MBR_DRIVER_LIB, STRLEN(MBR_DRIVER_LIB));
-        return ZX_OK;
-    }
-    case DISK_FORMAT_ZXCRYPT: {
-        if (!watcher->Netbooting()) {
-            printf("devmgr: %s: zxcrypt?\n", device_path);
-            // TODO(security): ZX-1130. We need to bind with channel in order to pass a key here.
-            // Where does the key come from?  We need to determine if this is unattended.
-            ioctl_device_bind(fd.get(), ZXCRYPT_DRIVER_LIB, STRLEN(ZXCRYPT_DRIVER_LIB));
+    {
+        fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
+        if (io == nullptr) {
+            return ZX_OK;
         }
-        return ZX_OK;
-    }
-    default:
-        break;
+        auto cleanup = fbl::MakeAutoCall([io]() { fdio_unsafe_release(io); });
+        zx::unowned_channel disk(fdio_unsafe_borrow_channel(io));
+
+        zx_status_t call_status;
+        block_info_t info;
+        if (ioctl_block_get_info(fd.get(), &info) >= 0 && info.flags & BLOCK_FLAG_BOOTPART) {
+            fuchsia_device_ControllerBind(disk->get(), BOOTPART_DRIVER_LIB,
+                                          STRLEN(BOOTPART_DRIVER_LIB), &call_status);
+            return ZX_OK;
+        }
+
+        switch (df) {
+        case DISK_FORMAT_GPT: {
+            printf("fshost: %s: GPT?\n", device_path);
+            // probe for partition table
+            fuchsia_device_ControllerBind(disk->get(), GPT_DRIVER_LIB, STRLEN(GPT_DRIVER_LIB),
+                                          &call_status);
+            return ZX_OK;
+        }
+        case DISK_FORMAT_FVM: {
+            printf("fshost: /dev/class/block/%s: FVM?\n", name);
+            // probe for partition table
+            fuchsia_device_ControllerBind(disk->get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB),
+                                          &call_status);
+            return ZX_OK;
+        }
+        case DISK_FORMAT_MBR: {
+            printf("fshost: %s: MBR?\n", device_path);
+            // probe for partition table
+            fuchsia_device_ControllerBind(disk->get(), MBR_DRIVER_LIB, STRLEN(MBR_DRIVER_LIB),
+                                          &call_status);
+            return ZX_OK;
+        }
+        case DISK_FORMAT_ZXCRYPT: {
+            if (!watcher->Netbooting()) {
+                printf("fshost: %s: zxcrypt?\n", device_path);
+                // TODO(security): ZX-1130. We need to bind with channel in order to pass a key
+                // here.  Where does the key come from?  We need to determine if this is unattended.
+                fuchsia_device_ControllerBind(disk->get(), ZXCRYPT_DRIVER_LIB,
+                                              STRLEN(ZXCRYPT_DRIVER_LIB), &call_status);
+            }
+            return ZX_OK;
+        }
+        default:
+            break;
+        }
     }
 
     uint8_t guid[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
@@ -567,7 +583,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
     if (watcher->Netbooting()) {
         const uint8_t expected_guid[GPT_GUID_LEN] = GUID_INSTALL_VALUE;
         if (memcmp(guid, expected_guid, sizeof(guid)) == 0) {
-            printf("devmgr: mounting install partition\n");
+            printf("fshost: mounting install partition\n");
             mount_options_t options = default_mount_options;
             mount_minfs(watcher, std::move(fd), &options);
             return ZX_OK;
@@ -591,7 +607,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
         options.enable_journal = true;
         zx_status_t status = watcher->MountBlob(std::move(fd), &options);
         if (status != ZX_OK) {
-            printf("devmgr: Failed to mount blobfs partition %s at %s: %s.\n", device_path,
+            printf("fshost: Failed to mount blobfs partition %s at %s: %s.\n", device_path,
                    PATH_BLOB, zx_status_get_string(status));
         } else {
             launch_blob_init(watcher);
@@ -599,7 +615,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
         return ZX_OK;
     }
     case DISK_FORMAT_MINFS: {
-        printf("devmgr: mounting minfs\n");
+        printf("fshost: mounting minfs\n");
         if (watcher->CheckFilesystem(device_path, DISK_FORMAT_MINFS) != ZX_OK) {
             return ZX_OK;
         }
@@ -613,7 +629,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
         ssize_t r = ioctl_block_get_type_guid(fd.get(), guid, sizeof(guid));
         bool efi = gpt_is_efi_guid(guid, r);
         if (efi) {
-            printf("devmgr: not automounting efi\n");
+            printf("fshost: not automounting efi\n");
             return ZX_OK;
         }
         mount_options_t options = default_mount_options;
@@ -622,7 +638,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
         char mountpath[FDIO_MAX_FILENAME + 64];
         snprintf(mountpath, sizeof(mountpath), "%s/fat-%d", "/fs" PATH_VOLUME, fat_counter++);
         options.wait_until_ready = false;
-        printf("devmgr: mounting fatfs\n");
+        printf("fshost: mounting fatfs\n");
         mount(fd.release(), mountpath, df, &options, launch_fat);
         return ZX_OK;
     }
