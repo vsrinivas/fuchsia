@@ -69,13 +69,6 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
   }
 
   // |fuchsia::modular::StoryController|
-  void GetActiveLinks(
-      fidl::InterfaceHandle<fuchsia::modular::StoryLinksWatcher> watcher,
-      GetActiveLinksCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  // |fuchsia::modular::StoryController|
   void GetLink(
       fuchsia::modular::LinkPath link_path,
       fidl::InterfaceRequest<fuchsia::modular::Link> request) override {

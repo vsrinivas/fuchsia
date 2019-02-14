@@ -211,9 +211,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
       std::vector<std::string> module_path,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController> request)
       override;
-  void GetActiveLinks(
-      fidl::InterfaceHandle<fuchsia::modular::StoryLinksWatcher> watcher,
-      GetActiveLinksCallback callback) override;
   void GetLink(fuchsia::modular::LinkPath link_path,
                fidl::InterfaceRequest<fuchsia::modular::Link> request) override;
 
@@ -289,7 +286,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Watcher for various aspects of the story.
   fidl::InterfacePtrSet<fuchsia::modular::StoryWatcher> watchers_;
-  fidl::InterfacePtrSet<fuchsia::modular::StoryLinksWatcher> links_watchers_;
 
   // Everything for the story shell. Relationships between modules are conveyed
   // to the story shell using their instance IDs.

@@ -1187,16 +1187,6 @@ void StoryControllerImpl::ConnectLinkPath(
   link_impls_.AddBinding(
       std::make_unique<LinkImpl>(story_storage_, std::move(link_path_clone)),
       std::move(request));
-
-  // TODO: remove this. MI4-1084
-  if (active_links.count(*link_path) == 0) {
-    // This is a new link: notify watchers.
-    for (auto& i : links_watchers_.ptrs()) {
-      LinkPath link_path_clone;
-      link_path->Clone(&link_path_clone);
-      (*i)->OnNewLink(std::move(link_path_clone));
-    }
-  }
 }
 
 fuchsia::modular::LinkPathPtr StoryControllerImpl::GetLinkPathForParameterName(
@@ -1407,24 +1397,6 @@ void StoryControllerImpl::GetModuleController(
         // Trying to get a controller for a module that is not active just
         // drops the connection request.
       })));
-}
-
-void StoryControllerImpl::GetActiveLinks(
-    fidl::InterfaceHandle<fuchsia::modular::StoryLinksWatcher> watcher,
-    GetActiveLinksCallback callback) {
-  auto result = fidl::VectorPtr<fuchsia::modular::LinkPath>::New(0);
-
-  std::set<fuchsia::modular::LinkPath> active_links = GetActiveLinksInternal();
-  for (auto& p : active_links) {
-    LinkPath clone;
-    p.Clone(&clone);
-    result.push_back(std::move(clone));
-  }
-
-  if (watcher) {
-    links_watchers_.AddInterfacePtr(watcher.Bind());
-  }
-  callback(std::move(result));
 }
 
 void StoryControllerImpl::GetLink(

@@ -49,9 +49,6 @@ protocol StoryController {
     // (metadata about, and requesting changes to runtime state).
     GetModuleController(vector<string> module_path, request<ModuleController> request);
 
-    // DEPRECATED: MI4-1084
-    GetActiveLinks(StoryLinksWatcher? watcher) -> (vector<LinkPath> link_data);
-
     // DEPRECATED
     GetLink(LinkPath link_path, request<Link> link);
 };
