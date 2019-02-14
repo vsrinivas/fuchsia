@@ -215,8 +215,12 @@ func (c *Client) closeLocked() error {
 		err = fmt.Errorf("fuchsia.hardware.ethernet.Device.Stop() for path %q failed: %v", c.path, err)
 	}
 
-	c.fifos.Tx.Close()
-	c.fifos.Rx.Close()
+	if err := c.fifos.Tx.Close(); err != nil {
+		log.Printf("eth: failed to close tx fifo: %s", err)
+	}
+	if err := c.fifos.Rx.Close(); err != nil {
+		log.Printf("eth: failed to close rx fifo: %s", err)
+	}
 	c.tmpbuf = c.tmpbuf[:0]
 	c.recvbuf = c.recvbuf[:0]
 	c.sendbuf = c.sendbuf[:0]
@@ -279,6 +283,8 @@ func (c *Client) Send(b Buffer) error {
 		n := copy(c.sendbuf, c.sendbuf[count:])
 		c.sendbuf = c.sendbuf[:n]
 	case zx.ErrShouldWait:
+	default:
+		return zx.Error{Status: status, Text: "eth.Client.RX"}
 	}
 
 	return nil
