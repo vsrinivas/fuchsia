@@ -1,0 +1,345 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/host_tool_action.gni")
+import("$zx/public/gn/resource.gni")
+import("$zx/public/gn/toolchain/environment_redirect.gni")
+
+# Define inputs to a dependent zbi() target.
+#
+# The target generates a manifest that collects any manifest_lines from its
+# dependencies' metadata, e.g. contributed by resource() targets.  It
+# contributes metadata that will drive zbi() to use this manifest, as well
+# as any non-BOOTFS inputs given via $sources and $args.
+#
+# resource() targets in the dependencies explicitly contribute to the
+# manifest.  Many other target types such as executable() and
+# shared_library() that have a $install_path parameter (even if defaulted)
+# implicitly contribute to the manifest.
+#
+# It's not necessary to use an explicit zbi_input() target just to collect
+# files into the BOOTFS of a zbi().  Use zbi_input() explicitly to get the
+# manifest file as an explicit build artifact, or to include other types.
+#
+# Parameters
+#
+#   data_deps, deps
+#     Optional: Dependencies examined for metadata.  Any other zbi_input()
+#     or zbi() targets in this dependency graph will flow into any zbi()
+#     target that depends on this one.  Any manifest metadata will be collected
+#     here into a manifest file.
+#     Type: list(label)
+#
+#   output_dir
+#     Optional: Directory where a manifest file is written.
+#     Type: dir
+#     Default: target_gen_dir
+#
+#   output_extension
+#     Optional: Extension added to $output_name.
+#     Type: string
+#     Default: "manifest"
+#
+#   output_name
+#     Optional: Name of the manifest file written out.
+#     Type: string
+#     Default: target_name
+#
+#   manifest
+#     Optional: Literal manifest entries for the BOOTFS.  These augment the
+#     entries collected from `manifest_lines` metadata.  Each entry is
+#     either a string that's a literal manifest entry line, or a scope
+#     with $sources and $outputs like a resource() target.
+#     Type: list(string or scope)
+#
+#   type
+#     Optional: The input type for any $sources or $args, as in the
+#     `--type` switch to the `zbi` tool.  See `zbi --help` for the set of
+#     available types.  A value of "" uses `zbi --files`.
+#     Type: string
+#     Default: ""
+#
+#   sources
+#     Optional: Files to put into the ZBI.  $type determines what kinds of
+#     files these can be and how their contents are used.  If $type is ""
+#     (the default), then these can be manifest files or directories.
+#     Type: list(file)
+#
+#   args
+#     Optional: Additional arguments to the `zbi` tool.  These are switches
+#     that will precede the $sources on the `zbi` command line, so they
+#     can include e.g. `--prefix=...` to affect contents of manifest file.
+#     The most common use is "--entry=..." to provide literal contents right
+#     in the GN file (e.g. for `type = "cmdline"`).
+#
+template("zbi_input") {
+  input_target = target_name
+  manifest_target = "_zbi_input.manifest.$target_name"
+
+  forward_variables_from(invoker,
+                         [
+                           "output_dir",
+                           "output_extension",
+                           "output_name",
+                         ])
+  if (!defined(output_dir)) {
+    output_dir = target_gen_dir
+  }
+  if (!defined(output_extension)) {
+    output_extension = "manifest"
+  }
+  if (!defined(output_name)) {
+    output_name = target_name
+  }
+
+  manifest_file = "$output_dir/$output_name"
+  if (output_extension != "") {
+    manifest_file += ".$output_extension"
+  }
+
+  generated_file(manifest_target) {
+    visibility = [ ":$input_target" ]
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "testonly",
+                           ])
+    outputs = [
+      manifest_file,
+    ]
+    output_conversion = "list lines"
+    data_keys = [ "manifest_lines" ]
+    walk_keys = [ "manifest_barrier" ]
+
+    # An embedded manifest contributes to metadata.manifest_lines directly.
+    if (defined(invoker.manifest)) {
+      entries = []
+      foreach(entry, invoker.manifest) {
+        if (entry == "$entry") {
+          # It's a literal manifest entry string.
+          # Note this doesn't express any dependency on its source file!
+          entries += [ entry ]
+        } else {
+          # It's a manifest entry in the style of a copy() target.
+          foreach(source, entry.sources) {
+            inputs += [ source ]
+            source_path = rebase_path(source, root_build_dir)
+            foreach(target, process_file_template([ source ], entry.outputs)) {
+              entries += [ "${target}=${source_path}" ]
+            }
+          }
+        }
+      }
+      metadata = {
+        manifest_lines = entries
+      }
+    }
+  }
+
+  # This is separate from the manifest target just because the metadata
+  # contributed here must not be included in the manifest metadata query.
+  group(input_target) {
+    forward_variables_from(invoker,
+                           [
+                             "visibility",
+                             "testonly",
+                           ])
+    deps = [
+      ":$manifest_target",
+    ]
+
+    metadata = {
+      zbi_input_args = []
+
+      # An explicit type applies only to $sources and $args.
+      if (defined(invoker.type) && invoker.type != "") {
+        zbi_input_args += [ "--type=${invoker.type}" ]
+      }
+
+      # Explicit $args come first, for e.g. "-u" or "-g" to affect inputs.
+      # $args may also contain "--entry=..." payloads directly.
+      if (defined(invoker.args)) {
+        zbi_input_args += invoker.args
+      }
+
+      if (defined(invoker.sources)) {
+        zbi_input_args += rebase_path(invoker.sources, root_build_dir)
+      }
+
+      # Always include the manifest generated from the deps here.  The
+      # barrier will prevent zbi() from collecting manifest_lines that are
+      # redundant with this manifest.
+      zbi_input_args += [
+        "--files",
+        rebase_path(manifest_file, root_build_dir),
+      ]
+      manifest_barrier = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata,
+                               "*",
+                               [
+                                 "manifest_barrier",
+                                 "manifest_lines",
+                                 "zbi_input_args",
+                               ])
+      }
+    }
+  }
+}
+
+# Build a ZBI file rolling up the contents from dependencies.
+#
+# This automatically collects a BOOTFS manifest from the dependencies like
+# zbi_input() does.  It also takes any zbi_input() or equivalent targets
+# from the dependencies.  (The kernel acts as a zbi_input(), for example.)
+#
+# Parameters
+#
+#   cpu
+#     Optional: CPU architecture for a complete ZBI.
+#     If this is "", then this target may produce an incomplete ZBI.
+#     Otherwise, it's a CPU name ("arm64" or "x64") and the target will
+#     fail if the ZBI is not complete so it can be booted on that CPU.
+#     Type: string
+#     Default: current_cpu
+#
+#   compress
+#     Optional: Whether to compress the BOOTFS and other `ZBI_TYPE_STORAGE`
+#     items in the output.  See the `--compressed` switch in `zbi --help`.
+#     Type: bool
+#     Default: true
+#
+#   output_dir
+#     Optional: Directory where the output file is written.
+#     Type: dir
+#     Default: target_out_dir
+#
+#   output_extension
+#     Optional: Extension added to $output_name.
+#     Type: string
+#     Default: "zbi"
+#
+#   output_name
+#     Optional: Name of the output file.
+#     Type: string
+#     Default: target_name
+#
+template("zbi") {
+  zbi_target = target_name
+  input_target = "_zbi.input.$target_name"
+  rspfile_target = "_zbi.rsp.$target_name"
+  rspfile = "$target_gen_dir/$target_name.zbi.rsp"
+
+  zbi_input(input_target) {
+    visibility = [ ":$rspfile_target" ]
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "output_dir",
+                             "output_name",
+                             "testonly",
+                           ])
+    assert(defined(deps), "zbi(\"$zbi_target\") must have `deps`")
+    if (!defined(output_name)) {
+      output_name = zbi_target
+    }
+  }
+
+  if (defined(invoker.output_name)) {
+    output_file = invoker.output_name
+  } else {
+    output_file = target_name
+  }
+
+  if (defined(invoker.output_extension)) {
+    if (invoker.output_extension != "") {
+      output_file += ".${invoker.output_extension}"
+    }
+  } else {
+    output_file += ".zbi"
+  }
+
+  if (defined(invoker.output_dir)) {
+    output_dir = invoker.output_dir
+  } else {
+    output_dir = target_out_dir
+  }
+
+  output_file = "$output_dir/$output_file"
+
+  # Generate a response file of input arguments collected from metadata.
+  generated_file(rspfile_target) {
+    visibility = [ ":$zbi_target" ]
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [
+      ":$input_target",
+    ]
+    outputs = [
+      rspfile,
+    ]
+    data_keys = [ "zbi_input_args" ]
+    output_conversion = "list lines"
+  }
+
+  host_tool_action(zbi_target) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "visibility",
+                             "testonly",
+                           ])
+    deps = [
+      ":$rspfile_target",
+    ]
+    outputs = [
+      output_file,
+    ]
+    depfile = "${output_file}.d"
+    sources = [
+      rspfile,
+    ]
+
+    tool = "$zx/system/host/zbi"
+    args = [
+      "--output=" + rebase_path(output_file, root_build_dir),
+      "--depfile=" + rebase_path(depfile, root_build_dir),
+      "@" + rebase_path(rspfile, root_build_dir),
+    ]
+
+    # Require a complete ZBI for the specified $cpu (or $current_cpu).
+    # A value of "" means it need not be a complete ZBI.
+    if (defined(invoker.cpu)) {
+      cpu = invoker.cpu
+    } else {
+      cpu = current_cpu
+    }
+    if (cpu != "") {
+      args += [ "--complete=$cpu" ]
+    }
+
+    # This comes last to affect the output despite any earlier
+    # "-c" or "-u" from metadata.zbi_input_args meant to affect
+    # a particular input (e.g. for "--type=ramdisk").
+    if (defined(invoker.compress) && !invoker.compress) {
+      args += [ "--uncompressed" ]
+    } else {
+      args += [ "--compressed" ]
+    }
+
+    metadata = {
+      # Provide metadata so that a zbi() target can also act as if it were a
+      # zbi_input() with `type = "zbi"` and $sources of this target's $outputs.
+      # Thus a zbi() target can be a dependency of another zbi() target to
+      # combine them without requiring an intervening zbi_input() target.
+      zbi_input_args =
+          [ "--type=container" ] + rebase_path(outputs, root_build_dir)
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*", [ "zbi_input_args" ])
+      }
+    }
+  }
+}

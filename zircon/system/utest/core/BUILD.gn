@@ -51,9 +51,12 @@ unified_only = [
 
 group("core") {
   testonly = true
-  deps = [
-    ":core-tests",  # Together.
-  ]
+
+  # Note this doesn't include ":core-tests" because the standalone binary
+  # only works when run directly from userboot and so is never useful to
+  # have in a normal boot image full of tests to run.  Instead, it's
+  # included directly in a standalone core-tests ZBI.
+  deps = []
   foreach(test, core_tests) {
     deps += [ ":$test" ]  # And alone.
   }

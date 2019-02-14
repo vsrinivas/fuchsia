@@ -4,6 +4,7 @@
 
 import("$zx/public/gn/config/standard.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
+import("$zx/public/gn/zbi.gni")
 
 # Build the native host tools intended for developer use.
 _tools_targets = [ "tools" ]
@@ -81,19 +82,51 @@ group("all-cpu") {
   testonly = true
   deps = []
   foreach(cpu, standard_fuchsia_cpus) {
-    # TODO: When everything builds, this will be reorganized.
-    deps += [ ":what-builds-$cpu" ]
+    deps += [
+      ":$cpu",
+      ":core-tests-$cpu",
+    ]
   }
 }
 
 foreach(cpu, standard_fuchsia_cpus) {
-  environment_redirect("what-builds-$cpu") {
+  if (current_toolchain == default_toolchain) {
+    zbi("core-tests-$cpu") {
+      output_dir = root_build_dir
+      testonly = true
+      cpu = cpu
+      deps = [
+        ":core-tests-$cpu-deps",
+      ]
+    }
+
+    zbi(cpu) {
+      output_dir = root_build_dir
+      testonly = true
+      cpu = cpu
+      deps = [
+        ":everything-$cpu",
+      ]
+    }
+  }
+
+  environment_redirect("core-tests-$cpu-deps") {
+    visibility = [ ":*" ]
+    testonly = true
+    cpu = cpu
+    environment_label = "$zx/public/gn/toolchain:user"
+    deps = [
+      "kernel",
+      "system/utest:core-tests",
+    ]
+  }
+
+  environment_redirect("everything-$cpu") {
     visibility = [ ":*" ]
     testonly = true
     environment_label = "$zx/public/gn/toolchain:user"
     cpu = cpu
     deps = [
-      # TODO: This indirectly reaches everything that builds so far.
       "$zx/kernel",
       "$zx/system/core",
       "$zx/system/dev",
