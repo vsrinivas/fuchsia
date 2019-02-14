@@ -24,8 +24,6 @@ class UserIntelligenceProviderImpl
   // |context| is not owned and must outlive this instance.
   UserIntelligenceProviderImpl(
       component::StartupContext* context,
-      fidl::InterfaceHandle<fuchsia::modular::ContextEngine>
-          context_engine_handle,
       fit::function<void(
           fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider>)>
           visible_stories_provider_connector,
@@ -105,8 +103,6 @@ class UserIntelligenceProviderImpl
   void StartSessionAgent(const std::string& url);
 
   component::StartupContext* context_;  // Not owned.
-
-  fuchsia::modular::ContextEnginePtr context_engine_;
 
   component::Services suggestion_services_;
   component::ServiceProviderImpl suggestion_engine_service_provider_;
