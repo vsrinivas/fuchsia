@@ -93,14 +93,10 @@ struct DirectoryConnection {
 
 impl DirectoryConnection {
     fn into_stream_future(
-        requests: DirectoryRequestStream, flags: u32,
+        requests: DirectoryRequestStream,
+        flags: u32,
     ) -> StreamFuture<DirectoryConnection> {
-        (DirectoryConnection {
-            requests,
-            flags,
-            seek: DirectoryReadPos::Start,
-        })
-        .into_future()
+        (DirectoryConnection { requests, flags, seek: DirectoryReadPos::Start }).into_future()
     }
 }
 
@@ -176,12 +172,10 @@ impl<'entries> PseudoDirectory<'entries> {
     }
 
     fn send_watcher_event(&mut self, mask: u32, event: u8, name: &str) {
-        self.watchers.retain(
-            |watcher| match watcher.send_event_check_mask(mask, event, name) {
-                Ok(()) => true,
-                Err(_) => false,
-            },
-        );
+        self.watchers.retain(|watcher| match watcher.send_event_check_mask(mask, event, name) {
+            Ok(()) => true,
+            Err(_) => false,
+        });
     }
 
     fn remove_dead_watchers(&mut self, lw: &LocalWaker) {
@@ -226,7 +220,11 @@ impl<'entries> PseudoDirectory<'entries> {
     }
 
     fn add_connection(
-        &mut self, parent_flags: u32, flags: u32, mode: u32, server_end: ServerEnd<NodeMarker>,
+        &mut self,
+        parent_flags: u32,
+        flags: u32,
+        mode: u32,
+        server_end: ServerEnd<NodeMarker>,
     ) -> Result<(), fidl::Error> {
         // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_DIRECTORY when
         // the target is a directory.
@@ -282,14 +280,12 @@ impl<'entries> PseudoDirectory<'entries> {
     }
 
     fn handle_request(
-        &mut self, req: DirectoryRequest, connection: &mut DirectoryConnection,
+        &mut self,
+        req: DirectoryRequest,
+        connection: &mut DirectoryConnection,
     ) -> Result<ConnectionState, failure::Error> {
         match req {
-            DirectoryRequest::Clone {
-                flags,
-                object,
-                control_handle: _,
-            } => {
+            DirectoryRequest::Clone { flags, object, control_handle: _ } => {
                 self.add_connection(connection.flags, flags, 0, object)?;
             }
             DirectoryRequest::Close { responder } => {
@@ -315,41 +311,22 @@ impl<'entries> PseudoDirectory<'entries> {
                 };
                 responder.send(ZX_OK, &mut attrs)?;
             }
-            DirectoryRequest::SetAttr {
-                flags: _,
-                attributes: _,
-                responder,
-            } => {
+            DirectoryRequest::SetAttr { flags: _, attributes: _, responder } => {
                 // According to zircon/system/fidl/fuchsia-io/io.fidl the only flag that might be
                 // modified through this call is OPEN_FLAG_APPEND, and it is not supported by the
                 // PseudoDirectory.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryRequest::Ioctl {
-                opcode: _,
-                max_out: _,
-                handles: _,
-                in_: _,
-                responder,
-            } => {
+            DirectoryRequest::Ioctl { opcode: _, max_out: _, handles: _, in_: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, &mut iter::empty(), &mut iter::empty())?;
             }
-            DirectoryRequest::Open {
-                flags,
-                mode,
-                path,
-                object,
-                control_handle: _,
-            } => {
+            DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
                 self.handle_open(flags, mode, &path, object)?;
             }
             DirectoryRequest::Unlink { path: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryRequest::ReadDirents {
-                max_bytes,
-                responder,
-            } => {
+            DirectoryRequest::ReadDirents { max_bytes, responder } => {
                 self.handle_read_dirents(connection, max_bytes, |status, entries| {
                     responder.send(status.into_raw(), entries)
                 })?;
@@ -361,28 +338,13 @@ impl<'entries> PseudoDirectory<'entries> {
             DirectoryRequest::GetToken { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
             }
-            DirectoryRequest::Rename {
-                src: _,
-                dst_parent_token: _,
-                dst: _,
-                responder,
-            } => {
+            DirectoryRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryRequest::Link {
-                src: _,
-                dst_parent_token: _,
-                dst: _,
-                responder,
-            } => {
+            DirectoryRequest::Link { src: _, dst_parent_token: _, dst: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryRequest::Watch {
-                mask,
-                options,
-                watcher,
-                responder,
-            } => {
+            DirectoryRequest::Watch { mask, options, watcher, responder } => {
                 if options != 0 {
                     responder.send(ZX_ERR_INVALID_ARGS)?;
                 } else {
@@ -400,7 +362,11 @@ impl<'entries> PseudoDirectory<'entries> {
     }
 
     fn handle_open(
-        &mut self, flags: u32, mut mode: u32, path: &str, server_end: ServerEnd<NodeMarker>,
+        &mut self,
+        flags: u32,
+        mut mode: u32,
+        path: &str,
+        server_end: ServerEnd<NodeMarker>,
     ) -> Result<(), fidl::Error> {
         if path == "/" {
             return send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
@@ -455,14 +421,16 @@ impl<'entries> PseudoDirectory<'entries> {
             .expect("out should be an in memory buffer that grows as needed");
         buf.write_u8(entry.type_())
             .expect("out should be an in memory buffer that grows as needed");
-        buf.write(name.as_ref())
-            .expect("out should be an in memory buffer that grows as needed");
+        buf.write(name.as_ref()).expect("out should be an in memory buffer that grows as needed");
 
         true
     }
 
     fn handle_read_dirents<R>(
-        &mut self, connection: &mut DirectoryConnection, max_bytes: u64, responder: R,
+        &mut self,
+        connection: &mut DirectoryConnection,
+        max_bytes: u64,
+        responder: R,
     ) -> Result<(), fidl::Error>
     where
         R: FnOnce(Status, &mut ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
@@ -515,11 +483,7 @@ impl<'entries> PseudoDirectory<'entries> {
             if !PseudoDirectory::encode_dirent(&mut buf, max_bytes, &entry.entry_info(), name) {
                 connection.seek = last_returned;
                 return responder(
-                    if fit_one {
-                        Status::OK
-                    } else {
-                        Status::BUFFER_TOO_SMALL
-                    },
+                    if fit_one { Status::OK } else { Status::BUFFER_TOO_SMALL },
                     &mut buf.iter().cloned(),
                 );
             }
@@ -534,7 +498,10 @@ impl<'entries> PseudoDirectory<'entries> {
 
 impl<'entries> DirectoryEntry for PseudoDirectory<'entries> {
     fn open(
-        &mut self, flags: u32, mode: u32, path: &mut Iterator<Item = &str>,
+        &mut self,
+        flags: u32,
+        mode: u32,
+        path: &mut Iterator<Item = &str>,
         server_end: ServerEnd<NodeMarker>,
     ) -> Result<(), fidl::Error> {
         let name = match path.next() {
@@ -686,7 +653,8 @@ mod tests {
     };
 
     fn run_server_client<GetClientRes>(
-        flags: u32, server: impl DirectoryEntry,
+        flags: u32,
+        server: impl DirectoryEntry,
         get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
     ) where
         GetClientRes: Future<Output = ()>,
@@ -695,7 +663,9 @@ mod tests {
     }
 
     fn run_server_client_with_mode<GetClientRes>(
-        flags: u32, mode: u32, mut server: impl DirectoryEntry,
+        flags: u32,
+        mode: u32,
+        mut server: impl DirectoryEntry,
         get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
     ) where
         GetClientRes: Future<Output = ()>,
@@ -731,12 +701,8 @@ mod tests {
         let _ = exec.run_until_stalled(&mut future);
     }
 
-    type OpenRequestArgs<'path> = (
-        u32,
-        u32,
-        Box<Iterator<Item = &'path str>>,
-        ServerEnd<DirectoryMarker>,
-    );
+    type OpenRequestArgs<'path> =
+        (u32, u32, Box<Iterator<Item = &'path str>>, ServerEnd<DirectoryMarker>);
 
     fn run_server_client_with_open_requests_channel<'path, GetClientRes>(
         mut server: impl DirectoryEntry,
@@ -796,36 +762,28 @@ mod tests {
 
     #[test]
     fn empty_directory() {
-        run_server_client(
-            OPEN_RIGHT_READABLE,
-            PseudoDirectory::empty(),
-            async move |proxy| {
-                assert_close!(proxy);
-            },
-        );
+        run_server_client(OPEN_RIGHT_READABLE, PseudoDirectory::empty(), async move |proxy| {
+            assert_close!(proxy);
+        });
     }
 
     #[test]
     fn empty_directory_get_attr() {
-        run_server_client(
-            OPEN_RIGHT_READABLE,
-            PseudoDirectory::empty(),
-            async move |proxy| {
-                assert_get_attr!(
-                    proxy,
-                    NodeAttributes {
-                        mode: MODE_TYPE_DIRECTORY | S_IRUSR,
-                        id: INO_UNKNOWN,
-                        content_size: 0,
-                        storage_size: 0,
-                        link_count: 1,
-                        creation_time: 0,
-                        modification_time: 0,
-                    }
-                );
-                assert_close!(proxy);
-            },
-        );
+        run_server_client(OPEN_RIGHT_READABLE, PseudoDirectory::empty(), async move |proxy| {
+            assert_get_attr!(
+                proxy,
+                NodeAttributes {
+                    mode: MODE_TYPE_DIRECTORY | S_IRUSR,
+                    id: INO_UNKNOWN,
+                    content_size: 0,
+                    storage_size: 0,
+                    link_count: 1,
+                    creation_time: 0,
+                    modification_time: 0,
+                }
+            );
+            assert_close!(proxy);
+        });
     }
 
     #[test]
@@ -854,14 +812,10 @@ mod tests {
 
     #[test]
     fn empty_directory_describe() {
-        run_server_client(
-            OPEN_RIGHT_READABLE,
-            PseudoDirectory::empty(),
-            async move |proxy| {
-                assert_describe!(proxy, NodeInfo::Directory(DirectoryObject { reserved: 0 }));
-                assert_close!(proxy);
-            },
-        );
+        run_server_client(OPEN_RIGHT_READABLE, PseudoDirectory::empty(), async move |proxy| {
+            assert_describe!(proxy, NodeInfo::Directory(DirectoryObject { reserved: 0 }));
+            assert_close!(proxy);
+        });
     }
 
     #[test]
@@ -878,9 +832,7 @@ mod tests {
                     assert_eq!(s, ZX_OK);
                     assert_eq!(
                         info,
-                        Some(Box::new(NodeInfo::Directory(DirectoryObject {
-                            reserved: 0
-                        })))
+                        Some(Box::new(NodeInfo::Directory(DirectoryObject { reserved: 0 })))
                     );
                 });
             },
@@ -890,8 +842,7 @@ mod tests {
     #[test]
     fn one_file_open_existing() {
         let mut root = PseudoDirectory::empty();
-        root.add_entry("file1", read_only(|| Ok(b"Content".to_vec())))
-            .unwrap();
+        root.add_entry("file1", read_only(|| Ok(b"Content".to_vec()))).unwrap();
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
@@ -907,8 +858,7 @@ mod tests {
     #[test]
     fn one_file_open_missing() {
         let mut root = PseudoDirectory::empty();
-        root.add_entry("file1", read_only(|| Ok(b"Content".to_vec())))
-            .unwrap();
+        root.add_entry("file1", read_only(|| Ok(b"Content".to_vec()))).unwrap();
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
@@ -924,22 +874,19 @@ mod tests {
         let mut etc_dir = PseudoDirectory::empty();
         let mut ssh_dir = PseudoDirectory::empty();
 
-        ssh_dir
-            .add_entry("sshd_config", read_only(|| Ok(b"# Empty".to_vec())))
-            .unwrap();
+        ssh_dir.add_entry("sshd_config", read_only(|| Ok(b"# Empty".to_vec()))).unwrap();
 
         etc_dir.add_entry("ssh", ssh_dir).unwrap();
-        etc_dir
-            .add_entry("fstab", read_only(|| Ok(b"/dev/fs /".to_vec())))
-            .unwrap();
+        etc_dir.add_entry("fstab", read_only(|| Ok(b"/dev/fs /".to_vec()))).unwrap();
 
         root.add_entry("etc", etc_dir).unwrap();
-        root.add_entry("uname", read_only(|| Ok(b"Fuchsia".to_vec())))
-            .unwrap();
+        root.add_entry("uname", read_only(|| Ok(b"Fuchsia".to_vec()))).unwrap();
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             async fn open_read_close<'a>(
-                from_dir: &'a DirectoryProxy, path: &'a str, expected_content: &'a str,
+                from_dir: &'a DirectoryProxy,
+                path: &'a str,
+                expected_content: &'a str,
             ) {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 let file = open_get_file_proxy_assert_ok!(from_dir, flags, path);
@@ -990,8 +937,12 @@ mod tests {
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             async fn open_read_write_close<'a>(
-                from_dir: &'a DirectoryProxy, path: &'a str, expected_content: &'a str,
-                new_content: &'a str, write_count: &'a RefCell<u32>, expected_count: u32,
+                from_dir: &'a DirectoryProxy,
+                path: &'a str,
+                expected_content: &'a str,
+                new_content: &'a str,
+                write_count: &'a RefCell<u32>,
+                expected_count: u32,
             ) {
                 let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
                 let file = open_get_file_proxy_assert_ok!(from_dir, flags, path);
@@ -1035,12 +986,9 @@ mod tests {
         let mut root = PseudoDirectory::empty();
         let mut sub_dir = PseudoDirectory::empty();
 
-        sub_dir
-            .add_entry("file1", read_only(|| Ok(b"Content 1".to_vec())))
-            .unwrap();
+        sub_dir.add_entry("file1", read_only(|| Ok(b"Content 1".to_vec()))).unwrap();
 
-        root.add_entry("file2", read_only(|| Ok(b"Content 2".to_vec())))
-            .unwrap();
+        root.add_entry("file2", read_only(|| Ok(b"Content 2".to_vec()))).unwrap();
         root.add_entry("dir", sub_dir).unwrap();
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
@@ -1059,12 +1007,9 @@ mod tests {
         let mut root = PseudoDirectory::empty();
         let mut sub_dir = PseudoDirectory::empty();
 
-        sub_dir
-            .add_entry("file1", read_only(|| Ok(b"Content 1".to_vec())))
-            .unwrap();
+        sub_dir.add_entry("file1", read_only(|| Ok(b"Content 1".to_vec()))).unwrap();
 
-        root.add_entry("file2", read_only(|| Ok(b"Content 2".to_vec())))
-            .unwrap();
+        root.add_entry("file2", read_only(|| Ok(b"Content 2".to_vec()))).unwrap();
         root.add_entry("dir", sub_dir).unwrap();
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
@@ -1081,12 +1026,9 @@ mod tests {
         let mut root = PseudoDirectory::empty();
         let mut sub_dir = PseudoDirectory::empty();
 
-        sub_dir
-            .add_entry("file2", read_only(|| Ok(b"Content 1".to_vec())))
-            .unwrap();
+        sub_dir.add_entry("file2", read_only(|| Ok(b"Content 1".to_vec()))).unwrap();
 
-        root.add_entry("file1", read_only(|| Ok(b"Content 2".to_vec())))
-            .unwrap();
+        root.add_entry("file1", read_only(|| Ok(b"Content 2".to_vec()))).unwrap();
         root.add_entry("dir", sub_dir).unwrap();
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
@@ -1146,8 +1088,7 @@ mod tests {
         let mut root = PseudoDirectory::empty();
         let sub_dir = PseudoDirectory::empty();
 
-        root.add_entry("file", read_only(|| Ok(b"Content".to_vec())))
-            .unwrap();
+        root.add_entry("file", read_only(|| Ok(b"Content".to_vec()))).unwrap();
         root.add_entry("dir", sub_dir).unwrap();
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
@@ -1177,8 +1118,7 @@ mod tests {
 
         sub_dir.add_entry("dir2", PseudoDirectory::empty()).unwrap();
 
-        root.add_entry("file", read_only(|| Ok(b"Content".to_vec())))
-            .unwrap();
+        root.add_entry("file", read_only(|| Ok(b"Content".to_vec()))).unwrap();
         root.add_entry("dir", sub_dir).unwrap();
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
@@ -1218,28 +1158,17 @@ mod tests {
         let mut etc_dir = PseudoDirectory::empty();
         let mut ssh_dir = PseudoDirectory::empty();
 
-        ssh_dir
-            .add_entry("sshd_config", read_only(|| Ok(b"# Empty".to_vec())))
-            .unwrap();
+        ssh_dir.add_entry("sshd_config", read_only(|| Ok(b"# Empty".to_vec()))).unwrap();
 
-        etc_dir
-            .add_entry("fstab", read_only(|| Ok(b"/dev/fs /".to_vec())))
-            .unwrap();
-        etc_dir
-            .add_entry("passwd", read_only(|| Ok(b"[redacted]".to_vec())))
-            .unwrap();
-        etc_dir
-            .add_entry("shells", read_only(|| Ok(b"/bin/bash".to_vec())))
-            .unwrap();
+        etc_dir.add_entry("fstab", read_only(|| Ok(b"/dev/fs /".to_vec()))).unwrap();
+        etc_dir.add_entry("passwd", read_only(|| Ok(b"[redacted]".to_vec()))).unwrap();
+        etc_dir.add_entry("shells", read_only(|| Ok(b"/bin/bash".to_vec()))).unwrap();
         etc_dir.add_entry("ssh", ssh_dir).unwrap();
 
         root.add_entry("etc", etc_dir).unwrap();
-        root.add_entry("files", read_only(|| Ok(b"Content".to_vec())))
-            .unwrap();
-        root.add_entry("more", read_only(|| Ok(b"Content".to_vec())))
-            .unwrap();
-        root.add_entry("uname", read_only(|| Ok(b"Fuchsia".to_vec())))
-            .unwrap();
+        root.add_entry("files", read_only(|| Ok(b"Content".to_vec()))).unwrap();
+        root.add_entry("more", read_only(|| Ok(b"Content".to_vec()))).unwrap();
+        root.add_entry("uname", read_only(|| Ok(b"Fuchsia".to_vec()))).unwrap();
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let mut expected = Vec::new();
@@ -1292,12 +1221,9 @@ mod tests {
         let etc_dir = PseudoDirectory::empty();
 
         root.add_entry("etc", etc_dir).unwrap();
-        root.add_entry("files", read_only(|| Ok(b"Content".to_vec())))
-            .unwrap();
-        root.add_entry("more", read_only(|| Ok(b"Content".to_vec())))
-            .unwrap();
-        root.add_entry("uname", read_only(|| Ok(b"Fuchsia".to_vec())))
-            .unwrap();
+        root.add_entry("files", read_only(|| Ok(b"Content".to_vec()))).unwrap();
+        root.add_entry("more", read_only(|| Ok(b"Content".to_vec()))).unwrap();
+        root.add_entry("uname", read_only(|| Ok(b"Fuchsia".to_vec()))).unwrap();
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let mut expected = Vec::new();
@@ -1329,8 +1255,7 @@ mod tests {
     #[test]
     fn read_dirents_very_small_buffer() {
         let mut root = PseudoDirectory::empty();
-        root.add_entry("file", read_only(|| Ok(b"Content".to_vec())))
-            .unwrap();
+        root.add_entry("file", read_only(|| Ok(b"Content".to_vec()))).unwrap();
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             // Entry header is 10 bytes, so this read should not be able to return a single entry.

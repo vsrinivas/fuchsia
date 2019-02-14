@@ -28,7 +28,8 @@ impl WatcherConnection {
     /// A helper used by other send_event*() methods.  Sends a collection of
     /// fidl_fuchsia_io::WatchEvent instances over this watcher connection.
     fn send_event_structs(
-        &self, events: &mut Iterator<Item = WatchedEvent>,
+        &self,
+        events: &mut Iterator<Item = WatchedEvent>,
     ) -> Result<(), fidl::Error> {
         // Unfortunately, io.fidl currently does not provide encoding for the watcher events.
         // Seems to be due to
@@ -66,9 +67,7 @@ impl WatcherConnection {
         }
 
         if buffer.len() > 0 {
-            self.channel
-                .write(&*buffer, &mut vec![])
-                .map_err(fidl::Error::ServerResponseWrite)?;
+            self.channel.write(&*buffer, &mut vec![]).map_err(fidl::Error::ServerResponseWrite)?;
         }
 
         Ok(())
@@ -102,7 +101,10 @@ impl WatcherConnection {
     /// skipping the operation if the watcher did not request this kind of events to be delivered -
     /// filtered by the mask value.
     pub fn send_event_check_mask(
-        &self, mask: u32, event: u8, name: &str,
+        &self,
+        mask: u32,
+        event: u8,
+        name: &str,
     ) -> Result<(), fidl::Error> {
         if self.mask & mask == 0 {
             return Ok(());
@@ -115,7 +117,8 @@ impl WatcherConnection {
     /// in the list.  If the watcher has requested this kind of events - similar to to
     /// [`send_event_check_mask`] above, but with a predefined mask and event type.
     pub fn send_events_existing(
-        &self, names: &mut Iterator<Item = &str>,
+        &self,
+        names: &mut Iterator<Item = &str>,
     ) -> Result<(), fidl::Error> {
         if self.mask & WATCH_MASK_EXISTING == 0 {
             return Ok(());

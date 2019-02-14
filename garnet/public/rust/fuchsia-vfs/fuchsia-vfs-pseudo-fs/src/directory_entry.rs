@@ -79,7 +79,10 @@ pub trait DirectoryEntry: Future<Output = Void> + Unpin + FusedFuture {
     /// populate the `info` part of the event if `OPEN_FLAG_DESCRIBE` was set.  This also applies
     /// to the error cases.
     fn open(
-        &mut self, flags: u32, mode: u32, path: &mut Iterator<Item = &str>,
+        &mut self,
+        flags: u32,
+        mode: u32,
+        path: &mut Iterator<Item = &str>,
         server_end: ServerEnd<NodeMarker>,
     ) -> Result<(), fidl::Error>;
 

@@ -150,7 +150,9 @@ where
 /// layer.  Note that only the MODE_PROTECTION_MASK part of the protection_attributes argument will
 /// be stored.
 pub fn write_only_attr<OnWrite>(
-    capacity: u64, on_write: OnWrite, protection_attributes: u32,
+    capacity: u64,
+    on_write: OnWrite,
+    protection_attributes: u32,
 ) -> impl PseudoFile
 where
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
@@ -179,18 +181,15 @@ pub const DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES: u32 =
 /// operation.  Subsequent writes act the same - there is no seek position, nor ability to write
 /// content in chunks.
 pub fn read_write<OnRead, OnWrite>(
-    on_read: OnRead, capacity: u64, on_write: OnWrite,
+    on_read: OnRead,
+    capacity: u64,
+    on_write: OnWrite,
 ) -> impl PseudoFile
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status>,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
 {
-    read_write_attr(
-        on_read,
-        capacity,
-        on_write,
-        DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES,
-    )
+    read_write_attr(on_read, capacity, on_write, DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES)
 }
 
 /// See [`read_write()`].  Wraps the read callback, allowing it to return a [`String`] instead of a
@@ -199,7 +198,9 @@ where
 /// call, and the passed to the handler.
 /// In every other aspect behaves just like [`read_write()`].
 pub fn read_write_str<OnReadStr, OnWriteStr>(
-    mut on_read: OnReadStr, capacity: u64, mut on_write: OnWriteStr,
+    mut on_read: OnReadStr,
+    capacity: u64,
+    mut on_write: OnWriteStr,
 ) -> impl PseudoFile
 where
     OnReadStr: FnMut() -> Result<String, Status>,
@@ -220,7 +221,10 @@ where
 /// layer.  Note that only the MODE_PROTECTION_MASK part of the protection_attributes argument will
 /// be stored.
 pub fn read_write_attr<OnRead, OnWrite>(
-    on_read: OnRead, capacity: u64, on_write: OnWrite, protection_attributes: u32,
+    on_read: OnRead,
+    capacity: u64,
+    on_write: OnWrite,
+    protection_attributes: u32,
 ) -> impl PseudoFile
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status>,
@@ -262,16 +266,12 @@ impl FileConnection {
     /// Creates a new [`FileConnection`] instance, immediately wrapping it in a [`StreamFuture`].
     /// This is how [`FileConnection`]s are used in the pseudo file implementation.
     fn as_stream_future(
-        requests: FileRequestStream, flags: u32, buffer: Vec<u8>, was_written: bool,
+        requests: FileRequestStream,
+        flags: u32,
+        buffer: Vec<u8>,
+        was_written: bool,
     ) -> StreamFuture<FileConnection> {
-        (FileConnection {
-            requests,
-            flags,
-            seek: 0,
-            buffer,
-            was_written,
-        })
-        .into_future()
+        (FileConnection { requests, flags, seek: 0, buffer, was_written }).into_future()
     }
 }
 
@@ -339,7 +339,9 @@ where
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
 {
     fn new(
-        on_read: Option<OnRead>, capacity: u64, on_write: Option<OnWrite>,
+        on_read: Option<OnRead>,
+        capacity: u64,
+        on_write: Option<OnWrite>,
         protection_attributes: u32,
     ) -> Self {
         PseudoFileImpl {
@@ -357,16 +359,8 @@ where
         }
 
         let allowed_flags = OPEN_FLAG_DESCRIBE
-            | if self.on_read.is_some() {
-                OPEN_RIGHT_READABLE
-            } else {
-                0
-            }
-            | if self.on_write.is_some() {
-                OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE
-            } else {
-                0
-            };
+            | if self.on_read.is_some() { OPEN_RIGHT_READABLE } else { 0 }
+            | if self.on_write.is_some() { OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE } else { 0 };
 
         let prohibited_flags = (0 | if self.on_read.is_some() {
                 OPEN_FLAG_TRUNCATE
@@ -400,7 +394,11 @@ where
     }
 
     fn add_connection(
-        &mut self, parent_flags: u32, flags: u32, mode: u32, server_end: ServerEnd<NodeMarker>,
+        &mut self,
+        parent_flags: u32,
+        flags: u32,
+        mode: u32,
+        server_end: ServerEnd<NodeMarker>,
     ) -> Result<(), fidl::Error> {
         // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_FILE when the
         // target is a pseudo file.
@@ -440,14 +438,12 @@ where
     }
 
     fn handle_request(
-        &mut self, req: FileRequest, connection: &mut FileConnection,
+        &mut self,
+        req: FileRequest,
+        connection: &mut FileConnection,
     ) -> Result<ConnectionState, Error> {
         match req {
-            FileRequest::Clone {
-                flags,
-                object,
-                control_handle: _,
-            } => {
+            FileRequest::Clone { flags, object, control_handle: _ } => {
                 self.add_connection(connection.flags, flags, 0, object)?;
             }
             FileRequest::Close { responder } => {
@@ -473,23 +469,13 @@ where
                 };
                 responder.send(ZX_OK, &mut attrs)?;
             }
-            FileRequest::SetAttr {
-                flags: _,
-                attributes: _,
-                responder,
-            } => {
+            FileRequest::SetAttr { flags: _, attributes: _, responder } => {
                 // According to zircon/system/fidl/fuchsia-io/io.fidl the only flag that might be
                 // modified through this call is OPEN_FLAG_APPEND, and it is not supported by the
                 // PseudoFileImpl.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            FileRequest::Ioctl {
-                opcode: _,
-                max_out: _,
-                handles: _,
-                in_: _,
-                responder,
-            } => {
+            FileRequest::Ioctl { opcode: _, max_out: _, handles: _, in_: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, &mut iter::empty(), &mut iter::empty())?;
             }
             FileRequest::Read { count, responder } => {
@@ -499,11 +485,7 @@ where
                     })?;
                 connection.seek += actual;
             }
-            FileRequest::ReadAt {
-                offset,
-                count,
-                responder,
-            } => {
+            FileRequest::ReadAt { offset, count, responder } => {
                 self.handle_read(connection, offset, count, |status, content| {
                     responder.send(status.into_raw(), content)
                 })?;
@@ -515,22 +497,14 @@ where
                     })?;
                 connection.seek += actual;
             }
-            FileRequest::WriteAt {
-                offset,
-                data,
-                responder,
-            } => {
+            FileRequest::WriteAt { offset, data, responder } => {
                 self.handle_write(connection, offset, data, |status, actual| {
                     // Seems like our API is not really designed for 128 bit machines. If data
                     // contains more than 16EB, we may not be returning the correct number here.
                     responder.send(status.into_raw(), actual as u64)
                 })?;
             }
-            FileRequest::Seek {
-                offset,
-                start,
-                responder,
-            } => {
+            FileRequest::Seek { offset, start, responder } => {
                 self.handle_seek(connection, offset, start, |status, offset| {
                     responder.send(status.into_raw(), offset)
                 })?;
@@ -543,19 +517,13 @@ where
             FileRequest::GetFlags { responder } => {
                 responder.send(ZX_OK, connection.flags)?;
             }
-            FileRequest::SetFlags {
-                flags: _,
-                responder,
-            } => {
+            FileRequest::SetFlags { flags: _, responder } => {
                 // TODO: Support OPEN_FLAG_APPEND?  It is the only flag that is allowed to be set
                 // via this call according to the io.fidl.  It would be nice to have that
                 // explicitly encoded in the API instead, I guess.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            FileRequest::GetBuffer {
-                flags: _,
-                responder,
-            } => {
+            FileRequest::GetBuffer { flags: _, responder } => {
                 // There is no backing VMO.
                 responder.send(ZX_OK, None)?;
             }
@@ -585,7 +553,11 @@ where
     }
 
     fn handle_read<R>(
-        &mut self, connection: &FileConnection, offset: u64, mut count: u64, responder: R,
+        &mut self,
+        connection: &FileConnection,
+        offset: u64,
+        mut count: u64,
+        responder: R,
     ) -> Result<u64, fidl::Error>
     where
         R: FnOnce(Status, &mut ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
@@ -625,7 +597,11 @@ where
     // on_read() case above, so, for consistency, on_write() has the same interface.
     // TODO: Do I need to return the number of bytes written?
     fn handle_write<R>(
-        &mut self, connection: &mut FileConnection, offset: u64, content: Vec<u8>, responder: R,
+        &mut self,
+        connection: &mut FileConnection,
+        offset: u64,
+        content: Vec<u8>,
+        responder: R,
     ) -> Result<u64, fidl::Error>
     where
         R: FnOnce(Status, u64) -> Result<(), fidl::Error>,
@@ -673,7 +649,11 @@ where
     }
 
     fn handle_seek<R>(
-        &mut self, connection: &mut FileConnection, offset: i64, start: SeekOrigin, responder: R,
+        &mut self,
+        connection: &mut FileConnection,
+        offset: i64,
+        start: SeekOrigin,
+        responder: R,
     ) -> Result<(), fidl::Error>
     where
         R: FnOnce(Status, u64) -> Result<(), fidl::Error>,
@@ -705,7 +685,10 @@ where
     }
 
     fn handle_truncate<R>(
-        &mut self, connection: &mut FileConnection, length: u64, responder: R,
+        &mut self,
+        connection: &mut FileConnection,
+        length: u64,
+        responder: R,
     ) -> Result<(), fidl::Error>
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
@@ -736,7 +719,9 @@ where
     }
 
     fn handle_close<R>(
-        &mut self, connection: &mut FileConnection, responder: R,
+        &mut self,
+        connection: &mut FileConnection,
+        responder: R,
     ) -> Result<(), fidl::Error>
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
@@ -763,7 +748,10 @@ where
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
 {
     fn open(
-        &mut self, flags: u32, mode: u32, path: &mut Iterator<Item = &str>,
+        &mut self,
+        flags: u32,
+        mode: u32,
+        path: &mut Iterator<Item = &str>,
         server_end: ServerEnd<NodeMarker>,
     ) -> Result<(), fidl::Error> {
         if let Some(_) = path.next() {
@@ -858,7 +846,9 @@ mod tests {
     };
 
     fn run_server_client<GetClientRes>(
-        flags: u32, server: impl PseudoFile, get_client: impl FnOnce(FileProxy) -> GetClientRes,
+        flags: u32,
+        server: impl PseudoFile,
+        get_client: impl FnOnce(FileProxy) -> GetClientRes,
     ) where
         GetClientRes: Future<Output = ()>,
     {
@@ -866,7 +856,9 @@ mod tests {
     }
 
     fn run_server_client_with_mode<GetClientRes>(
-        flags: u32, mode: u32, mut server: impl PseudoFile,
+        flags: u32,
+        mode: u32,
+        mut server: impl PseudoFile,
         get_client: impl FnOnce(FileProxy) -> GetClientRes,
     ) where
         GetClientRes: Future<Output = ()>,
@@ -877,12 +869,7 @@ mod tests {
             create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
         server
-            .open(
-                flags,
-                mode,
-                &mut iter::empty(),
-                ServerEnd::new(server_end.into_channel()),
-            )
+            .open(flags, mode, &mut iter::empty(), ServerEnd::new(server_end.into_channel()))
             .expect("open() failed");
 
         let client = get_client(client_proxy);
@@ -903,7 +890,8 @@ mod tests {
     }
 
     fn run_server_client_with_open_requests_channel_and_executor<GetClientRes>(
-        mut exec: fasync::Executor, mut server: impl PseudoFile,
+        mut exec: fasync::Executor,
+        mut server: impl PseudoFile,
         get_client: impl FnOnce(mpsc::Sender<(u32, u32, ServerEnd<FileMarker>)>) -> GetClientRes,
         executor: impl FnOnce(&mut FnMut() -> Poll<((), ())>),
     ) where
@@ -998,10 +986,7 @@ mod tests {
                 await!(open_sender.send((flags, 0, server_end))).unwrap();
                 assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
                     assert_eq!(s, ZX_OK);
-                    assert_eq!(
-                        info,
-                        Some(Box::new(NodeInfo::File(FileObject { event: None })))
-                    );
+                    assert_eq!(info, Some(Box::new(NodeInfo::File(FileObject { event: None }))));
                 });
             },
         );
@@ -1172,10 +1157,7 @@ mod tests {
                 await!(open_sender.send((flags, 0, server_end))).unwrap();
                 assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
                     assert_eq!(s, ZX_OK);
-                    assert_eq!(
-                        info,
-                        Some(Box::new(NodeInfo::File(FileObject { event: None })))
-                    );
+                    assert_eq!(info, Some(Box::new(NodeInfo::File(FileObject { event: None }))));
                 });
 
                 assert_read!(proxy, "Have value");
@@ -1238,10 +1220,7 @@ mod tests {
                 || Ok(b"Read handler may return more than capacity".to_vec()),
                 10,
                 |content| {
-                    assert_eq!(
-                        content,
-                        b"Write then could write beyond max capacity".to_vec()
-                    );
+                    assert_eq!(content, b"Write then could write beyond max capacity".to_vec());
                     Ok(())
                 },
             ),
@@ -1754,11 +1733,7 @@ mod tests {
     fn get_attr_read_write() {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            read_write(
-                || Ok(b"Content".to_vec()),
-                10,
-                |_content| panic!("No changes"),
-            ),
+            read_write(|| Ok(b"Content".to_vec()), 10, |_content| panic!("No changes")),
             async move |proxy| {
                 assert_get_attr!(
                     proxy,
@@ -1808,11 +1783,7 @@ mod tests {
     fn get_attr_write_only_attr() {
         run_server_client(
             OPEN_RIGHT_WRITABLE,
-            write_only_attr(
-                10,
-                |_content| panic!("No changes"),
-                S_IWOTH | S_IWGRP | S_IWUSR,
-            ),
+            write_only_attr(10, |_content| panic!("No changes"), S_IWOTH | S_IWGRP | S_IWUSR),
             async move |proxy| {
                 assert_get_attr!(
                     proxy,

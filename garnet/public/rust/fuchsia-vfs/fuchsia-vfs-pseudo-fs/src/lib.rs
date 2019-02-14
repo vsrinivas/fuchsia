@@ -7,7 +7,7 @@
 
 #![feature(async_await, await_macro, futures_api)]
 #![warn(missing_docs)]
-#![recursion_limit="128"]
+#![recursion_limit = "128"]
 
 #[cfg(test)]
 #[macro_use]

@@ -17,7 +17,9 @@ use {
 /// If `status` is `Status::OK`.  In this case `OnOpen` may need to contain a description of the
 /// object, and server_end should not be droppped.
 pub fn send_on_open_with_error(
-    flags: u32, server_end: ServerEnd<NodeMarker>, status: Status,
+    flags: u32,
+    server_end: ServerEnd<NodeMarker>,
+    status: Status,
 ) -> Result<(), fidl::Error> {
     if flags & OPEN_FLAG_DESCRIBE == 0 {
         return Ok(());

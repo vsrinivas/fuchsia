@@ -18,12 +18,7 @@ macro_rules! open_get_proxy {
             create_proxy::<$new_proxy_type>().expect("Failed to create connection endpoints");
 
         $proxy
-            .open(
-                $flags,
-                $mode,
-                $path,
-                ServerEnd::<NodeMarker>::new(new_server_end.into_channel()),
-            )
+            .open($flags, $mode, $path, ServerEnd::<NodeMarker>::new(new_server_end.into_channel()))
             .unwrap();
 
         new_proxy
@@ -59,10 +54,9 @@ macro_rules! assert_read_fidl_err {
         match await!($proxy.read(100)) {
             Err($expected_error) => (),
             Err(error) => panic!("read() returned unexpected error: {:?}", error),
-            Ok((status, content)) => panic!(
-                "Read succeeded: status: {:?}, content: '{:?}'",
-                status, content
-            ),
+            Ok((status, content)) => {
+                panic!("Read succeeded: status: {:?}, content: '{:?}'", status, content)
+            }
         }
     };
 }
@@ -116,10 +110,9 @@ macro_rules! assert_write_fidl_err {
         match await!($proxy.write(&mut $content.bytes())) {
             Err($expected_error) => (),
             Err(error) => panic!("write() returned unexpected error: {:?}", error),
-            Ok((status, actual)) => panic!(
-                "Write succeeded: status: {:?}, actual: '{:?}'",
-                status, actual
-            ),
+            Ok((status, actual)) => {
+                panic!("Write succeeded: status: {:?}, actual: '{:?}'", status, actual)
+            }
         }
     };
 }
@@ -275,20 +268,10 @@ macro_rules! open_get_proxy_assert {
 // See comment at the top of the file for why this is a macro.
 macro_rules! open_get_file_proxy_assert_ok {
     ($proxy:expr, $flags:expr, $path:expr) => {
-        open_get_proxy_assert!(
-            $proxy,
-            $flags,
-            $path,
-            FileMarker,
-            FileEvent::OnOpen_ { s, info },
-            {
-                assert_eq!(Status::from_raw(s), Status::OK);
-                assert_eq!(
-                    info,
-                    Some(Box::new(NodeInfo::File(FileObject { event: None }))),
-                );
-            }
-        )
+        open_get_proxy_assert!($proxy, $flags, $path, FileMarker, FileEvent::OnOpen_ { s, info }, {
+            assert_eq!(Status::from_raw(s), Status::OK);
+            assert_eq!(info, Some(Box::new(NodeInfo::File(FileObject { event: None }))),);
+        })
     };
 }
 
@@ -322,9 +305,7 @@ macro_rules! open_get_directory_proxy_assert_ok {
                 assert_eq!(Status::from_raw(s), Status::OK);
                 assert_eq!(
                     info,
-                    Some(Box::new(NodeInfo::Directory(DirectoryObject {
-                        reserved: 0
-                    }))),
+                    Some(Box::new(NodeInfo::Directory(DirectoryObject { reserved: 0 }))),
                 );
             }
         )
