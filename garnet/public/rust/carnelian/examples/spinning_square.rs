@@ -2,16 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(async_await, await_macro, futures_api)]
+
 use carnelian::{
     App, AppAssistant, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     ViewMessages, APP,
 };
-use failure::Error;
+use failure::{Error, ResultExt};
+use fidl::endpoints::{RequestStream, ServiceMarker};
+use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
 use fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba};
 use fuchsia_async::{self as fasync, Interval};
 use fuchsia_scenic::{Material, Rectangle, SessionPtr, ShapeNode};
 use fuchsia_zircon::{ClockId, Duration, Time};
-use futures::StreamExt;
+use futures::prelude::*;
 use parking_lot::Mutex;
 use std::{any::Any, cell::RefCell, f32::consts::PI};
 
@@ -30,6 +34,46 @@ impl AppAssistant for SpinningSquareAppAssistant {
             height: 0.0,
             start: Time::get(ClockId::Monotonic),
         }))))
+    }
+
+    /// Return the list of names of services this app wants to provide
+    fn outgoing_services_names(&self) -> Vec<&'static str> {
+        [EchoMarker::NAME].to_vec()
+    }
+
+    /// Handle a request to connect to a service provided by this app
+    fn handle_service_connection_request(
+        &mut self,
+        _service_name: &str,
+        channel: fasync::Channel,
+    ) -> Result<(), Error> {
+        Self::create_echo_server(channel, false);
+        Ok(())
+    }
+}
+
+impl SpinningSquareAppAssistant {
+    fn create_echo_server(channel: fasync::Channel, quiet: bool) {
+        fasync::spawn(
+            async move {
+                let mut stream = EchoRequestStream::from_channel(channel);
+                while let Some(EchoRequest::EchoString { value, responder }) =
+                    await!(stream.try_next()).context("error running echo server")?
+                {
+                    if !quiet {
+                        println!("Spinning Square received echo request for string {:?}", value);
+                    }
+                    responder
+                        .send(value.as_ref().map(|s| &**s))
+                        .context("error sending response")?;
+                    if !quiet {
+                        println!("echo response sent successfully");
+                    }
+                }
+                Ok(())
+            }
+                .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
+        );
     }
 }
 

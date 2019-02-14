@@ -1,7 +1,6 @@
 # Introduction
 
-Carnelian is a prototype framework for writing Fuchsia modules in Rust. It is primarily
-intended to be used as the basis of the Ermine session shell.
+Carnelian is a prototype framework for writing Fuchsia modules in Rust.
 
 # Tentative Roadmap
 
@@ -22,11 +21,6 @@ Design and implement a way to render text with RustType and display it with scen
 
 Implement the basics of flex box layout, similar to the way it is done in
 [Druid](https://docs.rs/druid/0.1.1/druid/).
-
-## Single-line text editor
-
-Design and implement a single-line text editor in Rust so that Ermine does not have to
-launch a Flutter mod for inputs to use to generate suggestions.
 
 # Future Areas
 

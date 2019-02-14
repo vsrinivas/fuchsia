@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::view::{NewViewParams, ViewAssistantPtr, ViewController, ViewControllerPtr, ViewKey};
-use failure::{Error, ResultExt};
+use failure::{bail, Error, ResultExt};
 use fidl::endpoints::{RequestStream, ServerEnd, ServiceMarker};
 use fidl_fuchsia_ui_app as viewsv2;
 use fidl_fuchsia_ui_viewsv1::{
@@ -32,6 +32,20 @@ pub trait AppAssistant: Send {
 
     /// Called when the Fuchsia view system requests that a view be created.
     fn create_view_assistant(&mut self, session: &SessionPtr) -> Result<ViewAssistantPtr, Error>;
+
+    /// Return the list of names of services this app wants to provide
+    fn outgoing_services_names(&self) -> Vec<&'static str> {
+        Vec::new()
+    }
+
+    /// Handle a request to connect to a service provided by this app
+    fn handle_service_connection_request(
+        &mut self,
+        _service_name: &str,
+        _channel: fasync::Channel,
+    ) -> Result<(), Error> {
+        bail!("handle_service_connection_request not implemented")
+    }
 }
 
 pub type AppAssistantPtr = Mutex<Box<dyn AppAssistant>>;
@@ -151,17 +165,37 @@ impl App {
         )
     }
 
+    fn pass_connection_to_assistant(channel: fasync::Channel, service_name: &'static str, app: &AppPtr) {
+        app.lock()
+            .assistant
+            .as_ref()
+            .unwrap()
+            .lock()
+            .handle_service_connection_request(service_name, channel)
+            .unwrap_or_else(|e| eprintln!("error running {} server: {:?}", service_name, e));
+    }
+
     fn start_services(app: &AppPtr) -> Result<FdioServer, Error> {
+        let outgoing_services_names =
+            app.lock().assistant.as_ref().unwrap().lock().outgoing_services_names();
         let app_view_provider = app.clone();
         let app_view_provider2 = app.clone();
         let services_server = component::server::ServicesServer::new();
-        let services_server = services_server
+        let mut services_server = services_server
             .add_service((ViewProviderMarker::NAME, move |channel| {
                 Self::spawn_view_provider_server(channel, &app_view_provider);
             }))
             .add_service((viewsv2::ViewProviderMarker::NAME, move |channel| {
                 Self::spawn_v2_view_provider_server(channel, &app_view_provider2);
             }));
+
+        for name in outgoing_services_names {
+            let app_server = app.clone();
+            services_server = services_server.add_service((name, move |channel| {
+                Self::pass_connection_to_assistant(channel, name, &app_server);
+            }));
+        }
+
         Ok(services_server.start()?)
     }
 }
