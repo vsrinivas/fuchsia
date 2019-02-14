@@ -51,10 +51,11 @@ func (e *endpoint) WritePacket(r *stack.Route, hdr buffer.Prependable, payload b
 
 	trace.DebugTrace("eth write")
 
-	// Call AllocForSend until it succeeds.  After each failure, call
-	// WaitSend.
-	buf := e.client.AllocForSend()
-	for ; buf == nil; buf = e.client.AllocForSend() {
+	var buf Buffer
+	for {
+		if buf = e.client.AllocForSend(); buf != nil {
+			break
+		}
 		if err := e.client.WaitSend(); err != nil {
 			trace.DebugDrop("link: alloc error: %v", err)
 			return tcpip.ErrWouldBlock
