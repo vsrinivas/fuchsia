@@ -12,9 +12,12 @@ MODULE_TYPE := userlib
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/framebuffer.c
+    $(LOCAL_DIR)/framebuffer.cpp
 
-MODULE_STATIC_LIBS := system/ulib/fidl
+MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
+    system/ulib/fidl \
+    system/ulib/zx \
 
 MODULE_LIBS := system/ulib/zircon system/ulib/fdio system/ulib/c
 

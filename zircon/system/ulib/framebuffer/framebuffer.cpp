@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <errno.h>
 #include <string.h>
+#include <unistd.h>
 
+#include <fbl/auto_call.h>
 #include <lib/fidl/coding.h>
+#include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 #include <zircon/device/display-controller.h>
 #include <zircon/pixelformat.h>
@@ -24,8 +26,8 @@ static int32_t dc_fd = -1;
 static zx_handle_t dc_handle = ZX_HANDLE_INVALID;
 
 static int32_t txid;
-static int32_t display_id;
-static int32_t layer_id;
+static uint64_t display_id;
+static uint64_t layer_id;
 
 static int32_t width;
 static int32_t height;
@@ -39,7 +41,7 @@ static zx_handle_t vmo = ZX_HANDLE_INVALID;
 static bool inited = false;
 static bool in_single_buffer_mode;
 
-static zx_status_t set_layer_config(int32_t layer_id, uint32_t width, uint32_t height,
+static zx_status_t set_layer_config(uint64_t layer_id, uint32_t width, uint32_t height,
                                     zx_pixel_format_t format, int32_t type) {
     fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequest layer_cfg_msg = {};
     layer_cfg_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryConfigOrdinal;
@@ -69,15 +71,21 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
     dc_fd = open("/dev/class/display-controller/000", O_RDWR);
     if (dc_fd < 0) {
         *err_msg_out = "Failed to open display controller";
-        status = ZX_ERR_NO_RESOURCES;
-        goto err;
+        return ZX_ERR_NO_RESOURCES;
     }
+    fbl::AutoCall close_dc_fd([]() {
+        close(dc_fd);
+        dc_fd = -1;
+    });
 
     if (ioctl_display_controller_get_handle(dc_fd, &dc_handle) != sizeof(zx_handle_t)) {
         *err_msg_out = "Failed to get display controller handle";
-        status = ZX_ERR_INTERNAL;
-        goto err;
+        return ZX_ERR_INTERNAL;
     }
+    fbl::AutoCall close_dc_handle([]() {
+        zx_handle_close(dc_handle);
+        dc_handle = ZX_HANDLE_INVALID;
+    });
 
     uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     uint32_t actual_bytes, actual_handles;
@@ -88,26 +96,25 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
         if ((status = zx_object_wait_one(dc_handle,
                                          signals, ZX_TIME_INFINITE, &observed)) != ZX_OK) {
             *err_msg_out = "Failed waiting for display";
-            goto err;
+            return status;
         }
         if (observed & ZX_CHANNEL_PEER_CLOSED) {
             *err_msg_out = "Display controller connection closed";
-            status = ZX_ERR_PEER_CLOSED;
-            goto err;
+            return ZX_ERR_PEER_CLOSED;
         }
 
         if ((status = zx_channel_read(dc_handle, 0, bytes, NULL, ZX_CHANNEL_MAX_MSG_BYTES, 0,
-                                      &actual_bytes, &actual_handles)) != ZX_OK
-                || actual_bytes < sizeof(fidl_message_header_t)) {
+                                      &actual_bytes, &actual_handles)) != ZX_OK ||
+            actual_bytes < sizeof(fidl_message_header_t)) {
             *err_msg_out = "Reading display addded callback failed";
-            goto err;
+            return status;
         }
 
-        fidl_message_header_t* hdr = (fidl_message_header_t*) bytes;
+        fidl_message_header_t* hdr = (fidl_message_header_t*)bytes;
         if (hdr->ordinal == fuchsia_hardware_display_ControllerDisplaysChangedOrdinal) {
             if ((status = fidl_decode(&fuchsia_hardware_display_ControllerDisplaysChangedEventTable,
                                       bytes, actual_bytes, NULL, 0, err_msg_out)) != ZX_OK) {
-                goto err;
+                return status;
             }
             has_display = true;
         }
@@ -136,7 +143,7 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
     if ((status = zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &stride_call,
                                   &actual_bytes, &actual_handles)) != ZX_OK) {
         *err_msg_out = "Failed to get linear stride";
-        goto err;
+        return status;
     }
 
     fuchsia_hardware_display_ControllerCreateLayerRequest create_layer_msg;
@@ -151,12 +158,12 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
     if ((status = zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &call_args,
                                   &actual_bytes, &actual_handles)) != ZX_OK) {
         *err_msg_out = "Create layer call failed";
-        goto err;
+        return status;
     }
     if (create_layer_rsp.res != ZX_OK) {
         *err_msg_out = "Failed to create layer";
         status = create_layer_rsp.res;
-        goto err;
+        return status;
     }
 
     uint8_t fidl_bytes[sizeof(fuchsia_hardware_display_ControllerSetDisplayLayersRequest) +
@@ -170,19 +177,19 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
         fuchsia_hardware_display_ControllerSetDisplayLayersOrdinal;
     set_display_layer_request->display_id = display->id;
     set_display_layer_request->layer_ids.count = 1;
-    set_display_layer_request->layer_ids.data = (void*) FIDL_ALLOC_PRESENT;
+    set_display_layer_request->layer_ids.data = (void*)FIDL_ALLOC_PRESENT;
 
     if ((status = zx_channel_write(dc_handle, 0, fidl_bytes,
                                    sizeof(fidl_bytes), NULL, 0)) != ZX_OK) {
         *err_msg_out = "Failed to set display layers";
-        goto err;
+        return status;
     }
 
     if ((status = set_layer_config(create_layer_rsp.layer_id, mode->horizontal_resolution,
                                    mode->vertical_resolution, pixel_format,
                                    IMAGE_TYPE_SIMPLE)) != ZX_OK) {
         *err_msg_out = "Failed to set layer config";
-        goto err;
+        return status;
     }
 
     display_id = display->id;
@@ -197,6 +204,12 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
 
     inited = true;
 
+    fbl::AutoCall clear_inited([]() {
+        inited = false;
+    });
+
+    zx::vmo local_vmo;
+
     if (single_buffer) {
         uint32_t size = stride * height * ZX_PIXEL_FORMAT_BYTES(format);
         fuchsia_hardware_display_ControllerAllocateVmoRequest alloc_msg;
@@ -208,7 +221,7 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
         zx_channel_call_args_t call_args = {};
         call_args.wr_bytes = &alloc_msg;
         call_args.rd_bytes = &alloc_rsp;
-        call_args.rd_handles = &vmo;
+        call_args.rd_handles = local_vmo.reset_and_get_address();
         call_args.wr_num_bytes = sizeof(alloc_msg);
         call_args.rd_num_bytes = sizeof(alloc_rsp);
         call_args.rd_num_handles = 1;
@@ -216,21 +229,21 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
         if ((status = zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &call_args,
                                       &actual_bytes, &actual_handles)) != ZX_OK) {
             *err_msg_out = "Failed vmo alloc call";
-            goto err;
+            return status;
         }
         if (alloc_rsp.res != ZX_OK) {
             status = alloc_rsp.res;
             *err_msg_out = "Failed to alloc vmo";
-            goto err;
+            return status;
         }
 
         // Failure to set the cache policy isn't a fatal error
-        zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_WRITE_COMBINING);
+        zx_vmo_set_cache_policy(local_vmo.get(), ZX_CACHE_POLICY_WRITE_COMBINING);
 
         zx_handle_t dup;
-        if ((status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
-            *err_msg_out = "Couldn't duplicate vmo\n";;
-            goto err;
+        if ((status = zx_handle_duplicate(local_vmo.get(), ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
+            *err_msg_out = "Couldn't duplicate vmo\n";
+            return status;
         }
 
         // fb_(present|import)_image expect to not be in single buffer
@@ -240,33 +253,23 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
         uint64_t image_id;
         if ((status = fb_import_image(dup, 0, &image_id)) != ZX_OK) {
             *err_msg_out = "Couldn't import framebuffer";
-            goto err;
+            return status;
         }
 
         if ((status = fb_present_image(image_id, INVALID_ID, INVALID_ID, INVALID_ID)) != ZX_OK) {
             *err_msg_out = "Failed to present single_buffer mode framebuffer";
-            goto err;
+            return status;
         }
     }
 
     in_single_buffer_mode = single_buffer;
 
+    clear_inited.cancel();
+    vmo = local_vmo.release();
+    close_dc_fd.cancel();
+    close_dc_handle.cancel();
+
     return ZX_OK;
-err:
-    inited = false;
-
-    zx_handle_close(dc_handle);
-    dc_handle = ZX_HANDLE_INVALID;
-
-    if (dc_fd >= 0) {
-        close(dc_fd);
-        dc_fd = -1;
-    }
-
-    zx_handle_close(vmo);
-    vmo = ZX_HANDLE_INVALID;
-
-    return status;
 }
 
 void fb_release() {
@@ -303,7 +306,7 @@ zx_handle_t fb_get_single_buffer() {
     return vmo;
 }
 
-zx_status_t fb_import_image(zx_handle_t handle, uint32_t type, uint64_t *id_out) {
+zx_status_t fb_import_image(zx_handle_t handle, uint32_t type, uint64_t* id_out) {
     ZX_ASSERT(inited && !in_single_buffer_mode);
     zx_status_t status;
 
@@ -479,7 +482,7 @@ zx_status_t fb_wait_for_vsync(zx_time_t* timestamp, uint64_t* image_id) {
         return ZX_ERR_INTERNAL;
     }
 
-    fidl_message_header_t* header = (fidl_message_header_t*) bytes;
+    fidl_message_header_t* header = (fidl_message_header_t*)bytes;
 
     switch (header->ordinal) {
     case fuchsia_hardware_display_ControllerDisplaysChangedOrdinal:
