@@ -292,6 +292,7 @@ static zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t 
     TRACE_DURATION("brcmfmac:isr", "sdiod_transfer",
                    "func", TA_UINT32((uint32_t)func),
                    "type", TA_STRING(write ? "write" : "read"),
+                   "addr", TA_UINT32(addr),
                    "size", TA_UINT64((uint64_t)size));
 
     txn.addr = addr;
