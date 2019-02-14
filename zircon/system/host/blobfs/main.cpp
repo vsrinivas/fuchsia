@@ -151,6 +151,7 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
 
                 if ((res = blobfs::blobfs_preprocess(data_fd.get(), ShouldCompress(), &info))
                     != ZX_OK) {
+                    mtx.lock();
                     status = res;
                     mtx.unlock();
                     return;
