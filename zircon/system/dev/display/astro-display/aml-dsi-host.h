@@ -5,7 +5,11 @@
 #pragma once
 
 #include <ddk/protocol/platform/device.h>
+#include <ddk/protocol/dsiimpl.h>
+
+#include <ddktl/protocol/dsiimpl.h>
 #include <ddktl/device.h>
+
 #include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
 #include <optional>
@@ -30,32 +34,34 @@ public:
     // given the highly configurable nature of this block, we'd have to provide a lot of
     // information to the generic driver. Therefore, it's just simpler to configure it here
     zx_status_t Init();
-    zx_status_t HostOn(const DisplaySetting& disp_setting);
+    zx_status_t HostOn(const display_setting_t& disp_setting);
     // This function will turn off DSI Host. It is a "best-effort" function. We will attempt
     // to shutdown whatever we can. Error during shutdown path is ignored and function proceeds
     // with shutting down.
-    void HostOff(const DisplaySetting& disp_setting);
+    void HostOff(const display_setting_t& disp_setting);
     void Dump();
 private:
     void PhyEnable();
     void PhyDisable();
-    zx_status_t HostModeInit(uint32_t opp, const DisplaySetting& disp_setting);
+    zx_status_t HostModeInit(const display_setting_t& disp_setting);
 
-    std::optional<ddk::MmioBuffer>              mipi_dsi_mmio_;
-    std::optional<ddk::MmioBuffer>              hhi_mmio_;
+    std::optional<ddk::MmioBuffer> mipi_dsi_mmio_;
+    std::optional<ddk::MmioBuffer> hhi_mmio_;
 
-    pdev_protocol_t                  pdev_ = {};
+    pdev_protocol_t pdev_ = {};
 
-    zx_device_t*                                parent_;
+    ddk::DsiImplProtocolClient dsiimpl_;
 
-    uint32_t                                    bitrate_;
-    uint8_t                                     panel_type_;
+    zx_device_t* parent_;
 
-    bool                                        initialized_ = false;
-    bool                                        host_on_ = false;
+    uint32_t bitrate_;
+    uint8_t panel_type_;
 
-    fbl::unique_ptr<Lcd>         lcd_;
-    fbl::unique_ptr<AmlMipiPhy>  phy_;
+    bool initialized_ = false;
+    bool host_on_ = false;
+
+    fbl::unique_ptr<Lcd> lcd_;
+    fbl::unique_ptr<AmlMipiPhy> phy_;
 
 };
 

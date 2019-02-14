@@ -7,6 +7,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
+#include <ddk/protocol/dsiimpl.h>
 #include <ddktl/device.h>
 #include <lib/mmio/mmio.h>
 #include <hwreg/mmio.h>
@@ -26,7 +27,7 @@ class AstroDisplayClock {
 public:
     AstroDisplayClock() {}
     zx_status_t Init(zx_device_t* parent);
-    zx_status_t Enable(const DisplaySetting& d);
+    zx_status_t Enable(const display_setting_t& d);
     void Disable();
     void Dump();
 
@@ -35,7 +36,7 @@ public:
     }
 
 private:
-    void CalculateLcdTiming(const DisplaySetting& disp_setting);
+    void CalculateLcdTiming(const display_setting_t& disp_setting);
 
     // This function wait for hdmi_pll to lock. The retry algorithm is
     // undocumented and comes from U-Boot.
@@ -43,17 +44,17 @@ private:
 
     // This function calculates the required pll configurations needed to generate
     // the desired lcd clock
-    zx_status_t GenerateHPLL(const DisplaySetting& disp_setting);
+    zx_status_t GenerateHPLL(const display_setting_t& disp_setting);
 
-    std::optional<ddk::MmioBuffer>          vpu_mmio_;
-    std::optional<ddk::MmioBuffer>          hhi_mmio_;
-    pdev_protocol_t              pdev_ = {nullptr, nullptr};
+    std::optional<ddk::MmioBuffer> vpu_mmio_;
+    std::optional<ddk::MmioBuffer> hhi_mmio_;
+    pdev_protocol_t pdev_ = {nullptr, nullptr};
 
-    PllConfig                               pll_cfg_;
-    LcdTiming                               lcd_timing_;
+    PllConfig pll_cfg_;
+    LcdTiming lcd_timing_;
 
-    bool                                    initialized_ = false;
-    bool                                    clock_enabled_ = false;
+    bool initialized_ = false;
+    bool clock_enabled_ = false;
 };
 
 } // namespace astro_display

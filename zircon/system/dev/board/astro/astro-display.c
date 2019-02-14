@@ -6,7 +6,8 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-
+#include <ddk/metadata.h>
+#include <ddk/metadata/display.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
@@ -21,9 +22,9 @@ static const pbus_mmio_t display_mmios[] = {
         .length = S905D2_VPU_LENGTH,
     },
     {
-        // DSI Host Controller
-        .base = S905D2_MIPI_DSI_BASE,
-        .length = S905D2_MIPI_DSI_LENGTH,
+        // TOP DSI Host Controller (Amlogic Specific)
+        .base = S905D2_MIPI_TOP_DSI_BASE,
+        .length = S905D2_MIPI_TOP_DSI_LENGTH,
     },
     {
         // DSI PHY
@@ -73,6 +74,22 @@ static const pbus_gpio_t display_gpios[] = {
     },
 };
 
+static const display_driver_t display_driver_info[] = {
+    {
+        .vid = PDEV_VID_AMLOGIC,
+        .pid = PDEV_PID_AMLOGIC_S905D2,
+        .did = PDEV_DID_AMLOGIC_DISPLAY,
+    },
+};
+
+static const pbus_metadata_t display_metadata[] = {
+    {
+        .type = DEVICE_METADATA_PRIVATE,
+        .data_buffer = &display_driver_info,
+        .data_size = sizeof(display_driver_t),
+    },
+};
+
 static const pbus_bti_t display_btis[] = {
     {
         .iommu_index = 0,
@@ -92,27 +109,47 @@ static const uint32_t display_protocols[] = {
     ZX_PROTOCOL_AMLOGIC_CANVAS,
 };
 
-static pbus_dev_t display_dev = {
-    .name = "display",
-    .vid = PDEV_VID_AMLOGIC,
-    .pid = PDEV_PID_AMLOGIC_S905D2,
-    .did = PDEV_DID_AMLOGIC_DISPLAY,
-    .mmio_list = display_mmios,
-    .mmio_count = countof(display_mmios),
-    .irq_list = display_irqs,
-    .irq_count = countof(display_irqs),
-    .gpio_list = display_gpios,
-    .gpio_count = countof(display_gpios),
-    .i2c_channel_list = display_i2c_channels,
-    .i2c_channel_count = countof(display_i2c_channels),
-    .bti_list = display_btis,
-    .bti_count = countof(display_btis),
+static const pbus_mmio_t dsi_mmios[] = {
+    {
+        // DSI Host Controller
+        .base = S905D2_MIPI_DSI_BASE,
+        .length = S905D2_MIPI_DSI_LENGTH,
+    },
+};
+
+static pbus_dev_t display_dev[] = {
+    {
+        .name = "display",
+        .mmio_list = display_mmios,
+        .mmio_count = countof(display_mmios),
+        .irq_list = display_irqs,
+        .irq_count = countof(display_irqs),
+        .gpio_list = display_gpios,
+        .gpio_count = countof(display_gpios),
+        .i2c_channel_list = display_i2c_channels,
+        .i2c_channel_count = countof(display_i2c_channels),
+        .bti_list = display_btis,
+        .bti_count = countof(display_btis),
+    },
+};
+
+static pbus_dev_t dsi_dev = {
+    .name = "dw-dsi",
+    .vid = PDEV_VID_GENERIC,
+    .pid = PDEV_PID_GENERIC,
+    .did = PDEV_DID_DW_DSI,
+    .metadata_list = display_metadata,
+    .metadata_count = countof(display_metadata),
+    .mmio_list = dsi_mmios,
+    .mmio_count =countof(dsi_mmios),
+    .child_list = display_dev,
+    .child_count = countof(display_dev),
     .protocol_list = display_protocols,
     .protocol_count = countof(display_protocols),
 };
 
 zx_status_t aml_display_init(aml_bus_t* bus) {
-    zx_status_t status = pbus_device_add(&bus->pbus, &display_dev);
+    zx_status_t status = pbus_device_add(&bus->pbus, &dsi_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Could not add display dev: %d\n", __FUNCTION__, status);
         return status;

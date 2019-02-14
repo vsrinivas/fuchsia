@@ -7,6 +7,7 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <lib/mipi-dsi/mipi-dsi.h>
+#include "common.h"
 
 #define DELAY_CMD           (0xFF)
 #define DCS_CMD             (0xFE)
@@ -1136,12 +1137,12 @@ zx_status_t Lcd::GetDisplayId() {
     uint8_t rsp[READ_DISPLAY_ID_LEN];
     zx_status_t status = ZX_OK;
     // Create the command using mipi-dsi library
-    mipi_dsi::MipiDsiCmd cmd;
+    mipi_dsi_cmd_t cmd;
     status = mipi_dsi::MipiDsi::CreateCommand(&txcmd, 1,
                                      rsp, READ_DISPLAY_ID_LEN,
                                      COMMAND_GEN, &cmd);
     if (status == ZX_OK) {
-        if ((status = dsi_->SendCmd(cmd)) != ZX_OK) {
+        if ((status = dsiimpl_.SendCmd(&cmd, 1)) != ZX_OK) {
             DISP_ERROR("Could not read out Display ID\n");
             return status;
         }
@@ -1171,12 +1172,12 @@ zx_status_t Lcd::LoadInitTable(const uint8_t* buffer, size_t size) {
         case GEN_CMD:
         default:
             // Create the command using mipi-dsi library
-            mipi_dsi::MipiDsiCmd cmd;
+            mipi_dsi_cmd_t cmd;
             status = mipi_dsi::MipiDsi::CreateCommand(&buffer[i+2], buffer[i+1],
                                               NULL, 0,
                                               isDCS, &cmd);
             if (status == ZX_OK) {
-                if ((status = dsi_->SendCmd(cmd)) != ZX_OK) {
+                if ((status = dsiimpl_.SendCmd(&cmd, 1)) != ZX_OK) {
                     DISP_ERROR("Error loading LCD init table. Aborting %d\n", status);
                     return status;
                 }
@@ -1259,24 +1260,13 @@ zx_status_t Lcd::Init(zx_device_t* parent) {
         return status;
     }
 
+    dsiimpl_ = parent;
+
     // Obtain GPIO protocol
     size_t actual;
     status = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, GPIO_LCD, &gpio_, sizeof(gpio_), &actual);
     if (status != ZX_OK) {
         DISP_ERROR("Could not obtain GPIO protocol\n");
-        return status;
-    }
-
-    // Create a DW MIPI DSI object to use for sending dsi commands
-    fbl::AllocChecker ac;
-    dsi_ = fbl::make_unique_checked<astro_display::DwMipiDsi>(&ac);
-    if (!ac.check()) {
-        DISP_ERROR("Lcd: Could not create MIPI DSI object\n");
-        return ZX_ERR_NO_MEMORY;
-    }
-    status = dsi_->Init(parent);
-    if (status != ZX_OK) {
-        DISP_ERROR("Lcd: MIPI DSI initialization failed\n");
         return status;
     }
 

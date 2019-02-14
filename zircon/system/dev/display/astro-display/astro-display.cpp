@@ -17,7 +17,7 @@ constexpr uint64_t kDisplayId = PANEL_DISPLAY_ID;
 
 // Astro/Sherlock Display Configuration. These configuration comes directly from
 // from LCD vendor and hardware team.
-constexpr DisplaySetting kDisplaySettingTV070WSM_FT = {
+constexpr display_setting_t kDisplaySettingTV070WSM_FT = {
     .lane_num                   = 4,
     .bit_rate_max               = 360,
     .clock_factor               = 8,
@@ -33,7 +33,7 @@ constexpr DisplaySetting kDisplaySettingTV070WSM_FT = {
     .vsync_bp                   = 8,
     .vsync_pol                  = 0,
 };
-constexpr DisplaySetting kDisplaySettingP070ACB_FT = {
+constexpr display_setting_t kDisplaySettingP070ACB_FT = {
     .lane_num                   = 4,
     .bit_rate_max               = 400,
     .clock_factor               = 8,
@@ -49,7 +49,7 @@ constexpr DisplaySetting kDisplaySettingP070ACB_FT = {
     .vsync_bp                   = 20,
     .vsync_pol                  = 0,
 };
-constexpr DisplaySetting kDisplaySettingG101B158_FT = {
+constexpr display_setting_t kDisplaySettingG101B158_FT = {
     .lane_num                   = 4,
     .bit_rate_max               = 566,
     .clock_factor               = 8,
@@ -65,7 +65,7 @@ constexpr DisplaySetting kDisplaySettingG101B158_FT = {
     .vsync_bp                   = 20,
     .vsync_pol                  = 0,
 };
-constexpr DisplaySetting kDisplaySettingTV101WXM_FT = {
+constexpr display_setting_t kDisplaySettingTV101WXM_FT = {
     .lane_num                   = 4,
     .bit_rate_max               = 566,
     .clock_factor               = 8,
@@ -538,6 +538,12 @@ zx_status_t AstroDisplay::Bind() {
         return status;
     }
 
+    // Make sure DSI IMPL is valid
+    if (!dsiimpl_.is_valid()) {
+        DISP_ERROR("DSI Protocol Not implemented\n");
+        return ZX_ERR_NO_RESOURCES;
+    }
+
     // Get board info
     status = pdev_get_board_info(&pdev_, &board_info_);
     if (status != ZX_OK) {
@@ -566,15 +572,21 @@ zx_status_t AstroDisplay::Bind() {
         return status;
     }
 
-    status = device_get_protocol(parent_, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
+    status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_SYSMEM, 0,
+                               &sysmem_,
+                               sizeof(sysmem_),
+                               &actual);
     if (status != ZX_OK) {
-        DISP_ERROR("Could not obtain CANVAS protocol\n");
+        DISP_ERROR("Could not get Display SYSMEM protocol\n");
         return status;
     }
 
-    status = device_get_protocol(parent_, ZX_PROTOCOL_SYSMEM, &sysmem_);
+    status = pdev_get_protocol(&pdev_, ZX_PROTOCOL_AMLOGIC_CANVAS, 0,
+                               &canvas_,
+                               sizeof(canvas_),
+                               &actual);
     if (status != ZX_OK) {
-        DISP_ERROR("Could not get Display SYSMEM protocol\n");
+        DISP_ERROR("Could not obtain CANVAS protocol\n");
         return status;
     }
 
@@ -654,12 +666,10 @@ void AstroDisplay::Dump() {
 // main bind function called from dev manager
 zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
-    auto dev = fbl::make_unique_checked<astro_display::AstroDisplay>(&ac,
-        parent);
+    auto dev = fbl::make_unique_checked<astro_display::AstroDisplay>(&ac, parent);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-
     auto status = dev->Bind();
     if (status == ZX_OK) {
         // devmgr is now in charge of the memory for dev
@@ -677,9 +687,7 @@ static zx_driver_ops_t astro_display_ops = [](){
 
 } // namespace astro_display
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(astro_display, astro_display::astro_display_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+ZIRCON_DRIVER_BEGIN(astro_display, astro_display::astro_display_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_DISPLAY),

@@ -7,26 +7,13 @@
 
 namespace astro_display {
 
-#define READ32_MIPI_DSI_REG(a)              mipi_dsi_mmio_->Read32(a)
-#define WRITE32_MIPI_DSI_REG(a, v)          mipi_dsi_mmio_->Write32(v, a)
+#define READ32_MIPI_DSI_REG(a) mipi_dsi_mmio_->Read32(a)
+#define WRITE32_MIPI_DSI_REG(a, v) mipi_dsi_mmio_->Write32(v, a)
 
-#define READ32_HHI_REG(a)                   hhi_mmio_->Read32(a)
-#define WRITE32_HHI_REG(a, v)               hhi_mmio_->Write32(v, a)
+#define READ32_HHI_REG(a) hhi_mmio_->Read32(a)
+#define WRITE32_HHI_REG(a, v) hhi_mmio_->Write32(v, a)
 
-zx_status_t AmlDsiHost::HostModeInit(uint32_t opp, const DisplaySetting& disp_setting) {
-    uint32_t lane_num = disp_setting.lane_num;
-
-    // DesignWare DSI Host Setup based on MIPI DSI Host Controller User Guide (Sec 3.1.1)
-
-    // 1. Global configuration: Lane number and PHY stop wait time
-    WRITE32_REG(MIPI_DSI, DW_DSI_PHY_IF_CFG, PHY_IF_CFG_STOP_WAIT_TIME |
-                PHY_IF_CFG_N_LANES(lane_num));
-
-    // 2.1 Configure virtual channel
-    WRITE32_REG(MIPI_DSI, DW_DSI_DPI_VCID, MIPI_DSI_VIRTUAL_CHAN_ID);
-
-    // 2.2, Configure Color format
-    WRITE32_REG(MIPI_DSI, DW_DSI_DPI_COLOR_CODING, DPI_COLOR_CODING(SUPPORTED_DPI_FORMAT));
+zx_status_t AmlDsiHost::HostModeInit(const display_setting_t& disp_setting) {
 
     // Setup relevant TOP_CNTL register -- Undocumented --
     SET_BIT32(MIPI_DSI, MIPI_DSI_TOP_CNTL, SUPPORTED_DPI_FORMAT,
@@ -36,51 +23,23 @@ zx_status_t AmlDsiHost::HostModeInit(uint32_t opp, const DisplaySetting& disp_se
     SET_BIT32(MIPI_DSI, MIPI_DSI_TOP_CNTL, 0,
         TOP_CNTL_CHROMA_SUBSAMPLE_START, TOP_CNTL_CHROMA_SUBSAMPLE_BITS);
 
-    // 2.3 Configure Signal polarity - Keep as default
-    WRITE32_REG(MIPI_DSI, DW_DSI_DPI_CFG_POL, 0);
+    // setup dsi config
+    dsi_config_t dsi_cfg;
+    dsi_cfg.display_setting = disp_setting;
+    dsi_cfg.video_mode_type = SUPPORTED_VIDEO_MODE_TYPE;
+    dsi_cfg.color_coding = SUPPORTED_DPI_FORMAT;
 
-    if (opp == VIDEO_MODE) {
-        // 3.1 Configure low power transitions and video mode type
-        WRITE32_REG(MIPI_DSI, DW_DSI_VID_MODE_CFG,VID_MODE_CFG_LP_EN_ALL |
-                    (VID_MODE_CFG_VID_MODE_TYPE(SUPPORTED_VIDEO_MODE_TYPE)));
+    designware_config_t dw_cfg;
+    dw_cfg.lp_escape_time = phy_->GetLowPowerEscaseTime();
+    dw_cfg.lp_cmd_pkt_size = LPCMD_PKT_SIZE;
+    dw_cfg.phy_timer_clkhs_to_lp = PHY_TMR_LPCLK_CLKHS_TO_LP;
+    dw_cfg.phy_timer_clklp_to_hs = PHY_TMR_LPCLK_CLKLP_TO_HS;
+    dw_cfg.phy_timer_hs_to_lp = PHY_TMR_HS_TO_LP;
+    dw_cfg.phy_timer_lp_to_hs = PHY_TMR_LP_TO_HS;
 
-        // Define the max pkt size during Low Power mode
-        WRITE32_REG(MIPI_DSI, DW_DSI_DPI_LP_CMD_TIM, LP_CMD_TIM_OUTVACT(LPCMD_PKT_SIZE) |
-                    LP_CMD_TIM_INVACT(LPCMD_PKT_SIZE));
+    dsi_cfg.vendor_config_buffer = &dw_cfg;
 
-        // 3.2   Configure video packet size settings
-        WRITE32_REG(MIPI_DSI, DW_DSI_VID_PKT_SIZE, disp_setting.h_active);
-        // Disable sending vid in chunk since they are ignored by DW host IP in burst mode
-        WRITE32_REG(MIPI_DSI, DW_DSI_VID_NUM_CHUNKS, 0);
-        WRITE32_REG(MIPI_DSI, DW_DSI_VID_NULL_SIZE, 0);
-
-        // 4 Configure the video relative parameters according to the output type
-        WRITE32_REG(MIPI_DSI, DW_DSI_VID_HLINE_TIME, disp_setting.h_period);
-        WRITE32_REG(MIPI_DSI, DW_DSI_VID_HSA_TIME, disp_setting.hsync_width);
-        WRITE32_REG(MIPI_DSI, DW_DSI_VID_HBP_TIME, disp_setting.hsync_bp);
-        WRITE32_REG(MIPI_DSI, DW_DSI_VID_VSA_LINES, disp_setting.vsync_width);
-        WRITE32_REG(MIPI_DSI, DW_DSI_VID_VBP_LINES, disp_setting.vsync_bp);
-        WRITE32_REG(MIPI_DSI, DW_DSI_VID_VACTIVE_LINES, disp_setting.v_active);
-        WRITE32_REG(MIPI_DSI, DW_DSI_VID_VFP_LINES, (disp_setting.v_period -
-                    disp_setting.v_active - disp_setting.vsync_bp -
-                    disp_setting.vsync_width));
-    }
-
-    // Internal dividers to divide lanebyteclk for timeout purposes
-    WRITE32_REG(MIPI_DSI, DW_DSI_CLKMGR_CFG,
-                (CLKMGR_CFG_TO_CLK_DIV(1)) |
-                (CLKMGR_CFG_TX_ESC_CLK_DIV(phy_->GetLowPowerEscaseTime())));
-
-    // Configure the operation mode (cmd or vid)
-    WRITE32_REG(MIPI_DSI, DW_DSI_MODE_CFG, opp);
-
-    // Setup Phy Timers as provided by vendor
-    WRITE32_REG(MIPI_DSI, DW_DSI_PHY_TMR_LPCLK_CFG,
-                PHY_TMR_LPCLK_CFG_CLKHS_TO_LP(PHY_TMR_LPCLK_CLKHS_TO_LP) |
-                PHY_TMR_LPCLK_CFG_CLKLP_TO_HS(PHY_TMR_LPCLK_CLKLP_TO_HS));
-    WRITE32_REG(MIPI_DSI, DW_DSI_PHY_TMR_CFG,
-                PHY_TMR_CFG_HS_TO_LP(PHY_TMR_HS_TO_LP) |
-                PHY_TMR_CFG_LP_TO_HS(PHY_TMR_LP_TO_HS));
+    dsiimpl_.Config(&dsi_cfg);
 
     return ZX_OK;
 }
@@ -102,7 +61,7 @@ void AmlDsiHost::PhyDisable() {
     WRITE32_REG(HHI, HHI_MIPI_CNTL2, 0);
 }
 
-void AmlDsiHost::HostOff(const DisplaySetting& disp_setting) {
+void AmlDsiHost::HostOff(const display_setting_t& disp_setting) {
     ZX_DEBUG_ASSERT(initialized_);
     // turn host off only if it's been fully turned on
     if (!host_on_) {
@@ -110,7 +69,7 @@ void AmlDsiHost::HostOff(const DisplaySetting& disp_setting) {
     }
 
     // Place dsi in command mode first
-    HostModeInit(COMMAND_MODE, disp_setting);
+    dsiimpl_.SetMode(DSI_MODE_COMMAND);
 
     // Turn off LCD
     lcd_->Disable();
@@ -124,7 +83,7 @@ void AmlDsiHost::HostOff(const DisplaySetting& disp_setting) {
     host_on_ = false;
 }
 
-zx_status_t AmlDsiHost::HostOn(const DisplaySetting& disp_setting) {
+zx_status_t AmlDsiHost::HostOn(const display_setting_t& disp_setting) {
     ZX_DEBUG_ASSERT(initialized_);
 
     if (host_on_) {
@@ -166,14 +125,9 @@ zx_status_t AmlDsiHost::HostOn(const DisplaySetting& disp_setting) {
     WRITE32_REG(MIPI_DSI, MIPI_DSI_TOP_MEM_PD, 0);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 
-    // Enable LP transmission in CMD Mode
-    WRITE32_REG(MIPI_DSI, DW_DSI_CMD_MODE_CFG,CMD_MODE_CFG_CMD_LP_ALL);
-
-    // Packet header settings - Enable CRC and ECC. BTA will be enabled based on CMD
-    WRITE32_REG(MIPI_DSI, DW_DSI_PCKHDL_CFG, PCKHDL_CFG_EN_CRC_ECC);
-
     // Initialize host in command mode first
-    if ((status = HostModeInit(COMMAND_MODE, disp_setting)) != ZX_OK) {
+    dsiimpl_.SetMode(DSI_MODE_COMMAND);
+    if ((status = HostModeInit(disp_setting)) != ZX_OK) {
         DISP_ERROR("Error during dsi host init! %d\n", status);
         return status;
     }
@@ -183,9 +137,6 @@ zx_status_t AmlDsiHost::HostOn(const DisplaySetting& disp_setting) {
         DISP_ERROR("Error during MIPI D-PHY Initialization! %d\n", status);
         return status;
     }
-
-    // Enable LP Clock
-    SET_BIT32(MIPI_DSI, DW_DSI_LPCLK_CTRL, 1, LPCLK_CTRL_AUTOCLKLANE_CTRL, 1);
 
     // Load LCD Init values while in command mode
     lcd_ = fbl::make_unique_checked<astro_display::Lcd>(&ac, panel_type_);
@@ -207,10 +158,7 @@ zx_status_t AmlDsiHost::HostOn(const DisplaySetting& disp_setting) {
     }
 
     // switch to video mode
-    if ((status = HostModeInit(VIDEO_MODE, disp_setting)) != ZX_OK) {
-        DISP_ERROR("Error during dsi host init! %d\n", status);
-        return status;
-    }
+    dsiimpl_.SetMode(DSI_MODE_VIDEO);
 
     // Host is On and Active at this point
     host_on_ = true;
@@ -227,6 +175,8 @@ zx_status_t AmlDsiHost::Init() {
         DISP_ERROR("AmlDsiHost: Could not get ZX_PROTOCOL_PDEV protocol\n");
         return status;
     }
+
+    dsiimpl_ = parent_;
 
     // Map MIPI DSI and HHI registers
     mmio_buffer_t mmio;
@@ -252,61 +202,6 @@ zx_status_t AmlDsiHost::Init() {
 
 void AmlDsiHost::Dump() {
     ZX_DEBUG_ASSERT(initialized_);
-
-    DISP_INFO("%s: DUMPING DSI HOST REGS\n", __func__);
-    DISP_INFO("DW_DSI_VERSION = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_VERSION));
-    DISP_INFO("DW_DSI_PWR_UP = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_PWR_UP));
-    DISP_INFO("DW_DSI_CLKMGR_CFG = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_CLKMGR_CFG));
-    DISP_INFO("DW_DSI_DPI_VCID = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_DPI_VCID));
-    DISP_INFO("DW_DSI_DPI_COLOR_CODING = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_DPI_COLOR_CODING));
-    DISP_INFO("DW_DSI_DPI_CFG_POL = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_DPI_CFG_POL));
-    DISP_INFO("DW_DSI_DPI_LP_CMD_TIM = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_DPI_LP_CMD_TIM));
-    DISP_INFO("DW_DSI_DBI_VCID = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_DBI_VCID));
-    DISP_INFO("DW_DSI_DBI_CFG = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_DBI_CFG));
-    DISP_INFO("DW_DSI_DBI_PARTITIONING_EN = 0x%x\n",
-              READ32_REG(MIPI_DSI, DW_DSI_DBI_PARTITIONING_EN));
-    DISP_INFO("DW_DSI_DBI_CMDSIZE = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_DBI_CMDSIZE));
-    DISP_INFO("DW_DSI_PCKHDL_CFG = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_PCKHDL_CFG));
-    DISP_INFO("DW_DSI_GEN_VCID = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_GEN_VCID));
-    DISP_INFO("DW_DSI_MODE_CFG = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_MODE_CFG));
-    DISP_INFO("DW_DSI_VID_MODE_CFG = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_VID_MODE_CFG));
-    DISP_INFO("DW_DSI_VID_PKT_SIZE = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_VID_PKT_SIZE));
-    DISP_INFO("DW_DSI_VID_NUM_CHUNKS = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_VID_NUM_CHUNKS));
-    DISP_INFO("DW_DSI_VID_NULL_SIZE = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_VID_NULL_SIZE));
-    DISP_INFO("DW_DSI_VID_HSA_TIME = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_VID_HSA_TIME));
-    DISP_INFO("DW_DSI_VID_HBP_TIME = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_VID_HBP_TIME));
-    DISP_INFO("DW_DSI_VID_HLINE_TIME = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_VID_HLINE_TIME));
-    DISP_INFO("DW_DSI_VID_VSA_LINES = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_VID_VSA_LINES));
-    DISP_INFO("DW_DSI_VID_VBP_LINES = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_VID_VBP_LINES));
-    DISP_INFO("DW_DSI_VID_VFP_LINES = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_VID_VFP_LINES));
-    DISP_INFO("DW_DSI_VID_VACTIVE_LINES = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_VID_VACTIVE_LINES));
-    DISP_INFO("DW_DSI_EDPI_CMD_SIZE = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_EDPI_CMD_SIZE));
-    DISP_INFO("DW_DSI_CMD_MODE_CFG = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_CMD_MODE_CFG));
-    DISP_INFO("DW_DSI_GEN_HDR = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_GEN_HDR));
-    DISP_INFO("DW_DSI_GEN_PLD_DATA = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_GEN_PLD_DATA));
-    DISP_INFO("DW_DSI_CMD_PKT_STATUS = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_CMD_PKT_STATUS));
-    DISP_INFO("DW_DSI_TO_CNT_CFG = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_TO_CNT_CFG));
-    DISP_INFO("DW_DSI_HS_RD_TO_CNT = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_HS_RD_TO_CNT));
-    DISP_INFO("DW_DSI_LP_RD_TO_CNT = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_LP_RD_TO_CNT));
-    DISP_INFO("DW_DSI_HS_WR_TO_CNT = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_HS_WR_TO_CNT));
-    DISP_INFO("DW_DSI_LP_WR_TO_CNT = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_LP_WR_TO_CNT));
-    DISP_INFO("DW_DSI_BTA_TO_CNT = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_BTA_TO_CNT));
-    DISP_INFO("DW_DSI_SDF_3D = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_SDF_3D));
-    DISP_INFO("DW_DSI_LPCLK_CTRL = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_LPCLK_CTRL));
-    DISP_INFO("DW_DSI_PHY_TMR_LPCLK_CFG = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_PHY_TMR_LPCLK_CFG));
-    DISP_INFO("DW_DSI_PHY_TMR_CFG = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_PHY_TMR_CFG));
-    DISP_INFO("DW_DSI_PHY_RSTZ = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_PHY_RSTZ));
-    DISP_INFO("DW_DSI_PHY_IF_CFG = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_PHY_IF_CFG));
-    DISP_INFO("DW_DSI_PHY_ULPS_CTRL = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_PHY_ULPS_CTRL));
-    DISP_INFO("DW_DSI_PHY_TX_TRIGGERS = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_PHY_TX_TRIGGERS));
-    DISP_INFO("DW_DSI_PHY_STATUS = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_PHY_STATUS));
-    DISP_INFO("DW_DSI_PHY_TST_CTRL0 = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_PHY_TST_CTRL0));
-    DISP_INFO("DW_DSI_PHY_TST_CTRL1 = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_PHY_TST_CTRL1));
-    DISP_INFO("DW_DSI_INT_ST0 = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_INT_ST0));
-    DISP_INFO("DW_DSI_INT_ST1 = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_INT_ST1));
-    DISP_INFO("DW_DSI_INT_MSK0 = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_INT_MSK0));
-    DISP_INFO("DW_DSI_INT_MSK1 = 0x%x\n", READ32_REG(MIPI_DSI, DW_DSI_INT_MSK1));
-
     DISP_INFO("MIPI_DSI_TOP_SW_RESET = 0x%x\n", READ32_REG(MIPI_DSI, MIPI_DSI_TOP_SW_RESET));
     DISP_INFO("MIPI_DSI_TOP_CLK_CNTL = 0x%x\n", READ32_REG(MIPI_DSI, MIPI_DSI_TOP_CLK_CNTL));
     DISP_INFO("MIPI_DSI_TOP_CNTL = 0x%x\n", READ32_REG(MIPI_DSI, MIPI_DSI_TOP_CNTL));

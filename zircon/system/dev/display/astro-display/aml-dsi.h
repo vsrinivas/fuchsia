@@ -5,20 +5,20 @@
 #pragma once
 
 // TOP MIPI_DSI AML Registers
-#define MIPI_DSI_TOP_SW_RESET                   (0xF0 << 2)
-#define MIPI_DSI_TOP_CLK_CNTL                   (0xF1 << 2)
-#define MIPI_DSI_TOP_CNTL                       (0xF2 << 2)
-#define MIPI_DSI_TOP_SUSPEND_CNTL               (0xF3 << 2)
-#define MIPI_DSI_TOP_SUSPEND_LINE               (0xF4 << 2)
-#define MIPI_DSI_TOP_SUSPEND_PIX                (0xF5 << 2)
-#define MIPI_DSI_TOP_MEAS_CNTL                  (0xF6 << 2)
-#define MIPI_DSI_TOP_STAT                       (0xF7 << 2)
-#define MIPI_DSI_TOP_MEAS_STAT_TE0              (0xF8 << 2)
-#define MIPI_DSI_TOP_MEAS_STAT_TE1              (0xF9 << 2)
-#define MIPI_DSI_TOP_MEAS_STAT_VS0              (0xFA << 2)
-#define MIPI_DSI_TOP_MEAS_STAT_VS1              (0xFB << 2)
-#define MIPI_DSI_TOP_INTR_CNTL_STAT             (0xFC << 2)
-#define MIPI_DSI_TOP_MEM_PD                     (0xFD << 2)
+#define MIPI_DSI_TOP_SW_RESET                   (0x00 << 2)
+#define MIPI_DSI_TOP_CLK_CNTL                   (0x01 << 2)
+#define MIPI_DSI_TOP_CNTL                       (0x02 << 2)
+#define MIPI_DSI_TOP_SUSPEND_CNTL               (0x03 << 2)
+#define MIPI_DSI_TOP_SUSPEND_LINE               (0x04 << 2)
+#define MIPI_DSI_TOP_SUSPEND_PIX                (0x05 << 2)
+#define MIPI_DSI_TOP_MEAS_CNTL                  (0x06 << 2)
+#define MIPI_DSI_TOP_STAT                       (0x07 << 2)
+#define MIPI_DSI_TOP_MEAS_STAT_TE0              (0x08 << 2)
+#define MIPI_DSI_TOP_MEAS_STAT_TE1              (0x09 << 2)
+#define MIPI_DSI_TOP_MEAS_STAT_VS0              (0x0A << 2)
+#define MIPI_DSI_TOP_MEAS_STAT_VS1              (0x0B << 2)
+#define MIPI_DSI_TOP_INTR_CNTL_STAT             (0x0C << 2)
+#define MIPI_DSI_TOP_MEM_PD                     (0x0D << 2)
 
 #define MIPI_DSI_PHY_CTRL                       (0x000 << 2)
 #define MIPI_DSI_CHAN_CTRL                      (0x001 << 2)
@@ -70,6 +70,9 @@
 #define MAX_PIXEL_CLK_KHZ                       (200 * 1000)
 #define MAX_OD_SEL                              (3)
 #define PLL_FRAC_RANGE                          (1 << 17)
+
+#define MIPI_DSI_COLOR_24BIT                    (0x5)
+#define VID_MODE_TYPE_BURST_MODE        (2)
 
 // We currently only support 8 bit mode
 #define SUPPORTED_LCD_BITS                      (8)

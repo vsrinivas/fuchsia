@@ -40,6 +40,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_SYSMEM             27  // Sysmem driver
 #define PDEV_DID_GPIO_LIGHT         28  // Driver for controlling lights via GPIOs
 #define PDEV_DID_CPU_TRACE          29  // CPU tracing driver
+#define PDEV_DID_DW_DSI             30  // Designware DSI
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1

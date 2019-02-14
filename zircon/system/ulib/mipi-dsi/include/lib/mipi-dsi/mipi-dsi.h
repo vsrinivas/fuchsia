@@ -10,6 +10,7 @@
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+#include <ddk/protocol/dsiimpl.h>
 #include "lib/mipi-dsi/mipi-dsi.h"
 
 // Assigned Virtual Channel ID
@@ -55,9 +56,6 @@
 #define MIPI_DSI_NO_ACK                         (0)
 #define MIPI_DSI_ACK                            (1)
 
-#define VIDEO_MODE                              (0)
-#define COMMAND_MODE                            (1)
-
 #define COMMAND_GEN                             (0)
 #define COMMAND_DCS                             (1)
 
@@ -67,28 +65,11 @@
 
 namespace mipi_dsi {
 
-// This is the generic MIPI-DSI command structure that
-// can be used as a IP-independent driver
-struct MipiDsiCmd {
-    uint8_t             virt_chn_id;
-    uint8_t             dsi_data_type;
-
-    // TX Direction
-    size_t              pld_size;
-    const uint8_t*      pld_data;
-
-    // RX Direction
-    size_t              rsp_size;
-    uint8_t*            rsp_data;
-
-    uint32_t            flags;
-};
-
 class MipiDsi {
 public:
     static zx_status_t CreateCommand(const uint8_t* tbuf, size_t tlen,
                                      uint8_t* rbuf, size_t rlen,
-                                     bool is_dcs, MipiDsiCmd* cmd);
+                                     bool is_dcs, mipi_dsi_cmd_t* cmd);
 };
 
 } // mipi_dsi

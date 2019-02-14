@@ -7,11 +7,8 @@
 
 namespace astro_display {
 
-#define READ32_MIPI_DSI_REG(a)              mipi_dsi_mmio_->Read32(a)
-#define WRITE32_MIPI_DSI_REG(a, v)          mipi_dsi_mmio_->Write32(v, a)
-
-#define READ32_DSI_PHY_REG(a)               dsi_phy_mmio_->Read32(a)
-#define WRITE32_DSI_PHY_REG(a, v)           dsi_phy_mmio_->Write32(v, a)
+#define READ32_DSI_PHY_REG(a) dsi_phy_mmio_->Read32(a)
+#define WRITE32_DSI_PHY_REG(a, v) dsi_phy_mmio_->Write32(v, a)
 
 template<typename T>
 constexpr inline uint8_t NsToLaneByte(T x, uint32_t lanebytetime) {
@@ -19,7 +16,6 @@ constexpr inline uint8_t NsToLaneByte(T x, uint32_t lanebytetime) {
 }
 
 constexpr uint32_t kUnit = (1 * 1000 * 1000 * 100);
-constexpr uint32_t kPhyDelay = 6;
 
 zx_status_t AmlMipiPhy::PhyCfgLoad(uint32_t bitrate) {
     ZX_DEBUG_ASSERT(initialized_);
@@ -93,37 +89,37 @@ zx_status_t AmlMipiPhy::PhyCfgLoad(uint32_t bitrate) {
     }
 
     DISP_SPEW("lp_tesc     = 0x%02x\n"
-                "lp_lpx      = 0x%02x\n"
-                "lp_ta_sure  = 0x%02x\n"
-                "lp_ta_go    = 0x%02x\n"
-                "lp_ta_get   = 0x%02x\n"
-                "hs_exit     = 0x%02x\n"
-                "hs_trail    = 0x%02x\n"
-                "hs_zero     = 0x%02x\n"
-                "hs_prepare  = 0x%02x\n"
-                "clk_trail   = 0x%02x\n"
-                "clk_post    = 0x%02x\n"
-                "clk_zero    = 0x%02x\n"
-                "clk_prepare = 0x%02x\n"
-                "clk_pre     = 0x%02x\n"
-                "init        = 0x%02x\n"
-                "wakeup      = 0x%02x\n\n",
-                dsi_phy_cfg_.lp_tesc,
-                dsi_phy_cfg_.lp_lpx,
-                dsi_phy_cfg_.lp_ta_sure,
-                dsi_phy_cfg_.lp_ta_go,
-                dsi_phy_cfg_.lp_ta_get,
-                dsi_phy_cfg_.hs_exit,
-                dsi_phy_cfg_.hs_trail,
-                dsi_phy_cfg_.hs_zero,
-                dsi_phy_cfg_.hs_prepare,
-                dsi_phy_cfg_.clk_trail,
-                dsi_phy_cfg_.clk_post,
-                dsi_phy_cfg_.clk_zero,
-                dsi_phy_cfg_.clk_prepare,
-                dsi_phy_cfg_.clk_pre,
-                dsi_phy_cfg_.init,
-                dsi_phy_cfg_.wakeup);
+              "lp_lpx      = 0x%02x\n"
+              "lp_ta_sure  = 0x%02x\n"
+              "lp_ta_go    = 0x%02x\n"
+              "lp_ta_get   = 0x%02x\n"
+              "hs_exit     = 0x%02x\n"
+              "hs_trail    = 0x%02x\n"
+              "hs_zero     = 0x%02x\n"
+              "hs_prepare  = 0x%02x\n"
+              "clk_trail   = 0x%02x\n"
+              "clk_post    = 0x%02x\n"
+              "clk_zero    = 0x%02x\n"
+              "clk_prepare = 0x%02x\n"
+              "clk_pre     = 0x%02x\n"
+              "init        = 0x%02x\n"
+              "wakeup      = 0x%02x\n\n",
+              dsi_phy_cfg_.lp_tesc,
+              dsi_phy_cfg_.lp_lpx,
+              dsi_phy_cfg_.lp_ta_sure,
+              dsi_phy_cfg_.lp_ta_go,
+              dsi_phy_cfg_.lp_ta_get,
+              dsi_phy_cfg_.hs_exit,
+              dsi_phy_cfg_.hs_trail,
+              dsi_phy_cfg_.hs_zero,
+              dsi_phy_cfg_.hs_prepare,
+              dsi_phy_cfg_.clk_trail,
+              dsi_phy_cfg_.clk_post,
+              dsi_phy_cfg_.clk_zero,
+              dsi_phy_cfg_.clk_prepare,
+              dsi_phy_cfg_.clk_pre,
+              dsi_phy_cfg_.init,
+              dsi_phy_cfg_.wakeup);
     return ZX_OK;
 }
 
@@ -165,34 +161,6 @@ void AmlMipiPhy::PhyInit()
     WRITE32_REG(DSI_PHY, MIPI_DSI_CHAN_CTRL, 0);
 }
 
-
-// This function checks two things in order to decide whether the PHY is
-// ready or not. LOCK Bit and StopStateClk bit. According to spec, once these
-// are set, PHY has completed initialization
-zx_status_t AmlMipiPhy::WaitforPhyReady()
-{
-    int timeout = DPHY_TIMEOUT;
-    while ((GET_BIT32(MIPI_DSI, DW_DSI_PHY_STATUS, PHY_STATUS_PHY_LOCK, 1) == 0) &&
-           timeout--) {
-        zx_nanosleep(zx_deadline_after(ZX_USEC(kPhyDelay)));
-    }
-    if (timeout <= 0) {
-        DISP_ERROR("Timeout! D-PHY did not lock\n");
-        return ZX_ERR_TIMED_OUT;
-    }
-
-    timeout = DPHY_TIMEOUT;
-    while ((GET_BIT32(MIPI_DSI, DW_DSI_PHY_STATUS, PHY_STATUS_PHY_STOPSTATECLKLANE, 1) == 0) &&
-           timeout--) {
-        zx_nanosleep(zx_deadline_after(ZX_USEC(kPhyDelay)));
-    }
-    if (timeout <= 0) {
-        DISP_ERROR("Timeout! D-PHY StopStateClk not set\n");
-        return ZX_ERR_TIMED_OUT;
-    }
-    return ZX_OK;
-}
-
 void AmlMipiPhy::Shutdown() {
     ZX_DEBUG_ASSERT(initialized_);
 
@@ -201,7 +169,7 @@ void AmlMipiPhy::Shutdown() {
     }
 
     // Power down DSI
-    WRITE32_REG(MIPI_DSI, DW_DSI_PWR_UP, PWR_UP_RST);
+    dsiimpl_.PowerDownDsi();
     WRITE32_REG(DSI_PHY, MIPI_DSI_CHAN_CTRL, 0x1f);
     SET_BIT32(DSI_PHY, MIPI_DSI_PHY_CTRL, 0, 7, 1);
     phy_enabled_ = false;
@@ -215,38 +183,29 @@ zx_status_t AmlMipiPhy::Startup() {
     }
 
     // Power up DSI
-    WRITE32_REG(MIPI_DSI, DW_DSI_PWR_UP, PWR_UP_ON);
+    dsiimpl_.PowerUpDsi();
 
     // Setup Parameters of DPHY
     // Below we are sending test code 0x44 with parameter 0x74. This means
     // we are setting up the phy to operate in 1050-1099 Mbps mode
     // TODO(payamm): Find out why 0x74 was selected
-    WRITE32_REG(MIPI_DSI, DW_DSI_PHY_TST_CTRL1, 0x00010044);
-    WRITE32_REG(MIPI_DSI, DW_DSI_PHY_TST_CTRL0, 0x2);
-    WRITE32_REG(MIPI_DSI, DW_DSI_PHY_TST_CTRL0, 0x0);
-    WRITE32_REG(MIPI_DSI, DW_DSI_PHY_TST_CTRL1, 0x00000074);
-    WRITE32_REG(MIPI_DSI, DW_DSI_PHY_TST_CTRL0, 0x2);
-    WRITE32_REG(MIPI_DSI, DW_DSI_PHY_TST_CTRL0, 0x0);
+    dsiimpl_.SendPhyCode(0x00010044, 0x00000074);
 
     // Power up D-PHY
-    WRITE32_REG(MIPI_DSI, DW_DSI_PHY_RSTZ, PHY_RSTZ_PWR_UP);
+    dsiimpl_.PhyPowerUp();
 
     // Setup PHY Timing parameters
     PhyInit();
 
     // Wait for PHY to be read
     zx_status_t status;
-    if ((status = WaitforPhyReady()) != ZX_OK) {
+    if ((status = dsiimpl_.WaitForPhyReady()) != ZX_OK) {
         // no need to print additional info.
         return status;
     }
 
     // Trigger a sync active for esc_clk
     SET_BIT32(DSI_PHY, MIPI_DSI_PHY_CTRL, 1, 1, 1);
-
-    // Startup transfer, default lpclk
-    WRITE32_REG(MIPI_DSI, DW_DSI_LPCLK_CTRL, (0x1 << LPCLK_CTRL_AUTOCLKLANE_CTRL) |
-                (0x1 << LPCLK_CTRL_TXREQUESTCLKHS));
 
     phy_enabled_ = true;
     return ZX_OK;
@@ -265,15 +224,10 @@ zx_status_t AmlMipiPhy::Init(zx_device_t* parent, uint32_t lane_num) {
         return status;
     }
 
+    dsiimpl_ = parent;
+
     // Map Mipi Dsi and Dsi Phy registers
     mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer(&pdev_, MMIO_MPI_DSI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &mmio);
-    if (status != ZX_OK) {
-        DISP_ERROR("AmlMipiPhy: Could not map MIPI DSI mmio\n");
-        return status;
-    }
-    mipi_dsi_mmio_ = ddk::MmioBuffer(mmio);
 
     status = pdev_map_mmio_buffer(&pdev_, MMIO_DSI_PHY, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                   &mmio);

@@ -85,23 +85,3 @@ constexpr uint8_t  BOARD_REV_P2 = 1;
 constexpr uint8_t  BOARD_REV_EVT_1 = 2;
 constexpr uint8_t  BOARD_REV_EVT_2 = 3;
 constexpr uint8_t  BOARD_REV_UNKNOWN = 0xff;
-
-// This structure is populated based on hardware/lcd type. Its values come from vendor.
-// This table is the top level structure used to populated all Clocks/LCD/DSI/BackLight/etc
-// values
-struct DisplaySetting {
-    uint32_t lane_num;
-    uint32_t bit_rate_max;
-    uint32_t clock_factor;
-    uint32_t lcd_clock;
-    uint32_t h_active;
-    uint32_t v_active;
-    uint32_t h_period;
-    uint32_t v_period;
-    uint32_t hsync_width;
-    uint32_t hsync_bp;
-    uint32_t hsync_pol;
-    uint32_t vsync_width;
-    uint32_t vsync_bp;
-    uint32_t vsync_pol;
-};

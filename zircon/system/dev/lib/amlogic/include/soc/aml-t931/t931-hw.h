@@ -88,6 +88,9 @@
 #define T931_MIPI_DSI_BASE              0xffd07000
 #define T931_MIPI_DSI_LENGTH            0x1000
 
+#define T931_TOP_MIPI_DSI_BASE          0xffd073C0
+#define T931_TOP_MIPI_DSI_LENGTH        0x40
+
 #define T931_MSR_CLK_BASE               0xffd18000
 #define T931_MSR_CLK_LENGTH             0x1000
 

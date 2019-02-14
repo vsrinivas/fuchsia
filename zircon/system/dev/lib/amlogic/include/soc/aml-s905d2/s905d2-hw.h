@@ -35,6 +35,9 @@
 #define S905D2_MIPI_DSI_BASE            0xffd07000
 #define S905D2_MIPI_DSI_LENGTH          0x1000
 
+#define S905D2_MIPI_TOP_DSI_BASE        0xffd073C0
+#define S905D2_MIPI_TOP_DSI_LENGTH      0x40
+
 #define S905D2_DSI_PHY_BASE             0xff644000
 #define S905D2_DSI_PHY_LENGTH           0x1000
 

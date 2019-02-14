@@ -17,10 +17,12 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/amlogiccanvas.h>
 #include <ddk/protocol/sysmem.h>
+#include <ddk/protocol/dsiimpl.h>
 #include <ddk/debug.h>
 
 #include <ddktl/protocol/display/controller.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/dsiimpl.h>
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -48,7 +50,7 @@ class AstroDisplay : public DeviceType,
                      public ddk::DisplayControllerImplProtocol<AstroDisplay, ddk::base_protocol> {
 public:
     AstroDisplay(zx_device_t* parent)
-        : DeviceType(parent) {}
+        : DeviceType(parent), dsiimpl_(parent) {}
 
     // This function is called from the c-bind function upon driver matching
     zx_status_t Bind();
@@ -92,65 +94,68 @@ private:
     zx_status_t DisplayInit() TA_REQ(display_lock_);
 
     // Zircon handles
-    zx::bti                             bti_;
-    zx::interrupt                       inth_;
+    zx::bti bti_;
+    zx::interrupt inth_;
 
     // Thread handles
-    thrd_t                              vsync_thread_;
+    thrd_t vsync_thread_;
 
     // Protocol handles used in by this driver
-    pdev_protocol_t                     pdev_ = {};
-    gpio_protocol_t                     gpio_ = {};
-    amlogic_canvas_protocol_t           canvas_ = {};
-    sysmem_protocol_t                   sysmem_ = {};
+    pdev_protocol_t pdev_ = {};
+    gpio_protocol_t gpio_ = {};
+    amlogic_canvas_protocol_t canvas_ = {};
+    sysmem_protocol_t sysmem_ = {};
 
     // Board Info
-    pdev_board_info_t                   board_info_;
+    pdev_board_info_t board_info_;
 
     // Interrupts
-    zx::interrupt                       vsync_irq_;
+    zx::interrupt vsync_irq_;
 
     // Locks used by the display driver
-    fbl::Mutex                          display_lock_; // general display state (i.e. display_id)
-    fbl::Mutex                          image_lock_; // used for accessing imported_images_
+    fbl::Mutex display_lock_; // general display state (i.e. display_id)
+    fbl::Mutex image_lock_; // used for accessing imported_images_
 
     // TODO(stevensd): This can race if this is changed right after
     // vsync but before the interrupt is handled.
-    uint8_t                             current_image_ TA_GUARDED(display_lock_);;
-    bool                                current_image_valid_ TA_GUARDED(display_lock_);;
+    uint8_t current_image_ TA_GUARDED(display_lock_);;
+    bool current_image_valid_ TA_GUARDED(display_lock_);;
 
     // display dimensions and format
-    uint32_t                            width_;
-    uint32_t                            height_;
-    uint32_t                            stride_;
-    zx_pixel_format_t                   format_;
+    uint32_t width_;
+    uint32_t height_;
+    uint32_t stride_;
+    zx_pixel_format_t format_;
 
-    const DisplaySetting*               init_disp_table_ = nullptr;
+    const display_setting_t* init_disp_table_ = nullptr;
 
     // This flag is used to skip all driver initializations for older
     // boards that we don't support. Those boards will depend on U-Boot
     // to set things up
-    bool                                skip_disp_init_ TA_GUARDED(display_lock_);
+    bool skip_disp_init_ TA_GUARDED(display_lock_);
 
-    bool                                full_init_done_ = false;
+    bool full_init_done_ = false;
 
     // board revision and panel type detected by the display driver
-    uint8_t                             panel_type_ TA_GUARDED(display_lock_);
+    uint8_t panel_type_ TA_GUARDED(display_lock_);
 
     // Display structure used by various layers of display controller
-    DisplaySetting                      disp_setting_;
+    display_setting_t disp_setting_;
 
     // Display controller related data
     ddk::DisplayControllerInterfaceClient dc_intf_ TA_GUARDED(display_lock_);
 
     // Simple hashtable
-    ImportedImageBitmap                  imported_images_ TA_GUARDED(image_lock_);;
+    ImportedImageBitmap imported_images_ TA_GUARDED(image_lock_);;
+
+    // DSIIMPL Protocol
+    ddk::DsiImplProtocolClient dsiimpl_;
 
     // Objects
-    fbl::unique_ptr<astro_display::Vpu>                 vpu_;
-    fbl::unique_ptr<astro_display::Osd>                 osd_;
-    fbl::unique_ptr<astro_display::AstroDisplayClock>   clock_;
-    fbl::unique_ptr<astro_display::AmlDsiHost>          dsi_host_;
+    fbl::unique_ptr<astro_display::Vpu> vpu_;
+    fbl::unique_ptr<astro_display::Osd> osd_;
+    fbl::unique_ptr<astro_display::AstroDisplayClock> clock_;
+    fbl::unique_ptr<astro_display::AmlDsiHost> dsi_host_;
 };
 
 } // namespace astro_display

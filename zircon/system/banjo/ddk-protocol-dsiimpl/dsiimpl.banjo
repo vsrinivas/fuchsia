@@ -1,0 +1,105 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.dsiimpl;
+using zx;
+
+/// This enum is used to configure DSI interface in either Video or Command mode
+enum DsiMode : uint8 {
+    VIDEO = 0;
+    COMMAND = 1;
+};
+
+// This enum is used to configure the type of video mode
+enum VideoMode : uint8 {
+    NON_BURST_PULSE = 0;
+    NON_BURST_EVENT = 1;
+    BURST = 2;
+};
+
+// Supported color codes for the DSI interface
+enum ColorCode : uint8 {
+    PACKED_16BIT_565 = 0;
+    PACKED_18BIT_666 = 1;
+    LOOSE_24BIT_666 = 2;
+    PACKED_24BIT_888 = 3;
+};
+
+/// This structure is populated based on hardware/lcd type. Its values come from vendor.
+/// This table is the top level structure used to populated all DSI configuration registers
+struct DisplaySetting {
+    uint32 lane_num;
+    uint32 bit_rate_max;
+    uint32 clock_factor;
+    uint32 lcd_clock;
+    uint32 h_active;
+    uint32 v_active;
+    uint32 h_period;
+    uint32 v_period;
+    uint32 hsync_width;
+    uint32 hsync_bp;
+    uint32 hsync_pol;
+    uint32 vsync_width;
+    uint32 vsync_bp;
+    uint32 vsync_pol;
+};
+
+/// This structure contains designware specific data
+struct DesignwareConfig {
+    uint32 lp_escape_time;
+    uint32 lp_cmd_pkt_size;
+    uint32 phy_timer_clkhs_to_lp;
+    uint32 phy_timer_clklp_to_hs;
+    uint32 phy_timer_hs_to_lp;
+    uint32 phy_timer_lp_to_hs;
+};
+
+/// This structure contains information that the DSI block needs from the MIPI D-PHY
+struct DsiConfig {
+    DisplaySetting display_setting;
+    VideoMode video_mode_type;
+    ColorCode color_coding;
+    vector<voidptr>? vendor_config;
+};
+
+/// This is the generic MIPI-DSI command structure
+struct MipiDsiCmd {
+    uint8 virt_chn_id;
+    uint8 dsi_data_type;
+
+    // TX Direction
+    vector<uint8> pld_data;
+
+    // RX Direction
+    vector<uint8>? rsp_data;
+
+    uint32 flags;
+};
+
+[Layout = "ddk-protocol"]
+interface DsiImpl {
+    /// This function is used to configure all the DSI parameters needed to operated in both
+    /// Command and Video Mode
+    Config(DsiConfig dsi_config) -> (zx.status s);
+    /// This function is used to change modes between Video and Command.
+    SetMode(DsiMode mode) -> ();
+    /// This function is used to send a MIPI-DSI command through the DSI block
+    SendCmd(vector<MipiDsiCmd> cmd) -> (zx.status s);
+    /// This function is called to power up the DSI interface
+    PowerUpDsi() -> ();
+    /// This function is called to power down the DSI interface
+    PowerDownDsi() -> ();
+    /// This function is used to communicate the MIPI D-PHY
+    SendPhyCode(uint32 code, uint32 parameter) -> ();
+    /// This function is used to power up the MIPI D-PHY block
+    PhyPowerUp() -> ();
+    /// This function return true if the DSI block is powered on and not in reset
+    IsDsiPoweredUp() -> (bool on);
+    /// This function checks two things in order to decide whether the PHY is
+    /// ready or not. LOCK Bit and StopStateClk bit. According to spec, once these
+    /// are set, PHY has completed initialization
+    WaitForPhyReady() -> (zx.status s);
+    /// This function prints the value of all DSI registers
+    PrintDsiRegisters() -> ();
+};
