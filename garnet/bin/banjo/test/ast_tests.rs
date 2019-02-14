@@ -69,3 +69,15 @@ codegen_test!(
     ["../zx.banjo", "banjo/protocol-other-types.test.banjo"],
     "ast/protocol-other-types.test.ast"
 );
+codegen_test!(
+    interface,
+    AstBackend,
+    ["../zx.banjo", "banjo/interface.test.banjo"],
+    "ast/interface.test.ast"
+);
+codegen_test!(
+    callback,
+    AstBackend,
+    ["../zx.banjo", "banjo/callback.test.banjo"],
+    "ast/callback.test.ast"
+);

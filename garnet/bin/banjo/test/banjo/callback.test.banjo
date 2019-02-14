@@ -21,7 +21,7 @@ enum Direction : uint32 {
 [Layout = "ddk-callback"]
 interface Draw {
     Callback(Point p, Direction d) -> ();
-}
+};
 
 [Layout = "ddk-protocol"]
 interface Drawing {

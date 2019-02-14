@@ -61,6 +61,13 @@ mod c {
         ["../zx.banjo", "banjo/protocol-other-types.test.banjo"],
         "c/protocol-other-types.h"
     );
+    codegen_test!(
+        interface,
+        CBackend,
+        ["../zx.banjo", "banjo/interface.test.banjo"],
+        "c/interface.h"
+    );
+    codegen_test!(callback, CBackend, ["../zx.banjo", "banjo/callback.test.banjo"], "c/callback.h");
 }
 
 mod cpp {
@@ -113,6 +120,18 @@ mod cpp {
         CppBackend,
         ["../zx.banjo", "banjo/protocol-other-types.test.banjo"],
         "cpp/protocol-other-types.h"
+    );
+    codegen_test!(
+        interface,
+        CppBackend,
+        ["../zx.banjo", "banjo/interface.test.banjo"],
+        "cpp/interface.h"
+    );
+    codegen_test!(
+        callback,
+        CppBackend,
+        ["../zx.banjo", "banjo/callback.test.banjo"],
+        "cpp/callback.h"
     );
 }
 
@@ -191,5 +210,17 @@ mod cpp_internal {
         CppInternalBackend,
         ["../zx.banjo", "banjo/protocol-other-types.test.banjo"],
         "cpp/protocol-other-types-internal.h"
+    );
+    codegen_test!(
+        interface,
+        CppInternalBackend,
+        ["../zx.banjo", "banjo/interface.test.banjo"],
+        "cpp/interface-internal.h"
+    );
+    codegen_test!(
+        callback,
+        CppInternalBackend,
+        ["../zx.banjo", "banjo/callback.test.banjo"],
+        "cpp/callback-internal.h"
     );
 }
