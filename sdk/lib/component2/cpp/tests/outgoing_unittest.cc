@@ -4,11 +4,11 @@
 
 #include <lib/component2/cpp/outgoing.h>
 
-#include <fidl/examples/echo/cpp/fidl.h>
+#include "echo_server.h"
+
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/zx/channel.h>
@@ -19,13 +19,6 @@ namespace {
 
 using OutgoingTest = gtest::RealLoopFixture;
 
-class EchoImpl : public fidl::examples::echo::Echo {
- public:
-  void EchoString(fidl::StringPtr value, EchoStringCallback callback) override {
-    callback(std::move(value));
-  }
-};
-
 TEST_F(OutgoingTest, Control) {
   zx::channel svc_client, svc_server;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &svc_client, &svc_server));
@@ -35,9 +28,7 @@ TEST_F(OutgoingTest, Control) {
 
   EchoImpl impl;
 
-  fidl::BindingSet<fidl::examples::echo::Echo> bindings;
-  ASSERT_EQ(ZX_OK, outgoing.AddPublicService(
-                       bindings.GetHandler(&impl, dispatcher())));
+  ASSERT_EQ(ZX_OK, outgoing.AddPublicService(impl.GetHandler(dispatcher())));
 
   fidl::examples::echo::EchoPtr echo;
   fdio_service_connect_at(
@@ -59,14 +50,16 @@ TEST_F(OutgoingTest, AddAndRemove) {
   component2::Outgoing outgoing;
   ASSERT_EQ(ZX_OK, outgoing.Serve(std::move(svc_server), dispatcher()));
 
-  ASSERT_EQ(ZX_ERR_NOT_FOUND, outgoing.RemovePublicService<fidl::examples::echo::Echo>());
+  ASSERT_EQ(ZX_ERR_NOT_FOUND,
+            outgoing.RemovePublicService<fidl::examples::echo::Echo>());
 
   EchoImpl impl;
   fidl::BindingSet<fidl::examples::echo::Echo> bindings;
   ASSERT_EQ(ZX_OK, outgoing.AddPublicService(
                        bindings.GetHandler(&impl, dispatcher())));
-  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, outgoing.AddPublicService(
-                       bindings.GetHandler(&impl, dispatcher())));
+  ASSERT_EQ(
+      ZX_ERR_ALREADY_EXISTS,
+      outgoing.AddPublicService(bindings.GetHandler(&impl, dispatcher())));
 
   fidl::examples::echo::EchoPtr echo;
   fdio_service_connect_at(
@@ -81,7 +74,8 @@ TEST_F(OutgoingTest, AddAndRemove) {
   EXPECT_EQ("hello", result);
 
   ASSERT_EQ(ZX_OK, outgoing.RemovePublicService<fidl::examples::echo::Echo>());
-  ASSERT_EQ(ZX_ERR_NOT_FOUND, outgoing.RemovePublicService<fidl::examples::echo::Echo>());
+  ASSERT_EQ(ZX_ERR_NOT_FOUND,
+            outgoing.RemovePublicService<fidl::examples::echo::Echo>());
 
   fdio_service_connect_at(
       svc_client.get(), "public/fidl.examples.echo.Echo",
@@ -108,7 +102,8 @@ TEST_F(OutgoingTest, AccessDenied) {
   svc_server.replace(ZX_RIGHT_NONE, &svc_server);
 
   component2::Outgoing outgoing;
-  ASSERT_EQ(ZX_ERR_ACCESS_DENIED, outgoing.Serve(std::move(svc_server), dispatcher()));
+  ASSERT_EQ(ZX_ERR_ACCESS_DENIED,
+            outgoing.Serve(std::move(svc_server), dispatcher()));
 }
 
 }  // namespace

@@ -22,7 +22,7 @@ namespace component2 {
 // specifically through the "/svc" entry.
 //
 // Instances of this class are thread-safe.
-class ServiceDirectory final {
+class ServiceDirectory {
  public:
   // Create an directory of services backed by given |directory|.
   //
@@ -30,9 +30,11 @@ class ServiceDirectory final {
   //
   // The directory is expected to implement the |fuchsia.io.Directory| protocol.
   explicit ServiceDirectory(zx::channel directory);
+
   explicit ServiceDirectory(
       fidl::InterfaceHandle<fuchsia::io::Directory> directory);
-  ~ServiceDirectory();
+
+  virtual ~ServiceDirectory();
 
   // ServiceDirectory objects cannot be copied.
   ServiceDirectory(const ServiceDirectory&) = delete;

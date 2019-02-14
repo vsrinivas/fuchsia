@@ -4,24 +4,21 @@
 
 import("//build/cpp/sdk_source_set.gni")
 
-sdk_source_set("cpp") {
+sdk_source_set("testing") {
   category = "internal"
 
-  sdk_name = "component_cpp"
+  sdk_name = "component_cpp_testing"
 
   include_base = "//sdk"
   sources = [
-    "outgoing.cc",
-    "outgoing.h",
-    "service_directory.cc",
-    "service_directory.h",
-    "startup_context.cc",
-    "startup_context.h",
-    "termination_reason.cc",
-    "termination_reason.h",
+    "service_directory_for_test.cc",
+    "service_directory_for_test.h",
+    "startup_context_for_test.cc",
+    "startup_context_for_test.h",
   ]
 
   public_deps = [
+    "//sdk/lib/component2/cpp",
     "//sdk/lib/vfs/cpp",
     "//zircon/public/fidl/fuchsia-io",
     "//zircon/public/lib/fit",
