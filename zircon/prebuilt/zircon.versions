@@ -2,16 +2,16 @@
 # Do not modify manually. All changes will be overwritten.
 
 fuchsia/clang/linux-amd64
-	git_revision:0c599c388dbb4c5852019c90eeb642839dc52ebe
-	s_YpZTiUtKfCBtl9dullSm6k8g4uOugbrznYySaJOzsC
+	git_revision:023dd1eefad3c3b41633e0644df2e0d29f66d728
+	vYijdTfWLAWorkERrmcNKJQDtbFWVkccyMtIA0tf3tAC
 
 fuchsia/clang/linux-arm64
-	git_revision:0c599c388dbb4c5852019c90eeb642839dc52ebe
-	HEmGi2Mz2Sp1NWRVJDdnvZiknmkRsRmrI7xjrRui2zcC
+	git_revision:023dd1eefad3c3b41633e0644df2e0d29f66d728
+	VJHnWoWdLmLpvXgH4xsv_cqyj71SnC9RThdO957UdNkC
 
 fuchsia/clang/mac-amd64
-	git_revision:0c599c388dbb4c5852019c90eeb642839dc52ebe
-	K4TpIHo-3cqSwfFcCbQm0j3wbwCHFoUHzzzaYjE7vLAC
+	git_revision:023dd1eefad3c3b41633e0644df2e0d29f66d728
+	OrP62YsLR61tghYaLZ4PuRg6qO3YwwYM0q-JtiQJrHIC
 
 fuchsia/gcc/linux-amd64
 	git_revision:fb02152947d8ef666961e3b8b6527ed39de18334,653a4ab26cb08800c45b8c3446c3753d6f2102df
