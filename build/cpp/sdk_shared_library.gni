@@ -13,6 +13,11 @@ import("//build/sdk/sdk_atom_alias.gni")
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
 #
+#   api (optional)
+#     Path to the file representing the API of this library.
+#     This file is used to ensure modifications to the library's API are
+#     explicitly acknowledged.
+#
 #   no_headers (optional)
 #     Whether to include the library's headers in the SDK.
 #     Defaults to false.
@@ -47,6 +52,7 @@ template("sdk_shared_library") {
     forward_variables_from(invoker,
                            "*",
                            [
+                             "api",
                              "category",
                              "include_base",
                              "no_headers",
@@ -138,8 +144,8 @@ template("sdk_shared_library") {
       }
     }
   }
-  sdk_headers = []
-  sdk_files = []
+  sdk_metadata_headers = []
+  sdk_header_files = []
   foreach(header, all_headers) {
     include_base = "include"
     if (defined(invoker.include_base)) {
@@ -147,8 +153,8 @@ template("sdk_shared_library") {
     }
     destination = rebase_path(header, include_base)
     header_dest = "$file_base/include/$destination"
-    sdk_headers += [ header_dest ]
-    sdk_files += [
+    sdk_metadata_headers += [ header_dest ]
+    sdk_header_files += [
       {
         source = header
         dest = header_dest
@@ -161,7 +167,7 @@ template("sdk_shared_library") {
   lib_name = "lib$output_name.so"
   link_lib = "$prebuilt_base/lib/$lib_name"
   dist_lib = "$prebuilt_base/dist/$lib_name"
-  sdk_files += [
+  sdk_files = sdk_header_files + [
     {
       # TODO(TO-791): put ABI stubs under lib/, not the full thing.
       source = "$shared_out_dir/$lib_name"
@@ -197,7 +203,7 @@ template("sdk_shared_library") {
              "--include-dir",
              "$file_base/include",
              "--deps",
-           ] + sdk_metas + [ "--headers" ] + sdk_headers +
+           ] + sdk_metas + [ "--headers" ] + sdk_metadata_headers +
            [
              "--arch",
              target_cpu,
@@ -220,6 +226,12 @@ template("sdk_shared_library") {
     id = "sdk://pkg/$atom_name"
 
     category = invoker.category
+
+    if (defined(invoker.api) && !no_headers) {
+      api = invoker.api
+
+      api_contents = sdk_header_files
+    }
 
     meta = {
       source = metadata_file

@@ -15,6 +15,11 @@ import("//build/sdk/sdk_atom.gni")
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
 #
+#   api (optional)
+#     Path to the file representing the API of this library.
+#     This file is used to ensure modifications to the library's API are
+#     explicitly acknowledged.
+#
 #   sdk_name (required)
 #     Name of the library in the SDK.
 #
@@ -38,6 +43,7 @@ template("sdk_source_set") {
     forward_variables_from(invoker,
                            "*",
                            [
+                             "api",
                              "category",
                              "include_base",
                              "sdk_name",
@@ -87,8 +93,9 @@ template("sdk_source_set") {
 
   # Determine destinations in the SDK for headers and sources.
   file_base = "pkg/${invoker.sdk_name}"
-  sdk_headers = []
-  sdk_sources = []
+  sdk_metadata_headers = []
+  sdk_metadata_sources = []
+  sdk_header_files = []
   sdk_files = []
   foreach(header, all_headers) {
     include_base = "include"
@@ -97,16 +104,17 @@ template("sdk_source_set") {
     }
     relative_destination = rebase_path(header, include_base)
     destination = "$file_base/include/$relative_destination"
-    sdk_headers += [ destination ]
-    sdk_files += [
+    sdk_metadata_headers += [ destination ]
+    sdk_header_files += [
       {
         source = header
         dest = destination
       },
     ]
   }
+  sdk_files += sdk_header_files
   foreach(source, all_sources) {
-    sdk_sources += [ "$file_base/$source" ]
+    sdk_metadata_sources += [ "$file_base/$source" ]
     sdk_files += [
       {
         source = source
@@ -138,8 +146,8 @@ template("sdk_source_set") {
       "$file_base/include",
     ]
     args += [ "--deps" ] + sdk_metas
-    args += [ "--sources" ] + sdk_sources
-    args += [ "--headers" ] + sdk_headers
+    args += [ "--sources" ] + sdk_metadata_sources
+    args += [ "--headers" ] + sdk_metadata_headers
 
     deps = sdk_deps
   }
@@ -153,6 +161,12 @@ template("sdk_source_set") {
 
     id = "sdk://pkg/${invoker.sdk_name}"
     category = invoker.category
+
+    if (defined(invoker.api)) {
+      api = invoker.api
+
+      api_contents = sdk_header_files
+    }
 
     meta = {
       source = metadata_file
