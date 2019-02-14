@@ -9,7 +9,8 @@ AudioCoreClient::AudioCoreClient(component::StartupContext* startup_context,
                                  fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)) {
   audio_core_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << "System error: AudioCore service failure: " << status;
+    FXL_LOG(ERROR) << "Connection to fuchsia.media.AudioCore failed: "
+                   << status;
     quit_callback_();
   });
 

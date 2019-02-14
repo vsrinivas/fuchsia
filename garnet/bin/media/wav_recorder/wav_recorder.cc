@@ -68,12 +68,13 @@ void WavRecorder::Run(component::StartupContext* app_context) {
   audio_capturer_->BindGainControl(gain_control_.NewRequest());
   audio_capturer_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR)
-        << "AudioCapturer connection lost unexpectedly, shutting down.";
+        << "Client connection to fuchsia.media.AudioCapturer failed: "
+        << status;
     Shutdown();
   });
   gain_control_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR)
-        << "GainControl connection lost unexpectedly, shutting down.";
+    FXL_LOG(ERROR) << "Client connection to fuchsia.media.GainControl failed: "
+                   << status;
     Shutdown();
   });
 

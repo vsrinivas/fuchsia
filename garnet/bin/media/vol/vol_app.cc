@@ -166,7 +166,9 @@ class VolApp {
     audio_ = startup_context_->ConnectToEnvironmentService<
         fuchsia::media::AudioDeviceEnumerator>();
     audio_.set_error_handler([this](zx_status_t status) {
-      std::cout << "System error: audio service failure";
+      FXL_LOG(ERROR)
+          << "Client connection to fuchsia.media.AudioDeviceEnumerator failed: "
+          << status;
       quit_callback_();
     });
 
@@ -477,11 +479,11 @@ class VolApp {
 
   bool ChooseDeviceToControl() {
     if (selected_uid_.length()) {
-      return ChooseDeviceToControl([uid_ptr = selected_uid_.c_str(),
-                                    uid_len = selected_uid_.length()](
-                                       const AudioDeviceInfo& info) -> bool {
-        return (strncmp(info.unique_id.c_str(), uid_ptr, uid_len) == 0);
-      });
+      return ChooseDeviceToControl(
+          [uid_ptr = selected_uid_.c_str(), uid_len = selected_uid_.length()](
+              const AudioDeviceInfo& info) -> bool {
+            return (strncmp(info.unique_id.c_str(), uid_ptr, uid_len) == 0);
+          });
     } else if (selected_token_ != ZX_KOID_INVALID) {
       return ChooseDeviceToControl(
           [token = selected_token_](const AudioDeviceInfo& info) -> bool {
@@ -499,11 +501,10 @@ class VolApp {
     // Build our device map.
     for (auto& dev : devices) {
       auto id = dev.token_id;
-      auto result =
-          devices_.emplace(std::make_pair(id, std::move(dev)));
+      auto result = devices_.emplace(std::make_pair(id, std::move(dev)));
       if (!result.second) {
-        std::cerr << "<WARNING>: Duplicate audio device token ID ("
-                  << id << std::endl;
+        std::cerr << "<WARNING>: Duplicate audio device token ID (" << id
+                  << std::endl;
         continue;
       }
     }
