@@ -44,7 +44,18 @@ const (
 	SOCKET_DATAGRAM   = 1 << 0
 )
 
+const (
+	_ int = iota
+	DebugVerbosity
+	TraceVerbosity
+)
+
 type LogLevel int32
+
+const (
+	TraceLevel = LogLevel(-TraceVerbosity)
+	DebugLevel = LogLevel(-DebugVerbosity)
+)
 
 const (
 	InfoLevel LogLevel = iota

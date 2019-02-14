@@ -165,13 +165,13 @@ func TestLoggerSeverity(t *testing.T) {
 func TestLoggerVerbosity(t *testing.T) {
 	sin, log := setup(t)
 	format := "integer: %d"
-	log.VLogf(2, format, 10)
+	log.VLogf(logger.TraceVerbosity, format, 10)
 	_, err := sin.Read(make([]byte, 0), 0)
 	if zerr, ok := err.(zx.Error); !ok || zerr.Status != zx.ErrShouldWait {
 		t.Fatal(err)
 	}
 	log.SetVerbosity(2)
-	log.VLogf(2, format, 10)
+	log.VLogf(logger.TraceVerbosity, format, 10)
 	expectedMsg := fmt.Sprintf(format, 10)
 	checkoutput(t, sin, expectedMsg, logger.LogLevel(-2))
 }
