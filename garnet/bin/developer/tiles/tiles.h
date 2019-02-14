@@ -12,8 +12,9 @@
 
 #include <zx/eventpair.h>
 
-#include "lib/component/cpp/startup_context.h"
-#include "lib/svc/cpp/service_provider_bridge.h"
+#include "lib/async/cpp/task.h"
+#include "lib/component2/cpp/startup_context.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 
@@ -23,7 +24,7 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
               public fuchsia::ui::viewsv1::ViewContainerListener,
               public fuchsia::developer::tiles::Controller {
  public:
-  Tiles(component::StartupContext* startup_context,
+  Tiles(component2::StartupContext* startup_context,
         zx::eventpair root_view_token, std::vector<std::string> urls,
         int border);
   ~Tiles() final = default;
@@ -79,7 +80,7 @@ class Tiles : public fuchsia::ui::viewsv1::ViewListener,
   void PresentScene();
 
   // Context inherited when TileView is launched.
-  component::StartupContext* startup_context_;
+  component2::StartupContext* startup_context_;
 
   // Connection to the root view.
   fidl::Binding<fuchsia::ui::viewsv1::ViewListener> root_view_listener_binding_;

@@ -49,14 +49,13 @@ int main(int argc, const char** argv) {
     FXL_NOTREACHED() << "failed to create tokens.";
 
   // Create tiles with a token for its root view.
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto startup_context = component2::StartupContext::CreateFromStartupInfo();
   tiles::Tiles tiles(startup_context.get(), std::move(view_token),
                      command_line.positional_args(), border);
 
   // Ask the presenter to display it.
   auto presenter =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+      startup_context->svc()->Connect<fuchsia::ui::policy::Presenter>();
   presenter->Present2(std::move(view_owner_token), nullptr);
 
   loop.Run();

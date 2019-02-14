@@ -10,8 +10,9 @@
 #include <zx/eventpair.h>
 
 #include "garnet/bin/developer/tiles/tiles.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/component/cpp/testing/startup_context_for_test.h"
+#include "lib/component2/cpp/startup_context.h"
+#include "lib/component2/cpp/testing/startup_context_for_test.h"
+#include "lib/fxl/logging.h"
 #include "lib/gtest/test_loop_fixture.h"
 
 namespace {
@@ -34,10 +35,8 @@ class FakeViewManager
 
 class TilesTest : public gtest::TestLoopFixture {
  public:
-  TilesTest() : context_(component::testing::StartupContextForTest::Create()) {
-    // Drop original starting context to make sure nothing depends on it.
-    component::StartupContext::CreateFromStartupInfo();
-  }
+  TilesTest()
+      : context_(component2::testing::StartupContextForTest::Create()) {}
 
   void SetUp() final {
     zx::eventpair view_token;
@@ -58,7 +57,7 @@ class TilesTest : public gtest::TestLoopFixture {
 
  private:
   FakeViewManager view_manager_;
-  std::unique_ptr<component::testing::StartupContextForTest> context_;
+  std::unique_ptr<component2::testing::StartupContextForTest> context_;
   std::unique_ptr<tiles::Tiles> tiles_impl_;
   fuchsia::developer::tiles::Controller* tiles_;
   zx::eventpair view_owner_token_;
@@ -106,9 +105,9 @@ TEST_F(TilesTest, AddFromURL) {
                             // noop
                           });
   tiles()->ListTiles([](::std::vector<uint32_t> keys,
-                           ::std::vector<::std::string> urls,
-                           ::std::vector<::fuchsia::math::SizeF> sizes,
-                           ::std::vector<bool> focusabilities) {
+                        ::std::vector<::std::string> urls,
+                        ::std::vector<::fuchsia::math::SizeF> sizes,
+                        ::std::vector<bool> focusabilities) {
     EXPECT_EQ(1u, keys.size());
     EXPECT_EQ(1u, urls.size());
     EXPECT_EQ(1u, sizes.size());

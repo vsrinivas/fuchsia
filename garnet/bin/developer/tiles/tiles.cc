@@ -7,26 +7,29 @@
 #include <lib/async/default.h>
 
 #include "lib/fidl/cpp/optional.h"
+#include "lib/fxl/logging.h"
+#include "lib/svc/cpp/services.h"
+
+#include <cmath>
 
 constexpr float kTileElevation = 5.f;
 
 namespace tiles {
 
-Tiles::Tiles(component::StartupContext* startup_context,
+Tiles::Tiles(component2::StartupContext* startup_context,
              zx::eventpair root_view_token, std::vector<std::string> urls,
              int border)
     : startup_context_(startup_context),
       root_view_listener_binding_(this),
       root_view_container_listener_binding_(this),
       session_(scenic::CreateScenicSessionPtrAndListenerRequest(
-          startup_context_
-              ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>()
+          startup_context_->svc()
+              ->Connect<fuchsia::ui::scenic::Scenic>()
               .get())),
       root_node_(&session_),
       background_node_(&session_),
       container_node_(&session_),
-      launcher_(startup_context_
-                    ->ConnectToEnvironmentService<fuchsia::sys::Launcher>()),
+      launcher_(startup_context_->svc()->Connect<fuchsia::sys::Launcher>()),
       present_scene_task_([this]() { PresentScene(); }),
       border_(border) {
   // Create a simple background scene.
@@ -40,8 +43,7 @@ Tiles::Tiles(component::StartupContext* startup_context,
 
   // Create a View and export our scene from it.
   auto view_manager =
-      startup_context_
-          ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewManager>();
+      startup_context_->svc()->Connect<fuchsia::ui::viewsv1::ViewManager>();
   view_manager->CreateView2(root_view_.NewRequest(), std::move(root_view_token),
                             root_view_listener_binding_.NewBinding(),
                             std::move(root_export_token), "Tiles Root");
