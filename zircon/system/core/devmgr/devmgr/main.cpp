@@ -284,7 +284,7 @@ int pwrbtn_monitor_starter(void* arg) {
         { .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
           .ns = { .prefix = "/misc", .handle = misc_handle.release() } },
         { .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-          .h = { .id = PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO | 0),
+          .h = { .id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO | 0),
                  .handle = debuglog.release() } },
     };
 
@@ -395,7 +395,7 @@ zx_status_t svchost_start(bool require_system) {
     launchpad_load_from_file(lp, argv[0]);
     launchpad_set_args(lp, argc, argv);
     launchpad_add_handle(lp, dir_request.release(), PA_DIRECTORY_REQUEST);
-    launchpad_add_handle(lp, logger.release(), PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO));
+    launchpad_add_handle(lp, logger.release(), PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO));
 
     // Remove once svchost hosts the tracelink service itself.
     launchpad_add_handle(lp, appmgr_svc.release(), PA_HND(PA_USER0, 0));

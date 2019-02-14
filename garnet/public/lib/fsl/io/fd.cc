@@ -7,30 +7,24 @@
 #include <lib/fdio/limits.h>
 #include <lib/fdio/util.h>
 #include <zircon/processargs.h>
+#include <zircon/syscalls.h>
 
 namespace fsl {
 
 zx::channel CloneChannelFromFileDescriptor(int fd) {
-  zx_handle_t handle[FDIO_MAX_HANDLES];
-  uint32_t type[FDIO_MAX_HANDLES];
-
-  zx_status_t r = fdio_clone_fd(fd, 0, handle, type);
-  if (r < 0 || r == 0)
+  zx::handle handle;
+  zx_status_t status = fdio_fd_clone(fd, handle.reset_and_get_address());
+  if (status != ZX_OK)
     return zx::channel();
 
-  if (type[0] != PA_FDIO_REMOTE) {
-    for (int i = 0; i < r; ++i) {
-      zx_handle_close(handle[i]);
-    }
+  zx_info_handle_basic_t info = {};
+  status =
+      handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
+
+  if (status != ZX_OK || info.type != ZX_OBJ_TYPE_CHANNEL)
     return zx::channel();
-  }
 
-  // Close any extra handles.
-  for (int i = 1; i < r; ++i) {
-    zx_handle_close(handle[i]);
-  }
-
-  return zx::channel(handle[0]);
+  return zx::channel(handle.release());
 }
 
 fxl::UniqueFD OpenChannelAsFileDescriptor(zx::channel channel) {

@@ -56,7 +56,7 @@ void InitStdio(StdioType stdio, fdio_spawn_action_t* actions,
         zx_debuglog_create(ZX_HANDLE_INVALID, 0, &h);
         if (h != ZX_HANDLE_INVALID) {
             actions[*action_count].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
-            actions[*action_count].h.id = PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO);
+            actions[*action_count].h.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO);
             actions[*action_count].h.handle = h;
             *action_count += 1;
         }

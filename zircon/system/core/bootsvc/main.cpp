@@ -180,7 +180,7 @@ int LaunchNextProcess(void* raw_ctx) {
     if (status != ZX_OK) {
         launchpad_abort(lp, status, "bootsvc: cannot create debuglog handle");
     } else {
-        launchpad_add_handle(lp, debuglog.release(), PA_HND(PA_FDIO_LOGGER,
+        launchpad_add_handle(lp, debuglog.release(), PA_HND(PA_FD,
                                                             FDIO_FLAG_USE_FOR_STDIO | 0));
     }
 

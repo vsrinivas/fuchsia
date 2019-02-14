@@ -101,7 +101,7 @@ static void stuff_loader_bootstrap(zx_handle_t log,
         },
         .handle_info = {
             [BOOTSTRAP_EXEC_VMO] = PA_HND(PA_VMO_EXECUTABLE, 0),
-            [BOOTSTRAP_LOGGER] = PA_HND(PA_FDIO_LOGGER, 0),
+            [BOOTSTRAP_LOGGER] = PA_HND(PA_FD, 0),
             [BOOTSTRAP_PROC] = PA_HND(PA_PROC_SELF, 0),
             [BOOTSTRAP_ROOT_VMAR] = PA_HND(PA_VMAR_ROOT, 0),
             [BOOTSTRAP_SEGMENTS_VMAR] = PA_HND(PA_VMAR_LOADED, 0),

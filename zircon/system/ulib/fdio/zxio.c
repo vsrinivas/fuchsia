@@ -74,7 +74,7 @@ static zx_status_t fdio_zxio_clone(fdio_t* io, zx_handle_t* handles,
         return status;
     }
     handles[0] = local;
-    types[0] = PA_FDIO_REMOTE;
+    types[0] = PA_FD;
     return 1;
 }
 
@@ -87,7 +87,7 @@ static zx_status_t fdio_zxio_unwrap(fdio_t* io, zx_handle_t* handles,
         return status;
     }
     handles[0] = handle;
-    types[0] = PA_FDIO_REMOTE;
+    types[0] = PA_FD;
     return 1;
 }
 
@@ -646,7 +646,7 @@ static zx_status_t fdio_zxio_pipe_clone(fdio_t* io, zx_handle_t* handles, uint32
     if (status != ZX_OK) {
         return status;
     }
-    types[0] = PA_FDIO_SOCKET;
+    types[0] = PA_FD;
     return 1;
 }
 
@@ -659,7 +659,7 @@ static zx_status_t fdio_zxio_pipe_unwrap(fdio_t* io, zx_handle_t* handles,
         return status;
     }
     handles[0] = handle;
-    types[0] = PA_FDIO_SOCKET;
+    types[0] = PA_FD;
     return 1;
 }
 
@@ -844,7 +844,7 @@ zx_status_t fdio_pipe_half(zx_handle_t* handle, uint32_t* type) {
         goto fail;
     }
     *handle = h1;
-    *type = PA_FDIO_SOCKET;
+    *type = PA_FD;
     return fd;
 
 fail:
@@ -867,7 +867,7 @@ static zx_status_t fdio_zxio_debuglog_clone(fdio_t* io, zx_handle_t* handles,
     if (status != ZX_OK) {
         return status;
     }
-    types[0] = PA_FDIO_LOGGER;
+    types[0] = PA_FD;
     return 1;
 }
 

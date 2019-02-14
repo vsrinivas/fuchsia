@@ -35,7 +35,7 @@ static void run_program(const char* progname, const char** argv, zx_handle_t h) 
     fdio_spawn_action_t actions[] = {
         {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = progname}},
         {.action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-         .h = {.id = PA_HND(PA_FDIO_LOGGER, 0 | FDIO_FLAG_USE_FOR_STDIO), .handle = logger}},
+         .h = {.id = PA_HND(PA_FD, 0 | FDIO_FLAG_USE_FOR_STDIO), .handle = logger}},
         {.action = FDIO_SPAWN_ACTION_ADD_HANDLE, .h = {.id = PA_HND(PA_USER0, 0), .handle = h}},
     };
 

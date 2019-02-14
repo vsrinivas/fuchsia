@@ -97,7 +97,7 @@ static zx_status_t zxsio_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types
     if (r < 0) {
         return r;
     }
-    types[0] = PA_FDIO_SOCKET;
+    types[0] = PA_FD;
     return 1;
 }
 
@@ -109,7 +109,7 @@ static zx_status_t zxsio_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* type
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
     zx_status_t r;
     handles[0] = sio->socket.socket;
-    types[0] = PA_FDIO_SOCKET;
+    types[0] = PA_FD;
     r = 1;
     return r;
 }

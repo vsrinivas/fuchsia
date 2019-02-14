@@ -652,9 +652,9 @@ void __libc_extensions_init(uint32_t handle_count,
         handle[n] = 0;
         handle_info[n] = 0;
 
-        // If we reach here then the handle is a PA_FDIO_* type (an fd), so
-        // check for a bit flag indicating that it should be duped into 0/1/2 to
-        // become all of stdin/out/err
+        // If we reach here then the handle is a PA_FDIO_* or PA_FD type
+        // (an fd), so check for a bit flag indicating that it should be duped
+        // into 0/1/2 to become all of stdin/out/err
         if ((arg & FDIO_FLAG_USE_FOR_STDIO) && (arg_fd < FDIO_MAX_FD)) {
           stdio_fd = arg_fd;
         }

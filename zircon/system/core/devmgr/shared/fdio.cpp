@@ -131,7 +131,7 @@ zx_status_t devmgr_launch_with_loader(const zx::job& job, const char* name, zx::
     if (debuglog.is_valid()) {
         actions.push_back((fdio_spawn_action_t){
             .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-            .h = { .id = PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO | 0),
+            .h = { .id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO | 0),
                    .handle = debuglog.release() },
         });
     } else {

@@ -73,28 +73,13 @@ zx_status_t fdio_ns_unbind(fdio_ns_t* ns, const char* path) {
 
 __EXPORT
 zx_status_t fdio_ns_bind_fd(fdio_ns_t* ns, const char* path, int fd) {
-    zx_handle_t handle[FDIO_MAX_HANDLES];
-    uint32_t type[FDIO_MAX_HANDLES];
-
-    zx_status_t r = fdio_clone_fd(fd, 0, handle, type);
-    if (r < 0) {
-        return r;
-    }
-    if (r == 0) {
-        return ZX_ERR_INTERNAL;
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    zx_status_t status = fdio_fd_clone(fd, &handle);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    if (type[0] != PA_FDIO_REMOTE) {
-        // wrong type, discard handles
-        zx_handle_close_many(handle, r);
-        return ZX_ERR_WRONG_TYPE;
-    }
-
-    // close any aux handles, then do the actual bind
-    for (int n = 1; n < r; n++) {
-        zx_handle_close(handle[n]);
-    }
-    return fdio_ns_bind(ns, path, handle[0]);
+    return fdio_ns_bind(ns, path, handle);
 }
 
 fdio_t* fdio_ns_open_root(fdio_ns_t* ns) {

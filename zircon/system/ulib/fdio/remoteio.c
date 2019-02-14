@@ -546,56 +546,15 @@ static zx_status_t fdio_from_handles(zx_handle_t handle, fuchsia_io_NodeInfo* in
 __EXPORT
 zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount,
                            int* fd_out) {
-    fdio_t* io;
-    zx_status_t r;
-    int fd;
-    fuchsia_io_NodeInfo info;
-
-    // Pack additional handles into |info|, if possible.
-    switch (PA_HND_TYPE(types[0])) {
-    case PA_FDIO_REMOTE:
-        switch (hcount) {
-        case 1:
-            io = fdio_remote_create(handles[0], 0);
-            goto bind;
-        case 2:
-            io = fdio_remote_create(handles[0], handles[1]);
-            goto bind;
-        default:
-            r = ZX_ERR_INVALID_ARGS;
-            goto fail;
-        }
-    case PA_FDIO_SOCKET:
-        info.tag = fuchsia_io_NodeInfoTag_pipe;
-        // Expected: Single socket handle
-        if (hcount != 1) {
-            r = ZX_ERR_INVALID_ARGS;
-            goto fail;
-        }
-        info.pipe.socket = handles[0];
-        break;
-    default:
-        r = ZX_ERR_IO;
-        goto fail;
+    if (hcount == 0) {
+        return ZX_ERR_INVALID_ARGS;
     }
-
-    if ((r = fdio_from_handles(ZX_HANDLE_INVALID, &info, &io)) != ZX_OK) {
-        return r;
+    // Change hcount != 1 into an error once we update the Go runtime not to
+    // send multiple handles.
+    if (hcount >= 1) {
+        zx_handle_close_many(handles + 1, hcount - 1);
     }
-
-bind:
-    fd = fdio_bind_to_fd(io, -1, 0);
-    if (fd < 0) {
-        fdio_close(io);
-        fdio_release(io);
-        return ZX_ERR_BAD_STATE;
-    }
-
-    *fd_out = fd;
-    return ZX_OK;
-fail:
-    zx_handle_close_many(handles, hcount);
-    return r;
+    return fdio_fd_create(handles[0], fd_out);
 }
 
 // Synchronously (non-pipelined) open an object

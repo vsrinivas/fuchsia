@@ -205,10 +205,10 @@ TEST_F(EnclosingEnvTest, OutErrPassing) {
         linfo.arguments.reset({"--echo", "--cout=potato", "--cerr=tomato"});
 
         linfo.out = FileDescriptor::New();
-        linfo.out->type0 = PA_FDIO_SOCKET;
+        linfo.out->type0 = PA_FD;
         linfo.out->handle0 = cout_reader.OpenSocket();
         linfo.err = FileDescriptor::New();
-        linfo.err->type0 = PA_FDIO_SOCKET;
+        linfo.err->type0 = PA_FD;
         linfo.err->handle0 = cerr_reader.OpenSocket();
 
         return linfo;

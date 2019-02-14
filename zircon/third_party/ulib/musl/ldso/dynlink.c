@@ -2011,10 +2011,10 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
             }
             exec_vmo = handles[i];
             break;
-        case PA_FDIO_LOGGER:
+        case PA_FD:
             if (logger != ZX_HANDLE_INVALID ||
                 handles[i] == ZX_HANDLE_INVALID) {
-                error("bootstrap message bad FDIO_LOGGER %#x vs %#x",
+                error("bootstrap message bad FD %#x vs %#x",
                       handles[i], logger);
             }
             logger = handles[i];

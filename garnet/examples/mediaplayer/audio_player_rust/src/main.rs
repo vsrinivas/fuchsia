@@ -26,7 +26,7 @@ use {
 };
 
 // Indicator for the remote handle type used by FDIO.
-const PA_FDIO_REMOTE: u32 = 0x32;
+const PA_FD: u32 = 0x30;
 
 fn channel_from_file(file: File) -> Result<zx::Channel, io::Error> {
     unsafe {
@@ -43,7 +43,7 @@ fn channel_from_file(file: File) -> Result<zx::Channel, io::Error> {
 
         let handle = zx::Handle::from_raw(handles[0]);
 
-        if types[0] != PA_FDIO_REMOTE {
+        if types[0] != PA_FD {
             return Err(io::Error::new(io::ErrorKind::Other, "unexpected handle type"));
         }
 
