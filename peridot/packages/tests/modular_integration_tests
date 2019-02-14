@@ -19,8 +19,6 @@
         "//peridot/tests/intents:intent_test_parent_module",
         "//peridot/tests/intents:intent_test_child_module",
         "//peridot/tests/last_focus_time:last_focus_time_test_session_shell",
-        "//peridot/tests/link_context_entities:link_context_entities_test_module",
-        "//peridot/tests/link_context_entities:link_context_entities_test_session_shell",
         "//peridot/tests:modular_tests",
         "//peridot/tests/module_context:module_context_test_session_shell",
         "//peridot/tests/module_context:module_context_test_module",
