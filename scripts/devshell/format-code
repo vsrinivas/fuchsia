@@ -18,12 +18,12 @@
 ##   --files   Allows the user to specify files.  Files are comma separated.
 ##             Globs are dealt with by bash; fx format-code "--files=foo/*" will
 ##             work as expected.
-##    --target Allows the user to specify a gn target.
-##    --git    The default; it uses `git diff-index` against the newest parent
+##   --target  Allows the user to specify a gn target.
+##   --git     The default; it uses `git diff-index` against the newest parent
 ##             commit in the upstream branch (or against HEAD if no such commit
 ##             is found).  Files that are locally modified, staged or touched by
 ##             any commits introduced on the local branch are formatted.
-##    --remove-ordinals (temporary)
+##   --remove-ordinals (temporary)
 ##             Removes ordinals from FIDL files.  This option will be removed
 ##             when ordinals are no longer legal in FIDL files.
 
