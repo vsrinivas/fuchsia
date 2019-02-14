@@ -75,6 +75,11 @@ static void HandleCommonMpElement(element_id::ElementId id, Span<const uint8_t> 
     }
 }
 
+static void ConvertMpmHeader(const MpmHeader& header, wlan_mlme::MeshPeeringCommon* out) {
+    out->protocol_id = header.protocol;
+    out->local_link_id = header.local_link_id;
+}
+
 // IEEE Std 802.11-2016, 9.6.16.2.2
 bool ParseMpOpenAction(BufferReader* r, wlan_mlme::MeshPeeringOpenAction* out) {
     auto cap_info = r->Read<CapabilityInfo>();
@@ -86,9 +91,34 @@ bool ParseMpOpenAction(BufferReader* r, wlan_mlme::MeshPeeringOpenAction* out) {
             // Handle the MPM element separately since there is no way to handle
             // it in a generic fashion
             if (auto mpm_open = common::ParseMpmOpen(raw_body)) {
-                out->common.protocol_id = mpm_open->header.protocol;
-                out->common.local_link_id = mpm_open->header.local_link_id;
+                ConvertMpmHeader(mpm_open->header, &out->common);
                 required_ies.have_mpm = true;
+            }
+        } else {
+            HandleCommonMpElement(id, raw_body, &out->common, &required_ies);
+        }
+    }
+    return required_ies.have_all();
+}
+
+// IEEE Std 802.11-2016, 9.6.16.3.2
+bool ParseMpConfirmAction(BufferReader* r, wlan_mlme::MeshPeeringConfirmAction* out) {
+    auto cap_info = r->Read<CapabilityInfo>();
+    if (cap_info == nullptr) { return false; }
+
+    auto aid = r->Read<uint16_t>();
+    if (aid == nullptr) { return false; }
+    out->aid = *aid;
+
+    RequiredIes required_ies;
+    for (auto [id, raw_body] : common::ElementSplitter(r->ReadRemaining())) {
+        if (id == element_id::kMeshPeeringManagement) {
+            // Handle the MPM element separately since there is no way to handle
+            // it in a generic fashion
+            if (auto mpm_confirm = common::ParseMpmConfirm(raw_body)) {
+                ConvertMpmHeader(mpm_confirm->header, &out->common);
+                required_ies.have_mpm = true;
+                out->peer_link_id = mpm_confirm->peer_link_id;
             }
         } else {
             HandleCommonMpElement(id, raw_body, &out->common, &required_ies);

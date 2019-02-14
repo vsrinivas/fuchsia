@@ -12,6 +12,8 @@ namespace wlan {
 
 bool ParseMpOpenAction(BufferReader* r, ::fuchsia::wlan::mlme::MeshPeeringOpenAction* out);
 
+bool ParseMpConfirmAction(BufferReader* r, ::fuchsia::wlan::mlme::MeshPeeringConfirmAction* out);
+
 }  // namespace wlan
 
 #endif  // GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MESH_PARSE_MP_ACTION_H_

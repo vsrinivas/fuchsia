@@ -46,8 +46,9 @@ class MeshMlme : public Mlme {
     zx_status_t HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt);
     zx_status_t HandleAnyMgmtFrame(MgmtFrame<>&& frame);
     zx_status_t HandleActionFrame(const MgmtFrameHeader& mgmt, BufferReader* r);
-    zx_status_t HandleSelfProtectedAction(common::MacAddr src_addr, BufferReader* r);
-    zx_status_t HandleMpmOpenAction(common::MacAddr src_addr, BufferReader* r);
+    zx_status_t HandleSelfProtectedAction(const common::MacAddr& src_addr, BufferReader* r);
+    zx_status_t HandleMpmOpenAction(const common::MacAddr& src_addr, BufferReader* r);
+    zx_status_t HandleMpmConfirmAction(const common::MacAddr& src_addr, BufferReader* r);
     void HandleMeshAction(const MgmtFrameHeader& mgmt, BufferReader* r);
 
     const MeshPath* QueryPathTable(const common::MacAddr& mesh_dest);

@@ -140,6 +140,46 @@ TEST_F(MeshMlmeTest, HandleMpmOpen) {
     }
 }
 
+TEST_F(MeshMlmeTest, HandleMpmConfirm) {
+    EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+
+    // clang-format off
+    const uint8_t frame[] = {
+        // Mgmt header
+        0xd0, 0x00, 0x00, 0x00,              // fc, duration
+        0x01, 0x01, 0x01, 0x01, 0x01, 0x01,  // addr1
+        0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff,  // addr2
+        0x03, 0x03, 0x03, 0x03, 0x03, 0x03,  // addr3
+        0x00, 0x00,                          // seq ctl
+        // Action
+        15,  // category (self-protected)
+        2,   // action = Mesh Peering Confirm
+        // Body
+        0xaa, 0xbb,                                        // capability info
+        0xcc, 0xdd,                                        // aid
+        1, 1, 0x81,                                        // supported rates
+        114, 3, 'f', 'o', 'o',                             // mesh id
+        113, 7, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7,  // mesh config
+        117, 6, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6,        // MPM
+    };
+    // clang-format on
+
+    ASSERT_EQ(mlme.HandleFramePacket(MakeWlanPacket(frame)), ZX_OK);
+
+    auto msgs = device.GetServiceMsgs<wlan_mlme::MeshPeeringConfirmAction>();
+    ASSERT_EQ(msgs.size(), 1ULL);
+
+    {
+        const uint8_t expected[] = {'f', 'o', 'o'};
+        EXPECT_RANGES_EQ(msgs[0].body()->common.mesh_id, expected);
+    }
+
+    {
+        const uint8_t expected[] = {0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
+        EXPECT_RANGES_EQ(msgs[0].body()->common.peer_sta_address, expected);
+    }
+}
+
 TEST_F(MeshMlmeTest, GetPathTable) {
     EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
     auto path_table_msgs = GetPathTable();

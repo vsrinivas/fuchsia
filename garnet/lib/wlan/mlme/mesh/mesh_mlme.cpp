@@ -347,13 +347,15 @@ zx_status_t MeshMlme::HandleActionFrame(const MgmtFrameHeader& mgmt, BufferReade
     }
 }
 
-zx_status_t MeshMlme::HandleSelfProtectedAction(common::MacAddr src_addr, BufferReader* r) {
+zx_status_t MeshMlme::HandleSelfProtectedAction(const common::MacAddr& src_addr, BufferReader* r) {
     auto self_prot_header = r->Read<SelfProtectedActionHeader>();
     if (self_prot_header == nullptr) { return ZX_OK; }
 
     switch (self_prot_header->self_prot_action) {
     case action::kMeshPeeringOpen:
         return HandleMpmOpenAction(src_addr, r);
+    case action::kMeshPeeringConfirm:
+        return HandleMpmConfirmAction(src_addr, r);
     default:
         return ZX_OK;
     }
@@ -381,12 +383,20 @@ void MeshMlme::HandleMeshAction(const MgmtFrameHeader& mgmt, BufferReader* r) {
     }
 }
 
-zx_status_t MeshMlme::HandleMpmOpenAction(common::MacAddr src_addr, BufferReader* r) {
+zx_status_t MeshMlme::HandleMpmOpenAction(const common::MacAddr& src_addr, BufferReader* r) {
     wlan_mlme::MeshPeeringOpenAction action;
     if (!ParseMpOpenAction(r, &action)) { return ZX_OK; }
 
     src_addr.CopyTo(action.common.peer_sta_address.data());
     return SendServiceMsg(device_, &action, fuchsia_wlan_mlme_MLMEIncomingMpOpenActionOrdinal);
+}
+
+zx_status_t MeshMlme::HandleMpmConfirmAction(const common::MacAddr& src_addr, BufferReader* r) {
+    wlan_mlme::MeshPeeringConfirmAction action;
+    if (!ParseMpConfirmAction(r, &action)) { return ZX_OK; }
+
+    src_addr.CopyTo(action.common.peer_sta_address.data());
+    return SendServiceMsg(device_, &action, fuchsia_wlan_mlme_MLMEIncomingMpConfirmActionOrdinal);
 }
 
 const MeshPath* MeshMlme::QueryPathTable(const common::MacAddr& mesh_dest) {
