@@ -261,28 +261,22 @@ static_assert(!(O_DIRECT & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MAS
 static_assert(!(O_LARGEFILE & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
 static_assert(!(O_NOATIME & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
 static_assert(!(O_TMPFILE & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
-static_assert(!(O_PIPELINE & ZXIO_FS_MASK), "Unexpected collision with ZXIO_FS_MASK");
 
 static uint32_t fdio_flags_to_zxio(uint32_t flags) {
-    uint32_t result = 0;
+    uint32_t rights = 0;
     switch (flags & O_ACCMODE) {
     case O_RDONLY:
-        result |= ZX_FS_RIGHT_READABLE;
+        rights |= ZX_FS_RIGHT_READABLE;
         break;
     case O_WRONLY:
-        result |= ZX_FS_RIGHT_WRITABLE;
+        rights |= ZX_FS_RIGHT_WRITABLE;
         break;
     case O_RDWR:
-        result |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
+        rights |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
         break;
     }
 
-    if (!(flags & O_PIPELINE)) {
-        result |= ZX_FS_FLAG_DESCRIBE;
-    }
-
-    result |= (flags & ZXIO_FS_MASK);
-    return result;
+    return rights | ZX_FS_FLAG_DESCRIBE | (flags & ZXIO_FS_MASK);
 }
 
 static uint32_t zxio_flags_to_fdio(uint32_t flags) {
