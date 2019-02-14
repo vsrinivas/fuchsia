@@ -205,7 +205,7 @@ FUNCTION(_start)
     // Map our current physical PC to the virtual PC and jump there.
     // PC = next_PC - __code_start + kernel_vaddr
     adr     tmp, .Lmmu_on_vaddr
-    adr     tmp2, __code_start
+    adr_global tmp2, __code_start
     sub     tmp, tmp, tmp2
     add     tmp, tmp, kernel_vaddr
     br      tmp
