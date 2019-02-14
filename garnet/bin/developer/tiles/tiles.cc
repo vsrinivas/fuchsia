@@ -16,7 +16,7 @@ constexpr float kTileElevation = 5.f;
 
 namespace tiles {
 
-Tiles::Tiles(component2::StartupContext* startup_context,
+Tiles::Tiles(sys::StartupContext* startup_context,
              zx::eventpair root_view_token, std::vector<std::string> urls,
              int border)
     : startup_context_(startup_context),

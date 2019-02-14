@@ -15,7 +15,6 @@
 
 #include <lib/fdio/util.h>
 
-#include "lib/component2/cpp/service_directory.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -24,6 +23,7 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/svc/cpp/services.h"
+#include "lib/sys/cpp/service_directory.h"
 
 #ifdef __x86_64__  // for other arches we're just a stub, TO-128
 
@@ -429,7 +429,7 @@ static bool ControlIpt(const insntrace::IptConfig& config,
 
 static bool RunProgram(const insntrace::IptConfig& config,
                        const fxl::CommandLine& cl,
-                       std::shared_ptr<component2::ServiceDirectory>& services) {
+                       std::shared_ptr<sys::ServiceDirectory>& services) {
   debugger_utils::Argv inferior_argv(cl.positional_args().begin(),
                                      cl.positional_args().end());
 
@@ -479,7 +479,7 @@ int main(int argc, char* argv[]) {
 
   FXL_LOG(INFO) << "insntrace control program starting";
 
-  auto services = component2::ServiceDirectory::CreateFromNamespace();
+  auto services = sys::ServiceDirectory::CreateFromNamespace();
 
   bool success;
   if (cl.HasOption("control", nullptr)) {

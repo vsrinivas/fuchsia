@@ -36,7 +36,7 @@ executable("main") {
   deps = [
     ":src",
     "//garnet/public/lib/syslog/cpp",
-    "//sdk/lib/component2/cpp",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/fidl/fuchsia-crash",
     "//zircon/public/lib/async-loop-cpp",
   ]

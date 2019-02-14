@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/component2/cpp/service_directory.h>
+#include <lib/sys/cpp/service_directory.h>
 
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 
-namespace component2 {
+namespace sys {
 namespace {
 
 zx::channel OpenServiceRoot() {
@@ -40,4 +40,4 @@ zx_status_t ServiceDirectory::Connect(const std::string& interface_name,
                                  channel.release());
 }
 
-}  // namespace component2
+}  // namespace sys

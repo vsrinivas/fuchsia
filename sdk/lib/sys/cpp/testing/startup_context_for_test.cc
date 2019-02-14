@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/component2/cpp/testing/startup_context_for_test.h"
+#include "lib/sys/cpp/testing/startup_context_for_test.h"
 
 #include <lib/fdio/directory.h>
 #include <zircon/processargs.h>
 
-namespace component2 {
+namespace sys {
 namespace testing {
 
 StartupContextForTest::StartupContextForTest(
@@ -36,4 +36,4 @@ std::unique_ptr<StartupContextForTest> StartupContextForTest::Create(
 }
 
 }  // namespace testing
-}  // namespace component2
+}  // namespace sys

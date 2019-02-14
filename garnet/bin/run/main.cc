@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component2/cpp/termination_reason.h>
-#include <lib/component2/cpp/service_directory.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/util.h>
 #include <lib/fxl/strings/string_printf.h>
+#include <lib/sys/cpp/service_directory.h>
+#include <lib/sys/cpp/termination_reason.h>
 #include <stdio.h>
 
 #include <fuchsia/sys/cpp/fidl.h>
@@ -63,7 +63,7 @@ int main(int argc, const char** argv) {
     consume_arg(&argc, &argv);
   }
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto services = component2::ServiceDirectory::CreateFromNamespace();
+  auto services = sys::ServiceDirectory::CreateFromNamespace();
 
   // Connect to the Launcher service through our static environment.
   fuchsia::sys::LauncherSyncPtr launcher;
@@ -85,8 +85,7 @@ int main(int argc, const char** argv) {
                                          TerminationReason termination_reason) {
     if (termination_reason != TerminationReason::EXITED) {
       fprintf(stderr, "%s: %s\n", program_name.c_str(),
-              component2::HumanReadableTerminationReason(termination_reason)
-                  .c_str());
+              sys::HumanReadableTerminationReason(termination_reason).c_str());
     }
     zx_process_exit(return_code);
   };

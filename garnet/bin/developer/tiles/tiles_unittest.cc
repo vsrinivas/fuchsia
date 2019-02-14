@@ -10,10 +10,10 @@
 #include <zx/eventpair.h>
 
 #include "garnet/bin/developer/tiles/tiles.h"
-#include "lib/component2/cpp/startup_context.h"
-#include "lib/component2/cpp/testing/startup_context_for_test.h"
 #include "lib/fxl/logging.h"
 #include "lib/gtest/test_loop_fixture.h"
+#include "lib/sys/cpp/startup_context.h"
+#include "lib/sys/cpp/testing/startup_context_for_test.h"
 
 namespace {
 
@@ -35,8 +35,7 @@ class FakeViewManager
 
 class TilesTest : public gtest::TestLoopFixture {
  public:
-  TilesTest()
-      : context_(component2::testing::StartupContextForTest::Create()) {}
+  TilesTest() : context_(sys::testing::StartupContextForTest::Create()) {}
 
   void SetUp() final {
     zx::eventpair view_token;
@@ -57,7 +56,7 @@ class TilesTest : public gtest::TestLoopFixture {
 
  private:
   FakeViewManager view_manager_;
-  std::unique_ptr<component2::testing::StartupContextForTest> context_;
+  std::unique_ptr<sys::testing::StartupContextForTest> context_;
   std::unique_ptr<tiles::Tiles> tiles_impl_;
   fuchsia::developer::tiles::Controller* tiles_;
   zx::eventpair view_owner_token_;

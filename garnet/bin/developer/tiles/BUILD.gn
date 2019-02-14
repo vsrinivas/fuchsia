@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/testing/environments.gni")
 import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 source_set("tiles_lib") {
   sources = [
@@ -18,7 +18,7 @@ source_set("tiles_lib") {
     "//sdk/fidl/fuchsia.developer.tiles",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.viewsv1",
-    "//sdk/lib/component2/cpp",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-cpp:async-cpp",
     "//zircon/public/lib/zx",
   ]
@@ -39,7 +39,7 @@ executable("bin") {
     ":tiles_lib",
     "//garnet/public/lib/fxl",
     "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/lib/component2/cpp",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
@@ -71,7 +71,7 @@ executable("tiles_unittests") {
     ":tiles_lib",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
-    "//sdk/lib/component2/cpp/testing",
+    "//sdk/lib/sys/cpp/testing",
     "//third_party/googletest:gtest_main",
   ]
 }

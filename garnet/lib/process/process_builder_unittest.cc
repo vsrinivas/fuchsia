@@ -4,7 +4,7 @@
 
 #include "garnet/lib/process/process_builder.h"
 #include "gtest/gtest.h"
-#include "lib/component2/cpp/service_directory.h"
+#include "lib/sys/cpp/service_directory.h"
 
 namespace process {
 namespace {
@@ -12,7 +12,7 @@ namespace {
 static constexpr char kShell[] = "/boot/bin/sh";
 
 TEST(ProcessBuilder, Control) {
-  ProcessBuilder builder(component2::ServiceDirectory::CreateFromNamespace());
+  ProcessBuilder builder(sys::ServiceDirectory::CreateFromNamespace());
   ASSERT_EQ(ZX_OK, builder.LoadPath(kShell));
   builder.AddArgs({kShell});
   builder.CloneAll();

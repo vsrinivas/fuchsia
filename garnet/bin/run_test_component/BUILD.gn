@@ -41,11 +41,11 @@ executable("bin") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/component2/cpp",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/fidl/fuchsia-logger",
     "//zircon/public/lib/async-loop-cpp",
   ]

@@ -64,7 +64,7 @@ class Process final {
   };
 
   explicit Process(Server* server, Delegate* delegate_,
-                   std::shared_ptr<component2::ServiceDirectory> services);
+                   std::shared_ptr<sys::ServiceDirectory> services);
   ~Process();
 
   std::string GetName() const;
@@ -241,7 +241,7 @@ class Process final {
   Delegate* delegate_;  // weak
 
   // Handle containing services available to this process.
-  std::shared_ptr<component2::ServiceDirectory> services_;
+  std::shared_ptr<sys::ServiceDirectory> services_;
 
   // The argv that this process was initialized with.
   debugger_utils::Argv argv_;

@@ -19,17 +19,17 @@
 #include "garnet/lib/debug_ipc/helper/message_loop_async.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_target.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
-#include "lib/component2/cpp/service_directory.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
-#include "lib/component2/cpp/service_directory.h"
+#include "lib/sys/cpp/service_directory.h"
 
 using namespace debug_ipc;
 
 namespace debug_agent {
 namespace {
 
-std::unique_ptr<debug_ipc::MessageLoop> GetMessageLoop(MessageLoopTarget::LoopType type) {
+std::unique_ptr<debug_ipc::MessageLoop> GetMessageLoop(
+    MessageLoopTarget::LoopType type) {
   switch (type) {
     case MessageLoopTarget::LoopType::kAsync:
       return std::make_unique<debug_ipc::MessageLoopAsync>();
@@ -48,7 +48,7 @@ std::unique_ptr<debug_ipc::MessageLoop> GetMessageLoop(MessageLoopTarget::LoopTy
 // Represents one connection to a client.
 class SocketConnection {
  public:
-  SocketConnection(std::shared_ptr<component2::ServiceDirectory> services)
+  SocketConnection(std::shared_ptr<sys::ServiceDirectory> services)
       : services_(services) {}
   ~SocketConnection() {}
 
@@ -57,7 +57,7 @@ class SocketConnection {
   const debug_agent::DebugAgent* agent() const { return agent_.get(); }
 
  private:
-  std::shared_ptr<component2::ServiceDirectory> services_;
+  std::shared_ptr<sys::ServiceDirectory> services_;
   debug_ipc::BufferedFD buffer_;
 
   std::unique_ptr<debug_agent::DebugAgent> agent_;
@@ -112,7 +112,7 @@ class SocketServer {
  public:
   SocketServer() = default;
   bool Run(debug_ipc::MessageLoop*, int port,
-           std::shared_ptr<component2::ServiceDirectory> services);
+           std::shared_ptr<sys::ServiceDirectory> services);
 
  private:
   bool AcceptNextConnection();
@@ -124,7 +124,7 @@ class SocketServer {
 };
 
 bool SocketServer::Run(debug_ipc::MessageLoop* message_loop, int port,
-                       std::shared_ptr<component2::ServiceDirectory> services) {
+                       std::shared_ptr<sys::ServiceDirectory> services) {
   server_socket_.reset(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
   if (!server_socket_.is_valid()) {
     FXL_LOG(ERROR) << "Could not create socket.";
@@ -231,7 +231,7 @@ int main(int argc, char* argv[]) {
       return 1;
     }
 
-    auto services = component2::ServiceDirectory::CreateFromNamespace();
+    auto services = sys::ServiceDirectory::CreateFromNamespace();
 
     printf("Using %s message loop.\n",
            MessageLoopTarget::LoopTypeToString(message_loop_type));

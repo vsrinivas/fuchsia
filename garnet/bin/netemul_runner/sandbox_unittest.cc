@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "sandbox.h"
-#include <lib/component2/cpp/termination_reason.h>
+#include <lib/sys/cpp/termination_reason.h>
 #include <iostream>
 #include <unordered_set>
 #include "lib/gtest/real_loop_fixture.h"
@@ -50,7 +50,7 @@ class SandboxTest : public ::gtest::RealLoopFixture {
                                        int64_t exit_code,
                                        TerminationReason reason) {
       FXL_LOG(INFO) << "Sandbox terminated with (" << exit_code << ") reason: "
-                    << component2::HumanReadableTerminationReason(reason);
+                    << sys::HumanReadableTerminationReason(reason);
       o_exit_code = exit_code;
       o_term_reason = reason;
       done = true;

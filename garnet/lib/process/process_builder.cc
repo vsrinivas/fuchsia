@@ -22,7 +22,7 @@
 #include <array>
 #include <string_view>
 
-#include "lib/component2/cpp/service_directory.h"
+#include "lib/sys/cpp/service_directory.h"
 
 namespace process {
 
@@ -39,14 +39,13 @@ constexpr int kFdioMaxResolveDepth = 256;
 
 }  // namespace
 
-ProcessBuilder::ProcessBuilder(
-    std::shared_ptr<component2::ServiceDirectory> services)
+ProcessBuilder::ProcessBuilder(std::shared_ptr<sys::ServiceDirectory> services)
     : services_(services) {
   services_->Connect(launcher_.NewRequest());
 }
 
-ProcessBuilder::ProcessBuilder(
-    zx::job job, std::shared_ptr<component2::ServiceDirectory> services)
+ProcessBuilder::ProcessBuilder(zx::job job,
+                               std::shared_ptr<sys::ServiceDirectory> services)
     : ProcessBuilder(services) {
   launch_info_.job = std::move(job);
 }

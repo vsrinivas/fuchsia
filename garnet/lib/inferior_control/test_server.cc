@@ -21,16 +21,16 @@
 
 #include "gtest/gtest.h"
 
-#include "lib/component2/cpp/service_directory.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "lib/sys/cpp/service_directory.h"
 
 namespace inferior_control {
 
 TestServer::TestServer()
     : Server(debugger_utils::GetRootJob(), debugger_utils::GetDefaultJob()),
-      services_(component2::ServiceDirectory::CreateFromNamespace()) {}
+      services_(sys::ServiceDirectory::CreateFromNamespace()) {}
 
 void TestServer::SetUp() {
   ASSERT_TRUE(exception_port_.Run());

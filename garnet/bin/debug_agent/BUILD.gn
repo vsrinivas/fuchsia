@@ -102,7 +102,7 @@ executable("bin") {
 
   deps = [
     ":lib",
-    "//sdk/lib/component2/cpp",
+    "//sdk/lib/sys/cpp",
   ]
 }
 
@@ -157,7 +157,9 @@ executable("unit_tests") {
 }
 
 executable("debug_test_true") {
-  sources = ["true.c"]
+  sources = [
+    "true.c",
+  ]
 }
 
 package("debug_agent_tests") {
@@ -175,17 +177,21 @@ package("debug_agent_tests") {
 
   # Unit tests.
   deps += [ ":unit_tests" ]
-  tests = [{
-    name = "debug_agent_unit_tests"
-    environments = basic_envs
-  }]
+  tests = [
+    {
+      name = "debug_agent_unit_tests"
+      environments = basic_envs
+    },
+  ]
 
   # Integration tests.
   deps += [ "//garnet/bin/debug_agent/integration_tests" ]
-  tests += [{
-    name = "debug_agent_integration_tests"
-    environments = basic_envs
-  }]
+  tests += [
+    {
+      name = "debug_agent_integration_tests"
+      environments = basic_envs
+    },
+  ]
 
   # Test binaries
   binaries = [
@@ -208,29 +214,38 @@ package("debug_agent_tests") {
   if (current_cpu == "x64") {
     deps += [ "//garnet/bin/debug_agent/test_data:write_register_test_exe" ]
 
-    binaries += [{
-      shell = true
-      name = "write_register_test_exe"
-    }]
+    binaries += [
+      {
+        shell = true
+        name = "write_register_test_exe"
+      },
+    ]
   }
 
-  loadable_modules = [{
-    name = "debug_agent_test_so.so"
-  }]
+  loadable_modules = [
+    {
+      name = "debug_agent_test_so.so"
+    },
+  ]
 
-  meta = [{
-    path = "meta/debug_agent_unit_tests.cmx"
-    dest = "debug_agent_unit_tests.cmx"
-  }, {
-    path = "meta/debug_agent_integration_tests.cmx"
-    dest = "debug_agent_integration_tests.cmx"
-  }]
+  meta = [
+    {
+      path = "meta/debug_agent_unit_tests.cmx"
+      dest = "debug_agent_unit_tests.cmx"
+    },
+    {
+      path = "meta/debug_agent_integration_tests.cmx"
+      dest = "debug_agent_integration_tests.cmx"
+    },
+  ]
 
   if (include_test_app) {
     deps += [ ":zxdb_test_app" ]
 
-    binaries += [{
-      name = "zxdb_test_app"
-    }]
+    binaries += [
+      {
+        name = "zxdb_test_app"
+      },
+    ]
   }
 }

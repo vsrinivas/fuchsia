@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/component2/cpp/testing/service_directory_for_test.h"
+#include "lib/sys/cpp/testing/service_directory_for_test.h"
 
-namespace component2 {
+namespace sys {
 namespace testing {
 
 ServiceDirectoryForTest::ServiceDirectoryForTest(
@@ -25,4 +25,4 @@ std::shared_ptr<ServiceDirectoryForTest> ServiceDirectoryForTest::Create(
 }
 
 }  // namespace testing
-}  // namespace component2
+}  // namespace sys

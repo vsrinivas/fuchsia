@@ -54,7 +54,7 @@ source_set("lib") {
     "//garnet/public/lib/pkg_url",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/component2/cpp",
+    "//sdk/lib/sys/cpp",
     "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-process",
     "//zircon/public/lib/async-loop-cpp",

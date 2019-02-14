@@ -49,7 +49,7 @@ int main(int argc, const char** argv) {
     FXL_NOTREACHED() << "failed to create tokens.";
 
   // Create tiles with a token for its root view.
-  auto startup_context = component2::StartupContext::CreateFromStartupInfo();
+  auto startup_context = sys::StartupContext::CreateFromStartupInfo();
   tiles::Tiles tiles(startup_context.get(), std::move(view_token),
                      command_line.positional_args(), border);
 

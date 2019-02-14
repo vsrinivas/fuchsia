@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_COMPONENT2_CPP_STARTUP_CONTEXT_H_
-#define LIB_COMPONENT2_CPP_STARTUP_CONTEXT_H_
+#ifndef LIB_SYS_CPP_STARTUP_CONTEXT_H_
+#define LIB_SYS_CPP_STARTUP_CONTEXT_H_
 
 #include <memory>
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/component2/cpp/outgoing.h>
-#include <lib/component2/cpp/service_directory.h>
+#include <lib/sys/cpp/outgoing.h>
+#include <lib/sys/cpp/service_directory.h>
 
-namespace component2 {
+namespace sys {
 
 // Context information that this component received at startup.
 //
@@ -38,7 +38,7 @@ namespace component2 {
 // ```
 // int main(int argc, const char** argv) {
 //   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-//   auto context = component2::StartupContext::CreateFromStartupInfo();
+//   auto context = sys::StartupContext::CreateFromStartupInfo();
 //   my::App app(std::move(context))
 //   loop.Run();
 //   return 0;
@@ -80,7 +80,7 @@ class StartupContext {
   // ```
   // int main(int argc, const char** argv) {
   //   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  //   auto context = component2::StartupContext::CreateFromStartupInfo();
+  //   auto context = sys::StartupContext::CreateFromStartupInfo();
   //   my::App app(std::move(context))
   //   loop.Run();
   //   return 0;
@@ -140,6 +140,6 @@ class StartupContext {
   Outgoing outgoing_;
 };
 
-}  // namespace component2
+}  // namespace sys
 
-#endif  // LIB_COMPONENT2_CPP_STARTUP_CONTEXT_H_
+#endif  // LIB_SYS_CPP_STARTUP_CONTEXT_H_

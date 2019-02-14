@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/component2/cpp/outgoing.h>
+#include <lib/sys/cpp/outgoing.h>
 
 #include "echo_server.h"
 
@@ -23,7 +23,7 @@ TEST_F(OutgoingTest, Control) {
   zx::channel svc_client, svc_server;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &svc_client, &svc_server));
 
-  component2::Outgoing outgoing;
+  sys::Outgoing outgoing;
   ASSERT_EQ(ZX_OK, outgoing.Serve(std::move(svc_server), dispatcher()));
 
   EchoImpl impl;
@@ -47,7 +47,7 @@ TEST_F(OutgoingTest, AddAndRemove) {
   zx::channel svc_client, svc_server;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &svc_client, &svc_server));
 
-  component2::Outgoing outgoing;
+  sys::Outgoing outgoing;
   ASSERT_EQ(ZX_OK, outgoing.Serve(std::move(svc_server), dispatcher()));
 
   ASSERT_EQ(ZX_ERR_NOT_FOUND,
@@ -90,7 +90,7 @@ TEST_F(OutgoingTest, AddAndRemove) {
 }
 
 TEST_F(OutgoingTest, Invalid) {
-  component2::Outgoing outgoing;
+  sys::Outgoing outgoing;
   // TODO: This should return ZX_ERR_BAD_HANDLE.
   ASSERT_EQ(ZX_OK, outgoing.Serve(zx::channel(), dispatcher()));
 }
@@ -101,7 +101,7 @@ TEST_F(OutgoingTest, AccessDenied) {
 
   svc_server.replace(ZX_RIGHT_NONE, &svc_server);
 
-  component2::Outgoing outgoing;
+  sys::Outgoing outgoing;
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED,
             outgoing.Serve(std::move(svc_server), dispatcher()));
 }

@@ -3,8 +3,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_COMPONENT2_CPP_TESTS_ECHO_SERVER_H_
-#define LIB_COMPONENT2_CPP_TESTS_ECHO_SERVER_H_
+#ifndef LIB_SYS_CPP_TESTS_ECHO_SERVER_H_
+#define LIB_SYS_CPP_TESTS_ECHO_SERVER_H_
 
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -27,4 +27,4 @@ class EchoImpl : public fidl::examples::echo::Echo {
 
 }  // namespace
 
-#endif  // LIB_COMPONENT2_CPP_TESTS_ECHO_SERVER_H_
+#endif  // LIB_SYS_CPP_TESTS_ECHO_SERVER_H_

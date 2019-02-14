@@ -8,12 +8,12 @@
 #include <lib/async/default.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/component/cpp/testing/test_util.h>
-#include <lib/component2/cpp/termination_reason.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/pkg_url/fuchsia_pkg_url.h>
+#include <lib/sys/cpp/termination_reason.h>
 #include <zircon/status.h>
 #include "garnet/lib/cmx/cmx.h"
 
@@ -426,7 +426,7 @@ bool Sandbox::LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher,
                                    int64_t code, TerminationReason reason) {
     FXL_LOG(INFO) << T::msg << " " << url << " terminated with (" << code
                   << ") reason: "
-                  << component2::HumanReadableTerminationReason(reason);
+                  << sys::HumanReadableTerminationReason(reason);
     if (is_test) {
       if (code != 0 || reason != TerminationReason::EXITED) {
         // test failed, early bail
@@ -466,7 +466,7 @@ bool Sandbox::LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
                                    int64_t code, TerminationReason reason) {
     FXL_LOG(INFO) << "Setup " << url << " terminated with (" << code
                   << ") reason: "
-                  << component2::HumanReadableTerminationReason(reason);
+                  << sys::HumanReadableTerminationReason(reason);
     done = true;
     success = code == 0 && reason == TerminationReason::EXITED;
   };

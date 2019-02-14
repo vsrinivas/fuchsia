@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_TESTAPP_COBALT_TESTAPP_H
-#define GARNET_BIN_COBALT_TESTAPP_COBALT_TESTAPP_H
+#ifndef GARNET_BIN_COBALT_TESTAPP_COBALT_TESTAPP_H_
+#define GARNET_BIN_COBALT_TESTAPP_COBALT_TESTAPP_H_
 
 #include <memory>
 #include <sstream>
 #include <string>
 
 #include "garnet/bin/cobalt/testapp/cobalt_testapp_logger.h"
-#include "lib/component2/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/command_line.h"
@@ -19,6 +18,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/svc/cpp/services.h"
+#include "lib/sys/cpp/startup_context.h"
 
 namespace cobalt {
 namespace testapp {
@@ -33,7 +33,7 @@ class CobaltTestApp {
   CobaltTestApp(bool use_network, bool do_environment_test,
                 int num_observations_per_batch)
       : do_environment_test_(do_environment_test),
-        context_(component2::StartupContext::CreateFromStartupInfo()),
+        context_(sys::StartupContext::CreateFromStartupInfo()),
         logger_(use_network, num_observations_per_batch, &cobalt_controller_) {}
 
   // We have multiple testing strategies based on the method we use to
@@ -79,7 +79,7 @@ class CobaltTestApp {
   bool RequestSendSoonTests();
 
   bool do_environment_test_;
-  std::unique_ptr<component2::StartupContext> context_;
+  std::unique_ptr<sys::StartupContext> context_;
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::cobalt::ControllerSyncPtr cobalt_controller_;
   CobaltTestAppLogger logger_;
@@ -90,4 +90,4 @@ class CobaltTestApp {
 }  // namespace testapp
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_TESTAPP_COBALT_TESTAPP_H
+#endif  // GARNET_BIN_COBALT_TESTAPP_COBALT_TESTAPP_H_

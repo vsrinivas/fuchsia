@@ -83,7 +83,7 @@ executable("tests") {
     "//garnet/lib/debugger_utils",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//sdk/lib/component2/cpp",
+    "//sdk/lib/sys/cpp",
     "//third_party/googletest:gtest_main",
   ]
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/component2/cpp/testing/service_directory_for_test.h>
+#include <lib/sys/cpp/testing/service_directory_for_test.h>
 
 #include "echo_server.h"
 
@@ -15,7 +15,7 @@ namespace {
 
 class ServiceDirectoryForTest_Tests : public gtest::RealLoopFixture {
  protected:
-  void ConnectToService(component2::ServiceDirectory* svc,
+  void ConnectToService(sys::ServiceDirectory* svc,
                         fidl::examples::echo::EchoPtr& echo) {
     svc->Connect(echo.NewRequest());
   }
@@ -24,7 +24,7 @@ class ServiceDirectoryForTest_Tests : public gtest::RealLoopFixture {
 };
 
 TEST_F(ServiceDirectoryForTest_Tests, TestInjectedService) {
-  auto svc = component2::testing::ServiceDirectoryForTest::Create();
+  auto svc = sys::testing::ServiceDirectoryForTest::Create();
 
   ASSERT_EQ(ZX_OK, svc->AddService(echo_impl_.GetHandler(dispatcher())));
 

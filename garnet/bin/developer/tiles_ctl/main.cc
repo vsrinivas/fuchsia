@@ -13,12 +13,12 @@
 #include <lib/fdio/util.h>
 
 #include "fuchsia/developer/tiles/cpp/fidl.h"
-#include "lib/component2/cpp/service_directory.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/memory/unique_object.h"
 #include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/sys/cpp/service_directory.h"
 
 using ControllerPtr = fuchsia::developer::tiles::ControllerSyncPtr;
 
@@ -104,7 +104,7 @@ ControllerPtr FindTiles() {
 }
 
 bool Start() {
-  auto services = component2::ServiceDirectory::CreateFromNamespace();
+  auto services = sys::ServiceDirectory::CreateFromNamespace();
 
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "fuchsia-pkg://fuchsia.com/tiles#meta/tiles.cmx";

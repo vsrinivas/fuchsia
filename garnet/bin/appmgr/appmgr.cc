@@ -5,7 +5,7 @@
 #include <lib/fxl/strings/string_printf.h>
 
 #include "garnet/bin/appmgr/appmgr.h"
-#include "lib/component2/cpp/termination_reason.h"
+#include "lib/sys/cpp/termination_reason.h"
 
 using fuchsia::sys::TerminationReason;
 
@@ -50,20 +50,20 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = sysmgr_url_;
     launch_info.arguments.reset(sysmgr_args_);
-    sysmgr_.events().OnTerminated =
-        [this](zx_status_t status, TerminationReason termination_reason) {
-          if (termination_reason != TerminationReason::EXITED) {
-            FXL_LOG(ERROR) << "sysmgr launch failed: "
-                           << component2::TerminationReasonToString(
-                                  termination_reason);
-            sysmgr_permanently_failed_ = true;
-          } else if (status == ZX_ERR_INVALID_ARGS) {
-            FXL_LOG(ERROR) << "sysmgr reported invalid arguments";
-            sysmgr_permanently_failed_ = true;
-          } else {
-            FXL_LOG(ERROR) << "sysmgr exited with status " << status;
-          }
-        };
+    sysmgr_.events().OnTerminated = [this](
+                                        zx_status_t status,
+                                        TerminationReason termination_reason) {
+      if (termination_reason != TerminationReason::EXITED) {
+        FXL_LOG(ERROR) << "sysmgr launch failed: "
+                       << sys::TerminationReasonToString(termination_reason);
+        sysmgr_permanently_failed_ = true;
+      } else if (status == ZX_ERR_INVALID_ARGS) {
+        FXL_LOG(ERROR) << "sysmgr reported invalid arguments";
+        sysmgr_permanently_failed_ = true;
+      } else {
+        FXL_LOG(ERROR) << "sysmgr exited with status " << status;
+      }
+    };
     root_realm_->CreateComponent(std::move(launch_info), sysmgr_.NewRequest());
   };
 

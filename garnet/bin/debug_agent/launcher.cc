@@ -10,7 +10,7 @@
 
 namespace debug_agent {
 
-Launcher::Launcher(std::shared_ptr<component2::ServiceDirectory> env_services)
+Launcher::Launcher(std::shared_ptr<sys::ServiceDirectory> env_services)
     : builder_(env_services) {}
 
 zx_status_t Launcher::Setup(const std::vector<std::string>& argv) {

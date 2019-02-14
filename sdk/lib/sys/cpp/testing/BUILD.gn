@@ -18,7 +18,7 @@ sdk_source_set("testing") {
   ]
 
   public_deps = [
-    "//sdk/lib/component2/cpp",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/vfs/cpp",
     "//zircon/public/fidl/fuchsia-io",
     "//zircon/public/lib/fit",

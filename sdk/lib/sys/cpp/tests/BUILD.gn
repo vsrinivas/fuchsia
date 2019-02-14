@@ -16,7 +16,7 @@ test("component_cpp_unittests") {
   deps = [
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
-    "//sdk/lib/component2/cpp",
+    "//sdk/lib/sys/cpp",
     "//third_party/googletest:gtest_main",
     "//zircon/public/fidl/fuchsia-io",
     "//zircon/public/lib/fdio",
@@ -34,7 +34,7 @@ test("component_cpp_testing_unittests") {
   deps = [
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
-    "//sdk/lib/component2/cpp/testing",
+    "//sdk/lib/sys/cpp/testing",
     "//third_party/googletest:gtest_main",
     "//zircon/public/fidl/fuchsia-io",
     "//zircon/public/lib/fidl",

@@ -15,13 +15,12 @@
 #include <sstream>
 #include <string>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/cobalt/testapp/cobalt_testapp_logger.h"
 #include "garnet/bin/cobalt/testapp/tests.h"
-#include "lib/component2/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fsl/vmo/file.h"
@@ -31,6 +30,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/svc/cpp/services.h"
+#include "lib/sys/cpp/startup_context.h"
 
 namespace cobalt {
 namespace testapp {
@@ -118,7 +118,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
     FXL_LOG(ERROR) << "Connection error from CobaltTestApp to CobaltClient.";
   });
 
-  component2::ServiceDirectory services(std::move(directory));
+  sys::ServiceDirectory services(std::move(directory));
 
   fuchsia::cobalt::LoggerFactorySyncPtr logger_factory;
   services.Connect(logger_factory.NewRequest());

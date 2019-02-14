@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_COMPONENT2_CPP_SERVICE_DIRECTORY_H_
-#define LIB_COMPONENT2_CPP_SERVICE_DIRECTORY_H_
+#ifndef LIB_SYS_CPP_SERVICE_DIRECTORY_H_
+#define LIB_SYS_CPP_SERVICE_DIRECTORY_H_
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_ptr.h>
@@ -14,7 +14,7 @@
 #include <string>
 #include <utility>
 
-namespace component2 {
+namespace sys {
 
 // A directory of services provided by another component.
 //
@@ -140,6 +140,6 @@ class ServiceDirectory {
   zx::channel directory_;
 };
 
-}  // namespace component2
+}  // namespace sys
 
-#endif  // LIB_COMPONENT2_CPP_SERVICE_DIRECTORY_H_
+#endif  // LIB_SYS_CPP_SERVICE_DIRECTORY_H_

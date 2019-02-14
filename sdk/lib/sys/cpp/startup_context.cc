@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/component2/cpp/startup_context.h>
+#include <lib/sys/cpp/startup_context.h>
 
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
-namespace component2 {
+namespace sys {
 namespace {
 
 constexpr char kServiceRootPath[] = "/svc";
@@ -50,4 +50,4 @@ std::unique_ptr<StartupContext> StartupContext::CreateFrom(
       std::move(startup_info.launch_info.directory_request));
 }
 
-}  // namespace component2
+}  // namespace sys

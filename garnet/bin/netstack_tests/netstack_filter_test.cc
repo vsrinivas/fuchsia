@@ -27,7 +27,7 @@
 
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
-#include "lib/component2/cpp/termination_reason.h"
+#include "lib/sys/cpp/termination_reason.h"
 
 namespace {
 class NetstackFilterTest : public component::testing::TestWithEnvironment {};
@@ -267,6 +267,6 @@ TEST_F(NetstackFilterTest, DISABLED_TestRuleset) {
   ASSERT_TRUE(exit_code == 0) << "Exit code was non-zero, got: " << exit_code;
   ASSERT_TRUE(term_reason == fuchsia::sys::TerminationReason::EXITED)
       << "TerminationReason was not 'EXITED' as expected, got: "
-      << component2::TerminationReasonToString(term_reason);
+      << sys::TerminationReasonToString(term_reason);
 }
 }  // namespace

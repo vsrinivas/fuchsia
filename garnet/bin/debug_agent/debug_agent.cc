@@ -8,7 +8,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component2/cpp/termination_reason.h>
+#include <lib/sys/cpp/termination_reason.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
@@ -31,7 +31,7 @@
 namespace debug_agent {
 
 DebugAgent::DebugAgent(debug_ipc::StreamBuffer* stream,
-                       std::shared_ptr<component2::ServiceDirectory> services)
+                       std::shared_ptr<sys::ServiceDirectory> services)
     : stream_(stream), services_(services) {}
 
 DebugAgent::~DebugAgent() = default;
@@ -550,7 +550,7 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
           int64_t return_code, fuchsia::sys::TerminationReason reason) {
         if (reason != fuchsia::sys::TerminationReason::EXITED) {
           FXL_LOG(WARNING) << "Component " << pkg_url << " exited with "
-                           << component2::HumanReadableTerminationReason(reason);
+                           << sys::HumanReadableTerminationReason(reason);
           launched = false;
         }
         loop.Quit();

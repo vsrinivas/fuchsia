@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_COMPONENT2_CPP_TESTING_SERVICE_DIRECTORY_FOR_TEST_H_
-#define LIB_COMPONENT2_CPP_TESTING_SERVICE_DIRECTORY_FOR_TEST_H_
+#ifndef LIB_SYS_CPP_TESTING_SERVICE_DIRECTORY_FOR_TEST_H_
+#define LIB_SYS_CPP_TESTING_SERVICE_DIRECTORY_FOR_TEST_H_
 
-#include "lib/component2/cpp/service_directory.h"
+#include "lib/sys/cpp/service_directory.h"
 
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
 
-namespace component2 {
+namespace sys {
 namespace testing {
 
 // A fake |ServiceDirectory| for unit testing.
 // Does not accessing services outside of this object.
-class ServiceDirectoryForTest final : public component2::ServiceDirectory {
+class ServiceDirectoryForTest final : public sys::ServiceDirectory {
  public:
   // Create instance of this class.
   static std::shared_ptr<ServiceDirectoryForTest> Create(
@@ -28,7 +28,7 @@ class ServiceDirectoryForTest final : public component2::ServiceDirectory {
   ~ServiceDirectoryForTest() override;
 
   // Injects a service which can be accessed by calling Connect on
-  // |component2::ServiceDirectory| by code under test.
+  // |sys::ServiceDirectory| by code under test.
   //
   // Adds a supported service with the given |service_name|, using the given
   // |interface_request_handler|. |interface_request_handler| should
@@ -57,6 +57,6 @@ class ServiceDirectoryForTest final : public component2::ServiceDirectory {
 };
 
 }  // namespace testing
-}  // namespace component2
+}  // namespace sys
 
-#endif  // LIB_COMPONENT2_CPP_TESTING_SERVICE_DIRECTORY_FOR_TEST_H_
+#endif  // LIB_SYS_CPP_TESTING_SERVICE_DIRECTORY_FOR_TEST_H_

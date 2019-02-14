@@ -34,7 +34,7 @@ executable("integration_tests") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/svc/cpp",
-    "//sdk/lib/component2/cpp",
+    "//sdk/lib/sys/cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]

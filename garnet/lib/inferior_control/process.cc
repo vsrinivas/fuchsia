@@ -28,7 +28,7 @@ constexpr zx_time_t kill_timeout = ZX_MSEC(10 * 1000);
 
 std::unique_ptr<process::ProcessBuilder> CreateProcessBuilder(
     zx_handle_t job, const debugger_utils::Argv& argv,
-    std::shared_ptr<component2::ServiceDirectory>& services) {
+    std::shared_ptr<sys::ServiceDirectory>& services) {
   FXL_DCHECK(argv.size() > 0);
   zx::job builder_job;
   zx_status_t status = zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS,
@@ -125,7 +125,7 @@ const char* Process::StateName(Process::State state) {
 }
 
 Process::Process(Server* server, Delegate* delegate,
-                 std::shared_ptr<component2::ServiceDirectory> services)
+                 std::shared_ptr<sys::ServiceDirectory> services)
     : server_(server),
       delegate_(delegate),
       services_(services),

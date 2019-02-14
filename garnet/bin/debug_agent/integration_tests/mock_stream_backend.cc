@@ -5,8 +5,8 @@
 #include "garnet/bin/debug_agent/integration_tests/mock_stream_backend.h"
 
 #include "garnet/lib/debug_ipc/message_reader.h"
-#include "lib/component2/cpp/service_directory.h"
 #include "lib/fxl/logging.h"
+#include "lib/sys/cpp/service_directory.h"
 
 namespace debug_agent {
 
@@ -14,7 +14,7 @@ MockStreamBackend::MockStreamBackend() {
   // We initialize the stream and pass it on to the debug agent, which will
   // think it's correctly connected to a client.
   stream_.set_writer(this);
-  auto services = component2::ServiceDirectory::CreateFromNamespace();
+  auto services = sys::ServiceDirectory::CreateFromNamespace();
   agent_ = std::make_unique<DebugAgent>(&stream_, std::move(services));
 }
 

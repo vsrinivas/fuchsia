@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/component2/cpp/outgoing.h>
+#include <lib/sys/cpp/outgoing.h>
 
 #include <utility>
 
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
-namespace component2 {
+namespace sys {
 
 Outgoing::Outgoing() : root_(std::make_unique<vfs::PseudoDir>()) {
   auto dir = std::make_unique<vfs::PseudoDir>();
@@ -30,4 +30,4 @@ zx_status_t Outgoing::ServeFromStartupInfo(async_dispatcher_t* dispatcher) {
                dispatcher);
 }
 
-}  // namespace component2
+}  // namespace sys

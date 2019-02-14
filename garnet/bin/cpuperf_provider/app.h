@@ -11,9 +11,9 @@
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/lib/cpuperf/controller.h"
-#include "lib/component2/cpp/startup_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
+#include "lib/sys/cpp/startup_context.h"
 
 namespace cpuperf_provider {
 
@@ -35,7 +35,7 @@ class App {
   // This is the max value cpu-trace will accept
   static constexpr uint32_t kMaxBufferSizeInMb = 256;
 
-  std::unique_ptr<component2::StartupContext> startup_context_;
+  std::unique_ptr<sys::StartupContext> startup_context_;
   trace::TraceObserver trace_observer_;
   TraceConfig trace_config_;
   // This context keeps the trace context alive until we've written our trace

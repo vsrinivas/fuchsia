@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_COMPONENT2_CPP_OUTGOING_H_
-#define LIB_COMPONENT2_CPP_OUTGOING_H_
+#ifndef LIB_SYS_CPP_OUTGOING_H_
+#define LIB_SYS_CPP_OUTGOING_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
@@ -13,7 +13,7 @@
 #include <memory>
 #include <utility>
 
-namespace component2 {
+namespace sys {
 
 // The directory provided by this component to the component manager.
 //
@@ -131,6 +131,6 @@ class Outgoing final {
   vfs::PseudoDir* public_;
 };
 
-}  // namespace component2
+}  // namespace sys
 
-#endif  // LIB_COMPONENT2_CPP_OUTGOING_H_
+#endif  // LIB_SYS_CPP_OUTGOING_H_
