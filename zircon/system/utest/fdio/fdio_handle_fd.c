@@ -177,14 +177,13 @@ bool transfer_fd_test(void) {
               "write() should have written the whole message.");
 
 
-    // fd --> handles
-    zx_handle_t handles[FDIO_MAX_HANDLES];
-    uint32_t types[FDIO_MAX_HANDLES];
-    zx_status_t r = fdio_transfer_fd(fds[0], 0, handles, types);
-    ASSERT_GT(r, 0, "failed to transfer fds to handles");
+    // fd --> handle
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    status = fdio_fd_transfer(fds[0], &handle);
+    ASSERT_EQ(status, ZX_OK, "failed to transfer fds to handle");
 
-    // handles --> fd
-    ASSERT_EQ(fdio_create_fd(handles, types, r, &fds[0]), ZX_OK,
+    // handle --> fd
+    ASSERT_EQ(fdio_fd_create(handle, &fds[0]), ZX_OK,
               "failed to transfer handles to fds");
 
     // Read message
@@ -206,14 +205,13 @@ bool transfer_device_test(void) {
     int fd = open("/dev/zero", O_RDONLY);
     ASSERT_GE(fd, 0, "Failed to open /dev/zero");
 
-    // fd --> handles
-    zx_handle_t handles[FDIO_MAX_HANDLES];
-    uint32_t types[FDIO_MAX_HANDLES];
-    zx_status_t r = fdio_transfer_fd(fd, 0, handles, types);
-    ASSERT_GT(r, 0, "failed to transfer fds to handles");
+    // fd --> handle
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    zx_status_t status = fdio_fd_transfer(fd, &handle);
+    ASSERT_EQ(status, ZX_OK, "failed to transfer fds to handles");
 
-    // handles --> fd
-    ASSERT_EQ(fdio_create_fd(handles, types, r, &fd), ZX_OK,
+    // handle --> fd
+    ASSERT_EQ(fdio_fd_create(handle, &fd), ZX_OK,
               "failed to transfer handles to fds");
 
     ASSERT_EQ(close(fd), 0, "Failed to close fd");
@@ -225,11 +223,10 @@ bool create_fd_from_connected_socket(void) {
     BEGIN_TEST;
 
     int fd;
-    uint32_t type = PA_FDIO_SOCKET;
     zx_handle_t h1, h2;
     ASSERT_EQ(ZX_OK, zx_socket_create(ZX_SOCKET_STREAM, &h1, &h2),
               "failed to create socket pair");
-    ASSERT_EQ(ZX_OK, fdio_create_fd(&h1, &type, 1, &fd),
+    ASSERT_EQ(ZX_OK, fdio_fd_create(h1, &fd),
               "failed to create FD for socket handle");
 
     int message[2] = {0xab, 0x1234};

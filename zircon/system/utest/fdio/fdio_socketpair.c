@@ -409,23 +409,20 @@ bool socketpair_clone_or_unwrap_and_wrap_test(void) {
     int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
     ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
 
-    zx_handle_t handles[FDIO_MAX_HANDLES];
-    uint32_t types[FDIO_MAX_HANDLES];
-    zx_status_t handle_count = fdio_clone_fd(fds[0], fds[0], handles, types);
-    ASSERT_GT(handle_count, 0, "fdio_clone_fd() failed");
-    EXPECT_EQ(PA_HND_TYPE(types[0]), PA_FDIO_SOCKET, "Wrong cloned fd type");
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    status = fdio_fd_clone(fds[0], &handle);
+    ASSERT_EQ(status, ZX_OK, "fdio_fd_clone() failed");
 
     int cloned_fd = -1;
-    status = fdio_create_fd(handles, types, handle_count, &cloned_fd);
-    EXPECT_EQ(status, 0, "fdio_create_fd(..., &cloned_fd) failed");
+    status = fdio_fd_create(handle, &cloned_fd);
+    EXPECT_EQ(status, 0, "fdio_fd_create(..., &cloned_fd) failed");
 
-    handle_count = fdio_transfer_fd(fds[0], fds[0], handles, types);
-    ASSERT_GT(handle_count, 0, "fdio_transfer_fd() failed");
-    EXPECT_EQ(PA_HND_TYPE(types[0]), PA_FDIO_SOCKET, "Wrong transferred fd type");
+    status = fdio_fd_transfer(fds[0], &handle);
+    ASSERT_EQ(status, ZX_OK, "fdio_fd_transfer() failed");
 
     int transferred_fd = -1;
-    status = fdio_create_fd(handles, types, handle_count, &transferred_fd);
-    EXPECT_EQ(status, 0, "fdio_create_fd(..., &transferred_fd) failed");
+    status = fdio_fd_create(handle, &transferred_fd);
+    EXPECT_EQ(status, 0, "fdio_fd_create(..., &transferred_fd) failed");
 
     // Verify that an operation specific to socketpairs works on these fds.
     ASSERT_EQ(shutdown(cloned_fd, SHUT_RD), 0, "shutdown(cloned_fd, SHUT_RD) failed");

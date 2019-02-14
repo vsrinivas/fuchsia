@@ -23,13 +23,11 @@ bool TestCloneSimple(void) {
     int fd = open("::file", O_RDWR | O_CREAT, 0644);
     ASSERT_GT(fd, 0);
 
-    zx_handle_t handle[FDIO_MAX_HANDLES];
-    uint32_t type[FDIO_MAX_HANDLES];
-    zx_status_t r = fdio_clone_fd(fd, 0, handle, type);
-    ASSERT_GT(r, 0);
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    ASSERT_EQ(fdio_fd_clone(fd, &handle), ZX_OK);
 
-    int fd2;
-    ASSERT_EQ(fdio_create_fd(handle, type, r, &fd2), ZX_OK);
+    int fd2 = -1;
+    ASSERT_EQ(fdio_fd_create(handle, &fd2), ZX_OK);
 
     // Output from one fd...
     char output[5];

@@ -86,10 +86,8 @@ static fidl::VectorPtr<fuchsia::guest::BlockDevice> GetBlockDevices() {
 }
 
 static int convert_socket_to_fd(zx::socket socket) {
-  int fd;
-  uint32_t type = PA_FDIO_SOCKET;
-  auto handle = socket.release();
-  zx_status_t status = fdio_create_fd(&handle, &type, 1, &fd);
+  int fd = -1;
+  zx_status_t status = fdio_fd_create(socket.release(), &fd);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Could not get client fdio endpoint";
     return -1;

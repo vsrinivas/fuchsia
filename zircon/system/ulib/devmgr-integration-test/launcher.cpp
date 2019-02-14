@@ -44,14 +44,8 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args,
         return status;
     }
 
-    int fd;
-    zx_handle_t devfs_handles[] = {
-        devfs.release(),
-    };
-    uint32_t devfs_types[fbl::count_of(devfs_handles)] = {
-        PA_FDIO_REMOTE,
-    };
-    status = fdio_create_fd(devfs_handles, devfs_types, fbl::count_of(devfs_handles), &fd);
+    int fd = -1;
+    status = fdio_fd_create(devfs.release(), &fd);
     if (status != ZX_OK) {
         return status;
     }

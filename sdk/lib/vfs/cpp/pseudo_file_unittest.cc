@@ -210,10 +210,8 @@ class BufferedPseudoFileTest : public gtest::RealLoopFixture {
     EXPECT_EQ(ZX_OK, node->Serve(fuchsia::io::OPEN_RIGHT_READABLE |
                                      fuchsia::io::OPEN_RIGHT_WRITABLE,
                                  std::move(remote), dispatcher));
-    zx_handle_t handles = local.release();
-    uint32_t types = PA_FDIO_REMOTE;
     int fd = -1;
-    EXPECT_EQ(ZX_OK, fdio_create_fd(&handles, &types, 1, &fd));
+    EXPECT_EQ(ZX_OK, fdio_fd_create(local.release(), &fd));
     return fd;
   }
 };

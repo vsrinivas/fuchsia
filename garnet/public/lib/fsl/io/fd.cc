@@ -34,10 +34,8 @@ zx::channel CloneChannelFromFileDescriptor(int fd) {
 }
 
 fxl::UniqueFD OpenChannelAsFileDescriptor(zx::channel channel) {
-  zx_handle_t handle = channel.release();
-  uint32_t types = PA_FDIO_REMOTE;
   int fd = -1;
-  zx_status_t status = fdio_create_fd(&handle, &types, 1, &fd);
+  zx_status_t status = fdio_fd_create(channel.release(), &fd);
   if (status != ZX_OK) {
     return fxl::UniqueFD();
   }

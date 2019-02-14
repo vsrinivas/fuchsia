@@ -18,9 +18,8 @@ static bool create_socket_fdio_pair(zx_handle_t* socket_out, int* fd_out) {
     ASSERT_EQ(ZX_OK, zx_socket_create(ZX_SOCKET_STREAM | ZX_SOCKET_HAS_CONTROL, &s1, &s2), "Socket create failed");
 
     // Convert one socket to FDIO
-    uint32_t type = PA_FDIO_SOCKET;
-    int fd;
-    ASSERT_EQ(ZX_OK, fdio_create_fd(&s2, &type, 1, &fd), "Socket from handle failed");
+    int fd = -1;
+    ASSERT_EQ(ZX_OK, fdio_fd_create(s2, &fd), "Socket from handle failed");
 
     *fd_out = fd;
     *socket_out = s1;

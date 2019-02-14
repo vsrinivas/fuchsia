@@ -1607,10 +1607,8 @@ extern "C" {
         handles: *mut zx_handle_t,
         types: *mut u32,
     ) -> zx_status_t;
-    pub fn fdio_create_fd(
-        handles: *mut zx_handle_t,
-        types: *mut u32,
-        hcount: usize,
+    pub fn fdio_fd_create(
+        handle: zx_handle_t,
         fd_out: *mut raw::c_int,
     ) -> zx_status_t;
     pub fn fdio_bind_to_fd(io: *mut fdio_t, fd: raw::c_int, starting_fd: raw::c_int) -> raw::c_int;

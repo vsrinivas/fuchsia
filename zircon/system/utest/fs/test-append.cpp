@@ -135,13 +135,11 @@ bool TestAppendOnClone() {
     ASSERT_TRUE(verify_append(fd, Append));
 
     // Verify that cloning the fd doesn't lose the APPEND flag.
-    zx_handle_t handles[FDIO_MAX_HANDLES];
-    uint32_t types[FDIO_MAX_HANDLES];
-    uint32_t count = fdio_clone_fd(fd.get(), 0, handles, types);
-    ASSERT_GT(count, 0, "Didn't clone any handles");
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    ASSERT_EQ(ZX_OK, fdio_fd_clone(fd.get(), &handle), "fdio_fd_clone failed");
 
-    int raw_fd;
-    ASSERT_EQ(fdio_create_fd(handles, types, count, &raw_fd), ZX_OK);
+    int raw_fd = -1;
+    ASSERT_EQ(fdio_fd_create(handle, &raw_fd), ZX_OK);
     fbl::unique_fd cloned_fd(raw_fd);
     ASSERT_TRUE(verify_append(cloned_fd, Append));
 

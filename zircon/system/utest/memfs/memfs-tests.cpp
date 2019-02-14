@@ -50,9 +50,8 @@ bool TestMemfsBasic() {
     memfs_filesystem_t* vfs;
     zx_handle_t root;
     ASSERT_EQ(memfs_create_filesystem(loop.dispatcher(), &vfs, &root), ZX_OK);
-    uint32_t type = PA_FDIO_REMOTE;
     int fd;
-    ASSERT_EQ(fdio_create_fd(&root, &type, 1, &fd), ZX_OK);
+    ASSERT_EQ(fdio_fd_create(root, &fd), ZX_OK);
 
     // Access files within the filesystem.
     DIR* d = fdopendir(fd);
@@ -100,9 +99,8 @@ bool TestMemfsLimitPages() {
         ASSERT_EQ(memfs_create_filesystem_with_page_limit(loop.dispatcher(),
                                                           static_cast<size_t>(page_limit),
                                                           &vfs, &root), ZX_OK);
-        uint32_t type = PA_FDIO_REMOTE;
-        int raw_root_fd;
-        ASSERT_EQ(fdio_create_fd(&root, &type, 1, &raw_root_fd), ZX_OK);
+        int raw_root_fd = -1;
+        ASSERT_EQ(fdio_fd_create(root, &raw_root_fd), ZX_OK);
         fbl::unique_fd root_fd(raw_root_fd);
 
         // Access files within the filesystem.
@@ -222,9 +220,8 @@ bool TestMemfsCloseDuringAccess() {
     memfs_filesystem_t* vfs;
     zx_handle_t root;
     ASSERT_EQ(memfs_create_filesystem(loop.dispatcher(), &vfs, &root), ZX_OK);
-    uint32_t type = PA_FDIO_REMOTE;
-    int fd;
-    ASSERT_EQ(fdio_create_fd(&root, &type, 1, &fd), ZX_OK);
+    int fd = -1;
+    ASSERT_EQ(fdio_fd_create(root, &fd), ZX_OK);
 
     // Access files within the filesystem.
     DIR* d = fdopendir(fd);

@@ -60,10 +60,8 @@ int OpenAsFD(vfs::Node* node, async_dispatcher_t* dispatcher) {
   EXPECT_EQ(ZX_OK, node->Serve(fuchsia::io::OPEN_RIGHT_READABLE |
                                    fuchsia::io::OPEN_RIGHT_WRITABLE,
                                std::move(remote), dispatcher));
-  zx_handle_t handles = local.release();
-  uint32_t types = PA_FDIO_REMOTE;
   int fd = -1;
-  EXPECT_EQ(ZX_OK, fdio_create_fd(&handles, &types, 1, &fd));
+  EXPECT_EQ(ZX_OK, fdio_fd_create(local.release(), &fd));
   return fd;
 }
 
@@ -112,12 +110,11 @@ TEST(File, Clone) {
   ASSERT_EQ(4, write(fd, "abcd", 4));
   EXPECT_EQ(0, strcmp("abcd", reinterpret_cast<char*>(store.data())));
 
-  zx_handle_t handles[FDIO_MAX_HANDLES];
-  uint32_t types[FDIO_MAX_HANDLES];
-  ASSERT_EQ(1, fdio_clone_fd(fd, 0, handles, types));
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  ASSERT_EQ(ZX_OK, fdio_fd_clone(fd, &handle));
 
   int cloned = -1;
-  EXPECT_EQ(ZX_OK, fdio_create_fd(handles, types, 1, &cloned));
+  EXPECT_EQ(ZX_OK, fdio_fd_create(handle, &cloned));
   ASSERT_LE(0, cloned);
 
   ASSERT_EQ(3, write(cloned, "xyz", 3));
