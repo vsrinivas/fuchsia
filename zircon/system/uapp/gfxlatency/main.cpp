@@ -70,6 +70,9 @@
 // for each frame when VSync is enabled.
 #define INPUT_PREDICTION_UPDATE_INTERVAL_MS 16
 
+#define HID_REPORT_TRACE_ID(trace_id, report_id) \
+    (((uint64_t)(report_id) << 32) | (trace_id))
+
 enum class VSync {
     ON,
     OFF,
@@ -1046,7 +1049,9 @@ int main(int argc, char* argv[]) {
 
     TouchDevice touch_device;
     int touchfd = -1;
+    uint32_t touchtraceid = 0;
     int touchpadfd = -1;
+    uint32_t touchpadtraceid = 0;
     struct dirent* de;
     while ((de = readdir(dir))) {
         char devname[128];
@@ -1080,20 +1085,41 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
+        // Use lower 32 bits of channel koid as trace ID.
+        zx_info_handle_basic_t info;
+        zx_object_get_info(caller.borrow_channel(),
+                           ZX_INFO_HANDLE_BASIC,
+                           &info,
+                           sizeof(info),
+                           nullptr,
+                           nullptr);
+        uint32_t traceid = info.koid & 0xffffffff;
+
+        status =
+            fuchsia_hardware_input_DeviceSetTraceId(caller.borrow_channel(),
+                                                    traceid);
+        if (status != ZX_OK) {
+            fprintf(stderr, "failed to set trace ID for %s: %d\n", devname, status);
+            continue;
+        }
+
         if (is_paradise_touch_v2_report_desc(rpt_desc, actual_rpt_desc_len)) {
             touch_device = TouchDevice::PARADISE_V2;
             touchfd = caller.release().release();
+            touchtraceid = traceid;
             continue;
         }
 
         if (is_paradise_touch_v3_report_desc(rpt_desc, actual_rpt_desc_len)) {
             touch_device = TouchDevice::PARADISE_V3;
             touchfd = caller.release().release();
+            touchtraceid = traceid;
             continue;
         }
 
         if (is_paradise_touchpad_v2_report_desc(rpt_desc, actual_rpt_desc_len)) {
             touchpadfd = caller.release().release();
+            touchpadtraceid = traceid;
             continue;
         }
     }
@@ -1159,6 +1185,8 @@ int main(int argc, char* argv[]) {
         {.x = 0, .y = 0},
     };
     vectorf_t predicted_stylus_movement = {.x = 0, .y = 0};
+    uint32_t touchreports_read = 0;
+    uint32_t touchpadreports_read = 0;
 
     async::TaskClosure frame_task([&] {
         if (vsync == VSync::OFF) {
@@ -1255,6 +1283,11 @@ int main(int argc, char* argv[]) {
                 ssize_t bytes = read(touchfd, rpt_buf, max_touch_rpt_sz);
                 ZX_ASSERT(bytes > 0);
 
+                TRACE_FLOW_END("input", "hid_report",
+                               HID_REPORT_TRACE_ID(touchtraceid,
+                                                   touchreports_read));
+                ++touchreports_read;
+
                 uint8_t id = *(uint8_t*)rpt_buf;
                 if (id == PARADISE_RPT_ID_TOUCH) {
                     if (touch_device == TouchDevice::PARADISE_V2) {
@@ -1285,6 +1318,11 @@ int main(int argc, char* argv[]) {
                 uint8_t rpt_buf[max_touchpad_rpt_sz];
                 ssize_t bytes = read(touchpadfd, rpt_buf, max_touchpad_rpt_sz);
                 ZX_ASSERT(bytes > 0);
+
+                TRACE_FLOW_END("input", "hid_report",
+                               HID_REPORT_TRACE_ID(touchpadtraceid,
+                                                   touchpadreports_read));
+                ++touchpadreports_read;
 
                 uint8_t button = 0;
                 parse_paradise_touchpad_report(rpt_buf, width, height, touch,

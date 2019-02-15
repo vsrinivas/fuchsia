@@ -53,4 +53,7 @@ protocol Device {
 
     // Set a single report of the given (type, id) pair.
     SetReport(ReportType type, ReportId id, vector<uint8>:MAX_REPORT_LEN report) -> (zx.status s);
+
+    // Set the trace ID that is used for HID report flow events.
+    SetTraceId(uint32 id);
 };

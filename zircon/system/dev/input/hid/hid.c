@@ -66,7 +66,6 @@ typedef struct hid_device {
     hid_report_size_t sizes[HID_MAX_REPORT_IDS];
 
     struct list_node instance_list;
-    uint32_t next_instance_trace_id;
     mtx_t instance_lock;
 
     char name[ZX_DEVICE_NAME_MAX + 1];
@@ -210,9 +209,9 @@ static zx_status_t hid_read_instance(void* ctx, void* buf, size_t count, zx_off_
     }
     mtx_unlock(&hid->fifo.lock);
     if (r > 0) {
-        TRACE_FLOW_END("input", "hid_instance_report",
-                       HID_REPORT_TRACE_ID(hid->trace_id,
-                                           hid->reports_read));
+        TRACE_FLOW_STEP("input", "hid_report",
+                        HID_REPORT_TRACE_ID(hid->trace_id,
+                                            hid->reports_read));
         ++hid->reports_read;
         *actual = r;
         r = ZX_OK;
@@ -309,6 +308,12 @@ static zx_status_t fidl_SetReport(void* ctx, fuchsia_hardware_input_ReportType t
     return fuchsia_hardware_input_DeviceSetReport_reply(txn, status);
 }
 
+static zx_status_t fidl_SetTraceId(void* ctx, uint32_t id) {
+    hid_instance_t* hid = ctx;
+    hid->trace_id = id;
+    return ZX_OK;
+}
+
 static fuchsia_hardware_input_Device_ops_t fidl_ops = {
     .GetBootProtocol = fidl_GetBootProtocol,
     .GetReportDescSize = fidl_GetReportDescSize,
@@ -319,6 +324,7 @@ static fuchsia_hardware_input_Device_ops_t fidl_ops = {
     .GetMaxInputReportSize = fidl_GetMaxInputReportSize,
     .GetReport = fidl_GetReport,
     .SetReport = fidl_SetReport,
+    .SetTraceId = fidl_SetTraceId,
 };
 
 static zx_status_t hid_message_instance(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -472,7 +478,6 @@ static zx_status_t hid_open_device(void* ctx, zx_device_t** dev_out, uint32_t fl
 
     mtx_lock(&hid->instance_lock);
     list_add_tail(&hid->instance_list, &inst->node);
-    inst->trace_id = hid->next_instance_trace_id++;
     mtx_unlock(&hid->instance_lock);
 
     *dev_out = inst->zxdev;
@@ -587,7 +592,7 @@ void hid_io_queue(void* cookie, const void* _buf, size_t len) {
                 }
             } else {
                 TRACE_FLOW_BEGIN(
-                    "input", "hid_instance_report",
+                    "input", "hid_report",
                     HID_REPORT_TRACE_ID(instance->trace_id,
                                         instance->reports_written));
                 ++instance->reports_written;
@@ -627,7 +632,6 @@ static zx_status_t hid_bind(void* ctx, zx_device_t* parent) {
 
     mtx_init(&hiddev->instance_lock, mtx_plain);
     list_initialize(&hiddev->instance_list);
-    hiddev->next_instance_trace_id = 1u;
 
     snprintf(hiddev->name, sizeof(hiddev->name), "hid-device-%03d", hiddev->info.dev_num);
     hiddev->name[ZX_DEVICE_NAME_MAX] = 0;
