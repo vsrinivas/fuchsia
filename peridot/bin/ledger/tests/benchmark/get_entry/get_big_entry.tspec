@@ -1,0 +1,29 @@
+{
+  "test_suite_name": "fuchsia.ledger.get_entry",
+  "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/get_entry.cmx",
+  "args": ["--entry-count=100", "--key-size=100", "--value-size=20000"],
+  "categories": ["benchmark", "ledger"],
+  "duration": 180,
+  "measure": [
+    {
+      "type": "duration",
+      "output_test_name": "big_value/get_snapshot",
+      "event_name": "get_snapshot",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "big_value/get_keys",
+      "event_name": "get_keys",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "output_test_name": "big_value/get",
+      "event_name": "get_entry",
+      "event_category": "benchmark",
+      "expected_sample_count": 100,
+      "split_first": true
+    }
+  ]
+}

@@ -103,6 +103,12 @@ page.
     * `update_entry.tspec`: basic case
     * `update_big_entry.tspec`: put an entry of big size, then update its value
     * `update_entry_transactions.tspec`: changes are grouped in transactions
+* __Get entry__: How long does it take to retrieve a single value from a page?
+  This benchmark also measures the time taken by the GetSnapshot call and the
+  GetKeys call to retrieve all keys from the page.
+    * `get_small_entry.tspec`: basic case
+    * `get_small_entry_inline.tspec`: GetInline is used instead of Get
+    * `get_big_entry.tspec`: values of bigger size are used.
 * __Delete entry__: How long does it take to delete an entry from a page?
     * `delete_entry.tspec`: each entry is deleted separately (outside of a
       transaction)

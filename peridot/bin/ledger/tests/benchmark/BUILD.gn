@@ -16,6 +16,7 @@ package("ledger_benchmarks") {
     "//peridot/bin/ledger/tests/benchmark/delete_entry",
     "//peridot/bin/ledger/tests/benchmark/disk_space",
     "//peridot/bin/ledger/tests/benchmark/fetch",
+    "//peridot/bin/ledger/tests/benchmark/get_entry",
     "//peridot/bin/ledger/tests/benchmark/get_page",
     "//peridot/bin/ledger/tests/benchmark/put",
     "//peridot/bin/ledger/tests/benchmark/sync",
@@ -30,6 +31,10 @@ package("ledger_benchmarks") {
     {
       path = rebase_path("get_page/get_page.cmx")
       dest = "get_page.cmx"
+    },
+    {
+      path = rebase_path("get_entry/get_entry.cmx")
+      dest = "get_entry.cmx"
     },
     {
       path = rebase_path("delete_entry/delete_entry.cmx")
@@ -68,6 +73,10 @@ package("ledger_benchmarks") {
 
     {
       name = "ledger_benchmark_get_page"
+    },
+
+    {
+      name = "ledger_benchmark_get_entry"
     },
 
     {
@@ -198,6 +207,21 @@ package("ledger_benchmarks") {
     {
       path = rebase_path("get_page/get_page_id.tspec")
       dest = "get_page_id.tspec"
+    },
+
+    {
+      path = rebase_path("get_entry/get_small_entry.tspec")
+      dest = "get_small_entry.tspec"
+    },
+
+    {
+      path = rebase_path("get_entry/get_small_entry_inline.tspec")
+      dest = "get_small_entry_inline.tspec"
+    },
+
+    {
+      path = rebase_path("get_entry/get_big_entry.tspec")
+      dest = "get_big_entry.tspec"
     },
 
     {

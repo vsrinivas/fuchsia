@@ -36,6 +36,21 @@ runbench_exec "${OUT_DIR}/ledger.get_page_id.json" \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/get_page_id.tspec \
     --benchmark-results-file="${OUT_DIR}/ledger.get_page_id.json"
 
+runbench_exec "${OUT_DIR}/ledger.get_small_entry.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/get_small_entry.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.get_small_entry.json"
+
+runbench_exec "${OUT_DIR}/ledger.get_small_entry_inline.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/get_small_entry_inline.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.get_small_entry_inline.json"
+
+runbench_exec "${OUT_DIR}/ledger.get_big_entry.json" \
+    trace record \
+    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/get_big_entry.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.get_big_entry.json"
+
 runbench_exec "${OUT_DIR}/ledger.put.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/put.tspec \

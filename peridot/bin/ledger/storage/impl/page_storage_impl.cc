@@ -529,10 +529,12 @@ void PageStorageImpl::GetObjectPart(
 void PageStorageImpl::GetObject(
     ObjectIdentifier object_identifier, Location location,
     fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
+  auto traced_callback =
+      TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_get_object");
   GetObjectPart(object_identifier, 0, -1, location,
                 [object_identifier = std::move(object_identifier),
-                 callback = std::move(callback)](Status status,
-                                                 fsl::SizedVmo vmo) mutable {
+                 callback = std::move(traced_callback)](
+                    Status status, fsl::SizedVmo vmo) mutable {
                   callback(status,
                            std::make_unique<VmoObject>(
                                std::move(object_identifier), std::move(vmo)));
