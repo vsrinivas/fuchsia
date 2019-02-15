@@ -38,7 +38,7 @@ and symbolize an ASan crash.
 First build (you can use `./scripts/build-zircon-x86 -A` as well):
 
 ```
-make -j $JOBS USE_ASAN=true
+gn gen build-zircon --args='variants=["asan"]'
 ```
 
 Now you'll want to run this on QEMU, but if you just run it directly

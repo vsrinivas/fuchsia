@@ -1,5 +1,7 @@
 # Zircon Makefile Options
 
+This file is deprecated. Please see the generated GN build argument documetation.
+
 The following options can be passed to **make** when building Zircon:
 
 * **BOOTFS_DEBUG_MODULES**: See [debugging tips](debugging/tips.md).

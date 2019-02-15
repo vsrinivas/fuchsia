@@ -16,15 +16,14 @@ Lock validation is disabled by default. **When disabled the lock instrumentation
 is transparent, acting as a zero-overhead wrapper for the underlying locking
 primitives**.
 
-The validator is enabled at compile time by setting the make variable
-`ENABLE_LOCK_DEP` to true. As of this writing logic for this variable is
-handled by [make/engine.mk](../make/engine.mk).
+The validator is enabled at compile time by setting the GN build argument
+`enable_lock_dep` to true. As of this writing logic for this variable is
+handled by [kernel/BUILD.gn](../kernel/BUILD.gn).
 
-You can set this variable in your `local.mk` like this:
+You can set this variable in your GN invocation like this:
 
-```makefile
-# local.mk
-ENABLE_LOCK_DEP := true
+```
+gn gen build-zircon --args='enable_lock_dep = true'
 ```
 
 When the lock validator is enabled a set of global lock-free, wait-free data

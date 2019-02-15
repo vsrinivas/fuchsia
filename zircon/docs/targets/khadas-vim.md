@@ -58,7 +58,8 @@ in the kernel boot log. You should see something like: "cmdline: fuchsia-bootloa
 ## Building Zircon
 
 ```
-make -j32 arm64
+gn gen build-zircon
+ninja -C build-zircon
 ```
 
 Be sure you've already set up your network before proceeding to the next step.

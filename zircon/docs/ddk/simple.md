@@ -529,24 +529,19 @@ We'll see more advanced examples below.
 #### Compile the FIDL code
 
 The FIDL code is compiled automatically by the build system; you just need to add a dependency
-into the `rules.mk` makefile.
+into the `BUILD.` file.
 This is what a stand-alone `rules.mk` would look like, assuming the "`.fidl`" file is called
 `demo_number.fidl`:
 
-```makefile
-LOCAL_DIR := $(GET_LOCAL_DIR)
+```gn
+import("$zx/public/gn/fidl.gni")
 
-MODULE := $(LOCAL_DIR)
-
-MODULE_TYPE := fidl
-
-MODULE_PACKAGE := fidl
-
-MODULE_FIDL_LIBRARY := zircon.sample.number
-
-MODULE_SRCS += $(LOCAL_DIR)/demo_number.fidl
-
-include make/module.mk
+// Defined in $zx/system/fidl/fuchsia-io/BUILD.gn
+fidl_library("zircon.sample.number") {
+  sources = [
+    "demo_number.fidl",
+  ]
+}
 ```
 
 Once compiled, the interface files will show up in the build output directory.

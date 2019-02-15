@@ -4,13 +4,15 @@ For general debugging info see the [Fuchsia Debugging Workflow][fuchsia-debuggin
 
 ## Generating debug info
 
-There are several make variables used to control the generation of debug info.
+There are several GN build arguments used to control the generation of debug
+info.
 
-### GLOBAL_DEBUGFLAGS
+### `symbol_level`
 
-GLOBAL\_DEBUGFLAGS specifies level of debug info to generate.
-The default is -g.
-A useful value for getting less debug info usable in backtraces is -g1.
+`symbol_level` specifies level of debug info to generate.
+The default is `-g3`.
+A useful value for getting less debug info usable in backtraces is
+`symbol_level = 1`.
 
 ### BOOTFS_DEBUG_MODULES
 
@@ -36,12 +38,12 @@ tools on zircon itself.
 
 Example:
 ```
-$ make -j10 x86 BOOTFS_DEBUG_MODULES=ulib/%,utest/debugger GLOBAL_DEBUGFLAGS=-g1
+$ gn gen build-zircon --args='BOOTFS_DEBUG_MODULES=ulib/%,utest/debugger symbol_level = 1'
 ```
 
 This example will include in the boot image debug info files for all
 shared libraries and for the "debugger" test program. To reduce the amount
-of debug info to just that usable in backtraces `GLOBAL_DEBUGFLAGS=-g1`
+of debug info to just that usable in backtraces `symbol_level = 1`
 is passed.
 
 ## Debugging the kernel with QEMU+GDB.

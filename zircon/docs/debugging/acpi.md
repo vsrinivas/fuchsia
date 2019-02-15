@@ -2,8 +2,9 @@
 
 ## ACPICA debug interfaces
 
-To turn on ACPICA's debug output, pass "ENABLE\_ACPI\_DEBUG=1" to make.  When this
-option is enabled, ACPICA uses two global variables to control debug output.
+To turn on ACPICA's debug output, pass the "enable_acpi_debug = true" build
+argument to GN.  When this option is enabled, ACPICA uses two global variables
+to control debug output.
 
 ### AcpiDbgLevel
 

@@ -357,10 +357,10 @@ in a different location). However, if you want to use your Clang to
 build Fuchsia, you will need to set some more arguments/variables.
 
 If you are only interested in building Zircon, set the following
-Make variables:
+GN build arguments:
 
 ```bash
-make USE_CLANG=true CLANG_TOOLCHAIN_PREFIX=${CLANG_DIR}
+gn gen build-zircon --args='variants = [ "clang" ] clang_tool_dir = ${CLANG_DIR}'
 ```
 
 `${CLANG_DIR}` is the path to the `bin` directory for your Clang build,

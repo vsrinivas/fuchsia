@@ -7,8 +7,8 @@ packages for various devices. To do so, it uses [GN][gn-main], a meta-build
 system that generates build files consumed by [Ninja][ninja-main], which
 executes the actual build. [Using GN build][gn-preso] is a good intro to GN.
 
-Note that Zircon uses an entirely different build system based on GNU Make.
-The rest of the build relies on Zircon being built ahead of time.
+Note that Zircon uses a different build system, though still using GN and
+Ninja. The rest of the build relies on Zircon being built ahead of time.
 
 ## Products
 
@@ -68,7 +68,7 @@ full-build`.
 
 For a list of all options, run `build-zircon.sh -h`. See Zircon's
 [Getting started][zircon-getting-started] and
-[Makefile options][zircon-makefile-options] for details.
+[GN options][zircon-gn-options] for details.
 
 ### B
 
@@ -227,4 +227,4 @@ You likely forgot to run **A** before running **B**.
 [gn-reference]: https://gn.googlesource.com/gn/+/master/docs/reference.md
 [build-project]: https://fuchsia.googlesource.com/fuchsia/+/master/build/
 [zircon-getting-started]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/getting_started.md
-[zircon-makefile-options]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/makefile_options.md
+[zircon-gn-options]: ../../../zircon/docs/gn_in_zircon.md

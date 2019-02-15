@@ -56,8 +56,10 @@ To build zircon, invoke the following command from the top level Zircon
 directory (ensure that you have checked out the ARM64 toolchains). For more
 information, see `docs/getting_started.md`:
 
-      make arm64
-
+```
+gn gen build-zircon
+ninja -C build-zircon
+```
 
 ## Setting up the serial console
 

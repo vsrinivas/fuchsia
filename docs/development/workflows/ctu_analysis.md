@@ -69,13 +69,13 @@ There are two sets of tools for running cross-translation-unit analysis:
 [This very small shell script](https://gist.github.com/karkhaz/c8ded50e564d73853731266fec729454) wraps the Ericsson `xtu-build-new` wrappers. To do a complete analysis of Zircon, make sure to clean first, and specify the correct path to your build of Clang. Then, in the zircon directory:
 
 ```
-make clean && ./run.sh
+ninja -t clean && ninja && ./run.sh
 ```
 
 In order to build only the kernel, specify a `TARGET` as an environment variable:
 
 ```
-make clean && TARGET=./build-zircon-pc-x64/zircon.elf ./run.sh
+ninja -t clean && ninja clean && TARGET=./build-zircon-pc-x64/zircon.elf ./run.sh
 ```
 
 The script also requires [clangify.py](https://gist.github.com/karkhaz/2ab5e8c7a8783318d44ceca715f20438) to be in the zircon directory with executable bit set. After the analysis has finished, there will be a `.result-xtu` directory, containing:

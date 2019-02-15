@@ -92,15 +92,13 @@ before cmdline is parsed to be forced to go to the console. The compile switch s
 overrides the cmdline parameter (if both are present). Note that both the compile switch
 and the cmdline parameter have the side effect of disabling irq driven uart Tx.
 
-More information on ``local.mk`` can be found via ``make help``
-
 ## Changing the compiler optimization level of a module
 
 You can override the default `-On` level for a module by defining in its
-`rules.mk`:
+build arguments:
 
 ```
-MODULE_OPTFLAGS := -O0
+opt_level := <n>
 ```
 
 ## Requesting a backtrace

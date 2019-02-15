@@ -29,14 +29,14 @@ bare-metal tools:
 By default, this will leave the compiler in the
 `x86_64-elf-<gcc-ver>-Fuchsia-x86_64` subdirectory of the current directory.
 
-## Build GNU make
-* Checkout make sources, if needed:
+## Build GN and Ninja
+* Checkout GN and Ninja sources, if needed:
 ```bash
-git clone https://fuchsia.googlesource.com/third_party/make
+git clone https://gn.googlesource.com/gn
+git clone https://fuchsia.googlesource.com/third_party/ninja
 ```
 
-* Follow the instructions provided in README.md of the GNU make sources
-to build a Fuchsia-hosted version of make.
+* Follow the instructions provided in README.md of the GN and Ninja sources
 
 ## Build utilities (Shouldn't be necessary)
 The following utilities are required by the build scripts. As long as your
@@ -100,9 +100,10 @@ do
   netcp "$filename" ":/data/gcc-bare-metal/$filename"
 done
 ```
-* Netcp make to `/data/bin`
+* Netcp gn and ninja to `/data/bin`
 ```bash
-netcp <make-build-dir>/make :/data/bin
+netcp <gn-build-dir>/gn :/data/bin
+netcp <ninja-build-dir>/ninja :/data/bin
 ```
 * Copy the zircon source code onto the target, either using netcp or a mounted
 image, or git. Note that if you are using the same source tree as was used to
@@ -148,8 +149,6 @@ export PATH="$PATH:/data/bin:/data/gcc/bin:/data/gcc-bare-metal/bin"
 * Finally, start the build in the zircon directory:
 ```bash
 cd zircon
-make \
-    HOST_SYSROOT=/data/sysroot \
-    ARCH_x86_64_TOOLCHAIN_PREFIX="x86_64-elf-" \
-    HOST_TOOLCHAIN_PREFIX=""
+gn gen build-zircon --args='sysroot = /data/sysroot'
+ninja -C build-zircon
 ```

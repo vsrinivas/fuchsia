@@ -62,14 +62,16 @@ unrelated data from a different trace provider.
 The event name is included in the trace to describe what the event
 is about. It is typically unique for each event.
 
-### Makefile additions
+### BUILD.gn additions
 
-The following addition to your driver's `rules.mk` file is needed to
+The following addition to your driver's `BUILD.gn` target is needed to
 pick up tracing support:
 
-```make
-MODULE_STATIC_LIBS += system/ulib/trace.driver
-MODULE_HEADER_DEPS += system/ulib/trace system/ulib/trace-engine
+```gn
+driver("my_driver") {
+  data_deps += [ "$zx/system/ulib/trace.driver" ]
+  public_deps += [ $zx/system/ulib/trace system/ulib/trace-engine" ]
+}
 ```
 
 ## Booting with tracing

@@ -77,12 +77,12 @@ $ git stash pop # uncommitted changes will come back
 
 A: [`jiri`](https://fuchsia.googlesource.com/jiri/+/master/) is source
 management for multiple repositories.
-[`fx`](https://fuchsia.googlesource.com/fuchsia/+/master/scripts/fx) is a convenience
-wrapper for configuring and running the build system (Make for Zircon,
+[`fx`](https://fuchsia.googlesource.com/fuchsia/+/master/scripts/fx) is a
+convenience wrapper for configuring and running the build system (
 [GN](https://fuchsia.googlesource.com/fuchsia/+/master/docs/glossary.md#gn) and
-[Ninja](https://fuchsia.googlesource.com/fuchsia/+/master/docs/glossary.md#ninja) for
-everything else), as well as facilities to help with day-to-day engineering (`fx
-boot`, `fx log`, etc).
+[Ninja](https://fuchsia.googlesource.com/fuchsia/+/master/docs/glossary.md#ninja)),
+as well as facilities to help with day-to-day engineering (`fx boot`, `fx log`,
+etc).
 
 ## Q: Will a git rebase to origin/master mess up my jiri-updated (i.e. synchronized) view of the repository?
 
