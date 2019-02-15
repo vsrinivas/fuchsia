@@ -8,6 +8,7 @@
 #include <fs/pseudo-file.h>
 #include <fs/remote-dir.h>
 #include <fs/synchronous-vfs.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
 
 #include "garnet/bin/appmgr/util.h"
@@ -61,8 +62,13 @@ std::unique_ptr<T> ComponentContainerImpl<T>::ExtractComponent(T* controller) {
 // See |Namespace::Namespace| constructor.
 std::vector<std::string> GetDefaultNamespaceServiceEntries() {
   return std::vector<std::string>{
-      ".", fuchsia::sys::Environment::Name_, Namespace::Launcher::Name_,
-      fuchsia::process::Launcher::Name_, fuchsia::process::Resolver::Name_};
+      ".",
+      fuchsia::sys::Environment::Name_,
+      Namespace::Launcher::Name_,
+      fuchsia::process::Launcher::Name_,
+      fuchsia::process::Resolver::Name_,
+      fuchsia::scheduler::ProfileProvider::Name_,
+  };
 }
 
 // Create a new Namespace that contains the default services available to all

@@ -86,12 +86,14 @@ TEST_F(HubTest, Services) {
     const std::string path = *glob.begin();
 
     // Expected files are built-in services plus sysmgr services.
-    std::vector<std::string> expected_files = {".",
-                                               "fuchsia.process.Resolver",
-                                               "fuchsia.process.Launcher",
-                                               "fuchsia.sys.Environment",
-                                               "fuchsia.sys.Launcher",
-                                               "fuchsia.sys.Loader"};
+    std::vector<std::string> expected_files = {
+        ".",
+        "fuchsia.process.Launcher",
+        "fuchsia.process.Resolver",
+        "fuchsia.scheduler.ProfileProvider",
+        "fuchsia.sys.Environment",
+        "fuchsia.sys.Launcher",
+        "fuchsia.sys.Loader"};
     sysmgr::Config config;
     ASSERT_TRUE(config.ParseFromDirectory("/system/data/sysmgr"));
     const auto service_map = config.TakeServices();

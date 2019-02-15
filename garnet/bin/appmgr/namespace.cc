@@ -5,6 +5,7 @@
 #include "garnet/bin/appmgr/namespace.h"
 
 #include <fuchsia/process/cpp/fidl.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
 
@@ -52,6 +53,14 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
         resolver_bindings_.AddBinding(
             this, fidl::InterfaceRequest<fuchsia::process::Resolver>(
                       std::move(channel)));
+        return ZX_OK;
+      })));
+  services_->AddService(
+      fuchsia::scheduler::ProfileProvider::Name_,
+      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        realm_->environment_services()->ConnectToService(
+            fidl::InterfaceRequest<fuchsia::scheduler::ProfileProvider>(
+                std::move(channel)));
         return ZX_OK;
       })));
 
