@@ -76,4 +76,4 @@ dependent projects between steps 1 and 2.
 Only Google developers can make hard transitions.  See internal documentation for
 instructions.
 
-[getting-source]: /development/source_code/README.md "Getting source"
+[getting-source]: /docs/development/source_code/README.md "Getting source"

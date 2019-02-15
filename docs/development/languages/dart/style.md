@@ -60,8 +60,6 @@ truncate the line.
 
 ## Repositories and Files
 
-### DO follow the [Fuchsia layer repository structure][Fuchsia-directory-style].
-
 ### DO prefix library names in `/lib` and `/public/lib` with `lib.`
 #### Example:
 ```
@@ -330,6 +328,5 @@ Widget buildButton(
 ### DO add [logging statements][dart-logging]
 
 [effective-dart]: https://www.dartlang.org/guides/language/effective-dart
-[fuchsia-directory-style]: /development/source_code/layer_repository_structure.md#
-[dart-logging]: /development/languages/dart/logging.md
+[dart-logging]: /docs/development/languages/dart/logging.md
 [dartstyle-80-chars]: https://www.dartlang.org/guides/language/effective-dart/style#avoid-lines-longer-than-80-characters
