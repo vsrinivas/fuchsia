@@ -11,11 +11,11 @@
 
 namespace sys {
 
-Outgoing::Outgoing() : root_(std::make_unique<vfs::PseudoDir>()) {
-  auto dir = std::make_unique<vfs::PseudoDir>();
-  public_ = dir.get();
-  root_->AddEntry("public", std::move(dir));
-}
+Outgoing::Outgoing()
+    : root_(std::make_unique<vfs::PseudoDir>()),
+      public_(AddNewEmptyDirectory("public")),
+      debug_(AddNewEmptyDirectory("debug")),
+      ctrl_(AddNewEmptyDirectory("ctrl")) {}
 
 Outgoing::~Outgoing() = default;
 
@@ -28,6 +28,13 @@ zx_status_t Outgoing::Serve(zx::channel directory_request,
 zx_status_t Outgoing::ServeFromStartupInfo(async_dispatcher_t* dispatcher) {
   return Serve(zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)),
                dispatcher);
+}
+
+vfs::PseudoDir* Outgoing::AddNewEmptyDirectory(std::string name) {
+  auto dir = std::make_unique<vfs::PseudoDir>();
+  auto ptr = dir.get();
+  root_->AddEntry(std::move(name), std::move(dir));
+  return ptr;
 }
 
 }  // namespace sys

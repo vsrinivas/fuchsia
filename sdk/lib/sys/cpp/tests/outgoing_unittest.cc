@@ -17,85 +17,89 @@
 
 namespace {
 
-using OutgoingTest = gtest::RealLoopFixture;
+using OutgoingSetupTest = gtest::RealLoopFixture;
+
+class OutgoingTest : public gtest::RealLoopFixture {
+ protected:
+  void SetUp() override {
+    gtest::RealLoopFixture::SetUp();
+    zx::channel svc_server;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &svc_client_, &svc_server));
+
+    ASSERT_EQ(ZX_OK, outgoing_.Serve(std::move(svc_server), dispatcher()));
+  }
+
+  void TestCanAccessEchoService(const char* service_path,
+                                bool succeeds = true) {
+    fidl::examples::echo::EchoPtr echo;
+    fdio_service_connect_at(
+        svc_client_.get(), service_path,
+        echo.NewRequest(dispatcher()).TakeChannel().release());
+
+    std::string result = "no callback";
+    echo->EchoString("hello",
+                     [&result](fidl::StringPtr value) { result = *value; });
+
+    RunLoopUntilIdle();
+    EXPECT_EQ(succeeds ? "hello" : "no callback", result);
+  }
+
+  void AddEchoService(vfs::PseudoDir* dir) {
+    ASSERT_EQ(ZX_OK, dir->AddEntry(fidl::examples::echo::Echo::Name_,
+                                   std::make_unique<vfs::Service>(
+                                       echo_impl_.GetHandler(dispatcher()))));
+  }
+
+  EchoImpl echo_impl_;
+  zx::channel svc_client_;
+  sys::Outgoing outgoing_;
+};
 
 TEST_F(OutgoingTest, Control) {
-  zx::channel svc_client, svc_server;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &svc_client, &svc_server));
+  ASSERT_EQ(ZX_OK,
+            outgoing_.AddPublicService(echo_impl_.GetHandler(dispatcher())));
 
-  sys::Outgoing outgoing;
-  ASSERT_EQ(ZX_OK, outgoing.Serve(std::move(svc_server), dispatcher()));
-
-  EchoImpl impl;
-
-  ASSERT_EQ(ZX_OK, outgoing.AddPublicService(impl.GetHandler(dispatcher())));
-
-  fidl::examples::echo::EchoPtr echo;
-  fdio_service_connect_at(
-      svc_client.get(), "public/fidl.examples.echo.Echo",
-      echo.NewRequest(dispatcher()).TakeChannel().release());
-
-  std::string result;
-  echo->EchoString("hello",
-                   [&result](fidl::StringPtr value) { result = *value; });
-
-  RunLoopUntilIdle();
-  EXPECT_EQ("hello", result);
+  TestCanAccessEchoService("public/fidl.examples.echo.Echo");
 }
 
 TEST_F(OutgoingTest, AddAndRemove) {
-  zx::channel svc_client, svc_server;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &svc_client, &svc_server));
-
-  sys::Outgoing outgoing;
-  ASSERT_EQ(ZX_OK, outgoing.Serve(std::move(svc_server), dispatcher()));
-
   ASSERT_EQ(ZX_ERR_NOT_FOUND,
-            outgoing.RemovePublicService<fidl::examples::echo::Echo>());
+            outgoing_.RemovePublicService<fidl::examples::echo::Echo>());
 
-  EchoImpl impl;
-  fidl::BindingSet<fidl::examples::echo::Echo> bindings;
-  ASSERT_EQ(ZX_OK, outgoing.AddPublicService(
-                       bindings.GetHandler(&impl, dispatcher())));
-  ASSERT_EQ(
-      ZX_ERR_ALREADY_EXISTS,
-      outgoing.AddPublicService(bindings.GetHandler(&impl, dispatcher())));
+  ASSERT_EQ(ZX_OK,
+            outgoing_.AddPublicService(echo_impl_.GetHandler(dispatcher())));
 
-  fidl::examples::echo::EchoPtr echo;
-  fdio_service_connect_at(
-      svc_client.get(), "public/fidl.examples.echo.Echo",
-      echo.NewRequest(dispatcher()).TakeChannel().release());
+  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS,
+            outgoing_.AddPublicService(echo_impl_.GetHandler(dispatcher())));
 
-  std::string result;
-  echo->EchoString("hello",
-                   [&result](fidl::StringPtr value) { result = *value; });
+  TestCanAccessEchoService("public/fidl.examples.echo.Echo");
 
-  RunLoopUntilIdle();
-  EXPECT_EQ("hello", result);
-
-  ASSERT_EQ(ZX_OK, outgoing.RemovePublicService<fidl::examples::echo::Echo>());
+  ASSERT_EQ(ZX_OK, outgoing_.RemovePublicService<fidl::examples::echo::Echo>());
   ASSERT_EQ(ZX_ERR_NOT_FOUND,
-            outgoing.RemovePublicService<fidl::examples::echo::Echo>());
+            outgoing_.RemovePublicService<fidl::examples::echo::Echo>());
 
-  fdio_service_connect_at(
-      svc_client.get(), "public/fidl.examples.echo.Echo",
-      echo.NewRequest(dispatcher()).TakeChannel().release());
-
-  result = "no callback";
-  echo->EchoString("good-bye",
-                   [&result](fidl::StringPtr value) { result = *value; });
-
-  RunLoopUntilIdle();
-  EXPECT_EQ("no callback", result);
+  TestCanAccessEchoService("public/fidl.examples.echo.Echo", false);
 }
 
-TEST_F(OutgoingTest, Invalid) {
+TEST_F(OutgoingTest, DebugDir) {
+  AddEchoService(outgoing_.debug_dir());
+
+  TestCanAccessEchoService("debug/fidl.examples.echo.Echo");
+}
+
+TEST_F(OutgoingTest, CtrlDir) {
+  AddEchoService(outgoing_.ctrl_dir());
+
+  TestCanAccessEchoService("ctrl/fidl.examples.echo.Echo");
+}
+
+TEST_F(OutgoingSetupTest, Invalid) {
   sys::Outgoing outgoing;
   // TODO: This should return ZX_ERR_BAD_HANDLE.
   ASSERT_EQ(ZX_OK, outgoing.Serve(zx::channel(), dispatcher()));
 }
 
-TEST_F(OutgoingTest, AccessDenied) {
+TEST_F(OutgoingSetupTest, AccessDenied) {
   zx::channel svc_client, svc_server;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &svc_client, &svc_server));
 

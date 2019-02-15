@@ -96,11 +96,10 @@ class Outgoing final {
   // outgoing.AddPublicService(bindings.GetHandler(this));
   // ```
   template <typename Interface>
-  zx_status_t AddPublicService(
-      fidl::InterfaceRequestHandler<Interface> handler,
-      const std::string& name = Interface::Name_) const {
+  zx_status_t AddPublicService(fidl::InterfaceRequestHandler<Interface> handler,
+                               std::string name = Interface::Name_) const {
     return public_->AddEntry(
-        name, std::make_unique<vfs::Service>(std::move(handler)));
+        std::move(name), std::make_unique<vfs::Service>(std::move(handler)));
   }
 
   // Removes the specified interface from the set of public interfaces.
@@ -121,7 +120,19 @@ class Outgoing final {
     return public_->RemoveEntry(name);
   }
 
+  // Get access to debug directory to publish debug data.
+  // This directory is owned by this class.
+  vfs::PseudoDir* debug_dir() { return debug_; }
+
+  // Get access to ctrl directory to publish ctrl data.
+  // This directory is owned by this class.
+  vfs::PseudoDir* ctrl_dir() { return ctrl_; }
+
  private:
+  // Adds a new empty directory to |root_| and returns pointer to new directory.
+  // Will fail silently if directory with that name already exists.
+  vfs::PseudoDir* AddNewEmptyDirectory(std::string name);
+
   // The root outgoing directory itself.
   std::unique_ptr<vfs::PseudoDir> root_;
 
@@ -129,6 +140,16 @@ class Outgoing final {
   //
   // The underlying |vfs::PseudoDir| object is owned by |root_|.
   vfs::PseudoDir* public_;
+
+  // The debug subdirectory of the root directory.
+  //
+  // The underlying |vfs::PseudoDir| object is owned by |root_|.
+  vfs::PseudoDir* debug_;
+
+  // The ctrl subdirectory of the root directory.
+  //
+  // The underlying |vfs::PseudoDir| object is owned by |root_|.
+  vfs::PseudoDir* ctrl_;
 };
 
 }  // namespace sys
