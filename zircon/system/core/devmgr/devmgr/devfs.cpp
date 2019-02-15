@@ -672,11 +672,11 @@ done:
 
 void devfs_unpublish(Device* dev) {
     if (dev->self != nullptr) {
-        devfs_remove(dev->self);
+        delete dev->self;
         dev->self = nullptr;
     }
     if (dev->link != nullptr) {
-        devfs_remove(dev->link);
+        delete dev->link;
         dev->link = nullptr;
     }
 }
