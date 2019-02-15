@@ -127,12 +127,10 @@ impl<B: ByteSlice> EthernetFrame<B> {
 
     /// The EtherType.
     ///
-    /// `ethertype` returns the `EtherType` from the Ethernet header. However:
-    /// - Some values of the EtherType header field are used to indicate the
-    ///   length of the frame's body. In this case, `ethertype` returns `None`.
-    /// - If the EtherType number is unrecognized, then `ethertype` returns
-    ///   `Ok(Err(x))` where `x` is the numerical EtherType number.
-    pub fn ethertype(&self) -> Option<Result<EtherType, u16>> {
+    /// `ethertype` returns the `EtherType` from the Ethernet header. However,
+    /// some values of the EtherType header field are used to indicate the
+    /// length of the frame's body. In this case, `ethertype` returns `None`.
+    pub fn ethertype(&self) -> Option<EtherType> {
         let et = NetworkEndian::read_u16(&self.ethertype[..]);
         if et <= 1500 {
             return None;
@@ -140,7 +138,7 @@ impl<B: ByteSlice> EthernetFrame<B> {
         // values in (1500, 1536) are illegal, and shouldn't make it through
         // parse
         debug_assert!(et >= 1536);
-        Some(EtherType::from_u16(et).ok_or(et))
+        Some(EtherType::from(et))
     }
 
     // The size of the frame header.
@@ -276,7 +274,7 @@ mod tests {
         assert_eq!(frame.hdr_prefix.dst_mac, DEFAULT_DST_MAC.bytes());
         assert_eq!(frame.hdr_prefix.src_mac, DEFAULT_SRC_MAC.bytes());
         assert!(frame.tag.is_none());
-        assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));
+        assert_eq!(frame.ethertype(), Some(EtherType::Arp));
         assert_eq!(frame.body(), &body[..]);
 
         // For both of the TPIDs that imply the existence of a tag, make sure
@@ -294,7 +292,7 @@ mod tests {
             let frame = buf.parse::<EthernetFrame<_>>().unwrap();
             assert_eq!(frame.hdr_prefix.dst_mac, DEFAULT_DST_MAC.bytes());
             assert_eq!(frame.hdr_prefix.src_mac, DEFAULT_SRC_MAC.bytes());
-            assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));
+            assert_eq!(frame.ethertype(), Some(EtherType::Arp));
 
             // help out with type inference
             let tag: &[u8; 4] = frame.tag.as_ref().unwrap();
@@ -325,7 +323,7 @@ mod tests {
         NetworkEndian::write_u16(&mut buf[12..], 1536);
         assert_eq!(
             (&mut buf[..]).parse::<EthernetFrame<_>>().unwrap().ethertype(),
-            Some(Err(1536))
+            Some(EtherType::Other(1536))
         );
     }
 

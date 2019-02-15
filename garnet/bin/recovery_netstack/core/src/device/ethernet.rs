@@ -114,18 +114,6 @@ impl EtherType {
     const IPV4: u16 = 0x0800;
     const ARP: u16 = 0x0806;
     const IPV6: u16 = 0x86DD;
-    /// Construct an `EtherType` from a `u16`.
-    ///
-    /// `from_u16` returns the `EtherType` with the numerical value `u`, or
-    /// `None` if the value is unrecognized.
-    pub fn from_u16(u: u16) -> Option<EtherType> {
-        match u {
-            Self::IPV4 => Some(EtherType::Ipv4),
-            Self::ARP => Some(EtherType::Arp),
-            Self::IPV6 => Some(EtherType::Ipv6),
-            _ => None,
-        }
-    }
 }
 
 impl From<u16> for EtherType {
@@ -258,33 +246,28 @@ pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64, b
         return;
     };
 
-    if let Some(Ok(ethertype)) = frame.ethertype() {
-        let (src, dst) = (frame.src_mac(), frame.dst_mac());
-        let device = DeviceId::new_ethernet(device_id);
-        match ethertype {
-            EtherType::Arp => {
-                let types = if let Ok(types) = peek_arp_types(buffer.as_ref()) {
-                    types
-                } else {
-                    // TODO(joshlf): Do something else here?
-                    return;
-                };
-                match types {
-                    (ArpHardwareType::Ethernet, EtherType::Ipv4) => {
-                        crate::device::arp::receive_arp_packet::<D, Ipv4Addr, EthernetArpDevice, _>(
-                            ctx, device_id, src, dst, buffer,
-                        )
-                    }
-                    types => debug!("got ARP packet for unsupported types: {:?}", types),
+    let (src, dst) = (frame.src_mac(), frame.dst_mac());
+    let device = DeviceId::new_ethernet(device_id);
+    match frame.ethertype() {
+        Some(EtherType::Arp) => {
+            let types = if let Ok(types) = peek_arp_types(buffer.as_ref()) {
+                types
+            } else {
+                // TODO(joshlf): Do something else here?
+                return;
+            };
+            match types {
+                (ArpHardwareType::Ethernet, EtherType::Ipv4) => {
+                    crate::device::arp::receive_arp_packet::<D, Ipv4Addr, EthernetArpDevice, _>(
+                        ctx, device_id, src, dst, buffer,
+                    )
                 }
+                types => debug!("got ARP packet for unsupported types: {:?}", types),
             }
-            EtherType::Ipv4 => crate::ip::receive_ip_packet::<D, _, Ipv4>(ctx, device, buffer),
-            EtherType::Ipv6 => crate::ip::receive_ip_packet::<D, _, Ipv6>(ctx, device, buffer),
-            EtherType::Other(_) => {} // TODO(joshlf)
         }
-    } else {
-        // TODO(joshlf): Do something else?
-        return;
+        Some(EtherType::Ipv4) => crate::ip::receive_ip_packet::<D, _, Ipv4>(ctx, device, buffer),
+        Some(EtherType::Ipv6) => crate::ip::receive_ip_packet::<D, _, Ipv6>(ctx, device, buffer),
+        Some(EtherType::Other(_)) | None => {} // TODO(joshlf)
     }
 }
 

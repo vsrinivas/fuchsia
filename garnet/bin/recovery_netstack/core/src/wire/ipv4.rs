@@ -205,9 +205,7 @@ impl<B: ByteSlice> Ipv4Packet<B> {
 
     /// The IP Protocol.
     ///
-    /// `proto` returns the `IpProto` from the protocol field. If the protocol
-    /// number is unrecognized, the `Err` value returned contains the numerical
-    /// protocol number.
+    /// `proto` returns the `IpProto` from the protocol field.
     pub fn proto(&self) -> IpProto {
         IpProto::from(self.hdr_prefix.proto)
     }
@@ -492,7 +490,7 @@ mod tests {
         let frame = buf.parse::<EthernetFrame<_>>().unwrap();
         assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
         assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
-        assert_eq!(frame.ethertype(), Some(Ok(EtherType::Ipv4)));
+        assert_eq!(frame.ethertype(), Some(EtherType::Ipv4));
 
         let mut body = frame.body();
         let packet = body.parse::<Ipv4Packet<_>>().unwrap();
@@ -523,7 +521,7 @@ mod tests {
         let frame = buf.parse::<EthernetFrame<_>>().unwrap();
         assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
         assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
-        assert_eq!(frame.ethertype(), Some(Ok(EtherType::Ipv4)));
+        assert_eq!(frame.ethertype(), Some(EtherType::Ipv4));
 
         let mut body = frame.body();
         let packet = body.parse::<Ipv4Packet<_>>().unwrap();

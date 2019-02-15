@@ -112,11 +112,7 @@ pub fn peek_arp_types<B: ByteSlice>(bytes: B) -> Result<(ArpHardwareType, EtherT
         "unrecognized hardware protocol: {:x}",
         header.hardware_protocol()
     ))?;
-    let proto = EtherType::from_u16(header.network_protocol()).ok_or_else(debug_err_fn!(
-        ParseError::NotSupported,
-        "unrecognized network protocol: {:x}",
-        header.network_protocol()
-    ))?;
+    let proto = EtherType::from(header.network_protocol());
     let hlen = match hw {
         ArpHardwareType::Ethernet => <Mac as HType>::hlen(),
     };
@@ -406,7 +402,7 @@ mod tests {
 
         let mut req = &ARP_REQUEST[..];
         let frame = req.parse::<EthernetFrame<_>>().unwrap();
-        assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));
+        assert_eq!(frame.ethertype(), Some(EtherType::Arp));
 
         let (hw, proto) = peek_arp_types(frame.body()).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);

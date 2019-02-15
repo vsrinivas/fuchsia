@@ -394,7 +394,7 @@ mod tests {
             let mut buf = &ctx.dispatcher.frames_sent()[packet_num].1[..];
 
             let frame = buf.parse::<EthernetFrame<_>>().unwrap();
-            assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));
+            assert_eq!(frame.ethertype(), Some(EtherType::Arp));
             assert_eq!(frame.src_mac(), TEST_LOCAL_MAC);
             assert_eq!(EthernetArpDevice::BROADCAST, frame.dst_mac());
 
@@ -459,7 +459,7 @@ mod tests {
         let mut buf = &ctx.dispatcher.frames_sent()[0].1[..];
 
         let frame = buf.parse::<EthernetFrame<_>>().unwrap();
-        assert_eq!(frame.ethertype(), Some(Ok(EtherType::Arp)));
+        assert_eq!(frame.ethertype(), Some(EtherType::Arp));
         assert_eq!(frame.src_mac(), TEST_LOCAL_MAC);
         assert_eq!(frame.dst_mac(), TEST_REMOTE_MAC);
 

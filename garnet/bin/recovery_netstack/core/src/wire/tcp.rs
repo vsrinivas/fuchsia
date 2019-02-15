@@ -518,7 +518,7 @@ mod tests {
         let frame = buf.parse::<EthernetFrame<_>>().unwrap();
         assert_eq!(frame.src_mac(), ETHERNET_SRC_MAC);
         assert_eq!(frame.dst_mac(), ETHERNET_DST_MAC);
-        assert_eq!(frame.ethertype(), Some(Ok(EtherType::Ipv4)));
+        assert_eq!(frame.ethertype(), Some(EtherType::Ipv4));
 
         let mut body = frame.body();
         let packet = body.parse::<Ipv4Packet<_>>().unwrap();
