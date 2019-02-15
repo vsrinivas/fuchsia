@@ -86,8 +86,7 @@ be passed to GN:
 build_sdk_archives=true
 ```
 
-
-#### Using a custom SDK in the build
+### Using a custom SDK in the build
 
 By setting the `export` property to true on an SDK target, that SDK's contents
 become available in the build output directory and may be used for other GN
@@ -98,3 +97,19 @@ For an SDK declared at `//some/place:my_sdk` and marked as "exported", an
 additional GN target exists: `//some/place:my_sdk_export`.
 This target will generate a usable SDK under
 `//out/<build-type>/sdk/exported/my_sdk`.
+
+
+## GN build arguments
+
+##### `build_sdk_archives`
+
+By default, the build system will not produce SDK tarballs as it is a somewhat
+time-consuming build step. Set this argument to `true` in order to have tarballs
+created under `$OUTPUT_DIR/sdk/archive`.
+
+##### `warn_on_sdk_changes`
+
+For each element in the SDK, a reference file representing its API is checked
+into the source tree. If the API is modified but the reference file is not
+updated, the build will fail. Set this argument to `true` in order to turn the
+errors into mere warnings.
