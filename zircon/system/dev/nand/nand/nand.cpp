@@ -190,23 +190,16 @@ void NandDevice::DoIo(Transaction txn) {
 // Initialization is complete by the time the thread starts.
 zx_status_t NandDevice::WorkerThread() {
     for (;;) {
-        // Don't loop until txn_queue_ is empty to check for shutdown.
-        // between each io.
-        for (auto txn = txn_queue_.pop(); txn; txn = txn_queue_.pop()) {
-            {
-                fbl::AutoLock al(&lock_);
-                if (shutdown_) {
-                    break;
-                }
-            }
-            DoIo(*std::move(txn));
-        }
-
         fbl::AutoLock al(&lock_);
+        while (txn_queue_.is_empty() && !shutdown_) {
+            worker_event_.Wait(&lock_);
+        }
         if (shutdown_) {
             break;
         }
-        worker_event_.Wait(&lock_);
+        auto txn = txn_queue_.pop();
+        al.release();
+        DoIo(*std::move(txn));
     }
 
     zxlogf(TRACE, "nand: worker thread terminated\n");
@@ -257,6 +250,7 @@ void NandDevice::NandQueue(nand_operation_t* op, nand_queue_callback completion_
     }
 
     // TODO: UPDATE STATS HERE.
+    fbl::AutoLock al(&lock_);
     txn_queue_.push(std::move(txn));
     worker_event_.Signal();
 }
@@ -276,11 +270,12 @@ NandDevice::~NandDevice() {
     {
         fbl::AutoLock al(&lock_);
         shutdown_ = true;
+        worker_event_.Signal();
     }
-    worker_event_.Signal();
     thrd_join(worker_thread_, nullptr);
 
     // Error out all pending requests.
+    fbl::AutoLock al(&lock_);
     txn_queue_.Release();
 }
 

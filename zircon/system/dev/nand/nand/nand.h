@@ -79,10 +79,10 @@ private:
     uint32_t num_nand_pages_;
 
     thrd_t worker_thread_;
-    nand::UnownedOperationQueue<> txn_queue_;
 
     fbl::Mutex lock_;
-    fbl::ConditionVariable worker_event_;
+    nand::UnownedOperationQueue<> txn_queue_ TA_GUARDED(lock_);
+    fbl::ConditionVariable worker_event_ TA_GUARDED(lock_);
     bool shutdown_ TA_GUARDED(lock_) = false;
 };
 
