@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::auth,
     failure::Error,
     wlan_common::{
         buffer_writer::{BufferWriter, ByteSliceMut},
@@ -12,15 +13,12 @@ use {
 
 type MacAddr = [u8; 6];
 
-/// Fills a given buffer with auth frame which will be sent from client to AP.
-/// Fails if the given buffer is too short.
-/// Returns the amount of bytes written to the buffer.
 pub fn write_open_auth_frame<B: ByteSliceMut>(
     buf: B,
     bssid: MacAddr,
     client_addr: MacAddr,
     seq_ctrl: u16,
-) -> Result<usize, Error> {
+) -> Result<BufferWriter<B>, Error> {
     let (mut mgmt_hdr, mut w) = BufferWriter::new(buf).reserve_zeroed::<mac::MgmtHdr>()?;
     let mut fc = mac::FrameControl(0);
     fc.set_frame_type(mac::FRAME_TYPE_MGMT);
@@ -32,22 +30,17 @@ pub fn write_open_auth_frame<B: ByteSliceMut>(
     mgmt_hdr.set_seq_ctrl(seq_ctrl);
 
     let (mut auth_hdr, w) = w.reserve_zeroed::<mac::AuthHdr>()?;
-    auth_hdr.set_auth_alg_num(mac::AuthAlgorithm::Open as u16);
-    auth_hdr.set_auth_txn_seq_num(1);
-    auth_hdr.set_status_code(0);
-    Ok(w.written_bytes())
+    auth::write_client_req(&mut auth_hdr);
+    Ok(w)
 }
 
-/// Fills a given buffer with a deauth frame which will be sent from client to AP.
-/// Fails if the given buffer is too short.
-/// Returns the amount of bytes written to the buffer.
 pub fn write_deauth_frame<B: ByteSliceMut>(
     buf: B,
     bssid: MacAddr,
     client_addr: MacAddr,
     seq_ctrl: u16,
     reason_code: mac::ReasonCode,
-) -> Result<usize, Error> {
+) -> Result<BufferWriter<B>, Error> {
     let (mut mgmt_hdr, mut w) = BufferWriter::new(buf).reserve_zeroed::<mac::MgmtHdr>()?;
     let mut fc = mac::FrameControl(0);
     fc.set_frame_type(mac::FRAME_TYPE_MGMT);
@@ -60,18 +53,16 @@ pub fn write_deauth_frame<B: ByteSliceMut>(
 
     let (mut deauth_hdr, w) = w.reserve_zeroed::<mac::DeauthHdr>()?;
     deauth_hdr.set_reason_code(reason_code as u16);
-    Ok(w.written_bytes())
+    Ok(w)
 }
 
-/// Fills a given buffer with a null-data frame which will be send from a client to an AP.
-/// Fails if the given buffer is too short.
-/// Returns the amount of bytes written to the buffer.
+/// Fills a given buffer with a null-data frame.
 pub fn write_keep_alive_resp_frame<B: ByteSliceMut>(
     buf: B,
     bssid: MacAddr,
     client_addr: MacAddr,
     seq_ctrl: u16,
-) -> Result<usize, Error> {
+) -> Result<BufferWriter<B>, Error> {
     let (mut data_hdr, w) = BufferWriter::new(buf).reserve_zeroed::<mac::DataHdr>()?;
     let mut fc = mac::FrameControl(0);
     fc.set_frame_type(mac::FRAME_TYPE_DATA);
@@ -82,7 +73,7 @@ pub fn write_keep_alive_resp_frame<B: ByteSliceMut>(
     data_hdr.addr2 = client_addr;
     data_hdr.addr3 = bssid;
     data_hdr.set_seq_ctrl(seq_ctrl);
-    Ok(w.written_bytes())
+    Ok(w)
 }
 
 #[cfg(test)]
@@ -92,8 +83,9 @@ mod tests {
     #[test]
     fn open_auth_frame() {
         let mut buf = [99u8; 30];
-        let written_bytes =
-            write_open_auth_frame(&mut buf[..], [1; 6], [2; 6], 42).expect("failed writing frame");
+        let written_bytes = write_open_auth_frame(&mut buf[..], [1; 6], [2; 6], 42)
+            .expect("failed writing frame")
+            .written_bytes();
         assert_eq!(30, written_bytes);
         assert_eq!(
             [
@@ -118,7 +110,8 @@ mod tests {
         let mut buf = [99u8; 26];
         let written_bytes =
             write_deauth_frame(&mut buf[..], [1; 6], [2; 6], 42, mac::ReasonCode::Timeout)
-                .expect("failed writing frame");
+                .expect("failed writing frame")
+                .written_bytes();
         assert_eq!(26, written_bytes);
         assert_eq!(
             [
@@ -140,7 +133,8 @@ mod tests {
     fn keep_alive_resp_frame() {
         let mut buf = [3u8; 25];
         let written_bytes = write_keep_alive_resp_frame(&mut buf[..], [1; 6], [2; 6], 42)
-            .expect("failed writing frame");
+            .expect("failed writing frame")
+            .written_bytes();
         assert_eq!(24, written_bytes);
         assert_eq!(
             [

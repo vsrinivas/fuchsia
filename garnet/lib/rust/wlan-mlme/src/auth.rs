@@ -7,15 +7,25 @@ use {
     wlan_common::mac,
 };
 
+pub fn write_client_req(auth_hdr: &mut mac::AuthHdr) {
+    auth_hdr.set_auth_alg_num(mac::AuthAlgorithm::Open as u16);
+    auth_hdr.set_auth_txn_seq_num(1);
+    auth_hdr.set_status_code(0);
+}
+
 /// Validates whether a given authentication header is a valid response to an open authentication
 /// request.
-pub fn is_valid_open_auth_resp(auth: &mac::AuthHdr) -> Result<(), Error> {
+pub fn is_valid_open_ap_resp(auth: &mac::AuthHdr) -> Result<(), Error> {
     ensure!(
         auth.auth_alg_num() == mac::AuthAlgorithm::Open as u16,
         "invalid auth_alg_num: {}",
         auth.auth_alg_num()
     );
-    ensure!(auth.auth_txn_seq_num() == 2, "invalid auth_txn_seq_num: {}", auth.auth_txn_seq_num());
+    ensure!(
+        auth.auth_txn_seq_num() == 2,
+        "invalid auth_txn_seq_num: {}",
+        auth.auth_txn_seq_num()
+    );
     ensure!(
         auth.status_code() == mac::StatusCode::Success as u16,
         "invalid status_code: {}",
@@ -38,21 +48,21 @@ mod tests {
 
     #[test]
     fn valid_open_auth_resp() {
-        assert!(is_valid_open_auth_resp(&make_valid_auth_resp()).is_ok());
+        assert!(is_valid_open_ap_resp(&make_valid_auth_resp()).is_ok());
     }
 
     #[test]
     fn invalid_open_auth_resp() {
         let mut auth_hdr = make_valid_auth_resp();
         auth_hdr.set_auth_alg_num(2);
-        assert!(is_valid_open_auth_resp(&auth_hdr).is_err());
+        assert!(is_valid_open_ap_resp(&auth_hdr).is_err());
 
         let mut auth_hdr = make_valid_auth_resp();
         auth_hdr.set_auth_txn_seq_num(1);
-        assert!(is_valid_open_auth_resp(&auth_hdr).is_err());
+        assert!(is_valid_open_ap_resp(&auth_hdr).is_err());
 
         let mut auth_hdr = make_valid_auth_resp();
         auth_hdr.set_status_code(1);
-        assert!(is_valid_open_auth_resp(&auth_hdr).is_err());
+        assert!(is_valid_open_ap_resp(&auth_hdr).is_err());
     }
 }

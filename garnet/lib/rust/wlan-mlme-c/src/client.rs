@@ -8,7 +8,7 @@ use {
     wlan_mlme::{
         buffer::{BufferProvider, InBuf, OutBuf},
         client,
-        common::mac::{self, OptionalField},
+        common::{frame_len, mac},
     },
 };
 
@@ -20,11 +20,11 @@ pub extern "C" fn rust_mlme_write_open_auth_frame(
     seq_ctrl: u16,
     out_buf: &mut OutBuf,
 ) -> i32 {
-    let frame_len = mac::MgmtHdr::len(mac::HtControl::ABSENT) + std::mem::size_of::<mac::AuthHdr>();
+    let frame_len = frame_len!(mac::MgmtHdr, mac::AuthHdr);
     let buf_result = provider.get_buffer(frame_len);
     let mut buf = unwrap_or_bail!(buf_result, zx::ZX_ERR_NO_RESOURCES);
     let write_result = client::write_open_auth_frame(&mut buf[..], *bssid, *client_addr, seq_ctrl);
-    let written_bytes = unwrap_or_bail!(write_result, zx::ZX_ERR_INTERNAL);
+    let written_bytes = unwrap_or_bail!(write_result, zx::ZX_ERR_INTERNAL).written_bytes();
     *out_buf = OutBuf::from(buf, written_bytes);
     zx::ZX_OK
 }
@@ -37,13 +37,12 @@ pub extern "C" fn rust_mlme_write_keep_alive_resp_frame(
     seq_ctrl: u16,
     out_buf: &mut OutBuf,
 ) -> i32 {
-    let frame_len =
-        mac::DataHdr::len(mac::Addr4::ABSENT, mac::QosControl::ABSENT, mac::HtControl::ABSENT);
+    let frame_len = frame_len!(mac::DataHdr);
     let buf_result = provider.get_buffer(frame_len);
     let mut buf = unwrap_or_bail!(buf_result, zx::ZX_ERR_NO_RESOURCES);
     let write_result =
         client::write_keep_alive_resp_frame(&mut buf[..], *bssid, *client_addr, seq_ctrl);
-    let written_bytes = unwrap_or_bail!(write_result, zx::ZX_ERR_INTERNAL);
+    let written_bytes = unwrap_or_bail!(write_result, zx::ZX_ERR_INTERNAL).written_bytes();
     *out_buf = OutBuf::from(buf, written_bytes);
     zx::ZX_OK
 }

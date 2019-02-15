@@ -11,6 +11,15 @@ use {
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
 
+#[macro_export]
+macro_rules! frame_len {
+    () => { 0 };
+    ($only:ty) => { std::mem::size_of::<$only>() };
+    ($first:ty, $($tail:ty),*) => {
+        std::mem::size_of::<$first>() + frame_len!($($tail),*)
+    };
+}
+
 type MacAddr = [u8; 6];
 pub const BCAST_ADDR: MacAddr = [0xFF; 6];
 
@@ -27,10 +36,11 @@ pub const MGMT_SUBTYPE_DEAUTH: u16 = 0x0C;
 pub const DATA_SUBTYPE_DATA: u16 = 0x00;
 pub const DATA_SUBTYPE_NULL_DATA: u16 = 0x04;
 pub const DATA_SUBTYPE_QOS_DATA: u16 = 0x08;
+pub const DATA_SUBTYPE_NULL_QOS_DATA: u16 = 0x0C;
 
 // IEEE Std 802.11-2016, 9.2.4.1.3, Table 9-1
-const BITMASK_NULL: u16 = 1 << 2;
-const BITMASK_QOS: u16 = 1 << 3;
+pub const BITMASK_NULL: u16 = 1 << 2;
+pub const BITMASK_QOS: u16 = 1 << 3;
 
 // IEEE Std 802.11-2016, 9.2.4.1.1
 bitfield! {
@@ -278,8 +288,8 @@ impl DataHdr {
     }
 }
 
-type RawHtControl = [u8; 4];
-type RawQosControl = [u8; 2];
+pub type RawHtControl = [u8; 4];
+pub type RawQosControl = [u8; 2];
 
 pub enum MacFrame<B> {
     Mgmt {
@@ -437,6 +447,7 @@ impl BeaconHdr {
 
 // IEEE Std 802.11-2016, 9.4.1.1
 #[repr(u16)]
+#[derive(Copy, Clone)]
 pub enum AuthAlgorithm {
     Open = 0,
     _SharedKey = 1,
