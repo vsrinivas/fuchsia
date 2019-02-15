@@ -193,26 +193,25 @@ void SessionmgrImpl::Initialize(
   // shell (see how RunSessionShell() initializes session_shell_services_) to
   // lazily initialize the following services only once they are requested
   // for the first time.
-  finish_initialization_ =
-      [this, called = false, session_shell_url = session_shell.url,
-       ledger_token_manager = std::move(ledger_token_manager),
-       story_shell = std::move(story_shell)]() mutable {
-        if (called) {
-          return;
-        }
-        called = true;
+  finish_initialization_ = [this, called = false,
+                            session_shell_url = session_shell.url,
+                            ledger_token_manager =
+                                std::move(ledger_token_manager),
+                            story_shell = std::move(story_shell)]() mutable {
+    if (called) {
+      return;
+    }
+    called = true;
 
-        InitializeLedger(std::move(ledger_token_manager));
-        InitializeDeviceMap();
-        InitializeMessageQueueManager();
-        InitializeMaxwellAndModular(session_shell_url, std::move(story_shell));
-        ConnectSessionShellToStoryProvider();
-        AtEnd([this](std::function<void()> cont) {
-          TerminateSessionShell(cont);
-        });
-        InitializeClipboard();
-        ReportEvent(ModularEvent::BOOTED_TO_SESSIONMGR);
-      };
+    InitializeLedger(std::move(ledger_token_manager));
+    InitializeDeviceMap();
+    InitializeMessageQueueManager();
+    InitializeMaxwellAndModular(session_shell_url, std::move(story_shell));
+    ConnectSessionShellToStoryProvider();
+    AtEnd([this](std::function<void()> cont) { TerminateSessionShell(cont); });
+    InitializeClipboard();
+    ReportEvent(ModularEvent::BOOTED_TO_SESSIONMGR);
+  };
 
   InitializeUser(std::move(account), std::move(agent_token_manager),
                  std::move(user_context));
@@ -772,8 +771,8 @@ void SessionmgrImpl::RunSessionShell(
 
 void SessionmgrImpl::TerminateSessionShell(const std::function<void()>& done) {
   session_shell_app_->Teardown(kBasicTimeout, [this, done] {
-    session_shell_app_.reset();
     done();
+    session_shell_app_.reset();
   });
 }
 
