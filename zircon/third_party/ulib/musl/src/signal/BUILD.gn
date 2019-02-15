@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("signal") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "getitimer.c",
+    "kill.c",
+    "killpg.c",
+    "psiginfo.c",
+    "psignal.c",
+    "raise.c",
+    "setitimer.c",
+    "sigaction.c",
+    "sigaddset.c",
+    "sigaltstack.c",
+    "sigandset.c",
+    "sigdelset.c",
+    "sigemptyset.c",
+    "sigfillset.c",
+    "siginterrupt.c",
+    "sigisemptyset.c",
+    "sigismember.c",
+    "signal.c",
+    "sigorset.c",
+    "sigpause.c",
+    "sigpending.c",
+    "sigprocmask.c",
+    "sigqueue.c",
+    "sigrtmax.c",
+    "sigrtmin.c",
+    "sigsuspend.c",
+    "sigtimedwait.c",
+    "sigwait.c",
+    "sigwaitinfo.c",
+  ]
+}

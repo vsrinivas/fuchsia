@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("mman") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "madvise.c",
+    "mlock.c",
+    "mlockall.c",
+    "mmap.c",
+    "mprotect.c",
+    "msync.c",
+    "munlock.c",
+    "munlockall.c",
+    "munmap.c",
+    "posix_madvise.c",
+    "shm_open.c",
+  ]
+}

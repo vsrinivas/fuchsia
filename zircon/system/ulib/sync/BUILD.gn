@@ -1,0 +1,29 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("sync") {
+  sdk = "static"
+  sdk_headers = [
+    "lib/sync/internal/condition-template.h",
+    "lib/sync/completion.h",
+    "lib/sync/condition.h",
+    "lib/sync/mutex.h",
+  ]
+  sources = [
+    "completion.c",
+    "condition.cpp",
+    "mutex.c",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+  ]
+
+  if (toolchain.environment == "user") {
+    # This code is used in early startup, where safe-stack setup is not
+    # ready yet.
+    configs += [ "$zx/public/gn/config:no_sanitizers" ]
+  }
+}

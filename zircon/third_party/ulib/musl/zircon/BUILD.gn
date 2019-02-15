@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("zircon") {
+  sources = [
+    "getentropy.c",
+    "internal.c",
+    "take_startup_handle.c",
+    "thrd_get_zx_handle.c",
+  ]
+  deps = [
+    "$zx/system/ulib/runtime",
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+}

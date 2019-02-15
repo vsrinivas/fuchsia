@@ -1,0 +1,41 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("process") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "execl.c",
+    "execle.c",
+    "execlp.c",
+    "execv.c",
+    "execve.c",
+    "execvp.c",
+    "fexecve.c",
+    "fork.c",
+    "posix_spawn.c",
+    "posix_spawn_file_actions_addclose.c",
+    "posix_spawn_file_actions_adddup2.c",
+    "posix_spawn_file_actions_addopen.c",
+    "posix_spawn_file_actions_destroy.c",
+    "posix_spawn_file_actions_init.c",
+    "posix_spawnattr_destroy.c",
+    "posix_spawnattr_getflags.c",
+    "posix_spawnattr_getpgroup.c",
+    "posix_spawnattr_getsigdefault.c",
+    "posix_spawnattr_getsigmask.c",
+    "posix_spawnattr_init.c",
+    "posix_spawnattr_sched.c",
+    "posix_spawnattr_setflags.c",
+    "posix_spawnattr_setpgroup.c",
+    "posix_spawnattr_setsigdefault.c",
+    "posix_spawnattr_setsigmask.c",
+    "posix_spawnp.c",
+    "system.c",
+    "wait.c",
+    "waitid.c",
+    "waitpid.c",
+  ]
+}

@@ -1,0 +1,17 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("linux") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "adjtime.c",
+    "flock.c",
+    "sethostname.c",
+    "settimeofday.c",
+    "stime.c",
+    "utimes.c",
+  ]
+}

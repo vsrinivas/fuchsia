@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#define _ALL_SOURCE 1
 #include "libc.h"
+#include <threads.h>
 #include <zircon/process.h>
 #include <zircon/types.h>
-
-#define _ALL_SOURCE  // For MTX_INIT
-#include <threads.h>
 
 static mtx_t startup_handles_lock = MTX_INIT;
 static uint32_t startup_handles_num;

@@ -17,9 +17,13 @@ ENTRY(memset)
     ret
 END(memset)
 
+#ifdef HIDDEN
+    .hidden memset
+#else
 ALIAS(memset, __unsanitized_memset)
 ASAN_WEAK_ALIAS(memset)
 
 // This name is called from inside libc to avoid going through the PLT.
 .hidden __libc_memset
 ALIAS(memset, __libc_memset)
+#endif

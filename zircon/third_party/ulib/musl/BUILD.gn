@@ -1,0 +1,111 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("headers") {
+  visibility = [
+    "./*",
+    "$zx/system/ulib/c:*",
+  ]
+  include_dirs = [ "include" ]
+}
+
+group("musl_internal") {
+  visibility = [
+    "./*",
+    "$zx/third_party/ulib/jemalloc:*",
+  ]
+  public_deps = [
+    "$zx/system/ulib/runtime",
+    "$zx/system/ulib/zircon",
+  ]
+  public_configs = [
+    ":headers",
+    ":musl_internal.config",
+  ]
+}
+
+config("musl_internal.config") {
+  visibility = [ ":musl_internal" ]
+
+  include_dirs = [
+    "src/internal",
+    "arch/${toolchain.cpu}",
+  ]
+
+  defines = [ "_XOPEN_SOURCE=700" ]
+
+  # TODO(kulakowski): Clean up the junkier -Wno flags below.
+  cflags = [
+    "-Wno-sign-compare",
+    "-Werror=incompatible-pointer-types",
+    "-Wno-implicit-fallthrough",
+  ]
+
+  if (!is_gcc) {
+    # Some of this code runs before the TLS area for the canary is set up.
+    # TODO(mcgrathr): Isolate this to exactly what code needs it.
+    cflags += [ "-fno-stack-protector" ]
+  }
+
+  cflags += [ "-ffreestanding" ]
+}
+
+if (toolchain.environment == "user") {
+  group("musl") {
+    visibility = [ "$zx/system/ulib/c:*" ]
+    deps = [
+      "$zx/third_party/ulib/jemalloc",
+      "ldso",
+      "pthread",
+      "sanitizers",
+      "src/complex",
+      "src/conf",
+      "src/ctype",
+      "src/dirent",
+      "src/env",
+      "src/errno",
+      "src/exit",
+      "src/fcntl",
+      "src/fenv",
+      "src/internal",
+      "src/ipc",
+      "src/ldso",
+      "src/legacy",
+      "src/linux",
+      "src/locale",
+      "src/math",
+      "src/misc",
+      "src/mman",
+      "src/multibyte",
+      "src/network",
+      "src/passwd",
+      "src/prng",
+      "src/process",
+      "src/regex",
+      "src/sched",
+      "src/setjmp",
+      "src/signal",
+      "src/stat",
+      "src/stdio",
+      "src/stdlib",
+      "src/string",
+      "src/temp",
+      "src/termios",
+      "src/thread",
+      "src/time",
+      "src/unistd",
+      "stubs",
+      "third_party/smoothsort",
+      "third_party/tre",
+      "zircon",
+    ]
+  }
+
+  source_set("crt1") {
+    visibility = [ "$zx/system/ulib/c:crt1" ]
+    sources = [
+      "arch/${toolchain.cpu}/Scrt1.S",
+    ]
+  }
+}

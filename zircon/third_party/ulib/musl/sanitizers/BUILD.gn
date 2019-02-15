@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("sanitizers") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "__asan_early_init.c",
+    "asan-stubs.c",
+    "hooks.c",
+    "log.c",
+  ]
+
+  # There is no '#if __has_feature(coverage)', so this file has to be
+  # excluded from the build entirely when not in use.
+  sancov = [ "$zx/public/gn/config/sanitizers:sancov" ]
+  if (configs + sancov - sancov != configs) {
+    sources += [ "sancov-stubs.S" ]
+  }
+}

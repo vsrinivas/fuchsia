@@ -101,6 +101,17 @@ standard_environments = [
       ]
     }
     configs = standard_fuchsia_configs + standard_fuchsia_user_configs
+    implicit_deps = [
+      "$zx/system/ulib/c",
+      {
+        types = [
+          "executable",
+          "host_tool",
+          "test",
+        ]
+        add = [ "$zx/system/ulib/c:crt1" ]
+      },
+    ]
     shlib = true
     strip = "--strip-sections"
   },

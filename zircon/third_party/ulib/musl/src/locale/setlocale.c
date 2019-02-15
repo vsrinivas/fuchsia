@@ -1,4 +1,4 @@
-#define _ALL_SOURCE
+#define _ALL_SOURCE 1
 #include "atomic.h"
 #include "libc.h"
 #include "locale_impl.h"

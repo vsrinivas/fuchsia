@@ -1,0 +1,27 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("unistd") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "_exit.c",
+    "acct.c",
+    "alarm.c",
+    "ctermid.c",
+    "gethostname.c",
+    "getlogin.c",
+    "getlogin_r.c",
+    "pause.c",
+    "posix_close.c",
+    "setpgrp.c",
+    "sleep.c",
+    "tcgetpgrp.c",
+    "tcsetpgrp.c",
+    "ttyname.c",
+    "ualarm.c",
+    "usleep.c",
+  ]
+}

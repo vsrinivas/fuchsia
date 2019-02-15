@@ -1,0 +1,225 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("string") {
+  deps = [
+    ":bsd",
+    ":extmem",
+    ":extstr",
+    ":stdmem",
+    ":stdstr",
+    ":wcs",
+    ":wmem",
+  ]
+}
+
+# These are the functions the compiler produces implicit calls to.
+source_set("compiler") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  if (current_cpu == "arm64") {
+    # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
+    include_dirs = [ "$zx/" ]
+    sources = [
+      "aarch64/memcpy.S",
+      "aarch64/memset.S",
+    ]
+  } else if (current_cpu == "x64") {
+    sources = [
+      "x86_64/memcpy.S",
+      "x86_64/memset.S",
+    ]
+  } else {
+    sources = [
+      "memcpy.c",
+      "memset.c",
+    ]
+  }
+}
+
+source_set("stdmem") {
+  deps = [
+    ":compiler",
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "memrchr.c",
+  ]
+  if (current_cpu == "arm64") {
+    # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
+    include_dirs = [ "$zx/" ]
+    sources += [ "aarch64/memmove.S" ]
+  } else if (current_cpu == "x64") {
+    sources += [ "x86_64/memmove.S" ]
+  } else {
+    sources += [ "memmove.c" ]
+  }
+  if (current_cpu == "arm64") {
+    sources += [
+      "$zx/third_party/lib/cortex-strings/src/aarch64/memchr.S",
+      "$zx/third_party/lib/cortex-strings/src/aarch64/memcmp.S",
+    ]
+  } else {
+    sources += [
+      "memchr.c",
+      "memcmp.c",
+    ]
+  }
+}
+
+source_set("extmem") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "memccpy.c",
+    "memmem.c",
+  ]
+  if (current_cpu == "x64" && !defined(toolchain.sanitizer)) {
+    # Only use the assembly version if x86-64 and not sanitized.
+    sources += [ "x86_64/mempcpy.S" ]
+  } else {
+    sources += [ "mempcpy.c" ]
+  }
+}
+
+source_set("minimal_str") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  if (current_cpu == "arm64") {
+    sources = [
+      "$zx/third_party/lib/cortex-strings/src/aarch64/strlen.S",
+      "$zx/third_party/lib/cortex-strings/src/aarch64/strncmp.S",
+    ]
+  } else {
+    sources = [
+      "strlen.c",
+      "strncmp.c",
+    ]
+  }
+}
+
+source_set("stdstr") {
+  deps = [
+    ":minimal_str",
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "strcat.c",
+    "strcspn.c",
+    "strdup.c",
+    "strerror_r.c",
+    "strncat.c",
+    "strncpy.c",
+    "strpbrk.c",
+    "strrchr.c",
+    "strspn.c",
+    "strstr.c",
+    "strtok.c",
+    "strtok_r.c",
+  ]
+  if (current_cpu == "arm64") {
+    sources += [
+      "$zx/third_party/lib/cortex-strings/src/aarch64/strchr.S",
+      "$zx/third_party/lib/cortex-strings/src/aarch64/strcmp.S",
+      "$zx/third_party/lib/cortex-strings/src/aarch64/strcpy.S",
+    ]
+  } else {
+    sources += [
+      "strchr.c",
+      "strcmp.c",
+      "strcpy.c",
+    ]
+  }
+}
+
+source_set("extstr") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "stpcpy.c",
+    "stpncpy.c",
+    "strcasecmp.c",
+    "strcasestr.c",
+    "strlcat.c",
+    "strlcpy.c",
+    "strncasecmp.c",
+    "strndup.c",
+    "strsep.c",
+    "strsignal.c",
+    "strverscmp.c",
+  ]
+  if (current_cpu == "arm64") {
+    # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
+    include_dirs = [ "$zx/" ]
+    sources += [
+      "$zx/third_party/lib/cortex-strings/src/aarch64/strnlen.S",
+      "aarch64/strchrnul.S",
+    ]
+  } else {
+    sources += [
+      "strchrnul.c",
+      "strnlen.c",
+    ]
+  }
+}
+
+source_set("bsd") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "bcmp.c",
+    "bcopy.c",
+    "bzero.c",
+    "index.c",
+    "rindex.c",
+    "swab.c",
+  ]
+}
+
+source_set("wcs") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "wcpcpy.c",
+    "wcpncpy.c",
+    "wcscasecmp.c",
+    "wcscat.c",
+    "wcschr.c",
+    "wcscmp.c",
+    "wcscpy.c",
+    "wcscspn.c",
+    "wcsdup.c",
+    "wcslen.c",
+    "wcsncasecmp.c",
+    "wcsncat.c",
+    "wcsncmp.c",
+    "wcsncpy.c",
+    "wcsnlen.c",
+    "wcspbrk.c",
+    "wcsrchr.c",
+    "wcsspn.c",
+    "wcsstr.c",
+    "wcstok.c",
+    "wcswcs.c",
+  ]
+}
+
+source_set("wmem") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "wmemchr.c",
+    "wmemcmp.c",
+    "wmemcpy.c",
+    "wmemmove.c",
+    "wmemset.c",
+  ]
+}

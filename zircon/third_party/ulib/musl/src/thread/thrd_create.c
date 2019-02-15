@@ -1,4 +1,4 @@
-#define _ALL_SOURCE
+#define _ALL_SOURCE 1
 #include <threads.h>
 
 #include "threads_impl.h"

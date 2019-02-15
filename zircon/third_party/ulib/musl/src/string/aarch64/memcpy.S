@@ -9,5 +9,9 @@
 
 #include "third_party/lib/cortex-strings/src/aarch64/memcpy.S"
 
+#ifdef HIDDEN
+    .hidden memcpy
+#else
 ALIAS(memcpy, __unsanitized_memcpy)
 ASAN_WEAK_ALIAS(memcpy)
+#endif

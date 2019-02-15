@@ -1,0 +1,38 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("thread") {
+  deps = [
+    "$zx/system/ulib/sync",
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "__timedwait.c",
+    "__tls_get_addr.c",
+    "__wait.c",
+    "allocate.c",
+    "call_once.c",
+    "cnd_broadcast.c",
+    "cnd_destroy.c",
+    "cnd_init.c",
+    "cnd_signal.c",
+    "cnd_timedwait.c",
+    "cnd_wait.c",
+    "mtx_destroy.c",
+    "mtx_init.c",
+    "mtx_lock.c",
+    "mtx_timedlock.c",
+    "mtx_trylock.c",
+    "mtx_unlock.c",
+    "safestack.c",
+    "thrd_create.c",
+    "thrd_detach.c",
+    "thrd_exit.c",
+    "thrd_join.c",
+    "thrd_sleep.c",
+    "thrd_yield.c",
+    "tss.c",
+    "tss_set.c",
+  ]
+}

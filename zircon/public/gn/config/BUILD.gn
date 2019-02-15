@@ -491,6 +491,7 @@ config("machine") {
 
 config("user") {
   defines = [ "_ALL_SOURCE" ]
+  configs = [ "$zx/third_party/ulib/musl:headers" ]
 }
 
 config("static-libc++") {

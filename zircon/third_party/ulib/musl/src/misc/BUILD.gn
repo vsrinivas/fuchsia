@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("misc") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "a64l.c",
+    "basename.c",
+    "dirname.c",
+    "ffs.c",
+    "ffsl.c",
+    "ffsll.c",
+    "get_current_dir_name.c",
+    "getauxval.c",
+    "getdomainname.c",
+    "gethostid.c",
+    "getopt.c",
+    "getopt_long.c",
+    "getsubopt.c",
+    "initgroups.c",
+    "issetugid.c",
+    "lockf.c",
+    "openpty.c",
+    "ptsname.c",
+    "pty.c",
+    "setdomainname.c",
+    "syslog.c",
+    "wordexp.c",
+  ]
+}

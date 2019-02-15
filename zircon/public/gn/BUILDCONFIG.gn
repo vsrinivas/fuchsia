@@ -117,6 +117,26 @@ template("_shlib_toolchain_target") {
                              "target_type",
                              "visibility",
                            ])
+
+    if (!defined(no_implicit_deps) || !no_implicit_deps) {
+      # Apply the toolchain's implicit_deps.  Note the logic here should
+      # match the ${toolchain.configs} handling in the set_defaults()
+      # loop at the end of this file.
+      if (!defined(deps)) {
+        deps = []
+      }
+      foreach(dep, toolchain.implicit_deps) {
+        # Either it's an absolute label string or it's a scope with filters
+        # and mutators.  See environment().
+        if (dep == "$dep") {
+          deps += [ dep ]
+        } else if (!defined(dep.types) || dep.types + [ invoker.target_type ] -
+                                          [ invoker.target_type ] != dep.types) {
+          deps += dep.add
+          deps -= dep.remove
+        }
+      }
+    }
   }
 }
 
@@ -307,6 +327,9 @@ template("library") {
 
   # Not all of these will be referenced in all toolchains.
   not_needed(_library_params)
+  if (shared && defined(invoker.no_implicit_deps)) {
+    not_needed(invoker, [ "no_implicit_deps" ])
+  }
 
   # A specialized toolchain might not support shared libraries.
   shared = shared && defined(toolchain.shlib)
@@ -376,6 +399,7 @@ template("library") {
                                [
                                  "configs",
                                  "data_deps",
+                                 "public_configs",
                                  "public_deps",
                                  "testonly",
                                  "visibility",
@@ -403,13 +427,15 @@ template("library") {
                                  "ldflags",
                                  "libs",
                                  "lib_dirs",
+                                 "no_implicit_deps",
+                                 "public_configs",
                                  "testonly",
                                  "visibility",
                                ])
 
         # Everything that depends on the library gets the headers.
         # It also gets the explicit `public_deps`, which includes
-        # any header dependencies or public config()s.
+        # any header dependencies or other targets with public_configs.
         public_deps = [
           ":${_library_name}.headers",
         ]
@@ -418,7 +444,7 @@ template("library") {
         }
 
         # The library depends on the source_set().  It also depends on the
-        # `deps` from the source_set() so as to get any config()
+        # `deps` from the source_set() so as to get any public_configs from
         # dependencies that affect linking rather than just compilation.
         # Other dependencies are redundant since the source_set() already
         # has them, but they don't hurt.
@@ -473,15 +499,20 @@ template("library") {
   }
 
   group("${_library_name}.headers") {
-    public_configs = [ ":_library.config.$_library_name" ]
-
     # The public_deps here represent header dependencies.
+    # Direct use of public_configs should be rare but is sometimes needed.
     forward_variables_from(invoker,
                            [
+                             "public_configs",
                              "public_deps",
                              "testonly",
                              "visibility",
                            ])
+    if (!defined(public_configs)) {
+      public_configs = []
+    }
+    public_configs += [ ":_library.config.$_library_name" ]
+
     if (defined(visibility)) {
       visibility += [ ":$_library_name" ]
       if (!is_kernel) {
@@ -898,21 +929,23 @@ template("_variant_target") {
           visibility = invoker.visibility + extra_visibility
         }
 
-        # Apply the toolchain's implicit_deps.  Note the logic here should
-        # match the ${toolchain.configs} handling in the set_defaults()
-        # loop at the end of this file.
-        if (!defined(deps)) {
-          deps = []
-        }
-        foreach(dep, toolchain.implicit_deps) {
-          # Either it's an absolute label string or it's a scope with filters
-          # and mutators.  See environment().
-          if (dep == "$dep") {
-            deps += [ dep ]
-          } else if (!defined(dep.types) || dep.types + [ target.type ] -
-                                            [ target.type ] != dep.types) {
-            deps += dep.add
-            deps -= dep.remove
+        if (!defined(invoker.no_implicit_deps) || !invoker.no_implicit_deps) {
+          # Apply the toolchain's implicit_deps.  Note the logic here should
+          # match the ${toolchain.configs} handling in the set_defaults()
+          # loop at the end of this file.
+          if (!defined(deps)) {
+            deps = []
+          }
+          foreach(dep, toolchain.implicit_deps) {
+            # Either it's an absolute label string or it's a scope with filters
+            # and mutators.  See environment().
+            if (dep == "$dep") {
+              deps += [ dep ]
+            } else if (!defined(dep.types) || dep.types + [ target.type ] -
+                                              [ target.type ] != dep.types) {
+              deps += dep.add
+              deps -= dep.remove
+            }
           }
         }
       }

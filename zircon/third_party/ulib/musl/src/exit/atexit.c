@@ -1,4 +1,4 @@
-#define _ALL_SOURCE
+#define _ALL_SOURCE 1
 #include "libc.h"
 #include <stdint.h>
 #include <stdlib.h>

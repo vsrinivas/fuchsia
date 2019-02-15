@@ -1,0 +1,31 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("stdlib") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "abs.c",
+    "atof.c",
+    "atoi.c",
+    "atol.c",
+    "atoll.c",
+    "bsearch.c",
+    "div.c",
+    "ecvt.c",
+    "fcvt.c",
+    "gcvt.c",
+    "imaxabs.c",
+    "imaxdiv.c",
+    "labs.c",
+    "ldiv.c",
+    "llabs.c",
+    "lldiv.c",
+    "strtod.c",
+    "strtol.c",
+    "wcstod.c",
+    "wcstol.c",
+  ]
+}

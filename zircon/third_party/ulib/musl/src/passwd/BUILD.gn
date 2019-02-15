@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("passwd") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "fgetgrent.c",
+    "fgetpwent.c",
+    "getgr_a.c",
+    "getgr_r.c",
+    "getgrent.c",
+    "getgrent_a.c",
+    "getgrouplist.c",
+    "getpw_a.c",
+    "getpw_r.c",
+    "getpwent.c",
+    "getpwent_a.c",
+    "nscd_query.c",
+    "putgrent.c",
+    "putpwent.c",
+  ]
+}

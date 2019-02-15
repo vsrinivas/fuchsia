@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("locale") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "__lctrans.c",
+    "__mo_lookup.c",
+    "c_locale.c",
+    "catclose.c",
+    "catgets.c",
+    "catopen.c",
+    "duplocale.c",
+    "freelocale.c",
+    "iconv.c",
+    "langinfo.c",
+    "locale_map.c",
+    "localeconv.c",
+    "newlocale.c",
+    "pleval.c",
+    "setlocale.c",
+    "strcoll.c",
+    "strfmon.c",
+    "strxfrm.c",
+    "uselocale.c",
+    "wcscoll.c",
+    "wcsxfrm.c",
+  ]
+}

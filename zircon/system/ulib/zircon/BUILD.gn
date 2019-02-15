@@ -73,14 +73,8 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
     # Note, "./" makes GN realize this is a file rather than a -l switch.
     libs = [ "./alternates.ld" ]
 
-    if (toolchain.environment == "user") {
-      # This doesn't get normal default deps on libc.
-      configs -= [ "$zx/public/gn/config:user" ]
-      if (is_gcc) {
-        # However, GCC's <x86intrin.h> needs <stdlib.h> indirectly.
-        configs += [ "$zx/system/ulib/c:headers" ]
-      }
-    }
+    # This doesn't get normal default deps on libc.
+    no_implicit_deps = true
   }
 
   # Everything with ":config" in configs needs ":generate" in deps.

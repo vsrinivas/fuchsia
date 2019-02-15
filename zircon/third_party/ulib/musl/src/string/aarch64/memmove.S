@@ -9,5 +9,9 @@
 
 #include "third_party/lib/cortex-strings/src/aarch64/memmove.S"
 
+#ifdef HIDDEN
+    .hidden memmove
+#else
 ALIAS(memmove, __unsanitized_memmove)
 ASAN_WEAK_ALIAS(memmove)
+#endif

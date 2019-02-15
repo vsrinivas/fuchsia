@@ -1,0 +1,27 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("complex") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  include_dirs = [ "$zx/third_party/ulib/musl/third_party/include" ]
+  sources = [
+    "__cexp.c",
+    "__cexpf.c",
+    "catan.c",
+    "catanf.c",
+    "catanl.c",
+    "ccosh.c",
+    "ccoshf.c",
+    "cexp.c",
+    "cexpf.c",
+    "csinh.c",
+    "csinhf.c",
+    "csqrt.c",
+    "csqrtf.c",
+    "ctanh.c",
+    "ctanhf.c",
+  ]
+}

@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("c") {
+  sdk = "shared"
+  sdk_headers = []  # TODO
+  shared = true
+  static = false
+
+  # At link time and in DT_SONAME, musl is known as libc.so.  But the
+  # (only) place it needs to be installed at runtime is where the
+  # PT_INTERP strings embedded in executables point, which is ld.so.1.
+  install_path = "lib/${toolchain.libprefix}ld.so.1"
+
+  public_configs = [ "$zx/third_party/ulib/musl:headers" ]
+
+  # The code comes from musl, where a source_set is defined.
+  sources = []
+  deps = [
+    "$zx/third_party/ulib/musl",
+  ]
+
+  # Suppress the ${toolchain.implicit_deps} that points back to here.
+  no_implicit_deps = true
+}
+
+group("crt1") {
+  deps = [
+    "$zx/third_party/ulib/musl:crt1",
+  ]
+}

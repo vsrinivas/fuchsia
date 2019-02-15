@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("sched") {
+  deps = [
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+  sources = [
+    "affinity.c",
+    "sched_cpucount.c",
+    "sched_get_priority_max.c",
+    "sched_getcpu.c",
+    "sched_getparam.c",
+    "sched_getscheduler.c",
+    "sched_rr_get_interval.c",
+    "sched_setparam.c",
+    "sched_setscheduler.c",
+    "sched_yield.c",
+  ]
+}
