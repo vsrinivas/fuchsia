@@ -13,8 +13,6 @@ source_set("lib") {
     "fake_disk_cleanup_manager.h",
     "get_page_ensure_initialized.cc",
     "get_page_ensure_initialized.h",
-    "inspect.cc",
-    "inspect.h",
     "ledger_matcher.cc",
     "ledger_matcher.h",
     "page_data_generator.cc",

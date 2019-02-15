@@ -9,12 +9,13 @@
 #include <lib/callback/set_when_called.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fxl/strings/string_view.h>
+#include <lib/inspect/reader.h>
+#include <lib/inspect/testing/inspect.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
-#include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
@@ -22,20 +23,25 @@
 namespace ledger {
 namespace {
 
-using ::testing::ElementsAre;
+using ::inspect::testing::ChildrenMatch;
+using ::inspect::testing::MetricList;
+using ::inspect::testing::NameMatches;
+using ::inspect::testing::ObjectMatches;
+using ::inspect::testing::PropertyList;
+using ::inspect::testing::UIntMetricIs;
+using ::testing::AllOf;
+using ::testing::Contains;
 using ::testing::IsEmpty;
 using ::testing::Not;
-using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 
-constexpr fxl::StringView kObjectsName = "test objects";
-constexpr fxl::StringView kUserID = "test user ID";
+constexpr char kObjectsName[] = "test objects";
+constexpr char kUserID[] = "test user ID";
 
 class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
  public:
   LedgerRepositoryFactoryImplTest() {
-    object_dir_ =
-        component::ObjectDir::Make({kObjectsName.data(), kObjectsName.size()});
+    object_dir_ = component::ObjectDir::Make({kObjectsName});
     repository_factory_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         &environment_, nullptr, object_dir_);
     object_dir_.set_children_callback(
@@ -55,19 +61,6 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
   ::testing::AssertionResult CallGetRepository(
       std::string name,
       ledger_internal::LedgerRepositoryPtr* ledger_repository_ptr);
-  ::testing::AssertionResult ReadTopLevelData(fuchsia::inspect::Object* object);
-  ::testing::AssertionResult ListTopLevelChildren(
-      std::vector<std::string>* children);
-  ::testing::AssertionResult OpenTopLevelRepositoriesChild(
-      fuchsia::inspect::InspectPtr* repositories_inspect_ptr);
-  ::testing::AssertionResult ReadData(fuchsia::inspect::InspectPtr* inspect_ptr,
-                                      fuchsia::inspect::Object* object);
-  ::testing::AssertionResult ListChildren(
-      fuchsia::inspect::InspectPtr* inspect_ptr,
-      std::vector<std::string>* children_names);
-  ::testing::AssertionResult OpenChild(
-      fuchsia::inspect::InspectPtr* parent_inspect_ptr, std::string child_name,
-      fuchsia::inspect::InspectPtr* child_inspect_ptr);
 
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   component::ObjectDir object_dir_;
@@ -99,8 +92,8 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
   Status status = Status::UNKNOWN_ERROR;
 
   repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(fd.get()), nullptr,
-      kUserID.ToString(), ledger_repository_ptr->NewRequest(),
+      fsl::CloneChannelFromFileDescriptor(fd.get()), nullptr, kUserID,
+      ledger_repository_ptr->NewRequest(),
       callback::Capture(callback::SetWhenCalled(&callback_called), &status));
 
   if (!callback_called) {
@@ -114,124 +107,14 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
   return ::testing::AssertionSuccess();
 }
 
-::testing::AssertionResult LedgerRepositoryFactoryImplTest::ReadTopLevelData(
-    fuchsia::inspect::Object* object) {
-  bool callback_called;
-
-  object_dir_.object()->ReadData(
-      callback::Capture(callback::SetWhenCalled(&callback_called), object));
-  RunLoopUntilIdle();
-
-  if (!callback_called) {
-    return ::testing::AssertionFailure()
-           << "Callback passed to object_dir_.object()->ReadData not called!";
-  }
-  return ::testing::AssertionSuccess();
-}
-
-::testing::AssertionResult
-LedgerRepositoryFactoryImplTest::ListTopLevelChildren(
-    std::vector<std::string>* children) {
-  bool callback_called;
-
-  object_dir_.object()->ListChildren(
-      callback::Capture(callback::SetWhenCalled(&callback_called), children));
-  RunLoopUntilIdle();
-
-  if (!callback_called) {
-    return ::testing::AssertionFailure()
-           << "Callback passed to object_dir_.object()->ListChildren not "
-              "called!";
-  }
-  return ::testing::AssertionSuccess();
-}
-
-::testing::AssertionResult
-LedgerRepositoryFactoryImplTest::OpenTopLevelRepositoriesChild(
-    fuchsia::inspect::InspectPtr* repositories_inspect_ptr) {
-  bool callback_called;
-  bool success = false;
-
-  object_dir_.object()->OpenChild(
-      kRepositoriesInspectPathComponent, repositories_inspect_ptr->NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &success));
-  RunLoopUntilIdle();
-
-  if (!callback_called) {
-    return ::testing::AssertionFailure()
-           << "Callback passed to object_dir_.object()->OpenChild not called!";
-  }
-  if (!success) {
-    return ::testing::AssertionFailure()
-           << "object_dir_.object()->OpenChild call unsuccessful!";
-  }
-  return ::testing::AssertionSuccess();
-}
-
-::testing::AssertionResult LedgerRepositoryFactoryImplTest::ReadData(
-    fuchsia::inspect::InspectPtr* inspect_ptr,
-    fuchsia::inspect::Object* object) {
-  bool callback_called;
-
-  (*inspect_ptr)
-      ->ReadData(
-          callback::Capture(callback::SetWhenCalled(&callback_called), object));
-  RunLoopUntilIdle();
-
-  if (!callback_called) {
-    return ::testing::AssertionFailure() << "ReadData callback not called!";
-  }
-  return ::testing::AssertionSuccess();
-}
-
-::testing::AssertionResult LedgerRepositoryFactoryImplTest::ListChildren(
-    fuchsia::inspect::InspectPtr* inspect_ptr,
-    std::vector<std::string>* children_names) {
-  bool callback_called;
-
-  (*inspect_ptr)
-      ->ListChildren(callback::Capture(
-          callback::SetWhenCalled(&callback_called), children_names));
-  RunLoopUntilIdle();
-
-  if (!callback_called) {
-    return ::testing::AssertionFailure() << "ListChildren callback not called!";
-  }
-  return ::testing::AssertionSuccess();
-}
-
-::testing::AssertionResult LedgerRepositoryFactoryImplTest::OpenChild(
-    fuchsia::inspect::InspectPtr* parent_inspect_ptr, std::string child_name,
-    fuchsia::inspect::InspectPtr* child_inspect_ptr) {
-  bool callback_called;
-  bool success = false;
-
-  (*parent_inspect_ptr)
-      ->OpenChild(child_name, child_inspect_ptr->NewRequest(),
-                  callback::Capture(callback::SetWhenCalled(&callback_called),
-                                    &success));
-  RunLoopUntilIdle();
-
-  if (!callback_called) {
-    return ::testing::AssertionFailure() << "OpenChild callback not called!";
-  }
-  if (!success) {
-    return ::testing::AssertionFailure() << "OpenChild call unsuccessful!";
-  }
-  return ::testing::AssertionSuccess();
-}
-
 TEST_F(LedgerRepositoryFactoryImplTest, InspectAPINoRepositories) {
-  fuchsia::inspect::Object object;
-  std::vector<std::string> children;
-
-  ASSERT_TRUE(ReadTopLevelData(&object));
-  ASSERT_TRUE(ListTopLevelChildren(&children));
-
-  EXPECT_EQ(kObjectsName, object.name);
-  EXPECT_THAT(*object.properties, IsEmpty());
-  EXPECT_THAT(*object.metrics, IsEmpty());
-  EXPECT_THAT(children, ElementsAre(kRepositoriesInspectPathComponent));
+  auto hierarchy = inspect::ReadFromObject(inspect::Object(object_dir_));
+  EXPECT_THAT(hierarchy,
+              AllOf(ObjectMatches(AllOf(NameMatches(kObjectsName),
+                                        MetricList(IsEmpty()),
+                                        PropertyList(IsEmpty()))),
+                    ChildrenMatch(UnorderedElementsAre(ObjectMatches(AllOf(
+                        NameMatches(kRepositoriesInspectPathComponent)))))));
 }
 
 TEST_F(LedgerRepositoryFactoryImplTest,
@@ -242,8 +125,8 @@ TEST_F(LedgerRepositoryFactoryImplTest,
 
   // The names of the two repositories, determined by the
   // LedgerRepositoryFactoryImpl under test.
-  fidl::StringPtr first_repository_name;
-  fidl::StringPtr second_repository_name;
+  std::string first_repository_name;
+  std::string second_repository_name;
 
   // Bindings to the two repositories. If these are not maintained, the
   // LedgerRepositoryFactoryImpl::LedgerRepositoryContainer objects associated
@@ -253,17 +136,6 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   ledger_internal::LedgerRepositoryPtr second_ledger_repository_ptr;
   ledger_internal::LedgerRepositoryPtr first_again_ledger_repository_ptr;
 
-  // Bindings to Inspect API "Inspect" objects. Because the Ledger objects'
-  // parent-child relationships are dynamically computed, these need to be
-  // unbound and rebound for each inspection of the repositories.
-  fuchsia::inspect::InspectPtr repositories_inspect_ptr;
-  fuchsia::inspect::InspectPtr first_repository_inspect_ptr;
-  fuchsia::inspect::InspectPtr second_repository_inspect_ptr;
-
-  // Temporary objects populated and cleared throughout the test.
-  fuchsia::inspect::Object object;
-  std::vector<std::string> children_names;
-
   // Create the directories for the repositories.
   ASSERT_TRUE(CreateDirectory(first_directory));
   ASSERT_TRUE(CreateDirectory(second_directory));
@@ -272,18 +144,18 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   // verify that that repository is listed (and to learn the name under which
   // it is listed) and that it was requested once.
   ASSERT_TRUE(CallGetRepository(first_directory, &first_ledger_repository_ptr));
-  ASSERT_TRUE(ListTopLevelChildren(&children_names));
-  EXPECT_THAT(children_names, ElementsAre(kRepositoriesInspectPathComponent));
-  ASSERT_TRUE(OpenTopLevelRepositoriesChild(&repositories_inspect_ptr));
-  ASSERT_TRUE(ListChildren(&repositories_inspect_ptr, &children_names));
-  EXPECT_THAT(children_names, SizeIs(1));
-  first_repository_name = children_names.at(0);
-  EXPECT_THAT(*first_repository_name, Not(IsEmpty()));
-  ASSERT_TRUE(OpenChild(&repositories_inspect_ptr, first_repository_name,
-                        &first_repository_inspect_ptr));
-  ASSERT_TRUE(ReadData(&first_repository_inspect_ptr, &object));
-  EXPECT_EQ(first_repository_name, object.name);
-  ExpectRequestsMetric(&object, 1UL);
+  auto top_hierarchy = inspect::ReadFromObject(inspect::Object(object_dir_));
+  auto lone_repository_match = ObjectMatches(
+      MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent, 1UL))));
+  auto first_inspection_repositories_match =
+      AllOf(ObjectMatches(NameMatches(kRepositoriesInspectPathComponent)),
+            ChildrenMatch(UnorderedElementsAre(lone_repository_match)));
+  auto first_inspection_top_level_match =
+      ChildrenMatch(UnorderedElementsAre(first_inspection_repositories_match));
+  EXPECT_THAT(top_hierarchy, first_inspection_top_level_match);
+  first_repository_name =
+      top_hierarchy.children()[0].children()[0].object().name;
+  EXPECT_THAT(first_repository_name, Not(IsEmpty()));
 
   // Request a second repository, then query the "repositories" Inspect object
   // to verify that that second repository is listed in addition to the first
@@ -291,29 +163,30 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   // repositories were each requested once.
   ASSERT_TRUE(
       CallGetRepository(second_directory, &second_ledger_repository_ptr));
-  ASSERT_TRUE(ListTopLevelChildren(&children_names));
-  EXPECT_THAT(children_names, ElementsAre(kRepositoriesInspectPathComponent));
-  ASSERT_TRUE(OpenTopLevelRepositoriesChild(&repositories_inspect_ptr));
-  ASSERT_TRUE(ListChildren(&repositories_inspect_ptr, &children_names));
-  EXPECT_THAT(children_names, SizeIs(2));
+  top_hierarchy = inspect::ReadFromObject(inspect::Object(object_dir_));
+  auto second_inspection_two_repositories_match = UnorderedElementsAre(
+      ObjectMatches(AllOf(NameMatches(first_repository_name),
+                          MetricList(Contains(UIntMetricIs(
+                              kRequestsInspectPathComponent, 1UL))))),
+      ObjectMatches(MetricList(
+          Contains(UIntMetricIs(kRequestsInspectPathComponent, 1UL)))));
+  auto second_inspection_repositories_match = UnorderedElementsAre(
+      AllOf(ObjectMatches(NameMatches(kRepositoriesInspectPathComponent)),
+            ChildrenMatch(second_inspection_two_repositories_match)));
+  auto second_inspection_top_level_match =
+      ChildrenMatch(second_inspection_repositories_match);
+  EXPECT_THAT(top_hierarchy, second_inspection_top_level_match);
   second_repository_name =
-      *find_if_not(children_names.begin(), children_names.end(),
-                   [&first_repository_name](const auto& name) {
-                     return name == first_repository_name;
-                   });
-  EXPECT_THAT(children_names, UnorderedElementsAre(first_repository_name,
-                                                   second_repository_name));
-  EXPECT_THAT(*second_repository_name, Not(IsEmpty()));
-  ASSERT_TRUE(OpenChild(&repositories_inspect_ptr, first_repository_name,
-                        &first_repository_inspect_ptr));
-  ASSERT_TRUE(OpenChild(&repositories_inspect_ptr, second_repository_name,
-                        &second_repository_inspect_ptr));
-  ASSERT_TRUE(ReadData(&first_repository_inspect_ptr, &object));
-  EXPECT_EQ(first_repository_name, object.name);
-  ExpectRequestsMetric(&object, 1UL);
-  ASSERT_TRUE(ReadData(&second_repository_inspect_ptr, &object));
-  EXPECT_EQ(second_repository_name, object.name);
-  ExpectRequestsMetric(&object, 1UL);
+      find_if_not(top_hierarchy.children()[0].children().begin(),
+                  top_hierarchy.children()[0].children().end(),
+                  [&first_repository_name](
+                      const inspect::ObjectHierarchy& repository_hierarchy) {
+                    return repository_hierarchy.object().name ==
+                           first_repository_name;
+                  })
+          ->object()
+          .name;
+  EXPECT_THAT(second_repository_name, Not(IsEmpty()));
 
   // Request the first repository a second time, then query the "repositories"
   // Inspect object to verify that both repositories remain listed (with their
@@ -321,22 +194,20 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   // respectively.
   ASSERT_TRUE(
       CallGetRepository(first_directory, &first_again_ledger_repository_ptr));
-  ASSERT_TRUE(ListTopLevelChildren(&children_names));
-  EXPECT_THAT(children_names, ElementsAre(kRepositoriesInspectPathComponent));
-  ASSERT_TRUE(OpenTopLevelRepositoriesChild(&repositories_inspect_ptr));
-  ASSERT_TRUE(ListChildren(&repositories_inspect_ptr, &children_names));
-  EXPECT_THAT(children_names, UnorderedElementsAre(first_repository_name,
-                                                   second_repository_name));
-  ASSERT_TRUE(OpenChild(&repositories_inspect_ptr, first_repository_name,
-                        &first_repository_inspect_ptr));
-  ASSERT_TRUE(OpenChild(&repositories_inspect_ptr, second_repository_name,
-                        &second_repository_inspect_ptr));
-  ASSERT_TRUE(ReadData(&first_repository_inspect_ptr, &object));
-  EXPECT_EQ(first_repository_name, object.name);
-  ExpectRequestsMetric(&object, 2UL);
-  ASSERT_TRUE(ReadData(&second_repository_inspect_ptr, &object));
-  EXPECT_EQ(second_repository_name, object.name);
-  ExpectRequestsMetric(&object, 1UL);
+  top_hierarchy = inspect::ReadFromObject(inspect::Object(object_dir_));
+  auto third_inspection_two_repositories_match = UnorderedElementsAre(
+      ObjectMatches(AllOf(NameMatches(first_repository_name),
+                          MetricList(Contains(UIntMetricIs(
+                              kRequestsInspectPathComponent, 2UL))))),
+      ObjectMatches(AllOf(NameMatches(second_repository_name),
+                          MetricList(Contains(UIntMetricIs(
+                              kRequestsInspectPathComponent, 1UL))))));
+  auto third_inspection_repositories_match = UnorderedElementsAre(
+      AllOf(ObjectMatches(NameMatches(kRepositoriesInspectPathComponent)),
+            ChildrenMatch(third_inspection_two_repositories_match)));
+  auto third_inspection_top_level_match =
+      ChildrenMatch(third_inspection_repositories_match);
+  EXPECT_THAT(top_hierarchy, third_inspection_top_level_match);
 }
 
 TEST_F(LedgerRepositoryFactoryImplTest, CloseOnFilesystemUnavailable) {

@@ -177,6 +177,7 @@ source_set("unittests") {
     "//garnet/public/lib/component/cpp:cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/inspect/testing:testing",
     "//peridot/lib/convert",
     "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.modular.auth",

@@ -14,19 +14,24 @@
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/string_view.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/inspect/testing/inspect.h>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
-#include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 
 namespace ledger {
 namespace {
+
+using ::inspect::testing::MetricList;
+using ::inspect::testing::UIntMetricIs;
+using ::testing::Contains;
 
 class LedgerRepositoryImplTest : public TestWithEnvironment {
  public:
@@ -95,7 +100,9 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   zeroth_out.at(0).get()->ReadData(callback::Capture(
       callback::SetWhenCalled(&zeroth_callback_called), &zeroth_read_object));
   EXPECT_TRUE(zeroth_callback_called);
-  ExpectRequestsMetric(&zeroth_read_object, 0UL);
+  EXPECT_THAT(
+      zeroth_read_object,
+      MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent, 0UL))));
 
   // When one binding has been made to the repository, check that the "requests"
   // metric is present and is one.
@@ -111,7 +118,9 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   first_out.at(0).get()->ReadData(callback::Capture(
       callback::SetWhenCalled(&first_callback_called), &first_read_object));
   EXPECT_TRUE(first_callback_called);
-  ExpectRequestsMetric(&first_read_object, 1UL);
+  EXPECT_THAT(
+      first_read_object,
+      MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent, 1UL))));
 
   // When two bindings have been made to the repository, check that the
   // "requests" metric is present and is two.
@@ -127,7 +136,9 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   second_out.at(0).get()->ReadData(callback::Capture(
       callback::SetWhenCalled(&second_callback_called), &second_read_object));
   EXPECT_TRUE(second_callback_called);
-  ExpectRequestsMetric(&second_read_object, 2UL);
+  EXPECT_THAT(
+      second_read_object,
+      MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent, 2UL))));
 }
 
 }  // namespace
