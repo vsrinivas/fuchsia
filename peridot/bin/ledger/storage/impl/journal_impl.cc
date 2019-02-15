@@ -138,31 +138,27 @@ void JournalImpl::Rollback(fit::function<void(Status)> callback) {
 }
 
 void JournalImpl::Put(convert::ExtendedStringView key,
-                      ObjectIdentifier object_identifier, KeyPriority priority,
-                      fit::function<void(Status)> callback) {
+                      ObjectIdentifier object_identifier,
+                      KeyPriority priority) {
   FXL_DCHECK(StateAllowsMutation());
   EntryChange change;
   change.entry = {key.ToString(), std::move(object_identifier), priority};
   change.deleted = false;
   journal_entries_[key.ToString()] = std::move(change);
-  callback(Status::OK);
 }
 
-void JournalImpl::Delete(convert::ExtendedStringView key,
-                         fit::function<void(Status)> callback) {
+void JournalImpl::Delete(convert::ExtendedStringView key) {
   FXL_DCHECK(StateAllowsMutation());
   EntryChange change;
   change.entry = {key.ToString(), ObjectIdentifier(), KeyPriority::EAGER};
   change.deleted = true;
   journal_entries_[key.ToString()] = std::move(change);
-  callback(Status::OK);
 }
 
-void JournalImpl::Clear(fit::function<void(Status)> callback) {
+void JournalImpl::Clear() {
   FXL_DCHECK(StateAllowsMutation());
   cleared_ = JournalContainsClearOperation::YES;
   journal_entries_.clear();
-  callback(Status::OK);
 }
 
 void JournalImpl::GetParents(

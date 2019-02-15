@@ -103,19 +103,13 @@ TEST_F(JournalTest, ImplicitJournalsPutDeleteCommit) {
   SetJournal(JournalImpl::Simple(JournalType::IMPLICIT, &environment_,
                                  &page_storage_,
                                  kFirstPageCommitId.ToString()));
+  journal_->Put("key", object_identifier_, KeyPriority::EAGER);
+
   bool called;
   Status status;
-  journal_->Put("key", object_identifier_, KeyPriority::EAGER,
-                callback::Capture(callback::SetWhenCalled(&called), &status));
-
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
-
   std::unique_ptr<const Commit> commit;
   journal_->Commit(
       callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
-
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
@@ -130,16 +124,10 @@ TEST_F(JournalTest, ImplicitJournalsPutDeleteCommit) {
   // Ledger's content is now a single entry "key" -> "value". Delete it.
   SetJournal(JournalImpl::Simple(JournalType::IMPLICIT, &environment_,
                                  &page_storage_, commit->GetId()));
-  journal_->Delete(
-      "key", callback::Capture(callback::SetWhenCalled(&called), &status));
-
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  journal_->Delete("key");
 
   journal_->Commit(
       callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
-
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
@@ -152,15 +140,10 @@ TEST_F(JournalTest, ImplicitJournalsPutRollback) {
   SetJournal(JournalImpl::Simple(JournalType::IMPLICIT, &environment_,
                                  &page_storage_,
                                  kFirstPageCommitId.ToString()));
+  journal_->Put("key", object_identifier_, KeyPriority::EAGER);
+
   bool called;
   Status status;
-  journal_->Put("key", object_identifier_, KeyPriority::EAGER,
-                callback::Capture(callback::SetWhenCalled(&called), &status));
-
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
-
   journal_->Rollback(
       callback::Capture(callback::SetWhenCalled(&called), &status));
 
@@ -182,15 +165,10 @@ TEST_F(JournalTest, ExplicitJournalsSinglePut) {
   SetJournal(JournalImpl::Simple(JournalType::EXPLICIT, &environment_,
                                  &page_storage_,
                                  kFirstPageCommitId.ToString()));
+  journal_->Put("key", object_identifier_, KeyPriority::EAGER);
+
   bool called;
   Status status;
-  journal_->Put("key", object_identifier_, KeyPriority::EAGER,
-                callback::Capture(callback::SetWhenCalled(&called), &status));
-
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
-
   std::unique_ptr<const Commit> commit;
   journal_->Commit(
       callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
@@ -217,25 +195,13 @@ TEST_F(JournalTest, ExplicitJournalsMultiplePutsDeletes) {
   // Insert keys {"0", "1", "2"}. Also insert key "0" a second time, with a
   // different value, and delete a non-existing key.
   for (int i = 0; i < size; i++) {
-    journal_->Put(std::to_string(i), object_identifier_, KeyPriority::EAGER,
-                  callback::Capture(callback::SetWhenCalled(&called), &status));
-    RunLoopUntilIdle();
-    ASSERT_TRUE(called);
-    ASSERT_EQ(Status::OK, status);
+    journal_->Put(std::to_string(i), object_identifier_, KeyPriority::EAGER);
   }
-  journal_->Delete(
-      "notfound", callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  journal_->Delete("notfound");
 
   ObjectIdentifier object_identifier_2(0u, 0u,
                                        MakeObjectDigest("another value"));
-  journal_->Put("0", object_identifier_2, KeyPriority::EAGER,
-                callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  journal_->Put("0", object_identifier_2, KeyPriority::EAGER);
 
   std::unique_ptr<const Commit> commit;
   journal_->Commit(
@@ -262,29 +228,10 @@ TEST_F(JournalTest, ExplicitJournalsMultiplePutsDeletes) {
   // journal.
   SetJournal(JournalImpl::Simple(JournalType::EXPLICIT, &environment_,
                                  &page_storage_, commit->GetId()));
-  journal_->Delete(
-      "0", callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
-
-  journal_->Delete(
-      "2", callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
-
-  journal_->Put("tmp", object_identifier_, KeyPriority::EAGER,
-                callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
-
-  journal_->Delete(
-      "tmp", callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  journal_->Delete("0");
+  journal_->Delete("2");
+  journal_->Put("tmp", object_identifier_, KeyPriority::EAGER);
+  journal_->Delete("tmp");
 
   journal_->Commit(
       callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
@@ -311,11 +258,7 @@ TEST_F(JournalTest, ExplicitJournalsClear) {
   Status status;
   // Insert keys {"0", "1", "2"}.
   for (int i = 0; i < size; i++) {
-    journal_->Put(std::to_string(i), object_identifier_, KeyPriority::EAGER,
-                  callback::Capture(callback::SetWhenCalled(&called), &status));
-    RunLoopUntilIdle();
-    ASSERT_TRUE(called);
-    ASSERT_EQ(Status::OK, status);
+    journal_->Put(std::to_string(i), object_identifier_, KeyPriority::EAGER);
   }
 
   std::unique_ptr<const Commit> commit;
@@ -332,10 +275,7 @@ TEST_F(JournalTest, ExplicitJournalsClear) {
   // Clear the contents.
   SetJournal(JournalImpl::Simple(JournalType::EXPLICIT, &environment_,
                                  &page_storage_, commit->GetId()));
-  journal_->Clear(callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  journal_->Clear();
 
   journal_->Commit(
       callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
@@ -353,13 +293,10 @@ TEST_F(JournalTest, MergeJournal) {
   SetJournal(JournalImpl::Simple(JournalType::IMPLICIT, &environment_,
                                  &page_storage_,
                                  kFirstPageCommitId.ToString()));
+  journal_->Put("0", object_identifier_, KeyPriority::EAGER);
+
   bool called;
   Status status;
-  journal_->Put("0", object_identifier_, KeyPriority::EAGER,
-                callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
   std::unique_ptr<const Commit> commit_0;
   journal_->Commit(
       callback::Capture(callback::SetWhenCalled(&called), &status, &commit_0));
@@ -371,11 +308,8 @@ TEST_F(JournalTest, MergeJournal) {
   SetJournal(JournalImpl::Simple(JournalType::EXPLICIT, &environment_,
                                  &page_storage_,
                                  kFirstPageCommitId.ToString()));
-  journal_->Put("1", object_identifier_, KeyPriority::EAGER,
-                callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  journal_->Put("1", object_identifier_, KeyPriority::EAGER);
+
   std::unique_ptr<const Commit> commit_1;
   journal_->Commit(
       callback::Capture(callback::SetWhenCalled(&called), &status, &commit_1));
@@ -387,11 +321,8 @@ TEST_F(JournalTest, MergeJournal) {
   // Create a merge journal, adding only a key "2".
   SetJournal(JournalImpl::Merge(&environment_, &page_storage_,
                                 commit_0->GetId(), commit_1->GetId()));
-  journal_->Put("2", object_identifier_, KeyPriority::EAGER,
-                callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
+  journal_->Put("2", object_identifier_, KeyPriority::EAGER);
+
   std::unique_ptr<const Commit> merge_commit;
   journal_->Commit(callback::Capture(callback::SetWhenCalled(&called), &status,
                                      &merge_commit));

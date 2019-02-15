@@ -99,10 +99,8 @@ class PageDelegate {
   // a transaction is currently in progress, it reuses it, otherwise creates a
   // new one and commits it before calling |callback|. This method is not
   // serialized, and should only be called from a callsite that is serialized.
-  void RunInTransaction(
-      fit::function<void(storage::Journal*, fit::function<void(Status)>)>
-          runnable,
-      StatusCallback callback);
+  void RunInTransaction(fit::function<void(storage::Journal*)> runnable,
+                        StatusCallback callback);
 
   void CommitJournal(
       std::unique_ptr<storage::Journal> journal,

@@ -102,26 +102,24 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Done(Status status) {
 }
 
 void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
-  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
-      storage::Status::OK);
-  auto on_next = [weak_this = weak_factory_.GetWeakPtr(),
-                  waiter = waiter.get()](storage::EntryChange change) {
+  auto on_next = [weak_this =
+                      weak_factory_.GetWeakPtr()](storage::EntryChange change) {
     if (!weak_this || weak_this->cancelled_) {
       // No need to call Done, as it will be called in the on_done callback.
       return false;
     }
     const std::string& key = change.entry.key;
     if (change.deleted) {
-      weak_this->journal_->Delete(key, waiter->NewCallback());
+      weak_this->journal_->Delete(key);
     } else {
       weak_this->journal_->Put(key, change.entry.object_identifier,
-                               change.entry.priority, waiter->NewCallback());
+                               change.entry.priority);
     }
     return true;
   };
 
-  auto on_diff_done = [weak_this = weak_factory_.GetWeakPtr(),
-                       waiter = std::move(waiter)](storage::Status s) {
+  auto on_diff_done = [weak_this =
+                           weak_factory_.GetWeakPtr()](storage::Status s) {
     if (!weak_this) {
       return;
     }
@@ -134,32 +132,18 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
       weak_this->Done(PageUtils::ConvertStatus(s));
       return;
     }
-    waiter->Finalize([weak_this](storage::Status s) {
-      if (!weak_this) {
-        return;
-      }
-      if (weak_this->cancelled_) {
-        weak_this->Done(Status::INTERNAL_ERROR);
-        return;
-      }
-      if (s != storage::Status::OK) {
-        FXL_LOG(ERROR) << "Error while merging commits: " << s;
-        weak_this->Done(PageUtils::ConvertStatus(s));
-        return;
-      }
-      weak_this->storage_->CommitJournal(
-          std::move(weak_this->journal_),
-          [weak_this](storage::Status s,
-                      std::unique_ptr<const storage::Commit>) {
-            if (s != storage::Status::OK) {
-              FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
-            }
-            if (weak_this) {
-              weak_this->Done(
-                  PageUtils::ConvertStatus(s, Status::INTERNAL_ERROR));
-            }
-          });
-    });
+
+    weak_this->storage_->CommitJournal(
+        std::move(weak_this->journal_),
+        [weak_this](storage::Status s, std::unique_ptr<const storage::Commit>) {
+          if (s != storage::Status::OK) {
+            FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
+          }
+          if (weak_this) {
+            weak_this->Done(
+                PageUtils::ConvertStatus(s, Status::INTERNAL_ERROR));
+          }
+        });
   };
   storage_->GetCommitContentsDiff(*(ancestor_), *(right_), "",
                                   std::move(on_next), std::move(on_diff_done));

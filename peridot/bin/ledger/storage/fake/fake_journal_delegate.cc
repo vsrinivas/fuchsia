@@ -47,33 +47,24 @@ FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, Data initial_data,
 
 FakeJournalDelegate::~FakeJournalDelegate() {}
 
-Status FakeJournalDelegate::SetValue(convert::ExtendedStringView key,
-                                     ObjectIdentifier value,
-                                     KeyPriority priority) {
-  if (is_committed_ || is_rolled_back_) {
-    return Status::ILLEGAL_STATE;
-  }
+void FakeJournalDelegate::SetValue(convert::ExtendedStringView key,
+                                   ObjectIdentifier value,
+                                   KeyPriority priority) {
+  FXL_DCHECK(!is_committed_ && !is_rolled_back_);
   data_.insert({key.ToString(), {key.ToString(), std::move(value), priority}});
-  return Status::OK;
 }
 
-Status FakeJournalDelegate::Delete(convert::ExtendedStringView key) {
-  if (is_committed_ || is_rolled_back_) {
-    return Status::ILLEGAL_STATE;
-  }
+void FakeJournalDelegate::Delete(convert::ExtendedStringView key) {
+  FXL_DCHECK(!is_committed_ && !is_rolled_back_);
   auto it = data_.find(key);
   if (it != data_.end()) {
     data_.erase(it);
   }
-  return Status::OK;
 }
 
-Status FakeJournalDelegate::Clear() {
-  if (is_committed_ || is_rolled_back_) {
-    return Status::ILLEGAL_STATE;
-  }
+void FakeJournalDelegate::Clear() {
+  FXL_DCHECK(!is_committed_ && !is_rolled_back_);
   data_.clear();
-  return Status::OK;
 }
 
 void FakeJournalDelegate::Commit(

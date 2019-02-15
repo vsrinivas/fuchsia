@@ -41,6 +41,11 @@ class ConflictResolverClient
   void Cancel();
 
  private:
+  // Handles the next merge value. If the |merged_value| is an insertion, i.e.
+  // if the source of |merged_value| is |RIGHT| or |NEW|, a new callback will be
+  // added on the waiter, that will be called with the object identifier of the
+  // inserted object. Otherwise, if the |merged_value| is a deletion, it will
+  // directly update the current journal.
   void OnNextMergeResult(
       const MergedValue& merged_value,
       const fxl::RefPtr<callback::Waiter<storage::Status,

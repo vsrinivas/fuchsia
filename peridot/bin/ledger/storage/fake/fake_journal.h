@@ -32,10 +32,9 @@ class FakeJournal : public Journal {
 
   // Journal:
   void Put(convert::ExtendedStringView key, ObjectIdentifier object_identifier,
-           KeyPriority priority, fit::function<void(Status)> callback) override;
-  void Delete(convert::ExtendedStringView key,
-              fit::function<void(Status)> callback) override;
-  void Clear(fit::function<void(Status)> callback) override;
+           KeyPriority priority) override;
+  void Delete(convert::ExtendedStringView key) override;
+  void Clear() override;
 
  private:
   FakeJournalDelegate* delegate_;

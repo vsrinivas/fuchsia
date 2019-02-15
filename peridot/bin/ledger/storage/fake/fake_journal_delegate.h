@@ -40,10 +40,10 @@ class FakeJournalDelegate {
 
   const CommitId& GetId() const { return id_; }
 
-  Status SetValue(convert::ExtendedStringView key, ObjectIdentifier value,
-                  KeyPriority priority);
-  Status Delete(convert::ExtendedStringView key);
-  Status Clear();
+  void SetValue(convert::ExtendedStringView key, ObjectIdentifier value,
+                KeyPriority priority);
+  void Delete(convert::ExtendedStringView key);
+  void Clear();
 
   void Commit(
       fit::function<void(Status, std::unique_ptr<const storage::Commit>)>

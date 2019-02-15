@@ -26,39 +26,27 @@ TestWithPageStorage::~TestWithPageStorage() {}
 fit::function<void(storage::Journal*)>
 TestWithPageStorage::AddKeyValueToJournal(const std::string& key,
                                           std::string value) {
-  return [this, key,
-          value = std::move(value)](storage::Journal* journal) mutable {
-    storage::Status status;
-    storage::ObjectIdentifier object_identifier;
-    bool called;
-    page_storage()->AddObjectFromLocal(
-        storage::ObjectType::BLOB,
-        storage::DataSource::Create(std::move(value)),
-        callback::Capture(callback::SetWhenCalled(&called), &status,
-                          &object_identifier));
-    RunLoopUntilIdle();
-    EXPECT_TRUE(called);
-    EXPECT_EQ(storage::Status::OK, status);
+  return
+      [this, key, value = std::move(value)](storage::Journal* journal) mutable {
+        storage::Status status;
+        storage::ObjectIdentifier object_identifier;
+        bool called;
+        page_storage()->AddObjectFromLocal(
+            storage::ObjectType::BLOB,
+            storage::DataSource::Create(std::move(value)),
+            callback::Capture(callback::SetWhenCalled(&called), &status,
+                              &object_identifier));
+        RunLoopUntilIdle();
+        EXPECT_TRUE(called);
+        EXPECT_EQ(storage::Status::OK, status);
 
-    journal->Put(key, object_identifier, storage::KeyPriority::EAGER,
-                 callback::Capture(callback::SetWhenCalled(&called), &status));
-    RunLoopUntilIdle();
-    EXPECT_TRUE(called);
-    EXPECT_EQ(storage::Status::OK, status);
-  };
+        journal->Put(key, object_identifier, storage::KeyPriority::EAGER);
+      };
 }
 
 fit::function<void(storage::Journal*)>
 TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
-  return [this, key](storage::Journal* journal) {
-    storage::Status status;
-    bool called;
-    journal->Delete(
-        key, callback::Capture(callback::SetWhenCalled(&called), &status));
-    RunLoopUntilIdle();
-    EXPECT_TRUE(called);
-    EXPECT_EQ(storage::Status::OK, status);
-  };
+  return [key](storage::Journal* journal) { journal->Delete(key); };
 }
 
 ::testing::AssertionResult TestWithPageStorage::GetValue(

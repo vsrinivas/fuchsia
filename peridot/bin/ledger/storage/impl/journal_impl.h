@@ -30,8 +30,6 @@ namespace storage {
 // call any further methods on that object. A journal that is not commited
 // before destruction, will be rolled back.
 // TODO(nellyv): Remove |Rollback()|: it is no longer useful.
-// TODO(nellyv): Remove callbacks from Put/Delete/Clear operations, as they can
-// now be synchronous.
 class JournalImpl : public Journal {
  private:
   // Passkey idiom to restrict access to the constructor to static factories.
@@ -69,10 +67,9 @@ class JournalImpl : public Journal {
 
   // Journal:
   void Put(convert::ExtendedStringView key, ObjectIdentifier object_identifier,
-           KeyPriority priority, fit::function<void(Status)> callback) override;
-  void Delete(convert::ExtendedStringView key,
-              fit::function<void(Status)> callback) override;
-  void Clear(fit::function<void(Status)> callback) override;
+           KeyPriority priority) override;
+  void Delete(convert::ExtendedStringView key) override;
+  void Clear() override;
 
  private:
   class Token {

@@ -239,44 +239,27 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
 void AutoMergeStrategy::AutoMerger::ApplyDiffOnJournal(
     std::unique_ptr<storage::Journal> journal,
     std::unique_ptr<std::vector<storage::EntryChange>> diff) {
-  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
-      storage::Status::OK);
   for (const storage::EntryChange& change : *diff) {
     if (change.deleted) {
-      journal->Delete(change.entry.key, waiter->NewCallback());
+      journal->Delete(change.entry.key);
     } else {
       journal->Put(change.entry.key, change.entry.object_identifier,
-                   change.entry.priority, waiter->NewCallback());
+                   change.entry.priority);
     }
   }
 
-  waiter->Finalize([weak_this = weak_factory_.GetWeakPtr(),
-                    journal = std::move(journal)](storage::Status s) mutable {
-    if (!weak_this) {
-      return;
-    }
-    if (weak_this->cancelled_) {
-      weak_this->Done(Status::INTERNAL_ERROR);
-      return;
-    }
-    if (s != storage::Status::OK) {
-      FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
-      weak_this->Done(PageUtils::ConvertStatus(s));
-      return;
-    }
-    weak_this->storage_->CommitJournal(
-        std::move(journal),
-        [weak_this = std::move(weak_this)](
-            storage::Status s,
-            std::unique_ptr<const storage::Commit> /*commit*/) {
-          if (s != storage::Status::OK) {
-            FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
-          }
-          if (weak_this) {
-            weak_this->Done(PageUtils::ConvertStatus(s));
-          }
-        });
-  });
+  storage_->CommitJournal(
+      std::move(journal),
+      [weak_this = weak_factory_.GetWeakPtr()](
+          storage::Status s,
+          std::unique_ptr<const storage::Commit> /*commit*/) {
+        if (s != storage::Status::OK) {
+          FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
+        }
+        if (weak_this) {
+          weak_this->Done(PageUtils::ConvertStatus(s));
+        }
+      });
 }
 
 void AutoMergeStrategy::AutoMerger::Cancel() {

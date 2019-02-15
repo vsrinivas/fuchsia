@@ -21,20 +21,18 @@ class Journal {
   virtual ~Journal() {}
 
   // Adds an entry with the given |key| and |object_identifier| to this
-  // |Journal|. Returns |OK| on success or the error code otherwise.
+  // |Journal|.
   virtual void Put(convert::ExtendedStringView key,
-                   ObjectIdentifier object_identifier, KeyPriority priority,
-                   fit::function<void(Status)> callback) = 0;
+                   ObjectIdentifier object_identifier,
+                   KeyPriority priority) = 0;
 
-  // Deletes the entry with the given |key| from this |Journal|. Returns |OK|
-  // on success or the error code otherwise.
-  virtual void Delete(convert::ExtendedStringView key,
-                      fit::function<void(Status)> callback) = 0;
+  // Deletes the entry with the given |key| from this |Journal|.
+  virtual void Delete(convert::ExtendedStringView key) = 0;
 
   // Deletes all entries from this Journal, as well as any entries already
   // present on the page. This doesn't prevent subsequent calls to update the
   // contents of this Journal (|Put|, |Delete| or |Clear|).
-  virtual void Clear(fit::function<void(Status)> callback) = 0;
+  virtual void Clear() = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Journal);

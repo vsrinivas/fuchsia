@@ -337,46 +337,6 @@ class PageStorageTest : public ledger::TestWithEnvironment {
     return commit;
   }
 
-  ::testing::AssertionResult PutInJournal(Journal* journal,
-                                          const std::string& key,
-                                          ObjectIdentifier object_identifier,
-                                          KeyPriority priority) {
-    bool called;
-    Status status;
-    journal->Put(key, std::move(object_identifier), priority,
-                 callback::Capture(callback::SetWhenCalled(&called), &status));
-    RunLoopUntilIdle();
-
-    if (!called) {
-      return ::testing::AssertionFailure()
-             << "Journal::Put for key " << key << " didn't return.";
-    }
-    if (status != Status::OK) {
-      return ::testing::AssertionFailure() << "Journal::Put for key " << key
-                                           << " returned status: " << status;
-    }
-    return ::testing::AssertionSuccess();
-  }
-
-  ::testing::AssertionResult DeleteFromJournal(Journal* journal,
-                                               const std::string& key) {
-    bool called;
-    Status status;
-    journal->Delete(
-        key, callback::Capture(callback::SetWhenCalled(&called), &status));
-    RunLoopUntilIdle();
-
-    if (!called) {
-      return ::testing::AssertionFailure()
-             << "Journal::Delete for key " << key << " didn't return.";
-    }
-    if (status != Status::OK) {
-      return ::testing::AssertionFailure() << "Journal::Delete for key " << key
-                                           << " returned status: " << status;
-    }
-    return ::testing::AssertionSuccess();
-  }
-
   std::unique_ptr<const Commit> TryCommitFromSync() {
     ObjectIdentifier root_identifier;
     EXPECT_TRUE(GetEmptyNodeIdentifier(&root_identifier));
@@ -437,12 +397,11 @@ class PageStorageTest : public ledger::TestWithEnvironment {
       if (key.size() < min_key_size) {
         key.resize(min_key_size);
       }
-      EXPECT_TRUE(PutInJournal(journal.get(), key,
-                               RandomObjectIdentifier(environment_.random()),
-                               KeyPriority::EAGER));
+      journal->Put(key, RandomObjectIdentifier(environment_.random()),
+                   KeyPriority::EAGER);
     }
 
-    EXPECT_TRUE(DeleteFromJournal(journal.get(), "key_does_not_exist"));
+    journal->Delete("key_does_not_exist");
 
     std::unique_ptr<const Commit> commit =
         TryCommitJournal(std::move(journal), Status::OK);
@@ -1132,9 +1091,8 @@ TEST_F(PageStorageTest, DestroyUncommittedJournal) {
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, journal);
-  EXPECT_TRUE(PutInJournal(journal.get(), "key",
-                           RandomObjectIdentifier(environment_.random()),
-                           KeyPriority::EAGER));
+  journal->Put("key", RandomObjectIdentifier(environment_.random()),
+               KeyPriority::EAGER);
 }
 
 TEST_F(PageStorageTest, AddObjectFromLocal) {
@@ -1515,9 +1473,8 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
 
-    EXPECT_TRUE(PutInJournal(journal.get(), fxl::StringPrintf("key%lu", i),
-                             data_array[i].object_identifier,
-                             KeyPriority::LAZY));
+    journal->Put(fxl::StringPrintf("key%lu", i),
+                 data_array[i].object_identifier, KeyPriority::LAZY);
     EXPECT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
     commits.push_back(GetFirstHead()->GetId());
   }
@@ -1605,9 +1562,8 @@ TEST_F(PageStorageTest, PageIsSynced) {
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   for (size_t i = 0; i < size; ++i) {
-    EXPECT_TRUE(PutInJournal(journal.get(), fxl::StringPrintf("key%lu", i),
-                             data_array[i].object_identifier,
-                             KeyPriority::LAZY));
+    journal->Put(fxl::StringPrintf("key%lu", i),
+                 data_array[i].object_identifier, KeyPriority::LAZY);
   }
   EXPECT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
   CommitId commit_id = GetFirstHead()->GetId();
@@ -1747,8 +1703,7 @@ TEST_F(PageStorageTest, PageIsEmpty) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(PutInJournal(journal.get(), "key", value.object_identifier,
-                           KeyPriority::LAZY));
+  journal->Put("key", value.object_identifier, KeyPriority::LAZY);
   EXPECT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
 
   storage_->IsEmpty(
@@ -1765,7 +1720,7 @@ TEST_F(PageStorageTest, PageIsEmpty) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(DeleteFromJournal(journal.get(), "key"));
+  journal->Delete("key");
   EXPECT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
 
   storage_->IsEmpty(
@@ -1796,8 +1751,7 @@ TEST_F(PageStorageTest, UntrackedObjectsSimple) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(PutInJournal(journal.get(), "key", data.object_identifier,
-                           KeyPriority::EAGER));
+  journal->Put("key", data.object_identifier, KeyPriority::EAGER);
   EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
   EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, false));
@@ -1824,8 +1778,7 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(PutInJournal(journal.get(), "key0",
-                           data_array[0].object_identifier, KeyPriority::LAZY));
+  journal->Put("key0", data_array[0].object_identifier, KeyPriority::LAZY);
   EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_identifier, true));
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
   EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_identifier, false));
@@ -1842,14 +1795,10 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(PutInJournal(journal.get(), "key1",
-                           data_array[1].object_identifier, KeyPriority::LAZY));
-  EXPECT_TRUE(PutInJournal(journal.get(), "key2",
-                           data_array[2].object_identifier, KeyPriority::LAZY));
-  EXPECT_TRUE(PutInJournal(journal.get(), "key1",
-                           data_array[2].object_identifier, KeyPriority::LAZY));
-  EXPECT_TRUE(PutInJournal(journal.get(), "key3",
-                           data_array[0].object_identifier, KeyPriority::LAZY));
+  journal->Put("key1", data_array[1].object_identifier, KeyPriority::LAZY);
+  journal->Put("key2", data_array[2].object_identifier, KeyPriority::LAZY);
+  journal->Put("key1", data_array[2].object_identifier, KeyPriority::LAZY);
+  journal->Put("key3", data_array[0].object_identifier, KeyPriority::LAZY);
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
   EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_identifier, false));
   EXPECT_TRUE(ObjectIsUntracked(data_array[1].object_identifier, true));
@@ -1906,9 +1855,8 @@ TEST_F(PageStorageTest, CommitFailNoWatchNotification) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, journal);
 
-  EXPECT_TRUE(PutInJournal(journal.get(), "key1",
-                           RandomObjectIdentifier(environment_.random()),
-                           KeyPriority::EAGER));
+  journal->Put("key1", RandomObjectIdentifier(environment_.random()),
+               KeyPriority::EAGER);
 
   leveldb_->SetFailBatchExecuteAfter(1);
   std::unique_ptr<const Commit> commit =
@@ -2139,10 +2087,9 @@ TEST_F(PageStorageTest, NoOpCommit) {
   EXPECT_EQ(Status::OK, status);
 
   // Create a key, and delete it.
-  EXPECT_TRUE(PutInJournal(journal.get(), "key",
-                           RandomObjectIdentifier(environment_.random()),
-                           KeyPriority::EAGER));
-  EXPECT_TRUE(DeleteFromJournal(journal.get(), "key"));
+  journal->Put("key", RandomObjectIdentifier(environment_.random()),
+               KeyPriority::EAGER);
+  journal->Delete("key");
 
   // Commit the journal.
   std::unique_ptr<const Commit> commit;
@@ -2265,9 +2212,8 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(PutInJournal(journal_a.get(), "a",
-                           RandomObjectIdentifier(environment_.random()),
-                           KeyPriority::EAGER));
+  journal_a->Put("a", RandomObjectIdentifier(environment_.random()),
+                 KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_a =
       TryCommitJournal(std::move(journal_a), Status::OK);
   ASSERT_TRUE(commit_a);
@@ -2280,9 +2226,8 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(PutInJournal(journal_b.get(), "b",
-                           RandomObjectIdentifier(environment_.random()),
-                           KeyPriority::EAGER));
+  journal_b->Put("b", RandomObjectIdentifier(environment_.random()),
+                 KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_b =
       TryCommitJournal(std::move(journal_b), Status::OK);
   ASSERT_TRUE(commit_b);
@@ -2308,9 +2253,8 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(PutInJournal(journal_c.get(), "c",
-                           RandomObjectIdentifier(environment_.random()),
-                           KeyPriority::EAGER));
+  journal_c->Put("c", RandomObjectIdentifier(environment_.random()),
+                 KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_c =
       TryCommitJournal(std::move(journal_c), Status::OK);
   ASSERT_TRUE(commit_c);

@@ -174,13 +174,8 @@ void PageDelegate::Delete(std::vector<uint8_t> key,
       std::move(callback),
       [this, key = std::move(key)](Page::DeleteCallback callback) mutable {
         RunInTransaction(
-            [key = std::move(key)](storage::Journal* journal,
-                                   fit::function<void(Status)> callback) {
-              journal->Delete(key, [callback = std::move(callback)](
-                                       storage::Status status) {
-                callback(
-                    PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND));
-              });
+            [key = std::move(key)](storage::Journal* journal) {
+              journal->Delete(key);
             },
             std::move(callback));
       });
@@ -189,15 +184,8 @@ void PageDelegate::Delete(std::vector<uint8_t> key,
 void PageDelegate::Clear(Page::ClearCallback callback) {
   operation_serializer_.Serialize<Status>(
       std::move(callback), [this](Page::ClearCallback callback) mutable {
-        RunInTransaction(
-            [](storage::Journal* journal,
-               fit::function<void(Status)> callback) {
-              journal->Clear(
-                  [callback = std::move(callback)](storage::Status status) {
-                    callback(PageUtils::ConvertStatus(status));
-                  });
-            },
-            std::move(callback));
+        RunInTransaction([](storage::Journal* journal) { journal->Clear(); },
+                         std::move(callback));
       });
 }
 
@@ -322,30 +310,24 @@ void PageDelegate::PutInCommit(std::vector<uint8_t> key,
                                fit::function<void(Status)> callback) {
   RunInTransaction(
       [key = std::move(key), object_identifier = std::move(object_identifier),
-       priority](storage::Journal* journal,
-                 fit::function<void(Status status)> callback) mutable {
-        journal->Put(key, std::move(object_identifier), priority,
-                     [callback = std::move(callback)](storage::Status status) {
-                       callback(PageUtils::ConvertStatus(status));
-                     });
+       priority](storage::Journal* journal) mutable {
+        journal->Put(key, std::move(object_identifier), priority);
       },
       std::move(callback));
 }
 
 void PageDelegate::RunInTransaction(
-    fit::function<void(storage::Journal*, fit::function<void(Status)>)>
-        runnable,
+    fit::function<void(storage::Journal*)> runnable,
     fit::function<void(Status)> callback) {
   if (journal_) {
     // A transaction is in progress; add this change to it.
-    runnable(journal_.get(), std::move(callback));
+    runnable(journal_.get());
+    callback(Status::OK);
     return;
   }
   // No transaction is in progress; create one just for this change.
-  // TODO(etiennej): Add a change batching strategy for operations outside
-  // transactions. Currently, we create a commit for every change; we
-  // would like to group changes that happen "close enough" together in
-  // one commit.
+  // TODO(LE-690): Batch together operations outside transactions that have been
+  // accumulated while waiting for the previous one to be committed.
   branch_tracker_.StartTransaction([] {});
   storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
   std::unique_ptr<storage::Journal> journal;
@@ -362,35 +344,18 @@ void PageDelegate::RunInTransaction(
               branch_tracker_.StopTransaction(nullptr);
               return;
             }
-            runnable(
-                journal.get(),
+            runnable(journal.get());
+
+            CommitJournal(
+                std::move(journal),
                 callback::MakeScoped(
                     weak_factory_.GetWeakPtr(),
-                    [this, journal = std::move(journal),
-                     callback =
-                         std::move(callback)](Status ledger_status) mutable {
-                      if (ledger_status != Status::OK) {
-                        callback(ledger_status);
-                        storage_->RollbackJournal(
-                            std::move(journal),
-                            [](storage::Status /*rollback_status*/) {});
-                        branch_tracker_.StopTransaction(nullptr);
-                        return;
-                      }
-
-                      CommitJournal(
-                          std::move(journal),
-                          callback::MakeScoped(
-                              weak_factory_.GetWeakPtr(),
-                              [this, callback = std::move(callback)](
-                                  Status status,
-                                  std::unique_ptr<const storage::Commit>
-                                      commit) {
-                                branch_tracker_.StopTransaction(
-                                    status == Status::OK ? std::move(commit)
-                                                         : nullptr);
-                                callback(status);
-                              }));
+                    [this, callback = std::move(callback)](
+                        Status status,
+                        std::unique_ptr<const storage::Commit> commit) {
+                      branch_tracker_.StopTransaction(
+                          status == Status::OK ? std::move(commit) : nullptr);
+                      callback(status);
                     }));
           }));
 }

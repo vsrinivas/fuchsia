@@ -24,19 +24,16 @@ void FakeJournal::Commit(
 Status FakeJournal::Rollback() { return delegate_->Rollback(); }
 
 void FakeJournal::Put(convert::ExtendedStringView key,
-                      ObjectIdentifier object_identifier, KeyPriority priority,
-                      fit::function<void(Status)> callback) {
-  callback(delegate_->SetValue(key, std::move(object_identifier), priority));
+                      ObjectIdentifier object_identifier,
+                      KeyPriority priority) {
+  delegate_->SetValue(key, std::move(object_identifier), priority);
 }
 
-void FakeJournal::Delete(convert::ExtendedStringView key,
-                         fit::function<void(Status)> callback) {
-  callback(delegate_->Delete(key));
+void FakeJournal::Delete(convert::ExtendedStringView key) {
+  delegate_->Delete(key);
 }
 
-void FakeJournal::Clear(fit::function<void(Status)> callback) {
-  callback(delegate_->Clear());
-}
+void FakeJournal::Clear() { delegate_->Clear(); }
 
 }  // namespace fake
 }  // namespace storage

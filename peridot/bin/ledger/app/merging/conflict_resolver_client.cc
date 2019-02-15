@@ -142,9 +142,7 @@ void ConflictResolverClient::OnNextMergeResult(
       break;
     }
     case ValueSource::DELETE: {
-      journal_->Delete(merged_value.key,
-                       [callback = waiter->NewCallback()](
-                           storage::Status status) { callback(status, {}); });
+      journal_->Delete(merged_value.key);
       break;
     }
   }
@@ -288,25 +286,22 @@ void ConflictResolverClient::MergeNew(std::vector<MergedValue> merged_values,
                 return;
               }
 
-              auto waiter =
-                  fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
-                      storage::Status::OK);
-              for (size_t i = 0; i < object_identifiers.size(); ++i) {
-                // DELETE is encoded with an invalid digest in
-                // OnNextMergeResult.
-                if (!object_identifiers[i].object_digest().IsValid()) {
+              size_t j = 0;
+              for (size_t i = 0; i < merged_values.size(); ++i) {
+                // |object_identifiers| contains only the identifiers of objects
+                // that have been inserted. Deletions have already been handled.
+                // TODO(LE-691): Maintain the order of insertions/deletions.
+                if (merged_values[i].source == ValueSource::DELETE) {
                   continue;
                 }
-                journal_->Put(merged_values.at(i).key, object_identifiers[i],
-                              merged_values.at(i).priority == Priority::EAGER
+                journal_->Put(merged_values[i].key, object_identifiers[j],
+                              merged_values[i].priority == Priority::EAGER
                                   ? storage::KeyPriority::EAGER
-                                  : storage::KeyPriority::LAZY,
-                              waiter->NewCallback());
+                                  : storage::KeyPriority::LAZY);
+                ++j;
               }
-              waiter->Finalize(
-                  [callback = std::move(callback)](storage::Status status) {
-                    callback(PageUtils::ConvertStatus(status));
-                  });
+              FXL_DCHECK(j == object_identifiers.size());
+              callback(Status::OK);
             });
       });
 }
@@ -328,12 +323,8 @@ void ConflictResolverClient::MergeNonConflictingEntriesNew(
         if (!IsInValidStateAndNotify(weak_this, callback)) {
           return;
         }
-        auto waiter =
-            fxl::MakeRefCounted<callback::StatusWaiter<storage::Status>>(
-                storage::Status::OK);
 
-        auto on_next = [this, weak_this,
-                        waiter](storage::ThreeWayChange change) {
+        auto on_next = [this, weak_this](storage::ThreeWayChange change) {
           if (!weak_this) {
             return false;
           }
@@ -346,31 +337,24 @@ void ConflictResolverClient::MergeNonConflictingEntriesNew(
           if (util::EqualPtr(change.base, change.left)) {
             if (change.right) {
               journal_->Put(change.right->key, change.right->object_identifier,
-                            change.right->priority, waiter->NewCallback());
+                            change.right->priority);
             } else {
-              journal_->Delete(change.base->key, waiter->NewCallback());
+              journal_->Delete(change.base->key);
             }
           } else if (util::EqualPtr(change.base, change.right) &&
                      has_merged_values_) {
             if (change.left) {
               journal_->Put(change.left->key, change.left->object_identifier,
-                            change.left->priority, waiter->NewCallback());
+                            change.left->priority);
             } else {
-              journal_->Delete(change.base->key, waiter->NewCallback());
+              journal_->Delete(change.base->key);
             }
           }
           return true;
         };
-        auto on_done = [waiter, callback = std::move(callback)](
-                           storage::Status status) mutable {
-          if (status != storage::Status::OK) {
-            callback(PageUtils::ConvertStatus(status));
-            return;
-          }
-          waiter->Finalize(
-              [callback = std::move(callback)](storage::Status status) {
-                callback(PageUtils::ConvertStatus(status));
-              });
+        auto on_done = [callback =
+                            std::move(callback)](storage::Status status) {
+          callback(PageUtils::ConvertStatus(status));
         };
         storage_->GetThreeWayContentsDiff(*ancestor_, *left_, *right_, "",
                                           std::move(on_next),
