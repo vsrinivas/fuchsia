@@ -31,7 +31,6 @@ void ModuleFacetReaderImpl::GetModuleManifest(
   loader_->LoadUrl(canonical_url, [canonical_url,
                                    callback](fuchsia::sys::PackagePtr package) {
     if (!package) {
-      FXL_LOG(ERROR) << "Could not resolve URL: " << canonical_url;
       callback({});
       return;
     }
@@ -50,24 +49,20 @@ void ModuleFacetReaderImpl::GetModuleManifest(
         cmx_path = pkg_url.GetDefaultComponentCmxPath();
       }
     } else {
-      FXL_LOG(ERROR) << "Could not parse package URL: "
-                     << package->resolved_url;
       callback({});
     }
 
     component::CmxFacetParser facet_parser;
     json::JSONParser json_parser;
     if (!facet_parser.ParseFromFileAt(fd.get(), cmx_path, &json_parser)) {
-      FXL_LOG(ERROR) << "Could not parse CMX manifest " << cmx_path << ": "
-                     << json_parser.error_str();
+      FXL_LOG(WARNING) << "Could not parse CMX manifest " << cmx_path << ": "
+                       << json_parser.error_str();
       callback({});
       return;
     }
 
     const auto& mod_facet = facet_parser.GetSection(kModuleFacetName);
     if (mod_facet.IsNull()) {
-      FXL_LOG(INFO) << "No module facet declared for module="
-                    << package->resolved_url;
       callback({});
       return;
     }
