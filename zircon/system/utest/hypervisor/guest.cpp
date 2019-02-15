@@ -28,10 +28,13 @@ static constexpr uint32_t kGuestMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
 static constexpr uint32_t kHostMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
 // Inject an interrupt with vector 32, the first user defined interrupt vector.
 static constexpr uint32_t kInterruptVector = 32u;
-static constexpr uint32_t kNmiVector = 2u;
-static constexpr uint32_t kExceptionVector = 16u;
 static constexpr uint64_t kTrapKey = 0x1234;
 static constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
+
+#ifdef __x86_64__
+static constexpr uint32_t kNmiVector = 2u;
+static constexpr uint32_t kExceptionVector = 16u;
+#endif
 
 extern const char vcpu_resume_start[];
 extern const char vcpu_resume_end[];
@@ -275,6 +278,8 @@ static bool vcpu_interrupt() {
     END_TEST;
 }
 
+#ifdef __x86_64__
+
 static bool vcpu_interrupt_priority() {
     BEGIN_TEST;
 
@@ -293,11 +298,9 @@ static bool vcpu_interrupt_priority() {
     ASSERT_EQ(test.vcpu.interrupt(kExceptionVector), ZX_OK);
     ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
     ASSERT_TRUE(resume_and_clean_exit(&test));
-#if __x86_64__
     zx_vcpu_state_t vcpu_state;
     ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
     EXPECT_EQ(vcpu_state.rax, kInterruptVector);
-#endif
 
     // TODO(MAC-225): Check that the exception is cleared.
 
@@ -323,11 +326,9 @@ static bool vcpu_nmi() {
     // Check that NMIs are handled.
     ASSERT_EQ(test.vcpu.interrupt(kNmiVector), ZX_OK);
     ASSERT_TRUE(resume_and_clean_exit(&test));
-#if __x86_64__
     zx_vcpu_state_t vcpu_state;
     ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
     EXPECT_EQ(vcpu_state.rax, kNmiVector);
-#endif
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
@@ -351,11 +352,9 @@ static bool vcpu_nmi_priority() {
     ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
     ASSERT_EQ(test.vcpu.interrupt(kNmiVector), ZX_OK);
     ASSERT_TRUE(resume_and_clean_exit(&test));
-#if __x86_64__
     zx_vcpu_state_t vcpu_state;
     ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
     EXPECT_EQ(vcpu_state.rax, kNmiVector);
-#endif
 
     // TODO(MAC-225): Check that the interrupt is queued.
 
@@ -381,11 +380,9 @@ static bool vcpu_exception() {
     // Check that exceptions are handled.
     ASSERT_EQ(test.vcpu.interrupt(kExceptionVector), ZX_OK);
     ASSERT_TRUE(resume_and_clean_exit(&test));
-#if __x86_64__
     zx_vcpu_state_t vcpu_state;
     ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
     EXPECT_EQ(vcpu_state.rax, kExceptionVector);
-#endif
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
@@ -435,17 +432,19 @@ static bool vcpu_write_cr0() {
 
     ASSERT_TRUE(resume_and_clean_exit(&test));
 
-#if __x86_64__
     zx_vcpu_state_t vcpu_state;
     ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
     // Check that cr0 has the NE bit set when read.
     EXPECT_TRUE(vcpu_state.rax & X86_CR0_NE);
-#endif
 
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
+
+#endif  // __x86_64__
+
+#ifdef __aarch64__
 
 static bool vcpu_wfi() {
     BEGIN_TEST;
@@ -477,10 +476,8 @@ static bool vcpu_wfi_aarch32() {
     ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
-#if __aarch64__
     EXPECT_EQ(packet.guest_mem.read, false);
     EXPECT_EQ(packet.guest_mem.data, 0);
-#endif // __aarch64__
 
     ASSERT_TRUE(teardown(&test));
 
@@ -517,15 +514,15 @@ static bool vcpu_fp_aarch32() {
     ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
-#if __aarch64__
     EXPECT_EQ(packet.guest_mem.read, false);
     EXPECT_EQ(packet.guest_mem.data, 0);
-#endif // __aarch64__
 
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
+
+#endif // __aarch64__
 
 static bool vcpu_read_write_state() {
     BEGIN_TEST;
@@ -636,6 +633,8 @@ static bool vcpu_read_write_state() {
     END_TEST;
 }
 
+#ifdef __x86_64__
+
 static bool vcpu_compat_mode() {
     BEGIN_TEST;
 
@@ -723,15 +722,15 @@ static bool vcpu_vmcall() {
     zx_vcpu_state_t vcpu_state;
     ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
 
-#if __x86_64__
     const uint64_t kVmCallNoSys = -1000;
     EXPECT_EQ(vcpu_state.rax, kVmCallNoSys);
-#endif
 
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
 }
+
+#endif  // __x86_64__
 
 static bool guest_set_trap_with_mem() {
     BEGIN_TEST;
@@ -790,6 +789,7 @@ static bool guest_set_trap_with_bell() {
     END_TEST;
 }
 
+#ifdef __x86_64__
 static bool guest_set_trap_with_io() {
     BEGIN_TEST;
 
@@ -815,6 +815,7 @@ static bool guest_set_trap_with_io() {
 
     END_TEST;
 }
+#endif  // __x86_64__
 
 BEGIN_TEST_CASE(guest)
 RUN_TEST(vcpu_resume)
