@@ -59,7 +59,7 @@ struct UserLoginParams {
     fuchsia.sys.ServiceProvider? services;
 
     // If login fails, |user_controller| is closed.
-    request<UserController> user_controller;
+    request<UserController>? user_controller;
 };
 
 // Used to specify arguments to log into a user session.
@@ -77,7 +77,7 @@ struct UserLoginParams2 {
     fuchsia.sys.ServiceProvider? services;
 
     // If login fails, |user_controller| is closed.
-    request<UserController> user_controller;
+    request<UserController>? user_controller;
 };
 
 // Provided by the |Basemgr| to the |BaseShell| when it authenticates a
