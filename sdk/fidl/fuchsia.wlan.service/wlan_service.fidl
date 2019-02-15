@@ -5,7 +5,6 @@
 library fuchsia.wlan.service;
 
 using fuchsia.wlan.common;
-using fuchsia.wlan.mlme;
 using fuchsia.wlan.stats;
 
 enum ErrCode {

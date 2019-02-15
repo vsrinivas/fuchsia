@@ -29,7 +29,6 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.wlan.ap:fuchsia.wlan.ap.policy-rustc",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
-    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
     "//sdk/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats-rustc",
     "//third_party/rust-crates/rustc_deps:failure",
