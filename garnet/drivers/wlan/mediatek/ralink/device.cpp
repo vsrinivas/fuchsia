@@ -3771,7 +3771,7 @@ zx_status_t Device::StartInterruptPolling() {
         return status;
     }
 
-    status = zx::timer::create(0u, ZX_CLOCK_MONOTONIC, &async_tx_interrupt_timer_);
+    status = zx::timer::create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &async_tx_interrupt_timer_);
     if (status != ZX_OK) {
         errorf("could not create async TX timer: %d\n", status);
         return status;
@@ -3784,7 +3784,7 @@ zx_status_t Device::StartInterruptPolling() {
         return status;
     }
 
-    status = zx::timer::create(0u, ZX_CLOCK_MONOTONIC, &tbtt_interrupt_timer_);
+    status = zx::timer::create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &tbtt_interrupt_timer_);
     if (status != ZX_OK) {
         errorf("could not create TBTT timer: %d\n", status);
         return status;

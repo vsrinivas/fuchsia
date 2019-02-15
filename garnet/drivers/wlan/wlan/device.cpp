@@ -453,7 +453,7 @@ zx_status_t Device::GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) {
     ZX_DEBUG_ASSERT(port_.is_valid());
 
     zx::timer t;
-    zx_status_t status = zx::timer::create(0u, ZX_CLOCK_MONOTONIC, &t);
+    zx_status_t status = zx::timer::create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &t);
     if (status != ZX_OK) { return status; }
 
     status = t.wait_async(port_, id, ZX_TIMER_SIGNALED, ZX_WAIT_ASYNC_REPEATING);
