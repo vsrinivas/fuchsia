@@ -1,0 +1,97 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+template("fidl_ir") {
+  assert(defined(invoker.sources), "A FIDL library requires some sources.")
+  assert(defined(invoker.output), "FIDL library IR needs to go somewhere.")
+  assert(defined(invoker.name), "A FIDL library requires a name.")
+
+  json_ir = invoker.output
+
+  compiled_action(target_name) {
+    tool = "//zircon/public/tool/fidlc"
+
+    inputs = invoker.sources
+
+    outputs = [
+      json_ir,
+    ]
+
+    args = [
+             "--json",
+             rebase_path(json_ir, root_build_dir),
+             "--name",
+             invoker.name,
+             "--files",
+           ] + rebase_path(invoker.sources, root_build_dir)
+  }
+}
+
+group("difl_test_fidl") {
+  deps = [
+    ":after",
+    ":before",
+    ":run_difl_test",
+  ]
+}
+
+action("run_difl_test") {
+  script = "run_difl_test.sh"
+  deps = [
+    ":after",
+    ":before",
+  ]
+  before_ir = target_gen_dir + "/before.fidl.json"
+  after_ir = target_gen_dir + "/after.fidl.json"
+  stamp = target_gen_dir + "/run_difl_test.stamp"
+  sources = [
+    after_ir,
+    before_ir,
+  ]
+  inputs = [
+    "../difl/changes.py",
+    "../difl/__init__.py",
+    "../difl/protocol.py",
+    "../difl/intersection.py",
+    "../difl/ir.py",
+    "../difl/library.py",
+    "../difl/__main__.py",
+    "../difl/struct.py",
+    "../difl/test.py",
+    "../difl/type.py",
+  ]
+  outputs = [
+    stamp,
+  ]
+  args = [
+    "--build-dir",
+    rebase_path(root_build_dir),
+    "--before",
+    rebase_path(before_ir),
+    "--after",
+    rebase_path(after_ir),
+    "--stamp",
+    rebase_path(stamp),
+  ]
+}
+
+fidl_ir("before") {
+  name = "fidl.difl.test"
+  output = target_gen_dir + "/before.fidl.json"
+  sources = [
+    "before/protocol.fidl",
+    "before/struct.fidl",
+  ]
+}
+
+fidl_ir("after") {
+  name = "fidl.difl.test"
+  output = target_gen_dir + "/after.fidl.json"
+  sources = [
+    "after/protocol.fidl",
+    "after/struct.fidl",
+  ]
+}

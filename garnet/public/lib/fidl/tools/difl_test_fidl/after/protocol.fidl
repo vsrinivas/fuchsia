@@ -1,0 +1,80 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.difl.test;
+
+// After
+
+//!DeclAdded
+protocol ProtocolAdded {
+    Method();
+};
+
+protocol MethodRemoved {
+    Method();
+};
+
+protocol MethodAdded {
+    Method();
+//!DeclAdded
+    NewMethod();
+};
+
+protocol MethodRemovedTransitional {
+    Method();
+};
+
+protocol MethodAddedTransitional {
+    Method();
+    [Transitional]
+//!DeclAdded
+    NewMethod();
+};
+
+protocol MethodOrdinalChanged {
+    [Selector="NewName"]
+//!MethodOrdinalChanged
+    Method();
+};
+
+protocol MethodBecameEvent {
+//!MethodBecameEvent
+    -> WasMethod();
+};
+
+protocol EventBecameMethod {
+//!EventBecameMethod
+    WasEvent();
+};
+
+protocol MethodGainedResponse {
+//!MethodGainedResponse
+    Method() -> ();
+};
+
+protocol MethodLostResponse {
+//!MethodLostResponse
+    Method();
+};
+
+protocol MethodArgumentCount {
+//!StructMemberAdded
+    MethodRequestArgumentsAdded(bool foo, bool bar);
+//!StructMemberAdded
+    MethodResponseArgumentsAdded() -> (bool foo, bool bar);
+//!StructMemberAdded
+    -> EventArgumentsAdded(bool foo, bool bar);
+    MethodRequestArgumentsRemoved(bool foo);
+    MethodResponseArgumentsRemoved() -> (bool foo);
+    -> EventArgumentsRemoved(bool foo);
+};
+
+protocol MethodArgumentRenamed {
+//!StructMemberRenamed
+    RequestArgument(bool arg, bool after);
+//!StructMemberRenamed
+    ResponseArgument() -> (bool arg, bool after);
+//!StructMemberRenamed
+    -> EventArgument(bool arg, bool after);
+};

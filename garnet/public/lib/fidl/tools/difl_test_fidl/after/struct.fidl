@@ -1,0 +1,155 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+library fidl.difl.test;
+
+// After
+
+//!DeclAdded
+struct StructAdded {
+    int32 field;
+};
+
+// Attributes
+
+[Attribute]
+struct StructAttributeAdded {
+    int32 field;
+};
+
+struct StructAttributeRemoved {
+    int32 field;
+};
+
+[Attribute="after"]
+struct StructAttributeChanged {
+    int32 field;
+};
+
+// Fields
+
+struct StructMemberRenamed {
+//!StructMemberRenamed
+    int32 renamed_field;
+};
+
+//!StructSizeChanged
+struct StructMemberAdded {
+    int32 field;
+//!StructMemberAdded
+    int32 new_field;
+};
+
+//!StructSizeChanged
+struct StructMemberRemoved {
+    int32 field;
+};
+
+struct StructMemberReordered {
+//!StructMemberMoved
+    int32 second;
+//!StructMemberMoved
+    int32 first;
+};
+
+// Field attributes
+
+struct StructMemberAttributeAdded {
+    [Attribute]
+    int32 field;
+};
+
+struct StructMemberAttributeRemoved {
+    int32 field;
+};
+
+struct StructMemberAttributeChanged {
+    [Attribute="before"]
+    int32 field;
+};
+
+// Field types
+
+struct StructMemberSignChanged {
+//!StructMemberTypeChanged
+    uint32 field;
+};
+
+//!StructSizeChanged
+struct StructMemberSizeChanged {
+//!StructMemberSizeChanged
+//!StructMemberTypeChanged
+    int64 field;
+};
+
+//!StructMemberSplit
+struct StructMemberSplit {
+    int16 a;
+    int16 b;
+};
+
+struct StructMemberJoin {
+//!StructMemberJoined
+    int32 ab;
+};
+
+//!StructSizeChanged
+struct StructMemberSplitPadding {
+    uint16 z;
+//!StructMemberAdded
+    int16 a;
+//!StructMemberAdded
+    int16 b;
+};
+
+//!StructSizeChanged
+struct StructMemberJoinPadding {
+    uint16 z;
+//!StructMemberAdded
+    int32 ab;
+};
+
+struct StructMemberStringToOptionalString {
+//!StructMemberTypeChanged
+    string? field;
+};
+
+struct StructMemberStringFromOptionalString {
+//!StructMemberTypeChanged
+    string field;
+};
+
+struct StructMemberHandleToOptionalHandle {
+//!StructMemberTypeChanged
+    handle? field;
+};
+
+struct StructMemberHandleFromOptionalHandle {
+//!StructMemberTypeChanged
+    handle field;
+};
+
+struct StructMemberHandleTypeChanged {
+//!StructMemberTypeChanged
+    handle<socket> field;
+};
+
+struct StructMemberStringLengthChanged {
+//!StructMemberTypeChanged
+    string:10 field;
+};
+
+struct StructMemberVectorLengthChanged {
+//!StructMemberTypeChanged
+    vector<int32>:10 field;
+};
+
+//!StructSizeChanged
+struct StructMemberArrayLengthChanged {
+//!StructMemberSizeChanged
+//!StructMemberTypeChanged
+    array<int32>:10 field;
+};
+
+// Struct Layout
