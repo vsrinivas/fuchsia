@@ -416,23 +416,31 @@ const Elf64_Sym* ElfLib::GetSymbol(const std::string& name) {
 }
 
 std::optional<std::map<std::string, Elf64_Sym>> ElfLib::GetAllSymbols() {
-  auto symtab = GetSymtab();
-
-  if (!symtab.first) {
+  auto [symtab_ptr, symtab_size] = GetSymtab();
+  if (!symtab_ptr)
     return std::nullopt;
-  }
 
   std::map<std::string, Elf64_Sym> out;
 
-  const Elf64_Sym* symbols = symtab.first;
-  const Elf64_Sym* end = symtab.first + symtab.second;
+  // We front-load the sym data, as it's the same memory section for each symbol
+  // within the section.
+  auto string_data = GetSectionData(".strtab");
+  if (!string_data.ptr) {
+    if (!LoadDynamicSymbols())
+      return std::nullopt;
 
+    auto data =
+        memory_->GetLoadedMemory(*dynamic_strtab_offset_, dynamic_strtab_size_);
+    string_data.ptr = data;
+    string_data.size = dynamic_strtab_size_;
+  }
+
+  const Elf64_Sym* symbols = symtab_ptr;
+  const Elf64_Sym* end = symtab_ptr + symtab_size;
   for (auto symbol = symbols; symbol != end; symbol++) {
-    auto got_name = GetString(symbol->st_name);
-
-    if (got_name) {
-      out[*got_name] = *symbol;
-    }
+    auto sym_name = GetNullTerminatedStringAt(string_data.ptr, string_data.size,
+                                              symbol->st_name);
+    out[sym_name] = *symbol;
   }
 
   return out;
