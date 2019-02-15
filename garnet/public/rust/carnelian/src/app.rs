@@ -165,7 +165,11 @@ impl App {
         )
     }
 
-    fn pass_connection_to_assistant(channel: fasync::Channel, service_name: &'static str, app: &AppPtr) {
+    fn pass_connection_to_assistant(
+        channel: fasync::Channel,
+        service_name: &'static str,
+        app: &AppPtr,
+    ) {
         app.lock()
             .assistant
             .as_ref()

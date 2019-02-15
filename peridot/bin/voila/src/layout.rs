@@ -6,6 +6,7 @@ use fidl::encoding::OutOfLine;
 use fidl_fuchsia_math::{InsetF, RectF, SizeF};
 use fidl_fuchsia_ui_viewsv1::{CustomFocusBehavior, ViewLayout, ViewProperties};
 use fuchsia_scenic::EntityNode;
+use carnelian::Size;
 
 /// Container for data related to a single child view displaying an emulated session.
 pub struct ChildViewData {
@@ -29,15 +30,15 @@ impl ChildViewData {
 /// Voila uses a column layout to display 2 or more emulated sessions side by side.
 pub fn layout(
     child_views: &mut [&mut ChildViewData],
-    view_container: &fidl_fuchsia_ui_viewsv1::ViewContainerProxy, width: f32, height: f32,
+    view_container: &fidl_fuchsia_ui_viewsv1::ViewContainerProxy, size: &Size,
 ) -> Result<(), failure::Error> {
     if child_views.is_empty() {
         return Ok(());
     }
     let num_views = child_views.len();
 
-    let tile_height = height;
-    let tile_width = (width / num_views as f32).floor();
+    let tile_height = size.height;
+    let tile_width = (size.width / num_views as f32).floor();
     for (column_index, view) in child_views.iter_mut().enumerate() {
         let tile_bounds = RectF {
             height: tile_height,

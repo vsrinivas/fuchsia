@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::geometry::{Coord, Point, Rect, Size};
+use euclid::rect;
 use failure::Error;
 use fidl_fuchsia_ui_gfx::ColorRgba;
 use rusttype::{Font, FontCollection, Scale};
@@ -46,32 +48,6 @@ impl Color {
     pub fn make_color_rgba(&self) -> ColorRgba {
         ColorRgba { red: self.r, green: self.g, blue: self.b, alpha: self.a }
     }
-}
-
-/// Struct representing an location
-#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
-#[allow(missing_docs)]
-pub struct Point {
-    pub x: u32,
-    pub y: u32,
-}
-
-/// Struct representing an size
-#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
-#[allow(missing_docs)]
-pub struct Size {
-    pub width: u32,
-    pub height: u32,
-}
-
-/// Struct representing a rectangle area.
-#[derive(Hash, Eq, PartialEq, Debug, Default, Clone, Copy)]
-#[allow(missing_docs)]
-pub struct Rect {
-    pub left: u32,
-    pub top: u32,
-    pub right: u32,
-    pub bottom: u32,
 }
 
 /// Struct combining a foreground and background color.
@@ -182,9 +158,12 @@ impl<T: PixelSink> Canvas<T> {
     #[inline]
     fn set_pixel_at_location(&mut self, location: &Point, value: u8, paint: &Paint) {
         let col_stride = BYTES_PER_PIXEL as u32;
-        let row_stride = self.stride as u32;
-        let row_offset = location.y * row_stride + location.x * col_stride;
-        self.set_pixel_at_offset(row_offset as usize, value, paint);
+        let location = location.floor().to_i32();
+        if location.x >= 0 && location.y >= 0 {
+            let location = location.to_u32();
+            let row_offset = location.y * self.stride + location.x * col_stride;
+            self.set_pixel_at_offset(row_offset as usize, value, paint);
+        }
     }
 
     #[inline]
@@ -210,11 +189,12 @@ impl<T: PixelSink> Canvas<T> {
 
     /// Fill a rectangle with a particular color.
     pub fn fill_rect(&mut self, rect: &Rect, color: Color) {
+        let rect = rect.round_out().to_i32();
         let col_stride = BYTES_PER_PIXEL;
         let row_stride = self.stride;
-        for y in rect.top..rect.bottom {
-            for x in rect.left..rect.right {
-                let offset = y * row_stride + x * col_stride;
+        for y in rect.min_y().max(0)..rect.max_y().max(0) {
+            for x in rect.min_x()..rect.max_x() {
+                let offset = y as u32 * row_stride + x as u32 * col_stride;
                 self.write_color_at_offset(offset as usize, color);
             }
         }
@@ -235,27 +215,22 @@ impl<T: PixelSink> Canvas<T> {
         let advance = size.width;
         let scale = Scale::uniform(font.size as f32);
         for scalar in text.chars() {
-            let cell = Rect {
-                left: x,
-                top: location.y,
-                right: x + advance,
-                bottom: location.y + size.height,
-            };
+            let cell = rect(x, location.y, advance, size.height);
             self.fill_rect(&cell, paint.bg);
 
             if scalar != ' ' {
                 let glyph =
                     font.face.font.glyph(scalar).scaled(scale).positioned(rusttype::Point {
-                        x: x as f32,
-                        y: (location.y + font.baseline as u32) as f32,
+                        x: x,
+                        y: (location.y + font.baseline as f32),
                     });
                 if let Some(bounding_box) = glyph.pixel_bounding_box() {
                     glyph.draw(|pixel_x, pixel_y, v| {
                         let value = (v * 255.0) as u8;
-                        let glyph_location = Point {
-                            x: pixel_x + bounding_box.min.x as u32,
-                            y: pixel_y + bounding_box.min.y as u32,
-                        };
+                        let glyph_location = Point::new(
+                            (pixel_x as i32 + bounding_box.min.x) as Coord,
+                            (pixel_y as i32 + bounding_box.min.y) as Coord,
+                        );
                         self.set_pixel_at_location(&glyph_location, value, paint);
                     });
                 }
@@ -282,10 +257,10 @@ impl<T: PixelSink> Canvas<T> {
             if let Some(bounding_box) = glyph.pixel_bounding_box() {
                 glyph.draw(|pixel_x, pixel_y, v| {
                     let value = (v * 255.0) as u8;
-                    let glyph_location = Point {
-                        x: pixel_x + bounding_box.min.x as u32,
-                        y: pixel_y + bounding_box.min.y as u32,
-                    };
+                    let glyph_location = Point::new(
+                        (pixel_x as i32 + bounding_box.min.x) as Coord,
+                        (pixel_y as i32 + bounding_box.min.y) as Coord,
+                    );
                     self.set_pixel_at_location(&glyph_location, value, paint);
                 })
             }

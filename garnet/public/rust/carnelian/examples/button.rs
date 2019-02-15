@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    measure_text, App, AppAssistant, Canvas, Color, FontDescription, FontFace, Paint, Point, Rect,
-    SharedBufferPixelSink, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
+    measure_text, App, AppAssistant, Canvas, Color, Coord, FontDescription, FontFace, Paint, Point,
+    Rect, SharedBufferPixelSink, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
 };
 use failure::{Error, ResultExt};
 use fidl_fuchsia_images as images;
@@ -97,11 +97,11 @@ impl Label {
         let mut canvas = Canvas::<SharedBufferPixelSink>::new(guard.image().buffer(), stride);
 
         // since the label buffer is sized to fit the text, allways draw at 0,0
-        let location = Point { x: 0, y: 0 };
+        let location = Point::zero();
 
         // fill the buffer with the bg color, since fill_text ignore pixels that
         // aren't covered by glyphs
-        let bounds = Rect { left: 0, top: 0, right: w, bottom: h };
+        let bounds = Rect::from_size(Size::new(w as Coord, h as Coord));
         canvas.fill_rect(&bounds, paint.bg);
 
         // Fill the text
@@ -141,19 +141,13 @@ struct Button {
     active: bool,
 }
 
-// Soon this sort of thing will be replaced with function from the
-// Euclid crate.
-fn is_point_in_rect(x: f32, y: f32, r: &Rect) -> bool {
-    x > r.left as f32 && x < r.right as f32 && y > r.top as f32 && y < r.bottom as f32
-}
-
 impl Button {
     pub fn new(session: &SessionPtr, text: &str) -> Result<Button, Error> {
         let mut button = Button {
             label: Label::new(session, text)?,
             background_node: ShapeNode::new(session.clone()),
             container: EntityNode::new(session.clone()),
-            bounds: Default::default(),
+            bounds: Rect::zero(),
             fg_color: Color::white(),
             bg_color: Color::from_hash_code("#404040")?,
             bg_color_active: Color::from_hash_code("#808080")?,
@@ -182,11 +176,11 @@ impl Button {
         // center the button in the Scenic view by translating the
         // container node. All child nodes will be positioned relative
         // to this container
-        let center_x = context.width * 0.5;
-        let center_y = context.height * 0.5;
+        let center_x = context.size.width * 0.5;
+        let center_y = context.size.height * 0.5;
 
         // pick font size and padding based on the available space
-        let min_dimension = context.width.min(context.height);
+        let min_dimension = context.size.width.min(context.size.height);
         let font_size = (min_dimension / 5.0).ceil().min(64.0) as u32;
         let padding = (min_dimension / 20.0).ceil().max(8.0);
         self.container.set_translation(center_x, center_y, 0.0);
@@ -200,17 +194,16 @@ impl Button {
         let button_h = h as f32 + 2.0 * padding;
 
         // record bounds for hit testing
-        self.bounds = Rect {
-            top: (center_y - button_h / 2.0) as u32,
-            bottom: (center_y + button_h / 2.0) as u32,
-            left: (center_x - button_w / 2.0) as u32,
-            right: (center_x + button_w / 2.0) as u32,
-        };
+        self.bounds = Rect::new(
+            Point::new(center_x - button_w / 2.0, center_y - button_h / 2.0),
+            Size::new(button_w, button_h),
+        )
+        .round_out();
 
         self.background_node.set_shape(&Rectangle::new(
             context.session.clone(),
-            button_w,
-            button_h,
+            self.bounds.size.width,
+            self.bounds.size.height,
         ));
 
         self.label.update(font_size, &paint)?;
@@ -230,14 +223,15 @@ impl Button {
         // TODO: extend this to support multiple pointers
         match pointer_event.phase {
             PointerEventPhase::Down => {
-                self.active = is_point_in_rect(pointer_event.x, pointer_event.y, &self.bounds);
+                self.active = self.bounds.contains(&Point::new(pointer_event.x, pointer_event.y));
                 self.tracking = self.active;
             }
             PointerEventPhase::Add => {}
             PointerEventPhase::Hover => {}
             PointerEventPhase::Move => {
                 if self.tracking {
-                    self.active = is_point_in_rect(pointer_event.x, pointer_event.y, &self.bounds);
+                    self.active =
+                        self.bounds.contains(&Point::new(pointer_event.x, pointer_event.y));
                 }
             }
             PointerEventPhase::Up => {
@@ -307,18 +301,18 @@ impl ViewAssistant for ButtonViewAssistant {
     // or if sent an explicit Update message.
     fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
         // Position and size the background
-        let center_x = context.width * 0.5;
-        let center_y = context.height * 0.5;
+        let center_x = context.size.width * 0.5;
+        let center_y = context.size.height * 0.5;
         self.background_node.set_shape(&Rectangle::new(
             context.session.clone(),
-            context.width,
-            context.height,
+            context.size.width,
+            context.size.height,
         ));
         self.background_node.set_translation(center_x, center_y, 0.0);
 
         // Position and size the indicator
-        let indicator_y = context.height / 5.0;
-        let indicator_size = context.height.min(context.width) / 8.0;
+        let indicator_y = context.size.height / 5.0;
+        let indicator_size = context.size.height.min(context.size.width) / 8.0;
         self.indicator.set_shape(&Rectangle::new(
             context.session.clone(),
             indicator_size,

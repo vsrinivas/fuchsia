@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::app::App;
+use crate::{app::App, geometry::Size};
 use failure::Error;
 use fidl::endpoints::{create_endpoints, create_proxy, ServerEnd};
 use fidl_fuchsia_ui_gfx as gfx;
@@ -31,8 +31,7 @@ pub struct ViewAssistantContext<'a> {
     pub import_node: &'a ImportNode,
     pub session: &'a SessionPtr,
     pub key: ViewKey,
-    pub width: f32,
-    pub height: f32,
+    pub size: Size,
     pub messages: Vec<Box<dyn Any>>,
 }
 
@@ -82,8 +81,7 @@ pub struct ViewController {
     view_container: fidl_fuchsia_ui_viewsv1::ViewContainerProxy,
     session: SessionPtr,
     import_node: ImportNode,
-    width: f32,
-    height: f32,
+    size: Size,
     #[allow(unused)]
     key: ViewKey,
     assistant: ViewAssistantPtr,
@@ -137,8 +135,7 @@ impl ViewController {
             import_node: &mut import_node,
             session: &session,
             key,
-            width: 0.0,
-            height: 0.0,
+            size: Size::zero(),
             messages: Vec::new(),
         };
         view_assistant.lock().borrow_mut().setup(&context)?;
@@ -148,8 +145,7 @@ impl ViewController {
             view_container: view_container,
             session,
             import_node,
-            height: 0.0,
-            width: 0.0,
+            size: Size::zero(),
             key,
             assistant: view_assistant,
         };
@@ -209,8 +205,7 @@ impl ViewController {
             import_node: &mut self.import_node,
             session: &self.session,
             key: self.key,
-            width: self.width,
-            height: self.height,
+            size: self.size,
             messages: Vec::new(),
         };
         self.assistant
@@ -232,8 +227,7 @@ impl ViewController {
                     import_node: &mut self.import_node,
                     session: &self.session,
                     key: self.key,
-                    width: self.width,
-                    height: self.height,
+                    size: self.size,
                     messages: Vec::new(),
                 };
                 self.assistant
@@ -262,8 +256,7 @@ impl ViewController {
 
     fn handle_properties_changed(&mut self, properties: &fidl_fuchsia_ui_viewsv1::ViewProperties) {
         if let Some(ref view_properties) = properties.view_layout {
-            self.width = view_properties.size.width;
-            self.height = view_properties.size.height;
+            self.size = Size::new(view_properties.size.width, view_properties.size.height);
             self.update();
         }
     }

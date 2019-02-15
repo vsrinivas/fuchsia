@@ -9,18 +9,20 @@
 //! [modules](https://fuchsia.googlesource.com/fuchsia/+/master/docs/glossary.md#module) in
 //! [Rust](https://www.rust-lang.org/).
 
-#![deny(missing_docs)]
+//#![deny(missing_docs)]
 
 mod app;
 mod canvas;
+mod geometry;
 mod view;
 
 pub use crate::{
     app::{App, AppAssistant, AppPtr, APP},
     canvas::{
-        measure_text, Canvas, Color, FontDescription, FontFace, Paint, PixelSink, Point, Rect,
-        SharedBufferPixelSink, Size,
+        measure_text, Canvas, Color, FontDescription, FontFace, Paint, PixelSink,
+        SharedBufferPixelSink,
     },
+    geometry::{Bounds, Coord, Point, Rect, Size},
     view::{
         ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewController, ViewKey,
         ViewMessages,

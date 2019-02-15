@@ -30,8 +30,6 @@ impl AppAssistant for SpinningSquareAppAssistant {
         Ok(Mutex::new(RefCell::new(Box::new(SpinningSquareViewAssistant {
             background_node: ShapeNode::new(session.clone()),
             spinning_square_node: ShapeNode::new(session.clone()),
-            width: 0.0,
-            height: 0.0,
             start: Time::get(ClockId::Monotonic),
         }))))
     }
@@ -80,8 +78,6 @@ impl SpinningSquareAppAssistant {
 struct SpinningSquareViewAssistant {
     background_node: ShapeNode,
     spinning_square_node: ShapeNode,
-    width: f32,
-    height: f32,
     start: Time,
 }
 
@@ -115,20 +111,18 @@ impl ViewAssistant for SpinningSquareViewAssistant {
     }
 
     fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        self.width = context.width;
-        self.height = context.height;
         const SPEED: f32 = 0.25;
         const SECONDS_PER_NANOSECOND: f32 = 1e-9;
 
-        let center_x = self.width * 0.5;
-        let center_y = self.height * 0.5;
+        let center_x = context.size.width * 0.5;
+        let center_y = context.size.height * 0.5;
         self.background_node.set_shape(&Rectangle::new(
             context.session.clone(),
-            self.width,
-            self.height,
+            context.size.width,
+            context.size.height,
         ));
         self.background_node.set_translation(center_x, center_y, 0.0);
-        let square_size = self.width.min(self.height) * 0.6;
+        let square_size = context.size.width.min(context.size.height) * 0.6;
         let t = ((Time::get(ClockId::Monotonic).nanos() - self.start.nanos()) as f32
             * SECONDS_PER_NANOSECOND
             * SPEED)

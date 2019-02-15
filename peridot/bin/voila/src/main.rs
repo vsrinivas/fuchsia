@@ -39,8 +39,6 @@ impl AppAssistant for VoilaAppAssistant {
         Ok(Mutex::new(RefCell::new(Box::new(VoilaViewAssistant {
             background_node: ShapeNode::new(session.clone()),
             circle_node: ShapeNode::new(session.clone()),
-            width: 0.0,
-            height: 0.0,
             replicas: BTreeMap::new(),
         }))))
     }
@@ -49,8 +47,6 @@ impl AppAssistant for VoilaAppAssistant {
 struct VoilaViewAssistant {
     background_node: ShapeNode,
     circle_node: ShapeNode,
-    width: f32,
-    height: f32,
     replicas: BTreeMap<u32, ReplicaData>,
 }
 
@@ -190,20 +186,17 @@ impl ViewAssistant for VoilaViewAssistant {
     }
 
     fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        self.width = context.width;
-        self.height = context.height;
-
-        let center_x = self.width * 0.5;
-        let center_y = self.height * 0.5;
+        let center_x = context.size.width * 0.5;
+        let center_y = context.size.height * 0.5;
         self.background_node.set_shape(&Rectangle::new(
             context.session.clone(),
-            self.width,
-            self.height,
+            context.size.width,
+            context.size.height,
         ));
         self.background_node
             .set_translation(center_x, center_y, 0.0);
 
-        let circle_radius = self.width.min(self.height) * 0.25;
+        let circle_radius = context.size.width.min(context.size.height) * 0.25;
         self.circle_node
             .set_shape(&Circle::new(context.session.clone(), circle_radius));
         self.circle_node.set_translation(center_x, center_y, 8.0);
@@ -213,7 +206,7 @@ impl ViewAssistant for VoilaViewAssistant {
             .iter_mut()
             .map(|(_key, child_session)| &mut child_session.view)
             .collect();
-        layout(&mut views, context.view_container, self.width, self.height)?;
+        layout(&mut views, context.view_container, &context.size)?;
         Ok(())
     }
 

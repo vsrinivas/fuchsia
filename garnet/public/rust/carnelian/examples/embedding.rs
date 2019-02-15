@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use carnelian::{App, AppAssistant, ViewAssistant, ViewAssistantContext, ViewAssistantPtr};
+use carnelian::{
+    App, AppAssistant, Coord, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
+};
 use failure::Error;
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::create_endpoints;
@@ -41,8 +43,7 @@ impl AppAssistant for EmbeddingAppAssistant {
         )?;
         Ok(Mutex::new(RefCell::new(Box::new(EmbeddingViewAssistant {
             background_node: ShapeNode::new(session.clone()),
-            width: 0.0,
-            height: 0.0,
+            size: Size::zero(),
             app,
             views: BTreeMap::new(),
         }))))
@@ -64,8 +65,7 @@ impl ViewData {
 
 struct EmbeddingViewAssistant {
     background_node: ShapeNode,
-    width: f32,
-    height: f32,
+    size: Size,
     #[allow(unused)]
     app: LaunchedApp,
     views: BTreeMap<u32, ViewData>,
@@ -97,7 +97,7 @@ impl EmbeddingViewAssistant {
 
             let columns = (num_tiles as f32).sqrt().ceil() as usize;
             let rows = (columns + num_tiles - 1) / columns;
-            let tile_height = (self.height / rows as f32).floor();
+            let tile_height = (self.size.height / rows as Coord).floor();
 
             for (row_index, view_chunk) in
                 self.views.iter_mut().chunks(columns).into_iter().enumerate()
@@ -107,7 +107,7 @@ impl EmbeddingViewAssistant {
                 } else {
                     columns
                 };
-                let tile_width = (self.width / tiles_in_row as f32).floor();
+                let tile_width = (self.size.width / tiles_in_row as Coord).floor();
                 for (column_index, (_key, view)) in view_chunk.enumerate() {
                     let mut tile_bounds = RectF {
                         height: tile_height,
@@ -157,15 +157,14 @@ impl ViewAssistant for EmbeddingViewAssistant {
     }
 
     fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        self.width = context.width;
-        self.height = context.height;
+        self.size = context.size;
 
-        let center_x = self.width * 0.5;
-        let center_y = self.height * 0.5;
+        let center_x = self.size.width * 0.5;
+        let center_y = self.size.height * 0.5;
         self.background_node.set_shape(&Rectangle::new(
             context.session.clone(),
-            self.width,
-            self.height,
+            self.size.width,
+            self.size.height,
         ));
         self.background_node.set_translation(center_x, center_y, 0.0);
         self.layout(context.view_container);
