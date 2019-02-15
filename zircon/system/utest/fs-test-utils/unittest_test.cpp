@@ -10,9 +10,9 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
-#include <ramdevice-client/ramdisk.h>
 #include <fs-test-utils/fixture.h>
 #include <fs-test-utils/unittest.h>
+#include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
@@ -65,7 +65,8 @@ END_FS_TEST_CASE(UnittestFixtureTest, OptionsUseRamdiskAndFvm)
 // and run multiple tests.
 BEGIN_FS_TEST_CASE(UnittestFixtureTest, OptionsUseRamdiskAndFvm2)
 RUN_FS_TEST_F(VerifyRamdiskAndFvmExist)
-RUN_FS_TEST_F(VerifyRamdiskAndFvmExist)
+// TODO(gevalentino): FLK-48 flaky.
+// RUN_FS_TEST_F(VerifyRamdiskAndFvmExist)
 RUN_FS_TEST_F(VerifyRamdiskAndFvmExist2)
 END_FS_TEST_CASE(UnittestFixtureTest, OptionsUseRamdiskAndFvm2)
 
