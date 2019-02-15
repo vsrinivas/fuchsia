@@ -139,8 +139,11 @@ impl<B: ByteSlice> Ipv6Packet<B> {
         self.fixed_hdr.hop_limit
     }
 
-    /// The IP Protocol.
-    pub fn proto(&self) -> IpProto {
+    /// The Next Header field.
+    ///
+    /// The Next Header field is the IPv6 equivalent of IPv4's protocol field,
+    /// and uses the same codes, encoded by the Rust type `IpProto`.
+    pub fn next_header(&self) -> IpProto {
         // TODO(tkilbourn): support extension headers
         IpProto::from(self.fixed_hdr.next_hdr)
     }
@@ -171,7 +174,7 @@ impl<B: ByteSlice> Ipv6Packet<B> {
             ecn: self.ecn(),
             flowlabel: self.flowlabel(),
             hop_limit: self.hop_limit(),
-            proto: self.fixed_hdr.next_hdr,
+            next_hdr: self.fixed_hdr.next_hdr,
             src_ip: self.src_ip(),
             dst_ip: self.dst_ip(),
         }
@@ -191,7 +194,7 @@ impl<B: ByteSlice> Debug for Ipv6Packet<B> {
             .field("src_ip", &self.src_ip())
             .field("dst_ip", &self.dst_ip())
             .field("hop_limit", &self.hop_limit())
-            .field("proto", &self.proto())
+            .field("proto", &self.next_header())
             .field("ds", &self.ds())
             .field("ecn", &self.ecn())
             .field("flowlabel", &self.flowlabel())
@@ -207,7 +210,7 @@ pub struct Ipv6PacketBuilder {
     ecn: u8,
     flowlabel: u32,
     hop_limit: u8,
-    proto: u8,
+    next_hdr: u8,
     src_ip: Ipv6Addr,
     dst_ip: Ipv6Addr,
 }
@@ -218,14 +221,14 @@ impl Ipv6PacketBuilder {
         src_ip: Ipv6Addr,
         dst_ip: Ipv6Addr,
         hop_limit: u8,
-        proto: IpProto,
+        next_hdr: IpProto,
     ) -> Ipv6PacketBuilder {
         Ipv6PacketBuilder {
             ds: 0,
             ecn: 0,
             flowlabel: 0,
             hop_limit,
-            proto: proto.into(),
+            next_hdr: next_hdr.into(),
             src_ip,
             dst_ip,
         }
@@ -301,7 +304,7 @@ impl PacketBuilder for Ipv6PacketBuilder {
             panic!("packet length of {} exceeds maximum of {}", payload_len, 1 << 16 - 1,);
         }
         NetworkEndian::write_u16(&mut packet.fixed_hdr.payload_len, payload_len as u16);
-        packet.fixed_hdr.next_hdr = self.proto;
+        packet.fixed_hdr.next_hdr = self.next_hdr;
         packet.fixed_hdr.hop_limit = self.hop_limit;
         packet.fixed_hdr.src_ip = self.src_ip.ipv6_bytes();
         packet.fixed_hdr.dst_ip = self.dst_ip.ipv6_bytes();
@@ -350,7 +353,7 @@ mod tests {
         assert_eq!(packet.ecn(), 2);
         assert_eq!(packet.flowlabel(), 0x77);
         assert_eq!(packet.hop_limit(), 64);
-        assert_eq!(packet.proto(), IpProto::Tcp);
+        assert_eq!(packet.next_header(), IpProto::Tcp);
         assert_eq!(packet.src_ip(), DEFAULT_SRC_IP);
         assert_eq!(packet.dst_ip(), DEFAULT_DST_IP);
         assert_eq!(packet.body(), []);

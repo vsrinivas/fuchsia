@@ -521,7 +521,7 @@ impl<B: ByteSlice> IpPacket<B, Ipv6> for Ipv6Packet<B> {
         Ipv6Packet::dst_ip(self)
     }
     fn proto(&self) -> IpProto {
-        Ipv6Packet::proto(self)
+        Ipv6Packet::next_header(self)
     }
     fn ttl(&self) -> u8 {
         Ipv6Packet::hop_limit(self)
