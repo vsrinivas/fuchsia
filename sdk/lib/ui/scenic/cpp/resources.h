@@ -196,6 +196,16 @@ class Node : public Resource {
   }
   void SetTranslation(const float translation[3]);
   void SetTranslation(uint32_t variable_id);
+
+  // TODO(SCN-1054) These methods are temporary, remove them.
+  void SetTranslationRH(float tx, float ty, float tz) {
+    SetTranslation(tx, ty, -tz);
+  }
+  void SetTranslationRH(const float translation[3]) {
+    SetTranslation(
+        (float[3]){translation[0], translation[1], -1.0f * translation[2]});
+  }
+
   void SetScale(float sx, float sy, float sz) {
     SetScale((float[3]){sx, sy, sz});
   }
