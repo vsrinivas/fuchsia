@@ -1,0 +1,89 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Default [AddressSanitizer](https://llvm.org/docs/AddressSanitizer.html)
+  # options (before the `ASAN_OPTIONS` environment variable is read at
+  # runtime).  This can be set as a build argument to affect most "asan"
+  # variants in $variants (which see), or overridden in $toolchain_args in
+  # one of those variants.  Note that setting this nonempty may conflict
+  # with programs that define their own `__asan_default_options` C
+  # function.
+  asan_default_options = ""
+}
+
+# TODO(mcgrathr): Some of these need runtime DSO deps added.  That will
+# have to be implicit_deps set in the variants rather than here, on
+# resource() targets or suchlike generated to point to the toolchain DSO
+# binaries.
+
+config("asan") {
+  compiler_flags = [ "-fsanitize=address" ]
+  asmflags = compiler_flags
+  cflags = compiler_flags
+  ldflags = compiler_flags
+}
+
+source_set("asan_default_options") {
+  if (asan_default_options != "") {
+    sources = [
+      "asan_default_options.c",
+    ]
+    defines = [ "ASAN_DEFAULT_OPTIONS=\"${asan_default_options}\"" ]
+
+    # On Fuchsia, the ASan runtime is dynamically linked and needs to have
+    # the __asan_default_options symbol exported.  On systems where the
+    # ASan runtime is statically linked, it doesn't matter either way.
+    # TODO: configs -= [ "$zx/public/gn/config:visibility_hidden" ]
+  }
+}
+
+config("ubsan") {
+  compiler_flags = [ "-fsanitize=undefined" ]
+  asmflags = compiler_flags
+  cflags = compiler_flags
+  ldflags = compiler_flags
+}
+
+config("sancov") {
+  compiler_flags = [ "-fsanitize-coverage=trace-pc-guard" ]
+  asmflags = compiler_flags
+  cflags = compiler_flags
+  ldflags = compiler_flags
+}
+
+config("profile") {
+  compiler_flags = [
+    "-fprofile-instr-generate",
+    "-fcoverage-mapping",
+  ]
+  asmflags = compiler_flags
+  cflags = compiler_flags
+  ldflags = compiler_flags
+}
+
+group("profile_deps") {
+  if (is_fuchsia) {
+    # The statically-linked profiling runtime depends on libzircon.
+    deps = [
+      "$zx/system/ulib/zircon",
+    ]
+  }
+}
+
+config("fuzzer") {
+  compiler_flags = [ "-fsanitize=fuzzer" ]
+  asmflags = compiler_flags
+  cflags = compiler_flags
+  ldflags = compiler_flags
+}
+
+group("fuzzer_deps") {
+  if (is_fuchsia) {
+    # The statically-linked libFuzzer runtime depends on libzircon.
+    deps = [
+      "$zx/system/ulib/zircon",
+    ]
+  }
+}

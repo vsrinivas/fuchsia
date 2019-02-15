@@ -103,8 +103,11 @@ library("ngunwind") {
 
   # Compile this with frame pointers so that if we crash
   # the simplistic unwinder will work.
-  configs -= [ "$zx/public/gn/config:default_frame_pointers" ]
-  configs += [ "$zx/public/gn/config:frame_pointers" ]
+  if (configs + [ "$zx/public/gn/config:default_frame_pointers" ] -
+      [ "$zx/public/gn/config:default_frame_pointers" ] != configs) {
+    configs -= [ "$zx/public/gn/config:default_frame_pointers" ]
+    configs += [ "$zx/public/gn/config:frame_pointers" ]
+  }
 
   if (opt_level < 2) {
     # Force -O2 since the library doesn't build with -Og.

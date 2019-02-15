@@ -162,6 +162,75 @@ standard_variants = [
       configs = [ "$zx/public/gn/config/lto:thinlto" ]
     }
   },
+  {
+    variant = {
+      name = "profile"
+      configs = [ "$zx/public/gn/config/instrumentation:profile" ]
+      implicit_deps = [ "$zx/public/gn/config/instrumentation:profile_deps" ]
+      tags = [
+        "instrumented",
+        "useronly",
+      ]
+    }
+  },
+  {
+    variant = {
+      name = "asan"
+      configs = [
+        {
+          # ASan wants frame pointers because it captures stack traces
+          # on allocations and such, not just on errors.
+          remove = [ "$zx/public/gn/config:default_frame_pointers" ]
+          add = [
+            "$zx/public/gn/config:frame_pointers",
+            "$zx/public/gn/config/instrumentation:asan",
+          ]
+        },
+      ]
+      implicit_deps = [
+        {
+          types = [
+            "executable",
+            "host_tool",
+            "test",
+          ]
+          add = [ "$zx/public/gn/config/instrumentation:asan_default_options" ]
+        },
+        {
+          # ASan drivers need to live in an ASan-compatible environment.
+          types = [ "driver" ]
+          remove = [ "$zx/system/core/devmgr:driver_deps" ]
+          add = [ "$zx/system/core/devmgr:driver_deps.$name" ]
+        },
+      ]
+      toolchain_vars = {
+        libprefix = "asan/"
+      }
+      tags = [
+        "instrumented",
+        "useronly",
+      ]
+    }
+  },
+  {
+    variant = {
+      name = "ubsan"
+      configs = [ "$zx/public/gn/config/instrumentation:ubsan" ]
+      tags = [
+        "instrumented",
+        "useronly",
+      ]
+    }
+  },
+  {
+    variant = {
+      name = "asan-ubsan"
+      bases = [
+        "asan",
+        "ubsan",
+      ]
+    }
+  },
 ]
 
 # This list is appended to the $variants list for the build.  It provides
@@ -207,6 +276,24 @@ variant_shorthands = [
       {
         variant = "gcc"
         host = true
+      },
+    ]
+  },
+  {
+    name = "host_asan"
+    selectors = [
+      {
+        variant = "asan"
+        host = true
+      },
+    ]
+  },
+  {
+    name = "asan_drivers"
+    selectors = [
+      {
+        variant = "asan"
+        target_type = [ "driver" ]
       },
     ]
   },
