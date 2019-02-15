@@ -557,7 +557,7 @@ mod tests {
     fn hdr_prefix_to_bytes(hdr_prefix: HeaderPrefix) -> [u8; 20] {
         let mut bytes = [0; 20];
         {
-            let mut lv = LayoutVerified::new_unaligned(&mut bytes[..]).unwrap();
+            let mut lv = LayoutVerified::<_, HeaderPrefix>::new_unaligned(&mut bytes[..]).unwrap();
             *lv = hdr_prefix;
         }
         bytes

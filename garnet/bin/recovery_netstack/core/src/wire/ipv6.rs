@@ -327,7 +327,7 @@ mod tests {
     fn fixed_hdr_to_bytes(fixed_hdr: FixedHeader) -> [u8; 40] {
         let mut bytes = [0; 40];
         {
-            let mut lv = LayoutVerified::new_unaligned(&mut bytes[..]).unwrap();
+            let mut lv = LayoutVerified::<_, FixedHeader>::new_unaligned(&mut bytes[..]).unwrap();
             *lv = fixed_hdr;
         }
         bytes

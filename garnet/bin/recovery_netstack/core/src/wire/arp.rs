@@ -418,7 +418,7 @@ mod tests {
     fn header_to_bytes(header: Header) -> [u8; 8] {
         let mut bytes = [0; 8];
         {
-            let mut lv = LayoutVerified::new_unaligned(&mut bytes[..]).unwrap();
+            let mut lv = LayoutVerified::<_, Header>::new_unaligned(&mut bytes[..]).unwrap();
             *lv = header;
         }
         bytes
