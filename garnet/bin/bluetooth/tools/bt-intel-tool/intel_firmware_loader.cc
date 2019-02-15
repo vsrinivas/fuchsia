@@ -312,7 +312,7 @@ bool IntelFirmwareLoader::RunCommandAndExpect(
   channel_->SendCommand(command);
 
   zx::timer timeout;
-  zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timeout);
+  zx::timer::create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &timeout);
 
   // We use a 5 second timeout for each event.
   zx::duration evt_timeout = zx::sec(5);

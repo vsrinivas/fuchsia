@@ -125,7 +125,7 @@ void CommandChannel::SendCommandSync(
 
   zx_status_t status = ZX_OK;
   zx::timer timeout;
-  zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timeout);
+  zx::timer::create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &timeout);
   // Wait up to 500ms for a response.
   timeout.set(zx::deadline_after(zx::msec(500)), zx::msec(50));
   for (;;) {
