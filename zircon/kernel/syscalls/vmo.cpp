@@ -162,12 +162,10 @@ zx_status_t sys_vmo_get_size(zx_handle_t handle, user_out_ptr<uint64_t> _size) {
     uint64_t size = 0;
     status = vmo->GetSize(&size);
 
-    // copy the size back, even if it failed
-    status = _size.copy_to_user(size);
     if (status != ZX_OK)
         return status;
 
-    return status;
+    return _size.copy_to_user(size);
 }
 
 // zx_status_t zx_vmo_set_size
