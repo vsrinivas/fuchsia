@@ -1,9 +1,9 @@
 disabled_for_asan = [
+  # SCN-1280
+  "/pkgfs/packages/e2e_input_tests/0/test/minimal_input_test",
+
   # CF-584
   "/pkgfs/packages/components_binary_test/0/test/components_binary_argv_test",
-
-  # CF-586
-  "/pkgfs/packages/iquery_golden_test/0/test/iquery_golden_test",
 
   # MF-193
   "/pkgfs/packages/modular_tests/0/test/run_modular_tests.sh",
