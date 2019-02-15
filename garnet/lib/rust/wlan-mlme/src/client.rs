@@ -5,9 +5,11 @@
 use {
     crate::auth,
     failure::Error,
+    std::{ops::Deref, ops::DerefMut},
     wlan_common::{
-        buffer_writer::{BufferWriter, ByteSliceMut},
-        mac,
+        buffer_writer::{BufferWriter, ByteSliceMut, LayoutVerified},
+        mac::{self, OptionalField},
+        data_writer, mgmt_writer,
     },
 };
 
@@ -19,15 +21,13 @@ pub fn write_open_auth_frame<B: ByteSliceMut>(
     client_addr: MacAddr,
     seq_ctrl: u16,
 ) -> Result<BufferWriter<B>, Error> {
-    let (mut mgmt_hdr, mut w) = BufferWriter::new(buf).reserve_zeroed::<mac::MgmtHdr>()?;
-    let mut fc = mac::FrameControl(0);
-    fc.set_frame_type(mac::FRAME_TYPE_MGMT);
-    fc.set_frame_subtype(mac::MGMT_SUBTYPE_AUTH);
-    mgmt_hdr.set_frame_ctrl(fc.value());
-    mgmt_hdr.addr1 = bssid;
-    mgmt_hdr.addr2 = client_addr;
-    mgmt_hdr.addr3 = bssid;
-    mgmt_hdr.set_seq_ctrl(seq_ctrl);
+    let mut frame_ctrl = mac::FrameControl(0);
+    frame_ctrl.set_frame_subtype(mac::MGMT_SUBTYPE_AUTH);
+    let mut w = mgmt_writer::write_mgmt_hdr(
+        BufferWriter::new(buf),
+        mgmt_writer::FixedFields::sent_from_client(frame_ctrl, bssid, client_addr, seq_ctrl),
+        None,
+    )?;
 
     let (mut auth_hdr, w) = w.reserve_zeroed::<mac::AuthHdr>()?;
     auth::write_client_req(&mut auth_hdr);
@@ -41,15 +41,13 @@ pub fn write_deauth_frame<B: ByteSliceMut>(
     seq_ctrl: u16,
     reason_code: mac::ReasonCode,
 ) -> Result<BufferWriter<B>, Error> {
-    let (mut mgmt_hdr, mut w) = BufferWriter::new(buf).reserve_zeroed::<mac::MgmtHdr>()?;
-    let mut fc = mac::FrameControl(0);
-    fc.set_frame_type(mac::FRAME_TYPE_MGMT);
-    fc.set_frame_subtype(mac::MGMT_SUBTYPE_DEAUTH);
-    mgmt_hdr.set_frame_ctrl(fc.value());
-    mgmt_hdr.addr1 = bssid;
-    mgmt_hdr.addr2 = client_addr;
-    mgmt_hdr.addr3 = bssid;
-    mgmt_hdr.set_seq_ctrl(seq_ctrl);
+    let mut frame_ctrl = mac::FrameControl(0);
+    frame_ctrl.set_frame_subtype(mac::MGMT_SUBTYPE_DEAUTH);
+    let mut w = mgmt_writer::write_mgmt_hdr(
+        BufferWriter::new(buf),
+        mgmt_writer::FixedFields::sent_from_client(frame_ctrl, bssid, client_addr, seq_ctrl),
+        None,
+    )?;
 
     let (mut deauth_hdr, w) = w.reserve_zeroed::<mac::DeauthHdr>()?;
     deauth_hdr.set_reason_code(reason_code as u16);
@@ -63,16 +61,13 @@ pub fn write_keep_alive_resp_frame<B: ByteSliceMut>(
     client_addr: MacAddr,
     seq_ctrl: u16,
 ) -> Result<BufferWriter<B>, Error> {
-    let (mut data_hdr, w) = BufferWriter::new(buf).reserve_zeroed::<mac::DataHdr>()?;
-    let mut fc = mac::FrameControl(0);
-    fc.set_frame_type(mac::FRAME_TYPE_DATA);
-    fc.set_frame_subtype(mac::DATA_SUBTYPE_NULL_DATA);
-    fc.set_to_ds(true);
-    data_hdr.set_frame_ctrl(fc.value());
-    data_hdr.addr1 = bssid;
-    data_hdr.addr2 = client_addr;
-    data_hdr.addr3 = bssid;
-    data_hdr.set_seq_ctrl(seq_ctrl);
+    let mut frame_ctrl = mac::FrameControl(0);
+    frame_ctrl.set_frame_subtype(mac::DATA_SUBTYPE_NULL_DATA);
+    let w = data_writer::write_data_hdr(
+        BufferWriter::new(buf),
+        data_writer::FixedFields::sent_from_client(frame_ctrl, bssid, client_addr, seq_ctrl),
+        data_writer::OptionalFields::none(),
+    )?;
     Ok(w)
 }
 

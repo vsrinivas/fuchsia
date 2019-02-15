@@ -12,8 +12,10 @@
 mod utils;
 pub mod buffer_writer;
 pub mod channel;
+pub mod data_writer;
 pub mod ie;
 pub mod mac;
+pub mod mgmt_writer;
 pub mod sequence;
 
 use channel::{Cbw, Phy};
