@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	"app/context"
@@ -98,9 +97,8 @@ func netAddrToString(addr net.IpAddress) string {
 }
 
 func flagsToString(flags uint32) string {
-	var b strings.Builder
 	if flags&netstack.NetInterfaceFlagUp != 0 {
-		b.WriteString("UP")
+		return "UP"
 	}
-	return b.String()
+	return "DOWN"
 }

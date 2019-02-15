@@ -352,11 +352,10 @@ func netAddrToString(addr netfidl.IpAddress) string {
 }
 
 func flagsToString(flags uint32) string {
-	var b strings.Builder
 	if flags&netstack.NetInterfaceFlagUp != 0 {
-		b.WriteString("UP")
+		return "UP"
 	}
-	return b.String()
+	return "DOWN"
 }
 
 func toIpAddress(addr net.IP) netfidl.IpAddress {
