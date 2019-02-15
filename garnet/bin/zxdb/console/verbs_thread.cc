@@ -309,19 +309,36 @@ Err DoUp(ConsoleContext* context, const Command& cmd) {
     return Err("Cannot find current frame.");
   }
 
-  id += 1;
-
   if (cmd.thread()->GetStack().size() == 0) {
     return Err("No stack frames.");
   }
 
-  if (static_cast<size_t>(id) >= cmd.thread()->GetStack().size()) {
-    return Err("At top of stack.");
-  }
+  id += 1;
 
-  context->SetActiveFrameIdForThread(cmd.thread(), id);
-  FormatFrameAsync(context, cmd.target(), cmd.thread(),
-                   cmd.thread()->GetStack()[id]);
+  auto cb = [context, cmd, id](const Err& err) {
+    Err got;
+
+    if (!err.has_error() &&
+        static_cast<size_t>(id) >= cmd.thread()->GetStack().size()) {
+      got = Err("At top of stack.");
+    } else {
+      got = err;
+    }
+
+    if (got.has_error()) {
+      Console::get()->Output(got);
+    } else {
+      context->SetActiveFrameIdForThread(cmd.thread(), id);
+      FormatFrameAsync(context, cmd.target(), cmd.thread(),
+                       cmd.thread()->GetStack()[id]);
+    }
+  };
+
+  if (cmd.thread()->GetStack().has_all_frames()) {
+    cb(Err());
+  } else {
+    cmd.thread()->GetStack().SyncFrames(std::move(cb));
+  }
 
   return Err();
 }
