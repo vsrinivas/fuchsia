@@ -456,6 +456,28 @@ TEST_F(DATA_SocketChannelRelayRxTest,
       << "Found unexpected datagram";
 }
 
+TEST_F(DATA_SocketChannelRelayRxTest, OldestSDUIsDroppedOnOverflow) {
+  size_t n_junk_bytes = StuffSocket();
+  ASSERT_TRUE(n_junk_bytes);
+
+  const auto kSentMessage1 = common::CreateStaticByteBuffer(1);
+  const auto kSentMessage2 = common::CreateStaticByteBuffer(2);
+  const auto kSentMessage3 = common::CreateStaticByteBuffer(3);
+  ASSERT_TRUE(relay()->Activate());
+  channel()->Receive(kSentMessage1);
+  channel()->Receive(kSentMessage2);
+  channel()->Receive(kSentMessage3);
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(DiscardFromSocket(n_junk_bytes));
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(common::ContainersEqual(
+      kSentMessage2, ReadDatagramFromSocket(kSentMessage2.size())));
+  EXPECT_TRUE(common::ContainersEqual(
+      kSentMessage3, ReadDatagramFromSocket(kSentMessage3.size())));
+}
+
 TEST_F(DATA_SocketChannelRelayRxTest,
        SdusReceivedBeforeChannelActivationAreCopiedToSocket) {
   const auto kExpectedMessage1 =

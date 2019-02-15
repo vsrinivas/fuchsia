@@ -17,12 +17,13 @@ namespace btlib::data::internal {
 template <typename ChannelT>
 SocketChannelRelay<ChannelT>::SocketChannelRelay(
     zx::socket socket, fbl::RefPtr<ChannelT> channel,
-    DeactivationCallback deactivation_cb)
+    DeactivationCallback deactivation_cb, size_t socket_write_queue_max_frames)
     : state_(RelayState::kActivating),
       socket_(std::move(socket)),
       channel_(channel),
       dispatcher_(async_get_default_dispatcher()),
       deactivation_cb_(std::move(deactivation_cb)),
+      socket_write_queue_max_frames_(socket_write_queue_max_frames),
       weak_ptr_factory_(this) {
   ZX_DEBUG_ASSERT(dispatcher_);
   ZX_DEBUG_ASSERT(socket_);
@@ -176,6 +177,15 @@ void SocketChannelRelay<ChannelT>::OnChannelDataReceived(
     return;
   }
 
+  ZX_DEBUG_ASSERT(socket_write_queue_.size() <= socket_write_queue_max_frames_);
+  // On a full queue, we drop the oldest element, on the theory that newer data
+  // is more useful. This should be true, e.g., for real-time applications such
+  // as voice calls. In the future, we may want to make the drop-head vs.
+  // drop-tail choice configurable.
+  if (socket_write_queue_.size() == socket_write_queue_max_frames_) {
+    // TODO(BT-732): Add a metric for number of dropped frames.
+    socket_write_queue_.pop_front();
+  }
   socket_write_queue_.push_back(std::move(rx_data));
   ServiceSocketWriteQueue();
 }

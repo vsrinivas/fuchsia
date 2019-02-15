@@ -32,6 +32,12 @@ class SocketChannelRelay final {
  public:
   using DeactivationCallback = fit::function<void()>;
 
+  // The kernel allows up to ~256 KB in a socket buffer, which is enough for
+  // about 1 second of data at 2 Mbps. Until we have a use case that requires
+  // more than 1 second of buffering, we allow only a small amount of buffering
+  // within SocketChannelRelay itself.
+  static constexpr size_t kDefaultSocketWriteQueueLimitFrames = 2;
+
   // Creates a SocketChannelRelay which executes on |dispatcher|. Note that
   // |dispatcher| must be single-threaded.
   //
@@ -53,7 +59,9 @@ class SocketChannelRelay final {
   // moving the data between the zx::socket and the ChannelT needs to be
   // serialized even in the multi-threaded case.
   SocketChannelRelay(zx::socket socket, fbl::RefPtr<ChannelT> channel,
-                     DeactivationCallback deactivation_cb);
+                     DeactivationCallback deactivation_cb,
+                     size_t socket_write_queue_max_frames =
+                         kDefaultSocketWriteQueueLimitFrames);
   ~SocketChannelRelay();
 
   // Enables read and close callbacks for the zx::socket and the
@@ -127,6 +135,7 @@ class SocketChannelRelay final {
   const fbl::RefPtr<ChannelT> channel_;
   async_dispatcher_t* const dispatcher_;
   DeactivationCallback deactivation_cb_;
+  const size_t socket_write_queue_max_frames_;
 
   async::Wait sock_read_waiter_;
   async::Wait sock_write_waiter_;
