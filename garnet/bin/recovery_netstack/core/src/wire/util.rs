@@ -327,8 +327,8 @@ mod options {
     pub trait OptionImpl<'a>: OptionImplErr {
         /// The value to multiply read lengths by.
         ///
-        /// By default, this value is 1, but some options (such as NDP) this
-        /// may be different.
+        /// By default, this value is 1, but for some protocols (such as NDP)
+        /// this may be different.
         const OPTION_LEN_MULTIPLIER: usize = 1;
 
         /// The End of options type (if one exists).
@@ -458,7 +458,7 @@ mod options {
             }
             let len = bytes[1] as usize * O::OPTION_LEN_MULTIPLIER;
             if len < 2 || len > bytes.len() {
-                return Err(OptionParseErr::Internal);
+                return debug_err!(Err(OptionParseErr::Internal), "option length {} is either too short or longer than the total buffer length of {}", len, bytes.len());
             }
             *idx += len;
             match O::parse(bytes[0], &bytes[2..len]) {

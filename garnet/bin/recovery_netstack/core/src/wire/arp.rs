@@ -397,7 +397,6 @@ mod tests {
 
     #[test]
     fn test_parse_serialize_full() {
-        crate::testutil::set_logger_for_test();
         use crate::wire::testdata::*;
 
         let mut req = &ARP_REQUEST[..];

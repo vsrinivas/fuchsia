@@ -115,7 +115,8 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
         let options = buffer
             .take_front(hdr_bytes - HEADER_PREFIX_SIZE)
             .ok_or_else(debug_err_fn!(ParseError::Format, "IHL larger than buffer"))?;
-        let options = Options::parse(options).map_err(|_| ParseError::Format)?;
+        let options = Options::parse(options)
+            .map_err(|err| debug_err!(ParseError::Format, "malformed options: {:?}", err))?;
         if hdr_prefix.version() != 4 {
             return debug_err!(
                 Err(ParseError::Format),

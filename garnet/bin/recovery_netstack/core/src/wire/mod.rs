@@ -58,6 +58,6 @@ pub mod ipv4;
 pub mod ipv6;
 pub mod tcp;
 #[cfg(test)]
-mod testdata;
+pub mod testdata;
 pub mod udp;
 mod util;

@@ -10,11 +10,16 @@ use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};
 
 use byteorder::{ByteOrder, NativeEndian};
+use packet::ParseBuffer;
 use rand::{SeedableRng, XorShiftRng};
 
+use crate::device::ethernet::{EtherType, Mac};
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
+use crate::error::ParseError;
+use crate::ip::{Ip, IpExt, IpPacket, IpProto};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
+use crate::wire::ethernet::EthernetFrame;
 use crate::{handle_timeout, Context, EventDispatcher, TimerId};
 
 /// Create a new deterministic RNG from a seed.
@@ -96,6 +101,58 @@ pub fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> bool {
     }
 }
 
+/// Parse an ethernet frame.
+///
+/// `parse_ethernet_frame` parses an ethernet frame, returning the body along
+/// with some important header fields.
+pub fn parse_ethernet_frame(
+    mut buf: &[u8],
+) -> Result<(&[u8], Mac, Mac, Option<EtherType>), ParseError> {
+    let frame = (&mut buf).parse::<EthernetFrame<_>>()?;
+    let src_mac = frame.src_mac();
+    let dst_mac = frame.dst_mac();
+    let ethertype = frame.ethertype();
+    Ok((buf, src_mac, dst_mac, ethertype))
+}
+
+/// Parse an IP packet.
+///
+/// `parse_ip_packet` parses an IP packet, returning the body along with some
+/// important header fields.
+pub fn parse_ip_packet<I: Ip>(
+    mut buf: &[u8],
+) -> Result<(&[u8], I::Addr, I::Addr, IpProto), ParseError> {
+    let packet = (&mut buf).parse::<<I as IpExt<_>>::Packet>()?;
+    let src_ip = packet.src_ip();
+    let dst_ip = packet.dst_ip();
+    let proto = packet.proto();
+    // Because the packet type here is generic, Rust doesn't know that it
+    // doesn't implement Drop, and so it doesn't know that it's safe to drop as
+    // soon as it's no longer used and allow buf to no longer be borrowed on the
+    // next line. It works fine in parse_ethernet_frame because EthernetFrame is
+    // a concrete type which Rust knows doesn't implement Drop.
+    std::mem::drop(packet);
+    Ok((buf, src_ip, dst_ip, proto))
+}
+
+/// Parse an IP packet in an Ethernet frame.
+///
+/// `parse_ip_packet_in_ethernet_frame` parses an IP packet in an Ethernet
+/// frame, returning the body of the IP packet along with some important fields
+/// from both the IP and Ethernet headers.
+pub fn parse_ip_packet_in_ethernet_frame<I: Ip>(
+    buf: &[u8],
+) -> Result<(&[u8], Mac, Mac, Option<EtherType>, I::Addr, I::Addr, IpProto), ParseError> {
+    let (body, src_mac, dst_mac, ethertype) = parse_ethernet_frame(buf)?;
+    let (body, src_ip, dst_ip, proto) = parse_ip_packet::<I>(body)?;
+    Ok((body, src_mac, dst_mac, ethertype, src_ip, dst_ip, proto))
+}
+
+/// A dummy `EventDispatcher` used for testing.
+///
+/// A `DummyEventDispatcher` implements the `EventDispatcher` interface for
+/// testing purposes. It provides facilities to inspect the history of what
+/// events have been emitted to the system.
 pub struct DummyEventDispatcher {
     frames_sent: Vec<(DeviceId, Vec<u8>)>,
     timer_events: BTreeMap<Instant, TimerId>,
@@ -169,5 +226,54 @@ impl EventDispatcher for DummyEventDispatcher {
             }
             None => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+
+    #[test]
+    fn test_parse_ethernet_frame() {
+        use crate::wire::testdata::ARP_REQUEST;
+        let (body, src_mac, dst_mac, ethertype) = parse_ethernet_frame(ARP_REQUEST).unwrap();
+        assert_eq!(body, &ARP_REQUEST[14..]);
+        assert_eq!(src_mac, Mac::new([20, 171, 197, 116, 32, 52]));
+        assert_eq!(dst_mac, Mac::new([255, 255, 255, 255, 255, 255]));
+        assert_eq!(ethertype, Some(EtherType::Arp));
+    }
+
+    #[test]
+    fn test_parse_ip_packet() {
+        use crate::wire::testdata::icmp_redirect::IP_PACKET_BYTES;
+        let (body, src_ip, dst_ip, proto) = parse_ip_packet::<Ipv4>(IP_PACKET_BYTES).unwrap();
+        assert_eq!(body, &IP_PACKET_BYTES[20..]);
+        assert_eq!(src_ip, Ipv4Addr::new([10, 123, 0, 2]));
+        assert_eq!(dst_ip, Ipv4Addr::new([10, 123, 0, 1]));
+        assert_eq!(proto, IpProto::Icmp);
+
+        use crate::wire::testdata::icmp_echo_v6::REQUEST_IP_PACKET_BYTES;
+        let (body, src_ip, dst_ip, proto) =
+            parse_ip_packet::<Ipv6>(REQUEST_IP_PACKET_BYTES).unwrap();
+        assert_eq!(body, &REQUEST_IP_PACKET_BYTES[40..]);
+        assert_eq!(src_ip, Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]));
+        assert_eq!(dst_ip, Ipv6Addr::new([0xFE, 0xC0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]));
+        assert_eq!(proto, IpProto::Icmpv6);
+    }
+
+    #[test]
+    fn test_parse_ip_packet_in_ethernet_frame() {
+        use crate::wire::testdata::tls_client_hello::*;
+        let (body, src_mac, dst_mac, ethertype, src_ip, dst_ip, proto) =
+            parse_ip_packet_in_ethernet_frame::<Ipv4>(ETHERNET_FRAME_BYTES).unwrap();
+        assert_eq!(body, &(ETHERNET_FRAME_BYTES[ETHERNET_BODY_RANGE])[IP_BODY_RANGE]);
+        assert_eq!(src_mac, ETHERNET_SRC_MAC);
+        assert_eq!(dst_mac, ETHERNET_DST_MAC);
+        assert_eq!(ethertype, Some(EtherType::Ipv4));
+        assert_eq!(src_ip, IP_SRC_IP);
+        assert_eq!(dst_ip, IP_DST_IP);
+        assert_eq!(proto, IpProto::Tcp);
     }
 }
