@@ -209,6 +209,15 @@ class EnclosingEnvironment {
     ConnectToService(service_name, request.TakeChannel());
   }
 
+  // Connects to service provided by this environment.
+  template <typename Interface>
+  fidl::InterfacePtr<Interface> ConnectToService(
+      const std::string& service_name = Interface::Name_) {
+    fidl::InterfacePtr<Interface> ptr;
+    ConnectToService(service_name, ptr.NewRequest().TakeChannel());
+    return ptr;
+  }
+
   // Sets a listener for changes in the running status
   void SetRunningChangedCallback(fit::function<void(bool)> cb) {
     running_changed_callback_ = std::move(cb);

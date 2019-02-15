@@ -92,8 +92,8 @@ TEST_F(RealmTest, Resolve) {
   auto enclosing_environment =
       CreateNewEnclosingEnvironment(kRealm, CreateServices());
 
-  fidl::InterfacePtr<fuchsia::process::Resolver> resolver;
-  enclosing_environment->ConnectToService(resolver.NewRequest());
+  auto resolver =
+      enclosing_environment->ConnectToService<fuchsia::process::Resolver>();
 
   bool wait = false;
   resolver->Resolve(
