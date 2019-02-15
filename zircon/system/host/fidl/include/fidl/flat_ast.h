@@ -1003,7 +1003,8 @@ public:
                 Library** out_library) const;
 
     void AddAttributeSchema(const std::string& name, AttributeSchema schema) {
-        auto iter = attribute_schemas_.emplace(name, std::move(schema));
+        [[maybe_unused]] auto iter =
+            attribute_schemas_.emplace(name, std::move(schema));
         assert(iter.second && "do not add schemas twice");
     }
 

@@ -1784,6 +1784,8 @@ bool Library::ResolveConstant(Constant* constant, const Type* type) {
         assert(false && "Compiler bug: synthesized constant does not have a resolved value!");
     }
     }
+
+    __UNREACHABLE;
 }
 
 bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant, const Type* type) {
