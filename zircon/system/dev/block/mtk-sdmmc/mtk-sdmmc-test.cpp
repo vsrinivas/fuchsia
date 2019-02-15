@@ -52,7 +52,7 @@ public:
     }
 
 protected:
-    zx_status_t WaitForInterrupt() override {
+    zx_status_t WaitForInterrupt(zx::time* timestamp) override {
         while (!thread_stop_) {
             fbl::AutoLock mutex_al(&mutex_);
             if (req_ != nullptr) {

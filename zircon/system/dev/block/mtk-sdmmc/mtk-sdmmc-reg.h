@@ -61,6 +61,7 @@ public:
     DEF_BIT(10, cmd_crc_err);
     DEF_BIT(9, cmd_timeout);
     DEF_BIT(8, cmd_ready);
+    DEF_BIT(7, sdio_irq);
 };
 
 class MsdcIntEn : public hwreg::RegisterBase<MsdcIntEn, uint32_t> {
@@ -75,6 +76,7 @@ public:
     DEF_BIT(10, cmd_crc_err_enable);
     DEF_BIT(9, cmd_timeout_enable);
     DEF_BIT(8, cmd_ready_enable);
+    DEF_BIT(7, sdio_irq_enable);
 };
 
 class MsdcFifoCs : public hwreg::RegisterBase<MsdcFifoCs, uint32_t> {

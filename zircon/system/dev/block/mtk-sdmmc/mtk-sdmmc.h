@@ -57,7 +57,7 @@ public:
 
     virtual ~MtkSdmmc() = default;
 
-    void DdkRelease() { delete this; }
+    void DdkRelease();
 
     zx_status_t Bind();
 
@@ -85,7 +85,7 @@ public:
 
     // Visible for testing.
 protected:
-    virtual zx_status_t WaitForInterrupt();
+    virtual zx_status_t WaitForInterrupt(zx::time* timestamp);
 
     int JoinIrqThread() {
         return thrd_join(irq_thread_, nullptr);
@@ -129,6 +129,7 @@ private:
     zx::bti bti_;
     const sdmmc_host_info_t info_;
     zx::interrupt irq_;
+    zx::interrupt sdio_irq_;
     thrd_t irq_thread_;
     io_buffer_t gpdma_buf_;
     io_buffer_t bdma_buf_;

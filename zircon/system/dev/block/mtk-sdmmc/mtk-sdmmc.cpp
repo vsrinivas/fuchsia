@@ -181,6 +181,12 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
     return ZX_OK;
 }
 
+void MtkSdmmc::DdkRelease() {
+    irq_.reset();
+    JoinIrqThread();
+    delete this;
+}
+
 zx_status_t MtkSdmmc::Bind() {
     zx_status_t status = DdkAdd("mtk-sdmmc");
     if (status != ZX_OK) {
@@ -201,8 +207,8 @@ zx_status_t MtkSdmmc::Init() {
 
     auto sdc_cfg = SdcCfg::Get().ReadFrom(&mmio_);
     if (dev_info_.did == PDEV_DID_MEDIATEK_SDIO) {
-        // TODO(bradenkell): Handle in-band interrupts from the SDIO device.
-        sdc_cfg.set_sdio_interrupt_enable(0).set_sdio_enable(1);
+        sdc_cfg.set_sdio_interrupt_enable(1).set_sdio_enable(1);
+        MsdcIntEn::Get().FromValue(0).set_sdio_irq_enable(1).WriteTo(&mmio_);
     }
 
     sdc_cfg.set_bus_width(SdcCfg::kBusWidth1).WriteTo(&mmio_);
@@ -763,8 +769,28 @@ RequestStatus MtkSdmmc::SdmmcRequestWithStatus(sdmmc_req_t* req) {
     return req_status;
 }
 
-zx_status_t MtkSdmmc::SdmmcGetInBandInterrupt(zx::interrupt* out) {
-    return ZX_ERR_NOT_SUPPORTED;
+zx_status_t MtkSdmmc::SdmmcGetInBandInterrupt(zx::interrupt* out_irq) {
+    if (dev_info_.did != PDEV_DID_MEDIATEK_SDIO) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    if (sdio_irq_.is_valid()) {
+        zxlogf(ERROR, "%s: Interrupt already exists\n", __FILE__);
+        return ZX_ERR_ALREADY_EXISTS;
+    }
+
+    zx_status_t status = zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &sdio_irq_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to create interrupt\n", __FILE__);
+        return status;
+    }
+
+    if ((status = sdio_irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, out_irq)) != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to duplicate interrupt\n", __FILE__);
+        return status;
+    }
+
+    return ZX_OK;
 }
 
 bool MtkSdmmc::CmdDone(const MsdcInt& msdc_int) {
@@ -805,7 +831,8 @@ bool MtkSdmmc::CmdDone(const MsdcInt& msdc_int) {
 
 int MtkSdmmc::IrqThread() {
     while (1) {
-        if (WaitForInterrupt() != ZX_OK) {
+        zx::time timestamp;
+        if (WaitForInterrupt(&timestamp) != ZX_OK) {
             zxlogf(ERROR, "%s: IRQ wait failed\n", __FILE__);
             return thrd_error;
         }
@@ -814,6 +841,17 @@ int MtkSdmmc::IrqThread() {
         auto msdc_int = MsdcInt::Get().ReadFrom(&mmio_).WriteTo(&mmio_);
 
         fbl::AutoLock mutex_al(&mutex_);
+
+        if (msdc_int.sdio_irq()) {
+            if (sdio_irq_.is_valid()) {
+                sdio_irq_.trigger(0, timestamp);
+            }
+
+            msdc_int.set_sdio_irq(0);
+            if (msdc_int.reg_value() == 0) {
+                continue;
+            }
+        }
 
         if (req_ == nullptr) {
             zxlogf(ERROR, "%s: Received interrupt with no request, MSDC_INT=%08x\n", __FILE__,
@@ -847,15 +885,18 @@ int MtkSdmmc::IrqThread() {
             continue;
         }
 
-        MsdcIntEn::Get().FromValue(0).WriteTo(&mmio_);
+        MsdcIntEn::Get()
+            .FromValue(0)
+            .set_sdio_irq_enable(dev_info_.did == PDEV_DID_MEDIATEK_SDIO ? 1 : 0)
+            .WriteTo(&mmio_);
+
         req_ = nullptr;
         sync_completion_signal(&req_completion_);
     }
 }
 
-zx_status_t MtkSdmmc::WaitForInterrupt() {
-    zx::time timestamp;
-    return irq_.wait(&timestamp);
+zx_status_t MtkSdmmc::WaitForInterrupt(zx::time* timestamp) {
+    return irq_.wait(timestamp);
 }
 
 }  // namespace sdmmc
