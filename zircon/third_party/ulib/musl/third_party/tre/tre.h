@@ -35,7 +35,7 @@
 
 #undef TRE_MBSTATE
 
-#define NDEBUG
+#define NDEBUG 1
 
 #define TRE_REGEX_T_FIELD __opaque
 typedef int reg_errcode_t;

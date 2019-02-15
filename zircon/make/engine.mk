@@ -953,7 +953,7 @@ HOST_DEFINES += \
 endif
 
 ifeq ($(DEBUG),0)
-GLOBAL_DEFINES += NDEBUG
+GLOBAL_DEFINES += NDEBUG=1
 endif
 
 #$(info LIBGCC = $(LIBGCC))
