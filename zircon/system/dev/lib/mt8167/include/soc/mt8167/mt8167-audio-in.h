@@ -14,13 +14,17 @@ class MtAudioInDevice {
 
 public:
     enum MtI2sCh {
+        I2S6, // TDM IN.
         I2S3, // Primary.
         I2S1, // Secondary. Documention some times calls I2S1 "I2S".
     };
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(MtAudioInDevice);
 
-    static std::unique_ptr<MtAudioInDevice> Create(ddk::MmioBuffer mmio, MtI2sCh ch);
+    static std::unique_ptr<MtAudioInDevice> Create(ddk::MmioBuffer mmio_audio,
+                                                   ddk::MmioBuffer mmio_clk,
+                                                   ddk::MmioBuffer mmio_pll,
+                                                   MtI2sCh ch);
 
     // Sets the buffer/length pointers for the DMA engine,
     // must reside in the lower 32-bits of the address space.
@@ -39,15 +43,24 @@ public:
     void Shutdown();
 
     uint32_t fifo_depth() const { return fifo_depth_; };
+    zx_status_t SetRate(uint32_t frames_per_second);
 
 private:
     const uint32_t fifo_depth_; // in bytes.
-    ddk::MmioBuffer mmio_;
+    uint32_t frames_per_second_;
+    ddk::MmioBuffer mmio_audio_;
+    ddk::MmioBuffer mmio_clk_;
+    ddk::MmioBuffer mmio_pll_;
 
     // TODO(andresoportus): Add more configuration options.
-    MtAudioInDevice(ddk::MmioBuffer mmio, uint32_t fifo_depth)
+    MtAudioInDevice(ddk::MmioBuffer mmio_audio,
+                    ddk::MmioBuffer mmio_clk,
+                    ddk::MmioBuffer mmio_pll,
+                    uint32_t fifo_depth)
         : fifo_depth_(fifo_depth),
-          mmio_(std::move(mmio)){};
+          mmio_audio_(std::move(mmio_audio)),
+          mmio_clk_(std::move(mmio_clk)),
+          mmio_pll_(std::move(mmio_pll)){};
 
     void InitRegs();
 };

@@ -18,9 +18,11 @@ namespace mt8167 {
 
 // Expects 2 mics.
 constexpr size_t kNumberOfChannels = 2;
-// Calculate ring buffer size for 1 second of 16-bit, 48kHz.
-constexpr size_t kRingBufferSize = fbl::round_up<size_t, size_t>(48000 * 2 * kNumberOfChannels,
-                                                                 PAGE_SIZE);
+constexpr size_t kMinSampleRate = 8000;
+constexpr size_t kMaxSampleRate = 192000;
+// Calculate ring buffer size for 1 second of 16-bit.
+constexpr size_t kRingBufferSize = fbl::round_up<size_t, size_t>(
+    kMaxSampleRate * 2 * kNumberOfChannels, PAGE_SIZE);
 
 Mt8167AudioStreamIn::Mt8167AudioStreamIn(zx_device_t* parent)
     : SimpleAudioStream(parent, true /* is input */), pdev_(parent) {
@@ -100,7 +102,8 @@ zx_status_t Mt8167AudioStreamIn::InitPdev() {
         return status;
     }
 
-    mt_audio_ = MtAudioInDevice::Create(*std::move(mmio_audio), MtAudioInDevice::I2S3);
+    mt_audio_ = MtAudioInDevice::Create(*std::move(mmio_audio), *std::move(mmio_clk),
+                                        *std::move(mmio_pll), MtAudioInDevice::I2S6);
     if (mt_audio_ == nullptr) {
         zxlogf(ERROR, "%s failed to create device\n", __FUNCTION__);
         return ZX_ERR_NO_MEMORY;
@@ -120,18 +123,10 @@ zx_status_t Mt8167AudioStreamIn::InitPdev() {
     mt_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr,
                          pinned_ring_buffer_.region(0).size);
 
-    // Configure XO and PLLs for interface aud1.
-    clk_.Enable(0); // 0 is the index, enables board_mt8167::kClkAud1.
-
-    // Power up by clearing the power down bit.
-    CLK_SEL_9::Get().ReadFrom(&*mmio_clk).set_apll12_div2_pdn(0).WriteTo(&*mmio_clk);   // I2S3.
-    CLK_SEL_9::Get().ReadFrom(&*mmio_clk).set_apll12_div5_pdn(0).WriteTo(&*mmio_clk);   // MCK.
-    CLK_SEL_9::Get().ReadFrom(&*mmio_clk).set_apll12_div5b_pdn(0).WriteTo(&*mmio_clk);  // BCK.
-    CLK_SEL_11::Get().ReadFrom(&*mmio_clk).set_apll12_ck_div5b(15).WriteTo(&*mmio_clk); // BCK.
-
-    // Enable aud1 PLL.
-    APLL1_CON0::Get().ReadFrom(&*mmio_pll).set_APLL1_EN(1).WriteTo(&*mmio_pll);
-
+    // Disables aud1 clk gating: 0 is the index, board_mt8167::kClkAud1.
+    clk_.Enable(0);
+    // Disables aud2 clk gating: 1 is the index, board_mt8167::kClkAud2.
+    clk_.Enable(1);
     return ZX_OK;
 }
 
@@ -139,9 +134,7 @@ zx_status_t Mt8167AudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtReq
     fifo_depth_ = mt_audio_->fifo_depth();
     external_delay_nsec_ = 0;
 
-    // At this time only one format is supported, and hardware is initialized
-    //  during driver binding, so nothing to do at this time.
-    return ZX_OK;
+    return mt_audio_->SetRate(req.frames_per_second);
 }
 
 zx_status_t Mt8167AudioStreamIn::GetBuffer(const audio_proto::RingBufGetBufferReq& req,
@@ -173,7 +166,8 @@ zx_status_t Mt8167AudioStreamIn::Start(uint64_t* out_start_time) {
     uint32_t notifs = LoadNotificationsPerRing();
     if (notifs) {
         us_per_notification_ = static_cast<uint32_t>(
-            1000 * pinned_ring_buffer_.region(0).size / (frame_size_ * 48 * notifs));
+            1000 * pinned_ring_buffer_.region(0).size /
+            (frame_size_ * kMaxSampleRate / 1000 * notifs));
         notify_timer_->Arm(zx_deadline_after(ZX_USEC(us_per_notification_)));
     } else {
         us_per_notification_ = 0;
@@ -202,7 +196,7 @@ zx_status_t Mt8167AudioStreamIn::InitPost() {
     }
 
     dispatcher::Timer::ProcessHandler thandler(
-        [mt_audio = this](dispatcher::Timer * timer)->zx_status_t {
+        [mt_audio = this](dispatcher::Timer* timer) -> zx_status_t {
             OBTAIN_EXECUTION_DOMAIN_TOKEN(t, mt_audio->domain_);
             return mt_audio->ProcessRingNotification();
         });
@@ -229,9 +223,9 @@ zx_status_t Mt8167AudioStreamIn::AddFormats() {
     range.min_channels = kNumberOfChannels;
     range.max_channels = kNumberOfChannels;
     range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
-    range.min_frames_per_second = 48000;
-    range.max_frames_per_second = 48000;
-    range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
+    range.min_frames_per_second = kMinSampleRate;
+    range.max_frames_per_second = kMaxSampleRate;
+    range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY | ASF_RANGE_FLAG_FPS_44100_FAMILY;
 
     supported_formats_.push_back(range);
 
@@ -259,8 +253,8 @@ zx_status_t Mt8167AudioStreamIn::InitBuffer(size_t size) {
     return ZX_OK;
 }
 
-} // mt8167
-} // audio
+} // namespace mt8167
+} // namespace audio
 
 __BEGIN_CDECLS
 

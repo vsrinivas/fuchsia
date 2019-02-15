@@ -6,8 +6,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/platform-defs.h>
 #include <ddk/metadata.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
 #include <ddktl/metadata/audio.h>
 #include <fbl/algorithm.h>
@@ -31,7 +31,7 @@ public:
 
 class WACS2_RDATA : public hwreg::RegisterBase<WACS2_RDATA, uint32_t> {
 public:
-    static constexpr uint32_t kStateIdle  = 0;
+    static constexpr uint32_t kStateIdle = 0;
 
     static auto Get() { return hwreg::RegisterAddr<WACS2_RDATA>(0x00A4); }
 
@@ -61,9 +61,8 @@ zx_status_t Mt8167::AudioInit() {
         },
     };
     static constexpr pbus_clk_t clks[] = {
-        {
-            .clk = board_mt8167::kClkAud1
-        },
+        {.clk = board_mt8167::kClkAud1},
+        {.clk = board_mt8167::kClkAud2},
     };
 
     static constexpr pbus_bti_t btis_out[] = {
@@ -205,7 +204,6 @@ zx_status_t Mt8167::AudioInit() {
     gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO24_EINT24, MT8167_GPIO_GPIO_FN);
     gpio_impl_config_out(&gpio_impl_, MT8167_GPIO24_EINT24, 1); // Set to "not reset".
 
-
     zx::unowned_resource root_resource(get_root_resource());
     std::optional<ddk::MmioBuffer> pmic_mmio;
     auto status = ddk::MmioBuffer::Create(MT8167_PMIC_WRAP_BASE, MT8167_PMIC_WRAP_SIZE,
@@ -217,7 +215,8 @@ zx_status_t Mt8167::AudioInit() {
     }
 
     // Wait for the PMIC to be IDLE.
-    while (WACS2_RDATA::Get().ReadFrom(&(*pmic_mmio)).status() != WACS2_RDATA::kStateIdle) {}
+    while (WACS2_RDATA::Get().ReadFrom(&(*pmic_mmio)).status() != WACS2_RDATA::kStateIdle) {
+    }
 
     // Set the VCN 1.8 Volts by sending a command to the PMIC via the SOC's PMIC WRAP interface.
     constexpr uint32_t kDigLdoCon11 = 0x0512;

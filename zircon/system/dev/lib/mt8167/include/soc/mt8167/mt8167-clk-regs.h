@@ -27,7 +27,12 @@ public:
 // Audio Clock Selection Register.
 class CLK_SEL_9 : public hwreg::RegisterBase<CLK_SEL_9, uint32_t> {
 public:
+    DEF_BIT(17, apll_i2s5_mck_sel);
+    DEF_BIT(16, apll_i2s4_mck_sel);
+    DEF_BIT(15, apll_i2s3_mck_sel);
     DEF_BIT(14, apll_i2s2_mck_sel);
+    DEF_BIT(13, apll_i2s1_mck_sel);
+    DEF_BIT(12, apll_i2s0_mck_sel);
     DEF_BIT(8, apll12_div6_pdn);
     DEF_BIT(7, apll12_div5b_pdn);
     DEF_BIT(6, apll12_div5_pdn);

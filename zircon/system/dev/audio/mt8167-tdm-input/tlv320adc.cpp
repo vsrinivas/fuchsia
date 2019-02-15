@@ -65,10 +65,13 @@ zx_status_t Tlv320adc::Init() {
     uint8_t defaults[][2] = {
         // Clocks.
         {4, 0x00}, // PLL_CLKIN = MCLK (device pin), CODEC_CLKIN = MCLK (device pin).
-        // MCLK (22.7 MHz) % NADC % MADC = ADC_MOD_CLK (5.675 MHz) = DMCLK (Digital Microphone CLK).
+        // DMCLK (Digital Mic CLK, example range 1.45MHz to 4.8MHz) is based on MCLK, e.g.:
+        // DMCLK = MCLK 22.5792 MHz (from Aud1) % NADC % MADC = ADC_MOD_CLK (2.8224 MHz).
+        // DMCLK = MCLK 24.576 MHz (from Aud2) % NADC % MADC = ADC_MOD_CLK (3.072 MHz).
+        // We need to keep MADC x AOSR > IADC (188 for PRB_R1)
         {18, 0x82}, // ADC NADC Clock Divider = 2, enabled.
-        {19, 0x82}, // ADC MADC Clock Divider = 2, enabled.
-        {20, 0x80}, // ADC AOSR = 128.
+        {19, 0x84}, // ADC MADC Clock Divider = 4, enabled.
+        {20, 0x40}, // ADC AOSR = 64.
 
         // ADC Audio Interface.
         {27, 0x00}, // I2S, 16 bits, BCLK is input, WCLK is input, 3-stating of DOUT disabled.
@@ -81,6 +84,7 @@ zx_status_t Tlv320adc::Init() {
         {52, 0x04}, // DMDIN/GPIO1 Control, DMDIN is in input mode.
 
         // ADC Config.
+        {61, 0x01}, // ADC Processing Block Selection, PRB_R1.
         {80, 0x01}, // ADC Digital-Microphone Polarity Select.
         {83, 0x00}, // Left ADC Volume Control, 0dB.
         {84, 0x00}, // Right ADC Volume Control, 0dB
