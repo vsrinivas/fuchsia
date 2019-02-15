@@ -708,8 +708,7 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
         DEFINE_REQUEST(msg, NodeClone);
         zx_handle_t h = request->object;
         uint32_t flags = request->flags;
-        char path[PATH_MAX];
-        path[0] = '\0';
+        char path[] = ".";
         devfs_open(dn, dispatcher, h, path, flags | ZX_FS_FLAG_NOREMOTE);
         return ZX_OK;
     }
@@ -724,13 +723,14 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
         DECODE_REQUEST(msg, DirectoryOpen);
         DEFINE_REQUEST(msg, DirectoryOpen);
         uint32_t len = static_cast<uint32_t>(request->path.size);
-        char* path = request->path.data;
         zx_handle_t h = request->object;
         uint32_t flags = request->flags;
-        if ((len < 1) || (len > 1024)) {
+        if (len == 0 || len > fuchsia_io_MAX_PATH) {
             zx_handle_close(h);
         } else {
-            path[len] = '\0';
+            char path[fuchsia_io_MAX_PATH + 1];
+            memcpy(path, request->path.data, len);
+            path[len] = 0;
             devfs_open(dn, dispatcher, h, path, flags);
         }
         return ZX_OK;
@@ -761,11 +761,11 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
         DECODE_REQUEST(msg, DirectoryReadDirents);
         DEFINE_REQUEST(msg, DirectoryReadDirents);
 
-        if (request->max_bytes > ZXFIDL_MAX_MSG_BYTES) {
+        if (request->max_bytes > fuchsia_io_MAX_BUF) {
             return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
         }
 
-        uint8_t data[request->max_bytes];
+        uint8_t data[fuchsia_io_MAX_BUF];
         size_t actual = 0;
         r = devfs_readdir(dn, &ios->readdir_ino_, data, request->max_bytes);
         if (r >= 0) {
