@@ -115,7 +115,7 @@ $(MODULE_LIBNAME).abi.stamp: $(MODULE_LIBNAME).abi.o $(MODULE_SOLIBS) \
 		       -shared -soname $(_SONAME) -s \
 		       $< $(_LIBS) -o $(@:.abi.stamp=.so.abi).new
 # Sanity check that the ABI stub really matches the actual DSO.
-	$(NOECHO)$(SHELLEXEC) scripts/shlib-symbols '$(NM)' $(@:.abi.stamp=.so.abi).new | \
+	$(NOECHO)$(SHELLEXEC) scripts/shlib-symbols '$(NM)' $(@:.abi.stamp=.so.abi).new /dev/stdout | \
 	cmp $(<:.o=.h) -
 # Move it into place only if it's changed.
 	$(NOECHO)\
@@ -127,7 +127,7 @@ $(MODULE_LIBNAME).abi.stamp: $(MODULE_LIBNAME).abi.o $(MODULE_SOLIBS) \
 	$(NOECHO)touch $@
 
 $(MODULE_LIBNAME).abi.h: $(MODULE_LIBNAME).so scripts/shlib-symbols
-	$(NOECHO)$(SHELLEXEC) scripts/shlib-symbols -z '$(NM)' $< > $@
+	$(NOECHO)$(SHELLEXEC) scripts/shlib-symbols '$(NM)' -z $< $@
 
 $(MODULE_LIBNAME).abi.o: $(MODULE_LIBNAME).abi.h scripts/dso-abi.h
 	$(NOECHO)$(CC) $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) \

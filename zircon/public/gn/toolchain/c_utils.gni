@@ -1,0 +1,121 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Like action() but using utility binaries from the C/C++ toolchain.
+# This is the way to use `nm`, `objcopy`, etc.
+#
+# Parameters
+#
+#   utils
+#     Required: Utilities to use, e.g. "nm", "objcopy", "objdump".
+#     Type: list(string)
+#
+#   script
+#     Optional:  Same as for action().  The script receives an implicit
+#     argument for each element in $utils giving the command to run.
+#     If omitted, then $utils must have only one element and that command
+#     itself will be run with $args just as given.
+#     Type: file
+#
+#   args
+#     Required: Same as for action().  If there is a $script,
+#     the implicit $utils arguments precede $args.
+#     Type: list(string)
+#
+#   deps, inputs, outputs, sources, testonly, visibility
+#      See action().
+#
+template("toolchain_utils_action") {
+  assert(defined(invoker.utils),
+         "toolchain_utils_action(\"$target_name\") requires `utils`")
+  forward_variables_from(invoker, [ "script" ])
+
+  utils_inputs = []
+  utils_paths = []
+  if (toolchain.tool_dir != "") {
+    # The toolchain binaries are in a specified location (e.g. a prebuilt).
+    foreach(util, invoker.utils) {
+      if (util == "cc") {
+        util = toolchain.cc
+      } else {
+        util = "${toolchain.tool_prefix}${util}"
+      }
+      util = "${toolchain.tool_dir}/${util}"
+      utils_inputs += [ util ]
+      utils_paths += [ rebase_path(util, root_build_dir) ]
+    }
+  } else {
+    # The toolchain binaries are just found in the system PATH.
+    # They won't be used as dependencies.
+    if (!defined(script)) {
+      # If there's no script, utils_paths[0] will become the script.
+      # But the script has to be a known location that's a dependency.
+      # So use a dummy wrapper as the script.
+      script = "/usr/bin/env"
+    }
+    foreach(util, invoker.utils) {
+      if (util == "cc") {
+        util = toolchain.cc
+      } else {
+        util = "${toolchain.tool_prefix}${util}"
+      }
+      utils_paths += [ util ]
+    }
+  }
+
+  action(target_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "args",
+                             "script",
+                             "utils",
+                           ])
+    if (!defined(inputs)) {
+      inputs = []
+    }
+    inputs += utils_inputs
+    if (defined(script)) {
+      args = utils_paths + invoker.args
+    } else {
+      script = rebase_path(utils_paths[0], "", root_build_dir)
+      assert(
+          utils_paths == [ utils_paths[0] ],
+          "toolchain_utils_action(\"$target_name\") without `script` must have exactly one element in `utils`")
+      args = invoker.args
+    }
+  }
+}
+
+# generated_file() containing output file name of a linking target.
+#
+# Parameters
+#
+#   deps, outputs, testonly, visibility
+#     See generated_file().  $deps determines the contents as described below.
+#
+# This produces a generated_file() target with $outputs as given.  The
+# contents of the file list the link outputs reached by $deps.  That is,
+# for each target that links a binary (executable(), loadable_module(),
+# shared_library() via library(), etc.) the path relative to
+# $root_build_dir of the actual binary created by the linker (before
+# stripping) will be listed, one per line.  The dependency traversal is
+# pruned at each linking target, so e.g. if an executable() is listed then
+# neither its shared_library() dependencies nor any $data_deps leading to
+# loadable_module() or executable() targets will be listed.
+#
+template("link_output_rspfile") {
+  generated_file(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "outputs",
+                             "testonly",
+                             "visibility",
+                           ])
+    data_keys = [ "link_output" ]
+    walk_keys = [ "link_barrier" ]
+    output_conversion = "list lines"
+  }
+}

@@ -77,7 +77,7 @@ MODULE_SRCS += system/ulib/ldmsg/ldmsg.c
 $(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.h: $(BUILDDIR)/system/ulib/zircon/libzircon.so
 	@$(MKDIR)
 	$(call BUILDECHO,generating $@)
-	$(NOECHO)$(SHELLEXEC) scripts/shlib-symbols -a '$(NM)' $< > $@
+	$(NOECHO)$(SHELLEXEC) scripts/shlib-symbols '$(NM)' -a $< $@
 GENERATED += $(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.h
 
 # This generated linker script defines symbols for each vDSO entry point

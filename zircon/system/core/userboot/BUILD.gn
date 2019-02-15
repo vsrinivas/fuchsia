@@ -1,0 +1,154 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/config/levels.gni")
+import("$zx/public/gn/config/standard.gni")
+import("$zx/public/gn/toolchain/c_utils.gni")
+import("$zx/public/gn/toolchain/environment.gni")
+import("$zx/public/gn/toolchain/environment_redirect.gni")
+
+# userboot gets its own toolchain for its special build requirements.
+if (current_toolchain == default_toolchain) {
+  # Define the special toolchain itself only in the default toolchain.
+  foreach(cpu, standard_fuchsia_cpus) {
+    environment("userboot") {
+      cpu = cpu
+      configs += standard_fuchsia_configs + [ ":userboot_config" ]
+
+      # This doesn't get a separate shlib sub-toolchain, but the main one
+      # can do loadable_module().
+      solink = true
+
+      if (opt_level < 2) {
+        # userboot doesn't stay sufficiently pure without optimization.
+        toolchain_args = {
+          opt_level = 2
+        }
+      }
+
+      # userboot can't use any instrumentation runtimes.
+      exclude_variant_tags = [ "instrumented" ]
+    }
+  }
+} else if (toolchain.environment == "userboot") {
+  # Everything in userboot gets compiled this way.
+  config("userboot_config") {
+    configs = [
+      "$zx/public/gn/config:no_sanitizers",
+      "$zx/public/gn/config:user",
+    ]
+
+    # Everything is statically linked together with no PLT or GOT.
+    # No $inputs needed here since the depfile will list it.
+    cflags = [
+      "-include",
+      rebase_path("$zx/kernel/include/hidden.h", root_build_dir),
+    ]
+    defines = [
+      "HIDDEN",
+      "WITH_LZ4_NOALLOC",
+    ]
+  }
+
+  # This is the output of target ":gen-vdso-syms-ld", below.
+  vdso_syms_ld = "$target_gen_dir/vdso-syms.ld"
+
+  # This file holds the name of the vDSO binary to extract symbols from.
+  vdso_syms_rspfile = "$target_gen_dir/vdso-syms.h.rsp"
+
+  # userboot is a reentrant DSO (no writable segment) with an entry point.
+  loadable_module("userboot") {
+    sources = [
+      "bootdata.c",
+      "bootfs.c",
+      "loader-service.c",
+      "option.c",
+      "start.c",
+      "userboot-elf.c",
+      "util.c",
+    ]
+    libs = [ vdso_syms_ld ]
+    deps = [
+      ":gen-vdso-syms-ld",
+      "$zx/system/ulib/bootdata",
+      "$zx/system/ulib/elfload",
+      "$zx/system/ulib/ldmsg",
+      "$zx/system/ulib/runtime",
+      "$zx/system/ulib/zircon:headers",
+      "$zx/third_party/ulib/lz4",
+      "$zx/third_party/ulib/musl/src/string:minimal_str",
+      "$zx/third_party/ulib/musl/src/string:stdmem",
+    ]
+  }
+
+  # This generated header lists all the ABI symbols in the vDSO with their
+  # addresses.  It's used to generate vdso-syms.ld, below.
+  toolchain_utils_action("gen-vdso-syms-header") {
+    visibility = [ ":gen-vdso-syms-ld" ]
+    sources = [
+      vdso_syms_rspfile,
+    ]
+    deps = [
+      ":gen-vdso-syms-header-rspfile",
+    ]
+    outputs = [
+      "$target_gen_dir/vdso-syms.h",
+    ]
+    depfile = "${outputs[0]}.d"
+    utils = [ "nm" ]
+    script = "$zx/scripts/shlib-symbols"
+    args = [
+      "-a",
+      "@" + rebase_path(vdso_syms_rspfile, root_build_dir),
+      rebase_path(outputs[0], root_build_dir),
+      rebase_path(depfile, root_build_dir),
+    ]
+  }
+
+  link_output_rspfile("gen-vdso-syms-header-rspfile") {
+    visibility = [ ":gen-vdso-syms-header" ]
+    deps = [
+      "$zx/system/ulib/zircon",
+    ]
+    outputs = [
+      vdso_syms_rspfile,
+    ]
+  }
+
+  # This generated linker script defines symbols for each vDSO entry point
+  # giving the relative address where it will be found at runtime.  With
+  # this hack, the userboot code doesn't need to do any special work to
+  # find the vDSO and its entry points, keeping the code far simpler.
+  toolchain_utils_action("gen-vdso-syms-ld") {
+    visibility = [ ":*" ]
+    outputs = [
+      vdso_syms_ld,
+    ]
+    deps = [
+      ":gen-vdso-syms-header",
+    ]
+    sources = get_target_outputs(deps[0])
+    inputs = [
+      "vdso-syms.ld.h",
+    ]
+    utils = [ "cc" ]
+    args = [
+      "-o",
+      rebase_path(outputs[0], root_build_dir),
+      "-E",
+      "-P",
+      "-include",
+      rebase_path(inputs[0], root_build_dir),
+      rebase_path(sources[0], root_build_dir),
+    ]
+  }
+} else {
+  # In any other toolchain, just redirect to the proper toolchain.
+  environment_redirect("userboot") {
+    environment_label = ":userboot"
+    deps = [
+      ":userboot",
+    ]
+  }
+}

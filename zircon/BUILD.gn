@@ -93,6 +93,7 @@ foreach(cpu, standard_fuchsia_cpus) {
     cpu = cpu
     deps = [
       # TODO: This indirectly reaches everything that builds so far.
+      "$zx/system/core/userboot",
       "$zx/system/ulib/c",
     ]
   }

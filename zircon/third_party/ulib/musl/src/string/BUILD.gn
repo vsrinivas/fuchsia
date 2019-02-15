@@ -59,7 +59,7 @@ source_set("stdmem") {
   if (current_cpu == "arm64") {
     sources += [
       "$zx/third_party/lib/cortex-strings/src/aarch64/memchr.S",
-      "$zx/third_party/lib/cortex-strings/src/aarch64/memcmp.S",
+      "aarch64/memcmp.S",
     ]
   } else {
     sources += [

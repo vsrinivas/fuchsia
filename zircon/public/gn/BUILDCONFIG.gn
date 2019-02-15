@@ -574,7 +574,7 @@ template("library") {
 }
 
 ###
-### "Terminal" (executable) target types.
+### "Terminal" (executable and loadable_module) target types.
 ### These are the targets that do variant selection.
 ###
 
@@ -1047,7 +1047,7 @@ template("_basic_executable") {
   }
 }
 
-# Build a C/C++ executable to run on the target Fuchsia system.
+# Build a C/C++ executable to run on the target system.
 #
 # Parameters
 #
@@ -1189,6 +1189,104 @@ template("host_tool") {
   }
 }
 
+# Build a C/C++ loadable module to run on the target system.
+#
+# Parameters
+#
+#   install_path
+#     Optional: If false (the default), nothing happens--the binary won't
+#     be installed anywhere automatically.  Set this to a string containing
+#     the install path where this module will appear in a BOOTFS
+#     or package filesystem image built containing it.
+#     Default: false
+#     Type: string or false
+#
+# See `gn help loadable_module()` for additional parameters and details.
+template("loadable_module") {
+  assert(!is_kernel)
+  assert(!is_host)
+  _variant_target(target_name) {
+    # This is for _variant_target().
+    target = {
+      shlib = true
+      match = "loadable_module"
+      type = "_shlib_toolchain_target"
+    }
+
+    # This is for _shlib_toolchain_target().
+    target_type = "loadable_module"
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "metadata",
+                             "target_type",
+                             "testonly",
+                             "visibility",
+                           ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    # Elaborate the toolchain's defaults to compute the output file name.
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
+    output_name += toolchain.output_name_suffix
+    if (!defined(output_extension)) {
+      output_extension = "so"
+    }
+    output_file = "$target_out_dir/$output_name"
+    if (output_extension != "") {
+      output_file += ".$output_extension"
+    }
+
+    metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      # Every terminal target provides these metadata keys.  The first is
+      # used the data key for the output of the link, as a file name
+      # relative to $root_build_dir appropriate for command-line
+      # contexts.  The second is used as a walk key to provide a
+      # dependency barrier against e.g. shared_library() deps or other
+      # executable() data_deps.
+      link_output = [ rebase_path(output_file + toolchain.link_output_suffix,
+                                  root_build_dir) ]
+      link_barrier = []
+      if (current_os != "mac" && current_os != "win") {
+        elf_link_output = link_output
+      }
+    }
+
+    if (defined(invoker.install_path)) {
+      target.main_metadata = {
+        manifest_inputs = [ output_file ]
+        manifest_lines =
+            [ "${install_path}=" + rebase_path(output_file, root_build_dir) ]
+      }
+
+      # Also define an alias with the variant suffix.  _variant_target will
+      # make this redirect to the specific variant toolchain chosen for
+      # this target.  In only that toolchain, the metadata will give the
+      # binary a second install path with the variant suffix.
+      extension = get_path_info(invoker.install_path, "extension")
+      if (extension != "") {
+        extension = ".$extension"
+      }
+      target.variant_metadata = {
+        manifest_inputs = [ output_file ]
+        manifest_lines = [ get_path_info(invoker.install_path, "dir") + "/" +
+                           get_path_info(invoker.install_path, "name") +
+                           toolchain.variant_suffix + extension + "=" +
+                           rebase_path(output_file, root_build_dir) ]
+      }
+    }
+  }
+}
+
 ###
 ### set_defaults()
 ###
@@ -1207,6 +1305,7 @@ _compile_target_types = [
   "executable",
   "host_tool",
   "library",
+  "loadable_module",
   "shared_library",
   "source_set",
   "static_library",
