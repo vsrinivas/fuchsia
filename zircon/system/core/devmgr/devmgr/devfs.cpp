@@ -505,7 +505,7 @@ void devfs_remove(Devnode* dn) {
 
     // detach all connected iostates
     while (!dn->iostate.is_empty()) {
-        dn->iostate.pop_front()->DetachFromDevnode();
+        dn->iostate.front().DetachFromDevnode();
     }
 
     // notify own file watcher
