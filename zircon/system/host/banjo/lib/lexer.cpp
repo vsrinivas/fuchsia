@@ -219,6 +219,7 @@ Token Lexer::Lex() {
     case '\r':
     case '\t':
         assert(false && "Should have been handled by SkipWhitespace!");
+        __UNREACHABLE;
 
     case '-':
         // Maybe the start of an arrow.
