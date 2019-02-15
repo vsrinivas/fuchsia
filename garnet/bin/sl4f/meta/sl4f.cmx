@@ -14,6 +14,7 @@
             "fuchsia.net.SocketProvider",
             "fuchsia.net.stack.Stack",
             "fuchsia.tracelink.Registry",
+            "fuchsia.ui.scenic.Scenic",
             "fuchsia.wlan.device.service.DeviceService"
         ]
     }

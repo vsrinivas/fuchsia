@@ -31,6 +31,9 @@ use crate::bluetooth::gatt_server_facade::GattServerFacade;
 // Netstack related includes
 use crate::netstack::facade::NetstackFacade;
 
+// Scenic related includes
+use crate::scenic::facade::ScenicFacade;
+
 // Wlan related includes
 use crate::wlan::facade::WlanFacade;
 
@@ -109,6 +112,9 @@ pub struct Sl4f {
     // netstack_facade: Thread safe object for state for netstack functions.
     netstack_facade: Arc<NetstackFacade>,
 
+    // scenic_facade: thread safe object for state for Scenic functions.
+    scenic_facade: Arc<ScenicFacade>,
+
     // wlan_facade: Thread safe object for state for wlan connectivity tests
     wlan_facade: Arc<WlanFacade>,
 
@@ -124,6 +130,7 @@ impl Sl4f {
         let gatt_client_facade = Arc::new(GattClientFacade::new());
         let gatt_server_facade = Arc::new(GattServerFacade::new());
         let netstack_facade = Arc::new(NetstackFacade::new());
+        let scenic_facade = Arc::new(ScenicFacade::new());
         let wlan_facade = Arc::new(WlanFacade::new()?);
         Ok(Arc::new(RwLock::new(Sl4f {
             ble_advertise_facade,
@@ -131,6 +138,7 @@ impl Sl4f {
             gatt_client_facade,
             gatt_server_facade,
             netstack_facade,
+            scenic_facade,
             wlan_facade,
             clients: Arc::new(Mutex::new(HashMap::new())),
         })))
@@ -154,6 +162,10 @@ impl Sl4f {
 
     pub fn get_bt_facade(&self) -> Arc<RwLock<BluetoothFacade>> {
         self.bt_facade.clone()
+    }
+
+    pub fn get_scenic_facade(&self) -> Arc<ScenicFacade> {
+        self.scenic_facade.clone()
     }
 
     pub fn get_wlan_facade(&self) -> Arc<WlanFacade> {
@@ -191,43 +203,47 @@ impl Sl4f {
 
 // Handles all incoming requests to SL4F server, routes accordingly
 pub fn serve(
-    request: &Request, sl4f_session: Arc<RwLock<Sl4f>>,
+    request: &Request,
+    sl4f_session: Arc<RwLock<Sl4f>>,
     rouille_sender: mpsc::UnboundedSender<AsyncRequest>,
 ) -> Response {
     router!(request,
-            (GET) (/) => {
-                // Parse the command request
-                fx_log_info!(tag: "serve", "Received command request.");
-                client_request(sl4f_session.clone(), &request, rouille_sender.clone())
-            },
-            (GET) (/init) => {
-                // Initialize a client
-                fx_log_info!(tag: "serve", "Received init request.");
-                client_init(&request, sl4f_session.write().get_clients().clone())
-            },
-            (GET) (/print_clients) => {
-                // Print information about all clients
-                fx_log_info!(tag: "serve", "Received print client request.");
-                const PRINT_ACK: &str = "Successfully printed clients.";
-                sl4f_session.read().print_clients();
-                rouille::Response::json(&PRINT_ACK)
-            },
-            (GET) (/cleanup) => {
-                fx_log_info!(tag: "serve", "Received server cleanup request.");
-                server_cleanup(&request, sl4f_session.clone())
-            },
-            _ => {
-                fx_log_err!(tag: "serve", "Received unknown server request.");
-                const FAIL_REQUEST_ACK: &str = "Unknown GET request.";
-                let res = CommandResponse::new("".to_string(), None, serde::export::Some(FAIL_REQUEST_ACK.to_string()));
-                rouille::Response::json(&res)
-            }
-        )
+        (GET) (/) => {
+            // Parse the command request
+            fx_log_info!(tag: "serve", "Received command request.");
+            client_request(sl4f_session.clone(), &request, rouille_sender.clone())
+        },
+        (GET) (/init) => {
+            // Initialize a client
+            fx_log_info!(tag: "serve", "Received init request.");
+            client_init(&request, sl4f_session.write().get_clients().clone())
+        },
+        (GET) (/print_clients) => {
+            // Print information about all clients
+            fx_log_info!(tag: "serve", "Received print client request.");
+            const PRINT_ACK: &str = "Successfully printed clients.";
+            sl4f_session.read().print_clients();
+            rouille::Response::json(&PRINT_ACK)
+        },
+        (GET) (/cleanup) => {
+            fx_log_info!(tag: "serve", "Received server cleanup request.");
+            server_cleanup(&request, sl4f_session.clone())
+        },
+        _ => {
+            fx_log_err!(tag: "serve", "Received unknown server request.");
+            const FAIL_REQUEST_ACK: &str = "Unknown GET request.";
+            let res = CommandResponse::new("".to_string(), None, serde::export::Some(FAIL_REQUEST_ACK.to_string()));
+            rouille::Response::json(&res)
+        }
+    )
 }
 
 // Given the session id, method id, and result of FIDL call, store the result for this client
 fn store_response(
-    sl4f_session: Arc<RwLock<Sl4f>>, client_id: String, method_id: String, result: AsyncResponse,
+    sl4f_session: Arc<RwLock<Sl4f>>,
+    client_id: String,
+    method_id: String,
+    result: AsyncResponse,
 ) {
     let clients = sl4f_session.write().clients.clone();
 
@@ -235,11 +251,7 @@ fn store_response(
     // history
     if clients.lock().contains_key(&client_id) {
         let command_response = ClientData::new(method_id.clone(), result.clone());
-        clients
-            .lock()
-            .entry(client_id.clone())
-            .or_insert(Vec::new())
-            .push(command_response);
+        clients.lock().entry(client_id.clone()).or_insert(Vec::new()).push(command_response);
     } else {
         fx_log_err!(tag: "store_response", "Client doesn't exist in server database: {:?}", client_id);
     }
@@ -250,7 +262,8 @@ fn store_response(
 // Given the request, map the test request to a FIDL query and execute
 // asynchronously
 fn client_request(
-    sl4f_session: Arc<RwLock<Sl4f>>, request: &Request,
+    sl4f_session: Arc<RwLock<Sl4f>>,
+    request: &Request,
     rouille_sender: mpsc::UnboundedSender<AsyncRequest>,
 ) -> Response {
     const FAIL_TEST_ACK: &str = "Command failed";
@@ -267,24 +280,12 @@ fn client_request(
     // Create channel for async thread to respond to
     // Package response and ship over JSON RPC
     let (async_sender, rouille_receiver) = std::sync::mpsc::channel();
-    let req = AsyncRequest::new(
-        async_sender,
-        method_id.clone(),
-        method_type,
-        method_name,
-        method_params,
-    );
-    rouille_sender
-        .unbounded_send(req)
-        .expect("Failed to send request to async thread.");
+    let req =
+        AsyncRequest::new(async_sender, method_id.clone(), method_type, method_name, method_params);
+    rouille_sender.unbounded_send(req).expect("Failed to send request to async thread.");
     let resp: AsyncResponse = rouille_receiver.recv().unwrap();
 
-    store_response(
-        sl4f_session,
-        session_id.clone(),
-        method_id.clone(),
-        resp.clone(),
-    );
+    store_response(sl4f_session, session_id.clone(), method_id.clone(), resp.clone());
     fx_log_info!(tag: "client_request", "Received async thread response: {:?}", resp);
 
     // If the response has a return value, package into response, otherwise use error code
@@ -303,7 +304,8 @@ fn client_request(
 // Initializes a new client, adds to clients, a thread-safe HashMap
 // Returns a rouille::Response
 fn client_init(
-    request: &Request, clients: Arc<Mutex<HashMap<String, Vec<ClientData>>>>,
+    request: &Request,
+    clients: Arc<Mutex<HashMap<String, Vec<ClientData>>>>,
 ) -> Response {
     const INIT_ACK: &str = "Recieved init request.";
     const FAIL_INIT_ACK: &str = "Failed to init client.";
@@ -382,13 +384,7 @@ fn parse_request(request: &Request) -> Result<(String, String, String, String, V
     // actual method name itself
     let (method_type, method_name) = split_string(method_name_raw.clone());
     let (session_id, method_id) = split_string(method_id_raw.clone());
-    Ok((
-        session_id,
-        method_id,
-        method_type,
-        method_name,
-        method_params,
-    ))
+    Ok((session_id, method_id, method_type, method_name, method_params))
 }
 
 fn server_cleanup(request: &Request, sl4f_session: Arc<RwLock<Sl4f>>) -> Response {
@@ -423,10 +419,7 @@ mod tests {
     fn split_string_test() {
         // Standard command
         let mut method_name = "bt.send".to_string();
-        assert_eq!(
-            ("bt".to_string(), "send".to_string()),
-            split_string(method_name)
-        );
+        assert_eq!(("bt".to_string(), "send".to_string()), split_string(method_name));
 
         // Invalid command (should result in empty result)
         method_name = "bluetooth_send".to_string();

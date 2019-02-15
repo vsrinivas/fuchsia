@@ -17,6 +17,7 @@ use std::thread;
 
 mod bluetooth;
 mod netstack;
+mod scenic;
 mod server;
 mod wlan;
 

@@ -19,10 +19,7 @@ pub struct ClientData {
 
 impl ClientData {
     pub fn new(id: String, result: AsyncResponse) -> ClientData {
-        ClientData {
-            command_id: id,
-            command_result: result,
-        }
+        ClientData { command_id: id, command_result: result }
     }
 }
 
@@ -79,16 +76,13 @@ pub struct AsyncRequest {
 
 impl AsyncRequest {
     pub fn new(
-        tx: mpsc::Sender<AsyncResponse>, id: String, method_type: String, name: String,
+        tx: mpsc::Sender<AsyncResponse>,
+        id: String,
+        method_type: String,
+        name: String,
         params: Value,
     ) -> AsyncRequest {
-        AsyncRequest {
-            tx,
-            id,
-            method_type,
-            name,
-            params,
-        }
+        AsyncRequest { tx, id, method_type, name, params }
     }
 }
 
@@ -104,14 +98,8 @@ pub struct AsyncResponse {
 impl AsyncResponse {
     pub fn new(res: Result<Value, Error>) -> AsyncResponse {
         match res {
-            Ok(v) => AsyncResponse {
-                result: Some(v),
-                error: None,
-            },
-            Err(e) => AsyncResponse {
-                result: None,
-                error: Some(e.to_string()),
-            },
+            Ok(v) => AsyncResponse { result: Some(v), error: None },
+            Err(e) => AsyncResponse { result: None, error: Some(e.to_string()) },
         }
     }
 }
@@ -124,6 +112,7 @@ pub enum FacadeType {
     GattClientFacade,
     GattServerFacade,
     NetstackFacade,
+    ScenicFacade,
     Wlan,
     Undefined,
 }
@@ -136,6 +125,7 @@ impl FacadeType {
             "gatt_client_facade" => FacadeType::GattClientFacade,
             "gatt_server_facade" => FacadeType::GattServerFacade,
             "netstack_facade" => FacadeType::NetstackFacade,
+            "scenic_facade" => FacadeType::ScenicFacade,
             "wlan" => FacadeType::Wlan,
             _ => FacadeType::Undefined,
         }
