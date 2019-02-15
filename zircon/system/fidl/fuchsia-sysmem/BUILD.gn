@@ -6,15 +6,16 @@ import("$zx/public/gn/fidl.gni")
 
 fidl_library("fuchsia-sysmem") {
   sources = [
-    "allocator.fidl",
     "allocator_2.fidl",
+    "allocator_deprecated.fidl",
     "collection.fidl",
-    "collections.fidl",
+    "collections_deprecated.fidl",
     "constraints.fidl",
     "driver_connector.fidl",
     "format_modifier.fidl",
-    "formats.fidl",
+    "formats_deprecated.fidl",
     "image_formats.fidl",
+    "image_formats_deprecated.fidl",
     "usages.fidl",
   ]
 }
