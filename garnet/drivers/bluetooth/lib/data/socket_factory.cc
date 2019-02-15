@@ -34,7 +34,7 @@ zx::socket SocketFactory<ChannelT>::MakeSocketForChannel(
 
   zx::socket local_socket, remote_socket;
   const auto status =
-      zx::socket::create(ZX_SOCKET_STREAM, &local_socket, &remote_socket);
+      zx::socket::create(ZX_SOCKET_DATAGRAM, &local_socket, &remote_socket);
   if (status != ZX_OK) {
     bt_log(ERROR, "l2cap", "Failed to create socket for channel %u @ %u: %s",
            channel->link_handle(), channel->id(), zx_status_get_string(status));
