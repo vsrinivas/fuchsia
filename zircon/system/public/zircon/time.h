@@ -140,14 +140,14 @@ __CONSTEXPR static inline zx_duration_t zx_duration_from_hour(int64_t n) {
 #define ZX_NSEC(n) \
     (__ISCONSTANT(n) ? ((zx_duration_t)(1LL * (n))) : (zx_duration_from_nsec(n)))
 #define ZX_USEC(n) \
-    (__ISCONSTANT(n) ? ((zx_duration_t)(1000LL * ZX_NSEC(n))) : (zx_duration_from_usec(n)))
+    (__ISCONSTANT(n) ? ((zx_duration_t)(1000LL * (n))) : (zx_duration_from_usec(n)))
 #define ZX_MSEC(n) \
-    (__ISCONSTANT(n) ? ((zx_duration_t)(1000LL * ZX_USEC(n))) : (zx_duration_from_msec(n)))
+    (__ISCONSTANT(n) ? ((zx_duration_t)(1000000LL * (n))) : (zx_duration_from_msec(n)))
 #define ZX_SEC(n) \
-    (__ISCONSTANT(n) ? ((zx_duration_t)(1000LL * ZX_MSEC(n))) : (zx_duration_from_sec(n)))
+    (__ISCONSTANT(n) ? ((zx_duration_t)(1000000000LL * (n))) : (zx_duration_from_sec(n)))
 #define ZX_MIN(n) \
-    (__ISCONSTANT(n) ? ((zx_duration_t)(60LL * ZX_SEC(n))) : (zx_duration_from_min(n)))
+    (__ISCONSTANT(n) ? ((zx_duration_t)(60LL * 1000000000LL * (n))) : (zx_duration_from_min(n)))
 #define ZX_HOUR(n) \
-    (__ISCONSTANT(n) ? ((zx_duration_t)(60LL * ZX_MIN(n))) : (zx_duration_from_hour(n)))
+    (__ISCONSTANT(n) ? ((zx_duration_t)(3600LL * 1000000000LL * (n))) : (zx_duration_from_hour(n)))
 
 __END_CDECLS
