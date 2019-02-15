@@ -109,11 +109,6 @@ bitfield! {
 
     pub value, _: 31,0;
 }
-impl<T: Deref<Target = RawHtControl>> From<T> for HtControl {
-    fn from(bytes: T) -> HtControl {
-        HtControl(LittleEndian::read_u32(&bytes[..]))
-    }
-}
 
 // IEEE Std 802.11-2016, 9.4.1.4
 type RawCapabilityInfo = [u8; 2];
@@ -139,11 +134,6 @@ bitfield! {
 
     pub value, _: 15, 0;
 }
-impl<T: Deref<Target = RawCapabilityInfo>> From<T> for CapabilityInfo {
-    fn from(bytes: T) -> CapabilityInfo {
-        CapabilityInfo(LittleEndian::read_u16(&bytes[..]))
-    }
-}
 
 // IEEE Std 802.11-2016, 9.2.4.5.1, Table 9-6
 bitfield! {
@@ -158,11 +148,6 @@ bitfield! {
     // TODO(hahnr): Support various interpretations for remaining 8 bits.
 
     pub value, _: 15, 0;
-}
-impl<T: Deref<Target = RawQosControl>> From<T> for QosControl {
-    fn from(bytes: T) -> QosControl {
-        QosControl(LittleEndian::read_u16(&bytes[..]))
-    }
 }
 
 #[derive(PartialEq, Eq)]
@@ -288,8 +273,49 @@ impl DataHdr {
     }
 }
 
-pub type RawHtControl = [u8; 4];
-pub type RawQosControl = [u8; 2];
+#[repr(C, packed)]
+pub struct RawHtControl([u8; 4]);
+// Safe: see macro explanation.
+unsafe_impl_zerocopy_traits!(RawHtControl);
+
+impl RawHtControl {
+    pub fn get(&self) -> u32 {
+        LittleEndian::read_u32(&self.0)
+    }
+
+    pub fn set(&mut self, val: u32) {
+        LittleEndian::write_u32(&mut self.0, val)
+    }
+}
+impl Deref for RawHtControl {
+    type Target = [u8; 4];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[repr(C, packed)]
+pub struct RawQosControl([u8; 2]);
+// Safe: see macro explanation.
+unsafe_impl_zerocopy_traits!(RawQosControl);
+
+impl RawQosControl {
+    pub fn get(&self) -> u16 {
+        LittleEndian::read_u16(&self.0)
+    }
+
+    pub fn set(&mut self, val: u16) {
+        LittleEndian::write_u16(&mut self.0, val)
+    }
+}
+impl Deref for RawQosControl {
+    type Target = [u8; 2];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 pub enum MacFrame<B> {
     Mgmt {
@@ -304,7 +330,7 @@ pub enum MacFrame<B> {
         // Data Header: fixed fields
         data_hdr: LayoutVerified<B, DataHdr>,
         // Data Header: optional fields
-        addr4: Option<LayoutVerified<B, MacAddr>>,
+        addr4: Option<LayoutVerified<B, Addr4>>,
         qos_ctrl: Option<LayoutVerified<B, RawQosControl>>,
         ht_ctrl: Option<LayoutVerified<B, RawHtControl>>,
         // Body
@@ -374,7 +400,7 @@ impl<B: ByteSlice> MacFrame<B> {
 fn parse_addr4_if_present<B: ByteSlice>(
     fc: &FrameControl,
     bytes: B,
-) -> Option<(Option<LayoutVerified<B, MacAddr>>, B)> {
+) -> Option<(Option<LayoutVerified<B, Addr4>>, B)> {
     if fc.to_ds() && fc.from_ds() {
         let (addr4, bytes) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
         Some((Some(addr4), bytes))
@@ -1041,7 +1067,7 @@ mod tests {
         let bytes = make_data_frame_with_padding();
         match MacFrame::parse(&bytes[..], true) {
             Some(MacFrame::Data { qos_ctrl, body, .. }) => {
-                assert_eq!([1, 1], *qos_ctrl.expect("qos_ctrl not present"));
+                assert_eq!([1, 1], qos_ctrl.expect("qos_ctrl not present").0);
                 assert_eq!(&[7, 7, 7], &body[..]);
             }
             _ => panic!("failed parsing data frame"),
