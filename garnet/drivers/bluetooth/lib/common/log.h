@@ -7,6 +7,8 @@
 
 #include <cstddef>
 
+#include <ddk/driver.h>
+
 // Logging utilities for the host library. This provides a common abstraction
 // over Zircon DDK debug utilities (used when btlib runs in a driver) and
 // printf.
