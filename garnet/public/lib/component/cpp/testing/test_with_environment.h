@@ -73,9 +73,10 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
   // After all services are added/passed through to the environment, you must
   // call Launch() to actually start it.
   std::unique_ptr<EnclosingEnvironment> CreateNewEnclosingEnvironment(
-      const std::string& label,
-      std::unique_ptr<EnvironmentServices> services) const {
-    return EnclosingEnvironment::Create(label, real_env_, std::move(services));
+      const std::string& label, std::unique_ptr<EnvironmentServices> services,
+      const fuchsia::sys::EnvironmentOptions& options = {}) const {
+    return EnclosingEnvironment::Create(label, real_env_, std::move(services),
+                                        options);
   }
 
   // Returns an EnvironmentServices object that the caller can use to pass
