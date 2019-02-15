@@ -7,8 +7,7 @@
 
 #include <stdint.h>
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 constexpr int32_t kMaxInt24In32 = std::numeric_limits<int32_t>::max() & ~0x0FF;
 constexpr int32_t kMinInt24In32 = std::numeric_limits<int32_t>::min();
@@ -52,7 +51,6 @@ constexpr uint32_t kPtsFractionalMask = (1 << kPtsFractionalBits) - 1;
 // (by the various things which use generation IDs to track state changes).
 constexpr uint32_t kInvalidGenerationId = 0;
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_CONSTANTS_H_

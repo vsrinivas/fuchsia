@@ -10,8 +10,7 @@
 #include "garnet/bin/media/audio_core/audio_device.h"
 #include "garnet/bin/media/audio_core/audio_driver.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioDeviceManager;
 
@@ -64,7 +63,6 @@ class AudioInput : public AudioDevice {
   State state_ = State::Uninitialized;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_INPUT_H_

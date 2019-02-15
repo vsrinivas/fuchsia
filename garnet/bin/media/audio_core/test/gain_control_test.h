@@ -12,9 +12,7 @@
 #include "garnet/bin/media/audio_core/test/audio_tests_shared.h"
 #include "lib/component/cpp/environment_services_helper.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 // GainControlTestBase
 //
@@ -203,8 +201,6 @@ class TwoCapturersGainControlsTest : public IndependentGainControlsTest {
   }
 };
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_TEST_GAIN_CONTROL_TEST_H_

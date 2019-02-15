@@ -14,8 +14,7 @@
 #include "garnet/bin/media/audio_core/fwd_decls.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 // An audio object is the simple base class for 4 major types of audio objects
 // in the mixer; Outputs, Inputs, AudioRenderers and AudioCapturers.  It ensures
@@ -173,7 +172,6 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   bool new_links_allowed_ FXL_GUARDED_BY(links_lock_) = true;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_OBJECT_H_

@@ -8,8 +8,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <zircon/device/audio.h>
 
-namespace media {
-namespace driver_utils {
+namespace media::driver_utils {
 
 // Convert an AudioSampleFormat into an audio stream driver sample_format.
 // Returns true if the conversion succeed, or false if it does not.
@@ -23,7 +22,6 @@ bool DriverSampleFormatToAudioSampleFormat(
     audio_sample_format_t driver_sample_format,
     fuchsia::media::AudioSampleFormat* sample_format_out);
 
-}  // namespace driver_utils
-}  // namespace media
+}  // namespace media::driver_utils
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_DRIVER_UTILS_H_

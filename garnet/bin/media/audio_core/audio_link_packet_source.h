@@ -16,8 +16,7 @@
 #include "garnet/bin/media/audio_core/pending_flush_token.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 // TODO(johngro): docs
 //
@@ -95,7 +94,6 @@ inline AudioLinkPacketSource* AsPacketSource(
   return static_cast<AudioLinkPacketSource*>(link.get());
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_LINK_PACKET_SOURCE_H_

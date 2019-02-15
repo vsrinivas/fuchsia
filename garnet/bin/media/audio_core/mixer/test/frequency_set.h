@@ -9,9 +9,7 @@
 #include <zircon/types.h>
 #include <array>
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 //
 // In performing all of our audio analysis tests with a specific buffer length,
@@ -90,8 +88,6 @@ class FrequencySet {
   FrequencySet() = delete;
 };
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_TEST_FREQUENCY_SET_H_

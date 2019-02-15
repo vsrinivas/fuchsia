@@ -12,8 +12,7 @@
 #include "garnet/bin/media/audio_core/fwd_decls.h"
 #include "lib/media/timeline/timeline_rate.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioRendererFormatInfo
     : public fbl::RefCounted<AudioRendererFormatInfo> {
@@ -39,7 +38,6 @@ class AudioRendererFormatInfo
   uint32_t bytes_per_frame_;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_RENDERER_FORMAT_INFO_H_

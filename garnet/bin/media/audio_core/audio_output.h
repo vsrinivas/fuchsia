@@ -15,8 +15,7 @@
 #include "garnet/bin/media/audio_core/fwd_decls.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class DriverRingBuffer;
 
@@ -31,7 +30,6 @@ class AudioOutput : public AudioDevice {
   int64_t min_clock_lead_time_nsec_ = 0;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_OUTPUT_H_

@@ -7,9 +7,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 // For operations expected to complete, wait five seconds to avoid flaky test
 // behavior in high-load (high-latency) test environments. For reference, today
@@ -41,8 +39,6 @@ constexpr float kUnityGainDb = 0.0f;
 constexpr float kTooLowGainDb = fuchsia::media::MUTED_GAIN_DB - 0.1f;
 constexpr float kTooHighGainDb = fuchsia::media::MAX_GAIN_DB + 0.1f;
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_TEST_AUDIO_TESTS_SHARED_H_

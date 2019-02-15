@@ -21,8 +21,7 @@
 #include "garnet/bin/media/audio_core/driver_ring_buffer.h"
 #include "garnet/bin/media/audio_core/utils.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioOutput;
 
@@ -288,7 +287,6 @@ class AudioDriver {
   zx_time_t plug_time_ FXL_GUARDED_BY(plugged_lock_) = 0;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_DRIVER_H_

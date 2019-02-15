@@ -10,9 +10,7 @@
 #include "garnet/bin/media/audio_core/mixer/constants.h"
 #include "garnet/bin/media/audio_core/mixer/gain.h"
 
-namespace media {
-namespace audio {
-namespace mixer {
+namespace media::audio::mixer {
 
 // mixer_utils.h is a collection of inline templated utility functions meant to
 // be used by mixer implementations and expanded/optimized at compile time in
@@ -166,8 +164,6 @@ class DestMixer<ScaleType, DoAccumulate,
   }
 };
 
-}  // namespace mixer
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::mixer
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_MIXER_UTILS_H_

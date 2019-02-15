@@ -9,8 +9,7 @@
 #include <memory>
 #include <set>
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioDeviceManager;
 class AudioCoreImpl;
@@ -23,7 +22,6 @@ class AudioLink;
 using AudioLinkPtr = std::shared_ptr<AudioLink>;
 using AudioLinkSet = std::set<AudioLinkPtr, std::owner_less<AudioLinkPtr>>;
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_FWD_DECLS_H_

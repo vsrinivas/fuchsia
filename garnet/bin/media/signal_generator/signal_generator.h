@@ -12,8 +12,7 @@
 #include "garnet/lib/media/wav_writer/wav_writer.h"
 #include "lib/component/cpp/startup_context.h"
 
-namespace media {
-namespace tools {
+namespace media::tools {
 
 typedef enum {
   kOutputTypeNoise,
@@ -164,7 +163,6 @@ class MediaApp {
   fuchsia::media::AudioOutputRoutingPolicy audio_policy_;
 };
 
-}  // namespace tools
-}  // namespace media
+}  // namespace media::tools
 
 #endif  // GARNET_BIN_MEDIA_SIGNAL_GENERATOR_SIGNAL_GENERATOR_H_

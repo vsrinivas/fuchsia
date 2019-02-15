@@ -25,8 +25,7 @@
 #include "lib/fxl/time/time_point.h"
 #include "lib/media/timeline/timeline_function.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioDriver;
 class DriverRingBuffer;
@@ -293,7 +292,6 @@ class AudioDevice : public AudioObject,
   volatile bool activated_ = false;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_DEVICE_H_

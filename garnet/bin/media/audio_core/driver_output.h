@@ -14,8 +14,7 @@
 #include "garnet/bin/media/audio_core/standard_output_base.h"
 #include "garnet/lib/media/wav_writer/wav_writer.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 constexpr bool kWavWriterEnabled = false;
 
@@ -84,7 +83,6 @@ class DriverOutput : public StandardOutputBase {
   WavWriter<kWavWriterEnabled> wav_writer_;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_DRIVER_OUTPUT_H_

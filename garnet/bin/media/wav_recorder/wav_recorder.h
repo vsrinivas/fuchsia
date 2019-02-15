@@ -14,8 +14,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace tools {
+namespace media::tools {
 
 class WavRecorder {
  public:
@@ -67,7 +66,6 @@ class WavRecorder {
   uint32_t outstanding_capture_jobs_ = 0;
 };
 
-}  // namespace tools
-}  // namespace media
+}  // namespace media::tools
 
 #endif  // GARNET_BIN_MEDIA_WAV_RECORDER_WAV_RECORDER_H_

@@ -16,8 +16,7 @@
 
 #include "lib/fxl/synchronization/thread_annotations.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioDevice;
 class AudioDriver;
@@ -169,7 +168,6 @@ class AudioDeviceSettings
       FXL_GUARDED_BY(settings_lock_) = static_cast<audio_set_gain_flags_t>(0);
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_DEVICE_SETTINGS_H_

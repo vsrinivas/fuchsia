@@ -14,8 +14,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_rate.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 constexpr bool kVerboseGainDebug = false;
 constexpr bool kVerboseMuteDebug = false;
@@ -209,7 +208,6 @@ class Gain {
   uint32_t frames_ramped_;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_GAIN_H_

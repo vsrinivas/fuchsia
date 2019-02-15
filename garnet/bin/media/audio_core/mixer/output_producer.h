@@ -8,8 +8,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <memory>
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class OutputProducer;
 using OutputProducerPtr = std::unique_ptr<OutputProducer>;
@@ -65,7 +64,6 @@ class OutputProducer {
   uint32_t bytes_per_frame_ = 0;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_OUTPUT_PRODUCER_H_

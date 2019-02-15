@@ -20,8 +20,7 @@
 #include "garnet/bin/media/audio_core/mixer/fx_loader.h"
 #include "lib/fidl/cpp/binding_set.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioCapturerImpl;
 
@@ -240,7 +239,6 @@ class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
   FxLoader fx_loader_;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_DEVICE_MANAGER_H_

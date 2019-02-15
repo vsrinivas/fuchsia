@@ -16,8 +16,7 @@
 
 #include "garnet/bin/media/audio_core/mixer/constants.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class GenerationId {
  public:
@@ -68,7 +67,6 @@ class RefCountedVmoMapper : public fzl::VmoMapper,
   RefCountedVmoMapper() = default;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_UTILS_H_

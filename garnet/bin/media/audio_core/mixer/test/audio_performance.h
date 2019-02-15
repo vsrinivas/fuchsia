@@ -8,9 +8,7 @@
 #include "garnet/bin/media/audio_core/mixer/test/frequency_set.h"
 #include "garnet/bin/media/audio_core/mixer/test/mixer_tests_shared.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 enum GainType : uint32_t { Mute, Unity, Scaled, Ramped };
 enum OutputDataRange : uint32_t { Silence, OutOfRange, Normal };
@@ -76,8 +74,6 @@ class AudioPerformance {
   static void ProfileOutputType(uint32_t num_chans, OutputDataRange data_range);
 };
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_TEST_AUDIO_PERFORMANCE_H_

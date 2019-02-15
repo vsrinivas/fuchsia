@@ -11,9 +11,7 @@
 #include "garnet/bin/media/audio_core/mixer/gain.h"
 #include "garnet/bin/media/audio_core/mixer/test/frequency_set.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 // Audio measurements that are determined by various test cases throughout the
 // overall set. These measurements are eventually displayed in an overall recap,
@@ -529,9 +527,7 @@ class AudioResult {
   static void DumpDynamicRangeValues();
 };
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test
 
 /*
     AudioResult journal - updated upon each CL that affects these measurements

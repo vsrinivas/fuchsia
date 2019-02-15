@@ -10,8 +10,7 @@
 #include "garnet/bin/media/audio_core/audio_link.h"
 #include "garnet/bin/media/audio_core/fwd_decls.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioDevice;
 
@@ -27,7 +26,6 @@ class AudioLinkRingBufferSource : public AudioLink {
                             fbl::RefPtr<AudioObject> dest);
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_LINK_RING_BUFFER_SOURCE_H_

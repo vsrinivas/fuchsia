@@ -11,9 +11,7 @@
 #include "garnet/bin/media/audio_core/mixer/test/audio_analysis.h"
 #include "gtest/gtest.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 //
 // Subtest shared helper functions -- used by tests; can ASSERT on their own.
@@ -77,8 +75,6 @@ constexpr double kFullScaleFloatAccumAmplitude = 1.0f;
 void DoMix(MixerPtr mixer, const void* src_buf, float* accum_buf,
            bool accumulate, int32_t num_frames, float gain_db = 0.0f);
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_TEST_MIXER_TESTS_SHARED_H_

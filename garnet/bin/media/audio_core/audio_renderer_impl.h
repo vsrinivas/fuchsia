@@ -17,8 +17,7 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/media/timeline/timeline_function.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioCoreImpl;
 
@@ -172,7 +171,6 @@ class AudioRendererImpl
   GenerationId ref_clock_to_frac_frames_gen_ FXL_GUARDED_BY(ref_to_ff_lock_);
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_RENDERER_IMPL_H_

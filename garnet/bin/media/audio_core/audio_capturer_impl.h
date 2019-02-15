@@ -23,8 +23,7 @@
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/timeline/timeline_rate.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioCoreImpl;
 
@@ -254,8 +253,7 @@ class AudioCapturerImpl
       sources_ FXL_GUARDED_BY(sources_lock_);
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 FWD_DECL_STATIC_SLAB_ALLOCATOR(
     ::media::audio::AudioCapturerImpl::PcbAllocatorTraits);

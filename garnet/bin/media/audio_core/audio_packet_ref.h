@@ -15,8 +15,7 @@
 #include "garnet/bin/media/audio_core/utils.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioCoreImpl;
 
@@ -93,7 +92,6 @@ class AudioPacketRef
   void fbl_recycle();
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_PACKET_REF_H_

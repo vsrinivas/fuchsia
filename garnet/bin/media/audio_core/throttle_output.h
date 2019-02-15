@@ -7,8 +7,7 @@
 
 #include "garnet/bin/media/audio_core/standard_output_base.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class ThrottleOutput : public StandardOutputBase {
  public:
@@ -37,7 +36,6 @@ class ThrottleOutput : public StandardOutputBase {
   bool uninitialized_ = true;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_THROTTLE_OUTPUT_H_

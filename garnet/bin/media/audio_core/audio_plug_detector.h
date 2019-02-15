@@ -15,8 +15,7 @@
 #include "lib/fsl/io/device_watcher.h"
 #include "lib/fxl/files/unique_fd.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioDeviceManager;
 
@@ -34,7 +33,6 @@ class AudioPlugDetector {
   AudioDeviceManager* manager_ = nullptr;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_PLUG_DETECTOR_H_

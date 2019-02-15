@@ -12,8 +12,7 @@
 #include "garnet/bin/media/audio_core/mixer/gain.h"
 #include "lib/media/timeline/timeline_function.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class Mixer;
 using MixerPtr = std::unique_ptr<Mixer>;
@@ -273,7 +272,6 @@ struct Bookkeeping {
       std::make_unique<Gain::AScale[]>(kScaleArrLen);
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_MIXER_H_

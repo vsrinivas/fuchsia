@@ -7,9 +7,7 @@
 
 #include "garnet/bin/media/audio_core/mixer/mixer.h"
 
-namespace media {
-namespace audio {
-namespace mixer {
+namespace media::audio::mixer {
 
 class NoOp : public Mixer {
  public:
@@ -20,8 +18,6 @@ class NoOp : public Mixer {
            bool accumulate, Bookkeeping* info) override;
 };
 
-}  // namespace mixer
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::mixer
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_NO_OP_H_

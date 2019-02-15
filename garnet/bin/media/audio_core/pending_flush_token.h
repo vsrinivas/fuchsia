@@ -11,8 +11,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioCoreImpl;
 
@@ -48,7 +47,6 @@ class PendingFlushToken
   bool was_recycled_ = false;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_PENDING_FLUSH_TOKEN_H_

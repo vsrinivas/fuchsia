@@ -8,9 +8,7 @@
 #include <zircon/types.h>
 #include <cmath>
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 // Numerically compare two buffers of integers. A bool (default true) represents
 // whether we expect the comparison to fail (for error logging purposes).
@@ -70,8 +68,7 @@ void FFT(double* real, double* imag, uint32_t buf_size);
 template <typename T>
 void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq,
                       double* magn_signal, double* magn_other = nullptr);
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+
+}  // namespace media::audio::test
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_TEST_AUDIO_ANALYSIS_H_

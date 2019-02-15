@@ -9,9 +9,7 @@
 
 #include "garnet/bin/media/audio_core/mixer/mixer.h"
 
-namespace media {
-namespace audio {
-namespace mixer {
+namespace media::audio::mixer {
 
 class PointSampler : public Mixer {
  public:
@@ -23,8 +21,6 @@ class PointSampler : public Mixer {
       : Mixer(pos_filter_width, neg_filter_width) {}
 };
 
-}  // namespace mixer
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::mixer
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_POINT_SAMPLER_H_

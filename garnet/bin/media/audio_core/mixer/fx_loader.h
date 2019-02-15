@@ -9,8 +9,7 @@
 
 #include "lib/media/audio_dfx/audio_device_fx.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 //
 // The following zx_status_t values are returned by these methods:
@@ -88,7 +87,6 @@ class FxLoader {
   bool (*fn_flush_)(fx_token_t);
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_MIXER_FX_LOADER_H_

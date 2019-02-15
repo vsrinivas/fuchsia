@@ -19,15 +19,13 @@ import sys
 
 HEADER = """#include <string>
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 static const std::string %s =
 """
 
 FOOTER = """
-}  // namespace media
-}  // namespace audio
+}  // namespace media::audio
 """
 
 def main():

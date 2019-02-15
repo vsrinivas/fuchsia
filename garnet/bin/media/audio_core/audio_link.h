@@ -14,8 +14,7 @@
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/timeline/timeline_rate.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioDevice;
 class AudioObject;
@@ -65,7 +64,6 @@ class AudioLink {
   std::atomic_bool valid_;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_LINK_H_

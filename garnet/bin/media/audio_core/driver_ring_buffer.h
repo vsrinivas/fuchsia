@@ -10,8 +10,7 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class DriverRingBuffer : public fbl::RefCounted<DriverRingBuffer> {
  public:
@@ -39,7 +38,6 @@ class DriverRingBuffer : public fbl::RefCounted<DriverRingBuffer> {
   uint32_t frame_size_ = 0;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_DRIVER_RING_BUFFER_H_

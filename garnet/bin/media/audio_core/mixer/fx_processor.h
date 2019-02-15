@@ -11,8 +11,7 @@
 #include "garnet/bin/media/audio_core/mixer/fx_loader.h"
 #include "lib/media/audio_dfx/audio_device_fx.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 // FxProcessor represents a chain of active effect instances, attached to a
 // specific device instance. It manages creation and sequencing of instances and
@@ -81,7 +80,6 @@ class FxProcessor {
   std::vector<fx_token_t> fx_chain_;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_FX_PROCESSOR_H_

@@ -19,8 +19,7 @@
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioPacketRef;
 
@@ -121,7 +120,6 @@ class StandardOutputBase : public AudioOutput {
   int64_t trim_threshold_;
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_STANDARD_OUTPUT_BASE_H_

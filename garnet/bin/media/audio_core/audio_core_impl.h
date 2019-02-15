@@ -20,8 +20,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 class AudioCoreImpl : public fuchsia::media::AudioCore {
  public:
@@ -108,7 +107,6 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
   FXL_DISALLOW_COPY_AND_ASSIGN(AudioCoreImpl);
 };
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio
 
 #endif  // GARNET_BIN_MEDIA_AUDIO_CORE_AUDIO_CORE_IMPL_H_
