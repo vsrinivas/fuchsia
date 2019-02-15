@@ -86,10 +86,19 @@ std::vector<const Function*> CodeBlock::GetInlineChain() const {
   while (cur_block) {
     if (const Function* function = cur_block->AsFunction()) {
       result.push_back(function);
-      if (!function->is_inline())
-        break;  // Just added containing non-inline function.
+
+      if (function->is_inline()) {
+        // Follow the inlined structure via containing_block() rather than
+        // the lexical structure of the inlined function (e.g. its parent
+        // class).
+        cur_block = function->containing_block().Get()->AsCodeBlock();
+      } else {
+        // Just added containing non-inline function so we're done.
+        break;
+      }
+    } else {
+      cur_block = cur_block->parent().Get()->AsCodeBlock();
     }
-    cur_block = cur_block->parent().Get()->AsCodeBlock();
   }
   return result;
 }

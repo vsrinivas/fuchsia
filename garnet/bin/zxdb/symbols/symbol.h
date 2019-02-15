@@ -209,17 +209,20 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // on what's in the symbol file).
   int tag() const { return tag_; }
 
-  // The parent symbol. This could be many things. For inlined subroutines
-  // or lexical blocks, it could be an inlined subroutine, a lexical block,
-  // or a function. For a function it could be a class, namespace, or
-  // the top-level compilation unit.
+  // The parent symbol.
   //
-  // In the case of function implementations with separate definitions, the
-  // decoder will set the parent symbol to be the parent scope around
-  // the definition, which is how one will discover classes and namespaces
-  // that the function is in. This is what callers normally want, but it means
-  // that the parent symbol isn't necessarily the physical parent of the
-  // DIE that generated this symbol.
+  // Normally this is the symbol that contains this one in the symbol file.
+  //
+  // In the case of function implementations with separate definitions, this
+  // will be the lexical parent of the function (for example, a class or
+  // namespace) rather than the one containing the code. This is how callers
+  // can navigate the type tree but it means the parent won't match the
+  // record in the DWARF file.
+  //
+  // For inline functions, it's important to know both the lexical scope
+  // which tells you the class/namespace of the function being inlined (the
+  // parent()) as well as the function it's inlined into. Function symbols have
+  // a special containing_block() to give the latter.
   const LazySymbol& parent() const { return parent_; }
   void set_parent(const LazySymbol& e) { parent_ = e; }
 

@@ -317,12 +317,8 @@ TEST_F(StackTest, InlineExpansion) {
   bottom_func->set_code_ranges(
       AddressRanges(AddressRange(kBottomAddr - 8, kBottomAddr + 16)));
 
-  // For convenience, the inline function is nested inside the "bottom" func.
-  // This is not something you can actually do in C++ and will give a name
-  // "Bottom::Inline()". In real life the inline function will reference the
-  // actualy function definition in the correct namespace.
-  bottom_ambig_inline_func->set_parent(LazySymbol(bottom_inline_func));
-  bottom_inline_func->set_parent(LazySymbol(bottom_func));
+  bottom_ambig_inline_func->set_containing_block(LazySymbol(bottom_inline_func));
+  bottom_inline_func->set_containing_block(LazySymbol(bottom_func));
 
   // The location returned by the symbol function will have the file/line
   // inside the inline function.
