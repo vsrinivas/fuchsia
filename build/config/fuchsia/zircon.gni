@@ -52,10 +52,12 @@ if (zircon_build_dir == "") {
   }
 }
 
-# If zircon_use_asan is true, then zircon_build_dir has the ASan bits.
-# Otherwise, they need to be found elsewhere.
-if (zircon_asan_build_dir == "" && !zircon_use_asan) {
-  zircon_asan_build_dir = "${zircon_build_dir}-asan"
+if (zircon_asan_build_dir == "") {
+  if (zircon_use_asan) {
+    zircon_asan_build_dir = zircon_build_dir
+  } else {
+    zircon_asan_build_dir = "${zircon_build_dir}-asan"
+  }
 }
 
 # Template for running a Zircon host tool as part of the build.
