@@ -13,18 +13,28 @@
 
 namespace time_server {
 
+const char kRealRtcDevicePath[] = "/dev/class/rtc/000";
+
+// The default number of time update attempts at startup.
+const uint32_t kDefaultUpdateAttempts = 255;
+
 // TODO(CP-131): Rename to something like SystemTimeUpdater.
 class Timezone {
  public:
   bool Run();
-  bool UpdateSystemTime(int tries);
-  static bool SetSystemTime(zx::time_utc time);
-  Timezone(std::string server_config_file)
-      : server_config_file_(std::move(server_config_file)) {}
+  bool UpdateSystemTime(uint32_t tries);
+  static bool SetSystemTime(const std::string& rtc_service_path,
+                            zx::time_utc time);
+  Timezone(std::string server_config_file,
+           std::string rtc_service_path = kRealRtcDevicePath)
+      : server_config_file_(std::move(server_config_file)),
+        rtc_service_path_(std::move(rtc_service_path)) {}
   ~Timezone() = default;
 
  private:
   std::string server_config_file_;
+  // Path to the FIDL service representing the realtime clock device.
+  std::string rtc_service_path_;
 };
 
 }  // namespace time_server

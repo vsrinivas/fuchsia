@@ -28,7 +28,11 @@ int main(int argc, char** argv) {
       "config", "/pkg/data/roughtime-servers.json");
   FX_LOGS(INFO) << "Opening client config from " << config_path;
 
-  time_server::Timezone service(config_path);
+  const std::string rtc_path = command_line.GetOptionValueWithDefault(
+      "rtc_path", time_server::kRealRtcDevicePath);
+  FX_LOGS(INFO) << "Connecting to RTC device at " << rtc_path;
+
+  time_server::Timezone service(config_path, rtc_path);
   bool success = service.Run();
 
   return success ? EXIT_SUCCESS : EXIT_FAILURE;

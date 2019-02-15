@@ -5,27 +5,29 @@
 #include "garnet/bin/network_time/timezone.h"
 
 #include <fcntl.h>
-#include <fuchsia/hardware/rtc/c/fidl.h>
 #include <inttypes.h>
 #include <sys/time.h>
 #include <unistd.h>
-
 #include <string>
 
+#include "fuchsia/hardware/rtc/cpp/fidl.h"
 #include "garnet/bin/network_time/roughtime_server.h"
 #include "garnet/bin/network_time/time_server_config.h"
 #include "garnet/bin/network_time/time_util.h"
 #include "lib/fdio/util.h"
 #include "lib/syslog/cpp/logger.h"
+#include "zircon/system/ulib/zx/include/lib/zx/channel.h"
 
 namespace time_server {
 
+namespace rtc = fuchsia::hardware::rtc;
+
 bool Timezone::Run() {
   FX_LOGS(INFO) << "started";
-  return UpdateSystemTime(255);
+  return UpdateSystemTime(kDefaultUpdateAttempts);
 }
 
-bool Timezone::UpdateSystemTime(int tries) {
+bool Timezone::UpdateSystemTime(uint32_t tries) {
   TimeServerConfig config;
   if (!config.Parse(server_config_file_)) {
     FX_LOGS(ERROR) << "Failed to parse config file";
@@ -47,7 +49,7 @@ bool Timezone::UpdateSystemTime(int tries) {
     return false;
   }
 
-  for (int i = 0; i < tries; i++) {
+  for (uint32_t i = 0; i < tries; i++) {
     FX_VLOGS(1) << "Updating system time, attempt: " << i + 1;
     auto ret = server->GetTimeFromServer();
     if (ret.first == NETWORK_ERROR) {
@@ -64,40 +66,35 @@ bool Timezone::UpdateSystemTime(int tries) {
                      << "], abort";
       return false;
     }
-    if (SetSystemTime(*ret.second)) {
+    if (SetSystemTime(rtc_service_path_, *ret.second)) {
       break;
     }
   }
   return true;
 }
 
-bool Timezone::SetSystemTime(zx::time_utc time) {
+bool Timezone::SetSystemTime(const std::string& rtc_service_path,
+                             zx::time_utc time) {
   int64_t epoch_seconds = time.get() / 1'000'000'000;
   struct tm ptm;
   gmtime_r(&epoch_seconds, &ptm);
-  fuchsia_hardware_rtc_Time rtc;
-  rtc.seconds = ptm.tm_sec;
-  rtc.minutes = ptm.tm_min;
-  rtc.hours = ptm.tm_hour;
-  rtc.day = ptm.tm_mday;
-  rtc.month = ptm.tm_mon + 1;
-  rtc.year = ptm.tm_year + 1900;
-  int rtc_fd = open("/dev/class/rtc/000", O_WRONLY);
-  if (rtc_fd < 0) {
-    FX_LOGS(ERROR) << "Couldn't open RTC file: " << strerror(errno);
-    return false;
-  }
-  zx_handle_t handle;
-  zx_status_t status = fdio_get_service_handle(rtc_fd, &handle);
+  const rtc::Time rtc_time = ToRtcTime(&ptm);
+
+  rtc::DeviceSyncPtr rtc_device_ptr;
+  zx_status_t status =
+      fdio_service_connect(rtc_service_path.c_str(),
+                           rtc_device_ptr.NewRequest().TakeChannel().release());
+
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't get service handle: " << status;
+    FX_LOGS(ERROR) << "Couldn't open RTC service at " << rtc_service_path
+                   << ": " << strerror(errno);
     return false;
   }
 
   zx_status_t set_status;
-  status = fuchsia_hardware_rtc_DeviceSet(handle, &rtc, &set_status);
+  status = rtc_device_ptr->Set(rtc_time, &set_status);
   if ((status != ZX_OK) || (set_status != ZX_OK)) {
-    FX_LOGS(ERROR) << "fuchsia_hardware_rtc_DeviceSet failed: " << status << "/"
+    FX_LOGS(ERROR) << "rtc::DeviceSyncPtr->Set failed: " << status << "/"
                    << set_status << " for " << ToIso8601String(epoch_seconds)
                    << " (" << epoch_seconds << ")";
     return false;

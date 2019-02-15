@@ -78,13 +78,12 @@ void LocalRoughtimeServer::SetTime(roughtime::rough_time_t server_time_micros) {
 
 void LocalRoughtimeServer::SetTime(uint16_t year, uint8_t month, uint8_t day,
                                    uint8_t hour, uint8_t min, uint8_t sec) {
-  struct tm time = {};
-  time.tm_year = year - 1900;
-  time.tm_mon = month;
-  time.tm_mday = day;
-  time.tm_hour = hour;
-  time.tm_min = min;
-  time.tm_sec = sec;
+  struct tm time = {.tm_year = year - 1900,
+                    .tm_mon = month - 1,
+                    .tm_mday = day,
+                    .tm_hour = hour,
+                    .tm_min = min,
+                    .tm_sec = sec};
   time_t epoch_seconds = timegm(&time);
   SetTime(static_cast<roughtime::rough_time_t>(epoch_seconds * 1'000'000));
 }

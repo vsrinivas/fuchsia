@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_NETWORK_TIME_TEST_LOCAL_ROUGHTIME_SERVER_H
-#define GARNET_BIN_NETWORK_TIME_TEST_LOCAL_ROUGHTIME_SERVER_H
+#ifndef GARNET_BIN_NETWORK_TIME_TEST_LOCAL_ROUGHTIME_SERVER_H_
+#define GARNET_BIN_NETWORK_TIME_TEST_LOCAL_ROUGHTIME_SERVER_H_
 
 #include <thread>
 #include "settable_time_source.h"
@@ -41,7 +41,7 @@ class LocalRoughtimeServer {
   //
   // Params:
   //   year: four-digit year (e.g. 2019)
-  //   month: 0-11
+  //   month: 1-12
   //   day: 1-31
   //   hour: 0-23
   //   min: 0-59
@@ -71,4 +71,4 @@ class LocalRoughtimeServer {
 
 }  // namespace time_server
 
-#endif  // GARNET_BIN_NETWORK_TIME_TEST_LOCAL_ROUGHTIME_SERVER_H
+#endif  // GARNET_BIN_NETWORK_TIME_TEST_LOCAL_ROUGHTIME_SERVER_H_

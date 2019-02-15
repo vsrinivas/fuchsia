@@ -7,9 +7,8 @@
 #include <time.h>
 #include <thread>
 
-#include <lib/zx/time.h>
-#include <lib/sys/cpp/file_descriptor.h>
-
+#include "fake_rtc_device.h"
+#include "fuchsia/hardware/rtc/cpp/fidl.h"
 #include "garnet/bin/network_time/timezone.h"
 #include "garnet/public/lib/fxl/files/scoped_temp_dir.h"
 #include "gmock/gmock.h"
@@ -20,21 +19,28 @@
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/substitute.h"
+#include "lib/sys/cpp/file_descriptor.h"
+#include "lib/vfs/cpp/pseudo_dir.h"
+#include "lib/vfs/cpp/service.h"
+#include "lib/zx/time.h"
 #include "local_roughtime_server.h"
 #include "third_party/roughtime/protocol.h"
 
 namespace time_server {
 
 namespace chrono = std::chrono;
+namespace rtc = fuchsia::hardware::rtc;
 
 using chrono::steady_clock;
 using chrono::system_clock;
 using chrono::time_point;
 using component::testing::EnclosingEnvironment;
+using component::testing::EnvironmentServices;
 using component::testing::TestWithEnvironment;
 using files::ScopedTempDir;
 using fuchsia::sys::LaunchInfo;
 using fxl::StringPrintf;
+using time_server::FakeRtcDevice;
 using time_server::LocalRoughtimeServer;
 using time_server::Timezone;
 
@@ -65,10 +71,14 @@ constexpr uint8_t kPublicKey[roughtime::kPublicKeyLength] = {
 
 #undef GARNET_BIN_NETWORK_TIME_TEST_PUBLIC_KEY
 
-// 0-indexed month
-constexpr uint8_t kOctober = 9;
 constexpr char kNetworkTimePackage[] =
     "fuchsia-pkg://fuchsia.com/network_time#meta/network_time.cmx";
+
+constexpr char kFakeDevPath[] = "/fakedev";
+constexpr char kRtcServiceName[] = "fuchsia.hardware.rtc.Device";
+// C++ still doesn't support compile-time string concatenation. Keep this in
+// sync with kFakeDevPath and kRtcServiceName.
+constexpr char kFakeRtcDevicePath[] = "/fakedev/fuchsia.hardware.rtc.Device";
 
 // Copied from zircon/lib/fidl/array_to_string
 std::string to_hex_string(const uint8_t* data, size_t size) {
@@ -90,14 +100,18 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
 
   void SetUp() override {
     TestWithEnvironment::SetUp();
-    monotonic_start_time_ = steady_clock::now();
-    utc_start_time_ = system_clock::now();
+
+    // Make a fake RTC device and a PseudoDir, and serve the RTC device at that
+    // PseudoDir.
+    fake_dev_vfs_dir_ = std::make_unique<vfs::PseudoDir>();
+    fake_rtc_device_ = std::make_unique<FakeRtcDevice>();
+    std::unique_ptr<vfs::Service> fake_rtc_service =
+        std::make_unique<vfs::Service>(fake_rtc_device_->GetHandler());
+    ASSERT_EQ(ZX_OK, fake_dev_vfs_dir_->AddEntry(kRtcServiceName,
+                                                 std::move(fake_rtc_service)));
   }
 
-  void TearDown() override {
-    ResetClock();
-    TestWithEnvironment::TearDown();
-  }
+  void TearDown() override { TestWithEnvironment::TearDown(); }
 
   // Launch a local Roughtime server in a new thread.
   std::unique_ptr<std::thread> LaunchLocalRoughtimeServer(
@@ -106,19 +120,6 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
         kPrivateKey, port_number, 1537485257118'000);
     return std::make_unique<std::thread>(
         std::thread([&]() { local_roughtime_server_->Start(); }));
-  }
-
-  // Reset the system clock to the correct time, captured before the test and
-  // adjusted for elapsed time.
-  void ResetClock() {
-    const auto elapsed_monotonic_duration =
-        steady_clock::now() - monotonic_start_time_;
-    const auto expected_utc_time = utc_start_time_ + elapsed_monotonic_duration;
-    const time_t expected_epoch_seconds =
-        chrono::duration_cast<chrono::seconds>(
-            expected_utc_time.time_since_epoch())
-            .count();
-    Timezone::SetSystemTime(zx::time_utc(ZX_SEC(expected_epoch_seconds)));
   }
 
   // Launch the system time update service using the production config file.
@@ -155,6 +156,8 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
     return LaunchSystemTimeUpdateService(client_config_path.c_str());
   }
 
+  std::unique_ptr<vfs::PseudoDir> fake_dev_vfs_dir_ = nullptr;
+  std::unique_ptr<FakeRtcDevice> fake_rtc_device_ = nullptr;
   std::unique_ptr<LocalRoughtimeServer> local_roughtime_server_ = nullptr;
 
  private:
@@ -162,6 +165,8 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
   // |opt_pathname| is null, then the production config file will be used.
   fuchsia::sys::ComponentControllerPtr LaunchSystemTimeUpdateService(
       const char* opt_pathname) {
+    zx_status_t status;
+
     LaunchInfo launch_info;
     launch_info.url = kNetworkTimePackage;
     launch_info.out = sys::CloneFileDescriptor(STDOUT_FILENO);
@@ -178,34 +183,53 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
           StringPrintf("--config=%s", opt_pathname));
     }
 
+    // Specify the service path at which to find a fake RTC device.
+    launch_info.arguments.push_back(
+        StringPrintf("--rtc_path=%s", kFakeRtcDevicePath));
+
+    // fuchsia::io::Directory is the directory interface that we expose to the
+    // OS. vfs::PseudoDir is the C++ object that implements the
+    // fuchsia::io::Directory in our process. Here, we bind the interface to the
+    // implementation.
+    fidl::InterfaceHandle<fuchsia::io::Directory> fake_dev_io_dir;
+    status = fake_dev_vfs_dir_->Serve(
+        0, fake_dev_io_dir.NewRequest().TakeChannel(), dispatcher());
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Couldn't Serve() fake dev dir";
+    }
+
+    // Note that the indices of `paths` and `directories` have to line up.
+    launch_info.flat_namespace->paths.push_back(kFakeDevPath);
+    launch_info.flat_namespace->directories.push_back(
+        fake_dev_io_dir.TakeChannel());
+
     fuchsia::sys::ComponentControllerPtr controller;
     CreateComponentInCurrentEnvironment(std::move(launch_info),
                                         controller.NewRequest());
     return controller;
   }
+
   ScopedTempDir temp_dir_;
-  time_point<system_clock> utc_start_time_;
-  time_point<steady_clock> monotonic_start_time_;
 };
 
-// Match the GMT date of the given |time_point<system_clock>|. Time differences
+// Match the GMT date of the given |rtc::Time|. Time differences
 // smaller than one day are ignored.
 // Args:
 //   expected_year: uint16_t
-//   expected_month: uint8_t, 0-11
+//   expected_month: uint8_t, 1-12
 //   expected_day: uint8_t, 1-31
 MATCHER_P3(EqualsGmtDate, expected_year, expected_month, expected_day,
            "has GMT date {" + testing::PrintToString(expected_year) + ", " +
-               testing::PrintToString(expected_month + 1) + ", " +
+               testing::PrintToString(expected_month) + ", " +
                testing::PrintToString(expected_day) + "}") {
-  time_t actual = system_clock::to_time_t(arg);
-  tm* tm = std::gmtime(&actual);
-  if (tm->tm_year + 1900 == expected_year && tm->tm_mon == expected_month &&
-      tm->tm_mday == expected_day) {
+  const rtc::Time actual = arg;
+  if (actual.year == expected_year && actual.month == expected_month &&
+      actual.day == expected_day) {
     return true;
   }
-  *result_listener << "GMT date {" << tm->tm_year + 1900 << ", "
-                   << tm->tm_mon + 1 << ", " << tm->tm_mday << "}";
+  *result_listener << "GMT date {" << actual.year << ", "
+                   << unsigned(actual.month) << ", " << unsigned(actual.day)
+                   << "}";
   return false;
 };
 
@@ -226,19 +250,19 @@ TEST_F(SystemTimeUpdaterTest, UpdateTimeFromLocalRoughtimeServer) {
       zx::sec(1));
   ASSERT_TRUE(local_roughtime_server_->IsRunning());
 
-  // Would use 1985-10-26, but it's considered too far in the past.
-  local_roughtime_server_->SetTime(2000, kOctober, 26, 9, 0, 0);
+  // Back to the past...
+  local_roughtime_server_->SetTime(1985, 10, 26, 9, 0, 0);
   RunComponentUntilTerminatedOrTimeout(
       LaunchSystemTimeUpdateServiceForLocalServer(port_number), nullptr,
       zx::sec(20));
-  EXPECT_THAT(system_clock::now(), EqualsGmtDate(2000, kOctober, 26));
+  EXPECT_THAT(fake_rtc_device_->Get(), EqualsGmtDate(1985, 10, 26));
 
   // Back to the future...
-  local_roughtime_server_->SetTime(2015, kOctober, 21, 7, 28, 0);
+  local_roughtime_server_->SetTime(2015, 10, 21, 7, 28, 0);
   RunComponentUntilTerminatedOrTimeout(
       LaunchSystemTimeUpdateServiceForLocalServer(port_number), nullptr,
       zx::sec(20));
-  EXPECT_THAT(system_clock::now(), EqualsGmtDate(2015, kOctober, 21));
+  EXPECT_THAT(fake_rtc_device_->Get(), EqualsGmtDate(2015, 10, 21));
 
   local_roughtime_server_->Stop();
   // Can't do anything to clean up the server thread.
