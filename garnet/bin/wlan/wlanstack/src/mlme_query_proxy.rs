@@ -14,9 +14,7 @@ pub struct MlmeQueryProxy {
 }
 
 impl MlmeQueryProxy {
-    pub fn new(proxy: MlmeProxy) -> Self {
-        MlmeQueryProxy { proxy }
-    }
+    pub fn new(proxy: MlmeProxy) -> Self { MlmeQueryProxy { proxy } }
 
     pub fn get_minstrel_list(
         &self,
@@ -25,8 +23,7 @@ impl MlmeQueryProxy {
     }
 
     pub fn get_minstrel_peer(
-        &self,
-        mac_addr: [u8; 6],
+        &self, mac_addr: [u8; 6],
     ) -> impl Future<Output = Result<MinstrelStatsResponse, fidl::Error>> {
         let mut req = MinstrelStatsRequest { mac_addr };
         self.proxy.get_minstrel_stats(&mut req)

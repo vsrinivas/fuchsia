@@ -17,16 +17,14 @@ use std::sync::Arc;
 /// All mutations and snapshots are totally ordered, and events in the
 /// queue are guaranteed to follow the same order.
 pub struct WatchableMap<K, V>
-where
-    K: Hash + Eq,
+where K: Hash + Eq
 {
     inner: Mutex<Inner<K, V>>,
 }
 
 #[derive(Debug)]
 pub enum MapEvent<K, V>
-where
-    K: Hash + Eq,
+where K: Hash + Eq
 {
     KeyInserted(K),
     KeyRemoved(K),
@@ -34,8 +32,7 @@ where
 }
 
 struct Inner<K, V>
-where
-    K: Hash + Eq,
+where K: Hash + Eq
 {
     // Storing the map in an Arc allows us to use copy-on-write:
     // taking a snapshot is simply cloning an Arc, and all mutations
@@ -46,8 +43,7 @@ where
 }
 
 impl<K, V> WatchableMap<K, V>
-where
-    K: Clone + Hash + Eq,
+where K: Clone + Hash + Eq
 {
     /// Returns an empty map and the receiving end of the event queue
     pub fn new() -> (Self, UnboundedReceiver<MapEvent<K, V>>) {
@@ -87,9 +83,7 @@ where
     }
 
     /// Get a snapshot without pushing it to the queue
-    pub fn get_snapshot(&self) -> Arc<HashMap<K, Arc<V>>> {
-        self.inner.lock().map.clone()
-    }
+    pub fn get_snapshot(&self) -> Arc<HashMap<K, Arc<V>>> { self.inner.lock().map.clone() }
 
     pub fn get<Q: ?Sized>(&self, k: &Q) -> Option<Arc<V>>
     where

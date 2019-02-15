@@ -10,8 +10,7 @@ use std::marker::Unpin;
 use std::pin::Pin;
 
 pub struct GroupAvailable<S, T, E>
-where
-    S: Stream<Item = Result<T, E>>,
+where S: Stream<Item = Result<T, E>>
 {
     stream: Fuse<S>,
     error: Option<E>,
@@ -20,19 +19,18 @@ where
 impl<S, T, E> Unpin for GroupAvailable<S, T, E> where S: Unpin + Stream<Item = Result<T, E>> {}
 
 impl<S, T, E> GroupAvailable<S, T, E>
-where
-    S: Unpin + Stream<Item = Result<T, E>>,
+where S: Unpin + Stream<Item = Result<T, E>>
 {
     // Safety: projecting to `Fuse<S>` is safe because GroupAvailable is `!Unpin`
     // when `S` is `!Unpin`, and `GroupAvailable` doesn't move out of `stream`.
     unsafe_pinned!(stream: Fuse<S>);
+
     // Safety: nothing requires `error` not to move.
     unsafe_unpinned!(error: Option<E>);
 }
 
 impl<S, T, E> Stream for GroupAvailable<S, T, E>
-where
-    S: Unpin + Stream<Item = Result<T, E>>,
+where S: Unpin + Stream<Item = Result<T, E>>
 {
     type Item = Result<Vec<T>, E>;
 
@@ -59,10 +57,12 @@ where
 }
 
 pub trait GroupAvailableExt: Stream {
-    /// An adaptor for grouping readily available messages into a single Vec item.
+    /// An adaptor for grouping readily available messages into a single Vec
+    /// item.
     ///
-    /// Similar to StreamExt.chunks(), except the size of produced batches can be arbitrary,
-    /// and only depends on how many items were available when the stream was polled.
+    /// Similar to StreamExt.chunks(), except the size of produced batches can
+    /// be arbitrary, and only depends on how many items were available when
+    /// the stream was polled.
     fn group_available<T, E>(self) -> GroupAvailable<Self, T, E>
     where
         Self: Stream<Item = Result<T, E>>,

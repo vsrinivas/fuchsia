@@ -28,12 +28,8 @@ use crate::Never;
 
 // The returned future successfully terminates when MLME closes the channel
 async fn serve_mlme_sme<STA, SRS, TS>(
-    proxy: MlmeProxy,
-    mut event_stream: MlmeEventStream,
-    station: Arc<Mutex<STA>>,
-    mut mlme_stream: MlmeStream,
-    stats_requests: SRS,
-    time_stream: TS,
+    proxy: MlmeProxy, mut event_stream: MlmeEventStream, station: Arc<Mutex<STA>>,
+    mut mlme_stream: MlmeStream, stats_requests: SRS, time_stream: TS,
 ) -> Result<(), failure::Error>
 where
     STA: Station,
@@ -106,8 +102,7 @@ fn forward_mlme_request(req: MlmeRequest, proxy: &MlmeProxy) -> Result<(), fidl:
 }
 
 fn handle_stats_resp(
-    stats_sender: &mut mpsc::Sender<IfaceStats>,
-    resp: fidl_mlme::StatsQueryResponse,
+    stats_sender: &mut mpsc::Sender<IfaceStats>, resp: fidl_mlme::StatsQueryResponse,
 ) -> Result<(), failure::Error> {
     stats_sender.try_send(resp.stats).or_else(|e| {
         if e.is_full() {
@@ -122,13 +117,9 @@ fn handle_stats_resp(
 }
 
 async fn serve_stats<S>(
-    proxy: MlmeProxy,
-    mut stats_requests: S,
-    mut responses: mpsc::Receiver<IfaceStats>,
+    proxy: MlmeProxy, mut stats_requests: S, mut responses: mpsc::Receiver<IfaceStats>,
 ) -> Result<Never, failure::Error>
-where
-    S: Stream<Item = StatsRequest> + Unpin,
-{
+where S: Stream<Item = StatsRequest> + Unpin {
     while let Some(req) = await!(stats_requests.next()) {
         proxy
             .stats_query_req()

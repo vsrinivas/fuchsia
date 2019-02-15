@@ -31,7 +31,8 @@ type StatsRef = Arc<Mutex<fidl_stats::IfaceStats>>;
 
 const REPORT_PERIOD_MINUTES: i64 = 1;
 
-// These IDs must match the Cobalt config from //third_party/cobalt_config/fuchsia/wlan/config.yaml
+// These IDs must match the Cobalt config from
+// //third_party/cobalt_config/fuchsia/wlan/config.yaml
 enum CobaltMetricId {
     RsnaDelay = 2,
     AssociationDelay = 3,
@@ -88,20 +89,20 @@ pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>, mut sender
 }
 
 fn report_stats(
-    last_stats: &fidl_stats::IfaceStats,
-    current_stats: &fidl_stats::IfaceStats,
+    last_stats: &fidl_stats::IfaceStats, current_stats: &fidl_stats::IfaceStats,
     sender: &mut CobaltSender,
-) {
+)
+{
     report_mlme_stats(&last_stats.mlme_stats, &current_stats.mlme_stats, sender);
 
     report_dispatcher_stats(&last_stats.dispatcher_stats, &current_stats.dispatcher_stats, sender);
 }
 
 fn report_dispatcher_stats(
-    last_stats: &fidl_stats::DispatcherStats,
-    current_stats: &fidl_stats::DispatcherStats,
+    last_stats: &fidl_stats::DispatcherStats, current_stats: &fidl_stats::DispatcherStats,
     sender: &mut CobaltSender,
-) {
+)
+{
     // These indexes must match the Cobalt config from
     // //third_party/cobalt_config/fuchsia/wlan/config.yaml
     const DISPATCHER_IN_PACKET_COUNT_INDEX: u32 = 0;
@@ -134,10 +135,10 @@ fn report_dispatcher_packets(packet_type_index: u32, packet_count: u64, sender: 
 }
 
 fn report_mlme_stats(
-    last: &Option<Box<fidl_stats::MlmeStats>>,
-    current: &Option<Box<fidl_stats::MlmeStats>>,
+    last: &Option<Box<fidl_stats::MlmeStats>>, current: &Option<Box<fidl_stats::MlmeStats>>,
     sender: &mut CobaltSender,
-) {
+)
+{
     if let (Some(ref last), Some(ref current)) = (last, current) {
         match (last.as_ref(), current.as_ref()) {
             (ClientMlmeStats(last), ClientMlmeStats(current)) => {
@@ -150,10 +151,10 @@ fn report_mlme_stats(
 }
 
 fn report_client_mlme_stats(
-    last_stats: &fidl_stats::ClientMlmeStats,
-    current_stats: &fidl_stats::ClientMlmeStats,
+    last_stats: &fidl_stats::ClientMlmeStats, current_stats: &fidl_stats::ClientMlmeStats,
     sender: &mut CobaltSender,
-) {
+)
+{
     report_rssi_stats(
         CobaltMetricId::ClientAssocDataRssi as u32,
         &last_stats.assoc_data_rssi,
@@ -171,10 +172,10 @@ fn report_client_mlme_stats(
 }
 
 fn report_client_mlme_rx_tx_frames(
-    last_stats: &fidl_stats::ClientMlmeStats,
-    current_stats: &fidl_stats::ClientMlmeStats,
+    last_stats: &fidl_stats::ClientMlmeStats, current_stats: &fidl_stats::ClientMlmeStats,
     sender: &mut CobaltSender,
-) {
+)
+{
     // These indexes must match the Cobalt config from
     // //third_party/cobalt_config/fuchsia/wlan/config.yaml
     const CLIENT_MLME_RX_FRAME_COUNT_INDEX: u32 = 0;
@@ -208,11 +209,10 @@ fn report_client_mlme_rx_tx_frames(
 }
 
 fn report_rssi_stats(
-    rssi_metric_id: u32,
-    last_stats: &fidl_stats::RssiStats,
-    current_stats: &fidl_stats::RssiStats,
+    rssi_metric_id: u32, last_stats: &fidl_stats::RssiStats, current_stats: &fidl_stats::RssiStats,
     sender: &mut CobaltSender,
-) {
+)
+{
     // In the internal stats histogram, hist[x] represents the number of frames
     // with RSSI -x. For the Cobalt representation, buckets from -128 to 0 are
     // used. When data is sent to Cobalt, the concept of index is utilized.
@@ -244,21 +244,17 @@ fn report_rssi_stats(
 }
 
 pub fn report_scan_delay(
-    sender: &mut CobaltSender,
-    scan_started_time: zx::Time,
-    scan_finished_time: zx::Time,
+    sender: &mut CobaltSender, scan_started_time: zx::Time, scan_finished_time: zx::Time,
 ) {
     let delay_micros = (scan_finished_time - scan_started_time).nanos() / 1000;
     sender.log_elapsed_time(CobaltMetricId::ScanDelay as u32, 0, delay_micros);
 }
 
 pub fn report_connection_delay(
-    sender: &mut CobaltSender,
-    conn_started_time: zx::Time,
-    conn_finished_time: zx::Time,
-    result: &ConnectResult,
-    failure: &Option<ConnectFailure>,
-) {
+    sender: &mut CobaltSender, conn_started_time: zx::Time, conn_finished_time: zx::Time,
+    result: &ConnectResult, failure: &Option<ConnectFailure>,
+)
+{
     let delay_micros = (conn_finished_time - conn_started_time).nanos() / 1000;
     let cobalt_index = match (result, failure) {
         (ConnectResult::Success, None) => Some(ConnectionResultLabel::SuccessId),
@@ -277,27 +273,21 @@ pub fn report_connection_delay(
 }
 
 pub fn report_assoc_success_delay(
-    sender: &mut CobaltSender,
-    assoc_started_time: zx::Time,
-    assoc_finished_time: zx::Time,
+    sender: &mut CobaltSender, assoc_started_time: zx::Time, assoc_finished_time: zx::Time,
 ) {
     let delay_micros = (assoc_finished_time - assoc_started_time).nanos() / 1000;
     sender.log_elapsed_time(CobaltMetricId::AssociationDelay as u32, 0, delay_micros);
 }
 
 pub fn report_rsna_established_delay(
-    sender: &mut CobaltSender,
-    rsna_started_time: zx::Time,
-    rsna_finished_time: zx::Time,
+    sender: &mut CobaltSender, rsna_started_time: zx::Time, rsna_finished_time: zx::Time,
 ) {
     let delay_micros = (rsna_finished_time - rsna_started_time).nanos() / 1000;
     sender.log_elapsed_time(CobaltMetricId::RsnaDelay as u32, 0, delay_micros);
 }
 
 pub fn report_neighbor_networks_count(
-    sender: &mut CobaltSender,
-    bss_count: usize,
-    ess_count: usize,
+    sender: &mut CobaltSender, bss_count: usize, ess_count: usize,
 ) {
     const BSS_COUNT_INDEX: u32 = 0;
     const ESS_COUNT_INDEX: u32 = 1;
@@ -314,8 +304,7 @@ pub fn report_neighbor_networks_count(
 }
 
 pub fn report_standards(
-    sender: &mut CobaltSender,
-    mut num_bss_by_standard: HashMap<Standard, usize>,
+    sender: &mut CobaltSender, mut num_bss_by_standard: HashMap<Standard, usize>,
 ) {
     const ALL_STANDARDS: [(Standard, StandardLabel); 5] = [
         (Standard::B, StandardLabel::B),
@@ -426,9 +415,7 @@ fn convert_connect_failure(result: &ConnectFailure) -> Option<ConnectionResultLa
 }
 
 fn get_diff<T>(last_stat: T, current_stat: T) -> T
-where
-    T: Sub<Output = T> + PartialOrd + Default,
-{
+where T: Sub<Output = T> + PartialOrd + Default {
     if current_stat >= last_stat {
         current_stat - last_stat
     } else {

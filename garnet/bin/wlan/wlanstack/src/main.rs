@@ -48,9 +48,7 @@ pub enum Never {}
 
 impl Never {
     #[allow(missing_docs)]
-    pub fn into_any<T>(self) -> T {
-        match self {}
-    }
+    pub fn into_any<T>(self) -> T { match self {} }
 }
 
 fn main() -> Result<(), Error> {
@@ -85,11 +83,11 @@ fn main() -> Result<(), Error> {
 }
 
 fn serve_fidl(
-    phys: Arc<PhyMap>,
-    ifaces: Arc<IfaceMap>,
+    phys: Arc<PhyMap>, ifaces: Arc<IfaceMap>,
     phy_events: UnboundedReceiver<MapEvent<u16, PhyDevice>>,
     iface_events: UnboundedReceiver<MapEvent<u16, IfaceDevice>>,
-) -> Result<impl Future<Output = Result<Never, Error>>, Error> {
+) -> Result<impl Future<Output = Result<Never, Error>>, Error>
+{
     let (sender, receiver) = mpsc::unbounded();
     let fdio_server = ServicesServer::new()
         .add_service((DeviceServiceMarker::NAME, move |channel| {
