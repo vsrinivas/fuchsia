@@ -137,12 +137,9 @@ protected:
 private:
     void HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                        const zx_packet_signal_t* signal);
+
     // Closes the connection and unregisters it from the VFS object.
     void Terminate(bool call_close);
-
-    // Method used to dispatch into filesystem.
-    // Invoked by |HandleSignals()| or synthesized internally.
-    zx_status_t CallHandler();
 
     // Sends an explicit close message to the underlying vnode.
     // Only necessary if the handler has not returned ERR_DISPATCHER_DONE

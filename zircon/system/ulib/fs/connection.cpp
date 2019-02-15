@@ -340,7 +340,9 @@ void Connection::HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* 
             status = ZX_ERR_PEER_CLOSED;
         } else if (signal->observed & ZX_CHANNEL_READABLE) {
             // Handle the message.
-            status = CallHandler();
+            status = ReadMessage(channel_.get(), [this] (fidl_msg_t* msg, FidlConnection* txn) {
+                return HandleMessage(msg, txn->Txn());
+            });
             switch (status) {
             case ERR_DISPATCHER_ASYNC:
                 return;
@@ -349,6 +351,9 @@ void Connection::HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* 
                 if (status == ZX_OK) {
                     return;
                 }
+                break;
+            default:
+                // In case of error, go to |Terminate|.
                 break;
             }
         }
@@ -371,12 +376,6 @@ void Connection::Terminate(bool call_close) {
     // Tell the VFS that the connection closed remotely.
     // This might have the side-effect of destroying this object.
     vfs_->OnConnectionClosedRemotely(this);
-}
-
-zx_status_t Connection::CallHandler() {
-    return ReadMessage(channel_.get(), [this] (fidl_msg_t* msg, FidlConnection* txn) {
-        return HandleMessage(msg, txn->Txn());
-    });
 }
 
 void Connection::CallClose() {
