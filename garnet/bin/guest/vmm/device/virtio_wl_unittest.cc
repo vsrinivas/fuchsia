@@ -106,7 +106,7 @@ class VirtioWlTest : public TestWithDevice {
       return status;
     }
 
-    auto used_elem = out_queue_.NextUsed();
+    auto used_elem = NextUsed(&out_queue_);
     if (!used_elem || used_elem->id != descriptor_id ||
         used_elem->len != sizeof(*response) ||
         response->hdr.type != VIRTIO_WL_RESP_VFD_NEW || !response->pfn ||
@@ -141,7 +141,7 @@ class VirtioWlTest : public TestWithDevice {
       return status;
     }
 
-    auto used_elem = out_queue_.NextUsed();
+    auto used_elem = NextUsed(&out_queue_);
     return (used_elem && used_elem->id == descriptor_id &&
             used_elem->len == sizeof(*response) &&
             response->hdr.type == VIRTIO_WL_RESP_VFD_NEW)
@@ -173,12 +173,20 @@ class VirtioWlTest : public TestWithDevice {
       return status;
     }
 
-    auto used_elem = out_queue_.NextUsed();
+    auto used_elem = NextUsed(&out_queue_);
     return (used_elem && used_elem->id == descriptor_id &&
             used_elem->len == sizeof(*response) &&
             response->hdr.type == VIRTIO_WL_RESP_VFD_NEW)
                ? ZX_OK
                : ZX_ERR_INTERNAL;
+  }
+
+  std::optional<VirtioQueueFake::UsedElement> NextUsed(VirtioQueueFake* queue) {
+    auto elem = queue->NextUsed();
+    while (!elem && WaitOnInterrupt() == ZX_OK) {
+      elem = queue->NextUsed();
+    }
+    return elem;
   }
 
  protected:
@@ -203,9 +211,8 @@ TEST_F(VirtioWlTest, HandleNew) {
             ZX_OK);
 
   ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
-  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
 
-  auto used_elem = out_queue_.NextUsed();
+  auto used_elem = NextUsed(&out_queue_);
   EXPECT_TRUE(used_elem);
   EXPECT_EQ(used_elem->id, descriptor_id);
   EXPECT_EQ(used_elem->len, sizeof(*response));
@@ -234,8 +241,7 @@ TEST_F(VirtioWlTest, HandleClose) {
             ZX_OK);
 
   ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
-  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
-  auto used_elem = out_queue_.NextUsed();
+  auto used_elem = NextUsed(&out_queue_);
   EXPECT_TRUE(used_elem);
   EXPECT_EQ(used_elem->id, descriptor_id);
   EXPECT_EQ(used_elem->len, sizeof(*response));
@@ -255,8 +261,7 @@ TEST_F(VirtioWlTest, HandleNewCtx) {
             ZX_OK);
 
   ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
-  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
-  auto used_elem = out_queue_.NextUsed();
+  auto used_elem = NextUsed(&out_queue_);
   EXPECT_TRUE(used_elem);
   EXPECT_EQ(used_elem->id, descriptor_id);
   EXPECT_EQ(used_elem->len, sizeof(*response));
@@ -285,8 +290,7 @@ TEST_F(VirtioWlTest, HandleNewPipe) {
             ZX_OK);
 
   ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
-  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
-  auto used_elem = out_queue_.NextUsed();
+  auto used_elem = NextUsed(&out_queue_);
   EXPECT_TRUE(used_elem);
   EXPECT_EQ(used_elem->id, descriptor_id);
   EXPECT_EQ(used_elem->len, sizeof(*response));
@@ -312,9 +316,7 @@ TEST_F(VirtioWlTest, HandleDmabuf) {
             ZX_OK);
 
   ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
-  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
-
-  auto used_elem = out_queue_.NextUsed();
+  auto used_elem = NextUsed(&out_queue_);
   EXPECT_TRUE(used_elem);
   EXPECT_EQ(used_elem->id, descriptor_id);
   EXPECT_EQ(used_elem->len, sizeof(*response));
@@ -354,8 +356,7 @@ TEST_F(VirtioWlTest, HandleSend) {
             ZX_OK);
 
   ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
-  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
-  auto used_elem = out_queue_.NextUsed();
+  auto used_elem = NextUsed(&out_queue_);
   EXPECT_TRUE(used_elem);
   EXPECT_EQ(used_elem->id, descriptor_id);
   EXPECT_EQ(used_elem->len, sizeof(*response));
@@ -399,8 +400,7 @@ TEST_F(VirtioWlTest, HandleSend) {
       reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(buffer);
 
   ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_IN), ZX_OK);
-  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
-  used_elem = in_queue_.NextUsed();
+  used_elem = NextUsed(&in_queue_);
   EXPECT_TRUE(used_elem);
   EXPECT_EQ(used_elem->id, descriptor_id);
   EXPECT_EQ(used_elem->len, buffer_size);
@@ -471,28 +471,19 @@ TEST_F(VirtioWlTest, Recv) {
   // first.
 
   // descriptor_id[1] -> NEW_VFD (VMO)
-  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
-  auto used_elem = in_queue_.NextUsed();
+  auto used_elem = NextUsed(&in_queue_);
   EXPECT_TRUE(used_elem);
   EXPECT_EQ(used_elem->id, descriptor_id[1]);
   EXPECT_EQ(used_elem->len, sizeof(virtio_wl_ctrl_vfd_new_t));
 
   // descriptor_id[2] -> NEW_VFD (SOCKET)
-  used_elem = in_queue_.NextUsed();
-  if (!used_elem) {
-    ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
-    used_elem = in_queue_.NextUsed();
-  }
+  used_elem = NextUsed(&in_queue_);
   EXPECT_TRUE(used_elem);
   EXPECT_EQ(used_elem->id, descriptor_id[2]);
   EXPECT_EQ(used_elem->len, sizeof(virtio_wl_ctrl_vfd_new_t));
 
   // descriptor_id[0] -> RECV
-  used_elem = in_queue_.NextUsed();
-  if (!used_elem) {
-    ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
-    used_elem = in_queue_.NextUsed();
-  }
+  used_elem = NextUsed(&in_queue_);
   EXPECT_TRUE(used_elem);
   EXPECT_EQ(used_elem->id, descriptor_id[0]);
   EXPECT_EQ(used_elem->len, buffer_size);
@@ -535,8 +526,7 @@ TEST_F(VirtioWlTest, Recv) {
               ZX_OK);
 
     ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
-    ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
-    used_elem = out_queue_.NextUsed();
+    used_elem = NextUsed(&out_queue_);
     EXPECT_TRUE(used_elem);
     EXPECT_EQ(used_elem->id, descriptor_id);
     EXPECT_EQ(used_elem->len, sizeof(*response));
@@ -561,8 +551,7 @@ TEST_F(VirtioWlTest, Recv) {
         ZX_OK);
 
     ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
-    ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
-    used_elem = out_queue_.NextUsed();
+    used_elem = NextUsed(&out_queue_);
     EXPECT_TRUE(used_elem);
     EXPECT_EQ(used_elem->id, descriptor_id);
     EXPECT_EQ(used_elem->len, sizeof(*send_response));
@@ -596,8 +585,7 @@ TEST_F(VirtioWlTest, Hup) {
             ZX_OK);
 
   ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_IN), ZX_OK);
-  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
-  auto used_elem = in_queue_.NextUsed();
+  auto used_elem = NextUsed(&in_queue_);
   EXPECT_TRUE(used_elem);
   EXPECT_EQ(used_elem->id, descriptor_id);
   EXPECT_EQ(used_elem->len, sizeof(*header));
