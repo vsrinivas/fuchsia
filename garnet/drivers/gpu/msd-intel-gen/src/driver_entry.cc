@@ -22,6 +22,7 @@
 
 #include "magma_util/dlog.h"
 #include "msd_intel_pci_device.h"
+#include "platform_trace.h"
 #include "sys_driver/magma_driver.h"
 
 #if MAGMA_TEST_DRIVER
@@ -167,6 +168,9 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device)
     device->magma_driver = MagmaDriver::Create();
     if (!device->magma_driver)
         return DRET_MSG(ZX_ERR_INTERNAL, "MagmaDriver::Create failed");
+
+    if (magma::PlatformTrace::Get())
+        magma::PlatformTrace::Get()->Initialize();
 
 #if MAGMA_TEST_DRIVER
     DLOG("running magma indriver test");
