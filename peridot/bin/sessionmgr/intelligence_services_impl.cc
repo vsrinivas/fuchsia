@@ -10,8 +10,10 @@ namespace modular {
 
 IntelligenceServicesImpl::IntelligenceServicesImpl(
     fuchsia::modular::ComponentScope scope,
+    fuchsia::modular::ContextEngine* context_engine,
     fuchsia::modular::SuggestionEngine* suggestion_engine)
     : scope_(std::move(scope)),
+      context_engine_(context_engine),
       suggestion_engine_(suggestion_engine) {}
 
 fuchsia::modular::ComponentScope IntelligenceServicesImpl::CloneScope() {
@@ -22,12 +24,12 @@ fuchsia::modular::ComponentScope IntelligenceServicesImpl::CloneScope() {
 
 void IntelligenceServicesImpl::GetContextReader(
     fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) {
-  // Deprecated: allow |request| to close the channel.
+  context_engine_->GetReader(CloneScope(), std::move(request));
 }
 
 void IntelligenceServicesImpl::GetContextWriter(
     fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
-  // Deprecated: allow |request| to close the channel.
+  context_engine_->GetWriter(CloneScope(), std::move(request));
 }
 
 void IntelligenceServicesImpl::GetProposalPublisher(

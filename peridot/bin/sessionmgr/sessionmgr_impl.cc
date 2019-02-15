@@ -56,6 +56,10 @@ constexpr char kAppId[] = "modular_sessionmgr";
 constexpr char kMaxwellComponentNamespace[] = "maxwell";
 constexpr char kMaxwellUrl[] = "maxwell";
 
+constexpr char kContextEngineUrl[] =
+    "fuchsia-pkg://fuchsia.com/context_engine#meta/context_engine.cmx";
+constexpr char kContextEngineComponentNamespace[] = "context_engine";
+
 constexpr char kModuleResolverUrl[] =
     "fuchsia-pkg://fuchsia.com/module_resolver#meta/module_resolver.cmx";
 
@@ -404,6 +408,9 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   // StoryProviderImpl, even though it won't be bound to a real implementation
   // (provided by Maxwell) until later. It works, but it's not a good pattern.
 
+  fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine;
+  auto context_engine_request = context_engine.NewRequest();
+
   fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider;
   auto story_provider_request = story_provider.NewRequest();
 
@@ -418,7 +425,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   auto visible_stories_provider_request = visible_stories_provider.NewRequest();
 
   user_intelligence_provider_impl_.reset(new UserIntelligenceProviderImpl(
-      startup_context_,
+      startup_context_, std::move(context_engine),
       [this](fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider>
                  request) {
         if (terminating_) {
@@ -469,6 +476,34 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   ComponentContextInfo component_context_info{
       message_queue_manager_.get(), agent_runner_.get(),
       ledger_repository_.get(), entity_provider_runner_.get()};
+  // Start kContextEngineUrl.
+  {
+    context_engine_ns_services_.AddService<fuchsia::modular::ComponentContext>(
+        [this, component_context_info](
+            fidl::InterfaceRequest<fuchsia::modular::ComponentContext>
+                request) {
+          maxwell_component_context_bindings_->AddBinding(
+              std::make_unique<ComponentContextImpl>(
+                  component_context_info, kContextEngineComponentNamespace,
+                  kContextEngineUrl, kContextEngineUrl),
+              std::move(request));
+        });
+    auto service_list = fuchsia::sys::ServiceList::New();
+    service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
+    context_engine_ns_services_.AddBinding(service_list->provider.NewRequest());
+
+    fuchsia::modular::AppConfig context_engine_config;
+    context_engine_config.url = kContextEngineUrl;
+
+    context_engine_app_ =
+        std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+            user_environment_->GetLauncher(), std::move(context_engine_config),
+            "" /* data_origin */, std::move(service_list));
+    context_engine_app_->services().ConnectToService(
+        std::move(context_engine_request));
+    AtEnd(Reset(&context_engine_app_));
+    AtEnd(Teardown(kBasicTimeout, "ContextEngine", context_engine_app_.get()));
+  }
 
   auto maxwell_app_component_context =
       maxwell_component_context_bindings_->AddBinding(
