@@ -61,11 +61,13 @@ template("test_spec") {
       # TODO(joshuaseaton): This is temporary until we are confident that all
       # tests that need to specify hardware are doing so.
       environments += [ nuc_env ]
-    } else if (current_cpu == "arm64" && !envs_specified) {
+    } else if (current_cpu == "arm64") {
       # TODO(IN-876): Remove after astros are ready to be targeted.
       environments += [ astro_env ]
-      # TODO(IN-571): Remove after vim2s are ready to be targeted.
-      environments += [ vim2_env ]
+      if (!envs_specified) {
+        # TODO(IN-571): Remove after vim2s are ready to be targeted.
+        environments += [ vim2_env ]
+      }
     }
   } else if (is_linux || is_mac) {
     if (!defined(environments)) {
@@ -169,7 +171,6 @@ template("test_spec") {
       }
     }
   }
-
 
   target_name_deps = []
 
