@@ -11,11 +11,6 @@ disabled_for_asan = [
   # CF-585
   "/pkgfs/packages/run_tests/0/test/run_return_value_shell_test",
 
-  # SCN-1250
-  "/pkgfs/packages/scenic_tests/0/test/input_unittests",
-  "/pkgfs/packages/scenic_tests/0/test/gfx_unittests",
-  "/pkgfs/packages/scenic_tests/0/test/gfx_viewstate_apptests",
-
   # Causes crash not asan failure (might be require toolchain help)
   "/pkgfs/packages/scenic_tests/0/test/gfx_pixeltests",
 
