@@ -17,6 +17,7 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/mmu_mem_types.h>
 #include <kernel/mp.h>
+#include <lib/counters.h>
 #include <new>
 #include <vm/arch_vm_aspace.h>
 #include <vm/physmap.h>
@@ -25,6 +26,11 @@
 #include <zircon/types.h>
 
 #define LOCAL_TRACE 0
+
+// Count of the number of batches of TLB invalidations initiated on each CPU
+KCOUNTER(tlb_invalidations_sent, "mmu.tlb_invalidation_batches_sent");
+// Count of the number of batches of TLB invalidation requests received on each CPU
+KCOUNTER(tlb_invalidations_received, "mmu.tlb_invalidation_batches_received");
 
 /* Default address width including virtual/physical address.
  * newer versions fetched below */
@@ -146,6 +152,8 @@ static void TlbInvalidatePage_task(void* raw_context) {
     DEBUG_ASSERT(arch_ints_disabled());
     TlbInvalidatePage_context* context = (TlbInvalidatePage_context*)raw_context;
 
+    kcounter_add(tlb_invalidations_received, 1);
+
     ulong cr3 = x86_get_cr3();
     if (context->target_cr3 != cr3 && !context->pending->contains_global) {
         /* This invalidation doesn't apply to this CPU, ignore it */
@@ -185,6 +193,8 @@ static void x86_tlb_invalidate_page(const X86PageTableBase* pt, PendingTlbInvali
     if (pending->count == 0) {
         return;
     }
+
+    kcounter_add(tlb_invalidations_sent, 1);
 
     ulong cr3 = pt ? pt->phys() : x86_get_cr3();
     struct TlbInvalidatePage_context task_context = {
