@@ -238,6 +238,94 @@ Err DoContinue(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
+// down ------------------------------------------------------------------------
+
+const char kDownShortHelp[] = "down: Move down the stack";
+const char kDownHelp[] =
+    R"(down
+
+  Switch the active frame to the one below (forward in time from) the current.
+
+Examples
+
+  down
+      Move one frame down the stack
+
+  t 1 down
+      Move down the stack on thread 1
+)";
+Err DoDown(ConsoleContext* context, const Command& cmd) {
+  Err err = AssertStoppedThreadCommand(context, cmd, true, "down");
+  if (err.has_error())
+    return err;
+
+  auto id = context->GetActiveFrameIdForThread(cmd.thread());
+
+  if (id < 0) {
+    return Err("Cannot find current frame.");
+  }
+
+  if (id == 0) {
+    return Err("At bottom of stack.");
+  }
+
+  if (cmd.thread()->GetStack().size() == 0) {
+    return Err("No stack frames.");
+  }
+
+  id -= 1;
+
+  context->SetActiveFrameIdForThread(cmd.thread(), id);
+  FormatFrameAsync(context, cmd.target(), cmd.thread(),
+                   cmd.thread()->GetStack()[id]);
+
+  return Err();
+}
+
+// up --------------------------------------------------------------------------
+
+const char kUpShortHelp[] = "up: Move up the stack";
+const char kUpHelp[] =
+    R"(up
+
+  Switch the active frame to the one above (backward in time from) the current.
+
+Examples
+
+  up
+      Move one frame up the stack
+
+  t 1 up
+      Move up the stack on thread 1
+)";
+Err DoUp(ConsoleContext* context, const Command& cmd) {
+  Err err = AssertStoppedThreadCommand(context, cmd, true, "up");
+  if (err.has_error())
+    return err;
+
+  auto id = context->GetActiveFrameIdForThread(cmd.thread());
+
+  if (id < 0) {
+    return Err("Cannot find current frame.");
+  }
+
+  id += 1;
+
+  if (cmd.thread()->GetStack().size() == 0) {
+    return Err("No stack frames.");
+  }
+
+  if (static_cast<size_t>(id) >= cmd.thread()->GetStack().size()) {
+    return Err("At top of stack.");
+  }
+
+  context->SetActiveFrameIdForThread(cmd.thread(), id);
+  FormatFrameAsync(context, cmd.target(), cmd.thread(),
+                   cmd.thread()->GetStack()[id]);
+
+  return Err();
+}
+
 // finish ----------------------------------------------------------------------
 
 const char kFinishShortHelp[] =
@@ -285,8 +373,8 @@ Err DoFinish(ConsoleContext* context, const Command& cmd) {
   else
     return Err("Internal error, frame not found in current thread.");
 
-  auto controller = std::make_unique<FinishThreadController>(
-      stack, frame_index);
+  auto controller =
+      std::make_unique<FinishThreadController>(stack, frame_index);
   cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
     if (err.has_error())
       Console::get()->Output(err);
@@ -817,7 +905,7 @@ Err DoStep(ConsoleContext* context, const Command& cmd) {
     auto controller =
         std::make_unique<StepOverThreadController>(StepMode::kSourceLine);
     controller->set_subframe_should_stop_callback(
-        [substr = cmd.args()[0]](const Frame* frame)->bool {
+        [substr = cmd.args()[0]](const Frame* frame) -> bool {
           const Symbol* symbol = frame->GetLocation().symbol().Get();
           if (!symbol)
             return false;  // Unsymbolized location, continue.
@@ -1208,6 +1296,12 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
                  CommandGroup::kAssembly, SourceAffinity::kAssembly);
   (*verbs)[Verb::kUntil] = VerbRecord(&DoUntil, {"until", "u"}, kUntilShortHelp,
                                       kUntilHelp, CommandGroup::kStep);
+
+  // Stack navigation
+  (*verbs)[Verb::kDown] = VerbRecord(&DoDown, {"down"}, kDownShortHelp,
+                                     kDownHelp, CommandGroup::kGeneral);
+  (*verbs)[Verb::kUp] =
+      VerbRecord(&DoUp, {"up"}, kUpShortHelp, kUpHelp, CommandGroup::kGeneral);
 }
 
 }  // namespace zxdb

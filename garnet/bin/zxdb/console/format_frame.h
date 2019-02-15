@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "garnet/bin/zxdb/console/console.h"
+
 namespace zxdb {
 
 class FormatValue;
@@ -33,5 +35,9 @@ void FormatFrame(const Frame* frame, bool include_params, OutputBuffer* out,
 // This does not append a newline at the end of the output.
 void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
                      const FormatExprValueOptions& options, int id = -1);
+
+// Asynchronously outputs a description of the current frame.
+void FormatFrameAsync(ConsoleContext* context, Target* target, Thread* thread,
+                      Frame* frame, bool force_types = false);
 
 }  // namespace zxdb

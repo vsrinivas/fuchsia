@@ -44,6 +44,7 @@ enum class Verb {
   kDetach,
   kDisassemble,
   kDisconnect,
+  kDown,
   kEdit,
   kFinish,
   kGet,
@@ -75,6 +76,7 @@ enum class Verb {
   kSymSearch,
   kSymStat,
   kUntil,
+  kUp,
 
   // Adding a new one? Add in one of the functions GetVerbs() calls.
   kLast  // Not a real verb, keep last.

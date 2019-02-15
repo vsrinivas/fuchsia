@@ -106,18 +106,12 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   // command line (otherwise the command would have been rejected before here).
   FXL_DCHECK(cmd.frame());
   context->SetActiveFrameForThread(cmd.frame());
-  // Setting the active thread also sets the active thread and target.
+  // Setting the active frame also sets the active thread and target.
   context->SetActiveThreadForTarget(cmd.thread());
   context->SetActiveTarget(cmd.target());
 
-  // Schedule asynchronous output of the full frame description.
-  auto helper = fxl::MakeRefCounted<FormatValue>(
-      std::make_unique<FormatValueProcessContextImpl>(cmd.target()));
-  FormatFrameLong(cmd.frame(), cmd.HasSwitch(kForceTypes), helper.get(),
-                  FormatExprValueOptions(),
-                  context->GetActiveFrameIdForThread(cmd.thread()));
-  helper->Complete(
-      [helper](OutputBuffer out) { Console::get()->Output(std::move(out)); });
+  FormatFrameAsync(context, cmd.target(), cmd.thread(), cmd.frame(),
+                   cmd.HasSwitch(kForceTypes));
   return true;
 }
 

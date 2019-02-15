@@ -271,8 +271,9 @@ std::string BreakpointScopeToString(const ConsoleContext* context,
                                context->IdForTarget(settings.scope_target));
     case BreakpointSettings::Scope::kThread:
       return fxl::StringPrintf(
-          "pr %d t %d", context->IdForTarget(
-                            settings.scope_thread->GetProcess()->GetTarget()),
+          "pr %d t %d",
+          context->IdForTarget(
+              settings.scope_thread->GetProcess()->GetTarget()),
           context->IdForThread(settings.scope_thread));
   }
   FXL_NOTREACHED();
@@ -411,7 +412,7 @@ std::string DescribeInputLocation(const InputLocation& location) {
 }
 
 OutputBuffer FormatIdentifier(const std::string& str, bool bold_last) {
-  const auto & [ err, identifier ] = Identifier::FromString(str);
+  const auto& [err, identifier] = Identifier::FromString(str);
   if (err.has_error()) {
     // Not parseable as an identnfier, just write the string.
     return OutputBuffer(str);
@@ -501,8 +502,8 @@ OutputBuffer FormatLocation(const Location& loc, bool always_show_address,
         AddressRange function_range = func->GetFullRange(loc.symbol_context());
         if (function_range.InRange(loc.address())) {
           // Inside a function but no file/line known. Show the offset.
-          result.Append(fxl::StringPrintf(" + 0x%" PRIx64,
-                                      loc.address() - function_range.begin()));
+          result.Append(fxl::StringPrintf(
+              " + 0x%" PRIx64, loc.address() - function_range.begin()));
           result.Append(Syntax::kComment, " (no line info)");
         }
       }

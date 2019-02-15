@@ -145,4 +145,14 @@ void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
   }
 }
 
+void FormatFrameAsync(ConsoleContext* context, Target* target, Thread* thread,
+                      Frame* frame, bool force_types) {
+  auto helper = fxl::MakeRefCounted<FormatValue>(
+      std::make_unique<FormatValueProcessContextImpl>(target));
+  FormatFrameLong(frame, force_types, helper.get(), FormatExprValueOptions(),
+                  context->GetActiveFrameIdForThread(thread));
+  helper->Complete(
+      [helper](OutputBuffer out) { Console::get()->Output(std::move(out)); });
+}
+
 }  // namespace zxdb

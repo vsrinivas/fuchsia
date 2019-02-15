@@ -115,8 +115,7 @@ OutputBuffer FormatFunctionName(const Function* function, bool show_params);
 
 // Formats the location. Normally if a function name is present the code
 // address will be omitted, but always_show_address will override this.
-OutputBuffer FormatLocation(const Location& loc,
-                            bool always_show_address,
+OutputBuffer FormatLocation(const Location& loc, bool always_show_address,
                             bool show_params);
 
 // If show_path is set, the path to the file will be included, otherwise only
