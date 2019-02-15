@@ -433,7 +433,7 @@ public:
     PrimitiveTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter,
                           const std::string& name, types::PrimitiveSubtype subtype)
         : TypeTemplate(Name(nullptr, name), typespace, error_reporter),
-          subtype_(subtype) {};
+          subtype_(subtype){};
 
     bool Create(const SourceLocation& location,
                 const Type* maybe_arg_type,
@@ -460,7 +460,7 @@ class BytesTypeTemplate : public TypeTemplate {
 public:
     BytesTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
         : TypeTemplate(Name(nullptr, "bytes"), typespace, error_reporter),
-        uint8_type_(types::PrimitiveSubtype::kUint8) {}
+          uint8_type_(types::PrimitiveSubtype::kUint8) {}
 
     bool Create(const SourceLocation& location,
                 const Type* maybe_arg_type,
@@ -485,7 +485,7 @@ private:
 class ArrayTypeTemplate : public TypeTemplate {
 public:
     ArrayTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-        : TypeTemplate(Name(nullptr, "array"), typespace, error_reporter) {};
+        : TypeTemplate(Name(nullptr, "array"), typespace, error_reporter){};
 
     bool Create(const SourceLocation& location,
                 const Type* arg_type,
@@ -508,7 +508,7 @@ public:
 class VectorTypeTemplate : public TypeTemplate {
 public:
     VectorTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-        : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter) {};
+        : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter){};
 
     bool Create(const SourceLocation& location,
                 const Type* arg_type,
@@ -532,7 +532,7 @@ private:
 class StringTypeTemplate : public TypeTemplate {
 public:
     StringTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-        : TypeTemplate(Name(nullptr, "string"), typespace, error_reporter) {};
+        : TypeTemplate(Name(nullptr, "string"), typespace, error_reporter){};
 
     bool Create(const SourceLocation& location,
                 const Type* arg_type,
@@ -556,7 +556,7 @@ private:
 class HandleTypeTemplate : public TypeTemplate {
 public:
     HandleTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-        : TypeTemplate(Name(nullptr, "handle"), typespace, error_reporter) {};
+        : TypeTemplate(Name(nullptr, "handle"), typespace, error_reporter){};
 
     bool Create(const SourceLocation& location,
                 const Type* maybe_arg_type,
@@ -581,7 +581,7 @@ public:
 class RequestTypeTemplate : public TypeTemplate {
 public:
     RequestTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-        : TypeTemplate(Name(nullptr, "request"), typespace, error_reporter) {};
+        : TypeTemplate(Name(nullptr, "request"), typespace, error_reporter){};
 
     bool Create(const SourceLocation& location,
                 const Type* arg_type,
@@ -612,7 +612,7 @@ private:
 class TypeDeclTypeTemplate : public TypeTemplate {
 public:
     TypeDeclTypeTemplate(Name name, Typespace* typespace, ErrorReporter* error_reporter,
-                     Library* library, TypeDecl* type_decl)
+                         Library* library, TypeDecl* type_decl)
         : TypeTemplate(std::move(name), typespace, error_reporter),
           library_(library), type_decl_(type_decl) {}
 
@@ -941,6 +941,55 @@ bool ResultShapeConstraint(ErrorReporter* error_reporter,
     return true;
 }
 
+static std::string Trim(std::string s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
+                return !std::isspace(ch);
+            }));
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
+                return !std::isspace(ch);
+            })
+                .base(),
+            s.end());
+    return s;
+}
+
+bool TransportConstraint(ErrorReporter* error_reporter, const raw::Attribute* attribute, const Decl* decl) {
+    // Parse comma separated transports
+    const std::string& value = attribute->value;
+    std::string::size_type prev_pos = 0;
+    std::string::size_type pos;
+    std::vector<std::string> transports;
+    while ((pos = value.find(',', prev_pos)) != std::string::npos) {
+        transports.emplace_back(Trim(value.substr(prev_pos, pos - prev_pos)));
+        prev_pos = pos + 1;
+    }
+    transports.emplace_back(Trim(value.substr(prev_pos)));
+
+    // Validate that they're ok
+    static const std::set<std::string> kValidTransports = {
+        "Channel",
+        "SocketControl",
+        "OvernetStream",
+    };
+    for (auto transport : transports) {
+        if (kValidTransports.count(transport) == 0) {
+            std::ostringstream out;
+            out << "invalid transport type: got " << transport << " expected one of ";
+            bool first = true;
+            for (const auto& t : kValidTransports) {
+                if (!first) {
+                    out << ", ";
+                }
+                first = false;
+                out << t;
+            }
+            error_reporter->ReportError(decl->name.source_location(), out.str());
+            return false;
+        }
+    }
+    return true;
+}
+
 Libraries::Libraries() {
     // clang-format off
     AddAttributeSchema("Discoverable", AttributeSchema({
@@ -1000,11 +1049,9 @@ Libraries::Libraries() {
     }));
     AddAttributeSchema("Transport", AttributeSchema({
         AttributeSchema::Placement::kInterfaceDecl,
-    }, {
-        "Channel",
-        "SocketControl",
-        "OvernetStream",
-    }));
+    }, { 
+        /* any value */
+    }, TransportConstraint));
     // clang-format on
 }
 
@@ -1189,7 +1236,7 @@ Name Library::GeneratedName(const std::string& name) {
 }
 
 Name Library::DerivedName(const std::vector<StringView>& components) {
-  return GeneratedName(StringJoin(components, "_"));
+    return GeneratedName(StringJoin(components, "_"));
 }
 
 bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
@@ -1465,9 +1512,9 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
 }
 
 bool Library::CreateMethodResult(const Name& interface_name,
-                                raw::InterfaceMethod* method,
-                                Struct* in_response,
-                                Struct** out_response) {
+                                 raw::InterfaceMethod* method,
+                                 Struct* in_response,
+                                 Struct** out_response) {
     // Compile the error type.
     auto error_location = method->maybe_error_ctor->location();
     std::unique_ptr<TypeConstructor> error_type_ctor;
@@ -1556,8 +1603,8 @@ bool Library::ConsumeInterfaceDeclaration(
         }
 
         if (has_error) {
-          if (!CreateMethodResult(name, method.get(), maybe_response, &maybe_response))
-            return false;
+            if (!CreateMethodResult(name, method.get(), maybe_response, &maybe_response))
+                return false;
         }
 
         assert(maybe_request != nullptr || maybe_response != nullptr);
@@ -2997,8 +3044,10 @@ bool Library::Compile() {
                     message_struct.push_back(&param.fieldshape);
                 message->typeshape = FidlMessageTypeShape(&message_struct);
             };
-            if (method->maybe_request) FixupMessage(method->maybe_request);
-            if (method->maybe_response) FixupMessage(method->maybe_response);
+            if (method->maybe_request)
+                FixupMessage(method->maybe_request);
+            if (method->maybe_response)
+                FixupMessage(method->maybe_response);
         }
     }
 
@@ -3038,7 +3087,8 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor, TypeShape* out_
             return false;
     }
 
-    if (out_typeshape) *out_typeshape = type_ctor->type->shape;
+    if (out_typeshape)
+        *out_typeshape = type_ctor->type->shape;
     return true;
 }
 
@@ -3115,12 +3165,12 @@ bool Library::ValidateBitsMembers(Bits* bits_decl) {
                   "Bits members must be an unsigned integral type!");
     // Each bits member must be a power of two.
     auto validator = [](MemberType member, std::string* out_error) {
-                         if (!IsPowerOfTwo(member)) {
-                             *out_error = "bits members must be powers of two";
-                             return false;
-                         }
-                         return true;
-                     };
+        if (!IsPowerOfTwo(member)) {
+            *out_error = "bits members must be powers of two";
+            return false;
+        }
+        return true;
+    };
     return ValidateMembers<Bits, MemberType>(bits_decl, validator);
 }
 

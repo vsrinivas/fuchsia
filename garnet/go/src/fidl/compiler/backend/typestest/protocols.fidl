@@ -1,0 +1,30 @@
+library test.name;
+
+[Transport="OvernetStream"]
+protocol OvernetStreamProtocol {
+    MethodA(int64 a, int64 b);
+    -> EventA(int64 a, int64 b);
+    MethodB(int64 a, int64 b) -> (int64 result);
+};
+
+[Transport="SocketControl"]
+protocol SocketControlProtocol {
+    MethodA(int64 a, int64 b);
+    -> EventA(int64 a, int64 b);
+    MethodB(int64 a, int64 b) -> (int64 result);
+};
+
+[Transport="Channel"]
+protocol ChannelProtocol {
+    MethodA(int64 a, int64 b);
+    -> EventA(int64 a, int64 b);
+    MethodB(int64 a, int64 b) -> (int64 result);
+};
+
+// This is not expected to generate code that could be built.
+[Transport="Channel, SocketControl, OvernetStream"]
+protocol KitchenSink {
+    MethodA(int64 a, int64 b);
+    -> EventA(int64 a, int64 b);
+    MethodB(int64 a, int64 b) -> (int64 result);
+};

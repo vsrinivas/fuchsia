@@ -192,7 +192,6 @@ type Interface struct {
 	EventSenderName string
 	SyncName        string
 	SyncProxyName   string
-	Transport       string
 	Methods         []Method
 	Kind            interfaceKind
 }
@@ -241,16 +240,14 @@ type Parameter struct {
 }
 
 type Root struct {
-	PrimaryHeader              string
-	Headers                    []string
-	LLHeaders                  []string
-	HandleTypes                []string
-	HasChannelInterfaces       bool
-	HasSocketControlInterfaces bool
-	HasOvernetStreams          bool
-	Library                    types.LibraryIdentifier
-	LibraryReversed            types.LibraryIdentifier
-	Decls                      []Decl
+	PrimaryHeader     string
+	Headers           []string
+	LLHeaders         []string
+	HandleTypes       []string
+	HasOvernetStreams bool
+	Library           types.LibraryIdentifier
+	LibraryReversed   types.LibraryIdentifier
+	Decls             []Decl
 }
 
 func (m *Method) CallbackWrapper() string {
@@ -698,10 +695,6 @@ func (m Method) NewLLProps(r Interface) LLProps {
 }
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
-	transport, has_transport := val.Attributes.LookupAttribute("Transport")
-	if !has_transport {
-		transport.Value = "Channel"
-	}
 	r := Interface{
 		Attributes:      val.Attributes,
 		Namespace:       c.namespace,
@@ -713,7 +706,6 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		EventSenderName: c.compileCompoundIdentifier(val.Name, "_EventSender"),
 		SyncName:        c.compileCompoundIdentifier(val.Name, "_Sync"),
 		SyncProxyName:   c.compileCompoundIdentifier(val.Name, "_SyncProxy"),
-		Transport:       transport.Value,
 		Methods:         []Method{},
 	}
 
@@ -974,12 +966,8 @@ func Compile(r types.Root) Root {
 		d := c.compileInterface(v)
 		decls[v.Name] = &d
 		// TODO(FIDL-469): refactor
-		if d.Transport == "Channel" {
-			root.HasChannelInterfaces = true
-		} else if d.Transport == "OvernetStream" {
+		if d.Transports()["OvernetStream"] {
 			root.HasOvernetStreams = true
-		} else if d.Transport == "SocketControl" {
-			root.HasSocketControlInterfaces = true
 		}
 	}
 

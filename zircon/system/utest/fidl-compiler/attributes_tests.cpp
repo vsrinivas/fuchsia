@@ -140,7 +140,7 @@ interface A {
     EXPECT_FALSE(library.Compile());
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "invalid value");
+    ASSERT_STR_STR(errors[0].c_str(), "invalid transport");
 
     END_TEST;
 }
@@ -160,7 +160,7 @@ interface A {
     EXPECT_FALSE(library.Compile());
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "invalid value");
+    ASSERT_STR_STR(errors[0].c_str(), "invalid transport");
 
     END_TEST;
 }
@@ -199,6 +199,45 @@ interface A {
     EXPECT_TRUE(library.Compile());
     ASSERT_EQ(library.errors().size(), 0);
     ASSERT_EQ(library.warnings().size(), 0);
+
+    END_TEST;
+}
+
+bool multiple_transports() {
+    BEGIN_TEST;
+
+    TestLibrary library("transport_attribuets.fidl", R"FIDL(
+library fidl.test.transportattributes;
+
+[Transport = "SocketControl, OvernetStream"]
+interface A {
+    MethodA();
+};
+
+)FIDL");
+    EXPECT_TRUE(library.Compile());
+    ASSERT_EQ(library.errors().size(), 0);
+    ASSERT_EQ(library.warnings().size(), 0);
+
+    END_TEST;
+}
+
+bool multiple_transports_with_bogus() {
+    BEGIN_TEST;
+
+    TestLibrary library("transport_attribuets.fidl", R"FIDL(
+library fidl.test.transportattributes;
+
+[Transport = "SocketControl,Bogus, OvernetStream"]
+interface A {
+    MethodA();
+};
+
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "invalid transport");
 
     END_TEST;
 }
@@ -281,16 +320,17 @@ struct MyStruct {
 
 )FIDL");
     library.AddAttributeSchema("MustHaveThreeMembers", fidl::flat::AttributeSchema({
-        fidl::flat::AttributeSchema::Placement::kStructDecl,
-    }, {
-        "",
-    },
-    MustHaveThreeMembers));
+                                                                                       fidl::flat::AttributeSchema::Placement::kStructDecl,
+                                                                                   },
+                                                                                   {
+                                                                                       "",
+                                                                                   },
+                                                                                   MustHaveThreeMembers));
     EXPECT_FALSE(library.Compile());
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(),
-        "declaration did not satisfy constraint of attribute 'MustHaveThreeMembers' with value ''");
+                   "declaration did not satisfy constraint of attribute 'MustHaveThreeMembers' with value ''");
 
     END_TEST;
 }
@@ -307,16 +347,17 @@ interface MyInterface {
 
 )FIDL");
     library.AddAttributeSchema("MustHaveThreeMembers", fidl::flat::AttributeSchema({
-        fidl::flat::AttributeSchema::Placement::kMethod,
-    }, {
-        "",
-    },
-    MustHaveThreeMembers));
+                                                                                       fidl::flat::AttributeSchema::Placement::kMethod,
+                                                                                   },
+                                                                                   {
+                                                                                       "",
+                                                                                   },
+                                                                                   MustHaveThreeMembers));
     EXPECT_FALSE(library.Compile());
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(),
-        "declaration did not satisfy constraint of attribute 'MustHaveThreeMembers' with value ''");
+                   "declaration did not satisfy constraint of attribute 'MustHaveThreeMembers' with value ''");
 
     END_TEST;
 }
@@ -335,16 +376,17 @@ interface MyInterface {
 
 )FIDL");
     library.AddAttributeSchema("MustHaveThreeMembers", fidl::flat::AttributeSchema({
-        fidl::flat::AttributeSchema::Placement::kInterfaceDecl,
-    }, {
-        "",
-    },
-    MustHaveThreeMembers));
+                                                                                       fidl::flat::AttributeSchema::Placement::kInterfaceDecl,
+                                                                                   },
+                                                                                   {
+                                                                                       "",
+                                                                                   },
+                                                                                   MustHaveThreeMembers));
     EXPECT_FALSE(library.Compile());
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 2); // 2 because there are two methods
     ASSERT_STR_STR(errors[0].c_str(),
-        "declaration did not satisfy constraint of attribute 'MustHaveThreeMembers' with value ''");
+                   "declaration did not satisfy constraint of attribute 'MustHaveThreeMembers' with value ''");
 
     END_TEST;
 }
@@ -365,7 +407,7 @@ table MyTable {
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(),
-        "too large: only 27 bytes allowed, but 40 bytes found");
+                   "too large: only 27 bytes allowed, but 40 bytes found");
 
     END_TEST;
 }
@@ -388,7 +430,7 @@ union MyUnion {
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(),
-        "too many handles: only 2 allowed, but 6 found");
+                   "too many handles: only 2 allowed, but 6 found");
 
     END_TEST;
 }
@@ -409,9 +451,9 @@ union MyUnion {
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(),
-        "placement of attribute");
+                   "placement of attribute");
     ASSERT_STR_STR(errors[0].c_str(),
-        "disallowed here");
+                   "disallowed here");
 
     END_TEST;
 }
@@ -428,6 +470,8 @@ RUN_TEST(empty_transport);
 RUN_TEST(bogus_transport);
 RUN_TEST(channel_transport);
 RUN_TEST(socket_control_transport);
+RUN_TEST(multiple_transports);
+RUN_TEST(multiple_transports_with_bogus);
 RUN_TEST(incorrect_placement_layout);
 RUN_TEST(constraint_only_three_members_on_struct);
 RUN_TEST(constraint_only_three_members_on_method);

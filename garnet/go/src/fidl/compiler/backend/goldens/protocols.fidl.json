@@ -1,0 +1,774 @@
+{
+  "version": "0.0.1",
+  "name": "test.name",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "test.name/OvernetStreamProtocol",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+        "line": 4,
+        "column": 9
+      },
+      "maybe_attributes": [
+        {
+          "name": "Transport",
+          "value": "OvernetStream"
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 411580008,
+          "generated_ordinal": 411580008,
+          "name": "MethodA",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+            "line": 5,
+            "column": 4
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "a",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 5,
+                "column": 18
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            },
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "b",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 5,
+                "column": 27
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 24,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 32,
+          "maybe_request_alignment": 8,
+          "has_response": false
+        },
+        {
+          "ordinal": 530966225,
+          "generated_ordinal": 530966225,
+          "name": "EventA",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+            "line": 6,
+            "column": 7
+          },
+          "has_request": false,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "a",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 6,
+                "column": 20
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            },
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "b",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 6,
+                "column": 29
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 24,
+              "max_handles": 0
+            }
+          ],
+          "maybe_response_size": 32,
+          "maybe_response_alignment": 8
+        },
+        {
+          "ordinal": 1291000979,
+          "generated_ordinal": 1291000979,
+          "name": "MethodB",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+            "line": 7,
+            "column": 4
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "a",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 7,
+                "column": 18
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            },
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "b",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 7,
+                "column": 27
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 24,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 32,
+          "maybe_request_alignment": 8,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "result",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 7,
+                "column": 40
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_response_size": 24,
+          "maybe_response_alignment": 8
+        }
+      ]
+    },
+    {
+      "name": "test.name/SocketControlProtocol",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+        "line": 11,
+        "column": 9
+      },
+      "maybe_attributes": [
+        {
+          "name": "Transport",
+          "value": "SocketControl"
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 1007842318,
+          "generated_ordinal": 1007842318,
+          "name": "MethodA",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+            "line": 12,
+            "column": 4
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "a",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 12,
+                "column": 18
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            },
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "b",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 12,
+                "column": 27
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 24,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 32,
+          "maybe_request_alignment": 8,
+          "has_response": false
+        },
+        {
+          "ordinal": 955483393,
+          "generated_ordinal": 955483393,
+          "name": "EventA",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+            "line": 13,
+            "column": 7
+          },
+          "has_request": false,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "a",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 13,
+                "column": 20
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            },
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "b",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 13,
+                "column": 29
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 24,
+              "max_handles": 0
+            }
+          ],
+          "maybe_response_size": 32,
+          "maybe_response_alignment": 8
+        },
+        {
+          "ordinal": 677342235,
+          "generated_ordinal": 677342235,
+          "name": "MethodB",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+            "line": 14,
+            "column": 4
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "a",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 14,
+                "column": 18
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            },
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "b",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 14,
+                "column": 27
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 24,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 32,
+          "maybe_request_alignment": 8,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "result",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 14,
+                "column": 40
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_response_size": 24,
+          "maybe_response_alignment": 8
+        }
+      ]
+    },
+    {
+      "name": "test.name/ChannelProtocol",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+        "line": 18,
+        "column": 9
+      },
+      "maybe_attributes": [
+        {
+          "name": "Transport",
+          "value": "Channel"
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 1432785874,
+          "generated_ordinal": 1432785874,
+          "name": "MethodA",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+            "line": 19,
+            "column": 4
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "a",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 19,
+                "column": 18
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            },
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "b",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 19,
+                "column": 27
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 24,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 32,
+          "maybe_request_alignment": 8,
+          "has_response": false
+        },
+        {
+          "ordinal": 477676034,
+          "generated_ordinal": 477676034,
+          "name": "EventA",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+            "line": 20,
+            "column": 7
+          },
+          "has_request": false,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "a",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 20,
+                "column": 20
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            },
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "b",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 20,
+                "column": 29
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 24,
+              "max_handles": 0
+            }
+          ],
+          "maybe_response_size": 32,
+          "maybe_response_alignment": 8
+        },
+        {
+          "ordinal": 180770075,
+          "generated_ordinal": 180770075,
+          "name": "MethodB",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+            "line": 21,
+            "column": 4
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "a",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 21,
+                "column": 18
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            },
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "b",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 21,
+                "column": 27
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 24,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 32,
+          "maybe_request_alignment": 8,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "result",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 21,
+                "column": 40
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_response_size": 24,
+          "maybe_response_alignment": 8
+        }
+      ]
+    },
+    {
+      "name": "test.name/KitchenSink",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+        "line": 26,
+        "column": 9
+      },
+      "maybe_attributes": [
+        {
+          "name": "Transport",
+          "value": "Channel, SocketControl, OvernetStream"
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 450577456,
+          "generated_ordinal": 450577456,
+          "name": "MethodA",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+            "line": 27,
+            "column": 4
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "a",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 27,
+                "column": 18
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            },
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "b",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 27,
+                "column": 27
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 24,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 32,
+          "maybe_request_alignment": 8,
+          "has_response": false
+        },
+        {
+          "ordinal": 1795426833,
+          "generated_ordinal": 1795426833,
+          "name": "EventA",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+            "line": 28,
+            "column": 7
+          },
+          "has_request": false,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "a",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 28,
+                "column": 20
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            },
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "b",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 28,
+                "column": 29
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 24,
+              "max_handles": 0
+            }
+          ],
+          "maybe_response_size": 32,
+          "maybe_response_alignment": 8
+        },
+        {
+          "ordinal": 1999489700,
+          "generated_ordinal": 1999489700,
+          "name": "MethodB",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+            "line": 29,
+            "column": 4
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "a",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 29,
+                "column": 18
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            },
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "b",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 29,
+                "column": 27
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 24,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 32,
+          "maybe_request_alignment": 8,
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "result",
+              "location": {
+                "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
+                "line": 29,
+                "column": 40
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_response_size": 24,
+          "maybe_response_alignment": 8
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "declaration_order": [
+    "test.name/KitchenSink",
+    "test.name/ChannelProtocol",
+    "test.name/SocketControlProtocol",
+    "test.name/OvernetStreamProtocol"
+  ],
+  "declarations": {
+    "test.name/OvernetStreamProtocol": "interface",
+    "test.name/SocketControlProtocol": "interface",
+    "test.name/ChannelProtocol": "interface",
+    "test.name/KitchenSink": "interface"
+  }
+}

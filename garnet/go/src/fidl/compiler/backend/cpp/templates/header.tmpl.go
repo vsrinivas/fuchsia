@@ -64,20 +64,26 @@ namespace fidl {
 {{ end }}
 
 {{- define "DispatchInterfaceForwardDeclaration" -}}
-{{- if Eq .Transport "Channel" -}}{{ template "InterfaceForwardDeclaration" . }}{{- end }}
-{{- if Eq .Transport "OvernetStream" }}{{ template "OvernetStreamForwardDeclaration" . }}{{- end }}
-{{- if Eq .Transport "SocketControl" -}}{{ template "InterfaceForwardDeclaration" . }}{{- end }}
+{{- range $transport, $_ := .Transports }}
+{{- if Eq $transport "Channel" -}}{{ template "InterfaceForwardDeclaration" $ }}{{- end }}
+{{- if Eq $transport "OvernetStream" }}{{ template "OvernetStreamForwardDeclaration" $ }}{{- end }}
+{{- if Eq $transport "SocketControl" -}}{{ template "InterfaceForwardDeclaration" $ }}{{- end }}
+{{- end }}
 {{- end -}}
 
 {{- define "DispatchInterfaceDeclaration" -}}
-{{- if Eq .Transport "Channel" -}}{{ template "InterfaceDeclaration" . }}{{- end }}
-{{- if Eq .Transport "OvernetStream" }}{{ template "OvernetStreamDeclaration" . }}{{- end }}
-{{- if Eq .Transport "SocketControl" -}}{{ template "InterfaceDeclaration" . }}{{- end }}
+{{- range $transport, $_ := .Transports }}
+{{- if Eq $transport "Channel" -}}{{ template "InterfaceDeclaration" $ }}{{- end }}
+{{- if Eq $transport "OvernetStream" }}{{ template "OvernetStreamDeclaration" $ }}{{- end }}
+{{- if Eq $transport "SocketControl" -}}{{ template "InterfaceDeclaration" $ }}{{- end }}
+{{- end }}
 {{- end -}}
 
 {{- define "DispatchInterfaceTraits" -}}
-{{- if Eq .Transport "Channel" -}}{{ template "InterfaceTraits" . }}{{- end }}
-{{- if Eq .Transport "OvernetStream" }}{{ template "OvernetStreamTraits" . }}{{- end }}
-{{- if Eq .Transport "SocketControl" -}}{{ template "InterfaceTraits" . }}{{- end }}
+{{- range $transport, $_ := .Transports }}
+{{- if Eq $transport "Channel" -}}{{ template "InterfaceTraits" $ }}{{- end }}
+{{- if Eq $transport "OvernetStream" }}{{ template "OvernetStreamTraits" $ }}{{- end }}
+{{- if Eq $transport "SocketControl" -}}{{ template "InterfaceTraits" $ }}{{- end }}
+{{- end }}
 {{- end -}}
 `

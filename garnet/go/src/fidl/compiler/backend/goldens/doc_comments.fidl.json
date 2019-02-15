@@ -2,6 +2,7 @@
   "version": "0.0.1",
   "name": "test.name",
   "library_dependencies": [],
+  "bits_declarations": [],
   "const_declarations": [
     {
       "name": "test.name/C",

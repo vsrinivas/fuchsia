@@ -309,6 +309,21 @@ func (el Attributes) DocComments() []string {
 	return strings.Split(doc.Value[0:len(doc.Value)-1], "\n")
 }
 
+func (el Attributes) Transports() map[string]bool {
+	transports := map[string]bool{}
+	raw, ok := el.LookupAttribute("Transport")
+	if ok && raw.Value != "" {
+		for _, transport := range strings.Split(raw.Value, ",") {
+			transports[strings.TrimSpace(transport)] = true
+		}
+	}
+	// No transport attribute => just Channel
+	if !ok {
+		transports["Channel"] = true
+	}
+	return transports
+}
+
 // Union represents the declaration of a FIDL union.
 type Union struct {
 	Attributes

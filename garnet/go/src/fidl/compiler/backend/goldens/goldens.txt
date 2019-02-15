@@ -22,6 +22,14 @@ ordinal_switch.fidl.json.llcpp.cpp.golden
 ordinal_switch.fidl.json.llcpp.h.golden
 ordinal_switch.fidl.json.rs.golden
 ordinal_switch.fidl.json_test_base.h.golden
+protocols.fidl.json
+protocols.fidl.json.cc.golden
+protocols.fidl.json.go.golden
+protocols.fidl.json.h.golden
+protocols.fidl.json.llcpp.cpp.golden
+protocols.fidl.json.llcpp.h.golden
+protocols.fidl.json.rs.golden
+protocols.fidl.json_test_base.h.golden
 tables.fidl.json
 tables.fidl.json.cc.golden
 tables.fidl.json.go.golden
