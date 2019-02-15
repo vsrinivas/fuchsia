@@ -78,17 +78,15 @@ class PageStorage : public PageSyncClient {
   // base commit must be one of the head commits. If |journal_type| is
   // |EXPLICIT|, all changes will be lost after a crash. Otherwise, changes to
   // implicit journals will be committed on system restart.
-  virtual void StartCommit(
-      const CommitId& commit_id, JournalType journal_type,
-      fit::function<void(Status, std::unique_ptr<Journal>)> callback) = 0;
+  virtual std::unique_ptr<Journal> StartCommit(const CommitId& commit_id,
+                                               JournalType journal_type) = 0;
   // Starts a new journal for a merge commit, based on the given commits.
   // |left| and |right| must both be in the set of head commits. All
   // modifications to the journal consider the |left| as the base of the new
   // commit. Merge commits are always explicit, that is in case of a crash all
   // changes to the journal will be lost.
-  virtual void StartMergeCommit(
-      const CommitId& left, const CommitId& right,
-      fit::function<void(Status, std::unique_ptr<Journal>)> callback) = 0;
+  virtual std::unique_ptr<Journal> StartMergeCommit(const CommitId& left,
+                                                    const CommitId& right) = 0;
 
   // Commits the given |journal| and when finished, returns the success/failure
   // status and the created Commit object through the given |callback|.

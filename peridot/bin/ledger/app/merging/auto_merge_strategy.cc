@@ -216,24 +216,9 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
   // Here, we reuse the diff we computed before to create the merge commit. As
   // StartMergeCommit uses the left commit (first parameter) as its base, we
   // only have to apply the right diff to it and we are done.
-  storage_->StartMergeCommit(
-      left_->GetId(), right_->GetId(),
-      callback::MakeScoped(
-          weak_factory_.GetWeakPtr(),
-          [this, right_changes = std::move(right_changes)](
-              storage::Status s,
-              std::unique_ptr<storage::Journal> journal) mutable {
-            if (cancelled_) {
-              Done(Status::INTERNAL_ERROR);
-              return;
-            }
-            if (s != storage::Status::OK) {
-              FXL_LOG(ERROR) << "Unable to start merge commit: " << s;
-              Done(PageUtils::ConvertStatus(s));
-              return;
-            }
-            ApplyDiffOnJournal(std::move(journal), std::move(right_changes));
-          }));
+  std::unique_ptr<storage::Journal> journal =
+      storage_->StartMergeCommit(left_->GetId(), right_->GetId());
+  ApplyDiffOnJournal(std::move(journal), std::move(right_changes));
 }
 
 void AutoMergeStrategy::AutoMerger::ApplyDiffOnJournal(

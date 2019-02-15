@@ -39,17 +39,12 @@ class CommonAncestorTest : public TestWithPageStorage {
   std::unique_ptr<const storage::Commit> CreateCommit(
       storage::CommitIdView parent_id,
       fit::function<void(storage::Journal*)> contents) {
-    bool called;
-    storage::Status status;
-    std::unique_ptr<storage::Journal> journal;
-    storage_->StartCommit(
-        parent_id.ToString(), storage::JournalType::IMPLICIT,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &journal));
-    RunLoopUntilIdle();
-    EXPECT_TRUE(called);
-    EXPECT_EQ(storage::Status::OK, status);
+    std::unique_ptr<storage::Journal> journal = storage_->StartCommit(
+        parent_id.ToString(), storage::JournalType::IMPLICIT);
 
     contents(journal.get());
+    bool called;
+    storage::Status status;
     std::unique_ptr<const storage::Commit> commit;
     storage_->CommitJournal(
         std::move(journal),
@@ -63,17 +58,11 @@ class CommonAncestorTest : public TestWithPageStorage {
   std::unique_ptr<const storage::Commit> CreateMergeCommit(
       storage::CommitIdView left, storage::CommitIdView right,
       fit::function<void(storage::Journal*)> contents) {
-    bool called;
-    storage::Status status;
-    std::unique_ptr<storage::Journal> journal;
-    storage_->StartMergeCommit(
-        left.ToString(), right.ToString(),
-        callback::Capture(callback::SetWhenCalled(&called), &status, &journal));
-    RunLoopUntilIdle();
-    EXPECT_TRUE(called);
-    EXPECT_EQ(storage::Status::OK, status);
+    std::unique_ptr<storage::Journal> journal =
+        storage_->StartMergeCommit(left.ToString(), right.ToString());
 
     contents(journal.get());
+    bool called;
     storage::Status actual_status;
     std::unique_ptr<const storage::Commit> actual_commit;
     storage_->CommitJournal(std::move(journal),

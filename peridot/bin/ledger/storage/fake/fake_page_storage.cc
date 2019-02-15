@@ -90,9 +90,8 @@ void FakePageStorage::GetCommit(
       kFakePageStorageDelay);
 }
 
-void FakePageStorage::StartCommit(
-    const CommitId& commit_id, JournalType /*journal_type*/,
-    fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
+std::unique_ptr<Journal> FakePageStorage::StartCommit(
+    const CommitId& commit_id, JournalType /*journal_type*/) {
   uint64_t next_generation = 0;
   FakeJournalDelegate::Data data;
   if (journals_.find(commit_id) != journals_.end()) {
@@ -104,12 +103,11 @@ void FakePageStorage::StartCommit(
       next_generation);
   auto journal = std::make_unique<FakeJournal>(delegate.get());
   journals_[delegate->GetId()] = std::move(delegate);
-  callback(Status::OK, std::move(journal));
+  return journal;
 }
 
-void FakePageStorage::StartMergeCommit(
-    const CommitId& left, const CommitId& right,
-    fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
+std::unique_ptr<Journal> FakePageStorage::StartMergeCommit(
+    const CommitId& left, const CommitId& right) {
   auto delegate = std::make_unique<FakeJournalDelegate>(
       environment_->random(), journals_[left].get()->GetData(), left, right,
       autocommit_,
@@ -117,7 +115,7 @@ void FakePageStorage::StartMergeCommit(
                    journals_[right].get()->GetGeneration()));
   auto journal = std::make_unique<FakeJournal>(delegate.get());
   journals_[delegate->GetId()] = std::move(delegate);
-  callback(Status::OK, std::move(journal));
+  return journal;
 }
 
 void FakePageStorage::CommitJournal(

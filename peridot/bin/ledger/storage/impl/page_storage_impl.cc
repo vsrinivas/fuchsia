@@ -197,19 +197,14 @@ void PageStorageImpl::AddCommitsFromSync(
       });
 }
 
-// TODO(nellyv): Remove the callback: The operation is synchronous.
-void PageStorageImpl::StartCommit(
-    const CommitId& commit_id, JournalType journal_type,
-    fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
-  callback(Status::OK,
-           JournalImpl::Simple(journal_type, environment_, this, commit_id));
+std::unique_ptr<Journal> PageStorageImpl::StartCommit(
+    const CommitId& commit_id, JournalType journal_type) {
+  return JournalImpl::Simple(journal_type, environment_, this, commit_id);
 }
 
-// TODO(nellyv): Remove the callback: The operation is synchronous.
-void PageStorageImpl::StartMergeCommit(
-    const CommitId& left, const CommitId& right,
-    fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
-  callback(Status::OK, JournalImpl::Merge(environment_, this, left, right));
+std::unique_ptr<Journal> PageStorageImpl::StartMergeCommit(
+    const CommitId& left, const CommitId& right) {
+  return JournalImpl::Merge(environment_, this, left, right);
 }
 
 void PageStorageImpl::CommitJournal(

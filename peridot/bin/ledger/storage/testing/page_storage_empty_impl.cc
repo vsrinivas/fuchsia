@@ -45,18 +45,16 @@ void PageStorageEmptyImpl::AddCommitsFromSync(
   callback(Status::NOT_IMPLEMENTED, {});
 }
 
-void PageStorageEmptyImpl::StartCommit(
-    const CommitId& /*commit_id*/, JournalType /*journal_type*/,
-    fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
+std::unique_ptr<Journal> PageStorageEmptyImpl::StartCommit(
+    const CommitId& /*commit_id*/, JournalType /*journal_type*/) {
   FXL_NOTIMPLEMENTED();
-  callback(Status::NOT_IMPLEMENTED, nullptr);
+  return nullptr;
 }
 
-void PageStorageEmptyImpl::StartMergeCommit(
-    const CommitId& /*left*/, const CommitId& /*right*/,
-    fit::function<void(Status, std::unique_ptr<Journal>)> callback) {
+std::unique_ptr<Journal> PageStorageEmptyImpl::StartMergeCommit(
+    const CommitId& /*left*/, const CommitId& /*right*/) {
   FXL_NOTIMPLEMENTED();
-  callback(Status::NOT_IMPLEMENTED, nullptr);
+  return nullptr;
 }
 
 void PageStorageEmptyImpl::CommitJournal(

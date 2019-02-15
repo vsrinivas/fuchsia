@@ -71,19 +71,8 @@ LastOneWinsMergeStrategy::LastOneWinsMerger::~LastOneWinsMerger() {
 }
 
 void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
-  storage_->StartMergeCommit(
-      left_->GetId(), right_->GetId(),
-      callback::MakeScoped(
-          weak_factory_.GetWeakPtr(),
-          [this](storage::Status s, std::unique_ptr<storage::Journal> journal) {
-            if (cancelled_ || s != storage::Status::OK) {
-              Done(cancelled_ ? Status::INTERNAL_ERROR
-                              : PageUtils::ConvertStatus(s));
-              return;
-            }
-            journal_ = std::move(journal);
-            BuildAndCommitJournal();
-          }));
+  journal_ = storage_->StartMergeCommit(left_->GetId(), right_->GetId());
+  BuildAndCommitJournal();
 }
 
 void LastOneWinsMergeStrategy::LastOneWinsMerger::Cancel() {

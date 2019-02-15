@@ -42,13 +42,11 @@ class PageStorageEmptyImpl : public PageStorage {
       std::vector<CommitIdAndBytes> ids_and_bytes, ChangeSource source,
       fit::function<void(Status, std::vector<CommitId>)> callback) override;
 
-  void StartCommit(
-      const CommitId& commit_id, JournalType journal_type,
-      fit::function<void(Status, std::unique_ptr<Journal>)> callback) override;
+  std::unique_ptr<Journal> StartCommit(const CommitId& commit_id,
+                                       JournalType journal_type) override;
 
-  void StartMergeCommit(
-      const CommitId& left, const CommitId& right,
-      fit::function<void(Status, std::unique_ptr<Journal>)> callback) override;
+  std::unique_ptr<Journal> StartMergeCommit(const CommitId& left,
+                                            const CommitId& right) override;
 
   void CommitJournal(std::unique_ptr<Journal> journal,
                      fit::function<void(Status, std::unique_ptr<const Commit>)>

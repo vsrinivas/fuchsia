@@ -53,42 +53,25 @@ ConflictResolverClient::~ConflictResolverClient() {
 
 void ConflictResolverClient::Start() {
   // Prepare the journal for the merge commit.
-  storage_->StartMergeCommit(
-      left_->GetId(), right_->GetId(),
-      callback::MakeScoped(
-          weak_factory_.GetWeakPtr(),
-          [this](storage::Status status,
-                 std::unique_ptr<storage::Journal> journal) {
-            if (cancelled_) {
-              Finalize(Status::INTERNAL_ERROR);
-              return;
-            }
-            journal_ = std::move(journal);
-            if (status != storage::Status::OK) {
-              FXL_LOG(ERROR) << "Unable to start merge commit: "
-                             << fidl::ToUnderlying(status);
-              Finalize(PageUtils::ConvertStatus(status));
-              return;
-            }
+  journal_ = storage_->StartMergeCommit(left_->GetId(), right_->GetId());
 
-            PageSnapshotPtr page_snapshot_ancestor;
-            manager_->BindPageSnapshot(ancestor_->Clone(),
-                                       page_snapshot_ancestor.NewRequest(), "");
+  PageSnapshotPtr page_snapshot_ancestor;
+  manager_->BindPageSnapshot(ancestor_->Clone(),
+                             page_snapshot_ancestor.NewRequest(), "");
 
-            PageSnapshotPtr page_snapshot_left;
-            manager_->BindPageSnapshot(left_->Clone(),
-                                       page_snapshot_left.NewRequest(), "");
+  PageSnapshotPtr page_snapshot_left;
+  manager_->BindPageSnapshot(left_->Clone(), page_snapshot_left.NewRequest(),
+                             "");
 
-            PageSnapshotPtr page_snapshot_right;
-            manager_->BindPageSnapshot(right_->Clone(),
-                                       page_snapshot_right.NewRequest(), "");
+  PageSnapshotPtr page_snapshot_right;
+  manager_->BindPageSnapshot(right_->Clone(), page_snapshot_right.NewRequest(),
+                             "");
 
-            in_client_request_ = true;
-            conflict_resolver_->Resolve(
-                std::move(page_snapshot_left), std::move(page_snapshot_right),
-                std::move(page_snapshot_ancestor),
-                merge_result_provider_binding_.NewBinding());
-          }));
+  in_client_request_ = true;
+  conflict_resolver_->Resolve(std::move(page_snapshot_left),
+                              std::move(page_snapshot_right),
+                              std::move(page_snapshot_ancestor),
+                              merge_result_provider_binding_.NewBinding());
 }
 
 void ConflictResolverClient::Cancel() {

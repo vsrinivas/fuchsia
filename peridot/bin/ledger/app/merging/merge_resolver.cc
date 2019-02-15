@@ -353,31 +353,20 @@ void MergeResolver::MergeCommitsWithSameContent(
     std::unique_ptr<const storage::Commit> head1,
     std::unique_ptr<const storage::Commit> head2,
     fit::closure on_successful_merge) {
-  storage_->StartMergeCommit(
-      head1->GetId(), head2->GetId(),
+  std::unique_ptr<storage::Journal> journal =
+      storage_->StartMergeCommit(head1->GetId(), head2->GetId());
+  has_merged_ = true;
+  storage_->CommitJournal(
+      std::move(journal),
       TRACE_CALLBACK(
-          task_runner_.MakeScoped(
-              [this, on_successful_merge = std::move(on_successful_merge)](
-                  storage::Status status,
-                  std::unique_ptr<storage::Journal> journal) mutable {
-                if (status != storage::Status::OK) {
-                  FXL_LOG(ERROR)
-                      << "Unable to start merge commit for identical commits.";
-                  return;
-                }
-                has_merged_ = true;
-                storage_->CommitJournal(
-                    std::move(journal),
-                    [on_successful_merge = std::move(on_successful_merge)](
-                        storage::Status status,
-                        std::unique_ptr<const storage::Commit>) {
-                      if (status != storage::Status::OK) {
-                        FXL_LOG(ERROR) << "Unable to merge identical commits.";
-                        return;
-                      }
-                      on_successful_merge();
-                    });
-              }),
+          [on_successful_merge = std::move(on_successful_merge)](
+              storage::Status status, std::unique_ptr<const storage::Commit>) {
+            if (status != storage::Status::OK) {
+              FXL_LOG(ERROR) << "Unable to merge identical commits.";
+              return;
+            }
+            on_successful_merge();
+          },
           "ledger", "merge_same_commit_journal"));
 }
 

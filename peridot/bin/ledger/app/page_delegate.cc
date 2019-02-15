@@ -217,25 +217,12 @@ void PageDelegate::StartTransaction(Page::StartTransactionCallback callback) {
           return;
         }
         storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
-        storage_->StartCommit(
-            commit_id, storage::JournalType::EXPLICIT,
-            callback::MakeScoped(
-                weak_factory_.GetWeakPtr(),
-                [this, commit_id, callback = std::move(callback)](
-                    storage::Status status,
-                    std::unique_ptr<storage::Journal> journal) mutable {
-                  journal_ = std::move(journal);
-                  if (status != storage::Status::OK) {
-                    callback(PageUtils::ConvertStatus(status));
-                    return;
-                  }
-                  journal_parent_commit_ = commit_id;
+        journal_ =
+            storage_->StartCommit(commit_id, storage::JournalType::EXPLICIT);
+        journal_parent_commit_ = commit_id;
 
-                  branch_tracker_.StartTransaction(
-                      [callback = std::move(callback)]() {
-                        callback(Status::OK);
-                      });
-                }));
+        branch_tracker_.StartTransaction(
+            [callback = std::move(callback)]() { callback(Status::OK); });
       });
 }
 
@@ -330,33 +317,19 @@ void PageDelegate::RunInTransaction(
   // accumulated while waiting for the previous one to be committed.
   branch_tracker_.StartTransaction([] {});
   storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
-  std::unique_ptr<storage::Journal> journal;
-  storage_->StartCommit(
-      commit_id, storage::JournalType::IMPLICIT,
+  std::unique_ptr<storage::Journal> journal =
+      storage_->StartCommit(commit_id, storage::JournalType::IMPLICIT);
+  runnable(journal.get());
+
+  CommitJournal(
+      std::move(journal),
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
-          [this, runnable = std::move(runnable),
-           callback = std::move(callback)](
-              storage::Status status,
-              std::unique_ptr<storage::Journal> journal) mutable {
-            if (status != storage::Status::OK) {
-              callback(PageUtils::ConvertStatus(status));
-              branch_tracker_.StopTransaction(nullptr);
-              return;
-            }
-            runnable(journal.get());
-
-            CommitJournal(
-                std::move(journal),
-                callback::MakeScoped(
-                    weak_factory_.GetWeakPtr(),
-                    [this, callback = std::move(callback)](
-                        Status status,
-                        std::unique_ptr<const storage::Commit> commit) {
-                      branch_tracker_.StopTransaction(
-                          status == Status::OK ? std::move(commit) : nullptr);
-                      callback(status);
-                    }));
+          [this, callback = std::move(callback)](
+              Status status, std::unique_ptr<const storage::Commit> commit) {
+            branch_tracker_.StopTransaction(
+                status == Status::OK ? std::move(commit) : nullptr);
+            callback(status);
           }));
 }
 
