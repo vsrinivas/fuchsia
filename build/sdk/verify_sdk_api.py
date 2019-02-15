@@ -55,7 +55,7 @@ def main():
         print('Elements added to SDK:')
         for id in sorted(added_ids):
             print(' - %s' % id)
-    if added_ids:
+    if removed_ids:
         print('Elements removed from SDK:')
         for id in sorted(removed_ids):
             print(' - %s' % id)
