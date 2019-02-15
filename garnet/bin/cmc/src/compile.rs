@@ -221,6 +221,8 @@ mod tests {
 
     // TODO: Consider converting these to a golden test
 
+    // TODO(viktard): re-enable after json5 0.2.4 merged
+    #[ignore]
     test_compile! {
         test_compile_empty => {
             input = json!({}),
@@ -416,6 +418,7 @@ mod tests {
 }"#,
         },
         // TODO(CF-167): JSON5 int->float parse bug
+
         test_compile_facets => {
             input = json!({
                 "facets": {
@@ -439,6 +442,7 @@ mod tests {
     }
 }"#,
         },
+
         test_compile_all_sections => {
             input = json!({
                 "program": {
