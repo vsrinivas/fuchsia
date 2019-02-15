@@ -74,10 +74,14 @@ struct Watcher : fbl::DoublyLinkedListable<fbl::unique_ptr<Watcher>> {
 Watcher::Watcher(Devnode* dn, zx::channel ch, uint32_t mask)
     : devnode(dn), handle(std::move(ch)), mask(mask) {}
 
-class DcIostate : public AsyncLoopOwnedRpcHandler<DcIostate> {
+class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
+                  public AsyncLoopOwnedRpcHandler<DcIostate> {
 public:
     explicit DcIostate(Devnode* dn);
     ~DcIostate();
+
+    // Remove this DcIostate from its devnode
+    void DetachFromDevnode();
 
     // Claims ownership of |*h| on success
     static zx_status_t Create(Devnode* dn, async_dispatcher_t* dispatcher, zx::channel* h);
@@ -89,26 +93,15 @@ public:
                           async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal);
 
-    struct Node {
-        static fbl::DoublyLinkedListNodeState<DcIostate*>& node_state(DcIostate& obj) {
-            return obj.node_;
-        }
-    };
-    // Remove this DcIostate from its devnode
-    void DetachFromDevnode();
-
 private:
     uint64_t readdir_ino_ = 0;
 
     // pointer to our devnode, nullptr if it has been removed
     Devnode* devnode_ = nullptr;
-
-    // entry in our devnode's iostate list
-    fbl::DoublyLinkedListNodeState<DcIostate*> node_;
 };
 
 // BUG(ZX-2868): We currently never free these after allocating them
-struct Devnode {
+struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
     explicit Devnode(fbl::String name);
     ~Devnode();
 
@@ -127,23 +120,15 @@ struct Devnode {
 
     fbl::DoublyLinkedList<fbl::unique_ptr<Watcher>> watchers;
 
-    // entry in our parent devnode's children list
-    struct Node {
-        static fbl::DoublyLinkedListNodeState<Devnode*>& node_state(Devnode& obj) {
-            return obj.node;
-        }
-    };
-    fbl::DoublyLinkedListNodeState<Devnode*> node;
-
     // list of our child devnodes
-    fbl::DoublyLinkedList<Devnode*, Devnode::Node> children;
+    fbl::DoublyLinkedList<Devnode*> children;
 
     // Pointer to our parent, for removing ourselves from its list of
     // children. Our parent must outlive us.
     Devnode* parent = nullptr;
 
     // list of attached iostates
-    fbl::DoublyLinkedList<DcIostate*, DcIostate::Node> iostate;
+    fbl::DoublyLinkedList<DcIostate*> iostate;
 
     // used to assign unique small device numbers
     // for class device links
@@ -499,7 +484,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
 }
 
 void devfs_remove(Devnode* dn) {
-    if (dn->node.InContainer()) {
+    if (dn->InContainer()) {
         dn->parent->children.erase(*dn);
     }
 
@@ -538,10 +523,9 @@ void devfs_remove(Devnode* dn) {
     dn->watchers.clear();
 
     // detach children
-    while ((dn->children.pop_front() != nullptr)) {
-        // they will be unpublished when the devices they're
-        // associated with are eventually destroyed
-    }
+    // They will be unpublished when the devices they're associated with are
+    // eventually destroyed.
+    dn->children.clear();
 }
 
 } // namespace
@@ -554,6 +538,18 @@ Devnode::~Devnode() {
 
 DcIostate::DcIostate(Devnode* dn) : devnode_(dn) {
     devnode_->iostate.push_back(this);
+}
+
+DcIostate::~DcIostate() {
+    DetachFromDevnode();
+}
+
+void DcIostate::DetachFromDevnode() {
+    if (devnode_ != nullptr) {
+        devnode_->iostate.erase(*this);
+        devnode_ = nullptr;
+    }
+    set_channel(zx::channel());
 }
 
 zx_status_t DcIostate::Create(Devnode* dn, async_dispatcher_t* dispatcher, zx::channel* ipc) {
@@ -570,18 +566,6 @@ zx_status_t DcIostate::Create(Devnode* dn, async_dispatcher_t* dispatcher, zx::c
         *ipc = ios->set_channel(zx::channel());
     }
     return status;
-}
-
-void DcIostate::DetachFromDevnode() {
-    if (devnode_) {
-        devnode_->iostate.erase(*this);
-        devnode_ = nullptr;
-    }
-    set_channel(zx::channel());
-}
-
-DcIostate::~DcIostate() {
-    DetachFromDevnode();
 }
 
 void devfs_advertise(Device* dev) {
@@ -635,7 +619,6 @@ zx_status_t devfs_publish(Device* parent, Device* dev) {
         const char* name = dev->name.data();
 
         if (dev->protocol_id != ZX_PROTOCOL_CONSOLE) {
-
             for (unsigned n = 0; n < 1000; n++) {
                 snprintf(tmp, sizeof(tmp), "%03u", (dir->seqcount++) % 1000);
                 if (devfs_lookup(dir, tmp) == nullptr) {
@@ -644,9 +627,9 @@ zx_status_t devfs_publish(Device* parent, Device* dev) {
                 }
             }
             return ZX_ERR_ALREADY_EXISTS;
-        got_name:;
         }
 
+got_name:
         fbl::unique_ptr<Devnode> dnlink = devfs_mknode(dev, name);
         if (dnlink == nullptr) {
             return ZX_ERR_NO_MEMORY;
