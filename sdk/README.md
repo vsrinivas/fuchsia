@@ -10,6 +10,16 @@ Software outside of the [Fuchsia Source
 Tree](../docs/glossary.md#fuchsia-source-tree) should depend only on the Fuchsia
 SDK.
 
+## Categories
+
+Not all the interfaces defined in this directory are part of every Fuchsia SDK.
+Instead, interfaces have a `category` label that determines whether the
+interface can be included in a given SDK. For example, interfaces with the
+`internal` category are available only within the
+[Fuchsia Source Tree](../docs/glossary.md#fuchsia-source-tree).
+Interfaces with the `partner` category are additionally available to partner
+projects. See [sdk_atom.gni](../build/sdk/sdk_atom.gni) for more details.
+
 ## Governance
 
 The API surface described by the SDK is governed by the
