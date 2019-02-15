@@ -7,7 +7,8 @@
             "class/audio-input"
         ],
         "services": [
-            "fuchsia.media.Audio"
+            "fuchsia.media.Audio",
+            "fuchsia.scheduler.ProfileProvider"
         ]
     }
 }

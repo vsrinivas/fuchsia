@@ -6,6 +6,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -83,7 +84,8 @@ class FxProcessor {
     FXL_DCHECK(quit_callback_);
   }
 
-  void Startup(fuchsia::media::AudioPtr audio);
+  void Startup(fuchsia::media::AudioPtr audio,
+               fuchsia::scheduler::ProfileProviderSyncPtr profile_provider);
 
  private:
   using EffectFn = void (FxProcessor::*)(int16_t* src, int16_t* dst,
@@ -161,10 +163,28 @@ class FxProcessor {
   bool lead_time_frames_known_ = false;
 };
 
-void FxProcessor::Startup(fuchsia::media::AudioPtr audio) {
+void FxProcessor::Startup(
+    fuchsia::media::AudioPtr audio,
+    fuchsia::scheduler::ProfileProviderSyncPtr profile_provider) {
   auto cleanup = fit::defer([this] { Shutdown("Startup failure"); });
 
-  zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
+  zx_status_t profile_status;
+  zx::profile profile;
+  zx_status_t fidl_status = profile_provider->GetProfile(
+      24 /* HIGH_PRIORITY in LK */, "garnet/examples/media/fx", &profile_status,
+      &profile);
+
+  if (fidl_status != ZX_OK || profile_status != ZX_OK) {
+    printf("GetProfile failed (%d || %d)\n", fidl_status, profile_status);
+    return;
+  }
+
+  zx_status_t set_status =
+      zx_object_set_profile(zx_thread_self(), profile.get(), 0);
+  if (set_status != ZX_OK) {
+    printf("zx_object_set_profile failed: %d\n", set_status);
+    return;
+  }
 
   if (input_->sample_size() != 2) {
     printf("Invalid input sample size %u\n", input_->sample_size());
@@ -738,10 +758,15 @@ int main(int argc, char** argv) {
   fuchsia::media::AudioPtr audio =
       startup_context->ConnectToEnvironmentService<fuchsia::media::Audio>();
 
+  fuchsia::scheduler::ProfileProviderSyncPtr profile_provider;
+  startup_context
+      ->ConnectToEnvironmentService<fuchsia::scheduler::ProfileProvider>(
+          profile_provider.NewRequest());
+
   FxProcessor fx(std::move(input), [&loop]() {
     async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
   });
-  fx.Startup(std::move(audio));
+  fx.Startup(std::move(audio), std::move(profile_provider));
 
   loop.Run();
   return 0;

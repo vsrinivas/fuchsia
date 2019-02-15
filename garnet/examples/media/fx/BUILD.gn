@@ -17,5 +17,6 @@ executable("fx") {
     "//zircon/public/lib/audio-utils",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
+    "//zircon/public/fidl/fuchsia-profile",
   ]
 }
