@@ -829,6 +829,34 @@ extern {
         bootimage_vmo: zx_handle_t,
         ) -> zx_status_t;
 
+    pub fn zx_pager_create(
+        options: u32,
+        out: *mut zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_pager_create_vmo(
+        pager: zx_handle_t,
+        options: u32,
+        port: zx_handle_t,
+        key: u64,
+        size: u64,
+        out: *mut zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_pager_detach_vmo(
+        pager: zx_handle_t,
+        vmo: zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_pager_supply_pages(
+        pager: zx_handle_t,
+        pager_vmo: zx_handle_t,
+        offset: u64,
+        length: u64,
+        aux_vmo: zx_handle_t,
+        aux_offset: u64
+        ) -> zx_status_t;
+
     pub fn zx_syscall_test_0(
         ) -> zx_status_t;
 
