@@ -301,18 +301,13 @@ mod tests {
         assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
     }
 
-    // TODO(CF-167): fix JSON5 int->float parse bug
-    // TODO(viktard): re-enable after json5 0.2.4 merged
-    #[ignore]
     #[test]
     fn test_json5_parse_number() {
         let json: Value = cm_json::from_json5_str("1").expect("couldn't parse");
         if let Value::Number(n) = json {
-            // This should be assert!(n.is_i64()), but the json5 parser has a bug that parses all
-            // numbers as floats.
-            assert!(!n.is_i64() && !n.is_u64() && n.is_f64());
+            assert!(n.is_i64());
         } else {
-            panic!("not a number");
+            panic!("{:?} is not a number", json);
         }
     }
 

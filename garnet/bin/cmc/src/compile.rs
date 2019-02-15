@@ -222,7 +222,6 @@ mod tests {
     }
 
     // TODO: Consider converting these to a golden test
-
     test_compile! {
         test_compile_empty => {
             input = json!({}),
@@ -418,10 +417,6 @@ mod tests {
 }"#,
         },
 
-        // TODO(CF-343): JSON5 int->float parse bug
-        //
-        // TODO(CF-343): re-enable after json5 0.2.4 merged
-        #[ignore]
         test_compile_facets => {
             input = json!({
                 "facets": {
@@ -440,14 +435,12 @@ mod tests {
                 "you"
             ],
             "title": "foo",
-            "year": 2018.0
+            "year": 2018
         }
     }
 }"#,
         },
 
-        // TODO(CF-343): re-enable after json5 0.2.4 merged
-        #[ignore]
         test_compile_all_sections => {
             input = json!({
                 "program": {
@@ -483,7 +476,6 @@ mod tests {
                     "year": 2018
                 }
             }),
-            // TODO(CF-343): JSON5 int->float parse bug
             output = r#"{
     "program": {
         "binary": "bin/app"
@@ -533,7 +525,7 @@ mod tests {
     ],
     "facets": {
         "author": "Fuchsia",
-        "year": 2018.0
+        "year": 2018
     }
 }"#,
         },
