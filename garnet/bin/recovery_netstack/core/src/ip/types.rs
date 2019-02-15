@@ -7,7 +7,12 @@ use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::Hash;
 
 use byteorder::{ByteOrder, NetworkEndian};
-use zerocopy::{AsBytes, FromBytes, Unaligned};
+use packet::{PacketBuilder, ParsablePacket};
+use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, Unaligned};
+
+use crate::error::ParseError;
+use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
+use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 
 /// An IP protocol version.
 #[allow(missing_docs)]
@@ -424,6 +429,128 @@ impl Display for IpProto {
 impl Debug for IpProto {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         Display::fmt(self, f)
+    }
+}
+
+/// An extension trait to the `Ip` trait adding an associated `Packet` type.
+///
+/// `IpExt` extends the `Ip` trait, adding an associated `Packet` type. It
+/// cannot be part of the `Ip` trait because it requires a `B: ByteSlice`
+/// parameter (due to the requirements of `packet::ParsablePacket`).
+pub trait IpExt<B: ByteSlice>: Ip {
+    type Packet: IpPacket<B, Self, Builder = Self::PacketBuilder>;
+    type PacketBuilder: IpPacketBuilder<Self>;
+}
+
+// NOTE(joshlf): We know that this is safe because we seal the Ip trait to only
+// be implemented by Ipv4 and Ipv6.
+impl<B: ByteSlice, I: Ip> IpExt<B> for I {
+    default type Packet = !;
+    default type PacketBuilder = !;
+}
+
+impl<B: ByteSlice> IpExt<B> for Ipv4 {
+    type Packet = Ipv4Packet<B>;
+    type PacketBuilder = Ipv4PacketBuilder;
+}
+
+impl<B: ByteSlice> IpExt<B> for Ipv6 {
+    type Packet = Ipv6Packet<B>;
+    type PacketBuilder = Ipv6PacketBuilder;
+}
+
+/// An IPv4 or IPv6 packet.
+///
+/// `IpPacket` is implemented by `Ipv4Packet` and `Ipv6Packet`.
+pub trait IpPacket<B: ByteSlice, I: Ip>:
+    Sized + Debug + ParsablePacket<B, (), Error = ParseError>
+{
+    /// A builder for this packet type.
+    type Builder: IpPacketBuilder<I>;
+
+    /// The source IP address.
+    fn src_ip(&self) -> I::Addr;
+
+    /// The destination IP address.
+    fn dst_ip(&self) -> I::Addr;
+
+    /// The protocol (IPv4) or next header (IPv6) field.
+    fn proto(&self) -> IpProto;
+
+    /// The Time to Live (TTL).
+    fn ttl(&self) -> u8;
+
+    /// Set the Time to Live (TTL).
+    ///
+    /// `set_ttl` updates the packet's TTL in place.
+    fn set_ttl(&mut self, ttl: u8)
+    where
+        B: ByteSliceMut;
+}
+
+impl<B: ByteSlice> IpPacket<B, Ipv4> for Ipv4Packet<B> {
+    type Builder = Ipv4PacketBuilder;
+
+    fn src_ip(&self) -> Ipv4Addr {
+        Ipv4Packet::src_ip(self)
+    }
+    fn dst_ip(&self) -> Ipv4Addr {
+        Ipv4Packet::dst_ip(self)
+    }
+    fn proto(&self) -> IpProto {
+        Ipv4Packet::proto(self)
+    }
+    fn ttl(&self) -> u8 {
+        Ipv4Packet::ttl(self)
+    }
+    fn set_ttl(&mut self, ttl: u8)
+    where
+        B: ByteSliceMut,
+    {
+        Ipv4Packet::set_ttl(self, ttl)
+    }
+}
+
+impl<B: ByteSlice> IpPacket<B, Ipv6> for Ipv6Packet<B> {
+    type Builder = Ipv6PacketBuilder;
+
+    fn src_ip(&self) -> Ipv6Addr {
+        Ipv6Packet::src_ip(self)
+    }
+    fn dst_ip(&self) -> Ipv6Addr {
+        Ipv6Packet::dst_ip(self)
+    }
+    fn proto(&self) -> IpProto {
+        Ipv6Packet::proto(self)
+    }
+    fn ttl(&self) -> u8 {
+        Ipv6Packet::hop_limit(self)
+    }
+    fn set_ttl(&mut self, ttl: u8)
+    where
+        B: ByteSliceMut,
+    {
+        Ipv6Packet::set_hop_limit(self, ttl)
+    }
+}
+
+/// A builder for IP packets.
+///
+/// `IpPacketBuilder` is implemented by `Ipv4PacketBuilder` and
+/// `Ipv6PacketBuilder`.
+pub trait IpPacketBuilder<I: Ip>: PacketBuilder {
+    fn new(src_ip: I::Addr, dst_ip: I::Addr, ttl: u8, proto: IpProto) -> Self;
+}
+
+impl IpPacketBuilder<Ipv4> for Ipv4PacketBuilder {
+    fn new(src_ip: Ipv4Addr, dst_ip: Ipv4Addr, ttl: u8, proto: IpProto) -> Ipv4PacketBuilder {
+        Ipv4PacketBuilder::new(src_ip, dst_ip, ttl, proto)
+    }
+}
+
+impl IpPacketBuilder<Ipv6> for Ipv6PacketBuilder {
+    fn new(src_ip: Ipv6Addr, dst_ip: Ipv6Addr, ttl: u8, proto: IpProto) -> Ipv6PacketBuilder {
+        Ipv6PacketBuilder::new(src_ip, dst_ip, ttl, proto)
     }
 }
 

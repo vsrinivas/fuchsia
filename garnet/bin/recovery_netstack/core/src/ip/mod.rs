@@ -13,16 +13,12 @@ mod types;
 pub use self::types::*;
 
 use log::{debug, trace};
-use std::fmt::Debug;
 use std::mem;
 
 use packet::{BufferMut, BufferSerializer, ParsablePacket, ParseBufferMut, Serializer};
-use zerocopy::{ByteSlice, ByteSliceMut};
 
 use crate::device::DeviceId;
 use crate::ip::forwarding::{Destination, ForwardingTable};
-use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
-use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 use crate::{Context, EventDispatcher};
 
 // default IPv4 TTL or IPv6 hops
@@ -319,96 +315,11 @@ pub fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
     assert!(!A::Version::LOOPBACK_SUBNET.contains(src_ip));
     assert!(!A::Version::LOOPBACK_SUBNET.contains(dst_ip));
 
-    specialize_ip_addr!(
-        fn serialize<D, S>(
-            ctx: &mut Context<D>, device: DeviceId, src_ip: Self, dst_ip: Self, next_hop: Self, ttl: u8, proto: IpProto, body: S
-        )
-        where
-            D: EventDispatcher,
-            S: Serializer,
-        {
-            Ipv4Addr => {
-                let body = body.encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, ttl, proto));
-                crate::device::send_ip_frame(ctx, device, next_hop, body);
-            }
-            Ipv6Addr => {
-                let body = body.encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, ttl, proto));
-                crate::device::send_ip_frame(ctx, device, next_hop, body);
-            }
-        }
-    );
-    A::serialize(ctx, device, src_ip, dst_ip, next_hop, DEFAULT_TTL, proto, body)
-}
-
-// An `Ip` extension trait for internal use.
-//
-// This trait adds extra associated types that are useful for our implementation
-// here, but which consumers outside of the ip module do not need to see.
-trait IpExt<B: ByteSlice>: Ip {
-    type Packet: IpPacket<B, Self>;
-}
-
-impl<B: ByteSlice, I: Ip> IpExt<B> for I {
-    default type Packet = !;
-}
-
-impl<B: ByteSlice> IpExt<B> for Ipv4 {
-    type Packet = Ipv4Packet<B>;
-}
-
-impl<B: ByteSlice> IpExt<B> for Ipv6 {
-    type Packet = Ipv6Packet<B>;
-}
-
-// `Ipv4Packet` or `Ipv6Packet`
-trait IpPacket<B: ByteSlice, I: Ip>: Sized + Debug + ParsablePacket<B, ()> {
-    fn src_ip(&self) -> I::Addr;
-    fn dst_ip(&self) -> I::Addr;
-    fn proto(&self) -> IpProto;
-    fn ttl(&self) -> u8;
-    fn set_ttl(&mut self, ttl: u8)
-    where
-        B: ByteSliceMut;
-}
-
-impl<B: ByteSlice> IpPacket<B, Ipv4> for Ipv4Packet<B> {
-    fn src_ip(&self) -> Ipv4Addr {
-        Ipv4Packet::src_ip(self)
-    }
-    fn dst_ip(&self) -> Ipv4Addr {
-        Ipv4Packet::dst_ip(self)
-    }
-    fn proto(&self) -> IpProto {
-        Ipv4Packet::proto(self)
-    }
-    fn ttl(&self) -> u8 {
-        Ipv4Packet::ttl(self)
-    }
-    fn set_ttl(&mut self, ttl: u8)
-    where
-        B: ByteSliceMut,
-    {
-        Ipv4Packet::set_ttl(self, ttl)
-    }
-}
-
-impl<B: ByteSlice> IpPacket<B, Ipv6> for Ipv6Packet<B> {
-    fn src_ip(&self) -> Ipv6Addr {
-        Ipv6Packet::src_ip(self)
-    }
-    fn dst_ip(&self) -> Ipv6Addr {
-        Ipv6Packet::dst_ip(self)
-    }
-    fn proto(&self) -> IpProto {
-        Ipv6Packet::proto(self)
-    }
-    fn ttl(&self) -> u8 {
-        Ipv6Packet::hop_limit(self)
-    }
-    fn set_ttl(&mut self, ttl: u8)
-    where
-        B: ByteSliceMut,
-    {
-        Ipv6Packet::set_hop_limit(self, ttl)
-    }
+    let body = body.encapsulate(<A::Version as IpExt<&[u8]>>::PacketBuilder::new(
+        src_ip,
+        dst_ip,
+        DEFAULT_TTL,
+        proto,
+    ));
+    crate::device::send_ip_frame(ctx, device, next_hop, body);
 }
