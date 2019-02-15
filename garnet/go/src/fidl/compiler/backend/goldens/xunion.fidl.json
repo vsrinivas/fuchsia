@@ -12,7 +12,7 @@
     {
       "name": "test.name/EmptyUnion",
       "location": {
-        "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
         "line": 3,
         "column": 7
       },
@@ -25,7 +25,7 @@
     {
       "name": "test.name/OlderSimpleUnion",
       "location": {
-        "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
         "line": 5,
         "column": 7
       },
@@ -38,7 +38,7 @@
           },
           "name": "i",
           "location": {
-            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
             "line": 6,
             "column": 8
           },
@@ -55,7 +55,7 @@
           },
           "name": "f",
           "location": {
-            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
             "line": 7,
             "column": 10
           },
@@ -73,7 +73,7 @@
     {
       "name": "test.name/NewerSimpleUnion",
       "location": {
-        "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
         "line": 10,
         "column": 7
       },
@@ -86,7 +86,7 @@
           },
           "name": "i",
           "location": {
-            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
             "line": 13,
             "column": 8
           },
@@ -103,7 +103,7 @@
           },
           "name": "s",
           "location": {
-            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
             "line": 15,
             "column": 9
           },
@@ -124,7 +124,7 @@
           },
           "name": "v",
           "location": {
-            "filename": "/usr/local/google/home/cramertj/src/fuchsia/garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
             "line": 16,
             "column": 17
           },
