@@ -213,7 +213,7 @@ void Bearer::TransactionQueue::Enqueue(PendingTransactionPtr transaction) {
 
 void Bearer::TransactionQueue::TrySendNext(l2cap::Channel* chan,
                                            async::Task::Handler timeout_cb,
-                                           uint32_t timeout_ms) {
+                                           zx::duration timeout) {
   ZX_DEBUG_ASSERT(chan);
 
   // Abort if a transaction is currently pending.
@@ -232,8 +232,7 @@ void Bearer::TransactionQueue::TrySendNext(l2cap::Channel* chan,
     if (pdu) {
       current()->pdu->Copy(pdu.get());
       timeout_task_.set_handler(std::move(timeout_cb));
-      timeout_task_.PostDelayed(async_get_default_dispatcher(),
-                                zx::msec(timeout_ms));
+      timeout_task_.PostDelayed(async_get_default_dispatcher(), timeout);
       chan->Send(std::move(pdu));
       break;
     }
@@ -524,7 +523,7 @@ void Bearer::TryStartNextTransaction(TransactionQueue* tq) {
         if (status == ZX_OK)
           ShutDownInternal(true /* due_to_timeout */);
       },
-      kTransactionTimeoutMs);
+      kTransactionTimeout);
 }
 
 void Bearer::SendErrorResponse(OpCode request_opcode, Handle attribute_handle,

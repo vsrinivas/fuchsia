@@ -73,8 +73,7 @@ std::unique_ptr<CommandPacket> BuildSetRandomAddress(
 }
 
 std::unique_ptr<CommandPacket> BuildSetAdvertisingParams(
-    LEAdvertisingType type,
-    LEOwnAddressType own_address_type,
+    LEAdvertisingType type, LEOwnAddressType own_address_type,
     uint16_t interval_slices) {
   auto packet =
       CommandPacket::New(kLESetAdvertisingParameters,
@@ -106,14 +105,20 @@ std::unique_ptr<CommandPacket> BuildSetAdvertisingParams(
 }
 
 // This function is undefined outside the range that ms is valid:
-// notabaly at 40960 ms it will produce undefined values.
-uint16_t MillisecondsToTimeslices(uint16_t ms) {
-  return (uint16_t)(static_cast<uint32_t>(ms) * 1000 / 625);
+// notably at 40960 ms it will produce undefined values.
+// (65535 * 625 / 1000 = 40959);
+uint16_t DurationToTimeslices(zx::duration value) {
+  ZX_DEBUG_ASSERT(value.to_msecs() < 40960);
+  ZX_DEBUG_ASSERT(value.get() >= 0);
+
+  uint32_t ms = static_cast<uint32_t>(value.to_msecs());
+  return static_cast<uint16_t>(ms * 1000 / 625);
 }
 
-uint16_t TimeslicesToMilliseconds(uint16_t timeslices) {
+zx::duration TimeslicesToDuration(uint16_t timeslices) {
   // Promoted so we don't overflow
-  return (uint16_t)(static_cast<uint32_t>(timeslices) * 625 / 1000);
+  uint32_t ms = static_cast<uint32_t>(timeslices) * 625 / 1000;
+  return zx::msec(ms);
 }
 
 }  // namespace
@@ -133,26 +138,22 @@ size_t LegacyLowEnergyAdvertiser::GetSizeLimit() {
 }
 
 void LegacyLowEnergyAdvertiser::StartAdvertising(
-    const common::DeviceAddress& address,
-    const common::ByteBuffer& data,
-    const common::ByteBuffer& scan_rsp,
-    ConnectionCallback connect_callback,
-    uint32_t interval_ms,
-    bool anonymous,
-    AdvertisingStatusCallback callback) {
+    const common::DeviceAddress& address, const common::ByteBuffer& data,
+    const common::ByteBuffer& scan_rsp, ConnectionCallback connect_callback,
+    zx::duration interval, bool anonymous, AdvertisingStatusCallback callback) {
   ZX_DEBUG_ASSERT(callback);
   ZX_DEBUG_ASSERT(address.type() != common::DeviceAddress::Type::kBREDR);
 
   if (anonymous) {
     bt_log(TRACE, "hci-le", "anonymous advertising not supported");
-    callback(0, Status(common::HostError::kNotSupported));
+    callback(zx::duration(), Status(common::HostError::kNotSupported));
     return;
   }
 
   if (advertising()) {
     if (address != advertised_) {
       bt_log(TRACE, "hci-le", "already advertising");
-      callback(0, Status(common::HostError::kNotSupported));
+      callback(zx::duration(), Status(common::HostError::kNotSupported));
       return;
     }
     bt_log(TRACE, "hci-le", "updating existing advertisement");
@@ -160,20 +161,20 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
 
   if (data.size() > GetSizeLimit()) {
     bt_log(TRACE, "hci-le", "advertising data too large");
-    callback(0, Status(common::HostError::kInvalidParameters));
+    callback(zx::duration(), Status(common::HostError::kInvalidParameters));
     return;
   }
 
   if (scan_rsp.size() > GetSizeLimit()) {
     bt_log(TRACE, "hci-le", "scan response too large");
-    callback(0, Status(common::HostError::kInvalidParameters));
+    callback(zx::duration(), Status(common::HostError::kInvalidParameters));
     return;
   }
 
   if (!hci_cmd_runner_->IsReady()) {
     if (starting_) {
       bt_log(TRACE, "hci-le", "already starting");
-      callback(0, Status(common::HostError::kInProgress));
+      callback(zx::duration(), Status(common::HostError::kInProgress));
       return;
     }
 
@@ -204,7 +205,7 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
   }
 
   // Set advertising parameters
-  uint16_t interval_slices = MillisecondsToTimeslices(interval_ms);
+  uint16_t interval_slices = DurationToTimeslices(interval);
   LEAdvertisingType type = LEAdvertisingType::kAdvNonConnInd;
   if (connect_callback) {
     type = LEAdvertisingType::kAdvInd;
@@ -234,15 +235,14 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
         bt_log(TRACE, "hci-le", "advertising status: %s",
                status.ToString().c_str());
 
-        uint16_t interval;
+        zx::duration interval;
         if (status) {
           advertised_ = address;
           connect_callback_ = std::move(connect_callback);
-          interval = TimeslicesToMilliseconds(interval_slices);
+          interval = TimeslicesToDuration(interval_slices);
         } else {
           // Clear out the advertising data if it partially succeeded.
           StopAdvertisingInternal();
-          interval = 0;
         }
 
         callback(interval, status);

@@ -30,19 +30,14 @@ namespace hci {
 //     - HCI_LE_Advertising_Report event
 class LegacyLowEnergyScanner : public LowEnergyScanner {
  public:
-  LegacyLowEnergyScanner(Delegate* delegate,
-                         fxl::RefPtr<Transport> hci,
+  LegacyLowEnergyScanner(Delegate* delegate, fxl::RefPtr<Transport> hci,
                          async_dispatcher_t* dispatcher);
   ~LegacyLowEnergyScanner() override;
 
   // LowEnergyScanner overrides:
-  bool StartScan(bool active,
-                 uint16_t scan_interval,
-                 uint16_t scan_window,
-                 bool filter_duplicates,
-                 LEScanFilterPolicy filter_policy,
-                 int64_t period_ms,
-                 ScanStatusCallback callback) override;
+  bool StartScan(bool active, uint16_t scan_interval, uint16_t scan_window,
+                 bool filter_duplicates, LEScanFilterPolicy filter_policy,
+                 zx::duration period, ScanStatusCallback callback) override;
   bool StopScan() override;
 
   // Used by tests to directly end a scan period without relying on a timeout.

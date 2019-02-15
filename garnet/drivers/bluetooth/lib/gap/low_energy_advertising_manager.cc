@@ -67,11 +67,8 @@ LowEnergyAdvertisingManager::~LowEnergyAdvertisingManager() {
 }
 
 void LowEnergyAdvertisingManager::StartAdvertising(
-    const AdvertisingData& data,
-    const AdvertisingData& scan_rsp,
-    ConnectionCallback connect_callback,
-    uint32_t interval_ms,
-    bool anonymous,
+    const AdvertisingData& data, const AdvertisingData& scan_rsp,
+    ConnectionCallback connect_callback, zx::duration interval, bool anonymous,
     AdvertisingStatusCallback status_callback) {
   // Can't be anonymous and connectable
   if (anonymous && connect_callback) {
@@ -103,7 +100,7 @@ void LowEnergyAdvertisingManager::StartAdvertising(
   }
   auto status_cb = [self, ad_ptr = std::move(ad_ptr),
                     status_callback = std::move(status_callback)](
-                       uint32_t, hci::Status status) mutable {
+                       zx::duration, hci::Status status) mutable {
     if (!self)
       return;
 
@@ -129,7 +126,7 @@ void LowEnergyAdvertisingManager::StartAdvertising(
 
   // Call StartAdvertising, with the callback
   advertiser_->StartAdvertising(address, *data_block, *scan_rsp_block,
-                                std::move(adv_conn_cb), interval_ms, anonymous,
+                                std::move(adv_conn_cb), interval, anonymous,
                                 std::move(status_cb));
 }
 

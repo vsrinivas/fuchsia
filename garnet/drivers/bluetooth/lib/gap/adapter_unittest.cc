@@ -53,9 +53,8 @@ class AdapterTest : public TestingBase {
   }
 
   void InitializeAdapter(Adapter::InitializeCallback callback) {
-    adapter_->Initialize(std::move(callback), [this] {
-      transport_closed_called_ = true;
-    });
+    adapter_->Initialize(std::move(callback),
+                         [this] { transport_closed_called_ = true; });
   }
 
  protected:
@@ -291,7 +290,7 @@ TEST_F(GAP_AdapterTest, RemoteDeviceCacheReturnsNonNull) {
 }
 
 TEST_F(GAP_AdapterTest, LeAutoConnect) {
-  constexpr int64_t kTestScanPeriodMs = 10000;
+  constexpr zx::duration kTestScanPeriod = zx::sec(10);
   const char kDeviceId[] = "1234";
   const common::DeviceAddress kAddress(common::DeviceAddress::Type::kLEPublic,
                                        "00:00:00:00:00:01");
@@ -302,7 +301,7 @@ TEST_F(GAP_AdapterTest, LeAutoConnect) {
 
   InitializeAdapter([](bool) {});
   RunLoopUntilIdle();
-  adapter()->le_discovery_manager()->set_scan_period(kTestScanPeriodMs);
+  adapter()->le_discovery_manager()->set_scan_period(kTestScanPeriod);
 
   auto fake_dev = std::make_unique<FakeDevice>(kAddress, true, false);
   fake_dev->enable_directed_advertising(true);
@@ -325,7 +324,7 @@ TEST_F(GAP_AdapterTest, LeAutoConnect) {
   adapter()->remote_device_cache()->AddBondedDevice(kDeviceId, kAddress, pdata,
                                                     {});
   EXPECT_EQ(1u, adapter()->remote_device_cache()->count());
-  RunLoopFor(zx::msec(kTestScanPeriodMs));
+  RunLoopFor(kTestScanPeriod);
 
   // The device should have been auto-connected.
   ASSERT_TRUE(conn);

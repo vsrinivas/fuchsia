@@ -106,8 +106,7 @@ bool Bearer::InitiateFeatureExchange() {
 
   // Start pairing timer.
   ZX_DEBUG_ASSERT(!timeout_task_.is_pending());
-  timeout_task_.PostDelayed(async_get_default_dispatcher(),
-                            zx::sec(kPairingTimeout));
+  timeout_task_.PostDelayed(async_get_default_dispatcher(), kPairingTimeout);
 
   feature_exchange_pending_ = true;
   chan_->Send(std::move(pdu));
@@ -393,8 +392,7 @@ void Bearer::OnPairingRequest(const PacketReader& reader) {
 
   // Start pairing timer.
   ZX_DEBUG_ASSERT(!timeout_task_.is_pending());
-  timeout_task_.PostDelayed(async_get_default_dispatcher(),
-                            zx::sec(kPairingTimeout));
+  timeout_task_.PostDelayed(async_get_default_dispatcher(), kPairingTimeout);
 
   PacketWriter writer(kPairingResponse, pdu.get());
   KeyDistGenField local_keys, remote_keys;

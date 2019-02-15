@@ -379,7 +379,7 @@ LowEnergyConnectionManager::LowEnergyConnectionManager(
     RemoteDeviceCache* device_cache, fbl::RefPtr<data::Domain> data_domain,
     fbl::RefPtr<gatt::GATT> gatt)
     : hci_(hci),
-      request_timeout_ms_(kLECreateConnectionTimeoutMs),
+      request_timeout_(kLECreateConnectionTimeout),
       dispatcher_(async_get_default_dispatcher()),
       device_cache_(device_cache),
       data_domain_(data_domain),
@@ -658,7 +658,7 @@ void LowEnergyConnectionManager::RequestCreateConnection(RemoteDevice* peer) {
   connector_->CreateConnection(hci::LEOwnAddressType::kPublic,
                                false /* use_whitelist */, peer->address(),
                                kLEScanFastInterval, kLEScanFastInterval,
-                               initial_params, status_cb, request_timeout_ms_);
+                               initial_params, status_cb, request_timeout_);
 }
 
 LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
@@ -710,7 +710,7 @@ LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
   //         GATT if available
   //      c. Initiate name discovery over GATT if complete name is unknown
   //      e. If master, allow slave to initiate procedures (service discovery,
-  //         encryption setup, etc) for kLEConnectionPauseCentralMs before
+  //         encryption setup, etc) for kLEConnectionPauseCentral before
   //         updating the connection parameters to the slave's preferred values.
 
   return first_ref;

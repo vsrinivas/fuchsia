@@ -136,7 +136,7 @@ TEST_F(ATT_BearerTest, RequestTimeout) {
   EXPECT_TRUE(
       bearer()->StartTransaction(NewBuffer(kTestRequest), NopCallback, err_cb));
 
-  RunLoopFor(zx::msec(kTransactionTimeoutMs));
+  RunLoopFor(kTransactionTimeout);
 
   EXPECT_TRUE(closed);
   EXPECT_TRUE(err_cb_called);
@@ -181,7 +181,7 @@ TEST_F(ATT_BearerTest, RequestTimeoutMany) {
   EXPECT_EQ(0u, err_cb_count);
 
   // Make the request timeout.
-  RunLoopFor(zx::msec(kTransactionTimeoutMs));
+  RunLoopFor(kTransactionTimeout);
 
   EXPECT_TRUE(closed);
   EXPECT_EQ(kTransactionCount, err_cb_count);
@@ -206,7 +206,7 @@ TEST_F(ATT_BearerTest, IndicationTimeout) {
   EXPECT_TRUE(bearer()->StartTransaction(
       NewBuffer(kIndication, 'T', 'e', 's', 't'), NopCallback, err_cb));
 
-  RunLoopFor(zx::msec(kTransactionTimeoutMs));
+  RunLoopFor(kTransactionTimeout);
 
   EXPECT_TRUE(closed);
   EXPECT_TRUE(err_cb_called);
@@ -253,7 +253,7 @@ TEST_F(ATT_BearerTest, IndicationTimeoutMany) {
   EXPECT_EQ(0u, err_cb_count);
 
   // Make the request timeout.
-  RunLoopFor(zx::msec(kTransactionTimeoutMs));
+  RunLoopFor(kTransactionTimeout);
 
   EXPECT_TRUE(closed);
   EXPECT_EQ(kTransactionCount, err_cb_count);

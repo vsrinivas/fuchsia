@@ -29,7 +29,7 @@ const common::DeviceAddress kLocalAddress(
 const common::DeviceAddress kTestAddress(common::DeviceAddress::Type::kLEPublic,
                                          "00:00:00:00:00:01");
 const LEPreferredConnectionParameters kTestParams(1, 1, 1, 1);
-constexpr int64_t kConnectTimeoutMs = 10000;
+constexpr zx::duration kConnectTimeout = zx::sec(10);
 
 class LowEnergyConnectorTest : public TestingBase {
  public:
@@ -84,8 +84,7 @@ class LowEnergyConnectorTest : public TestingBase {
   }
 
   void OnConnectionStateChanged(const common::DeviceAddress& address,
-                                bool connected,
-                                bool canceled) {
+                                bool connected, bool canceled) {
     request_canceled = canceled;
   }
 
@@ -117,13 +116,13 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnection) {
 
   bool ret = connector()->CreateConnection(
       LEOwnAddressType::kPublic, false, kTestAddress, defaults::kLEScanInterval,
-      defaults::kLEScanWindow, kTestParams, callback, kConnectTimeoutMs);
+      defaults::kLEScanWindow, kTestParams, callback, kConnectTimeout);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 
   ret = connector()->CreateConnection(
       LEOwnAddressType::kPublic, false, kTestAddress, defaults::kLEScanInterval,
-      defaults::kLEScanWindow, kTestParams, callback, kConnectTimeoutMs);
+      defaults::kLEScanWindow, kTestParams, callback, kConnectTimeout);
   EXPECT_FALSE(ret);
 
   RunLoopUntilIdle();
@@ -161,7 +160,7 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionStatusError) {
 
   bool ret = connector()->CreateConnection(
       LEOwnAddressType::kPublic, false, kTestAddress, defaults::kLEScanInterval,
-      defaults::kLEScanWindow, kTestParams, callback, kConnectTimeoutMs);
+      defaults::kLEScanWindow, kTestParams, callback, kConnectTimeout);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 
@@ -196,7 +195,7 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionEventError) {
 
   bool ret = connector()->CreateConnection(
       LEOwnAddressType::kPublic, false, kTestAddress, defaults::kLEScanInterval,
-      defaults::kLEScanWindow, kTestParams, callback, kConnectTimeoutMs);
+      defaults::kLEScanWindow, kTestParams, callback, kConnectTimeout);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 
@@ -231,7 +230,7 @@ TEST_F(HCI_LowEnergyConnectorTest, Cancel) {
 
   bool ret = connector()->CreateConnection(
       LEOwnAddressType::kPublic, false, kTestAddress, defaults::kLEScanInterval,
-      defaults::kLEScanWindow, kTestParams, callback, kConnectTimeoutMs);
+      defaults::kLEScanWindow, kTestParams, callback, kConnectTimeout);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 
@@ -305,7 +304,7 @@ TEST_F(HCI_LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
 
   connector()->CreateConnection(
       LEOwnAddressType::kPublic, false, kTestAddress, defaults::kLEScanInterval,
-      defaults::kLEScanWindow, kTestParams, callback, kConnectTimeoutMs);
+      defaults::kLEScanWindow, kTestParams, callback, kConnectTimeout);
 
   async::PostTask(dispatcher(), [kIncomingAddress, this] {
     LEConnectionCompleteSubeventParams event;
@@ -356,13 +355,13 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionTimeout) {
 
   connector()->CreateConnection(
       LEOwnAddressType::kPublic, false, kTestAddress, defaults::kLEScanInterval,
-      defaults::kLEScanWindow, kTestParams, callback, kConnectTimeoutMs);
+      defaults::kLEScanWindow, kTestParams, callback, kConnectTimeout);
   EXPECT_TRUE(connector()->request_pending());
 
   EXPECT_FALSE(request_canceled);
 
   // Make the connection attempt time out.
-  RunLoopFor(zx::msec(kConnectTimeoutMs));
+  RunLoopFor(kConnectTimeout);
 
   EXPECT_FALSE(connector()->request_pending());
   EXPECT_TRUE(callback_called);
@@ -381,8 +380,7 @@ TEST_F(HCI_LowEnergyConnectorTest, SendRequestAndDelete) {
 
   bool ret = connector()->CreateConnection(
       LEOwnAddressType::kPublic, false, kTestAddress, defaults::kLEScanInterval,
-      defaults::kLEScanWindow, kTestParams, [](auto, auto) {},
-      kConnectTimeoutMs);
+      defaults::kLEScanWindow, kTestParams, [](auto, auto) {}, kConnectTimeout);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 

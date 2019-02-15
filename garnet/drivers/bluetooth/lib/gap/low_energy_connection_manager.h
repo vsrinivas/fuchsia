@@ -155,7 +155,7 @@ class LowEnergyConnectionManager final {
   // Called when the connection parameters on a link have been updated.
   using ConnectionParametersCallback = fit::function<void(const RemoteDevice&)>;
   void SetConnectionParametersCallbackForTesting(
-       ConnectionParametersCallback callback);
+      ConnectionParametersCallback callback);
 
   // Called when a link with the given handle gets disconnected. This event is
   // guaranteed to be called before invalidating connection references.
@@ -168,9 +168,9 @@ class LowEnergyConnectionManager final {
   void SetDisconnectCallbackForTesting(DisconnectCallback callback);
 
   // Sets the timeout interval to be used on future connect requests. The
-  // default value is kLECreateConnectionTimeoutMs.
-  void set_request_timeout_for_testing(int64_t value_ms) {
-    request_timeout_ms_ = value_ms;
+  // default value is kLECreateConnectionTimeout.
+  void set_request_timeout_for_testing(zx::duration value) {
+    request_timeout_ = value;
   }
 
  private:
@@ -262,8 +262,7 @@ class LowEnergyConnectionManager final {
   RemoteDevice* UpdateRemoteDeviceWithLink(const hci::Connection& link);
 
   // Called by |connector_| to indicate the result of a connect request.
-  void OnConnectResult(const std::string& device_identifier,
-                       hci::Status status,
+  void OnConnectResult(const std::string& device_identifier, hci::Status status,
                        hci::ConnectionPtr link);
 
   // Event handler for the HCI Disconnection Complete event.
@@ -294,8 +293,7 @@ class LowEnergyConnectionManager final {
   // |device_identifier| uniquely identifies the peer. |handle| represents
   // the logical link that |params| should be applied to.
   void OnNewLEConnectionParams(
-      const std::string& device_identifier,
-      hci::ConnectionHandle handle,
+      const std::string& device_identifier, hci::ConnectionHandle handle,
       const hci::LEPreferredConnectionParameters& params);
 
   // Tells the controller to use the given connection |params| on the given
@@ -320,7 +318,7 @@ class LowEnergyConnectionManager final {
 
   // Time after which a connection attempt is considered to have timed out. This
   // is configurable to allow unit tests to set a shorter value.
-  int64_t request_timeout_ms_;
+  zx::duration request_timeout_;
 
   // The dispatcher for all asynchronous tasks.
   async_dispatcher_t* dispatcher_;

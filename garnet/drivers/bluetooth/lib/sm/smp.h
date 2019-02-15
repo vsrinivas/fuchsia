@@ -11,6 +11,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/common/uint128.h"
+#include "lib/zx/time.h"
 
 // This file defines constants that are used by the Security Manager Protocol
 // (SMP) that operates over the L2CAP SMP channel.
@@ -23,7 +24,7 @@ constexpr uint16_t kLEMTU = 23;
 constexpr uint16_t kBREDRMTU = 65;
 
 // SMP Timeout in seconds (Vol 3, Part H, 3.4)
-constexpr uint64_t kPairingTimeout = 30;
+constexpr zx::duration kPairingTimeout = zx::sec(30);
 
 // The supported encryption key sizes (Vol 3, Part H, 2.3.4).
 constexpr uint8_t kMinEncryptionKeySize = 7;

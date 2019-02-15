@@ -136,7 +136,7 @@ void LowEnergyPeripheralServer::StartAdvertising(
   };
 
   advertising_manager->StartAdvertising(
-      ad_data, scan_data, std::move(connect_cb), interval, anonymous,
+      ad_data, scan_data, std::move(connect_cb), zx::msec(interval), anonymous,
       std::move(advertising_status_cb));
 }
 

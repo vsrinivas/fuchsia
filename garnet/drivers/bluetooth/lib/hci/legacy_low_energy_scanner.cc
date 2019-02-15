@@ -57,16 +57,15 @@ LegacyLowEnergyScanner::~LegacyLowEnergyScanner() {
   transport()->command_channel()->RemoveEventHandler(event_handler_id_);
 }
 
-bool LegacyLowEnergyScanner::StartScan(bool active,
-                                       uint16_t scan_interval,
+bool LegacyLowEnergyScanner::StartScan(bool active, uint16_t scan_interval,
                                        uint16_t scan_window,
                                        bool filter_duplicates,
                                        LEScanFilterPolicy filter_policy,
-                                       int64_t period_ms,
+                                       zx::duration period,
                                        ScanStatusCallback callback) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(callback);
-  ZX_DEBUG_ASSERT(period_ms == kPeriodInfinite || period_ms > 0);
+  ZX_DEBUG_ASSERT(period == kPeriodInfinite || period.get() > 0);
   ZX_DEBUG_ASSERT(scan_interval <= kLEScanIntervalMax &&
                   scan_interval >= kLEScanIntervalMin);
   ZX_DEBUG_ASSERT(scan_window <= kLEScanIntervalMax &&
@@ -114,7 +113,7 @@ bool LegacyLowEnergyScanner::StartScan(bool active,
                                          : GenericEnableParam::kDisable;
 
   hci_cmd_runner()->QueueCommand(std::move(command));
-  hci_cmd_runner()->RunCommands([this, period_ms](Status status) {
+  hci_cmd_runner()->RunCommands([this, period](Status status) {
     ZX_DEBUG_ASSERT(scan_cb_);
     ZX_DEBUG_ASSERT(state() == State::kInitiating);
 
@@ -136,14 +135,12 @@ bool LegacyLowEnergyScanner::StartScan(bool active,
     }
 
     // Set the timeout handler and period.
-    if (period_ms != kPeriodInfinite) {
+    if (period != kPeriodInfinite) {
       scan_timeout_cb_.Reset([this] {
         if (IsScanning())
           StopScanInternal(false);
       });
-      async::PostDelayedTask(dispatcher(),
-          scan_timeout_cb_.callback(),
-          zx::msec(period_ms));
+      async::PostDelayedTask(dispatcher(), scan_timeout_cb_.callback(), period);
     }
 
     if (active_scan_requested()) {
@@ -301,8 +298,7 @@ void LegacyLowEnergyScanner::OnAdvertisingReportEvent(
 }
 
 void LegacyLowEnergyScanner::HandleScanResponse(
-    const LEAdvertisingReportData& report,
-    int8_t rssi) {
+    const LEAdvertisingReportData& report, int8_t rssi) {
   common::DeviceAddress address;
   bool resolved;
   if (!DeviceAddressFromAdvReport(report, &address, &resolved))
@@ -335,8 +331,7 @@ void LegacyLowEnergyScanner::HandleScanResponse(
 }
 
 void LegacyLowEnergyScanner::NotifyDeviceFound(
-    const LowEnergyScanResult& result,
-    const common::ByteBuffer& data) {
+    const LowEnergyScanResult& result, const common::ByteBuffer& data) {
   delegate()->OnDeviceFound(result, data);
 }
 

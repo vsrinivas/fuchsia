@@ -182,7 +182,7 @@ TEST_F(SMP_BearerTest, PacketsWhileIdle) {
   fake_chan()->Receive(CreateStaticByteBuffer(kPairingFailed));
   fake_chan()->Receive(CreateStaticByteBuffer(kPairingResponse));
 
-  RunLoopFor(zx::sec(kPairingTimeout));
+  RunLoopFor(kPairingTimeout);
 
   EXPECT_EQ(0, tx_count);
   EXPECT_EQ(0, pairing_error_count());
@@ -272,7 +272,7 @@ TEST_F(SMP_BearerTest, FeatureExchangeTimeout) {
   bearer()->InitiateFeatureExchange();
   ASSERT_TRUE(bearer()->pairing_started());
 
-  RunLoopFor(zx::sec(kPairingTimeout));
+  RunLoopFor(kPairingTimeout);
 
   EXPECT_EQ(HostError::kTimedOut, last_error().error());
   EXPECT_TRUE(fake_chan()->link_error());
@@ -293,7 +293,7 @@ TEST_F(SMP_BearerTest, Abort) {
   EXPECT_EQ(0, feature_exchange_count());
 
   // Timer should have stopped.
-  RunLoopFor(zx::sec(kPairingTimeout));
+  RunLoopFor(kPairingTimeout);
 
   EXPECT_EQ(1, pairing_error_count());
 }
@@ -544,7 +544,7 @@ TEST_F(SMP_BearerTest, FeatureExchangeResponderMalformedRequest) {
 TEST_F(SMP_BearerTest, FeatureExchangeResponderTimerRestarted) {
   NewBearer(hci::Connection::Role::kSlave);
 
-  constexpr uint64_t kThresholdSeconds = 1;
+  constexpr auto kThresholdSeconds = zx::sec(1);
   const auto kRequest =
       CreateStaticByteBuffer(0x01,  // code: Pairing Request
                              0x03,  // IO cap.: NoInputNoOutput
@@ -559,7 +559,7 @@ TEST_F(SMP_BearerTest, FeatureExchangeResponderTimerRestarted) {
   ASSERT_TRUE(bearer()->pairing_started());
 
   // Advance the time to 1 second behind the end of the pairing timeout.
-  RunLoopFor(zx::sec(kPairingTimeout - kThresholdSeconds));
+  RunLoopFor(kPairingTimeout - kThresholdSeconds);
 
   // The timer should not have expired.
   EXPECT_TRUE(bearer()->pairing_started());
@@ -574,11 +574,11 @@ TEST_F(SMP_BearerTest, FeatureExchangeResponderTimerRestarted) {
 
   // The old timeout should not expire when advance to 1 second behind the new
   // timeout.
-  RunLoopFor(zx::sec(kPairingTimeout - kThresholdSeconds));
+  RunLoopFor(kPairingTimeout - kThresholdSeconds);
   EXPECT_TRUE(bearer()->pairing_started());
   EXPECT_EQ(0, pairing_error_count());
 
-  RunLoopFor(zx::sec(kThresholdSeconds));
+  RunLoopFor(kThresholdSeconds);
   EXPECT_FALSE(bearer()->pairing_started());
   EXPECT_EQ(1, pairing_error_count());
   EXPECT_EQ(HostError::kTimedOut, last_error().error());
@@ -762,7 +762,7 @@ TEST_F(SMP_BearerTest, StopTimer) {
   bearer()->StopTimer();
   EXPECT_FALSE(bearer()->pairing_started());
 
-  RunLoopFor(zx::sec(kPairingTimeout));
+  RunLoopFor(kPairingTimeout);
   EXPECT_EQ(0, pairing_error_count());
 }
 

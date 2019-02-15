@@ -37,7 +37,7 @@ const DeviceAddress kAddress2(DeviceAddress::Type::kLEPublic,
 const DeviceAddress kAddress3(DeviceAddress::Type::kLEPublic,
                               "00:00:00:00:00:04");
 
-constexpr int64_t kTestScanPeriodMs = 10000;
+constexpr zx::duration kTestScanPeriod = zx::sec(10);
 
 class LowEnergyDiscoveryManagerTest : public TestingBase {
  public:
@@ -200,9 +200,8 @@ using GAP_LowEnergyDiscoveryManagerTest = LowEnergyDiscoveryManagerTest;
 
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryAndStop) {
   std::unique_ptr<LowEnergyDiscoverySession> session;
-  discovery_manager()->StartDiscovery([this, &session](auto cb_session) {
-    session = std::move(cb_session);
-  });
+  discovery_manager()->StartDiscovery(
+      [this, &session](auto cb_session) { session = std::move(cb_session); });
 
   RunLoopUntilIdle();
 
@@ -225,9 +224,8 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryAndStopByDeleting) {
   // Start discovery but don't acquire ownership of the received session. This
   // should immediately terminate the session.
   std::unique_ptr<LowEnergyDiscoverySession> session;
-  discovery_manager()->StartDiscovery([this, &session](auto cb_session) {
-    session = std::move(cb_session);
-  });
+  discovery_manager()->StartDiscovery(
+      [this, &session](auto cb_session) { session = std::move(cb_session); });
 
   RunLoopUntilIdle();
 
@@ -370,9 +368,8 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWhilePendingStop) {
   std::unique_ptr<LowEnergyDiscoverySession> session;
 
-  discovery_manager()->StartDiscovery([this, &session](auto cb_session) {
-    session = std::move(cb_session);
-  });
+  discovery_manager()->StartDiscovery(
+      [this, &session](auto cb_session) { session = std::move(cb_session); });
 
   RunLoopUntilIdle();
   EXPECT_TRUE(scan_enabled());
@@ -384,9 +381,8 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWhilePendingStop) {
 
   // Request a new session. The discovery manager should restart the scan after
   // the ongoing one stops.
-  discovery_manager()->StartDiscovery([this, &session](auto cb_session) {
-    session = std::move(cb_session);
-  });
+  discovery_manager()->StartDiscovery(
+      [this, &session](auto cb_session) { session = std::move(cb_session); });
 
   // Discovery should stop and start again.
   RunLoopUntilIdle();
@@ -419,7 +415,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryFailureManyPending) {
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestart) {
   constexpr size_t kNumScanStates = 3;
 
-  discovery_manager()->set_scan_period(kTestScanPeriodMs);
+  discovery_manager()->set_scan_period(kTestScanPeriod);
 
   std::unique_ptr<LowEnergyDiscoverySession> session;
   discovery_manager()->StartDiscovery(
@@ -430,7 +426,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestart) {
   EXPECT_TRUE(scan_enabled());
 
   // End the scan period.
-  RunLoopFor(zx::msec(kTestScanPeriodMs));
+  RunLoopFor(kTestScanPeriod);
   ASSERT_EQ(kNumScanStates, scan_states().size());
   EXPECT_TRUE(scan_states()[0]);
   EXPECT_FALSE(scan_states()[1]);
@@ -440,7 +436,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestart) {
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartFailure) {
   constexpr size_t kNumScanStates = 2;
 
-  discovery_manager()->set_scan_period(kTestScanPeriodMs);
+  discovery_manager()->set_scan_period(kTestScanPeriod);
 
   std::unique_ptr<LowEnergyDiscoverySession> session;
   bool session_error = false;
@@ -462,7 +458,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartFailure) {
   EXPECT_TRUE(scan_enabled());
 
   // End the scan period. The scan should not restart.
-  RunLoopFor(zx::msec(kTestScanPeriodMs));
+  RunLoopFor(kTestScanPeriod);
 
   ASSERT_EQ(kNumScanStates, scan_states().size());
   EXPECT_TRUE(scan_states()[0]);
@@ -473,7 +469,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartFailure) {
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartRemoveSession) {
   constexpr size_t kNumScanStates = 4;
 
-  discovery_manager()->set_scan_period(kTestScanPeriodMs);
+  discovery_manager()->set_scan_period(kTestScanPeriod);
 
   std::unique_ptr<LowEnergyDiscoverySession> session;
   discovery_manager()->StartDiscovery(
@@ -495,7 +491,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartRemoveSession) {
   EXPECT_TRUE(scan_enabled());
 
   // End the scan period.
-  RunLoopFor(zx::msec(kTestScanPeriodMs));
+  RunLoopFor(kTestScanPeriod);
 
   ASSERT_EQ(kNumScanStates, scan_states().size());
   EXPECT_TRUE(scan_states()[0]);
@@ -509,7 +505,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
   constexpr size_t kNumScanStates = 2;
 
   // Set a very short scan period for the sake of the test.
-  discovery_manager()->set_scan_period(kTestScanPeriodMs);
+  discovery_manager()->set_scan_period(kTestScanPeriod);
 
   std::unique_ptr<LowEnergyDiscoverySession> session;
   discovery_manager()->StartDiscovery(
@@ -531,7 +527,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
   EXPECT_TRUE(scan_enabled());
 
   // End the scan period.
-  RunLoopFor(zx::msec(kTestScanPeriodMs));
+  RunLoopFor(kTestScanPeriod);
 
   ASSERT_EQ(kNumScanStates, scan_states().size());
   EXPECT_TRUE(scan_states()[0]);
@@ -544,7 +540,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
   constexpr size_t kTotalNumStates = 5;
 
   // Set a very short scan period for the sake of the test.
-  discovery_manager()->set_scan_period(kTestScanPeriodMs);
+  discovery_manager()->set_scan_period(kTestScanPeriod);
 
   std::unique_ptr<LowEnergyDiscoverySession> session;
   auto cb = [&session](auto cb_session) { session = std::move(cb_session); };
@@ -568,7 +564,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
   EXPECT_TRUE(scan_enabled());
 
   // End the scan period.
-  RunLoopFor(zx::msec(kTestScanPeriodMs));
+  RunLoopFor(kTestScanPeriod);
 
   // Scan should have been disabled and re-enabled.
   ASSERT_EQ(kTotalNumStates, scan_states().size());
@@ -584,7 +580,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWithFilters) {
 
   // Set a short scan period so that we that we process events for multiple scan
   // periods during the test.
-  discovery_manager()->set_scan_period(200);
+  discovery_manager()->set_scan_period(zx::msec(200));
 
   // Session 0 is interested in performing general discovery.
   std::unordered_set<common::DeviceAddress> devices_session0;
@@ -681,7 +677,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
 
   // Set a long scan period to make sure that the FakeController sends
   // advertising reports only once.
-  discovery_manager()->set_scan_period(20000);
+  discovery_manager()->set_scan_period(zx::sec(20));
 
   // Session 0 is interested in performing general discovery.
   std::unordered_set<common::DeviceAddress> devices_session0;
@@ -740,8 +736,8 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
 #define EXPECT_CONTAINS(addr, dev_list) \
   EXPECT_TRUE(dev_list.find(addr) != dev_list.end())
   // At this point all sessions should have processed all devices at least once
-  // without running the message loop; results for Sessions 1, 2, 3, and 4 should
-  // have come from the cache.
+  // without running the message loop; results for Sessions 1, 2, 3, and 4
+  // should have come from the cache.
 
   // Session 0: Should have seen all devices except for device 3, which is
   // non-discoverable.
@@ -781,7 +777,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, DirectedConnectableEvent) {
   int count = 0;
   discovery_manager()->set_directed_connectable_callback(
       [&](const auto&) { count++; });
-  discovery_manager()->set_scan_period(kTestScanPeriodMs);
+  discovery_manager()->set_scan_period(kTestScanPeriod);
 
   // Start discovery. Advertisements from the device should be ignored since the
   // device is not bonded.
@@ -797,7 +793,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, DirectedConnectableEvent) {
   EXPECT_EQ(1u, device_cache()->count());
 
   // Advance to the next scan period. We should receive a new notification.
-  RunLoopFor(zx::msec(kTestScanPeriodMs));
+  RunLoopFor(kTestScanPeriod);
   EXPECT_EQ(1, count);
 }
 
@@ -810,7 +806,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
 
   AddFakeDevices();
 
-  discovery_manager()->set_scan_period(kTestScanPeriodMs);
+  discovery_manager()->set_scan_period(kTestScanPeriod);
 
   std::unordered_set<common::DeviceAddress> addresses_found;
   LowEnergyDiscoverySession::DeviceFoundCallback result_cb =
@@ -1019,7 +1015,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
 }
 
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, BackgroundScanPeriodRestart) {
-  discovery_manager()->set_scan_period(kTestScanPeriodMs);
+  discovery_manager()->set_scan_period(kTestScanPeriod);
   discovery_manager()->EnableBackgroundScan(true);
 
   // The scan state should transition to enabled.
@@ -1029,7 +1025,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, BackgroundScanPeriodRestart) {
   EXPECT_TRUE(scan_states()[0]);
 
   // End the scan period by advancing time.
-  RunLoopFor(zx::msec(kTestScanPeriodMs));
+  RunLoopFor(kTestScanPeriod);
   EXPECT_TRUE(test_device()->le_scan_state().enabled);
   EXPECT_EQ(hci::LEScanType::kPassive,
             test_device()->le_scan_state().scan_type);

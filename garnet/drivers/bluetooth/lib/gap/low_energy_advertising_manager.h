@@ -50,16 +50,14 @@ class LowEnergyAdvertisingManager {
   //      the controller, otherwise.
   //
   // TODO(armansito): Return integer IDs instead.
-  using ConnectionCallback =
-      fit::function<void(std::string advertisement_id,
-                         std::unique_ptr<hci::Connection> link)>;
+  using ConnectionCallback = fit::function<void(
+      std::string advertisement_id, std::unique_ptr<hci::Connection> link)>;
   using AdvertisingStatusCallback =
       fit::function<void(std::string advertisement_id, hci::Status status)>;
   void StartAdvertising(const AdvertisingData& data,
                         const AdvertisingData& scan_rsp,
                         ConnectionCallback connect_callback,
-                        uint32_t interval_ms,
-                        bool anonymous,
+                        zx::duration interval, bool anonymous,
                         AdvertisingStatusCallback status_callback);
 
   // Stop advertising the advertisement with the id |advertisement_id|

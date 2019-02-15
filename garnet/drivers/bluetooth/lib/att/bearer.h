@@ -227,7 +227,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
     // Tries to initiate the next transaction. Sends the PDU over |chan| if
     // successful.
     void TrySendNext(l2cap::Channel* chan, async::Task::Handler timeout_cb,
-                     uint32_t timeout_ms);
+                     zx::duration timeout);
 
     // Adds |next| to the transaction queue.
     void Enqueue(PendingTransactionPtr transaction);

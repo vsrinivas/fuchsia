@@ -171,8 +171,7 @@ class LowEnergyDiscoverySession final {
 class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
  public:
   // |device_cache| MUST out-live this LowEnergyDiscoveryManager.
-  LowEnergyDiscoveryManager(Mode mode,
-                            fxl::RefPtr<hci::Transport> hci,
+  LowEnergyDiscoveryManager(Mode mode, fxl::RefPtr<hci::Transport> hci,
                             RemoteDeviceCache* device_cache);
   virtual ~LowEnergyDiscoveryManager();
 
@@ -193,7 +192,7 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
   void EnableBackgroundScan(bool enable);
 
   // Sets a new scan period to any future and ongoing discovery procedures.
-  void set_scan_period(int64_t period_ms) { scan_period_ = period_ms; }
+  void set_scan_period(zx::duration period) { scan_period_ = period; }
 
   // Returns whether there is an active discovery session.
   bool discovering() const { return !sessions_.empty(); }
@@ -271,7 +270,7 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
   std::unordered_set<std::string> cached_scan_results_;
 
   // The value (in ms) that we use for the duration of each scan period.
-  int64_t scan_period_ = kLEGeneralDiscoveryScanMinMs;
+  zx::duration scan_period_ = kLEGeneralDiscoveryScanMin;
 
   // The scanner that performs the HCI procedures.
   std::unique_ptr<hci::LowEnergyScanner> scanner_;

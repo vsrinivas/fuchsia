@@ -30,6 +30,7 @@ const common::DeviceAddress kRandomAddress(
     common::DeviceAddress::Type::kLERandom, "00:00:00:00:00:02");
 
 constexpr size_t kDefaultAdSize = 20;
+constexpr zx::duration kTestInterval = zx::sec(1);
 
 void NopConnectionCallback(ConnectionPtr) {}
 
@@ -69,14 +70,14 @@ class HCI_LegacyLowEnergyAdvertiserTest : public TestingBase {
   LegacyLowEnergyAdvertiser* advertiser() const { return advertiser_.get(); }
 
   LowEnergyAdvertiser::AdvertisingStatusCallback GetSuccessCallback() {
-    return [this](uint32_t interval_ms, Status status) {
+    return [this](zx::duration interval, Status status) {
       last_status_ = status;
       EXPECT_TRUE(status) << status.ToString();
     };
   }
 
   LowEnergyAdvertiser::AdvertisingStatusCallback GetErrorCallback() {
-    return [this](uint32_t interval_ms, Status status) {
+    return [this](zx::duration interval, Status status) {
       last_status_ = status;
       EXPECT_FALSE(status);
     };
@@ -120,7 +121,8 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, AdvertisementSizeTest) {
 
   // Should accept ads that are of reasonable size
   advertiser()->StartAdvertising(kPublicAddress, reasonable_data, scan_data,
-                                 nullptr, 1000, false, GetSuccessCallback());
+                                 nullptr, kTestInterval, false,
+                                 GetSuccessCallback());
 
   RunLoopUntilIdle();
 
@@ -130,7 +132,8 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, AdvertisementSizeTest) {
 
   // And reject ads that are too big
   advertiser()->StartAdvertising(kPublicAddress, oversize_data, scan_data,
-                                 nullptr, 1000, false, GetErrorCallback());
+                                 nullptr, kTestInterval, false,
+                                 GetErrorCallback());
   EXPECT_TRUE(MoveLastStatus());
 }
 
@@ -145,8 +148,8 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, ConnectionTest) {
   ConnectionPtr link;
   auto conn_cb = [&link](auto cb_link) { link = std::move(cb_link); };
 
-  advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, conn_cb, 1000,
-                                 false, GetSuccessCallback());
+  advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, conn_cb,
+                                 kTestInterval, false, GetSuccessCallback());
   RunLoopUntilIdle();
   EXPECT_TRUE(MoveLastStatus());
 
@@ -168,8 +171,8 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, ConnectionTest) {
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);
 
   // Restart advertising using kRandomAddress.
-  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, conn_cb, 1000,
-                                 false, GetSuccessCallback());
+  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, conn_cb,
+                                 kTestInterval, false, GetSuccessCallback());
   RunLoopUntilIdle();
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
@@ -193,12 +196,12 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, RestartInConnectionCallback) {
   auto conn_cb = [&, this](auto cb_link) {
     link = std::move(cb_link);
     advertiser()->StartAdvertising(kPublicAddress, ad, scan_data,
-                                   NopConnectionCallback, 1000, false,
+                                   NopConnectionCallback, kTestInterval, false,
                                    GetSuccessCallback());
   };
 
-  advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, conn_cb, 1000,
-                                 false, GetSuccessCallback());
+  advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, conn_cb,
+                                 kTestInterval, false, GetSuccessCallback());
   RunLoopUntilIdle();
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
@@ -230,15 +233,15 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, RestartInConnectionCallback) {
 // - Stops advertisement
 // - Uses the random address given and sets it.
 TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartAndStop) {
-  constexpr uint16_t kIntervalMs = 500;
+  constexpr zx::duration kInterval = zx::msec(500);
   constexpr uint16_t kIntervalSlices = 800;
   common::DynamicByteBuffer ad = GetExampleData();
   common::DynamicByteBuffer scan_data;
 
   common::DeviceAddress addr = kRandomAddress;
 
-  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, kIntervalMs,
-                                 false, GetSuccessCallback());
+  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, kInterval, false,
+                                 GetSuccessCallback());
 
   RunLoopUntilIdle();
 
@@ -264,12 +267,12 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartWhileStarting) {
   common::DynamicByteBuffer scan_data;
   common::DeviceAddress addr = kRandomAddress;
 
-  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
-                                 [](auto, auto) {});
+  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, kTestInterval,
+                                 false, [](auto, auto) {});
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);
 
-  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
-                                 GetErrorCallback());
+  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, kTestInterval,
+                                 false, GetErrorCallback());
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);
   auto status = MoveLastStatus();
   ASSERT_TRUE(status);
@@ -282,8 +285,8 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartWhileStopping) {
   common::DeviceAddress addr = kRandomAddress;
 
   // Get to a started state.
-  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
-                                 GetSuccessCallback());
+  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, kTestInterval,
+                                 false, GetSuccessCallback());
   RunLoopUntilIdle();
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
@@ -297,7 +300,8 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartWhileStopping) {
       was_disabled = true;
 
       // Starting now should cancel the stop sequence and succeed.
-      advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
+      advertiser()->StartAdvertising(addr, ad, scan_data, nullptr,
+                                     kTestInterval, false,
                                      GetSuccessCallback());
     }
   };
@@ -319,8 +323,8 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StopAdvertisingConditions) {
   common::DynamicByteBuffer ad = GetExampleData();
   common::DynamicByteBuffer scan_data;
 
-  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr, 1000,
-                                 false, GetSuccessCallback());
+  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr,
+                                 kTestInterval, false, GetSuccessCallback());
 
   RunLoopUntilIdle();
 
@@ -351,8 +355,8 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, NoAdvertiseTwice) {
   common::DynamicByteBuffer ad = GetExampleData();
   common::DynamicByteBuffer scan_data;
 
-  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr, 1000,
-                                 false, GetSuccessCallback());
+  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr,
+                                 kTestInterval, false, GetSuccessCallback());
   RunLoopUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
@@ -362,8 +366,8 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, NoAdvertiseTwice) {
 
   uint8_t before = ad[0];
   ad[0] = 0xff;
-  advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, nullptr, 1000,
-                                 false, GetErrorCallback());
+  advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, nullptr,
+                                 kTestInterval, false, GetErrorCallback());
   ad[0] = before;
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
@@ -377,8 +381,8 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, AdvertiseUpdate) {
   common::DynamicByteBuffer ad = GetExampleData();
   common::DynamicByteBuffer scan_data;
 
-  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr, 1000,
-                                 false, GetSuccessCallback());
+  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr,
+                                 kTestInterval, false, GetSuccessCallback());
   RunLoopUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
@@ -387,8 +391,8 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, AdvertiseUpdate) {
       test_device()->le_advertising_state().advertised_view(), ad));
 
   ad[0] = 0xff;
-  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr, 2500,
-                                 false, GetSuccessCallback());
+  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr,
+                                 zx::msec(2500), false, GetSuccessCallback());
   RunLoopUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
@@ -405,8 +409,8 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, NoAnonymous) {
   common::DynamicByteBuffer ad = GetExampleData();
   common::DynamicByteBuffer scan_data;
 
-  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr, 1000,
-                                 true, GetErrorCallback());
+  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr,
+                                 kTestInterval, true, GetErrorCallback());
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);
 }

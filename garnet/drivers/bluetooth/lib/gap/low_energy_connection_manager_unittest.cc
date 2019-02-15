@@ -125,8 +125,7 @@ class LowEnergyConnectionManagerTest : public TestingBase {
 
   // Called by FakeController on connection events.
   void OnConnectionStateChanged(const common::DeviceAddress& address,
-                                bool connected,
-                                bool canceled) {
+                                bool connected, bool canceled) {
     bt_log(SPEW, "gap-test",
            "OnConnectionStateChanged: %s connected: %s, canceled %s",
            address.ToString().c_str(), connected ? "true" : "false",
@@ -235,7 +234,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceFailure) {
 }
 
 TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
-  constexpr int64_t kTestRequestTimeoutMs = 20000;
+  constexpr zx::duration kTestRequestTimeout = zx::sec(20);
 
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
 
@@ -247,13 +246,13 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
     status = cb_status;
   };
 
-  conn_mgr()->set_request_timeout_for_testing(kTestRequestTimeoutMs);
+  conn_mgr()->set_request_timeout_for_testing(kTestRequestTimeout);
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
   ASSERT_TRUE(dev->le());
   EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
             dev->le()->connection_state());
 
-  RunLoopFor(zx::msec(kTestRequestTimeoutMs));
+  RunLoopFor(kTestRequestTimeout);
 
   EXPECT_FALSE(status);
   EXPECT_EQ(common::HostError::kTimedOut, status.error()) << status.ToString();
@@ -689,9 +688,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectEvent) {
   test_device()->AddDevice(std::make_unique<FakeDevice>(kAddress0));
 
   int closed_count = 0;
-  auto closed_cb = [&closed_count, this] {
-    closed_count++;
-  };
+  auto closed_cb = [&closed_count, this] { closed_count++; };
 
   std::vector<LowEnergyConnectionRefPtr> conn_refs;
   auto success_cb = [&conn_refs, &closed_cb, this](auto status, auto conn_ref) {
@@ -872,7 +869,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, L2CAPLEConnectionParameterUpdate) {
   bool conn_params_cb_called = false;
 
   auto fake_dev_cb = [&actual, &fake_dev_cb_called](const auto& addr,
-                                                           const auto& params) {
+                                                    const auto& params) {
     fake_dev_cb_called = true;
     actual = params;
   };

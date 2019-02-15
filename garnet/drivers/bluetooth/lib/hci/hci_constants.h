@@ -11,6 +11,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "lib/zx/time.h"
+
 // This file contains constants and numbers used in HCI packet payloads.
 
 namespace btlib {
@@ -734,7 +736,7 @@ enum class ReadTransmitPowerType : uint8_t {
 // TODO(BT-603/BT-604) This was increased to handle flaking integration tests.
 // We may want to reduce this to something lower again once we have a better 
 // resolution to this issue.
-constexpr int64_t kCommandTimeoutMs = 10000;
+constexpr zx::duration kCommandTimeout = zx::sec(10);
 
 // The minimum and maximum range values for the LE advertising interval
 // parameters.

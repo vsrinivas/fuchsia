@@ -38,12 +38,11 @@ CommandChannel::QueuedCommand::QueuedCommand(
   ZX_DEBUG_ASSERT(packet);
 }
 
-CommandChannel::TransactionData::TransactionData(
-    TransactionId id,
-    OpCode opcode,
-    EventCode complete_event_code,
-    CommandCallback callback,
-    async_dispatcher_t* dispatcher)
+CommandChannel::TransactionData::TransactionData(TransactionId id,
+                                                 OpCode opcode,
+                                                 EventCode complete_event_code,
+                                                 CommandCallback callback,
+                                                 async_dispatcher_t* dispatcher)
     : id_(id),
       opcode_(opcode),
       complete_event_code_(complete_event_code),
@@ -92,18 +91,17 @@ void CommandChannel::TransactionData::Complete(
   if (!callback_) {
     return;
   }
-  async::PostTask(dispatcher_,
-      [ event = std::move(event),
-        callback = std::move(callback_),
-        transaction_id = id_]() mutable {
-    callback(transaction_id, *event);
-  });
+  async::PostTask(
+      dispatcher_,
+      [event = std::move(event), callback = std::move(callback_),
+       transaction_id = id_]() mutable { callback(transaction_id, *event); });
   callback_ = nullptr;
 }
 
 CommandChannel::EventCallback CommandChannel::TransactionData::MakeCallback() {
-  return
-      [id = id_, cb = callback_.share()](const EventPacket& event) { cb(id, event); };
+  return [id = id_, cb = callback_.share()](const EventPacket& event) {
+    cb(id, event);
+  };
 }
 
 CommandChannel::CommandChannel(Transport* transport,
@@ -192,8 +190,7 @@ void CommandChannel::ShutDownInternal() {
 
 CommandChannel::TransactionId CommandChannel::SendCommand(
     std::unique_ptr<CommandPacket> command_packet,
-    async_dispatcher_t* dispatcher,
-    CommandCallback callback,
+    async_dispatcher_t* dispatcher, CommandCallback callback,
     const EventCode complete_event_code) {
   if (!is_initialized_) {
     bt_log(TRACE, "hci", "can't send commands while uninitialized");
@@ -247,8 +244,7 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
 }
 
 CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
-    EventCode event_code,
-    EventCallback event_callback,
+    EventCode event_code, EventCallback event_callback,
     async_dispatcher_t* dispatcher) {
   if (event_code == kCommandStatusEventCode ||
       event_code == kCommandCompleteEventCode ||
@@ -272,8 +268,7 @@ CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
 }
 
 CommandChannel::EventHandlerId CommandChannel::AddLEMetaEventHandler(
-    EventCode subevent_code,
-    EventCallback event_callback,
+    EventCode subevent_code, EventCallback event_callback,
     async_dispatcher_t* dispatcher) {
   std::lock_guard<std::mutex> lock(event_handler_mutex_);
 
@@ -382,7 +377,7 @@ void CommandChannel::SendQueuedCommand(QueuedCommand&& cmd) {
         ShutDownInternal();
         // TODO(jamuraa): Have Transport notice we've shutdown. (NET-620)
       },
-      zx::msec(kCommandTimeoutMs));
+      kCommandTimeout);
 
   MaybeAddTransactionHandler(transaction.get());
 
@@ -413,9 +408,7 @@ void CommandChannel::MaybeAddTransactionHandler(TransactionData* data) {
 }
 
 CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
-    EventCode event_code,
-    bool is_le_meta,
-    EventCallback event_callback,
+    EventCode event_code, bool is_le_meta, EventCallback event_callback,
     async_dispatcher_t* dispatcher) {
   ZX_DEBUG_ASSERT(event_code);
   ZX_DEBUG_ASSERT(event_callback);
@@ -582,11 +575,9 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
       it->second);
 }
 
-void CommandChannel::OnChannelReady(
-    async_dispatcher_t* dispatcher,
-    async::WaitBase* wait,
-    zx_status_t status,
-    const zx_packet_signal_t* signal) {
+void CommandChannel::OnChannelReady(async_dispatcher_t* dispatcher,
+                                    async::WaitBase* wait, zx_status_t status,
+                                    const zx_packet_signal_t* signal) {
   ZX_DEBUG_ASSERT(async_get_default_dispatcher() == io_dispatcher_);
   ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_READABLE);
 

@@ -49,14 +49,13 @@ class LowEnergyAdvertiser {
   // |callback| may be called before this function returns, but will
   // be called before any calls to |connect_callback|.
   using AdvertisingStatusCallback =
-      fit::function<void(uint32_t interval_ms, Status status)>;
+      fit::function<void(zx::duration interval, Status status)>;
   using ConnectionCallback = fit::function<void(ConnectionPtr link)>;
   virtual void StartAdvertising(const common::DeviceAddress& address,
                                 const common::ByteBuffer& data,
                                 const common::ByteBuffer& scan_rsp,
                                 ConnectionCallback connect_callback,
-                                uint32_t interval_ms,
-                                bool anonymous,
+                                zx::duration interval, bool anonymous,
                                 AdvertisingStatusCallback callback) = 0;
 
   // Stops any advertisement currently active on |address|. Idempotent and

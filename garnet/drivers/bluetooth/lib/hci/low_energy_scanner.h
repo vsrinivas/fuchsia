@@ -54,7 +54,7 @@ struct LowEnergyScanResult {
 class LowEnergyScanner {
  public:
   // Value that can be passed to StartScan() to scan indefinitely.
-  static constexpr int64_t kPeriodInfinite = -1;
+  static constexpr zx::duration kPeriodInfinite = zx::duration::infinite();
 
   enum class State {
     // No scan is currently being performed.
@@ -88,8 +88,7 @@ class LowEnergyScanner {
     virtual void OnDirectedAdvertisement(const LowEnergyScanResult& result);
   };
 
-  LowEnergyScanner(Delegate* delegate,
-                   fxl::RefPtr<Transport> hci,
+  LowEnergyScanner(Delegate* delegate, fxl::RefPtr<Transport> hci,
                    async_dispatcher_t* dispatcher);
   virtual ~LowEnergyScanner() = default;
 
@@ -129,7 +128,7 @@ class LowEnergyScanner {
   //
   // Once started, a scan can be terminated at any time by calling the
   // StopScan() method. Otherwise, an ongoing scan will terminate at the end of
-  // the scan period if a finite value for |period_ms| was provided.
+  // the scan period if a finite value for |period| was provided.
   //
   // If an active scan is being performed, then scannable advertising reports
   // will NOT generate an OnDeviceFound event until a scan response is received
@@ -155,12 +154,9 @@ class LowEnergyScanner {
     kStopped,
   };
   using ScanStatusCallback = fit::function<void(ScanStatus)>;
-  virtual bool StartScan(bool active,
-                         uint16_t scan_interval,
-                         uint16_t scan_window,
-                         bool filter_duplicates,
-                         LEScanFilterPolicy filter_policy,
-                         int64_t period_ms,
+  virtual bool StartScan(bool active, uint16_t scan_interval,
+                         uint16_t scan_window, bool filter_duplicates,
+                         LEScanFilterPolicy filter_policy, zx::duration period,
                          ScanStatusCallback callback) = 0;
 
   // Stops a previously started device scan. Returns false if a scan is not in

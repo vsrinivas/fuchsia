@@ -62,11 +62,11 @@ bool LowEnergyConnector::CreateConnection(
     const DeviceAddress& peer_address, uint16_t scan_interval,
     uint16_t scan_window,
     const LEPreferredConnectionParameters& initial_parameters,
-    StatusCallback status_callback, int64_t timeout_ms) {
+    StatusCallback status_callback, zx::duration timeout) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(status_callback);
   ZX_DEBUG_ASSERT(peer_address.type() != DeviceAddress::Type::kBREDR);
-  ZX_DEBUG_ASSERT(timeout_ms > 0);
+  ZX_DEBUG_ASSERT(timeout.get() > 0);
 
   if (request_pending())
     return false;
@@ -102,7 +102,7 @@ bool LowEnergyConnector::CreateConnection(
 
   // HCI Command Status Event will be sent as our completion callback.
   auto self = weak_ptr_factory_.GetWeakPtr();
-  auto complete_cb = [self, timeout_ms](auto id, const EventPacket& event) {
+  auto complete_cb = [self, timeout](auto id, const EventPacket& event) {
     ZX_DEBUG_ASSERT(event.event_code() == kCommandStatusEventCode);
 
     if (!self)
@@ -119,7 +119,7 @@ bool LowEnergyConnector::CreateConnection(
     // asynchronously notifies us of with a LE Connection Complete event.
     self->request_timeout_task_.Cancel();
     self->request_timeout_task_.PostDelayed(async_get_default_dispatcher(),
-                                            zx::msec(timeout_ms));
+                                            timeout);
   };
 
   hci_->command_channel()->SendCommand(std::move(request), dispatcher_,

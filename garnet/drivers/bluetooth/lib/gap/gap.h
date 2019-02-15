@@ -95,9 +95,9 @@ constexpr uint8_t kInquiryLengthDefault = 0x08;
 
 // Constants used in Low Energy Discovery (see Core Spec v5.0, Vol 3, Part C,
 // Appendix A).
-constexpr int64_t kLEGeneralDiscoveryScanMinMs = 10240;       // 10.24 seconds
-constexpr int64_t kLEGeneralDiscoveryScanMinCodedMs = 30720;  // 30.72 seconds
-constexpr int64_t kLEScanFastPeriodMs = 30720;                // 30.72 seconds
+constexpr zx::duration kLEGeneralDiscoveryScanMin = zx::msec(10240);
+constexpr zx::duration kLEGeneralDiscoveryScanMinCoded = zx::msec(30720);
+constexpr zx::duration kLEScanFastPeriod = zx::msec(30720);
 
 // Recommended scan parameters that can be passed directly to the HCI commands.
 // The HCI spec defines the time conversion as follows: Time =  N * 0.625 ms,
@@ -123,13 +123,13 @@ constexpr uint16_t kLEScanSlowWindow2 = 0x0024;         // 22.5 ms
 constexpr uint16_t kLEScanSlowWindow2Coded = 0x006C;    // 67.5 ms
 
 // Timeout used for the LE Create Connection command.
-constexpr int64_t kLECreateConnectionTimeoutMs = 20000;  // 20 s
+constexpr zx::duration kLECreateConnectionTimeout = zx::sec(20);
 
 // Connection Interval Timing Parameters (see v5.0, Vol 3, Part C,
 // Section 9.3.12 and Appendix A)
-constexpr int64_t kLEConnectionParameterTimeoutMs = 30000;  // 30 s
-constexpr int64_t kLEConnectionPauseCentralMs = 1000;       // 1 s
-constexpr int64_t kLEConnectionPausePeripheralMs = 5000;    // 5 s
+constexpr zx::duration kLEConnectionParameterTimeout = zx::sec(30);
+constexpr zx::duration kLEConnectionPauseCentral = zx::sec(1);
+constexpr zx::duration kLEConnectionPausePeripheral = zx::sec(5);
 
 constexpr uint16_t kLEInitialConnIntervalMin = 0x0018;       // 30 ms
 constexpr uint16_t kLEInitialConnIntervalMax = 0x0028;       // 50 ms

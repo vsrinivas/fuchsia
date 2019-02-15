@@ -12,8 +12,8 @@
 #include <zircon/compiler.h>
 
 #include "garnet/drivers/bluetooth/lib/common/uint128.h"
-
 #include "lib/fxl/macros.h"
+#include "lib/zx/time.h"
 
 namespace btlib {
 namespace att {
@@ -27,9 +27,9 @@ constexpr uint16_t kBREDRMinMTU = 48;
 // The maximum length of an attribute value (v5.0, Vol 3, Part F, 3.2.9).
 constexpr size_t kMaxAttributeValueLength = 512;
 
-// The ATT protocol transaction timeout in milliseconds
+// The ATT protocol transaction timeout.
 // (see v5.0, Vol 3, Part F, Section 3.3.3).
-constexpr uint32_t kTransactionTimeoutMs = 30000;
+constexpr zx::duration kTransactionTimeout = zx::sec(30);
 
 // A server identifies each attribute using a 16-bit handle.
 using Handle = uint16_t;
@@ -104,8 +104,9 @@ enum class UUIDType : uint8_t {
 };
 
 template <UUIDType Type>
-using AttributeType = typename std::
-    conditional<Type == UUIDType::k16Bit, uint16_t, common::UInt128>::type;
+using AttributeType =
+    typename std::conditional<Type == UUIDType::k16Bit, uint16_t,
+                              common::UInt128>::type;
 
 using AttributeType16 = AttributeType<UUIDType::k16Bit>;
 using AttributeType128 = AttributeType<UUIDType::k128Bit>;

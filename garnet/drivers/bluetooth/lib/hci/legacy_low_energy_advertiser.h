@@ -32,8 +32,7 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
                         const common::ByteBuffer& data,
                         const common::ByteBuffer& scan_rsp,
                         ConnectionCallback connect_callback,
-                        uint32_t interval_ms,
-                        bool anonymous,
+                        zx::duration interval, bool anonymous,
                         AdvertisingStatusCallback callback) override;
 
   // If called while a stop request is pending, returns false.

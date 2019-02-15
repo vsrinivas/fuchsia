@@ -23,13 +23,13 @@ namespace {
 constexpr size_t kDefaultMaxAds = 1;
 constexpr size_t kDefaultMaxAdSize = 23;
 constexpr size_t kDefaultFakeAdSize = 20;
-constexpr uint32_t kTestIntervalMs = 1000;
+constexpr zx::duration kTestInterval = zx::sec(1);
 
 struct AdvertisementStatus {
   AdvertisingData data;
   AdvertisingData scan_rsp;
   bool anonymous;
-  uint32_t interval_ms;
+  zx::duration interval;
   hci::LowEnergyAdvertiser::ConnectionCallback connect_cb;
 };
 
@@ -56,29 +56,31 @@ class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
                         const common::ByteBuffer& data,
                         const common::ByteBuffer& scan_rsp,
                         ConnectionCallback connect_callback,
-                        uint32_t interval_ms, bool anonymous,
+                        zx::duration interval, bool anonymous,
                         AdvertisingStatusCallback callback) override {
     if (!pending_error_) {
-      callback(0, pending_error_);
+      callback(zx::duration(), pending_error_);
       pending_error_ = hci::Status();
       return;
     }
     if (data.size() > max_ad_size_) {
-      callback(0, hci::Status(common::HostError::kInvalidParameters));
+      callback(zx::duration(),
+               hci::Status(common::HostError::kInvalidParameters));
       return;
     }
     if (scan_rsp.size() > max_ad_size_) {
-      callback(0, hci::Status(common::HostError::kInvalidParameters));
+      callback(zx::duration(),
+               hci::Status(common::HostError::kInvalidParameters));
       return;
     }
     AdvertisementStatus new_status;
     AdvertisingData::FromBytes(data, &new_status.data);
     AdvertisingData::FromBytes(scan_rsp, &new_status.scan_rsp);
     new_status.connect_cb = std::move(connect_callback);
-    new_status.interval_ms = interval_ms;
+    new_status.interval = interval;
     new_status.anonymous = anonymous;
     ads_->emplace(address, std::move(new_status));
-    callback(interval_ms, hci::Status());
+    callback(interval, hci::Status());
   }
 
   bool StopAdvertising(const common::DeviceAddress& address) override {
@@ -196,7 +198,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, Success) {
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;  // Empty scan response
 
-  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
+  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
                       false /* anonymous */, GetSuccessCallback());
 
   RunLoopUntilIdle();
@@ -210,7 +212,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, DataSize) {
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;  // Empty scan response
 
-  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
+  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
                       false /* anonymous */, GetSuccessCallback());
 
   RunLoopUntilIdle();
@@ -220,7 +222,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, DataSize) {
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_EQ(1u, ad_store().size());
 
-  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
+  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
                       false /* anonymous */, GetErrorCallback());
 
   RunLoopUntilIdle();
@@ -240,7 +242,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, RegisterUnregister) {
 
   EXPECT_FALSE(am.StopAdvertising(""));
 
-  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
+  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
                       false /* anonymous */, GetSuccessCallback());
 
   RunLoopUntilIdle();
@@ -251,7 +253,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, RegisterUnregister) {
   std::string first_ad_id = last_ad_id();
   common::DeviceAddress first_ad_address = ad_store().begin()->first;
 
-  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
+  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
                       false /* anonymous */, GetSuccessCallback());
 
   RunLoopUntilIdle();
@@ -276,7 +278,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, AdvertiserError) {
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;
 
-  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
+  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
                       false /* anonymous */, GetErrorCallback());
 
   RunLoopUntilIdle();
@@ -298,7 +300,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectCallback) {
     EXPECT_EQ(advertised_id, connected_id);
   };
 
-  am.StartAdvertising(fake_ad, scan_rsp, connect_cb, kTestIntervalMs,
+  am.StartAdvertising(fake_ad, scan_rsp, connect_cb, kTestInterval,
                       false /* anonymous */, GetSuccessCallback());
 
   RunLoopUntilIdle();
@@ -325,7 +327,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectAdvertiseError) {
   auto connect_cb = [this](std::string connected_id, hci::ConnectionPtr conn) {
   };
 
-  am.StartAdvertising(fake_ad, scan_rsp, connect_cb, kTestIntervalMs,
+  am.StartAdvertising(fake_ad, scan_rsp, connect_cb, kTestInterval,
                       true /* anonymous */, GetErrorCallback());
 
   EXPECT_TRUE(MoveLastStatus());
@@ -338,9 +340,8 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, SendsCorrectData) {
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp = CreateFakeAdvertisingData(21 /* size of ad */);
 
-  uint32_t interval_ms = (uint32_t)fxl::RandUint64();
-
-  am.StartAdvertising(fake_ad, scan_rsp, nullptr, interval_ms,
+  auto interval = zx::duration(fxl::RandUint64());
+  am.StartAdvertising(fake_ad, scan_rsp, nullptr, interval,
                       false /* anonymous */, GetSuccessCallback());
 
   RunLoopUntilIdle();
@@ -354,7 +355,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, SendsCorrectData) {
   EXPECT_EQ(scan_rsp, ad_status->scan_rsp);
   EXPECT_EQ(false, ad_status->anonymous);
   EXPECT_EQ(nullptr, ad_status->connect_cb);
-  EXPECT_EQ(interval_ms, ad_status->interval_ms);
+  EXPECT_EQ(interval, ad_status->interval);
 }
 
 }  // namespace

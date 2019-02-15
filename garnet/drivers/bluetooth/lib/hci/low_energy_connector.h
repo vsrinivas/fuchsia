@@ -86,7 +86,7 @@ class LowEnergyConnector {
       const common::DeviceAddress& peer_address, uint16_t scan_interval,
       uint16_t scan_window,
       const LEPreferredConnectionParameters& initial_parameters,
-      StatusCallback status_callback, int64_t timeout_ms);
+      StatusCallback status_callback, zx::duration timeout);
 
   // Cancels the currently pending connection attempt.
   void Cancel();

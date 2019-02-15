@@ -17,9 +17,9 @@ namespace btlib {
 namespace hci {
 namespace {
 
-using ::btlib::testing::CommandTransaction;
-using ::btlib::common::UpperBits;
 using ::btlib::common::LowerBits;
+using ::btlib::common::UpperBits;
+using ::btlib::testing::CommandTransaction;
 
 using TestingBase =
     ::btlib::testing::FakeControllerTest<::btlib::testing::TestController>;
@@ -149,8 +149,7 @@ TEST_F(HCI_CommandChannelTest, SingleAsynchronousRequest) {
   params->lap = kGIAC;
   params->inquiry_length = 1;
   params->num_responses = 0;
-  id = cmd_channel()->SendCommand(std::move(packet),
-                                  dispatcher(), cb,
+  id = cmd_channel()->SendCommand(std::move(packet), dispatcher(), cb,
                                   kInquiryCompleteEventCode);
   RunLoopUntilIdle();
   EXPECT_EQ(2, cb_count);
@@ -193,8 +192,7 @@ TEST_F(HCI_CommandChannelTest, SingleRequestWithStatusResponse) {
   };
 
   auto reset = CommandPacket::New(kReset);
-  id = cmd_channel()->SendCommand(std::move(reset),
-                                  dispatcher(), complete_cb,
+  id = cmd_channel()->SendCommand(std::move(reset), dispatcher(), complete_cb,
                                   kCommandStatusEventCode);
   RunLoopUntilIdle();
 }
@@ -242,8 +240,7 @@ TEST_F(HCI_CommandChannelTest, OneSentUntilStatus) {
   size_t transaction_count = 0u;
 
   test_device()->SetTransactionCallback(
-      [&transaction_count]() { transaction_count++; },
-      dispatcher());
+      [&transaction_count]() { transaction_count++; }, dispatcher());
 
   auto cb = [&cb_event_count](CommandChannel::TransactionId,
                               const EventPacket& event) {
@@ -262,11 +259,9 @@ TEST_F(HCI_CommandChannelTest, OneSentUntilStatus) {
   };
 
   auto reset = CommandPacket::New(kReset);
-  reset_id = cmd_channel()->SendCommand(std::move(reset),
-                                        dispatcher(), cb);
+  reset_id = cmd_channel()->SendCommand(std::move(reset), dispatcher(), cb);
   auto inquiry = CommandPacket::New(kInquiryCancel);
-  inquiry_id = cmd_channel()->SendCommand(std::move(inquiry),
-                                          dispatcher(), cb);
+  inquiry_id = cmd_channel()->SendCommand(std::move(inquiry), dispatcher(), cb);
 
   RunLoopUntilIdle();
 
@@ -328,8 +323,7 @@ TEST_F(HCI_CommandChannelTest, QueuedCommands) {
   size_t cancel_count = 0u;
 
   test_device()->SetTransactionCallback(
-      [&transaction_count]() { transaction_count++; },
-      dispatcher());
+      [&transaction_count]() { transaction_count++; }, dispatcher());
 
   auto cb = [&reset_count, &cancel_count](CommandChannel::TransactionId id,
                                           const EventPacket& event) {
@@ -349,14 +343,11 @@ TEST_F(HCI_CommandChannelTest, QueuedCommands) {
   test_device()->SendCommandChannelPacket(rsp_commandsavail);
 
   auto packet = CommandPacket::New(kReset);
-  cmd_channel()->SendCommand(std::move(packet), dispatcher(),
-                             cb);
+  cmd_channel()->SendCommand(std::move(packet), dispatcher(), cb);
   packet = CommandPacket::New(kInquiryCancel);
-  cmd_channel()->SendCommand(std::move(packet), dispatcher(),
-                             cb);
+  cmd_channel()->SendCommand(std::move(packet), dispatcher(), cb);
   packet = CommandPacket::New(kReset);
-  cmd_channel()->SendCommand(std::move(packet), dispatcher(),
-                             cb);
+  cmd_channel()->SendCommand(std::move(packet), dispatcher(), cb);
 
   RunLoopUntilIdle();
 
@@ -445,8 +436,8 @@ TEST_F(HCI_CommandChannelTest, AsynchronousCommands) {
   };
 
   auto packet = CommandPacket::New(kReset);
-  id1 = cmd_channel()->SendCommand(
-      std::move(packet), dispatcher(), cb, kTestEventCode0);
+  id1 = cmd_channel()->SendCommand(std::move(packet), dispatcher(), cb,
+                                   kTestEventCode0);
 
   RunLoopUntilIdle();
 
@@ -456,8 +447,8 @@ TEST_F(HCI_CommandChannelTest, AsynchronousCommands) {
   // Setting another event up with different opcode will still queue the command
   // because we don't want to have two commands waiting on an event.
   packet = CommandPacket::New(kInquiryCancel);
-  id2 = cmd_channel()->SendCommand(
-      std::move(packet), dispatcher(), cb, kTestEventCode0);
+  id2 = cmd_channel()->SendCommand(std::move(packet), dispatcher(), cb,
+                                   kTestEventCode0);
   RunLoopUntilIdle();
 
   EXPECT_EQ(1u, cb_count);
@@ -521,8 +512,7 @@ TEST_F(HCI_CommandChannelTest, AsyncQueueWhenBlocked) {
   size_t transaction_count = 0u;
 
   test_device()->SetTransactionCallback(
-      [&transaction_count]() { transaction_count++; },
-      dispatcher());
+      [&transaction_count]() { transaction_count++; }, dispatcher());
 
   test_device()->QueueCommandTransaction(
       CommandTransaction(req_reset, {&rsp_resetstatus, &rsp_bogocomplete}));
@@ -550,8 +540,8 @@ TEST_F(HCI_CommandChannelTest, AsyncQueueWhenBlocked) {
   };
 
   auto packet = CommandPacket::New(kReset);
-  id = cmd_channel()->SendCommand(
-      std::move(packet), dispatcher(), cb, kTestEventCode0);
+  id = cmd_channel()->SendCommand(std::move(packet), dispatcher(), cb,
+                                  kTestEventCode0);
 
   RunLoopUntilIdle();
 
@@ -608,8 +598,8 @@ TEST_F(HCI_CommandChannelTest, EventHandlerBasic) {
     event_count2++;
     EXPECT_EQ(kTestEventCode1, event.event_code());
   };
-  auto id0 = cmd_channel()->AddEventHandler(kTestEventCode0, event_cb0,
-                                            dispatcher());
+  auto id0 =
+      cmd_channel()->AddEventHandler(kTestEventCode0, event_cb0, dispatcher());
   EXPECT_NE(0u, id0);
 
   // Can register a handler for the same event code more than once.
@@ -727,8 +717,7 @@ TEST_F(HCI_CommandChannelTest, EventHandlerEventWhileTransactionPending) {
     EXPECT_EQ(1u, event.view().payload_size());
   };
 
-  cmd_channel()->AddEventHandler(kTestEventCode, event_cb,
-                                 dispatcher());
+  cmd_channel()->AddEventHandler(kTestEventCode, event_cb, dispatcher());
 
   auto reset = CommandPacket::New(kReset);
   CommandChannel::TransactionId id = cmd_channel()->SendCommand(
@@ -736,8 +725,7 @@ TEST_F(HCI_CommandChannelTest, EventHandlerEventWhileTransactionPending) {
   EXPECT_EQ(0u, id);
 
   reset = CommandPacket::New(kReset);
-  id = cmd_channel()->SendCommand(std::move(reset),
-                                  dispatcher(), nullptr);
+  id = cmd_channel()->SendCommand(std::move(reset), dispatcher(), nullptr);
   EXPECT_NE(0u, id);
 
   RunLoopUntilIdle();
@@ -771,13 +759,13 @@ TEST_F(HCI_CommandChannelTest, LEMetaEventHandler) {
               event.view().payload<LEMetaEventParams>().subevent_code);
   };
 
-  auto id0 = cmd_channel()->AddLEMetaEventHandler(
-      kTestSubeventCode0, event_cb0, dispatcher());
+  auto id0 = cmd_channel()->AddLEMetaEventHandler(kTestSubeventCode0, event_cb0,
+                                                  dispatcher());
   EXPECT_NE(0u, id0);
 
   // Can register a handler for the same event code more than once.
-  auto id1 = cmd_channel()->AddLEMetaEventHandler(
-      kTestSubeventCode0, event_cb0, dispatcher());
+  auto id1 = cmd_channel()->AddLEMetaEventHandler(kTestSubeventCode0, event_cb0,
+                                                  dispatcher());
   EXPECT_NE(0u, id1);
   EXPECT_NE(id0, id1);
 
@@ -826,13 +814,11 @@ TEST_F(HCI_CommandChannelTest, EventHandlerIdsDontCollide) {
 // Tests:
 //  - Can't register an event handler for CommandStatus or CommandComplete
 TEST_F(HCI_CommandChannelTest, EventHandlerRestrictions) {
-  auto id0 = cmd_channel()->AddEventHandler(hci::kCommandStatusEventCode,
-                                            [](const auto&) {},
-                                            dispatcher());
+  auto id0 = cmd_channel()->AddEventHandler(
+      hci::kCommandStatusEventCode, [](const auto&) {}, dispatcher());
   EXPECT_EQ(0u, id0);
-  id0 = cmd_channel()->AddEventHandler(hci::kCommandCompleteEventCode,
-                                       [](const auto&) {},
-                                       dispatcher());
+  id0 = cmd_channel()->AddEventHandler(
+      hci::kCommandCompleteEventCode, [](const auto&) {}, dispatcher());
   EXPECT_EQ(0u, id0);
 }
 
@@ -927,11 +913,8 @@ TEST_F(HCI_CommandChannelTest, TransportClosedCallback) {
   StartTestDevice();
 
   bool closed_cb_called = false;
-  auto closed_cb = [&closed_cb_called, this] {
-    closed_cb_called = true;
-  };
-  transport()->SetTransportClosedCallback(closed_cb,
-                                          dispatcher());
+  auto closed_cb = [&closed_cb_called, this] { closed_cb_called = true; };
+  transport()->SetTransportClosedCallback(closed_cb, dispatcher());
 
   async::PostTask(dispatcher(),
                   [this] { test_device()->CloseCommandChannel(); });
@@ -940,7 +923,7 @@ TEST_F(HCI_CommandChannelTest, TransportClosedCallback) {
 }
 
 TEST_F(HCI_CommandChannelTest, CommandTimeout) {
-  constexpr uint32_t kCommandTimeoutMs = 12000;
+  constexpr zx::duration kCommandTimeout = zx::sec(12);
 
   auto req_reset = common::CreateStaticByteBuffer(
       LowerBits(kReset), UpperBits(kReset),  // HCI_Reset opcode
@@ -967,20 +950,19 @@ TEST_F(HCI_CommandChannelTest, CommandTimeout) {
   };
 
   auto packet = CommandPacket::New(kReset);
-  id1 = cmd_channel()->SendCommand(std::move(packet),
-                                   dispatcher(), cb);
+  id1 = cmd_channel()->SendCommand(std::move(packet), dispatcher(), cb);
   ASSERT_NE(0u, id1);
 
   packet = CommandPacket::New(kReset);
-  id2 = cmd_channel()->SendCommand(std::move(packet),
-                                   dispatcher(), cb);
+  id2 = cmd_channel()->SendCommand(std::move(packet), dispatcher(), cb);
   ASSERT_NE(0u, id2);
 
   // Run the loop until the command timeout task gets scheduled.
   RunLoopUntilIdle();
   ASSERT_EQ(0u, cb_count);
 
-  RunLoopFor(zx::msec(kCommandTimeoutMs));
+  RunLoopFor(kCommandTimeout);
+  ;
 
   EXPECT_EQ(2u, cb_count);
 }
@@ -1030,10 +1012,9 @@ TEST_F(HCI_CommandChannelTest, AsynchronousCommandChaining) {
   CommandChannel::CommandCallback cb;
   size_t cb_count = 0u;
 
-  cb = [&cb, cmd_channel = cmd_channel(),
-        dispatcher = dispatcher(), &id1, &id2, &cb_count,
-        kTestEventCode0](CommandChannel::TransactionId callback_id,
-                         const EventPacket& event) {
+  cb = [&cb, cmd_channel = cmd_channel(), dispatcher = dispatcher(), &id1, &id2,
+        &cb_count, kTestEventCode0](CommandChannel::TransactionId callback_id,
+                                    const EventPacket& event) {
     if (cb_count < kExpectedCallbacksPerCommand) {
       EXPECT_EQ(id1, callback_id);
     } else {
@@ -1050,16 +1031,16 @@ TEST_F(HCI_CommandChannelTest, AsynchronousCommandChaining) {
       if (cb_count < 2) {
         // Add the second command when the first one completes.
         auto packet = CommandPacket::New(kReset);
-        id2 = cmd_channel->SendCommand(std::move(packet), dispatcher, cb.share(),
-                                       kTestEventCode0);
+        id2 = cmd_channel->SendCommand(std::move(packet), dispatcher,
+                                       cb.share(), kTestEventCode0);
       }
     }
     cb_count++;
   };
 
   auto packet = CommandPacket::New(kReset);
-  id1 = cmd_channel()->SendCommand(
-      std::move(packet), dispatcher(), cb.share(), kTestEventCode0);
+  id1 = cmd_channel()->SendCommand(std::move(packet), dispatcher(), cb.share(),
+                                   kTestEventCode0);
 
   RunLoopUntilIdle();
 
