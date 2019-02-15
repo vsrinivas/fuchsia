@@ -7,14 +7,11 @@
 
 #pragma once
 
+#include "allocation.h"
 #include "device.h"
 #include "ref_counted.h"
-#include <ddktl/protocol/pciroot.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
-#include <region-alloc/region-alloc.h>
 #include <sys/types.h>
 #include <zircon/types.h>
 
@@ -65,44 +62,6 @@ protected:
 private:
     const Type type_;
     const uint32_t managed_bus_id_; // The ID of the downstream bus which this node manages.
-};
-
-// PciAllocations and PciAllocators are concepts internal to UpstreamNodes which
-// track address space allocations across roots and bridges. PciAllocator is an
-// interface for roots and bridges to provide allocators to downstream bridges
-// for their own allocations. Roots allocate across the PciRoot protocol so the
-// dtors of PciRootAllocations will make a protocol call to release the address
-// space if for some reason a root's allocations go out of scope. A bridge works
-// similarly, except its allocations from from a bridge or upstream root's
-// region allocators, and holds a given region for its lifecycle. When it is
-// released the region can go through the normal region lifecycle and be
-// released back to the region allocator.
-class PciAllocation {
-public:
-    // These should not be copied, assigned, or moved
-    PciAllocation(const PciAllocation&) = delete;
-    PciAllocation(PciAllocation&) = delete;
-    PciAllocation& operator=(const PciAllocation&) = delete;
-    PciAllocation& operator=(PciAllocation&&) = delete;
-
-    virtual ~PciAllocation() = default;
-    virtual zx_paddr_t base() = 0;
-    virtual size_t size() = 0;
-
-protected:
-    PciAllocation() = default;
-};
-
-class PciAllocator {
-public:
-    virtual ~PciAllocator() = default;
-    virtual zx_status_t GetRegion(zx_paddr_t base,
-                                  size_t size,
-                                  fbl::unique_ptr<PciAllocation>* out_alloc) = 0;
-    virtual zx_status_t AddAddressSpace(fbl::unique_ptr<PciAllocation> alloc) = 0;
-
-protected:
-    PciAllocator() = default;
 };
 
 } // namespace pci

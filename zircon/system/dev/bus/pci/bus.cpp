@@ -78,7 +78,7 @@ zx_status_t Bus::Initialize() {
     // created to manage the start of the bus id range given to use by the
     // pciroot protocol.
     fbl::AllocChecker ac;
-    root_ = fbl::unique_ptr<PciRoot>(new (&ac) PciRoot(info_.start_bus_num, &pciroot_));
+    root_ = fbl::unique_ptr<PciRoot>(new (&ac) PciRoot(info_.start_bus_num, pciroot_));
     if (!ac.check()) {
         pci_errorf("failed to allocate root bookkeeping!\n");
         return ZX_ERR_NO_MEMORY;

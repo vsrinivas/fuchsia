@@ -22,11 +22,11 @@ driver("bus-pci") {
   ]
   if (enable_user_pci) {
     sources = [
+      "allocation.cpp",
       "bridge.cpp",
       "bus.cpp",
       "config.cpp",
       "device.cpp",
-      "root.cpp",
       "upstream_node.cpp",
     ]
     deps += [
