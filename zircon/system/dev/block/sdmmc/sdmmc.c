@@ -217,6 +217,7 @@ static sdio_protocol_ops_t sdio_proto = {
     .do_rw_txn = sdio_rw_data,
     .do_rw_byte = sdio_rw_byte,
     .get_dev_hw_info = sdio_get_device_hw_info,
+    .get_in_band_intr = sdio_get_interrupt,
 };
 
 static zx_status_t sdmmc_wait_for_tran(sdmmc_device_t* dev) {

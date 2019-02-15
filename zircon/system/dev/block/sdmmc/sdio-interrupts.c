@@ -95,3 +95,8 @@ zx_status_t sdio_disable_interrupt(void *ctx, uint8_t fn_idx) {
     zxlogf(TRACE, "sdio_enable_interrupt: Interrupt disabled for fn %d\n", fn_idx);
     return ZX_OK;
 }
+
+zx_status_t sdio_get_interrupt(void *ctx, zx_handle_t *out_irq) {
+    sdmmc_device_t *dev = ctx;
+    return sdmmc_get_in_band_interrupt(&dev->host, out_irq);
+}

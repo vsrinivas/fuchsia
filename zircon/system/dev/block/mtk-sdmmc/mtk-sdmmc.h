@@ -69,6 +69,7 @@ public:
     void SdmmcHwReset();
     zx_status_t SdmmcPerformTuning(uint32_t cmd_idx);
     zx_status_t SdmmcRequest(sdmmc_req_t* req);
+    zx_status_t SdmmcGetInBandInterrupt(zx::interrupt* out_irq);
 
     // Visible for testing.
     MtkSdmmc(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti, const sdmmc_host_info_t& info,

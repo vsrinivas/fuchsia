@@ -125,6 +125,7 @@ zx_status_t sdio_modify_block_size(void *ctx, uint8_t fn_idx, uint16_t blk_sz, b
 zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn);
 zx_status_t sdio_rw_byte(void *ctx, bool write, uint8_t fn_idx, uint32_t addr,
                          uint8_t write_byte, uint8_t *read_byte);
+zx_status_t sdio_get_interrupt(void* ctx, zx_handle_t* out_irq);
 zx_status_t sdio_get_device_hw_info(void *ctx, sdio_hw_info_t *dev_info);
 zx_status_t sdio_get_cur_block_size(void *ctx, uint8_t fn_idx,
                                     uint16_t *cur_blk_size);

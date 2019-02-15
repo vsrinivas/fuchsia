@@ -763,6 +763,10 @@ RequestStatus MtkSdmmc::SdmmcRequestWithStatus(sdmmc_req_t* req) {
     return req_status;
 }
 
+zx_status_t MtkSdmmc::SdmmcGetInBandInterrupt(zx::interrupt* out) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 bool MtkSdmmc::CmdDone(const MsdcInt& msdc_int) {
     if (req_->cmd_flags & SDMMC_RESP_LEN_136) {
         req_->response[0] = SdcResponse::Get(0).ReadFrom(&mmio_).response();

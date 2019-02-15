@@ -105,4 +105,5 @@ interface Sdmmc {
     PerformTuning(uint32 cmd_idx) -> (zx.status s);
     /// Issue a request.
     Request(SdmmcReq? req) -> (zx.status s);
+    GetInBandInterrupt() -> (zx.status s, handle<interrupt> irq);
 };

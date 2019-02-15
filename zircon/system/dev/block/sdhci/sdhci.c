@@ -900,6 +900,10 @@ static zx_status_t sdhci_perform_tuning(void* ctx, uint32_t tuning_cmd_idx) {
     }
 }
 
+static zx_status_t sdhci_get_interrupt2(void* ctx, zx_handle_t* out_irq) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static sdmmc_protocol_ops_t sdmmc_proto = {
     .host_info = sdhci_host_info,
     .set_signal_voltage = sdhci_set_signal_voltage,
@@ -909,6 +913,7 @@ static sdmmc_protocol_ops_t sdmmc_proto = {
     .hw_reset = sdhci_hw_reset2,
     .perform_tuning = sdhci_perform_tuning,
     .request = sdhci_request,
+    .get_in_band_interrupt = sdhci_get_interrupt2,
 };
 
 static void sdhci_unbind(void* ctx) {

@@ -968,6 +968,10 @@ zx_status_t aml_sd_emmc_request(void* ctx, sdmmc_req_t* req) {
     return req->status;
 }
 
+zx_status_t aml_sd_emmc_get_interrupt(void* ctx, zx_handle_t* out_irq) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static zx_protocol_device_t aml_sd_emmc_device_proto = []() {
     zx_protocol_device_t aml_sd_emmc_device = {};
     aml_sd_emmc_device.version = DEVICE_OPS_VERSION;
@@ -984,6 +988,7 @@ static sdmmc_protocol_ops_t aml_sdmmc_proto = {
     .hw_reset = aml_sd_emmc_hw_reset,
     .perform_tuning = aml_sd_emmc_perform_tuning,
     .request = aml_sd_emmc_request,
+    .get_in_band_interrupt = aml_sd_emmc_get_interrupt,
 };
 
 static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
