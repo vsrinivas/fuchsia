@@ -290,20 +290,17 @@ void SessionmgrImpl::InitializeLedger(
   fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
   std::string ledger_user_id;
   if (account_ && !options_.no_cloud_provider_for_ledger) {
-    // If not running in Guest mode, spin up a cloud provider for Ledger to use
-    // for syncing.
-    fuchsia::modular::AppConfig cloud_provider_config;
-    cloud_provider_config.url = kCloudProviderFirestoreAppUrl;
-    cloud_provider_app_ =
-        std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-            user_environment_->GetLauncher(), std::move(cloud_provider_config));
-    cloud_provider_app_->services().ConnectToService(
-        cloud_provider_factory_.NewRequest());
+    // If not running in Guest mode, configure the cloud provider for Ledger to
+    // use for syncing.
 
-    cloud_provider = GetCloudProvider(std::move(ledger_token_manager));
+    if (options_.use_cloud_provider_from_environment) {
+      startup_context_->ConnectToEnvironmentService(
+          cloud_provider.NewRequest());
+    } else {
+      cloud_provider = LaunchCloudProvider(std::move(ledger_token_manager));
+    }
+
     ledger_user_id = account_->profile_id;
-
-    // TODO(mesch): Teardown cloud_provider_app_ ?
   }
 
   ledger_repository_factory_.set_error_handler([this](zx_status_t status) {
@@ -878,9 +875,19 @@ void SessionmgrImpl::ConnectToStoryEntityProvider(
       story_id, std::move(entity_provider_request));
 }
 
-fuchsia::ledger::cloud::CloudProviderPtr SessionmgrImpl::GetCloudProvider(
+fuchsia::ledger::cloud::CloudProviderPtr SessionmgrImpl::LaunchCloudProvider(
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager) {
   FXL_CHECK(ledger_token_manager);
+
+  fuchsia::modular::AppConfig cloud_provider_app_config;
+  cloud_provider_app_config.url = kCloudProviderFirestoreAppUrl;
+  cloud_provider_app_ =
+      std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+          user_environment_->GetLauncher(),
+          std::move(cloud_provider_app_config));
+  cloud_provider_app_->services().ConnectToService(
+      cloud_provider_factory_.NewRequest());
+  // TODO(mesch): Teardown cloud_provider_app_ ?
 
   fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
   auto cloud_provider_config = GetLedgerFirestoreConfig();

@@ -68,8 +68,13 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
     // /data/LEDGER.
     bool use_memfs_for_ledger;
 
-    // If set, DO NOT pass a cloud provider to the ledger.
+    // If set, no cloud provider is configured for Ledger. This overrides any
+    // value of |use_cloud_provider_from_environment|.
     bool no_cloud_provider_for_ledger;
+    // If set, use the cloud provider available in the incoming namespace,
+    // rather than initializing an instance within sessionmgr. This can be used
+    // by Voila to inject a custom cloud provider.
+    bool use_cloud_provider_from_environment;
 
     // Sessionmgr passes args startup agents and session agent to maxwell.
     std::vector<std::string> startup_agents;
@@ -173,7 +178,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fuchsia::modular::AppConfig config);
   fuchsia::sys::ServiceProviderPtr GetServiceProvider(const std::string& url);
 
-  fuchsia::ledger::cloud::CloudProviderPtr GetCloudProvider(
+  fuchsia::ledger::cloud::CloudProviderPtr LaunchCloudProvider(
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager);
 
   // Called during initialization. Schedules the given action to be executed
@@ -308,7 +313,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // Part of Initialize() that is deferred until the first environment service
   // request is received from the session shell, in order to accelerate the
   // startup of session shell.
-  fit::function<void()> finish_initialization_{[]{}};
+  fit::function<void()> finish_initialization_{[] {}};
 
   // Set to |true| when sessionmgr starts its terminating sequence;  this flag
   // can be used to determine whether to reject vending FIDL services.

@@ -34,6 +34,8 @@ int main(int argc, const char** argv) {
   opts.use_memfs_for_ledger = command_line.HasOption("use_memfs_for_ledger");
   opts.no_cloud_provider_for_ledger =
       command_line.HasOption("no_cloud_provider_for_ledger");
+  opts.use_cloud_provider_from_environment =
+      command_line.HasOption("use_cloud_provider_from_environment");
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());
