@@ -20,12 +20,17 @@ namespace zxdb {
 class LineDetails {
  public:
   struct LineEntry {
+    LineEntry() = default;
+    explicit LineEntry(AddressRange r) : range(r) {}
+    LineEntry(int c, AddressRange r) : column(c), range(r) {}
+
     int column = 0;  // 1-based, but 0 indicates whole line.
     AddressRange range;
   };
 
   LineDetails();
-  LineDetails(FileLine fl);
+  explicit LineDetails(FileLine fl);
+  explicit LineDetails(FileLine fl, std::vector<LineEntry> entries);
   ~LineDetails();
 
   bool is_valid() const { return !entries_.empty(); }

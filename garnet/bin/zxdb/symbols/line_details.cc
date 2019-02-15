@@ -10,6 +10,8 @@ namespace zxdb {
 
 LineDetails::LineDetails() = default;
 LineDetails::LineDetails(FileLine fl) : file_line_(std::move(fl)) {}
+LineDetails::LineDetails(FileLine fl, std::vector<LineEntry> entries)
+    : file_line_(std::move(fl)), entries_(std::move(entries)) {}
 LineDetails::~LineDetails() = default;
 
 AddressRange LineDetails::GetExtent() const {

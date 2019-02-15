@@ -178,8 +178,8 @@ class ThreadController {
   // it will set the top stack frame to be the requested one.
   //
   // If there is no ambiguity or one of the possibly ambiguous frames doesn't
-  // match the given fingerprint, the inline frame hide count will be reset to
-  // zero.
+  // match the given fingerprint, the inline frame hide count will be
+  // unchanged.
   void SetInlineFrameIfAmbiguous(InlineFrameIs comparison,
                                  FrameFingerprint fingerprint);
 

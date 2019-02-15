@@ -9,6 +9,8 @@
 #include "garnet/bin/zxdb/common/address_ranges.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/symbols/function.h"
+#include "garnet/bin/zxdb/symbols/line_details.h"
+#include "garnet/bin/zxdb/symbols/mock_module_symbols.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 
 namespace zxdb {
@@ -121,17 +123,30 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   ASSERT_FALSE(mock_frames[0]->IsInline());
 
   // Step in a range right before the inline call.
-  AddressRange step_range1(mock_frames[0]->GetAddress() - 4,
-                           mock_frames[0]->GetAddress());
-  mock_frames[0]->SetAddress(step_range1.begin());
+  FileLine step_line(kTopFileLine.file(), kTopFileLine.line() - 1);
+  AddressRange step_addr_range(mock_frames[0]->GetAddress() - 4,
+                               mock_frames[0]->GetAddress());
+  mock_frames[0]->SetAddress(step_addr_range.begin());
+
+  // Add line information for the line we're stepping on and the following.
+  module_symbols()->AddLineDetails(
+      step_addr_range.begin(),
+      LineDetails(step_line,
+                  {LineDetails::LineEntry(AddressRange(step_addr_range))}));
+  module_symbols()->AddLineDetails(
+      kTopInlineFunctionRange.begin(),
+      LineDetails(
+          kTopInlineFileLine,
+          {LineDetails::LineEntry(AddressRange(kTopInlineFunctionRange))}));
 
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)),
                            true);
 
+  // Step over the line we're on.
   thread()->ContinueWith(
-      std::make_unique<StepOverThreadController>(AddressRanges(step_range1)),
+      std::make_unique<StepOverThreadController>(StepMode::kSourceLine),
       [](const Err& err) {});
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continued.
 

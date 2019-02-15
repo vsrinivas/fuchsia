@@ -250,6 +250,7 @@ void Stack::SyncFrames(std::function<void(const Err&)> callback) {
 
 void Stack::SetFrames(debug_ipc::ThreadRecord::StackAmount amount,
                       const std::vector<debug_ipc::StackFrame>& frames) {
+  hide_ambiguous_inline_frame_count_ = 0;
   frames_.clear();
   for (const debug_ipc::StackFrame& frame : frames)
     AppendFrame(frame);
@@ -260,10 +261,12 @@ void Stack::SetFramesForTest(std::vector<std::unique_ptr<Frame>> frames,
                              bool has_all) {
   frames_ = std::move(frames);
   has_all_frames_ = has_all;
+  hide_ambiguous_inline_frame_count_ = 0;
 }
 
 bool Stack::ClearFrames() {
   has_all_frames_ = false;
+  hide_ambiguous_inline_frame_count_ = 0;
 
   if (frames_.empty())
     return false;  // Nothing to do.

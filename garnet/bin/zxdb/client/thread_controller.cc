@@ -47,8 +47,8 @@ void ThreadController::SetInlineFrameIfAmbiguous(InlineFrameIs comparison,
 
   // Reset any hidden inline frames so we can iterate through all of them
   // (and we'll leave this reset to 0 if the requested one isn't found).
-  if (stack.hide_ambiguous_inline_frame_count())
-    stack.SetHideAmbiguousInlineFrameCount(0);
+  size_t old_hide_count = stack.hide_ambiguous_inline_frame_count();
+  stack.SetHideAmbiguousInlineFrameCount(0);
 
   for (size_t i = 0; i < stack.size(); i++) {
     const Frame* frame = stack[i];
@@ -60,28 +60,37 @@ void ThreadController::SetInlineFrameIfAmbiguous(InlineFrameIs comparison,
     // all inline frames need to be at the beginning of one of their ranges.
     // (the physical frame also needs matching but its range doesn't count).
     bool is_inline = frame->IsInline();
-    if (is_inline) {
-      if (!frame->IsAmbiguousInlineLocation())
-        break;  // Not an ambiguous address.
-    }
 
     if (*found == fingerprint) {
       // Found it.
       if (comparison == InlineFrameIs::kEqual) {
         // Make this one the top of the stack.
         stack.SetHideAmbiguousInlineFrameCount(i);
+        return;
       } else {  // comparison == InlineFrameIs::kOneBefore.
         // Make the one below this frame topmost. That requires the current
         // frame be inline since it will be hidden.
-        if (is_inline)
+        if (is_inline) {
           stack.SetHideAmbiguousInlineFrameCount(i + 1);
+          return;
+        }
       }
       break;
     }
 
     if (!is_inline)
       break;  // Don't check below the first physical frame.
+
+    // The fingerprint can be set on a frame as long as all frames above it
+    // were ambiguous, but the frame being set to is usually not ambiguous
+    // (it's often the physical frame that calls an inline function, for
+    // example).
+    if (!frame->IsAmbiguousInlineLocation())
+      break;
   }
+
+  if (old_hide_count)
+    stack.SetHideAmbiguousInlineFrameCount(old_hide_count);
 }
 
 void ThreadController::NotifyControllerDone() {

@@ -27,19 +27,34 @@ const uint64_t InlineThreadControllerTest::kTopSP = 0x2010;
 const uint64_t InlineThreadControllerTest::kMiddleSP = 0x2020;
 const uint64_t InlineThreadControllerTest::kBottomSP = 0x2040;
 
-const AddressRange InlineThreadControllerTest::kTopFunctionRange(0x30000,
-                                                                 0x40000);
+// These address ranges must all be inside the symbolized module address so
+// tests can mock symbols and line lookups inside of them.
+const AddressRange InlineThreadControllerTest::kTopFunctionRange(
+    kSymbolizedModuleAddress + 0x30000, kSymbolizedModuleAddress + 0x40000);
 // Must be inside the top function.
-const AddressRange InlineThreadControllerTest::kTopInlineFunctionRange(0x30100,
-                                                                       0x30200);
-const AddressRange InlineThreadControllerTest::kMiddleFunctionRange(0x10000,
-                                                                    0x20000);
+const AddressRange InlineThreadControllerTest::kTopInlineFunctionRange(
+    kSymbolizedModuleAddress + 0x30100, kSymbolizedModuleAddress + 0x30200);
+const AddressRange InlineThreadControllerTest::kMiddleFunctionRange(
+    kSymbolizedModuleAddress + 0x10000, kSymbolizedModuleAddress + 0x20000);
 // Must be inside the middle function
 const AddressRange InlineThreadControllerTest::kMiddleInline1FunctionRange(
-    0x10100, 0x10200);
+    kSymbolizedModuleAddress + 0x10100, kSymbolizedModuleAddress + 0x10200);
 // Must be inside the middle inline 1 function with same start address.
 const AddressRange InlineThreadControllerTest::kMiddleInline2FunctionRange(
-    0x10100, 0x10110);
+    kSymbolizedModuleAddress + 0x10100, kSymbolizedModuleAddress + 0x10110);
+
+// Note that the Stack object currently treats the location of caller of an
+// inline frame to be the inline call site, while for physical frames this will
+// be the following line. The reason for the difference is that inline
+// functions don't necessarily have a clear return address, and the actual call
+// is the easiest thing to compute.
+const FileLine InlineThreadControllerTest::kTopInlineFileLine("file.cc", 11);
+const FileLine InlineThreadControllerTest::kTopFileLine("file.cc", 15);
+const FileLine InlineThreadControllerTest::kMiddleInline2FileLine("file.cc",
+                                                                  22);
+const FileLine InlineThreadControllerTest::kMiddleInline1FileLine("file.cc",
+                                                                  25);
+const FileLine InlineThreadControllerTest::kMiddleFileLine("file.cc", 30);
 
 // static
 fxl::RefPtr<Function> InlineThreadControllerTest::GetTopFunction() {
@@ -71,21 +86,21 @@ fxl::RefPtr<Function> InlineThreadControllerTest::GetMiddleInline2Function() {
 
 // static
 Location InlineThreadControllerTest::GetTopLocation(uint64_t address) {
-  return Location(address, FileLine("file.cc", 10), 0,
+  return Location(address, kTopFileLine, 0,
                   SymbolContext::ForRelativeAddresses(),
                   LazySymbol(GetTopFunction()));
 }
 
 // static
 Location InlineThreadControllerTest::GetTopInlineLocation(uint64_t address) {
-  return Location(address, FileLine("file.cc", 20), 0,
+  return Location(address, kTopInlineFileLine, 0,
                   SymbolContext::ForRelativeAddresses(),
                   LazySymbol(GetTopInlineFunction()));
 }
 
 // static
 Location InlineThreadControllerTest::GetMiddleLocation(uint64_t address) {
-  return Location(address, FileLine("file.cc", 30), 0,
+  return Location(address, kMiddleFileLine, 0,
                   SymbolContext::ForRelativeAddresses(),
                   LazySymbol(GetMiddleFunction()));
 }
@@ -93,7 +108,7 @@ Location InlineThreadControllerTest::GetMiddleLocation(uint64_t address) {
 // static
 Location InlineThreadControllerTest::GetMiddleInline1Location(
     uint64_t address) {
-  return Location(address, FileLine("file.cc", 40), 0,
+  return Location(address, kMiddleInline1FileLine, 0,
                   SymbolContext::ForRelativeAddresses(),
                   LazySymbol(GetMiddleInline1Function()));
 }
@@ -101,7 +116,7 @@ Location InlineThreadControllerTest::GetMiddleInline1Location(
 // static
 Location InlineThreadControllerTest::GetMiddleInline2Location(
     uint64_t address) {
-  return Location(address, FileLine("file.cc", 50), 0,
+  return Location(address, kMiddleInline2FileLine, 0,
                   SymbolContext::ForRelativeAddresses(),
                   LazySymbol(GetMiddleInline2Function()));
 }

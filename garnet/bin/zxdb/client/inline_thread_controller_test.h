@@ -19,12 +19,76 @@ class MockFrame;
 
 // Helper class used for testing thread controllers that need inline stacks.
 //
+// Note on code locations: The source location for inline calls and physical
+// calls is different. The current instruction for a non-topmost physical frame
+// is always the return address of the function call (typically the next line)
+// because the debuggers knows the return address but don't necessarily know
+// the exact call location. For inline calls, however, we show the inline call
+// location because we do have that information, but don't know exactly where
+// the inline call will "return" to since there's no clear return address.
+//
+// The code looks like this, with line numbers and the code locations (see
+// note above):
+//
+//   10  inline void TopInline() {
+//   11    ...                          <- kTopInlineFileLine
+//   12  }
+//   13  void Top() {
+//   14    ...
+//   15    TopInlineFunction();         <- kTopFileLine
+//   16    ...
+//   17  }
+//   18
+//   19  inline void MiddleInline2() {
+//   20    ...
+//   21    Top();  // Non-inline call.
+//   22    ...                          <- kMiddleInline2FileLine
+//   23  }
+//   24  inline void MiddleInline1() {
+//   25    MiddleInline2();             <- kMiddleInline1FileLine
+//   26    ...
+//   27  }
+//   28  void Middle() {
+//   29    ...
+//   30    MiddleInline1();             <- kMiddleFileLine
+//   31    ...
+//   32  }
+//   33
+//   34  void Bottom() {
+//   35    ...
+//   36    Middle();
+//   37    ...
+//   38  }
+//
+// The stack looks like this:
+//
 //   [0] =   inline from frame 1: TopInline()
 //   [1] = physical frame at kTopSP: Top()
 //   [2] =   inline #2 from frame 4: MiddleInline2()
 //   [3] =   inline #1 from frame 4: MiddleInline1()
 //   [4] = physical frame at kMiddleSP: Middle()
 //   [5] = physical frame at kBottomSP
+//
+// Binary code layout
+//
+//   +--------------------------+
+//   | TopFunction              |
+//   |                          |
+//   |  +--------------------+  |
+//   |  | TopInlineFunction  |  |
+//   |  +--------------------+  |
+//   +--------------------------+
+//
+//   +----------------------------------------------------------+
+//   | MiddleFunction                                           |
+//   |                                                          |
+//   |  +------------------------+------------------------+--+  |
+//   |  | MiddleFunctionInline1  | MiddleFunctionInline2  |  |  |
+//   |  |                        +------------------------+  |  |
+//   |  |                                                    |  |
+//   |  +----------------------------------------------------+  |
+//   |                                                          |
+//   +----------------------------------------------------------+
 //
 // Note that MiddleInline1() and MiddleInline2() start at the same location
 // (as if calling #2 was the first thing #1 did).
@@ -35,12 +99,19 @@ class InlineThreadControllerTest : public ThreadControllerTest {
   static const uint64_t kMiddleSP;
   static const uint64_t kBottomSP;
 
-  // Returns address range for each function.
+  // Address range for each function.
   static const AddressRange kTopFunctionRange;
   static const AddressRange kTopInlineFunctionRange;
   static const AddressRange kMiddleFunctionRange;
   static const AddressRange kMiddleInline1FunctionRange;
   static const AddressRange kMiddleInline2FunctionRange;
+
+  // Line numbers.
+  static const FileLine kTopInlineFileLine;      // IP @ top of stack
+  static const FileLine kTopFileLine;            // Call loc of top inline.
+  static const FileLine kMiddleInline2FileLine;  // Return of Top().
+  static const FileLine kMiddleInline1FileLine;  // Call loc of inline2.
+  static const FileLine kMiddleFileLine;         // Call loc of inline1.
 
   // Creates functions associated with each of the frames.
   static fxl::RefPtr<Function> GetTopFunction();

@@ -56,10 +56,10 @@ TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
 
   SymbolContext symbol_context = mock_frames[0]->GetLocation().symbol_context();
 
-  // Make the top two frames have an ambiguous location (address at the
-  // beginning of their code range). This isn't the case in the default test
-  // data.
-  // functions.
+  // Make the now-exposed top two frames have an ambiguous location (address at
+  // the beginning of their code range). This isn't the case in the default
+  // test data (inline frames not at the top of the stack can't be ambiguous
+  // because the physical call requires some instructions).
   uint64_t address = kMiddleInline2FunctionRange.begin();
   mock_frames[0]->SetAddress(address);
   mock_frames[0]->set_is_ambiguous_inline(true);
@@ -143,11 +143,12 @@ TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
       DummyThreadController::InlineFrameIs::kEqual, inline_1_fingerprint);
   EXPECT_EQ(1u, stack.hide_ambiguous_inline_frame_count());
 
-  // Set previous to the top physical frame should hide nothing because it's
-  // not ambiguous (there's a physical frame in the way).
+  // Set previous to the top physical frame should be invalid because it's
+  // not ambiguous (there's a physical frame in the way). As a result, the
+  // hide count should be unchanged from before.
   controller.SetInlineFrameIfAmbiguous(
       DummyThreadController::InlineFrameIs::kOneBefore, physical_fingerprint);
-  EXPECT_EQ(0u, stack.hide_ambiguous_inline_frame_count());
+  EXPECT_EQ(1u, stack.hide_ambiguous_inline_frame_count());
 
   // Make a case that's not ambiguous because the current location isn't at the
   // top of the beginning of an inline function range.
@@ -159,13 +160,6 @@ TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
                            debug_ipc::NotifyException::Type::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)),
                            true);
-
-  // Set the inline frame hide count so we can tell the function reset it to
-  // zero in the failure case.
-  stack.SetHideAmbiguousInlineFrameCount(1);
-  controller.SetInlineFrameIfAmbiguous(
-      DummyThreadController::InlineFrameIs::kEqual, inline_1_fingerprint);
-  EXPECT_EQ(0u, stack.hide_ambiguous_inline_frame_count());
 }
 
 }  // namespace zxdb
