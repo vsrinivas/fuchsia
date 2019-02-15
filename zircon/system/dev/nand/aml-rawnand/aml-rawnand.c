@@ -214,7 +214,11 @@ static void aml_cmd_n2m_page0(aml_raw_nand_t* raw_nand) {
 static zx_status_t aml_wait_dma_finish(aml_raw_nand_t* raw_nand) {
     aml_cmd_idle(raw_nand, 0);
     aml_cmd_idle(raw_nand, 0);
-    return aml_wait_cmd_finish(raw_nand, DMA_BUSY_TIMEOUT);
+    /*
+     * This timeout was 1048 seconds. Make this 1 second, similar
+     * to other codepaths where we wait for the cmd fifo to drain.
+     */
+    return aml_wait_cmd_finish(raw_nand, CMD_FINISH_TIMEOUT_MS);
 }
 
 /*
