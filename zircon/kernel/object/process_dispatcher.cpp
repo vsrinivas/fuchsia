@@ -551,24 +551,6 @@ zx_status_t ProcessDispatcher::GetDispatcherInternal(zx_handle_t handle_value,
     return ZX_OK;
 }
 
-zx_status_t ProcessDispatcher::GetDispatcherWithRightsInternal(zx_handle_t handle_value,
-                                                               zx_rights_t desired_rights,
-                                                               fbl::RefPtr<Dispatcher>* dispatcher_out,
-                                                               zx_rights_t* out_rights) {
-    Guard<BrwLock, BrwLock::Reader> guard{&handle_table_lock_};
-    Handle* handle = GetHandleLocked(handle_value);
-    if (!handle)
-        return ZX_ERR_BAD_HANDLE;
-
-    if (!handle->HasRights(desired_rights))
-        return ZX_ERR_ACCESS_DENIED;
-
-    *dispatcher_out = handle->dispatcher();
-    if (out_rights)
-        *out_rights = handle->rights();
-    return ZX_OK;
-}
-
 zx_status_t ProcessDispatcher::GetInfo(zx_info_process_t* info) {
     memset(info, 0, sizeof(*info));
 

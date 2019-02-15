@@ -130,22 +130,45 @@ public:
 
     // Get the dispatcher corresponding to this handle value, after
     // checking that this handle has the desired rights.
-    // Returns the rights the handle currently has.
+    // WRONG_TYPE is returned before ACESSS_DENIED, because if the
+    // wrong handle was passed, evaluating its rights does not have
+    // much meaning and also this aids in debugging.
+    // If successful, returns the dispatcher and the rights the
+    // handle currently has.
     template <typename T>
     zx_status_t GetDispatcherWithRights(zx_handle_t handle_value,
                                         zx_rights_t desired_rights,
-                                        fbl::RefPtr<T>* dispatcher,
+                                        fbl::RefPtr<T>* out_dispatcher,
                                         zx_rights_t* out_rights) {
+        bool has_desired_rights;
+        zx_rights_t rights;
         fbl::RefPtr<Dispatcher> generic_dispatcher;
-        auto status = GetDispatcherWithRightsInternal(handle_value,
-                                                      desired_rights,
-                                                      &generic_dispatcher,
-                                                      out_rights);
-        if (status != ZX_OK)
-            return status;
-        *dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
-        if (!*dispatcher)
+
+        {
+            // Scope utilized to reduce lock duration.
+            Guard<BrwLock, BrwLock::Reader> guard{&handle_table_lock_};
+            Handle* handle = GetHandleLocked(handle_value);
+            if (!handle)
+                return ZX_ERR_BAD_HANDLE;
+
+            has_desired_rights = handle->HasRights(desired_rights);
+            rights = handle->rights();
+            generic_dispatcher = handle->dispatcher();
+        }
+
+        fbl::RefPtr<T> dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
+
+        // Wrong type takes precedence over access denied.
+        if (!dispatcher)
             return ZX_ERR_WRONG_TYPE;
+
+        if (!has_desired_rights)
+            return ZX_ERR_ACCESS_DENIED;
+
+        *out_dispatcher = ktl::move(dispatcher);
+        if (out_rights)
+            *out_rights = rights;
+
         return ZX_OK;
     }
 
@@ -291,9 +314,6 @@ private:
     zx_status_t GetDispatcherInternal(zx_handle_t handle_value, fbl::RefPtr<Dispatcher>* dispatcher,
                                       zx_rights_t* rights);
 
-    zx_status_t GetDispatcherWithRightsInternal(zx_handle_t handle_value, zx_rights_t desired_rights,
-                                                fbl::RefPtr<Dispatcher>* dispatcher_out,
-                                                zx_rights_t* out_rights);
 
     void OnProcessStartForJobDebugger(ThreadDispatcher *t);
 

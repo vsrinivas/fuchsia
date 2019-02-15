@@ -721,6 +721,23 @@ bool vmo_rights_test() {
     status = zx_handle_close(vmo);
     EXPECT_EQ(ZX_OK, status, "handle_close");
 
+    // Use wrong handle with wrong permission, and expect wrong type not
+    // ZX_ERR_ACCESS_DENIED
+    vmo = ZX_HANDLE_INVALID;
+    vmo2 = ZX_HANDLE_INVALID;
+    status = zx_port_create(0, &vmo);
+    EXPECT_EQ(ZX_OK, status, "zx_port_create");
+    status = zx_handle_duplicate(vmo, 0, &vmo2);
+    EXPECT_EQ(ZX_OK, status, "zx_handle_duplicate");
+    status = zx_vmo_read(vmo2, buf, 0, 0);
+    EXPECT_EQ(ZX_ERR_WRONG_TYPE, status, "vmo_read wrong type");
+
+    // close the handle
+    status = zx_handle_close(vmo);
+    EXPECT_EQ(ZX_OK, status, "handle_close");
+    status = zx_handle_close(vmo2);
+    EXPECT_EQ(ZX_OK, status, "handle_close");
+
     END_TEST;
 }
 
