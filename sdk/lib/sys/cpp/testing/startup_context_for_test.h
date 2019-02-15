@@ -6,6 +6,7 @@
 #define LIB_SYS_CPP_TESTING_STARTUP_CONTEXT_FOR_TEST_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/sys/cpp/startup_context.h>
 
 #include "lib/sys/cpp/testing/service_directory_for_test.h"
@@ -33,14 +34,28 @@ class StartupContextForTest final : public sys::StartupContext {
     return outgoing_directory_ptr_;
   }
 
-  // Points to public directory of outgoing directory, test can get it and try
-  // to connect to a public service published by code under test.
-  fuchsia::io::DirectoryPtr& public_directory_ptr() {
-    return public_directory_ptr_;
+  // Connect to public service which was published in "public" directory by
+  // code under test.
+  template <typename Interface>
+  fidl::InterfacePtr<Interface> ConnectToPublicService(
+      const std::string& name = Interface::Name_,
+      async_dispatcher_t* dispatcher = nullptr) {
+    fidl::InterfacePtr<Interface> ptr;
+    ConnectToPublicService(ptr.NewRequest(dispatcher), name);
+    return ptr;
   }
 
-  // This can be used to get fake service directory and inject services which
-  // can be accessed by code under test.
+  // Connect to public service which was published in "public" directory by
+  // code under test.
+  template <typename Interface>
+  void ConnectToPublicService(fidl::InterfaceRequest<Interface> request,
+                              const std::string& name = Interface::Name_) {
+    fdio_service_connect_at(public_directory_ptr_.channel().get(), name.c_str(),
+                            request.TakeChannel().release());
+  }
+
+  // This can be used to get fake service directory and inject services
+  // which can be accessed by code under test.
   //
   // # Example
   //

@@ -6,7 +6,6 @@
 
 #include "echo_server.h"
 
-#include <lib/fdio/directory.h>
 #include <lib/gtest/real_loop_fixture.h>
 
 #include "gtest/gtest.h"
@@ -33,12 +32,7 @@ TEST_F(StartupContextForTest_Tests, TestOutgoingPublicServices) {
 
   PublishOutgoingService(context.get());
 
-  fidl::examples::echo::EchoPtr echo;
-
-  fdio_service_connect_at(
-      context->public_directory_ptr().channel().get(),
-      fidl::examples::echo::Echo::Name_,
-      echo.NewRequest(dispatcher()).TakeChannel().release());
+  auto echo = context->ConnectToPublicService<fidl::examples::echo::Echo>();
 
   std::string result;
   echo->EchoString("hello",
