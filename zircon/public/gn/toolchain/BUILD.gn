@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("toolchain.gni")
+
+assert(current_toolchain == default_toolchain,
+       "Define toolchains only in `default_toolchain` $default_toolchain")
+
+# The stub toolchain is the $default_toolchain set by //gn/BUILDCONFIG.gn.
+# It has nothing but the standard stamp and copy tools, so it can only be
+# used for action and copy rules.
+toolchain_with_tools("stub") {
+  tools = []
+
+  # This is needed for $zx/public/gn/banjo.gni et al.
+  propagates_configs = true
+}

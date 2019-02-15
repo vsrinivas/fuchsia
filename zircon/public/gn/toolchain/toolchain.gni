@@ -1,0 +1,66 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Define a toolchain in a template-friendly way, with default copy(), stamp().
+#
+# GN's built-in toolchain() API does not allow for any sort of composition.
+# This template provides a way to define a toolchain that permits composing
+# the list of tools somewhat flexibly.  Rather than using the special
+# tool() API embedded within a toolchain() scope, toolchain_with_tools()
+# uses a simple list of scopes that gives the same information.  An even
+# more flexible API would allow for template invocations inside toolchain()
+# to define tools.  TODO(mcgrathr): Look into GN toolchain() API improvements.
+#
+# Parameters
+#
+#   tools
+#     Requires: List of tools to define.  Each scope in the list
+#     must define `name` and everything used by `tool(name)` inside a
+#     toolchain() definition.  The "stamp" and "copy" tools are always
+#     defined and should not be included here.
+#     Type: list of scopes
+#
+#   deps, toolchain_args, propagates_configs
+#     Optional: See toolchain().
+#
+template("toolchain_with_tools") {
+  assert(current_toolchain == default_toolchain,
+         "toolchain_with_tools(\"$target_name\") evaluated" +
+             " outside default toolchain $default_toolchain")
+  assert(defined(invoker.tools),
+         "toolchain_with_tools(\"$target_name\") must set tools")
+
+  toolchain(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "propagates_configs",
+                             "toolchain_args",
+                           ])
+
+    # Define each tool specified by the invoker.
+    foreach(tool, invoker.tools) {
+      assert(tool.name != "copy",
+             "toolchain_with_tools() should not include \"copy\" in `tools`")
+      assert(tool.name != "stamp",
+             "toolchain_with_tools() should not include \"stamp\" in `tools`")
+      tool(tool.name) {
+        forward_variables_from(tool, "*", [ "name" ])
+      }
+    }
+
+    # Every toolchain needs the standard stamp and copy tools.
+    tool("stamp") {
+      command = "touch {{output}}"
+      description = "STAMP {{output}}"
+    }
+
+    tool("copy") {
+      # We use link instead of copy; the way the "copy" tool is used is
+      # compatible with links since Ninja tracks changes to the source.
+      command = "ln -f {{source}} {{output}}"
+      description = "COPY {{source}} {{output}}"
+    }
+  }
+}

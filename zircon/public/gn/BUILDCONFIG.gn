@@ -1,0 +1,27 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # *This must never be set as a build argument*.
+  #
+  # "$zx/" is the prefix for GN "source-absolute" paths in the Zircon
+  # build.  When Zircon is built standalone, the Zircon repository is the
+  # root of the build (where `.gn` is found) so "$zx/" becomes "//".  When
+  # Zircon is part of a larger unified build, there is a higher-level `.gn`
+  # file that uses `default_args` to set "$zx/" to "//zircon/".
+  zx = "/"
+}
+
+declare_args() {
+  # *This must never be set as a build argument.*
+  # It exists only to be set via c_toolchain().
+  toolchain = {
+    label = "$zx/public/gn/toolchain:stub"
+  }
+}
+
+# The default toolchain is a very boring one.  It can only be used for
+# action and copy rules where current_cpu et al don't matter.  Doing
+# anything else happens in another toolchain.
+set_default_toolchain(toolchain.label)

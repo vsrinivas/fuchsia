@@ -1,0 +1,11 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file is the root of GN configuration for Zircon.
+
+# The location of the build configuration file.
+buildconfig = "//public/gn/BUILDCONFIG.gn"
+
+# The executable used to execute scripts in action and exec_script.
+script_executable = "/usr/bin/env"
