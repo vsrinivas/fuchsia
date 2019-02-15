@@ -335,12 +335,11 @@ impl<A: IpAddr> Subnet<A> {
 impl Subnet<Ipv4Addr> {
     /// Get the broadcast address in this subnet.
     pub fn broadcast(&self) -> Ipv4Addr {
-        let bits = 32 - self.prefix;
-        if bits == 32 {
+        if self.prefix == 32 {
             // shifting right by the size of the value is undefined
-            Ipv4Addr([0xFF; 4])
+            self.network
         } else {
-            let mask = <u32>::max_value() >> (32 - bits);
+            let mask = <u32>::max_value() >> self.prefix;
             let masked = NetworkEndian::read_u32(&self.network.0) | mask;
             let mut ret = Ipv4Addr::default();
             NetworkEndian::write_u32(&mut ret.0, masked);
