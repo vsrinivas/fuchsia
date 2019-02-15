@@ -8,6 +8,7 @@
 #pragma once
 
 #include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/common-pm.h>
 
 __BEGIN_CDECLS
 
@@ -357,11 +358,6 @@ typedef struct {
     // supporting it.
     uint32_t lbr_stack_size;
 } zx_x86_pmu_properties_t;
-
-// This is for passing buffer specs to the kernel.
-typedef struct {
-    zx_handle_t vmo;
-} zx_x86_pmu_buffer_t;
 
 // PMU configuration.
 typedef struct {

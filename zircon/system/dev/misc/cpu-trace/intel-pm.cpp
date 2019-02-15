@@ -958,7 +958,7 @@ zx_status_t CpuperfDevice::PmuStart() {
 
     uint32_t num_cpus = zx_system_get_num_cpus();
     for (uint32_t cpu = 0; cpu < num_cpus; ++cpu) {
-        zx_x86_pmu_buffer_t buffer;
+        zx_pmu_buffer_t buffer;
         io_buffer_t* io_buffer = &per_trace->buffers[cpu];
         buffer.vmo = io_buffer->vmo_handle;
         status = zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,

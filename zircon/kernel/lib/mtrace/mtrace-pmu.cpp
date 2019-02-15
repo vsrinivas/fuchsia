@@ -20,7 +20,6 @@
 #include "arch/x86/perf_mon.h"
 using zx_arch_pmu_properties_t = zx_x86_pmu_properties_t;
 using zx_arch_pmu_config_t = zx_x86_pmu_config_t;
-using zx_arch_pmu_buffer_t = zx_x86_pmu_buffer_t;
 
 #define LOCAL_TRACE 0
 
@@ -51,10 +50,10 @@ zx_status_t mtrace_cpuperf_control(uint32_t action, uint32_t options,
         return arch_perfmon_init();
 
     case MTRACE_CPUPERF_ASSIGN_BUFFER: {
-        zx_arch_pmu_buffer_t buffer;
+        zx_pmu_buffer_t buffer;
         if (size != sizeof(buffer))
             return ZX_ERR_INVALID_ARGS;
-        zx_status_t status = arg.reinterpret<zx_arch_pmu_buffer_t>().copy_from_user(&buffer);
+        zx_status_t status = arg.reinterpret<zx_pmu_buffer_t>().copy_from_user(&buffer);
         if (status != ZX_OK)
             return status;
 
