@@ -90,8 +90,6 @@ Session::~Session() {
         << ", total outstanding resources: " << resource_count_;
   }
   error_reporter_ = nullptr;
-
-  weak_factory_.InvalidateWeakPtrs();
 }
 
 ErrorReporter* Session::error_reporter() const {

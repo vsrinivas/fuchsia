@@ -152,7 +152,7 @@ bool Engine::UpdateSessions(std::vector<SessionUpdate> sessions_to_update,
 
     // If update fails, kill the entire client session.
     if (!update_results.success) {
-      session_manager_->KillSession(session->id());
+      session_handler->KillSession();
     }
 
     needs_render |= update_results.needs_render;

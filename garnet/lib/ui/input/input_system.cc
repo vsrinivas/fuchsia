@@ -246,16 +246,18 @@ InputSystem::InputSystem(SystemContext context, gfx::GfxSystem* gfx_system)
   });
 }
 
-std::unique_ptr<CommandDispatcher> InputSystem::CreateCommandDispatcher(
+CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(
     CommandDispatcherContext context) {
-  return std::make_unique<InputCommandDispatcher>(std::move(context),
-                                                  gfx_system_, this);
+  return CommandDispatcherUniquePtr(
+      new InputCommandDispatcher(std::move(context), gfx_system_, this),
+      // Custom deleter.
+      [](CommandDispatcher* cd) { delete cd; });
 }
 
-InputCommandDispatcher::InputCommandDispatcher(CommandDispatcherContext context,
-                                               gfx::GfxSystem* gfx_system,
-                                               InputSystem* input_system)
-    : CommandDispatcher(std::move(context)),
+InputCommandDispatcher::InputCommandDispatcher(
+    CommandDispatcherContext command_dispatcher_context,
+    gfx::GfxSystem* gfx_system, InputSystem* input_system)
+    : CommandDispatcher(std::move(command_dispatcher_context)),
       gfx_system_(gfx_system),
       input_system_(input_system) {
   FXL_CHECK(gfx_system_);
@@ -271,7 +273,7 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command) {
     DispatchCommand(std::move(input.send_keyboard_input()));
   } else if (input.is_send_pointer_input()) {
     // Compositor and layer stack required for dispatch.
-    GlobalId compositor_id(context()->session_id(),
+    GlobalId compositor_id(command_dispatcher_context()->session_id(),
                            input.send_pointer_input().compositor_id);
     gfx::CompositorWeakPtr compositor =
         gfx_system_->GetCompositor(compositor_id);
@@ -330,7 +332,8 @@ void InputCommandDispatcher::DispatchTouchCommand(
       << "Oops, touch device had unexpected HOVER event.";
 
   if (pointer_phase == Phase::ADD) {
-    GlobalId compositor_id(context()->session_id(), command.compositor_id);
+    GlobalId compositor_id(command_dispatcher_context()->session_id(),
+                           command.compositor_id);
     const std::vector<gfx::Hit> hits =
         PerformGlobalHitTest(gfx_system_, compositor_id, pointer_x, pointer_y);
 
@@ -453,7 +456,8 @@ void InputCommandDispatcher::DispatchMouseCommand(
       << ") had an unexpected event: " << pointer_phase;
 
   if (pointer_phase == Phase::DOWN) {
-    GlobalId compositor_id(context()->session_id(), command.compositor_id);
+    GlobalId compositor_id(command_dispatcher_context()->session_id(),
+                           command.compositor_id);
     const std::vector<gfx::Hit> hits =
         PerformGlobalHitTest(gfx_system_, compositor_id, pointer_x, pointer_y);
 
@@ -527,7 +531,8 @@ void InputCommandDispatcher::DispatchMouseCommand(
 
   // Deal with unassociated MOVE events.
   if (pointer_phase == Phase::MOVE && mouse_targets_.count(device_id) == 0) {
-    GlobalId compositor_id(context()->session_id(), command.compositor_id);
+    GlobalId compositor_id(command_dispatcher_context()->session_id(),
+                           command.compositor_id);
     const std::vector<gfx::Hit> hits =
         PerformGlobalHitTest(gfx_system_, compositor_id, pointer_x, pointer_y);
     // Find top-hit target and send it this move event.
@@ -569,7 +574,7 @@ void InputCommandDispatcher::DispatchCommand(
 
 void InputCommandDispatcher::DispatchCommand(
     const SetHardKeyboardDeliveryCmd command) {
-  const SessionId session_id = context()->session_id();
+  const SessionId session_id = command_dispatcher_context()->session_id();
   FXL_VLOG(2) << "Hard keyboard events, session_id=" << session_id
               << ", delivery_request="
               << (command.delivery_request ? "on" : "off");

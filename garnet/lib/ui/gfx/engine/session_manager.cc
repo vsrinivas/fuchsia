@@ -14,7 +14,7 @@
 namespace scenic_impl {
 namespace gfx {
 
-SessionHandler* SessionManager::FindSessionHandler(SessionId id) {
+SessionHandler* SessionManager::FindSessionHandler(SessionId id) const {
   auto it = session_handlers_.find(id);
   if (it != session_handlers_.end()) {
     return it->second;
@@ -22,21 +22,31 @@ SessionHandler* SessionManager::FindSessionHandler(SessionId id) {
   return nullptr;
 }
 
-std::unique_ptr<SessionHandler> SessionManager::CreateSessionHandler(
-    CommandDispatcherContext context, Engine* engine,
-    EventReporter* event_reporter, ErrorReporter* error_reporter) const {
-  return std::make_unique<SessionHandler>(
-      std::move(context), engine->session_manager(), engine->session_context(),
-      event_reporter, error_reporter);
+CommandDispatcherUniquePtr SessionManager::CreateCommandDispatcher(
+    CommandDispatcherContext dispatcher_context,
+    SessionContext session_context) {
+  scenic_impl::Session* session = dispatcher_context.session();
+  auto handler = this->CreateSessionHandler(
+      std::move(dispatcher_context), std::move(session_context), session->id(),
+      session, session->error_reporter());
+  InsertSessionHandler(session->id(), handler.get());
+
+  return CommandDispatcherUniquePtr(
+      handler.release(),
+      // Custom deleter.
+      [this, id = session->id()](CommandDispatcher* cd) {
+        RemoveSessionHandler(id);
+        delete cd;
+      });
 }
 
-std::unique_ptr<CommandDispatcher> SessionManager::CreateCommandDispatcher(
-    CommandDispatcherContext context, Engine* engine) {
-  scenic_impl::Session* session = context.session();
-  auto handler = CreateSessionHandler(std::move(context), engine, session,
-                                      session->error_reporter());
-  InsertSessionHandler(session->id(), handler.get());
-  return handler;
+std::unique_ptr<SessionHandler> SessionManager::CreateSessionHandler(
+    CommandDispatcherContext dispatcher_context, SessionContext session_context,
+    SessionId session_id, EventReporter* event_reporter,
+    ErrorReporter* error_reporter) const {
+  return std::make_unique<SessionHandler>(std::move(dispatcher_context),
+                                          std::move(session_context),
+                                          event_reporter, error_reporter);
 }
 
 void SessionManager::InsertSessionHandler(SessionId session_id,
@@ -53,12 +63,6 @@ void SessionManager::RemoveSessionHandler(SessionId id) {
     FXL_DCHECK(session_count_ > 0);
     --session_count_;
   }
-}
-
-void SessionManager::KillSession(SessionId session_id) {
-  auto session_handler = FindSessionHandler(session_id);
-  FXL_DCHECK(session_handler);
-  session_handler->BeginTearDown();
 }
 
 }  // namespace gfx

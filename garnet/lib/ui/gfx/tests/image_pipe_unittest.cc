@@ -110,7 +110,7 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
 TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
   ImagePipePtr image_pipe =
       fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
-          session_handler_->session(), this);
+          session_handler()->session(), this);
   uint32_t image1_id = 0;
   // Create a checkerboard image and copy it into a vmo.
   {
@@ -133,7 +133,7 @@ TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
 TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
   ImagePipePtr image_pipe =
       fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
-          session_handler_->session(), this);
+          session_handler()->session(), this);
 
   uint32_t image1_id = 1;
   // Create a checkerboard image and copy it into a vmo.
@@ -166,7 +166,7 @@ TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
 TEST_F(ImagePipeTest, PresentImagesInOrder) {
   ImagePipePtr image_pipe =
       fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
-          session_handler_->session(), this);
+          session_handler()->session(), this);
 
   uint32_t image1_id = 1;
   // Create a checkerboard image and copy it into a vmo.
@@ -198,7 +198,7 @@ TEST_F(ImagePipeTest, PresentImagesInOrder) {
 TEST_F(ImagePipeTest, PresentImagesWithOffset) {
   ImagePipePtr image_pipe =
       fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
-          session_handler_->session(), this);
+          session_handler()->session(), this);
 
   uint32_t image1_id = 1;
   // Create a checkerboard image and copy it into a vmo.
@@ -238,7 +238,7 @@ TEST_F(ImagePipeTest, PresentImagesWithOffset) {
 TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   ImagePipePtr image_pipe =
       fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
-          session_handler_->session(), this);
+          session_handler()->session(), this);
 
   uint32_t image1_id = 1;
 
@@ -325,7 +325,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 // called on images that are acquired and used.
 TEST_F(ImagePipeTest, ImagePipeUpdateTwoFrames) {
   auto image_pipe = fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
-      session_handler_->session(), this);
+      session_handler()->session(), this);
 
   // Image A is a 2x2 image with id=2.
   // Image B is a 4x4 image with id=4.
@@ -386,7 +386,7 @@ TEST_F(ImagePipeTest, ImagePipeUpdateTwoFrames) {
 TEST_F(ImagePipeTest, ImagePipeRemoveImageThatIsPendingPresent) {
   ImagePipePtr image_pipe =
       fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
-          session_handler_->session(), this);
+          session_handler()->session(), this);
 
   uint32_t image1_id = 1;
 

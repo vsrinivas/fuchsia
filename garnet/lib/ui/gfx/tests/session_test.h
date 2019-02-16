@@ -9,7 +9,6 @@
 
 #include <lib/fit/function.h>
 
-#include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
@@ -53,7 +52,7 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
   std::unique_ptr<DisplayManager> display_manager_;
   std::unique_ptr<FrameScheduler> frame_scheduler_;
   std::unique_ptr<SessionForTest> session_;
-  std::unique_ptr<SessionManagerForTest> session_manager_;
+  std::unique_ptr<SessionManager> session_manager_;
   std::vector<fuchsia::ui::scenic::Event> events_;
 };
 

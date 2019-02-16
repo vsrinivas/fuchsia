@@ -71,7 +71,7 @@ void Scenic::CreateSessionImmediately(
 
   // Give each installed System an opportunity to install a CommandDispatcher in
   // the newly-created Session.
-  std::array<std::unique_ptr<CommandDispatcher>, System::TypeId::kMaxSystems>
+  std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems>
       dispatchers;
   for (size_t i = 0; i < System::TypeId::kMaxSystems; ++i) {
     if (auto& system = systems_[i]) {

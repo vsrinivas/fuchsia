@@ -18,7 +18,7 @@ class DummySystem : public System {
                        bool initialized_after_construction = true);
   ~DummySystem() override;
 
-  std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
+  CommandDispatcherUniquePtr CreateCommandDispatcher(
       CommandDispatcherContext context) override;
 
  private:

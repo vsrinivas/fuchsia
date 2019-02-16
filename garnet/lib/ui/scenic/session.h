@@ -36,9 +36,9 @@ class Session final : public fuchsia::ui::scenic::Session,
       ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
   ~Session() override { valid_ = false; };
 
-  void SetCommandDispatchers(std::array<std::unique_ptr<CommandDispatcher>,
-                                        System::TypeId::kMaxSystems>
-                                 dispatchers);
+  void SetCommandDispatchers(
+      std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems>
+          dispatchers);
 
   // |fuchsia::ui::scenic::Session|
   void Enqueue(::std::vector<fuchsia::ui::scenic::Command> cmds) override;
@@ -108,7 +108,7 @@ class Session final : public fuchsia::ui::scenic::Session,
   const SessionId id_;
   ::fidl::InterfacePtr<fuchsia::ui::scenic::SessionListener> listener_;
 
-  std::array<std::unique_ptr<CommandDispatcher>, System::TypeId::kMaxSystems>
+  std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems>
       dispatchers_;
 
   // Holds events from EnqueueEvent() until they are flushed by FlushEvents().

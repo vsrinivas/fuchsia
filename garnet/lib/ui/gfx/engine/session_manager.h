@@ -7,6 +7,7 @@
 
 #include <unordered_map>
 
+#include "garnet/lib/ui/gfx/engine/session_context.h"
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 
 namespace scenic_impl {
@@ -20,7 +21,6 @@ namespace gfx {
 using SessionId = ::scenic_impl::SessionId;
 
 class SessionHandler;
-class Engine;
 
 // Manages a collection of SessionHandlers.
 // Tracks future updates requested by Sessions, and executes updates for a
@@ -31,34 +31,32 @@ class SessionManager {
 
   virtual ~SessionManager() = default;
 
-  // Finds the session handler corresponding to the given id.
-  SessionHandler* FindSessionHandler(SessionId id);
+  // Finds and returns a pointer the session handler corresponding to the given
+  // |id|. Returns nullptr if none found.
+  SessionHandler* FindSessionHandler(SessionId id) const;
 
   size_t GetSessionCount() { return session_count_; }
 
   // Returns a SessionHandler, which is casted as a CommandDispatcher. Used by
   // ScenicSystem.
-  std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
-      CommandDispatcherContext context, Engine* engine);
+  CommandDispatcherUniquePtr CreateCommandDispatcher(
+      CommandDispatcherContext dispatcher_context,
+      SessionContext session_context);
 
-  // Called by engine on a failed session update
-  void KillSession(SessionId session_id);
-
- protected:
-  // Protected for testing subclass
+ private:
+  // Insert a SessionHandler into the |session_handlers_| map
   void InsertSessionHandler(SessionId session_id,
                             SessionHandler* session_handler);
 
-  virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
-      CommandDispatcherContext context, Engine* engine,
-      EventReporter* event_reporter, ErrorReporter* error_reporter) const;
-
- private:
-  friend class SessionHandler;
-
-  // Removes the SessionHandler from the session_handlers_ map.  We assume that
-  // the SessionHandler has already taken care of itself and its Session.
+  // Removes the SessionHandler from the |session_handlers_| map. Only called by
+  // the custom deleter provided by CreateCommandDispatcher.
   void RemoveSessionHandler(SessionId id);
+
+  // Virtual for testing purposes
+  virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
+      CommandDispatcherContext dispatcher_context,
+      SessionContext session_context, SessionId session_id,
+      EventReporter* event_reporter, ErrorReporter* error_reporter) const;
 
   // Map of all the sessions.
   std::unordered_map<SessionId, SessionHandler*> session_handlers_;

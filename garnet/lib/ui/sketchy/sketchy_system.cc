@@ -11,10 +11,12 @@ SketchySystem::SketchySystem(SystemContext context, gfx::GfxSystem* gfx_system)
 
 SketchySystem::~SketchySystem() = default;
 
-std::unique_ptr<CommandDispatcher> SketchySystem::CreateCommandDispatcher(
+CommandDispatcherUniquePtr SketchySystem::CreateCommandDispatcher(
     CommandDispatcherContext context) {
-  return std::make_unique<SketchyCommandDispatcher>(std::move(context),
-                                                    gfx_system_);
+  return CommandDispatcherUniquePtr(
+      new SketchyCommandDispatcher(std::move(context), gfx_system_),
+      // Custom deleter.
+      [](CommandDispatcher* cd) { delete cd; });
 }
 
 SketchyCommandDispatcher::SketchyCommandDispatcher(

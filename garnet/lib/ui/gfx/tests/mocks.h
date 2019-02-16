@@ -26,15 +26,14 @@ class SessionForTest : public Session {
 class SessionHandlerForTest : public SessionHandler {
  public:
   SessionHandlerForTest(
-      SessionManager* session_manager, SessionContext session_context,
-      SessionId session_id, Scenic* scenic,
+      SessionContext session_context, SessionId session_id, Scenic* scenic,
       EventReporter* event_reporter = EventReporter::Default(),
       ErrorReporter* error_reporter = ErrorReporter::Default());
 
-  SessionHandlerForTest(
-    CommandDispatcherContext command_dispatcher_context,
-    SessionManager* session_manager, SessionContext session_context,
-    EventReporter* event_reporter, ErrorReporter* error_reporter);
+  SessionHandlerForTest(CommandDispatcherContext command_dispatcher_context,
+                        SessionContext session_context,
+                        EventReporter* event_reporter,
+                        ErrorReporter* error_reporter);
 
   // |scenic::CommandDispatcher|
   void DispatchCommand(fuchsia::ui::scenic::Command command) override;
@@ -73,7 +72,8 @@ class ReleaseFenceSignallerForTest : public escher::ReleaseFenceSignaller {
 
 class SessionManagerForTest : public SessionManager {
  public:
-  SessionManagerForTest() = default;
+  SessionManagerForTest(EventReporter* event_reporter = nullptr,
+                        ErrorReporter* error_reporter = nullptr);
   ~SessionManagerForTest() override = default;
 
   // Publicly accessible for tests.
@@ -81,17 +81,27 @@ class SessionManagerForTest : public SessionManager {
                             SessionHandler* session_handler);
 
  protected:
+  // Override CreateSessionHandler so that calling CreateCommandDispatcher
+  // creates the test version of SessionHandler.
   std::unique_ptr<SessionHandler> CreateSessionHandler(
-      CommandDispatcherContext context, Engine* engine,
-      EventReporter* event_reporter,
-      ErrorReporter* error_reporter) const override;
+      CommandDispatcherContext dispatcher_context,
+      SessionContext session_context, SessionId session_id,
+      // If tests instances of reporters were provided at SessionManager
+      // creation, those are used instead of the ones provided here
+      EventReporter* error_reporter,
+      ErrorReporter* event_reporter) const override;
+
+ private:
+  EventReporter* event_reporter_;
+  ErrorReporter* error_reporter_;
 };
 
 class EngineForTest : public Engine {
  public:
   EngineForTest(DisplayManager* display_manager,
                 std::unique_ptr<escher::ReleaseFenceSignaller> r,
-                escher::EscherWeakPtr escher = escher::EscherWeakPtr());
+                EventReporter* event_reporter = nullptr,
+                ErrorReporter* error_reporter = nullptr);
 };
 
 }  // namespace test

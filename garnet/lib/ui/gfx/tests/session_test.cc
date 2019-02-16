@@ -24,7 +24,7 @@ void SessionTest::TearDown() {
 }
 
 SessionContext SessionTest::CreateBarebonesSessionContext() {
-  session_manager_ = std::make_unique<SessionManagerForTest>();
+  session_manager_ = std::make_unique<SessionManager>();
 
   display_manager_ = std::make_unique<DisplayManager>();
   display_manager_->SetDefaultDisplayForTests(std::make_unique<Display>(

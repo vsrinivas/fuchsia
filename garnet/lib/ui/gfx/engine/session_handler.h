@@ -30,12 +30,16 @@ class SceneManagerImpl;
 class SessionHandler : public TempSessionDelegate {
  public:
   SessionHandler(CommandDispatcherContext context,
-                 SessionManager* session_manager,
                  SessionContext session_context, EventReporter* event_reporter,
                  ErrorReporter* error_reporter);
-  virtual ~SessionHandler();
+  ~SessionHandler() = default;
 
   scenic_impl::gfx::Session* session() const { return session_.get(); }
+
+  // Called to initiate a session crash when an update fails.
+  // Requests the destruction of client fidl session, which
+  // then triggers the actual destruction of the SessionHandler
+  void KillSession();
 
  protected:
   // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
@@ -64,22 +68,6 @@ class SessionHandler : public TempSessionDelegate {
   void DispatchCommand(fuchsia::ui::scenic::Command command) override;
 
  private:
-  friend class SessionManager;
-
-  // Called to initiate a session crash when an update fails.
-  // Requests the destruction of client fidl session, which
-  // then triggers the actual destruction of the SessionHandler
-  void BeginTearDown();
-
-  // Remove SessionHandler reference from SessionManager
-  // and destroy gfx::Session
-  void CleanUp();
-
-  SessionManager* const session_manager_;
-
-  EventReporter* const event_reporter_;
-  ErrorReporter* const error_reporter_;
-
   std::unique_ptr<Session> session_;
 
   // TODO(SCN-710): We reallocate this everytime we std::move it into

@@ -69,7 +69,7 @@ class System {
                   bool initialized_after_construction = true);
   virtual ~System();
 
-  virtual std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
+  virtual CommandDispatcherUniquePtr CreateCommandDispatcher(
       CommandDispatcherContext context) = 0;
 
   SystemContext* context() { return &context_; }

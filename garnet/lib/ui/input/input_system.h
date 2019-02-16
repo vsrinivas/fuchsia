@@ -32,7 +32,7 @@ class InputSystem : public System {
   explicit InputSystem(SystemContext context, gfx::GfxSystem* scenic);
   virtual ~InputSystem() = default;
 
-  virtual std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
+  virtual CommandDispatcherUniquePtr CreateCommandDispatcher(
       CommandDispatcherContext context) override;
 
   fuchsia::ui::input::ImeServicePtr& text_sync_service() {

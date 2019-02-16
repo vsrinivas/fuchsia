@@ -52,7 +52,7 @@ void Session::Present(uint64_t presentation_time,
 }
 
 void Session::SetCommandDispatchers(
-    std::array<std::unique_ptr<CommandDispatcher>, System::TypeId::kMaxSystems>
+    std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems>
         dispatchers) {
   for (size_t i = 0; i < System::TypeId::kMaxSystems; ++i) {
     dispatchers_[i] = std::move(dispatchers[i]);

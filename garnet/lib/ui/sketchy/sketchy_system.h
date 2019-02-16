@@ -18,7 +18,7 @@ class SketchySystem : public System {
   SketchySystem(SystemContext context, gfx::GfxSystem* scenic);
   ~SketchySystem() override;
 
-  std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
+  CommandDispatcherUniquePtr CreateCommandDispatcher(
       CommandDispatcherContext context) override;
 
  private:

@@ -13,18 +13,20 @@ namespace test {
 TEST_F(
     SessionHandlerTest,
     WhenSessionHandlerDestroyed_ShouldRemoveSessionHandlerPtrFromSessionManager) {
-  InitializeSessionHandler();
-  auto id = session_handler_->session()->id();
+  ASSERT_NE(session_handler(), nullptr);
+
+  auto id = session_handler()->session()->id();
 
   auto session_manager = engine_->session_context().session_manager;
   ASSERT_NE(session_manager, nullptr);
 
-  EXPECT_NE(session_handler_.get(), nullptr);
-  EXPECT_EQ(session_manager->FindSessionHandler(id), session_handler_.get());
+  EXPECT_NE(session_handler(), nullptr);
+  EXPECT_EQ(session_manager->FindSessionHandler(id), session_handler());
 
-  session_handler_.reset();
+  // Reset session_handler
+  command_dispatcher_.reset();
 
-  EXPECT_EQ(session_handler_.get(), nullptr);
+  EXPECT_EQ(session_handler(), nullptr);
   EXPECT_EQ(session_manager->FindSessionHandler(id), nullptr);
 }
 

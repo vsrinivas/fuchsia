@@ -13,9 +13,12 @@ DummySystem::DummySystem(SystemContext context,
 
 DummySystem::~DummySystem() = default;
 
-std::unique_ptr<CommandDispatcher> DummySystem::CreateCommandDispatcher(
+CommandDispatcherUniquePtr DummySystem::CreateCommandDispatcher(
     CommandDispatcherContext context) {
-  return std::make_unique<DummyCommandDispatcher>(std::move(context));
+  return CommandDispatcherUniquePtr(
+      new DummyCommandDispatcher(std::move(context)),
+      // Custom deleter.
+      [](CommandDispatcher* cd) { delete cd; });
 }
 
 DummyCommandDispatcher::DummyCommandDispatcher(CommandDispatcherContext context)

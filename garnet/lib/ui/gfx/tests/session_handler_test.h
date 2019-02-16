@@ -38,14 +38,20 @@ class SessionHandlerTest : public ErrorReportingTest, public EventReporter {
   void InitializeDisplayManager();
   void InitializeEngine();
   void InitializeSessionHandler();
+  void InitializeScenicSession(SessionId session_id);
+
+  SessionHandler* session_handler() {
+    return static_cast<SessionHandler*>(command_dispatcher_.get());
+  }
 
   std::unique_ptr<component::StartupContext> app_context_;
   std::unique_ptr<Scenic> scenic_;
   std::unique_ptr<escher::impl::CommandBufferSequencer>
       command_buffer_sequencer_;
   std::unique_ptr<EngineForTest> engine_;
-  std::unique_ptr<SessionHandlerForTest> session_handler_;
   std::unique_ptr<DisplayManager> display_manager_;
+  std::unique_ptr<scenic_impl::Session> scenic_session_;
+  CommandDispatcherUniquePtr command_dispatcher_;
 
   std::vector<fuchsia::ui::scenic::Event> events_;
 };

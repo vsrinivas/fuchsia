@@ -48,10 +48,10 @@ GfxSystem::~GfxSystem() {
   }
 }
 
-std::unique_ptr<CommandDispatcher> GfxSystem::CreateCommandDispatcher(
+CommandDispatcherUniquePtr GfxSystem::CreateCommandDispatcher(
     CommandDispatcherContext context) {
-  return engine_->session_manager()->CreateCommandDispatcher(std::move(context),
-                                                             engine_.get());
+  return engine_->session_manager()->CreateCommandDispatcher(
+      std::move(context), engine_->session_context());
 }
 
 std::unique_ptr<Engine> GfxSystem::InitializeEngine() {

@@ -17,7 +17,7 @@ void SessionHandlerTest::SetUp() {
 }
 
 void SessionHandlerTest::TearDown() {
-  session_handler_.reset();
+  command_dispatcher_.reset();
   engine_.reset();
   command_buffer_sequencer_.reset();
   display_manager_.reset();
@@ -38,11 +38,10 @@ void SessionHandlerTest::InitializeSessionHandler() {
   auto session_manager = session_context.session_manager;
   auto session_id = SessionId(1);
 
-  session_handler_ = std::make_unique<SessionHandlerForTest>(
-      session_manager, std::move(session_context), session_id, scenic_.get(),
-      this, error_reporter());
-  static_cast<SessionManagerForTest*>(session_manager)
-      ->InsertSessionHandler(session_id, session_handler_.get());
+  InitializeScenicSession(session_id);
+  command_dispatcher_ = session_manager->CreateCommandDispatcher(
+      CommandDispatcherContext(scenic_.get(), scenic_session_.get()),
+      std::move(session_context));
 }
 
 void SessionHandlerTest::InitializeDisplayManager() {
@@ -60,7 +59,14 @@ void SessionHandlerTest::InitializeEngine() {
           command_buffer_sequencer_.get());
 
   engine_ = std::make_unique<EngineForTest>(
-      display_manager_.get(), std::move(mock_release_fence_signaller));
+      display_manager_.get(), std::move(mock_release_fence_signaller),
+      /*event reporter*/ this, this->error_reporter());
+}
+
+void SessionHandlerTest::InitializeScenicSession(SessionId session_id) {
+  fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener;
+  scenic_session_ =
+      std::make_unique<scenic_impl::Session>(session_id, std::move(listener));
 }
 
 void SessionHandlerTest::EnqueueEvent(fuchsia::ui::gfx::Event event) {

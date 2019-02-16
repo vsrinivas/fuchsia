@@ -16,7 +16,7 @@ class A11yInputSystem : public System {
                            bool initialized_after_construction);
   ~A11yInputSystem() override = default;
 
-  virtual std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
+  virtual CommandDispatcherUniquePtr CreateCommandDispatcher(
       CommandDispatcherContext context) override;
 
  private:

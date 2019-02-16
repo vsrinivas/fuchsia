@@ -13,28 +13,14 @@ namespace scenic_impl {
 namespace gfx {
 
 SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
-                               SessionManager* session_manager,
                                SessionContext session_context,
                                EventReporter* event_reporter,
                                ErrorReporter* error_reporter)
     : TempSessionDelegate(std::move(dispatcher_context)),
-      session_manager_(session_manager),
-      event_reporter_(event_reporter),
-      error_reporter_(error_reporter),
-      session_(std::make_unique<Session>(context()->session_id(),
-                                         std::move(session_context),
-                                         event_reporter, error_reporter)) {
-  FXL_DCHECK(session_manager_);
-}
 
-SessionHandler::~SessionHandler() { CleanUp(); }
-
-void SessionHandler::CleanUp() {
-  if (session_.get() != nullptr) {
-    session_manager_->RemoveSessionHandler(session_->id());
-    session_.reset();
-  }
-}
+      session_(std::make_unique<Session>(
+          command_dispatcher_context()->session_id(),
+          std::move(session_context), event_reporter, error_reporter)) {}
 
 void SessionHandler::Present(
     uint64_t presentation_time, std::vector<zx::event> acquire_fences,
@@ -44,7 +30,7 @@ void SessionHandler::Present(
           presentation_time, std::move(buffered_commands_),
           std::move(acquire_fences), std::move(release_fences),
           std::move(callback))) {
-    BeginTearDown();
+    KillSession();
   } else {
     buffered_commands_.clear();
   }
@@ -70,10 +56,10 @@ void SessionHandler::DispatchCommand(fuchsia::ui::scenic::Command command) {
   buffered_commands_.emplace_back(std::move(command.gfx()));
 }
 
-void SessionHandler::BeginTearDown() {
+void SessionHandler::KillSession() {
   // Since this is essentially a self destruct
   // call, it's safest not call anything after this
-  context()->KillSession();
+  command_dispatcher_context()->KillSession();
 }
 
 }  // namespace gfx

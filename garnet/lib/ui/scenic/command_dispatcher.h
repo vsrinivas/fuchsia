@@ -49,12 +49,15 @@ class CommandDispatcher {
 
   virtual void DispatchCommand(fuchsia::ui::scenic::Command command) = 0;
 
-  CommandDispatcherContext* context() { return &context_; }
+  CommandDispatcherContext* command_dispatcher_context() { return &context_; }
 
  private:
   CommandDispatcherContext context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(CommandDispatcher);
 };
+
+using CommandDispatcherUniquePtr =
+    std::unique_ptr<CommandDispatcher, std::function<void(CommandDispatcher*)>>;
 
 // TODO(SCN-421): Remove this once view manager is another Scenic system.
 class TempSessionDelegate : public CommandDispatcher {

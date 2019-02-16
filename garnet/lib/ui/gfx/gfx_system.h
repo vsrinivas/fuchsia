@@ -26,7 +26,7 @@ class GfxSystem : public TempSystemDelegate {
                      std::unique_ptr<DisplayManager> display_manager);
   ~GfxSystem();
 
-  std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
+  CommandDispatcherUniquePtr CreateCommandDispatcher(
       CommandDispatcherContext context) override;
 
   // TODO(MZ-452): Remove this when we externalize Displays.

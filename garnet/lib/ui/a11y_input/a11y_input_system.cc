@@ -9,9 +9,10 @@ A11yInputSystem::A11yInputSystem(SystemContext context,
   FXL_LOG(INFO) << "Scenic accessibility input system started.";
 }
 
-std::unique_ptr<CommandDispatcher> A11yInputSystem::CreateCommandDispatcher(
+CommandDispatcherUniquePtr A11yInputSystem::CreateCommandDispatcher(
     CommandDispatcherContext context) {
-  return nullptr;
+  return CommandDispatcherUniquePtr(/* command dispatcher */ nullptr,
+                                    /* custom deleter */ nullptr);
 }
 
 }  // namespace a11y_input
