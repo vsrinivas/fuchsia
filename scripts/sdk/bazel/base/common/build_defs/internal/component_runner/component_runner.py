@@ -45,8 +45,7 @@ def serve_package(pm, package, directory):
     run_command(pm, 'publish', '-a', '-r', directory, '-f', package)
 
     # Start the server.
-    server = Popen([pm, 'serve', '-repo', directory+'/repository'], stdout=PIPE,
-                   stderr=PIPE)
+    server = Popen([pm, 'serve', '-repo', directory], stdout=PIPE, stderr=PIPE)
     return lambda: server.kill()
 
 
