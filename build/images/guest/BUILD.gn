@@ -53,7 +53,7 @@ generate_manifest("guest.manifest") {
   testonly = true
 
   bootfs_manifest = boot_manifest
-  bootfs_zircon_groups = "all"
+  bootfs_zircon_groups = "misc,test"
 
   args = []
   deps = []
@@ -224,15 +224,10 @@ zbi("guest") {
     ":devmgr_config.txt",
     ":guest.manifest",
   ]
-  foreach(image, zircon_images) {
-    if (image.cpu == current_cpu && image.type == "zbi" &&
-        image.name == current_cpu) {
-      inputs = [
-        "$zircon_root_build_dir/${image.path}",
-      ]
-    }
-  }
-  inputs += [ boot_manifest ]
+  inputs = [
+    "${zircon_build_dir}/zircon.zbi",
+    boot_manifest,
+  ]
   manifest = [
     {
       outputs = [

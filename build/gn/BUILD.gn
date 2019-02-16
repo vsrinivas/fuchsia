@@ -112,10 +112,14 @@ exec_script("//build/zircon/create_gn_rules.py",
             [
               "--out",
               rebase_path("//zircon/public"),
-              "--zircon-build",
-              rebase_path(zircon_root_build_dir),
-              "--zircon-manifest",
-              rebase_path("$zircon_root_build_dir/export/manifest-$target_cpu"),
+              "--staging",
+              rebase_path("$root_out_dir/zircon-gn"),
+              "--zircon-user-build",
+              rebase_path(zircon_build_abi_dir),
+              "--zircon-tool-build",
+              rebase_path("$zircon_tools_dir/.."),
+              "--make",
+              zircon_make_path,
             ],
             "",
             zircon_files + supporting_templates)
@@ -130,6 +134,24 @@ _fx_config_lines = [
   "FUCHSIA_BUILD_DIR='${_relative_build_dir}'",
   "FUCHSIA_ARCH='${target_cpu}'",
 ]
+if (use_goma) {
+  _fx_config_lines += [
+    "# This will affect Zircon's make via //scripts/build-zircon.sh.",
+    "export GOMACC='${goma_dir}/gomacc'",
+  ]
+}
+_fx_build_zircon_args = ""
+if (zircon_use_asan) {
+  _fx_build_zircon_args += " -A"
+}
+foreach(selector, select_variant) {
+  if (selector == "host_asan") {
+    _fx_build_zircon_args += " -H"
+  }
+}
+if (_fx_build_zircon_args != "") {
+  _fx_config_lines += [ "FUCHSIA_BUILD_ZIRCON_ARGS=($_fx_build_zircon_args)" ]
+}
 write_file("$root_build_dir/fx.config", _fx_config_lines)
 
 # Generates breakpad symbol data for unstripped binaries.

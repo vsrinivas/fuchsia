@@ -100,7 +100,7 @@ zbi("zbi") {
     ":zedboot.manifest",
   ]
   inputs = [
-    zircon_kernel_zbi,
+    "${zircon_build_dir}/kernel.zbi",
     manifest_file,
   ]
   manifest = [

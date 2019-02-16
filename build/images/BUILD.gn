@@ -19,9 +19,38 @@ import("//garnet/build/pkgfs.gni")
 import("//garnet/go/src/pm/pm.gni")
 
 declare_args() {
+  # Groups to include from the Zircon /boot manifest into /boot.
+  # This is either "all" or a comma-separated list of one or more of:
+  #   core -- necessary to boot
+  #   misc -- utilities in /bin
+  #   test -- test binaries in /bin and /test
+  zircon_boot_groups = "core"
+
   # Path to manifest file containing data to place into the initial /data
   # partition.
   data_partition_manifest = ""
+}
+
+declare_args() {
+  # Groups to include from the Zircon /boot manifest into /system
+  # (instead of into /boot like Zircon's own bootdata.bin does).
+  # Should not include any groups that are also in zircon_boot_groups,
+  # which see.  If zircon_boot_groups is "all" then this should be "".
+  # **TODO(mcgrathr)**: _Could default to "" for `!is_debug`, or "production
+  # build".  Note including `"test"` here places all of Zircon's tests into
+  # `/system/test`, which means that Fuchsia bots run those tests too._
+  zircon_system_groups = "misc,test"
+  if (zircon_boot_groups == "all") {
+    zircon_system_groups = ""
+  }
+}
+
+if (zircon_boot_groups == "all") {
+  assert(zircon_system_groups == "",
+         "zircon_boot_groups already has everything")
+} else {
+  assert(zircon_system_groups != "all" && zircon_system_groups != "core",
+         "zircon_system_groups cannot include core (or all)")
 }
 
 # This will collect a list of scopes describing each image exported.
@@ -261,10 +290,10 @@ generate_manifest("system_image.manifest") {
   # /system manifest files can assume that the /boot files are visible at
   # runtime, so dependencies already in /boot won't be copied into /system.
   bootfs_manifest = boot_manifest
-  bootfs_zircon_groups = "all"
+  bootfs_zircon_groups = zircon_boot_groups
 
   # Collect whatever we want from Zircon that didn't go into /boot.
-  zircon_groups = ""
+  zircon_groups = zircon_system_groups
 
   # Now each package() target in the build contributes manifest entries.
   # For system_image packages, these contain binaries that need their
@@ -440,12 +469,14 @@ images += [
     }
     sdk = "qemu-kernel.bin"
     deps = []
-    foreach(image, zircon_images) {
-      if (image.name == "qemu-kernel" && image.cpu == target_cpu) {
-        sources = [
-          "$zircon_root_build_dir/${image.path}",
-        ]
-      }
+    if (current_cpu == "arm64") {
+      sources = [
+        "$zircon_build_dir/qemu-boot-shim.bin",
+      ]
+    } else if (current_cpu == "x64") {
+      sources = [
+        "$zircon_build_dir/multiboot.bin",
+      ]
     }
   },
 ]
@@ -532,7 +563,7 @@ zbi("fuchsia") {
     ":system_image.manifest",
   ]
   inputs = [
-    zircon_kernel_zbi,
+    "${zircon_build_dir}/kernel.zbi",
     boot_manifest,
   ]
   manifest = [
@@ -1471,9 +1502,6 @@ group("updates") {
 ###
 ### Build ID maps.
 ###
-### TODO(TC-303): ids.txt is deprecated and will be removed.
-### The toolchain rules already populate $root_build_dir/.build-id/.
-###
 
 # Combine the /boot, /system, and package build ID maps into one.
 # Nothing in the build uses this, but top-level targets always update
@@ -1484,6 +1512,8 @@ action("ids.txt") {
   deps = [
     ":kernel-ids.txt",
     ":system_image.manifest",
+    ":zircon-asan-build-id",
+    ":zircon-build-id",
   ]
   sources = [
     "$target_out_dir/kernel-ids.txt",
@@ -1519,7 +1549,7 @@ action("ids.txt") {
 action("kernel-ids.txt") {
   script = "manifest.py"
   sources = [
-    "$zircon_root_build_dir/ids-$current_cpu.txt",
+    "$zircon_build_dir/ids.txt",
   ]
   outputs = [
     "$target_out_dir/kernel-ids.txt",
@@ -1527,10 +1557,43 @@ action("kernel-ids.txt") {
   args = [
     "--separator= ",
     "--output=" + rebase_path(outputs[0], root_build_dir),
-    "--include-source=*/libzircon.so.debug",
+    "--include-source=*/libzircon.so",
     "--include-source=*/zircon.elf",
     "--manifest=" + rebase_path(sources[0], root_build_dir),
   ]
+}
+
+# TODO(TC-303): This is a temporary hack to get all of Zircon's debug files
+# into the $root_build_dir/.build-id hierarchy.  The Zircon build produces
+# its own .build-id hierarchy under $zircon_build_dir, but using its ids.txt
+# is the simpler way to populate the one in this build.  When ids.txt is fully
+# obsolete, hopefully Zircon will be in the unified build anyway.
+foreach(target,
+        [
+          {
+            name = "zircon-build-id"
+            sources = [
+              "$zircon_build_dir/ids.txt",
+            ]
+          },
+          {
+            name = "zircon-asan-build-id"
+            sources = [
+              "$zircon_asan_build_dir/ids.txt",
+            ]
+          },
+        ]) {
+  action(target.name) {
+    visibility = [ ":ids.txt" ]
+    script = "//scripts/build_id_conv.py"
+    sources = target.sources
+    outputs = [
+      "$root_build_dir/${target_name}.stamp",
+    ]
+    args =
+        [ "--stamp=" + rebase_path(outputs[0], root_build_dir) ] +
+        rebase_path(sources + [ "$root_build_dir/.build-id" ], root_build_dir)
+  }
 }
 
 images += [
