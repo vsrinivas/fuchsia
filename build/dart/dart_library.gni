@@ -10,6 +10,11 @@ import("//third_party/flutter/lib/ui/dart_ui.gni")
 import("//topaz/public/dart-pkg/fuchsia/sdk_ext.gni")
 import("//topaz/public/dart-pkg/zircon/sdk_ext.gni")
 
+declare_args() {
+  # Enable all dart analysis
+  enable_dart_analysis = true
+}
+
 # Defines a Dart library
 #
 # Parameters
@@ -182,6 +187,7 @@ if (current_toolchain == dart_toolchain) {
     with_analysis =
         (!defined(invoker.disable_analysis) || !invoker.disable_analysis) &&
         (use_prebuilt_dart_sdk || host_cpu == target_cpu)
+    with_analysis = enable_dart_analysis && with_analysis
     if (with_analysis) {
       options_file = "$package_root/analysis_options.yaml"
       invocation_file = "$target_gen_dir/$target_name.analyzer.sh"
