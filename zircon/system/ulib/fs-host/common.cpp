@@ -516,11 +516,6 @@ zx_status_t FsCreator::ParseSize(char* device, size_t* out) {
 }
 
 zx_status_t FsCreator::ResizeFile(off_t requested_size, struct stat stats) {
-    if (command_ != Command::kMkfs) {
-        // This method is only valid on creation of the fs image.
-        return ZX_OK;
-    }
-
     // Calculate the total required size for the fs image, given all files that have been processed
     // up to this point.
     off_t required_size;
