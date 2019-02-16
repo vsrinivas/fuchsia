@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("iotime") {
+  sources = [
+    "iotime.c",
+  ]
+  deps = [
+    "$zx/system/ulib/block-client",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/ramdevice-client",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+  ]
+}

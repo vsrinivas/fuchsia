@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("sysconfig") {
+  sources = [
+    "sysconfig.c",
+  ]
+  deps = [
+    "$zx/system/ulib/ddk:headers",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/kvstore",
+    "$zx/system/ulib/zircon",
+    "$zx/third_party/ulib/cksum",
+  ]
+}

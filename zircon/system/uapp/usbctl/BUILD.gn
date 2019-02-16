@@ -1,0 +1,17 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("usbctl") {
+  sources = [
+    "usbctl.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-usb-modeswitch",
+    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:c",
+    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/zircon",
+  ]
+}

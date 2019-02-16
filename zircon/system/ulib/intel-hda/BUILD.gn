@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("intel-hda") {
+  sources = [
+    "codec-utils/codec-driver-base.cpp",
+    "codec-utils/stream-base.cpp",
+    "utils/codec-caps.cpp",
+    "utils/utils.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    # <intel-hda/codec-utils/stream-base.h> has #include <ddk/protocol/intelhda/codec.h>.
+    "$zx/system/banjo/ddk-protocol-intelhda-codec",
+  ]
+  deps = [
+    "$zx/system/ulib/audio-driver-proto",
+    "$zx/system/ulib/audio-proto-utils",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/dispatcher-pool",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zx",
+  ]
+}

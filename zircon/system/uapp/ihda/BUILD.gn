@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("ihda") {
+  sources = [
+    "ihda.cpp",
+    "intel_hda_codec.cpp",
+    "intel_hda_controller.cpp",
+    "intel_hda_device.cpp",
+    "print_codec_state.cpp",
+    "zircon_device.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/intel-hda",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

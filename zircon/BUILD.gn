@@ -98,6 +98,7 @@ foreach(cpu, standard_fuchsia_cpus) {
       "$zx/system/core/userboot",
       "$zx/system/uapp",
       "$zx/system/utest",
+      "$zx/third_party/uapp",
     ]
   }
 }

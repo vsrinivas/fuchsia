@@ -1,0 +1,20 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("fs-mkfs") {
+  deps = [
+    ":mkfs",
+  ]
+}
+
+executable("mkfs") {
+  sources = [
+    "main.c",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fs-management",
+    "$zx/system/ulib/zircon",
+  ]
+}
