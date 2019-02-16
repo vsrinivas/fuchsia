@@ -10,6 +10,8 @@ Software outside of the [Fuchsia Source
 Tree](../docs/glossary.md#fuchsia-source-tree) should depend only on the Fuchsia
 SDK.
 
+> [Learn more](../docs/development/sdk/README.md)
+
 ## Categories
 
 Not all the interfaces defined in this directory are part of every Fuchsia SDK.
