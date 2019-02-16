@@ -12,16 +12,56 @@
 namespace ddk {
 namespace internal {
 
-// base_device is a tag that default initializes the zx_protocol_device_t so the mixin classes
-// can fill in the table.
-struct base_device {
-protected:
-    base_device(zx_device_t* parent)
-        : parent_(parent) {
-        ddk_device_proto_.version = DEVICE_OPS_VERSION;
+// Implemented like protocol op mixins, but defined on all base_device since they must implement
+template <typename D>
+class Releasable {
+public:
+    static constexpr void InitOp(zx_protocol_device_t* proto) {
+        proto->release = Release;
     }
 
-    zx_protocol_device_t ddk_device_proto_ = {};
+private:
+    static void Release(void* ctx) {
+        return static_cast<D*>(ctx)->DdkRelease();
+    }
+};
+
+// base_device is a tag that default initializes the zx_protocol_device_t so the mixin classes
+// can fill in the table.
+template <class D, template <typename> class... Mixins>
+class base_device : private Mixins<D>... {
+protected:
+    explicit base_device(zx_device_t* parent)
+        : parent_(parent) {}
+
+    // populated ops table at compile time. All Mixins must have a constexpr
+    // InitOp function that manipulates ops for their respective function
+    static const constexpr zx_protocol_device_t ddk_device_proto_ = []() {
+        zx_protocol_device_t ops = {};
+        ops.version = DEVICE_OPS_VERSION;
+        // Releasable Mixin
+        Releasable<D>::InitOp(&ops);
+        //
+        // This C++17 fold expression with the , operator means this ("iterating" at compile time):
+        // for (typename Mixin : Mixins<D>) Mixin::Protocol(&ops);
+        //
+        // template <typename D>
+        // class Openable : public base_mixin {
+        //   public:
+        //     static constexpr void InitOp(zx_protocol_device_t* proto) {
+        //         internal::CheckOpenable<D>();
+        //         proto->open = Open;
+        //     }
+        //   private:
+        //     static zx_status_t Open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
+        //         return static_cast<D*>(ctx)->DdkOpen(dev_out, flags);
+        //     }
+        // };
+        //
+        (Mixins<D>::InitOp(&ops), ...);
+        return ops;
+    }();
+
     zx_device_t* zxdev_ = nullptr;
     zx_device_t* const parent_;
 };
@@ -114,8 +154,6 @@ template <typename D>
 constexpr void CheckGetProtocolable() {
     static_assert(has_ddk_get_protocol<D>::value,
                   "GetProtocolable classes must implement DdkGetProtocol");
-    static_assert(std::is_base_of<base_device, D>::value,
-                  "GetProtocolable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkGetProtocol),
                                zx_status_t (D::*)(uint32_t, void*)>::value,
                   "DdkGetProtocol must be a public non-static member function with signature "
@@ -127,8 +165,6 @@ DECLARE_HAS_MEMBER_FN(has_ddk_open, DdkOpen);
 template <typename D>
 constexpr void CheckOpenable() {
     static_assert(has_ddk_open<D>::value, "Openable classes must implement DdkOpen");
-    static_assert(std::is_base_of<base_device, D>::value,
-                  "Openable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkOpen),
                                zx_status_t (D::*)(zx_device_t**, uint32_t)>::value,
                   "DdkOpen must be a public non-static member function with signature "
@@ -141,8 +177,6 @@ template <typename D>
 constexpr void CheckOpenAtable() {
     static_assert(has_ddk_open_at<D>::value,
                   "OpenAtable classes must implement DdkOpenAt");
-    static_assert(std::is_base_of<base_device, D>::value,
-                  "OpenAtable classes must be derived from ddk::Device<...>.");
     static_assert(
         std::is_same<decltype(&D::DdkOpenAt),
                      zx_status_t (D::*)(zx_device_t**, const char*, uint32_t)>::value,
@@ -156,8 +190,6 @@ template <typename D>
 constexpr void CheckClosable() {
     static_assert(has_ddk_close<D>::value,
                   "Closable classes must implement DdkClose");
-    static_assert(std::is_base_of<base_device, D>::value,
-                  "Closable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkClose), zx_status_t (D::*)(uint32_t)>::value,
                   "DdkClose must be a public non-static member function with signature "
                   "'zx_status_t DdkClose(uint32)'.");
@@ -169,8 +201,6 @@ template <typename D>
 constexpr void CheckUnbindable() {
     static_assert(has_ddk_unbind<D>::value,
                   "Unbindable classes must implement DdkUnbind");
-    static_assert(std::is_base_of<base_device, D>::value,
-                  "Unbindable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkUnbind), void (D::*)(void)>::value,
                   "DdkUnbind must be a public non-static member function with signature "
                   "'void DdkUnbind()'.");
@@ -182,7 +212,6 @@ template <typename D>
 constexpr void CheckReleasable() {
     static_assert(has_ddk_release<D>::value,
                   "Releasable classes must implement DdkRelease");
-    // No need to check is_base_of because Releasable is a property of ddk::Device itself
     static_assert(std::is_same<decltype(&D::DdkRelease), void (D::*)(void)>::value,
                   "DdkRelease must be a public non-static member function with signature "
                   "'void DdkRelease()'.");
@@ -193,8 +222,6 @@ DECLARE_HAS_MEMBER_FN(has_ddk_read, DdkRead);
 template <typename D>
 constexpr void CheckReadable() {
     static_assert(has_ddk_read<D>::value, "Readable classes must implement DdkRead");
-    static_assert(std::is_base_of<base_device, D>::value,
-                  "Readable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkRead),
                                zx_status_t (D::*)(void*, size_t, zx_off_t, size_t*)>::value,
                   "DdkRead must be a public non-static member function with signature "
@@ -207,8 +234,6 @@ template <typename D>
 constexpr void CheckWritable() {
     static_assert(has_ddk_write<D>::value,
                   "Writable classes must implement DdkWrite");
-    static_assert(std::is_base_of<base_device, D>::value,
-                  "Writable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkWrite),
                                zx_status_t (D::*)(const void*, size_t, zx_off_t, size_t*)>::value,
                   "DdkWrite must be a public non-static member function with signature "
@@ -221,8 +246,6 @@ template <typename D>
 constexpr void CheckGetSizable() {
     static_assert(has_ddk_get_size<D>::value,
                   "GetSizable classes must implement DdkGetSize");
-    static_assert(std::is_base_of<base_device, D>::value,
-                  "GetSizable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkGetSize), zx_off_t (D::*)(void)>::value,
                   "DdkGetSize must be a public non-static member function with signature "
                   "'zx_off_t DdkGetSize()'.");
@@ -234,8 +257,6 @@ template <typename D>
 constexpr void CheckIoctlable() {
     static_assert(has_ddk_ioctl<D>::value,
                   "Ioctlable classes must implement DdkIoctl");
-    static_assert(std::is_base_of<base_device, D>::value,
-                  "Ioctlable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkIoctl),
                                zx_status_t (D::*)(uint32_t, const void*, size_t,
                                                   void*, size_t, size_t*)>::value,
@@ -249,8 +270,6 @@ template <typename D>
 constexpr void CheckMessageable() {
     static_assert(has_ddk_message<D>::value,
                   "Messageable classes must implement DdkMessage");
-    static_assert(std::is_base_of<base_device, D>::value,
-                  "Messageable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkMessage),
                                zx_status_t (D::*)(fidl_msg_t*, fidl_txn_t*)>::value,
                   "DdkMessage must be a public non-static member function with signature "
@@ -263,8 +282,6 @@ template <typename D>
 constexpr void CheckSuspendable() {
     static_assert(has_ddk_suspend<D>::value,
                   "Suspendable classes must implement DdkSuspend");
-    static_assert(std::is_base_of<base_device, D>::value,
-                  "Suspendable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkSuspend), zx_status_t (D::*)(uint32_t)>::value,
                   "DdkSuspend must be a public non-static member function with signature "
                   "'zx_status_t DdkSuspend(uint32_t)'.");
@@ -276,8 +293,6 @@ template <typename D>
 constexpr void CheckResumable() {
     static_assert(has_ddk_resume<D>::value,
                   "Resumable classes must implement DdkResume");
-    static_assert(std::is_base_of<base_device, D>::value,
-                  "Resumable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkResume), zx_status_t (D::*)(uint32_t)>::value,
                   "DdkResume must be a public non-static member function with signature "
                   "'zx_status_t DdkResume(uint32_t)'.");
@@ -289,8 +304,6 @@ template <typename D>
 constexpr void CheckRxrpcable() {
     static_assert(has_ddk_rxrpc<D>::value,
                   "Rxrpcable classes must implement DdkRxrpc");
-    static_assert(std::is_base_of<base_device, D>::value,
-                  "Rxrpcable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkRxrpc), zx_status_t (D::*)(uint32_t)>::value,
                   "DdkRxrpc must be a public non-static member function with signature "
                   "'zx_status_t DdkRxrpc(zx_handle_t)'.");

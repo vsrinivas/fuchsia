@@ -122,7 +122,7 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
         : ddk::FullDevice<TestDispatch>(nullptr) {}
 
     // Give access to the device ops for testing
-    zx_protocol_device_t* GetDeviceOps() {
+    const zx_protocol_device_t* GetDeviceOps() {
         return &ddk_device_proto_;
     }
 

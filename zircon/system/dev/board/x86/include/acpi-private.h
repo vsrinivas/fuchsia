@@ -71,6 +71,6 @@ zx_device_t* publish_device(zx_device_t* parent, zx_device_t* platform_bus, ACPI
                             ACPI_DEVICE_INFO* info, const char* name, uint32_t protocol_id,
                             void* protocol_ops);
 
-zx_protocol_device_t* get_acpi_root_device_proto(void);
+const zx_protocol_device_t* get_acpi_root_device_proto(void);
 
 #endif // ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_ACPI_PRIVATE_H_

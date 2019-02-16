@@ -132,7 +132,7 @@ using base_protocol = internal::base_protocol;
 template <typename D>
 class GetProtocolable : public base_mixin {
 protected:
-    explicit GetProtocolable(zx_protocol_device_t* proto) {
+    static constexpr void InitOp(zx_protocol_device_t* proto) {
         internal::CheckGetProtocolable<D>();
         proto->get_protocol = GetProtocol;
     }
@@ -146,7 +146,7 @@ private:
 template <typename D>
 class Openable : public base_mixin {
 protected:
-    explicit Openable(zx_protocol_device_t* proto) {
+    static constexpr void InitOp(zx_protocol_device_t* proto) {
         internal::CheckOpenable<D>();
         proto->open = Open;
     }
@@ -160,7 +160,7 @@ private:
 template <typename D>
 class OpenAtable : public base_mixin {
 protected:
-    explicit OpenAtable(zx_protocol_device_t* proto) {
+    static constexpr void InitOp(zx_protocol_device_t* proto) {
         internal::CheckOpenAtable<D>();
         proto->open_at = OpenAt;
     }
@@ -175,7 +175,7 @@ private:
 template <typename D>
 class Closable : public base_mixin {
 protected:
-    explicit Closable(zx_protocol_device_t* proto) {
+    static constexpr void InitOp(zx_protocol_device_t* proto) {
         internal::CheckClosable<D>();
         proto->close = Close;
     }
@@ -189,7 +189,7 @@ private:
 template <typename D>
 class Unbindable : public base_mixin {
 protected:
-    explicit Unbindable(zx_protocol_device_t* proto) {
+    static constexpr void InitOp(zx_protocol_device_t* proto) {
         internal::CheckUnbindable<D>();
         proto->unbind = Unbind;
     }
@@ -203,7 +203,7 @@ private:
 template <typename D>
 class Readable : public base_mixin {
 protected:
-    explicit Readable(zx_protocol_device_t* proto) {
+    static constexpr void InitOp(zx_protocol_device_t* proto) {
         internal::CheckReadable<D>();
         proto->read = Read;
     }
@@ -217,7 +217,7 @@ private:
 template <typename D>
 class Writable : public base_mixin {
 protected:
-    explicit Writable(zx_protocol_device_t* proto) {
+    static constexpr void InitOp(zx_protocol_device_t* proto) {
         internal::CheckWritable<D>();
         proto->write = Write;
     }
@@ -232,7 +232,7 @@ private:
 template <typename D>
 class GetSizable : public base_mixin {
 protected:
-    explicit GetSizable(zx_protocol_device_t* proto) {
+    static constexpr void InitOp(zx_protocol_device_t* proto) {
         internal::CheckGetSizable<D>();
         proto->get_size = GetSize;
     }
@@ -246,7 +246,7 @@ private:
 template <typename D>
 class Ioctlable : public base_mixin {
 protected:
-    explicit Ioctlable(zx_protocol_device_t* proto) {
+    static constexpr void InitOp(zx_protocol_device_t* proto) {
         internal::CheckIoctlable<D>();
         proto->ioctl = Ioctl;
     }
@@ -261,7 +261,7 @@ private:
 template <typename D>
 class Messageable : public base_mixin {
 protected:
-    explicit Messageable(zx_protocol_device_t* proto) {
+    static constexpr void InitOp(zx_protocol_device_t* proto) {
         internal::CheckMessageable<D>();
         proto->message = Message;
     }
@@ -275,7 +275,7 @@ private:
 template <typename D>
 class Suspendable : public base_mixin {
 protected:
-    explicit Suspendable(zx_protocol_device_t* proto) {
+    static constexpr void InitOp(zx_protocol_device_t* proto) {
         internal::CheckSuspendable<D>();
         proto->suspend = Suspend;
     }
@@ -289,7 +289,7 @@ private:
 template <typename D>
 class Resumable : public base_mixin {
 protected:
-    explicit Resumable(zx_protocol_device_t* proto) {
+    static constexpr void InitOp(zx_protocol_device_t* proto) {
         internal::CheckResumable<D>();
         proto->resume = Resume;
     }
@@ -303,7 +303,7 @@ private:
 template <typename D>
 class Rxrpcable : public base_mixin {
 protected:
-    explicit Rxrpcable(zx_protocol_device_t* proto) {
+    static constexpr void InitOp(zx_protocol_device_t* proto) {
         internal::CheckRxrpcable<D>();
         proto->rxrpc = Rxrpc;
     }
@@ -320,13 +320,13 @@ private:
 // mixin constructors. This ensures that ddk_device_proto_ is zero-initialized
 // before setting the fields in the mixins.
 template <class D, template <typename> class... Mixins>
-class Device : public ::ddk::internal::base_device, public Mixins<D>... {
+class Device : public ::ddk::internal::base_device<D, Mixins...> {
 public:
     zx_status_t DdkAdd(const char* name, uint32_t flags = 0, zx_device_prop_t* props = nullptr,
                        uint32_t prop_count = 0, uint32_t proto_id = 0,
                        const char* proxy_args = nullptr,
                        zx_handle_t client_remote = ZX_HANDLE_INVALID) {
-        if (zxdev_ != nullptr) {
+        if (this->zxdev_ != nullptr) {
             return ZX_ERR_BAD_STATE;
         }
 
@@ -336,7 +336,7 @@ public:
         // Since we are stashing this as a D*, we can use ctx in all
         // the callback functions and cast it directly to a D*.
         args.ctx = static_cast<D*>(this);
-        args.ops = &ddk_device_proto_;
+        args.ops = &this->ddk_device_proto_;
         args.flags = flags;
         args.props = props;
         args.prop_count = prop_count;
@@ -345,7 +345,7 @@ public:
         args.client_remote = client_remote;
         AddProtocol(&args);
 
-        return device_add(parent_, &args, &zxdev_);
+        return device_add(this->parent_, &args, &this->zxdev_);
     }
 
     void DdkMakeVisible() {
@@ -356,14 +356,14 @@ public:
     // This method may have the side-effect of destroying this object if the
     // device's reference count drops to zero.
     zx_status_t DdkRemove() {
-        if (zxdev_ == nullptr) {
+        if (this->zxdev_ == nullptr) {
             return ZX_ERR_BAD_STATE;
         }
 
         // The call to |device_remove| must be last since it decrements the
         // device's reference count when successful.
-        zx_device_t* dev = zxdev_;
-        zxdev_ = nullptr;
+        zx_device_t* dev = this->zxdev_;
+        this->zxdev_ = nullptr;
         return device_remove(dev);
     }
 
@@ -391,37 +391,30 @@ public:
     const char* name() const { return zxdev() ? device_get_name(zxdev()) : nullptr; }
 
     // The opaque pointer representing this device.
-    zx_device_t* zxdev() const { return zxdev_; }
+    zx_device_t* zxdev() const { return this->zxdev_; }
     // The opaque pointer representing the device's parent.
-    zx_device_t* parent() const { return parent_; }
+    zx_device_t* parent() const { return this->parent_; }
 
     void SetState(zx_signals_t stateflag) {
-        device_state_set(zxdev_, stateflag);
+        device_state_set(this->zxdev_, stateflag);
     }
 
     void ClearState(zx_signals_t stateflag) {
-        device_state_clr(zxdev_, stateflag);
+        device_state_clr(this->zxdev_, stateflag);
     }
 
     void ClearAndSetState(zx_signals_t clearflag, zx_signals_t setflag) {
-        device_state_clr_set(zxdev_, clearflag, setflag);
+        device_state_clr_set(this->zxdev_, clearflag, setflag);
     }
 
 protected:
     Device(zx_device_t* parent)
-        : internal::base_device(parent),
-          Mixins<D>(&ddk_device_proto_)... {
+        : internal::base_device<D, Mixins...>(parent) {
         internal::CheckMixins<Mixins<D>...>();
         internal::CheckReleasable<D>();
-
-        ddk_device_proto_.release = DdkReleaseThunk;
     }
 
 private:
-    static void DdkReleaseThunk(void* ctx) {
-        static_cast<D*>(ctx)->DdkRelease();
-    }
-
     // Add the protocol id and ops if D inherits from a base_protocol implementation.
     template <typename T = D>
     void AddProtocol(device_add_args_t* args,
@@ -457,4 +450,4 @@ using FullDevice = Device<D,
 
 } // namespace ddk
 
-#endif  // DDKTL_DEVICE_H_
+#endif // DDKTL_DEVICE_H_

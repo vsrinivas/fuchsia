@@ -168,7 +168,7 @@ private:
     // These fields are saved values from the device_add_args_t passed to pdev_device_add().
     // These are unused for top level devices created via pbus_device_add().
     void* ctx_ = nullptr;
-    zx_protocol_device_t* device_ops_ = nullptr;
+    const zx_protocol_device_t* device_ops_ = nullptr;
     uint32_t proto_id_ = 0;
     void* proto_ops_ = nullptr;
 };

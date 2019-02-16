@@ -265,7 +265,7 @@ static void enum_lock_release() REQ_DM_LOCK {
 }
 
 zx_status_t devhost_device_create(zx_driver_t* drv, const fbl::RefPtr<zx_device_t>& parent,
-                                  const char* name, void* ctx, zx_protocol_device_t* ops,
+                                  const char* name, void* ctx, const zx_protocol_device_t* ops,
                                   fbl::RefPtr<zx_device_t>* out) REQ_DM_LOCK {
 
     if (!drv) {
@@ -306,11 +306,6 @@ zx_status_t devhost_device_create(zx_driver_t* drv, const fbl::RefPtr<zx_device_
     return ZX_OK;
 }
 
-#define DEFAULT_IF_NULL(ops, method)                                                               \
-    if (ops->method == nullptr) {                                                                  \
-        ops->method = default_##method;                                                            \
-    }
-
 static zx_status_t device_validate(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
     if (dev == nullptr) {
         printf("INVAL: nullptr!\n");
@@ -337,22 +332,6 @@ static zx_status_t device_validate(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_L
     if (dev->protocol_id == 0) {
         dev->protocol_id = ZX_PROTOCOL_MISC;
     }
-
-    // install default methods if needed
-    zx_protocol_device_t* ops = dev->ops;
-    DEFAULT_IF_NULL(ops, open);
-    DEFAULT_IF_NULL(ops, open_at);
-    DEFAULT_IF_NULL(ops, close);
-    DEFAULT_IF_NULL(ops, unbind);
-    DEFAULT_IF_NULL(ops, release);
-    DEFAULT_IF_NULL(ops, read);
-    DEFAULT_IF_NULL(ops, write);
-    DEFAULT_IF_NULL(ops, get_size);
-    DEFAULT_IF_NULL(ops, ioctl);
-    DEFAULT_IF_NULL(ops, suspend);
-    DEFAULT_IF_NULL(ops, resume);
-    DEFAULT_IF_NULL(ops, rxrpc);
-    DEFAULT_IF_NULL(ops, message);
 
     return ZX_OK;
 }
@@ -600,10 +579,13 @@ static zx_status_t devhost_device_suspend_locked(const fbl::RefPtr<zx_device>& d
         }
     }
 
+
     // then invoke our suspend hook
-    {
+    if (dev->ops->suspend) {
         ApiAutoRelock relock;
         st = dev->ops->suspend(dev->ctx, flags);
+    } else {
+        st = ZX_ERR_NOT_SUPPORTED;
     }
 
     // default_suspend() returns ZX_ERR_NOT_SUPPORTED

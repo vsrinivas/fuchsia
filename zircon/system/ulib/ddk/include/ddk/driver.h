@@ -79,7 +79,7 @@ typedef struct device_add_args {
     void* ctx;
 
     // Pointer to device's device protocol operations
-    zx_protocol_device_t* ops;
+    const zx_protocol_device_t* ops;
 
     // Optional list of device properties
     zx_device_prop_t* props;

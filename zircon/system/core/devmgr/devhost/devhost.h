@@ -130,7 +130,7 @@ zx_status_t devhost_device_bind(const fbl::RefPtr<zx_device_t>& dev,
 zx_status_t devhost_device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 zx_status_t devhost_device_unbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 zx_status_t devhost_device_create(zx_driver_t* drv, const fbl::RefPtr<zx_device_t>& parent,
-                                  const char* name, void* ctx, zx_protocol_device_t* ops,
+                                  const char* name, void* ctx, const zx_protocol_device_t* ops,
                                   fbl::RefPtr<zx_device_t>* out) REQ_DM_LOCK;
 zx_status_t devhost_device_open_at(const fbl::RefPtr<zx_device_t>& dev,
                                    fbl::RefPtr<zx_device_t>* out, const char* path,

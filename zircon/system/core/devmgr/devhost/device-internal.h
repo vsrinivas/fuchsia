@@ -35,43 +35,57 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     static zx_status_t Create(fbl::RefPtr<zx_device>* out_dev);
 
     zx_status_t OpenOp(zx_device_t** dev_out, uint32_t flags) {
-        return ops->open(ctx, dev_out, flags);
+        return Dispatch(ops->open, ZX_OK, dev_out, flags);
     }
 
     zx_status_t OpenAtOp(zx_device_t** dev_out, const char* path, uint32_t flags) {
-        return ops->open_at(ctx, dev_out, path, flags);
+        return Dispatch(ops->open_at, ZX_ERR_NOT_SUPPORTED, dev_out, path, flags);
     }
 
-    zx_status_t CloseOp(uint32_t flags) { return ops->close(ctx, flags); }
+    zx_status_t CloseOp(uint32_t flags) {
+        return Dispatch(ops->close, ZX_OK, flags);
+    }
 
-    void UnbindOp() { ops->unbind(ctx); }
+    void UnbindOp() {
+        Dispatch(ops->unbind);
+    }
 
-    void ReleaseOp() { ops->release(ctx); }
+    void ReleaseOp() {
+        Dispatch(ops->release);
+    }
 
-    zx_status_t SuspendOp(uint32_t flags) { return ops->suspend(ctx, flags); }
+    zx_status_t SuspendOp(uint32_t flags) {
+        return Dispatch(ops->suspend, ZX_ERR_NOT_SUPPORTED, flags);
+    }
 
-    zx_status_t ResumeOp(uint32_t flags) { return ops->resume(ctx, flags); }
+    zx_status_t ResumeOp(uint32_t flags) {
+        return Dispatch(ops->resume, ZX_ERR_NOT_SUPPORTED, flags);
+    }
 
     zx_status_t ReadOp(void* buf, size_t count, zx_off_t off, size_t* actual) {
-        return ops->read(ctx, buf, count, off, actual);
+        return Dispatch(ops->read, ZX_ERR_NOT_SUPPORTED, buf, count, off, actual);
     }
 
     zx_status_t WriteOp(const void* buf, size_t count, zx_off_t off, size_t* actual) {
-        return ops->write(ctx, buf, count, off, actual);
+        return Dispatch(ops->write, ZX_ERR_NOT_SUPPORTED, buf, count, off, actual);
     }
 
-    zx_off_t GetSizeOp() { return ops->get_size(ctx); }
+    zx_off_t GetSizeOp() {
+        return Dispatch(ops->get_size, 0lu);
+    }
 
     zx_status_t IoctlOp(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                         size_t out_len, size_t* out_actual) {
-        return ops->ioctl(ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
+        return Dispatch(ops->ioctl, ZX_ERR_NOT_SUPPORTED, op, in_buf, in_len, out_buf, out_len, out_actual);
     }
 
-    zx_status_t MessageOp(fidl_msg_t* msg, fidl_txn_t* txn) { return ops->message(ctx, msg, txn); }
+    zx_status_t MessageOp(fidl_msg_t* msg, fidl_txn_t* txn) {
+      return Dispatch(ops->message, ZX_ERR_NOT_SUPPORTED, msg, txn);
+    }
 
     uintptr_t magic = DEV_MAGIC;
 
-    zx_protocol_device_t* ops = nullptr;
+    const zx_protocol_device_t* ops = nullptr;
 
     // reserved for driver use; will not be touched by devmgr
     void* ctx = nullptr;
@@ -128,6 +142,22 @@ private:
 
     friend class fbl::Recyclable<zx_device_t>;
     void fbl_recycle();
+
+    // Templates that dispatch the protocol operations if they were set.
+    // If they were not set, the second paramater is returned to the caller
+    // (usually ZX_ERR_NOT_SUPPORTED)
+    template <typename RetType, typename... ArgTypes>
+    RetType Dispatch(RetType (*op)(void* ctx, ArgTypes...),
+                     RetType fallback, ArgTypes... args) {
+        return op ? (*op)(ctx, args...) : fallback;
+    }
+
+    template <typename... ArgTypes>
+    void Dispatch(void (*op)(void* ctx, ArgTypes...), ArgTypes... args) {
+        if (op) {
+            (*op)(ctx, args...);
+        }
+    }
 };
 
 // zx_device_t objects must be created or initialized by the driver manager's
