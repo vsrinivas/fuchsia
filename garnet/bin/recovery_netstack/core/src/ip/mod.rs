@@ -14,7 +14,9 @@ pub use self::types::*;
 use log::{debug, trace};
 use std::mem;
 
-use packet::{BufferMut, BufferSerializer, ParsablePacket, ParseBufferMut, Serializer};
+use packet::{
+    BufferMut, BufferSerializer, ParsablePacket, ParseBufferMut, ParseMetadata, Serializer,
+};
 
 use crate::device::DeviceId;
 use crate::ip::forwarding::{Destination, ForwardingTable};
@@ -22,6 +24,9 @@ use crate::{Context, EventDispatcher};
 
 // default IPv4 TTL or IPv6 hops
 const DEFAULT_TTL: u8 = 64;
+
+// minimum MTU required by all IPv6 devices
+const IPV6_MIN_MTU: usize = 1280;
 
 /// The state associated with the IP layer.
 #[derive(Default)]
@@ -36,12 +41,29 @@ struct IpLayerStateInner<I: Ip> {
     table: ForwardingTable<I>,
 }
 
+// TODO(joshlf): Once we support multiple extension headers in IPv6, we will
+// need to verify that the callers of this function are still sound. In
+// particular, they may accidentally pass a parse_metadata argument which
+// corresponds to a single extension header rather than all of the IPv6 headers.
+
+/// Dispatch a received IP packet to the appropriate protocol.
+///
+/// `parse_metadata` is the parse metadata associated with parsing the IP
+/// headers. It is used to undo that parsing, which is required in order to send
+/// ICMP messages in response to unrecognized protocols. If `parse_metadata` is
+/// `None`, the caller promises that the protocol is recognized.
+///
+/// # Panics
+///
+/// `dispatch_receive_ip_packet` panics if the protocol is unrecognized and
+/// `parse_metadata` is `None`.
 fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddr, B: BufferMut>(
     ctx: &mut Context<D>,
     proto: IpProto,
     src_ip: I,
     dst_ip: I,
     mut buffer: B,
+    parse_metadata: Option<ParseMetadata>,
 ) {
     increment_counter!(ctx, "dispatch_receive_ip_packet");
     let _ = match proto {
@@ -55,7 +77,14 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddr, B: BufferMut>(
         }
         IpProto::Tcp => crate::transport::tcp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
         IpProto::Udp => crate::transport::udp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
-        IpProto::Other(_) => Ok(()), // TODO(joshlf)
+        IpProto::Other(_) => {
+            // Undo the parsing of the IP packet header so that the buffer
+            // contains the entire original IP packet.
+            let meta = parse_metadata.unwrap();
+            buffer.undo_parse(meta);
+            icmp::send_icmp_protocol_unreachable(ctx, src_ip, dst_ip, buffer, meta.header_len());
+            Ok(())
+        }
     };
 }
 
@@ -110,16 +139,17 @@ pub fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
     if I::LOOPBACK_SUBNET.contains(packet.dst_ip()) {
         // A packet from outside this host was sent with the destination IP of
         // the loopback address, which is illegal. Loopback traffic is handled
-        // explicitly in send_ip_packet. TODO(joshlf): Do something with ICMP
-        // here?
+        // explicitly in send_ip_packet.
+        //
+        // TODO(joshlf): Do something with ICMP here?
         debug!("got packet from remote host for loopback address {}", packet.dst_ip());
     } else if deliver(ctx, device, packet.dst_ip()) {
         trace!("receive_ip_packet: delivering locally");
         // TODO(joshlf):
         // - Do something with ICMP if we don't have a handler for that protocol?
         // - Check for already-expired TTL?
-        let (src_ip, dst_ip, proto, _) = drop_packet!(packet);
-        dispatch_receive_ip_packet(ctx, proto, src_ip, dst_ip, buffer);
+        let (src_ip, dst_ip, proto, meta) = drop_packet!(packet);
+        dispatch_receive_ip_packet(ctx, proto, src_ip, dst_ip, buffer, Some(meta));
     } else if let Some(dest) = forward(ctx, packet.dst_ip()) {
         let ttl = packet.ttl();
         if ttl > 1 {
@@ -132,7 +162,6 @@ pub fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
                 dest.next_hop,
                 BufferSerializer::new_vec(buffer),
             );
-            return;
         } else {
             // TTL is 0 or would become 0 after decrement; see "TTL" section,
             // https://tools.ietf.org/html/rfc791#page-14
@@ -282,12 +311,18 @@ pub fn send_ip_packet<D: EventDispatcher, A, S, F>(
         // TODO(joshlf): Respond with some kind of error if we don't have a
         // handler for that protocol? Maybe simulate what would have happened
         // (w.r.t ICMP) if this were a remote host?
+
+        // NOTE(joshlf): By passing a ParseMetadata of None here, we are
+        // promising that the protocol will be recognized (and the call will
+        // panic if it's not). This is OK because the fact that we're sending a
+        // packet with this protocol means we are able to process that protocol.
         dispatch_receive_ip_packet(
             ctx,
             proto,
             A::Version::LOOPBACK_ADDRESS,
             dst_ip,
             buffer.as_buf_mut(),
+            None,
         );
     } else if let Some(dest) = lookup_route(&ctx.state().ip, dst_ip) {
         let (src_ip, _) = crate::device::get_ip_addr(ctx, dest.device)

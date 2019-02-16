@@ -6,6 +6,7 @@
 
 use std::fmt;
 
+use byteorder::{ByteOrder, NetworkEndian};
 use packet::{BufferView, ParsablePacket, ParseMetadata};
 use zerocopy::ByteSlice;
 
@@ -180,6 +181,14 @@ create_net_enum! {
 #[repr(C, packed)]
 pub struct Icmpv6ParameterProblem {
     pointer: [u8; 4],
+}
+
+impl Icmpv6ParameterProblem {
+    pub fn new(pointer: u32) -> Icmpv6ParameterProblem {
+        let mut buf = [0u8; 4];
+        NetworkEndian::write_u32(&mut buf[..], pointer);
+        Icmpv6ParameterProblem { pointer: buf }
+    }
 }
 
 impl_from_bytes_as_bytes_unaligned!(Icmpv6ParameterProblem);
