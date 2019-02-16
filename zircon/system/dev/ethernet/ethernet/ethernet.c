@@ -14,6 +14,7 @@
 #include <zircon/device/ethernet.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
@@ -92,6 +93,7 @@ typedef struct ethdev {
 
     ethdev0_t* edev0;
 
+    uint64_t open_count;
     uint32_t state;
     char name[fuchsia_hardware_ethernet_MAX_CLIENT_NAME_LEN + 1];
 
@@ -952,8 +954,29 @@ static void eth_release(void* ctx) {
     free(edev);
 }
 
+static zx_status_t eth_open(void* ctx, zx_device_t** out, uint32_t flags) {
+    ethdev_t* edev = ctx;
+    mtx_lock(&edev->lock);
+    edev->open_count++;
+    mtx_unlock(&edev->lock);
+    *out = NULL;
+    return ZX_OK;
+}
+
 static zx_status_t eth_close(void* ctx, uint32_t flags) {
     ethdev_t* edev = ctx;
+
+    bool destroy = false;
+    mtx_lock(&edev->lock);
+    edev->open_count--;
+    if (edev->open_count == 0) {
+        destroy = true;
+    }
+    mtx_unlock(&edev->lock);
+
+    if (!destroy) {
+        return ZX_OK;
+    }
 
     mtx_lock(&edev->edev0->lock);
     eth_stop_locked(edev);
@@ -966,6 +989,7 @@ static zx_status_t eth_close(void* ctx, uint32_t flags) {
 
 static zx_protocol_device_t ethdev_ops = {
     .version = DEVICE_OPS_VERSION,
+    .open = eth_open,
     .close = eth_close,
     .message = eth_message,
     .release = eth_release,
@@ -978,6 +1002,7 @@ static zx_status_t eth0_open(void* ctx, zx_device_t** out, uint32_t flags) {
     if ((edev = calloc(1, sizeof(ethdev_t))) == NULL) {
         return ZX_ERR_NO_MEMORY;
     }
+    edev->open_count = 1;
     edev->edev0 = edev0;
 
     edev->tx_size = ROUNDUP(sizeof(tx_info_t) + edev0->info.netbuf_size, 8);
