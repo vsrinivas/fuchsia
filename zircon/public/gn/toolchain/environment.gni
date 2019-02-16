@@ -1,0 +1,871 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/config/standard.gni")
+import("c_toolchain.gni")
+
+declare_args() {
+  # List of "selectors" to request variant builds of certain targets.  Each
+  # selector specifies matching criteria and a chosen variant.  The first
+  # selector in the list to match a given target determines which variant is
+  # used for that target.
+  #
+  # The $default_variants list is appended to the list set here.  So if no
+  # selector set in $variants matches (e.g. if the list is empty, as is the
+  # default), then the first match in $default_variants chooses the variant.
+  #
+  # Each selector is either a string or a scope.  A selector that's a string
+  # is a shorthand that gets expanded to a full selector (a scope); the full
+  # selector form is described below.
+  #
+  # If a string selector contains a slash, then it's "shorthand/filename".
+  # This is like the plain "shorthand" selector, but further constrained to
+  # apply only to a binary whose `output_name` exactly matches "filename".
+  #
+  # The "shorthand" string (a whole string selector or the part before slash)
+  # is first looked up in $variant_shorthands, which see.  If it doesn't match
+  # a name defined there, then it must be the name of a variant.  In that case,
+  # it's equivalent to `{ variant = "..." host = false }`, meaning it applies
+  # to every binary not built to be a host tool.
+  #
+  # A full selector is a scope with the following fields.  All the fields
+  # other than `.variant` are matching criteria.  A selector matches if all of
+  # its matching criteria match.  Hence, a selector with no criteria defined
+  # always matches and is referred to as a "catch-all".  The $default_variants
+  # list ends with a catch-all, so each target always chooses some variant.
+  #
+  # Selector scope parameters
+  #
+  #   variant
+  #     Required: The variant to use when this selector matches.  If this is a
+  #     string then it must match a fully-defined variant elsewhere in the
+  #     list (or in $default_variants + $standard_variants, which is appended
+  #     implicitly to the $variants list).  If it's a scope then it defines a
+  #     new variant (see details below).
+  #     Type: string or scope, described below
+  #
+  #   cpu
+  #     Optional: If nonempty, match only when $current_cpu is one in the list.
+  #     Type: list(string)
+  #
+  #   os
+  #     Optional: If nonempty, match only when $current_os is one in the list.
+  #     Type: list(string)
+  #
+  #   host
+  #     Optional: If present, match only in host environments if true or
+  #     non-host environments if false.  This means a context in which
+  #     $is_host is true, not specifically the build host.  For example, it
+  #     would be true when cross-compiling host tools for an SDK build but
+  #     would be false when compiling code for a hypervisor guest system
+  #     that happens to be the same CPU and OS as the build host.
+  #     Type: bool
+  #
+  #   kernel
+  #     Optional: If present, match only in kernel environments if true or
+  #     non-kernel environments if false.  This means a context in which
+  #     $is_kernel is true, not just the "kernel" environment itself.
+  #     For different machine architectures there may be multiple different
+  #     specialized environments that set $is_kernel, e.g. for boot loaders
+  #     and for special circumstances used within the kernel.  See also the
+  #     $tags field in $variant, described below.
+  #     Type: bool
+  #
+  #   environment
+  #     Optional: If nonempty, a list of environment names that match.  This
+  #     looks at ${toolchain.environment}, which is the simple name (no
+  #     directories) in an environment label defined by environment().  Each
+  #     element can match either the whole environment name, or just the
+  #     "base" environment, which is the part of the name before a `.` if it
+  #     has one.  For example, "host" would match both "host" and "host.fuzz".
+  #     Type: list(string)
+  #
+  #   target_type
+  #     Optional: If nonempty, a list of target types to match.  This is one of
+  #     "executable", "host_tool", "loadable_module", "driver", or "test".
+  #     Note, test_driver() matches as "driver".
+  #     Type: list(string)
+  #
+  #   label
+  #     Optional: If nonempty, match only when the canonicalized target label
+  #     (as returned by `get_label_info(..., "label_no_toolchain")`) is one in
+  #     the list.
+  #     Type: list(label_no_toolchain)
+  #
+  #   dir
+  #     Optional: If nonempty, match only when the directory part of the
+  #     target label (as returned by `get_label_info(..., "dir")`) is one in
+  #     the list.
+  #     Type: list(label_no_toolchain)
+  #
+  #   name
+  #     Optional: If nonempty, match only when the name part of the target
+  #     label (as returned by `get_label_info(..., "name")`) is one in the
+  #     list.
+  #     Type: list(label_no_toolchain)
+  #
+  #   output_name
+  #     Optional: If nonempty, match only when the `output_name` of the target
+  #     is one in the list.  Note `output_name` defaults to `target_name`,
+  #     and does not include prefixes or suffixes like ".so" or ".exe".
+  #     Type: list(string)
+  #
+  # An element with a scope for `.variant` defines a new variant.  Each
+  # variant name used in a selector must be defined exactly once.  Other
+  # selectors can refer to the same variant by using the name string in the
+  # `.variant` field.  Definitions in $variants take precedence over the same
+  # name defined in $standard_variants, but it would probably cause confusion
+  # to use the name of a standard variant with a non-standard definition.
+  #
+  # Variant scope parameters
+  #
+  #   name
+  #     Required: Name for the variant.  This must be unique among all
+  #     variants used with the same environment.  It becomes part of the GN
+  #     toolchain names defined for the environment, which in turn forms part
+  #     of directory names used in $root_build_dir; so it must meet Ninja's
+  #     constraints on file names (sticking to `[a-z0-9_-]` is a good idea).
+  #
+  #   globals
+  #     Optional: Variables in this scope are introduced as globals visible
+  #     to all GN code in the toolchain.  For example, the standard "gcc"
+  #     variant sets `is_gcc = true` in $globals.  This should be used
+  #     sparingly and is safest when restricted to variables that
+  #     $zx/public/gn/BUILDCONFIG.gn sets defaults for.
+  #     Type: scope
+  #
+  #   toolchain_args
+  #     Optional: See toolchain().  Variables in this scope must match GN
+  #     build arguments defined somewhere in the build with declare_args().
+  #     Use this when the variant should change something that otherwise is a
+  #     manual tuning variable to set via `gn args`.  *Do not* define
+  #     variables in declare_args() just for the purpose of setting them here,
+  #     i.e. if they should not *also* be available to set via `gn args` to
+  #     affect other variants that don't override them here.  Instead, use
+  #     either $globals (above) or $toolchain_vars (below).
+  #     Type: scope
+  #
+  #   toolchain_vars
+  #     Optional: Variables in this scope are visible in the scope-typed
+  #     $toolchain global variable seen in toolchains for this variant.
+  #     Use this to pass along interesting information without cluttering
+  #     the global scope via $globals.
+  #     Type: scope
+  #
+  #   configs
+  #     Optional: List of changes to the pre-set $configs variable in targets
+  #     being defined in toolchains for this variant.  This is the same as in
+  #     the $configs parameter to environment().  Each element is either a
+  #     string or a scope.  A string element is simply appended to the default
+  #     $configs list: it's equivalent to a scope element of `{add=["..."]}`.
+  #     The string is the GN label (without toolchain) for a config() target.
+  #     A scope element can be more selective, as described below.
+  #     Type: list(label_no_toolchain or scope)
+  #
+  #       shlib
+  #         Optional: If present, this element applies only when
+  #         `current_toolchain == toolchain.shlib` (if true) or
+  #         `current_toolchain != toolchain.shlib` (if false).  That is, it
+  #         applies only in (not ni) the companion toolchain used to compile
+  #         shared_library() and loadable_module() (including driver()) code.
+  #         Type: bool
+  #
+  #       types
+  #         Optional: If present, this element applies only to a target whose
+  #         type is one in this list (same as `target_type` in a selector,
+  #         described above).
+  #         Type: list(string)
+  #
+  #       add
+  #         Optional: List of labels to append to $configs.
+  #         Type: list(label_no_toolchain)
+  #
+  #       remove
+  #         Optional: List of labels to remove from $configs.  This does
+  #         exactly `configs -= remove` so it has the normal GN semantics that
+  #         it's an error if any element in the $remove list is not present in
+  #         the $configs list beforehand.
+  #         Type: list(label_no_toolchain)
+  #
+  #   implicit_deps
+  #     Optional: List of changes to the list added to $deps of all linking
+  #     targets in toolchains for this variant.  This is the same as in the
+  #     $implicit_deps parameter to environment().
+  #     Type: See $configs
+  #
+  #   tags
+  #     Optional: List of tags that describe this variant.  This list will be
+  #     visible within the variant's toolchains as ${toolchain.tags}.  Its main
+  #     purpose is to match the $exclude_variant_tags list in an environment()
+  #     definition.  For example, several of the standard variants listed in
+  #     $standard_variants use the "useronly" tag.  The environment() defining
+  #     the kernel toolchains uses `exclude_variant_tags = [ "useronly" ]`.
+  #     Then $variants selectors that choose variants that are incompatible
+  #     with the kernel are automatically ignored in the kernel toolchains,
+  #     so there's no need to add `kernel = false` to every such selector.
+  #     Type: list(string)
+  #
+  #   bases
+  #     Optional: A list of other variant names that this one inherits from.
+  #     This is a very primitive mechanism for deriving a new variant from an
+  #     existing variant.  All of fields from all the bases except for `name`
+  #     and `bases` are combined with the fields defined explicitly for the
+  #     new variant.  The fields of list type are just concatenated in order
+  #     (each $bases variant in the order listed, then this variant).  The
+  #     fields of scope type are merged in the same order, with a variant
+  #     later in the list overriding values set earlier (so this variant's
+  #     values override all the bases).  There is *only one* level of
+  #     inheritance: a base variant listed in $bases cannot have $bases itself.
+  #     Type: list(string)
+  #
+  variants = []
+}
+
+# Define toolchains for a compilation environment.
+#
+# A compilation environment is the combination of a particular CPU, OS, and
+# "execution environment".  The $target_name in environment() is the
+# name of the execution environment, which identifies the circumstances in
+# which code built with these toolchains runs.  Examples are:
+#  * `host` for programs run during the build or by developers in an SDK
+#  * `kernel` for the Zircon kernel
+#  * `user` for user-mode programs running on top of Zircon/Fuchsia
+# Additional environments are defined for more specialized purposes.
+#
+# The expansion of ":$target_name" is the ${toolchain.environment_label}
+# value seen in these toolchains.  This is what must be suppled in
+# environment_redirect()'s `environment_label` parameter.  The toolchains
+# that make up the environment have labels that begin with this prefix
+# and then append "-${variant}" or "-${variant}.shlib".
+#
+# Parameters
+#
+#   cpu
+#     Required: $current_cpu value in the new toolchains.
+#     Type: string
+#
+#   os
+#     Optional: $current_os value in the new toolchains.
+#     Type: string
+#     Default: "fuchsia"
+#
+#   shlib
+#     Optional: If this environment will supported shared_library() and
+#     loadable_module() targets via `.shlib` companion toolchains.
+#     Type: bool
+#     Default: false
+#
+#   solink
+#     Optional: If this environment will be used *only* for shared_library()
+#     and/or loadable_module() targets.  Mutually exclusive with $shlib.
+#     Type: bool
+#     Default: false
+#
+#   configs
+#     Preset: $standard_configs
+#     Required: List of config() labels or scopes.
+#     These are the default $configs preset in all compiling targets.
+#     Elements are the same as $configs in a $variant scope in $variants.
+#
+#   implicit_deps
+#     Optional: List of labels or scopes.  This controls the list forcibly
+#     added to the $deps list of every linking target built in this
+#     environment.  Elements are the same as $implicit_deps in a @variant
+#     scope in $variants.
+#     Type: list(label)
+#     Default: []
+#
+#   globals
+#     Optional: A scope imported into the global scope in these toolchains.
+#     This is the place to define `is_...` variables.
+#
+#   toolchain_args
+#     Optional: A scope of build argument overrides for these toolchains.
+#     This is just like $toolchain_args passed to toolchain() in bare GN.
+#
+#   toolchain_vars
+#     Optional: A scope imported into the $toolchain scope in these toolchains.
+#     This can store useful toolchain-specific variables that should be
+#     available within the toolchain.  $toolchain automatically contains
+#     `tool_dir`, `tool_prefix`, `cc, and `cxx`, from c_toolchain().
+#     If `variant_suffix` is defined here, terminal targets in the environment
+#     will have "$target_name$variant_suffix" aliases that get the same thing
+#     but in that particular variant installed under the suffixed name.
+#     The default `variant_suffix` is ".$variant" in each variant.
+#
+#   variant_selectors
+#     Optional: A list in the schema of the $variants build argument.  This
+#     controls which variant is used to build each individual target.  Just
+#     having a selector with `.variant = "..."` makes the "..." variant
+#     toolchain exist in this environment, even if the selector doesn't
+#     match anything.  Each `variant` scope can have its own $configs,
+#     $implicit_deps, $globals, $toolchain_args, and $toolchain_vars that
+#     are merged with the environment's (potentially overriding their
+#     individual elements).  Note: environment_redirect() with
+#     `environment_label` set to this environment may not work if this does
+#     not include $default_variants.  Default: $variants +
+#     $default_variants + $standard_variants
+#
+#   exclude_variant_tags
+#     Optional: A list of strings that might appear in the .tags list of a
+#     .variant scope.  If any of these strings appears in a .variant scope,
+#     then $variant_selectors elements using that variant will be silently
+#     ignored in this environment's toolchains.  e.g. an environment that is
+#     incompatbile with instrumentation could list the "instrumentation" tag
+#     and variants that enable instrumentation will be defined with that tag.
+#     Then simple `variants=["asan"]` user configurations that would apply
+#     ordinarily to all targets don't break the special-case execution
+#     environments (vdso, bootloader, etc).
+#
+template("environment") {
+  assert(current_toolchain == default_toolchain,
+         "environment() should only be used in $default_toolchain")
+
+  # These are seen by c_toolchain(), below.
+  environment = target_name
+  environment_label = get_label_info(":$target_name", "label_no_toolchain")
+
+  # For "host.fuzz", the base is "host".
+  base_environment = get_path_info(environment, "name")
+
+  # Name construction logic must match environment_redirect.gni.
+  toolchain_base_name = "${environment}-${invoker.cpu}"
+
+  # For host environments include the OS to distinguish one from another.
+  # For other environments, the OS is implicit (i.e. "fuchsia" modulo EFI).
+  if (base_environment == "host") {
+    toolchain_base_name += "-${invoker.os}"
+  }
+
+  # These will be seen by c_toolchain() below.
+  shlib = defined(invoker.shlib) && invoker.shlib
+
+  # The canonicalized list of selectors.  Each element is in the schema of
+  # $variant elements, but canonicalized to simplify the matching code: all
+  # fields are present (defaults of []); .variant is always a simple string
+  # (of those in $_variant_names, below).
+  variant_selectors = []
+
+  # The environment can have its own list of selectors.
+  # Most environments use the globally-configured $variants list.
+  if (defined(invoker.variant_selectors)) {
+    raw_selectors = invoker.variant_selectors
+  } else {
+    raw_selectors = variants + default_variants + standard_variants
+  }
+
+  # First expand the plain-string shorthand selectors to full scopes.
+  selectors = []
+  foreach(selector, raw_selectors) {
+    if (selector == "$selector") {
+      # A string selector is a shorthand.
+      # First check for a simple shorthand from the global list.
+      foreach(shorthand, variant_shorthands) {
+        if (selector == shorthand.name) {
+          selectors += shorthand.selectors
+          selector = false
+        }
+      }
+    }
+    if (selector == "$selector") {
+      if (selector == get_path_info(selector, "file")) {
+        # No slash in the name.  Just a trivial non-host catch-all.
+        selector = {
+          variant = selector
+          host = false
+        }
+      } else {
+        # "$variant/$output_name"
+        selector = {
+          variant = get_path_info(selector, "dir")
+          output_name = [ get_path_info(selector, "file") ]
+        }
+        assert(false, "TODO: shorthand expansion")
+      }
+    }
+    if (selector != false) {
+      selectors += [ selector ]
+    }
+  }
+
+  # Needed below because a.b.c doesn't work in GN.
+  g = {
+  }
+  if (defined(invoker.globals)) {
+    g = invoker.globals
+  }
+
+  # This pass canonicalizes the selectors and collects the variant specs.
+  defined_variant_names = []
+  variant_names = []
+  variant_specs = []
+  foreach(selector, selectors) {
+    assert(defined(selector.variant),
+           "`variants` selector missing `.variant`: $selector")
+
+    foreach(variant, [ selector.variant ]) {
+      if (variant != false && variant != "$variant") {
+        # This selector is defining a variant.  Record the variant spec and
+        # name and then update the selector to use just the name.
+        assert(defined(variant.name),
+               "`variants` element .variant scope missing .name: $selector")
+        assert(
+            defined_variant_names + [ variant.name ] - [ variant.name ] ==
+                defined_variant_names,
+            "`variants` element overrides variant ${variant.name}: $selector")
+        defined_variant_names += [ variant.name ]
+        variant_names += [ variant.name ]
+        variant_specs += [ variant ]
+        sel_variant = variant.name
+      } else {
+        sel_variant = variant
+
+        # Add this to the list of needed variants if it's not there already.
+        variant_names += [ variant ]
+        variant_names -= [ variant ]
+        variant_names += [ variant ]
+      }
+    }
+
+    sel = {
+      # Clear from previous iteration.
+    }
+    sel = {
+      # Set defaults for all the list fields and then clobber a subset of
+      # those with whatever the selector actually included.  The boolean
+      # fields are not defaulted this way because for them neither false
+      # nor true means the same thing as the field being omitted.
+      cpu = []
+      dir = []
+      environment = []
+      label = []
+      name = []
+      os = []
+      output_name = []
+      target_type = []
+      forward_variables_from(selector,
+                             "*",
+                             [
+                               "toolchain",
+                               "variant",
+                             ])
+    }
+
+    # If the selector filters on environment, then don't bother including
+    # it if it will never match in the environment we're defining.
+    if (sel.environment != [] && (sel.environment + [ environment ] -
+                                  [ environment ] == sel.environment ||
+                                  sel.environment + [ base_environment ] -
+                                  [ base_environment ] == sel.environment)) {
+      sel = {
+      }
+    }
+
+    # Same for standard shorthands.
+    if ((defined(sel.host) && sel.host != (defined(g.is_host) && g.is_host)) ||
+        (defined(sel.kernel) &&
+         sel.kernel != (defined(g.is_kernel) && g.is_kernel))) {
+      sel = {
+      }
+    }
+
+    if (sel != {
+        }) {
+      sel.variant = sel_variant
+
+      # When the selector matches, redirect to this toolchain.
+      sel.toolchain = get_label_info(":${toolchain_base_name}-${sel_variant}",
+                                     "label_no_toolchain")
+      if (shlib) {
+        sel.shlib_toolchain = "${sel.toolchain}.shlib"
+      }
+
+      variant_selectors += [ sel ]
+    }
+  }
+
+  # variant_names now lists all the variants that might be needed in this
+  # environment.  toolchain_variants will collect all the canonicalized
+  # variant specs that control which toolchains actually get defined below.
+  toolchain_variants = []
+
+  # In the first pass, each variant spec is canonicalized, and then
+  # appended to toolchain_variants if it's complete.  An incomplete variant
+  # has a nonempty .bases list that will be resolved in the second pass;
+  # these are appended to incomplete_variants instead.
+  incomplete_variants = []
+  foreach(raw_spec, variant_specs) {
+    spec = {
+      # Clear from previous iteration.
+    }
+    spec = {
+      bases = []
+      configs = []
+      implicit_deps = []
+      tags = []
+      globals = {
+      }
+      toolchain_args = {
+      }
+      toolchain_vars = {
+      }
+      forward_variables_from(raw_spec, "*")
+    }
+    if (spec.bases == []) {
+      toolchain_variants += [ spec ]
+    } else {
+      incomplete_variants += [ spec ]
+      variant_names += spec.bases
+    }
+  }
+
+  # In the final pass, the incomplete variants are expanded with
+  # reference to the complete variants.
+  foreach(incomplete, incomplete_variants) {
+    bases = []  # Clear from previous iteration.
+    foreach(base, incomplete.bases) {
+      assert(base == "$base",
+             ".variant.base elements must be strings: $incomplete")
+      assert(toolchain_variants + [ base ] - [ base ] == toolchain_variants,
+             ".variant.base elements must be complete themselves: $incomplete")
+      foreach(complete, toolchain_variants) {
+        if (base == complete.name) {
+          bases += [ complete ]
+        }
+      }
+    }
+    bases += [ incomplete ]
+    toolchain_variants += [
+      {
+        name = incomplete.name
+
+        # Append each list from all the bases.
+        configs = []
+        implicit_deps = []
+        tags = []
+        foreach(base, bases) {
+          configs += base.configs
+          implicit_deps += base.implicit_deps
+          tags += base.tags
+          tags -= base.tags
+          tags += base.tags
+        }
+
+        # Merge each scope from all the bases.
+        globals = {
+          foreach(base, bases) {
+            forward_variables_from(base.globals, "*")
+          }
+        }
+        toolchain_args = {
+          foreach(base, bases) {
+            forward_variables_from(base.toolchain_args, "*")
+          }
+        }
+        toolchain_vars = {
+          foreach(base, bases) {
+            forward_variables_from(base.toolchain_vars, "*")
+          }
+        }
+      },
+    ]
+  }
+
+  # Now we have toolchain_variants and variant_selectors in canonical form.
+  # See if there are any we should cull from the list.
+  exclude_variant_tags = []
+  if (defined(invoker.exclude_variant_tags)) {
+    exclude_variant_tags += invoker.exclude_variant_tags
+  }
+  if (defined(g.is_kernel) && g.is_kernel) {
+    exclude_variant_tags += [ "useronly" ]
+  } else {
+    exclude_variant_tags += [ "kernel" ]
+  }
+  if (exclude_variant_tags != []) {
+    # Weed out the variants that this environment silently excludes.
+    excluded_variants = []
+    foreach(variant, toolchain_variants) {
+      if (exclude_variant_tags + variant.tags - variant.tags !=
+          exclude_variant_tags) {
+        excluded_variants += [ variant.name ]
+        toolchain_variants -= [ variant ]
+      }
+    }
+    if (excluded_variants != []) {
+      # Weed out the selectors that would choose an excluded variant.
+      excluded_selectors = []
+      foreach(selector, variant_selectors) {
+        if (excluded_variants + [ selector.variant ] - [ selector.variant ] !=
+            excluded_variants) {
+          excluded_selectors += [ selector ]
+          excluded_selectors -= [ selector ]
+          excluded_selectors += [ selector ]
+        }
+      }
+      variant_selectors -= excluded_selectors
+    }
+  }
+
+  # Reuse the selectors local so we can shadow variant_selectors below.
+  selectors = []
+  selectors = variant_selectors
+  variant_selectors = []
+
+  # Define a primary toolchain, and possibly also a shlib toolchain, for each
+  # variant.  If there are two, both toolchains get a ${toolchain.shlib} value
+  # pointing to the shlib toolchain.  Any ${toolchain.configs} elements that
+  # use `.shlib = true` will affect the preset configs in ${toolchain.shlib}
+  # differently and then both shared_library() and loadable_module() in the
+  # primary toolchain redirect to the shlib toolchain.
+  foreach(variant, toolchain_variants) {
+    toolchains = []  # Clear from previous iteration.
+
+    tc_name = "${toolchain_base_name}-${variant.name}"
+    toolchains = [
+      {
+        name = tc_name
+        if (shlib) {
+          shlib_name = "${name}.shlib"
+        }
+      },
+    ]
+    if (shlib) {
+      toolchains += [
+        {
+          name = "${tc_name}.shlib"
+          shlib_name = name
+        },
+      ]
+    }
+
+    foreach(tc, toolchains) {
+      # Canonicalize the ${toolchain.configs} list.
+      #
+      # This is used by $zx/public/gn/BUILDCONFIG.gn for set_defaults().
+      # The labels must be absolute since they will be used all over in
+      # the new toolchain, not just where the environment() is.
+      #
+      tc_configs = []
+      foreach(config, invoker.configs + variant.configs) {
+        if (config == "$config") {
+          tc_configs += [ get_label_info(config, "label_no_toolchain") ]
+        } else if (!defined(config.shlib) || !config.shlib ||
+                   (defined(tc.shlib_name) && tc.name == tc.shlib_name)) {
+          # It's actually a scope.
+          # Expand its add and remove lists.
+          tc_configs += [
+            {
+              forward_variables_from(config, [ "types" ])
+              add = []
+              if (defined(config.add)) {
+                foreach(label, config.add) {
+                  add += [ get_label_info(label, "label_no_toolchain") ]
+                }
+              }
+              remove = []
+              if (defined(config.remove)) {
+                foreach(label, config.remove) {
+                  remove += [ get_label_info(label, "label_no_toolchain") ]
+                }
+              }
+              assert(add != [] || remove != [], "useless $config")
+            },
+          ]
+        }
+      }
+
+      # Likewise for the ${toolchain.implicit_deps} list.  This is used by
+      # the various linking target types, where it's forcibly appended to
+      # $deps rather than pre-set via set_defaults() as $configs is.
+      raw_implicit_deps = []
+      if (defined(invoker.implicit_deps)) {
+        raw_implicit_deps += invoker.implicit_deps
+      }
+      raw_implicit_deps += variant.implicit_deps
+      tc_implicit_deps = []
+      foreach(dep, raw_implicit_deps) {
+        if (dep == "$dep") {
+          tc_implicit_deps += [ get_label_info(dep, "label_no_toolchain") ]
+        } else if (!defined(dep.shlib) || !dep.shlib ||
+                   (defined(tc.shlib_name) && tc.name == tc.shlib_name)) {
+          # It's actually a scope.
+          # Expand its add and remove lists.
+          tc_implicit_deps += [
+            {
+              forward_variables_from(dep, [ "types" ])
+              add = []
+              if (defined(dep.add)) {
+                foreach(label, dep.add) {
+                  add += [ get_label_info(label, "label_no_toolchain") ]
+                }
+              }
+              remove = []
+              if (defined(dep.remove)) {
+                foreach(label, dep.remove) {
+                  remove += [ get_label_info(label, "label_no_toolchain") ]
+                }
+              }
+              assert(add != [] || remove != [], "useless $dep")
+            },
+          ]
+        }
+      }
+
+      # Merge the $globals scopes from the invoker and the variant.
+      tc_globals = {
+      }
+      tc_globals = {
+        forward_variables_from(g, "*")
+        if (defined(variant.globals)) {
+          forward_variables_from(variant.globals, "*")
+        }
+      }
+
+      c_toolchain(tc.name) {
+        cpu = invoker.cpu
+        if (defined(invoker.os)) {
+          os = invoker.os
+        } else {
+          os = "fuchsia"
+        }
+        shlib = shlib || (defined(invoker.solink) && invoker.solink)
+        toolchain_args = {
+          if (defined(invoker.toolchain_args)) {
+            forward_variables_from(invoker.toolchain_args,
+                                   "*",
+                                   [
+                                     "current_cpu",
+                                     "current_os",
+                                     "toolchain",
+                                   ])
+          }
+          if (defined(variant.toolchain_args)) {
+            forward_variables_from(variant.toolchain_args,
+                                   "*",
+                                   [
+                                     "current_cpu",
+                                     "current_os",
+                                     "toolchain",
+                                   ])
+          }
+        }
+        toolchain_vars = {
+          # ${toolchain.environment} and ${toolchain.environment_label}
+          # will identify the environment within its own toolchains.
+          base_environment = base_environment
+          environment = environment
+          environment_label = environment_label
+
+          if (defined(tc.shlib_name)) {
+            shlib = get_label_info(":${tc.shlib_name}", "label_no_toolchain")
+
+            # Override the .label set by c_toolchain(), so it refers
+            # to the base toolchain, not the shlib toolchain.
+            label = get_label_info(":$tc_name", "label_no_toolchain")
+          }
+
+          configs = tc_configs
+          implicit_deps = tc_implicit_deps
+          globals = tc_globals
+
+          # Both the invoker and the variant can supply a $toolchain_vars
+          # scope for whatever they want to see in $toolchain, but they
+          # cannot set the things we set directly.
+          if (defined(invoker.toolchain_vars)) {
+            forward_variables_from(invoker.toolchain_vars,
+                                   "*",
+                                   [
+                                     "configs",
+                                     "base_environment",
+                                     "environment",
+                                     "environment_label",
+                                     "globals",
+                                     "implicit_deps",
+                                     "label",
+                                     "shlib",
+                                     "strip",
+                                     "variant",
+                                     "variant_selectors",
+                                   ])
+          }
+          if (defined(variant.toolchain_vars)) {
+            forward_variables_from(variant.toolchain_vars,
+                                   "*",
+                                   [
+                                     "configs",
+                                     "base_environment",
+                                     "environment",
+                                     "environment_label",
+                                     "globals",
+                                     "implicit_deps",
+                                     "label",
+                                     "shlib",
+                                     "strip",
+                                     "variant",
+                                     "variant_selectors",
+                                   ])
+          }
+
+          # Plumb through the canonicalized $variants list for
+          # _variant_target() to match against.
+          variant_selectors = selectors
+
+          # Plumb through the list of tags from this variant.
+          tags = variant.tags
+
+          # Finally, set .variant to the simple name string for the
+          # variant.  (This now shadows the template-scope variable
+          # `variant`, so it can't be used any more in this block.)
+          variant = variant.name
+
+          # Plumb through the suffix of this variant and the list of others.
+          if (!defined(variant_suffix)) {
+            variant_suffix = ".$variant"
+          }
+
+          if (!defined(libprefix)) {
+            libprefix = ""
+          }
+
+          other_variants = []
+          foreach(other_variant, toolchain_variants) {
+            if (other_variant.name != variant) {
+              other_variants += [
+                {
+                  label = get_label_info(
+                          ":${toolchain_base_name}-${other_variant.name}",
+                          "label_no_toolchain")
+                  if (defined(other_variant.variant_suffix)) {
+                    suffix = other_variant.variant_suffix
+                  } else {
+                    suffix = ".${other_variant.name}"
+                  }
+                },
+              ]
+            }
+          }
+        }
+
+        # Translate in-toolchain settings to toolchain-defining settings.
+        gcc = defined(tc_globals.is_gcc) && tc_globals.is_gcc
+        if (defined(toolchain_args.use_goma)) {
+          use_goma = toolchain_args.use_goma
+        }
+
+        forward_variables_from(invoker, [ "strip" ])
+        if (gcc && defined(strip) && strip == "--strip-sections") {
+          # GNU strip/objcopy doesn't support --strip-sections.
+          strip = true
+        }
+
+        host = defined(g.is_host) && g.is_host
+      }
+    }
+  }
+}
+
+set_defaults("environment") {
+  configs = standard_configs
+}

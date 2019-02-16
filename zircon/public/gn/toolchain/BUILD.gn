@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/config/standard.gni")
+import("environment.gni")
 import("toolchain.gni")
 
 assert(current_toolchain == default_toolchain,
@@ -16,3 +18,22 @@ toolchain_with_tools("stub") {
   # This is needed for $zx/public/gn/banjo.gni et al.
   propagates_configs = true
 }
+
+environment("host") {
+  cpu = host_cpu
+  os = host_os
+
+  globals = {
+    is_host = true
+  }
+  strip = true
+}
+
+standard_host = false
+foreach(host, standard_build_hosts) {
+  if (host.cpu == host_cpu && host.os == host_os) {
+    standard_host = true
+  }
+}
+assert(standard_host,
+       "$host_cpu-$host_os is not a standard build host for Fuchsia")

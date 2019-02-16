@@ -1,0 +1,485 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("ccache.gni")
+import("clang.gni")
+import("gcc.gni")
+import("goma.gni")
+import("toolchain.gni")
+
+declare_args() {
+  # Directory to populate with `xx/yyy` and `xx/yyy.debug` links to ELF
+  # files.  For every ELF binary built, with build ID `xxyyy` (lowercase
+  # hexadecimal of any length), `xx/yyy` is a hard link to the stripped
+  # file and `xx/yyy.debug` is a hard link to the unstripped file.
+  # Symbolization tools and debuggers find symbolic information this way.
+  build_id_dir = "$root_build_dir/.build-id"
+}
+
+# Define a toolchain for compiling C/C++ code.
+#
+# This is mostly a subroutine of environment() and not really used separately.
+#
+# Parameters
+#
+#   cpu, os
+#     Required: $current_cpu and $current_os values for the toolchain.
+#     Type: string
+#
+#   gcc
+#     Optional: If true, this toolchain uses GCC rather than Clang.
+#     Type: bool
+#     Default: false
+#
+#   host
+#     Optional: If true, this is doing "host" compiles.  This only matters
+#     if $os == $host_os and $cpu == $host_cpu, i.e. native compilation for
+#     the build host.  In that case, when using GCC, this says to use plain
+#     "gcc" et al rather than "<triple>-gcc" et al.
+#     Type: bool
+#     Default: false
+#
+#   strip
+#     Optional: If not false, linked binaries will be stripped.
+#     If this is a string rather than true, it's a switch to the `objcopy`
+#     tool, e.g. "--strip-sections".
+#     Type: bool or string
+#     Default: false
+#
+#   tool_dir, tool_prefix
+#     Optional: If one of these is provided, then both must be provided.
+#     $tool_dir is the directory where compiler tools are found, or "" if they
+#     are found by searching `PATH`.  $tool_prefix is the prefix prepended to
+#     each tool's name.  If $gcc is true, then $tool_dir defaults to "" if
+#     $host is true and $gcc_tool_dir otherwise.  If $gcc is true and $host is
+#     not true or $cpu != $host_cpu or $os != $host_os, then $tool_prefix
+#     defaults to the "<tuple>-" prefix appropriate for $cpu and $os;
+#     otherwise it defaults to "".
+#     Type: string
+#
+#   shlib
+#     Optional: If true, the toolchain will support the "solink" and
+#     "solink_module" (for shared_library() and loadable_module() targets,
+#     respectively).
+#     Type: bool
+#     Default: false
+#
+#   use_goma
+#     Optional: If defined, overrides the $use_goma build argument.
+#     If true, compilation commands are prefixed with "$goma_dir/gomacc".
+#     Type: bool
+#     Default: $use_goma
+#
+#   use_ccache
+#     Optional: If defined, overrides the $use_ccache build argument.
+#     If true, compilation commands are prefixed with "ccache".
+#     Type: bool
+#     Default: $use_ccache
+#
+#   toolchain_vars
+#     Optional: Additional keys/values to export in the $toolchain scope.
+#     The $toolchain global variable is a scope that provides various fields
+#     describing how things are done in this toolchain.  Several standard
+#     fields are set automatically.  This can supply others.
+#     Type: scope
+#     Default: {}
+#
+#   deps, toolchain_args
+#     Optional: See toolchain().
+#
+template("c_toolchain") {
+  # Translate GN cpu/os to GNU config tuple.
+  if (invoker.cpu == "arm64") {
+    tc_cpu = "aarch64"
+  } else if (invoker.cpu == "x64") {
+    tc_cpu = "x86_64"
+  } else {
+    tc_cpu = invoker.cpu
+  }
+  tc_target = "${tc_cpu}-"
+  if (invoker.os == "mac") {
+    tc_target += "apple-darwin"
+  } else if (invoker.os == "win") {
+    tc_target += "windows-msvc"
+  } else {
+    tc_target += invoker.os
+  }
+
+  # Cached and distributed wrappers just go on the front of compiler commands.
+  compiler_prefix = ""
+  if (defined(invoker.use_goma)) {
+    use_goma = invoker.use_goma
+  }
+  if (use_goma) {
+    compiler_prefix = "$goma_dir/gomacc "
+  } else {
+    if (defined(invoker.use_ccache)) {
+      use_ccache = invoker.use_ccache
+    }
+    if (use_ccache) {
+      compiler_prefix = "ccache "
+    }
+  }
+
+  use_gcc = defined(invoker.gcc) && invoker.gcc
+  use_strip = defined(invoker.strip) && invoker.strip != false
+
+  # If either $tool_dir or $tool_prefix is supplied then both must be supplied.
+  if (defined(invoker.tool_dir) || defined(invoker.tool_prefix)) {
+    tc = {
+      tool_dir = invoker.tool_dir
+      tool_prefix = invoker.tool_prefix
+    }
+  } else if (use_gcc) {
+    if (defined(invoker.host) && invoker.host) {
+      tc = {
+        tool_dir = ""
+        if (invoker.cpu == host_cpu && invoker.os == host_os) {
+          tool_prefix = ""
+        } else {
+          tool_prefix = "${tc_target}-"
+        }
+      }
+    } else {
+      if (clang_tool_dir == "") {
+        clangxx_exec_inputs = []
+        clangxx_exec_command = "clang++"
+      } else {
+        clangxx_exec_inputs = [ "${clang_tool_dir}/clang++" ]
+        clangxx_exec_command =
+            rebase_path(clangxx_exec_inputs[0], root_build_dir)
+      }
+      tc = {
+        tool_dir = gcc_tool_dir
+        tool_prefix = "${tc_cpu}-elf-"
+        version_string = gcc_version_string
+        include_dirs =
+            [ rebase_path(exec_script("/usr/bin/env",
+                                      [
+                                        clangxx_exec_command,
+                                        "--target=$tc_target",
+                                        "-print-file-name=include/c++/v1",
+                                      ],
+                                      "trim string",
+                                      clangxx_exec_inputs),
+                          "",
+                          root_build_dir) ]
+        lib_dirs = [ rebase_path(
+                get_path_info(exec_script("/usr/bin/env",
+                                          [
+                                            clangxx_exec_command,
+                                            "--target=$tc_target",
+                                            "-print-file-name=libc++.a",
+                                          ],
+                                          "trim string",
+                                          clangxx_exec_inputs),
+                              "dir"),
+                "",
+                root_build_dir) ]
+      }
+    }
+  } else {
+    tc = {
+      tool_dir = clang_tool_dir
+      tool_prefix = "llvm-"
+      version_string = clang_version_string
+    }
+  }
+
+  if (defined(invoker.host)) {
+    not_needed(invoker, [ "host" ])
+  }
+
+  if (use_gcc) {
+    tc.cc = "${tc.tool_prefix}gcc"
+    tc.cxx = "${tc.tool_prefix}g++"
+  } else {
+    tc.cc = "clang"
+    tc.cxx = "clang++"
+  }
+
+  if (tc.tool_dir == "") {
+    dir_prefix = ""
+  } else {
+    dir_prefix = rebase_path(tc.tool_dir, root_build_dir) + "/"
+  }
+
+  cc = "$compiler_prefix$dir_prefix${tc.cc}"
+  cxx = "$compiler_prefix$dir_prefix${tc.cxx}"
+  ld = cxx
+  ar = "$dir_prefix${tc.tool_prefix}ar"
+
+  _compile_common = {
+    outputs = [
+      "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o",
+    ]
+    depfile = "{{output}}.d"
+    depsformat = "gcc"
+    switches = "-MD -MF $depfile -o {{output}} {{defines}} {{include_dirs}}"
+  }
+
+  _link_common = {
+    lib_switch = "-l"
+    lib_dir_switch = "-L"
+    default_output_dir = "{{target_out_dir}}"
+    outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+    runtime_outputs = [ outfile ]
+    outputs = runtime_outputs
+
+    # All others are ELF and so might have build IDs.
+    make_id_link = invoker.os != "mac" && invoker.os != "win"
+    if (make_id_link) {
+      id_dir = rebase_path(build_id_dir, root_build_dir)
+    }
+
+    if (use_strip) {
+      unstripped_outfile = "${outfile}.debug"
+      outputs += [ unstripped_outfile ]
+      strip_command = " && "
+      if (invoker.strip == true && !make_id_link) {
+        if (invoker.os == "mac") {
+          # Only the host native tool works on macOS.
+          strip_tool = "strip"
+        } else {
+          strip_tool = "$dir_prefix${tc.tool_prefix}strip"
+        }
+        strip_command += "$strip_tool -o $outfile $unstripped_outfile"
+      } else {
+        if (invoker.strip == true) {
+          strip_switch = "--strip-all"
+        } else {
+          strip_switch = invoker.strip
+        }
+        if (make_id_link && !use_gcc) {
+          # llvm-objcopy has built-in support for populating $id_dir.
+          strip_switch +=
+              " --build-id-link-dir=$id_dir" + " --build-id-link-output=" +
+              " --build-id-link-input=.debug"
+          make_id_link = false
+        }
+        strip_command += "$dir_prefix${tc.tool_prefix}objcopy ${strip_switch} $unstripped_outfile $outfile"
+      }
+    } else {
+      unstripped_outfile = outfile
+      strip_command = ""
+    }
+
+    if (make_id_link) {
+      readelf = "$dir_prefix${tc.tool_prefix}readelf"
+
+      # This works with bash, but ${var:n:m} syntax is not standard.  This is
+      # better than the definition below because it does everything except
+      # `readelf` directly in the shell with no other process launches.
+      # However, non-bash shells can't handle it.  It's left here to show how
+      # it can be done better when presuming bash is acceptable.
+      #strip_command += " && notes=\$(\"$readelf\" -n $unstripped_outfile) && id=\"\${notes##*Build ID: }\" && nl=\$(echo; echo '*') && id=\"\${id%%\$nl}\" && { test -z \"\$id\" || { mkdir -p \"$id_dir/\${id:0:2}\" && ln -f $unstripped_outfile \"$id_dir/\${id:0:2}/\${id:2}.debug\" && ln -f $outfile \"$id_dir/\${id:0:2}/\${id:2}\" ; } ; }"
+
+      # This works with any POSIX-compliant sh and sed.
+      strip_command += " && eval \$(\"$readelf\" -n $unstripped_outfile | sed -n 's/.*Build ID: \\(..\\)\\(.*\\)\$/id0=\\1 id1=\\2/p') && { test -z \"\$id0\" || { mkdir -p \"$id_dir/\$id0\" && ln -f $unstripped_outfile \"$id_dir/\$id0/\$id1.debug\" && ln -f $outfile \"$id_dir/\$id0/\$id1\" ; } ; }"
+    }
+
+    rspfile = "${outfile}.rsp"
+    switches = "-o $unstripped_outfile {{ldflags}}"
+    if (invoker.os == "mac") {
+      rspfile_content = "{{inputs_newline}}"
+      link_inputs = "-Wl,-filelist,$rspfile {{libs}} {{solibs}}"
+    } else {
+      rspfile_content = "{{inputs}}"
+      link_inputs = "@'$rspfile'"
+      if (invoker.os == "win") {
+        link_inputs += " {{libs}} {{solibs}}"
+      } else {
+        link_inputs = "-Wl,--start-group " + link_inputs +
+                      " {{libs}} -Wl,--end-group {{solibs}}"
+        mapfile = "${outfile}.map"
+        outputs += [ mapfile ]
+        switches += " -Wl,-Map,$mapfile"
+      }
+    }
+    if (invoker.os == "win") {
+      # This assumes "-Wl,/debug" or suchlike is in ldflags.  If it's not
+      # but nothing depends on the .pdb file, then it should be OK that
+      # Ninja thinks it's an additional output but it doesn't get created.
+      outputs += [ "{{output_dir}}/{{target_output_name}}.pdb" ]
+    }
+  }
+
+  toolchain_with_tools(target_name) {
+    propagates_configs = true
+
+    tools = [
+      {
+        name = "asm"
+        description = "ASM {{output}}"
+        forward_variables_from(_compile_common, "*")
+        command = "$cc $switches {{asmflags}} -c {{source}}"
+      },
+
+      {
+        name = "cc"
+        description = "CC {{output}}"
+        forward_variables_from(_compile_common, "*")
+        command = "$cc $switches {{cflags}} {{cflags_c}} -c {{source}}"
+      },
+
+      {
+        name = "cxx"
+        description = "CXX {{output}}"
+        forward_variables_from(_compile_common, "*")
+        command = "$cxx $switches {{cflags}} {{cflags_cc}} -c {{source}}"
+      },
+
+      {
+        name = "objc"
+        description = "OBJC {{output}}"
+        forward_variables_from(_compile_common, "*")
+        command = "$cc $switches {{cflags}} {{cflags_c}} {{cflags_objc}} -c {{source}}"
+      },
+
+      {
+        name = "objcxx"
+        description = "OBJCXX {{output}}"
+        forward_variables_from(_compile_common, "*")
+        command = "$cxx $switches {{cflags}} {{cflags_cc}} {{cflags_objcc}} -c {{source}}"
+      },
+
+      {
+        name = "alink"
+        description = "AR {{output}}"
+        rspfile = "{{output}}.rsp"
+        command =
+            "rm -f {{output}} && $ar {{arflags}} cqsD {{output}} '@$rspfile'"
+        rspfile_content = "{{inputs}}"
+        default_output_dir = "{{target_out_dir}}"
+        default_output_extension = ".a"
+        output_prefix = "lib"
+        outputs = [
+          "{{output_dir}}/{{target_output_name}}{{output_extension}}",
+        ]
+      },
+
+      {
+        forward_variables_from(_link_common, "*")
+        name = "link"
+        description = "LINK $outfile"
+        if (invoker.os == "win") {
+          default_output_extension = ".exe"
+        }
+        command = "$ld $switches $link_inputs$strip_command"
+      },
+    ]
+
+    if (defined(invoker.shlib) && invoker.shlib) {
+      # We don't support building shared libraries for host tools.
+      assert(invoker.os == "fuchsia",
+             "shared library creation not supported for ${invoker.os}")
+
+      solink_common = {
+        forward_variables_from(_link_common, "*")
+        depend_output = outfile
+        link_output = unstripped_outfile
+      }
+
+      tools += [
+        {
+          forward_variables_from(solink_common, "*")
+
+          name = "solink"
+          description = "LINK_SHLIB $outfile"
+
+          output_prefix = "lib"
+          default_output_extension = ".so"
+
+          # Put the automatic -soname first so that ldflags can override it.
+          soname = "{{target_output_name}}{{output_extension}}"
+          switches = "-shared -Wl,-soname,$soname $switches"
+          if (use_gcc && tc.tool_prefix == "${tc_cpu}-elf-") {
+            # The *-elf-gcc driver doesn't handle -shared properly.
+            # Just force it through to the linker.
+            switches = "-Wl,$switches"
+          }
+
+          command = "$ld $switches $link_inputs$strip_command"
+
+          # TODO: abi stubs
+        },
+
+        {
+          forward_variables_from(solink_common, "*")
+
+          name = "solink_module"
+          description = "LINK_MODULE $outfile"
+
+          default_output_extension = ".so"
+
+          switches = "-shared $switches"
+          command = "$ld $switches $link_inputs$strip_command"
+        },
+      ]
+    }
+
+    forward_variables_from(invoker, [ "deps" ])
+
+    toolchain_args = {
+      current_cpu = invoker.cpu
+      current_os = invoker.os
+
+      if (defined(invoker.toolchain_args)) {
+        forward_variables_from(invoker.toolchain_args,
+                               "*",
+                               [
+                                 "current_cpu",
+                                 "current_os",
+                                 "toolchain",
+                               ])
+      }
+
+      # This shadows the global and so has to be cleared first.
+      toolchain = {
+      }
+      toolchain = {
+        name = target_name
+        label = get_label_info(":$target_name", "label_no_toolchain")
+
+        # These are provided by BUILDCONFIG.gn so they are expected in
+        # every toolchain.
+        globals = {
+        }
+        public_deps = []
+
+        # This gets `tool_dir` et al as expected by c_utils.gni (set above).
+        forward_variables_from(tc, "*")
+        cpu = tc_cpu
+        target_tuple = tc_target
+
+        if (invoker.os == "win") {
+          executable_extension = "exe"
+        } else {
+          executable_extension = ""
+        }
+
+        if (defined(invoker.toolchain_vars)) {
+          forward_variables_from(invoker.toolchain_vars, "*")
+        }
+
+        if (!defined(include_dirs)) {
+          include_dirs = []
+        }
+        if (!defined(lib_dirs)) {
+          lib_dirs = []
+        }
+        if (!defined(output_name_suffix)) {
+          output_name_suffix = ""
+        }
+
+        # This is used in setting metadata.link_output.
+        if (use_strip) {
+          link_output_suffix = ".debug"
+        } else {
+          link_output_suffix = ""
+        }
+      }
+    }
+  }
+}

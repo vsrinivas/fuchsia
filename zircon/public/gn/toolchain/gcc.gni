@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # If $gcc_tool_dir is "", then this controls how the GCC toolchain
+  # binaries are found.  If true, the standard prebuilt is used.  If false,
+  # the tools are just expected to be found in PATH.
+  use_prebuilt_gcc = true
+
+  # Directory where the GCC toolchain binaries ("gcc", "nm", etc.) are
+  # found.  If this is "", then the behavior depends on $use_prebuilt_gcc.
+  # This directory is expected to contain `aarch64-elf-*` and `x86_64-elf-*`
+  # tools used to build for the Fuchsia targets.  This directory will not
+  # be used for host tools; if GCC is selected for host builds, only the
+  # system-installed tools found by the shell via `PATH` will be used.
+  gcc_tool_dir = ""
+}
+
+# This is a string identifying the particular toolchain version in use.  Its
+# only purpose is to be unique enough that it changes when switching to a new
+# toolchain, so that recompilations with the new compiler can be triggered.
+#
+# When using the prebuilt, the CIPD instance ID of the prebuilt is perfect.
+# When not using the prebuilt, there isn't a quick way to extract the compiler
+# version.  But at least changing the setting to a different compiler will
+# change the string.
+gcc_version_string = gcc_tool_dir
+if (gcc_tool_dir == "" && use_prebuilt_gcc) {
+  _prebuilt_dir = "$zx/prebuilt/downloads/gcc"
+  gcc_tool_dir = "$_prebuilt_dir/bin"
+  _prebuilt_cipd_version =
+      read_file("$_prebuilt_dir/.versions/gcc.cipd_version", "json")
+  gcc_version_string = _prebuilt_cipd_version.instance_id
+}

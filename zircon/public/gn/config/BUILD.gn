@@ -1,0 +1,360 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("levels.gni")
+
+# TODO: download all host sysroot prebuilts
+if (host_os == "mac") {
+  _prebuilt_sysroot =
+      exec_script("/usr/bin/xcrun", [ "--show-sdk-path" ], "trim string")
+} else {
+  _prebuilt_sysroot = "$zx/prebuilt/downloads/sysroot"
+}
+
+declare_args() {
+  # The `--sysroot` directory for host compilations.
+  # This can be a string, which only applies to $host_os-$host_cpu.
+  # Or it can be a list of scopes containing `cpu`, `os`, and `sysroot`.
+  # The empty list (or empty string) means don't use `--sysroot` at all.
+  sysroot = _prebuilt_sysroot
+}
+
+# Convert a string to a list.
+if (sysroot == "") {
+  sysroot = []
+} else if (sysroot == "$sysroot") {
+  sysroot = [
+    {
+      cpu = host_cpu
+      os = host_os
+      sysroot = sysroot
+    },
+  ]
+}
+
+config("sysroot") {
+  foreach(host, sysroot) {
+    if (host.cpu == current_cpu && host.os == current_os) {
+      compiler_flags =
+          [ "--sysroot=" + rebase_path(host.sysroot, root_build_dir) ]
+      asmflags = compiler_flags
+      cflags = compiler_flags
+      ldflags = compiler_flags
+    }
+  }
+}
+
+if (current_os == "mac") {
+  # Only the native host linker works for macOS.
+  linker = ""
+} else if (is_gcc) {
+  # Assume ld.gold is available for any native Linux host, and for any ELF
+  # cross-compile target.  Use Gold for userland, and BFD ld for kernel.
+  if (current_os == "linux" ||
+      ((current_cpu != host_cpu || current_os != host_os) && !is_kernel &&
+       current_os != "win")) {
+    linker = "gold"
+  } else {
+    # For GCC on non-ELF hosts, use the system default linker.
+    linker = ""
+  }
+} else {
+  # Always use lld with Clang.
+  linker = "lld"
+}
+
+config("compiler") {
+  compiler_flags = []
+  defines = []
+  ldflags = []
+
+  # For GCC, the compiler command implies the target.
+  # For Clang, there's a single compiler command that takes `--target`.
+  if (!is_gcc && (current_cpu != host_cpu || current_os != host_os)) {
+    compiler_flags += [ "--target=${toolchain.target_tuple}" ]
+  }
+
+  if (linker != "") {
+    ldflags += [ "-fuse-ld=$linker" ]
+  }
+
+  if (defined(toolchain.version_string) && toolchain.version_string != "") {
+    # Nothing uses this define, but its presence on compilation command
+    # lines ensures that Ninja will rebuild things when a new compiler
+    # version arrives.
+    defines += [ "TOOLCHAIN_VERSION=${toolchain.version_string}" ]
+  }
+
+  # This is the default already on Fuchsia and maybe others, but never hurts.
+  cflags = [ "-fno-common" ]
+
+  configs = [
+    ":color_diagnostics",
+    # TODO: "$current_os:compiler",
+  ]
+
+  if (is_host) {
+    configs += [ ":sysroot" ]
+
+    if (current_os != "win" && current_os != "mac") {
+      ldflags += [ "-Wl,--build-id" ]
+    }
+  } else if (is_fuchsia) {
+    # TODO(mcgrathr): These should all be default in the compiler driver.
+    ldflags += [
+      "-Wl,-z,combreloc",
+      "-Wl,-z,relro",
+      "-Wl,-z,now",
+      "-Wl,-z,text",
+    ]
+
+    if (is_gcc) {
+      # This is predefined by Clang --target=*-fuchsia.
+      # But the GCC toolchain is the generic --target=*-elf one.
+      defines += [ "__Fuchsia__" ]
+
+      # This is done by default in the Clang toolchain.
+      ldflags += [ "-Wl,--build-id" ]
+
+      # In the Clang toolchain assembly files with no explicit marker don't
+      # cause the presumption of executable stack as they do in GCC.
+      ldflags += [ "-Wl,-z,noexecstack" ]
+    } else {
+      # TODO(mcgrathr): This should be default in the compiler driver.
+      ldflags += [ "-Wl,--pack-dyn-relocs=relr" ]
+    }
+
+    if (current_cpu == "arm64") {
+      # Generate code for the fairly generic cortex-a53.
+      compiler_flags += [ "-mcpu=cortex-a53" ]
+
+      # x18 is reserved in the Fuchsia userland ABI so it can be used
+      # for things like -fsanitize=shadow-call-stack.  In the kernel,
+      # it's reserved so we can use it to point at the per-CPU structure.
+      compiler_flags += [ "-ffixed-x18" ]
+    }
+  }
+
+  include_dirs = toolchain.include_dirs
+  lib_dirs = toolchain.lib_dirs
+
+  asmflags = compiler_flags
+  cflags += compiler_flags
+  ldflags += compiler_flags
+}
+
+config("language") {
+  cflags_c = [ "-std=c11" ]
+}
+
+config("color_diagnostics") {
+  # GCC correctly defaults this from the terminal, so leave it alone.
+  if (!is_gcc) {
+    compiler_flags = [ "-fcolor-diagnostics" ]
+    asmflags = compiler_flags
+    cflags = compiler_flags
+    ldflags = compiler_flags
+
+    # The macOS linker does not support `--color-diagnostics`.
+    if (current_os != "mac") {
+      ldflags += [ "-Wl,--color-diagnostics" ]
+    }
+  }
+}
+
+config("relative_paths") {
+  # Make builds independent of absolute file path.  The file names embedded
+  # in debugging information will be expressed as relative to the build
+  # directory, e.g. "../.." for an "out/subdir" under //.  This is
+  # consistent with the file names in __FILE__ expansions (e.g. in
+  # assertion messages), which the compiler doesn't provide a way to remap.
+  # That way source file names in logging and symbolization can all be
+  # treated the same way.  This won't go well if $root_build_dir is not a
+  # subdirectory of //, but there isn't a better option to keep all source
+  # file name references uniformly relative to a single root.
+  absolute_path = rebase_path("//.")
+  relative_path = rebase_path("//.", root_build_dir)
+
+  # This makes sure that the DW_AT_comp_dir string (the current
+  # directory while running the compiler, which is the basis for all
+  # relative source file names in the DWARF info) is represented as
+  # relative to //.
+  compiler_flags = [ "-fdebug-prefix-map=$absolute_path=$relative_path" ]
+  if (!is_gcc) {
+    # This makes sure that include directories in the toolchain are
+    # represented as relative to the build directory (because that's how we
+    # invoke the compiler), rather than absolute.  This can affect __FILE__
+    # expansions (e.g. assertions in system headers).  We normally run a
+    # compiler that's someplace within the source tree, so its absolute
+    # installation path will have a prefix matching `absolute_path` and
+    # hence be mapped to `relative_path` in the debugging information, so
+    # this should actually be superfluous for purposes of the debugging
+    # information.
+    compiler_flags += [ "-no-canonical-prefixes" ]
+  }
+
+  asmflags = compiler_flags
+  cflags = compiler_flags
+  ldflags = compiler_flags
+}
+
+config("data_sections") {
+  cflags = [ "-fdata-sections" ]
+}
+
+config("linker_gc") {
+  configs = [ ":data_sections" ]
+  cflags = [ "-ffunction-sections" ]
+  ldflags = cflags
+  if (current_os == "mac") {
+    ldflags += [ "-Wl,-dead_strip" ]
+  } else if (current_os == "win") {
+    ldflags += [ "-Wl,/opt:ref" ]
+  } else {
+    ldflags += [ "-Wl,--gc-sections" ]
+  }
+}
+
+config("assert_level") {
+  assert(assert_level >= 0)
+  defines = [ "ZX_DEBUGLEVEL=$assert_level" ]
+  if (assert_level == 0) {
+    defines += [ "NDEBUG" ]
+  }
+}
+
+config("opt_level") {
+  if (opt_level == -1) {
+    compiler_flags = [ "-O0" ]
+  } else {
+    assert(opt_level >= 0)
+    if (opt_level == 0) {
+      if (is_gcc) {
+        compiler_flags = [ "-O0" ]
+      } else {
+        compiler_flags = [ "-Og" ]
+      }
+    } else if (opt_level == 4) {
+      if (is_gcc) {
+        compiler_flags = [ "-Os" ]
+      } else {
+        compiler_flags = [ "-Oz" ]
+      }
+    } else {
+      compiler_flags = [ "-O$opt_level" ]
+    }
+  }
+
+  configs = []
+  if (opt_level > 1) {
+    # TODO(ZX-3427): enable this later; it's not used in the make build.
+    #configs += [ ":icf" ]
+  }
+
+  asmflags = compiler_flags
+  cflags = compiler_flags
+  ldflags = compiler_flags
+
+  if (opt_level > 2) {
+    # Enable optimal string merging.
+    ldflags += [ "-Wl,-O2" ]
+  }
+}
+
+# This is separate from opt_level so it can be removed.
+config("default_linker_gc") {
+  # TODO(mcgrathr): Kernel can't be built without --gc-sections.
+  # The macOS host linker seems to have some bugs with its
+  # equivalent, so don't use it there.
+  if ((opt_level > 0 || toolchain.environment == "kernel") &&
+      current_os != "mac") {
+    configs = [ ":linker_gc" ]
+  }
+}
+
+config("symbol_level") {
+  assert(symbol_level >= 0 && symbol_level <= 2)
+  if (symbol_level == 0) {
+    compiler_flags = [ "-g0" ]
+  } else if (symbol_level == 1) {
+    compiler_flags = [ "-gline-tables-only" ]
+  } else if (symbol_level == 2) {
+    compiler_flags = [ "-g3" ]
+  }
+  asmflags = compiler_flags
+  cflags = compiler_flags
+  ldflags = compiler_flags
+  if (symbol_level > 0 && current_os == "win") {
+    # TODOD: ??? This produces the .pdb file, but it doesn't seem
+    # to get the DWARF data out of the main output file.
+    ldflags += [ "-Wl,/debug:full" ]
+  }
+}
+
+config("default_warnings") {
+  cflags = [
+    "-Wall",
+    "-Wextra",
+    "-Wno-multichar",
+    "-Wno-unused-parameter",
+    "-Wno-unused-function",
+    "-Werror=unused-label",
+    "-Werror=return-type",
+  ]
+  cflags_c = [
+    "-Werror=implicit-function-declaration",
+    "-Wstrict-prototypes",
+    "-Wwrite-strings",
+  ]
+  cflags_cc = [
+    "-Wconversion",
+    "-Wno-sign-conversion",
+  ]
+  if (is_gcc) {
+    cflags += [
+      "-Wno-nonnull-compare",
+      "-Wno-format-truncation",
+    ]
+  } else {
+    cflags += [
+      "-Wno-address-of-packed-member",
+      "-Wimplicit-fallthrough",
+    ]
+  }
+}
+
+config("icf") {
+  # This changes C/C++ semantics and might be incompatible with third-party
+  # code that relies on function pointers comparison.
+  if (current_os == "win" && (linker == "lld" || !is_gcc)) {
+    ldflags = [ "-Wl,/opt:icf=all" ]
+  } else if (linker == "gold" || linker == "lld") {
+    ldflags = [ "-Wl,--icf=all" ]
+  }
+}
+
+config("default_include_dirs") {
+  include_dirs = [
+    "$zx/system/public",
+    "$zx/system/private",
+  ]
+}
+
+config("default_frame_pointers") {
+  if (assert_level > 0) {
+    configs = [ ":frame_pointers" ]
+  } else {
+    configs = [ ":no_frame_pointers" ]
+  }
+}
+
+config("frame_pointers") {
+  defines = [ "WITH_FRAME_POINTERS=1" ]
+  cflags = [ "-fno-omit-frame-pointer" ]
+}
+
+config("no_frame_pointers") {
+  defines = [ "WITH_FRAME_POINTERS=0" ]
+  cflags = [ "-fomit-frame-pointer" ]
+}

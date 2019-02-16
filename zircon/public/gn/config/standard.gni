@@ -1,0 +1,101 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# All the {cpu, os} combinations supported as build or SDK hosts.  The
+# build will define toolchains for all of these.  Successful
+# cross-compilation may require that a sysroot be installed and configured.
+standard_build_hosts = [
+  {
+    cpu = "arm64"
+    os = "linux"
+  },
+  {
+    cpu = "x64"
+    os = "linux"
+  },
+]
+
+# Cross-compiling to Mac isn't possible because of the Mach-O linker.
+if (host_os == "mac") {
+  standard_build_hosts += [
+    {
+      cpu = "x64"
+      os = "mac"
+    },
+  ]
+}
+
+# Universal configs apply to all code in the build.
+standard_configs = [
+  "$zx/public/gn/config:compiler",
+  "$zx/public/gn/config:language",
+  "$zx/public/gn/config:relative_paths",
+  "$zx/public/gn/config:assert_level",
+  "$zx/public/gn/config:opt_level",
+  "$zx/public/gn/config:symbol_level",
+  "$zx/public/gn/config:default_warnings",
+  "$zx/public/gn/config:default_include_dirs",
+  "$zx/public/gn/config:default_frame_pointers",
+  "$zx/public/gn/config:default_linker_gc",
+]
+
+# This list has the same structure as $variants (see
+# $zx/public/gn/toolchain/environment.gni) but it just supplies definitions
+# of variants with standard names.  The $variants list can refer to
+# variants defined here by name, but these are not otherwise involved in
+# variant selection.
+standard_variants = [
+  {
+    variant = {
+      name = "clang"
+    }
+  },
+  {
+    variant = {
+      name = "gcc"
+      tags = [ "gcc" ]
+      globals = {
+        is_gcc = true
+      }
+    }
+  },
+]
+
+# This list is appended to the $variants list for the build.  It provides
+# default selectors that match if nothing else does.  The first catch-all
+# selector must be compatible with all environments used in
+# environment_redirect(),
+default_variants = [
+  {
+    variant = "clang"
+  },
+]
+
+# Define shorthand selectors that can be used in $variants, which see.
+# This is a list of scopes.  Each scope defines one shorthand.
+#
+#   name
+#     Required: The name that matches a string element of $variants (or the
+#     part of an element before the slash).
+#     Type: string
+#
+#   selectors
+#     Required: The expansion, a list of selectors.  An element of $variants
+#     that matches $name is removed and the $selectors list is spliced into the
+#     list in its place.  An element that matches "$name/something" is instead
+#     replaced by this $selectors list with `output_name = "something"` added
+#     to each element.
+#     Type: See $variants.
+#
+variant_shorthands = [
+  {
+    name = "host_gcc"
+    selectors = [
+      {
+        variant = "gcc"
+        host = true
+      },
+    ]
+  },
+]

@@ -1,0 +1,135 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/config/standard.gni")
+
+# Redirect dependents to dependencies in another environment (toolchain).
+#
+# An environment_redirect() acts like a group() with `public_deps` set (which
+# we call a "redirect" target): Depending on this target means to depend on
+# its dependencies.  The special feature of environment_redirect() is that it
+# selects an appropriate toolchain for those dependencies based on the other
+# parameters described below.
+#
+# Parameters
+#
+#   cpu
+#     Optional: Required if $current_cpu is "" (default toolchain).
+#     Defaults to $host_cpu in "host" or "host.*" environments.
+#
+#   os
+#     Optional: Required if $current_os is "" (default toolchain).
+#     Defaults to $host_os in "host" or "host.*" environments.
+#
+#   environment_label
+#     Optional: Required if ${toolchain.environment_label} is undefined
+#     (default toolchain).  This is the label of an execution environment
+#     defined with environment().  The $deps will be resolved in one of the
+#     toolchains defined by that environment() invocation.
+#     Default: ${toolchain.environment_label}
+#
+#   deps
+#     Required: These must be labels without toolchain suffix.  The
+#     environment_redirect() target redirects its dependents to instead depend
+#     on this list of labels, but in the toolchain selected by the other
+#     parameters.
+#
+#   variant
+#     Optional: Specific variant toolchain to select.  If omitted, one will be
+#     chosen from $default_variants with the expectation that the
+#     environment() named by $environment_label used a `.variants` list
+#     including $default_variants (as is preset).
+#
+template("environment_redirect") {
+  forward_variables_from(invoker,
+                         [
+                           "cpu",
+                           "environment_label",
+                           "os",
+                           "variant",
+                         ])
+  if (!defined(environment_label)) {
+    assert(defined(toolchain.environment_label),
+           "environment_redirect() needs `environment_label`" +
+               " in $current_toolchain")
+    environment_label = toolchain.environment_label
+  }
+
+  environment_label = get_label_info(environment_label, "label_no_toolchain")
+  environment = get_label_info(environment_label, "name")
+
+  # For, e.g., "host.fuzz", the base is "host".
+  base_environment = get_path_info(environment, "name")
+
+  if (defined(cpu)) {
+    assert(cpu != "", "empty `cpu` in environment_redirect()")
+  } else {
+    if (base_environment == "host") {
+      assert(host_cpu != "", "empty `host_cpu` in environment_redirect()")
+      cpu = host_cpu
+    } else {
+      assert(current_cpu != "", "empty `current_cpu` in environment_redirect()")
+      cpu = current_cpu
+    }
+  }
+
+  if (defined(os)) {
+    assert(os != "", "empty `os` in environment_redirect()")
+  } else {
+    if (base_environment == "host") {
+      assert(host_os != "", "empty `host_os` in environment_redirect()")
+      os = host_os
+    } else {
+      os = "fuchsia"
+    }
+  }
+
+  # Name construction logic must match environment.gni.
+  toolchain_base_name = "${environment_label}-${cpu}"
+
+  # For host environments include the OS to distinguish one from another.
+  # For other environments, the OS is implicit (i.e. "fuchsia" modulo EFI).
+  if (base_environment == "host") {
+    toolchain_base_name += "-${os}"
+  } else {
+    not_needed([ "os" ])
+  }
+
+  # If the caller didn't request a specific variant, then use the default most
+  # likely to be selected for an arbitrary target in the selected environment.
+  # That will dispatch to the correct variant for each particular target.
+  foreach(default, default_variants) {
+    if (!defined(variant) &&
+        (!defined(default.environment) || default.environment == [] ||
+         default.environment + [ environment ] - [ environment ] !=
+         default.environment ||
+         default.environment + [ base_environment ] - [ base_environment ] !=
+         default.environment)) {
+      variant = default.variant
+    }
+  }
+
+  toolchain_name = "${toolchain_base_name}-${variant}"
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    public_deps = []
+    foreach(label, invoker.deps) {
+      foreach(label, invoker.deps) {
+        # The original string should not contain a "(toolchain)" suffix.
+        # We can't easily tell if it does, but we can tell if it has any
+        # suffix other than the expansion of "($current_toolchain)".
+        full_label = get_label_info(label, "label_with_toolchain")
+        bare_label = get_label_info(label, "label_no_toolchain")
+        assert(full_label == "$bare_label($current_toolchain)",
+               "environment_redirect() `deps` cannot have toolchain suffix")
+        public_deps += [ "$label($toolchain_name)" ]
+      }
+    }
+  }
+}
