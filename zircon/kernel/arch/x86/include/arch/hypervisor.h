@@ -99,7 +99,7 @@ private:
     Guest* guest_;
     const uint16_t vpid_;
     const thread_t* thread_;
-    fbl::atomic_bool running_;
+    ktl::atomic<bool> running_;
     LocalApicState local_apic_state_;
     PvClockState pvclock_state_;
     VmxState vmx_state_;

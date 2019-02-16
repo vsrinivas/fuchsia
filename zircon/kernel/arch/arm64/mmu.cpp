@@ -15,7 +15,6 @@
 #include <bits.h>
 #include <debug.h>
 #include <err.h>
-#include <fbl/atomic.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <inttypes.h>

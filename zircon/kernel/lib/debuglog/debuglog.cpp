@@ -8,9 +8,9 @@
 
 #include <dev/udisplay.h>
 #include <err.h>
-#include <fbl/atomic.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
+#include <ktl/atomic.h>
 #include <lib/crashlog.h>
 #include <kernel/cmdline.h>
 #include <lib/io.h>
@@ -37,8 +37,8 @@ static thread_t* notifier_thread;
 static thread_t* dumper_thread;
 
 // Used to request that notifier and dumper threads terminate.
-static fbl::atomic_bool notifier_shutdown_requested;
-static fbl::atomic_bool dumper_shutdown_requested;
+static ktl::atomic<bool> notifier_shutdown_requested;
+static ktl::atomic<bool> dumper_shutdown_requested;
 
 // dlog_bypass_ will directly write to console. It also has the side effect of
 // disabling uart Tx interrupts. So all serial console writes are polling.

@@ -8,7 +8,6 @@
 
 #include <err.h>
 #include <fbl/algorithm.h>
-#include <fbl/atomic.h>
 #include <inttypes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/event.h>
@@ -16,6 +15,7 @@
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
+#include <ktl/atomic.h>
 #include <lib/unittest/unittest.h>
 #include <malloc.h>
 #include <platform.h>
@@ -70,7 +70,7 @@ static void timer_diag_all_cpus(void) {
 }
 
 static void timer_diag_cb2(timer_t* timer, zx_time_t now, void* arg) {
-    auto timer_count = static_cast<fbl::atomic<size_t>*>(arg);
+    auto timer_count = static_cast<ktl::atomic<size_t>*>(arg);
     timer_count->fetch_add(1);
     thread_preempt_set_pending();
 }
@@ -79,7 +79,7 @@ static void timer_diag_coalescing(TimerSlack slack, const zx_time_t* deadline,
                                   const zx_duration_t* expected_adj, size_t count) {
     printf("testing coalsecing mode %u\n", slack.mode());
 
-    fbl::atomic<size_t> timer_count(0);
+    ktl::atomic<size_t> timer_count(0);
 
     timer_t* timer = (timer_t*)malloc(sizeof(timer_t) * count);
 

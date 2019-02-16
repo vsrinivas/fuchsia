@@ -5,16 +5,16 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch/ops.h>
-#include <fbl/atomic.h>
 #include <hypervisor/cpu.h>
 #include <kernel/cpu.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
+#include <ktl/atomic.h>
 
 namespace {
 
 struct percpu_state {
-    fbl::atomic<cpu_mask_t> cpu_mask;
+    ktl::atomic<cpu_mask_t> cpu_mask;
     hypervisor::percpu_task_t task;
     void* context;
 

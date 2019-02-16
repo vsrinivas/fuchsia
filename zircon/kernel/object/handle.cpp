@@ -57,7 +57,7 @@ void Handle::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 void Handle::set_process_id(zx_koid_t pid) {
-    process_id_.store(pid, fbl::memory_order_relaxed);
+    process_id_.store(pid, ktl::memory_order_relaxed);
     dispatcher_->set_owner(pid);
 }
 

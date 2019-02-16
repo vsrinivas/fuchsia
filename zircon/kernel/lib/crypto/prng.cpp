@@ -9,10 +9,10 @@
 
 #include <err.h>
 #include <explicit-memory/bytes.h>
-#include <fbl/atomic.h>
 #include <fbl/auto_call.h>
 #include <fbl/mutex.h>
 #include <kernel/auto_lock.h>
+#include <ktl/atomic.h>
 #include <lib/crypto/prng.h>
 #include <pow2.h>
 #include <zircon/compiler.h>

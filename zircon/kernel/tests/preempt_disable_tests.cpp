@@ -4,12 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <fbl/atomic.h>
 #include <kernel/event.h>
 #include <kernel/interrupt.h>
 #include <kernel/sched.h>
 #include <kernel/thread_lock.h>
 #include <kernel/timer.h>
+#include <ktl/atomic.h>
 #include <platform.h>
 #include <lib/unittest/unittest.h>
 
@@ -222,7 +222,7 @@ static bool test_interrupt_clears_preempt_pending() {
 // Timer callback used for testing.
 static void timer_set_preempt_pending(timer_t* timer, zx_time_t now,
                                       void* arg) {
-    auto* timer_ran = reinterpret_cast<fbl::atomic<bool>*>(arg);
+    auto* timer_ran = reinterpret_cast<ktl::atomic<bool>*>(arg);
 
     thread_preempt_set_pending();
     timer_ran->store(true);
@@ -244,7 +244,7 @@ static bool test_interrupt_with_preempt_disable() {
     // accidentally call any blocking operations that cause our thread to
     // be rescheduled to another CPU.
     thread_preempt_disable();
-    fbl::atomic<bool> timer_ran(false);
+    ktl::atomic<bool> timer_ran(false);
     timer_t timer;
     timer_init(&timer);
     const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));
@@ -269,7 +269,7 @@ static bool test_interrupt_with_resched_disable() {
     // This assumes that timer_set() will run the callback on the same CPU
     // that we invoked it from.
     thread_resched_disable();
-    fbl::atomic<bool> timer_ran(false);
+    ktl::atomic<bool> timer_ran(false);
     timer_t timer;
     timer_init(&timer);
     const Deadline deadline = Deadline::no_slack(current_time() + ZX_USEC(100));

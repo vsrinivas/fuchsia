@@ -10,7 +10,7 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mp.h>
-#include <fbl/atomic.h>
+#include <ktl/atomic.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -37,10 +37,10 @@ static void reboot(void) {
     pc_keyboard_reboot();
 }
 
-static fbl::atomic<cpu_mask_t> halted_cpus(0);
+static ktl::atomic<cpu_mask_t> halted_cpus(0);
 
 static void halt_other_cpus(void) {
-    static fbl::atomic<int> halted(0);
+    static ktl::atomic<int> halted(0);
 
     if (halted.exchange(1) == 0) {
         // stop the other cpus
@@ -72,7 +72,7 @@ void platform_panic_start(void) {
     platform_debug_panic_start();
     arch_disable_ints();
 
-    static fbl::atomic<int> panic_started(0);
+    static ktl::atomic<int> panic_started(0);
     if (panic_started.exchange(1) == 0) {
         dlog_bluescreen_init();
     }

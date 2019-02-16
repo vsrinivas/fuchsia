@@ -118,7 +118,7 @@ private:
     Guest* guest_;
     const uint8_t vpid_;
     const thread_t* thread_;
-    fbl::atomic_bool running_;
+    ktl::atomic<bool> running_;
     // We allocate El2State in its own page as it is passed between EL1 and EL2,
     // which have different address space mappings. This ensures that El2State
     // will not cross a page boundary and be incorrectly accessed in EL2.

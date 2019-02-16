@@ -19,7 +19,7 @@
 #include <new>
 #include <string.h>
 
-#include <fbl/atomic.h>
+#include <ktl/atomic.h>
 #include <lockdep/lockdep.h>
 
 // Always assert to catch changes when lockdep is not enabled.

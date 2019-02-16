@@ -7,7 +7,6 @@
 
 #include <debug.h>
 #include <err.h>
-#include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <reg.h>

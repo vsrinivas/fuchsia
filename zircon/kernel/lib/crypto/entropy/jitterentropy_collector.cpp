@@ -7,8 +7,8 @@
 #include <lib/crypto/entropy/jitterentropy_collector.h>
 
 #include <kernel/cmdline.h>
+#include <ktl/atomic.h>
 #include <zircon/errors.h>
-#include <fbl/atomic.h>
 
 #ifndef JITTERENTROPY_MEM_SIZE
 #define JITTERENTROPY_MEM_SIZE (64u * 1024u)
@@ -20,9 +20,7 @@ namespace entropy {
 
 zx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
     static JitterentropyCollector* instance = nullptr;
-    // Note: this would be fbl::atomic<bool>, except that fbl doesn't support
-    // that specialization.
-    static fbl::atomic<int> initialized = {0};
+    static ktl::atomic<bool> initialized = {false};
 
     // Release-acquire ordering guarantees that, once a thread has stored a
     // value in |initialized| with |memory_order_release|, any other thread that
@@ -35,7 +33,7 @@ zx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
     // try to run the initialization code. That's why the comment in
     // jitterentropy_collector.h requires that GetInstance() runs to completion
     // first before concurrent calls are allowed.
-    if (!initialized.load(fbl::memory_order_acquire)) {
+    if (!initialized.load(ktl::memory_order_acquire)) {
         if (jent_entropy_init() != 0) {
             // Initialization failed; keep instance == nullptr
             instance = nullptr;
@@ -47,7 +45,7 @@ zx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
             static JitterentropyCollector collector(mem, sizeof(mem));
             instance = &collector;
         }
-        initialized.store(1, fbl::memory_order_release);
+        initialized.store(true, ktl::memory_order_release);
     }
 
     if (instance) {

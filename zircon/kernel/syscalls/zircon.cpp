@@ -16,6 +16,7 @@
 #include <explicit-memory/bytes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/thread.h>
+#include <ktl/atomic.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/user_copy/user_ptr.h>
 #include <object/event_dispatcher.h>
@@ -27,7 +28,6 @@
 #include <object/thread_dispatcher.h>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/atomic.h>
 #include <fbl/ref_ptr.h>
 
 #include <zircon/syscalls/log.h>
@@ -65,7 +65,7 @@ zx_status_t sys_nanosleep(zx_time_t deadline) {
 //
 // NOTE(abdulla): This is used by pvclock. If logic here is changed, please
 // update pvclock too.
-fbl::atomic<int64_t> utc_offset;
+ktl::atomic<int64_t> utc_offset;
 
 zx_time_t sys_clock_get(zx_clock_t clock_id) {
     switch (clock_id) {

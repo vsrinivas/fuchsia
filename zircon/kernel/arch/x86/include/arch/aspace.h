@@ -11,8 +11,8 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/page_tables/page_tables.h>
 #include <fbl/algorithm.h>
-#include <fbl/atomic.h>
 #include <fbl/canary.h>
+#include <ktl/atomic.h>
 #include <vm/arch_vm_aspace.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -128,7 +128,7 @@ private:
 
     // CPUs that are currently executing in this aspace.
     // Actually an mp_cpu_mask_t, but header dependencies.
-    fbl::atomic_int active_cpus_{0};
+    ktl::atomic<int> active_cpus_{0};
 };
 
 using ArchVmAspace = X86ArchVmAspace;

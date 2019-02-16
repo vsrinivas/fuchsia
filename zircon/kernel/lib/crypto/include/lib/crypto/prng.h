@@ -9,10 +9,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <fbl/atomic.h>
 #include <fbl/mutex.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
+#include <ktl/atomic.h>
 #include <zircon/thread_annotations.h>
 
 namespace crypto {
@@ -95,7 +95,7 @@ private:
     event_t ready_;
 
     // Number of bytes of entropy added so far.
-    fbl::atomic<size_t> accumulated_;
+    ktl::atomic<size_t> accumulated_;
 };
 
 } // namespace crypto

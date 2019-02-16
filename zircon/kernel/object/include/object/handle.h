@@ -7,13 +7,13 @@
 #pragma once
 
 #include <fbl/arena.h>
-#include <fbl/atomic.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/brwlock.h>
 #include <kernel/lockdep.h>
+#include <ktl/atomic.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
@@ -90,7 +90,7 @@ public:
     // Returns the process that owns this instance. Used to guarantee
     // that one process may not access a handle owned by a different process.
     zx_koid_t process_id() const {
-        return process_id_.load(fbl::memory_order_relaxed);
+        return process_id_.load(ktl::memory_order_relaxed);
     }
 
     // Sets the value returned by process_id().
@@ -163,7 +163,7 @@ private:
     // process_id_ is atomic because threads from different processes can
     // access it concurrently, while holding different instances of
     // handle_table_lock_.
-    fbl::atomic<zx_koid_t> process_id_;
+    ktl::atomic<zx_koid_t> process_id_;
     fbl::RefPtr<Dispatcher> dispatcher_;
     const zx_rights_t rights_;
     const uint32_t base_value_;

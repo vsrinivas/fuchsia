@@ -604,7 +604,7 @@ zx_status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags) {
 
         LTRACEF("user aspace: pt phys %#" PRIxPTR ", virt %p\n", pt_->phys(), pt_->virt());
     }
-    fbl::atomic_init(&active_cpus_, 0);
+    ktl::atomic_init(&active_cpus_, 0);
 
     return ZX_OK;
 }

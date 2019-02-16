@@ -8,11 +8,11 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <fbl/atomic.h>
 #include <fbl/canary.h>
 #include <kernel/sched.h>
 #include <kernel/thread.h>
 #include <kernel/wait.h>
+#include <ktl/atomic.h>
 #include <stdint.h>
 #include <zircon/thread_annotations.h>
 
@@ -29,7 +29,7 @@ public:
         DEBUG_ASSERT(!arch_blocking_disallowed());
         canary_.Assert();
         // Attempt the optimistic grab
-        uint64_t prev = state_.fetch_add(kBrwLockReader, fbl::memory_order_acquire);
+        uint64_t prev = state_.fetch_add(kBrwLockReader, ktl::memory_order_acquire);
         // See if there are only readers
         if (unlikely((prev & kBrwLockReaderMask) != prev)) {
             ContendedReadAcquire();
@@ -48,7 +48,7 @@ public:
 
     void ReadRelease() TA_REL_SHARED(this) TA_NO_THREAD_SAFETY_ANALYSIS {
         canary_.Assert();
-        uint64_t prev = state_.fetch_sub(kBrwLockReader, fbl::memory_order_release);
+        uint64_t prev = state_.fetch_sub(kBrwLockReader, ktl::memory_order_release);
         if (unlikely((prev & kBrwLockReaderMask) == 1 && (prev & kBrwLockWaiterMask) != 0)) {
             // there are no readers but still some waiters, becomes our job to wake them up
             ReleaseWakeup();
@@ -137,20 +137,20 @@ private:
         // but this is not free and the performance should be measured and balanced
         // with the risk of failing to perform correct priority inheritance.
         bool success = state_.compare_exchange_weak(
-            &expected_state, kBrwLockWriter, fbl::memory_order_acquire, fbl::memory_order_relaxed);
+            expected_state, kBrwLockWriter, ktl::memory_order_acquire, ktl::memory_order_relaxed);
         if (likely(success)) {
-            writer_.store(ct, fbl::memory_order_relaxed);
+            writer_.store(ct, ktl::memory_order_relaxed);
         } else {
             contended();
         }
 
-        DEBUG_ASSERT(writer_.load(fbl::memory_order_relaxed) == ct);
+        DEBUG_ASSERT(writer_.load(ktl::memory_order_relaxed) == ct);
         ct->mutexes_held++;
     }
 
     fbl::Canary<fbl::magic("RWLK")> canary_;
-    fbl::atomic<uint64_t> state_;
-    fbl::atomic<thread_t*> writer_;
+    ktl::atomic<uint64_t> state_;
+    ktl::atomic<thread_t*> writer_;
     WaitQueue wait_;
 };
 

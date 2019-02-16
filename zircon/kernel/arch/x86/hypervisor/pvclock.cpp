@@ -60,7 +60,7 @@ void calculate_scale_factor(uint64_t tsc_freq, uint32_t* mul, int8_t* shift) {
 
 } // namespace
 
-extern fbl::atomic<int64_t> utc_offset;
+extern ktl::atomic<int64_t> utc_offset;
 
 zx_status_t pvclock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas,
                                      zx_vaddr_t guest_paddr) {

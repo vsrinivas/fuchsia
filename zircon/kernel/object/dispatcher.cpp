@@ -11,8 +11,8 @@
 #include <arch/ops.h>
 #include <lib/ktrace.h>
 #include <lib/counters.h>
-#include <fbl/atomic.h>
 #include <fbl/mutex.h>
+#include <ktl/atomic.h>
 
 #include <object/tls_slots.h>
 
@@ -32,10 +32,10 @@ KCOUNTER(dispatcher_cookie_reset_count, "dispatcher.cookie.reset");
 
 namespace {
 // The first 1K koids are reserved.
-fbl::atomic<zx_koid_t> global_koid(1024ULL);
+ktl::atomic<zx_koid_t> global_koid(1024ULL);
 
 zx_koid_t GenerateKernelObjectId() {
-    return global_koid.fetch_add(1ULL, fbl::memory_order_relaxed);
+    return global_koid.fetch_add(1ULL, ktl::memory_order_relaxed);
 }
 
 // Helper class that safely allows deleting Dispatchers without
