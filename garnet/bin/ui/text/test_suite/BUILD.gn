@@ -4,6 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 
 rustc_binary("test_suite") {
   name = "text_test_suite"
@@ -40,6 +41,19 @@ package("text_test_suite") {
     {
       path = rebase_path("meta/test_suite.cmx")
       dest = "test_suite.cmx"
+    },
+  ]
+}
+
+test_package("text_test_suite_tests") {
+  deps = [
+    ":test_suite",
+  ]
+
+  tests = [
+    {
+      name = "text_test_suite_bin_test"
+      dest = "text_test_suite_unittests"
     },
   ]
 }
