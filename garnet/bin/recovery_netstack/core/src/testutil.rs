@@ -17,7 +17,7 @@ use rand::{SeedableRng, XorShiftRng};
 use crate::device::ethernet::{EtherType, Mac};
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::error::ParseError;
-use crate::ip::{Ip, IpExt, IpPacket, IpProto};
+use crate::ip::{Ip, IpAddr, IpAddress, IpExt, IpPacket, IpProto, IpSubnet, Ipv4Addr, Subnet};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
 use crate::wire::ethernet::EthernetFrame;
@@ -153,6 +153,146 @@ pub fn parse_ip_packet_in_ethernet_frame<I: Ip>(
     let (body, src_mac, dst_mac, ethertype) = parse_ethernet_frame(buf)?;
     let (body, src_ip, dst_ip, proto) = parse_ip_packet::<I>(body)?;
     Ok((body, src_mac, dst_mac, ethertype, src_ip, dst_ip, proto))
+}
+
+/// A configuration for a simple network.
+///
+/// `DummyEventDispatcherConfig` describes a simple network with two IPv4 hosts
+/// - one remote and one local - both on the same Ethernet network.
+pub struct DummyEventDispatcherConfig {
+    /// The subnet of the local Ethernet network.
+    pub subnet: Subnet<Ipv4Addr>,
+    /// The IP address of our interface to the local network (must be in
+    /// subnet).
+    pub local_ip: Ipv4Addr,
+    /// The MAC address of our interface to the local network.
+    pub local_mac: Mac,
+    /// The remote host's IP address (must be in subnet).
+    pub remote_ip: Ipv4Addr,
+    /// The remote host's MAC address.
+    pub remote_mac: Mac,
+}
+
+/// A `DummyEventDispatcherConfig` with reasonable values.
+pub const DUMMY_CONFIG: DummyEventDispatcherConfig = DummyEventDispatcherConfig {
+    subnet: unsafe { Subnet::new_unchecked(Ipv4Addr::new([192, 168, 0, 0]), 16) },
+    local_ip: Ipv4Addr::new([192, 168, 0, 1]),
+    local_mac: Mac::new([0, 1, 2, 3, 4, 5]),
+    remote_ip: Ipv4Addr::new([192, 168, 0, 2]),
+    remote_mac: Mac::new([6, 7, 8, 9, 10, 11]),
+};
+
+/// A builder for `DummyEventDispatcher`s.
+///
+/// A `DummyEventDispatcherBuilder` is capable of storing the configuration of a
+/// network stack including forwarding table entries, devices and their assigned
+/// IP addresses, ARP table entries, etc. It can be built using `build`,
+/// producing a `Context<DummyEventDispatcher>` with all of the appropriate
+/// state configured.
+#[derive(Clone, Default)]
+pub struct DummyEventDispatcherBuilder {
+    devices: Vec<(Mac, Option<(IpAddress, IpSubnet)>)>,
+    arp_table_entries: Vec<(usize, Ipv4Addr, Mac)>,
+    // usize refers to index into devices Vec
+    device_routes: Vec<(IpSubnet, usize)>,
+    routes: Vec<(IpSubnet, IpAddress)>,
+}
+
+impl DummyEventDispatcherBuilder {
+    /// Construct a `DummyEventDispatcherBuilder` from a `DummyEventDispatcherConfig`.
+    pub fn from_config(cfg: DummyEventDispatcherConfig) -> DummyEventDispatcherBuilder {
+        assert!(cfg.subnet.contains(cfg.local_ip));
+        assert!(cfg.subnet.contains(cfg.remote_ip));
+
+        let mut builder = DummyEventDispatcherBuilder::default();
+        builder.devices.push((cfg.local_mac, Some((cfg.local_ip.into(), cfg.subnet.into()))));
+        builder.arp_table_entries.push((0, cfg.remote_ip, cfg.remote_mac));
+        builder.device_routes.push((cfg.subnet.into(), 0));
+        builder
+    }
+
+    /// Add a device.
+    ///
+    /// `add_device` returns a key which can be used to refer to the device in
+    /// future calls to `add_arp_table_entry` and `add_device_route`.
+    pub fn add_device(&mut self, mac: Mac) -> usize {
+        let idx = self.devices.len();
+        self.devices.push((mac, None));
+        idx
+    }
+
+    /// Add a device with an associated IP address.
+    ///
+    /// `add_device_with_ip` is like `add_device`, except that it takes an
+    /// associated IP address and subnet to assign to the device.
+    pub fn add_device_with_ip<A: IpAddr>(&mut self, mac: Mac, ip: A, subnet: Subnet<A>) -> usize {
+        let idx = self.devices.len();
+        self.devices.push((mac, Some((ip.into(), subnet.into()))));
+        idx
+    }
+
+    /// Add an ARP table entry for a device's ARP table.
+    pub fn add_arp_table_entry(&mut self, device: usize, ip: Ipv4Addr, mac: Mac) {
+        self.arp_table_entries.push((device, ip, mac));
+    }
+
+    /// Add a route to the forwarding table.
+    pub fn add_route<A: IpAddr>(&mut self, subnet: Subnet<A>, next_hop: A) {
+        self.routes.push((subnet.into(), next_hop.into()));
+    }
+
+    /// Add a device route to the forwarding table.
+    pub fn add_device_route<A: IpAddr>(&mut self, subnet: Subnet<A>, device: usize) {
+        self.device_routes.push((subnet.into(), device));
+    }
+
+    /// Build a `Context<DummyEventDispatcher>` from the present configuration.
+    pub fn build(self) -> Context<DummyEventDispatcher> {
+        let mut ctx = Context::default();
+
+        let DummyEventDispatcherBuilder { devices, arp_table_entries, device_routes, routes } =
+            self;
+        let mut idx_to_device_id =
+            HashMap::<_, _, std::collections::hash_map::RandomState>::default();
+        for (idx, (mac, ip_subnet)) in devices.into_iter().enumerate() {
+            let id = ctx.state().add_ethernet_device(mac);
+            idx_to_device_id.insert(idx, id);
+            match ip_subnet {
+                Some((IpAddress::V4(ip), IpSubnet::V4(subnet))) => {
+                    crate::device::set_ip_addr(&mut ctx, id, ip, subnet)
+                }
+                Some((IpAddress::V6(ip), IpSubnet::V6(subnet))) => {
+                    crate::device::set_ip_addr(&mut ctx, id, ip, subnet)
+                }
+                None => {}
+                _ => unreachable!(),
+            }
+        }
+        for (idx, ip, mac) in arp_table_entries {
+            let device = *idx_to_device_id.get(&idx).unwrap();
+            crate::device::ethernet::insert_arp_table_entry(&mut ctx, device.id(), ip, mac);
+        }
+        for (subnet, idx) in device_routes {
+            let device = *idx_to_device_id.get(&idx).unwrap();
+            match subnet {
+                IpSubnet::V4(subnet) => crate::ip::add_device_route(&mut ctx, subnet, device),
+                IpSubnet::V6(subnet) => crate::ip::add_device_route(&mut ctx, subnet, device),
+            }
+        }
+        for (subnet, next_hop) in routes {
+            match (subnet, next_hop) {
+                (IpSubnet::V4(subnet), IpAddress::V4(next_hop)) => {
+                    crate::ip::add_route(&mut ctx, subnet, next_hop)
+                }
+                (IpSubnet::V6(subnet), IpAddress::V6(next_hop)) => {
+                    crate::ip::add_route(&mut ctx, subnet, next_hop)
+                }
+                _ => unreachable!(),
+            }
+        }
+
+        ctx
+    }
 }
 
 /// A dummy `EventDispatcher` used for testing.

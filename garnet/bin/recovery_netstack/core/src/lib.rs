@@ -76,6 +76,7 @@ impl<D: EventDispatcher> StackState<D> {
 /// `Context` provides access to the state of the netstack and to an event
 /// dispatcher which can be used to emit events and schedule timeouts. A mutable
 /// reference to a `Context` is passed to every function in the netstack.
+#[derive(Default)]
 pub struct Context<D: EventDispatcher> {
     state: StackState<D>,
     dispatcher: D,
