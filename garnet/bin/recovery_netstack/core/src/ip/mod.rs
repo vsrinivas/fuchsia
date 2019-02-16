@@ -56,6 +56,39 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddr, B: BufferMut>(
     }
 }
 
+/// Drop a packet and extract some of the fields.
+///
+/// `drop_packet!` saves the results of the `src_ip()`, `dst_ip()`, `proto()`,
+/// and `parse_metadata()` methods, drops the packet, and returns them. This
+/// exposes the buffer that the packet was borrowed from so that it can be used
+/// directly again.
+macro_rules! drop_packet {
+    ($packet:expr) => {{
+        let src_ip = $packet.src_ip();
+        let dst_ip = $packet.dst_ip();
+        let proto = $packet.proto();
+        let meta = $packet.parse_metadata();
+        mem::drop($packet);
+        (src_ip, dst_ip, proto, meta)
+    }};
+}
+
+/// Drop a packet and undo the effects of parsing it.
+///
+/// `drop_packet_and_undo_parse!` takes a `$packet` and a `$buffer` which the
+/// packet was parsed from. It saves the results of the `src_ip()`, `dst_ip()`,
+/// `proto()`, and `parse_metadata()` methods. It drops `$packet` and uses the
+/// result of `parse_metadata()` to undo the effects of parsing the packet.
+/// Finally, it returns the source IP, destination IP, protocol, and parse
+/// metadata.
+macro_rules! drop_packet_and_undo_parse {
+    ($packet:expr, $buffer:expr) => {{
+        let (src_ip, dst_ip, proto, meta) = drop_packet!($packet);
+        $buffer.undo_parse(meta);
+        (src_ip, dst_ip, proto, meta)
+    }};
+}
+
 /// Receive an IP packet from a device.
 pub fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
     ctx: &mut Context<D>,
@@ -82,23 +115,14 @@ pub fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
         // TODO(joshlf):
         // - Do something with ICMP if we don't have a handler for that protocol?
         // - Check for already-expired TTL?
-        let proto = packet.proto();
-        let src_ip = packet.src_ip();
-        let dst_ip = packet.dst_ip();
-        // drop packet so we can re-use the underlying buffer
-        mem::drop(packet);
+        let (src_ip, dst_ip, proto, _) = drop_packet!(packet);
         dispatch_receive_ip_packet(ctx, proto, src_ip, dst_ip, buffer);
     } else if let Some(dest) = forward(ctx, packet.dst_ip()) {
         let ttl = packet.ttl();
         if ttl > 1 {
             trace!("receive_ip_packet: forwarding");
             packet.set_ttl(ttl - 1);
-            let meta = packet.parse_metadata();
-            // drop packet so we can re-use the underlying buffer
-            mem::drop(packet);
-            // Undo the effects of parsing so that the body of the buffer
-            // contains the entire IP packet again (not just the body).
-            buffer.undo_parse(meta);
+            drop_packet_and_undo_parse!(packet, buffer);
             crate::device::send_ip_frame(
                 ctx,
                 dest.device,
