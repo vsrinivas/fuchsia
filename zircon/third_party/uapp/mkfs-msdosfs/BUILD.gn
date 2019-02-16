@@ -1,0 +1,17 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+host_tool("mkfs-msdosfs") {
+  sources = [
+    "mkfs_msdos.c",
+    "mkfs_msdos.h",
+    "newfs_msdos.c",
+  ]
+  if (is_host) {
+    defines = [
+      "_XOPEN_SOURCE",
+      "_GNU_SOURCE",
+    ]
+  }
+}

@@ -136,6 +136,15 @@ config("compiler") {
     }
   }
 
+  if (is_host) {
+    configs += [ ":static-libc++" ]
+
+    # For host tools without C++, ignore the unused arguments.
+    if (!is_gcc) {
+      ldflags += [ "-Wno-unused-command-line-argument" ]
+    }
+  }
+
   include_dirs = toolchain.include_dirs
   lib_dirs = toolchain.lib_dirs
 
@@ -146,6 +155,13 @@ config("compiler") {
 
 config("language") {
   cflags_c = [ "-std=c11" ]
+  cflags_cc = [ "-std=c++17" ]
+  if (current_os == "mac") {
+    # macOS needs this to not complain about C++17isms that older macOS
+    # system libc++ doesn't support.  But we use our own toolchain's static
+    # libc++ anyway.
+    cflags_cc += [ "-faligned-allocation" ]
+  }
 }
 
 config("color_diagnostics") {
@@ -334,6 +350,31 @@ config("icf") {
   }
 }
 
+config("exceptions") {
+  cflags_cc = [ "-fexceptions" ]
+  cflags_objcc = cflags_cc
+}
+
+config("no_exceptions") {
+  cflags_cc = [ "-fno-exceptions" ]
+  cflags_objcc = cflags_cc
+}
+
+config("rtti") {
+  cflags_cc = [ "-frtti" ]
+  cflags_objcc = cflags_cc
+}
+
+config("no_rtti") {
+  cflags_cc = [ "-fno-rtti" ]
+  cflags_objcc = cflags_cc
+}
+
+config("no_threadsafe_statics") {
+  cflags_cc = [ "-fno-threadsafe-statics" ]
+  cflags_objcc = cflags_cc
+}
+
 config("default_include_dirs") {
   include_dirs = [
     "$zx/system/public",
@@ -357,4 +398,22 @@ config("frame_pointers") {
 config("no_frame_pointers") {
   defines = [ "WITH_FRAME_POINTERS=0" ]
   cflags = [ "-fomit-frame-pointer" ]
+}
+
+config("thread_safety_annotations") {
+  if (!is_gcc) {
+    cflags = [ "-Wthread-safety" ]
+    defines = [ "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS=1" ]
+  }
+}
+
+config("static-libc++") {
+  ldflags = [ "-static-libstdc++" ]
+  if (current_os == "linux") {
+    # TODO(TC-74): The implicitly linked static libc++.a depends on these.
+    libs = [
+      "dl",
+      "pthread",
+    ]
+  }
 }

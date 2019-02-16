@@ -7,6 +7,8 @@
 # such as abigen.
 group("tools") {
   deps = [
+    "$zx/third_party/uapp/mkfs-msdosfs",
+    "kernel-buildsig",
     "loglistener",
   ]
 }

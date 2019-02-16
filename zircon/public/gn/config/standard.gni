@@ -38,6 +38,10 @@ standard_configs = [
   "$zx/public/gn/config:default_include_dirs",
   "$zx/public/gn/config:default_frame_pointers",
   "$zx/public/gn/config:default_linker_gc",
+  "$zx/public/gn/config:no_exceptions",
+  "$zx/public/gn/config:no_rtti",
+  "$zx/public/gn/config:no_threadsafe_statics",
+  "$zx/public/gn/config:thread_safety_annotations",
 ]
 
 # This list has the same structure as $variants (see
