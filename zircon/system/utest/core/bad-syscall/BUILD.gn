@@ -1,0 +1,20 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/kernel/params.gni")
+
+source_set("bad-syscall") {
+  testonly = true
+  sources = [
+    "bad-syscall.c",
+    "syscall.S",
+  ]
+  defines = [ "KERNEL_ASPACE_BASE=$kernel_aspace_base" ]
+  deps = [
+    "$zx/kernel/syscalls:syscall-abi",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+  ]
+}

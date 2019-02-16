@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("inspect-vmo") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/inspect-vmo/snapshot.h",
+    "lib/inspect-vmo/scanner.h",
+    "lib/inspect-vmo/inspect.h",
+    "lib/inspect-vmo/types.h",
+    "lib/inspect-vmo/heap.h",
+    "lib/inspect-vmo/block.h",
+    "lib/inspect-vmo/state.h",
+    "lib/inspect-vmo/limits.h",
+  ]
+  sources = [
+    "heap.cpp",
+    "inspect.cpp",
+    "scanner.cpp",
+    "snapshot.cpp",
+    "state.cpp",
+    "types.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/syslog",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

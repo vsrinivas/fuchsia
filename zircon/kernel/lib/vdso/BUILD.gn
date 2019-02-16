@@ -22,11 +22,10 @@ library("vdso") {
   # touched when libzircon.so has been touched and thus ensure vdso-image.S
   # is reassembled with the new vDSO contents.
   if (is_kernel) {
-    include_dirs = [ target_gen_dir ]
     deps = [
       ":gen-categories",
-      ":gen-vdso-code-header",
       ":rodso",
+      ":vdso-code-header",
       "$zx/kernel/lib/version:config-buildid-header",
       "$zx/kernel/syscalls",
       "$zx/kernel/vm:headers",
@@ -88,6 +87,12 @@ group("vdso-code-header") {
   deps = [
     ":gen-vdso-code-header",
   ]
+  public_configs = [ ":vdso-code-header.config" ]
+}
+
+config("vdso-code-header.config") {
+  visibility = [ ":vdso-code-header" ]
+  include_dirs = [ target_gen_dir ]
 }
 
 # This generated header file tells the vdso.cpp code

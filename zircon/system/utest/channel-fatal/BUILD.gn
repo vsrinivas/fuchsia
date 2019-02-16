@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/toolchain/environment_redirect.gni")
+
+test("channel-fatal") {
+  sources = [
+    "channel-fatal-test.c",
+  ]
+  deps = [
+    ":vdso-code-header",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/launchpad",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+environment_redirect("vdso-code-header") {
+  environment_label = "$zx/kernel"
+  deps = [
+    "$zx/kernel/lib/vdso:vdso-code-header",
+  ]
+}

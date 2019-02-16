@@ -4,10 +4,11 @@
 
 # Each subdirectory just provides an eponymous source_set().
 core_tests = [
-  # TODO: "bad-syscall", "channel",
+  "bad-syscall",
   "c11-condvar",
   "c11-mutex",
   "c11-thread",
+  "channel",
   "clock",
   "cookies",
   "echo",
