@@ -16,7 +16,6 @@
 #include <fuchsia/minfs/c/fidl.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/device/block.h>
-#include <zircon/device/device.h>
 #include <zircon/types.h>
 
 #include <utility>

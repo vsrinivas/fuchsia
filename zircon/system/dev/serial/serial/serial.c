@@ -162,17 +162,17 @@ static void platform_serial_state_cb(void* cookie, serial_state_t state) {
 
     if (state & SERIAL_STATE_READABLE) {
         event_set |= EVENT_READABLE_SIGNAL;
-        device_set |= DEVICE_SIGNAL_READABLE;
+        device_set |= DEV_STATE_READABLE;
     } else {
         event_clear |= EVENT_READABLE_SIGNAL;
-        device_clear |= DEVICE_SIGNAL_READABLE;
+        device_clear |= DEV_STATE_READABLE;
     }
     if (state & SERIAL_STATE_WRITABLE) {
         event_set |= EVENT_WRITABLE_SIGNAL;
-        device_set |= DEVICE_SIGNAL_WRITABLE;
+        device_set |= DEV_STATE_WRITABLE;
     } else {
         event_clear |= EVENT_WRITABLE_SIGNAL;
-        device_clear |= DEVICE_SIGNAL_WRITABLE;
+        device_clear |= DEV_STATE_WRITABLE;
     }
 
     if (port->socket != ZX_HANDLE_INVALID) {

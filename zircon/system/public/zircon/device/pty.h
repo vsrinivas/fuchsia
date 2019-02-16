@@ -5,7 +5,6 @@
 #pragma once
 
 #include <stdint.h>
-#include <zircon/device/device.h>
 #include <zircon/device/ioctl-wrapper.h>
 #include <zircon/device/ioctl.h>
 #include <zircon/types.h>
@@ -77,7 +76,7 @@ typedef struct {
 
 // When an event is pending, this signal is asserted
 // On the Controlling Client PTY
-#define PTY_SIGNAL_EVENT DEVICE_SIGNAL_OOB
+#define PTY_SIGNAL_EVENT ZX_USER_SIGNAL_1 // This lines up with fuchsia.device.DEVICE_SIGNAL_OOB
 
 // IOCTLs allowed on the Server PTY
 // --------------------------------

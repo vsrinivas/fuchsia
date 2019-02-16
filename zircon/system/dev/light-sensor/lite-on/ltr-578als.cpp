@@ -5,6 +5,7 @@
 #include "ltr-578als.h"
 
 #include <ddktl/pdev.h>
+#include <endian.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 

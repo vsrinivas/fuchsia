@@ -19,7 +19,6 @@
 #include <lib/fdio/unsafe.h>
 #include <pretty/hexdump.h>
 #include <zircon/device/block.h>
-#include <zircon/device/device.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 

@@ -7,6 +7,7 @@
 
 #include <zircon/compiler.h>
 #include <zircon/device/ioctl.h>
+#include <zircon/device/ioctl-wrapper.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS

@@ -8,7 +8,6 @@
 #include <string.h>
 
 #include <zircon/assert.h>
-#include <zircon/device/device.h>
 
 ParentDevice::ParentDevice(const TestConfig& config) : config_(config) {
     if (config_.path) {

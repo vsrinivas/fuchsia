@@ -18,7 +18,6 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/debug.h>
 #include <lib/fdio/io.h>
-#include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>

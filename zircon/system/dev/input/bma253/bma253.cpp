@@ -8,6 +8,7 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/pdev.h>
+#include <endian.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 

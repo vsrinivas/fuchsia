@@ -16,7 +16,6 @@
 #include <lib/fdio/util.h>
 #include <lib/fxl/logging.h>
 #include <lib/zx/resource.h>
-#include <zircon/device/device.h>
 
 #include "garnet/bin/cobalt/system-metrics/metrics_registry.cb.h"
 #include "garnet/bin/cobalt/utils/clock.h"

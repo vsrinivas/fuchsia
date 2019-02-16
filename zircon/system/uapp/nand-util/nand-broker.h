@@ -8,7 +8,6 @@
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/channel.h>
-#include <zircon/device/device.h>
 
 // Broker device wrapper.
 class NandBroker {

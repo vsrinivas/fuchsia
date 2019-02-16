@@ -21,6 +21,7 @@
 #include <lib/fzl/vmar-manager.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
 #include <zircon/compiler.h>
 
 namespace eth {

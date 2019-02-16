@@ -6,7 +6,6 @@
 #include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
 #include <zircon/assert.h>
-#include <zircon/device/device.h>
 
 #include "libgpt-tests.h"
 

@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <threads.h>
 #include <unistd.h>
 

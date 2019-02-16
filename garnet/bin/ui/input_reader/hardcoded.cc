@@ -25,7 +25,6 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <trace/event.h>
-#include <zircon/device/device.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 

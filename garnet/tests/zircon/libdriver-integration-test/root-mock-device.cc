@@ -17,7 +17,6 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/util.h>
 #include <zircon/assert.h>
-#include <zircon/device/device.h>
 
 #define DRIVER_TEST_DIR "/boot/driver/test"
 #define MOCK_DEVICE_LIB "/boot/driver/test/mock-device.so"

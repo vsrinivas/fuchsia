@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <string.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <ddk/debug.h>

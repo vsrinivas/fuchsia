@@ -5,7 +5,6 @@
 #pragma once
 
 #include <zircon/compiler.h>
-#include <zircon/device/device.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 #include <zircon/listnode.h>
@@ -279,14 +278,16 @@ zx_status_t device_add_metadata(zx_device_t* dev, uint32_t type, const void* dat
 zx_status_t device_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
                                     const void* data, size_t length);
 
-// Device State Change Functions
+// Device State Change Functions.  These match up with the signals defined in
+// the fuchsia.device.Controller interface.
+//
 //@ #### Device State Bits
 //{
-#define DEV_STATE_READABLE DEVICE_SIGNAL_READABLE
-#define DEV_STATE_WRITABLE DEVICE_SIGNAL_WRITABLE
-#define DEV_STATE_ERROR DEVICE_SIGNAL_ERROR
-#define DEV_STATE_HANGUP DEVICE_SIGNAL_HANGUP
-#define DEV_STATE_OOB DEVICE_SIGNAL_OOB
+#define DEV_STATE_READABLE ZX_USER_SIGNAL_0
+#define DEV_STATE_WRITABLE ZX_USER_SIGNAL_2
+#define DEV_STATE_ERROR    ZX_USER_SIGNAL_3
+#define DEV_STATE_HANGUP   ZX_USER_SIGNAL_4
+#define DEV_STATE_OOB      ZX_USER_SIGNAL_1
 //}
 
 void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_signals_t setflag);

@@ -179,11 +179,6 @@ zx_status_t Bcache::SetSparse(off_t offset, const fbl::Vector<size_t>& extent_le
     return ZX_OK;
 }
 
-// This is used by the ioctl wrappers in zircon/device/device.h. It's not
-// called by host tools, so just satisfy the linker with a stub.
-ssize_t fdio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
-    return -1;
-}
 #endif
 
 } // namespace minfs

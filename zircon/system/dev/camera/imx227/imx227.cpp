@@ -9,6 +9,7 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/camera.h>
 #include <ddk/protocol/i2c-lib.h>
+#include <endian.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

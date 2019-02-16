@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/util.h>
 #include <string.h>
-#include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
@@ -32,11 +32,11 @@ static_assert(fuchsia_io_VMO_FLAG_EXEC == ZX_VM_PERM_EXECUTE,
               "Vmar / Vmo flags should be aligned");
 
 static_assert(ZX_USER_SIGNAL_0 == (1 << POLL_SHIFT), "");
-static_assert((POLLIN << POLL_SHIFT) == DEVICE_SIGNAL_READABLE, "");
-static_assert((POLLPRI << POLL_SHIFT) == DEVICE_SIGNAL_OOB, "");
-static_assert((POLLOUT << POLL_SHIFT) == DEVICE_SIGNAL_WRITABLE, "");
-static_assert((POLLERR << POLL_SHIFT) == DEVICE_SIGNAL_ERROR, "");
-static_assert((POLLHUP << POLL_SHIFT) == DEVICE_SIGNAL_HANGUP, "");
+static_assert((POLLIN << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_READABLE, "");
+static_assert((POLLPRI << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_OOB, "");
+static_assert((POLLOUT << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_WRITEABLE, "");
+static_assert((POLLERR << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_ERROR, "");
+static_assert((POLLHUP << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_HANGUP, "");
 
 // The |mode| argument used for |fuchsia.io.Directory/Open| calls.
 #define FDIO_CONNECT_MODE ((uint32_t)0755)

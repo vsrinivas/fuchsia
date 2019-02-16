@@ -387,6 +387,7 @@ zx_status_t pty_server_send(pty_server_t* ps, const void* data, size_t len, bool
                 ps->events |= evt;
                 zxlogf(TRACE, "PTY Client %p event %x\n", ps, evt);
                 if (ps->control) {
+                    static_assert(PTY_SIGNAL_EVENT == DEV_STATE_OOB);
                     device_state_set(ps->control->zxdev, PTY_SIGNAL_EVENT);
                 }
             }
