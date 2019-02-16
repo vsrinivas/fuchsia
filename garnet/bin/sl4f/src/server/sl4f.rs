@@ -22,6 +22,9 @@ use crate::server::sl4f_types::{
     AsyncRequest, AsyncResponse, ClientData, CommandRequest, CommandResponse,
 };
 
+// Audio related includes
+use crate::audio::facade::AudioFacade;
+
 // Bluetooth related includes
 use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
 use crate::bluetooth::facade::BluetoothFacade;
@@ -43,6 +46,9 @@ use crate::wlan::facade::WlanFacade;
 /// the impl functions. Then, update method_to_fidl() to support the "wlan" method type.
 #[derive(Debug, Clone)]
 pub struct Sl4f {
+    // audio_facade: Thread safe object for state for Audio tests
+    audio_facade: Arc<AudioFacade>,
+
     // bt_facade: Thread safe object for state for ble functions.
     ble_advertise_facade: Arc<BleAdvertiseFacade>,
 
@@ -72,6 +78,7 @@ pub struct Sl4f {
 
 impl Sl4f {
     pub fn new() -> Result<Arc<RwLock<Sl4f>>, Error> {
+        let audio_facade = Arc::new(AudioFacade::new()?);
         let ble_advertise_facade = Arc::new(BleAdvertiseFacade::new());
         let gatt_client_facade = Arc::new(GattClientFacade::new());
         let gatt_server_facade = Arc::new(GattServerFacade::new());
@@ -79,6 +86,7 @@ impl Sl4f {
         let scenic_facade = Arc::new(ScenicFacade::new());
         let wlan_facade = Arc::new(WlanFacade::new()?);
         Ok(Arc::new(RwLock::new(Sl4f {
+            audio_facade,
             ble_advertise_facade,
             bt_facade: BluetoothFacade::new(),
             gatt_client_facade,
@@ -92,6 +100,10 @@ impl Sl4f {
 
     pub fn get_netstack_facade(&self) -> Arc<NetstackFacade> {
         self.netstack_facade.clone()
+    }
+
+    pub fn get_audio_facade(&self) -> Arc<AudioFacade> {
+        self.audio_facade.clone()
     }
 
     pub fn get_ble_advertise_facade(&self) -> Arc<BleAdvertiseFacade> {

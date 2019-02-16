@@ -15,6 +15,7 @@ use parking_lot::RwLock;
 use std::sync::Arc;
 use std::thread;
 
+mod audio;
 mod bluetooth;
 mod netstack;
 mod scenic;

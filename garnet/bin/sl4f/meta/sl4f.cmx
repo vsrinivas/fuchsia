@@ -11,6 +11,7 @@
             "fuchsia.bluetooth.le.Peripheral",
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
+            "fuchsia.media.Audio",
             "fuchsia.net.SocketProvider",
             "fuchsia.net.stack.Stack",
             "fuchsia.sys.Launcher",

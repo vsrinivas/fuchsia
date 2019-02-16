@@ -16,6 +16,7 @@ use crate::server::sl4f::Sl4f;
 use crate::server::sl4f_types::{AsyncRequest, AsyncResponse, FacadeType};
 
 // Translation layers go here (i.e netstack_method_to_fidl)
+use crate::audio::commands::audio_method_to_fidl;
 use crate::bluetooth::commands::ble_advertise_method_to_fidl;
 use crate::bluetooth::commands::ble_method_to_fidl;
 use crate::bluetooth::commands::gatt_client_method_to_fidl;
@@ -79,6 +80,9 @@ async fn method_to_fidl(
     sl4f_session: Arc<RwLock<Sl4f>>,
 ) -> Result<Value, Error> {
     match FacadeType::from_str(&method_type) {
+        FacadeType::AudioFacade => {
+            await!(audio_method_to_fidl(method_name, args, sl4f_session.read().get_audio_facade(),))
+        }
         FacadeType::BleAdvertiseFacade => await!(ble_advertise_method_to_fidl(
             method_name,
             args,
