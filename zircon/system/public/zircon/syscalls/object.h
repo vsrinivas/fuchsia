@@ -73,7 +73,7 @@ typedef struct zx_info_handle_count {
 
 typedef struct zx_info_process_handle_stats {
     // The number of outstanding handles to kernel objects of each type.
-    uint32_t handle_count[64];
+    uint32_t handle_count[ZX_OBJ_TYPE_UPPER_BOUND];
 } zx_info_process_handle_stats_t;
 
 typedef struct zx_info_process {

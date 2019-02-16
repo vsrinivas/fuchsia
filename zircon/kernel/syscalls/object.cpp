@@ -605,7 +605,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
             return status;
 
         zx_info_process_handle_stats_t info = {};
-        static_assert(fbl::count_of(info.handle_count) >= ZX_OBJ_TYPE_LAST,
+        static_assert(fbl::count_of(info.handle_count) >= ZX_OBJ_TYPE_UPPER_BOUND,
                       "Need room for each handle type.");
 
         process->ForEachHandle([&](zx_handle_t handle, zx_rights_t rights,

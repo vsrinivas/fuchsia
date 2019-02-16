@@ -60,8 +60,6 @@ static void DumpProcessListKeyMap() {
 }
 
 static const char* ObjectTypeToString(zx_obj_type_t type) {
-    static_assert(ZX_OBJ_TYPE_LAST == 29, "need to update switch below");
-
     switch (type) {
         case ZX_OBJ_TYPE_PROCESS: return "process";
         case ZX_OBJ_TYPE_THREAD: return "thread";
@@ -115,9 +113,7 @@ static uint32_t BuildHandleStats(const ProcessDispatcher& pd,
 // buffer as strings.
 static void FormatHandleTypeCount(const ProcessDispatcher& pd,
                                   char *buf, size_t buf_len) {
-    static_assert(ZX_OBJ_TYPE_LAST == 29, "need to update table below");
-
-    uint32_t types[ZX_OBJ_TYPE_LAST] = {0};
+    uint32_t types[ZX_OBJ_TYPE_UPPER_BOUND] = {0};
     uint32_t handle_count = BuildHandleStats(pd, types, sizeof(types));
 
     snprintf(buf, buf_len, "%4u: %4u %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u",
@@ -146,7 +142,7 @@ void DumpProcessList() {
     printf("%7s  #h:  #jb #pr #th #vo #vm #ch #ev #po #so #tm #fi #?? [name]\n", "id");
 
     auto walker = MakeProcessWalker([](ProcessDispatcher* process) {
-        char handle_counts[(ZX_OBJ_TYPE_LAST * 4) + 1 + /*slop*/ 16];
+        char handle_counts[(ZX_OBJ_TYPE_UPPER_BOUND * 4) + 1 + /*slop*/ 16];
         FormatHandleTypeCount(*process, handle_counts, sizeof(handle_counts));
 
         char pname[ZX_MAX_NAME_LEN];

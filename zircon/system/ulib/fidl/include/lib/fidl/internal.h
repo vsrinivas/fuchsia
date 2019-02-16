@@ -211,7 +211,7 @@ struct FidlCodedHandle {
     constexpr FidlCodedHandle(uint32_t handle_subtype, FidlNullability nullable)
         : handle_subtype(handle_subtype), nullable(nullable) {}
 
-    static_assert(ZX_OBJ_TYPE_LAST <= UINT32_MAX, "");
+    static_assert(ZX_OBJ_TYPE_UPPER_BOUND <= UINT32_MAX, "");
 };
 
 struct FidlCodedString {

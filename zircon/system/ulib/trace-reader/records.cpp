@@ -45,8 +45,6 @@ const char* ThreadStateToString(ThreadState state) {
 }
 
 const char* ObjectTypeToString(zx_obj_type_t type) {
-    static_assert(ZX_OBJ_TYPE_LAST == 29, "need to update switch below");
-
     switch (type) {
     case ZX_OBJ_TYPE_PROCESS:
         return "process";

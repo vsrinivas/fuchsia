@@ -308,7 +308,7 @@ private:
             } else {
                 printf(",\n   \"handle_stats\": {");
                 size_t count = 0;
-                for (zx_obj_type_t i = 0; i < ZX_OBJ_TYPE_LAST; i++) {
+                for (zx_obj_type_t i = 0; i < ZX_OBJ_TYPE_UPPER_BOUND; i++) {
                     if (!info.handle_count[i]) {
                         continue;
                     }

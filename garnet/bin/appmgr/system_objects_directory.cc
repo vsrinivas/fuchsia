@@ -83,7 +83,7 @@ SystemObjectsDirectory::SystemObjectsDirectory(zx::process process)
         auto handle_count_dir = component::ObjectDir::Make("handle_count");
 
         for (zx_obj_type_t obj_type = ZX_OBJ_TYPE_NONE;
-             obj_type < ZX_OBJ_TYPE_LAST; ++obj_type) {
+             obj_type < ZX_OBJ_TYPE_UPPER_BOUND; ++obj_type) {
           handle_count_dir.set_metric(
               obj_type_get_name(obj_type),
               component::UIntMetric(

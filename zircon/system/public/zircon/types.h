@@ -338,7 +338,12 @@ typedef uint32_t zx_obj_type_t;
 #define ZX_OBJ_TYPE_PMT             ((zx_obj_type_t)26u)
 #define ZX_OBJ_TYPE_SUSPEND_TOKEN   ((zx_obj_type_t)27u)
 #define ZX_OBJ_TYPE_PAGER           ((zx_obj_type_t)28u)
-#define ZX_OBJ_TYPE_LAST            ((zx_obj_type_t)29u)
+
+// System ABI commits to having no more than 64 object types.
+//
+// See zx_info_process_handle_stats_t for an example of a binary interface that
+// depends on having an upper bound for the number of object types.
+#define ZX_OBJ_TYPE_UPPER_BOUND     ((zx_obj_type_t)64u)
 
 typedef struct zx_handle_info {
     zx_handle_t handle;
