@@ -19,7 +19,6 @@
 #include <ddk/driver.h>
 #include <lib/sync/completion.h>
 
-#include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
 
 #include <zircon/processargs.h>
@@ -152,112 +151,6 @@ static ssize_t do_sync_io(const fbl::RefPtr<zx_device_t>& dev, uint32_t opcode, 
         return r;
     } else {
         return actual;
-    }
-}
-
-static ssize_t do_ioctl(const fbl::RefPtr<zx_device_t>& dev, uint32_t op, const void* in_buf,
-                        size_t in_len, void* out_buf, size_t out_len, size_t* out_actual) {
-    zx_status_t r;
-    switch (op) {
-    case IOCTL_DEVICE_BIND: {
-        char* drv_libname = in_len > 0 ? (char*)in_buf : nullptr;
-        if (in_len > PATH_MAX) {
-            return ZX_ERR_BAD_PATH;
-        }
-        drv_libname[in_len] = 0;
-        // BUG(ZX-3431): The line below is buggy due to misplaced parenthesis.
-        // This code will be deleted soon, but we don't want to change the
-        // behavior as part of migrating off of ioctls
-        if ((r = device_bind(dev, drv_libname) < 0)) {
-            return r;
-        }
-        *out_actual = r;
-        return ZX_OK;
-    }
-    case IOCTL_DEVICE_GET_EVENT_HANDLE: {
-        if (out_len < sizeof(zx_handle_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        auto raw_event = static_cast<zx_handle_t*>(out_buf);
-        zx::eventpair event;
-        if ((r = dev->event.duplicate(ZX_RIGHTS_BASIC, &event)) != ZX_OK) {
-            return r;
-        }
-        *raw_event = event.release();
-        *out_actual = sizeof(zx_handle_t);
-        return ZX_OK;
-    }
-    case IOCTL_DEVICE_GET_DRIVER_NAME: {
-        if (!dev->driver) {
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-        const char* name = dev->driver->name();
-        if (name == nullptr) {
-            name = "unknown";
-        }
-        size_t len = strlen(name);
-        if (out_len <= len) {
-            r = ZX_ERR_BUFFER_TOO_SMALL;
-        } else {
-            strncpy(static_cast<char*>(out_buf), name, len);
-            *out_actual = len;
-            r = ZX_OK;
-        }
-        return r;
-    }
-    case IOCTL_DEVICE_GET_DEVICE_NAME: {
-        size_t actual = strlen(dev->name) + 1;
-        if (out_len < actual) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        memcpy(out_buf, dev->name, actual);
-        *out_actual = actual;
-        return ZX_OK;
-    }
-    case IOCTL_DEVICE_GET_TOPO_PATH: {
-        size_t actual;
-        if ((r = devhost_get_topo_path(dev, static_cast<char*>(out_buf), out_len, &actual)) < 0) {
-            return r;
-        }
-        *out_actual = actual;
-        return ZX_OK;
-    }
-    case IOCTL_DEVICE_DEBUG_SUSPEND: {
-        return dev->SuspendOp(0);
-    }
-    case IOCTL_DEVICE_DEBUG_RESUME: {
-        return dev->ResumeOp(0);
-    }
-    case IOCTL_DEVICE_GET_DRIVER_LOG_FLAGS: {
-        if (!dev->driver) {
-            return ZX_ERR_UNAVAILABLE;
-        }
-        if (out_len < sizeof(uint32_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        *((uint32_t*)out_buf) = dev->driver->driver_rec()->log_flags;
-        *out_actual = sizeof(uint32_t);
-        return ZX_OK;
-    }
-    case IOCTL_DEVICE_SET_DRIVER_LOG_FLAGS: {
-        if (!dev->driver) {
-            return ZX_ERR_UNAVAILABLE;
-        }
-        if (in_len < sizeof(driver_log_flags_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        driver_log_flags_t* flags = (driver_log_flags_t*)in_buf;
-        dev->driver->driver_rec()->log_flags &= ~flags->clear;
-        dev->driver->driver_rec()->log_flags |= flags->set;
-        *out_actual = sizeof(driver_log_flags_t);
-        return ZX_OK;
-    }
-    case IOCTL_DEVICE_UNBIND: {
-        return device_unbind(dev);
-    }
-    default: {
-        return dev->IoctlOp(op, in_buf, in_len, out_buf, out_len, out_actual);
-    }
     }
 }
 
@@ -631,7 +524,7 @@ static zx_status_t fidl_node_ioctl(void* ctx, uint32_t opcode, uint64_t max_out,
     uint8_t out[max_out];
     zx_handle_t* out_handles = (zx_handle_t*)out;
     size_t out_count = 0;
-    ssize_t r = do_ioctl(conn->dev, opcode, in_buf, in_count, out, max_out, &out_count);
+    ssize_t r = conn->dev->IoctlOp(opcode, in_buf, in_count, out, max_out, &out_count);
     size_t out_hcount = 0;
     if (r >= 0) {
         switch (IOCTL_KIND(opcode)) {
