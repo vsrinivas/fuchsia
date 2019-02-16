@@ -26,7 +26,7 @@ library fidl.examples.echo;
 
 [Discoverable]
 interface Echo {
-  1: EchoString(string? value) -> (string? response);
+  EchoString(string? value) -> (string? response);
 };
 ```
 

@@ -91,7 +91,7 @@ using textures as tex;
 interface Frob {
     // "Thing" refers to "Thing" in the "objects" library
     // "tex.Color" refers to "Color" in the "textures" library
-    1: Paint(Thing thing, tex.Color color);
+    Paint(Thing thing, tex.Color color);
 };
 
 struct Thing {
@@ -570,26 +570,26 @@ struct Paint {
 
 ```fidl
 interface Calculator {
-    1: Add(int32 a, int32 b) -> (int32 sum);
-    2: Divide(int32 dividend, int32 divisor)
+    Add(int32 a, int32 b) -> (int32 sum);
+    Divide(int32 dividend, int32 divisor)
     -> (int32 quotient, int32 remainder);
-    3: Clear();
-    4: -> OnClear();
+    Clear();
+    -> OnClear();
 };
 
 interface RealCalculator : Calculator {
-    1001: AddFloats(float32 a, float32 b) -> (float32 sum);
+    AddFloats(float32 a, float32 b) -> (float32 sum);
 };
 
 interface Science {
-    2001: Hypothesize();
-    2002: Investigate();
-    2003: Explode();
-    2004: Reproduce();
+    Hypothesize();
+    Investigate();
+    Explode();
+    Reproduce();
 };
 
 interface ScientificCalculator : RealCalculator, Science {
-    3001: Sin(float32 x) -> (float32 result);
+    Sin(float32 x) -> (float32 result);
 };
 ```
 
