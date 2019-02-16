@@ -14,7 +14,7 @@ use packet::{
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
-use crate::error::ParseError;
+use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ip, IpAddr, IpProto};
 use crate::wire::util::{fits_in_u16, fits_in_u32, Checksum};
 
@@ -107,7 +107,7 @@ impl<B: ByteSlice, A: IpAddr> ParsablePacket<B, UdpParseArgs<A>> for UdpPacket<B
         ParseMetadata::from_packet(self.header.bytes().len(), self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: UdpParseArgs<A>) -> Result<Self, ParseError> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, args: UdpParseArgs<A>) -> ParseResult<Self> {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 
         let buf_len = buffer.len();

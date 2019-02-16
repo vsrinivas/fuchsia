@@ -11,7 +11,7 @@ use packet::{
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::device::ethernet::{EtherType, Mac};
-use crate::error::ParseError;
+use crate::error::{ParseError, ParseResult};
 
 // HeaderPrefix has the same memory layout (thanks to repr(C, packed)) as an
 // Ethernet header prefix. Thus, we can simply reinterpret the bytes of the
@@ -67,7 +67,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for EthernetFrame<B> {
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> Result<Self, ParseError> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> ParseResult<Self> {
         // See for details: https://en.wikipedia.org/wiki/Ethernet_frame#Frame_%E2%80%93_data_link_layer
 
         let hdr_prefix = buffer

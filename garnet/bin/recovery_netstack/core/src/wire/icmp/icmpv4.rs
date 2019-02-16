@@ -10,7 +10,7 @@ use byteorder::{ByteOrder, NetworkEndian};
 use packet::{BufferView, ParsablePacket, ParseMetadata};
 use zerocopy::ByteSlice;
 
-use crate::error::ParseError;
+use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ipv4, Ipv4Addr};
 
 use super::common::{IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpTimeExceeded};
@@ -74,7 +74,7 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv4Addr>> for Icmpv4Packet<B
     fn parse<BV: BufferView<B>>(
         mut buffer: BV,
         args: IcmpParseArgs<Ipv4Addr>,
-    ) -> Result<Self, ParseError> {
+    ) -> ParseResult<Self> {
         macro_rules! mtch {
             ($buffer:expr, $args:expr, $($variant:ident => $type:ty,)*) => {
                 match peek_message_type($buffer.as_ref())? {

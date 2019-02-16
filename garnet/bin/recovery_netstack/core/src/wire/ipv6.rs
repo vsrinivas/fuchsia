@@ -13,7 +13,7 @@ use packet::{
 };
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
-use crate::error::ParseError;
+use crate::error::{ParseError, ParseResult};
 use crate::ip::{IpProto, Ipv6Addr};
 
 // FixedHeader has the same memory layout (thanks to repr(C, packed)) as an IPv6
@@ -92,7 +92,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6Packet<B> {
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> Result<Self, ParseError> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> ParseResult<Self> {
         let total_len = buffer.len();
         let fixed_hdr = buffer
             .take_obj_front::<FixedHeader>()

@@ -12,7 +12,7 @@ use packet::{
 };
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
-use crate::error::ParseError;
+use crate::error::{ParseError, ParseResult};
 use crate::ip::{IpProto, Ipv4Addr, Ipv4Option};
 use crate::wire::util::{Checksum, Options};
 
@@ -101,7 +101,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> Result<Self, ParseError> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> ParseResult<Self> {
         // See for details: https://en.wikipedia.org/wiki/IPv4#Header
 
         let total_len = buffer.len();

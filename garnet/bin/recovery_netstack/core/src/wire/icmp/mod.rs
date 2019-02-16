@@ -29,7 +29,7 @@ use byteorder::{ByteOrder, NetworkEndian};
 use packet::{BufferView, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
-use crate::error::ParseError;
+use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ip, IpAddr, IpProto, Ipv4, Ipv6};
 use crate::wire::ipv4;
 use crate::wire::util::{fits_in_u32, Checksum, OptionImpl, Options};
@@ -95,9 +95,7 @@ impl Header {
 /// Note that `peek_message_type` only inspects certain fields in the header,
 /// and so `peek_message_type` succeeding does not guarantee that a subsequent
 /// call to `parse` will also succeed.
-pub fn peek_message_type<MessageType: TryFrom<u8>>(
-    bytes: &[u8],
-) -> Result<MessageType, ParseError> {
+pub fn peek_message_type<MessageType: TryFrom<u8>>(bytes: &[u8]) -> ParseResult<MessageType> {
     let (header, _) = LayoutVerified::<_, Header>::new_unaligned_from_prefix(bytes)
         .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
     MessageType::try_from(header.msg_type).or_else(|_| {
@@ -192,7 +190,7 @@ pub trait MessageBody<B>: Sized {
     const EXPECTS_BODY: bool = true;
 
     /// Parse the MessageBody from the provided bytes.
-    fn parse(bytes: B) -> Result<Self, ParseError>
+    fn parse(bytes: B) -> ParseResult<Self>
     where
         B: ByteSlice;
 
@@ -210,7 +208,7 @@ pub trait MessageBody<B>: Sized {
 impl<B> MessageBody<B> for () {
     const EXPECTS_BODY: bool = false;
 
-    fn parse(bytes: B) -> Result<(), ParseError>
+    fn parse(bytes: B) -> ParseResult<()>
     where
         B: ByteSlice,
     {
@@ -244,7 +242,7 @@ impl<B: Deref<Target = [u8]>> OriginalPacket<B> {
 }
 
 impl<B> MessageBody<B> for OriginalPacket<B> {
-    fn parse(bytes: B) -> Result<OriginalPacket<B>, ParseError> {
+    fn parse(bytes: B) -> ParseResult<OriginalPacket<B>> {
         return Ok(OriginalPacket(bytes));
     }
 
@@ -264,7 +262,7 @@ impl<B> MessageBody<B> for OriginalPacket<B> {
 }
 
 impl<B, O: for<'a> OptionImpl<'a>> MessageBody<B> for Options<B, O> {
-    fn parse(bytes: B) -> Result<Options<B, O>, ParseError>
+    fn parse(bytes: B) -> ParseResult<Options<B, O>>
     where
         B: ByteSlice,
     {
@@ -362,10 +360,7 @@ impl<B: ByteSlice, I: IcmpIpExt, M: IcmpMessage<I, B>> ParsablePacket<B, IcmpPar
         ParseMetadata::from_packet(header_len, self.message_body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(
-        mut buffer: BV,
-        args: IcmpParseArgs<I::Addr>,
-    ) -> Result<Self, ParseError> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, args: IcmpParseArgs<I::Addr>) -> ParseResult<Self> {
         let header = buffer
             .take_obj_front::<Header>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;

@@ -16,7 +16,7 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::device::arp::{ArpHardwareType, ArpOp};
 use crate::device::ethernet::{EtherType, Mac};
-use crate::error::ParseError;
+use crate::error::{ParseError, ParseResult};
 use crate::ip::Ipv4Addr;
 
 // Header has the same memory layout (thanks to repr(C, packed)) as an ARP
@@ -104,7 +104,7 @@ impl Header {
 /// Note that `peek_arp_types` only inspects certain fields in the header, and
 /// so `peek_arp_types` succeeding does not guarantee that a subsequent call to
 /// `parse` will also succeed.
-pub fn peek_arp_types<B: ByteSlice>(bytes: B) -> Result<(ArpHardwareType, EtherType), ParseError> {
+pub fn peek_arp_types<B: ByteSlice>(bytes: B) -> ParseResult<(ArpHardwareType, EtherType)> {
     let (header, _) = LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes)
         .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
     let hw = ArpHardwareType::from_u16(header.hardware_protocol()).ok_or_else(debug_err_fn!(
@@ -237,7 +237,7 @@ where
         ParseMetadata::from_inner_packet(self.header.bytes().len() + self.body.bytes().len())
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> Result<Self, ParseError> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> ParseResult<Self> {
         let header = buffer
             .take_obj_front::<Header>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;

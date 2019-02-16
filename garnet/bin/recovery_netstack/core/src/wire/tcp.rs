@@ -14,7 +14,7 @@ use packet::{
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
-use crate::error::ParseError;
+use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ip, IpAddr, IpProto};
 use crate::transport::tcp::TcpOption;
 use crate::wire::util::{fits_in_u16, fits_in_u32, Checksum, Options};
@@ -107,7 +107,7 @@ impl<B: ByteSlice, A: IpAddr> ParsablePacket<B, TcpParseArgs<A>> for TcpSegment<
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: TcpParseArgs<A>) -> Result<Self, ParseError> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, args: TcpParseArgs<A>) -> ParseResult<Self> {
         // See for details: https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
 
         let hdr_prefix = buffer

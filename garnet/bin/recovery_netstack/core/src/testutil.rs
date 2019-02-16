@@ -16,7 +16,7 @@ use rand_xorshift::XorShiftRng;
 
 use crate::device::ethernet::{EtherType, Mac};
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
-use crate::error::ParseError;
+use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ip, IpAddr, IpAddress, IpExt, IpPacket, IpProto, IpSubnet, Ipv4Addr, Subnet};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
@@ -113,9 +113,7 @@ pub fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> bool {
 ///
 /// `parse_ethernet_frame` parses an ethernet frame, returning the body along
 /// with some important header fields.
-pub fn parse_ethernet_frame(
-    mut buf: &[u8],
-) -> Result<(&[u8], Mac, Mac, Option<EtherType>), ParseError> {
+pub fn parse_ethernet_frame(mut buf: &[u8]) -> ParseResult<(&[u8], Mac, Mac, Option<EtherType>)> {
     let frame = (&mut buf).parse::<EthernetFrame<_>>()?;
     let src_mac = frame.src_mac();
     let dst_mac = frame.dst_mac();
@@ -127,9 +125,7 @@ pub fn parse_ethernet_frame(
 ///
 /// `parse_ip_packet` parses an IP packet, returning the body along with some
 /// important header fields.
-pub fn parse_ip_packet<I: Ip>(
-    mut buf: &[u8],
-) -> Result<(&[u8], I::Addr, I::Addr, IpProto), ParseError> {
+pub fn parse_ip_packet<I: Ip>(mut buf: &[u8]) -> ParseResult<(&[u8], I::Addr, I::Addr, IpProto)> {
     let packet = (&mut buf).parse::<<I as IpExt<_>>::Packet>()?;
     let src_ip = packet.src_ip();
     let dst_ip = packet.dst_ip();
@@ -158,7 +154,7 @@ pub fn parse_icmp_packet<
     src_ip: I::Addr,
     dst_ip: I::Addr,
     f: F,
-) -> Result<(M, C), ParseError>
+) -> ParseResult<(M, C)>
 where
     for<'a> IcmpPacket<I, &'a [u8], M>:
         ParsablePacket<&'a [u8], IcmpParseArgs<I::Addr>, Error = ParseError>,
@@ -178,7 +174,7 @@ where
 /// from both the IP and Ethernet headers.
 pub fn parse_ip_packet_in_ethernet_frame<I: Ip>(
     buf: &[u8],
-) -> Result<(&[u8], Mac, Mac, I::Addr, I::Addr, IpProto), ParseError> {
+) -> ParseResult<(&[u8], Mac, Mac, I::Addr, I::Addr, IpProto)> {
     use crate::device::ethernet::EthernetIpExt;
     let (body, src_mac, dst_mac, ethertype) = parse_ethernet_frame(buf)?;
     if ethertype != Some(I::ETHER_TYPE) {
@@ -203,7 +199,7 @@ pub fn parse_icmp_packet_in_ip_packet_in_ethernet_frame<
 >(
     mut buf: &[u8],
     f: F,
-) -> Result<(Mac, Mac, I::Addr, I::Addr, M, C), ParseError>
+) -> ParseResult<(Mac, Mac, I::Addr, I::Addr, M, C)>
 where
     for<'a> IcmpPacket<I, &'a [u8], M>:
         ParsablePacket<&'a [u8], IcmpParseArgs<I::Addr>, Error = ParseError>,
