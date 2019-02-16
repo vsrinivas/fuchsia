@@ -63,19 +63,33 @@ $ nand-util --device /dev/sys/platform/05:00:d/aml-raw_nand/nand --info
 *nand-util* can also be used to grab an image of the nand contents:
 
 ```shell
+$ unbind /dev/sys/platform/05:00:d/aml-raw_nand/nand/fvm/ftl/block
+$ unbind /dev/sys/platform/05:00:d/aml-raw_nand/nand/fvm/ftl
 $ nand-util --device /dev/sys/platform/05:00:d/aml-raw_nand/nand/fvm --save --file /tmp/image
 ```
 
 Transfer the image file to the host:
 
 ```shell
-$ zircon/build-x86/tools/netcp :/tmp/image /tmp/saved_image_file
+$ zircon/build-x64/tools/netcp :/tmp/image /tmp/saved_image_file
 ```
 
 ## Replay
 
-A saved nand image can be loaded on top of a ram-nand device like so:
+A saved nand image can be loaded on top of a ram-nand device using nand-loader.
+
+First, transfer the image to a device running Zircon. For example, on the host:
 
 ```shell
-$ nand-loader saved_image_file
+$ echo /nand.dmp=/tmp/saved_image_file > /tmp/manifest.txt
+$ zircon/build-x64/tools/minfs /tmp/image.dsk create --manifest /tmp/manifest.txt
+$ zircon/scripts/run-zircon-x64 -k -- -hda /tmp/image.dsk
+```
+
+Then, inside zircon:
+
+```shell
+$ mkdir data/a
+$ mount /dev/class/block/000 data/a
+$ nand-loader data/a/nand.dmp
 ```
