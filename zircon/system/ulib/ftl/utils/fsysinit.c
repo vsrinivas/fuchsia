@@ -14,7 +14,7 @@ SEM FileSysSem; // Global File System Semaphore
 
 // Called when a file system error has occurred.
 int FsError(int err_code) {
-    printf("FsError: %d\n", err_code);
+    printf("FsError: %d. What follows is NOT a crash:\n", err_code);
     backtrace_request();
     return -1;
 }
