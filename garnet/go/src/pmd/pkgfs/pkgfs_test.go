@@ -7,6 +7,7 @@
 package pkgfs
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,12 +16,16 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
+	"syscall/zx"
+	"syscall/zx/fdio"
+	"syscall/zx/fidl"
+	zxio "syscall/zx/io"
 	"testing"
 
 	"fuchsia.googlesource.com/merkle"
 	"fuchsia.googlesource.com/pm/build"
 	"fuchsia.googlesource.com/pmd/amberer"
-	"fuchsia.googlesource.com/pmd/ramdisk"
 )
 
 // Adding a file to /in writes the file to blobfs
@@ -29,7 +34,7 @@ import (
 // A package directory should contain all files from meta.far and listed by meta/contents
 
 var (
-	pkgfsMount string
+	pkgfsDir   fdio.Directory
 	blobfsPath string
 )
 
@@ -44,21 +49,6 @@ func tmain(m *testing.M) int {
 		panic(err)
 	}
 	defer os.RemoveAll(blobfsPath)
-
-	rd, err := ramdisk.New(10 * 1024 * 1024)
-	if err != nil {
-		panic(err)
-	}
-	defer rd.Destroy()
-
-	if err := rd.MkfsBlobfs(); err != nil {
-		panic(err)
-	}
-
-	if err := rd.MountBlobfs(blobfsPath); err != nil {
-		panic(err)
-	}
-	defer rd.Umount(blobfsPath)
 
 	fmt.Printf("blobfs mounted at %s\n", blobfsPath)
 
@@ -102,7 +92,7 @@ func tmain(m *testing.M) int {
 	if err != nil {
 		panic(err)
 	}
-	if err := f.Truncate(fi.Size()); err != nil {
+	if err := f.Truncate(int64(fi.Size())); err != nil {
 		panic(err)
 	}
 	if _, err := io.Copy(f, src); err != nil {
@@ -143,13 +133,19 @@ func tmain(m *testing.M) int {
 	}
 	pkgfs.static.LoadFrom(sf)
 	sf.Close()
+
+	nc, sc, err := zx.NewChannel(0)
+	if err != nil {
+		panic(err)
+	}
+
+	pkgfsDir = fdio.Directory{fdio.Node{(*zxio.NodeInterface)(&fidl.ChannelProxy{nc})}}
+
 	go func() {
-		if err := pkgfs.Mount(d); err != nil {
+		if err := pkgfs.Serve(sc); err != nil {
 			panic(err)
 		}
 	}()
-	defer pkgfs.Unmount()
-	pkgfsMount = d
 
 	return m.Run()
 }
@@ -198,10 +194,11 @@ func TestAddPackage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	f, err := os.Create(filepath.Join(pkgfsMount, "install", "pkg", merkleroot))
+	f, err := pkgfsOpen(filepath.Join("install/pkg", merkleroot), zxio.OpenRightWritable|zxio.OpenFlagCreate, zxio.ModeTypeFile)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if err := f.Truncate(fi.Size()); err != nil {
 		t.Fatal(err)
 	}
@@ -230,14 +227,23 @@ func TestAddPackage(t *testing.T) {
 	packageName := "testpackage"
 	packageVersion := "0"
 
-	if _, err = os.Stat(filepath.Join(pkgfsMount, "packages", packageName, packageVersion)); err == nil {
+	f, err = pkgfsOpen(filepath.Join("packages", packageName, packageVersion), zxio.OpenRightReadable, zxio.ModeTypeFile)
+	if err == nil {
+		f.Close()
 		t.Error("package appeared in the pkgfs package tree before needs fulfilled")
 	}
 
-	needs, err := filepath.Glob(filepath.Join(pkgfsMount, "needs", "blobs", "*"))
+	f, err = pkgfsOpen(filepath.Join("needs", "blobs"), zxio.OpenRightReadable, zxio.ModeTypeDirectory)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	needs, err := f.Readdirnames(256)
+	f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	for i := range needs {
 		needs[i] = filepath.Base(needs[i])
 	}
@@ -264,21 +270,27 @@ func TestAddPackage(t *testing.T) {
 			continue
 		}
 
-		// write the real content into the target to fulfill the need
-		err := copyBlob(filepath.Join(pkgfsMount, "install", "blob", root), manifest.Paths[name])
+		f, err = pkgfsOpen(filepath.Join("install", "blob", root), zxio.OpenRightWritable|zxio.OpenFlagCreate, zxio.ModeTypeFile)
 		if err != nil {
+			t.Fatal(err)
+		}
+		from, err := os.Open(manifest.Paths[name])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := io.Copy(f, from); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	var info os.FileInfo
-	if info, err = os.Stat(filepath.Join(pkgfsMount, "packages", packageName)); err != nil {
+	if info, err = pkgfsStat(filepath.Join("packages", packageName)); err != nil {
 		t.Fatalf("package did not appear in the pkgfs package tree: %s", err)
 	}
 	if !info.IsDir() {
 		t.Errorf("os.Stat on package directory says it's not a directory")
 	}
-	if info, err = os.Stat(filepath.Join(pkgfsMount, "packages", packageName, packageVersion)); err != nil {
+	if info, err = pkgfsStat(filepath.Join("packages", packageName, packageVersion)); err != nil {
 		t.Fatalf("package version did not appear in the pkgfs package tree: %s", err)
 	}
 	if !info.IsDir() {
@@ -288,7 +300,7 @@ func TestAddPackage(t *testing.T) {
 	// put the files into needs and expect the pacakage to be live
 
 	for f := range manifest.Content() {
-		b, err := ioutil.ReadFile(filepath.Join(pkgfsMount, "packages", packageName, packageVersion, f))
+		b, err := pkgfsReadFile(filepath.Join("packages", packageName, packageVersion, f))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -298,7 +310,7 @@ func TestAddPackage(t *testing.T) {
 	}
 
 	// assert that the dynamically added package appears in /versions
-	contents2, err := ioutil.ReadFile(filepath.Join(pkgfsMount, "versions", merkleroot, "meta", "contents"))
+	contents2, err := pkgfsReadFile(filepath.Join("versions", merkleroot, "meta", "contents"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -307,26 +319,60 @@ func TestAddPackage(t *testing.T) {
 	}
 }
 
+func pkgfsOpen(path string, flags, mode uint32) (*os.File, error) {
+	f, err := pkgfsDir.Open(path, flags, mode)
+	if err != nil {
+		return nil, err
+	}
+	return os.NewFile(uintptr(syscall.OpenFDIO(f)), path), err
+}
+
+func pkgfsReadFile(path string) ([]byte, error) {
+	f, err := pkgfsOpen(path, zxio.OpenRightReadable, zxio.ModeTypeFile)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	buf := bytes.Buffer{}
+	if _, err := io.Copy(&buf, f); err != io.EOF && err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func pkgfsStat(path string) (os.FileInfo, error) {
+	f, err := pkgfsOpen(path, zxio.OpenRightReadable, zxio.ModeTypeFile|zxio.ModeTypeDirectory)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return f.Stat()
+}
+
 func TestListContainsStatic(t *testing.T) {
-	names, err := filepath.Glob(filepath.Join(pkgfsMount, "packages", "*", "*"))
+	//names, err := filepath.Glob(filepath.Join(pkgfsMount, "packages", "*", "*"))
+	f, err := pkgfsOpen("packages/static-package/0", zxio.OpenRightReadable, zxio.ModeTypeDirectory)
 	if err != nil {
 		t.Fatal(err)
 	}
-	name := ""
-	for _, path := range names {
-		if strings.Contains(path, "static-") {
-			name = path
-		}
+	names, err := f.Readdirnames(-1)
+	f.Close()
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	want := "static-package/0"
-	if !strings.HasSuffix(name, want) {
-		t.Errorf("did not find %q in %v (%q)", want, names, name)
+	if len(names) <= 0 {
+		t.Errorf("static-package appears to be empty or missing")
 	}
 }
 
 func TestListRoot(t *testing.T) {
-	names, err := filepath.Glob(filepath.Join(pkgfsMount, "*"))
+	f, err := pkgfsOpen(".", zxio.OpenRightReadable, zxio.ModeTypeDirectory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	names, err := f.Readdirnames(-1)
+	f.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -348,7 +394,12 @@ func TestListRoot(t *testing.T) {
 }
 
 func TestVersions(t *testing.T) {
-	names, err := filepath.Glob(filepath.Join(pkgfsMount, "versions", "*"))
+	f, err := pkgfsOpen("versions", zxio.OpenRightReadable, zxio.ModeTypeDirectory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	names, err := f.Readdirnames(-1)
+	f.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +412,7 @@ func TestVersions(t *testing.T) {
 			t.Fatalf("got non-merkle version: %s", name)
 		}
 
-		b, err := ioutil.ReadFile(filepath.Join(name, "meta"))
+		b, err := pkgfsReadFile(filepath.Join("versions", name, "meta"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -369,26 +420,4 @@ func TestVersions(t *testing.T) {
 			t.Errorf("got %q, want %q", got, want)
 		}
 	}
-}
-
-func copyBlob(dest, src string) error {
-	d, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer d.Close()
-	s, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer s.Close()
-	info, err := s.Stat()
-	if err != nil {
-		return err
-	}
-	d.Truncate(info.Size())
-	if _, err := io.Copy(d, s); err != nil {
-		return err
-	}
-	return d.Close()
 }
