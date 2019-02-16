@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("unittest") {
+  kernel = true
+  sources = [
+    "unittest.cpp",
+    "user_memory.cpp",
+  ]
+  public_deps = [
+    # <lib/unittest/user_memory.h> has #include <lib/crypto/prng.h>.
+    "$zx/kernel/vm:headers",
+  ]
+  deps = [
+    "$zx/kernel/lib/console",
+  ]
+}

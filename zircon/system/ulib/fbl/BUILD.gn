@@ -63,6 +63,6 @@ library("fbl") {
 
   if (toolchain.environment == "kernel") {
     # Avoid circularity.
-    configs -= [ "$zx/kernel/vm:headers" ]
+    configs -= [ "$zx/kernel/vm:headers.config" ]
   }
 }

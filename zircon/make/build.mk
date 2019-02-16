@@ -41,7 +41,7 @@ KERNEL_LDFLAGS += --emit-relocs
 KERNEL_FIXUPS := $(BUILDDIR)/kernel-fixups.inc
 $(KERNEL_FIXUPS): scripts/gen-kaslr-fixups.sh $(KERNEL_ELF)
 	$(call BUILDECHO,extracting relocations into $@)
-	$(NOECHO)$(SHELLEXEC) $^ '$(READELF)' '$(OBJDUMP)' $@
+	$(NOECHO)$(SHELLEXEC) $< '$(READELF)' '$(OBJDUMP)' $(KERNEL_ELF) $@
 GENERATED += $(KERNEL_FIXUPS)
 
 # Canned sequence to convert an ELF file to a raw binary.
@@ -57,13 +57,12 @@ $(KERNEL_RAW): $(KERNEL_ELF); $(elf2bin-commands)
 KERNEL_IMAGE_ASM := kernel/arch/$(ARCH)/image.S
 KERNEL_IMAGE_OBJ := $(BUILDDIR)/kernel.image.o
 ALLOBJS += $(KERNEL_IMAGE_OBJ)
-KERNEL_DEFINES += \
-    BOOT_HEADER_SIZE=$(BOOT_HEADER_SIZE) \
-    KERNEL_IMAGE='"$(KERNEL_RAW)"' \
+KERNEL_DEFINES += BOOT_HEADER_SIZE=$(BOOT_HEADER_SIZE)
 
 # Assemble the kernel image along with boot headers and relocation fixup code.
 # TODO(mcgrathr): Reuse compile.mk $(MODULE_ASMOBJS) commands here somehow.
-$(KERNEL_IMAGE_OBJ): $(KERNEL_IMAGE_ASM) $(KERNEL_FIXUPS) $(KERNEL_RAW)
+$(KERNEL_IMAGE_OBJ): $(KERNEL_IMAGE_ASM) $(KERNEL_FIXUPS) $(KERNEL_RAW) \
+		     $(BUILDDIR)/kernel_image.h
 	@$(MKDIR)
 	$(call BUILDECHO, assembling $<)
 	$(NOECHO)$(CC) $(GLOBAL_OPTFLAGS)  \
@@ -71,6 +70,11 @@ $(KERNEL_IMAGE_OBJ): $(KERNEL_IMAGE_ASM) $(KERNEL_FIXUPS) $(KERNEL_RAW)
 	    $(GLOBAL_ASMFLAGS) $(KERNEL_ASMFLAGS) $(ARCH_ASMFLAGS) \
 	    $(KERNEL_INCLUDES) $(GLOBAL_INCLUDES) -I$(BUILDDIR) \
 	    -c $< -MD -MP -MT $@ -MF $(@:.o=.d) -o $@
+
+$(BUILDDIR)/kernel_image.h:
+	@$(MKDIR)
+	$(call BUILDECHO, generating $<)
+	$(NOECHO)echo '#define KERNEL_IMAGE "$(KERNEL_RAW)"' > $@
 
 # Now link the final load image, using --just-symbols to let image.S refer
 # to symbols defined in the kernel proper.

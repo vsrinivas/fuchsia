@@ -1,0 +1,29 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/kernel/syscalls/abigen.gni")
+
+source_set("ktrace") {
+  sources = [
+    "ktrace.cpp",
+  ]
+  include_dirs = [ target_gen_dir ]
+  deps = [
+    ":ktrace-info",
+    "$zx/kernel/lib/hypervisor",
+    "$zx/system/ulib/zircon-internal",
+  ]
+}
+
+abigen("ktrace-info") {
+  visibility = [ ":*" ]
+  gen = [
+    {
+      args = [ "-trace" ]
+      outputs = [
+        "$target_gen_dir/zircon/syscall-ktrace-info.inc",
+      ]
+    },
+  ]
+}

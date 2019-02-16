@@ -74,8 +74,8 @@ $(BOOT_SHIM_ELF): $(BOOT_SHIM_OBJS) $(BOOT_SHIM_LD)
 # The shim code should be purely position-independent code.
 $(BOOT_SHIM_ELF).pure-stamp: $(BOOT_SHIM_ELF) scripts/gen-kaslr-fixups.sh
 	$(call BUILDECHO,checking $<)
-	$(NOECHO)scripts/gen-kaslr-fixups.sh --pure \
-					     $< '$(READELF)' '$(OBJDUMP)' $@
+	$(NOECHO)scripts/gen-kaslr-fixups.sh '$(READELF)' '$(OBJDUMP)' \
+					     --pure $< $@
 
 $(BOOT_SHIM_BIN): $(BOOT_SHIM_ELF) $(BOOT_SHIM_ELF).pure-stamp
 	$(call BUILDECHO,generating $@)

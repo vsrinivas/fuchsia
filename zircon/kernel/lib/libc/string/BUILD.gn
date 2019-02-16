@@ -1,0 +1,34 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("string") {
+  sources = [
+    "memchr.c",
+    "memcmp.c",
+    "memmove.c",
+    "strcat.c",
+    "strchr.c",
+    "strcmp.c",
+    "strcoll.c",
+    "strcpy.c",
+    "strlcat.c",
+    "strlcpy.c",
+    "strlen.c",
+    "strncat.c",
+    "strncmp.c",
+    "strncpy.c",
+    "strnicmp.c",
+    "strnlen.c",
+    "strpbrk.c",
+    "strrchr.c",
+    "strspn.c",
+    "strstr.c",
+    "strtok.c",
+    "strxfrm.c",
+  ]
+  deps = [
+    "$zx/kernel/lib/libc:ctype",
+    "arch/$zircon_cpu",
+  ]
+}

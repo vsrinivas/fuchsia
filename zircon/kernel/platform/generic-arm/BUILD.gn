@@ -1,0 +1,38 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/kernel/params.gni")
+
+source_set("generic-arm") {
+  sources = [
+    "platform.cpp",
+  ]
+  defines = [ "SMP_CPU_MAX_CLUSTERS=$smp_max_clusters" ]
+  deps = [
+    "$zx/kernel/dev/hdcp/amlogic_s912",
+    "$zx/kernel/dev/hw_rng",
+    "$zx/kernel/dev/interrupt/arm_gic/common",
+    "$zx/kernel/dev/interrupt/arm_gic/v2",
+    "$zx/kernel/dev/interrupt/arm_gic/v3",
+    "$zx/kernel/dev/pcie",
+    "$zx/kernel/dev/pdev",
+    "$zx/kernel/dev/pdev/power",
+    "$zx/kernel/dev/power/hisi",
+    "$zx/kernel/dev/psci",
+    "$zx/kernel/dev/timer/arm_generic",
+    "$zx/kernel/dev/uart/amlogic_s905",
+    "$zx/kernel/dev/uart/msm",
+    "$zx/kernel/dev/uart/nxp-imx",
+    "$zx/kernel/dev/uart/pl011",
+    "$zx/kernel/lib/cbuf",
+    "$zx/kernel/lib/console",
+    "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/lockdep",
+    "$zx/kernel/lib/memory_limit",
+    "$zx/kernel/lib/topology",
+    "$zx/kernel/object",
+    "$zx/kernel/vm",
+    "$zx/system/ulib/libzbi",
+  ]
+}

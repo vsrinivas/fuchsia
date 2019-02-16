@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("cpuid") {
+  kernel = true
+  sources = [
+    "cpuid.cpp",
+  ]
+
+  # TODO: testonly
+  deps = [
+    ":test",
+  ]
+}
+
+source_set("test") {
+  # TODO: testonly = true
+  sources = [
+    "cpuid_test.cpp",
+  ]
+  deps = [
+    ":cpuid.headers",
+    "$zx/kernel/lib/unittest",
+  ]
+}

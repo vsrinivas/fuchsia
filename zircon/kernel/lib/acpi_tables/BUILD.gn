@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("acpi_tables") {
+  kernel = true
+  sources = [
+    "acpi_tables.cpp",
+  ]
+  public_deps = [
+    # <lib/acpi_tables.h> has #include <acpica/acpi.h>.
+    "$zx/third_party/lib/acpica:headers",
+
+    # <lib/acpi_tables.h> has #include <arch/x86/apic.h.
+    "$zx/kernel/arch/x86:headers",
+  ]
+
+  # TODO: testonly
+  deps = [
+    ":test",
+  ]
+}
+
+source_set("test") {
+  # TODO: testonly = true
+  sources = [
+    "acpi_tables_test.cpp",
+  ]
+  deps = [
+    ":acpi_tables.headers",
+    "$zx/kernel/lib/unittest",
+  ]
+}

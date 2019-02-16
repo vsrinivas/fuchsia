@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("hypervisor") {
+  sources = [
+    "el2.S",
+    "el2_cpu_state.cpp",
+    "gic/el2.S",
+    "gic/gicv2.cpp",
+    "gic/gicv3.cpp",
+    "guest.cpp",
+    "vcpu.cpp",
+    "vmexit.cpp",
+  ]
+  deps = [
+    "$zx/kernel/dev/interrupt/arm_gic/common",
+    "$zx/kernel/dev/interrupt/arm_gic/v2",
+    "$zx/kernel/dev/interrupt/arm_gic/v3",
+    "$zx/kernel/dev/psci",
+    "$zx/kernel/dev/timer/arm_generic",
+    "$zx/kernel/lib/hypervisor:headers",
+  ]
+}

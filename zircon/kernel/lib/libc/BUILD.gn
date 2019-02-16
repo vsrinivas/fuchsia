@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("libc") {
+  sources = [
+    "atexit.c",
+    "atoi.c",
+    "bsearch.c",
+    "cxa_atexit.cpp",
+    "eabi.c",
+    "errno.c",
+    "printf.c",
+    "qsort.c",
+    "rand.c",
+    "stdio.c",
+    "strtol.c",
+    "strtoll.c",
+  ]
+  deps = [
+    ":ctype",
+    "$zx/kernel/lib/heap",
+    "$zx/kernel/lib/io",
+    "string",
+  ]
+}
+
+source_set("ctype") {
+  sources = [
+    "ctype.c",
+  ]
+}

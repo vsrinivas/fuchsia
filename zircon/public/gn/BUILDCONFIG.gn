@@ -347,7 +347,18 @@ template("library") {
   not_needed([ "static_library" ])
 
   targets = false
-  if (is_host) {
+  if (is_kernel) {
+    if (kernel) {
+      targets = true
+      source_set(_library_name) {
+        forward_variables_from(invoker, "*", _library_params)
+        if (!defined(public_deps)) {
+          public_deps = []
+        }
+        public_deps += [ ":${_library_name}.headers" ]
+      }
+    }
+  } else if (is_host) {
     if (host) {
       targets = true
       target(static_library, _library_name) {
@@ -546,6 +557,11 @@ template("library") {
         ":${_library_name}.headers",
       ]
     }
+
+    # This is really only used in the $zx/kernel:kernel environment().
+    config("headers.config") {
+      include_dirs = [ "include" ]
+    }
     if (!is_kernel && !is_host) {
       if (static) {
         group("static") {
@@ -594,6 +610,14 @@ template("library") {
 #         Optional: The target type to match in $variants selectors.
 #         Type: string
 #         Default: $type
+#       label
+#         Optional: The target label to match in $variants selectors.
+#         Type: label_no_toolchain
+#         Default: ":$target_name"
+#       output_name
+#         Optional: The $output_name to match in $variants selectors.
+#         Type: string
+#         Default: $output_name (which defaults to $target_name)
 #       shlib
 #         Optional: Target always builds in shlib toolchain (loadable_module).
 #         Type: bool
@@ -616,6 +640,9 @@ template("_variant_target") {
     if (!defined(match)) {
       match = type
     }
+    if (!defined(label)) {
+      label = ":$target_name"
+    }
   }
 
   main_target_name = target_name
@@ -625,6 +652,10 @@ template("_variant_target") {
     output_name = invoker.output_name
   } else {
     output_name = target_name
+  }
+
+  if (!defined(target.output_name)) {
+    target.output_name = output_name
   }
 
   if (toolchain.variant_selectors == []) {
@@ -665,7 +696,7 @@ template("_variant_target") {
         }
       }
       if (selector.dir != []) {
-        dir = get_label_info(":$target_name", "dir")
+        dir = get_label_info(target.label, "dir")
         if (selector.dir + [ dir ] - [ dir ] == selector.dir) {
           selector_matches = false
         }
@@ -679,13 +710,13 @@ template("_variant_target") {
         }
       }
       if (selector.label != []) {
-        label = get_label_info(":$target_name", "label_no_toolchain")
+        label = get_label_info(target.label, "label_no_toolchain")
         if (selector.label + [ label ] - [ label ] == selector.label) {
           selector_matches = false
         }
       }
       if (selector.name != []) {
-        name = get_name_info(":$target_name", "name_no_toolchain")
+        name = get_label_info(target.label, "name")
         if (selector.name + [ name ] - [ name ] == selector.name) {
           selector_matches = false
         }
@@ -696,8 +727,8 @@ template("_variant_target") {
         }
       }
       if (selector.output_name != []) {
-        if (selector.output_name + [ output_name ] - [ output_name ] ==
-            selector.output_name) {
+        if (selector.output_name + [ target.output_name ] -
+            [ target.output_name ] == selector.output_name) {
           selector_matches = false
         }
       }
@@ -925,6 +956,10 @@ template("_variant_target") {
                                  "visibility",
                                ])
         output_name = output_name
+
+        # This might actually be ignored if target.type is "action".
+        not_needed([ "output_name" ])
+
         forward_variables_from(invoker, [ "testonly" ])
         if (defined(invoker.visibility)) {
           # Make sure we're visible to the redirector groups.

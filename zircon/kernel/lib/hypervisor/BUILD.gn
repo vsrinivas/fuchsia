@@ -1,0 +1,30 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("hypervisor") {
+  kernel = true
+  sources = [
+    "cpu.cpp",
+    "guest_physical_address_space.cpp",
+    "hypervisor_unittest.cpp",
+    "ktrace.cpp",
+    "trap_map.cpp",
+  ]
+  deps = [
+    "$zx/kernel/arch/$zircon_cpu/hypervisor",
+    "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/unittest",
+    "$zx/system/ulib/bitmap",
+  ]
+  public_deps = [
+    # <hypervisor/trap_map.h> has #include <object/port_dispatcher.h>.
+    "$zx/kernel/object:headers",
+
+    # <hypervisor/id_allocator.h> has #include <bitmap/raw-bitmap.h>.
+    "$zx/system/ulib/bitmap:headers",
+
+    # <hypervisor/guest_physical_address_space.h> has #include <vm/vm_aspace.h>.
+    "$zx/kernel/vm:headers",
+  ]
+}

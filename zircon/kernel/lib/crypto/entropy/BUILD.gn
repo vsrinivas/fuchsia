@@ -1,0 +1,20 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("entropy") {
+  sources = [
+    "collector.cpp",
+    "collector_unittest.cpp",
+    "hw_rng_collector.cpp",
+    "jitterentropy_collector.cpp",
+    "quality_test.cpp",
+  ]
+  deps = [
+    "$zx/kernel/dev/hw_rng",
+    "$zx/kernel/lib/crypto:headers",
+    "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/unittest",
+    "$zx/third_party/lib/jitterentropy",
+  ]
+}

@@ -1,0 +1,99 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("object") {
+  kernel = true
+  sources = [
+    "buffer_chain.cpp",
+    "bus_transaction_initiator_dispatcher.cpp",
+    "channel_dispatcher.cpp",
+    "diagnostics.cpp",
+    "dispatcher.cpp",
+    "event_dispatcher.cpp",
+    "event_pair_dispatcher.cpp",
+    "exception.cpp",
+    "excp_port.cpp",
+    "fifo_dispatcher.cpp",
+    "futex_context.cpp",
+    "futex_node.cpp",
+    "glue.cpp",
+    "guest_dispatcher.cpp",
+    "handle.cpp",
+    "interrupt_dispatcher.cpp",
+    "interrupt_event_dispatcher.cpp",
+    "iommu_dispatcher.cpp",
+    "job_dispatcher.cpp",
+    "job_policy.cpp",
+    "log_dispatcher.cpp",
+    "mbuf.cpp",
+    "message_packet.cpp",
+    "pager_dispatcher.cpp",
+    "pci_device_dispatcher.cpp",
+    "pci_interrupt_dispatcher.cpp",
+    "pinned_memory_token_dispatcher.cpp",
+    "port_dispatcher.cpp",
+    "process_dispatcher.cpp",
+    "profile_dispatcher.cpp",
+    "resource.cpp",
+    "resource_dispatcher.cpp",
+    "semaphore.cpp",
+    "socket_dispatcher.cpp",
+    "suspend_token_dispatcher.cpp",
+    "thread_dispatcher.cpp",
+    "timer_dispatcher.cpp",
+    "vcpu_dispatcher.cpp",
+    "virtual_interrupt_dispatcher.cpp",
+    "vm_address_region_dispatcher.cpp",
+    "vm_object_dispatcher.cpp",
+    "wait_state_observer.cpp",
+  ]
+  deps = [
+    ":tests",
+    "$zx/kernel/dev/interrupt",
+    "$zx/kernel/dev/iommu/dummy",
+    "$zx/kernel/dev/pcie",
+    "$zx/kernel/lib/console",
+    "$zx/kernel/lib/counters",
+    "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/hypervisor",
+    "$zx/kernel/lib/oom",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/region-alloc",
+  ]
+  if (current_cpu == "x64") {
+    deps += [ "$zx/kernel/dev/iommu/intel" ]
+  }
+  public_deps = [
+    # <object/pci_device_dispatcher.h> has #include <dev/pci_common.h>
+    "$zx/kernel/dev/pcie:headers",
+
+    # <object/log_dispatcher.h> has #include <lib/debuglog.h>.
+    "$zx/kernel/lib/debuglog:headers",
+
+    # <object/resource_dispatcher.h> has #include <region-alloc/region-alloc.h>.
+    "$zx/system/ulib/region-alloc:headers",
+
+    # <object/vcpu_dispatcher.h> has #include <hypervisor/interrupt_tracker.h>.
+    #"$zx/kernel/lib/hypervisor:headers",
+
+    # <object/process_dispatcher.h> has #include <vm/vm_aspace.h>.
+    "$zx/kernel/vm:headers",
+  ]
+}
+
+source_set("tests") {
+  # TODO: testonly = true
+  sources = [
+    "buffer_chain_tests.cpp",
+    "job_policy_tests.cpp",
+    "mbuf_tests.cpp",
+    "message_packet_tests.cpp",
+    "state_tracker_tests.cpp",
+  ]
+  deps = [
+    ":headers",
+    "$zx/kernel/lib/console",
+    "$zx/kernel/lib/unittest",
+  ]
+}

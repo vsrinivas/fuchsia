@@ -15,7 +15,7 @@ library("uboringssl") {
     sources += [ "crypto/chacha/chacha.c" ]
 
     # Avoid circularity.
-    configs -= [ "$zx/kernel/vm:headers" ]
+    configs -= [ "$zx/kernel/vm:headers.config" ]
 
     defines = [
       # The assembly code uses vector registers, which is not allowed in

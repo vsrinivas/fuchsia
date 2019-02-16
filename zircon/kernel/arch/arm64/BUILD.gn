@@ -1,0 +1,110 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/kernel/params.gni")
+import("$zx/public/gn/toolchain/environment.gni")
+
+if (current_toolchain == default_toolchain) {
+  # Define a special environment for building code that runs in physical
+  # memory with the MMU disabled, at early boot.
+  environment("physmem") {
+    cpu = "arm64"
+    globals = {
+      is_kernel = true
+    }
+    configs += standard_fuchsia_configs + [ ":physmem_config" ]
+  }
+} else {
+  # This is the top config for the physmem environment.
+  config("physmem_config") {
+    configs = [
+      "$zx/kernel:headers",
+      "$zx/kernel:standalone",
+      "$zx/kernel:warnings",
+      "$zx/kernel/lib/libc:headers.config",
+      "$zx/public/gn/config:no_sanitizers",
+    ]
+
+    cflags = [
+      "-fpie",
+
+      "-mgeneral-regs-only",
+
+      # With the MMU disabled, alignment checking is always enabled.  So make
+      # sure the compiler doesn't use any unaligned memory accesses.
+      "-mstrict-align",
+    ]
+
+    if (!is_gcc) {
+      # TODO(TC-237): cflags += [ "-mcmodel=tiny" ]
+    }
+
+    include_dirs = [ "include" ]
+  }
+
+  # This is used pervasively throughout the kernel on arm64.
+  config("kernel") {
+    # The kernel does not use FP or vector registers.
+    cflags = [ "-mgeneral-regs-only" ]
+
+    if (!is_gcc) {
+      # Clang needs -mcmodel=kernel to tell it to use the right safe-stack
+      # ABI for the kernel.
+      cflags += [ "-mcmodel=kernel" ]
+    }
+
+    defines = [
+      "ARCH_ARM64",
+      "KERNEL_ASPACE_BASE=$kernel_aspace_base",
+      "KERNEL_ASPACE_SIZE=0x0001000000000000",
+      "USER_ASPACE_BASE=0x0000000001000000",
+      "USER_ASPACE_SIZE=0x0000fffffe000000",
+    ]
+
+    # For #include <arch/foo.h>.
+    include_dirs = [ "include" ]
+  }
+
+  library("arm64") {
+    kernel = true
+    defines = [
+      "SMP_CPU_MAX_CLUSTER_CPUS=$smp_max_cpus",
+      "SMP_CPU_MAX_CLUSTERS=$smp_max_clusters",
+    ]
+    sources = [
+      "arch.cpp",
+      "asm.S",
+      "boot-mmu.cpp",
+      "cache-ops.S",
+      "debugger.cpp",
+      "exceptions.S",
+      "exceptions_c.cpp",
+      "feature.cpp",
+      "fpu.cpp",
+      "mexec.S",
+      "mmu.cpp",
+      "mp.cpp",
+      "periphmap.cpp",
+      "registers.cpp",
+      "smccc.S",
+      "spinlock.cpp",
+      "start.S",
+      "sysreg.cpp",
+      "thread.cpp",
+      "user_copy.S",
+      "user_copy_c.cpp",
+      "uspace_entry.S",
+    ]
+    deps = [
+      "$zx/kernel/dev/iommu/dummy",
+      "$zx/kernel/lib/console",
+      "$zx/kernel/lib/counters",
+      "$zx/kernel/lib/crashlog",
+      "$zx/kernel/object",
+      "$zx/kernel/syscalls:syscall-abi",
+      "$zx/kernel/vm",
+      "$zx/system/ulib/bitmap",
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("arm64") {
+  sources = [
+    "$zx/third_party/lib/cortex-strings/src/aarch64/memcpy.S",
+    "$zx/third_party/lib/cortex-strings/no-neon/src/aarch64/memset.S",
+  ]
+}

@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("top") {
+  sources = [
+    "init.cpp",
+    "main.cpp",
+  ]
+  deps = [
+    "$zx/kernel/arch/$zircon_cpu",
+    "$zx/kernel/kernel",
+    "$zx/kernel/lib/debuglog",
+    "$zx/kernel/lib/userboot",
+    "$zx/kernel/lib/version",
+    "$zx/kernel/platform",
+    "$zx/kernel/target",
+  ]
+}

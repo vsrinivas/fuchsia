@@ -1,0 +1,36 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("lockdep") {
+  sdk = "source"
+  sdk_headers = [
+    "lockdep/common.h",
+    "lockdep/global_reference.h",
+    "lockdep/guard.h",
+    "lockdep/guard_multiple.h",
+    "lockdep/lock_class.h",
+    "lockdep/lock_class_state.h",
+    "lockdep/lock_dependency_set.h",
+    "lockdep/lock_policy.h",
+    "lockdep/lock_traits.h",
+    "lockdep/lockdep.h",
+    "lockdep/runtime_api.h",
+    "lockdep/thread_lock_state.h",
+  ]
+  kernel = true
+  static = true
+  sources = [
+    "lock_dep.cpp",
+  ]
+  public_deps = [
+    "$zx/system/ulib/fbl:headers",
+  ]
+  if (!is_kernel) {
+    configs += [ "$zx/public/gn/config:visibility_hidden" ]
+    deps = [
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/zx",
+    ]
+  }
+}

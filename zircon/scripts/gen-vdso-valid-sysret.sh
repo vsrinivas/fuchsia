@@ -63,6 +63,17 @@ scan() {
 }
 
 set -e
+
+case $# in
+1)
+  exec < "$1"
+  ;;
+2)
+  trap "rm -f '$2'" ERR HUP INT TERM
+  exec < "$1" > "$2"
+  ;;
+esac
+
 header
 scan < "$1"
 footer

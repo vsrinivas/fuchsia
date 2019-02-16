@@ -1,0 +1,20 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("lockdep") {
+  sources = [
+    "lock_dep.cpp",
+  ]
+  deps = [
+    "$zx/kernel/lib/console",
+    "$zx/kernel/lib/version",
+  ]
+  public_deps = [
+    # The kernel lockdep library is just a slight augmentation of the
+    # userland lockdep library, which supplies all the API headers.  So
+    # kernel/lib/lockdep is used as if it were a library() itself and acts
+    # as the kernel's drop-in replacement for system/ulib/lockdep.
+    "$zx/system/ulib/lockdep",
+  ]
+}

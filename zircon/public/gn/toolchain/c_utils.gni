@@ -15,20 +15,66 @@
 #     Optional:  Same as for action().  The script receives an implicit
 #     argument for each element in $utils giving the command to run.
 #     If omitted, then $utils must have only one element and that command
-#     itself will be run with $args just as given.
-#     Type: file
+#     itself will be run with $args just as given.  This can be true instead
+#     of a string for automatic response file handling; see notes below.
+#     Type: file or true (see below)
 #
 #   args
 #     Required: Same as for action().  If there is a $script,
 #     the implicit $utils arguments precede $args.
 #     Type: list(string)
 #
-#   deps, inputs, outputs, sources, testonly, visibility
+#   depfile, deps, inputs, outputs, sources, testonly, visibility
 #      See action().
+#
+#   variant_target
+#     Optional: If present, this target will participate in $variants
+#     selection.  This scope is passed through to _variant_target() as
+#     $target to control how the selector matching is done.  The main
+#     effect of this variant selection is on where the $utils will be
+#     found (e.g. clang with LLVM utilities vs gcc with GNU binutils).
+#     It also affects the toolchain context in which this target is
+#     evaluated, but usually the inputs/deps will themselves be targets
+#     like executable() that will do their own variant dispatch.
+#     Type: scope, see _variant_target() for details.
+#
+# Notes on response files
+#
+# When using "@rspfile" command-line syntax, its crucial that any input
+# files fed to $utils are recorded as dependencies.  GN won't be aware of
+# this file dependency because it only knows about the response *file*, not
+# the response file's *contents*.  This target will depend on the target
+# that generates the response file (e.g. a link_output_rspfile() target)
+# and that gives this target a transitive order-only dependency to ensure
+# the input exists.  To make Ninja aware of the dependency to ensure that
+# incremental rebuilds re-run this action when needed, use $depfile.
+#
+# When running $utils directly, set $script to true (and do not set
+# $depfile) to use a standard script that handles dependencies for the
+# simple "@RSPFILE" cases.  In this mode, each $args string that looks like
+# "@RSPFILE" will cause implicit dependencies (after the fact, via depfile)
+# on each file listed in "RSPFILE" (one file per line with no quoting).
+# Most toolchain utilities have built-in "@RSPFILE" support, but the script
+# also does remedial "@RSPFILE" expansion for utilities known to lack it.
 #
 template("toolchain_utils_action") {
   assert(defined(invoker.utils),
          "toolchain_utils_action(\"$target_name\") requires `utils`")
+
+  if (defined(invoker.variant_target)) {
+    target_type = "_variant_target"
+    extra_params = {
+      target = {
+        forward_variables_from(invoker.variant_target, "*", [ "type" ])
+        type = "action"
+      }
+    }
+  } else {
+    target_type = "action"
+    extra_params = {
+    }
+  }
+
   forward_variables_from(invoker, [ "script" ])
 
   utils_inputs = []
@@ -64,12 +110,14 @@ template("toolchain_utils_action") {
     }
   }
 
-  action(target_name) {
+  target(target_type, target_name) {
+    forward_variables_from(extra_params, "*")
     forward_variables_from(invoker,
                            "*",
                            [
                              "args",
                              "script",
+                             "target",
                              "utils",
                            ])
     if (!defined(inputs)) {
@@ -77,7 +125,20 @@ template("toolchain_utils_action") {
     }
     inputs += utils_inputs
     if (defined(script)) {
-      args = utils_paths + invoker.args
+      if (script == true) {
+        assert(!defined(depfile),
+               "script=true is incompatible with setting depfile")
+        script = "$zx/public/gn/toolchain/toolchain_utils_action.sh"
+        depfile = "$target_out_dir/_host_tool_action.$target_name.d"
+        args = [
+          rebase_path(outputs[0], root_build_dir),
+          rebase_path(depfile, root_build_dir),
+        ]
+      } else {
+        script = script
+        args = []
+      }
+      args += utils_paths + invoker.args
     } else {
       script = rebase_path(utils_paths[0], "", root_build_dir)
       assert(
@@ -117,5 +178,98 @@ template("link_output_rspfile") {
     data_keys = [ "link_output" ]
     walk_keys = [ "link_barrier" ]
     output_conversion = "list lines"
+  }
+}
+
+# Define an action to convert an ELF file to a raw binary image file.
+#
+# Parameters
+#
+#   deps
+#     Required: Dependencies leading to a linking target (e.g. executable).
+#     The ${metadata.link_output} key is used to find the input ELF file.
+#     Type: list(label)
+#
+#   output_name
+#     Optional: Basename of the output file.
+#     Type: string
+#     Default: $target_name
+#
+#   output_dir
+#     Optional: Directory for the output file.
+#     Type: dir
+#     Default: $target_out_dir
+#
+#   output_extension
+#     Optional: Extension added to $output_name (after a `.` if nonempty).
+#     Type: string
+#     Default: "bin"
+#
+#   variant_target
+#     See toolchain_utils_action().
+#
+template("image_binary") {
+  image_target = target_name
+  rspfile_target = "_image_binary.rsp.$target_name"
+  rspfile = "$target_gen_dir/$target_name.image.rsp"
+
+  link_output_rspfile(rspfile_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    visibility = [
+      ":$image_target",
+      ":$image_target._build",
+    ]
+    outputs = [
+      rspfile,
+    ]
+  }
+
+  toolchain_utils_action(image_target) {
+    deps = [
+      ":$rspfile_target",
+    ]
+    forward_variables_from(invoker,
+                           [
+                             "metadata",
+                             "output_dir",
+                             "output_extension",
+                             "output_name",
+                             "testonly",
+                             "variant_target",
+                             "visibility",
+                           ])
+    if (!defined(output_dir)) {
+      output_dir = target_out_dir
+    }
+    if (!defined(output_extension)) {
+      output_extension = "bin"
+    }
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
+
+    output_file = "$output_dir/$output_name"
+    if (output_extension != "") {
+      output_file += ".$output_extension"
+    }
+
+    utils = [ "objcopy" ]
+    script = true
+    sources = [
+      rspfile,
+    ]
+    outputs = [
+      output_file,
+    ]
+    args = [
+      "-O",
+      "binary",
+      "@" + rebase_path(rspfile, root_build_dir),
+      rebase_path(output_file, root_build_dir),
+    ]
   }
 }

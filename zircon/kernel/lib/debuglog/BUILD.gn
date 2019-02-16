@@ -1,0 +1,15 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("debuglog") {
+  kernel = true
+  sources = [
+    "debuglog.cpp",
+  ]
+  deps = [
+    "$zx/kernel/dev/udisplay:headers",
+    "$zx/kernel/lib/crashlog",
+    "$zx/kernel/lib/version",
+  ]
+}

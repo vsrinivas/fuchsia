@@ -1,0 +1,73 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/toolchain/c_utils.gni")
+
+# Generate a header file with address constants from an RODSO layout object.
+#
+# The userboot loadable_module() and the vdso (libzircon) shared_library()
+# both use the special RODSO layout (by default in lld or via rodso.ld in
+# gold).  The kernel needs to use address constants extracted from these
+# ELF files' headers and symbols.
+#
+# Parameters
+#
+#   outputs
+#     Required: See action().
+#
+#   deps
+#     Required; Should reach the loadable_module() or library() target
+#     and no other linking targets; see link_output_rspfile().
+#     Type: list(label)
+#
+template("rodso_code_header") {
+  main_target_name = target_name
+  rspfile_target_name = "_rodso_code_header.rsp.$main_target_name"
+  rspfile = "$target_gen_dir/$target_name.rsp"
+
+  link_output_rspfile(rspfile_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    outputs = [
+      rspfile,
+    ]
+    visibility = [ ":$main_target_name" ]
+  }
+
+  toolchain_utils_action(main_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    deps = [
+      ":$rspfile_target_name",
+    ]
+    outputs = invoker.outputs
+    assert(outputs == [ outputs[0] ],
+           "rodso_code_header() outputs must have exactly one element")
+    depfile = "${outputs[0]}.d"
+
+    # TODO(mcgrathr): Move the script to this dir.
+    script = "$zx/scripts/gen-rodso-code.sh"
+    utils = [
+      "nm",
+      "readelf",
+    ]
+    sources = [
+      rspfile,
+    ]
+    args = [
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+      rebase_path(outputs[0], root_build_dir),
+      invoker.name,
+      "@" + rebase_path(rspfile, root_build_dir),
+    ]
+  }
+}

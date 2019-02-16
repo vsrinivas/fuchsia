@@ -1,0 +1,20 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("hypervisor") {
+  sources = [
+    "guest.cpp",
+    "pvclock.cpp",
+    "vcpu.cpp",
+    "vmexit.cpp",
+    "vmx.S",
+    "vmx_cpu_state.cpp",
+  ]
+  deps = [
+    "$zx/kernel/arch/x86:headers",
+    "$zx/kernel/lib/hypervisor:headers",
+    "$zx/kernel/platform/pc",
+    "$zx/system/ulib/explicit-memory",
+  ]
+}

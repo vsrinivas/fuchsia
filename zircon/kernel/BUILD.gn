@@ -1,0 +1,359 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/config/standard.gni")
+import("$zx/public/gn/toolchain/c_utils.gni")
+import("$zx/public/gn/toolchain/environment.gni")
+import("$zx/public/gn/toolchain/environment_redirect.gni")
+import("params.gni")
+
+if (current_toolchain == default_toolchain) {
+  # In the default toolchain, just define the kernel toolchains.
+  foreach(cpu, standard_fuchsia_cpus) {
+    environment("kernel") {
+      globals = {
+        is_kernel = true
+      }
+      configs += standard_fuchsia_configs
+      configs += [
+        ":kernel_config",
+
+        # <stdio.h> has #include <lib/io.h>.
+        "$zx/kernel/lib/io:headers.config",
+
+        # <malloc.h> has #include <lib/heap.h>.
+        "$zx/kernel/lib/heap:headers.config",
+
+        # <kernel/spinlock.h> has #include <lockdep/lock_policy.h>.
+        "$zx/system/ulib/lockdep:headers.config",
+
+        # <kernel/thread.h> has #include <vm/kstack.h>.
+        "vm:headers.config",
+
+        # <lib/ktrace.h> has #include <lib/zircon-internal/ktrace.h>.
+        "$zx/system/ulib/zircon-internal:headers.config",
+
+        # <kernel/thread.h> has #include <fbl/macros.h>
+        "$zx/system/ulib/fbl:headers.config",
+
+        # <dev/iommu.h> has #include <fbl/name.h>
+        "lib/fbl:headers.config",
+
+        # <lib/mtrace.h> has #include <lib/user_copy/user_ptr.h>
+        "lib/user_copy:headers.config",
+      ]
+    }
+  }
+} else if (is_kernel) {
+  # These are needed both in kernel sources (pervasively) and in the linker
+  # scripts.
+  kernel_defines = [
+    # TODO: should not be needed in C, but is in one place now.
+    "KERNEL_BASE=$kernel_base",
+
+    "SMP_MAX_CPUS=$smp_max_cpus",
+  ]
+
+  # This is the top config for all kernel code.
+  config("kernel_config") {
+    configs = [
+      ":headers",
+      ":lock_dep",
+      ":standalone",
+      ":warnings",
+      "arch/$zircon_cpu:kernel",
+
+      # include/lib/counters.h and kernel.ld depend on -fdata-sections.
+      "$zx/public/gn/config:data_sections",
+    ]
+
+    defines = kernel_defines + kernel_extra_defines
+    defines += [
+      "_KERNEL",
+      "LK",
+      "ENABLE_PANIC_SHELL",
+      "WITH_DEBUG_LINEBUFFER",
+      "ZIRCON_TOOLCHAIN",
+    ]
+
+    if (!enable_user_pci) {
+      defines += [ "WITH_KERNEL_PCIE" ]
+    }
+
+    cflags = [ "-fpie" ]
+  }
+
+  config("headers") {
+    include_dirs = [
+      "include",
+      "lib/libc/include",
+    ]
+  }
+
+  # For any standalone static binary.
+  config("standalone") {
+    ldflags = [
+      "-nostdlib",
+      "-static",
+    ]
+
+    cflags = [
+      "-ffreestanding",
+      "-include",
+      rebase_path("include/hidden.h", root_build_dir),
+
+      # We want `.debug_frame` for the kernel (ZX-62).  And we still want
+      # asynchronous unwind tables.  Alas there's (currently) no way to
+      # achieve this with our GCC.  At the moment we compile with
+      # `-fno-omit-frame-pointer`, which is good because we link with
+      # `--gc-sections`, which means `.eh_frame` gets discarded so GCC-built
+      # kernels don't have any unwind info (except for assembly)!  Assembler
+      # code has its own way of requesting `.debug_frame` vs `.eh_frame` with
+      # the `.cfi_sections` directive.
+      "-fno-unwind-tables",
+    ]
+
+    if (!is_gcc && current_os == "fuchsia") {
+      # In the Fuchsia-target toolchains there's no way to prevent the
+      # compiler driver from passing -pie, so negate it.  BFD ld doesn't
+      # have --no-pie, but arm64-elf-gcc doesn't pass -pie either.
+      ldflags += [ "-Wl,--no-pie" ]
+    }
+
+    configs = [ "$zx/public/gn/config:no_exceptions" ]
+  }
+
+  config("warnings") {
+    cflags = [
+      "-Wformat=2",
+      "-Wvla",
+    ]
+
+    # GCC supports `-Wformat-signedness` but Clang currently does not.
+    if (is_gcc) {
+      cflags += [ "-Wformat-signedness" ]
+    }
+
+    cflags_c = [ "-Wmissing-prototypes" ]
+  }
+
+  config("lock_dep") {
+    visibility = [ ":*" ]
+    defines = []
+    if (enable_lock_dep) {
+      defines += [
+        "WITH_LOCK_DEP=1",
+        "LOCK_DEP_ENABLE_VALIDATION=1",
+      ]
+    }
+    if (enable_lock_dep_tests) {
+      defines += [ "WITH_LOCK_DEP_TESTS=1" ]
+    }
+  }
+
+  # This is the kernel proper, an ELF executable with full symbols.
+  # It's the file to use with a debugger, for example.
+  executable("zircon") {
+    visibility = [ ":*" ]
+
+    # $zx/scripts/zircon.elf-gdb.py expects kernel symbols in "zircon.elf".
+    output_extension = "elf"
+
+    ldflags = [
+      "-Wl,-T," + rebase_path("kernel.ld", root_build_dir),
+      "-Wl,--emit-relocs",
+    ]
+    inputs = [
+      "kernel.ld",
+    ]
+    configs += [ ":kernel_defsym" ]
+
+    deps = [
+      ":test",  # TODO: make optional, add testonly taint
+      "top",
+    ]
+    if (current_cpu == "arm64") {
+      deps += [ "platform/generic-arm" ]
+    } else if (current_cpu == "x64") {
+      deps += [ "target/pc" ]
+    }
+  }
+
+  zircon_elf_rspfile = "$target_gen_dir/zircon.elf.rsp"
+  link_output_rspfile("zircon.elf.rsp") {
+    visibility = [ ":*" ]
+    deps = [
+      ":zircon",
+    ]
+    outputs = [
+      zircon_elf_rspfile,
+    ]
+  }
+
+  # These are needed only in image.S and in the linker scripts.
+  image_defines = [ "BOOT_HEADER_SIZE=0x50" ]
+
+  # This supplies those variables for use in linker scripts.
+  config("kernel_defsym") {
+    visibility = [ ":*" ]
+    ldflags = []
+    foreach(assignment, kernel_defines + image_defines) {
+      ldflags += [ "-Wl,-defsym,$assignment" ]
+    }
+  }
+
+  group("test") {
+    #TODO: testonly = true
+    visibility = [ ":*" ]
+    deps = [
+      "lib/debugcommands",
+      "tests",
+    ]
+  }
+
+  # Extract the raw binary image (no ELF headers) of the kernel proper.
+  image_binary("raw") {
+    visibility = [ ":*" ]
+    deps = [
+      ":zircon",
+    ]
+    output_name = "zircon"
+    output_path =
+        rebase_path("$target_out_dir/$output_name.bin", root_build_dir)
+    metadata = {
+      image_path_defines = [ "#define KERNEL_IMAGE \"${output_path}\"" ]
+      image_path_barrier = []
+    }
+
+    # Use the same variant for the extraction that will have built the kernel.
+    variant_target = {
+      match = "executable"
+      label = ":zircon"
+      output_name = "zircon"
+    }
+  }
+
+  # Use metadata to embed that file name in case it's a variant redirect.
+  kernel_image_h = "$target_gen_dir/kernel_image.h"
+  generated_file("kernel_image.h") {
+    visibility = [ ":*" ]
+    deps = [
+      ":raw",
+    ]
+    outputs = [
+      kernel_image_h,
+    ]
+    data_keys = [ "image_path_defines" ]
+    walk_keys = [ "image_path_barrier" ]
+    output_conversion = "list lines"
+  }
+
+  # Use the --emit-relocs records to extract the fixups needed to relocate
+  # the kernel at boot.  This generates the "kernel-fixups.inc" file that's
+  # #include'd by "arch/$zircon_cpu/image.S".
+  toolchain_utils_action("fixups") {
+    visibility = [ ":*" ]
+    deps = [
+      ":zircon",
+      ":zircon.elf.rsp",
+    ]
+    sources = [
+      zircon_elf_rspfile,
+    ]
+    outputs = [
+      "$target_gen_dir/kernel-fixups.inc",
+    ]
+    depfile = "${outputs[0]}.d"
+
+    # TODO(mcgrathr): Move the script to this dir as it's private to this use.
+    script = "$zx/scripts/gen-kaslr-fixups.sh"
+    utils = [
+      "readelf",
+      "objdump",
+    ]
+    args = [
+      "@" + rebase_path(zircon_elf_rspfile, root_build_dir),
+      rebase_path(outputs[0], root_build_dir),
+      rebase_path(depfile, root_build_dir),
+    ]
+
+    # Use the same variant for the extraction that will have built the kernel.
+    variant_target = {
+      match = "executable"
+      label = ":zircon"
+      output_name = "zircon"
+    }
+  }
+
+  # Link the final kernel image layout including the extracted raw binary
+  # and the generated fixups.
+  executable("image") {
+    visibility = [ ":*" ]
+    configs += [ ":kernel_defsym" ]
+    deps = [
+      ":fixups",
+      ":kernel_image.h",
+      ":raw",
+      ":zircon",
+      ":zircon.elf.rsp",
+    ]
+    include_dirs = [ target_gen_dir ]
+    defines = image_defines
+    sources = [
+      "arch/$zircon_cpu/image.S",
+    ]
+    ldflags = [
+      "-Wl,--build-id=none",
+      "-Wl,-T," + rebase_path("image.ld", root_build_dir),
+      "-Wl,--just-symbols,@" + rebase_path(zircon_elf_rspfile, root_build_dir),
+    ]
+    inputs = [
+      "image.ld",
+      zircon_elf_rspfile,
+    ]
+  }
+
+  # Finally, extract the raw image (no ELF headers), which includes its own
+  # embedded headers to make it a ZBI.
+  image_binary("kernel") {
+    output_dir = root_out_dir
+    output_extension = "zbi"
+    output_path = rebase_path("$output_dir/$target_name.$output_extension",
+                              root_build_dir)
+    deps = [
+      ":image",
+    ]
+    metadata = {
+      images = [
+        {
+          type = "zbi"
+          name = "kernel"
+          path = output_path
+        },
+      ]
+
+      # This metadata makes the kernel act as a zbi_input() target so it can
+      # be a dependency of a zbi() target to get into the image.
+      zbi_input_args = [
+        "--type=container",
+        output_path,
+      ]
+    }
+
+    # Use the same variant for the extraction that will have built the kernel.
+    variant_target = {
+      match = "executable"
+      label = ":zircon"
+      output_name = "zircon"
+    }
+  }
+} else {
+  # Redirect to the kernel toolchain.
+  environment_redirect("kernel") {
+    environment_label = ":kernel"
+    deps = [
+      ":kernel",
+    ]
+  }
+}

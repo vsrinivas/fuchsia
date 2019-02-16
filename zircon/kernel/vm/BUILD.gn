@@ -1,0 +1,55 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("vm") {
+  kernel = true
+  sources = [
+    "bootalloc.cpp",
+    "bootreserve.cpp",
+    "kstack.cpp",
+    "page.cpp",
+    "page_source.cpp",
+    "pinned_vm_object.cpp",
+    "pmm.cpp",
+    "pmm_arena.cpp",
+    "pmm_node.cpp",
+    "vm.cpp",
+    "vm_address_region.cpp",
+    "vm_address_region_or_mapping.cpp",
+    "vm_aspace.cpp",
+    "vm_mapping.cpp",
+    "vm_object.cpp",
+    "vm_object_paged.cpp",
+    "vm_object_physical.cpp",
+    "vm_page_list.cpp",
+    "vmm.cpp",
+  ]
+  deps = [
+    "$zx/kernel/lib/console",
+    "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/user_copy",
+    "$zx/kernel/lib/vdso",
+    "$zx/system/ulib/pretty",
+    "$zx/third_party/ulib/cryptolib",
+  ]
+  public_deps = [
+    # <vm/vm_object.h> has #include <fbl/name.h>.
+    "$zx/kernel/lib/fbl:headers",
+
+    # <vm/vm_object.h> has #include <lib/user_copy/user_ptr.h>.
+    "$zx/kernel/lib/user_copy",
+
+    # <vm/vm_aspace.h> has #include <lib/crypto/prng.h>
+    "$zx/kernel/lib/crypto:headers",
+  ]
+}
+
+source_set("tests") {
+  sources = [
+    "vm_unittest.cpp",
+  ]
+  deps = [
+    "$zx/kernel/lib/unittest",
+  ]
+}

@@ -17,7 +17,7 @@
 # of entries in the table.
 
 usage() {
-  echo >&2 "Usage: $0 NM READELF OUTFILE {NAME DSO}..."
+  echo >&2 "Usage: $0 NM READELF [--depfile DEPFILE] OUTFILE {NAME DSO}..."
   exit 2
 }
 
@@ -29,6 +29,14 @@ NM="$1"
 shift
 READELF="$1"
 shift
+
+DEPFILE=
+if [ $# -gt 2 -a "$1" = "--depfile" ]; then
+  DEPFILE="$2"
+  shift 2
+fi
+USED_FILES=()
+
 OUTFILE="$1"
 shift
 
@@ -135,15 +143,33 @@ find_segments() {
   }; then : ; fi
 }
 
+trap 'rm -f "$OUTFILE" ${DEPFILE:+"$DEPFILE"}' ERR HUP INT TERM
+
 while [ $# -gt 0 ]; do
   if [ $# -lt 2 ]; then
     usage
   fi
-  echo "#define ${1}_FILENAME \"${2}\"" > $OUTFILE
-  find_segments "$1" "$2"
-  find_code_symbols "$1" "$2"
-  if [ $have_dynsym = yes ]; then
-    find_dynsym_slots "$1" "$2"
-  fi
+  name="$1"
+  dso="$2"
   shift 2
+
+  # This argument might be a response file.
+  if [[ "$dso" == @* ]]; then
+    rspfile="${dso#@}"
+    dso="$(< "$rspfile")"
+    USED_FILES+=("$rspfile" "$dso")
+  else
+    USED_FILES+=("$dso")
+  fi
+
+  echo "#define ${name}_FILENAME \"${dso}\"" > $OUTFILE
+  find_segments "$name" "$dso"
+  find_code_symbols "$name" "$dso"
+  if [ $have_dynsym = yes ]; then
+    find_dynsym_slots "$name" "$dso"
+  fi
 done
+
+if [ -n "$DEPFILE" ]; then
+  echo "$OUTFILE: ${USED_FILES[*]}" > "$DEPFILE"
+fi

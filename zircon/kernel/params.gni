@@ -3,6 +3,48 @@
 # found in the LICENSE file.
 
 declare_args() {
+  # Maximum number of CPUs the kernel will run on (others will be ignored).
+  smp_max_cpus = 16
+
+  if (current_cpu == "arm64") {
+    # Maximum number of CPU clusters the kernel will support.
+    # The kernel will panic at boot on hardware with more clusters.
+    smp_max_clusters = 2
+  }
+
+  # Virtual address where the kernel is mapped statically.  This is the
+  # base of addresses that appear in the kernel symbol table.  At runtime
+  # KASLR relocation processing adjusts addresses in memory from this base
+  # to the actual runtime virtual address.
+  if (current_cpu == "arm64") {
+    kernel_base = "0xffffffff00000000"
+  } else if (current_cpu == "x64") {
+    kernel_base = "0xffffffff80100000"  # Has KERNEL_LOAD_OFFSET baked into it.
+  }
+
+  # Virtual address where the kernel address space begins.
+  # Below this is the user address space.
+  if (current_cpu == "arm64") {
+    kernel_aspace_base = "0xffff000000000000"
+  } else if (current_cpu == "x64") {
+    kernel_aspace_base = "0xffffff8000000000UL"  # -512GB
+  }
+
+  # Enable kernel lock dependency tracking.
+  enable_lock_dep = false
+
   # Enable userspace PCI and disable kernel PCI.
   enable_user_pci = false
+
+  # Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
+  # "ENABLE_KERNEL_LL_DEBUG".
+  kernel_extra_defines = []
+}
+
+declare_args() {
+  # Enable kernel lock dependency tracking tests.  By default this is
+  # enabled when tracking is enabled, but can also be eanbled independently
+  # to assess whether the tests build and *fail correctly* when lockdep is
+  # disabled.
+  enable_lock_dep_tests = enable_lock_dep
 }

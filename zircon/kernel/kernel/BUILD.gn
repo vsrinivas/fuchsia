@@ -1,0 +1,36 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("kernel") {
+  sources = [
+    "brwlock.cpp",
+    "cmdline.cpp",
+    "deadline.cpp",
+    "debug.cpp",
+    "dpc.cpp",
+    "event.cpp",
+    "init.cpp",
+    "mp.cpp",
+    "mutex.cpp",
+    "percpu.cpp",
+    "sched.cpp",
+    "thread.cpp",
+    "timer.cpp",
+    "wait.cpp",
+  ]
+  deps = [
+    "$zx/kernel/dev/interrupt",
+    "$zx/kernel/lib/console",
+    "$zx/kernel/lib/counters",
+    "$zx/kernel/lib/debug",
+    "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/heap",
+    "$zx/kernel/lib/libc",
+    "$zx/kernel/lib/version",
+    "$zx/kernel/object",
+    "$zx/kernel/vm",
+    "$zx/system/ulib/explicit-memory",
+    "$zx/system/ulib/zircon-internal",
+  ]
+}

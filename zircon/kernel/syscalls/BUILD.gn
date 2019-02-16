@@ -4,10 +4,74 @@
 
 import("abigen.gni")
 
+source_set("syscalls") {
+  sources = [
+    "channel.cpp",
+    "ddk.cpp",
+    "ddk_${zircon_cpu}.cpp",
+    "ddk_pci.cpp",
+    "debug.cpp",
+    "exceptions.cpp",
+    "fifo.cpp",
+    "futex.cpp",
+    "handle_ops.cpp",
+    "hypervisor.cpp",
+    "object.cpp",
+    "object_wait.cpp",
+    "pager.cpp",
+    "port.cpp",
+    "profile.cpp",
+    "resource.cpp",
+    "socket.cpp",
+    "system.cpp",
+    "system_${zircon_cpu}.cpp",
+    "task.cpp",
+    "test.cpp",
+    "timer.cpp",
+    "vmar.cpp",
+    "vmo.cpp",
+    "zircon.cpp",
+  ]
+  deps = [
+    ":dispatch",
+    ":syscall-abi",
+    "$zx/kernel/dev/udisplay",
+    "$zx/kernel/lib/console",
+    "$zx/kernel/lib/counters",
+    "$zx/kernel/lib/crypto",
+    "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/gfxconsole",
+    "$zx/kernel/lib/ktrace",
+    "$zx/kernel/lib/mtrace",
+    "$zx/kernel/lib/pci",
+    "$zx/kernel/lib/user_copy",
+    "$zx/kernel/object",
+    "$zx/system/ulib/explicit-memory",
+    "$zx/system/ulib/libzbi",
+    "$zx/system/ulib/region-alloc",
+  ]
+  if (current_cpu == "x64") {
+    deps += [ "$zx/kernel/platform/pc" ]
+  }
+}
+
+# Only this file depends on vdso-valid-sysret.h.
+source_set("dispatch") {
+  sources = [
+    "syscalls.cpp",
+  ]
+  deps = [
+    ":syscall-abi",
+    "$zx/kernel/lib/vdso:headers",
+  ]
+}
+
 group("syscall-abi") {
   visibility = [
     ":*",
+    "$zx/kernel/arch/$zircon_cpu:*",
     "$zx/system/ulib/zircon:*",
+    "$zx/system/utest/core/bad-syscall:*",
   ]
 
   public_configs = [ ":syscall-abi.config" ]

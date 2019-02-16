@@ -1,0 +1,28 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("crypto") {
+  kernel = true
+  sources = [
+    "global_prng.cpp",
+    "global_prng_unittest.cpp",
+    "prng.cpp",
+    "prng_unittest.cpp",
+  ]
+  deps = [
+    "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/unittest",
+    "$zx/system/ulib/explicit-memory",
+    "$zx/third_party/ulib/cryptolib",
+    "$zx/third_party/ulib/uboringssl",
+    "entropy",
+  ]
+  public_deps = [
+    # lib/crypto/prng.h has #include <openssl/sha.h>.
+    "$zx/third_party/ulib/uboringssl:headers",
+
+    # <lib/crypto/entropy/jitterentropy_collector.h> has #include <lib/jitterentropy/jitterentropy.h>.
+    "$zx/third_party/lib/jitterentropy:headers",
+  ]
+}
