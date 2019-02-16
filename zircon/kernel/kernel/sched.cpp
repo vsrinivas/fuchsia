@@ -901,8 +901,9 @@ void sched_resched_internal() {
 
 void sched_init_early() {
     // initialize the run queues
-    for (unsigned int cpu = 0; cpu < SMP_MAX_CPUS; cpu++)
+    for (unsigned int cpu = 0; cpu < SMP_MAX_CPUS; cpu++) {
         for (unsigned int i = 0; i < NUM_PRIORITIES; i++) {
             list_initialize(&percpu[cpu].run_queue[i]);
         }
+    }
 }
