@@ -1613,6 +1613,113 @@ mod tests {
     }
 
     #[test]
+    fn test_buffer_view_from_buffer() {
+        // This test is specifically designed to verify that implementations of
+        // ParseBuffer::parse properly construct a BufferView, and that that
+        // BufferView properly updates the underlying buffer. It was inspired by
+        // the bug with Change-Id Ifeab21fba0f7ba94d1a12756d4e83782002e4e1e.
+
+        // This ParsablePacket implementation takes the contents it expects as a
+        // parse argument and validates the BufferView[Mut] against it. It consumes
+        // one byte from the front and one byte from the back to ensure that that
+        // functionality works as well.
+        impl<B: ByteSlice> ParsablePacket<B, &[u8]> for () {
+            type Error = ();
+            fn parse<BV: BufferView<B>>(mut buffer: BV, args: &[u8]) -> Result<(), ()> {
+                assert_eq!(buffer.as_ref(), args);
+                buffer.take_front(1);
+                buffer.take_back(1);
+                Ok(())
+            }
+
+            fn parse_mut<BV: BufferViewMut<B>>(mut buffer: BV, args: &[u8]) -> Result<(), ()>
+            where
+                B: ByteSliceMut,
+            {
+                assert_eq!(buffer.as_ref(), args);
+                buffer.take_front(1);
+                buffer.take_back(1);
+                Ok(())
+            }
+
+            fn parse_metadata(&self) -> ParseMetadata {
+                unimplemented!()
+            }
+        }
+
+        // immutable byte slices
+
+        let mut buf = &[0, 1, 2, 3, 4, 5, 6, 7][..];
+        buf.parse_with::<_, ()>(&[0, 1, 2, 3, 4, 5, 6, 7]).unwrap();
+        // test that, after parsing, the bytes consumed are consumed permanently
+        buf.parse_with::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
+
+        // test that different temporary values do not affect one another and
+        // also that slicing works properly (in that the elements outside of the
+        // slice are not exposed in the BufferView[Mut]; this is fairly obvious
+        // for slices, but less obvious for Buf, which we test below)
+        let buf = &[0, 1, 2, 3, 4, 5, 6, 7][..];
+        (&buf[1..7]).parse_with::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
+        (&buf[1..7]).parse_with::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
+
+        // mutable byte slices
+
+        let mut buf = &mut [0, 1, 2, 3, 4, 5, 6, 7][..];
+        buf.parse_with::<_, ()>(&[0, 1, 2, 3, 4, 5, 6, 7]).unwrap();
+        // test that, after parsing, the bytes consumed are consumed permanently
+        buf.parse_with::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
+        // test that this also works with parse_with_mut
+        buf.parse_with_mut::<_, ()>(&[2, 3, 4, 5]).unwrap();
+        buf.parse_with_mut::<_, ()>(&[3, 4]).unwrap();
+
+        // test that different temporary values do not affect one another and
+        // also that slicing works properly (in that the elements outside of the
+        // slice are not exposed in the BufferView[Mut]; this is fairly obvious
+        // for slices, but less obvious for Buf, which we test below)
+        let buf = &mut [0, 1, 2, 3, 4, 5, 6, 7][..];
+        (&buf[1..7]).parse_with::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
+        (&buf[1..7]).parse_with::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
+        (&mut buf[1..7]).parse_with_mut::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
+        (&mut buf[1..7]).parse_with_mut::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
+
+        // Buf with immutable byte slice
+
+        let mut buf = Buf::new(&[0, 1, 2, 3, 4, 5, 6, 7][..], ..);
+        buf.parse_with::<_, ()>(&[0, 1, 2, 3, 4, 5, 6, 7]).unwrap();
+        // test that, after parsing, the bytes consumed are consumed permanently
+        buf.parse_with::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
+
+        // the same test again, but this time with Buf's range set
+        let mut buf = Buf::new(&[0, 1, 2, 3, 4, 5, 6, 7][..], 1..7);
+        buf.parse_with::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
+        // test that, after parsing, the bytes consumed are consumed permanently
+        buf.parse_with::<_, ()>(&[2, 3, 4, 5]).unwrap();
+
+        // Buf with mutable byte slice
+
+        let buf = &mut [0, 1, 2, 3, 4, 5, 6, 7][..];
+        let mut buf = Buf::new(&mut buf[..], ..);
+        buf.parse_with::<_, ()>(&[0, 1, 2, 3, 4, 5, 6, 7]).unwrap();
+        // test that, after parsing, the bytes consumed are consumed permanently
+        buf.parse_with::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
+        // test that this also works with parse_with_mut
+        buf.parse_with_mut::<_, ()>(&[2, 3, 4, 5]).unwrap();
+        buf.parse_with_mut::<_, ()>(&[3, 4]).unwrap();
+
+        // the same test again, but this time with Buf's range set
+        let buf = &mut [0, 1, 2, 3, 4, 5, 6, 7][..];
+        let mut buf = Buf::new(&mut buf[..], 1..7);
+        buf.parse_with::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
+        // test that, after parsing, the bytes consumed are consumed permanently
+        buf.parse_with::<_, ()>(&[2, 3, 4, 5]).unwrap();
+        // test that this also works with parse_with_mut
+        let buf = &mut [0, 1, 2, 3, 4, 5, 6, 7][..];
+        let mut buf = Buf::new(&mut buf[..], 1..7);
+        buf.parse_with_mut::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
+        buf.parse_with_mut::<_, ()>(&[2, 3, 4, 5]).unwrap();
+    }
+
+    #[test]
     fn test_buf_shrink_to() {
         // Tests the shrink_front_to and shrink_back_to methods.
         fn test(buf: &[u8], shrink_to: usize, size_after: usize) {

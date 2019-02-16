@@ -182,7 +182,7 @@ impl<B: AsRef<[u8]>> Buf<B> {
 
     // in a separate method so it can be used in testing
     pub(crate) fn buffer_view(&mut self) -> BufView {
-        BufView { buf: self.buf.as_ref(), range: &mut self.range }
+        BufView { buf: &self.buf.as_ref()[self.range.clone()], range: &mut self.range }
     }
 }
 
@@ -223,7 +223,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> ParseBufferMut for Buf<B> {
         &'a mut self,
         args: ParseArgs,
     ) -> Result<P, P::Error> {
-        P::parse(BufViewMut { buf: self.buf.as_mut(), range: &mut self.range }, args)
+        P::parse(BufViewMut { buf: &mut self.buf.as_mut()[self.range.clone()], range: &mut self.range }, args)
     }
     fn as_buf_mut(&mut self) -> Buf<&mut [u8]> {
         Buf::new(self.buf.as_mut(), self.range.clone())
