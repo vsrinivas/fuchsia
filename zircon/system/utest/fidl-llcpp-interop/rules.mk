@@ -41,6 +41,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/main.cpp \
     $(LOCAL_DIR)/generated/fidl_llcpp_basictypes.cpp \
     $(LOCAL_DIR)/generated/fidl_llcpp_dirent.cpp \
     $(LOCAL_DIR)/basictypes_tests.cpp \
@@ -76,3 +77,4 @@ MODULE_COMPILEFLAGS += \
     -Isystem/utest/fidl-llcpp-interop/generated \
 
 include make/module.mk
+

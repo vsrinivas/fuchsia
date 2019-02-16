@@ -30,3 +30,7 @@ bool mutex_block(void) TA_ACQ(&big_lock) {
 BEGIN_TEST_CASE(hard_to_exit)
 RUN_TEST(mutex_block)
 END_TEST_CASE(hard_to_exit)
+
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}

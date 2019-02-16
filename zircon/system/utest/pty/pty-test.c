@@ -225,3 +225,7 @@ BEGIN_TEST_CASE(pty_tests)
 RUN_TEST(pty_test)
 RUN_TEST(not_a_pty_test)
 END_TEST_CASE(pty_tests)
+
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}

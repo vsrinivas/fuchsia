@@ -11,6 +11,7 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/default_tests.cpp \
     $(LOCAL_DIR)/exception_tests.cpp \
+    $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/receiver_tests.cpp \
     $(LOCAL_DIR)/time_tests.cpp \
     $(LOCAL_DIR)/task_tests.cpp \

@@ -11,6 +11,7 @@ MODULE_TYPE := usertest
 MODULE_NAME := inspect-test
 
 MODULE_SRCS := \
+    $(LOCAL_DIR)/main.cpp \
     $(LOCAL_DIR)/heap_tests.cpp \
     $(LOCAL_DIR)/inspect_tests.cpp \
     $(LOCAL_DIR)/scanner_tests.cpp \
@@ -29,5 +30,6 @@ MODULE_LIBS := \
     system/ulib/fdio  \
     system/ulib/unittest \
     system/ulib/zircon \
+    system/ulib/unittest \
 
 include make/module.mk

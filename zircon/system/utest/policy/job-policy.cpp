@@ -464,3 +464,8 @@ RUN_TEST(TestErrorOnBadHandle)
 RUN_TEST(TestExceptionOnBadHandle)
 RUN_TEST(TestGetInfoOnBadHandle)
 END_TEST_CASE(job_policy)
+
+int main(int argc, char** argv) {
+    bool success = unittest_run_all_tests(argc, argv);
+    return success ? 0 : -1;
+}

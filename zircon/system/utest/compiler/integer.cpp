@@ -64,3 +64,7 @@ RUN_TEST_ENABLE_CRASH_HANDLER(signed_overflow_test)
 RUN_TEST_ENABLE_CRASH_HANDLER(signed_underflow_test)
 RUN_TEST_ENABLE_CRASH_HANDLER(divide_by_zero_test)
 END_TEST_CASE(integer_tests)
+
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}

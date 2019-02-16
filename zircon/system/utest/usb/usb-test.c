@@ -241,3 +241,7 @@ RUN_TEST(usb_bulk_scatter_gather_test)
 RUN_TEST(usb_isoch_loopback_test)
 RUN_TEST(usb_callbacks_opt_out_test)
 END_TEST_CASE(usb_tests)
+
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}

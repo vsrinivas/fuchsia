@@ -1797,3 +1797,12 @@ RUN_TEST(resize_nonresizable_vmo);
 END_TEST_CASE(api_violations)
 
 } // namespace pager_tests
+
+#ifndef BUILD_COMBINED_TESTS
+int main(int argc, char** argv) {
+    if (!unittest_run_all_tests(argc, argv)) {
+        return -1;
+    }
+    return 0;
+}
+#endif

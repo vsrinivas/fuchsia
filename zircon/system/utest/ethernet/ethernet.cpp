@@ -934,3 +934,8 @@ BEGIN_TEST_CASE(EthernetDataTests)
 RUN_TEST_MEDIUM(EthernetDataTest_Send)
 RUN_TEST_MEDIUM(EthernetDataTest_Recv)
 END_TEST_CASE(EthernetDataTests)
+
+int main(int argc, char* argv[]) {
+    bool success = unittest_run_all_tests(argc, argv);
+    return success ? 0 : -1;
+}

@@ -592,3 +592,7 @@ RUN_TEST(TestNoKernc)
 RUN_TEST(TestDiskTooSmall)
 RUN_TEST(TestIsCrosDevice)
 END_TEST_CASE(disk_wizard_tests)
+
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}

@@ -107,3 +107,8 @@ RUN_TEST(stat_empty_test)
 RUN_TEST(lstat_empty_test)
 RUN_TEST(open_empty_test)
 END_TEST_CASE(posixio_test)
+
+int main(int argc, char** argv) {
+    bool success = unittest_run_all_tests(argc, argv);
+    return success ? 0 : -1;
+}

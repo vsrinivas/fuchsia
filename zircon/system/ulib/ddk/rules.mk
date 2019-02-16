@@ -34,6 +34,7 @@ MODULE_NAME := ddk-unittest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/phys-iter.c \
+    $(TEST_DIR)/main.cpp \
     $(TEST_DIR)/phys-iter-test.cpp \
 
 MODULE_STATIC_LIBS := \

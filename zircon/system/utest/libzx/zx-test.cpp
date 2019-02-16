@@ -653,3 +653,8 @@ RUN_TEST(job_default_test)
 RUN_TEST(unowned_test)
 RUN_TEST(get_child_test)
 END_TEST_CASE(libzx_tests)
+
+int main(int argc, char** argv) {
+    bool success = unittest_run_all_tests(argc, argv);
+    return success ? 0 : -1;
+}

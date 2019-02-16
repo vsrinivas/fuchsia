@@ -61,6 +61,7 @@ std::map<std::string, std::string> Examples::map_ = {\n" >> $@ && \
 
 
 MODULE_SRCS := \
+    $(LOCAL_DIR)/main.cpp \
     $(LOCAL_DIR)/dup_attributes_tests.cpp \
     $(LOCAL_DIR)/flat_ast_tests.cpp \
     $(LOCAL_DIR)/formatter_unittests.cpp \

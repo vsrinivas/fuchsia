@@ -15,6 +15,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/operation-list-test.cpp \
     $(LOCAL_DIR)/operation-pool-test.cpp \
     $(LOCAL_DIR)/operation-queue-test.cpp \
+    $(LOCAL_DIR)/main.cpp \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/fake_ddk \

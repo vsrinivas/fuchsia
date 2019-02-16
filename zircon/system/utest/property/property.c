@@ -408,3 +408,8 @@ RUN_TEST(fs_invalid_test)
 RUN_TEST(gs_test)
 #endif
 END_TEST_CASE(property_tests)
+
+int main(int argc, char** argv) {
+    bool success = unittest_run_all_tests(argc, argv);
+    return success ? 0 : -1;
+}

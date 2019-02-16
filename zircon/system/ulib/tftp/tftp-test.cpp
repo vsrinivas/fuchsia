@@ -2066,3 +2066,7 @@ RUN_TEST(test_tftp_recv_busy_from_rrq)
 RUN_TEST(test_tftp_recv_busy_from_wrq)
 RUN_TEST(test_tftp_recv_other_err)
 END_TEST_CASE(tftp_recv_err)
+
+int main(int argc, char* argv[]) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}

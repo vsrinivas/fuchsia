@@ -44,6 +44,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/client_tests.c \
     $(LOCAL_DIR)/fakesocket_tests.cpp \
     $(LOCAL_DIR)/ldsvc_tests.c \
+    $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/server_tests.c \
     $(LOCAL_DIR)/spaceship_tests.c \
     $(LOCAL_DIR)/spaceship_tests.cpp \

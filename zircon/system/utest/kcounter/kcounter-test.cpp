@@ -131,3 +131,8 @@ bool test_counters() {
 BEGIN_TEST_CASE(counters_test)
 RUN_TEST(test_counters)
 END_TEST_CASE(counters_test)
+
+int main(int argc, char** argv) {
+    bool success = unittest_run_all_tests(argc, argv);
+    return success ? 0 : -1;
+}

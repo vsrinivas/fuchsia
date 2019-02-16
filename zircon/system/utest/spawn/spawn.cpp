@@ -613,3 +613,7 @@ RUN_TEST(spawn_actions_name_test)
 RUN_TEST(spawn_errors_test)
 RUN_TEST(spawn_vmo_test)
 END_TEST_CASE(spawn_tests)
+
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}

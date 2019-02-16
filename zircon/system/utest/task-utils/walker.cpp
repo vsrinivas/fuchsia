@@ -199,3 +199,8 @@ RUN_TEST((cpp_walk_failure<HAS_ON_PROCESS, /*PoisonDepth=*/2>))
 RUN_TEST((cpp_walk_failure<HAS_ON_THREAD, /*PoisonDepth=*/2>))
 
 END_TEST_CASE(task_utils)
+
+int main(int argc, char** argv) {
+    bool success = unittest_run_all_tests(argc, argv);
+    return success ? 0 : -1;
+}

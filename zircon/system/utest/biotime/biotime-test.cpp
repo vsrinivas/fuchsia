@@ -75,3 +75,8 @@ RUN_TEST(TestBiotimeWrite)
 END_TEST_CASE(biotime_tests)
 
 }
+
+int main(int argc, char** argv) {
+    bool success = unittest_run_all_tests(argc, argv);
+    return success ? 0 : -1;
+}

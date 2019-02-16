@@ -99,3 +99,7 @@ RUN_TEST(get_root_resource_succeeds)
 RUN_TEST(get_board_name_succeeds)
 RUN_TEST(get_interrupt_controller_info_succeeds)
 END_TEST_CASE(sysinfo_tests)
+
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}

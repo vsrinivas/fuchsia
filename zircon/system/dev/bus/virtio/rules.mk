@@ -66,6 +66,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/scsilib.cpp \
     $(LOCAL_DIR)/ring.cpp \
     $(LOCAL_DIR)/scsi_test.cpp \
+    $(LOCAL_DIR)/test_main.cpp \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/fake_ddk \

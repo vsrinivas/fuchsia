@@ -1678,3 +1678,9 @@ RUN_TEST(TestWritingArmFlagsRegister)
 // RUN_TEST(TestDebugRegistersValidation);
 
 END_TEST_CASE(threads_tests)
+
+#ifndef BUILD_COMBINED_TESTS
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}
+#endif

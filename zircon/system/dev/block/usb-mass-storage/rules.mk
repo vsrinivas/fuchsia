@@ -39,6 +39,7 @@ MODULE_NAME := ums-block-test
 MODULE_SRCS := \
     $(LOCAL_DIR)/block.cpp \
     $(LOCAL_DIR)/tests/block.cpp \
+    $(LOCAL_DIR)/tests/main.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk \
     system/ulib/ddktl \
@@ -76,6 +77,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/usb-mass-storage.cpp \
     $(LOCAL_DIR)/block.cpp \
     $(LOCAL_DIR)/tests/usb-mass-storage.cpp \
+    $(LOCAL_DIR)/tests/main.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk \
     system/ulib/ddktl \

@@ -65,3 +65,7 @@ bool enumeration_test() {
 BEGIN_TEST_CASE(driver_integration_tests)
 RUN_TEST(enumeration_test)
 END_TEST_CASE(driver_integration_tests);
+
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}

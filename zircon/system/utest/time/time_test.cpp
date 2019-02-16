@@ -246,3 +246,8 @@ RUN_TEST(duration_mul_int64_test)
 RUN_TEST(duration_from_test)
 RUN_TEST(macro_conversion_test)
 END_TEST_CASE(time_test)
+
+int main(int argc, char** argv) {
+    bool success = unittest_run_all_tests(argc, argv);
+    return success ? 0 : -1;
+}

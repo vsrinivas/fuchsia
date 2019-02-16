@@ -13,6 +13,7 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/fdio-tests.cpp \
     $(LOCAL_DIR)/fidl-tests.cpp \
+    $(LOCAL_DIR)/main.c \
 
 MODULE_NAME := devfs-test
 

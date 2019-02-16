@@ -498,3 +498,8 @@ RUN_TEST(reg_field_test)
 RUN_TEST(print_test)
 RUN_TEST(set_chaining_test)
 END_TEST_CASE(libhwreg_tests)
+
+int main(int argc, char** argv) {
+    bool success = unittest_run_all_tests(argc, argv);
+    return success ? 0 : -1;
+}

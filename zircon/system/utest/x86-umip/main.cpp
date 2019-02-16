@@ -150,3 +150,7 @@ RUN_TEST(umip_test<Instruction::STR>)
 RUN_TEST(umip_test<Instruction::NOOP>)
 RUN_TEST(umip_test<Instruction::MOV_NONCANON>)
 END_TEST_CASE(x86_umip_test)
+
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}

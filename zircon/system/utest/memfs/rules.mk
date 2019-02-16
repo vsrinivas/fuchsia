@@ -12,6 +12,7 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/fidl-tests.cpp \
+    $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/memfs-tests.cpp \
     $(LOCAL_DIR)/vmofile-tests.cpp \
 

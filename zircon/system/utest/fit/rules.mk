@@ -8,6 +8,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 # Zircon currently only supports that for the host.
 fit_zircon_friendly_usertests := \
     $(LOCAL_DIR)/function_tests.cpp \
+    $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/nullable_tests.cpp \
     $(LOCAL_DIR)/optional_tests.cpp \
     $(LOCAL_DIR)/result_tests.cpp \

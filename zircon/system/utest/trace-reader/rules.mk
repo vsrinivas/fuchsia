@@ -5,6 +5,7 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 reader_tests := \
+    $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/reader_tests.cpp \
     $(LOCAL_DIR)/records_tests.cpp
 

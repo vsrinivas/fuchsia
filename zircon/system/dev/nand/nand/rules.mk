@@ -50,6 +50,7 @@ TEST_DIR := $(LOCAL_DIR)/test
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/nand.cpp \
+    $(TEST_DIR)/main.cpp\
     $(TEST_DIR)/nand-test.cpp\
 
 MODULE_COMPILEFLAGS := \

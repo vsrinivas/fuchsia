@@ -187,3 +187,8 @@ BEGIN_TEST_CASE(elf_search_tests)
 // sussed out by looking at coverage results.
 RUN_TEST(ElfSearchTest)
 END_TEST_CASE(elf_search_tests)
+
+int main(int argc, char** argv) {
+    bool success = unittest_run_all_tests(argc, argv);
+    return success ? 0 : -1;
+}

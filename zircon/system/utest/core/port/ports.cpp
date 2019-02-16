@@ -701,3 +701,9 @@ RUN_TEST(threads_event_once)
 RUN_TEST(threads_event_repeat)
 RUN_TEST_LARGE(cancel_stress)
 END_TEST_CASE(port_tests)
+
+#ifndef BUILD_COMBINED_TESTS
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}
+#endif

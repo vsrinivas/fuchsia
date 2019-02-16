@@ -10,6 +10,7 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/test_loop_tests.cpp \
+	$(LOCAL_DIR)/main.c
 
 MODULE_NAME := async-testutils-test
 

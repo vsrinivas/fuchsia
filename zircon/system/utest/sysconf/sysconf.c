@@ -24,3 +24,7 @@ static bool sysconf_test(void) {
 BEGIN_TEST_CASE(sysconf_tests)
 RUN_TEST(sysconf_test)
 END_TEST_CASE(sysconf_tests)
+
+int main(int argc, char** argv) {
+  return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}

@@ -233,3 +233,8 @@ RUN_TEST(edge_cases)
 RUN_TEST(restart_race)
 RUN_TEST(signals_asserted_immediately)
 END_TEST_CASE(timers_test)
+
+int main(int argc, char** argv) {
+    bool success = unittest_run_all_tests(argc, argv);
+    return success ? 0 : -1;
+}

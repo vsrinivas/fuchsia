@@ -67,3 +67,7 @@ BEGIN_TEST_CASE(vdso_variant_tests)
 RUN_TEST(vdso_open_test)
 RUN_TEST(vdso_missing_test_syscall1_test)
 END_TEST_CASE(vdso_variant_tests)
+
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}

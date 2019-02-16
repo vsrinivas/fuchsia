@@ -11,6 +11,7 @@ MODULE_TYPE := hosttest
 MODULE_NAME := fs-test
 
 MODULE_SRCS := \
+    $(LOCAL_DIR)/main.cpp \
     $(LOCAL_DIR)/util.cpp \
     $(LOCAL_DIR)/test-basic.cpp \
     $(LOCAL_DIR)/test-directory.cpp \

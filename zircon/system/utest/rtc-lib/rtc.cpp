@@ -54,3 +54,7 @@ BEGIN_TEST_CASE(rtc_lib_tests)
 RUN_TEST(santitize_rtc_test)
 RUN_TEST(seconds_since_epoch_test)
 END_TEST_CASE(rtc_lib_tests)
+
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}

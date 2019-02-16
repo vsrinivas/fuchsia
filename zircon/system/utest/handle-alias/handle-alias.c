@@ -121,3 +121,8 @@ static bool handle_value_alias_test(void) {
 BEGIN_TEST_CASE(handle_reuse)
 RUN_TEST_LARGE(handle_value_alias_test); // Potentially flaky => large test
 END_TEST_CASE(handle_reuse)
+
+int main(int argc, char** argv) {
+    bool success = unittest_run_all_tests(argc, argv);
+    return success ? 0 : -1;
+}

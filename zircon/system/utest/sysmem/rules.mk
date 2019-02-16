@@ -18,6 +18,7 @@ MODULE_USERTEST_GROUP := sys
 #MODULE_GROUP := misc
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/sysmem_tests.cpp \
 
 MODULE_NAME := sysmem-test

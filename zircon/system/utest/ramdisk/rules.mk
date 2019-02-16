@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/ramdisk.cpp \
 
 MODULE_NAME := ramdisk-test

@@ -27,3 +27,7 @@ RUN_TEST(entropy_file_exists);
 END_TEST_CASE(entropy_tests)
 
 #endif
+
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}

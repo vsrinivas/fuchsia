@@ -362,3 +362,7 @@ RUN_TEST(utf16to8_unpaired_surrogates);
 RUN_TEST(utf16to8_dst_buffer_lengths);
 RUN_TEST(utf16to8_endianness_and_bom);
 END_TEST_CASE(utf_conversion_tests)
+
+int main(int argc, char** argv) {
+    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+}

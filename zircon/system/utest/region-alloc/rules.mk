@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/region-alloc.cpp \
     $(LOCAL_DIR)/region-alloc-c-api.c
 
