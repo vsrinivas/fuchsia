@@ -275,25 +275,6 @@ extern fdio_state_t __fdio_global_state;
 #define fdio_root_init (__fdio_global_state.init)
 #define fdio_root_ns (__fdio_global_state.ns)
 
-// Enable low level debug chatter, which requires a kernel that
-// doesn't check the resource argument to zx_debuglog_create()
-//
-// The value is the default debug level (0 = none)
-// The environment variable FDIODEBUG will override this on fdio init
-//
-// #define FDIO_LLDEBUG 1
-
-#ifdef FDIO_LLDEBUG
-void fdio_lldebug_printf(unsigned level, const char* fmt, ...);
-#define LOG(level, fmt...) fdio_lldebug_printf(level, fmt)
-#else
-#define LOG(level, fmt...) \
-    do {                   \
-    } while (0)
-#endif
-
-void fdio_set_debug_level(unsigned level);
-
 // Returns an fd number greater than or equal to |starting_fd|, following the
 // same rules as fdio_bind_fd. If there are no free file descriptors, -1 is
 // returned and |errno| is set to EMFILE. The returned |fd| is bound to

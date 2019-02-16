@@ -61,7 +61,6 @@ zx_status_t fdio_ns_destroy(fdio_ns_t* raw_ns) {
 
 __EXPORT
 zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t remote_raw) {
-    LOG(1, "BIND '%s' %x\n", path, remote_raw);
     zx::channel remote(remote_raw);
     return ns->Bind(path, std::move(remote));
 }

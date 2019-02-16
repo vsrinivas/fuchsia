@@ -63,7 +63,6 @@ zx_status_t zxio_dir_close(fdio_t* io) {
 zx_status_t zxio_dir_open(fdio_t* io, const char* path, uint32_t flags,
                           uint32_t mode, fdio_t** out) {
     LocalConnection* dir = fdio_get_zxio_dir(io);
-    LOG(6, "OPEN '%s'\n", path);
 
     return dir->fs->Open(fbl::WrapRefPtr(dir->vn), path, flags, mode, out);
 }

@@ -193,7 +193,6 @@ fdio_t* fdio_namespace::CreateConnection(fbl::RefPtr<const LocalVnode> vn) const
 
 zx_status_t fdio_namespace::Connect(const char* path, uint32_t flags,
                                     zx::channel channel) const {
-    LOG(6, "CONNECT '%s'\n", path);
     // Require that we start at /
     if (path[0] != '/') {
         return ZX_ERR_NOT_FOUND;

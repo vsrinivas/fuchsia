@@ -120,7 +120,6 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
     fdio_t* io_to_close = NULL;
 
     mtx_lock(&fdio_lock);
-    LOG(1, "fdio: bind_to_fd(%p, %d, %d)\n", io, fd, starting_fd);
     if (fd < 0) {
         // If we are not given an |fd|, the |starting_fd| must be non-negative.
         if (starting_fd < 0) {
@@ -147,8 +146,6 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
         io_to_close = fdio_fdtab[fd];
         if (io_to_close) {
             fdio_dupcount_release(io_to_close);
-            LOG(1, "fdio: bind_to_fd: closed fd=%d, io=%p, dupcount=%d\n",
-                fd, io_to_close, fdio_get_dupcount(io_to_close));
             if (fdio_get_dupcount(io_to_close) > 0) {
                 // still alive in another fdtab slot
                 fdio_release(io_to_close);
@@ -158,7 +155,6 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
     }
 
 free_fd_found:
-    LOG(1, "fdio: bind_to_fd() OK fd=%d\n", fd);
     fdio_dupcount_acquire(io);
     fdio_fdtab[fd] = io;
     mtx_unlock(&fdio_lock);
@@ -178,7 +174,6 @@ __EXPORT
 zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
     zx_status_t status;
     mtx_lock(&fdio_lock);
-    LOG(1, "fdio: unbind_from_fd(%d)\n", fd);
     if (fd >= FDIO_MAX_FD) {
         status = ZX_ERR_INVALID_ARGS;
         goto done;
@@ -224,10 +219,6 @@ fdio_t* fdio_unsafe_fd_to_io(int fd) {
 }
 
 zx_status_t fdio_close(fdio_t* io) {
-    if (fdio_get_dupcount(io) > 0) {
-        LOG(1, "fdio: close(%p): nonzero dupcount!\n", io);
-    }
-    LOG(1, "fdio: io: close(%p)\n", io);
     return fdio_get_ops(io)->close(io);
 }
 
@@ -593,16 +584,6 @@ void __libc_extensions_init(uint32_t handle_count,
                             uint32_t name_count,
                             char** names) {
 
-#ifdef FDIO_LLDEBUG
-    const char* fdiodebug = getenv("FDIODEBUG");
-    if (fdiodebug) {
-        fdio_set_debug_level(strtoul(fdiodebug, NULL, 10));
-        LOG(1, "fdio: init: debuglevel = %s\n", fdiodebug);
-    } else {
-        LOG(1, "fdio: init()\n");
-    }
-#endif
-
     int stdio_fd = -1;
 
     // extract handles we care about
@@ -621,14 +602,11 @@ void __libc_extensions_init(uint32_t handle_count,
             fdio_t* io = NULL;
             zx_status_t status = fdio_create(h, &io);
             if (status != ZX_OK) {
-                LOG(1, "fdio: Failed to acquire for fd=%d status=%d (%s)\n",
-                    arg_fd, status, zx_status_get_string(status));
                 zx_handle_close(h);
                 continue;
             }
             fdio_fdtab[arg_fd] = io;
             fdio_dupcount_acquire(fdio_fdtab[arg_fd]);
-            LOG(1, "fdio: inherit fd=%d\n", arg_fd);
             break;
         }
         case PA_NS_DIR:
@@ -677,7 +655,6 @@ void __libc_extensions_init(uint32_t handle_count,
                 fdio_fdtab[n] = fdio_null_create();
             }
             fdio_dupcount_acquire(fdio_fdtab[n]);
-            LOG(1, "fdio: inherit fd=%u (dup of fd=%d)\n", n, stdio_fd);
         }
     }
 
@@ -1171,7 +1148,6 @@ int close(int fd) {
     fdio_t* io = fdio_fdtab[fd];
     fdio_dupcount_release(io);
     fdio_fdtab[fd] = NULL;
-    LOG(1, "fdio: close(%d) dupcount=%u\n", fdio_get_dupcount(io));
     if (fdio_get_dupcount(io) > 0) {
         // still alive in other fdtab slots
         mtx_unlock(&fdio_lock);
@@ -1601,11 +1577,9 @@ int fstatat(int dirfd, const char* fn, struct stat* s, int flags) {
     fdio_t* io;
     zx_status_t r;
 
-    LOG(1,"fdio: fstatat(%d, '%s',...)\n", dirfd, fn);
     if ((r = __fdio_open_at(&io, dirfd, fn, O_PATH, 0)) < 0) {
         return ERROR(r);
     }
-    LOG(1,"fdio: fstatat io=%p\n", io);
     r = fdio_stat(io, s);
     fdio_close(io);
     fdio_release(io);

@@ -72,21 +72,17 @@ zxio_storage_t* fdio_get_zxio_storage(fdio_t* io) {
 
 fdio_t* fdio_alloc(const fdio_ops_t* ops) {
     fdio_t* io = (fdio_t*) calloc(1, sizeof(fdio_t));
-    LOG(5, "fdio: io: alloc: %p\n", io);
     io->ops = ops;
     atomic_init(&io->refcount, 1);
     return io;
 }
 
 void fdio_acquire(fdio_t* io) {
-    LOG(6, "fdio: acquire: %p\n", io);
     atomic_fetch_add(&io->refcount, 1);
 }
 
 void fdio_release(fdio_t* io) {
-    LOG(6, "fdio: release: %p\n", io);
     if (atomic_fetch_sub(&io->refcount, 1) == 1) {
-        LOG(5, "fdio: io: free: %p\n", io);
         io->ops = NULL;
         free(io);
     }
