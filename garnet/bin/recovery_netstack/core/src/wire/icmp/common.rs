@@ -7,7 +7,7 @@
 use super::IdAndSeq;
 
 /// An ICMP Destination Unreachable message.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 #[repr(C, packed)]
 pub struct IcmpDestUnreachable {
     // Rest of Header in ICMP, unused in ICMPv6
@@ -46,7 +46,7 @@ impl_from_bytes_as_bytes_unaligned!(IcmpEchoRequest);
 impl_from_bytes_as_bytes_unaligned!(IcmpEchoReply);
 
 /// An ICMP Time Exceeded message.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Default, Debug, Eq, PartialEq)]
 #[repr(C, packed)]
 pub struct IcmpTimeExceeded {
     // Rest of Header in ICMP, unused in ICMPv6

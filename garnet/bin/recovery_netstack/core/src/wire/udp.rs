@@ -127,7 +127,9 @@ impl<B: ByteSlice, A: IpAddr> ParsablePacket<B, UdpParseArgs<A>> for UdpPacket<B
         if len != buf_len {
             return debug_err!(
                 Err(ParseError::Format),
-                "length in header does not match packet length"
+                "length in header ({}) does not match packet length ({})",
+                len,
+                buf_len,
             );
         }
         if packet.header.dst_port() == 0 {

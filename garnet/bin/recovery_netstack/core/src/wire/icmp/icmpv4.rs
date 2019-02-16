@@ -164,7 +164,7 @@ impl_icmp_message!(Ipv4, Icmpv4Redirect, Redirect, Icmpv4RedirectCode, OriginalP
 
 create_net_enum! {
   Icmpv4TimeExceededCode,
-  TTLExpired: TTL_EXPIRED = 0,
+  TtlExpired: TTL_EXPIRED = 0,
   FragmentReassemblyTimeExceeded: FRAGMENT_REASSEMBLY_TIME_EXCEEDED = 1,
 }
 
@@ -364,7 +364,7 @@ mod tests {
     fn test_parse_and_serialize_time_exceeded() {
         use crate::wire::testdata::icmp_time_exceeded::*;
         test_parse_and_serialize::<IcmpTimeExceeded, _>(IP_PACKET_BYTES, |icmp| {
-            assert_eq!(icmp.code(), Icmpv4TimeExceededCode::TTLExpired);
+            assert_eq!(icmp.code(), Icmpv4TimeExceededCode::TtlExpired);
             assert_eq!(icmp.original_packet_body(), ORIGIN_DATA);
         });
     }
