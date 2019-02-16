@@ -664,11 +664,14 @@ zx_status_t Blob::GetReadableEvent(zx_handle_t* out) {
             readable_event_.signal(0u, ZX_USER_SIGNAL_0);
         }
     }
-    status = zx_handle_duplicate(readable_event_.get(), ZX_RIGHTS_BASIC, out);
+    zx::event out_event;
+    status = readable_event_.duplicate(ZX_RIGHTS_BASIC, &out_event);
     if (status != ZX_OK) {
         return status;
     }
-    return sizeof(zx_handle_t);
+
+    *out = out_event.release();
+    return ZX_OK;
 }
 
 zx_status_t Blob::CloneVmo(zx_rights_t rights, zx_handle_t* out_vmo, size_t* out_size) {
@@ -824,12 +827,7 @@ zx_status_t Blob::ValidateFlags(uint32_t flags) {
 
 zx_status_t Blob::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
     info->tag = fuchsia_io_NodeInfoTag_file;
-    zx_status_t r = GetReadableEvent(&info->file.event);
-    if (r < 0) {
-        return r;
-    }
-
-    return ZX_OK;
+    return GetReadableEvent(&info->file.event);
 }
 
 zx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
