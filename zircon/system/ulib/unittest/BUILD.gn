@@ -10,6 +10,7 @@ library("unittest") {
   shared = true
   sources = [
     "all-tests.cpp",
+    "unittest-main.cpp",
     "unittest.cpp",
     "watchdog.cpp",
   ]

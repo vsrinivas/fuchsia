@@ -1,0 +1,20 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("fs-host") {
+  sources = [
+    "test-basic.cpp",
+    "test-directory.cpp",
+    "test-maxfile.cpp",
+    "test-rw-workers.cpp",
+    "test-sparse.cpp",
+    "test-truncate.cpp",
+    "util.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/minfs",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon-internal",
+  ]
+}

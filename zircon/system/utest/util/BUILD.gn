@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("util") {
+  sources = [
+    "listnode.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/unittest",
+  ]
+  if (is_fuchsia) {
+    deps += [
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/fdio",
+    ]
+  }
+}

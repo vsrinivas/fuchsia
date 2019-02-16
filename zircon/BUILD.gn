@@ -96,6 +96,7 @@ foreach(cpu, standard_fuchsia_cpus) {
       # TODO: This indirectly reaches everything that builds so far.
       "$zx/system/core/userboot",
       "$zx/system/uapp",
+      "$zx/system/utest",
     ]
   }
 }

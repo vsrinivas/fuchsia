@@ -1,0 +1,93 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# The generation depends only on the source, so do it only once.
+if (current_toolchain == default_toolchain) {
+  action("gen-examples") {
+    visibility = [ ":examples" ]
+    examples_dir = "$zx/system/host/fidl/examples"
+    outputs = [
+      "$target_gen_dir/examples.cpp",
+    ]
+    sources = [
+      "$examples_dir/alignment.fidl",
+      "$examples_dir/bits.fidl",
+      "$examples_dir/empty.fidl",
+      "$examples_dir/enums.fidl",
+      "$examples_dir/errors.fidl",
+      "$examples_dir/events.fidl",
+      "$examples_dir/example-0.fidl",
+      "$examples_dir/example-1.fidl",
+      "$examples_dir/example-10.fidl",
+      "$examples_dir/example-2.fidl",
+      "$examples_dir/example-3.fidl",
+      "$examples_dir/example-4.fidl",
+      "$examples_dir/example-5.fidl",
+      "$examples_dir/example-6.fidl",
+      "$examples_dir/example-7.fidl",
+      "$examples_dir/example-8.fidl",
+      "$examples_dir/example-9.fidl",
+      "$examples_dir/interface-ordinals.fidl",
+      "$examples_dir/library-a/point.fidl",
+      "$examples_dir/library-b/view.fidl",
+      "$examples_dir/simple.fidl",
+      "$examples_dir/tables.fidl",
+      "$examples_dir/test.fidl",
+      "$examples_dir/types.fidl",
+      "testdata/badformat.fidl.noformat",
+      "testdata/doc_comments.fidl",
+      "testdata/goodformat.fidl",
+    ]
+    script = "gen-examples.sh"
+    args = rebase_path(outputs, root_build_dir) +
+           rebase_path(sources, root_build_dir)
+  }
+} else {
+  test("fidl-compiler") {
+    sources = [
+      "attributes_tests.cpp",
+      "bits_tests.cpp",
+      "coded_types_generator_tests.cpp",
+      "consts_tests.cpp",
+      "declaration_order_tests.cpp",
+      "enums_tests.cpp",
+      "errors_tests.cpp",
+      "flat_ast_tests.cpp",
+      "formatter_unittests.cpp",
+      "json_generator_tests.cpp",
+      "max_bytes_multipass_tests.cpp",
+      "max_bytes_tests.cpp",
+      "max_handle_tests.cpp",
+      "optionals_tests.cpp",
+      "ordinals_tests.cpp",
+      "parsing_tests.cpp",
+      "protocol_tests.cpp",
+      "superinterface_tests.cpp",
+      "table_tests.cpp",
+      "types_tests.cpp",
+      "using_tests.cpp",
+      "virtual_source_tests.cpp",
+      "visitor_unittests.cpp",
+      "xunion_tests.cpp",
+    ]
+    deps = [
+      ":examples",
+      "$zx/system/host/fidl",
+      "$zx/system/ulib/unittest",
+      "$zx/third_party/ulib/uboringssl",
+    ]
+  }
+
+  source_set("examples") {
+    gen_label = ":gen-examples($default_toolchain)"
+    gen_dir = get_label_info(gen_label, "target_gen_dir")
+    include_dirs = [ "." ]
+    sources = [
+      "$gen_dir/examples.cpp",
+    ]
+    deps = [
+      gen_label,
+    ]
+  }
+}

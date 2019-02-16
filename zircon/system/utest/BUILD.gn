@@ -1,0 +1,59 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/config/standard.gni")
+import("$zx/public/gn/toolchain/environment_redirect.gni")
+
+if (current_cpu != "") {
+  group("utest") {
+    testonly = true
+
+    deps = [
+      ":host",  # TODO(mcgrathr): reach this differently?
+    ]
+  }
+
+  group("host-tests") {
+    testonly = true
+    deps = [
+      "banjo-compiler",
+      "fbl",
+      "fidl-compiler",
+      "fit",
+      "fs-host",
+      "runtests-utils",
+      "trace-reader",
+      "util",
+      "zbi",
+    ]
+  }
+}
+
+# Build the host tests for each host.
+foreach(host, standard_build_hosts) {
+  environment_redirect("host-tests-${host.os}-${host.cpu}") {
+    testonly = true
+    environment_label = "$zx/public/gn/toolchain:host"
+    cpu = host.cpu
+    os = host.os
+    deps = [
+      ":host-tests",
+    ]
+  }
+}
+
+group("host-tests-all-platforms") {
+  testonly = true
+  deps = []
+  foreach(host, standard_build_hosts) {
+    deps += [ ":host-tests-${host.os}-${host.cpu}" ]
+  }
+}
+
+group("host") {
+  testonly = true
+  deps = [
+    ":host-tests-${host_os}-${host_cpu}",
+  ]
+}

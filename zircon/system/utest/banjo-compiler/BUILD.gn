@@ -1,0 +1,74 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# The generation depends only on the source, so do it only once.
+if (current_toolchain == default_toolchain) {
+  action("gen-examples") {
+    visibility = [ ":examples" ]
+    examples_dir = "$zx/system/host/banjo/examples"
+    outputs = [
+      "$target_gen_dir/examples.cpp",
+    ]
+    sources = [
+      "$examples_dir/alignment.banjo",
+      "$examples_dir/empty.banjo",
+      "$examples_dir/enums.banjo",
+      "$examples_dir/events.banjo",
+      "$examples_dir/example-0.banjo",
+      "$examples_dir/example-1.banjo",
+      "$examples_dir/example-2.banjo",
+      "$examples_dir/example-3.banjo",
+      "$examples_dir/example-4.banjo",
+      "$examples_dir/example-5.banjo",
+      "$examples_dir/example-6.banjo",
+      "$examples_dir/example-7.banjo",
+      "$examples_dir/example-8.banjo",
+      "$examples_dir/example-9.banjo",
+      "$examples_dir/interface-ordinals.banjo",
+      "$examples_dir/library-a/point.banjo",
+      "$examples_dir/library-b/view.banjo",
+      "$examples_dir/simple.banjo",
+      "$examples_dir/tables.banjo",
+      "$examples_dir/test.banjo",
+      "$examples_dir/types.banjo",
+      "testdata/badformat.banjo.noformat",
+      "testdata/goodformat.banjo",
+    ]
+    script = "../fidl-compiler/gen-examples.sh"
+    args = rebase_path(outputs, root_build_dir) +
+           rebase_path(sources, root_build_dir)
+  }
+} else {
+  test("banjo-compiler") {
+    sources = [
+      "dup_attributes_tests.cpp",
+      "flat_ast_tests.cpp",
+      "formatter_unittests.cpp",
+      "json_generator_tests.cpp",
+      "max_bytes_tests.cpp",
+      "max_handle_tests.cpp",
+      "parsing_tests.cpp",
+      "superinterface_tests.cpp",
+      "using_tests.cpp",
+      "visitor_unittests.cpp",
+    ]
+    deps = [
+      ":examples",
+      "$zx/system/host/banjo/lib",
+      "$zx/system/ulib/unittest",
+    ]
+  }
+
+  source_set("examples") {
+    gen_label = ":gen-examples($default_toolchain)"
+    gen_dir = get_label_info(gen_label, "target_gen_dir")
+    include_dirs = [ "." ]
+    sources = [
+      "$gen_dir/examples.cpp",
+    ]
+    deps = [
+      gen_label,
+    ]
+  }
+}

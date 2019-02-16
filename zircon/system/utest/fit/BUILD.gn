@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("fit") {
+  sources = [
+    "function_tests.cpp",
+    "nullable_tests.cpp",
+    "optional_tests.cpp",
+    "result_tests.cpp",
+    "traits_tests.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/unittest",
+  ]
+  if (is_fuchsia) {
+    deps += [
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/zxcpp",
+    ]
+  } else {
+    sources += [
+      "bridge_tests.cpp",
+      "defer_tests.cpp",
+      "examples/function_example1.cpp",
+      "examples/function_example2.cpp",
+      "examples/promise_example1.cpp",
+      "examples/promise_example2.cpp",
+      "examples/utils.cpp",
+      "future_tests.cpp",
+      "pending_task_tests.cpp",
+      "promise_tests.cpp",
+      "scheduler_tests.cpp",
+      "scope_tests.cpp",
+      "sequencer_tests.cpp",
+      "single_threaded_executor_tests.cpp",
+      "suspended_task_tests.cpp",
+      "variant_tests.cpp",
+    ]
+  }
+}
