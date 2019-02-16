@@ -7,11 +7,11 @@ and Traditional profiles.
 
 Source code shortcuts:
 - Public API:
-  * [shared](../../public/fidl/fuchsia.bluetooth)
-  * [BR/EDR](../../public/fidl/fuchsia.bluetooth.bredr)
-  * [Control](../../public/fidl/fuchsia.bluetooth.control)
-  * [GATT](../../public/fidl/fuchsia.bluetooth.gatt)
-  * [LE](../../public/fidl/fuchsia.bluetooth.le)
+  * [shared](/sdk/fidl/fuchsia.bluetooth)
+  * [BR/EDR](/sdk/fidl/fuchsia.bluetooth.bredr)
+  * [Control](/sdk/fidl/fuchsia.bluetooth.control)
+  * [GATT](/sdk/fidl/fuchsia.bluetooth.gatt)
+  * [LE](/sdk/fidl/fuchsia.bluetooth.le)
 - [Private API](/sdk/fidl/fuchsia.bluetooth.host)
 - [Tools](tools/)
 - [Host Library](../../drivers/bluetooth/lib)
@@ -45,7 +45,7 @@ beacon.
 ### Control API
 
 Dual-mode (LE + Classic) GAP operations that are typically exposed to privileged
-clients are performed using the [control.fidl](../../public/fidl/fuchsia.bluetooth.control/control.fidl)
+clients are performed using the [control.fidl](/sdk/fidl/fuchsia.bluetooth.control/control.fidl)
 API. This API is intended for managing local adapters, device discovery & discoverability,
 pairing/bonding, and other settings.
 
@@ -85,8 +85,8 @@ Bluetooth test packages are listed in
 [tests/bluetooth](../../packages/tests/bluetooth) and each contains at least one
 test binary. Refer to package definitions for each package's binaries.
 
-Each test binary is a [component](https://fuchsia.googlesource.com/docs/+/HEAD/glossary.md#component)
-whose runtime environment is defined by its [`.cmx` component manifest](https://fuchsia.googlesource.com/docs/+/HEAD/the-book/package_metadata.md#Component-Manifest)
+Each test binary is a [component](/docs/glossary.md#component)
+whose runtime environment is defined by its [`.cmx` component manifest](/docs/the-book/package_metadata.md#Component-Manifest)
 
 For example, `bt-host-unittests` is a [Google Test](https://github.com/google/googletest)
 binary that contains all the C++ bt-host subsystem unit tests and is a part of
@@ -125,7 +125,7 @@ from your development shell:
 Note the use of the package name `bluetooth-tests` and the extra `--` used to
 separate arguments passed to the test binary.
 
-See [Developing with Fuchsia packages](https://fuchsia.googlesource.com/docs/+/HEAD/development/workflows/package_update.md)
+See [Developing with Fuchsia packages](/docs/development/workflows/package_update.md)
 for more details on the package-based workflow.
 
 ##### Running on QEMU
