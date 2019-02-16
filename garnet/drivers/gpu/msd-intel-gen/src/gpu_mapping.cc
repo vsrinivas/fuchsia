@@ -14,17 +14,20 @@ GpuMapping::GpuMapping(std::shared_ptr<AddressSpace> address_space,
 {
 }
 
-GpuMapping::~GpuMapping()
+std::unique_ptr<magma::PlatformBusMapper::BusMapping> GpuMapping::Release()
 {
     std::shared_ptr<AddressSpace> address_space = address_space_.lock();
-    if (!address_space) {
-        DLOG("Failed to lock address space");
-        return;
+    if (address_space) {
+        if (!address_space->Clear(gpu_addr_, length() / PAGE_SIZE))
+            DLOG("failed to clear address");
+
+        if (!address_space->Free(gpu_addr_))
+            DLOG("failed to free address");
     }
 
-    if (!address_space->Clear(gpu_addr_, length() / PAGE_SIZE))
-        DLOG("failed to clear address");
-
-    if (!address_space->Free(gpu_addr_))
-        DLOG("failed to free address");
+    buffer_.reset();
+    address_space_.reset();
+    offset_ = 0;
+    length_ = 0;
+    return std::move(bus_mapping_);
 }

@@ -19,7 +19,10 @@ public:
                uint64_t offset, uint64_t length, gpu_addr_t gpu_addr,
                std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping);
 
-    ~GpuMapping();
+    ~GpuMapping() { Release(); }
+
+    // Releases the gpu mapping, returns the bus mapping.
+    std::unique_ptr<magma::PlatformBusMapper::BusMapping> Release();
 
     MsdIntelBuffer* buffer() { return buffer_.get(); }
 

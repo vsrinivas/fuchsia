@@ -19,20 +19,14 @@ private:
 
 class TestExec {
 public:
-    void GlobalGttReuseGpuAddress() { Exec(true, true, false); }
+    void GlobalGttReuseGpuAddress() { ExecReuseGpuAddress(true); }
 
-    void PerProcessGttReuseGpuAddress() { Exec(false, true, false); }
-
-    void PerProcessGttCheckMappingRelease() { Exec(false, false, true); }
+    void PerProcessGttReuseGpuAddress() { ExecReuseGpuAddress(false); }
 
     // Submits a few command buffers through the full connection-context flow.
     // Uses per process gtt unless |kUseGlobalGtt| is specified.
-    // If |kReuseGpuAddr|, ensures two command buffers are submitted with the same gpu address.
-    // If |kCheckMappingRelease|, checks a buffer mapping is released after the next command buffer
-    void Exec(const bool kUseGlobalGtt, const bool kReuseGpuAddr, const bool kCheckMappingRelease)
+    void ExecReuseGpuAddress(const bool kUseGlobalGtt)
     {
-        ASSERT_FALSE(kUseGlobalGtt && kCheckMappingRelease);
-
         magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
         ASSERT_NE(platform_device, nullptr);
 
@@ -188,27 +182,19 @@ public:
 
             dst_mapping[0].reset();
 
-            if (kCheckMappingRelease) {
-                connection->ReleaseBuffer(dst_buffer[0]->platform_buffer());
-                const std::vector<std::shared_ptr<GpuMapping>>& mappings_to_release =
-                    connection->mappings_to_release();
-                ASSERT_EQ(1u, mappings_to_release.size());
-                EXPECT_EQ(1u, mappings_to_release[0].use_count());
-                dst_mapping[0] = mappings_to_release[0];
-                EXPECT_EQ(2u, dst_mapping[0].use_count());
-            } else {
+            if (kUseGlobalGtt) {
                 std::vector<std::shared_ptr<GpuMapping>> mappings;
                 address_space->ReleaseBuffer(dst_buffer[0]->platform_buffer(), &mappings);
                 mappings.clear();
+            } else {
+                // Connection always releases on per_process_gtt
+                connection->ReleaseBuffer(dst_buffer[0]->platform_buffer());
             }
 
             dst_mapping[1] = AddressSpace::GetSharedGpuMapping(
                 address_space, dst_buffer[1], 0, dst_buffer[1]->platform_buffer()->size());
             ASSERT_NE(dst_mapping[1], nullptr);
-
-            if (kReuseGpuAddr) {
-                ASSERT_EQ(gpu_addr, dst_mapping[1]->gpu_addr());
-            }
+            ASSERT_EQ(gpu_addr, dst_mapping[1]->gpu_addr());
         }
 
         reinterpret_cast<uint32_t*>(dst_cpu_addr[0])[0] = kInitVal;
@@ -249,21 +235,11 @@ public:
         EXPECT_TRUE(context->SubmitCommandBuffer(std::move(command_buffer)));
         EXPECT_TRUE(semaphore->Wait(1000));
 
-        if (kReuseGpuAddr) {
-            EXPECT_EQ(kInitVal, reinterpret_cast<uint32_t*>(dst_cpu_addr[0])[0]);
-            EXPECT_EQ(kExpectedVal, reinterpret_cast<uint32_t*>(dst_cpu_addr[1])[0]);
-        } else {
-            EXPECT_EQ(kExpectedVal, reinterpret_cast<uint32_t*>(dst_cpu_addr[0])[0]);
-            EXPECT_EQ(kInitVal, reinterpret_cast<uint32_t*>(dst_cpu_addr[1])[0]);
-        }
-        if (kCheckMappingRelease) {
-            EXPECT_EQ(1u, dst_mapping[0].use_count());
-        }
+        EXPECT_EQ(kInitVal, reinterpret_cast<uint32_t*>(dst_cpu_addr[0])[0]);
+        EXPECT_EQ(kExpectedVal, reinterpret_cast<uint32_t*>(dst_cpu_addr[1])[0]);
     }
 };
 
 TEST(Exec, GlobalGttReuseGpuAddress) { TestExec().GlobalGttReuseGpuAddress(); }
 
 TEST(Exec, PerProcessGttReuseGpuAddress) { TestExec().PerProcessGttReuseGpuAddress(); }
-
-TEST(Exec, PerProcessGttCheckMappingRelease) { TestExec().PerProcessGttCheckMappingRelease(); }

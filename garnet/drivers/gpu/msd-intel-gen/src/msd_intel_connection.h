@@ -70,7 +70,8 @@ private:
     {
     }
 
-    const std::vector<std::shared_ptr<GpuMapping>>& mappings_to_release() const
+    const std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>>&
+    mappings_to_release() const
     {
         return mappings_to_release_;
     }
@@ -80,7 +81,7 @@ private:
     Owner* owner_;
     std::shared_ptr<PerProcessGtt> ppgtt_;
     msd_client_id_t client_id_;
-    std::vector<std::shared_ptr<GpuMapping>> mappings_to_release_;
+    std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> mappings_to_release_;
 
     class Notifications {
     public:
@@ -130,7 +131,7 @@ private:
 
     Notifications notifications_;
 
-    friend class TestExec;
+    friend class TestMsdIntelConnection;
 };
 
 class MsdIntelAbiConnection : public msd_connection_t {

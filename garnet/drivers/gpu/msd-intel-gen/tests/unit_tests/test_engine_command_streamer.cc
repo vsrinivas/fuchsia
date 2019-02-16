@@ -293,9 +293,12 @@ public:
         std::shared_ptr<GpuMapping> mapping =
             AddressSpace::MapBufferGpu(address_space_, MsdIntelBuffer::Create(PAGE_SIZE, "test"));
 
+        std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> bus_mappings(1);
+        bus_mappings[0] = mapping->Release();
+
         auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
-        render_cs->MoveBatchToInflight(std::make_unique<MappingReleaseBatch>(
-            context_, std::vector<std::shared_ptr<GpuMapping>>({mapping})));
+        render_cs->MoveBatchToInflight(
+            std::make_unique<MappingReleaseBatch>(context_, std::move(bus_mappings)));
 
         // Validate ringbuffer
         uint32_t dword_count =
@@ -306,10 +309,6 @@ public:
             TestRingbuffer::vaddr(ringbuffer) + tail_start / sizeof(uint32_t);
         ringbuffer_content =
             ValidatePipeControl(ringbuffer_content, (uint32_t)kFirstSequenceNumber);
-
-        EXPECT_EQ(2u, mapping.use_count());
-        render_cs->ProcessCompletedCommandBuffers(kFirstSequenceNumber);
-        EXPECT_EQ(1u, mapping.use_count());
     }
 
     void Reset()

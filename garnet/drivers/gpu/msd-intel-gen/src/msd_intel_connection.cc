@@ -59,21 +59,24 @@ void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer)
     std::vector<std::shared_ptr<GpuMapping>> mappings;
     per_process_gtt()->ReleaseBuffer(buffer, &mappings);
 
-    // It's an error to release a buffer while it has inflight mappings, as that
-    // can fault the gpu.
+    bool killed = false;
     for (const auto& mapping : mappings) {
         uint32_t use_count = mapping.use_count();
-        if (use_count != 1) {
+        if (use_count == 1) {
+            // Bus mappings are held in the connection and passed through the command stream to
+            // ensure the memory isn't released until the tlbs are invalidated, which happens
+            // implicitly on every pipeline flush.
+            mappings_to_release_.push_back(mapping->Release());
+        } else {
+            // It's an error to release a buffer while it has inflight mappings, as that
+            // can fault the gpu.
             DLOG("mapping use_count %d", use_count);
-            SendContextKilled();
-            break;
+            if (!killed) {
+                SendContextKilled();
+                killed = true;
+            }
         }
     }
-
-    // Mappings are held in the connection and passed through the command stream to ensure
-    // the memory isn't released until the tlbs are invalidated, which happens implicitly
-    // on every pipeline flush.
-    mappings_to_release_.insert(mappings_to_release_.end(), mappings.begin(), mappings.end());
 }
 
 bool MsdIntelConnection::SubmitPendingReleaseMappings(std::shared_ptr<MsdIntelContext> context)

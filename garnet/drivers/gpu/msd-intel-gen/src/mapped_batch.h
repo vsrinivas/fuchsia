@@ -7,6 +7,7 @@
 
 #include "gpu_mapping.h"
 #include "msd_intel_buffer.h"
+#include "platform_bus_mapper.h"
 #include "sequencer.h"
 
 class MsdIntelContext;
@@ -67,11 +68,11 @@ public:
     GpuMapping* GetBatchMapping() override { return nullptr; }
 };
 
-// Releases the list of mappings when destroyed.
+// Releases the list of bus mappings when destroyed.
 class MappingReleaseBatch : public NullBatch {
 public:
     MappingReleaseBatch(std::shared_ptr<MsdIntelContext> context,
-                        std::vector<std::shared_ptr<GpuMapping>> mappings)
+                        std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> mappings)
         : context_(std::move(context)), mappings_(std::move(mappings))
     {
     }
@@ -80,7 +81,7 @@ public:
 
 private:
     std::shared_ptr<MsdIntelContext> context_;
-    std::vector<std::shared_ptr<GpuMapping>> mappings_;
+    std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> mappings_;
 };
 
 #endif // MAPPED_BATCH_H
