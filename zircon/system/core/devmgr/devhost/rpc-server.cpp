@@ -686,9 +686,6 @@ static zx_status_t fidl_DeviceControllerUnbind(void* ctx, fidl_txn_t* txn) {
 
 static zx_status_t fidl_DeviceControllerGetDriverName(void* ctx, fidl_txn_t* txn) {
     auto conn = static_cast<DevfsConnection*>(ctx);
-    zx_status_t status = device_unbind(conn->dev);
-    return fuchsia_device_ControllerUnbind_reply(txn, status);
-
     if (!conn->dev->driver) {
         return fuchsia_device_ControllerGetDriverName_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr, 0);
     }
