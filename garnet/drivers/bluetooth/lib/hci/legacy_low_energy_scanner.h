@@ -14,7 +14,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
-#include "lib/fxl/functional/cancelable_callback.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/synchronization/thread_checker.h"
@@ -66,11 +65,14 @@ class LegacyLowEnergyScanner : public LowEnergyScanner {
   void NotifyDeviceFound(const LowEnergyScanResult& result,
                          const common::ByteBuffer& data);
 
+  // Called when the scan timeout task executes.
+  void OnScanPeriodComplete();
+
   // Callback passed in to the most recently accepted call to StartScan();
   ScanStatusCallback scan_cb_;
 
   // The scan period timeout handler for the currently active scan session.
-  fxl::CancelableClosure scan_timeout_cb_;
+  async::TaskClosure scan_timeout_task_;
 
   // Our event handler ID for the LE Advertising Report event.
   CommandChannel::EventHandlerId event_handler_id_;

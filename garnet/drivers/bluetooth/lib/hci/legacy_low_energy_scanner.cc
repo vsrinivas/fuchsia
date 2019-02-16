@@ -51,6 +51,8 @@ LegacyLowEnergyScanner::LegacyLowEnergyScanner(Delegate* delegate,
       kLEAdvertisingReportSubeventCode,
       fit::bind_member(this, &LegacyLowEnergyScanner::OnAdvertisingReportEvent),
       this->dispatcher());
+  scan_timeout_task_.set_handler(
+      fit::bind_member(this, &LegacyLowEnergyScanner::OnScanPeriodComplete));
 }
 
 LegacyLowEnergyScanner::~LegacyLowEnergyScanner() {
@@ -79,7 +81,7 @@ bool LegacyLowEnergyScanner::StartScan(bool active, uint16_t scan_interval,
   }
 
   ZX_DEBUG_ASSERT(!scan_cb_);
-  ZX_DEBUG_ASSERT(scan_timeout_cb_.IsCanceled());
+  ZX_DEBUG_ASSERT(!scan_timeout_task_.is_pending());
   ZX_DEBUG_ASSERT(hci_cmd_runner()->IsReady());
   ZX_DEBUG_ASSERT(pending_results_.empty());
 
@@ -134,13 +136,9 @@ bool LegacyLowEnergyScanner::StartScan(bool active, uint16_t scan_interval,
       return;
     }
 
-    // Set the timeout handler and period.
+    // Schedule the timeout.
     if (period != kPeriodInfinite) {
-      scan_timeout_cb_.Reset([this] {
-        if (IsScanning())
-          StopScanInternal(false);
-      });
-      async::PostDelayedTask(dispatcher(), scan_timeout_cb_.callback(), period);
+      scan_timeout_task_.PostDelayed(dispatcher(), period);
     }
 
     if (active_scan_requested()) {
@@ -185,7 +183,7 @@ void LegacyLowEnergyScanner::StopScanPeriodForTesting() {
 void LegacyLowEnergyScanner::StopScanInternal(bool stopped) {
   ZX_DEBUG_ASSERT(scan_cb_);
 
-  scan_timeout_cb_.Cancel();
+  scan_timeout_task_.Cancel();
   set_state(State::kStopping);
 
   // Notify any pending scan results unless the scan was terminated by the user.
@@ -333,6 +331,12 @@ void LegacyLowEnergyScanner::HandleScanResponse(
 void LegacyLowEnergyScanner::NotifyDeviceFound(
     const LowEnergyScanResult& result, const common::ByteBuffer& data) {
   delegate()->OnDeviceFound(result, data);
+}
+
+void LegacyLowEnergyScanner::OnScanPeriodComplete() {
+  if (IsScanning()) {
+    StopScanInternal(false);
+  }
 }
 
 }  // namespace hci
