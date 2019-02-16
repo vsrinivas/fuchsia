@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Define aliases for subtargets of a directory's main target.
+#
+# This is a subroutine for a template that defines targets called
+# "$target_name", "$target_name.a", and "$target_name.b".  If $target_name
+# matches the name of the directory, then this defines redirecting alias
+# targets called just "a" and "b".  Otherwise, this does nothing.
+#
+# Parameters
+#
+#   outputs
+#     Required: List of subtarget names (e.g. [ "a", "b" ]).
+#     Type: list(string)
+#
+template("subtarget_aliases") {
+  if (get_label_info(":$target_name", "name") ==
+      get_path_info(get_label_info(":$target_name", "dir"), "file")) {
+    invoker_name = target_name
+    foreach(subtarget, invoker.outputs) {
+      group(subtarget) {
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visibility",
+                               ])
+        public_deps = [
+          ":$invoker_name.$subtarget"
+        ]
+      }
+    }
+  } else {
+    not_needed(invoker, "*")
+  }
+}

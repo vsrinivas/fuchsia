@@ -1,0 +1,48 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("fidl") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/fidl/cpp/message.h",
+    "lib/fidl/cpp/string_view.h",
+    "lib/fidl/cpp/message_part.h",
+    "lib/fidl/cpp/message_builder.h",
+    "lib/fidl/cpp/builder.h",
+    "lib/fidl/cpp/message_buffer.h",
+    "lib/fidl/cpp/vector_view.h",
+    "lib/fidl/coding.h",
+    "lib/fidl/llcpp/array_wrapper.h",
+    "lib/fidl/llcpp/encoded_message.h",
+    "lib/fidl/llcpp/coding.h",
+    "lib/fidl/llcpp/decoded_message.h",
+    "lib/fidl/llcpp/traits.h",
+    "lib/fidl/epitaph.h",
+    "lib/fidl/transport.h",
+    "lib/fidl/internal_callable_traits.h",
+    "lib/fidl/internal.h",
+  ]
+  sources = [
+    "builder.cpp",
+    "decoding.cpp",
+    "encoding.cpp",
+    "envelope_frames.h",
+    "epitaph.c",
+    "formatting.cpp",
+    "handle_closing.cpp",
+    "linearizing.cpp",
+    "message.cpp",
+    "message_buffer.cpp",
+    "message_builder.cpp",
+    "transport.cpp",
+    "validating.cpp",
+    "visitor.h",
+    "walker.cpp",
+    "walker.h",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/ulib/zircon",
+  ]
+}

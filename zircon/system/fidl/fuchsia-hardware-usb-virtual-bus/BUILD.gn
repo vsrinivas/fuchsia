@@ -1,0 +1,20 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/fidl.gni")
+
+# TODO(ZX-3365): rename the dir
+if (current_toolchain != default_toolchain) {
+  group("c") {
+    public_deps = [
+      ":fuchsia.usb.virtualbus.c",
+    ]
+  }
+}
+
+fidl_library("fuchsia.usb.virtualbus") {
+  sources = [
+    "usb-virtual-bus.fidl",
+  ]
+}

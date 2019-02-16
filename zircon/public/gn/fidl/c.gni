@@ -1,0 +1,112 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/subtarget_aliases.gni")
+
+# This is the $fidl_support module for C bindings.  See fidl_library() for
+# details.  This file should not normally be imported by other code.
+
+# This tells fidl_library() to invoke fidl_c_library().
+fidl_support_templates = [
+  {
+    import = "$zx/public/gn/fidl/c.gni"
+    target = "fidl_c_library"
+    fidlc = "c"
+  },
+]
+
+# This tells fidl_library() what fidlc outputs fidl_c_library() requires.
+fidl_support_fidlc = [
+  {
+    name = "c"
+    files = [
+      {
+        switch = "--c-header"
+        path_prefix = "include/"
+        path_suffix = "/c/fidl.h"
+      },
+      {
+        switch = "--c-client"
+        path = "client.c"
+      },
+      {
+        switch = "--c-server"
+        path = "server.c"
+      },
+      {
+        switch = "--tables"
+        path = "tables.cpp"
+      },
+    ]
+  },
+]
+
+# Provide C bindings for fidl_library().  **Do not use directly!**
+#
+# This is never used directly, but only indirectly by fidl_library().
+# See there for details.
+template("fidl_c_library") {
+  not_needed([ "target_name" ])
+  not_needed(invoker, "*")
+  if (current_toolchain != default_toolchain) {
+    fidl_target = target_name
+    library_target = "$fidl_target.c"
+
+    config("_fidl_c_library.config.$library_target") {
+      visibility = [
+        ":$library_target.headers",
+        ":$library_target.static",
+      ]
+      include_dirs = [ "${invoker.fidlc_gen_dir}/include" ]
+    }
+
+    library(library_target) {
+      forward_variables_from(invoker,
+                             [
+                               "visibility",
+                               "testonly",
+                             ])
+
+      configs += [ "$zx/public/gn/config:visibility_hidden" ]
+
+      # Depend on the fidlc generation step and compile what it produces.
+      deps = invoker.fidlc_deps
+      sources = invoker.fidlc_outputs
+
+      # Users of the bindings library need the generated headers.
+      public_configs = [ ":_fidl_c_library.config.$library_target" ]
+
+      # The generated headers of a dependent fidl_library() will #include the
+      # generated headers for its dependencies' bindings libraries, so those
+      # headers are needed in public_deps.  The generated bindings code may
+      # call into its dependencies' bindings code, so the libraries
+      # themselves are needed in deps too.
+      public_deps = []
+      foreach(dep, invoker.fidl_deps) {
+        deps += [ "$dep.c" ]
+        public_deps += [ "$dep.c.headers" ]
+      }
+
+      # The generated code uses these.
+      deps += [
+        "$zx/system/ulib/fidl",
+        "$zx/system/ulib/zircon",
+      ]
+    }
+
+    # Things normally depend on "fidl/foo:c" rather than "fidl/foo:foo.c".
+    subtarget_aliases(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "visibility",
+                               "testonly",
+                             ])
+      outputs = [
+        "c",
+        "c.headers",
+        "c.static",
+      ]
+    }
+  }
+}

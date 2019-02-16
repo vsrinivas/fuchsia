@@ -1,0 +1,69 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(is_fuchsia)
+
+library("zx") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/zx/bti.h",
+    "lib/zx/channel.h",
+    "lib/zx/debuglog.h",
+    "lib/zx/event.h",
+    "lib/zx/eventpair.h",
+    "lib/zx/fifo.h",
+    "lib/zx/guest.h",
+    "lib/zx/handle.h",
+    "lib/zx/interrupt.h",
+    "lib/zx/iommu.h",
+    "lib/zx/job.h",
+    "lib/zx/object.h",
+    "lib/zx/object_traits.h",
+    "lib/zx/pager.h",
+    "lib/zx/pmt.h",
+    "lib/zx/port.h",
+    "lib/zx/process.h",
+    "lib/zx/profile.h",
+    "lib/zx/resource.h",
+    "lib/zx/socket.h",
+    "lib/zx/suspend_token.h",
+    "lib/zx/task.h",
+    "lib/zx/thread.h",
+    "lib/zx/time.h",
+    "lib/zx/timer.h",
+    "lib/zx/vcpu.h",
+    "lib/zx/vmar.h",
+    "lib/zx/vmo.h",
+  ]
+  sources = [
+    "bti.cpp",
+    "channel.cpp",
+    "debuglog.cpp",
+    "event.cpp",
+    "eventpair.cpp",
+    "fifo.cpp",
+    "guest.cpp",
+    "interrupt.cpp",
+    "iommu.cpp",
+    "job.cpp",
+    "pager.cpp",
+    "port.cpp",
+    "process.cpp",
+    "profile.cpp",
+    "resource.cpp",
+    "socket.cpp",
+    "thread.cpp",
+    "timer.cpp",
+    "vcpu.cpp",
+    "vmar.cpp",
+    "vmo.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/ulib/zircon",
+  ]
+  public_deps = [
+    "$zx/system/ulib/zircon:headers",
+  ]
+}

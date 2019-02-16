@@ -1,0 +1,36 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("zxio") {
+  sdk = "static"
+  sdk_headers = [
+    "lib/zxio/inception.h",
+    "lib/zxio/null.h",
+    "lib/zxio/ops.h",
+    "lib/zxio/types.h",
+    "lib/zxio/zxio.h",
+  ]
+  sources = [
+    "debuglog.cpp",
+    "null.cpp",
+    "pipe.cpp",
+    "remote.cpp",
+    "socket.cpp",
+    "vmo.cpp",
+    "vmofile.cpp",
+    "zxio.cpp",
+  ]
+  public_deps = [
+    # <lib/zxio/zxio.h> has #include <fuchsia/io/c/fidl.h>.
+    "$zx/system/fidl/fuchsia-io:c.headers",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-net:c",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxs",
+  ]
+}

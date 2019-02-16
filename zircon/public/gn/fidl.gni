@@ -1,0 +1,294 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/fidl/fidlc.gni")
+
+# List of FIDL support modules.  Each of these defines its own version of
+# $fidl_support_fidlc and $fidl_support_templates.
+#
+# $fidl_support_templates:
+# Type: list of scopes
+#
+#   import
+#     Required: Source-absolute path to the .gni file that defines $target.
+#     Type: file
+#
+#   target
+#     Required: Name of a template to invoke, defined in the $import file.
+#     Type: string
+#
+#   fidlc
+#     Optional: Name of an entry in $fidl_support_fidlc describing fidlc
+#     outputs that this template requires.
+#
+# The $target template is invoked with the $target_name from fidl_library()
+# and these parameters:
+#
+#   fidl_deps
+#     Required: $public_deps list from fidl_library() after canonicalization.
+#     Type: list(label_no_toolchain)
+#
+#   fidl_name
+#     Required: The FIDL library name (with dots).
+#     Type: string
+#
+#   fidl_path
+#     Required: $fidl_name with each `.` replaced by a `/`.
+#     Type: string
+#
+#   fidl_gen_dir
+#     Optional: If $fidlc was set, this is the directory in which those
+#     fidlc outputs went.  e.g. "$fidl_gen_dir/include" might be useful.
+#     Type: file
+#
+#   fidlc_outputs
+#     Optional: If $fidlc was set, this is the list of output files generated
+#     by fidlc for that entry in $fidl_support_fidlc.
+#
+#   fidlc_deps
+#     Optional: If $fidlc was set, this is the label to include in $deps
+#     of something using $fidlc_outputs.
+#
+#   visibility, testonly
+#     Optional: Forwarded from fidl_library().
+#
+# $fidl_support_fidlc:
+# Type: list of scopes
+#
+#   name
+#     Required: Name for this collection of fidlc output
+#     Type: string
+#
+#   files
+#     Required: A list of scopes describing outputs from fidlc.
+#     Type: list of scopes
+#       switch
+#         Required: fidlc command-line switch preceding output file name.
+#         Type: string
+#       path
+#         Optional: Required unless $path_prefix and $path_suffix are given.
+#         The fidlc output file is "$fidl_gen_dir/$path".
+#         Type: string
+#       path_prefix, path_suffix
+#         Optional: If one is specified, both must be and $path must not be.
+#         The output file is "$fidl_gen_dir/$path_prefix$fidl_path$path_suffix".
+#         Type: string
+#
+# All these kinds of output will be generated in one run of fidlc.  Modules
+# should use the $fidl_support_fidlc list only for generation work that is
+# more or less free once you're running fidlc anyway.  These output files
+# will be generated if *any* $fidl_support_fidlc output file from *any*
+# support module is needed in the build.  For more costly generation steps
+# (or ones requiring more than a simple fidlc command-line switch), support
+# modules should use $fidl_support_templates.
+#
+# TODO(mcgrathr): Add more language generators.  For language support from
+# a different petal, add a build argument to contribute to this list via
+# default_overrides.
+fidl_support = [ "$zx/public/gn/fidl/c.gni" ]
+
+# Each support module defines $fidl_support_fidlc and
+# $fidl_support_templates lists in its .gni file.
+_fidl_generators = []
+foreach(module, fidl_support) {
+  _fidl_generators += [
+    {
+      import(module)
+    },
+  ]
+}
+
+# Collect all fidlc outputs from the support modules, and deduplicate.
+# Collect all the generation templates to invoke, and deduplicate.  All
+# these templates will be invoked by fidl_library() to define their targets.
+_fidl_gen_fidlc = []
+_fidl_gen_templates = []
+foreach(gen, _fidl_generators) {
+  _fidl_gen_fidlc += gen.fidl_support_fidlc
+  _fidl_gen_fidlc -= gen.fidl_support_fidlc
+  _fidl_gen_fidlc += gen.fidl_support_fidlc
+  _fidl_gen_templates += gen.fidl_support_templates
+  _fidl_gen_templates -= gen.fidl_support_templates
+  _fidl_gen_templates += gen.fidl_support_templates
+}
+
+# Define a FIDL library and implicitly generate bindings targets.
+#
+# The $fidl_support global determines what targets this actually produces.
+#
+# Parameters
+#
+#   sources
+#     Required: List of `.fidl` source files.
+#
+#   deps
+#     Optional: This is *not* the way to express dependencies on other FIDL
+#     libraries.  Use $public_deps for that.  The only use for $deps is if
+#     some of $sources are generated, to depend on the targets generating them.
+#     Type: list(label)
+#
+#   public_deps
+#     Optional: Other fidl_library() targets this library depends on.
+#     If `using foo;` appears in a $sources file, then the label of the
+#     fidl_library() target should be listed here.  This must list only
+#     other fidl_library() targets and may not use a "(toolchain)" suffix.
+#     Type: list(label_no_toolchain)
+#
+template("fidl_library") {
+  assert(defined(invoker.sources),
+         "fidl_library(\"$target_name\") must set `sources`")
+
+  fidl_target = target_name
+
+  # TODO(mcgrathr): temporary until everything is renamed with . names
+  fidl_name = string_replace(fidl_target, "-", ".")
+  fidl_path = string_replace(fidl_name, ".", "/")
+
+  # Collect the dependencies on other FIDL libraries, and canonicalize them.
+  fidl_library_deps = []
+  if (defined(invoker.public_deps)) {
+    foreach(label, invoker.public_deps) {
+      assert(get_label_info(label, "toolchain") == current_toolchain,
+             "fidl_library() `deps` must be fidl_library() target labels")
+      fidl_library_deps += [ get_label_info(label, "label_no_toolchain") ]
+    }
+  }
+
+  files_rspfile_target = "_fidl_library.files.$fidl_target.rsp"
+  fidl_gen_dir =
+      get_label_info(":$fidl_target($default_toolchain)", "target_gen_dir")
+  files_rspfile = "$fidl_gen_dir/$fidl_target.rsp"
+
+  gen_target = "_fidl_library.generate.$fidl_target"
+
+  # This is the label to use in deps.
+  files_rspfile_label = ":$files_rspfile_target($default_toolchain)"
+  gen_target_label = ":$gen_target($default_toolchain)"
+
+  gens = []
+  foreach(gen, _fidl_gen_fidlc) {
+    gen_dir = "$fidl_gen_dir/$fidl_target.${gen.name}"
+    gen_outputs = []
+    gen_args = []
+    foreach(file, gen.files) {
+      gen_args += [ file.switch ]
+      if (defined(file.path)) {
+        file = file.path
+      } else {
+        file = "${file.path_prefix}${fidl_path}${file.path_suffix}"
+      }
+      gen_outputs += [ "$gen_dir/$file" ]
+      gen_args += [ rebase_path("$gen_dir/$file", root_build_dir) ]
+    }
+    gens += [
+      {
+        name = gen.name
+        outputs = gen_outputs
+        args = gen_args
+      },
+    ]
+  }
+
+  if (current_toolchain == default_toolchain) {
+    # This just groups the dependencies together with the metadata listing
+    # the input files.
+    group(fidl_target) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "public_deps",
+                               "visibility",
+                               "testonly",
+                             ])
+      if (defined(visibility)) {
+        visibility += [ ":$files_rspfile_target" ]
+      }
+
+      metadata = {
+        # These inputs are needed both here and in every dependent library.
+        # Each --files switch introduces a group of source files that make
+        # up a single FIDL library (all have identical `library ...;` lines).
+        fidl_rspfile =
+            [ "--files" ] + rebase_path(invoker.sources, root_build_dir)
+      }
+    }
+
+    # Produce a metadata response file from all the fidl_rspfile lists.
+    # fidlc() uses this file.
+    generated_file(files_rspfile_target) {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [
+        ":$fidl_target",
+      ]
+      outputs = [
+        files_rspfile,
+      ]
+      output_conversion = "list lines"
+      data_keys = [ "fidl_rspfile" ]
+    }
+
+    fidlc(gen_target) {
+      visibility = [ ":*" ]
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [
+        ":$fidl_target",
+      ]
+      outputs = []
+      args = []
+      foreach(gen, gens) {
+        outputs += gen.outputs
+        args += gen.args
+      }
+    }
+  } else {
+    not_needed(invoker, "*")
+  }
+
+  # Subroutine used in the _fidl_gen_templates loop in fidl_library().
+  # The inner template provides a local scope for the import so it
+  # won't clobber the outer template scope.
+  template("_fidl_gen_subtarget") {
+    import(invoker.import)
+    target(invoker.target, target_name) {
+      forward_variables_from(invoker.args, "*")
+    }
+  }
+
+  # Invoke each template.
+  foreach(gen, _fidl_gen_templates) {
+    # The target_name for the template is the main FIDL target name.
+    # The template will define its targets using appropriate suffixes.
+    _fidl_gen_subtarget(fidl_target) {
+      import = gen.import
+      target = gen.target
+      args = {
+        forward_variables_from(invoker,
+                               [
+                                 "visibility",
+                                 "testonly",
+                               ])
+
+        # The bindings-library template can map these to corresponding
+        # bindings-library targets.
+        fidl_deps = fidl_library_deps
+
+        # Provide these for convenience.  They're derived from target_name
+        # but every generator will be doing it the same way.
+        fidl_name = fidl_name
+        fidl_path = fidl_path
+
+        # If the template uses our main fidlc run, give it details about that.
+        if (defined(gen.fidlc)) {
+          fidlc_gen_dir = "$fidl_gen_dir/$fidl_target.${gen.fidlc}"
+          fidlc_deps = [ gen_target_label ]
+          foreach(gen_fidlc, gens) {
+            if (gen.fidlc == gen_fidlc.name) {
+              fidlc_outputs = gen_fidlc.outputs
+            }
+          }
+        }
+      }
+    }
+  }
+}
