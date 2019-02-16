@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("fidl-async") {
+  sdk = "source"
+  sdk_headers = [ "lib/fidl-async/bind.h" ]
+  sources = [
+    "bind.c",
+  ]
+  deps = [
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/zircon",
+  ]
+}

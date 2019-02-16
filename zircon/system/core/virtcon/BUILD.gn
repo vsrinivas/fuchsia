@@ -1,0 +1,57 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("virtcon") {
+  testonly = true
+  deps = [
+    ":virtual-console",
+    ":virtual-console-test",
+  ]
+}
+
+common_sources = [
+  "keyboard-vt100.cpp",
+  "keyboard.cpp",
+  "textcon.cpp",
+  "vc-device.cpp",
+  "vc-gfx.cpp",
+  "vc-input.cpp",
+]
+
+common_deps = [
+  "$zx/system/fidl/fuchsia-hardware-display:c",
+  "$zx/system/fidl/fuchsia-io:c",
+  "$zx/system/fidl/fuchsia-hardware-input:c",
+  "$zx/system/ulib/fbl",
+  "$zx/system/ulib/fdio",
+  "$zx/system/ulib/fidl",
+  "$zx/system/ulib/fzl",
+  "$zx/system/ulib/gfx",
+  "$zx/system/ulib/hid",
+  "$zx/system/ulib/port",
+  "$zx/system/ulib/zircon",
+  "$zx/system/ulib/zx",
+  "$zx/system/ulib/zxcpp",
+]
+
+executable("virtual-console") {
+  sources = common_sources + [
+              "main.cpp",
+              "vc-display.cpp",
+            ]
+  deps = common_deps
+}
+
+test("virtual-console-test") {
+  output_name = "virtual-console-test"
+  defines = [ "BUILD_FOR_TEST" ]
+  sources = common_sources + [
+              "keyboard-test.cpp",
+              "textcon-test.cpp",
+            ]
+  deps = common_deps + [
+           "$zx/system/ulib/unittest",
+           "$zx/system/utest/core:unittest_main",
+         ]
+}

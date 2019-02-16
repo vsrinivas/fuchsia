@@ -1,0 +1,46 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("hid") {
+  sdk = "shared"
+  sdk_headers = [
+    "hid/acer12.h",
+    "hid/ambient-light.h",
+    "hid/boot.h",
+    "hid/buttons.h",
+    "hid/descriptor.h",
+    "hid/egalax.h",
+    "hid/eyoyo.h",
+    "hid/ft3x27.h",
+    "hid/gt92xx.h",
+    "hid/hid.h",
+    "hid/ltr-578als.h",
+    "hid/paradise.h",
+    "hid/samsung.h",
+    "hid/usages.h",
+  ]
+  shared = true
+  sources = [
+    "acer12.c",
+    "ambient-light.c",
+    "bma253.c",
+    "buttons.c",
+    "egalax.c",
+    "eyoyo.c",
+    "ft3x27.c",
+    "ft6336.c",
+    "gt92xx.c",
+    "hid.c",
+    "keymaps.c",
+    "ltr-578als.c",
+    "paradise.c",
+    "samsung.c",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-hardware-input:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+  ]
+}

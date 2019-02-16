@@ -1,0 +1,27 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("devmgr-integration-test") {
+  sdk = "shared"
+  sdk_headers = [ "lib/devmgr-integration-test/fixture.h" ]
+
+  # TODO: testonly = true
+  shared = true
+  sources = [
+    "file-wait.cpp",
+    "launcher.cpp",
+  ]
+  public_deps = [
+    # <lib/devmgr-integration-test/fixture.h> has #include <lib/devmgr-launcher/launch.h>.
+    "$zx/system/ulib/devmgr-launcher:headers",
+  ]
+  deps = [
+    "$zx/system/ulib/devmgr-launcher",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

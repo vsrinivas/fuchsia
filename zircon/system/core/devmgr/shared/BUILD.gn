@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("shared") {
+  visibility = [ "$zx/system/core/devmgr/*" ]
+  sources = [
+    "fdio.cpp",
+  ]
+  deps = [
+    ":env",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/launchpad",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+source_set("env") {
+  visibility = [ "$zx/system/core/devmgr/*" ]
+  sources = [
+    "env.cpp",
+  ]
+}

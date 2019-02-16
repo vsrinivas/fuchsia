@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("netsvc") {
+  sources = [
+    "debuglog.cpp",
+    "device_id.cpp",
+    "netboot.cpp",
+    "netfile.cpp",
+    "netsvc.cpp",
+    "tftp.cpp",
+    "zbi.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-device-manager:c",
+    "$zx/system/fidl/fuchsia-hardware-ethernet:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/inet6",
+    "$zx/system/ulib/libzbi",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/tftp",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+  data_deps = [
+    # netsvc launches /boot/bin/install-disk-image under --netboot.
+    "$zx/system/uapp/disk-pave",
+
+    # netsvc launches /boot/bin/sh for netruncmd.
+    "$zx/third_party/uapp/dash",
+  ]
+}

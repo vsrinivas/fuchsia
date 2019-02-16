@@ -1,0 +1,55 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# libmemfs-cpp.a: The C++ client library.
+#
+# Used to implement the C++ components of Memfs, which
+# can be plugged into ulib/fs.
+library("memfs-cpp") {
+  sdk = "source"
+  sdk_headers = [ "lib/memfs/cpp/vnode.h" ]
+  sources = [
+    "directory.cpp",
+    "dnode.cpp",
+    "file.cpp",
+    "memfs.cpp",
+    "vmo.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+# libmemfs.so: The C ABI client library.
+#
+# Used to create local temporary filesystems.
+library("memfs") {
+  sdk = "shared"
+  sdk_headers = [ "lib/memfs/memfs.h" ]
+  shared = true
+  sources = [
+    "memfs-local.cpp",
+  ]
+  public_deps = [
+    # <lib/memfs/memfs.h> has #include <lib/sync/completion.h>.
+    "$zx/system/ulib/sync:headers",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    ":memfs-cpp",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fs",
+  ]
+}

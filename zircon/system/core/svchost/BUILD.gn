@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("svchost") {
+  sources = [
+    "crashsvc.cpp",
+    "svchost.cpp",
+    "sysmem.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-crash:c",
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-logger:c",
+    "$zx/system/fidl/fuchsia-mem:c",
+    "$zx/system/fidl/fuchsia-net:c",
+    "$zx/system/fidl/fuchsia-process:c",
+    "$zx/system/fidl/fuchsia-profile:c",
+    "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/inspector",
+    "$zx/system/ulib/logger",
+    "$zx/system/ulib/process-launcher",
+    "$zx/system/ulib/profile",
+    "$zx/system/ulib/svc",
+    "$zx/system/ulib/sysmem",
+    "$zx/system/ulib/sysmem-connector",
+    "$zx/system/ulib/zircon",
+  ]
+}

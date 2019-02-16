@@ -494,6 +494,13 @@ config("user") {
   configs = [ "$zx/third_party/ulib/musl:headers" ]
 }
 
+config("integer-paranoia") {
+  cflags = [
+    "-fsanitize=integer-divide-by-zero,signed-integer-overflow",
+    "-fsanitize-undefined-trap-on-error",
+  ]
+}
+
 config("static-libc++") {
   ldflags = [ "-static-libstdc++" ]
   if (current_os == "linux") {

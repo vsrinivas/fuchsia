@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("explicit-memory") {
+  sdk = "static"
+  sdk_headers = [ "explicit-memory/bytes.h" ]
+  kernel = true
+  static = true
+  sources = [
+    "bytes.c",
+  ]
+  if (!is_kernel) {
+    deps = [
+      "$zx/system/ulib/fbl",
+    ]
+  }
+}

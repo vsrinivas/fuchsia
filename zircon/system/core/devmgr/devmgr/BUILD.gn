@@ -1,0 +1,72 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("devmgr") {
+  sources = [
+    "main.cpp",
+  ]
+
+  deps = [
+    ":common",
+    "$zx/system/ulib/devmgr-launcher",
+    "../shared",
+  ]
+
+  # Bring the auxiliaries into the build and the image.  devhost isn't
+  # listed here because it's implicitly in data_deps of every driver().
+  data_deps = [
+    # TODO: "../dmctl",
+    "../fshost",
+    "$zx/system/core/netsvc",
+    "$zx/system/core/svchost",
+    "$zx/system/core/virtcon:virtual-console",
+    "$zx/system/core/pwrbtn-monitor",
+  ]
+}
+
+source_set("common") {
+  visibility = [ ":*" ]
+  sources = [
+    "binding.cpp",
+    "coordinator.cpp",
+    "devfs.cpp",
+    "devhost-loader-service.cpp",
+    "device.cpp",
+    "driver.cpp",
+    "fidl.cpp",
+  ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-device-manager:c",
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-mem:c",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/driver-info",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/launchpad",
+    "$zx/system/ulib/libzbi",
+    "$zx/system/ulib/loader-service",
+    "$zx/system/ulib/memfs",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+test("devmgr-test") {
+  test_group = "ddk"
+  sources = [
+    "coordinator-test.cpp",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/ulib/unittest",
+    "../shared:env",
+  ]
+}

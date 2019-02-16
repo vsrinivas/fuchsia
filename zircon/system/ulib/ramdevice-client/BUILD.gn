@@ -1,0 +1,34 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("ramdevice-client") {
+  shared = true
+  sdk = "shared"
+  sdk_headers = [
+    "ramdevice-client/ramdisk.h",
+    "ramdevice-client/ramnand.h",
+  ]
+  sources = [
+    "ramdisk.cpp",
+    "ramnand.cpp",
+  ]
+  public_deps = [
+    # <ramdevice-client/ramnand.h> has #include <lib/devmgr-integration-test/fixture.h>
+    "$zx/system/ulib/devmgr-integration-test:headers",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-hardware-nand:c",
+    "$zx/system/fidl/fuchsia-hardware-ramdisk:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/devmgr-integration-test:static",
+    "$zx/system/ulib/devmgr-launcher:static",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

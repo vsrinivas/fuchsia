@@ -15,11 +15,18 @@ source_set("common") {
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/trace-engine",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
 }
+
+header_deps = [
+  # <trace/internal/event_common.h> has #include <trace-engine/instrumentation.h>.
+  "$zx/system/ulib/trace-engine:headers",
+
+  # <trace/internal/event_args.h> has #include <fbl/string_traits.h>.
+  "$zx/system/ulib/fbl:headers",
+]
 
 # The default version for the normal case.
 library("trace") {
@@ -34,15 +41,10 @@ library("trace") {
     "trace/observer.h",
   ]
   sources = []
-  public_deps = [
-    # <trace/internal/event_common.h> has #include <trace-engine/instrumentation.h>.
-    "$zx/system/ulib/trace-engine:headers",
-
-    # <trace/internal/event_args.h> has #include <fbl/string_traits.h>.
-    "$zx/system/ulib/fbl:headers",
-  ]
+  public_deps = header_deps
   deps = [
     ":common",
+    "$zx/system/ulib/trace-engine",
   ]
 }
 
@@ -62,8 +64,20 @@ library("trace-with-static-engine") {
     "trace/observer.h",
   ]
   sources = []
+  public_deps = header_deps
   deps = [
     ":common",
-    "$zx/system/ulib/trace-engine:static",
+    "$zx/system/ulib/trace-engine:trace-engine-static",
+  ]
+}
+
+# And again, but this time for drivers.
+# This gets linked into each driver.
+library("trace-driver") {
+  sources = []
+  public_deps = header_deps
+  deps = [
+    ":common",
+    "$zx/system/ulib/trace-engine:trace-engine-driver",
   ]
 }

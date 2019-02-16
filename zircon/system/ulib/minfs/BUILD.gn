@@ -23,6 +23,9 @@ library("minfs") {
     "$zx/system/ulib/bitmap:headers",
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fs:headers",
+
+    # <minfs/bcache.h> has #include <fvm/client.h>.
+    "$zx/system/ulib/fvm:headers",
   ]
   deps = [
     "$zx/system/ulib/bitmap",
@@ -34,6 +37,7 @@ library("minfs") {
     public_deps += [ "$zx/system/ulib/zx:headers" ]
     configs += [ "$zx/public/gn/config:visibility_hidden" ]
     deps += [
+      "$zx/system/fidl/fuchsia-device:c",
       "$zx/system/fidl/fuchsia-io:c",
       "$zx/system/fidl/fuchsia-minfs:c",
       "$zx/system/ulib/async",
@@ -45,6 +49,7 @@ library("minfs") {
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/fidl",
       "$zx/system/ulib/fidl-utils",
+      "$zx/system/ulib/fvm",
       "$zx/system/ulib/fzl",
       "$zx/system/ulib/sync",
       "$zx/system/ulib/trace",

@@ -1,0 +1,57 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("devhost") {
+  sources = [
+    "main.cpp",
+  ]
+  deps = [
+    ":driver",
+  ]
+}
+
+# "$zx/system/ulib/driver" is an alias for this.
+library("driver") {
+  sdk = "shared"
+  sdk_headers = []
+  shared = true
+  static = false
+  sources = [
+    "api.cpp",
+    "core.cpp",
+    "devhost.cpp",
+    "rpc-server.cpp",
+    "tracing.cpp",
+    "zx-device.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-device-manager:c",
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/ulib/async:async-cpp.static",
+    "$zx/system/ulib/async:async-default.static",
+    "$zx/system/ulib/async:static",
+    "$zx/system/ulib/async-loop:async-loop-cpp.static",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fs:fs-for-driver",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/trace:trace-driver",
+    "$zx/system/ulib/trace-provider:static",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxio",
+    "../shared:env",
+  ]
+
+  # Since the tracing support is brought in via an archive, we need explicit
+  # references to ensure everything is present.
+  libs = [ "$zx/system/ulib/trace-engine/ddk-exports.ld" ]
+
+  assert_no_deps = [ "$zx/system/ulib/trace-engine:trace-engine.shared" ]
+}

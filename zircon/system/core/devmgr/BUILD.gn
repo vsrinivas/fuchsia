@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("devmgr") {
+  # Everything else is in data_deps of devmgr.
+  # TODO: consider moving devmgr/* back to this dir
+  deps = [
+    "devmgr",
+  ]
+}
+
+# Drivers depend on this (see $standard_fuchsia_user_configs).
+# It just gets the standard devhost binary into the BOOTFS image.
+group("driver_deps") {
+  data_deps = [
+    "devhost",
+  ]
+}
+
+# Variants can remove that standard "driver_deps" from $implicit_deps and
+# instead add a specific "driver_deps.variant" defined below.
+
+variant_suffixes = [ toolchain.variant_suffix ]
+foreach(other, toolchain.other_variants) {
+  variant_suffixes += [ other.suffix ]
+}
+
+foreach(variant, variant_suffixes) {
+  group("driver_deps$variant") {
+    data_deps = [
+      "devhost:devhost$variant(${toolchain.label})",
+    ]
+  }
+}

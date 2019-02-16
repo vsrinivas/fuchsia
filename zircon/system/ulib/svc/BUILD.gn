@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("svc") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/svc/outgoing.h",
+    "lib/svc/service.h",
+  ]
+  sources = [
+    "outgoing.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+  ]
+  public_deps = [
+    "$zx/system/ulib/async:headers",
+    "$zx/system/ulib/fs:headers",
+    "$zx/system/ulib/zx:headers",
+  ]
+}

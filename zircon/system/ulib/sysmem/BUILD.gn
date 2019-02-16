@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("sysmem") {
+  sources = [
+    "sysmem.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/syslog",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+  public_deps = [
+    "$zx/system/ulib/svc:headers",
+  ]
+}

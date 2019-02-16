@@ -1,0 +1,86 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("dash") {
+  output_name = "sh"
+  sources = [
+    "src/alias.c",
+    "src/arith_yacc.c",
+    "src/arith_yylex.c",
+    "src/bltin/printf.c",
+    "src/bltin/test.c",
+    "src/bltin/times.c",
+    "src/bltin/zircon.c",
+    "src/builtins.c",
+    "src/cd.c",
+    "src/error.c",
+    "src/eval.c",
+    "src/exec.c",
+    "src/expand.c",
+    "src/init.c",
+    "src/input.c",
+    "src/jobs.c",
+    "src/main.c",
+    "src/memalloc.c",
+    "src/miscbltin.c",
+    "src/mystring.c",
+    "src/nodes.c",
+    "src/options.c",
+    "src/output.c",
+    "src/output.h",
+    "src/parser.c",
+    "src/process.c",
+    "src/redir.c",
+    "src/show.c",
+    "src/signames.c",
+    "src/syntax.c",
+    "src/system.c",
+    "src/tab.c",
+    "src/trap.c",
+    "src/var.c",
+  ]
+  configs += [ ":config" ]
+  deps = [
+    "$zx/system/fidl/fuchsia-device-manager:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/zircon",
+    "$zx/third_party/ulib/linenoise",
+  ]
+}
+
+config("config") {
+  visibility = [ ":*" ]
+  defines = [
+    "BSD",
+    "DEBUG",
+    "IFS_BROKEN",
+    "JOBS=0",
+    "SHELL",
+    "USE_LINENOISE",
+    "_GNU_SOURCE",
+  ]
+  include_dirs = [ "src" ]
+  cflags = [
+    "-include",
+    rebase_path("config.h", root_build_dir),
+  ]
+
+  # TODO: Fix Warnings
+  cflags_c = [
+    "-Wno-strict-prototypes",
+    "-Wno-sign-compare",
+    "-Wno-logical-not-parentheses",
+  ]
+  if (is_gcc) {
+    cflags_c += [ "-Wno-discarded-qualifiers" ]
+  } else {
+    cflags_c += [
+      "-Wno-incompatible-pointer-types-discards-qualifiers",
+      "-Wno-gnu-designator",
+      "-Wno-format-security",
+      "-Wno-string-plus-int",
+    ]
+  }
+}

@@ -2,24 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("trace-engine") {
-  sdk = "shared"
-  sdk_headers = [
-    "trace-engine/buffer_internal.h",
-    "trace-engine/context.h",
-    "trace-engine/fields.h",
-    "trace-engine/handler.h",
-    "trace-engine/instrumentation.h",
-    "trace-engine/types.h",
-  ]
-  shared = true
+# Three copies of libtrace-engine are built:
+# 1) Shared library for use by userspace tracing.
+# 2) Static library for use by userspace tracing.
+# 3) Static library to be linked into libdriver.so for use by driver tracing.
+#
+# N.B. Please DO NOT use (2) unless you KNOW you need to. Generally you do not.
+# If in doubt, ask. (2) is for very special circumstances where
+# libtrace-engine.so is not available.
+
+common_pieces = {
+  # The crux of the library is the same for each version.  But each one
+  # uses different $defines, so they can't use a common source_set().
   sources = [
     "context.cpp",
     "context_api.cpp",
     "engine.cpp",
     "nonce.cpp",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [
     # <trace-engine/instrumentation.h> has #include <fbl/macros.h>.
     "$zx/system/ulib/fbl:headers",
@@ -32,4 +32,55 @@ library("trace-engine") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
   ]
+}
+
+# The default version for the normal case.
+library("trace-engine") {
+  forward_variables_from(common_pieces, "*")
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+
+  shared = true
+  static = false
+  sdk = "shared"
+  sdk_headers = [
+    "trace-engine/buffer_internal.h",
+    "trace-engine/context.h",
+    "trace-engine/fields.h",
+    "trace-engine/handler.h",
+    "trace-engine/instrumentation.h",
+    "trace-engine/types.h",
+  ]
+}
+
+# A special version for programs and shared libraries that can't use
+# libtrace-engine.so, e.g., because it is unavailable.
+# N.B. Please verify that you really need this before using it.
+# Generally you DO NOT want to use this.
+library("trace-engine-static") {
+  forward_variables_from(common_pieces, "*")
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  defines = [ "STATIC_LIBRARY"]
+
+  shared = false
+  static = true
+  sdk = "static"
+  sdk_headers = [
+    "trace-engine/buffer_internal.h",
+    "trace-engine/context.h",
+    "trace-engine/fields.h",
+    "trace-engine/handler.h",
+    "trace-engine/instrumentation.h",
+    "trace-engine/types.h",
+  ]
+}
+
+# And again, but this time for drivers.
+# This gets linked into libdriver.so.
+library("trace-engine-driver") {
+  forward_variables_from(common_pieces, "*")
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  defines = [ "DDK_TRACING" ]
+
+  shared = false
+  static = true
 }

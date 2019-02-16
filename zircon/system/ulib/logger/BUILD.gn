@@ -1,0 +1,28 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("logger") {
+  sources = [
+    "logger.cpp",
+    "provider.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/fidl/fuchsia-logger:c",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/syslog",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+  public_deps = [
+    # <lib/logger/logger.h> has #include <lib/fidl/cpp/message_buffer.h>.
+    "$zx/system/ulib/fidl",
+
+    # <lib/logger/provider.h> has #include <lib/svc/service.h>.
+    "$zx/system/ulib/svc:headers",
+
+    # <lib/logger/logger.h> has #include <lib/async/cpp/wait.h>.
+    "$zx/system/ulib/async:async-cpp.headers",
+  ]
+}
