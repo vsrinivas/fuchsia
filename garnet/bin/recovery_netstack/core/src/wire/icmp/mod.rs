@@ -117,6 +117,8 @@ pub trait IcmpIpExt: Ip {
     /// `icmpv6::MessageType`.
     type IcmpMessageType: Into<u8> + Copy;
 
+    const IP_PROTO: IpProto;
+
     /// Compute the length of the header of the packet prefix stored in `bytes`.
     ///
     /// Given the prefix of a packet stored in `bytes`, compute the length of
@@ -136,6 +138,13 @@ pub trait IcmpIpExt: Ip {
 impl<I: Ip> IcmpIpExt for I {
     default type IcmpMessageType = !;
 
+    // divide by 0 will only happen during constant evaluation, which will only
+    // happen if this implementation is monomorphized, which should never happen
+    default const IP_PROTO: IpProto = {
+        let _ = 0 / 0;
+        IpProto::Other(255)
+    };
+
     default fn header_len(bytes: &[u8]) -> usize {
         unreachable!()
     }
@@ -143,6 +152,7 @@ impl<I: Ip> IcmpIpExt for I {
 
 impl IcmpIpExt for Ipv4 {
     type IcmpMessageType = icmpv4::MessageType;
+    const IP_PROTO: IpProto = IpProto::Icmp;
 
     fn header_len(bytes: &[u8]) -> usize {
         if bytes.len() < ipv4::MIN_HEADER_BYTES {
@@ -156,6 +166,7 @@ impl IcmpIpExt for Ipv4 {
 
 impl IcmpIpExt for Ipv6 {
     type IcmpMessageType = icmpv6::MessageType;
+    const IP_PROTO: IpProto = IpProto::Icmpv6;
 
     fn header_len(bytes: &[u8]) -> usize {
         // NOTE: We panic here rather than doing log_unimplemented! because
