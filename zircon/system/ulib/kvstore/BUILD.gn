@@ -1,0 +1,27 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("kvstore") {
+  sources = [
+    "kvstore.c",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/third_party/ulib/cksum",
+  ]
+}
+
+test("kvstore-test") {
+  output_name = "kvstore-test"
+  sources = [
+    "kvstore-test.c",
+  ]
+  deps = [
+    ":kvstore",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/unittest",
+    "$zx/third_party/ulib/cksum",
+  ]
+}

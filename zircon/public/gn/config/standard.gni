@@ -71,13 +71,7 @@ standard_fuchsia_configs = [
 ]
 
 # Additional configs apply to normal userland Fuchsia code.
-standard_fuchsia_user_configs = [
-  "$zx/public/gn/config:user",
-  {
-    types = [ "host_tool" ]
-    add = [ "$zx/system/ulib/fdio" ]
-  },
-]
+standard_fuchsia_user_configs = [ "$zx/public/gn/config:user" ]
 
 # See environment().  These are the environments that are
 # vanilla bases to make derived environments from.
@@ -110,6 +104,10 @@ standard_environments = [
           "test",
         ]
         add = [ "$zx/system/ulib/c:crt1" ]
+      },
+      {
+        types = [ "host_tool" ]
+        add = [ "$zx/system/ulib/fdio" ]
       },
     ]
     shlib = true

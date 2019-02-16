@@ -89,13 +89,13 @@ group("all-cpu") {
 foreach(cpu, standard_fuchsia_cpus) {
   environment_redirect("what-builds-$cpu") {
     visibility = [ ":*" ]
+    testonly = true
     environment_label = "$zx/public/gn/toolchain:user"
     cpu = cpu
     deps = [
       # TODO: This indirectly reaches everything that builds so far.
       "$zx/system/core/userboot",
-      "$zx/system/ulib/c",
-      "$zx/system/ulib/fdio",
+      "$zx/system/uapp",
     ]
   }
 }

@@ -1,0 +1,41 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(mcgrathr): In the makefile build this actually had SONAME
+# "system/ulib/crypto", which is pretty insane.  But there is
+# a conflicting libcrypto.so from //third_party/boringssl in higher layers.
+
+group("crypto") {
+  public_deps = [
+    ":zircon-crypto",
+  ]
+}
+
+group("headers") {
+  public_deps = [
+    ":zircon-crypto.headers",
+  ]
+}
+
+library("zircon-crypto") {
+  shared = true
+  sources = [
+    "aead.cpp",
+    "bytes.cpp",
+    "cipher.cpp",
+    "digest.cpp",
+    "error.cpp",
+    "hkdf.cpp",
+    "hmac.cpp",
+    "secret.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/explicit-memory",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxcpp",
+    "$zx/third_party/ulib/uboringssl",
+  ]
+}

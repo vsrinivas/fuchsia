@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("tee-client-api") {
+  sdk = "shared"
+  sdk_headers = []
+  foreach(file,
+          [
+            "tee_client_api.h",
+            "tee-client-types.h",
+          ]) {
+    sdk_headers += [ "lib/tee-client-api/$file" ]
+  }
+  shared = true
+  sources = [
+    "tee-client-api.c",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-hardware-tee:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/zircon",
+  ]
+}

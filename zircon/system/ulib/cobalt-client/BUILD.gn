@@ -1,0 +1,47 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("cobalt-client") {
+  sdk = "source"
+  sdk_headers = [
+    "cobalt-client/cpp/collector-internal.h",
+    "cobalt-client/cpp/collector.h",
+    "cobalt-client/cpp/counter-internal.h",
+    "cobalt-client/cpp/counter.h",
+    "cobalt-client/cpp/histogram-internal.h",
+    "cobalt-client/cpp/histogram.h",
+    "cobalt-client/cpp/metric-options.h",
+    "cobalt-client/cpp/timer.h",
+    "cobalt-client/cpp/types-internal.h",
+  ]
+  host = true
+  sources = [
+    "collector.cpp",
+    "counter.cpp",
+    "histogram.cpp",
+    "metric_info.cpp",
+  ]
+  if (is_fuchsia) {
+    sources += [ "cobalt_logger.cpp" ]
+  }
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    # <cobalt-client/cpp/timer.h> has #include <lib/fzl/time.h>.
+    "$zx/system/ulib/fzl:headers",
+
+    # <cobalt-client/cpp/types-internal.h> has #include <fuchsia/cobalt/c/fidl.h>.
+    "$zx/system/fidl/fuchsia-cobalt:c.headers",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-cobalt:c",
+    "$zx/system/fidl/fuchsia-mem:c",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

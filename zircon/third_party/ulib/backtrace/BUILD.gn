@@ -1,0 +1,28 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("backtrace") {
+  sdk = "shared"
+  sdk_headers = [
+    "backtrace/backtrace-supported.h",
+    "backtrace/backtrace.h",
+  ]
+  shared = true
+  include_dirs = [ "include/backtrace" ]
+  sources = [
+    "alloc.c",
+    "dwarf.c",
+    "elf.c",
+    "fileline.c",
+    "posix.c",
+    "read.c",
+    "sort.c",
+    "state.c",
+  ]
+
+  # Compile this with frame pointers so that if we crash
+  # the simplistic unwinder will work.
+  configs -= [ "$zx/public/gn/config:default_frame_pointers" ]
+  configs += [ "$zx/public/gn/config:frame_pointers" ]
+}

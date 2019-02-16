@@ -1,0 +1,31 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [
+    ":blobfs-unit",
+  ]
+}
+
+test("blobfs-unit") {
+  sources = [
+    "allocated-extent-iterator-test.cpp",
+    "allocator-test.cpp",
+    "blob-cache-test.cpp",
+    "compressor-test.cpp",
+    "extent-reserver-test.cpp",
+    "get-allocated-regions-test.cpp",
+    "journal-test.cpp",
+    "main.cpp",
+    "node-populator-test.cpp",
+    "node-reserver-test.cpp",
+    "utils.cpp",
+    "vector-extent-iterator-test.cpp",
+    "writeback-test.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/blobfs",
+  ]
+}

@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("async-loop") {
+  sdk = "source"
+  sdk_headers = [ "lib/async-loop/loop.h" ]
+  sources = [
+    "loop.c",
+  ]
+  public_deps = [
+    # <lib/async-loop/loop.h> has #include <lib/async/dispatcher.h>.
+    "$zx/system/ulib/async:headers",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-default",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+library("async-loop-cpp") {
+  sdk = "source"
+  sdk_headers = [ "lib/async-loop/cpp/loop.h" ]
+  sources = [
+    "loop_wrapper.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    ":async-loop",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-default",
+    "$zx/system/ulib/zircon",
+  ]
+  public_deps = [
+    ":headers",
+
+    # <lib/async-loop/cpp/loop.h> has #include <lib/zx/time.h>.
+    "$zx/system/ulib/zx:headers",
+  ]
+}

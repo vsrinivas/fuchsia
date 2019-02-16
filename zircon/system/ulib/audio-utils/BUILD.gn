@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("audio-utils") {
+  sdk = "source"
+  sdk_headers = [
+    "audio-utils/audio-device-stream.h",
+    "audio-utils/audio-input.h",
+    "audio-utils/audio-output.h",
+    "audio-utils/audio-stream.h",
+  ]
+  sources = [
+    "audio-device-stream.cpp",
+    "audio-input.cpp",
+    "audio-output.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zx",
+  ]
+}

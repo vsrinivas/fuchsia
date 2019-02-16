@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("loader-service") {
+  sdk = "static"
+  sdk_headers = [ "loader-service/loader-service.h" ]
+  sources = [
+    "loader-service.c",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/ldmsg",
+    "$zx/system/ulib/zircon",
+  ]
+}

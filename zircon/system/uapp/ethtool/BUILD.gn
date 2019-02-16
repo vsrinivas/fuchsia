@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("ethtool") {
+  sources = [
+    "ethtool.c",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-hardware-ethernet:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/inet6",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/zircon",
+  ]
+}

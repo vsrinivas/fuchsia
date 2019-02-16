@@ -1,0 +1,13 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("backlight") {
+  sources = [
+    "main.c",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-hardware-backlight:c",
+    "$zx/system/ulib/fdio",
+  ]
+}

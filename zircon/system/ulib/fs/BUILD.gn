@@ -1,0 +1,100 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("fs") {
+  sdk = "source"
+  sdk_headers = [
+    "fs/block-txn.h",
+    "fs/client.h",
+    "fs/connection.h",
+    "fs/fvm.h",
+    "fs/handler.h",
+    "fs/lazy-dir.h",
+    "fs/locking.h",
+    "fs/managed-vfs.h",
+    "fs/metrics.h",
+    "fs/pseudo-dir.h",
+    "fs/pseudo-file.h",
+    "fs/queue.h",
+    "fs/ref_counted.h",
+    "fs/remote-dir.h",
+    "fs/remote.h",
+    "fs/service.h",
+    "fs/synchronous-vfs.h",
+    "fs/ticker.h",
+    "fs/trace.h",
+    "fs/vfs.h",
+    "fs/vmo-file.h",
+    "fs/vnode.h",
+    "fs/watcher.h",
+  ]
+  host = true
+  static = true
+
+  public_deps = [
+    "$zx/system/ulib/async:headers",
+    "$zx/system/ulib/fbl:headers",
+    "$zx/system/ulib/fdio:headers",
+  ]
+
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon-internal",
+  ]
+
+  sources = [
+    "block-txn.cpp",
+    "vfs.cpp",
+    "vnode.cpp",
+  ]
+
+  if (is_fuchsia) {
+    sources += [
+      "connection.cpp",
+      "fvm.cpp",
+      "handler.cpp",
+      "lazy-dir.cpp",
+      "managed-vfs.cpp",
+      "metrics.cpp",
+      "mount.cpp",
+      "pseudo-dir.cpp",
+      "pseudo-file.cpp",
+      "remote-dir.cpp",
+      "service.cpp",
+      "synchronous-vfs.cpp",
+      "unmount.cpp",
+      "vmo-file.cpp",
+      "watcher.cpp",
+    ]
+    public_deps += [
+      "$zx/system/ulib/zx:headers",
+
+      # <fs/vnode.h> has #include <fuchsia/io/c/fidl.h>.
+      "$zx/system/fidl/fuchsia-io:c.headers",
+
+      # <fs/metrics.h> has #include <cobalt-client/cpp/collector.h>.
+      "$zx/system/ulib/cobalt-client:headers",
+    ]
+    configs += [ "$zx/public/gn/config:visibility_hidden" ]
+    deps += [
+      "$zx/system/fidl/fuchsia-cobalt:c",
+      "$zx/system/fidl/fuchsia-io:c",
+      "$zx/system/fidl/fuchsia-mem:c",
+      "$zx/system/ulib/async",
+      "$zx/system/ulib/async:async-cpp",
+      "$zx/system/ulib/cobalt-client",
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/fidl",
+      "$zx/system/ulib/fidl-utils",
+      "$zx/system/ulib/fzl",
+      "$zx/system/ulib/sync",
+      "$zx/system/ulib/trace",
+      "$zx/system/ulib/trace-engine",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+      "$zx/system/ulib/zxcpp",
+    ]
+  }
+}

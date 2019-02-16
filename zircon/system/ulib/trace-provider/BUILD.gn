@@ -1,0 +1,157 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Three copies of libtrace-provider are built:
+# (1) libtrace-provider.a: Static copy that uses libtrace-engine.so
+#     (or libdriver.so for DDK).
+# (2) libtrace-provider.without-fdio.a: Static copy that uses
+#     libtrace-engine.so but does not contain fdio support for connect to
+#     trace-manager; instead the client must make its own connection.
+# (3) libtrace-provider.with-static-engine.a: Static copy that uses
+#     libtrace-engine.static.a.
+#
+# N.B. Please DO NOT use (3) unless you KNOW you need to. Generally you do not.
+# If in doubt, ask. (3) is for very special circumstances where
+# libtrace-engine.so is not available.
+
+# Common pieces.
+source_set("common") {
+  visibility = [ ":*" ]
+  sources = [
+    "provider_impl.cpp",
+    "session.cpp",
+    "utils.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    ":handler",
+    ":headers",
+    "$zx/system/fidl/fuchsia-tracelink:c",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/trace-engine:headers",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+# This is used in isolation by trace-handler, and also used by :common.
+source_set("handler") {
+  visibility = [ ":*" ]
+  sources = [
+    "handler.cpp",
+  ]
+  deps = [
+    ":headers",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+}
+
+# The default version for the normal case.
+# TODO(PT-63): Remove fdio dependency.
+library("trace-provider") {
+  sdk = "static"
+  sdk_headers = [
+    "trace-provider/fdio_connect.h",
+    "trace-provider/handler.h",
+    "trace-provider/provider.h",
+  ]
+  sources = []
+  deps = [
+    ":common",
+    ":common.fdio-connect",
+    "$zx/system/fidl/fuchsia-tracelink:c",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/fdio",
+  ]
+  public_deps = [
+    # <trace-provider/provider.h> has #include <lib/async/dispatcher.h>.
+    "$zx/system/ulib/async:headers",
+
+    # <trace-provider/provider.h> has #include <lib/zx/channel.h>.
+    "$zx/system/ulib/zx:headers",
+
+    # <trace-provider/handler.h> has #include <trace-engine/handler.h>.
+    "$zx/system/ulib/trace-engine:headers",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+}
+
+# Same as the default version with the fdio dependency removed.
+# TODO(PT-63): This will be removed (the default case will become this)
+# when all clients are updated.
+library("trace-provider-without-fdio") {
+  sdk = "static"
+  sdk_headers = [
+    "trace-provider/handler.h",
+    "trace-provider/provider.h",
+  ]
+  sources = []
+  deps = [
+    ":common",
+    "$zx/system/fidl/fuchsia-tracelink:c",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/trace-engine",
+  ]
+}
+
+# A special version for programs and shared libraries that can't use
+# libtrace-engine.so, e.g., because it is unavailable.
+# N.B. Please verify that you really need this before using it.
+# Generally you DO NOT want to use this.
+library("trace-provider-with-static-engine") {
+  sdk = "static"
+  sdk_headers = [
+    "trace-provider/handler.h",
+    "trace-provider/provider.h",
+  ]
+  sources = []
+  deps = [
+    ":common",
+    "$zx/system/fidl/fuchsia-tracelink:c",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/trace-engine:static",
+  ]
+}
+
+# For apps that use the trace engine, but not via a trace provider.
+# These are usually test and benchmarking apps.
+# Normal apps are not expected to use this.
+library("trace-handler") {
+  sdk = "static"
+  sdk_headers = []
+  sources = []
+  deps = [
+    ":handler",
+    "$zx/system/ulib/trace-engine",
+  ]
+}
+
+# A helper library for clients that want to use fdio to connect to
+# trace manager.
+library("trace-provider-fdio-connect") {
+  sdk = "static"
+  sdk_headers = [ "trace-provider/fdio_connect.h" ]
+  sources = []
+  deps = [
+    ":common.fdio-connect",
+    "$zx/system/ulib/fdio",
+  ]
+}
+
+source_set("common.fdio-connect") {
+  visibility = [ ":*" ]
+  sources = [
+    "fdio_connect.cpp",
+    "provider_with_fdio.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    ":headers",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zx",
+  ]
+}

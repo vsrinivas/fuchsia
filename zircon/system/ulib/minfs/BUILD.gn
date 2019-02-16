@@ -1,0 +1,57 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("minfs") {
+  host = true
+  static = true
+  sources = [
+    "allocator.cpp",
+    "bcache.cpp",
+    "fsck.cpp",
+    "inode-manager.cpp",
+    "minfs.cpp",
+    "superblock.cpp",
+    "transaction-limits.cpp",
+    "vnode.cpp",
+    "writeback.cpp",
+  ]
+  if (!is_fuchsia) {
+    sources += [ "host.cpp" ]
+  }
+  public_deps = [
+    "$zx/system/ulib/bitmap:headers",
+    "$zx/system/ulib/fbl:headers",
+    "$zx/system/ulib/fs:headers",
+  ]
+  deps = [
+    "$zx/system/ulib/bitmap",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/zircon-internal",
+  ]
+  if (is_fuchsia) {
+    public_deps += [ "$zx/system/ulib/zx:headers" ]
+    configs += [ "$zx/public/gn/config:visibility_hidden" ]
+    deps += [
+      "$zx/system/fidl/fuchsia-io:c",
+      "$zx/system/fidl/fuchsia-minfs:c",
+      "$zx/system/ulib/async",
+      "$zx/system/ulib/async:async-cpp",
+      "$zx/system/ulib/async:async-default",
+      "$zx/system/ulib/async-loop",
+      "$zx/system/ulib/async-loop:async-loop-cpp",
+      "$zx/system/ulib/block-client",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/fidl",
+      "$zx/system/ulib/fidl-utils",
+      "$zx/system/ulib/fzl",
+      "$zx/system/ulib/sync",
+      "$zx/system/ulib/trace",
+      "$zx/system/ulib/trace-engine",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+      "$zx/system/ulib/zxcpp",
+    ]
+  }
+}

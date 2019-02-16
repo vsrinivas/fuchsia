@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("trace-engine") {
+  sdk = "shared"
+  sdk_headers = [
+    "trace-engine/buffer_internal.h",
+    "trace-engine/context.h",
+    "trace-engine/fields.h",
+    "trace-engine/handler.h",
+    "trace-engine/instrumentation.h",
+    "trace-engine/types.h",
+  ]
+  shared = true
+  sources = [
+    "context.cpp",
+    "context_api.cpp",
+    "engine.cpp",
+    "nonce.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    # <trace-engine/instrumentation.h> has #include <fbl/macros.h>.
+    "$zx/system/ulib/fbl:headers",
+  ]
+  deps = [
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

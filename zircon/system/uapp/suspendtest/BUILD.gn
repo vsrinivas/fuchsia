@@ -1,0 +1,14 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("suspendtest") {
+  sources = [
+    "suspendtest.c",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+  ]
+}

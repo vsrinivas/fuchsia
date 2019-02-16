@@ -1,0 +1,69 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Common pieces.
+source_set("common") {
+  visibility = [ ":*" ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  sources = [
+    "event.cpp",
+    "observer.cpp",
+  ]
+  deps = [
+    ":headers",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/trace-engine",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+# The default version for the normal case.
+library("trace") {
+  sdk = "static"
+  sdk_headers = [
+    "trace/internal/event_args.h",
+    "trace/internal/event_common.h",
+    "trace/internal/event_internal.h",
+    "trace/internal/pairs_internal.h",
+    "trace/event.h",
+    "trace/event_args.h",
+    "trace/observer.h",
+  ]
+  sources = []
+  public_deps = [
+    # <trace/internal/event_common.h> has #include <trace-engine/instrumentation.h>.
+    "$zx/system/ulib/trace-engine:headers",
+
+    # <trace/internal/event_args.h> has #include <fbl/string_traits.h>.
+    "$zx/system/ulib/fbl:headers",
+  ]
+  deps = [
+    ":common",
+  ]
+}
+
+# A special version for programs and shared libraries that can't use
+# libtrace-engine.so.
+# N.B. Please verify that you really need this before using it.
+# Generally you DON'T want to use this.
+library("trace-with-static-engine") {
+  sdk = "static"
+  sdk_headers = [
+    "trace/internal/event_args.h",
+    "trace/internal/event_common.h",
+    "trace/internal/event_internal.h",
+    "trace/internal/pairs_internal.h",
+    "trace/event.h",
+    "trace/event_args.h",
+    "trace/observer.h",
+  ]
+  sources = []
+  deps = [
+    ":common",
+    "$zx/system/ulib/trace-engine:static",
+  ]
+}

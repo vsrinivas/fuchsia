@@ -1,0 +1,44 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("fzl") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/fzl/fdio.h",
+    "lib/fzl/fifo.h",
+    "lib/fzl/memory-probe.h",
+    "lib/fzl/owned-vmo-mapper.h",
+    "lib/fzl/pinned-vmo.h",
+    "lib/fzl/resizeable-vmo-mapper.h",
+    "lib/fzl/time.h",
+    "lib/fzl/vmar-manager.h",
+    "lib/fzl/vmo-mapper.h",
+    "lib/fzl/vmo-pool.h",
+  ]
+  sources = [
+    "memory-probe.cpp",
+    "owned-vmo-mapper.cpp",
+    "pinned-vmo.cpp",
+    "resizeable-vmo-mapper.cpp",
+    "time.cpp",
+    "vmar-manager.cpp",
+    "vmo-mapper.cpp",
+    "vmo-pool.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zx",
+  ]
+  public_deps = [
+    # Many public headers here use various fbl headers.
+    "$zx/system/ulib/fbl:headers",
+
+    # <lib/fzl/fdio.h> has #include <lib/fdio/unsafe.h>.
+    "$zx/system/ulib/fdio:headers",
+
+    # <lib/fzl/fdio.h> has #include <lib/zx/channel.h>.
+    "$zx/system/ulib/zx:headers",
+  ]
+}

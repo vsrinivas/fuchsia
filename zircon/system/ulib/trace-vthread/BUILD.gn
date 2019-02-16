@@ -1,0 +1,114 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(MA-488): Add ddk support.
+
+# Common pieces.
+source_set("common") {
+  visibility = [ ":*" ]
+  sources = [
+    "event_vthread.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    ":headers",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+# The default version for the normal case.
+library("trace-vthread") {
+  sdk = "static"
+  sdk_headers = [
+    "trace-vthread/internal/event_vthread.h",
+    "trace-vthread/event_vthread.h",
+  ]
+  sources = []
+  public_deps = [
+    # <trace-vthread/internal/event_vthread.h> has #include <trace/event_args.h>.
+    "$zx/system/ulib/trace:headers",
+
+    # <trace-vthread/internal/event_vthread.h> has #include <trace-engine/instrumentation.h>.
+    "$zx/system/ulib/trace-engine:headers",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/ulib/trace",
+  ]
+}
+
+# A special version for programs and shared libraries that can't use
+# libtrace-engine.so.
+# N.B. Please verify that you really need this before using it.
+# Generally you DON'T want to use this.
+library("trace-vthread-with-static-engine") {
+  sdk = "static"
+  sdk_headers = [
+    "trace-vthread/internal/event_vthread.h",
+    "trace-vthread/event_vthread.h",
+  ]
+  sources = []
+  public_deps = [
+    # <trace-vthread/internal/event_vthread.h> has #include <trace/event_args.h>.
+    "$zx/system/ulib/trace:headers",
+
+    # <trace-vthread/internal/event_vthread.h> has #include <trace-engine/instrumentation.h>.
+    "$zx/system/ulib/trace-engine:headers",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/ulib/trace:trace-with-static-engine",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":trace-vthread-test",
+    ":trace-vthread-with-static-engine-test",
+  ]
+}
+
+# Common pieces of the unittest.
+source_set("test-common") {
+  testonly = true
+  visibility = [ ":*" ]
+  sources = [
+    "event_vthread_tests.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop.cpp",
+    "$zx/system/ulib/async.cpp",
+    "$zx/system/ulib/async.default",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/trace",
+    "$zx/system/ulib/trace-provider.handler",
+    "$zx/system/ulib/trace-reader",
+    "$zx/system/ulib/trace-test-utils",
+    "$zx/system/ulib/trace-vthread",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+# The unittest for the default case of dynamically linked trace-engine.
+test("trace-vthread-test") {
+  deps = [
+    ":test-common",
+    "$zx/system/ulib/trace-engine",
+  ]
+}
+
+# The unittest with a static trace-engine.
+test("trace-vthread-with-static-engine-test") {
+  deps = [
+    ":test-common",
+    "$zx/system/ulib/trace-engine:static",
+  ]
+}

@@ -1,0 +1,131 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/config/levels.gni")
+
+library("ngunwind") {
+  sdk = "shared"
+  sdk_headers = [
+    "ngunwind/private/compiler.h",
+    "ngunwind/private/config.h",
+    "ngunwind/private/dwarf-config.h",
+    "ngunwind/private/dwarf_i.h",
+    "ngunwind/private/elf32.h",
+    "ngunwind/private/elf64.h",
+    "ngunwind/private/elfxx.h",
+    "ngunwind/private/fuchsia_i.h",
+    "ngunwind/private/libunwind-common.h",
+    "ngunwind/private/libunwind-dynamic.h",
+    "ngunwind/private/libunwind_i.h",
+    "ngunwind/private/mempool.h",
+    "ngunwind/private/remote.h",
+    "ngunwind/private/tgt-aarch64.h",
+    "ngunwind/private/tgt-arm.h",
+    "ngunwind/private/tgt-x86_64.h",
+    "ngunwind/private/tgt_i-aarch64.h",
+    "ngunwind/private/tgt_i-arm.h",
+    "ngunwind/private/tgt_i-x86_64.h",
+    "ngunwind/dwarf-eh.h",
+    "ngunwind/dwarf.h",
+    "ngunwind/fuchsia.h",
+    "ngunwind/libunwind.h",
+  ]
+  shared = true
+  configs += [ ":private_config" ]
+  deps = [
+    "$zx/system/ulib/zircon",
+  ]
+  sources = [
+    "src/dwarf/Gexpr.c",
+    "src/dwarf/Gfde.c",
+    "src/dwarf/Gfind_proc_info-lsb.c",
+    "src/dwarf/Gfind_unwind_table.c",
+    "src/dwarf/Gparser.c",
+    "src/dwarf/Gpe.c",
+    "src/dwarf/Gstep.c",
+    "src/dwarf/global.c",
+    "src/fuchsia.c",
+    "src/mi/Gdestroy_addr_space.c",
+    "src/mi/Gdyn-extract.c",
+    "src/mi/Gdyn-remote.c",
+    "src/mi/Gfind_dynamic_proc_info.c",
+    "src/mi/Gget_accessors.c",
+    "src/mi/Gget_fpreg.c",
+    "src/mi/Gget_proc_info_by_ip.c",
+    "src/mi/Gget_proc_name.c",
+    "src/mi/Gget_reg.c",
+    "src/mi/Gput_dynamic_unwind_info.c",
+    "src/mi/Gset_caching_policy.c",
+    "src/mi/Gset_fpreg.c",
+    "src/mi/Gset_reg.c",
+    "src/mi/common.c",
+    "src/mi/flush_cache.c",
+    "src/mi/init.c",
+    "src/mi/mempool.c",
+    "src/mi/strerror.c",
+  ]
+  if (current_cpu == "arm64") {
+    sources += [
+      "src/aarch64/Gcreate_addr_space.c",
+      "src/aarch64/Gget_proc_info.c",
+      "src/aarch64/Gget_save_loc.c",
+      "src/aarch64/Gglobal.c",
+      "src/aarch64/Ginit.c",
+      "src/aarch64/Ginit_local.c",
+      "src/aarch64/Ginit_remote.c",
+      "src/aarch64/Gregs.c",
+      "src/aarch64/Gsignal_frame.c",
+      "src/aarch64/Gstash_frame.c",
+      "src/aarch64/Gstep.c",
+      "src/aarch64/fuchsia.c",
+      "src/aarch64/regname.c",
+      "src/elf64.c",
+    ]
+  } else if (current_cpu == "x64") {
+    sources += [
+      "src/elf64.c",
+      "src/x86_64/Gcreate_addr_space.c",
+      "src/x86_64/Gget_proc_info.c",
+      "src/x86_64/Gget_save_loc.c",
+      "src/x86_64/Gglobal.c",
+      "src/x86_64/Ginit.c",
+      "src/x86_64/Ginit_local.c",
+      "src/x86_64/Ginit_remote.c",
+      "src/x86_64/Gregs.c",
+      "src/x86_64/Gsignal_frame.c",
+      "src/x86_64/Gstash_frame.c",
+      "src/x86_64/Gstep.c",
+      "src/x86_64/fuchsia.c",
+      "src/x86_64/regname.c",
+    ]
+  }
+
+  # Compile this with frame pointers so that if we crash
+  # the simplistic unwinder will work.
+  configs -= [ "$zx/public/gn/config:default_frame_pointers" ]
+  configs += [ "$zx/public/gn/config:frame_pointers" ]
+
+  if (opt_level < 2) {
+    # Force -O2 since the library doesn't build with -Og.
+    configs -= [ "$zx/public/gn/config:opt_level" ]
+    cflags = [ "-O2" ]
+  }
+}
+
+config("private_config") {
+  visibility = [ ":*" ]
+
+  defines = [ "DEBUG" ]
+  include_dirs = [
+    "include/ngunwind",
+    "include/ngunwind/private",
+  ]
+
+  # cflags has to go in a config rather than directly in the target because
+  # the target's cflags comes before the standard configs that include the
+  # positive -W* switches, but -Wno-* switches must come afterwards.
+  if (!is_gcc) {
+    cflags = [ "-Wno-absolute-value" ]
+  }
+}

@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("audio") {
+  sources = [
+    "audio.cpp",
+    "sine-source.cpp",
+    "wav-common.cpp",
+    "wav-sink.cpp",
+    "wav-source.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/audio-proto-utils",
+    "$zx/system/ulib/audio-utils",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

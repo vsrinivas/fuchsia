@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("inspector") {
+  sdk = "static"
+  sdk_headers = [ "inspector/inspector.h" ]
+  sources = [
+    "backtrace.cpp",
+    "debug-info.cpp",
+    "dso-list.cpp",
+    "memory.cpp",
+    "registers.cpp",
+    "utils.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/ulib/backtrace-request",
+    "$zx/system/ulib/elf-search",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxcpp",
+    "$zx/third_party/ulib/backtrace",
+    "$zx/third_party/ulib/ngunwind",
+  ]
+
+  # Compile this with frame pointers so that if we crash
+  # the simplistic unwinder will work.
+  configs -= [ "$zx/public/gn/config:default_frame_pointers" ]
+  configs += [ "$zx/public/gn/config:frame_pointers" ]
+}

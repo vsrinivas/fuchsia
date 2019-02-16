@@ -1,0 +1,168 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("psutils") {
+  deps = [
+    ":kill",
+    ":killall",
+    ":kstats",
+    ":memgraph",
+    ":ps",
+    ":signal",
+    ":threads",
+    ":top",
+    ":vmaps",
+    ":vmos",
+  ]
+}
+
+executable("ps") {
+  sources = [
+    "ps.c",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/task-utils",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+executable("top") {
+  sources = [
+    "top.c",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/task-utils",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+executable("kill") {
+  sources = [
+    "kill.c",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/task-utils",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+executable("killall") {
+  sources = [
+    "killall.c",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/task-utils",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+executable("vmaps") {
+  sources = [
+    "vmaps.c",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/task-utils",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+executable("vmos") {
+  sources = [
+    "vmo-utils.c",
+    "vmos.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/task-utils",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+executable("memgraph") {
+  sources = [
+    "memgraph.cpp",
+    "resources.c",
+    "vmo-utils.c",
+  ]
+  include_dirs = [ target_gen_dir ]
+  deps = [
+    ":gen-memgraph-schema",
+    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/task-utils",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+# Generate an include file that contains the schema JSON.
+action("gen-memgraph-schema") {
+  outputs = [
+    "$target_gen_dir/memgraph-schema.h",
+  ]
+  sources = [
+    "memgraph-schema.json",
+  ]
+  script = "gen-memgraph-schema-header.sh"
+  args = rebase_path(outputs, root_build_dir) +
+         rebase_path(sources, root_build_dir)
+}
+
+executable("kstats") {
+  sources = [
+    "kstats.c",
+    "resources.c",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+executable("threads") {
+  sources = [
+    "threads.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/inspector",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/task-utils",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxcpp",
+    "$zx/third_party/ulib/backtrace",
+    "$zx/third_party/ulib/ngunwind",
+  ]
+}
+
+executable("signal") {
+  sources = [
+    "signal.c",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/task-utils",
+    "$zx/system/ulib/zircon",
+  ]
+}
