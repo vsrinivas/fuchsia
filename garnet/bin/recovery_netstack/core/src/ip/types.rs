@@ -22,6 +22,20 @@ pub enum IpVersion {
     V6,
 }
 
+/// An IP address.
+#[allow(missing_docs)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum IpAddress {
+    V4(Ipv4Addr),
+    V6(Ipv6Addr),
+}
+
+impl<A: IpAddr> From<A> for IpAddress {
+    fn from(addr: A) -> IpAddress {
+        addr.into_ip_address()
+    }
+}
+
 impl IpVersion {
     /// The number for this IP protocol version.
     ///
@@ -148,6 +162,9 @@ where
     ///
     /// Return a copy of `self` where all but the top `bits` bits are set to 0.
     fn mask(&self, bits: u8) -> Self;
+
+    /// Convert a statically-typed IP address into a dynamically-typed one.
+    fn into_ip_address(self) -> IpAddress;
 }
 
 /// An IPv4 address.
@@ -192,6 +209,10 @@ impl IpAddr for Ipv4Addr {
 
     fn bytes(&self) -> &[u8] {
         &self.0
+    }
+
+    fn into_ip_address(self) -> IpAddress {
+        IpAddress::V4(self)
     }
 }
 
@@ -256,6 +277,10 @@ impl IpAddr for Ipv6Addr {
     fn bytes(&self) -> &[u8] {
         &self.0
     }
+
+    fn into_ip_address(self) -> IpAddress {
+        IpAddress::V6(self)
+    }
 }
 
 impl From<std::net::Ipv6Addr> for Ipv6Addr {
@@ -290,13 +315,55 @@ impl Debug for Ipv6Addr {
 }
 
 /// An IP subnet.
+#[allow(missing_docs)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum IpSubnet {
+    V4(Subnet<Ipv4Addr>),
+    V6(Subnet<Ipv6Addr>),
+}
+
+impl<A: IpAddr> From<Subnet<A>> for IpSubnet {
+    default fn from(_addr: Subnet<A>) -> IpSubnet {
+        unreachable!()
+    }
+}
+
+impl From<Subnet<Ipv4Addr>> for IpSubnet {
+    fn from(subnet: Subnet<Ipv4Addr>) -> IpSubnet {
+        IpSubnet::V4(subnet)
+    }
+}
+
+impl From<Subnet<Ipv6Addr>> for IpSubnet {
+    fn from(subnet: Subnet<Ipv6Addr>) -> IpSubnet {
+        IpSubnet::V6(subnet)
+    }
+}
+
+/// An IP subnet.
 ///
 /// `Subnet` is a combination of an IP network address and a prefix length.
-#[derive(Copy, Clone)]
-pub struct Subnet<A: IpAddr> {
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct Subnet<A> {
     // invariant: normalized to contain only prefix bits
     network: A,
     prefix: u8,
+}
+
+// TODO(joshlf): Currently, we need a separate new_unchecked because trait
+// bounds other than Sized are not supported in const fns. Once that restriction
+// is lifted, we can make new a const fn.
+
+impl<A> Subnet<A> {
+    /// Create a new subnet without enforcing correctness.
+    ///
+    /// Unlike `new`, `new_unchecked` does not validate that `prefix` is in the
+    /// proper range, and does not mask `network`. It is up to the caller to
+    /// guarantee that `prefix` is in the proper range, and that none of the
+    /// bits of `network` beyond the prefix are set.
+    pub const unsafe fn new_unchecked(network: A, prefix: u8) -> Subnet<A> {
+        Subnet { network, prefix }
+    }
 }
 
 impl<A: IpAddr> Subnet<A> {
