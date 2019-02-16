@@ -178,7 +178,8 @@ pub fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
         } else {
             // TTL is 0 or would become 0 after decrement; see "TTL" section,
             // https://tools.ietf.org/html/rfc791#page-14
-            // TODO(joshlf): Do something with ICMP here?
+            let (src_ip, dst_ip, _, meta) = drop_packet_and_undo_parse!(packet, buffer);
+            icmp::send_icmp_ttl_expired(ctx, src_ip, dst_ip, buffer, meta.header_len());
             debug!("received IP packet dropped due to expired TTL");
         }
     } else {

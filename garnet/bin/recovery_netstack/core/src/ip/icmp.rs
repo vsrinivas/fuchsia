@@ -11,8 +11,9 @@ use packet::{BufferMut, BufferSerializer, Serializer};
 
 use crate::ip::{send_ip_packet, IpAddr, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use crate::wire::icmp::{
-    IcmpDestUnreachable, IcmpPacketBuilder, IcmpParseArgs, Icmpv4DestUnreachableCode, Icmpv4Packet,
-    Icmpv6DestUnreachableCode, Icmpv6Packet, Icmpv6ParameterProblem, Icmpv6ParameterProblemCode,
+    IcmpDestUnreachable, IcmpPacketBuilder, IcmpParseArgs, IcmpTimeExceeded,
+    Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4TimeExceededCode, Icmpv6DestUnreachableCode,
+    Icmpv6Packet, Icmpv6ParameterProblem, Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode,
 };
 use crate::{Context, EventDispatcher};
 
@@ -291,6 +292,77 @@ pub fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
     A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, ipv4_header_len);
 }
 
+/// Send an ICMP message in response to receiving a packet whose TTL has
+/// expired.
+///
+/// `send_icmp_ttl_expired` sends the appropriate ICMP or ICMPv6 message in
+/// response to receiving an IP packet from `src_ip` to `dst_ip` whose TTL
+/// (IPv4)/Hop Limit (IPv6) has expired. For IPv4, this is an ICMP "time
+/// exceeded" message with a "time to live exceeded in transit" code. For IPv6,
+/// this is an ICMPv6 "time exceeded" message with a "hop limit exceeded in
+/// transit" code.
+///
+/// `original_packet` contains the contents of the entire original packet -
+/// including all IP headers. `ipv4_header_len` is the length of the IPv4
+/// header. It is ignored for IPv6.
+pub fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddr, B: BufferMut>(
+    ctx: &mut Context<D>,
+    src_ip: A,
+    dst_ip: A,
+    original_packet: B,
+    ipv4_header_len: usize,
+) {
+    increment_counter!(ctx, "send_icmp_ttl_expired");
+
+    specialize_ip_addr! {
+        fn make_packet_builder<D, B>(ctx: &mut Context<D>, src_ip: Self, dst_ip: Self, original_packet: B, ipv4_header_len: usize)
+        where
+            D: EventDispatcher,
+            B: BufferMut,
+        {
+            Ipv4Addr => {
+                // Per RFC 792, body contains entire IPv4 header + 64 bytes of
+                // original body.
+                let mut original_packet = original_packet;
+                original_packet.shrink_back_to(ipv4_header_len + 64);
+                // TODO(joshlf): The source address should probably be fixed rather than
+                // looked up in the routing table.
+                send_ip_packet(ctx, dst_ip, IpProto::Icmp, |src_ip| {
+                    BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                        src_ip,
+                        dst_ip,
+                        Icmpv4TimeExceededCode::TtlExpired,
+                        IcmpTimeExceeded::default(),
+                    ))
+                });
+            }
+            Ipv6Addr => {
+                // Per RFC 4443, body contains as much of the original body as
+                // possible without exceeding IPv6 minimum MTU.
+                let mut original_packet = original_packet;
+                original_packet.shrink_back_to(crate::ip::IPV6_MIN_MTU);
+                // TODO(joshlf): The source address should probably be fixed rather than
+                // looked up in the routing table.
+                send_ip_packet(ctx, dst_ip, IpProto::Icmpv6, |src_ip| {
+                    BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                        src_ip,
+                        dst_ip,
+                        Icmpv6TimeExceededCode::HopLimitExceeded,
+                        IcmpTimeExceeded::default(),
+                    ))
+                });
+            }
+        }
+    }
+
+    // NOTE(joshlf): src_ip and dst_ip swapped since we're responding
+    // TODO(joshlf): When we finally get around to setting src_ip properly (see
+    // note in send_icmpvX_dest_unreachable), we need to make sure we use our
+    // source IP rather than the original packet's destination IP (which won't
+    // necessarily be the same if we have forwarding enabled).
+    A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, ipv4_header_len);
+}
+
 fn send_icmpv4_dest_unreachable<D: EventDispatcher, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: Ipv4Addr,
@@ -509,6 +581,26 @@ mod tests {
             &["send_icmp_net_unreachable", "send_ip_packet"],
             IcmpDestUnreachable::default(),
             Icmpv4DestUnreachableCode::DestNetworkUnreachable,
+            // ensure packet is truncated to the right length
+            |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
+        );
+    }
+
+    #[test]
+    fn test_ttl_expired() {
+        // Receive an IP packet with an expired TTL. Check to make sure that we
+        // respond with the appropriate ICMP message.
+        //
+        // TODO(joshlf): Also perform the check for IPv6 once we support dummy
+        // IPv6 networks.
+        test_receive_ip_packet(
+            &mut [0u8; 128],
+            DUMMY_CONFIG.remote_ip,
+            1,
+            IpProto::Udp,
+            &["send_icmp_ttl_expired", "send_ip_packet"],
+            IcmpTimeExceeded::default(),
+            Icmpv4TimeExceededCode::TtlExpired,
             // ensure packet is truncated to the right length
             |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
         );
