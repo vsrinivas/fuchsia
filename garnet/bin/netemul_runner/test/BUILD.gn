@@ -8,6 +8,7 @@ import("//build/testing/environments.gni")
 test_package("netemul_sandbox_test") {
   deps = [
     "//garnet/bin/netemul_runner:sandbox_unittest",
+    "//garnet/bin/netemul_runner/helpers/mock_device_settings",
     "//garnet/bin/netemul_runner/model:model_unittest",
     "//garnet/bin/netemul_runner/test/dummy_proc",
     "//garnet/bin/netemul_runner/test/dynamic_devices",
@@ -93,6 +94,10 @@ test_package("netemul_sandbox_test") {
     {
       name = "dynamic_devices"
       environments = basic_envs
+    },
+    {
+      name = "mock_device_settings_bin_test"
+      dest = "mock_device_settings"
     },
   ]
 }

@@ -1,0 +1,25 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.devicesettings.DeviceSettingsManager": [
+                    "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/mock_device_settings.cmx",
+                    "-s",
+                    "StringKey=bla",
+                    "-i",
+                    "WatchKey=0",
+                    "-i",
+                    "IntKey=0"
+                ]
+            }
+        }
+    },
+    "program": {
+        "binary": "test/mock_device_settings"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.devicesettings.DeviceSettingsManager"
+        ]
+    }
+}

@@ -95,6 +95,7 @@ package("netemul_sandbox") {
 
   deps = [
     ":bin",
+    "//garnet/bin/netemul_runner/helpers/mock_device_settings",
     "//garnet/bin/netemul_runner/helpers/netstack_cfg",
   ]
 
@@ -104,6 +105,9 @@ package("netemul_sandbox") {
     },
     {
       name = "netstack_cfg"
+    },
+    {
+      name = "mock_device_settings"
     },
   ]
 
@@ -115,6 +119,10 @@ package("netemul_sandbox") {
     {
       path = rebase_path("helpers/meta/helper_netstack_cfg.cmx")
       dest = "helper_netstack_cfg.cmx"
+    },
+    {
+      path = rebase_path("helpers/meta/mock_device_settings.cmx")
+      dest = "mock_device_settings.cmx"
     },
   ]
 }

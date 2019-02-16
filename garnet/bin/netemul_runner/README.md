@@ -236,3 +236,29 @@ OPTIONS:
     -i <ip>              Static ip address to assign. Omit to use DHCP.
 
 ```
+
+### mock_device_settings
+
+The `mock_device_settings` helper is a mock implementation of the FIDL interface 
+`fuchsia.devicesettings.DeviceSettingsManager`. You can launch it
+by using its package url: `fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/mock_device_settings.cmx`.
+It receives the command line arguments shown below and is intended to be used as a "services" entry in
+[environment's facet definition](#environment). You **must** specify the values for **every** key that your
+tests may want to access as a command-line option. 
+
+
+```
+Serves DeviceSettingsManager with a memory-backed database
+
+USAGE:
+    mock_device_settings [OPTIONS]
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+OPTIONS:
+    -i <int_key>...           Starts with a pre-set integer key, format [k]=[v] e.g. Audio=100
+    -s <string_key>...        Starts with a pre-set string key, format [k]=[v] e.g. DeviceName=my-device-name
+
+```

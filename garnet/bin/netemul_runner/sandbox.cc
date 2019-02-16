@@ -368,17 +368,17 @@ bool Sandbox::ConfigureEnvironment(
     return false;
   }
 
-  for (const auto& app : config.apps()) {
-    if (!LaunchProcess<kMsgApp>(&launcher,
-                                app.GetUrlOrDefault(sandbox_env_->name()),
-                                app.arguments(), false)) {
+  for (const auto& setup : config.setup()) {
+    if (!LaunchSetup(&launcher, setup.GetUrlOrDefault(sandbox_env_->name()),
+                     setup.arguments())) {
       return false;
     }
   }
 
-  for (const auto& setup : config.setup()) {
-    if (!LaunchSetup(&launcher, setup.GetUrlOrDefault(sandbox_env_->name()),
-                     setup.arguments())) {
+  for (const auto& app : config.apps()) {
+    if (!LaunchProcess<kMsgApp>(&launcher,
+                                app.GetUrlOrDefault(sandbox_env_->name()),
+                                app.arguments(), false)) {
       return false;
     }
   }
