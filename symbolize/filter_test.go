@@ -126,7 +126,7 @@ func EqualJson(a, b []byte) bool {
 
 func TestBacktrace(t *testing.T) {
 	parseLine := GetLineParser()
-	line := parseLine("Error at {{{bt:0:0x12389987}}}")
+	line := parseLine("Error at {{{bt:0:0x12389988}}}")
 
 	if line == nil {
 		t.Error("got", nil, "expected", "not nil")
@@ -160,7 +160,7 @@ func TestBacktrace(t *testing.T) {
 
 	expectedJson := []byte(`[
     {"type": "text", "text": "Error at "},
-    {"type": "bt", "vaddr": 305699207, "num": 0, "locs":[
+    {"type": "bt", "vaddr": 305699208, "num": 0, "locs":[
       {"line": 64, "function": "duffcopy", "file": "duff.h"},
       {"line": 76, "function": "memcpy", "file": "memcpy.c"}
     ]}
