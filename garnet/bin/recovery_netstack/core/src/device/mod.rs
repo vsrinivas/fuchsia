@@ -25,7 +25,8 @@ pub struct DeviceId {
 }
 
 impl DeviceId {
-    fn new_ethernet(id: u64) -> DeviceId {
+    /// Construct a new `DeviceId` for an Ethernet device.
+    pub fn new_ethernet(id: u64) -> DeviceId {
         DeviceId { id, protocol: DeviceProtocol::Ethernet }
     }
 

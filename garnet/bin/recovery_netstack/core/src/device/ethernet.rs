@@ -175,7 +175,7 @@ impl EthernetDeviceState {
 }
 
 /// An extension trait adding IP-related functionality to `Ipv4` and `Ipv6`.
-trait EthernetIpExt: Ip {
+pub trait EthernetIpExt: Ip {
     const ETHER_TYPE: EtherType;
 }
 
@@ -300,6 +300,16 @@ pub fn set_ip_addr<D: EventDispatcher, A: IpAddr>(
         }
     );
     A::set_ip_addr(get_device_state(ctx, device_id), addr, subnet)
+}
+
+/// Insert an entry into this device's ARP table.
+pub fn insert_arp_table_entry<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device_id: u64,
+    addr: Ipv4Addr,
+    mac: Mac,
+) {
+    crate::device::arp::insert::<D, Ipv4Addr, EthernetArpDevice>(ctx, device_id, addr, mac);
 }
 
 fn get_device_state<D: EventDispatcher>(

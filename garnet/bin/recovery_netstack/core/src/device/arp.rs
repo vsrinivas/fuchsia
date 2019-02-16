@@ -231,6 +231,16 @@ pub fn receive_arp_packet<
     };
 }
 
+/// Insert an entry into the ARP table.
+pub fn insert<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
+    ctx: &mut Context<D>,
+    device_id: u64,
+    net: P,
+    hw: AD::HardwareAddr,
+) {
+    AD::get_arp_state(ctx, device_id).table.insert(net, hw);
+}
+
 /// Look up the hardware address for a network protocol address.
 pub fn lookup<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
     ctx: &mut Context<D>,
