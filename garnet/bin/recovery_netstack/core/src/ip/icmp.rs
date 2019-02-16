@@ -182,6 +182,58 @@ pub fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMu
     A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, header_len);
 }
 
+/// Send an ICMP message in response to receiving a packet destined for an
+/// unreachable local transport-layer port.
+///
+/// `send_icmp_port_unreachable` sends the appropriate ICMP or ICMPv6 message in
+/// response to receiving an IP packet from `src_ip` to `dst_ip` with an
+/// unreachable local transport-layer port. For both IPv4 and IPv6, this is an
+/// ICMP(v6) "destination unreachable" message with a "port unreachable" code.
+///
+/// `original_packet` contains the contents of the entire original packet -
+/// including all IP headers. `ipv4_header_len` is the length of the IPv4
+/// header. It is ignored for IPv6.
+pub fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
+    ctx: &mut Context<D>,
+    src_ip: A,
+    dst_ip: A,
+    original_packet: B,
+    ipv4_header_len: usize,
+) {
+    increment_counter!(ctx, "send_icmp_port_unreachable");
+
+    specialize_ip_addr! {
+        fn make_packet_builder<D, B>(ctx: &mut Context<D>, src_ip: Self, dst_ip: Self, original_packet: B, ipv4_header_len: usize)
+        where
+            D: EventDispatcher,
+            B: BufferMut,
+        {
+            Ipv4Addr => {
+                send_icmpv4_dest_unreachable(
+                    ctx,
+                    src_ip,
+                    dst_ip,
+                    Icmpv4DestUnreachableCode::DestPortUnreachable,
+                    original_packet,
+                    ipv4_header_len,
+                );
+            }
+            Ipv6Addr => {
+                send_icmpv6_dest_unreachable(
+                    ctx,
+                    src_ip,
+                    dst_ip,
+                    Icmpv6DestUnreachableCode::PortUnreachable,
+                    original_packet,
+                );
+            }
+        }
+    }
+
+    // NOTE(joshlf): src_ip and dst_ip swapped since we're responding
+    A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, ipv4_header_len);
+}
+
 fn send_icmpv4_dest_unreachable<D: EventDispatcher, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: Ipv4Addr,
@@ -238,6 +290,7 @@ mod tests {
     use packet::{Buf, BufferSerializer, Serializer};
 
     use std::fmt::Debug;
+    use std::num::NonZeroU16;
 
     use super::*;
     use crate::device::DeviceId;
@@ -246,6 +299,7 @@ mod tests {
     use crate::wire::icmp::{
         IcmpEchoRequest, IcmpMessage, IcmpPacket, IcmpUnusedCode, MessageBody,
     };
+    use crate::wire::udp::UdpPacketBuilder;
 
     /// Test that receiving a particular IP packet results in a particular ICMP
     /// response.
@@ -344,6 +398,36 @@ mod tests {
             &["send_icmp_protocol_unreachable", "send_ip_packet"],
             IcmpDestUnreachable::default(),
             Icmpv4DestUnreachableCode::DestProtocolUnreachable,
+            // ensure packet is truncated to the right length
+            |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
+        );
+    }
+
+    #[test]
+    fn test_port_unreachable() {
+        // Receive an IP packet for an unreachable UDP port (1234). Check to
+        // make sure that we respond with the appropriate ICMP message.
+        //
+        // TODO(joshlf):
+        // - Also perform the check for IPv6 once we support dummy IPv6
+        //   networks.
+        // - Perform the same check for TCP once the logic is implemented
+        let mut buf = [0u8; 128];
+        let mut buffer = BufferSerializer::new_vec(Buf::new(&mut buf[..], ..))
+            .encapsulate(UdpPacketBuilder::new(
+                DUMMY_CONFIG.remote_ip,
+                DUMMY_CONFIG.local_ip,
+                None,
+                NonZeroU16::new(1234).unwrap(),
+            ))
+            .serialize_outer();
+        test_receive_ip_packet(
+            buffer.as_mut(),
+            64,
+            IpProto::Udp,
+            &["send_icmp_port_unreachable", "send_ip_packet"],
+            IcmpDestUnreachable::default(),
+            Icmpv4DestUnreachableCode::DestPortUnreachable,
             // ensure packet is truncated to the right length
             |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
         );

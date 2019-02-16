@@ -66,7 +66,7 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddr, B: BufferMut>(
     parse_metadata: Option<ParseMetadata>,
 ) {
     increment_counter!(ctx, "dispatch_receive_ip_packet");
-    let _ = match proto {
+    let res = match proto {
         IpProto::Icmp | IpProto::Icmpv6 => {
             icmp::receive_icmp_packet(ctx, src_ip, dst_ip, buffer);
             Ok(())
@@ -86,6 +86,19 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddr, B: BufferMut>(
             Ok(())
         }
     };
+
+    if let Err(mut buffer) = res {
+        // TODO(joshlf): What if we're called from a loopback handler, and
+        // parse_metadata is None?
+
+        // tcp::receive_ip_packet and udp::receive_ip_packet promise to return
+        // the buffer in the same state it was in when they were called. Thus,
+        // all we have to do is undo the parsing of the IP packet header, and
+        // the buffer will be back to containing the entire original IP packet.
+        let meta = parse_metadata.unwrap();
+        buffer.undo_parse(meta);
+        icmp::send_icmp_port_unreachable(ctx, src_ip, dst_ip, buffer, meta.header_len());
+    }
 }
 
 /// Drop a packet and extract some of the fields.
