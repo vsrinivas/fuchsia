@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("async-testutils") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/async-testutils/dispatcher_stub.h",
+    "lib/async-testutils/test_loop.h",
+    "lib/async-testutils/test_loop_dispatcher.h",
+    "lib/async-testutils/time-keeper.h",
+  ]
+  testonly = true
+  sources = [
+    "dispatcher_stub.cpp",
+    "test_loop.cpp",
+    "test_loop_dispatcher.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    # <lib/async-testutils/dispatcher.h_stub> has #include <lib/async/dispatcher.h>.
+    "$zx/system/ulib/async:headers",
+
+    # <lib/async-testutils/test_loop_dispatcher.h> has #include <fbl/macros.h>.
+    "$zx/system/ulib/fbl:headers",
+
+    # <lib/async-testutils/dispatcher.h_stub> has #include <lib/zx/time.h>.
+    "$zx/system/ulib/zx:headers",
+
+  ]
+  deps = [
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async:async-default",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

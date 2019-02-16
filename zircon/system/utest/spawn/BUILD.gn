@@ -1,0 +1,44 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("spawn") {
+  sources = [
+    "spawn.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+  data_deps = [
+    ":spawn-child",
+    ":spawn-launcher",
+  ]
+}
+
+executable("spawn-child") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [
+    "child.c",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+executable("spawn-launcher") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [
+    "launcher.c",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/launchpad",
+    "$zx/system/ulib/zircon",
+  ]
+}

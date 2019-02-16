@@ -1,0 +1,23 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("libfzl") {
+  sources = [
+    "fzl-test.cpp",
+    "owned-vmo-mapper-tests.cpp",
+    "resizeable-vmo-mapper-tests.cpp",
+    "vmo-pool-tests.cpp",
+    "vmo-probe.cpp",
+    "vmo-vmar-tests.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("zxio") {
+  sources = [
+    "null-test.cpp",
+    "vmofile-test.cpp",
+    "zxio-test.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-net:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxio",
+    "$zx/system/ulib/zxs",
+  ]
+}

@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("fdio") {
+  sources = [
+    "fdio_fd.cpp",
+    "fdio_handle_fd.c",
+    "fdio_open_max.c",
+    "fdio_path_canonicalize.c",
+    "fdio_root.c",
+    "fdio_socket.c",
+    "fdio_socketpair.c",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

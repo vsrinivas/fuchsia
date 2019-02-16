@@ -1,0 +1,30 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("vdso-variant") {
+  sources = [
+    "vdso-variant.c",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/launchpad",
+    "$zx/system/ulib/zircon",
+  ]
+  data_deps = [
+    ":vdso-variant-helper",
+  ]
+}
+
+executable("vdso-variant-helper") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [
+    "helper/vdso-variant-helper.c",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+  ]
+}

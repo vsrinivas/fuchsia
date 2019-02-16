@@ -1,0 +1,23 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("chromeos-disk-setup") {
+  sources = [
+    "chromeos-disk-setup.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/ulib/chromeos-disk-setup",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fs-management",
+    "$zx/system/ulib/gpt",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxio",
+    "$zx/third_party/ulib/cksum",
+  ]
+}

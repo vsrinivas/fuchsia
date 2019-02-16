@@ -1,0 +1,59 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Common pieces.
+source_set("common") {
+  testonly = true
+  visibility = [ ":*" ]
+  sources = [
+    "engine_tests.cpp",
+    "event_tests.c",
+    "event_tests.cpp",
+    "event_tests_ntrace.c",
+    "event_tests_ntrace.cpp",
+    "fields_tests.cpp",
+    "fixture.cpp",
+    "no_optimization.c",
+    "record_tests.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async:async-default",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/trace",
+    "$zx/system/ulib/trace-provider:trace-handler",
+    "$zx/system/ulib/trace-reader",
+    "$zx/system/ulib/trace-test-utils",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+
+    # fdio is here so that things like printf work.
+    # Otherwise they silently fail (output is dropped).
+    "$zx/system/ulib/fdio",
+  ]
+}
+
+# Version of test that uses libtrace-engine.so.
+test("trace") {
+  deps = [
+    ":common",
+    "$zx/system/ulib/trace-engine",
+  ]
+  data_deps = [
+    ":trace-static-engine",
+  ]
+}
+
+# And again using libtrace-engine.a.
+test("trace-static-engine") {
+  deps = [
+    ":common",
+    "$zx/system/ulib/trace-engine:trace-engine-static",
+  ]
+}

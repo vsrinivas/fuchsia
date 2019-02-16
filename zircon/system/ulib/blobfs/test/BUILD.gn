@@ -10,6 +10,7 @@ group("test") {
 }
 
 test("blobfs-unit") {
+  test_group = "fs"
   sources = [
     "allocated-extent-iterator-test.cpp",
     "allocator-test.cpp",
@@ -26,5 +27,6 @@ test("blobfs-unit") {
   ]
   deps = [
     "$zx/system/ulib/blobfs",
+    "$zx/system/ulib/unittest",
   ]
 }

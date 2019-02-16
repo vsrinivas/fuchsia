@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("dlfcn") {
+  sources = [
+    "dlfcn.c",
+  ]
+  deps = [
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-default",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/elfload",
+    "$zx/system/ulib/fdio",
+
+    # This test uses liblaunchpad.so as the test library to dlopen.
+    # We don't want it to already be there when we call dlopen, but
+    # we use launchpad_vmo_from_file to load it!  So link it statically.
+    "$zx/system/ulib/launchpad:static",
+    "$zx/system/ulib/ldmsg",
+    "$zx/system/ulib/loader-service",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+  ]
+}

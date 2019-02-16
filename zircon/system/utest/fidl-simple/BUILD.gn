@@ -1,0 +1,51 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/fidl.gni")
+
+if (is_fuchsia) {
+  test("fidl-simple") {
+    sources = [
+      "client_tests.c",
+      "fakesocket_tests.cpp",
+      "ldsvc_tests.c",
+      "server_tests.c",
+      "spaceship_tests.c",
+      "spaceship_tests.cpp",
+    ]
+    deps = [
+      ":fidl.test.fakesocket.c",
+      ":fidl.test.spaceship.c",
+      "$zx/system/fidl/fuchsia-crash:c",
+      "$zx/system/fidl/fuchsia-ldsvc:c",
+      "$zx/system/fidl/fuchsia-mem:c",
+      "$zx/system/ulib/async",
+      "$zx/system/ulib/async:async-default",
+      "$zx/system/ulib/async-loop",
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/fidl",
+      "$zx/system/ulib/fidl-utils",
+      "$zx/system/ulib/ldmsg",
+      "$zx/system/ulib/unittest",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+      "$zx/system/ulib/zxcpp",
+    ]
+  }
+}
+
+fidl_library("fidl.test.spaceship") {
+  visibility = [ ":*" ]
+  sources = [
+    "spaceship.fidl",
+  ]
+}
+
+fidl_library("fidl.test.fakesocket") {
+  visibility = [ ":*" ]
+  sources = [
+    "fakesocket.fidl",
+  ]
+}

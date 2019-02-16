@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 #include <zircon/compiler.h>
-#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 
 #define THREAD_COUNT 8

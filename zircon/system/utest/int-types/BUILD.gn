@@ -1,0 +1,27 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("int-types") {
+  sources = [
+    "int-types.c",
+    "int-types.cpp",
+    "wchar-type.c",
+    "wchar-type.cpp",
+  ]
+  configs += [ ":config" ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/unittest",
+  ]
+}
+
+config("config") {
+  visibility = [ ":*" ]
+
+  # The C file here uses a macro to detect whether a type is signed, by
+  # comparing the values of -1 and 0. This leads to complaints about
+  # vacuously true comparisons, which we don't care about.
+  cflags = [ "-Wno-type-limits" ]
+}

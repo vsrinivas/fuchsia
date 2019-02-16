@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("hid") {
+  sources = [
+    "$zx/system/dev/input/hid/hid-parser-lib.cpp",
+    "$zx/system/utest/hid-parser/hid-report-data.cpp",
+    "hid-test.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-hidbus",
+    "$zx/system/fidl/fuchsia-hardware-input:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/hid-parser",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

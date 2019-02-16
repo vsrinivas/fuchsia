@@ -1,0 +1,49 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("dlopen-indirect-deps") {
+  sources = [
+    "dlopen-indirect-deps.c",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/unittest",
+  ]
+  data_deps = [
+    ":dlopen-indirect-deps-test-module",
+  ]
+}
+
+library("dlopen-indirect-deps-test-module") {
+  visibility = [ ":*" ]
+  testonly = true
+  shared = true
+  sources = [
+    "dlopen-indirect-deps-test-module/test-module.c",
+  ]
+  deps = [
+    ":dlopen-indirect-deps-test-liba",
+  ]
+}
+
+library("dlopen-indirect-deps-test-liba") {
+  visibility = [ ":*" ]
+  testonly = true
+  shared = true
+  sources = [
+    "dlopen-indirect-deps-test-module/dlopen-indirect-deps-test-liba/liba.c",
+  ]
+  deps = [
+    ":dlopen-indirect-deps-test-libb",
+  ]
+}
+
+library("dlopen-indirect-deps-test-libb") {
+  visibility = [ ":*" ]
+  testonly = true
+  shared = true
+  sources = [
+    "dlopen-indirect-deps-test-module/dlopen-indirect-deps-test-liba/dlopen-indirect-deps-test-libb/libb.c",
+  ]
+}

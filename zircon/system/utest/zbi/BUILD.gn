@@ -11,6 +11,7 @@ test("zbi") {
     "$zx/system/ulib/libzbi",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zxcpp",
   ]
   if (is_fuchsia) {
     deps += [ "$zx/system/ulib/fdio" ]

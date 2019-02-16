@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("thread-initial-state") {
+  sources = [
+    "init-state.c",
+  ]
+  if (current_cpu == "x64") {
+    sources += [ "x86-64.S" ]
+  } else {
+    sources += [ "${zircon_cpu}.S" ]
+  }
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+  ]
+}

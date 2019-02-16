@@ -1,0 +1,28 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("ctor") {
+  sources = [
+    "ctor.cpp",
+  ]
+  deps = [
+    ":dso-ctor",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+library("dso-ctor") {
+  visibility = [ ":*" ]
+  testonly = true
+  shared = true
+  sources = [
+    "dso-ctor/dso-ctor.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

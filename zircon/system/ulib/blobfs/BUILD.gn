@@ -19,7 +19,10 @@ library("blobfs") {
     "$zx/system/ulib/bitmap:headers",
     "$zx/system/ulib/fs:headers",
 
-    # <blobfs/allocator.h> has  #include <fuchsia/blobfs/c/fidl.h>.
+    # <blobfs/format.h> has #include <digest/digest.h>.
+    "$zx/system/ulib/digest:headers",
+
+    # <blobfs/allocator.h> has #include <fuchsia/blobfs/c/fidl.h>.
     "$zx/system/fidl/fuchsia-blobfs:c.headers",
 
     # <blobfs/compression/compressor.h> has #include <lz4/lz4frame.h>
