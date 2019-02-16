@@ -13,7 +13,6 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/$(ARCH).S \
     $(LOCAL_DIR)/guest.cpp \
-    $(LOCAL_DIR)/main.cpp \
 
 MODULE_LIBS := \
     system/ulib/c \

@@ -14,6 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/crash-handler.cpp \
     $(LOCAL_DIR)/crash-list.cpp \
     $(LOCAL_DIR)/unittest.cpp \
+    $(LOCAL_DIR)/unittest-main.cpp \
     $(LOCAL_DIR)/watchdog.cpp \
 
 MODULE_SO_NAME := unittest
@@ -36,6 +37,7 @@ MODULE_TYPE := hostlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/all-tests.cpp \
     $(LOCAL_DIR)/unittest.cpp \
+    $(LOCAL_DIR)/unittest-main.cpp \
     $(LOCAL_DIR)/watchdog.cpp \
 
 MODULE_HOST_LIBS := system/ulib/pretty

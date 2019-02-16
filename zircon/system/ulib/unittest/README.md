@@ -31,6 +31,9 @@ where N has the range 0-9. The default is zero, which means
 Unittest has a set of options that it recognizes.
 All tests are expected to call `unittest_run_all_tests()`,
 which will ensure all tests get these options.
+The library supplies a default `main()` function that does this.
+So if a test has no interest in the arguments itself and needs no
+other special global initialization, it need not define its own `main` at all.
 
 However, tests can also have their own options. Since Unittest does not
 use any kind of general argv parsing library, and each test as well as

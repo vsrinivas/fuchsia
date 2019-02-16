@@ -48,7 +48,3 @@ static bool get_profile(void) {
 BEGIN_TEST_CASE(sched_profiles)
 RUN_TEST(get_profile);
 END_TEST_CASE(sched_profiles)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

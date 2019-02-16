@@ -189,7 +189,3 @@ RUN_TEST(kvs_bad_args)
 RUN_TEST(kvs_get_put)
 RUN_TEST(kvs_wire_format)
 END_TEST_CASE(kvstore_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

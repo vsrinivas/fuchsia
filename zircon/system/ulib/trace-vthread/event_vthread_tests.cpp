@@ -224,7 +224,3 @@ RUN_TEST(TestVthreadFlowBegin)
 RUN_TEST(TestVthreadFlowStep)
 RUN_TEST(TestVthreadFlowEnd)
 END_TEST_CASE(event_thread_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

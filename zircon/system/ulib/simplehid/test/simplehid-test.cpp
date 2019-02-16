@@ -106,10 +106,6 @@ bool TestReports() {
 
 }  // namespace simplehid
 
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : 1;
-}
-
 BEGIN_TEST_CASE(SimpleHidTests)
 RUN_TEST_SMALL(simplehid::TestNoReports)
 RUN_TEST_SMALL(simplehid::TestReports)

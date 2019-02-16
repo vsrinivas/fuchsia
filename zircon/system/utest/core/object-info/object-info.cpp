@@ -1081,9 +1081,3 @@ RUN_TEST(handle_count_valid);
 RUN_TEST(handle_stats_control);
 
 END_TEST_CASE(object_info_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

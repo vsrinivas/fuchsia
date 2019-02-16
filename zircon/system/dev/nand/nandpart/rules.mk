@@ -54,7 +54,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/aml-bad-block.cpp \
     $(LOCAL_DIR)/bad-block.cpp \
     $(LOCAL_DIR)/nandpart-utils.cpp \
-    $(TEST_DIR)/main.cpp\
     $(TEST_DIR)/aml-bad-block-test.cpp\
     $(TEST_DIR)/nandpart-utils-test.cpp\
 

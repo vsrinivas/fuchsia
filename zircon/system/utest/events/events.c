@@ -287,7 +287,3 @@ RUN_TEST(wait_signals_test)
 RUN_TEST(reset_test)
 RUN_TEST(wait_many_failures_test)
 END_TEST_CASE(event_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

@@ -137,8 +137,3 @@ RUN_TEST(vdso_base_test);
 RUN_TEST(vdso_unmap_test);
 RUN_TEST(vdso_map_test);
 END_TEST_CASE(vdso_base_tests)
-
-int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
-}

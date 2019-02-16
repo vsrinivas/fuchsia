@@ -32,7 +32,6 @@ MODULE_NAME := usb-wrapper-test
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/tests/usb-wrapper-tests.cpp \
-    $(LOCAL_DIR)/tests/main.c \
     $(LOCAL_DIR)/usb.c \
     $(LOCAL_DIR)/usb-wrapper.cpp \
 

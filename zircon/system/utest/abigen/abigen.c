@@ -33,8 +33,3 @@ BEGIN_TEST_CASE(launchpad_tests)
 RUN_TEST(wrapper_test);
 RUN_TEST(syscall_test);
 END_TEST_CASE(launchpad_tests)
-
-int main(int argc, char **argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
-}

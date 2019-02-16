@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/fdio_fd.cpp \
     $(LOCAL_DIR)/fdio_handle_fd.c \
     $(LOCAL_DIR)/fdio_open_max.c \

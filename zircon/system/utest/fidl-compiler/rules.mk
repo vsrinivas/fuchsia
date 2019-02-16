@@ -75,7 +75,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/flat_ast_tests.cpp \
     $(LOCAL_DIR)/formatter_unittests.cpp \
     $(LOCAL_DIR)/json_generator_tests.cpp \
-    $(LOCAL_DIR)/main.cpp \
     $(LOCAL_DIR)/max_bytes_multipass_tests.cpp \
     $(LOCAL_DIR)/max_bytes_tests.cpp \
     $(LOCAL_DIR)/max_handle_tests.cpp \

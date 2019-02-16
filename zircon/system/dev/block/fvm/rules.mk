@@ -60,7 +60,6 @@ TEST_DIR := $(LOCAL_DIR)/test
 
 MODULE_SRCS := $(SHARED_SRCS) \
     $(TEST_DIR)/slice-extent-test.cpp \
-    $(TEST_DIR)/main.cpp \
 
 MODULE_STATIC_LIBS := \
     $(SHARED_STATIC_LIBS) \

@@ -156,10 +156,3 @@ BEGIN_TEST_CASE(launchpad_tests)
 RUN_TEST(stdio_pipe_test);
 RUN_TEST(stdio_launchpad_pipe_test);
 END_TEST_CASE(launchpad_tests)
-
-int main(int argc, char **argv)
-{
-    bool success = unittest_run_all_tests(argc, argv);
-
-    return success ? 0 : -1;
-}

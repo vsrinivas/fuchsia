@@ -528,7 +528,3 @@ RUN_TEST(ZbiTestInitTooSmall)
 RUN_TEST(ZbiTestExtendOkay)
 RUN_TEST(ZbiTestNoOverflow)
 END_TEST_CASE(zbi_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

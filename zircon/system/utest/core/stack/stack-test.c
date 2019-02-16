@@ -124,9 +124,3 @@ BEGIN_TEST_CASE(stack_tests)
 RUN_TEST(main_thread_stack_tests)
 RUN_TEST(other_thread_stack_tests)
 END_TEST_CASE(stack_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

@@ -58,7 +58,3 @@ bool tis_test(void) {
 BEGIN_TEST_CASE(tis_tests)
 RUN_TEST(tis_test)
 END_TEST_CASE(tis_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

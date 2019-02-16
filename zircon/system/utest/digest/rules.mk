@@ -11,7 +11,6 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/digest.cpp \
     $(LOCAL_DIR)/merkle-tree.cpp \
-    $(LOCAL_DIR)/main.c
 
 MODULE_NAME := digest-test
 

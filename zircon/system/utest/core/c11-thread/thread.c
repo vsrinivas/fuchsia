@@ -118,9 +118,3 @@ RUN_TEST(c11_thread_test)
 RUN_TEST(long_name_succeeds)
 RUN_TEST(detach_self_test)
 END_TEST_CASE(c11_thread_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

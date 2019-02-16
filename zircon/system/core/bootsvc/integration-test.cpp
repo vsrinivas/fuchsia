@@ -186,8 +186,3 @@ RUN_TEST(TestNamespace)
 RUN_TEST(TestStartupHandles)
 RUN_TEST(TestVdsosPresent)
 END_TEST_CASE(bootsvc_integration_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-

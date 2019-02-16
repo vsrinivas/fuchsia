@@ -174,9 +174,3 @@ bool ExecutableTlsTest() {
 BEGIN_TEST_CASE(elf_tls_tests)
 RUN_TEST(ExecutableTlsTest)
 END_TEST_CASE(elf_tls_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

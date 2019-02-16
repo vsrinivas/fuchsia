@@ -185,7 +185,3 @@ RUN_TEST(vdso_map_twice_test);
 RUN_TEST(vdso_map_code_wrong_test);
 RUN_TEST(vdso_map_change_test);
 END_TEST_CASE(vdso_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

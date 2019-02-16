@@ -370,9 +370,3 @@ RUN_TEST(pthread_big_stack_size)
 RUN_TEST(pthread_getstack_main_thread)
 RUN_TEST(pthread_getstack_other_thread)
 END_TEST_CASE(pthread_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

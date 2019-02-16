@@ -28,9 +28,3 @@ static bool elapsed_time_using_ticks(void) {
 BEGIN_TEST_CASE(ticks_tests)
 RUN_TEST(elapsed_time_using_ticks)
 END_TEST_CASE(ticks_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

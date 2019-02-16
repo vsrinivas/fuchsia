@@ -1067,9 +1067,3 @@ RUN_TEST(channel_read_etc)
 RUN_TEST(channel_write_different_sizes)
 RUN_TEST(channel_write_takes_all_handles)
 END_TEST_CASE(channel_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

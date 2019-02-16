@@ -286,10 +286,3 @@ bool handle_wait_test(void) {
 BEGIN_TEST_CASE(handle_wait_tests)
 RUN_TEST(handle_wait_test);
 END_TEST_CASE(handle_wait_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
-}
-#endif

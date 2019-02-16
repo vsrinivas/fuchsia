@@ -1405,9 +1405,3 @@ RUN_TEST(socket_share_invalid_handle)
 RUN_TEST(socket_share_consumes_on_failure)
 RUN_TEST(socket_signals2)
 END_TEST_CASE(socket_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

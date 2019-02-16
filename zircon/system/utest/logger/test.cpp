@@ -247,7 +247,3 @@ RUN_TEST(TestLogWhenLoggerHandleDies)
 RUN_TEST(TestLoggerDiesWithSocket)
 RUN_TEST(TestLoggerDiesWithChannelWhenNoConnectCalled)
 END_TEST_CASE(logger_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

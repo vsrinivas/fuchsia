@@ -118,9 +118,3 @@ BEGIN_TEST_CASE(cnd_tests)
 RUN_TEST(cnd_test)
 RUN_TEST(cnd_timedwait_timeout_test)
 END_TEST_CASE(cnd_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

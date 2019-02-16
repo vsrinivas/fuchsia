@@ -68,9 +68,3 @@ static bool test_barrier(void) {
 BEGIN_TEST_CASE(pthread_barrier_tests)
 RUN_TEST(test_barrier)
 END_TEST_CASE(pthread_barrier_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

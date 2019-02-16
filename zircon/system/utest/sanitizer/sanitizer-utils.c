@@ -188,8 +188,3 @@ BEGIN_TEST_CASE(sanitizer_utils_tests)
 RUN_TEST(publish_data_test);
 RUN_TEST(debug_config_test);
 END_TEST_CASE(sanitizer_utils_tests)
-
-int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
-}

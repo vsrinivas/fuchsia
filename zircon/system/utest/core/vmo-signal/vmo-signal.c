@@ -130,9 +130,3 @@ RUN_TEST(vmo_signal_sanity_test)
 RUN_TEST(vmo_child_signal_clone_test)
 RUN_TEST(vmo_child_signal_map_test)
 END_TEST_CASE(vmo_signal_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

@@ -445,10 +445,3 @@ RUN_TEST(wait_test)
 RUN_TEST(info_task_stats_fails)
 RUN_TEST(max_height_smoke)
 END_TEST_CASE(job_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
-}
-#endif

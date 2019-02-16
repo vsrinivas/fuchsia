@@ -312,8 +312,3 @@ RUN_TEST(parse_ps3)
 RUN_TEST(parse_acer12)
 RUN_TEST(parse_asus)
 END_TEST_CASE(hid_tests)
-
-int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
-}
