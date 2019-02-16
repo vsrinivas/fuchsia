@@ -33,6 +33,12 @@ constexpr SampleValue NO_DATA = (SampleValue)-2ULL;
 // The highest value for sample data.
 constexpr SampleValue SAMPLE_MAX_VALUE = (SampleValue)-3ULL;
 
+// The slope value is scaled up to preserve decimal precision when using an
+// integer value. To convert the slope integer (slope_value) to floating point:
+// float slope_as_percentage = float(slope_value) * SLOPE_SCALE.
+constexpr SampleValue SLOPE_LIMIT = 1000000ULL;
+constexpr float SLOPE_SCALE = 100.0f / float(SLOPE_LIMIT);
+
 // The upper value used to represent zero to one values with integers.
 constexpr SampleValue NORMALIZATION_RANGE = 1000000ULL;
 
@@ -79,6 +85,8 @@ struct StreamSetsRequest {
     // will be undesired. The values in the response will be in the range
     // [0 to NORMALIZATION_RANGE].
     NORMALIZE = 1 << 0,
+    // Compute the slope of the curve.
+    SLOPE = 1 << 1,
   };
 
   StreamSetsRequest()
