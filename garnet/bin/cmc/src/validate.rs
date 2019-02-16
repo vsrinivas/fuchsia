@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::cml;
-use cm_json::{self, Error, CML_SCHEMA, CMX_SCHEMA, CM_SCHEMA};
+use cm_json::{self, Error, JsonSchema, CML_SCHEMA, CMX_SCHEMA, CM_SCHEMA};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -68,7 +68,7 @@ fn validate_file<P: AsRef<Path>>(
         Some("cml") => cm_json::from_json5_str(&buffer),
         _ => Err(Error::invalid_args(BAD_EXTENSION)),
     }?;
-    let schema: &str = match ext {
+    let schema: &JsonSchema = match ext {
         Some("cm") => CM_SCHEMA,
         Some("cml") => CML_SCHEMA,
         Some("cmx") => CMX_SCHEMA,
@@ -77,9 +77,8 @@ fn validate_file<P: AsRef<Path>>(
 
     cm_json::validate_json(&v, schema)?;
     for extra_schema in extra_schemas {
-        let mut schema_buf = String::new();
-        File::open(&extra_schema.as_ref())?.read_to_string(&mut schema_buf)?;
-        cm_json::validate_json(&v, schema_buf.as_str())?;
+        let schema = cm_json::JsonSchema::new_from_file(&extra_schema.as_ref())?;
+        cm_json::validate_json(&v, &schema)?;
     }
 
     // Perform addition validation for .cml files and parse the JSON into a cml::Document struct.
@@ -107,7 +106,10 @@ impl<'a> ValidationContext<'a> {
         if let Some(children) = self.document.children.as_ref() {
             for child in children.iter() {
                 if !self.all_children.insert(&child.name) {
-                    return Err(Error::parse(format!("Duplicate child name: \"{}\"", &child.name)));
+                    return Err(Error::validate(format!(
+                        "Duplicate child name: \"{}\"",
+                        &child.name
+                    )));
                 }
             }
         }
@@ -152,7 +154,7 @@ impl<'a> ValidationContext<'a> {
             // Check that any referenced child in the target name is valid.
             if let Some(caps) = cml::CHILD_RE.captures(&target.to) {
                 if !self.all_children.contains(&caps[1]) {
-                    return Err(Error::parse(format!(
+                    return Err(Error::validate(format!(
                         "\"{}\" is an \"offer\" target but it does not appear in \"children\"",
                         &target.to,
                     )));
@@ -171,7 +173,7 @@ impl<'a> ValidationContext<'a> {
     {
         if let Some(caps) = cml::CHILD_RE.captures(source_obj.from()) {
             if !self.all_children.contains(&caps[1]) {
-                return Err(Error::parse(format!(
+                return Err(Error::validate(format!(
                     "\"{}\" is an \"{}\" source but it does not appear in \"children\"",
                     source_obj.from(),
                     keyword,
@@ -222,11 +224,11 @@ impl<'a> ValidationContext<'a> {
             prev_target_paths.entry(target_name.to_string()).or_insert(HashSet::new());
         if !paths_for_target.insert(target_path) {
             return match target_name {
-                "" => Err(Error::parse(format!(
+                "" => Err(Error::validate(format!(
                     "\"{}\" is a duplicate \"{}\" target path",
                     target_path, keyword
                 ))),
-                _ => Err(Error::parse(format!(
+                _ => Err(Error::validate(format!(
                     "\"{}\" is a duplicate \"{}\" target path for \"{}\"",
                     target_path, keyword, target_name
                 ))),
@@ -236,7 +238,7 @@ impl<'a> ValidationContext<'a> {
         // Check that the target is not a duplicate of a previous target (for this source).
         if let Some(target_name) = target_obj.to() {
             if !prev_targets.insert(target_name) {
-                return Err(Error::parse(format!(
+                return Err(Error::validate(format!(
                     "\"{}\" is a duplicate \"{}\" target for \"{}\"",
                     target_name, keyword, source_path
                 )));
@@ -250,6 +252,7 @@ impl<'a> ValidationContext<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use lazy_static::lazy_static;
     use serde_json::json;
     use std::io::Write;
     use tempfile::TempDir;
@@ -386,7 +389,7 @@ mod tests {
             input = json!({
                 "uses": [ {} ]
             }),
-            result = Err(Error::parse("This property is required at /uses/0/source_path, This property is required at /uses/0/target_path, This property is required at /uses/0/type")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /uses/0/source_path, This property is required at /uses/0/target_path, This property is required at /uses/0/type")),
         },
         test_cm_uses_bad_type => {
             input = json!({
@@ -398,7 +401,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /uses/0/type")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /uses/0/type")),
         },
 
         // exposes
@@ -430,7 +433,7 @@ mod tests {
             input = json!({
                 "exposes": [ {} ]
             }),
-            result = Err(Error::parse("This property is required at /exposes/0/source, This property is required at /exposes/0/source_path, This property is required at /exposes/0/target_path, This property is required at /exposes/0/type")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /exposes/0/source, This property is required at /exposes/0/source_path, This property is required at /exposes/0/target_path, This property is required at /exposes/0/type")),
         },
         test_cm_exposes_bad_type => {
             input = json!({
@@ -445,7 +448,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /exposes/0/type")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /exposes/0/type")),
         },
         test_cm_exposes_source_missing_props => {
             input = json!({
@@ -458,7 +461,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("This property is required at /exposes/0/source/relation")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /exposes/0/source/relation")),
         },
         test_cm_exposes_source_extraneous_child => {
             input = json!({
@@ -471,7 +474,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("OneOf conditions are not met at /exposes/0/source")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /exposes/0/source")),
         },
         test_cm_exposes_source_missing_child => {
             input = json!({
@@ -484,7 +487,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("OneOf conditions are not met at /exposes/0/source")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /exposes/0/source")),
         },
         test_cm_exposes_source_bad_relation => {
             input = json!({
@@ -499,7 +502,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /exposes/0/source/relation")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /exposes/0/source/relation")),
         },
         test_cm_exposes_source_bad_child_name => {
             input = json!({
@@ -515,7 +518,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /exposes/0/source/child_name")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /exposes/0/source/child_name")),
         },
 
         // offers
@@ -595,7 +598,7 @@ mod tests {
             input = json!({
                 "offers": [ {} ]
             }),
-            result = Err(Error::parse("This property is required at /offers/0/source, This property is required at /offers/0/source_path, This property is required at /offers/0/targets, This property is required at /offers/0/type")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /offers/0/source, This property is required at /offers/0/source_path, This property is required at /offers/0/targets, This property is required at /offers/0/type")),
         },
         test_cm_offers_bad_type => {
             input = json!({
@@ -615,7 +618,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /offers/0/type")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/type")),
         },
         test_cm_offers_source_missing_props => {
             input = json!({
@@ -633,7 +636,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("This property is required at /offers/0/source/relation")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /offers/0/source/relation")),
         },
         test_cm_offers_source_extraneous_child => {
             input = json!({
@@ -651,7 +654,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("OneOf conditions are not met at /offers/0/source")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/source")),
         },
         test_cm_offers_source_missing_child => {
             input = json!({
@@ -669,7 +672,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("OneOf conditions are not met at /offers/0/source")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/source")),
         },
         test_cm_offers_source_bad_relation => {
             input = json!({
@@ -689,7 +692,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /offers/0/source/relation")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/source/relation")),
         },
         test_cm_offers_source_bad_child_name => {
             input = json!({
@@ -710,7 +713,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /offers/0/source/child_name")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/source/child_name")),
         },
         test_cm_offers_target_missing_props => {
             input = json!({
@@ -726,7 +729,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("This property is required at /offers/0/targets/0/child_name, This property is required at /offers/0/targets/0/target_path")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /offers/0/targets/0/child_name, This property is required at /offers/0/targets/0/target_path")),
         },
         test_cm_offers_target_bad_child_name => {
             input = json!({
@@ -746,7 +749,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /offers/0/targets/0/child_name")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/targets/0/child_name")),
         },
 
         // children
@@ -769,7 +772,7 @@ mod tests {
             input = json!({
                 "children": [ {} ]
             }),
-            result = Err(Error::parse("This property is required at /children/0/name, This property is required at /children/0/uri")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /children/0/name, This property is required at /children/0/uri")),
         },
         test_cm_children_bad_name => {
             input = json!({
@@ -780,7 +783,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /children/0/name")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /children/0/name")),
         },
 
         // facets
@@ -800,7 +803,7 @@ mod tests {
             input = json!({
                 "facets": 55
             }),
-            result = Err(Error::parse("Type of the value is wrong at /facets")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Type of the value is wrong at /facets")),
         },
 
         // constraints
@@ -826,7 +829,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /uses/0/source_path")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /uses/0/source_path")),
         },
         test_cm_path_too_long => {
             input = json!({
@@ -838,7 +841,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("MaxLength condition is not met at /uses/0/source_path")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "MaxLength condition is not met at /uses/0/source_path")),
         },
         test_cm_name => {
             input = json!({
@@ -860,7 +863,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /children/0/name")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /children/0/name")),
         },
         test_cm_name_too_long => {
             input = json!({
@@ -871,7 +874,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("MaxLength condition is not met at /children/0/name")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "MaxLength condition is not met at /children/0/name")),
         },
         test_cm_uri => {
             input = json!({
@@ -893,7 +896,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /children/0/uri")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /children/0/uri")),
         },
         test_cm_uri_too_long => {
             input = json!({
@@ -904,7 +907,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("MaxLength condition is not met at /children/0/uri")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "MaxLength condition is not met at /children/0/uri")),
         },
     }
 
@@ -938,7 +941,7 @@ mod tests {
         },
         test_cml_program_no_binary => {
             input = json!({"program": {}}),
-            result = Err(Error::parse("This property is required at /program/binary")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /program/binary")),
         },
 
         // use
@@ -955,7 +958,7 @@ mod tests {
             input = json!({
                 "use": [ { "as": "/svc/fuchsia.logger.Log" } ]
             }),
-            result = Err(Error::parse("OneOf conditions are not met at /use/0")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /use/0")),
         },
 
         // expose
@@ -996,7 +999,7 @@ mod tests {
             input = json!({
                 "expose": [ {} ]
             }),
-            result = Err(Error::parse("OneOf conditions are not met at /expose/0, This property is required at /expose/0/from")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /expose/0, This property is required at /expose/0/from")),
         },
         test_cml_expose_missing_from => {
             input = json!({
@@ -1004,7 +1007,7 @@ mod tests {
                     { "service": "/loggers/fuchsia.logger.Log", "from": "#missing" }
                 ]
             }),
-            result = Err(Error::parse("\"#missing\" is an \"expose\" source but it does not appear in \"children\"")),
+            result = Err(Error::validate("\"#missing\" is an \"expose\" source but it does not appear in \"children\"")),
         },
         test_cml_expose_duplicate_target_paths => {
             input = json!({
@@ -1020,7 +1023,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("\"/thing\" is a duplicate \"expose\" target path")),
+            result = Err(Error::validate("\"/thing\" is a duplicate \"expose\" target path")),
         },
         test_cml_expose_bad_from => {
             input = json!({
@@ -1028,7 +1031,7 @@ mod tests {
                     "service": "/loggers/fuchsia.logger.Log", "from": "realm"
                 } ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /expose/0/from")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /expose/0/from")),
         },
 
         // offer
@@ -1101,7 +1104,7 @@ mod tests {
             input = json!({
                 "offer": [ {} ]
             }),
-            result = Err(Error::parse("OneOf conditions are not met at /offer/0, This property is required at /offer/0/from, This property is required at /offer/0/targets")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /offer/0, This property is required at /offer/0/from, This property is required at /offer/0/targets")),
         },
         test_cml_offer_missing_from => {
             input = json!({
@@ -1113,7 +1116,7 @@ mod tests {
                         ]
                     } ]
                 }),
-            result = Err(Error::parse("\"#missing\" is an \"offer\" source but it does not appear in \"children\"")),
+            result = Err(Error::validate("\"#missing\" is an \"offer\" source but it does not appear in \"children\"")),
         },
         test_cml_offer_bad_from => {
             input = json!({
@@ -1125,7 +1128,7 @@ mod tests {
                         ]
                     } ]
                 }),
-            result = Err(Error::parse("Pattern condition is not met at /offer/0/from")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/from")),
         },
         test_cml_offer_empty_targets => {
             input = json!({
@@ -1135,7 +1138,7 @@ mod tests {
                     "targets": []
                 } ]
             }),
-            result = Err(Error::parse("MinItems condition is not met at /offer/0/targets")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "MinItems condition is not met at /offer/0/targets")),
         },
         test_cml_offer_target_missing_props => {
             input = json!({
@@ -1147,7 +1150,7 @@ mod tests {
                     ]
                 } ]
             }),
-            result = Err(Error::parse("This property is required at /offer/0/targets/0/to")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /offer/0/targets/0/to")),
         },
         test_cml_offer_target_missing_to => {
             input = json!({
@@ -1163,7 +1166,7 @@ mod tests {
                     "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                 } ]
             }),
-            result = Err(Error::parse("\"#missing\" is an \"offer\" target but it does not appear in \"children\"")),
+            result = Err(Error::validate("\"#missing\" is an \"offer\" target but it does not appear in \"children\"")),
         },
         test_cml_offer_target_bad_to => {
             input = json!({
@@ -1175,7 +1178,7 @@ mod tests {
                     ]
                 } ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /offer/0/targets/0/to")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/targets/0/to")),
         },
         test_cml_offer_duplicate_target_paths => {
             input = json!({
@@ -1207,7 +1210,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("\"/thing\" is a duplicate \"offer\" target path for \"#echo_server\"")),
+            result = Err(Error::validate("\"/thing\" is a duplicate \"offer\" target path for \"#echo_server\"")),
         },
 
         // children
@@ -1230,7 +1233,7 @@ mod tests {
             input = json!({
                 "children": [ {} ]
             }),
-            result = Err(Error::parse("This property is required at /children/0/name, This property is required at /children/0/uri")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /children/0/name, This property is required at /children/0/uri")),
         },
         test_cml_children_duplicate_names => {
            input = json!({
@@ -1245,7 +1248,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("Duplicate child name: \"logger\"")),
+            result = Err(Error::validate("Duplicate child name: \"logger\"")),
         },
 
         // facets
@@ -1265,7 +1268,7 @@ mod tests {
             input = json!({
                 "facets": 55
             }),
-            result = Err(Error::parse("Type of the value is wrong at /facets")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Type of the value is wrong at /facets")),
         },
 
         // constraints
@@ -1283,7 +1286,7 @@ mod tests {
                   { "service": "foo/" },
                 ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /use/0/service")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/service")),
         },
         test_cml_path_too_long => {
             input = json!({
@@ -1291,7 +1294,7 @@ mod tests {
                   { "service": "/".repeat(1025) },
                 ]
             }),
-            result = Err(Error::parse("MaxLength condition is not met at /use/0/service")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /use/0/service")),
         },
         test_cml_relative_id_too_long => {
             input = json!({
@@ -1308,7 +1311,7 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::parse("MaxLength condition is not met at /expose/0/from")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /expose/0/from")),
         },
         test_cml_child_name => {
             input = json!({
@@ -1330,7 +1333,7 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /children/0/name")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /children/0/name")),
         },
         test_cml_child_name_too_long => {
             input = json!({
@@ -1341,7 +1344,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::parse("MaxLength condition is not met at /children/0/name")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /children/0/name")),
         },
         test_cml_uri => {
             input = json!({
@@ -1363,7 +1366,7 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::parse("Pattern condition is not met at /children/0/uri")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /children/0/uri")),
         },
         test_cml_uri_too_long => {
             input = json!({
@@ -1374,14 +1377,14 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::parse("MaxLength condition is not met at /children/0/uri")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /children/0/uri")),
         },
     }
 
     test_validate_cmx! {
         test_cmx_err_empty_json => {
             input = json!({}),
-            result = Err(Error::parse("This property is required at /program")),
+            result = Err(Error::validate_schema(CMX_SCHEMA, "This property is required at /program")),
         },
         test_cmx_program => {
             input = json!({"program": { "binary": "bin/app" }}),
@@ -1389,11 +1392,11 @@ mod tests {
         },
         test_cmx_program_no_binary => {
             input = json!({ "program": {}}),
-            result = Err(Error::parse("OneOf conditions are not met at /program")),
+            result = Err(Error::validate_schema(CMX_SCHEMA, "OneOf conditions are not met at /program")),
         },
         test_cmx_bad_program => {
             input = json!({"prigram": { "binary": "bin/app" }}),
-            result = Err(Error::parse("Property conditions are not met at , \
+            result = Err(Error::validate_schema(CMX_SCHEMA, "Property conditions are not met at , \
                                        This property is required at /program")),
         },
         test_cmx_sandbox => {
@@ -1416,8 +1419,29 @@ mod tests {
         },
     }
 
-    const BLOCK_SHELL_FEATURE_SCHEMA: &str = include_str!("../test_block_shell_feature.json");
-    const BLOCK_DEV_SCHEMA: &str = include_str!("../test_block_dev.json");
+    // We can't simply using JsonSchema::new here and create a temp file with the schema content
+    // to pass to validate() later because the path in the errors in the expected results below
+    // need to include the whole path, since that's what you get in the Error::Validate.
+    lazy_static! {
+        static ref BLOCK_SHELL_FEATURE_SCHEMA: JsonSchema<'static> = str_to_json_schema(
+            "block_shell_feature.json",
+            include_str!("../test_block_shell_feature.json")
+        );
+    }
+    lazy_static! {
+        static ref BLOCK_DEV_SCHEMA: JsonSchema<'static> =
+            str_to_json_schema("block_dev.json", include_str!("../test_block_dev.json"));
+    }
+
+    fn str_to_json_schema<'a, 'b>(name: &'a str, content: &'a str) -> JsonSchema<'b> {
+        lazy_static! {
+            static ref TEMPDIR: TempDir = TempDir::new().unwrap();
+        }
+
+        let tmp_path = TEMPDIR.path().join(name);
+        File::create(&tmp_path).unwrap().write_all(content.as_bytes()).unwrap();
+        JsonSchema::new_from_file(&tmp_path).unwrap()
+    }
 
     macro_rules! test_validate_extra_schemas {
         (
@@ -1440,7 +1464,7 @@ mod tests {
 
     fn validate_extra_schemas_test(
         input: serde_json::value::Value,
-        extra_schemas: Vec<&str>,
+        extra_schemas: &[&JsonSchema],
         expected_result: Result<(), Error>,
     ) -> Result<(), Error> {
         let input_str = format!("{}", input);
@@ -1448,14 +1472,9 @@ mod tests {
         let tmp_cmx_path = tmp_dir.path().join("test.cmx");
         File::create(&tmp_cmx_path)?.write_all(input_str.as_bytes())?;
 
-        let mut extra_schema_paths = Vec::new();
-        for i in 0..extra_schemas.len() {
-            let tmp_file_path = tmp_dir.path().join(format!("schema{}.json", i));
-            File::create(&tmp_file_path)?.write_all(extra_schemas[i].as_bytes())?;
-            extra_schema_paths.push(tmp_file_path);
-        }
-
-        let result = validate(&[tmp_cmx_path], &extra_schema_paths);
+        let extra_schema_paths =
+            extra_schemas.iter().map(|s| Path::new(&*s.name)).collect::<Vec<_>>();
+        let result = validate(&[tmp_cmx_path.as_path()], &extra_schema_paths);
         assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
         Ok(())
     }
@@ -1463,38 +1482,38 @@ mod tests {
     test_validate_extra_schemas! {
         test_validate_extra_schemas_empty_json => {
             input = json!({"program": {"binary": "a"}}),
-            extra_schemas = vec![BLOCK_SHELL_FEATURE_SCHEMA],
+            extra_schemas = &[&BLOCK_SHELL_FEATURE_SCHEMA],
             result = Ok(()),
         },
         test_validate_extra_schemas_empty_features => {
             input = json!({"sandbox": {"features": []}, "program": {"binary": "a"}}),
-            extra_schemas = vec![BLOCK_SHELL_FEATURE_SCHEMA],
+            extra_schemas = &[&BLOCK_SHELL_FEATURE_SCHEMA],
             result = Ok(()),
         },
         test_validate_extra_schemas_feature_not_present => {
             input = json!({"sandbox": {"features": ["isolated-persistent-storage"]}, "program": {"binary": "a"}}),
-            extra_schemas = vec![BLOCK_SHELL_FEATURE_SCHEMA],
+            extra_schemas = &[&BLOCK_SHELL_FEATURE_SCHEMA],
             result = Ok(()),
         },
         test_validate_extra_schemas_feature_present => {
             input = json!({"sandbox": {"features" : ["shell"]}, "program": {"binary": "a"}}),
-            extra_schemas = vec![BLOCK_SHELL_FEATURE_SCHEMA],
-            result = Err(Error::parse("Not condition is not met at /sandbox/features/0")),
+            extra_schemas = &[&BLOCK_SHELL_FEATURE_SCHEMA],
+            result = Err(Error::validate_schema(&BLOCK_SHELL_FEATURE_SCHEMA, "Not condition is not met at /sandbox/features/0")),
         },
         test_validate_extra_schemas_block_dev => {
             input = json!({"dev": ["misc"], "program": {"binary": "a"}}),
-            extra_schemas = vec![BLOCK_DEV_SCHEMA],
-            result = Err(Error::parse("Not condition is not met at /dev")),
+            extra_schemas = &[&BLOCK_DEV_SCHEMA],
+            result = Err(Error::validate_schema(&BLOCK_DEV_SCHEMA, "Not condition is not met at /dev")),
         },
         test_validate_multiple_extra_schemas_valid => {
             input = json!({"sandbox": {"features": ["isolated-persistent-storage"]}, "program": {"binary": "a"}}),
-            extra_schemas = vec![BLOCK_SHELL_FEATURE_SCHEMA, BLOCK_DEV_SCHEMA],
+            extra_schemas = &[&BLOCK_SHELL_FEATURE_SCHEMA, &BLOCK_DEV_SCHEMA],
             result = Ok(()),
         },
         test_validate_multiple_extra_schemas_invalid => {
             input = json!({"dev": ["misc"], "sandbox": {"features": ["isolated-persistent-storage"]}, "program": {"binary": "a"}}),
-            extra_schemas = vec![BLOCK_SHELL_FEATURE_SCHEMA, BLOCK_DEV_SCHEMA],
-            result = Err(Error::parse("Not condition is not met at /dev")),
+            extra_schemas = &[&BLOCK_SHELL_FEATURE_SCHEMA, &BLOCK_DEV_SCHEMA],
+            result = Err(Error::validate_schema(&BLOCK_DEV_SCHEMA, "Not condition is not met at /dev")),
         },
     }
 }

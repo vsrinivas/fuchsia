@@ -540,6 +540,8 @@ mod tests {
 
     #[test]
     fn test_invalid_json() {
+        use cm_json::CML_SCHEMA;
+
         let tmp_dir = TempDir::new().unwrap();
         let tmp_in_path = tmp_dir.path().join("test.cml");
         let tmp_out_path = tmp_dir.path().join("test.cm");
@@ -552,8 +554,10 @@ mod tests {
         File::create(&tmp_in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
         {
             let result = compile(&tmp_in_path, false, Some(tmp_out_path.clone()));
-            let expected_result: Result<(), Error> =
-                Err(Error::parse("Pattern condition is not met at /expose/0/from"));
+            let expected_result: Result<(), Error> = Err(Error::validate_schema(
+                CML_SCHEMA,
+                "Pattern condition is not met at /expose/0/from",
+            ));
             assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
         }
         // Compilation failed so output should not exist.

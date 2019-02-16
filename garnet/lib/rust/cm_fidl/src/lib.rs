@@ -195,6 +195,7 @@ fn new_component_decl() -> ComponentDecl {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cm_json::CM_SCHEMA;
     use serde_json::json;
 
     fn translate_test(input: serde_json::value::Value, expected_output: ComponentDecl) {
@@ -235,7 +236,7 @@ mod tests {
             ]
         });
 
-        let expected_res: Result<ComponentDecl, Error> = Err(Error::parse(
+        let expected_res: Result<ComponentDecl, Error> = Err(Error::validate_schema(CM_SCHEMA,
             "Pattern condition is not met at /exposes/0/type",
         ));
         let res = translate(&format!("{}", input));
