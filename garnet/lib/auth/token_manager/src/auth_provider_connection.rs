@@ -97,20 +97,17 @@ impl AuthProviderConnection {
     /// Connects the supplied `ServerEnd` to the `AuthProvider`. If a component has previously been
     /// launched this is used, otherwise a fresh component is launched.
     pub async fn connect(
-        &self, server_end: ServerEnd<AuthProviderMarker>,
+        &self,
+        server_end: ServerEnd<AuthProviderMarker>,
     ) -> Result<(), TokenManagerError> {
         let factory_proxy = self.get_factory_proxy()?;
 
         match await!(factory_proxy.get_auth_provider(server_end)) {
             Ok(AuthProviderStatus::Ok) => Ok(()),
-            Ok(status) => Err(
-                TokenManagerError::new(Status::AuthProviderServiceUnavailable)
-                    .with_cause(format_err!("Error getting auth provider: {:?}", status)),
-            ),
-            Err(err) => Err(
-                TokenManagerError::new(Status::AuthProviderServiceUnavailable)
-                    .with_cause(format_err!("GetAuthProvider method failed with {:?}", err)),
-            ),
+            Ok(status) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
+                .with_cause(format_err!("Error getting auth provider: {:?}", status))),
+            Err(err) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
+                .with_cause(format_err!("GetAuthProvider method failed with {:?}", err))),
         }
     }
 

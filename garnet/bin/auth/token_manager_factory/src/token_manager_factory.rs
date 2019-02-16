@@ -114,7 +114,8 @@ impl TokenManagerFactory {
     /// Returns true iff the supplied `auth_provider_configs` are equal to any previous invocations
     /// on this factory.
     fn is_auth_provider_config_consistent(
-        &self, auth_provider_configs: &Vec<AuthProviderConfig>,
+        &self,
+        auth_provider_configs: &Vec<AuthProviderConfig>,
     ) -> bool {
         let mut previous_auth_provider_configs = self.auth_provider_configs.lock();
         if previous_auth_provider_configs.is_empty() {
@@ -130,7 +131,8 @@ impl TokenManagerFactory {
     /// encountered while creating one. If an auth provider supplier has been previously created,
     /// it will be cloned.
     fn get_auth_provider_supplier(
-        &self, auth_provider_configs: Vec<AuthProviderConfig>,
+        &self,
+        auth_provider_configs: Vec<AuthProviderConfig>,
     ) -> Result<AuthProviderSupplier, TokenManagerError> {
         let mut auth_provider_supplier_lock = self.auth_provider_supplier.lock();
         match &*auth_provider_supplier_lock {
@@ -147,7 +149,9 @@ impl TokenManagerFactory {
     /// The TokenManager is retrieved from the user map if one already exists, or is created
     /// and added to the map if not.
     fn get_token_manager(
-        &self, user_id: String, auth_provider_configs: Vec<AuthProviderConfig>,
+        &self,
+        user_id: String,
+        auth_provider_configs: Vec<AuthProviderConfig>,
     ) -> Result<Arc<TokenManager>, Error> {
         let mut user_to_token_manager = self.user_to_token_manager.lock();
         if let Some(token_manager) = user_to_token_manager.get(&user_id) {

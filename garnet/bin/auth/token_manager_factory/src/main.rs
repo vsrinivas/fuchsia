@@ -51,9 +51,7 @@ fn main() -> Result<(), Error> {
         .start()
         .context("Error starting token manager factory server")?;
 
-    executor
-        .run_singlethreaded(fut)
-        .context("Failed to execute token manager factory future")?;
+    executor.run_singlethreaded(fut).context("Failed to execute token manager factory future")?;
     info!("Stopping token manager factory");
     Ok(())
 }

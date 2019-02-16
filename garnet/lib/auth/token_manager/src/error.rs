@@ -41,11 +41,7 @@ pub struct TokenManagerError {
 impl TokenManagerError {
     /// Constructs a new non-fatal error based on the supplied `Status`.
     pub fn new(status: Status) -> Self {
-        TokenManagerError {
-            status,
-            fatal: false,
-            cause: None,
-        }
+        TokenManagerError { status, fatal: false, cause: None }
     }
 
     /// Sets a cause on the current error.
@@ -70,11 +66,7 @@ impl From<AuthDbError> for TokenManagerError {
             AuthDbError::SerializationError => (Status::InternalError, false),
             _ => (Status::UnknownError, false),
         };
-        TokenManagerError {
-            status,
-            fatal,
-            cause: Some(Error::from(auth_db_error)),
-        }
+        TokenManagerError { status, fatal, cause: Some(Error::from(auth_db_error)) }
     }
 }
 
@@ -107,10 +99,7 @@ impl From<AuthProviderStatus> for TokenManagerError {
             // Auth provider failures are localized to the particular provider that
             // produced them and therefore none are fatal to an entire TokenManager.
             fatal: false,
-            cause: Some(format_err!(
-                "Auth provider error: {:?}",
-                auth_provider_status
-            )),
+            cause: Some(format_err!("Auth provider error: {:?}", auth_provider_status)),
         }
     }
 }

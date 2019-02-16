@@ -43,6 +43,7 @@ pub trait AuthProviderSupplier {
     /// Asynchronously creates an `AuthProvider` for the requested `auth_provider_type` and returns
     /// the `ClientEnd` for communication with it.
     fn get<'a>(
-        &'a self, auth_provider_type: &'a str,
+        &'a self,
+        auth_provider_type: &'a str,
     ) -> FutureObj<'a, Result<ClientEnd<AuthProviderMarker>, TokenManagerError>>;
 }
