@@ -1,0 +1,38 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("fvm") {
+  deps = [
+    ":shared",
+  ]
+}
+
+# Also used by test/.
+source_set("shared") {
+  visibility = [ "./*" ]
+  sources = [
+    "fvm.c",
+    "fvm.cpp",
+    "slice-extent.cpp",
+    "vpartition.cpp",
+  ]
+  public_deps = [
+    "$zx/system/banjo/ddk-protocol-block",
+    "$zx/system/banjo/ddk-protocol-block-partition",
+    "$zx/system/banjo/ddk-protocol-block-volume",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/digest",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/fvm",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/gpt",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/third_party/ulib/uboringssl",
+  ]
+}

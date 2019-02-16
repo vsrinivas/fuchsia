@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("machina") {
+  sources = [
+    "machina-sysmem.c",
+    "machina.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/zircon",
+  ]
+}

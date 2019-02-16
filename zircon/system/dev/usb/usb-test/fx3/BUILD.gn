@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/firmware.gni")
+
+driver("fx3") {  # TODO: test_driver?
+  testonly = true
+  sources = [
+    "fx3.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-usb",
+    "$zx/system/banjo/ddk-protocol-usb-composite",
+    "$zx/system/banjo/ddk-protocol-usb-request",
+    "$zx/system/dev/lib/usb",
+    "$zx/system/fidl/fuchsia-hardware-usb-fwloader:c",
+    "$zx/system/fidl/fuchsia-mem:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/zircon",
+  ]
+  data_deps = [
+    ":firmware",
+  ]
+}
+
+firmware("firmware") {
+  sources = [
+    "$firmware_dir/fx3-flash/cyfxflashprog.img",
+    "$firmware_dir/usb-testing/fx3/fx3.img",
+  ]
+}

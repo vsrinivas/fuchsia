@@ -1,0 +1,14 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("gpio") {
+  deps = [
+    "aml-axg-gpio",
+    "aml-gxl-gpio",
+    "gpio-test",
+    "imx8",
+    "mt-8167",
+    "pl061",
+  ]
+}

@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("hisi3660") {
+  sources = [
+    "hisi3660-clk.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-clk",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/dev/clk/hisi-lib",
+    "$zx/system/dev/lib/hi3660",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+  ]
+}

@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("integration") {
+  testonly = true
+  deps = [
+    ":zxtest-integration",
+  ]
+}
+
+test("zxtest-integration") {
+  sources = [
+    "assertions_test.c",
+    "assertions_test.cpp",
+    "helper.cpp",
+    "main.cpp",
+    "print_test.c",
+    "print_test.cpp",
+    "register_test.c",
+    "register_test.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zxtest",
+  ]
+  if (is_fuchsia) {
+    deps += [
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+      "$zx/system/ulib/zxcpp",
+    ]
+  }
+}

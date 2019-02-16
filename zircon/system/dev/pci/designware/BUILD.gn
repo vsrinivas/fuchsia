@@ -1,0 +1,27 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("designware") {
+  sdk = "static"
+  sdk_headers = [
+    "dev/pci/designware/atu-cfg.h",
+    "dev/pci/designware/dw-pcie.h",
+  ]
+  sources = [
+    "dw-pcie.cpp",
+  ]
+  deps = [
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

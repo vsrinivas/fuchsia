@@ -1,0 +1,30 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("imx8mevk") {
+  sources = [
+    "imx8mevk-gpio.c",
+    "imx8mevk-gpu.c",
+    "imx8mevk-i2c.c",
+    "imx8mevk-sdhci.c",
+    "imx8mevk-sysmem.c",
+    "imx8mevk-usb.c",
+    "imx8mevk.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-gpioimpl",
+    "$zx/system/banjo/ddk-protocol-iommu",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk-protocol-usb-modeswitch",
+    "$zx/system/dev/lib/imx8m",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+  ]
+  data_deps = [
+    # TODO: "$zx/kernel/target/arm64/boot-shim:imx8mevk",
+  ]
+}

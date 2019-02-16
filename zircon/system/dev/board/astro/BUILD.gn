@@ -1,0 +1,43 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("astro") {
+  sources = [
+    "astro-audio.c",
+    "astro-backlight.c",
+    "astro-bluetooth.c",
+    "astro-buttons.c",
+    "astro-canvas.c",
+    "astro-clk.c",
+    "astro-display.c",
+    "astro-gpio.c",
+    "astro-i2c.c",
+    "astro-light.c",
+    "astro-rawnand.c",
+    "astro-sdio.c",
+    "astro-sysmem.c",
+    "astro-tee.c",
+    "astro-thermal.c",
+    "astro-touch.c",
+    "astro-usb.c",
+    "astro-video.c",
+    "astro.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-gpioimpl",
+    "$zx/system/banjo/ddk-protocol-iommu",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk-protocol-scpi",
+    "$zx/system/banjo/ddk-protocol-serial",
+    "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/broadcom",
+    "$zx/system/dev/lib/focaltech",
+    "$zx/system/fidl/fuchsia-hardware-light:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+  ]
+}

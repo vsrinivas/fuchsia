@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("aml-gpu") {
+  sources = [
+    "aml-gpu.c",
+    "aml-s905d2g.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-iommu",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk-protocol-scpi",
+    "$zx/system/dev/lib/amlogic",
+    "$zx/system/fidl/fuchsia-hardware-gpu-clock:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+  ]
+}

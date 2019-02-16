@@ -1,0 +1,58 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("sysmem") {
+  sources = [
+    "allocator.cpp",
+    "amlogic_memory_allocator.cpp",
+    "binding.cpp",
+    "buffer_collection.cpp",
+    "buffer_collection_token.cpp",
+    "device.cpp",
+    "driver.cpp",
+    "koid_util.cpp",
+    "logging.cpp",
+    "logical_buffer_collection.cpp",
+    "usage_pixel_format_cost.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk-protocol-platform-proxy",
+    "$zx/system/banjo/ddk-protocol-sysmem",
+    "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/fidl-async-2",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/image-format",
+    "$zx/system/ulib/region-alloc",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+  data_deps = [
+    ":sysmem.proxy",
+  ]
+}
+
+driver("sysmem.proxy") {
+  sources = [
+    "sysmem-proxy-client.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk-protocol-platform-proxy",
+    "$zx/system/banjo/ddk-protocol-sysmem",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/zircon",
+  ]
+}

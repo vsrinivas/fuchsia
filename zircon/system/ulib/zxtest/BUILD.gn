@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("zxtest") {
+  host = true
+  sdk = "source"
+  sdk_headers = [
+    "zxtest/base/event-broadcaster.h",
+    "zxtest/base/observer.h",
+    "zxtest/base/test-case.h",
+    "zxtest/base/test-driver.h",
+    "zxtest/base/test-info.h",
+    "zxtest/base/test-internal.h",
+    "zxtest/base/test.h",
+    "zxtest/base/types.h",
+  ]
+  sources = [
+    "assertion.cpp",
+    "c-wrappers.cpp",
+    "event-broadcaster.cpp",
+    "reporter.cpp",
+    "runner-options.cpp",
+    "runner.cpp",
+    "test-case.cpp",
+    "test-info.cpp",
+    "test.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/ulib/fbl",
+  ]
+  if (is_fuchsia) {
+    deps += [
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+      "$zx/system/ulib/zxcpp",
+    ]
+  }
+}

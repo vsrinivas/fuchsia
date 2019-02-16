@@ -14,10 +14,29 @@ if (current_cpu != "") {
       "$zx/system/core/bootsvc:bootsvc-tests",
       "$zx/system/core/devmgr/devmgr:devmgr-test",
       "$zx/system/core/virtcon:virtual-console-test",
+      "$zx/system/dev/backlight/sg-micro:sgm37603a-test",
+      "$zx/system/dev/block/ftl/test",
+      "$zx/system/dev/block/fvm/test",
+      "$zx/system/dev/block/mtk-sdmmc:mtk-sdmmc-test",
+      "$zx/system/dev/block/usb-mass-storage:tests",
+      "$zx/system/dev/bus/virtio:virtio-test",
+      "$zx/system/dev/gpio/mt-8167:mtk-gpio",
+      "$zx/system/dev/gpio/mt-8167:mtk-gpio",
+      "$zx/system/dev/input/bma253:bma253-test",
+      "$zx/system/dev/lib/usb:usb-wrapper-test",
+      "$zx/system/dev/light-sensor/lite-on:ltr-578als-test",
+      "$zx/system/dev/nand/broker/test",
+      "$zx/system/dev/nand/nand/test",
+      "$zx/system/dev/nand/nandpart:nandpart-test",
+      "$zx/system/dev/nand/ram-nand:ram-nand-test",
+      "$zx/system/dev/nand/skip-block:skip-block-test",
+      "$zx/system/dev/test/usb",
+      "$zx/system/dev/thermal/mtk-thermal:mtk-thermal-test",
       "$zx/system/uapp/disk-pave:install-disk-image-test",
       "$zx/system/ulib/blobfs/test",
       "$zx/system/ulib/bootfs:bootfs-test",
       "$zx/system/ulib/ddk:ddk-unittest",
+      "$zx/system/ulib/driver-integration-test/test",
       "$zx/system/ulib/kvstore:kvstore-test",
       "$zx/system/ulib/pretty:pretty-test",
       "$zx/system/ulib/tftp:tftp-test",
@@ -150,6 +169,9 @@ if (current_cpu != "") {
       "util",
       "zbi",
     ]
+    if (current_os == "linux") {
+      deps += [ "$zx/system/dev/usb/usb-peripheral-test" ]
+    }
   }
 }
 

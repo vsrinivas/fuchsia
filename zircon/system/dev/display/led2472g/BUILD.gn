@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("led2472g") {
+  deps = [
+    ":vim-led2472g",
+  ]
+}
+
+driver("vim-led2472g") {
+  sources = [
+    "led2472g.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+  ]
+}

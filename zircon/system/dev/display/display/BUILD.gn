@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("display") {
+  sources = [
+    "client.cpp",
+    "controller.cpp",
+    "fence.cpp",
+    "image.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-display-controller",
+    "$zx/system/banjo/ddk-protocol-i2cimpl",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/fidl/fuchsia-hardware-display:c",
+    "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/audio-proto-utils",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/edid",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/trace:trace-driver",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+
+    # TODO(BLD-353): This is actually a transitive dependency of the ddk
+    # library, but the library doesn't express it properly because of
+    # legacy complications.
+    "$zx/system/ulib/trace:headers",
+  ]
+}

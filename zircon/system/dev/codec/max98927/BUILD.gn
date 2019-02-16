@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("max98927") {
+  sources = [
+    "binding.c",
+    "max98927.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/banjo/ddk-protocol-pci",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

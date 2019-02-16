@@ -1,0 +1,44 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("vim") {
+  sources = [
+    "vim-canvas.cpp",
+    "vim-clk.cpp",
+    "vim-display.cpp",
+    "vim-eth.cpp",
+    "vim-gpio.cpp",
+    "vim-i2c.cpp",
+    "vim-led2472g.cpp",
+    "vim-mali.cpp",
+    "vim-rtc.cpp",
+    "vim-sd-emmc.cpp",
+    "vim-sdio.cpp",
+    "vim-sysmem.cpp",
+    "vim-thermal.cpp",
+    "vim-uart.cpp",
+    "vim-usb.cpp",
+    "vim-video.cpp",
+    "vim.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-ethernet",
+    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-gpioimpl",
+    "$zx/system/banjo/ddk-protocol-iommu",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk-protocol-scpi",
+    "$zx/system/banjo/ddk-protocol-serial",
+    "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/broadcom",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

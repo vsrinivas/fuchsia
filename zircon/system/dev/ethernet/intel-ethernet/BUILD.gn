@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(current_cpu == "x64")
+
+driver("intel-ethernet") {
+  sources = [
+    "ethernet.c",
+    "ie.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-ethernet",
+    "$zx/system/banjo/ddk-protocol-pci",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/zircon",
+  ]
+}

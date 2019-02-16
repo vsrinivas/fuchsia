@@ -1,0 +1,27 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("gauss-tdm") {
+  sources = [
+    "gauss-tdm-out.c",
+    "gauss-tdm-stream.cpp",
+    "tas57xx.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/audio-driver-proto",
+    "$zx/system/ulib/audio-proto-utils",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/dispatcher-pool",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

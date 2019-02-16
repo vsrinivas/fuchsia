@@ -1,0 +1,45 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("shared") {
+  visibility = [ ":*" ]
+  sources = [
+    "simple-display.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-display-controller",
+    "$zx/system/banjo/ddk-protocol-pci",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+  ]
+}
+
+simple_drivers = [
+  "bochs",
+  "amd-kaveri",
+  "nv",
+  "intel",
+]
+
+group("simple") {
+  deps = []
+  foreach(driver, simple_drivers) {
+    deps += [ ":simple.$driver" ]
+  }
+}
+
+foreach(driver, simple_drivers) {
+  driver("simple.$driver") {
+    sources = [
+      "simple-$driver.c",
+    ]
+    deps = [
+      ":shared",
+      "$zx/system/banjo/ddk-protocol-display-controller",
+      "$zx/system/banjo/ddk-protocol-pci",
+      "$zx/system/ulib/ddk",
+    ]
+  }
+}

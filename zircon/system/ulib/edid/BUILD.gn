@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("edid") {
+  sources = [
+    "edid.cpp",
+    "eisa_vid_lut.cpp",
+    "timings.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  deps = [
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/zx",
+  ]
+}

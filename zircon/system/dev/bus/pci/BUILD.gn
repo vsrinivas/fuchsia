@@ -1,0 +1,53 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/kernel/params.gni")
+
+group("pci") {
+  deps = [
+    ":bus-pci",
+  ]
+  if (!enable_user_pci) {
+    deps += [ ":bus-pci.proxy" ]
+  }
+}
+
+driver("bus-pci") {
+  deps = [
+    "$zx/system/banjo/ddk-protocol-pci",
+    "$zx/system/banjo/ddk-protocol-pciroot",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/zircon",
+  ]
+  if (enable_user_pci) {
+    sources = [
+      "bus.cpp",
+      "config.cpp",
+    ]
+    deps += [
+      "$zx/system/ulib/ddktl",
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/pretty",
+      "$zx/system/ulib/zxcpp",
+    ]
+  } else {
+    sources = [
+      "kpci/kpci.c",
+    ]
+    deps += [ "$zx/system/banjo/ddk-protocol-platform-device" ]
+  }
+}
+
+driver("bus-pci.proxy") {
+  sources = [
+    "kpci/proxy.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-pci",
+    "$zx/system/banjo/ddk-protocol-pciroot",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/zircon",
+  ]
+}

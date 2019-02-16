@@ -1,0 +1,75 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("usb-mass-storage") {
+  sources = [
+    "usb-mass-storage.cpp",
+  ]
+  deps = [
+    ":block",
+  ]
+}
+
+source_set("block") {
+  visibility = [ ":*" ]
+  sources = [
+    "block.cpp",
+  ]
+  public_deps = [
+    "$zx/system/banjo/ddk-protocol-block",
+    "$zx/system/banjo/ddk-protocol-usb",
+    "$zx/system/banjo/ddk-protocol-usb-composite",
+    "$zx/system/banjo/ddk-protocol-usb-request",
+    "$zx/system/dev/lib/usb",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/ftl",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":ums",
+    ":ums-block",
+  ]
+}
+
+test("ums-block") {
+  sources = [
+    "tests/block.cpp",
+  ]
+  deps = [
+    ":block",
+    "$zx/system/dev/lib/fake-bti",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/unittest",
+  ]
+}
+
+test("ums") {
+  sources = [
+    "tests/usb-mass-storage.cpp",
+    "usb-mass-storage.cpp",
+  ]
+  defines = [ "UNITTEST" ]
+  deps = [
+    ":block",
+    "$zx/system/dev/lib/fake-bti",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/unittest",
+  ]
+}

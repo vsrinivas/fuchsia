@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("resource.gni")
+
+# This is the directory populated by $zx/scripts/download-prebuilt.
+# Currently all firmware blobs are stored there.
+firmware_dir = "$zx/prebuilt/downloads/firmware"
+
+# This is the same as resource(), but $outputs strings give exactly the
+# strings passed to the `load_firmware()` function by the driver code.
+#
+# A driver calls `load_firmware("foo/bar")` and devmgr actually loads
+# `/lib/firmware/foo/bar`, but it's not the driver's business that's how the
+# storage works (and it will change in the future), so in firmware() they just
+# write `outputs = [ "foo/bar" ]` so what you write in GN exactly matches what
+# you write in C.
+#
+# Giving a driver() a $data_deps on the firmware() ensures that the firmware
+# will be stored somewhere and made available at runtime by `devmgr`, but the
+# driver has no knowledge of how the storage actually works.  If $outputs is
+# omitted, it defaults to `[ "{{source_file_part}}" ]` so the string matches
+# the string in `sources` after any slash.
+#
+template("firmware") {
+  resource(target_name) {
+    forward_variables_from(invoker, "*", [ "outputs" ])
+    if (defined(invoker.outputs)) {
+      outputs = []
+      foreach(path, invoker.outputs) {
+        assert(rebase_path(path, "foo") != path,
+               "`outputs` in firmware() must be relative paths")
+        outputs += [ "lib/firmware/$path" ]
+      }
+    } else {
+      outputs = [
+        "lib/firmware/{{source_file_part}}",
+      ]
+    }
+  }
+}

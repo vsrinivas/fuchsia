@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("usb") {
+  testonly = true
+  deps = [
+    "dwc3",
+    "hikey-usb",
+    "mt-musb-peripheral",
+    "usb-bus",
+    "usb-composite",
+    "usb-dfu",
+    "usb-hub",
+    "usb-peripheral",
+    "usb-peripheral-test",
+    "usb-test",
+    "usb-virtual-bus",
+    "xhci",
+  ]
+}

@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("display") {
+  deps = [
+    "aml-canvas",
+    "astro-display",
+    "display",
+    "dummy",
+    "hikey-display",
+    "imx8m-display",
+    "led2472g",
+    "mt8167s-display",
+    "simple",
+    "vim-display",
+  ]
+  if (current_cpu == "x64") {
+    deps += [ "intel-i915" ]
+  }
+}

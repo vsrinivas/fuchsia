@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("virtio") {
+  sdk = "source"
+  sdk_headers = [
+    "virtio/balloon.h",
+    "virtio/block.h",
+    "virtio/console.h",
+    "virtio/gpu.h",
+    "virtio/input.h",
+    "virtio/net.h",
+    "virtio/virtio.h",
+    "virtio/virtio_ids.h",
+    "virtio/virtio_ring.h",
+    "virtio/vsock.h",
+    "virtio/wl.h",
+  ]
+  sources = []
+}

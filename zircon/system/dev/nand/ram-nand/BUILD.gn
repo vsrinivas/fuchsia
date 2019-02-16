@@ -1,0 +1,65 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("ram-nand") {
+  sources = [
+    "bind.cpp",
+    "ram-nand-ctl.cpp",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/banjo/ddk-protocol-nand",
+    "$zx/system/fidl/fuchsia-hardware-nand:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+source_set("common") {
+  visibility = [ ":*" ]
+  sources = [
+    "ram-nand.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-nand",
+    "$zx/system/fidl/fuchsia-hardware-nand:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/sync",
+  ]
+}
+
+test("ram-nand-test") {
+  output_name = "ram-nand-test"
+  sources = [
+    "test/ram-nand-ctl.cpp",
+    "test/ram-nand.cpp",
+  ]
+  include_dirs = [ "." ]
+  deps = [
+    ":common",
+    "$zx/system/banjo/ddk-protocol-nand",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/fidl/fuchsia-hardware-nand:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/devmgr-launcher",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/ramdevice-client",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

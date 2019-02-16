@@ -1,0 +1,51 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("bma253") {
+  sources = [
+    "bma253.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-clk",
+    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-hidbus",
+    "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/hid",
+    "$zx/system/ulib/simplehid",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+test("bma253-test") {
+  sources = [
+    "bma253-test.cpp",
+    "bma253.cpp",
+  ]
+  deps = [
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/mock-hidbus-ifc",
+    "$zx/system/dev/lib/mock-i2c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/hid",
+    "$zx/system/ulib/simplehid",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxtest",
+  ]
+}

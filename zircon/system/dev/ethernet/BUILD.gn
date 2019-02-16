@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("ethernet") {
+  deps = [
+    "aml-ethernet-s912",
+    "asix-88179",
+    "asix-88772b",
+    "dwmac",
+    "ethernet",
+    "ethertap",
+    "realtek-8211f",
+    "rndis",
+    "usb-cdc-ecm",
+    "usb-cdc-function",
+  ]
+  if (current_cpu == "x64") {
+    deps += [
+      "intel-ethernet",
+      "realtek-8111",
+    ]
+  }
+}

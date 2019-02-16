@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("aml-uart") {
+  sources = [
+    "aml-uart.cpp",
+    "binding.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk-protocol-serial",
+    "$zx/system/banjo/ddk-protocol-serialimpl",
+    "$zx/system/dev/lib/amlogic",
+    "$zx/system/ulib/ddk",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

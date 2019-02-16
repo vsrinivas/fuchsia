@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("intel-i2c") {
+  sources = [
+    "intel-i2c-controller.c",
+    "intel-i2c-slave.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/banjo/ddk-protocol-i2cimpl",
+    "$zx/system/banjo/ddk-protocol-pci",
+    "$zx/system/fidl/fuchsia-hardware-i2c:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+  ]
+}

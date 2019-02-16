@@ -1,0 +1,58 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("gauss") {
+  sources = [
+    "gauss-audio.c",
+    "gauss-clk.c",
+    "gauss-gpio.c",
+    "gauss-i2c.c",
+    "gauss-pcie.c",
+    "gauss-rawnand.c",
+    "gauss-sysmem.c",
+    "gauss-usb.c",
+    "gauss.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-gpioimpl",
+    "$zx/system/banjo/ddk-protocol-iommu",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/pci/designware",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+  ]
+  data_deps = [
+    ":gauss-i2c-test",
+  ]
+}
+
+driver("gauss-i2c-test") {
+  sources = [
+    "gauss-i2c-test.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+if (false) {  # TODO: ifeq (PLEASE_DISCUSS_WITH_SWETLAND,)
+  driver("gauss-led") {
+    sources = [
+      "gauss-led.c",
+    ]
+    deps = [
+      "$zx/system/ulib/ddk",
+      "$zx/system/ulib/sync",
+      "$zx/system/ulib/zircon",
+    ]
+  }
+}

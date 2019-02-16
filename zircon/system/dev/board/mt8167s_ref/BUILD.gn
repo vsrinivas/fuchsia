@@ -1,0 +1,45 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("mt8167s_ref") {
+  sources = [
+    "mt8167-audio.cpp",
+    "mt8167-backlight.cpp",
+    "mt8167-buttons.cpp",
+    "mt8167-clk.cpp",
+    "mt8167-display.cpp",
+    "mt8167-emmc.cpp",
+    "mt8167-gpio.cpp",
+    "mt8167-gpu.cpp",
+    "mt8167-i2c.cpp",
+    "mt8167-sdio.cpp",
+    "mt8167-sensors.cpp",
+    "mt8167-soc.cpp",
+    "mt8167-sysmem.cpp",
+    "mt8167-thermal.cpp",
+    "mt8167-touch.cpp",
+    "mt8167-usb.cpp",
+    "mt8167.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-gpioimpl",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk-protocol-scpi",
+    "$zx/system/dev/lib/focaltech",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/mt8167",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+  data_deps = [
+    # TODO: "$zx/kernel/target/arm64/boot-shim:mt8167s_ref",
+  ]
+}

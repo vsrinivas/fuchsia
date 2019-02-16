@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("serial") {
+  sources = [
+    "serial.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-serial",
+    "$zx/system/banjo/ddk-protocol-serialimpl",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+  ]
+}

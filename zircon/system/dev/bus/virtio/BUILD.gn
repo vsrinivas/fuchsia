@@ -1,0 +1,66 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("virtio") {
+  sources = [
+    "backends/pci.cpp",
+    "backends/pci_legacy.cpp",
+    "backends/pci_modern.cpp",
+    "block.cpp",
+    "console.cpp",
+    "ethernet.cpp",
+    "gpu.cpp",
+    "input.cpp",
+    "rng.cpp",
+    "socket.cpp",
+    "virtio_driver.cpp",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/banjo/ddk-protocol-display-controller",
+    "$zx/system/banjo/ddk-protocol-ethernet",
+    "$zx/system/banjo/ddk-protocol-hidbus",
+    "$zx/system/fidl/fuchsia-hardware-vsock:c",
+  ]
+}
+
+source_set("common") {
+  visibility = [ ":*" ]
+  sources = [
+    "device.cpp",
+    "ring.cpp",
+    "scsi.cpp",
+    "scsilib.cpp",
+  ]
+  public_deps = [
+    "$zx/system/banjo/ddk-protocol-block",
+    "$zx/system/banjo/ddk-protocol-pci",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hid",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/virtio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+test("virtio-test") {
+  sources = [
+    "scsi_test.cpp",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/unittest",
+  ]
+}

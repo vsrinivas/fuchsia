@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("input") {
+  deps = [
+    "bma253",
+    "focaltech",
+    "goodix",
+    "hid",
+    "hid-buttons",
+    "hidctl",
+    "i2c-hid",
+    "usb-hid",
+  ]
+  if (current_cpu == "x64") {
+    deps += [ "pc-ps2" ]
+  }
+}

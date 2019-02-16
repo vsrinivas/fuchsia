@@ -1,0 +1,49 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("usb") {
+  sdk = "source"
+  sdk_headers = [
+    "usb/usb-request.h",
+    "usb/usb.h",
+  ]
+  sources = [
+    "usb-request.c",
+    "usb-wrapper.cpp",
+    "usb.c",
+  ]
+  public_deps = [
+    # <ddk/usb/usb.h> has #include <ddk/protocol/usb.h>.
+    "$zx/system/ulib/ddk:headers",
+
+    # <usb/request-cpp.h> has  #include <lib/operation/operation.h>.
+    "$zx/system/dev/lib/operation:headers",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-usb",
+    "$zx/system/banjo/ddk-protocol-usb-composite",
+    "$zx/system/banjo/ddk-protocol-usb-request",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+  ]
+}
+
+test("usb-wrapper-test") {
+  sources = [
+    "tests/usb-wrapper-tests.cpp",
+  ]
+  deps = [
+    ":usb",
+    "$zx/system/banjo/ddk-protocol-usb",
+    "$zx/system/banjo/ddk-protocol-usb-composite",
+    "$zx/system/dev/lib/fake-bti",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+  ]
+}

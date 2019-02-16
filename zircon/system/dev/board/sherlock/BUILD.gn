@@ -1,0 +1,47 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("sherlock") {
+  sources = [
+    "bind.c",
+    "sherlock-audio.cpp",
+    "sherlock-backlight.cpp",
+    "sherlock-bluetooth.cpp",
+    "sherlock-board.cpp",
+    "sherlock-buttons.cpp",
+    "sherlock-camera.cpp",
+    "sherlock-canvas.cpp",
+    "sherlock-clk.cpp",
+    "sherlock-display.cpp",
+    "sherlock-emmc.cpp",
+    "sherlock-gpio.cpp",
+    "sherlock-i2c.cpp",
+    "sherlock-mali.cpp",
+    "sherlock-sdio.cpp",
+    "sherlock-sysmem.cpp",
+    "sherlock-usb.cpp",
+    "sherlock-video.cpp",
+    "sherlock.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-gpioimpl",
+    "$zx/system/banjo/ddk-protocol-iommu",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk-protocol-serial",
+    "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/broadcom",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+  data_deps = [
+    # TODO: "$zx/kernel/target/arm64/boot-shim:sherlock",
+  ]
+}

@@ -113,7 +113,7 @@ library("trace-provider-with-static-engine") {
     ":common",
     "$zx/system/fidl/fuchsia-tracelink:c",
     "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/trace-engine:static",
+    "$zx/system/ulib/trace-engine:trace-engine-static",
   ]
 }
 

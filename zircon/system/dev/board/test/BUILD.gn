@@ -1,0 +1,71 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+testonly = true
+
+simple_drivers = [
+  "child-1",
+  "child-2",
+  "child-3",
+  "parent",
+]
+
+group("test") {
+  deps = [
+    ":test-board",
+    ":test-gpio",
+  ]
+  foreach(driver, simple_drivers) {
+    deps += [ ":test-$driver" ]
+  }
+}
+
+driver("test-board") {
+  sources = [
+    "test-board.cpp",
+    "test-gpio.cpp",
+    "test.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+driver("test-gpio") {
+  sources = [
+    "test/gpio.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-gpioimpl",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+foreach(driver, simple_drivers) {
+  driver("test-$driver") {
+    sources = [
+      "test/$driver.c",
+    ]
+    deps = [
+      "$zx/system/banjo/ddk-protocol-gpio",
+      "$zx/system/banjo/ddk-protocol-platform-device",
+      "$zx/system/ulib/ddk",
+      "$zx/system/ulib/zircon",
+    ]
+  }
+}

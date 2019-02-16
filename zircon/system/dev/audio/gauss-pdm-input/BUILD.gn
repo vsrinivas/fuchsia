@@ -1,0 +1,27 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("gauss-pdm-input") {
+  sources = [
+    "a113-audio-device.c",
+    "a113-ddr.c",
+    "a113-pdm.c",
+    "gauss-pdm-input-stream.cpp",
+    "gauss-pdm-input.c",
+    "vmo_helper.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/ulib/audio-driver-proto",
+    "$zx/system/ulib/audio-proto-utils",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/dispatcher-pool",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

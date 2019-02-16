@@ -1,0 +1,44 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("ftl") {
+  sources = [
+    "ftln/ftln_init.c",
+    "ftln/ftln_intrnl.c",
+    "ftln/ftln_rd.c",
+    "ftln/ftln_util.c",
+    "ftln/ndm-driver.cpp",
+    "ftln/volume.cpp",
+    "ndm/ndm_init.c",
+    "ndm/ndm_intrnl.c",
+    "ndm/ndm_vols.c",
+    "utils/aalloc.c",
+    "utils/crc32_tbl.c",
+    "utils/fsmem.c",
+    "utils/fsys.c",
+    "utils/fsysinit.c",
+    "utils/ftl_mc.c",
+    "utils/semaphore.cpp",
+    "utils/sys.c",
+  ]
+  configs += [ ":config" ]
+  deps = [
+    "$zx/system/ulib/backtrace-request",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+config("config") {
+  visibility = [ ":*" ]
+  defines = [ "NDM_DEBUG" ]
+  include_dirs = [
+    ".",
+    "utils",
+    "inc",
+    "inc/kprivate",
+  ]
+}

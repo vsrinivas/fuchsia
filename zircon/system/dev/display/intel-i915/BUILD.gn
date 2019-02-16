@@ -1,0 +1,36 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(current_cpu == "x64")
+
+driver("intel-i915") {
+  sources = [
+    "display-device.cpp",
+    "dp-display.cpp",
+    "gtt.cpp",
+    "hdmi-display.cpp",
+    "igd.cpp",
+    "intel-i915.cpp",
+    "interrupts.cpp",
+    "pipe.cpp",
+    "power.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-display-controller",
+    "$zx/system/banjo/ddk-protocol-i2cimpl",
+    "$zx/system/banjo/ddk-protocol-intelgpucore",
+    "$zx/system/banjo/ddk-protocol-pci",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/fidl/fuchsia-hardware-backlight:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/edid",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/region-alloc",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

@@ -1,0 +1,31 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("usb-virtual-bus") {
+  sources = [
+    "usb-virtual-bus.cpp",
+    "usb-virtual-device.cpp",
+    "usb-virtual-host.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-usb",
+    "$zx/system/banjo/ddk-protocol-usb-bus",
+    "$zx/system/banjo/ddk-protocol-usb-dci",
+    "$zx/system/banjo/ddk-protocol-usb-function",
+    "$zx/system/banjo/ddk-protocol-usb-hci",
+    "$zx/system/banjo/ddk-protocol-usb-hub",
+    "$zx/system/banjo/ddk-protocol-usb-modeswitch",
+    "$zx/system/banjo/ddk-protocol-usb-request",
+    "$zx/system/dev/lib/usb",
+    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

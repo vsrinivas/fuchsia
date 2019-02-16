@@ -1,0 +1,20 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("simple-audio-stream") {
+  sdk = "source"
+  sdk_headers = [ "lib/simple-audio-stream/simple-audio-stream.h" ]
+  sources = [
+    "simple-audio-stream.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/audio-driver-proto",
+    "$zx/system/ulib/audio-proto-utils",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/dispatcher-pool",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zx",
+  ]
+}

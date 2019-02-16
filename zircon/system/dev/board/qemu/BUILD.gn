@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("qemu") {
+  sources = [
+    "qemu-bus.c",
+    "qemu-sysmem.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/zircon",
+  ]
+  if (current_cpu == "arm64") {
+    data_deps = [
+      # TODO: "$zx/kernel/target/arm64/boot-shim:qemu",
+    ]
+  }
+}

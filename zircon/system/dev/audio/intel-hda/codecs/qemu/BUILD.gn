@@ -1,0 +1,30 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("qemu") {
+  deps = [
+    ":qemu-audio",
+  ]
+}
+
+driver("qemu-audio") {
+  sources = [
+    "binding.c",
+    "qemu-codec.cpp",
+    "qemu-stream.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-intelhda-codec",
+    "$zx/system/banjo/ddk-protocol-pci",
+    "$zx/system/ulib/audio-driver-proto",
+    "$zx/system/ulib/audio-proto-utils",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/dispatcher-pool",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/intel-hda",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

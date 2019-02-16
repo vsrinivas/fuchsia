@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("audio") {
+  deps = [
+    "astro-pdm-input",
+    "astro-tdm-output",
+    "gauss-pdm-input",
+    "gauss-tdm",
+    "intel-hda",
+    "mt8167-tdm-input",
+    "mt8167-tdm-output",
+    "sherlock-pdm-input",
+    "sherlock-tdm-output",
+    "usb-audio",
+  ]
+}

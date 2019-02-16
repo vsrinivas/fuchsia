@@ -1,0 +1,20 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("intel-serialio") {
+  sources = [
+    "dma/dma.c",
+    "sdio/sdio.c",
+    "serialio.c",
+    "spi/spi.c",
+    "uart/uart.c",
+  ]
+  include_dirs = [ "intel-serialio-include" ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-pci",
+    "$zx/system/banjo/ddk-protocol-serial",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/zircon",
+  ]
+}

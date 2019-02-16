@@ -1,0 +1,38 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("usb-audio") {
+  sources = [
+    "midi.c",
+    "usb-audio-control-interface.cpp",
+    "usb-audio-descriptors.cpp",
+    "usb-audio-device.cpp",
+    "usb-audio-path.cpp",
+    "usb-audio-stream-interface.cpp",
+    "usb-audio-stream.cpp",
+    "usb-audio-units.cpp",
+    "usb-audio.cpp",
+    "usb-midi-sink.c",
+    "usb-midi-source.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-usb",
+    "$zx/system/banjo/ddk-protocol-usb-composite",
+    "$zx/system/banjo/ddk-protocol-usb-request",
+    "$zx/system/dev/lib/usb",
+    "$zx/system/ulib/audio-driver-proto",
+    "$zx/system/ulib/audio-proto-utils",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/digest",
+    "$zx/system/ulib/dispatcher-pool",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/third_party/ulib/uboringssl",
+  ]
+}

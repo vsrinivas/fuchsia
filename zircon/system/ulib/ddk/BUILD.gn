@@ -47,8 +47,14 @@ library("ddk") {
     # <ddk/protocol/rawnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>.
     "$zx/system/fidl/fuchsia-hardware-nand:c.headers",
 
+    # <ddk/usb-peripheral-config.h> has #include <fuchsia/hardware/usb/peripheral/c/fidl.h>.
+    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:c.headers",
+
+    # TODO(BLD-353): Exporting this dependency causes problems in the legacy
+    # build.  Instead, users of the ddk library that actually use this header
+    # have to also express a dependency on the trace library.
     # <ddk/trace/event.h> has #include <trace/internal/event_common.h>.
-    "$zx/system/ulib/trace:headers",
+    #"$zx/system/ulib/trace:headers",
 
     # <ddk/protocol/i2c-lib.h> has #include <ddk/protocol/i2c.h>.
     "$zx/system/banjo/ddk-protocol-i2c",

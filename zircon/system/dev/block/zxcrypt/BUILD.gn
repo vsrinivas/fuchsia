@@ -1,0 +1,28 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("zxcrypt") {
+  sources = [
+    "binding.c",
+    "device.cpp",
+    "extra.cpp",
+    "worker.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:integer-paranoia" ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-block",
+    "$zx/system/banjo/ddk-protocol-block-partition",
+    "$zx/system/banjo/ddk-protocol-block-volume",
+    "$zx/system/ulib/bitmap",
+    "$zx/system/ulib/crypto",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxcrypt",
+  ]
+}

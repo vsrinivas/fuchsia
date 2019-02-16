@@ -1,0 +1,56 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("imx8") {
+  deps = [
+    ":imx8.m",
+    ":imx8.m-mini",
+  ]
+}
+
+driver("imx8.m") {
+  sources = [
+    "imx8m-gpio.c",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/banjo/ddk-protocol-gpioimpl",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/dev/lib/imx8m",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+driver("imx8.m-mini") {
+  sources = [
+    "imx8m-mini-gpio.c",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/banjo/ddk-protocol-gpioimpl",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/dev/lib/imx8m",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+source_set("common") {
+  visibility = [ ":*" ]
+  sources = [
+    "imx8-gpio.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-gpioimpl",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/dev/lib/imx8m",
+    "$zx/system/ulib/ddk",
+  ]
+}

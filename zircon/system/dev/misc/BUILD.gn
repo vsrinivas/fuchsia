@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("misc") {
+  deps = [
+    "builtin",
+    "console",
+    "ktrace",
+    "pty",
+    "sysinfo",
+    "test",
+  ]
+
+  if (current_cpu == "x64") {
+    deps += [
+      "tpm",
+
+      # TODO(dje): This can either be removed (we only support arm,x86)
+      # or even add arm to the filter-out list when arm supported is added.
+      "cpu-trace",
+    ]
+  }
+}

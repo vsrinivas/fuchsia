@@ -1,0 +1,52 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("nandpart") {
+  sources = [
+    "aml-bad-block.cpp",
+    "bad-block.cpp",
+    "binding.c",
+    "nandpart-utils.cpp",
+    "nandpart.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-badblock",
+    "$zx/system/banjo/ddk-protocol-nand",
+    "$zx/system/dev/lib/operation",
+    "$zx/system/fidl/fuchsia-hardware-nand:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+test("nandpart-test") {
+  output_name = "nandpart-test"
+  sources = [
+    "aml-bad-block.cpp",
+    "bad-block.cpp",
+    "nandpart-utils.cpp",
+    "test/aml-bad-block-test.cpp",
+    "test/nandpart-utils-test.cpp",
+  ]
+  include_dirs = [ "." ]
+  defines = [ "TEST" ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-nand",
+    "$zx/system/fidl/fuchsia-hardware-nand:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

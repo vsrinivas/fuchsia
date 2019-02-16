@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+if (is_fuchsia) {
+  driver("usb-peripheral-test") {
+    sources = [
+      "driver.cpp",
+    ]
+    deps = [
+      "$zx/system/banjo/ddk-protocol-usb",
+      "$zx/system/banjo/ddk-protocol-usb-function",
+      "$zx/system/banjo/ddk-protocol-usb-request",
+      "$zx/system/dev/lib/usb",
+      "$zx/system/ulib/ddk",
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/sync",
+      "$zx/system/ulib/zircon",
+    ]
+  }
+} else if (current_os == "linux") {
+  test("usb-peripheral-test") {
+    sources = [
+      "test.cpp",
+    ]
+    deps = [
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/unittest",
+      "$zx/third_party/ulib/usbhost",
+    ]
+  }
+}

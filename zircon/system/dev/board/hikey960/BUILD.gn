@@ -1,0 +1,45 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("hikey960") {
+  sources = [
+    "hikey960-devices.c",
+    "hikey960-i2c.c",
+    "hikey960-sysmem.c",
+    "hikey960-usb.c",
+    "hikey960.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-gpioimpl",
+    "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/banjo/ddk-protocol-iommu",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk-protocol-usb-modeswitch",
+    "$zx/system/dev/gpio/pl061",
+    "$zx/system/dev/lib/hi3660",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+  ]
+  data_deps = [
+    # TODO: "$zx/kernel/target/arm64/boot-shim:hikey960",
+    ":hi3660-i2c-test",  # TODO: only for test configs
+  ]
+}
+
+driver("hi3660-i2c-test") {
+  # TODO: testonly = true
+  sources = [
+    "hikey960-i2c-test.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+  ]
+}

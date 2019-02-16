@@ -1,0 +1,17 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("bootpart") {
+  sources = [
+    "bootpart.c",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-block",
+    "$zx/system/banjo/ddk-protocol-block-partition",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/third_party/ulib/cksum",
+  ]
+}

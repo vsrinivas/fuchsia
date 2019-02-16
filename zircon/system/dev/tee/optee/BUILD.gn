@@ -1,0 +1,28 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("optee") {
+  sources = [
+    "binding.c",
+    "optee-client.cpp",
+    "optee-controller.cpp",
+    "optee-message.cpp",
+    "shared-memory.cpp",
+    "util.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/fidl/fuchsia-hardware-tee:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/region-alloc",
+    "$zx/system/ulib/tee-client-api",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

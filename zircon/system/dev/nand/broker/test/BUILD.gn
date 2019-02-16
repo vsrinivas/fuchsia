@@ -1,0 +1,55 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [
+    ":nand-broker",
+    ":nandpart-broker",
+  ]
+}
+
+source_set("common") {
+  testonly = true
+  visibility = [ ":*" ]
+
+  sources = [
+    "broker-test.cpp",
+    "parent.cpp",
+  ]
+  public_deps = [
+    "$zx/system/banjo/ddk-protocol-nand",
+    "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-hardware-nand:c",
+    "$zx/system/fidl/fuchsia-nand:c",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/devmgr-launcher",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/ramdevice-client",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("nand-broker") {
+  sources = [
+    "main.cpp",
+  ]
+  deps = [
+    ":common",
+  ]
+}
+
+test("nandpart-broker") {
+  sources = [
+    "nandpart-main.cpp",
+  ]
+  deps = [
+    ":common",
+  ]
+}
