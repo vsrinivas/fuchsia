@@ -7,14 +7,12 @@
 #include <ddk/device.h>
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS
-
 // This value is passed to bti_create as a marker; it does not have a particular
-// meaning to anything in the system.
-#define CPU_TRACE_BTI_ID 0x8086808680868086ULL
+// meaning to anything in the system, it just needs to be unique.
+// The value chosen here is the same used by acpi/include/cpu-trace.h.
+// "CPUTRACE"
+#define CPU_TRACE_BTI_ID 0x4350555452414345UL
 
 // Publish a pbus device under sysroot, with access to the given BTI handle.
 // Unconditionally takes ownership of the BTI handle.
 zx_status_t publish_cpu_trace(zx_handle_t bti, zx_device_t* sys_root);
-
-__END_CDECLS

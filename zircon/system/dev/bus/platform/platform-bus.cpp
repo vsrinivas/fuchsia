@@ -27,6 +27,8 @@
 
 #include <utility>
 
+#include "cpu-trace.h"
+
 namespace platform_bus {
 
 zx_status_t PlatformBus::Proxy(
@@ -506,6 +508,24 @@ static void sys_device_release(void* ctx) {
     delete p;
 }
 
+// cpu-trace provides access to the cpu's tracing and performance counters.
+// As such the "device" is the cpu itself.
+static zx_status_t InitCpuTrace(zx_device_t* parent, zx_handle_t dummy_iommu_handle) {
+    zx_handle_t cpu_trace_bti;
+    zx_status_t status = zx_bti_create(dummy_iommu_handle, 0, CPU_TRACE_BTI_ID, &cpu_trace_bti);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "platform-bus: error %d in bti_create(cpu_trace_bti)\n", status);
+        return status;
+    }
+
+    status = publish_cpu_trace(cpu_trace_bti, parent);
+    if (status != ZX_OK) {
+        // This is not fatal.
+        zxlogf(INFO, "publish_cpu_trace returned %d\n", status);
+    }
+    return status;
+}
+
 static zx_protocol_device_t sys_device_proto = []() {
     zx_protocol_device_t result;
 
@@ -538,15 +558,17 @@ zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::vmo z
     args.flags = DEVICE_ADD_NON_BINDABLE;
     args.ctx = suspend_buf;
 
-    // Add child of sys for the board driver to bind to.
-    auto status = device_add(parent, &args, &parent);
+    // Create /dev/sys.
+    zx_device_t* sys_root;
+    auto status = device_add(parent, &args, &sys_root);
     if (status != ZX_OK) {
         return status;
     } else {
         __UNUSED auto* dummy = ptr.release();
     }
 
-    fbl::unique_ptr<platform_bus::PlatformBus> bus(new (&ac) platform_bus::PlatformBus(parent));
+    // Add child of sys for the board driver to bind to.
+    fbl::unique_ptr<platform_bus::PlatformBus> bus(new (&ac) platform_bus::PlatformBus(sys_root));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -555,6 +577,17 @@ zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::vmo z
     status = bus->Init(std::move(zbi));
     if (status != ZX_OK) {
         return status;
+    }
+
+    // Create /dev/sys/cpu-trace.
+    // But only do so if we have an iommu handle. Normally we do, but tests
+    // may create us without a root resource, and thus without the iommu
+    // handle.
+    if (bus->iommu_handle_.is_valid()) {
+        status = InitCpuTrace(sys_root, bus->iommu_handle_.get());
+        if (status != ZX_OK) {
+            // This is not fatal. Error message already printed.
+        }
     }
 
     // devmgr is now in charge of the device.

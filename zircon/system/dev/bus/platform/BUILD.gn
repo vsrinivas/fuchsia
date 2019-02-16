@@ -11,6 +11,7 @@ group("platform") {
 
 driver("platform-bus") {
   sources = [
+    "cpu-trace.cpp",
     "device-resources.cpp",
     "platform-bus.cpp",
     "platform-device.cpp",

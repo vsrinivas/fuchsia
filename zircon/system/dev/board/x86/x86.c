@@ -32,7 +32,6 @@
 #include <zircon/threads.h>
 
 #include "acpi-private.h"
-#include "cpu-trace.h"
 #include "dev.h"
 #include "errors.h"
 #include "init.h"
@@ -613,20 +612,6 @@ static zx_status_t acpi_bus_bind(void* ctx, zx_device_t* parent) {
     if (status != ZX_OK) {
         free(acpi);
         zxlogf(ERROR, "%s: error %d in iommu_manager_get_dummy_iommu()\n", __func__, status);
-        return status;
-    }
-
-    zx_handle_t cpu_trace_bti;
-    status = zx_bti_create(dummy_iommu_handle, 0, CPU_TRACE_BTI_ID, &cpu_trace_bti);
-    if (status != ZX_OK) {
-        free(acpi);
-        zxlogf(ERROR, "%s: error %d in bti_create(cpu_trace_bti)\n", __func__, status);
-        return status;
-    }
-    status = publish_cpu_trace(cpu_trace_bti, sys_root);
-    if (status != ZX_OK) {
-        free(acpi);
-        zxlogf(ERROR, "publish_cpu_trace failed: %d\n", status);
         return status;
     }
 
