@@ -227,6 +227,7 @@ void AmlThermal::DdkRelease() {
             THERMAL_ERROR("worker thread failed: %d\n", status);
         }
     }
+    delete this;
 }
 
 void AmlThermal::DdkUnbind() {
