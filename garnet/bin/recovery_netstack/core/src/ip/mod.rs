@@ -182,8 +182,9 @@ pub fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
             debug!("received IP packet dropped due to expired TTL");
         }
     } else {
-        // TODO(joshlf): Do something with ICMP here?
-        debug!("received IP packet with no known route to destination {}", packet.dst_ip());
+        let (src_ip, dst_ip, _, meta) = drop_packet_and_undo_parse!(packet, buffer);
+        icmp::send_icmp_net_unreachable(ctx, src_ip, dst_ip, buffer, meta.header_len());
+        debug!("received IP packet with no known route to destination {}", dst_ip);
     }
 }
 
