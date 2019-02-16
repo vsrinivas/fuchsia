@@ -7,6 +7,7 @@
 #![allow(deprecated)]
 
 use std::collections::{BTreeMap, HashMap};
+use std::sync::Once;
 use std::time::{Duration, Instant};
 
 use byteorder::{ByteOrder, NativeEndian};
@@ -70,13 +71,19 @@ impl log::Log for Logger {
 
 static LOGGER: Logger = Logger;
 
+static LOGGER_ONCE: Once = Once::new();
+
 /// Install a logger for tests.
 ///
 /// Call this method at the beginning of the test for which logging is desired.  This function sets
 /// global program state, so all tests that run after this function is called will use the logger.
 pub fn set_logger_for_test() {
-    log::set_logger(&LOGGER).unwrap();
-    log::set_max_level(log::LevelFilter::Trace);
+    // log::set_logger will panic if called multiple times; using a Once makes
+    // set_logger_for_test idempotent
+    LOGGER_ONCE.call_once(|| {
+        log::set_logger(&LOGGER).unwrap();
+        log::set_max_level(log::LevelFilter::Trace);
+    })
 }
 
 /// Skip current (fake) time forward to trigger the next timer event.
