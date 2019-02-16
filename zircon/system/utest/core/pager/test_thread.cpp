@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fbl/function.h>
-#include <inspector/inspector.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/process.h>
@@ -12,6 +11,10 @@
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
+
+#ifndef BUILD_COMBINED_TESTS
+#include <inspector/inspector.h>
+#endif
 
 #include "test_thread.h"
 
@@ -128,6 +131,8 @@ bool TestThread::Wait(bool expect_failure, bool expect_crash, uintptr_t crash_ad
 }
 
 void TestThread::PrintDebugInfo(const zx_exception_report_t& report) {
+    // The crash library isn't available when running as part of core-tests
+#ifndef BUILD_COMBINED_TESTS
     printf("\nCrash info:\n");
 
     zx_thread_state_general_regs_t regs;
@@ -150,6 +155,7 @@ void TestThread::PrintDebugInfo(const zx_exception_report_t& report) {
     inspector_dso_print_list(stdout, dso_list);
     inspector_print_backtrace(stdout, zx_process_self(), zx_thread_.get(), dso_list,
                               pc, sp, fp, true);
+#endif
 }
 
 bool TestThread::WaitForBlocked() {
