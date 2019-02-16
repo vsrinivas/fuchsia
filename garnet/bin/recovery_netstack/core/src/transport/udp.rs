@@ -7,7 +7,7 @@
 use std::hash::Hash;
 use std::num::NonZeroU16;
 
-use packet::{BufferMut, BufferSerializer, Serializer};
+use packet::{BufferMut, BufferSerializer, ParsablePacket, Serializer};
 use zerocopy::ByteSlice;
 
 use crate::ip::{Ip, IpAddr, IpProto, Ipv4Addr, Ipv6Addr};
@@ -123,12 +123,15 @@ pub trait UdpEventDispatcher {
 }
 
 /// Receive a UDP packet in an IP packet.
+///
+/// In the event of an unreachable port, `receive_ip_packet` returns the buffer
+/// in its original state (with the UDP packet un-parsed) in the `Err` variant.
 pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,
     mut buffer: B,
-) {
+) -> Result<(), B> {
     println!("received udp packet: {:x?}", buffer.as_mut());
     let packet = if let Ok(packet) =
         buffer.parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(src_ip, dst_ip))
@@ -136,7 +139,7 @@ pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
         packet
     } else {
         // TODO(joshlf): Do something with ICMP here?
-        return;
+        return Ok(());
     };
 
     let (state, dispatcher) = ctx.state_and_dispatcher();
@@ -146,6 +149,7 @@ pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
         Conn::from_packet(src_ip, dst_ip, &packet).and_then(|conn| state.conns.get_by_addr(&conn))
     {
         dispatcher.receive_udp_from_conn(conn, packet.body());
+        Ok(())
     } else if let Some(listener) = state
         .listeners
         .get_by_addr(&Listener::from_packet(dst_ip, &packet))
@@ -158,6 +162,14 @@ pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
             packet.src_port(),
             packet.body(),
         );
+        Ok(())
+    } else {
+        // Unfortunately, type inference isn't smart enough for us to just do
+        // packet.parse_metadata().
+        let meta = ParsablePacket::<_, crate::wire::udp::UdpParseArgs<A>>::parse_metadata(&packet);
+        std::mem::drop(packet);
+        buffer.undo_parse(meta);
+        Err(buffer)
     }
 }
 

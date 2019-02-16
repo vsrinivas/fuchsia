@@ -44,16 +44,21 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddr, B: BufferMut>(
     src_ip: I,
     dst_ip: I,
     mut buffer: B,
-) -> bool {
+) {
     increment_counter!(ctx, "dispatch_receive_ip_packet");
-    match proto {
-        IpProto::Icmp | IpProto::Icmpv6 => icmp::receive_icmp_packet(ctx, src_ip, dst_ip, buffer),
-        IpProto::Igmp => igmp::receive_igmp_packet(ctx, src_ip, dst_ip, buffer),
-        IpProto::Tcp | IpProto::Udp => {
-            crate::transport::receive_ip_packet(ctx, src_ip, dst_ip, proto, buffer)
+    let _ = match proto {
+        IpProto::Icmp | IpProto::Icmpv6 => {
+            icmp::receive_icmp_packet(ctx, src_ip, dst_ip, buffer);
+            Ok(())
         }
-        IpProto::Other(_) => false, // TODO(joshlf)
-    }
+        IpProto::Igmp => {
+            igmp::receive_igmp_packet(ctx, src_ip, dst_ip, buffer);
+            Ok(())
+        }
+        IpProto::Tcp => crate::transport::tcp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
+        IpProto::Udp => crate::transport::udp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
+        IpProto::Other(_) => Ok(()), // TODO(joshlf)
+    };
 }
 
 /// Drop a packet and extract some of the fields.

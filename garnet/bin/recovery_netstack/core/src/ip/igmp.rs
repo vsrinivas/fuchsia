@@ -19,6 +19,6 @@ pub fn receive_igmp_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
     src_ip: A,
     dst_ip: A,
     buffer: B,
-) -> bool {
-    log_unimplemented!(false, "ip::igmp::receive_igmp_packet: Not implemented.")
+) {
+    log_unimplemented!((), "ip::igmp::receive_igmp_packet: Not implemented.")
 }

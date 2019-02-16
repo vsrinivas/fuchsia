@@ -56,12 +56,15 @@ struct FourTuple<A: IpAddr> {
 }
 
 /// Receive a TCP segment in an IP packet.
+///
+/// In the event of an unreachable port, `receive_ip_packet` returns the buffer
+/// in its original state (with the TCP segment un-parsed) in the `Err` variant.
 pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,
     mut buffer: B,
-) {
+) -> Result<(), B> {
     println!("received tcp packet: {:x?}", buffer.as_mut());
     let segment = if let Ok(segment) =
         buffer.parse_with::<_, TcpSegment<_>>(TcpParseArgs::new(src_ip, dst_ip))
@@ -69,7 +72,7 @@ pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
         segment
     } else {
         // TODO(joshlf): Do something with ICMP here?
-        return;
+        return Ok(());
     };
 
     if segment.syn() {
@@ -84,4 +87,6 @@ pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
         };
         // TODO(joshlf): Lookup and handle
     }
+
+    Ok(())
 }

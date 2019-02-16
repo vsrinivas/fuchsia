@@ -61,9 +61,6 @@ pub mod udp;
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use packet::BufferMut;
-
-use crate::ip::{IpAddr, IpProto};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::{Context, EventDispatcher};
 
@@ -98,32 +95,6 @@ pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TransportLay
 ///
 /// See the `EventDispatcher` trait in the crate root for more details.
 pub trait TransportLayerEventDispatcher: UdpEventDispatcher {}
-
-/// Receive a transport layer packet in an IP packet.
-///
-/// `receive_ip_packet` receives a transport layer packet. If the given protocol
-/// is supported, the packet is delivered to that protocol, and
-/// `receive_ip_packet` returns `true`. Otherwise, it returns `false`.
-pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
-    ctx: &mut Context<D>,
-    src_ip: A,
-    dst_ip: A,
-    proto: IpProto,
-    buffer: B,
-) -> bool {
-    match proto {
-        IpProto::Tcp => {
-            self::tcp::receive_ip_packet(ctx, src_ip, dst_ip, buffer);
-            true
-        }
-        IpProto::Udp => {
-            self::udp::receive_ip_packet(ctx, src_ip, dst_ip, buffer);
-            true
-        }
-        // All other protocols are not "transport" protocols.
-        _ => false,
-    }
-}
 
 /// A bidirectional map between listeners and addresses.
 ///
