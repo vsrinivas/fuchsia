@@ -1,0 +1,29 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("mini-process") {
+  testonly = true
+  shared = true
+  sources = [
+    "mini-process.c",
+  ]
+  deps = [
+    ":subprocess",
+    "$zx/system/ulib/elfload",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+source_set("subprocess") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [
+    "subprocess.c",
+  ]
+  configs += [ "$zx/public/gn/config:no_sanitizers" ]
+  deps = [
+    ":headers",
+    "$zx/system/ulib/zircon",
+  ]
+}

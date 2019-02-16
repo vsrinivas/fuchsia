@@ -1,0 +1,31 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("threads") {
+  testonly = true
+  sources = [
+    "register-set.cpp",
+    "threads.cpp",
+  ]
+  deps = [
+    ":thread-functions",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/runtime",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+source_set("thread-functions") {
+  testonly = true
+  visibility = [ ":*" ]
+  sources = [
+    "thread-functions/thread-functions.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:no_sanitizers" ]
+  deps = [
+    "$zx/system/ulib/runtime",
+    "$zx/system/ulib/zircon",
+  ]
+}

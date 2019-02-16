@@ -1,0 +1,86 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Each subdirectory just provides an eponymous source_set().
+core_tests = [
+  # TODO: "bad-syscall", "channel",
+  "c11-condvar",
+  "c11-mutex",
+  "c11-thread",
+  "clock",
+  "cookies",
+  "echo",
+  "elf-tls",
+  "event-pair",
+  "fifo",
+  "futex",
+  "handle-close",
+  "handle-info",
+  "handle-transfer",
+  "handle-wait",
+  "job",
+  "memory-mapping",
+  "object-child",
+  "object-info",
+  "pager",
+  "port",
+  "process",
+  "pthread",
+  "pthread-barrier",
+  "pthread-tls",
+  "socket",
+  "stack",
+  "sync-completion",
+  "sync-condition",
+  "sync-mutex",
+  "threads",
+  "time",
+  "vmar",
+  "vmo-signal",
+]
+
+# These tests need get_root_resource(), which is only available in the
+# unified core-tests binary.
+unified_only = [
+  "interrupt",
+  "profile",
+  "resource",
+]
+
+group("core") {
+  testonly = true
+  deps = [
+    ":core-tests",  # Together.
+  ]
+  foreach(test, core_tests) {
+    deps += [ ":$test" ]  # And alone.
+  }
+}
+
+# First, build all of those into the standalone core-tests binary.  This
+# can be run directly from userboot with nothing else on the system.
+# It's not a test() so that it won't be run by `runtests`, since that
+# runs all the individual test() binaries created below.
+executable("core-tests") {
+  testonly = true
+  deps = core_tests + unified_only
+  sources = [
+    "main.c",
+  ]
+  deps += [
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+# Next, build each into its own standalone test binary.
+foreach(test_name, core_tests) {
+  test(test_name) {
+    test_group = "core"
+    deps = [
+      "$zx/system/ulib/unittest",
+      test_name,
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("sync-condition") {
+  testonly = true
+  sources = [
+    "condition.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+  ]
+}

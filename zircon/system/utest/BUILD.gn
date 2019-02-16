@@ -11,6 +11,7 @@ if (current_cpu != "") {
 
     deps = [
       ":host",  # TODO(mcgrathr): reach this differently?
+      "core",
     ]
   }
 

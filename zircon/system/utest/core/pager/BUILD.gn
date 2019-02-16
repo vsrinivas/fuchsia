@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("pager") {
+  testonly = true
+  sources = [
+    "pager.cpp",
+    "test_thread.cpp",
+    "userpager.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/elf-search",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/inspector",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/third_party/ulib/backtrace",
+    "$zx/third_party/ulib/ngunwind",
+  ]
+}

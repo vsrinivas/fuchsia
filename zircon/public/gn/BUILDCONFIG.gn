@@ -1120,6 +1120,26 @@ template("test") {
                                "visibility",
                              ])
       forward_variables_from(invoker, [ "visibility" ])
+
+      if (!defined(output_name)) {
+        output_name = "${target_name}-test"
+      }
+      output_name += toolchain.output_name_suffix
+      if (!defined(output_extension)) {
+        output_extension = toolchain.executable_extension
+      }
+
+      if (!is_host && !defined(install_path)) {
+        if (defined(invoker.test_group)) {
+          test_group = invoker.test_group
+        } else {
+          test_group = "sys"
+        }
+        install_path = "test/$test_group/$output_name"
+        if (output_extension != "") {
+          install_path += ".$output_extension"
+        }
+      }
     }
   }
 }
