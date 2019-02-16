@@ -15,7 +15,7 @@
 #include "userpager.h"
 
 __BEGIN_CDECLS
-extern zx_handle_t get_root_resource(void);
+__WEAK extern zx_handle_t get_root_resource(void);
 __END_CDECLS
 
 namespace pager_tests {
@@ -1573,17 +1573,23 @@ bool invalid_pager_supply_pages() {
     ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(),
                                     0, 0, aux_vmo.get(), 1), ZX_ERR_INVALID_ARGS);
 
-#ifdef BUILD_COMBINED_TESTS
-    // unsupported aux vmo type
-    zx::vmo physical_vmo;
-    // We're not actually going to do anything with this vmo, and since the kernel doesn't
-    // do any checks with the address if you're using the root resource, just use addr 0.
-    ASSERT_EQ(zx_vmo_create_physical(get_root_resource(), 0, ZX_PAGE_SIZE,
-                                     physical_vmo.reset_and_get_address()),
-              ZX_OK);
-    ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(),
-                                    0, ZX_PAGE_SIZE, physical_vmo.get(), 0), ZX_ERR_NOT_SUPPORTED);
-#endif // BUILD_COMBINED_TESTS
+    // The get_root_resource() function is a weak reference here.  In the
+    // standalone pager-test program, it's not defined because the root
+    // resource handle is not available to to the test.  In the unified
+    // standalone core-tests program, get_root_resource() is available.
+    if (&get_root_resource) {
+        // unsupported aux vmo type
+        zx::vmo physical_vmo;
+        // We're not actually going to do anything with this vmo, and since the
+        // kernel doesn't do any checks with the address if you're using the
+        // root resource, just use addr 0.
+        ASSERT_EQ(zx_vmo_create_physical(get_root_resource(), 0, ZX_PAGE_SIZE,
+                                         physical_vmo.reset_and_get_address()),
+                  ZX_OK);
+        ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(),
+                                        0, ZX_PAGE_SIZE, physical_vmo.get(), 0),
+                  ZX_ERR_NOT_SUPPORTED);
+    }
 
     // violations of conditions for taking pages from a vmo
     enum PagerViolation {
@@ -1592,12 +1598,14 @@ bool invalid_pager_supply_pages() {
         kHasMapping,
         kHasClone,
         kNotCommitted,
-#ifdef BUILD_COMBINED_TESTS
         kHasPinned,
-#endif // BUILD_COMBINED_TESTS
         kViolationCount,
     };
     for (uint32_t i = 0; i < kViolationCount; i++) {
+        if (i == kHasPinned && ! &get_root_resource) {
+            continue;
+        }
+
         zx::vmo aux_vmo; // aux vmo given to supply pages
         zx::vmo alt_vmo; // alt vmo if clones are involved
 
@@ -1631,7 +1639,6 @@ bool invalid_pager_supply_pages() {
             }
         }
 
-#ifdef BUILD_COMBINED_TESTS
         zx::iommu iommu;
         zx::bti bti;
         zx::pmt pmt;
@@ -1644,16 +1651,14 @@ bool invalid_pager_supply_pages() {
             zx_paddr_t addr;
             ASSERT_EQ(bti.pin(ZX_BTI_PERM_READ, aux_vmo, 0, ZX_PAGE_SIZE, &addr, 1, &pmt), ZX_OK);
         }
-#endif // BUILD_COMBINED_TESTS
 
         ASSERT_EQ(zx_pager_supply_pages(pager.get(), vmo.get(),
-                                        0, ZX_PAGE_SIZE, aux_vmo.get(), 0), ZX_ERR_BAD_STATE);
+                                        0, ZX_PAGE_SIZE, aux_vmo.get(), 0),
+                  ZX_ERR_BAD_STATE);
 
-#ifdef BUILD_COMBINED_TESTS
         if (pmt) {
             pmt.unpin();
         }
-#endif // BUILD_COMBINED_TESTS
     }
 
     // out of range pager_vmo region
