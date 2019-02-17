@@ -261,7 +261,7 @@ For further details, see README.md.
       return;
     }
 
-    // TODO(SCN-1068): Default to IME-based input, and have the curent mode
+    // TODO(SCN-1068): Default to IME-based input, and have the current mode
     // available as an option.
     // TODO(SCN-1068): Pull default keymap from environment if possible.
     KeySequence key_sequence;

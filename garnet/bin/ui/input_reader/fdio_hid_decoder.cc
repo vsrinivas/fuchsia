@@ -43,7 +43,7 @@ FdioHidDecoder::FdioHidDecoder(const std::string& name, fbl::unique_fd fd)
 FdioHidDecoder::~FdioHidDecoder() = default;
 
 bool FdioHidDecoder::Init() {
-  // |fzl::FdioCaller| expects full temporary ownership of the the file
+  // |fzl::FdioCaller| expects full temporary ownership of the file
   // descriptor, but it doesn't actually require it. We still need the file
   // descriptor to set up some devices in |ParseProtocol| using C setup
   // functions. They do the same thing as |fzl::FdioCaller|, in particular

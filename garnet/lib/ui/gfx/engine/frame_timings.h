@@ -42,7 +42,7 @@ class FrameTimings : public escher::Reffable {
   //
   // Although the actual frame presentation depends on the actual frame
   // rendering, there is currently no guaranteed ordering between when the
-  // two events are received by the the engine (due to the redispatch
+  // two events are received by the engine (due to the redispatch
   // in EventTimestamper).
   bool finalized() const { return finalized_; }
 

@@ -66,7 +66,7 @@ void MirrorBgra(uint32_t* out_ptr, uint32_t* in_ptr, uint32_t width,
   }
 }
 
-// For now, copy each UV sample to a 2x2 square of ouput pixels.  This is not
+// For now, copy each UV sample to a 2x2 square of output pixels.  This is not
 // proper signal processing for the UV up-scale, but it _may_ be faster.
 //
 // This function isn't really optimized in any serious sense so far.
@@ -77,7 +77,7 @@ void ConvertNv12ToBgra(uint8_t* out_ptr, uint8_t* in_ptr, uint32_t width,
 
   // Convert 2 lines at a time, to avoid reading UV data twice.  I don't know if
   // avoiding reading UV twice really matters much since we're not skipping
-  // caches (such as with non-temporal reads), and I wouldn't be surpised if the
+  // caches (such as with non-temporal reads), and I wouldn't be surprised if the
   // bottleneck is often compute rather than memory.
   //
   // Writing two lines at a time might turn out to be counterproductive,

@@ -44,7 +44,7 @@ invocation in strong quotes, e.g.:
 
 This facility will eventually use IME for general text input, removing the
 above limitations. Keystroke mapping will remain as a specialized utility. At
-that point, the Dvorak keymap will also be suppported.
+that point, the Dvorak keymap will also be supported.
 
 ### `keyevent`
 
@@ -74,7 +74,7 @@ report with no touches. The time between the first and last report is
 `--duration`.
 
 `swipe` coordinates are interpreted linearly, but they are all sent at the same
-time, after `--duration`, immediately preceeding the last report.
+time, after `--duration`, immediately preceding the last report.
 
 #### options:
 

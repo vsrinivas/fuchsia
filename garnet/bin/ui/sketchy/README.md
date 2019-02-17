@@ -4,7 +4,7 @@ This package contains implementation for FIDLs in `//sdk/fidl/fuchsia.ui.sketchy
 
 * `buffer` contains helper classes for different types of buffers.
 * `resources` contains resources that are defined in `fidl`.
-* `stroke` contains helper classes for mananging strokes.
+* `stroke` contains helper classes for managing strokes.
 * `canvas.cc` is the implementation of the canvas `fidl`.
 * `main.cc` is the entry point of the service.
 

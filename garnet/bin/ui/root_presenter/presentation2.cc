@@ -179,7 +179,7 @@ void Presentation2::InitializeDisplayModel(
     fuchsia::ui::gfx::DisplayInfo display_info) {
   FXL_DCHECK(!display_model_initialized_);
 
-  // Save previous display values. These could have been overriden by earlier
+  // Save previous display values. These could have been overridden by earlier
   // calls to SetDisplayUsage() and SetDisplaySizeInMm(); if not, they will
   // be unknown or 0.
   auto previous_display_usage =
@@ -836,7 +836,7 @@ void Presentation2::SetRendererParams(
         if (renderer_params_override_.shadow_technique.has_value()) {
           FXL_LOG(WARNING)
               << "Presentation2::SetRendererParams: Cannot change "
-                 "shadow technique, default was overriden in root_presenter";
+                 "shadow technique, default was overridden in root_presenter";
           continue;
         }
         break;
@@ -844,7 +844,7 @@ void Presentation2::SetRendererParams(
         if (renderer_params_override_.render_frequency.has_value()) {
           FXL_LOG(WARNING)
               << "Presentation2::SetRendererParams: Cannot change "
-                 "render frequency, default was overriden in root_presenter";
+                 "render frequency, default was overridden in root_presenter";
           continue;
         }
         break;
