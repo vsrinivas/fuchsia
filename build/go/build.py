@@ -21,7 +21,15 @@ def main():
     parser.add_argument('--godepfile', help='Path to godepfile tool', required=True)
     parser.add_argument('--root-out-dir', help='Path to root of build output',
                         required=True)
+    parser.add_argument('--cc', help='The C compiler to use',
+                        required=False, default='cc')
+    parser.add_argument('--cxx', help='The C++ compiler to use',
+                        required=False, default='c++')
+    parser.add_argument('--objcopy', help='The objcopy tool to use',
+                        required=False, default='objcopy')
     parser.add_argument('--sysroot', help='The sysroot to use',
+                        required=False)
+    parser.add_argument('--target', help='The compiler target to use',
                         required=False)
     parser.add_argument('--depfile', help='The path to the depfile',
                         required=True)
@@ -40,8 +48,6 @@ def main():
                         default=[])
     parser.add_argument('--binname', help='Output file', required=True)
     parser.add_argument('--unstripped-binname', help='Unstripped output file')
-    parser.add_argument('--toolchain-prefix', help='Path to toolchain binaries',
-                        required=False)
     parser.add_argument('--verbose', help='Tell the go tool to be verbose about what it is doing',
                         action='store_true')
     parser.add_argument('--package', help='The package name', required=True)
@@ -120,22 +126,32 @@ def main():
     # things, so it is always set explicitly here.
     env['GOROOT'] = build_goroot
     env['GOCACHE'] = args.go_cache
-    env['CGO_CFLAGS'] = "--sysroot=" + args.sysroot
 
-    if goos == 'fuchsia':
-        env['CGO_ENABLED'] = '1'
-        env['CC'] = os.path.join(build_goroot, 'misc', 'fuchsia', 'clangwrap.sh')
+    env['CC'] = args.cc
+    if args.target:
+        env['CC_FOR_TARGET'] = args.cc
+    env['CXX'] = args.cxx
+    if args.target:
+        env['CXX_FOR_TARGET'] = args.cxx
 
-        # These are used by clangwrap.sh
-        env['FUCHSIA_SHARED_LIBS'] = args.shared_libs_root
-        env['CLANG_PREFIX'] = args.toolchain_prefix
-        env['FDIO_INCLUDE'] = args.fdio_include
-        env['ZIRCON_SYSROOT'] = args.sysroot
+    cflags = []
+    if args.sysroot:
+        cflags.append('--sysroot=' + args.sysroot)
+    if args.target:
+        cflags.append('--target=' + args.target)
+    ldflags = cflags[:]
 
-    # /usr/bin:/bin are required for basic things like bash(1) and env(1), but
-    # preference the toolchain path. Note that on Mac, ld is also found from
-    # /usr/bin.
-    env['PATH'] = args.toolchain_prefix + ":/usr/bin:/bin"
+    if args.current_os == 'fuchsia':
+        cflags.append('-I' + args.fdio_include)
+        ldflags.append('-L' + args.shared_libs_root)
+
+    env['CGO_CFLAGS'] = env['CGO_CPPFLAGS'] = env['CGO_CXXFLAGS'] = ' '.join(cflags)
+    env['CGO_LDFLAGS'] = ' '.join(ldflags)
+    env['CGO_ENABLED'] = '1'
+
+    # /usr/bin:/bin are required for basic things like bash(1) and env(1). Note
+    # that on Mac, ld is also found from /usr/bin.
+    env['PATH'] = "/usr/bin:/bin"
 
     go_tool = os.path.join(build_goroot, 'bin/go')
 
@@ -161,8 +177,7 @@ def main():
                                        '-o', stripped_output_name],
                                       env=env)
         else:
-            retcode = subprocess.call([os.path.join(args.toolchain_prefix,
-                                                    'llvm-objcopy'),
+            retcode = subprocess.call([args.objcopy,
                                        '--strip-sections',
                                        '--build-id-link-dir=%s' % build_id_dir,
                                        '--build-id-link-input=.debug',

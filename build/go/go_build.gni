@@ -114,15 +114,21 @@ template("go_build") {
       current_os,
       "--binname",
       output_name,
-      "--toolchain-prefix",
-      rebase_path(clang_prefix, "", root_build_dir),
       "--shared-libs-root",
       rebase_path(
           get_label_info("//default($shlib_toolchain)", "root_out_dir")),
-      "--sysroot",
-      sysroot,
       "--go-cache",
       gocache_dir,
+      "--cc",
+      rebase_path("$clang_prefix/clang", "", root_build_dir),
+      "--cxx",
+      rebase_path("$clang_prefix/clang++", "", root_build_dir),
+      "--objcopy",
+      rebase_path("$clang_prefix/llvm-objcopy", "", root_build_dir),
+      "--sysroot",
+      sysroot,
+      "--target",
+      clang_target,
     ]
 
     if (defined(invoker.skip_vet) && !invoker.skip_vet && go_vet_enabled) {
