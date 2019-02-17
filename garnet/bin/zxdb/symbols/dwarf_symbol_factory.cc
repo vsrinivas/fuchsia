@@ -353,7 +353,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
     }
 
     if (tag == Symbol::kTagInlinedSubroutine) {
-      // In contrast the the logic for parent() above, the containing block
+      // In contrast to the logic for parent() above, the containing block
       // will save the CodeBlock inlined functions are embedded in.
       function->set_containing_block(MakeLazy(parent));
     }

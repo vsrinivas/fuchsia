@@ -415,7 +415,7 @@ fxl::RefPtr<ExprNode> ExprParser::JoinIdentifiers(fxl::RefPtr<ExprNode> left,
   const auto& right_comps = right_ident->ident().components();
   FXL_DCHECK(!right_comps.empty());
 
-  // Right shoudn't start with a "::" since we're adding another one.
+  // Right shouldn't start with a "::" since we're adding another one.
   const Identifier::Component& first_comp = right_comps[0];
   if (first_comp.has_separator()) {
     // Two "::" in a row.
