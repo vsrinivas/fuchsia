@@ -6,14 +6,16 @@
 source_set("debug") {
   public = [
     "block_timer.h",
-    "file_line_function.h",
     "debug.h",
+    "file_line_function.h",
+    "logging.h",
   ]
 
   sources = [
     "block_timer.cc",
-    "file_line_function.cc",
     "debug.cc",
+    "file_line_function.cc",
+    "logging.cc"
   ]
 
   deps = [
