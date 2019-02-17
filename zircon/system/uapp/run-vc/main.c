@@ -80,11 +80,10 @@ int main(int argc, const char** argv) {
     zx_object_wait_one(h0, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                        ZX_TIME_INFINITE, NULL);
 
-    uint32_t types[FDIO_MAX_HANDLES];
-    zx_handle_t handles[FDIO_MAX_HANDLES];
-    uint32_t dcount, hcount;
-    if (zx_channel_read(h0, 0, types, handles,
-                        sizeof(types), FDIO_MAX_HANDLES, &dcount, &hcount) < 0) {
+    uint32_t type = 0;
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    uint32_t dcount = 0, hcount = 0;
+    if (zx_channel_read(h0, 0, &type, &handle, sizeof(type), 1, &dcount, &hcount) != ZX_OK) {
         return -1;
     }
     if (dcount / sizeof(uint32_t) != hcount) {
@@ -108,13 +107,9 @@ int main(int argc, const char** argv) {
 
     uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO;
 
-    fdio_spawn_action_t actions[1 + FDIO_MAX_HANDLES] = {
+    fdio_spawn_action_t actions[2] = {
         {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = pname}},
-    };
-    for (uint32_t i = 0; i < hcount; i++) {
-        actions[1 + i].action = FDIO_SPAWN_ACTION_ADD_HANDLE;
-        actions[1 + i].h.id = types[i];
-        actions[1 + i].h.handle = handles[i];
+        {.action = FDIO_SPAWN_ACTION_ADD_HANDLE, .h = {.id = type, .handle = handle}},
     };
 
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];

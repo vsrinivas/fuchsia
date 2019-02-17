@@ -222,9 +222,9 @@ static void start_shell(bool make_active, const char* cmd) {
 }
 
 static zx_status_t new_vc_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    zx_handle_t h;
+    zx::channel h;
     uint32_t dcount, hcount;
-    if (zx_channel_read(ph->handle, 0, NULL, &h, 0, 1, &dcount, &hcount) < 0) {
+    if (zx_channel_read(ph->handle, 0, NULL, h.reset_and_get_address(), 0, 1, &dcount, &hcount) < 0) {
         return ZX_OK;
     }
     if (hcount != 1) {
@@ -234,21 +234,23 @@ static zx_status_t new_vc_cb(port_handler_t* ph, zx_signals_t signals, uint32_t 
     vc_t* vc;
     int fd;
     if (session_create(&vc, &fd, true, false) < 0) {
-        zx_handle_close(h);
         return ZX_OK;
     }
 
-    zx_handle_t handles[FDIO_MAX_HANDLES];
-    uint32_t types[FDIO_MAX_HANDLES];
-    zx_status_t r = fdio_transfer_fd(fd, FDIO_FLAG_USE_FOR_STDIO | 0, handles, types);
-    if (zx_channel_write(h, 0, types,
-                         static_cast<uint32_t>(r * sizeof(uint32_t)), handles, r) != ZX_OK) {
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    uint32_t type = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO);
+    zx_status_t status = fdio_fd_transfer(fd, &handle);
+    if (status != ZX_OK) {
         session_destroy(vc);
-    } else {
-        port_wait(&port, &vc->fh.ph);
+        return ZX_OK;
+    }
+    status = h.write(0, &type, static_cast<uint32_t>(sizeof(type)), &handle, 1);
+    if (status != ZX_OK) {
+        session_destroy(vc);
+        return ZX_OK;
     }
 
-    zx_handle_close(h);
+    port_wait(&port, &vc->fh.ph);
     return ZX_OK;
 }
 
