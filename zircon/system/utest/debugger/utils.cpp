@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <elf.h>
 #include <inttypes.h>
 #include <link.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,9 +26,32 @@
 #include "utils.h"
 
 // argv[0]
-const char* program_path;
+const char* g_program_path;
 
-static const uint64_t exception_port_key = 0x6b6579; // "key"
+uint64_t extract_pc_reg(const zx_thread_state_general_regs_t* regs) {
+#if defined(__x86_64__)
+    return regs->rip;
+#elif defined(__aarch64__)
+    return regs->pc;
+#endif
+}
+
+uint64_t extract_sp_reg(const zx_thread_state_general_regs_t* regs) {
+#if defined(__x86_64__)
+    return regs->rsp;
+#elif defined(__aarch64__)
+    return regs->sp;
+#endif
+}
+
+static __NO_RETURN void fatal(const char* msg, ...) {
+    fprintf(stderr, "%s: encountered fatal error:\n", g_program_path);
+    va_list args;
+    va_start(args, msg);
+    vfprintf(stderr, msg, args);
+    va_end(args);
+    exit(1);
+}
 
 uint32_t get_uint32(char* buf) {
     uint32_t value = 0;
@@ -52,290 +77,89 @@ uint32_t get_uint32_property(zx_handle_t handle, uint32_t prop) {
     return value;
 }
 
-void send_msg(zx_handle_t handle, message msg) {
-    uint64_t data = msg;
-    unittest_printf("sending message %d on handle %u\n", msg, handle);
-    tu_channel_write(handle, 0, &data, sizeof(data), NULL, 0);
+void send_request(zx_handle_t handle, const request_message_t& rqst) {
+    unittest_printf("sending request %d on handle %u\n", rqst.type, handle);
+    tu_channel_write(handle, 0, &rqst, sizeof(rqst), NULL, 0);
+}
+
+void send_simple_request(zx_handle_t handle, request_t type) {
+    unittest_printf("sending request %d on handle %u\n", type, handle);
+    tu_channel_write(handle, 0, &type, sizeof(type), NULL, 0);
+}
+
+void send_response(zx_handle_t handle, const response_message_t& resp) {
+    unittest_printf("sending response %d on handle %u\n", resp.type, handle);
+    tu_channel_write(handle, 0, &resp, sizeof(resp), NULL, 0);
+}
+
+void send_response_with_handle(zx_handle_t handle, const response_message_t& resp,
+                               zx_handle_t resp_handle) {
+    unittest_printf("sending response %d on handle %u\n", resp.type, handle);
+    tu_channel_write(handle, 0, &resp, sizeof(resp), &resp_handle, 1);
+}
+
+void send_simple_response(zx_handle_t handle, response_t type) {
+    unittest_printf("sending response %d on handle %u\n", type, handle);
+    tu_channel_write(handle, 0, &type, sizeof(type), NULL, 0);
 }
 
 // This returns "bool" because it uses ASSERT_*.
 
-bool recv_msg(zx_handle_t handle, message* msg) {
+bool recv_request(zx_handle_t handle, request_message_t* rqst) {
     BEGIN_HELPER;
 
-    uint64_t data;
-    uint32_t num_bytes = sizeof(data);
-
-    unittest_printf("waiting for message on handle %u\n", handle);
+    unittest_printf("waiting for request on handle %u\n", handle);
 
     ASSERT_TRUE(tu_channel_wait_readable(handle), "peer closed while trying to read message");
 
-    tu_channel_read(handle, 0, &data, &num_bytes, NULL, 0);
-    ASSERT_EQ(num_bytes, sizeof(data), "unexpected message size");
-
-    *msg = static_cast<message>(data);
-    unittest_printf("received message %d\n", *msg);
+    uint32_t num_bytes = sizeof(*rqst);
+    tu_channel_read(handle, 0, rqst, &num_bytes, NULL, NULL);
+    ASSERT_LE(num_bytes, sizeof(*rqst), "unexpected request size");
 
     END_HELPER;
 }
 
-void dump_gregs(zx_handle_t thread_handle, const zx_thread_state_general_regs_t* regs) {
-    unittest_printf("Registers for thread %d\n", thread_handle);
+// This returns "bool" because it uses ASSERT_*.
 
-#define DUMP_NAMED_REG(name)                                                                       \
-    unittest_printf("  %8s      %24ld  0x%lx\n", #name, (long)regs->name, (long)regs->name)
-
-#if defined(__x86_64__)
-
-    DUMP_NAMED_REG(rax);
-    DUMP_NAMED_REG(rbx);
-    DUMP_NAMED_REG(rcx);
-    DUMP_NAMED_REG(rdx);
-    DUMP_NAMED_REG(rsi);
-    DUMP_NAMED_REG(rdi);
-    DUMP_NAMED_REG(rbp);
-    DUMP_NAMED_REG(rsp);
-    DUMP_NAMED_REG(r8);
-    DUMP_NAMED_REG(r9);
-    DUMP_NAMED_REG(r10);
-    DUMP_NAMED_REG(r11);
-    DUMP_NAMED_REG(r12);
-    DUMP_NAMED_REG(r13);
-    DUMP_NAMED_REG(r14);
-    DUMP_NAMED_REG(r15);
-    DUMP_NAMED_REG(rip);
-    DUMP_NAMED_REG(rflags);
-
-#elif defined(__aarch64__)
-
-    for (int i = 0; i < 30; i++) {
-        unittest_printf("  r[%2d]     %24ld  0x%lx\n", i, (long)regs->r[i], (long)regs->r[i]);
-    }
-    DUMP_NAMED_REG(lr);
-    DUMP_NAMED_REG(sp);
-    DUMP_NAMED_REG(pc);
-    DUMP_NAMED_REG(cpsr);
-
-#endif
-
-#undef DUMP_NAMED_REG
-}
-
-void dump_inferior_regs(zx_handle_t thread) {
-    zx_thread_state_general_regs_t regs;
-    read_inferior_gregs(thread, &regs);
-    dump_gregs(thread, &regs);
-}
-
-// N.B. It is assumed |buf_size| is large enough.
-
-void read_inferior_gregs(zx_handle_t thread, zx_thread_state_general_regs_t* in) {
-    zx_status_t status = zx_thread_read_state(
-        thread, ZX_THREAD_STATE_GENERAL_REGS, in, sizeof(zx_thread_state_general_regs_t));
-    // It's easier to just terminate if this fails.
-    if (status != ZX_OK)
-        tu_fatal("read_inferior_gregs: zx_thread_read_state", status);
-}
-
-void write_inferior_gregs(zx_handle_t thread, const zx_thread_state_general_regs_t* out) {
-    zx_status_t status = zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, out,
-                                               sizeof(zx_thread_state_general_regs_t));
-    // It's easier to just terminate if this fails.
-    if (status != ZX_OK)
-        tu_fatal("write_inferior_gregs: zx_thread_write_state", status);
-}
-
-size_t read_inferior_memory(zx_handle_t proc, uintptr_t vaddr, void* buf, size_t len) {
-    zx_status_t status = zx_process_read_memory(proc, vaddr, buf, len, &len);
-    if (status < 0)
-        tu_fatal("read_inferior_memory", status);
-    return len;
-}
-
-size_t write_inferior_memory(zx_handle_t proc, uintptr_t vaddr, const void* buf, size_t len) {
-    zx_status_t status = zx_process_write_memory(proc, vaddr, buf, len, &len);
-    if (status < 0)
-        tu_fatal("write_inferior_memory", status);
-    return len;
-}
-
-// This does everything that launchpad_launch_fdio_etc does except
-// start the inferior. We want to attach to it first.
-// TODO(dje): Are there other uses of such a wrapper? Move to launchpad?
-// Plus there's a fair bit of code here. IWBN to not have to update it as
-// launchpad_launch_fdio_etc changes.
-
-zx_status_t create_inferior(const char* name, int argc, const char* const* argv,
-                            const char* const* envp, size_t hnds_count, zx_handle_t* handles,
-                            uint32_t* ids, launchpad_t** out_launchpad) {
-    launchpad_t* lp = NULL;
-
-    const char* filename = argv[0];
-    if (name == NULL)
-        name = filename;
-
-    zx_status_t status;
-    launchpad_create(0u, name, &lp);
-    launchpad_load_from_file(lp, filename);
-    launchpad_set_args(lp, argc, argv);
-    launchpad_set_environ(lp, envp);
-    launchpad_clone(lp, LP_CLONE_FDIO_ALL);
-    status = launchpad_add_handles(lp, hnds_count, handles, ids);
-
-    if (status < 0) {
-        launchpad_destroy(lp);
-    } else {
-        *out_launchpad = lp;
-    }
-    return status;
-}
-
-bool setup_inferior(const char* name, launchpad_t** out_lp, zx_handle_t* out_inferior,
-                    zx_handle_t* out_channel) {
+bool recv_response(zx_handle_t handle, response_message_t* resp) {
     BEGIN_HELPER;
 
-    zx_status_t status;
-    zx_handle_t channel1, channel2;
-    tu_channel_create(&channel1, &channel2);
+    unittest_printf("waiting for response on handle %u\n", handle);
 
-    const char verbosity_string[] = {'v', '=', static_cast<char>(utest_verbosity_level + '0'),
-                                     '\0'};
-    const char* test_child_path = program_path;
-    const char* const argv[] = {test_child_path, name, verbosity_string};
-    zx_handle_t handles[1] = {channel2};
-    uint32_t handle_ids[1] = {PA_USER0};
+    ASSERT_TRUE(tu_channel_wait_readable(handle), "peer closed while trying to read message");
 
-    launchpad_t* lp;
-    unittest_printf("Creating process \"%s\"\n", name);
-    status = create_inferior(name, fbl::count_of(argv), argv, NULL, fbl::count_of(handles),
-                             handles, handle_ids, &lp);
-    ASSERT_EQ(status, ZX_OK, "failed to create inferior");
-
-    // Note: |inferior| is a borrowed handle here.
-    zx_handle_t inferior = launchpad_get_process_handle(lp);
-    ASSERT_NE(inferior, ZX_HANDLE_INVALID, "can't get launchpad process handle");
-
-    zx_info_handle_basic_t process_info;
-    tu_handle_get_basic_info(inferior, &process_info);
-    unittest_printf("Inferior pid = %llu\n", (long long)process_info.koid);
-
-    // |inferior| is given to the child by launchpad_go.
-    // We need our own copy, and launchpad_go will give us one, but we need
-    // it before we call launchpad_go in order to attach to the debugging
-    // exception port. We could leave this to our caller to do, but since every
-    // caller needs this for convenience sake we do this here.
-    status = zx_handle_duplicate(inferior, ZX_RIGHT_SAME_RIGHTS, &inferior);
-    ASSERT_EQ(status, ZX_OK, "zx_handle_duplicate failed");
-
-    *out_lp = lp;
-    *out_inferior = inferior;
-    *out_channel = channel1;
+    uint32_t num_bytes = sizeof(*resp);
+    zx_handle_t resp_handle = ZX_HANDLE_INVALID;
+    uint32_t num_handles = 1;
+    tu_channel_read(handle, 0, resp, &num_bytes, &resp_handle, &num_handles);
+    ASSERT_LE(num_bytes, sizeof(*resp), "unexpected response size");
+    if (num_handles > 0) {
+        EXPECT_EQ(num_handles, 1, "");
+        EXPECT_NE(resp_handle, ZX_HANDLE_INVALID, "");
+        resp->handle = resp_handle;
+    }
 
     END_HELPER;
 }
 
-// While this should perhaps take a launchpad_t* argument instead of the
-// inferior's handle, we later want to test attaching to an already running
-// inferior.
-// |max_threads| is the maximum number of threads the process is expected
-// to have in its lifetime. A real debugger would be more flexible of course.
-// N.B. |inferior| cannot be the result of launchpad_get_process_handle().
-// That handle is passed to the inferior when started and thus is lost to us.
-// Returns a boolean indicating success.
+// This returns "bool" because it uses ASSERT_*.
 
-inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t eport, size_t max_threads) {
-    // Fetch all current threads and attach async-waiters to them.
-    // N.B. We assume threads aren't being created as we're running.
-    // This is just a testcase so we can assume that. A real debugger
-    // would not have this assumption.
-    zx_koid_t* thread_koids = static_cast<zx_koid_t*>(tu_malloc(max_threads * sizeof(zx_koid_t)));
-    size_t num_threads = tu_process_get_threads(inferior, thread_koids, max_threads);
-    // For now require |max_threads| to be big enough.
-    if (num_threads > max_threads)
-        tu_fatal(__func__, ZX_ERR_BUFFER_TOO_SMALL);
+bool recv_simple_response(zx_handle_t handle, response_t expected_type) {
+    BEGIN_HELPER;
 
-    tu_set_exception_port(inferior, eport, exception_port_key, ZX_EXCEPTION_PORT_DEBUGGER);
-    tu_object_wait_async(inferior, eport, ZX_PROCESS_TERMINATED);
+    response_message_t response;
+    ASSERT_TRUE(recv_response(handle, &response), "");
+    unittest_printf("received message %d\n", response.type);
+    EXPECT_EQ(response.type, expected_type, "");
 
-    inferior_data_t* data = static_cast<inferior_data_t*>(tu_malloc(sizeof(*data)));
-    data->threads = static_cast<thread_data_t*>(tu_calloc(max_threads, sizeof(data->threads[0])));
-    data->inferior = inferior;
-    data->eport = eport;
-    data->max_num_threads = max_threads;
-
-    // Notification of thread termination and suspension is delivered by
-    // signals. So that we can continue to only have to wait on |eport|
-    // for inferior status change notification, install async-waiters
-    // for each thread.
-    size_t j = 0;
-    zx_signals_t thread_signals = ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
-    for (size_t i = 0; i < num_threads; ++i) {
-        zx_handle_t thread = tu_process_get_thread(inferior, thread_koids[i]);
-        if (thread != ZX_HANDLE_INVALID) {
-            data->threads[j].tid = thread_koids[i];
-            data->threads[j].handle = thread;
-            tu_object_wait_async(thread, eport, thread_signals);
-            ++j;
-        }
-    }
-    free(thread_koids);
-
-    unittest_printf("Attached to inferior\n");
-    return data;
-}
-
-void detach_inferior(inferior_data_t* data, bool unbind_eport) {
-    if (unbind_eport) {
-        tu_set_exception_port(data->inferior, ZX_HANDLE_INVALID, exception_port_key,
-                              ZX_EXCEPTION_PORT_DEBUGGER);
-    }
-    for (size_t i = 0; i < data->max_num_threads; ++i) {
-        if (data->threads[i].handle != ZX_HANDLE_INVALID)
-            tu_handle_close(data->threads[i].handle);
-    }
-    free(data->threads);
-    free(data);
-}
-
-bool start_inferior(launchpad_t* lp) {
-    zx_handle_t dup_inferior = tu_launch_fdio_fini(lp);
-    unittest_printf("Inferior started\n");
-    // launchpad_go returns a dup of |inferior|. The original inferior
-    // handle is given to the child. However we don't need it, we already
-    // created one so that we could attach to the inferior before starting it.
-    tu_handle_close(dup_inferior);
-    return true;
+    END_HELPER;
 }
 
 bool verify_inferior_running(zx_handle_t channel) {
     BEGIN_HELPER;
 
-    enum message msg;
-    send_msg(channel, MSG_PING);
-    if (!recv_msg(channel, &msg))
-        return false;
-    EXPECT_EQ(msg, MSG_PONG, "unexpected response from ping");
-
-    END_HELPER;
-}
-
-static bool recv_msg_handle(zx_handle_t channel, message expected_msg, zx_handle_t* handle) {
-    BEGIN_HELPER;
-
-    unittest_printf("waiting for message on channel %u\n", channel);
-    ASSERT_TRUE(tu_channel_wait_readable(channel), "peer closed while trying to read message");
-
-    uint64_t data;
-    uint32_t num_bytes = sizeof(data);
-    uint32_t num_handles = 1;
-    tu_channel_read(channel, 0, &data, &num_bytes, handle, &num_handles);
-    ASSERT_EQ(num_bytes, sizeof(data));
-    ASSERT_EQ(num_handles, 1u);
-
-    message msg = static_cast<message>(data);
-    ASSERT_EQ(msg, expected_msg);
-
-    unittest_printf("received handle %d\n", *handle);
+    send_simple_request(channel, RQST_PING);
+    EXPECT_TRUE(recv_simple_response(channel, RESP_PONG), "");
 
     END_HELPER;
 }
@@ -343,133 +167,20 @@ static bool recv_msg_handle(zx_handle_t channel, message expected_msg, zx_handle
 bool get_inferior_thread_handle(zx_handle_t channel, zx_handle_t* thread) {
     BEGIN_HELPER;
 
-    send_msg(channel, MSG_GET_THREAD_HANDLE);
-    ASSERT_TRUE(recv_msg_handle(channel, MSG_THREAD_HANDLE, thread));
+    send_simple_request(channel, RQST_GET_THREAD_HANDLE);
+    response_message_t response;
+    ASSERT_TRUE(recv_response(channel, &response), "");
+    ASSERT_EQ(response.type, RESP_THREAD_HANDLE, "");
+    ASSERT_NE(response.handle, ZX_HANDLE_INVALID, "");
+    *thread = response.handle;
 
     END_HELPER;
 }
 
-bool resume_inferior(zx_handle_t inferior, zx_handle_t port, zx_koid_t tid) {
-    BEGIN_HELPER;
-
-    zx_handle_t thread;
-    zx_status_t status = zx_object_get_child(inferior, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
-    if (status == ZX_ERR_NOT_FOUND) {
-        // If the process has exited then the kernel may have reaped the
-        // thread already. Check.
-        if (tu_process_has_exited(inferior))
-            return true;
-    }
-    ASSERT_EQ(status, ZX_OK, "zx_object_get_child failed");
-
-    unittest_printf("Resuming inferior ...\n");
-    status = zx_task_resume_from_exception(thread, port, 0);
-    if (status == ZX_ERR_BAD_STATE) {
-        // If the process has exited then the thread may have exited
-        // ExceptionHandlerExchange already. Check.
-        if (tu_thread_is_dying_or_dead(thread)) {
-            tu_handle_close(thread);
-            return true;
-        }
-    }
-    tu_handle_close(thread);
-    ASSERT_EQ(status, ZX_OK, "zx_task_resume_from_exception failed");
-
-    END_HELPER;
-}
-
-bool shutdown_inferior(zx_handle_t channel, zx_handle_t inferior) {
-    BEGIN_HELPER;
-
-    unittest_printf("Shutting down inferior\n");
-
-    send_msg(channel, MSG_DONE);
-
-    tu_process_wait_signaled(inferior);
-    EXPECT_EQ(tu_process_get_return_code(inferior), 1234, "unexpected inferior return code");
-
-    END_HELPER;
-}
-
-// Wait for and read an exception/signal on |eport|.
-
-bool read_exception(zx_handle_t eport, zx_port_packet_t* packet) {
-    BEGIN_HELPER;
-
-    unittest_printf("Waiting for exception/signal on eport %d\n", eport);
-    ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, packet), ZX_OK, "zx_port_wait failed");
-
-    if (ZX_PKT_IS_EXCEPTION(packet->type))
-        ASSERT_EQ(packet->key, exception_port_key);
-
-    unittest_printf("read_exception: got exception/signal %d\n", packet->type);
-
-    END_HELPER;
-}
-
-// Wait for the thread to suspend
-// We could get a thread exit report from a previous test, so
-// we need to handle that, but no other exceptions are expected.
-//
-// The thread is assumed to be wait-async'd on |eport|. While we could just
-// wait on the |thread| for the appropriate signal, the signal will also be
-// sent to |eport| which our caller would then have to deal with. Keep things
-// simpler by doing all waiting via |eport|. It also makes us exercise doing
-// things this way, which is generally what debuggers will do.
-
-bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t eport) {
-    BEGIN_HELPER;
-
-    zx_koid_t tid = tu_get_koid(thread);
-
-    while (true) {
-        zx_port_packet_t packet;
-        zx_status_t status = zx_port_wait(eport, zx_deadline_after(ZX_SEC(1)), &packet);
-        if (status == ZX_ERR_TIMED_OUT) {
-            // This shouldn't really happen unless the system is really loaded.
-            // Just flag it and try again. The watchdog will catch failures.
-            unittest_printf("%s: timed out???\n", __func__);
-            continue;
-        }
-        ASSERT_EQ(status, ZX_OK);
-        if (ZX_PKT_IS_SIGNAL_REP(packet.type)) {
-            ASSERT_EQ(packet.key, tid);
-            if (packet.signal.observed & ZX_THREAD_SUSPENDED)
-                break;
-            ASSERT_TRUE(packet.signal.observed & ZX_THREAD_RUNNING);
-        } else {
-            ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet.type));
-            zx_koid_t report_tid = packet.exception.tid;
-            ASSERT_NE(report_tid, tid);
-            ASSERT_EQ(packet.type, (uint32_t)ZX_EXCP_THREAD_EXITING);
-            // Note the thread may be completely gone by now.
-            zx_handle_t other_thread;
-            zx_status_t status =
-                zx_object_get_child(proc, report_tid, ZX_RIGHT_SAME_RIGHTS, &other_thread);
-            if (status == ZX_OK) {
-                // And even if it's not gone it may be dead now.
-                status = zx_task_resume_from_exception(other_thread, eport, 0);
-                if (status == ZX_ERR_BAD_STATE)
-                    ASSERT_TRUE(tu_thread_is_dying_or_dead(other_thread));
-                else
-                    ASSERT_EQ(status, ZX_OK);
-                tu_handle_close(other_thread);
-            }
-        }
-    }
-
-    // Verify thread is suspended
-    zx_info_thread_t info = tu_thread_get_info(thread);
-    ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED);
-    ASSERT_EQ(info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE);
-
-    END_HELPER;
-}
-
-static int phdr_info_callback(dl_phdr_info* info, size_t size, void* data) {
-    dl_phdr_info* key = static_cast<dl_phdr_info*>(data);
-    if (info->dlpi_addr == key->dlpi_addr) {
-        *key = *info;
+static int phdr_info_callback(dl_phdr_info* info, size_t size, void* argp) {
+    dl_phdr_info* arg = reinterpret_cast<dl_phdr_info*>(argp);
+    if (info->dlpi_addr == arg->dlpi_addr) {
+        *arg = *info;
         return 1;
     }
     return 0;

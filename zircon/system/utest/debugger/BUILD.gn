@@ -4,17 +4,29 @@
 
 test("debugger") {
   sources = [
+    "crash-and-recover.cpp",
+    "crash-and-recover.h",
     "debugger.cpp",
+    "debugger.h",
+    "inferior.cpp",
+    "inferior.h",
+    "inferior-control.cpp",
+    "inferior-control.h",
+    "main.cpp",
+    "suspended-reg-access.cpp",
     "utils.cpp",
+    "utils.h",
   ]
   deps = [
     "$zx/system/ulib/backtrace-request",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/launchpad",
+    "$zx/system/ulib/pretty",
     "$zx/system/ulib/runtime",
     "$zx/system/ulib/test-utils",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
   ]
 }
