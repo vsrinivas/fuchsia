@@ -65,12 +65,12 @@ bool test_unclean_close(void) {
     // Try closing a connection to a file with an "unclean" shutdown,
     // noticed by the filesystem server as a closed handle rather than
     // an explicit "Close" call.
-    zx_handle_t handles[FDIO_MAX_HANDLES];
-    uint32_t types[FDIO_MAX_HANDLES];
-    zx_status_t r = fdio_transfer_fd(fd, 0, handles, types);
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    fdio_fd_transfer(fd, &handle);
+    // TODO: Should we check the status returned by fdio_fd_transfer?
     ASSERT_GE(fd, 0, "");
-    for (size_t i = 0; i < (size_t) r; i++) {
-        ASSERT_EQ(zx_handle_close(handles[i]), ZX_OK, "");
+    if (handle != ZX_HANDLE_INVALID) {
+        ASSERT_EQ(zx_handle_close(handle), ZX_OK, "");
     }
 
     ASSERT_EQ(unlink("::foobar"), 0, "");

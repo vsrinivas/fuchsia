@@ -16,12 +16,10 @@
 #include <zircon/syscalls.h>
 
 static bool has_fd(int fd) {
-    zx_handle_t handles[FDIO_MAX_HANDLES];
-    uint32_t ids[FDIO_MAX_HANDLES];
-    zx_status_t status = fdio_clone_fd(fd, fd + 50, handles, ids);
-    if (status > 0) {
-        size_t n = (size_t)status;
-        zx_handle_close_many(handles, n);
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    zx_status_t status = fdio_fd_clone(fd, &handle);
+    if (status == ZX_OK) {
+        zx_handle_close(handle);
         return true;
     }
     return false;

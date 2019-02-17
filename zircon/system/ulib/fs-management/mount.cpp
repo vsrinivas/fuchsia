@@ -84,8 +84,8 @@ private:
     int fd_;
     uint32_t flags_ = 0; // Currently not used.
     size_t num_handles_ = 0;
-    zx_handle_t handles_[FDIO_MAX_HANDLES * 2];
-    uint32_t ids_[FDIO_MAX_HANDLES * 2];
+    zx_handle_t handles_[2];
+    uint32_t ids_[2];
 };
 
 // Initializes 'handles_' and 'ids_' with the root handle and block device handle.
@@ -100,16 +100,16 @@ zx_status_t Mounter::PrepareHandles(unique_fd device) {
     num_handles_ = 1;
 
     int device_fd = device.release();
-    status = fdio_transfer_fd(device_fd, FS_FD_BLOCKDEVICE, &handles_[1], &ids_[1]);
-    if (status < 0) {
-        // Note that fdio_transfer_fd returns > 0 on success :(.
+    status = fdio_fd_transfer(device_fd, &handles_[1]);
+    if (status != ZX_OK) {
         fprintf(stderr, "Failed to access device handle\n");
         zx_handle_close(mountee_handle);
         zx_handle_close(root_);
         device.reset(device_fd);
-        return status != 0 ? status : ZX_ERR_BAD_STATE;
+        return status;
     }
-    num_handles_ += status;
+    ids_[1] = PA_HND(PA_FD, FS_FD_BLOCKDEVICE);
+    num_handles_ = 2;
     return ZX_OK;
 }
 

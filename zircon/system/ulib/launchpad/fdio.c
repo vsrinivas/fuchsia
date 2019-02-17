@@ -16,15 +16,15 @@
 #include <unistd.h>
 
 static zx_status_t add_fdio(launchpad_t* lp,
-                            zx_handle_t handles[FDIO_MAX_HANDLES],
-                            uint32_t types[FDIO_MAX_HANDLES],
+                            zx_handle_t* handle,
+                            uint32_t type,
                             zx_status_t status) {
     if (status == ZX_ERR_BAD_HANDLE)
         return ZX_OK;
     if (status == ZX_ERR_NOT_SUPPORTED)
         return ZX_OK;
-    if (status > 0) {
-        return launchpad_add_handles(lp, status, handles, types);
+    if (status == ZX_OK) {
+        return launchpad_add_handles(lp, 1, handle, &type);
     } else {
         launchpad_abort(lp, status, "add_fdio: failed");
         return status;
@@ -32,13 +32,9 @@ static zx_status_t add_fdio(launchpad_t* lp,
 }
 
 zx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
-    zx_handle_t handles[FDIO_MAX_HANDLES];
-    uint32_t types[FDIO_MAX_HANDLES];
-    zx_status_t status;
-
     if (what & LP_CLONE_FDIO_NAMESPACE) {
         fdio_flat_namespace_t* flat;
-        status = fdio_ns_export_root(&flat);
+        zx_status_t status = fdio_ns_export_root(&flat);
         if (status == ZX_OK) {
             launchpad_set_nametable(lp, flat->count, flat->path);
             launchpad_add_handles(lp, flat->count, flat->handle, flat->type);
@@ -50,7 +46,8 @@ zx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
     }
     if (what & LP_CLONE_FDIO_STDIO) {
         for (int fd = 0; fd < 3; fd++) {
-            add_fdio(lp, handles, types, fdio_clone_fd(fd, fd, handles, types));
+            zx_handle_t handle = ZX_HANDLE_INVALID;
+            add_fdio(lp, &handle, PA_HND(PA_FD, fd), fdio_fd_clone(fd, &handle));
         }
     }
     if (what & LP_CLONE_ENVIRON) {

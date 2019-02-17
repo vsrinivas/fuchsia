@@ -26,20 +26,18 @@ namespace {
 
 zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCallback cb,
                          const mkfs_options_t* options) {
-    zx_handle_t hnd[FDIO_MAX_HANDLES * 2];
-    uint32_t ids[FDIO_MAX_HANDLES * 2];
-    size_t n = 0;
+    zx_handle_t hnd = ZX_HANDLE_INVALID;
+    uint32_t id = PA_HND(PA_FD, FS_FD_BLOCKDEVICE);
     int device_fd;
     if ((device_fd = open(device_path, O_RDWR)) < 0) {
         fprintf(stderr, "Failed to open device\n");
         return ZX_ERR_BAD_STATE;
     }
-    zx_status_t status;
-    if ((status = fdio_transfer_fd(device_fd, FS_FD_BLOCKDEVICE, hnd + n, ids + n)) <= 0) {
+    zx_status_t status = fdio_fd_transfer(device_fd, &hnd);
+    if (status != ZX_OK) {
         fprintf(stderr, "Failed to access device handle\n");
-        return status != 0 ? status : ZX_ERR_BAD_STATE;
+        return status;
     }
-    n += status;
 
     fbl::Vector<const char*> argv;
     argv.push_back(binary);
@@ -55,7 +53,7 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
     argv.push_back("mkfs");
     argv.push_back(nullptr);
     status = static_cast<zx_status_t>(cb(static_cast<int>(argv.size() - 1), argv.get(),
-                                         hnd, ids, n));
+                                         &hnd, &id, 1));
     return status;
 }
 

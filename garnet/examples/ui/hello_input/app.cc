@@ -6,34 +6,25 @@
 
 #include <limits>
 #include <string>
+#include <utility>
 
 #include <fuchsia/math/cpp/fidl.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
 #include <lib/fit/function.h>
+#include <lib/ui/input/cpp/formatting.h>
+#include <lib/ui/scenic/cpp/resources.h>
 #include <lib/zx/time.h>
-
-#include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/scenic/cpp/resources.h"
+#include <zircon/processargs.h>
 
 // Lifted from hello_views.
 static fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd) {
-  zx_handle_t handles[FDIO_MAX_HANDLES] = {0, 0, 0};
-  uint32_t types[FDIO_MAX_HANDLES] = {
-      ZX_HANDLE_INVALID,
-      ZX_HANDLE_INVALID,
-      ZX_HANDLE_INVALID,
-  };
-  zx_status_t status = fdio_clone_fd(fd, 0, handles, types);
-  if (status <= 0) {
+  zx::handle handle;
+  zx_status_t status = fdio_fd_clone(fd, handle.reset_and_get_address());
+  if (status != ZX_OK)
     return nullptr;
-  }
   fuchsia::sys::FileDescriptorPtr result = fuchsia::sys::FileDescriptor::New();
-  result->type0 = types[0];
-  result->handle0 = zx::handle(handles[0]);
-  result->type1 = types[1];
-  result->handle1 = zx::handle(handles[1]);
-  result->type2 = types[2];
-  result->handle2 = zx::handle(handles[2]);
+  result->type0 = PA_HND(PA_FD, fd);
+  result->handle0 = std::move(handle);
   return result;
 }
 

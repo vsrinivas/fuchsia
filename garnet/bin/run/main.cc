@@ -2,37 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/limits.h>
-#include <lib/fdio/util.h>
+#include <lib/fdio/fd.h>
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <stdio.h>
-
-#include <fuchsia/sys/cpp/fidl.h>
+#include <unistd.h>
+#include <utility>
 #include <zircon/syscalls.h>
+#include <zircon/processargs.h>
 
 using fuchsia::sys::TerminationReason;
 using fxl::StringPrintf;
 
 static fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd) {
-  zx_handle_t handles[FDIO_MAX_HANDLES] = {0, 0, 0};
-  uint32_t types[FDIO_MAX_HANDLES] = {
-      ZX_HANDLE_INVALID,
-      ZX_HANDLE_INVALID,
-      ZX_HANDLE_INVALID,
-  };
-  zx_status_t status = fdio_clone_fd(fd, 0, handles, types);
-  if (status <= 0)
+  zx::handle handle;
+  zx_status_t status = fdio_fd_clone(fd, handle.reset_and_get_address());
+  if (status != ZX_OK)
     return nullptr;
   fuchsia::sys::FileDescriptorPtr result = fuchsia::sys::FileDescriptor::New();
-  result->type0 = types[0];
-  result->handle0 = zx::handle(handles[0]);
-  result->type1 = types[1];
-  result->handle1 = zx::handle(handles[1]);
-  result->type2 = types[2];
-  result->handle2 = zx::handle(handles[2]);
+  result->type0 = PA_HND(PA_FD, fd);
+  result->handle0 = std::move(handle);
   return result;
 }
 

@@ -5,10 +5,11 @@
 #include "garnet/lib/process/process_builder.h"
 
 #include <fcntl.h>
+#include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fdio/util.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -21,8 +22,6 @@
 
 #include <array>
 #include <string_view>
-
-#include "lib/sys/cpp/service_directory.h"
 
 namespace process {
 
@@ -211,18 +210,15 @@ void ProcessBuilder::CloneAll() {
 }
 
 zx_status_t ProcessBuilder::CloneFileDescriptor(int local_fd, int target_fd) {
-  zx_handle_t fdio_handles[FDIO_MAX_HANDLES];
-  uint32_t fdio_types[FDIO_MAX_HANDLES];
+  zx::handle fd_handle;
   zx_status_t status =
-      fdio_clone_fd(local_fd, target_fd, fdio_handles, fdio_types);
-  if (status < ZX_OK)
+      fdio_fd_clone(local_fd, fd_handle.reset_and_get_address());
+  if (status != ZX_OK)
     return status;
-  for (int i = 0; i < status; ++i) {
-    handles_.push_back(fuchsia::process::HandleInfo{
-        .id = fdio_types[i],
-        .handle = zx::handle(fdio_handles[i]),
-    });
-  }
+  handles_.push_back(fuchsia::process::HandleInfo{
+      .id = PA_HND(PA_FD, target_fd),
+      .handle = std::move(fd_handle),
+  });
   return ZX_OK;
 }
 

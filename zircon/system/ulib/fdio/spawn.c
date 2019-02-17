@@ -37,10 +37,6 @@
 
 #define FDIO_SPAWN_LAUNCH_REPLY_HANDLE_COUNT ((size_t)1u)
 
-// Even though FDIO_MAX_HANDLES is 3, the clone and transfer operations can only
-// ever generate 2 handles.
-#define FDIO_MAX_HANDLES_FOR_CLONE_OR_TRANSFER ((size_t)2u)
-
 // The fdio_spawn_action_t is replicated in various ffi interfaces, including
 // the rust and golang standard libraries.
 static_assert(sizeof(fdio_spawn_action_t) == 24,
@@ -233,42 +229,37 @@ static zx_status_t send_handles(zx_handle_t launcher, size_t handle_capacity,
 
     if ((flags & FDIO_SPAWN_CLONE_STDIO) != 0) {
         for (int fd = 0; fd < 3; ++fd) {
-            zx_handle_t fdio_handles[FDIO_MAX_HANDLES];
-            uint32_t fdio_types[FDIO_MAX_HANDLES];
-            status = fdio_clone_fd(fd, fd, fdio_handles, fdio_types);
-            if (status == ZX_ERR_BAD_HANDLE) {
+            zx_handle_t fd_handle = ZX_HANDLE_INVALID;
+            status = fdio_fd_clone(fd, &fd_handle);
+            if (status == ZX_ERR_INVALID_ARGS) {
                 // This file descriptor is closed. We just skip it rather than
                 // generating an error.
                 continue;
             }
-            if (status < ZX_OK) {
+            if (status != ZX_OK) {
                 report_error(err_msg, "failed to clone fd %d: %d", fd, status);
                 goto cleanup;
             }
-            ZX_ASSERT((size_t)status <= FDIO_MAX_HANDLES_FOR_CLONE_OR_TRANSFER);
-            for (int i = 0; i < status; ++i) {
-                handle_infos[h].handle = FIDL_HANDLE_PRESENT;
-                handle_infos[h].id = fdio_types[i];
-                handles[h++] = fdio_handles[i];
-            }
+            handle_infos[h].handle = FIDL_HANDLE_PRESENT;
+            handle_infos[h].id = PA_HND(PA_FD, fd);
+            handles[h++] = fd_handle;
         }
     }
 
     for (; a < action_count; ++a) {
-        zx_handle_t fdio_handles[FDIO_MAX_HANDLES];
-        uint32_t fdio_types[FDIO_MAX_HANDLES];
+        zx_handle_t fd_handle = ZX_HANDLE_INVALID;
 
         switch (actions[a].action) {
         case FDIO_SPAWN_ACTION_CLONE_FD:
-            status = fdio_clone_fd(actions[a].fd.local_fd, actions[a].fd.target_fd, fdio_handles, fdio_types);
-            if (status < ZX_OK) {
+            status = fdio_fd_clone(actions[a].fd.local_fd, &fd_handle);
+            if (status != ZX_OK) {
                 report_error(err_msg, "failed to clone fd %d (action index %zu): %d", actions[a].fd.local_fd, a, status);
                 goto cleanup;
             }
             break;
         case FDIO_SPAWN_ACTION_TRANSFER_FD:
-            status = fdio_transfer_fd(actions[a].fd.local_fd, actions[a].fd.target_fd, fdio_handles, fdio_types);
-            if (status < ZX_OK) {
+            status = fdio_fd_transfer(actions[a].fd.local_fd, &fd_handle);
+            if (status != ZX_OK) {
                 report_error(err_msg, "failed to transfer fd %d (action index %zu): %d", actions[a].fd.local_fd, a, status);
                 goto cleanup;
             }
@@ -282,12 +273,9 @@ static zx_status_t send_handles(zx_handle_t launcher, size_t handle_capacity,
             continue;
         }
 
-        ZX_ASSERT((size_t)status <= FDIO_MAX_HANDLES_FOR_CLONE_OR_TRANSFER);
-        for (int j = 0; j < status; ++j) {
-            handle_infos[h].handle = FIDL_HANDLE_PRESENT;
-            handle_infos[h].id = fdio_types[j];
-            handles[h++] = fdio_handles[j];
-        }
+        handle_infos[h].handle = FIDL_HANDLE_PRESENT;
+        handle_infos[h].id = PA_HND(PA_FD, actions[a].fd.target_fd);
+        handles[h++] = fd_handle;
     }
 
     req->handles.count = h;
@@ -469,7 +457,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
         switch (actions[i].action) {
         case FDIO_SPAWN_ACTION_CLONE_FD:
         case FDIO_SPAWN_ACTION_TRANSFER_FD:
-            handle_capacity += FDIO_MAX_HANDLES_FOR_CLONE_OR_TRANSFER;
+            ++handle_capacity;
             break;
         case FDIO_SPAWN_ACTION_ADD_NS_ENTRY:
             if (actions[i].ns.handle == ZX_HANDLE_INVALID || !actions[i].ns.prefix) {
@@ -510,7 +498,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
         ++handle_capacity;
 
     if ((flags & FDIO_SPAWN_CLONE_STDIO) != 0)
-        handle_capacity += 3 * FDIO_MAX_HANDLES_FOR_CLONE_OR_TRANSFER;
+        handle_capacity += 3;
 
     if ((flags & FDIO_SPAWN_CLONE_NAMESPACE) != 0) {
         status = fdio_ns_export_root(&flat);

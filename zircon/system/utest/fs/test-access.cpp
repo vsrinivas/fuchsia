@@ -242,24 +242,22 @@ bool TestOpathFdcount(void) {
     BEGIN_TEST;
 
     const char* dirname = "::foo";
-    int fd;
-    zx_handle_t handles[FDIO_MAX_HANDLES];
-    uint32_t types[FDIO_MAX_HANDLES];
-    zx_status_t r;
+    int fd = -1;
+    zx_handle_t handle = ZX_HANDLE_INVALID;
 
     // Opened with O_PATH, cloned, and closed before clone.
     ASSERT_EQ(mkdir(dirname, 0666), 0);
     ASSERT_GE((fd = open(dirname, O_PATH | O_DIRECTORY)), 0);
-    ASSERT_GT((r = fdio_clone_fd(fd, 0, handles, types)), 0);
+    ASSERT_EQ(fdio_fd_clone(fd, &handle), ZX_OK);
     ASSERT_EQ(close(fd), 0);
-    ASSERT_EQ(zx_handle_close_many(handles, r), ZX_OK);
+    ASSERT_EQ(zx_handle_close(handle), ZX_OK);
     ASSERT_EQ(rmdir(dirname), 0);
 
     // Opened with O_PATH, cloned, and closed after clone.
     ASSERT_EQ(mkdir(dirname, 0666), 0);
     ASSERT_GE((fd = open(dirname, O_PATH | O_DIRECTORY)), 0);
-    ASSERT_GT((r = fdio_clone_fd(fd, 0, handles, types)), 0);
-    ASSERT_EQ(zx_handle_close_many(handles, r), ZX_OK);
+    ASSERT_EQ(fdio_fd_clone(fd, &handle), ZX_OK);
+    ASSERT_EQ(zx_handle_close(handle), ZX_OK);
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(rmdir(dirname), 0);
 
