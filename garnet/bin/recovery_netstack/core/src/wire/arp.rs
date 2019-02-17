@@ -19,6 +19,11 @@ use crate::device::ethernet::{EtherType, Mac};
 use crate::error::{ParseError, ParseResult};
 use crate::ip::Ipv4Addr;
 
+#[cfg(test)]
+pub const ARP_HDR_LEN: usize = 8;
+#[cfg(test)]
+pub const ARP_ETHERNET_IPV4_PACKET_LEN: usize = 28;
+
 // Header has the same memory layout (thanks to repr(C, packed)) as an ARP
 // header. Thus, we can simply reinterpret the bytes of the ARP header as a
 // Header and then safely access its fields. Note the following caveats:
@@ -415,8 +420,8 @@ mod tests {
         assert_eq!(frame_bytes.as_ref(), ARP_REQUEST);
     }
 
-    fn header_to_bytes(header: Header) -> [u8; 8] {
-        let mut bytes = [0; 8];
+    fn header_to_bytes(header: Header) -> [u8; ARP_HDR_LEN] {
+        let mut bytes = [0; ARP_HDR_LEN];
         {
             let mut lv = LayoutVerified::<_, Header>::new_unaligned(&mut bytes[..]).unwrap();
             *lv = header;
@@ -454,7 +459,7 @@ mod tests {
         let mut buf = &mut [
             0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8,
         ][..];
-        (&mut buf[..8]).copy_from_slice(&header_to_bytes(new_header()));
+        (&mut buf[..ARP_HDR_LEN]).copy_from_slice(&header_to_bytes(new_header()));
         let (hw, proto) = peek_arp_types(&buf[..]).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);
         assert_eq!(proto, EtherType::Ipv4);
@@ -493,7 +498,7 @@ mod tests {
     #[test]
     fn test_peek_error() {
         // Test that a header which is too short is rejected.
-        let buf = [0; 7];
+        let buf = [0; ARP_HDR_LEN - 1];
         assert_eq!(peek_arp_types(&buf[..]).unwrap_err(), ParseError::Format);
 
         // Test that an unexpected hardware protocol type is rejected.
@@ -532,17 +537,17 @@ mod tests {
 
         // Assert that parsing a particular header results in an error.
         fn assert_header_err(header: Header, err: ParseError) {
-            let mut buf = [0; 28];
+            let mut buf = [0; ARP_ETHERNET_IPV4_PACKET_LEN];
             *LayoutVerified::<_, Header>::new_unaligned_from_prefix(&mut buf[..]).unwrap().0 =
                 header;
             assert_err(&buf[..], err);
         }
 
         // Test that a packet which is too short is rejected.
-        let buf = [0; 27];
-        assert_err(&[0; 27][..], ParseError::Format);
+        let buf = [0; ARP_ETHERNET_IPV4_PACKET_LEN - 1];
+        assert_err(&[0; ARP_ETHERNET_IPV4_PACKET_LEN - 1][..], ParseError::Format);
 
-        let mut buf = [0; 28];
+        let mut buf = [0; ARP_ETHERNET_IPV4_PACKET_LEN];
 
         // Test that an unexpected hardware protocol type is rejected.
         let mut header = new_header();
@@ -574,7 +579,7 @@ mod tests {
     fn test_serialize_zeroes() {
         // Test that ArpPacket::serialize properly zeroes memory before
         // serializing the packet.
-        let mut buf_0 = [0; 28];
+        let mut buf_0 = [0; ARP_ETHERNET_IPV4_PACKET_LEN];
         InnerPacketBuilder::serialize(
             ArpPacketBuilder::new(
                 ArpOp::Request,
@@ -585,7 +590,7 @@ mod tests {
             ),
             &mut buf_0[..],
         );
-        let mut buf_1 = [0xFF; 28];
+        let mut buf_1 = [0xFF; ARP_ETHERNET_IPV4_PACKET_LEN];
         InnerPacketBuilder::serialize(
             ArpPacketBuilder::new(
                 ArpOp::Request,
@@ -612,7 +617,7 @@ mod tests {
                 TEST_TARGET_MAC,
                 TEST_TARGET_IPV4,
             ),
-            &mut [0; 27],
+            &mut [0; ARP_ETHERNET_IPV4_PACKET_LEN - 1],
         );
     }
 }

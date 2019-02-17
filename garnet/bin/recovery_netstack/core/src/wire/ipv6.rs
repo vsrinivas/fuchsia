@@ -16,6 +16,8 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{IpProto, Ipv6Addr};
 
+pub const IPV6_FIXED_HDR_LEN: usize = 40;
+
 // FixedHeader has the same memory layout (thanks to repr(C, packed)) as an IPv6
 // fixed header. Thus, we can simply reinterpret the bytes of the IPv6 fixed
 // header as a FixedHeader and then safely access its fields. Note the following
@@ -265,12 +267,10 @@ impl Ipv6PacketBuilder {
     }
 }
 
-const FIXED_HEADER_BYTES: usize = 40;
-
 impl PacketBuilder for Ipv6PacketBuilder {
     fn header_len(&self) -> usize {
         // TODO(joshlf): Update when we support serializing extension headers
-        FIXED_HEADER_BYTES
+        IPV6_FIXED_HDR_LEN
     }
 
     fn min_body_len(&self) -> usize {
@@ -324,8 +324,8 @@ mod tests {
 
     // TODO(tkilbourn): add IPv6 versions of TCP and UDP parsing
 
-    fn fixed_hdr_to_bytes(fixed_hdr: FixedHeader) -> [u8; 40] {
-        let mut bytes = [0; 40];
+    fn fixed_hdr_to_bytes(fixed_hdr: FixedHeader) -> [u8; IPV6_FIXED_HDR_LEN] {
+        let mut bytes = [0; IPV6_FIXED_HDR_LEN];
         {
             let mut lv = LayoutVerified::<_, FixedHeader>::new_unaligned(&mut bytes[..]).unwrap();
             *lv = fixed_hdr;
@@ -412,12 +412,12 @@ mod tests {
     fn test_serialize_zeroes() {
         // Test that Ipv6PacketBuilder::serialize properly zeroes memory before
         // serializing the header.
-        let mut buf_0 = [0; 40];
-        BufferSerializer::new_vec(Buf::new(&mut buf_0[..], 40..))
+        let mut buf_0 = [0; IPV6_FIXED_HDR_LEN];
+        BufferSerializer::new_vec(Buf::new(&mut buf_0[..], IPV6_FIXED_HDR_LEN..))
             .encapsulate(new_builder())
             .serialize_outer();
-        let mut buf_1 = [0xFF; 40];
-        BufferSerializer::new_vec(Buf::new(&mut buf_1[..], 40..))
+        let mut buf_1 = [0xFF; IPV6_FIXED_HDR_LEN];
+        BufferSerializer::new_vec(Buf::new(&mut buf_1[..], IPV6_FIXED_HDR_LEN..))
             .encapsulate(new_builder())
             .serialize_outer();
         assert_eq!(&buf_0[..], &buf_1[..]);

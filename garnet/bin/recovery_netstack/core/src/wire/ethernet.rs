@@ -13,6 +13,22 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 use crate::device::ethernet::{EtherType, Mac};
 use crate::error::{ParseError, ParseResult};
 
+// used in PacketBuilder impl
+pub const ETHERNET_HDR_LEN_NO_TAG: usize = 14;
+#[cfg(test)]
+pub const ETHERNET_HDR_LEN_WITH_TAG: usize = 18;
+#[cfg(test)]
+pub const ETHERNET_MIN_FRAME_LEN: usize = 60;
+// used in PacketBuilder impl
+pub const ETHERNET_MIN_BODY_LEN_NO_TAG: usize = 46;
+#[cfg(test)]
+pub const ETHERNET_MIN_BODY_LEN_WITH_TAG: usize = 42;
+#[cfg(test)]
+pub const ETHERNET_ETHERTYPE_BYTE_OFFSET: usize = 12;
+
+const ETHERNET_MIN_ILLEGAL_ETHERTYPE: u16 = 1501;
+const ETHERNET_MAX_ILLEGAL_ETHERTYPE: u16 = 1535;
+
 // HeaderPrefix has the same memory layout (thanks to repr(C, packed)) as an
 // Ethernet header prefix. Thus, we can simply reinterpret the bytes of the
 // Ethernet header prefix as a HeaderPrefix and then safely access its fields.
@@ -100,7 +116,9 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for EthernetFrame<B> {
         let frame = EthernetFrame { hdr_prefix, tag, ethertype, body };
 
         let et = NetworkEndian::read_u16(&*frame.ethertype);
-        if (et > 1500 && et < 1536) || (et <= 1500 && et as usize != frame.body.len()) {
+        if (et >= ETHERNET_MIN_ILLEGAL_ETHERTYPE && et <= ETHERNET_MAX_ILLEGAL_ETHERTYPE)
+            || (et < ETHERNET_MIN_ILLEGAL_ETHERTYPE && et as usize != frame.body.len())
+        {
             // EtherType values between 1500 and 1536 are disallowed, and values
             // of 1500 and below are used to indicate the body length.
             return debug_err!(Err(ParseError::Format), "invalid ethertype number: {:x}", et);
@@ -132,12 +150,12 @@ impl<B: ByteSlice> EthernetFrame<B> {
     /// length of the frame's body. In this case, `ethertype` returns `None`.
     pub fn ethertype(&self) -> Option<EtherType> {
         let et = NetworkEndian::read_u16(&self.ethertype[..]);
-        if et <= 1500 {
+        if et < ETHERNET_MIN_ILLEGAL_ETHERTYPE {
             return None;
         }
         // values in (1500, 1536) are illegal, and shouldn't make it through
         // parse
-        debug_assert!(et >= 1536);
+        debug_assert!(et > ETHERNET_MAX_ILLEGAL_ETHERTYPE);
         Some(EtherType::from(et))
     }
 
@@ -179,22 +197,18 @@ impl EthernetFrameBuilder {
     }
 }
 
-// NOTE(joshlf): MIN_BODY_BYTES assumes no 802.1Q or 802.1ad tag. We don't
-// support creating new packets with these tags at the moment, so this is a
-// reasonable assumption. If we support tags in the future, this minimum will
-// only go down, so it is forwards-compatible.
-
-const MAX_HEADER_BYTES: usize = 18;
-const MIN_HEADER_BYTES: usize = 14;
-const MIN_BODY_BYTES: usize = 46;
+// NOTE(joshlf): header_len and min_body_len assume no 802.1Q or 802.1ad tag. We
+// don't support creating packets with these tags at the moment, so this is a
+// sound assumption. If we support them in the future, we will need to update
+// these to compute dynamically.
 
 impl PacketBuilder for EthernetFrameBuilder {
     fn header_len(&self) -> usize {
-        MIN_HEADER_BYTES
+        ETHERNET_HDR_LEN_NO_TAG
     }
 
     fn min_body_len(&self) -> usize {
-        MIN_BODY_BYTES
+        ETHERNET_MIN_BODY_LEN_NO_TAG
     }
 
     fn footer_len(&self) -> usize {
@@ -245,22 +259,22 @@ mod tests {
     // Return a buffer for testing parsing with values 0..60 except for the
     // EtherType field, which is EtherType::Arp. Also return the contents
     // of the body.
-    fn new_parse_buf() -> ([u8; 60], [u8; 46]) {
-        let mut buf = [0; 60];
-        for i in 0..60 {
+    fn new_parse_buf() -> ([u8; ETHERNET_MIN_FRAME_LEN], [u8; ETHERNET_MIN_BODY_LEN_NO_TAG]) {
+        let mut buf = [0; ETHERNET_MIN_FRAME_LEN];
+        for i in 0..ETHERNET_MIN_FRAME_LEN {
             buf[i] = i as u8;
         }
-        NetworkEndian::write_u16(&mut buf[12..14], EtherType::Arp.into());
-        let mut body = [0; 46];
-        (&mut body).copy_from_slice(&buf[14..]);
+        NetworkEndian::write_u16(&mut buf[ETHERNET_ETHERTYPE_BYTE_OFFSET..], EtherType::Arp.into());
+        let mut body = [0; ETHERNET_MIN_BODY_LEN_NO_TAG];
+        (&mut body).copy_from_slice(&buf[ETHERNET_HDR_LEN_NO_TAG..]);
         (buf, body)
     }
 
     // Return a test buffer with values 0..46 to be used as a test payload for
     // serialization.
-    fn new_serialize_buf() -> [u8; 46] {
-        let mut buf = [0; 46];
-        for i in 0..46 {
+    fn new_serialize_buf() -> [u8; ETHERNET_MIN_BODY_LEN_NO_TAG] {
+        let mut buf = [0; ETHERNET_MIN_BODY_LEN_NO_TAG];
+        for i in 0..ETHERNET_MIN_BODY_LEN_NO_TAG {
             buf[i] = i as u8;
         }
         buf
@@ -311,19 +325,22 @@ mod tests {
         // EtherTypes of 1500 and below must match the body length
         let mut buf = [0u8; 1014];
         // an incorrect length results in error
-        NetworkEndian::write_u16(&mut buf[12..], 1001);
+        NetworkEndian::write_u16(&mut buf[ETHERNET_ETHERTYPE_BYTE_OFFSET..], 1001);
         assert!((&mut buf[..]).parse::<EthernetFrame<_>>().is_err());
 
         // a correct length results in success
-        NetworkEndian::write_u16(&mut buf[12..], 1000);
+        NetworkEndian::write_u16(&mut buf[ETHERNET_ETHERTYPE_BYTE_OFFSET..], 1000);
         assert_eq!((&mut buf[..]).parse::<EthernetFrame<_>>().unwrap().ethertype(), None);
 
         // an unrecognized EtherType is returned numerically
         let mut buf = [0u8; 1014];
-        NetworkEndian::write_u16(&mut buf[12..], 1536);
+        NetworkEndian::write_u16(
+            &mut buf[ETHERNET_ETHERTYPE_BYTE_OFFSET..],
+            ETHERNET_MAX_ILLEGAL_ETHERTYPE + 1,
+        );
         assert_eq!(
             (&mut buf[..]).parse::<EthernetFrame<_>>().unwrap().ethertype(),
-            Some(EtherType::Other(1536))
+            Some(EtherType::Other(ETHERNET_MAX_ILLEGAL_ETHERTYPE + 1))
         );
     }
 
@@ -337,7 +354,7 @@ mod tests {
             ))
             .serialize_outer();
         assert_eq!(
-            &buf.as_ref()[..MAX_HEADER_BYTES - 4],
+            &buf.as_ref()[..ETHERNET_HDR_LEN_NO_TAG],
             [6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 0x08, 0x06]
         );
     }
@@ -346,18 +363,18 @@ mod tests {
     fn test_serialize_zeroes() {
         // Test that EthernetFrame::serialize properly zeroes memory before
         // serializing the header.
-        let mut buf_0 = [0; 60];
+        let mut buf_0 = [0; ETHERNET_MIN_FRAME_LEN];
 
-        BufferSerializer::new_vec(Buf::new(&mut buf_0[..], 14..))
+        BufferSerializer::new_vec(Buf::new(&mut buf_0[..], ETHERNET_HDR_LEN_NO_TAG..))
             .encapsulate(EthernetFrameBuilder::new(
                 DEFAULT_SRC_MAC,
                 DEFAULT_DST_MAC,
                 EtherType::Arp,
             ))
             .serialize_outer();
-        let mut buf_1 = [0; 60];
-        (&mut buf_1[..14]).copy_from_slice(&[0xFF; 14]);
-        BufferSerializer::new_vec(Buf::new(&mut buf_1[..], 14..))
+        let mut buf_1 = [0; ETHERNET_MIN_FRAME_LEN];
+        (&mut buf_1[..ETHERNET_HDR_LEN_NO_TAG]).copy_from_slice(&[0xFF; ETHERNET_HDR_LEN_NO_TAG]);
+        BufferSerializer::new_vec(Buf::new(&mut buf_1[..], ETHERNET_HDR_LEN_NO_TAG..))
             .encapsulate(EthernetFrameBuilder::new(
                 DEFAULT_SRC_MAC,
                 DEFAULT_DST_MAC,
@@ -370,22 +387,31 @@ mod tests {
     #[test]
     fn test_parse_error() {
         // 1 byte shorter than the minimum
-        let mut buf = [0u8; 59];
+        let mut buf = [0u8; ETHERNET_MIN_FRAME_LEN - 1];
         assert!((&mut buf[..]).parse::<EthernetFrame<_>>().is_err());
 
         // an ethertype of 1500 should be validated as the length of the body
-        let mut buf = [0u8; 60];
-        NetworkEndian::write_u16(&mut buf[12..], 1500);
+        let mut buf = [0u8; ETHERNET_MIN_FRAME_LEN];
+        NetworkEndian::write_u16(
+            &mut buf[ETHERNET_ETHERTYPE_BYTE_OFFSET..],
+            ETHERNET_MIN_ILLEGAL_ETHERTYPE - 1,
+        );
         assert!((&mut buf[..]).parse::<EthernetFrame<_>>().is_err());
 
         // an ethertype of 1501 is illegal because it's in the range [1501, 1535]
-        let mut buf = [0u8; 60];
-        NetworkEndian::write_u16(&mut buf[12..], 1501);
+        let mut buf = [0u8; ETHERNET_MIN_FRAME_LEN];
+        NetworkEndian::write_u16(
+            &mut buf[ETHERNET_ETHERTYPE_BYTE_OFFSET..],
+            ETHERNET_MIN_ILLEGAL_ETHERTYPE,
+        );
         assert!((&mut buf[..]).parse::<EthernetFrame<_>>().is_err());
 
         // an ethertype of 1535 is illegal
-        let mut buf = [0u8; 60];
-        NetworkEndian::write_u16(&mut buf[12..], 1535);
+        let mut buf = [0u8; ETHERNET_MIN_FRAME_LEN];
+        NetworkEndian::write_u16(
+            &mut buf[ETHERNET_ETHERTYPE_BYTE_OFFSET..],
+            ETHERNET_MAX_ILLEGAL_ETHERTYPE,
+        );
         assert!((&mut buf[..]).parse::<EthernetFrame<_>>().is_err());
     }
 
@@ -393,8 +419,11 @@ mod tests {
     #[should_panic]
     fn test_serialize_panic() {
         // create with a body which is below the minimum length
-        let mut buf = [0u8; 60];
-        let buffer = SerializeBuffer::new(&mut buf[..], (60 - (MIN_BODY_BYTES - 1))..);
+        let mut buf = [0u8; ETHERNET_MIN_FRAME_LEN];
+        let buffer = SerializeBuffer::new(
+            &mut buf[..],
+            (ETHERNET_MIN_FRAME_LEN - (ETHERNET_MIN_BODY_LEN_WITH_TAG - 1))..,
+        );
         EthernetFrameBuilder::new(
             Mac::new([0, 1, 2, 3, 4, 5]),
             Mac::new([6, 7, 8, 9, 10, 11]),

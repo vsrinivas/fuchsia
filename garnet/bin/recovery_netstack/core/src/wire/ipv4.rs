@@ -18,7 +18,9 @@ use crate::wire::util::{Checksum, Options};
 
 use self::options::Ipv4OptionImpl;
 
-const HEADER_PREFIX_SIZE: usize = 20;
+const HDR_PREFIX_LEN: usize = 20;
+pub const IPV4_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
+pub const IPV4_MAX_HDR_LEN: usize = 60;
 
 // HeaderPrefix has the same memory layout (thanks to repr(C, packed)) as an
 // IPv4 header prefix. Thus, we can simply reinterpret the bytes of the IPv4
@@ -109,11 +111,11 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
             .take_obj_front::<HeaderPrefix>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
         let hdr_bytes = (hdr_prefix.ihl() * 4) as usize;
-        if hdr_bytes < HEADER_PREFIX_SIZE {
+        if hdr_bytes < HDR_PREFIX_LEN {
             return debug_err!(Err(ParseError::Format), "invalid IHL: {}", hdr_prefix.ihl());
         }
         let options = buffer
-            .take_front(hdr_bytes - HEADER_PREFIX_SIZE)
+            .take_front(hdr_bytes - HDR_PREFIX_LEN)
             .ok_or_else(debug_err_fn!(ParseError::Format, "IHL larger than buffer"))?;
         let options = Options::parse(options)
             .map_err(|err| debug_err!(ParseError::Format, "malformed options: {:?}", err))?;
@@ -373,13 +375,9 @@ impl Ipv4PacketBuilder {
     }
 }
 
-const MAX_HEADER_BYTES: usize = 60;
-// used by wire::icmp
-pub const MIN_HEADER_BYTES: usize = 20;
-
 impl PacketBuilder for Ipv4PacketBuilder {
     fn header_len(&self) -> usize {
-        MIN_HEADER_BYTES
+        IPV4_MIN_HDR_LEN
     }
 
     fn min_body_len(&self) -> usize {
@@ -677,12 +675,12 @@ mod tests {
     fn test_serialize_zeroes() {
         // Test that Ipv4PacketBuilder::serialize properly zeroes memory before
         // serializing the header.
-        let mut buf_0 = [0; 20];
-        BufferSerializer::new_vec(Buf::new(&mut buf_0[..], 20..))
+        let mut buf_0 = [0; IPV4_MIN_HDR_LEN];
+        BufferSerializer::new_vec(Buf::new(&mut buf_0[..], IPV4_MIN_HDR_LEN..))
             .encapsulate(new_builder())
             .serialize_outer();
-        let mut buf_1 = [0xFF; 20];
-        BufferSerializer::new_vec(Buf::new(&mut buf_1[..], 20..))
+        let mut buf_1 = [0xFF; IPV4_MIN_HDR_LEN];
+        BufferSerializer::new_vec(Buf::new(&mut buf_1[..], IPV4_MIN_HDR_LEN..))
             .encapsulate(new_builder())
             .serialize_outer();
         assert_eq!(buf_0, buf_1);
@@ -692,7 +690,7 @@ mod tests {
     #[should_panic]
     fn test_serialize_panic_packet_length() {
         // Test that a packet which is longer than 2^16 - 1 bytes is rejected.
-        BufferSerializer::new_vec(Buf::new(&mut [0; (1 << 16) - 20][..], ..))
+        BufferSerializer::new_vec(Buf::new(&mut [0; (1 << 16) - IPV4_MIN_HDR_LEN][..], ..))
             .encapsulate(new_builder())
             .serialize_outer();
     }

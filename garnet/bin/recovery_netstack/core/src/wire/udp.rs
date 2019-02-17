@@ -18,6 +18,8 @@ use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ip, IpAddr, IpProto};
 use crate::wire::util::{fits_in_u16, fits_in_u32, Checksum};
 
+pub const HEADER_BYTES: usize = 8;
+
 // Header has the same memory layout (thanks to repr(C, packed)) as a UDP
 // header. Thus, we can simply reinterpret the bytes of the UDP header as a
 // Header and then safely access its fields. Note the following caveats:
@@ -262,8 +264,6 @@ impl<A: IpAddr> UdpPacketBuilder<A> {
     }
 }
 
-const HEADER_BYTES: usize = 8;
-
 impl<A: IpAddr> PacketBuilder for UdpPacketBuilder<A> {
     fn header_len(&self) -> usize {
         HEADER_BYTES
@@ -442,8 +442,8 @@ mod tests {
     fn test_serialize_zeroes() {
         // Test that UdpPacket::serialize properly zeroes memory before serializing
         // the header.
-        let mut buf_0 = [0; 8];
-        BufferSerializer::new_vec(Buf::new(&mut buf_0[..], 8..))
+        let mut buf_0 = [0; HEADER_BYTES];
+        BufferSerializer::new_vec(Buf::new(&mut buf_0[..], HEADER_BYTES..))
             .encapsulate(UdpPacketBuilder::new(
                 TEST_SRC_IPV4,
                 TEST_DST_IPV4,
@@ -451,8 +451,8 @@ mod tests {
                 NonZeroU16::new(2).unwrap(),
             ))
             .serialize_outer();
-        let mut buf_1 = [0xFF; 8];
-        BufferSerializer::new_vec(Buf::new(&mut buf_1[..], 8..))
+        let mut buf_1 = [0xFF; HEADER_BYTES];
+        BufferSerializer::new_vec(Buf::new(&mut buf_1[..], HEADER_BYTES..))
             .encapsulate(UdpPacketBuilder::new(
                 TEST_SRC_IPV4,
                 TEST_DST_IPV4,
@@ -499,7 +499,7 @@ mod tests {
         {
             // total length of 2^32 or greater is disallowed in IPv6
             let mut buf = vec![0u8; 1 << 32];
-            (&mut buf[..8]).copy_from_slice(&[0, 0, 1, 2, 0, 0, 0xFF, 0xE4]);
+            (&mut buf[..HEADER_BYTES]).copy_from_slice(&[0, 0, 1, 2, 0, 0, 0xFF, 0xE4]);
             assert_eq!(
                 (&buf[..])
                     .parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(TEST_SRC_IPV6, TEST_DST_IPV6))
@@ -519,7 +519,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_serialize_fail_packet_too_long_ipv4() {
-        (&[0; (1 << 16) - 8][..])
+        (&[0; (1 << 16) - HEADER_BYTES][..])
             .encapsulate(UdpPacketBuilder::new(
                 TEST_SRC_IPV4,
                 TEST_DST_IPV4,
@@ -540,7 +540,7 @@ mod tests {
     // fn test_serialize_fail_packet_too_long_ipv6() {
     //     // total length of 2^32 or greater is disallowed in IPv6
     //     let mut buf = vec![0u8; 1 << 32];
-    //     (&[0u8; (1 << 32) - 8])
+    //     (&[0u8; (1 << 32) - HEADER_BYTES])
     //         .encapsulate(UdpPacketBuilder::new(
     //             TEST_SRC_IPV4,
     //             TEST_DST_IPV4,

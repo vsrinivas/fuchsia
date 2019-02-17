@@ -153,7 +153,7 @@ impl IcmpIpExt for Ipv4 {
     const IP_PROTO: IpProto = IpProto::Icmp;
 
     fn header_len(bytes: &[u8]) -> usize {
-        if bytes.len() < ipv4::MIN_HEADER_BYTES {
+        if bytes.len() < ipv4::IPV4_MIN_HDR_LEN {
             return bytes.len();
         }
         let (header_prefix, _) =
