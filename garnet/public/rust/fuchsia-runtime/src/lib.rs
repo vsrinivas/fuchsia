@@ -30,11 +30,35 @@ extern "C" {
 /// Other variants may be added in the future.
 #[repr(u32)]
 pub enum HandleType {
+    /// Handle to a job object which can be used to make child processes.
+    ///
+    /// The job can be the same as the one used to create this process or it can
+    /// be different.
+    JobDefault = 0x03,
+
+    /// Service for loading shared libraries.
+    ///
+    /// See `fuchsia.ldsvc.Loader` for the interface definition.
+    LdsvcLoader = 0x10,
+
+    /// A handle which will be used as a file descriptor.
+    FileDescriptor = 0x30,
+
     /// Server endpoint for handling connections to appmgr services.
     DirectoryRequest = 0x3B,
 
     #[doc(hidden)]
     __Nonexhaustive,
+}
+
+/// Creates a handle identifier from a handle type and an argument.
+///
+/// For example, a `create_handle_id(HandleType::FileDescriptor, 32)` identifies
+/// the handle as file descriptor 32.
+///
+/// Corresponds to PA_HND in C.
+pub fn create_handle_id(htype: HandleType, arg: u16) -> u32 {
+    ((htype as u32) & 0xFF) | ((arg as u32) << 16)
 }
 
 /// Removes the handle of type `HandleType` from the list of handles received at startup.

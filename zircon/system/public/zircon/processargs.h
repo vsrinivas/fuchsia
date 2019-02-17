@@ -73,8 +73,9 @@ struct zx_proc_args {
 // Handle to the initial thread of our own process.
 #define PA_THREAD_SELF           0x02u
 
-// Handle to a Job object which can be used to make child processes. The
-// Job can be the same as the one used to create this process or it can
+// Handle to a job object which can be used to make child processes. 
+//
+// The job can be the same as the one used to create this process or it can
 // be different.
 #define PA_JOB_DEFAULT           0x03u
 
@@ -89,6 +90,7 @@ struct zx_proc_args {
 // Used by libc init (or equivalent) and dynamic loader
 
 // Service for loading shared libraries.
+//
 // See |fuchsia.ldsvc.Loader| for the interface definition.
 #define PA_LDSVC_LOADER          0x10u
 

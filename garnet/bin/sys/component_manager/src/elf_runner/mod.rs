@@ -12,42 +12,32 @@ use {
     fdio::fdio_sys,
     fidl_fuchsia_data as fdata, fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys,
     fuchsia_app::client::connect_to_service,
+    fuchsia_runtime::{HandleType, create_handle_id},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::future::FutureObj,
     std::path::PathBuf,
 };
 
-// TODO: the following should be sourced from //zircon/system/public/zircon/processargs.h
-const PA_JOB_DEFAULT: u32 = 0x03;
-const PA_LDSVC_LOADER: u32 = 0x10;
-
 /// Runs components with ELF binaries.
 pub struct ElfRunner {}
 
-fn handles_from_fd(fd: i32) -> Result<Vec<fproc::HandleInfo>, Error> {
+fn handle_info_from_fd(fd: i32) -> Result<Option<fproc::HandleInfo>, Error> {
     // TODO(CF-592): fdio is not guaranteed to be asynchronous, replace with native rust solution
     unsafe {
-        let mut fdio_handles = [zx::sys::ZX_HANDLE_INVALID; fdio_sys::FDIO_MAX_HANDLES as usize];
-        let mut fdio_types = [0u32; fdio_sys::FDIO_MAX_HANDLES as usize];
-        let handle_ptr = &mut fdio_handles[0] as *mut _ as *mut zx::sys::zx_handle_t;
-        let type_ptr = &mut fdio_types[0] as *mut _ as *mut u32;
-        let status = fdio_sys::fdio_clone_fd(fd, fd, handle_ptr, type_ptr);
-        if status == zx::sys::ZX_ERR_BAD_HANDLE {
+        let mut fd_handle = zx::sys::ZX_HANDLE_INVALID;
+        let status = fdio_sys::fdio_fd_clone(fd, &mut fd_handle as *mut zx::sys::zx_handle_t);
+        if status == zx::sys::ZX_ERR_INVALID_ARGS {
             // This file descriptor is closed. We just skip it rather than
             // generating an error.
-            return Ok(vec![]);
+            return Ok(None);
         }
-        if status < zx::sys::ZX_OK {
+        if status != zx::sys::ZX_OK {
             return Err(format_err!("failed to clone fd {}: {}", fd, status));
         }
-        let mut infos = vec![];
-        for i in 0usize..(status as usize) {
-            infos.push(fproc::HandleInfo {
-                handle: zx::Handle::from_raw(fdio_handles[i]),
-                id: fdio_types[i],
-            });
-        }
-        Ok(infos)
+        Ok(Some(fproc::HandleInfo {
+                handle: zx::Handle::from_raw(fd_handle),
+                id: create_handle_id(HandleType::FileDescriptor, fd as u16),
+            }))
     }
 }
 
@@ -108,20 +98,24 @@ impl ElfRunner {
 
         let mut handle_infos = vec![];
         for fd in 0..3 {
-            handle_infos.append(&mut handles_from_fd(fd).map_err(|e| {
+            handle_infos.extend(handle_info_from_fd(fd).map_err(|e| {
                 eprintln!("error getting handles for {}: {}", fd, e);
                 RunnerError::ComponentNotAvailable
             })?);
         }
 
         handle_infos.append(&mut vec![
-            fproc::HandleInfo { handle: ll_client_chan.into_handle(), id: PA_LDSVC_LOADER },
+            fproc::HandleInfo { handle: ll_client_chan.into_handle(), id: create_handle_id(HandleType::LdsvcLoader, 0) },
             // TODO: is this needed?
+            // A: Yes. Otherwise, the spawned process will not be able to create
+            //    process itself. The ELF runner should create a job for each
+            //    process it spawns so that subprocesses are contained in that
+            //    job and can be killed together.
             //fproc::HandleInfo{
             //    handle: ,
-            //    id: PA_JOB_DEFAULT,
+            //    id: create_handle_id(HandleType::JobDefault, 0),
             //},
-            // TODO: PA_DIRECTORY_REQUEST
+            // TODO: HandleType::DirectoryRequest
         ]);
         launcher
             .add_handles(&mut handle_infos.iter_mut())

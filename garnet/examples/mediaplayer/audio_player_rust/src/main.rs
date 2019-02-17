@@ -6,50 +6,18 @@
 
 use {
     failure::{bail, Error, ResultExt},
-    ::fdio::fdio_sys::*,
+    fdio,
     fidl_fuchsia_mediaplayer::*,
     fuchsia_app::client::connect_to_service,
     fuchsia_async as fasync,
     fuchsia_zircon::{
         self as zx,
-        sys::zx_handle_t,
     },
     futures::prelude::*,
-    std::{
-        fs::File,
-        io,
-        mem,
-        os::unix::io::IntoRawFd,
-    },
+    std::fs::File,
     structopt::StructOpt,
     url::Url,
 };
-
-// Indicator for the remote handle type used by FDIO.
-const PA_FD: u32 = 0x30;
-
-fn channel_from_file(file: File) -> Result<zx::Channel, io::Error> {
-    unsafe {
-        let mut handles: [zx_handle_t; FDIO_MAX_HANDLES as usize] = mem::uninitialized();
-        let mut types: [u32; FDIO_MAX_HANDLES as usize] = mem::uninitialized();
-        let status = fdio_transfer_fd(file.into_raw_fd(), 0, handles.as_mut_ptr(), types.as_mut_ptr());
-        if status < 0 {
-            return Err(zx::Status::from_raw(status).into_io_error());
-        } else if status != 1 {
-            // status >0 indicates number of handles returned
-            for i in 0..status as usize { drop(zx::Handle::from_raw(handles[i])) };
-            return Err(io::Error::new(io::ErrorKind::Other, "unexpected handle count"));
-        }
-
-        let handle = zx::Handle::from_raw(handles[0]);
-
-        if types[0] != PA_FD {
-            return Err(io::Error::new(io::ErrorKind::Other, "unexpected handle type"));
-        }
-
-        Ok(zx::Channel::from(handle))
-    }
-}
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "audio_player_rust")]
@@ -76,8 +44,8 @@ impl App {
         let player = connect_to_service::<PlayerMarker>().context("Failed to connect to media player")?;
         if url.scheme() == "file" {
             let file = File::open(url.path())?;
-            let channel = channel_from_file(file)?;
-            player.set_file_source(channel)?;
+            let handle = fdio::transfer_fd(file)?;
+            player.set_file_source(zx::Channel::from(handle))?;
         } else {
             player.set_http_source(url.as_str(), None)?;
         }

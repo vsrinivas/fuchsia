@@ -108,13 +108,9 @@ pub mod client {
 
     /// Adds a new directory to the namespace for the new process.
     pub fn add_dir_to_namespace(namespace: &mut FlatNamespace, path: String, dir: File) -> Result<(), Error> {
-        let (mut channels, _) = fdio::transfer_fd(dir)?;
-        if channels.len() != 1 {
-            return Err(format_err!("fdio_transfer_fd() returned unexpected number of handles"));
-        }
-
+        let handle = fdio::transfer_fd(dir)?;
         namespace.paths.push(path);
-        namespace.directories.push(channels.remove(0));
+        namespace.directories.push(zx::Channel::from(handle));
 
         Ok(())
     }

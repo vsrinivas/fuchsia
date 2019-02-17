@@ -85,23 +85,14 @@ pub fn service_connect_at(dir: &zx::Channel, service_path: &str, channel: zx::Ch
     })
 }
 
-pub fn transfer_fd(file: std::fs::File) -> Result<(Vec<zx::Channel>, Vec<u32>), zx::Status> {
+pub fn transfer_fd(file: std::fs::File) -> Result<zx::Handle, zx::Status> {
     unsafe {
-        let mut channels: [zx::sys::zx_handle_t; fdio_sys::FDIO_MAX_HANDLES as usize] = [0, 0, 0];
-        let mut types: [u32; fdio_sys::FDIO_MAX_HANDLES as usize] = [0, 0, 0];
-        let res =
-            fdio_sys::fdio_transfer_fd(file.into_raw_fd(), 0, &mut channels[0], &mut types[0]);
-        if res < 0 {
-            return Err(zx::Status::from_raw(res));
+        let mut fd_handle = zx::sys::ZX_HANDLE_INVALID;
+        let status = fdio_sys::fdio_fd_transfer(file.into_raw_fd(), &mut fd_handle as *mut zx::sys::zx_handle_t);
+        if status != zx::sys::ZX_OK {
+            return Err(zx::Status::from_raw(status));
         }
-        let num_handles = res as usize;
-        Ok((
-            channels[0..num_handles]
-                .iter()
-                .map(|c| zx::Channel::from(zx::Handle::from_raw(*c)))
-                .collect(),
-            types[0..num_handles].to_vec(),
-        ))
+        Ok(zx::Handle::from_raw(fd_handle))
     }
 }
 
