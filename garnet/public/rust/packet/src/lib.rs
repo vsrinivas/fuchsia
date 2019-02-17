@@ -35,7 +35,7 @@
 //! frame. In this example, we omit the Ethernet Frame Check Sequence (FCS)
 //! footer. If there were any footers, they would be treated the same as
 //! headers, except that they would be consumed from the end and working towards
-//! the beginning, as opposed to headers, which are consumed from the begining
+//! the beginning, as opposed to headers, which are consumed from the beginning
 //! and working towards the end.
 //!
 //! Also note that, in order to satisfy Ethernet's minimum body size
@@ -177,7 +177,7 @@
 //! The `PacketBuilder`'s `serialize` method consumes the `PacketBuilder` itself
 //! and the `SerializeBuffer` by value, and serializes the headers and footers
 //! of the packet into the buffer. It expects that the `SerializeBuffer` is
-//! intialized with a body equal to the body which will be encapsulated. For
+//! initialized with a body equal to the body which will be encapsulated. For
 //! example, imagine that we are trying to serialize a TCP segment in an IPv4
 //! packet in an Ethernet frame, and that, so far, we have only serialized the
 //! TCP segment:
@@ -303,7 +303,7 @@
 //!
 //! When the innermost call to `serialize` is reached, it is that call's
 //! responsibility to produce a buffer which satisfies the constraints passed to
-//! it, and to intialize that buffer's body with the contents of its packet. For
+//! it, and to initialize that buffer's body with the contents of its packet. For
 //! example, the TCP segment `Serializer` from the preceding example would need
 //! to produce a buffer with 38 bytes of prefix, and whose body was initialized
 //! to the bytes of the TCP segment.
@@ -601,7 +601,7 @@ pub trait ParseBufferMut: ParseBuffer + AsMut<[u8]> {
 /// the buffer is referred to as its "capacity", and the size of the body is
 /// referred to as its "length". The body of the buffer can shrink or grow as
 /// allowed by the capacity as packets are parsed or serialized. `Buffer`'s
-/// `AsRef<[u8]>` implementation provides acecss to the body.
+/// `AsRef<[u8]>` implementation provides access to the body.
 ///
 /// A `Buffer` guarantees never to discard bytes from the prefix or suffix,
 /// which is an important requirement for serialization. \[1\] For parsing, this
@@ -794,7 +794,7 @@ pub trait BufferMut: Buffer + ParseBufferMut {
             self.suffix_len(),
             builder.footer_len()
         );
-        // SECURITY: _zero here is technically unncessary since it's
+        // SECURITY: _zero here is technically unnecessary since it's
         // PacketBuilder::serialize's responsibility to zero/initialize the
         // header and footer, but we do it anyway to hedge against non-compliant
         // PacketBuilder::serialize implementations. If this becomes a
@@ -1095,7 +1095,7 @@ pub trait ParsablePacket<B: ByteSlice, ParseArgs>: Sized {
     /// and footers should be consumed from the beginning and end of the
     /// buffer's body respectively. The packet's body should be constructed from
     /// a reference to the buffer's body (i.e., `BufferView::into_body`), but
-    /// the buffer's body should not be consumed. This allows the the next
+    /// the buffer's body should not be consumed. This allows the next
     /// encapsulated packet to be parsed from the remaining buffer body. See the
     /// crate documentation for more details.
     ///
