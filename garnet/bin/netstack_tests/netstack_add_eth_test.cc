@@ -10,6 +10,7 @@
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fidl/cpp/interface_handle.h>
+#include <lib/sys/cpp/file_descriptor.h>
 #include <lib/zx/socket.h>
 #include <zircon/device/ethertap.h>
 #include <zircon/status.h>
@@ -42,8 +43,8 @@ TEST_F(NetstackLaunchTest, AddEthernetInterface) {
   // TODO(NET-1818): parameterize this over multiple netstack implementations
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kNetstackUrl;
-  launch_info.out = component::testing::CloneFileDescriptor(1);
-  launch_info.err = component::testing::CloneFileDescriptor(2);
+  launch_info.out = sys::CloneFileDescriptor(1);
+  launch_info.err = sys::CloneFileDescriptor(2);
   services->AddServiceWithLaunchInfo(std::move(launch_info),
                                      fuchsia::net::stack::Stack::Name_);
 
@@ -108,8 +109,8 @@ TEST_F(NetstackLaunchTest, AddEthernetDevice) {
   // TODO(NET-1818): parameterize this over multiple netstack implementations
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kNetstackUrl;
-  launch_info.out = component::testing::CloneFileDescriptor(1);
-  launch_info.err = component::testing::CloneFileDescriptor(2);
+  launch_info.out = sys::CloneFileDescriptor(1);
+  launch_info.err = sys::CloneFileDescriptor(2);
   services->AddServiceWithLaunchInfo(std::move(launch_info),
                                      fuchsia::netstack::Netstack::Name_);
 
@@ -172,8 +173,8 @@ TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
   // TODO(NET-1818): parameterize this over multiple netstack implementations
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kNetstackUrl;
-  launch_info.out = component::testing::CloneFileDescriptor(1);
-  launch_info.err = component::testing::CloneFileDescriptor(2);
+  launch_info.out = sys::CloneFileDescriptor(1);
+  launch_info.err = sys::CloneFileDescriptor(2);
   zx_status_t status = services->AddServiceWithLaunchInfo(
       std::move(launch_info), fuchsia::netstack::Netstack::Name_);
   ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);

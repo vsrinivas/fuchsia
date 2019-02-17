@@ -22,6 +22,7 @@ executable("realm_tests") {
   deps = [
     "fidl:test.component.mockrunner",
     "mock_runner:appmgr_mock_runner",
+    "//sdk/lib/sys/cpp",
     "//garnet//examples/fidl/services:echo",
     "//garnet/bin/appmgr:lib",
     "//garnet/public/lib/component/cpp",
@@ -46,6 +47,7 @@ executable("hub_tests") {
   ]
 
   deps = [
+    "//sdk/lib/sys/cpp",
     "//garnet/bin/sysmgr:lib",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing",

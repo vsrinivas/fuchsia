@@ -9,6 +9,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/util.h>
+#include <lib/sys/cpp/file_descriptor.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/time.h>
 #include <zircon/types.h>
@@ -17,27 +18,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
 #include "lib/ui/scenic/cpp/commands.h"
-
-static fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd) {
-  zx_handle_t handles[FDIO_MAX_HANDLES] = {0, 0, 0};
-  uint32_t types[FDIO_MAX_HANDLES] = {
-      ZX_HANDLE_INVALID,
-      ZX_HANDLE_INVALID,
-      ZX_HANDLE_INVALID,
-  };
-  zx_status_t status = fdio_clone_fd(fd, 0, handles, types);
-  if (status <= 0) {
-    return nullptr;
-  }
-  fuchsia::sys::FileDescriptorPtr result = fuchsia::sys::FileDescriptor::New();
-  result->type0 = types[0];
-  result->handle0 = zx::handle(handles[0]);
-  result->type1 = types[1];
-  result->handle1 = zx::handle(handles[1]);
-  result->type2 = types[2];
-  result->handle2 = zx::handle(handles[2]);
-  return result;
-}
 
 // Returns a human-readable string for a given hello_views process type -
 // either container or subview.
@@ -67,8 +47,8 @@ App::App(async::Loop* loop, AppType type)
     // if it came from us.
     component::Services subview_services;
     fuchsia::sys::LaunchInfo launch_info;
-    launch_info.out = CloneFileDescriptor(STDOUT_FILENO);
-    launch_info.err = CloneFileDescriptor(STDERR_FILENO);
+    launch_info.out = sys::CloneFileDescriptor(STDOUT_FILENO);
+    launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
     launch_info.url =
         "fuchsia-pkg://fuchsia.com/hello_views#meta/hello_subview.cmx";
     launch_info.directory_request = subview_services.NewRequest();

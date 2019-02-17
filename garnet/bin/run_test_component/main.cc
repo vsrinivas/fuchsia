@@ -8,6 +8,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/util.h>
+#include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/termination_reason.h>
 
 #include "garnet/bin/run_test_component/env_config.h"
@@ -153,10 +154,8 @@ int main(int argc, const char** argv) {
                                       parent_env.NewRequest().TakeChannel())) {
       return 1;
     }
-    parse_result.launch_info.out =
-        component::testing::CloneFileDescriptor(STDOUT_FILENO);
-    parse_result.launch_info.err =
-        component::testing::CloneFileDescriptor(STDERR_FILENO);
+    parse_result.launch_info.out = sys::CloneFileDescriptor(STDOUT_FILENO);
+    parse_result.launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
     parent_env->GetLauncher(launcher.NewRequest());
   } else {
     context->ConnectToEnvironmentService(parent_env.NewRequest());

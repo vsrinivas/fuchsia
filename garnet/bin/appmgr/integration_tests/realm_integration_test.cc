@@ -19,6 +19,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <lib/fdio/util.h>
+#include <lib/sys/cpp/file_descriptor.h>
 #include "garnet/bin/appmgr/util.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -36,7 +37,6 @@ using fuchsia::sys::TerminationReason;
 using ::testing::AnyOf;
 using ::testing::Eq;
 
-using testing::CloneFileDescriptor;
 using testing::EnclosingEnvironment;
 using testing::TestWithEnvironment;
 
@@ -68,8 +68,8 @@ class RealmTest : public TestWithEnvironment {
     for (const auto& a : args) {
       launch_info.arguments.push_back(a);
     }
-    launch_info.out = CloneFileDescriptor(outf_);
-    launch_info.err = CloneFileDescriptor(STDERR_FILENO);
+    launch_info.out = sys::CloneFileDescriptor(outf_);
+    launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
     return launch_info;
   }
 

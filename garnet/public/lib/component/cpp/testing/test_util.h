@@ -15,8 +15,6 @@
 namespace component {
 namespace testing {
 
-fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd);
-
 zx::channel OpenAsDirectory(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> node);
 
 }  // namespace testing

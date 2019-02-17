@@ -16,10 +16,10 @@
 #include "lib/fdio/util.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
+#include <lib/sys/cpp/file_descriptor.h>
 
 namespace intl_wisdom {
 
-using component::testing::CloneFileDescriptor;
 using component::testing::TestWithEnvironment;
 using fuchsia::sys::ComponentControllerPtr;
 using fuchsia::sys::LaunchInfo;
@@ -69,8 +69,8 @@ class IntlWisdomTest : public TestWithEnvironment {
   ComponentControllerPtr LaunchClientWithServer() {
     LaunchInfo launch_info{
         .url = kIntlWisdomClientPackage,
-        .out = CloneFileDescriptor(fileno(out_file_)),
-        .err = CloneFileDescriptor(STDERR_FILENO),
+        .out = sys::CloneFileDescriptor(fileno(out_file_)),
+        .err = sys::CloneFileDescriptor(STDERR_FILENO),
     };
     launch_info.arguments.push_back("--timestamp=2018-11-01T12:34:56Z");
     launch_info.arguments.push_back("--timezone=America/Los_Angeles");

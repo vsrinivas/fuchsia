@@ -18,6 +18,7 @@ executable("system_time_updater_test_bin") {
   ]
 
   deps = [
+    "//sdk/lib/sys/cpp",
     "//garnet/bin/network_time:lib",
     "//garnet/bin/network_time:time_util_lib",
     "//garnet/public/lib/component/cpp",

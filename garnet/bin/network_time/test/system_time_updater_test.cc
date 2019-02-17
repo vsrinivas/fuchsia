@@ -8,6 +8,7 @@
 #include <thread>
 
 #include <lib/zx/time.h>
+#include <lib/sys/cpp/file_descriptor.h>
 
 #include "garnet/bin/network_time/timezone.h"
 #include "garnet/public/lib/fxl/files/scoped_temp_dir.h"
@@ -29,7 +30,6 @@ namespace chrono = std::chrono;
 using chrono::steady_clock;
 using chrono::system_clock;
 using chrono::time_point;
-using component::testing::CloneFileDescriptor;
 using component::testing::EnclosingEnvironment;
 using component::testing::TestWithEnvironment;
 using files::ScopedTempDir;
@@ -164,8 +164,8 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
       const char* opt_pathname) {
     LaunchInfo launch_info;
     launch_info.url = kNetworkTimePackage;
-    launch_info.out = CloneFileDescriptor(STDOUT_FILENO);
-    launch_info.err = CloneFileDescriptor(STDERR_FILENO);
+    launch_info.out = sys::CloneFileDescriptor(STDOUT_FILENO);
+    launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
 
     fxl::UniqueFD tmp_dir_fd(open("/tmp", O_DIRECTORY | O_RDONLY));
     launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();

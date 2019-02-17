@@ -11,6 +11,7 @@
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fidl/cpp/interface_handle.h>
+#include <lib/sys/cpp/file_descriptor.h>
 #include <lib/zx/socket.h>
 #include <zircon/device/ethertap.h>
 #include <zircon/status.h>
@@ -140,8 +141,8 @@ fuchsia::sys::LaunchInfo CreateLaunchInfo(
   for (const auto& a : args) {
     launch_info.arguments.push_back(a);
   }
-  launch_info.out = component::testing::CloneFileDescriptor(1);
-  launch_info.err = component::testing::CloneFileDescriptor(2);
+  launch_info.out = sys::CloneFileDescriptor(1);
+  launch_info.err = sys::CloneFileDescriptor(2);
   return launch_info;
 }
 

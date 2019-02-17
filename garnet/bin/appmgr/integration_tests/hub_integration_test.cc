@@ -17,6 +17,7 @@
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/svc/cpp/services.h"
+#include "lib/sys/cpp/file_descriptor.h"
 
 namespace component {
 namespace {
@@ -39,7 +40,7 @@ class HubTest : public component::testing::TestWithEnvironment {
       launch_info.arguments.push_back(arg);
     }
 
-    launch_info.out = component::testing::CloneFileDescriptor(out_fd);
+    launch_info.out = sys::CloneFileDescriptor(out_fd);
 
     fuchsia::sys::ComponentControllerPtr controller;
     launcher->CreateComponent(std::move(launch_info), controller.NewRequest());

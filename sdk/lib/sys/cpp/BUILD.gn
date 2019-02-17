@@ -11,6 +11,8 @@ sdk_source_set("cpp") {
 
   include_base = "//sdk"
   sources = [
+    "file_descriptor.cc",
+    "file_descriptor.h",
     "outgoing.cc",
     "outgoing.h",
     "service_directory.cc",
