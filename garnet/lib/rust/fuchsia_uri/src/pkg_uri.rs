@@ -2,19 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use lazy_static::lazy_static;
-use regex::Regex;
+pub use crate::errors::ParseError;
+pub use crate::parse::{check_resource, HASH_RE, NAME_RE};
 use std::fmt;
 use url::percent_encoding::percent_decode;
 use url::Url;
-
-pub use crate::errors::ParseError;
-pub use crate::parse::check_resource;
-
-lazy_static! {
-    static ref NAME_RE: Regex = Regex::new(r"^[0-9a-z\-\._]{1,100}$").unwrap();
-    static ref HASH_RE: Regex = Regex::new(r"^[0-9a-z]{64}$").unwrap();
-}
 
 /// Decoded representation of a fuchsia-pkg URI.
 ///

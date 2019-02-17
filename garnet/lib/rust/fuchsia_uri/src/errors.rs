@@ -9,6 +9,8 @@ use std::fmt;
 pub enum ParseError {
     InvalidScheme,
     InvalidHost,
+    HostMustBeEmpty,
+    InvalidPath,
     InvalidName,
     InvalidVariant,
     InvalidHash,
@@ -26,6 +28,8 @@ impl fmt::Display for ParseError {
         match *self {
             ParseError::InvalidScheme => write!(f, "invalid scheme"),
             ParseError::InvalidHost => write!(f, "invalid host"),
+            ParseError::HostMustBeEmpty => write!(f, "host must be empty to imply absolute path"),
+            ParseError::InvalidPath => write!(f, "invalid path"),
             ParseError::InvalidName => write!(f, "invalid name"),
             ParseError::InvalidVariant => write!(f, "invalid variant"),
             ParseError::InvalidHash => write!(f, "invalid hash"),
@@ -47,6 +51,8 @@ impl error::Error for ParseError {
         match *self {
             ParseError::InvalidScheme => None,
             ParseError::InvalidHost => None,
+            ParseError::HostMustBeEmpty => None,
+            ParseError::InvalidPath => None,
             ParseError::InvalidName => None,
             ParseError::InvalidVariant => None,
             ParseError::InvalidHash => None,
