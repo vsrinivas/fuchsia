@@ -26,7 +26,7 @@ use fidl_fuchsia_logger::{LogListener, LogListenerImpl};
 
 /// This trait is used to pass log message back to client.
 pub trait LogProcessor {
-    /// Called when log is recieved from logger.
+    /// Called when log is received from logger.
     fn log(&mut self, message: LogMessage);
 
     /// Called when logger service signals that it is done dumping logs.
