@@ -45,7 +45,3 @@ bool errno_test(void) {
 BEGIN_TEST_CASE(errno_tests)
 RUN_TEST(errno_test)
 END_TEST_CASE(errno_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

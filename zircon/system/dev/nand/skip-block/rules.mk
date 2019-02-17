@@ -51,7 +51,6 @@ TEST_DIR := $(LOCAL_DIR)/test
 MODULE_SRCS := \
     $(LOCAL_DIR)/logical-to-physical-map.cpp \
     $(TEST_DIR)/logical-to-physical-map-test.cpp \
-    $(TEST_DIR)/main.cpp \
 
 MODULE_COMPILEFLAGS := \
     -I$(LOCAL_DIR) \

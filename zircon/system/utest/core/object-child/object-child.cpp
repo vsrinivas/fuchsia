@@ -29,9 +29,3 @@ bool handle_invalid() {
 BEGIN_TEST_CASE(object_get_child_tests)
 RUN_TEST(handle_invalid);
 END_TEST_CASE(object_get_child_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

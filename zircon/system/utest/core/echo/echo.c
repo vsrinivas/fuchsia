@@ -146,10 +146,3 @@ bool echo_test(void) {
 BEGIN_TEST_CASE(echo_tests)
 RUN_TEST(echo_test)
 END_TEST_CASE(echo_tests)
-
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

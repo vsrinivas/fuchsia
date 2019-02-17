@@ -242,9 +242,3 @@ RUN_TEST(test_try_mutexes)
 RUN_TEST(test_static_initializer)
 RUN_TEST(test_timeout_elapsed)
 END_TEST_CASE(mtx_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

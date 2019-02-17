@@ -22,7 +22,3 @@ bool publish_data(void) {
 BEGIN_TEST_CASE(publish_data_helper_tests)
 RUN_TEST(publish_data)
 END_TEST_CASE(publish_data_helper_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

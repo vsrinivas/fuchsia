@@ -47,7 +47,3 @@ RUN_TEST(cprng_test_draw_success)
 RUN_TEST(cprng_test_add_entropy_buf_too_large)
 RUN_TEST(cprng_test_add_entropy_bad_buf)
 END_TEST_CASE(cprng_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

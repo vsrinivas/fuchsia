@@ -18,7 +18,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/handle_closing_tests.cpp \
     $(LOCAL_DIR)/linearizing_tests.cpp \
     $(LOCAL_DIR)/llcpp_types_tests.cpp \
-    $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/message_tests.cpp \
     $(LOCAL_DIR)/validating_tests.cpp \
 

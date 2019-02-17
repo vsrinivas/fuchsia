@@ -12,7 +12,6 @@ MODULE_NAME := fzl-test
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/fdio.cpp \
-    $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/memory_probe_tests.cpp \
 
 MODULE_STATIC_LIBS := \

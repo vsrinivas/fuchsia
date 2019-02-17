@@ -257,7 +257,3 @@ RUN_TEST(format_size_empty_null_str_succeeds)
 RUN_TEST(hexdump_very_ex_test)
 RUN_TEST(hexdump8_very_ex_test)
 END_TEST_CASE(pretty_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

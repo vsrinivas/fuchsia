@@ -46,7 +46,3 @@ BEGIN_TEST_CASE(getentropy_tests)
 RUN_TEST(getentropy_valid);
 RUN_TEST(getentropy_too_big);
 END_TEST_CASE(getentropy_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

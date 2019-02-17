@@ -220,8 +220,3 @@ RUN_TEST(TestInitShortHeader)
 RUN_TEST(TestInitCantMap)
 RUN_TEST(TestParseSuccess)
 END_TEST_CASE(bootfs_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-

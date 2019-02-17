@@ -35,9 +35,3 @@ static bool clock_monotonic_test(void) {
 BEGIN_TEST_CASE(clock_tests)
 RUN_TEST(clock_monotonic_test)
 END_TEST_CASE(clock_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

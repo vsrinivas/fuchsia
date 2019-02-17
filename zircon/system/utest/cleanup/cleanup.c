@@ -87,7 +87,3 @@ bool cleanup_test(void) {
 BEGIN_TEST_CASE(cleanup_tests)
 RUN_TEST(cleanup_test)
 END_TEST_CASE(cleanup_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

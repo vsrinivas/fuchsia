@@ -747,9 +747,3 @@ RUN_TEST(test_scrollback_lines_contents)
 END_TEST_CASE(gfxconsole_textbuf_tests)
 
 }
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

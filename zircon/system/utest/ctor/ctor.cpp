@@ -70,7 +70,3 @@ RUN_TEST(check_initializer)
 RUN_TEST(check_dso_ctor)
 RUN_TEST(check_thread_local_ctor_dtor)
 END_TEST_CASE(ctors)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

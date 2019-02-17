@@ -2025,10 +2025,3 @@ RUN_TEST(partial_unmap_and_read);
 RUN_TEST(partial_unmap_and_write);
 RUN_TEST(partial_unmap_with_vmar_offset);
 END_TEST_CASE(vmar_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
-}
-#endif

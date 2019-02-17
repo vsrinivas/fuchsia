@@ -84,7 +84,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/devmgr/device.cpp \
     $(LOCAL_DIR)/devmgr/driver.cpp \
     $(LOCAL_DIR)/devmgr/fidl.cpp \
-    $(LOCAL_DIR)/devmgr/test-main.cpp \
     $(LOCAL_DIR)/shared/env.cpp \
 
 MODULE_FIDL_LIBS := \

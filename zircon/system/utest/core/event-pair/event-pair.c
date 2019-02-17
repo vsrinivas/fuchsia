@@ -135,9 +135,3 @@ RUN_TEST(signal_test)
 RUN_TEST(signal_peer_test)
 RUN_TEST(signal_peer_closed_test)
 END_TEST_CASE(eventpair_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

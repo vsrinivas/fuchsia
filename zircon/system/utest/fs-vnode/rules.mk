@@ -16,7 +16,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/service-tests.cpp \
     $(LOCAL_DIR)/teardown-tests.cpp \
     $(LOCAL_DIR)/vmo-file-tests.cpp \
-    $(LOCAL_DIR)/main.c
 
 MODULE_NAME := fs-vnode-test
 

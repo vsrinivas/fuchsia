@@ -169,9 +169,3 @@ RUN_TEST(handle_info_test)
 RUN_TEST(handle_related_koid_test)
 RUN_TEST(handle_rights_test)
 END_TEST_CASE(handle_info_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

@@ -69,7 +69,6 @@ TEST_DIR := $(LOCAL_DIR)/test
 MODULE_SRCS := \
     $(LOCAL_DIR)/device-partitioner.cpp \
     $(LOCAL_DIR)/pave-utils.cpp \
-    $(TEST_DIR)/main.cpp\
     $(TEST_DIR)/device-partitioner-test.cpp\
 
 MODULE_COMPILEFLAGS := \

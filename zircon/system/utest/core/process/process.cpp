@@ -682,10 +682,3 @@ RUN_TEST(suspend_twice);
 RUN_TEST(suspend_twice_before_creating_threads);
 RUN_TEST(suspend_with_dying_thread);
 END_TEST_CASE(process_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
-}
-#endif

@@ -269,10 +269,3 @@ RUN_TEST(mmap_prot_test);
 RUN_TEST(mmap_flags_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(mprotect_test);
 END_TEST_CASE(memory_mapping_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
-}
-#endif

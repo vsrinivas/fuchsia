@@ -325,7 +325,3 @@ static bool check_format_specifiers(void) {
 BEGIN_TEST_CASE(format_specifiers)
 RUN_TEST(check_format_specifiers)
 END_TEST_CASE(format_specifiers)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

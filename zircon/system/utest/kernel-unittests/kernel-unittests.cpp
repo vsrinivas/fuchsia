@@ -47,8 +47,3 @@ bool run_kernel_unittests() {
 BEGIN_TEST_CASE(kernel_unittests)
 RUN_TEST(run_kernel_unittests)
 END_TEST_CASE(kernel_unittests)
-
-int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
-}

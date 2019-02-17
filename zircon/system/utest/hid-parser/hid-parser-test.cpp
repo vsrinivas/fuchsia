@@ -920,8 +920,3 @@ RUN_TEST(parse_eve_tablet)
 RUN_TEST(parse_asus_touch)
 RUN_TEST(parse_eve_touchpad_v2)
 END_TEST_CASE(hidparser_tests)
-
-int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
-}

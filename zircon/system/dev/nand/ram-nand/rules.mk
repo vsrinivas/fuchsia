@@ -46,7 +46,6 @@ TEST_DIR := $(LOCAL_DIR)/test
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/ram-nand.cpp \
-    $(TEST_DIR)/main.cpp \
     $(TEST_DIR)/ram-nand.cpp \
     $(TEST_DIR)/ram-nand-ctl.cpp \
 

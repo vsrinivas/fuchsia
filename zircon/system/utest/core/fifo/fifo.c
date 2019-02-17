@@ -166,9 +166,3 @@ RUN_TEST(basic_test)
 RUN_TEST(peer_closed_test)
 RUN_TEST(options_test)
 END_TEST_CASE(fifo_tests)
-
-#ifndef BUILD_COMBINED_TESTS
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-#endif

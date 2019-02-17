@@ -379,7 +379,3 @@ RUN_TEST_MEDIUM(UnbindAncestorTest)
 END_TEST_CASE(namespace_tests)
 
 } // namespace
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}

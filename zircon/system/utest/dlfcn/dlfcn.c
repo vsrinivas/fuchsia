@@ -167,16 +167,17 @@ bool clone_test(void) {
     END_TEST;
 }
 
-int main(int argc, char** argv);
-static bool dladdr_main_test(void) {
+void test_global_function(void) {}
+
+static bool dladdr_unexported_test(void) {
     BEGIN_TEST;
 
     Dl_info info;
-    ASSERT_NE(dladdr(&main, &info), 0, "dladdr failed");
+    ASSERT_NE(dladdr(&test_global_function, &info), 0, "dladdr failed");
 
-    // The "main" symbol is not exported to .dynsym, so it won't be found.
-    EXPECT_EQ(info.dli_sname, NULL, "unexpected symbol name");
-    EXPECT_EQ(info.dli_saddr, NULL, "unexpected symbol address");
+    // This symbol is not exported to .dynsym, so it won't be found.
+    EXPECT_NULL(info.dli_sname, "unexpected symbol name");
+    EXPECT_NULL(info.dli_saddr, "unexpected symbol address");
 
     END_TEST;
 }
@@ -187,10 +188,5 @@ BEGIN_TEST_CASE(dlfcn_tests)
 RUN_TEST(dlopen_vmo_test);
 RUN_TEST(loader_service_test);
 RUN_TEST(clone_test);
-RUN_TEST(dladdr_main_test);
+RUN_TEST(dladdr_unexported_test);
 END_TEST_CASE(dlfcn_tests)
-
-int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
-}

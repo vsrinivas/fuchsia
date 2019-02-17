@@ -11,7 +11,6 @@ MODULE_TYPE := usertest
 MODULE_NAME := zxio-test
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/null-test.cpp \
     $(LOCAL_DIR)/vmofile-test.cpp \
     $(LOCAL_DIR)/zxio-test.cpp \
