@@ -50,9 +50,9 @@ class AudioDeviceSettings
   // attempt to persist these settings to disk from now on.
   void InitFromClone(const AudioDeviceSettings& other);
 
-  // Commit dirty setttings to storage if needed, and return the next time at
+  // Commit dirty settings to storage if needed, and return the next time at
   // which we should commit our settings, or zx::time::infinite() if the
-  // settings are now clean and do not need to be commited in the future.
+  // settings are now clean and do not need to be committed in the future.
   zx::time Commit(bool force = false);
 
   // Simple accessors for constant properties
@@ -151,9 +151,9 @@ class AudioDeviceSettings
   // When now >= next, it is time to commit.  The general idea here is to wait
   // a short amount of time before committing the settings to storage, because
   // another change may be arriving very soon.  This said, if the settings are
-  // constantly changing, they will need to eventually be commited.  The
+  // constantly changing, they will need to eventually be committed.  The
   // UpdateDelay determines the maximum possible rate at which the settings
-  // will be commited, while MaxUpdateDelay determines the minimum commit rate
+  // will be committed, while MaxUpdateDelay determines the minimum commit rate
   // in the event that the settings are constantly changing.
   zx::time next_commit_time_ = zx::time::infinite();
   zx::time max_commit_time_ = zx::time::infinite();

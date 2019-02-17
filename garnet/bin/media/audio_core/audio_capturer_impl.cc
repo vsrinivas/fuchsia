@@ -54,7 +54,7 @@ AudioCapturerImpl::AudioCapturerImpl(
   source_link_refs_.reserve(16u);
 
   // TODO(johngro) : Initialize this with the native configuration of the source
-  // we are initally bound to.
+  // we are initially bound to.
   format_ = fuchsia::media::AudioStreamType::New();
   UpdateFormat(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 8000);
 }
@@ -493,7 +493,7 @@ void AudioCapturerImpl::StartAsyncCapture(uint32_t frames_per_packet) {
 
   // Sanity check the number of frames per packet the user is asking for.
   //
-  // TODO(johngro) : This effectivly sets the minimum number of frames per
+  // TODO(johngro) : This effectively sets the minimum number of frames per
   // packet to produce at 1. This is still absurdly low; what is the proper
   // number? We should decide on a proper lower bound, document it, and enforce
   // the limit here.

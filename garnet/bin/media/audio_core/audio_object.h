@@ -79,7 +79,7 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   // For example, Sources like an AudioRenderer override InitializeDestLink in
   // order to set the source gain and to make a copy of their pending packet
   // queue. Destinations like an output override InitializeSourceLink in order
-  // to choose and intialize an appropriate resampling filter.
+  // to choose and initialize an appropriate resampling filter.
   //
   // @return MediaResult::OK if initialization succeeded, or an appropriate
   // error code otherwise.

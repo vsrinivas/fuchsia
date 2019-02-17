@@ -41,7 +41,7 @@ zx_status_t AudioDeviceManager::Init() {
   zx_status_t res = throttle_output->Startup();
   if (res != ZX_OK) {
     FXL_LOG(WARNING)
-        << "AudioDeviceManager failed to initalize the throttle output (res "
+        << "AudioDeviceManager failed to initialize the throttle output (res "
         << res << ")";
     throttle_output->Shutdown();
   }

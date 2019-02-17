@@ -58,7 +58,7 @@ OutputProducerPtr SelectOutputProducer(
 // This shared function normalizes data arrays into our float32 pipeline.
 // Because inputs must be in the range of [-2^27 , 2^27 ], for all practical
 // purposes it wants "int28" inputs, hence this function's unexpected name. The
-// test-data-width of 28 bits was chosen to accomodate float32 precision.
+// test-data-width of 28 bits was chosen to accommodate float32 precision.
 constexpr float kInt28ToFloat = 1.0 / (1 << 27);  // Why 27? Remember sign bit.
 void NormalizeInt28ToPipelineBitwidth(float* source, uint32_t source_len) {
   for (uint32_t idx = 0; idx < source_len; ++idx) {

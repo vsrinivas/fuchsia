@@ -39,7 +39,7 @@ OutputProducerPtr SelectOutputProducer(
 // values at the higher-than-needed precision of 28-bit. (They also specify
 // values in hexadecimal format in most cases, to make bit-shifted values more
 // clear.)  A __28__bit__ precision for test data was specifically chosen to
-// accomodate the transition we have now made to a float32 internal pipeline,
+// accommodate the transition we have now made to a float32 internal pipeline,
 // with its 25 effective bits of [precision+sign].
 //
 // This shared function, then, normalizes data arrays into our float32 pipeline.

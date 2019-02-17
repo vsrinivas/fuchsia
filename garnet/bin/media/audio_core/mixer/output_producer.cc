@@ -18,7 +18,7 @@ namespace media::audio {
 // Converting audio between float and int is surprisingly controversial.
 // (blog.bjornroche.com/2009/12/int-float-int-its-jungle-out-there.html etc. --
 // web-search "audio float int convert"). Our float32-based internal pipeline
-// can accomodate float and int Sources without data loss (where Source is a
+// can accommodate float and int Sources without data loss (where Source is a
 // client-submitted stream from AudioRenderer, or an input device), but for non-
 // float Destinations (output device, or AudioCapturer stream to a client) we
 // must clamp +1.0 values in DestConverter::Convert. When translating from float
