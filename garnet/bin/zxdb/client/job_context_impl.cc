@@ -11,6 +11,7 @@
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/setting_schema_definition.h"
 #include "garnet/bin/zxdb/client/system_impl.h"
+#include "garnet/lib/debug_ipc/debug/logging.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "garnet/public/lib/fxl/logging.h"
@@ -158,6 +159,7 @@ void JobContextImpl::Detach(Callback callback) {
 
 void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters,
                                           bool force_send) {
+  DEBUG_LOG() << "Updating filters for job " << job_->GetName();
   if (!job_.get()) {
     filters_ = std::move(filters);
     return;
@@ -165,15 +167,16 @@ void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters,
   if (!force_send && filters_ == filters) {
     return;
   }
+
   debug_ipc::JobFilterRequest request;
   request.job_koid = job_->GetKoid();
   request.filters = filters;
   session()->remote_api()->JobFilter(
-      request, [ filters, weak_job_context = impl_weak_factory_.GetWeakPtr() ](
+      request, [filters, weak_job_context = impl_weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::JobFilterReply reply) {
         if (reply.status != 0) {
-          printf("Error adding filter, error: %s.",
-                 debug_ipc::ZxStatusToString(reply.status));
+          FXL_LOG(ERROR) << "Error adding filter: "
+                         << debug_ipc::ZxStatusToString(reply.status);
           if (weak_job_context) {
             // Agent failed, reset filters in settings.
             // This will also trigger another callback but would be a no-op

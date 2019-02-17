@@ -33,6 +33,9 @@ thread_local MessageLoopZircon* current_message_loop_zircon = nullptr;
 // Everything in this class must be simple and copyable since we copy this
 // structure for every call (to avoid locking problems).
 struct MessageLoopZircon::WatchInfo {
+  // Mostly for debugging purposes.
+  std::string resource_name;
+
   WatchType type = WatchType::kFdio;
 
   // FDIO-specific watcher parameters.
@@ -64,19 +67,25 @@ MessageLoopZircon::~MessageLoopZircon() {
 }
 
 void MessageLoopZircon::Init() {
+  InitTarget();
+}
+
+zx_status_t MessageLoopZircon::InitTarget() {
   MessageLoop::Init();
 
   FXL_DCHECK(!current_message_loop_zircon);
   current_message_loop_zircon = this;
   MessageLoopTarget::current_message_loop_type =
-      MessageLoopTarget::LoopType::kZircon;
+      MessageLoopTarget::Type::kZircon;
+
+  return ZX_OK;
 }
 
 void MessageLoopZircon::Cleanup() {
   FXL_DCHECK(current_message_loop_zircon == this);
   current_message_loop_zircon = nullptr;
   MessageLoopTarget::current_message_loop_type =
-      MessageLoopTarget::LoopType::kLast;
+      MessageLoopTarget::Type::kLast;
 
   MessageLoop::Cleanup();
 }
@@ -134,8 +143,10 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchFD(WatchMode mode, int fd,
   return WatchHandle(this, watch_id);
 }
 
-MessageLoop::WatchHandle MessageLoopZircon::WatchSocket(
-    WatchMode mode, zx_handle_t socket_handle, SocketWatcher* watcher) {
+zx_status_t MessageLoopZircon::WatchSocket(WatchMode mode,
+                                           zx_handle_t socket_handle,
+                                           SocketWatcher* watcher,
+                                           MessageLoop::WatchHandle* out) {
   WatchInfo info;
   info.type = WatchType::kSocket;
   info.socket_watcher = watcher;
@@ -153,7 +164,7 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchSocket(
           zx_object_wait_async(socket_handle, port_.get(), watch_id,
                                ZX_SOCKET_READABLE, ZX_WAIT_ASYNC_REPEATING);
       if (status != ZX_OK)
-        return WatchHandle();
+        return status;
     }
 
     if (mode == WatchMode::kWrite || mode == WatchMode::kReadWrite) {
@@ -161,22 +172,24 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchSocket(
           zx_object_wait_async(socket_handle, port_.get(), watch_id,
                                ZX_SOCKET_WRITABLE, ZX_WAIT_ASYNC_REPEATING);
       if (status != ZX_OK)
-        return WatchHandle();
+        return status;
     }
 
     watches_[watch_id] = info;
   }
-  return WatchHandle(this, watch_id);
+
+  *out = WatchHandle(this, watch_id);
+  return ZX_OK;
 }
 
-MessageLoop::WatchHandle MessageLoopZircon::WatchProcessExceptions(
-    zx_handle_t process_handle, zx_koid_t process_koid,
-    ZirconExceptionWatcher* watcher) {
+zx_status_t MessageLoopZircon::WatchProcessExceptions(
+    WatchProcessConfig config, MessageLoop::WatchHandle* out) {
   WatchInfo info;
   info.type = WatchType::kProcessExceptions;
-  info.exception_watcher = watcher;
-  info.task_koid = process_koid;
-  info.task_handle = process_handle;
+  info.resource_name = config.process_name;
+  info.exception_watcher = config.watcher;
+  info.task_koid = config.process_koid;
+  info.task_handle = config.process_handle;
 
   int watch_id;
   {
@@ -186,31 +199,34 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchProcessExceptions(
     next_watch_id_++;
 
     // Bind to the exception port.
-    zx_status_t status = zx_task_bind_exception_port(
-        process_handle, port_.get(), watch_id, ZX_EXCEPTION_PORT_DEBUGGER);
+    zx_status_t status =
+        zx_task_bind_exception_port(config.process_handle, port_.get(),
+                                    watch_id, ZX_EXCEPTION_PORT_DEBUGGER);
     if (status != ZX_OK)
-      return WatchHandle();
+      return status;
 
     // Also watch for process termination.
     status =
-        zx_object_wait_async(process_handle, port_.get(), watch_id,
+        zx_object_wait_async(config.process_handle, port_.get(), watch_id,
                              ZX_PROCESS_TERMINATED, ZX_WAIT_ASYNC_REPEATING);
     if (status != ZX_OK)
-      return WatchHandle();
+      return status;
 
     watches_[watch_id] = info;
   }
-  return WatchHandle(this, watch_id);
+
+  *out = WatchHandle(this, watch_id);
+  return ZX_OK;
 }
 
-MessageLoop::WatchHandle MessageLoopZircon::WatchJobExceptions(
-    zx_handle_t job_handle, zx_koid_t job_koid,
-    ZirconExceptionWatcher* watcher) {
+zx_status_t MessageLoopZircon::WatchJobExceptions(
+    WatchJobConfig config, MessageLoop::WatchHandle* out) {
   WatchInfo info;
   info.type = WatchType::kJobExceptions;
-  info.exception_watcher = watcher;
-  info.task_koid = job_koid;
-  info.task_handle = job_handle;
+  info.resource_name = config.job_name;
+  info.exception_watcher = config.watcher;
+  info.task_koid = config.job_koid;
+  info.task_handle = config.job_handle;
 
   int watch_id;
   {
@@ -221,13 +237,15 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchJobExceptions(
 
     // Bind to the exception port.
     zx_status_t status = zx_task_bind_exception_port(
-        job_handle, port_.get(), watch_id, ZX_EXCEPTION_PORT_DEBUGGER);
+        config.job_handle, port_.get(), watch_id, ZX_EXCEPTION_PORT_DEBUGGER);
     if (status != ZX_OK)
-      return WatchHandle();
+      return status;
 
     watches_[watch_id] = info;
   }
-  return WatchHandle(this, watch_id);
+
+  *out = WatchHandle(this, watch_id);
+  return ZX_OK;
 }
 
 // |thread_koid| is unused in this message loop.

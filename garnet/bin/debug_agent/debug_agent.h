@@ -109,18 +109,15 @@ class DebugAgent : public RemoteAPI,
 
   // Job/Process/Thread Management ---------------------------------------------
 
-  // Returns the debugged process/thread for the given koid(s) or null if not
-  // found.
-  DebuggedJob* AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job);
-  DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
+  zx_status_t AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job);
   DebuggedJob* GetDebuggedJob(zx_koid_t koid);
+
+  zx_status_t AddDebuggedProcess(zx_koid_t process_koid, zx::process zx_proc,
+                                 bool resume_initial_thread);
+  DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
+
   DebuggedThread* GetDebuggedThread(zx_koid_t process_koid,
                                     zx_koid_t thread_koid);
-
-  // Returns a pointer to the newly created object.
-  DebuggedProcess* AddDebuggedProcess(zx_koid_t process_koid,
-                                      zx::process zx_proc,
-                                      bool resume_initial_thread);
 
   void LaunchProcess(const debug_ipc::LaunchRequest&, debug_ipc::LaunchReply*);
   void LaunchComponent(const debug_ipc::LaunchRequest&,

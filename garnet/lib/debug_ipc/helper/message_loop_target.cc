@@ -13,17 +13,17 @@ namespace debug_ipc {
 
 MessageLoopTarget::~MessageLoopTarget() = default;
 
-MessageLoopTarget::LoopType MessageLoopTarget::current_message_loop_type =
-    MessageLoopTarget::LoopType::kLast;
+MessageLoopTarget::Type MessageLoopTarget::current_message_loop_type =
+    MessageLoopTarget::Type::kLast;
 
 MessageLoopTarget* MessageLoopTarget::Current() {
-  FXL_DCHECK(current_message_loop_type != MessageLoopTarget::LoopType::kLast);
+  FXL_DCHECK(current_message_loop_type != MessageLoopTarget::Type::kLast);
   switch (current_message_loop_type) {
-    case MessageLoopTarget::LoopType::kAsync:
+    case MessageLoopTarget::Type::kAsync:
       return MessageLoopAsync::Current();
-    case MessageLoopTarget::LoopType::kZircon:
+    case MessageLoopTarget::Type::kZircon:
       return MessageLoopZircon::Current();
-    case MessageLoopTarget::LoopType::kLast:
+    case MessageLoopTarget::Type::kLast:
       break;
   }
 
@@ -31,13 +31,13 @@ MessageLoopTarget* MessageLoopTarget::Current() {
   return nullptr;
 }
 
-const char* MessageLoopTarget::LoopTypeToString(LoopType type) {
+const char* MessageLoopTarget::TypeToString(Type type) {
   switch (type) {
-    case MessageLoopTarget::LoopType::kAsync:
+    case MessageLoopTarget::Type::kAsync:
       return "Async";
-    case MessageLoopTarget::LoopType::kZircon:
+    case MessageLoopTarget::Type::kZircon:
       return "Zircon";
-    case MessageLoopTarget::LoopType::kLast:
+    case MessageLoopTarget::Type::kLast:
       return "Last";
   }
 

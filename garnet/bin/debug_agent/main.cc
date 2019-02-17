@@ -20,6 +20,7 @@
 #include "garnet/lib/debug_ipc/helper/message_loop_async.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_target.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
+#include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/sys/cpp/service_directory.h"
@@ -29,14 +30,14 @@ using namespace debug_ipc;
 namespace debug_agent {
 namespace {
 
-std::unique_ptr<debug_ipc::MessageLoop> GetMessageLoop(
-    MessageLoopTarget::LoopType type) {
+std::unique_ptr<debug_ipc::MessageLoopTarget> GetMessageLoop(
+    MessageLoopTarget::Type type) {
   switch (type) {
-    case MessageLoopTarget::LoopType::kAsync:
+    case MessageLoopTarget::Type::kAsync:
       return std::make_unique<debug_ipc::MessageLoopAsync>();
-    case MessageLoopTarget::LoopType::kZircon:
+    case MessageLoopTarget::Type::kZircon:
       return std::make_unique<debug_ipc::MessageLoopZircon>();
-    case MessageLoopTarget::LoopType::kLast:
+    case MessageLoopTarget::Type::kLast:
       break;
   }
 
@@ -179,9 +180,9 @@ Arguments
   --async-message-loop
       [Experimental] Use async-loop backend message loop.
 
-  --debug-message-loop
-      Run the debug agent's message loop in debug mode.
-      This prints all the enqueued tasks to the message loop.
+  --debug-mode
+      Run the agent on debug mode. This will enable conditional logging messages
+      and timing profiling. Mainly useful for people developing zxdb.
 
   --help
       Print this help.
@@ -212,14 +213,14 @@ int main(int argc, char* argv[]) {
   }
 
   // By default use the original agent message loop.
-  auto message_loop_type = MessageLoopTarget::LoopType::kZircon;
+  auto message_loop_type = MessageLoopTarget::Type::kZircon;
   if (cmdline.HasOption("async-message-loop")) {
     // Use new async loop.
-    message_loop_type = MessageLoopTarget::LoopType::kAsync;
+    message_loop_type = MessageLoopTarget::Type::kAsync;
   }
 
-  if (cmdline.HasOption("debug-message-loop")) {
-    printf("Running message loop in debug mode.\n");
+  if (cmdline.HasOption("debug-mode")) {
+    printf("Running the debug agent in debug mode.\n");
     debug_ipc::SetDebugMode(true);
   }
 
@@ -236,9 +237,14 @@ int main(int argc, char* argv[]) {
     auto services = sys::ServiceDirectory::CreateFromNamespace();
 
     printf("Using %s message loop.\n",
-           MessageLoopTarget::LoopTypeToString(message_loop_type));
+           MessageLoopTarget::TypeToString(message_loop_type));
     auto message_loop = debug_agent::GetMessageLoop(message_loop_type);
-    message_loop->Init();
+    zx_status_t status = message_loop->InitTarget();
+    if (status != ZX_OK) {
+      const char* type = MessageLoopTarget::TypeToString(message_loop_type);
+      FXL_LOG(ERROR) << "Could not initialize message loop (type: " << type
+                     << "): " << debug_ipc::ZxStatusToString(status);
+    }
 
     // The scope ensures the objects are destroyed before calling Cleanup on the
     // MessageLoop.
@@ -254,5 +260,8 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
+  // It's very useful to have a simple message that informs the debug agent
+  // exited successfully.
+  fprintf(stderr, "\rSee you, Space Cowboy...\r\n");
   return 0;
 }

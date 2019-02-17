@@ -43,7 +43,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   uint64_t dl_debug_addr() const { return dl_debug_addr_; }
 
   // Returns true on success. On failure, the object may not be used further.
-  bool Init();
+  zx_status_t Init();
 
   // IPC handlers.
   void OnPause(const debug_ipc::PauseRequest& request);

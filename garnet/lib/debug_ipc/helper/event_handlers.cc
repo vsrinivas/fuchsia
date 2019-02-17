@@ -7,26 +7,16 @@
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 
-#include "lib/fxl/logging.h"
-
+#include "garnet/lib/debug_ipc/debug/logging.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_async.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
+#include "lib/fxl/logging.h"
 
 namespace debug_ipc {
 
 // SignalHandler ---------------------------------------------------------------
 
 SignalHandler::SignalHandler() = default;
-SignalHandler::SignalHandler(int id, zx_handle_t object, zx_signals_t signals)
-    : watch_info_id_(id), handle_(std::make_unique<async_wait_t>()) {
-  *handle_ = {};  // Need to zero it out.
-  handle_->handler = Handler;
-  handle_->object = object;
-  handle_->trigger = signals;
-
-  WaitForSignals();
-}
-
 SignalHandler::~SignalHandler() {
   if (handle_) {
     async_wait_t* wait = handle_.get();
@@ -39,10 +29,22 @@ SignalHandler::~SignalHandler() {
 SignalHandler::SignalHandler(SignalHandler&&) = default;
 SignalHandler& SignalHandler::operator=(SignalHandler&&) = default;
 
-void SignalHandler::WaitForSignals() const {
+zx_status_t SignalHandler::Init(int id, zx_handle_t object,
+                                zx_signals_t signals) {
+  handle_ = std::make_unique<async_wait_t>();
+  *handle_ = {};  // Need to zero it out.
+  handle_->handler = Handler;
+  handle_->object = object;
+  handle_->trigger = signals;
+
+  watch_info_id_ = id;
+  return WaitForSignals();
+}
+
+zx_status_t SignalHandler::WaitForSignals() const {
   async_wait_t* wait = handle_.get();
   zx_status_t status = async_begin_wait(async_get_default_dispatcher(), wait);
-  FXL_DCHECK(status == ZX_OK);
+  return status;
 }
 
 void SignalHandler::Handler(async_dispatcher_t*, async_wait_t* wait,
@@ -61,6 +63,13 @@ void SignalHandler::Handler(async_dispatcher_t*, async_wait_t* wait,
   int watch_info_id = signal_handler.watch_info_id();
   auto* watch_info = loop->FindWatchInfo(watch_info_id);
   FXL_DCHECK(watch_info);
+
+  // BufferedFD will constantly create/destroy FD handles, making this statement
+  // flood the log.
+  if (watch_info->type != WatchType::kFdio) {
+    DEBUG_LOG() << "Signal for " << WatchTypeToString(watch_info->type) << " "
+                << watch_info->resource_name;
+  }
 
   switch (watch_info->type) {
     case WatchType::kFdio:
@@ -87,8 +96,17 @@ void SignalHandler::Handler(async_dispatcher_t*, async_wait_t* wait,
 // ExceptionHandler ------------------------------------------------------------
 
 ExceptionHandler::ExceptionHandler() = default;
-ExceptionHandler::ExceptionHandler(int id, zx_handle_t object, uint32_t options)
-    : watch_info_id_(id), handle_(std::make_unique<async_exception_t>()) {
+ExceptionHandler::~ExceptionHandler() {
+  if (handle_)
+    async_unbind_exception_port(async_get_default_dispatcher(), handle_.get());
+}
+
+ExceptionHandler::ExceptionHandler(ExceptionHandler&&) = default;
+ExceptionHandler& ExceptionHandler::operator=(ExceptionHandler&&) = default;
+
+zx_status_t ExceptionHandler::Init(int id, zx_handle_t object,
+                                   uint32_t options) {
+  handle_ = std::make_unique<async_exception_t>();
   *handle_ = {};  // Need to zero it out.
   handle_->state = ASYNC_STATE_INIT;
   handle_->handler = Handler;
@@ -97,29 +115,19 @@ ExceptionHandler::ExceptionHandler(int id, zx_handle_t object, uint32_t options)
 
   zx_status_t status =
       async_bind_exception_port(async_get_default_dispatcher(), handle_.get());
-  FXL_DCHECK(status == ZX_OK)
-      << "Expected ZX_OK, got " << ZxStatusToString(status);
-}
 
-ExceptionHandler::~ExceptionHandler() {
-  if (handle_) {
-    async_unbind_exception_port(async_get_default_dispatcher(), handle_.get());
-  }
+  watch_info_id_ = id;
+  return status;
 }
-
-// Copy constructors are implicitly deleted by unique_ptr
-ExceptionHandler::ExceptionHandler(ExceptionHandler&&) = default;
-ExceptionHandler& ExceptionHandler::operator=(ExceptionHandler&&) = default;
 
 void ExceptionHandler::Handler(async_dispatcher_t*,
                                async_exception_t* exception, zx_status_t status,
                                const zx_port_packet_t* packet) {
-  if (status == ZX_ERR_CANCELED) {
+  if (status == ZX_ERR_CANCELED)
     return;
-  }
 
-  FXL_DCHECK(status == ZX_OK)
-      << "Unexpected status: " << ZxStatusToString(status);
+  FXL_DCHECK(status == ZX_OK) << "Unexpected status: "
+                              << ZxStatusToString(status);
 
   auto* loop = MessageLoopAsync::Current();
   FXL_DCHECK(loop);

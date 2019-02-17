@@ -27,7 +27,11 @@ class FDWatcher;
 // host in addition to a Zircon target.
 class MessageLoop {
  public:
-  enum class WatchMode { kRead, kWrite, kReadWrite };
+  enum class WatchMode {
+    kRead,
+    kWrite,
+    kReadWrite,
+  };
 
   class WatchHandle;
 

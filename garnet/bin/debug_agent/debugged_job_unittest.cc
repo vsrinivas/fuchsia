@@ -6,6 +6,7 @@
 
 #include <thread>
 
+#include <gmock/gmock.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fit/function.h>
 #include <zircon/processargs.h>
@@ -13,8 +14,7 @@
 #include "garnet/bin/debug_agent/object_util.h"
 // TODO(DX-952): Move this over once the async loop is stable.
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "lib/fxl/arraysize.h"
 
 namespace debug_agent {
@@ -94,7 +94,9 @@ TEST_F(JobDebuggerTest, OneProcess) {
   ASSERT_EQ(ZX_OK, job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job));
   DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                            std::move(duplicate_job));
-  ASSERT_TRUE(debugged_job.Init());
+  zx_status_t status = debugged_job.Init();
+  ASSERT_EQ(ZX_OK, status) << "Expected ZX_OK, Got: "
+                           << debug_ipc::ZxStatusToString(status);
   debugged_job.SetFilters({"t"});
   ASSERT_EQ(0u, processes_.size());
   zx_handle_t proc = ZX_HANDLE_INVALID;
@@ -119,7 +121,9 @@ TEST_F(JobDebuggerTest, DebuggedJobKilled) {
     ASSERT_EQ(ZX_OK, job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job));
     DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                              std::move(duplicate_job));
-    ASSERT_TRUE(debugged_job.Init());
+    zx_status_t status = debugged_job.Init();
+    ASSERT_EQ(status, ZX_OK)
+        << "Expected ZX_OK, Got: " << debug_ipc::ZxStatusToString(status);
     debugged_job.SetFilters({"t"});
     ASSERT_EQ(0u, processes_.size());
     zx_handle_t proc = ZX_HANDLE_INVALID;
@@ -151,7 +155,9 @@ TEST_F(JobDebuggerTest, MultipleProcesses) {
   ASSERT_EQ(ZX_OK, job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job));
   DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                            std::move(duplicate_job));
-  ASSERT_TRUE(debugged_job.Init());
+  zx_status_t status = debugged_job.Init();
+  ASSERT_EQ(status, ZX_OK) << "Expected ZX_OK, Got: "
+                           << debug_ipc::ZxStatusToString(status);
   debugged_job.SetFilters({"t"});
   ASSERT_EQ(0u, processes_.size());
 
@@ -187,7 +193,9 @@ TEST_F(JobDebuggerTest, ProcessInNestedJob) {
   ASSERT_EQ(ZX_OK, job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job));
   DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                            std::move(duplicate_job));
-  ASSERT_TRUE(debugged_job.Init());
+  zx_status_t status = debugged_job.Init();
+  ASSERT_EQ(status, ZX_OK) << "Expected ZX_OK, Got: "
+                           << debug_ipc::ZxStatusToString(status);
   debugged_job.SetFilters({"t"});
   ASSERT_EQ(0u, processes_.size());
   zx_handle_t proc = ZX_HANDLE_INVALID;
@@ -209,7 +217,9 @@ TEST_F(JobDebuggerTest, FilterFullName) {
   ASSERT_EQ(ZX_OK, job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job));
   DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                            std::move(duplicate_job));
-  ASSERT_TRUE(debugged_job.Init());
+  zx_status_t status = debugged_job.Init();
+  ASSERT_EQ(status, ZX_OK) << "Expected ZX_OK, Got: "
+                           << debug_ipc::ZxStatusToString(status);
   constexpr char name[] = "true";
   debugged_job.SetFilters({name});
   ASSERT_EQ(0u, processes_.size());
@@ -232,7 +242,9 @@ TEST_F(JobDebuggerTest, FilterMultipleProcess) {
   ASSERT_EQ(ZX_OK, job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job));
   DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                            std::move(duplicate_job));
-  ASSERT_TRUE(debugged_job.Init());
+  zx_status_t status = debugged_job.Init();
+  ASSERT_EQ(status, ZX_OK) << "Expected ZX_OK, Got: "
+                           << debug_ipc::ZxStatusToString(status);
   debugged_job.SetFilters({"t"});
   ASSERT_EQ(0u, processes_.size());
 
@@ -257,7 +269,6 @@ TEST_F(JobDebuggerTest, FilterMultipleProcess) {
   WaitForProcToExit(proc2, 0);
 }
 
-
 // Launch two separate processes and check that multiple filters can attach to
 // them.
 TEST_F(JobDebuggerTest, MultipleFilters) {
@@ -265,7 +276,9 @@ TEST_F(JobDebuggerTest, MultipleFilters) {
   ASSERT_EQ(ZX_OK, job_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_job));
   DebuggedJob debugged_job(this, KoidForObject(duplicate_job),
                            std::move(duplicate_job));
-  ASSERT_TRUE(debugged_job.Init());
+  zx_status_t status = debugged_job.Init();
+  ASSERT_EQ(status, ZX_OK) << "Expected ZX_OK, Got: "
+                           << debug_ipc::ZxStatusToString(status);
   debugged_job.SetFilters({"t", "f"});
   ASSERT_EQ(0u, processes_.size());
 

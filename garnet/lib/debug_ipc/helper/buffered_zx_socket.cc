@@ -12,7 +12,7 @@ namespace debug_ipc {
 BufferedZxSocket::BufferedZxSocket() = default;
 BufferedZxSocket::~BufferedZxSocket() = default;
 
-bool BufferedZxSocket::Init(zx::socket socket) {
+zx_status_t BufferedZxSocket::Init(zx::socket socket) {
   FXL_DCHECK(!socket_.is_valid());  // Can't be initialized more than once.
   socket_ = std::move(socket);
   stream_.set_writer(this);
@@ -20,9 +20,8 @@ bool BufferedZxSocket::Init(zx::socket socket) {
   // Register for socket updates from the message loop.
   MessageLoopTarget* loop = MessageLoopTarget::Current();
   FXL_DCHECK(loop);
-  watch_handle_ = loop->WatchSocket(MessageLoop::WatchMode::kReadWrite,
-                                    socket_.get(), this);
-  return watch_handle_.watching();
+  return loop->WatchSocket(MessageLoop::WatchMode::kReadWrite, socket_.get(),
+                           this, &watch_handle_);
 }
 
 void BufferedZxSocket::OnSocketReadable(zx_handle_t) {

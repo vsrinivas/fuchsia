@@ -27,16 +27,24 @@ const char* WatchTypeToString(WatchType);
 class MessageLoopTarget : public MessageLoop {
  public:
   // New message loops should be suscribed here.
-  enum class LoopType {
+  enum class Type {
     kAsync,
     kZircon,
     kLast,
   };
-  // Set by a message loop at Init();
-  static LoopType current_message_loop_type;
-  static const char* LoopTypeToString(LoopType);
+
+  // Set by a message loop at InitTarget();
+  static Type current_message_loop_type;
+  static const char* TypeToString(Type);
+
+  // Target message loops can call wither Init or InitTarget. The difference is
+  // that InitTarget will return a status about what happened, whether Init
+  // will silently ignore it.
+  virtual zx_status_t InitTarget() = 0;
 
   virtual ~MessageLoopTarget();
+
+  virtual Type GetType() const = 0;
 
   // Runs until timeout. Mostly used in tests.
   void RunUntilTimeout(zx::duration timeout);
@@ -54,22 +62,32 @@ class MessageLoopTarget : public MessageLoop {
   // become both readable and writable at the same time which will necessitate
   // calling both callbacks. The code does not expect the FDWatcher to
   // disappear in between these callbacks.
-  virtual WatchHandle WatchSocket(WatchMode mode, zx_handle_t socket_handle,
-                                  SocketWatcher* watcher) = 0;
+  virtual zx_status_t WatchSocket(WatchMode mode, zx_handle_t socket_handle,
+                                  SocketWatcher* watcher, WatchHandle* out) = 0;
 
   // Attaches to the exception port of the given process and issues callbacks
   // on the given watcher. The watcher must outlive the returned WatchHandle.
   // Must only be called on the message loop thread.
-  virtual WatchHandle WatchProcessExceptions(
-      zx_handle_t process_handle, zx_koid_t process_koid,
-      ZirconExceptionWatcher* watcher) = 0;
+  struct WatchProcessConfig {
+    std::string process_name;
+    zx_handle_t process_handle;
+    zx_koid_t process_koid;
+    ZirconExceptionWatcher* watcher = nullptr;
+  };
+  virtual zx_status_t WatchProcessExceptions(WatchProcessConfig config,
+                                             WatchHandle* out) = 0;
 
   // Attaches to the exception port of the given job and issues callbacks
   // on the given watcher. The watcher must outlive the returned WatchHandle.
   // Must only be called on the message loop thread.
-  virtual WatchHandle WatchJobExceptions(zx_handle_t job_handle,
-                                         zx_koid_t job_koid,
-                                         ZirconExceptionWatcher* watcher) = 0;
+  struct WatchJobConfig {
+    std::string job_name;
+    zx_handle_t job_handle;
+    zx_koid_t job_koid;
+    ZirconExceptionWatcher* watcher;
+  };
+  virtual zx_status_t WatchJobExceptions(WatchJobConfig config,
+                                         WatchHandle* out) = 0;
 
   // When this class issues an exception notification, the code should call
   // this function to resume the thread from the exception. This is a wrapper

@@ -28,19 +28,19 @@ class SignalHandler {
                       const zx_packet_signal_t*);
 
   SignalHandler();
-  explicit SignalHandler(int id, zx_handle_t object, zx_signals_t signals);
   ~SignalHandler();
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SignalHandler);
-
   SignalHandler(SignalHandler&&);
   SignalHandler& operator=(SignalHandler&&);
+
+  zx_status_t Init(int id, zx_handle_t object, zx_signals_t signals);
 
   int watch_info_id() const { return watch_info_id_; }
   const async_wait_t* handle() const { return handle_.get(); }
 
  private:
-  void WaitForSignals() const;
+  zx_status_t WaitForSignals() const;
 
   int watch_info_id_ = -1;
   std::unique_ptr<async_wait_t> handle_;
@@ -52,13 +52,13 @@ class ExceptionHandler {
                       zx_status_t status, const zx_port_packet_t* packet);
 
   ExceptionHandler();
-  explicit ExceptionHandler(int id, zx_handle_t object, uint32_t options);
   ~ExceptionHandler();
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ExceptionHandler);
-
   ExceptionHandler(ExceptionHandler&&);
   ExceptionHandler& operator=(ExceptionHandler&&);
+
+  zx_status_t Init(int id, zx_handle_t object, uint32_t options);
 
   int watch_info_id() const { return watch_info_id_; }
   const async_exception_t* handle() const { return handle_.get(); }

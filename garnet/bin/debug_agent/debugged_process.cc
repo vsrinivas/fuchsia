@@ -16,6 +16,7 @@
 #include "garnet/bin/debug_agent/process_memory_accessor.h"
 #include "garnet/bin/debug_agent/process_watchpoint.h"
 #include "garnet/lib/debug_ipc/agent_protocol.h"
+#include "garnet/lib/debug_ipc/debug/logging.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_target.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
@@ -61,14 +62,18 @@ void DebuggedProcess::DetachFromProcess() {
   process_watch_handle_.StopWatching();
 }
 
-bool DebuggedProcess::Init() {
+zx_status_t DebuggedProcess::Init() {
   debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
   FXL_DCHECK(loop);  // Loop must be created on this thread first.
 
   // Register for debug exceptions.
-  process_watch_handle_ =
-      loop->WatchProcessExceptions(process_.get(), koid_, this);
-  return process_watch_handle_.watching();
+  debug_ipc::MessageLoopTarget::WatchProcessConfig config;
+  config.process_name = NameForObject(process_);
+  config.process_handle = process_.get();
+  config.process_koid = koid_;
+  config.watcher = this;
+  return loop->WatchProcessExceptions(std::move(config),
+                                      &process_watch_handle_);
 }
 
 void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request) {

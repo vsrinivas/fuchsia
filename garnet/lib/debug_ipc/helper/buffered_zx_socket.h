@@ -24,7 +24,7 @@ class BufferedZxSocket : public SocketWatcher, public StreamBuffer::Writer {
   // A MessageLoopZircon must be already set up on the current thread.
   //
   // Returns true on success.
-  bool Init(zx::socket socket);
+  zx_status_t Init(zx::socket socket);
 
   void set_data_available_callback(DataAvailableCallback cb) { callback_ = cb; }
 

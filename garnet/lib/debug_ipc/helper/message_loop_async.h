@@ -39,6 +39,10 @@ class MessageLoopAsync : public MessageLoopTarget {
   ~MessageLoopAsync();
 
   void Init() override;
+  zx_status_t InitTarget() override;
+
+  Type GetType() const override { return Type::kAsync; }
+
   void Cleanup() override;
 
   // Runs until timeout. Mostly used in tests.
@@ -50,21 +54,20 @@ class MessageLoopAsync : public MessageLoopTarget {
   // MessageLoop implementation.
   WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) override;
 
-  WatchHandle WatchSocket(WatchMode mode, zx_handle_t socket_handle,
-                          SocketWatcher* watcher) override;
+  zx_status_t WatchSocket(WatchMode mode, zx_handle_t socket_handle,
+                          SocketWatcher* watcher, WatchHandle* out) override;
 
   // Attaches to the exception port of the given process and issues callbacks
   // on the given watcher. The watcher must outlive the returned WatchHandle.
   // Must only be called on the message loop thread.
-  WatchHandle WatchProcessExceptions(zx_handle_t process_handle,
-                                     zx_koid_t process_koid,
-                                     ZirconExceptionWatcher* watcher) override;
+  zx_status_t WatchProcessExceptions(WatchProcessConfig config,
+                                     WatchHandle* out) override;
 
   // Attaches to the exception port of the given job and issues callbacks
   // on the given watcher. The watcher must outlive the returned WatchHandle.
   // Must only be called on the message loop thread.
-  WatchHandle WatchJobExceptions(zx_handle_t job_handle, zx_koid_t job_koid,
-                                 ZirconExceptionWatcher* watcher) override;
+  zx_status_t WatchJobExceptions(WatchJobConfig config,
+                                 WatchHandle* out) override;
 
   // When this class issues an exception notification, the code should call
   // this function to resume the thread from the exception. This is a wrapper
@@ -122,14 +125,14 @@ class MessageLoopAsync : public MessageLoopTarget {
   // See SignalHandler constructor.
   // |associated_info| needs to be updated with the fact that it has an
   // associated SignalHandler.
-  void AddSignalHandler(int, zx_handle_t, zx_signals_t, WatchInfo* info);
+  zx_status_t AddSignalHandler(int, zx_handle_t, zx_signals_t, WatchInfo* info);
   void RemoveSignalHandler(const async_wait_t* id);
 
   ExceptionHandlerMap exception_handlers_;
   // See ExceptionHandler constructor.
   // |associated_info| needs to be updated with the fact that it has an
   // associated ExceptionHandler.
-  void AddExceptionHandler(int, zx_handle_t, uint32_t, WatchInfo* info);
+  zx_status_t AddExceptionHandler(int, zx_handle_t, uint32_t, WatchInfo* info);
   void RemoveExceptionHandler(const async_exception_t*);
 
   // Every exception source (ExceptionHandler) will get an async_exception_t*
@@ -151,6 +154,10 @@ class MessageLoopAsync : public MessageLoopTarget {
 
 // EventHandlers need access to the WatchInfo implementation.
 struct MessageLoopAsync::WatchInfo {
+  // Name of the resource being watched.
+  // Mostly tracked for debugging purposes.
+  std::string resource_name;
+
   WatchType type = WatchType::kFdio;
 
   // FDIO-specific watcher parameters.

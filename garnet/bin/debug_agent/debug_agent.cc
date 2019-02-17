@@ -22,6 +22,7 @@
 #include "garnet/lib/debug_ipc/agent_protocol.h"
 #include "garnet/lib/debug_ipc/debug/block_timer.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
+#include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
 #include "lib/fxl/files/file.h"
@@ -127,15 +128,12 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
   reply.status = ZX_ERR_NOT_FOUND;
   if (request.type == debug_ipc::AttachRequest::Type::kProcess) {
     zx::process process = GetProcessFromKoid(request.koid);
-    DebuggedProcess* new_process = nullptr;
     if (process.is_valid()) {
       reply.name = NameForObject(process);
       reply.koid = request.koid;
       // TODO(donosoc): change resume thread setting once we have global
       // settings.
-      new_process = AddDebuggedProcess(request.koid, std::move(process), true);
-      if (new_process)
-        reply.status = ZX_OK;
+      reply.status = AddDebuggedProcess(request.koid, std::move(process), true);
     }
 
     // Send the reply.
@@ -144,6 +142,7 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
     stream()->Write(writer.MessageComplete());
 
     // For valid attaches, follow up with the current module and thread lists.
+    DebuggedProcess* new_process = GetDebuggedProcess(request.koid);
     if (new_process) {
       new_process->PopulateCurrentThreads();
 
@@ -162,10 +161,7 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
     if (job.is_valid()) {
       reply.name = NameForObject(job);
       reply.koid = request.koid;
-      auto new_job = AddDebuggedJob(request.koid, std::move(job));
-      if (new_job) {
-        reply.status = ZX_OK;
-      }
+      reply.status = AddDebuggedJob(request.koid, std::move(job));
     }
 
     // Send the reply.
@@ -189,10 +185,13 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
         if (job.is_valid()) {
           reply.koid = koid;
           reply.name = NameForObject(job);
-          auto new_job = AddDebuggedJob(koid, std::move(job));
-          if (new_job) {
+          reply.status = AddDebuggedJob(koid, std::move(job));
+          if (reply.status == ZX_OK) {
             reply.status = ZX_OK;
             component_root_job_koid_ = koid;
+          } else {
+            FXL_LOG(ERROR) << "Could not attach to the root job: "
+                           << debug_ipc::ZxStatusToString(reply.status);
           }
         }
       }
@@ -473,27 +472,27 @@ DebuggedThread* DebugAgent::GetDebuggedThread(zx_koid_t process_koid,
   return process->GetThread(thread_koid);
 }
 
-DebuggedJob* DebugAgent::AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job) {
+zx_status_t DebugAgent::AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job) {
   auto job = std::make_unique<DebuggedJob>(this, job_koid, std::move(zx_job));
-  if (!job->Init())
-    return nullptr;
+  zx_status_t status = job->Init();
+  if (status != ZX_OK)
+    return status;
 
-  DebuggedJob* result = job.get();
   jobs_[job_koid] = std::move(job);
-  return result;
+  return ZX_OK;
 }
 
-DebuggedProcess* DebugAgent::AddDebuggedProcess(zx_koid_t process_koid,
-                                                zx::process zx_proc,
-                                                bool resume_initial_thread) {
+zx_status_t DebugAgent::AddDebuggedProcess(zx_koid_t process_koid,
+                                           zx::process zx_proc,
+                                           bool resume_initial_thread) {
   auto proc = std::make_unique<DebuggedProcess>(
       this, process_koid, std::move(zx_proc), resume_initial_thread);
-  if (!proc->Init())
-    return nullptr;
+  zx_status_t status = proc->Init();
+  if (status != ZX_OK)
+    return status;
 
-  DebuggedProcess* result = proc.get();
   procs_[process_koid] = std::move(proc);
-  return result;
+  return ZX_OK;
 }
 
 void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
@@ -508,10 +507,12 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
   zx_koid_t process_koid = KoidForObject(process);
 
   // TODO(donosoc): change resume thread setting once we have global settings.
-  DebuggedProcess* debugged_process =
+  zx_status_t status =
       AddDebuggedProcess(process_koid, std::move(process), true);
-  if (!debugged_process)
+  if (status != ZX_OK) {
+    reply->status = status;
     return;
+  }
 
   reply->status = launcher.Start();
   if (reply->status != ZX_OK) {
@@ -522,6 +523,7 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
   // Success, fill out the reply.
   reply->process_koid = process_koid;
   reply->process_name = NameForObject(process);
+  reply->status = ZX_OK;
 }
 
 void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,

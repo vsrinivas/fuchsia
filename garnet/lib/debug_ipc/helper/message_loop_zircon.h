@@ -22,8 +22,12 @@ class MessageLoopZircon : public MessageLoopTarget {
   ~MessageLoopZircon();
 
   void Init() override;
+  zx_status_t InitTarget() override;
+
   void Cleanup() override;
   void QuitNow() override;
+
+  Type GetType() const override { return Type::kZircon; }
 
   // Runs until timeout. Mostly used in tests.
   void RunUntilTimeout(zx::duration timeout);
@@ -34,15 +38,14 @@ class MessageLoopZircon : public MessageLoopTarget {
   // MessageLoop implementation.
   WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) override;
 
-  WatchHandle WatchSocket(WatchMode mode, zx_handle_t socket_handle,
-                          SocketWatcher* watcher) override;
+  zx_status_t WatchSocket(WatchMode mode, zx_handle_t socket_handle,
+                          SocketWatcher* watcher, WatchHandle* out) override;
 
-  WatchHandle WatchProcessExceptions(zx_handle_t process_handle,
-                                     zx_koid_t process_koid,
-                                     ZirconExceptionWatcher* watcher) override;
+  zx_status_t WatchProcessExceptions(WatchProcessConfig config,
+                                     WatchHandle* out) override;
 
-  WatchHandle WatchJobExceptions(zx_handle_t job_handle, zx_koid_t job_koid,
-                                 ZirconExceptionWatcher* watcher) override;
+  zx_status_t WatchJobExceptions(WatchJobConfig config,
+                                 WatchHandle* out) override;
 
   zx_status_t ResumeFromException(zx_koid_t thread_koid, zx::thread& thread,
                                   uint32_t options) override;

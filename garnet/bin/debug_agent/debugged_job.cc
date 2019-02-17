@@ -7,6 +7,8 @@
 #include "garnet/bin/debug_agent/debugged_job.h"
 #include "garnet/bin/debug_agent/object_util.h"
 #include "garnet/bin/debug_agent/system_info.h"
+#include "garnet/lib/debug_ipc/debug/logging.h"
+#include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "lib/fxl/logging.h"
 
 namespace debug_agent {
@@ -22,8 +24,12 @@ bool DebuggedJob::Init() {
   FXL_DCHECK(loop);  // Loop must be created on this thread first.
 
   // Register for debug exceptions.
-  job_watch_handle_ = loop->WatchJobExceptions(job_.get(), koid_, this);
-  return job_watch_handle_.watching();
+  debug_ipc::MessageLoopTarget::WatchJobConfig config;
+  config.job_name = NameForObject(job_);
+  config.job_handle = job_.get();
+  config.job_koid = koid_;
+  config.watcher = this;
+  return loop->WatchJobExceptions(std::move(config), &job_watch_handle_);
 }
 
 void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
@@ -34,26 +40,29 @@ void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
   auto proc_name = NameForObject(process);
   zx::thread thread = ThreadForKoid(process.get(), thread_koid);
 
-  bool found = false;
   // Search through the available filters. If the regex is not valid, fallback
   // to checking if |proc_name| contains the filter.
+  FilterInfo* matching_filter = nullptr;
   for (auto& filter : filters_) {
     if (filter.regex.valid()) {
       if (filter.regex.Match(proc_name)) {
-        found = true;
+        matching_filter = &filter;
         break;
       }
     } else {
       // TODO(DX-953): Job filters should always be valid.
       if (proc_name.find(filter.filter) != std::string::npos) {
-        found = true;
+        matching_filter = &filter;
         break;
       }
     }
   }
 
-  if (found)
+  if (matching_filter) {
+    DEBUG_LOG() << "Filter " << matching_filter->filter << " matches process "
+                << proc_name << ". Attaching.";
     handler_->OnProcessStart(std::move(process));
+  }
 
   // Attached to the process. At that point it will get a new thread
   // notification for the initial thread which it can stop or continue as it
