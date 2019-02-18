@@ -23,9 +23,15 @@ static zx_status_t cpu_trace_bind(void* ctx, zx_device_t* parent) {
     zx_status_t insntrace_status = insntrace_bind(ctx, parent);
 
     // If at least one succeeded return ZX_OK.
-    // E.g., Devhost may dlclose us some day if we fail.
     if (cpuperf_status != ZX_OK && insntrace_status != ZX_OK) {
         // Doesn't matter which one we return.
+        return cpuperf_status;
+    }
+#endif
+
+#ifdef __aarch64__
+    zx_status_t cpuperf_status = cpuperf_bind(ctx, parent);
+    if (cpuperf_status != ZX_OK) {
         return cpuperf_status;
     }
 #endif

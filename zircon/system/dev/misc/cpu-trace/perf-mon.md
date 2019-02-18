@@ -1,6 +1,9 @@
-# Intel Hardware Performance Monitor Data Collection
+# Intel/ARM64 Hardware Performance Monitor Data Collection
 
 See chapters 18,19 of the Intel Architecture Software Developer's Manual.
+
+See chapter D5 of the ARM64 Architecture Reference Manual and
+chapter 12 of the Cortex A53 Technical Reference Manual.
 
 ## IOCTLs
 

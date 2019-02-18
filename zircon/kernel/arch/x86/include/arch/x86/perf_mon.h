@@ -16,6 +16,10 @@
 
 #include <lib/zircon-internal/device/cpu-trace/intel-pm.h>
 
+// TODO(dje): Transition helpers.
+using zx_x86_pmu_properties_t = perfmon::X86PmuProperties;
+using zx_x86_pmu_config_t = perfmon::X86PmuConfig;
+
 zx_status_t arch_perfmon_get_properties(zx_x86_pmu_properties_t* state);
 
 zx_status_t arch_perfmon_init();

@@ -9,6 +9,30 @@
 #ifndef LIB_ZIRCON_INTERNAL_DEVICE_CPU_TRACE_COMMON_PM_H_
 #define LIB_ZIRCON_INTERNAL_DEVICE_CPU_TRACE_COMMON_PM_H_
 
+#ifdef __cplusplus
+
+namespace perfmon {
+
+// H/W properties used by common code.
+struct PmuCommonProperties {
+    // The H/W Performance Monitor version.
+    uint16_t pm_version;
+    // The number of fixed events.
+    uint16_t num_fixed_events;
+    // The number of programmable events.
+    uint16_t num_programmable_events;
+    // The number of misc events.
+    uint16_t num_misc_events;
+    // For fixed events that are counters, the width in bits.
+    uint16_t fixed_counter_width;
+    // For programmable events that are counters, the width in bits.
+    uint16_t programmable_counter_width;
+};
+
+} // namespace perfmon
+
+#endif // __cplusplus
+
 // This is for passing buffer specs to the kernel.
 typedef struct {
     zx_handle_t vmo;

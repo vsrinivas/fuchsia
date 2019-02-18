@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <zircon/compiler.h>
 #include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
 #include <lib/zircon-internal/device/cpu-trace/common-pm.h>
 
@@ -336,20 +337,12 @@ __BEGIN_CDECLS
 // These structs are used for communication between the device driver
 // and the kernel.
 
+#ifdef __cplusplus
+
+namespace perfmon {
+
 // Properties of perf data collection on this system.
-typedef struct {
-    // The H/W Performance Monitor version.
-    uint16_t pm_version;
-    // The number of fixed events.
-    uint16_t num_fixed_events;
-    // The number of programmable events.
-    uint16_t num_programmable_events;
-    // The number of misc events.
-    uint16_t num_misc_events;
-    // For fixed events that are counters, the width in bits.
-    uint16_t fixed_counter_width;
-    // For programmable events that are counters, the width in bits.
-    uint16_t programmable_counter_width;
+struct X86PmuProperties : public PmuCommonProperties {
     // The PERF_CAPABILITIES MSR.
     uint64_t perf_capabilities;
     // The size of the LBR (Last Branch Record) stack.
@@ -357,10 +350,10 @@ typedef struct {
     // LBR is supported by the chip because the device is not recognized as
     // supporting it.
     uint32_t lbr_stack_size;
-} zx_x86_pmu_properties_t;
+};
 
 // PMU configuration.
-typedef struct {
+struct X86PmuConfig {
     // IA32_PERF_GLOBAL_CTRL
     uint64_t global_ctrl;
 
@@ -413,7 +406,11 @@ typedef struct {
 
     // IA32_PERFEVTSEL_*
     uint64_t programmable_events[IPM_MAX_PROGRAMMABLE_COUNTERS];
-} zx_x86_pmu_config_t;
+};
+
+} // namespace perfmon
+
+#endif // __cplusplus
 
 ///////////////////////////////////////////////////////////////////////////////
 

@@ -2,14 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-assert(current_cpu == "x64")
-
 driver("cpu-trace") {
   sources = [
     "cpu-trace.cpp",
-    "intel-pm.cpp",
-    "intel-pt.cpp",
+    "perf-mon.cpp",
   ]
+
+  if (current_cpu == "arm64") {
+    sources += [
+      "arm64-pm.cpp",
+    ]
+  } else if (current_cpu == "x64") {
+    sources += [
+      "intel-pm.cpp",
+      "intel-pt.cpp",
+    ]
+  }
+
   deps = [
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/ulib/ddk",
