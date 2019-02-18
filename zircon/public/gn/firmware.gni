@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/prebuilt/config.gni")
 import("resource.gni")
 
 # This is the directory populated by $zx/scripts/download-prebuilt.
@@ -23,6 +24,7 @@ firmware_dir = "$zx/prebuilt/downloads/firmware"
 # omitted, it defaults to `[ "{{source_file_part}}" ]` so the string matches
 # the string in `sources` after any slash.
 #
+# This is a no-op when the firmware downloads are not available at build time.
 template("firmware") {
   resource(target_name) {
     forward_variables_from(invoker, "*", [ "outputs" ])
@@ -37,6 +39,10 @@ template("firmware") {
       outputs = [
         "lib/firmware/{{source_file_part}}",
       ]
+    }
+
+    if (!have_firmware) {
+      sources = []
     }
   }
 }
