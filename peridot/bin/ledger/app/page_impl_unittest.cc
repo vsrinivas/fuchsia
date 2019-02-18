@@ -98,7 +98,7 @@ class PageImplTest : public TestWithEnvironment {
           journals) {
     for (const auto& journal_pair : journals) {
       const auto& journal = journal_pair.second;
-      if (!journal->IsCommitted() && !journal->IsRolledBack()) {
+      if (!journal->IsCommitted()) {
         journal->ResolvePendingCommit(storage::Status::OK);
         return;
       }
@@ -661,6 +661,7 @@ TEST_F(PageImplTest, TransactionRollback) {
   // Sequence of operations:
   //  - StartTransaction
   //  - Rollback
+  //  - StartTransaction
   bool called_start;
   Status status_start;
   bool called_rollback;
@@ -678,14 +679,14 @@ TEST_F(PageImplTest, TransactionRollback) {
   EXPECT_EQ(Status::OK, status_rollback);
   EXPECT_EQ(0u, fake_storage_->GetObjects().size());
 
-  // Only one journal, rollbacked.
-  const std::map<std::string,
-                 std::unique_ptr<storage::fake::FakeJournalDelegate>>&
-      journals = fake_storage_->GetJournals();
-  EXPECT_EQ(1u, journals.size());
-  auto it = journals.begin();
-  EXPECT_TRUE(it->second->IsRolledBack());
-  EXPECT_EQ(0u, it->second->GetData().size());
+  // Starting another transaction should now succeed.
+  bool called;
+  Status status;
+  page_ptr_->StartTransaction(
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  DrainLoop();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
 }
 
 TEST_F(PageImplTest, NoTwoTransactions) {

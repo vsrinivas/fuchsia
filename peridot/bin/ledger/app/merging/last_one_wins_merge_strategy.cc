@@ -63,12 +63,7 @@ LastOneWinsMergeStrategy::LastOneWinsMerger::LastOneWinsMerger(
   FXL_DCHECK(callback_);
 }
 
-LastOneWinsMergeStrategy::LastOneWinsMerger::~LastOneWinsMerger() {
-  if (journal_) {
-    storage_->RollbackJournal(std::move(journal_),
-                              [](storage::Status /*status*/) {});
-  }
-}
+LastOneWinsMergeStrategy::LastOneWinsMerger::~LastOneWinsMerger() {}
 
 void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
   journal_ = storage_->StartMergeCommit(left_->GetId(), right_->GetId());
@@ -78,8 +73,6 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
 void LastOneWinsMergeStrategy::LastOneWinsMerger::Cancel() {
   cancelled_ = true;
   if (journal_) {
-    storage_->RollbackJournal(std::move(journal_),
-                              [](storage::Status /*status*/) {});
     journal_.reset();
   }
 }

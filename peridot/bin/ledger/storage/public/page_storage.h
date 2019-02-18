@@ -93,9 +93,7 @@ class PageStorage : public PageSyncClient {
   virtual void CommitJournal(
       std::unique_ptr<Journal> journal,
       fit::function<void(Status, std::unique_ptr<const Commit>)> callback) = 0;
-  // Rolls back all changes to the given |Journal|.
-  virtual void RollbackJournal(std::unique_ptr<Journal> journal,
-                               fit::function<void(Status)> callback) = 0;
+
   // Registers the given |CommitWatcher| which will be notified on new commits.
   virtual Status AddCommitWatcher(CommitWatcher* watcher) = 0;
   // Unregisters the given CommitWatcher.

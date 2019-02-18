@@ -988,15 +988,6 @@ TEST_F(PageStorageTest, CreateJournals) {
   // Journal for merge commit.
   std::unique_ptr<Journal> journal =
       storage_->StartMergeCommit(left_commit->GetId(), right_commit->GetId());
-
-  bool called;
-  Status status;
-  storage_->RollbackJournal(
-      std::move(journal),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
 }
 
 TEST_F(PageStorageTest, CreateJournalHugeNode) {

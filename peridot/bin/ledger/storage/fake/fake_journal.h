@@ -28,8 +28,6 @@ class FakeJournal : public Journal {
       fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
           callback);
 
-  Status Rollback();
-
   // Journal:
   void Put(convert::ExtendedStringView key, ObjectIdentifier object_identifier,
            KeyPriority priority) override;

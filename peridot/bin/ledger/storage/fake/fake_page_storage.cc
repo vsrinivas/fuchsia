@@ -154,11 +154,6 @@ void FakePageStorage::CommitJournal(
       });
 }
 
-void FakePageStorage::RollbackJournal(std::unique_ptr<Journal> journal,
-                                      fit::function<void(Status)> callback) {
-  callback(static_cast<FakeJournal*>(journal.get())->Rollback());
-}
-
 Status FakePageStorage::AddCommitWatcher(CommitWatcher* watcher) {
   watchers_.emplace(watcher);
   return Status::OK;

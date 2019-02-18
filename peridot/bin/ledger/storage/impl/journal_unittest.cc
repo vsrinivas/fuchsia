@@ -142,15 +142,12 @@ TEST_F(JournalTest, ImplicitJournalsPutRollback) {
                                  kFirstPageCommitId.ToString()));
   journal_->Put("key", object_identifier_, KeyPriority::EAGER);
 
+  // The journal was not committed: the contents of page storage should not have
+  // changed.
+  journal_.reset();
+
   bool called;
   Status status;
-  journal_->Rollback(
-      callback::Capture(callback::SetWhenCalled(&called), &status));
-
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
-
   std::vector<CommitId> heads;
   page_storage_.GetHeadCommitIds(
       callback::Capture(callback::SetWhenCalled(&called), &status, &heads));

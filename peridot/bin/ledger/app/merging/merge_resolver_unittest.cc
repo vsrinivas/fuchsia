@@ -90,11 +90,6 @@ class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
     storage_->CommitJournal(std::move(journal), std::move(callback));
   }
 
-  void RollbackJournal(std::unique_ptr<storage::Journal> journal,
-                       fit::function<void(storage::Status)> callback) override {
-    storage_->RollbackJournal(std::move(journal), std::move(callback));
-  }
-
   void AddObjectFromLocal(
       storage::ObjectType object_type,
       std::unique_ptr<storage::DataSource> data_source,

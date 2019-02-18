@@ -25,11 +25,10 @@ namespace storage {
 // applied before it is commited or rolled back. This way, it is guaranteed that
 // in case of unexpected shut down of Ledger, all operations that completed
 // successfully (i.e. returned with a status |OK|) will actually be persisted.
-// Instances of |JournalImpl| are valid as long as none of |Commit| or
-// |Rollback| has been called. When no longer valid, it is an error to try to
-// call any further methods on that object. A journal that is not commited
-// before destruction, will be rolled back.
-// TODO(nellyv): Remove |Rollback()|: it is no longer useful.
+// Instances of |JournalImpl| are valid as long as |Commit| has not been called.
+// When no longer valid, it is an error to try to call any further methods on
+// that object. A journal that is not commited before destruction, will be
+// rolled back.
 class JournalImpl : public Journal {
  private:
   // Passkey idiom to restrict access to the constructor to static factories.
@@ -59,11 +58,6 @@ class JournalImpl : public Journal {
   void Commit(
       fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
           callback);
-
-  // Rolls back all changes to this |Journal|. Trying to update entries or
-  // commit will fail with an |ILLEGAL_STATE| after a successful rollback. This
-  // Journal object should not be deleted before |callback| is called.
-  void Rollback(fit::function<void(Status)> callback);
 
   // Journal:
   void Put(convert::ExtendedStringView key, ObjectIdentifier object_identifier,

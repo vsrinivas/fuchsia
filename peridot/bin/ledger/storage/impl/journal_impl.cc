@@ -60,12 +60,7 @@ JournalImpl::JournalImpl(Token /* token */, JournalType type,
       base_(std::move(base)),
       valid_(true) {}
 
-JournalImpl::~JournalImpl() {
-  // Log a warning if the journal was not committed or rolled back.
-  if (valid_) {
-    FXL_LOG(WARNING) << "Journal not committed or rolled back.";
-  }
-}
+JournalImpl::~JournalImpl() {}
 
 std::unique_ptr<Journal> JournalImpl::Simple(JournalType type,
                                              ledger::Environment* environment,
@@ -129,12 +124,6 @@ void JournalImpl::Commit(
                                       std::move(changes), std::move(callback));
             });
       });
-}
-
-void JournalImpl::Rollback(fit::function<void(Status)> callback) {
-  FXL_DCHECK(valid_);
-  valid_ = false;
-  callback(Status::OK);
 }
 
 void JournalImpl::Put(convert::ExtendedStringView key,

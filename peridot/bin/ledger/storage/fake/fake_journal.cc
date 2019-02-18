@@ -21,8 +21,6 @@ void FakeJournal::Commit(
   delegate_->Commit(std::move(callback));
 }
 
-Status FakeJournal::Rollback() { return delegate_->Rollback(); }
-
 void FakeJournal::Put(convert::ExtendedStringView key,
                       ObjectIdentifier object_identifier,
                       KeyPriority priority) {

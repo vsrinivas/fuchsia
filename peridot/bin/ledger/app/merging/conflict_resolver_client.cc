@@ -44,12 +44,7 @@ ConflictResolverClient::ConflictResolverClient(
   FXL_DCHECK(callback_);
 }
 
-ConflictResolverClient::~ConflictResolverClient() {
-  if (journal_) {
-    storage_->RollbackJournal(std::move(journal_),
-                              [](storage::Status /*status*/) {});
-  }
-}
+ConflictResolverClient::~ConflictResolverClient() {}
 
 void ConflictResolverClient::Start() {
   // Prepare the journal for the merge commit.
@@ -134,8 +129,6 @@ void ConflictResolverClient::GetOrCreateObjectIdetifier(
 void ConflictResolverClient::Finalize(Status status) {
   FXL_DCHECK(callback_) << "Finalize must only be called once.";
   if (journal_) {
-    storage_->RollbackJournal(std::move(journal_),
-                              [](storage::Status /*rollback_status*/) {});
     journal_.reset();
   }
   merge_result_provider_binding_.Close(status);

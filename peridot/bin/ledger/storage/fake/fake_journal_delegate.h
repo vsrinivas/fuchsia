@@ -50,9 +50,6 @@ class FakeJournalDelegate {
           callback);
   bool IsCommitted() const;
 
-  Status Rollback();
-  bool IsRolledBack() const;
-
   uint64_t GetGeneration() const { return generation_; }
 
   std::vector<CommitIdView> GetParentIds() const;
@@ -72,7 +69,6 @@ class FakeJournalDelegate {
   uint64_t generation_;
 
   bool is_committed_ = false;
-  bool is_rolled_back_ = false;
   fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
       commit_callback_;
 

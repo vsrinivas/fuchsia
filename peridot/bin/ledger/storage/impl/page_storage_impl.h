@@ -75,8 +75,6 @@ class PageStorageImpl : public PageStorage {
   void CommitJournal(std::unique_ptr<Journal> journal,
                      fit::function<void(Status, std::unique_ptr<const Commit>)>
                          callback) override;
-  void RollbackJournal(std::unique_ptr<Journal> journal,
-                       fit::function<void(Status)> callback) override;
   Status AddCommitWatcher(CommitWatcher* watcher) override;
   Status RemoveCommitWatcher(CommitWatcher* watcher) override;
   void IsSynced(fit::function<void(Status, bool)> callback) override;

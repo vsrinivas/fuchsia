@@ -253,16 +253,10 @@ void PageDelegate::Rollback(Page::RollbackCallback callback) {
           callback(Status::NO_TRANSACTION_IN_PROGRESS);
           return;
         }
-        storage_->RollbackJournal(
-            std::move(journal_),
-            callback::MakeScoped(
-                weak_factory_.GetWeakPtr(),
-                [this, callback = std::move(callback)](storage::Status status) {
-                  journal_.reset();
-                  journal_parent_commit_.clear();
-                  callback(PageUtils::ConvertStatus(status));
-                  branch_tracker_.StopTransaction(nullptr);
-                }));
+        journal_.reset();
+        journal_parent_commit_.clear();
+        callback(Status::OK);
+        branch_tracker_.StopTransaction(nullptr);
       });
 }
 

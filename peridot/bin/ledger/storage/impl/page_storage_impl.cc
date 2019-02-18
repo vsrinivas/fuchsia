@@ -225,18 +225,6 @@ void PageStorageImpl::CommitJournal(
       });
 }
 
-void PageStorageImpl::RollbackJournal(std::unique_ptr<Journal> journal,
-                                      fit::function<void(Status)> callback) {
-  FXL_DCHECK(journal);
-
-  auto managed_journal = managed_container_.Manage(std::move(journal));
-  JournalImpl* journal_ptr = static_cast<JournalImpl*>(managed_journal->get());
-
-  journal_ptr->Rollback(
-      [managed_journal = std::move(managed_journal),
-       callback = std::move(callback)](Status status) { callback(status); });
-}
-
 Status PageStorageImpl::AddCommitWatcher(CommitWatcher* watcher) {
   watchers_.push_back(watcher);
   return Status::OK;
