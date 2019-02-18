@@ -42,8 +42,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
   void GetCommit(CommitIdView commit_id,
                  fit::function<void(Status, std::unique_ptr<const Commit>)>
                      callback) override;
-  std::unique_ptr<Journal> StartCommit(const CommitId& commit_id,
-                                       JournalType journal_type) override;
+  std::unique_ptr<Journal> StartCommit(const CommitId& commit_id) override;
   std::unique_ptr<Journal> StartMergeCommit(const CommitId& left,
                                             const CommitId& right) override;
   void CommitJournal(

@@ -46,7 +46,7 @@ void PageStorageEmptyImpl::AddCommitsFromSync(
 }
 
 std::unique_ptr<Journal> PageStorageEmptyImpl::StartCommit(
-    const CommitId& /*commit_id*/, JournalType /*journal_type*/) {
+    const CommitId& /*commit_id*/) {
   FXL_NOTIMPLEMENTED();
   return nullptr;
 }

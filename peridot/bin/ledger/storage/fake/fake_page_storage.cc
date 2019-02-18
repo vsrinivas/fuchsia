@@ -91,7 +91,7 @@ void FakePageStorage::GetCommit(
 }
 
 std::unique_ptr<Journal> FakePageStorage::StartCommit(
-    const CommitId& commit_id, JournalType /*journal_type*/) {
+    const CommitId& commit_id) {
   uint64_t next_generation = 0;
   FakeJournalDelegate::Data data;
   if (journals_.find(commit_id) != journals_.end()) {

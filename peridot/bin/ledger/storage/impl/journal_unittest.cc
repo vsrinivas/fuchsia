@@ -82,8 +82,7 @@ class JournalTest : public ledger::TestWithEnvironment {
 };
 
 TEST_F(JournalTest, ImplicitJournalsCommitEmptyJournal) {
-  SetJournal(JournalImpl::Simple(JournalType::IMPLICIT, &environment_,
-                                 &page_storage_,
+  SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
                                  kFirstPageCommitId.ToString()));
   bool called;
   Status status;
@@ -100,8 +99,7 @@ TEST_F(JournalTest, ImplicitJournalsCommitEmptyJournal) {
 }
 
 TEST_F(JournalTest, ImplicitJournalsPutDeleteCommit) {
-  SetJournal(JournalImpl::Simple(JournalType::IMPLICIT, &environment_,
-                                 &page_storage_,
+  SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
                                  kFirstPageCommitId.ToString()));
   journal_->Put("key", object_identifier_, KeyPriority::EAGER);
 
@@ -122,8 +120,8 @@ TEST_F(JournalTest, ImplicitJournalsPutDeleteCommit) {
   EXPECT_EQ(KeyPriority::EAGER, entries[0].priority);
 
   // Ledger's content is now a single entry "key" -> "value". Delete it.
-  SetJournal(JournalImpl::Simple(JournalType::IMPLICIT, &environment_,
-                                 &page_storage_, commit->GetId()));
+  SetJournal(
+      JournalImpl::Simple(&environment_, &page_storage_, commit->GetId()));
   journal_->Delete("key");
 
   journal_->Commit(
@@ -137,8 +135,7 @@ TEST_F(JournalTest, ImplicitJournalsPutDeleteCommit) {
 }
 
 TEST_F(JournalTest, ImplicitJournalsPutRollback) {
-  SetJournal(JournalImpl::Simple(JournalType::IMPLICIT, &environment_,
-                                 &page_storage_,
+  SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
                                  kFirstPageCommitId.ToString()));
   journal_->Put("key", object_identifier_, KeyPriority::EAGER);
 
@@ -159,8 +156,7 @@ TEST_F(JournalTest, ImplicitJournalsPutRollback) {
 }
 
 TEST_F(JournalTest, ExplicitJournalsSinglePut) {
-  SetJournal(JournalImpl::Simple(JournalType::EXPLICIT, &environment_,
-                                 &page_storage_,
+  SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
                                  kFirstPageCommitId.ToString()));
   journal_->Put("key", object_identifier_, KeyPriority::EAGER);
 
@@ -184,8 +180,7 @@ TEST_F(JournalTest, ExplicitJournalsSinglePut) {
 
 TEST_F(JournalTest, ExplicitJournalsMultiplePutsDeletes) {
   int size = 3;
-  SetJournal(JournalImpl::Simple(JournalType::EXPLICIT, &environment_,
-                                 &page_storage_,
+  SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
                                  kFirstPageCommitId.ToString()));
   bool called;
   Status status;
@@ -223,8 +218,8 @@ TEST_F(JournalTest, ExplicitJournalsMultiplePutsDeletes) {
 
   // Delete keys {"0", "2"}. Also insert a key, that is deleted on the same
   // journal.
-  SetJournal(JournalImpl::Simple(JournalType::EXPLICIT, &environment_,
-                                 &page_storage_, commit->GetId()));
+  SetJournal(
+      JournalImpl::Simple(&environment_, &page_storage_, commit->GetId()));
   journal_->Delete("0");
   journal_->Delete("2");
   journal_->Put("tmp", object_identifier_, KeyPriority::EAGER);
@@ -248,8 +243,7 @@ TEST_F(JournalTest, ExplicitJournalsMultiplePutsDeletes) {
 
 TEST_F(JournalTest, ExplicitJournalsClear) {
   int size = 3;
-  SetJournal(JournalImpl::Simple(JournalType::EXPLICIT, &environment_,
-                                 &page_storage_,
+  SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
                                  kFirstPageCommitId.ToString()));
   bool called;
   Status status;
@@ -270,8 +264,8 @@ TEST_F(JournalTest, ExplicitJournalsClear) {
   ASSERT_THAT(GetCommitContents(*commit), SizeIs(size));
 
   // Clear the contents.
-  SetJournal(JournalImpl::Simple(JournalType::EXPLICIT, &environment_,
-                                 &page_storage_, commit->GetId()));
+  SetJournal(
+      JournalImpl::Simple(&environment_, &page_storage_, commit->GetId()));
   journal_->Clear();
 
   journal_->Commit(
@@ -287,8 +281,7 @@ TEST_F(JournalTest, ExplicitJournalsClear) {
 TEST_F(JournalTest, MergeJournal) {
   // Create 2 commits from the |kFirstPageCommitId|, one implicit with a key
   // "0", and one explicit with a key "1".
-  SetJournal(JournalImpl::Simple(JournalType::IMPLICIT, &environment_,
-                                 &page_storage_,
+  SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
                                  kFirstPageCommitId.ToString()));
   journal_->Put("0", object_identifier_, KeyPriority::EAGER);
 
@@ -302,8 +295,7 @@ TEST_F(JournalTest, MergeJournal) {
   ASSERT_EQ(Status::OK, status);
   ASSERT_NE(nullptr, commit_0);
 
-  SetJournal(JournalImpl::Simple(JournalType::EXPLICIT, &environment_,
-                                 &page_storage_,
+  SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
                                  kFirstPageCommitId.ToString()));
   journal_->Put("1", object_identifier_, KeyPriority::EAGER);
 

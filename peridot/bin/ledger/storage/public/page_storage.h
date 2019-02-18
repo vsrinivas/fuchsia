@@ -75,11 +75,8 @@ class PageStorage : public PageSyncClient {
       std::vector<CommitIdAndBytes> ids_and_bytes, ChangeSource source,
       fit::function<void(Status, std::vector<CommitId>)> callback) = 0;
   // Starts a new journal based on the commit with the given |commit_id|. The
-  // base commit must be one of the head commits. If |journal_type| is
-  // |EXPLICIT|, all changes will be lost after a crash. Otherwise, changes to
-  // implicit journals will be committed on system restart.
-  virtual std::unique_ptr<Journal> StartCommit(const CommitId& commit_id,
-                                               JournalType journal_type) = 0;
+  // base commit must be one of the head commits.
+  virtual std::unique_ptr<Journal> StartCommit(const CommitId& commit_id) = 0;
   // Starts a new journal for a merge commit, based on the given commits.
   // |left| and |right| must both be in the set of head commits. All
   // modifications to the journal consider the |left| as the base of the new

@@ -55,8 +55,8 @@ class ConflictResolverClientTest : public TestWithPageStorage {
   storage::CommitId CreateCommit(
       storage::CommitIdView parent_id,
       fit::function<void(storage::Journal*)> contents) {
-    std::unique_ptr<storage::Journal> journal = page_storage_->StartCommit(
-        parent_id.ToString(), storage::JournalType::IMPLICIT);
+    std::unique_ptr<storage::Journal> journal =
+        page_storage_->StartCommit(parent_id.ToString());
 
     contents(journal.get());
     storage::Status status;

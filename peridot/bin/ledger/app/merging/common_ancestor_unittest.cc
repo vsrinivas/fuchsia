@@ -39,8 +39,8 @@ class CommonAncestorTest : public TestWithPageStorage {
   std::unique_ptr<const storage::Commit> CreateCommit(
       storage::CommitIdView parent_id,
       fit::function<void(storage::Journal*)> contents) {
-    std::unique_ptr<storage::Journal> journal = storage_->StartCommit(
-        parent_id.ToString(), storage::JournalType::IMPLICIT);
+    std::unique_ptr<storage::Journal> journal =
+        storage_->StartCommit(parent_id.ToString());
 
     contents(journal.get());
     bool called;

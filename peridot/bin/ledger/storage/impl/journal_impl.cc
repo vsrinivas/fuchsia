@@ -51,22 +51,19 @@ class JournalEntriesIterator : public Iterator<const storage::EntryChange> {
 };
 }  // namespace
 
-JournalImpl::JournalImpl(Token /* token */, JournalType type,
-                         ledger::Environment* environment,
+JournalImpl::JournalImpl(Token /* token */, ledger::Environment* environment,
                          PageStorageImpl* page_storage, CommitId base)
-    : type_(type),
-      environment_(environment),
+    : environment_(environment),
       page_storage_(page_storage),
       base_(std::move(base)),
-      valid_(true) {}
+      committed_(false) {}
 
 JournalImpl::~JournalImpl() {}
 
-std::unique_ptr<Journal> JournalImpl::Simple(JournalType type,
-                                             ledger::Environment* environment,
+std::unique_ptr<Journal> JournalImpl::Simple(ledger::Environment* environment,
                                              PageStorageImpl* page_storage,
                                              const CommitId& base) {
-  return std::make_unique<JournalImpl>(Token(), type, environment, page_storage,
+  return std::make_unique<JournalImpl>(Token(), environment, page_storage,
                                        base);
 }
 
@@ -74,8 +71,8 @@ std::unique_ptr<Journal> JournalImpl::Merge(ledger::Environment* environment,
                                             PageStorageImpl* page_storage,
                                             const CommitId& base,
                                             const CommitId& other) {
-  auto journal = std::make_unique<JournalImpl>(Token(), JournalType::EXPLICIT,
-                                               environment, page_storage, base);
+  auto journal =
+      std::make_unique<JournalImpl>(Token(), environment, page_storage, base);
   journal->other_ = std::make_unique<CommitId>(other);
   return journal;
 }
@@ -83,8 +80,8 @@ std::unique_ptr<Journal> JournalImpl::Merge(ledger::Environment* environment,
 void JournalImpl::Commit(
     fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
-  FXL_DCHECK(valid_);
-  valid_ = false;
+  FXL_DCHECK(!committed_);
+  committed_ = true;
 
   GetParents(
       [this, callback = std::move(callback)](
@@ -129,7 +126,7 @@ void JournalImpl::Commit(
 void JournalImpl::Put(convert::ExtendedStringView key,
                       ObjectIdentifier object_identifier,
                       KeyPriority priority) {
-  FXL_DCHECK(StateAllowsMutation());
+  FXL_DCHECK(!committed_);
   EntryChange change;
   change.entry = {key.ToString(), std::move(object_identifier), priority};
   change.deleted = false;
@@ -137,7 +134,7 @@ void JournalImpl::Put(convert::ExtendedStringView key,
 }
 
 void JournalImpl::Delete(convert::ExtendedStringView key) {
-  FXL_DCHECK(StateAllowsMutation());
+  FXL_DCHECK(!committed_);
   EntryChange change;
   change.entry = {key.ToString(), ObjectIdentifier(), KeyPriority::EAGER};
   change.deleted = true;
@@ -145,7 +142,7 @@ void JournalImpl::Delete(convert::ExtendedStringView key) {
 }
 
 void JournalImpl::Clear() {
-  FXL_DCHECK(StateAllowsMutation());
+  FXL_DCHECK(!committed_);
   cleared_ = JournalContainsClearOperation::YES;
   journal_entries_.clear();
 }
@@ -258,14 +255,6 @@ void JournalImpl::GetObjectsToSync(
         }
         callback(Status::OK, std::move(objects_to_sync));
       });
-}
-
-bool JournalImpl::StateAllowsMutation() {
-  // If the journal is IMPLICIT, it can only have a single mutation operation
-  // applied.
-  return valid_ && (type_ == JournalType::EXPLICIT ||
-                    (journal_entries_.empty() &&
-                     cleared_ == JournalContainsClearOperation::NO));
 }
 
 }  // namespace storage

@@ -380,9 +380,9 @@ class PageStorageTest : public ledger::TestWithEnvironment {
 
   // Returns an empty pointer if |TryCommitJournal| failed.
   FXL_WARN_UNUSED_RESULT std::unique_ptr<const Commit> TryCommitFromLocal(
-      JournalType type, int keys, size_t min_key_size = 0) {
+      int keys, size_t min_key_size = 0) {
     std::unique_ptr<Journal> journal =
-        storage_->StartCommit(GetFirstHead()->GetId(), type);
+        storage_->StartCommit(GetFirstHead()->GetId());
 
     for (int i = 0; i < keys; ++i) {
       auto key = fxl::StringPrintf("key%05d", i);
@@ -980,9 +980,9 @@ TEST_F(PageStorageTest, HeadCommits) {
 
 TEST_F(PageStorageTest, CreateJournals) {
   // Explicit journal.
-  auto left_commit = TryCommitFromLocal(JournalType::EXPLICIT, 5);
+  auto left_commit = TryCommitFromLocal(5);
   ASSERT_TRUE(left_commit);
-  auto right_commit = TryCommitFromLocal(JournalType::EXPLICIT, 10);
+  auto right_commit = TryCommitFromLocal(10);
   ASSERT_TRUE(right_commit);
 
   // Journal for merge commit.
@@ -991,8 +991,7 @@ TEST_F(PageStorageTest, CreateJournals) {
 }
 
 TEST_F(PageStorageTest, CreateJournalHugeNode) {
-  std::unique_ptr<const Commit> commit =
-      TryCommitFromLocal(JournalType::EXPLICIT, 500, 1024);
+  std::unique_ptr<const Commit> commit = TryCommitFromLocal(500, 1024);
   ASSERT_TRUE(commit);
   std::vector<Entry> entries = GetCommitContents(*commit);
 
@@ -1059,7 +1058,7 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
 TEST_F(PageStorageTest, DestroyUncommittedJournal) {
   // It is not an error if a journal is not committed or rolled back.
   std::unique_ptr<Journal> journal =
-      storage_->StartCommit(GetFirstHead()->GetId(), JournalType::EXPLICIT);
+      storage_->StartCommit(GetFirstHead()->GetId());
   journal->Put("key", RandomObjectIdentifier(environment_.random()),
                KeyPriority::EAGER);
 }
@@ -1433,7 +1432,7 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
   // Add one key-value pair per commit.
   for (size_t i = 0; i < size; ++i) {
     std::unique_ptr<Journal> journal =
-        storage_->StartCommit(GetFirstHead()->GetId(), JournalType::IMPLICIT);
+        storage_->StartCommit(GetFirstHead()->GetId());
 
     journal->Put(fxl::StringPrintf("key%lu", i),
                  data_array[i].object_identifier, KeyPriority::LAZY);
@@ -1516,7 +1515,7 @@ TEST_F(PageStorageTest, PageIsSynced) {
 
   // Add all objects in one commit.
   std::unique_ptr<Journal> journal =
-      storage_->StartCommit(GetFirstHead()->GetId(), JournalType::EXPLICIT);
+      storage_->StartCommit(GetFirstHead()->GetId());
   for (size_t i = 0; i < size; ++i) {
     journal->Put(fxl::StringPrintf("key%lu", i),
                  data_array[i].object_identifier, KeyPriority::LAZY);
@@ -1587,8 +1586,7 @@ TEST_F(PageStorageTest, PageIsMarkedOnlineAfterCloudSync) {
 
   // Create a local commit: the page is still not online.
   int size = 10;
-  std::unique_ptr<const Commit> commit =
-      TryCommitFromLocal(JournalType::EXPLICIT, size);
+  std::unique_ptr<const Commit> commit = TryCommitFromLocal(size);
   EXPECT_FALSE(storage_->IsOnline());
 
   // Mark all objects as synced. The page is still not online: other devices
@@ -1653,7 +1651,7 @@ TEST_F(PageStorageTest, PageIsEmpty) {
 
   // Add an entry and expect that the page is not empty any more.
   std::unique_ptr<Journal> journal =
-      storage_->StartCommit(GetFirstHead()->GetId(), JournalType::IMPLICIT);
+      storage_->StartCommit(GetFirstHead()->GetId());
   journal->Put("key", value.object_identifier, KeyPriority::LAZY);
   EXPECT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
 
@@ -1665,8 +1663,7 @@ TEST_F(PageStorageTest, PageIsEmpty) {
   EXPECT_FALSE(is_empty);
 
   // Clear the page and expect it to be empty again.
-  journal =
-      storage_->StartCommit(GetFirstHead()->GetId(), JournalType::IMPLICIT);
+  journal = storage_->StartCommit(GetFirstHead()->GetId());
   journal->Delete("key");
   EXPECT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
 
@@ -1690,7 +1687,7 @@ TEST_F(PageStorageTest, UntrackedObjectsSimple) {
 
   // After adding the object in a commit it should not be untracked any more.
   std::unique_ptr<Journal> journal =
-      storage_->StartCommit(GetFirstHead()->GetId(), JournalType::IMPLICIT);
+      storage_->StartCommit(GetFirstHead()->GetId());
   journal->Put("key", data.object_identifier, KeyPriority::EAGER);
   EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
@@ -1710,7 +1707,7 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
 
   // Add a first commit containing data_array[0].
   std::unique_ptr<Journal> journal =
-      storage_->StartCommit(GetFirstHead()->GetId(), JournalType::IMPLICIT);
+      storage_->StartCommit(GetFirstHead()->GetId());
   journal->Put("key0", data_array[0].object_identifier, KeyPriority::LAZY);
   EXPECT_TRUE(ObjectIsUntracked(data_array[0].object_identifier, true));
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
@@ -1721,8 +1718,7 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   // Create a second commit. After calling Put for "key1" for the second time
   // data_array[1] is no longer part of this commit: it should remain
   // untracked after committing.
-  journal =
-      storage_->StartCommit(GetFirstHead()->GetId(), JournalType::EXPLICIT);
+  journal = storage_->StartCommit(GetFirstHead()->GetId());
   journal->Put("key1", data_array[1].object_identifier, KeyPriority::LAZY);
   journal->Put("key2", data_array[2].object_identifier, KeyPriority::LAZY);
   journal->Put("key1", data_array[2].object_identifier, KeyPriority::LAZY);
@@ -1738,7 +1734,7 @@ TEST_F(PageStorageTest, CommitWatchers) {
   storage_->AddCommitWatcher(&watcher);
 
   // Add a watcher and receive the commit.
-  auto expected = TryCommitFromLocal(JournalType::EXPLICIT, 10);
+  auto expected = TryCommitFromLocal(10);
   ASSERT_TRUE(expected);
   EXPECT_EQ(1, watcher.commit_count);
   EXPECT_EQ(expected->GetId(), watcher.last_commit_id);
@@ -1747,7 +1743,7 @@ TEST_F(PageStorageTest, CommitWatchers) {
   // Add a second watcher.
   FakeCommitWatcher watcher2;
   storage_->AddCommitWatcher(&watcher2);
-  expected = TryCommitFromLocal(JournalType::EXPLICIT, 10);
+  expected = TryCommitFromLocal(10);
   ASSERT_TRUE(expected);
   EXPECT_EQ(2, watcher.commit_count);
   EXPECT_EQ(expected->GetId(), watcher.last_commit_id);
@@ -1773,7 +1769,7 @@ TEST_F(PageStorageTest, CommitFailNoWatchNotification) {
 
   // Create the commit.
   std::unique_ptr<Journal> journal =
-      storage_->StartCommit(GetFirstHead()->GetId(), JournalType::EXPLICIT);
+      storage_->StartCommit(GetFirstHead()->GetId());
   journal->Put("key1", RandomObjectIdentifier(environment_.random()),
                KeyPriority::EAGER);
 
@@ -1897,13 +1893,11 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
 }
 
 TEST_F(PageStorageTest, Generation) {
-  std::unique_ptr<const Commit> commit1 =
-      TryCommitFromLocal(JournalType::EXPLICIT, 3);
+  std::unique_ptr<const Commit> commit1 = TryCommitFromLocal(3);
   ASSERT_TRUE(commit1);
   EXPECT_EQ(1u, commit1->GetGeneration());
 
-  std::unique_ptr<const Commit> commit2 =
-      TryCommitFromLocal(JournalType::EXPLICIT, 3);
+  std::unique_ptr<const Commit> commit2 = TryCommitFromLocal(3);
   ASSERT_TRUE(commit2);
   EXPECT_EQ(2u, commit2->GetGeneration());
 
@@ -1918,8 +1912,7 @@ TEST_F(PageStorageTest, Generation) {
 
 TEST_F(PageStorageTest, GetEntryFromCommit) {
   int size = 10;
-  std::unique_ptr<const Commit> commit =
-      TryCommitFromLocal(JournalType::EXPLICIT, size);
+  std::unique_ptr<const Commit> commit = TryCommitFromLocal(size);
   ASSERT_TRUE(commit);
 
   bool called;
@@ -1988,8 +1981,7 @@ TEST_F(PageStorageTest, NoOpCommit) {
   std::vector<CommitId> heads = GetHeads();
   ASSERT_FALSE(heads.empty());
 
-  std::unique_ptr<Journal> journal =
-      storage_->StartCommit(heads[0], JournalType::EXPLICIT);
+  std::unique_ptr<Journal> journal = storage_->StartCommit(heads[0]);
 
   // Create a key, and delete it.
   journal->Put("key", RandomObjectIdentifier(environment_.random()),
@@ -2110,8 +2102,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
 TEST_F(PageStorageTest, GetUnsyncedCommits) {
   const CommitId root_id = GetFirstHead()->GetId();
 
-  std::unique_ptr<Journal> journal_a =
-      storage_->StartCommit(root_id, JournalType::EXPLICIT);
+  std::unique_ptr<Journal> journal_a = storage_->StartCommit(root_id);
   journal_a->Put("a", RandomObjectIdentifier(environment_.random()),
                  KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_a =
@@ -2119,8 +2110,7 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   ASSERT_TRUE(commit_a);
   EXPECT_EQ(1u, commit_a->GetGeneration());
 
-  std::unique_ptr<Journal> journal_b =
-      storage_->StartCommit(root_id, JournalType::EXPLICIT);
+  std::unique_ptr<Journal> journal_b = storage_->StartCommit(root_id);
   journal_b->Put("b", RandomObjectIdentifier(environment_.random()),
                  KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_b =
@@ -2136,8 +2126,7 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   ASSERT_TRUE(commit_merge);
   EXPECT_EQ(2u, commit_merge->GetGeneration());
 
-  std::unique_ptr<Journal> journal_c =
-      storage_->StartCommit(root_id, JournalType::EXPLICIT);
+  std::unique_ptr<Journal> journal_c = storage_->StartCommit(root_id);
   journal_c->Put("c", RandomObjectIdentifier(environment_.random()),
                  KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_c =
@@ -2188,12 +2177,10 @@ TEST_F(PageStorageTest, AddCommitsMissingParent) {
 }
 
 TEST_F(PageStorageTest, GetMergeCommitIdsEmpty) {
-  std::unique_ptr<const Commit> parent1 =
-      TryCommitFromLocal(JournalType::EXPLICIT, 3);
+  std::unique_ptr<const Commit> parent1 = TryCommitFromLocal(3);
   ASSERT_TRUE(parent1);
 
-  std::unique_ptr<const Commit> parent2 =
-      TryCommitFromLocal(JournalType::EXPLICIT, 3);
+  std::unique_ptr<const Commit> parent2 = TryCommitFromLocal(3);
   ASSERT_TRUE(parent2);
 
   // Check that there is no merge of |parent1| and |parent2|.
@@ -2209,12 +2196,10 @@ TEST_F(PageStorageTest, GetMergeCommitIdsEmpty) {
 }
 
 TEST_F(PageStorageTest, GetMergeCommitIdsNonEmpty) {
-  std::unique_ptr<const Commit> parent1 =
-      TryCommitFromLocal(JournalType::EXPLICIT, 3);
+  std::unique_ptr<const Commit> parent1 = TryCommitFromLocal(3);
   ASSERT_TRUE(parent1);
 
-  std::unique_ptr<const Commit> parent2 =
-      TryCommitFromLocal(JournalType::EXPLICIT, 3);
+  std::unique_ptr<const Commit> parent2 = TryCommitFromLocal(3);
   ASSERT_TRUE(parent2);
 
   std::unique_ptr<Journal> journal =

@@ -143,8 +143,6 @@ std::ostream& operator<<(std::ostream& os, const ThreeWayChange& e);
 enum class ChangeSource { LOCAL, P2P, CLOUD };
 enum class IsObjectSynced : bool { NO, YES };
 
-enum class JournalType { IMPLICIT, EXPLICIT };
-
 enum class JournalContainsClearOperation { NO, YES };
 
 enum class Status {

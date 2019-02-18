@@ -20,28 +20,24 @@
 
 namespace storage {
 
-// A |JournalImpl| represents an in-memory |Journal|. As such, if the journal's
-// type is |IMPLICIT| only one mutation operation (Put/Delete/Clear) can be
-// applied before it is commited or rolled back. This way, it is guaranteed that
-// in case of unexpected shut down of Ledger, all operations that completed
-// successfully (i.e. returned with a status |OK|) will actually be persisted.
-// Instances of |JournalImpl| are valid as long as |Commit| has not been called.
-// When no longer valid, it is an error to try to call any further methods on
-// that object. A journal that is not commited before destruction, will be
-// rolled back.
+// A |JournalImpl| represents an in-memory |Journal|. As such, if not committed,
+// (e.g. because of an unexpected shutdown) its entries will be lost. Instances
+// of |JournalImpl| are valid as long as |Commit| has not been called. When no
+// longer valid, it is an error to try to call any further methods on that
+// object. A journal that is not commited before destruction, will be rolled
+// back.
 class JournalImpl : public Journal {
  private:
   // Passkey idiom to restrict access to the constructor to static factories.
   class Token;
 
  public:
-  JournalImpl(Token token, JournalType type, ledger::Environment* environment,
+  JournalImpl(Token token, ledger::Environment* environment,
               PageStorageImpl* page_storage, CommitId base);
   ~JournalImpl() override;
 
   // Creates a new Journal for a simple commit.
-  static std::unique_ptr<Journal> Simple(JournalType type,
-                                         ledger::Environment* environment,
+  static std::unique_ptr<Journal> Simple(ledger::Environment* environment,
                                          PageStorageImpl* page_storage,
                                          const CommitId& base);
 
@@ -92,11 +88,6 @@ class JournalImpl : public Journal {
                          std::vector<ObjectIdentifier> objects_to_sync)>
           callback);
 
-  // Returns whether the journal is in a state where it is legal to call |Put|,
-  // |Delete| or |Clear|.
-  bool StateAllowsMutation();
-
-  const JournalType type_;
   ledger::Environment* const environment_;
   PageStorageImpl* const page_storage_;
   CommitId base_;
@@ -105,8 +96,11 @@ class JournalImpl : public Journal {
   JournalContainsClearOperation cleared_ = JournalContainsClearOperation::NO;
   std::map<std::string, EntryChange> journal_entries_;
 
-  // A journal is no longer valid after calling commit or rollback.
-  bool valid_;
+  // After |Commit| has been called, no further mutations are allowed on the
+  // journal.
+  bool committed_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(JournalImpl);
 };
 
 }  // namespace storage

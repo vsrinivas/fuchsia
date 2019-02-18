@@ -217,8 +217,7 @@ void PageDelegate::StartTransaction(Page::StartTransactionCallback callback) {
           return;
         }
         storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
-        journal_ =
-            storage_->StartCommit(commit_id, storage::JournalType::EXPLICIT);
+        journal_ = storage_->StartCommit(commit_id);
         journal_parent_commit_ = commit_id;
 
         branch_tracker_.StartTransaction(
@@ -311,8 +310,7 @@ void PageDelegate::RunInTransaction(
   // accumulated while waiting for the previous one to be committed.
   branch_tracker_.StartTransaction([] {});
   storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
-  std::unique_ptr<storage::Journal> journal =
-      storage_->StartCommit(commit_id, storage::JournalType::IMPLICIT);
+  std::unique_ptr<storage::Journal> journal = storage_->StartCommit(commit_id);
   runnable(journal.get());
 
   CommitJournal(

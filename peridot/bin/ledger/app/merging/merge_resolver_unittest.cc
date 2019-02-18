@@ -73,9 +73,8 @@ class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
   }
 
   std::unique_ptr<storage::Journal> StartCommit(
-      const storage::CommitId& commit_id,
-      storage::JournalType journal_type) override {
-    return storage_->StartCommit(commit_id, journal_type);
+      const storage::CommitId& commit_id) override {
+    return storage_->StartCommit(commit_id);
   }
 
   std::unique_ptr<storage::Journal> StartMergeCommit(
@@ -190,8 +189,8 @@ class MergeResolverTest : public TestWithPageStorage {
   storage::CommitId CreateCommit(
       storage::PageStorage* storage, storage::CommitIdView parent_id,
       fit::function<void(storage::Journal*)> contents) {
-    std::unique_ptr<storage::Journal> journal = storage->StartCommit(
-        parent_id.ToString(), storage::JournalType::IMPLICIT);
+    std::unique_ptr<storage::Journal> journal =
+        storage->StartCommit(parent_id.ToString());
 
     contents(journal.get());
     bool called;

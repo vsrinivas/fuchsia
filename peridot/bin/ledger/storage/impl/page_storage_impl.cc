@@ -198,8 +198,8 @@ void PageStorageImpl::AddCommitsFromSync(
 }
 
 std::unique_ptr<Journal> PageStorageImpl::StartCommit(
-    const CommitId& commit_id, JournalType journal_type) {
-  return JournalImpl::Simple(journal_type, environment_, this, commit_id);
+    const CommitId& commit_id) {
+  return JournalImpl::Simple(environment_, this, commit_id);
 }
 
 std::unique_ptr<Journal> PageStorageImpl::StartMergeCommit(
