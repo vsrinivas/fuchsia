@@ -6,7 +6,7 @@
 
 #include "garnet/lib/perfmon/events.h"
 
-#include "verify_test.h"
+#include "../verify_test.h"
 
 class ValueRecordsVerifier : public Verifier {
  public:

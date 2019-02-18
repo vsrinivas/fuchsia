@@ -21,21 +21,21 @@ executable("cpuperf_integration_tests") {
 
   sources = [
     "integration_tests.cc",
+    "run_test.cc",
+    "run_test.h",
+    "verify_test.cc",
+    "verify_test.h",
   ]
 
   if (current_cpu == "x64") {
     sources += [
-      "fixed_counters.cc",
-      "last_branch.cc",
-      "os_flag.cc",
-      "programmable_counters.cc",
-      "run_test.cc",
-      "run_test.h",
-      "tally.cc",
-      "user_flag.cc",
-      "value_records.cc",
-      "verify_test.cc",
-      "verify_test.h",
+      "intel/fixed_counters.cc",
+      "intel/last_branch.cc",
+      "intel/os_flag.cc",
+      "intel/programmable_counters.cc",
+      "intel/tally.cc",
+      "intel/user_flag.cc",
+      "intel/value_records.cc",
     ]
   }
 
@@ -82,35 +82,35 @@ package("cpuperf_tests") {
   if (current_cpu == "x64") {
     resources += [
       {
-        path = rebase_path("fixed_counters.cpspec")
-        dest = "fixed_counters.cpspec"
-      },
-      {
-        path = rebase_path("last_branch.cpspec")
-        dest = "last_branch.cpspec"
-      },
-      {
-        path = rebase_path("os_flag.cpspec")
-        dest = "os_flag.cpspec"
-      },
-      {
         path = rebase_path("gen_printer_test_data.cpspec")
         dest = "gen_printer_test_data.cpspec"
       },
       {
-        path = rebase_path("programmable_counters.cpspec")
+        path = rebase_path("intel/fixed_counters.cpspec")
+        dest = "fixed_counters.cpspec"
+      },
+      {
+        path = rebase_path("intel/last_branch.cpspec")
+        dest = "last_branch.cpspec"
+      },
+      {
+        path = rebase_path("intel/os_flag.cpspec")
+        dest = "os_flag.cpspec"
+      },
+      {
+        path = rebase_path("intel/programmable_counters.cpspec")
         dest = "programmable_counters.cpspec"
       },
       {
-        path = rebase_path("tally.cpspec")
+        path = rebase_path("intel/tally.cpspec")
         dest = "tally.cpspec"
       },
       {
-        path = rebase_path("user_flag.cpspec")
+        path = rebase_path("intel/user_flag.cpspec")
         dest = "user_flag.cpspec"
       },
       {
-        path = rebase_path("value_records.cpspec")
+        path = rebase_path("intel/value_records.cpspec")
         dest = "value_records.cpspec"
       },
     ]

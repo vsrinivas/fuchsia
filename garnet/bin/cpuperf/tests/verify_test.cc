@@ -23,6 +23,7 @@
 
 // List of tests.
 // A test automatically fails if it's not listed here.
+#ifdef __x86_64__
 const TestSpec* const kTestSpecs[] = {
   &kFixedCounterSpec,
   &kLastBranchSpec,
@@ -32,6 +33,7 @@ const TestSpec* const kTestSpecs[] = {
   &kUserFlagSpec,
   &kValueRecordsSpec,
 };
+#endif
 
 bool Verifier::VerifyIteration(uint32_t iter) {
   auto get_file_name = [this, &iter] (uint32_t trace_num) -> std::string {
@@ -127,11 +129,13 @@ void Verifier::Verify() {
 
 static std::unique_ptr<Verifier> LookupVerifier(
     const cpuperf::SessionResultSpec* spec) {
+#ifdef __x86_64__
   for (const auto& test : kTestSpecs) {
     if (strcmp(spec->config_name.c_str(), test->config_name) == 0) {
       return test->make_verifier(spec);
     }
   }
+#endif
   return nullptr;
 }
 

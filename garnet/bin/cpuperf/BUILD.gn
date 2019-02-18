@@ -82,19 +82,19 @@ package("cpuperf") {
   if (current_cpu == "x64") {
     resources += [
       {
-        path = rebase_path("cpspec/basic-cpu-memory.cpspec")
+        path = rebase_path("cpspec/intel/basic-cpu-memory.cpspec")
         dest = "basic-cpu-memory.cpspec"
       },
       {
-        path = rebase_path("cpspec/l1.cpspec")
+        path = rebase_path("cpspec/intel/l1.cpspec")
         dest = "l1.cpspec"
       },
       {
-        path = rebase_path("cpspec/l2.cpspec")
+        path = rebase_path("cpspec/intel/l2.cpspec")
         dest = "l2.cpspec"
       },
       {
-        path = rebase_path("cpspec/l3.cpspec")
+        path = rebase_path("cpspec/intel/l3.cpspec")
         dest = "l3.cpspec"
       },
     ]

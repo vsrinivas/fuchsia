@@ -4,7 +4,7 @@
 
 #include <lib/fxl/logging.h>
 
-#include "verify_test.h"
+#include "../verify_test.h"
 
 class UserFlagVerifier : public Verifier {
  public:
