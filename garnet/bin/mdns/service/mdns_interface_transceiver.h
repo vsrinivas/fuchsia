@@ -52,7 +52,7 @@ class MdnsInterfaceTransceiver {
   // Sets an alternate address for the interface.
   void SetAlternateAddress(const inet::IpAddress& alternate_address);
 
-  // Sends a messaage to the specified address. A V6 interface will send to
+  // Sends a message to the specified address. A V6 interface will send to
   // |MdnsAddresses::kV6Multicast| if |reply_address| is
   // |MdnsAddresses::kV4Multicast|. This method expects there to be at most two
   // address records per record vector and, if there are two, that they are

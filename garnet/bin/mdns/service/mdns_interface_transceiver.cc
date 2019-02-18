@@ -274,7 +274,7 @@ void MdnsInterfaceTransceiver::FixUpAddresses(
   // address resource is added for that alternate address. That address resource
   // is returned by |GetAlternateAddressResource|.
   //
-  // A/AAAA addresses in the orginal message come from two sources:
+  // A/AAAA addresses in the original message come from two sources:
   // 1) The agent that sent the message may insert a placeholder A message that
   //    contains an invalid address.
   // 2) A different transceiver that sent the message previously may have

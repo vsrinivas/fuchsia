@@ -35,13 +35,13 @@ class PacketReader {
 
   // Consumes |count| bytes from the packet and copies them to |dest| if at
   // least |count| bytes remain in the packet. If less than |count| bytes remain
-  // in the the packet, this method returns false and |healthy| returns false
+  // in the packet, this method returns false and |healthy| returns false
   // thereafter.
   bool GetBytes(size_t count, void* dest);
 
   // Consumes |count| bytes from the packet and returns a pointer to them if
   // at least |count| bytes remain in the packet. If less than |count| bytes
-  // remain in the the packet, this method returns nullptr and |healthy| returns
+  // remain in the packet, this method returns nullptr and |healthy| returns
   // false thereafter.
   const uint8_t* Bytes(size_t count);
 

@@ -37,7 +37,7 @@ class MdnsTransceiver {
   // Determines if this transceiver has interfaces.
   bool has_interfaces() { return !interface_transceivers_by_address_.empty(); }
 
-  // Sends a messaage to the specified address. A V6 interface will send to
+  // Sends a message to the specified address. A V6 interface will send to
   // |MdnsAddresses::kV6Multicast| if |reply_address.socket_address()| is
   // |MdnsAddresses::kV4Multicast|.
   void SendMessage(DnsMessage* message, const ReplyAddress& reply_address);
@@ -55,7 +55,7 @@ class MdnsTransceiver {
   void InterfacesChanged(
       std::vector<fuchsia::netstack::NetInterface> interfaces);
 
-  // Ensures that an interface transciever exists for |address| if |address|
+  // Ensures that an interface transceiver exists for |address| if |address|
   // is valid. Returns true if a change was made, false otherwise.
   bool EnsureInterfaceTransceiver(
       const inet::IpAddress& address, const inet::IpAddress& alternate_address,
