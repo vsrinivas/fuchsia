@@ -39,7 +39,7 @@ class File : public Node {
   // Write the given |data| to the file at the given |offset|.
   //
   // Data should be copied into the file starting at the beginning of |data|.
-  // If |WriteAt| returns |ZX_OK|, |out_actual| should contain the the number of
+  // If |WriteAt| returns |ZX_OK|, |out_actual| should contain the number of
   // bytes actually written to the file.
   virtual zx_status_t WriteAt(std::vector<uint8_t> data, uint64_t offset,
                               uint64_t* out_actual);

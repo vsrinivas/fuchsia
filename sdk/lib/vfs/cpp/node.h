@@ -150,7 +150,7 @@ class Node {
   // This function is used in |ValidateFlags| and |Lookup| to return correct
   // error.
   //
-  // This should be overriden by every implementation.
+  // This should be overridden by every implementation.
   virtual bool IsDirectory() const = 0;
 
   // Additional Allowed flags for use in |ValidateFlags|.

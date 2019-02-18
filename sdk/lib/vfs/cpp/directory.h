@@ -55,7 +55,7 @@ class Directory : public Node {
   //
   // Returns |ZX_ERR_INVALID_ARGS| if path_len is more than |NAME_MAX| or if
   // |path| starts with ".." or "/".
-  // Retuns |ZX_OK| on valid path.
+  // Returns |ZX_OK| on valid path.
   static zx_status_t ValidatePath(const char* path, size_t path_len);
 
   // Walks provided path to find first node name in from path and then
