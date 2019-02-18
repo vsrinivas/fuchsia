@@ -17,6 +17,7 @@ use std::mem;
 use packet::{
     BufferMut, BufferSerializer, ParsablePacket, ParseBufferMut, ParseMetadata, Serializer,
 };
+use specialize_ip_macro::specialize_ip_addr;
 
 use crate::device::DeviceId;
 use crate::ip::forwarding::{Destination, ForwardingTable};
@@ -208,6 +209,7 @@ pub fn local_address_for_remote<D: EventDispatcher, A: IpAddr>(
 // - dst_ip is equal to the address set on the device
 // - dst_ip is equal to the broadcast address of the subnet set on the device
 // - dst_ip is equal to the global broadcast address
+#[specialize_ip_addr]
 fn deliver<D: EventDispatcher, A: IpAddr>(
     ctx: &mut Context<D>,
     device: DeviceId,
@@ -218,32 +220,28 @@ fn deliver<D: EventDispatcher, A: IpAddr>(
     //   which are addressed to the device over which they were received). This
     //   is the easiest to implement for the time being, but we should actually
     //   put real thought into what our host model should be (NET-1011).
-    specialize_ip_addr!(
-        fn deliver(dst_ip: Self, addr_subnet: Option<(Self, Subnet<Self>)>) -> bool {
-            Ipv4Addr => {
-                addr_subnet
-                    .map(|(addr, subnet)| dst_ip == addr || dst_ip == subnet.broadcast())
-                    .unwrap_or(dst_ip == Ipv4::BROADCAST_ADDRESS)
-            }
-            Ipv6Addr => { log_unimplemented!(false, "ip::deliver: Ipv6 not implemeneted") }
-        }
-    );
-    A::deliver(dst_ip, crate::device::get_ip_addr::<D, A>(ctx, device))
+    #[ipv4addr]
+    return crate::device::get_ip_addr::<D, _>(ctx, device)
+        .map(|(addr, subnet)| dst_ip == addr || dst_ip == subnet.broadcast())
+        .unwrap_or(dst_ip == Ipv4::BROADCAST_ADDRESS);
+    #[ipv6addr]
+    return log_unimplemented!(false, "ip::deliver: Ipv6 not implemeneted");
 }
 
 // Should we forward this packet, and if so, to whom?
+#[specialize_ip_addr]
 fn forward<D: EventDispatcher, A: IpAddr>(
     ctx: &mut Context<D>,
     dst_ip: A,
 ) -> Option<Destination<A::Version>> {
-    specialize_ip_addr!(
-        fn forwarding_enabled(state: &IpLayerState) -> bool {
-            Ipv4Addr => { state.v4.forward }
-            Ipv6Addr => { state.v6.forward }
-        }
-    );
     let ip_state = &ctx.state().ip;
-    if A::forwarding_enabled(ip_state) {
+
+    #[ipv4addr]
+    let forward = ip_state.v4.forward;
+    #[ipv6addr]
+    let forward = ip_state.v6.forward;
+
+    if forward {
         lookup_route(ip_state, dst_ip)
     } else {
         None
@@ -251,44 +249,42 @@ fn forward<D: EventDispatcher, A: IpAddr>(
 }
 
 // Look up the route to a host.
+#[specialize_ip_addr]
 fn lookup_route<A: IpAddr>(state: &IpLayerState, dst_ip: A) -> Option<Destination<A::Version>> {
-    specialize_ip_addr!(
-        fn get_table(state: &IpLayerState) -> &ForwardingTable<Self::Version> {
-            Ipv4Addr => { &state.v4.table }
-            Ipv6Addr => { &state.v6.table }
-        }
-    );
-    A::get_table(state).lookup(dst_ip)
+    #[ipv4addr]
+    return state.v4.table.lookup(dst_ip);
+    #[ipv6addr]
+    return state.v6.table.lookup(dst_ip);
 }
 
 /// Add a route to the forwarding table.
+#[specialize_ip_addr]
 pub fn add_route<D: EventDispatcher, A: IpAddr>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
     next_hop: A,
 ) {
-    specialize_ip_addr!(
-        fn generic_add_route(state: &mut IpLayerState, subnet: Subnet<Self>, next_hop: Self) {
-            Ipv4Addr => { state.v4.table.add_route(subnet, next_hop) }
-            Ipv6Addr => { state.v6.table.add_route(subnet, next_hop) }
-        }
-    );
-    A::generic_add_route(&mut ctx.state().ip, subnet, next_hop)
+    let state = &mut ctx.state().ip;
+
+    #[ipv4addr]
+    state.v4.table.add_route(subnet, next_hop);
+    #[ipv6addr]
+    state.v6.table.add_route(subnet, next_hop);
 }
 
 /// Add a device route to the forwarding table.
+#[specialize_ip_addr]
 pub fn add_device_route<D: EventDispatcher, A: IpAddr>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
     device: DeviceId,
 ) {
-    specialize_ip_addr!(
-        fn generic_add_device_route(state: &mut IpLayerState, subnet: Subnet<Self>, device: DeviceId) {
-            Ipv4Addr => { state.v4.table.add_device_route(subnet, device) }
-            Ipv6Addr => { state.v6.table.add_device_route(subnet, device) }
-        }
-    );
-    A::generic_add_device_route(&mut ctx.state().ip, subnet, device)
+    let state = &mut ctx.state().ip;
+
+    #[ipv4addr]
+    state.v4.table.add_device_route(subnet, device);
+    #[ipv6addr]
+    state.v6.table.add_device_route(subnet, device);
 }
 
 /// Is this one of our local addresses?

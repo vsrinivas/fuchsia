@@ -8,6 +8,7 @@ use std::fmt::{self, Debug, Display, Formatter};
 
 use log::debug;
 use packet::{Buf, ParseBuffer, Serializer};
+use specialize_ip_macro::specialize_ip_addr;
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::device::arp::{ArpDevice, ArpHardwareType, ArpState};
@@ -196,38 +197,32 @@ impl EthernetIpExt for Ipv6 {
 /// `send_ip_frame` accepts a device ID, a local IP address, and a
 /// `SerializationRequest`. It computes the routing information and serializes
 /// the request in a new Ethernet frame and sends it.
-pub fn send_ip_frame<D: EventDispatcher, A, S>(
+#[specialize_ip_addr]
+pub fn send_ip_frame<D: EventDispatcher, A: IpAddr, S: Serializer>(
     ctx: &mut Context<D>,
     device_id: u64,
     local_addr: A,
     body: S,
-) where
-    A: IpAddr,
-    S: Serializer,
-{
-    specialize_ip_addr!(
-        fn lookup_dst_mac<D>(ctx: &mut Context<D>, device_id: u64, local_addr: Self) -> Option<Mac>
-        where
-            D: EventDispatcher,
-        {
-            Ipv4Addr => {
-                let src_mac = get_device_state(ctx, device_id).mac;
-                if let Some(dst_mac) = crate::device::arp::lookup::<_, _, EthernetArpDevice>(
-                    ctx, device_id, src_mac, local_addr,
-                ) {
-                    Some(dst_mac)
-                } else {
-                    log_unimplemented!(
-                        None,
-                        "device::ethernet::send_ip_frame: unimplemented on arp cache miss"
-                    )
-                }
-            }
-            Ipv6Addr => { log_unimplemented!(None, "device::ethernet::send_ip_frame: IPv6 unimplemented") }
+) {
+    #[ipv4addr]
+    let dst_mac = {
+        let src_mac = get_device_state(ctx, device_id).mac;
+        if let Some(dst_mac) = crate::device::arp::lookup::<_, _, EthernetArpDevice>(
+            ctx, device_id, src_mac, local_addr,
+        ) {
+            Some(dst_mac)
+        } else {
+            log_unimplemented!(
+                None,
+                "device::ethernet::send_ip_frame: unimplemented on arp cache miss"
+            )
         }
-    );
+    };
 
-    if let Some(dst_mac) = A::lookup_dst_mac(ctx, device_id, local_addr) {
+    #[ipv6addr]
+    let dst_mac = log_unimplemented!(None, "device::ethernet::send_ip_frame: IPv6 unimplemented");
+
+    if let Some(dst_mac) = dst_mac {
         let src_mac = get_device_state(ctx, device_id).mac;
         let buffer = body
             .encapsulate(EthernetFrameBuilder::new(src_mac, dst_mac, A::Version::ETHER_TYPE))
@@ -272,34 +267,29 @@ pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64, b
 }
 
 /// Get the IP address associated with this device.
+#[specialize_ip_addr]
 pub fn get_ip_addr<D: EventDispatcher, A: IpAddr>(
     ctx: &mut Context<D>,
     device_id: u64,
 ) -> Option<(A, Subnet<A>)> {
-    specialize_ip_addr!(
-        fn get_ip_addr(state: &EthernetDeviceState) -> Option<(Self, Subnet<Self>)> {
-            Ipv4Addr => { state.ipv4_addr }
-            Ipv6Addr => { state.ipv6_addr }
-        }
-    );
-    A::get_ip_addr(get_device_state(ctx, device_id))
+    #[ipv4addr]
+    return get_device_state(ctx, device_id).ipv4_addr;
+    #[ipv6addr]
+    return get_device_state(ctx, device_id).ipv6_addr;
 }
 
 /// Set the IP address associated with this device.
+#[specialize_ip_addr]
 pub fn set_ip_addr<D: EventDispatcher, A: IpAddr>(
     ctx: &mut Context<D>,
     device_id: u64,
     addr: A,
     subnet: Subnet<A>,
 ) {
-    // TODO(joshlf): Perform any other necessary setup
-    specialize_ip_addr!(
-        fn set_ip_addr(state: &mut EthernetDeviceState, addr: Self, subnet: Subnet<Self>) {
-            Ipv4Addr => { state.ipv4_addr = Some((addr, subnet)) }
-            Ipv6Addr => { state.ipv6_addr = Some((addr, subnet)) }
-        }
-    );
-    A::set_ip_addr(get_device_state(ctx, device_id), addr, subnet)
+    #[ipv4addr]
+    get_device_state(ctx, device_id).ipv4_addr = Some((addr, subnet));
+    #[ipv6addr]
+    get_device_state(ctx, device_id).ipv6_addr = Some((addr, subnet));
 }
 
 /// Insert an entry into this device's ARP table.

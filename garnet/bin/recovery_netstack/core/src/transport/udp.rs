@@ -8,6 +8,7 @@ use std::hash::Hash;
 use std::num::NonZeroU16;
 
 use packet::{BufferMut, BufferSerializer, ParsablePacket, Serializer};
+use specialize_ip_macro::specialize_ip_addr;
 use zerocopy::ByteSlice;
 
 use crate::ip::{Ip, IpAddr, IpProto, Ipv4Addr, Ipv6Addr};
@@ -379,19 +380,14 @@ pub fn listen_udp<D: EventDispatcher, A: IpAddr>(
     }
 }
 
+#[specialize_ip_addr]
 fn get_inner_state<D: EventDispatcher, A: IpAddr>(
     state: &mut StackState<D>,
 ) -> &mut UdpStateInner<D, A> {
-    specialize_ip_addr!(
-        fn get_inner_state<D>(state: &mut UdpState<D>) -> &mut UdpStateInner<D, Self>
-        where
-            D: EventDispatcher,
-        {
-            Ipv4Addr => { &mut state.ipv4 }
-            Ipv6Addr => { &mut state.ipv6 }
-        }
-    );
-    A::get_inner_state(&mut state.transport.udp)
+    #[ipv4addr]
+    return &mut state.transport.udp.ipv4;
+    #[ipv6addr]
+    return &mut state.transport.udp.ipv6;
 }
 
 fn get_inner_states<D: EventDispatcher>(

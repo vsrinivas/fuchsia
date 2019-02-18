@@ -198,6 +198,7 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
                     // be evaluated there.
                     const PREVENT_CONST_EVALUATION: usize = 0/0;
 
+                    #[allow(patterns_in_fns_without_body)]
                     fn f #trait_decl;
                 }
 

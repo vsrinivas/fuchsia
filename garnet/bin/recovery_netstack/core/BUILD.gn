@@ -11,6 +11,7 @@ rustc_library("netstack-core") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/bin/recovery_netstack/core/specialize-ip-macro",
     "//garnet/public/rust/packet",
     "//garnet/public/rust/zerocopy",
     "//third_party/rust-crates/rustc_deps:byteorder",

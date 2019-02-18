@@ -130,9 +130,7 @@ pub trait IcmpIpExt: Ip {
 // that, given an I: Ip, it's guaranteed to implement IcmpIpExt. We humans know
 // that Ipv4 and Ipv6 are the only types implementing Ip and so, since we
 // implement IcmpIpExt for both of these types, this is fine. The compiler isn't
-// so smart. This implementation should never actually be used. See the
-// specialize_ip! and specialize_ip_addr! macros for other examples of this
-// pattern.
+// so smart. This implementation should never actually be used.
 impl<I: Ip> IcmpIpExt for I {
     default type IcmpMessageType = !;
 

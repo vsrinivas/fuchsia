@@ -8,6 +8,7 @@ use std::mem;
 
 use log::trace;
 use packet::{BufferMut, BufferSerializer, Serializer};
+use specialize_ip_macro::specialize_ip_addr;
 
 use crate::ip::{send_ip_packet, IpAddr, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use crate::wire::icmp::{
@@ -18,94 +19,87 @@ use crate::wire::icmp::{
 use crate::{Context, EventDispatcher};
 
 /// Receive an ICMP message in an IP packet.
+#[specialize_ip_addr]
 pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
     dst_ip: A,
-    buffer: B,
+    mut buffer: B,
 ) {
     trace!("receive_icmp_packet({}, {})", src_ip, dst_ip);
 
-    specialize_ip_addr!(
-        fn receive_icmp_packet<D, B>(ctx: &mut Context<D>, src_ip: Self, dst_ip: Self, buffer: B)
-        where
-            D: EventDispatcher,
-            B: BufferMut,
-        {
-            Ipv4Addr => {
-                let mut buffer = buffer;
-                let packet = match buffer.parse_with::<_, Icmpv4Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip)) {
-                    Ok(packet) => packet,
-                    Err(err) => return, // TODO(joshlf): Do something else here?
-                };
+    #[ipv4addr]
+    {
+        let mut buffer = buffer;
+        let packet =
+            match buffer.parse_with::<_, Icmpv4Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip)) {
+                Ok(packet) => packet,
+                Err(err) => return, // TODO(joshlf): Do something else here?
+            };
 
-                match packet {
-                    Icmpv4Packet::EchoRequest(echo_request) => {
-                        let req = *echo_request.message();
-                        let code = echo_request.code();
-                        // drop packet so we can re-use the underlying buffer
-                        mem::drop(echo_request);
+        match packet {
+            Icmpv4Packet::EchoRequest(echo_request) => {
+                let req = *echo_request.message();
+                let code = echo_request.code();
+                // drop packet so we can re-use the underlying buffer
+                mem::drop(echo_request);
 
-                        increment_counter!(ctx, "receive_icmp_packet::echo_request");
+                increment_counter!(ctx, "receive_icmp_packet::echo_request");
 
-                        // we're responding to the sender, so these are flipped
-                        let (src_ip, dst_ip) = (dst_ip, src_ip);
-                        send_ip_packet(
-                            ctx,
-                            dst_ip,
-                            IpProto::Icmp,
-                            |src_ip| BufferSerializer::new_vec(buffer).encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(src_ip, dst_ip, code, req.reply())),
-                        );
-                    }
-                    Icmpv4Packet::EchoReply(echo_reply) => {
-                        increment_counter!(ctx, "receive_icmp_packet::echo_reply");
-                        trace!("receive_icmp_packet: Received an EchoReply message");
-                    }
-                    _ => log_unimplemented!(
-                        (),
-                        "ip::icmp::receive_icmp_packet: Not implemented for this packet type"
-                    ),
-                }
-            }
-            Ipv6Addr => {
-                let mut buffer = buffer;
-                let packet = match buffer.parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip)) {
-                    Ok(packet) => packet,
-                    Err(err) => return, // TODO(joshlf): Do something else here?
-                };
-
-                match packet {
-                    Icmpv6Packet::EchoRequest(echo_request) => {
-                        let req = *echo_request.message();
-                        let code = echo_request.code();
-                        // drop packet so we can re-use the underlying buffer
-                        mem::drop(echo_request);
-
-                        increment_counter!(ctx, "receive_icmp_packet::echo_request");
-
-                        // we're responding to the sender, so these are flipped
-                        let (src_ip, dst_ip) = (dst_ip, src_ip);
-                        send_ip_packet(
-                            ctx,
-                            dst_ip,
-                            IpProto::Icmp,
-                            |src_ip| BufferSerializer::new_vec(buffer).encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(src_ip, dst_ip, code, req.reply())),
-                        );
-                    }
-                    Icmpv6Packet::EchoReply(echo_reply) => {
-                        increment_counter!(ctx, "receive_icmp_packet::echo_reply");
-                        trace!("receive_icmp_packet: Received an EchoReply message");
-                    }
-                    _ => log_unimplemented!(
-                        (),
-                        "ip::icmp::receive_icmp_packet: Not implemented for this packet type"
+                // we're responding to the sender, so these are flipped
+                let (src_ip, dst_ip) = (dst_ip, src_ip);
+                send_ip_packet(ctx, dst_ip, IpProto::Icmp, |src_ip| {
+                    BufferSerializer::new_vec(buffer).encapsulate(
+                        IcmpPacketBuilder::<Ipv4, &[u8], _>::new(src_ip, dst_ip, code, req.reply()),
                     )
-                }
+                });
             }
+            Icmpv4Packet::EchoReply(echo_reply) => {
+                increment_counter!(ctx, "receive_icmp_packet::echo_reply");
+                trace!("receive_icmp_packet: Received an EchoReply message");
+            }
+            _ => log_unimplemented!(
+                (),
+                "ip::icmp::receive_icmp_packet: Not implemented for this packet type"
+            ),
         }
-    );
+    }
 
-    A::receive_icmp_packet(ctx, src_ip, dst_ip, buffer)
+    #[ipv6addr]
+    {
+        let packet =
+            match buffer.parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip)) {
+                Ok(packet) => packet,
+                Err(err) => return, // TODO(joshlf): Do something else here?
+            };
+
+        match packet {
+            Icmpv6Packet::EchoRequest(echo_request) => {
+                let req = *echo_request.message();
+                let code = echo_request.code();
+                // drop packet so we can re-use the underlying buffer
+                mem::drop(echo_request);
+
+                increment_counter!(ctx, "receive_icmp_packet::echo_request");
+
+                // we're responding to the sender, so these are flipped
+                let (src_ip, dst_ip) = (dst_ip, src_ip);
+                send_ip_packet(ctx, dst_ip, IpProto::Icmp, |src_ip| {
+                    BufferSerializer::new_vec(buffer).encapsulate(
+                        IcmpPacketBuilder::<Ipv6, &[u8], _>::new(src_ip, dst_ip, code, req.reply()),
+                    )
+                });
+            }
+            Icmpv6Packet::EchoReply(echo_reply) => {
+                increment_counter!(ctx, "receive_icmp_packet::echo_reply");
+                trace!("receive_icmp_packet: Received an EchoReply message");
+            }
+            _ => log_unimplemented!(
+                (),
+                "ip::icmp::receive_icmp_packet: Not implemented for this packet type"
+            ),
+        }
+    }
 }
 
 /// Send an ICMP message in response to receiving a packet destined for an
@@ -124,6 +118,7 @@ pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
 /// payload with the problematic Next Header type. In other words, in an IPv6
 /// packet with a single header with a Next Header type of TCP, it `header_len`
 /// would be the length of the single header (40 bytes).
+#[specialize_ip_addr]
 pub fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
@@ -133,54 +128,53 @@ pub fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMu
 ) {
     increment_counter!(ctx, "send_icmp_protocol_unreachable");
 
-    specialize_ip_addr! {
-        fn make_packet_builder<D, B>(ctx: &mut Context<D>, src_ip: Self, dst_ip: Self, original_packet: B, header_len: usize)
-        where
-            D: EventDispatcher,
-            B: BufferMut,
-        {
-            Ipv4Addr => {
-                send_icmpv4_dest_unreachable(
-                    ctx,
-                    src_ip,
-                    dst_ip,
-                    Icmpv4DestUnreachableCode::DestProtocolUnreachable,
-                    original_packet,
-                    header_len,
-                );
-            }
-            Ipv6Addr => {
-                // Per RFC 4443, body contains as much of the original body as
-                // possible without exceeding IPv6 minimum MTU.
-                let mut original_packet = original_packet;
-                original_packet.shrink_back_to(crate::ip::IPV6_MIN_MTU);
-                // TODO(joshlf): The source address should probably be fixed rather than
-                // looked up in the routing table.
-                send_ip_packet(ctx, dst_ip, IpProto::Icmpv6, |src_ip| {
-                    BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
-                        src_ip,
-                        dst_ip,
-                        Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
-                        // Per RFC 4443, the pointer refers to the first byte of
-                        // the packet whose Next Header field was unrecognized.
-                        // It is measured as an offset from the beginning of the
-                        // first IPv6 header. E.g., a pointer of 40 (the length
-                        // of a single IPv6 header) would indicate that the Next
-                        // Header field from that header - and hence of the
-                        // first encapsulated packet - was unrecognized.
-                        Icmpv6ParameterProblem::new({
-                            // TODO(joshlf): Use TryInto::try_into once it's stable.
-                            assert!(header_len <= u32::max_value() as usize);
-                            header_len as u32
-                        }),
-                    ))
-                });
-            }
-        }
-    }
+    // Swap since we're responding.
+    let (src_ip, dst_ip) = (dst_ip, src_ip);
 
+    #[ipv4addr]
+    send_icmpv4_dest_unreachable(
+        ctx,
+        src_ip,
+        dst_ip,
+        Icmpv4DestUnreachableCode::DestProtocolUnreachable,
+        original_packet,
+        header_len,
+    );
+
+    #[ipv6addr]
+    {
+        // Per RFC 4443, body contains as much of the original body as
+        // possible without exceeding IPv6 minimum MTU.
+        let mut original_packet = original_packet;
+        original_packet.shrink_back_to(crate::ip::IPV6_MIN_MTU);
+        // TODO(joshlf): The source address should probably be fixed rather than
+        // looked up in the routing table.
+        send_ip_packet(ctx, dst_ip, IpProto::Icmpv6, |src_ip| {
+            BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
+                Ipv6,
+                &[u8],
+                _,
+            >::new(
+                src_ip,
+                dst_ip,
+                Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
+                // Per RFC 4443, the pointer refers to the first byte of
+                // the packet whose Next Header field was unrecognized.
+                // It is measured as an offset from the beginning of the
+                // first IPv6 header. E.g., a pointer of 40 (the length
+                // of a single IPv6 header) would indicate that the Next
+                // Header field from that header - and hence of the
+                // first encapsulated packet - was unrecognized.
+                Icmpv6ParameterProblem::new({
+                    // TODO(joshlf): Use TryInto::try_into once it's stable.
+                    assert!(header_len <= u32::max_value() as usize);
+                    header_len as u32
+                }),
+            ))
+        });
+    }
     // NOTE(joshlf): src_ip and dst_ip swapped since we're responding
-    A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, header_len);
+    // A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, header_len);
 }
 
 /// Send an ICMP message in response to receiving a packet destined for an
@@ -194,6 +188,7 @@ pub fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMu
 /// `original_packet` contains the contents of the entire original packet -
 /// including all IP headers. `ipv4_header_len` is the length of the IPv4
 /// header. It is ignored for IPv6.
+#[specialize_ip_addr]
 pub fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
@@ -203,36 +198,29 @@ pub fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
 ) {
     increment_counter!(ctx, "send_icmp_port_unreachable");
 
-    specialize_ip_addr! {
-        fn make_packet_builder<D, B>(ctx: &mut Context<D>, src_ip: Self, dst_ip: Self, original_packet: B, ipv4_header_len: usize)
-        where
-            D: EventDispatcher,
-            B: BufferMut,
-        {
-            Ipv4Addr => {
-                send_icmpv4_dest_unreachable(
-                    ctx,
-                    src_ip,
-                    dst_ip,
-                    Icmpv4DestUnreachableCode::DestPortUnreachable,
-                    original_packet,
-                    ipv4_header_len,
-                );
-            }
-            Ipv6Addr => {
-                send_icmpv6_dest_unreachable(
-                    ctx,
-                    src_ip,
-                    dst_ip,
-                    Icmpv6DestUnreachableCode::PortUnreachable,
-                    original_packet,
-                );
-            }
-        }
-    }
+    // Swap since we're responding.
+    let (src_ip, dst_ip) = (dst_ip, src_ip);
+
+    #[ipv4addr]
+    send_icmpv4_dest_unreachable(
+        ctx,
+        src_ip,
+        dst_ip,
+        Icmpv4DestUnreachableCode::DestPortUnreachable,
+        original_packet,
+        ipv4_header_len,
+    );
+    #[ipv6addr]
+    send_icmpv6_dest_unreachable(
+        ctx,
+        src_ip,
+        dst_ip,
+        Icmpv6DestUnreachableCode::PortUnreachable,
+        original_packet,
+    );
 
     // NOTE(joshlf): src_ip and dst_ip swapped since we're responding
-    A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, ipv4_header_len);
+    // A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, ipv4_header_len);
 }
 
 /// Send an ICMP message in response to receiving a packet destined for an
@@ -247,6 +235,7 @@ pub fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
 /// `original_packet` contains the contents of the entire original packet -
 /// including all IP headers. `ipv4_header_len` is the length of the IPv4
 /// header. It is ignored for IPv6.
+#[specialize_ip_addr]
 pub fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
@@ -256,40 +245,39 @@ pub fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
 ) {
     increment_counter!(ctx, "send_icmp_net_unreachable");
 
-    specialize_ip_addr! {
-        fn make_packet_builder<D, B>(ctx: &mut Context<D>, src_ip: Self, dst_ip: Self, original_packet: B, ipv4_header_len: usize)
-        where
-            D: EventDispatcher,
-            B: BufferMut,
-        {
-            Ipv4Addr => {
-                send_icmpv4_dest_unreachable(
-                    ctx,
-                    src_ip,
-                    dst_ip,
-                    Icmpv4DestUnreachableCode::DestNetworkUnreachable,
-                    original_packet,
-                    ipv4_header_len,
-                );
-            }
-            Ipv6Addr => {
-                send_icmpv6_dest_unreachable(
-                    ctx,
-                    src_ip,
-                    dst_ip,
-                    Icmpv6DestUnreachableCode::NoRoute,
-                    original_packet,
-                );
-            }
-        }
-    }
+    // TODO(joshlf): When we finally get around to setting src_ip properly (see
+    // note in send_icmpvX_dest_unreachable), we need to make sure we use our
+    // source IP rather than the original packet's destination IP (which won't
+    // necessarily be the same if we have forwarding enabled).
+
+    // Swap since we're responding.
+    let (src_ip, dst_ip) = (dst_ip, src_ip);
+
+    #[ipv4addr]
+    send_icmpv4_dest_unreachable(
+        ctx,
+        src_ip,
+        dst_ip,
+        Icmpv4DestUnreachableCode::DestNetworkUnreachable,
+        original_packet,
+        ipv4_header_len,
+    );
+
+    #[ipv6addr]
+    send_icmpv6_dest_unreachable(
+        ctx,
+        src_ip,
+        dst_ip,
+        Icmpv6DestUnreachableCode::NoRoute,
+        original_packet,
+    );
 
     // NOTE(joshlf): src_ip and dst_ip swapped since we're responding
     // TODO(joshlf): When we finally get around to setting src_ip properly (see
     // note in send_icmpvX_dest_unreachable), we need to make sure we use our
     // source IP rather than the original packet's destination IP (which won't
     // necessarily be the same if we have forwarding enabled).
-    A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, ipv4_header_len);
+    // A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, ipv4_header_len);
 }
 
 /// Send an ICMP message in response to receiving a packet whose TTL has
@@ -305,6 +293,7 @@ pub fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddr, B: BufferMut>(
 /// `original_packet` contains the contents of the entire original packet -
 /// including all IP headers. `ipv4_header_len` is the length of the IPv4
 /// header. It is ignored for IPv6.
+#[specialize_ip_addr]
 pub fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddr, B: BufferMut>(
     ctx: &mut Context<D>,
     src_ip: A,
@@ -314,45 +303,55 @@ pub fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddr, B: BufferMut>(
 ) {
     increment_counter!(ctx, "send_icmp_ttl_expired");
 
-    specialize_ip_addr! {
-        fn make_packet_builder<D, B>(ctx: &mut Context<D>, src_ip: Self, dst_ip: Self, original_packet: B, ipv4_header_len: usize)
-        where
-            D: EventDispatcher,
-            B: BufferMut,
-        {
-            Ipv4Addr => {
-                // Per RFC 792, body contains entire IPv4 header + 64 bytes of
-                // original body.
-                let mut original_packet = original_packet;
-                original_packet.shrink_back_to(ipv4_header_len + 64);
-                // TODO(joshlf): The source address should probably be fixed rather than
-                // looked up in the routing table.
-                send_ip_packet(ctx, dst_ip, IpProto::Icmp, |src_ip| {
-                    BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
-                        src_ip,
-                        dst_ip,
-                        Icmpv4TimeExceededCode::TtlExpired,
-                        IcmpTimeExceeded::default(),
-                    ))
-                });
-            }
-            Ipv6Addr => {
-                // Per RFC 4443, body contains as much of the original body as
-                // possible without exceeding IPv6 minimum MTU.
-                let mut original_packet = original_packet;
-                original_packet.shrink_back_to(crate::ip::IPV6_MIN_MTU);
-                // TODO(joshlf): The source address should probably be fixed rather than
-                // looked up in the routing table.
-                send_ip_packet(ctx, dst_ip, IpProto::Icmpv6, |src_ip| {
-                    BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
-                        src_ip,
-                        dst_ip,
-                        Icmpv6TimeExceededCode::HopLimitExceeded,
-                        IcmpTimeExceeded::default(),
-                    ))
-                });
-            }
-        }
+    // TODO(joshlf): When we finally get around to setting src_ip properly (see
+    // note in send_icmpvX_dest_unreachable), we need to make sure we use our
+    // source IP rather than the original packet's destination IP (which won't
+    // necessarily be the same if we have forwarding enabled).
+
+    // Swap since we're responding.
+    let (src_ip, dst_ip) = (dst_ip, src_ip);
+
+    #[ipv4addr]
+    {
+        // Per RFC 792, body contains entire IPv4 header + 64 bytes of
+        // original body.
+        let mut original_packet = original_packet;
+        original_packet.shrink_back_to(ipv4_header_len + 64);
+        // TODO(joshlf): The source address should probably be fixed rather than
+        // looked up in the routing table.
+        send_ip_packet(ctx, dst_ip, IpProto::Icmp, |src_ip| {
+            BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
+                Ipv4,
+                &[u8],
+                _,
+            >::new(
+                src_ip,
+                dst_ip,
+                Icmpv4TimeExceededCode::TtlExpired,
+                IcmpTimeExceeded::default(),
+            ))
+        });
+    }
+    #[ipv6addr]
+    {
+        // Per RFC 4443, body contains as much of the original body as
+        // possible without exceeding IPv6 minimum MTU.
+        let mut original_packet = original_packet;
+        original_packet.shrink_back_to(crate::ip::IPV6_MIN_MTU);
+        // TODO(joshlf): The source address should probably be fixed rather than
+        // looked up in the routing table.
+        send_ip_packet(ctx, dst_ip, IpProto::Icmpv6, |src_ip| {
+            BufferSerializer::new_vec(original_packet).encapsulate(IcmpPacketBuilder::<
+                Ipv6,
+                &[u8],
+                _,
+            >::new(
+                src_ip,
+                dst_ip,
+                Icmpv6TimeExceededCode::HopLimitExceeded,
+                IcmpTimeExceeded::default(),
+            ))
+        });
     }
 
     // NOTE(joshlf): src_ip and dst_ip swapped since we're responding
@@ -360,7 +359,7 @@ pub fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddr, B: BufferMut>(
     // note in send_icmpvX_dest_unreachable), we need to make sure we use our
     // source IP rather than the original packet's destination IP (which won't
     // necessarily be the same if we have forwarding enabled).
-    A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, ipv4_header_len);
+    // A::make_packet_builder(ctx, dst_ip, src_ip, original_packet, ipv4_header_len);
 }
 
 fn send_icmpv4_dest_unreachable<D: EventDispatcher, B: BufferMut>(
