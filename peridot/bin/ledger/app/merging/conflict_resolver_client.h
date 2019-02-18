@@ -41,15 +41,12 @@ class ConflictResolverClient
   void Cancel();
 
  private:
-  // Handles the next merge value. If the |merged_value| is an insertion, i.e.
-  // if the source of |merged_value| is |RIGHT| or |NEW|, a new callback will be
-  // added on the waiter, that will be called with the object identifier of the
-  // inserted object. Otherwise, if the |merged_value| is a deletion, it will
-  // directly update the current journal.
-  void OnNextMergeResult(
+  // Gets or creates the object identifier associated to the given
+  // |merge_value|. This method can only be called on merge values whose source
+  // is either |NEW| or |RIGHT|.
+  void GetOrCreateObjectIdetifier(
       const MergedValue& merged_value,
-      const fxl::RefPtr<callback::Waiter<storage::Status,
-                                         storage::ObjectIdentifier>>& waiter);
+      fit::function<void(storage::Status, storage::ObjectIdentifier)> callback);
 
   // Rolls back journal, closes merge result provider and invokes callback_ with
   // |status|. This method must be called at most once.

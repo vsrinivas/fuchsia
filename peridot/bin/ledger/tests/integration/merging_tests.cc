@@ -841,6 +841,124 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   EXPECT_EQ("phone", convert::ExtendedStringView(final_entries[2].key));
 }
 
+TEST_P(MergingIntegrationTest, CustomConflictResolutionMergeValuesOrder) {
+  auto instance = NewLedgerAppInstance();
+  ConflictResolverFactoryPtr resolver_factory_ptr;
+  auto resolver_factory = std::make_unique<TestConflictResolverFactory>(
+      this, MergePolicy::CUSTOM, resolver_factory_ptr.NewRequest(), nullptr);
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
+  auto waiter = NewWaiter();
+  Status status;
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr),
+      callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  PagePtr page1 = instance->GetTestPage();
+  waiter = NewWaiter();
+  PageId test_page_id;
+  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  PagePtr page2 =
+      instance->GetPage(fidl::MakeOptional(test_page_id), Status::OK);
+
+  waiter = NewWaiter();
+  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+  waiter = NewWaiter();
+  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+             callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  waiter = NewWaiter();
+  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+  waiter = NewWaiter();
+  page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"),
+             callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  waiter = NewWaiter();
+  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+  waiter = NewWaiter();
+  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  resolver_factory->RunUntilNewConflictResolverCalled();
+
+  // We now have a conflict.
+  EXPECT_EQ(1u, resolver_factory->resolvers.size());
+  EXPECT_NE(
+      resolver_factory->resolvers.end(),
+      resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
+  ConflictResolverImpl* resolver_impl =
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))
+            ->second);
+  resolver_impl->RunUntilResolveCalled();
+  ASSERT_EQ(1u, resolver_impl->requests.size());
+
+  std::vector<DiffEntry> changes;
+  ASSERT_TRUE(resolver_impl->requests[0].GetFullDiff(&changes));
+
+  EXPECT_EQ(2u, changes.size());
+  EXPECT_TRUE(ChangeMatch("email", Optional<std::string>(),
+                          Optional<std::string>("alice@example.org"),
+                          Optional<std::string>(), changes[0]));
+  EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(),
+                          Optional<std::string>(),
+                          Optional<std::string>("Alice"), changes[1]));
+
+  // Common ancestor is empty.
+  PageSnapshotPtr snapshot = resolver_impl->requests[0].common_version.Bind();
+  auto entries = SnapshotGetEntries(this, &snapshot);
+  EXPECT_EQ(0u, entries.size());
+
+  // Prepare the merged values: Initially add, but then delete the entry with
+  // key "name".
+  std::vector<MergedValue> merged_values;
+  {
+    MergedValue merged_value;
+    merged_value.key = convert::ToArray("name");
+    merged_value.source = ValueSource::RIGHT;
+    merged_values.push_back(std::move(merged_value));
+  }
+  {
+    MergedValue merged_value;
+    merged_value.key = convert::ToArray("name");
+    merged_value.source = ValueSource::DELETE;
+    merged_values.push_back(std::move(merged_value));
+  }
+
+  // Watch for the change.
+  PageWatcherPtr watcher_ptr;
+  auto watcher_waiter = NewWaiter();
+  Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
+  PageSnapshotPtr snapshot2;
+  waiter = NewWaiter();
+  page1->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher_ptr),
+                     callback::Capture(waiter->GetCallback(), &status));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+  EXPECT_EQ(Status::OK, status);
+
+  EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
+
+  // Wait for the watcher to be called.
+  ASSERT_TRUE(watcher_waiter->RunUntilCalled());
+
+  auto final_entries = SnapshotGetEntries(this, &watcher.last_snapshot_);
+  ASSERT_EQ(1u, final_entries.size());
+  EXPECT_EQ("email", convert::ExtendedStringView(final_entries[0].key));
+}
+
 TEST_P(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
   auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;

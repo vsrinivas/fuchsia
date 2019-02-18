@@ -98,17 +98,18 @@ void ConflictResolverClient::Cancel() {
   }
 }
 
-void ConflictResolverClient::OnNextMergeResult(
+void ConflictResolverClient::GetOrCreateObjectIdetifier(
     const MergedValue& merged_value,
-    const fxl::RefPtr<
-        callback::Waiter<storage::Status, storage::ObjectIdentifier>>& waiter) {
+    fit::function<void(storage::Status, storage::ObjectIdentifier)> callback) {
+  FXL_DCHECK(merged_value.source == ValueSource::RIGHT ||
+             merged_value.source == ValueSource::NEW);
   switch (merged_value.source) {
     case ValueSource::RIGHT: {
       std::string key = convert::ToString(merged_value.key);
       storage_->GetEntryFromCommit(
           *right_, key,
-          [key, callback = waiter->NewCallback()](storage::Status status,
-                                                  storage::Entry entry) {
+          [key, callback = std::move(callback)](storage::Status status,
+                                                storage::Entry entry) {
             if (status != storage::Status::OK) {
               if (status == storage::Status::NOT_FOUND) {
                 FXL_LOG(ERROR)
@@ -127,22 +128,21 @@ void ConflictResolverClient::OnNextMergeResult(
         storage_->AddObjectFromLocal(storage::ObjectType::BLOB,
                                      storage::DataSource::Create(std::move(
                                          merged_value.new_value->bytes())),
-                                     waiter->NewCallback());
+                                     std::move(callback));
       } else {
         storage::ObjectIdentifier object_identifier;
         Status status = manager_->ResolveReference(
             std::move(merged_value.new_value->reference()), &object_identifier);
         if (status != Status::OK) {
-          waiter->NewCallback()(storage::Status::NOT_FOUND, {});
+          callback(storage::Status::NOT_FOUND, {});
           return;
         }
-        waiter->NewCallback()(storage::Status::OK,
-                              std::move(object_identifier));
+        callback(storage::Status::OK, std::move(object_identifier));
       }
       break;
     }
     case ValueSource::DELETE: {
-      journal_->Delete(merged_value.key);
+      // No object identifier to retrieve for deletions.
       break;
     }
   }
@@ -275,7 +275,9 @@ void ConflictResolverClient::MergeNew(std::vector<MergedValue> merged_values,
             callback::Waiter<storage::Status, storage::ObjectIdentifier>>(
             storage::Status::OK);
         for (const MergedValue& merged_value : merged_values) {
-          OnNextMergeResult(merged_value, waiter);
+          if (merged_value.source != ValueSource::DELETE) {
+            GetOrCreateObjectIdetifier(merged_value, waiter->NewCallback());
+          }
         }
         waiter->Finalize(
             [this, weak_this, merged_values = std::move(merged_values),
@@ -286,21 +288,21 @@ void ConflictResolverClient::MergeNew(std::vector<MergedValue> merged_values,
                 return;
               }
 
-              size_t j = 0;
-              for (size_t i = 0; i < merged_values.size(); ++i) {
-                // |object_identifiers| contains only the identifiers of objects
-                // that have been inserted. Deletions have already been handled.
-                // TODO(LE-691): Maintain the order of insertions/deletions.
-                if (merged_values[i].source == ValueSource::DELETE) {
-                  continue;
+              // |object_identifiers| contains only the identifiers of objects
+              // that have been inserted.
+              size_t i = 0;
+              for (const MergedValue& merged_value : merged_values) {
+                if (merged_value.source == ValueSource::DELETE) {
+                  journal_->Delete(merged_value.key);
+                } else {
+                  journal_->Put(merged_value.key, object_identifiers[i],
+                                merged_value.priority == Priority::EAGER
+                                    ? storage::KeyPriority::EAGER
+                                    : storage::KeyPriority::LAZY);
+                  ++i;
                 }
-                journal_->Put(merged_values[i].key, object_identifiers[j],
-                              merged_values[i].priority == Priority::EAGER
-                                  ? storage::KeyPriority::EAGER
-                                  : storage::KeyPriority::LAZY);
-                ++j;
               }
-              FXL_DCHECK(j == object_identifiers.size());
+              FXL_DCHECK(i == object_identifiers.size());
               callback(Status::OK);
             });
       });
