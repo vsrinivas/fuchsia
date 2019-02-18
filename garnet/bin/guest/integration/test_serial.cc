@@ -15,6 +15,9 @@ static constexpr size_t kSerialBufferSize = 1024;
 static constexpr zx::duration kTestTimeout = zx::sec(15);
 static constexpr zx::duration kSerialStableDelay = zx::msec(800);
 
+// This is the maximum line length of dash in both zircon_guest and linux_guest.
+static constexpr size_t kMaximumLineLength = 4096;
+
 static std::string command_hash(const std::string& command) {
   std::hash<std::string> hash;
   return fxl::StringPrintf("%zu", hash(command));
@@ -58,6 +61,11 @@ zx_status_t TestSerial::ExecuteBlocking(const std::string& command, const std::s
 
   std::string full_command =
       "echo " + header + "; " + command + "; echo " + footer;
+  if (full_command.size() > kMaximumLineLength) {
+    FXL_LOG(ERROR) << "Command is too long";
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
   zx_status_t status = SendBlocking(full_command + "\n");
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to send command: " << status;
