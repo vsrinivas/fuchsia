@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifdef __x86_64__ // entire file
+#if defined(__x86_64__) || defined(__aarch64__)  // entire file
 
 #include <inttypes.h>
 
@@ -17,9 +17,17 @@
 
 #include <lib/zircon-internal/mtrace.h>
 
+#ifdef __x86_64__
 #include "arch/x86/perf_mon.h"
 using zx_arch_pmu_properties_t = zx_x86_pmu_properties_t;
 using zx_arch_pmu_config_t = zx_x86_pmu_config_t;
+#endif
+
+#ifdef __aarch64__
+#include "arch/arm64/perf_mon.h"
+using zx_arch_pmu_properties_t = zx_arm64_pmu_properties_t;
+using zx_arch_pmu_config_t = zx_arm64_pmu_config_t;
+#endif
 
 #define LOCAL_TRACE 0
 
@@ -113,4 +121,4 @@ zx_status_t mtrace_cpuperf_control(uint32_t action, uint32_t options,
     }
 }
 
-#endif
+#endif  // defined(__x86_64__) || defined(__aarch64__)

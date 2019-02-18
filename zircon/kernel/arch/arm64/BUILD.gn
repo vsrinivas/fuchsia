@@ -83,6 +83,7 @@ if (current_toolchain == default_toolchain) {
       "mexec.S",
       "mmu.cpp",
       "mp.cpp",
+      "perf_mon.cpp",
       "periphmap.cpp",
       "registers.cpp",
       "smccc.S",
@@ -95,6 +96,7 @@ if (current_toolchain == default_toolchain) {
       "uspace_entry.S",
     ]
     deps = [
+      "$zx/kernel/dev/interrupt/arm_gic/common",
       "$zx/kernel/dev/iommu/dummy",
       "$zx/kernel/lib/console",
       "$zx/kernel/lib/counters",

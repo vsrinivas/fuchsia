@@ -17,9 +17,11 @@
 zx_status_t mtrace_control(uint32_t kind, uint32_t action, uint32_t options,
                            user_inout_ptr<void> arg, size_t size) {
     switch (kind) {
-#ifdef __x86_64__
+#if defined(__x86_64__) || defined(__aarch64__)
     case MTRACE_KIND_CPUPERF:
         return mtrace_cpuperf_control(action, options, arg, size);
+#endif
+#ifdef __x86_64__
     case MTRACE_KIND_INSNTRACE:
         return mtrace_insntrace_control(action, options, arg, size);
 #endif
