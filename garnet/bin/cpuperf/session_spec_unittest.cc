@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/lib/cpuperf/events.h"
+#include "garnet/lib/perfmon/events.h"
 
 #include "session_spec.h"
 
@@ -77,20 +77,20 @@ TEST(SessionSpec, DecodeEvents) {
   SessionSpec result;
   ASSERT_TRUE(DecodeSessionSpec(json, &result));
 
-  const EventDetails* details;
-  ASSERT_TRUE(cpuperf::LookupEventByName("fixed", "instructions_retired",
+  const perfmon::EventDetails* details;
+  ASSERT_TRUE(perfmon::LookupEventByName("fixed", "instructions_retired",
                                          &details));
-  cpuperf_event_id_t instructions_retired_id = details->id;
+  perfmon_event_id_t instructions_retired_id = details->id;
 
-  EXPECT_EQ(result.cpuperf_config.events[0], instructions_retired_id);
-  EXPECT_EQ(result.cpuperf_config.rate[0], 42u);
-  EXPECT_EQ(result.cpuperf_config.flags[0],
-            CPUPERF_CONFIG_FLAG_OS |
-            CPUPERF_CONFIG_FLAG_USER |
-            CPUPERF_CONFIG_FLAG_PC |
-            CPUPERF_CONFIG_FLAG_TIMEBASE0);
-  for (size_t i = 1; i < CPUPERF_MAX_EVENTS; ++i) {
-    EXPECT_EQ(result.cpuperf_config.events[i], 0);
+  EXPECT_EQ(result.perfmon_config.events[0], instructions_retired_id);
+  EXPECT_EQ(result.perfmon_config.rate[0], 42u);
+  EXPECT_EQ(result.perfmon_config.flags[0],
+            PERFMON_CONFIG_FLAG_OS |
+            PERFMON_CONFIG_FLAG_USER |
+            PERFMON_CONFIG_FLAG_PC |
+            PERFMON_CONFIG_FLAG_TIMEBASE0);
+  for (size_t i = 1; i < PERFMON_MAX_EVENTS; ++i) {
+    EXPECT_EQ(result.perfmon_config.events[i], 0);
   }
 }
 

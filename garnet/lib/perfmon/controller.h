@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_CPUPERF_CONTROLLER_H_
-#define GARNET_LIB_CPUPERF_CONTROLLER_H_
+#ifndef GARNET_LIB_PERFMON_CONTROLLER_H_
+#define GARNET_LIB_PERFMON_CONTROLLER_H_
 
 #include <cstdint>
 #include <memory>
 
 #include <lib/fxl/files/unique_fd.h>
-#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 
-#include "garnet/lib/cpuperf/device_reader.h"
+#include "garnet/lib/perfmon/device_reader.h"
 
-namespace cpuperf {
+namespace perfmon {
 
 class Controller {
  public:
@@ -29,14 +29,14 @@ class Controller {
   // 2 gigabytes per cpu is plenty for now.
   static constexpr uint32_t kMaxBufferSizeInMb = 2 * 1024;
 
-  // Return true if cpuperf is supported on this device.
+  // Return true if perfmon is supported on this device.
   static bool IsSupported();
 
   // Fetch the properties of this device.
-  static bool GetProperties(cpuperf_properties_t* props);
+  static bool GetProperties(perfmon_properties_t* props);
 
   static bool Create(uint32_t buffer_size_in_mb,
-                     const cpuperf_config_t& config,
+                     const perfmon_config_t& config,
                      std::unique_ptr<Controller>* out_controller);
 
   ~Controller();
@@ -55,9 +55,9 @@ class Controller {
 
  private:
   static bool Alloc(int fd, uint32_t num_traces, uint32_t buffer_size,
-                    const cpuperf_config_t& config);
+                    const perfmon_config_t& config);
   Controller(fxl::UniqueFD fd, Mode mode, uint32_t num_traces,
-             uint32_t buffer_size, const cpuperf_config_t& config);
+             uint32_t buffer_size, const perfmon_config_t& config);
   bool Stage();
   void Free();
   void Reset();
@@ -68,10 +68,10 @@ class Controller {
   uint32_t num_traces_;
   // This is the actual buffer size we use, in bytes.
   const uint32_t buffer_size_;
-  const cpuperf_config_t config_;
+  const perfmon_config_t config_;
   bool started_ = false;
 };
 
-}  // namespace cpuperf
+}  // namespace perfmon
 
-#endif  // GARNET_LIB_CPUPERF_CONTROLLER_H_
+#endif  // GARNET_LIB_PERFMON_CONTROLLER_H_

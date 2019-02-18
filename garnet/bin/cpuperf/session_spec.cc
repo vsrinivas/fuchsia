@@ -20,7 +20,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <zircon/syscalls.h>
 
-#include "garnet/lib/cpuperf/events.h"
+#include "garnet/lib/perfmon/events.h"
 
 #include "session_spec.h"
 
@@ -132,14 +132,14 @@ bool ValidateSchema(const rapidjson::Value& value,
 
 template <typename T>
 bool DecodeEvents(T events, SessionSpec* out_spec) {
-  FXL_DCHECK(events.Size() < CPUPERF_MAX_EVENTS);
+  FXL_DCHECK(events.Size() < PERFMON_MAX_EVENTS);
 
   FXL_VLOG(1) << "Processing " << events.Size() << " events";
 
   int event_index = 0;
   for (const auto& event : events) {
-    cpuperf_event_id_t id = CPUPERF_EVENT_ID_NONE;
-    cpuperf_rate_t rate = 0;
+    perfmon_event_id_t id = PERFMON_EVENT_ID_NONE;
+    perfmon_rate_t rate = 0;
     uint32_t flags = 0;
     if (!event.HasMember(kGroupNameKey) || !event.HasMember(kEventNameKey)) {
       FXL_LOG(ERROR) << "Event is missing group_name,event_name fields";
@@ -147,7 +147,7 @@ bool DecodeEvents(T events, SessionSpec* out_spec) {
     }
     const std::string& group_name = event[kGroupNameKey].GetString();
     const std::string& event_name = event[kEventNameKey].GetString();
-    const EventDetails* details;
+    const perfmon::EventDetails* details;
     if (!LookupEventByName(group_name.c_str(), event_name.c_str(),
                            &details)) {
       FXL_LOG(ERROR) << "Unknown event: " << group_name << ":" << event_name;
@@ -166,15 +166,15 @@ bool DecodeEvents(T events, SessionSpec* out_spec) {
         }
         const std::string& flag_name = flag.GetString();
         if (flag_name == "os") {
-          flags |= CPUPERF_CONFIG_FLAG_OS;
+          flags |= PERFMON_CONFIG_FLAG_OS;
         } else if (flag_name == "user") {
-          flags |= CPUPERF_CONFIG_FLAG_USER;
+          flags |= PERFMON_CONFIG_FLAG_USER;
         } else if (flag_name == "pc") {
-          flags |= CPUPERF_CONFIG_FLAG_PC;
+          flags |= PERFMON_CONFIG_FLAG_PC;
         } else if (flag_name == "timebase0") {
-          flags |= CPUPERF_CONFIG_FLAG_TIMEBASE0;
+          flags |= PERFMON_CONFIG_FLAG_TIMEBASE0;
         } else if (flag_name == "last_branch") {
-          flags |= CPUPERF_CONFIG_FLAG_LAST_BRANCH;
+          flags |= PERFMON_CONFIG_FLAG_LAST_BRANCH;
         } else {
           FXL_LOG(ERROR) << "Unknown flag for event " << group_name << ":"
                          << event_name << ": " << flag_name;
@@ -187,9 +187,9 @@ bool DecodeEvents(T events, SessionSpec* out_spec) {
                 << ", id 0x" << std::hex << id << ", rate " << std::dec << rate
                 << ", flags 0x" << std::hex << flags;
 
-    out_spec->cpuperf_config.events[event_index] = id;
-    out_spec->cpuperf_config.rate[event_index] = rate;
-    out_spec->cpuperf_config.flags[event_index] = flags;
+    out_spec->perfmon_config.events[event_index] = id;
+    out_spec->perfmon_config.rate[event_index] = rate;
+    out_spec->perfmon_config.flags[event_index] = flags;
     ++event_index;
   }
 
@@ -229,8 +229,8 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
       FXL_LOG(ERROR) << "Need at least one event";
       return false;
     }
-    if (events.Size() > CPUPERF_MAX_EVENTS) {
-      FXL_LOG(ERROR) << "Too many events, max " << CPUPERF_MAX_EVENTS;
+    if (events.Size() > PERFMON_MAX_EVENTS) {
+      FXL_LOG(ERROR) << "Too many events, max " << PERFMON_MAX_EVENTS;
       return false;
     }
     if (!DecodeEvents(events, &result)) {

@@ -12,7 +12,7 @@
 #include <trace-provider/provider.h>
 #include <trace-reader/reader.h>
 
-#include "garnet/lib/cpuperf/writer.h"
+#include "garnet/lib/perfmon/writer.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "rapidjson/writer.h"
@@ -165,7 +165,7 @@ void ChromiumExporter::ExportRecord(const trace::Record& record) {
       const auto& blob = record.GetBlob();
       if (blob.type == TRACE_BLOB_TYPE_LAST_BRANCH) {
         auto lbr =
-            reinterpret_cast<const cpuperf::LastBranchRecord*>(blob.blob);
+            reinterpret_cast<const perfmon::LastBranchRecord*>(blob.blob);
         last_branch_records_.push_back(*lbr);
       }
       break;
@@ -386,7 +386,7 @@ void ChromiumExporter::ExportKernelObject(
 }
 
 void ChromiumExporter::ExportLastBranchBlob(
-    const cpuperf::LastBranchRecord& lbr) {
+    const perfmon::LastBranchRecord& lbr) {
   writer_.StartObject();
   writer_.Key("cpu");
   writer_.Uint(lbr.cpu);

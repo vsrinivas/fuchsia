@@ -8,7 +8,7 @@
 #pragma once
 
 #include <zircon/compiler.h>
-#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zircon-internal/device/cpu-trace/common-pm.h>
 
 __BEGIN_CDECLS
@@ -369,15 +369,15 @@ struct X86PmuConfig {
     // If zero, then no timebase is in use: Each event must trigger its own
     // data collection. Otherwise the value is the id of the timebase counter
     // to use, which must appear in one of |programmable_ids| or |fixed_ids|.
-    cpuperf_event_id_t timebase_id;
+    perfmon_event_id_t timebase_id;
 
     // Ids of each event. These values are written to the trace buffer to
     // identify the event.
     // The used entries begin at index zero and are consecutive (no holes).
-    cpuperf_event_id_t fixed_ids[IPM_MAX_FIXED_COUNTERS];
-    cpuperf_event_id_t programmable_ids[IPM_MAX_PROGRAMMABLE_COUNTERS];
+    perfmon_event_id_t fixed_ids[IPM_MAX_FIXED_COUNTERS];
+    perfmon_event_id_t programmable_ids[IPM_MAX_PROGRAMMABLE_COUNTERS];
     // Ids of other h/w events to collect data for.
-    cpuperf_event_id_t misc_ids[IPM_MAX_MISC_EVENTS];
+    perfmon_event_id_t misc_ids[IPM_MAX_MISC_EVENTS];
 
     // Initial value of each counter.
     // The "misc" counters currently do not support initial values.
@@ -398,7 +398,7 @@ struct X86PmuConfig {
 // While redundant, it is ok to set this for the |timebase_id| counter.
 #define IPM_CONFIG_FLAG_TIMEBASE (1u << 1)
 // Collect the available set of last branches.
-// Branch data is emitted as CPUPERF_RECORD_LBR records.
+// Branch data is emitted as PERFMON_RECORD_LBR records.
 // Cannot be set with IPM_CONFIG_FLAG_TIMEBASE unless the counter is
 // |timebase_id|.
 // This is only available when the underlying system supports it.

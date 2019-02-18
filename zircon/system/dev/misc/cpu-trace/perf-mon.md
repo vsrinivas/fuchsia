@@ -9,20 +9,20 @@ chapter 12 of the Cortex A53 Technical Reference Manual.
 
 Several ioctls are provided to control performance data collection.
 
-### *ioctl_cpuperf_get_properties*
+### *ioctl_perfmon_get_properties*
 
 ```
-ssize_t ioctl_cpuperf_get_properties(int fd, cpuperf_properties_t* props);
+ssize_t ioctl_perfmon_get_properties(int fd, perfmon_properties_t* props);
 ```
 
 Return various aspects of PMU properties in |*props|.
 
 Returns 0 on success or a negative error code.
 
-### *ioctl_cpuperf_alloc_trace*
+### *ioctl_perfmon_alloc_trace*
 
 ```
-ssize_t ioctl_cpuperf_alloc_trace(int fd, const ioctl_cpuperf_alloc_t* alloc);
+ssize_t ioctl_perfmon_alloc_trace(int fd, const ioctl_perfmon_alloc_t* alloc);
 ```
 
 Allocate various resources needed to perform a trace.
@@ -31,33 +31,33 @@ This must be called while tracing is stopped.
 
 Returns 0 on success or a negative error code.
 
-### *ioctl_cpuperf_free_trace*
+### *ioctl_perfmon_free_trace*
 
 ```
-ssize_t ioctl_cpuperf_free_trace(int fd);
+ssize_t ioctl_perfmon_free_trace(int fd);
 ```
 
 Free all resources allocated by a preceding all to
-*ioctl_cpuperf_alloc_trace()*.
+*ioctl_perfmon_alloc_trace()*.
 This must be called while tracing is stopped.
 
 Returns 0 on success or a negative error code.
 
-### *ioctl_cpuperf_get_alloc*
+### *ioctl_perfmon_get_alloc*
 
 ```
-ssize_t ioctl_cpuperf_get_alloc(int fd, cpuperf_alloc_t* alloc);
+ssize_t ioctl_perfmon_get_alloc(int fd, perfmon_alloc_t* alloc);
 ```
 
 Fetch the trace configuration passed in to a preceding call to
-*ioctl_cpuperf_alloc_trace()*.
+*ioctl_perfmon_alloc_trace()*.
 
 Returns 0 on success or a negative error code.
 
-### *ioctl_cpuperf_stage_config*
+### *ioctl_perfmon_stage_config*
 
 ```
-ssize_t ioctl_cpuperf_stage_config(int fd, const cpuperf_config_t* config);
+ssize_t ioctl_perfmon_stage_config(int fd, const perfmon_config_t* config);
 ```
 
 Configure data collection. |*config| specifies the events to collect
@@ -66,22 +66,22 @@ This must be called while tracing is stopped.
 
 Returns 0 on success or a negative error code.
 
-### *ioctl_cpuperf_get_config*
+### *ioctl_perfmon_get_config*
 
 ```
-ssize_t ioctl_cpuperf_get_config(int fd, cpuperf_config_t* config);
+ssize_t ioctl_perfmon_get_config(int fd, perfmon_config_t* config);
 ```
 
 Fetch the configuration passed in to a preceding call to
-*ioctl_cpuperf_stage_config()*.
+*ioctl_perfmon_stage_config()*.
 
 Returns 0 on success or a negative error code.
 
 ### *ioctl_pmu_get_buffer_handle*
 
 ```
-ssize_t ioctl_cpuperf_get_buffer_handle(
-    int fd, const ioctl_cpuperf_buffer_handle_req_t* rqst,
+ssize_t ioctl_perfmon_get_buffer_handle(
+    int fd, const ioctl_perfmon_buffer_handle_req_t* rqst,
     zx_handle_t* handle);
 ```
 
@@ -91,10 +91,10 @@ This must be called while tracing is stopped.
 
 Returns 0 on success or a negative error code.
 
-### *ioctl_cpuperf_start*
+### *ioctl_perfmon_start*
 
 ```
-ssize_t ioctl_cpuperf_start(int fd);
+ssize_t ioctl_perfmon_start(int fd);
 ```
 
 Start data collection.
@@ -103,10 +103,10 @@ This must be called while tracing is stopped.
 Returns 0 on success or a negative error code.
 
 
-### *ioctl_cpuperf_stop*
+### *ioctl_perfmon_stop*
 
 ```
-ssize_t ioctl_cpuperf_stop(int fd);
+ssize_t ioctl_perfmon_stop(int fd);
 ```
 
 Stop tracing and collect any remaining data from each cpu.
@@ -118,10 +118,10 @@ Returns 0 on success or a negative error code.
 
 Here's a sketch of typical usage:
 
-1) *ioctl_cpuperf_alloc_trace(fd, &alloc)*
-2) *ioctl_cpuperf_stage_config(fd, &config)*
-3) *ioctl_cpuperf_start(fd)*
+1) *ioctl_perfmon_alloc_trace(fd, &alloc)*
+2) *ioctl_perfmon_stage_config(fd, &config)*
+3) *ioctl_perfmon_start(fd)*
 4) launch program one wishes to trace
-5) *ioctl_cpuperf_stop(fd)*
+5) *ioctl_perfmon_stop(fd)*
 6) fetch handles for each vmo, and process data
-7) *ioctl_cpuperf_free_trace(fd)* [this will free each buffer as well]
+7) *ioctl_perfmon_free_trace(fd)* [this will free each buffer as well]

@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_CPUPERF_DEVICE_READER_H_
-#define GARNET_LIB_CPUPERF_DEVICE_READER_H_
+#ifndef GARNET_LIB_PERFMON_DEVICE_READER_H_
+#define GARNET_LIB_PERFMON_DEVICE_READER_H_
 
 #include <lib/fxl/macros.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <zircon/types.h>
 
 #include "reader.h"
 
-namespace cpuperf {
+namespace perfmon {
 
 class DeviceReader final : public Reader {
  public:
@@ -23,9 +23,9 @@ class DeviceReader final : public Reader {
 
   ~DeviceReader();
 
-  bool GetProperties(cpuperf_properties_t* props);
+  bool GetProperties(perfmon_properties_t* props);
 
-  bool GetConfig(cpuperf_config_t* config);
+  bool GetConfig(perfmon_config_t* config);
 
  private:
   // |fd| is borrowed.
@@ -44,6 +44,6 @@ class DeviceReader final : public Reader {
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceReader);
 };
 
-}  // namespace cpuperf
+}  // namespace perfmon
 
-#endif  // GARNET_LIB_CPUPERF_DEVICE_READER_H_
+#endif  // GARNET_LIB_PERFMON_DEVICE_READER_H_

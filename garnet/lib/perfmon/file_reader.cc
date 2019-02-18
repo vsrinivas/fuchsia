@@ -13,7 +13,7 @@
 
 #include "file_reader.h"
 
-namespace cpuperf {
+namespace perfmon {
 
 bool FileReader::Create(FileNameProducer file_name_producer,
                         uint32_t num_traces,
@@ -101,4 +101,4 @@ bool FileReader::UnmapBuffer() {
   return true;
 }
 
-}  // namespace cpuperf
+}  // namespace perfmon

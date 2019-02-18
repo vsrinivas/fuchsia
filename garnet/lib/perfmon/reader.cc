@@ -5,9 +5,9 @@
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_printf.h>
 
-#include "garnet/lib/cpuperf/reader.h"
+#include "garnet/lib/perfmon/reader.h"
 
-namespace cpuperf {
+namespace perfmon {
 
 Reader::Reader(uint32_t num_traces)
     : num_traces_(num_traces) {
@@ -88,4 +88,4 @@ ReaderStatus Reader::ReadNextRecord(uint32_t* trace_num,
   return set_status(ReaderStatus::kNoMoreRecords);
 }
 
-}  // namespace cpuperf
+}  // namespace perfmon

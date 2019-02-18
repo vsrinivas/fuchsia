@@ -4,7 +4,7 @@
 
 #include <lib/fxl/logging.h>
 
-#include "garnet/lib/cpuperf/events.h"
+#include "garnet/lib/perfmon/events.h"
 
 #include "verify_test.h"
 
@@ -17,28 +17,28 @@ class ValueRecordsVerifier : public Verifier {
 
   ValueRecordsVerifier(const cpuperf::SessionResultSpec* spec)
       : Verifier(spec) {
-    const cpuperf::EventDetails* details;
+    const perfmon::EventDetails* details;
 
     bool rc __UNUSED =
-      cpuperf::LookupEventByName("misc", "edram_temperature", &details);
+      perfmon::LookupEventByName("misc", "edram_temperature", &details);
     FXL_DCHECK(rc);
     edram_temperature_id_ = details->id;
 
-    rc = cpuperf::LookupEventByName("misc", "package_temperature", &details);
+    rc = perfmon::LookupEventByName("misc", "package_temperature", &details);
     FXL_DCHECK(rc);
     package_temperature_id_ = details->id;
 
-    rc = cpuperf::LookupEventByName("misc", "ia_temperature", &details);
+    rc = perfmon::LookupEventByName("misc", "ia_temperature", &details);
     FXL_DCHECK(rc);
     ia_temperature_id_ = details->id;
 
-    rc = cpuperf::LookupEventByName("misc", "gt_temperature", &details);
+    rc = perfmon::LookupEventByName("misc", "gt_temperature", &details);
     FXL_DCHECK(rc);
     gt_temperature_id_ = details->id;
   }
 
  private:
-  bool VerifyRecord(const cpuperf::SampleRecord& record) override {
+  bool VerifyRecord(const perfmon::SampleRecord& record) override {
     if (record.header->event == edram_temperature_id_) {
       ++edram_temperature_count_;
     } else if (record.header->event == package_temperature_id_) {
@@ -73,10 +73,10 @@ class ValueRecordsVerifier : public Verifier {
   }
 
   // Ids of the events we should see.
-  cpuperf_event_id_t edram_temperature_id_;
-  cpuperf_event_id_t package_temperature_id_;
-  cpuperf_event_id_t ia_temperature_id_;
-  cpuperf_event_id_t gt_temperature_id_;
+  perfmon_event_id_t edram_temperature_id_;
+  perfmon_event_id_t package_temperature_id_;
+  perfmon_event_id_t ia_temperature_id_;
+  perfmon_event_id_t gt_temperature_id_;
 
   // Counts of the events we should see;
   size_t edram_temperature_count_ = 0;

@@ -42,7 +42,7 @@ executable("cpuperf_integration_tests") {
   deps = [
     "//garnet/bin/cpuperf:session_result_spec",
     "//garnet/bin/cpuperf:session_spec",
-    "//garnet/lib/cpuperf",
+    "//garnet/lib/perfmon",
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fdio",

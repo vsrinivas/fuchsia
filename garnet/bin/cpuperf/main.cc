@@ -17,12 +17,12 @@
 
 #ifdef __x86_64__  // For non-supported arches we're just a stub.
 
-#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <zircon/syscalls.h>
 
-#include "garnet/lib/cpuperf/controller.h"
-#include "garnet/lib/cpuperf/events.h"
 #include "garnet/lib/debugger_utils/util.h"
+#include "garnet/lib/perfmon/controller.h"
+#include "garnet/lib/perfmon/events.h"
 
 #include "print_tallies.h"
 #include "session_spec.h"
@@ -72,7 +72,7 @@ static bool GetSessionSpecFromArgv(const fxl::CommandLine& cl,
   return true;
 }
 
-static void DescribeEvent(FILE* f, const cpuperf::EventDetails* details) {
+static void DescribeEvent(FILE* f, const perfmon::EventDetails* details) {
   if (details->description[0] != '\0') {
     fprintf(f, "%s: %s\n", details->name, details->description);
   } else {
@@ -93,7 +93,7 @@ static void DescribeEvent(FILE* f, const std::string& full_name) {
     exit(EXIT_FAILURE);
   }
 
-  const cpuperf::EventDetails* details;
+  const perfmon::EventDetails* details;
   if (!LookupEventByName(parts[0].c_str(), parts[1].c_str(),
                          &details)) {
     FXL_LOG(ERROR) << "Unknown event: " << full_name;
@@ -104,12 +104,12 @@ static void DescribeEvent(FILE* f, const std::string& full_name) {
 }
 
 static void PrintEventList(FILE* f) {
-  cpuperf::GroupTable groups = cpuperf::GetAllGroups();
+  perfmon::GroupTable groups = perfmon::GetAllGroups();
 
   for (auto& group : groups) {
     std::sort(group.events.begin(), group.events.end(),
-              [] (const cpuperf::EventDetails*& a,
-                  const cpuperf::EventDetails*& b) {
+              [] (const perfmon::EventDetails*& a,
+                  const perfmon::EventDetails*& b) {
       return strcmp(a->name, b->name) < 0;
     });
     fprintf(f, "\nGroup %s\n", group.group_name);
@@ -120,8 +120,8 @@ static void PrintEventList(FILE* f) {
 }
 
 static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
-                      cpuperf::Controller* controller, size_t iter) {
-  std::unique_ptr<cpuperf::DeviceReader> reader = controller->GetReader();
+                      perfmon::Controller* controller, size_t iter) {
+  std::unique_ptr<perfmon::DeviceReader> reader = controller->GetReader();
   if (!reader) {
     return;
   }
@@ -129,7 +129,7 @@ static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
   FXL_VLOG(1) << "Saving results of iteration " << iter;
 
   for (size_t trace = 0; trace < result_spec.num_traces; ++trace) {
-    if (reader->SetTrace(trace) != cpuperf::ReaderStatus::kOk) {
+    if (reader->SetTrace(trace) != perfmon::ReaderStatus::kOk) {
       // If we can't set the trace to this one it's unlikely we can continue.
       return;
     }
@@ -150,7 +150,7 @@ static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
   // Print a summary of this run.
   // In tally mode this is noise, but if verbosity is on sure.
   FXL_LOG(INFO) << "Iteration " << iter << " summary";
-  if (controller->mode() != cpuperf::Controller::Mode::kTally ||
+  if (controller->mode() != perfmon::Controller::Mode::kTally ||
       FXL_VLOG_IS_ON(2)) {
     for (size_t trace = 0; trace < result_spec.num_traces; ++trace) {
       std::string path = result_spec.GetTraceFilePath(iter, trace);
@@ -165,7 +165,7 @@ static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
 }
 
 static bool RunSession(const cpuperf::SessionSpec& spec,
-                       cpuperf::Controller* controller) {
+                       perfmon::Controller* controller) {
   cpuperf::SessionResultSpec result_spec{spec.config_name, spec.num_iterations,
       controller->num_traces(), spec.output_path_prefix};
 
@@ -179,14 +179,14 @@ static bool RunSession(const cpuperf::SessionSpec& spec,
 
     controller->Stop();
 
-    if (controller->mode() == cpuperf::Controller::Mode::kTally) {
+    if (controller->mode() == perfmon::Controller::Mode::kTally) {
       PrintTallyResults(stdout, spec, result_spec, controller);
     } else {
       SaveTrace(result_spec, controller, iter);
     }
   }
 
-  if (controller->mode() != cpuperf::Controller::Mode::kTally) {
+  if (controller->mode() != perfmon::Controller::Mode::kTally) {
     if (!cpuperf::WriteSessionResultSpec(spec.session_result_spec_path,
                                          result_spec)) {
       return false;
@@ -225,14 +225,14 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  if (cpuperf::GetConfigEventCount(spec.cpuperf_config) == 0) {
+  if (perfmon::GetConfigEventCount(spec.perfmon_config) == 0) {
     FXL_LOG(ERROR) << "No events specified";
     return EXIT_FAILURE;
   }
 
-  std::unique_ptr<cpuperf::Controller> controller;
-  if (!cpuperf::Controller::Create(spec.buffer_size_in_mb,
-                                   spec.cpuperf_config,
+  std::unique_ptr<perfmon::Controller> controller;
+  if (!perfmon::Controller::Create(spec.buffer_size_in_mb,
+                                   spec.perfmon_config,
                                    &controller)) {
     return EXIT_FAILURE;
   }

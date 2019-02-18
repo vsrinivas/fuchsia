@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_CPUPERF_WRITER_H_
-#define GARNET_LIB_CPUPERF_WRITER_H_
+#ifndef GARNET_LIB_PERFMON_WRITER_H_
+#define GARNET_LIB_PERFMON_WRITER_H_
 
 #include <cstddef>
 #include <cstdint>
 
-namespace cpuperf {
+namespace perfmon {
 
-// struct to export |cpuperf_last_branch_record_t| as a "blob" in the trace
+// struct to export |perfmon_last_branch_record_t| as a "blob" in the trace
 // format. A problem that we need to solve is giving the reader a way to match
 // last branch records with their originating event. The way we do this is to
 // add the cpu and timestamp to the data.
@@ -44,6 +44,6 @@ static inline size_t LastBranchRecordSize(uint16_t num_branches) {
   return sizeof(LastBranchRecord) + (num_branches + sizeof(LastBranchRecord));
 }
 
-}  // namespace cpuperf
+}  // namespace perfmon
 
-#endif  // GARNET_LIB_CPUPERF_WRITER_H_
+#endif  // GARNET_LIB_PERFMON_WRITER_H_

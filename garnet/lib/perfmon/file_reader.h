@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_CPUPERF_FILE_READER_H_
-#define GARNET_LIB_CPUPERF_FILE_READER_H_
+#ifndef GARNET_LIB_PERFMON_FILE_READER_H_
+#define GARNET_LIB_PERFMON_FILE_READER_H_
 
 #include <cstdint>
 #include <cstdio>
@@ -13,12 +13,12 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/files/unique_fd.h>
 #include <lib/fxl/macros.h>
-#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <zircon/types.h>
 
 #include "reader.h"
 
-namespace cpuperf {
+namespace perfmon {
 
 class FileReader final : public Reader {
  public:
@@ -42,6 +42,6 @@ class FileReader final : public Reader {
   FXL_DISALLOW_COPY_AND_ASSIGN(FileReader);
 };
 
-}  // namespace cpuperf
+}  // namespace perfmon
 
-#endif  // GARNET_LIB_CPUPERF_FILE_READER_H_
+#endif  // GARNET_LIB_PERFMON_FILE_READER_H_

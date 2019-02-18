@@ -8,7 +8,7 @@
 #pragma once
 
 #include <zircon/compiler.h>
-#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zircon-internal/device/cpu-trace/common-pm.h>
 
 __BEGIN_CDECLS
@@ -281,26 +281,26 @@ struct Arm64PmuProperties : public PmuCommonProperties {
 
 // Configuration data passed from driver to kernel.
 struct Arm64PmuConfig {
-    // The id of the timebase counter to use or CPUPERF_EVENT_ID_NONE.
+    // The id of the timebase counter to use or PERFMON_EVENT_ID_NONE.
     // A "timebase counter" is used to trigger collection of data from other
     // events. In other words it sets the sample rate for those events.
     // If zero, then no timebase is in use: Each event must trigger its own
     // data collection. Otherwise the value is the id of the timebase counter
     // to use, which must appear in one of |programmable_ids| or |fixed_ids|.
-    cpuperf_event_id_t timebase_event;
+    perfmon_event_id_t timebase_event;
 
     // Ids of each event. These values are written to the trace buffer to
     // identify the event.
     // The used entries begin at index zero and are consecutive (no holes).
-    cpuperf_event_id_t fixed_events[ARM64_PMU_MAX_FIXED_COUNTERS];
-    cpuperf_event_id_t programmable_events[ARM64_PMU_MAX_PROGRAMMABLE_COUNTERS];
+    perfmon_event_id_t fixed_events[ARM64_PMU_MAX_FIXED_COUNTERS];
+    perfmon_event_id_t programmable_events[ARM64_PMU_MAX_PROGRAMMABLE_COUNTERS];
 
     // Initial value of each counter.
     uint64_t fixed_initial_value[ARM64_PMU_MAX_FIXED_COUNTERS];
     uint32_t programmable_initial_value[ARM64_PMU_MAX_PROGRAMMABLE_COUNTERS];
 
     // Flags for each counter.
-    // The values of the flags is the same as for cpuperf_config_t::flags.
+    // The values of the flags is the same as for perfmon_config_t::flags.
     uint32_t fixed_flags[ARM64_PMU_MAX_FIXED_COUNTERS];
     uint32_t programmable_flags[ARM64_PMU_MAX_PROGRAMMABLE_COUNTERS];
 

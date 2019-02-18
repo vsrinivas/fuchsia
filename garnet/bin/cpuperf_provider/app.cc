@@ -12,8 +12,8 @@
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/bin/cpuperf_provider/importer.h"
-#include "garnet/lib/cpuperf/controller.h"
-#include "garnet/lib/cpuperf/reader.h"
+#include "garnet/lib/perfmon/controller.h"
+#include "garnet/lib/perfmon/reader.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
@@ -99,16 +99,16 @@ void App::StartTracing(const TraceConfig& trace_config) {
   FXL_DCHECK(!context_);
   FXL_DCHECK(!controller_);
 
-  cpuperf_config_t device_config;
+  perfmon_config_t device_config;
   if (!trace_config.TranslateToDeviceConfig(&device_config)) {
     FXL_LOG(ERROR) << "Error converting trace config to device config";
     return;
   }
 
-  std::unique_ptr<cpuperf::Controller> controller;
-  if (!cpuperf::Controller::Create(buffer_size_in_mb_, device_config,
+  std::unique_ptr<perfmon::Controller> controller;
+  if (!perfmon::Controller::Create(buffer_size_in_mb_, device_config,
                                    &controller)) {
-    FXL_LOG(ERROR) << "Cpuperf controller failed to initialize";
+    FXL_LOG(ERROR) << "Perfmon controller failed to initialize";
     return;
   }
 
@@ -153,7 +153,7 @@ void App::StopTracing() {
   if (reader) {
     Importer importer(buffer_context, &trace_config_, start_time_, stop_time_);
     if (!importer.Import(*reader)) {
-      FXL_LOG(ERROR) << "Errors encountered while importing cpuperf data";
+      FXL_LOG(ERROR) << "Errors encountered while importing perfmon data";
     }
   } else {
     FXL_LOG(ERROR) << "Unable to initialize reader";

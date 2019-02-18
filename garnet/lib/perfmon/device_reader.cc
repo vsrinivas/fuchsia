@@ -10,7 +10,7 @@
 
 #include "device_reader.h"
 
-namespace cpuperf {
+namespace perfmon {
 
 bool DeviceReader::Create(int fd, uint32_t buffer_size,
                           std::unique_ptr<DeviceReader>* out_reader) {
@@ -38,17 +38,17 @@ DeviceReader::~DeviceReader() {
   UnmapBuffer();
 }
 
-bool DeviceReader::GetProperties(cpuperf_properties_t* props) {
-  auto status = ioctl_cpuperf_get_properties(fd_, props);
+bool DeviceReader::GetProperties(perfmon_properties_t* props) {
+  auto status = ioctl_perfmon_get_properties(fd_, props);
   if (status < 0)
-    FXL_LOG(ERROR) << "ioctl_cpuperf_get_properties failed: " << status;
+    FXL_LOG(ERROR) << "ioctl_perfmon_get_properties failed: " << status;
   return status >= 0;
 }
 
-bool DeviceReader::GetConfig(cpuperf_config_t* config) {
-  auto status = ioctl_cpuperf_get_config(fd_, config);
+bool DeviceReader::GetConfig(perfmon_config_t* config) {
+  auto status = ioctl_perfmon_get_config(fd_, config);
   if (status < 0)
-    FXL_LOG(ERROR) << "ioctl_cpuperf_get_config failed: " << status;
+    FXL_LOG(ERROR) << "ioctl_perfmon_get_config failed: " << status;
   return status >= 0;
 }
 
@@ -57,12 +57,12 @@ bool DeviceReader::MapBuffer(const std::string& name, uint32_t trace_num) {
     return false;
   }
 
-  ioctl_cpuperf_buffer_handle_req_t req;
+  ioctl_perfmon_buffer_handle_req_t req;
   req.descriptor = trace_num;
   zx_handle_t raw_vmo;
-  auto ioctl_status = ioctl_cpuperf_get_buffer_handle(fd_, &req, &raw_vmo);
+  auto ioctl_status = ioctl_perfmon_get_buffer_handle(fd_, &req, &raw_vmo);
   if (ioctl_status < 0) {
-    FXL_LOG(ERROR) << name << ": ioctl_cpuperf_get_buffer_handle failed: "
+    FXL_LOG(ERROR) << name << ": ioctl_perfmon_get_buffer_handle failed: "
                    << ioctl_status;
     return false;
   }
@@ -102,4 +102,4 @@ bool DeviceReader::UnmapBuffer() {
   return true;
 }
 
-}  // namespace cpuperf
+}  // namespace perfmon

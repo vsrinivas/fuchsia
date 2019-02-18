@@ -10,7 +10,7 @@
 #include <memory>
 
 #include "garnet/bin/cpuperf/session_result_spec.h"
-#include "garnet/lib/cpuperf/records.h"
+#include "garnet/lib/perfmon/records.h"
 
 class Verifier {
  public:
@@ -34,7 +34,7 @@ class Verifier {
       : session_result_spec_(session_result_spec) {
   }
 
-  virtual bool VerifyRecord(const cpuperf::SampleRecord& record) = 0;
+  virtual bool VerifyRecord(const perfmon::SampleRecord& record) = 0;
   virtual bool VerifyTrace(const RecordCounts& counts) = 0;
 
   // Kernel pcs are guaranteed to have this bit set.

@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 #include <lib/fxl/logging.h>
 
-#include "garnet/lib/cpuperf/events.h"
+#include "garnet/lib/perfmon/events.h"
 
 #include "verify_test.h"
 
@@ -18,35 +18,35 @@ class LastBranchVerifier : public Verifier {
 
   LastBranchVerifier(const cpuperf::SessionResultSpec* spec)
       : Verifier(spec) {
-    const cpuperf::EventDetails* details;
+    const perfmon::EventDetails* details;
 
     bool rc __UNUSED =
-      cpuperf::LookupEventByName("arch", "instructions_retired", &details);
+      perfmon::LookupEventByName("arch", "instructions_retired", &details);
     FXL_DCHECK(rc);
     instructions_retired_id_ = details->id;
   }
 
  private:
-  bool VerifyRecord(const cpuperf::SampleRecord& record) override {
+  bool VerifyRecord(const perfmon::SampleRecord& record) override {
     if (record.header->event == instructions_retired_id_) {
       ++instructions_retired_count_;
     }
-    if (record.type() == CPUPERF_RECORD_LAST_BRANCH) {
+    if (record.type() == PERFMON_RECORD_LAST_BRANCH) {
       ++last_branch_record_count_;
       if (record.header->event != instructions_retired_id_) {
         FXL_LOG(ERROR) << "Last branch record has wrong event id: "
                        << record.header->event;
         return false;
       }
-      const cpuperf_last_branch_record_t* lbr = record.last_branch;
-      uint64_t valid_info_mask = (CPUPERF_LAST_BRANCH_INFO_CYCLES_MASK |
-                                  CPUPERF_LAST_BRANCH_INFO_MISPRED_MASK);
+      const perfmon_last_branch_record_t* lbr = record.last_branch;
+      uint64_t valid_info_mask = (PERFMON_LAST_BRANCH_INFO_CYCLES_MASK |
+                                  PERFMON_LAST_BRANCH_INFO_MISPRED_MASK);
       for (size_t i = 0; i < lbr->num_branches; ++i) {
         if (lbr->aspace == 0) {
           FXL_LOG(ERROR) << "Last branch record has zero aspace";
           return false;
         }
-        if (lbr->num_branches > CPUPERF_MAX_NUM_LAST_BRANCH) {
+        if (lbr->num_branches > PERFMON_MAX_NUM_LAST_BRANCH) {
           FXL_LOG(ERROR) << "Last branch record has too many branches";
           return false;
         }
@@ -79,7 +79,7 @@ class LastBranchVerifier : public Verifier {
   }
 
   // Ids of the events we should see.
-  cpuperf_event_id_t instructions_retired_id_;
+  perfmon_event_id_t instructions_retired_id_;
 
   // Counts of the events we should see.
   size_t instructions_retired_count_ = 0;

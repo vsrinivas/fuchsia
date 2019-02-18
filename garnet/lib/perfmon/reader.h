@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_CPUPERF_READER_H_
-#define GARNET_LIB_CPUPERF_READER_H_
+#ifndef GARNET_LIB_PERFMON_READER_H_
+#define GARNET_LIB_PERFMON_READER_H_
 
 #include <cstdint>
 #include <memory>
 
 #include <lib/fxl/macros.h>
-#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <zircon/types.h>
 
 #include "buffer_reader.h"
 
-namespace cpuperf {
+namespace perfmon {
 
 class Reader {
  public:
@@ -83,6 +83,6 @@ class Reader {
   FXL_DISALLOW_COPY_AND_ASSIGN(Reader);
 };
 
-}  // namespace cpuperf
+}  // namespace perfmon
 
-#endif  // GARNET_LIB_CPUPERF_READER_H_
+#endif  // GARNET_LIB_PERFMON_READER_H_

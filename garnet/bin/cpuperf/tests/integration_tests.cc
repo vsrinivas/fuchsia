@@ -6,7 +6,7 @@
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
 
-#include "garnet/lib/cpuperf/controller.h"
+#include "garnet/lib/perfmon/controller.h"
 
 #include "run_test.h"
 #include "verify_test.h"
@@ -35,9 +35,9 @@ TEST(Cpuperf, ValueRecords) {
 }
 
 TEST(Cpuperf, LastBranchRecord) {
-  cpuperf_properties_t properties;
-  ASSERT_TRUE(cpuperf::Controller::GetProperties(&properties));
-  if (!(properties.flags & CPUPERF_PROPERTY_FLAG_HAS_LAST_BRANCH)) {
+  perfmon_properties_t properties;
+  ASSERT_TRUE(perfmon::Controller::GetProperties(&properties));
+  if (!(properties.flags & PERFMON_PROPERTY_FLAG_HAS_LAST_BRANCH)) {
     // Not supported on this h/w. Punt.
     FXL_LOG(INFO) << "Last Branch Records not supported, skipping test";
     return;
@@ -56,13 +56,13 @@ int main(int argc, char** argv)
   if (!fxl::SetLogSettingsFromCommandLine(cl))
     return EXIT_FAILURE;
 
-  // Early exit if there is no cpuperf device. We could be running on QEMU.
+  // Early exit if there is no perfmon device. We could be running on QEMU.
   bool is_supported = false;
 #ifdef __x86_64__
-  is_supported = cpuperf::Controller::IsSupported();
+  is_supported = perfmon::Controller::IsSupported();
 #endif
   if (!is_supported) {
-    FXL_LOG(INFO) << "Cpuperf device not supported";
+    FXL_LOG(INFO) << "Perfmon device not supported";
     return EXIT_SUCCESS;
   }
 

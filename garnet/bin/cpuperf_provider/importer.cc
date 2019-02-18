@@ -12,8 +12,8 @@
 #include <zircon/syscalls.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
-#include "garnet/lib/cpuperf/reader.h"
-#include "garnet/lib/cpuperf/writer.h"
+#include "garnet/lib/perfmon/reader.h"
+#include "garnet/lib/perfmon/writer.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/time/time_point.h"
@@ -62,19 +62,19 @@ Importer::Importer(trace_context_t* context, const TraceConfig* trace_config,
 
 Importer::~Importer() = default;
 
-bool Importer::Import(cpuperf::DeviceReader& reader) {
+bool Importer::Import(perfmon::DeviceReader& reader) {
   trace_context_write_process_info_record(context_, kCpuProcess,
                                           &cpu_string_ref_);
 
   auto start = fxl::TimePoint::Now();
 
-  cpuperf_properties_t props;
+  perfmon_properties_t props;
   if (!reader.GetProperties(&props)) {
     FXL_LOG(ERROR) << "Error reading CPU performance properties";
     return false;
   }
 
-  cpuperf_config_t config;
+  perfmon_config_t config;
   if (!reader.GetConfig(&config)) {
     FXL_LOG(ERROR) << "Error reading CPU performance config";
     return false;
@@ -88,9 +88,9 @@ bool Importer::Import(cpuperf::DeviceReader& reader) {
   return true;
 }
 
-uint64_t Importer::ImportRecords(cpuperf::DeviceReader& reader,
-                                 const cpuperf_properties_t& props,
-                                 const cpuperf_config_t& config) {
+uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
+                                 const perfmon_properties_t& props,
+                                 const perfmon_config_t& config) {
   EventTracker event_data(start_time_);
   uint32_t record_count = 0;
   // Only print these warnings once, and then again at the end with
@@ -101,15 +101,15 @@ uint64_t Importer::ImportRecords(cpuperf::DeviceReader& reader,
   uint32_t printed_late_record_warning_count = 0;
 
   uint32_t cpu;
-  cpuperf::SampleRecord record;
+  perfmon::SampleRecord record;
 
   uint64_t sample_rate = trace_config_->sample_rate();
   bool is_tally_mode = sample_rate == 0;
   trace_ticks_t current_time = reader.time();
 
-  while (reader.ReadNextRecord(&cpu, &record) == cpuperf::ReaderStatus::kOk) {
+  while (reader.ReadNextRecord(&cpu, &record) == perfmon::ReaderStatus::kOk) {
     FXL_DCHECK(cpu < kMaxNumCpus);
-    cpuperf_event_id_t event_id = record.event();
+    perfmon_event_id_t event_id = record.event();
     uint64_t ticks_per_second = reader.ticks_per_second();
 
     // There can be millions of records. This log message is useful for small
@@ -119,9 +119,9 @@ uint64_t Importer::ImportRecords(cpuperf::DeviceReader& reader,
         "Import: cpu=%u, event=0x%x, time=%" PRIu64, cpu, event_id,
         current_time);
 
-    if (record.type() == CPUPERF_RECORD_TIME) {
+    if (record.type() == PERFMON_RECORD_TIME) {
       current_time = reader.time();
-      if (event_id == CPUPERF_EVENT_ID_NONE) {
+      if (event_id == PERFMON_EVENT_ID_NONE) {
         // This is just a time update, not a combined time+tick record.
         ++record_count;
         continue;
@@ -153,10 +153,10 @@ uint64_t Importer::ImportRecords(cpuperf::DeviceReader& reader,
       ++printed_late_record_warning_count;
     } else {
       switch (record.type()) {
-        case CPUPERF_RECORD_TIME:
-          FXL_DCHECK(event_id != CPUPERF_EVENT_ID_NONE);
+        case PERFMON_RECORD_TIME:
+          FXL_DCHECK(event_id != PERFMON_EVENT_ID_NONE);
           // fall through
-        case CPUPERF_RECORD_TICK:
+        case PERFMON_RECORD_TICK:
           if (is_tally_mode) {
             event_data.AccumulateCount(cpu, event_id, sample_rate);
           } else {
@@ -164,7 +164,7 @@ uint64_t Importer::ImportRecords(cpuperf::DeviceReader& reader,
                                ticks_per_second, sample_rate);
           }
           break;
-        case CPUPERF_RECORD_COUNT:
+        case PERFMON_RECORD_COUNT:
           if (is_tally_mode) {
             event_data.AccumulateCount(cpu, event_id, record.count->count);
           } else {
@@ -172,7 +172,7 @@ uint64_t Importer::ImportRecords(cpuperf::DeviceReader& reader,
                                ticks_per_second, record.count->count);
           }
           break;
-        case CPUPERF_RECORD_VALUE:
+        case PERFMON_RECORD_VALUE:
           if (is_tally_mode) {
             event_data.UpdateValue(cpu, event_id, record.value->value);
           } else {
@@ -180,13 +180,13 @@ uint64_t Importer::ImportRecords(cpuperf::DeviceReader& reader,
                                ticks_per_second, record.value->value);
           }
           break;
-        case CPUPERF_RECORD_PC:
+        case PERFMON_RECORD_PC:
           if (!is_tally_mode) {
             ImportSampleRecord(cpu, config, record, prev_time, current_time,
                                ticks_per_second, sample_rate);
           }
           break;
-        case CPUPERF_RECORD_LAST_BRANCH:
+        case PERFMON_RECORD_LAST_BRANCH:
           if (!is_tally_mode) {
             EmitLastBranchRecord(cpu, config, record, current_time);
           }
@@ -223,17 +223,17 @@ uint64_t Importer::ImportRecords(cpuperf::DeviceReader& reader,
 }
 
 void Importer::ImportSampleRecord(trace_cpu_number_t cpu,
-                                  const cpuperf_config_t& config,
-                                  const cpuperf::SampleRecord& record,
+                                  const perfmon_config_t& config,
+                                  const perfmon::SampleRecord& record,
                                   trace_ticks_t previous_time,
                                   trace_ticks_t current_time,
                                   uint64_t ticks_per_second,
                                   uint64_t event_value) {
-  cpuperf_event_id_t event_id = record.event();
-  const cpuperf::EventDetails* details;
+  perfmon_event_id_t event_id = record.event();
+  const perfmon::EventDetails* details;
   // Note: Errors here are generally rare, so at present we don't get clever
   // with minimizing the noise.
-  if (cpuperf::EventIdToEventDetails(event_id, &details)) {
+  if (perfmon::EventIdToEventDetails(event_id, &details)) {
     EmitSampleRecord(cpu, details, record, previous_time, current_time,
                      ticks_per_second, event_value);
   } else {
@@ -242,8 +242,8 @@ void Importer::ImportSampleRecord(trace_cpu_number_t cpu,
 }
 
 void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
-                                const cpuperf::EventDetails* details,
-                                const cpuperf::SampleRecord& record,
+                                const perfmon::EventDetails* details,
+                                const perfmon::SampleRecord& record,
                                 trace_ticks_t start_time,
                                 trace_ticks_t end_time,
                                 uint64_t ticks_per_second, uint64_t value) {
@@ -280,17 +280,17 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
   trace_arg_t args[3];
   size_t n_args;
   switch (record.type()) {
-    case CPUPERF_RECORD_TICK:
+    case PERFMON_RECORD_TICK:
       args[0] = {trace_make_arg(rate_name_ref_,
                                 trace_make_double_arg_value(rate_per_second))};
       n_args = 1;
       break;
-    case CPUPERF_RECORD_COUNT:
+    case PERFMON_RECORD_COUNT:
       args[0] = {trace_make_arg(rate_name_ref_,
                                 trace_make_double_arg_value(rate_per_second))};
       n_args = 1;
       break;
-    case CPUPERF_RECORD_VALUE:
+    case PERFMON_RECORD_VALUE:
       // We somehow need to mark the value as not being a count. This is
       // important for some consumers to guide how to print the value.
       // Do this by using a different name for the value.
@@ -298,7 +298,7 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
           trace_make_arg(value_name_ref_, trace_make_uint64_arg_value(value))};
       n_args = 1;
       break;
-    case CPUPERF_RECORD_PC:
+    case PERFMON_RECORD_PC:
       args[1] = {trace_make_arg(
           aspace_name_ref_, trace_make_uint64_arg_value(record.pc->aspace))};
       args[2] = {trace_make_arg(pc_name_ref_,
@@ -333,17 +333,17 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
 }
 
 void Importer::EmitLastBranchRecord(trace_cpu_number_t cpu,
-                                    const cpuperf_config_t& config,
-                                    const cpuperf::SampleRecord& record,
+                                    const perfmon_config_t& config,
+                                    const perfmon::SampleRecord& record,
                                     trace_ticks_t time) {
   // Use the cpu's name as the blob's name.
   auto cpu_name_ref{GetCpuNameRef(cpu)};
   uint16_t num_branches = record.last_branch->num_branches;
-  size_t size = cpuperf::LastBranchRecordSize(num_branches);
+  size_t size = perfmon::LastBranchRecordSize(num_branches);
   void* ptr = trace_context_begin_write_blob_record(
       context_, TRACE_BLOB_TYPE_LAST_BRANCH, &cpu_name_ref, size);
   if (ptr) {
-    auto rec = reinterpret_cast<cpuperf::LastBranchRecord*>(ptr);
+    auto rec = reinterpret_cast<perfmon::LastBranchRecord*>(ptr);
     rec->cpu = cpu;
     rec->num_branches = record.last_branch->num_branches;
     rec->reserved = 0;
@@ -368,15 +368,15 @@ void Importer::EmitLastBranchRecord(trace_cpu_number_t cpu,
 // currently no other way to communicate the start time of the trace in a
 // json output file, and thus there would otherwise be no way for the
 // report printer to know the duration over which the count was collected.
-void Importer::EmitTallyCounts(const cpuperf_config_t& config,
+void Importer::EmitTallyCounts(const perfmon_config_t& config,
                                const EventTracker* event_data) {
   unsigned num_cpus = zx_system_get_num_cpus();
 
   for (unsigned cpu = 0; cpu < num_cpus; ++cpu) {
     for (unsigned ctr = 0; ctr < countof(config.events) &&
-                           config.events[ctr] != CPUPERF_EVENT_ID_NONE;
+                           config.events[ctr] != PERFMON_EVENT_ID_NONE;
          ++ctr) {
-      cpuperf_event_id_t event_id = config.events[ctr];
+      perfmon_event_id_t event_id = config.events[ctr];
       if (event_data->HaveValue(cpu, event_id)) {
         uint64_t value = event_data->GetCountOrValue(cpu, event_id);
         if (event_data->IsValue(cpu, event_id)) {
@@ -391,15 +391,15 @@ void Importer::EmitTallyCounts(const cpuperf_config_t& config,
 }
 
 void Importer::EmitTallyRecord(trace_cpu_number_t cpu,
-                               cpuperf_event_id_t event_id, trace_ticks_t time,
+                               perfmon_event_id_t event_id, trace_ticks_t time,
                                bool is_value, uint64_t value) {
   trace_thread_ref_t thread_ref{GetCpuThreadRef(cpu, event_id)};
   trace_arg_t args[1] = {
       {trace_make_arg(is_value ? value_name_ref_ : count_name_ref_,
                       trace_make_uint64_arg_value(value))},
   };
-  const cpuperf::EventDetails* details;
-  if (cpuperf::EventIdToEventDetails(event_id, &details)) {
+  const perfmon::EventDetails* details;
+  if (perfmon::EventIdToEventDetails(event_id, &details)) {
     trace_string_ref_t name_ref{
         trace_context_make_registered_string_literal(context_, details->name)};
     trace_context_write_counter_event_record(context_, time, &thread_ref,
@@ -416,11 +416,11 @@ trace_string_ref_t Importer::GetCpuNameRef(trace_cpu_number_t cpu) {
 }
 
 trace_thread_ref_t Importer::GetCpuThreadRef(trace_cpu_number_t cpu,
-                                             cpuperf_event_id_t id) {
+                                             perfmon_event_id_t id) {
   FXL_DCHECK(cpu < countof(cpu_thread_refs_));
   // TODO(dje): Misc events are currently all system-wide, not attached
   // to any specific cpu. That won't always be the case.
-  if (CPUPERF_EVENT_ID_GROUP(id) == CPUPERF_GROUP_MISC)
+  if (PERFMON_EVENT_ID_GROUP(id) == PERFMON_GROUP_MISC)
     cpu = 0;
   else
     ++cpu;

@@ -46,7 +46,7 @@ struct EventDetails {
 };
 
 // Compare function to qsort, bsearch.
-int CompareCpuperfEventId(const void* ap, const void* bp);
+int ComparePerfmonEventId(const void* ap, const void* bp);
 
 // Return the largest event id in |events,count|.
 uint16_t GetLargestEventId(const EventDetails* events, size_t count);
@@ -67,7 +67,7 @@ struct PmuPerTraceState {
     bool configured;
 
     // The trace configuration as given to us via the ioctl.
-    cpuperf_config_t ioctl_config;
+    perfmon_config_t ioctl_config;
 
     // The internalized form of |ioctl_config| that we pass to the kernel.
     PmuConfig config;
@@ -90,13 +90,13 @@ struct PmuPerTraceState {
 // Devhost interface.
 
 // TODO(dje): add unbindable?
-class CpuperfDevice;
-using DeviceType = ddk::Device<CpuperfDevice,
+class PerfmonDevice;
+using DeviceType = ddk::Device<PerfmonDevice,
                                ddk::Openable,
                                ddk::Closable,
                                ddk::Ioctlable>;
 
-class CpuperfDevice : public DeviceType {
+class PerfmonDevice : public DeviceType {
   public:
     // maximum space, in bytes, for trace buffers (per cpu)
     static constexpr uint32_t kMaxPerTraceSpace = 256 * 1024 * 1024;
@@ -107,9 +107,9 @@ class CpuperfDevice : public DeviceType {
     // Architecture-provided routine to initialize static state.
     static zx_status_t InitOnce();
 
-    explicit CpuperfDevice(zx_device_t* parent, zx::bti bti)
+    explicit PerfmonDevice(zx_device_t* parent, zx::bti bti)
         : DeviceType(parent), bti_(std::move(bti)) {}
-    ~CpuperfDevice() = default;
+    ~PerfmonDevice() = default;
 
     static const PmuHwProperties& pmu_hw_properties() {
         return pmu_hw_properties_;

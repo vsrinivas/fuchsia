@@ -21,9 +21,9 @@ Data is collected with the "cpuperf" program to drive the "trace session"
 (not to be confused with Fuchsia's general tracing system, driven by
 [the "trace" program](../trace/README.md)).
 
-The specification of what data to collect is provided by a "cpspec"
-(pronounced "See Pee Spek") file. The contents and format of this file
-is described below. Several examples are provided by the cpuperf package.
+The specification of what data to collect is provided by a "cpspec" file
+(pronounced "See Pee Spek"). The contents and format of this file
+are described below. Several examples are provided by the cpuperf package.
 
 Example:
 

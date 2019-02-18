@@ -18,7 +18,7 @@ class UserFlagVerifier : public Verifier {
   }
 
  private:
-  bool VerifyRecord(const cpuperf::SampleRecord& record) override {
+  bool VerifyRecord(const perfmon::SampleRecord& record) override {
     // IWBN to verify we got a kernel pc here, but that doesn't always
     // happen. There can be slippage to the time the event is reported.
     return true;

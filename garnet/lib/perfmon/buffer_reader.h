@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_CPUPERF_BUFFER_READER_H_
-#define GARNET_LIB_CPUPERF_BUFFER_READER_H_
+#ifndef GARNET_LIB_PERFMON_BUFFER_READER_H_
+#define GARNET_LIB_PERFMON_BUFFER_READER_H_
 
 #include <cstdint>
 #include <memory>
 #include <string>
 
 #include <lib/fxl/macros.h>
-#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <zircon/types.h>
 
 #include "records.h"
 #include "types.h"
 
-namespace cpuperf {
+namespace perfmon {
 
 // This class provides support for reading one in-memory buffer of data.
 
@@ -27,7 +27,7 @@ class BufferReader {
                              size_t buffer_size,
                              std::unique_ptr<BufferReader>* out_reader);
 
-  static ReaderStatus AnalyzeHeader(const cpuperf_buffer_header_t* header,
+  static ReaderStatus AnalyzeHeader(const perfmon_buffer_header_t* header,
                                     size_t buffer_size);
 
   ReaderStatus status() const { return status_; }
@@ -81,7 +81,7 @@ class BufferReader {
   const std::string name_;
   const uint8_t* const buffer_;
 
-  const cpuperf_buffer_header_t* const header_;
+  const perfmon_buffer_header_t* const header_;
   const uint8_t* next_record_ = nullptr;
   const uint8_t* last_record_ = nullptr;
   const uint8_t* buffer_end_ = nullptr;
@@ -95,7 +95,7 @@ class BufferReader {
   // value, so keep track of the value here.
   uint64_t ticks_per_second_;
 
-  // The time from the last CPUPERF_RECORD_TIME record read.
+  // The time from the last PERFMON_RECORD_TIME record read.
   zx_time_t time_ = 0;
 
   // Reader status. Once we get a reader error, reading stops.
@@ -104,6 +104,6 @@ class BufferReader {
   FXL_DISALLOW_COPY_AND_ASSIGN(BufferReader);
 };
 
-}  // namespace cpuperf
+}  // namespace perfmon
 
-#endif  // GARNET_LIB_CPUPERF_BUFFER_READER_H_
+#endif  // GARNET_LIB_PERFMON_BUFFER_READER_H_

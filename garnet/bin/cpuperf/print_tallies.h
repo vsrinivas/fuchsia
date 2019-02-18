@@ -7,13 +7,13 @@
 
 #include <stdio.h>
 
-#include "garnet/lib/cpuperf/controller.h"
+#include "garnet/lib/perfmon/controller.h"
 
 #include "session_spec.h"
 #include "session_result_spec.h"
 
 void PrintTallyResults(FILE* f, const cpuperf::SessionSpec& spec,
                        const cpuperf::SessionResultSpec& result_spec,
-                       cpuperf::Controller* controller);
+                       perfmon::Controller* controller);
 
 #endif  // GARNET_BIN_CPUPERF_PRINT_TALLIES_H_

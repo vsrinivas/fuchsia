@@ -19,4 +19,4 @@ zx_status_t insntrace_bind(void* ctx, zx_device_t* parent);
 // This driver accesses the PMU of the chip as well as various other
 // h/w and s/w provided counters.
 
-zx_status_t cpuperf_bind(void* ctx, zx_device_t* parent);
+zx_status_t perfmon_bind(void* ctx, zx_device_t* parent);

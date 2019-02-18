@@ -9,42 +9,42 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
-#include "garnet/lib/cpuperf/events.h"
+#include "garnet/lib/perfmon/events.h"
 
 namespace cpuperf_provider {
 
 enum EventId {
 #define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, \
                         readable_name, description) \
-  symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_FIXED, id),
+  symbol = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_FIXED, id),
 #define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, \
                        umask, flags, readable_name, description) \
-  symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_ARCH, id),
+  symbol = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_ARCH, id),
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 
 #define DEF_SKL_EVENT(symbol, event_name, id, event, umask, \
                       flags, readable_name, description) \
-  symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_MODEL, id),
+  symbol = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_MODEL, id),
 #include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
 
 #define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, \
                            flags, readable_name, description) \
-  symbol = CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_MISC, id),
+  symbol = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_MISC, id),
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 };
 
 #define DEF_FIXED_CATEGORY(symbol, name, events...) \
-  static const cpuperf_event_id_t symbol##_events[] = {events};
+  static const perfmon_event_id_t symbol##_events[] = {events};
 #define DEF_ARCH_CATEGORY(symbol, name, events...) \
-  static const cpuperf_event_id_t symbol##_events[] = {events};
+  static const perfmon_event_id_t symbol##_events[] = {events};
 #include "intel-pm-categories.inc"
 
 #define DEF_SKL_CATEGORY(symbol, name, events...) \
-  static const cpuperf_event_id_t symbol##_events[] = {events};
+  static const perfmon_event_id_t symbol##_events[] = {events};
 #include "skylake-pm-categories.inc"
 
 #define DEF_MISC_SKL_CATEGORY(symbol, name, events...) \
-  static const cpuperf_event_id_t symbol##_events[] = {events};
+  static const perfmon_event_id_t symbol##_events[] = {events};
 #include "skylake-misc-categories.inc"
 
 static const CategorySpec kCategories[] = {
@@ -114,7 +114,7 @@ void TraceConfig::Reset() {
   trace_pc_ = false;
   trace_last_branch_ = false;
   sample_rate_ = 0;
-  timebase_event_ = CPUPERF_EVENT_ID_NONE;
+  timebase_event_ = PERFMON_EVENT_ID_NONE;
   selected_categories_.clear();
 }
 
@@ -205,7 +205,7 @@ bool TraceConfig::ProcessTimebase() {
   for (const auto& cat : kTimebaseCategories) {
     if (trace_is_category_enabled(cat.name)) {
       FXL_VLOG(1) << "Category " << cat.name << " enabled";
-      if (timebase_event_ != CPUPERF_EVENT_ID_NONE) {
+      if (timebase_event_ != PERFMON_EVENT_ID_NONE) {
         FXL_LOG(ERROR) << "Timebase already specified";
         return false;
       }
@@ -253,16 +253,16 @@ bool TraceConfig::Changed(const TraceConfig& old) const {
   return false;
 }
 
-bool TraceConfig::TranslateToDeviceConfig(cpuperf_config_t* out_config) const {
-  cpuperf_config_t* cfg = out_config;
+bool TraceConfig::TranslateToDeviceConfig(perfmon_config_t* out_config) const {
+  perfmon_config_t* cfg = out_config;
   memset(cfg, 0, sizeof(*cfg));
 
   unsigned ctr = 0;
 
   // If a timebase is requested, it is the first event.
-  if (timebase_event_ != CPUPERF_EVENT_ID_NONE) {
-    const cpuperf::EventDetails* details;
-    FXL_CHECK(cpuperf::EventIdToEventDetails(timebase_event_, &details));
+  if (timebase_event_ != PERFMON_EVENT_ID_NONE) {
+    const perfmon::EventDetails* details;
+    FXL_CHECK(perfmon::EventIdToEventDetails(timebase_event_, &details));
     FXL_VLOG(2) << fxl::StringPrintf("Using timebase %s", details->name);
     cfg->events[ctr++] = timebase_event_;
   }
@@ -287,7 +287,7 @@ bool TraceConfig::TranslateToDeviceConfig(cpuperf_config_t* out_config) const {
     }
     for (size_t i = 0; i < cat->count; ++i) {
       if (ctr < countof(cfg->events)) {
-        cpuperf_event_id_t id = cat->events[i];
+        perfmon_event_id_t id = cat->events[i];
         FXL_VLOG(2) << fxl::StringPrintf("Adding %s event id %u to trace",
                                          group_name, id);
         cfg->events[ctr++] = id;
@@ -301,29 +301,29 @@ bool TraceConfig::TranslateToDeviceConfig(cpuperf_config_t* out_config) const {
 
   uint32_t flags = 0;
   if (trace_os_)
-    flags |= CPUPERF_CONFIG_FLAG_OS;
+    flags |= PERFMON_CONFIG_FLAG_OS;
   if (trace_user_)
-    flags |= CPUPERF_CONFIG_FLAG_USER;
-  if (timebase_event_ == CPUPERF_EVENT_ID_NONE) {
+    flags |= PERFMON_CONFIG_FLAG_USER;
+  if (timebase_event_ == PERFMON_EVENT_ID_NONE) {
     // These can only be set for events that are their own timebase.
     if (trace_pc_)
-      flags |= CPUPERF_CONFIG_FLAG_PC;
+      flags |= PERFMON_CONFIG_FLAG_PC;
     if (trace_last_branch_)
-      flags |= CPUPERF_CONFIG_FLAG_LAST_BRANCH;
+      flags |= PERFMON_CONFIG_FLAG_LAST_BRANCH;
   }
-  if (timebase_event_ != CPUPERF_EVENT_ID_NONE)
-    flags |= CPUPERF_CONFIG_FLAG_TIMEBASE0;
+  if (timebase_event_ != PERFMON_EVENT_ID_NONE)
+    flags |= PERFMON_CONFIG_FLAG_TIMEBASE0;
 
   for (unsigned i = 0; i < num_used_events; ++i) {
     cfg->rate[i] = sample_rate_;
     cfg->flags[i] = flags;
   }
 
-  if (timebase_event_ != CPUPERF_EVENT_ID_NONE) {
+  if (timebase_event_ != PERFMON_EVENT_ID_NONE) {
     if (trace_pc_)
-      cfg->flags[0] |= CPUPERF_CONFIG_FLAG_PC;
+      cfg->flags[0] |= PERFMON_CONFIG_FLAG_PC;
     if (trace_last_branch_)
-      cfg->flags[0] |= CPUPERF_CONFIG_FLAG_LAST_BRANCH;
+      cfg->flags[0] |= PERFMON_CONFIG_FLAG_LAST_BRANCH;
   }
 
   return true;
@@ -335,9 +335,9 @@ std::string TraceConfig::ToString() const {
   if (!is_enabled_)
     return "disabled";
 
-  if (timebase_event_ != CPUPERF_EVENT_ID_NONE) {
-    const cpuperf::EventDetails* details;
-    FXL_CHECK(cpuperf::EventIdToEventDetails(timebase_event_, &details));
+  if (timebase_event_ != PERFMON_EVENT_ID_NONE) {
+    const perfmon::EventDetails* details;
+    FXL_CHECK(perfmon::EventIdToEventDetails(timebase_event_, &details));
     result +=
         fxl::StringPrintf("Timebase 0x%x(%s)", timebase_event_, details->name);
   }

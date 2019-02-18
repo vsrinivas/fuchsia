@@ -4,7 +4,7 @@
 
 #include <lib/fxl/logging.h>
 
-#include "garnet/lib/cpuperf/events.h"
+#include "garnet/lib/perfmon/events.h"
 
 #include "verify_test.h"
 
@@ -17,16 +17,16 @@ class TallyVerifier : public Verifier {
 
   TallyVerifier(const cpuperf::SessionResultSpec* spec)
       : Verifier(spec) {
-    const cpuperf::EventDetails* details;
+    const perfmon::EventDetails* details;
 
     bool rc __UNUSED =
-      cpuperf::LookupEventByName("fixed", "instructions_retired", &details);
+      perfmon::LookupEventByName("fixed", "instructions_retired", &details);
     FXL_DCHECK(rc);
     instructions_retired_id_ = details->id;
   }
 
  private:
-  bool VerifyRecord(const cpuperf::SampleRecord& record) override {
+  bool VerifyRecord(const perfmon::SampleRecord& record) override {
     if (record.header->event == instructions_retired_id_) {
       ++instructions_retired_count_;
     }
@@ -46,7 +46,7 @@ class TallyVerifier : public Verifier {
   }
 
   // Ids of the events we should see.
-  cpuperf_event_id_t instructions_retired_id_;
+  perfmon_event_id_t instructions_retired_id_;
 
   // Counts of the events we should see;
   size_t instructions_retired_count_ = 0;

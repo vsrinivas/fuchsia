@@ -10,7 +10,7 @@
 #include <string>
 
 #include <lib/fxl/time/time_delta.h>
-#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zx/time.h>
 
 namespace cpuperf {
@@ -30,7 +30,7 @@ struct SessionSpec {
   std::string config_name;
 
   // Configuration for collecting cpu performance data.
-  cpuperf_config_t cpuperf_config{};
+  perfmon_config_t perfmon_config{};
 
   // The size of the trace buffer to use, in MB.
   uint32_t buffer_size_in_mb{kDefaultBufferSizeInMb};

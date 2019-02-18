@@ -16,7 +16,7 @@
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/fxl/strings/string_printf.h>
 
-#include "garnet/lib/cpuperf/file_reader.h"
+#include "garnet/lib/perfmon/file_reader.h"
 
 #include "raw_printer.h"
 
@@ -60,41 +60,41 @@ void RawPrinter::Printf(const char* format, ...) {
   va_end(args);
 }
 
-void RawPrinter::PrintHeader(const SampleRecord& record) {
+void RawPrinter::PrintHeader(const perfmon::SampleRecord& record) {
   // There's no need to print the type here, caller does that.
   Printf("Event 0x%x", record.header->event);
 }
 
-void RawPrinter::PrintTimeRecord(const SampleRecord& record) {
+void RawPrinter::PrintTimeRecord(const perfmon::SampleRecord& record) {
   Printf("Time: %" PRIu64 "\n", record.time->time);
 }
 
-void RawPrinter::PrintTickRecord(const SampleRecord& record) {
+void RawPrinter::PrintTickRecord(const perfmon::SampleRecord& record) {
   Printf("Tick: ");
   PrintHeader(record);
   Printf("\n");
 }
 
-void RawPrinter::PrintCountRecord(const SampleRecord& record) {
+void RawPrinter::PrintCountRecord(const perfmon::SampleRecord& record) {
   Printf("Count: ");
   PrintHeader(record);
   Printf(", %" PRIu64 "\n", record.count->count);
 }
 
-void RawPrinter::PrintValueRecord(const SampleRecord& record) {
+void RawPrinter::PrintValueRecord(const perfmon::SampleRecord& record) {
   Printf("Value: ");
   PrintHeader(record);
   Printf(", %" PRIu64 "\n", record.value->value);
 }
 
-void RawPrinter::PrintPcRecord(const SampleRecord& record) {
+void RawPrinter::PrintPcRecord(const perfmon::SampleRecord& record) {
   Printf("PC: ");
   PrintHeader(record);
   Printf(", aspace 0x%" PRIx64 ", pc 0x%" PRIx64 "\n",
          record.pc->aspace, record.pc->pc);
 }
 
-void RawPrinter::PrintLastBranchRecord(const SampleRecord& record) {
+void RawPrinter::PrintLastBranchRecord(const perfmon::SampleRecord& record) {
   Printf("LastBranch: ");
   PrintHeader(record);
   Printf(", aspace 0x%" PRIx64 ", %u branches\n",
@@ -109,8 +109,8 @@ uint64_t RawPrinter::PrintOneTrace(uint32_t iter_num) {
     return session_result_spec_->GetTraceFilePath(iter_num, trace_num);
   };
 
-  std::unique_ptr<FileReader> reader;
-  if (!FileReader::Create(get_file_name,
+  std::unique_ptr<perfmon::FileReader> reader;
+  if (!perfmon::FileReader::Create(get_file_name,
                           session_result_spec_->num_traces,
                           &reader)) {
     return 0;
@@ -119,8 +119,8 @@ uint64_t RawPrinter::PrintOneTrace(uint32_t iter_num) {
   uint32_t current_trace = ~0;
 
   uint32_t trace;
-  SampleRecord record;
-  while (reader->ReadNextRecord(&trace, &record) == ReaderStatus::kOk) {
+  perfmon::SampleRecord record;
+  while (reader->ReadNextRecord(&trace, &record) == perfmon::ReaderStatus::kOk) {
     ++total_records;
 
     if (trace != current_trace) {
@@ -133,22 +133,22 @@ uint64_t RawPrinter::PrintOneTrace(uint32_t iter_num) {
     Printf("%04zx: ", reader->GetLastRecordOffset());
 
     switch (record.type()) {
-    case CPUPERF_RECORD_TIME:
+    case PERFMON_RECORD_TIME:
       PrintTimeRecord(record);
       break;
-    case CPUPERF_RECORD_TICK:
+    case PERFMON_RECORD_TICK:
       PrintTickRecord(record);
       break;
-    case CPUPERF_RECORD_COUNT:
+    case PERFMON_RECORD_COUNT:
       PrintCountRecord(record);
       break;
-    case CPUPERF_RECORD_VALUE:
+    case PERFMON_RECORD_VALUE:
       PrintValueRecord(record);
       break;
-    case CPUPERF_RECORD_PC:
+    case PERFMON_RECORD_PC:
       PrintPcRecord(record);
       break;
-    case CPUPERF_RECORD_LAST_BRANCH:
+    case PERFMON_RECORD_LAST_BRANCH:
       PrintLastBranchRecord(record);
       break;
     default:

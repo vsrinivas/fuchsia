@@ -1,6 +1,6 @@
 // Spec to generate test data for the printer test.
 // Run this then save the results to print/tests.
-// $ cpuperf --quiet /pkgfs/packages/cpuperf_tests/0/data/gen_printer_test_data.cpspec
+// $ cpuperf --quiet --spec-file=/pkgfs/packages/cpuperf_tests/0/data/gen_printer_test_data.cpspec
 // The --quiet flag is to remove environment-dependent text from the output.
 // To copy the results to your desktop:
 // $ sh garnet/bin/cpuperf/copy_cpuperf.sh /data/cpuperf-test.cpsession /tmp
@@ -17,7 +17,7 @@
       "flags": [ "os", "user", "pc", "last_branch" ]
     },
     {
-      // This one is used to get CPUPERF_RECORD_VALUE records.
+      // This one is used to get PERFMON_RECORD_VALUE records.
       "group_name": "misc",
       "event_name": "package_temperature",
       "flags": [ "timebase0" ]

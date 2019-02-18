@@ -15,7 +15,7 @@ __BEGIN_CDECLS
 // before it's useful; it's here in the interests of hackability in the
 // interim.
 #define MTRACE_KIND_INSNTRACE 0
-#define MTRACE_KIND_CPUPERF 1
+#define MTRACE_KIND_PERFMON 1
 
 // Actions for instruction tracing control
 
@@ -38,43 +38,43 @@ __BEGIN_CDECLS
 
 // Get performonce monitoring system properties
 // The result is an mx_x86_ipm_properties_t struct filled in.
-#define MTRACE_CPUPERF_GET_PROPERTIES 0
+#define MTRACE_PERFMON_GET_PROPERTIES 0
 
 // Prepare the kernel for performance data collection trace runs.
-#define MTRACE_CPUPERF_INIT 1
+#define MTRACE_PERFMON_INIT 1
 
 // Assign a buffer to the specified cpu.
-#define MTRACE_CPUPERF_ASSIGN_BUFFER 2
+#define MTRACE_PERFMON_ASSIGN_BUFFER 2
 
 // Stage the perf config for a CPU.
 // Will allocate resources as necessary.
 // Must be called with data collection off.
-#define MTRACE_CPUPERF_STAGE_CONFIG 3
+#define MTRACE_PERFMON_STAGE_CONFIG 3
 
 // Start data collection.
 // Must be called after STAGE_CONFIG with data collection off.
-#define MTRACE_CPUPERF_START 4
+#define MTRACE_PERFMON_START 4
 
 // Stop data collection.
 // May be called before START.
 // May be called multiple times.
-#define MTRACE_CPUPERF_STOP 5
+#define MTRACE_PERFMON_STOP 5
 
 // Finish data collection.
 // Must be called with data collection off.
 // Must be called when done: frees various resources allocated to perform
 // the data collection.
 // May be called multiple times.
-#define MTRACE_CPUPERF_FINI 6
+#define MTRACE_PERFMON_FINI 6
 
 // Encode/decode options values for mtrace_control().
 // At present we just encode the cpu number here.
 // We only support 32 cpus at the moment, the extra bit is for magic values.
-#define MTRACE_CPUPERF_OPTIONS_CPU_MASK 0x3f
-#define MTRACE_CPUPERF_OPTIONS(cpu) ((cpu) & MTRACE_CPUPERF_OPTIONS_CPU_MASK)
+#define MTRACE_PERFMON_OPTIONS_CPU_MASK 0x3f
+#define MTRACE_PERFMON_OPTIONS(cpu) ((cpu) & MTRACE_PERFMON_OPTIONS_CPU_MASK)
 
-#define MTRACE_CPUPERF_ALL_CPUS 32
+#define MTRACE_PERFMON_ALL_CPUS 32
 
-#define MTRACE_CPUPERF_OPTIONS_CPU(options) ((options) & MTRACE_CPUPERF_OPTIONS_CPU_MASK)
+#define MTRACE_PERFMON_OPTIONS_CPU(options) ((options) & MTRACE_PERFMON_OPTIONS_CPU_MASK)
 
 __END_CDECLS

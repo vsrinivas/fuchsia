@@ -16,7 +16,7 @@
 
 #include <fbl/alloc_checker.h>
 
-#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zircon-internal/mtrace.h>
 #include <zircon/syscalls.h>
 
@@ -25,11 +25,11 @@
 
 namespace perfmon {
 
-PmuHwProperties CpuperfDevice::pmu_hw_properties_;
+PmuHwProperties PerfmonDevice::pmu_hw_properties_;
 
-int CompareCpuperfEventId(const void* ap, const void* bp) {
-    auto a = reinterpret_cast<const cpuperf_event_id_t*>(ap);
-    auto b = reinterpret_cast<const cpuperf_event_id_t*>(bp);
+int ComparePerfmonEventId(const void* ap, const void* bp) {
+    auto a = reinterpret_cast<const perfmon_event_id_t*>(ap);
+    auto b = reinterpret_cast<const perfmon_event_id_t*>(bp);
     if (*a < *b)
         return -1;
     if (*a > *b)
@@ -51,14 +51,14 @@ uint16_t GetLargestEventId(const EventDetails* events, size_t count) {
 
 zx_status_t BuildEventMap(const EventDetails* events, size_t count,
                           const uint16_t** out_event_map, size_t* out_map_size) {
-    static_assert(CPUPERF_MAX_EVENT < std::numeric_limits<uint16_t>::max());
+    static_assert(PERFMON_MAX_EVENT < std::numeric_limits<uint16_t>::max());
 
     uint16_t largest_event_id = GetLargestEventId(events, count);
-    // See cpu-perf.h: The full event id is split into two pieces:
+    // See perf-mon.h: The full event id is split into two pieces:
     // group type and id within that group. The event recorded in
     // |EventDetails| is the id within the group. Each id must be in
-    // the range [1,CPUPERF_MAX_EVENT]. ID 0 is reserved.
-    if (largest_event_id == 0 || largest_event_id > CPUPERF_MAX_EVENT) {
+    // the range [1,PERFMON_MAX_EVENT]. ID 0 is reserved.
+    if (largest_event_id == 0 || largest_event_id > PERFMON_MAX_EVENT) {
         zxlogf(ERROR, "PMU: Corrupt event database\n");
         return ZX_ERR_INTERNAL;
     }
@@ -84,11 +84,11 @@ zx_status_t BuildEventMap(const EventDetails* events, size_t count,
     return ZX_OK;
 }
 
-zx_status_t CpuperfDevice::GetHwProperties() {
+zx_status_t PerfmonDevice::GetHwProperties() {
     PmuHwProperties props;
     zx_handle_t resource = get_root_resource();
     zx_status_t status =
-        zx_mtrace_control(resource, MTRACE_KIND_CPUPERF, MTRACE_CPUPERF_GET_PROPERTIES,
+        zx_mtrace_control(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_GET_PROPERTIES,
                           0, &props, sizeof(props));
     if (status != ZX_OK) {
         if (status == ZX_ERR_NOT_SUPPORTED)
@@ -103,7 +103,7 @@ zx_status_t CpuperfDevice::GetHwProperties() {
     return ZX_OK;
 }
 
-void CpuperfDevice::FreeBuffersForTrace(PmuPerTraceState* per_trace, uint32_t num_allocated) {
+void PerfmonDevice::FreeBuffersForTrace(PmuPerTraceState* per_trace, uint32_t num_allocated) {
     // Note: This may be called with partially allocated buffers.
     assert(per_trace->buffers);
     assert(num_allocated <= per_trace->num_buffers);
@@ -112,15 +112,15 @@ void CpuperfDevice::FreeBuffersForTrace(PmuPerTraceState* per_trace, uint32_t nu
     per_trace->buffers.reset();
 }
 
-zx_status_t CpuperfDevice::PmuGetProperties(void* reply, size_t replymax,
+zx_status_t PerfmonDevice::PmuGetProperties(void* reply, size_t replymax,
                                             size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    cpuperf_properties_t props{};
+    perfmon_properties_t props{};
     if (replymax < sizeof(props))
         return ZX_ERR_BUFFER_TOO_SMALL;
 
-    props.api_version = CPUPERF_API_VERSION;
+    props.api_version = PERFMON_API_VERSION;
     // TODO(dje): Remove cast in subsequent patch.
     props.pm_version = pmu_hw_properties_.pm_version;
     // To the arch-independent API, the misc events on Intel are currently
@@ -137,7 +137,7 @@ zx_status_t CpuperfDevice::PmuGetProperties(void* reply, size_t replymax,
     props.programmable_counter_width = pmu_hw_properties_.programmable_counter_width;
 #ifdef __x86_64__
     if (pmu_hw_properties_.lbr_stack_size > 0) {
-        props.flags |= CPUPERF_PROPERTY_FLAG_HAS_LAST_BRANCH;
+        props.flags |= PERFMON_PROPERTY_FLAG_HAS_LAST_BRANCH;
     }
 #endif
 
@@ -146,13 +146,13 @@ zx_status_t CpuperfDevice::PmuGetProperties(void* reply, size_t replymax,
     return ZX_OK;
 }
 
-zx_status_t CpuperfDevice::PmuAllocTrace(const void* cmd, size_t cmdlen) {
+zx_status_t PerfmonDevice::PmuAllocTrace(const void* cmd, size_t cmdlen) {
     zxlogf(TRACE, "%s called\n", __func__);
 
     if (per_trace_state_)
         return ZX_ERR_BAD_STATE;
 
-    ioctl_cpuperf_alloc_t alloc;
+    ioctl_perfmon_alloc_t alloc;
     if (cmdlen != sizeof(alloc))
         return ZX_ERR_INVALID_ARGS;
     memcpy(&alloc, cmd, sizeof(alloc));
@@ -191,7 +191,7 @@ zx_status_t CpuperfDevice::PmuAllocTrace(const void* cmd, size_t cmdlen) {
     return ZX_OK;
 }
 
-zx_status_t CpuperfDevice::PmuFreeTrace() {
+zx_status_t PerfmonDevice::PmuFreeTrace() {
     zxlogf(TRACE, "%s called\n", __func__);
 
     if (active_)
@@ -205,7 +205,7 @@ zx_status_t CpuperfDevice::PmuFreeTrace() {
     return ZX_OK;
 }
 
-zx_status_t CpuperfDevice::PmuGetAlloc(void* reply, size_t replymax,
+zx_status_t PerfmonDevice::PmuGetAlloc(void* reply, size_t replymax,
                                        size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
@@ -213,7 +213,7 @@ zx_status_t CpuperfDevice::PmuGetAlloc(void* reply, size_t replymax,
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
-    ioctl_cpuperf_alloc_t alloc{};
+    ioctl_perfmon_alloc_t alloc{};
     if (replymax < sizeof(alloc))
         return ZX_ERR_BUFFER_TOO_SMALL;
 
@@ -224,7 +224,7 @@ zx_status_t CpuperfDevice::PmuGetAlloc(void* reply, size_t replymax,
     return ZX_OK;
 }
 
-zx_status_t CpuperfDevice::PmuGetBufferHandle(const void* cmd, size_t cmdlen,
+zx_status_t PerfmonDevice::PmuGetBufferHandle(const void* cmd, size_t cmdlen,
                                               void* reply, size_t replymax,
                                               size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
@@ -233,7 +233,7 @@ zx_status_t CpuperfDevice::PmuGetBufferHandle(const void* cmd, size_t cmdlen,
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
-    ioctl_cpuperf_buffer_handle_req_t req;
+    ioctl_perfmon_buffer_handle_req_t req;
     zx_handle_t h;
 
     if (cmdlen != sizeof(req))
@@ -252,7 +252,7 @@ zx_status_t CpuperfDevice::PmuGetBufferHandle(const void* cmd, size_t cmdlen,
     return ZX_OK;
 }
 
-zx_status_t CpuperfDevice::PmuGetConfig(void* reply, size_t replymax,
+zx_status_t PerfmonDevice::PmuGetConfig(void* reply, size_t replymax,
                                         size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
@@ -263,7 +263,7 @@ zx_status_t CpuperfDevice::PmuGetConfig(void* reply, size_t replymax,
     if (!per_trace->configured)
         return ZX_ERR_BAD_STATE;
 
-    const cpuperf_config_t* config = &per_trace->ioctl_config;
+    const perfmon_config_t* config = &per_trace->ioctl_config;
     if (replymax < sizeof(*config))
         return ZX_ERR_BUFFER_TOO_SMALL;
 
@@ -272,7 +272,7 @@ zx_status_t CpuperfDevice::PmuGetConfig(void* reply, size_t replymax,
     return ZX_OK;
 }
 
-zx_status_t CpuperfDevice::PmuStart() {
+zx_status_t PerfmonDevice::PmuStart() {
     zxlogf(TRACE, "%s called\n", __func__);
 
     if (active_)
@@ -299,8 +299,8 @@ zx_status_t CpuperfDevice::PmuStart() {
     zx_handle_t resource = get_root_resource();
 
     zx_status_t status =
-        zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
-                          MTRACE_CPUPERF_INIT, 0, nullptr, 0);
+        zx_mtrace_control(resource, MTRACE_KIND_PERFMON,
+                          MTRACE_PERFMON_INIT, 0, nullptr, 0);
     if (status != ZX_OK)
         return status;
 
@@ -309,22 +309,22 @@ zx_status_t CpuperfDevice::PmuStart() {
         zx_pmu_buffer_t buffer;
         io_buffer_t* io_buffer = &per_trace->buffers[cpu];
         buffer.vmo = io_buffer->vmo_handle;
-        status = zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
-                                   MTRACE_CPUPERF_ASSIGN_BUFFER, cpu,
+        status = zx_mtrace_control(resource, MTRACE_KIND_PERFMON,
+                                   MTRACE_PERFMON_ASSIGN_BUFFER, cpu,
                                    &buffer, sizeof(buffer));
         if (status != ZX_OK)
             goto fail;
     }
 
-    status = zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
-                               MTRACE_CPUPERF_STAGE_CONFIG, 0,
+    status = zx_mtrace_control(resource, MTRACE_KIND_PERFMON,
+                               MTRACE_PERFMON_STAGE_CONFIG, 0,
                                &per_trace->config, sizeof(per_trace->config));
     if (status != ZX_OK)
         goto fail;
 
     // Step 2: Start data collection.
 
-    status = zx_mtrace_control(resource, MTRACE_KIND_CPUPERF, MTRACE_CPUPERF_START,
+    status = zx_mtrace_control(resource, MTRACE_KIND_PERFMON, MTRACE_PERFMON_START,
                                0, nullptr, 0);
     if (status != ZX_OK)
         goto fail;
@@ -335,16 +335,16 @@ zx_status_t CpuperfDevice::PmuStart() {
   fail:
     {
         zx_status_t status2 =
-            zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
-                              MTRACE_CPUPERF_FINI, 0, nullptr, 0);
+            zx_mtrace_control(resource, MTRACE_KIND_PERFMON,
+                              MTRACE_PERFMON_FINI, 0, nullptr, 0);
         if (status2 != ZX_OK)
-            zxlogf(TRACE, "%s: MTRACE_CPUPERF_FINI failed: %d\n", __func__, status2);
+            zxlogf(TRACE, "%s: MTRACE_PERFMON_FINI failed: %d\n", __func__, status2);
         assert(status2 == ZX_OK);
         return status;
     }
 }
 
-zx_status_t CpuperfDevice::PmuStop() {
+zx_status_t PerfmonDevice::PmuStop() {
     zxlogf(TRACE, "%s called\n", __func__);
 
     PmuPerTraceState* per_trace = per_trace_state_.get();
@@ -353,62 +353,62 @@ zx_status_t CpuperfDevice::PmuStop() {
 
     zx_handle_t resource = get_root_resource();
     zx_status_t status =
-        zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
-                          MTRACE_CPUPERF_STOP, 0, nullptr, 0);
+        zx_mtrace_control(resource, MTRACE_KIND_PERFMON,
+                          MTRACE_PERFMON_STOP, 0, nullptr, 0);
     if (status == ZX_OK) {
         active_ = false;
-        status = zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
-                                   MTRACE_CPUPERF_FINI, 0, nullptr, 0);
+        status = zx_mtrace_control(resource, MTRACE_KIND_PERFMON,
+                                   MTRACE_PERFMON_FINI, 0, nullptr, 0);
     }
     return status;
 }
 
 // Dispatch the various kinds of requests.
 
-zx_status_t CpuperfDevice::IoctlWorker(uint32_t op,
+zx_status_t PerfmonDevice::IoctlWorker(uint32_t op,
                                        const void* cmd, size_t cmdlen,
                                        void* reply, size_t replymax,
                                        size_t* out_actual) {
-    assert(IOCTL_FAMILY(op) == IOCTL_FAMILY_CPUPERF);
+    assert(IOCTL_FAMILY(op) == IOCTL_FAMILY_PERFMON);
 
     switch (op) {
-    case IOCTL_CPUPERF_GET_PROPERTIES:
+    case IOCTL_PERFMON_GET_PROPERTIES:
         if (cmdlen != 0)
             return ZX_ERR_INVALID_ARGS;
         return PmuGetProperties(reply, replymax, out_actual);
 
-    case IOCTL_CPUPERF_ALLOC_TRACE:
+    case IOCTL_PERFMON_ALLOC_TRACE:
         if (replymax != 0)
             return ZX_ERR_INVALID_ARGS;
         return PmuAllocTrace(cmd, cmdlen);
 
-    case IOCTL_CPUPERF_FREE_TRACE:
+    case IOCTL_PERFMON_FREE_TRACE:
         if (cmdlen != 0 || replymax != 0)
             return ZX_ERR_INVALID_ARGS;
         return PmuFreeTrace();
 
-    case IOCTL_CPUPERF_GET_ALLOC:
+    case IOCTL_PERFMON_GET_ALLOC:
         if (cmdlen != 0)
             return ZX_ERR_INVALID_ARGS;
         return PmuGetAlloc(reply, replymax, out_actual);
 
-    case IOCTL_CPUPERF_GET_BUFFER_HANDLE:
+    case IOCTL_PERFMON_GET_BUFFER_HANDLE:
         return PmuGetBufferHandle(cmd, cmdlen, reply, replymax, out_actual);
 
-    case IOCTL_CPUPERF_STAGE_CONFIG:
+    case IOCTL_PERFMON_STAGE_CONFIG:
         if (replymax != 0)
             return ZX_ERR_INVALID_ARGS;
         return PmuStageConfig(cmd, cmdlen);
 
-    case IOCTL_CPUPERF_GET_CONFIG:
+    case IOCTL_PERFMON_GET_CONFIG:
         return PmuGetConfig(reply, replymax, out_actual);
 
-    case IOCTL_CPUPERF_START:
+    case IOCTL_PERFMON_START:
         if (cmdlen != 0 || replymax != 0)
             return ZX_ERR_INVALID_ARGS;
         return PmuStart();
 
-    case IOCTL_CPUPERF_STOP:
+    case IOCTL_PERFMON_STOP:
         if (cmdlen != 0 || replymax != 0)
             return ZX_ERR_INVALID_ARGS;
         return PmuStop();
@@ -420,7 +420,7 @@ zx_status_t CpuperfDevice::IoctlWorker(uint32_t op,
 
 // Devhost interface.
 
-zx_status_t CpuperfDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
+zx_status_t PerfmonDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
     if (opened_)
         return ZX_ERR_ALREADY_BOUND;
 
@@ -428,19 +428,19 @@ zx_status_t CpuperfDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
     return ZX_OK;
 }
 
-zx_status_t CpuperfDevice::DdkClose(uint32_t flags) {
+zx_status_t PerfmonDevice::DdkClose(uint32_t flags) {
     opened_ = false;
     return ZX_OK;
 }
 
-zx_status_t CpuperfDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
+zx_status_t PerfmonDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
                                     void* reply, size_t replymax,
                                     size_t* out_actual) {
     mtx_lock(&lock_);
 
     ssize_t result;
     switch (IOCTL_FAMILY(op)) {
-        case IOCTL_FAMILY_CPUPERF:
+        case IOCTL_FAMILY_PERFMON:
             result = IoctlWorker(op, cmd, cmdlen,
                                  reply, replymax, out_actual);
             break;
@@ -454,7 +454,7 @@ zx_status_t CpuperfDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
     return static_cast<zx_status_t>(result);
 }
 
-void CpuperfDevice::DdkRelease() {
+void PerfmonDevice::DdkRelease() {
     // TODO(dje): None of these should fail. What to do?
     // Suggest flagging things as busted and prevent further use.
     PmuStop();
@@ -465,8 +465,8 @@ void CpuperfDevice::DdkRelease() {
 
 } // namespace perfmon
 
-zx_status_t cpuperf_bind(void* ctx, zx_device_t* parent) {
-    zx_status_t status = perfmon::CpuperfDevice::InitOnce();
+zx_status_t perfmon_bind(void* ctx, zx_device_t* parent) {
+    zx_status_t status = perfmon::PerfmonDevice::InitOnce();
     if (status != ZX_OK) {
         return status;
     }
@@ -484,13 +484,13 @@ zx_status_t cpuperf_bind(void* ctx, zx_device_t* parent) {
     }
 
     fbl::AllocChecker ac;
-    auto dev = std::unique_ptr<perfmon::CpuperfDevice>(
-        new (&ac) perfmon::CpuperfDevice(parent, std::move(bti)));
+    auto dev = std::unique_ptr<perfmon::PerfmonDevice>(
+        new (&ac) perfmon::PerfmonDevice(parent, std::move(bti)));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    status = dev->DdkAdd("cpuperf");
+    status = dev->DdkAdd("perfmon");
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
     } else {

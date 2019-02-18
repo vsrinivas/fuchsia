@@ -16,7 +16,7 @@ namespace perfmon {
 // There's only a few fixed events, so handle them directly.
 enum FixedEventId {
 #define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
-    symbol ## _ID = CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_FIXED, id),
+    symbol ## _ID = PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_FIXED, id),
 #include <lib/zircon-internal/device/cpu-trace/arm64-pm-events.inc>
 };
 
@@ -60,7 +60,7 @@ static zx_status_t InitializeEventMaps() {
 
 // Each arch provides its own |InitOnce()| method.
 
-zx_status_t CpuperfDevice::InitOnce() {
+zx_status_t PerfmonDevice::InitOnce() {
     zx_status_t status = GetHwProperties();
     if (status != ZX_OK) {
         return status;
@@ -111,13 +111,13 @@ struct StagingState {
     bool have_timebase0_user;
 };
 
-static zx_status_t pmu_stage_fixed_config(const cpuperf_config_t* icfg,
+static zx_status_t pmu_stage_fixed_config(const perfmon_config_t* icfg,
                                           StagingState* ss,
                                           unsigned input_index,
                                           Arm64PmuConfig* ocfg) {
     const unsigned ii = input_index;
-    const cpuperf_event_id_t id = icfg->events[ii];
-    bool uses_timebase0 = !!(icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0);
+    const perfmon_event_id_t id = icfg->events[ii];
+    bool uses_timebase0 = !!(icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0);
 
     // There's only one fixed counter on ARM64, the cycle counter.
     if (id != FIXED_CYCLE_COUNTER_ID) {
@@ -150,15 +150,15 @@ static zx_status_t pmu_stage_fixed_config(const cpuperf_config_t* icfg,
     return ZX_OK;
 }
 
-static zx_status_t pmu_stage_programmable_config(const cpuperf_config_t* icfg,
+static zx_status_t pmu_stage_programmable_config(const perfmon_config_t* icfg,
                                                  StagingState* ss,
                                                  unsigned input_index,
                                                  Arm64PmuConfig* ocfg) {
     const unsigned ii = input_index;
-    cpuperf_event_id_t id = icfg->events[ii];
-    unsigned group = CPUPERF_EVENT_ID_GROUP(id);
-    unsigned event = CPUPERF_EVENT_ID_EVENT(id);
-    bool uses_timebase0 = !!(icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0);
+    perfmon_event_id_t id = icfg->events[ii];
+    unsigned group = PERFMON_EVENT_ID_GROUP(id);
+    unsigned event = PERFMON_EVENT_ID_EVENT(id);
+    bool uses_timebase0 = !!(icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0);
 
     // TODO(dje): Verify no duplicates.
     if (ss->num_programmable == ss->max_num_programmable) {
@@ -186,7 +186,7 @@ static zx_status_t pmu_stage_programmable_config(const cpuperf_config_t* icfg,
     }
     const EventDetails* details = NULL;
     switch (group) {
-    case CPUPERF_GROUP_ARCH:
+    case PERFMON_GROUP_ARCH:
         if (event >= kArchEventMapSize) {
             zxlogf(ERROR, "%s: Invalid event id, event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
@@ -211,7 +211,7 @@ static zx_status_t pmu_stage_programmable_config(const cpuperf_config_t* icfg,
     return ZX_OK;
 }
 
-zx_status_t CpuperfDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
+zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
     zxlogf(TRACE, "%s called\n", __func__);
 
     if (active_)
@@ -224,7 +224,7 @@ zx_status_t CpuperfDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
     // can't be used.
     per_trace->configured = false;
 
-    cpuperf_config_t* icfg = &per_trace->ioctl_config;
+    perfmon_config_t* icfg = &per_trace->ioctl_config;
     if (cmdlen != sizeof(*icfg))
         return ZX_ERR_INVALID_ARGS;
     memcpy(icfg, cmd, sizeof(*icfg));
@@ -254,24 +254,24 @@ zx_status_t CpuperfDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
     zx_status_t status;
     unsigned ii;  // ii: input index
     for (ii = 0; ii < countof(icfg->events); ++ii) {
-        cpuperf_event_id_t id = icfg->events[ii];
+        perfmon_event_id_t id = icfg->events[ii];
         zxlogf(TRACE, "%s: processing [%u] = %u\n", __func__, ii, id);
         if (id == 0)
             break;
-        unsigned group = CPUPERF_EVENT_ID_GROUP(id);
+        unsigned group = PERFMON_EVENT_ID_GROUP(id);
 
-        if (icfg->flags[ii] & ~CPUPERF_CONFIG_FLAG_MASK) {
+        if (icfg->flags[ii] & ~PERFMON_CONFIG_FLAG_MASK) {
             zxlogf(ERROR, "%s: reserved flag bits set [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
 
         switch (group) {
-        case CPUPERF_GROUP_FIXED:
+        case PERFMON_GROUP_FIXED:
             status = pmu_stage_fixed_config(icfg, ss, ii, ocfg);
             if (status != ZX_OK)
                 return status;
             break;
-        case CPUPERF_GROUP_ARCH:
+        case PERFMON_GROUP_ARCH:
             status = pmu_stage_programmable_config(icfg, ss, ii, ocfg);
             if (status != ZX_OK)
                 return status;
@@ -282,7 +282,7 @@ zx_status_t CpuperfDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
             return ZX_ERR_INVALID_ARGS;
         }
 
-        if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0)
+        if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0)
             ss->have_timebase0_user = true;
     }
     if (ii == 0) {
@@ -292,7 +292,7 @@ zx_status_t CpuperfDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
 
     // Ensure there are no holes.
     for (; ii < countof(icfg->events); ++ii) {
-        if (icfg->events[ii] != CPUPERF_EVENT_ID_NONE) {
+        if (icfg->events[ii] != PERFMON_EVENT_ID_NONE) {
             zxlogf(ERROR, "%s: Hole at event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }

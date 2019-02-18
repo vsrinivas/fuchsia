@@ -17,8 +17,8 @@ executable("cpuperf_print") {
 
   deps = [
     "//garnet/bin/cpuperf:session_result_spec",
-    "//garnet/lib/cpuperf",
     "//garnet/lib/debugger_utils",
+    "//garnet/lib/perfmon",
     "//garnet/public/lib/fxl",
   ]
 }

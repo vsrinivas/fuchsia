@@ -12,7 +12,7 @@
 #include <lib/fxl/macros.h>
 
 #include "garnet/bin/cpuperf/session_result_spec.h"
-#include "garnet/lib/cpuperf/records.h"
+#include "garnet/lib/perfmon/records.h"
 
 namespace cpuperf {
 
@@ -40,13 +40,13 @@ class RawPrinter {
   void Printf(const char* format, ...);
   uint64_t PrintOneTrace(uint32_t iter_num);
 
-  void PrintHeader(const SampleRecord& record);
-  void PrintTimeRecord(const SampleRecord& record);
-  void PrintTickRecord(const SampleRecord& record);
-  void PrintCountRecord(const SampleRecord& record);
-  void PrintValueRecord(const SampleRecord& record);
-  void PrintPcRecord(const SampleRecord& record);
-  void PrintLastBranchRecord(const SampleRecord& record);
+  void PrintHeader(const perfmon::SampleRecord& record);
+  void PrintTimeRecord(const perfmon::SampleRecord& record);
+  void PrintTickRecord(const perfmon::SampleRecord& record);
+  void PrintCountRecord(const perfmon::SampleRecord& record);
+  void PrintValueRecord(const perfmon::SampleRecord& record);
+  void PrintPcRecord(const perfmon::SampleRecord& record);
+  void PrintLastBranchRecord(const perfmon::SampleRecord& record);
 
   FILE* const out_file_;
   const SessionResultSpec* const session_result_spec_;

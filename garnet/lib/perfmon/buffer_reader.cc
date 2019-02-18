@@ -11,12 +11,12 @@
 #include "buffer_reader.h"
 #include "records.h"
 
-namespace cpuperf {
+namespace perfmon {
 
 ReaderStatus BufferReader::Create(const std::string& name, const void* buffer,
                                   size_t buffer_size,
                                   std::unique_ptr<BufferReader>* out_reader) {
-  auto header = reinterpret_cast<const cpuperf_buffer_header_t*>(buffer);
+  auto header = reinterpret_cast<const perfmon_buffer_header_t*>(buffer);
   ReaderStatus status = AnalyzeHeader(header, buffer_size);
   if (status != ReaderStatus::kOk) {
     return status;
@@ -29,20 +29,20 @@ BufferReader::BufferReader(const std::string& name, const void* buffer,
                            size_t capture_end)
     : name_(name),
       buffer_(reinterpret_cast<const uint8_t*>(buffer)),
-      header_(reinterpret_cast<const cpuperf_buffer_header_t*>(buffer)),
+      header_(reinterpret_cast<const perfmon_buffer_header_t*>(buffer)),
       next_record_(buffer_ + sizeof(*header_)),
       buffer_end_(buffer_ + capture_end),
       ticks_per_second_(header_->ticks_per_second) {
 }
 
-ReaderStatus BufferReader::AnalyzeHeader(const cpuperf_buffer_header_t* header,
+ReaderStatus BufferReader::AnalyzeHeader(const perfmon_buffer_header_t* header,
                                          size_t buffer_size) {
   FXL_VLOG(2) << "Reading header, buffer version "
               << header->version << ", " << header->capture_end << " bytes";
 
   // TODO(dje): check magic
 
-  uint32_t expected_version = CPUPERF_BUFFER_VERSION;
+  uint32_t expected_version = PERFMON_BUFFER_VERSION;
   if (header->version != expected_version) {
     FXL_LOG(ERROR) << "Unsupported buffer version, got " << header->version
                    << " instead of " << expected_version;
@@ -79,8 +79,8 @@ ReaderStatus BufferReader::ReadNextRecord(SampleRecord* record) {
     return set_status(ReaderStatus::kNoMoreRecords);
   }
 
-  const cpuperf_record_header_t* hdr =
-    reinterpret_cast<const cpuperf_record_header_t*>(next_record_);
+  const perfmon_record_header_t* hdr =
+    reinterpret_cast<const perfmon_record_header_t*>(next_record_);
   if (next_record_ + sizeof(*hdr) > buffer_end_) {
     FXL_LOG(ERROR) << name_ << ": Bad trace data"
                    << ", no space for final record header";
@@ -106,29 +106,29 @@ ReaderStatus BufferReader::ReadNextRecord(SampleRecord* record) {
   FXL_VLOG(10) << "ReadNextRecord: offset=" << (next_record_ - buffer_);
 
   switch (record_type) {
-  case CPUPERF_RECORD_TIME:
+  case PERFMON_RECORD_TIME:
     record->time =
-      reinterpret_cast<const cpuperf_time_record_t*>(next_record_);
+      reinterpret_cast<const perfmon_time_record_t*>(next_record_);
     time_ = record->time->time;
     break;
-  case CPUPERF_RECORD_TICK:
+  case PERFMON_RECORD_TICK:
     record->tick =
-      reinterpret_cast<const cpuperf_tick_record_t*>(next_record_);
+      reinterpret_cast<const perfmon_tick_record_t*>(next_record_);
     break;
-  case CPUPERF_RECORD_COUNT:
+  case PERFMON_RECORD_COUNT:
     record->count =
-      reinterpret_cast<const cpuperf_count_record_t*>(next_record_);
+      reinterpret_cast<const perfmon_count_record_t*>(next_record_);
     break;
-  case CPUPERF_RECORD_VALUE:
+  case PERFMON_RECORD_VALUE:
     record->value =
-      reinterpret_cast<const cpuperf_value_record_t*>(next_record_);
+      reinterpret_cast<const perfmon_value_record_t*>(next_record_);
     break;
-  case CPUPERF_RECORD_PC:
-    record->pc = reinterpret_cast<const cpuperf_pc_record_t*>(next_record_);
+  case PERFMON_RECORD_PC:
+    record->pc = reinterpret_cast<const perfmon_pc_record_t*>(next_record_);
     break;
-  case CPUPERF_RECORD_LAST_BRANCH:
+  case PERFMON_RECORD_LAST_BRANCH:
     record->last_branch =
-      reinterpret_cast<const cpuperf_last_branch_record_t*>(next_record_);
+      reinterpret_cast<const perfmon_last_branch_record_t*>(next_record_);
     break;
   default:
     // We shouldn't get here because RecordSize() should have returned
@@ -141,4 +141,4 @@ ReaderStatus BufferReader::ReadNextRecord(SampleRecord* record) {
   return ReaderStatus::kOk;
 }
 
-}  // namespace cpuperf
+}  // namespace perfmon

@@ -17,7 +17,7 @@
 
 #include "garnet/bin/cpuperf/session_result_spec.h"
 #include "garnet/bin/cpuperf/session_spec.h"
-#include "garnet/lib/cpuperf/file_reader.h"
+#include "garnet/lib/perfmon/file_reader.h"
 
 #include "verify_test.h"
 
@@ -38,8 +38,8 @@ bool Verifier::VerifyIteration(uint32_t iter) {
       return session_result_spec_->GetTraceFilePath(iter, trace_num);
   };
 
-  std::unique_ptr<cpuperf::FileReader> reader;
-  if (!cpuperf::FileReader::Create(get_file_name,
+  std::unique_ptr<perfmon::FileReader> reader;
+  if (!perfmon::FileReader::Create(get_file_name,
                                    session_result_spec_->num_traces,
                                    &reader)) {
     return false;
@@ -50,31 +50,31 @@ bool Verifier::VerifyIteration(uint32_t iter) {
   RecordCounts counts{};
 
   uint32_t trace;
-  cpuperf::SampleRecord record;
-  cpuperf::ReaderStatus status;
+  perfmon::SampleRecord record;
+  perfmon::ReaderStatus status;
   while ((status = reader->ReadNextRecord(&trace, &record)) ==
-         cpuperf::ReaderStatus::kOk) {
+         perfmon::ReaderStatus::kOk) {
     if (trace != current_trace) {
       current_trace = trace;
     }
 
     switch (record.type()) {
-    case CPUPERF_RECORD_TIME:
+    case PERFMON_RECORD_TIME:
       ++counts.time_records;
       break;
-    case CPUPERF_RECORD_TICK:
+    case PERFMON_RECORD_TICK:
       ++counts.tick_records;
       break;
-    case CPUPERF_RECORD_COUNT:
+    case PERFMON_RECORD_COUNT:
       ++counts.count_records;
       break;
-    case CPUPERF_RECORD_VALUE:
+    case PERFMON_RECORD_VALUE:
       ++counts.value_records;
       break;
-    case CPUPERF_RECORD_PC:
+    case PERFMON_RECORD_PC:
       ++counts.pc_records;
       break;
-    case CPUPERF_RECORD_LAST_BRANCH:
+    case PERFMON_RECORD_LAST_BRANCH:
       ++counts.last_branch_records;
       break;
     default:
@@ -107,9 +107,9 @@ bool Verifier::VerifyIteration(uint32_t iter) {
     << fxl::StringPrintf("Counts: %zu pc",
                          counts.pc_records);
 
-  if (status != cpuperf::ReaderStatus::kNoMoreRecords) {
+  if (status != perfmon::ReaderStatus::kNoMoreRecords) {
     FXL_LOG(ERROR) << "Error occurred in record reader: "
-                   << cpuperf::ReaderStatusToString(status);
+                   << perfmon::ReaderStatusToString(status);
     return false;
   }
 

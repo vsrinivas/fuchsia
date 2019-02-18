@@ -26,7 +26,7 @@
 //
 // These counters are kinda like fixed counters except there's no need to
 // specify a h/w register number: there isn't any.
-// Misc counter id rule: |id| must be <= CPUPERF_MAX_EVENT. 
+// Misc counter id rule: |id| must be <= PERFMON_MAX_EVENT. 
 //
 // All current misc counters require a timebase, so that is the default
 // for misc regs. This affects configuration: If one of these is requested

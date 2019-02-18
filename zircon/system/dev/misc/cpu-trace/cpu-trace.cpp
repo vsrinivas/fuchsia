@@ -19,20 +19,20 @@
 
 static zx_status_t cpu_trace_bind(void* ctx, zx_device_t* parent) {
 #ifdef __x86_64__
-    zx_status_t cpuperf_status = cpuperf_bind(ctx, parent);
+    zx_status_t perfmon_status = perfmon_bind(ctx, parent);
     zx_status_t insntrace_status = insntrace_bind(ctx, parent);
 
     // If at least one succeeded return ZX_OK.
-    if (cpuperf_status != ZX_OK && insntrace_status != ZX_OK) {
+    if (perfmon_status != ZX_OK && insntrace_status != ZX_OK) {
         // Doesn't matter which one we return.
-        return cpuperf_status;
+        return perfmon_status;
     }
 #endif
 
 #ifdef __aarch64__
-    zx_status_t cpuperf_status = cpuperf_bind(ctx, parent);
-    if (cpuperf_status != ZX_OK) {
-        return cpuperf_status;
+    zx_status_t perfmon_status = perfmon_bind(ctx, parent);
+    if (perfmon_status != ZX_OK) {
+        return perfmon_status;
     }
 #endif
 

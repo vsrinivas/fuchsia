@@ -14,7 +14,7 @@
 #include <string>
 #include <unordered_set>
 
-#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 
 namespace cpuperf_provider {
 
@@ -53,12 +53,12 @@ struct CategorySpec {
   // This is only used by kOption and kSample.
   CategoryValue value;
   size_t count;
-  const cpuperf_event_id_t* events;
+  const perfmon_event_id_t* events;
 };
 
 struct TimebaseSpec {
   const char* name;
-  const cpuperf_event_id_t event;
+  const perfmon_event_id_t event;
 };
 
 // A data collection run is called a "trace".
@@ -76,7 +76,7 @@ class TraceConfig final {
 
   uint32_t sample_rate() const { return sample_rate_; }
 
-  cpuperf_event_id_t timebase_event() const { return timebase_event_; }
+  perfmon_event_id_t timebase_event() const { return timebase_event_; }
 
   // Reset state so that nothing is traced.
   void Reset();
@@ -87,7 +87,7 @@ class TraceConfig final {
   bool Changed(const TraceConfig& old) const;
 
   // Translate our representation of the configuration to the device's.
-  bool TranslateToDeviceConfig(cpuperf_config_t* out_config) const;
+  bool TranslateToDeviceConfig(perfmon_config_t* out_config) const;
 
   // Return a string representation of the config for error reporting.
   std::string ToString() const;
@@ -103,7 +103,7 @@ class TraceConfig final {
   bool trace_pc_ = false;
   bool trace_last_branch_ = false;
   uint32_t sample_rate_ = 0;
-  cpuperf_event_id_t timebase_event_ = CPUPERF_EVENT_ID_NONE;
+  perfmon_event_id_t timebase_event_ = PERFMON_EVENT_ID_NONE;
 
   // Set of selected fixed + programmable categories.
   std::unordered_set<const CategorySpec*> selected_categories_;

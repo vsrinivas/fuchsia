@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 
-static_library("cpuperf") {
+static_library("perfmon") {
   sources = [
     "buffer_reader.cc",
     "buffer_reader.h",

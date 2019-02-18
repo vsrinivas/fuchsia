@@ -10,7 +10,7 @@
 #include <memory>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
-#include "garnet/lib/cpuperf/controller.h"
+#include "garnet/lib/perfmon/controller.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 #include "lib/sys/cpp/startup_context.h"
@@ -41,7 +41,7 @@ class App {
   // This context keeps the trace context alive until we've written our trace
   // records, which doesn't happen until after tracing has stopped.
   trace_prolonged_context_t* context_ = nullptr;
-  std::unique_ptr<cpuperf::Controller> controller_;
+  std::unique_ptr<perfmon::Controller> controller_;
 
   trace_ticks_t start_time_ = 0;
   trace_ticks_t stop_time_ = 0;

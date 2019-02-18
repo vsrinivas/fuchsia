@@ -11,12 +11,12 @@
 
 #include <unordered_map>
 
-#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <trace-engine/context.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
-#include "garnet/lib/cpuperf/device_reader.h"
-#include "garnet/lib/cpuperf/events.h"
+#include "garnet/lib/perfmon/device_reader.h"
+#include "garnet/lib/perfmon/events.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
@@ -28,7 +28,7 @@ class Importer {
            trace_ticks_t start_time, trace_ticks_t stop_time);
   ~Importer();
 
-  bool Import(cpuperf::DeviceReader& reader);
+  bool Import(perfmon::DeviceReader& reader);
 
  private:
   static constexpr size_t kMaxNumCpus = 32;
@@ -39,18 +39,18 @@ class Importer {
    public:
     EventTracker(trace_ticks_t start_time) : start_time_(start_time) {}
 
-    bool HaveValue(unsigned cpu, cpuperf_event_id_t id) const {
+    bool HaveValue(unsigned cpu, perfmon_event_id_t id) const {
       Key key = GenKey(cpu, id);
       EventData::const_iterator iter = data_.find(key);
       return iter != data_.end();
     }
 
-    void UpdateTime(unsigned cpu, cpuperf_event_id_t id, trace_ticks_t time) {
+    void UpdateTime(unsigned cpu, perfmon_event_id_t id, trace_ticks_t time) {
       Key key = GenKey(cpu, id);
       data_[key].time = time;
     }
 
-    trace_ticks_t GetTime(unsigned cpu, cpuperf_event_id_t id) const {
+    trace_ticks_t GetTime(unsigned cpu, perfmon_event_id_t id) const {
       Key key = GenKey(cpu, id);
       EventData::const_iterator iter = data_.find(key);
       if (iter == data_.end())
@@ -58,26 +58,26 @@ class Importer {
       return iter->second.time;
     }
 
-    void UpdateValue(unsigned cpu, cpuperf_event_id_t id, uint64_t value) {
+    void UpdateValue(unsigned cpu, perfmon_event_id_t id, uint64_t value) {
       Key key = GenKey(cpu, id);
       data_[key].is_value = true;
       data_[key].count_or_value = value;
     }
 
-    void AccumulateCount(unsigned cpu, cpuperf_event_id_t id, uint64_t value) {
+    void AccumulateCount(unsigned cpu, perfmon_event_id_t id, uint64_t value) {
       Key key = GenKey(cpu, id);
       data_[key].is_value = false;
       data_[key].count_or_value += value;
     }
 
-    bool IsValue(unsigned cpu, cpuperf_event_id_t id) const {
+    bool IsValue(unsigned cpu, perfmon_event_id_t id) const {
       Key key = GenKey(cpu, id);
       EventData::const_iterator iter = data_.find(key);
       FXL_DCHECK(iter != data_.end());
       return iter->second.is_value;
     }
 
-    uint64_t GetCountOrValue(unsigned cpu, cpuperf_event_id_t id) const {
+    uint64_t GetCountOrValue(unsigned cpu, perfmon_event_id_t id) const {
       Key key = GenKey(cpu, id);
       EventData::const_iterator iter = data_.find(key);
       if (iter == data_.end())
@@ -89,17 +89,17 @@ class Importer {
     using Key = uint32_t;
     struct Data {
       trace_ticks_t time = 0;
-      // false -> count (CPUPERF_RECORD_COUNT),
-      // true -> value (CPUPERF_RECORD_VALUE).
+      // false -> count (PERFMON_RECORD_COUNT),
+      // true -> value (PERFMON_RECORD_VALUE).
       bool is_value;
       // This is either a count or a value.
       // Records for any particular event should only be using one
-      // of CPUPERF_RECORD_{COUNT,VALUE}.
+      // of PERFMON_RECORD_{COUNT,VALUE}.
       uint64_t count_or_value = 0;
     };
     using EventData = std::unordered_map<Key, Data>;
 
-    Key GenKey(unsigned cpu, cpuperf_event_id_t id) const {
+    Key GenKey(unsigned cpu, perfmon_event_id_t id) const {
       FXL_DCHECK(cpu < kMaxNumCpus);
       static_assert(sizeof(id) == 2, "");
       return (cpu << 16) | id;
@@ -109,38 +109,38 @@ class Importer {
     EventData data_;
   };
 
-  uint64_t ImportRecords(cpuperf::DeviceReader& reader,
-                         const cpuperf_properties_t& props,
-                         const cpuperf_config_t& config);
+  uint64_t ImportRecords(perfmon::DeviceReader& reader,
+                         const perfmon_properties_t& props,
+                         const perfmon_config_t& config);
 
   void ImportSampleRecord(trace_cpu_number_t cpu,
-                          const cpuperf_config_t& config,
-                          const cpuperf::SampleRecord& record,
+                          const perfmon_config_t& config,
+                          const perfmon::SampleRecord& record,
                           trace_ticks_t previous_time,
                           trace_ticks_t current_time, uint64_t ticks_per_second,
                           uint64_t event_value);
 
   void EmitSampleRecord(trace_cpu_number_t cpu,
-                        const cpuperf::EventDetails* details,
-                        const cpuperf::SampleRecord& record,
+                        const perfmon::EventDetails* details,
+                        const perfmon::SampleRecord& record,
                         trace_ticks_t start_time, trace_ticks_t end_time,
                         uint64_t ticks_per_second, uint64_t value);
 
   void EmitLastBranchRecord(trace_cpu_number_t cpu,
-                            const cpuperf_config_t& config,
-                            const cpuperf::SampleRecord& record,
+                            const perfmon_config_t& config,
+                            const perfmon::SampleRecord& record,
                             trace_ticks_t time);
 
-  void EmitTallyCounts(const cpuperf_config_t& config,
+  void EmitTallyCounts(const perfmon_config_t& config,
                        const EventTracker* event_data);
 
-  void EmitTallyRecord(trace_cpu_number_t cpu, cpuperf_event_id_t event_id,
+  void EmitTallyRecord(trace_cpu_number_t cpu, perfmon_event_id_t event_id,
                        trace_ticks_t time, bool is_value, uint64_t value);
 
   trace_string_ref_t GetCpuNameRef(trace_cpu_number_t cpu);
 
   trace_thread_ref_t GetCpuThreadRef(trace_cpu_number_t cpu,
-                                     cpuperf_event_id_t id);
+                                     perfmon_event_id_t id);
 
   trace_context* const context_;
   const TraceConfig* trace_config_;

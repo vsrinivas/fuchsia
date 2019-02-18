@@ -28,7 +28,7 @@ executable("bin") {
   }
 
   deps = [
-    "//garnet/lib/cpuperf",
+    "//garnet/lib/perfmon",
     "//garnet/public/lib/fxl",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",

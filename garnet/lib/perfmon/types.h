@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_CPUPERF_TYPES_H_
-#define GARNET_LIB_CPUPERF_TYPES_H_
+#ifndef GARNET_LIB_PERFMON_TYPES_H_
+#define GARNET_LIB_PERFMON_TYPES_H_
 
 #include <string>
 
-namespace cpuperf {
+namespace perfmon {
 
 enum class ReaderStatus {
   kOk,
@@ -20,6 +20,6 @@ enum class ReaderStatus {
 
 std::string ReaderStatusToString(ReaderStatus status);
 
-}  // namespace cpuperf
+}  // namespace perfmon
 
-#endif  // GARNET_LIB_CPUPERF_TYPES_H_
+#endif  // GARNET_LIB_PERFMON_TYPES_H_

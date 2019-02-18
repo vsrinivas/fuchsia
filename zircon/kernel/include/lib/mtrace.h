@@ -23,7 +23,7 @@
 zx_status_t mtrace_control(uint32_t kind, uint32_t action, uint32_t options,
                            user_inout_ptr<void> arg, size_t size);
 
-zx_status_t mtrace_cpuperf_control(uint32_t action, uint32_t options,
+zx_status_t mtrace_perfmon_control(uint32_t action, uint32_t options,
                                    user_inout_ptr<void> arg, size_t size);
 
 #ifdef __x86_64__

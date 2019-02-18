@@ -19,12 +19,12 @@
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/fxl/logging.h>
 
-#include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <zircon/syscalls.h>
 
-#include "garnet/lib/cpuperf/controller.h"
-#include "garnet/lib/cpuperf/events.h"
 #include "garnet/lib/debugger_utils/util.h"
+#include "garnet/lib/perfmon/controller.h"
+#include "garnet/lib/perfmon/events.h"
 
 #include "session_spec.h"
 #include "session_result_spec.h"
@@ -42,27 +42,27 @@ struct EventColumn {
   int width;
 };
 
-using SessionColumns = std::unordered_map<cpuperf_event_id_t, EventColumn>;
+using SessionColumns = std::unordered_map<perfmon_event_id_t, EventColumn>;
 
 struct EventResult {
   uint64_t value_or_count;
 };
 
-using TraceResults = std::unordered_map<cpuperf_event_id_t, EventResult>;
+using TraceResults = std::unordered_map<perfmon_event_id_t, EventResult>;
 
 // Indexed by trace number.
 using SessionResults = std::vector<TraceResults>;
 
 template<typename T>
 void IterateOverEventIds(const cpuperf::SessionSpec& spec, T func) {
-  for (size_t i = 0; i < CPUPERF_MAX_EVENTS; ++i) {
-    cpuperf_event_id_t id = spec.cpuperf_config.events[i];
+  for (size_t i = 0; i < PERFMON_MAX_EVENTS; ++i) {
+    perfmon_event_id_t id = spec.perfmon_config.events[i];
     if (id == 0) {
       // End of present events.
       break;
     }
 
-    const cpuperf::EventDetails* details = nullptr;
+    const perfmon::EventDetails* details = nullptr;
     if (!EventIdToEventDetails(id, &details)) {
       // This shouldn't happen, but let |func| decide what to do.
     }
@@ -74,8 +74,8 @@ void IterateOverEventIds(const cpuperf::SessionSpec& spec, T func) {
 static SessionColumns BuildSessionColumns(const cpuperf::SessionSpec& spec) {
   SessionColumns columns;
 
-  IterateOverEventIds(spec, [&columns] (size_t index, cpuperf_event_id_t id,
-                                        const cpuperf::EventDetails* details) {
+  IterateOverEventIds(spec, [&columns] (size_t index, perfmon_event_id_t id,
+                                        const perfmon::EventDetails* details) {
     const char* name;
     if (details) {
       name = details->name;
@@ -99,8 +99,8 @@ static void PrintColumnTitles(FILE* f, const cpuperf::SessionSpec& spec,
                               const SessionColumns& columns) {
   fprintf(f, "%*s", kTraceNameColumnWidth, "");
 
-  IterateOverEventIds(spec, [&] (size_t index, cpuperf_event_id_t id,
-                                 const cpuperf::EventDetails* details) {
+  IterateOverEventIds(spec, [&] (size_t index, perfmon_event_id_t id,
+                                 const perfmon::EventDetails* details) {
     auto iter = columns.find(id);
     FXL_DCHECK(iter != columns.end());
     const EventColumn& column = iter->second;
@@ -118,8 +118,8 @@ static void PrintTrace(FILE* f, const cpuperf::SessionSpec& spec,
   snprintf(&label[0], sizeof(label), "Trace %u:", trace_num);
   fprintf(f, "%-*s", kTraceNameColumnWidth, label);
 
-  IterateOverEventIds(spec, [&] (size_t index, cpuperf_event_id_t id,
-                                 const cpuperf::EventDetails* details) {
+  IterateOverEventIds(spec, [&] (size_t index, perfmon_event_id_t id,
+                                 const perfmon::EventDetails* details) {
     auto column_iter = columns.find(id);
     FXL_DCHECK(column_iter != columns.end());
     const EventColumn& column = column_iter->second;
@@ -147,8 +147,8 @@ static void PrintTrace(FILE* f, const cpuperf::SessionSpec& spec,
 
 void PrintTallyResults(FILE* f, const cpuperf::SessionSpec& spec,
                        const cpuperf::SessionResultSpec& result_spec,
-                       cpuperf::Controller* controller) {
-  std::unique_ptr<cpuperf::DeviceReader> reader = controller->GetReader();
+                       perfmon::Controller* controller) {
+  std::unique_ptr<perfmon::DeviceReader> reader = controller->GetReader();
   if (!reader) {
     return;
   }
@@ -164,18 +164,18 @@ void PrintTallyResults(FILE* f, const cpuperf::SessionSpec& spec,
   uint32_t current_trace = kCurrentTraceUnset;
 
   uint32_t trace;
-  cpuperf::SampleRecord record;
-  cpuperf::ReaderStatus status;
+  perfmon::SampleRecord record;
+  perfmon::ReaderStatus status;
   while ((status = reader->ReadNextRecord(&trace, &record)) ==
-         cpuperf::ReaderStatus::kOk) {
+         perfmon::ReaderStatus::kOk) {
     if (trace != current_trace) {
       current_trace = trace;
     }
 
     if (record.header->event == 0)
       continue;
-    cpuperf_event_id_t id = record.header->event;
-    const cpuperf::EventDetails* details;
+    perfmon_event_id_t id = record.header->event;
+    const perfmon::EventDetails* details;
     if (!EventIdToEventDetails(id, &details)) {
       FXL_LOG(WARNING) << "Unknown event: 0x" << std::hex
                        << record.header->event;
@@ -183,10 +183,10 @@ void PrintTallyResults(FILE* f, const cpuperf::SessionSpec& spec,
     }
 
     switch (record.type()) {
-    case CPUPERF_RECORD_COUNT:
+    case PERFMON_RECORD_COUNT:
       results[current_trace][id] = EventResult{record.count->count};
       break;
-    case CPUPERF_RECORD_VALUE:
+    case PERFMON_RECORD_VALUE:
       results[current_trace][id] = EventResult{record.value->value};
       break;
     default:

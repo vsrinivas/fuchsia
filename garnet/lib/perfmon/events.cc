@@ -7,14 +7,14 @@
 #include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
 
-#include "garnet/lib/cpuperf/events.h"
+#include "garnet/lib/perfmon/events.h"
 
-namespace cpuperf {
+namespace perfmon {
 
 const EventDetails g_arch_event_details[] = {
 #define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, \
                        umask, flags, readable_name, description) \
-  [id] = {CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_ARCH, id), #event_name, \
+  [id] = {PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_ARCH, id), #event_name, \
           readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 };
@@ -22,7 +22,7 @@ const EventDetails g_arch_event_details[] = {
 const EventDetails g_fixed_event_details[] = {
 #define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, \
                         readable_name, description) \
-  [id] = {CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_FIXED, id), #event_name, \
+  [id] = {PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_FIXED, id), #event_name, \
           readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 };
@@ -30,7 +30,7 @@ const EventDetails g_fixed_event_details[] = {
 const EventDetails g_skl_event_details[] = {
 #define DEF_SKL_EVENT(symbol, event_name, id, event, umask, \
                       flags, readable_name, description) \
-  [id] = {CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_MODEL, id), #event_name, \
+  [id] = {PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_MODEL, id), #event_name, \
           readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
 };
@@ -38,28 +38,28 @@ const EventDetails g_skl_event_details[] = {
 const EventDetails g_skl_misc_event_details[] = {
 #define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, \
                            flags, readable_name, description) \
-  [id] = {CPUPERF_MAKE_EVENT_ID(CPUPERF_GROUP_MISC, id), #event_name, \
+  [id] = {PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_MISC, id), #event_name, \
           readable_name, description},
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 };
 
-bool EventIdToEventDetails(cpuperf_event_id_t id,
+bool EventIdToEventDetails(perfmon_event_id_t id,
                            const EventDetails** out_details) {
-  unsigned event = CPUPERF_EVENT_ID_EVENT(id);
+  unsigned event = PERFMON_EVENT_ID_EVENT(id);
   const EventDetails* details;
 
-  switch (CPUPERF_EVENT_ID_GROUP(id)) {
-    case CPUPERF_GROUP_ARCH:
+  switch (PERFMON_EVENT_ID_GROUP(id)) {
+    case PERFMON_GROUP_ARCH:
       details = &g_arch_event_details[event];
       break;
-    case CPUPERF_GROUP_FIXED:
+    case PERFMON_GROUP_FIXED:
       details = &g_fixed_event_details[event];
       break;
-    case CPUPERF_GROUP_MODEL:
+    case PERFMON_GROUP_MODEL:
       // TODO(dje): For now assume Skylake, Kaby Lake.
       details = &g_skl_event_details[event];
       break;
-    case CPUPERF_GROUP_MISC:
+    case PERFMON_GROUP_MISC:
       // TODO(dje): For now assume Skylake, Kaby Lake.
       details = &g_skl_misc_event_details[event];
       break;
@@ -107,10 +107,10 @@ bool LookupEventByName(const char* group_name, const char* event_name,
   return false;
 }
 
-size_t GetConfigEventCount(const cpuperf_config_t& config) {
+size_t GetConfigEventCount(const perfmon_config_t& config) {
   size_t count;
-  for (count = 0; count < CPUPERF_MAX_EVENTS; ++count) {
-    if (config.events[count] == CPUPERF_EVENT_ID_NONE)
+  for (count = 0; count < PERFMON_MAX_EVENTS; ++count) {
+    if (config.events[count] == PERFMON_EVENT_ID_NONE)
       break;
   }
   return count;
@@ -121,7 +121,7 @@ static void AddEvents(GroupTable& gt, const char* group_name_literal,
   gt.emplace_back(GroupEvents{group_name_literal, {}});
   auto& v = gt.back();
   for (size_t i = 0; i < count; ++i) {
-    if (details[i].id != CPUPERF_EVENT_ID_NONE) {
+    if (details[i].id != PERFMON_EVENT_ID_NONE) {
       v.events.push_back(&details[i]);
     }
   }
@@ -142,4 +142,4 @@ GroupTable GetAllGroups() {
   return groups;
 }
 
-}  // namespace cpuperf
+}  // namespace perfmon

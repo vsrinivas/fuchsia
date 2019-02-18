@@ -21,7 +21,7 @@ source_set("chromium") {
   ]
 
   public_deps = [
-    "//garnet/lib/cpuperf",
+    "//garnet/lib/perfmon",
     "//zircon/public/lib/trace-reader",
   ]
 }

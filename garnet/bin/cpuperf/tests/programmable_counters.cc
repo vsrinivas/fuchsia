@@ -4,7 +4,7 @@
 
 #include <lib/fxl/logging.h>
 
-#include "garnet/lib/cpuperf/events.h"
+#include "garnet/lib/perfmon/events.h"
 
 #include "verify_test.h"
 
@@ -17,30 +17,30 @@ class ProgrammableCounterVerifier : public Verifier {
 
   ProgrammableCounterVerifier(const cpuperf::SessionResultSpec* spec)
       : Verifier(spec) {
-    const cpuperf::EventDetails* details;
+    const perfmon::EventDetails* details;
 
     bool rc __UNUSED =
-      cpuperf::LookupEventByName("arch", "llc_references", &details);
+      perfmon::LookupEventByName("arch", "llc_references", &details);
     FXL_DCHECK(rc);
     llc_references_id_ = details->id;
 
-    rc = cpuperf::LookupEventByName("arch", "llc_misses", &details);
+    rc = perfmon::LookupEventByName("arch", "llc_misses", &details);
     FXL_DCHECK(rc);
     llc_misses_id_ = details->id;
 
-    rc = cpuperf::LookupEventByName("arch", "branches_retired",
+    rc = perfmon::LookupEventByName("arch", "branches_retired",
                                     &details);
     FXL_DCHECK(rc);
     branches_retired_id_ = details->id;
 
-    rc = cpuperf::LookupEventByName("arch", "branch_misses_retired",
+    rc = perfmon::LookupEventByName("arch", "branch_misses_retired",
                                     &details);
     FXL_DCHECK(rc);
     branch_misses_retired_id_ = details->id;
   }
 
  private:
-  bool VerifyRecord(const cpuperf::SampleRecord& record) override {
+  bool VerifyRecord(const perfmon::SampleRecord& record) override {
     if (record.header->event == llc_references_id_) {
       ++llc_references_count_;
     } else if (record.header->event == llc_misses_id_) {
@@ -75,16 +75,16 @@ class ProgrammableCounterVerifier : public Verifier {
   }
 
   // Ids of the events we should see.
-  cpuperf_event_id_t llc_references_id_;
-  cpuperf_event_id_t llc_misses_id_;
-  cpuperf_event_id_t branches_retired_id_;
-  cpuperf_event_id_t branch_misses_retired_id_;
+  perfmon_event_id_t llc_references_id_;
+  perfmon_event_id_t llc_misses_id_;
+  perfmon_event_id_t branches_retired_id_;
+  perfmon_event_id_t branch_misses_retired_id_;
 
   // Counts of the events we should see;
-  cpuperf_event_id_t llc_references_count_ = 0;
-  cpuperf_event_id_t llc_misses_count_ = 0;
-  cpuperf_event_id_t branches_retired_count_ = 0;
-  cpuperf_event_id_t branch_misses_retired_count_ = 0;
+  perfmon_event_id_t llc_references_count_ = 0;
+  perfmon_event_id_t llc_misses_count_ = 0;
+  perfmon_event_id_t branches_retired_count_ = 0;
+  perfmon_event_id_t branch_misses_retired_count_ = 0;
 };
 
 const TestSpec kProgrammableCounterSpec = {

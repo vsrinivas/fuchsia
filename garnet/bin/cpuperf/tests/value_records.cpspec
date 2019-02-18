@@ -1,4 +1,4 @@
-// Test records that use CPUPERF_RECORD_VALUE.
+// Test records that use PERFMON_RECORD_VALUE.
 // These don't count anything, just provide a value, like a temperature.
 // This test is highly chip-specific. The test harness knows this.
 {

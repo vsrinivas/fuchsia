@@ -6,7 +6,7 @@
 
 #include "types.h"
 
-namespace cpuperf {
+namespace perfmon {
 
 std::string ReaderStatusToString(ReaderStatus status) {
   switch (status) {
@@ -27,4 +27,4 @@ std::string ReaderStatusToString(ReaderStatus status) {
   }
 }
 
-}  // namespace cpuperf
+}  // namespace perfmon
