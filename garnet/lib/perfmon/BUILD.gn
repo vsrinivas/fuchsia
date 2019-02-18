@@ -8,6 +8,8 @@ static_library("perfmon") {
   sources = [
     "buffer_reader.cc",
     "buffer_reader.h",
+    "event-registry.cc",
+    "event-registry.h",
     "events.cc",
     "events.h",
     "file_reader.cc",
@@ -26,8 +28,7 @@ static_library("perfmon") {
     "//zircon/public/lib/zircon-internal",
   ]
 
-  # arm64 support will come later
-  if (is_fuchsia && current_cpu == "x64") {
+  if (is_fuchsia) {
     sources += [
       "controller.cc",
       "controller.h",
@@ -35,7 +36,14 @@ static_library("perfmon") {
       "device_reader.h",
     ]
 
+    # arm64 support will come later
+    if (current_cpu == "x64") {
+      sources += [ "intel-events.cc" ]
+    }
+
     public_deps += [ "//zircon/public/lib/zx" ]
+  } else {
+    sources += [ "intel-events.cc" ]
   }
 
   if (!is_fuchsia) {

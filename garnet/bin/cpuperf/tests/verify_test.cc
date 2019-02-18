@@ -127,6 +127,22 @@ void Verifier::Verify() {
   }
 }
 
+bool Verifier::LookupEventByName(const char* group_name,
+                                 const char* event_name,
+                                 const perfmon::EventDetails** out_details) {
+  GetModelEventManager();
+  return model_event_manager_->LookupEventByName(group_name, event_name,
+                                                 out_details);
+}
+
+void Verifier::GetModelEventManager() {
+  if (!model_event_manager_) {
+    model_event_manager_ = perfmon::ModelEventManager::Create(
+      session_result_spec_->model_name);
+    ASSERT_TRUE(model_event_manager_);
+  }
+}
+
 static std::unique_ptr<Verifier> LookupVerifier(
     const cpuperf::SessionResultSpec* spec) {
 #ifdef __x86_64__

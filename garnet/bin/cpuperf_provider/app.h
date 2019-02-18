@@ -9,11 +9,12 @@
 
 #include <memory>
 
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/macros.h>
+#include <lib/sys/cpp/startup_context.h>
+
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/lib/perfmon/controller.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/macros.h"
-#include "lib/sys/cpp/startup_context.h"
 
 namespace cpuperf_provider {
 
@@ -37,6 +38,7 @@ class App {
 
   std::unique_ptr<sys::StartupContext> startup_context_;
   trace::TraceObserver trace_observer_;
+  std::unique_ptr<perfmon::ModelEventManager> model_event_manager_;
   TraceConfig trace_config_;
   // This context keeps the trace context alive until we've written our trace
   // records, which doesn't happen until after tracing has stopped.

@@ -19,22 +19,19 @@ class ProgrammableCounterVerifier : public Verifier {
       : Verifier(spec) {
     const perfmon::EventDetails* details;
 
-    bool rc __UNUSED =
-      perfmon::LookupEventByName("arch", "llc_references", &details);
+    bool rc __UNUSED = LookupEventByName("arch", "llc_references", &details);
     FXL_DCHECK(rc);
     llc_references_id_ = details->id;
 
-    rc = perfmon::LookupEventByName("arch", "llc_misses", &details);
+    rc = LookupEventByName("arch", "llc_misses", &details);
     FXL_DCHECK(rc);
     llc_misses_id_ = details->id;
 
-    rc = perfmon::LookupEventByName("arch", "branches_retired",
-                                    &details);
+    rc = LookupEventByName("arch", "branch_instructions_retired", &details);
     FXL_DCHECK(rc);
-    branches_retired_id_ = details->id;
+    branch_instructions_retired_id_ = details->id;
 
-    rc = perfmon::LookupEventByName("arch", "branch_misses_retired",
-                                    &details);
+    rc = LookupEventByName("arch", "branch_misses_retired", &details);
     FXL_DCHECK(rc);
     branch_misses_retired_id_ = details->id;
   }
@@ -45,8 +42,8 @@ class ProgrammableCounterVerifier : public Verifier {
       ++llc_references_count_;
     } else if (record.header->event == llc_misses_id_) {
       ++llc_misses_count_;
-    } else if (record.header->event == branches_retired_id_) {
-      ++branches_retired_count_;
+    } else if (record.header->event == branch_instructions_retired_id_) {
+      ++branch_instructions_retired_count_;
     } else if (record.header->event == branch_misses_retired_id_) {
       ++branch_misses_retired_count_;
     }
@@ -63,8 +60,8 @@ class ProgrammableCounterVerifier : public Verifier {
       FXL_LOG(ERROR) << "Missing llc_misses events";
       pass = false;
     }
-    if (branches_retired_count_ == 0) {
-      FXL_LOG(ERROR) << "Missing branches_retired events";
+    if (branch_instructions_retired_count_ == 0) {
+      FXL_LOG(ERROR) << "Missing branch_instructions_retired events";
       pass = false;
     }
     if (branch_misses_retired_count_ == 0) {
@@ -77,13 +74,13 @@ class ProgrammableCounterVerifier : public Verifier {
   // Ids of the events we should see.
   perfmon_event_id_t llc_references_id_;
   perfmon_event_id_t llc_misses_id_;
-  perfmon_event_id_t branches_retired_id_;
+  perfmon_event_id_t branch_instructions_retired_id_;
   perfmon_event_id_t branch_misses_retired_id_;
 
   // Counts of the events we should see;
   perfmon_event_id_t llc_references_count_ = 0;
   perfmon_event_id_t llc_misses_count_ = 0;
-  perfmon_event_id_t branches_retired_count_ = 0;
+  perfmon_event_id_t branch_instructions_retired_count_ = 0;
   perfmon_event_id_t branch_misses_retired_count_ = 0;
 };
 

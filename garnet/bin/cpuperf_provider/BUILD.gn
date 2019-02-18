@@ -18,11 +18,14 @@ executable("bin") {
       "app.h",
       "categories.cc",
       "categories.h",
+      "category-db.cc",
       "importer.cc",
       "importer.h",
-      "intel-misc-categories.inc",
+      "intel-category-db.cc",
+      "intel-events.h",
       "intel-pm-categories.inc",
       "intel-timebase-categories.inc",
+      "skylake-misc-categories.inc",
       "skylake-pm-categories.inc",
     ]
   }

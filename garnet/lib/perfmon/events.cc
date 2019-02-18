@@ -2,104 +2,139 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
-
-#include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
 
+#include "garnet/lib/perfmon/event-registry.h"
 #include "garnet/lib/perfmon/events.h"
 
 namespace perfmon {
 
-const EventDetails g_arch_event_details[] = {
-#define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, \
-                       umask, flags, readable_name, description) \
-  [id] = {PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_ARCH, id), #event_name, \
-          readable_name, description},
-#include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
-};
+// Tables of each model's registered events.
+static internal::EventRegistry* g_model_events;
 
-const EventDetails g_fixed_event_details[] = {
-#define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, \
-                        readable_name, description) \
-  [id] = {PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_FIXED, id), #event_name, \
-          readable_name, description},
-#include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
-};
+namespace internal {
 
-const EventDetails g_skl_event_details[] = {
-#define DEF_SKL_EVENT(symbol, event_name, id, event, umask, \
-                      flags, readable_name, description) \
-  [id] = {PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_MODEL, id), #event_name, \
-          readable_name, description},
-#include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
-};
+EventRegistry* GetGlobalEventRegistry() {
+  if (g_model_events == nullptr) {
+    FXL_VLOG(2) << "Initializing model event registry";
+    g_model_events = new internal::EventRegistry{};
+  }
+  return g_model_events;
+}
 
-const EventDetails g_skl_misc_event_details[] = {
-#define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, \
-                           flags, readable_name, description) \
-  [id] = {PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_MISC, id), #event_name, \
-          readable_name, description},
-#include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
-};
+}  // namespace internal
 
-bool EventIdToEventDetails(perfmon_event_id_t id,
-                           const EventDetails** out_details) {
+std::string GetDefaultModelName() {
+  std::string model_name = "";
+#ifdef __x86_64__
+  model_name = "skylake";
+#endif
+#ifdef __aarch64__
+  model_name = "armv8";
+#endif
+  return model_name;
+}
+
+void ModelEventManager::RegisterEvents(const char* model_name,
+                                       const char* group_name,
+                                       const EventDetails* events,
+                                       size_t count) {
+  internal::EventRegistry* registry = internal::GetGlobalEventRegistry();
+  registry->RegisterEvents(model_name, group_name, events, count);
+}
+
+std::unique_ptr<ModelEventManager> ModelEventManager::Create(
+    const std::string& model_name) {
+  // For convenience, if no events have been registered yet, ensure the
+  // current arch's events are registered.
+  if (g_model_events == nullptr) {
+    internal::EventRegistry* registry = internal::GetGlobalEventRegistry();
+    internal::RegisterCurrentArchEvents(registry);
+  }
+  auto iter = g_model_events->find(model_name);
+  if (iter == g_model_events->end()) {
+    return nullptr;
+  }
+
+  auto model_event_manager =
+    std::make_unique<ModelEventManager>(ModelEventManager{
+        model_name, &iter->second.arch_events, &iter->second.fixed_events,
+        &iter->second.model_events, &iter->second.misc_events});
+  if (FXL_VLOG_IS_ON(2)) {
+    FXL_VLOG(2) << "Dump of events for model " << model_name;
+    model_event_manager->Dump();
+  }
+  return model_event_manager;
+}
+
+ModelEventManager::ModelEventManager(const std::string& model_name,
+                                     const EventTable* arch_events,
+                                     const EventTable* fixed_events,
+                                     const EventTable* model_events,
+                                     const EventTable* misc_events)
+  : model_name_(model_name),
+    arch_events_(arch_events),
+    fixed_events_(fixed_events),
+    model_events_(model_events),
+    misc_events_(misc_events) {
+}
+
+bool ModelEventManager::EventIdToEventDetails(
+    perfmon_event_id_t id, const EventDetails** out_details) const {
   unsigned event = PERFMON_EVENT_ID_EVENT(id);
-  const EventDetails* details;
+  const EventTable* events;
 
   switch (PERFMON_EVENT_ID_GROUP(id)) {
     case PERFMON_GROUP_ARCH:
-      details = &g_arch_event_details[event];
+      events = arch_events_;
       break;
     case PERFMON_GROUP_FIXED:
-      details = &g_fixed_event_details[event];
+      events = fixed_events_;
       break;
     case PERFMON_GROUP_MODEL:
-      // TODO(dje): For now assume Skylake, Kaby Lake.
-      details = &g_skl_event_details[event];
+      events = model_events_;
       break;
     case PERFMON_GROUP_MISC:
-      // TODO(dje): For now assume Skylake, Kaby Lake.
-      details = &g_skl_misc_event_details[event];
+      events = misc_events_;
       break;
     default:
       return false;
   }
 
-  if (details->id == 0)
+  if (event >= events->size()) {
     return false;
+  }
+  const EventDetails* details = (*events)[event];
+  if (details->id == 0) {
+    return false;
+  }
   *out_details = details;
   return true;
 }
 
 // This just uses a linear search for now.
-bool LookupEventByName(const char* group_name, const char* event_name,
-                       const EventDetails** out_details) {
-  const EventDetails* details;
-  size_t num_events;
+bool ModelEventManager::LookupEventByName(
+    const char* group_name, const char* event_name,
+    const EventDetails** out_details) const {
+  const EventTable* events;
 
-  if (strcmp(group_name, "arch") == 0) {
-    details = &g_arch_event_details[0];
-    num_events = arraysize(g_arch_event_details);
-  } else if (strcmp(group_name, "fixed") == 0) {
-    details = &g_fixed_event_details[0];
-    num_events = arraysize(g_fixed_event_details);
-  } else if (strcmp(group_name, "model") == 0) {
-    details = &g_skl_event_details[0];
-    num_events = arraysize(g_skl_event_details);
-  } else if (strcmp(group_name, "misc") == 0) {
-    details = &g_skl_misc_event_details[0];
-    num_events = arraysize(g_skl_misc_event_details);
+  if (strcmp(group_name, internal::kArchGroupName) == 0) {
+    events = arch_events_;
+  } else if (strcmp(group_name, internal::kFixedGroupName) == 0) {
+    events = fixed_events_;
+  } else if (strcmp(group_name, internal::kModelGroupName) == 0) {
+    events = model_events_;
+  } else if (strcmp(group_name, internal::kMiscGroupName) == 0) {
+    events = misc_events_;
   } else {
     return false;
   }
 
-  for (size_t i = 0; i < num_events; ++i) {
-    if (details[i].id == 0)
+  for (auto event : *events) {
+    if (event->id == 0)
       continue;
-    if (strcmp(details[i].name, event_name) == 0) {
-      *out_details = &details[i];
+    if (strcmp(event->name, event_name) == 0) {
+      *out_details = event;
       return true;
     }
   }
@@ -107,39 +142,58 @@ bool LookupEventByName(const char* group_name, const char* event_name,
   return false;
 }
 
-size_t GetConfigEventCount(const perfmon_config_t& config) {
-  size_t count;
-  for (count = 0; count < PERFMON_MAX_EVENTS; ++count) {
-    if (config.events[count] == PERFMON_EVENT_ID_NONE)
-      break;
-  }
-  return count;
-}
-
-static void AddEvents(GroupTable& gt, const char* group_name_literal,
-                      const EventDetails* details, size_t count) {
-  gt.emplace_back(GroupEvents{group_name_literal, {}});
-  auto& v = gt.back();
-  for (size_t i = 0; i < count; ++i) {
-    if (details[i].id != PERFMON_EVENT_ID_NONE) {
-      v.events.push_back(&details[i]);
+static void FillGroupTable(const char* name,
+                           const ModelEventManager::EventTable* events,
+                           ModelEventManager::GroupTable* groups) {
+  groups->emplace_back(ModelEventManager::GroupEvents{name, {}});
+  ModelEventManager::GroupEvents& group_events = groups->back();
+  for (const auto& event : *events) {
+    if (event->id != 0) {
+      group_events.events.push_back(event);
     }
   }
 }
 
-GroupTable GetAllGroups() {
+ModelEventManager::GroupTable ModelEventManager::GetAllGroups() const {
   GroupTable groups;
 
-  AddEvents(groups, "arch", &g_arch_event_details[0],
-            arraysize(g_arch_event_details));
-  AddEvents(groups, "fixed", &g_fixed_event_details[0],
-            arraysize(g_fixed_event_details));
-  AddEvents(groups, "model", &g_skl_event_details[0],
-            arraysize(g_skl_event_details));
-  AddEvents(groups, "misc", &g_skl_misc_event_details[0],
-            arraysize(g_skl_misc_event_details));
+  // Note: This makes copies of all the tables so that the result is not linked
+  // to this object's lifetime. It also allows us to remove empty slots
+  // (id == 0).
+  FillGroupTable(internal::kArchGroupName, arch_events_, &groups);
+  FillGroupTable(internal::kFixedGroupName, fixed_events_, &groups);
+  FillGroupTable(internal::kModelGroupName, model_events_, &groups);
+  FillGroupTable(internal::kMiscGroupName, misc_events_, &groups);
 
   return groups;
+}
+
+void ModelEventManager::Dump() const {
+  DumpGroup(internal::kArchGroupName, arch_events_);
+  DumpGroup(internal::kFixedGroupName, fixed_events_);
+  DumpGroup(internal::kModelGroupName, model_events_);
+  DumpGroup(internal::kMiscGroupName, misc_events_);
+}
+
+void ModelEventManager::DumpGroup(const char* name,
+                                  const EventTable* events) const {
+  printf("Group %s\n", name);
+  for (const auto& event : *events) {
+    if (event->id != 0) {
+      printf("  %s\n", event->name);
+    }
+  }
+}
+
+size_t GetConfigEventCount(const perfmon_config_t& config) {
+  size_t count;
+
+  for (count = 0; count < PERFMON_MAX_EVENTS; ++count) {
+    if (config.events[count] == PERFMON_EVENT_ID_NONE)
+      break;
+  }
+
+  return count;
 }
 
 }  // namespace perfmon

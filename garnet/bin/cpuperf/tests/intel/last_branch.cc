@@ -21,7 +21,7 @@ class LastBranchVerifier : public Verifier {
     const perfmon::EventDetails* details;
 
     bool rc __UNUSED =
-      perfmon::LookupEventByName("arch", "instructions_retired", &details);
+      LookupEventByName("arch", "instructions_retired", &details);
     FXL_DCHECK(rc);
     instructions_retired_id_ = details->id;
   }

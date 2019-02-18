@@ -17,6 +17,9 @@ struct SessionResultSpec {
                     const std::string& output_path_prefix);
   SessionResultSpec() = default;
 
+  // Return true if results are to be saved.
+  bool save_results() const { return output_path_prefix != ""; }
+
   // Given an iteration number and trace number, return the output file.
   std::string GetTraceFilePath(size_t iter_num, size_t trace_num) const;
 

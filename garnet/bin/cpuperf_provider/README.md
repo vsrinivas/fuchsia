@@ -191,16 +191,16 @@ There are dozens of programmable counters on Skylake (and Kaby Lake) chips.
 For a complete list see Intel Volume 3 Chapter 19.2,
 Performance Monitoring Events For 6th And 7th Generation Processors.
 For a list of the ones that are currently supported see
-`zircon/system/public/zircon/device/cpu-trace/intel-pm-events.inc`
+`zircon/system/ulib/zircon-internal/include/lib/zircon-internal/device/cpu-trace/intel-pm-events.inc`
 and
-`zircon/system/public/zircon/device/cpu-trace/skylake-pm-events.inc`
+`zircon/system/ulib/zircon-internal/include/lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc`
 in the source tree.
 
 To simplify specifying the programmable counters they have been grouped
 into categories defined in
-`zircon/system/public/zircon/device/cpu-trace/intel-pm-categories.inc`
+`garnet/bin/cpuperf_provider/intel-pm-categories.inc`
 and
-`zircon/system/public/zircon/device/cpu-trace/skylake-pm-categories.inc`
+`garnet/bin/cpuperf_provider/skylake-pm-categories.inc`
 in the source tree. See these files for a full list.
 
 Only one of these categories may be specified at a time.

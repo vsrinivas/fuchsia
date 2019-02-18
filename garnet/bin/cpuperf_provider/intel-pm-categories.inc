@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 // Table of categories for configuring Intel Performance Monitor hardware.
+// See chapter 18 of the Intel Architecture Software Developer's Manual.
 
 #ifndef DEF_FIXED_CATEGORY
 #define DEF_FIXED_CATEGORY(symbol, name, events...)

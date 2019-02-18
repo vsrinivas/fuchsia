@@ -84,7 +84,9 @@ static void DescribeEvent(FILE* f, const perfmon::EventDetails* details) {
   }
 }
 
-static void DescribeEvent(FILE* f, const std::string& full_name) {
+static void DescribeEvent(FILE* f,
+                          perfmon::ModelEventManager* model_event_manager,
+                          const std::string& full_name) {
   std::vector<std::string> parts =
     fxl::SplitStringCopy(full_name, ":", fxl::kTrimWhitespace,
                          fxl::kSplitWantAll);
@@ -94,8 +96,8 @@ static void DescribeEvent(FILE* f, const std::string& full_name) {
   }
 
   const perfmon::EventDetails* details;
-  if (!LookupEventByName(parts[0].c_str(), parts[1].c_str(),
-                         &details)) {
+  if (!model_event_manager->LookupEventByName(
+        parts[0].c_str(), parts[1].c_str(), &details)) {
     FXL_LOG(ERROR) << "Unknown event: " << full_name;
     exit(EXIT_FAILURE);
   }
@@ -103,8 +105,10 @@ static void DescribeEvent(FILE* f, const std::string& full_name) {
   DescribeEvent(f, details);
 }
 
-static void PrintEventList(FILE* f) {
-  perfmon::GroupTable groups = perfmon::GetAllGroups();
+static void PrintEventList(FILE* f,
+                           perfmon::ModelEventManager* model_event_manager) {
+  perfmon::ModelEventManager::GroupTable groups =
+    model_event_manager->GetAllGroups();
 
   for (auto& group : groups) {
     std::sort(group.events.begin(), group.events.end(),
@@ -112,7 +116,7 @@ static void PrintEventList(FILE* f) {
                   const perfmon::EventDetails*& b) {
       return strcmp(a->name, b->name) < 0;
     });
-    fprintf(f, "\nGroup %s\n", group.group_name);
+    fprintf(f, "\nGroup %s\n", group.group_name.c_str());
     for (const auto& event : group.events) {
       DescribeEvent(f, event);
     }
@@ -156,7 +160,7 @@ static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
       std::string path = result_spec.GetTraceFilePath(iter, trace);
       uint64_t size;
       if (files::GetFileSize(path, &size)) {
-        FXL_LOG(INFO) << path << ": " << size;
+        FXL_LOG(INFO) << path << ": " << size << " bytes";
       } else {
         FXL_LOG(INFO) << path << ": unknown size";
       }
@@ -165,9 +169,13 @@ static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
 }
 
 static bool RunSession(const cpuperf::SessionSpec& spec,
+                       const perfmon::ModelEventManager* model_event_manager,
                        perfmon::Controller* controller) {
-  cpuperf::SessionResultSpec result_spec{spec.config_name, spec.model_name,
-      spec.num_iterations, controller->num_traces(), spec.output_path_prefix};
+  cpuperf::SessionResultSpec result_spec{spec.config_name,
+                                         spec.model_name,
+                                         spec.num_iterations,
+                                         controller->num_traces(),
+                                         spec.output_path_prefix};
 
   for (size_t iter = 0; iter < spec.num_iterations; ++iter) {
     if (!controller->Start()) {
@@ -179,14 +187,18 @@ static bool RunSession(const cpuperf::SessionSpec& spec,
 
     controller->Stop();
 
-    if (controller->mode() == perfmon::Controller::Mode::kTally) {
-      PrintTallyResults(stdout, spec, result_spec, controller);
-    } else {
+    // Save the trace, even if printing results, for testing purposes.
+    if (result_spec.save_results()) {
       SaveTrace(result_spec, controller, iter);
+    }
+
+    if (controller->mode() == perfmon::Controller::Mode::kTally) {
+      PrintTallyResults(stdout, spec, result_spec, model_event_manager,
+                        controller);
     }
   }
 
-  if (controller->mode() != perfmon::Controller::Mode::kTally) {
+  if (result_spec.save_results()) {
     if (!cpuperf::WriteSessionResultSpec(spec.session_result_spec_path,
                                          result_spec)) {
       return false;
@@ -206,15 +218,24 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
   }
 
-  if (cl.HasOption("list-events", nullptr)) {
-    PrintEventList(stdout);
-    return EXIT_SUCCESS;
-  }
+  if (cl.HasOption("list-events", nullptr) ||
+      cl.HasOption("describe-event", nullptr)) {
+    // For list-events and describe-event, just support the default model
+    // for now.
+    std::unique_ptr<perfmon::ModelEventManager> model_event_manager =
+      perfmon::ModelEventManager::Create(perfmon::GetDefaultModelName());
+    FXL_CHECK(model_event_manager);
 
-  std::string arg;
-  if (cl.GetOptionValue("describe-event", &arg)) {
-    DescribeEvent(stdout, arg);
-    return EXIT_SUCCESS;
+    if (cl.HasOption("list-events", nullptr)) {
+      PrintEventList(stdout, model_event_manager.get());
+      return EXIT_SUCCESS;
+    }
+
+    std::string arg;
+    if (cl.GetOptionValue("describe-event", &arg)) {
+      DescribeEvent(stdout, model_event_manager.get(), arg);
+      return EXIT_SUCCESS;
+    }
   }
 
   // TODO(dje): dump-arch option
@@ -241,7 +262,8 @@ int main(int argc, char* argv[]) {
   FXL_LOG(INFO) << spec.num_iterations << " iteration(s), "
                 << spec.duration.ToSeconds() << " second(s) per iteration";
 
-  bool success = RunSession(spec, controller.get());
+  bool success =
+    RunSession(spec, spec.model_event_manager.get(), controller.get());
 
   if (!success) {
     FXL_LOG(INFO) << "cpuperf exiting with error";

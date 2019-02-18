@@ -17,7 +17,7 @@
     },
     {
       "group_name": "arch",
-      "event_name": "branches_retired",
+      "event_name": "branch_instructions_retired",
       "rate": 10000,
       "flags": [ "os", "user" ]
     },

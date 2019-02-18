@@ -20,7 +20,7 @@ class TallyVerifier : public Verifier {
     const perfmon::EventDetails* details;
 
     bool rc __UNUSED =
-      perfmon::LookupEventByName("fixed", "instructions_retired", &details);
+      LookupEventByName("fixed", "instructions_retired", &details);
     FXL_DCHECK(rc);
     instructions_retired_id_ = details->id;
   }

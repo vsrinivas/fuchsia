@@ -13,6 +13,8 @@
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zx/time.h>
 
+#include "garnet/lib/perfmon/events.h"
+
 namespace cpuperf {
 
 // The parameters controlling data collection.
@@ -54,6 +56,9 @@ struct SessionSpec {
 
   // The path of the session result spec.
   std::string session_result_spec_path;
+
+  // The details of events for |model_name|.
+  std::unique_ptr<perfmon::ModelEventManager> model_event_manager;
 };
 
 bool DecodeSessionSpec(const std::string& json, SessionSpec* spec);

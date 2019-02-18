@@ -20,16 +20,15 @@ class FixedCounterVerifier : public Verifier {
     const perfmon::EventDetails* details;
 
     bool rc __UNUSED =
-      perfmon::LookupEventByName("fixed", "instructions_retired", &details);
+      LookupEventByName("fixed", "instructions_retired", &details);
     FXL_DCHECK(rc);
     instructions_retired_id_ = details->id;
 
-    rc = perfmon::LookupEventByName("fixed", "unhalted_core_cycles", &details);
+    rc = LookupEventByName("fixed", "unhalted_core_cycles", &details);
     FXL_DCHECK(rc);
     unhalted_core_cycles_id_ = details->id;
 
-    rc = perfmon::LookupEventByName("fixed", "unhalted_reference_cycles",
-                                    &details);
+    rc = LookupEventByName("fixed", "unhalted_reference_cycles", &details);
     FXL_DCHECK(rc);
     unhalted_reference_cycles_id_ = details->id;
   }

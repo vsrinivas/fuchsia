@@ -16,6 +16,8 @@
 
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 
+#include "garnet/lib/perfmon/events.h"
+
 namespace cpuperf_provider {
 
 enum class TraceOption {
@@ -61,11 +63,24 @@ struct TimebaseSpec {
   const perfmon_event_id_t event;
 };
 
+extern const CategorySpec kCommonCategories[];
+extern const size_t kNumCommonCategories;
+
+extern const CategorySpec kTargetCategories[];
+extern const size_t kNumTargetCategories;
+
+extern const TimebaseSpec kTimebaseCategories[];
+extern const size_t kNumTimebaseCategories;
+
 // A data collection run is called a "trace".
 // This records the user-specified configuration of the trace.
 class TraceConfig final {
  public:
   TraceConfig() {}
+
+  perfmon::ModelEventManager* model_event_manager() const {
+    return model_event_manager_;
+  }
 
   bool is_enabled() const { return is_enabled_; }
 
@@ -81,7 +96,7 @@ class TraceConfig final {
   // Reset state so that nothing is traced.
   void Reset();
 
-  void Update();
+  void Update(perfmon::ModelEventManager* model_event_manager);
 
   // Return true if the configuration has changed.
   bool Changed(const TraceConfig& old) const;
@@ -93,8 +108,22 @@ class TraceConfig final {
   std::string ToString() const;
 
  private:
-  bool ProcessCategories();
+  // Keeps track of category data for ProcessCategories.
+  struct CategoryData {
+    bool have_data_to_collect = false;
+    bool have_sample_rate = false;
+    bool have_programmable_category = false;
+  };
+
+  bool ProcessAllCategories();
+  bool ProcessCategories(const CategorySpec categories[],
+                         size_t num_categories,
+                         CategoryData* data);
+
   bool ProcessTimebase();
+
+  // Non-owning.
+  perfmon::ModelEventManager* model_event_manager_ = nullptr;
 
   bool is_enabled_ = false;
 

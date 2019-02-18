@@ -239,6 +239,12 @@ The format of the specification file has the following schema:
 }
 ```
 
+Some values have defaults.
+
+ - `model_name`: obtained from `perfmon::GetDefaultModelName()`
+ - `output_path_prefix`: "/tmp/cpuperf"
+ - `session_result_spec_path`: "/tmp/cpuperf.cpsession"
+
 ### Example Specification
 
 This spec collects data every 10,000 retired instructions.

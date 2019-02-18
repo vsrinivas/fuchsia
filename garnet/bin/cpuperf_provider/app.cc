@@ -10,13 +10,14 @@
 
 #include <lib/async/default.h>
 
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_number_conversions.h>
+
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/bin/cpuperf_provider/importer.h"
 #include "garnet/lib/perfmon/controller.h"
 #include "garnet/lib/perfmon/reader.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_number_conversions.h"
 
 namespace cpuperf_provider {
 
@@ -66,6 +67,12 @@ App::App(const fxl::CommandLine& command_line)
     buffer_size_in_mb_ = static_cast<uint32_t>(buffer_size);
   }
 
+  // The supported models and their names are determined by lib/perfmon.
+  // These are defaults for now.
+  model_event_manager_ = perfmon::ModelEventManager::Create(
+    perfmon::GetDefaultModelName());
+  FXL_CHECK(model_event_manager_);
+
   trace_observer_.Start(async_get_default_dispatcher(),
                         [this] { UpdateState(); });
 }
@@ -83,7 +90,7 @@ void App::PrintHelp() {
 void App::UpdateState() {
   if (trace_state() == TRACE_STARTED) {
     TraceConfig config;
-    config.Update();
+    config.Update(model_event_manager_.get());
     if (trace_config_.Changed(config)) {
       StopTracing();
       if (config.is_enabled())

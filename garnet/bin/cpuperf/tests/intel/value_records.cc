@@ -20,19 +20,19 @@ class ValueRecordsVerifier : public Verifier {
     const perfmon::EventDetails* details;
 
     bool rc __UNUSED =
-      perfmon::LookupEventByName("misc", "edram_temperature", &details);
+      LookupEventByName("misc", "edram_temperature", &details);
     FXL_DCHECK(rc);
     edram_temperature_id_ = details->id;
 
-    rc = perfmon::LookupEventByName("misc", "package_temperature", &details);
+    rc = LookupEventByName("misc", "package_temperature", &details);
     FXL_DCHECK(rc);
     package_temperature_id_ = details->id;
 
-    rc = perfmon::LookupEventByName("misc", "ia_temperature", &details);
+    rc = LookupEventByName("misc", "ia_temperature", &details);
     FXL_DCHECK(rc);
     ia_temperature_id_ = details->id;
 
-    rc = perfmon::LookupEventByName("misc", "gt_temperature", &details);
+    rc = LookupEventByName("misc", "gt_temperature", &details);
     FXL_DCHECK(rc);
     gt_temperature_id_ = details->id;
   }

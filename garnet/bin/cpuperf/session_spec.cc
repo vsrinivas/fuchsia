@@ -109,7 +109,9 @@ const char kOutputPathPrefixKey[] = "output_path_prefix";
 const char kSessionResultSpecPathKey[] = "session_result_spec_path";
 
 template <typename T>
-bool DecodeEvents(T events, SessionSpec* out_spec) {
+bool DecodeEvents(T events,
+                  const perfmon::ModelEventManager* model_event_manager,
+                  SessionSpec* out_spec) {
   FXL_DCHECK(events.Size() < PERFMON_MAX_EVENTS);
 
   FXL_VLOG(1) << "Processing " << events.Size() << " events";
@@ -126,7 +128,8 @@ bool DecodeEvents(T events, SessionSpec* out_spec) {
     const std::string& group_name = event[kGroupNameKey].GetString();
     const std::string& event_name = event[kEventNameKey].GetString();
     const perfmon::EventDetails* details;
-    if (!LookupEventByName(group_name.c_str(), event_name.c_str(), &details)) {
+    if (!model_event_manager->LookupEventByName(group_name.c_str(),
+                                                event_name.c_str(), &details)) {
       FXL_LOG(ERROR) << "Unknown event: " << group_name << ":" << event_name;
       return false;
     }
@@ -204,6 +207,16 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
   if (document.HasMember(kModelNameKey)) {
     result.model_name = document[kModelNameKey].GetString();
   }
+  if (result.model_name == SessionSpec::kDefaultModelName) {
+    result.model_name = perfmon::GetDefaultModelName();
+  }
+
+  std::unique_ptr<perfmon::ModelEventManager> model_event_manager =
+      perfmon::ModelEventManager::Create(result.model_name);
+  if (!model_event_manager) {
+    FXL_LOG(ERROR) << "Unsupported model: " << result.model_name;
+    return false;
+  }
 
   if (document.HasMember(kEventsKey)) {
     const auto& events = document[kEventsKey].GetArray();
@@ -215,7 +228,7 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
       FXL_LOG(ERROR) << "Too many events, max " << PERFMON_MAX_EVENTS;
       return false;
     }
-    if (!DecodeEvents(events, &result)) {
+    if (!DecodeEvents(events, model_event_manager.get(), &result)) {
       return false;
     }
   }
@@ -243,6 +256,7 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
   }
 
   *out_spec = std::move(result);
+  out_spec->model_event_manager = std::move(model_event_manager);
   return true;
 }
 

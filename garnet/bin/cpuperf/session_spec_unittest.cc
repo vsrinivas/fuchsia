@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
+#include <lib/fxl/arraysize.h>
 
 #include "garnet/lib/perfmon/events.h"
 
@@ -12,7 +13,43 @@ namespace cpuperf {
 
 namespace {
 
-TEST(SessionSpec, DecodingErrors) {
+class SessionSpecTest : public ::testing::Test {
+ public:
+  // ::testing::Test overrides
+  void SetUp() override { RegisterTestModel(); }
+  void TearDown() override {}
+
+ private:
+  // Ensure there's a model named "test".
+  // This serves two functions:
+  // - provide a model to test against
+  // - cause |ModelEventManager::Create()| to not register events for the
+  //   current arch
+  void RegisterTestModel() {
+    // Only do this once though, the effect is otherwise cumulative.
+    if (!models_registered_) {
+      static const perfmon::EventDetails TestEvents[] = {
+        { PERFMON_MAKE_EVENT_ID(PERFMON_GROUP_FIXED, 1), "test-event",
+          "test-event", "test-event description" },
+      };
+      perfmon::ModelEventManager::RegisterEvents(
+          "test", "misc", &TestEvents[0], arraysize(TestEvents));
+      // Also register events for the default model: Some tests don't specify
+      // one (on purpose) and we want to control what events are present. Do
+      // this by registering them first.
+      perfmon::ModelEventManager::RegisterEvents(
+          perfmon::GetDefaultModelName().c_str(), "misc", &TestEvents[0],
+          arraysize(TestEvents));
+      models_registered_ = true;
+    }
+  }
+
+  static bool models_registered_;
+};
+
+bool SessionSpecTest::models_registered_ = false;
+
+TEST_F(SessionSpecTest, DecodingErrors) {
   std::string json;
   SessionSpec result;
 
@@ -57,7 +94,7 @@ TEST(SessionSpec, DecodingErrors) {
   EXPECT_FALSE(DecodeSessionSpec(json, &result));
 }
 
-TEST(SessionSpec, DecodeConfigName) {
+TEST_F(SessionSpecTest, DecodeConfigName) {
   std::string json = R"({"config_name": "test"})";
 
   SessionSpec result;
@@ -65,7 +102,7 @@ TEST(SessionSpec, DecodeConfigName) {
   EXPECT_EQ("test", result.config_name);
 }
 
-TEST(SessionSpec, DecodeModelName) {
+TEST_F(SessionSpecTest, DecodeModelName) {
   std::string json = R"({"model_name": "test"})";
 
   SessionSpec result;
@@ -73,12 +110,13 @@ TEST(SessionSpec, DecodeModelName) {
   EXPECT_EQ("test", result.model_name);
 }
 
-TEST(SessionSpec, DecodeEvents) {
-  std::string json = R"({"events":
-  [
+TEST_F(SessionSpecTest, DecodeEvents) {
+  std::string json = R"({
+  "model_name": "test",
+  "events": [
     {
-      "group_name": "fixed",
-      "event_name": "instructions_retired",
+      "group_name": "misc",
+      "event_name": "test-event",
       "rate": 42,
       "flags": [ "os", "user", "pc", "timebase0" ]
     }
@@ -89,11 +127,11 @@ TEST(SessionSpec, DecodeEvents) {
   ASSERT_TRUE(DecodeSessionSpec(json, &result));
 
   const perfmon::EventDetails* details;
-  ASSERT_TRUE(perfmon::LookupEventByName("fixed", "instructions_retired",
-                                         &details));
-  perfmon_event_id_t instructions_retired_id = details->id;
+  ASSERT_TRUE(result.model_event_manager->LookupEventByName(
+                "misc", "test-event", &details));
+  perfmon_event_id_t test_event_id = details->id;
 
-  EXPECT_EQ(result.perfmon_config.events[0], instructions_retired_id);
+  EXPECT_EQ(result.perfmon_config.events[0], test_event_id);
   EXPECT_EQ(result.perfmon_config.rate[0], 42u);
   EXPECT_EQ(result.perfmon_config.flags[0],
             PERFMON_CONFIG_FLAG_OS |
@@ -105,7 +143,7 @@ TEST(SessionSpec, DecodeEvents) {
   }
 }
 
-TEST(SessionSpec, DecodeBufferSizeInMb) {
+TEST_F(SessionSpecTest, DecodeBufferSizeInMb) {
   std::string json = R"({"buffer_size_in_mb": 1})";
 
   SessionSpec result;
@@ -113,7 +151,7 @@ TEST(SessionSpec, DecodeBufferSizeInMb) {
   EXPECT_EQ(1u, result.buffer_size_in_mb);
 }
 
-TEST(SessionSpec, DecodeDuration) {
+TEST_F(SessionSpecTest, DecodeDuration) {
   std::string json = R"({"duration": 42})";
 
   SessionSpec result;
@@ -122,7 +160,7 @@ TEST(SessionSpec, DecodeDuration) {
             result.duration.ToNanoseconds());
 }
 
-TEST(SessionSpec, DecodeNumIterations) {
+TEST_F(SessionSpecTest, DecodeNumIterations) {
   std::string json = R"({"num_iterations": 99})";
 
   SessionSpec result;

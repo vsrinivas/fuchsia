@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "garnet/bin/cpuperf/session_result_spec.h"
+#include "garnet/lib/perfmon/events.h"
 #include "garnet/lib/perfmon/records.h"
 
 class Verifier {
@@ -43,7 +44,17 @@ class Verifier {
   static bool IsKernelPc(uint64_t pc) { return !!(pc & kKernelPcMask); }
   static bool IsUserPc(uint64_t pc) { return !(pc & kKernelPcMask); }
 
+  // Wrappers on ModelEventManager that first we ensure we have a model
+  // event manager.
+  bool LookupEventByName(const char* group_name, const char* event_name,
+                         const perfmon::EventDetails** out_details);
+
   const cpuperf::SessionResultSpec* const session_result_spec_;
+
+ private:
+  void GetModelEventManager();
+
+  std::unique_ptr<perfmon::ModelEventManager> model_event_manager_;
 };
 
 using MakeVerifier = std::unique_ptr<Verifier>(

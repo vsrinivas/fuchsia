@@ -54,7 +54,9 @@ using TraceResults = std::unordered_map<perfmon_event_id_t, EventResult>;
 using SessionResults = std::vector<TraceResults>;
 
 template<typename T>
-void IterateOverEventIds(const cpuperf::SessionSpec& spec, T func) {
+void IterateOverEventIds(const cpuperf::SessionSpec& spec,
+                         const perfmon::ModelEventManager* model_event_manager,
+                         T func) {
   for (size_t i = 0; i < PERFMON_MAX_EVENTS; ++i) {
     perfmon_event_id_t id = spec.perfmon_config.events[i];
     if (id == 0) {
@@ -63,7 +65,7 @@ void IterateOverEventIds(const cpuperf::SessionSpec& spec, T func) {
     }
 
     const perfmon::EventDetails* details = nullptr;
-    if (!EventIdToEventDetails(id, &details)) {
+    if (!model_event_manager->EventIdToEventDetails(id, &details)) {
       // This shouldn't happen, but let |func| decide what to do.
     }
 
@@ -71,11 +73,14 @@ void IterateOverEventIds(const cpuperf::SessionSpec& spec, T func) {
   }
 }
 
-static SessionColumns BuildSessionColumns(const cpuperf::SessionSpec& spec) {
+static SessionColumns BuildSessionColumns(
+    const cpuperf::SessionSpec& spec,
+    const perfmon::ModelEventManager* model_event_manager) {
   SessionColumns columns;
 
-  IterateOverEventIds(spec, [&columns] (size_t index, perfmon_event_id_t id,
-                                        const perfmon::EventDetails* details) {
+  IterateOverEventIds(spec, model_event_manager,
+                      [&columns] (size_t index, perfmon_event_id_t id,
+                                  const perfmon::EventDetails* details) {
     const char* name;
     if (details) {
       name = details->name;
@@ -96,11 +101,13 @@ static SessionColumns BuildSessionColumns(const cpuperf::SessionSpec& spec) {
 
 // Data is printed in the order it appears in |spec|.
 static void PrintColumnTitles(FILE* f, const cpuperf::SessionSpec& spec,
+                              const perfmon::ModelEventManager* model_event_manager,
                               const SessionColumns& columns) {
   fprintf(f, "%*s", kTraceNameColumnWidth, "");
 
-  IterateOverEventIds(spec, [&] (size_t index, perfmon_event_id_t id,
-                                 const perfmon::EventDetails* details) {
+  IterateOverEventIds(spec, model_event_manager,
+                      [&] (size_t index, perfmon_event_id_t id,
+                           const perfmon::EventDetails* details) {
     auto iter = columns.find(id);
     FXL_DCHECK(iter != columns.end());
     const EventColumn& column = iter->second;
@@ -112,14 +119,16 @@ static void PrintColumnTitles(FILE* f, const cpuperf::SessionSpec& spec,
 
 static void PrintTrace(FILE* f, const cpuperf::SessionSpec& spec,
                        const cpuperf::SessionResultSpec& result_spec,
+                       const perfmon::ModelEventManager* model_event_manager,
                        const SessionColumns& columns, uint32_t trace_num,
                        const TraceResults& results) {
   char label[kTraceNameColumnWidth + 1];
   snprintf(&label[0], sizeof(label), "Trace %u:", trace_num);
   fprintf(f, "%-*s", kTraceNameColumnWidth, label);
 
-  IterateOverEventIds(spec, [&] (size_t index, perfmon_event_id_t id,
-                                 const perfmon::EventDetails* details) {
+  IterateOverEventIds(spec, model_event_manager,
+                      [&] (size_t index, perfmon_event_id_t id,
+                           const perfmon::EventDetails* details) {
     auto column_iter = columns.find(id);
     FXL_DCHECK(column_iter != columns.end());
     const EventColumn& column = column_iter->second;
@@ -147,13 +156,14 @@ static void PrintTrace(FILE* f, const cpuperf::SessionSpec& spec,
 
 void PrintTallyResults(FILE* f, const cpuperf::SessionSpec& spec,
                        const cpuperf::SessionResultSpec& result_spec,
+                       const perfmon::ModelEventManager* model_event_manager,
                        perfmon::Controller* controller) {
   std::unique_ptr<perfmon::DeviceReader> reader = controller->GetReader();
   if (!reader) {
     return;
   }
 
-  SessionColumns columns = BuildSessionColumns(spec);
+  SessionColumns columns = BuildSessionColumns(spec, model_event_manager);
 
   SessionResults results;
   for (size_t i = 0; i < result_spec.num_traces; ++i) {
@@ -176,7 +186,7 @@ void PrintTallyResults(FILE* f, const cpuperf::SessionSpec& spec,
       continue;
     perfmon_event_id_t id = record.header->event;
     const perfmon::EventDetails* details;
-    if (!EventIdToEventDetails(id, &details)) {
+    if (!model_event_manager->EventIdToEventDetails(id, &details)) {
       FXL_LOG(WARNING) << "Unknown event: 0x" << std::hex
                        << record.header->event;
       continue;
@@ -194,9 +204,10 @@ void PrintTallyResults(FILE* f, const cpuperf::SessionSpec& spec,
     }
   }
 
-  PrintColumnTitles(f, spec, columns);
+  PrintColumnTitles(f, spec, model_event_manager, columns);
 
   for (uint32_t i = 0; i < result_spec.num_traces; ++i) {
-    PrintTrace(f, spec, result_spec, columns, i, results[i]);
+    PrintTrace(f, spec, result_spec, model_event_manager, columns, i,
+               results[i]);
   }
 }

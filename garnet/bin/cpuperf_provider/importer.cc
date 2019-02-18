@@ -8,15 +8,15 @@
 #include <inttypes.h>
 #include <atomic>
 
-#include <fbl/algorithm.h>
 #include <zircon/syscalls.h>
+
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
+#include <lib/fxl/time/time_point.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/lib/perfmon/reader.h"
 #include "garnet/lib/perfmon/writer.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
-#include "lib/fxl/time/time_point.h"
 
 namespace cpuperf_provider {
 
@@ -233,7 +233,8 @@ void Importer::ImportSampleRecord(trace_cpu_number_t cpu,
   const perfmon::EventDetails* details;
   // Note: Errors here are generally rare, so at present we don't get clever
   // with minimizing the noise.
-  if (perfmon::EventIdToEventDetails(event_id, &details)) {
+  if (trace_config_->model_event_manager()->EventIdToEventDetails(
+        event_id, &details)) {
     EmitSampleRecord(cpu, details, record, previous_time, current_time,
                      ticks_per_second, event_value);
   } else {
@@ -399,7 +400,8 @@ void Importer::EmitTallyRecord(trace_cpu_number_t cpu,
                       trace_make_uint64_arg_value(value))},
   };
   const perfmon::EventDetails* details;
-  if (perfmon::EventIdToEventDetails(event_id, &details)) {
+  if (trace_config_->model_event_manager()->EventIdToEventDetails(
+        event_id, &details)) {
     trace_string_ref_t name_ref{
         trace_context_make_registered_string_literal(context_, details->name)};
     trace_context_write_counter_event_record(context_, time, &thread_ref,
