@@ -181,6 +181,9 @@ The format of the specification file has the following schema:
     "config_name": {
       "type": "string"
     },
+    "model_name": {
+      "type": "string"
+    },
     "events": {
       "type": "array",
       "items": {

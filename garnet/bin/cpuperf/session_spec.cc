@@ -37,6 +37,9 @@ const char kRootSchema[] = R"({
     "config_name": {
       "type": "string"
     },
+    "model_name": {
+      "type": "string"
+    },
     "events": {
       "type": "array",
       "items": {
@@ -93,6 +96,7 @@ const char kRootSchema[] = R"({
 })";
 
 const char kConfigNameKey[] = "config_name";
+const char kModelNameKey[] = "model_name";
 const char kEventsKey[] = "events";
 const char kGroupNameKey[] = "group_name";
 const char kEventNameKey[] = "event_name";
@@ -197,6 +201,10 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
     result.config_name = document[kConfigNameKey].GetString();
   }
 
+  if (document.HasMember(kModelNameKey)) {
+    result.model_name = document[kModelNameKey].GetString();
+  }
+
   if (document.HasMember(kEventsKey)) {
     const auto& events = document[kEventsKey].GetArray();
     if (events.Size() == 0) {
@@ -238,12 +246,14 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
   return true;
 }
 
+const char SessionSpec::kDefaultModelName[] = "default";
 const char SessionSpec::kDefaultOutputPathPrefix[] = "/tmp/cpuperf";
 const char SessionSpec::kDefaultSessionResultSpecPath[] =
     "/tmp/cpuperf.cpsession";
 
 SessionSpec::SessionSpec()
-    : output_path_prefix(kDefaultOutputPathPrefix),
+    : model_name(kDefaultModelName),
+      output_path_prefix(kDefaultOutputPathPrefix),
       session_result_spec_path(kDefaultSessionResultSpecPath) {}
 
 }  // namespace cpuperf

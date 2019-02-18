@@ -11,8 +11,9 @@
 namespace cpuperf {
 
 struct SessionResultSpec {
-  SessionResultSpec(const std::string& config_name, size_t num_iterations,
-                    size_t num_traces,
+  SessionResultSpec(const std::string& config_name,
+                    const std::string& model_name,
+                    size_t num_iterations, size_t num_traces,
                     const std::string& output_path_prefix);
   SessionResultSpec() = default;
 
@@ -20,6 +21,7 @@ struct SessionResultSpec {
   std::string GetTraceFilePath(size_t iter_num, size_t trace_num) const;
 
   std::string config_name;
+  std::string model_name;
   size_t num_iterations = 0;
   size_t num_traces = 0;
   std::string output_path_prefix;

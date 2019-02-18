@@ -27,6 +27,9 @@ const char kRootSchema[] = R"({
     "config_name": {
       "type": "string"
     },
+    "model_name": {
+      "type": "string"
+    },
     "num_iterations": {
       "type": "integer",
       "minimum": 1
@@ -42,6 +45,7 @@ const char kRootSchema[] = R"({
 })";
 
 const char kConfigNameKey[] = "config_name";
+const char kModelNameKey[] = "model_name";
 const char kNumIterationsKey[] = "num_iterations";
 const char kNumTracesKey[] = "num_traces";
 const char kOutputPathPrefixKey[] = "output_path_prefix";
@@ -49,9 +53,11 @@ const char kOutputPathPrefixKey[] = "output_path_prefix";
 }  // namespace
 
 SessionResultSpec::SessionResultSpec(const std::string& config_name,
+                                     const std::string& model_name,
                                      size_t num_iterations, size_t num_traces,
                                      const std::string& output_path_prefix)
     : config_name(config_name),
+      model_name(model_name),
       num_iterations(num_iterations),
       num_traces(num_traces),
       output_path_prefix(output_path_prefix) {}
@@ -90,6 +96,10 @@ bool DecodeSessionResultSpec(const std::string& json,
     result.config_name = document[kConfigNameKey].GetString();
   }
 
+  if (document.HasMember(kModelNameKey)) {
+    result.model_name = document[kModelNameKey].GetString();
+  }
+
   if (document.HasMember(kNumIterationsKey)) {
     result.num_iterations = document[kNumIterationsKey].GetUint();
   }
@@ -116,6 +126,11 @@ bool WriteSessionResultSpec(const std::string& output_file_path,
   if (!spec.config_name.empty()) {
     writer.Key(kConfigNameKey);
     writer.String(spec.config_name.c_str());
+  }
+
+  if (!spec.model_name.empty()) {
+    writer.Key(kModelNameKey);
+    writer.String(spec.model_name.c_str());
   }
 
   writer.Key(kNumIterationsKey);

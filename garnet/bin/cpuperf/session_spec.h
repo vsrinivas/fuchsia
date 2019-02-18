@@ -18,6 +18,7 @@ namespace cpuperf {
 // The parameters controlling data collection.
 
 struct SessionSpec {
+  static const char kDefaultModelName[];
   static constexpr uint32_t kDefaultBufferSizeInMb = 16u;
   static constexpr fxl::TimeDelta kDefaultDuration{fxl::TimeDelta::FromSeconds(10)};
   static constexpr size_t kDefaultNumIterations = 1u;
@@ -28,6 +29,13 @@ struct SessionSpec {
 
   // Name of the config for reporting and debugging purposes.
   std::string config_name;
+
+  // The model being used.
+  // This affects what performance counters are available.
+  // The default is "default" which means use the default for the system
+  // we're being run on. But it's useful to be able to modify the default
+  // for test purposes.
+  std::string model_name;
 
   // Configuration for collecting cpu performance data.
   perfmon_config_t perfmon_config{};

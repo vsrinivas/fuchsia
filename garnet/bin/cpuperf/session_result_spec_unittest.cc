@@ -29,6 +29,9 @@ TEST(SessionResultSpec, DecodingErrors) {
   json = R"({"config_name": 42})";
   EXPECT_FALSE(DecodeSessionResultSpec(json, &result));
 
+  json = R"({"model_name": 42})";
+  EXPECT_FALSE(DecodeSessionResultSpec(json, &result));
+
   json = R"({"num_iterations": false})";
   EXPECT_FALSE(DecodeSessionResultSpec(json, &result));
 
@@ -54,6 +57,14 @@ TEST(SessionResultSpec, DecodeConfigName) {
   SessionResultSpec result;
   ASSERT_TRUE(DecodeSessionResultSpec(json, &result));
   EXPECT_EQ("test", result.config_name);
+}
+
+TEST(SessionResultSpec, DecodeModelName) {
+  std::string json = R"({"model_name": "test"})";
+
+  SessionResultSpec result;
+  ASSERT_TRUE(DecodeSessionResultSpec(json, &result));
+  EXPECT_EQ("test", result.model_name);
 }
 
 TEST(SessionResultSpec, DecodeNumIterations) {

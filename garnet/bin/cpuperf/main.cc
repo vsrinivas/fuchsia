@@ -166,8 +166,8 @@ static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
 
 static bool RunSession(const cpuperf::SessionSpec& spec,
                        perfmon::Controller* controller) {
-  cpuperf::SessionResultSpec result_spec{spec.config_name, spec.num_iterations,
-      controller->num_traces(), spec.output_path_prefix};
+  cpuperf::SessionResultSpec result_spec{spec.config_name, spec.model_name,
+      spec.num_iterations, controller->num_traces(), spec.output_path_prefix};
 
   for (size_t iter = 0; iter < spec.num_iterations; ++iter) {
     if (!controller->Start()) {

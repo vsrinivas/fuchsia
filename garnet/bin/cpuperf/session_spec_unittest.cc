@@ -31,6 +31,9 @@ TEST(SessionSpec, DecodingErrors) {
   json = R"({"config_name": 42})";
   EXPECT_FALSE(DecodeSessionSpec(json, &result));
 
+  json = R"({"model_name": 42})";
+  EXPECT_FALSE(DecodeSessionSpec(json, &result));
+
   json = R"({"events": 42})";
   EXPECT_FALSE(DecodeSessionSpec(json, &result));
 
@@ -60,6 +63,14 @@ TEST(SessionSpec, DecodeConfigName) {
   SessionSpec result;
   ASSERT_TRUE(DecodeSessionSpec(json, &result));
   EXPECT_EQ("test", result.config_name);
+}
+
+TEST(SessionSpec, DecodeModelName) {
+  std::string json = R"({"model_name": "test"})";
+
+  SessionSpec result;
+  ASSERT_TRUE(DecodeSessionSpec(json, &result));
+  EXPECT_EQ("test", result.model_name);
 }
 
 TEST(SessionSpec, DecodeEvents) {
