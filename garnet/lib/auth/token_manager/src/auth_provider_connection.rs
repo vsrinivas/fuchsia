@@ -15,7 +15,7 @@ use log::info;
 use parking_lot::Mutex;
 use std::sync::Arc;
 
-/// The information neccesary to retain an open connection to the `AuthProviderFactory` interface
+/// The information necessary to retain an open connection to the `AuthProviderFactory` interface
 /// of a launched component.
 struct ConnectionState {
     // Note: The app must remain in scope for the connection to be retained, but never needs to be

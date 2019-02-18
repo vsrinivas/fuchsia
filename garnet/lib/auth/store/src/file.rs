@@ -233,7 +233,7 @@ mod test {
         }
 
         {
-            // Load a seperate instance of the database and insert the second credential.
+            // Load a separate instance of the database and insert the second credential.
             let mut db = AuthDbFile::new(&temp_location.path)?;
             db.add_credential(cred_2.clone())?;
         }

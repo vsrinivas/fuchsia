@@ -22,11 +22,11 @@ pub enum AuthDbError {
     /// An illegal input argument was supplied, such as an invalid path.
     #[fail(display = "invalid argument")]
     InvalidArguments,
-    /// A lower level failure occured while serialization and writing the data.
+    /// A lower level failure occurred while serialization and writing the data.
     /// See logs for more information.
-    #[fail(display = "unexpected error serializing or deserialing the database")]
+    #[fail(display = "unexpected error serializing or deserializing the database")]
     SerializationError,
-    /// A lower level failure occured while reading and deserialization the data.
+    /// A lower level failure occurred while reading and deserialization the data.
     #[fail(
         display = "unexpected IO error accessing the database: {}",
         _0

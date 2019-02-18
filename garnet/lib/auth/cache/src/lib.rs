@@ -17,7 +17,7 @@ use std::time::{Duration, SystemTime};
 /// the cache if they have at least this much life remaining.
 const PADDING_FOR_TOKEN_EXPIRY: Duration = Duration::from_secs(600);
 
-/// An enumeration of the possile failure modes for operations on a `TokenCache`.
+/// An enumeration of the possible failure modes for operations on a `TokenCache`.
 #[derive(Debug, PartialEq, Eq, Fail)]
 pub enum AuthCacheError {
     /// One or more inputs were not valid.
@@ -102,7 +102,7 @@ impl FirebaseAuthToken {
 struct TokenSet {
     /// A map from audience strings to cached OAuth ID tokens.
     id_token_map: HashMap<String, Arc<OAuthToken>>,
-    /// A map from concatenatations of OAuth scope strings to cached OAuth Access
+    /// A map from concatenations of OAuth scope strings to cached OAuth Access
     /// tokens.
     access_token_map: HashMap<String, Arc<OAuthToken>>,
     /// A map from firebase API keys to cached Firebase tokens.
@@ -298,7 +298,7 @@ impl TokenCache {
     /// strings.
     fn scope_key<'a, T: Deref<Target = str>>(scopes: &'a [T]) -> Cow<'a, str> {
         // Use the scope strings concatenated with a newline as the key. Note that this
-        // is order dependent; a client that reqested the same scopes with two
+        // is order dependent; a client that requested the same scopes with two
         // different orders would create two cache entries. We argue that the
         // harm of this is limited compared to the cost of sorting scopes to
         // create a canonical ordering on every access. Most clients are likely
@@ -544,7 +544,7 @@ mod tests {
     fn test_remove_oauth_on_expiry() {
         let mut token_cache = TokenCache::new(CACHE_SIZE);
 
-        // Insert one entry thats already expired and one that hasn't.
+        // Insert one entry that's already expired and one that hasn't.
         let scopes = vec![TEST_SCOPE_A, TEST_SCOPE_B];
         let key_1 = build_test_cache_key("1");
         let access_token_1 = build_test_access_token(LONG_EXPIRY, "1");
@@ -580,7 +580,7 @@ mod tests {
         );
         assert_eq!(token_cache.get_firebase_token(&key, TEST_API_KEY), None);
 
-        // Add a firebase token and verify it can be retreived.
+        // Add a firebase token and verify it can be retrieved.
         let firebase_token = build_test_firebase_token(LONG_EXPIRY, "");
         token_cache.put_firebase_token(
             key.clone(),

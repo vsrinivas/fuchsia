@@ -593,7 +593,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             .insert(auth_provider_type.to_string(), Arc::clone(&proxy));
 
         // TODO(jsankey): AuthProviders might crash or close connections, leaving our cached proxy
-        // in an invalid state. Currently we explictly discard a proxy from each method that
+        // in an invalid state. Currently we explicitly discard a proxy from each method that
         // observes a communication failure, but we should probably also be monitoring for the
         // close event on each channel to remove the associated proxy from the cache automatically.
 

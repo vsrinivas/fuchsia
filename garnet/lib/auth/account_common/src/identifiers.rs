@@ -4,9 +4,9 @@
 
 // The fuchsia.auth.account interface uses a common pattern of wrapped structs to provide type
 // safety for the various integer identifiers. The FIDL bindings for these types are currently not
-// very ergomonic since all FIDL structs potentially can grow to contain handles so prohibit
+// very ergonomic since all FIDL structs potentially can grow to contain handles so prohibit
 // useful features like cloning. This module provides convenient and full featured alternatives for
-// the wrapped structs that implement From/Into for each convertion to the FIDL type.
+// the wrapped structs that implement From/Into for each conversion to the FIDL type.
 //
 // Longer term we aspire to annotate this wrapper pattern in FIDL, which would allow the bindings
 // to be more ergonomic and remove the need for this module.

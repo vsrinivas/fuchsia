@@ -48,7 +48,7 @@ protocol AccountHandlerControl {
 
     // Deletes all persistent information about the Fuchsia account handled by
     // this handler, including all credentials and global identifiers. After a
-    // successfull call to RemoveAccount, all other open interfaces for this
+    // successful call to RemoveAccount, all other open interfaces for this
     // account handler will be closed and any subsequent calls on the current
     // interface will fail.
     //
@@ -57,7 +57,7 @@ protocol AccountHandlerControl {
     RemoveAccount() -> (fuchsia.auth.account.Status status);
 
     // TODO(jsankey): Add methods to cover adding an existing account and
-    // handling an account where the disk is not yet decrpyted.
+    // handling an account where the disk is not yet decrypted.
 
     // Connects an interface to read properties of and perform operations on
     // the account handled by this handler. The account must have previously
