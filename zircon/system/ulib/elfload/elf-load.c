@@ -96,35 +96,39 @@ static zx_status_t choose_load_bias(zx_handle_t root_vmar,
     // figure out the total span it will need and reserve a span
     // of address space that big.  The kernel decides where to put it.
 
+    bool first = true;
     uintptr_t low = 0, high = 0;
+    uint32_t max_perm = 0;
     for (uint_fast16_t i = 0; i < header->e_phnum; ++i) {
         if (phdrs[i].p_type == PT_LOAD) {
-            uint_fast16_t j = header->e_phnum;
-            do {
-                --j;
-            } while (j > i && phdrs[j].p_type != PT_LOAD);
-            low = phdrs[i].p_vaddr & -PAGE_SIZE;
-            high = ((phdrs[j].p_vaddr +
-                     phdrs[j].p_memsz + PAGE_SIZE - 1) & -PAGE_SIZE);
-            break;
+            uintptr_t start = phdrs[i].p_vaddr & -PAGE_SIZE;
+            uintptr_t end = ((phdrs[i].p_vaddr +
+                              phdrs[i].p_memsz + PAGE_SIZE - 1) & -PAGE_SIZE);
+            // Sanity check.  ELF requires that PT_LOAD phdrs be sorted in
+            // ascending p_vaddr order and not overlap.
+            if (first) {
+                low = start;
+                first = false;
+            } else if (start < low || end < high) {
+                return ERR_ELF_BAD_FORMAT;
+            }
+            high = end;
+            max_perm |= phdrs[i].p_flags;
         }
     }
-    // Sanity check.  ELF requires that PT_LOAD phdrs be sorted in
-    // ascending p_vaddr order.
-    if (low > high)
-        return ERR_ELF_BAD_FORMAT;
 
     const size_t span = high - low;
     if (span == 0)
         return ZX_OK;
 
     // Allocate a VMAR to reserve the whole address range.
-    zx_status_t status = zx_vmar_allocate(root_vmar,
-                                          ZX_VM_CAN_MAP_READ |
-                                          ZX_VM_CAN_MAP_WRITE |
-                                          ZX_VM_CAN_MAP_EXECUTE |
-                                          ZX_VM_CAN_MAP_SPECIFIC,
-                                          0, span, vmar, vmar_base);
+    zx_status_t status = zx_vmar_allocate(
+        root_vmar,
+        ((max_perm & PF_R) ? ZX_VM_CAN_MAP_READ : 0) |
+        ((max_perm & PF_W) ? ZX_VM_CAN_MAP_WRITE : 0) |
+        ((max_perm & PF_X) ? ZX_VM_CAN_MAP_EXECUTE : 0) |
+        ZX_VM_CAN_MAP_SPECIFIC,
+        0, span, vmar, vmar_base);
     if (status == ZX_OK)
         *bias = *vmar_base - low;
     return status;
