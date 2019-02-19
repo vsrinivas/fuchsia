@@ -101,9 +101,11 @@ func (c *CompositeRepo) AddRepo(repo Repository) {
 
 func (c *CompositeRepo) GetBuildObject(buildID string) (string, error) {
 	for _, repo := range c.repos {
-		if file, err := repo.GetBuildObject(buildID); err != nil {
-			return file, nil
+		file, err := repo.GetBuildObject(buildID)
+		if err != nil {
+			continue
 		}
+		return file, nil
 	}
 	return "", fmt.Errorf("could not find file for %s", buildID)
 }

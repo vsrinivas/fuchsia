@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"os"
 
@@ -16,11 +17,22 @@ import (
 	"fuchsia.googlesource.com/tools/symbolize"
 )
 
+type argList []string
+
+func (a *argList) String() string {
+	return fmt.Sprintf("%s", []string(*a))
+}
+
+func (a *argList) Set(value string) error {
+	*a = append(*a, value)
+	return nil
+}
+
 var (
-	buildIDDirPath string
-	colors         color.EnableColor
-	jsonOutput     string
-	idsPath        string
+	buildIDDirPaths argList
+	colors          color.EnableColor
+	jsonOutput      string
+	idsPaths        argList
 	// TODO(jakehehrlich): Make idsRel always true and remove this flag.
 	idsRel        bool
 	level         logger.LogLevel
@@ -31,9 +43,9 @@ func init() {
 	colors = color.ColorAuto
 	level = logger.InfoLevel
 
-	flag.StringVar(&buildIDDirPath, "build-id-dir", "", "path to .build-id directory")
+	flag.Var(&buildIDDirPaths, "build-id-dir", "path to .build-id directory")
 	flag.StringVar(&llvmSymboPath, "llvm-symbolizer", "llvm-symbolizer", "path to llvm-symbolizer")
-	flag.StringVar(&idsPath, "ids", "", "path to ids.txt")
+	flag.Var(&idsPaths, "ids", "path to ids.txt")
 	flag.Var(&colors, "color", "use color in output, can be never, auto, always")
 	flag.Var(&level, "level", "output verbosity, can be fatal, error, warning, info, debug or trace")
 	flag.StringVar(&jsonOutput, "json-output", "", "outputs trigger information to the specified file")
@@ -86,13 +98,14 @@ func main() {
 
 	// Construct the nodes of the pipeline
 	symbolizer := symbolize.NewLLVMSymbolizer(llvmSymboPath)
-	var repo symbolize.Repository
-	if buildIDDirPath != "" {
-		repo = symbolize.NewBuildIDRepo(buildIDDirPath)
-	} else {
-		repo = symbolize.NewIDsTxtRepo(idsPath, idsRel)
+	var repo symbolize.CompositeRepo
+	for _, dir := range buildIDDirPaths {
+		repo.AddRepo(symbolize.NewBuildIDRepo(dir))
 	}
-	demuxer := symbolize.NewDemuxer(repo, symbolizer)
+	for _, idsPath := range idsPaths {
+		repo.AddRepo(symbolize.NewIDsTxtRepo(idsPath, idsRel))
+	}
+	demuxer := symbolize.NewDemuxer(&repo, symbolizer)
 	tap := symbolize.NewTriggerTap()
 	if jsonTriggerHandler != nil {
 		tap.AddHandler(jsonTriggerHandler.HandleDump)
