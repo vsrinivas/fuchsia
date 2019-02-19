@@ -12,6 +12,7 @@ import (
 	"syslog/logger"
 
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 )
@@ -269,6 +270,14 @@ func getSockOptIP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 
 		return int32(v), nil
 
+	case C.IP_MULTICAST_IF:
+		var v tcpip.MulticastInterfaceOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+
+		return encodeAddr(ipv4.ProtocolNumber, tcpip.FullAddress{Addr: v.InterfaceAddr}), nil
+
 	default:
 		logger.Infof("unimplemented getsockopt: SOL_IP name=%d", name)
 
@@ -494,8 +503,8 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		}
 		return ep.SetSockOpt(tcpip.MulticastTTLOption(v))
 
-	case C.IP_ADD_MEMBERSHIP, C.IP_DROP_MEMBERSHIP:
-		var o tcpip.MembershipOption
+	case C.IP_ADD_MEMBERSHIP, C.IP_DROP_MEMBERSHIP, C.IP_MULTICAST_IF:
+		var mreqn C.struct_ip_mreqn
 
 		switch len(optVal) {
 		case C.sizeof_struct_ip_mreq:
@@ -504,22 +513,20 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 				return tcpip.ErrInvalidOptionValue
 			}
 
-			o = tcpip.MembershipOption{
-				MulticastAddr: tcpip.Address(mreq.imr_multiaddr.Bytes()),
-				InterfaceAddr: tcpip.Address(mreq.imr_interface.Bytes()),
-			}
+			mreqn.imr_multiaddr = mreq.imr_multiaddr
+			mreqn.imr_address = mreq.imr_interface
 
 		case C.sizeof_struct_ip_mreqn:
-			var mreqn C.struct_ip_mreqn
 			if err := mreqn.Unmarshal(optVal); err != nil {
 				return tcpip.ErrInvalidOptionValue
 			}
 
-			o = tcpip.MembershipOption{
-				NIC:           tcpip.NICID(mreqn.imr_ifindex),
-				MulticastAddr: tcpip.Address(mreqn.imr_multiaddr.Bytes()),
-				InterfaceAddr: tcpip.Address(mreqn.imr_address.Bytes()),
+		case C.sizeof_struct_in_addr:
+			if name == C.IP_MULTICAST_IF {
+				copy(mreqn.imr_address.Bytes(), optVal)
+				break
 			}
+			fallthrough
 
 		default:
 			return tcpip.ErrInvalidOptionValue
@@ -527,15 +534,36 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		}
 
 		switch name {
-		case C.IP_ADD_MEMBERSHIP:
-			return ep.SetSockOpt(tcpip.AddMembershipOption(o))
-		case C.IP_DROP_MEMBERSHIP:
-			return ep.SetSockOpt(tcpip.RemoveMembershipOption(o))
+		case C.IP_ADD_MEMBERSHIP, C.IP_DROP_MEMBERSHIP:
+			o := tcpip.MembershipOption{
+				NIC:           tcpip.NICID(mreqn.imr_ifindex),
+				MulticastAddr: tcpip.Address(mreqn.imr_multiaddr.Bytes()),
+				InterfaceAddr: tcpip.Address(mreqn.imr_address.Bytes()),
+			}
+
+			switch name {
+			case C.IP_ADD_MEMBERSHIP:
+				return ep.SetSockOpt(tcpip.AddMembershipOption(o))
+
+			case C.IP_DROP_MEMBERSHIP:
+				return ep.SetSockOpt(tcpip.RemoveMembershipOption(o))
+
+			default:
+				panic("unreachable")
+
+			}
+		case C.IP_MULTICAST_IF:
+			return ep.SetSockOpt(tcpip.MulticastInterfaceOption{
+				NIC:           tcpip.NICID(mreqn.imr_ifindex),
+				InterfaceAddr: tcpip.Address(mreqn.imr_address.Bytes()),
+			})
+
 		default:
 			panic("unreachable")
+
 		}
 
-	case C.MCAST_JOIN_GROUP, C.IP_MULTICAST_IF:
+	case C.MCAST_JOIN_GROUP:
 		// FIXME: Disallow IP-level multicast group options by
 		// default. These will need to be supported by appropriately plumbing
 		// the level through to the network stack (if at all). However, we
