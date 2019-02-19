@@ -4,7 +4,10 @@
 
 #include "garnet/bin/feedback_agent/feedback_agent.h"
 
+#include <ostream>
+
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h>
 #include <gtest/gtest.h>
 
 namespace fuchsia {
@@ -18,7 +21,7 @@ namespace {
 // class, without connecting through FIDL.
 TEST(FeedbackAgentTest, GetPngScreenshot_Basic) {
   FeedbackAgent agent;
-  Status out_status;
+  Status out_status = Status::UNKNOWN;
   std::unique_ptr<PngImage> out_image;
   agent.GetPngScreenshot([&out_status, &out_image](
                              Status status, std::unique_ptr<PngImage> image) {
@@ -30,5 +33,10 @@ TEST(FeedbackAgentTest, GetPngScreenshot_Basic) {
 }
 
 }  // namespace
+
+// Pretty-prints status in gTest matchers instead of the default byte string in
+// case of failed expectations.
+void PrintTo(const Status status, std::ostream* os) { *os << status; }
+
 }  // namespace feedback
 }  // namespace fuchsia
