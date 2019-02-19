@@ -27,7 +27,7 @@ Mesh::Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
       vk_index_buffer_(index_buffer->vk()),
       index_buffer_(std::move(index_buffer)),
       index_buffer_offset_(index_buffer_offset) {
-  FXL_DCHECK(spec.IsValid());
+  FXL_DCHECK(spec_.IsValid());
   FXL_DCHECK(num_indices_ * sizeof(uint32_t) + index_buffer_offset_ <=
              index_buffer_->size());
 }

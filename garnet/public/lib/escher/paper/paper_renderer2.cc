@@ -105,7 +105,6 @@ PaperRenderer2::FrameData::FrameData(
       gpu_uploader(BatchGpuUploader::New(frame->escher()->GetWeakPtr())) {
   // Scale the camera viewports to pixel coordinates in the output framebuffer.
   for (auto& cam : cameras_in) {
-    mat4 vp_matrix = cam.projection() * cam.transform();
     vk::Rect2D rect = cam.viewport().vk_rect_2d(output_image->width(),
                                                 output_image->height());
     vk::Viewport viewport(rect.offset.x, rect.offset.y, rect.extent.width,

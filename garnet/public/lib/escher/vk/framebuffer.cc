@@ -38,7 +38,7 @@ Framebuffer::Framebuffer(Escher* escher, uint32_t width, uint32_t height,
   vk::Device device = vulkan_context().device;
 
   // For each image, construct a corresponding view.
-  image_views_.reserve(images.size());
+  image_views_.reserve(images_.size());
   for (auto& im : images_) {
     FXL_DCHECK(width == im->width());
     FXL_DCHECK(height == im->height());
