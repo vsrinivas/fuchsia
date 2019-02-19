@@ -114,8 +114,7 @@ class MyDummyAgent : fuchsia::modular::Agent,
   }
 
   // |fuchsia::modular::Agent|
-  void RunTask(std::string /*task_id*/,
-               RunTaskCallback /*callback*/) override {
+  void RunTask(std::string /*task_id*/, RunTaskCallback /*callback*/) override {
     ++counts["RunTask"];
   }
 

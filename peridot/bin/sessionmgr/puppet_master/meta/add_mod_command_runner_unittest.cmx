@@ -1,10 +1,10 @@
 {
-  "program": {
-    "binary": "test/add_mod_command_runner_unittest"
-  },
-  "sandbox": {
-    "services": [
-      "fuchsia.sys.Launcher"
-    ]
-  }
+    "program": {
+        "binary": "test/add_mod_command_runner_unittest"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
 }

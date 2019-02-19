@@ -46,8 +46,7 @@ class FakeTokenManager : public fuchsia::auth::TokenManager {
                   GetIdTokenCallback callback) override;
 
   void GetFirebaseToken(AppConfig app_config, std::string user_profile_id,
-                        std::string audience,
-                        std::string firebase_api_key,
+                        std::string audience, std::string firebase_api_key,
                         GetFirebaseTokenCallback callback) override;
 
   void DeleteAllTokens(AppConfig app_config, std::string user_profile_id,

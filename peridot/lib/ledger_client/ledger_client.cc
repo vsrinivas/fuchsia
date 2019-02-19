@@ -249,8 +249,7 @@ LedgerClient::LedgerClient(
     if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
       FXL_LOG(ERROR) << "Ledger error: " << LedgerEpitaphToString(status);
     } else {
-      FXL_LOG(INFO) << "Ledger disconnected: "
-                       << LedgerEpitaphToString(status);
+      FXL_LOG(INFO) << "Ledger disconnected: " << LedgerEpitaphToString(status);
     }
   });
   // Open Ledger.

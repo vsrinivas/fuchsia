@@ -818,7 +818,7 @@ TEST(Xdr, FidlArray) {
 
   json_xdr_unittest::ArrayData t0;
 
-  for (size_t i=0; i<t0.string.size(); i++) {
+  for (size_t i = 0; i < t0.string.size(); i++) {
     t0.string.at(i) = "1";
     t0.bool_.at(i) = true;
     t0.int8.at(i) = 2;

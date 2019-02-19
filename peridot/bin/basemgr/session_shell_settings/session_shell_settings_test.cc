@@ -28,7 +28,8 @@ extern template fuchsia::ui::policy::DisplayUsage
 GetObjectValue<fuchsia::ui::policy::DisplayUsage>(
     const rapidjson::Value& object, const std::string& field_name);
 
-std::vector<SessionShellSettings> ParseSessionShellSettings(const std::string& json);
+std::vector<SessionShellSettings> ParseSessionShellSettings(
+    const std::string& json);
 
 }  // namespace internal
 

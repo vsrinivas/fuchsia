@@ -6,8 +6,8 @@
 
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "lib/fidl/cpp/object_coding.h"  // for EncodeObject()/DecodeObject()
 #include "lib/fsl/vmo/vector.h"

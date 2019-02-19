@@ -22,8 +22,8 @@
 #include <lib/fxl/macros.h>
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
-#include "peridot/bin/basemgr/user_provider_impl.h"
 #include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"
+#include "peridot/bin/basemgr/user_provider_impl.h"
 #include "peridot/bin/basemgr/wait_for_minfs.h"
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/common/teardown.h"

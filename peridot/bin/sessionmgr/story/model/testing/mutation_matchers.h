@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_SESSIONMGR_STORY_MODEL_TESTING_MUTATION_MATCHERS_H_
+#define PERIDOT_BIN_SESSIONMGR_STORY_MODEL_TESTING_MUTATION_MATCHERS_H_
 
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
 
@@ -29,3 +30,5 @@ MATCHER_P(IsSetRuntimeStateMutation, expected, "") {
 }
 
 }  // namespace modular
+
+#endif  // PERIDOT_BIN_SESSIONMGR_STORY_MODEL_TESTING_MUTATION_MATCHERS_H_

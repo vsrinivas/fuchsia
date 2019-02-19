@@ -38,7 +38,8 @@ ContextWriterImpl::ContextWriterImpl(
     parent_value_selector_.meta->mod = fuchsia::modular::ModuleMetadata::New();
     std::vector<std::string> module_path;
     fidl::Clone(client_info.module_scope().module_path, &module_path);
-    parent_value_selector_.meta->mod->path = fidl::VectorPtr(std::move(module_path));
+    parent_value_selector_.meta->mod->path =
+        fidl::VectorPtr(std::move(module_path));
   }
 }
 
@@ -135,8 +136,8 @@ void ContextWriterImpl::WriteEntityTopic(std::string topic,
   }
 
   GetEntityTypesFromEntityReference(
-      value, [this, activity, topic,
-              value](const std::vector<std::string>& types) {
+      value,
+      [this, activity, topic, value](const std::vector<std::string>& types) {
         fuchsia::modular::ContextValue context_value;
         context_value.type = fuchsia::modular::ContextValueType::ENTITY;
         context_value.content = value;
@@ -181,8 +182,8 @@ void ContextWriterImpl::GetEntityTypesFromEntityReference(
 
   (*entity)->GetTypes(fxl::MakeCopyable(
       [this, activity, id = entities_.GetId(&entity), done = std::move(done),
-       fallback = std::move(fallback)](
-          const std::vector<std::string>& types) mutable {
+       fallback =
+           std::move(fallback)](const std::vector<std::string>& types) mutable {
         done(types);
         fallback.cancel();
         entities_.erase(id);

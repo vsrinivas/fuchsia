@@ -9,9 +9,9 @@ source_set("session_shell_settings") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.policy",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson:rapidjson",
+    "//sdk/fidl/fuchsia.ui.policy",
   ]
 }
 

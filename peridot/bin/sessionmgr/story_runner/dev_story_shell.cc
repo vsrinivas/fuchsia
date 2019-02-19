@@ -53,9 +53,8 @@ class DevStoryShellApp
   }
 
   // |fuchsia::modular::StoryShell|
-  void AddSurface(
-      fuchsia::modular::ViewConnection view_connection,
-      fuchsia::modular::SurfaceInfo /*surface_info*/) override {
+  void AddSurface(fuchsia::modular::ViewConnection view_connection,
+                  fuchsia::modular::SurfaceInfo /*surface_info*/) override {
     if (view_) {
       view_->ConnectView(std::move(view_connection.owner));
     } else {
@@ -68,7 +67,7 @@ class DevStoryShellApp
 
   // |fuchsia::modular::StoryShell|
   void DefocusSurface(std::string /*surface_id*/,
-                   DefocusSurfaceCallback callback) override {
+                      DefocusSurfaceCallback callback) override {
     callback();
   }
 
@@ -77,19 +76,19 @@ class DevStoryShellApp
       std::string /*container_name*/, fidl::StringPtr /*parent_id*/,
       fuchsia::modular::SurfaceRelation /* relation */,
       std::vector<fuchsia::modular::ContainerLayout> /*layout*/,
-      std::vector<
-          fuchsia::modular::ContainerRelationEntry> /* relationships */,
+      std::vector<fuchsia::modular::ContainerRelationEntry> /* relationships */,
       std::vector<fuchsia::modular::ContainerView> /* views */) override {}
 
   // |fuchsia::modular::StoryShell|
   void RemoveSurface(std::string /*surface_id*/) override {}
 
   // |fuchsia::modular::StoryShell|
-  void ReconnectView(fuchsia::modular::ViewConnection view_connection) override {}
+  void ReconnectView(
+      fuchsia::modular::ViewConnection view_connection) override {}
 
   // |fuchsia::modular::StoryShell|
   void UpdateSurface(fuchsia::modular::ViewConnection view_connection,
-        fuchsia::modular::SurfaceInfo /*surface_info*/) override {};
+                     fuchsia::modular::SurfaceInfo /*surface_info*/) override{};
 
   void Connect() {
     if (story_shell_context_.is_bound() && view_owner_request_) {

@@ -35,8 +35,7 @@ class Logger {
   // Returns a JSON formatted string of the executed |command| with respective
   // |params| to be logged.
   std::string GenerateJsonLogString(
-      const std::string& command,
-      const std::vector<std::string>& params) const;
+      const std::string& command, const std::vector<std::string>& params) const;
 
   std::string GenerateJsonLogString(
       const std::string& command,

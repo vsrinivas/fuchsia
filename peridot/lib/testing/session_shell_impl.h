@@ -54,7 +54,7 @@ class SessionShellImpl : fuchsia::modular::SessionShell {
   // |SessionShell|
   void AttachView(fuchsia::modular::ViewIdentifier view_id,
                   fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>
-                  view_owner) override;
+                      view_owner) override;
 
   // |SessionShell|
   void DetachView(fuchsia::modular::ViewIdentifier view_id,

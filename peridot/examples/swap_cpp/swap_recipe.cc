@@ -99,8 +99,9 @@ class RecipeApp : public modular::ViewApp {
   void SwapModule() {
     StartModule(kModuleQueries[query_index_]);
     query_index_ = (query_index_ + 1) % kModuleQueries.size();
-    async::PostDelayedTask(async_get_default_dispatcher(),
-                           [this] { SwapModule(); }, zx::sec(kSwapSeconds));
+    async::PostDelayedTask(
+        async_get_default_dispatcher(), [this] { SwapModule(); },
+        zx::sec(kSwapSeconds));
   }
 
   void StartModule(const std::string& module_query) {

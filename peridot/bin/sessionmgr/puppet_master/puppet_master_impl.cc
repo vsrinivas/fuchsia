@@ -42,8 +42,7 @@ void PuppetMasterImpl::DeleteStory(std::string story_name,
 void PuppetMasterImpl::GetStories(GetStoriesCallback done) {
   session_storage_->GetAllStoryData()->Then(
       [done = std::move(done)](
-          std::vector<fuchsia::modular::internal::StoryData>
-              all_story_data) {
+          std::vector<fuchsia::modular::internal::StoryData> all_story_data) {
         std::vector<std::string> result;
         for (auto& story : all_story_data) {
           result.push_back(std::move(story.story_info.id));

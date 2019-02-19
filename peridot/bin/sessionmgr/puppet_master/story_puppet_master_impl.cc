@@ -17,8 +17,7 @@ namespace {
 class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
  public:
   ExecuteOperation(SessionStorage* const session_storage,
-                   StoryCommandExecutor* const executor,
-                   std::string story_name,
+                   StoryCommandExecutor* const executor, std::string story_name,
                    fuchsia::modular::StoryOptions story_options,
                    std::vector<fuchsia::modular::StoryCommand> commands,
                    ResultCall done)

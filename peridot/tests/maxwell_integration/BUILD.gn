@@ -43,8 +43,8 @@ executable("suggestion_engine_test") {
 
   deps = [
     ":context_common",
-    ":test_suggestion_listener",
     ":maxwell_service_provider_bridge",
+    ":test_suggestion_listener",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/lib/rapidjson",

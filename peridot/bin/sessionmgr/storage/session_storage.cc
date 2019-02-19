@@ -325,9 +325,8 @@ SessionStorage::GetStoryData(fidl::StringPtr story_name) {
 // Returns a Future vector of StoryData for all stories in this session.
 FuturePtr<std::vector<fuchsia::modular::internal::StoryData>>
 SessionStorage::GetAllStoryData() {
-  auto ret =
-      Future<std::vector<fuchsia::modular::internal::StoryData>>::Create(
-          "SessionStorage.GetAllStoryData.ret");
+  auto ret = Future<std::vector<fuchsia::modular::internal::StoryData>>::Create(
+      "SessionStorage.GetAllStoryData.ret");
   operation_queue_.Add(
       new ReadAllDataCall<fuchsia::modular::internal::StoryData>(
           page(), kStoryDataKeyPrefix, XdrStoryData, ret->Completer()));

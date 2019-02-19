@@ -11,7 +11,8 @@ constexpr char kChildModuleName[] = "child";
 
 // Package URLs of the test components used here.
 constexpr char kChildModuleUrl[] =
-    "fuchsia-pkg://fuchsia.com/intent_test_child_module#meta/intent_test_child_module.cmx";
+    "fuchsia-pkg://fuchsia.com/intent_test_child_module#meta/"
+    "intent_test_child_module.cmx";
 
 // The action of the intent the parent module issues to the child module.
 constexpr char kChildModuleAction[] = "intent_test_child_module_action";

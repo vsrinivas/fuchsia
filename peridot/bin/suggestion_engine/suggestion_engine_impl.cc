@@ -181,8 +181,7 @@ void SuggestionEngineImpl::SubscribeToNext(
 
 // |fuchsia::modular::SuggestionProvider|
 void SuggestionEngineImpl::NotifyInteraction(
-    std::string suggestion_uuid,
-    fuchsia::modular::Interaction interaction) {
+    std::string suggestion_uuid, fuchsia::modular::Interaction interaction) {
   // Find the suggestion
   bool suggestion_in_ask = false;
   RankedSuggestion* suggestion = next_processor_.GetSuggestion(suggestion_uuid);
@@ -263,7 +262,7 @@ void SuggestionEngineImpl::RegisterProposalPublisher(
 // |fuchsia::modular::SuggestionEngine|
 void SuggestionEngineImpl::RegisterQueryHandler(
     std::string url, fidl::InterfaceHandle<fuchsia::modular::QueryHandler>
-                             query_handler_handle) {
+                         query_handler_handle) {
   query_processor_.RegisterQueryHandler(url, std::move(query_handler_handle));
 }
 

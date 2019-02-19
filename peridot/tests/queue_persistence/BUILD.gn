@@ -31,11 +31,11 @@ executable_package("queue_persistence_test_module") {
     ":defs",
     ":queue_persistence_test_service",
     "//garnet/public/lib/callback",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/lib/message_queue/cpp",
     "//peridot/tests/common:defs",
+    "//sdk/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -57,11 +57,11 @@ executable_package("queue_persistence_test_agent") {
   deps = [
     ":defs",
     ":queue_persistence_test_service",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/lib/message_queue/cpp",
     "//peridot/tests/common:defs",
+    "//sdk/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

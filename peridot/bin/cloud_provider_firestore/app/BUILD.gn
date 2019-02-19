@@ -14,10 +14,10 @@ executable("app") {
   deps = [
     ":lib",
     "//garnet/public/lib/component/cpp",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rng:system",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
@@ -41,7 +41,6 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firestore/fidl",
     "//peridot/bin/cloud_provider_firestore/firestore",
@@ -50,6 +49,7 @@ source_set("lib") {
     "//peridot/lib/rng",
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//sdk/fidl/fuchsia.modular.auth",
+    "//sdk/lib/fidl/cpp",
     "//third_party/grpc:grpc++",
   ]
 
@@ -76,7 +76,6 @@ source_set("unittests") {
   deps = [
     ":lib",
     "//garnet/public/lib/callback",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl:fxl_printers",
     "//garnet/public/lib/gtest",
     "//peridot/bin/cloud_provider_firestore/app/testing",
@@ -84,6 +83,7 @@ source_set("unittests") {
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth/testing",
     "//peridot/lib/rng:testing",
+    "//sdk/lib/fidl/cpp",
     "//third_party/protobuf:protobuf_full",
   ]
 }

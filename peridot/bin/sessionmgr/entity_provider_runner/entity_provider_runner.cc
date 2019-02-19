@@ -149,9 +149,7 @@ class EntityProviderRunner::DataEntity : fuchsia::modular::Entity {
 
  private:
   // |fuchsia::modular::Entity|
-  void GetTypes(GetTypesCallback result) override {
-    result(types_);
-  }
+  void GetTypes(GetTypesCallback result) override { result(types_); }
   // |fuchsia::modular::Entity|
   void GetData(std::string type, GetDataCallback result) override {
     auto it = data_.find(type);

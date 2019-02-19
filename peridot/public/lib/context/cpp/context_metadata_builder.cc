@@ -64,8 +64,7 @@ ContextMetadataBuilder& ContextMetadataBuilder::SetEntityTypes(
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::SetLinkPath(
-    const std::vector<std::string>& module_path,
-    const std::string& name) {
+    const std::vector<std::string>& module_path, const std::string& name) {
   LinkMetadata()->module_path.reset(module_path);
   LinkMetadata()->name = name;
   return *this;

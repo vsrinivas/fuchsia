@@ -11,15 +11,15 @@ executable_package("test_driver_module") {
     "test_driver_module.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.testing.runner",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:test_driver",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/integration_testing/cpp",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.testing.runner",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 

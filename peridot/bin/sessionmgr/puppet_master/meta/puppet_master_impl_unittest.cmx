@@ -1,10 +1,10 @@
 {
-  "program": {
-    "binary": "test/puppet_master_impl_unittest"
-  },
-  "sandbox": {
-    "services": [
-      "fuchsia.sys.Launcher"
-    ]
-  }
+    "program": {
+        "binary": "test/puppet_master_impl_unittest"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
 }

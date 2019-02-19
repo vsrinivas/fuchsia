@@ -29,8 +29,8 @@ source_set("operations") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:json_xdr",
-    "//sdk/fidl/fuchsia.ledger",
     "//peridot/public/lib/async/cpp:operation",
+    "//sdk/fidl/fuchsia.ledger",
   ]
 }
 
@@ -47,14 +47,14 @@ source_set("page_client") {
   deps = [
     ":status",
     ":types",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:clone",
-    "//sdk/fidl/fuchsia.ledger",
     "//peridot/public/lib/async/cpp:operation",
+    "//sdk/fidl/fuchsia.ledger",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 

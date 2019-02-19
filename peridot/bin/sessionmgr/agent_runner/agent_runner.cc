@@ -91,11 +91,12 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
     });
   }
 
-  async::PostDelayedTask(async_get_default_dispatcher(),
-                         [termination_callback] {
-                           termination_callback(/* from_timeout= */ true);
-                         },
-                         kTeardownTimeout);
+  async::PostDelayedTask(
+      async_get_default_dispatcher(),
+      [termination_callback] {
+        termination_callback(/* from_timeout= */ true);
+      },
+      kTeardownTimeout);
 }
 
 void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url,

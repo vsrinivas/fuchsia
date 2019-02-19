@@ -16,7 +16,8 @@ constexpr char kTestAgent[] =
     "fuchsia-pkg://fuchsia.com/trigger_test_agent#meta/trigger_test_agent.cmx";
 
 const char kModuleUrl[] =
-    "fuchsia-pkg://fuchsia.com/trigger_test_module#meta/trigger_test_module.cmx";
+    "fuchsia-pkg://fuchsia.com/trigger_test_module#meta/"
+    "trigger_test_module.cmx";
 
 const char kModuleAction[] = "trigger_test_action";
 

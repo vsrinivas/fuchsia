@@ -14,8 +14,7 @@ class GetLinkPathForParameterNameCall
  public:
   GetLinkPathForParameterNameCall(StoryStorage* const story_storage,
                                   std::vector<std::string> module_name,
-                                  std::string link_name,
-                                  ResultCall result_call)
+                                  std::string link_name, ResultCall result_call)
       : Operation("AddModCommandRunner::GetLinkPathForParameterNameCall",
                   std::move(result_call)),
         story_storage_(story_storage),
@@ -60,8 +59,8 @@ class GetLinkPathForParameterNameCall
 
 void AddGetLinkPathForParameterNameOperation(
     OperationContainer* const operation_container,
-    StoryStorage* const story_storage,
-    std::vector<std::string> module_name, std::string link_name,
+    StoryStorage* const story_storage, std::vector<std::string> module_name,
+    std::string link_name,
     std::function<void(fuchsia::modular::LinkPathPtr)> result_call) {
   operation_container->Add(new GetLinkPathForParameterNameCall(
       story_storage, std::move(module_name), std::move(link_name),

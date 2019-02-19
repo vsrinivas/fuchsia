@@ -23,11 +23,11 @@ source_set("add_mod_call") {
     ":get_link_path_for_parameter_name_call",
     ":get_types_from_entity_call",
     ":initialize_chain_call",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/module_manifest:module_facet_reader",
     "//peridot/public/lib/entity/cpp:json",
+    "//sdk/lib/fidl/cpp",
   ]
 
   public_deps = [
@@ -50,10 +50,10 @@ source_set("find_modules_call") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/sessionmgr/storage:story_storage",
     "//peridot/lib/fidl:clone",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/entity/cpp:json",
     "//peridot/public/lib/fostr/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -66,8 +66,8 @@ source_set("get_link_path_for_parameter_name_call") {
   deps = [
     "//peridot/bin/sessionmgr/storage:story_storage",
     "//peridot/lib/fidl:clone",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -80,8 +80,8 @@ source_set("initialize_chain_call") {
   deps = [
     ":set_link_value_call",
     "//peridot/bin/sessionmgr/storage:story_storage",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -94,8 +94,8 @@ source_set("get_types_from_entity_call") {
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -107,7 +107,7 @@ source_set("set_link_value_call") {
 
   deps = [
     "//peridot/bin/sessionmgr/storage:story_storage",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }

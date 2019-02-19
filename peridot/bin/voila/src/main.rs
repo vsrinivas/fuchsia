@@ -59,8 +59,13 @@ struct ReplicaData {
 
 impl VoilaViewAssistant {
     fn create_replica(
-        &mut self, key: u32, profile_id: &str, url: &str, session: &SessionPtr,
-        view_container: &fidl_fuchsia_ui_viewsv1::ViewContainerProxy, import_node: &ImportNode,
+        &mut self,
+        key: u32,
+        profile_id: &str,
+        url: &str,
+        session: &SessionPtr,
+        view_container: &fidl_fuchsia_ui_viewsv1::ViewContainerProxy,
+        import_node: &ImportNode,
     ) -> Result<(), Error> {
         let replica_random_number = rand::thread_rng().gen_range(1, 1000000);
         let replica_id = format!("voila-r{}", replica_random_number.to_string());
@@ -103,10 +108,7 @@ impl VoilaViewAssistant {
         let host_import_token = host_node.export_as_request();
         import_node.add_child(&host_node);
         let view_data = ChildViewData::new(key, host_node);
-        let session_data = ReplicaData {
-            sessionmgr_app: app,
-            view: view_data,
-        };
+        let session_data = ReplicaData { sessionmgr_app: app, view: view_data };
         self.replicas.insert(key, session_data);
         view_container.add_child(key, view_owner_client, host_import_token)?;
 
@@ -140,28 +142,15 @@ impl VoilaViewAssistant {
 
 impl ViewAssistant for VoilaViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        context
-            .import_node
-            .resource()
-            .set_event_mask(gfx::METRICS_EVENT_MASK);
+        context.import_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
         context.import_node.add_child(&self.background_node);
         let material = Material::new(context.session.clone());
-        material.set_color(ColorRgba {
-            red: 0x00,
-            green: 0x00,
-            blue: 0xff,
-            alpha: 0xff,
-        });
+        material.set_color(ColorRgba { red: 0x00, green: 0x00, blue: 0xff, alpha: 0xff });
         self.background_node.set_material(&material);
 
         context.import_node.add_child(&self.circle_node);
         let material = Material::new(context.session.clone());
-        material.set_color(ColorRgba {
-            red: 0xff,
-            green: 0x00,
-            blue: 0xff,
-            alpha: 0xff,
-        });
+        material.set_color(ColorRgba { red: 0xff, green: 0x00, blue: 0xff, alpha: 0xff });
         self.circle_node.set_material(&material);
 
         let profile_random_number = rand::thread_rng().gen_range(1, 1000000);
@@ -193,19 +182,14 @@ impl ViewAssistant for VoilaViewAssistant {
             context.size.width,
             context.size.height,
         ));
-        self.background_node
-            .set_translation(center_x, center_y, 0.0);
+        self.background_node.set_translation(center_x, center_y, 0.0);
 
         let circle_radius = context.size.width.min(context.size.height) * 0.25;
-        self.circle_node
-            .set_shape(&Circle::new(context.session.clone(), circle_radius));
+        self.circle_node.set_shape(&Circle::new(context.session.clone(), circle_radius));
         self.circle_node.set_translation(center_x, center_y, 8.0);
 
-        let mut views: Vec<&mut ChildViewData> = self
-            .replicas
-            .iter_mut()
-            .map(|(_key, child_session)| &mut child_session.view)
-            .collect();
+        let mut views: Vec<&mut ChildViewData> =
+            self.replicas.iter_mut().map(|(_key, child_session)| &mut child_session.view).collect();
         layout(&mut views, context.view_container, &context.size)?;
         Ok(())
     }

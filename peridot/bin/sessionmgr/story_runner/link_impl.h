@@ -65,8 +65,7 @@ class LinkImpl : public Link {
 
   void Set(fidl::VectorPtr<std::string> path,
            fuchsia::mem::Buffer json) override;
-  void Get(fidl::VectorPtr<std::string> path,
-           GetCallback callback) override;
+  void Get(fidl::VectorPtr<std::string> path, GetCallback callback) override;
   void Erase(std::vector<std::string> path) override;
   void GetEntity(GetEntityCallback callback) override;
   void SetEntity(fidl::StringPtr entity_reference) override;

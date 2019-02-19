@@ -6,7 +6,6 @@
 
 namespace modular {
 
-
 std::unique_ptr<StoryMutator> TestMutator::Create(TestMutator** ptr) {
   auto mutator = std::make_unique<TestMutator>();
   *ptr = mutator.get();

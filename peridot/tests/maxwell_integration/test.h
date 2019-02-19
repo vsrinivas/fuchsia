@@ -13,9 +13,9 @@
 #include <lib/svc/cpp/services.h>
 
 #include "gtest/gtest.h"
-#include "peridot/tests/maxwell_integration/maxwell_service_provider_bridge.h"
 #include "peridot/lib/testing/component_context_fake.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
+#include "peridot/tests/maxwell_integration/maxwell_service_provider_bridge.h"
 
 namespace maxwell {
 

@@ -9,11 +9,14 @@ namespace {
 
 // Package URLs of the test components used here.
 constexpr char kOneAgentUrl[] =
-    "fuchsia-pkg://fuchsia.com/component_context_test_one_agent#meta/component_context_test_one_agent.cmx";
+    "fuchsia-pkg://fuchsia.com/component_context_test_one_agent#meta/"
+    "component_context_test_one_agent.cmx";
 constexpr char kUnstoppableAgent[] =
-    "fuchsia-pkg://fuchsia.com/component_context_test_unstoppable_agent#meta/component_context_test_unstoppable_agent.cmx";
+    "fuchsia-pkg://fuchsia.com/component_context_test_unstoppable_agent#meta/"
+    "component_context_test_unstoppable_agent.cmx";
 constexpr char kTwoAgentUrl[] =
-    "fuchsia-pkg://fuchsia.com/component_context_test_two_agent#meta/component_context_test_two_agent.cmx";
+    "fuchsia-pkg://fuchsia.com/component_context_test_two_agent#meta/"
+    "component_context_test_two_agent.cmx";
 
 constexpr int kTotalSimultaneousTests = 2;
 

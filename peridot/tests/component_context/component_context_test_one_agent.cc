@@ -57,13 +57,13 @@ class TestApp : ComponentContextTestService {
     FXL_LOG(INFO) << "TestOneAgent::Terminate()";
     // Before reporting that we stop, we wait until two_agent has connected.
     Await("two_agent_connected", [this, done] {
-          FXL_LOG(INFO) << "TestOneAgent::Terminate() GET";
-          // Killing the agent controller should stop it.
-          two_agent_controller_.Unbind();
-          two_agent_connected_.Pass();
-          Signal("one_agent_stopped");
-          modular::testing::Done(done);
-        });
+      FXL_LOG(INFO) << "TestOneAgent::Terminate() GET";
+      // Killing the agent controller should stop it.
+      two_agent_controller_.Unbind();
+      two_agent_connected_.Pass();
+      Signal("one_agent_stopped");
+      modular::testing::Done(done);
+    });
   }
 
  private:

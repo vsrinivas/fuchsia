@@ -29,17 +29,18 @@ class EventStreamTest : public ::gtest::TestLoopFixture {
     socket::SocketPair socket;
     producer_socket_ = std::move(socket.socket1);
     event_stream_ = std::make_unique<EventStream>();
-    event_stream_->Start(std::move(socket.socket2),
-                         [this](Status status, const std::string& event,
-                                const std::string& data) {
-                           status_.push_back(status);
-                           events_.push_back(event);
-                           data_.push_back(data);
-                           if (delete_on_event_) {
-                             event_stream_.reset();
-                           }
-                         },
-                         []() {});
+    event_stream_->Start(
+        std::move(socket.socket2),
+        [this](Status status, const std::string& event,
+               const std::string& data) {
+          status_.push_back(status);
+          events_.push_back(event);
+          data_.push_back(data);
+          if (delete_on_event_) {
+            event_stream_.reset();
+          }
+        },
+        []() {});
   }
 
   void TearDown() override {

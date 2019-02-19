@@ -23,11 +23,11 @@ executable_package("component_context_test_module") {
     ":component_context_test_service",
     ":defs",
     "//garnet/public/lib/callback",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/lib/message_queue/cpp",
     "//peridot/tests/common:defs",
+    "//sdk/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -50,11 +50,11 @@ executable_package("component_context_test_one_agent") {
     ":component_context_test_service",
     ":defs",
     "//garnet/public/lib/fsl",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/lib/message_queue/cpp",
     "//peridot/tests/common:defs",
+    "//sdk/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -75,10 +75,10 @@ executable_package("component_context_test_two_agent") {
 
   deps = [
     ":defs",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
+    "//sdk/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -99,10 +99,10 @@ executable_package("component_context_test_unstoppable_agent") {
 
   deps = [
     ":defs",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
+    "//sdk/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

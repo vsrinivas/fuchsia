@@ -168,8 +168,8 @@ class FindModulesByTypesTest : public gtest::TestLoopFixture {
   };
 
   std::string GetMappingFromQuery(
-      const std::vector<
-          fuchsia::modular::FindModulesByTypesParameterMapping>& mapping,
+      const std::vector<fuchsia::modular::FindModulesByTypesParameterMapping>&
+          mapping,
       std::string query_constraint_name) {
     for (auto& item : mapping) {
       if (item.query_constraint_name == query_constraint_name) {

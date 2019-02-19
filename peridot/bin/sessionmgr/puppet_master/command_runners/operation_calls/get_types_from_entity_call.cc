@@ -23,9 +23,8 @@ class GetTypesFromEntityCall : public Operation<std::vector<std::string>> {
  private:
   void Run() override {
     entity_resolver_->ResolveEntity(entity_reference_, entity_.NewRequest());
-    entity_->GetTypes([this](const std::vector<std::string>& types) {
-      Done(types);
-    });
+    entity_->GetTypes(
+        [this](const std::vector<std::string>& types) { Done(types); });
   }
 
   fuchsia::modular::EntityResolver* const entity_resolver_;

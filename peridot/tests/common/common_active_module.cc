@@ -44,16 +44,17 @@ class ActiveModule {
             fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
 
   void ScheduleActive() {
-    async::PostDelayedTask(async_get_default_dispatcher(),
-                           [this, weak_this = weak_ptr_factory_.GetWeakPtr()] {
-                             if (!weak_this) {
-                               return;
-                             }
-                             module_host_->module_context()->Active();
-                             Signal(kCommonActiveModuleOngoing);
-                             ScheduleActive();
-                           },
-                           zx::duration(ZX_SEC(1)));
+    async::PostDelayedTask(
+        async_get_default_dispatcher(),
+        [this, weak_this = weak_ptr_factory_.GetWeakPtr()] {
+          if (!weak_this) {
+            return;
+          }
+          module_host_->module_context()->Active();
+          Signal(kCommonActiveModuleOngoing);
+          ScheduleActive();
+        },
+        zx::duration(ZX_SEC(1)));
   }
 
   // Called by ModuleDriver.

@@ -43,10 +43,11 @@ bool IsRetriableError(fuchsia::auth::Status status) {
 }
 }  // namespace
 
-FirebaseAuthImpl::FirebaseAuthImpl(
-    Config config, async_dispatcher_t* dispatcher, rng::Random* random,
-    fuchsia::auth::TokenManagerPtr token_manager,
-    component::StartupContext* startup_context)
+FirebaseAuthImpl::FirebaseAuthImpl(Config config,
+                                   async_dispatcher_t* dispatcher,
+                                   rng::Random* random,
+                                   fuchsia::auth::TokenManagerPtr token_manager,
+                                   component::StartupContext* startup_context)
     : config_(std::move(config)),
       token_manager_(std::move(token_manager)),
       backoff_(std::make_unique<backoff::ExponentialBackoff>(

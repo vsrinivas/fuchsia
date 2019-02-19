@@ -9,7 +9,8 @@ namespace {
 
 // Package URLs of the test components used here.
 constexpr char kSuggestionTestModule[] =
-    "fuchsia-pkg://fuchsia.com/suggestion_test_module#meta/suggestion_test_module.cmx";
+    "fuchsia-pkg://fuchsia.com/suggestion_test_module#meta/"
+    "suggestion_test_module.cmx";
 
 constexpr char kSuggestionTestAction[] = "suggestion_test_action";
 

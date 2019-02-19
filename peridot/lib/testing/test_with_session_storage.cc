@@ -59,9 +59,9 @@ void TestWithSessionStorage::SetLinkValue(
   bool done{};
   int context;
   story_storage
-      ->UpdateLinkValue(link_path,
-                        [&](fidl::StringPtr* value) { *value = link_value; },
-                        &context)
+      ->UpdateLinkValue(
+          link_path, [&](fidl::StringPtr* value) { *value = link_value; },
+          &context)
       ->Then([&](StoryStorage::Status status) {
         ASSERT_EQ(status, StoryStorage::Status::OK);
         done = true;

@@ -157,7 +157,8 @@ void UserIntelligenceProviderImpl::StartSuggestionEngine() {
   service_list->provider = std::move(service_provider);
 
   fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = "fuchsia-pkg://fuchsia.com/suggestion_engine#meta/suggestion_engine.cmx";
+  launch_info.url =
+      "fuchsia-pkg://fuchsia.com/suggestion_engine#meta/suggestion_engine.cmx";
   launch_info.directory_request = suggestion_services_.NewRequest();
   launch_info.additional_services = std::move(service_list);
   context_->launcher()->CreateComponent(std::move(launch_info), nullptr);

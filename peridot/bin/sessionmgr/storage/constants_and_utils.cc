@@ -47,8 +47,7 @@ std::string MakeMessageQueueKey(const std::string& queue_token) {
   return kMessageQueueKeyPrefix + queue_token;
 }
 
-std::string EncodeModulePath(
-    const std::vector<std::string>& module_path) {
+std::string EncodeModulePath(const std::vector<std::string>& module_path) {
   std::vector<std::string> segments;
   segments.reserve(module_path.size());
   for (const auto& module_path_part : module_path) {
@@ -93,8 +92,7 @@ std::string MakeLinkKey(const fuchsia::modular::LinkPath& link_path) {
 }
 
 std::string MakeModuleKey(const std::vector<std::string>& module_path) {
-  FXL_DCHECK(module_path.size() > 0)
-      << EncodeModulePath(module_path);
+  FXL_DCHECK(module_path.size() > 0) << EncodeModulePath(module_path);
   FXL_DCHECK(module_path.at(0).size() > 0) << EncodeModulePath(module_path);
   std::string key{kModuleKeyPrefix};
   key.append(EncodeModulePath(module_path));

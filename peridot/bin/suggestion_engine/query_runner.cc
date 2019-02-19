@@ -88,13 +88,14 @@ void QueryRunner::Run(const std::vector<QueryHandlerRecord>& query_handlers) {
       DispatchQuery(handler_record);
     }
 
-    async::PostDelayedTask(async_get_default_dispatcher(),
-                           [w = weak_ptr_factory_.GetWeakPtr()] {
-                             if (w) {
-                               w->TimeOut();
-                             }
-                           },
-                           kQueryTimeout);
+    async::PostDelayedTask(
+        async_get_default_dispatcher(),
+        [w = weak_ptr_factory_.GetWeakPtr()] {
+          if (w) {
+            w->TimeOut();
+          }
+        },
+        kQueryTimeout);
   }
 }
 

@@ -1,15 +1,4 @@
 {
-    "program": {
-      "binary": "bin/app"
-    },
-    "sandbox": {
-      "services": [
-        "fuchsia.modular.ComponentContext",
-        "fuchsia.modular.ModuleContext",
-        "fuchsia.testing.runner.TestRunner",
-        "fuchsia.testing.runner.TestRunnerStore"
-      ]
-    },
     "facets": {
         "fuchsia.module": {
             "@version": 2,
@@ -21,5 +10,16 @@
             ],
             "suggestion_headline": "Active module"
         }
+    },
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.modular.ComponentContext",
+            "fuchsia.modular.ModuleContext",
+            "fuchsia.testing.runner.TestRunner",
+            "fuchsia.testing.runner.TestRunnerStore"
+        ]
     }
 }

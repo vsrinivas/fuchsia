@@ -28,8 +28,8 @@ source_set("set_link_value_command_runner") {
 
   public_deps = [
     ":command_runner",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 
@@ -76,7 +76,6 @@ executable("add_mod_command_runner_unittest") {
 
   deps = [
     ":add_mod_command_runner",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
@@ -84,6 +83,7 @@ executable("add_mod_command_runner_unittest") {
     "//peridot/lib/testing:module_facet_reader_fake",
     "//peridot/lib/testing:module_resolver_fake",
     "//peridot/lib/testing:test_with_session_storage",
+    "//sdk/lib/fidl/cpp",
     "//third_party/googletest:gtest_main",
   ]
 }

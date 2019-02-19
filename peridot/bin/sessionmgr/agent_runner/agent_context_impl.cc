@@ -37,8 +37,9 @@ class AgentContextImpl::InitializeCall : public Operation<> {
   InitializeCall(AgentContextImpl* const agent_context_impl,
                  fuchsia::sys::Launcher* const launcher,
                  fuchsia::modular::AppConfig agent_config)
-      : Operation("AgentContextImpl::InitializeCall", [] {},
-                  agent_context_impl->url_),
+      : Operation(
+            "AgentContextImpl::InitializeCall", [] {},
+            agent_context_impl->url_),
         agent_context_impl_(agent_context_impl),
         launcher_(launcher),
         agent_config_(std::move(agent_config)) {}

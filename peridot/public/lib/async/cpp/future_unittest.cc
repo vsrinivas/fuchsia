@@ -546,9 +546,10 @@ TEST_F(FutureTest, WaitWithTimeoutOnZeroFutures) {
   AsyncExpectations async_expectations;
   async::TestLoop loop;
 
-  auto f = WaitWithTimeout(__PRETTY_FUNCTION__, loop.dispatcher(), {},
-                           [](const std::string& msg) { FAIL() << msg; },
-                           std::vector<FuturePtr<int>>{});
+  auto f = WaitWithTimeout(
+      __PRETTY_FUNCTION__, loop.dispatcher(), {},
+      [](const std::string& msg) { FAIL() << msg; },
+      std::vector<FuturePtr<int>>{});
 
   loop.RunUntilIdle();
 

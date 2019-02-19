@@ -1,8 +1,8 @@
 {
-  "program": {
-    "binary": "test/story_controller_impl_unittest"
-  },
-  "sandbox": {
-    "services": []
-  }
+    "program": {
+        "binary": "test/story_controller_impl_unittest"
+    },
+    "sandbox": {
+        "services": []
+    }
 }

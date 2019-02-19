@@ -73,10 +73,10 @@ class TestModule {
 
   void TestAgentConnected() {
     Await("one_agent_connected", [this] {
-                                   FXL_LOG(INFO) << "TestModule One Agent Connected";
-                                   one_agent_connected_.Pass();
-                                   TestMessageQueue();
-                               });
+      FXL_LOG(INFO) << "TestModule One Agent Connected";
+      one_agent_connected_.Pass();
+      TestMessageQueue();
+    });
   }
 
   TestPoint msg_queue_communicated_{

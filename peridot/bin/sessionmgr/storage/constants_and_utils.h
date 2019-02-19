@@ -92,8 +92,7 @@ constexpr char kCharsToEscape[] = ":/";
 constexpr char kSubSeparator[] = ":";
 
 std::string EncodeLinkPath(const fuchsia::modular::LinkPath& link_path);
-std::string EncodeModulePath(
-    const std::vector<std::string>& module_path);
+std::string EncodeModulePath(const std::vector<std::string>& module_path);
 std::string EncodeModuleComponentNamespace(const std::string& story_id);
 
 // More notes:

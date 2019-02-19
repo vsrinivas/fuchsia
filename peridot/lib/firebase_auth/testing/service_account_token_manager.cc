@@ -47,8 +47,7 @@ void ServiceAccountTokenManager::Authorize(
 
 void ServiceAccountTokenManager::GetAccessToken(
     AppConfig app_config, std::string /*user_profile_id*/,
-    std::vector<std::string> /*app_scopes*/,
-    GetAccessTokenCallback callback) {
+    std::vector<std::string> /*app_scopes*/, GetAccessTokenCallback callback) {
   FXL_NOTIMPLEMENTED();
   callback(fuchsia::auth::Status::INTERNAL_ERROR /*Not implemented*/, nullptr);
 }

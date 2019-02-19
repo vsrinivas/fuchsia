@@ -620,7 +620,8 @@ void StoryProviderImpl::OnStoryStorageUpdated(
   // StoryData and get runtime state available from it.
   //
   // Otherwise, use defaults for an unloaded story.
-  fuchsia::modular::StoryState runtime_state = fuchsia::modular::StoryState::STOPPED;
+  fuchsia::modular::StoryState runtime_state =
+      fuchsia::modular::StoryState::STOPPED;
   fuchsia::modular::StoryVisibilityState visibility_state =
       fuchsia::modular::StoryVisibilityState::DEFAULT;
   auto i = story_runtime_containers_.find(story_data.story_info.id);

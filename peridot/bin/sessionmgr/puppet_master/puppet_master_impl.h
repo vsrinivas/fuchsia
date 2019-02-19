@@ -36,8 +36,7 @@ class PuppetMasterImpl : public fuchsia::modular::PuppetMaster {
                         request) override;
 
   // |PuppetMaster|
-  void DeleteStory(std::string story_name,
-                   DeleteStoryCallback done) override;
+  void DeleteStory(std::string story_name, DeleteStoryCallback done) override;
 
   // |PuppetMaster|
   void GetStories(GetStoriesCallback done) override;

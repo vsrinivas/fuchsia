@@ -1,10 +1,10 @@
 {
-  "program": {
-    "binary": "test/link_impl_unittest"
-  },
-  "sandbox": {
-    "services": [
-      "fuchsia.sys.Launcher"
-    ]
-  }
+    "program": {
+        "binary": "test/link_impl_unittest"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
 }

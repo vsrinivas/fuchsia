@@ -14,10 +14,10 @@
 
 #include <lib/async/cpp/future.h>
 #include <lib/async_promise/executor.h>
+#include <lib/fit/promise.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 #include <lib/fxl/memory/weak_ptr.h>
-#include <lib/fit/promise.h>
 
 namespace modular {
 class OperationBase;

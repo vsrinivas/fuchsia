@@ -85,8 +85,7 @@ LinkImpl::LinkImpl(StoryStorage* const story_storage, LinkPath link_path)
 
 LinkImpl::~LinkImpl() = default;
 
-void LinkImpl::Get(fidl::VectorPtr<std::string> path,
-                   GetCallback callback) {
+void LinkImpl::Get(fidl::VectorPtr<std::string> path, GetCallback callback) {
   // TODO: Need error reporting. MI4-1082
   story_storage_->GetLinkValue(link_path_)
       ->WeakMap(
@@ -133,8 +132,7 @@ void LinkImpl::Set(fidl::VectorPtr<std::string> path,
   Set(std::move(path), json_string);
 }
 
-void LinkImpl::Set(fidl::VectorPtr<std::string> path,
-                   const std::string& json) {
+void LinkImpl::Set(fidl::VectorPtr<std::string> path, const std::string& json) {
   // TODO: Need error reporting. MI4-1082
   story_storage_
       ->UpdateLinkValue(

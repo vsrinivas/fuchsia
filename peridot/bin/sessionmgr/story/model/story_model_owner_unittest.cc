@@ -217,9 +217,8 @@ TEST_F(StoryModelOwnerTest, ObserversAreNotNotifiedOnNoChange) {
   auto observer = owner->NewObserver();
 
   bool got_update{false};
-  observer->RegisterListener([&](const StoryModel& model) {
-    got_update = true;
-  });
+  observer->RegisterListener(
+      [&](const StoryModel& model) { got_update = true; });
 
   std::vector<StoryModelMutation> commands;
   commands.resize(1);

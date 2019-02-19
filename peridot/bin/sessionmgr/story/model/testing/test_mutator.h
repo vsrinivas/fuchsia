@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_SESSIONMGR_STORY_MODEL_TESTING_TEST_MUTATOR_H_
+#define PERIDOT_BIN_SESSIONMGR_STORY_MODEL_TESTING_TEST_MUTATOR_H_
 
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
 #include <lib/fit/bridge.h>
@@ -24,8 +25,9 @@ namespace modular {
 // unblock.
 class TestMutator : public StoryMutator {
  public:
-  // Convenience factory allowing the caller to retain a pointer to the TestMutator
-  // when constructing a class that accepts a StoryMutator as a constructor argument.
+  // Convenience factory allowing the caller to retain a pointer to the
+  // TestMutator when constructing a class that accepts a StoryMutator as a
+  // constructor argument.
   //
   // Usage:
   //
@@ -45,3 +47,5 @@ class TestMutator : public StoryMutator {
 };
 
 }  // namespace modular
+
+#endif  // PERIDOT_BIN_SESSIONMGR_STORY_MODEL_TESTING_TEST_MUTATOR_H_

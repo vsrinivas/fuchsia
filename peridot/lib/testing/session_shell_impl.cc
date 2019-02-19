@@ -13,14 +13,15 @@ namespace testing {
 SessionShellImpl::SessionShellImpl() = default;
 SessionShellImpl::~SessionShellImpl() = default;
 
-fidl::InterfaceRequestHandler<fuchsia::modular::SessionShell> SessionShellImpl::GetHandler() {
+fidl::InterfaceRequestHandler<fuchsia::modular::SessionShell>
+SessionShellImpl::GetHandler() {
   return bindings_.GetHandler(this);
 }
 
 // |SessionShell|
-void SessionShellImpl::AttachView(fuchsia::modular::ViewIdentifier view_id,
-                                  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>
-                                  view_owner) {
+void SessionShellImpl::AttachView(
+    fuchsia::modular::ViewIdentifier view_id,
+    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner) {
   on_attach_view_(std::move(view_id));
 }
 
@@ -30,8 +31,8 @@ void SessionShellImpl::DetachView(fuchsia::modular::ViewIdentifier view_id,
   on_detach_view_(std::move(view_id));
 
   // Used to simulate a sluggish shell that hits the timeout.
-  async::PostDelayedTask(async_get_default_dispatcher(),
-                         std::move(done), detach_delay_);
+  async::PostDelayedTask(async_get_default_dispatcher(), std::move(done),
+                         detach_delay_);
 }
 
 }  // namespace testing

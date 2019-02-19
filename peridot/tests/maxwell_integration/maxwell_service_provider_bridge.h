@@ -19,9 +19,7 @@ class MaxwellServiceProviderBridge {
   MaxwellServiceProviderBridge(fuchsia::sys::Environment* parent_env);
 
   zx::channel OpenAsDirectory();
-  const std::vector<std::string>& service_names() {
-    return service_names_;
-  }
+  const std::vector<std::string>& service_names() { return service_names_; }
 
   template <typename Interface>
   void AddService(fidl::InterfaceRequestHandler<Interface> handler) {

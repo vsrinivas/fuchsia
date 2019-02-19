@@ -86,9 +86,8 @@ class StoryStorage : public PageClient {
   //
   // It is illegal to change ModuleDataPtr->module_path in |mutate_fn| or to
   // reset to null an otherwise initialized ModuleDataPtr.
-  FuturePtr<> UpdateModuleData(
-      const std::vector<std::string>& module_path,
-      std::function<void(ModuleDataPtr*)> mutate_fn);
+  FuturePtr<> UpdateModuleData(const std::vector<std::string>& module_path,
+                               std::function<void(ModuleDataPtr*)> mutate_fn);
 
   // Returns all ModuleData entries for all mods.
   FuturePtr<std::vector<ModuleData>> ReadAllModuleData();

@@ -1,8 +1,8 @@
 {
-  "program": {
-    "binary": "test/story_model_owner_unittest"
-  },
-  "sandbox": {
-    "services": []
-  }
+    "program": {
+        "binary": "test/story_model_owner_unittest"
+    },
+    "sandbox": {
+        "services": []
+    }
 }

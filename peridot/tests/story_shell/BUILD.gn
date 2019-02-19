@@ -28,20 +28,20 @@ executable_package("story_shell_test_story_shell") {
 
   deps = [
     ":defs",
-    "//sdk/fidl/fuchsia.testing.runner",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:clone",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_base",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.testing.runner",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 
@@ -61,10 +61,6 @@ executable_package("story_shell_test_session_shell") {
 
   deps = [
     ":defs",
-    "//sdk/fidl/fuchsia.testing.runner",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
@@ -72,9 +68,13 @@ executable_package("story_shell_test_session_shell") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_main",
     "//peridot/lib/testing:session_shell_base",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.testing.runner",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/lib/fidl/cpp",
   ]
 }

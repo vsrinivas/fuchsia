@@ -8,7 +8,8 @@
 namespace modular {
 
 inline constexpr char kCloudProviderFirestoreAppUrl[] =
-    "fuchsia-pkg://fuchsia.com/cloud_provider_firestore#meta/cloud_provider_firestore.cmx";
+    "fuchsia-pkg://fuchsia.com/cloud_provider_firestore#meta/"
+    "cloud_provider_firestore.cmx";
 inline constexpr char kLedgerAppUrl[] =
     "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
 

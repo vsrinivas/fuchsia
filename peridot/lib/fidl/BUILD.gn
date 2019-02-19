@@ -42,9 +42,9 @@ source_set("json_xdr") {
   # MUST be public so clients pick up the defines from
   # //third_party/rapidjson:rapidjson_config
   public_deps = [
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson",
+    "//sdk/lib/fidl/cpp",
     "//third_party/rapidjson",
   ]
 }
@@ -56,8 +56,8 @@ source_set("proxy") {
   ]
 
   deps = [
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 
@@ -66,8 +66,8 @@ source_set("clone") {
     "clone.h",
   ]
   deps = [
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 
@@ -82,8 +82,8 @@ source_set("environment") {
   ]
 
   deps = [
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 
@@ -93,14 +93,14 @@ source_set("single_service_app") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/fidl/fuchsia.ui.viewsv1token",
-    "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
-    "//garnet/public/lib/fxl",
-    "//sdk/fidl/fuchsia.modular",
     "//zircon/public/lib/zx",
   ]
 }
@@ -118,11 +118,11 @@ source_set("view_host") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/fidl/fuchsia.ui.viewsv1token",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
   ]
 }
 

@@ -26,11 +26,7 @@ executable_package("sessionmgr") {
     ":presentation_provider",
     ":session_ctl",
     ":user_intelligence_provider",
-    "//sdk/fidl/fuchsia.net.oldhttp",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/basemgr/cobalt",
@@ -62,14 +58,18 @@ executable_package("sessionmgr") {
     "//peridot/lib/module_manifest:module_facet_reader_impl",
     "//peridot/lib/rapidjson",
     "//peridot/lib/scoped_tmpfs",
+    "//peridot/public/lib/app_driver/cpp:app_driver",
+    "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/fidl/fuchsia.speech",
-    "//peridot/public/lib/app_driver/cpp:app_driver",
-    "//peridot/public/lib/async/cpp:operation",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
@@ -102,15 +102,15 @@ executable_package("dev_session_shell") {
   ]
 
   deps = [
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:test_driver",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
@@ -149,9 +149,9 @@ source_set("component_context") {
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
+    "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
-    "//peridot/public/lib/async/cpp:operation",
   ]
 }
 
@@ -162,7 +162,6 @@ source_set("focus") {
   ]
 
   deps = [
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/sessionmgr/storage:constants_and_utils",
@@ -173,10 +172,11 @@ source_set("focus") {
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
     "//peridot/lib/rapidjson",
+    "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
-    "//peridot/public/lib/async/cpp:operation",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 
@@ -187,10 +187,10 @@ source_set("presentation_provider") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 
@@ -208,11 +208,11 @@ source_set("user_intelligence_provider") {
     ":focus",
     ":intelligence_services",
     ":rate_limited_retry",
-    "//sdk/fidl/fuchsia.bluetooth.le",
-    "//sdk/fidl/fuchsia.net.oldhttp",
     "//peridot/bin/basemgr/cobalt",
     "//peridot/lib:maxwell_internal",
+    "//sdk/fidl/fuchsia.bluetooth.le",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.net.oldhttp",
     "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }

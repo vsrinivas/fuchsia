@@ -21,16 +21,14 @@ class StoryCommandExecutor;
 // story command execution to a StoryCommandExecutor.
 class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
  public:
-  StoryPuppetMasterImpl(std::string story_name,
-                        OperationContainer* operations,
+  StoryPuppetMasterImpl(std::string story_name, OperationContainer* operations,
                         SessionStorage* session_storage,
                         StoryCommandExecutor* executor);
   ~StoryPuppetMasterImpl() override;
 
  private:
   // |StoryPuppetMaster|
-  void Enqueue(
-      std::vector<fuchsia::modular::StoryCommand> commands) override;
+  void Enqueue(std::vector<fuchsia::modular::StoryCommand> commands) override;
 
   // |StoryPuppetMaster|
   void Execute(ExecuteCallback done) override;

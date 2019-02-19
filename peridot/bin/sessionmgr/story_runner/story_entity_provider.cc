@@ -55,8 +55,7 @@ void StoryEntityProvider::GetData(std::string cookie, std::string type,
       });
 }
 
-void StoryEntityProvider::WriteData(std::string cookie,
-                                    std::string type,
+void StoryEntityProvider::WriteData(std::string cookie, std::string type,
                                     fuchsia::mem::Buffer data,
                                     WriteDataCallback callback) {
   story_storage_->SetEntityData(cookie, type, std::move(data))

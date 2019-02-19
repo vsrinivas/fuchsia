@@ -32,14 +32,10 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
   }
 
   // |fuchsia::modular::StoryController|
-  void RequestStart() override {
-    FXL_NOTIMPLEMENTED();
-  }
+  void RequestStart() override { FXL_NOTIMPLEMENTED(); }
 
   // |fuchsia::modular::StoryController|
-  void Stop(StopCallback done) override {
-    FXL_NOTIMPLEMENTED();
-  }
+  void Stop(StopCallback done) override { FXL_NOTIMPLEMENTED(); }
 
   // |fuchsia::modular::StoryController|
   void TakeAndLoadSnapshot(

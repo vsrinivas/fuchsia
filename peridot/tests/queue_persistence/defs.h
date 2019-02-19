@@ -13,7 +13,8 @@ constexpr int kTimeoutMilliseconds = 10000;
 
 // Package URLs of the test components used here.
 constexpr char kTestAgent[] =
-    "fuchsia-pkg://fuchsia.com/queue_persistence_test_agent#meta/queue_persistence_test_agent.cmx";
+    "fuchsia-pkg://fuchsia.com/queue_persistence_test_agent#meta/"
+    "queue_persistence_test_agent.cmx";
 
 }  // namespace
 

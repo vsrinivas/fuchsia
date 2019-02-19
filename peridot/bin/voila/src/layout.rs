@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use carnelian::Size;
 use fidl::encoding::OutOfLine;
 use fidl_fuchsia_math::{InsetF, RectF, SizeF};
 use fidl_fuchsia_ui_viewsv1::{CustomFocusBehavior, ViewLayout, ViewProperties};
 use fuchsia_scenic::EntityNode;
-use carnelian::Size;
 
 /// Container for data related to a single child view displaying an emulated session.
 pub struct ChildViewData {
@@ -17,11 +17,7 @@ pub struct ChildViewData {
 
 impl ChildViewData {
     pub fn new(key: u32, host_node: EntityNode) -> ChildViewData {
-        ChildViewData {
-            key: key,
-            bounds: None,
-            host_node: host_node,
-        }
+        ChildViewData { key: key, bounds: None, host_node: host_node }
     }
 }
 
@@ -30,7 +26,8 @@ impl ChildViewData {
 /// Voila uses a column layout to display 2 or more emulated sessions side by side.
 pub fn layout(
     child_views: &mut [&mut ChildViewData],
-    view_container: &fidl_fuchsia_ui_viewsv1::ViewContainerProxy, size: &Size,
+    view_container: &fidl_fuchsia_ui_viewsv1::ViewContainerProxy,
+    size: &Size,
 ) -> Result<(), failure::Error> {
     if child_views.is_empty() {
         return Ok(());
@@ -50,21 +47,12 @@ pub fn layout(
         let mut view_properties = ViewProperties {
             custom_focus_behavior: Some(Box::new(CustomFocusBehavior { allow_focus: true })),
             view_layout: Some(Box::new(ViewLayout {
-                inset: InsetF {
-                    bottom: 0.0,
-                    left: 0.0,
-                    right: 0.0,
-                    top: 0.0,
-                },
-                size: SizeF {
-                    width: tile_bounds.width,
-                    height: tile_bounds.height,
-                },
+                inset: InsetF { bottom: 0.0, left: 0.0, right: 0.0, top: 0.0 },
+                size: SizeF { width: tile_bounds.width, height: tile_bounds.height },
             })),
         };
         view_container.set_child_properties(view.key, Some(OutOfLine(&mut view_properties)))?;
-        view.host_node
-            .set_translation(tile_bounds.x, tile_bounds.y, 0.0);
+        view.host_node.set_translation(tile_bounds.x, tile_bounds.y, 0.0);
         view.bounds = Some(tile_bounds);
     }
     Ok(())
@@ -87,12 +75,7 @@ mod tests {
 
     #[test]
     fn inset_empty_returns_empty() {
-        let empty = RectF {
-            x: 0.0,
-            y: 0.0,
-            width: 0.0,
-            height: 0.0,
-        };
+        let empty = RectF { x: 0.0, y: 0.0, width: 0.0, height: 0.0 };
 
         let result = inset(&empty, 2.0);
         assert_eq!(result.x, 0.0);
@@ -103,12 +86,7 @@ mod tests {
 
     #[test]
     fn inset_non_empty_works_correctly() {
-        let empty = RectF {
-            x: 1.0,
-            y: 3.0,
-            width: 10.0,
-            height: 8.0,
-        };
+        let empty = RectF { x: 1.0, y: 3.0, width: 10.0, height: 8.0 };
 
         let result = inset(&empty, 2.0);
         assert_eq!(result.x, 3.0);

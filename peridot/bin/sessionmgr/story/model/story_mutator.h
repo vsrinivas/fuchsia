@@ -40,8 +40,7 @@ class StoryMutator {
   // retry.
 
   // Sets the value of |StoryModel.runtime_state|.
-  fit::consumer<> set_runtime_state(
-      fuchsia::modular::StoryState state);
+  fit::consumer<> set_runtime_state(fuchsia::modular::StoryState state);
 
   // Sets the value of |StoryModel.visibility_state|.
   fit::consumer<> set_visibility_state(

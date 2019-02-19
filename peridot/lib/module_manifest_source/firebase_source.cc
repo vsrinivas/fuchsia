@@ -101,13 +101,14 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
     // Try to reconnect.
     FXL_LOG(INFO) << "Reconnecting to Firebase in " << reconnect_wait_seconds_
                   << " seconds.";
-    async::PostDelayedTask(dispatcher_,
-                           [owner = owner_, this]() {
-                             if (!owner)
-                               return;
-                             owner->StartWatching(this);
-                           },
-                           zx::sec(reconnect_wait_seconds_));
+    async::PostDelayedTask(
+        dispatcher_,
+        [owner = owner_, this]() {
+          if (!owner)
+            return;
+          owner->StartWatching(this);
+        },
+        zx::sec(reconnect_wait_seconds_));
   }
 
   void ProcessEntry(const std::string& name, const rapidjson::Value& value) {

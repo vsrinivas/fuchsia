@@ -128,7 +128,6 @@ class PageClient : fuchsia::ledger::PageWatcher {
   friend class LedgerClient;
   virtual void OnPageConflict(Conflict* conflict);
 
-
   fidl::Binding<fuchsia::ledger::PageWatcher> binding_;
   const std::string context_;
 

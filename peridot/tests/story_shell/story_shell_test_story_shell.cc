@@ -73,14 +73,16 @@ class TestApp
   bool seen_root_one_{};
 
   // |fuchsia::modular::StoryShell|
-  void AddSurface(
-      fuchsia::modular::ViewConnection view_connection,
-      fuchsia::modular::SurfaceInfo surface_info) override {
-    fuchsia::modular::ModuleManifestPtr module_manifest = std::move(surface_info.module_manifest);
-    FXL_LOG(INFO) << "AddSurface " << view_connection.surface_id << " " << surface_info.parent_id << " "
+  void AddSurface(fuchsia::modular::ViewConnection view_connection,
+                  fuchsia::modular::SurfaceInfo surface_info) override {
+    fuchsia::modular::ModuleManifestPtr module_manifest =
+        std::move(surface_info.module_manifest);
+    FXL_LOG(INFO) << "AddSurface " << view_connection.surface_id << " "
+                  << surface_info.parent_id << " "
                   << (module_manifest ? module_manifest->composition_pattern
                                       : " NO MANIFEST");
-    if (view_connection.surface_id == "root:one" && surface_info.parent_id == "root") {
+    if (view_connection.surface_id == "root:one" &&
+        surface_info.parent_id == "root") {
       Signal("root:one");
 
       if (module_manifest && module_manifest->composition_pattern == "ticker" &&
@@ -93,7 +95,8 @@ class TestApp
       seen_root_one_ = true;
     }
 
-    if (view_connection.surface_id == "root:one:two" && surface_info.parent_id == "root:one") {
+    if (view_connection.surface_id == "root:one:two" &&
+        surface_info.parent_id == "root:one") {
       Signal("root:one:two");
 
       if (module_manifest && module_manifest->composition_pattern == "ticker" &&
@@ -114,7 +117,7 @@ class TestApp
 
   // |fuchsia::modular::StoryShell|
   void DefocusSurface(std::string /*surface_id*/,
-                   DefocusSurfaceCallback callback) override {
+                      DefocusSurfaceCallback callback) override {
     callback();
   }
 
@@ -123,20 +126,19 @@ class TestApp
       std::string /*container_name*/, fidl::StringPtr /*parent_id*/,
       fuchsia::modular::SurfaceRelation /*relation*/,
       std::vector<fuchsia::modular::ContainerLayout> /*layout*/,
-      std::vector<
-          fuchsia::modular::ContainerRelationEntry> /* relationships */,
+      std::vector<fuchsia::modular::ContainerRelationEntry> /* relationships */,
       std::vector<fuchsia::modular::ContainerView> /* views */) override {}
 
   // |fuchsia::modular::StoryShell|
   void RemoveSurface(std::string /*surface_id*/) override {}
 
   // |fuchsia::modular::StoryShell|
-  void ReconnectView(fuchsia::modular::ViewConnection view_connection) override {}
+  void ReconnectView(
+      fuchsia::modular::ViewConnection view_connection) override {}
 
   // |fuchsia::modular::StoryShell|
   void UpdateSurface(fuchsia::modular::ViewConnection view_connection,
-        fuchsia::modular::SurfaceInfo /*surface_info*/) override {};
-
+                     fuchsia::modular::SurfaceInfo /*surface_info*/) override{};
 
   fuchsia::modular::StoryShellContextPtr story_shell_context_;
   fuchsia::modular::LinkPtr story_shell_link_;

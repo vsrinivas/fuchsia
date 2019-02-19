@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_LIB_LEDGER_CLIENT_PROMISE_H_
+#define PERIDOT_LIB_LEDGER_CLIENT_PROMISE_H_
 
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <lib/fit/bridge.h>
@@ -133,8 +134,7 @@ class PageSnapshotPromise {
             case fuchsia::ledger::Status::KEY_NOT_FOUND:
               if (value) {
                 // Convert the result to a unique_ptr instead of a VectorPtr.
-                auto ret =
-                    std::make_unique<std::vector<uint8_t>>(value->value);
+                auto ret = std::make_unique<std::vector<uint8_t>>(value->value);
                 completer.complete_ok(std::move(ret));
               } else {
                 completer.complete_ok(nullptr);
@@ -154,3 +154,5 @@ class PageSnapshotPromise {
 };
 
 }  // namespace modular
+
+#endif  // PERIDOT_LIB_LEDGER_CLIENT_PROMISE_H_

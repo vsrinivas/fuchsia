@@ -15,14 +15,16 @@ constexpr char kLinkKey[] = "name";
 
 // The URL for the module under test.
 constexpr char kModuleUrl[] =
-    "fuchsia-pkg://fuchsia.com/module_context_test_module#meta/module_context_test_module.cmx";
+    "fuchsia-pkg://fuchsia.com/module_context_test_module#meta/"
+    "module_context_test_module.cmx";
 
 // The intent action |kModuleUrl| accepts.
 constexpr char kIntentAction[] = "action";
 
 // The URL for the entity test module.
 constexpr char kEntityModuleUrl[] =
-    "fuchsia-pkg://fuchsia.com/module_context_test_entity_module#meta/module_context_test_entity_module.cmx";
+    "fuchsia-pkg://fuchsia.com/module_context_test_entity_module#meta/"
+    "module_context_test_entity_module.cmx";
 
 // The intent action |kEntityModuleUrl| accepts.
 constexpr char kEntityIntentAction[] = "test";

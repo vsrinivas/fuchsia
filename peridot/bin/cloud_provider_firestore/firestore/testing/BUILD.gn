@@ -15,10 +15,10 @@ source_set("testing") {
   ]
 
   public_deps = [
-    "//sdk/lib/fidl/cpp",
     "//peridot/bin/cloud_provider_firestore/firestore",
     "//peridot/bin/cloud_provider_firestore/include",
     "//sdk/fidl/fuchsia.ledger.cloud",
+    "//sdk/lib/fidl/cpp",
   ]
 
   deps = [

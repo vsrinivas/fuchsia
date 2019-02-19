@@ -15,7 +15,8 @@ constexpr char kCommonNullModuleStarted[] = "common_null_module_started";
 constexpr char kCommonNullModuleStopped[] = "common_null_module_stopped";
 
 constexpr char kCommonActiveModule[] =
-    "fuchsia-pkg://fuchsia.com/common_active_module#meta/common_active_module.cmx";
+    "fuchsia-pkg://fuchsia.com/common_active_module#meta/"
+    "common_active_module.cmx";
 constexpr char kCommonActiveAction[] = "com.google.fuchsia.common.active";
 
 constexpr char kCommonActiveModuleStarted[] = "common_active_module_started";

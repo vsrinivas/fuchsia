@@ -172,7 +172,8 @@ void TodoApp::GetKeys(std::function<void(std::vector<Key>)> callback) {
                      HandleResponse([this] { loop_->Quit(); }, "GetSnapshot"));
 
   fuchsia::ledger::PageSnapshot* snapshot_ptr = snapshot.get();
-  snapshot_ptr->GetKeys({}, nullptr,
+  snapshot_ptr->GetKeys(
+      {}, nullptr,
       fxl::MakeCopyable([snapshot = std::move(snapshot), callback](
                             fuchsia::ledger::Status status, auto keys,
                             auto next_token) { callback(std::move(keys)); }));

@@ -144,7 +144,7 @@ class SuggestionEngineImpl : public fuchsia::modular::ContextListener,
   // |fuchsia::modular::SuggestionEngine|
   void RegisterQueryHandler(
       std::string url, fidl::InterfaceHandle<fuchsia::modular::QueryHandler>
-                               query_handler_handle) override;
+                           query_handler_handle) override;
 
   void Terminate(std::function<void()> done) { done(); }
 

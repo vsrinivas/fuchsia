@@ -562,8 +562,8 @@ class StoryControllerImpl::StopCall : public Operation<> {
 
     story_controller_impl_->DetachView([cont] { cont(false); });
 
-    async::PostDelayedTask(async_get_default_dispatcher(),
-                           [cont] { cont(true); }, kBasicTimeout);
+    async::PostDelayedTask(
+        async_get_default_dispatcher(), [cont] { cont(true); }, kBasicTimeout);
   }
 
   void StopStory() {

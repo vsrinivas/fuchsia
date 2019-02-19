@@ -46,11 +46,11 @@ source_set("unittests") {
 
   deps = [
     ":firestore",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl:fxl_printers",
     "//garnet/public/lib/gtest",
     "//peridot/bin/cloud_provider_firestore/firestore/testing",
     "//peridot/lib/convert",
+    "//sdk/lib/fidl/cpp",
     "//third_party/protobuf:protobuf_full",
   ]
 }

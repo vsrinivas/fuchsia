@@ -406,8 +406,9 @@ class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
       fuchsia::ledger::Page* const page, const std::string& component_namespace,
       const std::string& component_instance_id, const std::string& queue_name,
       fidl::InterfaceRequest<fuchsia::modular::MessageQueue> request)
-      : PageOperation("MessageQueueManager::ObtainMessageQueueCall", page,
-                      [] {}, queue_name),
+      : PageOperation(
+            "MessageQueueManager::ObtainMessageQueueCall", page, [] {},
+            queue_name),
         message_queue_manager_(message_queue_manager),
         request_(std::move(request)) {
     message_queue_info_.component_namespace = component_namespace;
@@ -517,8 +518,9 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
                          const std::string& component_namespace,
                          const std::string& component_instance_id,
                          const std::string& queue_name)
-      : PageOperation("MessageQueueManager::DeleteMessageQueueCall", page,
-                      [] {}, queue_name),
+      : PageOperation(
+            "MessageQueueManager::DeleteMessageQueueCall", page, [] {},
+            queue_name),
         message_queue_manager_(message_queue_manager) {
     message_queue_info_.component_namespace = component_namespace;
     message_queue_info_.component_instance_id = component_instance_id;

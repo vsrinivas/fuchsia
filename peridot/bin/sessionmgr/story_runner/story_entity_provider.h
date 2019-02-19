@@ -60,4 +60,3 @@ class StoryEntityProvider : public fuchsia::modular::EntityProvider {
 }  // namespace modular
 
 #endif  // PERIDOT_BIN_SESSIONMGR_STORY_RUNNER_STORY_ENTITY_PROVIDER_H_
-

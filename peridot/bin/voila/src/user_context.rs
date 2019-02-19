@@ -14,17 +14,15 @@ impl UserContext {
     async fn handle_request(&self, request: UserContextRequest) -> Result<(), (fidl::Error)> {
         match request {
             UserContextRequest::Logout { control_handle: _ } => {}
-            UserContextRequest::GetPresentation {
-                presentation: _,
-                control_handle: _,
-            } => {}
+            UserContextRequest::GetPresentation { presentation: _, control_handle: _ } => {}
         }
         Ok(())
     }
 
     /// Asynchronously handles the supplied stream of requests.
     pub async fn handle_requests_from_stream(
-        &self, mut stream: UserContextRequestStream,
+        &self,
+        mut stream: UserContextRequestStream,
     ) -> Result<(), fidl::Error> {
         while let Some(req) = await!(stream.try_next())? {
             await!(self.handle_request(req)).unwrap_or_else(|err| {

@@ -244,12 +244,13 @@ TEST_F(StoryStorageTest, UpdateLinkValue) {
   int mutate_count{0};
   int context;
   storage
-      ->UpdateLinkValue(MakeLinkPath("link"),
-                        [](fidl::StringPtr* current_value) {
-                          EXPECT_TRUE(current_value->is_null());
-                          *current_value = "10";
-                        },
-                        &context)
+      ->UpdateLinkValue(
+          MakeLinkPath("link"),
+          [](fidl::StringPtr* current_value) {
+            EXPECT_TRUE(current_value->is_null());
+            *current_value = "10";
+          },
+          &context)
       ->Then([&](StoryStorage::Status status) {
         EXPECT_EQ(StoryStorage::Status::OK, status);
         ++mutate_count;
@@ -257,12 +258,13 @@ TEST_F(StoryStorageTest, UpdateLinkValue) {
 
   // If we mutate again, we should see the old value.
   storage
-      ->UpdateLinkValue(MakeLinkPath("link"),
-                        [](fidl::StringPtr* current_value) {
-                          EXPECT_EQ("10", *current_value);
-                          *current_value = "20";
-                        },
-                        &context)
+      ->UpdateLinkValue(
+          MakeLinkPath("link"),
+          [](fidl::StringPtr* current_value) {
+            EXPECT_EQ("10", *current_value);
+            *current_value = "20";
+          },
+          &context)
       ->Then([&](StoryStorage::Status status) {
         EXPECT_EQ(StoryStorage::Status::OK, status);
         ++mutate_count;
@@ -297,8 +299,9 @@ TEST_F(StoryStorageTest, WatchingLink_IgnoresOthers) {
   bool mutate_done{};
   int context;
   storage
-      ->UpdateLinkValue(MakeLinkPath("bar"),
-                        [](fidl::StringPtr* value) { *value = "10"; }, &context)
+      ->UpdateLinkValue(
+          MakeLinkPath("bar"), [](fidl::StringPtr* value) { *value = "10"; },
+          &context)
       ->Then([&](StoryStorage::Status status) { mutate_done = true; });
   RunLoopUntil([&] { return mutate_done; });
   EXPECT_EQ(0, notified_count);
@@ -317,9 +320,9 @@ TEST_F(StoryStorageTest, WatchingLink_IgnoresNoopUpdates) {
   bool mutate_done{};
   int context;
   storage
-      ->UpdateLinkValue(MakeLinkPath("foo"),
-                        [](fidl::StringPtr* value) { /* do nothing */ },
-                        &context)
+      ->UpdateLinkValue(
+          MakeLinkPath("foo"), [](fidl::StringPtr* value) { /* do nothing */ },
+          &context)
       ->Then([&](StoryStorage::Status status) { mutate_done = true; });
   RunLoopUntil([&] { return mutate_done; });
   EXPECT_EQ(0, notified_count);
@@ -348,8 +351,9 @@ TEST_F(StoryStorageTest, WatchingLink_SeesUpdates) {
   bool mutate_done{};
   int context;
   storage
-      ->UpdateLinkValue(MakeLinkPath("bar"),
-                        [](fidl::StringPtr* value) { *value = "10"; }, &context)
+      ->UpdateLinkValue(
+          MakeLinkPath("bar"), [](fidl::StringPtr* value) { *value = "10"; },
+          &context)
       ->Then([&](StoryStorage::Status status) { mutate_done = true; });
   RunLoopUntil([&] { return mutate_done; });
   EXPECT_EQ(1, notified_count);
@@ -359,16 +363,18 @@ TEST_F(StoryStorageTest, WatchingLink_SeesUpdates) {
   // Change it two more times. We expect to be notified of the first one, but
   // not the second because we are going to cancel our watcher.
   storage
-      ->UpdateLinkValue(MakeLinkPath("bar"),
-                        [](fidl::StringPtr* value) { *value = "20"; }, &context)
+      ->UpdateLinkValue(
+          MakeLinkPath("bar"), [](fidl::StringPtr* value) { *value = "20"; },
+          &context)
       ->Then([&](StoryStorage::Status status) {
         watch_cancel.call();  // Remove the watcher for bar.
       });
 
   mutate_done = false;
   storage
-      ->UpdateLinkValue(MakeLinkPath("bar"),
-                        [](fidl::StringPtr* value) { *value = "30"; }, &context)
+      ->UpdateLinkValue(
+          MakeLinkPath("bar"), [](fidl::StringPtr* value) { *value = "30"; },
+          &context)
       ->Then([&](StoryStorage::Status status) { mutate_done = true; });
   RunLoopUntil([&] { return mutate_done; });
 
@@ -397,9 +403,9 @@ TEST_F(StoryStorageTest, WatchingOtherStorageInstance) {
       });
 
   int context;
-  storage->UpdateLinkValue(MakeLinkPath("foo"),
-                           [](fidl::StringPtr* value) { *value = "10"; },
-                           &context);
+  storage->UpdateLinkValue(
+      MakeLinkPath("foo"), [](fidl::StringPtr* value) { *value = "10"; },
+      &context);
 
   RunLoopUntil([&] { return notified_count > 0; });
   EXPECT_EQ(1, notified_count);

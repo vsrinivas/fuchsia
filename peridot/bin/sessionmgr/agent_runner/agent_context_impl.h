@@ -115,8 +115,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
 
   // |fuchsia::auth::TokenManager|
   void GetFirebaseToken(fuchsia::auth::AppConfig app_config,
-                        std::string user_profile_id,
-                        std::string audience,
+                        std::string user_profile_id, std::string audience,
                         std::string firebase_api_key,
                         GetFirebaseTokenCallback callback) override;
 

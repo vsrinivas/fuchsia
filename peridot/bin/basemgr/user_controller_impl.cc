@@ -23,7 +23,7 @@ namespace {
 // NOTE: This is defined in basemgr_impl.cc as well.
 // TODO(SCN-595): mozart.Presentation is being renamed to ui.Presenter.
 constexpr char kPresentationService[] = "mozart.Presentation";
-}
+}  // namespace
 
 UserControllerImpl::UserControllerImpl(
     fuchsia::sys::Launcher* const launcher,

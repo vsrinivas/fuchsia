@@ -19,9 +19,9 @@ executable_package("modular_benchmark_story_module") {
   ]
   deps = [
     ":tracing_waiter",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -38,17 +38,17 @@ executable_package("modular_benchmark_story_session_shell") {
 
   deps = [
     ":tracing_waiter",
-    "//sdk/fidl/fuchsia.testing.runner",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_main",
     "//peridot/lib/testing:session_shell_impl",
-    "//sdk/fidl/fuchsia.modular",
     "//peridot/public/lib/integration_testing/cpp",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.testing.runner",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/lib/fidl/cpp",
   ]
 
   sources = [
