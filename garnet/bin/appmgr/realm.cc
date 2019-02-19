@@ -625,7 +625,7 @@ void Realm::CreateComponentWithRunnerForScheme(
   auto* runner = GetOrCreateRunner(runner_url);
   if (runner == nullptr) {
     FXL_LOG(ERROR) << "Cannot create " << runner_url << " to run "
-                   << launch_info.url;
+                   << startup_info.launch_info.url;
     component_request.SetReturnValues(kComponentCreationFailed,
                                       TerminationReason::RUNNER_FAILED);
     return;
@@ -892,7 +892,7 @@ void Realm::CreateRunnerComponentFromPackage(
   auto* runner = GetOrCreateRunner(runtime.runner());
   if (runner == nullptr) {
     FXL_LOG(ERROR) << "Cannot create " << runner << " to run "
-                   << launch_info.url;
+                   << startup_info.launch_info.url;
     component_request.SetReturnValues(kComponentCreationFailed,
                                       TerminationReason::INTERNAL_ERROR);
     return;
