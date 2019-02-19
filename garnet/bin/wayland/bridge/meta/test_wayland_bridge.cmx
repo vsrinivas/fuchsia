@@ -6,6 +6,7 @@
         "services": [
             "fuchsia.guest.EnvironmentManager",
             "fuchsia.logger.LogSink",
+            "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.viewsv1.ViewManager",
             "fuchsia.sys.Launcher"
         ]

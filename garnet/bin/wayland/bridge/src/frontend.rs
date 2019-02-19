@@ -8,7 +8,7 @@ use failure::Error;
 use fidl::endpoints::{create_proxy, ClientEnd};
 use fidl_fuchsia_developer_tiles as tiles;
 use fidl_fuchsia_ui_app::ViewProviderMarker;
-use fidl_fuchsia_ui_scenic::ScenicProxy;
+use fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy};
 use fidl_fuchsia_ui_viewsv1::{ViewManagerMarker, ViewManagerProxy};
 use fuchsia_app::client::{connect_to_service, App, Launcher};
 use fuchsia_async as fasync;
@@ -67,9 +67,8 @@ impl TileViewSink {
     /// launched.
     pub fn new() -> Result<ViewSinkPtr, Error> {
         // Connect to Scenic
+        let scenic = connect_to_service::<ScenicMarker>()?;
         let view_manager = connect_to_service::<ViewManagerMarker>()?;
-        let (scenic, scenic_request) = create_proxy()?;
-        view_manager.get_scenic(scenic_request)?;
         let (session_proxy, session_request) = create_proxy()?;
         scenic.create_session(session_request, None)?;
         let scenic_session = scenic::Session::new(session_proxy);
@@ -77,7 +76,8 @@ impl TileViewSink {
         // Spawn a tiles process. We'll forward our |ViewProvider|s here to be
         // presented.
         let launcher = Launcher::new()?;
-        let app = launcher.launch("fuchsia-pkg://fuchsia.com/tiles#meta/tiles.cmx".to_string(), None)?;
+        let app =
+            launcher.launch("fuchsia-pkg://fuchsia.com/tiles#meta/tiles.cmx".to_string(), None)?;
         let tiles_controller = app.connect_to_service(tiles::ControllerMarker)?;
         Ok(Arc::new(Box::new(TileViewSink {
             _app: app,
@@ -91,13 +91,8 @@ impl TileViewSink {
 
 impl ViewSink for TileViewSink {
     fn new_view_provider(&self, view_provider: ClientEnd<ViewProviderMarker>) {
-        let fut = self
-            .tiles_controller
-            .add_tile_from_view_provider("tile", view_provider);
-        fasync::spawn_local(
-            fut.map_ok(|_| ())
-                .unwrap_or_else(|e| println!("Failed {:?}", e)),
-        );
+        let fut = self.tiles_controller.add_tile_from_view_provider("tile", view_provider);
+        fasync::spawn_local(fut.map_ok(|_| ()).unwrap_or_else(|e| println!("Failed {:?}", e)));
     }
 
     fn view_manager(&self) -> &ViewManagerProxy {

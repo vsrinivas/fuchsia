@@ -10,6 +10,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
                 "fuchsia.ui.viewsv1.ViewManager": "fuchsia-pkg://fuchsia.com/view_manager#meta/view_manager.cmx"
             }
         }
