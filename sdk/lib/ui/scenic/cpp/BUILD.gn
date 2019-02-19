@@ -7,6 +7,8 @@ import("//build/cpp/sdk_source_set.gni")
 sdk_source_set("cpp") {
   category = "partner"
 
+  api = "scenic_cpp.api"
+
   sdk_name = "scenic_cpp"
 
   include_base = "//sdk"

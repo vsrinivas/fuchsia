@@ -11,6 +11,8 @@ import("//build/testing/environments.gni")
 sdk_source_set("cpp") {
   category = "partner"
 
+  api = "fidl_cpp.api"
+
   sdk_name = "fidl_cpp"
 
   sources = [
@@ -59,6 +61,8 @@ sdk_source_set("cpp") {
 sdk_source_set("cpp_sync") {
   category = "partner"
 
+  api = "fidl_cpp_sync.api"
+
   sdk_name = "fidl_cpp_sync"
 
   sources = [
@@ -84,6 +88,8 @@ sdk_source_set("cpp_sync") {
 
 sdk_source_set("cpp_base") {
   category = "partner"
+
+  api = "fidl_cpp_base.api"
 
   sdk_name = "fidl_cpp_base"
 
