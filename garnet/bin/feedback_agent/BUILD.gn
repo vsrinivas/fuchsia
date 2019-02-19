@@ -28,9 +28,10 @@ executable("main") {
 
   deps = [
     ":src",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
