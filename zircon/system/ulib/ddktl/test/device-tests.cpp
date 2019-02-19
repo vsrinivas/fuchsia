@@ -12,79 +12,98 @@
 namespace {
 
 class TestNone : public ddk::Device<TestNone> {
-  public:
-    TestNone() : ddk::Device<TestNone>(nullptr) {}
+public:
+    TestNone()
+        : ddk::Device<TestNone>(nullptr) {}
 
     void DdkRelease() {}
 };
 
-#define BEGIN_SUCCESS_CASE(name) \
-class Test##name : public ddk::Device<Test##name, ddk::name> { \
-  public: \
-    Test##name() : ddk::Device<Test##name, ddk::name>(nullptr) {} \
-    void DdkRelease() {}
+#define BEGIN_SUCCESS_CASE(name)                                      \
+    class Test##name : public ddk::Device<Test##name, ddk::name> {    \
+    public:                                                           \
+        Test##name() : ddk::Device<Test##name, ddk::name>(nullptr) {} \
+        void DdkRelease() {}
 
-#define END_SUCCESS_CASE };
+#define END_SUCCESS_CASE \
+    }                    \
+    ;
 
 BEGIN_SUCCESS_CASE(GetProtocolable)
-    zx_status_t DdkGetProtocol(uint32_t proto_id, void* protocol) { return ZX_OK; }
+zx_status_t DdkGetProtocol(uint32_t proto_id, void* protocol) {
+    return ZX_OK;
+}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Openable)
-    zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags) { return ZX_OK; }
+zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags) {
+    return ZX_OK;
+}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(OpenAtable)
-    zx_status_t DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags) {
-        return ZX_OK;
-    }
+zx_status_t DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags) {
+    return ZX_OK;
+}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Closable)
-    zx_status_t DdkClose(uint32_t flags) { return ZX_OK; }
+zx_status_t DdkClose(uint32_t flags) {
+    return ZX_OK;
+}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Unbindable)
-    void DdkUnbind() {}
+void DdkUnbind() {}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Readable)
-    zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual) { return ZX_OK; }
+zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual) {
+    return ZX_OK;
+}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Writable)
-    zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual) {
-        return ZX_OK;
-    }
+zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual) {
+    return ZX_OK;
+}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(GetSizable)
-    zx_off_t DdkGetSize() { return 0; }
+zx_off_t DdkGetSize() {
+    return 0;
+}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Ioctlable)
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                         size_t out_len, size_t* out_actual) {
-        return ZX_OK;
-    }
+zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                     size_t out_len, size_t* out_actual) {
+    return ZX_OK;
+}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Messageable)
-    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-        return ZX_OK;
-    }
+zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return ZX_OK;
+}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Suspendable)
-    zx_status_t DdkSuspend(uint32_t flags) { return ZX_OK; }
+zx_status_t DdkSuspend(uint32_t flags) {
+    return ZX_OK;
+}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Resumable)
-    zx_status_t DdkResume(uint32_t flags) { return ZX_OK; }
+zx_status_t DdkResume(uint32_t flags) {
+    return ZX_OK;
+}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Rxrpcable)
-    zx_status_t DdkRxrpc(zx_handle_t channel) { return ZX_OK; }
+zx_status_t DdkRxrpc(zx_handle_t channel) {
+    return ZX_OK;
+}
 END_SUCCESS_CASE
 
 template <typename T>
@@ -99,7 +118,8 @@ static bool do_test() {
 }
 
 struct TestDispatch : public ddk::FullDevice<TestDispatch> {
-    TestDispatch() : ddk::FullDevice<TestDispatch>(nullptr) {}
+    TestDispatch()
+        : ddk::FullDevice<TestDispatch>(nullptr) {}
 
     // Give access to the device ops for testing
     zx_protocol_device_t* GetDeviceOps() {
@@ -230,16 +250,17 @@ static bool test_dispatch() {
 #if TEST_WILL_NOT_COMPILE || 0
 
 class TestNotReleasable : public ddk::Device<TestNotReleasable> {
-  public:
-    TestNotReleasable() : ddk::Device<TestNotReleasable>(nullptr) {}
+public:
+    TestNotReleasable()
+        : ddk::Device<TestNotReleasable>(nullptr) {}
 };
 
-#define DEFINE_FAIL_CASE(name) \
-class TestNot##name : public ddk::Device<TestNot##name, ddk::name> { \
-  public: \
-    TestNot##name() : ddk::Device<TestNot##name, ddk::name>(nullptr) {} \
-    void DdkRelease() {} \
-};
+#define DEFINE_FAIL_CASE(name)                                              \
+    class TestNot##name : public ddk::Device<TestNot##name, ddk::name> {    \
+    public:                                                                 \
+        TestNot##name() : ddk::Device<TestNot##name, ddk::name>(nullptr) {} \
+        void DdkRelease() {}                                                \
+    };
 
 DEFINE_FAIL_CASE(GetProtocolable)
 DEFINE_FAIL_CASE(Openable)
@@ -256,27 +277,28 @@ DEFINE_FAIL_CASE(Resumable)
 DEFINE_FAIL_CASE(Rxrpcable)
 
 class TestBadOverride : public ddk::Device<TestBadOverride, ddk::Closable> {
-  public:
-    TestBadOverride() : ddk::Device<TestBadOverride, ddk::Closable>(nullptr) {}
+public:
+    TestBadOverride()
+        : ddk::Device<TestBadOverride, ddk::Closable>(nullptr) {}
     void DdkRelease() {}
 
     void DdkClose(uint32_t flags) {}
 };
 
 class TestHiddenOverride : public ddk::Device<TestHiddenOverride, ddk::Closable> {
-  public:
+public:
     TestHiddenOverride()
-      : ddk::Device<TestHiddenOverride, ddk::Closable>(nullptr) {}
+        : ddk::Device<TestHiddenOverride, ddk::Closable>(nullptr) {}
     void DdkRelease() {}
 
-  private:
+private:
     zx_status_t DdkClose(uint32_t flags) { return ZX_OK; }
 };
 
 class TestStaticOverride : public ddk::Device<TestStaticOverride, ddk::Closable> {
-  public:
+public:
     TestStaticOverride()
-      : ddk::Device<TestStaticOverride, ddk::Closable>(nullptr) {}
+        : ddk::Device<TestStaticOverride, ddk::Closable>(nullptr) {}
     void DdkRelease() {}
 
     static zx_status_t DdkClose(uint32_t flags) { return ZX_OK; }
@@ -288,8 +310,9 @@ struct A {
 };
 
 class TestNotAMixin : public ddk::Device<TestNotAMixin, A> {
-  public:
-    TestNotAMixin() : ddk::Device<TestNotAMixin, A>(nullptr) {}
+public:
+    TestNotAMixin()
+        : ddk::Device<TestNotAMixin, A>(nullptr) {}
     void DdkRelease() {}
 };
 
@@ -299,15 +322,16 @@ using TestNotAllMixinsType = ddk::Device<TestNotAllMixins,
                                          ddk::Closable,
                                          A>;
 class TestNotAllMixins : public TestNotAllMixinsType {
-  public:
-    TestNotAllMixins() : TestNotAllMixinsType(nullptr) {}
+public:
+    TestNotAllMixins()
+        : TestNotAllMixinsType(nullptr) {}
     void DdkRelease() {}
     zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags) { return ZX_OK; }
     zx_status_t DdkClose(uint32_t flags) { return ZX_OK; }
 };
 #endif
 
-}  // namespace
+} // namespace
 
 BEGIN_TEST_CASE(ddktl_device)
 RUN_NAMED_TEST("No mixins", do_test<TestNone>);

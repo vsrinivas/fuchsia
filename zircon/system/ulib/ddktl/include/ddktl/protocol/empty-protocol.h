@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDKTL_PROTOCOL_EMPTY_PROTOCOL_H_
+#define DDKTL_PROTOCOL_EMPTY_PROTOCOL_H_
 
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
@@ -22,4 +23,6 @@ public:
     }
 };
 
-}  // namespace ddk
+} // namespace ddk
+
+#endif  // DDKTL_PROTOCOL_EMPTY_PROTOCOL_H_

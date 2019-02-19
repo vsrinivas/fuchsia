@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDKTL_I2C_CHANNEL_H_
+#define DDKTL_I2C_CHANNEL_H_
 
 #include <ddk/protocol/i2c-lib.h>
 #include <ddktl/protocol/i2c.h>
@@ -42,3 +43,5 @@ public:
 };
 
 } //namespace ddk
+
+#endif  // DDKTL_I2C_CHANNEL_H_

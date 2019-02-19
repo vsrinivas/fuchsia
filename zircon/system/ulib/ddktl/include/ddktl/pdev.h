@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDKTL_PDEV_H_
+#define DDKTL_PDEV_H_
 
 #include <ddktl/i2c-channel.h>
-#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/clk.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/platform/device.h>
+#include <lib/mmio/mmio.h>
 
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
@@ -50,3 +51,5 @@ public:
 };
 
 } // namespace ddk
+
+#endif  // DDKTL_PDEV_H_

@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
 #include <ddk/protocol/test.h>
 #include <lib/zx/socket.h>
 
-#include <unittest/unittest.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
+#include <unittest/unittest.h>
 
 extern test_case_element* test_case_ddktl_device;
 extern test_case_element* test_case_ddktl_ethernet_device;
@@ -62,7 +62,7 @@ zx_status_t ddktl_test_func(void* cookie, test_report_t* report) {
     return report->n_failed == 0 ? ZX_OK : ZX_ERR_INTERNAL;
 }
 
-}  // namespace
+} // namespace
 
 extern "C" zx_status_t ddktl_test_bind(void* ctx, zx_device_t* parent) {
     test_protocol_t proto;

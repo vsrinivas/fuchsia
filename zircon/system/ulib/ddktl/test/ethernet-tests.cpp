@@ -19,8 +19,9 @@ namespace {
 
 class TestEthmacIfc : public ddk::Device<TestEthmacIfc>,
                       public ddk::EthmacIfc<TestEthmacIfc> {
-  public:
-    TestEthmacIfc() : ddk::Device<TestEthmacIfc>(nullptr) {
+public:
+    TestEthmacIfc()
+        : ddk::Device<TestEthmacIfc>(nullptr) {
         this_ = get_this();
     }
 
@@ -58,7 +59,7 @@ class TestEthmacIfc : public ddk::Device<TestEthmacIfc>,
         return client->Start(this, &ethmac_ifc_ops_);
     }
 
-  private:
+private:
     uintptr_t this_ = 0u;
     uintptr_t status_this_ = 0u;
     uintptr_t recv_this_ = 0u;
@@ -70,14 +71,15 @@ class TestEthmacIfc : public ddk::Device<TestEthmacIfc>,
 
 class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtocolable>,
                            public ddk::EthmacProtocol<TestEthmacProtocol, ddk::base_protocol> {
-  public:
+public:
     TestEthmacProtocol()
-      : ddk::Device<TestEthmacProtocol, ddk::GetProtocolable>(nullptr) {
+        : ddk::Device<TestEthmacProtocol, ddk::GetProtocolable>(nullptr) {
         this_ = get_this();
     }
 
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out) {
-        if (proto_id != ZX_PROTOCOL_ETHMAC) return ZX_ERR_INVALID_ARGS;
+        if (proto_id != ZX_PROTOCOL_ETHMAC)
+            return ZX_ERR_INVALID_ARGS;
         ddk::AnyProtocol* proto = static_cast<ddk::AnyProtocol*>(out);
         proto->ops = &ethmac_protocol_ops_;
         proto->ctx = this;
@@ -115,8 +117,7 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
         set_param_called_ = true;
         return ZX_OK;
     }
-    void EthmacGetBti(zx::bti* bti) { bti->reset();}
-
+    void EthmacGetBti(zx::bti* bti) { bti->reset(); }
 
     bool VerifyCalls() const {
         BEGIN_HELPER;
@@ -134,7 +135,8 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
     }
 
     bool TestIfc() {
-        if (!client_) return false;
+        if (!client_)
+            return false;
         // Use the provided client to test the ifc client.
         client_->Status(0);
         client_->Recv(nullptr, 0, 0);
@@ -142,7 +144,7 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
         return true;
     }
 
-  private:
+private:
     uintptr_t this_ = 0u;
     uintptr_t query_this_ = 0u;
     uintptr_t stop_this_ = 0u;
@@ -269,8 +271,7 @@ static bool test_ethmac_protocol_ifc_client() {
     END_TEST;
 }
 
-
-}  // namespace
+} // namespace
 
 BEGIN_TEST_CASE(ddktl_ethernet_device)
 RUN_NAMED_TEST("ddk::EthmacIfc", test_ethmac_ifc);

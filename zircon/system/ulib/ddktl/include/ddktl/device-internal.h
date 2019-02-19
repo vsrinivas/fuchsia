@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDKTL_DEVICE_INTERNAL_H_
+#define DDKTL_DEVICE_INTERNAL_H_
 
 #include <ddk/device.h>
 #include <fbl/macros.h>
@@ -14,9 +15,9 @@ namespace internal {
 // base_device is a tag that default initializes the zx_protocol_device_t so the mixin classes
 // can fill in the table.
 struct base_device {
-  protected:
+protected:
     base_device(zx_device_t* parent)
-      : parent_(parent) {
+        : parent_(parent) {
         ddk_device_proto_.version = DEVICE_OPS_VERSION;
     }
 
@@ -33,7 +34,7 @@ struct base_protocol {
     uint32_t ddk_proto_id_ = 0;
     void* ddk_proto_ops_ = nullptr;
 
-  protected:
+protected:
     base_protocol() = default;
 };
 
@@ -90,12 +91,12 @@ using is_base_proto = std::is_same<internal::base_protocol, T>;
 // Now the DDKTL_DEPRECATED method can be removed, along with the NewFooMethod template parameter.
 // At no stage should the build be broken. These annotations may also be used to add new methods, by
 // providing a no-op in the DDKTL_DEPRECATED static method.
-#define DDKTL_DEPRECATED(condition) \
+#define DDKTL_DEPRECATED(condition)                \
     template <typename T = D, bool En = condition, \
-    typename std::enable_if<!fbl::integral_constant<bool, En>::value, int>::type = 0>
-#define DDKTL_NOTREADY(condition) \
+              typename std::enable_if<!fbl::integral_constant<bool, En>::value, int>::type = 0>
+#define DDKTL_NOTREADY(condition)                  \
     template <typename T = D, bool En = condition, \
-    typename std::enable_if<fbl::integral_constant<bool, En>::value, int>::type = 0>
+              typename std::enable_if<fbl::integral_constant<bool, En>::value, int>::type = 0>
 
 // Mixin checks: ensure that a type meets the following qualifications:
 //
@@ -116,7 +117,7 @@ constexpr void CheckGetProtocolable() {
     static_assert(std::is_base_of<base_device, D>::value,
                   "GetProtocolable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkGetProtocol),
-                                zx_status_t (D::*)(uint32_t, void*)>::value,
+                               zx_status_t (D::*)(uint32_t, void*)>::value,
                   "DdkGetProtocol must be a public non-static member function with signature "
                   "'zx_status_t DdkGetProtocol(uint32_t, void*)'.");
 }
@@ -129,7 +130,7 @@ constexpr void CheckOpenable() {
     static_assert(std::is_base_of<base_device, D>::value,
                   "Openable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkOpen),
-                                zx_status_t (D::*)(zx_device_t**, uint32_t)>::value,
+                               zx_status_t (D::*)(zx_device_t**, uint32_t)>::value,
                   "DdkOpen must be a public non-static member function with signature "
                   "'zx_status_t DdkOpen(zx_device_t**, uint32_t)'.");
 }
@@ -143,10 +144,10 @@ constexpr void CheckOpenAtable() {
     static_assert(std::is_base_of<base_device, D>::value,
                   "OpenAtable classes must be derived from ddk::Device<...>.");
     static_assert(
-            std::is_same<decltype(&D::DdkOpenAt),
-                          zx_status_t (D::*)(zx_device_t**, const char*, uint32_t)>::value,
-                  "DdkOpenAt must be a public non-static member function with signature "
-                  "'zx_status_t DdkOpenAt(zx_device_t**, const char*, uint32_t)'.");
+        std::is_same<decltype(&D::DdkOpenAt),
+                     zx_status_t (D::*)(zx_device_t**, const char*, uint32_t)>::value,
+        "DdkOpenAt must be a public non-static member function with signature "
+        "'zx_status_t DdkOpenAt(zx_device_t**, const char*, uint32_t)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_close, DdkClose);
@@ -195,7 +196,7 @@ constexpr void CheckReadable() {
     static_assert(std::is_base_of<base_device, D>::value,
                   "Readable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkRead),
-                                zx_status_t (D::*)(void*, size_t, zx_off_t, size_t*)>::value,
+                               zx_status_t (D::*)(void*, size_t, zx_off_t, size_t*)>::value,
                   "DdkRead must be a public non-static member function with signature "
                   "'zx_status_t DdkRead(void*, size_t, zx_off_t, size_t*)'.");
 }
@@ -209,7 +210,7 @@ constexpr void CheckWritable() {
     static_assert(std::is_base_of<base_device, D>::value,
                   "Writable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkWrite),
-                                zx_status_t (D::*)(const void*, size_t, zx_off_t, size_t*)>::value,
+                               zx_status_t (D::*)(const void*, size_t, zx_off_t, size_t*)>::value,
                   "DdkWrite must be a public non-static member function with signature "
                   "'zx_status_t DdkWrite(const void*, size_t, zx_off_t, size_t*)'.");
 }
@@ -236,8 +237,8 @@ constexpr void CheckIoctlable() {
     static_assert(std::is_base_of<base_device, D>::value,
                   "Ioctlable classes must be derived from ddk::Device<...>.");
     static_assert(std::is_same<decltype(&D::DdkIoctl),
-                                zx_status_t (D::*)(uint32_t, const void*, size_t,
-                                                   void*, size_t, size_t*)>::value,
+                               zx_status_t (D::*)(uint32_t, const void*, size_t,
+                                                  void*, size_t, size_t*)>::value,
                   "DdkIoctl must be a public non-static member function with signature "
                   "'zx_status_t DdkIoctl(uint32_t, const void*, size_t, void*, size_t, size_t*)'.");
 }
@@ -304,14 +305,16 @@ struct all_mixins : std::true_type {};
 
 template <typename Base, typename Mixin, typename... Mixins>
 struct all_mixins<Base, Mixin, Mixins...>
-  : std::integral_constant<bool, std::is_base_of<Base, Mixin>::value &&
-                                  all_mixins<Base, Mixins...>::value> {};
+    : std::integral_constant<bool, std::is_base_of<Base, Mixin>::value &&
+                                       all_mixins<Base, Mixins...>::value> {};
 
 template <typename... Mixins>
 constexpr void CheckMixins() {
     static_assert(all_mixins<base_mixin, Mixins...>::value,
-            "All mixins must be from the ddk template library");
+                  "All mixins must be from the ddk template library");
 }
 
-}  // namespace internal
-}  // namespace ddk
+} // namespace internal
+} // namespace ddk
+
+#endif  // DDKTL_DEVICE_INTERNAL_H_

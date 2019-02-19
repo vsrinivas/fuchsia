@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DDKTL_METADATA_AUDIO_H_
+#define DDKTL_METADATA_AUDIO_H_
 
 namespace metadata {
 
@@ -14,3 +15,5 @@ enum class Codec : uint32_t {
 };
 
 } // namespace metadata
+
+#endif  // DDKTL_METADATA_AUDIO_H_
