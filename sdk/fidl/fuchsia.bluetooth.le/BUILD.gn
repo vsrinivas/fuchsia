@@ -7,6 +7,8 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.bluetooth.le") {
   sdk_category = "partner"
 
+  api = "fuchsia.bluetooth.le.api"
+
   sources = [
     "central.fidl",
     "peripheral.fidl",

@@ -7,6 +7,8 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.net.oldhttp") {
   sdk_category = "partner"
 
+  api = "fuchsia.net.oldhttp.api"
+
   sources = [
     "http_error.fidl",
     "http_header.fidl",

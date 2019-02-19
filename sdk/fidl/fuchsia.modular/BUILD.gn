@@ -9,6 +9,8 @@ fidl("fuchsia.modular") {
 
   sdk_category = "partner"
 
+  api = "fuchsia.modular.api"
+
   sources = [
     "agent/agent.fidl",
     "agent/agent_context.fidl",

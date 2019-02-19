@@ -1,0 +1,4 @@
+{
+  "fidl/fuchsia.wlan.mlme/wlan_mlme.fidl": "9f22098131871e5edc397f77526dd203",
+  "fidl/fuchsia.wlan.mlme/wlan_mlme_ext.fidl": "bb7a235f4db9a3e8a4fc4133c20271b6"
+}

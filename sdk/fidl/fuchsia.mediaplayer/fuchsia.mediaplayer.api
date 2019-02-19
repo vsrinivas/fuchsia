@@ -1,0 +1,9 @@
+{
+  "fidl/fuchsia.mediaplayer/metadata.fidl": "ab1026ba3118635416ed330d20b13997",
+  "fidl/fuchsia.mediaplayer/player.fidl": "a78fc22c5a10e3ef6290a65ddee050d9",
+  "fidl/fuchsia.mediaplayer/problem.fidl": "321c3ee60eaa6a74a079610a17b4b395",
+  "fidl/fuchsia.mediaplayer/seeking_reader.fidl": "c77b67438f0b182584eded53737d4b81",
+  "fidl/fuchsia.mediaplayer/sink_manager.fidl": "8b5244eaef2a1679093e0ee433e9878b",
+  "fidl/fuchsia.mediaplayer/source_manager.fidl": "76d7fb33de737a58c969ca314412e979",
+  "fidl/fuchsia.mediaplayer/timeline_function.fidl": "a79bb27cf6af2073aed354bda2262e6d"
+}

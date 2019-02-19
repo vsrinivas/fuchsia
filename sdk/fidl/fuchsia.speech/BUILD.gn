@@ -9,6 +9,8 @@ fidl("fuchsia.speech") {
 
   sdk_category = "partner"
 
+  api = "fuchsia.speech.api"
+
   sources = [
     "speech_to_text.fidl",
   ]

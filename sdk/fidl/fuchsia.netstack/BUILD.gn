@@ -7,6 +7,8 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.netstack") {
   sdk_category = "partner"
 
+  api = "fuchsia.netstack.api"
+
   sources = [
     "netstack.fidl",
   ]

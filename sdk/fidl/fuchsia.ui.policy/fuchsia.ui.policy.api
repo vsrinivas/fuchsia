@@ -1,0 +1,5 @@
+{
+  "fidl/fuchsia.ui.policy/display_usage.fidl": "b024c197efe3c283f30e9aafe7631190",
+  "fidl/fuchsia.ui.policy/presentation.fidl": "6d5f3f9c702cb097c7100686e1c4e793",
+  "fidl/fuchsia.ui.policy/presenter.fidl": "fd7a5bf17c747fd74196847b023f311b"
+}
