@@ -15,7 +15,7 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
     "//garnet/lib/rust/files_async",
-    "//garnet/lib/rust/fuchsia_pkg_uri",
+    "//garnet/lib/rust/fuchsia_uri",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",

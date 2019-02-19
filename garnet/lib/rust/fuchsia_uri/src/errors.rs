@@ -34,7 +34,9 @@ impl fmt::Display for ParseError {
             ParseError::CannotContainPort => write!(f, "cannot contain port"),
             ParseError::CannotContainUsername => write!(f, "cannot contain username"),
             ParseError::CannotContainPassword => write!(f, "cannot contain password"),
-            ParseError::CannotContainQueryParameters => write!(f, "cannot contain query parameters"),
+            ParseError::CannotContainQueryParameters => {
+                write!(f, "cannot contain query parameters")
+            }
             ParseError::UrlParseError(err) => err.fmt(f),
         }
     }
