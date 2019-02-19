@@ -16,8 +16,6 @@ sdk_source_set("cpp") {
   sources = [
     "commands.cc",
     "commands.h",
-    "host_image_cycler.cc",
-    "host_image_cycler.h",
     "host_memory.cc",
     "host_memory.h",
     "id.h",
