@@ -158,7 +158,7 @@ bool Mouse::ParseReport(const uint8_t* data, size_t len,
     // scan_time is unchanged. Either way we return successfully.
     hid::unit::ConvertUnits(x_.unit, x, length_unit, &x);
 
-    mouse_report.rel_x = static_cast<uint32_t>(x);
+    mouse_report.rel_x = static_cast<int32_t>(x);
   }
   if (capabilities_ & Capabilities::Y) {
     double y;
@@ -171,7 +171,7 @@ bool Mouse::ParseReport(const uint8_t* data, size_t len,
     // scan_time is unchanged. Either way we return successfully.
     hid::unit::ConvertUnits(y_.unit, y, length_unit, &y);
 
-    mouse_report.rel_y = static_cast<uint32_t>(y);
+    mouse_report.rel_y = static_cast<int32_t>(y);
   }
 
   // Now that we can't fail, set the real report.

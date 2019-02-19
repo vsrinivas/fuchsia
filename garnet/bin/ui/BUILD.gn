@@ -52,6 +52,10 @@ package("scenic_tests") {
       environments = basic_envs
     },
     {
+      name = "input_reader_unittests"
+      environments = basic_envs
+    },
+    {
       name = "input_unittests"
       environments = basic_envs
     },
