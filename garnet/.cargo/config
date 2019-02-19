@@ -1,0 +1,8 @@
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "../third_party/rust-crates/rustc_deps/vendor"
+
+[build]
+target-dir = "../out/cargo_target"
