@@ -17,16 +17,13 @@ func TestParse(t *testing.T) {
 		expected *Document
 	}{
 		{
-			name: "version",
-			input: strings.TrimSpace(`
-		TAP version 13
-		`),
+			name:  "should parse a document containing only the version",
+			input: strings.TrimSpace(`TAP version 13`),
 			expected: &Document{
 				Version: 13,
 			},
-		},
-		{
-			name: "version and plan",
+		}, {
+			name: "should parse a document containing only the version and plan",
 			input: strings.TrimSpace(`
 TAP version 13
 1..2
@@ -35,9 +32,8 @@ TAP version 13
 				Version: 13,
 				Plan:    Plan{Start: 1, End: 2},
 			},
-		},
-		{
-			name: "version and plan and test lines.",
+		}, {
+			name: "should parse a basic TAP document",
 			input: strings.TrimSpace(`
 TAP version 13
 1..4
@@ -58,14 +54,14 @@ ok 4 - This test passed also # TODO congratulate the author
 			},
 		},
 		{
-			name: "version and test lines with plan at the end",
+			name: "should parse a plan at the end of the document",
 			input: strings.TrimSpace(`
 TAP version 13
 ok 1 - This test passed
 ok 2 # TODO this test is disabled
 not ok 3 - This test failed
 1..3
-		`),
+`),
 			expected: &Document{
 				Version: 13,
 				Plan: Plan{
@@ -80,7 +76,7 @@ not ok 3 - This test failed
 			},
 		},
 		{
-			name: "with garbage output interleaved",
+			name: "should skip garbage output",
 			input: strings.TrimSpace(`
 TAP version 13
 ERROR: segfault at 0x33123. print stackdump;
@@ -93,7 +89,7 @@ ok 1 - This test passed
 ok 2 # TODO this test is disabled
 exiting
 not ok 3 - This test failed
-		`),
+`),
 			expected: &Document{
 				Version: 13,
 				Plan: Plan{
@@ -108,12 +104,12 @@ not ok 3 - This test failed
 			},
 		},
 		{
-			name: "line that looks like test plan, but is not",
+			name: "should skip a line with an incomplete test plan",
 			input: strings.TrimSpace(`
 TAP version 13
 1..
 not ok 3 - This test failed
-				`),
+`),
 			expected: &Document{
 				Version: 13,
 				TestLines: []TestLine{
@@ -148,6 +144,160 @@ ok 1 # SKIP this  is   disabled
 				Plan:    Plan{Start: 1, End: 1},
 				TestLines: []TestLine{
 					{Ok: true, Count: 1, Directive: Skip, Explanation: "this  is   disabled"},
+				},
+			},
+		},
+		{
+			name: "should parse a YAML block",
+			input: strings.TrimSpace(`
+TAP version 13
+1..1
+ok 1
+ ---
+ name: foo
+ start: 1
+ end: 2
+ ...
+`),
+			expected: &Document{
+				Version: 13,
+				Plan:    Plan{Start: 1, End: 1},
+				TestLines: []TestLine{
+					{
+						Ok:    true,
+						Count: 1,
+						YAML:  "name: foo\nstart: 1\nend: 2\n",
+					},
+				},
+			},
+		},
+		{
+			name: "should parse a YAML block whose header contains trailing characters",
+			input: strings.TrimSpace(`
+TAP version 13
+1..1
+ok 1
+ ---trailing chars
+ name: foo
+ start: 1
+ end: 2
+ ...
+`),
+			expected: &Document{
+				Version: 13,
+				Plan:    Plan{Start: 1, End: 1},
+				TestLines: []TestLine{
+					{
+						Ok:    true,
+						Count: 1,
+						YAML:  "name: foo\nstart: 1\nend: 2\n",
+					},
+				},
+			},
+		},
+		{
+			name: "should parse a YAML block whose footer contains trailing characters",
+			input: strings.TrimSpace(`
+TAP version 13
+1..1
+ok 1
+ ---
+ name: foo
+ start: 1
+ end: 2
+ ...trailing chars
+`),
+			expected: &Document{
+				Version: 13,
+				Plan:    Plan{Start: 1, End: 1},
+				TestLines: []TestLine{
+					{
+						Ok:    true,
+						Count: 1,
+						YAML:  "name: foo\nstart: 1\nend: 2\n",
+					},
+				},
+			},
+		},
+		{
+			name: "should parse a YAML block whose header and footer contain trailing characters",
+			input: strings.TrimSpace(`
+TAP version 13
+1..1
+ok 1
+ --- trailing chars
+ name: foo
+ start: 1
+ end: 2
+ ... even more trailing chars
+`),
+			expected: &Document{
+				Version: 13,
+				Plan:    Plan{Start: 1, End: 1},
+				TestLines: []TestLine{
+					{
+						Ok:    true,
+						Count: 1,
+						YAML:  "name: foo\nstart: 1\nend: 2\n",
+					},
+				},
+			},
+		},
+		{
+			name: "should skip a YAML block at the start of the output",
+			input: strings.TrimSpace(`
+TAP version 13
+1..1
+	---
+	name: foo
+	start: 1
+	end: 2
+	...
+`),
+			expected: &Document{
+				Version: 13,
+				Plan:    Plan{Start: 1, End: 1},
+			},
+		},
+		{
+			name: "should skip a YAML block that does not follow a test line",
+			input: strings.TrimSpace(`
+TAP version 13
+1..1
+ok 1
+	---
+	name: foo_test
+	start: 1
+	end: 2
+	...
+	---
+	name: bar_test
+	start: 3
+	end: 4
+	...
+`),
+			expected: &Document{
+				Version:   13,
+				Plan:      Plan{Start: 1, End: 1},
+				TestLines: []TestLine{{Ok: true, Count: 1, YAML: "name: foo_test\nstart: 1\nend: 2\n"}},
+			},
+		},
+		{
+			name: "should parse a YAML block with no trailing /\\s+.../",
+			input: strings.TrimSpace(`
+TAP version 13
+1..1
+ok 1
+  ---
+  name: foo_test
+  start: 1
+  end: 2
+`),
+			expected: &Document{
+				Version: 13,
+				Plan:    Plan{Start: 1, End: 1},
+				TestLines: []TestLine{
+					{Ok: true, Count: 1, YAML: "name: foo_test\nstart: 1\nend: 2\n"},
 				},
 			},
 		},

@@ -4,92 +4,72 @@
 
 package tokenizer
 
-// NewStream creates a stream of Token values read from input.
+import "fmt"
+
+// Iterator iterates over a stream of tokens. This provides the core functionality for a
+// TokenStream.
+type iterator interface {
+	Next() Token
+	Peek() Token
+	Raw() *rawIterator
+}
+
+// NewTokenStream creates a stream of Token values read from input.
 func NewTokenStream(input []byte) *TokenStream {
 	return &TokenStream{
-		raw: &RawTokenStream{
-			stream: Tokenize(input),
+		iter: &noSpacesIterator{
+			raw: &rawIterator{
+				stream: Tokenize(input),
+			},
 		},
 	}
 }
 
 // TokenStream is a read-only queue of Token values. The next Token in the stream can be
-// consumed by calling Next(). The next token can be observed without being consumed by
-// calling Peek(). By default, TokenStream discards \s characters as though they are not
-// part of the stream. They are discarded when calling both Peek and Next.
+// consumed by calling Next(). The next token can be inspected without being consumed by
+// calling Peek(). By default, TokenStream discards whitespace characters as though they
+// are not part of the stream. Use Raw get a TokenStream that respects whitespace.
 type TokenStream struct {
-	raw *RawTokenStream
-}
-
-// Next consumes the next token in the stream. Space characters are skipped.
-func (s *TokenStream) Next() Token {
-	for {
-		next := s.raw.Next()
-		if next.Type != TypeSpace {
-			return next
-		}
-	}
-}
-
-// Peek returns a read-only copy of the next token in the stream, without consuming it.
-// Space characters are skipped.
-func (s *TokenStream) Peek() Token {
-	for {
-		next := s.raw.Peek()
-		if next.Type == TypeSpace {
-			s.raw.Next()
-			continue
-		}
-		return next
-	}
-}
-
-// Raw returns a RawTokenStream using the same underlying stream of Tokens as this
-// TokenStream.
-func (s TokenStream) Raw() *RawTokenStream {
-	return s.raw
-}
-
-// RawTokenStream is a read-only queue of Token values. The next Token in the stream can
-// be consumed by calling Next(). The next token can be observed without being consumed
-// by calling Peek().
-type RawTokenStream struct {
-	stream    <-chan Token
-	eof       bool
-	lookahead *Token
+	iter iterator
 }
 
 // Next consumes the next token in the stream.
-func (s *RawTokenStream) Next() Token {
-	if s.eof {
-		return EOFToken()
-	}
-
-	next := new(Token)
-	if s.lookahead == nil {
-		*next = <-s.stream
-	} else {
-		next = s.lookahead
-		s.lookahead = nil
-	}
-
-	if next.Type == TypeEOF {
-		s.eof = true
-	}
-
-	return *next
+func (s *TokenStream) Next() Token {
+	return s.iter.Next()
 }
 
 // Peek returns a read-only copy of the next token in the stream, without consuming it.
-func (s *RawTokenStream) Peek() Token {
-	if s.eof {
-		return EOFToken()
-	}
+func (s *TokenStream) Peek() Token {
+	return s.iter.Peek()
+}
 
-	if s.lookahead == nil {
-		s.lookahead = new(Token)
-		*s.lookahead = <-s.stream
-	}
+// Raw returns a TokenStream that includes whitespace characters.
+func (s *TokenStream) Raw() *TokenStream {
+	return &TokenStream{iter: s.iter.Raw()}
+}
 
-	return *s.lookahead
+// Eat consumes the next token from the stream iff it's type matches typ.  If the types
+// are different, an error is returned.
+func (s *TokenStream) Eat(typ TokenType) error {
+	token := s.iter.Peek()
+	if token.Type != typ {
+		return fmt.Errorf("unexpected token: %q", token.Type)
+	}
+	s.iter.Next()
+	return nil
+}
+
+// ConcatUntil concatenates the values of the next tokens in this stream as long as their
+// types are not anyOf. TypeEOF is implied and need not be specified. Returns the
+// contatenated output with outer spaces trimmed.
+func (s *TokenStream) ConcatUntil(anyOf ...TokenType) string {
+	var values string
+	stopAtType := map[TokenType]bool{TypeEOF: true}
+	for i := range anyOf {
+		stopAtType[anyOf[i]] = true
+	}
+	for !stopAtType[s.iter.Peek().Type] {
+		values += s.iter.Next().Value
+	}
+	return values
 }

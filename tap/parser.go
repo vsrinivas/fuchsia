@@ -64,15 +64,20 @@ func discardLine(tokens *tokenizer.TokenStream, _ *Document) (state, error) {
 }
 
 func parseNextLine(tokens *tokenizer.TokenStream, doc *Document) (state, error) {
-	if tokens.Peek().Type == tokenizer.TypeEOF {
+	rtokens := tokens.Raw()
+	if rtokens.Peek().Type == tokenizer.TypeEOF {
 		return nil, nil
 	}
 
-	if tokens.Peek().Type == tokenizer.TypeNumber {
+	if rtokens.Peek().Type == tokenizer.TypeSpace {
+		return parseYAMLBlock, nil
+	}
+
+	if rtokens.Peek().Type == tokenizer.TypeNumber {
 		return parsePlan, nil
 	}
 
-	if tokens.Peek().Value == "ok" || tokens.Peek().Value == "not" {
+	if rtokens.Peek().Value == "ok" || rtokens.Peek().Value == "not" {
 		return parseTestLine, nil
 	}
 
@@ -101,7 +106,7 @@ func parseVersion(tokens *tokenizer.TokenStream, doc *Document) (state, error) {
 	}
 
 	doc.Version = Version(version)
-	return parseNextLine, eat(tokens, tokenizer.TypeNewline)
+	return parseNextLine, tokens.Eat(tokenizer.TypeNewline)
 }
 
 func parsePlan(tokens *tokenizer.TokenStream, doc *Document) (state, error) {
@@ -119,11 +124,11 @@ func parsePlan(tokens *tokenizer.TokenStream, doc *Document) (state, error) {
 		return discardLine, parserError(err.Error())
 	}
 
-	if err := eat(tokens, tokenizer.TypeDot); err != nil {
+	if err := tokens.Eat(tokenizer.TypeDot); err != nil {
 		return discardLine, err
 	}
 
-	if err := eat(tokens, tokenizer.TypeDot); err != nil {
+	if err := tokens.Eat(tokenizer.TypeDot); err != nil {
 		return discardLine, err
 	}
 
@@ -138,7 +143,7 @@ func parsePlan(tokens *tokenizer.TokenStream, doc *Document) (state, error) {
 	}
 
 	doc.Plan = Plan{Start: int(start), End: int(end)}
-	return parseNextLine, eat(tokens, tokenizer.TypeNewline)
+	return parseNextLine, tokens.Eat(tokenizer.TypeNewline)
 }
 
 func parseTestLine(tokens *tokenizer.TokenStream, doc *Document) (state, error) {
@@ -171,15 +176,18 @@ func parseTestLine(tokens *tokenizer.TokenStream, doc *Document) (state, error) 
 
 	// Parse optional description. Stop at a TypePound token which marks the start of a
 	// diagnostic.
-	testLine.Description = concat(tokens.Raw(), func(tok tokenizer.Token) bool {
-		t := tok.Type
-		return t != tokenizer.TypePound && t != tokenizer.TypeNewline && t != tokenizer.TypeEOF
-	})
+	description := tokens.Raw().ConcatUntil(tokenizer.TypePound, tokenizer.TypeNewline)
+	testLine.Description = strings.TrimSpace(description)
 
-	// Move to next line if there's no directive.
-	if err := eat(tokens, tokenizer.TypePound); err != nil {
+	switch tokens.Peek().Type {
+	case tokenizer.TypeEOF:
 		doc.TestLines = append(doc.TestLines, testLine)
-		return discardLine, err
+		return nil, nil
+	case tokenizer.TypeNewline:
+		doc.TestLines = append(doc.TestLines, testLine)
+		return discardLine, nil
+	case tokenizer.TypePound:
+		tokens.Eat(tokenizer.TypePound)
 	}
 
 	// Parse optional directive.
@@ -194,35 +202,55 @@ func parseTestLine(tokens *tokenizer.TokenStream, doc *Document) (state, error) 
 	}
 
 	// Parse explanation.
-	testLine.Explanation = concat(tokens.Raw(), func(tok tokenizer.Token) bool {
-		t := tok.Type
-		return t != tokenizer.TypeNewline && t != tokenizer.TypeEOF
-	})
-
+	explanation := tokens.Raw().ConcatUntil(tokenizer.TypeNewline)
+	testLine.Explanation = strings.TrimSpace(explanation)
 	doc.TestLines = append(doc.TestLines, testLine)
-	return parseNextLine, eat(tokens, tokenizer.TypeNewline)
+
+	if tokens.Peek().Type == tokenizer.TypeEOF {
+		return nil, nil
+	}
+	tokens.Eat(tokenizer.TypeNewline)
+	return parseNextLine, nil
 }
 
-// Eat consumes the next token from the stream iff it's type matches typ. If the types
-// are different, an error is returned.
-func eat(tokens *tokenizer.TokenStream, typ tokenizer.TokenType) error {
-	token := tokens.Peek()
-	if token.Type != typ {
-		return unexpectedTokenError(string(typ), token)
+// Parses a YAML block. The block must begin as a line containing three dashes and end
+// with a line containing three dots.
+func parseYAMLBlock(tokens *tokenizer.TokenStream, doc *Document) (state, error) {
+	rtokens := tokens.Raw()
+	if len(doc.TestLines) == 0 {
+		return discardLine, parserError("found YAML with no parent test line")
 	}
-	tokens.Next()
-	return nil
-}
+	testLine := &doc.TestLines[len(doc.TestLines)-1]
+	if len(testLine.YAML) > 0 {
+		return discardLine, parserError("found YAML with no parent test line")
+	}
 
-// Concat concatenates the values of the next tokens in the stream as long as cond keeps
-// returning true. Returns the contatenated output with leading and trailing spaces
-// trimmed.
-func concat(tokens *tokenizer.RawTokenStream, cond func(tok tokenizer.Token) bool) string {
-	var values string
-	for cond(tokens.Peek()) {
-		values += tokens.Next().Value
+	// Expect the header to match /\s+---/
+	header := rtokens.ConcatUntil(tokenizer.TypeNewline)
+	if len(header) < 4 || !strings.HasPrefix(strings.TrimSpace(header), "---") {
+		return discardLine, fmt.Errorf("expected line matching /^\\s+---/ but got %q", header)
 	}
-	return strings.TrimSpace(values)
+	if err := rtokens.Eat(tokenizer.TypeNewline); err != nil {
+		return discardLine, unexpectedTokenError("a newline", rtokens.Peek())
+	}
+
+	var body string
+	for {
+		line := rtokens.ConcatUntil(tokenizer.TypeNewline)
+		// Expect the footer to match /\s+.../
+		if len(line) >= 4 && strings.HasPrefix(strings.TrimSpace(line), "...") {
+			break
+		}
+
+		body += strings.TrimSpace(line) + "\n"
+		if rtokens.Peek().Type == tokenizer.TypeEOF {
+			break
+		}
+		rtokens.Eat(tokenizer.TypeNewline)
+	}
+
+	testLine.YAML = body
+	return parseNextLine, nil
 }
 
 func unexpectedTokenError(wanted string, token tokenizer.Token) error {

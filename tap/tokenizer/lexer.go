@@ -23,6 +23,7 @@ const (
 	TypeNewline TokenType = "NEWLINE" // '\n'
 	TypeEOF     TokenType = "EOF"     // Psuedo token to signal the end of input.
 	TypeSpace   TokenType = "SPACE"   // A whitespace character
+	TypeDash    TokenType = "DASH"    // '-'
 )
 
 // Token represents some atomic TAP output string.
@@ -97,6 +98,9 @@ func (l *lexer) next() rune {
 
 // Returns the current lexeme.
 func (l *lexer) lexeme() lexeme {
+	if l.pos >= len(l.input) {
+		return lexeme(eof)
+	}
 	return lexeme(l.input[l.pos : l.pos+1][0])
 }
 
@@ -114,6 +118,10 @@ func lexAny(l *lexer) state {
 	l.start = l.pos
 
 	switch {
+	case lxm.isDash():
+		l.next()
+		l.emit(TypeDash)
+		return lexAny
 	case lxm.isNewline():
 		l.next()
 		l.emit(TypeNewline)
@@ -187,6 +195,10 @@ func (l lexeme) isDot() bool {
 	return l == '.'
 }
 
+func (l lexeme) isDash() bool {
+	return l == '-'
+}
+
 func (l lexeme) isPound() bool {
 	return l == '#'
 }
@@ -196,5 +208,5 @@ func (l lexeme) isEOF() bool {
 }
 
 func (l lexeme) isNonText() bool {
-	return l.isEOF() || l.isSpace() || l.isNewline() || l.isDigit() || l.isDot() || l.isPound()
+	return l.isEOF() || l.isSpace() || l.isNewline() || l.isDigit() || l.isDot() || l.isPound() || l.isDash()
 }

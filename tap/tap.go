@@ -116,8 +116,6 @@ const (
 )
 
 // TestLine represents a TAP test line beginning with "ok" or "not ok".
-//
-// TODO: Support inline YAML documents.
 type TestLine struct {
 	Ok          bool
 	Count       int
@@ -125,6 +123,7 @@ type TestLine struct {
 	Directive   Directive
 	Explanation string
 	Diagnostic  string
+	YAML        string
 }
 
 // Type implements Object.
