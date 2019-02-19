@@ -37,79 +37,79 @@ declare_args() {
   #
   # Selector scope parameters
   #
-  #   variant
-  #     Required: The variant to use when this selector matches.  If this is a
+  #   * variant
+  #     - Required: The variant to use when this selector matches.  If this is a
   #     string then it must match a fully-defined variant elsewhere in the
   #     list (or in $default_variants + $standard_variants, which is appended
   #     implicitly to the $variants list).  If it's a scope then it defines a
   #     new variant (see details below).
-  #     Type: string or scope, described below
+  #     - Type: string or scope, described below
   #
-  #   cpu
-  #     Optional: If nonempty, match only when $current_cpu is one in the list.
-  #     Type: list(string)
+  #   * cpu
+  #     - Optional: If nonempty, match only when $current_cpu is one in the list.
+  #     - Type: list(string)
   #
-  #   os
-  #     Optional: If nonempty, match only when $current_os is one in the list.
-  #     Type: list(string)
+  #   * os
+  #     - Optional: If nonempty, match only when $current_os is one in the list.
+  #     - Type: list(string)
   #
-  #   host
-  #     Optional: If present, match only in host environments if true or
+  #   * host
+  #     - Optional: If present, match only in host environments if true or
   #     non-host environments if false.  This means a context in which
   #     $is_host is true, not specifically the build host.  For example, it
   #     would be true when cross-compiling host tools for an SDK build but
   #     would be false when compiling code for a hypervisor guest system
   #     that happens to be the same CPU and OS as the build host.
-  #     Type: bool
+  #     - Type: bool
   #
-  #   kernel
-  #     Optional: If present, match only in kernel environments if true or
+  #   * kernel
+  #     - Optional: If present, match only in kernel environments if true or
   #     non-kernel environments if false.  This means a context in which
   #     $is_kernel is true, not just the "kernel" environment itself.
   #     For different machine architectures there may be multiple different
   #     specialized environments that set $is_kernel, e.g. for boot loaders
   #     and for special circumstances used within the kernel.  See also the
   #     $tags field in $variant, described below.
-  #     Type: bool
+  #     - Type: bool
   #
-  #   environment
-  #     Optional: If nonempty, a list of environment names that match.  This
+  #   * environment
+  #     - Optional: If nonempty, a list of environment names that match.  This
   #     looks at ${toolchain.environment}, which is the simple name (no
   #     directories) in an environment label defined by environment().  Each
   #     element can match either the whole environment name, or just the
   #     "base" environment, which is the part of the name before a `.` if it
   #     has one.  For example, "host" would match both "host" and "host.fuzz".
-  #     Type: list(string)
+  #     - Type: list(string)
   #
-  #   target_type
-  #     Optional: If nonempty, a list of target types to match.  This is one of
+  #   * target_type
+  #     - Optional: If nonempty, a list of target types to match.  This is one of
   #     "executable", "host_tool", "loadable_module", "driver", or "test".
   #     Note, test_driver() matches as "driver".
-  #     Type: list(string)
+  #     - Type: list(string)
   #
-  #   label
-  #     Optional: If nonempty, match only when the canonicalized target label
+  #   * label
+  #     - Optional: If nonempty, match only when the canonicalized target label
   #     (as returned by `get_label_info(..., "label_no_toolchain")`) is one in
   #     the list.
-  #     Type: list(label_no_toolchain)
+  #     - Type: list(label_no_toolchain)
   #
-  #   dir
-  #     Optional: If nonempty, match only when the directory part of the
+  #   * dir
+  #     - Optional: If nonempty, match only when the directory part of the
   #     target label (as returned by `get_label_info(..., "dir")`) is one in
   #     the list.
-  #     Type: list(label_no_toolchain)
+  #     - Type: list(label_no_toolchain)
   #
-  #   name
-  #     Optional: If nonempty, match only when the name part of the target
+  #   * name
+  #     - Optional: If nonempty, match only when the name part of the target
   #     label (as returned by `get_label_info(..., "name")`) is one in the
   #     list.
-  #     Type: list(label_no_toolchain)
+  #     - Type: list(label_no_toolchain)
   #
-  #   output_name
-  #     Optional: If nonempty, match only when the `output_name` of the target
+  #   * output_name
+  #     - Optional: If nonempty, match only when the `output_name` of the target
   #     is one in the list.  Note `output_name` defaults to `target_name`,
   #     and does not include prefixes or suffixes like ".so" or ".exe".
-  #     Type: list(string)
+  #     - Type: list(string)
   #
   # An element with a scope for `.variant` defines a new variant.  Each
   # variant name used in a selector must be defined exactly once.  Other
@@ -120,23 +120,23 @@ declare_args() {
   #
   # Variant scope parameters
   #
-  #   name
-  #     Required: Name for the variant.  This must be unique among all
+  #   * name
+  #     - Required: Name for the variant.  This must be unique among all
   #     variants used with the same environment.  It becomes part of the GN
   #     toolchain names defined for the environment, which in turn forms part
   #     of directory names used in $root_build_dir; so it must meet Ninja's
   #     constraints on file names (sticking to `[a-z0-9_-]` is a good idea).
   #
-  #   globals
-  #     Optional: Variables in this scope are introduced as globals visible
+  #   * globals
+  #     - Optional: Variables in this scope are introduced as globals visible
   #     to all GN code in the toolchain.  For example, the standard "gcc"
   #     variant sets `is_gcc = true` in $globals.  This should be used
   #     sparingly and is safest when restricted to variables that
   #     $zx/public/gn/BUILDCONFIG.gn sets defaults for.
-  #     Type: scope
+  #     - Type: scope
   #
-  #   toolchain_args
-  #     Optional: See toolchain().  Variables in this scope must match GN
+  #   * toolchain_args
+  #     - Optional: See toolchain().  Variables in this scope must match GN
   #     build arguments defined somewhere in the build with declare_args().
   #     Use this when the variant should change something that otherwise is a
   #     manual tuning variable to set via `gn args`.  *Do not* define
@@ -144,58 +144,57 @@ declare_args() {
   #     i.e. if they should not *also* be available to set via `gn args` to
   #     affect other variants that don't override them here.  Instead, use
   #     either $globals (above) or $toolchain_vars (below).
-  #     Type: scope
+  #     - Type: scope
   #
-  #   toolchain_vars
-  #     Optional: Variables in this scope are visible in the scope-typed
+  #   * toolchain_vars
+  #     - Optional: Variables in this scope are visible in the scope-typed
   #     $toolchain global variable seen in toolchains for this variant.
   #     Use this to pass along interesting information without cluttering
   #     the global scope via $globals.
-  #     Type: scope
+  #     - Type: scope
   #
-  #   configs
-  #     Optional: List of changes to the pre-set $configs variable in targets
+  #   * configs
+  #     - Optional: List of changes to the pre-set $configs variable in targets
   #     being defined in toolchains for this variant.  This is the same as in
   #     the $configs parameter to environment().  Each element is either a
   #     string or a scope.  A string element is simply appended to the default
   #     $configs list: it's equivalent to a scope element of `{add=["..."]}`.
   #     The string is the GN label (without toolchain) for a config() target.
   #     A scope element can be more selective, as described below.
-  #     Type: list(label_no_toolchain or scope)
-  #
-  #       shlib
-  #         Optional: If present, this element applies only when
+  #     - Type: list(label_no_toolchain or scope)
+  #       * shlib
+  #         - Optional: If present, this element applies only when
   #         `current_toolchain == toolchain.shlib` (if true) or
   #         `current_toolchain != toolchain.shlib` (if false).  That is, it
   #         applies only in (not ni) the companion toolchain used to compile
   #         shared_library() and loadable_module() (including driver()) code.
-  #         Type: bool
+  #         - Type: bool
   #
-  #       types
-  #         Optional: If present, this element applies only to a target whose
+  #       * types
+  #         - Optional: If present, this element applies only to a target whose
   #         type is one in this list (same as `target_type` in a selector,
   #         described above).
-  #         Type: list(string)
+  #         - Type: list(string)
   #
-  #       add
-  #         Optional: List of labels to append to $configs.
-  #         Type: list(label_no_toolchain)
+  #       * add
+  #         - Optional: List of labels to append to $configs.
+  #         - Type: list(label_no_toolchain)
   #
-  #       remove
-  #         Optional: List of labels to remove from $configs.  This does
+  #       * remove
+  #         - Optional: List of labels to remove from $configs.  This does
   #         exactly `configs -= remove` so it has the normal GN semantics that
   #         it's an error if any element in the $remove list is not present in
   #         the $configs list beforehand.
-  #         Type: list(label_no_toolchain)
+  #         - Type: list(label_no_toolchain)
   #
-  #   implicit_deps
-  #     Optional: List of changes to the list added to $deps of all linking
+  #   * implicit_deps
+  #     - Optional: List of changes to the list added to $deps of all linking
   #     targets in toolchains for this variant.  This is the same as in the
   #     $implicit_deps parameter to environment().
-  #     Type: See $configs
+  #     - Type: See $configs
   #
-  #   tags
-  #     Optional: List of tags that describe this variant.  This list will be
+  #   * tags
+  #     - Optional: List of tags that describe this variant.  This list will be
   #     visible within the variant's toolchains as ${toolchain.tags}.  Its main
   #     purpose is to match the $exclude_variant_tags list in an environment()
   #     definition.  For example, several of the standard variants listed in
@@ -204,10 +203,10 @@ declare_args() {
   #     Then $variants selectors that choose variants that are incompatible
   #     with the kernel are automatically ignored in the kernel toolchains,
   #     so there's no need to add `kernel = false` to every such selector.
-  #     Type: list(string)
+  #     - Type: list(string)
   #
-  #   bases
-  #     Optional: A list of other variant names that this one inherits from.
+  #   * bases
+  #     - Optional: A list of other variant names that this one inherits from.
   #     This is a very primitive mechanism for deriving a new variant from an
   #     existing variant.  All of fields from all the bases except for `name`
   #     and `bases` are combined with the fields defined explicitly for the
@@ -217,7 +216,7 @@ declare_args() {
   #     later in the list overriding values set earlier (so this variant's
   #     values override all the bases).  There is *only one* level of
   #     inheritance: a base variant listed in $bases cannot have $bases itself.
-  #     Type: list(string)
+  #     - Type: list(string)
   #
   variants = []
 }
@@ -241,64 +240,64 @@ declare_args() {
 #
 # Parameters
 #
-#   cpu
-#     Required: $current_cpu value in the new toolchains.
-#     Type: string
+#   * cpu
+#     - Required: $current_cpu value in the new toolchains.
+#     - Type: string
 #
-#   os
-#     Optional: $current_os value in the new toolchains.
-#     Type: string
-#     Default: "fuchsia"
+#   * os
+#     - Optional: $current_os value in the new toolchains.
+#     - Type: string
+#     - Default: "fuchsia"
 #
-#   shlib
-#     Optional: If this environment will supported shared_library() and
+#   * shlib
+#     - Optional: If this environment will supported shared_library() and
 #     loadable_module() targets via `.shlib` companion toolchains.
-#     Type: bool
-#     Default: false
+#     - Type: bool
+#     - Default: false
 #
-#   solink
-#     Optional: If this environment will be used *only* for shared_library()
+#   * solink
+#     - Optional: If this environment will be used *only* for shared_library()
 #     and/or loadable_module() targets.  Mutually exclusive with $shlib.
-#     Type: bool
-#     Default: false
+#     - Type: bool
+#     - Default: false
 #
-#   configs
-#     Preset: $standard_configs
-#     Required: List of config() labels or scopes.
+#   * configs
+#     - Preset: $standard_configs
+#     - Required: List of config() labels or scopes.
 #     These are the default $configs preset in all compiling targets.
 #     Elements are the same as $configs in a $variant scope in $variants.
 #     Each element is usually a label (string), which means it's
 #     in the preset $configs for all target scopes.  It can instead
 #     be a scope that defines:
-#       shlib
-#         Optional: Boolean.  If defined, this element only takes effect
+#       * shlib
+#         - Optional: Boolean.  If defined, this element only takes effect
 #         in the ${toolchain.shlib} toolchain (if true) or in the non-shlib
 #         toolchain if false.
-#       types
-#         Optional: List of strings,  e.g. ["driver", "source_set"].
+#       * types
+#         - Optional: List of strings,  e.g. ["driver", "source_set"].
 #         This element only takes effect for targets of these types.
-#       add, remove
-#         Optional: List of labels, usually config() targets.
+#       * add, remove
+#         - Optional: List of labels, usually config() targets.
 #         The preset $configs gets `+=` and then `-=` these, respectively.
 #
-#   implicit_deps
-#     Optional: List of labels or scopes.  This controls the list forcibly
+#   * implicit_deps
+#     - Optional: List of labels or scopes.  This controls the list forcibly
 #     added to the $deps list of every linking target built in this
 #     environment.  Elements are the same as $implicit_deps in a @variant
 #     scope in $variants.
-#     Type: list(label)
-#     Default: []
+#     - Type: list(label)
+#     - Default: []
 #
-#   globals
-#     Optional: A scope imported into the global scope in these toolchains.
+#   * globals
+#     - Optional: A scope imported into the global scope in these toolchains.
 #     This is the place to define `is_...` variables.
 #
-#   toolchain_args
-#     Optional: A scope of build argument overrides for these toolchains.
+#   * toolchain_args
+#     - Optional: A scope of build argument overrides for these toolchains.
 #     This is just like $toolchain_args passed to toolchain() in bare GN.
 #
-#   toolchain_vars
-#     Optional: A scope imported into the $toolchain scope in these toolchains.
+#   * toolchain_vars
+#     - Optional: A scope imported into the $toolchain scope in these toolchains.
 #     This can store useful toolchain-specific variables that should be
 #     available within the toolchain.  $toolchain automatically contains
 #     `tool_dir`, `tool_prefix`, `cc, and `cxx`, from c_toolchain().
@@ -307,8 +306,8 @@ declare_args() {
 #     but in that particular variant installed under the suffixed name.
 #     The default `variant_suffix` is ".$variant" in each variant.
 #
-#   variant_selectors
-#     Optional: A list in the schema of the $variants build argument.  This
+#   * variant_selectors
+#     - Optional: A list in the schema of the $variants build argument.  This
 #     controls which variant is used to build each individual target.  Just
 #     having a selector with `.variant = "..."` makes the "..." variant
 #     toolchain exist in this environment, even if the selector doesn't
@@ -320,8 +319,8 @@ declare_args() {
 #     not include $default_variants.  Default: $variants +
 #     $default_variants + $standard_variants
 #
-#   exclude_variant_tags
-#     Optional: A list of strings that might appear in the .tags list of a
+#   * exclude_variant_tags
+#     - Optional: A list of strings that might appear in the .tags list of a
 #     .variant scope.  If any of these strings appears in a .variant scope,
 #     then $variant_selectors elements using that variant will be silently
 #     ignored in this environment's toolchains.  e.g. an environment that is
