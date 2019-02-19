@@ -191,6 +191,7 @@ mod tests {
     macro_rules! test_compile {
         (
             $(
+                $(#[$m:meta])*
                 $test_name:ident => {
                     input = $input:expr,
                     output = $result:expr,
@@ -198,6 +199,7 @@ mod tests {
             )+
         ) => {
             $(
+                $(#[$m])*
                 #[test]
                 fn $test_name() {
                     compile_test($input, $result, true);
@@ -221,8 +223,6 @@ mod tests {
 
     // TODO: Consider converting these to a golden test
 
-    // TODO(viktard): re-enable after json5 0.2.4 merged
-    #[ignore]
     test_compile! {
         test_compile_empty => {
             input = json!({}),
@@ -417,8 +417,11 @@ mod tests {
     ]
 }"#,
         },
-        // TODO(CF-167): JSON5 int->float parse bug
 
+        // TODO(CF-343): JSON5 int->float parse bug
+        //
+        // TODO(CF-343): re-enable after json5 0.2.4 merged
+        #[ignore]
         test_compile_facets => {
             input = json!({
                 "facets": {
@@ -443,6 +446,8 @@ mod tests {
 }"#,
         },
 
+        // TODO(CF-343): re-enable after json5 0.2.4 merged
+        #[ignore]
         test_compile_all_sections => {
             input = json!({
                 "program": {
@@ -478,7 +483,7 @@ mod tests {
                     "year": 2018
                 }
             }),
-            // TODO(CF-167): JSON5 int->float parse bug
+            // TODO(CF-343): JSON5 int->float parse bug
             output = r#"{
     "program": {
         "binary": "bin/app"
