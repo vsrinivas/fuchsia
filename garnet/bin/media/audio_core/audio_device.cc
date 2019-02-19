@@ -84,9 +84,10 @@ void AudioDevice::SetGainInfo(const ::fuchsia::media::AudioGainInfo& info,
 }
 
 zx_status_t AudioDevice::Init() {
-  // TODO(johngro) : See MG-940.  Eliminate this priority boost as soon as we
+  // TODO(johngro) : See ZX-940.  Eliminate this priority boost as soon as we
   // have a more official way of meeting real-time latency requirements.
-  mix_domain_ = ::dispatcher::ExecutionDomain::Create(24);
+  mix_domain_ = ::dispatcher::ExecutionDomain::Create(
+      24, "garnet/bin/media/audio_core/audio_device");
   mix_wakeup_ = ::dispatcher::WakeupEvent::Create();
 
   if ((mix_domain_ == nullptr) || (mix_wakeup_ == nullptr)) {

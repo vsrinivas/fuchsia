@@ -24,7 +24,9 @@ library("dispatcher-pool") {
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
+    "$zx/system/fidl/fuchsia-scheduler:c",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/zx",
   ]
 }

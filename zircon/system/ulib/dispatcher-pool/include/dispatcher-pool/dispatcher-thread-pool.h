@@ -7,6 +7,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <lib/zx/port.h>
+#include <lib/zx/profile.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_single_list.h>
@@ -24,7 +25,8 @@ namespace dispatcher {
 class ThreadPool : public fbl::RefCounted<ThreadPool>,
                    public fbl::WAVLTreeContainable<fbl::RefPtr<ThreadPool>> {
 public:
-    static zx_status_t Get(fbl::RefPtr<ThreadPool>* pool_out, uint32_t priority);
+    static zx_status_t Get(fbl::RefPtr<ThreadPool>* pool_out, uint32_t priority,
+                           const char* profile_name);
     static void ShutdownAll();
 
     void Shutdown();
@@ -65,22 +67,44 @@ private:
         const uint32_t id_;
     };
 
-    explicit ThreadPool(uint32_t priority) : priority_(priority) { }
+    ThreadPool(uint32_t priority, const char* profile_name)
+        : priority_(priority), profile_name_(profile_name) {}
     ~ThreadPool() { }
 
     uint32_t priority() const { return priority_; }
+    const char* profile_name() const { return profile_name_; }
     const zx::port& port() const { return port_; }
+    const zx::profile& profile() const { return profile_; }
 
     void PrintDebugPrefix();
     zx_status_t Init();
     void InternalShutdown();
 
+    struct PriorityAndProfileName {
+        uint32_t priority;
+        const char* profile_name;
+    };
+
+    struct PoolsTraits {
+        static PriorityAndProfileName GetKey(const ThreadPool& element) {
+            return PriorityAndProfileName{element.priority(), element.profile_name()};
+        }
+        static bool LessThan(const PriorityAndProfileName& a, const PriorityAndProfileName& b) {
+            return std::tie(a.priority, a.profile_name) < std::tie(b.priority, b.profile_name);
+        }
+        static bool EqualTo(const PriorityAndProfileName& a, const PriorityAndProfileName& b) {
+            return std::tie(a.priority, a.profile_name) == std::tie(b.priority, b.profile_name);
+        }
+    };
+
     static fbl::Mutex active_pools_lock_;
-    static fbl::WAVLTree<uint32_t, fbl::RefPtr<ThreadPool>> active_pools_
-        __TA_GUARDED(active_pools_lock_);
+    static fbl::WAVLTree<PriorityAndProfileName, fbl::RefPtr<ThreadPool>, PoolsTraits>
+        active_pools_ __TA_GUARDED(active_pools_lock_);
     static bool system_shutdown_ __TA_GUARDED(active_pools_lock_);
 
     const uint32_t priority_;
+    const char* profile_name_;
+    zx::profile profile_;
 
     fbl::Mutex pool_lock_ __TA_ACQUIRED_AFTER(active_pools_lock_);
     zx::port port_;
