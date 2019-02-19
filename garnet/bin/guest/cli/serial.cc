@@ -4,8 +4,8 @@
 
 #include "garnet/bin/guest/cli/serial.h"
 
+#include <fcntl.h>
 #include <poll.h>
-#include <iostream>
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
@@ -31,7 +31,7 @@ class InputReader {
 
  private:
   void WaitForKeystroke() {
-    if (std::cin.good()) {
+    if (fcntl(STDIN_FILENO, F_GETFD) != -1) {
       fd_waiter_.Wait(fit::bind_member(this, &InputReader::HandleKeystroke),
                       STDIN_FILENO, POLLIN);
     }
@@ -53,7 +53,10 @@ class InputReader {
     if (status != ZX_OK) {
       return;
     }
-    pending_key_ = std::cin.get();
+    ssize_t actual = read(STDIN_FILENO, &pending_key_, 1);
+    if (actual != 1) {
+      return;
+    }
     switch (pending_key_) {
       case '\b':
         pending_key_ = 0x7f;
@@ -90,8 +93,7 @@ class OutputWriter : public fsl::SocketDrainer::Client {
 
   // |fsl::SocketDrainer::Client|
   void OnDataAvailable(const void* data, size_t num_bytes) override {
-    std::cout.write(static_cast<const char*>(data), num_bytes);
-    std::cout.flush();
+    write(STDOUT_FILENO, data, num_bytes);
   }
 
   void OnDataComplete() override { loop_->Shutdown(); }
@@ -133,7 +135,7 @@ void handle_serial(uint32_t env_id, uint32_t cid, async::Loop* loop,
   zx::socket socket;
   instance_controller->GetSerial(&socket);
   if (!socket) {
-    std::cerr << "Failed to open serial port\n";
+    FXL_LOG(ERROR) << "Failed to open serial port";
     return;
   }
   SerialConsole console(loop);
