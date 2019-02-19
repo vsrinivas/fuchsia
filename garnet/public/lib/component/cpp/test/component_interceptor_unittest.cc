@@ -76,14 +76,14 @@ TEST_F(ComponentInterceptorTest, TestFallbackAndInterceptingUrls) {
     std::string actual_url;
 
     bool intercepted_url = false;
-    interceptor.InterceptURL(
-        kInterceptUrl,
+    ASSERT_TRUE(interceptor.InterceptURL(
+        kInterceptUrl, "",
         [&actual_url, &intercepted_url](
             fuchsia::sys::StartupInfo startup_info,
             fidl::InterfaceRequest<fuchsia::sys::ComponentController>) {
           intercepted_url = true;
           actual_url = startup_info.launch_info.url;
-        });
+        }));
 
     fuchsia::sys::ComponentControllerPtr controller;
     fuchsia::sys::LaunchInfo info;
@@ -109,4 +109,45 @@ TEST_F(ComponentInterceptorTest, TestFallbackAndInterceptingUrls) {
 
     EXPECT_EQ(kFallbackUrl, test_loader.requested_urls[0]);
   }
+}
+
+TEST_F(ComponentInterceptorTest, ExtraCmx) {
+  auto interceptor =
+      component::testing::ComponentInterceptor::CreateWithEnvironmentLoader(
+          real_env());
+  auto env = component::testing::EnclosingEnvironment::Create(
+      "test_harness", real_env(),
+      interceptor.MakeEnvironmentServices(real_env()));
+
+  constexpr char kUrl[] = "file://fake_url";
+  bool intercepted_url = false;
+  std::map<std::string, std::string> program_metadata;
+  ASSERT_TRUE(interceptor.InterceptURL(
+      kUrl, R"({
+        "runner": "fake",
+        "program": {
+          "binary": "",
+          "data": "randomstring"
+        }
+      })",
+      [&](fuchsia::sys::StartupInfo startup_info,
+          fidl::InterfaceRequest<fuchsia::sys::ComponentController>) {
+        intercepted_url = true;
+        for (const auto& metadata : startup_info.program_metadata.get()) {
+          program_metadata[metadata.key] = metadata.value;
+        }
+      }));
+
+  fuchsia::sys::ComponentControllerPtr controller;
+  fuchsia::sys::LaunchInfo info;
+  info.url = kUrl;
+
+  // This should call into our TestLoader.
+  env->CreateComponent(std::move(info), controller.NewRequest());
+
+  // Test that we intercepting URL
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return intercepted_url; }, zx::sec(2)));
+  EXPECT_TRUE(intercepted_url);
+  EXPECT_EQ("randomstring", program_metadata["data"]);
 }
