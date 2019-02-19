@@ -76,7 +76,7 @@ void ConflictResolverClient::Cancel() {
   }
 }
 
-void ConflictResolverClient::GetOrCreateObjectIdetifier(
+void ConflictResolverClient::GetOrCreateObjectIdentifier(
     const MergedValue& merged_value,
     fit::function<void(storage::Status, storage::ObjectIdentifier)> callback) {
   FXL_DCHECK(merged_value.source == ValueSource::RIGHT ||
@@ -119,9 +119,8 @@ void ConflictResolverClient::GetOrCreateObjectIdetifier(
       }
       break;
     }
-    case ValueSource::DELETE: {
-      // No object identifier to retrieve for deletions.
-      break;
+    default: {
+      FXL_NOTREACHED();
     }
   }
 }
@@ -252,7 +251,7 @@ void ConflictResolverClient::MergeNew(std::vector<MergedValue> merged_values,
             storage::Status::OK);
         for (const MergedValue& merged_value : merged_values) {
           if (merged_value.source != ValueSource::DELETE) {
-            GetOrCreateObjectIdetifier(merged_value, waiter->NewCallback());
+            GetOrCreateObjectIdentifier(merged_value, waiter->NewCallback());
           }
         }
         waiter->Finalize(

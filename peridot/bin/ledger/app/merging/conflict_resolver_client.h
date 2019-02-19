@@ -44,7 +44,7 @@ class ConflictResolverClient
   // Gets or creates the object identifier associated to the given
   // |merge_value|. This method can only be called on merge values whose source
   // is either |NEW| or |RIGHT|.
-  void GetOrCreateObjectIdetifier(
+  void GetOrCreateObjectIdentifier(
       const MergedValue& merged_value,
       fit::function<void(storage::Status, storage::ObjectIdentifier)> callback);
 
