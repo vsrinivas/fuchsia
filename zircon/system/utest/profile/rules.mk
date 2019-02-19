@@ -12,7 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/profile.cpp
 
 MODULE_FIDL_LIBS := \
-    system/fidl/fuchsia-profile
+    system/fidl/fuchsia-scheduler
 
 MODULE_NAME := profile-svc-test
 

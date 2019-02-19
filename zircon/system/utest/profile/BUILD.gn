@@ -7,7 +7,7 @@ test("profile") {
     "profile.cpp",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-profile:c",
+    "$zx/system/fidl/fuchsia-scheduler:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/profile",
     "$zx/system/ulib/unittest",

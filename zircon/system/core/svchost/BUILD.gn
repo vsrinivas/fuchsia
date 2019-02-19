@@ -15,7 +15,7 @@ executable("svchost") {
     "$zx/system/fidl/fuchsia-mem:c",
     "$zx/system/fidl/fuchsia-net:c",
     "$zx/system/fidl/fuchsia-process:c",
-    "$zx/system/fidl/fuchsia-profile:c",
+    "$zx/system/fidl/fuchsia-scheduler:c",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/fbl",

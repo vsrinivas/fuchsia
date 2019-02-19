@@ -8,7 +8,7 @@ library("profile") {
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
-    "$zx/system/fidl/fuchsia-profile:c",
+    "$zx/system/fidl/fuchsia-scheduler:c",
     "$zx/system/ulib/async",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

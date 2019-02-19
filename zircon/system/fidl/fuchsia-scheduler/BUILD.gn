@@ -4,17 +4,8 @@
 
 import("$zx/public/gn/fidl.gni")
 
-fidl_library("fuchsia.scheduler") {
+fidl_library("fuchsia-scheduler") {
   sources = [
     "profile.fidl",
   ]
-}
-
-if (current_toolchain != default_toolchain) {
-  group("c") {
-    # TODO(ZX-3365): rename this dir
-    public_deps = [
-      ":fuchsia.scheduler.c",
-    ]
-  }
 }

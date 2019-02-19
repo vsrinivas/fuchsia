@@ -14,7 +14,7 @@ MODULE_SRCS := \
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_FIDL_LIBS := \
-    system/fidl/fuchsia-profile
+    system/fidl/fuchsia-scheduler
 
 MODULE_HEADER_DEPS := \
     system/ulib/svc \

@@ -57,7 +57,7 @@ source_set("lib") {
     "//sdk/lib/sys/cpp",
     "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-process",
-    "//zircon/public/fidl/fuchsia-profile",
+    "//zircon/public/fidl/fuchsia-scheduler",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",

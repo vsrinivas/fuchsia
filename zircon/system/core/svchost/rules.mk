@@ -21,7 +21,7 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-mem \
     system/fidl/fuchsia-net \
     system/fidl/fuchsia-process \
-    system/fidl/fuchsia-profile \
+    system/fidl/fuchsia-scheduler \
     system/fidl/fuchsia-sysmem \
 
 MODULE_STATIC_LIBS := \
