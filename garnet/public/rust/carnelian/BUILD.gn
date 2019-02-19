@@ -27,7 +27,6 @@ rustc_library("carnelian") {
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.viewsv1:fuchsia.ui.viewsv1-rustc",
-    "//sdk/fidl/fuchsia.ui.viewsv1token:fuchsia.ui.viewsv1token-rustc",
     "//third_party/rust-crates/rustc_deps:euclid",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",

@@ -9,10 +9,9 @@ use fidl_fuchsia_ui_gfx as gfx;
 use fidl_fuchsia_ui_input;
 use fidl_fuchsia_ui_scenic::{SessionListenerMarker, SessionListenerRequest};
 use fidl_fuchsia_ui_viewsv1::{ViewListenerMarker, ViewListenerRequest};
-use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
 use fuchsia_async as fasync;
 use fuchsia_scenic::{ImportNode, Session, SessionPtr};
-use fuchsia_zircon::{self as zx, EventPair};
+use fuchsia_zircon as zx;
 use futures::{TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::{any::Any, cell::RefCell, sync::Arc};
@@ -31,7 +30,9 @@ pub struct ViewAssistantContext<'a> {
     pub import_node: &'a ImportNode,
     pub session: &'a SessionPtr,
     pub key: ViewKey,
+    pub logical_size: Size,
     pub size: Size,
+    pub metrics: Size,
     pub messages: Vec<Box<dyn Any>>,
 }
 
@@ -81,45 +82,35 @@ pub struct ViewController {
     view_container: fidl_fuchsia_ui_viewsv1::ViewContainerProxy,
     session: SessionPtr,
     import_node: ImportNode,
-    size: Size,
     #[allow(unused)]
     key: ViewKey,
     assistant: ViewAssistantPtr,
-}
-
-pub(crate) enum NewViewParams {
-    V1(ServerEnd<ViewOwnerMarker>),
-    V2(EventPair),
+    metrics: Size,
+    physical_size: Size,
+    logical_size: Size,
 }
 
 impl ViewController {
     pub(crate) fn new(
         app: &mut App,
-        req: NewViewParams,
+        view_token: gfx::ExportToken,
         key: ViewKey,
     ) -> Result<ViewControllerPtr, Error> {
         let (view, view_server_end) = create_proxy()?;
         let (view_listener, view_listener_request) = create_endpoints()?;
         let (mine, theirs) = zx::EventPair::create()?;
-        match req {
-            NewViewParams::V1(req) => {
-                app.view_manager.create_view(view_server_end, req, view_listener, theirs, None)?;
-            }
-            NewViewParams::V2(view_token) => {
-                app.view_manager.create_view2(
-                    view_server_end,
-                    view_token,
-                    view_listener,
-                    theirs,
-                    None,
-                )?;
-            }
-        }
-        let (scenic, scenic_request) = create_proxy()?;
-        app.view_manager.get_scenic(scenic_request)?;
+
+        app.view_manager.create_view2(
+            view_server_end,
+            view_token.value,
+            view_listener,
+            theirs,
+            None,
+        )?;
+
         let (session_listener, session_listener_request) = create_endpoints()?;
         let (session_proxy, session_request) = create_proxy()?;
-        scenic.create_session(session_request, Some(session_listener))?;
+        app.scenic.create_session(session_request, Some(session_listener))?;
         let session = Session::new(session_proxy);
 
         let view_assistant = app.create_view_assistant(&session)?;
@@ -135,7 +126,9 @@ impl ViewController {
             import_node: &mut import_node,
             session: &session,
             key,
+            logical_size: Size::zero(),
             size: Size::zero(),
+            metrics: Size::zero(),
             messages: Vec::new(),
         };
         view_assistant.lock().borrow_mut().setup(&context)?;
@@ -145,7 +138,9 @@ impl ViewController {
             view_container: view_container,
             session,
             import_node,
-            size: Size::zero(),
+            metrics: Size::zero(),
+            physical_size: Size::zero(),
+            logical_size: Size::zero(),
             key,
             assistant: view_assistant,
         };
@@ -205,7 +200,9 @@ impl ViewController {
             import_node: &mut self.import_node,
             session: &self.session,
             key: self.key,
-            size: self.size,
+            logical_size: self.logical_size,
+            size: self.physical_size,
+            metrics: self.metrics,
             messages: Vec::new(),
         };
         self.assistant
@@ -218,7 +215,12 @@ impl ViewController {
 
     fn handle_session_events(&mut self, events: Vec<fidl_fuchsia_ui_scenic::Event>) {
         events.iter().for_each(|event| match event {
-            fidl_fuchsia_ui_scenic::Event::Gfx(gfx::Event::Metrics(_event)) => {
+            fidl_fuchsia_ui_scenic::Event::Gfx(gfx::Event::Metrics(event)) => {
+                self.metrics = Size::new(event.metrics.scale_x, event.metrics.scale_y);
+                self.logical_size = Size::new(
+                    self.physical_size.width * self.metrics.width,
+                    self.physical_size.height * self.metrics.height,
+                );
                 self.update();
             }
             fidl_fuchsia_ui_scenic::Event::Input(event) => {
@@ -227,7 +229,9 @@ impl ViewController {
                     import_node: &mut self.import_node,
                     session: &self.session,
                     key: self.key,
-                    size: self.size,
+                    logical_size: self.logical_size,
+                    size: self.physical_size,
+                    metrics: self.metrics,
                     messages: Vec::new(),
                 };
                 self.assistant
@@ -256,7 +260,11 @@ impl ViewController {
 
     fn handle_properties_changed(&mut self, properties: &fidl_fuchsia_ui_viewsv1::ViewProperties) {
         if let Some(ref view_properties) = properties.view_layout {
-            self.size = Size::new(view_properties.size.width, view_properties.size.height);
+            self.physical_size = Size::new(view_properties.size.width, view_properties.size.height);
+            self.logical_size = Size::new(
+                self.physical_size.width * self.metrics.width,
+                self.physical_size.height * self.metrics.height,
+            );
             self.update();
         }
     }

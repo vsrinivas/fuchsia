@@ -1,5 +1,8 @@
+use carnelian::{
+    Canvas, Color, FontDescription, FontFace, Paint, Point, SharedBufferPixelSink, Size,
+};
 use failure::Error;
-use fidl::endpoints::{create_endpoints, create_proxy, ServerEnd};
+use fidl::endpoints::{create_endpoints, ServerEnd};
 use fidl_fuchsia_images as images;
 use fidl_fuchsia_math::SizeF;
 use fidl_fuchsia_ui_gfx as gfx;
@@ -8,14 +11,11 @@ use fidl_fuchsia_ui_input::{
     InputMethodEditorClientRequest, InputMethodEditorMarker, KeyboardEventPhase, KeyboardType,
     TextAffinity, TextInputState, TextRange, TextSelection,
 };
-use fidl_fuchsia_ui_scenic::{self as scenic, ScenicProxy, SessionListenerRequest};
+use fidl_fuchsia_ui_scenic::{self as scenic, SessionListenerMarker, SessionListenerRequest};
 use fidl_fuchsia_ui_viewsv1::{ViewListenerMarker, ViewListenerRequest, ViewProperties, ViewProxy};
 use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
-use fuchsia_scenic::{HostImageCycler, ImportNode, Session, SessionPtr};
-use fuchsia_ui::{
-    Canvas, Color, FontDescription, FontFace, Paint, Point, SharedBufferPixelSink, Size,
-};
+use fuchsia_scenic::{HostImageCycler, ImportNode, SessionPtr};
 use fuchsia_zircon::EventPair;
 use futures::{FutureExt, TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
@@ -46,7 +46,8 @@ impl ViewController {
         view_listener_request: ServerEnd<ViewListenerMarker>,
         view: ViewProxy,
         mine: EventPair,
-        scenic: ScenicProxy,
+        session: SessionPtr,
+        session_listener_request: ServerEnd<SessionListenerMarker>,
     ) -> Result<ViewControllerPtr, Error> {
         let ime_service = connect_to_service::<ImeServiceMarker>()?;
         let (ime_listener, ime_listener_request) = create_endpoints::<InputMethodEditorMarker>()?;
@@ -65,11 +66,6 @@ impl ViewController {
             ime_client_listener,
             ime_listener_request,
         )?;
-
-        let (session_listener, session_listener_request) = create_endpoints()?;
-        let (session_proxy, session_request) = create_proxy()?;
-        scenic.create_session(session_request, Some(session_listener))?;
-        let session = Session::new(session_proxy);
 
         let view_controller = ViewController {
             face,
@@ -178,7 +174,7 @@ impl ViewController {
             let guard = self.image_cycler.acquire(info).expect("failed to allocate buffer");
             let mut face = self.face.lock();
             let mut canvas = Canvas::<SharedBufferPixelSink>::new(guard.image().buffer(), stride);
-            let size = Size { width: 14, height: 22 };
+            let size = Size::new(14.0, 22.0);
             let mut font = FontDescription { face: &mut face, size: 20, baseline: 18 };
             let parser = &mut self.parser;
             let term = self.term.get_or_insert_with(|| {
@@ -202,10 +198,7 @@ impl ViewController {
                 let mut buffer: [u8; 4] = [0, 0, 0, 0];
                 canvas.fill_text_cells(
                     cell.c.encode_utf8(&mut buffer),
-                    Point {
-                        x: size.width * cell.column.0 as u32,
-                        y: size.height * cell.line.0 as u32,
-                    },
+                    Point::new(size.width * cell.column.0 as f32, size.height * cell.line.0 as f32),
                     size,
                     &mut font,
                     &Paint {

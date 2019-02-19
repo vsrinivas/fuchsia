@@ -14,6 +14,13 @@ rustc_binary("bin") {
   deps = [
     "third_party/term-model",
     "//garnet/bin/terminal/third_party/term-model",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/carnelian",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-scenic",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//garnet/public/rust/shared-buffer",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
@@ -22,13 +29,6 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.viewsv1:fuchsia.ui.viewsv1-rustc",
     "//sdk/fidl/fuchsia.ui.viewsv1token:fuchsia.ui.viewsv1token-rustc",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-app",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-scenic",
-    "//garnet/public/rust/fuchsia-ui",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//garnet/public/rust/shared-buffer",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:parking_lot",
@@ -63,11 +63,11 @@ package("tiles_with_terminal_config") {
 package("terminal_tests") {
   testonly = true
   deps = [
-    "third_party/term-model"
+    "third_party/term-model",
   ]
   tests = [
     {
       name = "term_model_lib_test"
-    }
+    },
   ]
 }

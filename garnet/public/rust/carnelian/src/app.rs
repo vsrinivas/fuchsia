@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::view::{NewViewParams, ViewAssistantPtr, ViewController, ViewControllerPtr, ViewKey};
+use crate::view::{ViewAssistantPtr, ViewController, ViewControllerPtr, ViewKey};
 use failure::{bail, Error, ResultExt};
-use fidl::endpoints::{RequestStream, ServerEnd, ServiceMarker};
+use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_ui_app as viewsv2;
+use fidl_fuchsia_ui_gfx as gfx;
+use fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy};
 use fidl_fuchsia_ui_viewsv1::{
     ViewManagerMarker, ViewManagerProxy, ViewProviderMarker, ViewProviderRequest::CreateView,
     ViewProviderRequestStream,
 };
-use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
 use fuchsia_app::{self as component, client::connect_to_service, server::FdioServer};
 use fuchsia_async as fasync;
 use fuchsia_scenic::SessionPtr;
-use fuchsia_zircon::EventPair;
+use fuchsia_zircon as zx;
 use futures::{TryFutureExt, TryStreamExt};
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
@@ -53,6 +54,7 @@ pub type AppAssistantPtr = Mutex<Box<dyn AppAssistant>>;
 /// Struct that implements module-wide responsibilties, currently limited
 /// to creating views on request.
 pub struct App {
+    pub(crate) scenic: ScenicProxy,
     pub(crate) view_manager: ViewManagerProxy,
     view_controllers: BTreeMap<ViewKey, ViewControllerPtr>,
     next_key: ViewKey,
@@ -70,8 +72,10 @@ lazy_static! {
 
 impl App {
     fn new() -> Result<AppPtr, Error> {
+        let scenic = connect_to_service::<ScenicMarker>()?;
         let view_manager = connect_to_service::<ViewManagerMarker>()?;
         Ok(Arc::new(Mutex::new(App {
+            scenic,
             view_manager,
             view_controllers: BTreeMap::new(),
             next_key: 0,
@@ -120,16 +124,8 @@ impl App {
         Ok(self.assistant.as_ref().unwrap().lock().create_view_assistant(session)?)
     }
 
-    fn create_view(&mut self, req: ServerEnd<ViewOwnerMarker>) -> Result<(), Error> {
-        let view_controller = ViewController::new(self, NewViewParams::V1(req), self.next_key)?;
-        self.view_controllers.insert(self.next_key, view_controller);
-        self.next_key += 1;
-        Ok(())
-    }
-
-    fn create_view2(&mut self, view_token: EventPair) -> Result<(), Error> {
-        let view_controller =
-            ViewController::new(self, NewViewParams::V2(view_token), self.next_key)?;
+    fn create_view(&mut self, view_token: gfx::ExportToken) -> Result<(), Error> {
+        let view_controller = ViewController::new(self, view_token, self.next_key)?;
         self.view_controllers.insert(self.next_key, view_controller);
         self.next_key += 1;
         Ok(())
@@ -141,8 +137,12 @@ impl App {
             ViewProviderRequestStream::from_channel(chan)
                 .try_for_each(move |req| {
                     let CreateView { view_owner, .. } = req;
+                    let view_token = gfx::ExportToken {
+                        value: zx::EventPair::from(zx::Handle::from(view_owner.into_channel())),
+                    };
+
                     app.lock()
-                        .create_view(view_owner)
+                        .create_view(view_token)
                         .unwrap_or_else(|e| eprintln!("create_view error: {:?}", e));
                     futures::future::ready(Ok(()))
                 })
@@ -156,8 +156,10 @@ impl App {
             viewsv2::ViewProviderRequestStream::from_channel(chan)
                 .try_for_each(move |req| {
                     let viewsv2::ViewProviderRequest::CreateView { token, .. } = req;
+                    let view_token = gfx::ExportToken { value: token };
+
                     app.lock()
-                        .create_view2(token)
+                        .create_view(view_token)
                         .unwrap_or_else(|e| eprintln!("create_view2 error: {:?}", e));
                     futures::future::ready(Ok(()))
                 })

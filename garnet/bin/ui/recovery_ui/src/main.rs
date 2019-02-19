@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use carnelian::{Canvas, Color, FontDescription, FontFace, Paint, PixelSink, Point, Rect, Size};
 use failure::{bail, Error, Fail, ResultExt};
 use fidl_fuchsia_amber as amber;
 use fuchsia_app as app;
 use fuchsia_async::{self as fasync, futures::TryFutureExt};
 use fuchsia_framebuffer::{Config, Frame, FrameBuffer, PixelFormat};
-use fuchsia_ui::{Canvas, Color, FontDescription, FontFace, Paint, PixelSink, Point, Rect};
 use futures::future;
 use std::{cell::RefCell, rc::Rc};
 
@@ -23,42 +23,24 @@ struct RecoveryUI<'a> {
 
 impl<'a> RecoveryUI<'a> {
     fn draw(&mut self, url: &str, user_code: &str) {
-        let r = Rect {
-            top: 0,
-            left: 0,
-            bottom: self.config.height,
-            right: self.config.width,
-        };
+        let r = Rect::new(
+            Point::new(0.0, 0.0),
+            Size::new(self.config.width as f32, self.config.height as f32),
+        );
 
-        let bg = Color {
-            r: 255,
-            g: 0,
-            b: 255,
-            a: 255,
-        };
+        let bg = Color { r: 255, g: 0, b: 255, a: 255 };
         self.canvas.fill_rect(&r, bg);
 
-        let mut font_description = FontDescription {
-            baseline: 0,
-            face: &mut self.face,
-            size: self.text_size,
-        };
+        let mut font_description =
+            FontDescription { baseline: 0, face: &mut self.face, size: self.text_size };
         let (width, height) = self.canvas.measure_text(url, &mut font_description);
-        let paint = Paint {
-            fg: Color {
-                r: 255,
-                g: 255,
-                b: 255,
-                a: 255,
-            },
-            bg: bg,
-        };
+        let paint = Paint { fg: Color { r: 255, g: 255, b: 255, a: 255 }, bg: bg };
         self.canvas.fill_text(
             url,
-            Point {
-                x: ((self.config.width / 2) as i32 - width / 2) as u32,
-                y: ((self.config.height / 4) as i32 - height / 2) as u32,
-            },
+            Point::new(
+                (self.config.width / 2) as f32 - (width / 2) as f32,
+                (self.config.height / 4) as f32 - (height / 2) as f32,
+            ),
             &mut font_description,
             &paint,
         );
@@ -67,10 +49,11 @@ impl<'a> RecoveryUI<'a> {
 
         self.canvas.fill_text(
             user_code,
-            Point {
-                x: ((self.config.width / 2) as i32 - width / 2) as u32,
-                y: ((self.config.height / 2 + self.config.height / 4) as i32 - height / 2) as u32,
-            },
+            Point::new(
+                (self.config.width / 2) as f32 - (width / 2) as f32,
+                (self.config.height / 2) as f32 + (self.config.height / 4) as f32
+                    - (height / 2) as f32,
+            ),
             &mut font_description,
             &paint,
         );
@@ -115,12 +98,7 @@ fn main() -> Result<(), Error> {
     let sink = FramePixelSink { frame };
     let canvas = Canvas::new_with_sink(sink, stride);
 
-    let mut ui = RecoveryUI {
-        face: face,
-        canvas,
-        config,
-        text_size: config.height / 12,
-    };
+    let mut ui = RecoveryUI { face: face, canvas, config, text_size: config.height / 12 };
 
     ui.draw("Verification URL", "User Code");
 
@@ -144,9 +122,7 @@ fn main() -> Result<(), Error> {
                     ui_local.draw(&src_list[0].id, "Login failed")
                 }));
             } else {
-                ui_fail
-                    .borrow_mut()
-                    .draw("Could not get", "source list from Amber")
+                ui_fail.borrow_mut().draw("Could not get", "source list from Amber")
             }
         });
 
