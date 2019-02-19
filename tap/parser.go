@@ -14,7 +14,7 @@ import (
 	"fuchsia.googlesource.com/tools/tap/tokenizer"
 )
 
-// Parse parses the given input string into a Document.  The input is allowed to contain
+// Parse parses the given input string into a Document. The input is allowed to contain
 // garbage lines; The parser will skip them and parse as much of the input as possible.
 // The only execption is that the first line of input must be a TAP version header of the
 // form "TAP version XXX".
@@ -24,13 +24,13 @@ func Parse(input []byte) (*Document, error) {
 	return <-output, nil
 }
 
-// State represents a parser state.  Each state takes the current stream of input tokens
-// and the current Document and attempts to parse the next line of input.  A state must
-// return the next state to use, even when an error is encountered.  If nil is returned,
+// State represents a parser state. Each state takes the current stream of input tokens
+// and the current Document and attempts to parse the next line of input. A state must
+// return the next state to use, even when an error is encountered. If nil is returned,
 // parsing stops.
 type state func(*tokenizer.TokenStream, *Document) (state, error)
 
-// Parse parses a Document from the given Token stream.  The result is emitted on the
+// Parse parses a Document from the given Token stream. The result is emitted on the
 // output channel.
 func parse(tokens *tokenizer.TokenStream, output chan<- *Document) {
 	document := &Document{}
@@ -169,12 +169,12 @@ func parseTestLine(tokens *tokenizer.TokenStream, doc *Document) (state, error) 
 		testLine.Count = int(count)
 	}
 
-	// Parse optional description
-	var description []string
-	for tokens.Peek().Type == tokenizer.TypeText {
-		description = append(description, tokens.Next().Value)
-	}
-	testLine.Description = strings.Join(description, " ")
+	// Parse optional description. Stop at a TypePound token which marks the start of a
+	// diagnostic.
+	testLine.Description = concat(tokens.Raw(), func(tok tokenizer.Token) bool {
+		t := tok.Type
+		return t != tokenizer.TypePound && t != tokenizer.TypeNewline && t != tokenizer.TypeEOF
+	})
 
 	// Move to next line if there's no directive.
 	if err := eat(tokens, tokenizer.TypePound); err != nil {
@@ -194,17 +194,16 @@ func parseTestLine(tokens *tokenizer.TokenStream, doc *Document) (state, error) 
 	}
 
 	// Parse explanation.
-	var explanation []string
-	for tokens.Peek().Type == tokenizer.TypeText {
-		explanation = append(explanation, tokens.Next().Value)
-	}
-	testLine.Explanation = strings.Join(explanation, " ")
+	testLine.Explanation = concat(tokens.Raw(), func(tok tokenizer.Token) bool {
+		t := tok.Type
+		return t != tokenizer.TypeNewline && t != tokenizer.TypeEOF
+	})
 
 	doc.TestLines = append(doc.TestLines, testLine)
 	return parseNextLine, eat(tokens, tokenizer.TypeNewline)
 }
 
-// Eat consumes the next token from the stream iff it's type matches typ.  If the types
+// Eat consumes the next token from the stream iff it's type matches typ. If the types
 // are different, an error is returned.
 func eat(tokens *tokenizer.TokenStream, typ tokenizer.TokenType) error {
 	token := tokens.Peek()
@@ -213,6 +212,17 @@ func eat(tokens *tokenizer.TokenStream, typ tokenizer.TokenType) error {
 	}
 	tokens.Next()
 	return nil
+}
+
+// Concat concatenates the values of the next tokens in the stream as long as cond keeps
+// returning true. Returns the contatenated output with leading and trailing spaces
+// trimmed.
+func concat(tokens *tokenizer.RawTokenStream, cond func(tok tokenizer.Token) bool) string {
+	var values string
+	for cond(tokens.Peek()) {
+		values += tokens.Next().Value
+	}
+	return strings.TrimSpace(values)
 }
 
 func unexpectedTokenError(wanted string, token tokenizer.Token) error {

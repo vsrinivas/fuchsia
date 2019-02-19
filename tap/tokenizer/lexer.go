@@ -7,6 +7,7 @@ package tokenizer
 import (
 	"log"
 	"strconv"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -21,6 +22,7 @@ const (
 	TypeDot     TokenType = "DOT"     // '.'
 	TypeNewline TokenType = "NEWLINE" // '\n'
 	TypeEOF     TokenType = "EOF"     // Psuedo token to signal the end of input.
+	TypeSpace   TokenType = "SPACE"   // A whitespace character
 )
 
 // Token represents some atomic TAP output string.
@@ -50,8 +52,8 @@ func EOFToken() Token {
 // The rune emitted when the end of input has been reached.
 const eof = rune(-1)
 
-// State represents a lexical analysis state.  Each state accepts a lexer as input and
-// returns the next lexer state.  If the output state is nil, lexing stops.
+// State represents a lexical analysis state. Each state accepts a lexer as input and
+// returns the next lexer state. If the output state is nil, lexing stops.
 type state func(*lexer) state
 
 // Lexer manages the position of a lexical analysis on some TAP output string.
@@ -98,9 +100,9 @@ func (l *lexer) lexeme() lexeme {
 	return lexeme(l.input[l.pos : l.pos+1][0])
 }
 
-// LexAny is the lexer start state.  It's job is to put the lexer into the proper state
-// according to the next input rune.  Other states should return to this state after
-// emitting their lexemes.  They should also not consume runes using l.next() immediately
+// LexAny is the lexer start state. It's job is to put the lexer into the proper state
+// according to the next input rune. Other states should return to this state after
+// emitting their lexemes. They should also not consume runes using l.next() immediately
 // before entering this state.
 func lexAny(l *lexer) state {
 	lxm := l.lexeme()
@@ -125,12 +127,7 @@ func lexAny(l *lexer) state {
 		l.emit(TypePound)
 		return lexAny
 	case lxm.isSpace():
-		// Skip all spaces.
-		for l.lexeme().isSpace() {
-			l.next()
-		}
-		l.start = l.pos
-		return lexAny
+		return lexSpace
 	case lxm.isDigit():
 		return lexNumber
 	}
@@ -138,42 +135,35 @@ func lexAny(l *lexer) state {
 	return lexText
 }
 
+func lexSpace(l *lexer) state {
+	return lexUntil(l, TypeSpace, func(lxm lexeme) bool { return !lxm.isSpace() })
+}
+
 func lexNumber(l *lexer) state {
+	return lexUntil(l, TypeNumber, func(lxm lexeme) bool { return !lxm.isDigit() })
+}
+
+func lexText(l *lexer) state {
+	return lexUntil(l, TypeText, func(lxm lexeme) bool { return lxm.isNonText() })
+}
+
+// LexUntil consumes all runes into a token of the given type while `stop` is false.
+// Returns lexAny when complete or nil if the end of input was reached.
+func lexUntil(l *lexer, typ TokenType, stop func(lexeme) bool) state {
 	for {
 		lxm := l.lexeme()
-		if lxm.isEOF() || !lxm.isDigit() {
-			l.emit(TypeNumber)
+		if lxm.isEOF() || stop(lxm) {
+			l.emit(typ)
 			return lexAny
 		}
-
 		if l.next() == eof {
 			break
 		}
 	}
-
 	// Reached EOF
 	if l.pos > l.start {
-		l.emit(TypeNumber)
+		l.emit(typ)
 	}
-
-	l.emit(TypeEOF)
-	return nil
-}
-
-func lexText(l *lexer) state {
-	for l.next() != eof {
-		lxm := l.lexeme()
-		if lxm.isNonText() {
-			l.emit(TypeText)
-			return lexAny
-		}
-	}
-
-	// Reached EOF
-	if l.pos > l.start {
-		l.emit(TypeText)
-	}
-
 	l.emit(TypeEOF)
 	return nil
 }
@@ -181,7 +171,7 @@ func lexText(l *lexer) state {
 type lexeme rune
 
 func (l lexeme) isSpace() bool {
-	return l == ' ' || l == '\r'
+	return l != '\n' && unicode.IsSpace(rune(l))
 }
 
 func (l lexeme) isNewline() bool {

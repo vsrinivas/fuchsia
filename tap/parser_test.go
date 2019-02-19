@@ -121,6 +121,36 @@ not ok 3 - This test failed
 				},
 			},
 		},
+		{
+			name: "should preserve spaces in description",
+			input: strings.TrimSpace(`
+TAP version 13
+1..1
+ok 1 - This test     passed
+`),
+			expected: &Document{
+				Version: 13,
+				Plan:    Plan{Start: 1, End: 1},
+				TestLines: []TestLine{
+					{Ok: true, Count: 1, Description: "- This test     passed"},
+				},
+			},
+		},
+		{
+			name: "should preserve spaces in directive explanation",
+			input: strings.TrimSpace(`
+TAP version 13
+1..1
+ok 1 # SKIP this  is   disabled
+`),
+			expected: &Document{
+				Version: 13,
+				Plan:    Plan{Start: 1, End: 1},
+				TestLines: []TestLine{
+					{Ok: true, Count: 1, Directive: Skip, Explanation: "this  is   disabled"},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
