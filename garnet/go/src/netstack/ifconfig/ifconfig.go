@@ -492,7 +492,7 @@ func main() {
 		if err != nil {
 			fmt.Printf("error creating bridge: %s\n", err)
 		} else {
-			fmt.Printf("Bridged interfaces %s\n", ifaces)
+			fmt.Printf("Bridged interfaces %s. Please run `ifconfig <bridge_id> up` to enable it.\n", ifaces)
 		}
 		return
 	case "help":
