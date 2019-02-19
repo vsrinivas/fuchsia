@@ -310,27 +310,6 @@ static __attribute__ ((unused)) acpi_protocol_ops_t acpi_proto = {
     .map_interrupt = acpi_op_map_interrupt,
 };
 
-static zx_status_t sys_device_suspend(void* ctx, uint32_t flags) {
-    switch (flags & DEVICE_SUSPEND_REASON_MASK) {
-    case DEVICE_SUSPEND_FLAG_MEXEC: {
-        AcpiTerminate();
-        return ZX_OK;
-    }
-    case DEVICE_SUSPEND_FLAG_REBOOT:
-        reboot();
-        // Kill this driver so that the IPC channel gets closed; devmgr will
-        // perform a fallback that should shutdown or reboot the machine.
-        exit(0);
-    case DEVICE_SUSPEND_FLAG_POWEROFF:
-        poweroff();
-        exit(0);
-    case DEVICE_SUSPEND_FLAG_SUSPEND_RAM:
-        return suspend_to_ram();
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    };
-}
-
 static const char* hid_from_acpi_devinfo(ACPI_DEVICE_INFO* info) {
     const char* hid = NULL;
     if ((info->Valid & ACPI_VALID_HID) &&
@@ -518,10 +497,15 @@ out:
     return AE_OK;
 }
 
-static zx_status_t publish_acpi_devices(zx_device_t* sys_root, zx_device_t* acpi_root,
-                                        zx_device_t* platform_bus) {
-    zx_status_t status = pwrbtn_init(acpi_root);
+typedef struct {
+    pbus_protocol_t pbus;
+    zx_device_t* parent;
+    zx_device_t* sys_root;
+    zx_device_t* acpi_root;
+} pbus_x86_t;
 
+static zx_status_t publish_acpi_devices(pbus_x86_t *x86) {
+    zx_status_t status = pwrbtn_init(x86->acpi_root);
     if (status != ZX_OK) {
         zxlogf(ERROR, "acpi: failed to initialize pwrbtn device: %d\n", status);
     }
@@ -529,9 +513,9 @@ static zx_status_t publish_acpi_devices(zx_device_t* sys_root, zx_device_t* acpi
     // Walk the ACPI namespace for devices and publish them
     // Only publish a single PCI device
     publish_acpi_device_ctx_t ctx = {
-        .acpi_root = acpi_root,
-        .sys_root = sys_root,
-        .platform_bus = platform_bus,
+        .acpi_root = x86->acpi_root,
+        .sys_root = x86->sys_root,
+        .platform_bus = x86->parent,
         .found_pci = false,
         .last_pci = 0xFF,
     };
@@ -547,63 +531,77 @@ static zx_status_t publish_acpi_devices(zx_device_t* sys_root, zx_device_t* acpi
     }
 }
 
-typedef struct {
-    pbus_protocol_t pbus;
-    zx_device_t* parent;
-    zx_device_t* sys_root;
-    zx_device_t* acpi_root;
-} pbus_acpi_t;
+static void x86_root_release(void* ctx) {
+    pbus_x86_t* x86 = ctx;
 
-static void acpi_root_release(void* ctx) {
-    pbus_acpi_t* acpi = ctx;
-
-    free(acpi);
+    free(x86);
 }
 
 static zx_protocol_device_t acpi_root_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .release = acpi_root_release,
+    .release = x86_root_release,
 };
 
-static int acpi_start_thread(void* arg) {
-    pbus_acpi_t* acpi = arg;
-    zx_status_t status = publish_sysmem(&acpi->pbus);
+static zx_status_t sys_device_suspend(void* ctx, uint32_t flags) {
+    switch (flags & DEVICE_SUSPEND_REASON_MASK) {
+    case DEVICE_SUSPEND_FLAG_MEXEC: {
+        AcpiTerminate();
+        return ZX_OK;
+    }
+    case DEVICE_SUSPEND_FLAG_REBOOT:
+        reboot();
+        // Kill this driver so that the IPC channel gets closed; devmgr will
+        // perform a fallback that should shutdown or reboot the machine.
+        exit(0);
+    case DEVICE_SUSPEND_FLAG_POWEROFF:
+        poweroff();
+        exit(0);
+    case DEVICE_SUSPEND_FLAG_SUSPEND_RAM:
+        return suspend_to_ram();
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    };
+}
+
+static int x86_start_thread(void* arg) {
+    pbus_x86_t* x86 = arg;
+    zx_status_t status = publish_sysmem(&x86->pbus);
     if (status != ZX_OK) {
         zxlogf(ERROR, "publish_sysmem failed: %d\n", status);
         goto fail;
     }
 
-    return publish_acpi_devices(acpi->sys_root, acpi->acpi_root, acpi->parent);
+    return publish_acpi_devices(x86);
 
 fail:
     return status;
 }
 
-static zx_status_t acpi_bus_bind(void* ctx, zx_device_t* parent) {
+static zx_status_t x86_bind(void* ctx, zx_device_t* parent) {
     root_resource_handle = get_root_resource();
 
-    pbus_acpi_t* acpi = calloc(1, sizeof(pbus_acpi_t));
-    if (!acpi) {
+    pbus_x86_t* x86 = calloc(1, sizeof(pbus_x86_t));
+    if (!x86) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &acpi->pbus);
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &x86->pbus);
     if (status != ZX_OK) {
-        free(acpi);
+        free(x86);
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Do ACPI init.
     status = init();
     if (status != ZX_OK) {
-        free(acpi);
+        free(x86);
         zxlogf(ERROR, "%s: failed to initialize ACPI %d \n", __func__, status);
         return ZX_ERR_INTERNAL;
     }
 
     zx_device_t* sys_root = device_get_parent(parent);
     if (sys_root == NULL) {
-        free(acpi);
+        free(x86);
         zxlogf(ERROR, "%s: failed to find parent node of platform (expected sys)\n", __func__);
         return ZX_ERR_INTERNAL;
     }
@@ -611,7 +609,7 @@ static zx_status_t acpi_bus_bind(void* ctx, zx_device_t* parent) {
     zx_handle_t dummy_iommu_handle;
     status = iommu_manager_get_dummy_iommu(&dummy_iommu_handle);
     if (status != ZX_OK) {
-        free(acpi);
+        free(x86);
         zxlogf(ERROR, "%s: error %d in iommu_manager_get_dummy_iommu()\n", __func__, status);
         return status;
     }
@@ -620,7 +618,7 @@ static zx_status_t acpi_bus_bind(void* ctx, zx_device_t* parent) {
     device_add_args_t args2 = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "acpi",
-        .ctx = acpi,
+        .ctx = x86,
         .ops = &acpi_root_device_proto,
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
@@ -630,7 +628,7 @@ static zx_status_t acpi_bus_bind(void* ctx, zx_device_t* parent) {
     // created under /dev/sys (to preserve compatibility).
     status = device_add(parent, &args2, &acpi_root);
     if (status != ZX_OK) {
-        free(acpi);
+        free(x86);
         zxlogf(ERROR, "acpi: error %d in device_add(sys/platform/acpi)\n", status);
         return status;
     }
@@ -645,11 +643,11 @@ static zx_status_t acpi_bus_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "device_publish_metadata(board_name) failed: %d\n", status);
     }
 
-    acpi->sys_root = sys_root;
-    acpi->acpi_root = acpi_root;
-    acpi->parent = parent;
+    x86->sys_root = sys_root;
+    x86->acpi_root = acpi_root;
+    x86->parent = parent;
     thrd_t t;
-    int thrd_rc = thrd_create_with_name(&t, acpi_start_thread, acpi, "acpi_start_thread");
+    int thrd_rc = thrd_create_with_name(&t, x86_start_thread, x86, "x86_start_thread");
     if (thrd_rc != thrd_success) {
         status = thrd_status_to_zx_status(thrd_rc);
         zxlogf(ERROR, "%s: Failed to create start thread: %d\n", __func__, status);
@@ -663,7 +661,7 @@ static zx_status_t acpi_bus_bind(void* ctx, zx_device_t* parent) {
     // we must make sure that the coordinator code arranges for this suspend op to be
     // called last.
     pbus_sys_suspend_t suspend = {sys_device_suspend, NULL};
-    status = pbus_register_sys_suspend_callback(&acpi->pbus, &suspend);
+    status = pbus_register_sys_suspend_callback(&x86->pbus, &suspend);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Could not register suspend callback: %d\n", __func__, status);
     }
@@ -673,12 +671,12 @@ fail:
     return status;
 }
 
-static zx_driver_ops_t acpi_bus_driver_ops = {
+static zx_driver_ops_t x86_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-    .bind = acpi_bus_bind,
+    .bind = x86_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(acpi_bus, acpi_bus_driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(acpi_bus, x86_driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_INTEL),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_X86),
