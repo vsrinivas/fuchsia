@@ -72,138 +72,20 @@ appropriate.
 
 ### Comparison of Usage Styles
 
-<table>
-  <tr>
-   <td>
-   </td>
-   <td><strong>C style</strong>
-   </td>
-   <td><strong>C++ native style</strong>
-   </td>
-   <td><strong>C++ idiomatic style</strong>
-   </td>
-  </tr>
-  <tr>
-   <td><strong>audience</strong>
-   </td>
-   <td>drivers
-   </td>
-   <td>drivers
-   </td>
-   <td>high-level services
-   </td>
-  </tr>
-  <tr>
-   <td><strong>abstraction overhead</strong>
-   </td>
-   <td>almost zero
-   </td>
-   <td>almost zero
-   </td>
-   <td>heap allocation, construction, destruction
-   </td>
-  </tr>
-  <tr>
-   <td><strong>type safe types</strong>
-   </td>
-   <td>enums, structs, unions
-   </td>
-   <td>enums, structs, unions
-   </td>
-   <td>enums, structs, unions, handles, interfaces
-   </td>
-  </tr>
-  <tr>
-   <td><strong>storage</strong>
-   </td>
-   <td>in-place buffer
-   </td>
-   <td>in-place buffer
-   </td>
-   <td>heap
-   </td>
-  </tr>
-  <tr>
-   <td><strong>lifecycle</strong>
-   </td>
-   <td>manual free (POD)
-   </td>
-   <td>manual free (POD)
-   </td>
-   <td>automatic free (RAII)
-   </td>
-  </tr>
-  <tr>
-   <td><strong>receive behavior</strong>
-   </td>
-   <td>decode in-place
-   </td>
-   <td>decode in-place
-   </td>
-   <td>decode then move to heap
-   </td>
-  </tr>
-  <tr>
-   <td><strong>send behavior</strong>
-   </td>
-   <td>encode in-place
-   </td>
-   <td>encode in-place
-   </td>
-   <td>move to buffer then encode
-   </td>
-  </tr>
-  <tr>
-   <td><strong>calling interface methods</strong>
-   </td>
-   <td>manual proxy
-   </td>
-   <td>manual proxy
-   </td>
-   <td>call through proxies, register callbacks
-   </td>
-  </tr>
-  <tr>
-   <td><strong>implementing interface methods</strong>
-   </td>
-   <td>manual dispatch
-   </td>
-   <td>manual dispatch
-   </td>
-   <td>implement stub object, invoke callbacks
-   </td>
-  </tr>
-  <tr>
-   <td><strong>generated code</strong>
-   </td>
-   <td>structures, data tables, inline functions
-   </td>
-   <td>structures, data tables, inline functions
-   </td>
-   <td>structures, data tables, constructors, destructors, proxies, stubs, inline functions
-   </td>
-  </tr>
-  <tr>
-   <td><strong>generated code footprint</strong>
-   </td>
-   <td>small (data tables only)
-   </td>
-   <td>small (data tables only)
-   </td>
-   <td>moderate (data tables, constructors, destructors, proxies, and stubs)
-   </td>
-  </tr>
-  <tr>
-   <td><strong>friendliness</strong>
-   </td>
-   <td>surly
-   </td>
-   <td>aloof
-   </td>
-   <td>genial
-   </td>
-  </tr>
-</table>
+Category                           | C style                                   | C++ native style                          | C++ idiomatic style
+-----------------------------------|-------------------------------------------|-------------------------------------------|--------------------
+**audience**                       | drivers                                   | drivers                                   | high-level services
+**abstraction overhead**           | almost zero                               | almost zero                               | heap allocation, construction, destruction
+**type safe types**                | enums, structs, unions                    | enums, structs, unions                    | enums, structs, unions, handles, interfaces
+**storage**                        | in-place buffer                           | in-place buffer                           | heap
+**lifecycle**                      | manual free (POD)                         | manual free (POD)                         | automatic free (RAII)
+**receive behavior**               | decode in-place                           | decode in-place                           | decode then move to heap
+**send behavior**                  | encode in-place                           | encode in-place                           | move to buffer then encode
+**calling interface methods**      | manual proxy                              | manual proxy                              | call through proxies, register callbacks
+**implementing interface methods** | manual dispatch                           | manual dispatch                           | implement stub object, invoke callbacks
+**generated code**                 | structures, data tables, inline functions | structures, data tables, inline functions | structures, data tables, constructors, destructors, proxies, stubs, inline functions
+**generated code footprint**       | small (data tables only)                  | small (data tables only)                  | moderate (data tables, constructors, destructors, proxies, and stubs)
+**friendliness**                   | surly                                     | aloof                                     | genial
 
 _Point for discussion: given how close the C++ native style is to the C style
 (mostly syntactic benefits), we might want to consider deferring its
@@ -219,221 +101,43 @@ non-POD with weak RAII semantics (don't traverse pointers)._
 This is the mapping from FIDL types to C types which the code generator
 produces.
 
-<table>
-  <tr>
-   <td><strong>FIDL</strong>
-   </td>
-   <td><strong>Native C++ Style</strong>
-   </td>
-   <td><strong>Idiomatic C++ Style</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>bool
-   </td>
-   <td>bool,
-<em>assuming sizeof(bool) ==1</em>
-   </td>
-   <td>bool
-   </td>
-  </tr>
-  <tr>
-   <td>int8
-   </td>
-   <td>int8_t
-   </td>
-   <td>int8_t
-   </td>
-  </tr>
-  <tr>
-   <td>uint8
-   </td>
-   <td>uint8_t
-   </td>
-   <td>uint8_t
-   </td>
-  </tr>
-  <tr>
-   <td>int16
-   </td>
-   <td>int16_t
-   </td>
-   <td>int16_t
-   </td>
-  </tr>
-  <tr>
-   <td>uint16
-   </td>
-   <td>uint16_t
-   </td>
-   <td>uint16_t
-   </td>
-  </tr>
-  <tr>
-   <td>int32
-   </td>
-   <td>int32_t
-   </td>
-   <td>int32_t
-   </td>
-  </tr>
-  <tr>
-   <td>uint32
-   </td>
-   <td>uint32_t
-   </td>
-   <td>uint32_t
-   </td>
-  </tr>
-  <tr>
-   <td>int64
-   </td>
-   <td>int64_t
-   </td>
-   <td>int64_t
-   </td>
-  </tr>
-  <tr>
-   <td>uint64
-   </td>
-   <td>uint64_t
-   </td>
-   <td>uint64_t
-   </td>
-  </tr>
-  <tr>
-   <td>float32
-   </td>
-   <td>float
-   </td>
-   <td>float
-   </td>
-  </tr>
-  <tr>
-   <td>float64
-   </td>
-   <td>double
-   </td>
-   <td>double
-   </td>
-  </tr>
-  <tr>
-   <td>handle, handle?
-   </td>
-   <td>zx_handle_t, or perhaps zx::unowned_handle
-   </td>
-   <td>zx::handle
-   </td>
-  </tr>
-  <tr>
-   <td>handle<T>, handle<T>?
-   </td>
-   <td>zx_handle_t, or perhaps zx::unowned_T
-   </td>
-   <td>zx::T <em>(subclass of zx::object<T>)</em>
-   </td>
-  </tr>
-  <tr>
-   <td>string
-   </td>
-   <td>fidl::string
-   </td>
-   <td>std::string
-   </td>
-  </tr>
-  <tr>
-   <td>string?
-   </td>
-   <td>fidl::string
-   </td>
-   <td>std::optional<std::string>
-   </td>
-  </tr>
-  <tr>
-   <td>vector<T>
-   </td>
-   <td>fidl::vector<T>
-   </td>
-   <td>std::vector<T>
-   </td>
-  </tr>
-  <tr>
-   <td>vector<T>?
-   </td>
-   <td>fidl::vector<T>
-   </td>
-   <td>std::optional<std::vector>
-   </td>
-  </tr>
-  <tr>
-   <td>array<T>:N
-   </td>
-   <td>fidl::array<T, N>
-   </td>
-   <td>std::array<T, N>
-   </td>
-  </tr>
-  <tr>
-   <td><em>Interface, Interface?</em>
-   </td>
-   <td><em>interface named typedef to zx_handle_t</em>
-<p>
-<em>eg. typedef zx_handle_t Foo;</em>
-   </td>
-   <td><em>Interface</em>Ptr
-   </td>
-  </tr>
-  <tr>
-   <td><em>request<Interface>, request<Interface>?</em>
-   </td>
-   <td><em>interface_request named typedef to zx_handle_t</em>
-<p>
-<em>eg. typedef zx_handle_t FooRequest;</em>
-   </td>
-   <td><em>Interface</em>Request
-   </td>
-  </tr>
-  <tr>
-   <td><em>Struct</em>
-   </td>
-   <td>struct <em>Struct</em>
-   </td>
-   <td><em>Struct</em>Ptr
-   </td>
-  </tr>
-  <tr>
-   <td><em>Struct?</em>
-   </td>
-   <td>struct <em>Struct*</em>
-   </td>
-   <td><em>Struct</em>Ptr
-   </td>
-  </tr>
-  <tr>
-   <td><em>Union</em>
-   </td>
-   <td>struct <em>Union</em>
-   </td>
-   <td><em>Union</em>Ptr
-   </td>
-  </tr>
-  <tr>
-   <td><em>Union?</em>
-   </td>
-   <td><em>struct Union*</em>
-   </td>
-   <td><em>Union</em>Ptr
-   </td>
-  </tr>
-  <tr>
-   <td><em>Enum</em>
-   </td>
-   <td><em>enum class Foo : data type</em>
-   </td>
-   <td><em>enum class Foo : data type</em>
-   </td>
-  </tr>
-</table>
+FIDL                                        | Native C++ Style                                     | Idiomatic C++ Style
+--------------------------------------------|------------------------------------------------------|--------------------
+`bool`                                      | `bool`, *assuming sizeof(bool) ==1*                  | `bool`
+`int8`                                      | `int8_t`                                             | `int8_t`
+`uint8`                                     | `uint8_t`                                            | `uint8_t`
+`int16`                                     | `int16_t`                                            | `int16_t`
+`uint16`                                    | `uint16_t`                                           | `uint16_t`
+`int32`                                     | `int32_t`                                            | `int32_t`
+`uint32`                                    | `uint32_t`                                           | `uint32_t`
+`int64`                                     | `int64_t`                                            | `int64_t`
+`uint64`                                    | `uint64_t`                                           | `uint64_t`
+`float32`                                   | `float`                                              | `float`
+`float64`                                   | `double`                                             | `double`
+`handle`, `handle?`                         | `zx_handle_t` [1]                                    | `zx::handle`
+`handle<T>`,`handle<T>?`                    | `zx_handle_t` [2]                                    | `zx::T` *(subclass of zx::object<T>)*
+`string`                                    | `fidl::string`                                       | `std::string`
+`string?`                                   | `fidl::string`                                       | `std::optional<std::string>`
+`vector<T>`                                 | `fidl::vector<T>`                                    | `std::vector<T>`
+`vector<T>?`                                | `fidl::vector<T>`                                    | `std::optional<std::vector>`
+`array<T>:N`                                | `fidl::array<T, N>`                                  | `std::array<T, N>`
+*Interface, Interface?*                     | interface named *typedef to zx_handle_t* [3]         | *Interface*Ptr
+*request<Interface>, request<Interface>?*   | *interface_request named typedef to zx_handle_t* [4] | *Interface*Request
+*Struct*                                    | struct *Struct*                                      | *Struct*Ptr
+*Struct?*                                   | struct *Struct**                                     | *Struct*Ptr
+`table`                                     | `class TheTableName`                                 | `class TheTableName`
+`table?`                                    | `class TheTableName*`                                | `class TheTableName`
+*Union*                                     | struct *Union*                                       | *Union*Ptr
+*Union?*                                    | struct *Union**                                      | *Union*Ptr
+*Xunion*                                    | struct *Xunion*                                      | *Xunion*Ptr
+*Xunion?*                                   | struct *Xunion**                                     | *Xunion*Ptr
+*Enum*                                      | *enum class Foo : data type*                         | *enum class Foo : data type*
+
+Notes:
+1. or perhaps `zx::unowned_handle`
+2. or perhaps `zx::unowned_T`
+3. e.g. `typedef zx_handle_t Foo;`
+4. e.g. `typedef zx_handle_t FooRequest;`
 
 #### Mapping FIDL Identifiers to C++ Identifiers
 

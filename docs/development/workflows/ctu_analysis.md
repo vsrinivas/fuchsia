@@ -122,41 +122,15 @@ The upstream CSA crashes on the vast majority of Zircon files. This section desc
 
 The Clang Static Analyzer is unable to import a lot of Zircon code, due to not having implemented support for importing certain kinds of AST nodes. Patches to support these nodes are listed here:
 
-<table>
-  <tr>
-    <td>AtomicType</td>
-    <td>Patch merged into upstream</td>
-  </tr>
-  <tr>
-    <td>CXXDependentScopeMemberExpr</td>
-    <td>https://reviews.llvm.org/D26904</td>
-  </tr>
-  <tr>
-    <td>UnresolvedLookupExpr</td>
-    <td>https://reviews.llvm.org/D27033</td>
-  </tr>
-  <tr>
-    <td>DependentSizedArray</td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>CXXUnresolvedConstructExpr</td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>UsingDecl</td>
-    <td>https://reviews.llvm.org/D27181</td>
-  </tr>
-  <tr>
-    <td>UsingShadowDecl</td>
-    <td>https://reviews.llvm.org/D27181</td>
-  </tr>
-  <tr>
-    <td>FunctionTemplateDecl</td>
-    <td>https://reviews.llvm.org/D26904</td>
-  </tr>
-</table>
-
+AtomicType                    | Patch merged into upstream
+------------------------------|--------------------------------
+`CXXDependentScopeMemberExpr` | [`https://reviews.llvm.org/D26904`](https://reviews.llvm.org/D26904)
+`UnresolvedLookupExpr`        | [`https://reviews.llvm.org/D27033`](https://reviews.llvm.org/D27033)
+`DependentSizedArray`         | &nbsp;
+`CXXUnresolvedConstructExpr`  | &nbsp;
+`UsingDecl`                   | [`https://reviews.llvm.org/D27181`](https://reviews.llvm.org/D27181)
+`UsingShadowDecl`             | [`https://reviews.llvm.org/D27181`](https://reviews.llvm.org/D27181)
+`FunctionTemplateDecl`        | [`https://reviews.llvm.org/D26904`](https://reviews.llvm.org/D26904)
 
 In general, when implementing support for new node types, one must implement a `VisitNode` function in `ASTImporter.cpp`, and also unit tests and functional tests; Kareem’s patches above contain examples. There are still quite a few unsupported AST nodes remaining; grep the analyzer output directory for `error: cannot import unsupported AST node`.
 
