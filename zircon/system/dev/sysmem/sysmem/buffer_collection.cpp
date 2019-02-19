@@ -46,6 +46,8 @@ const fuchsia_sysmem_BufferCollection_ops_t BufferCollection::kOps = {
     fidl::Binder<BufferCollection>::BindMember<
         &BufferCollection::WaitForBuffersAllocated>,
     fidl::Binder<BufferCollection>::BindMember<
+        &BufferCollection::CheckBuffersAllocated>,
+    fidl::Binder<BufferCollection>::BindMember<
         &BufferCollection::CloseSingleBuffer>,
     fidl::Binder<BufferCollection>::BindMember<
         &BufferCollection::AllocateSingleBuffer>,
@@ -166,6 +168,25 @@ zx_status_t BufferCollection::WaitForBuffersAllocated(fidl_txn_t* txn_param) {
     // done, in which case this immediately completes txn.
     MaybeCompleteWaitForBuffersAllocated();
     return ZX_OK;
+}
+
+zx_status_t BufferCollection::CheckBuffersAllocated(fidl_txn_t* txn) {
+    BindingType::Txn::RecognizeTxn(txn);
+    if (is_done_) {
+        FailAsync(ZX_ERR_BAD_STATE,
+                  "BufferCollectionToken::CheckBuffersAllocated() when "
+                  "already is_done_");
+        // We're failing async - no need to try to fail sync.
+        return ZX_OK;
+    }
+    LogicalBufferCollection::AllocationResult allocation_result =
+        parent()->allocation_result();
+    if (allocation_result.status == ZX_OK &&
+        !allocation_result.buffer_collection_info) {
+        return fuchsia_sysmem_BufferCollectionCheckBuffersAllocated_reply(txn, ZX_ERR_UNAVAILABLE);
+    }
+    // Buffer collection has either been allocated or failed.
+    return fuchsia_sysmem_BufferCollectionCheckBuffersAllocated_reply(txn, allocation_result.status);
 }
 
 zx_status_t BufferCollection::CloseSingleBuffer(uint64_t buffer_index) {

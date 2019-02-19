@@ -484,6 +484,16 @@ extern "C" bool test_sysmem_multiple_participants(void) {
         allocator2_client_2.get(), token_client_2.release(), collection_server_2.release());
     ASSERT_EQ(status, ZX_OK, "");
 
+    // Not all constraints have been input, so the buffers haven't been
+    // allocated yet.
+    zx_status_t check_status;
+    status = fuchsia_sysmem_BufferCollectionCheckBuffersAllocated(collection_client_1.get(), &check_status);
+    ASSERT_EQ(status, ZX_OK, "");
+    EXPECT_EQ(check_status, ZX_ERR_UNAVAILABLE, "");
+    status = fuchsia_sysmem_BufferCollectionCheckBuffersAllocated(collection_client_2.get(), &check_status);
+    ASSERT_EQ(status, ZX_OK, "");
+    EXPECT_EQ(check_status, ZX_ERR_UNAVAILABLE, "");
+
     status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_2.get(), true,
                                                            constraints_2.release());
     ASSERT_EQ(status, ZX_OK, "");
@@ -503,6 +513,13 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     // to any step above failing async.
     ASSERT_EQ(status, ZX_OK, "");
     ASSERT_EQ(allocation_status, ZX_OK, "");
+
+    status = fuchsia_sysmem_BufferCollectionCheckBuffersAllocated(collection_client_1.get(), &check_status);
+    ASSERT_EQ(status, ZX_OK, "");
+    EXPECT_EQ(check_status, ZX_OK, "");
+    status = fuchsia_sysmem_BufferCollectionCheckBuffersAllocated(collection_client_2.get(), &check_status);
+    ASSERT_EQ(status, ZX_OK, "");
+    EXPECT_EQ(check_status, ZX_OK, "");
 
     BufferCollectionInfo buffer_collection_info_2(BufferCollectionInfo::Default);
     // This helps with a later exact equality check.

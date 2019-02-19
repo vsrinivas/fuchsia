@@ -38,6 +38,7 @@ public:
         bool has_constraints,
         const fuchsia_sysmem_BufferCollectionConstraints* constraints);
     zx_status_t WaitForBuffersAllocated(fidl_txn_t* txn);
+    zx_status_t CheckBuffersAllocated(fidl_txn_t* txn);
     zx_status_t CloseSingleBuffer(uint64_t buffer_index);
     zx_status_t AllocateSingleBuffer(uint64_t buffer_index);
     zx_status_t WaitForSingleBufferAllocated(uint64_t buffer_index,
