@@ -131,8 +131,7 @@ impl TokenSet {
     /// returns true iff no valid OAuth tokens remain.
     fn remove_expired_tokens(&mut self) -> bool {
         let current_time = SystemTime::now();
-        self.id_token_map
-            .retain(|_, v| current_time <= (v.expiry_time - PADDING_FOR_TOKEN_EXPIRY));
+        self.id_token_map.retain(|_, v| current_time <= (v.expiry_time - PADDING_FOR_TOKEN_EXPIRY));
         self.access_token_map
             .retain(|_, v| current_time <= (v.expiry_time - PADDING_FOR_TOKEN_EXPIRY));
         self.firebase_token_map
@@ -156,10 +155,7 @@ impl CacheKey {
         } else if idp_credential_id.is_empty() {
             Err(format_err!("idp_credential_id cannot be empty"))
         } else {
-            Ok(CacheKey {
-                idp_provider,
-                idp_credential_id,
-            })
+            Ok(CacheKey { idp_provider, idp_credential_id })
         }
     }
 }
@@ -175,16 +171,16 @@ pub struct TokenCache {
 impl TokenCache {
     /// Creates a new `TokenCache` with the specified initial size.
     pub fn new(size: usize) -> TokenCache {
-        TokenCache {
-            map: HashMap::with_capacity(size),
-        }
+        TokenCache { map: HashMap::with_capacity(size) }
     }
 
     /// Returns the OAuth ID token for the specified `cache_key` and `audience` if present and
     /// not expired. This will cause any expired tokens on the same key to
     /// be purged from the underlying cache.
     pub fn get_id_token(
-        &mut self, cache_key: &CacheKey, audience: &str,
+        &mut self,
+        cache_key: &CacheKey,
+        audience: &str,
     ) -> Option<Arc<OAuthToken>> {
         self.get_token_set(cache_key)
             .and_then(|ts| ts.id_token_map.get(audience).map(|t| t.clone()))
@@ -194,26 +190,24 @@ impl TokenCache {
     /// if present and not expired. This will cause any expired tokens on
     /// the same key to be purged from the underlying cache.
     pub fn get_access_token<T: Deref<Target = str>>(
-        &mut self, cache_key: &CacheKey, scopes: &[T],
+        &mut self,
+        cache_key: &CacheKey,
+        scopes: &[T],
     ) -> Option<Arc<OAuthToken>> {
-        self.get_token_set(cache_key).and_then(|ts| {
-            ts.access_token_map
-                .get(&*Self::scope_key(scopes))
-                .map(|t| t.clone())
-        })
+        self.get_token_set(cache_key)
+            .and_then(|ts| ts.access_token_map.get(&*Self::scope_key(scopes)).map(|t| t.clone()))
     }
 
     /// Returns a Firebase token for the specified `cache_key` and `firebase_api_key`, if present
     /// and not expired. This will cause any expired tokens on the same key to
     /// be purged from the underlying cache.
     pub fn get_firebase_token(
-        &mut self, cache_key: &CacheKey, firebase_api_key: &str,
+        &mut self,
+        cache_key: &CacheKey,
+        firebase_api_key: &str,
     ) -> Option<Arc<FirebaseAuthToken>> {
-        self.get_token_set(cache_key).and_then(|ts| {
-            ts.firebase_token_map
-                .get(firebase_api_key)
-                .map(|t| t.clone())
-        })
+        self.get_token_set(cache_key)
+            .and_then(|ts| ts.firebase_token_map.get(firebase_api_key).map(|t| t.clone()))
     }
 
     /// Returns the set of unexpired tokens stored in the cache for the given
@@ -245,18 +239,23 @@ impl TokenCache {
     /// Adds an OAuth Access token to the cache, replacing any existing token for the same
     /// `cache_key` and `scopes`.
     pub fn put_access_token<T: Deref<Target = str>>(
-        &mut self, cache_key: CacheKey, scopes: &[T], token: Arc<OAuthToken>,
+        &mut self,
+        cache_key: CacheKey,
+        scopes: &[T],
+        token: Arc<OAuthToken>,
     ) {
         self.put_token(cache_key, |ts| {
-            ts.access_token_map
-                .insert(Self::scope_key(scopes).into_owned(), token);
+            ts.access_token_map.insert(Self::scope_key(scopes).into_owned(), token);
         });
     }
 
     /// Adds a Firebase token to the cache, replacing any existing token for
     /// the same `cache_key` and `firebase_api_key`.
     pub fn put_firebase_token(
-        &mut self, cache_key: CacheKey, firebase_api_key: String, token: Arc<FirebaseAuthToken>,
+        &mut self,
+        cache_key: CacheKey,
+        firebase_api_key: String,
+        token: Arc<FirebaseAuthToken>,
     ) {
         self.put_token(cache_key, |ts| {
             ts.firebase_token_map.insert(firebase_api_key, token);
@@ -359,7 +358,8 @@ mod tests {
     }
 
     fn build_test_firebase_token(
-        time_until_expiry: Duration, suffix: &str,
+        time_until_expiry: Duration,
+        suffix: &str,
     ) -> Arc<FirebaseAuthToken> {
         Arc::new(FirebaseAuthToken {
             expiry_time: SystemTime::now() + time_until_expiry,
@@ -403,10 +403,7 @@ mod tests {
         let time_after_conversion = SystemTime::now();
 
         assert_eq!(&native_type.id_token, TEST_FIREBASE_ID_TOKEN);
-        assert_eq!(
-            native_type.local_id,
-            Some(TEST_FIREBASE_LOCAL_ID.to_string())
-        );
+        assert_eq!(native_type.local_id, Some(TEST_FIREBASE_LOCAL_ID.to_string()));
         assert_eq!(native_type.email, Some(TEST_EMAIL.to_string()));
         assert!(native_type.expiry_time >= time_before_conversion + LONG_EXPIRY);
         assert!(native_type.expiry_time <= time_after_conversion + LONG_EXPIRY);
@@ -423,9 +420,8 @@ mod tests {
         };
 
         let fidl_type = native_type.to_fidl();
-        let elapsed_time_during_conversion = SystemTime::now()
-            .duration_since(time_before_conversion)
-            .unwrap();
+        let elapsed_time_during_conversion =
+            SystemTime::now().duration_since(time_before_conversion).unwrap();
 
         assert_eq!(&fidl_type.id_token, TEST_FIREBASE_ID_TOKEN);
         assert_eq!(fidl_type.local_id, Some(TEST_FIREBASE_LOCAL_ID.to_string()));
@@ -448,10 +444,7 @@ mod tests {
         // Verify inserting then retrieving a token succeeds.
         let token_1 = build_test_id_token(LONG_EXPIRY, "1");
         token_cache.put_id_token(key.clone(), TEST_AUDIENCE.to_string(), token_1.clone());
-        assert_eq!(
-            token_cache.get_id_token(&key, TEST_AUDIENCE),
-            Some(token_1.clone())
-        );
+        assert_eq!(token_cache.get_id_token(&key, TEST_AUDIENCE), Some(token_1.clone()));
 
         // Verify a second token on a different audience can be stored in the key
         // without conflict.
@@ -474,42 +467,27 @@ mod tests {
         // Verify inserting then retrieving a token succeeds.
         let token_1 = build_test_access_token(LONG_EXPIRY, "1");
         token_cache.put_access_token(key.clone(), &scopes, token_1.clone());
-        assert_eq!(
-            token_cache.get_access_token(&key, &scopes),
-            Some(token_1.clone())
-        );
+        assert_eq!(token_cache.get_access_token(&key, &scopes), Some(token_1.clone()));
 
         // We don't create a canonical ordering of scopes, so can store a different
         // token with the same scopes in reverse order.
         let reversed_scopes = vec![TEST_SCOPE_B, TEST_SCOPE_A];
         let token_2 = build_test_id_token(LONG_EXPIRY, "2");
         token_cache.put_access_token(key.clone(), &reversed_scopes, token_2.clone());
-        assert_eq!(
-            token_cache.get_access_token(&key, &reversed_scopes),
-            Some(token_2)
-        );
+        assert_eq!(token_cache.get_access_token(&key, &reversed_scopes), Some(token_2));
 
         // Check that storing with a single scope and an empty scope vector also work.
         let single_scope = vec![TEST_SCOPE_A];
         let token_3 = build_test_id_token(LONG_EXPIRY, "3");
         token_cache.put_access_token(key.clone(), &single_scope, token_3.clone());
-        assert_eq!(
-            token_cache.get_access_token(&key, &single_scope),
-            Some(token_3)
-        );
+        assert_eq!(token_cache.get_access_token(&key, &single_scope), Some(token_3));
         let no_scopes: Vec<String> = vec![];
         let token_4 = build_test_id_token(LONG_EXPIRY, "4");
         token_cache.put_access_token(key.clone(), &no_scopes, token_4.clone());
-        assert_eq!(
-            token_cache.get_access_token(&key, &no_scopes),
-            Some(token_4)
-        );
+        assert_eq!(token_cache.get_access_token(&key, &no_scopes), Some(token_4));
 
         // And finally check that we didn't dork up the original entry.
-        assert_eq!(
-            token_cache.get_access_token(&key, &scopes),
-            Some(token_1.clone())
-        );
+        assert_eq!(token_cache.get_access_token(&key, &scopes), Some(token_1.clone()));
     }
 
     #[test]
@@ -558,10 +536,7 @@ mod tests {
         assert_eq!(token_cache.has_key(&key_2), true);
 
         // Getting the expired key should fail and remove it from the cache.
-        assert_eq!(
-            token_cache.get_access_token(&key_1, &scopes),
-            Some(access_token_1)
-        );
+        assert_eq!(token_cache.get_access_token(&key_1, &scopes), Some(access_token_1));
         assert_eq!(token_cache.get_access_token(&key_2, &scopes), None);
         assert_eq!(token_cache.has_key(&key_1), true);
         assert_eq!(token_cache.has_key(&key_2), false);
@@ -587,10 +562,7 @@ mod tests {
             TEST_API_KEY.to_string(),
             firebase_token.clone(),
         );
-        assert_eq!(
-            token_cache.get_firebase_token(&key, TEST_API_KEY),
-            Some(firebase_token)
-        );
+        assert_eq!(token_cache.get_firebase_token(&key, TEST_API_KEY), Some(firebase_token));
     }
 
     #[test]
@@ -621,9 +593,6 @@ mod tests {
             token_cache.get_firebase_token(&key, &firebase_api_key_1),
             Some(firebase_token_1)
         );
-        assert_eq!(
-            token_cache.get_firebase_token(&key, &firebase_api_key_2),
-            None
-        );
+        assert_eq!(token_cache.get_firebase_token(&key, &firebase_api_key_2), None);
     }
 }

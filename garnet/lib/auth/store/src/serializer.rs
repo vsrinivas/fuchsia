@@ -60,10 +60,7 @@ impl serde::ser::Serialize for CredentialValue {
             auth_provider_type: &self.credential_key.auth_provider_type,
             user_profile_id: base64::encode_config(&self.credential_key.user_profile_id, CHARSET),
             refresh_token: base64::encode_config(&self.refresh_token, CHARSET),
-            private_key: self
-                .private_key
-                .as_ref()
-                .map(|key| base64::encode_config(key, CHARSET)),
+            private_key: self.private_key.as_ref().map(|key| base64::encode_config(key, CHARSET)),
         }
         .serialize(serializer)
     }
@@ -144,7 +141,8 @@ fn entry_to_str<'a>(object: &'a Value, field_name: &'static str) -> result::Resu
 /// Returns the base64 decoded contents of a string field from the supplied json object, or a
 /// descriptive error if this is not possible.
 fn base64_entry_to_bytes(
-    object: &Value, field_name: &'static str,
+    object: &Value,
+    field_name: &'static str,
 ) -> result::Result<Vec<u8>, Error> {
     let encoded_string = entry_to_str(object, field_name)?;
     base64::decode_config(encoded_string, CHARSET)
@@ -209,11 +207,7 @@ mod tests {
 
     #[test]
     fn test_json_serialize_deserialize_multiple_items() -> Result<()> {
-        let mut input = vec![
-            build_test_creds("1"),
-            build_test_creds("2"),
-            build_test_creds("3"),
-        ];
+        let mut input = vec![build_test_creds("1"), build_test_creds("2"), build_test_creds("3")];
         // Include a mix of bound and unbound test credentials.
         input[1].private_key = Some(vec![7, 6, 5, 4, 3, 2, 1]);
 

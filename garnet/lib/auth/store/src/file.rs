@@ -47,10 +47,7 @@ impl<S: Serializer> AuthDbFile<S> {
             // If the file exists, attempt to read its contents into a map...
             let credentials_file = Self::read_file(credentials_path)?;
             let credentials_vec = serializer.deserialize(credentials_file)?;
-            credentials_vec
-                .into_iter()
-                .map(|cred| (cred.credential_key.clone(), cred))
-                .collect()
+            credentials_vec.into_iter().map(|cred| (cred.credential_key.clone(), cred)).collect()
         } else {
             // ...if not, create its directory and start with an empty map.
             Self::create_directory(credentials_path)?;
@@ -99,10 +96,7 @@ impl<S: Serializer> AuthDbFile<S> {
     /// name.
     fn rename_file(source: &Path, dest: &Path) -> Result<()> {
         fs::rename(source, dest).map_err(|err| {
-            warn!(
-                "AuthDbFile failed to rename temporary credential file: {:?}",
-                err
-            );
+            warn!("AuthDbFile failed to rename temporary credential file: {:?}", err);
             AuthDbError::IoError(err)
         })
     }
@@ -127,8 +121,7 @@ impl<S: Serializer> AuthDbFile<S> {
 
 impl<S: Serializer> AuthDb for AuthDbFile<S> {
     fn add_credential(&mut self, credential: CredentialValue) -> Result<()> {
-        self.credentials
-            .insert(credential.credential_key.clone(), credential);
+        self.credentials.insert(credential.credential_key.clone(), credential);
         self.save()
     }
 
@@ -190,10 +183,7 @@ mod test {
             // Load a database and insert one credential.
             let mut db = AuthDbFile::new(&temp_location.path)?;
             db.add_credential(cred_1.clone())?;
-            assert_eq!(
-                db.get_refresh_token(&cred_1.credential_key)?,
-                &cred_1.refresh_token
-            );
+            assert_eq!(db.get_refresh_token(&cred_1.credential_key)?, &cred_1.refresh_token);
             assert_match!(
                 db.get_refresh_token(&cred_2.credential_key),
                 Err(AuthDbError::CredentialNotFound)
@@ -203,15 +193,9 @@ mod test {
         {
             // Load a second database from the same file and verify contents are retained.
             let mut db = AuthDbFile::new(&temp_location.path)?;
-            assert_eq!(
-                db.get_refresh_token(&cred_1.credential_key)?,
-                &cred_1.refresh_token
-            );
+            assert_eq!(db.get_refresh_token(&cred_1.credential_key)?, &cred_1.refresh_token);
             db.add_credential(cred_2.clone())?;
-            assert_eq!(
-                db.get_refresh_token(&cred_2.credential_key)?,
-                &cred_2.refresh_token
-            );
+            assert_eq!(db.get_refresh_token(&cred_2.credential_key)?, &cred_2.refresh_token);
             assert_eq!(
                 db.get_all_credential_keys().unwrap(),
                 vec![&cred_1.credential_key, &cred_2.credential_key]
@@ -242,14 +226,8 @@ mod test {
             // Load another separate instance of the database and checks both credentials are
             // present.
             let db = AuthDbFile::new(&temp_location.path)?;
-            assert_eq!(
-                db.get_refresh_token(&cred_1.credential_key)?,
-                &cred_1.refresh_token
-            );
-            assert_eq!(
-                db.get_refresh_token(&cred_2.credential_key)?,
-                &cred_2.refresh_token
-            );
+            assert_eq!(db.get_refresh_token(&cred_1.credential_key)?, &cred_1.refresh_token);
+            assert_eq!(db.get_refresh_token(&cred_2.credential_key)?, &cred_2.refresh_token);
         }
         Ok(())
     }

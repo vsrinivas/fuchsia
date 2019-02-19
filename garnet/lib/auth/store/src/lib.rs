@@ -22,15 +22,12 @@ pub enum AuthDbError {
     /// An illegal input argument was supplied, such as an invalid path.
     #[fail(display = "invalid argument")]
     InvalidArguments,
-    /// A lower level failure occurred while serialization and writing the data.
+    /// A lower level failure occurred while serializing and writing the data.
     /// See logs for more information.
     #[fail(display = "unexpected error serializing or deserializing the database")]
     SerializationError,
-    /// A lower level failure occurred while reading and deserialization the data.
-    #[fail(
-        display = "unexpected IO error accessing the database: {}",
-        _0
-    )]
+    /// A lower level failure occurred while reading and deserializing the data.
+    #[fail(display = "unexpected IO error accessing the database: {}", _0)]
     IoError(#[cause] std::io::Error),
     /// The existing contents of the DB are not valid. This could be caused by a change in file
     /// format or by data corruption.
@@ -55,17 +52,15 @@ pub struct CredentialKey {
 impl CredentialKey {
     /// Create a new CredentialKey, or returns an Error if any input is empty.
     pub fn new(
-        auth_provider_type: String, user_profile_id: String,
+        auth_provider_type: String,
+        user_profile_id: String,
     ) -> result::Result<CredentialKey, Error> {
         if auth_provider_type.is_empty() {
             Err(format_err!("auth_provider_type cannot be empty"))
         } else if user_profile_id.is_empty() {
             Err(format_err!("user_profile_id cannot be empty"))
         } else {
-            Ok(CredentialKey {
-                auth_provider_type,
-                user_profile_id,
-            })
+            Ok(CredentialKey { auth_provider_type, user_profile_id })
         }
     }
 
@@ -95,7 +90,9 @@ pub struct CredentialValue {
 impl CredentialValue {
     /// Create a new CredentialValue, or returns an Error if any input is empty.
     pub fn new(
-        auth_provider_type: String, user_profile_id: String, refresh_token: String,
+        auth_provider_type: String,
+        user_profile_id: String,
+        refresh_token: String,
         private_key: Option<Vec<u8>>,
     ) -> result::Result<CredentialValue, Error> {
         if refresh_token.is_empty() {
@@ -168,32 +165,26 @@ mod tests {
 
     #[test]
     fn test_new_invalid_credential() {
-        assert!(
-            CredentialValue::new(
-                "".to_string(),
-                TEST_ID.to_string(),
-                TEST_REFRESH_TOKEN.to_string(),
-                None
-            )
-            .is_err()
-        );
-        assert!(
-            CredentialValue::new(
-                TEST_AUTH_PROVIDER.to_string(),
-                "".to_string(),
-                TEST_REFRESH_TOKEN.to_string(),
-                None
-            )
-            .is_err()
-        );
-        assert!(
-            CredentialValue::new(
-                TEST_AUTH_PROVIDER.to_string(),
-                TEST_ID.to_string(),
-                "".to_string(),
-                None
-            )
-            .is_err()
-        );
+        assert!(CredentialValue::new(
+            "".to_string(),
+            TEST_ID.to_string(),
+            TEST_REFRESH_TOKEN.to_string(),
+            None
+        )
+        .is_err());
+        assert!(CredentialValue::new(
+            TEST_AUTH_PROVIDER.to_string(),
+            "".to_string(),
+            TEST_REFRESH_TOKEN.to_string(),
+            None
+        )
+        .is_err());
+        assert!(CredentialValue::new(
+            TEST_AUTH_PROVIDER.to_string(),
+            TEST_ID.to_string(),
+            "".to_string(),
+            None
+        )
+        .is_err());
     }
 }
