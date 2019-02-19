@@ -83,24 +83,34 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
                          kMaxBytesPerEnvelope, kMaxBytesTotal,
                          std::make_unique<PosixFileSystem>(),
                          kObservationStorePath, "V1 FileObservationStore"),
-      legacy_encrypt_to_analyzer_(ReadPublicKeyPem(kAnalyzerPublicKeyPemPath),
-                                  EncryptedMessage::HYBRID_ECDH_V1),
-      legacy_encrypt_to_shuffler_(ReadPublicKeyPem(kShufflerPublicKeyPemPath),
-                                  EncryptedMessage::HYBRID_ECDH_V1),
+      legacy_encrypt_to_analyzer_(
+          util::EncryptedMessageMaker::Make(
+              ReadPublicKeyPem(kAnalyzerPublicKeyPemPath),
+              EncryptedMessage::HYBRID_ECDH_V1)
+              .ValueOrDie()),
+      legacy_encrypt_to_shuffler_(
+          util::EncryptedMessageMaker::Make(
+              ReadPublicKeyPem(kShufflerPublicKeyPemPath),
+              EncryptedMessage::HYBRID_ECDH_V1)
+              .ValueOrDie()),
       // TODO(rudominer,pesk) Support encryption in Cobalt 1.0.
-      encrypt_to_analyzer_("", EncryptedMessage::NONE),
-      encrypt_to_shuffler_("", EncryptedMessage::NONE),
+      encrypt_to_analyzer_(util::EncryptedMessageMaker::MakeAllowUnencrypted(
+                               "", EncryptedMessage::NONE)
+                               .ValueOrDie()),
+      encrypt_to_shuffler_(util::EncryptedMessageMaker::MakeAllowUnencrypted(
+                               "", EncryptedMessage::NONE)
+                               .ValueOrDie()),
 
       legacy_shipping_manager_(
           UploadScheduler(target_interval, min_interval, initial_interval),
-          &legacy_observation_store_, &legacy_encrypt_to_shuffler_,
+          &legacy_observation_store_, legacy_encrypt_to_shuffler_.get(),
           LegacyShippingManager::SendRetryerParams(kInitialRpcDeadline,
                                                    kDeadlinePerSendAttempt),
           &send_retryer_),
 
       clearcut_shipping_manager_(
           UploadScheduler(target_interval, min_interval, initial_interval),
-          &observation_store_, &encrypt_to_shuffler_,
+          &observation_store_, encrypt_to_shuffler_.get(),
           std::make_unique<clearcut::ClearcutUploader>(
               kClearcutEndpoint, std::make_unique<FuchsiaHTTPClient>(
                                      &network_wrapper_, dispatcher))),
@@ -111,7 +121,7 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
                                std::make_unique<PosixFileSystem>()),
       logger_encoder_(getClientSecret(), &system_data_),
       observation_writer_(&observation_store_, &clearcut_shipping_manager_,
-                          &encrypt_to_analyzer_),
+                          encrypt_to_analyzer_.get()),
       // Construct an EventAggregator using default values for the snapshot
       // intervals and the number of backfill days.
       // TODO(pesk): consider using non-default values for these arguments; in
@@ -158,8 +168,8 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
 
   logger_factory_impl_.reset(new LoggerFactoryImpl(
       getClientSecret(), &legacy_observation_store_,
-      &legacy_encrypt_to_analyzer_, &legacy_shipping_manager_, &system_data_,
-      &timer_manager_, &logger_encoder_, &observation_writer_,
+      legacy_encrypt_to_analyzer_.get(), &legacy_shipping_manager_,
+      &system_data_, &timer_manager_, &logger_encoder_, &observation_writer_,
       &event_aggregator_, client_config_, project_configs_));
 
   context_->outgoing().AddPublicService(

@@ -78,10 +78,10 @@ class CobaltApp {
   network_wrapper::NetworkWrapperImpl network_wrapper_;
   encoder::FileObservationStore legacy_observation_store_;
   encoder::FileObservationStore observation_store_;
-  util::EncryptedMessageMaker legacy_encrypt_to_analyzer_;
-  util::EncryptedMessageMaker legacy_encrypt_to_shuffler_;
-  util::EncryptedMessageMaker encrypt_to_analyzer_;
-  util::EncryptedMessageMaker encrypt_to_shuffler_;
+  std::unique_ptr<util::EncryptedMessageMaker> legacy_encrypt_to_analyzer_;
+  std::unique_ptr<util::EncryptedMessageMaker> legacy_encrypt_to_shuffler_;
+  std::unique_ptr<util::EncryptedMessageMaker> encrypt_to_analyzer_;
+  std::unique_ptr<util::EncryptedMessageMaker> encrypt_to_shuffler_;
   encoder::LegacyShippingManager legacy_shipping_manager_;
   encoder::ClearcutV1ShippingManager clearcut_shipping_manager_;
   TimerManager timer_manager_;
