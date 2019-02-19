@@ -626,35 +626,43 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 	}
 	ns.mu.Unlock()
 
-	return ns.addEndpoint(func(ifs *ifState) (stack.LinkEndpoint, error) {
-		if len(ifs.mu.nic.Name) == 0 {
-			ifs.mu.nic.Name = fmt.Sprintf("br%d", ifs.mu.nic.ID)
-		}
-		b := bridge.New(links)
-		ifs.eth = b
-		return b, nil
-	})
+	b := bridge.New(links)
+	ifs, err := ns.addEndpoint(b, b)
+	if err != nil {
+		return nil, err
+	}
+	ifs.mu.Lock()
+	if len(ifs.mu.nic.Name) == 0 {
+		ifs.mu.nic.Name = fmt.Sprintf("br%d", ifs.mu.nic.ID)
+	}
+	ifs.mu.Unlock()
+	return ifs, nil
 }
 
 func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.Device) (*ifState, error) {
-	return ns.addEndpoint(func(ifs *ifState) (stack.LinkEndpoint, error) {
-		client, err := eth.NewClient("netstack", topological_path, device, ns.arena)
-		if err != nil {
-			return nil, err
-		}
-		ifs.eth = client
-		ifs.mu.nic.Features = client.Info.Features
-		ifs.mu.nic.Name = config.Name
-		if len(ifs.mu.nic.Name) == 0 {
-			ifs.mu.nic.Name = fmt.Sprintf("eth%d", ifs.mu.nic.ID)
-		}
-		return eth.NewLinkEndpoint(client), nil
-	})
+	client, err := eth.NewClient("netstack", topological_path, device, ns.arena)
+	if err != nil {
+		return nil, err
+	}
+
+	ifs, err := ns.addEndpoint(eth.NewLinkEndpoint(client), client)
+	if err != nil {
+		return nil, err
+	}
+	ifs.mu.Lock()
+	ifs.mu.nic.Features = client.Info.Features
+	ifs.mu.nic.Name = config.Name
+	if len(ifs.mu.nic.Name) == 0 {
+		ifs.mu.nic.Name = fmt.Sprintf("eth%d", ifs.mu.nic.ID)
+	}
+	ifs.mu.Unlock()
+	return ifs, nil
 }
 
-func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint, error)) (*ifState, error) {
+func (ns *Netstack) addEndpoint(ep stack.LinkEndpoint, controller link.Controller) (*ifState, error) {
 	ifs := &ifState{
 		ns: ns,
+		eth: controller,
 	}
 	ifs.mu.state = link.StateUnknown
 	ifs.mu.nic = &netiface.NIC{
@@ -665,13 +673,6 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 	ifs.mu.dhcp.running = func() bool { return false }
 	ifs.mu.dhcp.cancel = func() {}
 
-	ep, err := makeEndpoint(ifs)
-	if err != nil {
-		return nil, err
-	}
-	if ifs.eth == nil {
-		return nil, fmt.Errorf("makeEndpoint func did not set ifs.eth")
-	}
 	ifs.eth.SetOnStateChange(ifs.stateChange)
 	linkID := stack.RegisterLinkEndpoint(ep)
 	linkAddr := ep.LinkAddress()

@@ -32,7 +32,7 @@ const (
 func TestNicName(t *testing.T) {
 	ns := newNetstack(t)
 
-	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName}, &ethernetext.Device{
+	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &ethernetext.Device{
 		TB:                t,
 		GetInfoImpl:       func() (ethernet.Info, error) { return ethernet.Info{}, nil },
 		SetClientNameImpl: func(string) (int32, error) { return 0, nil },
@@ -88,7 +88,7 @@ func TestDhcpConfiguration(t *testing.T) {
 	ipAddressConfig.SetDhcp(true)
 
 	d := deviceForAddEth(ethernet.Info{}, t)
-	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName, IpAddressConfig: ipAddressConfig}, &d)
+	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName, IpAddressConfig: ipAddressConfig}, &d)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,13 +144,32 @@ func TestDhcpConfiguration(t *testing.T) {
 	ifs.mu.Unlock()
 }
 
+func TestUniqueFallbackNICNames(t *testing.T) {
+	ns := newNetstack(t)
+
+	d1 := deviceForAddEth(ethernet.Info{}, t)
+	ifs1, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d2 := deviceForAddEth(ethernet.Info{}, t)
+	ifs2, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ifs1.mu.nic.Name == ifs2.mu.nic.Name {
+		t.Fatalf("got (%+v).Name == (%+v).Name, want non-equal", ifs1, ifs2)
+	}
+}
+
 func TestStaticIPConfiguration(t *testing.T) {
 	ns := newNetstack(t)
 
 	addr := fidlconv.ToNetIpAddress(testIpAddress)
 	ifAddr := stack.InterfaceAddress{IpAddress: addr, PrefixLen: 32}
 	d := deviceForAddEth(ethernet.Info{}, t)
-	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName}, &d)
+	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &d)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +235,7 @@ func TestWLANStaticIPConfiguration(t *testing.T) {
 	addr := fidlconv.ToNetIpAddress(testIpAddress)
 	ifAddr := stack.InterfaceAddress{IpAddress: addr, PrefixLen: 32}
 	d := deviceForAddEth(ethernet.Info{Features: ethernet.InfoFeatureWlan}, t)
-	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName}, &d)
+	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &d)
 	if err != nil {
 		t.Fatal(err)
 	}
