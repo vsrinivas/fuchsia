@@ -8,37 +8,48 @@
 
 function HELP {
     echo "help:"
-    echo "-a <arch>            : arm64, or x64"
-    echo "-A                   : use ASan build"
-    echo "-C                   : use Clang build"
-    echo "-l                   : use ThinLTO build"
-    echo "-L                   : use LTO build"
-    echo "-q                   : build quietly"
-    echo "-v                   : build verbosely"
+    echo "-a <arch>            : build just one architecture (default: both)"
+    echo "-A                   : build asan variant"
+    echo "-C                   : build clang variant"
+    echo "-l                   : build thinlto variant"
+    echo "-L                   : build lto variant"
+    echo "-X                   : build xray variant"
+    echo "-P                   : build profile variant"
+    echo "-o <dir>             : build in <dir> (default build-VARIANT)"
+    echo "-j N                 : passed on to Ninja"
+    echo "-q                   : build quietly (pass -q to gn)"
+    echo "-v                   : build verbosely (pass -v to ninja)"
     echo "-r                   : build release build"
     echo "-d                   : build unoptimized, with full debug symbols"
     echo "-h for help"
-    echo "all arguments after -- are passed to make directly"
+    echo "all arguments after -- become GN build arguments"
     exit 1
 }
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-ARGS=
-ARCH=
-QUIET=0
+GN_SWITCHES=()
+GN_ARGS=()
+NINJA_ARGS=()
+VARIANT=gcc
+BUILDDIR=
+BUILDDIR_SUFFIX=
 
-while getopts a:ACdhlLqrv FLAG; do
+while getopts a:ACdhj:lLo:PqrvX FLAG; do
     case $FLAG in
-        a) ARCH=${OPTARG};;
-        A) ARGS+=" USE_ASAN=true USE_CLANG=true";;
-        C) ARGS+=" USE_CLANG=true";;
-        d) ARGS+=" DEBUG_HARD=1";;
-        l) ARGS+=" USE_THINLTO=true";;
-        L) ARGS+=" USE_LTO=true";;
-        q) ARGS+=" QUIET=1";;
-        r) ARGS+=" DEBUG=0";;
-        v) ARGS+=" NOECHO=";;
+        a) NINJA_ARGS+=("$OPTARG") ;;
+        A) VARIANT=asan ;;
+        C) VARIANT=clang ;;
+        d) VARIANT=noopt ;;
+        j) NINJA_ARGS+=(-j "$OPTARG") ;;
+        l) VARIANT=thinlto ;;
+        L) VARIANT=lto ;;
+        o) BUILDDIR="$OPTARG" ;;
+        P) VARIANT=profile ;;
+        q) GN_SWITCHES+=(-q) ;;
+        r) BUILDDIR_SUFFIX=-release GN_ARGS+=(assert_level=0) ;;
+        v) NINJA_ARGS+=(-v) ;;
+        X) VARIANT=xray ;;
         h) HELP ;;
         \?)
             echo unrecognized option
@@ -47,9 +58,19 @@ while getopts a:ACdhlLqrv FLAG; do
 done
 shift $((OPTIND-1))
 
-if [[ ! ${ARCH} ]]; then
-    echo no arch specified!
-    HELP
+set -e
+
+if [[ -z "$BUILDDIR" ]]; then
+    BUILDDIR="build-$VARIANT$BUILDDIR_SUFFIX"
 fi
 
-exec ${DIR}/make-parallel ${ARCH} ${ARGS} "$@"
+if [[ -r "$BUILDDIR/args.gn" && $# -eq 0 ]]; then
+    echo >&2 "Reusing existing $BUILDDIR/args.gn"
+else
+    "$DIR/gn" gen "${GN_SWITCHES[@]}" "$BUILDDIR" --args="
+variants = [ \"$VARIANT\" ]
+$GN_ARGS
+$*"
+fi
+
+exec "$DIR/ninja" -C "$BUILDDIR" "${NINJA_ARGS[@]}"
