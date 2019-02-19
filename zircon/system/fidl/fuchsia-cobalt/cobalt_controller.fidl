@@ -8,7 +8,7 @@ library fuchsia.cobalt;
 // Cobalt clients should use the Logger.
 
 [Discoverable]
-interface Controller {
+protocol Controller {
     // Requests that the collection of Observations that are currently cached
     // locally be sent to the Cobalt server soon. Cobalt will send the
     // Observations in one or more batches and will retry several times upon

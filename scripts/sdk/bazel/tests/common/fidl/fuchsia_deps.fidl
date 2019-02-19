@@ -6,6 +6,6 @@ library bazel.examples.fuchsiadeps;
 
 using fuchsia.sys;
 
-interface Fuchsia {
+protocol Fuchsia {
     UseThat(request<fuchsia.sys.Loader> loader);
 };

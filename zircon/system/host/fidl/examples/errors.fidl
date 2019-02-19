@@ -10,7 +10,7 @@ enum ErrorCode : int32 {
     kOMGSoTerrible = 3;
 };
 
-interface EpicFail {
+protocol EpicFail {
     IntegerError(string x) -> (string y) error int32;
     UnsignedError(string x) -> (string y) error uint32;
     EnumError(string x) -> (string y) error ErrorCode;

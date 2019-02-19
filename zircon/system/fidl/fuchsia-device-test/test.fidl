@@ -21,7 +21,7 @@ struct TestReport {
 
 /// Interface for controlling a device created via RootDevice.CreateDevice
 [Layout = "Simple"]
-interface Device {
+protocol Device {
     /// Set a socket to stream test output to.
     SetOutputSocket(handle<socket> sock);
 
@@ -43,7 +43,7 @@ const uint32 MAX_DEVICE_PATH_LEN = 1024;
 
 /// Interface for creating devices within a devhost.
 [Layout = "Simple"]
-interface RootDevice {
+protocol RootDevice {
     /// Create a device with the given |name| that is a child of this device.
     /// If |name| contains a trailing ".so", it will be removed.
     ///

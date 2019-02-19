@@ -38,7 +38,7 @@ const uint32 PROPERTIES_MAX = 256;
 
 /// Interface for controlling a device in a devhost process from the devcoordinator.
 [Layout = "Simple"]
-interface Controller {
+protocol Controller {
     // TODO(ZX-2921): These should probably return a status?
 
     /// Create a device in the devhost that only implements the device protocol
@@ -81,7 +81,7 @@ interface Controller {
 
 /// Interface for the devices in devhosts to coordinate with the devcoordinator.
 [Layout = "Simple"]
-interface Coordinator {
+protocol Coordinator {
     /// Record the addition of a new device that can be communicated with via |rpc|.
     /// For binding purposes, it is has properties |props|. |name| and |driver_path|
     /// are informational and used for debugging.  The device will have |protocol_id|

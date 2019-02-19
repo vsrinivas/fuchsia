@@ -26,7 +26,7 @@ const uint32 MAX_RESOLVE_NAME_SIZE = 2048;
 /// |fdio_spawn_etc| use this interface internally when they try to run a file
 /// with a |#!resolve| directive.
 [Discoverable, Layout = "Simple"]
-interface Resolver {
+protocol Resolver {
     /// Resolves the given |name| to an |executable| and an shared library
     /// loader.
     ///

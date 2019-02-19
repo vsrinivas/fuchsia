@@ -9,7 +9,7 @@
 
 library fidl.test.coding;
 
-interface LinearizerTest {
+protocol LinearizerTest {
     VectorOfUint32(vector<uint32> v);
     VectorOfString(vector<string> v);
 };

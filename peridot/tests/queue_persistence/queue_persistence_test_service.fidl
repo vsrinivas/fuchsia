@@ -6,6 +6,6 @@ library test.peridot.tests.queuepersistence;
 
 // Cf. README.md for what this test does and how.
 [Discoverable]
-interface QueuePersistenceTestService {
+protocol QueuePersistenceTestService {
     GetMessageQueueToken() -> (string message_queue_token);
 };

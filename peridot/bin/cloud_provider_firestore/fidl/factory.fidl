@@ -17,7 +17,7 @@ struct Config {
 };
 
 [Discoverable]
-interface Factory {
+protocol Factory {
     // Creates a cloud provider instance using the given |config|.
     //
     // Parameters:

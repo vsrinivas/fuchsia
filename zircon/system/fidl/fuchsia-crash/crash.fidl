@@ -21,7 +21,7 @@ enum ManagedRuntimeLanguage {
 // Analyzes crashed processes, string exceptions from managed runtimes or
 // kernel panic crashlogs.
 [Discoverable, Layout = "Simple"]
-interface Analyzer {
+protocol Analyzer {
     // Requests that the crash analyzer handles the exception thrown by the
     // given |thread| in |process|.
     // This method is responsible for resuming or stopping the thread once the

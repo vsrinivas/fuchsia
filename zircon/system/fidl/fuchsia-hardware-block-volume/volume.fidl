@@ -28,7 +28,7 @@ const uint32 AllocatePartitionFlagInactive = 0x00000001;
 
 // VolumeManager controls a collection of Volumes.
 [Layout = "Simple"]
-interface VolumeManager {
+protocol VolumeManager {
     // Allocates a virtual partition with the requested features.
     //
     // |slice_count| is the number of slices initially allocated to the partition, at
@@ -78,7 +78,9 @@ struct VsliceRange {
 
 // Volume is a partition which may access virtually-mapped blocks within a device.
 [Layout = "Simple"]
-interface Volume : partition.Partition {
+protocol Volume {
+    compose partition.Partition;
+
     // Gets slice size information about the parent volume.
     Query() -> (zx.status status, VolumeInfo? info);
 

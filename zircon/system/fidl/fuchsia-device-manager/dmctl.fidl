@@ -9,7 +9,7 @@ using zx;
 /// Interface for requesting devmgr perform miscellaneous actions.
 /// These methods are all work-arounds that should go away eventually.
 [Layout = "Simple"]
-interface ExternalController {
+protocol ExternalController {
     /// Execute the given string command.  This is mostly used for accessing debug
     /// interfaces, but also as a backdoor for plumbing that has not been fully
     /// solved.

@@ -8,7 +8,7 @@ struct Empty {
 };
 
 [Layout = "Simple"]
-interface EmptyInterface {
+protocol EmptyInterface {
     Send(Empty e);
     -> Receive (Empty e);
     SendAndReceive(Empty e) -> (Empty e);

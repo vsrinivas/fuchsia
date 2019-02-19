@@ -23,7 +23,7 @@ union AstrologicalData {
 };
 
 [Layout = "Simple"]
-interface AstrometricsListener {
+protocol AstrometricsListener {
     OnNova();
 };
 
@@ -59,7 +59,7 @@ const uint32 MaxStarsAdjustHeading = 64;
 const uint32 MaxStarsScanForLifeforms = 64;
 
 [Layout = "Simple"]
-interface SpaceShip {
+protocol SpaceShip {
     AdjustHeading(vector<uint32>:MaxStarsAdjustHeading stars) -> (int8 result);
     ScanForLifeforms() -> (vector<uint32>:MaxStarsScanForLifeforms lifesigns);
     SetAstrometricsListener(AstrometricsListener listener);

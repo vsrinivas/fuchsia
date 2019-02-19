@@ -6,6 +6,6 @@ library bazel.examples.localdeps;
 
 using bazel.examples.simple;
 
-interface Foobar {
+protocol Foobar {
     DoSomething(bazel.examples.simple.Hello world);
 };

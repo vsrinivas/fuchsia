@@ -17,7 +17,7 @@ enum PrebuiltType : uint8 {
 };
 
 [Layout = "Simple"]
-interface Device {
+protocol Device {
     /// Loads the prebuilt firmware onto the USB test device, and renumerates as the new device.
     LoadPrebuiltFirmware(PrebuiltType prebuilt_type) -> (zx.status s);
 

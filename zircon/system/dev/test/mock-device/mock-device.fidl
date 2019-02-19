@@ -65,7 +65,7 @@ const uint32 MAX_WRITE_BYTES = 16384;
 /// Interface for controlling a mock device.  The test suite will implement this interface.
 /// Any method that returns a list of actions is interpreted as requesting the corresponding hook
 /// to perform that list of actions in order.
-interface MockDevice {
+protocol MockDevice {
     /// |record.device_id| corresponds to the parent here.
     Bind(HookInvocation record) -> (vector<Action>:MAX_ACTIONS actions);
 
@@ -92,7 +92,7 @@ interface MockDevice {
 
 /// Interface for requesting a mock device thread do something.  The mock device implements
 /// this interface.  Closing the interface causes the thread to exit.
-interface MockDeviceThread {
+protocol MockDeviceThread {
     /// Perform the actions in the given list.  Threads may not create other threads.
     PerformActions(vector<Action>:MAX_ACTIONS actions);
 

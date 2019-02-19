@@ -133,7 +133,7 @@ struct Error {
 };
 
 [Discoverable]
-interface Stack {
+protocol Stack {
     /// Add an Ethernet interface to the network stack. On success, returns the identifier assigned
     /// by the stack for use in subsequent calls.
     AddEthernetInterface(string topological_path, fuchsia.hardware.ethernet.Device device) -> (Error? err, uint64 id);

@@ -86,7 +86,7 @@ const uint32 OPEN_FLAG_DESCRIBE = 0x00800000;
 
 /// Node defines the minimal interface for entities which can be accessed in a filesystem.
 [Layout="Simple", FragileBase]
-interface Node {
+protocol Node {
     /// Create another connection to the same remote object.
     ///
     /// |flags| may be any of:
@@ -216,7 +216,9 @@ const uint32 VMO_FLAG_EXACT = 0x00020000;
 
 /// File defines the interface of a node which contains a flat layout of data.
 [Layout = "Simple"]
-interface File : Node {
+protocol File {
+    compose Node;
+
     /// Read 'count' bytes at the seek offset.
     /// The seek offset is moved forward by the number of bytes read.
     ///
@@ -324,14 +326,16 @@ struct WatchedEvent {
 /// new watchers using the Directory "Watch" method, where they can
 /// filter which events they want to receive notifications for.
 [Layout = "Simple"]
-interface DirectoryWatcher {
+protocol DirectoryWatcher {
     /// TODO(smklein): Convert this to a vector of WatchedEvents, when possible.
     OnEvent(vector<uint8>:MAX_BUF events);
 };
 
 /// Directory defines a node which is capable of containing other Objects.
 [Layout = "Simple", FragileBase]
-interface Directory : Node {
+protocol Directory {
+    compose Node;
+
     /// Open a new object relative to this directory object.
     ///
     /// Flags may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
@@ -429,7 +433,9 @@ struct FilesystemInfo {
 /// DirectoryAdmin defines a directory which is capable of handling
 /// administrator tasks within the filesystem.
 [Layout = "Simple"]
-interface DirectoryAdmin : Directory {
+protocol DirectoryAdmin {
+    compose Directory;
+
     /// Mount a channel representing a remote filesystem onto this directory.
     /// All future requests to this node will be forwarded to the remote filesystem.
     /// To re-open a node without forwarding to the remote target, the node

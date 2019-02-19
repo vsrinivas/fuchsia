@@ -52,7 +52,7 @@ const uint64 MAX_BUFFER = 900;
 
 /// POSIX, as much as possible. |code| values are defined in errno.h.
 [Discoverable, Layout = "Simple"]
-interface SocketProvider {
+protocol SocketProvider {
     Socket(int16 domain, int16 type, int16 protocol) -> (int16 code, handle<socket>? s);
     // TODO(FIDL-323): use vector<AddInfo>:4.
     GetAddrInfo(string:256? node, string:256? service, AddrInfoHints? hints)
@@ -62,7 +62,7 @@ interface SocketProvider {
 // This interface is essentially POSIX. Its implementation must support
 // Linux-specific arguments to {Get,Set}SockOpt.
 [Transport = "SocketControl", Layout = "Simple"]
-interface SocketControl {
+protocol SocketControl {
     Close() -> (int16 code);
     Ioctl(int16 req, vector<uint8>:MAX_BUFFER in) -> (int16 code, vector<uint8>:MAX_BUFFER out);
     Connect(vector<uint8>:MAX_ADDR addr) -> (int16 code);

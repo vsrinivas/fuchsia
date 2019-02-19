@@ -7,7 +7,7 @@
 
 library fidl.test.coding;
 
-interface Handles {
+protocol Handles {
     // Starting easy: just a handle.
     NonnullableHandle(handle h0);
 
@@ -20,14 +20,14 @@ struct NonnullableHandleArray {
     array<handle>:4 handles;
 };
 
-interface Arrays {
+protocol Arrays {
     ArrayOfNonnullableHandles(array<handle>:4 handles);
     ArrayOfNullableHandles(array<handle?>:4 handles);
     ArrayOfArrayOfNonnullableHandles(array<array<handle>:3>:4 handles);
     OutOfLineArrayOfNonnullableHandles(NonnullableHandleArray? handles);
 };
 
-interface Strings {
+protocol Strings {
     UnboundedNonnullableString(string s0);
     UnboundedNullableString(string? s0);
     Bounded32NonnullableString(string:32 s0);
@@ -36,7 +36,7 @@ interface Strings {
     MultipleNullableStrings(string? s0, string? s1);
 };
 
-interface Vectors {
+protocol Vectors {
     UnboundedNonnullableVectorOfHandles(vector<handle> vh0);
     UnboundedNullableVectorOfHandles(vector<handle>? vh0);
     Bounded32NonnullableVectorOfHandles(vector<handle>:32 vh0);
@@ -66,7 +66,7 @@ union MaybeRecurse {
     MaybeRecurse? more;
 };
 
-interface Unions {
+protocol Unions {
     SingleHandleUnion(SingleHandleUnion u);
     SingleHandleUnionPointer(SingleHandleUnion u);
     MultipleHandlesUnion(MultipleHandlesUnion u);
@@ -125,7 +125,7 @@ struct OutOfLine0 {
     OutOfLine1? l1_present;
 };
 
-interface Structs {
+protocol Structs {
     Inline(Inline0 l0);
     OutOfLine(OutOfLine0 l0);
 };

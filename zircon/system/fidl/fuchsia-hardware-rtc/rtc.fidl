@@ -16,7 +16,7 @@ struct Time {
 };
 
 [Layout = "Simple"]
-interface Device {
+protocol Device {
     // Get the current RTC time
     Get() -> (Time rtc);
 

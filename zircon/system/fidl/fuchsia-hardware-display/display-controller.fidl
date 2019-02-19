@@ -189,7 +189,7 @@ struct ClientCompositionOp {
 //
 // Performing illegal actions on the interface will result in the interface
 // being closed.
-interface Controller {
+protocol Controller {
     // Event fired when displays are added or removed. This event will be fired
     // when the callback is registered if there are any connected displays.
     //

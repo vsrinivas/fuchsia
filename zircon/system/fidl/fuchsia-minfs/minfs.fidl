@@ -63,7 +63,7 @@ struct BlockRegion {
 };
 
 [Layout="Simple"]
-interface Minfs {
+protocol Minfs {
     // Acquires metrics about the currently running filesystem.
     GetMetrics() -> (zx.status status, Metrics? metrics);
 

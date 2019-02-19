@@ -26,7 +26,7 @@ struct Segment {
 };
 
 [Layout = "Simple"]
-interface Device {
+protocol Device {
     /// Send and receive data on the I2C device.
     SlaveTransfer(vector<uint8>:MAX_TRANSFER_SIZE in) -> (zx.status s,
                                                           vector<uint8>:MAX_TRANSFER_SIZE out);

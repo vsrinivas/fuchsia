@@ -8,7 +8,7 @@ using fuchsia.mem;
 
 /// Provides data useful to attach in feedback reports (crash or user feedback).
 [Discoverable]
-interface DataProvider {
+protocol DataProvider {
     /// Returns a PNG image of the current view.
     GetPngScreenshot() -> (Status status, PngImage? screenshot);
 };

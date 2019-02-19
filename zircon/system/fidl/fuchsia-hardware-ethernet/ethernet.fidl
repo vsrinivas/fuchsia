@@ -48,7 +48,7 @@ const uint32 SET_CLIENT_NAME_MAX_LEN = 16;
 
 // zircon/device/ethernet.h
 [Layout = "Simple"]
-interface Device {
+protocol Device {
     // Obtain information about device
     GetInfo() -> (Info info);
 

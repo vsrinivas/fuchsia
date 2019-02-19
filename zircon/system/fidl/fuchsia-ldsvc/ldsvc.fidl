@@ -15,7 +15,7 @@ using zx;
 // update that implementation if you change this protocol.
 
 [Layout = "Simple"]
-interface Loader {
+protocol Loader {
     // Cleanly shutdown the connection to the Loader service.
     Done();
 

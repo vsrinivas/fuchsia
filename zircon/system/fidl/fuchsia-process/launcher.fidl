@@ -115,7 +115,7 @@ struct ProcessStartData {
 /// |CreateWithoutStarting| method to create the process without actually
 /// starting it.
 [Discoverable]
-interface Launcher {
+protocol Launcher {
     /// Creates and starts the process described by |info|.
     ///
     /// After processing this message, the |Launcher| is reset to its initial

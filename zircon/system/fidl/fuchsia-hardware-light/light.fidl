@@ -22,7 +22,7 @@ struct Rgb {
 };
 
 [Layout = "Simple"]
-interface Light {
+protocol Light {
     // Returns a board specific name for the light.
     // For example, "mute" for a microphone mute indicator light, "bluetooth" for
     // Bluetooth pairing light, etc.

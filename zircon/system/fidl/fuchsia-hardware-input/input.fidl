@@ -25,7 +25,7 @@ enum ReportType : uint8 {
 };
 
 [Layout = "Simple"]
-interface Device {
+protocol Device {
     // Get the HID boot interface protocol this device supports
     GetBootProtocol() -> (BootProtocol protocol);
 

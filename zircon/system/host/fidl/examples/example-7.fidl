@@ -6,6 +6,6 @@ library fidl.examples.example7;
 
 // ¡🇷🇸🇷
 
-interface Hello {
+protocol Hello {
     Say(string req) -> (string response);
 };

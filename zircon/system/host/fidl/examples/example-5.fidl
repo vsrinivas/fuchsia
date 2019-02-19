@@ -29,7 +29,7 @@ enum Enum23 : int32 {
 };
 
 [Discoverable]
-interface Thing {
+protocol Thing {
     one_function(string s, bool b) -> ();
     two_function(string s, bool b);
     three_function(string s, request<Thing> r);

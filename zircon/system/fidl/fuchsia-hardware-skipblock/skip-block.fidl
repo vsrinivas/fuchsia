@@ -30,7 +30,7 @@ struct ReadWriteOperation {
 };
 
 [Layout = "Simple"]
-interface SkipBlock {
+protocol SkipBlock {
     /// Returns information about the skip-block partition.
     ///
     /// The block count can shrink in the event that a bad block is grown. It is

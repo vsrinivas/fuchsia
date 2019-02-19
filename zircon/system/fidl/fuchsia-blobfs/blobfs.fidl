@@ -13,7 +13,7 @@ struct BlockRegion {
 };
 
 [Layout="Simple"]
-interface Blobfs {
+protocol Blobfs {
     // Retrieve information about allocated regions on the filesystem.
     GetAllocatedRegions() -> (zx.status status, handle<vmo>? regions, uint64 count);
 };

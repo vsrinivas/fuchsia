@@ -14,7 +14,7 @@ using zx;
 // (pair) because this way we can detect error conditions like a participant
 // dying mid-create.
 [Discoverable, Layout = "Simple"]
-interface BufferCollectionToken {
+protocol BufferCollectionToken {
     // The initiator or a participant can send Duplicate() as part of creating
     // another participant-side handle to the same logical
     // BufferCollectionToken.
@@ -129,7 +129,7 @@ interface BufferCollectionToken {
 // the old and new collections. Collections can be large enough that it's worth
 // avoiding allocation overlap (in time).
 [Discoverable, Layout = "Simple"]
-interface BufferCollection {
+protocol BufferCollection {
     // At least for now, the only way to get events from a BufferCollection is
     // to set a reverse BufferCollectionEvents channel.  This can be sent up to
     // once at any point during BufferCollection channel lifetime.  All events
@@ -277,7 +277,7 @@ interface BufferCollection {
 // soon to be useful.  Instead, such an indication should be made in-band within
 // FIDL interfaces that deliver packets to downstream participants.
 [Discoverable, Layout = "Simple"]
-interface BufferCollectionEvents {
+protocol BufferCollectionEvents {
     // See comments on BufferCollectionToken::Sync().
     //
     // This message only indicates that the server has reached the point where

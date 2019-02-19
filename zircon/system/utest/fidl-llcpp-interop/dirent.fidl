@@ -17,7 +17,7 @@ const uint32 SMALL_DIR_VECTOR_SIZE = 3;
 
 /// Test interface implemented by LLCPP, with a manually written server,
 /// since types with more than one level of indirections are not handled by the C binding.
-interface DirEntTestInterface {
+protocol DirEntTestInterface {
     /// Iterate over the dirents and return the number of directories within them.
     CountNumDirectories(vector<DirEnt>:1000 dirents) -> (int64 num_dir);
 

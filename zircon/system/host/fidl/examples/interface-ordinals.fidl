@@ -7,17 +7,20 @@ library fidl.examples.ordinals;
 using zx;
 
 [FragileBase]
-interface Foo {
+protocol Foo {
     SomeMethod();
     SomeMethodWithAResponse() -> ();
     -> SomeEvent(zx.status response);
 };
 
 [FragileBase]
-interface Bar {
+protocol Bar {
     DoIt();
 };
 
-interface FooAndBarWaitTheresMore : Foo, Bar {
+protocol FooAndBarWaitTheresMore {
+    compose Foo;
+    compose Bar;
+
     MoreMoreMore();
 };

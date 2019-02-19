@@ -18,7 +18,9 @@ struct GUID {
 // Partition describes a region of one or more block devices, labelled
 // with distinguishing identifiers.
 [Layout = "Simple", FragileBase]
-interface Partition : block.Block {
+protocol Partition {
+    compose block.Block;
+
     // Gets the type GUID of the partition (if one exists).
     // If the partition has no type GUID, ZX_ERR_NOT_SUPPORTED is returned.
     GetTypeGuid() -> (zx.status status, GUID? guid);

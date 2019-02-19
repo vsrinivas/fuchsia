@@ -88,7 +88,7 @@ struct ProjectProfile {
 
 [Discoverable, Layout = "Simple"]
 // LoggerFactory creates Loggers.
-interface LoggerFactory {
+protocol LoggerFactory {
     // Creates a Logger for the given ProjectProfile.
     //
     // |profile| A ProjectProfile describing the Cobalt project that the
@@ -225,7 +225,7 @@ interface LoggerFactory {
 // may be generated for it. For the full interfaces, see Logger and LoggerSimple
 // below.
 [Layout = "Simple", FragileBase]
-interface LoggerBase {
+protocol LoggerBase {
     // Logs the fact that an event has occurred.
     //
     // |metric_id| ID of the metric to use. It must be one of the Metrics
@@ -539,7 +539,9 @@ struct CobaltEvent {
 // a natural easy-to-understand interface at the cost of not being "Simple".
 // See the interface LoggerSimple below for versions of some of these methods
 // that do conform to the Simple layout.
-interface Logger : LoggerBase {
+protocol Logger {
+    compose LoggerBase;
+
     // Logs a histogram over a set of integer buckets. The meaning of the
     // Metric and the buckets is specified in the Metric definition.
     //
@@ -608,7 +610,9 @@ interface Logger : LoggerBase {
 // This interface conforms to the Simple layout so that Simple bindings
 // may be generated for it.
 [Layout = "Simple"]
-interface LoggerSimple : LoggerBase {
+protocol LoggerSimple {
+    compose LoggerBase;
+
     // Logs a histogram over a set of integer buckets. The meaning of the
     // Metric and the buckets is specified in the Metric definition.
     //
@@ -640,7 +644,7 @@ struct Experiment {
 // The SystemDataUpdater interface allows callers to update the state of
 // the System Data in Cobalt. This includes the SystemProfile and experiment
 // state. The changes are global and affect all loggers running on the device.
-interface SystemDataUpdater {
+protocol SystemDataUpdater {
     // Resets Cobalt's view of the system-wide experiment state and replaces it
     // with the given values.
     //

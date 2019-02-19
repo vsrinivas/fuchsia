@@ -12,6 +12,6 @@ enum Enum {
     x = 23;
 };
 
-interface Interface {
+protocol Interface {
     func(bool x) -> ();
 };

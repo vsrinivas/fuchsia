@@ -11,7 +11,9 @@ using fuchsia.ledger.cloud;
 // the process setting up the user environment to obtain repositories for
 // individual users.
 [Discoverable]
-interface LedgerRepositoryFactory : fuchsia.ledger.ErrorNotifier {
+protocol LedgerRepositoryFactory {
+    compose fuchsia.ledger.ErrorNotifier;
+
     // Binds to the directory referenced by |repository|. If this is called
     // multiple times for the same directory, only the first instance of
     // |server_id| / |cloud_provider| will be used. Any subsequent ones will
@@ -39,12 +41,14 @@ interface LedgerRepositoryFactory : fuchsia.ledger.ErrorNotifier {
 
 // Controller interface for the Ledger application lifecycle.
 [Discoverable]
-interface LedgerController {
+protocol LedgerController {
     // Terminate the ledger application.
     Terminate();
 };
 
-interface LedgerRepository : fuchsia.ledger.ErrorNotifier {
+protocol LedgerRepository {
+    compose fuchsia.ledger.ErrorNotifier;
+
     // Creates a new Ledger for the given |ledger_name| if it doesn't already
     // exist.
     GetLedger(vector<uint8> ledger_name, request<fuchsia.ledger.Ledger> ledger);

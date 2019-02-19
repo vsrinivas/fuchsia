@@ -9,7 +9,7 @@ library test.peridot.tests.componentcontext;
 //
 // Cf. README.md for what this test does and how.
 [Discoverable]
-interface ComponentContextTestService {
+protocol ComponentContextTestService {
     // Send |message_to_send| to the message queue backed by
     // |message_queue_token|.
     SendToMessageQueue(string message_queue_token, string message_to_send);

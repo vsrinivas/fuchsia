@@ -5,7 +5,7 @@
 library fuchsia.modular.examples.simple;
 
 [Discoverable]
-interface Simple {
+protocol Simple {
     // Provides the Simple interface with a message queue to which
     // messages will be written periodically.
     SetMessageQueue(string queue_token);

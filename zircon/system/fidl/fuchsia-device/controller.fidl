@@ -34,7 +34,7 @@ const uint32 DEVICE_SIGNAL_HANGUP = 0x10000000; // ZX_USER_SIGNAL_4
 
 /// Interface for manipulating a device in a devhost
 [Layout = "Simple"]
-interface Controller {
+protocol Controller {
     /// Attempt to bind the requested driver to this device
     Bind(string:MAX_DRIVER_PATH_LEN driver) -> (zx.status status);
     /// Disconnect this device and allow its parent to be bound again.

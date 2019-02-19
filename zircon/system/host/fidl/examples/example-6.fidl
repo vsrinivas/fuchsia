@@ -6,6 +6,6 @@ library fidl.examples.example6;
 
 const int32 x = 23;
 
-interface Hello {
+protocol Hello {
     Say(string req) -> (string response);
 };

@@ -6,7 +6,7 @@ library test.peridot.tests.trigger;
 
 // Cf. README.md for what this test does and how.
 [Discoverable]
-interface TriggerTestService {
+protocol TriggerTestService {
     GetMessageQueueToken() -> (string message_queue_token);
     ObserveMessageQueueDeletion(string token);
 };

@@ -6,7 +6,9 @@ library fuchsia.ledger.errornotifiertest;
 
 using fuchsia.ledger;
 
-interface ErrorNotifierTest : fuchsia.ledger.ErrorNotifier {
+protocol ErrorNotifierTest {
+    compose fuchsia.ledger.ErrorNotifier;
+
     NoResponse();
     NoResponseWithParameter(int8 input);
     EmptyResponse() -> ();

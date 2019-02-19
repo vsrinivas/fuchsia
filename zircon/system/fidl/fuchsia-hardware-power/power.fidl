@@ -56,7 +56,7 @@ struct BatteryInfo {
 };
 
 [Layout = "Simple"]
-interface Source {
+protocol Source {
     // Get device info.
     GetPowerInfo() -> (zx.status status, SourceInfo info);
 

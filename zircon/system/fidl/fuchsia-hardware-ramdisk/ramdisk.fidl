@@ -21,7 +21,7 @@ struct BlockWriteCounts {
 
 // The interface for interacting with a instance of a ramdisk.
 [Layout = "Simple"]
-interface Ramdisk {
+protocol Ramdisk {
     // Sets any of the |RAMDISK_FLAG_*| flags.
     SetFlags(uint32 flags) -> (zx.status s);
 
@@ -61,7 +61,7 @@ struct GUID {
 const uint32 MAX_NAME_LENGTH = 32;
 
 [Layout = "Simple"]
-interface RamdiskController {
+protocol RamdiskController {
     // Initializes a new Ramdisk instance with the provided block size and block count.
     // Takes an optional |type_guid|, which may be queried from the ramdisk instance.
     Create(uint64 block_size, uint64 block_count, GUID? type_guid) -> (zx.status s, string:MAX_NAME_LENGTH? name);

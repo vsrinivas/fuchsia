@@ -7,7 +7,7 @@ library fuchsia.bluetooth.avrcp;
 using fuchsia.bluetooth;
 
 [Discoverable]
-interface AvrcpTest {
+protocol AvrcpTest {
     /// Sets an implementation of target handler that will vend delegates for each incoming
     /// remote TG -> local CT connections to handle the commands being sent by the remote TG.
     /// If no target handler is set, a default handler will be used internally that will
@@ -24,7 +24,7 @@ interface AvrcpTest {
 
 /// An implementation of this interface is registered with the AvrcpTest service to handle
 /// incoming connections.
-interface TargetHandler {
+protocol TargetHandler {
     /// Called when an incoming target is connected. |delegate| should be fulfilled with an
     /// interface that will be used to handle commands from the connected Controller.
     /// TODO (BT-305): change device_id to int.
@@ -33,13 +33,13 @@ interface TargetHandler {
 
 /// Returned by an implementer of the TargetHandler interface.
 /// Handles incoming connection commands by a remote CT device.
-interface TargetDelegate {
+protocol TargetDelegate {
     /// Called after Panel key down and up events.
     OnCommand(AvcPanelCommand command) -> (fuchsia.bluetooth.Status status);
 };
 
 /// Provides methods not exposed in `Controller` that are strictly for testing and debug.
-interface TestController {
+protocol TestController {
     /// Returns whether there is an underlying connection open with the remote device currently.
     IsConnected() -> (bool connected);
 

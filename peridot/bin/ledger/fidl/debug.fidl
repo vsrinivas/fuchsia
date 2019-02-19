@@ -8,7 +8,7 @@ using fuchsia.ledger;
 using zx;
 
 [Discoverable]
-interface LedgerRepositoryDebug {
+protocol LedgerRepositoryDebug {
     // Returns the instances list in LedgerRepository.
     GetInstancesList() -> (vector<vector<uint8>> result);
 
@@ -17,7 +17,7 @@ interface LedgerRepositoryDebug {
         -> (fuchsia.ledger.Status status);
 };
 
-interface LedgerDebug {
+protocol LedgerDebug {
     // Returns the pages list in Ledger.
     GetPagesList() -> (vector<fuchsia.ledger.PageId> result);
 
@@ -27,7 +27,7 @@ interface LedgerDebug {
         -> (fuchsia.ledger.Status status);
 };
 
-interface PageDebug {
+protocol PageDebug {
     // Returns OK and a list of the head commits IDs.
     GetHeadCommitsIds() -> (fuchsia.ledger.Status status, vector<CommitId> result);
 

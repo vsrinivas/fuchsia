@@ -18,7 +18,7 @@ struct BrokerRequest {
 };
 
 [Layout = "Simple"]
-interface Broker {
+protocol Broker {
     // Retrieves the nand info from the underlying device.
     GetInfo() -> (zx.status status, fuchsia.hardware.nand.Info? info);
 

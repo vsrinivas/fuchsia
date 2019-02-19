@@ -20,7 +20,7 @@ struct InterruptControllerInfo {
 };
 
 [Layout = "Simple"]
-interface Device {
+protocol Device {
     // Return the root job handle.
     GetRootJob() -> (zx.status status, handle<job>? job);
 

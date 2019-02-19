@@ -31,7 +31,7 @@ struct DeviceDescriptor {
 const uint32 MAX_STRING_LENGTH = 127;
 
 [Layout = "Simple"]
-interface Device {
+protocol Device {
     // Sets the device's USB device descriptor.
     SetDeviceDescriptor(DeviceDescriptor desc) -> (zx.status s);
     // Sets a string descriptor a string in the USB device descriptor.

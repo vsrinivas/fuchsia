@@ -7,6 +7,6 @@ library fidl.rust.test.compilation;
 xunion TestXUnion {
 };
 
-interface TestInterface {
+protocol TestInterface {
   TestMethod(TestXUnion test_x_union) -> (TestXUnion test_x_union);
 };

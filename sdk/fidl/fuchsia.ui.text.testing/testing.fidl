@@ -8,7 +8,7 @@ using fuchsia.ui.text;
 /// This interface runs the standard suite of tests on an implementation of TextField.
 /// If you maintain a TextField implementation, you should ensure to spin up the
 /// text_test_suite package and call RunTest in your integration tests.
-interface TextFieldTestSuite {
+protocol TextFieldTestSuite {
   RunTest(fuchsia.ui.text.TextField field, uint64 test_id) -> (bool passed, string message);
   ListTests() -> (vector<TestInfo> results);
 };

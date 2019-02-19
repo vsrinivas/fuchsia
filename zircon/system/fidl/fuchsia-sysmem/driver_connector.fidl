@@ -25,7 +25,7 @@ using zx;
 //
 // Needs Layout = "Simple" because used with "FIDL Simple C Bindings".
 [Discoverable, Layout = "Simple"]
-interface DriverConnector {
+protocol DriverConnector {
     // This one-way message sends in the server end of an Allocator2 channel.
     //
     // |allocator_request| will be served by the sysmem driver (or the channel

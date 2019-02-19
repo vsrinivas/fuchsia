@@ -23,7 +23,7 @@ struct HidCtlConfig {
 /// The device is controlled through a socket that can Read/Write HID reports. When the socket
 /// is closed the device will remove itself from the system.
 [Layout = "Simple"]
-interface Device {
+protocol Device {
     /// Create a fake HID device with a given report descriptor. Returns a
     /// socket that can Read/Write HID reports.
     MakeHidDevice(HidCtlConfig config, vector<uint8>:MAX_RPT_DESC_LEN rpt_desc) -> (handle<socket> report_socket);

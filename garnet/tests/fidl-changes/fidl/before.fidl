@@ -4,20 +4,20 @@
 
 library fidl.test.before;
 
-interface AddMethod {
+protocol AddMethod {
     ExistingMethod();
 };
 
-interface RemoveMethod {
+protocol RemoveMethod {
     ExistingMethod();
     OldMethod();
 };
 
-interface AddEvent {
+protocol AddEvent {
     ExistingMethod();
 };
 
-interface RemoveEvent {
+protocol RemoveEvent {
     ExistingMethod();
     -> OldEvent();
 };

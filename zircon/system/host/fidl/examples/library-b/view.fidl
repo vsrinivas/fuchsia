@@ -6,6 +6,6 @@ library fidl.examples.libraryb;
 
 using fidl.examples.librarya;
 
-interface View {
+protocol View {
     MoveTo(fidl.examples.librarya.Point p);
 };

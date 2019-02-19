@@ -14,7 +14,7 @@ table Event {
 /// Represents a named bus:
 ///    a bus is a broadcast pub/sub network that distributes Events.
 ///    Events are not stored, only forwarded to attached clients.
-interface Bus {
+protocol Bus {
     /// Publishes event on the bus.
     Publish(Event data);
     /// Publishes data on bus and only returns when data has been dispatched.
@@ -47,7 +47,7 @@ interface Bus {
 /// primitives.
 /// The client's 'ticket' to remain on the bus is the channel obtained through the 'BusSubscribe' call.
 [Discoverable]
-interface SyncManager {
+protocol SyncManager {
     /// Subscribes to bus 'busName' with a given client name.
     /// Duplicate client names are disallowed and will cause the request to return unfulfilled.
     BusSubscribe(string busName, string clientName, request<Bus> bus);

@@ -63,7 +63,7 @@ using fuchsia.ui.gfx;
 ///
 ///  TODO(SCN-1198): Migrate all implementations of |ViewProvider| to use |View|.
 [Discoverable]
-interface View {
+protocol View {
     /// Provides the View with an attachment point to Scenic's scene graph.
     ///
     /// When |Present()| is called the View's implementation should create a

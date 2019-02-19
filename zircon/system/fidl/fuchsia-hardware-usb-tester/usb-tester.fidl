@@ -69,7 +69,7 @@ struct IsochResult {
 };
 
 [Layout = "Simple"]
-interface Device {
+protocol Device {
     /// Resets the device to firmware loader mode.
     SetModeFwloader() -> (zx.status s);
 

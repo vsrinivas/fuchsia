@@ -59,14 +59,14 @@ struct RamNandInfo {
 };
 
 [Layout = "Simple"]
-interface RamNandCtl {
+protocol RamNandCtl {
     // Creates a new ram-nand device. On success, returns the device's name (not the full
     // topological name, just the last component).
     CreateDevice(RamNandInfo info) -> (zx.status status, string:NAME_LEN name);
 };
 
 [Layout = "Simple"]
-interface RamNand {
+protocol RamNand {
     // Removes the device.
     Unlink() -> (zx.status status);
 };

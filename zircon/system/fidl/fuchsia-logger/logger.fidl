@@ -62,7 +62,7 @@ struct LogMessage {
 
 // Interface for LogListener to register to listen to logs.
 [Discoverable]
-interface Log {
+protocol Log {
     // Listens to new log entries by calling Log() on |log_listener|.
     // A null |options| indicates no filtering is requested.
     Listen(LogListener log_listener, LogFilterOptions? options);
@@ -75,14 +75,14 @@ interface Log {
 
 // Interface to get and listen to socket from syslogger
 [Discoverable]
-interface LogSink {
+protocol LogSink {
     // Client connects to send logs over socket
     Connect(handle<socket> socket);
 };
 
 const uint64 MAX_LOG_MANY_SIZE_BYTES = 16384;
 
-interface LogListener {
+protocol LogListener {
     // Called for single messages.
     Log(LogMessage log);
 

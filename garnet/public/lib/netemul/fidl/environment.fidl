@@ -41,7 +41,7 @@ struct EnvironmentOptions {
 /// Typically this interface will be used by the root runner
 /// to setup the testing environment.
 [Discoverable]
-interface ManagedEnvironment {
+protocol ManagedEnvironment {
     /// Gets the managed launcher for the environment.
     GetLauncher(request<fuchsia.sys.Launcher> launcher);
     /// Creates a nested managed environment.

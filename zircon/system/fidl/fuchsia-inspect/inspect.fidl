@@ -38,7 +38,7 @@ struct Object {
 // The |Inspect| interface provides a point for Components to expose
 // structured Objects for inspection. An Object may have 0 or more children.
 [Discoverable]
-interface Inspect {
+protocol Inspect {
     ReadData() -> (Object object);
     ListChildren() -> (vector<string>? children_names);
     // Open a child of this Object by name.

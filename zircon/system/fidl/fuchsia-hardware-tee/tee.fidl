@@ -93,7 +93,7 @@ struct Result {
 };
 
 [Layout = "Simple"]
-interface Device {
+protocol Device {
     // Obtain information about the TEE OS
     GetOsInfo() -> (OsInfo info);
 

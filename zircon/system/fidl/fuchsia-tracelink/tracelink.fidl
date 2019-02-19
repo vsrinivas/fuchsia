@@ -11,7 +11,7 @@ using zx;
 //
 // See //zircon/system/ulib/trace-provider/ for a C++ implementation of
 // this interface which can easily be configured by an application.
-interface Provider {
+protocol Provider {
     // Starts writing trace records for events in the specified |categories|
     // into |buffer| using |fifo| for signaling.
     //
@@ -56,7 +56,7 @@ interface Provider {
 // Note that one property of this interface is that once registration is made
 // the provider can drop this connection.
 [Discoverable, Layout = "Simple"]
-interface Registry {
+protocol Registry {
     // Registers the trace provider.
     // Note: Registration is asynchronous, it's only at some point after this
     // returns that the provider is actually registered.

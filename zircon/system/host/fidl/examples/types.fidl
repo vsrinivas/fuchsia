@@ -17,7 +17,7 @@ xunion this_is_a_xunion {
     int32 i;
 };
 
-interface this_is_an_interface {
+protocol this_is_an_interface {
     Copy(string s, uint32 count) -> (string s);
 };
 

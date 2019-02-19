@@ -5,7 +5,7 @@
 library fidl.test.fakesocket;
 
 [Transport = "SocketControl", Layout = "Simple"]
-interface Control {
+protocol Control {
     Bind(string:64 addr);
     GetPeerAddr(int32 index) -> (string:64 addr);
 };
