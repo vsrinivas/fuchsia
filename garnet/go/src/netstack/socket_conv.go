@@ -156,14 +156,6 @@ func getSockOptSocket(ep tcpip.Endpoint, transProto tcpip.TransportProtocolNumbe
 	case C.SO_RCVTIMEO:
 		return nil, tcpip.ErrNotSupported
 
-	case C.SO_TIMESTAMP:
-		var v tcpip.TimestampOption
-		if err := ep.GetSockOpt(&v); err != nil {
-			return nil, err
-		}
-
-		return int32(v), nil
-
 	case C.SO_OOBINLINE:
 		var v tcpip.OutOfBandInlineOption
 		if err := ep.GetSockOpt(&v); err != nil {
@@ -364,14 +356,6 @@ func setSockOptSocket(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error
 
 	case C.SO_RCVTIMEO:
 		return tcpip.ErrNotSupported
-
-	case C.SO_TIMESTAMP:
-		if len(optVal) < sizeOfInt32 {
-			return tcpip.ErrInvalidOptionValue
-		}
-
-		v := binary.LittleEndian.Uint32(optVal)
-		return ep.SetSockOpt(tcpip.TimestampOption(v))
 
 	default:
 		log.Printf("unimplemented setsockopt: SOL_SOCKET name=%d optVal=%x", name, optVal)

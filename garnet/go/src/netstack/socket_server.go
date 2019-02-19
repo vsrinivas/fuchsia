@@ -48,6 +48,11 @@ type iostate struct {
 
 	ns *Netstack
 
+	mu struct {
+		sync.Mutex
+		sockOptTimestamp bool
+	}
+
 	netProto   tcpip.NetworkProtocolNumber   // IPv4 or IPv6
 	transProto tcpip.TransportProtocolNumber // TCP or UDP
 
@@ -656,9 +661,21 @@ func (ios *iostate) Accept(flags int16) (int16, error) {
 }
 
 func (ios *iostate) GetSockOpt(level, optName int16) (int16, []uint8, error) {
-	val, err := GetSockOpt(ios.ep, ios.transProto, level, optName)
-	if err != nil {
-		return tcpipErrorToCode(err), nil, nil
+	var val interface{}
+	if level == C.SOL_SOCKET && optName == C.SO_TIMESTAMP {
+		ios.mu.Lock()
+		if ios.mu.sockOptTimestamp {
+			val = int32(1)
+		} else {
+			val = int32(0)
+		}
+		ios.mu.Unlock()
+	} else {
+		var err *tcpip.Error
+		val, err = GetSockOpt(ios.ep, ios.transProto, level, optName)
+		if err != nil {
+			return tcpipErrorToCode(err), nil, nil
+		}
 	}
 	b := make([]byte, reflect.TypeOf(val).Size())
 	n := copyAsBytes(b, val)
@@ -669,8 +686,19 @@ func (ios *iostate) GetSockOpt(level, optName int16) (int16, []uint8, error) {
 }
 
 func (ios *iostate) SetSockOpt(level, optName int16, optVal []uint8) (int16, error) {
-	if err := SetSockOpt(ios.ep, level, optName, optVal); err != nil {
-		return tcpipErrorToCode(err), nil
+	if level == C.SOL_SOCKET && optName == C.SO_TIMESTAMP {
+		if len(optVal) < sizeOfInt32 {
+			return tcpipErrorToCode(tcpip.ErrInvalidOptionValue), nil
+		}
+
+		v := binary.LittleEndian.Uint32(optVal)
+		ios.mu.Lock()
+		ios.mu.sockOptTimestamp = v != 0
+		ios.mu.Unlock()
+	} else {
+		if err := SetSockOpt(ios.ep, level, optName, optVal); err != nil {
+			return tcpipErrorToCode(err), nil
+		}
 	}
 	return 0, nil
 }
