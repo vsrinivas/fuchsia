@@ -15,7 +15,7 @@
 // Use like:
 //   int x = ...;
 //   ALLOW_UNUSED_LOCAL(x);
-#define FXL_ALLOW_UNUSED_LOCAL(x) false ? (void)x : (void)0
+#define FXL_ALLOW_UNUSED_LOCAL(x) false ? (void)(x) : (void)0
 
 // Annotate a typedef or function indicating it's ok if it's not used.
 // Use like:

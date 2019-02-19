@@ -140,7 +140,7 @@ class FXL_EXPORT StringView {
     return v1 < v2 ? v1 : v2;
   }
 
-  constexpr static int constexpr_strlen(const char* str) {
+  constexpr static size_t constexpr_strlen(const char* str) {
 #if defined(_MSC_VER)
     return *str ? 1 + constexpr_strlen(str + 1) : 0;
 #else
