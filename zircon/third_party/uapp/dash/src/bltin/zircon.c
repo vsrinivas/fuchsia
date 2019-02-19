@@ -16,6 +16,7 @@
 #include <unistd.h>
 
 #include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/kernel/c/fidl.h>
 #include <lib/fdio/util.h>
 #include <pretty/hexdump.h>
 #include <zircon/syscalls.h>
@@ -460,6 +461,23 @@ usage:
     return -1;
 }
 
+//TODO(edcoyne): move "dm" command to its own file.
+static int print_dm_help() {
+    printf("dump              - dump device tree\n"
+           "poweroff          - power off the system\n"
+           "shutdown          - power off the system\n"
+           "suspend           - suspend the system to RAM\n"
+           "reboot            - reboot the system\n"
+           "reboot-bootloader - reboot the system into bootloader\n"
+           "reboot-recovery   - reboot the system into recovery\n"
+           "kerneldebug       - send a command to the kernel\n"
+           "ktraceoff         - stop kernel tracing\n"
+           "ktraceon          - start kernel tracing\n"
+           "devprops          - dump published devices and their binding properties\n"
+           "drivers           - list discovered drivers and their properties\n");
+    return 0;
+}
+
 static int send_dmctl(const char* command, size_t length) {
     int fd = open("/dev/misc/dmctl", O_WRONLY);
     if (fd < 0) {
@@ -520,11 +538,104 @@ static int send_dmctl(const char* command, size_t length) {
     return 0;
 }
 
+static zx_status_t connect_to_service(const char* service, zx_handle_t* channel) {
+    zx_handle_t channel_local, channel_remote;
+    zx_status_t status = zx_channel_create(0, &channel_local, &channel_remote);
+    if (status != ZX_OK) {
+        fprintf(stderr, "failed to create channel: %d\n", status);
+        return ZX_ERR_INTERNAL;
+    }
+
+    status = fdio_service_connect(service, channel_remote);
+    if (status != ZX_OK) {
+        zx_handle_close(channel_local);
+        fprintf(stderr, "failed to connect to service: %d\n", status);
+        return ZX_ERR_INTERNAL;
+    }
+
+    *channel = channel_local;
+    return ZX_OK;
+
+}
+
+static int send_kernel_debug_command(const char* command, size_t length) {
+    if (length > fuchsia_kernel_DEBUG_COMMAND_MAX) {
+        fprintf(stderr, "error: kernel debug command longer than %u bytes: '%.*s'\n",
+                fuchsia_kernel_DEBUG_COMMAND_MAX, (int)length, command);
+        return -1;
+    }
+
+    zx_handle_t channel;
+    zx_status_t status = connect_to_service("/svc/fuchsia.kernel.DebugBroker", &channel);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx_status_t call_status;
+    status = fuchsia_kernel_DebugBrokerSendDebugCommand(channel, command, length, &call_status);
+    zx_handle_close(channel);
+    if (status != ZX_OK || call_status != ZX_OK) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static int send_kernel_tracing_enabled(bool enabled) {
+    zx_handle_t channel;
+    zx_status_t status = connect_to_service("/svc/fuchsia.kernel.DebugBroker", &channel);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx_status_t call_status;
+    status = fuchsia_kernel_DebugBrokerSetTracingEnabled(channel, enabled, &call_status);
+    zx_handle_close(channel);
+    if (status != ZX_OK || call_status != ZX_OK) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static bool command_cmp(const char* command, const char* input, int* command_length) {
+  *command_length = strlen(command);
+  const size_t input_length = strlen(input);
+  if (input_length < *command_length) {
+    return false;
+  }
+
+  // Ensure that the first command_length chars of input match and that it is
+  // either the whole input or there is a space after the command, we don't want
+  // partial command matching.
+  return strncmp(command, input, *command_length) == 0 &&
+      ((input_length == *command_length) || input[*command_length] == ' ');
+}
+
 int zxc_dm(int argc, char** argv) {
     if (argc != 2) {
         printf("usage: dm <command>\n");
         return -1;
     }
+
+    // Handle service backed commands.
+    int command_length = 0;
+    if (command_cmp("kerneldebug", argv[1], &command_length)) {
+        return send_kernel_debug_command(argv[1] + command_length,
+                                         strlen(argv[1]) - command_length);
+    } else if (command_cmp("ktraceon", argv[1], &command_length)) {
+        return send_kernel_tracing_enabled(true);
+
+    } else if (command_cmp("ktraceoff", argv[1], &command_length)) {
+        return send_kernel_tracing_enabled(false);
+
+    } else if (command_cmp("help", argv[1], &command_length)) {
+        return print_dm_help();
+    }
+
+    // Fallback to dmctl.
+    // TODO(edcoyne): all dmctl commands will eventually be deprecated and this
+    // will be removed.
     return send_dmctl(argv[1], strlen(argv[1]));
 }
 

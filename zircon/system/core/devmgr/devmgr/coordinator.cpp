@@ -278,43 +278,16 @@ zx_status_t Coordinator::DmCommand(size_t len, const char* cmd) {
             DumpState();
             return ZX_OK;
         }
-        if (!memcmp(cmd, "help", 4)) {
-            DmPrintf("dump              - dump device tree\n"
-                     "poweroff          - power off the system\n"
-                     "shutdown          - power off the system\n"
-                     "suspend           - suspend the system to RAM\n"
-                     "reboot            - reboot the system\n"
-                     "reboot-bootloader - reboot the system into bootloader\n"
-                     "reboot-recovery   - reboot the system into recovery\n"
-                     "kerneldebug       - send a command to the kernel\n"
-                     "ktraceoff         - stop kernel tracing\n"
-                     "ktraceon          - start kernel tracing\n"
-                     "devprops          - dump published devices and their binding properties\n"
-                     "drivers           - list discovered drivers and their properties\n");
-            return ZX_OK;
-        }
     }
     if ((len == 7) && !memcmp(cmd, "drivers", 7)) {
         DumpDrivers();
         return ZX_OK;
     }
     if (len == 8) {
-        if (!memcmp(cmd, "ktraceon", 8)) {
-            zx_ktrace_control(root_resource().get(), KTRACE_ACTION_START, KTRACE_GRP_ALL, nullptr);
-            return ZX_OK;
-        }
         if (!memcmp(cmd, "devprops", 8)) {
             DumpGlobalDeviceProps();
             return ZX_OK;
         }
-    }
-    if ((len == 9) && (!memcmp(cmd, "ktraceoff", 9))) {
-        zx_ktrace_control(root_resource().get(), KTRACE_ACTION_STOP, 0, nullptr);
-        zx_ktrace_control(root_resource().get(), KTRACE_ACTION_REWIND, 0, nullptr);
-        return ZX_OK;
-    }
-    if ((len > 12) && !memcmp(cmd, "kerneldebug ", 12)) {
-        return zx_debug_send_command(root_resource().get(), cmd + 12, len - 12);
     }
 
     if (InSuspend()) {
