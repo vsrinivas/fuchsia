@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys,
     futures::lock::Mutex,
-    std::{cell::RefCell, convert::TryFrom, rc::Rc},
+    std::{cell::RefCell, collections::HashMap, convert::TryFrom, rc::Rc},
 };
 
 /// Parameters for initializing a component model, particularly the root of the component
@@ -47,6 +47,7 @@ pub struct Model {
 ///
 /// The realm's properties influence the runtime behavior of the subtree of component instances
 /// that it contains, including component resolution, execution, and service discovery.
+type ChildRealmMap = HashMap<ChildMoniker, Rc<RefCell<Realm>>>;
 struct Realm {
     /// The registry for resolving component URIs within the realm.
     resolver_registry: Rc<ResolverRegistry>,
@@ -58,13 +59,44 @@ struct Realm {
 }
 
 /// An instance of a component.
-/// TODO: Describe child instances (map of child moniker to realm).
 struct Instance {
     /// The component's URI.
-    /// The URI is only meaningful
     component_uri: String,
     /// Execution state for the component instance or `None` if not running.
     execution: Mutex<Option<Execution>>,
+    /// Realms of child instances, indexed by child moniker (name). Evaluated on demand.
+    child_realms: Option<ChildRealmMap>,
+}
+
+impl Instance {
+    fn make_child_realms(
+        component: &fsys::Component,
+        resolver_registry: Rc<ResolverRegistry>,
+        default_runner: Rc<Box<dyn Runner>>,
+    ) -> Result<ChildRealmMap, ModelError> {
+        let mut child_realms = HashMap::new();
+        if component.decl.is_none() {
+            return Err(ModelError::ComponentInvalid);
+        }
+        if let Some(ref children_decl) = component.decl.as_ref().unwrap().children {
+            for child_decl in children_decl {
+                let child_name = child_decl.name.as_ref().unwrap().clone();
+                let child_uri = child_decl.uri.as_ref().unwrap().clone();
+                let moniker = ChildMoniker::new(child_name);
+                let realm = Rc::new(RefCell::new(Realm {
+                    resolver_registry: resolver_registry.clone(),
+                    default_runner: default_runner.clone(),
+                    instance: Instance {
+                        component_uri: child_uri,
+                        execution: Mutex::new(None),
+                        child_realms: None,
+                    },
+                }));
+                child_realms.insert(moniker, realm);
+            }
+        }
+        Ok(child_realms)
+    }
 }
 
 /// The execution state for a component instance that has started running.
@@ -132,6 +164,7 @@ impl Model {
                 instance: Instance {
                     component_uri: params.root_component_uri,
                     execution: Mutex::new(None),
+                    child_realms: None,
                 },
             })),
         }
@@ -139,13 +172,9 @@ impl Model {
 
     /// Binds to the component instance with the specified moniker, causing it to start if it is
     /// not already running.
-    pub async fn bind_instance(&self, moniker: AbsoluteMoniker) -> Result<(), ModelError> {
-        // TODO: Use moniker to locate non-root component instances.
-        if moniker.is_root() {
-            await!(self.bind_instance_in_realm(self.root_realm.clone()))
-        } else {
-            Err(ModelError::instance_not_found(moniker))
-        }
+    pub async fn bind_instance(&self, abs_moniker: AbsoluteMoniker) -> Result<(), ModelError> {
+        let realm = await!(self.look_up_realm(abs_moniker))?;
+        await!(self.bind_instance_in_realm(realm))
     }
 
     async fn bind_instance_in_realm(
@@ -153,13 +182,21 @@ impl Model {
         realm_cell: Rc<RefCell<Realm>>,
     ) -> Result<(), ModelError> {
         // There can only be one task manipulating an instance's execution at a time.
-        let realm = realm_cell.borrow();
-        let mut execution_lock = await!(realm.instance.execution.lock());
+        let Realm { ref resolver_registry, ref default_runner, ref mut instance } =
+            *realm_cell.borrow_mut();
+        let Instance { ref component_uri, ref execution, ref mut child_realms } = instance;
+        let mut execution_lock = await!(execution.lock());
         match &*execution_lock {
-            Some(_) => Ok(()),
+            Some(_) => {}
             None => {
-                let component =
-                    await!(realm.resolver_registry.resolve(&realm.instance.component_uri))?;
+                let component = await!(resolver_registry.resolve(component_uri))?;
+                if child_realms.is_none() {
+                    *child_realms = Some(Instance::make_child_realms(
+                        &component,
+                        resolver_registry.clone(),
+                        default_runner.clone(),
+                    )?);
+                }
                 let execution = Execution::try_from(component)?;
                 let ns = execution
                     .make_namespace()
@@ -169,11 +206,38 @@ impl Model {
                     program: data::clone_option_dictionary(&execution.decl.program),
                     ns: Some(ns),
                 };
-                await!(realm.default_runner.start(start_info))?;
+                await!(default_runner.start(start_info))?;
                 *execution_lock = Some(execution);
-                Ok(())
             }
         }
+        Ok(())
+    }
+
+    async fn look_up_realm(
+        &self,
+        abs_moniker: AbsoluteMoniker,
+    ) -> Result<Rc<RefCell<Realm>>, ModelError> {
+        let mut cur_realm = self.root_realm.clone();
+        for moniker in abs_moniker.path().iter() {
+            cur_realm = {
+                let Realm { ref resolver_registry, ref default_runner, ref mut instance } =
+                    *cur_realm.borrow_mut();
+                if instance.child_realms.is_none() {
+                    let component = await!(resolver_registry.resolve(&instance.component_uri))?;
+                    instance.child_realms = Some(Instance::make_child_realms(
+                        &component,
+                        resolver_registry.clone(),
+                        default_runner.clone(),
+                    )?);
+                }
+                let child_realms = instance.child_realms.as_ref().unwrap();
+                if !child_realms.contains_key(&moniker) {
+                    return Err(ModelError::instance_not_found(abs_moniker));
+                }
+                child_realms[moniker].clone()
+            }
+        }
+        Ok(cur_realm)
     }
 }
 
@@ -228,77 +292,324 @@ impl From<RunnerError> for ModelError {
 mod tests {
     use super::*;
     use futures::future::{self, FutureObj};
+    use lazy_static::lazy_static;
+    use regex::Regex;
+    use std::cell::RefCell;
+    use std::collections::HashSet;
 
-    struct MockResolver {}
+    struct MockResolver {
+        children: Rc<RefCell<HashMap<String, Vec<String>>>>,
+    }
+
+    lazy_static! {
+        static ref NAME_RE: Regex = Regex::new(r"test:///([0-9a-z\-\._]+)$").unwrap();
+    }
 
     impl Resolver for MockResolver {
         fn resolve(
             &self,
             component_uri: &str,
         ) -> FutureObj<Result<fsys::Component, ResolverError>> {
-            assert_eq!("test:///root", component_uri);
+            let caps = NAME_RE.captures(component_uri).unwrap();
+            let name = &caps[1];
+            let children = self.children.borrow();
+            let mut decl = new_component_decl();
+            if let Some(children) = children.get(name) {
+                decl.children = Some(
+                    children
+                        .iter()
+                        .map(|c| fsys::ChildDecl {
+                            name: Some(c.clone()),
+                            uri: Some(format!("test:///{}", c)),
+                        })
+                        .collect(),
+                );
+            }
             FutureObj::new(Box::new(future::ok(fsys::Component {
-                resolved_uri: Some("test:///resolved_root".to_string()),
-                decl: Some(fsys::ComponentDecl {
-                    program: None,
-                    uses: None,
-                    exposes: None,
-                    offers: None,
-                    facets: None,
-                    children: None,
-                }),
+                resolved_uri: Some(format!("test:///{}_resolved", name)),
+                decl: Some(decl),
                 package: None,
             })))
         }
     }
 
-    struct MockRunner {}
+    struct MockRunner {
+        uris_run: Rc<RefCell<Vec<String>>>,
+    }
 
     impl Runner for MockRunner {
         fn start(
             &self,
             start_info: fsys::ComponentStartInfo,
         ) -> FutureObj<Result<(), RunnerError>> {
-            assert_eq!(Some("test:///resolved_root".to_string()), start_info.resolved_uri);
+            self.uris_run.borrow_mut().push(start_info.resolved_uri.unwrap().clone());
             FutureObj::new(Box::new(future::ok(())))
         }
     }
 
-    #[fuchsia_async::run_until_stalled(test)]
-    async fn bind_instance_non_existent() {
-        let resolver = ResolverRegistry::new();
-        let model = Model::new(ModelParams {
-            root_component_uri: "test:///root".to_string(),
-            root_resolver_registry: resolver,
-            root_default_runner: Box::new(MockRunner {}),
-        });
-        let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(
-            AbsoluteMoniker::new(vec![ChildMoniker::new("no-such-instance".to_string())]),
-        ));
-        assert_eq!(
-            format!("{:?}", expected_res,),
-            format!(
-                "{:?}",
-                await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
-                    "no-such-instance".to_string()
-                )])))
-            ),
-        );
+    fn new_component_decl() -> fsys::ComponentDecl {
+        fsys::ComponentDecl {
+            program: None,
+            uses: None,
+            exposes: None,
+            offers: None,
+            facets: None,
+            children: None,
+        }
     }
 
     #[fuchsia_async::run_until_stalled(test)]
-    async fn bind_instance_successfully() {
+    async fn bind_instance_root() {
         let mut resolver = ResolverRegistry::new();
-        resolver.register("test".to_string(), Box::new(MockResolver {}));
+        let uris_run = Rc::new(RefCell::new(vec![]));
+        let runner = MockRunner { uris_run: uris_run.clone() };
+        let children = Rc::new(RefCell::new(HashMap::new()));
+        resolver
+            .register("test".to_string(), Box::new(MockResolver { children: children.clone() }));
         let model = Model::new(ModelParams {
             root_component_uri: "test:///root".to_string(),
             root_resolver_registry: resolver,
-            root_default_runner: Box::new(MockRunner {}),
+            root_default_runner: Box::new(runner),
         });
+        let res = await!(model.bind_instance(AbsoluteMoniker::root()));
         let expected_res: Result<(), ModelError> = Ok(());
-        assert_eq!(
-            format!("{:?}", expected_res),
-            format!("{:?}", await!(model.bind_instance(AbsoluteMoniker::root()))),
-        );
+        assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+
+        let actual_uris: &Vec<String> = &uris_run.borrow();
+        let expected_uris: Vec<String> = vec!["test:///root_resolved".to_string()];
+        assert_eq!(actual_uris, &expected_uris);
+
+        let actual_children = get_children(&model.root_realm.borrow());
+        assert!(actual_children.is_empty());
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn bind_instance_root_non_existent() {
+        let mut resolver = ResolverRegistry::new();
+        let uris_run = Rc::new(RefCell::new(vec![]));
+        let runner = MockRunner { uris_run: uris_run.clone() };
+        let children = Rc::new(RefCell::new(HashMap::new()));
+        resolver
+            .register("test".to_string(), Box::new(MockResolver { children: children.clone() }));
+        let model = Model::new(ModelParams {
+            root_component_uri: "test:///root".to_string(),
+            root_resolver_registry: resolver,
+            root_default_runner: Box::new(runner),
+        });
+        let res = await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+            "no-such-instance".to_string()
+        )])));
+        let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(
+            AbsoluteMoniker::new(vec![ChildMoniker::new("no-such-instance".to_string())]),
+        ));
+        assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+        let actual_uris: &Vec<String> = &uris_run.borrow();
+        let expected_uris: Vec<String> = vec![];
+        assert_eq!(actual_uris, &expected_uris);
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn bind_instance_child() {
+        let mut resolver = ResolverRegistry::new();
+        let uris_run = Rc::new(RefCell::new(vec![]));
+        let runner = MockRunner { uris_run: uris_run.clone() };
+        let children = Rc::new(RefCell::new(HashMap::new()));
+        children
+            .borrow_mut()
+            .insert("root".to_string(), vec!["system".to_string(), "echo".to_string()]);
+        resolver
+            .register("test".to_string(), Box::new(MockResolver { children: children.clone() }));
+        let model = Model::new(ModelParams {
+            root_component_uri: "test:///root".to_string(),
+            root_resolver_registry: resolver,
+            root_default_runner: Box::new(runner),
+        });
+
+        // bind to system
+        {
+            let res = await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+                "system".to_string()
+            ),])));
+            let expected_res: Result<(), ModelError> = Ok(());
+            assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let expected_uris: Vec<String> = vec!["test:///system_resolved".to_string()];
+            assert_eq!(actual_uris, &expected_uris);
+        }
+
+        // Validate children. system is resolved, but not echo.
+        {
+            let actual_children = get_children(&model.root_realm.borrow());
+            let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
+            expected_children.insert(ChildMoniker::new("system".to_string()));
+            expected_children.insert(ChildMoniker::new("echo".to_string()));
+            assert_eq!(actual_children, expected_children);
+        }
+        {
+            let system_realm = get_child_realm(&model.root_realm.borrow(), "system");
+            let echo_realm = get_child_realm(&model.root_realm.borrow(), "echo");
+            let actual_children = get_children(&system_realm.borrow());
+            assert!(actual_children.is_empty());
+            assert!(echo_realm.borrow().instance.child_realms.is_none());
+        }
+
+        // bind to echo
+        {
+            let res = await!(model
+                .bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("echo".to_string()),])));
+            let expected_res: Result<(), ModelError> = Ok(());
+            assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let expected_uris: Vec<String> =
+                vec!["test:///system_resolved".to_string(), "test:///echo_resolved".to_string()];
+            assert_eq!(actual_uris, &expected_uris);
+        }
+
+        // Validate children. Now echo is resolved.
+        {
+            let echo_realm = get_child_realm(&model.root_realm.borrow(), "echo");
+            let actual_children = get_children(&echo_realm.borrow());
+            assert!(actual_children.is_empty());
+        }
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn bind_instance_child_non_existent() {
+        let mut resolver = ResolverRegistry::new();
+        let uris_run = Rc::new(RefCell::new(vec![]));
+        let runner = MockRunner { uris_run: uris_run.clone() };
+        let children = Rc::new(RefCell::new(HashMap::new()));
+        children.borrow_mut().insert("root".to_string(), vec!["system".to_string()]);
+        resolver
+            .register("test".to_string(), Box::new(MockResolver { children: children.clone() }));
+        let model = Model::new(ModelParams {
+            root_component_uri: "test:///root".to_string(),
+            root_resolver_registry: resolver,
+            root_default_runner: Box::new(runner),
+        });
+
+        // bind to system
+        {
+            let res = await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+                "system".to_string()
+            ),])));
+            let expected_res: Result<(), ModelError> = Ok(());
+            assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let expected_uris: Vec<String> = vec!["test:///system_resolved".to_string()];
+            assert_eq!(actual_uris, &expected_uris);
+        }
+
+        // can't bind to logger: it does not exist
+        {
+            let moniker = AbsoluteMoniker::new(vec![
+                ChildMoniker::new("system".to_string()),
+                ChildMoniker::new("logger".to_string()),
+            ]);
+            let res = await!(model.bind_instance(moniker.clone()));
+            let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(moniker));
+            assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let expected_uris: Vec<String> = vec!["test:///system_resolved".to_string()];
+            assert_eq!(actual_uris, &expected_uris);
+        }
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn bind_instance_recursive_child() {
+        let mut resolver = ResolverRegistry::new();
+        let uris_run = Rc::new(RefCell::new(vec![]));
+        let runner = MockRunner { uris_run: uris_run.clone() };
+        let children = Rc::new(RefCell::new(HashMap::new()));
+        children.borrow_mut().insert("root".to_string(), vec!["system".to_string()]);
+        children
+            .borrow_mut()
+            .insert("system".to_string(), vec!["logger".to_string(), "netstack".to_string()]);
+        resolver
+            .register("test".to_string(), Box::new(MockResolver { children: children.clone() }));
+        let model = Model::new(ModelParams {
+            root_component_uri: "test:///root".to_string(),
+            root_resolver_registry: resolver,
+            root_default_runner: Box::new(runner),
+        });
+
+        // bind to logger (before ever binding to system)
+        {
+            let res = await!(model.bind_instance(AbsoluteMoniker::new(vec![
+                ChildMoniker::new("system".to_string()),
+                ChildMoniker::new("logger".to_string())
+            ])));
+            let expected_res: Result<(), ModelError> = Ok(());
+            assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let expected_uris: Vec<String> = vec!["test:///logger_resolved".to_string()];
+            assert_eq!(actual_uris, &expected_uris);
+        }
+
+        // bind to netstack
+        {
+            let res = await!(model.bind_instance(AbsoluteMoniker::new(vec![
+                ChildMoniker::new("system".to_string()),
+                ChildMoniker::new("netstack".to_string()),
+            ])));
+            let expected_res: Result<(), ModelError> = Ok(());
+            assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let expected_uris: Vec<String> = vec![
+                "test:///logger_resolved".to_string(),
+                "test:///netstack_resolved".to_string(),
+            ];
+            assert_eq!(actual_uris, &expected_uris);
+        }
+
+        // finally, bind to system
+        {
+            let res = await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+                "system".to_string()
+            ),])));
+            let expected_res: Result<(), ModelError> = Ok(());
+            assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+            let actual_uris: &Vec<String> = &uris_run.borrow();
+            let expected_uris: Vec<String> = vec![
+                "test:///logger_resolved".to_string(),
+                "test:///netstack_resolved".to_string(),
+                "test:///system_resolved".to_string(),
+            ];
+            assert_eq!(actual_uris, &expected_uris);
+        }
+
+        // validate children
+        {
+            let actual_children = get_children(&model.root_realm.borrow());
+            let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
+            expected_children.insert(ChildMoniker::new("system".to_string()));
+            assert_eq!(actual_children, expected_children);
+        }
+        let system_realm = get_child_realm(&model.root_realm.borrow(), "system");
+        {
+            let actual_children = get_children(&system_realm.borrow());
+            let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
+            expected_children.insert(ChildMoniker::new("logger".to_string()));
+            expected_children.insert(ChildMoniker::new("netstack".to_string()));
+            assert_eq!(actual_children, expected_children);
+        }
+        {
+            let logger_realm = get_child_realm(&system_realm.borrow(), "logger");
+            let actual_children = get_children(&logger_realm.borrow());
+            assert!(actual_children.is_empty());
+        }
+        {
+            let netstack_realm = get_child_realm(&system_realm.borrow(), "netstack");
+            let actual_children = get_children(&netstack_realm.borrow());
+            assert!(actual_children.is_empty());
+        }
+    }
+
+    fn get_children(realm: &Realm) -> HashSet<ChildMoniker> {
+        realm.instance.child_realms.as_ref().unwrap().keys().map(|m| m.clone()).collect()
+    }
+
+    fn get_child_realm(realm: &Realm, child: &str) -> Rc<RefCell<Realm>> {
+        realm.instance.child_realms.as_ref().unwrap()[&ChildMoniker::new(child.to_string())].clone()
     }
 }

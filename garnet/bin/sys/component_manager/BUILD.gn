@@ -30,6 +30,7 @@ rustc_binary("bin") {
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:lazy_static",
+    "//third_party/rust-crates/rustc_deps:regex",
     "//third_party/rust-crates/rustc_deps:tempfile",
     "//third_party/rust-crates/rustc_deps:url",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",

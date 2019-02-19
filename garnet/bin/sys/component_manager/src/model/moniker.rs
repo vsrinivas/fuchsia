@@ -10,7 +10,7 @@ use std::fmt;
 /// Display notation: "#name".
 ///
 /// TODO: Add a mechanism for representing children grouped into collections by index.
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone, Hash)]
 pub struct ChildMoniker {
     name: String,
 }
@@ -42,7 +42,7 @@ impl fmt::Display for ChildMoniker {
 /// information which is disclosed about the overall structure of the component instance tree.
 ///
 /// Display notation: "/", "/name1", "/name1/name2", ...
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub struct AbsoluteMoniker {
     path: Vec<ChildMoniker>,
 }
