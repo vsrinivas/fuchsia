@@ -21,18 +21,18 @@ const MEDIASESSION_URL: &str = "fuchsia-pkg://fuchsia.com/mediasession#meta/medi
 
 fn default_playback_status() -> PlaybackStatus {
     PlaybackStatus {
-        duration: 100,
-        playback_state: PlaybackState::Playing,
-        playback_function: TimelineFunction {
+        duration: Some(100),
+        playback_state: Some(PlaybackState::Playing),
+        playback_function: Some(TimelineFunction {
             subject_time: 0,
             reference_time: 0,
             subject_delta: 1,
             reference_delta: 1,
-        },
-        repeat_mode: RepeatMode::Off,
-        shuffle_on: false,
-        has_next_item: true,
-        has_prev_item: false,
+        }),
+        repeat_mode: Some(RepeatMode::Off),
+        shuffle_on: Some(false),
+        has_next_item: Some(true),
+        has_prev_item: Some(false),
         error: None,
     }
 }
@@ -88,9 +88,9 @@ impl TestService {
             await!(self.active_session_changes.try_next())
                 .expect("Reported active session.")
                 .expect("Active session stream");
-        let actual = actual.map(|active_session| {
-            active_session.session_id.as_handle_ref().get_koid().expect("Handle actual KOID")
-        });
+        let actual = actual
+            .session_id
+            .map(|session_id| session_id.as_handle_ref().get_koid().expect("Handle actual KOID"));
         assert_eq!(actual, expected);
     }
 }
@@ -167,7 +167,7 @@ async fn service_reports_published_active_session() {
         await!(test_service.publisher.publish(test_session.client_end)).expect("Session id.");
     test_session
         .control_handle
-        .send_on_playback_status_changed(&mut default_playback_status())
+        .send_on_playback_status_changed(default_playback_status())
         .expect("To update playback status.");
     await!(test_service.expect_active_session(Some(
         our_session_id.as_handle_ref().get_koid().expect("Handle expected KOID")
@@ -189,7 +189,7 @@ async fn service_reports_changed_active_session() {
             .expect(&format!("Session {}", i));
         test_session
             .control_handle
-            .send_on_playback_status_changed(&mut default_playback_status())
+            .send_on_playback_status_changed(default_playback_status())
             .expect("To update playback status.");
         await!(test_service.expect_active_session(Some(
             session_id.as_handle_ref().get_koid().expect("Handle expected KOID")
@@ -211,7 +211,7 @@ async fn service_broadcasts_events() {
     // Send a single event.
     test_session
         .control_handle
-        .send_on_playback_status_changed(&mut default_playback_status())
+        .send_on_playback_status_changed(default_playback_status())
         .expect("To update playback status.");
 
     // Ensure we wait for the service to accept the session.
@@ -258,14 +258,15 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
     // Publish 100 sessions and have each of them post a playback status.
     let count = 100;
     let mut test_sessions = Vec::new();
-    let numbered_playback_status = |i| PlaybackStatus { duration: i, ..default_playback_status() };
+    let numbered_playback_status =
+        |i| PlaybackStatus { duration: Some(i), ..default_playback_status() };
     for i in 0..count {
         let test_session = TestSession::new().expect(&format!("Test session {}.", i));
         let session_id = await!(test_service.publisher.publish(test_session.client_end))
             .expect(&format!("To publish test session {}.", i));
         test_session
             .control_handle
-            .send_on_playback_status_changed(&mut numbered_playback_status(i as i64))
+            .send_on_playback_status_changed(numbered_playback_status(i as i64))
             .expect(&format!("To broadcast playback status {}.", i));
         test_sessions.push((session_id, test_session.control_handle));
     }

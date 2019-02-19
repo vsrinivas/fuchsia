@@ -18,8 +18,8 @@ protocol Publisher {
 
 /// Describes the session which is currently implementing the active session
 /// interface.
-struct ActiveSession {
-    handle<event> session_id;
+table ActiveSession {
+    1: handle<event> session_id;
 };
 
 /// |ControllerRegistry| observes the collection of published media sessions
@@ -28,7 +28,7 @@ struct ActiveSession {
 protocol ControllerRegistry {
     /// |OnActiveSession| is sent on connection and when the
     /// underlying active session is changed.
-    -> OnActiveSession(ActiveSession? active_session);
+    -> OnActiveSession(ActiveSession active_session);
 
     /// Connects to a |Controller| for |session_id| if present.
     ConnectToControllerById(handle<event> session_id, request<Controller> controller_request);
@@ -39,7 +39,7 @@ protocol ControllerRegistry {
 protocol ObserverRegistry {
     /// |OnActiveSession| is sent on connection and when the
     /// underlying active session is changed.
-    -> OnActiveSession(ActiveSession? active_session);
+    -> OnActiveSession(ActiveSession active_session);
 
     /// Connects to an |Observer| for |session_id| if present.
     GetObserverById(handle<event> session_id, request<Observer> observer_request);

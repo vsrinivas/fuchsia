@@ -7,9 +7,10 @@ use crate::service::ServiceEvent;
 use crate::{Result, CHANNEL_BUFFER_SIZE};
 use failure::ResultExt;
 use fidl::endpoints::ServerEnd;
+use fidl_fuchsia_mediaplayer::TimelineFunction;
 use fidl_fuchsia_mediasession::{
     ControllerControlHandle, ControllerEvent, ControllerEventStream, ControllerMarker,
-    ControllerProxy, ControllerRequest, PlaybackState,
+    ControllerProxy, ControllerRequest, Error, PlaybackCapabilities, PlaybackState, PlaybackStatus,
 };
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -272,16 +273,54 @@ impl EventBroadcaster {
 
     /// Sends an event to a listener by a control handle.
     fn send_event(listener: &ControllerControlHandle, event: &mut ControllerEvent) -> Result<()> {
+        // TODO(turnage): remove this field by field copy for a `.clone()` invocation
+        //                when FIDL structs and tables get a method for that.
         match event {
-            ControllerEvent::OnPlaybackStatusChanged { playback_status } => {
-                listener.send_on_playback_status_changed(playback_status)
-            }
+            ControllerEvent::OnPlaybackStatusChanged { playback_status } => listener
+                .send_on_playback_status_changed(PlaybackStatus {
+                    duration: playback_status.duration.clone(),
+                    playback_state: playback_status.playback_state.clone(),
+                    playback_function: playback_status.playback_function.as_ref().map(|function| {
+                        TimelineFunction {
+                            subject_time: function.subject_time,
+                            reference_time: function.reference_time,
+                            subject_delta: function.subject_delta,
+                            reference_delta: function.reference_delta,
+                        }
+                    }),
+                    repeat_mode: playback_status.repeat_mode.clone(),
+                    shuffle_on: playback_status.shuffle_on,
+                    has_next_item: playback_status.has_next_item,
+                    has_prev_item: playback_status.has_prev_item,
+                    error: playback_status.error.as_ref().map(|error| Error {
+                        code: error.code,
+                        description: error.description.clone(),
+                    }),
+                }),
             ControllerEvent::OnMetadataChanged { media_metadata } => {
                 listener.send_on_metadata_changed(media_metadata)
             }
-            ControllerEvent::OnPlaybackCapabilitiesChanged { playback_capabilities } => {
-                listener.send_on_playback_capabilities_changed(playback_capabilities)
-            }
+            ControllerEvent::OnPlaybackCapabilitiesChanged { playback_capabilities } => listener
+                .send_on_playback_capabilities_changed(PlaybackCapabilities {
+                    can_play: playback_capabilities.can_play,
+                    can_stop: playback_capabilities.can_stop,
+                    can_pause: playback_capabilities.can_pause,
+                    can_seek_to_position: playback_capabilities.can_seek_to_position,
+                    can_skip_forward: playback_capabilities.can_skip_forward,
+                    can_skip_reverse: playback_capabilities.can_skip_reverse,
+                    supported_skip_intervals: playback_capabilities
+                        .supported_skip_intervals
+                        .clone(),
+                    supported_playback_rates: playback_capabilities
+                        .supported_playback_rates
+                        .clone(),
+                    can_shuffle: playback_capabilities.can_shuffle,
+                    supported_repeat_modes: playback_capabilities.supported_repeat_modes.clone(),
+                    can_change_to_next_item: playback_capabilities.can_change_to_next_item,
+                    can_change_to_prev_item: playback_capabilities.can_change_to_prev_item,
+                    custom_extensions: playback_capabilities.custom_extensions.clone(),
+                    has_gain_control: playback_capabilities.has_gain_control,
+                }),
         }
         .map_err(Into::into)
     }
@@ -298,7 +337,7 @@ impl EventBroadcaster {
     fn event_is_an_active_playback_status(event: &ControllerEvent) -> bool {
         match *event {
             ControllerEvent::OnPlaybackStatusChanged { ref playback_status }
-                if playback_status.playback_state == PlaybackState::Playing =>
+                if playback_status.playback_state == Some(PlaybackState::Playing) =>
             {
                 true
             }

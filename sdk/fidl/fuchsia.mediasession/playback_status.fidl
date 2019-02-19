@@ -7,22 +7,22 @@ library fuchsia.mediasession;
 using zx;
 using fuchsia.mediaplayer;
 
-struct PlaybackStatus {
+table PlaybackStatus {
     /// Total duration of playing media. 0 if not known or not applicable.
-    zx.duration duration;
-    PlaybackState playback_state;
+    1: zx.duration duration;
+    2: PlaybackState playback_state;
     /// A playback function that describes the position and rate of play through
     /// the media.
     // TODO(turnage): move this type to fuchsia.media
-    fuchsia.mediaplayer.TimelineFunction playback_function;
-    RepeatMode repeat_mode;
-    bool shuffle_on;
+    3: fuchsia.mediaplayer.TimelineFunction playback_function;
+    4: RepeatMode repeat_mode;
+    5: bool shuffle_on;
     /// Whether a media item exists after the playing one in queue (e.g. a next
     /// song in an album or next video in a playlist.)
-    bool has_next_item;
+    6: bool has_next_item;
     /// Whether a media item preceded the playing one in queue.
-    bool has_prev_item;
-    Error? error;
+    7: bool has_prev_item;
+    8: Error error;
 };
 
 enum PlaybackState {
@@ -32,9 +32,9 @@ enum PlaybackState {
     ERROR = 3;
 };
 
-struct Error {
-    uint32 code;
-    string description;
+table Error {
+    1: uint32 code;
+    2: string description;
 };
 
 enum RepeatMode {

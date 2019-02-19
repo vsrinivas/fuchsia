@@ -7,7 +7,7 @@ use crate::session::Session;
 use crate::session_id_rights;
 use crate::Result;
 use crate::CHANNEL_BUFFER_SIZE;
-use fidl::{encoding::OutOfLine, endpoints::ServerEnd};
+use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_mediasession::{ActiveSession, ControllerMarker, ControllerRegistryControlHandle};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -128,39 +128,27 @@ impl Service {
     /// Broadcasts the active session to all listeners and drops those which are
     /// no longer connected.
     fn broadcast_active_session(&mut self) -> Result<()> {
-        let mut update = self.active_session_update()?;
-        self.active_session_listeners
-            .retain(move |listener| listener.send_on_active_session(update.render()).is_ok());
+        let mut active_session_listeners = Vec::new();
+        std::mem::swap(&mut self.active_session_listeners, &mut active_session_listeners);
+        active_session_listeners.retain(|listener| self.send_active_session(listener).is_ok());
+        std::mem::swap(&mut self.active_session_listeners, &mut active_session_listeners);
         Ok(())
     }
 
     fn send_active_session(&self, recipient: &ControllerRegistryControlHandle) -> Result<()> {
-        recipient.send_on_active_session(self.active_session_update()?.render()).map_err(Into::into)
+        recipient.send_on_active_session(self.active_session_update()?).map_err(Into::into)
     }
 
-    fn active_session_update(&self) -> Result<ActiveSessionUpdate> {
-        Ok(ActiveSessionUpdate {
-            update: self
+    fn active_session_update(&self) -> Result<ActiveSession> {
+        Ok(ActiveSession {
+            session_id: self
                 .active_session_queue
                 .active_session()
                 .and_then(|koid| self.published_sessions.get(&koid))
                 .map(|(_, session_id)| -> Result<zx::Event> {
                     Ok(session_id.as_handle_ref().duplicate(session_id_rights())?.into())
                 })
-                .transpose()?
-                .map(|session_id| ActiveSession { session_id }),
+                .transpose()?,
         })
-    }
-}
-
-/// A struct that holds the active session update we need to send just so it
-/// can own the out of line value.
-struct ActiveSessionUpdate {
-    update: Option<ActiveSession>,
-}
-
-impl ActiveSessionUpdate {
-    fn render<'a>(&'a mut self) -> Option<OutOfLine<'a, ActiveSession>> {
-        self.update.as_mut().map(OutOfLine)
     }
 }
