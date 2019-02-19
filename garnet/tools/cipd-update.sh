@@ -11,6 +11,9 @@ readonly GARNET_ROOT="${FUCHSIA_ROOT}/garnet"
 readonly BUILDTOOLS_DIR="${FUCHSIA_ROOT}/buildtools"
 readonly CIPD="${BUILDTOOLS_DIR}/cipd"
 
+# TODO(juliehockett): remove this after we finish migration to CIPD
+rm -rf "${GARNET_ROOT}/public/lib/escher/third_party/vulkansdk"
+
 INTERNAL_ACCESS=false
 if [[ "$(${CIPD} ls fuchsia_internal)" != "No matching packages." ]]; then
   INTERNAL_ACCESS=true
