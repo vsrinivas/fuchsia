@@ -14,11 +14,24 @@ source_set("hypervisor") {
     "vmexit.cpp",
   ]
   deps = [
+    ":tests",
     "$zx/kernel/dev/interrupt/arm_gic/common",
     "$zx/kernel/dev/interrupt/arm_gic/v2",
     "$zx/kernel/dev/interrupt/arm_gic/v3",
     "$zx/kernel/dev/psci",
     "$zx/kernel/dev/timer/arm_generic",
     "$zx/kernel/lib/hypervisor:headers",
+  ]
+}
+
+source_set("tests") {
+  # TODO: testonly = true
+  sources = [
+    "gich_state_test.cpp",
+  ]
+  deps = [
+    "$zx/kernel/dev/interrupt/arm_gic/common",
+    "$zx/kernel/lib/hypervisor:headers",
+    "$zx/kernel/lib/unittest",
   ]
 }

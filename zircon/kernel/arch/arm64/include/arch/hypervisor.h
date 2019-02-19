@@ -7,7 +7,6 @@
 #pragma once
 
 #include <arch/arm64/hypervisor/el2_state.h>
-#include <dev/interrupt/arm_gic_hw_interface.h>
 #include <fbl/ref_ptr.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/id_allocator.h>
@@ -29,6 +28,7 @@ static_assert(kTimerVector < kNumInterrupts, "Timer vector is out of range");
 
 typedef struct zx_port_packet zx_port_packet_t;
 class PortDispatcher;
+enum class InterruptState : uint8_t;
 
 class Guest {
 public:

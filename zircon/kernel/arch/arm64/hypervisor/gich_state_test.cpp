@@ -7,6 +7,7 @@
 #include <lib/unittest/unittest.h>
 
 #include <arch/hypervisor.h>
+#include <dev/interrupt/arm_gic_hw_interface.h>
 
 static bool has_pending_interrupt() {
     BEGIN_TEST;

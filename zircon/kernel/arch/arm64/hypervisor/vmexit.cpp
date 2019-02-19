@@ -12,6 +12,7 @@
 
 #include <arch/arm64/hypervisor/el2_state.h>
 #include <arch/hypervisor.h>
+#include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/psci.h>
 #include <dev/timer/arm_generic.h>
 #include <hypervisor/ktrace.h>
