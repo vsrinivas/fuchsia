@@ -33,7 +33,9 @@ def main():
         api[destination] = hash
 
     with open(args.output, 'w') as output_file:
-        json.dump(api, output_file, indent=2, sort_keys=True)
+        # Specify `separators` to prevent whitespaces at the end of lines.
+        json.dump(api, output_file, indent=2, sort_keys=True,
+                  separators=(',', ': '))
 
     return 0
 
