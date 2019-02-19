@@ -337,9 +337,9 @@ interface definition file:
 2
 3   [Discoverable]
 4   interface Echo {
-5       1: EchoString(string? value) -> (string? response);
-6       2: SendString(string? value);
-7       3. -> ReceiveString (string? response);
+5       EchoString(string? value) -> (string? response);
+6       SendString(string? value);
+7       -> ReceiveString (string? response);
 8   };
 ```
 

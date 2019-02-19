@@ -572,7 +572,7 @@ struct Paint {
 interface Calculator {
     Add(int32 a, int32 b) -> (int32 sum);
     Divide(int32 dividend, int32 divisor)
-    -> (int32 quotient, int32 remainder);
+        -> (int32 quotient, int32 remainder);
     Clear();
     -> OnClear();
 };

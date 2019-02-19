@@ -516,10 +516,10 @@ We'll use the following interface for the next few examples:
 
 ```fidl
 interface Calculator {
-    1: Add(int32 a, int32 b) -> (int32 sum);
-    2: Divide(int32 dividend, int32 divisor)
-    -> (int32 quotient, int32 remainder);
-    3: Clear();
+    Add(int32 a, int32 b) -> (int32 sum);
+    Divide(int32 dividend, int32 divisor)
+        -> (int32 quotient, int32 remainder);
+    Clear();
 };
 ```
 
@@ -535,9 +535,9 @@ interface to invoke methods of that interface.
 If a server receives an unknown, unsupported, or unexpected method call message,
 it must close the channel.
 
-The message indicates the method to invoke by means of its ordinal index. The
-body of the message contains the method arguments as if they were packed in a
-**struct**.
+The message indicates the method to invoke by means of its (automatically
+computed) ordinal index. The body of the message contains the method arguments
+as if they were packed in a **struct**.
 
 ![drawing](method-call-messages.png)
 
@@ -572,14 +572,14 @@ Value      | Meaning
 #### Event Messages
 
 These support sending unsolicited messages from the server back to the client.
-Here we've added ordinal 4 to our `Calculator` example:
+Here we've added an `Error` method to our `Calculator` example:
 
 ```fidl
 interface Calculator {
-    1: Add(int32 a, int32 b) -> (int32 sum);
-    2: Divide(int32 dividend, int32 divisor) -> (int32 quotient, int32 remainder);
-    3: Clear();
-    4: -> Error(uint32 status_code);
+    Add(int32 a, int32 b) -> (int32 sum);
+    Divide(int32 dividend, int32 divisor) -> (int32 quotient, int32 remainder);
+    Clear();
+    -> Error(uint32 status_code);
 };
 ```
 
