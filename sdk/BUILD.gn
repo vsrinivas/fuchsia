@@ -12,6 +12,22 @@ declare_args() {
   sdk_id = ""
 }
 
+sdk_documentation("open_source") {
+  name = "open_source"
+
+  category = "public"
+
+  files = []
+  foreach(file, ["AUTHORS", "LICENSE", "PATENTS"]) {
+    files += [
+      {
+        source = "//$file"
+        dest = file
+      },
+    ]
+  }
+}
+
 sdk("zircon_sysroot") {
   category = "partner"
 
@@ -102,6 +118,7 @@ sdk("garnet") {
   testonly = true
 
   deps = [
+    ":open_source",
     "docs",
     "tools:dev_finder_sdk($host_toolchain)",
     "tools:symbolize_sdk($host_toolchain)",
