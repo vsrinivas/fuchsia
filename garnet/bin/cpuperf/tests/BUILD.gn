@@ -27,9 +27,19 @@ executable("cpuperf_integration_tests") {
     "verify_test.h",
   ]
 
+  if (current_cpu == "arm64") {
+    sources += [
+      "arm64/arm64_tests.cc",
+      "arm64/arm64_tests.h",
+      "arm64/tally.cc",
+    ]
+  }
+
   if (current_cpu == "x64") {
     sources += [
       "intel/fixed_counters.cc",
+      "intel/intel_tests.cc",
+      "intel/intel_tests.h",
       "intel/last_branch.cc",
       "intel/os_flag.cc",
       "intel/programmable_counters.cc",
@@ -77,6 +87,15 @@ package("cpuperf_tests") {
   ]
 
   resources = []
+
+  if (current_cpu == "arm64") {
+    resources += [
+      {
+        path = rebase_path("arm64/tally.cpspec")
+        dest = "tally.cpspec"
+      },
+    ]
+  }
 
   if (current_cpu == "x64") {
     resources += [

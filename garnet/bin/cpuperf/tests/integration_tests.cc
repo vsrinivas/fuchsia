@@ -11,12 +11,12 @@
 #include "run_test.h"
 #include "verify_test.h"
 
-#ifdef __x86_64__
-
 static void RunAndVerify(const char* spec_path) {
   ASSERT_TRUE(RunSpec(spec_path));
   VerifySpec(spec_path);
 }
+
+#ifdef __x86_64__
 
 TEST(Cpuperf, FixedCounters) {
   RunAndVerify("/pkg/data/fixed_counters.cpspec");
@@ -24,6 +24,10 @@ TEST(Cpuperf, FixedCounters) {
 
 TEST(Cpuperf, OsFlag) {
   RunAndVerify("/pkg/data/os_flag.cpspec");
+}
+
+TEST(Cpuperf, ProgrammableCounters) {
+  RunAndVerify("/pkg/data/programmable_counters.cpspec");
 }
 
 TEST(Cpuperf, UserFlag) {
@@ -48,19 +52,20 @@ TEST(Cpuperf, LastBranchRecord) {
 
 #endif  // __x86_64__
 
+TEST(Cpuperf, Tally) {
+  RunAndVerify("/pkg/data/tally.cpspec");
+}
+
 // Provide our own main so that --verbose,etc. are recognized.
 // This is useful because our verbosity is passed on to each test.
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(cl))
     return EXIT_FAILURE;
 
   // Early exit if there is no perfmon device. We could be running on QEMU.
   bool is_supported = false;
-#ifdef __x86_64__
   is_supported = perfmon::Controller::IsSupported();
-#endif
   if (!is_supported) {
     FXL_LOG(INFO) << "Perfmon device not supported";
     return EXIT_SUCCESS;

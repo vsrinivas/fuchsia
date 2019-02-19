@@ -11,6 +11,7 @@
 #include "garnet/lib/perfmon/events.h"
 
 namespace perfmon {
+
 namespace {
 
 const EventDetails g_fixed_event_details[] = {

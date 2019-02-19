@@ -60,7 +60,7 @@
   ],
   "buffer_size_in_mb": 1,
   "duration": 1,
-  "num_iterations": 100,
+  "num_iterations": 10,
   "output_path_prefix": "/tmp/cpuperf-test",
   "session_result_spec_path": "/tmp/cpuperf-test.cpsession"
 }

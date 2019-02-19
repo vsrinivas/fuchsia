@@ -42,9 +42,10 @@ EventRegistry* GetGlobalEventRegistry();
 // Register all models and their events for this build.
 void RegisterCurrentArchEvents(EventRegistry* registry);
 
-// Register all events for all Intel models.
+// Register all events for all Intel,Arm64 models.
 // TODO(dje): Support registering just a specific model.
 void RegisterAllIntelModelEvents(EventRegistry* registry);
+void RegisterAllArm64ModelEvents(EventRegistry* registry);
 
 }  // namespace internal
 }  // namespace perfmon

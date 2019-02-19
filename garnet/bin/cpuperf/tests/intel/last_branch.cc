@@ -7,7 +7,7 @@
 
 #include "garnet/lib/perfmon/events.h"
 
-#include "../verify_test.h"
+#include "intel_tests.h"
 
 class LastBranchVerifier : public Verifier {
  public:

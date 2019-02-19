@@ -15,8 +15,6 @@
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/split_string.h>
 
-#ifdef __x86_64__  // For non-supported arches we're just a stub.
-
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <zircon/syscalls.h>
 
@@ -61,7 +59,7 @@ static bool GetSessionSpecFromArgv(const fxl::CommandLine& cl,
   if (cl.GetOptionValue("spec-file", &arg)) {
     std::string content;
     if (!files::ReadFileToString(arg, &content)) {
-      FXL_LOG(ERROR) << "Can't read " << arg;
+      FXL_LOG(ERROR) << "Can't read spec file \"" << arg << "\"";
       return false;
     }
     if (!cpuperf::DecodeSessionSpec(content, out_spec)) {
@@ -153,16 +151,16 @@ static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
 
   // Print a summary of this run.
   // In tally mode this is noise, but if verbosity is on sure.
-  FXL_LOG(INFO) << "Iteration " << iter << " summary";
   if (controller->mode() != perfmon::Controller::Mode::kTally ||
-      FXL_VLOG_IS_ON(2)) {
+      FXL_VLOG_IS_ON(1)) {
+    FXL_VLOG(1) << "Iteration " << iter << " summary";
     for (size_t trace = 0; trace < result_spec.num_traces; ++trace) {
       std::string path = result_spec.GetTraceFilePath(iter, trace);
       uint64_t size;
       if (files::GetFileSize(path, &size)) {
-        FXL_LOG(INFO) << path << ": " << size << " bytes";
+        FXL_VLOG(1) << path << ": " << size << " bytes";
       } else {
-        FXL_LOG(INFO) << path << ": unknown size";
+        FXL_VLOG(1) << path << ": unknown size";
       }
     }
   }
@@ -273,12 +271,3 @@ int main(int argc, char* argv[]) {
   FXL_LOG(INFO) << "cpuperf control program exiting";
   return EXIT_SUCCESS;
 }
-
-#else  // !__x86_64__
-
-int main(int argc, char* argv[]) {
-  FXL_LOG(ERROR) << "cpuperf is currently for x86_64 only";
-  return EXIT_FAILURE;
-}
-
-#endif  // !__x86_64__

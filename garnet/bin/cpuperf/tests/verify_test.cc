@@ -21,18 +21,10 @@
 
 #include "verify_test.h"
 
-// List of tests.
-// A test automatically fails if it's not listed here.
-#ifdef __x86_64__
-const TestSpec* const kTestSpecs[] = {
-  &kFixedCounterSpec,
-  &kLastBranchSpec,
-  &kOsFlagSpec,
-  &kProgrammableCounterSpec,
-  &kTallySpec,
-  &kUserFlagSpec,
-  &kValueRecordsSpec,
-};
+#if defined(__x86_64__)
+#include "intel/intel_tests.h"
+#elif defined(__aarch64__)
+#include "arm64/arm64_tests.h"
 #endif
 
 bool Verifier::VerifyIteration(uint32_t iter) {
@@ -145,13 +137,12 @@ void Verifier::GetModelEventManager() {
 
 static std::unique_ptr<Verifier> LookupVerifier(
     const cpuperf::SessionResultSpec* spec) {
-#ifdef __x86_64__
-  for (const auto& test : kTestSpecs) {
+  for (size_t i = 0; i < kTestSpecCount; ++i) {
+    const TestSpec* test = kTestSpecs[i];
     if (strcmp(spec->config_name.c_str(), test->config_name) == 0) {
       return test->make_verifier(spec);
     }
   }
-#endif
   return nullptr;
 }
 

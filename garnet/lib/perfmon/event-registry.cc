@@ -44,6 +44,8 @@ void EventRegistry::RegisterEvents(const char* model_name,
 void RegisterCurrentArchEvents(EventRegistry* registry) {
 #ifdef __x86_64__
   RegisterAllIntelModelEvents(registry);
+#elif defined(__aarch64__)
+  RegisterAllArm64ModelEvents(registry);
 #endif
 }
 

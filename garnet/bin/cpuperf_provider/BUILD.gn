@@ -8,19 +8,27 @@ executable("bin") {
   output_name = "cpuperf_provider"
 
   sources = [
+    "app.cc",
+    "app.h",
+    "categories.cc",
+    "categories.h",
+    "category-db.cc",
+    "importer.cc",
+    "importer.h",
     "main.cc",
   ]
 
-  # arm64 support will come later
+  if (current_cpu == "arm64") {
+    sources += [
+      "arm64-category-db.cc",
+      "arm64-events.h",
+      "arm64-pm-categories.inc",
+      "arm64-timebase-categories.inc",
+    ]
+  }
+
   if (current_cpu == "x64") {
     sources += [
-      "app.cc",
-      "app.h",
-      "categories.cc",
-      "categories.h",
-      "category-db.cc",
-      "importer.cc",
-      "importer.h",
       "intel-category-db.cc",
       "intel-events.h",
       "intel-pm-categories.inc",

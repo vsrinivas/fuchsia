@@ -39,14 +39,9 @@ executable("bin") {
 
   sources = [
     "main.cc",
+    "print_tallies.cc",
+    "print_tallies.h",
   ]
-
-  if (current_cpu == "x64") {
-    sources += [
-      "print_tallies.cc",
-      "print_tallies.h",
-    ]
-  }
 
   deps = [
     ":session_result_spec",
@@ -97,6 +92,19 @@ package("cpuperf") {
       {
         path = rebase_path("cpspec/intel/l3.cpspec")
         dest = "l3.cpspec"
+      },
+    ]
+  }
+
+  if (current_cpu == "arm64") {
+    resources += [
+      {
+        path = rebase_path("cpspec/arm64/cycle-counter.cpspec")
+        dest = "cycle-counter.cpspec"
+      },
+      {
+        path = rebase_path("cpspec/arm64/l1.cpspec")
+        dest = "l1.cpspec"
       },
     ]
   }

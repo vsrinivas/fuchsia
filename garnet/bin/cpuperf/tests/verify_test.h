@@ -65,15 +65,9 @@ struct TestSpec {
   MakeVerifier* make_verifier;
 };
 
-// These are defined in each testcase's file, and referenced by the
-// testcase verifier.
-extern const TestSpec kFixedCounterSpec;
-extern const TestSpec kLastBranchSpec;
-extern const TestSpec kOsFlagSpec;
-extern const TestSpec kProgrammableCounterSpec;
-extern const TestSpec kTallySpec;
-extern const TestSpec kUserFlagSpec;
-extern const TestSpec kValueRecordsSpec;
+// These are provided by each arch's subdirectory of tests.
+extern const TestSpec* const kTestSpecs[];
+extern const size_t kTestSpecCount;
 
 // Common routine for verifying the result of a test run.
 // |spec_file_path| is the path to the cpspec file.

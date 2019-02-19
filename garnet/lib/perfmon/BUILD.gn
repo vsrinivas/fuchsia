@@ -36,14 +36,19 @@ static_library("perfmon") {
       "device_reader.h",
     ]
 
-    # arm64 support will come later
+    if (current_cpu == "arm64") {
+      sources += [ "arm64-events.cc" ]
+    }
     if (current_cpu == "x64") {
       sources += [ "intel-events.cc" ]
     }
 
     public_deps += [ "//zircon/public/lib/zx" ]
   } else {
-    sources += [ "intel-events.cc" ]
+    sources += [
+      "arm64-events.cc",
+      "intel-events.cc",
+    ]
   }
 
   if (!is_fuchsia) {

@@ -5,26 +5,26 @@
   "config_name": "l2-stats",
   "events": [
     {
-      "group_name": "model",
-      "event_name": "retired_load_l2_hit",
+      "group_name": "arch",
+      "event_name": "l2d_cache",
       "rate": 0,
       "flags": [ "os", "user" ]
     },
     {
-      "group_name": "model",
-      "event_name": "retired_load_l2_miss",
+      "group_name": "arch",
+      "event_name": "l2d_cache_refill",
       "rate": 0,
       "flags": [ "os", "user" ]
     },
     {
-      "group_name": "model",
-      "event_name": "l2_miss_demand_load_outstanding",
+      "group_name": "arch",
+      "event_name": "l2d_cache_wb",
       "rate": 0,
       "flags": [ "os", "user" ]
     },
     {
-      "group_name": "model",
-      "event_name": "l2_miss_execution_stalls",
+      "group_name": "arch",
+      "event_name": "l2d_cache_allocate",
       "rate": 0,
       "flags": [ "os", "user" ]
     }

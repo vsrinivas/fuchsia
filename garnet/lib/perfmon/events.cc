@@ -60,8 +60,7 @@ std::unique_ptr<ModelEventManager> ModelEventManager::Create(
     std::make_unique<ModelEventManager>(ModelEventManager{
         model_name, &iter->second.arch_events, &iter->second.fixed_events,
         &iter->second.model_events, &iter->second.misc_events});
-  if (FXL_VLOG_IS_ON(2)) {
-    FXL_VLOG(2) << "Dump of events for model " << model_name;
+  if (FXL_VLOG_IS_ON(4)) {
     model_event_manager->Dump();
   }
   return model_event_manager;
@@ -169,6 +168,7 @@ ModelEventManager::GroupTable ModelEventManager::GetAllGroups() const {
 }
 
 void ModelEventManager::Dump() const {
+  printf("Dump of events for model %s\n", model_name_.c_str());
   DumpGroup(internal::kArchGroupName, arch_events_);
   DumpGroup(internal::kFixedGroupName, fixed_events_);
   DumpGroup(internal::kModelGroupName, model_events_);

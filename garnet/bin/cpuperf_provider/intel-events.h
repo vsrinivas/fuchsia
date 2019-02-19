@@ -5,6 +5,8 @@
 #ifndef GARNET_BIN_CPUPERF_PROVIDER_INTEL_EVENTS_H_
 #define GARNET_BIN_CPUPERF_PROVIDER_INTEL_EVENTS_H_
 
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
+
 namespace cpuperf_provider {
 
 enum EventId {
