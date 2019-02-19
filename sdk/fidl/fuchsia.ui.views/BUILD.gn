@@ -12,10 +12,10 @@ fidl("fuchsia.ui.views") {
     "events.fidl",
     "view.fidl",
     "view_config.fidl",
+    "view_token.fidl",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.intl",
-    "//sdk/fidl/fuchsia.ui.gfx",
   ]
 }

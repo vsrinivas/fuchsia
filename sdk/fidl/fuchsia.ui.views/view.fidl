@@ -4,8 +4,6 @@
 
 library fuchsia.ui.views;
 
-using fuchsia.ui.gfx;
-
 /// A View is an interface that a component implements to offer Scenic view(s)
 /// to its clients.
 ///
@@ -79,7 +77,7 @@ protocol View {
     /// had already been called before), then it should terminate the connection
     /// with an error.
     /// TODO(SCN-1271): Allow re-parenting |View|s with a new |Present()| call.
-    Present(fuchsia.ui.gfx.ExportToken view_token, ViewConfig initial_config);
+    Present(ViewToken view_token, ViewConfig initial_config);
 
     /// Updates the View's configuration after it has been attached.
     ///

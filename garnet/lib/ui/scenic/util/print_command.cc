@@ -178,8 +178,14 @@ std::ostream& operator<<(std::ostream& stream,
     case ResourceArgs::Tag::kView:
       stream << "View";
       break;
+    case ResourceArgs::Tag::kView2:
+      stream << "View2";
+      break;
     case ResourceArgs::Tag::kViewHolder:
       stream << "ViewHolder";
+      break;
+    case ResourceArgs::Tag::kViewHolder2:
+      stream << "ViewHolder2";
       break;
     case ResourceArgs::Tag::kClipNode:
       stream << "ClipNode";
