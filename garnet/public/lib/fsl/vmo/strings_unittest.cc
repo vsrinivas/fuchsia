@@ -39,7 +39,7 @@ TEST(VmoStringsTest, EmptyString) {
 }
 
 TEST(VmoStringsTest, BinaryString) {
-  std::string binary_in_string('\0', 10);
+  std::string binary_in_string(10, '\0');
   for (size_t i = 0; i < binary_in_string.size(); i++) {
     binary_in_string[i] = (char)i;
   }
