@@ -62,6 +62,16 @@ func (p *Producer) Ok(test bool, description string) {
 	p.directive = None
 }
 
+// YAML produces a YAML block from the given input. This will indent the input data. The
+// caller should not do this themselves.
+func (p *Producer) YAML(input []byte) {
+	// Chomp empty lines from the end of the document.
+	content := strings.TrimSuffix(string(input), "\n")
+	p.writeln(p.indent("---"))
+	p.writeln(p.indent(content))
+	p.writeln(p.indent("..."))
+}
+
 // Todo returns a new Producer that prints TODO directives.
 func (p *Producer) Todo() *Producer {
 	p.directive = Todo
@@ -75,8 +85,7 @@ func (p *Producer) Skip() *Producer {
 }
 
 func (p *Producer) writeln(format string, args ...interface{}) {
-	line := strings.TrimSpace(fmt.Sprintf(format, args...)) + "\n"
-	fmt.Fprintf(p.writer(), line)
+	fmt.Fprintln(p.writer(), fmt.Sprintf(format, args...))
 }
 
 // writer initializes the Writer to use for this Producer, in case the Producer was
@@ -86,4 +95,23 @@ func (p *Producer) writer() io.Writer {
 		p.output = os.Stdout
 	}
 	return p.output
+}
+
+// Indent indents every line of the input text with a single space.
+func (p *Producer) indent(input string) string {
+	return string(p.indentBytes([]byte(input)))
+}
+
+// IndentBytes indents every line of the input text with a single space.
+func (p *Producer) indentBytes(input []byte) []byte {
+	var output []byte
+	startOfLine := true
+	for _, c := range input {
+		if startOfLine && c != '\n' {
+			output = append(output, ' ')
+		}
+		output = append(output, c)
+		startOfLine = c == '\n'
+	}
+	return output
 }
