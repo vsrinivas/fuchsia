@@ -35,9 +35,6 @@ sdk://fidl/fuchsia.ui.views
 sdk://fidl/fuchsia.ui.viewsv1
 sdk://fidl/fuchsia.ui.viewsv1token
 sdk://fidl/fuchsia.wlan.common
-sdk://fidl/fuchsia.wlan.mesh
-sdk://fidl/fuchsia.wlan.minstrel
-sdk://fidl/fuchsia.wlan.mlme
 sdk://fidl/fuchsia.wlan.service
 sdk://fidl/fuchsia.wlan.stats
 sdk://pkg/async
