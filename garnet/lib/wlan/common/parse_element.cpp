@@ -197,5 +197,16 @@ std::optional<ParsedPrep> ParsePrep(Span<const uint8_t> raw_body) {
     return { ret };
 }
 
+std::optional<ParsedPerr> ParsePerr(Span<const uint8_t> raw_body) {
+    ParsedPerr ret {};
+    auto r = BufferReader { raw_body };
+
+    ret.header = r.Read<PerrHeader>();
+    if (ret.header == nullptr) { return {}; }
+
+    ret.destinations = r.ReadRemaining();
+    return { ret };
+}
+
 } // namespace common
 } // namespace wlan

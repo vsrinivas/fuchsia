@@ -278,6 +278,37 @@ struct PrepTail {
 
 static_assert(sizeof(PrepTail) == 18);
 
+// Fixed-length fields of the PERR element that precede the variable-length
+// per-destination fields.
+// IEEE Std 802.11-2016, 9.4.2.115
+struct PerrHeader {
+    uint8_t element_ttl;
+    uint8_t num_destinations;
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.115, Figure 9-483
+struct PerrPerDestinationFlags : public common::BitField<uint8_t> {
+    // bits 0-5 reserved
+    WLAN_BIT_FIELD(addr_ext, 6, 1);
+    // bit 7 reserved
+};
+
+// Fixed-length fields of the per-destination chunk of the PERR element
+// that precede the optional "Destination External Address" field.
+// IEEE Std 802.11-2016, 9.4.2.115
+struct PerrPerDestinationHeader {
+    PerrPerDestinationFlags flags;
+    common::MacAddr dest_addr;
+    uint32_t hwmp_seqno;
+} __PACKED;
+
+// The fixed-length field of the per-destination chunk of the PERR element
+// that follows the optional "Destination External Address" field.
+// IEEE Std 802.11-2016, 9.4.2.115
+struct PerrPerDestinationTail {
+    uint16_t reason_code;
+} __PACKED;
+
 // IEEE Std 802.11-2016, 9.4.1.17
 class QosInfo : public common::BitField<uint8_t> {
    public:

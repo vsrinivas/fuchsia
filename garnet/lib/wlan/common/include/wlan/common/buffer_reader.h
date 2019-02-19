@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_BUFFER_READER_H_
+#define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_BUFFER_READER_H_
 
 #include <fbl/unique_ptr.h>
-#include <optional>
 #include <wlan/common/span.h>
 #include <zircon/types.h>
+#include <optional>
 
 namespace wlan {
 
 class BufferReader {
    public:
-    explicit BufferReader(Span<const uint8_t> buf) : buf_(buf) {
-        ZX_ASSERT(buf_.data() != nullptr);
-    }
+    explicit BufferReader(Span<const uint8_t> buf) : buf_(buf) {}
 
     template <typename T> const T* Peek() {
         if (buf_.size() < offset_ + sizeof(T)) { return nullptr; }
@@ -35,7 +34,7 @@ class BufferReader {
 
         auto data = reinterpret_cast<const T*>(buf_.data() + offset_);
         offset_ += sizeof(T) * len;
-        return { data, len };
+        return {data, len};
     }
 
     template <typename T> std::optional<T> ReadValue() {
@@ -69,3 +68,5 @@ class BufferReader {
 };
 
 }  // namespace wlan
+
+#endif  // GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_BUFFER_READER_H_

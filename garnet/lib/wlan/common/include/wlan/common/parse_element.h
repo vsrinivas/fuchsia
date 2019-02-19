@@ -52,6 +52,11 @@ struct ParsedPrep {
     const PrepTail* tail;
 };
 
+struct ParsedPerr {
+    const PerrHeader* header;
+    Span<const uint8_t> destinations; // can be parsed with PerrDestinationParser
+};
+
 std::optional<Span<const uint8_t>> ParseSsid(Span<const uint8_t> raw_body);
 std::optional<Span<const SupportedRate>> ParseSupportedRates(Span<const uint8_t> raw_body);
 const DsssParamSet* ParseDsssParamSet(Span<const uint8_t> raw_body);
@@ -77,6 +82,7 @@ std::optional<ParsedMpmClose> ParseMpmClose(Span<const uint8_t> raw_body);
 
 std::optional<ParsedPreq> ParsePreq(Span<const uint8_t> raw_body);
 std::optional<ParsedPrep> ParsePrep(Span<const uint8_t> raw_body);
+std::optional<ParsedPerr> ParsePerr(Span<const uint8_t> raw_body);
 
 } // namespace common
 } // namespace wlan

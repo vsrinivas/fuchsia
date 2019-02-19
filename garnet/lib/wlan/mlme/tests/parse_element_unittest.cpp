@@ -752,6 +752,49 @@ TEST(ParseElement, PrepTooLong) {
     ASSERT_FALSE(prep);
 }
 
+TEST(ParseElement, Perr) {
+    // clang-format off
+    const uint8_t data[] = {
+        11, // TTL
+        7, // number of destinations
+        10, 20, 30, // destination data (not parsed, returned as raw bytes)
+    };
+    // clang-format on
+    auto perr = ParsePerr(data);
+    ASSERT_TRUE(perr.has_value());
+    EXPECT_EQ(11u, perr->header->element_ttl);
+    EXPECT_EQ(7u, perr->header->num_destinations);
+    ASSERT_EQ(3u, perr->destinations.size());
+    EXPECT_EQ(20, perr->destinations[1]);
+}
+
+TEST(ParseElement, PerrNoDestinationData) {
+    // clang-format off
+    const uint8_t data[] = {
+        11, // TTL
+        7, // number of destinations
+    };
+    // clang-format on
+    auto perr = ParsePerr(data);
+    // Still expect to be parsed correctly. It is the responsibility of PerrDestinationParser
+    // to validate the destination data separately.
+    ASSERT_TRUE(perr.has_value());
+    EXPECT_EQ(11u, perr->header->element_ttl);
+    EXPECT_EQ(7u, perr->header->num_destinations);
+    ASSERT_EQ(0u, perr->destinations.size());
+}
+
+TEST(ParseElement, PerrTooShort) {
+    // clang-format off
+    const uint8_t data[] = {
+        11, // TTL
+        // no number of destinations
+    };
+    // clang-format on
+    auto perr = ParsePerr(data);
+    ASSERT_FALSE(perr.has_value());
+}
+
 } // namespace common
 } // namespace wlan
 

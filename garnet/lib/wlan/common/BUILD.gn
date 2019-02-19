@@ -35,6 +35,7 @@ source_set("common") {
     "macaddr.cpp",
     "parse_element.cpp",
     "parse_mac_header.cpp",
+    "perr_destination_parser.cpp",
     "tim_element.cpp",
     "tx_vector.cpp",
     "write_element.cpp",
