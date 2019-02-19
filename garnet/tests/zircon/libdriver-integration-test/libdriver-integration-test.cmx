@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/libdriver-integration-test"
+    },
+    "sandbox": {
+        "features": [ "shell" ],
+        "services": [
+          "fuchsia.process.Launcher"
+        ]
+    }
+}
+
