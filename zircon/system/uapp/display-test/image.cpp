@@ -32,21 +32,14 @@ Image::Image(uint32_t width, uint32_t height, int32_t stride,
 Image* Image::Create(zx_handle_t dc_handle,
                      uint32_t width, uint32_t height, zx_pixel_format_t format,
                      uint32_t fg_color, uint32_t bg_color, bool cursor) {
-    zx::channel server, driver_client;
-    zx::channel::create(0, &server, &driver_client);
-    zx_status_t status;
-    status = fdio_service_connect("/dev/class/sysmem/000", server.release());
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to open sysmem\n");
-        return nullptr;
-    }
-
     zx::channel allocator2_client;
     zx::channel allocator2_server;
+    zx_status_t status;
     status = zx::channel::create(0, &allocator2_client, &allocator2_server);
-
-    status = fuchsia_sysmem_DriverConnectorConnect(
-        driver_client.get(), allocator2_server.release());
+    if (status != ZX_OK) {
+        return nullptr;
+    }
+    status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator2", allocator2_server.release());
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to connect to sysmem\n");
         return nullptr;
