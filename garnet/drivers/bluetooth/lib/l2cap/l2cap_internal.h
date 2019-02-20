@@ -60,7 +60,6 @@ struct SimpleInformationFrameHeader : public EnhancedControlField {
     return (le16toh(raw_value) & (0b01111110)) >> 1;
   }
 } __PACKED;
-static_assert(std::is_standard_layout_v<SimpleInformationFrameHeader>);
 
 // Represents an I-frame header for:
 // * a channel operating in Enhanced Retransmission or
@@ -72,7 +71,6 @@ static_assert(std::is_standard_layout_v<SimpleInformationFrameHeader>);
 struct SimpleStartOfSduFrameHeader : public SimpleInformationFrameHeader {
   uint16_t sdu_len;
 } __PACKED;
-static_assert(std::is_standard_layout_v<SimpleInformationFrameHeader>);
 
 // Represents an S-frame for:
 // * a channel operating in Enhanced Retransmission or
@@ -82,7 +80,6 @@ static_assert(std::is_standard_layout_v<SimpleInformationFrameHeader>);
 // Omits the Basic L2CAP header. See Vol 3, Part A, Sec 3.3.
 struct SimpleSupervisoryFrame : public EnhancedControlField {
 } __PACKED;
-static_assert(std::is_standard_layout_v<SimpleInformationFrameHeader>);
 
 }  // namespace internal
 }  // namespace l2cap
