@@ -183,7 +183,7 @@ bool ReadReply(MessageReader* reader, LaunchReply* reply,
   }
   reply->inferior_type = static_cast<InferiorType>(inferior_type);
 
-  if (!reader->ReadUint32(&reply->status))
+  if (!reader->ReadInt32(&reply->status))
     return false;
   if (!reader->ReadUint64(&reply->process_koid))
     return false;
@@ -207,7 +207,7 @@ bool ReadReply(MessageReader* reader, KillReply* reply,
     return false;
   *transaction_id = header.transaction_id;
 
-  if (!reader->ReadUint32(&reply->status))
+  if (!reader->ReadInt32(&reply->status))
     return false;
   return true;
 }
@@ -230,7 +230,7 @@ bool ReadReply(MessageReader* reader, AttachReply* reply,
 
   if (!reader->ReadUint64(&reply->koid))
     return false;
-  if (!reader->ReadUint32(&reply->status))
+  if (!reader->ReadInt32(&reply->status))
     return false;
   if (!reader->ReadString(&reply->name))
     return false;
@@ -253,7 +253,7 @@ bool ReadReply(MessageReader* reader, DetachReply* reply,
     return false;
   *transaction_id = header.transaction_id;
 
-  if (!reader->ReadUint32(&reply->status))
+  if (!reader->ReadInt32(&reply->status))
     return false;
   return true;
 }
@@ -404,7 +404,7 @@ bool ReadReply(MessageReader* reader, WriteRegistersReply* reply,
     return false;
 
   *transaction_id = header.transaction_id;
-  return reader->ReadUint64(&reply->status);
+  return reader->ReadInt32(&reply->status);
 }
 
 // AddOrChangeBreakpoint -------------------------------------------------------
@@ -422,7 +422,7 @@ bool ReadReply(MessageReader* reader, AddOrChangeBreakpointReply* reply,
     return false;
   *transaction_id = header.transaction_id;
 
-  return reader->ReadUint32(&reply->status);
+  return reader->ReadInt32(&reply->status);
 }
 
 // RemoveBreakpoint ------------------------------------------------------------
@@ -535,7 +535,7 @@ bool ReadReply(MessageReader* reader, JobFilterReply* reply,
     return false;
   *transaction_id = header.transaction_id;
 
-  return reader->ReadUint32(&reply->status);
+  return reader->ReadInt32(&reply->status);
 }
 
 // WriteMemory -----------------------------------------------------------------
@@ -555,7 +555,7 @@ bool ReadReply(MessageReader* reader, WriteMemoryReply* reply,
     return false;
   *transaction_id = header.transaction_id;
 
-  return reader->ReadUint64(&reply->status);
+  return reader->ReadInt32(&reply->status);
 }
 
 // Notifications ---------------------------------------------------------------

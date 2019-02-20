@@ -171,8 +171,7 @@ void ThreadImpl::JumpTo(uint64_t new_address,
         if (err.has_error()) {
           cb(err);  // Transport error.
         } else if (reply.status != 0) {
-          cb(Err("Could not set thread instruction pointer. Error %" PRIu64
-                 " (%s).",
+          cb(Err("Could not set thread instruction pointer. Error %d (%s).",
                  reply.status,
                  debug_ipc::ZxStatusToString(
                      static_cast<uint32_t>(reply.status))));

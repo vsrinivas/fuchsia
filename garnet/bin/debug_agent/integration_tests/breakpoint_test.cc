@@ -130,7 +130,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     launch_request.inferior_type = debug_ipc::InferiorType::kBinary;
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
-    ASSERT_EQ(launch_reply.status, static_cast<uint32_t>(ZX_OK))
+    ASSERT_EQ(launch_reply.status, ZX_OK)
         << "Expected ZX_OK, Got: "
         << debug_ipc::ZxStatusToString(launch_reply.status);
 
@@ -158,7 +158,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     breakpoint_request.breakpoint.locations.push_back(location);
     debug_ipc::AddOrChangeBreakpointReply breakpoint_reply;
     remote_api->OnAddOrChangeBreakpoint(breakpoint_request, &breakpoint_reply);
-    ASSERT_EQ(breakpoint_reply.status, static_cast<uint32_t>(ZX_OK));
+    ASSERT_EQ(breakpoint_reply.status, ZX_OK);
 
     // Resume the process now that the breakpoint is installed.
     debug_ipc::ResumeRequest resume_request;
@@ -213,7 +213,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     launch_request.argv.push_back(kTestExecutablePath);
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
-    ASSERT_EQ(launch_reply.status, static_cast<uint32_t>(ZX_OK))
+    ASSERT_EQ(launch_reply.status, ZX_OK)
         << "Expected ZX_OK, Got: "
         << debug_ipc::ZxStatusToString(launch_reply.status);
 
@@ -242,7 +242,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     breakpoint_request.breakpoint.locations.push_back(location);
     debug_ipc::AddOrChangeBreakpointReply breakpoint_reply;
     remote_api->OnAddOrChangeBreakpoint(breakpoint_request, &breakpoint_reply);
-    ASSERT_EQ(breakpoint_reply.status, static_cast<uint32_t>(ZX_OK))
+    ASSERT_EQ(breakpoint_reply.status, ZX_OK)
         << "Received: " << debug_ipc::ZxStatusToString(breakpoint_reply.status);
 
     // Resume the process now that the breakpoint is installed.

@@ -154,8 +154,7 @@ void ProcessImpl::WriteMemory(uint64_t address, std::vector<uint8_t> data,
           callback(err);
         } else if (reply.status != 0) {
           // Convert bad reply to error.
-          callback(Err("Unable to write memory to 0x%" PRIx64 ", error %" PRId64
-                       ".",
+          callback(Err("Unable to write memory to 0x%" PRIx64 ", error %d.",
                        address, reply.status));
         } else {
           // Success.

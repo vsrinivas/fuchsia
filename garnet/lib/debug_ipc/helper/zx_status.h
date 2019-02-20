@@ -10,7 +10,6 @@
 
 namespace debug_ipc {
 
-const char* ZxStatusToString(uint32_t status);
+const char* ZxStatusToString(zx_status_t status);
 
 }  // namespace debug_ipc
-

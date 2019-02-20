@@ -63,7 +63,8 @@ class TargetImpl : public Target {
                                          uint64_t koid, uint32_t status,
                                          const std::string& process_name);
   void OnLaunchOrAttachReply(Callback callback, const Err& err, uint64_t koid,
-                             uint32_t status, const std::string& process_name);
+                             debug_ipc::zx_status_t status,
+                             const std::string& process_name);
 
   void OnKillOrDetachReply(const Err& err, uint32_t status, Callback callback);
 

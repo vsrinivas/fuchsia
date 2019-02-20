@@ -220,7 +220,8 @@ void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
 }
 
 void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err,
-                                       uint64_t koid, uint32_t status,
+                                       uint64_t koid,
+                                       debug_ipc::zx_status_t status,
                                        const std::string& process_name) {
   FXL_DCHECK(state_ == State::kAttaching || state_ == State::kStarting);
   FXL_DCHECK(!process_.get());  // Shouldn't have a process.

@@ -9,7 +9,10 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 4;
+// As defined in zircon/types.h
+using zx_status_t = int32_t;
+
+constexpr uint32_t kProtocolVersion = 5;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -107,7 +110,7 @@ struct LaunchReply {
   // process or a component.
   InferiorType inferior_type;
 
-  uint32_t status = 0;  // zx_status_t value from launch, ZX_OK on success.
+  zx_status_t status = 0;  // zx_status_t value from launch, ZX_OK on success.
   uint64_t process_koid = 0;
   std::string process_name;
 };
@@ -116,7 +119,7 @@ struct KillRequest {
   uint64_t process_koid = 0;
 };
 struct KillReply {
-  uint32_t status = 0;
+  zx_status_t status = 0;
 };
 
 // The debug agent will follow a successful AttachReply with notifications for
@@ -130,7 +133,7 @@ struct AttachRequest {
 
 struct AttachReply {
   uint64_t koid = 0;
-  uint32_t status = 0;  // zx_status_t value from attaching. ZX_OK on success.
+  zx_status_t status = 0;  // zx_status_t value from attaching. ZX_OK on success.
   std::string name;
 };
 
@@ -141,7 +144,7 @@ struct DetachRequest {
   uint64_t koid = 0;
 };
 struct DetachReply {
-  uint32_t status = 0;
+  zx_status_t status = 0;
 };
 
 struct PauseRequest {
@@ -218,7 +221,7 @@ struct AddOrChangeBreakpointReply {
   // remove them all just because one failed). Therefore, you can't
   // definitively say the breakpoint is invalid just because it has a failure
   // code here. If necessary, we can add more information in the failure.
-  uint32_t status = 0;  // zx_status_t
+  zx_status_t status = 0;
 };
 
 struct RemoveBreakpointRequest {
@@ -276,7 +279,7 @@ struct JobFilterRequest {
 };
 
 struct JobFilterReply {
-  uint32_t status = 0;  // zx_status for filter request
+  zx_status_t status = 0;  // zx_status for filter request
 };
 
 struct WriteMemoryRequest {
@@ -286,7 +289,7 @@ struct WriteMemoryRequest {
 };
 
 struct WriteMemoryReply {
-  uint64_t status = 0;  // zx_status_t
+  zx_status_t status = 0;
 };
 
 // ReadRegisters ---------------------------------------------------------------
@@ -311,7 +314,7 @@ struct WriteRegistersRequest {
 };
 
 struct WriteRegistersReply {
-  uint64_t status = 0;  // zx_status_t.
+  zx_status_t status = 0;
 };
 
 // Notifications ---------------------------------------------------------------

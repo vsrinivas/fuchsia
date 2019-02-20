@@ -102,7 +102,7 @@ TEST(ElfSymbol, Lookup) {
     launch_request.inferior_type = debug_ipc::InferiorType::kBinary;
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
-    ASSERT_EQ(launch_reply.status, static_cast<uint32_t>(ZX_OK))
+    ASSERT_EQ(launch_reply.status, ZX_OK)
         << "Expected ZX_OK, Got: "
         << debug_ipc::ZxStatusToString(launch_reply.status);
 

@@ -9,7 +9,7 @@
 
 namespace debug_ipc {
 
-const char* ZxStatusToString(uint32_t status) {
+const char* ZxStatusToString(zx_status_t status) {
   switch (status) {
     case kZxOK:
       return "ZX_OK";
