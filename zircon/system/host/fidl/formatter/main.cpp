@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
     std::vector<std::string> args(argv, argv + argc);
     bool in_place = false;
     bool remove_ordinals = false;
-    int pos = 1;
+    size_t pos = 1;
     // Process options
     while (pos < args.size() && args[pos] != "--" && args[pos].find("-") == 0) {
         if (args[pos] == "-i" || args[pos] == "--in-place") {
