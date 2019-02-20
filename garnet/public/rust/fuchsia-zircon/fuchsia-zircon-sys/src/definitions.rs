@@ -234,15 +234,15 @@ extern {
     pub fn zx_thread_create(
         process: zx_handle_t,
         name: *const u8,
-        name_len: usize,
+        name_size: usize,
         options: u32,
         out: *mut zx_handle_t
         ) -> zx_status_t;
 
     pub fn zx_thread_start(
         handle: zx_handle_t,
-        thread_entry: usize,
-        stack: usize,
+        thread_entry: zx_vaddr_t,
+        stack: zx_vaddr_t,
         arg1: usize,
         arg2: usize
         ) -> zx_status_t;
@@ -251,8 +251,7 @@ extern {
         handle: zx_handle_t,
         kind: u32,
         buffer: *mut u8,
-        len: usize,
-        actual: *mut u64
+        buffer_size: usize
         ) -> zx_status_t;
 
     pub fn zx_thread_write_state(
@@ -280,25 +279,25 @@ extern {
         ) -> zx_status_t;
 
     pub fn zx_process_start(
-        process_handle: zx_handle_t,
-        thread_handle: zx_handle_t,
-        entry: usize,
-        stack: usize,
-        arg_handle: zx_handle_t,
+        handle: zx_handle_t,
+        thread: zx_handle_t,
+        entry: zx_vaddr_t,
+        stack: zx_vaddr_t,
+        arg1: zx_handle_t,
         arg2: usize
         ) -> zx_status_t;
 
     pub fn zx_process_read_memory(
-        proc_: zx_handle_t,
-        vaddr: usize,
+        handle: zx_handle_t,
+        vaddr: zx_vaddr_t,
         buffer: *mut u8,
         buffer_size: usize,
         actual: *mut usize
         ) -> zx_status_t;
 
     pub fn zx_process_write_memory(
-        proc_: zx_handle_t,
-        vaddr: usize,
+        handle: zx_handle_t,
+        vaddr: zx_vaddr_t,
         buffer: *const u8,
         buffer_size: usize,
         actual: *mut usize
@@ -328,7 +327,19 @@ extern {
         ) -> zx_status_t;
 
     pub fn zx_task_suspend(
-        task_handle: zx_handle_t
+        handle: zx_handle_t,
+        token: *mut zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_task_suspend_token(
+        handle: zx_handle_t,
+        token: *mut zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_task_resume_from_exception(
+        handle: zx_handle_t,
+        port: zx_handle_t,
+        options: u32
         ) -> zx_status_t;
 
     pub fn zx_task_kill(
