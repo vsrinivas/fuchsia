@@ -21,6 +21,16 @@
 char kDot[2] = ".";
 char kDotDot[3] = "..";
 
+namespace {
+template <class T> uint32_t ToU32(T in) {
+    if (in > std::numeric_limits<uint32_t>::max()) {
+        fprintf(stderr, "out of range %" PRIu64 "\n", in);
+        exit(-1);
+    }
+    return static_cast<uint32_t>(in);
+}
+} // namespace
+
 // Returns the string version of |mode|.
 static const char* GetModeString(uint32_t mode) {
     switch (mode & S_IFMT) {
@@ -114,7 +124,7 @@ zx_status_t CopyFile(const char* src_path, const char* dst_path) {
         }
     }
 done:
-    return r;
+    return r == 0 ? ZX_OK : ZX_ERR_IO;
 }
 
 // Attempts to make the directory at |path|.
@@ -310,12 +320,12 @@ zx_status_t MinfsCreator::CalculateRequiredSize(off_t* out) {
     // This is a rough estimate of how many directory data blocks will be needed.
     // This is not super robust and will not hold up if directories start requiring indirect blocks,
     // but for our current purposes it should be sufficient.
-    uint32_t dir_blocks = dir_count + (dir_bytes_ / minfs::kMinfsBlockSize);
+    uint32_t dir_blocks = ToU32(dir_count + (dir_bytes_ / minfs::kMinfsBlockSize));
 
     minfs::Superblock info;
     info.flags = 0;
     info.inode_count = minfs::kMinfsDefaultInodeCount;
-    info.block_count = data_blocks_ + dir_blocks;
+    info.block_count = ToU32(data_blocks_ + dir_blocks);
 
     // Calculate number of blocks we will need for all minfs structures.
     uint32_t inode_bitmap_blocks = (info.inode_count + minfs::kMinfsBlockBits - 1)
@@ -577,12 +587,17 @@ void MinfsCreator::ProcessDirectoryEntry(char* path) {
     }
     char* last_slash = strrchr(path, '/');
     last_slash = last_slash == nullptr ? path : last_slash + 1;
-    dir_bytes_ += minfs::DirentSize(strlen(last_slash));
+    size_t component_length = strlen(last_slash);
+    if (component_length > std::numeric_limits<uint8_t>::max()) {
+        fprintf(stderr, "component too long");
+        exit(-1);
+    }
+    dir_bytes_ += minfs::DirentSize(static_cast<uint8_t>(component_length));
 }
 
 zx_status_t MinfsCreator::ProcessBlocks(off_t file_size) {
     uint64_t total_blocks = 0;
-    uint32_t remaining = (file_size + minfs::kMinfsBlockSize - 1) / minfs::kMinfsBlockSize;
+    uint32_t remaining = ToU32((file_size + minfs::kMinfsBlockSize - 1) / minfs::kMinfsBlockSize);
 
     // Add direct blocks to the total.
     uint32_t direct_blocks = fbl::min(remaining, minfs::kMinfsDirect);
