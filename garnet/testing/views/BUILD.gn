@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("views") {
+  testonly = true
+
+  sources = [
+    "background_view.cc",
+    "background_view.h",
+    "color.cc",
+    "color.h",
+    "coordinate_test_view.cc",
+    "coordinate_test_view.h",
+    "embedder_view.cc",
+    "embedder_view.h",
+    "rotated_square_view.cc",
+    "rotated_square_view.h",
+    "test_view.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//garnet/public/lib/ui/scenic/cpp",
+    "//sdk/fidl/fuchsia.ui.scenic",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/gfx/cpp",
+  ]
+}
