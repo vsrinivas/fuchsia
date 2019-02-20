@@ -84,7 +84,7 @@ use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
 use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus, MacAddress};
 use fidl_fuchsia_net as fidl_net;
-use fidl_fuchsia_net::SocketProviderRequest;
+use fidl_fuchsia_net::{SocketProviderRequest, SocketControlRequest};
 use fidl_fuchsia_net_ext as fidl_net_ext;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_net_stack::{
@@ -202,6 +202,8 @@ pub enum Event {
     FidlStackEvent(StackRequest),
     /// A request from the fuchsia.net.SocketProvider FIDL interface.
     FidlSocketProviderEvent(SocketProviderRequest),
+    /// A request from the fuchsia.net.SocketControl FIDL interface.
+    FidlSocketControlEvent(SocketControlRequest),
     /// An event from an ethernet interface. Either a status change or a frame.
     EthEvent((DeviceId, eth::Event)),
     /// An indication that an ethernet device is ready to be used.
@@ -252,6 +254,9 @@ impl EventLoop {
                 Some(Event::FidlSocketProviderEvent(req)) => {
                     await!(self.handle_fidl_socket_provider_request(req));
                 }
+                Some(Event::FidlSocketControlEvent(req)) => {
+                    await!(self.handle_fidl_socket_control_request(req));
+                }
                 Some(Event::EthEvent((id, eth::Event::StatusChanged))) => {
                     info!("device {:?} status changed", id.id());
                     // We need to call get_status even if we don't use the output, since calling it
@@ -293,6 +298,21 @@ impl EventLoop {
             SocketProviderRequest::GetAddrInfo { node, service, hints, responder } => {
                 // TODO(wesleyac)
             }
+        }
+    }
+
+    async fn handle_fidl_socket_control_request(&mut self, req: SocketControlRequest) {
+        match req {
+            SocketControlRequest::Close { responder } => {}
+            SocketControlRequest::Ioctl { req, in_, responder } => {}
+            SocketControlRequest::Connect { addr, responder } => {}
+            SocketControlRequest::Accept { flags, responder } => {}
+            SocketControlRequest::Bind { addr, responder } => {}
+            SocketControlRequest::Listen { backlog, responder } => {}
+            SocketControlRequest::GetSockName { responder } => {}
+            SocketControlRequest::GetPeerName { responder } => {}
+            SocketControlRequest::SetSockOpt { level, optname, optval, responder } => {}
+            SocketControlRequest::GetSockOpt { level, optname, responder } => {}
         }
     }
 
