@@ -476,10 +476,15 @@ zx_status_t PersistentStorage::Extend(WriteTxn* txn, WriteData data, GrowMapCall
 
 void PersistentStorage::PersistRange(WriteTxn* txn, WriteData data, size_t index, size_t count) {
     ZX_DEBUG_ASSERT(txn != nullptr);
-    blk_t rel_block = static_cast<blk_t>(index) / kMinfsBlockBits;
-    blk_t abs_block = metadata_.MetadataStartBlock() + rel_block;
-    blk_t blk_count = BitmapBlocksForSize(count);
-    txn->Enqueue(data, rel_block, abs_block, blk_count);
+    // Determine the blocks containing the first and last indices.
+    blk_t first_rel_block = static_cast<blk_t>(index / kMinfsBlockBits);
+    blk_t last_rel_block = static_cast<blk_t>((index + count - 1) / kMinfsBlockBits);
+
+    // Calculate number of blocks based on the first and last blocks touched.
+    blk_t block_count = last_rel_block - first_rel_block + 1;
+
+    blk_t abs_block = metadata_.MetadataStartBlock() + first_rel_block;
+    txn->Enqueue(data, first_rel_block, abs_block, block_count);
 }
 
 void PersistentStorage::PersistAllocate(WriteTxn* txn, size_t count) {

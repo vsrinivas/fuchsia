@@ -334,5 +334,21 @@ TEST(AllocatorTest, AllocateSwap) {
     ASSERT_NO_FATAL_FAILURES(PerformFree(allocator.get(), indices));
 }
 
+TEST(AllocatorTest, PersistRange) {
+    // Create PersistentStorage with bogus attributes - valid storage is unnecessary for this test.
+    AllocatorFvmMetadata fvm_metadata;
+    AllocatorMetadata metadata(0, 0, false, std::move(fvm_metadata), 0, 0);
+    PersistentStorage storage(nullptr, nullptr, kMinfsBlockSize, nullptr, std::move(metadata));
+    WriteTxn txn(nullptr);
+    ASSERT_EQ(txn.BlockCount(), 0);
+
+    // Add a transaction which crosses the boundary between two blocks within the storage bitmap.
+    storage.PersistRange(&txn, 1, kMinfsBlockBits - 1, 2);
+
+    // Check that two distinct blocks have been added to the txn.
+    ASSERT_EQ(txn.BlockCount(), 2);
+    txn.Cancel();
+}
+
 } // namespace
 } // namespace minfs
