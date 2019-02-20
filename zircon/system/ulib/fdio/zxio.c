@@ -387,7 +387,6 @@ static fdio_ops_t fdio_zxio_remote_ops = {
     .shutdown = fdio_default_shutdown,
 };
 
-__EXPORT
 fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event) {
     fdio_t* io = fdio_alloc(&fdio_zxio_remote_ops);
     if (io == NULL) {
@@ -767,7 +766,6 @@ fail:
 
 // Debuglog --------------------------------------------------------------------
 
-__EXPORT
 fdio_t* fdio_logger_create(zx_handle_t handle) {
     zxio_storage_t* storage = NULL;
     fdio_t* io = fdio_zxio_create(&storage);
