@@ -3,6 +3,70 @@
 This document describes various high-level design concepts employed in
 `recovery_netstack`.
 
+## Control Flow
+
+Control flow in the netstack is event-driven. The netstack runs in a single
+thread, which runs the event loop. The event loop blocks waiting for an event.
+When an event occurs, control passes to the code responsible for processing that
+event. That code is responsible for processing the event in its entirety,
+including updating any state and emitting any other events in response to the
+incoming event.
+
+There are three types of events in the system:
+- Incoming packets from the network
+- Incoming requests from local application clients (open new connection, read on
+  an existing connection, etc)
+- Timers firing (a timer fire event may include associated data, the type of the
+  timer (e.g. "TCP ACK timeout"), etc)
+
+The netstack may emit three types of events:
+- Outgoing packets to the network
+- Responses to requests from local application clients (return newly-created
+  connection, return data for a read request on an existing connection, etc)
+- Installing timers
+
+Once an event has been fully processed, the code responsible for its processing
+returns, and the event loop goes back to blocking for a future event.
+
+Consider the following example of an event being handled:
+1. The netstack receives an Ethernet frame from the Ethernet driver. This causes
+   the event loop to become unblocked.
+2. The event loop executes the function responsible for processing incoming
+   Ethernet frames.
+3. This function parses the frame, and discovers that it contains an IPv4
+   packet. It passes control to the function responsible for processing incoming
+   IPv4 packets.
+4. This function parses the packet, and discovers that it contains a TCP
+   segment. It passes control to the function responsible for processing
+   incoming TCP segments.
+5. This function parses the segment, and discovers that it is a SYN from a
+   remote host attempting to initiate a new TCP connection. It finds the
+   appropriate local TCP listener, and creates a new TCP connection object to
+   track the new connection. It emits the following events:
+   - It sends a SYN/ACK segment back to the sender of the SYN segment.
+   - It sends a message to the local application client which created the TCP
+     listener to inform it that there's a new connection.
+   - It installs a timer which will fire if the remote side doesn't respond with
+     an ACK within a certain period of time.
+6. This function is done, so it returns. None of the parent functions (the one
+   for processing incoming IPv4 packets or the one for processing incoming
+   Ethernet frames) have any more work to do, so they return as well.
+7. The event loop returns to its steady state of waiting for further events to
+   process.
+
+This control flow design has a number of advantages:
+- Since it is entirely single-threaded, there's no need for synchronization
+  of any common data structures.
+- Since each event results in a single function call, the flow of control
+  within the core of the netstack is easy to follow, and follows normal
+  function call flow. There's no indirect flow, for example in the form
+  of scheduling and later executing callbacks or other event processing.
+- Since data is never shared between threads, the design is quite
+  cache-friendly.
+
+Of course, being single-threaded has its downsides as well. For a discussion of
+those, see [`IMPROVEMENTS.md`](./IMPROVEMENTS.md#single-threaded-execution).
+
 ## Packet Buffers
 
 The design of parsing and serialization is organized around the principle of
@@ -11,44 +75,61 @@ zero copy. Whenever a packet is parsed, the resulting packet object (such as
 from, and so parsing involves no copying of memory. This allows for a number of
 desirable design patterns.
 
+*Most of the design patterns relating to buffers are enabled by utilities
+provided by the `packet` crate. See its documentation
+[here](https://fuchsia-docs.firebaseapp.com/rust/packet/index.html).*
+
 ### Packet Buffer Reuse
 
 Since packet objects are merely views into an existing buffer, when they are
 dropped, the original buffer can be modified directly again. This allows buffers
-to be reused once the data inside of them is no longer needed. For example,
-consider this hypothetical control flow in response to receiving an Ethernet
-frame:
+to be reused once the data inside of them is no longer needed. To accomplish
+this, we use the `packet` crate's `ParseBuffer` trait, which is a buffer that
+can keep track of which bytes have already been consumed by parsing, and which
+are yet to be parsed. The bytes which have not yet been parsed are called the
+"body", and the bytes preceding and following the body are called the "prefix"
+and the "suffix."
+
+In order to demonstrate how we use buffers in the netstack, consider this
+hypothetical control flow in response to receiving an Ethernet frame:
 
 1. The Ethernet layer receives a buffer containing an Ethernet frame. It parses
    the buffer as an Ethernet frame. The EtherType indicates that the
    encapsulated payload is an IPv4 packet, so the payload is delivered to the IP
    layer for further processing. Note that the *entire* original buffer is
-   delivered to the IP layer along with the range of bytes which corresponds to
-   the IP packet itself.
+   delivered to the IP layer. However, since the Ethernet header has already
+   been parsed from the buffer, the buffer's body contains only the bytes of the
+   IP packet itself.
 2. The IP layer parses the payload as an IPv4 packet. The IP protocol number
    indicates that the encapsulated payload is a TCP segment, so the payload is
    delivered to the TCP layer for further processing. Again, the entire original
-   buffer is delivered to the TCP layer along with the range of bytes
-   corresponding to the TCP segment itself.
+   buffer is delivered to the TCP layer, with the body now equal to the bytes of
+   the TCP segment.
 3. The TCP layer parses the payload as a TCP segment. It contains data which the
    TCP layer would like to acknowledge. Once the TCP layer has extracted all of
    the data that it needs out of the segment, it drops the segment (the
    `TcpSegment` object, which itself borrowed the buffer), regaining direct
-   mutable access to the original buffer. Since the entire buffer - not just the
-   sub-set of the buffer containing the payload - has been passed up the stack,
-   the TCP stack still has access to the entire buffer. It figures out how much
-   space must be left at the beginning of the buffer for all lower-layer headers
-   (in this case, IPv4 and Ethernet), and serializes a TCP Ack segment at the
-   appropriate offset into the buffer.
-4. The TCP layer passes the buffer to the IP layer, indicating the range within
-   the buffer corresponding to the TCP segment that it has just serialized. The
-   IP layer treats this range as the body for its IP packet. It serializes the
-   appropriate IP header just preceding the already-written body.
-5. The IP layer passes the buffer to the Ethernet layer, indicating the range
-   within the buffer corresponding to the IP packet that it has just serialized.
-   The Ethernet layer treats this range as the body for its Ethernet frame. It
-   serializes the appropriate Ethernet header, and passes the layer to the
-   Ethernet driver to be written to the appropriate network device.
+   mutable access to the original buffer. Since the buffer has access to the
+   now-parsed prefix and suffix in addition to the body, the TCP stack can now
+   use the entire buffer for serializing. It figures out how much space must be
+   left at the beginning of the buffer for all lower-layer headers (in this
+   case, IPv4 and Ethernet), and serializes a TCP Ack segment at the appropriate
+   offset into the buffer. Now that the buffer is being used for serialization
+   (rather than parsing), the body indicates the range of bytes which have been
+   serialized so far, and the prefix and suffix represent empty space which can
+   be used by lower layers to serialize their headers and footers.
+4. The TCP layer passes the buffer to the IP layer, with the body equal to the
+   bytes of the TCP segment that has just been serialized. The IP layer treats
+   this as the body for its IP packet. It serializes the appropriate IP header
+   into the buffer's prefix, just preceding the body. It expands the body to
+   include the now-serialized header, leaving the body equal to the bytes of the
+   entire IP packet.
+5. The IP layer passes the buffer to the Ethernet layer, with the body now
+   corresponding to the IP packet that it has just serialized. The Ethernet
+   layer treats this as the body for its Ethernet frame. It serializes the
+   appropriate Ethernet header, expands the body to include the bytes of the
+   entire Ethernet frame, and passes the buffer to the Ethernet driver to be
+   written to the appropriate network device.
 
 Note that, in this entire control flow, only a single buffer is ever used,
 although it is at times used for different purposes. If, in step 3, the TCP
@@ -73,38 +154,39 @@ Ethernet has a minimum body requirement, and so there must also be enough bytes
 following the IPv4 packet to be used as padding in order to meet this minimum in
 case the IPv4 packet itself is not sufficiently large.
 
-In `recovery_netstack`, the canonical way to convey this information is through
-a `SerializationRequest`. A `SerializationRequest` represents a request to
-serialize a packet. `SerializationRequest`s may be nested, which results in a
-request to serialize a sequence of encapsulated packets. When a sequence of
-nested `SerializationRequest`s is fulfilled, the header, footer, and minimum
-body size requirements are computed starting with the outermost packet and
-working in. Once the innermost request is reached, it is that request's
-responsibility to provide a buffer:
+To accomplish this, we use the `packet` crate's `Serializer` trait. A
+`Serializer` represents the metadata needed to serialize a request in the
+future. `Serializer`s may be nested, which results in a `Serializer` describing
+a sequence of encapsulated packets to be serialized, each being used as the body
+of an encapsulating packet. When a sequence of nested `Serializer`s is
+processed, the header, footer, and minimum body size requirements are computed
+starting with the outermost packet and working in. Once the innermost
+`Serializer` is reached, it is that `Serializer`'s responsibility to provide a
+buffer:
 - The buffer must contain the body to be encapsulated in the next layer. The
-  buffer is a `BufferAndRange` type, and the range identifies the bytes of the
-  buffer to be encapsulated.
+  buffer implements the `BufferMut` trait (a superset of the functionality
+  required by the `ParseBuffer` trait mentioned above), and the buffer's body
+  indicates the bytes to be encapsulated by the next layer.
 - The buffer must satisfy the header, footer, and minimum body size requirements
-  by providing enough room before and after the body range.
+  by providing enough prefix and suffix bytes before and after the body.
 
-Once the innermost request has produced its buffer, each subsequent packet
-serializes its headers and footers, expands the buffer's range to identify the
+Once the innermost `Serializer` has produced its buffer, each subsequent packet
+serializes its headers and footers, expands the buffer's body to contain the
 whole packet as the body to be encapsulated in the next layer, and returns the
 buffer to be handled by the next layer.
 
-When control finally makes its way to a layer of the stack that has a minimimum
-body length requirement, that layer is responsible for consuming any bytes
-following the range for use as padding (and zeroing those bytes for security).
-This logic is handled by `EncapsulatingSerializationRequest`'s implementation of
-`serialize`.
+When control makes its way to a layer of the stack that has a minimimum body
+length requirement, that layer is responsible for consuming any bytes following
+the range for use as padding (and zeroing those bytes for security). This logic
+is handled by `EncapsulatingSerializer`'s implementation of `serialize`.
 
-`SerializationRequest` is implemented by a number of different types, allowing
-for a range of serialization scenarios including:
+`Serializer` is implemented by a number of different types, allowing for a range
+of serialization scenarios including:
 - Serializing a new packet in a buffer which previously stored an incoming
   packet.
 - Forwarding a packet by shrinking the incoming buffer's range to the body of
   the packet to be serialized, and then passing that buffer back down the stack
-  of `SerializationRequest`s.
+  of `Serializer`s.
 
 ### In-Place Packet Modification
 
@@ -134,12 +216,13 @@ initialized. In order to prevent this:
 
 A special case of these requirements is post-body padding. For packet formats
 with minimum body size requirements, upper layers will provide extra buffer
-bytes beyond the end of the body. These bytes are outside of the range used by
-the `BufferAndRange` to indicate the body to be encapsulated, but are allocated.
+bytes beyond the end of the body. In the `BufferMut` used to store packets
+during serialization, these padding bytes are in the "suffix" just following the
+buffer's body.
 
-The logic for adding padding is provided by `EncapsulatingSerializationRequest`,
-described in the *Prefix, Suffix, and Padding* section above.
-`EncapsulatingSerializationRequest` ensures that these padding bytes are zeroed.
+The logic for adding padding is provided by `EncapsulatingSerializer`, described
+in the *Prefix, Suffix, and Padding* section above. `EncapsulatingSerializer`
+ensures that these padding bytes are zeroed.
 
 *See also: the `_zeroed` constructors of the `zerocopy::LayoutVerified` type*
 
@@ -222,64 +305,3 @@ the concrete types - `Ipv4Addr` or `Ipv6Addr` - that the function is
 instantiated with. Finally, the blocks associated with these labels become the
 function bodies, and so must return, in this case, `Option<Ipv4Addr>` or
 `Option<Ipv6Addr>` respectively.
-
-## Control Flow
-
-Control flow in the netstack is event-driven. The netstack runs in a single
-thread, which runs the event loop. The event loop blocks waiting for an event.
-When an event occurs, control passes to the code responsible for processing that
-event. That code is responsible for processing the event in its entirety,
-including updating any state and emitting any other events in response to the
-incoming event.
-
-There are three types of events in the system:
-- Incoming packets from the network
-- Incoming requests from local application clients (open new connection, read on
-  an existing connection, etc)
-- Timers firing (a timer fire event may include associated data, the type of the
-  timer (e.g. "TCP ACK timeout"), etc)
-
-The netstack may emit three types of events:
-- Outgoing packets to the network
-- Responses to requests from local application clients (return newly-created
-  connection, return data for a read request on an existing connection, etc)
-- Installing timers
-
-Once an event has been fully processed, the code responsible for its processing
-returns, and the event loop goes back to blocking for a future event.
-
-Consider the following example of an event being handled:
-1. The netstack receives an Ethernet frame from the Ethernet driver. This causes
-   the event loop to become unblocked.
-2. The event loop executes the function responsible for processing incoming
-   Ethernet frames.
-3. This function parses the frame, and discovers that it contains an IPv4
-   packet. It passes control to the function responsible for processing incoming
-   IPv4 packets.
-4. This function parses the packet, and discovers that it contains a TCP
-   segment. It passes control to the function responsible for processing
-   incoming TCP segments.
-5. This function parses the segment, and discovers that it is a SYN from a
-   remote host attempting to initiate a new TCP connection. It finds the
-   appropriate local TCP listener, and creates a new TCP connection object to
-   track the new connection. It emits the following events:
-   - It sends a SYN/ACK segment back to the sender of the SYN segment.
-   - It sends a message to the local application client which created the TCP
-     listener to inform it that there's a new connection.
-   - It installs a timer which will fire if the remote side doesn't respond with
-     an ACK within a certain period of time.
-6. This function is done, so it returns. None of the parent functions (the one
-   for processing incoming IPv4 packets or the one for processing incoming
-   Ethernet frames) have any more work to do, so they return as well.
-7. The event loop returns to its steady state of waiting for further events to
-   process.
-
-This control flow design has a number of advantages:
-- Since it is entirely single-threaded, there's no need for synchronization
-  of any common data structures.
-- Since each event results in a single function call, the flow of control
-  within the core of the netstack is easy to follow, and follows normal
-  function call flow. There's no indirect flow, for example in the form
-  of scheduling and later executing callbacks or other event processing.
-- Since data is never shared between threads, the design is quite
-  cache-friendly.
