@@ -9,6 +9,10 @@
 #include <fbl/string_printf.h>
 #include <perftest/perftest.h>
 
+// These tests are very slow under ASAN under ARM64 KVM-QEMU, so disable
+// them under ASAN in general (ZX-3384).
+#if !__has_feature(address_sanitizer)
+
 namespace {
 
 constexpr size_t kCacheSizeMB =
@@ -107,3 +111,5 @@ void RegisterTests() {
 PERFTEST_CTOR(RegisterTests);
 
 }  // namespace
+
+#endif

@@ -10,7 +10,4 @@ disabled_for_asan = [
 
   # MTWN-236
   "/pkgfs/packages/use_aac_decoder_test/0/test/use_aac_decoder_test",
-
-  # ZX-3384
-  "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks",
 ]
