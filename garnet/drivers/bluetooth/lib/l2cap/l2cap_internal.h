@@ -56,7 +56,7 @@ struct EnhancedControlField {
 
   uint8_t request_seq_num() const {
     // See Vol 3, Part A, Table 3.2.
-    return (le16toh(raw_value) >> 8) & 0b111111;
+    return (le16toh(raw_value) >> 8) & 0b11'1111;
   }
 
   void set_request_seq_num(uint8_t seq_num) {
@@ -83,7 +83,7 @@ using ExtendedControlField = uint32_t;
 struct SimpleInformationFrameHeader : public EnhancedControlField {
   uint8_t tx_seq() const {
     ZX_DEBUG_ASSERT(!designates_supervisory_frame());
-    return (le16toh(raw_value) & (0b01111110)) >> 1;
+    return (le16toh(raw_value) & (0b0111'1110)) >> 1;
   }
 } __PACKED;
 
