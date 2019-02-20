@@ -105,6 +105,7 @@ void UserControllerImpl::Logout(LogoutCallback done) {
     for (auto& watcher : user_watchers_.ptrs()) {
       (*watcher)->OnLogout();
     }
+
     done_(this);
   });
 }

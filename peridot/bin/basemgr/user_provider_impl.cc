@@ -169,10 +169,6 @@ void UserProviderImpl::Teardown(const std::function<void()>& callback) {
 
   for (auto& it : user_controllers_) {
     auto cont = [this, ptr = it.first, callback] {
-      // This is okay because during teardown, |cont| is never invoked
-      // asynchronously.
-      user_controllers_.erase(ptr);
-
       if (!user_controllers_.empty()) {
         // Not the last callback.
         return;
