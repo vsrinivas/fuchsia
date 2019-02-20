@@ -211,8 +211,13 @@ static zx_status_t DoThreads(const WalkContext* ctx, zx_handle_t process_h,
     zx_handle_t thread_h;
     zx_koid_t tid = koids.Get(i);
     status = GetChild(process_h, pid, tid, &thread_h);
-    if (status != ZX_OK) {
+    if (status == ZX_ERR_NOT_FOUND) {
+      // Thread died.
       continue;
+    }
+    if (status != ZX_OK) {
+      // Other errors shouldn't happen.
+      return status;
     }
 
     zx::thread thread(thread_h);
@@ -241,8 +246,13 @@ static zx_status_t DoProcesses(const WalkContext* ctx, zx_handle_t job_h,
     zx_handle_t process_h;
     zx_koid_t pid = koids.Get(i);
     status = GetChild(job_h, jid, pid, &process_h);
-    if (status != ZX_OK) {
+    if (status == ZX_ERR_NOT_FOUND) {
+      // Process died.
       continue;
+    }
+    if (status != ZX_OK) {
+      // Other errors shouldn't happen.
+      return status;
     }
 
     zx::process process(process_h);
@@ -328,7 +338,12 @@ static zx_status_t WalkJobTreeInternal(JobKoidTableStack* stack,
       auto jid = stack_entry.PopNext();
       zx_handle_t job_h;
       auto status = GetChild(parent_job_h, parent_jid, jid, &job_h);
+      if (status == ZX_ERR_NOT_FOUND) {
+        // Job is gone.
+        continue;
+      }
       if (status != ZX_OK) {
+        // Other errors shouldn't happen.
         return status;
       }
 
