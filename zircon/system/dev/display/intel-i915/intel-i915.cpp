@@ -1653,8 +1653,42 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
     fuchsia_sysmem_ImageFormatConstraints& image_constraints =
         constraints.image_format_constraints[0];
 
-    // For now only support linear tiling.
     image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
+    switch (config->type) {
+    case IMAGE_TYPE_SIMPLE:
+        image_constraints.bytes_per_row_divisor = 64;
+        image_constraints.start_offset_divisor = 64;
+        break;
+
+    case IMAGE_TYPE_X_TILED:
+        image_constraints.pixel_format.has_format_modifier = true;
+        image_constraints.pixel_format.format_modifier.value =
+            fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED;
+        image_constraints.start_offset_divisor = 4096;
+        image_constraints.bytes_per_row_divisor = 1; // Not meaningful
+        break;
+
+    case IMAGE_TYPE_Y_LEGACY_TILED:
+        image_constraints.pixel_format.has_format_modifier = true;
+        image_constraints.pixel_format.format_modifier.value =
+            fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED;
+        image_constraints.start_offset_divisor = 4096;
+        image_constraints.bytes_per_row_divisor = 1; // Not meaningful
+        break;
+
+    case IMAGE_TYPE_YF_TILED:
+        image_constraints.pixel_format.has_format_modifier = true;
+        image_constraints.pixel_format.format_modifier.value =
+            fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED;
+        image_constraints.start_offset_divisor = 4096;
+        image_constraints.bytes_per_row_divisor = 1; // Not meaningful
+        break;
+
+    default:
+        LOG_ERROR("Invalid image type: %d\n", config->type);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     image_constraints.color_spaces_count = 1;
     image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
     image_constraints.min_coded_width = 0;
@@ -1667,8 +1701,6 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
     image_constraints.layers = 1;
     image_constraints.coded_width_divisor = 1;
     image_constraints.coded_height_divisor = 1;
-    image_constraints.bytes_per_row_divisor = 64;
-    image_constraints.start_offset_divisor = 64;
     image_constraints.display_width_divisor = 1;
     image_constraints.display_height_divisor = 1;
 

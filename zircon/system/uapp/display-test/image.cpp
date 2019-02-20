@@ -116,7 +116,7 @@ Image* Image::CreateWithSysmem(zx_handle_t dc_handle,
     constraints_msg.config.pixel_format = format;
     constraints_msg.config.height = height;
     constraints_msg.config.width = width;
-    if (USE_INTEL_Y_TILING) {
+    if (USE_INTEL_Y_TILING && !cursor) {
         constraints_msg.config.type = 2; // IMAGE_TYPE_Y_LEGACY
     } else {
         constraints_msg.config.type = IMAGE_TYPE_SIMPLE;
@@ -169,7 +169,7 @@ Image* Image::CreateWithSysmem(zx_handle_t dc_handle,
             .type = fuchsia_sysmem_ColorSpaceType_REC709,
         };
     }
-    if (USE_INTEL_Y_TILING) {
+    if (USE_INTEL_Y_TILING && !cursor) {
         image_constraints.pixel_format.has_format_modifier = true;
         image_constraints.pixel_format.format_modifier.value =
             fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED;

@@ -182,11 +182,11 @@ uint32_t ImageFormatStrideBytesPerWidthPixel(
 // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-skl-vol05-memory_views.pdf
 constexpr uint32_t kIntelTileByteSize = 4096;
 constexpr uint32_t kIntelYTilePixelWidth = 32;
-constexpr uint32_t kIntelYTileHeight = 4096 / kIntelYTilePixelWidth;
+constexpr uint32_t kIntelYTileHeight = 4096 / (kIntelYTilePixelWidth * 4);
 constexpr uint32_t kIntelXTilePixelWidth = 128;
-constexpr uint32_t kIntelXTileHeight = 4096 / kIntelXTilePixelWidth;
+constexpr uint32_t kIntelXTileHeight = 4096 / (kIntelXTilePixelWidth * 4);
 constexpr uint32_t kIntelYFTilePixelWidth = 32; // For a 4 byte per component format
-constexpr uint32_t kIntelYFTileHeight = 4096 / kIntelYFTilePixelWidth;
+constexpr uint32_t kIntelYFTileHeight = 4096 / (kIntelYFTilePixelWidth * 4);
 
 uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) {
     ZX_DEBUG_ASSERT(ImageFormatIsSupported(&image_format->pixel_format));
