@@ -118,12 +118,10 @@ class Harvester {
     std::shared_ptr<grpc::ClientReaderWriter<dockyard_proto::RawSample,
                                              dockyard_proto::EmptyMessage> >
         stream(stub_->SendSample(&context));
-    if (stream->Write(sample)) {
-      stream->WritesDone();
-      return grpc::Status::OK;
-    }
-    FXL_LOG(INFO) << "ERROR: stream->Write";
-    return grpc::Status::CANCELLED;
+
+    stream->Write(sample);
+    stream->WritesDone();
+    return stream->Finish();
   }
 
   grpc::Status GetStreamIdForName(dockyard::SampleStreamId* stream_id,
