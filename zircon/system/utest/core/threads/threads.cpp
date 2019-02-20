@@ -16,6 +16,8 @@
 #include <runtime/thread.h>
 #include <unittest/unittest.h>
 
+#include <lib/zx/vmo.h>
+
 #include "register-set.h"
 #include "thread-functions/thread-functions.h"
 
@@ -124,16 +126,17 @@ namespace {
 // and starting the thread - otherwise just use start_thread() for simplicity.
 class ThreadStarter {
 public:
-    bool CreateThread(zxr_thread_t* thread_out, zx_handle_t* thread_h) {
+    bool CreateThread(zxr_thread_t* thread_out, zx_handle_t* thread_h,
+                      bool start_suspended = false) {
         // TODO: Don't leak these when the thread dies.
-        zx_handle_t thread_stack_vmo = ZX_HANDLE_INVALID;
-        ASSERT_EQ(zx_vmo_create(kStackSize, 0, &thread_stack_vmo), ZX_OK);
-        ASSERT_NE(thread_stack_vmo, ZX_HANDLE_INVALID);
+        // If the thread should start suspended, give it a 0-size VMO for a stack so
+        // that it will crash if it gets to userspace.
+        ASSERT_EQ(zx::vmo::create(start_suspended ? 0 : kStackSize, 0, &stack_handle_), ZX_OK);
+        ASSERT_NE(stack_handle_.get(), ZX_HANDLE_INVALID);
 
         ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                              0, thread_stack_vmo, 0, kStackSize, &stack_),
+                              0, stack_handle_.get(), 0, kStackSize, &stack_),
                   ZX_OK);
-        ASSERT_EQ(zx_handle_close(thread_stack_vmo), ZX_OK);
 
         ASSERT_EQ(zxr_thread_create(zx_process_self(), "test_thread", false,
                                     thread_out),
@@ -149,6 +152,11 @@ public:
         return true;
     }
 
+    bool GrowStackVmo() {
+        ASSERT_EQ(stack_handle_.set_size(kStackSize), ZX_OK);
+        return true;
+    }
+
     bool StartThread(zxr_thread_entry_t entry, void* arg) {
         return zxr_thread_start(thread_, stack_, kStackSize, entry, arg) == ZX_OK;
     }
@@ -156,8 +164,10 @@ public:
 private:
     static constexpr size_t kStackSize = 256u << 10;
 
+    zx::vmo stack_handle_;
+
     uintptr_t stack_ = 0u;
-    zxr_thread_t* thread_;
+    zxr_thread_t* thread_ = nullptr;
 };
 
 } // namespace
@@ -821,7 +831,7 @@ static bool TestStartSuspendedThread() {
     zxr_thread_t thread;
     zx_handle_t thread_h;
     ThreadStarter starter;
-    ASSERT_TRUE(starter.CreateThread(&thread, &thread_h));
+    ASSERT_TRUE(starter.CreateThread(&thread, &thread_h, true));
 
     // Suspend first, then start the thread.
     zx_handle_t suspend_token = ZX_HANDLE_INVALID;
@@ -832,7 +842,9 @@ static bool TestStartSuspendedThread() {
 
     // Make sure the thread goes directly to suspended state without executing at all.
     ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, NULL), ZX_OK);
-    EXPECT_EQ(arg.v, 0);
+
+    // Once we know it's suspended, give it a real stack.
+    ASSERT_TRUE(starter.GrowStackVmo());
 
     // Make sure the thread still resumes properly.
     ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);

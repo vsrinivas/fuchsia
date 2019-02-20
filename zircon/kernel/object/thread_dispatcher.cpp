@@ -482,6 +482,9 @@ int ThreadDispatcher::StartRoutine(void* arg) {
         }
     }
 
+    // TODO(ZX-3489): Support reading the thread's registers if we're suspended here.
+    thread_process_pending_signals();
+
     LTRACEF("arch_enter_uspace SP: %#" PRIxPTR " PC: %#" PRIxPTR
             ", ARG1: %#" PRIxPTR ", ARG2: %#" PRIxPTR "\n",
             t->user_sp_, t->user_entry_, t->user_arg1_, t->user_arg2_);
