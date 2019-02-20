@@ -80,8 +80,6 @@ executable("debugserver-unittests") {
 }
 
 package("debugserver") {
-  deprecated_system_image = true
-
   deps = [
     ":bin",
   ]
@@ -89,6 +87,7 @@ package("debugserver") {
   binaries = [
     {
       name = "debugserver"
+      shell = true
     },
   ]
 }
