@@ -29,12 +29,18 @@
 
 namespace devmgr {
 
+struct BindContext {
+    fbl::RefPtr<zx_device_t> parent;
+    fbl::RefPtr<zx_device_t> child;
+};
+
 struct CreationContext {
     fbl::RefPtr<zx_device_t> parent;
     fbl::RefPtr<zx_device_t> child;
     zx::unowned_channel rpc;
 };
 
+void devhost_set_bind_context(BindContext* ctx);
 void devhost_set_creation_context(CreationContext* ctx);
 
 } // namespace devmgr
@@ -78,11 +84,11 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
 
     zx_status_t InitOp() { return ops_->init(&ctx_); }
 
-    zx_status_t BindOp(devmgr::CreationContext* creation_context,
+    zx_status_t BindOp(devmgr::BindContext* bind_context,
                        const fbl::RefPtr<zx_device_t>& device) const {
-        devmgr::devhost_set_creation_context(creation_context);
+        devmgr::devhost_set_bind_context(bind_context);
         auto status = ops_->bind(ctx_, device.get());
-        devmgr::devhost_set_creation_context(nullptr);
+        devmgr::devhost_set_bind_context(nullptr);
         return status;
     }
 

@@ -492,14 +492,13 @@ static zx_status_t fidl_BindDriver(void* raw_ctx, const char* driver_path_data,
     }
 
     if (drv->has_bind_op()) {
-        CreationContext creation_ctx = {
+        BindContext bind_ctx = {
             .parent = ctx->conn->dev,
             .child = nullptr,
-            .rpc = zx::unowned_channel(),
         };
-        r = drv->BindOp(&creation_ctx, ctx->conn->dev);
+        r = drv->BindOp(&bind_ctx, ctx->conn->dev);
 
-        if ((r == ZX_OK) && (creation_ctx.child == nullptr)) {
+        if ((r == ZX_OK) && (bind_ctx.child == nullptr)) {
             printf("devhost: WARNING: driver '%.*s' did not add device in bind()\n",
                    static_cast<int>(driver_path_size), driver_path_data);
         }
