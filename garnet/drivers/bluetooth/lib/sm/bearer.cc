@@ -291,9 +291,22 @@ ErrorCode Bearer::ResolveFeatures(bool local_initiator,
   if (local_initiator) {
     local_keys = pres.initiator_key_dist_gen;
     remote_keys = pres.responder_key_dist_gen;
+
+    // v5.1, Vol 3, Part H requires that the responder shall not set to one
+    // any flag in the key dist gen fields that the initiator has set to zero.
+    // Hence we reject the pairing if the responder requests keys that we don't
+    // support.
+    if ((preq.initiator_key_dist_gen & local_keys) != local_keys ||
+        (preq.responder_key_dist_gen & remote_keys) != remote_keys) {
+      return ErrorCode::kInvalidParameters;
+    }
   } else {
     local_keys = pres.responder_key_dist_gen;
     remote_keys = pres.initiator_key_dist_gen;
+
+    // When we are the responder we always respect the initiator's wishes.
+    ZX_DEBUG_ASSERT((preq.initiator_key_dist_gen & remote_keys) == remote_keys);
+    ZX_DEBUG_ASSERT((preq.responder_key_dist_gen & local_keys) == local_keys);
   }
 
   *out_features = PairingFeatures(local_initiator, sc, method, enc_key_size,

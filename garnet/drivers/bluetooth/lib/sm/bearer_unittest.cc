@@ -314,6 +314,96 @@ TEST_F(SMP_BearerTest, FeatureExchangePairingFailed) {
   EXPECT_EQ(ErrorCode::kPairingNotSupported, last_error().protocol_error());
 }
 
+TEST_F(SMP_BearerTest, FeatureExchangeLocalRejectsUnsupportedInitiatorKeys) {
+  // We should reject a pairing response that requests keys that we don't
+  // support.
+  // clang-format off
+  const auto kRequest = CreateStaticByteBuffer(
+      0x01,  // code: Pairing Request
+      0x03,  // IO cap.: NoInputNoOutput
+      0x00,  // OOB: not present
+      0x01,  // AuthReq: bonding, no MITM
+      0x10,  // encr. key size: 16 (default max)
+      0x00,  // initiator keys: none
+      0x03   // responder keys: enc key and identity info
+  );
+  const auto kResponse = CreateStaticByteBuffer(
+      0x02,  // code: Pairing Response
+      0x00,  // IO cap.: DisplayOnly
+      0x00,  // OOB: not present
+      0x00,  // AuthReq: no MITM
+      0x07,  // encr. key size: 7 (default min)
+      0x01,  // initiator keys: enc key (not listed in kRequest)
+      0x03   // responder keys: enc key and identity info
+  );
+  const auto kFailure = CreateStaticByteBuffer(
+      0x05,  // code: Pairing Failed
+      0x0A   // reason: Invalid Parameters
+  );
+  // clang-format on
+
+  // Initiate the request in a loop task for Expect to detect it.
+  async::PostTask(dispatcher(),
+                  [this] { bearer()->InitiateFeatureExchange(); });
+  ASSERT_TRUE(Expect(kRequest));
+  ASSERT_TRUE(bearer()->pairing_started());
+
+  // We should receive a pairing response and reply back with Pairing Failed.
+  EXPECT_TRUE(ReceiveAndExpect(kResponse, kFailure));
+
+  EXPECT_FALSE(bearer()->pairing_started());
+  EXPECT_EQ(1, pairing_error_count());
+  EXPECT_TRUE(last_error().is_protocol_error());
+  EXPECT_EQ(ErrorCode::kInvalidParameters,
+            last_error().protocol_error());
+  EXPECT_EQ(0, feature_exchange_count());
+}
+
+TEST_F(SMP_BearerTest, FeatureExchangeLocalRejectsUnsupportedResponderKeys) {
+  // We should reject a pairing response that requests keys that we don't
+  // support.
+  // clang-format off
+  const auto kRequest = CreateStaticByteBuffer(
+      0x01,  // code: Pairing Request
+      0x03,  // IO cap.: NoInputNoOutput
+      0x00,  // OOB: not present
+      0x01,  // AuthReq: bonding, no MITM
+      0x10,  // encr. key size: 16 (default max)
+      0x00,  // initiator keys: none
+      0x03   // responder keys: enc key and identity info
+  );
+  const auto kResponse = CreateStaticByteBuffer(
+      0x02,  // code: Pairing Response
+      0x00,  // IO cap.: DisplayOnly
+      0x00,  // OOB: not present
+      0x00,  // AuthReq: no MITM
+      0x07,  // encr. key size: 7 (default min)
+      0x00,  // initiator keys: none
+      0x04   // responder keys: sign key (not in kRequest)
+  );
+  const auto kFailure = CreateStaticByteBuffer(
+      0x05,  // code: Pairing Failed
+      0x0A   // reason: Invalid Parameters
+  );
+  // clang-format on
+
+  // Initiate the request in a loop task for Expect to detect it.
+  async::PostTask(dispatcher(),
+                  [this] { bearer()->InitiateFeatureExchange(); });
+  ASSERT_TRUE(Expect(kRequest));
+  ASSERT_TRUE(bearer()->pairing_started());
+
+  // We should receive a pairing response and reply back with Pairing Failed.
+  EXPECT_TRUE(ReceiveAndExpect(kResponse, kFailure));
+
+  EXPECT_FALSE(bearer()->pairing_started());
+  EXPECT_EQ(1, pairing_error_count());
+  EXPECT_TRUE(last_error().is_protocol_error());
+  EXPECT_EQ(ErrorCode::kInvalidParameters,
+            last_error().protocol_error());
+  EXPECT_EQ(0, feature_exchange_count());
+}
+
 // Pairing should fail if MITM is required but the pairing method cannot provide
 // it (due to I/O capabilities).
 TEST_F(SMP_BearerTest, FeatureExchangeFailureAuthenticationRequirements) {
@@ -333,8 +423,8 @@ TEST_F(SMP_BearerTest, FeatureExchangeFailureAuthenticationRequirements) {
       0x00,  // OOB: not present
       0x04,  // AuthReq: MITM required
       0x07,  // encr. key size: 7 (default min)
-      0x01,  // initiator keys: enc key only
-      0x01   // responder keys: enc key only
+      0x00,  // initiator keys: none
+      0x01   // responder keys: enc key only (it's OK to agree to fewer keys)
   );
   const auto kFailure = CreateStaticByteBuffer(
       0x05,  // code: Pairing Failed
@@ -376,7 +466,7 @@ TEST_F(SMP_BearerTest, FeatureExchangePairingResponseJustWorks) {
       0x00,  // OOB: not present
       0x00,  // AuthReq: MITM not required
       0x07,  // encr. key size: 7 (default min)
-      0x01,  // initiator keys: enc key only
+      0x00,  // initiator keys: none
       0x01   // responder keys: enc key only
   );
   // clang-format on
@@ -399,7 +489,7 @@ TEST_F(SMP_BearerTest, FeatureExchangePairingResponseJustWorks) {
   EXPECT_FALSE(features().secure_connections);
   EXPECT_EQ(PairingMethod::kJustWorks, features().method);
   EXPECT_EQ(7, features().encryption_key_size);
-  EXPECT_TRUE(KeyDistGen::kEncKey & features().local_key_distribution);
+  EXPECT_FALSE(features().local_key_distribution);
   EXPECT_TRUE(KeyDistGen::kEncKey & features().remote_key_distribution);
   EXPECT_TRUE(ContainersEqual(kRequest, preq()));
   EXPECT_TRUE(ContainersEqual(kResponse, pres()));
@@ -427,7 +517,7 @@ TEST_F(SMP_BearerTest, FeatureExchangePairingResponseMITM) {
       0x00,  // OOB: not present
       0x04,  // AuthReq: MITM required
       0x07,  // encr. key size: 7 (default min)
-      0x01,  // initiator keys: enc key only
+      0x00,  // initiator keys: none
       0x01   // responder keys: enc key only
   );
   // clang-format on
@@ -450,7 +540,7 @@ TEST_F(SMP_BearerTest, FeatureExchangePairingResponseMITM) {
   EXPECT_FALSE(features().secure_connections);
   EXPECT_EQ(PairingMethod::kPasskeyEntryDisplay, features().method);
   EXPECT_EQ(7, features().encryption_key_size);
-  EXPECT_TRUE(KeyDistGen::kEncKey & features().local_key_distribution);
+  EXPECT_FALSE(features().local_key_distribution);
   EXPECT_TRUE(KeyDistGen::kEncKey & features().remote_key_distribution);
   EXPECT_TRUE(ContainersEqual(kRequest, preq()));
   EXPECT_TRUE(ContainersEqual(kResponse, pres()));
@@ -537,6 +627,39 @@ TEST_F(SMP_BearerTest, FeatureExchangeResponderMalformedRequest) {
   NewBearer(hci::Connection::Role::kMaster);
   EXPECT_TRUE(ReceiveAndExpect(kMalformedRequest, kFailure));
   EXPECT_FALSE(bearer()->pairing_started());
+}
+
+// Tests that the local responder does not request keys that the initiator
+// cannot distribute.
+TEST_F(SMP_BearerTest, FeatureExchangeLocalResponderRespectsInitiator) {
+  // clang-format off
+  const auto kRequest = CreateStaticByteBuffer(
+      0x01,  // code: Pairing Request
+      0x03,  // IO cap.: NoInputNoOutput
+      0x00,  // OOB: not present
+      0x00,  // AuthReq: no auth. request by default
+      0x10,  // encr. key size: 16 (default max)
+      0x01,  // initiator key dist.: encr. key only
+      0x00   // responder key dist.: none
+  );
+  const auto kResponse = CreateStaticByteBuffer(
+      0x02,  // code: Pairing Response
+      0x03,  // IO cap.: NoInputNoOutput
+      0x00,  // OOB: not present
+      0x01,  // AuthReq: bonding, no MITM
+      0x10,  // encr. key size: 16 (default max)
+      0x00,  // initiator keys: none  // We shouldn't request the IdKey
+      0x00   // responder keys: none
+  );
+  // clang-format on
+
+  NewBearer(hci::Connection::Role::kSlave);
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kResponse));
+  EXPECT_TRUE(bearer()->pairing_started());
+  EXPECT_EQ(1, feature_exchange_count());
+  EXPECT_FALSE(features().initiator);
+  EXPECT_FALSE(features().local_key_distribution);
+  EXPECT_FALSE(features().remote_key_distribution);
 }
 
 // Tests that the pairing timer gets reset when a second Pairing Request is
@@ -746,7 +869,7 @@ TEST_F(SMP_BearerTest, StopTimer) {
                              0x00,  // OOB: not present
                              0x00,  // AuthReq: MITM not required
                              0x07,  // encr. key size: 7 (default min)
-                             0x01,  // initiator key dist.: encr. key only
+                             0x00,  // initiator key dist.: none
                              0x01   // responder key dist.: encr. key only
       );
 
