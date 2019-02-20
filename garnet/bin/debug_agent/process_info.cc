@@ -40,7 +40,25 @@ class ProcessMemoryAccessor : public ElfLib::MemoryAccessorForAddressSpace {
   virtual ~ProcessMemoryAccessor() = default;
 
   const uint8_t* GetLoadedMemory(uint64_t offset, size_t size) override {
-    auto& vec = data_.emplace_back(size, 0);
+#ifndef NDEBUG
+    auto iter = data_.upper_bound(offset);
+
+    if (iter != data_.begin()) {
+      --iter;
+    }
+
+    if (iter != data_.end() && iter->first <= offset &&
+        iter->first + iter->second.size() > offset) {
+      FXL_DCHECK(iter->first == offset && iter->second.size() == size);
+    }
+#endif  // NDEBUG
+    for (const auto& range : data_[offset]) {
+      if (range.size() >= size) {
+        return range.data();
+      }
+    }
+
+    auto& vec = data_[offset].emplace_back(size, 0);
 
     size_t got;
     if (process_->read_memory(base_ + offset, vec.data(), size, &got) !=
@@ -83,7 +101,7 @@ class ProcessMemoryAccessor : public ElfLib::MemoryAccessorForAddressSpace {
  private:
   const zx::process* process_;
   uint64_t base_;
-  std::vector<std::vector<uint8_t>> data_;
+  std::map<uint64_t, std::vector<std::vector<uint8_t>>> data_;
 };
 
 zx_status_t WalkModules(
