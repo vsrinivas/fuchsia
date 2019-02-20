@@ -7,6 +7,8 @@
 
 #include "garnet/bin/a11y/a11y_manager/semantic_tree.h"
 
+// DEPRECATED
+
 namespace a11y_manager {
 const std::string kNewLine = "\n";
 const std::string kFourSpace = "    ";

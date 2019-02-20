@@ -28,6 +28,10 @@ source_set("lib") {
     "manager_impl.h",
     "semantic_tree.cc",
     "semantic_tree.h",
+    "semantics/semantic_tree_impl.cc",
+    "semantics/semantic_tree_impl.h",
+    "semantics/semantics_manager_impl.cc",
+    "semantics/semantics_manager_impl.h",
     "settings_manager.cc",
     "settings_manager.h",
     "toggler_impl.cc",
@@ -36,6 +40,7 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.accessibility.semantics",
   ]
 
   deps = [

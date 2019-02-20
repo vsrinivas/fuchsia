@@ -12,6 +12,7 @@
 
 #include "garnet/bin/a11y/a11y_manager/manager_impl.h"
 #include "garnet/bin/a11y/a11y_manager/semantic_tree.h"
+#include "garnet/bin/a11y/a11y_manager/semantics/semantics_manager_impl.h"
 #include "garnet/bin/a11y/a11y_manager/settings_manager.h"
 #include "garnet/bin/a11y/a11y_manager/toggler_impl.h"
 #include "lib/component/cpp/startup_context.h"
@@ -35,6 +36,7 @@ class App {
   std::unique_ptr<ManagerImpl> a11y_manager_;
   std::unique_ptr<TogglerImpl> toggler_impl_;
   std::unique_ptr<SettingsManagerImpl> settings_manager_impl_;
+  std::unique_ptr<SemanticsManagerImpl> semantics_manager_impl_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

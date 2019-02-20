@@ -11,7 +11,8 @@ App::App()
       semantic_tree_(std::make_unique<SemanticTree>()),
       a11y_manager_(std::make_unique<ManagerImpl>()),
       toggler_impl_(std::make_unique<TogglerImpl>()),
-      settings_manager_impl_(std::make_unique<SettingsManagerImpl>()) {
+      settings_manager_impl_(std::make_unique<SettingsManagerImpl>()),
+      semantics_manager_impl_(std::make_unique<SemanticsManagerImpl>()) {
   startup_context_->outgoing()
       .AddPublicService<fuchsia::accessibility::Manager>(
           [this](
@@ -45,6 +46,14 @@ App::App()
           [this](fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager>
                      request) {
             settings_manager_impl_->AddBinding(std::move(request));
+          });
+
+  startup_context_->outgoing()
+      .AddPublicService<fuchsia::accessibility::semantics::SemanticsManager>(
+          [this](fidl::InterfaceRequest<
+                 fuchsia::accessibility::semantics::SemanticsManager>
+                     request) {
+            semantics_manager_impl_->AddBinding(std::move(request));
           });
 }
 
