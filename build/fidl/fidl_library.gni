@@ -162,6 +162,11 @@ template("fidl_library") {
   }
 
   if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
+    sdk_category = invoker.sdk_category
+    if (sdk_category == "partner" || sdk_category == "public") {
+      assert(defined(invoker.api), "Published libraries need an API file")
+    }
+
     library_name = target_name
     if (defined(invoker.name)) {
       library_name = invoker.name
@@ -229,7 +234,7 @@ template("fidl_library") {
     sdk_atom("${target_name}_sdk") {
       id = "sdk://fidl/$library_name"
 
-      category = invoker.sdk_category
+      category = sdk_category
 
       if (defined(invoker.api)) {
         api = invoker.api

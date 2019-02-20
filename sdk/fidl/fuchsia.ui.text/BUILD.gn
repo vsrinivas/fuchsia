@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.ui.text") {
-  sdk_category = "partner"
+  sdk_category = "internal"
 
   sources = [
     "primitives.fidl",

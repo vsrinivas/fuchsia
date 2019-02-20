@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.mdns") {
-  sdk_category = "partner"
+  sdk_category = "internal"
 
   sources = [
     "mdns.fidl",

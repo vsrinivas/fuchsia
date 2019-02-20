@@ -5,8 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.game.tennis") {
-  sdk_category = "partner"
-
   sources = [
     "tennis.fidl",
   ]

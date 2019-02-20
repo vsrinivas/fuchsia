@@ -1,0 +1,4 @@
+{
+  "fidl/fuchsia.process/launcher.fidl": "43b94d089e1bbc8452e4d326a69bf861",
+  "fidl/fuchsia.process/resolver.fidl": "31f6996e05a20fc02f4474653235f068"
+}

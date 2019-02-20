@@ -58,6 +58,22 @@ LIBRARIES_WITHOUT_SDK_HEADERS = ['trace-engine']
 # is the reason why this list is needed.
 NON_SDK_DEPS = ['zircon-internal']
 
+# FIDL libraries that may be included in SDKs.
+# Note that this is a temporary measure until the Zircon GN build allows us to
+# express the same concept of SDK publication.
+PUBLISHED_FIDL_LIBRARIES = [
+    'fuchsia-cobalt',
+    'fuchsia-hardware-ethernet',
+    'fuchsia-io',
+    'fuchsia-ldsvc',
+    'fuchsia-logger',
+    'fuchsia-mem',
+    'fuchsia-net',
+    'fuchsia-process',
+    'fuchsia-sysinfo',
+    'fuchsia-sysmem',
+]
+
 def make_dir(path, is_dir=False):
     '''Creates the directory at `path`.'''
     target = path if is_dir else os.path.dirname(path)
@@ -366,6 +382,8 @@ class FidlLibrary(object):
         self.library = library
         self.sources = []
         self.fidl_deps = []
+        self.is_published = False
+        self.api = ''
 
 
 def generate_fidl_library(package, context):
@@ -373,6 +391,11 @@ def generate_fidl_library(package, context):
     pkg_name = package['package']['name']
     # TODO(pylaligand): remove fallback.
     data = FidlLibrary(pkg_name, package['package'].get('library', pkg_name))
+
+    if pkg_name in PUBLISHED_FIDL_LIBRARIES:
+        data.is_published = True
+        library_name = pkg_name.replace('-', '.')
+        data.api = '//sdk/fidl/%s/%s.api' % (library_name, library_name)
 
     for name, path in package.get('fidl', {}).iteritems():
         (file, _) = extract_file(name, path, context)

@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.memory") {
-  sdk_category = "partner"
+  sdk_category = "internal"
   sources = [
     "monitor.fidl",
   ]
