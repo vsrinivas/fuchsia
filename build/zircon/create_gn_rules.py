@@ -92,8 +92,10 @@ def parse_package(lines):
             return
         if current_list and current_map:
             raise Exception('Found both map-style and list-style section')
-        result[current_section] = (current_map if current_map
-                                   else current_list)
+        if current_map:
+            result[current_section] = current_map
+        elif current_list:
+            result[current_section] = current_list
     for line in lines:
         section_match = section_exp.match(line)
         if section_match:
@@ -118,9 +120,8 @@ def extract_file(name, path, context, is_tool=False):
     # name: foo/bar.h
     # path: <SOURCE|BUILD>/somewhere/under/zircon/foo/bar.h
     (full_path, changes) = re.subn('^SOURCE', context.source_base, path)
-    build_base = context.tool_build_base if is_tool else context.user_build_base
     if not changes:
-        (full_path, changes) = re.subn('^BUILD', build_base, path)
+        (full_path, changes) = re.subn('^BUILD', context.build_base, path)
     if not changes:
         raise Exception('Unknown pattern type: %s' % path)
     folder = None
@@ -444,12 +445,10 @@ def generate_board_list(package, context):
 class GenerationContext(object):
     '''Describes the context in which GN rules should be generated.'''
 
-    def __init__(self, out_dir, source_base, user_build_base, tool_build_base,
-                 templates):
+    def __init__(self, out_dir, source_base, build_base, templates):
         self.out_dir = out_dir
         self.source_base = source_base
-        self.user_build_base = user_build_base
-        self.tool_build_base = tool_build_base
+        self.build_base = build_base
         self.templates = templates
 
 
@@ -458,21 +457,15 @@ def main():
     parser.add_argument('--out',
                         help='Path to the output directory',
                         required=True)
-    parser.add_argument('--staging',
-                        help='Path to the staging directory',
+    parser.add_argument('--zircon-build',
+                        help='Path to the Zircon build directory',
                         required=True)
-    parser.add_argument('--zircon-user-build',
-                        help='Path to the Zircon "user" build directory',
-                        required=True)
-    parser.add_argument('--zircon-tool-build',
-                        help='Path to the Zircon "tools" build directory',
+    parser.add_argument('--zircon-manifest',
+                        help='Path to the Zircon export/manifest file',
                         required=True)
     parser.add_argument('--debug',
                         help='Whether to print out debug information',
                         action='store_true')
-    parser.add_argument('--make',
-                        help='Path to make binary',
-                        required=True)
     args = parser.parse_args()
 
     out_dir = os.path.abspath(args.out)
@@ -484,29 +477,13 @@ def main():
     shutil.rmtree(os.path.join(out_dir, 'tool'), True)
     debug = args.debug
 
-    # Generate package descriptions through Zircon's build.
-    zircon_dir = os.path.abspath(args.staging)
-    shutil.rmtree(zircon_dir, True)
-    if debug:
-        print('Building Zircon in: %s' % zircon_dir)
-    make_args = [
-        args.make,
-        'packages',
-        'BUILDDIR=%s' % zircon_dir,
-    ]
-
-    env = {}
-    env['PATH'] = os.environ['PATH']
-    if not debug:
-        env['QUIET'] = '1'
-    subprocess.check_call(make_args, cwd=ZIRCON_ROOT, env=env)
-    # Parse package definitions.
+    # Parse package definitions from Zircon's build.
     packages = []
-    with open(os.path.join(zircon_dir, 'export', 'manifest'), 'r') as manifest:
-        package_files = map(lambda line: line.strip(), manifest.readlines())
-    for file in package_files:
-        with open(os.path.join(zircon_dir, 'export', file), 'r') as pkg_file:
-            packages.append(parse_package(pkg_file.readlines()))
+    with open(args.zircon_manifest, 'r') as manifest:
+        for file in manifest:
+            file = file.strip()
+            with open(os.path.join(args.zircon_build, 'export', file), 'r') as pkg_file:
+                packages.append(parse_package(pkg_file.readlines()))
     if debug:
         print('Found %s packages:' % len(packages))
         names = sorted(map(lambda p: p['package']['name'], packages))
@@ -517,8 +494,7 @@ def main():
     context = GenerationContext(
         out_dir,
         ZIRCON_ROOT,
-        os.path.abspath(args.zircon_user_build),
-        os.path.abspath(args.zircon_tool_build),
+        os.path.abspath(args.zircon_build),
         TemplateLookup(directories=[SCRIPT_DIR]),
     )
     for package in packages:
@@ -552,10 +528,14 @@ def main():
         if debug:
             print('Processed %s (%s)' % (name, type))
 
-    board_path = os.path.join(zircon_dir, 'export', 'all-boards.list')
-    with open(board_path, 'r') as board_file:
-        package = parse_package(board_file.readlines())
-        generate_board_list(package, context)
+    board_file_lines = []
+    for cpu in ['arm64', 'x64']:
+        board_path = os.path.join(args.zircon_build, 'export',
+                                  'boards-%s.list' % cpu)
+        with open(board_path, 'r') as board_file:
+            board_file_lines += [ '[%s]' % cpu ] + board_file.readlines()
+    package = parse_package(board_file_lines)
+    generate_board_list(package, context)
 
 
 if __name__ == '__main__':

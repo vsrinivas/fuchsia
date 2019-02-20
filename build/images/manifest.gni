@@ -15,36 +15,18 @@ declare_args() {
                 root_build_dir),
   ]
 
-  # Manifest files describing extra libraries from a Zircon build
-  # not included in `zircon_boot_manifests`, such as an ASan build.
-  # Can be either // source paths or absolute system paths.
-  #
-  # Since Zircon manifest files are relative to a Zircon source directory
-  # rather than to the directory containing the manifest, these are assumed
-  # to reside in a build directory that's a direct subdirectory of the
-  # Zircon source directory and thus their contents can be taken as
-  # relative to `get_path_info(entry, "dir") + "/.."`.
-  # TODO(mcgrathr): Make Zircon manifests self-relative too and then
-  # merge this and toolchain_manifests into generic aux_manifests.
-  if (zircon_use_asan) {
-    zircon_aux_manifests = [ "$zircon_build_abi_dir/bootfs.manifest" ]
-  } else {
-    zircon_aux_manifests = [ "$zircon_asan_build_dir/bootfs.manifest" ]
-  }
-
-  # Manifest files describing files to go into the `/boot` filesystem.
-  # Can be either // source paths or absolute system paths.
-  # `zircon_boot_groups` controls which files are actually selected.
-  #
-  # Since Zircon manifest files are relative to a Zircon source directory
-  # rather than to the directory containing the manifest, these are assumed
-  # to reside in a build directory that's a direct subdirectory of the
-  # Zircon source directory and thus their contents can be taken as
-  # relative to `get_path_info(entry, "dir") + "/.."`.
-  zircon_boot_manifests = [ "$zircon_build_dir/bootfs.manifest" ]
-
   # Extra args to globally apply to the manifest generation script.
   extra_manifest_args = []
+}
+
+foreach(image, zircon_images) {
+  if (image.type == "manifest") {
+    if (image.name == "legacy-image-$target_cpu") {
+      zircon_boot_manifests = [ "$zircon_root_build_dir/${image.path}" ]
+    } else if (image.name == "asan-libs" && image.cpu == target_cpu) {
+      zircon_aux_manifests = [ "$zircon_root_build_dir/${image.path}" ]
+    }
+  }
 }
 
 # Action target that generates a response file in GN's "shlex" format.
@@ -193,7 +175,7 @@ template("generate_manifest") {
     }
     sources += zircon_aux_manifests + zircon_boot_manifests
     foreach(manifest, zircon_aux_manifests + zircon_boot_manifests) {
-      manifest_cwd = get_path_info(rebase_path(manifest), "dir") + "/.."
+      manifest_cwd = rebase_path(zircon_root_build_dir)
       response_file_contents += [
         "--cwd=$manifest_cwd",
         "--manifest=" + rebase_path(manifest),
@@ -220,6 +202,10 @@ template("generate_manifest") {
       response_file_contents += [
         "--exclude=bin/devhost",
         "--exclude=bin/devhost.asan",
+
+        # Elide the empty file deposited by the Zircon build, since
+        # we will add our own.
+        "--exclude=config/devmgr",
       ]
     }
 
@@ -243,7 +229,7 @@ template("generate_manifest") {
         response_file_contents += [ "--groups=${manifest.groups}" ]
         sources += zircon_boot_manifests
         foreach(manifest, zircon_boot_manifests) {
-          manifest_cwd = get_path_info(rebase_path(manifest), "dir") + "/.."
+          manifest_cwd = rebase_path(zircon_root_build_dir)
           response_file_contents += [
             "--cwd=$manifest_cwd",
             "--manifest=" + rebase_path(manifest),

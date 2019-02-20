@@ -258,11 +258,15 @@ def strip_binary_manifest(manifest, stripped_dir, examined):
 
     def find_debug_file(filename):
         # In the Zircon makefile build, the file to be installed is called
-        # foo.strip and the unstripped file is called foo.  In the GN build,
-        # the file to be installed is called foo and the unstripped file has
-        # the same name in the exe.unstripped or lib.unstripped subdirectory.
+        # foo.strip and the unstripped file is called foo.  In the new Zircon
+        # GN build, the file to be installed is called foo and the unstripped
+        # file is called foo.debug.  In the Fuchsia GN build, the file to be
+        # installed is called foo and the unstripped file has the same name in
+        # the exe.unstripped or lib.unstripped subdirectory.
         if filename.endswith('.strip'):
             debugfile = filename[:-6]
+        elif os.path.exists(filename + '.debug'):
+            debugfile = filename + '.debug'
         else:
             dir, file = os.path.split(filename)
             if file.endswith('.so') or '.so.' in file:

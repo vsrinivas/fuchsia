@@ -93,7 +93,7 @@ template("custom_signed_zbi") {
       "-v",
       rebase_path(vbmeta_file, root_build_dir),
       "-B",
-      rebase_path(zircon_build_dir, root_build_dir),
+      rebase_path(zircon_root_build_dir, root_build_dir),
     ]
   }
 }

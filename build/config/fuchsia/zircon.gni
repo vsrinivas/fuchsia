@@ -4,59 +4,19 @@
 
 import("//build/config/clang/clang.gni")
 
-declare_args() {
-  # Where to find Zircon's host-side tools that are run as part of the build.
-  zircon_tools_dir = "//out/build-zircon/tools"
+# This is $root_build_dir in the Zircon GN build.
+zircon_root_build_dir = "//out/build-zircon"
 
-  # Zircon build directory for `target_cpu`, containing link-time `.so.abi`
-  # files that GN `deps` on //zircon/public libraries will link against.
-  # This should not be a sanitizer build.
-  zircon_build_abi_dir = "//out/build-zircon/build-$target_cpu"
+# The top-level `tools` Ninja target in Zircon puts the tool binaries here.
+zircon_tools_dir = "$zircon_root_build_dir/tools"
 
-  # Zircon build directory for `target_cpu`, containing `.manifest` and
-  # `.zbi` files for Zircon's BOOTFS and kernel.  This provides the kernel
-  # and Zircon components used in the boot image.  It also provides the
-  # Zircon shared libraries used at runtime in Fuchsia packages.
-  #
-  # If left `""` (the default), then this is computed from
-  # [`zircon_build_abi_dir`](#zircon_build_abi_dir) and
-  # [`zircon_use_asan`](#zircon_use_asan).
-  zircon_build_dir = ""
+# The `gn gen` stage of the Zircon GN build writes this file.
+# It's a list of {name=... path=... type=...} scopes.
+zircon_images = read_file("$zircon_root_build_dir/images.json", "json")
 
-  # Zircon `USE_ASAN=true` build directory for `target_cpu` containing
-  # `bootfs.manifest` with libraries and `devhost.asan`.
-  #
-  # If left `""` (the default), then this is computed from
-  # [`zircon_build_dir`](#zircon_build_dir) and
-  # [`zircon_use_asan`](#zircon_use_asan).
-  zircon_asan_build_dir = ""
-
-  # Set this if [`zircon_build_dir`](#zircon_build_dir) was built with
-  # `USE_ASAN=true`, e.g. `//scripts/build-zircon.sh -A`.  This mainly
-  # affects the defaults for [`zircon_build_dir`](#zircon_build_dir) and
-  # [`zircon_build_abi_dir`](#zircon_build_abi_dir).  It also gets noticed
-  # by //scripts/fx commands that rebuild Zircon so that they use `-A`
-  # again next time.
-  zircon_use_asan = false
-
-  # Path to `make` binary. By default, `make` is assumed to be in the
-  # path. Used in the script that generates the Zircon build rules. N.B. this
-  # path is *not* rebased, just used as is.
-  zircon_make_path = "make"
-}
-
-if (zircon_build_dir == "") {
-  zircon_build_dir = zircon_build_abi_dir
-  if (zircon_use_asan) {
-    zircon_build_dir += "-asan"
-  }
-}
-
-if (zircon_asan_build_dir == "") {
-  if (zircon_use_asan) {
-    zircon_asan_build_dir = zircon_build_dir
-  } else {
-    zircon_asan_build_dir = "${zircon_build_dir}-asan"
+foreach(image, zircon_images) {
+  if (image.name == "kernel" && image.type == "zbi" && image.cpu == target_cpu) {
+    zircon_kernel_zbi = "$zircon_root_build_dir/${image.path}"
   }
 }
 
