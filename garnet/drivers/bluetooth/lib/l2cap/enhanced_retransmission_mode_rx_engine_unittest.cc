@@ -209,6 +209,44 @@ TEST(L2CAP_EnhancedRetransmissionModeRxEngineTest,
   EXPECT_EQ(0u, n_acks);
 }
 
+TEST(L2CAP_EnhancedRetransmissionModeRxEngineTest,
+     ProcessPduRespondsToReceiverReadyPollRequest) {
+  size_t n_outbound_frames = 0;
+  common::ByteBufferPtr last_outbound_frame;
+  auto tx_callback = [&](auto pdu) {
+    last_outbound_frame = std::move(pdu);
+    ++n_outbound_frames;
+  };
+
+  Engine rx_engine(tx_callback);
+  // Send an I-frame to advance the receiver's sequence number.
+  // See Core Spec, v5, Vol 3, Part A, Table 3.2 for the first two bytes.
+  const auto info_frame =
+      common::CreateStaticByteBuffer(0, 0, 'h', 'e', 'l', 'l', 'o');
+  rx_engine.ProcessPdu(
+      Fragmenter(kTestHandle).BuildBasicFrame(kTestChannelId, info_frame));
+  ASSERT_EQ(1u, n_outbound_frames);
+
+  // Now send a ReceiverReady poll request. See Core Spec, v5, Vol 3, Part A,
+  // Table 3.2 and Table 3.5 for frame format.
+  const auto receiver_ready_poll_request =
+      common::CreateStaticByteBuffer(0b1'0001, 0);
+  auto local_sdu = rx_engine.ProcessPdu(
+      Fragmenter(kTestHandle)
+          .BuildBasicFrame(kTestChannelId, receiver_ready_poll_request));
+  EXPECT_FALSE(local_sdu);  // No payload in a ReceiverReady frame.
+  EXPECT_EQ(2u, n_outbound_frames);
+  ASSERT_TRUE(last_outbound_frame);
+  ASSERT_EQ(sizeof(SimpleSupervisoryFrame), last_outbound_frame->size());
+
+  auto sframe = *reinterpret_cast<const SimpleSupervisoryFrame *>(
+      last_outbound_frame->data());
+  EXPECT_EQ(SupervisoryFunction::ReceiverReady, sframe.function());
+  EXPECT_EQ(1u, sframe.request_seq_num());
+  EXPECT_TRUE(sframe.is_poll_response());
+  EXPECT_FALSE(sframe.is_poll_request());
+}
+
 }  // namespace
 }  // namespace internal
 }  // namespace l2cap

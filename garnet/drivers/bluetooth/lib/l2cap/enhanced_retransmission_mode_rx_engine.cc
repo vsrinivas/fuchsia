@@ -135,9 +135,25 @@ common::ByteBufferPtr Engine::ProcessFrame(const SimpleStartOfSduFrameHeader,
   return nullptr;
 }
 
-common::ByteBufferPtr Engine::ProcessFrame(const SimpleSupervisoryFrame,
+common::ByteBufferPtr Engine::ProcessFrame(const SimpleSupervisoryFrame sframe,
                                            PDU pdu) {
-  // TODO(quiche): Implement validation and handling of S-frames.
+  if (sframe.function() == SupervisoryFunction::ReceiverReady &&
+      sframe.is_poll_request()) {
+    // TODO(quiche): Propagate ReqSeq to the transmit engine.
+    // See Core Spec, v5, Vol 3, Part A, Table 8.6, "Recv RR(P=1)".
+    //
+    // Note, however, that there may be additional work to do if we're in the
+    // REJ_SENT state. See Core Spec, v5, Vol 3, Part A, Table 8.7, "Recv
+    // RR(P=1)".
+    SimpleReceiverReadyFrame poll_response;
+    poll_response.set_is_poll_response();
+    poll_response.set_request_seq_num(next_seqnum_);
+    send_basic_frame_callback_(std::make_unique<common::DynamicByteBuffer>(
+        common::BufferView(&poll_response, sizeof(poll_response))));
+    return nullptr;
+  }
+
+  // TODO(quiche): Implement handling of other S-frames.
   return nullptr;
 }
 
