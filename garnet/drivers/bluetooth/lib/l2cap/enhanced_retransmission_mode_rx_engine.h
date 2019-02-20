@@ -27,9 +27,6 @@ class EnhancedRetransmissionModeRxEngine final : public RxEngine {
   common::ByteBufferPtr ProcessPdu(PDU) override;
 
  private:
-  // See Core Spec v5, Vol 3, Part A, Sec 8.3.
-  static constexpr auto kMaxSeqNum{63};
-
   common::ByteBufferPtr ProcessFrame(const SimpleInformationFrameHeader, PDU);
   common::ByteBufferPtr ProcessFrame(const SimpleStartOfSduFrameHeader, PDU);
   common::ByteBufferPtr ProcessFrame(const SimpleSupervisoryFrame, PDU);

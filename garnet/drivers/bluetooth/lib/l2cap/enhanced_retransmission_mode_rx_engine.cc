@@ -141,7 +141,7 @@ common::ByteBufferPtr Engine::ProcessFrame(std::monostate, PDU pdu) {
 
 void Engine::AdvanceSeqNum() {
   ++next_seqnum_;
-  if (next_seqnum_ > kMaxSeqNum) {
+  if (next_seqnum_ > EnhancedControlField::kMaxSeqNum) {
     next_seqnum_ = 0;
   }
 }
