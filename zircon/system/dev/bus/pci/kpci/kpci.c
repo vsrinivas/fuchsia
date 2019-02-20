@@ -351,7 +351,7 @@ static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index) {
         {BIND_PCI_SUBCLASS, 0, info.sub_class},
         {BIND_PCI_INTERFACE, 0, info.program_interface},
         {BIND_PCI_REVISION, 0, info.revision_id},
-        {BIND_PCI_BDF_ADDR, 0, BIND_PCI_BDF_PACK(info.bus_id, info.dev_id, info.func_id)},
+        {BIND_TOPO_PCI, 0, BIND_TOPO_PCI_PACK(info.bus_id, info.dev_id, info.func_id)},
     };
 
     // The most important detail here is the handling of DEVICE_ADD_MUST_ISOLATE. With that

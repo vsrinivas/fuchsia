@@ -201,7 +201,7 @@ static zx_status_t intel_serialio_i2c_add_slave(intel_serialio_i2c_device_t* dev
     }
     props[count++] = (zx_device_prop_t){BIND_PCI_VID, 0, vendor_id};
     props[count++] = (zx_device_prop_t){BIND_PCI_DID, 0, device_id};
-    props[count++] = (zx_device_prop_t){BIND_I2C_ADDR, 0, address};
+    props[count++] = (zx_device_prop_t){BIND_TOPO_I2C, 0, BIND_TOPO_I2C_PACK(address)};
     memcpy(&props[count], moreprops, sizeof(zx_device_prop_t) * propcount);
     count += propcount;
 

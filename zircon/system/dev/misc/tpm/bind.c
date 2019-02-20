@@ -18,6 +18,6 @@ ZIRCON_DRIVER_BEGIN(tpm, tpm_driver_ops, "zircon", "0.1", 3)
     // TODO(teisenbe): Make this less hacky when we have a proper I2C protocol
     BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
     BI_ABORT_IF(NE, BIND_PCI_DID, 0x9d61),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDR, 0x0050),
+    BI_MATCH_IF(EQ, BIND_TOPO_I2C, BIND_TOPO_I2C_PACK(0x0050)),
 ZIRCON_DRIVER_END(tpm);
 // clang-format on

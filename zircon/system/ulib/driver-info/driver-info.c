@@ -155,7 +155,7 @@ const char* di_bind_param_name(uint32_t param_num) {
     case BIND_PCI_SUBCLASS:           return "PCI.Subclass";
     case BIND_PCI_INTERFACE:          return "PCI.Interface";
     case BIND_PCI_REVISION:           return "PCI.Revision";
-    case BIND_PCI_BDF_ADDR:           return "PCI.BDFAddr";
+    case BIND_TOPO_PCI:               return "Topology.PCI";
     case BIND_USB_VID:                return "USB.VID";
     case BIND_USB_PID:                return "USB.PID";
     case BIND_USB_CLASS:              return "USB.Class";
