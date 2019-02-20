@@ -580,6 +580,39 @@ bool read_resize_test(bool check_vmar) {
     END_TEST;
 }
 
+// Test that suspending and resuming a thread in the middle of a read works.
+bool suspend_read_test(bool check_vmar) {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(1, &vmo));
+
+    TestThread t([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 0, 1, check_vmar);
+    });
+
+    ASSERT_TRUE(t.Start());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+
+    ASSERT_TRUE(t.SuspendSync());
+    t.Resume();
+
+    ASSERT_TRUE(t.WaitForBlocked());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+
+    ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+    ASSERT_TRUE(t.Wait());
+
+    END_TEST;
+}
+
 // Tests that detaching results in a complete request.
 bool detach_page_complete_test() {
     BEGIN_TEST;
@@ -1464,6 +1497,39 @@ bool resize_commit_test() {
     END_TEST;
 }
 
+// Test that suspending and resuming a thread in the middle of commit works.
+bool suspend_commit_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(1, &vmo));
+
+    TestThread t([vmo]() -> bool {
+        return vmo->Commit(0, 1);
+    });
+
+    ASSERT_TRUE(t.Start());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+
+    ASSERT_TRUE(t.SuspendSync());
+    t.Resume();
+
+    ASSERT_TRUE(t.WaitForBlocked());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+
+    ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+    ASSERT_TRUE(t.Wait());
+
+    END_TEST;
+}
+
 // Tests API violations for pager_create.
 bool invalid_pager_create() {
     BEGIN_TEST;
@@ -1756,6 +1822,7 @@ DEFINE_VMO_VMAR_TEST(bulk_odd_offset_supply_test);
 DEFINE_VMO_VMAR_TEST(overlap_supply_test);
 DEFINE_VMO_VMAR_TEST(many_request_test);
 DEFINE_VMO_VMAR_TEST(read_resize_test);
+DEFINE_VMO_VMAR_TEST(suspend_read_test);
 
 BEGIN_TEST_CASE(pager_read_tests)
 RUN_VMO_VMAR_TEST(single_page_test);
@@ -1775,6 +1842,7 @@ RUN_TEST(vmar_unmap_test);
 RUN_TEST(vmar_remap_test);
 RUN_TEST(vmar_map_range_test);
 RUN_VMO_VMAR_TEST(read_resize_test);
+RUN_VMO_VMAR_TEST(suspend_read_test);
 END_TEST_CASE(pager_read_tests)
 
 // Tests focused on lifecycle of pager and paged vmos.
@@ -1831,6 +1899,7 @@ RUN_TEST(multicommit_supply_test);
 RUN_TEST(commit_redundant_supply_test);
 RUN_TEST(supply_decommit_test);
 RUN_TEST(resize_commit_test);
+RUN_TEST(suspend_commit_test);
 END_TEST_CASE(commit_tests)
 
 // Tests focused on API violations.

@@ -587,13 +587,13 @@ syscall vmo_create
 
 #^ Read bytes from the VMO.
 #! handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
-syscall vmo_read
+syscall vmo_read blocking
     (handle: zx_handle_t, buffer: any[buffer_size] OUT, offset: uint64_t, buffer_size: size_t)
     returns (zx_status_t);
 
 #^ Write bytes to the VMO.
 #! handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
-syscall vmo_write
+syscall vmo_write blocking
     (handle: zx_handle_t, buffer: any[buffer_size] IN, offset: uint64_t, buffer_size: size_t)
     returns (zx_status_t);
 
@@ -616,7 +616,7 @@ syscall vmo_set_size
 #! If op is ZX_VMO_OP_CACHE_INVALIDATE, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
 #! If op is ZX_VMO_OP_CACHE_CLEAN, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
 #! If op is ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
-syscall vmo_op_range
+syscall vmo_op_range blocking
     (handle: zx_handle_t, op: uint32_t, offset: uint64_t, size: uint64_t,
         buffer: any[buffer_size] INOUT, buffer_size: size_t)
     returns (zx_status_t);

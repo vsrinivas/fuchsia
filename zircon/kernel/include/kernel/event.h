@@ -57,7 +57,7 @@ void event_destroy(event_t*);
 
 // Wait until deadline
 // Interruptable arg allows it to return early with ZX_ERR_INTERNAL_INTR_KILLED if thread
-// is signaled for kill.
+// is signaled for kill or with ZX_ERR_INTERNAL_INTR_RETRY if the thread is suspended.
 zx_status_t event_wait_deadline(event_t*, zx_time_t, bool interruptable);
 
 // Wait until the event occurs, the deadline has elapsed, or the thread is interrupted.
@@ -102,6 +102,7 @@ public:
     // ZX_OK - signaled
     // ZX_ERR_TIMED_OUT - time out expired
     // ZX_ERR_INTERNAL_INTR_KILLED - thread killed
+    // ZX_ERR_INTERNAL_INTR_RETRY - thread is suspended
     // Or the |status| which the caller specified in Event::Signal(status)
     zx_status_t Wait(const Deadline& deadline) {
         return event_wait_interruptable(&event_, deadline);
