@@ -218,7 +218,10 @@ def main():
         os.mkdir(pub_cache_dir)
         env = os.environ
         env['PUB_CACHE'] = pub_cache_dir
-        subprocess.check_call([args.pub, 'get'], cwd=importer_dir, env=env)
+        pub_get = [args.pub, 'get']
+        if args.debug:
+          pub_get.append('-v')
+        subprocess.check_call(pub_get, cwd=importer_dir, env=env)
 
         # Walk the cache and copy the packages we are interested in.
         if os.path.exists(args.output):
