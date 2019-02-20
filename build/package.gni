@@ -389,7 +389,10 @@ template("package") {
           # "deprecated-global-persistent-storage" feature is removed.
           if (!defined(pkg.deprecated_global_persistent_storage)) {
             extra_schemas = [
-              "//build/cmx/block_deprecated_global_persistent_storage.json"
+              {
+                schema = "//build/cmx/block_deprecated_global_persistent_storage.json"
+                error_msg = "The 'deprecated-global-persistent-storage' feature is deprecated and guarded by a whitelist. Use 'isolated-persistent-storage' instead."
+              }
             ]
           }
         }

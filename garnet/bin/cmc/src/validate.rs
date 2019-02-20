@@ -16,7 +16,10 @@ use std::path::Path;
 /// The primary JSON schemas are taken from cm_json, selected based on the file extension,
 /// is used to determine the validity of each input file. Extra schemas to validate against can be
 /// optionally provided.
-pub fn validate<P: AsRef<Path>>(files: &[P], extra_schemas: &[P]) -> Result<(), Error> {
+pub fn validate<P: AsRef<Path>>(
+    files: &[P],
+    extra_schemas: &[(P, Option<String>)],
+) -> Result<(), Error> {
     if files.is_empty() {
         return Err(Error::invalid_args("No files provided"));
     }
@@ -38,7 +41,7 @@ pub fn validate_cml(file: &Path) -> Result<cml::Document, Error> {
     }?;
 
     // Simply unwrap the Option<cml::Document> since we already validated extension above
-    return Ok(validate_file(file, &[] as &[&Path])?.unwrap());
+    return Ok(validate_file(file, &[] as &[(&Path, Option<String>)])?.unwrap());
 }
 
 /// Read in and parse a single manifest file, and return an Error if the given file is not valid.
@@ -51,7 +54,7 @@ pub fn validate_cml(file: &Path) -> Result<cml::Document, Error> {
 /// independently. For cml, call into parse_cml instead of the reverse.
 fn validate_file<P: AsRef<Path>>(
     file: &Path,
-    extra_schemas: &[P],
+    extra_schemas: &[(P, Option<String>)],
 ) -> Result<Option<cml::Document>, Error> {
     const BAD_EXTENSION: &str = "Input file does not have a component manifest extension \
                                  (.cm, .cml, or .cmx)";
@@ -75,10 +78,19 @@ fn validate_file<P: AsRef<Path>>(
         _ => return Err(Error::invalid_args(BAD_EXTENSION)),
     };
 
+    // Validate against the default schema (based on file extension).
     cm_json::validate_json(&v, schema)?;
+
+    // Validate against any extra schemas provided.
     for extra_schema in extra_schemas {
-        let schema = cm_json::JsonSchema::new_from_file(&extra_schema.as_ref())?;
-        cm_json::validate_json(&v, &schema)?;
+        let schema = cm_json::JsonSchema::new_from_file(&extra_schema.0.as_ref())?;
+        cm_json::validate_json(&v, &schema).map_err(|e| match (&e, &extra_schema.1) {
+            (Error::Validate { schema_name, err }, Some(extra_msg)) => Error::Validate {
+                schema_name: schema_name.clone(),
+                err: format!("{}\n{}", err, extra_msg),
+            },
+            _ => e,
+        })?;
     }
 
     // Perform addition validation for .cml files and parse the JSON into a cml::Document struct.
@@ -1464,7 +1476,7 @@ mod tests {
 
     fn validate_extra_schemas_test(
         input: serde_json::value::Value,
-        extra_schemas: &[&JsonSchema],
+        extra_schemas: &[(&JsonSchema, Option<String>)],
         expected_result: Result<(), Error>,
     ) -> Result<(), Error> {
         let input_str = format!("{}", input);
@@ -1473,7 +1485,7 @@ mod tests {
         File::create(&tmp_cmx_path)?.write_all(input_str.as_bytes())?;
 
         let extra_schema_paths =
-            extra_schemas.iter().map(|s| Path::new(&*s.name)).collect::<Vec<_>>();
+            extra_schemas.iter().map(|i| (Path::new(&*i.0.name), i.1.clone())).collect::<Vec<_>>();
         let result = validate(&[tmp_cmx_path.as_path()], &extra_schema_paths);
         assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
         Ok(())
@@ -1482,38 +1494,50 @@ mod tests {
     test_validate_extra_schemas! {
         test_validate_extra_schemas_empty_json => {
             input = json!({"program": {"binary": "a"}}),
-            extra_schemas = &[&BLOCK_SHELL_FEATURE_SCHEMA],
+            extra_schemas = &[(&BLOCK_SHELL_FEATURE_SCHEMA, None)],
             result = Ok(()),
         },
         test_validate_extra_schemas_empty_features => {
             input = json!({"sandbox": {"features": []}, "program": {"binary": "a"}}),
-            extra_schemas = &[&BLOCK_SHELL_FEATURE_SCHEMA],
+            extra_schemas = &[(&BLOCK_SHELL_FEATURE_SCHEMA, None)],
             result = Ok(()),
         },
         test_validate_extra_schemas_feature_not_present => {
             input = json!({"sandbox": {"features": ["isolated-persistent-storage"]}, "program": {"binary": "a"}}),
-            extra_schemas = &[&BLOCK_SHELL_FEATURE_SCHEMA],
+            extra_schemas = &[(&BLOCK_SHELL_FEATURE_SCHEMA, None)],
             result = Ok(()),
         },
         test_validate_extra_schemas_feature_present => {
             input = json!({"sandbox": {"features" : ["shell"]}, "program": {"binary": "a"}}),
-            extra_schemas = &[&BLOCK_SHELL_FEATURE_SCHEMA],
+            extra_schemas = &[(&BLOCK_SHELL_FEATURE_SCHEMA, None)],
             result = Err(Error::validate_schema(&BLOCK_SHELL_FEATURE_SCHEMA, "Not condition is not met at /sandbox/features/0")),
         },
         test_validate_extra_schemas_block_dev => {
             input = json!({"dev": ["misc"], "program": {"binary": "a"}}),
-            extra_schemas = &[&BLOCK_DEV_SCHEMA],
+            extra_schemas = &[(&BLOCK_DEV_SCHEMA, None)],
             result = Err(Error::validate_schema(&BLOCK_DEV_SCHEMA, "Not condition is not met at /dev")),
         },
         test_validate_multiple_extra_schemas_valid => {
             input = json!({"sandbox": {"features": ["isolated-persistent-storage"]}, "program": {"binary": "a"}}),
-            extra_schemas = &[&BLOCK_SHELL_FEATURE_SCHEMA, &BLOCK_DEV_SCHEMA],
+            extra_schemas = &[(&BLOCK_SHELL_FEATURE_SCHEMA, None), (&BLOCK_DEV_SCHEMA, None)],
             result = Ok(()),
         },
         test_validate_multiple_extra_schemas_invalid => {
             input = json!({"dev": ["misc"], "sandbox": {"features": ["isolated-persistent-storage"]}, "program": {"binary": "a"}}),
-            extra_schemas = &[&BLOCK_SHELL_FEATURE_SCHEMA, &BLOCK_DEV_SCHEMA],
+            extra_schemas = &[(&BLOCK_SHELL_FEATURE_SCHEMA, None), (&BLOCK_DEV_SCHEMA, None)],
             result = Err(Error::validate_schema(&BLOCK_DEV_SCHEMA, "Not condition is not met at /dev")),
         },
+    }
+
+    #[test]
+    fn test_validate_extra_error() -> Result<(), Error> {
+        validate_extra_schemas_test(
+            json!({"dev": ["misc"], "program": {"binary": "a"}}),
+            &[(&BLOCK_DEV_SCHEMA, Some("Extra error".to_string()))],
+            Err(Error::validate_schema(
+                &BLOCK_DEV_SCHEMA,
+                "Not condition is not met at /dev\nExtra error",
+            )),
+        )
     }
 }

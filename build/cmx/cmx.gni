@@ -41,7 +41,9 @@ template("cmx_module_validate") {
 #   data (required)
 #     [file] The path to the cmx file that is to be validated
 #   extra_schemas (optional)
-#     [list of files] Paths to extra json schemas to validate the cmx file against
+#     [list of scopes] Paths to extra json schemas to validate the cmx file against.
+#     A custom error message can also be provided, to be displayed if the schema fails
+#     to validate.
 #
 #   deps (optional)
 #   public_deps (optional)
@@ -86,11 +88,14 @@ template("cmx_validate") {
     ]
     if (defined(invoker.extra_schemas)) {
       foreach(extra_schema, invoker.extra_schemas) {
-        inputs += [ rebase_path(extra_schema) ]
-        args += [
-          "--extra_schema",
-          rebase_path(extra_schema),
-        ]
+        schema_path = rebase_path(extra_schema.schema)
+        inputs += [ schema_path ]
+        args += [ "--extra_schema" ]
+        if (defined(extra_schema.error_msg)) {
+          args += [ "${schema_path}:${extra_schema.error_msg}" ]
+        } else {
+          args += [ "${schema_path}" ]
+        }
       }
     }
   }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -24,9 +24,11 @@ pub enum Commands {
         /// files to process
         files: Vec<PathBuf>,
 
-        #[structopt(long = "extra_schema", parse(from_os_str))]
-        /// extra JSON schema files to additionally validate against
-        extra_schemas: Vec<PathBuf>,
+        #[structopt(long = "extra_schema", parse(from_str = "parse_extra_schema_arg"))]
+        /// extra JSON schema files to additionally validate against. A custom error message - to
+        /// be displayed if the schema fails to validate - can be specified by adding a ':'
+        /// separator and the message after the path.
+        extra_schemas: Vec<(PathBuf,Option<String>)>,
     },
 
     #[structopt(name = "merge")]
@@ -72,4 +74,47 @@ pub enum Commands {
         /// file to write the formatted results to, will print to stdout if not provided
         output: Option<PathBuf>,
     },
+}
+
+fn parse_extra_schema_arg(src: &str) -> (PathBuf,Option<String>) {
+    let v: Vec<&str> = src.splitn(2, ':').collect();
+    (Path::new(v[0]).to_path_buf(), v.get(1).map(|s| s.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! test_parse_extra_schema_arg {
+        (
+            $(
+                $test_name:ident => {
+                    input = $input:expr,
+                    result = $result:expr,
+                },
+            )+
+        ) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    assert_eq!(parse_extra_schema_arg($input), $result)
+                }
+            )+
+        }
+    }
+
+    test_parse_extra_schema_arg! {
+        test_parse_extra_schema_arg_schema_only => {
+            input = "/some/path",
+            result = (Path::new("/some/path").to_path_buf(), None),
+        },
+        test_parse_extra_schema_arg_schema_and_msg => {
+            input = "/some/path:my error message",
+            result = (Path::new("/some/path").to_path_buf(), Some("my error message".to_string())),
+        },
+        test_parse_extra_schema_arg_msg_with_sep => {
+            input = "/some/path:my:error:message",
+            result = (Path::new("/some/path").to_path_buf(), Some("my:error:message".to_string())),
+        },
+    }
 }
