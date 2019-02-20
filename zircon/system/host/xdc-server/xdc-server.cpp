@@ -76,7 +76,7 @@ void Client::ProcessCompletedReads(const std::unique_ptr<UsbHandler>& usb_handle
         std::unique_ptr<UsbHandler::Transfer>& transfer = *iter;
 
         unsigned char* data = transfer->data() + transfer->offset();
-        size_t len_to_write = transfer->actual_length() - transfer->offset();
+        ssize_t len_to_write = transfer->actual_length() - transfer->offset();
 
         ssize_t total_written = 0;
         while (total_written < len_to_write) {
@@ -92,8 +92,13 @@ void Client::ProcessCompletedReads(const std::unique_ptr<UsbHandler>& usb_handle
                 }
             }
             total_written += res;
-            int offset = transfer->offset() + res;
-            assert(transfer->SetOffset(offset));
+            ssize_t offset = transfer->offset() + res;
+            if (offset < std::numeric_limits<int>::min() ||
+                offset > std::numeric_limits<int>::max()) {
+                fprintf(stderr, "offset out of range\n");
+                exit(-1);
+            }
+            assert(transfer->SetOffset(static_cast<int>(offset)));
         }
         usb_handler->RequeueRead(std::move(transfer));
         iter = completed_reads_.erase(iter);
@@ -116,7 +121,7 @@ zx_status_t Client::ProcessWrites(const std::unique_ptr<UsbHandler>& usb_handler
             // Read from the client into the usb transfer buffer. Leave space for the header.
             unsigned char* buf = pending_write_->write_data_buffer();
 
-            int n = recv(fd(), buf, UsbHandler::Transfer::MAX_WRITE_DATA_SIZE, 0);
+            ssize_t n = recv(fd(), buf, UsbHandler::Transfer::MAX_WRITE_DATA_SIZE, 0);
             if (n == 0) {
                 return ZX_ERR_PEER_CLOSED;
             } else if (n == EAGAIN) {
@@ -273,8 +278,8 @@ void XdcServer::Run() {
             break;
         }
         // Not using an iterator for poll_fds_ as we might add/remove elements.
-        int num_sockets = poll_fds_.size();
-        int i = 0;
+        size_t num_sockets = poll_fds_.size();
+        size_t i = 0;
         while (i < num_sockets) {
             if (poll_fds_[i].fd == socket_fd_.get()) {
                 // A new client is trying to connect.
