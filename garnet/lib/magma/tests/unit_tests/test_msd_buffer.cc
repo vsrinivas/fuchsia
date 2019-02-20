@@ -24,55 +24,201 @@ TEST(MsdBuffer, ImportAndDestroy)
 TEST(MsdBuffer, MapAndUnmap)
 {
     msd_driver_t* driver = msd_driver_create();
-    ASSERT_NE(driver, nullptr);
+    ASSERT_TRUE(driver);
+
+    std::unique_ptr<magma::PlatformHandle> buffer_handle;
+    msd_buffer_t* buffer = nullptr;
+
+    constexpr uint32_t kBufferSizeInPages = 1;
+
+    {
+        auto platform_buf = magma::PlatformBuffer::Create(kBufferSizeInPages * PAGE_SIZE, "test");
+        ASSERT_TRUE(platform_buf);
+
+        uint32_t raw_handle;
+        EXPECT_TRUE(platform_buf->duplicate_handle(&raw_handle));
+        buffer_handle = magma::PlatformHandle::Create(raw_handle);
+        ASSERT_TRUE(buffer_handle);
+
+        EXPECT_TRUE(platform_buf->duplicate_handle(&raw_handle));
+        buffer = msd_buffer_import(raw_handle);
+        ASSERT_TRUE(buffer);
+    }
+
+    // There should be at least two handles, the msd buffer and the "checker handle".
+    uint32_t handle_count;
+    EXPECT_TRUE(buffer_handle->GetCount(&handle_count));
+    EXPECT_GE(2u, handle_count);
 
     msd_device_t* device = msd_driver_create_device(driver, GetTestDeviceHandle());
-    EXPECT_NE(device, nullptr);
+    ASSERT_TRUE(device);
 
-    constexpr uint64_t kBufferSize = 4096;
-    auto platform_buf = magma::PlatformBuffer::Create(kBufferSize, "test");
+    msd_connection_t* connection = msd_device_open(device, 0);
+    ASSERT_TRUE(connection);
+
+    std::vector<uint64_t> gpu_addr{0, PAGE_SIZE * 1024};
+
+    // Mapping should keep alive the msd buffer.
+    for (uint32_t i = 0; i < gpu_addr.size(); i++) {
+        EXPECT_EQ(MAGMA_STATUS_OK, msd_connection_map_buffer_gpu(connection, buffer,
+                                                                 gpu_addr[i],        // gpu addr
+                                                                 0,                  // page offset
+                                                                 kBufferSizeInPages, // page count
+                                                                 MAGMA_GPU_MAP_FLAG_READ |
+                                                                     MAGMA_GPU_MAP_FLAG_WRITE));
+    }
+
+    // Verify we haven't lost any handles.
+    EXPECT_TRUE(buffer_handle->GetCount(&handle_count));
+    EXPECT_GE(2u, handle_count);
+
+    // Try to unmap a region that doesn't exist.
+    EXPECT_NE(MAGMA_STATUS_OK,
+              msd_connection_unmap_buffer_gpu(connection, buffer, PAGE_SIZE * 2048));
+
+    // Unmap the valid regions.
+    magma_status_t status;
+    for (uint32_t i = 0; i < gpu_addr.size(); i++) {
+        status = msd_connection_unmap_buffer_gpu(connection, buffer, gpu_addr[i]);
+        EXPECT_TRUE(status == MAGMA_STATUS_UNIMPLEMENTED || status == MAGMA_STATUS_OK);
+    }
+
+    if (status != MAGMA_STATUS_OK) {
+        // If unmap unsupported, mappings should be released here.
+        msd_connection_release_buffer(connection, buffer);
+    }
+
+    // Mapping should keep alive the msd buffer.
+    for (uint32_t i = 0; i < gpu_addr.size(); i++) {
+        EXPECT_EQ(MAGMA_STATUS_OK, msd_connection_map_buffer_gpu(connection, buffer,
+                                                                 gpu_addr[i],        // gpu addr
+                                                                 0,                  // page offset
+                                                                 kBufferSizeInPages, // page count
+                                                                 MAGMA_GPU_MAP_FLAG_READ |
+                                                                     MAGMA_GPU_MAP_FLAG_WRITE));
+    }
+
+    msd_buffer_destroy(buffer);
+    msd_connection_close(connection);
+    msd_device_destroy(device);
+    msd_driver_destroy(driver);
+}
+
+TEST(MsdBuffer, MapAndAutoUnmap)
+{
+    msd_driver_t* driver = msd_driver_create();
+    ASSERT_TRUE(driver);
+
+    std::unique_ptr<magma::PlatformHandle> buffer_handle;
+    msd_buffer_t* buffer = nullptr;
+
+    constexpr uint32_t kBufferSizeInPages = 1;
+
+    {
+        auto platform_buf = magma::PlatformBuffer::Create(kBufferSizeInPages * PAGE_SIZE, "test");
+        ASSERT_TRUE(platform_buf);
+
+        uint32_t raw_handle;
+        EXPECT_TRUE(platform_buf->duplicate_handle(&raw_handle));
+        buffer_handle = magma::PlatformHandle::Create(raw_handle);
+        ASSERT_TRUE(buffer_handle);
+
+        EXPECT_TRUE(platform_buf->duplicate_handle(&raw_handle));
+        buffer = msd_buffer_import(raw_handle);
+        ASSERT_TRUE(buffer);
+    }
+
+    // There should be at least two handles, the msd buffer and the "checker handle".
+    uint32_t handle_count;
+    EXPECT_TRUE(buffer_handle->GetCount(&handle_count));
+    EXPECT_GE(2u, handle_count);
+
+    msd_device_t* device = msd_driver_create_device(driver, GetTestDeviceHandle());
+    ASSERT_TRUE(device);
+
+    msd_connection_t* connection = msd_device_open(device, 0);
+    ASSERT_TRUE(connection);
+
+    // Mapping should keep alive the msd buffer.
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              msd_connection_map_buffer_gpu(connection, buffer,
+                                            0,                  // gpu addr
+                                            0,                  // page offset
+                                            kBufferSizeInPages, // page count
+                                            MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE));
+
+    // Verify we haven't lost any handles.
+    EXPECT_TRUE(buffer_handle->GetCount(&handle_count));
+    EXPECT_GE(2u, handle_count);
+
+    // Mapping auto released either here...
+    msd_connection_release_buffer(connection, buffer);
+
+    // OR here.
+    msd_buffer_destroy(buffer);
+
+    // Buffer should be now be released.
+    EXPECT_TRUE(buffer_handle->GetCount(&handle_count));
+    EXPECT_EQ(1u, handle_count);
+
+    msd_connection_close(connection);
+    msd_device_destroy(device);
+    msd_driver_destroy(driver);
+}
+
+TEST(MsdBuffer, Commit)
+{
+    msd_driver_t* driver = msd_driver_create();
+    ASSERT_TRUE(driver);
+
+    constexpr uint32_t kBufferSizeInPages = 1;
+
+    auto platform_buf = magma::PlatformBuffer::Create(kBufferSizeInPages * PAGE_SIZE, "test");
     ASSERT_NE(platform_buf, nullptr);
 
     uint32_t duplicate_handle;
     ASSERT_TRUE(platform_buf->duplicate_handle(&duplicate_handle));
 
-    auto msd_buffer = msd_buffer_import(duplicate_handle);
-    ASSERT_NE(msd_buffer, nullptr);
+    msd_buffer_t* buffer = msd_buffer_import(duplicate_handle);
+    ASSERT_TRUE(buffer);
 
-    auto connection = msd_device_open(device, 0);
+    msd_device_t* device = msd_driver_create_device(driver, GetTestDeviceHandle());
+    ASSERT_TRUE(device);
 
-    magma_status_t status =
-        msd_connection_map_buffer_gpu(connection, msd_buffer, 0, 0, kBufferSize / PAGE_SIZE,
-                                      MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE);
-    EXPECT_TRUE(status == MAGMA_STATUS_UNIMPLEMENTED || status == MAGMA_STATUS_OK);
+    msd_connection_t* connection = msd_device_open(device, 0);
+    ASSERT_TRUE(connection);
 
-    // Ensure it can map twice.
-    status = msd_connection_map_buffer_gpu(connection, msd_buffer, PAGE_SIZE * 1024, 0,
-                                           kBufferSize / PAGE_SIZE,
-                                           MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_EXECUTE);
+    // Bad offset
+    magma_status_t status;
+    status = msd_connection_commit_buffer(connection, buffer,
+                                          kBufferSizeInPages, // page offset
+                                          1                   // page count
+    );
+    EXPECT_NE(MAGMA_STATUS_OK, status);
+
+    // Bad page count
+    status = msd_connection_commit_buffer(connection, buffer,
+                                          0,                     // page offset
+                                          kBufferSizeInPages + 1 // page count
+    );
+    EXPECT_NE(MAGMA_STATUS_OK, status);
+
+    // Full
+    status = msd_connection_commit_buffer(connection, buffer,
+                                          0,                 // page offset
+                                          kBufferSizeInPages // page count
+    );
     EXPECT_TRUE(status == MAGMA_STATUS_OK || status == MAGMA_STATUS_UNIMPLEMENTED);
 
-    // Try to unmap a region that doesn't exist.
-    status = msd_connection_unmap_buffer_gpu(connection, msd_buffer, PAGE_SIZE * 2048);
-    EXPECT_TRUE(status != MAGMA_STATUS_OK);
-
-    // Commit an invalid region.
-    status = msd_connection_commit_buffer(connection, msd_buffer, 1, 2);
-    EXPECT_TRUE(status != MAGMA_STATUS_OK);
-
-    // Commit the entire valid region.
-    status = msd_connection_commit_buffer(connection, msd_buffer, 0, 1);
+    // Partial
+    status = msd_connection_commit_buffer(connection, buffer,
+                                          0, // page offset
+                                          1  // page count
+    );
     EXPECT_TRUE(status == MAGMA_STATUS_OK || status == MAGMA_STATUS_UNIMPLEMENTED);
 
-    status = msd_connection_unmap_buffer_gpu(connection, msd_buffer, 0);
-    EXPECT_TRUE(status == MAGMA_STATUS_OK || status == MAGMA_STATUS_UNIMPLEMENTED);
-
-    // One mapping is still outstanding, and this should release it.
-    msd_connection_release_buffer(connection, msd_buffer);
+    msd_buffer_destroy(buffer);
     msd_connection_close(connection);
-
-    msd_buffer_destroy(msd_buffer);
     msd_device_destroy(device);
-
     msd_driver_destroy(driver);
 }
