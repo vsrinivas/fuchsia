@@ -5,17 +5,11 @@ disabled_for_asan = [
   # CF-584
   "/pkgfs/packages/components_binary_test/0/test/components_binary_argv_test",
 
-  # MF-193
-  "/pkgfs/packages/modular_tests/0/test/run_modular_tests.sh",
-
   # CF-585
   "/pkgfs/packages/run_tests/0/test/run_return_value_shell_test",
 
   # Causes crash not asan failure (might be require toolchain help)
   "/pkgfs/packages/scenic_tests/0/test/gfx_pixeltests",
-
-  # MF-196
-  "/pkgfs/packages/sessionctl_integration_tests/0/test/sessionctl_test",
 
   # MTWN-236
   "/pkgfs/packages/use_aac_decoder_test/0/test/use_aac_decoder_test",
