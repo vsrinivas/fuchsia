@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 library("sysmem-connector") {
+  sdk = "source"
+  sdk_headers = [ "lib/sysmem-connector/sysmem-connector.h" ]
   sources = [
     "sysmem-connector.cpp",
   ]

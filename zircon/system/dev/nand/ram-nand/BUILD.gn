@@ -39,6 +39,7 @@ source_set("common") {
 test("ram-nand-test") {
   output_name = "ram-nand-test"
   sources = [
+    "test/main.cpp",
     "test/ram-nand-ctl.cpp",
     "test/ram-nand.cpp",
   ]
@@ -61,5 +62,6 @@ test("ram-nand-test") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zxtest",
   ]
 }
