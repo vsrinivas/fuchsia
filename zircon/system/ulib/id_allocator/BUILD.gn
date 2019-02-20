@@ -1,0 +1,27 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("id_allocator") {
+  sdk = "source"
+  sdk_headers = [ "id_allocator/id_allocator.h" ]
+  sources = [
+    "id_allocator.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    # <id_allocator/id_allocator.h> has #include <bitmap/bitmap.h>.
+    "$zx/system/ulib/bitmap:headers",
+
+    # <id_allocator/id_allocator.h> has #include <fbl/algorithm.h>.
+    "$zx/system/ulib/fbl:headers",
+  ]
+  deps = [
+    "$zx/system/ulib/bitmap",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
