@@ -277,7 +277,6 @@ void PageDelegate::WaitForConflictResolution(
 }
 
 const storage::CommitId& PageDelegate::GetCurrentCommitId() {
-  // TODO(etiennej): Commit implicit transactions when we have those.
   if (!journal_) {
     return branch_tracker_.GetBranchHeadId();
   }

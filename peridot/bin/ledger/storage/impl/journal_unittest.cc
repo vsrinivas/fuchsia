@@ -81,7 +81,7 @@ class JournalTest : public ledger::TestWithEnvironment {
   FXL_DISALLOW_COPY_AND_ASSIGN(JournalTest);
 };
 
-TEST_F(JournalTest, ImplicitJournalsCommitEmptyJournal) {
+TEST_F(JournalTest, CommitEmptyJournal) {
   SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
                                  kFirstPageCommitId.ToString()));
   bool called;
@@ -98,7 +98,7 @@ TEST_F(JournalTest, ImplicitJournalsCommitEmptyJournal) {
   EXPECT_EQ(kFirstPageCommitId, commit->GetId());
 }
 
-TEST_F(JournalTest, ImplicitJournalsPutDeleteCommit) {
+TEST_F(JournalTest, JournalsPutDeleteCommit) {
   SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
                                  kFirstPageCommitId.ToString()));
   journal_->Put("key", object_identifier_, KeyPriority::EAGER);
@@ -134,7 +134,7 @@ TEST_F(JournalTest, ImplicitJournalsPutDeleteCommit) {
   ASSERT_THAT(GetCommitContents(*commit), ElementsAre());
 }
 
-TEST_F(JournalTest, ImplicitJournalsPutRollback) {
+TEST_F(JournalTest, JournalsPutRollback) {
   SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
                                  kFirstPageCommitId.ToString()));
   journal_->Put("key", object_identifier_, KeyPriority::EAGER);
@@ -155,30 +155,7 @@ TEST_F(JournalTest, ImplicitJournalsPutRollback) {
   EXPECT_EQ(kFirstPageCommitId, heads[0]);
 }
 
-TEST_F(JournalTest, ExplicitJournalsSinglePut) {
-  SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
-                                 kFirstPageCommitId.ToString()));
-  journal_->Put("key", object_identifier_, KeyPriority::EAGER);
-
-  bool called;
-  Status status;
-  std::unique_ptr<const Commit> commit;
-  journal_->Commit(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
-
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  ASSERT_EQ(Status::OK, status);
-  ASSERT_NE(nullptr, commit);
-
-  std::vector<Entry> entries = GetCommitContents(*commit);
-  ASSERT_THAT(entries, SizeIs(1));
-  EXPECT_EQ("key", entries[0].key);
-  EXPECT_EQ(object_identifier_, entries[0].object_identifier);
-  EXPECT_EQ(KeyPriority::EAGER, entries[0].priority);
-}
-
-TEST_F(JournalTest, ExplicitJournalsMultiplePutsDeletes) {
+TEST_F(JournalTest, MultiplePutsDeletes) {
   int size = 3;
   SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
                                  kFirstPageCommitId.ToString()));
@@ -241,7 +218,7 @@ TEST_F(JournalTest, ExplicitJournalsMultiplePutsDeletes) {
   EXPECT_EQ(KeyPriority::EAGER, entries[0].priority);
 }
 
-TEST_F(JournalTest, ExplicitJournalsClear) {
+TEST_F(JournalTest, PutClear) {
   int size = 3;
   SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
                                  kFirstPageCommitId.ToString()));
@@ -279,8 +256,8 @@ TEST_F(JournalTest, ExplicitJournalsClear) {
 }
 
 TEST_F(JournalTest, MergeJournal) {
-  // Create 2 commits from the |kFirstPageCommitId|, one implicit with a key
-  // "0", and one explicit with a key "1".
+  // Create 2 commits from the |kFirstPageCommitId|, one with a key "0", and one
+  // with a key "1".
   SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
                                  kFirstPageCommitId.ToString()));
   journal_->Put("0", object_identifier_, KeyPriority::EAGER);

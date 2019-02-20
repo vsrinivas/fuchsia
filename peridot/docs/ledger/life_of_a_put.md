@@ -41,19 +41,15 @@ handled the updates before continuing to the next step. The PageWatchers say
 that they've handled the OnChange by calling the (generated) OnChangeCallback.
 
 ### Journals
-All changes are first written in a Journal before being committed. There are two
-types of journals: *explicit* journals when clients starts a transaction, and
-*implicit* journals when clients do a change without having started a
-transaction first.
+All changes are first written in a Journal before being committed. This includes
+Put, Delete or Clear operations. Journals can be used to store transactions in
+progress, in which case the journal is called explicit, or to prepare a single
+update operation outside of a transaction (implicit journal).
 
-Changes in explicit journals are guaranteed to be seen together: a PageSnapshot
-and/or a PageWatcher will either contain/see **all** the changes, or none. If
-for some reason Ledger is unexpectedly closed, any non completed explicit
-transaction is dropped.
-
-In contrast, PageSnapshots and/or PageWatchers may see the individual changes
-from an implicit journal, and if Ledger is unexpectedly closed any in-progress
-implicit journal will be committed during the next startup.
+Changes in journals are guaranteed to be seen together: a PageSnapshot and/or a
+PageWatcher will either contain/see **all** the changes, or none. If for some
+reason Ledger is unexpectedly closed, the updates added in any non completed
+journal are dropped.
 
 ### Finishing a transaction
 When a transaction is completed, a commit is appended to one of the Page's
