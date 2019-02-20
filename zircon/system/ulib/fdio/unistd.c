@@ -738,41 +738,6 @@ zx_status_t fdio_ns_get_installed(fdio_ns_t** ns) {
 }
 
 __EXPORT
-zx_status_t fdio_clone_fd(int fd, int newfd, zx_handle_t* handles, uint32_t* types) {
-    zx_status_t r;
-    fdio_t* io;
-    if ((io = fd_to_io(fd)) == NULL) {
-        return ZX_ERR_BAD_HANDLE;
-    }
-    // TODO(ZX-973): implement/honor close-on-exec flag
-    if ((r = fdio_get_ops(io)->clone(io, handles, types)) > 0) {
-        for (int i = 0; i < r; i++) {
-            types[i] |= (newfd << 16);
-        }
-    }
-    fdio_release(io);
-    return r;
-}
-
-__EXPORT
-zx_status_t fdio_transfer_fd(int fd, int newfd, zx_handle_t* handles, uint32_t* types) {
-    fdio_t* io;
-    zx_status_t status;
-    if ((status = fdio_unbind_from_fd(fd, &io)) < 0) {
-        return status;
-    }
-    status = fdio_get_ops(io)->unwrap(io, handles, types);
-    fdio_release(io);
-    if (status < 0) {
-        return status;
-    }
-    for (int n = 0; n < status; n++) {
-        types[n] |= (newfd << 16);
-    }
-    return status;
-}
-
-__EXPORT
 ssize_t fdio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
     fdio_t* io;
     if ((io = fd_to_io(fd)) == NULL) {

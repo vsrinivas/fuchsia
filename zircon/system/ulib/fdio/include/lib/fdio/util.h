@@ -15,14 +15,7 @@
 __BEGIN_CDECLS
 
 // BEGIN DEPRECATED ------------------------------------------------------------
-
-// Use fdio_cwd_clone, fdio_fd_clone, and fdio_fd_transfer instead.
-zx_status_t fdio_clone_fd(int fd, int newfd, zx_handle_t* handles, uint32_t* types);
-zx_status_t fdio_transfer_fd(int fd, int newfd, zx_handle_t* handles, uint32_t* types);
-
-// Use fdio_fd_create instead.
 zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount, int* fd_out);
-
 // END DEPRECATED --------------------------------------------------------------
 
 __END_CDECLS
