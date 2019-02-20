@@ -62,6 +62,7 @@ source_set("common") {
 test("devmgr-test") {
   test_group = "ddk"
   sources = [
+    "binding-test.cpp",
     "coordinator-test.cpp",
   ]
   deps = [

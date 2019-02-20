@@ -5,23 +5,18 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-
+#include <fbl/array.h>
 #include <stdio.h>
 
+#include "binding-internal.h"
 #include "coordinator.h"
+#include "device.h"
 
-namespace {
+namespace devmgr {
 
-struct BindProgramContext {
-    const fbl::Array<const zx_device_prop_t>* props;
-    uint32_t protocol_id;
-    uint32_t binding_size;
-    const zx_bind_inst_t* binding;
-    const char* name;
-    uint32_t autobind;
-};
+namespace internal {
 
-uint32_t dev_get_prop(BindProgramContext* ctx, uint32_t id) {
+uint32_t LookupBindProperty(BindProgramContext* ctx, uint32_t id) {
     for (const auto prop : *ctx->props) {
         if (prop.id == id) {
             return prop.value;
@@ -40,7 +35,7 @@ uint32_t dev_get_prop(BindProgramContext* ctx, uint32_t id) {
     }
 }
 
-bool is_bindable(BindProgramContext* ctx) {
+bool EvaluateBindProgram(BindProgramContext* ctx) {
     const zx_bind_inst_t* ip = ctx->binding;
     const zx_bind_inst_t* end = ip + (ctx->binding_size / sizeof(zx_bind_inst_t));
     uint32_t flags = 0;
@@ -54,7 +49,7 @@ bool is_bindable(BindProgramContext* ctx) {
             uint32_t pid = BINDINST_PB(inst);
             uint32_t pval;
             if (pid != BIND_FLAGS) {
-                pval = dev_get_prop(ctx, pid);
+                pval = LookupBindProperty(ctx, pid);
             } else {
                 pval = flags;
             }
@@ -122,23 +117,31 @@ bool is_bindable(BindProgramContext* ctx) {
     return false;
 }
 
-} // namespace
+Match SumMatchCounts(Match m1, Match m2) {
+    switch (m1) {
+    case Match::None: return m2;
+    case Match::One: return (m2 == Match::None ? Match::One : Match::Many);
+    case Match::Many: return Match::Many;
+    }
+    __builtin_trap();
+}
 
-namespace devmgr {
+// Instantiate MatchParts<Device>
+template Match MatchParts(Device* device, DeviceComponentPartDescriptor* parts,
+                          uint32_t parts_count);
+
+} // namespace internal
 
 bool dc_is_bindable(const Driver* drv, uint32_t protocol_id,
                     const fbl::Array<const zx_device_prop_t>& props, bool autobind) {
-    if (drv->binding_size == 0) {
-        return false;
-    }
-    BindProgramContext ctx;
+    internal::BindProgramContext ctx;
     ctx.props = &props;
     ctx.protocol_id = protocol_id;
     ctx.binding = drv->binding.get();
     ctx.binding_size = drv->binding_size;
     ctx.name = drv->name.c_str();
     ctx.autobind = autobind ? 1 : 0;
-    return is_bindable(&ctx);
+    return internal::EvaluateBindProgram(&ctx);
 }
 
 } // namespace devmgr
