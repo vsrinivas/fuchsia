@@ -64,8 +64,9 @@ if [[ -z "$BUILDDIR" ]]; then
     BUILDDIR="build-$VARIANT$BUILDDIR_SUFFIX"
 fi
 
-if [[ -r "$BUILDDIR/args.gn" && $# -eq 0 ]]; then
+if [[ -r "$BUILDDIR/args.gn" && -r "$BUILDDIR/build.ninja" && $# -eq 0 ]]; then
     echo >&2 "Reusing existing $BUILDDIR/args.gn"
+    echo >&2 "If Ninja fails confusingly, try: rm -rf $BUILDDIR"
 else
     "$DIR/gn" gen "${GN_SWITCHES[@]}" "$BUILDDIR" --args="
 variants = [ \"$VARIANT\" ]
