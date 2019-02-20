@@ -43,15 +43,19 @@ executable("scenic") {
       "//garnet/lib/ui/input",
     ]
   }
+
+  # Extra stack needed to avoid crashes when loading vulkan validation layers
+  # with asan enabled.
+  ldflags = [ "-Wl,-z,stack-size=0x100000" ]
 }
 
 source_set("base_deps") {
   public_deps = [
     "//garnet/lib/ui/scenic",
     "//garnet/public/lib/component/cpp",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/trace-provider",
   ]
