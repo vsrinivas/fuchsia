@@ -22,8 +22,11 @@ using DeviceType = ddk::Device<BtHciMediatek, ddk::GetProtocolable>;
 
 class BtHciMediatek : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_BT_TRANSPORT> {
 public:
-    BtHciMediatek(zx_device_t* parent, const ddk::SdioProtocolClient& sdio, zx::port port)
-        : DeviceType(parent), sdio_(sdio), port_(std::move(port)) {}
+    BtHciMediatek(zx_device_t* parent, const ddk::SdioProtocolClient& sdio, zx::port port,
+                  size_t fw_part_max_size)
+        : DeviceType(parent), sdio_(sdio), port_(std::move(port)),
+          fw_part_max_size_(fw_part_max_size) {}
+    virtual ~BtHciMediatek() = default;
 
     void DdkRelease();
 
@@ -31,13 +34,32 @@ public:
 
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
 
-private:
+    // Visible for testing.
     enum FirmwarePartMode {
         kFirmwarePartFirst = 1,
         kFirmwarePartContinue = 2,
         kFirmwarePartLast = 3
     };
 
+    zx_status_t CardSendVendorPacket(uint8_t id, uint8_t ocf, uint8_t* packet, size_t* size,
+                                     size_t buffer_size);
+
+    zx_status_t CardDownloadFirmware(const zx::vmo& vmo, size_t fw_size);
+
+protected:
+    // Visible for testing.
+    virtual zx_status_t CardRead32(uint32_t address, uint32_t* value);
+    virtual zx_status_t CardWrite32(uint32_t address, uint32_t value);
+    virtual zx_status_t CardRecvPacket(uint32_t* size);
+
+    virtual zx_status_t CardReset();
+
+    virtual zx_status_t CardGetHwVersion(uint32_t* version);
+    virtual zx_status_t CardSendFirmwarePart(zx_handle_t vmo, uint8_t* buffer,
+                                             const uint8_t* fw_data, size_t size,
+                                             FirmwarePartMode mode);
+
+private:
     enum PacketKey {
         kSdioInterruptKey,
         kCommandChannelKey,
@@ -61,22 +83,10 @@ private:
     zx_status_t CardEnableInterrupt();
     zx_status_t CardDisableInterrupt();
 
-    zx_status_t CardRead32(uint32_t address, uint32_t* value);
-    zx_status_t CardWrite32(uint32_t address, uint32_t value);
-    zx_status_t CardRecvPacket(uint32_t* size);
-
-    zx_status_t CardReset();
     zx_status_t CardSetOwn(bool driver);
     zx_status_t CardSetPower(bool on);
 
-    zx_status_t CardSendVendorPacket(uint8_t id, uint8_t ocf, uint8_t* packet, size_t* size,
-                                     size_t buffer_size);
-
     int CardGetFirmwareStatus();
-    zx_status_t CardGetHwVersion(uint32_t* version);
-    zx_status_t CardDownloadFirmware(const zx::vmo& vmo, size_t fw_size);
-    zx_status_t CardSendFirmwarePart(zx_handle_t vmo, uint8_t* buffer, const uint8_t* fw_data,
-                                     size_t size, FirmwarePartMode mode);
 
     zx_status_t HandleCardInterrupt() TA_REQ(thread_mutex_);
     zx_status_t HostToCardPacket(const zx::channel& channel, uint8_t packet_type,
@@ -98,6 +108,7 @@ private:
         .open_acl_data_channel = OpenAclDataChannel,
         .open_snoop_channel = OpenSnoopChannel
     };
+    const size_t fw_part_max_size_;
 };
 
 }  // namespace bluetooth

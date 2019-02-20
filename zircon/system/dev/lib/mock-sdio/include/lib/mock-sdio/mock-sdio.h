@@ -19,7 +19,7 @@ namespace mock_sdio {
 // mock_sdio::MockSdio sdio;
 // sdio
 //     .ExpectReadByte(SDIO_FN_1, 0x10, 0xab)
-//     .ExpectFifoWrite(SDIO_FN_2, 0x20, {0x01, 0x23, 0x45, 0x67})
+//     .ExpectFifoWrite(SDIO_FN_2, 0x20, {0x01, 0x23, 0x45, 0x67}, true)
 //     .ExpectRead(SDIO_FN_1, 0x00, {0x89, 0xab});
 //
 // SomeDriver dut(sdio.GetProto());
@@ -39,7 +39,8 @@ public:
             .addr = addr,
             .incr = false,
             .write = false,
-            .data = {byte}
+            .data = {byte},
+            .exact = true
         };
         expectations_.push_back(std::move(exp));
         return *this;
@@ -51,55 +52,60 @@ public:
             .addr = addr,
             .incr = false,
             .write = true,
-            .data = {byte}
+            .data = {byte},
+            .exact = true
         };
         expectations_.push_back(std::move(exp));
         return *this;
     }
 
-    MockSdio& ExpectFifoRead(uint8_t fn_idx, uint32_t addr, fbl::Vector<uint8_t> buf) {
+    MockSdio& ExpectFifoRead(uint8_t fn_idx, uint32_t addr, fbl::Vector<uint8_t> buf, bool exact) {
         SdioRwExpectation exp{
             .fn_idx = fn_idx,
             .addr = addr,
             .incr = false,
             .write = false,
-            .data = std::move(buf)
+            .data = std::move(buf),
+            .exact = exact
         };
         expectations_.push_back(std::move(exp));
         return *this;
     }
 
-    MockSdio& ExpectFifoWrite(uint8_t fn_idx, uint32_t addr, fbl::Vector<uint8_t> buf) {
+    MockSdio& ExpectFifoWrite(uint8_t fn_idx, uint32_t addr, fbl::Vector<uint8_t> buf, bool exact) {
         SdioRwExpectation exp{
             .fn_idx = fn_idx,
             .addr = addr,
             .incr = false,
             .write = true,
-            .data = std::move(buf)
+            .data = std::move(buf),
+            .exact = exact
         };
         expectations_.push_back(std::move(exp));
         return *this;
     }
 
-    MockSdio& ExpectRead(uint8_t fn_idx, uint32_t addr, fbl::Vector<uint8_t> buf) {
+    MockSdio& ExpectRead(uint8_t fn_idx, uint32_t addr, fbl::Vector<uint8_t> buf, bool exact) {
         SdioRwExpectation exp{
             .fn_idx = fn_idx,
             .addr = addr,
             .incr = true,
             .write = false,
-            .data = std::move(buf)
+            .data = std::move(buf),
+            .exact = exact
         };
         expectations_.push_back(std::move(exp));
         return *this;
     }
 
-    MockSdio& ExpectWrite(uint8_t fn_idx, uint32_t addr, fbl::Vector<uint8_t> buf) {
+    MockSdio& ExpectWrite(uint8_t fn_idx, uint32_t addr, fbl::Vector<uint8_t> buf, bool exact) {
         SdioRwExpectation exp{
             .fn_idx = fn_idx,
             .addr = addr,
             .incr = true,
             .write = true,
-            .data = std::move(buf)
+            .data = std::move(buf),
+            .exact = exact
         };
         expectations_.push_back(std::move(exp));
         return *this;
@@ -169,6 +175,7 @@ private:
         bool incr;
         bool write;
         fbl::Vector<uint8_t> data;
+        bool exact;
     };
 
     void ExpectGetInBandIntrHelper(const zx::interrupt& interrupt) {
@@ -186,12 +193,18 @@ private:
         EXPECT_EQ(exp.addr, addr, "Transaction address mismatch");
         EXPECT_EQ(exp.incr, incr, "Transaction FIFO mismatch");
         ASSERT_EQ(exp.write, write, "Transaction read/write mismatch");
-        ASSERT_EQ(exp.data.size(), size, "Transaction size mismatch");
+
+        if (exp.exact) {
+            ASSERT_EQ(exp.data.size(), size, "Transaction size mismatch");
+        } else {
+            // The expected message must not be larger than the provided buffer.
+            ASSERT_LE(exp.data.size(), size, "Transaction size mismatch");
+        }
 
         if (write) {
-            EXPECT_BYTES_EQ(exp.data.get(), buffer, size);
+            EXPECT_BYTES_EQ(exp.data.get(), buffer, exp.data.size());
         } else {
-            memcpy(buffer, exp.data.get(), size);
+            memcpy(buffer, exp.data.get(), exp.data.size());
         }
     }
 
@@ -203,7 +216,8 @@ private:
         fzl::VmoMapper mapper;
         if (txn->use_dma) {
             zx::vmo vmo(txn->dma_vmo);
-            zx_status_t status = mapper.Map(vmo, 0, txn->data_size, 0);
+            zx_status_t status =
+                mapper.Map(vmo, 0, txn->data_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
 
             __UNUSED zx_handle_t handle = vmo.release();
 

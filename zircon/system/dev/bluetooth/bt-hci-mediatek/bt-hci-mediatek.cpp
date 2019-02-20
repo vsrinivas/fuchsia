@@ -163,7 +163,8 @@ zx_status_t BtHciMediatek::Create(void* ctx, zx_device_t* parent) {
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<BtHciMediatek> device(new (&ac) BtHciMediatek(parent, sdio, std::move(port)));
+    fbl::unique_ptr<BtHciMediatek> device(
+        new (&ac) BtHciMediatek(parent, sdio, std::move(port), kFwPartMaxSize));
     if (!ac.check()) {
         zxlogf(ERROR, "%s: BtHciMediatek alloc failed\n", __FILE__);
         return ZX_ERR_NO_MEMORY;
@@ -234,6 +235,9 @@ zx_status_t BtHciMediatek::Init(const zx::vmo& fw_vmo, size_t fw_size) {
     } else if (fw_status == kFirmwareNeedDownload) {
         if ((status = CardDownloadFirmware(fw_vmo, fw_size)) != ZX_OK) {
             return status;
+        } else if (CardGetFirmwareStatus() != kFirmwareReady) {
+            zxlogf(ERROR, "%s: Firmware not ready after download\n", __FILE__);
+            return ZX_ERR_INTERNAL;
         }
     }
 
@@ -676,6 +680,11 @@ zx_status_t BtHciMediatek::CardGetHwVersion(uint32_t* version) {
 }
 
 zx_status_t BtHciMediatek::CardDownloadFirmware(const zx::vmo& fw_vmo, size_t fw_size) {
+    if (fw_size < kFwHeaderSize) {
+        zxlogf(ERROR, "%s: Invalid firmware size\n", __FILE__);
+        return ZX_ERR_IO;
+    }
+
     uint32_t hw_version = 0;
     zx_status_t status = CardGetHwVersion(&hw_version);
     if (status != ZX_OK) {
@@ -695,7 +704,7 @@ zx_status_t BtHciMediatek::CardDownloadFirmware(const zx::vmo& fw_vmo, size_t fw
 
     fzl::VmoMapper fw_part_mapper;
     zx::vmo fw_part_vmo;
-    status = fw_part_mapper.CreateAndMap(kFwPartHeaderSize + kFwPartMaxSize,
+    status = fw_part_mapper.CreateAndMap(kFwPartHeaderSize + fw_part_max_size_,
                                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &fw_part_vmo);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to create and map VMO\n", __FILE__);
@@ -709,7 +718,7 @@ zx_status_t BtHciMediatek::CardDownloadFirmware(const zx::vmo& fw_vmo, size_t fw
 
     size_t fw_left = fw_size;
     for (size_t send_size; fw_left > 0 && status == ZX_OK; fw_left -= send_size) {
-        send_size = std::min(kFwPartMaxSize, fw_left);
+        send_size = std::min(fw_part_max_size_, fw_left);
 
         FirmwarePartMode mode = kFirmwarePartContinue;
         if (fw_left == fw_size) {
@@ -733,11 +742,6 @@ zx_status_t BtHciMediatek::CardDownloadFirmware(const zx::vmo& fw_vmo, size_t fw
 
     if ((status = CardWrite32(kChcrAddress, chcr | kChcrWriteClear)) != ZX_OK) {
         return status;
-    }
-
-    if (CardGetFirmwareStatus() != kFirmwareReady) {
-        zxlogf(ERROR, "%s: Firmware not ready after download\n", __FILE__);
-        return ZX_ERR_INTERNAL;
     }
 
     return CardReset();

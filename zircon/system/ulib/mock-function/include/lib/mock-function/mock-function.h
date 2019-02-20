@@ -56,7 +56,7 @@ public:
     }
 
     R Call(Ts... args) {
-        R ret = 0;
+        R ret = {};
         CallHelper(&ret, args...);
         return ret;
     }
