@@ -1,0 +1,43 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.accessibility.semantics;
+
+/// An interface to manage connections with views for the purposes of gathering semantic information
+/// about their current UI state.
+///
+/// The manager allows clients to register as a semantic provider for their view(s). In return the
+/// semantics manager supplies an interface to update, commit and delete information from the
+/// semantic tree for that view.
+[Discoverable]
+interface SemanticsManager {
+    RegisterView(handle<event> view_ref, // TODO: replace with ViewRef type once it exists
+                 SemanticActionListener listener,
+                 request<SemanticTree> semantic_tree_request);
+};
+
+/// Interface to update the semantic tree for a particular view. Nodes can be added, updated or
+/// deleted. Because the size of an update may exceed FIDL transfer limits, clients are responsible
+/// for breaking up changes into multiple update and delete calls that conform to these limits. The
+/// commit function must always be called at the end of a full update push to signal the end of an
+/// update.
+interface SemanticTree {
+    // Commits pending changes to node tree associated with the view using UpdateSemanticNodes and
+    // DeleteSemanticNodes.
+    Commit();
+
+    // Sends new/updated nodes to the root to add to the cache on the next commit.
+    UpdateSemanticNodes(vector<Node> nodes);
+
+    // Tells the root to remove nodes with node_ids from the semantic tree on the next commit.
+    DeleteSemanticNodes(vector<uint32> node_ids);
+};
+
+/// A semantic provider is the client-side interface that the manager can use to
+/// ask clients to perform accessibility actions.
+interface SemanticActionListener {
+    // Asks the semantics provider to perform an accessibility action on the
+    // node with node id in the front-end.
+    OnAccessibilityActionRequested(uint32 node_id, Action action) -> (bool handled);
+};

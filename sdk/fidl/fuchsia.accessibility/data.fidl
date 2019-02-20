@@ -6,6 +6,8 @@ library fuchsia.accessibility;
 
 using fuchsia.ui.gfx;
 
+// DEPRECATED; TO BE REMOVED
+
 // Represents the data needed to identify a specific ui element.
 // TODO(SCN-814) Figure out how we want to serialize data.
 // Starting with a very small selection of fields for testing.

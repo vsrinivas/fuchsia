@@ -6,11 +6,14 @@ library fuchsia.accessibility;
 
 using koid = uint64;
 
+// DEPRECATED; TO BE REMOVED
+
 // A semantics root is an interface implemented by an accessibility manager. It stores semantic
 // information on a per-view basis as supplied by front-ends. Each frontend pushes its semantic tree
 // to the manager, which stores this data. In future, the manager will also forward this data to
 // relevant client services. It also acts as a place for the manager to call actions on front-ends.
 //
+
 // This is a stub implementation and is currently a work in progress.
 [Discoverable]
 protocol SemanticsRoot {
