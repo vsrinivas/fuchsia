@@ -8,6 +8,7 @@
 namespace test {
 namespace name {
 
+#ifdef __Fuchsia__
 class SwitchingOrdinals;
 using SwitchingOrdinalsPtr = ::fidl::InterfacePtr<SwitchingOrdinals>;
 class SwitchingOrdinals_Proxy;
@@ -16,6 +17,8 @@ class SwitchingOrdinals_EventSender;
 class SwitchingOrdinals_Sync;
 using SwitchingOrdinalsSyncPtr = ::fidl::SynchronousInterfacePtr<SwitchingOrdinals>;
 class SwitchingOrdinals_SyncProxy;
+#endif // __Fuchsia__
+#ifdef __Fuchsia__
 
 class SwitchingOrdinals {
  public:
@@ -94,6 +97,7 @@ class SwitchingOrdinals_SyncProxy : public SwitchingOrdinals_Sync {
   private:
   ::fidl::internal::SynchronousProxy proxy_;
 };
+#endif // __Fuchsia__
 }  // namespace name
 }  // namespace test
 namespace fidl {

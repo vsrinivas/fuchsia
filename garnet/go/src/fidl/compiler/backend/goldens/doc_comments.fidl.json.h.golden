@@ -8,6 +8,7 @@
 namespace test {
 namespace name {
 
+#ifdef __Fuchsia__
 class Interface;
 using InterfacePtr = ::fidl::InterfacePtr<Interface>;
 class Interface_Proxy;
@@ -16,9 +17,11 @@ class Interface_EventSender;
 class Interface_Sync;
 using InterfaceSyncPtr = ::fidl::SynchronousInterfacePtr<Interface>;
 class Interface_SyncProxy;
+#endif // __Fuchsia__
 class Struct;
 class Union;
 class Table;
+#ifdef __Fuchsia__
 
 // interface comment #1
 //
@@ -88,6 +91,7 @@ class Interface_SyncProxy : public Interface_Sync {
   private:
   ::fidl::internal::SynchronousProxy proxy_;
 };
+#endif // __Fuchsia__
 
 // struct comment #1
 //

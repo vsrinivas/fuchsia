@@ -6,6 +6,7 @@ package templates
 
 const Interface = `
 {{- define "InterfaceForwardDeclaration" }}
+#ifdef __Fuchsia__
 class {{ .Name }};
 using {{ .Name }}Ptr = ::fidl::InterfacePtr<{{ .Name }}>;
 class {{ .ProxyName }};
@@ -14,6 +15,7 @@ class {{ .EventSenderName }};
 class {{ .SyncName }};
 using {{ .Name }}SyncPtr = ::fidl::SynchronousInterfacePtr<{{ .Name }}>;
 class {{ .SyncProxyName }};
+#endif // __Fuchsia__
 {{- end }}
 
 {{- define "Params" -}}
@@ -55,6 +57,7 @@ class {{ .SyncProxyName }};
 {{ end -}}
 
 {{- define "InterfaceDeclaration" }}
+#ifdef __Fuchsia__
 {{range .DocComments}}
 //{{ . }}
 {{- end}}
@@ -171,9 +174,11 @@ class {{ .SyncProxyName }} : public {{ .SyncName }} {
   private:
   ::fidl::internal::SynchronousProxy proxy_;
 };
+#endif // __Fuchsia__
 {{- end }}
 
 {{- define "InterfaceDefinition" }}
+#ifdef __Fuchsia__
 namespace {
 
 {{- range .Methods }}
@@ -445,6 +450,7 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
   {{- end }}
 {{- end }}
 
+#endif // __Fuchsia__
 {{ end }}
 
 {{- define "InterfaceTraits" }}

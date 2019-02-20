@@ -6,6 +6,7 @@
 namespace test {
 namespace name {
 
+#ifdef __Fuchsia__
 namespace {
   
 constexpr uint32_t kKitchenSink_MethodA_Ordinal = 450577456u;
@@ -208,6 +209,7 @@ zx_status_t KitchenSink_SyncProxy::MethodB(int64_t a, int64_t b, int64_t* out_re
   return ZX_OK;
 }
 
+#endif // __Fuchsia__
 
 namespace {
 
@@ -332,6 +334,7 @@ void KitchenSink_Stub::EventA(int64_t a, int64_t b) {
 }
 
 
+#ifdef __Fuchsia__
 namespace {
   
 constexpr uint32_t kKitchenSink_MethodA_Ordinal = 450577456u;
@@ -534,7 +537,9 @@ zx_status_t KitchenSink_SyncProxy::MethodB(int64_t a, int64_t b, int64_t* out_re
   return ZX_OK;
 }
 
+#endif // __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace {
   
 constexpr uint32_t kChannelProtocol_MethodA_Ordinal = 1432785874u;
@@ -737,7 +742,9 @@ zx_status_t ChannelProtocol_SyncProxy::MethodB(int64_t a, int64_t b, int64_t* ou
   return ZX_OK;
 }
 
+#endif // __Fuchsia__
 
+#ifdef __Fuchsia__
 namespace {
   
 constexpr uint32_t kSocketControlProtocol_MethodA_Ordinal = 1007842318u;
@@ -940,6 +947,7 @@ zx_status_t SocketControlProtocol_SyncProxy::MethodB(int64_t a, int64_t b, int64
   return ZX_OK;
 }
 
+#endif // __Fuchsia__
 
 namespace {
 

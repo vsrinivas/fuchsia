@@ -9,6 +9,7 @@
 namespace test {
 namespace name {
 
+#ifdef __Fuchsia__
 class KitchenSink;
 using KitchenSinkPtr = ::fidl::InterfacePtr<KitchenSink>;
 class KitchenSink_Proxy;
@@ -17,9 +18,11 @@ class KitchenSink_EventSender;
 class KitchenSink_Sync;
 using KitchenSinkSyncPtr = ::fidl::SynchronousInterfacePtr<KitchenSink>;
 class KitchenSink_SyncProxy;
+#endif // __Fuchsia__
 class KitchenSink;
 class KitchenSink_Proxy;
 class KitchenSink_Stub;
+#ifdef __Fuchsia__
 class KitchenSink;
 using KitchenSinkPtr = ::fidl::InterfacePtr<KitchenSink>;
 class KitchenSink_Proxy;
@@ -28,6 +31,8 @@ class KitchenSink_EventSender;
 class KitchenSink_Sync;
 using KitchenSinkSyncPtr = ::fidl::SynchronousInterfacePtr<KitchenSink>;
 class KitchenSink_SyncProxy;
+#endif // __Fuchsia__
+#ifdef __Fuchsia__
 class ChannelProtocol;
 using ChannelProtocolPtr = ::fidl::InterfacePtr<ChannelProtocol>;
 class ChannelProtocol_Proxy;
@@ -36,6 +41,8 @@ class ChannelProtocol_EventSender;
 class ChannelProtocol_Sync;
 using ChannelProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<ChannelProtocol>;
 class ChannelProtocol_SyncProxy;
+#endif // __Fuchsia__
+#ifdef __Fuchsia__
 class SocketControlProtocol;
 using SocketControlProtocolPtr = ::fidl::InterfacePtr<SocketControlProtocol>;
 class SocketControlProtocol_Proxy;
@@ -44,9 +51,11 @@ class SocketControlProtocol_EventSender;
 class SocketControlProtocol_Sync;
 using SocketControlProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SocketControlProtocol>;
 class SocketControlProtocol_SyncProxy;
+#endif // __Fuchsia__
 class OvernetStreamProtocol;
 class OvernetStreamProtocol_Proxy;
 class OvernetStreamProtocol_Stub;
+#ifdef __Fuchsia__
 
 class KitchenSink {
  public:
@@ -122,6 +131,7 @@ class KitchenSink_SyncProxy : public KitchenSink_Sync {
   private:
   ::fidl::internal::SynchronousProxy proxy_;
 };
+#endif // __Fuchsia__
 
 class KitchenSink {
  public:
@@ -160,6 +170,7 @@ class KitchenSink_Stub : public ::fidl::OvernetStream, public KitchenSink {
  private:
   zx_status_t Dispatch_(::fidl::Message* message) override final;
 };
+#ifdef __Fuchsia__
 
 class KitchenSink {
  public:
@@ -235,6 +246,8 @@ class KitchenSink_SyncProxy : public KitchenSink_Sync {
   private:
   ::fidl::internal::SynchronousProxy proxy_;
 };
+#endif // __Fuchsia__
+#ifdef __Fuchsia__
 
 class ChannelProtocol {
  public:
@@ -310,6 +323,8 @@ class ChannelProtocol_SyncProxy : public ChannelProtocol_Sync {
   private:
   ::fidl::internal::SynchronousProxy proxy_;
 };
+#endif // __Fuchsia__
+#ifdef __Fuchsia__
 
 class SocketControlProtocol {
  public:
@@ -385,6 +400,7 @@ class SocketControlProtocol_SyncProxy : public SocketControlProtocol_Sync {
   private:
   ::fidl::internal::SynchronousProxy proxy_;
 };
+#endif // __Fuchsia__
 
 class OvernetStreamProtocol {
  public:

@@ -6,6 +6,7 @@
 namespace test {
 namespace name {
 
+#ifdef __Fuchsia__
 namespace {
   
 constexpr uint32_t kInterface_Method_Ordinal = 1061382220u;
@@ -86,6 +87,7 @@ zx_status_t Interface_SyncProxy::Method() {
   return proxy_.Send(&test_name_InterfaceMethodRequestTable, _encoder.GetMessage());
 }
 
+#endif // __Fuchsia__
 
 extern "C" const fidl_type_t test_name_StructTable;
 const fidl_type_t* Struct::FidlType = &test_name_StructTable;

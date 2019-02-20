@@ -6,6 +6,7 @@
 namespace test {
 namespace name {
 
+#ifdef __Fuchsia__
 namespace {
   
 constexpr uint32_t kSwitchingOrdinals_OrdinalFive_Ordinal = 2005164903u;
@@ -149,6 +150,7 @@ zx_status_t SwitchingOrdinals_SyncProxy::OnlyGeneratedOrdinal() {
   return proxy_.Send(&test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable, _encoder.GetMessage());
 }
 
+#endif // __Fuchsia__
 
 }  // namespace name
 }  // namespace test
