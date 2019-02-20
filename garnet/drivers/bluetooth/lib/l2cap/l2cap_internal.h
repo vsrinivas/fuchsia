@@ -122,9 +122,30 @@ struct SimpleSupervisoryFrame : public EnhancedControlField {
         htole16(le16toh(raw_value) | (static_cast<uint8_t>(sfunc) << 2));
   }
 
+  bool is_poll_request() const {
+    return le16toh(raw_value) & 0b1'0000;  // See Vol 3, Part A, Table 3.2.
+  }
+
+  bool is_poll_response() const {
+    // See Vol 3, Part A, Table 3.2. The spec calls this the 'final' bit. But
+    // poll response seems more intuitive.
+    return le16toh(raw_value) & 0b1000'0000;
+  }
+
   SupervisoryFunction function() const {
     // See Vol 3, Part A, Table 3.2.
     return static_cast<SupervisoryFunction>((le16toh(raw_value) >> 2) & 0b11);
+  }
+
+  void set_is_poll_request() {
+    // See Vol 3, Part A, Table 3.2.
+    raw_value = htole16(le16toh(raw_value) | 0b1'0000);
+  }
+
+  void set_is_poll_response() {
+    // See Vol 3, Part A, Table 3.2. The spec calls this the 'final' bit. But
+    // poll response seems more intuitive.
+    raw_value = htole16(le16toh(raw_value) | 0b1000'0000);
   }
 } __PACKED;
 

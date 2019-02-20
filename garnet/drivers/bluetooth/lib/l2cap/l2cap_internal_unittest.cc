@@ -163,6 +163,26 @@ TEST(L2CAP_Internal_SimpleSupervisoryFrameTest, IsConstructedProperly) {
   }
 }
 
+TEST(L2CAP_Internal_SimpleSupervisoryFrameTest, IdentifiesPollRequest) {
+  // See Core Spec, v5, Vol 3, Part A, Table 3.2.
+  EXPECT_FALSE(CreateStaticByteBuffer(0b0'0001, 0)
+                   .As<SimpleSupervisoryFrame>()
+                   .is_poll_request());
+  EXPECT_TRUE(CreateStaticByteBuffer(0b1'0001, 0)
+                  .As<SimpleSupervisoryFrame>()
+                  .is_poll_request());
+}
+
+TEST(L2CAP_Internal_SimpleSupervisoryFrameTest, IdentifiesPollResponse) {
+  // See Core Spec, v5, Vol 3, Part A, Table 3.2.
+  EXPECT_FALSE(CreateStaticByteBuffer(0b0000'0001, 0)
+                   .As<SimpleSupervisoryFrame>()
+                   .is_poll_response());
+  EXPECT_TRUE(CreateStaticByteBuffer(0b1000'0001, 0)
+                  .As<SimpleSupervisoryFrame>()
+                  .is_poll_response());
+}
+
 TEST(L2CAP_Internal_SimpleSupervisoryFrameTest,
      FunctionReadsSupervisoryFunction) {
   // See Core Spec, v5, Vol 3, Part A, Table 3.2 and Table 3.5.
@@ -181,6 +201,24 @@ TEST(L2CAP_Internal_SimpleSupervisoryFrameTest,
             CreateStaticByteBuffer(0b1101, 0)
                 .As<SimpleSupervisoryFrame>()
                 .function());
+}
+
+TEST(L2CAP_Internal_SimpleSupervisoryFrameTest,
+     SetIsPollRequestSetsCorrectBit) {
+  SimpleSupervisoryFrame sframe(SupervisoryFunction::ReceiverReady);
+  sframe.set_is_poll_request();
+  // See Core Spec, v5, Vol 3, Part A, Table 3.2.
+  EXPECT_EQ(CreateStaticByteBuffer(0b1'0001, 0),
+            BufferView(&sframe, sizeof(sframe)));
+}
+
+TEST(L2CAP_Internal_SimpleSupervisoryFrameTest,
+     SetIsPollResponseSetsCorrectBit) {
+  SimpleSupervisoryFrame sframe(SupervisoryFunction::ReceiverReady);
+  sframe.set_is_poll_response();
+  // See Core Spec, v5, Vol 3, Part A, Table 3.2.
+  EXPECT_EQ(CreateStaticByteBuffer(0b1000'0001, 0),
+            BufferView(&sframe, sizeof(sframe)));
 }
 
 TEST(L2CAP_Internal_SimpleReceiverReadyFrameTest, IsConstructedProperly) {
