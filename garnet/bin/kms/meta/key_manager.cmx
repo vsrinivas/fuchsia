@@ -7,7 +7,7 @@
             "class/tee"
         ],
         "features": [
-            "persistent-storage"
+            "isolated-persistent-storage"
         ]
     }
 }
