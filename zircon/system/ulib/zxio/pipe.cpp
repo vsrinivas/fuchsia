@@ -9,6 +9,14 @@
 #include <sys/stat.h>
 #include <zircon/syscalls.h>
 
+static zx_status_t zxio_pipe_close(zxio_t* io) {
+    zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(io);
+    zx_handle_t socket = pipe->socket;
+    pipe->socket = ZX_HANDLE_INVALID;
+    zx_handle_close(socket);
+    return ZX_OK;
+}
+
 static zx_status_t zxio_pipe_release(zxio_t* io, zx_handle_t* out_handle) {
     zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(io);
     zx_handle_t socket = pipe->socket;
@@ -17,12 +25,9 @@ static zx_status_t zxio_pipe_release(zxio_t* io, zx_handle_t* out_handle) {
     return ZX_OK;
 }
 
-static zx_status_t zxio_pipe_close(zxio_t* io) {
+static zx_status_t zxio_pipe_clone(zxio_t* io, zx_handle_t* out_handle) {
     zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(io);
-    zx_handle_t socket = pipe->socket;
-    pipe->socket = ZX_HANDLE_INVALID;
-    zx_handle_close(socket);
-    return ZX_OK;
+    return zx_handle_duplicate(pipe->socket, ZX_RIGHT_SAME_RIGHTS, out_handle);
 }
 
 static zx_status_t zxio_pipe_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
@@ -80,8 +85,9 @@ static zx_status_t zxio_pipe_write(zxio_t* io, const void* buffer,
 
 static constexpr zxio_ops_t zxio_pipe_ops = []() {
     zxio_ops_t ops = zxio_default_ops;
-    ops.release = zxio_pipe_release;
     ops.close = zxio_pipe_close;
+    ops.release = zxio_pipe_release;
+    ops.clone = zxio_pipe_clone;
     ops.wait_begin = zxio_pipe_wait_begin;
     ops.wait_end = zxio_pipe_wait_end;
     ops.attr_get = zxio_pipe_attr_get;

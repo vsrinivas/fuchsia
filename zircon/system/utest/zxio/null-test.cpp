@@ -17,7 +17,12 @@ bool null_basic_test(void) {
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_wait_one(&io, ZXIO_READABLE,
                                                   ZX_TIME_INFINITE, &observed));
 
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_clone_async(&io, 0u, ZX_HANDLE_INVALID));
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_release(&io, &handle));
+    ASSERT_EQ(ZX_HANDLE_INVALID, handle);
+    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_clone(&io, &handle));
+    ASSERT_EQ(ZX_HANDLE_INVALID, handle);
+
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_sync(&io));
 
     zxio_node_attr_t attr = {};

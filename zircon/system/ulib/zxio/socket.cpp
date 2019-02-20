@@ -5,6 +5,12 @@
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
+#include <zircon/syscalls.h>
+
+static zx_status_t zxio_socket_close(zxio_t* io) {
+    zxio_socket_t* zs = reinterpret_cast<zxio_socket_t*>(io);
+    return zxs_close(&zs->socket);
+}
 
 static zx_status_t zxio_socket_release(zxio_t* io, zx_handle_t* out_handle) {
     zxio_socket_t* zs = reinterpret_cast<zxio_socket_t*>(io);
@@ -14,9 +20,10 @@ static zx_status_t zxio_socket_release(zxio_t* io, zx_handle_t* out_handle) {
     return ZX_OK;
 }
 
-static zx_status_t zxio_socket_close(zxio_t* io) {
+static zx_status_t zxio_socket_clone(zxio_t* io, zx_handle_t* out_handle) {
     zxio_socket_t* zs = reinterpret_cast<zxio_socket_t*>(io);
-    return zxs_close(&zs->socket);
+    return zx_handle_duplicate(zs->socket.socket, ZX_RIGHT_SAME_RIGHTS,
+                               out_handle);
 }
 
 static zx_status_t zxio_socket_read(zxio_t* io, void* buffer, size_t capacity,
@@ -33,8 +40,9 @@ static zx_status_t zxio_socket_write(zxio_t* io, const void* buffer,
 
 static constexpr zxio_ops_t zxio_socket_ops = []() {
     zxio_ops_t ops = zxio_default_ops;
-    ops.release = zxio_socket_release;
     ops.close = zxio_socket_close;
+    ops.release = zxio_socket_release;
+    ops.clone = zxio_socket_clone;
     ops.read = zxio_socket_read;
     ops.write = zxio_socket_write;
     return ops;

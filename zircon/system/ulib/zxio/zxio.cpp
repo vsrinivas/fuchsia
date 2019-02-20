@@ -43,19 +43,14 @@ void zxio_init(zxio_t* io, const zxio_ops_t* ops) {
     zio->ops = ops;
 }
 
-zx_status_t zxio_acquire_node(zx_handle_t node, zxio_t** out_io) {
-    zx_handle_close(node);
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t zxio_acquire_socket(zx_handle_t socket, zxio_t** out_io) {
-    zx_handle_close(socket);
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t zxio_release(zxio_t* io, zx_handle_t* out_io) {
+zx_status_t zxio_release(zxio_t* io, zx_handle_t* out_handle) {
     zxio_internal_t* zio = (zxio_internal_t*)io;
-    return zio->ops->release(io, out_io);
+    return zio->ops->release(io, out_handle);
+}
+
+zx_status_t zxio_clone(zxio_t* io, zx_handle_t* out_handle) {
+    zxio_internal_t* zio = (zxio_internal_t*)io;
+    return zio->ops->clone(io, out_handle);
 }
 
 zx_status_t zxio_close(zxio_t* io) {
@@ -91,23 +86,6 @@ void zxio_wait_end(zxio_t* io, zx_signals_t zx_signals,
                    zxio_signals_t* out_zxio_signals) {
     zxio_internal_t* zio = (zxio_internal_t*)io;
     return zio->ops->wait_end(io, zx_signals, out_zxio_signals);
-}
-
-zx_status_t zxio_clone(zxio_t* io, uint32_t flags, zxio_t** out_io) {
-    zx::channel h1, h2;
-    zx_status_t status = zx::channel::create(0, &h1, &h2);
-    if (status != ZX_OK)
-        return status;
-    status = zxio_clone_async(io, flags, h1.release());
-    if (status != ZX_OK)
-        return status;
-    return zxio_acquire_node(h2.release(), out_io);
-}
-
-zx_status_t zxio_clone_async(zxio_t* io, uint32_t flags,
-                             zx_handle_t request) {
-    zxio_internal_t* zio = (zxio_internal_t*)io;
-    return zio->ops->clone_async(io, flags, request);
 }
 
 zx_status_t zxio_sync(zxio_t* io) {

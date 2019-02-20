@@ -31,10 +31,8 @@ bool vmofile_basic_test(void) {
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_wait_one(io, ZXIO_READABLE,
                                                   ZX_TIME_INFINITE, &observed));
 
-    zx::channel clone1, clone2;
-    ASSERT_EQ(ZX_OK, zx::channel::create(0u, &clone1, &clone2));
-
-    ASSERT_EQ(ZX_OK, zxio_clone_async(io, 0u, clone1.release()));
+    zx::channel clone;
+    ASSERT_EQ(ZX_OK, zxio_clone(io, clone.reset_and_get_address()));
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_sync(io));
 
     zxio_node_attr_t attr = {};

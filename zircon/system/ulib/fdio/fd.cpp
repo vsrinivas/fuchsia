@@ -30,15 +30,7 @@ zx_status_t fdio_fd_create(zx_handle_t handle, int* fd_out) {
 __EXPORT
 zx_status_t fdio_cwd_clone(zx_handle_t* out_handle) {
     auto ops = fdio_get_ops(fdio_cwd_handle);
-    zx_handle_t handles[FDIO_MAX_HANDLES];
-    uint32_t types[FDIO_MAX_HANDLES];
-    zx_status_t status = ops->clone(fdio_cwd_handle, handles, types);
-    if (status < 0) {
-        return status;
-    }
-    ZX_ASSERT(status == 1);
-    *out_handle = handles[0];
-    return ZX_OK;
+    return ops->clone(fdio_cwd_handle, out_handle);
 }
 
 __EXPORT
@@ -49,16 +41,9 @@ zx_status_t fdio_fd_clone(int fd, zx_handle_t* out_handle) {
         return ZX_ERR_INVALID_ARGS;
     }
     // TODO(ZX-973): implement/honor close-on-exec flag
-    zx_handle_t handles[FDIO_MAX_HANDLES];
-    uint32_t types[FDIO_MAX_HANDLES];
-    status = fdio_get_ops(io)->clone(io, handles, types);
+    status = fdio_get_ops(io)->clone(io, out_handle);
     fdio_release(io);
-    if (status < 0) {
-        return status;
-    }
-    ZX_ASSERT(status == 1);
-    *out_handle = handles[0];
-    return ZX_OK;
+    return status;
 }
 
 __EXPORT
@@ -69,14 +54,7 @@ zx_status_t fdio_fd_transfer(int fd, zx_handle_t* out_handle) {
     if (status != ZX_OK) {
         return status;
     }
-    zx_handle_t handles[FDIO_MAX_HANDLES];
-    uint32_t types[FDIO_MAX_HANDLES];
-    status = fdio_get_ops(io)->unwrap(io, handles, types);
+    status = fdio_get_ops(io)->unwrap(io, out_handle);
     fdio_release(io);
-    if (status < 0) {
-        return status;
-    }
-    ZX_ASSERT(status == 1);
-    *out_handle = handles[0];
-    return ZX_OK;
+    return status;
 }

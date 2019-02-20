@@ -3,12 +3,26 @@
 // found in the LICENSE file.
 
 #include <fuchsia/io/c/fidl.h>
+#include <lib/zx/channel.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <zircon/syscalls.h>
+
+static zx_status_t zxio_vmofile_close(zxio_t* io) {
+    zxio_vmofile_t* file = reinterpret_cast<zxio_vmofile_t*>(io);
+    zx_handle_t control = file->control;
+    if (control != ZX_HANDLE_INVALID) {
+        file->control = ZX_HANDLE_INVALID;
+        zx_handle_close(control);
+    }
+    zx_handle_t vmo = file->vmo;
+    file->vmo = ZX_HANDLE_INVALID;
+    zx_handle_close(vmo);
+    return ZX_OK;
+}
 
 static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
     zxio_vmofile_t* file = reinterpret_cast<zxio_vmofile_t*>(io);
@@ -38,23 +52,20 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
     return ZX_OK;
 }
 
-static zx_status_t zxio_vmofile_close(zxio_t* io) {
+static zx_status_t zxio_vmofile_clone(zxio_t* io, zx_handle_t* out_handle) {
     zxio_vmofile_t* file = reinterpret_cast<zxio_vmofile_t*>(io);
-    zx_handle_t control = file->control;
-    if (control != ZX_HANDLE_INVALID) {
-        file->control = ZX_HANDLE_INVALID;
-        zx_handle_close(control);
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+        return status;
     }
-    zx_handle_t vmo = file->vmo;
-    file->vmo = ZX_HANDLE_INVALID;
-    zx_handle_close(vmo);
+    uint32_t flags = fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_WRITABLE;
+    status = fuchsia_io_NodeClone(file->control, flags, remote.release());
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out_handle = local.release();
     return ZX_OK;
-}
-
-static zx_status_t zxio_vmofile_clone_async(zxio_t* io, uint32_t flags,
-                                            zx_handle_t request) {
-    zxio_vmofile_t* file = reinterpret_cast<zxio_vmofile_t*>(io);
-    return fuchsia_io_NodeClone(file->control, flags, request);
 }
 
 static zx_status_t zxio_vmofile_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
@@ -142,9 +153,9 @@ static zx_status_t zxio_vmofile_seek(zxio_t* io, size_t offset,
 
 static constexpr zxio_ops_t zxio_vmofile_ops = []() {
     zxio_ops_t ops = zxio_default_ops;
-    ops.release = zxio_vmofile_release;
     ops.close = zxio_vmofile_close;
-    ops.clone_async = zxio_vmofile_clone_async;
+    ops.release = zxio_vmofile_release;
+    ops.clone = zxio_vmofile_clone;
     ops.attr_get = zxio_vmofile_attr_get;
     ops.read = zxio_vmofile_read;
     ops.read_at = zxio_vmofile_read_at;

@@ -6,12 +6,16 @@
 #include <lib/zxio/null.h>
 #include <zircon/syscalls.h>
 
+zx_status_t zxio_default_close(zxio_t* io) {
+    return ZX_OK;
+}
+
 zx_status_t zxio_default_release(zxio_t* io, zx_handle_t* out_handle) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxio_default_close(zxio_t* io) {
-    return ZX_OK;
+zx_status_t zxio_default_clone(zxio_t* io, zx_handle_t* out_handle) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 void zxio_default_wait_begin(zxio_t* io, zxio_signals_t zxio_signals,
@@ -24,12 +28,6 @@ void zxio_default_wait_begin(zxio_t* io, zxio_signals_t zxio_signals,
 void zxio_default_wait_end(zxio_t* io, zx_signals_t zx_signals,
                            zxio_signals_t* out_zxio_signals) {
     *out_zxio_signals = ZXIO_SIGNAL_NONE;
-}
-
-zx_status_t zxio_default_clone_async(zxio_t* io, uint32_t flags,
-                                     zx_handle_t request) {
-    zx_handle_close(request);
-    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t zxio_default_sync(zxio_t* io) {

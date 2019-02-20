@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/io/c/fidl.h>
+#include <lib/zx/channel.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
@@ -10,19 +11,6 @@
 #include <zircon/syscalls.h>
 
 #define ZXIO_REMOTE_CHUNK_SIZE 8192
-
-static zx_status_t zxio_remote_release(zxio_t* io, zx_handle_t* out_handle) {
-    zxio_remote_t* rio = reinterpret_cast<zxio_remote_t*>(io);
-    zx_handle_t control = rio->control;
-    rio->control = ZX_HANDLE_INVALID;
-    if (rio->event != ZX_HANDLE_INVALID) {
-        zx_handle_t event = rio->event;
-        rio->event = ZX_HANDLE_INVALID;
-        zx_handle_close(event);
-    }
-    *out_handle = control;
-    return ZX_OK;
-}
 
 static zx_status_t zxio_remote_close(zxio_t* io) {
     zxio_remote_t* rio = reinterpret_cast<zxio_remote_t*>(io);
@@ -39,9 +27,33 @@ static zx_status_t zxio_remote_close(zxio_t* io) {
     return io_status != ZX_OK ? io_status : status;
 }
 
-static zx_status_t zxio_remote_clone_async(zxio_t* io, uint32_t flags, zx_handle_t request) {
+static zx_status_t zxio_remote_release(zxio_t* io, zx_handle_t* out_handle) {
     zxio_remote_t* rio = reinterpret_cast<zxio_remote_t*>(io);
-    return fuchsia_io_NodeClone(rio->control, flags, request);
+    zx_handle_t control = rio->control;
+    rio->control = ZX_HANDLE_INVALID;
+    if (rio->event != ZX_HANDLE_INVALID) {
+        zx_handle_t event = rio->event;
+        rio->event = ZX_HANDLE_INVALID;
+        zx_handle_close(event);
+    }
+    *out_handle = control;
+    return ZX_OK;
+}
+
+static zx_status_t zxio_remote_clone(zxio_t* io, zx_handle_t* out_handle) {
+    zxio_remote_t* rio = reinterpret_cast<zxio_remote_t*>(io);
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+        return status;
+    }
+    uint32_t flags = fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_WRITABLE;
+    status = fuchsia_io_NodeClone(rio->control, flags, remote.release());
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out_handle = local.release();
+    return ZX_OK;
 }
 
 static zx_status_t zxio_remote_sync(zxio_t* io) {
@@ -352,9 +364,9 @@ static zx_status_t zxio_remote_rewind(zxio_t* io) {
 
 static constexpr zxio_ops_t zxio_remote_ops = []() {
     zxio_ops_t ops = zxio_default_ops;
-    ops.release = zxio_remote_release;
     ops.close = zxio_remote_close;
-    ops.clone_async = zxio_remote_clone_async;
+    ops.release = zxio_remote_release;
+    ops.clone = zxio_remote_clone;
     ops.sync = zxio_remote_sync;
     ops.attr_get = zxio_remote_attr_get;
     ops.attr_set = zxio_remote_attr_set;
@@ -408,9 +420,9 @@ static zx_status_t zxio_dir_read_at(zxio_t* io, size_t offset, void* data,
 
 static constexpr zxio_ops_t zxio_dir_ops = []() {
     zxio_ops_t ops = zxio_default_ops;
-    ops.release = zxio_remote_release;
     ops.close = zxio_remote_close;
-    ops.clone_async = zxio_remote_clone_async;
+    ops.release = zxio_remote_release;
+    ops.clone = zxio_remote_clone;
     ops.sync = zxio_remote_sync;
     ops.attr_get = zxio_remote_attr_get;
     ops.attr_set = zxio_remote_attr_set;
@@ -439,9 +451,9 @@ zx_status_t zxio_dir_init(zxio_storage_t* storage, zx_handle_t control) {
 
 static constexpr zxio_ops_t zxio_file_ops = []() {
     zxio_ops_t ops = zxio_default_ops;
-    ops.release = zxio_remote_release;
     ops.close = zxio_remote_close;
-    ops.clone_async = zxio_remote_clone_async;
+    ops.release = zxio_remote_release;
+    ops.clone = zxio_remote_clone;
     ops.sync = zxio_remote_sync;
     ops.attr_get = zxio_remote_attr_get;
     ops.attr_set = zxio_remote_attr_set;

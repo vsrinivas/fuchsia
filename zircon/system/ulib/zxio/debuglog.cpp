@@ -12,10 +12,23 @@
 
 #define LOGBUF_MAX (ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t))
 
-struct zxio_debuglog_buffer {
+typedef struct zxio_debuglog_buffer {
     unsigned next;
     char pending[LOGBUF_MAX];
-};
+} zxio_debuglog_buffer_t;
+
+// A |zxio_t| backend that uses a debuglog.
+//
+// The |handle| handle is a Zircon debuglog object.
+typedef struct zxio_debuglog {
+    zxio_t io;
+    zx_handle_t handle;
+    zxio_debuglog_buffer_t* buffer;
+} zxio_debuglog_t;
+
+static_assert(sizeof(zxio_debuglog_t) <= sizeof(zxio_storage_t),
+              "zxio_debuglog_t must fit inside zxio_storage_t.");
+
 
 static zx_status_t zxio_debuglog_close(zxio_t* io) {
     zxio_debuglog_t* debuglog = reinterpret_cast<zxio_debuglog_t*>(io);
@@ -27,6 +40,12 @@ static zx_status_t zxio_debuglog_close(zxio_t* io) {
         debuglog->buffer = nullptr;
     }
     return ZX_OK;
+}
+
+zx_status_t zxio_debuglog_clone(zxio_t* io, zx_handle_t* out_handle) {
+    zxio_debuglog_t* debuglog = reinterpret_cast<zxio_debuglog_t*>(io);
+    return zx_handle_duplicate(debuglog->handle, ZX_RIGHT_SAME_RIGHTS,
+                               out_handle);
 }
 
 static zx_status_t zxio_debuglog_write(zxio_t* io, const void* buffer, size_t capacity,
@@ -71,6 +90,7 @@ static zx_status_t zxio_debuglog_write(zxio_t* io, const void* buffer, size_t ca
 static constexpr zxio_ops_t zxio_debuglog_ops = ([]() {
     zxio_ops_t ops = zxio_default_ops;
     ops.close = zxio_debuglog_close;
+    ops.clone = zxio_debuglog_clone;
     ops.write = zxio_debuglog_write;
     return ops;
 })();

@@ -43,33 +43,6 @@ zx_status_t zxio_file_init(zxio_storage_t* remote, zx_handle_t control,
 
 // vmo -------------------------------------------------------------------------
 
-typedef struct zxio_vmo {
-    // The |zxio_t| control structure for this object.
-    zxio_t io;
-
-    // The underlying VMO that stores the data.
-    zx_handle_t vmo;
-
-    // The size of the VMO in bytes.
-    //
-    // This value is read from the kernel during |zxio_vmo_init|, is always a
-    // multiple of the page size, and is never changed.
-    zx_off_t size;
-
-    // The current seek offset within the file.
-    //
-    // Protected by |lock|.
-    zx_off_t offset;
-
-    // The lock that protects |offset|.
-    //
-    // TODO: Migrate to sync_mutex_t.
-    mtx_t lock;
-} zxio_vmo_t;
-
-static_assert(sizeof(zxio_vmo_t) <= sizeof(zxio_storage_t),
-              "zxio_vmo_t must fit inside zxio_storage_t.");
-
 // Initialize |file| with from a VMO.
 //
 // The file will be sized to match the underlying VMO by reading the size of the
@@ -137,20 +110,6 @@ static_assert(sizeof(zxio_socket_t) <= sizeof(zxio_storage_t),
 zx_status_t zxio_socket_init(zxio_storage_t* pipe, zxs_socket_t socket);
 
 // debuglog --------------------------------------------------------------------
-
-typedef struct zxio_debuglog_buffer zxio_debuglog_buffer_t;
-
-// A |zxio_t| backend that uses a debuglog.
-//
-// The |handle| handle is a Zircon debuglog object.
-typedef struct zxio_debuglog {
-    zxio_t io;
-    zx_handle_t handle;
-    zxio_debuglog_buffer_t* buffer;
-} zxio_debuglog_t;
-
-static_assert(sizeof(zxio_debuglog_t) <= sizeof(zxio_storage_t),
-              "zxio_debuglog_t must fit inside zxio_storage_t.");
 
 // Initializes a |zxio_storage_t| to use the given |handle| for output.
 //

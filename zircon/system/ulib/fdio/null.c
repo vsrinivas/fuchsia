@@ -90,11 +90,11 @@ zx_status_t fdio_default_open(fdio_t* io, const char* path, uint32_t flags, uint
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio_default_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
+zx_status_t fdio_default_clone(fdio_t* io, zx_handle_t* out_handle) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio_default_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
+zx_status_t fdio_default_unwrap(fdio_t* io, zx_handle_t* out_handle) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

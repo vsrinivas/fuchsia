@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <zircon/assert.h>
 #include <zircon/device/ioctl.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -59,36 +60,14 @@ static void fdio_zxio_wait_end(fdio_t* io, zx_signals_t signals,
     *out_events = events;
 }
 
-static zx_status_t fdio_zxio_clone(fdio_t* io, zx_handle_t* handles,
-                                   uint32_t* types) {
+static zx_status_t fdio_zxio_clone(fdio_t* io, zx_handle_t* out_handle) {
     zxio_t* z = fdio_get_zxio(io);
-    zx_handle_t local, remote;
-    zx_status_t status = zx_channel_create(0, &local, &remote);
-    if (status != ZX_OK) {
-        return status;
-    }
-    uint32_t flags = fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_WRITABLE;
-    status = zxio_clone_async(z, flags, remote);
-    if (status != ZX_OK) {
-        zx_handle_close(local);
-        return status;
-    }
-    handles[0] = local;
-    types[0] = PA_FD;
-    return 1;
+    return zxio_clone(z, out_handle);
 }
 
-static zx_status_t fdio_zxio_unwrap(fdio_t* io, zx_handle_t* handles,
-                                    uint32_t* types) {
+static zx_status_t fdio_zxio_unwrap(fdio_t* io, zx_handle_t* out_handle) {
     zxio_t* z = fdio_get_zxio(io);
-    zx_handle_t handle = ZX_HANDLE_INVALID;
-    zx_status_t status = zxio_release(z, &handle);
-    if (status != ZX_OK) {
-        return status;
-    }
-    handles[0] = handle;
-    types[0] = PA_FD;
-    return 1;
+    return zxio_release(z, out_handle);
 }
 
 static zx_status_t fdio_zxio_sync(fdio_t* io) {
@@ -495,58 +474,16 @@ zx_handle_t fdio_unsafe_borrow_channel(fdio_t* io) {
 
 // Vmo -------------------------------------------------------------------------
 
-static inline zxio_vmo_t* fdio_get_zxio_vmo(fdio_t* io) {
-    return (zxio_vmo_t*)fdio_get_zxio(io);
-}
-
-static zx_status_t fdio_zxio_vmo_clone(fdio_t* io, zx_handle_t* handles,
-                                       uint32_t* types) {
-    zxio_vmo_t* file = fdio_get_zxio_vmo(io);
-    zx_status_t status = zx_handle_duplicate(file->vmo, ZX_RIGHT_SAME_RIGHTS,
-                                             &handles[0]);
-    if (status != ZX_OK) {
-        return status;
-    }
-    types[0] = PA_FD;
-    return 1;
-}
-
-fdio_ops_t fdio_zxio_vmo_ops = {
-    .close = fdio_zxio_close,
-    .open = fdio_default_open,
-    .clone = fdio_zxio_vmo_clone,
-    .ioctl = fdio_default_ioctl,
-    .wait_begin = fdio_default_wait_begin,
-    .wait_end = fdio_default_wait_end,
-    .unwrap = fdio_zxio_unwrap,
-    .posix_ioctl = fdio_default_posix_ioctl,
-    .get_vmo = fdio_default_get_vmo,
-    .get_token = fdio_default_get_token,
-    .get_attr = fdio_zxio_get_attr,
-    .set_attr = fdio_zxio_set_attr,
-    .readdir = fdio_default_readdir,
-    .rewind = fdio_default_rewind,
-    .unlink = fdio_default_unlink,
-    .truncate = fdio_zxio_truncate,
-    .rename = fdio_default_rename,
-    .link = fdio_default_link,
-    .get_flags = fdio_zxio_get_flags,
-    .set_flags = fdio_zxio_set_flags,
-    .recvfrom = fdio_default_recvfrom,
-    .sendto = fdio_default_sendto,
-    .recvmsg = fdio_default_recvmsg,
-    .sendmsg = fdio_default_sendmsg,
-    .shutdown = fdio_default_shutdown,
-};
-
 fdio_t* fdio_vmo_create(zx_handle_t vmo, zx_off_t seek) {
-    fdio_t* io = fdio_alloc(&fdio_zxio_vmo_ops);
+    zxio_storage_t* storage = NULL;
+    fdio_t* io = fdio_zxio_create(&storage);
     if (io == NULL) {
         zx_handle_close(vmo);
         return NULL;
     }
-    zx_status_t status = zxio_vmo_init(fdio_get_zxio_storage(io), vmo, seek);
+    zx_status_t status = zxio_vmo_init(storage, vmo, seek);
     if (status != ZX_OK) {
+        fdio_release(io);
         return NULL;
     }
     return io;
@@ -637,30 +574,6 @@ fdio_t* fdio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
 
 static inline zxio_pipe_t* fdio_get_zxio_pipe(fdio_t* io) {
     return (zxio_pipe_t*)fdio_get_zxio(io);
-}
-
-static zx_status_t fdio_zxio_pipe_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
-    zxio_pipe_t* pipe = fdio_get_zxio_pipe(io);
-    zx_status_t status = zx_handle_duplicate(pipe->socket, ZX_RIGHT_SAME_RIGHTS,
-                                             &handles[0]);
-    if (status != ZX_OK) {
-        return status;
-    }
-    types[0] = PA_FD;
-    return 1;
-}
-
-static zx_status_t fdio_zxio_pipe_unwrap(fdio_t* io, zx_handle_t* handles,
-                                         uint32_t* types) {
-    zxio_t* z = fdio_get_zxio(io);
-    zx_handle_t handle = ZX_HANDLE_INVALID;
-    zx_status_t status = zxio_release(z, &handle);
-    if (status != ZX_OK) {
-        return status;
-    }
-    handles[0] = handle;
-    types[0] = PA_FD;
-    return 1;
 }
 
 static ssize_t fdio_zxio_pipe_posix_ioctl(fdio_t* io, int request, va_list va) {
@@ -763,11 +676,11 @@ static zx_status_t fdio_zxio_pipe_shutdown(fdio_t* io, int how) {
 static fdio_ops_t fdio_zxio_pipe_ops = {
     .close = fdio_zxio_close,
     .open = fdio_default_open,
-    .clone = fdio_zxio_pipe_clone,
+    .clone = fdio_zxio_clone,
     .ioctl = fdio_default_ioctl,
     .wait_begin = fdio_zxio_wait_begin,
     .wait_end = fdio_zxio_wait_end,
-    .unwrap = fdio_zxio_pipe_unwrap,
+    .unwrap = fdio_zxio_unwrap,
     .posix_ioctl = fdio_zxio_pipe_posix_ioctl,
     .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
@@ -854,61 +767,15 @@ fail:
 
 // Debuglog --------------------------------------------------------------------
 
-static inline zxio_debuglog_t* fdio_get_zxio_debuglog(fdio_t* io) {
-    return (zxio_debuglog_t*)fdio_get_zxio(io);
-}
-
-static zx_status_t fdio_zxio_debuglog_clone(fdio_t* io, zx_handle_t* handles,
-                                            uint32_t* types) {
-    zxio_debuglog_t* pipe = fdio_get_zxio_debuglog(io);
-
-    zx_status_t status = zx_handle_duplicate(pipe->handle, ZX_RIGHT_SAME_RIGHTS,
-                                             &handles[0]);
-    if (status != ZX_OK) {
-        return status;
-    }
-    types[0] = PA_FD;
-    return 1;
-}
-
-static fdio_ops_t fdio_zxio_debuglog_ops = {
-    .close = fdio_zxio_close,
-    .open = fdio_default_open,
-    .clone = fdio_zxio_debuglog_clone,
-    .ioctl = fdio_default_ioctl,
-    .wait_begin = fdio_default_wait_begin,
-    .wait_end = fdio_default_wait_end,
-    .unwrap = fdio_default_unwrap,
-    .posix_ioctl = fdio_default_posix_ioctl,
-    .get_vmo = fdio_default_get_vmo,
-    .get_token = fdio_default_get_token,
-    .get_attr = fdio_default_get_attr,
-    .set_attr = fdio_default_set_attr,
-    .readdir = fdio_default_readdir,
-    .rewind = fdio_default_rewind,
-    .unlink = fdio_default_unlink,
-    .truncate = fdio_default_truncate,
-    .rename = fdio_default_rename,
-    .link = fdio_default_link,
-    .get_flags = fdio_default_get_flags,
-    .set_flags = fdio_default_set_flags,
-    .recvfrom = fdio_default_recvfrom,
-    .sendto = fdio_default_sendto,
-    .recvmsg = fdio_default_recvmsg,
-    .sendmsg = fdio_default_sendmsg,
-    .shutdown = fdio_default_shutdown,
-};
-
 __EXPORT
 fdio_t* fdio_logger_create(zx_handle_t handle) {
-    fdio_t* io = fdio_alloc(&fdio_zxio_debuglog_ops);
+    zxio_storage_t* storage = NULL;
+    fdio_t* io = fdio_zxio_create(&storage);
     if (io == NULL) {
         zx_handle_close(handle);
         return NULL;
     }
-    zx_status_t status = zxio_debuglog_init(fdio_get_zxio_storage(io), handle);
-    if (status != ZX_OK) {
-        return NULL;
-    }
+    zx_status_t status = zxio_debuglog_init(storage, handle);
+    ZX_ASSERT(status == ZX_OK);
     return io;
 }

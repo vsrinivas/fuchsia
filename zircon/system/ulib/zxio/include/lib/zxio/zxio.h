@@ -37,36 +37,25 @@ typedef struct zxio zxio_t;
 
 // Node
 
-// Create a |zxio_t| object from |node|.
+// Attempt to destroy |io| and produce a |zx_handle_t|.
 //
-// To free the resources allocated by this function, either call
-// |zxio_destroy| to retrieve the |zx_handle_t| or |zxio_close| to
-// destroy the |zx_handle_t| as well.
+// Recovers the underlying |zx_handle_t| for |io| if one exists. Does not
+// terminate the connection with the server.
 //
-// The |node| must be a channel whose remote endpoint implements the
-// |fuchsia.io.Node| protocol.
-//
-// Always consumes |node|.
-zx_status_t zxio_acquire_node(zx_handle_t node, zxio_t** out_io);
-
-// Create a |zxio_t| object from |socket|.
-//
-// To free the resources allocated by this function, either call
-// |zxio_destroy| to retrieve the |zx_handle_t| or |zxio_close| to
-// destroy the |zx_handle_t| as well.
-//
-// The |socket| must be a socket.
-//
-// Always consumes |socket|.
-zx_status_t zxio_acquire_socket(zx_handle_t socket, zxio_t** out_io);
-
-// Destroy |io| and produce a |zx_handle_t|.
-//
-// Recovers the underlying |zx_handle_t| for |io|. Does not terminate the
-// connection with the server.
+// Does not block.
 //
 // Always consumes |io|.
 zx_status_t zxio_release(zxio_t* io, zx_handle_t* out_handle);
+
+// Attempt to create a |zx_handle_t| that represents another session with |io|.
+//
+// The returned |zx_handle_t| is suitable for transfer to another process or for
+// use within this process.
+//
+// Does not block.
+//
+// Does not consume |io|.
+zx_status_t zxio_clone(zxio_t* io, zx_handle_t* out_handle);
 
 // Terminates connection with the server.
 //
@@ -97,24 +86,6 @@ void zxio_wait_begin(zxio_t* io, zxio_signals_t zxio_signals,
 // |zx_handle_t| and to interpret the observed |zx_signals|.
 void zxio_wait_end(zxio_t* io, zx_signals_t zx_signals,
                    zxio_signals_t* out_zxio_signals);
-
-// Creates another connection to the same remote object.
-//
-// The connection is represented as a |zxio_t|. This call blocks until the
-// remote server is able to describe the new connection.
-//
-// See io.fidl for the available |flags|.
-zx_status_t zxio_clone(zxio_t* io, uint32_t flags, zxio_t** out_io);
-
-// Creates another connection to the same remote object.
-//
-// The connection is represented as a |zx_handle_t|. The caller is responsible
-// for creating the |zx_handle_t|, which must be a channel. This call does not
-// block on the remote server.
-//
-// See io.fidl for the available |flags|.
-zx_status_t zxio_clone_async(zxio_t* io, uint32_t flags,
-                             zx_handle_t request);
 
 // Synchronizes updates to the file to the underlying media, if it exists.
 zx_status_t zxio_sync(zxio_t* io);

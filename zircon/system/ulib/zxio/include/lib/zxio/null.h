@@ -24,13 +24,12 @@ __BEGIN_CDECLS
 
 zx_status_t zxio_default_release(zxio_t* io, zx_handle_t* out_handle);
 zx_status_t zxio_default_close(zxio_t* io);
+zx_status_t zxio_default_clone(zxio_t* io, zx_handle_t* out_handle);
 void zxio_default_wait_begin(zxio_t* io, zxio_signals_t zxio_signals,
                              zx_handle_t* out_handle, zx_signals_t*
                              out_zx_signals);
 void zxio_default_wait_end(zxio_t* io, zx_signals_t zx_signals,
                            zxio_signals_t* out_zxio_signals);
-zx_status_t zxio_default_clone_async(zxio_t* io, uint32_t flags,
-                                     zx_handle_t request);
 zx_status_t zxio_default_sync(zxio_t* io);
 zx_status_t zxio_default_attr_get(zxio_t* io, zxio_node_attr_t* out_attr);
 zx_status_t zxio_default_attr_set(zxio_t* io, uint32_t flags,
@@ -70,11 +69,11 @@ zx_status_t zxio_default_rewind(zxio_t* io);
 // the default implementations of unimplemented operations is consistent across
 // ops tables.
 static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
-    .release = zxio_default_release,
     .close = zxio_default_close,
+    .release = zxio_default_release,
+    .clone = zxio_default_clone,
     .wait_begin = zxio_default_wait_begin,
     .wait_end = zxio_default_wait_end,
-    .clone_async = zxio_default_clone_async,
     .sync = zxio_default_sync,
     .attr_get = zxio_default_attr_get,
     .attr_set = zxio_default_attr_set,

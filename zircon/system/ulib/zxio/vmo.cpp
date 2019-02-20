@@ -10,6 +10,41 @@
 #include <sys/stat.h>
 #include <zircon/syscalls.h>
 
+typedef struct zxio_vmo {
+    // The |zxio_t| control structure for this object.
+    zxio_t io;
+
+    // The underlying VMO that stores the data.
+    zx_handle_t vmo;
+
+    // The size of the VMO in bytes.
+    //
+    // This value is read from the kernel during |zxio_vmo_init|, is always a
+    // multiple of the page size, and is never changed.
+    zx_off_t size;
+
+    // The current seek offset within the file.
+    //
+    // Protected by |lock|.
+    zx_off_t offset;
+
+    // The lock that protects |offset|.
+    //
+    // TODO: Migrate to sync_mutex_t.
+    mtx_t lock;
+} zxio_vmo_t;
+
+static_assert(sizeof(zxio_vmo_t) <= sizeof(zxio_storage_t),
+              "zxio_vmo_t must fit inside zxio_storage_t.");
+
+static zx_status_t zxio_vmo_close(zxio_t* io) {
+    zxio_vmo_t* file = reinterpret_cast<zxio_vmo_t*>(io);
+    zx_handle_t vmo = file->vmo;
+    file->vmo = ZX_HANDLE_INVALID;
+    zx_handle_close(vmo);
+    return ZX_OK;
+}
+
 static zx_status_t zxio_vmo_release(zxio_t* io, zx_handle_t* out_handle) {
     zxio_vmo_t* file = reinterpret_cast<zxio_vmo_t*>(io);
     zx_handle_t vmo = file->vmo;
@@ -18,12 +53,9 @@ static zx_status_t zxio_vmo_release(zxio_t* io, zx_handle_t* out_handle) {
     return ZX_OK;
 }
 
-static zx_status_t zxio_vmo_close(zxio_t* io) {
+static zx_status_t zxio_vmo_clone(zxio_t* io, zx_handle_t* out_handle) {
     zxio_vmo_t* file = reinterpret_cast<zxio_vmo_t*>(io);
-    zx_handle_t vmo = file->vmo;
-    file->vmo = ZX_HANDLE_INVALID;
-    zx_handle_close(vmo);
-    return ZX_OK;
+    return zx_handle_duplicate(file->vmo, ZX_RIGHT_SAME_RIGHTS, out_handle);
 }
 
 static zx_status_t zxio_vmo_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
@@ -144,8 +176,9 @@ static zx_status_t zxio_vmo_seek(zxio_t* io, size_t offset,
 
 static constexpr zxio_ops_t zxio_vmo_ops = []() {
     zxio_ops_t ops = zxio_default_ops;
-    ops.release = zxio_vmo_release;
     ops.close = zxio_vmo_close;
+    ops.release = zxio_vmo_release;
+    ops.clone = zxio_vmo_clone;
     ops.attr_get = zxio_vmo_attr_get;
     ops.read = zxio_vmo_read;
     ops.read_at = zxio_vmo_read_at;

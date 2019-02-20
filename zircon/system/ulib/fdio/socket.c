@@ -87,31 +87,23 @@ static ssize_t zxsio_sendmsg_stream(fdio_t* io, const struct msghdr* msg, int fl
     return status != ZX_OK ? status : (ssize_t)actual;
 }
 
-static zx_status_t zxsio_clone(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
+static zx_status_t zxsio_clone(fdio_t* io, zx_handle_t* out_handle) {
     // TODO: support unconnected sockets
     if (!(*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED)) {
         return ZX_ERR_BAD_STATE;
     }
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    zx_status_t r = zx_handle_duplicate(sio->socket.socket, ZX_RIGHT_SAME_RIGHTS, handles);
-    if (r < 0) {
-        return r;
-    }
-    types[0] = PA_FD;
-    return 1;
+    return zx_handle_duplicate(sio->socket.socket, ZX_RIGHT_SAME_RIGHTS, out_handle);
 }
 
-static zx_status_t zxsio_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* types) {
+static zx_status_t zxsio_unwrap(fdio_t* io, zx_handle_t* out_handle) {
     // TODO: support unconnected sockets
     if (!(*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED)) {
         return ZX_ERR_BAD_STATE;
     }
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    zx_status_t r;
-    handles[0] = sio->socket.socket;
-    types[0] = PA_FD;
-    r = 1;
-    return r;
+    *out_handle = sio->socket.socket;
+    return ZX_OK;
 }
 
 static void zxsio_wait_begin_stream(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* _signals) {

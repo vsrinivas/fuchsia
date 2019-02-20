@@ -70,7 +70,6 @@ fn zxrio_msg_size() {
 }
 
 pub const FDIO_MAX_FD: raw::c_uint = 256;
-pub const FDIO_MAX_HANDLES: raw::c_uint = 3;
 pub const FDIO_CHUNK_SIZE: raw::c_uint = 8192;
 pub const FDIO_IOCTL_MAX_INPUT: raw::c_uint = 1024;
 pub const FDIO_MAX_FILENAME: raw::c_uint = 255;
