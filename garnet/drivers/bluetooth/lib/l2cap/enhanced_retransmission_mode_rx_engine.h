@@ -21,7 +21,10 @@ namespace internal {
 // THREAD-SAFETY: This class is not thread-safe.
 class EnhancedRetransmissionModeRxEngine final : public RxEngine {
  public:
-  EnhancedRetransmissionModeRxEngine();
+  using SendBasicFrameCallback = fit::function<void(common::ByteBufferPtr pdu)>;
+
+  EnhancedRetransmissionModeRxEngine(
+      SendBasicFrameCallback send_basic_frame_callback);
   virtual ~EnhancedRetransmissionModeRxEngine() = default;
 
   common::ByteBufferPtr ProcessPdu(PDU) override;
@@ -37,6 +40,8 @@ class EnhancedRetransmissionModeRxEngine final : public RxEngine {
   // cases, the sequence number is a 6-bit counter that wraps on overflow. See
   // Core Spec Ver 5, Vol 3, Part A, Secs 5.7 and 8.3.
   uint8_t next_seqnum_;  // (AKA Expected-TxSeq)
+
+  SendBasicFrameCallback send_basic_frame_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EnhancedRetransmissionModeRxEngine);
 };

@@ -63,7 +63,10 @@ bool IsMpsValid(const PDU& pdu) {
 
 using Engine = EnhancedRetransmissionModeRxEngine;
 
-Engine::EnhancedRetransmissionModeRxEngine() : next_seqnum_(0) {}
+Engine::EnhancedRetransmissionModeRxEngine(
+    SendBasicFrameCallback send_basic_frame_callback)
+    : next_seqnum_(0),
+      send_basic_frame_callback_(std::move(send_basic_frame_callback)) {}
 
 common::ByteBufferPtr Engine::ProcessPdu(PDU pdu) {
   // A note on validation (see Vol 3, Part A, 3.3.7):
@@ -112,8 +115,12 @@ common::ByteBufferPtr Engine::ProcessFrame(
     return nullptr;
   }
 
-  // TODO(quiche): Send ACK.
   AdvanceSeqNum();
+
+  SimpleReceiverReadyFrame ack_frame;
+  ack_frame.set_request_seq_num(next_seqnum_);
+  send_basic_frame_callback_(std::make_unique<common::DynamicByteBuffer>(
+      common::BufferView(&ack_frame, sizeof(ack_frame))));
 
   const auto header_len = sizeof(header);
   const auto payload_len = pdu.length() - header_len;
