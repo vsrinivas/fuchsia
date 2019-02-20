@@ -603,6 +603,167 @@ where
     }
 }
 
+impl<'a, B, T> LayoutVerified<B, T>
+where
+    B: 'a + ByteSlice,
+{
+    /// Convert this `LayoutVerified` into a reference.
+    ///
+    /// `into_ref` consumes the `LayoutVerified`, and returns a reference to
+    /// `T`.
+    pub fn into_ref(self) -> &'a T {
+        // NOTE: This is safe because `B` is guaranteed to live for the lifetime
+        // `'a`, meaning that a) the returned reference cannot outlive the `B`
+        // from which `self` was constructed and, b) no mutable methods on that
+        // `B` can be called during the lifetime of the returned reference. See
+        // the documentation on `deref_helper` for what invariants we are
+        // required to uphold.
+        unsafe { self.deref_helper() }
+    }
+}
+
+impl<'a, B, T> LayoutVerified<B, T>
+where
+    B: 'a + ByteSliceMut,
+    T: FromBytes + AsBytes,
+{
+    /// Convert this `LayoutVerified` into a mutable reference.
+    ///
+    /// `into_mut` consumes the `LayoutVerified`, and returns a mutable
+    /// reference to `T`.
+    pub fn into_mut(mut self) -> &'a mut T {
+        // NOTE: This is safe because `B` is guaranteed to live for the lifetime
+        // `'a`, meaning that a) the returned reference cannot outlive the `B`
+        // from which `self` was constructed and, b) no other methods - mutable
+        // or immutable - on that `B` can be called during the lifetime of the
+        // returned reference. See the documentation on `deref_mut_helper` for
+        // what invariants we are required to uphold.
+        unsafe { self.deref_mut_helper() }
+    }
+}
+
+impl<'a, B, T> LayoutVerified<B, [T]>
+where
+    B: 'a + ByteSlice,
+    T: FromBytes,
+{
+    /// Convert this `LayoutVerified` into a slice reference.
+    ///
+    /// `into_slice` consumes the `LayoutVerified`, and returns a reference to
+    /// `[T]`.
+    pub fn into_slice(self) -> &'a [T] {
+        // NOTE: This is safe because `B` is guaranteed to live for the lifetime
+        // `'a`, meaning that a) the returned reference cannot outlive the `B`
+        // from which `self` was constructed and, b) no mutable methods on that
+        // `B` can be called during the lifetime of the returned reference. See
+        // the documentation on `deref_slice_helper` for what invariants we are
+        // required to uphold.
+        unsafe { self.deref_slice_helper() }
+    }
+}
+
+impl<'a, B, T> LayoutVerified<B, [T]>
+where
+    B: 'a + ByteSliceMut,
+    T: FromBytes + AsBytes,
+{
+    /// Convert this `LayoutVerified` into a mutable slice reference.
+    ///
+    /// `into_mut_slice` consumes the `LayoutVerified`, and returns a mutable reference to
+    /// `[T]`.
+    pub fn into_mut_slice(mut self) -> &'a mut [T] {
+        // NOTE: This is safe because `B` is guaranteed to live for the lifetime
+        // `'a`, meaning that a) the returned reference cannot outlive the `B`
+        // from which `self` was constructed and, b) no other methods - mutable
+        // or immutable - on that `B` can be called during the lifetime of the
+        // returned reference. See the documentation on `deref_mut_slice_helper`
+        // for what invariants we are required to uphold.
+        unsafe { self.deref_mut_slice_helper() }
+    }
+}
+
+impl<B, T> LayoutVerified<B, T>
+where
+    B: ByteSlice,
+{
+    /// Create an immutable reference to `T` with a specific lifetime.
+    ///
+    /// # Safety
+    ///
+    /// The type bounds on this method guarantee that it is safe to create an
+    /// immutable reference to `T` from `self`. However, since the lifetime `'a`
+    /// is not required to be shorter than the lifetime of the reference to
+    /// `self`, the caller must guarantee that the lifetime `'a` is valid for
+    /// this reference. In particular, the referent must exist for all of `'a`,
+    /// and no mutable references to the same memory may be constructed during
+    /// `'a`.
+    unsafe fn deref_helper<'a>(&self) -> &'a T {
+        &mut *(self.0.as_ptr() as *mut T)
+    }
+}
+
+impl<B, T> LayoutVerified<B, T>
+where
+    B: ByteSliceMut,
+    T: FromBytes + AsBytes,
+{
+    /// Create a mutable reference to `T` with a specific lifetime.
+    ///
+    /// # Safety
+    ///
+    /// The type bounds on this method guarantee that it is safe to create a
+    /// mutable reference to `T` from `self`. However, since the lifetime `'a`
+    /// is not required to be shorter than the lifetime of the reference to
+    /// `self`, the caller must guarantee that the lifetime `'a` is valid for
+    /// this reference. In particular, the referent must exist for all of `'a`,
+    /// and no other references - mutable or immutable - to the same memory may
+    /// be constructed during `'a`.
+    unsafe fn deref_mut_helper<'a>(&mut self) -> &'a mut T {
+        &mut *(self.0.as_mut_ptr() as *mut T)
+    }
+}
+
+impl<B, T> LayoutVerified<B, [T]>
+where
+    B: ByteSlice,
+    T: FromBytes,
+{
+    /// Create an immutable reference to `[T]` with a specific lifetime.
+    ///
+    /// # Safety
+    ///
+    /// `deref_slice_helper` has the same safety requirements as `deref_helper`.
+    unsafe fn deref_slice_helper<'a>(&self) -> &'a [T] {
+        let len = self.0.len();
+        let elem_size = mem::size_of::<T>();
+        debug_assert_ne!(elem_size, 0);
+        debug_assert_eq!(len % elem_size, 0);
+        let elems = len / elem_size;
+        slice::from_raw_parts(self.0.as_ptr() as *const T, elems)
+    }
+}
+
+impl<B, T> LayoutVerified<B, [T]>
+where
+    B: ByteSliceMut,
+    T: FromBytes + AsBytes,
+{
+    /// Create a mutable reference to `[T]` with a specific lifetime.
+    ///
+    /// # Safety
+    ///
+    /// `deref_mut_slice_helper` has the same safety requirements as
+    /// `deref_mut_helper`.
+    unsafe fn deref_mut_slice_helper<'a>(&mut self) -> &'a mut [T] {
+        let len = self.0.len();
+        let elem_size = mem::size_of::<T>();
+        debug_assert_ne!(elem_size, 0);
+        debug_assert_eq!(len % elem_size, 0);
+        let elems = len / elem_size;
+        slice::from_raw_parts_mut(self.0.as_mut_ptr() as *mut T, elems)
+    }
+}
+
 fn aligned_to(bytes: &[u8], align: usize) -> bool {
     (bytes as *const _ as *const () as usize) % align == 0
 }
@@ -627,7 +788,13 @@ where
     type Target = T;
     #[inline]
     fn deref(&self) -> &T {
-        unsafe { &mut *(self.0.as_ptr() as *mut T) }
+        // NOTE: This is safe because the lifetime of `self` is the same as the
+        // lifetime of the return value, meaning that a) the returned reference
+        // cannot outlive `self` and, b) no mutable methods on `self` can be
+        // called during the lifetime of the returned reference. See the
+        // documentation on `deref_helper` for what invariants we are required
+        // to uphold.
+        unsafe { self.deref_helper() }
     }
 }
 
@@ -638,7 +805,13 @@ where
 {
     #[inline]
     fn deref_mut(&mut self) -> &mut T {
-        unsafe { &mut *(self.0.as_mut_ptr() as *mut T) }
+        // NOTE: This is safe because the lifetime of `self` is the same as the
+        // lifetime of the return value, meaning that a) the returned reference
+        // cannot outlive `self` and, b) no other methods on `self` can be
+        // called during the lifetime of the returned reference. See the
+        // documentation on `deref_mut_helper` for what invariants we are
+        // required to uphold.
+        unsafe { self.deref_mut_helper() }
     }
 }
 
@@ -650,14 +823,13 @@ where
     type Target = [T];
     #[inline]
     fn deref(&self) -> &[T] {
-        unsafe {
-            let len = self.0.len();
-            let elem_size = mem::size_of::<T>();
-            debug_assert_ne!(elem_size, 0);
-            debug_assert_eq!(len % elem_size, 0);
-            let elems = len / elem_size;
-            slice::from_raw_parts(self.0.as_ptr() as *const T, elems)
-        }
+        // NOTE: This is safe because the lifetime of `self` is the same as the
+        // lifetime of the return value, meaning that a) the returned reference
+        // cannot outlive `self` and, b) no mutable methods on `self` can be
+        // called during the lifetime of the returned reference. See the
+        // documentation on `deref_slice_helper` for what invariants we are
+        // required to uphold.
+        unsafe { self.deref_slice_helper() }
     }
 }
 
@@ -668,14 +840,13 @@ where
 {
     #[inline]
     fn deref_mut(&mut self) -> &mut [T] {
-        unsafe {
-            let len = self.0.len();
-            let elem_size = mem::size_of::<T>();
-            debug_assert_ne!(elem_size, 0);
-            debug_assert_eq!(len % elem_size, 0);
-            let elems = len / elem_size;
-            slice::from_raw_parts_mut(self.0.as_mut_ptr() as *mut T, elems)
-        }
+        // NOTE: This is safe because the lifetime of `self` is the same as the
+        // lifetime of the return value, meaning that a) the returned reference
+        // cannot outlive `self` and, b) no other methods on `self` can be
+        // called during the lifetime of the returned reference. See the
+        // documentation on `deref_mut_slice_helper` for what invariants we are
+        // required to uphold.
+        unsafe { self.deref_mut_slice_helper() }
     }
 }
 
