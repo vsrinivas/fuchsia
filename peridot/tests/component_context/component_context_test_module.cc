@@ -94,12 +94,11 @@ class TestModule {
         [this, kTestMessage](const std::string& msg,
                              fit::function<void()> ack) {
           ack();
-          // We only want one message.
-          msg_queue_.RegisterReceiver(nullptr);
 
           if (msg == kTestMessage) {
             msg_queue_communicated_.Pass();
           }
+
           TestAgentController();
         });
 
