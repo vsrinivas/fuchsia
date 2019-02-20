@@ -318,7 +318,7 @@ impl ViewAssistant for ButtonViewAssistant {
             indicator_size,
             indicator_size,
         ));
-        self.indicator.set_translation(center_x, indicator_y, 5.0);
+        self.indicator.set_translation(center_x, indicator_y, -5.0);
 
         let indicator_color = if self.red_light {
             Color::from_hash_code("#ff0000")?
