@@ -50,7 +50,7 @@ mutex::~mutex() {
     }
 #endif
     magic = 0;
-    val = 0;
+    val.store(0, ktl::memory_order_relaxed);
     wait_queue_destroy(&wait);
 }
 
@@ -67,7 +67,9 @@ void mutex_acquire(mutex_t* m) TA_NO_THREAD_SAFETY_ANALYSIS {
 retry:
     // fast path: assume its unheld, try to grab it
     oldval = 0;
-    if (likely(atomic_cmpxchg_u64(&m->val, &oldval, (uintptr_t)ct))) {
+    if (likely(m->val.compare_exchange_strong(oldval, reinterpret_cast<uintptr_t>(ct),
+                                              ktl::memory_order_seq_cst,
+                                              ktl::memory_order_seq_cst))) {
         // acquired it cleanly
         ct->mutexes_held++;
         return;
@@ -90,7 +92,9 @@ retry:
         }
 
         // try to exchange again with a flag indicating that we're blocking is set
-        if (unlikely(!atomic_cmpxchg_u64(&m->val, &oldval, oldval | MUTEX_FLAG_QUEUED))) {
+        if (unlikely(!m->val.compare_exchange_strong(oldval, oldval | MUTEX_FLAG_QUEUED,
+                                                     ktl::memory_order_seq_cst,
+                                                     ktl::memory_order_seq_cst))) {
             // if we fail, just start over from the top
             goto retry;
         }
@@ -128,7 +132,8 @@ static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thre
 
     // in case there's no contention, try the fast path
     oldval = (uintptr_t)ct;
-    if (likely(atomic_cmpxchg_u64(&m->val, &oldval, 0))) {
+    if (likely(m->val.compare_exchange_strong(oldval, 0, ktl::memory_order_seq_cst,
+                                              ktl::memory_order_seq_cst))) {
         // we're done, exit
         // if we had inherited any priorities, undo it if we are no longer holding any mutexes
         if (unlikely(ct->inherited_priority >= 0) && ct->mutexes_held == 0) {
@@ -172,13 +177,16 @@ static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thre
 
     // release a thread in the wait queue
     thread_t* t = wait_queue_dequeue_one(&m->wait, ZX_OK);
-    DEBUG_ASSERT_MSG(t, "mutex_release: wait queue didn't have anything, but m->val = %#" PRIxPTR "\n", mutex_val(m));
+    DEBUG_ASSERT_MSG(t,
+                     "mutex_release: wait queue didn't have anything, but m->val = %#" PRIxPTR "\n",
+                     mutex_val(m));
 
     // we woke up a thread, mark the mutex owned by that thread
     uintptr_t newval = (uintptr_t)t | (wait_queue_is_empty(&m->wait) ? 0 : MUTEX_FLAG_QUEUED);
 
     oldval = (uintptr_t)ct | MUTEX_FLAG_QUEUED;
-    if (!atomic_cmpxchg_u64(&m->val, &oldval, newval)) {
+    if (!m->val.compare_exchange_strong(oldval, newval, ktl::memory_order_seq_cst,
+                                        ktl::memory_order_seq_cst)) {
         panic("bad state in mutex release %p, current thread %p\n", m, ct);
     }
 

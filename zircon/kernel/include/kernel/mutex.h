@@ -10,7 +10,7 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <kernel/atomic.h>
+#include <ktl/atomic.h>
 #include <kernel/thread.h>
 #include <lockdep/lock_policy.h>
 #include <lockdep/lock_traits.h>
@@ -33,14 +33,13 @@ typedef struct TA_CAP("mutex") mutex {
     constexpr mutex() = default;
     ~mutex();
     uint32_t magic = MUTEX_MAGIC;
-    uintptr_t val = 0;
+    ktl::atomic<uintptr_t> val = 0;
     wait_queue_t wait = WAIT_QUEUE_INITIAL_VALUE(this->wait);
 } mutex_t;
 
 // accessors to extract the holder pointer from the val member
 static inline uintptr_t mutex_val(const mutex_t* m) {
-    static_assert(sizeof(uintptr_t) == sizeof(uint64_t), "");
-    return atomic_load_u64_relaxed((uint64_t*)&m->val);
+    return m->val.load(ktl::memory_order_relaxed);
 }
 
 static inline thread_t* mutex_holder(const mutex_t* m) {
