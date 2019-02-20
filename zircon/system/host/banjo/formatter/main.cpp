@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
     }
 
     bool in_place = false;
-    int pos = 1;
+    size_t pos = 1;
     // Process options
     while (pos < args.size() && args[pos] != "--" && args[pos].find("-") == 0) {
         if (args[pos] == "-i" || args[pos] == "--in-place") {
