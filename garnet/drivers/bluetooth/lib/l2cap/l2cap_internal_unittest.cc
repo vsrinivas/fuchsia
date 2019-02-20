@@ -17,28 +17,29 @@ namespace {
 using common::BufferView;
 using common::CreateStaticByteBuffer;
 
-TEST(L2CAP_InternalTest, IdentifiesSupervisoryFrame) {
+TEST(L2CAP_Internal_EnhancedControlFieldTest, IdentifiesSupervisoryFrame) {
   // See Core Spec, v5, Vol 3, Part A, Table 3.2.
   EXPECT_TRUE(CreateStaticByteBuffer(0b00000001, 0)
                   .As<EnhancedControlField>()
                   .designates_supervisory_frame());
 }
 
-TEST(L2CAP_InternalTest, IdentifiesNonSupervisoryFrame) {
+TEST(L2CAP_Internal_EnhancedControlFieldTest, IdentifiesNonSupervisoryFrame) {
   // See Core Spec, v5, Vol 3, Part A, Table 3.2.
   EXPECT_FALSE(CreateStaticByteBuffer(0b00000000, 1)
                    .As<EnhancedControlField>()
                    .designates_supervisory_frame());
 }
 
-TEST(L2CAP_InternalTest, IdentifiesStartOfSegmentedSdu) {
+TEST(L2CAP_Internal_EnhancedControlFieldTest, IdentifiesStartOfSegmentedSdu) {
   // See Core Spec, v5, Vol 3, Part A, Tables 3.2 and 3.4.
   EXPECT_TRUE(CreateStaticByteBuffer(0, 0b01000000)
                   .As<EnhancedControlField>()
                   .designates_start_of_segmented_sdu());
 }
 
-TEST(L2CAP_InternalTest, IdentifiesNonStartOfSegmentedSdu) {
+TEST(L2CAP_Internal_EnhancedControlFieldTest,
+     IdentifiesNonStartOfSegmentedSdu) {
   // See Core Spec, v5, Vol 3, Part A, Tables 3.2 and 3.4.
   EXPECT_FALSE(CreateStaticByteBuffer(0, 0b00000000)
                    .As<EnhancedControlField>()
@@ -54,7 +55,7 @@ TEST(L2CAP_InternalTest, IdentifiesNonStartOfSegmentedSdu) {
                    .designates_start_of_segmented_sdu());
 }
 
-TEST(L2CAP_InternalTest, IdentifiesPartOfSegmentedSdu) {
+TEST(L2CAP_Internal_EnhancedControlFieldTest, IdentifiesPartOfSegmentedSdu) {
   // See Core Spec, v5, Vol 3, Part A, Tables 3.2 and 3.4.
   EXPECT_TRUE(CreateStaticByteBuffer(0, 0b01000000)
                   .As<EnhancedControlField>()
@@ -67,7 +68,7 @@ TEST(L2CAP_InternalTest, IdentifiesPartOfSegmentedSdu) {
                   .designates_part_of_segmented_sdu());
 }
 
-TEST(L2CAP_InternalTest, IdentifiesNotPartOfSegmentedSdu) {
+TEST(L2CAP_Internal_EnhancedControlFieldTest, IdentifiesNotPartOfSegmentedSdu) {
   // See Core Spec, v5, Vol 3, Part A, Tables 3.2 and 3.4.
   EXPECT_FALSE(CreateStaticByteBuffer(0, 0b00000000)
                    .As<EnhancedControlField>()
@@ -83,7 +84,7 @@ TEST(L2CAP_InternalTest, IdentifiesNotPartOfSegmentedSdu) {
                    .designates_part_of_segmented_sdu());
 }
 
-TEST(L2CAP_InternalTest, ReadsRequestSequenceNumber) {
+TEST(L2CAP_Internal_EnhancedControlFieldTest, ReadsRequestSequenceNumber) {
   // See Core Spec, v5, Vol 3, Part A, Table 3.2, and Core Spec v5, Vol 3, Part
   // A, Sec 8.3.
   for (uint8_t seq_num = 0; seq_num < 64; ++seq_num) {
@@ -93,19 +94,21 @@ TEST(L2CAP_InternalTest, ReadsRequestSequenceNumber) {
   }
 }
 
-TEST(L2CAP_InternalTest, EnhancedControlFieldIsConstructedProperly) {
+TEST(L2CAP_Internal_EnhancedControlFieldTest, IsConstructedProperly) {
   EnhancedControlField ecf;
   EXPECT_EQ(CreateStaticByteBuffer(0, 0), BufferView(&ecf, sizeof(ecf)));
 }
 
-TEST(L2CAP_InternalTest, SetSupervisoryFrameSetsBitCorrectly) {
+TEST(L2CAP_Internal_EnhancedControlFieldTest,
+     SetSupervisoryFrameSetsBitCorrectly) {
   EnhancedControlField ecf;
   ecf.set_supervisory_frame();
   // See Core Spec, v5, Vol 3, Part A, Table 3.2.
   EXPECT_EQ(CreateStaticByteBuffer(0b1, 0), BufferView(&ecf, sizeof(ecf)));
 }
 
-TEST(L2CAP_InternalTest, SetRequestSeqNumSetsBitsCorrectly) {
+TEST(L2CAP_Internal_EnhancedControlFieldTest,
+     SetRequestSeqNumSetsBitsCorrectly) {
   for (uint8_t seq_num = 0; seq_num < 64; ++seq_num) {
     EnhancedControlField ecf;
     ecf.set_request_seq_num(seq_num);
@@ -115,7 +118,7 @@ TEST(L2CAP_InternalTest, SetRequestSeqNumSetsBitsCorrectly) {
   }
 }
 
-TEST(L2CAP_InternalTest, ReadsTxSequenceNumber) {
+TEST(L2CAP_Internal_SimpleInformationFrameHeaderTest, ReadsTxSequenceNumber) {
   // See Core Spec, v5, Vol 3, Part A, Table 3.2, and Core Spec v5, Vol 3, Part
   // A, Sec 8.3.
   for (uint8_t seq_num = 0; seq_num < 64; ++seq_num) {
@@ -125,14 +128,14 @@ TEST(L2CAP_InternalTest, ReadsTxSequenceNumber) {
   }
 }
 
-TEST(L2CAP_InternalTest, SimpleStartOfSduFrameHeaderIsConstructedProperly) {
+TEST(L2CAP_Internal_SimpleStartOfSduFrameHeaderTest, IsConstructedProperly) {
   SimpleStartOfSduFrameHeader frame;
   // See Core Spec, v5, Vol 3, Part A, Table 3.2, and Figure 3.3.
   EXPECT_EQ(CreateStaticByteBuffer(0, 0, 0, 0),
             BufferView(&frame, sizeof(frame)));
 }
 
-TEST(L2CAP_InternalTest, SimpleSupervisoryFrameIsConstructedProperly) {
+TEST(L2CAP_Internal_SimpleSupervisoryFrameTest, IsConstructedProperly) {
   // See Core Spec, v5, Vol 3, Part A, Table 3.2.
 
   {
@@ -160,7 +163,8 @@ TEST(L2CAP_InternalTest, SimpleSupervisoryFrameIsConstructedProperly) {
   }
 }
 
-TEST(L2CAP_InternalTest, FunctionReadsSupervisoryFunction) {
+TEST(L2CAP_Internal_SimpleSupervisoryFrameTest,
+     FunctionReadsSupervisoryFunction) {
   // See Core Spec, v5, Vol 3, Part A, Table 3.2 and Table 3.5.
   EXPECT_EQ(SupervisoryFunction::ReceiverReady,
             CreateStaticByteBuffer(0b0001, 0)
@@ -179,7 +183,7 @@ TEST(L2CAP_InternalTest, FunctionReadsSupervisoryFunction) {
                 .function());
 }
 
-TEST(L2CAP_InternalTest, SimpleReceiverReadyFrameIsConstructedProperly) {
+TEST(L2CAP_Internal_SimpleReceiverReadyFrameTest, IsConstructedProperly) {
   SimpleReceiverReadyFrame frame;
   // See Core Spec, v5, Vol 3, Part A, Table 3.2 and Table 3.5.
   EXPECT_EQ(CreateStaticByteBuffer(0b0001, 0),
