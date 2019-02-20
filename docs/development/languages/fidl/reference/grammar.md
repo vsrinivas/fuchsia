@@ -66,17 +66,20 @@ compound-identifier = IDENTIFIER ( "." , IDENTIFIER )* ;
 
 using = "using" , compound-identifier , ( "as" , IDENTIFIER ) , ";" ;
 
-declaration = const-declaration | enum-declaration | protocol-declaration
+declaration = bits-declaration | const-declaration | enum-declaration | protocol-declaration
             | struct-declaration | table-declaration | union-declaration | xunion-declaration ;
 
 const-declaration = ( attribute-list ) , "const" , type-constructor , IDENTIFIER , "=" , constant ;
 
 enum-declaration = ( attribute-list ) , "enum" , IDENTIFIER , ( ":" , type-constructor ) ,
-                   "{" , ( enum-member , ";" )+ , "}" ; [NOTE 2]
+                   "{" , ( bits-or-enum-member , ";" )+ , "}" ; [NOTE 2]
 
-enum-member = ( attribute-list ) , IDENTIFIER , ( "=" , enum-member-value ) ;
+bits-declaration = ( attribute-list ) , "bits" , IDENTIFIER , ( ":" , type-constructor ) ,
+                   "{" , ( bits-or-enum-member , ";" )+ , "}" ; [NOTE 3]
 
-enum-member-value = IDENTIFIER | literal ; [NOTE 3]
+bits-or-enum-member = ( attribute-list ) , IDENTIFIER , ( "=" , bits-or-enum-member-value ) ;
+
+bits-or-enum-member-value = IDENTIFIER | literal ; [NOTE 4]
 
 protocol-declaration = ( attribute-list ) , "protocol" , IDENTIFIER ,
                        "{" , ( protocol-member , ";" )*  , "}" ;
@@ -141,14 +144,22 @@ literal = STRING-LITERAL | NUMERIC-LITERAL | "true" | "false" ;
 ### NOTE 1
 The `using-declaration` allows the more liberal `type-constructor`
 in the grammar, but the compiler limits this to
-[primitives](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/reference/language.md#primitives)
+[primitives].
 
 ### NOTE 2
 The `enum-declaration` allows the more liberal `type-constructor` in the
 grammar, but the compiler limits this to signed or unsigned integer types,
-see [primitives](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/reference/language.md#primitives).
+see [primitives].
 
 ### NOTE 3
-The `enum-member-value` allows the more liberal `literal`
-in the grammar, but the compiler limits this to `NUMERIC-LITERAL` later.
+The `bits-declaration` allows the more liberal `type-constructor` in the grammar, but the compiler
+limits this to unsigned integer types, see [primitives].
+
+### NOTE 4
+The `bits-or-enum-member-value` allows the more liberal `literal` in the grammar, but the compiler limits this to:
+* A `NUMERIC-LITERAL` in the context of an `enum`;
+* A `NUMERIC-LITERAL` which must be a power of two, in the context of a `bits`.
+
+<!-- xrefs -->
+[primitives]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/language.md#primitives
 
