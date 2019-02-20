@@ -22,7 +22,7 @@
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 
-#include "../private-remoteio.h" // For zxrio_open_handle.
+#include "../private.h"
 #include "local-connection.h"
 #include "local-filesystem.h"
 #include "local-vnode.h"
@@ -168,7 +168,7 @@ zx_status_t fdio_namespace::Open(fbl::RefPtr<const LocalVnode> vn, const char* p
 
     // Active remote connections are immutable, so referencing remote here
     // is safe. We don't want to do a blocking open under the ns lock.
-    return zxrio_open_handle(vn->Remote().get(), path, flags, mode, out);
+    return fdio_remote_open_at(vn->Remote().get(), path, flags, mode, out);
 }
 
 zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, void* buffer,
@@ -380,7 +380,7 @@ fdio_t* fdio_namespace::OpenRoot() const {
     lock.release();
 
     fdio_t* io;
-    zx_status_t status = zxrio_open_handle(remote.get(), "", O_RDWR, 0, &io);
+    zx_status_t status = fdio_remote_open_at(remote.get(), "", O_RDWR, 0, &io);
     if (status != ZX_OK) {
         return nullptr;
     }

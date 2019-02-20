@@ -16,7 +16,6 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include "private-remoteio.h"
 #include "private.h"
 
 static zx_status_t fdio_zxio_close(fdio_t* io) {
@@ -186,7 +185,7 @@ static zx_status_t fdio_zxio_remote_open(fdio_t* io, const char* path,
                                          uint32_t flags, uint32_t mode,
                                          fdio_t** out) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
-    return zxrio_open_handle(rio->control, path, flags, mode, out);
+    return fdio_remote_open_at(rio->control, path, flags, mode, out);
 }
 
 static zx_status_t fidl_ioctl(zx_handle_t h, uint32_t op, const void* in_buf,

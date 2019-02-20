@@ -203,6 +203,21 @@ int fdio_pipe_pair(fdio_t** a, fdio_t** b);
 
 fdio_t* fdio_ns_open_root(fdio_ns_t* ns);
 
+// Open |path| relative to |dir| as an |fdio_t|.
+//
+// |dir| must be a channel that implements the |fuchsia.io.Directory| protocol.
+// The |flags| and |mode| are passed to |fuchsia.io.Directory/Open| as |flags|
+// and |mode|, respectively.
+//
+// If |flags| includes |ZX_FS_FLAG_DESCRIBE|, this function reads the resulting
+// |fuchsia.io.Node/OnOpen| event from the newly created channel and creates an
+// appropriate |fdio_t| object to interact with the remote object.
+//
+// Otherwise, this function creates a generic "remote" |fdio_t| object.
+zx_status_t fdio_remote_open_at(zx_handle_t dir, const char* path,
+                                uint32_t flags, uint32_t mode,
+                                fdio_t** out_io);
+
 // io will be consumed by this and must not be shared
 void fdio_chdir(fdio_t* io, const char* path);
 
