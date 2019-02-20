@@ -8,11 +8,12 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-012](ftp-012.md) | 2018-08-30 | 2018-09-11 | Empty structs
 [FTP-007](ftp-007.md) | 2018-07-27 | 2018-09-20 | Tables
 [FTP-008](ftp-008.md) | 2018-07-19 | 2018-10-04 | Epitaphs
-FTP-013               | 2018-09-10 | 2018-10-11 | [Deprecated] Attribute
+[FTP-013](ftp-013.md) | 2018-09-07 | 2018-10-11 | Introduce a `[Deprecated]` Attribute
 FTP-015               | 2018-09-26 | 2018-10-11 | Extensible Unions
-FTP-021               | 2018-10-31 | 2018-11-01 | Soft Transitions for Methods Add / Remove
+[FTP-021](ftp-021.md) | 2018-10-31 | 2018-11-01 | Soft Transitions for Methods Add / Remove
 [FTP-020](ftp-020.md) | 2018-10-26 | 2018-11-29 | Interface Ordinal Hashing
 FTP-014               | 2019-09-18 | 2018-12-06 | Error Handling
 [FTP-023](ftp-023.md) | 2018-12-10 | 2019-01-09 | Compositional Model for Protocols
+[FTP-025](ftp-025.md) | 2019-01-09 | 2019-01-24 | Bit Flags &mdash; Just a Little Bit
 [FTP-030](ftp-030.md) | 2019-01-30 | 2019-01-30 | FIDL is little endian
 [FTP-027](ftp-027.md) | 2019-01-19 | 2019-02-04 | You only pay for what you use
