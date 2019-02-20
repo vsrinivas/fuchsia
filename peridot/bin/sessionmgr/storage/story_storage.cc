@@ -189,10 +189,7 @@ class ReadVmoCall
   void Run() override {
     FlowToken flow{this, &status_, &value_};
 
-    page_snapshot_ = page_client_->NewSnapshot([this, weak_ptr = GetWeakPtr()] {
-      if (!weak_ptr) {
-        return;
-      }
+    page_snapshot_ = page_client_->NewSnapshot([this, flow] {
       // An error occurred getting the snapshot. Resetting page_snapshot_
       // will ensure that the FlowToken it has captured below while waiting for
       // a connected channel will be destroyed, and the operation will be
@@ -782,20 +779,12 @@ void StoryStorage::OnPageChange(const std::string& key,
     return;
   }
 
-  // If there are any operations waiting on this particular write
-  // having happened, tell them to continue.
-  auto it = pending_writes_.find({key, value_string});
-  bool notify_link_listeners = true;
-  if (it != pending_writes_.end()) {
-    auto local_futures = std::move(it->second);
-    for (auto fut : local_futures) {
-      fut->Complete();
-    }
-
-    // Since the above write originated from this StoryStorage instance,
-    // we do not notify any link listeners.
-    notify_link_listeners = false;
-  }
+  // Find any write operations which are waiting for the notification of the
+  // write being successful.
+  auto pending_writes_it = pending_writes_.find({key, value_string});
+  // Link watchers are not notified of writes originating from this story
+  // storage instance.
+  bool notify_link_listeners = pending_writes_it == pending_writes_.end();
 
   if (StartsWith(key, kLinkKeyPrefix)) {
     if (notify_link_listeners) {
@@ -818,6 +807,15 @@ void StoryStorage::OnPageChange(const std::string& key,
     // Consider putting all story-scoped data under a shared prefix, and use
     // that when initializing the PageClient.
     FXL_LOG(ERROR) << "Unexpected StoryStorage Ledger key prefix: " << key;
+  }
+
+  if (pending_writes_it != pending_writes_.end()) {
+    auto local_futures = std::move(pending_writes_it->second);
+    for (auto fut : local_futures) {
+      // Completing this future may trigger a deletion of the story storage
+      // instance, and thus leaves |this| invalid.
+      fut->Complete();
+    }
   }
 }
 
