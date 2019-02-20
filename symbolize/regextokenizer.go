@@ -93,7 +93,12 @@ func (r *regexpTokenizer) run(input string) {
 				for i := 0; i < regex.groupCount; i++ {
 					groupBeginIdx := locs[2*(regex.index+i)]
 					groupEndIdx := locs[2*(regex.index+i)+1]
-					groups = append(groups, input[groupBeginIdx:groupEndIdx])
+					// When a group is optional it may not be included. Check for that.
+					if groupBeginIdx == -1 || groupEndIdx == -1 {
+						groups = append(groups, "")
+					} else {
+						groups = append(groups, input[groupBeginIdx:groupEndIdx])
+					}
 				}
 				// Pass the regex's groups to it
 				regex.action(groups...)

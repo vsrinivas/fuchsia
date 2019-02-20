@@ -233,6 +233,53 @@ func ExampleDemux() {
 	//[131.604] 01234.05678> Error at atan2 at atan2.c:49
 }
 
+func TestMsgSimpleBacktrace(t *testing.T) {
+	msg := "{{{bt:0:0xdeadbeef:this is a message}}}\n"
+	symbo := newMockSymbolizer([]mockModule{})
+	demuxer := NewDemuxer(testBinaries, symbo)
+	ctx := context.Background()
+	in := StartParsing(ctx, strings.NewReader(msg))
+	out := demuxer.Start(ctx, in)
+	buf := new(bytes.Buffer)
+	Consume(ComposePostProcessors(ctx, out, &FilterContextElements{},
+		NewBacktracePresenter(buf, NewBasicPresenter(buf, false))))
+	expected := "    #0    0x00000000deadbeee in <>+0xdeadbeee this is a message\n"
+	actual := buf.String()
+	if actual != expected {
+		t.Errorf("want %q got %q", expected, actual)
+	}
+}
+
+func ExampleMsgBacktrace() {
+	// mock the input and outputs of llvm-symbolizer
+	symbo := newMockSymbolizer([]mockModule{
+		{"testdata/libc.elf", map[uint64][]SourceLocation{
+			0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
+		}},
+	})
+
+	// make a demuxer
+	demuxer := NewDemuxer(testBinaries, symbo)
+
+	// define a little message that will need to be parsed
+	msg := "{{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
+		"{{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}\n" +
+		"{{{bt:0:0x12388681:sp 0xdeadbaaf bp 0xdeadbeef}}}\n"
+
+	// start sending InputLines to the demuxer
+	ctx := context.Background()
+	in := StartParsing(ctx, strings.NewReader(msg))
+	// start the demuxer which will cause filters to send output lines to 'out'
+	out := demuxer.Start(ctx, in)
+
+	Consume(ComposePostProcessors(ctx, out,
+		&FilterContextElements{},
+		NewBacktracePresenter(os.Stdout, NewBasicPresenter(os.Stdout, false))))
+
+	//Output:
+	//     #0    0x0000000012388680 in pow pow.c:23 <libc.so>+0x43680 sp 0xdeadbaaf bp 0xdeadbeef
+}
+
 func ExampleNoHeaderBacktrace() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{

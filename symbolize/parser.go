@@ -71,10 +71,11 @@ func GetLineParser() ParseLineFunc {
 	ptr := ptrRegexp
 	str := strRegexp
 	num := fmt.Sprintf("(?:%s|%s)", dec, ptr)
-	b.addRule(fmt.Sprintf("{{{bt:(%s):(%s)}}}", dec, ptr), func(args ...string) {
+	b.addRule(fmt.Sprintf("{{{bt:(%s):(%s)(?::(%s))?}}}", dec, ptr, str), func(args ...string) {
 		out = append(out, &BacktraceElement{
 			num:   str2dec(args[1]),
 			vaddr: str2int(args[2]),
+			msg:   args[3],
 		})
 	})
 	b.addRule(fmt.Sprintf("{{{pc:(%s)}}}", ptr), func(args ...string) {

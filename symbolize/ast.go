@@ -72,6 +72,7 @@ type SourceLocation struct {
 type BacktraceElement struct {
 	vaddr uint64
 	num   uint64
+	msg   string
 	info  addressInfo
 }
 

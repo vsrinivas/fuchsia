@@ -27,14 +27,14 @@ func NewBacktracePresenter(out io.Writer, next PostProcessor) *BacktracePresente
 	}
 }
 
-func printBacktrace(out io.Writer, hdr LineHeader, frame uint64, info addressInfo) {
+func printBacktrace(out io.Writer, hdr LineHeader, frame uint64, msg string, info addressInfo) {
 	modRelAddr := info.addr - info.seg.Vaddr + info.seg.ModRelAddr
 	var hdrString string
 	if hdr != nil {
 		hdrString = hdr.Present()
 	}
 	if len(info.locs) == 0 {
-		fmt.Fprintf(out, "%s    #%-4d %#016x in <%s>+%#x\n", hdrString, frame, info.addr, info.mod.Name, modRelAddr)
+		fmt.Fprintf(out, "%s    #%-4d %#016x in <%s>+%#x %s\n", hdrString, frame, info.addr, info.mod.Name, modRelAddr, msg)
 		return
 	}
 	for i, loc := range info.locs {
@@ -54,7 +54,11 @@ func printBacktrace(out io.Writer, hdr LineHeader, frame uint64, info addressInf
 		if !loc.file.IsEmpty() {
 			fmt.Fprintf(out, " %s:%d", loc.file, loc.line)
 		}
-		fmt.Fprintf(out, " <%s>+%#x\n", info.mod.Name, modRelAddr)
+		fmt.Fprintf(out, " <%s>+%#x", info.mod.Name, modRelAddr)
+		if msg != "" {
+			fmt.Fprintf(out, " %s", msg)
+		}
+		fmt.Fprintf(out, "\n")
 	}
 }
 
@@ -70,7 +74,7 @@ func isSpace(s string) bool {
 func (b *BacktracePresenter) Process(line OutputLine, out chan<- OutputLine) {
 	if len(line.line) == 1 {
 		if bt, ok := line.line[0].(*BacktraceElement); ok {
-			printBacktrace(b.out, line.header, bt.num, bt.info)
+			printBacktrace(b.out, line.header, bt.num, bt.msg, bt.info)
 			// Don't process a backtrace we've already output.
 			return
 		}
@@ -79,7 +83,7 @@ func (b *BacktracePresenter) Process(line OutputLine, out chan<- OutputLine) {
 		// Note that we're going to discard the text in front.
 		if txt, ok := line.line[0].(*Text); ok && isSpace(txt.text) {
 			if bt, ok := line.line[1].(*BacktraceElement); ok {
-				printBacktrace(b.out, line.header, bt.num, bt.info)
+				printBacktrace(b.out, line.header, bt.num, bt.msg, bt.info)
 				// Don't process a backtrace we've already output.
 				return
 			}
