@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//garnet/bin/sysmem_connector:sysmem_connector_test_package"
+        "//garnet/bin/sysmem_connector:sysmem_connector_test"
     ]
 }

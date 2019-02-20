@@ -5,7 +5,7 @@
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 
-executable("sysmem_connector") {
+executable("sysmem_connector_executable") {
   output_name = "sysmem_connector"
 
   sources = [
@@ -21,9 +21,9 @@ executable("sysmem_connector") {
   ]
 }
 
-package("sysmem_connector_package") {
+package("sysmem_connector") {
   deps = [
-    ":sysmem_connector",
+    ":sysmem_connector_executable",
   ]
 
   binaries = [
@@ -40,7 +40,7 @@ package("sysmem_connector_package") {
   ]
 }
 
-executable("sysmem_connector_test") {
+executable("sysmem_connector_test_executable") {
   testonly = true
   output_name = "sysmem_connector_test"
 
@@ -57,20 +57,21 @@ executable("sysmem_connector_test") {
   ]
 }
 
-test_package("sysmem_connector_test_package") {
+test_package("sysmem_connector_test") {
   deps = [
-    ":sysmem_connector_test",
+    ":sysmem_connector_test_executable",
   ]
 
   tests = [
     {
       name = "sysmem_connector_test"
+
       # For now, this test is disabled on CI/CQ, because those use a test
       # sandbox that prevents access to /dev/class/sysmem.
       #
       # TODO(dustingreen): Set up this test to run similarly to HW-dependent
       # tests, in CQ if possible,
       disabled = true
-    }
+    },
   ]
 }

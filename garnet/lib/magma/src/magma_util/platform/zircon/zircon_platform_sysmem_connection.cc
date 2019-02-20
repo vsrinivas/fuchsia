@@ -340,17 +340,11 @@ private:
 // static
 std::unique_ptr<PlatformSysmemConnection> PlatformSysmemConnection::Create()
 {
-    fuchsia::sysmem::DriverConnectorSyncPtr connector;
-    auto interface_request = connector.NewRequest();
-    zx_status_t status =
-        fdio_service_connect("/dev/class/sysmem/000", interface_request.TakeChannel().release());
-    if (status != ZX_OK) {
-        return DRETP(nullptr, "Failed to connect to sysmem driver, status %d", status);
-    }
     fuchsia::sysmem::Allocator2SyncPtr sysmem_allocator;
-    status = connector->Connect(sysmem_allocator.NewRequest());
+    zx_status_t status = fdio_service_connect(
+        "/svc/fuchsia.sysmem.Allocator2", sysmem_allocator.NewRequest().TakeChannel().release());
     if (status != ZX_OK) {
-        return DRETP(nullptr, "Failed to connect to sysmem allocator, status %d", status);
+        return DRETP(nullptr, "Failed to connect to sysmem service, status %d", status);
     }
     return std::make_unique<ZirconPlatformSysmemConnection>(std::move(sysmem_allocator));
 }

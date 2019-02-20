@@ -1,4 +1,7 @@
 {
+    "imports": [
+        "garnet/packages/prod/sysmem_connector"
+    ],
     "packages": [
         "//garnet/lib/magma/gnbuild/magma-intel-gen",
         "//garnet/lib/magma/gnbuild/magma-arm-mali"
