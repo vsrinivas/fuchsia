@@ -21,7 +21,7 @@ impl Fifo {
     /// element into the fifo from which the opposing endpoint reads. Wraps the
     /// [zx_fifo_create](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/fifo_create.md)
     /// syscall.
-    pub fn create(elem_count: u32, elem_size: u32)
+    pub fn create(elem_count: usize, elem_size: usize)
         -> Result<(Fifo, Fifo), Status>
     {
         let mut out0 = 0;

@@ -529,8 +529,8 @@ extern {
         ) -> zx_status_t;
 
     pub fn zx_fifo_create(
-        elem_count: u32,
-        elem_size: u32,
+        elem_count: usize,
+        elem_size: usize,
         options: u32,
         out0: *mut zx_handle_t,
         out1: *mut zx_handle_t

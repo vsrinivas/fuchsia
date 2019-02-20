@@ -275,7 +275,7 @@ mod tests {
         let mut exec = Executor::new().expect("failed to create executor");
         let elements: &[entry; 1] = &[entry { a: 10, b: 20 }];
 
-        let (tx, rx) = zx::Fifo::create(2, ::std::mem::size_of::<entry>() as u32)
+        let (tx, rx) = zx::Fifo::create(2, ::std::mem::size_of::<entry>())
             .expect("failed to create zx fifo");
         let (tx, rx) = (
             Fifo::<entry>::from_fifo(tx).expect("failed to create async tx fifo"),
@@ -302,7 +302,7 @@ mod tests {
         let mut exec = Executor::new().expect("failed to create executor");
         let elements: &[entry; 1] = &[entry { a: 10, b: 20 }];
 
-        let (tx, rx) = zx::Fifo::create(2, ::std::mem::size_of::<entry>() as u32)
+        let (tx, rx) = zx::Fifo::create(2, ::std::mem::size_of::<entry>())
             .expect("failed to create zx fifo");
         let (tx, rx) = (
             Fifo::<entry>::from_fifo(tx).expect("failed to create async tx fifo"),
@@ -332,7 +332,7 @@ mod tests {
         let mut exec = Executor::new().expect("failed to create executor");
         let elements: &[wrong_entry; 1] = &[wrong_entry { a: 10 }];
 
-        let (tx, rx) = zx::Fifo::create(2, ::std::mem::size_of::<entry>() as u32)
+        let (tx, rx) = zx::Fifo::create(2, ::std::mem::size_of::<entry>())
             .expect("failed to create zx fifo");
         let (tx, _rx) = (
             Fifo::<wrong_entry>::from_fifo(tx).expect("failed to create async tx fifo"),
@@ -359,7 +359,7 @@ mod tests {
             entry { a: 50, b: 60 },
         ];
 
-        let (tx, rx) = zx::Fifo::create(2, ::std::mem::size_of::<entry>() as u32)
+        let (tx, rx) = zx::Fifo::create(2, ::std::mem::size_of::<entry>())
             .expect("failed to create zx fifo");
         let (tx, rx) = (
             Fifo::<entry>::from_fifo(tx).expect("failed to create async tx fifo"),
@@ -411,7 +411,7 @@ mod tests {
             entry { a: 50, b: 60 },
         ];
 
-        let (tx, rx) = zx::Fifo::create(2, ::std::mem::size_of::<entry>() as u32)
+        let (tx, rx) = zx::Fifo::create(2, ::std::mem::size_of::<entry>())
             .expect("failed to create zx fifo");
         let (tx, rx) = (
             Fifo::<entry>::from_fifo(tx).expect("failed to create async tx fifo"),
