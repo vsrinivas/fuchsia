@@ -13,8 +13,7 @@ use fuchsia_async as fasync;
 use fuchsia_scenic::{ImportNode, Session, SessionPtr};
 use fuchsia_zircon as zx;
 use futures::{TryFutureExt, TryStreamExt};
-use parking_lot::Mutex;
-use std::{any::Any, cell::RefCell, sync::Arc};
+use std::any::Any;
 
 /// enum that defines all messages sent with `App::send_message` that
 /// the view struct will understand and process.
@@ -44,7 +43,7 @@ impl<'a> ViewAssistantContext<'a> {
 }
 
 /// Trait that allows mod developers to customize the behavior of view controllers.
-pub trait ViewAssistant: Send {
+pub trait ViewAssistant {
     /// This method is called once when a view is created. It is a good point to create scenic
     /// commands that apply throughout the lifetime of the view.
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error>;
@@ -63,12 +62,12 @@ pub trait ViewAssistant: Send {
 
     /// This method is called when `App::send_message` is called with the associated
     /// view controller's `ViewKey` and the view controller does not handle the message.
-    fn handle_message(&mut self, message: &Any);
+    fn handle_message(&mut self, _message: &Any) {}
 }
 
 /// Reference to an app assistant. _This type is likely to change in the future so
 /// using this type alias might make for easier forward migration._
-pub type ViewAssistantPtr = Mutex<RefCell<Box<ViewAssistant>>>;
+pub type ViewAssistantPtr = Box<dyn ViewAssistant>;
 
 /// Key identifying a view.
 pub type ViewKey = u64;
@@ -95,7 +94,7 @@ impl ViewController {
         app: &mut App,
         view_token: gfx::ExportToken,
         key: ViewKey,
-    ) -> Result<ViewControllerPtr, Error> {
+    ) -> Result<ViewController, Error> {
         let (view, view_server_end) = create_proxy()?;
         let (view_listener, view_listener_request) = create_endpoints()?;
         let (mine, theirs) = zx::EventPair::create()?;
@@ -113,7 +112,7 @@ impl ViewController {
         app.scenic.create_session(session_request, Some(session_listener))?;
         let session = Session::new(session_proxy);
 
-        let view_assistant = app.create_view_assistant(&session)?;
+        let mut view_assistant = app.create_view_assistant(&session)?;
 
         let mut import_node = ImportNode::new(session.clone(), mine);
 
@@ -131,7 +130,7 @@ impl ViewController {
             metrics: Size::zero(),
             messages: Vec::new(),
         };
-        view_assistant.lock().borrow_mut().setup(&context)?;
+        view_assistant.setup(&context)?;
 
         let view_controller = ViewController {
             view,
@@ -145,26 +144,25 @@ impl ViewController {
             assistant: view_assistant,
         };
 
-        let view_controller = Arc::new(Mutex::new(view_controller));
-
-        Self::setup_session_listener(&view_controller, session_listener_request)?;
-        Self::setup_view_listener(&view_controller, view_listener_request)?;
+        Self::setup_session_listener(key, session_listener_request)?;
+        Self::setup_view_listener(key, view_listener_request)?;
 
         Ok(view_controller)
     }
 
     fn setup_session_listener(
-        view_controller: &ViewControllerPtr,
+        key: ViewKey,
         session_listener_request: ServerEnd<SessionListenerMarker>,
     ) -> Result<(), Error> {
-        let view_controller = view_controller.clone();
-        fasync::spawn(
+        fasync::spawn_local(
             session_listener_request
                 .into_stream()?
                 .map_ok(move |request| match request {
-                    SessionListenerRequest::OnScenicEvent { events, .. } => {
-                        view_controller.lock().handle_session_events(events)
-                    }
+                    SessionListenerRequest::OnScenicEvent { events, .. } => App::with(|app| {
+                        app.with_view(key, |view| {
+                            view.handle_session_events(events);
+                        })
+                    }),
                     _ => (),
                 })
                 .try_collect::<()>()
@@ -175,16 +173,19 @@ impl ViewController {
     }
 
     fn setup_view_listener(
-        view_controller: &ViewControllerPtr,
+        key: ViewKey,
         view_listener_request: ServerEnd<ViewListenerMarker>,
     ) -> Result<(), Error> {
-        let view_controller = view_controller.clone();
-        fasync::spawn(
+        fasync::spawn_local(
             view_listener_request
                 .into_stream()?
                 .try_for_each(
                     move |ViewListenerRequest::OnPropertiesChanged { properties, responder }| {
-                        view_controller.lock().handle_properties_changed(&properties);
+                        App::with(|app| {
+                            app.with_view(key, |view| {
+                                view.handle_properties_changed(&properties);
+                            });
+                        });
                         futures::future::ready(responder.send())
                     },
                 )
@@ -205,11 +206,7 @@ impl ViewController {
             metrics: self.metrics,
             messages: Vec::new(),
         };
-        self.assistant
-            .lock()
-            .borrow_mut()
-            .update(&context)
-            .unwrap_or_else(|e| eprintln!("Update error: {:?}", e));
+        self.assistant.update(&context).unwrap_or_else(|e| eprintln!("Update error: {:?}", e));
         self.present();
     }
 
@@ -235,8 +232,6 @@ impl ViewController {
                     messages: Vec::new(),
                 };
                 self.assistant
-                    .lock()
-                    .borrow_mut()
                     .handle_input_event(&mut context, &event)
                     .unwrap_or_else(|e| eprintln!("handle_event: {:?}", e));
                 for msg in context.messages {
@@ -249,7 +244,7 @@ impl ViewController {
     }
 
     fn present(&self) {
-        fasync::spawn(
+        fasync::spawn_local(
             self.session
                 .lock()
                 .present(0)
@@ -280,9 +275,7 @@ impl ViewController {
                 }
             }
         } else {
-            self.assistant.lock().borrow_mut().handle_message(msg);
+            self.assistant.handle_message(msg);
         }
     }
 }
-
-pub type ViewControllerPtr = Arc<Mutex<ViewController>>;

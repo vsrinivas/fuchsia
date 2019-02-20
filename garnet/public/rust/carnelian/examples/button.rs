@@ -12,8 +12,7 @@ use fidl_fuchsia_ui_gfx as gfx;
 use fidl_fuchsia_ui_input::{InputEvent::Pointer, PointerEvent, PointerEventPhase};
 use fuchsia_scenic::{EntityNode, HostImageCycler, Material, Rectangle, SessionPtr, ShapeNode};
 use lazy_static::lazy_static;
-use parking_lot::Mutex;
-use std::{any::Any, cell::RefCell};
+use std::any::Any;
 
 // This font creation method isn't ideal. The correct method would be to ask the Fuchsia
 // font service for the font data.
@@ -55,7 +54,7 @@ impl AppAssistant for ButtonAppAssistant {
     }
 
     fn create_view_assistant(&mut self, session: &SessionPtr) -> Result<ViewAssistantPtr, Error> {
-        Ok(Mutex::new(RefCell::new(Box::new(ButtonViewAssistant::new(session)?))))
+        Ok(Box::new(ButtonViewAssistant::new(session)?))
     }
 }
 

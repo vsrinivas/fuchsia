@@ -16,9 +16,7 @@ use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
 use fuchsia_app::client::{App as LaunchedApp, Launcher};
 use fuchsia_scenic::{EntityNode, ImportNode, Material, Rectangle, SessionPtr, ShapeNode};
 use itertools::Itertools;
-use parking_lot::Mutex;
 use std::collections::BTreeMap;
-use std::{any::Any, cell::RefCell};
 
 fn inset(rect: &mut RectF, border: f32) {
     let inset = border.min(rect.width / 0.3).min(rect.height / 0.3);
@@ -41,16 +39,15 @@ impl AppAssistant for EmbeddingAppAssistant {
             "fuchsia-pkg://fuchsia.com/spinning_square_rs#meta/spinning_square_rs.cmx".to_string(),
             None,
         )?;
-        Ok(Mutex::new(RefCell::new(Box::new(EmbeddingViewAssistant {
+        Ok(Box::new(EmbeddingViewAssistant {
             background_node: ShapeNode::new(session.clone()),
             size: Size::zero(),
             app,
             views: BTreeMap::new(),
-        }))))
+        }))
     }
 }
 
-#[allow(unused)]
 struct ViewData {
     key: u32,
     bounds: Option<RectF>,
@@ -169,11 +166,6 @@ impl ViewAssistant for EmbeddingViewAssistant {
         self.background_node.set_translation(center_x, center_y, 0.0);
         self.layout(context.view_container);
         Ok(())
-    }
-
-    fn handle_message(&mut self, _message: &Any) {
-        // If spinning square had any custom messages they
-        // would be handled here.
     }
 }
 

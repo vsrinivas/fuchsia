@@ -17,10 +17,9 @@ use fuchsia_app::client::{App as LaunchedApp, LaunchOptions, Launcher};
 use fuchsia_async as fasync;
 use fuchsia_scenic::{Circle, EntityNode, ImportNode, Material, Rectangle, SessionPtr, ShapeNode};
 use log::{info, warn};
-use parking_lot::Mutex;
 use rand::Rng;
+use std::any::Any;
 use std::collections::BTreeMap;
-use std::{any::Any, cell::RefCell};
 
 mod layout;
 mod user_context;
@@ -36,11 +35,11 @@ impl AppAssistant for VoilaAppAssistant {
     }
 
     fn create_view_assistant(&mut self, session: &SessionPtr) -> Result<ViewAssistantPtr, Error> {
-        Ok(Mutex::new(RefCell::new(Box::new(VoilaViewAssistant {
+        Ok(Box::new(VoilaViewAssistant {
             background_node: ShapeNode::new(session.clone()),
             circle_node: ShapeNode::new(session.clone()),
             replicas: BTreeMap::new(),
-        }))))
+        }))
     }
 }
 
@@ -116,7 +115,7 @@ impl VoilaViewAssistant {
         let (user_context_client, user_context_server) = create_endpoints::<UserContextMarker>()?;
         let user_context = UserContext {};
         let user_context_stream = user_context_server.into_stream()?;
-        fasync::spawn(
+        fasync::spawn_local(
             async move {
                 await!(user_context.handle_requests_from_stream(user_context_stream))
                     .unwrap_or_else(|err| {

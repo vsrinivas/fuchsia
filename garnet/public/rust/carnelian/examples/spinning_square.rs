@@ -5,8 +5,7 @@
 #![feature(async_await, await_macro, futures_api)]
 
 use carnelian::{
-    App, AppAssistant, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
-    ViewMessages, APP,
+    App, AppAssistant, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
 };
 use failure::{Error, ResultExt};
 use fidl::endpoints::{RequestStream, ServiceMarker};
@@ -16,8 +15,7 @@ use fuchsia_async::{self as fasync, Interval};
 use fuchsia_scenic::{Material, Rectangle, SessionPtr, ShapeNode};
 use fuchsia_zircon::{ClockId, Duration, Time};
 use futures::prelude::*;
-use parking_lot::Mutex;
-use std::{any::Any, cell::RefCell, f32::consts::PI};
+use std::f32::consts::PI;
 
 struct SpinningSquareAppAssistant {}
 
@@ -27,11 +25,11 @@ impl AppAssistant for SpinningSquareAppAssistant {
     }
 
     fn create_view_assistant(&mut self, session: &SessionPtr) -> Result<ViewAssistantPtr, Error> {
-        Ok(Mutex::new(RefCell::new(Box::new(SpinningSquareViewAssistant {
+        Ok(Box::new(SpinningSquareViewAssistant {
             background_node: ShapeNode::new(session.clone()),
             spinning_square_node: ShapeNode::new(session.clone()),
             start: Time::get(ClockId::Monotonic),
-        }))))
+        }))
     }
 
     /// Return the list of names of services this app wants to provide
@@ -52,7 +50,7 @@ impl AppAssistant for SpinningSquareAppAssistant {
 
 impl SpinningSquareAppAssistant {
     fn create_echo_server(channel: fasync::Channel, quiet: bool) {
-        fasync::spawn(
+        fasync::spawn_local(
             async move {
                 let mut stream = EchoRequestStream::from_channel(channel);
                 while let Some(EchoRequest::EchoString { value, responder }) =
@@ -86,11 +84,12 @@ impl SpinningSquareViewAssistant {
         let timer = Interval::new(Duration::from_millis(10));
         let f = timer
             .map(move |_| {
-                let mut app = APP.lock();
-                app.send_message(key, &ViewMessages::Update);
+                App::with(|app| {
+                    app.send_message(key, &ViewMessages::Update);
+                });
             })
             .collect::<()>();
-        fasync::spawn(f);
+        fasync::spawn_local(f);
     }
 }
 
@@ -136,11 +135,6 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         self.spinning_square_node.set_translation(center_x, center_y, -8.0);
         self.spinning_square_node.set_rotation(0.0, 0.0, (angle * 0.5).sin(), (angle * 0.5).cos());
         Ok(())
-    }
-
-    fn handle_message(&mut self, _message: &Any) {
-        // If spinning square had any custom messages they
-        // would be handled here.
     }
 }
 
