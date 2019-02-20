@@ -47,7 +47,7 @@ int usage(void) {
 }
 
 int add_partitions(Container* container, int argc, char** argv) {
-    for (unsigned i = 0; i < argc; i += 2) {
+    for (int i = 0; i < argc; i += 2) {
         if (argc - i < 2 || argv[i][0] != '-' || argv[i][1] != '-') {
             usage();
         }
@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
         usage();
     }
 
-    unsigned i = 1;
+    int i = 1;
     const char* path = argv[i++];    // Output path
     const char* command = argv[i++]; // Command
 
