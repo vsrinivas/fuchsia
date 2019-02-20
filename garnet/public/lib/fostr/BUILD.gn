@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 source_set("fostr") {
@@ -70,10 +71,7 @@ test("tests") {
   ]
 }
 
-package("tests_package") {
-  testonly = true
-  deprecated_system_image = true
-
+test_package("tests_package") {
   package_name = "fostr_unittests"
 
   deps = [

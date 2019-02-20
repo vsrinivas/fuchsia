@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/overnet_unittests"
+    },
+    "sandbox": {
+      "services": [
+        "fuchsia.process.Launcher"
+      ]
+    }
+}
