@@ -28,8 +28,6 @@ go_binary("wlantool_bin") {
 }
 
 package("wlantool") {
-  deprecated_system_image = true
-
   deps = [
     ":wlantool_bin",
   ]
@@ -37,6 +35,7 @@ package("wlantool") {
   binaries = [
     {
       name = "wlan"
+      shell = true
     },
   ]
 }

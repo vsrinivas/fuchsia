@@ -1,8 +1,8 @@
 {
   "imports": [
     "garnet/packages/prod/netstack_tools",
-    "garnet/packages/prod/wlan_tools",
     "garnet/packages/products/devtools",
-    "garnet/packages/products/network_wifi"
+    "garnet/packages/products/network_wifi",
+    "garnet/packages/tools/wlan"
   ]
 }

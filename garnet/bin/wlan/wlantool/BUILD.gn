@@ -30,8 +30,6 @@ rustc_binary("bin") {
 }
 
 package("wlantool2") {
-  deprecated_system_image = true
-
   deps = [
     ":bin",
   ]
@@ -40,6 +38,7 @@ package("wlantool2") {
     {
       name = "rust_crates/wlantool2"
       dest = "wlantool2"
+      shell = true
     },
   ]
 }

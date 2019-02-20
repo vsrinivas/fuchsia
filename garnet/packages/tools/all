@@ -12,6 +12,7 @@
         "garnet/packages/tools/scenic",
         "garnet/packages/tools/sl4f",
         "garnet/packages/tools/tiles",
+        "garnet/packages/tools/wlan",
         "garnet/packages/tools/zxdb"
     ]
 }

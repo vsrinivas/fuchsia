@@ -36,10 +36,10 @@
     "garnet/packages/prod/wlan-hw-sim",
     "garnet/packages/prod/wlan-smoke-test",
     "garnet/packages/prod/wlan-stress-test",
-    "garnet/packages/prod/wlan_tools",
     "garnet/packages/prod/wlanif",
     "garnet/packages/prod/wlanphy",
     "garnet/packages/prod/wlanstack",
-    "garnet/packages/prod/wlantap"
+    "garnet/packages/prod/wlantap",
+    "garnet/packages/tools/wlan"
   ]
 }
