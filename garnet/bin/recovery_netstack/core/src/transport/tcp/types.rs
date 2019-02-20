@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use byteorder::{ByteOrder, NetworkEndian};
+use zerocopy::{AsBytes, FromBytes, Unaligned};
+
 /// A TCP header option.
 ///
 /// A TCP header option comprises an option kind byte, a length, and the option
@@ -39,10 +42,27 @@ pub(crate) enum TcpOption<'a> {
 /// See [RFC 2018] for more details.
 ///
 /// [RFC 2018]: https://tools.ietf.org/html/rfc2018
-#[derive(Copy, Clone, Default, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Default, Eq, PartialEq, Debug, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 pub(crate) struct TcpSackBlock {
-    /// The sequence number of the first byte in this block.
-    pub(crate) left_edge: u32,
-    /// The sequence number of the first byte following the end of this block.
-    pub(crate) right_edge: u32,
+    left_edge: [u8; 4],
+    right_edge: [u8; 4],
+}
+
+impl TcpSackBlock {
+    pub(crate) fn left_edge(&self) -> u32 {
+        NetworkEndian::read_u32(&self.left_edge)
+    }
+
+    pub(crate) fn right_edge(&self) -> u32 {
+        NetworkEndian::read_u32(&self.right_edge)
+    }
+
+    pub(crate) fn set_left_edge(&mut self, left_edge: u32) {
+        NetworkEndian::write_u32(&mut self.left_edge, left_edge);
+    }
+
+    pub(crate) fn set_right_edge(&mut self, right_edge: u32) {
+        NetworkEndian::write_u32(&mut self.right_edge, right_edge);
+    }
 }

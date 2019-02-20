@@ -379,19 +379,11 @@ const SYN_MASK: u16 = 0b00010;
 const FIN_MASK: u16 = 0b00001;
 
 mod options {
-    use std::mem;
-
     use byteorder::{ByteOrder, NetworkEndian};
+    use zerocopy::LayoutVerified;
 
-    use crate::transport::tcp::{TcpOption, TcpSackBlock};
+    use crate::transport::tcp::TcpOption;
     use crate::wire::util::{OptionImpl, OptionImplErr};
-
-    fn parse_sack_block(bytes: &[u8]) -> TcpSackBlock {
-        TcpSackBlock {
-            left_edge: NetworkEndian::read_u32(bytes),
-            right_edge: NetworkEndian::read_u32(&bytes[4..]),
-        }
-    }
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;
@@ -436,21 +428,9 @@ mod options {
                         Ok(Some(TcpOption::SackPermitted))
                     }
                 }
-                self::OPTION_KIND_SACK => match data.len() {
-                    8 | 16 | 24 | 32 => {
-                        let num_blocks = data.len() / mem::size_of::<TcpSackBlock>();
-                        // TODO(joshlf): Figure out how to support this safely
-                        // with zerocopy mechanisms.
-                        let blocks = unsafe {
-                            std::slice::from_raw_parts(
-                                data.as_ptr() as *const TcpSackBlock,
-                                num_blocks,
-                            )
-                        };
-                        Ok(Some(TcpOption::Sack(blocks)))
-                    }
-                    _ => Err(()),
-                },
+                self::OPTION_KIND_SACK => Ok(Some(TcpOption::Sack(
+                    LayoutVerified::new_slice(data).ok_or(())?.into_slice(),
+                ))),
                 self::OPTION_KIND_TIMESTAMP => {
                     if data.len() != 8 {
                         Err(())
