@@ -1,6 +1,5 @@
 {
     "packages": [
-        "//third_party/sbase",
         "//third_party/sbase:basename",
         "//third_party/sbase:cal",
         "//third_party/sbase:cat",
