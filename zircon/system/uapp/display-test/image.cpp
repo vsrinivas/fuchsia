@@ -29,9 +29,9 @@ Image::Image(uint32_t width, uint32_t height, int32_t stride,
         : width_(width), height_(height), stride_(stride), format_(format),
           vmo_(vmo), buf_(buf), fg_color_(fg_color), bg_color_(bg_color), cursor_(cursor) {}
 
-Image* Image::CreateWithSysmem(zx_handle_t dc_handle,
-                               uint32_t width, uint32_t height, zx_pixel_format_t format,
-                               uint32_t fg_color, uint32_t bg_color, bool cursor) {
+Image* Image::Create(zx_handle_t dc_handle,
+                     uint32_t width, uint32_t height, zx_pixel_format_t format,
+                     uint32_t fg_color, uint32_t bg_color, bool cursor) {
     zx::channel server, driver_client;
     zx::channel::create(0, &server, &driver_client);
     zx_status_t status;
@@ -241,80 +241,6 @@ Image* Image::CreateWithSysmem(zx_handle_t dc_handle,
     zx_cache_flush(ptr, buffer_size, ZX_CACHE_FLUSH_DATA);
 
     return new Image(width, height, stride_pixels, format,
-                     vmo.release(), ptr, fg_color, bg_color, cursor);
-}
-
-Image* Image::Create(zx_handle_t dc_handle,
-                     uint32_t width, uint32_t height, zx_pixel_format_t format,
-                     uint32_t fg_color, uint32_t bg_color, bool cursor) {
-    fuchsia_hardware_display_ControllerComputeLinearImageStrideRequest stride_msg;
-    stride_msg.hdr.ordinal = fuchsia_hardware_display_ControllerComputeLinearImageStrideOrdinal;
-    stride_msg.width = width;
-    stride_msg.pixel_format = format;
-
-    fuchsia_hardware_display_ControllerComputeLinearImageStrideResponse stride_rsp;
-    zx_channel_call_args_t stride_call = {};
-    stride_call.wr_bytes = &stride_msg;
-    stride_call.rd_bytes = &stride_rsp;
-    stride_call.wr_num_bytes = sizeof(stride_msg);
-    stride_call.rd_num_bytes = sizeof(stride_rsp);
-    uint32_t actual_bytes, actual_handles;
-    if (zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE,
-                        &stride_call, &actual_bytes, &actual_handles) != ZX_OK) {
-        printf("Failed to make stride call\n");
-        return nullptr;
-    }
-
-    if (stride_rsp.stride < width) {
-        printf("Invalid stride\n");
-        return nullptr;
-    }
-
-    zx::vmo vmo;
-    fuchsia_hardware_display_ControllerAllocateVmoRequest alloc_msg;
-    alloc_msg.hdr.ordinal = fuchsia_hardware_display_ControllerAllocateVmoOrdinal;
-    if (format == ZX_PIXEL_FORMAT_NV12) {
-        alloc_msg.size = stride_rsp.stride * height * ZX_PIXEL_FORMAT_BYTES(format) * 3 / 2;
-    } else if (!USE_INTEL_Y_TILING || cursor) {
-        alloc_msg.size = stride_rsp.stride * height * ZX_PIXEL_FORMAT_BYTES(format);
-    } else {
-        ZX_ASSERT(ZX_PIXEL_FORMAT_BYTES(format) == TILE_BYTES_PER_PIXEL);
-        alloc_msg.size = fbl::round_up(width, TILE_PIXEL_WIDTH) *
-                fbl::round_up(height, TILE_PIXEL_HEIGHT) * TILE_BYTES_PER_PIXEL;
-    }
-
-    fuchsia_hardware_display_ControllerAllocateVmoResponse alloc_rsp;
-    zx_channel_call_args_t call_args = {};
-    call_args.wr_bytes = &alloc_msg;
-    call_args.rd_bytes = &alloc_rsp;
-    call_args.rd_handles = vmo.reset_and_get_address();
-    call_args.wr_num_bytes = sizeof(alloc_msg);
-    call_args.rd_num_bytes = sizeof(alloc_rsp);
-    call_args.rd_num_handles = 1;
-    if (zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &call_args,
-                        &actual_bytes, &actual_handles) != ZX_OK) {
-        printf("Vmo alloc call failed\n");
-        return nullptr;
-    }
-    if (alloc_rsp.res != ZX_OK) {
-        printf("Failed to alloc vmo %d\n", alloc_rsp.res);
-        return nullptr;
-    }
-
-    uintptr_t addr;
-    uint32_t perms = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
-    if (zx::vmar::root_self()->map(0, vmo, 0, alloc_msg.size, perms, &addr) != ZX_OK) {
-        printf("Failed to map vmar\n");
-        return nullptr;
-    }
-
-    uint32_t* ptr = reinterpret_cast<uint32_t*>(addr);
-    for (unsigned i = 0; i < alloc_msg.size / sizeof(uint32_t); i++) {
-        ptr[i] = bg_color;
-    }
-    zx_cache_flush(ptr, alloc_msg.size, ZX_CACHE_FLUSH_DATA);
-
-    return new Image(width, height, stride_rsp.stride, format,
                      vmo.release(), ptr, fg_color, bg_color, cursor);
 }
 
