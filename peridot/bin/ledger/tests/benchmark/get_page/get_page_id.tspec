@@ -1,7 +1,7 @@
 {
   "test_suite_name": "fuchsia.ledger.get_page",
   "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/get_page.cmx",
-  "args": ["--requests-count=50"],
+  "args": ["--requests-count=500"],
   "categories": ["benchmark", "ledger"],
   "duration": 120,
   "measure": [
@@ -10,7 +10,7 @@
       "output_test_name": "page_id/get_page_id",
       "event_name": "get page id",
       "event_category": "benchmark",
-      "expected_sample_count": 50,
+      "expected_sample_count": 500,
       "split_first": true
     }
   ]
