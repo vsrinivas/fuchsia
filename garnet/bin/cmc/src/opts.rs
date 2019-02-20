@@ -23,6 +23,10 @@ pub enum Commands {
         #[structopt(name = "FILE", parse(from_os_str))]
         /// files to process
         files: Vec<PathBuf>,
+
+        #[structopt(long = "extra_schema", parse(from_os_str))]
+        /// extra JSON schema files to additionally validate against
+        extra_schemas: Vec<PathBuf>,
     },
 
     #[structopt(name = "merge")]

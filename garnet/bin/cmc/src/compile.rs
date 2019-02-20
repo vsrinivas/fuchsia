@@ -9,26 +9,21 @@ use serde::ser::Serialize;
 use serde_json;
 use serde_json::ser::{CompactFormatter, PrettyFormatter, Serializer};
 use std::fs;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::PathBuf;
 use std::str::from_utf8;
 
 /// Read in a CML file and produce the equivalent CM.
 pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<(), Error> {
-    const BAD_EXTENSION: &str = "Input file does not have the component manifest extension (.cm)";
+    const BAD_EXTENSION: &str = "Output file does not have the component manifest extension (.cm)";
     if let Some(ref path) = output {
-        match path.extension() {
-            Some(ext) => match ext.to_str() {
-                Some("cm") => Ok(()),
-                _ => Err(Error::invalid_args(BAD_EXTENSION)),
-            },
-            None => Err(Error::invalid_args(BAD_EXTENSION)),
+        match path.extension().and_then(|e| e.to_str()) {
+            Some("cm") => Ok(()),
+            _ => Err(Error::invalid_args(BAD_EXTENSION)),
         }?;
     }
 
-    let mut buffer = String::new();
-    fs::File::open(&file)?.read_to_string(&mut buffer)?;
-    let document = validate::validate_cml(&buffer)?;
+    let document = validate::validate_cml(&file.as_path())?;
     let out = compile_cml(document)?;
 
     let mut res = Vec::new();

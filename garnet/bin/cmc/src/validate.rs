@@ -6,51 +6,92 @@ use crate::cml;
 use cm_json::{self, Error, CML_SCHEMA, CMX_SCHEMA, CM_SCHEMA};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
-use std::fs;
+use std::fs::File;
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::Path;
 
-/// Read in and parse a list of files, and return an Error if any of the given files are not valid
-/// cmx. One of the JSON schemas located at ../*_schema.json, selected based on the file extension,
-/// is used to determine the validity of each input file.
-pub fn validate(files: Vec<PathBuf>) -> Result<(), Error> {
-    const BAD_EXTENSION: &str = "Input file does not have a component manifest extension \
-                                 (.cm, .cml, or .cmx)";
+/// Read in and parse one or more manifest files. Returns an Err() if any file is not valid
+/// or Ok(()) if all files are valid.
+///
+/// The primary JSON schemas are taken from cm_json, selected based on the file extension,
+/// is used to determine the validity of each input file. Extra schemas to validate against can be
+/// optionally provided.
+pub fn validate<P: AsRef<Path>>(files: &[P], extra_schemas: &[P]) -> Result<(), Error> {
     if files.is_empty() {
         return Err(Error::invalid_args("No files provided"));
     }
 
     for filename in files {
-        let mut buffer = String::new();
-        fs::File::open(&filename)?.read_to_string(&mut buffer)?;
-        match filename.extension().and_then(|e| e.to_str()) {
-            Some("cm") => {
-                let v: Value = serde_json::from_str(&buffer)
-                    .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e)))?;
-                cm_json::validate_json(&v, CM_SCHEMA)
-            }
-            Some("cml") => validate_cml(&buffer).map(|_d| ()),
-            Some("cmx") => {
-                let v: Value = serde_json::from_str(&buffer)
-                    .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e)))?;
-                cm_json::validate_json(&v, CMX_SCHEMA)
-            }
-            _ => Err(Error::invalid_args(BAD_EXTENSION)),
-        }?;
+        validate_file(filename.as_ref(), extra_schemas)?;
     }
     Ok(())
 }
 
-/// Validates CML JSON document according to the schema and returns it as a cml::Document.
-pub fn validate_cml(buffer: &str) -> Result<cml::Document, Error> {
-    let json: Value = cm_json::from_json5_str(&buffer)?;
-    cm_json::validate_json(&json, CML_SCHEMA)?;
-    let document: cml::Document = serde_json::from_value(json)
-        .map_err(|e| Error::parse(format!("Couldn't read input as struct: {}", e)))?;
+/// Read in and parse .cml file. Returns a cml::Document if the file is valid, or an Error if not.
+/// TODO(CF-610): Rename "parse_cml" and remove dependency on validate_file.
+pub fn validate_cml(file: &Path) -> Result<cml::Document, Error> {
+    const BAD_EXTENSION: &str =
+        "Input file does not have correct component manifest extension (.cml)";
+    match file.extension().and_then(|e| e.to_str()) {
+        Some("cml") => Ok(()),
+        _ => Err(Error::invalid_args(BAD_EXTENSION)),
+    }?;
 
-    let mut ctx = ValidationContext { document: &document, all_children: HashSet::new() };
-    ctx.validate()?;
-    Ok(document)
+    // Simply unwrap the Option<cml::Document> since we already validated extension above
+    return Ok(validate_file(file, &[] as &[&Path])?.unwrap());
+}
+
+/// Read in and parse a single manifest file, and return an Error if the given file is not valid.
+/// If the file is a .cml file and is valid, will return Some(cml::Document), and for other valid
+/// files returns None.
+///
+/// Internal single manifest file validation function, used to implement the two public validate
+/// functions.
+/// TODO(CF-610): Have distinct branches for cm, cml, and cmx, so that each branch can evolve
+/// independently. For cml, call into parse_cml instead of the reverse.
+fn validate_file<P: AsRef<Path>>(
+    file: &Path,
+    extra_schemas: &[P],
+) -> Result<Option<cml::Document>, Error> {
+    const BAD_EXTENSION: &str = "Input file does not have a component manifest extension \
+                                 (.cm, .cml, or .cmx)";
+
+    let mut buffer = String::new();
+    File::open(&file)?.read_to_string(&mut buffer)?;
+
+    // Parse the JSON content into a serde_json::Value to use for validation and select the schema
+    // to validate against based on file extension.
+    let ext = file.extension().and_then(|e| e.to_str());
+    let v: Value = match ext {
+        Some("cm") | Some("cmx") => serde_json::from_str(&buffer)
+            .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e))),
+        Some("cml") => cm_json::from_json5_str(&buffer),
+        _ => Err(Error::invalid_args(BAD_EXTENSION)),
+    }?;
+    let schema: &str = match ext {
+        Some("cm") => CM_SCHEMA,
+        Some("cml") => CML_SCHEMA,
+        Some("cmx") => CMX_SCHEMA,
+        _ => return Err(Error::invalid_args(BAD_EXTENSION)),
+    };
+
+    cm_json::validate_json(&v, schema)?;
+    for extra_schema in extra_schemas {
+        let mut schema_buf = String::new();
+        File::open(&extra_schema.as_ref())?.read_to_string(&mut schema_buf)?;
+        cm_json::validate_json(&v, schema_buf.as_str())?;
+    }
+
+    // Perform addition validation for .cml files and parse the JSON into a cml::Document struct.
+    if ext == Some("cml") {
+        let document: cml::Document = serde_json::from_value(v)
+            .map_err(|e| Error::parse(format!("Couldn't read input as struct: {}", e)))?;
+
+        let mut ctx = ValidationContext { document: &document, all_children: HashSet::new() };
+        ctx.validate()?;
+        return Ok(Some(document));
+    }
+    Ok(None)
 }
 
 struct ValidationContext<'a> {
@@ -210,7 +251,6 @@ impl<'a> ValidationContext<'a> {
 mod tests {
     use super::*;
     use serde_json::json;
-    use std::fs::File;
     use std::io::Write;
     use tempfile::TempDir;
 
@@ -283,7 +323,7 @@ mod tests {
 
         File::create(&tmp_file_path).unwrap().write_all(input.as_bytes()).unwrap();
 
-        let result = validate(vec![tmp_file_path]);
+        let result = validate(&vec![tmp_file_path], &[]);
         assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
     }
 
@@ -294,7 +334,7 @@ mod tests {
 
         File::create(&tmp_file_path).unwrap().write_all(b"{,}").unwrap();
 
-        let result = validate(vec![tmp_file_path]);
+        let result = validate(&vec![tmp_file_path], &[]);
         let expected_result: Result<(), Error> = Err(Error::parse(
             "Couldn't read input as JSON: key must be a string at line 1 column 2",
         ));
@@ -1373,6 +1413,88 @@ mod tests {
                 }
             }),
             result = Ok(()),
+        },
+    }
+
+    const BLOCK_SHELL_FEATURE_SCHEMA: &str = include_str!("../test_block_shell_feature.json");
+    const BLOCK_DEV_SCHEMA: &str = include_str!("../test_block_dev.json");
+
+    macro_rules! test_validate_extra_schemas {
+        (
+            $(
+                $test_name:ident => {
+                    input = $input:expr,
+                    extra_schemas = $extra_schemas:expr,
+                    result = $result:expr,
+                },
+            )+
+        ) => {
+            $(
+                #[test]
+                fn $test_name() -> Result<(), Error> {
+                    validate_extra_schemas_test($input, $extra_schemas, $result)
+                }
+            )+
+        }
+    }
+
+    fn validate_extra_schemas_test(
+        input: serde_json::value::Value,
+        extra_schemas: Vec<&str>,
+        expected_result: Result<(), Error>,
+    ) -> Result<(), Error> {
+        let input_str = format!("{}", input);
+        let tmp_dir = TempDir::new()?;
+        let tmp_cmx_path = tmp_dir.path().join("test.cmx");
+        File::create(&tmp_cmx_path)?.write_all(input_str.as_bytes())?;
+
+        let mut extra_schema_paths = Vec::new();
+        for i in 0..extra_schemas.len() {
+            let tmp_file_path = tmp_dir.path().join(format!("schema{}.json", i));
+            File::create(&tmp_file_path)?.write_all(extra_schemas[i].as_bytes())?;
+            extra_schema_paths.push(tmp_file_path);
+        }
+
+        let result = validate(&[tmp_cmx_path], &extra_schema_paths);
+        assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
+        Ok(())
+    }
+
+    test_validate_extra_schemas! {
+        test_validate_extra_schemas_empty_json => {
+            input = json!({"program": {"binary": "a"}}),
+            extra_schemas = vec![BLOCK_SHELL_FEATURE_SCHEMA],
+            result = Ok(()),
+        },
+        test_validate_extra_schemas_empty_features => {
+            input = json!({"sandbox": {"features": []}, "program": {"binary": "a"}}),
+            extra_schemas = vec![BLOCK_SHELL_FEATURE_SCHEMA],
+            result = Ok(()),
+        },
+        test_validate_extra_schemas_feature_not_present => {
+            input = json!({"sandbox": {"features": ["isolated-persistent-storage"]}, "program": {"binary": "a"}}),
+            extra_schemas = vec![BLOCK_SHELL_FEATURE_SCHEMA],
+            result = Ok(()),
+        },
+        test_validate_extra_schemas_feature_present => {
+            input = json!({"sandbox": {"features" : ["shell"]}, "program": {"binary": "a"}}),
+            extra_schemas = vec![BLOCK_SHELL_FEATURE_SCHEMA],
+            result = Err(Error::parse("Not condition is not met at /sandbox/features/0")),
+        },
+        test_validate_extra_schemas_block_dev => {
+            input = json!({"dev": ["misc"], "program": {"binary": "a"}}),
+            extra_schemas = vec![BLOCK_DEV_SCHEMA],
+            result = Err(Error::parse("Not condition is not met at /dev")),
+        },
+        test_validate_multiple_extra_schemas_valid => {
+            input = json!({"sandbox": {"features": ["isolated-persistent-storage"]}, "program": {"binary": "a"}}),
+            extra_schemas = vec![BLOCK_SHELL_FEATURE_SCHEMA, BLOCK_DEV_SCHEMA],
+            result = Ok(()),
+        },
+        test_validate_multiple_extra_schemas_invalid => {
+            input = json!({"dev": ["misc"], "sandbox": {"features": ["isolated-persistent-storage"]}, "program": {"binary": "a"}}),
+            extra_schemas = vec![BLOCK_SHELL_FEATURE_SCHEMA, BLOCK_DEV_SCHEMA],
+            result = Err(Error::parse("Not condition is not met at /dev")),
         },
     }
 }

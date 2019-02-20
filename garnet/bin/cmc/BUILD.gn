@@ -27,7 +27,17 @@ rustc_binary("cmc") {
     "//third_party/rust-crates/rustc_deps:tempfile",
   ]
 
-  non_rust_deps = [ "//garnet/lib/rust/cm_json:cm_schema_json" ]
+  non_rust_deps = [
+    ":cmc_test_schemas",
+    "//garnet/lib/rust/cm_json:cm_schema_json"
+  ]
+}
+
+source_set("cmc_test_schemas") {
+  inputs = [
+    "test_block_dev.json",
+    "test_block_shell_feature.json",
+  ]
 }
 
 # TODO(IN-819): Delete this copy target once host tests are no longer run out

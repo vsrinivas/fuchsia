@@ -27,13 +27,13 @@ template("executable_package") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "deprecated_global_persistent_storage",
                              "deprecated_system_image",
                              "public_deps",
                              "testonly",
                              "meta",
                              "tests",
                              "resources",
-                             "deprecated_bare_package_url",
                            ])
     if (defined(deps)) {
       deps += [ ":${binary_rule}" ]

@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$comment": "This schema is used in unit tests of cmc's validate command. It makes the 'shell' sandbox feature forbidden.",
+  "properties": {
+    "sandbox": {
+      "type": "object",
+      "properties": {
+        "features": {
+          "type": "array",
+          "items": {
+            "not": {
+              "enum": ["shell"]
+            }
+          }
+        }
+      }
+    }
+  }
+}

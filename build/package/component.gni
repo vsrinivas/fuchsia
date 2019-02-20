@@ -74,6 +74,7 @@ template("fuchsia_component") {
                              [
                                "binary",
                                "data_deps",
+                               "deprecated_global_persistent_storage",
                                "deps",
                                "public_deps",
                                "loadable_modules",
@@ -145,6 +146,14 @@ template("fuchsia_component") {
         # but we don't know which one, so depend on all package deps here.
         deps = component.deps
         public_deps = component.public_deps
+
+        # TODO(bryanhenry,CF-28): Remove this validation when the
+        # "deprecated-global-persistent-storage" feature is removed.
+        if (!defined(component.deprecated_global_persistent_storage)) {
+          extra_schemas = [
+            "//build/cmx/block_deprecated_global_persistent_storage.json"
+          ]
+        }
       }
       component.deps += [ ":$validate" ]
 
@@ -233,6 +242,15 @@ template("fuchsia_component") {
       public_deps = [
         ":${target_name}.manifest",
       ]
+    }
+
+    # This dep is added at the end so that only this target depends on the
+    # visibility whitelist, which lets us whitelist specific targets instead of
+    # whole paths. If we did it above this dep would also get added to targets
+    # above that use 'pkg.deps' as their own deps.
+    # TODO(bryanhenry,CF-28): Remove along with deprecated-global-persistent-storage feature
+    if (defined(component.deprecated_global_persistent_storage)) {
+      component.deps += [ "${component.deprecated_global_persistent_storage}:deprecated_global_persistent_storage_whitelist" ]
     }
   } else {
     group(target_name) {
