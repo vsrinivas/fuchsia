@@ -3,8 +3,17 @@
 # found in the LICENSE file.
 
 source_set("arm64") {
-  sources = [
-    "$zx/third_party/lib/cortex-strings/src/aarch64/memcpy.S",
-    "$zx/third_party/lib/cortex-strings/no-neon/src/aarch64/memset.S",
-  ]
+  if (toolchain.environment == "physmem") {
+    # The no-MMU environment can't handled unaligned accesses, which the
+    # optimized assembly routines do.
+    sources = [
+      "$zx/kernel/lib/libc/string/memcpy.c",
+      "$zx/kernel/lib/libc/string/memset.c",
+    ]
+  } else {
+    sources = [
+      "$zx/third_party/lib/cortex-strings/no-neon/src/aarch64/memset.S",
+      "$zx/third_party/lib/cortex-strings/src/aarch64/memcpy.S",
+    ]
+  }
 }
