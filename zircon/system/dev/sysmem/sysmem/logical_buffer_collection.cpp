@@ -295,7 +295,7 @@ void LogicalBufferCollection::MaybeAllocate() {
     }
     // Sweep looking for any views that haven't set constraints.
     for (auto& [key, value] : collection_views_) {
-        if (!key->set_constraints_seen()) {
+        if (!key->is_set_constraints_seen()) {
             return;
         }
     }
@@ -313,6 +313,19 @@ void LogicalBufferCollection::TryAllocate() {
     // last collection view disappeared we would have run ~this which would have
     // cleared the Post() canary so this method woudn't be running.
     ZX_DEBUG_ASSERT(!collection_views_.empty());
+
+    // Currently only BufferCollection(s) that have already done a clean Close()
+    // have their constraints in constraints_list_.  Now we want all the rest of
+    // the constraints represented in collection_views_ to be in
+    // constraints_list_ so we can just process constraints_list_ in
+    // CombineConstraints().  These can't be moved, only cloned, because the
+    // still-alive BufferCollection(s) will still want to refer to their
+    // constraints at least for GetUsageBasedRightsAttenuation() purposes.
+    for (auto& [key, value] : collection_views_) {
+        ZX_DEBUG_ASSERT(key->is_set_constraints_seen());
+        constraints_list_.emplace_back(
+            BufferCollectionConstraintsClone(key->constraints()));
+    }
 
     if (!CombineConstraints()) {
         // It's impossible to combine the constraints due to incompatible
@@ -378,7 +391,7 @@ void LogicalBufferCollection::SendAllocationResult() {
 
     for (auto& [key, value] : collection_views_) {
         // May as well assert since we can.
-        ZX_DEBUG_ASSERT(key->set_constraints_seen());
+        ZX_DEBUG_ASSERT(key->is_set_constraints_seen());
         key->OnBuffersAllocated();
     }
 
@@ -429,7 +442,16 @@ void LogicalBufferCollection::BindSharedCollectionInternal(
 
             // At this point we know the collection_ptr is cleanly done (Close()
             // was sent from client) and can be removed from the set of tracked
-            // collections.
+            // collections.  We keep the collection's constraints (if any), as
+            // those are still relevant - this lets a participant do
+            // SetConstraints() followed by Close() followed by closing the
+            // participant's BufferCollection channel, which is convenient for
+            // some participants.
+
+            if (collection_ptr->is_set_constraints_seen()) {
+                constraints_list_.emplace_back(collection_ptr->TakeConstraints());
+            }
+
             auto self = collection_ptr->parent_shared();
             ZX_DEBUG_ASSERT(self.get() == this);
             collection_views_.erase(collection_ptr);
@@ -445,35 +467,42 @@ void LogicalBufferCollection::BindSharedCollectionInternal(
 
 bool LogicalBufferCollection::CombineConstraints() {
     // This doesn't necessarily mean that any of the collection_views_ have
-    // non-null constraints though.
+    // set non-null constraints though.  We do require that at least one
+    // participant (probably the initiator) retains an open channel to its
+    // BufferCollection until allocation is done, else allocation won't be
+    // attempted.
     ZX_DEBUG_ASSERT(!collection_views_.empty());
 
+    // We also know that all the constraints are in constraints_list_ now,
+    // including all constraints from collection_views_.
+    ZX_DEBUG_ASSERT(!constraints_list_.empty());
+
     auto iter =
-        std::find_if(collection_views_.begin(), collection_views_.end(),
-                     [](auto& pair) { return !!pair.first->constraints(); });
-    if (iter == collection_views_.end()) {
+        std::find_if(constraints_list_.begin(), constraints_list_.end(),
+                     [](auto& item) { return !!item; });
+    if (iter == constraints_list_.end()) {
         // This is a failure.  At least one participant must provide
         // constraints.
         return false;
     }
 
-    if (!CheckBufferCollectionConstraints(iter->first->constraints())) {
+    if (!CheckBufferCollectionConstraints(iter->get())) {
         return false;
     }
 
     Constraints result =
-        BufferCollectionConstraintsClone(iter->first->constraints());
+        BufferCollectionConstraintsClone(iter->get());
     ++iter;
 
-    for (; iter != collection_views_.end(); ++iter) {
-        if (!iter->first->constraints()) {
+    for (; iter != constraints_list_.end(); ++iter) {
+        if (!iter->get()) {
             continue;
         }
-        if (!CheckBufferCollectionConstraints(iter->first->constraints())) {
+        if (!CheckBufferCollectionConstraints(iter->get())) {
             return false;
         }
         if (!AccumulateConstraintBufferCollection(result.get(),
-                                                  iter->first->constraints())) {
+                                                  iter->get())) {
             // This is a failure.  The space of permitted settings contains no
             // points.
             return false;

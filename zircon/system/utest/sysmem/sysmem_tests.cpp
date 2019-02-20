@@ -620,6 +620,143 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     END_TEST;
 }
 
+extern "C" bool test_sysmem_constraints_retained_beyond_clean_close() {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::channel allocator2_client_1;
+    status = connect_to_sysmem_driver(&allocator2_client_1);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel token_client_1;
+    zx::channel token_server_1;
+    status = zx::channel::create(0, &token_client_1, &token_server_1);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Client 1 creates a token and new LogicalBufferCollection using
+    // AllocateSharedCollection().
+    status = fuchsia_sysmem_Allocator2AllocateSharedCollection(allocator2_client_1.get(),
+                                                               token_server_1.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel token_client_2;
+    zx::channel token_server_2;
+    status = zx::channel::create(0, &token_client_2, &token_server_2);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Client 1 duplicates its token and gives the duplicate to client 2 (this
+    // test is single proc, so both clients are coming from this client
+    // process - normally the two clients would be in separate processes with
+    // token_client_2 transferred to another participant).
+    status = fuchsia_sysmem_BufferCollectionTokenDuplicate(
+        token_client_1.get(), std::numeric_limits<uint32_t>::max(), token_server_2.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel collection_client_1;
+    zx::channel collection_server_1;
+    status = zx::channel::create(0, &collection_client_1, &collection_server_1);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_NE(token_client_1.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_Allocator2BindSharedCollection(
+        allocator2_client_1.get(), token_client_1.release(), collection_server_1.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    BufferCollectionConstraints constraints_1(BufferCollectionConstraints::Default);
+    constraints_1->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+    constraints_1->min_buffer_count_for_camping = 2;
+    constraints_1->has_buffer_memory_constraints = true;
+    constraints_1->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+        .min_size_bytes = 64 * 1024,
+        .max_size_bytes = 64 * 1024,
+        .physically_contiguous_required = false,
+        .secure_required = false,
+        .secure_permitted = false,
+    };
+
+    // constraints_2 is just a copy of constraints_1 - since both participants
+    // specify min_buffer_count_for_camping 2, the total number of allocated
+    // buffers will be 4.  There are no handles in the constraints struct so a
+    // struct copy instead of clone is fine here.
+    BufferCollectionConstraints constraints_2(*constraints_1.get());
+    ASSERT_EQ(constraints_2->min_buffer_count_for_camping, 2, "");
+
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_1.get(), true,
+                                                           constraints_1.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Client 2 connects to sysmem separately.
+    zx::channel allocator2_client_2;
+    status = connect_to_sysmem_driver(&allocator2_client_2);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel collection_client_2;
+    zx::channel collection_server_2;
+    status = zx::channel::create(0, &collection_client_2, &collection_server_2);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Just because we can, perform this sync as late as possible, just before
+    // the BindSharedCollection() via allocator2_client_2.  Without this Sync(),
+    // the BindSharedCollection() might arrive at the server before the
+    // Duplicate() that delivered the server end of token_client_2 to sysmem,
+    // which would cause sysmem to not recognize the token.
+    status = fuchsia_sysmem_BufferCollectionSync(collection_client_1.get());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // client 1 will now do a clean Close(), but client 1's constraints will be
+    // retained by the LogicalBufferCollection.
+    status = fuchsia_sysmem_BufferCollectionClose(collection_client_1.get());
+    ASSERT_EQ(status, ZX_OK, "");
+    // close client 1's channel.
+    collection_client_1.reset();
+
+    // Wait briefly so that LogicalBufferCollection will have seen the channel
+    // closure of client 1 before client 2 sets constraints.  If we wanted to
+    // eliminate this sleep we could add a call to query how many
+    // BufferCollection views still exist per LogicalBufferCollection, but that
+    // call wouldn't be meant to be used by normal clients, so it seems best to
+    // avoid adding such a call.
+    status = zx_nanosleep(zx_deadline_after(ZX_MSEC(250)));
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_NE(token_client_2.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_Allocator2BindSharedCollection(
+        allocator2_client_2.get(), token_client_2.release(), collection_server_2.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Not all constraints have been input (client 2 hasn't SetConstraints()
+    // yet), so the buffers haven't been allocated yet.
+    zx_status_t check_status;
+    status = fuchsia_sysmem_BufferCollectionCheckBuffersAllocated(collection_client_2.get(), &check_status);
+    ASSERT_EQ(status, ZX_OK, "");
+    EXPECT_EQ(check_status, ZX_ERR_UNAVAILABLE, "");
+
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_2.get(), true,
+                                                           constraints_2.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    //
+    // Now that client 2 has SetConstraints(), the allocation will proceed, with
+    // client 1's constraints included despite client 1 having done a clean
+    // Close().
+    //
+
+    zx_status_t allocation_status;
+    BufferCollectionInfo buffer_collection_info_2(BufferCollectionInfo::Default);
+    // This helps with a later exact equality check.
+    memset(buffer_collection_info_2.get(), 0, sizeof(*buffer_collection_info_2.get()));
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client_2.get(), &allocation_status, buffer_collection_info_2.get());
+    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_EQ(allocation_status, ZX_OK, "");
+
+    // The fact that this is 4 instead of 2 proves that client 1's constraints
+    // were taken into account.
+    ASSERT_EQ(buffer_collection_info_2->buffer_count, 4, "");
+
+    END_TEST;
+}
+
 // clang-format off
 BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_driver_connection)
@@ -628,5 +765,6 @@ BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_token_one_participant_with_image_constraints)
     RUN_TEST(test_sysmem_no_token)
     RUN_TEST(test_sysmem_multiple_participants)
+    RUN_TEST(test_sysmem_constraints_retained_beyond_clean_close)
 END_TEST_CASE(sysmem_tests)
 // clang-format on

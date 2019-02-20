@@ -69,7 +69,7 @@ zx_status_t BufferCollection::SetEventSink(
     if (is_done_) {
         FailAsync(
             ZX_ERR_BAD_STATE,
-            "BufferCollectionToken::CloseSingleBuffer() when already is_done_");
+            "BufferCollectionToken::SetEventSink() when already is_done_");
         // We're failing async - no need to try to fail sync.
         return ZX_OK;
     }
@@ -79,7 +79,7 @@ zx_status_t BufferCollection::SetEventSink(
                           "with a non-zero handle.");
         return status;
     }
-    if (set_constraints_seen_) {
+    if (is_set_constraints_seen_) {
         zx_status_t status = ZX_ERR_INVALID_ARGS;
         // It's not required to use SetEventSink(), but if it's used, it must be
         // before SetConstraints().
@@ -121,16 +121,16 @@ zx_status_t BufferCollection::SetConstraints(
     if (is_done_) {
         FailAsync(
             ZX_ERR_BAD_STATE,
-            "BufferCollectionToken::CloseSingleBuffer() when already is_done_");
+            "BufferCollectionToken::SetConstraints() when already is_done_");
         // We're failing async - no need to try to fail sync.
         return ZX_OK;
     }
-    if (set_constraints_seen_) {
+    if (is_set_constraints_seen_) {
         FailAsync(ZX_ERR_NOT_SUPPORTED,
                   "For now, 2nd SetConstraints() causes failure.");
         return ZX_ERR_NOT_SUPPORTED;
     }
-    set_constraints_seen_ = true;
+    is_set_constraints_seen_ = true;
 
     if (!has_constraints) {
         // We don't need any of the handles/info in constraints_param, so close
@@ -156,7 +156,7 @@ zx_status_t BufferCollection::WaitForBuffersAllocated(fidl_txn_t* txn_param) {
     if (is_done_) {
         FailAsync(
             ZX_ERR_BAD_STATE,
-            "BufferCollectionToken::CloseSingleBuffer() when already is_done_");
+            "BufferCollectionToken::WaitForBuffersAllocated() when already is_done_");
         // We're failing async - no need to try to fail sync.
         return ZX_OK;
     }
@@ -292,17 +292,23 @@ void BufferCollection::OnBuffersAllocated() {
         events_.get(), allocation_result.status, to_send.release());
 }
 
-bool BufferCollection::set_constraints_seen() {
-    return set_constraints_seen_;
+bool BufferCollection::is_set_constraints_seen() {
+    return is_set_constraints_seen_;
 }
 
 const fuchsia_sysmem_BufferCollectionConstraints*
 BufferCollection::constraints() {
-    ZX_DEBUG_ASSERT(set_constraints_seen());
+    ZX_DEBUG_ASSERT(is_set_constraints_seen());
     if (!constraints_) {
         return nullptr;
     }
     return constraints_.get();
+}
+
+BufferCollection::Constraints
+BufferCollection::TakeConstraints() {
+    ZX_DEBUG_ASSERT(is_set_constraints_seen());
+    return std::move(constraints_);
 }
 
 LogicalBufferCollection* BufferCollection::parent() {
@@ -324,7 +330,7 @@ BufferCollection::BufferCollection(fbl::RefPtr<LogicalBufferCollection> parent)
 
 // This method is only meant to be called from GetClientVmoRights().
 uint32_t BufferCollection::GetUsageBasedRightsAttenuation() {
-    ZX_DEBUG_ASSERT(set_constraints_seen_);
+    ZX_DEBUG_ASSERT(is_set_constraints_seen_);
     if (!constraints_) {
         // If there are no constraints from this participant, it means this
         // participant doesn't intend to do any "usage" at all aside from

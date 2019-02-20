@@ -26,6 +26,10 @@ class BufferCollection
                         fuchsia_sysmem_BufferCollection_dispatch>,
           vLog> {
 public:
+    using Constraints =
+        FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
+                   &fuchsia_sysmem_BufferCollectionConstraintsTable>;
+
     ~BufferCollection();
 
     //
@@ -56,10 +60,17 @@ public:
 
     void OnBuffersAllocated();
 
-    bool set_constraints_seen();
+    bool is_set_constraints_seen();
 
-    // nullptr means Null constraints
+    // is_set_constraints_seen() must be true to call this.
+    //
+    // this can only be called if TakeConstraints() hasn't been called yet.
     const fuchsia_sysmem_BufferCollectionConstraints* constraints();
+
+    // is_set_constraints_seen() must be true to call this.
+    //
+    // this can only be called once
+    Constraints TakeConstraints();
 
     LogicalBufferCollection* parent();
 
@@ -69,9 +80,6 @@ public:
 
 private:
     friend class FidlServer;
-    using Constraints =
-        FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-                   &fuchsia_sysmem_BufferCollectionConstraintsTable>;
 
     BufferCollection(fbl::RefPtr<LogicalBufferCollection> parent);
 
@@ -101,7 +109,8 @@ private:
     //     events_.get(), ...);
     zx::channel events_;
 
-    bool set_constraints_seen_ = false;
+    bool is_set_constraints_seen_ = false;
+
     Constraints constraints_{Constraints::Null};
 
     // The rights attenuation mask driven by BufferCollectionToken::Duplicate()

@@ -221,8 +221,8 @@ protocol BufferCollection {
         -> (zx.status status, BufferCollectionInfo_2 buffer_collection_info);
 
     // This returns the same result code as WaitForBuffersAllocated if the
-    // buffer collection can immediately be allocated or failed, or
-    // |ZX_ERR_UNAVAILABLE| if it would block.
+    // buffer collection has been allocated or failed, or |ZX_ERR_UNAVAILABLE|
+    // if WaitForBuffersAllocated would block.
     CheckBuffersAllocated() -> (zx.status status);
 
     // The CloseBuffer() doesn't immediately force all VMO handles to that

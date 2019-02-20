@@ -54,10 +54,76 @@ class FidlStruct {
     // the handle field to ZX_HANDLE_INVALID (or leaving it 0 which is the same
     // thing).
     ~FidlStruct() {
-        reset(nullptr);
+        reset_internal(nullptr);
     }
 
     void reset(const FidlCStruct* to_copy_and_own_handles) {
+        ZX_DEBUG_ASSERT_COND(!is_moved_out_);
+        reset_internal(to_copy_and_own_handles);
+    }
+
+    // Stop managing the handles, and return a pointer for the caller's
+    // convenience.  After this, get() will return nullptr to discourage further
+    // use of non-owned handle fields.
+    //
+    // The caller must stop using the returned value before the earlier of when
+    // this instance is deleted or when this instance is re-used.
+    FidlCStruct* release() {
+        ZX_DEBUG_ASSERT_COND(!is_moved_out_);
+        ZX_DEBUG_ASSERT(ptr_);
+        FidlCStruct* tmp = ptr_;
+        ptr_ = nullptr;
+        return tmp;
+    }
+
+    // Return value can be nullptr if release() has been called previously.
+    FidlCStruct* get() {
+        ZX_DEBUG_ASSERT_COND(!is_moved_out_);
+        return ptr_;
+    }
+
+    bool is_valid() {
+        ZX_DEBUG_ASSERT_COND(!is_moved_out_);
+        return !!ptr_;
+    }
+
+    operator bool() {
+        ZX_DEBUG_ASSERT_COND(!is_moved_out_);
+        return !!ptr_;
+    }
+
+    FidlCStruct* operator->() {
+        ZX_DEBUG_ASSERT_COND(!is_moved_out_);
+        ZX_DEBUG_ASSERT(ptr_);
+        return ptr_;
+    }
+
+    FidlCStruct& operator*() {
+        ZX_DEBUG_ASSERT_COND(!is_moved_out_);
+        ZX_DEBUG_ASSERT(ptr_);
+        return *ptr_;
+    }
+
+    // transfer handle ownership, copy the data, invalidate the source
+    FidlStruct(FidlStruct&& to_move) {
+        reset(to_move.release());
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
+        to_move.is_moved_out_ = true;
+#endif
+    }
+
+    // transfer handle ownership, copy the data, invalidate the source
+    FidlStruct& operator=(FidlStruct&& to_move) {
+        reset(to_move.release());
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
+        to_move.is_moved_out_ = true;
+#endif
+        return *this;
+    }
+
+  private:
+
+    void reset_internal(const FidlCStruct* to_copy_and_own_handles) {
         if (ptr_) {
             fidl_close_handles(FidlCMetaTable, ptr_, nullptr);
         }
@@ -69,57 +135,12 @@ class FidlStruct {
         }
     }
 
-    // Stop managing the handles, and return a pointer for the caller's
-    // convenience.  After this, get() will return nullptr to discourage further
-    // use of non-owned handle fields.
-    //
-    // The caller must stop using the returned value before the earlier of when
-    // this instance is deleted or when this instance is re-used.
-    FidlCStruct* release() {
-        ZX_DEBUG_ASSERT(ptr_);
-        FidlCStruct* tmp = ptr_;
-        ptr_ = nullptr;
-        return tmp;
-    }
-
-    // Return value can be nullptr if release() has been called previously.
-    FidlCStruct* get() {
-        return ptr_;
-    }
-
-    bool is_valid() {
-        return !!ptr_;
-    }
-
-    operator bool() {
-        return !!ptr_;
-    }
-
-    FidlCStruct* operator->() {
-        ZX_DEBUG_ASSERT(ptr_);
-        return ptr_;
-    }
-
-    FidlCStruct& operator*() {
-        ZX_DEBUG_ASSERT(ptr_);
-        return *ptr_;
-    }
-
-    // transfer handle ownership, copy the data, invalidate the source
-    FidlStruct(FidlStruct&& to_move) {
-        reset(to_move.release());
-    }
-
-    // transfer handle ownership, copy the data, invalidate the source
-    FidlStruct& operator=(FidlStruct&& to_move) {
-        reset(to_move.release());
-        return *this;
-    }
-
-  private:
-
     FidlCStruct storage_{};
     FidlCStruct* ptr_ = nullptr;
+
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
+    bool is_moved_out_ = false;
+#endif
 
     FidlStruct(FidlStruct& to_copy) = delete;
     FidlStruct& operator=(FidlStruct& to_copy) = delete;
