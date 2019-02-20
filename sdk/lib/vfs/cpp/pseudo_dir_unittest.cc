@@ -312,8 +312,7 @@ class PseudoDirConnection : public gtest::RealLoopFixture {
             }
           };
 
-      ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&]() { return on_open_called; },
-                                            zx::sec(1), zx::msec(1)));
+      ASSERT_TRUE(RunLoopUntil([&]() { return on_open_called; }, zx::msec(1)));
     }
   }
 
@@ -334,8 +333,7 @@ class PseudoDirConnection : public gtest::RealLoopFixture {
           EXPECT_EQ(expected_status, status);
         };
 
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&]() { return on_open_called; },
-                                          zx::sec(1), zx::msec(1)));
+    ASSERT_TRUE(RunLoopUntil([&]() { return on_open_called; }, zx::msec(1)));
 
     // Bind channel to sync_ptr
     out_sync_ptr.Bind(node_ptr.Unbind().TakeChannel());

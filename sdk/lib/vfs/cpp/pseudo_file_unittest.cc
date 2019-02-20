@@ -99,7 +99,7 @@ class BufferedPseudoFileTest : public gtest::RealLoopFixture {
             }
           };
 
-      ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&]() { return on_open_called; }));
+      ASSERT_TRUE(RunLoopUntil([&]() { return on_open_called; }));
     }
   }
 
@@ -199,9 +199,9 @@ class BufferedPseudoFileTest : public gtest::RealLoopFixture {
 
   void AssertFileWrapperState(FileWrapper& file_wrapper,
                               const std::string& expected_str) {
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [&]() { return file_wrapper.buffer() == expected_str; }, zx::sec(1)))
-        << file_wrapper.buffer();
+    ASSERT_TRUE(RunLoopUntil([&]() {
+      return file_wrapper.buffer() == expected_str;
+    })) << file_wrapper.buffer();
   }
 
   int OpenAsFD(vfs::Node* node, async_dispatcher_t* dispatcher) {

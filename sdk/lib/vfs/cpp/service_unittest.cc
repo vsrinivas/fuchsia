@@ -51,8 +51,7 @@ class ServiceTest : public gtest::RealLoopFixture,
           EXPECT_EQ(expected_status, status);
         };
 
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&]() { return on_open_called; },
-                                          zx::sec(1), zx::msec(1)));
+    ASSERT_TRUE(RunLoopUntil([&]() { return on_open_called; }, zx::msec(1)));
   }
 
   fuchsia::io::DirectoryPtr& dir_ptr() { return dir_ptr_; }
