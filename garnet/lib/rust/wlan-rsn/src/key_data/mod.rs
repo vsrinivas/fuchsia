@@ -160,7 +160,7 @@ mod tests {
 
     #[test]
     fn test_complex_key_data() {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let buf = [
             // GTK KDE
             0xDD,
@@ -255,7 +255,7 @@ mod tests {
 
     #[test]
     fn test_too_short_key_data() {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let buf = [
             10, 5, 1, 2, 3, 4, 5, // Unsupported IE
         ];
@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn test_not_multiple_of_8() {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let buf = [
             // Unsupported IE
             10, 21, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn test_no_padding() {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let buf = [
             10, 14, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, // Unsupported IE
         ];
@@ -299,7 +299,7 @@ mod tests {
 
     #[test]
     fn test_single_padding_byte() {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let buf = [
             10, 13, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, // Unsupported IE
             0xDD, // 1 byte padding
@@ -324,7 +324,7 @@ mod tests {
 
     #[test]
     fn test_long_padding() {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let buf = [
             20, 6, 1, 2, 3, 4, 5, 6, // Unsupported IE
             0xdd, 0, 0, 0, 0, 0, 0, 0, // 8 bytes padding
@@ -349,7 +349,7 @@ mod tests {
 
     #[test]
     fn test_gtk() {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let buf = [
             // GTK KDE
             0xDD,
@@ -383,7 +383,7 @@ mod tests {
 
     #[test]
     fn test_long_gtk() {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let buf = [
             // GTK KDE
             0xDD,

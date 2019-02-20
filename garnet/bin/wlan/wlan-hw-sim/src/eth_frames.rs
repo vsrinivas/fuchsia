@@ -54,7 +54,7 @@ mod tests {
             },
         )
         .expect("Error writing ethernet header");
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let expected_frame: &[u8] = &[
             // dst
             0x01, 0x02, 0x03, 0x04, 0x05, 0x06,

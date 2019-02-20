@@ -746,7 +746,7 @@ mod tests {
     use std::mem::transmute;
 
     fn make_mgmt_frame(ht_ctrl: bool) -> Vec<u8> {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let mut bytes = vec![
             1, if ht_ctrl { 128 } else { 1 }, // fc
             2, 2, // duration
@@ -771,7 +771,7 @@ mod tests {
         fc.set_htc_order(ht_ctrl.is_some());
         let fc: [u8; 2] = unsafe { transmute(fc.value().to_le()) };
 
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let mut bytes = vec![
             // Data Header
             fc[0], fc[1], // fc
@@ -810,7 +810,7 @@ mod tests {
         fc.set_frame_subtype(DATA_SUBTYPE_QOS_DATA);
         let fc: [u8; 2] = unsafe { transmute(fc.value().to_le()) };
 
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let bytes = vec![
             // Data Header
             fc[0], fc[1], // fc
@@ -879,7 +879,7 @@ mod tests {
 
     #[test]
     fn parse_beacon_frame() {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let bytes = vec![
             1,1,1,1,1,1,1,1, // timestamp
             2,2, // beacon_interval
@@ -959,7 +959,7 @@ mod tests {
 
     #[test]
     fn parse_amsdu() {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let first_msdu = vec![
             // LLC header
             0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00, 0x08, 0x00,
@@ -979,7 +979,7 @@ mod tests {
             0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
             0x01, 0x02, 0x03, 0x04,
         ];
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let second_msdu = vec![
             // LLC header
             0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00, 0x08, 0x00,
@@ -998,7 +998,7 @@ mod tests {
             0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
         ];
 
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let mut amsdu_frame = vec![
             // A-MSDU Subframe #1
             0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, 0xb4, 0xf7,
@@ -1006,10 +1006,13 @@ mod tests {
             0x00, 0x74, // MSDU length
         ];
         amsdu_frame.extend(&first_msdu[..]);
+        #[rustfmt::skip]
         amsdu_frame.extend(vec![
             // Padding
-            0x00, 0x00, // A-MSDU Subframe #2
-            0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, 0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xab, 0x00,
+            0x00, 0x00,
+            // A-MSDU Subframe #2
+            0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, 0xb4, 0xf7,
+            0xa1, 0xbe, 0xb9, 0xab, 0x00,
             0x66, // MSDU length
         ]);
         amsdu_frame.extend(&second_msdu[..]);

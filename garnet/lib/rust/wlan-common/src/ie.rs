@@ -304,7 +304,7 @@ mod tests {
 
     #[test]
     fn parse_ie_chain() {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let bytes = [
             0, 5, 1, 2, 3, 4, 5, // SSID IE
             254, 3, 1, 2, // Unsupported IE

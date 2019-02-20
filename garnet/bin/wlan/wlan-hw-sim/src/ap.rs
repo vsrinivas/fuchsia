@@ -27,11 +27,11 @@ pub mod tests {
         const HW_MAC_ADDR: [u8; 6] = [0x70, 0xf1, 0x1c, 0x05, 0x2d, 0x7f];
 
         // frame 1 and 3 from ios12.1-connect-open-ap.pcapng
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         const AUTH_REQ_HEX: &str = "b0003a0170f11c052d7fdca90435e58c70f11c052d7ff07d000001000000dd0b0017f20a00010400000000dd09001018020000100000ed7895e7";
         let auth_req = hex::decode(AUTH_REQ_HEX).expect("fail to parse auth req hex");
 
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         const ASSOC_REQ_HEX: &str = "00003a0170f11c052d7fdca90435e58c70f11c052d7f007e210414000014465543485349412d544553542d4b4945542d4150010882848b962430486c32040c121860210202142402010ddd0b0017f20a00010400000000dd09001018020000100000debda9bb";
         let assoc_req = hex::decode(ASSOC_REQ_HEX).expect("fail to parse assoc req hex");
         // -- end test data block

@@ -442,7 +442,7 @@ mod tests {
             .ssid(&[0xAA, 0xBB, 0xCC, 0xDD, 0xEE])
             .unwrap()
             .into_writer();
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let expected_frame: &[u8] = &[
             // Framectl Duration    Address 1
             0x80, 0x00, 0x65, 0x97, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
@@ -458,7 +458,7 @@ mod tests {
 
     #[test]
     fn parse_auth_frame() {
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let mut bytes: &[u8] = &[
             // Framectl Duration    Address 1
             0xb0, 0x00, 0x76, 0x98, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
@@ -504,7 +504,7 @@ mod tests {
             )
             .unwrap()
             .into_writer();
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let expected_frame: &[u8] = &[
             // Framectl Duration    Address 1
             0xb0, 0x00, 0x76, 0x98, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
@@ -563,7 +563,7 @@ mod tests {
             )
             .unwrap()
             .into_writer();
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let expected_frame: &[u8] = &[
             // Framectl Duration    Address 1
             0x10, 0x00, 0x65, 0x87, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
@@ -636,7 +636,7 @@ mod tests {
             )
             .unwrap()
             .into_writer();
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let expected_frame: &[u8] = &[
             8u8, 0,  // FrameControl (overwritten)
             0x65, 0x87,  // Duration
