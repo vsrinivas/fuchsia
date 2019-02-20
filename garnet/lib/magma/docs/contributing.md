@@ -35,7 +35,7 @@ often these are built from third party projects, such as third_party/mesa.
 * garnet/packages/tests/image_pipe_swapchain
 * garnet/packages/examples/vkcube_on_scenic
 * garnet/packages/examples/vkcube_on_fb
-* garnet/packages/prod/magma_tools
+* garnet/packages/tools/magma
 
 ##### Product for L2 testing:
 * topaz/products/default.gni

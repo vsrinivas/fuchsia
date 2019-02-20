@@ -1,6 +1,0 @@
-{
-    "packages": [
-        "//garnet/bin/bluetooth/tools",
-        "//garnet/drivers/bluetooth/hci/fake"
-    ]
-}

@@ -17,7 +17,6 @@
     "garnet/packages/prod/net-cli",
     "garnet/packages/prod/netcfg",
     "garnet/packages/prod/netconnector",
-    "garnet/packages/prod/netstack_tools",
     "garnet/packages/prod/network-speed-test",
     "garnet/packages/prod/overnetstack",
     "garnet/packages/prod/pm",
@@ -40,6 +39,7 @@
     "garnet/packages/prod/wlanphy",
     "garnet/packages/prod/wlanstack",
     "garnet/packages/prod/wlantap",
+    "garnet/packages/tools/netstack",
     "garnet/packages/tools/wlan"
   ]
 }

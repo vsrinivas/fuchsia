@@ -2,6 +2,10 @@
     "imports": [
         "garnet/packages/tools/audio",
         "garnet/packages/tools/bluetooth",
+        "garnet/packages/tools/magma",
+        "garnet/packages/tools/netstack",
+        "garnet/packages/tools/scenic",
+        "garnet/packages/tools/cs",
         "garnet/packages/tools/curl",
         "garnet/packages/tools/dockyard_host",
         "garnet/packages/tools/fidlmerge",

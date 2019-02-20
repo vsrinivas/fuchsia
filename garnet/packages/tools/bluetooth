@@ -1,6 +1,7 @@
 {
     "packages": [
         "//garnet/bin/bluetooth/bt-snoop",
-        "//garnet/bin/bluetooth/tools"
+        "//garnet/bin/bluetooth/tools",
+        "//garnet/drivers/bluetooth/hci/fake"
     ]
 }

@@ -1,6 +1,6 @@
 {
     "imports": [
         "garnet/packages/products/devtools",
-        "garnet/packages/tools/wlan"
+        "garnet/packages/tools/all"
     ]
 }
