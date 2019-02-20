@@ -133,7 +133,7 @@ static void* watchdog_thread_func(void* arg) {
         }
 
         struct timespec delay;
-        clock_gettime(CLOCK_REALTIME, &delay);
+        clock_gettime(CLOCK_MONOTONIC, &delay);
         delay.tv_sec += WATCHDOG_TICK_SECONDS;
         // If compiled with #define NDEBUG the assert essentially goes away.
         // Thus we need to protect |result| with __UNUSED lest the compiler
@@ -144,7 +144,7 @@ static void* watchdog_thread_func(void* arg) {
         assert(result == 0 || result == ETIMEDOUT);
 
         struct timespec now;
-        clock_gettime(CLOCK_REALTIME, &now);
+        clock_gettime(CLOCK_MONOTONIC, &now);
         uint64_t now_nanos = timespec_to_nanoseconds(&now);
         assert (now_nanos >= test_start_time);
         uint64_t elapsed_nanos = now_nanos - test_start_time;
@@ -194,7 +194,7 @@ void watchdog_start(test_type_t type, const char* name) {
         test_name = name;
         active_timeout_seconds = test_timeout_for_type(type);
         struct timespec now;
-        clock_gettime(CLOCK_REALTIME, &now);
+        clock_gettime(CLOCK_MONOTONIC, &now);
         test_start_time = timespec_to_nanoseconds(&now);
         pthread_mutex_unlock(&mutex);
     }
