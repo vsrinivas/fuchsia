@@ -502,7 +502,9 @@ impl EHandle {
         let inner = self.inner.clone();
         EXECUTOR.with(|e| {
             let mut e = e.borrow_mut();
-            assert!(e.is_none());
+            assert!(
+                e.is_none(),
+                "Cannot create multiple Fuchsia Executors");
             *e = Some((inner, timers));
         });
     }
