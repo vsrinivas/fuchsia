@@ -17,7 +17,7 @@ using fuchsia::cobalt::SystemDataUpdaterPtr;
 class CobaltAppForTest {
  public:
   CobaltAppForTest(std::unique_ptr<component::StartupContext> context)
-      : system_data_("test"), context_(std::move(context)) {
+      : system_data_("test", "test"), context_(std::move(context)) {
     system_data_updater_impl_.reset(new SystemDataUpdaterImpl(&system_data_));
 
     context_->outgoing().AddPublicService(
