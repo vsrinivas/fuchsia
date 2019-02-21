@@ -97,32 +97,6 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
             "-f and [directory globs ...] are mutually exclusive.  \n");
     return EXIT_FAILURE;
 }
-
-// Trying to accomplish the same thing as syncfs() but using only POSIX.
-// A single call to fsync() only has to do with the data for that file, but that file may be missing
-// from the directories above it.
-void SyncPathAndAncestors(const char* path) {
-    // dirname mutates its argument.
-    char mutable_path[PATH_MAX];
-    strncpy(mutable_path, path, PATH_MAX - 1);
-    mutable_path[PATH_MAX - 1] = '\0';
-    for (char* p = mutable_path;; p = dirname(p)) {
-        int fd = open(p, O_RDONLY);
-        if (fd < 0) {
-            fprintf(stderr, "Warning: Could not open %s for syncing: %s", p, strerror(errno));
-            return;
-        } else if (fsync(fd)) {
-            fprintf(stderr, "Warning: Could not sync %s: %s", p, strerror(errno));
-            return;
-        } else if (close(fd)) {
-            fprintf(stderr, "Warning: Could not close %s: %s", p, strerror(errno));
-            return;
-        }
-        if (!strcmp(p, "/")) {
-            break;
-        }
-    }
-};
 } // namespace
 
 int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* argv,
@@ -337,8 +311,6 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
             fprintf(stderr, "Error: Could not close JSON summary.\n");
             return EXIT_FAILURE;
         }
-
-        SyncPathAndAncestors(output_dir);
     }
 
     // Display any failed tests, and free the test results.
