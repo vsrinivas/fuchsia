@@ -35,6 +35,4 @@ private:
     void Init(fbl::RefPtr<EventPairDispatcher> other);
 
     CookieJar cookie_jar_;
-
-    fbl::Canary<fbl::magic("EVPD")> canary_;
 };

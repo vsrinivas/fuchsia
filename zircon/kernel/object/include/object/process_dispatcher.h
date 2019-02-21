@@ -331,9 +331,6 @@ private:
     // Kill all threads
     void KillAllThreadsLocked() TA_REQ(get_lock());
 
-    // TODO(dbort): Add "canary_.Assert()" calls to methods.
-    fbl::Canary<fbl::magic("PROC")> canary_;
-
     // the enclosing job
     const fbl::RefPtr<JobDispatcher> job_;
 

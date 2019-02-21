@@ -9,7 +9,10 @@
 #include <lib/unittest/unittest.h>
 #include <object/state_observer.h>
 
-namespace {
+class TestDispatcher;
+template <> struct CanaryTag<TestDispatcher> {
+    static constexpr uint32_t magic = 0;
+};
 
 class TestDispatcher final : public SoloDispatcher<TestDispatcher, ZX_RIGHTS_BASIC> {
 public:
@@ -30,8 +33,6 @@ public:
         CancelByKey(/* handle= */ nullptr, /* port= */ nullptr, /* key= */ 2u);
     }
 };
-
-} // namespace
 
 // Tests for observer removal
 namespace removal {

@@ -40,6 +40,5 @@ private:
     void VcpuInterruptHandler();
 
     const uint32_t vector_;
-    fbl::Canary<fbl::magic("INED")> canary_;
     fbl::Vector<fbl::RefPtr<VcpuDispatcher>> vcpus_;
 };

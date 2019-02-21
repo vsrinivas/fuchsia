@@ -63,9 +63,6 @@ private:
 
     PciDeviceDispatcher(const PciDeviceDispatcher &) = delete;
     PciDeviceDispatcher& operator=(const PciDeviceDispatcher &) = delete;
-
-    fbl::Canary<fbl::magic("PCID")> canary_;
-
     // Lock protecting upward facing APIs.  Generally speaking, this lock is
     // held for the duration of most of our dispatcher API implementations.  It
     // is unsafe to ever attempt to acquire this lock during a callback from the

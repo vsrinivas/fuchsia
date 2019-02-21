@@ -54,7 +54,6 @@ private:
     explicit VmAddressRegionDispatcher(fbl::RefPtr<VmAddressRegion> vmar,
                                        uint base_arch_mmu_flags);
 
-    fbl::Canary<fbl::magic("VARD")> canary_;
     fbl::RefPtr<VmAddressRegion> vmar_;
     const uint base_arch_mmu_flags_;
 };

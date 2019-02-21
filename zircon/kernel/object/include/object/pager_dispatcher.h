@@ -112,8 +112,6 @@ public:
 private:
     explicit PagerDispatcher();
 
-    fbl::Canary<fbl::magic("PGRD")> canary_;
-
     mutable DECLARE_MUTEX(PagerDispatcher) list_mtx_;
     fbl::DoublyLinkedList<fbl::RefPtr<PagerSource>> srcs_ TA_GUARDED(list_mtx_);
 };

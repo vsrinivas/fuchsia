@@ -79,8 +79,6 @@ private:
     BusTransactionInitiatorDispatcher(fbl::RefPtr<Iommu> iommu, uint64_t bti_id);
     void PrintQuarantineWarningLocked() TA_REQ(get_lock());
 
-    fbl::Canary<fbl::magic("BTID")> canary_;
-
     const fbl::RefPtr<Iommu> iommu_;
     const uint64_t bti_id_;
 

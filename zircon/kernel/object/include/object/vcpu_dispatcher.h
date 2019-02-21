@@ -33,7 +33,6 @@ public:
     zx_status_t WriteState(uint32_t kind, const void* buffer, size_t len);
 
 private:
-    fbl::Canary<fbl::magic("VCPD")> canary_;
     fbl::RefPtr<GuestDispatcher> guest_;
     ktl::unique_ptr<Vcpu> vcpu_;
 

@@ -28,6 +28,5 @@ public:
 private:
     explicit IommuDispatcher(fbl::RefPtr<Iommu> iommu);
 
-    fbl::Canary<fbl::magic("IOMD")> canary_;
     const fbl::RefPtr<Iommu> iommu_;
 };

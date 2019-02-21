@@ -26,6 +26,5 @@ public:
 
 private:
     explicit EventDispatcher(uint32_t options);
-    fbl::Canary<fbl::magic("EVTD")> canary_;
     CookieJar cookie_jar_;
 };

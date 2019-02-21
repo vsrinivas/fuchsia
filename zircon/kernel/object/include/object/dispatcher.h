@@ -37,37 +37,42 @@ struct CookieJar {
 };
 
 template <typename T> struct DispatchTag;
+template <typename T> struct CanaryTag;
 
-#define DECLARE_DISPTAG(T, E)               \
-class T;                                    \
-template <> struct DispatchTag<T> {         \
-    static constexpr zx_obj_type_t ID = E;  \
+#define DECLARE_DISPTAG(T, E, M)                \
+class T;                                        \
+template <> struct DispatchTag<T> {             \
+    static constexpr zx_obj_type_t ID = E;      \
+};                                              \
+template <> struct CanaryTag<T> {               \
+    static constexpr uint32_t magic =           \
+        fbl::magic(M);                          \
 };
 
-DECLARE_DISPTAG(ProcessDispatcher, ZX_OBJ_TYPE_PROCESS)
-DECLARE_DISPTAG(ThreadDispatcher, ZX_OBJ_TYPE_THREAD)
-DECLARE_DISPTAG(VmObjectDispatcher, ZX_OBJ_TYPE_VMO)
-DECLARE_DISPTAG(ChannelDispatcher, ZX_OBJ_TYPE_CHANNEL)
-DECLARE_DISPTAG(EventDispatcher, ZX_OBJ_TYPE_EVENT)
-DECLARE_DISPTAG(PortDispatcher, ZX_OBJ_TYPE_PORT)
-DECLARE_DISPTAG(InterruptDispatcher, ZX_OBJ_TYPE_INTERRUPT)
-DECLARE_DISPTAG(PciDeviceDispatcher, ZX_OBJ_TYPE_PCI_DEVICE)
-DECLARE_DISPTAG(LogDispatcher, ZX_OBJ_TYPE_LOG)
-DECLARE_DISPTAG(SocketDispatcher, ZX_OBJ_TYPE_SOCKET)
-DECLARE_DISPTAG(ResourceDispatcher, ZX_OBJ_TYPE_RESOURCE)
-DECLARE_DISPTAG(EventPairDispatcher, ZX_OBJ_TYPE_EVENTPAIR)
-DECLARE_DISPTAG(JobDispatcher, ZX_OBJ_TYPE_JOB)
-DECLARE_DISPTAG(VmAddressRegionDispatcher, ZX_OBJ_TYPE_VMAR)
-DECLARE_DISPTAG(FifoDispatcher, ZX_OBJ_TYPE_FIFO)
-DECLARE_DISPTAG(GuestDispatcher, ZX_OBJ_TYPE_GUEST)
-DECLARE_DISPTAG(VcpuDispatcher, ZX_OBJ_TYPE_VCPU)
-DECLARE_DISPTAG(TimerDispatcher, ZX_OBJ_TYPE_TIMER)
-DECLARE_DISPTAG(IommuDispatcher, ZX_OBJ_TYPE_IOMMU)
-DECLARE_DISPTAG(BusTransactionInitiatorDispatcher, ZX_OBJ_TYPE_BTI)
-DECLARE_DISPTAG(ProfileDispatcher, ZX_OBJ_TYPE_PROFILE)
-DECLARE_DISPTAG(PinnedMemoryTokenDispatcher, ZX_OBJ_TYPE_PMT)
-DECLARE_DISPTAG(SuspendTokenDispatcher, ZX_OBJ_TYPE_SUSPEND_TOKEN)
-DECLARE_DISPTAG(PagerDispatcher, ZX_OBJ_TYPE_PAGER)
+DECLARE_DISPTAG(ProcessDispatcher, ZX_OBJ_TYPE_PROCESS, "PROC")
+DECLARE_DISPTAG(ThreadDispatcher, ZX_OBJ_TYPE_THREAD, "THRD")
+DECLARE_DISPTAG(VmObjectDispatcher, ZX_OBJ_TYPE_VMO, "VMOD")
+DECLARE_DISPTAG(ChannelDispatcher, ZX_OBJ_TYPE_CHANNEL, "CHAN")
+DECLARE_DISPTAG(EventDispatcher, ZX_OBJ_TYPE_EVENT, "EVTD")
+DECLARE_DISPTAG(PortDispatcher, ZX_OBJ_TYPE_PORT, "PORT")
+DECLARE_DISPTAG(InterruptDispatcher, ZX_OBJ_TYPE_INTERRUPT, "INTD")
+DECLARE_DISPTAG(PciDeviceDispatcher, ZX_OBJ_TYPE_PCI_DEVICE, "PCID")
+DECLARE_DISPTAG(LogDispatcher, ZX_OBJ_TYPE_LOG, "LOGD")
+DECLARE_DISPTAG(SocketDispatcher, ZX_OBJ_TYPE_SOCKET, "SOCK")
+DECLARE_DISPTAG(ResourceDispatcher, ZX_OBJ_TYPE_RESOURCE, "RSRD")
+DECLARE_DISPTAG(EventPairDispatcher, ZX_OBJ_TYPE_EVENTPAIR, "EPAI")
+DECLARE_DISPTAG(JobDispatcher, ZX_OBJ_TYPE_JOB, "JOBD")
+DECLARE_DISPTAG(VmAddressRegionDispatcher, ZX_OBJ_TYPE_VMAR, "VARD")
+DECLARE_DISPTAG(FifoDispatcher, ZX_OBJ_TYPE_FIFO, "FIFO")
+DECLARE_DISPTAG(GuestDispatcher, ZX_OBJ_TYPE_GUEST, "GSTD")
+DECLARE_DISPTAG(VcpuDispatcher, ZX_OBJ_TYPE_VCPU, "VCPU")
+DECLARE_DISPTAG(TimerDispatcher, ZX_OBJ_TYPE_TIMER, "TIMR")
+DECLARE_DISPTAG(IommuDispatcher, ZX_OBJ_TYPE_IOMMU, "IOMM")
+DECLARE_DISPTAG(BusTransactionInitiatorDispatcher, ZX_OBJ_TYPE_BTI, "BTID")
+DECLARE_DISPTAG(ProfileDispatcher, ZX_OBJ_TYPE_PROFILE, "PROF")
+DECLARE_DISPTAG(PinnedMemoryTokenDispatcher, ZX_OBJ_TYPE_PMT, "PIMT")
+DECLARE_DISPTAG(SuspendTokenDispatcher, ZX_OBJ_TYPE_SUSPEND_TOKEN, "SUTD")
+DECLARE_DISPTAG(PagerDispatcher, ZX_OBJ_TYPE_PAGER, "PGRD")
 
 #undef DECLARE_DISPTAG
 
@@ -91,10 +96,6 @@ public:
     using fbl::RefCountedUpgradeable<Dispatcher>::Release;
     using fbl::RefCountedUpgradeable<Dispatcher>::Adopt;
     using fbl::RefCountedUpgradeable<Dispatcher>::AddRefMaybeInDestructor;
-
-    // At construction, the object's state tracker is asserting
-    // |signals|.
-    explicit Dispatcher(zx_signals_t signals = 0u);
 
     // Dispatchers are either Solo or Peered. They handle refcounting
     // and locking differently.
@@ -186,6 +187,9 @@ public:
     virtual void set_owner(zx_koid_t new_owner) {}
 
 protected:
+    // At construction, the object's state tracker is asserting |signals|.
+    explicit Dispatcher(zx_signals_t signals);
+
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.)
     void UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask);
@@ -233,7 +237,7 @@ private:
 // directly contain their state lock. This is a CRTP template type to permit
 // the lock validator to distinguish between locks in different subclasses of
 // SoloDispatcher.
-template <typename T, zx_rights_t def_rights, zx_signals_t extra_signals = 0u>
+template <typename Self, zx_rights_t def_rights, zx_signals_t extra_signals = 0u>
 class SoloDispatcher : public Dispatcher {
 public:
     static constexpr zx_rights_t default_rights() { return def_rights; }
@@ -267,6 +271,7 @@ public:
 protected:
     Lock<fbl::Mutex>* get_lock() const final { return &lock_; }
 
+    const fbl::Canary<CanaryTag<Self>::magic> canary_;
     mutable DECLARE_MUTEX(SoloDispatcher) lock_;
 };
 
@@ -370,6 +375,8 @@ public:
     Lock<fbl::Mutex>* get_lock() const final { return holder_->get_lock(); }
 
 protected:
+    const fbl::Canary<CanaryTag<Self>::magic> canary_;
+
     zx_koid_t peer_koid_ = 0u;
     fbl::RefPtr<Self> peer_ TA_GUARDED(get_lock());
 

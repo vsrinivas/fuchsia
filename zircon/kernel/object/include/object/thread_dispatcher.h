@@ -211,11 +211,8 @@ private:
     // change states of the object, do what is appropriate for the state transition
     void SetStateLocked(ThreadState::Lifecycle lifecycle) TA_REQ(get_lock());
 
-    fbl::Canary<fbl::magic("THRD")> canary_;
-
     // The containing process holds a list of all its threads.
     fbl::DoublyLinkedListNodeState<ThreadDispatcher*> dll_thread_;
-
     // a ref pointer back to the parent process
     fbl::RefPtr<ProcessDispatcher> process_;
 

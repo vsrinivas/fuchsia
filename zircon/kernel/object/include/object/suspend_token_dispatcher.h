@@ -34,8 +34,6 @@ public:
 
 private:
     explicit SuspendTokenDispatcher(fbl::RefPtr<Dispatcher> task);
-    fbl::Canary<fbl::magic("SUTD")> canary_;
-
     // A lock annotation is unnecessary because the only time |task_| is used is on_zero_handles()
     // and the constructor, and the object can only get zero handles once.
     fbl::RefPtr<Dispatcher> task_;

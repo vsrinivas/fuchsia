@@ -32,8 +32,6 @@ private:
     static void Notify(void* cookie);
     void Signal();
 
-    fbl::Canary<fbl::magic("LOGD")> canary_;
-
     dlog_reader reader_ TA_GUARDED(get_lock());
     const uint32_t flags_;
 };

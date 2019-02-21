@@ -29,6 +29,5 @@ public:
 private:
     explicit ProfileDispatcher(const zx_profile_info_t& info);
 
-    fbl::Canary<fbl::magic("PROF")> canary_;
     const zx_profile_info_t info_;
 };

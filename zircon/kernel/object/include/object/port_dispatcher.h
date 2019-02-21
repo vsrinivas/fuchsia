@@ -212,7 +212,6 @@ private:
     // Called by ExceptionPort under |eport|'s lock.
     void UnlinkExceptionPortEportLocked(ExceptionPort* eport) TA_REQ(eport->lock_);
 
-    fbl::Canary<fbl::magic("PORT")> canary_;
     const uint32_t options_;
     Semaphore sema_;
     bool zero_handles_ TA_GUARDED(get_lock());

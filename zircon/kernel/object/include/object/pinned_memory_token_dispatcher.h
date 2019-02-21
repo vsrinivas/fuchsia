@@ -87,8 +87,6 @@ private:
 
     void InvalidateMappedAddrsLocked() TA_REQ(get_lock());
 
-    fbl::Canary<fbl::magic("PMT_")> canary_;
-
     // The containing BTI holds a list of all its PMTs, including those which are quarantined.
     fbl::DoublyLinkedListNodeState<PinnedMemoryTokenDispatcher*> dll_pmt_;
     // The containing BTI holds a list of all its quarantined PMTs.

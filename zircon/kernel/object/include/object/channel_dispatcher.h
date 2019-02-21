@@ -117,8 +117,6 @@ private:
     void WriteSelf(MessagePacketPtr msg) TA_REQ(get_lock());
     zx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) TA_REQ(get_lock());
 
-    fbl::Canary<fbl::magic("CHAN")> canary_;
-
     MessageList messages_ TA_GUARDED(get_lock());
     uint64_t message_count_ TA_GUARDED(get_lock()) = 0;
     uint64_t max_message_count_ TA_GUARDED(get_lock()) = 0;

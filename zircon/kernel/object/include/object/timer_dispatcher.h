@@ -40,7 +40,6 @@ private:
     void SetTimerLocked(bool cancel_first) TA_REQ(get_lock());
     bool CancelTimerLocked() TA_REQ(get_lock());
 
-    fbl::Canary<fbl::magic("TIMR")> canary_;
     const slack_mode slack_mode_;
     dpc_t timer_dpc_;
     zx_time_t deadline_ TA_GUARDED(get_lock());

@@ -36,8 +36,6 @@ private:
     PciInterruptDispatcher(const fbl::RefPtr<PcieDevice>& device, uint32_t vector, bool maskable);
     zx_status_t RegisterInterruptHandler();
 
-    fbl::Canary<fbl::magic("INPD")> canary_;
-
     fbl::RefPtr<PcieDevice> device_;
     const uint32_t vector_;
     const bool maskable_;

@@ -81,8 +81,6 @@ public:
     ~ResourceDispatcher();
 
 private:
-    fbl::Canary<fbl::magic("RSRD")> canary_;
-
     ResourceDispatcher(uint32_t kind,
                        uint64_t base,
                        size_t size,

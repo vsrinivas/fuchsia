@@ -97,8 +97,6 @@ private:
     bool is_full() const TA_REQ(get_lock()) { return data_.is_full(); }
     bool is_empty() const TA_REQ(get_lock()) { return data_.is_empty(); }
 
-    fbl::Canary<fbl::magic("SOCK")> canary_;
-
     const uint32_t flags_;
 
     // The shared |get_lock()| protects all members below.

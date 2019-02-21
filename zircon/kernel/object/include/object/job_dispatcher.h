@@ -180,8 +180,6 @@ private:
 
     bool CanSetPolicy() TA_REQ(get_lock());
 
-    fbl::Canary<fbl::magic("JOBD")> canary_;
-
     const fbl::RefPtr<JobDispatcher> parent_;
     const uint32_t max_height_;
 

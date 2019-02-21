@@ -63,9 +63,6 @@ public:
 
 private:
     explicit VmObjectDispatcher(fbl::RefPtr<VmObject> vmo, zx_koid_t pager_koid);
-
-    fbl::Canary<fbl::magic("VMOD")> canary_;
-
     // The 'const' here is load bearing; we give a raw pointer to
     // ourselves to |vmo_| so we have to ensure we don't reset vmo_
     // except during destruction.

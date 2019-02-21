@@ -28,7 +28,6 @@ public:
                         fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
 private:
-    fbl::Canary<fbl::magic("GSTD")> canary_;
     ktl::unique_ptr<Guest> guest_;
 
     explicit GuestDispatcher(ktl::unique_ptr<Guest> guest);
