@@ -26,6 +26,8 @@ library("vm") {
     "vmm.cpp",
   ]
   deps = [
+    # TODO: testonly
+    ":tests",
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/user_copy",
