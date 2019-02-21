@@ -85,16 +85,14 @@ struct Stream {
 
 impl Stream {
     fn new(endpoint: avdtp::StreamEndpoint, encoding: String) -> Stream {
-        Stream {
-            endpoint,
-            encoding,
-            suspend_sender: None,
-        }
+        Stream { endpoint, encoding, suspend_sender: None }
     }
 
     /// Attempt to start the media decoding task.
     fn start(&mut self) -> Result<(), avdtp::ErrorCode> {
-        if self.suspend_sender.is_some() {
+        let start_res = self.endpoint.start();
+        if start_res.is_err() || self.suspend_sender.is_some() {
+            fx_log_info!("Start when streaming: {:?} {:?}", start_res, self.suspend_sender);
             return Err(avdtp::ErrorCode::BadState);
         }
         let (send, receive) = mpsc::channel(1);
@@ -109,6 +107,10 @@ impl Stream {
 
     /// Signals to the media decoding task to end.
     fn stop(&mut self) -> Result<(), avdtp::ErrorCode> {
+        if let Err(e) = self.endpoint.suspend() {
+            fx_log_info!("Stop when not streaming: {}", e);
+            return Err(avdtp::ErrorCode::BadState);
+        }
         match self.suspend_sender.take() {
             None => Err(avdtp::ErrorCode::BadState),
             Some(mut sender) => sender.try_send(()).or(Err(avdtp::ErrorCode::BadState)),
@@ -161,8 +163,7 @@ impl Streams {
     /// Adds a stream, indexing it by the endoint id, associated with an encoding,
     /// replacing any other stream with the same endpoint id.
     fn insert(&mut self, stream: avdtp::StreamEndpoint, codec: String) {
-        self.0
-            .insert(stream.local_id().clone(), Stream::new(stream, codec));
+        self.0.insert(stream.local_id().clone(), Stream::new(stream, codec));
     }
 
     /// Retrievees a mutable reference to the endpoint with the `id`.
@@ -216,11 +217,7 @@ type RemotesMap = HashMap<String, RemotePeer>;
 
 impl RemotePeer {
     fn new(peer: avdtp::Peer) -> RemotePeer {
-        RemotePeer {
-            peer: Arc::new(peer),
-            opening: None,
-            streams: Streams::build().unwrap(),
-        }
+        RemotePeer { peer: Arc::new(peer), opening: None, streams: Streams::build().unwrap() }
     }
 
     /// Provides a reference to the AVDTP peer.
@@ -234,10 +231,7 @@ impl RemotePeer {
     fn receive_channel(&mut self, channel: zx::Socket) -> Result<(), Error> {
         let stream = match &self.opening {
             None => Err(format_err!("No stream opening.")),
-            Some(id) => self
-                .streams
-                .get_endpoint(&id)
-                .ok_or(format_err!("endpoint doesn't exist")),
+            Some(id) => self.streams.get_endpoint(&id).ok_or(format_err!("endpoint doesn't exist")),
         }?;
         if !stream.receive_channel(fasync::Socket::from_socket(channel)?)? {
             self.opening = None;
@@ -283,37 +277,31 @@ impl RemotePeer {
         fx_log_info!("Handling {:?} from peer..", r);
         match r {
             avdtp::Request::Discover { responder } => responder.send(&self.streams.information()),
-            avdtp::Request::GetCapabilities {
-                responder,
-                stream_id,
+            avdtp::Request::GetCapabilities { responder, stream_id }
+            | avdtp::Request::GetAllCapabilities { responder, stream_id } => {
+                match self.streams.get_endpoint(&stream_id) {
+                    None => responder.reject(avdtp::ErrorCode::BadAcpSeid),
+                    Some(stream) => responder.send(stream.capabilities()),
+                }
             }
-            | avdtp::Request::GetAllCapabilities {
-                responder,
-                stream_id,
-            } => match self.streams.get_endpoint(&stream_id) {
-                None => responder.reject(avdtp::ErrorCode::BadAcpSeid),
-                Some(stream) => responder.send(stream.capabilities()),
-            },
-            avdtp::Request::Open {
-                responder,
-                stream_id,
-            } => match self.streams.get_endpoint(&stream_id) {
-                None => responder.reject(avdtp::ErrorCode::BadAcpSeid),
-                Some(stream) => match stream.establish() {
-                    Ok(()) => {
-                        self.opening = Some(stream_id);
-                        responder.send()
-                    }
-                    Err(_) => responder.reject(avdtp::ErrorCode::BadState),
-                },
-            },
-            avdtp::Request::Close {
-                responder,
-                stream_id,
-            } => match self.streams.get_endpoint(&stream_id) {
-                None => responder.reject(avdtp::ErrorCode::BadAcpSeid),
-                Some(stream) => await!(stream.release(responder, &self.peer)),
-            },
+            avdtp::Request::Open { responder, stream_id } => {
+                match self.streams.get_endpoint(&stream_id) {
+                    None => responder.reject(avdtp::ErrorCode::BadAcpSeid),
+                    Some(stream) => match stream.establish() {
+                        Ok(()) => {
+                            self.opening = Some(stream_id);
+                            responder.send()
+                        }
+                        Err(_) => responder.reject(avdtp::ErrorCode::BadState),
+                    },
+                }
+            }
+            avdtp::Request::Close { responder, stream_id } => {
+                match self.streams.get_endpoint(&stream_id) {
+                    None => responder.reject(avdtp::ErrorCode::BadAcpSeid),
+                    Some(stream) => await!(stream.release(responder, &self.peer)),
+                }
+            }
             avdtp::Request::SetConfiguration {
                 responder,
                 local_stream_id,
@@ -334,10 +322,7 @@ impl RemotePeer {
                     }
                 }
             }
-            avdtp::Request::GetConfiguration {
-                stream_id,
-                responder,
-            } => {
+            avdtp::Request::GetConfiguration { stream_id, responder } => {
                 let stream = match self.streams.get_endpoint(&stream_id) {
                     None => return responder.reject(avdtp::ErrorCode::BadAcpSeid),
                     Some(stream) => stream,
@@ -351,11 +336,7 @@ impl RemotePeer {
                     }
                 }
             }
-            avdtp::Request::Reconfigure {
-                responder,
-                local_stream_id,
-                capabilities,
-            } => {
+            avdtp::Request::Reconfigure { responder, local_stream_id, capabilities } => {
                 let stream = match self.streams.get_endpoint(&local_stream_id) {
                     None => return responder.reject(None, avdtp::ErrorCode::BadAcpSeid),
                     Some(stream) => stream,
@@ -369,10 +350,7 @@ impl RemotePeer {
                     }
                 }
             }
-            avdtp::Request::Start {
-                responder,
-                stream_ids,
-            } => {
+            avdtp::Request::Start { responder, stream_ids } => {
                 for seid in stream_ids {
                     if let Err(code) = self.streams.get_mut(&seid).and_then(|x| x.start()) {
                         return responder.reject(&seid, code);
@@ -380,10 +358,7 @@ impl RemotePeer {
                 }
                 responder.send()
             }
-            avdtp::Request::Suspend {
-                responder,
-                stream_ids,
-            } => {
+            avdtp::Request::Suspend { responder, stream_ids } => {
                 for seid in stream_ids {
                     if let Err(code) = self.streams.get_mut(&seid).and_then(|x| x.stop()) {
                         return responder.reject(&seid, code);
@@ -391,10 +366,7 @@ impl RemotePeer {
                 }
                 responder.send()
             }
-            avdtp::Request::Abort {
-                responder,
-                stream_id,
-            } => {
+            avdtp::Request::Abort { responder, stream_id } => {
                 let stream = match self.streams.get_endpoint(&stream_id) {
                     None => return Ok(()),
                     Some(stream) => stream,
@@ -412,7 +384,9 @@ impl RemotePeer {
 /// to the player.  Restarts the player on player errors.
 /// Ends when signaled from `end_signal`, or when the media transport stream is closed.
 async fn decode_media_stream(
-    mut stream: avdtp::MediaStream, encoding: String, mut end_signal: Receiver<()>,
+    mut stream: avdtp::MediaStream,
+    encoding: String,
+    mut end_signal: Receiver<()>,
 ) -> () {
     let mut total_bytes = 0;
     let mut player = match await!(player::Player::new(encoding.clone())) {
@@ -503,18 +477,8 @@ async fn main() -> Result<(), Error> {
     while let Some(evt) = await!(evt_stream.next()) {
         match evt {
             Err(e) => return Err(e.into()),
-            Ok(ProfileEvent::OnConnected {
-                device_id,
-                service_id: _,
-                channel,
-                protocol,
-            }) => {
-                fx_log_info!(
-                    "Connection from {}: {:?} {:?}!",
-                    device_id,
-                    channel,
-                    protocol
-                );
+            Ok(ProfileEvent::OnConnected { device_id, service_id: _, channel, protocol }) => {
+                fx_log_info!("Connection from {}: {:?} {:?}!", device_id, channel, protocol);
                 match remotes.write().entry(device_id.clone()) {
                     Entry::Occupied(mut entry) => {
                         if let Err(e) = entry.get_mut().receive_channel(channel) {
