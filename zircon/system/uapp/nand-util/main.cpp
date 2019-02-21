@@ -40,6 +40,14 @@ Options:
   --live-dangerously (-y) : Don't prompt for confirmation.
 )""";
 
+enum class Actions {
+    kBbt,
+    kRead,
+    kErase,
+    kReadCheck,
+    kSave
+};
+
 // Configuration info (what to do).
 struct Config {
     const char* path;
@@ -48,13 +56,9 @@ struct Config {
     uint32_t block_num;
     uint32_t abs_page;
     uint32_t count;
-    int actions;
+    Actions action;
+    int num_actions;
     bool info;
-    bool bbt;
-    bool read;
-    bool erase;
-    bool read_check;
-    bool save;
     bool skip_prompt;
 };
 
@@ -90,24 +94,24 @@ bool GetOptions(int argc, char** argv, Config* config) {
             config->info = true;
             break;
         case 't':
-            config->bbt = true;
-            config->actions++;
+            config->action = Actions::kBbt;
+            config->num_actions++;
             break;
         case 'r':
-            config->read = true;
-            config->actions++;
+            config->action = Actions::kRead;
+            config->num_actions++;
             break;
         case 'e':
-            config->erase = true;
-            config->actions++;
+            config->action = Actions::kErase;
+            config->num_actions++;
             break;
         case 'c':
-            config->read_check = true;
-            config->actions++;
+            config->action = Actions::kReadCheck;
+            config->num_actions++;
             break;
         case 's':
-            config->save = true;
-            config->actions++;
+            config->action = Actions::kSave;
+            config->num_actions++;
             break;
         case 'f':
             config->file = optarg;
@@ -142,7 +146,7 @@ bool ValidateOptions(const Config& config) {
         return false;
     }
 
-    if (config.actions > 1) {
+    if (config.num_actions > 1) {
         printf("Only one action allowed\n");
         return false;
     }
@@ -152,22 +156,25 @@ bool ValidateOptions(const Config& config) {
         return false;
     }
 
-    if ((config.erase || config.save) && (config.page_num || config.abs_page)) {
+    if ((config.action == Actions::kErase || config.action == Actions::kSave) &&
+        (config.page_num || config.abs_page)) {
         printf("The operation works with blocks, not pages\n");
         return false;
     }
 
-    if (!config.info && !config.actions) {
+    if (!config.info && !config.num_actions) {
         printf("Nothing to do\n");
         return false;
     }
 
-    if (config.save && !config.file) {
+    if (config.action == Actions::kSave && !config.file) {
         printf("Save requires a file\n");\
         return false;
     }
 
-    if (config.count && (!config.read_check && !config.save && !config.erase)) {
+    if (config.count &&
+        (config.action != Actions::kReadCheck && config.action != Actions::kSave &&
+         config.action != Actions::kErase)) {
         printf("Count not supported for this operation\n");
         return false;
     }
@@ -175,6 +182,10 @@ bool ValidateOptions(const Config& config) {
 }
 
 bool ValidateOptionsWithNand(const NandBroker& nand, const Config& config) {
+    if (config.action == Actions::kBbt) {
+        return true;
+    }
+
     if (config.page_num >= nand.Info().pages_per_block) {
         printf("Page not within a block:\n");
         return false;
@@ -190,13 +201,49 @@ bool ValidateOptionsWithNand(const NandBroker& nand, const Config& config) {
         return false;
     }
 
-    if (config.erase && nand.Info().nand_class == fuchsia_hardware_nand_Class_PARTMAP &&
-        config.block_num < 24) {
+    if (config.action == Actions::kErase &&
+        nand.Info().nand_class == fuchsia_hardware_nand_Class_PARTMAP && config.block_num < 24) {
         printf("Erasing the restricted area is not a good idea, sorry\n");
         return false;
     }
 
     return true;
+}
+
+bool ExecuteAction(const NandBroker& nand, const Config& config) {
+    switch (config.action) {
+        case Actions::kBbt :
+            return FindBadBlocks(nand);
+
+        case Actions::kRead :  {
+            uint32_t abs_page = config.abs_page ? config.abs_page :
+                                config.block_num * nand.Info().pages_per_block + config.page_num;
+            printf("To read page %d\n", abs_page);
+            return nand.DumpPage(abs_page);
+        }
+
+        case Actions::kErase : {
+            // Erase a single block by default.
+            uint32_t count = config.count ? config.count : 1;
+            if (!config.skip_prompt) {
+                printf("About to erase %d block(s) starting at block %d. Press y to confirm\n",
+                       count, config.block_num);
+                if (getchar() != 'y') {
+                    return false;
+                }
+            }
+            return Erase(nand, config.block_num, count);
+        }
+
+        case Actions::kReadCheck :
+            printf("Checking blocks...\n");
+            return ReadCheck(nand, config.block_num, config.count);
+
+        case Actions::kSave :
+            printf("Saving blocks...\n");
+            return Save(nand, config.block_num, config.count, config.file);
+    }
+    return false;
 }
 
 }  // namespace
@@ -226,45 +273,10 @@ int main(int argc, char** argv) {
         DumpPage0(nand.data());
     }
 
-    if (config.bbt) {
-        return FindBadBlocks(nand) ? 0 : -1;
-    }
-
     if (!ValidateOptionsWithNand(nand, config)) {
         nand.ShowInfo();
         return -1;
     }
 
-    if (config.read) {
-        if (!config.abs_page) {
-            config.abs_page = config.block_num * nand.Info().pages_per_block + config.page_num;
-        }
-        printf("To read page %d\n", config.abs_page);
-        return nand.DumpPage(config.abs_page) ? 0 : -1;
-    }
-
-    if (config.erase) {
-        // Erase a single block by default.
-        config.count = config.count ? config.count : 1;
-        if (!config.skip_prompt) {
-            printf("About to erase %d block(s) starting at block %d. Press y to confirm\n",
-                   config.count, config.block_num);
-            if (getchar() != 'y') {
-                return -1;
-            }
-        }
-        return Erase(nand, config.block_num, config.count) ? 0 : -1;
-    }
-
-    if (config.read_check) {
-        printf("Checking blocks...\n");
-        return ReadCheck(nand, config.block_num, config.count) ? 0 : -1;
-    }
-
-    if (config.save) {
-        printf("Saving blocks...\n");
-        return Save(nand, config.block_num, config.count, config.file) ? 0 : -1;
-    }
-
-    return 0;
+    return ExecuteAction(nand, config) ? 0 : -1;
 }
