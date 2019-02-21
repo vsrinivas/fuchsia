@@ -12,6 +12,8 @@
     See also: ./README.md
 */
 
+#include "harvester.h"
+
 #include <fcntl.h>
 #include <chrono>
 #include <iostream>
@@ -21,12 +23,9 @@
 
 #include <fuchsia/memory/cpp/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
-#include <grpc++/grpc++.h>
 #include <lib/fdio/util.h>
 #include <zircon/status.h>
 
-#include "garnet/lib/system_monitor/dockyard/dockyard.h"
-#include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
@@ -66,88 +65,80 @@ zx_status_t get_root_resource(zx_handle_t* root_resource) {
 
 }  // namespace
 
-class Harvester {
- public:
-  Harvester(std::shared_ptr<grpc::Channel> channel)
-      : stub_(dockyard_proto::Dockyard::NewStub(channel)) {}
+bool Harvester::Init() {
+  dockyard_proto::InitRequest request;
+  request.set_name("TODO SET DEVICE NAME");
+  request.set_version(dockyard::DOCKYARD_VERSION);
+  dockyard_proto::InitReply reply;
 
-  bool Init() {
-    dockyard_proto::InitRequest request;
-    request.set_name("TODO SET DEVICE NAME");
-    request.set_version(dockyard::DOCKYARD_VERSION);
-    dockyard_proto::InitReply reply;
+  grpc::ClientContext context;
+  grpc::Status status = stub_->Init(&context, request, &reply);
+  if (status.ok()) {
+    return true;
+  }
+  FXL_LOG(ERROR) << status.error_code() << ": " << status.error_message();
+  FXL_LOG(ERROR) << "Unable to send to dockyard.";
+  return false;
+}
 
-    grpc::ClientContext context;
-    grpc::Status status = stub_->Init(&context, request, &reply);
-    if (status.ok()) {
-      return true;
-    }
-    FXL_LOG(ERROR) << status.error_code() << ": " << status.error_message();
-    FXL_LOG(ERROR) << "Unable to send to dockyard.";
-    return false;
+grpc::Status Harvester::SendSample(const std::string& stream_name,
+                                   uint64_t value) {
+  // TODO(dschuyler): system_clock might be at usec resolution. Consider using
+  // high_resolution_clock.
+  auto now = std::chrono::system_clock::now();
+  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                             now.time_since_epoch())
+                             .count();
+  dockyard::SampleStreamId stream_id;
+  grpc::Status status = GetStreamIdForName(&stream_id, stream_name);
+  if (status.ok()) {
+    return SendSampleById(nanoseconds, stream_id, value);
+  }
+  return status;
+}
+
+grpc::Status Harvester::SendSampleById(uint64_t time,
+                                       dockyard::SampleStreamId stream_id,
+                                       uint64_t value) {
+  // Data we are sending to the server.
+  dockyard_proto::RawSample sample;
+  sample.set_time(time);
+  sample.mutable_sample()->set_key(stream_id);
+  sample.mutable_sample()->set_value(value);
+
+  grpc::ClientContext context;
+  std::shared_ptr<grpc::ClientReaderWriter<dockyard_proto::RawSample,
+                                           dockyard_proto::EmptyMessage> >
+      stream(stub_->SendSample(&context));
+
+  stream->Write(sample);
+  stream->WritesDone();
+  return stream->Finish();
+}
+
+grpc::Status Harvester::GetStreamIdForName(dockyard::SampleStreamId* stream_id,
+                                           const std::string& stream_name) {
+  auto iter = stream_ids_.find(stream_name);
+  if (iter != stream_ids_.end()) {
+    *stream_id = iter->second;
+    return grpc::Status::OK;
   }
 
-  grpc::Status SendSample(const std::string& stream_name, uint64_t value) {
-    // TODO(dschuyler): system_clock might be at usec resolution. Consider using
-    // high_resolution_clock.
-    auto now = std::chrono::system_clock::now();
-    uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                               now.time_since_epoch())
-                               .count();
-    dockyard::SampleStreamId stream_id;
-    grpc::Status status = GetStreamIdForName(&stream_id, stream_name);
-    if (status.ok()) {
-      return SendSampleById(nanoseconds, stream_id, value);
-    }
-    return status;
+  dockyard_proto::StreamNameMessage name;
+  name.set_name(stream_name);
+
+  // Container for the data we expect from the server.
+  dockyard_proto::StreamIdMessage reply;
+
+  grpc::ClientContext context;
+  grpc::Status status = stub_->GetStreamIdForName(&context, name, &reply);
+  if (status.ok()) {
+    *stream_id = reply.id();
+    // Memoize it.
+    stream_ids_.emplace(stream_name, *stream_id);
   }
-
- private:
-  std::unique_ptr<dockyard_proto::Dockyard::Stub> stub_;
-  std::map<std::string, dockyard::SampleStreamId> _stream_ids;
-
-  grpc::Status SendSampleById(uint64_t time, dockyard::SampleStreamId stream_id,
-                              uint64_t value) {
-    // Data we are sending to the server.
-    dockyard_proto::RawSample sample;
-    sample.set_time(time);
-    sample.mutable_sample()->set_key(stream_id);
-    sample.mutable_sample()->set_value(value);
-
-    grpc::ClientContext context;
-    std::shared_ptr<grpc::ClientReaderWriter<dockyard_proto::RawSample,
-                                             dockyard_proto::EmptyMessage> >
-        stream(stub_->SendSample(&context));
-
-    stream->Write(sample);
-    stream->WritesDone();
-    return stream->Finish();
-  }
-
-  grpc::Status GetStreamIdForName(dockyard::SampleStreamId* stream_id,
-                                  const std::string& stream_name) {
-    auto iter = _stream_ids.find(stream_name);
-    if (iter != _stream_ids.end()) {
-      *stream_id = iter->second;
-      return grpc::Status::OK;
-    }
-
-    dockyard_proto::StreamNameMessage name;
-    name.set_name(stream_name);
-
-    // Container for the data we expect from the server.
-    dockyard_proto::StreamIdMessage reply;
-
-    grpc::ClientContext context;
-    grpc::Status status = stub_->GetStreamIdForName(&context, name, &reply);
-    if (status.ok()) {
-      *stream_id = reply.id();
-      // Memoize it.
-      _stream_ids.emplace(stream_name, *stream_id);
-    }
-    return status;
-  }
-};
+  return status;
+}
 
 void GatherCpuSamples(zx_handle_t root_resource, Harvester* harvester) {
   // TODO(dschuyler): Determine the array size at runtime (32 is arbitrary).
