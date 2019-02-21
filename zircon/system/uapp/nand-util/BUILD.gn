@@ -5,7 +5,9 @@
 executable("nand-util") {
   sources = [
     "aml.cpp",
+    "commands.cpp",
     "main.cpp",
+    "nand-broker.cpp",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
