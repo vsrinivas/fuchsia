@@ -4,14 +4,17 @@
 
 use base64;
 use fidl_fuchsia_images::{AlphaFormat, ColorSpace, ImageInfo, PixelFormat, Tiling, Transform};
+use fidl_fuchsia_intl::{CalendarId, LocaleId, Profile, TemperatureUnit, TimeZoneId};
 use fidl_fuchsia_mem::Buffer;
+use fidl_fuchsia_ui_app::ViewConfig;
 use fidl_fuchsia_ui_scenic::ScreenshotData;
-use serde::Serializer;
+use serde::{Deserialize, Deserializer, Serializer};
 use serde_derive::{Deserialize, Serialize};
 
 /// Enum for supported FIDL commands.
 pub enum ScenicMethod {
     TakeScreenshot,
+    PresentView,
 }
 
 impl std::str::FromStr for ScenicMethod {
@@ -20,6 +23,7 @@ impl std::str::FromStr for ScenicMethod {
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
             "TakeScreenshot" => Ok(ScenicMethod::TakeScreenshot),
+            "PresentView" => Ok(ScenicMethod::PresentView),
             _ => bail!("invalid Scenic FIDL method: {}", method),
         }
     }
@@ -104,4 +108,97 @@ impl ScreenshotDataDef {
     pub fn new(screenshot_data: ScreenshotData) -> ScreenshotDataDef {
         ScreenshotDataDef { info: screenshot_data.info, data: screenshot_data.data }
     }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(remote = "LocaleId")]
+pub struct LocaleIdDef {
+    pub id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(remote = "CalendarId")]
+pub struct CalendarIdDef {
+    pub id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(remote = "TimeZoneId")]
+pub struct TimeZoneIdDef {
+    pub id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(remote = "TemperatureUnit")]
+pub enum TemperatureUnitDef {
+    Celsius = 0,
+    Fahrenheit = 1,
+}
+
+// https://github.com/serde-rs/serde/issues/723
+macro_rules! remote_vec {
+    ($remote:ident with=$def:ident) => {
+        impl $def {
+            fn vec<'de, D>(deserializer: D) -> Result<Vec<$remote>, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                #[derive(Deserialize)]
+                struct Wrapper(#[serde(deserialize_with = "deserialize_element")] $remote);
+
+                fn deserialize_element<'de, D>(deserializer: D) -> Result<$remote, D::Error>
+                where
+                    D: Deserializer<'de>,
+                {
+                    $def::deserialize(deserializer)
+                }
+
+                let v = Vec::deserialize(deserializer)?;
+                Ok(v.into_iter().map(|Wrapper(a)| a).collect())
+            }
+        }
+    };
+}
+
+remote_vec!(LocaleId with=LocaleIdDef);
+remote_vec!(CalendarId with=CalendarIdDef);
+remote_vec!(TimeZoneId with=TimeZoneIdDef);
+
+#[derive(Deserialize, Debug)]
+#[serde(remote = "Profile")]
+pub struct ProfileDef {
+    #[serde(default, deserialize_with = "LocaleIdDef::vec")]
+    pub locales: Vec<LocaleId>,
+    #[serde(default, deserialize_with = "CalendarIdDef::vec")]
+    pub calendars: Vec<CalendarId>,
+    #[serde(default, deserialize_with = "TimeZoneIdDef::vec")]
+    pub time_zones: Vec<TimeZoneId>,
+    #[serde(with = "TemperatureUnitDef")]
+    pub temperature_unit: TemperatureUnit,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(remote = "ViewConfig")]
+pub struct ViewConfigDef {
+    #[serde(with = "ProfileDef")]
+    pub intl_profile: Profile,
+}
+
+// https://github.com/serde-rs/serde/issues/723
+fn option_view_config_def<'de, D>(deserializer: D) -> Result<Option<ViewConfig>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct Wrapper(#[serde(with = "ViewConfigDef")] ViewConfig);
+
+    let v = Option::deserialize(deserializer)?;
+    Ok(v.map(|Wrapper(a)| a))
+}
+
+#[derive(Deserialize, Debug)]
+pub struct PresentViewRequest {
+    pub url: String,
+    #[serde(default, deserialize_with = "option_view_config_def")]
+    pub config: Option<ViewConfig>,
 }

@@ -13,7 +13,9 @@
             "fuchsia.logger.LogSink",
             "fuchsia.net.SocketProvider",
             "fuchsia.net.stack.Stack",
+            "fuchsia.sys.Launcher",
             "fuchsia.tracelink.Registry",
+            "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.wlan.device.service.DeviceService"
         ]
