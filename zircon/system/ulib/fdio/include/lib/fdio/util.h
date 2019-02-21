@@ -12,10 +12,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
 
-__BEGIN_CDECLS
+// TODO: Remove this header.
 
-// BEGIN DEPRECATED ------------------------------------------------------------
-zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount, int* fd_out);
-// END DEPRECATED --------------------------------------------------------------
-
-__END_CDECLS
+// Please do not add any declarations to this header.
