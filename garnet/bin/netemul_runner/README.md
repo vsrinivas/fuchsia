@@ -128,7 +128,7 @@ service *configuration*, that is, the configuration of which services to launch 
 
 The *ManagedEnvironment* service also provides a special *fuchsia.sys.Launcher* instance that provides
 extended functionality, such as forwarding *VirtualDevice* instances in a `/vdev` path and mounting
-a memfs under `/vdata` for components that request *dev* and *persistent-storage*, respectively.
+a memfs under `/vdata` for components that request *dev* and *isolated-persistent-storage*, respectively.
 
 *VirtualDevice* instances are a `vfs` hook for [NetworkContext](#networkcontext)'s *Endpoints*. That
 allows for clients to expose specific *Endpoints* on the `vfs` under the created root folder `/vdev`.

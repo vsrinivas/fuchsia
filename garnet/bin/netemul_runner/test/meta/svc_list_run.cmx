@@ -7,7 +7,7 @@
             "class/ethernet"
         ],
         "features": [
-            "persistent-storage"
+            "isolated-persistent-storage"
         ],
         "services": [
             "fuchsia.netemul.environment.ManagedEnvironment",

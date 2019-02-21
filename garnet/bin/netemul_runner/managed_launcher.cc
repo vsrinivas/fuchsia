@@ -107,7 +107,7 @@ void ManagedLauncher::CreateComponent(
         env_->OpenVdevDirectory());
   }
 
-  if (cmx.sandbox_meta().HasFeature("persistent-storage")) {
+  if (cmx.sandbox_meta().HasFeature("isolated-persistent-storage")) {
     CreateFlatNamespace(&launch_info);
     // add virtual data folder (in-memory fs) to namespace
     launch_info.flat_namespace->paths.push_back(kVDataRoot);
