@@ -1,6 +1,6 @@
 # Layout of Product and Package Directories
 
-The Fuchsia source tree
+The Platform Source Tree
 contains a top-level directory called `packages` containing all the
 [build packages](packages.md) for that layer. The present document describes
 the packages that are common to all of the layers. Each layer will introduce

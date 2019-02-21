@@ -83,8 +83,8 @@ function usage {
 usage: fx [--config CONFIG_FILE | --dir BUILD_DIR] [-d DEVICE_NAME] [-i] [-x] COMMAND [...]
 
 Run Fuchsia development commands. Must be run with either a current working
-directory that is contained in a Fuchsia source tree or the FUCHSIA_DIR
-environment variable set to the root of a Fuchsia source tree.
+directory that is contained in a Platform Source Tree or the FUCHSIA_DIR
+environment variable set to the root of a Platform Source Tree.
 
 commands:
 $(help)
@@ -123,12 +123,12 @@ if [[ -z "${fuchsia_dir}" ]]; then
   # We walk the parent directories looking for .jiri_root rather than using
   # BASH_SOURCE so that we find the fuchsia_dir enclosing the current working
   # directory instead of the one containing this file in case the user has
-  # multiple Fuchsia source trees and is picking up this file from another one.
+  # multiple source trees and is picking up this file from another one.
   fuchsia_dir="$(pwd)"
   while [[ ! -d "${fuchsia_dir}/.jiri_root" ]]; do
     fuchsia_dir="$(dirname "${fuchsia_dir}")"
     if [[ "${fuchsia_dir}" == "/" ]]; then
-      echo >& 2 "error: Cannot find Fuchsia source tree containing $(pwd)"
+      echo >& 2 "error: Cannot find Platform Source Tree containing $(pwd)"
       exit 1
     fi
   done

@@ -3,7 +3,7 @@
 ## Overview
 
 The purpose of this document is to provide short definitions for a collection of technical terms
-used in the Fuchsia source tree.
+used in Fuchsia.
 
 #### Adding new definitions
 
@@ -180,12 +180,6 @@ The Fuchsia SDK is a collection of libraries and tools that the Fuchsia project 
 writing software for Fuchsia.  Among other things, the Fuchsia SDK contains a definition of
 the [Fuchsia System Interface](#fuchsia-system-interface) as well as a number of client libraries.
 
-#### **Fuchsia Source Tree**
-
-The Fuchsia Source Tree is the open source code hosted on fuchsia.googlesource.com, which comprises
-the source code for Fuchsia. A given Fuchsia system can include additional software from outside
-the Fuchsia Source Tree by adding the appropriate [Fuchsia Package](#fuchsia-package).
-
 #### **Fuchsia System Interface**
 
 The [Fuchsia System Interface](development/abi/system.md) is the binary interface that the Fuchsia
@@ -319,6 +313,12 @@ build package](#GN).
 
 A tool in Zircon that installs partition images to internal storage of a device.
 - [Guide for installing Fuchsia with paver](/development/workflows/paving.md).
+
+#### **Platform Source Tree**
+
+The Platform Source Tree is the open source code hosted on fuchsia.googlesource.com, which comprises
+the source code for Fuchsia. A given Fuchsia system can include additional software from outside
+the Platform Source Tree by adding the appropriate [Fuchsia Package](#fuchsia-package).
 
 #### **Realm**
 

@@ -191,7 +191,7 @@ sdk("core") {
 
   # We explicitly do not want to pull these dependencies into the SDK.
   #
-  # These libraries are common dependencies in the Fuchsia source tree, but they
+  # These libraries are common dependencies in the Platform Source Tree, but they
   # are not stable enough to expose in the SDK.
   #
   # See <https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/sdk/standards.md#dependencies>

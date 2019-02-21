@@ -9,7 +9,7 @@ function usage {
   cat <<END
 usage: bootstrap
 
-Bootstrap the Fuchsia Source Tree.
+Bootstrap the Platform Source Tree.
 END
 }
 
@@ -28,5 +28,5 @@ cd fuchsia
 .jiri_root/bin/jiri override fuchsia https://fuchsia.googlesource.com/fuchsia
 .jiri_root/bin/jiri update
 
-echo "Done creating a Fuchsia Source Tree at \"$(pwd)\"."
+echo "Done creating a Platform Source Tree at \"$(pwd)\"."
 echo "Recommended: export PATH=\"$(pwd)/.jiri_root/bin:\$PATH\""

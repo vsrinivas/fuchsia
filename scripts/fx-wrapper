@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 # This script is a wrapper around the fx script that allows it to be run from
-# a current working directory outside the fuchsia source tree.
+# a current working directory outside the Platform Source Tree.
 
 export FUCHSIA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
 

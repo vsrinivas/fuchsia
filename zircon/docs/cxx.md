@@ -294,7 +294,7 @@ failures.  In some cases, implicit memory allocation is permitted, but
 functions that implicitly allocate memory must be #ifdef'ed to be unavailable
 in the kernel.
 
-FBL not available outside the Fuchsia Source Tree.
+FBL not available outside the Platform Source Tree.
 
 ## ZX
 
@@ -313,7 +313,7 @@ operations involving kernel objects and is free to have opinions about how to
 interact with the Zircon syscalls.  If a piece of code has no dependency on
 Zircon syscalls, the code should go in FBL instead.
 
-FZL not available outside the Fuchsia Source Tree.
+FZL not available outside the Platform Source Tree.
 
 ## ZXCPP
 

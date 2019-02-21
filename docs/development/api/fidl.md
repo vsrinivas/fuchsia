@@ -112,7 +112,7 @@ specific to that product.  For example, `fuchsia.cobalt` is a better name for
 the Cobalt interface than `fuchsia.metrics` because other metrics
 implementations (e.g., Firebase) are unlikely to implement the same protocol.
 
-FIDL libraries defined in the Fuchsia source tree (i.e., defined in
+FIDL libraries defined in the Platform Source Tree (i.e., defined in
 fuchsia.googlesource.com) must be in the `fuchsia` top-level namespace (e.g.,
 `fuchsia.ui`) unless (a) the library defines portions of the FIDL language
 itself or its conformance test suite, in which case the top-level namespace must
@@ -120,7 +120,7 @@ be `fidl`, or (b) the library is used only for internal testing and is not
 included in the SDK or in production builds, in which case the top-level
 namespace must be `test`.
 
-FIDL libraries defined in the Fuchsia source tree for the purpose of exposing
+FIDL libraries defined in the Platform Source Tree for the purpose of exposing
 hardware functionality to applications must be in the `fuchsia.hardware`
 namespace.  For example, an interface for exposing an ethernet device might
 be named `fuchsia.hardware.ethernet.Device`.  Higher-level functionality built
@@ -731,7 +731,7 @@ understood by the Fuchsia graphics drivers, which means new texture formats can
 be added by developers working on those drivers even if the set of texture
 formats is controlled by the graphics hardware vendors.  As a counter example,
 do not use an enum to represent HTTP methods because we cannot reasonably expect
-people who use novel HTTP methods to submit a patch to the Fuchsia source tree.
+people who use novel HTTP methods to submit a patch to the Platform Source Tree.
 
 For _a priori_ unbounded sets, a `string` might be a more appropriate choice if
 you foresee wanting to extend the set dynamically.  For example, use a `string`

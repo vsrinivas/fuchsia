@@ -38,7 +38,7 @@ _fx() {
     while [[ ! -d "${fuchsia_dir}/.jiri_root" ]]; do
       fuchsia_dir="$(dirname "${fuchsia_dir}")"
       if [[ "${fuchsia_dir}" == "/" ]]; then
-        _message -r "Cannot find Fuchsia source tree containing $(pwd)"
+        _message -r "Cannot find Platform Source Tree containing $(pwd)"
         return
       fi
     done

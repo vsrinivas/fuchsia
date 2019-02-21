@@ -157,7 +157,7 @@ libraries (libm, etc.); other runtime link dependencies are not allowed.
 ### Building from Source
 
 Keep in mind that some developers will want to build the tools from source. Use
-the same build and dependency structure as the code in the Fuchsia source tree.
+the same build and dependency structure as the code in the Platform Source Tree.
 Do not make a separate system to build tools.
 
 

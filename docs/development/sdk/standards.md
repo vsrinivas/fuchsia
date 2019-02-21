@@ -2,7 +2,7 @@ SDK Standards
 =============
 
 This document describes the standards for how we develop the Fuchsia SDK within
-the Fuchsia source tree. Some of the information in this document might be of
+the Platform Source Tree. Some of the information in this document might be of
 interest to clients of the Fuchsia SDK, but the primary focus of the document is
 how the Fuchsia project develops the SDK.
 

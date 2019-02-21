@@ -192,7 +192,7 @@ repository and one or more Petals) requires performing a *hard transition*.
 Use the following steps to execute a hard transition:
 
 1.  Prepare changes to all affected repositories. If all of these repositories
-    are part of the Fuchsia source tree:
+    are part of the Platform Source Tree:
 
     1.  Upload CLs containing the changes to fuchsia-review.googlesource.com.
     1.  Upload another CL that modifies the *global integration* repository to
