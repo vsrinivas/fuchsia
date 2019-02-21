@@ -116,7 +116,7 @@ static bool handle_loader_rpc(struct loader_state* state,
         fail(state->log, "loader-service received LOAD_SCRIPT_INTERP request");
         break;
 
-    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK_OLD: 
+    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK_OLD:
     case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK: {
         if (hcount != 1) {
             fail(state->log, "loader-service received DEBUG_PUBLISH_DATA_SINK request without VMO");
@@ -158,7 +158,7 @@ error_reply:
         zx_handle_close(reqhandle);
     }
 
-    status = zx_channel_write(channel, 0, &rsp, ldmsg_rsp_get_size(&rsp),
+    status = zx_channel_write(channel, 0, &rsp, ldmsg_rsp_get_size_wrong(&rsp),
                               &handle, handle == ZX_HANDLE_INVALID ? 0 : 1);
     check(state->log, status,
           "zx_channel_write on loader-service channel failed");

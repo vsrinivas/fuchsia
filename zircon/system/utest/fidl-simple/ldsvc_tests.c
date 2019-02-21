@@ -322,8 +322,36 @@ static bool ldmsg_functions_are_consistent(void) {
     END_TEST;
 }
 
+static zx_status_t validate_reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
+    EXPECT_EQ(msg->num_bytes, ldmsg_rsp_get_size((ldmsg_rsp_t*)msg->bytes), "");
+    return ZX_OK;
+}
+
+static bool replies_are_consistent(void) {
+    BEGIN_TEST;
+
+    fidl_txn_t txn = {
+        .reply = validate_reply,
+    };
+
+    zx_handle_t event = ZX_HANDLE_INVALID;
+    ASSERT_EQ(ZX_OK, zx_event_create(0, &event), "");
+
+    ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderLoadObject_reply(&txn, 42, event), "");
+    ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderLoadScriptInterpreter_reply(&txn, 43, event), "");
+    ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderConfig_reply(&txn, 44), "");
+    ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderClone_reply(&txn, 45), "");
+    ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderDebugPublishDataSink_reply(&txn, 46), "");
+    ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderDebugLoadConfig_reply(&txn, 47, event), "");
+
+    zx_handle_close(event);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(ldsvc_tests)
 RUN_NAMED_TEST("fuchsia.ldsvc.Loader test", loader_test)
 RUN_NAMED_TEST("fuchsia.ldsvc.Loader ordinals", ordinals_are_consistent)
-RUN_NAMED_TEST("fuchsia.ldsvc.Loader same as fidl", ldmsg_functions_are_consistent)
+RUN_NAMED_TEST("fuchsia.ldsvc.Loader requests are the same as FIDL", ldmsg_functions_are_consistent)
+RUN_NAMED_TEST("fuchsia.ldsvc.Loader replies are the same as FIDL", replies_are_consistent)
 END_TEST_CASE(ldsvc_tests);

@@ -246,7 +246,7 @@ static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_st
     rsp.header.ordinal = req.header.ordinal;
     rsp.rv = status;
     rsp.object = rsp_handle == ZX_HANDLE_INVALID ? FIDL_HANDLE_ABSENT : FIDL_HANDLE_PRESENT;
-    if ((status = zx_channel_write(h, 0, &rsp, ldmsg_rsp_get_size(&rsp),
+    if ((status = zx_channel_write(h, 0, &rsp, ldmsg_rsp_get_size_wrong(&rsp),
                                    &rsp_handle, rsp_handle != ZX_HANDLE_INVALID ? 1 : 0)) < 0) {
         fprintf(stderr, "dlsvc: msg write error: %d: %s\n", status, zx_status_get_string(status));
         return status;

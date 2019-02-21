@@ -416,7 +416,8 @@ static zx_status_t loader_svc_rpc(zx_handle_t loader_svc, uint32_t ordinal,
         return status;
 
     // Check for protocol violations.
-    if (reply_size != ldmsg_rsp_get_size(&rsp)) {
+    if (reply_size != ldmsg_rsp_get_size_wrong(&rsp)
+        && reply_size != ldmsg_rsp_get_size(&rsp)) {
     protocol_violation:
         zx_handle_close(handle);
         return ZX_ERR_BAD_STATE;
