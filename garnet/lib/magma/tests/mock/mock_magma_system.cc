@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "magma.h"
+#include "magma_sysmem.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
@@ -215,8 +216,6 @@ void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer
 
 uint32_t magma_get_notification_channel_handle(magma_connection_t connection) { return 0; }
 
-// Read a notification from the channel into |buffer|. Sets |*buffer_size_out| to 0 if there are no
-// messages pending.
 magma_status_t magma_read_notification_channel(magma_connection_t connection, void* buffer,
                                                uint64_t buffer_size, uint64_t* buffer_size_out)
 {
@@ -224,6 +223,75 @@ magma_status_t magma_read_notification_channel(magma_connection_t connection, vo
 }
 
 magma_status_t magma_wait_notification_channel(magma_connection_t connection, int64_t timeout_ns)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_buffer_collection_import(magma_sysmem_connection_t connection, uint32_t handle,
+                                              magma_buffer_collection_t* collection_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_sysmem_connection_create(magma_sysmem_connection_t* connection_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+void magma_sysmem_connection_release(magma_sysmem_connection_t connection) {}
+
+void magma_buffer_collection_release(magma_sysmem_connection_t connection,
+                                     magma_buffer_collection_t collection)
+{
+}
+
+magma_status_t
+magma_buffer_constraints_create(magma_sysmem_connection_t connection,
+                                const magma_buffer_format_constraints_t* buffer_constraints,
+                                magma_sysmem_buffer_constraints_t* constraints_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t
+magma_buffer_constraints_set_format(magma_sysmem_connection_t connection,
+                                    magma_sysmem_buffer_constraints_t constraints, uint32_t index,
+                                    const magma_image_format_constraints_t* format_constraints)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+void magma_buffer_constraints_release(magma_sysmem_connection_t connection,
+                                      magma_sysmem_buffer_constraints_t constraints)
+{
+}
+
+magma_status_t
+magma_buffer_collection_set_constraints(magma_sysmem_connection_t connection,
+                                        magma_buffer_collection_t collection,
+                                        magma_sysmem_buffer_constraints_t constraints)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t
+magma_get_buffer_format_description(const void* image_data, uint64_t image_data_size,
+                                    magma_buffer_format_description_t* description_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_get_buffer_format_plane_info(magma_buffer_format_description_t description,
+                                                  magma_image_plane_t* image_planes_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+void magma_buffer_format_description_release(magma_buffer_format_description_t description) {}
+
+magma_status_t magma_get_buffer_format_modifier(magma_buffer_format_description_t description,
+                                                magma_bool_t* has_format_modifier_out,
+                                                uint64_t* format_modifier_out)
 {
     return MAGMA_STATUS_UNIMPLEMENTED;
 }
