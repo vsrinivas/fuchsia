@@ -5,8 +5,6 @@
 import("//build/package.gni")
 
 package("garnet_bluetooth_examples") {
-  deprecated_system_image = true
-
   deps = [
     "bt-le-battery-service",
     "bt-le-heart-rate-peripheral",
@@ -18,9 +16,11 @@ package("garnet_bluetooth_examples") {
     {
       name = "bt_le_battery_service"
       dest = "bt-le-battery-service"
+      shell = true
     },
     {
       name = "bt-le-heart-rate-peripheral"
+      shell = true
     },
 
     # {
