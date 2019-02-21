@@ -264,6 +264,8 @@ public:
 
     Pml4Table* pml4_table() { return pml4_table_.get(); }
 
+    static constexpr uint32_t ExtraPageCount() { return kOverfetchPageCount + kGuardPageCount; }
+
 private:
     PerProcessGtt(Owner* owner, std::unique_ptr<Pml4Table> pml4_table);
 

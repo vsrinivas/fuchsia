@@ -10,6 +10,7 @@
 enum MsdIntelGenQuery {
     kMsdIntelGenQuerySubsliceAndEuTotal = MAGMA_QUERY_VENDOR_PARAM_0,
     kMsdIntelGenQueryGttSize = MAGMA_QUERY_VENDOR_PARAM_0 + 1,
+    kMsdIntelGenQueryExtraPageCount = MAGMA_QUERY_VENDOR_PARAM_0 + 2,
 };
 
 #endif // MSD_INTEL_GEN_QUERY_H
