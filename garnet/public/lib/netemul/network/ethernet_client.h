@@ -28,6 +28,7 @@ class EthernetClient {
   using Ptr = std::unique_ptr<EthernetClient>;
   using DataCallback = fit::function<void(const void* buf, size_t len)>;
   using PeerClosedCallback = fit::function<void()>;
+  using LinkStatusChangedCallback = fit::function<void(bool link_up)>;
 
   explicit EthernetClient(
       async_dispatcher_t* dispatcher,
@@ -50,15 +51,25 @@ class EthernetClient {
   // disappears or there's an error with the FIDL interface
   void SetPeerClosedCallback(PeerClosedCallback cb);
 
+  void SetLinkStatusChangedCallback(LinkStatusChangedCallback cb);
+
   // Send a packet to the interface.
   zx_status_t Send(const void* data, uint16_t len);
   // Acquires a fifo buffer and sends data.
   // Clients that care about performance should prefer this over Send.
   zx_status_t AcquireAndSend(fit::function<void(void*, uint16_t*)> writer);
 
+  // Returns whether the last observed device status signal
+  // says that the device is online.
+  bool online() const;
+
  private:
+  void set_online(bool online);
+
   async_dispatcher_t* dispatcher_;
   PeerClosedCallback peer_closed_callback_;
+  LinkStatusChangedCallback link_status_changed_callback_;
+  bool online_;
   fidl::InterfacePtr<fuchsia::hardware::ethernet::Device> device_;
   std::unique_ptr<FifoHolder> fifos_;
 };

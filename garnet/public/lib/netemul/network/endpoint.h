@@ -36,6 +36,8 @@ class Endpoint : public fuchsia::netemul::network::Endpoint,
 
   // Sets up the endpoint based on the configuration
   zx_status_t Startup();
+  // Sets endpoint link up
+  void SetLinkUp(bool up);
 
   // fidl interface implementations:
   void GetConfig(GetConfigCallback callback) override;

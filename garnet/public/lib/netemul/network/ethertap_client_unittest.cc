@@ -15,6 +15,10 @@ namespace testing {
 #define TEST_FIFO_SIZE (2048)
 #define TEST_MTU_SIZE (1500)
 
+#define WAIT_FOR_ETH_ONLINE(ethnu)       \
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil( \
+      [this]() { return eth(ethnu)->online(); }, zx::sec(5)))
+
 using component::testing::TestWithEnvironment;
 class EthertapClientTest : public TestWithEnvironment {
  public:
@@ -71,6 +75,7 @@ TEST_F(EthertapClientTest, EthertapReceive) {
   // create single interface and bring it up
   PushInterface();
   tap()->SetLinkUp(true);
+  WAIT_FOR_ETH_ONLINE(0);
   tap()->SetPeerClosedCallback([]() { FAIL() << "ethertap should not close"; });
   bool ok = false;
 
@@ -107,6 +112,7 @@ TEST_F(EthertapClientTest, EthertapSend) {
   // create single interface and bring it up
   PushInterface();
   tap()->SetLinkUp(true);
+  WAIT_FOR_ETH_ONLINE(0);
   tap()->SetPeerClosedCallback([]() { FAIL() << "ethertap should not close"; });
   bool ok = false;
 
@@ -137,6 +143,8 @@ TEST_F(EthertapClientTest, EthertapLink) {
   // bring both up:
   tap(0)->SetLinkUp(true);
   tap(1)->SetLinkUp(true);
+  WAIT_FOR_ETH_ONLINE(0);
+  WAIT_FOR_ETH_ONLINE(1);
   auto peerClosed = []() { FAIL() << "ethertap should not close"; };
   tap(0)->SetPeerClosedCallback(peerClosed);
   tap(1)->SetPeerClosedCallback(peerClosed);
@@ -195,6 +203,7 @@ TEST_F(EthertapClientTest, EthertapClose) {
 TEST_F(EthertapClientTest, EthertapDies) {
   PushInterface();
   tap()->SetLinkUp(true);
+  WAIT_FOR_ETH_ONLINE(0);
   bool ok = false;
   tap()->SetPeerClosedCallback([&ok]() { ok = true; });
   // use internal ethertap signal to destroy ethertap

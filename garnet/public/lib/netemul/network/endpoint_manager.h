@@ -25,6 +25,9 @@ class EndpointManager : public fuchsia::netemul::network::EndpointManager {
   zx_status_t CreateEndpoint(std::string name, Endpoint::Config config,
                              fidl::InterfaceRequest<Endpoint::FEndpoint> req);
 
+  // gets endpoint with name
+  Endpoint* GetEndpoint(const std::string& name);
+
   // fidl interface implementations:
   void ListEndpoints(ListEndpointsCallback callback) override;
   void CreateEndpoint(std::string name, Endpoint::Config config,

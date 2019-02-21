@@ -138,6 +138,8 @@ struct EndpointSetup {
     /// Optional endpoint config, if not provided defaults will be used.
     /// Default values are: mtu = 1500, backing = ETHERTAP, mac = randomized.
     EndpointConfig? config;
+    /// Start endpoint with link status up.
+    bool link_up;
 };
 
 /// Handle returned when using NetworkContext.Setup for quick network configuration.

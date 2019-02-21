@@ -66,6 +66,15 @@ void EndpointManager::CreateEndpoint(
   callback(status, std::move(handle));
 }
 
+Endpoint* EndpointManager::GetEndpoint(const std::string& name) {
+  auto ep_it = endpoints_.find(name);
+  if (ep_it == endpoints_.end()) {
+    return nullptr;
+  } else {
+    return ep_it->second.get();
+  }
+}
+
 void EndpointManager::GetEndpoint(
     ::std::string name, EndpointManager::GetEndpointCallback callback) {
   auto ep_it = endpoints_.find(name);

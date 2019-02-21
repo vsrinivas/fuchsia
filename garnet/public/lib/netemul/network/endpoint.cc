@@ -156,6 +156,8 @@ void Endpoint::GetConfig(Endpoint::GetConfigCallback callback) {
 
 void Endpoint::GetName(Endpoint::GetNameCallback callback) { callback(name_); }
 
+void Endpoint::SetLinkUp(bool up) { impl_->SetLinkUp(up); }
+
 void Endpoint::SetLinkUp(bool up, Endpoint::SetLinkUpCallback callback) {
   impl_->SetLinkUp(up);
   callback();

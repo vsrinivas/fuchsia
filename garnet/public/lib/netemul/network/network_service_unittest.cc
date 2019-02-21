@@ -144,8 +144,10 @@ class NetworkServiceTest : public TestWithEnvironment {
     net1.config = std::move(config);
     auto& ep1_setup = net1.endpoints.emplace_back();
     ep1_setup.name = "ep1";
+    ep1_setup.link_up = true;
     auto& ep2_setup = net1.endpoints.emplace_back();
     ep2_setup.name = "ep2";
+    ep2_setup.link_up = true;
 
     ASSERT_OK(context->Setup(std::move(net_setup), &status, setup_handle));
     ASSERT_OK(status);
@@ -180,6 +182,10 @@ class NetworkServiceTest : public TestWithEnvironment {
       eth_ready = true;
     });
     WAIT_FOR_OK_AND_RESET(eth_ready);
+
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+        [&eth1, &eth2]() { return (*eth1)->online() && (*eth2)->online(); },
+        zx::sec(2)));
   }
 
   void TearDown() override {
@@ -383,6 +389,8 @@ TEST_F(NetworkServiceTest, TransitData) {
   // create second endpoint:
   fidl::SynchronousInterfacePtr<FEndpoint> ep2;
   CreateEndpoint(ep2name, &ep2);
+  ASSERT_OK(ep1->SetLinkUp(true));
+  ASSERT_OK(ep2->SetLinkUp(true));
 
   // attach both endpoints:
   zx_status_t status;
@@ -414,6 +422,9 @@ TEST_F(NetworkServiceTest, TransitData) {
     ok = true;
   });
   WAIT_FOR_OK_AND_RESET(ok);
+  // wait for both ethernets to come online
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&eth1, &eth2]() { return eth1.online() && eth2.online(); }, zx::sec(2)));
 
   // create some test buffs
   uint8_t test_buff1[TEST_BUF_SIZE];
@@ -472,6 +483,9 @@ TEST_F(NetworkServiceTest, Flooding) {
   // create a third:
   fidl::SynchronousInterfacePtr<FEndpoint> ep3;
   CreateEndpoint(ep3name, &ep3);
+  ASSERT_OK(ep1->SetLinkUp(true));
+  ASSERT_OK(ep2->SetLinkUp(true));
+  ASSERT_OK(ep3->SetLinkUp(true));
 
   // attach all three endpoints:
   zx_status_t status;
@@ -514,6 +528,12 @@ TEST_F(NetworkServiceTest, Flooding) {
     ok = true;
   });
   WAIT_FOR_OK_AND_RESET(ok);
+  // Wait for all ethernets to come online
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&eth1, &eth2, &eth3]() {
+        return eth1.online() && eth2.online() && eth3.online();
+      },
+      zx::sec(2)));
 
   // create a test buff
   uint8_t test_buff[TEST_BUF_SIZE];
@@ -601,6 +621,7 @@ TEST_F(NetworkServiceTest, FakeEndpoints) {
   // create first endpoint:
   fidl::SynchronousInterfacePtr<FEndpoint> ep1;
   CreateEndpoint(epname, &ep1);
+  ep1->SetLinkUp(true);
 
   // attach endpoint:
   zx_status_t status;
@@ -621,6 +642,9 @@ TEST_F(NetworkServiceTest, FakeEndpoints) {
     ok = true;
   });
   WAIT_FOR_OK_AND_RESET(ok);
+  // and wait for it to come online:
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&eth1]() { return eth1.online(); },
+                                        zx::sec(2)));
 
   // create some test buffs
   std::vector<uint8_t> test_buff1(TEST_BUF_SIZE);
@@ -670,8 +694,10 @@ TEST_F(NetworkServiceTest, NetworkContext) {
   net1.name = "main_net";
   auto& ep1_setup = net1.endpoints.emplace_back();
   ep1_setup.name = "ep1";
+  ep1_setup.link_up = true;
   auto& ep2_setup = net1.endpoints.emplace_back();
   ep2_setup.name = "ep2";
+  ep2_setup.link_up = true;
   auto& alt_net_setup = net_setup.emplace_back();
   alt_net_setup.name = "alt_net";
 
@@ -718,6 +744,10 @@ TEST_F(NetworkServiceTest, NetworkContext) {
       ok = true;
     });
     WAIT_FOR_OK_AND_RESET(ok);
+    // and wait for them to come online:
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+        [&eth1, &eth2]() { return eth1.online() && eth2.online(); },
+        zx::sec(2)));
 
     // create some test buffs
     uint8_t test_buff[TEST_BUF_SIZE];

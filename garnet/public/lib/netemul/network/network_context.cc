@@ -110,6 +110,12 @@ zx_status_t NetworkContext::Setup(std::vector<NetworkSetup> setup,
         return status;
       }
 
+      if (endp_setup.link_up) {
+        auto* endpoint = endpoint_manager_.GetEndpoint(endp_setup.name);
+        ZX_ASSERT(endpoint != nullptr);
+        endpoint->SetLinkUp(true);
+      }
+
       status = network->AttachEndpoint(std::move(endp_setup.name));
       if (status != ZX_OK) {
         return status;
