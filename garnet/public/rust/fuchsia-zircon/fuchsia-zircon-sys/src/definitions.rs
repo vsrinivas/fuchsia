@@ -678,6 +678,12 @@ extern {
         options: u32
         ) -> zx_status_t;
 
+    pub fn zx_ioports_request(
+        resource: zx_handle_t,
+        io_addr: u16,
+        len: u32
+        ) -> zx_status_t;
+
     pub fn zx_vmo_create_contiguous(
         bti: zx_handle_t,
         size: usize,
@@ -692,11 +698,56 @@ extern {
         out: *mut zx_handle_t
         ) -> zx_status_t;
 
-    pub fn zx_bootloader_fb_get_info(
+    pub fn zx_iommu_create(
+        resource: zx_handle_t,
+        type_: u32,
+        desc: *const u8,
+        desc_size: usize,
+        out: *mut zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_bti_create(
+        iommu: zx_handle_t,
+        options: u32,
+        bti_id: u64,
+        out: *mut zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_bti_pin(
+        handle: zx_handle_t,
+        options: u32,
+        vmo: zx_handle_t,
+        offset: u64,
+        size: u64,
+        addrs: *mut zx_paddr_t,
+        addrs_count: usize,
+        pmt: *mut zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_bti_release_quarantine(
+        handle: zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_pmt_unpin(
+        handle: zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_framebuffer_get_info(
+        resource: zx_handle_t,
         format: *mut u32,
         width: *mut u32,
         height: *mut u32,
         stride: *mut u32
+        ) -> zx_status_t;
+
+    pub fn zx_framebuffer_set_range(
+        resource: zx_handle_t,
+        vmo: zx_handle_t,
+        len: u32,
+        format: u32,
+        width: u32,
+        height: u32,
+        stride: u32
         ) -> zx_status_t;
 
     pub fn zx_pci_get_nth_device(
