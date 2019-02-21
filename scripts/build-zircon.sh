@@ -20,8 +20,9 @@ usage() {
   echo "  -A: Build with ASan"
   echo "  -H: Build host tools with ASan"
   echo "  -n: Just print build commands to STDOUT."
-  echo "  -l: Only build tools; do not build zircon."
-  echo "  -j N: Passed along to make (number of parallel jobs)"
+  echo "  -T: Only build tools; do not build Zircon."
+  echo "  -j N: Passed along to ninja (number of parallel jobs)"
+  echo "  -l N: Passed along to ninja (maximum load average)"
   echo "  -t <target>: Architecture (GN style) to build, instead of all"
   echo "  -o <outdir>: Directory in which to put the build-zircon directory."
   echo ""
@@ -50,10 +51,11 @@ declare OUTDIR="${ROOT_DIR}/out"
 declare VERBOSE="0"
 declare -a ARCHLIST=(arm64 x64)
 declare JOBS=0
+declare LOADAVG=0
 declare RUN_GN="true"
 declare RUN_NINJA="true"
 
-while getopts "AcgGHhlnj:t:p:o:vV" opt; do
+while getopts "AcgGHhl:nj:t:Tp:o:vV" opt; do
   case "${opt}" in
     A) ASAN="true" ;;
     c) CLEAN="true" ;;
@@ -63,9 +65,10 @@ while getopts "AcgGHhlnj:t:p:o:vV" opt; do
     h) usage ; exit 0 ;;
     n) DRY_RUN="true" ;;
     j) JOBS="${OPTARG}" ;;
-    l) TOOLS_ONLY="true" ;;
+    l) LOADAVG="${OPTARG}" ;;
     o) OUTDIR="${OPTARG}" ;;
     t) ARCHLIST=("${OPTARG}") ;;
+    T) TOOLS_ONLY="true" ;;
     v) VERBOSE="1" ;;
     V) VERBOSE="2" ;;
     *) usage 1>&2 ; exit 1 ;;

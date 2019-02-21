@@ -15,7 +15,4 @@ if [[ -r "${ZIRCON_BUILDROOT}/args.gn" ]]; then
   set -- -G "$@"
 fi
 
-fx-run-ninja "${FUCHSIA_DIR}/scripts/build-zircon.sh" \
-  -t "${FUCHSIA_ARCH}" \
-  -j "$(fx-choose-build-concurrency)" \
-  "$@"
+fx-run-ninja "${FUCHSIA_DIR}/scripts/build-zircon.sh" -t "${FUCHSIA_ARCH}" "$@"
