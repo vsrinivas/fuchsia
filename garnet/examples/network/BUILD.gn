@@ -14,8 +14,6 @@ group("examples") {
 }
 
 package("nc") {
-  deprecated_system_image = true
-
   deps = [
     "third_party/openbsd-netcat:nc",
   ]
@@ -23,6 +21,7 @@ package("nc") {
   binaries = [
     {
       name = "nc"
+      shell = true
     },
   ]
 }
