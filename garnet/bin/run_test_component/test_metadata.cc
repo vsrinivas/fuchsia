@@ -67,16 +67,16 @@ bool TestMetadata::ParseFromFile(const std::string& cmx_file_path) {
   if (json_parser_.HasError()) {
     return false;
   }
-  auto& fuchisa_test = cmx.GetFacet(kFuchsiaTest);
-  if (!fuchisa_test.IsNull()) {
+  auto& fuchsia_test = cmx.GetFacet(kFuchsiaTest);
+  if (!fuchsia_test.IsNull()) {
     null_ = false;
-    if (!fuchisa_test.IsObject()) {
+    if (!fuchsia_test.IsObject()) {
       json_parser_.ReportError(
           Substitute("'$0' in 'facets' should be an object.", kFuchsiaTest));
       return false;
     }
-    auto allow_network_services = fuchisa_test.FindMember(kSystemServices);
-    if (allow_network_services != fuchisa_test.MemberEnd()) {
+    auto allow_network_services = fuchsia_test.FindMember(kSystemServices);
+    if (allow_network_services != fuchsia_test.MemberEnd()) {
       if (!allow_network_services->value.IsArray()) {
         json_parser_.ReportError(
             Substitute("'$0' in '$1' should be a string array.",
@@ -102,8 +102,8 @@ bool TestMetadata::ParseFromFile(const std::string& cmx_file_path) {
             });
       }
     }
-    auto services = fuchisa_test.FindMember(kInjectedServices);
-    if (services != fuchisa_test.MemberEnd()) {
+    auto services = fuchsia_test.FindMember(kInjectedServices);
+    if (services != fuchsia_test.MemberEnd()) {
       if (!services->value.IsObject()) {
         json_parser_.ReportError(Substitute("'$0' in '$1' should be an object.",
                                             kInjectedServices, kFuchsiaTest));
