@@ -32,7 +32,7 @@ mod common;
 const MY_PACKAGE: &str = "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/netstack_socks.cmx";
 const NETSTACK_URL: &str = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
 const NETWORK_NAME: &str = "test-network";
-const TIMEOUT: i64 = 2;
+const TIMEOUT: i64 = 5;
 
 struct Env {
     controller: ComponentControllerProxy,
@@ -228,14 +228,7 @@ struct Opt {
     remote: Option<String>,
 }
 
-// TODO(brunodalbo) FLK-55 re-enable this test
 fn main() -> Result<(), Error> {
-    println!("DISABLED");
-    Ok(())
-}
-
-#[allow(dead_code)]
-fn main_flk() -> Result<(), Error> {
     let opt = Opt::from_args();
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     if opt.is_child {

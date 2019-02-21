@@ -241,15 +241,17 @@ netstack_cfg
 Configure netstack from emulated environments.
 
 USAGE:
-    netstack_cfg [OPTIONS] -e <endpoint>
+    netstack_cfg [FLAGS] [OPTIONS] -e <endpoint>
 
 FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
+    -h, --help             Prints help information
+        --skip-up-check    netstack_cfg will by default wait until it sees the interface be reported as "Up", skip-up-
+                           check will override that behavior.
+    -V, --version          Prints version information
 
 OPTIONS:
     -e <endpoint>        Endpoint name to retrieve from network.EndpointManager
-    -i <ip>              Static ip address to assign. Omit to use DHCP.
+    -i <ip>              Static ip address to assign (don't forget /prefix termination). Omit to use DHCP.
 
 ```
 

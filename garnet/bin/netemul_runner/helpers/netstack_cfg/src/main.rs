@@ -26,6 +26,10 @@ struct Opt {
     #[structopt(short = "i")]
     /// Static ip address to assign (don't forget /prefix termination). Omit to use DHCP.
     ip: Option<String>,
+    #[structopt(long = "skip-up-check")]
+    /// netstack_cfg will by default wait until it sees the interface be reported as "Up",
+    /// skip-up-check will override that behavior.
+    skip_up_check: bool,
 }
 
 const TIMEOUT_SECS: i64 = 5;
@@ -50,12 +54,22 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     // connect to netstack:
     let netstack = client::connect_to_service::<NetstackMarker>()?;
 
+    let skip_up_check = opt.skip_up_check;
     let mut if_changed = netstack.take_event_stream().try_filter_map(
         |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
             let iface = interfaces.iter().filter(|iface| iface.name == if_name).next();
             match iface {
                 None => futures::future::ok(None),
-                Some(a) => futures::future::ok(Some((a.id, a.hwaddr.clone()))),
+                Some(a) => {
+                    if skip_up_check
+                        || (a.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP != 0)
+                    {
+                        futures::future::ok(Some((a.id, a.hwaddr.clone())))
+                    } else {
+                        println!("Found interface, but it's down. waiting.");
+                        futures::future::ok(None)
+                    }
+                }
             }
         },
     );
@@ -72,7 +86,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         let _ = await!(netstack.set_interface_address(
             nicid as u32,
             &mut subnet.addr,
-            subnet.prefix_len
+            subnet.prefix_len,
         ))?;
     } else {
         let _ = await!(netstack.set_dhcp_client_status(nicid as u32, true))?;

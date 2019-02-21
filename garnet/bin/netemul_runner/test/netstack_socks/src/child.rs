@@ -104,7 +104,14 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
             let iface = interfaces.iter().filter(|iface| iface.name == if_name).next();
             match iface {
                 None => futures::future::ok(None),
-                Some(a) => futures::future::ok(Some((a.id, a.hwaddr.clone()))),
+                Some(a) => {
+                    if a.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP != 0 {
+                        futures::future::ok(Some((a.id, a.hwaddr.clone())))
+                    } else {
+                        println!("Found interface, but it's down. waiting.");
+                        futures::future::ok(None)
+                    }
+                }
             }
         },
     );
