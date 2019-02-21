@@ -29,7 +29,7 @@ const uint32 METADATA_MAX = 4096;
 /// Maximum number of bytes in a command string
 const uint32 COMMAND_MAX = 1024;
 
-/// Maxmimum number of properties that can be attached to a device
+/// Maximum number of properties that can be attached to a device
 const uint32 PROPERTIES_MAX = 256;
 
 // All functions in these interfaces have the most-significant-byte set to 0x01 to allow
@@ -165,7 +165,7 @@ protocol Coordinator {
 
     /// Watches a directory, receiving events of added messages on the
     /// watcher request channel.
-    /// See fuchisa.io.Directory for more information.
+    /// See fuchsia.io.Directory for more information.
     DirectoryWatch(uint32 mask, uint32 options, handle<channel> watcher)
         -> (zx.status s);
 };
