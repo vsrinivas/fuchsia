@@ -445,12 +445,7 @@ func main() {
 	var iface *netstack.NetInterface2
 	switch os.Args[1] {
 	case "route":
-		if len(os.Args) == 2 {
-			fmt.Printf("Missing route operation.\n")
-			usage()
-		}
-		op := os.Args[2]
-		if op == "show" {
+		if len(os.Args) == 2 || os.Args[2] == "show" {
 			err = a.showRoutes()
 			if err != nil {
 				fmt.Printf("Error showing routes: %s\n", err)
@@ -468,6 +463,7 @@ func main() {
 			usage()
 		}
 
+		op := os.Args[2]
 		switch op {
 		case "add":
 			if err = a.addRoute(r); err != nil {
