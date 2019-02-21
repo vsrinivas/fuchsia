@@ -37,8 +37,8 @@ KCOUNTER(dispatcher_channel_create_count, "dispatcher.channel.create");
 KCOUNTER(dispatcher_channel_destroy_count, "dispatcher.channel.destroy");
 
 // static
-zx_status_t ChannelDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
-                                      fbl::RefPtr<Dispatcher>* dispatcher1,
+zx_status_t ChannelDispatcher::Create(fbl::RefPtr<ChannelDispatcher>* dispatcher0,
+                                      fbl::RefPtr<ChannelDispatcher>* dispatcher1,
                                       zx_rights_t* rights) {
     fbl::AllocChecker ac;
     auto holder0 = fbl::AdoptRef(new (&ac) PeerHolder<ChannelDispatcher>());

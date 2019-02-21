@@ -26,8 +26,8 @@ class ChannelDispatcher final :
 public:
     class MessageWaiter;
 
-    static zx_status_t Create(fbl::RefPtr<Dispatcher>* dispatcher0,
-                              fbl::RefPtr<Dispatcher>* dispatcher1, zx_rights_t* rights);
+    static zx_status_t Create(fbl::RefPtr<ChannelDispatcher>* dispatcher0,
+                              fbl::RefPtr<ChannelDispatcher>* dispatcher1, zx_rights_t* rights);
 
     ~ChannelDispatcher() final;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_CHANNEL; }

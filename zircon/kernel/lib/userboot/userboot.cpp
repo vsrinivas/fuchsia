@@ -155,13 +155,13 @@ static zx_status_t make_bootstrap_channel(
     fbl::RefPtr<ChannelDispatcher> kernel_channel;
     *out = ZX_HANDLE_INVALID;
     {
-        fbl::RefPtr<Dispatcher> mpd0, mpd1;
+        fbl::RefPtr<ChannelDispatcher> mpd0, mpd1;
         zx_rights_t rights;
         zx_status_t status = ChannelDispatcher::Create(&mpd0, &mpd1, &rights);
         if (status != ZX_OK)
             return status;
         user_channel_handle = Handle::Make(ktl::move(mpd0), rights);
-        kernel_channel = DownCastDispatcher<ChannelDispatcher>(&mpd1);
+        kernel_channel = ktl::move(mpd1);
     }
 
     // Here it goes!

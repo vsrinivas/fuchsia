@@ -60,7 +60,7 @@ zx_status_t sys_channel_create(uint32_t options,
     if (res != ZX_OK)
         return res;
 
-    fbl::RefPtr<Dispatcher> mpd0, mpd1;
+    fbl::RefPtr<ChannelDispatcher> mpd0, mpd1;
     zx_rights_t rights;
     zx_status_t result = ChannelDispatcher::Create(&mpd0, &mpd1, &rights);
     if (result != ZX_OK)
