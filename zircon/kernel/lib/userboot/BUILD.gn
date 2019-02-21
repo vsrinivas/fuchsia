@@ -28,8 +28,7 @@ rodso_code_header("gen-userboot-code-header") {
     "$target_gen_dir/userboot-code.h",
   ]
   deps = [
-    # TODO(mcgrathr): mv //system/core/userboot ./user
-    "$zx/system/core/userboot",
+    "user",
   ]
 }
 
