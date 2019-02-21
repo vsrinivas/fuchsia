@@ -8,22 +8,31 @@ use cm_json::{self, cm, Error, CM_SCHEMA};
 use serde::ser::Serialize;
 use serde_json;
 use serde_json::ser::{CompactFormatter, PrettyFormatter, Serializer};
-use std::fs;
-use std::io::Write;
+use std::fs::{self, File};
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::str::from_utf8;
 
 /// Read in a CML file and produce the equivalent CM.
 pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<(), Error> {
-    const BAD_EXTENSION: &str = "Output file does not have the component manifest extension (.cm)";
+    const BAD_IN_EXTENSION: &str = "Input file does not have the component manifest language \
+                                    extension (.cml)";
+    match file.extension().and_then(|e| e.to_str()) {
+        Some("cml") => Ok(()),
+        _ => Err(Error::invalid_args(BAD_IN_EXTENSION)),
+    }?;
+    const BAD_OUT_EXTENSION: &str = "Output file does not have the component manifest extension (.cm)";
     if let Some(ref path) = output {
         match path.extension().and_then(|e| e.to_str()) {
             Some("cm") => Ok(()),
-            _ => Err(Error::invalid_args(BAD_EXTENSION)),
+            _ => Err(Error::invalid_args(BAD_OUT_EXTENSION)),
         }?;
     }
 
-    let document = validate::validate_cml(&file.as_path())?;
+    let mut buffer = String::new();
+    File::open(&file.as_path())?.read_to_string(&mut buffer)?;
+    let value = cm_json::from_json5_str(&buffer)?;
+    let document = validate::parse_cml(value)?;
     let out = compile_cml(document)?;
 
     let mut res = Vec::new();

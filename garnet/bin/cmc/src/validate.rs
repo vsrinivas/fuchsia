@@ -31,17 +31,13 @@ pub fn validate<P: AsRef<Path>>(
 }
 
 /// Read in and parse .cml file. Returns a cml::Document if the file is valid, or an Error if not.
-/// TODO(CF-610): Rename "parse_cml" and remove dependency on validate_file.
-pub fn validate_cml(file: &Path) -> Result<cml::Document, Error> {
-    const BAD_EXTENSION: &str =
-        "Input file does not have correct component manifest extension (.cml)";
-    match file.extension().and_then(|e| e.to_str()) {
-        Some("cml") => Ok(()),
-        _ => Err(Error::invalid_args(BAD_EXTENSION)),
-    }?;
-
-    // Simply unwrap the Option<cml::Document> since we already validated extension above
-    return Ok(validate_file(file, &[] as &[(&Path, Option<String>)])?.unwrap());
+pub fn parse_cml(value: Value) -> Result<cml::Document, Error> {
+    cm_json::validate_json(&value, CML_SCHEMA)?;
+    let document: cml::Document = serde_json::from_value(value)
+        .map_err(|e| Error::parse(format!("Couldn't read input as struct: {}", e)))?;
+    let mut ctx = ValidationContext { document: &document, all_children: HashSet::new() };
+    ctx.validate()?;
+    Ok(document)
 }
 
 /// Read in and parse a single manifest file, and return an Error if the given file is not valid.
@@ -50,40 +46,38 @@ pub fn validate_cml(file: &Path) -> Result<cml::Document, Error> {
 ///
 /// Internal single manifest file validation function, used to implement the two public validate
 /// functions.
-/// TODO(CF-610): Have distinct branches for cm, cml, and cmx, so that each branch can evolve
-/// independently. For cml, call into parse_cml instead of the reverse.
-fn validate_file<P: AsRef<Path>>(
-    file: &Path,
-    extra_schemas: &[(P, Option<String>)],
-) -> Result<Option<cml::Document>, Error> {
+fn validate_file<P: AsRef<Path>>(file: &Path, extra_schemas: &[(P, Option<String>)]) -> Result<(), Error> {
     const BAD_EXTENSION: &str = "Input file does not have a component manifest extension \
                                  (.cm, .cml, or .cmx)";
-
     let mut buffer = String::new();
     File::open(&file)?.read_to_string(&mut buffer)?;
 
-    // Parse the JSON content into a serde_json::Value to use for validation and select the schema
-    // to validate against based on file extension.
+    // Validate based on file extension.
     let ext = file.extension().and_then(|e| e.to_str());
-    let v: Value = match ext {
-        Some("cm") | Some("cmx") => serde_json::from_str(&buffer)
-            .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e))),
-        Some("cml") => cm_json::from_json5_str(&buffer),
-        _ => Err(Error::invalid_args(BAD_EXTENSION)),
-    }?;
-    let schema: &JsonSchema = match ext {
-        Some("cm") => CM_SCHEMA,
-        Some("cml") => CML_SCHEMA,
-        Some("cmx") => CMX_SCHEMA,
-        _ => return Err(Error::invalid_args(BAD_EXTENSION)),
+    let v = match ext {
+        Some("cmx") => {
+            let v = cm_json::from_json_str(&buffer)?;
+            cm_json::validate_json(&v, CMX_SCHEMA)?;
+            v
+        }
+        Some("cm") => {
+            let v = cm_json::from_json_str(&buffer)?;
+            cm_json::validate_json(&v, CM_SCHEMA)?;
+            v
+        }
+        Some("cml") => {
+            let v = cm_json::from_json5_str(&buffer)?;
+            parse_cml(v.clone())?;
+            v
+        }
+        _ => {
+            return Err(Error::invalid_args(BAD_EXTENSION));
+        }
     };
-
-    // Validate against the default schema (based on file extension).
-    cm_json::validate_json(&v, schema)?;
 
     // Validate against any extra schemas provided.
     for extra_schema in extra_schemas {
-        let schema = cm_json::JsonSchema::new_from_file(&extra_schema.0.as_ref())?;
+        let schema = JsonSchema::new_from_file(&extra_schema.0.as_ref())?;
         cm_json::validate_json(&v, &schema).map_err(|e| match (&e, &extra_schema.1) {
             (Error::Validate { schema_name, err }, Some(extra_msg)) => Error::Validate {
                 schema_name: schema_name.clone(),
@@ -92,17 +86,7 @@ fn validate_file<P: AsRef<Path>>(
             _ => e,
         })?;
     }
-
-    // Perform addition validation for .cml files and parse the JSON into a cml::Document struct.
-    if ext == Some("cml") {
-        let document: cml::Document = serde_json::from_value(v)
-            .map_err(|e| Error::parse(format!("Couldn't read input as struct: {}", e)))?;
-
-        let mut ctx = ValidationContext { document: &document, all_children: HashSet::new() };
-        ctx.validate()?;
-        return Ok(Some(document));
-    }
-    Ok(None)
+    Ok(())
 }
 
 struct ValidationContext<'a> {
