@@ -52,17 +52,7 @@ template("fidl") {
     not_needed(invoker, [ "cpp_legacy_callbacks" ])
   }
 
-  if (current_toolchain == fidl_toolchain) {
-    import("//build/fidl/fidl_library.gni")
-
-    fidl_library(target_name) {
-      forward_variables_from(invoker, "*")
-    }
-
-    fidl_cpp_codegen(target_name) {
-      forward_variables_from(invoker, "*")
-    }
-  } else if (current_toolchain == dart_toolchain) {
+  if (current_toolchain == dart_toolchain) {
     import("//build/dart/fidl_dart.gni")
 
     fidl_dart(target_name) {
@@ -80,52 +70,34 @@ template("fidl") {
     fidl_go(target_name) {
       forward_variables_from(invoker, "*")
     }
-  } else if (is_fuchsia) {
+  } else {
     import("//build/c/fidl_c.gni")
-    import("//build/rust/fidl_rust_library.gni")
 
-    fidl_tables(target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
-    }
+    if (current_toolchain == fidl_toolchain) {
+      import("//build/fidl/fidl_library.gni")
 
-    # TODO(cramertj): remove pending TC-81.
-    fidl_rust_library(target_name) {
-      forward_variables_from(invoker, "*")
+      fidl_library(target_name) {
+        forward_variables_from(invoker, "*")
+      }
     }
 
     fidl_cpp(target_name) {
       forward_variables_from(invoker, "*")
-    }
-
-    fidl_c_client(target_name) {
-      forward_variables_from(invoker, "*")
-    }
-
-    fidl_c_server(target_name) {
-      forward_variables_from(invoker, "*")
-    }
-
-    group("${target_name}_c") {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
-
-      public_deps = [
-        ":${target_name}_client",
-        ":${target_name}_server",
+      generators = [
+        {
+          fidlgen_generator = "cpp"
+          output_stem = "cpp/fidl"
+          additional_public_deps = []
+        },
+        {
+          target_suffix = "overnet_internal"
+          fidlgen_generator = "overnet_internal"
+          output_stem = "cpp/overnet_internal"
+          additional_public_deps =
+              [ "//garnet/lib/overnet/protocol:fidl_stream" ]
+        },
       ]
     }
-  } else {
-    # TODO(ctiller): this case is for host-side FIDL, and ultimately
-    # should be identical to the previous case (once C & Rust are usable from
-    # host)
-    import("//build/c/fidl_c.gni")
 
     fidl_tables(target_name) {
       forward_variables_from(invoker,
@@ -135,8 +107,34 @@ template("fidl") {
                              ])
     }
 
-    fidl_cpp(target_name) {
-      forward_variables_from(invoker, "*")
+    if (is_fuchsia) {
+      import("//build/rust/fidl_rust_library.gni")
+
+      # TODO(cramertj): remove pending TC-81.
+      fidl_rust_library(target_name) {
+        forward_variables_from(invoker, "*")
+      }
+
+      fidl_c_client(target_name) {
+        forward_variables_from(invoker, "*")
+      }
+
+      fidl_c_server(target_name) {
+        forward_variables_from(invoker, "*")
+      }
+
+      group("${target_name}_c") {
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visibility",
+                               ])
+
+        public_deps = [
+          ":${target_name}_client",
+          ":${target_name}_server",
+        ]
+      }
     }
   }
 }

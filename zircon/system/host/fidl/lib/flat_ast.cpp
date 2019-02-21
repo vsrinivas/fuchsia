@@ -969,7 +969,7 @@ bool TransportConstraint(ErrorReporter* error_reporter, const raw::Attribute* at
     static const std::set<std::string> kValidTransports = {
         "Channel",
         "SocketControl",
-        "OvernetStream",
+        "OvernetInternal",
     };
     for (auto transport : transports) {
         if (kValidTransports.count(transport) == 0) {

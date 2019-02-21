@@ -8,7 +8,7 @@ using zx;
 
 /// Peer-to-peer protocol between two Overnet nodes.
 /// Each end of the Overnet connection stream implements this protocol.
-[Transport="OvernetStream"]
+[Transport="OvernetInternal"]
 protocol Peer {
     /// Create a new stream, labelled `stream_id`, to communicate with the
     /// advertised service `service_name`.

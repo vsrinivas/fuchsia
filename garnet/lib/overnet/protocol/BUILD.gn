@@ -106,6 +106,17 @@ source_set("fidl") {
   ]
 }
 
+# fidl_stream
+source_set("fidl_stream") {
+  sources = [
+    "fidl_stream.h",
+    "fidl_stream.cc",
+  ]
+  deps = [
+    "//sdk/lib/fidl/cpp:cpp_base",
+  ]
+}
+
 # routable_message
 source_set("routable_message") {
   sources = [

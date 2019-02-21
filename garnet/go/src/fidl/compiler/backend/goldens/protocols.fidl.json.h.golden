@@ -3,7 +3,6 @@
 #pragma once
 
 #include "lib/fidl/cpp/internal/header.h"
-#include <lib/fidl/cpp/overnet_stream.h>
 
 
 namespace test {
@@ -19,9 +18,6 @@ class KitchenSink_Sync;
 using KitchenSinkSyncPtr = ::fidl::SynchronousInterfacePtr<KitchenSink>;
 class KitchenSink_SyncProxy;
 #endif // __Fuchsia__
-class KitchenSink;
-class KitchenSink_Proxy;
-class KitchenSink_Stub;
 #ifdef __Fuchsia__
 class KitchenSink;
 using KitchenSinkPtr = ::fidl::InterfacePtr<KitchenSink>;
@@ -52,9 +48,6 @@ class SocketControlProtocol_Sync;
 using SocketControlProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SocketControlProtocol>;
 class SocketControlProtocol_SyncProxy;
 #endif // __Fuchsia__
-class OvernetStreamProtocol;
-class OvernetStreamProtocol_Proxy;
-class OvernetStreamProtocol_Stub;
 #ifdef __Fuchsia__
 
 class KitchenSink {
@@ -132,44 +125,6 @@ class KitchenSink_SyncProxy : public KitchenSink_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
 };
 #endif // __Fuchsia__
-
-class KitchenSink {
- public:
-  using Proxy_ = KitchenSink_Proxy;
-  using Stub_ = KitchenSink_Stub;
-  virtual ~KitchenSink();
-      
-  virtual void MethodA(int64_t a, int64_t b) = 0;
-  virtual void EventA(int64_t a, int64_t b) = 0;
-  using MethodBCallback =
-      fit::function<void(int64_t)>;
-      
-  virtual void MethodB(int64_t a, int64_t b, MethodBCallback callback) = 0;
-};
-
-class KitchenSink_Proxy : public ::fidl::OvernetStream, public KitchenSink {
- public:
- KitchenSink_Proxy() = default;
-  ~KitchenSink_Proxy() override;
-  void MethodA(int64_t a, int64_t b) override final;
-  void MethodB(int64_t a, int64_t b, MethodBCallback callback) override final;
-
- private:
-  zx_status_t Dispatch_(::fidl::Message* message) override final;
-  KitchenSink_Proxy(const KitchenSink_Proxy&) = delete;
-  KitchenSink_Proxy& operator=(const KitchenSink_Proxy&) = delete;
-};
-
-class KitchenSink_Stub : public ::fidl::OvernetStream, public KitchenSink {
- public:
-  typedef class KitchenSink KitchenSink_clazz;
-  KitchenSink_Stub() = default;
-  ~KitchenSink_Stub() override;
-  virtual void EventA(int64_t a, int64_t b) override final;
-
- private:
-  zx_status_t Dispatch_(::fidl::Message* message) override final;
-};
 #ifdef __Fuchsia__
 
 class KitchenSink {
@@ -401,44 +356,6 @@ class SocketControlProtocol_SyncProxy : public SocketControlProtocol_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
 };
 #endif // __Fuchsia__
-
-class OvernetStreamProtocol {
- public:
-  using Proxy_ = OvernetStreamProtocol_Proxy;
-  using Stub_ = OvernetStreamProtocol_Stub;
-  virtual ~OvernetStreamProtocol();
-      
-  virtual void MethodA(int64_t a, int64_t b) = 0;
-  virtual void EventA(int64_t a, int64_t b) = 0;
-  using MethodBCallback =
-      fit::function<void(int64_t)>;
-      
-  virtual void MethodB(int64_t a, int64_t b, MethodBCallback callback) = 0;
-};
-
-class OvernetStreamProtocol_Proxy : public ::fidl::OvernetStream, public OvernetStreamProtocol {
- public:
- OvernetStreamProtocol_Proxy() = default;
-  ~OvernetStreamProtocol_Proxy() override;
-  void MethodA(int64_t a, int64_t b) override final;
-  void MethodB(int64_t a, int64_t b, MethodBCallback callback) override final;
-
- private:
-  zx_status_t Dispatch_(::fidl::Message* message) override final;
-  OvernetStreamProtocol_Proxy(const OvernetStreamProtocol_Proxy&) = delete;
-  OvernetStreamProtocol_Proxy& operator=(const OvernetStreamProtocol_Proxy&) = delete;
-};
-
-class OvernetStreamProtocol_Stub : public ::fidl::OvernetStream, public OvernetStreamProtocol {
- public:
-  typedef class OvernetStreamProtocol OvernetStreamProtocol_clazz;
-  OvernetStreamProtocol_Stub() = default;
-  ~OvernetStreamProtocol_Stub() override;
-  virtual void EventA(int64_t a, int64_t b) override final;
-
- private:
-  zx_status_t Dispatch_(::fidl::Message* message) override final;
-};
 }  // namespace name
 }  // namespace test
 namespace fidl {

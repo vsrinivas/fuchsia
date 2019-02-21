@@ -7,7 +7,7 @@
   "enum_declarations": [],
   "interface_declarations": [
     {
-      "name": "test.name/OvernetStreamProtocol",
+      "name": "test.name/OvernetInternalProtocol",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
         "line": 4,
@@ -16,13 +16,13 @@
       "maybe_attributes": [
         {
           "name": "Transport",
-          "value": "OvernetStream"
+          "value": "OvernetInternal"
         }
       ],
       "methods": [
         {
-          "ordinal": 411580008,
-          "generated_ordinal": 411580008,
+          "ordinal": 1993818253,
+          "generated_ordinal": 1993818253,
           "name": "MethodA",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
@@ -71,8 +71,8 @@
           "has_response": false
         },
         {
-          "ordinal": 530966225,
-          "generated_ordinal": 530966225,
+          "ordinal": 1746007436,
+          "generated_ordinal": 1746007436,
           "name": "EventA",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
@@ -121,8 +121,8 @@
           "maybe_response_alignment": 8
         },
         {
-          "ordinal": 1291000979,
-          "generated_ordinal": 1291000979,
+          "ordinal": 952134976,
+          "generated_ordinal": 952134976,
           "name": "MethodB",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.fidl",
@@ -577,7 +577,7 @@
       "maybe_attributes": [
         {
           "name": "Transport",
-          "value": "Channel, SocketControl, OvernetStream"
+          "value": "Channel, SocketControl, OvernetInternal"
         }
       ],
       "methods": [
@@ -763,10 +763,10 @@
     "test.name/KitchenSink",
     "test.name/ChannelProtocol",
     "test.name/SocketControlProtocol",
-    "test.name/OvernetStreamProtocol"
+    "test.name/OvernetInternalProtocol"
   ],
   "declarations": {
-    "test.name/OvernetStreamProtocol": "interface",
+    "test.name/OvernetInternalProtocol": "interface",
     "test.name/SocketControlProtocol": "interface",
     "test.name/ChannelProtocol": "interface",
     "test.name/KitchenSink": "interface"

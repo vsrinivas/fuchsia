@@ -46,9 +46,9 @@ class SocketControlProtocol_TestBase : public SocketControlProtocol {
 
 };
 
-class OvernetStreamProtocol_TestBase : public OvernetStreamProtocol {
+class OvernetInternalProtocol_TestBase : public OvernetInternalProtocol {
   public:
-  virtual ~OvernetStreamProtocol_TestBase() { }
+  virtual ~OvernetInternalProtocol_TestBase() { }
   virtual void NotImplemented_(const std::string& name) = 0;
   void MethodA(int64_t a, int64_t b) override {
     NotImplemented_("MethodA");

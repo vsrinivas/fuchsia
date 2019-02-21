@@ -33,9 +33,7 @@ namespace {{ . }} {
 
 {{- define "DispatchInterfaceDefinition" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if Eq $transport "Channel" -}}{{ template "InterfaceDefinition" $ }}{{- end }}
-{{- if Eq $transport "OvernetStream" }}{{ template "OvernetStreamDefinition" $ }}{{- end }}
-{{- if Eq $transport "SocketControl" -}}{{ template "InterfaceDefinition" $ }}{{- end }}
+{{- if eq $transport "Channel" "SocketControl" -}}{{ template "InterfaceDefinition" $ }}{{- end }}
 {{- end }}
 {{- end -}}
 `

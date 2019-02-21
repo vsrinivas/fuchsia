@@ -12,10 +12,6 @@ const Header = `
 
 #include "lib/fidl/cpp/internal/header.h"
 
-{{- if .HasOvernetStreams }}
-#include <lib/fidl/cpp/overnet_stream.h>
-{{- end }}
-
 {{ range .Headers -}}
 #include <{{ . }}>
 {{ end -}}
@@ -65,25 +61,19 @@ namespace fidl {
 
 {{- define "DispatchInterfaceForwardDeclaration" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if Eq $transport "Channel" -}}{{ template "InterfaceForwardDeclaration" $ }}{{- end }}
-{{- if Eq $transport "OvernetStream" }}{{ template "OvernetStreamForwardDeclaration" $ }}{{- end }}
-{{- if Eq $transport "SocketControl" -}}{{ template "InterfaceForwardDeclaration" $ }}{{- end }}
+{{- if eq $transport "Channel" "SocketControl" -}}{{ template "InterfaceForwardDeclaration" $ }}{{- end }}
 {{- end }}
 {{- end -}}
 
 {{- define "DispatchInterfaceDeclaration" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if Eq $transport "Channel" -}}{{ template "InterfaceDeclaration" $ }}{{- end }}
-{{- if Eq $transport "OvernetStream" }}{{ template "OvernetStreamDeclaration" $ }}{{- end }}
-{{- if Eq $transport "SocketControl" -}}{{ template "InterfaceDeclaration" $ }}{{- end }}
+{{- if eq $transport "Channel" "SocketControl" -}}{{ template "InterfaceDeclaration" $ }}{{- end }}
 {{- end }}
 {{- end -}}
 
 {{- define "DispatchInterfaceTraits" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if Eq $transport "Channel" -}}{{ template "InterfaceTraits" $ }}{{- end }}
-{{- if Eq $transport "OvernetStream" }}{{ template "OvernetStreamTraits" $ }}{{- end }}
-{{- if Eq $transport "SocketControl" -}}{{ template "InterfaceTraits" $ }}{{- end }}
+{{- if eq $transport "Channel" "SocketControl" -}}{{ template "InterfaceTraits" $ }}{{- end }}
 {{- end }}
 {{- end -}}
 `

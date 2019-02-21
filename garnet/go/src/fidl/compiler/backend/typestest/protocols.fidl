@@ -1,7 +1,7 @@
 library test.name;
 
-[Transport="OvernetStream"]
-protocol OvernetStreamProtocol {
+[Transport="OvernetInternal"]
+protocol OvernetInternalProtocol {
     MethodA(int64 a, int64 b);
     -> EventA(int64 a, int64 b);
     MethodB(int64 a, int64 b) -> (int64 result);
@@ -22,7 +22,7 @@ protocol ChannelProtocol {
 };
 
 // This is not expected to generate code that could be built.
-[Transport="Channel, SocketControl, OvernetStream"]
+[Transport="Channel, SocketControl, OvernetInternal"]
 protocol KitchenSink {
     MethodA(int64 a, int64 b);
     -> EventA(int64 a, int64 b);

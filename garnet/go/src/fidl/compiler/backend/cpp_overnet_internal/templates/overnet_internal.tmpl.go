@@ -4,8 +4,62 @@
 
 package templates
 
-const OvernetStream = `
-{{- define "OvernetStreamForwardDeclaration" }}
+// OvernetInternal transports are used by Overnet to communicate between peers,
+// and are not intended for general purpose consumption.
+
+const OvernetInternal = `
+{{- define "Header" }}
+#include "garnet/lib/overnet/protocol/fidl_stream.h"
+
+#include "{{ range $index, $path := .Library }}{{ if $index }}/{{ end }}{{ $path }}{{ end }}/cpp/fidl.h"
+  {{- range .Library }}
+  namespace {{ . }} {
+  {{- end }}
+  {{ range .Decls }}
+    {{- if Eq .Kind Kinds.Interface }}
+      {{ if index .Transports "OvernetInternal" }}
+        {{ template "InterfaceForwardDeclaration" . }}
+      {{ end }}
+    {{- end }}
+  {{ end }}
+  {{ range .Decls }}
+    {{- if Eq .Kind Kinds.Interface }}
+      {{ if index .Transports "OvernetInternal" }}
+        {{ template "InterfaceDeclaration" . }}
+      {{ end }}
+    {{- end }}
+  {{ end }}
+  {{ range .Decls }}
+    {{- if Eq .Kind Kinds.Interface }}
+      {{ if index .Transports "OvernetInternal" }}
+        {{ template "InterfaceTraits" . }}
+      {{ end }}
+    {{- end }}
+  {{ end }}
+  {{- range .LibraryReversed }}
+  }  // namespace {{ . }}
+  {{- end }}
+{{- end }}
+
+{{- define "Source" }}
+#include <{{ .PrimaryHeader }}>
+#include "lib/fidl/cpp/internal/implementation.h"
+  {{- range .Library }}
+  namespace {{ . }} {
+  {{- end }}
+  {{ range .Decls }}
+    {{- if Eq .Kind Kinds.Interface }}
+      {{ if index .Transports "OvernetInternal" }}
+        {{ template "InterfaceDefinition" . }}
+      {{ end }}
+    {{- end }}
+  {{ end }}
+  {{- range .LibraryReversed }}
+  }  // namespace {{ . }}
+  {{- end }}
+{{- end }}
+
+{{- define "InterfaceForwardDeclaration" }}
 class {{ .Name }};
 class {{ .ProxyName }};
 class {{ .StubName }};
@@ -41,7 +95,7 @@ class {{ .StubName }};
 {{ .Name }}({{ template "Params" .Response }})
 {{- end -}}
 
-{{- define "OvernetStreamDeclaration" }}
+{{- define "InterfaceDeclaration" }}
 {{range .DocComments}}
 //{{ . }}
 {{- end}}
@@ -80,7 +134,7 @@ class {{ .Name }} {
   {{- end }}
 };
 
-class {{ .ProxyName }} : public ::fidl::OvernetStream, public {{ .Name }} {
+class {{ .ProxyName }} : public ::overnet::FidlStream, public {{ .Name }} {
  public:
  {{ .ProxyName }}() = default;
   ~{{ .ProxyName }}() override;
@@ -97,7 +151,7 @@ class {{ .ProxyName }} : public ::fidl::OvernetStream, public {{ .Name }} {
   {{ .ProxyName }}& operator=(const {{ .ProxyName }}&) = delete;
 };
 
-class {{ .StubName }} : public ::fidl::OvernetStream, public {{ .Name }} {
+class {{ .StubName }} : public ::overnet::FidlStream, public {{ .Name }} {
  public:
   typedef class {{ .Name }} {{ .ClassName }};
   {{ .StubName }}() = default;
@@ -116,7 +170,7 @@ class {{ .StubName }} : public ::fidl::OvernetStream, public {{ .Name }} {
 };
 {{- end }}
 
-{{- define "OvernetStreamDefinition" }}
+{{- define "InterfaceDefinition" }}
 namespace {
 
 {{ range .Methods }}
@@ -284,7 +338,7 @@ void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
 
 {{ end }}
 
-{{- define "OvernetStreamTestBase" }}
+{{- define "OvernetInternalTestBase" }}
 class {{ .Name }}_TestBase : public {{ .Name }} {
   public:
   virtual ~{{ .Name }}_TestBase() { }
@@ -301,6 +355,6 @@ class {{ .Name }}_TestBase : public {{ .Name }} {
 };
 {{ end }}
 
-{{- define "OvernetStreamTraits" }}
+{{- define "InterfaceTraits" }}
 {{- end }}
 `

@@ -22,15 +22,15 @@ use fidl::{
 
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct OvernetStreamProtocolMarker;
+pub struct OvernetInternalProtocolMarker;
 
-impl fidl::endpoints::ServiceMarker for OvernetStreamProtocolMarker {
-	type Proxy = OvernetStreamProtocolProxy;
-	type RequestStream = OvernetStreamProtocolRequestStream;
+impl fidl::endpoints::ServiceMarker for OvernetInternalProtocolMarker {
+	type Proxy = OvernetInternalProtocolProxy;
+	type RequestStream = OvernetInternalProtocolRequestStream;
 	const NAME: &'static str = "";
 }
 
-pub trait OvernetStreamProtocolProxyInterface: Send + Sync {
+pub trait OvernetInternalProtocolProxyInterface: Send + Sync {
 	fn method_a(&self,
 		a: i64,
 		b: i64,
@@ -44,11 +44,11 @@ pub trait OvernetStreamProtocolProxyInterface: Send + Sync {
 }
 
 #[derive(Debug)]
-pub struct OvernetStreamProtocolSynchronousProxy {
+pub struct OvernetInternalProtocolSynchronousProxy {
 	client: fidl::client::sync::Client,
 }
 
-impl OvernetStreamProtocolSynchronousProxy {
+impl OvernetInternalProtocolSynchronousProxy {
 	pub fn new(channel: zx::Channel) -> Self {
 		Self { client: fidl::client::sync::Client::new(channel) }
 	}
@@ -59,28 +59,28 @@ impl OvernetStreamProtocolSynchronousProxy {
 	pub fn method_a(&mut self,
 		mut a: i64,
 		mut b: i64,) -> Result<(), fidl::Error> {self.client.send(&mut (a, b),
-				411580008,
+				1993818253,
 			)}
 	pub fn method_b(&mut self,
 		mut a: i64,
 		mut b: i64,___deadline: zx::Time,) -> Result<(i64), fidl::Error> {self.client.send_query(&mut (a, b),
-				1291000979,
+				952134976,
 				___deadline,
 			)}
 }
 
 #[derive(Debug, Clone)]
-pub struct OvernetStreamProtocolProxy {
+pub struct OvernetInternalProtocolProxy {
 	client: fidl::client::Client,
 }
 
-impl fidl::endpoints::Proxy for OvernetStreamProtocolProxy {
+impl fidl::endpoints::Proxy for OvernetInternalProtocolProxy {
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
 		Self::new(inner)
 	}
 }
 
-impl ::std::ops::Deref for OvernetStreamProtocolProxy {
+impl ::std::ops::Deref for OvernetInternalProtocolProxy {
 	type Target = fidl::client::Client;
 
 	fn deref(&self) -> &Self::Target {
@@ -88,9 +88,9 @@ impl ::std::ops::Deref for OvernetStreamProtocolProxy {
 	}
 }
 
-/// Proxy object for communicating with interface OvernetStreamProtocol
-impl OvernetStreamProtocolProxy {
-	/// Create a new Proxy for OvernetStreamProtocol
+/// Proxy object for communicating with interface OvernetInternalProtocol
+impl OvernetInternalProtocolProxy {
+	/// Create a new Proxy for OvernetInternalProtocol
 	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
 		Self { client: fidl::client::Client::new(channel) }
 	}
@@ -104,9 +104,9 @@ impl OvernetStreamProtocolProxy {
 		self.client.into_channel().map_err(|client| Self { client })
 	}
 
-	/// Get a Stream of events from the remote end of the OvernetStreamProtocol interface
-	pub fn take_event_stream(&self) -> OvernetStreamProtocolEventStream {
-		OvernetStreamProtocolEventStream {
+	/// Get a Stream of events from the remote end of the OvernetInternalProtocol interface
+	pub fn take_event_stream(&self) -> OvernetInternalProtocolEventStream {
+		OvernetInternalProtocolEventStream {
 			event_receiver: self.client.take_event_receiver(),
 		}
 	}
@@ -114,7 +114,7 @@ impl OvernetStreamProtocolProxy {
 		mut a: i64,
 		mut b: i64,
 	)-> Result<(), fidl::Error> {
-		OvernetStreamProtocolProxyInterface::method_a(self,
+		OvernetInternalProtocolProxyInterface::method_a(self,
 		a,
 		b,
 		)
@@ -123,19 +123,19 @@ impl OvernetStreamProtocolProxy {
 		mut a: i64,
 		mut b: i64,
 	)-> fidl::client::QueryResponseFut<(i64)> {
-		OvernetStreamProtocolProxyInterface::method_b(self,
+		OvernetInternalProtocolProxyInterface::method_b(self,
 		a,
 		b,
 		)
 	}
 }
 
-impl OvernetStreamProtocolProxyInterface for OvernetStreamProtocolProxy {
+impl OvernetInternalProtocolProxyInterface for OvernetInternalProtocolProxy {
 	fn method_a(&self,
 		mut a: i64,
 		mut b: i64,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (a, b), 411580008)
+		self.client.send(&mut (a, b), 1993818253)
 	}
 	type EventAResponseFut = fidl::client::QueryResponseFut<(i64, i64)>;
 	type MethodBResponseFut = fidl::client::QueryResponseFut<(i64)>;
@@ -143,23 +143,23 @@ impl OvernetStreamProtocolProxyInterface for OvernetStreamProtocolProxy {
 		mut a: i64,
 		mut b: i64,
 	)-> Self::MethodBResponseFut {
-		self.client.send_query(&mut (a, b), 1291000979)
+		self.client.send_query(&mut (a, b), 952134976)
 	}}
 
-pub struct OvernetStreamProtocolEventStream {
+pub struct OvernetInternalProtocolEventStream {
 	event_receiver: fidl::client::EventReceiver,
 }
 
-impl ::std::marker::Unpin for OvernetStreamProtocolEventStream {}
+impl ::std::marker::Unpin for OvernetInternalProtocolEventStream {}
 
-impl futures::stream::FusedStream for OvernetStreamProtocolEventStream {
+impl futures::stream::FusedStream for OvernetInternalProtocolEventStream {
 	fn is_terminated(&self) -> bool {
 		self.event_receiver.is_terminated()
 	}
 }
 
-impl futures::Stream for OvernetStreamProtocolEventStream {
-	type Item = Result<OvernetStreamProtocolEvent, fidl::Error>;
+impl futures::Stream for OvernetInternalProtocolEventStream {
+	type Item = Result<OvernetInternalProtocolEvent, fidl::Error>;
 
 	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
 		-> futures::Poll<Option<Self::Item>>
@@ -175,23 +175,23 @@ impl futures::Stream for OvernetStreamProtocolEventStream {
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 		futures::Poll::Ready(Some(match tx_header.ordinal {
-			530966225 | 530966225 => {
+			1746007436 | 1746007436 => {
 				let mut out_tuple: (i64,i64) = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut out_tuple)?;
 				Ok((
-					OvernetStreamProtocolEvent::EventA {a: out_tuple.0,b: out_tuple.1,}
+					OvernetInternalProtocolEvent::EventA {a: out_tuple.0,b: out_tuple.1,}
 				))
 			}
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal,
-				service_name: <OvernetStreamProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
+				service_name: <OvernetInternalProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
 			})
 		}))
 	}
 }
 
 #[derive(Debug)]
-pub enum OvernetStreamProtocolEvent {
+pub enum OvernetInternalProtocolEvent {
 	
 	
 	
@@ -204,12 +204,12 @@ pub enum OvernetStreamProtocolEvent {
 	},
 	}
 
-pub struct OvernetStreamProtocolEventSender<'a> {
+pub struct OvernetInternalProtocolEventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
 	channel: zx::Unowned<'a, zx::Channel>,
 }
-impl <'a> OvernetStreamProtocolEventSender<'a> {
+impl <'a> OvernetInternalProtocolEventSender<'a> {
 	pub fn new(channel: zx::Unowned<'a, zx::Channel>) -> Self {
 		Self { channel }
 	}
@@ -217,7 +217,7 @@ impl <'a> OvernetStreamProtocolEventSender<'a> {
 		mut a: i64,
 		mut b: i64) -> Result<(), fidl::Error> {
 		let (bytes, handles) = (&mut vec![], &mut vec![]);
-		OvernetStreamProtocolEncoder::encode_event_a_response(
+		OvernetInternalProtocolEncoder::encode_event_a_response(
 			bytes, handles,a,b,)?;
 		self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
 		Ok(())
@@ -225,36 +225,36 @@ impl <'a> OvernetStreamProtocolEventSender<'a> {
 	
 }
 
-#[deprecated(note = "use OvernetStreamProtocolRequestStream instead")]
-pub trait OvernetStreamProtocol {
+#[deprecated(note = "use OvernetInternalProtocolRequestStream instead")]
+pub trait OvernetInternalProtocol {
 	type OnOpenFut: futures::Future<Output = ()> + Send;
-	fn on_open(&mut self, control_handle: OvernetStreamProtocolControlHandle) -> Self::OnOpenFut;
+	fn on_open(&mut self, control_handle: OvernetInternalProtocolControlHandle) -> Self::OnOpenFut;
 	type MethodAFut: futures::Future<Output = ()> + Send;
 	fn method_a (&mut self,
 		a: i64,
 		b: i64,
-		control_handle: OvernetStreamProtocolControlHandle
+		control_handle: OvernetInternalProtocolControlHandle
 	) -> Self::MethodAFut;
 	
 	type MethodBFut: futures::Future<Output = ()> + Send;
 	fn method_b (&mut self,
 		a: i64,
 		b: i64,
-		response_chan: OvernetStreamProtocolMethodBResponder,
+		response_chan: OvernetInternalProtocolMethodBResponder,
 	) -> Self::MethodBFut;
 	
 
 	fn serve(mut self, channel: ::fuchsia_async::Channel)
-		-> OvernetStreamProtocolServer<Self>
+		-> OvernetInternalProtocolServer<Self>
 	where Self: Sized
 	{
 		let inner = ::std::sync::Arc::new(fidl::ServeInner::new(channel));
 		let on_open_fut = self.on_open(
-			OvernetStreamProtocolControlHandle {
+			OvernetInternalProtocolControlHandle {
 				inner: inner.clone(),
 			}
 		);
-		OvernetStreamProtocolServer {
+		OvernetInternalProtocolServer {
 			server: self,
 			inner: inner.clone(),
 			msg_buf: zx::MessageBuf::new(),
@@ -263,7 +263,7 @@ pub trait OvernetStreamProtocol {
 	}
 }
 
-pub struct OvernetStreamProtocolServer<T: OvernetStreamProtocol> {
+pub struct OvernetInternalProtocolServer<T: OvernetInternalProtocol> {
 	#[allow(dead_code)] // not used if no methods are present
 	server: T,
 	inner: ::std::sync::Arc<fidl::ServeInner>,
@@ -274,19 +274,19 @@ pub struct OvernetStreamProtocolServer<T: OvernetStreamProtocol> {
 // Safety: only the OnOpen fut is held directly, so it's the only one that
 // is projected to, so it's the only one that needs to be Unpin for the Impl
 // struct to be Unpin.
-impl<T: OvernetStreamProtocol> ::std::marker::Unpin for OvernetStreamProtocolServer<T>
+impl<T: OvernetInternalProtocol> ::std::marker::Unpin for OvernetInternalProtocolServer<T>
 where T::OnOpenFut: ::std::marker::Unpin,
 {}
 
-impl<T: OvernetStreamProtocol> OvernetStreamProtocolServer<T> {
-	pub fn control_handle(&self) -> OvernetStreamProtocolControlHandle {
-		OvernetStreamProtocolControlHandle {
+impl<T: OvernetInternalProtocol> OvernetInternalProtocolServer<T> {
+	pub fn control_handle(&self) -> OvernetInternalProtocolControlHandle {
+		OvernetInternalProtocolControlHandle {
 			inner: self.inner.clone(),
 		}
 	}
 }
 
-impl<T: OvernetStreamProtocol> futures::Future for OvernetStreamProtocolServer<T> {
+impl<T: OvernetInternalProtocol> futures::Future for OvernetInternalProtocolServer<T> {
 	type Output = Result<(), fidl::Error>;
 
 	fn poll(
@@ -354,24 +354,24 @@ impl<T: OvernetStreamProtocol> futures::Future for OvernetStreamProtocolServer<T
 
 			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 			match header.ordinal {
-					411580008 | 411580008 => {
+					1993818253 | 1993818253 => {
 						let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
 						fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-						let control_handle = OvernetStreamProtocolControlHandle {
+						let control_handle = OvernetInternalProtocolControlHandle {
 							inner: this.inner.clone(),
 						};
 						this.method_a_futures.push(
 							this.server.method_a(req.0,req.1,control_handle)
 						);
 					}
-					1291000979 | 1291000979 => {
+					952134976 | 952134976 => {
 						let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
 						fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-						let control_handle = OvernetStreamProtocolControlHandle {
+						let control_handle = OvernetInternalProtocolControlHandle {
 							inner: this.inner.clone(),
 						};
 						this.method_b_futures.push(
-							this.server.method_b(req.0,req.1,OvernetStreamProtocolMethodBResponder {
+							this.server.method_b(req.0,req.1,OvernetInternalProtocolMethodBResponder {
 										control_handle: ::std::mem::ManuallyDrop::new(control_handle),
 										tx_id: header.tx_id,
 										ordinal: header.ordinal,
@@ -388,22 +388,22 @@ impl<T: OvernetStreamProtocol> futures::Future for OvernetStreamProtocolServer<T
 	}}
 }
 
-/// A Stream of incoming requests for OvernetStreamProtocol
-pub struct OvernetStreamProtocolRequestStream {
+/// A Stream of incoming requests for OvernetInternalProtocol
+pub struct OvernetInternalProtocolRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 	msg_buf: Option<zx::MessageBuf>,
 }
 
-impl ::std::marker::Unpin for OvernetStreamProtocolRequestStream {}
+impl ::std::marker::Unpin for OvernetInternalProtocolRequestStream {}
 
-impl futures::stream::FusedStream for OvernetStreamProtocolRequestStream {
+impl futures::stream::FusedStream for OvernetInternalProtocolRequestStream {
 	fn is_terminated(&self) -> bool {
 		self.msg_buf.is_none()
 	}
 }
 
-impl fidl::endpoints::RequestStream for OvernetStreamProtocolRequestStream {
-	/// Consume a channel to make a OvernetStreamProtocolRequestStream
+impl fidl::endpoints::RequestStream for OvernetInternalProtocolRequestStream {
+	/// Consume a channel to make a OvernetInternalProtocolRequestStream
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
@@ -412,11 +412,11 @@ impl fidl::endpoints::RequestStream for OvernetStreamProtocolRequestStream {
 	}
 
 	/// ControlHandle for the remote connection
-	type ControlHandle = OvernetStreamProtocolControlHandle;
+	type ControlHandle = OvernetInternalProtocolControlHandle;
 
 	/// ControlHandle for the remote connection
 	fn control_handle(&self) -> Self::ControlHandle {
-		OvernetStreamProtocolControlHandle { inner: self.inner.clone() }
+		OvernetInternalProtocolControlHandle { inner: self.inner.clone() }
 	}
 
 	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, Option<zx::MessageBuf>) {
@@ -430,8 +430,8 @@ impl fidl::endpoints::RequestStream for OvernetStreamProtocolRequestStream {
 	}
 }
 
-impl futures::Stream for OvernetStreamProtocolRequestStream {
-	type Item = Result<OvernetStreamProtocolRequest, fidl::Error>;
+impl futures::Stream for OvernetInternalProtocolRequestStream {
+	type Item = Result<OvernetInternalProtocolRequest, fidl::Error>;
 
 	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
 		-> futures::Poll<Option<Self::Item>>
@@ -442,7 +442,7 @@ impl futures::Stream for OvernetStreamProtocolRequestStream {
 			return futures::Poll::Ready(None);
 		}
 		let msg_buf = this.msg_buf.as_mut()
-								.expect("polled OvernetStreamProtocolRequestStream after completion");
+								.expect("polled OvernetInternalProtocolRequestStream after completion");
 		msg_buf.clear();
 		match this.inner.channel().recv_from(msg_buf, lw) {
 			futures::Poll::Ready(Ok(())) => {},
@@ -461,23 +461,23 @@ impl futures::Stream for OvernetStreamProtocolRequestStream {
 
 		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
 		futures::Poll::Ready(Some(match header.ordinal {
-			411580008 | 411580008 => {
+			1993818253 | 1993818253 => {
 				let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-				let control_handle = OvernetStreamProtocolControlHandle {
+				let control_handle = OvernetInternalProtocolControlHandle {
 					inner: this.inner.clone(),
 				};
 
-				Ok(OvernetStreamProtocolRequest::MethodA {a: req.0,b: req.1,control_handle,})
+				Ok(OvernetInternalProtocolRequest::MethodA {a: req.0,b: req.1,control_handle,})
 			}
-			1291000979 | 1291000979 => {
+			952134976 | 952134976 => {
 				let mut req: (i64,i64) = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(_body_bytes, _handles, &mut req)?;
-				let control_handle = OvernetStreamProtocolControlHandle {
+				let control_handle = OvernetInternalProtocolControlHandle {
 					inner: this.inner.clone(),
 				};
 
-				Ok(OvernetStreamProtocolRequest::MethodB {a: req.0,b: req.1,responder:OvernetStreamProtocolMethodBResponder {
+				Ok(OvernetInternalProtocolRequest::MethodB {a: req.0,b: req.1,responder:OvernetInternalProtocolMethodBResponder {
 							control_handle: ::std::mem::ManuallyDrop::new(control_handle),
 							tx_id: header.tx_id,
 							ordinal: header.ordinal,
@@ -485,33 +485,33 @@ impl futures::Stream for OvernetStreamProtocolRequestStream {
 			}
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: header.ordinal,
-				service_name: <OvernetStreamProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
+				service_name: <OvernetInternalProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
 			}),
 		}))
 	}
 }
-pub enum OvernetStreamProtocolRequest {
+pub enum OvernetInternalProtocolRequest {
 	MethodA {
 		
 		a: i64,
 		
 		b: i64,
-		control_handle: OvernetStreamProtocolControlHandle,},
+		control_handle: OvernetInternalProtocolControlHandle,},
 	MethodB {
 		
 		a: i64,
 		
 		b: i64,
-		responder: OvernetStreamProtocolMethodBResponder,},
+		responder: OvernetInternalProtocolMethodBResponder,},
 }
 
-pub struct OvernetStreamProtocolEncoder;
-impl OvernetStreamProtocolEncoder {
+pub struct OvernetInternalProtocolEncoder;
+impl OvernetInternalProtocolEncoder {
 	pub fn encode_method_a_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<zx::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
-			ordinal: 411580008,
+			ordinal: 1993818253,
 		};
 		let mut body = (in_a,in_b,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -522,7 +522,7 @@ impl OvernetStreamProtocolEncoder {
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<zx::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {tx_id: 0,flags: 0,
-			ordinal: 530966225,
+			ordinal: 1746007436,
 		};
 		let mut body = (in_a,in_b,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -535,7 +535,7 @@ impl OvernetStreamProtocolEncoder {
 		tx_id: u32,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,flags: 0,
-			ordinal: 1291000979,
+			ordinal: 952134976,
 		};
 		let mut body = (in_a,in_b,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -548,7 +548,7 @@ impl OvernetStreamProtocolEncoder {
 		tx_id: u32,mut in_result: i64,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id,flags: 0,
-			ordinal: 1291000979,
+			ordinal: 952134976,
 		};
 		let mut body = (in_result,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -556,14 +556,14 @@ impl OvernetStreamProtocolEncoder {
 		Ok(())
 	}}
 
-#[deprecated(note = "use OvernetStreamProtocolRequestStream instead")]
-pub struct OvernetStreamProtocolImpl<
+#[deprecated(note = "use OvernetInternalProtocolRequestStream instead")]
+pub struct OvernetInternalProtocolImpl<
 	State,
-OnOpen: FnMut(&mut State, OvernetStreamProtocolControlHandle) -> OnOpenFut,
+OnOpen: FnMut(&mut State, OvernetInternalProtocolControlHandle) -> OnOpenFut,
 OnOpenFut: futures::Future<Output = ()> + Send,
-	MethodA: FnMut(&mut State,i64,i64,OvernetStreamProtocolControlHandle) -> MethodAFut,
+	MethodA: FnMut(&mut State,i64,i64,OvernetInternalProtocolControlHandle) -> MethodAFut,
 	MethodAFut: futures::Future<Output = ()> + Send,
-	MethodB: FnMut(&mut State,i64,i64,OvernetStreamProtocolMethodBResponder) -> MethodBFut,
+	MethodB: FnMut(&mut State,i64,i64,OvernetInternalProtocolMethodBResponder) -> MethodBFut,
 	MethodBFut: futures::Future<Output = ()> + Send,
 > {
 	pub state: State,
@@ -575,13 +575,13 @@ OnOpenFut: futures::Future<Output = ()> + Send,
 // Unpin is never projected for the Impl struct
 impl<
 	State,
-OnOpen: FnMut(&mut State, OvernetStreamProtocolControlHandle) -> OnOpenFut,
+OnOpen: FnMut(&mut State, OvernetInternalProtocolControlHandle) -> OnOpenFut,
 OnOpenFut: futures::Future<Output = ()> + Send,
-	MethodA: FnMut(&mut State,i64,i64,OvernetStreamProtocolControlHandle) -> MethodAFut,
+	MethodA: FnMut(&mut State,i64,i64,OvernetInternalProtocolControlHandle) -> MethodAFut,
 	MethodAFut: futures::Future<Output = ()> + Send,
-	MethodB: FnMut(&mut State,i64,i64,OvernetStreamProtocolMethodBResponder) -> MethodBFut,
+	MethodB: FnMut(&mut State,i64,i64,OvernetInternalProtocolMethodBResponder) -> MethodBFut,
 	MethodBFut: futures::Future<Output = ()> + Send,
-> ::std::marker::Unpin for OvernetStreamProtocolImpl<State, OnOpen, OnOpenFut,
+> ::std::marker::Unpin for OvernetInternalProtocolImpl<State, OnOpen, OnOpenFut,
 	MethodA,
 	MethodAFut,
 	MethodB,
@@ -591,13 +591,13 @@ OnOpenFut: futures::Future<Output = ()> + Send,
 
 impl<
 	State,
-OnOpen: FnMut(&mut State, OvernetStreamProtocolControlHandle) -> OnOpenFut,
+OnOpen: FnMut(&mut State, OvernetInternalProtocolControlHandle) -> OnOpenFut,
 OnOpenFut: futures::Future<Output = ()> + Send,
-	MethodA: FnMut(&mut State,i64,i64,OvernetStreamProtocolControlHandle) -> MethodAFut,
+	MethodA: FnMut(&mut State,i64,i64,OvernetInternalProtocolControlHandle) -> MethodAFut,
 	MethodAFut: futures::Future<Output = ()> + Send,
-	MethodB: FnMut(&mut State,i64,i64,OvernetStreamProtocolMethodBResponder) -> MethodBFut,
+	MethodB: FnMut(&mut State,i64,i64,OvernetInternalProtocolMethodBResponder) -> MethodBFut,
 	MethodBFut: futures::Future<Output = ()> + Send,
-> OvernetStreamProtocol for OvernetStreamProtocolImpl<State, OnOpen, OnOpenFut,
+> OvernetInternalProtocol for OvernetInternalProtocolImpl<State, OnOpen, OnOpenFut,
 	MethodA,
 	MethodAFut,
 	MethodB,
@@ -605,14 +605,14 @@ OnOpenFut: futures::Future<Output = ()> + Send,
 >
 {
 	type OnOpenFut = OnOpenFut;
-	fn on_open(&mut self, response_chan: OvernetStreamProtocolControlHandle) -> Self::OnOpenFut {
+	fn on_open(&mut self, response_chan: OvernetInternalProtocolControlHandle) -> Self::OnOpenFut {
 		(self.on_open)(&mut self.state, response_chan)
 	}
 	type MethodAFut = MethodAFut;
 	fn method_a (&mut self,
 		a: i64,
 		b: i64,
-		response_chan: OvernetStreamProtocolControlHandle
+		response_chan: OvernetInternalProtocolControlHandle
 	) -> Self::MethodAFut
 	{
 		(self.method_a)(
@@ -627,7 +627,7 @@ OnOpenFut: futures::Future<Output = ()> + Send,
 	fn method_b (&mut self,
 		a: i64,
 		b: i64,
-		response_chan: OvernetStreamProtocolMethodBResponder
+		response_chan: OvernetInternalProtocolMethodBResponder
 	) -> Self::MethodBFut
 	{
 		(self.method_b)(
@@ -641,11 +641,11 @@ OnOpenFut: futures::Future<Output = ()> + Send,
 }
 
 #[derive(Clone)]
-pub struct OvernetStreamProtocolControlHandle {
+pub struct OvernetInternalProtocolControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
-impl ::std::ops::Deref for OvernetStreamProtocolControlHandle {
+impl ::std::ops::Deref for OvernetInternalProtocolControlHandle {
 	type Target = ::std::sync::Arc<fidl::ServeInner>;
 
 	fn deref(&self) -> &Self::Target {
@@ -654,7 +654,7 @@ impl ::std::ops::Deref for OvernetStreamProtocolControlHandle {
 }
 
 
-impl OvernetStreamProtocolControlHandle {
+impl OvernetInternalProtocolControlHandle {
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
 	}
@@ -664,7 +664,7 @@ impl OvernetStreamProtocolControlHandle {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: 0,
 			flags: 0,
-			ordinal: 530966225,
+			ordinal: 1746007436,
 		};
 
 		let mut response = (a, b);
@@ -683,13 +683,13 @@ impl OvernetStreamProtocolControlHandle {
 
 /* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
-pub struct OvernetStreamProtocolMethodBResponder {
-	control_handle: ::std::mem::ManuallyDrop<OvernetStreamProtocolControlHandle>,
+pub struct OvernetInternalProtocolMethodBResponder {
+	control_handle: ::std::mem::ManuallyDrop<OvernetInternalProtocolControlHandle>,
 	tx_id: u32,
 	ordinal: u32,
 }
 
-impl ::std::ops::Drop for OvernetStreamProtocolMethodBResponder {
+impl ::std::ops::Drop for OvernetInternalProtocolMethodBResponder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
 		// so that the client doesn't hang. To prevent this behavior, some methods
@@ -700,8 +700,8 @@ impl ::std::ops::Drop for OvernetStreamProtocolMethodBResponder {
 	}
 }
 
-impl OvernetStreamProtocolMethodBResponder {
-	pub fn control_handle(&self) -> &OvernetStreamProtocolControlHandle {
+impl OvernetInternalProtocolMethodBResponder {
+	pub fn control_handle(&self) -> &OvernetInternalProtocolControlHandle {
 		&self.control_handle
 	}
 

@@ -1,0 +1,23 @@
+
+#include "garnet/lib/overnet/protocol/fidl_stream.h"
+
+#include "test/name/cpp/fidl.h"
+  namespace test {
+  namespace name {
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  }  // namespace name
+  }  // namespace test

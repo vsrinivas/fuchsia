@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package cpp
+package cpp_overnet_internal
 
 import (
 	"io"
@@ -11,7 +11,7 @@ import (
 	"text/template"
 
 	"fidl/compiler/backend/cpp/ir"
-	"fidl/compiler/backend/cpp/templates"
+	"fidl/compiler/backend/cpp_overnet_internal/templates"
 	"fidl/compiler/backend/types"
 )
 
@@ -20,21 +20,16 @@ type FidlGenerator struct {
 }
 
 func NewFidlGenerator() *FidlGenerator {
-	tmpls := template.New("CPPTemplates").Funcs(template.FuncMap{
+	tmpls := template.New("OvernetInternal").Funcs(template.FuncMap{
 		"Kinds": func() interface{} { return ir.Kinds },
 		"Eq":    func(a interface{}, b interface{}) bool { return a == b },
 	})
-	template.Must(tmpls.Parse(templates.Bits))
-	template.Must(tmpls.Parse(templates.Const))
-	template.Must(tmpls.Parse(templates.Enum))
-	template.Must(tmpls.Parse(templates.Header))
-	template.Must(tmpls.Parse(templates.Implementation))
-	template.Must(tmpls.Parse(templates.Interface))
-	template.Must(tmpls.Parse(templates.Struct))
-	template.Must(tmpls.Parse(templates.Table))
-	template.Must(tmpls.Parse(templates.TestBase))
-	template.Must(tmpls.Parse(templates.Union))
-	template.Must(tmpls.Parse(templates.XUnion))
+	templates := []string{
+		templates.OvernetInternal,
+	}
+	for _, t := range templates {
+		template.Must(tmpls.Parse(t))
+	}
 	return &FidlGenerator{
 		tmpls: tmpls,
 	}
@@ -47,11 +42,7 @@ func (gen *FidlGenerator) GenerateHeader(wr io.Writer, tree ir.Root) error {
 
 // GenerateSource generates the C++ bindings source, i.e. implementation.
 func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree ir.Root) error {
-	return gen.tmpls.ExecuteTemplate(wr, "Implementation", tree)
-}
-
-func (gen *FidlGenerator) GenerateTestBase(wr io.Writer, tree ir.Root) error {
-	return gen.tmpls.ExecuteTemplate(wr, "TestBase", tree)
+	return gen.tmpls.ExecuteTemplate(wr, "Source", tree)
 }
 
 // GenerateFidl generates all files required for the C++ bindings.
@@ -66,7 +57,6 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) err
 
 	headerPath := config.OutputBase + ".h"
 	sourcePath := config.OutputBase + ".cc"
-	testBasePath := config.OutputBase + "_test_base.h"
 
 	if err := os.MkdirAll(filepath.Dir(config.OutputBase), os.ModePerm); err != nil {
 		return err
@@ -89,17 +79,6 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) err
 	defer sourceFile.Close()
 
 	if err := gen.GenerateSource(sourceFile, tree); err != nil {
-		return err
-	}
-
-	testBaseFile, err := os.Create(testBasePath)
-	if err != nil {
-		return err
-	}
-	defer testBaseFile.Close()
-
-	err = gen.GenerateTestBase(testBaseFile, tree)
-	if err != nil {
 		return err
 	}
 

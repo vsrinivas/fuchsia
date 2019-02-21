@@ -241,14 +241,13 @@ type Parameter struct {
 }
 
 type Root struct {
-	PrimaryHeader     string
-	Headers           []string
-	LLHeaders         []string
-	HandleTypes       []string
-	HasOvernetStreams bool
-	Library           types.LibraryIdentifier
-	LibraryReversed   types.LibraryIdentifier
-	Decls             []Decl
+	PrimaryHeader   string
+	Headers         []string
+	LLHeaders       []string
+	HandleTypes     []string
+	Library         types.LibraryIdentifier
+	LibraryReversed types.LibraryIdentifier
+	Decls           []Decl
 }
 
 func (m *Method) CallbackWrapper() string {
@@ -967,10 +966,6 @@ func Compile(r types.Root) Root {
 	for _, v := range r.Interfaces {
 		d := c.compileInterface(v)
 		decls[v.Name] = &d
-		// TODO(FIDL-469): refactor
-		if d.Transports()["OvernetStream"] {
-			root.HasOvernetStreams = true
-		}
 	}
 
 	for _, v := range r.Structs {

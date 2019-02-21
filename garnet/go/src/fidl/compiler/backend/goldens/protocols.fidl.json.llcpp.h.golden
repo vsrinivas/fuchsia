@@ -18,7 +18,7 @@ namespace name {
 class KitchenSink;
 class ChannelProtocol;
 class SocketControlProtocol;
-class OvernetStreamProtocol;
+class OvernetInternalProtocol;
 
 
 class KitchenSink final {
@@ -420,7 +420,7 @@ class SocketControlProtocol final {
 };
 
 
-class OvernetStreamProtocol final {
+class OvernetInternalProtocol final {
  public:
 
   struct MethodARequest {
@@ -501,7 +501,7 @@ class OvernetStreamProtocol final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = OvernetStreamProtocol;
+    using _Outer = OvernetInternalProtocol;
     using _Base = ::fidl::CompleterBase;
 
     using MethodACompleter = ::fidl::Completer<>;
@@ -663,38 +663,38 @@ static_assert(sizeof(::test::name::SocketControlProtocol::MethodBResponse)
 static_assert(offsetof(::test::name::SocketControlProtocol::MethodBResponse, result) == 16);
 
 template <>
-struct IsFidlType<::test::name::OvernetStreamProtocol::MethodARequest> : public std::true_type {};
+struct IsFidlType<::test::name::OvernetInternalProtocol::MethodARequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::OvernetStreamProtocol::MethodARequest> : public std::true_type {};
-static_assert(sizeof(::test::name::OvernetStreamProtocol::MethodARequest)
-    == ::test::name::OvernetStreamProtocol::MethodARequest::PrimarySize);
-static_assert(offsetof(::test::name::OvernetStreamProtocol::MethodARequest, a) == 16);
-static_assert(offsetof(::test::name::OvernetStreamProtocol::MethodARequest, b) == 24);
+struct IsFidlMessage<::test::name::OvernetInternalProtocol::MethodARequest> : public std::true_type {};
+static_assert(sizeof(::test::name::OvernetInternalProtocol::MethodARequest)
+    == ::test::name::OvernetInternalProtocol::MethodARequest::PrimarySize);
+static_assert(offsetof(::test::name::OvernetInternalProtocol::MethodARequest, a) == 16);
+static_assert(offsetof(::test::name::OvernetInternalProtocol::MethodARequest, b) == 24);
 
 template <>
-struct IsFidlType<::test::name::OvernetStreamProtocol::EventAResponse> : public std::true_type {};
+struct IsFidlType<::test::name::OvernetInternalProtocol::EventAResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::OvernetStreamProtocol::EventAResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::OvernetStreamProtocol::EventAResponse)
-    == ::test::name::OvernetStreamProtocol::EventAResponse::PrimarySize);
-static_assert(offsetof(::test::name::OvernetStreamProtocol::EventAResponse, a) == 16);
-static_assert(offsetof(::test::name::OvernetStreamProtocol::EventAResponse, b) == 24);
+struct IsFidlMessage<::test::name::OvernetInternalProtocol::EventAResponse> : public std::true_type {};
+static_assert(sizeof(::test::name::OvernetInternalProtocol::EventAResponse)
+    == ::test::name::OvernetInternalProtocol::EventAResponse::PrimarySize);
+static_assert(offsetof(::test::name::OvernetInternalProtocol::EventAResponse, a) == 16);
+static_assert(offsetof(::test::name::OvernetInternalProtocol::EventAResponse, b) == 24);
 
 template <>
-struct IsFidlType<::test::name::OvernetStreamProtocol::MethodBRequest> : public std::true_type {};
+struct IsFidlType<::test::name::OvernetInternalProtocol::MethodBRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::OvernetStreamProtocol::MethodBRequest> : public std::true_type {};
-static_assert(sizeof(::test::name::OvernetStreamProtocol::MethodBRequest)
-    == ::test::name::OvernetStreamProtocol::MethodBRequest::PrimarySize);
-static_assert(offsetof(::test::name::OvernetStreamProtocol::MethodBRequest, a) == 16);
-static_assert(offsetof(::test::name::OvernetStreamProtocol::MethodBRequest, b) == 24);
+struct IsFidlMessage<::test::name::OvernetInternalProtocol::MethodBRequest> : public std::true_type {};
+static_assert(sizeof(::test::name::OvernetInternalProtocol::MethodBRequest)
+    == ::test::name::OvernetInternalProtocol::MethodBRequest::PrimarySize);
+static_assert(offsetof(::test::name::OvernetInternalProtocol::MethodBRequest, a) == 16);
+static_assert(offsetof(::test::name::OvernetInternalProtocol::MethodBRequest, b) == 24);
 
 template <>
-struct IsFidlType<::test::name::OvernetStreamProtocol::MethodBResponse> : public std::true_type {};
+struct IsFidlType<::test::name::OvernetInternalProtocol::MethodBResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::OvernetStreamProtocol::MethodBResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::OvernetStreamProtocol::MethodBResponse)
-    == ::test::name::OvernetStreamProtocol::MethodBResponse::PrimarySize);
-static_assert(offsetof(::test::name::OvernetStreamProtocol::MethodBResponse, result) == 16);
+struct IsFidlMessage<::test::name::OvernetInternalProtocol::MethodBResponse> : public std::true_type {};
+static_assert(sizeof(::test::name::OvernetInternalProtocol::MethodBResponse)
+    == ::test::name::OvernetInternalProtocol::MethodBResponse::PrimarySize);
+static_assert(offsetof(::test::name::OvernetInternalProtocol::MethodBResponse, result) == 16);
 
 }  // namespace fidl

@@ -42,7 +42,7 @@ struct SocketHandle {
 
 /// Proxy protocol for channels.
 /// This protocol is published for each side of the Overnet stream.
-[Transport="OvernetStream"]
+[Transport="OvernetInternal"]
 protocol ZirconChannel {
     /// Send a message to the stream's peer.
     Message(ZirconChannelMessage message);
@@ -50,7 +50,7 @@ protocol ZirconChannel {
 
 /// Proxy protocol for sockets.
 /// This protocol is published for each side of the Overnet stream.
-[Transport="OvernetStream"]
+[Transport="OvernetInternal"]
 protocol ZirconSocket {
     /// Send some bytes to the stream's peer.
     /// For datagram sockets, this is one datagram.

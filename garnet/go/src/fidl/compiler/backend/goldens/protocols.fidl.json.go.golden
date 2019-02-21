@@ -12,191 +12,191 @@ import (
 
 
 const (
-	OvernetStreamProtocolMethodAOrdinal uint32 = 411580008
-	OvernetStreamProtocolMethodAGenOrdinal uint32 = 411580008
-	OvernetStreamProtocolEventAOrdinal uint32 = 530966225
-	OvernetStreamProtocolEventAGenOrdinal uint32 = 530966225
-	OvernetStreamProtocolMethodBOrdinal uint32 = 1291000979
-	OvernetStreamProtocolMethodBGenOrdinal uint32 = 1291000979
+	OvernetInternalProtocolMethodAOrdinal uint32 = 1993818253
+	OvernetInternalProtocolMethodAGenOrdinal uint32 = 1993818253
+	OvernetInternalProtocolEventAOrdinal uint32 = 1746007436
+	OvernetInternalProtocolEventAGenOrdinal uint32 = 1746007436
+	OvernetInternalProtocolMethodBOrdinal uint32 = 952134976
+	OvernetInternalProtocolMethodBGenOrdinal uint32 = 952134976
 )
 
-type OvernetStreamProtocolMethodARequest struct {
+type OvernetInternalProtocolMethodARequest struct {
 	_ struct{} `fidl2:"s,16,0"`
 	A int64
 	B int64
 }
 
-var _mOvernetStreamProtocolMethodARequest = _bindings.CreateLazyMarshaler(OvernetStreamProtocolMethodARequest{})
+var _mOvernetInternalProtocolMethodARequest = _bindings.CreateLazyMarshaler(OvernetInternalProtocolMethodARequest{})
 
-func (msg *OvernetStreamProtocolMethodARequest) Marshaler() _bindings.Marshaler {
-	return _mOvernetStreamProtocolMethodARequest
+func (msg *OvernetInternalProtocolMethodARequest) Marshaler() _bindings.Marshaler {
+	return _mOvernetInternalProtocolMethodARequest
 }
 
 // Implements Payload.
-func (_ *OvernetStreamProtocolMethodARequest) InlineAlignment() int {
+func (_ *OvernetInternalProtocolMethodARequest) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *OvernetStreamProtocolMethodARequest) InlineSize() int {
+func (_ *OvernetInternalProtocolMethodARequest) InlineSize() int {
 	return 16
 }
 
-type OvernetStreamProtocolEventAResponse struct {
+type OvernetInternalProtocolEventAResponse struct {
 	_ struct{} `fidl2:"s,16,0"`
 	A int64
 	B int64
 }
 
-var _mOvernetStreamProtocolEventAResponse = _bindings.CreateLazyMarshaler(OvernetStreamProtocolEventAResponse{})
+var _mOvernetInternalProtocolEventAResponse = _bindings.CreateLazyMarshaler(OvernetInternalProtocolEventAResponse{})
 
-func (msg *OvernetStreamProtocolEventAResponse) Marshaler() _bindings.Marshaler {
-	return _mOvernetStreamProtocolEventAResponse
+func (msg *OvernetInternalProtocolEventAResponse) Marshaler() _bindings.Marshaler {
+	return _mOvernetInternalProtocolEventAResponse
 }
 
 // Implements Payload.
-func (_ *OvernetStreamProtocolEventAResponse) InlineAlignment() int {
+func (_ *OvernetInternalProtocolEventAResponse) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *OvernetStreamProtocolEventAResponse) InlineSize() int {
+func (_ *OvernetInternalProtocolEventAResponse) InlineSize() int {
 	return 16
 }
 
-type OvernetStreamProtocolMethodBRequest struct {
+type OvernetInternalProtocolMethodBRequest struct {
 	_ struct{} `fidl2:"s,16,0"`
 	A int64
 	B int64
 }
 
-var _mOvernetStreamProtocolMethodBRequest = _bindings.CreateLazyMarshaler(OvernetStreamProtocolMethodBRequest{})
+var _mOvernetInternalProtocolMethodBRequest = _bindings.CreateLazyMarshaler(OvernetInternalProtocolMethodBRequest{})
 
-func (msg *OvernetStreamProtocolMethodBRequest) Marshaler() _bindings.Marshaler {
-	return _mOvernetStreamProtocolMethodBRequest
+func (msg *OvernetInternalProtocolMethodBRequest) Marshaler() _bindings.Marshaler {
+	return _mOvernetInternalProtocolMethodBRequest
 }
 
 // Implements Payload.
-func (_ *OvernetStreamProtocolMethodBRequest) InlineAlignment() int {
+func (_ *OvernetInternalProtocolMethodBRequest) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *OvernetStreamProtocolMethodBRequest) InlineSize() int {
+func (_ *OvernetInternalProtocolMethodBRequest) InlineSize() int {
 	return 16
 }
 
-type OvernetStreamProtocolMethodBResponse struct {
+type OvernetInternalProtocolMethodBResponse struct {
 	_ struct{} `fidl2:"s,8,0"`
 	Result int64
 }
 
-var _mOvernetStreamProtocolMethodBResponse = _bindings.CreateLazyMarshaler(OvernetStreamProtocolMethodBResponse{})
+var _mOvernetInternalProtocolMethodBResponse = _bindings.CreateLazyMarshaler(OvernetInternalProtocolMethodBResponse{})
 
-func (msg *OvernetStreamProtocolMethodBResponse) Marshaler() _bindings.Marshaler {
-	return _mOvernetStreamProtocolMethodBResponse
+func (msg *OvernetInternalProtocolMethodBResponse) Marshaler() _bindings.Marshaler {
+	return _mOvernetInternalProtocolMethodBResponse
 }
 
 // Implements Payload.
-func (_ *OvernetStreamProtocolMethodBResponse) InlineAlignment() int {
+func (_ *OvernetInternalProtocolMethodBResponse) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *OvernetStreamProtocolMethodBResponse) InlineSize() int {
+func (_ *OvernetInternalProtocolMethodBResponse) InlineSize() int {
 	return 8
 }
 
-type OvernetStreamProtocolInterface _bindings.ChannelProxy
+type OvernetInternalProtocolInterface _bindings.ChannelProxy
 
 
-func (p *OvernetStreamProtocolInterface) MethodA(a int64,b int64) error {
-	req_ := OvernetStreamProtocolMethodARequest{
+func (p *OvernetInternalProtocolInterface) MethodA(a int64,b int64) error {
+	req_ := OvernetInternalProtocolMethodARequest{
 		A: a,
 		B: b,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(OvernetStreamProtocolMethodAOrdinal, &req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(OvernetInternalProtocolMethodAOrdinal, &req_)
 	return err
 }
 
-func (p *OvernetStreamProtocolInterface) ExpectEventA() (int64, int64, error) {
-	resp_ := OvernetStreamProtocolEventAResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Recv(OvernetStreamProtocolEventAOrdinal, &resp_)
+func (p *OvernetInternalProtocolInterface) ExpectEventA() (int64, int64, error) {
+	resp_ := OvernetInternalProtocolEventAResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Recv(OvernetInternalProtocolEventAOrdinal, &resp_)
 	return resp_.A, resp_.B, err
 }
 
-func (p *OvernetStreamProtocolInterface) MethodB(a int64,b int64) (int64, error) {
-	req_ := OvernetStreamProtocolMethodBRequest{
+func (p *OvernetInternalProtocolInterface) MethodB(a int64,b int64) (int64, error) {
+	req_ := OvernetInternalProtocolMethodBRequest{
 		A: a,
 		B: b,
 	}
-	resp_ := OvernetStreamProtocolMethodBResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(OvernetStreamProtocolMethodBOrdinal, &req_, &resp_)
+	resp_ := OvernetInternalProtocolMethodBResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Call(OvernetInternalProtocolMethodBOrdinal, &req_, &resp_)
 	return resp_.Result, err
 }
 
 
-type OvernetStreamProtocol interface {
+type OvernetInternalProtocol interface {
 	MethodA(a int64,b int64) error
 	MethodB(a int64,b int64) (int64, error)
 }
 
-type OvernetStreamProtocolTransitionalBase struct {}
+type OvernetInternalProtocolTransitionalBase struct {}
 
 
-type OvernetStreamProtocolInterfaceRequest _bindings.InterfaceRequest
+type OvernetInternalProtocolInterfaceRequest _bindings.InterfaceRequest
 
-func NewOvernetStreamProtocolInterfaceRequest() (OvernetStreamProtocolInterfaceRequest, *OvernetStreamProtocolInterface, error) {
+func NewOvernetInternalProtocolInterfaceRequest() (OvernetInternalProtocolInterfaceRequest, *OvernetInternalProtocolInterface, error) {
 	req, cli, err := _bindings.NewInterfaceRequest()
-	return OvernetStreamProtocolInterfaceRequest(req), (*OvernetStreamProtocolInterface)(cli), err
+	return OvernetInternalProtocolInterfaceRequest(req), (*OvernetInternalProtocolInterface)(cli), err
 }
 
-type OvernetStreamProtocolStub struct {
-	Impl OvernetStreamProtocol
+type OvernetInternalProtocolStub struct {
+	Impl OvernetInternalProtocol
 }
 
-func (s *OvernetStreamProtocolStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
+func (s *OvernetInternalProtocolStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
 	switch ord {
-	case OvernetStreamProtocolMethodAOrdinal:
-		in_ := OvernetStreamProtocolMethodARequest{}
+	case OvernetInternalProtocolMethodAOrdinal:
+		in_ := OvernetInternalProtocolMethodARequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		err_ := s.Impl.MethodA(in_.A,in_.B)
 		return nil, err_
-	case OvernetStreamProtocolMethodBOrdinal:
-		in_ := OvernetStreamProtocolMethodBRequest{}
+	case OvernetInternalProtocolMethodBOrdinal:
+		in_ := OvernetInternalProtocolMethodBRequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
-		out_ := OvernetStreamProtocolMethodBResponse{}
+		out_ := OvernetInternalProtocolMethodBResponse{}
 		result, err_ := s.Impl.MethodB(in_.A,in_.B)
 		out_.Result = result
 		return &out_, err_
 	}
 	return nil, _bindings.ErrUnknownOrdinal
 }
-type OvernetStreamProtocolService struct {
+type OvernetInternalProtocolService struct {
 	_bindings.BindingSet
 }
 
-func (s *OvernetStreamProtocolService) Add(impl OvernetStreamProtocol, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
-	return s.BindingSet.Add(&OvernetStreamProtocolStub{Impl: impl}, c, onError)
+func (s *OvernetInternalProtocolService) Add(impl OvernetInternalProtocol, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&OvernetInternalProtocolStub{Impl: impl}, c, onError)
 }
 
-func (s *OvernetStreamProtocolService) EventProxyFor(key _bindings.BindingKey) (*OvernetStreamProtocolEventProxy, bool) {
+func (s *OvernetInternalProtocolService) EventProxyFor(key _bindings.BindingKey) (*OvernetInternalProtocolEventProxy, bool) {
 	pxy, err := s.BindingSet.ProxyFor(key)
-	return (*OvernetStreamProtocolEventProxy)(pxy), err
+	return (*OvernetInternalProtocolEventProxy)(pxy), err
 }
 
-type OvernetStreamProtocolEventProxy _bindings.ChannelProxy
+type OvernetInternalProtocolEventProxy _bindings.ChannelProxy
 
-func (p *OvernetStreamProtocolEventProxy) EventA(a int64,b int64) error {
-	event_ := OvernetStreamProtocolEventAResponse{
+func (p *OvernetInternalProtocolEventProxy) EventA(a int64,b int64) error {
+	event_ := OvernetInternalProtocolEventAResponse{
 		A: a,
 		B: b,
 	}
-	return ((*_bindings.ChannelProxy)(p)).Send(OvernetStreamProtocolEventAOrdinal, &event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(OvernetInternalProtocolEventAOrdinal, &event_)
 }
 
 

@@ -1,0 +1,129 @@
+
+#include "garnet/lib/overnet/protocol/fidl_stream.h"
+
+#include "test/name/cpp/fidl.h"
+  namespace test {
+  namespace name {
+  
+      
+        
+class KitchenSink;
+class KitchenSink_Proxy;
+class KitchenSink_Stub;
+      
+  
+      
+  
+      
+  
+      
+        
+class OvernetInternalProtocol;
+class OvernetInternalProtocol_Proxy;
+class OvernetInternalProtocol_Stub;
+      
+  
+  
+      
+        
+
+class KitchenSink {
+ public:
+  using Proxy_ = KitchenSink_Proxy;
+  using Stub_ = KitchenSink_Stub;
+  virtual ~KitchenSink();
+      
+  virtual void MethodA(int64_t a, int64_t b) = 0;
+  virtual void EventA(int64_t a, int64_t b) = 0;
+  using MethodBCallback =
+      fit::function<void(int64_t)>;
+      
+  virtual void MethodB(int64_t a, int64_t b, MethodBCallback callback) = 0;
+};
+
+class KitchenSink_Proxy : public ::overnet::FidlStream, public KitchenSink {
+ public:
+ KitchenSink_Proxy() = default;
+  ~KitchenSink_Proxy() override;
+  void MethodA(int64_t a, int64_t b) override final;
+  void MethodB(int64_t a, int64_t b, MethodBCallback callback) override final;
+
+ private:
+  zx_status_t Dispatch_(::fidl::Message* message) override final;
+  KitchenSink_Proxy(const KitchenSink_Proxy&) = delete;
+  KitchenSink_Proxy& operator=(const KitchenSink_Proxy&) = delete;
+};
+
+class KitchenSink_Stub : public ::overnet::FidlStream, public KitchenSink {
+ public:
+  typedef class KitchenSink KitchenSink_clazz;
+  KitchenSink_Stub() = default;
+  ~KitchenSink_Stub() override;
+  virtual void EventA(int64_t a, int64_t b) override final;
+
+ private:
+  zx_status_t Dispatch_(::fidl::Message* message) override final;
+};
+      
+  
+      
+  
+      
+  
+      
+        
+
+class OvernetInternalProtocol {
+ public:
+  using Proxy_ = OvernetInternalProtocol_Proxy;
+  using Stub_ = OvernetInternalProtocol_Stub;
+  virtual ~OvernetInternalProtocol();
+      
+  virtual void MethodA(int64_t a, int64_t b) = 0;
+  virtual void EventA(int64_t a, int64_t b) = 0;
+  using MethodBCallback =
+      fit::function<void(int64_t)>;
+      
+  virtual void MethodB(int64_t a, int64_t b, MethodBCallback callback) = 0;
+};
+
+class OvernetInternalProtocol_Proxy : public ::overnet::FidlStream, public OvernetInternalProtocol {
+ public:
+ OvernetInternalProtocol_Proxy() = default;
+  ~OvernetInternalProtocol_Proxy() override;
+  void MethodA(int64_t a, int64_t b) override final;
+  void MethodB(int64_t a, int64_t b, MethodBCallback callback) override final;
+
+ private:
+  zx_status_t Dispatch_(::fidl::Message* message) override final;
+  OvernetInternalProtocol_Proxy(const OvernetInternalProtocol_Proxy&) = delete;
+  OvernetInternalProtocol_Proxy& operator=(const OvernetInternalProtocol_Proxy&) = delete;
+};
+
+class OvernetInternalProtocol_Stub : public ::overnet::FidlStream, public OvernetInternalProtocol {
+ public:
+  typedef class OvernetInternalProtocol OvernetInternalProtocol_clazz;
+  OvernetInternalProtocol_Stub() = default;
+  ~OvernetInternalProtocol_Stub() override;
+  virtual void EventA(int64_t a, int64_t b) override final;
+
+ private:
+  zx_status_t Dispatch_(::fidl::Message* message) override final;
+};
+      
+  
+  
+      
+        
+      
+  
+      
+  
+      
+  
+      
+        
+      
+  
+  }  // namespace name
+  }  // namespace test

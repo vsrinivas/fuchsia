@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/cpp/overnet_stream.h>
+#include "garnet/lib/overnet/protocol/fidl_stream.h"
 #include <zircon/assert.h>
 
-namespace fidl {
+namespace overnet {
 
-OvernetStream::~OvernetStream() = default;
+FidlStream::~FidlStream() = default;
 
-zx_status_t OvernetStream::Process_(fidl::Message message) {
+zx_status_t FidlStream::Process_(fidl::Message message) {
   if (!message.has_header()) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -30,17 +30,17 @@ zx_status_t OvernetStream::Process_(fidl::Message message) {
   }
 }
 
-void OvernetStream::Send_(uint32_t txid, fidl::Message message) {
+void FidlStream::Send_(uint32_t txid, fidl::Message message) {
   ZX_DEBUG_ASSERT(message.txid() == 0);
   message.set_txid(txid);
   Send_(std::move(message));
 }
 
-zx_txid_t OvernetStream::AllocateCallback(
+zx_txid_t FidlStream::AllocateCallback(
     fit::function<zx_status_t(fidl::Message)> callback) {
   zx_txid_t id;
   do {
-    // No need to worry about user space txid spaces - OvernetStream messages
+    // No need to worry about user space txid spaces - FidlStream messages
     // are never carried over channels.
     id = next_txid_++;
   } while (callbacks_.count(id));
@@ -48,4 +48,4 @@ zx_txid_t OvernetStream::AllocateCallback(
   return id;
 }
 
-}  // namespace fidl
+}  // namespace overnet

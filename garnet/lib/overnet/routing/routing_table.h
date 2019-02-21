@@ -5,6 +5,7 @@
 #pragma once
 
 #include <fuchsia/overnet/protocol/cpp/fidl.h>
+#include <fuchsia/overnet/protocol/cpp/overnet_internal.h>
 #include <condition_variable>
 #include <mutex>
 #include <thread>

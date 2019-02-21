@@ -59,6 +59,14 @@ go_test("fidlgen_llcpp_test") {
   ]
 }
 
+go_test("fidlgen_cpp_overnet_internal_test") {
+  gopackage = "fidl/compiler/backend/cpp_overnet_internal"
+
+  deps = [
+    ":fidlgen_test_lib",
+  ]
+}
+
 go_test("fidlgen_cpp_ir_test") {
   gopackage = "fidl/compiler/backend/cpp/ir"
 

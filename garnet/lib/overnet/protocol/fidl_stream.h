@@ -10,11 +10,11 @@
 #include <zircon/types.h>
 #include <map>
 
-namespace fidl {
+namespace overnet {
 
-class OvernetStream {
+class FidlStream {
  public:
-  virtual ~OvernetStream();
+  virtual ~FidlStream();
 
   zx_status_t Process_(::fidl::Message message);
 
@@ -38,6 +38,6 @@ class OvernetStream {
   zx_txid_t next_txid_ = 1;
 };
 
-}  // namespace fidl
+}  // namespace overnet
 
 #endif
