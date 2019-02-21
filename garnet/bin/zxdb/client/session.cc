@@ -6,12 +6,15 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <ifaddrs.h>
 #include <inttypes.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
 #include <thread>
+#include <variant>
 
 #include "garnet/bin/zxdb/client/arch_info.h"
 #include "garnet/bin/zxdb/client/breakpoint_action.h"
@@ -20,6 +23,7 @@
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/remote_api_impl.h"
 #include "garnet/bin/zxdb/client/setting_schema_definition.h"
+#include "garnet/bin/zxdb/client/socket_connect.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
 #include "garnet/lib/debug_ipc/client_protocol.h"
@@ -29,9 +33,9 @@
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
-#include "garnet/public/lib/fxl/logging.h"
-#include "garnet/public/lib/fxl/memory/ref_counted.h"
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/memory/ref_counted.h"
+#include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -41,29 +45,6 @@ namespace {
 // send nontrivial memory dumps over the channel, but ensures we won't crash
 // trying to allocate an unreasonable buffer size if the stream is corrupt.
 constexpr uint32_t kMaxMessageSize = 16777216;
-
-// Tries to resolve the host/port. On success populates *addr and returns Err().
-Err ResolveAddress(const std::string& host, uint16_t port, addrinfo* addr) {
-  std::string port_str = fxl::StringPrintf("%" PRIu16, port);
-
-  struct addrinfo hints;
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_protocol = IPPROTO_TCP;
-  hints.ai_flags = AI_NUMERICSERV;
-
-  struct addrinfo* addrs = nullptr;
-  int addr_err = getaddrinfo(host.c_str(), port_str.c_str(), &hints, &addrs);
-  if (addr_err != 0) {
-    return Err(fxl::StringPrintf("Failed to resolve \"%s\": %s", host.c_str(),
-                                 gai_strerror(addr_err)));
-  }
-
-  *addr = *addrs;
-  freeaddrinfo(addrs);
-  return Err();
-}
 
 }  // namespace
 
@@ -257,28 +238,7 @@ void Session::PendingConnection::HelloCompleteMainThread(
 }
 
 Err Session::PendingConnection::DoConnectBackgroundThread() {
-  addrinfo addr;
-  Err err = ResolveAddress(host_, port_, &addr);
-  if (err.has_error())
-    return err;
-
-  socket_.reset(socket(addr.ai_family, SOCK_STREAM, IPPROTO_TCP));
-  if (!socket_.is_valid())
-    return Err(ErrType::kGeneral, "Could not create socket.");
-
-  if (connect(socket_.get(), addr.ai_addr, addr.ai_addrlen)) {
-    socket_.reset();
-    return Err(
-        fxl::StringPrintf("Failed to connect socket: %s", strerror(errno)));
-  }
-
-  // By default sockets are blocking which we don't want.
-  if (fcntl(socket_.get(), F_SETFL, O_NONBLOCK) < 0) {
-    socket_.reset();
-    return Err(ErrType::kGeneral, "Could not make nonblocking socket.");
-  }
-
-  return Err();
+  return ConnectToHost(host_, port_, &socket_);
 }
 
 // Session ---------------------------------------------------------------------
