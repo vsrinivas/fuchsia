@@ -17,6 +17,7 @@ static_library("libmagma_static") {
 
   sources = [
     "magma.cc",
+    "trace_init.cc",
   ]
 
   deps = [
