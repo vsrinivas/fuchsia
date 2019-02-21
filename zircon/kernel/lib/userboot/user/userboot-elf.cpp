@@ -7,8 +7,6 @@
 #include "bootfs.h"
 #include "util.h"
 
-#pragma GCC visibility push(hidden)
-
 #include <elf.h>
 #include <elfload/elfload.h>
 #include <zircon/compiler.h>
@@ -16,8 +14,6 @@
 #include <zircon/syscalls.h>
 #include <stdbool.h>
 #include <string.h>
-
-#pragma GCC visibility pop
 
 #define INTERP_PREFIX "lib/"
 

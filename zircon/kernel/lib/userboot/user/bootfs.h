@@ -4,8 +4,6 @@
 
 #pragma once
 
-#pragma GCC visibility push(hidden)
-
 #include <cstddef>
 #include <zircon/types.h>
 
@@ -20,5 +18,3 @@ void bootfs_unmount(zx_handle_t vmar, zx_handle_t log, struct bootfs *fs);
 
 zx_handle_t bootfs_open(zx_handle_t log, const char* purpose,
                         struct bootfs *fs, const char* filename);
-
-#pragma GCC visibility pop

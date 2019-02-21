@@ -5,13 +5,9 @@
 #include "bootfs.h"
 #include "util.h"
 
-#pragma GCC visibility push(hidden)
-
 #include <zircon/boot/bootdata.h>
 #include <zircon/syscalls.h>
 #include <string.h>
-
-#pragma GCC visibility pop
 
 void bootfs_mount(zx_handle_t vmar, zx_handle_t log, zx_handle_t vmo, struct bootfs *fs) {
     uint64_t size;

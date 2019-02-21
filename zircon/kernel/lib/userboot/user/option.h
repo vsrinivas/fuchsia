@@ -4,8 +4,6 @@
 
 #pragma once
 
-#pragma GCC visibility push(hidden)
-
 #include <zircon/types.h>
 
 enum option {
@@ -26,5 +24,3 @@ struct options {
 };
 
 void parse_options(zx_handle_t log, struct options *o, char** strings);
-
-#pragma GCC visibility pop

@@ -5,14 +5,10 @@
 #include "bootfs.h"
 #include "util.h"
 
-#pragma GCC visibility push(hidden)
-
 #include <ldmsg/ldmsg.h>
 #include <string.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-
-#pragma GCC visibility pop
 
 #define LOAD_OBJECT_FILE_PREFIX "lib/"
 

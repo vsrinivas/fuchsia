@@ -4,15 +4,11 @@
 
 #include "util.h"
 
-#pragma GCC visibility push(hidden)
-
 #include <assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 #include <stdarg.h>
 #include <string.h>
-
-#pragma GCC visibility pop
 
 #define LOG_PREFIX "userboot: "
 #define LOG_WRITE_FAIL \

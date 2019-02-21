@@ -5,14 +5,10 @@
 #include "bootdata.h"
 #include "util.h"
 
-#pragma GCC visibility push(hidden)
-
 #include <bootdata/decompress.h>
 #include <zircon/boot/bootdata.h>
 #include <zircon/syscalls.h>
 #include <string.h>
-
-#pragma GCC visibility pop
 
 zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self,
                                 zx_handle_t bootdata_vmo) {

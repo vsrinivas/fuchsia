@@ -16,8 +16,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#pragma GCC visibility push(hidden)
-
 #ifdef _LP64
 # define MY_ELFCLASS ELFCLASS64
 typedef Elf64_Ehdr elf_ehdr_t;
@@ -62,5 +60,3 @@ bool elf_load_find_interp(const elf_phdr_t* phdrs, size_t phnum,
                           uintptr_t* interp_off, size_t* interp_len);
 
 __END_CDECLS
-
-#pragma GCC visibility pop

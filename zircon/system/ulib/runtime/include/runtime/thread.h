@@ -18,8 +18,6 @@ typedef struct {
     char internal[16];
 } zxr_thread_t;
 
-#pragma GCC visibility push(hidden)
-
 // TODO(kulakowski) Document the possible zx_status_t values from these.
 
 // Create a thread, filling in the given zxr_thread_t to describe it.
@@ -91,7 +89,5 @@ zx_status_t zxr_thread_destroy(zxr_thread_t* thread);
 // exit.  The returned handle is not a duplicate, and must be duplicated if the caller
 // intends to hold it after zxr_thread_start() is called.
 zx_handle_t zxr_thread_get_handle(zxr_thread_t* thread);
-
-#pragma GCC visibility pop
 
 __END_CDECLS

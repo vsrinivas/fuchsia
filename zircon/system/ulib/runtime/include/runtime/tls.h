@@ -10,8 +10,6 @@
 
 __BEGIN_CDECLS
 
-#pragma GCC visibility push(hidden)
-
 // Get and set the thread pointer.
 static inline void* zxr_tp_get(void);
 static inline void zxr_tp_set(zx_handle_t self, void* tp);
@@ -74,7 +72,5 @@ __NO_SAFESTACK static inline void zxr_tp_set(zx_handle_t self, void* tp) {
 #error Unsupported architecture
 
 #endif
-
-#pragma GCC visibility pop
 
 __END_CDECLS

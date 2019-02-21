@@ -4,8 +4,6 @@
 
 #pragma once
 
-#pragma GCC visibility push(hidden)
-
 #include <stdarg.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -24,5 +22,3 @@ void vprintl(zx_handle_t log, const char* fmt, va_list ap);
             fail(log, "%s: " fmt,                                       \
                  zx_status_get_string(status),##__VA_ARGS__);           \
     } while (0)
-
-#pragma GCC visibility pop

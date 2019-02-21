@@ -9,8 +9,6 @@
 #include "userboot-elf.h"
 #include "util.h"
 
-#pragma GCC visibility push(hidden)
-
 #include <zircon/stack.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
@@ -21,8 +19,6 @@
 #include <string.h>
 #include <sys/param.h>
 #include <zircon/syscalls/system.h>
-
-#pragma GCC visibility pop
 
 #define STACK_VMO_NAME "userboot-child-initial-stack"
 

@@ -7,8 +7,6 @@
 #include <zircon/types.h>
 #include <stddef.h>
 
-#pragma GCC visibility push(hidden)
-
 typedef struct elf_load_info elf_load_info_t;
 
 // Validate the ELF headers and set up for further use.
@@ -36,5 +34,3 @@ zx_status_t elf_load_finish(zx_handle_t vmar, elf_load_info_t* info,
                             zx_handle_t vmo,
                             zx_handle_t* segments_vmar,
                             zx_vaddr_t* base, zx_vaddr_t* entry);
-
-#pragma GCC visibility pop

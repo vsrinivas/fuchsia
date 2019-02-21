@@ -5,11 +5,7 @@
 #include "option.h"
 #include "util.h"
 
-#pragma GCC visibility push(hidden)
-
 #include <string.h>
-
-#pragma GCC visibility pop
 
 #define OPTION_DEFAULT(option) \
     case OPTION_##option: value = OPTION_##option##_DEFAULT; break

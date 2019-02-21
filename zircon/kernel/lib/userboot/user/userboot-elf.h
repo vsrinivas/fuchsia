@@ -4,8 +4,6 @@
 
 #pragma once
 
-#pragma GCC visibility push(hidden)
-
 #include <zircon/types.h>
 #include <stddef.h>
 
@@ -28,5 +26,3 @@ zx_vaddr_t elf_load_bootfs(zx_handle_t log, struct bootfs *fs,
                            zx_handle_t thread,
                            const char* filename, zx_handle_t to_child,
                            size_t* stack_size, zx_handle_t* loader_svc);
-
-#pragma GCC visibility pop

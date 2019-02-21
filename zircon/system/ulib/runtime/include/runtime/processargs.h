@@ -11,8 +11,6 @@
 
 __BEGIN_CDECLS
 
-#pragma GCC visibility push(hidden)
-
 // Define a properly-aligned buffer on the stack for reading a processargs
 // message.  The nbytes parameter should be gotten from zxr_message_size.
 #define ZXR_PROCESSARGS_BUFFER(variable, nbytes) \
@@ -39,7 +37,5 @@ zx_status_t zxr_processargs_read(zx_handle_t bootstrap,
 zx_status_t zxr_processargs_strings(void* msg, uint32_t bytes,
                                     char* argv[], char* envp[],
                                     char* names[]);
-
-#pragma GCC visibility pop
 
 __END_CDECLS

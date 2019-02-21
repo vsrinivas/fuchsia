@@ -4,8 +4,6 @@
 
 #pragma once
 
-#pragma GCC visibility push(hidden)
-
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -19,5 +17,3 @@ zx_status_t decompress_bootdata(zx_handle_t vmar, zx_handle_t vmo,
                                 zx_handle_t* out, const char** errmsg);
 
 __END_CDECLS
-
-#pragma GCC visibility pop
