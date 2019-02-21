@@ -66,9 +66,7 @@ This section covers Fuchsia development hardware targets.
 
 This section covers Fuchsia-wide conventions and best practices.
 
- - [Repository structure](source_code/layer_repository_structure.md) - standard way
-   of organizing code within a Fuchsia layer repository
- - [Documentation standards](/best-practices/documentation_standards.md)
+ - [Documentation standards](/docs/best-practices/documentation_standards.md)
  - [Endian Issues](source_code/endian.md) and recommendations
 
 ## Miscellaneous
