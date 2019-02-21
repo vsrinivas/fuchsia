@@ -348,6 +348,13 @@ function fx-exit-on-failure {
 # Note this takes the ninja command itself as first argument.
 # This can be used both to run ninja directly or to run a wrapper script.
 function fx-run-ninja {
+  # Separate the command from the arguments so we can prepend default -j/-l
+  # switch arguments.  They need to come before the user's arguments in case
+  # those include -- or something else that makes following arguments not be
+  # handled as normal switches.
+  local cmd="$1"
+  shift
+
   local args=()
   local have_load=false
   local have_jobs=false
@@ -368,7 +375,7 @@ function fx-run-ninja {
       # reasonable value to prevent catastrophic load (i.e. user can not kill
       # the build, can not lock the screen, etc).
       local cpus="$(fx-cpu-count)"
-      args+=("-l" $(($cpus * 20)))
+      args=("-l" $(($cpus * 20)) "${args[@]}")
     fi
   fi
 
@@ -383,7 +390,7 @@ function fx-run-ninja {
     if [[ $(ulimit -n) -lt "${min_limit}" ]]; then
       ulimit -n "${min_limit}"
     fi
-    args+=("-j" "${concurrency}")
+    args=("-j" "${concurrency}" "${args[@]}")
   fi
 
   # TERM is passed for the pretty ninja UI
@@ -395,5 +402,5 @@ function fx-run-ninja {
   fx-try-locked env -i TERM="${TERM}" PATH="${PATH}" \
     ${NINJA_STATUS+"NINJA_STATUS=${NINJA_STATUS}"} \
     ${TMPDIR+"TMPDIR=$TMPDIR"} \
-    "${args[@]}"
+    "$cmd" "${args[@]}"
 }
