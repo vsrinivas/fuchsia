@@ -115,7 +115,7 @@ class ZirconVsockGuestTest : public ZirconEnclosedGuest,
     do {
       socket1.wait_one(ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_WRITABLE, zx::time::infinite(), &pending);
       if((pending & ZX_SOCKET_WRITABLE) != 0) {
-        uint8_t buf[1000];
+        uint8_t buf[1000] = {};
         size_t actual = 0;
         status = socket1.write(0, buf, sizeof(buf), &actual);
       }

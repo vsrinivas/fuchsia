@@ -77,11 +77,12 @@ TEST_F(VirtioInputTest, Keyboard) {
 TEST_F(VirtioInputTest, PointerMove) {
   view_listener_->OnSizeChanged({1, 1});
   fuchsia::ui::input::InputEvent fuchsia_event;
-  fuchsia_event.set_pointer({
+  fuchsia::ui::input::PointerEvent pointer = {
       .phase = fuchsia::ui::input::PointerEventPhase::MOVE,
       .x = 0.25,
       .y = 0.5,
-  });
+  };
+  fuchsia_event.set_pointer(pointer);
   view_listener_->OnInputEvent(std::move(fuchsia_event));
 
   virtio_input_event_t* event_1;
@@ -101,11 +102,11 @@ TEST_F(VirtioInputTest, PointerMove) {
 
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_1->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_X, event_1->code);
-  EXPECT_EQ(std::ceil(kInputAbsMaxX * fuchsia_event.pointer().x),
+  EXPECT_EQ(std::ceil(kInputAbsMaxX * pointer.x),
             event_1->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_2->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_Y, event_2->code);
-  EXPECT_EQ(std::ceil(kInputAbsMaxY * fuchsia_event.pointer().y),
+  EXPECT_EQ(std::ceil(kInputAbsMaxY * pointer.y),
             event_2->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_SYN, event_3->type);
 }
@@ -113,11 +114,12 @@ TEST_F(VirtioInputTest, PointerMove) {
 TEST_F(VirtioInputTest, PointerUp) {
   view_listener_->OnSizeChanged({1, 1});
   fuchsia::ui::input::InputEvent fuchsia_event;
-  fuchsia_event.set_pointer({
+  fuchsia::ui::input::PointerEvent pointer = {
       .phase = fuchsia::ui::input::PointerEventPhase::UP,
       .x = 0.25,
       .y = 0.5,
-  });
+  };
+  fuchsia_event.set_pointer(pointer);
   view_listener_->OnInputEvent(std::move(fuchsia_event));
 
   virtio_input_event_t* event_1;
@@ -139,11 +141,11 @@ TEST_F(VirtioInputTest, PointerUp) {
 
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_1->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_X, event_1->code);
-  EXPECT_EQ(std::ceil(kInputAbsMaxX * fuchsia_event.pointer().x),
+  EXPECT_EQ(std::ceil(kInputAbsMaxX * pointer.x),
             event_1->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS, event_2->type);
   EXPECT_EQ(VIRTIO_INPUT_EV_ABS_Y, event_2->code);
-  EXPECT_EQ(std::ceil(kInputAbsMaxY * fuchsia_event.pointer().y),
+  EXPECT_EQ(std::ceil(kInputAbsMaxY * pointer.y),
             event_2->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_KEY, event_3->type);
   EXPECT_EQ(kButtonTouchCode, event_3->code);
