@@ -196,7 +196,7 @@ function guess_config_within_layer {
 
   echo "Could not guess a ${config_type} configuration matching \"${config_name}\""
   echo "Please specify the full path from the root of the checkout such as"
-  echo "garnet/${config_type}/base.gni"
+  echo "${config_type}/core.gni"
   exit 1
 }
 

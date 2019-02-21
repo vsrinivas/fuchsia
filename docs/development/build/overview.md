@@ -77,14 +77,14 @@ product to build:
 ```
 # --products and --packages can be omitted to use the defaults, which are
 # $layer/products/default.gni and empty, respectively.
-$ buildtools/gn gen out/x64 --args='import("//garnet/products/product_name.gni") fuchsia_packages=["garnet/packages/my_stuff"]'
+$ buildtools/gn gen out/x64 --args='import("//products/core.gni") monolith+=["garnet/packages/my_stuff"]'
 ```
 
 This will create an `out/x64` directory containing Ninja files.
 
 The equivalent fx set command is:
 ```
-$ scripts/fx set x64 --products garnet/products/base.gni --packages garnet/packages/my_stuff
+$ scripts/fx set x64 --products core --monolith garnet/packages/my_stuff
 ```
 
 For a list of all GN build arguments, run `buildtools/gn args out/x64 --list`.
