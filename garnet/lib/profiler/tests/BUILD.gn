@@ -61,15 +61,12 @@ executable("profiledata_unittest") {
 
 package("profiler_tests") {
   #  testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":profiledata_unittest",
     ":profiler_unittest",
     ":stacktrace_unittest",
   ]
-
-  # Tests will live inside /pkgfs/system/test/
 
   binaries = [
     {
