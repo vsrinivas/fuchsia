@@ -146,6 +146,9 @@ zx_status_t TapDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) 
     fbl::AutoLock lock(&lock_);
     if (dead_) {
         return ZX_ERR_PEER_CLOSED;
+    } else if (!online_) {
+        ethertap_trace("dropping packet, device offline\n");
+        return ZX_ERR_UNAVAILABLE;
     }
     uint8_t temp_buf[ETHERTAP_MAX_MTU + sizeof(ethertap_socket_header_t)];
     auto header = reinterpret_cast<ethertap_socket_header*>(temp_buf);
@@ -319,10 +322,17 @@ zx_status_t TapDevice::Recv(uint8_t* buffer, uint32_t capacity) {
     }
 
     fbl::AutoLock lock(&lock_);
+
+    if (!online_) {
+        ethertap_trace("attempted to push bytes to an offline device\n");
+        return ZX_OK;
+    }
+
     if (unlikely(options_ & ETHERTAP_OPT_TRACE_PACKETS)) {
         ethertap_trace("received %zu bytes\n", actual);
         hexdump8_ex(buffer, actual, 0);
     }
+
     if (ethmac_client_.is_valid()) {
         ethmac_client_.Recv(buffer, actual, 0u);
     }
