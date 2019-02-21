@@ -7,9 +7,8 @@
             "shell"
         ],
         "services": [
-            "fuchsia.process.Resolver",
-            "fuchsia.process.Launcher",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
         ]
     }
 }

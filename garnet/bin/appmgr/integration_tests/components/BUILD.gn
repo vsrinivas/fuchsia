@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/testing/environments.gni")
+import("//build/test/test_package.gni")
 
 executable("bin") {
   output_name = "components_test_app"
@@ -29,30 +30,26 @@ executable("bin2") {
   ]
 }
 
-copy("components_binary_argv_test") {
+executable("components_binary_argv_test") {
+  testonly = true
+
   sources = [
-    "components_binary_argv_test",
+    "components_binary_argv_test.cc",
   ]
 
-  outputs = [
-    "$root_out_dir/components_binary_argv_test",
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
   ]
 }
 
-package("components_binary_test") {
-  testonly = true
-
+test_package("components_binary_test") {
   deps = [
+    ":components_binary_argv_test",
     ":bin",
     ":bin2",
-    ":components_binary_argv_test",
-  ]
-
-  tests = [
-    {
-      name = "components_binary_argv_test"
-      environments = basic_envs
-    },
   ]
 
   binaries = [
@@ -68,16 +65,19 @@ package("components_binary_test") {
 
   meta = [
     {
-      dest = "components_binary_argv_test.cmx"
-      path = rebase_path(dest)
-    },
-    {
       path = rebase_path("meta/program1.cmx")
       dest = "program1.cmx"
     },
     {
       path = rebase_path("meta/program2.cmx")
       dest = "program2.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "components_binary_argv_test"
+      environments = basic_envs
     },
   ]
 }
