@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
+
 source_set("views") {
   testonly = true
 
@@ -29,5 +31,50 @@ source_set("views") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/gfx/cpp",
+  ]
+}
+
+executable("test_views_app") {
+  testonly = true
+
+  sources = [
+    "app.cc",
+  ]
+
+  deps = [
+    ":views",
+    "//garnet/public/lib/fxl",
+    "//sdk/lib/fidl/cpp",
+    "//zircon/public/lib/async-loop",
+  ]
+}
+
+package("test_views") {
+  testonly = true
+
+  binaries = [
+    {
+      name = "test_views_app"
+      dest = "app"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/background_view.cmx")
+      dest = "background_view.cmx"
+    },
+    {
+      path = rebase_path("meta/coordinate_test_view.cmx")
+      dest = "coordinate_test_view.cmx"
+    },
+    {
+      path = rebase_path("meta/rotated_square_view.cmx")
+      dest = "rotated_square_view.cmx"
+    },
+  ]
+
+  deps = [
+    ":test_views_app",
   ]
 }

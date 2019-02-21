@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/testing/views:test_views"
+    ]
+}

@@ -1,0 +1,13 @@
+{
+    "program": {
+        "args": [
+            "rotated_square_view"
+        ],
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}

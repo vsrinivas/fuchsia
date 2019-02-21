@@ -1,0 +1,13 @@
+{
+    "program": {
+        "args": [
+            "background_view"
+        ],
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}
