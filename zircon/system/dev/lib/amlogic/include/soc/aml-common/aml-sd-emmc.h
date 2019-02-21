@@ -59,8 +59,7 @@ static inline bool get_bit(uint32_t x, uint32_t mask) {
     return (x & mask) ? 1 : 0;
 }
 
-typedef struct {
-    volatile uint32_t sd_emmc_clock;            // 0x00
+#define AML_SD_EMMC_CLOCK_OFFSET                0x00
 #define AML_SD_EMMC_CLOCK_CFG_DIV_LOC           0
 #define AML_SD_EMMC_CLOCK_CFG_DIV_MASK          0x0000003f
 #define AML_SD_EMMC_CLOCK_CFG_SRC_LOC           6
@@ -82,7 +81,7 @@ typedef struct {
 #define AML_SD_EMMC_CLOCK_CFG_IRQ_SDIO_SLEEP_DS 0x40000000
 #define AML_SD_EMMC_CLOCK_CFG_NAND              0x80000000
 
-    volatile uint32_t sd_emmc_delay1;           // 0x04
+#define AML_SD_EMMC_DELAY1_OFFSET               0x04
 #define AML_SD_EMMC_DELAY_DATA0_LOC             0
 #define AML_SD_EMMC_DELAY_DATA0_MASK            0x0000003f
 #define AML_SD_EMMC_DELAY_DATA1_LOC             6
@@ -96,9 +95,8 @@ typedef struct {
 #define AML_SD_EMMC_DELAY_SPARE_LOC             30
 #define AML_SD_EMMC_DELAY_SPARE_MASK            0xc0000000
 
-    volatile uint32_t sd_emmc_delay2;           //0x08
-
-    volatile uint32_t sd_emmc_adjust;           // 0x0c
+#define AML_SD_EMMC_DELAY2_OFFSET               0x08
+#define AML_SD_EMMC_ADJUST_OFFSET               0x0c
 #define AML_SD_EMMC_ADJUST_CALI_SEL_LOC         8
 #define AML_SD_EMMC_ADJUST_CALI_SEL_MASK        0x00000f00
 #define AML_SD_EMMC_ADJUST_CALI_ENABLE          0x00001000
@@ -109,24 +107,22 @@ typedef struct {
 #define AML_SD_EMMC_ADJUST_ADJ_DELAY_MASK       0x003f0000
 #define AML_SD_EMMC_ADJUST_ADJ_AUTO             0x00400000
 
-    volatile uint32_t sd_emmc_calout;           // 0x10
+#define AML_SD_EMMC_CALOUT_OFFSET               0x10
 #define AML_SD_EMMC_CALOUT_CALI_IDX_LOC         0
 #define AML_SD_EMMC_CALOUT_CALI_IDX_MASK        0x0000003f
 #define AML_SD_EMMC_CALOUT_CALI_VLD             0x00000040
 #define AML_SD_EMMC_CALOUT_CALI_SETUP_LOC       8
 #define AML_SD_EMMC_CALOUT_CALI_SETUP_MASK      0x0000ff00
 
-    volatile uint32_t sd_emmc_calout_v2[3];     // 0x14~0x1c
-    volatile uint32_t resvd_test[6];            // 0x20~0x34
-    volatile uint32_t sd_emmc_intf3[2];         // 0x38, 0x39
-
-    volatile uint32_t sd_emmc_start;            // 0x40
+#define AML_SD_EMMC_CALOUTV2_OFFSET             0x14
+#define AML_SD_EMMC_CALOUTV2_OFFSET             0x14
+#define AML_SD_EMMC_START_OFFSET                0x40
 #define AML_SD_EMMC_START_DESC_INT              0x00000001
 #define AML_SD_EMMC_START_DESC_BUSY             0x00000002
 #define AML_SD_EMMC_START_DESC_ADDR_LOC         2
 #define AML_SD_EMMC_START_DESC_ADDR_MASK        0xfffffffc
 
-    volatile uint32_t sd_emmc_cfg;              // 0x44
+#define AML_SD_EMMC_CFG_OFFSET                  0x44
 #define AML_SD_EMMC_CFG_BUS_WIDTH_LOC           0
 #define AML_SD_EMMC_CFG_BUS_WIDTH_MASK          0x00000003
 #define AML_SD_EMMC_CFG_BUS_WIDTH_1BIT          0x00000000
@@ -155,7 +151,7 @@ typedef struct {
 #define AML_SD_EMMC_CFG_IP_TXD_ADJ_LOC          28
 #define AML_SD_EMMC_CFG_IP_TXD_ADJ_MASK         0xf0000000
 
-    volatile uint32_t sd_emmc_status;           // 0x48
+#define AML_SD_EMMC_STATUS_OFFSET               0x48
 #define AML_SD_EMMC_STATUS_RXD_ERR_LOC          0
 #define AML_SD_EMMC_STATUS_RXD_ERR_MASK         0x000000ff
 #define AML_SD_EMMC_STATUS_TXD_ERR              0x00000100
@@ -175,9 +171,8 @@ typedef struct {
 #define AML_SD_EMMC_STATUS_BUS_DESC_BUSY        0x40000000
 #define AML_SD_EMMC_STATUS_BUS_CORE_BUSY        0x80000000
 
-    volatile uint32_t sd_emmc_irq_en;           // 0x4c
-
-    volatile uint32_t sd_emmc_cmd_cfg;          // 0x50
+#define AML_SD_EMMC_IRQ_EN_OFFSET               0x4c
+#define AML_SD_EMMC_CMD_CFG_OFFSET              0x50
 #define AML_SD_EMMC_CMD_INFO_LEN_LOC            0
 #define AML_SD_EMMC_CMD_INFO_LEN_MASK           0x000001ff
 #define AML_SD_EMMC_CMD_INFO_BLOCK_MODE         0x00000200
@@ -198,28 +193,26 @@ typedef struct {
 #define AML_SD_EMMC_CMD_INFO_ERROR              0x40000000
 #define AML_SD_EMMC_CMD_INFO_OWNER              0x80000000
 
-    volatile uint32_t sd_emmc_cmd_arg;          // 0x54
-    volatile uint32_t sd_emmc_cmd_dat;          // 0x58
-    volatile uint32_t sd_emmc_cmd_rsp;          // 0x5c
-    volatile uint32_t sd_emmc_cmd_rsp1;         // 0x60
-    volatile uint32_t sd_emmc_cmd_rsp2;         // 0x64
-    volatile uint32_t sd_emmc_cmd_rsp3;         // 0x68
-    volatile uint32_t bus_err;                  // 0x6c
-    volatile uint32_t sd_emmc_curr_cfg;         // 0x70
-    volatile uint32_t sd_emmc_curr_arg;         // 0x74
-    volatile uint32_t sd_emmc_curr_dat;         // 0x78
-    volatile uint32_t sd_emmc_curr_rsp;         // 0x7c
-    volatile uint32_t sd_emmc_next_cfg;         // 0x80
-    volatile uint32_t sd_emmc_next_arg;         // 0x84
-    volatile uint32_t sd_emmc_next_dat;         // 0x88
-    volatile uint32_t sd_emmc_next_rsp;         // 0x8c
-    volatile uint32_t sd_emmc_rxd;              // 0x90
-    volatile uint32_t sd_emmc_txd;              // 0x94
-    volatile uint32_t resvd[90];                // 0x98~0x1fc
-    volatile uint32_t sramDesc[128];            // 0x200
-    volatile uint32_t ping[128];                // 0x400
-    volatile uint32_t pong[128];                // 0x800
-} aml_sd_emmc_regs_t;
+#define AML_SD_EMMC_CMD_ARG_OFFSET              0x54
+#define AML_SD_EMMC_CMD_DAT_OFFSET              0x58
+#define AML_SD_EMMC_CMD_RSP_OFFSET              0x5c
+#define AML_SD_EMMC_CMD_RSP1_OFFSET             0x60
+#define AML_SD_EMMC_CMD_RSP2_OFFSET             0x64
+#define AML_SD_EMMC_CMD_RSP3_OFFSET             0x68
+#define AML_SD_EMMC_CMD_BUS_ERR_OFFSET          0x6c
+#define AML_SD_EMMC_CURR_CFG_OFFSET             0x70
+#define AML_SD_EMMC_CURR_ARG_OFFSET             0x74
+#define AML_SD_EMMC_CURR_DAT_OFFSET             0x78
+#define AML_SD_EMMC_CURR_RSP_OFFSET             0x7c
+#define AML_SD_EMMC_NXT_CFG_OFFSET              0x80
+#define AML_SD_EMMC_NXT_ARG_OFFSET              0x84
+#define AML_SD_EMMC_NXT_DAT_OFFSET              0x88
+#define AML_SD_EMMC_NXT_RSP_OFFSET              0x8c
+#define AML_SD_EMMC_RXD_OFFSET                  0x90
+#define AML_SD_EMMC_TXD_OFFSET                  0x94
+#define AML_SD_EMMC_SRAMDESC_OFFSET             0x200
+#define AML_SD_EMMC_PING_OFFSET                 0x400
+#define AML_SD_EMMC_PONG_OFFSET                 0x800
 
 typedef struct {
     uint32_t cmd_info;
