@@ -1361,9 +1361,13 @@ Status PageStorageImpl::SynchronousAddPiece(
           GetObjectDigestInfo(object_identifier.object_digest()).object_type,
           data->Get()));
 
-  std::unique_ptr<const Object> object;
-  Status status = db_->ReadObject(handler, object_identifier, &object);
-  if (status == Status::NOT_FOUND) {
+  bool has_object;
+  Status status =
+      db_->HasObject(handler, object_identifier.object_digest(), &has_object);
+  if (status != Status::OK) {
+    return status;
+  }
+  if (!has_object) {
     PageDbObjectStatus object_status;
     switch (is_object_synced) {
       case IsObjectSynced::NO:
@@ -1378,7 +1382,7 @@ Status PageStorageImpl::SynchronousAddPiece(
     return db_->WriteObject(handler, object_identifier, std::move(data),
                             object_status);
   }
-  return status;
+  return Status::OK;
 }
 
 Status PageStorageImpl::SynchronousMarkPageOnline(

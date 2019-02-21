@@ -196,7 +196,9 @@ Status FakeDb::GetObject(coroutine::CoroutineHandler* handler,
   if (it == key_value_store_.end()) {
     return Status::NOT_FOUND;
   }
-  *object = std::make_unique<FakeObject>(object_identifier, it->second);
+  if (object) {
+    *object = std::make_unique<FakeObject>(object_identifier, it->second);
+  }
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 
