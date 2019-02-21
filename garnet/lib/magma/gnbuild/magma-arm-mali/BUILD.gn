@@ -159,30 +159,3 @@ test_package("msd-arm-mali-integration-tests") {
     ]
   }
 }
-
-package("autorun") {
-  testonly = true
-  deprecated_system_image = true
-
-  if (build_msd_arm_mali) {
-    deps = [
-      ":autorun_mali",
-    ]
-
-    binaries = [
-      {
-        name = "autorun_mali"
-        dest = "magma_autorun"
-      },
-    ]
-  }
-}
-
-copy("autorun_mali") {
-  sources = [
-    "//garnet/lib/magma/scripts/autorun_mali",
-  ]
-  outputs = [
-    "$root_out_dir/autorun_mali",
-  ]
-}

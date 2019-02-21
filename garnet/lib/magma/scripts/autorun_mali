@@ -11,15 +11,15 @@ else
   gtest_output_arg=--gtest_output=$GTEST_OUTPUT
 fi
 echo [UNIT TEST START=]
-run_test_component magma_unit_tests $gtest_output_arg
-run_test_component msd_arm_mali_nonhardware_tests $gtest_output_arg
+run-test-component magma_unit_tests $gtest_output_arg
+run-test-component msd_arm_mali_nonhardware_tests $gtest_output_arg
 echo [UNIT TEST END===]
 echo [INTEGRATION TEST START=]
-run_test_component magma_abi_conformance_tests $gtest_output_arg
-run_test_component msd_arm_mali_integration_tests $gtest_output_arg
+run-test-component magma_abi_conformance_tests $gtest_output_arg
+run-test-component msd_arm_mali_integration_tests $gtest_output_arg
 if [ -e /pkgfs/packages/vulkan-tests/0/test/vkext ]; then
-  run_test_component vkext --gtest_filter=-VulkanExtension.Scanout $gtest_output_arg
-  run_test_component vkreadback $gtest_output_arg
+  run-test-component vkext --gtest_filter=-VulkanExtension.Scanout $gtest_output_arg
+  run-test-component vkreadback $gtest_output_arg
 else
   echo SKIPPED app tests - no /pkgfs/packages/vulkan-tests/0/test/vkext
 fi

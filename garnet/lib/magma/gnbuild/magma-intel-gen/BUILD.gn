@@ -103,30 +103,3 @@ test_package("magma_intel_gen_integration_tests") {
     ]
   }
 }
-
-package("magma_intel_autorun") {
-  testonly = true
-  deprecated_system_image = true
-
-  if (build_intel_gen) {
-    deps = [
-      ":autorun",
-    ]
-
-    binaries = [
-      {
-        name = "autorun"
-        dest = "magma_autorun"
-      },
-    ]
-  }
-}
-
-copy("autorun") {
-  sources = [
-    "$magma_build_root/scripts/autorun",
-  ]
-  outputs = [
-    "$root_out_dir/autorun",
-  ]
-}

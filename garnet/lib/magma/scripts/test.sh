@@ -4,16 +4,31 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-set -e
-fuchsia_root=`pwd`
-netaddr=$fuchsia_root/out/build-zircon/tools/netaddr
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+source "$(cd "${script_dir}/../../../../scripts/devshell" && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
 test_out=/tmp/magma_test_out
 
-scripts/fx shell 'rm -rf /tmp/magma_test_out; export GTEST_OUTPUT=xml:/tmp/magma_test_out/ && . /system/bin/magma_autorun'
+case "$1" in
+intel)
+  fx-command-run cp "${script_dir}/autorun_intel" /tmp/magma_autorun
+  ;;
+mali)
+  fx-command-run cp "${script_dir}/autorun_mali" /tmp/magma_autorun
+  ;;
+*)
+  echo >&2 "unknown gpu: $1"
+  echo >&2 "usage: $0 [intel|mali]"
+  exit 1
+  ;;
+esac
 
-rm -rf $test_out
-mkdir $test_out
-scripts/fx scp [`$netaddr --fuchsia`]:/tmp/magma_test_out/*.xml $test_out
+fx-command-run shell "rm -rf ${test_out}; export GTEST_OUTPUT=xml:${test_out}/ && /boot/bin/sh /tmp/magma_autorun"
+
+rm -rf -- "${test_out}"
+mkdir "${test_out}"
+fx-command-run scp "[$(get-fuchsia-device-addr)]:${test_out}/*.xml" "${test_out}"
 
 echo "Grepping for failures:"
-grep failures $test_out/* | grep -v 'failures=\"0\"'
+grep failures "${test_out}"/* | grep -v 'failures=\"0\"'
