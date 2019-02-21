@@ -41,7 +41,6 @@ void StepOverThreadController::InitWithThread(
   frame_fingerprint_ = *thread->GetStack().GetFrameFingerprint(0);
 
   // Stepping in the function itself is managed by the StepInto controller.
-
   step_into_->InitWithThread(thread, std::move(cb));
 }
 
@@ -67,32 +66,21 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     Log("Done stepping out of sub-frame.");
     finish_.reset();
 
-    // Ignore the stop type when giving control back to the "step into"
-    // controller. In this case the stop type will be a software debug
-    // exception (from the breakpoint inserted by the "finish" controller).
-    // We want the "step into" controller to check for continuation even though
-    // this stop type doesn't match what it's looking for.
     if (step_into_->OnThreadStopIgnoreType(hit_breakpoints) == kContinue) {
       Log("Still in range after stepping out.");
       return kContinue;
     }
-  } else {
-    // Ignore the stop type as above.
-    if (step_into_->OnThreadStopIgnoreType(hit_breakpoints) == kContinue) {
-      Log("Still in range.");
-      return kContinue;
-    }
   }
 
-  // If the current location is ambiguous and could be in the frame we're
-  // stepping within, set the top frame to that (rather than inline calls off
-  // of that). This will treat the inline call as a separate statement.
-  //
-  // Without this call, when stepping to an inlined call, this code will notice
-  // that the stack is in a subframe of the function we're stepping in and then
-  // try to step out. The "finish" controller will then step out of the inline
-  // frame, which will skip over it from the context of the user.
-  SetInlineFrameIfAmbiguous(InlineFrameIs::kEqual, frame_fingerprint_);
+  // Use the "IgnoreType" variant of OnThreadStop to avoid passing any
+  // exception type from the "finish" controller above. The finish controller
+  // may generate a breakpoint stop which if the step controller sees will
+  // assume it doesn't belong (it's expecting only single step ones) and will
+  // ignore.
+  if (step_into_->OnThreadStopIgnoreType(hit_breakpoints) == kContinue) {
+    Log("Still in range.");
+    return kContinue;
+  }
 
   // If we get here the thread is no longer in range but could be in a sub-
   // frame that we need to step out of.

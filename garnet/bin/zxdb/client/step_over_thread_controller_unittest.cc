@@ -164,7 +164,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
 
   // Now step over the inline call.
   thread()->ContinueWith(std::make_unique<StepOverThreadController>(
-                             AddressRanges(kTopFunctionRange)),
+                             AddressRanges(kTopInlineFunctionRange)),
                          [](const Err& err) {});
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continued.
 
@@ -174,8 +174,8 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   // instruction of the next.
 
   // The function range for inline function immediately following the first.
-  AddressRange second_inline_range(kTopFunctionRange.end(),
-                                   kTopFunctionRange.end() + 4);
+  AddressRange second_inline_range(kTopInlineFunctionRange.end(),
+                                   kTopInlineFunctionRange.end() + 4);
   auto second_inline_func =
       fxl::MakeRefCounted<Function>(Symbol::kTagInlinedSubroutine);
   second_inline_func->set_assigned_name("Second");

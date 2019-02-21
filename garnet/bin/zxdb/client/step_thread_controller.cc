@@ -40,8 +40,8 @@ void StepThreadController::InitWithThread(Thread* thread,
 
     original_frame_fingerprint_ = *thread->GetStack().GetFrameFingerprint(0);
 
-    Log("Stepping in %s:%d %s",
-        file_line_.file().c_str(), file_line_.line(), current_ranges_.ToString().c_str());
+    Log("Stepping in %s:%d %s", file_line_.file().c_str(), file_line_.line(),
+        current_ranges_.ToString().c_str());
   } else {
     // In the "else" cases, the range will already have been set up.
     Log("Stepping in %s", current_ranges_.ToString().c_str());
@@ -221,6 +221,15 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
     }
   }
 
+  // Normal stop. When stepping has resulted in landing at an ambiguous inline
+  // location, always consider the location to be the oldest frame to allow the
+  // user to step into the inline frames if desired.
+  //
+  // We don't want to select the same frame here that we were originally
+  // stepping in because we could have just stepped out of a frame to an inline
+  // function starting immediately after the call. We always want to at the
+  // oldest possible inline call.
+  stack.SetHideAmbiguousInlineFrameCount(stack.GetAmbiguousInlineFrameCount());
   return kStop;
 }
 
