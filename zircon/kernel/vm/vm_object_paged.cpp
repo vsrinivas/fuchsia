@@ -639,21 +639,15 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
     list_node page_list;
     list_initialize(&page_list);
     if (root_source == nullptr) {
-        // make a pass through the list, counting the number of pages we need to allocate
-        uint64_t expected_next_off = offset;
-        size_t count = 0;
+        // make a pass through the list to find out how many pages we need to allocate
+        size_t count = (end - offset) / PAGE_SIZE;
         page_list_.ForEveryPageInRange(
-            [&count, &expected_next_off](const auto p, uint64_t off) {
-                count += (off - expected_next_off) / PAGE_SIZE;
-                expected_next_off = off + PAGE_SIZE;
+            [&count](const auto p, auto off) {
+                count--;
                 return ZX_ERR_NEXT;
             },
-            expected_next_off, end);
+            offset, end);
 
-        // If expected_next_off isn't at the end of the range, there was a gap at
-        // the end.  Add it back in
-        DEBUG_ASSERT(end >= expected_next_off);
-        count += (end - expected_next_off) / PAGE_SIZE;
         if (count == 0) {
             return ZX_OK;
         }
@@ -826,29 +820,25 @@ zx_status_t VmObjectPaged::PinLocked(uint64_t offset, uint64_t len) {
     const uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
     const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
-    uint64_t expected_next_off = start_page_offset;
-    zx_status_t status = page_list_.ForEveryPageInRange(
-        [&expected_next_off](const auto p, uint64_t off) {
-            if (off != expected_next_off) {
-                return ZX_ERR_NOT_FOUND;
-            }
-
+    uint64_t pin_range_end = start_page_offset;
+    zx_status_t status = page_list_.ForEveryPageAndGapInRange(
+        [&pin_range_end](const auto p, uint64_t off) {
             DEBUG_ASSERT(p->state == VM_PAGE_STATE_OBJECT);
             if (p->object.pin_count == VM_PAGE_OBJECT_MAX_PIN_COUNT) {
                 return ZX_ERR_UNAVAILABLE;
             }
 
             p->object.pin_count++;
-            expected_next_off = off + PAGE_SIZE;
+            pin_range_end = off + PAGE_SIZE;
             return ZX_ERR_NEXT;
+        },
+        [](uint64_t gap_start, uint64_t gap_end) {
+            return ZX_ERR_NOT_FOUND;
         },
         start_page_offset, end_page_offset);
 
-    if (status == ZX_OK && expected_next_off != end_page_offset) {
-        status = ZX_ERR_NOT_FOUND;
-    }
     if (status != ZX_OK) {
-        UnpinLocked(start_page_offset, expected_next_off - start_page_offset);
+        UnpinLocked(start_page_offset, pin_range_end - start_page_offset);
         return status;
     }
 
@@ -874,22 +864,18 @@ void VmObjectPaged::UnpinLocked(uint64_t offset, uint64_t len) {
     const uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
     const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
-    uint64_t expected_next_off = start_page_offset;
-    zx_status_t status = page_list_.ForEveryPageInRange(
-        [&expected_next_off](const auto p, uint64_t off) {
-            if (off != expected_next_off) {
-                return ZX_ERR_NOT_FOUND;
-            }
-
+    zx_status_t status = page_list_.ForEveryPageAndGapInRange(
+        [](const auto p, uint64_t off) {
             DEBUG_ASSERT(p->state == VM_PAGE_STATE_OBJECT);
             ASSERT(p->object.pin_count > 0);
             p->object.pin_count--;
-            expected_next_off = off + PAGE_SIZE;
             return ZX_ERR_NEXT;
         },
+        [](uint64_t gap_start, uint64_t gap_end) {
+            return ZX_ERR_NOT_FOUND;
+        },
         start_page_offset, end_page_offset);
-    ASSERT_MSG(status == ZX_OK && expected_next_off == end_page_offset,
-               "Tried to unpin an uncommitted page");
+    ASSERT_MSG(status == ZX_OK, "Tried to unpin an uncommitted page");
     return;
 }
 
@@ -959,19 +945,15 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
         if (page_source_) {
             // Tell the page source that any non-resident pages that are now out-of-bounds
             // were supplied, to ensure that any reads of those pages get woken up.
-            uint64_t expected_next_off = start;
-            zx_status_t status = page_list_.ForEveryPageInRange(
-                [&](const auto p, uint64_t off) {
-                    if (off != expected_next_off) {
-                        page_source_->OnPagesSupplied(expected_next_off, off);
-                    }
-                    expected_next_off = off + PAGE_SIZE;
+            zx_status_t status = page_list_.ForEveryPageAndGapInRange(
+                [](const auto p, uint64_t off) {
+                    return ZX_ERR_NEXT;
+                },
+                [&](uint64_t gap_start, uint64_t gap_end) {
+                    page_source_->OnPagesSupplied(gap_start, gap_end);
                     return ZX_ERR_NEXT;
                 },
                 start, end);
-            if (expected_next_off != end) {
-                page_source_->OnPagesSupplied(expected_next_off, end);
-            }
             DEBUG_ASSERT(status == ZX_OK);
         }
 
@@ -1145,32 +1127,8 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len,
     const uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
     const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
-    uint64_t expected_next_off = start_page_offset;
-    zx_status_t status = page_list_.ForEveryPageInRange(
-        [&expected_next_off, this, lookup_fn, context,
-         start_page_offset](const auto p, uint64_t off) {
-
-            // If some page was missing from our list, run the more expensive
-            // GetPageLocked to see if our parent has it.
-            for (uint64_t missing_off = expected_next_off; missing_off < off;
-                 missing_off += PAGE_SIZE) {
-
-                paddr_t pa;
-                zx_status_t status = this->GetPageLocked(missing_off, 0, nullptr,
-                                                         nullptr, nullptr, &pa);
-                if (status != ZX_OK) {
-                    return ZX_ERR_NO_MEMORY;
-                }
-                const size_t index = (missing_off - start_page_offset) / PAGE_SIZE;
-                status = lookup_fn(context, missing_off, index, pa);
-                if (status != ZX_OK) {
-                    if (unlikely(status == ZX_ERR_NEXT || status == ZX_ERR_STOP)) {
-                        status = ZX_ERR_INTERNAL;
-                    }
-                    return status;
-                }
-            }
-
+    zx_status_t status = page_list_.ForEveryPageAndGapInRange(
+        [lookup_fn, context, start_page_offset](const auto p, uint64_t off) {
             const size_t index = (off - start_page_offset) / PAGE_SIZE;
             paddr_t pa = p->paddr();
             zx_status_t status = lookup_fn(context, off, index, pa);
@@ -1180,27 +1138,32 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len,
                 }
                 return status;
             }
+            return ZX_ERR_NEXT;
+        },
+        [this, lookup_fn, context, start_page_offset](uint64_t gap_start, uint64_t gap_end) {
+            // If some page was missing from our list, run the more expensive
+            // GetPageLocked to see if our parent has it.
+            for (uint64_t off = gap_start; off < gap_end; off += PAGE_SIZE) {
 
-            expected_next_off = off + PAGE_SIZE;
+                paddr_t pa;
+                zx_status_t status = this->GetPageLocked(off, 0, nullptr, nullptr, nullptr, &pa);
+                if (status != ZX_OK) {
+                    return ZX_ERR_NO_MEMORY;
+                }
+                const size_t index = (off - start_page_offset) / PAGE_SIZE;
+                status = lookup_fn(context, off, index, pa);
+                if (status != ZX_OK) {
+                    if (unlikely(status == ZX_ERR_NEXT || status == ZX_ERR_STOP)) {
+                        status = ZX_ERR_INTERNAL;
+                    }
+                    return status;
+                }
+            }
             return ZX_ERR_NEXT;
         },
         start_page_offset, end_page_offset);
     if (status != ZX_OK) {
         return status;
-    }
-
-    // If expected_next_off isn't at the end, there's a gap to process
-    for (uint64_t off = expected_next_off; off < end_page_offset; off += PAGE_SIZE) {
-        paddr_t pa;
-        zx_status_t status = GetPageLocked(off, 0, nullptr, nullptr, nullptr, &pa);
-        if (status != ZX_OK) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        const size_t index = (off - start_page_offset) / PAGE_SIZE;
-        status = lookup_fn(context, off, index, pa);
-        if (status != ZX_OK) {
-            return status;
-        }
     }
 
     return ZX_OK;

@@ -1358,6 +1358,79 @@ static bool vmpl_take_cleanup_test() {
     END_TEST;
 }
 
+// Helper function which takes an array of pages, builds a VmPageList, and then verifies that
+// ForEveryPageInRange is correct when ZX_ERR_NEXT is returned for the |stop_idx|th entry.
+static bool vmpl_page_gap_iter_test_body(vm_page_t** pages, uint32_t count, uint32_t stop_idx) {
+    BEGIN_TEST;
+
+    VmPageList list;
+    for (uint32_t i = 0; i < count; i++) {
+        if (pages[i]) {
+            ASSERT_EQ(list.AddPage(pages[i], i * PAGE_SIZE), ZX_OK, "");
+        }
+    }
+
+    uint32_t idx = 0;
+    zx_status_t s = list.ForEveryPageAndGapInRange(
+            [pages, stop_idx, &idx](const vm_page_t* p, auto off) {
+                if (off != idx * PAGE_SIZE || pages[idx] != p) {
+                    return ZX_ERR_INTERNAL;
+                }
+                if (idx == stop_idx) {
+                    return ZX_ERR_STOP;
+                }
+                idx++;
+                return ZX_ERR_NEXT;
+            },
+            [pages, stop_idx, &idx](uint64_t gap_start, uint64_t gap_end) {
+                for (auto o = gap_start; o < gap_end; o += PAGE_SIZE) {
+                    if (o != idx * PAGE_SIZE || pages[idx] != nullptr) {
+                        return ZX_ERR_INTERNAL;
+                    }
+                    if (idx == stop_idx) {
+                        return ZX_ERR_STOP;
+                    }
+                    idx++;
+                }
+                return ZX_ERR_NEXT;
+            },
+            0, count * PAGE_SIZE);
+    ASSERT_EQ(ZX_OK, s, "");
+    ASSERT_EQ(stop_idx, idx, "");
+
+    list_node_t free_list;
+    list_initialize(&free_list);
+    list.RemoveAllPages(&free_list);
+    ASSERT_TRUE(list.IsEmpty(), "");
+
+    END_TEST;
+}
+
+// Test ForEveryPageInRange against all lists of size 4
+static bool vmpl_page_gap_iter_test() {
+    static constexpr uint32_t kCount = 4;
+    static_assert((kCount & (kCount - 1)) == 0);
+
+    vm_page_t pages[kCount] = {};
+    vm_page_t* list[kCount] = {};
+    for (unsigned i = 0; i < kCount; i++) {
+        for (unsigned  j = 0; j < (1 << kCount); j++) {
+            for (unsigned k = 0; k < kCount; k++) {
+                if (j & (1 << k)) {
+                    list[k] = pages + k;
+                } else {
+                    list[k] = nullptr;
+                }
+            }
+
+            if (!vmpl_page_gap_iter_test_body(list, kCount, i)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 // Use the function name as the test name
 #define VM_UNITTEST(fname) UNITTEST(#fname, fname)
 
@@ -1413,4 +1486,5 @@ VM_UNITTEST(vmpl_take_all_pages_test)
 VM_UNITTEST(vmpl_take_middle_pages_test)
 VM_UNITTEST(vmpl_take_gap_test)
 VM_UNITTEST(vmpl_take_cleanup_test)
+VM_UNITTEST(vmpl_page_gap_iter_test)
 UNITTEST_END_TESTCASE(vm_page_list_tests, "vmpl", "VmPageList tests");

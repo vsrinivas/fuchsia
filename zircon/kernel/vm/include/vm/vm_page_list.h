@@ -220,6 +220,43 @@ public:
         return ZX_OK;
     }
 
+    template <typename T1, typename T2>
+    zx_status_t ForEveryPageAndGapInRange(T1 per_page_func, T2 per_gap_func,
+                                          uint64_t start_offset, uint64_t end_offset) const {
+
+        uint64_t expected_next_off = start_offset;
+        auto per_page_wrapper_fn = [&expected_next_off, end_offset, per_page_func, per_gap_func]
+                    (const auto p, uint64_t off) {
+            zx_status_t status = ZX_ERR_NEXT;
+            if (expected_next_off != off) {
+                status = per_gap_func(expected_next_off, off);
+            }
+            if (status == ZX_ERR_NEXT) {
+                status = per_page_func(p, off);
+            }
+            expected_next_off = off + PAGE_SIZE;
+            // Prevent the last call to per_gap_func
+            if (status == ZX_ERR_STOP) {
+                expected_next_off = end_offset;
+            }
+            return status;
+        };
+
+        zx_status_t status = ForEveryPageInRange(per_page_wrapper_fn, start_offset, end_offset);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        if (expected_next_off != end_offset) {
+            status = per_gap_func(expected_next_off, end_offset);
+            if (status != ZX_ERR_NEXT && status != ZX_ERR_STOP) {
+                return status;
+            }
+        }
+
+        return ZX_OK;
+    }
+
     zx_status_t AddPage(vm_page*, uint64_t offset);
     vm_page* GetPage(uint64_t offset);
     // Removes the page at |offset| from the list. Returns true if a page was present,
