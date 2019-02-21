@@ -677,9 +677,11 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
             }
             retry = false;
 
-            // Re-run the range checks, since size_ could have changed while we were blocked.
+            // Re-run the range checks, since size_ could have changed while we were blocked. This
+            // is not a failure, since the arguments were valid when the syscall was made. It's as
+            // if the commit was successful but then the pages were thrown away.
             if (!TrimRange(offset, new_len, size_, &new_len)) {
-                return ZX_ERR_OUT_OF_RANGE;
+                return ZX_OK;
             }
 
             if (new_len == 0) {
@@ -944,6 +946,25 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
 
         // unmap all of the pages in this range on all the mapping regions
         RangeChangeUpdateLocked(start, len);
+
+        if (page_source_) {
+            // Tell the page source that any non-resident pages that are now out-of-bounds
+            // were supplied, to ensure that any reads of those pages get woken up.
+            uint64_t expected_next_off = start;
+            zx_status_t status = page_list_.ForEveryPageInRange(
+                [&](const auto p, uint64_t off) {
+                    if (off != expected_next_off) {
+                        page_source_->OnPagesSupplied(expected_next_off, off);
+                    }
+                    expected_next_off = off + PAGE_SIZE;
+                    return ZX_ERR_NEXT;
+                },
+                start, end);
+            if (expected_next_off != end) {
+                page_source_->OnPagesSupplied(expected_next_off, end);
+            }
+            DEBUG_ASSERT(status == ZX_OK);
+        }
 
         page_list_.RemovePages(start, end, &free_list);
     } else if (s > size_) {

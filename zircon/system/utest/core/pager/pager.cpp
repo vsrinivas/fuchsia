@@ -550,8 +550,8 @@ bool vmar_map_range_test() {
     END_TEST;
 }
 
-// Tests that vmo_read fails gracefully if a vmo is resized while reading.
-bool vmo_read_resize_test() {
+// Tests that reads don't block forever if a vmo is resized out from under a read.
+bool read_resize_test(bool check_vmar) {
     BEGIN_TEST;
 
     UserPager pager;
@@ -559,23 +559,23 @@ bool vmo_read_resize_test() {
     ASSERT_TRUE(pager.Init());
 
     Vmo* vmo;
-    ASSERT_TRUE(pager.CreateVmo(2, &vmo));
+    ASSERT_TRUE(pager.CreateVmo(1, &vmo));
 
-    TestThread t([vmo]() -> bool {
-        return !check_buffer(vmo, 0, 2, false);
+    TestThread t([vmo, check_vmar]() -> bool {
+        return check_buffer(vmo, 0, 1, check_vmar);
     });
 
     ASSERT_TRUE(t.Start());
 
     ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
 
-    ASSERT_TRUE(vmo->Resize(1));
+    ASSERT_TRUE(vmo->Resize(0));
 
-    ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
-
-    ASSERT_TRUE(t.Wait());
-
-    ASSERT_FALSE(pager.WaitForPageRead(vmo, 1, 1, 0));
+    if (check_vmar) {
+        ASSERT_TRUE(t.WaitForCrash(vmo->GetBaseAddr()));
+    } else {
+        ASSERT_TRUE(t.WaitForFailure());
+    }
 
     END_TEST;
 }
@@ -1424,6 +1424,46 @@ bool supply_decommit_test() {
     END_TEST;
 }
 
+// Test that resizing out from under a commit is handled.
+bool resize_commit_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(3, &vmo));
+
+    TestThread t([vmo]() -> bool {
+        return vmo->Commit(0, 3);
+    });
+
+    ASSERT_TRUE(t.Start());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 3, ZX_TIME_INFINITE));
+
+    // Supply one of the pages that will be removed.
+    ASSERT_TRUE(pager.SupplyPages(vmo, 2, 1));
+
+    // Truncate the VMO.
+    ASSERT_TRUE(vmo->Resize(1));
+
+    // Make sure the thread is still blocked (i.e. check the accounting
+    // w.r.t. the page that was removed).
+    ASSERT_TRUE(t.WaitForBlocked());
+
+    ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+    ASSERT_TRUE(t.Wait());
+
+    // Make sure there are no extra requests.
+    uint64_t offset, length;
+    ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
+    END_TEST;
+}
+
 // Tests API violations for pager_create.
 bool invalid_pager_create() {
     BEGIN_TEST;
@@ -1715,6 +1755,7 @@ DEFINE_VMO_VMAR_TEST(bulk_odd_length_supply_test);
 DEFINE_VMO_VMAR_TEST(bulk_odd_offset_supply_test);
 DEFINE_VMO_VMAR_TEST(overlap_supply_test);
 DEFINE_VMO_VMAR_TEST(many_request_test);
+DEFINE_VMO_VMAR_TEST(read_resize_test);
 
 BEGIN_TEST_CASE(pager_read_tests)
 RUN_VMO_VMAR_TEST(single_page_test);
@@ -1733,7 +1774,7 @@ RUN_TEST(multiple_concurrent_vmo_test);
 RUN_TEST(vmar_unmap_test);
 RUN_TEST(vmar_remap_test);
 RUN_TEST(vmar_map_range_test);
-RUN_TEST(vmo_read_resize_test);
+RUN_VMO_VMAR_TEST(read_resize_test);
 END_TEST_CASE(pager_read_tests)
 
 // Tests focused on lifecycle of pager and paged vmos.
@@ -1789,6 +1830,7 @@ RUN_TEST(multisupply_commit_test);
 RUN_TEST(multicommit_supply_test);
 RUN_TEST(commit_redundant_supply_test);
 RUN_TEST(supply_decommit_test);
+RUN_TEST(resize_commit_test);
 END_TEST_CASE(commit_tests)
 
 // Tests focused on API violations.
