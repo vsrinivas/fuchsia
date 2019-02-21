@@ -1,0 +1,38 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_binary("bin") {
+  name = "http_client"
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-hyper",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.net.oldhttp:fuchsia.net.oldhttp-rustc",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+  ]
+}
+
+package("http_client") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "http_client"
+
+  meta = [
+    {
+      path = rebase_path("meta/http_client.cmx")
+      dest = "http_client.cmx"
+    },
+  ]
+}

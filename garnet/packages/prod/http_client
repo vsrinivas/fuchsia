@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/bin/http_client"
+    ]
+}

@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/http_client"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.SocketProvider"
+        ]
+    }
+}
