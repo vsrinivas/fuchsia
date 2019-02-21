@@ -48,6 +48,7 @@ template("rustc_third_party_artifact") {
 # The arguments are the same as for rustc_library and rustc_binary, with the exception
 # of `type`, which must be one of bin/lib/staticlib/proc-macro. This is used to determine
 # the kind of artifact that is produced by rustc.
+#
 template("rustc_artifact") {
   assert(defined(invoker.type),
          "Must specify an artifact type (bin/lib/staticlib/proc-macro)")
@@ -153,9 +154,17 @@ template("rustc_artifact") {
       if (defined(invoker.non_rust_deps)) {
         deps += invoker.non_rust_deps
       }
+if (defined(invoker.test_environments)) {
+environments =invoker.test_environments
+}
     }
   } else {
     not_needed([ "test_spec_target_name" ])
+    if (defined(invoker.test_environments)) {
+assert(with_unit_tests,
+"test_environments may only be set when with_unit_tests is true")
+      not_needed(invoker, [ "test_environments" ])
+    }
   }
 
   # Iterate through the deps collecting a list of the outputs

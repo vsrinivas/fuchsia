@@ -8,7 +8,10 @@ import("//build/go/go_build.gni")
 
 template("go_test") {
   go_build(target_name) {
-    forward_variables_from(invoker, "*")
     test = true
+    forward_variables_from(invoker, "*", [ "environments" ])
+    if (defined(invoker.environments)) {
+      test_environments = invoker.environments
+    }
   }
 }

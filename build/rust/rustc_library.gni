@@ -31,6 +31,13 @@ import("//build/rust/rustc_artifact.gni")
 #     Builds unit tests associated with the binary. This will create a
 #     `<name>_lib_test` test file in the output directory.
 #
+#   test_environments (optional)
+#     What environments unit tests, if provided, should target. Only used here
+#     for linux and mac tests, with a default value of a general linux/mac
+#     environment (as a function of $current_os).
+#     See environments parameter on //build/testing/test_spec.gni for more
+#     details.
+#
 #   source_root (optional)
 #     Location of the crate root (e.g. `src/main.rs` or `src/lib.rs`).
 #     This defaults to `./src/main.rs` for binaries and `./src/lib.rs` for libraries,
@@ -58,6 +65,7 @@ template("rustc_library") {
                              "deps",
                              "non_rust_deps",
                              "with_unit_tests",
+                             "test_environments",
                              "source_root",
                              "testonly",
                            ])

@@ -31,6 +31,13 @@ import("//build/rust/rustc_artifact.gni")
 #     Builds unit tests associated with the binary. This will create a
 #     `<name>_bin_test` test file in the output directory.
 #
+#   test_environments (optional)
+#     What environments unit tests, if provided, should target. Only used here
+#     for linux and mac tests, with a default value of a general linux/mac
+#     environment (as a function of $current_os).
+#     See environments parameter //build/testing/test_spec.gni for more
+#     details.
+#
 #   sdk_category (optional)
 #     If this field is set, this rust binary will be included in SDK builds for
 #     the provided category. See //build/sdk/sdk_atom.gni for available
@@ -68,6 +75,7 @@ template("rustc_binary") {
                              "deps",
                              "non_rust_deps",
                              "with_unit_tests",
+                             "test_environments",
                              "source_root",
                              "testonly",
                              "with_lto",
