@@ -9,32 +9,31 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/zx/handle.h>
-#include <unordered_set>
 
 #include "garnet/lib/ui/gfx/engine/object_linker.h"
+#include "garnet/lib/ui/gfx/resources/nodes/view_node.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/gfx/resources/resource_type_info.h"
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
+#include "garnet/lib/ui/gfx/resources/view_holder.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
 namespace scenic_impl {
 namespace gfx {
 
 class Session;
-class Node;
-class View;
-class ViewHolder;
 
-using NodePtr = fxl::RefPtr<Node>;
+using ViewNodePtr = fxl::RefPtr<ViewNode>;
 using ViewLinker = ObjectLinker<ViewHolder, View>;
 
-// View and ViewHolder work together via the ViewLinker to allow scene traversal
-// across Session boundaries.
+// View and ViewHolder work together via the ViewLinker to allow scene
+// traversal across Session boundaries.
 //
-// Once connected via their ImportLink and ExportLinks the View and ViewHolder
-// will directly connect their child and parent Nodes.  This allows traversal to
-// continue through them as if the View/ViewHolder were not present.  It works
-// even if the View and ViewHolder are in separate processes!
+// Once connected via their ImportLink and ExportLinks the View and
+// ViewHolder will directly connect their child and parent Nodes.  This
+// allows traversal to continue through them as if the View/ViewHolder were
+// not present.  It works even if the View and ViewHolder are in separate
+// processes!
 //
 // Disconnected Views do not participate in the scene graph in any way.  The
 // link is only created once per View, so once a View is disconnected it may
@@ -49,22 +48,20 @@ class View final : public Resource {
   View(Session* session, ResourceId id, ViewLinker::ImportLink link);
   ~View() override;
 
-  // | Resource |
+  // |Resource|
   void Accept(class ResourceVisitor* visitor) override;
 
   // Paired ViewHolder on the other side of the link.  This should be nullptr
   // iff. connected() is false.
   ViewHolder* view_holder() const { return view_holder_; }
+  // Paired |ViewNode| used to attach this View and its children to the scene
+  // graph.
+  ViewNode* GetViewNode() const { return node_.get(); }
 
   // Connection management.  Call once the View is created to initiate the link
   // to its partner ViewHolder.
   void Connect();
   bool connected() const { return link_.initialized(); }
-
-  // Child Node management.
-  bool AddChild(NodePtr child);
-  void DetachChildren();
-  const std::unordered_set<NodePtr>& children() const { return children_; }
 
   // Called by |ViewHolder| to set the handle of the render event. It is
   // triggered on the next render pass this View is involved in.
@@ -79,30 +76,25 @@ class View final : public Resource {
   void SignalRender();
 
  private:
-  // | ViewLinker::ExportCallbacks |
+  // |ViewLinker::ExportCallbacks|
   void LinkResolved(ViewHolder* view_holder);
   void LinkDisconnected();
-
-  // Called by Node in order to notify the View when a child is removed.
-  // TODO(SCN-820): Remove when parent-child relationships are split out of Node
-  // and View.
-  void RemoveChild(Node* child);
 
   // Sends an event to our SessionListener.
   void SendViewHolderDisconnectedEvent();
 
   ViewLinker::ImportLink link_;
   ViewHolder* view_holder_ = nullptr;
-  std::unordered_set<NodePtr> children_;
+
+  // The View's "phantom node". This is the node corresponding to the View in
+  // the scene graph. All parent-child relationships are through this node.
+  // Note: this node should not be added to the Session's ResourceMap, and it's
+  // lifetime is exclusively owned by this View.
+  ViewNodePtr node_;
 
   // Handle signaled when any of this View's children are involved in a render
   // pass.
   zx_handle_t render_handle_;
-
-  // Used for |RemoveChild|.
-  // TODO(SCN-820): Remove when parent-child relationships are split out of Node
-  // and View.
-  friend class Node;
 };
 using ViewPtr = fxl::RefPtr<View>;
 

@@ -25,6 +25,7 @@
 #include "garnet/lib/ui/gfx/resources/nodes/opacity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
 #include "garnet/lib/ui/gfx/resources/nodes/shape_node.h"
+#include "garnet/lib/ui/gfx/resources/nodes/view_node.h"
 #include "garnet/lib/ui/gfx/resources/renderers/renderer.h"
 #include "garnet/lib/ui/gfx/resources/shapes/circle_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/mesh_shape.h"
@@ -46,6 +47,8 @@ void HostImage::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 void ImagePipe::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void View::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
+
+void ViewNode::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void ViewHolder::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 

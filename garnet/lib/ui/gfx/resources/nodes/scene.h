@@ -52,6 +52,10 @@ class Scene final : public Node {
     return point_lights_;
   }
 
+ protected:
+  // |Node|
+  void OnSceneChanged() override;
+
  private:
   std::vector<AmbientLightPtr> ambient_lights_;
   std::vector<DirectionalLightPtr> directional_lights_;

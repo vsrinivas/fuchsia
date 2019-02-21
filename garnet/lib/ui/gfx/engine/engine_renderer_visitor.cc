@@ -16,6 +16,7 @@
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
 #include "garnet/lib/ui/gfx/resources/nodes/shape_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
+#include "garnet/lib/ui/gfx/resources/nodes/view_node.h"
 #include "garnet/lib/ui/gfx/resources/shapes/circle_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/rounded_rectangle_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
@@ -39,7 +40,20 @@ void EngineRendererVisitor::Visit(Buffer* r) { FXL_CHECK(false); }
 
 void EngineRendererVisitor::Visit(View* r) { FXL_CHECK(false); }
 
-void EngineRendererVisitor::Visit(ViewHolder* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(ViewNode* r) {
+  const size_t previous_count = draw_call_count_;
+
+  VisitNode(r);
+
+  bool view_is_rendering_element = draw_call_count_ > previous_count;
+  if (r->GetView() && view_is_rendering_element) {
+    // TODO(SCN-1099) Add a test to ensure this signal isn't triggered when this
+    // view is not rendering.
+    r->GetView()->SignalRender();
+  }
+}
+
+void EngineRendererVisitor::Visit(ViewHolder* r) { VisitNode(r); }
 
 void EngineRendererVisitor::Visit(EntityNode* r) { VisitNode(r); }
 
@@ -57,8 +71,6 @@ void EngineRendererVisitor::Visit(OpacityNode* r) {
 }
 
 void EngineRendererVisitor::VisitNode(Node* r) {
-  const size_t previous_count = draw_call_count_;
-
   escher::PaperTransformStack* transform_stack = renderer_->transform_stack();
   transform_stack->PushTransform(static_cast<escher::mat4>(r->transform()));
   transform_stack->AddClipPlanes(r->clip_planes());
@@ -67,13 +79,6 @@ void EngineRendererVisitor::VisitNode(Node* r) {
       *r, [this](Node* node) { node->Accept(this); });
 
   transform_stack->Pop();
-
-  bool view_is_rendering_element = draw_call_count_ > previous_count;
-  if (r->view() && view_is_rendering_element) {
-    // TODO(SCN-1099) Add a test to ensure this signal isn't triggered when this
-    // view is not rendering.
-    r->view()->SignalRender();
-  }
 }
 
 void EngineRendererVisitor::Visit(Scene* r) { VisitNode(r); }

@@ -43,7 +43,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   // The session this Resource lives in and the id it was created with there.
   Session* session() const { return session_; }
   ResourceId id() const { return id_; }
-  GlobalId global_id() const;
+  GlobalId global_id() const { return global_id_; }
 
   // An error reporter associated with the Resource's session. When operating
   // on this resource, always log errors to the ErrorReporter before failing.
@@ -119,6 +119,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
  private:
   Session* const session_;
   const ResourceId id_;
+  const GlobalId global_id_;
   const ResourceTypeInfo& type_info_;
   std::string label_;
   uint32_t event_mask_ = 0u;

@@ -1,66 +1,26 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
 
-#include "garnet/lib/ui/gfx/engine/engine.h"
-#include "garnet/lib/ui/gfx/engine/object_linker.h"
+#include <lib/async/default.h>
+
 #include "garnet/lib/ui/gfx/engine/session.h"
-#include "garnet/lib/ui/gfx/resources/nodes/node.h"
-#include "garnet/lib/ui/gfx/resources/view.h"
 #include "lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {
 
-const ResourceTypeInfo ViewHolder::kTypeInfo = {ResourceType::kViewHolder,
-                                                "ViewHolder"};
+const ResourceTypeInfo ViewHolder::kTypeInfo = {
+    ResourceType::kNode | ResourceType::kViewHolder, "ViewHolder"};
 
-ViewHolder::ViewHolder(Session* session, ResourceId id,
-                       ViewLinker::ExportLink link)
-    : Resource(session, id, ViewHolder::kTypeInfo), link_(std::move(link)) {
+ViewHolder::ViewHolder(Session* session, ResourceId node_id,
+                               ViewLinker::ExportLink link)
+    : Node(session, node_id, ViewHolder::kTypeInfo),
+      link_(std::move(link)) {
   FXL_DCHECK(link_.valid());
   FXL_DCHECK(!link_.initialized());
-}
-
-ViewHolder::~ViewHolder() {
-  // The View (if any) cleans things up in its LinkDisconnected handler,
-  // including Detaching any grandchild Nodes from the parent.
-}
-
-bool ViewHolder::Detach() {
-  SetParent(nullptr);
-  return true;
-}
-
-void ViewHolder::SetParent(Node* parent) {
-  // Make sure the parent and child Nodes' connections to each other remain
-  // consistent.
-  if (view_) {
-    if (parent) {
-      for (const NodePtr& grandchild : view_->children()) {
-        parent->AddChild(grandchild);  // Also detaches from the old parent.
-      }
-    } else {
-      for (const NodePtr& grandchild : view_->children()) {
-        grandchild->Detach();
-      }
-    }
-  }
-
-  ViewHolderPtr self(this);
-  if (parent_ != nullptr) {
-    // Be careful! If we were not holding on to |self|, this could remove the
-    // last reference to ourselves and subsequent code would be operating on
-    // invalid memory.
-    // TODO(SCN-1176): Make this less brittle.
-    parent_->EraseViewHolder(self);
-  }
-
-  parent_ = parent;
-  // The parent has changed, so the Scene might have as well.
-  RefreshScene();
 }
 
 void ViewHolder::Connect() {
@@ -68,28 +28,52 @@ void ViewHolder::Connect() {
                    fit::bind_member(this, &ViewHolder::LinkDisconnected));
 }
 
+void ViewHolder::LinkResolved(View* view) {
+  // The view will also receive a LinkResolved call, and it will take care of
+  // linking up the Nodes.
+  FXL_DCHECK(!view_ && view);
+  view_ = view;
+  // Set the render waiting event on the view.
+  ResetRenderEvent();
+
+  SendViewConnectedEvent();
+  // If the ViewHolder is already attached to a scene, the linked view is now
+  // also attached to the scene. Emit event.
+  if (scene()) {
+    SendViewAttachedToSceneEvent();
+  }
+
+  // This guarantees that the View is notified of any previously-set
+  // ViewProperties.  Otherwise, e.g. if the ViewHolder properties were set
+  // only once before the link was resolved, the View would never be notified.
+  SendViewPropertiesChangedEvent();
+}
+
+void ViewHolder::LinkDisconnected() {
+  // The child is already dead (or never existed) and it cleans things up in its
+  // destructor, including Detaching any child Nodes.
+  view_ = nullptr;
+
+  CloseRenderEvent();
+  // Link was disconnected, the view can no longer be rendering. If the state
+  // was previously rendering, update with not rendering event.
+  SetIsViewRendering(false);
+
+  SendViewDisconnectedEvent();
+}
+
 void ViewHolder::SetViewProperties(fuchsia::ui::gfx::ViewProperties props) {
   if (props != view_properties_) {
     view_properties_ = std::move(props);
+    // TODO(SCN-1180) Set the BoundingBox bounds as ClipPlanes on this node.
     if (view_) {
       SendViewPropertiesChangedEvent();
     }
   }
 }
 
-void ViewHolder::RefreshScene() {
-  Scene* new_scene = parent_ ? parent_->scene() : nullptr;
-  if (scene_ == new_scene) {
-    return;
-  }
-  scene_ = new_scene;
-
-  if (!view_) {
-    // No view to interact with events.
-    return;
-  }
-
-  if (scene_) {
+void ViewHolder::OnSceneChanged() {
+  if (scene()) {
     SendViewAttachedToSceneEvent();
   } else {
     // View is no longer part of a scene and therefore cannot render to one.
@@ -102,49 +86,33 @@ void ViewHolder::RefreshScene() {
   }
 }
 
-void ViewHolder::LinkResolved(View* view) {
-  // The view will also receive a LinkResolved call, and it will take care of
-  // linking up the Nodes.
-  FXL_DCHECK(!view_ && view);
-  view_ = view;
-  // Set the render waiting event on the view.
-  ResetRenderEvent();
-
-  SendViewConnectedEvent();
-
-  // If the ViewHolder is already attached to a scene, the linked view is now
-  // also attached to the scene. Emit event.
-  if (scene_) {
-    SendViewAttachedToSceneEvent();
+bool ViewHolder::CanAddChild(NodePtr child_node) {
+  // A ViewHolder can only have a child node that is associated with the
+  // connected View.
+  if (!(child_node->type_flags() & ResourceType::kView)) {
+    return false;
   }
 
-  // This guarantees that the View is notified of any previously-set
-  // ViewProperties.  Otherwise, e.g. if the ViewHolder properties were set
-  // only once before the link was resolved, the View would never be notified.
-  SendViewPropertiesChangedEvent();
-}
-
-void ViewHolder::LinkDisconnected() {
-  // The child is already dead (or never existed) and it cleans things up in its
-  // destructor, including Detaching any grandchild Nodes from the parent.
-  view_ = nullptr;
-
-  CloseRenderEvent();
-  // Link was disconnected, the view can no longer be rendering. If the state
-  // was previously rendering, update with not rendering event.
-  SetIsViewRendering(false);
-
-  SendViewDisconnectedEvent();
+  if (view_ && view_->GetViewNode()) {
+    return view_->GetViewNode()->id() == child_node->id();
+  }
+  // else, no view set and so this cannot verify the child. Return false.
+  // Note: the child of this node should only be added by View when the link
+  // is between this ViewHolder and the View are connected.
+  return false;
 }
 
 void ViewHolder::ResetRenderEvent() {
-  FXL_DCHECK(view_);
+  if (!view_) {
+    return;
+  }
+
   // Close any previously set event.
   CloseRenderEvent();
 
+  // Create a new render event.
   zx_status_t status = zx::event::create(0u, &render_event_);
   ZX_ASSERT(status == ZX_OK);
-
   // Re-arm the wait.
   render_waiter_.set_object(render_event_.get());
   render_waiter_.set_trigger(ZX_EVENT_SIGNALED);
@@ -189,6 +157,9 @@ void ViewHolder::SetIsViewRendering(bool is_rendering) {
 }
 
 void ViewHolder::SendViewPropertiesChangedEvent() {
+  if (!view_) {
+    return;
+  }
   fuchsia::ui::gfx::Event event;
   event.set_view_properties_changed(
       {.view_id = view_->id(), .properties = view_properties_});
@@ -208,6 +179,9 @@ void ViewHolder::SendViewDisconnectedEvent() {
 }
 
 void ViewHolder::SendViewAttachedToSceneEvent() {
+  if (!view_) {
+    return;
+  }
   fuchsia::ui::gfx::Event event;
   event.set_view_attached_to_scene(
       {.view_id = view_->id(), .properties = view_properties_});
@@ -215,6 +189,9 @@ void ViewHolder::SendViewAttachedToSceneEvent() {
 }
 
 void ViewHolder::SendViewDetachedFromSceneEvent() {
+  if (!view_) {
+    return;
+  }
   fuchsia::ui::gfx::Event event;
   event.set_view_detached_from_scene({.view_id = view_->id()});
   view_->session()->EnqueueEvent(std::move(event));

@@ -10,8 +10,6 @@
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
-#include "garnet/lib/ui/gfx/resources/view.h"
-#include "garnet/lib/ui/gfx/resources/view_holder.h"
 #include "lib/escher/geometry/types.h"
 #include "lib/fxl/logging.h"
 
@@ -20,17 +18,18 @@ namespace gfx {
 
 namespace {
 
-constexpr ResourceTypeFlags kHasChildren = ResourceType::kEntityNode |
-                                           ResourceType::kOpacityNode |
-                                           ResourceType::kScene;
+constexpr ResourceTypeFlags kHasChildren =
+    ResourceType::kEntityNode | ResourceType::kOpacityNode |
+    ResourceType::kScene | ResourceType::kView;
 constexpr ResourceTypeFlags kHasParts = ResourceType::kEntityNode |
                                         ResourceType::kOpacityNode |
                                         ResourceType::kClipNode;
 constexpr ResourceTypeFlags kHasTransform =
     ResourceType::kClipNode | ResourceType::kEntityNode |
     ResourceType::kOpacityNode | ResourceType::kScene |
-    ResourceType::kShapeNode;
-constexpr ResourceTypeFlags kHasClip = ResourceType::kEntityNode;
+    ResourceType::kShapeNode | ResourceType::kViewHolder;
+constexpr ResourceTypeFlags kHasClip =
+    ResourceType::kEntityNode | ResourceType::kViewHolder;
 
 }  // anonymous namespace
 
@@ -43,20 +42,8 @@ Node::Node(Session* session, ResourceId node_id,
 }
 
 Node::~Node() {
-  // TODO(SCN-1176): This teardown code is brittle. Figure out a better way to
-  // structure the View/ViewHolder-Node relationship.
-
-  // |view_holder->Detach()| will trigger removing an item from
-  // |view_holders_|, so move |view_holders_| before we start iterating through
-  // it.
-  auto view_holders_to_detach = std::move(view_holders_);
-  view_holders_.clear();
-  for (auto& view_holder : view_holders_to_detach) {
-    view_holder->Detach();
-  }
   ForEachDirectDescendantFrontToBack(*this, [](Node* node) {
     FXL_DCHECK(node->parent_relation_ != ParentRelation::kNone);
-
     // Detach without affecting parent Node (because thats us) or firing the
     // on_detached_cb_ (because that shouldn't be up to us).
     node->DetachInternal();
@@ -75,13 +62,18 @@ bool Node::SetEventMask(uint32_t event_mask) {
   return true;
 }
 
-bool Node::AddChild(NodePtr child_node) {
-  // TODO(SCN-130): Some node types (e.g. Scenes) cannot be re-parented. We
-  // should add verification to reject such operations.
+bool Node::CanAddChild(NodePtr child_node) {
+  return type_flags() & kHasChildren;
+}
 
-  if (!(type_flags() & kHasChildren)) {
-    error_reporter()->ERROR() << "scenic::gfx::Node::AddChild(): node of type '"
-                              << type_name() << "' cannot have children.";
+bool Node::AddChild(NodePtr child_node) {
+  if (child_node->type_flags() & ResourceType::kScene) {
+    return false;
+  }
+  if (!CanAddChild(child_node)) {
+    error_reporter()->ERROR()
+        << "scenic::gfx::Node::AddChild(): node of type '" << type_name()
+        << "' cannot have children of type " << child_node->type_name();
     return false;
   }
 
@@ -127,32 +119,6 @@ void Node::SetParent(Node* parent, ParentRelation relation) {
   RefreshScene(parent_->scene());
 }
 
-bool Node::AddViewHolder(ViewHolderPtr view_holder) {
-  // Just treat ViewHolders as children for the purposes of capabilities for
-  // now.
-  if (!(type_flags() & kHasChildren)) {
-    error_reporter()->ERROR()
-        << "scenic::gfx::Node::AddViewHolder(): node of type " << type_name()
-        << " cannot have children.";
-    return false;
-  }
-
-  if (view_holder->parent() == this) {
-    return true;  // no change
-  }
-
-  view_holder->SetParent(this);
-  view_holders_.insert(std::move(view_holder));
-
-  return true;
-}
-
-void Node::EraseViewHolder(ViewHolderPtr view_holder) {
-  // This might be a no-op; for example, we do a std::move(view_holders) in our
-  // destructor before detaching ViewHolders.
-  view_holders_.erase(view_holder);
-}
-
 bool Node::Detach() {
   if (parent_) {
     switch (parent_relation_) {
@@ -169,12 +135,6 @@ bool Node::Detach() {
         FXL_NOTREACHED();
         break;
     }
-
-    if (view_ != nullptr) {
-      view_->RemoveChild(this);
-      view_ = nullptr;
-    }
-
     DetachInternal();
   }
   return true;
@@ -198,14 +158,6 @@ bool Node::DetachChildren() {
     child->DetachInternal();
   }
 
-  // |view_holder->Detach()| will trigger removing an item from
-  // |view_holders_|, so move |view_holders_| before we start iterating through
-  // it.
-  auto view_holders_to_detach = std::move(view_holders_);
-  view_holders_.clear();
-  for (auto& view_holder : view_holders_to_detach) {
-    view_holder->Detach();
-  }
   return true;
 }
 
@@ -450,7 +402,9 @@ void Node::ErasePart(Node* part) {
 void Node::DetachInternal() {
   parent_relation_ = ParentRelation::kNone;
   parent_ = nullptr;
-  RefreshScene(nullptr);
+  if (!(type_flags() & ResourceType::kScene)) {
+    RefreshScene(nullptr);
+  }
   InvalidateGlobalTransform();
 }
 
@@ -461,41 +415,31 @@ void Node::RefreshScene(Scene* new_scene) {
   }
 
   scene_ = new_scene;
-  for (auto& view_holder : view_holders_) {
-    view_holder->RefreshScene();
-  }
+  OnSceneChanged();
+
   ForEachDirectDescendantFrontToBack(
       *this, [this](Node* node) { node->RefreshScene(scene_); });
 }
 
 // TODO(SCN-1006): After v2 transition, remove this function.
 ResourcePtr Node::FindOwningViewOrImportNode() const {
-  const Node* node = this;
-  while (node) {
-    if (node->is_exported() &&         // Exported
-        node->imports().size() > 0 &&  // Imported
-        node->tag_value() > 0) {       // Used by ViewManager
-      FXL_DCHECK(node->imports().size() == 1);
-      return ImportPtr(node->imports()[0]);
-    }
-
-    if (View* view = node->view()) {
-      return ViewPtr(view);
-    }
-
-    node = node->parent();
+  if (is_exported() &&         // Exported
+      imports().size() > 0 &&  // Imported
+      tag_value() > 0) {       // Used by ViewManager
+    FXL_DCHECK(imports().size() == 1);
+    return ImportPtr(imports()[0]);
   }
+
+  if (parent()) {
+    return parent()->FindOwningViewOrImportNode();
+  }
+
   return nullptr;
 }
 
 ResourcePtr Node::FindOwningView() const {
-  const Node* node = this;
-  while (node) {
-    if (View* view = node->view()) {
-      return ViewPtr(view);
-    }
-
-    node = node->parent();
+  if (parent()) {
+    return parent()->FindOwningView();
   }
   return nullptr;
 }

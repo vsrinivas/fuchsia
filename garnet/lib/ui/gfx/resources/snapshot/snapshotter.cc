@@ -193,7 +193,8 @@ void Snapshotter::Snapshotter::Visit(ImagePipe* r) {
 }
 void Snapshotter::Visit(Buffer* r) { VisitResource(r); }
 void Snapshotter::Visit(View* r) { VisitResource(r); }
-void Snapshotter::Visit(ViewHolder* r) { VisitResource(r); }
+void Snapshotter::Visit(ViewNode* r) { VisitNode(r); }
+void Snapshotter::Visit(ViewHolder* r) { VisitNode(r); }
 void Snapshotter::Visit(Compositor* r) { r->layer_stack()->Accept(this); }
 
 void Snapshotter::Visit(DisplayCompositor* r) {

@@ -398,24 +398,25 @@ bool GfxCommandApplier::ApplyAddChildCmd(
   // Find the parent and child nodes. We can add:
   // - Nodes to Nodes
   // - ViewHolders to Nodes
-  // - Nodes to Views
-  // TODO(SCN-795): Split these out into separate commands?
+  // - Nodes to Views' ViewNodes
+  // TODO(SCN-795): Split these out into separate commands? or just allow node
+  // to handle these??
+  auto child = session->resources()->FindResource<Node>(command.child_id);
+  if (!child) {
+    return false;
+  }
+
   if (auto parent = session->resources()->FindResource<Node>(
           command.node_id, ResourceMap::ErrorBehavior::kDontReportErrors)) {
-    if (auto child = session->resources()->FindResource<Node>(
-            command.child_id, ResourceMap::ErrorBehavior::kDontReportErrors)) {
-      return parent->AddChild(std::move(child));
-    } else if (auto child = session->resources()->FindResource<ViewHolder>(
-                   command.child_id)) {
-      return parent->AddViewHolder(std::move(child));
-    }
-  } else if (auto parent =
-                 session->resources()->FindResource<View>(command.node_id)) {
-    if (auto child =
-            session->resources()->FindResource<Node>(command.child_id)) {
-      return parent->AddChild(std::move(child));
-    }
+    return parent->AddChild(std::move(child));
+  } else if (auto view = session->resources()->FindResource<View>(
+                 command.node_id,
+                 ResourceMap::ErrorBehavior::kDontReportErrors)) {
+    // Children are added to a View. Add them the corresponding ViewNode.
+    return view->GetViewNode()->AddChild(std::move(child));
   }
+  session->error_reporter()->ERROR()
+      << "No View or Node found with id " << command.node_id;
   return false;
 }
 
@@ -1316,7 +1317,8 @@ bool GfxCommandApplier::ApplyCreateViewHolder(
          ": no token provided.";
 
   if (auto view_holder = CreateViewHolder(session, id, std::move(args))) {
-    view_holder->As<ViewHolder>()->Connect();  // Initiate the link.
+    view_holder->As<ViewHolder>()
+        ->Connect();  // Initiate the ViewHolder link.
     session->resources()->AddResource(id, std::move(view_holder));
     return true;
   }

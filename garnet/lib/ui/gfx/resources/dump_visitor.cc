@@ -92,23 +92,27 @@ void DumpVisitor::Visit(View* r) {
                         << (vh ? vh->global_id() : GlobalId());
 }
 
+void DumpVisitor::Visit(ViewNode* r) {
+  BeginItem("ViewNode", r);
+  if (auto view = r->GetView()) {
+    Visit(view);
+  }
+  VisitNode(r);
+  EndItem();
+}
+
 void DumpVisitor::Visit(ViewHolder* r) {
+  BeginItem("ViewHolder", r);
   View* v = r->view();
   WriteProperty("view_holder")
       << r->global_id() << "->" << (v ? v->global_id() : GlobalId());
-  WriteProperty("focus_change") << r->view_properties().focus_change;
+  WriteProperty("focus_change") << r->GetViewProperties().focus_change;
+  VisitNode(r);
+  EndItem();
 }
 
 void DumpVisitor::Visit(EntityNode* r) {
   BeginItem("EntityNode", r);
-  if (r->view()) {
-    Visit(r->view());
-  }
-  if (!r->view_holders().empty()) {
-    for (ViewHolderPtr vh : r->view_holders()) {
-      Visit(vh.get());
-    }
-  }
   VisitNode(r);
   EndItem();
 }

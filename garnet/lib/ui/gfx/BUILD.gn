@@ -152,6 +152,8 @@ source_set("gfx") {
     "resources/nodes/traversal.h",
     "resources/nodes/variable_binding.cc",
     "resources/nodes/variable_binding.h",
+    "resources/nodes/view_node.cc",
+    "resources/nodes/view_node.h",
     "resources/renderers/renderer.cc",
     "resources/renderers/renderer.h",
     "resources/resource.cc",

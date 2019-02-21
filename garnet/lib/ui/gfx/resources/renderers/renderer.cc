@@ -89,7 +89,20 @@ void Renderer::Visitor::Visit(Buffer* r) { FXL_CHECK(false); }
 
 void Renderer::Visitor::Visit(View* r) { FXL_CHECK(false); }
 
-void Renderer::Visitor::Visit(ViewHolder* r) { FXL_CHECK(false); }
+void Renderer::Visitor::Visit(ViewNode* r) {
+  size_t previous_display_size = display_list_.size();
+
+  VisitNode(r);
+
+  bool view_is_rendering_element = display_list_.size() > previous_display_size;
+  if (r->GetView() && view_is_rendering_element) {
+    // TODO(SCN-1099) Add a test to ensure this signal isn't triggered when this
+    // view is not rendering.
+    r->GetView()->SignalRender();
+  }
+}
+
+void Renderer::Visitor::Visit(ViewHolder* r) { VisitNode(r); }
 
 void Renderer::Visitor::Visit(EntityNode* r) { VisitNode(r); }
 
@@ -106,18 +119,7 @@ void Renderer::Visitor::Visit(OpacityNode* r) {
   context_.opacity = old_opacity;
 }
 
-void Renderer::Visitor::VisitNode(Node* r) {
-  size_t previous_display_size = display_list_.size();
-
-  VisitAndMaybeClipNode(r);
-
-  bool view_is_rendering_element = display_list_.size() > previous_display_size;
-  if (r->view() && view_is_rendering_element) {
-    // TODO(SCN-1099) Add a test to ensure this signal isn't triggered when this
-    // view is not rendering.
-    r->view()->SignalRender();
-  }
-}
+void Renderer::Visitor::VisitNode(Node* r) { VisitAndMaybeClipNode(r); }
 
 std::vector<escher::Object> Renderer::Visitor::GenerateClippeeDisplayList(
     Node* r) {

@@ -101,6 +101,7 @@ class Renderer : public Resource {
     void Visit(ImagePipe* r) override;
     void Visit(Buffer* r) override;
     void Visit(View* r) override;
+    void Visit(ViewNode* r) override;
     void Visit(ViewHolder* r) override;
     void Visit(EntityNode* r) override;
     void Visit(OpacityNode* r) override;

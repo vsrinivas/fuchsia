@@ -21,10 +21,8 @@ namespace gfx {
 class Node;
 class Scene;
 class View;
-class ViewHolder;
 
 using NodePtr = fxl::RefPtr<Node>;
-using ViewHolderPtr = fxl::RefPtr<ViewHolder>;
 
 // Node is an abstract base class for all the concrete node types listed in
 // scene/services/nodes.fidl.
@@ -37,9 +35,6 @@ class Node : public Resource {
   bool AddChild(NodePtr child_node);
   bool AddPart(NodePtr part_node);
   bool DetachChildren();
-
-  bool AddViewHolder(ViewHolderPtr view_holder);
-  void EraseViewHolder(ViewHolderPtr view_holder);
 
   bool SetTagValue(uint32_t tag_value);
   uint32_t tag_value() const { return tag_value_; }
@@ -91,16 +86,9 @@ class Node : public Resource {
   // part of a Scene.
   Scene* scene() const { return scene_; }
 
-  // Each Node which is the direct child of a View caches its parent.
-  View* view() const { return view_; }
-
   const std::vector<NodePtr>& children() const { return children_; }
 
   const std::vector<NodePtr>& parts() const { return parts_; }
-
-  const std::unordered_set<ViewHolderPtr>& view_holders() const {
-    return view_holders_;
-  }
 
   bool SetEventMask(uint32_t event_mask) override;
 
@@ -122,13 +110,20 @@ class Node : public Resource {
   // Walk up tree until we find the responsible View; otherwise return nullptr.
   // N.B. Typically the view and node are in the same session, but it's possible
   // to have them inhabit different sessions.
-  ResourcePtr FindOwningView() const;
+  virtual ResourcePtr FindOwningView() const;
 
   // TODO(SCN-1006): After v2 transition, remove this function.
-  ResourcePtr FindOwningViewOrImportNode() const;
+  virtual ResourcePtr FindOwningViewOrImportNode() const;
 
  protected:
   Node(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info);
+
+  // Returns whether or not this node can add the |child_node| as a child.
+  virtual bool CanAddChild(NodePtr child_node);
+  // Triggered on the node when the node's | scene_ | has changed, before its
+  // children are updated with the new scene.
+  virtual void OnSceneChanged() {}
+
   // Protected so that Scene Node can set itself as a Scene.
   Scene* scene_ = nullptr;
 
@@ -155,20 +150,13 @@ class Node : public Resource {
   void DetachInternal();
   void RefreshScene(Scene* new_scene);
 
-  // Called by View in order to set itself as a parent.
-  // TODO(SCN-820): Remove when parent-child relationships are split out of Node
-  // and View.
-  void set_view(View* view) { view_ = view; }
-
   uint32_t tag_value_ = 0u;
 
   Node* parent_ = nullptr;
-  View* view_ = nullptr;
   ParentRelation parent_relation_ = ParentRelation::kNone;
-
+  // TODO(SCN-1299) Split out child behavior into ContainerNode class.
   std::vector<NodePtr> children_;
   std::vector<NodePtr> parts_;
-  std::unordered_set<ViewHolderPtr> view_holders_;
 
   std::unordered_map<NodeProperty, std::unique_ptr<VariableBinding>>
       bound_variables_;
@@ -181,11 +169,6 @@ class Node : public Resource {
   ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior_ =
       ::fuchsia::ui::gfx::HitTestBehavior::kDefault;
   ::fuchsia::ui::gfx::Metrics reported_metrics_;
-
-  // Used for |set_view|.
-  // TODO(SCN-820): Remove when parent-child relationships are split out of Node
-  // and View.
-  friend class View;
 };
 
 // Inline functions.

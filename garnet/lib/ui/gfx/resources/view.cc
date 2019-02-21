@@ -8,7 +8,6 @@
 #include "garnet/lib/ui/gfx/engine/object_linker.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
-#include "garnet/lib/ui/gfx/resources/view_holder.h"
 #include "lib/fxl/logging.h"
 
 namespace scenic_impl {
@@ -18,48 +17,20 @@ const ResourceTypeInfo View::kTypeInfo = {ResourceType::kView, "View"};
 
 View::View(Session* session, ResourceId id, ViewLinker::ImportLink link)
     : Resource(session, id, View::kTypeInfo), link_(std::move(link)) {
+  node_ = fxl::AdoptRef<ViewNode>(new ViewNode(session, id));
+
   FXL_DCHECK(link_.valid());
   FXL_DCHECK(!link_.initialized());
 }
 
 View::~View() {
-  for (const NodePtr& child : children_) {
-    child->set_view(nullptr);
-    child->Detach();
-  }
+  // Explicitly detach the phantom node to ensure it is cleaned up.
+  node_->Detach();
 }
 
 void View::Connect() {
   link_.Initialize(this, fit::bind_member(this, &View::LinkResolved),
                    fit::bind_member(this, &View::LinkDisconnected));
-}
-
-bool View::AddChild(NodePtr child) {
-  auto* parent_node = view_holder_ ? view_holder_->parent() : nullptr;
-
-  // Bail if this Node is already a child of ours.
-  if (children_.find(child) != children_.end()) {
-    FXL_DCHECK(parent_node == child->parent());
-    return false;
-  }
-
-  // Link the child to our parent, and set its view to us.
-  if (parent_node != nullptr) {
-    parent_node->AddChild(child);
-  } else {
-    child->Detach();
-  }
-  child->set_view(this);
-  children_.insert(child);
-
-  return true;
-}
-
-void View::DetachChildren() {
-  for (const NodePtr& child : children_) {
-    child->Detach();
-  }
-  children_.clear();
 }
 
 void View::SignalRender() {
@@ -80,25 +51,13 @@ void View::SignalRender() {
 void View::LinkResolved(ViewHolder* view_holder) {
   FXL_DCHECK(!view_holder_);
   view_holder_ = view_holder;
-
-  auto* parent_node = view_holder_->parent();
-  if (parent_node) {
-    for (const NodePtr& child : children_) {
-      parent_node->AddChild(child);  // Also detaches child from the old parent.
-    }
-  } else {
-    for (const NodePtr& child : children_) {
-      child->Detach();
-    }
-  }
+  view_holder_->AddChild(node_);
 }
 
 void View::LinkDisconnected() {
-  // Make sure the parent and child Nodes' connections to each other remain
-  // consistent.
-  for (const NodePtr& child : children_) {
-    child->Detach();
-  }
+  // The connection ViewHolder no longer exists, detach the phantom node from
+  // the ViewHolder.
+  node_->Detach();
 
   view_holder_ = nullptr;
   // ViewHolder was disconnected. There are no guarantees on liveness of the
@@ -106,14 +65,6 @@ void View::LinkDisconnected() {
   InvalidateRenderEventHandle();
 
   SendViewHolderDisconnectedEvent();
-}
-
-void View::RemoveChild(Node* child) {
-  // It is OK to use the temporary RefPtr here, as child is guaranteed to
-  // already have at least one other reference.  The RefPtr allows for easy
-  // lookup into the set.
-  size_t erase_count = children_.erase(NodePtr(child));
-  FXL_DCHECK(erase_count == 1);
 }
 
 void View::SendViewHolderDisconnectedEvent() {

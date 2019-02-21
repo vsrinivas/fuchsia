@@ -106,13 +106,13 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     const uint32_t kRootNodeId = 1007;  // Hit
     s_r.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
 
-    const uint32_t kViewHolder1Id = 1008;
+    const uint32_t kViewHolder1Id = 1008;  // Hit
     s_r.Apply(scenic::NewAddChildCmd(kSceneId, kRootNodeId));
     s_r.Apply(scenic::NewCreateViewHolderCmd(
         kViewHolder1Id, std::move(tokens_1.second), "viewholder_1"));
     s_r.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolder1Id));
 
-    const uint32_t kViewHolder2Id = 1009;
+    const uint32_t kViewHolder2Id = 1009;  // Hit
     s_r.Apply(scenic::NewCreateViewHolderCmd(
         kViewHolder2Id, std::move(tokens_2.second), "viewholder_2"));
     s_r.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolder2Id));
@@ -121,7 +121,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   // Two sessions (s_1 and s_2) create an overlapping and hittable surface.
   CustomSession s_1(1, engine->session_context());
   {
-    const uint32_t kViewId = 2001;
+    const uint32_t kViewId = 2001;  // Hit
     s_1.Apply(
         scenic::NewCreateViewCmd(kViewId, std::move(tokens_1.first), "view_1"));
 
@@ -143,7 +143,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
 
   CustomSession s_2(2, engine->session_context());
   {
-    const uint32_t kViewId = 3001;
+    const uint32_t kViewId = 3001;  // Hit
     s_2.Apply(
         scenic::NewCreateViewCmd(kViewId, std::move(tokens_2.first), "view_2"));
 
@@ -185,7 +185,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   }
 
   // All that for this!
-  EXPECT_EQ(hits.size(), 6u) << "Should see six hits across three sessions.";
+  EXPECT_EQ(hits.size(), 10u) << "Should see ten hits across three sessions.";
 }
 
 }  // namespace test

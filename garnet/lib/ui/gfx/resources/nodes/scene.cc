@@ -21,6 +21,12 @@ Scene::Scene(Session* session, ResourceId node_id)
 
 Scene::~Scene() = default;
 
+void Scene::OnSceneChanged() {
+  FXL_CHECK(scene_ && scene_->global_id() == global_id())
+      << "Error: "
+      << "Scene cannot be changed to a different Scene.";
+}
+
 bool Scene::AddLight(const LightPtr& light) {
   if (light->IsKindOf<AmbientLight>()) {
     // TODO(SCN-1217): check for duplicates.

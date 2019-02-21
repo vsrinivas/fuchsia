@@ -43,9 +43,8 @@ namespace root_presenter {
 // The scene's node tree has the following structure:
 // + Scene
 //   + RootNode
-//     + ViewHolderNode
-//       + ViewHolder
-//           + link: Content view's actual content
+//     + ViewHolder
+//       + link: Content view's actual content
 //   + child: cursor 1
 //   + child: cursor N
 //

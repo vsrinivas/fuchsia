@@ -175,6 +175,10 @@ class Session {
   SessionContext session_context_;
   ResourceContext resource_context_;
   ResourceMap resources_;
+  // The total number of live resources in this session, i.e. resources
+  // which have been created and not yet destroyed. Note: there may be resources
+  // alive that are not part of |resources_|, such as a Node that is referenced
+  // by a parent Node in the scene graph.
   size_t resource_count_ = 0;
 
   // Tracks the number of method calls for tracing.

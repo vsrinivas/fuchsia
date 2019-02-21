@@ -201,7 +201,7 @@ bool IsFocusChange(gfx::ResourcePtr view) {
   if (view->IsKindOf<gfx::View>()) {
     gfx::ViewPtr view_ptr = view->As<gfx::View>();
     if (view_ptr->connected()) {
-      return view_ptr->view_holder()->view_properties().focus_change;
+      return view_ptr->view_holder()->GetViewProperties().focus_change;
     }
   } else {
     // TODO(SCN-1006): After v2 transition, remove this clause.
@@ -218,7 +218,7 @@ bool IsFocusChange(gfx::ResourcePtr view) {
 
           if (resource && resource->IsKindOf<gfx::View>()) {
             gfx::ViewPtr view = resource->As<gfx::View>();
-            return view->view_holder()->view_properties().focus_change;
+            return view->view_holder()->GetViewProperties().focus_change;
           }
         }
       }

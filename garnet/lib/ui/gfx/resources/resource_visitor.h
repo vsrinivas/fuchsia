@@ -14,6 +14,7 @@ class Image;
 class ImagePipe;
 class Buffer;
 class View;
+class ViewNode;
 class ViewHolder;
 class EntityNode;
 class OpacityNode;
@@ -46,6 +47,7 @@ class ResourceVisitor {
 
   // Views.
   virtual void Visit(View* r) = 0;
+  virtual void Visit(ViewNode* r) = 0;
   virtual void Visit(ViewHolder* r) = 0;
 
   // Nodes.
