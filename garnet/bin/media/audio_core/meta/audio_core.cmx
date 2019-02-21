@@ -9,7 +9,7 @@
         ],
         "features": [
             "system-temp",
-            "persistent-storage"
+            "deprecated-global-persistent-storage"
         ],
         "services": [],
         "system": [

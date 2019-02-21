@@ -8,6 +8,7 @@ import("//build/testing/environments.gni")
 import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
 sandbox_test_package("has_persistent_storage") {
+  deprecated_global_persistent_storage = "//build"
   sources = [
     "has_persistent_storage.cc",
   ]
@@ -88,6 +89,7 @@ executable("isolated_persistent_storage_bin") {
 }
 
 test_package("isolated_persistent_storage") {
+  deprecated_global_persistent_storage = "//build"
   tests = [
     {
       name = "isolated_persistent_storage"

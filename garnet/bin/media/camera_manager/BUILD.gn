@@ -44,6 +44,7 @@ executable("bin") {
 }
 
 package("camera_manager_cpp") {
+  deprecated_global_persistent_storage = "//build"
   deps = [
     ":bin",
   ]

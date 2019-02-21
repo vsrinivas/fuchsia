@@ -8,6 +8,7 @@ import("//peridot/bin/ledger/testing/sync_params.gni")
 visibility = [ "//peridot/bin/ledger/*" ]
 
 package("ledger_benchmarks") {
+  deprecated_global_persistent_storage = "//build"
   testonly = true
 
   deps = [

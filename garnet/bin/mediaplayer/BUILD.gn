@@ -86,6 +86,7 @@ executable("mediaplayer_test_util_bin") {
 }
 
 package("mediaplayer_test_util") {
+  deprecated_global_persistent_storage = "//build"
   binaries = [
     {
       name = "mediaplayer_test_util"

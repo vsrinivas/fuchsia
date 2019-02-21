@@ -23,6 +23,7 @@ rustc_binary("bin") {
 }
 
 package("example_http_server") {
+  deprecated_global_persistent_storage = "//build"
   deps = [
     ":bin",
   ]

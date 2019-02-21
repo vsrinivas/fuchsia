@@ -19,6 +19,7 @@ group("tools") {
 }
 
 package("audio_core") {
+  deprecated_global_persistent_storage = "//build"
   deps = [
     "//garnet/bin/media/audio_core",
     "//garnet/bin/media/audio_core/audiofx",

@@ -104,6 +104,7 @@ executable("bin") {
 }
 
 package("biscotti") {
+  deprecated_global_persistent_storage = "//build"
   deps = [
     ":bin",
   ]

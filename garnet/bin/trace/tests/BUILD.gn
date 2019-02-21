@@ -191,6 +191,7 @@ executable("two_providers_two_engines_test_app") {
 }
 
 package("trace_tests") {
+  deprecated_global_persistent_storage = "//build"
   testonly = true
 
   deps = [

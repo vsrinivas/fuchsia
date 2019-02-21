@@ -3,7 +3,7 @@
         "binary": "bin/system_updater"
     },
     "sandbox": {
-        "features": [ "shell", "persistent-storage" ],
+        "features": [ "shell", "deprecated-global-persistent-storage" ],
         "pkgfs": [ "packages" ],
         "services": [
             "fuchsia.amber.Control",

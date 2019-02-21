@@ -56,6 +56,7 @@ manifest_outputs = get_target_outputs(":install-disk-image.manifest")
 manifest_file = manifest_outputs[0]
 
 package("amber") {
+  deprecated_global_persistent_storage = "//build"
   extra = [ manifest_file ]
 
   deps = [

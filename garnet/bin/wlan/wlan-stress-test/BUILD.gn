@@ -29,6 +29,7 @@ rustc_binary("bin") {
 }
 
 package("wlan-stress-test") {
+  deprecated_global_persistent_storage = "//build"
   deps = [
     ":bin",
   ]

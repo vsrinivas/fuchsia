@@ -51,6 +51,7 @@ executable("cpuperf_integration_tests") {
 }
 
 package("cpuperf_tests") {
+  deprecated_global_persistent_storage = "//build"
   testonly = true
 
   deps = [

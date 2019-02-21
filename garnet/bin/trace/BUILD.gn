@@ -86,6 +86,7 @@ source_set("unittests") {
 }
 
 package("trace") {
+  deprecated_global_persistent_storage = "//build"
   deps = [
     ":bin",
   ]

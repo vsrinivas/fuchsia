@@ -33,6 +33,7 @@ executable("bin") {
 }
 
 package("example_camera_client") {
+  deprecated_global_persistent_storage = "//build"
   deps = [
     ":bin",
   ]
