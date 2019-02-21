@@ -16,6 +16,8 @@ table OfferDecl {
     /// If |source| == |SELF|, this is a path in the component’s namespace.
     /// Otherwise, it is the path by which the capability was presented to the
     /// component.
+    ///
+    /// Must be an absolute path starting with /.
     2: string:MAX_PATH_LENGTH source_path;
 
     /// The provider of the capability relative to the component itself.
@@ -30,6 +32,8 @@ table OfferDecl {
 /// Describes a target for a capability offering.
 table OfferTarget {
     /// The path under which the capability is being offered.
+    ///
+    /// Must be an absolute path starting with /.
     1: string:MAX_PATH_LENGTH target_path;
 
     /// The name of the child component.
