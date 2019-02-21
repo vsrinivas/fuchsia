@@ -34,8 +34,6 @@ executable("bin") {
 }
 
 package("guest") {
-  deprecated_system_image = true
-
   deps = [
     ":bin",
   ]
@@ -43,6 +41,7 @@ package("guest") {
   binaries = [
     {
       name = "guest"
+      shell = true
     },
   ]
 }
