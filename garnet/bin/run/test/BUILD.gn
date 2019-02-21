@@ -45,17 +45,6 @@ executable("run_return_value_test") {
   ]
 }
 
-# Test `run` from the shell's perspective
-copy("run_return_value_shell_test") {
-  sources = [
-    "run_return_value_shell_test",
-  ]
-
-  outputs = [
-    "$root_out_dir/run_return_value_shell_test",
-  ]
-}
-
 # Helper program for tests
 executable("exiter_bin") {
   output_name = "run_test_exiter"
@@ -90,15 +79,10 @@ package("run_tests") {
 
   deps = [
     ":bin",
-    ":run_return_value_shell_test",
     ":run_return_value_test",
   ]
 
   meta = [
-    {
-      dest = "run_return_value_shell_test.cmx"
-      path = rebase_path(dest)
-    },
     {
       dest = "run_return_value_test.cmx"
       path = rebase_path(dest)
@@ -108,10 +92,6 @@ package("run_tests") {
   tests = [
     {
       name = "run_return_value_test"
-      environments = basic_envs
-    },
-    {
-      name = "run_return_value_shell_test"
       environments = basic_envs
     },
     {
