@@ -71,60 +71,72 @@ void BrwLock::WakeAny() {
 }
 
 void BrwLock::ContendedReadAcquire() {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    // Remove our optimistic reader from the count, and put a waiter on there instead.
-    uint64_t prev = state_.fetch_add(-kBrwLockReader + kBrwLockWaiter, ktl::memory_order_relaxed);
-    // If there is a writer then we just block, they will wake us up
-    if (prev & kBrwLockWriter) {
-        Block(false);
-        return;
-    }
-    // If we raced and there is in fact no one waiting then we can switch to
-    // having the lock
-    if ((prev & kBrwLockWaiterMask) == 0) {
-        state_.fetch_add(-kBrwLockWaiter + kBrwLockReader, ktl::memory_order_acquire);
-        return;
-    }
-    thread_t* next = wait_.Peek();
-    DEBUG_ASSERT(next != NULL);
-    if (next->state == THREAD_BLOCKED_READ_LOCK) {
-        WakeReaders();
-        // Join the reader pool.
-        state_.fetch_add(-kBrwLockWaiter + kBrwLockReader, ktl::memory_order_acquire);
-        return;
-    }
-    // If there are no current readers then we unblock this writer, since
-    // otherwise nobody will be using the lock.
-    if ((prev & kBrwLockReaderMask) == 1) {
-        WakeWriter(next);
-    }
+    // In the case where we wake other threads up we need them to not run until we're finished
+    // holding the thread_lock, so disable local rescheduling.
+    AutoReschedDisable resched_disable;
+    resched_disable.Disable();
+    {
+        Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+        // Remove our optimistic reader from the count, and put a waiter on there instead.
+        uint64_t prev = state_.fetch_add(-kBrwLockReader + kBrwLockWaiter, ktl::memory_order_relaxed);
+        // If there is a writer then we just block, they will wake us up
+        if (prev & kBrwLockWriter) {
+            Block(false);
+            return;
+        }
+        // If we raced and there is in fact no one waiting then we can switch to
+        // having the lock
+        if ((prev & kBrwLockWaiterMask) == 0) {
+            state_.fetch_add(-kBrwLockWaiter + kBrwLockReader, ktl::memory_order_acquire);
+            return;
+        }
+        thread_t* next = wait_.Peek();
+        DEBUG_ASSERT(next != NULL);
+        if (next->state == THREAD_BLOCKED_READ_LOCK) {
+            WakeReaders();
+            // Join the reader pool.
+            state_.fetch_add(-kBrwLockWaiter + kBrwLockReader, ktl::memory_order_acquire);
+            return;
+        }
+        // If there are no current readers then we unblock this writer, since
+        // otherwise nobody will be using the lock.
+        if ((prev & kBrwLockReaderMask) == 1) {
+            WakeWriter(next);
+        }
 
-    Block(false);
+        Block(false);
+    }
 }
 
 void BrwLock::ContendedWriteAcquire() {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    // Mark ourselves as waiting
-    uint64_t prev = state_.fetch_add(kBrwLockWaiter, ktl::memory_order_relaxed);
-    // If there is a writer then we just block, they will wake us up
-    if (prev & kBrwLockWriter) {
-        Block(true);
-        return;
-    }
-    if ((prev & kBrwLockReaderMask) == 0) {
-        if ((prev & kBrwLockWaiterMask) == 0) {
-            writer_.store(get_current_thread(), ktl::memory_order_relaxed);
-            // Must have raced previously as turns out there's no readers or
-            // waiters, so we can convert to having the lock
-            state_.fetch_add(-kBrwLockWaiter + kBrwLockWriter, ktl::memory_order_acquire);
+    // In the case where we wake other threads up we need them to not run until we're finished
+    // holding the thread_lock, so disable local rescheduling.
+    AutoReschedDisable resched_disable;
+    resched_disable.Disable();
+    {
+        Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+        // Mark ourselves as waiting
+        uint64_t prev = state_.fetch_add(kBrwLockWaiter, ktl::memory_order_relaxed);
+        // If there is a writer then we just block, they will wake us up
+        if (prev & kBrwLockWriter) {
+            Block(true);
             return;
-        } else {
-            // There's no readers, but someone already waiting, wake up someone
-            // before we ourselves block
-            WakeAny();
         }
+        if ((prev & kBrwLockReaderMask) == 0) {
+            if ((prev & kBrwLockWaiterMask) == 0) {
+                writer_.store(get_current_thread(), ktl::memory_order_relaxed);
+                // Must have raced previously as turns out there's no readers or
+                // waiters, so we can convert to having the lock
+                state_.fetch_add(-kBrwLockWaiter + kBrwLockWriter, ktl::memory_order_acquire);
+                return;
+            } else {
+                // There's no readers, but someone already waiting, wake up someone
+                // before we ourselves block
+                WakeAny();
+            }
+        }
+        Block(true);
     }
-    Block(true);
 }
 
 void BrwLock::WriteRelease() TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -167,11 +179,17 @@ void BrwLock::WriteRelease() TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 void BrwLock::ReleaseWakeup() {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    uint64_t count = state_.load(ktl::memory_order_relaxed);
-    if ((count & kBrwLockWaiterMask) != 0 && (count & kBrwLockWriter) == 0 &&
-        (count & kBrwLockReaderMask) == 0) {
-        WakeAny();
+    // Don't reschedule whilst we're waking up all the threads as if there are
+    // several readers available then we'd like to get them all out of the wait queue.
+    AutoReschedDisable resched_disable;
+    resched_disable.Disable();
+    {
+        Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+        uint64_t count = state_.load(ktl::memory_order_relaxed);
+        if ((count & kBrwLockWaiterMask) != 0 && (count & kBrwLockWriter) == 0 &&
+            (count & kBrwLockReaderMask) == 0) {
+            WakeAny();
+        }
     }
 }
 
