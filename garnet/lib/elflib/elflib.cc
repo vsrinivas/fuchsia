@@ -88,6 +88,40 @@ std::unique_ptr<ElfLib> ElfLib::Create(
 
   out->header_ = *header;
 
+  // Header magic should be correct.
+  if (!std::equal(ElfMagic, ElfMagic + 4, out->header_.e_ident)) {
+    return std::unique_ptr<ElfLib>();
+  }
+
+  // We only support 64-bit binaries.
+  if (out->header_.e_ident[EI_CLASS] != ELFCLASS64) {
+    return std::unique_ptr<ElfLib>();
+  }
+
+  const uint32_t kOne = 1;
+
+  // Endianness of the file has to match the endianness of the host. To do the
+  // endianness check, we snip the first byte off of a 4-byte word. If it
+  // contains the LSB (a value of 1) we are on a little-endian machine.
+  if (out->header_.e_ident[EI_DATA] == ELFDATA2MSB &&
+      *reinterpret_cast<const char*>(&kOne)) {
+    return std::unique_ptr<ElfLib>();
+  }
+
+  // Version field has only had one correct value for most of the life of the
+  // spec.
+  if (out->header_.e_ident[EI_VERSION] != EV_CURRENT) {
+    return std::unique_ptr<ElfLib>();
+  }
+
+  if (out->header_.e_version != EV_CURRENT) {
+    return std::unique_ptr<ElfLib>();
+  }
+
+  // We'll skip EI_OSABI and EI_ABIVERSION as well as e_machine and e_type. In
+  // either case any valid value should be fine. We just don't screen for
+  // invalid values.
+
   // We don't support non-standard section header sizes. Stripped binaries that
   // don't have sections sometimes zero out the shentsize, so we can ignore it
   // if we have no sections.

@@ -5,7 +5,6 @@
 #include "garnet/lib/elflib/elflib.h"
 
 #include <limits.h>
-#include <stdio.h>
 #include <unistd.h>
 
 #if defined(__APPLE__)
@@ -106,8 +105,8 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessorForFile {
  public:
   TestMemoryAccessor() {
     PushData(Elf64_Ehdr{
-        .e_ident = {EI_MAG0, EI_MAG1, EI_MAG2, EI_MAG3},
-        .e_version = 1,
+        .e_ident = {0, 0, 0, 0, ELFCLASS64, ELFDATA2LSB, EV_CURRENT},
+        .e_version = EV_CURRENT,
         .e_shoff = sizeof(Elf64_Ehdr),
         .e_ehsize = sizeof(Elf64_Ehdr),
         .e_shentsize = sizeof(Elf64_Shdr),
@@ -116,6 +115,11 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessorForFile {
         .e_phnum = 2,
         .e_shstrndx = 0,
     });
+
+    *DataAt<char>(0) = ElfMagic[0];
+    *DataAt<char>(1) = ElfMagic[1];
+    *DataAt<char>(2) = ElfMagic[2];
+    *DataAt<char>(3) = ElfMagic[3];
 
     size_t shstrtab_hdr = PushData(Elf64_Shdr{
         .sh_name = 1,
