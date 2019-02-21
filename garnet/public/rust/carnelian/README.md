@@ -2,6 +2,9 @@
 
 Carnelian is a prototype framework for writing Fuchsia modules in Rust.
 
+To build the included samples, add `--available garnet/packages/examples/carnelian` to
+your fx set line.
+
 # Tentative Roadmap
 
 1. Mouse, touch and keyboard input
@@ -12,10 +15,6 @@ Carnelian is a prototype framework for writing Fuchsia modules in Rust.
 ## Mouse, touch and keyboard input
 
 Design and implement a way to pass input events from Scenic to app and view assistants.
-
-## Text rendering with RustType
-
-Design and implement a way to render text with RustType and display it with scenic.
 
 ## Flutter-style flex-box layout
 

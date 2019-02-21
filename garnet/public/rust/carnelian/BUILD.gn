@@ -32,6 +32,7 @@ rustc_library("carnelian") {
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:itertools",
     "//third_party/rust-crates/rustc_deps:lazy_static",
+    "//third_party/rust-crates/rustc_deps:rand",
     "//third_party/rust-crates/rustc_deps:rusttype",
     "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
@@ -119,6 +120,35 @@ rustc_binary("button_example") {
   ]
 }
 
+rustc_binary("perf_test_01") {
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "examples/perf_test_01.rs"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/carnelian",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-scenic",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//garnet/public/rust/shared-buffer",
+    "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
+    "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//sdk/fidl/fuchsia.ui.viewsv1:fuchsia.ui.viewsv1-rustc",
+    "//sdk/fidl/fuchsia.ui.viewsv1token:fuchsia.ui.viewsv1token-rustc",
+    "//third_party/rust-crates/rustc_deps:euclid",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:itertools",
+    "//third_party/rust-crates/rustc_deps:rand",
+    "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
+  ]
+}
+
 package("spinning_square_rs") {
   deps = [
     ":spinning_square_example",
@@ -175,6 +205,26 @@ package("button_rs") {
     {
       path = rebase_path("meta/example.cmx")
       dest = "button_rs.cmx"
+    },
+  ]
+}
+
+package("perf_test_01_rs") {
+  deps = [
+    ":perf_test_01",
+  ]
+
+  binaries = [
+    {
+      name = "app"
+      source = "rust_crates/perf_test_01"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/example.cmx")
+      dest = "perf_test_01_rs.cmx"
     },
   ]
 }

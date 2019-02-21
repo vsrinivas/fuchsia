@@ -1,0 +1,11 @@
+{
+    "imports": [
+        "garnet/packages/prod/scenic"
+    ],
+    "packages": [
+        "//garnet/public/rust/carnelian:button_rs",
+        "//garnet/public/rust/carnelian:embedding_rs",
+        "//garnet/public/rust/carnelian:spinning_square_rs",
+        "//garnet/public/rust/carnelian:perf_test_01_rs"
+    ]
+}
