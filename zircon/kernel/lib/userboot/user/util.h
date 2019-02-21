@@ -16,7 +16,7 @@ void __PRINTFLIKE(2, 3) printl(zx_handle_t log, const char* fmt, ...);
 void vprintl(zx_handle_t log, const char* fmt, va_list ap);
 
 // fail() combines printl() with process exit
-_Noreturn void __PRINTFLIKE(2, 3) fail(zx_handle_t log, const char* fmt, ...);
+[[noreturn]] void __PRINTFLIKE(2, 3) fail(zx_handle_t log, const char* fmt, ...);
 
 #define check(log, status, fmt, ...)                                    \
     do {                                                                \

@@ -26,7 +26,7 @@
 
 #define STACK_VMO_NAME "userboot-child-initial-stack"
 
-static noreturn void do_powerctl(zx_handle_t log, zx_handle_t rroot, uint32_t reason) {
+[[noreturn]] static void do_powerctl(zx_handle_t log, zx_handle_t rroot, uint32_t reason) {
     const char* r_str = (reason == ZX_SYSTEM_POWERCTL_SHUTDOWN) ? "poweroff" : "reboot";
     if (reason == ZX_SYSTEM_POWERCTL_REBOOT) {
         printl(log, "Waiting 3 seconds...");
@@ -96,7 +96,7 @@ enum {
 // 4. Load up a channel with the zx_proc_args_t message for the child.
 // 5. Start the child process running.
 // 6. Optionally, wait for it to exit and then shut down.
-static noreturn void bootstrap(zx_handle_t log, zx_handle_t bootstrap_pipe) {
+[[noreturn]] static void bootstrap(zx_handle_t log, zx_handle_t bootstrap_pipe) {
     // Sample the bootstrap message to see how big it is.
     uint32_t nbytes;
     uint32_t nhandles;
@@ -128,11 +128,13 @@ static noreturn void bootstrap(zx_handle_t log, zx_handle_t bootstrap_pipe) {
         fail(log, "unexpected bootstrap message layout: environ");
     }
     const size_t environ_size = nbytes - pargs->environ_off;
-    pargs->environ_off += EXTRA_HANDLE_COUNT * sizeof(uint32_t);
+    constexpr uint32_t info_size =
+        static_cast<uint32_t>(EXTRA_HANDLE_COUNT * sizeof(uint32_t));
+    pargs->environ_off += info_size;
     memmove(&buffer[pargs->environ_off],
             &buffer[pargs->handle_info_off + nhandles * sizeof(uint32_t)],
             environ_size);
-    nbytes += EXTRA_HANDLE_COUNT * sizeof(uint32_t);
+    nbytes += info_size;
 
     // Extract the environment (aka kernel command line) strings.
     char* environ[pargs->environ_num + 1];
@@ -348,12 +350,13 @@ static noreturn void bootstrap(zx_handle_t log, zx_handle_t bootstrap_pipe) {
 
 // This is the entry point for the whole show, the very first bit of code
 // to run in user mode.
-noreturn void _start(void* start_arg) {
+extern "C" [[noreturn]] void _start(void* start_arg) {
     zx_handle_t log = ZX_HANDLE_INVALID;
     zx_debuglog_create(ZX_HANDLE_INVALID, 0, &log);
     if (log == ZX_HANDLE_INVALID)
         printl(log, "zx_debuglog_create failed, using zx_debug_write instead");
 
-    zx_handle_t bootstrap_pipe = (uintptr_t)start_arg;
+    zx_handle_t bootstrap_pipe =
+        static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(start_arg));
     bootstrap(log, bootstrap_pipe);
 }

@@ -6,13 +6,12 @@
 
 #pragma GCC visibility push(hidden)
 
+#include <cstddef>
 #include <zircon/types.h>
-#include <stddef.h>
-#include <stdint.h>
 
 struct bootfs {
     zx_handle_t vmo;
-    const void* contents;
+    const std::byte* contents;
     size_t len;
 };
 

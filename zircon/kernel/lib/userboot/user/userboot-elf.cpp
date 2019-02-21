@@ -90,14 +90,16 @@ static void stuff_loader_bootstrap(zx_handle_t log,
                                    zx_handle_t segments_vmar,
                                    zx_handle_t vmo,
                                    zx_handle_t* loader_svc) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
     struct loader_bootstrap_message msg = {
         .header = {
             .protocol = ZX_PROCARGS_PROTOCOL,
             .version = ZX_PROCARGS_VERSION,
             .handle_info_off = offsetof(struct loader_bootstrap_message,
                                         handle_info),
-            .environ_num = LOADER_BOOTSTRAP_ENVIRON_NUM,
             .environ_off = offsetof(struct loader_bootstrap_message, env),
+            .environ_num = LOADER_BOOTSTRAP_ENVIRON_NUM,
         },
         .handle_info = {
             [BOOTSTRAP_EXEC_VMO] = PA_HND(PA_VMO_EXECUTABLE, 0),
@@ -110,6 +112,7 @@ static void stuff_loader_bootstrap(zx_handle_t log,
         },
         .env = LOADER_BOOTSTRAP_ENVIRON,
     };
+#pragma GCC diagnostic pop
     zx_handle_t handles[] = {
         [BOOTSTRAP_EXEC_VMO] = vmo,
         [BOOTSTRAP_LOGGER] = ZX_HANDLE_INVALID,

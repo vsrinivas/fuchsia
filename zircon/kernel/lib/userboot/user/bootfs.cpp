@@ -20,7 +20,7 @@ void bootfs_mount(zx_handle_t vmar, zx_handle_t log, zx_handle_t vmo, struct boo
     uintptr_t addr = 0;
     status = zx_vmar_map(vmar, ZX_VM_PERM_READ, 0, vmo, 0, size, &addr);
     check(log, status, "zx_vmar_map failed on bootfs vmo\n");
-    fs->contents = (const void*)addr;
+    fs->contents = reinterpret_cast<const std::byte*>(addr);
     fs->len = size;
     status = zx_handle_duplicate(
         vmo,
@@ -40,12 +40,12 @@ void bootfs_unmount(zx_handle_t vmar, zx_handle_t log, struct bootfs *fs) {
 static const bootfs_entry_t* bootfs_search(zx_handle_t log,
                                            struct bootfs *fs,
                                            const char* filename) {
-    const void* p = fs->contents;
+    const std::byte* p = fs->contents;
 
     if (fs->len < sizeof(bootfs_header_t))
         fail(log, "bootfs is too small");
 
-    const bootfs_header_t* hdr = p;
+    const bootfs_header_t* hdr = reinterpret_cast<const bootfs_header_t*>(p);
     if ((hdr->magic != BOOTFS_MAGIC) || (hdr->dirsize > fs->len))
         fail(log, "bootfs bad magic or size");
 
@@ -55,7 +55,7 @@ static const bootfs_entry_t* bootfs_search(zx_handle_t log,
     size_t avail = hdr->dirsize;
 
     while (avail > sizeof(bootfs_entry_t)) {
-        const bootfs_entry_t* e = p;
+        auto e = reinterpret_cast<const bootfs_entry_t*>(p);
 
         size_t sz = BOOTFS_RECSIZE(e);
         if ((e->name_len < 1) || (sz > avail))

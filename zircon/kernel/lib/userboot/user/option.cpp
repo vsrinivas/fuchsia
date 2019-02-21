@@ -15,9 +15,9 @@
     case OPTION_##option: value = OPTION_##option##_DEFAULT; break
 
 static void initialize_options(struct options* o) {
-    for (enum option i = 0; i < OPTION_MAX; ++i) {
+    for (int i = 0; i < OPTION_MAX; ++i) {
         const char* value = NULL;
-        switch (i) {
+        switch (option(i)) {
             OPTION_DEFAULT(FILENAME);
             OPTION_DEFAULT(SHUTDOWN);
             OPTION_DEFAULT(REBOOT);
@@ -36,10 +36,10 @@ static void initialize_options(struct options* o) {
 
 static void apply_option(struct options* o, const char* arg) {
     size_t len = strlen(arg);
-    for (enum option i = 0; i < OPTION_MAX; ++i) {
+    for (int i = 0; i < OPTION_MAX; ++i) {
         const char* string = NULL;
         size_t string_len = 0;
-        switch (i) {
+        switch (option(i)) {
             OPTION_STRING(FILENAME);
             OPTION_STRING(SHUTDOWN);
             OPTION_STRING(REBOOT);

@@ -158,8 +158,10 @@ error_reply:
         zx_handle_close(reqhandle);
     }
 
-    status = zx_channel_write(channel, 0, &rsp, ldmsg_rsp_get_size_wrong(&rsp),
-                              &handle, handle == ZX_HANDLE_INVALID ? 0 : 1);
+    status = zx_channel_write(
+        channel, 0, &rsp,
+        static_cast<uint32_t>(ldmsg_rsp_get_size_wrong(&rsp)),
+        &handle, handle == ZX_HANDLE_INVALID ? 0 : 1);
     check(state->log, status,
           "zx_channel_write on loader-service channel failed");
 
@@ -176,10 +178,9 @@ void loader_service(zx_handle_t log, struct bootfs* bootfs,
                     zx_handle_t channel) {
     printl(log, "waiting for loader-service requests...");
 
-    struct loader_state state = {
-        .log = log,
-        .bootfs = bootfs,
-    };
+    struct loader_state state = {};
+    state.log = log;
+    state.bootfs = bootfs;
 
     do {
         zx_signals_t signals;
