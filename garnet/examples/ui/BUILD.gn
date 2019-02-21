@@ -13,6 +13,7 @@ group("ui") {
     "hello_pose_buffer",
     "hello_scenic",
     "hello_stereo",
+    "hello_touch_colors",
     "hello_views",
     "shadertoy/client",
     "shadertoy/service",
@@ -37,6 +38,21 @@ package("hello_base_view") {
     {
       path = rebase_path("meta/ui_example.cmx")
       dest = "hello_base_view.cmx"
+    },
+  ]
+}
+
+package("hello_touch_colors") {
+  deps = [
+    "hello_touch_colors",
+  ]
+
+  binary = "hello_touch_colors"
+
+  meta = [
+    {
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "hello_touch_colors.cmx"
     },
   ]
 }
