@@ -130,7 +130,7 @@ TEST_F(MinidumpTest, AttachDetach) {
   DoRequest(request, reply, err, &RemoteAPI::Attach);
   ASSERT_ZXDB_SUCCESS(err);
 
-  EXPECT_EQ(0UL, reply.status);
+  EXPECT_EQ(0, reply.status);
   EXPECT_EQ("scenic", reply.name);
 
   debug_ipc::DetachRequest detach_request;
@@ -140,13 +140,13 @@ TEST_F(MinidumpTest, AttachDetach) {
   DoRequest(detach_request, detach_reply, err, &RemoteAPI::Detach);
   ASSERT_ZXDB_SUCCESS(err);
 
-  EXPECT_EQ(0UL, detach_reply.status);
+  EXPECT_EQ(0, detach_reply.status);
 
   /* Try to detach when not attached */
   DoRequest(detach_request, detach_reply, err, &RemoteAPI::Detach);
   ASSERT_ZXDB_SUCCESS(err);
 
-  EXPECT_NE(0UL, detach_reply.status);
+  EXPECT_NE(0, detach_reply.status);
 }
 
 TEST_F(MinidumpTest, AttachFail) {
@@ -160,7 +160,7 @@ TEST_F(MinidumpTest, AttachFail) {
   DoRequest(request, reply, err, &RemoteAPI::Attach);
   ASSERT_ZXDB_SUCCESS(err);
 
-  EXPECT_NE(0UL, reply.status);
+  EXPECT_NE(0, reply.status);
 }
 
 TEST_F(MinidumpTest, Threads) {
