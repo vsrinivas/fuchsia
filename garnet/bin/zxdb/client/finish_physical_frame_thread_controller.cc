@@ -8,6 +8,7 @@
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/client/until_thread_controller.h"
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/symbols/function.h"
 #include "lib/fxl/logging.h"
 
 namespace zxdb {
@@ -77,6 +78,14 @@ void FinishPhysicalFrameThreadController::InitWithThread(
   // function (though it's possible in the future if necessary).
   FXL_DCHECK(stack.size() > frame_to_finish_);
   FXL_DCHECK(stack[frame_to_finish_]->GetAddress() == frame_ip_);
+#endif
+
+#ifdef DEBUG_THREAD_CONTROLLERS
+  auto function = stack[frame_to_finish_]->GetLocation().symbol().Get()->AsFunction();
+  if (function)
+    Log("Finishing %s", function->GetFullName().c_str());
+  else
+    Log("Finshing unsymbolized function");
 #endif
 
   auto found_fingerprint = stack.GetFrameFingerprint(frame_to_finish_);

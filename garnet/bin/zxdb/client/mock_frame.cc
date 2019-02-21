@@ -12,8 +12,7 @@ namespace zxdb {
 
 MockFrame::MockFrame(Session* session, Thread* thread,
                      const debug_ipc::StackFrame& stack_frame,
-                     const Location& location,
-                     const Frame* physical_frame,
+                     const Location& location, const Frame* physical_frame,
                      bool is_ambiguous_inline)
     : Frame(session),
       thread_(thread),
@@ -25,9 +24,13 @@ MockFrame::~MockFrame() = default;
 
 void MockFrame::SetAddress(uint64_t address) {
   stack_frame_.ip = address;
-  location_ = Location(address, location_.file_line(),
-                       location_.column(), location_.symbol_context(),
-                       location_.symbol());
+  location_ = Location(address, location_.file_line(), location_.column(),
+                       location_.symbol_context(), location_.symbol());
+}
+
+void MockFrame::SetFileLine(const FileLine& file_line) {
+  location_ = Location(location_.address(), file_line, location_.column(),
+                       location_.symbol_context(), location_.symbol());
 }
 
 Thread* MockFrame::GetThread() const { return thread_; }
@@ -42,9 +45,7 @@ const Frame* MockFrame::GetPhysicalFrame() const {
 
 const Location& MockFrame::GetLocation() const { return location_; }
 uint64_t MockFrame::GetAddress() const { return stack_frame_.ip; }
-uint64_t MockFrame::GetBasePointerRegister() const {
-  return stack_frame_.bp;
-}
+uint64_t MockFrame::GetBasePointerRegister() const { return stack_frame_.bp; }
 std::optional<uint64_t> MockFrame::GetBasePointer() const {
   return stack_frame_.bp;
 }
@@ -63,7 +64,8 @@ fxl::RefPtr<SymbolDataProvider> MockFrame::GetSymbolDataProvider() const {
 fxl::RefPtr<ExprEvalContext> MockFrame::GetExprEvalContext() const {
   if (!symbol_eval_context_) {
     symbol_eval_context_ = fxl::MakeRefCounted<SymbolEvalContext>(
-        fxl::WeakPtr<const ProcessSymbols>(), GetSymbolDataProvider(), location_);
+        fxl::WeakPtr<const ProcessSymbols>(), GetSymbolDataProvider(),
+        location_);
   }
   return symbol_eval_context_;
 }

@@ -9,7 +9,7 @@
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/step_into_thread_controller.h"
+#include "garnet/bin/zxdb/client/step_thread_controller.h"
 #include "garnet/bin/zxdb/client/step_over_thread_controller.h"
 #include "garnet/bin/zxdb/client/step_thread_controller.h"
 #include "garnet/bin/zxdb/client/thread.h"
@@ -908,7 +908,7 @@ Err DoStep(ConsoleContext* context, const Command& cmd) {
   if (cmd.args().empty()) {
     // Step over a single line.
     auto controller =
-        std::make_unique<StepIntoThreadController>(StepMode::kSourceLine);
+        std::make_unique<StepThreadController>(StepMode::kSourceLine);
     controller->set_stop_on_no_symbols(cmd.HasSwitch(kStepIntoUnsymbolized));
     cmd.thread()->ContinueWith(std::move(controller), std::move(completion));
   } else if (cmd.args().size() == 1) {

@@ -17,6 +17,7 @@ namespace zxdb {
 
 class Breakpoint;
 class Err;
+class Frame;
 class Location;
 class Thread;
 
@@ -58,6 +59,7 @@ class ThreadController {
       result.range = range;
       return result;
     }
+    // See synthetic_stop_ below.
     static ContinueOp SyntheticStop() {
       ContinueOp result;
       result.synthetic_stop_ = true;
@@ -65,21 +67,22 @@ class ThreadController {
     }
 
     // A synthetic stop means that the thread remains stopped but a synthetic
-    // stop notification is broadcast to the frontend to make it look like the
-    // thread did continued and stopped again.
+    // stop notification is broadcast to make it look like the thread did
+    // continued and stopped again. This will call back into the top
+    // controller's OnThreadStop().
     //
     // This is useful when modifying the stack for inline routines, where the
     // code didn't execute but from a user perspective they stepped into an
     // inline subroutine. In this case the thread controller will update the
     // Stack to reflect the new state, and return ContinueOp::SyntheticStop().
     //
-    // Synthetic stops are not dispatched to ThreadControllers.
-    //
     // Why isn't this a StopOp instead? This only makes sense as the initial
     // state of the ThreadController that decides it doesn't need to do
     // anything but wants to pretend that it did. When a ThreadController is in
     // OnThreadStop and about to return a StopOp, returning kStop is a real
     // thread stop and nothing needs to be synthetic.
+    //
+    // See GetContinueOp() for more.
     bool synthetic_stop_ = false;
 
     // Valid when synthetic_stop = true.
@@ -114,6 +117,17 @@ class ThreadController {
   // Returns how to continue the thread when running this controller. This
   // will be called after InitWithThread and after every subsequent kContinue
   // response from OnThreadStop to see how the controller wishes to run.
+  //
+  // A thread controller can return a "synthetic stop" from this function which
+  // will schedule an OnThreadStop() call in the future without running the
+  // thread. This can be used to adjust the ambiguous inline stack state (see
+  // Stack object) to implement step commands.
+  //
+  // GetContinueOp() should not change thread state and controllers should be
+  // prepared for only InitWithThread() followe by OnThreadStop() calls. When
+  // thread controllers embed other thread controllers, the embedding
+  // controller may create the nested one and want it to evaluate the current
+  // stop, and this happens without ever continuing.
   virtual ContinueOp GetContinueOp() = 0;
 
   // Notification that the thread has stopped. The return value indicates what
@@ -138,9 +152,17 @@ class ThreadController {
 
   // Logs the raw string (no controller name prefix).
   static void LogRaw(const char* format, ...);
+
+  // Returns the given frame's function name or a placeholder string if
+  // unavailable. Does nothing if logging is disabled (computing this is
+  // non-trivial).
+  static std::string FrameFunctionNameForLog(const Frame* frame);
 #else
   void Log(const char* format, ...) const {}
   static void LogRaw(const char* format, ...) {}
+  static std::string FrameFunctionNameForLog(const Frame* frame) {
+    return std::string();
+  }
 #endif
 
  protected:

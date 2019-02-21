@@ -14,15 +14,15 @@ namespace zxdb {
 
 class FinishThreadController;
 
-// Implements stepping the processor over some known range of code. This is
-// implemented by single-stepping the thread until the instruction pointer is
-// in a different region (line/range/instruction as defined by the StepMode).
+// Implements a "step into" command. It knows how to step by source lines,
+// over a range of addresses, or by single instruction.
 //
 // This is the main low-level thread controller used by other ones. Generally
-// programmatic uses (e.g. from with "step over") will use this class. User-
-// level "step into" should use the StepIntoThreadController as there are
-// some subtle differences around expectations for inlined subroutine calls
-// (see that class for more).
+// programmatic uses (e.g. from with "step over") will use this class.
+//
+// When stepping by file/line, this class will generate synthetic exceptions
+// and adjust the stack to simulate stepping into inline function calls (even
+// though there is no actual call instruction).
 class StepThreadController : public ThreadController {
  public:
   // Constructor for kSourceLine and kInstruction modes. It will initialize
@@ -52,13 +52,27 @@ class StepThreadController : public ThreadController {
       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
   const char* GetName() const override { return "Step"; }
 
-  // When used as a nested controller, the thread may be stopped by another
-  // controller's action and control given to this controller. In this case,
-  // we want to evaluate the step condition regardless of the stop_type.
-  StopOp OnThreadStopIgnoreType(
-      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints);
-
  private:
+  enum class StepIntoInline {
+    // Actually performs the inline step, modifying the hidden ambiguous Stack
+    // items as necessary.
+    kCommit,
+
+    // Does the operations to compute whether an inline step can be completed
+    // and returns the corresponding result, but does not actually change any
+    // state.
+    kQuery
+  };
+
+  // Attempts to step into an inline function that starts and the current
+  // stack addresss. This will make it look like the user stepped into the
+  // inline function even though no code was executed.
+  //
+  // If there is an inline to step into, this will fix up the current stack to
+  // appear as if the inline function is stepped into and return true. False
+  // means there was not an inline function starting at the current address.
+  bool TrySteppingIntoInline(StepIntoInline command);
+
   StepMode step_mode_;
 
   // When construction_mode_ == kSourceLine, this represents the line

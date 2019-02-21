@@ -98,12 +98,14 @@ void ThreadImpl::Continue() {
     if (op.synthetic_stop_) {
       // Synthetic stop. Skip notifying the backend and broadcast a stop
       // notification for the current state.
-      controllers_.back()->Log("Synthetic stop, controller done.");
-      controllers_.pop_back();  // Remove controller.
-      for (auto& observer : observers()) {
-        observer.OnThreadStopped(
-            this, debug_ipc::NotifyException::Type::kSynthetic, {});
-      }
+      controllers_.back()->Log("Synthetic stop.");
+      debug_ipc::MessageLoop::Current()->PostTask(
+          FROM_HERE, [thread = weak_factory_.GetWeakPtr()]() {
+            if (thread) {
+              thread->OnException(debug_ipc::NotifyException::Type::kSynthetic,
+                                  {});
+            }
+          });
       return;
     } else {
       // Dispatch the continuation message.
@@ -242,8 +244,10 @@ void ThreadImpl::OnException(
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   TIME_BLOCK();
 #if defined(DEBUG_THREAD_CONTROLLERS)
-  ThreadController::LogRaw("----------\r\nGot exception @ 0x%" PRIx64,
-                           stack_[0]->GetAddress());
+  ThreadController::LogRaw(
+      "----------\r\nGot %s exception @ 0x%" PRIx64 " in %s",
+      debug_ipc::NotifyException::TypeToString(type), stack_[0]->GetAddress(),
+      ThreadController::FrameFunctionNameForLog(stack_[0]).c_str());
 #endif
   bool should_stop;
   if (controllers_.empty()) {

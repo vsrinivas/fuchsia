@@ -52,8 +52,19 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
     // May need to step out of some inline frames now.
     if (!from_inline_frame_fingerprint_.is_valid()) {
       Log("No inline frames to step out of, 'finish' is done.");
+      Log("  inline frames = %zu, hidden = %zu",
+          thread()->GetStack().GetAmbiguousInlineFrameCount(),
+          thread()->GetStack().hide_ambiguous_inline_frame_count());
       return kStop;  // No inline frames to step out of, we're done.
     }
+
+    // Clear the exception type since it will typically be a software
+    // breakpoint from the finish controller which the step controllers don't
+    // expect.
+    //
+    // TODO(brettw) DX-1058 This is wrong and can continue from unexpected
+    // exceptions.
+    stop_type = debug_ipc::NotifyException::Type::kNone;
   }
 
   if (step_over_controller_) {
@@ -103,6 +114,13 @@ void FinishThreadController::InitWithThread(
   // The stack must not have changed from construction to this call.
   FXL_DCHECK(stack.size() > frame_to_finish_);
   FXL_DCHECK(stack[frame_to_finish_]->GetAddress() == frame_ip_);
+#endif
+
+#ifdef DEBUG_THREAD_CONTROLLERS
+  auto function =
+      stack[frame_to_finish_]->GetLocation().symbol().Get()->AsFunction();
+  if (function)
+    Log("Finishing inline %s", function->GetFullName().c_str());
 #endif
 
   auto found_fingerprint = stack.GetFrameFingerprint(frame_to_finish_);
@@ -174,7 +192,8 @@ bool FinishThreadController::CreateInlineStepOverController(
 
   // Make a step over controller with the range of the inline function at
   // the top of the stack.
-  Log("Creating a new step over controller to get out of inline frame.");
+  Log("Creating a new step over controller to get out of inline frame %s.",
+      FrameFunctionNameForLog(stack[0]).c_str());
   step_over_controller_ = std::make_unique<StepOverThreadController>(
       func->GetAbsoluteCodeRanges(location.symbol_context()));
   step_over_controller_->InitWithThread(thread(), std::move(cb));

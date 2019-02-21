@@ -5,7 +5,7 @@
 #include "garnet/bin/zxdb/client/step_thread_controller.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/client/thread_controller_test.h"
+#include "garnet/bin/zxdb/client/inline_thread_controller_test.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/symbols/line_details.h"
 #include "garnet/bin/zxdb/symbols/mock_module_symbols.h"
@@ -13,7 +13,7 @@
 
 namespace zxdb {
 
-class StepThreadControllerTest : public ThreadControllerTest {
+class StepThreadControllerTest : public InlineThreadControllerTest {
  public:
   // Shared code for the shared lib thunk tests. There are two variants of this
   // test, one where we want to skip the thunks, and one where we don't. The
@@ -87,13 +87,15 @@ TEST_F(StepThreadControllerTest, Line0) {
   const uint64_t kAddr4 = kAddr3 + 4;                        // Line 11
 
   LineDetails line_details1(line10);
-  line_details1.entries().push_back({20, AddressRange(kAddr1, kAddr2)});
+  line_details1.entries().push_back({21, AddressRange(kAddr1, kAddr2)});
 
   LineDetails line_details2(line0);
+  // Column 0 indicates the "whole line".
   line_details2.entries().push_back({0, AddressRange(kAddr2, kAddr3)});
 
+  // Same line 10 as above but starts at a different column (this time 7).
   LineDetails line_details3(line10);
-  line_details3.entries().push_back({10, AddressRange(kAddr3, kAddr4)});
+  line_details3.entries().push_back({7, AddressRange(kAddr3, kAddr4)});
 
   LineDetails line_details4(line11);
   line_details4.entries().push_back({0, AddressRange(kAddr4, kAddr4 + 4)});
@@ -104,16 +106,13 @@ TEST_F(StepThreadControllerTest, Line0) {
   module_symbols()->AddLineDetails(kAddr4, line_details4);
 
   // Set up the thread to be stopped at the beginning of our range.
-  debug_ipc::NotifyException exception;
-  exception.process_koid = process()->GetKoid();
-  exception.type = debug_ipc::NotifyException::Type::kSingleStep;
-  exception.thread.koid = thread()->GetKoid();
-  exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  exception.thread.frames.resize(2);
-  exception.thread.frames[0].ip = kAddr1;
-  exception.thread.frames[0].sp = 0x5000;
-  exception.thread.frames[0].bp = 0x5000;
-  InjectException(exception);
+  std::vector<std::unique_ptr<MockFrame>> mock_frames;
+  mock_frames.push_back(GetTopFrame(kAddr1));
+  mock_frames[0]->SetFileLine(line10);
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
 
   // Continue the thread with the controller stepping in range.
   auto step_into =
@@ -129,19 +128,31 @@ TEST_F(StepThreadControllerTest, Line0) {
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Stop on 2nd instruction (line 0). This should be automatically resumed.
-  exception.thread.frames[0].ip = kAddr2;
-  InjectException(exception);
+  mock_frames.push_back(GetTopFrame(kAddr2));
+  mock_frames[0]->SetFileLine(line0);
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Stop on 3rd instruction (line 10). Since this matches the original line,
   // it should be automatically resumed.
-  exception.thread.frames[0].ip = kAddr3;
-  InjectException(exception);
+  mock_frames.push_back(GetTopFrame(kAddr3));
+  mock_frames[0]->SetFileLine(line10);
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Stop on 4th instruction. Since this is line 11, we should stay stopped.
-  exception.thread.frames[0].ip = kAddr4;
-  InjectException(exception);
+  mock_frames.push_back(GetTopFrame(kAddr4));
+  mock_frames[0]->SetFileLine(line11);
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
 }
@@ -327,6 +338,70 @@ TEST_F(StepThreadControllerTest, UnsymbolizedCallStepOver) {
 
 TEST_F(StepThreadControllerTest, UnsymbolizedCallStepInto) {
   DoUnsymbolizedFunctionTest(true);
+}
+
+TEST_F(StepThreadControllerTest, Inline) {
+  // Recall the top frame from GetStack() is inline.
+  auto mock_frames = GetStack();
+
+  // Stepping into the 0th frame from the first. These are the source locations.
+  FileLine file_line = mock_frames[1]->GetLocation().file_line();
+
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::NotifyException::Type::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true);
+
+  // Hide the inline frame at the top so we're about to step into it.
+  Stack& stack = thread()->GetStack();
+  stack.SetHideAmbiguousInlineFrameCount(1);
+
+  // Provide a line mapping for this address so the symbolic stepping doesn't
+  // think we're in code with no symbols. This maps the first address of the
+  // inline function to its code. This is specifically not the file/line
+  // above because the line table maps generated code which will be the
+  // inlined function.
+  module_symbols()->AddLineDetails(
+      kTopInlineFunctionRange.begin(),
+      LineDetails(kTopInlineFileLine,
+                  {LineDetails::LineEntry(kTopInlineFunctionRange)}));
+
+  // Do the "step into".
+  auto step_into_controller =
+      std::make_unique<StepThreadController>(StepMode::kSourceLine);
+  bool continued = false;
+  thread()->ContinueWith(std::move(step_into_controller),
+                         [&continued](const Err& err) {
+                           if (!err.has_error())
+                             continued = true;
+                         });
+  EXPECT_TRUE(continued);
+
+  // That should have requested a synthetic exception which will be sent out
+  // asynchronously. The Resume() call will cause the MockRemoteAPI to exit the
+  // message loop.
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Nothing yet.
+  loop().PostTask(FROM_HERE, [loop = &loop()](){ loop->QuitNow(); });
+  loop().Run();
+
+  // The operation should have unhidden the inline stack frame rather than
+  // actually affecting the backend.
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());
+  EXPECT_EQ(0u, stack.hide_ambiguous_inline_frame_count());
+
+  // Now that we're at the top of the inline stack, do a subsequent "step into"
+  // which this time should resume the backend.
+  step_into_controller =
+      std::make_unique<StepThreadController>(StepMode::kSourceLine);
+  continued = false;
+  thread()->ContinueWith(std::move(step_into_controller),
+                         [&continued](const Err& err) {
+                           if (!err.has_error())
+                             continued = true;
+                         });
+  EXPECT_TRUE(continued);
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
+  EXPECT_EQ(0u, stack.hide_ambiguous_inline_frame_count());
 }
 
 }  // namespace zxdb

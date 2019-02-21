@@ -42,6 +42,10 @@ class MockFrame : public Frame {
   // about the location including the stack or symbols.
   void SetAddress(uint64_t address);
 
+  // Overrides the location's file_line with the new value, leaving everything
+  // else as-is.
+  void SetFileLine(const FileLine& file_line);
+
   void set_is_ambiguous_inline(bool ambiguous) {
     is_ambiguous_inline_ = ambiguous;
   }

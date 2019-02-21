@@ -10,6 +10,7 @@
 #include "garnet/bin/zxdb/client/frame_fingerprint.h"
 #include "garnet/bin/zxdb/client/step_mode.h"
 #include "garnet/bin/zxdb/client/thread_controller.h"
+#include "garnet/bin/zxdb/symbols/file_line.h"
 
 namespace zxdb {
 
@@ -63,9 +64,15 @@ class StepOverThreadController : public ThreadController {
   const char* GetName() const override { return "Step Over"; }
 
  private:
+  StepMode step_mode_;
+
   // When non-null indicates callback to check for stopping in subframes. See
   // the setter above.
   std::function<bool(const Frame*)> subframe_should_stop_callback_;
+
+  // When construction_mode_ == kSourceLine, this represents the line
+  // information of the line we're stepping over.
+  FileLine file_line_;
 
   // The fingerprint of the frame we're stepping in. Anything newer than this
   // is a child frame we should step through, and anything older than this

@@ -39,6 +39,21 @@ void ThreadController::LogRaw(const char* format, ...) {
   printf("\r\n");
   va_end(ap);
 }
+
+// static
+std::string ThreadController::FrameFunctionNameForLog(const Frame* frame) {
+  const char kNone[] = "<none>";
+
+  const Location& loc = frame->GetLocation();
+  if (!loc.symbol())
+    return kNone;
+
+  const Function* func = loc.symbol().Get()->AsFunction();
+  if (!func)
+    return kNone;
+
+  return func->GetFullName();
+}
 #endif
 
 void ThreadController::SetInlineFrameIfAmbiguous(InlineFrameIs comparison,
