@@ -9,7 +9,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_ptr.h>
@@ -30,14 +30,12 @@ class StoryControllerImpl;
 // ModuleContextImpl instance.
 class ModuleControllerImpl : fuchsia::modular::ModuleController {
  public:
-  ModuleControllerImpl(
-      StoryControllerImpl* story_controller_impl,
-      fuchsia::sys::Launcher* launcher,
-      fuchsia::modular::AppConfig module_config,
-      const fuchsia::modular::ModuleData* module_data,
-      fuchsia::sys::ServiceListPtr service_list,
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
-          view_provider_request);
+  ModuleControllerImpl(StoryControllerImpl* story_controller_impl,
+                       fuchsia::sys::Launcher* launcher,
+                       fuchsia::modular::AppConfig module_config,
+                       const fuchsia::modular::ModuleData* module_data,
+                       fuchsia::sys::ServiceListPtr service_list,
+                       fuchsia::ui::views::ViewToken view_token);
 
   ~ModuleControllerImpl() override;
 

@@ -4,6 +4,7 @@
 
 #include "peridot/bin/sessionmgr/story_runner/module_controller_impl.h"
 
+#include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -42,8 +43,7 @@ ModuleControllerImpl::ModuleControllerImpl(
     fuchsia::modular::AppConfig module_config,
     const fuchsia::modular::ModuleData* const module_data,
     fuchsia::sys::ServiceListPtr service_list,
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
-        view_provider_request)
+    fuchsia::ui::views::ViewToken view_token)
     : story_controller_impl_(story_controller_impl),
       app_client_(
           launcher, CloneStruct(module_config),
@@ -51,7 +51,12 @@ ModuleControllerImpl::ModuleControllerImpl(
           std::move(service_list)),
       module_data_(module_data) {
   app_client_.SetAppErrorHandler([this] { OnAppConnectionError(); });
-  app_client_.services().ConnectToService(std::move(view_provider_request));
+
+  fuchsia::ui::app::ViewProviderPtr view_provider;
+  app_client_.services().ConnectToService(view_provider.NewRequest());
+  view_provider->CreateView(std::move(view_token.value),
+                            nullptr /* incoming_services */,
+                            nullptr /* outgoing_services */);
 }
 
 ModuleControllerImpl::~ModuleControllerImpl() {}

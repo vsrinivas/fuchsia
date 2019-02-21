@@ -14,7 +14,7 @@
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
 #include <lib/async/default.h>
 #include <lib/component/cpp/connect.h>
@@ -130,15 +130,14 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
                    fuchsia::modular::ModuleData module_data,
                    fidl::InterfaceRequest<fuchsia::modular::ModuleController>
                        module_controller_request,
-                   fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-                       view_owner_request,
+                   fuchsia::ui::views::ViewToken view_token,
                    ResultCall result_call)
       : Operation("StoryControllerImpl::LaunchModuleCall",
                   std::move(result_call)),
         story_controller_impl_(story_controller_impl),
         module_data_(std::move(module_data)),
+        view_token_(std::move(view_token)),
         module_controller_request_(std::move(module_controller_request)),
-        view_owner_request_(std::move(view_owner_request)),
         start_time_(zx_clock_get(ZX_CLOCK_UTC)) {}
 
  private:
@@ -184,11 +183,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     fuchsia::modular::AppConfig module_config;
     module_config.url = module_data_.module_url;
 
-    fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
-        view_provider_request = view_provider.NewRequest();
-    view_provider->CreateView(std::move(view_owner_request_), nullptr);
-
     fuchsia::sys::ServiceProviderPtr module_context_provider;
     auto module_context_provider_request = module_context_provider.NewRequest();
     auto service_list = fuchsia::sys::ServiceList::New();
@@ -207,7 +201,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
             story_controller_impl_,
             story_controller_impl_->story_environment_->GetLauncher(),
             std::move(module_config), running_mod_info.module_data.get(),
-            std::move(service_list), std::move(view_provider_request));
+            std::move(service_list), std::move(view_token_));
 
     // Modules added/started through PuppetMaster don't have a module
     // controller request.
@@ -260,10 +254,9 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   fuchsia::modular::ModuleData module_data_;
+  fuchsia::ui::views::ViewToken view_token_;
   fidl::InterfaceRequest<fuchsia::modular::ModuleController>
       module_controller_request_;
-  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-      view_owner_request_;
   const zx_time_t start_time_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LaunchModuleCall);
@@ -386,7 +379,11 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     // shell.
     operation_queue_.Add(new LaunchModuleCall(
         story_controller_impl_, fidl::Clone(module_data_),
-        std::move(module_controller_request_), view_owner_.NewRequest(),
+        std::move(module_controller_request_),
+        fuchsia::ui::views::ViewToken({
+            .value =
+                zx::eventpair(view_owner_.NewRequest().TakeChannel().release()),
+        }),
         [this, flow] { LoadModuleManifest(flow); }));
     view_owner_.set_error_handler([module_url =
                                        module_data_.module_url](zx_status_t) {
@@ -725,11 +722,10 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
     // We do not auto-start Modules that were added through ModuleContext on
     // other devices.
     //
-    // TODO(thatguy): Revisit this decision. It seems wrong: we do not want
-    // to auto-start mods added through ModuleContext.EmbedModule(), because
-    // we do not have the necessary capabilities (the ViewOwner). However,
-    // mods added through ModuleContext.AddModuleToStory() can be started
-    // automatically.
+    // TODO(thatguy): Revisit this decision. It seems wrong: we do not want to
+    // auto-start mods added through ModuleContext.EmbedModule(), because we do
+    // not have the necessary capabilities (the ImportToken). Mods added through
+    // ModuleContext.AddModuleToStory() can be started automatically, however.
     if (module_data_.module_source ==
         fuchsia::modular::ModuleSource::INTERNAL) {
       return;
@@ -815,14 +811,13 @@ class StoryControllerImpl::AddIntentCall
                 AddModParams add_mod_params,
                 fidl::InterfaceRequest<fuchsia::modular::ModuleController>
                     module_controller_request,
-                fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-                    view_owner_request,
+                fuchsia::ui::views::ViewToken view_token,
                 ResultCall result_call)
       : Operation("StoryControllerImpl::AddIntentCall", std::move(result_call)),
         story_controller_impl_(story_controller_impl),
         add_mod_params_(std::move(add_mod_params)),
-        module_controller_request_(std::move(module_controller_request)),
-        view_owner_request_(std::move(view_owner_request)) {}
+        view_token_(std::move(view_token)),
+        module_controller_request_(std::move(module_controller_request)) {}
 
  private:
   void Run() {
@@ -853,15 +848,15 @@ class StoryControllerImpl::AddIntentCall
   void LaunchModuleIfStoryRunning(FlowToken flow) {
     if (story_controller_impl_->IsRunning()) {
       // TODO(thatguy): Should we be checking surface_relation also?
-      if (!view_owner_request_) {
+      if (!view_token_.value) {
         operation_queue_.Add(new LaunchModuleInShellCall(
             story_controller_impl_, std::move(module_data_),
             std::move(module_controller_request_), [flow] {}));
       } else {
         operation_queue_.Add(new LaunchModuleCall(
             story_controller_impl_, std::move(module_data_),
-            std::move(module_controller_request_),
-            std::move(view_owner_request_), [this, flow] {
+            std::move(module_controller_request_), std::move(view_token_),
+            [this, flow] {
               // LaunchModuleInShellCall above already calls
               // ProcessPendingStoryShellViews(). NOTE(thatguy): This
               // cannot be moved into LaunchModuleCall, because
@@ -886,10 +881,9 @@ class StoryControllerImpl::AddIntentCall
   // Some of the fields in add_mod_params_ are used to initializel
   // module_data_ in AddModuleFromResult().
   AddModParams add_mod_params_;
+  fuchsia::ui::views::ViewToken view_token_;
   fidl::InterfaceRequest<fuchsia::modular::ModuleController>
       module_controller_request_;
-  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-      view_owner_request_;
 
   // Created by AddModuleFromResult, and ultimately written to story state.
   fuchsia::modular::ModuleData module_data_;
@@ -1229,7 +1223,10 @@ void StoryControllerImpl::EmbedModule(
     std::function<void(fuchsia::modular::StartModuleStatus)> callback) {
   operation_queue_.Add(new AddIntentCall(
       this, std::move(add_mod_params), std::move(module_controller_request),
-      std::move(view_owner_request), std::move(callback)));
+      fuchsia::ui::views::ViewToken({
+          .value = zx::eventpair(view_owner_request.TakeChannel().release()),
+      }),
+      std::move(callback)));
 }
 
 void StoryControllerImpl::AddModuleToStory(
@@ -1239,7 +1236,7 @@ void StoryControllerImpl::AddModuleToStory(
     std::function<void(fuchsia::modular::StartModuleStatus)> callback) {
   operation_queue_.Add(new AddIntentCall(
       this, std::move(add_mod_params), std::move(module_controller_request),
-      nullptr /* view_owner_request */, std::move(callback)));
+      fuchsia::ui::views::ViewToken() /* view_token */, std::move(callback)));
 }
 
 void StoryControllerImpl::ProcessPendingStoryShellViews() {
