@@ -111,7 +111,6 @@ template("rustc_macro") {
   # Copy the generated _build_info.json which provides data about the target that
   # was built.
   copy_out_info_target = "${target_name}_copy_info"
-  out_info_path = "$target_out_dir/${rustc_artifact_name}_build_info.json"
   proc_macro_target_out_dir =
       get_label_info(proc_macro_host_target, "target_out_dir")
   copy(copy_out_info_target) {
@@ -124,7 +123,7 @@ template("rustc_macro") {
       "$proc_macro_target_out_dir/${proc_macro_target}_build_info.json",
     ]
     outputs = [
-      out_info_path,
+      "$target_out_dir/${target_name}_build_info.json",
     ]
   }
 
