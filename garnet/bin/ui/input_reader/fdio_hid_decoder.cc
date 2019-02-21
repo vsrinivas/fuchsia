@@ -18,9 +18,13 @@
 #include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
 #include <lib/fzl/fdio.h>
+#include <trace/event.h>
 #include <zircon/status.h>
 
 namespace {
+
+#define HID_REPORT_TRACE_ID(trace_id, report_id) \
+  (((uint64_t)(report_id) << 32) | (trace_id))
 
 bool log_err(zx_status_t status, const std::string& what,
              const std::string& name) {
@@ -88,6 +92,15 @@ bool FdioHidDecoder::Init() {
     return log_err(status, "report descriptor", name_);
   report_descriptor_.resize(actual);
 
+  // Use lower 32 bits of channel koid as trace ID.
+  zx_info_handle_basic_t info;
+  zx_object_get_info(svc, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr,
+                     nullptr);
+  trace_id_ = info.koid & 0xffffffff;
+  status = fuchsia_hardware_input_DeviceSetTraceId(svc, trace_id_);
+  if (status != ZX_OK)
+    return log_err(status, "failed to set trace ID", name_);
+
   return true;
 }
 
@@ -135,6 +148,11 @@ const std::vector<uint8_t>& FdioHidDecoder::ReadReportDescriptor(
 
 const std::vector<uint8_t>& FdioHidDecoder::Read(int* bytes_read) {
   *bytes_read = read(fd_.get(), report_.data(), report_.size());
+
+  TRACE_FLOW_END("input", "hid_report",
+                 HID_REPORT_TRACE_ID(trace_id_, reports_read_));
+  ++reports_read_;
+
   return report_;
 }
 

@@ -53,6 +53,9 @@ class FdioHidDecoder : public HidDecoder {
   BootMode boot_mode_ = BootMode::NONE;
   std::vector<uint8_t> report_;
   std::vector<uint8_t> report_descriptor_;
+
+  uint32_t trace_id_ = 0;
+  uint32_t reports_read_ = 0;
 };
 
 }  // namespace mozart

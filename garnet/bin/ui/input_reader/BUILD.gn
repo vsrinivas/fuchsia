@@ -12,8 +12,8 @@ source_set("input_reader") {
 
   deps = [
     ":fdio",
-    "//sdk/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/ui/input/cpp",
+    "//sdk/fidl/fuchsia.ui.scenic",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/hid-parser",
@@ -24,8 +24,8 @@ source_set("input_reader") {
 
   public_deps = [
     ":device",
-    "//sdk/fidl/fuchsia.ui.input",
     "//garnet/public/lib/fxl",
+    "//sdk/fidl/fuchsia.ui.input",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",
@@ -50,6 +50,7 @@ source_set("fdio") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/hid-parser",
+    "//zircon/public/lib/trace",
   ]
 
   public_deps = [
