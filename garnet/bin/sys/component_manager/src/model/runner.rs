@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    failure::{Error, Fail},
     fidl_fuchsia_sys2 as fsys,
     futures::future::FutureObj,
-    std::{error, fmt},
 };
 
 /// Executes a component instance.
@@ -19,26 +19,38 @@ pub trait Runner {
 }
 
 /// Errors produced by `Runner`.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Debug, Fail)]
 pub enum RunnerError {
-    ComponentNotAvailable,
-    InvalidArgs,
+    #[fail(display = "invalid arguments provided for component with uri \"{}\": {}", uri, err)]
+    InvalidArgs {
+        uri: String,
+        #[fail(cause)]
+        err: Error,
+    },
+    #[fail(display = "unable to load component with uri \"{}\": {}", uri, err)]
+    ComponentLoadError {
+        uri: String,
+        #[fail(cause)]
+        err: Error,
+    },
+    #[fail(display = "failed to launch component with uri \"{}\": {}", uri, err)]
+    ComponentLaunchError {
+        uri: String,
+        #[fail(cause)]
+        err: Error,
+    },
 }
 
-impl fmt::Display for RunnerError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            RunnerError::ComponentNotAvailable => write!(f, "component not available"),
-            RunnerError::InvalidArgs => write!(f, "invalid args"),
-        }
+impl RunnerError {
+    pub fn invalid_args(uri: impl Into<String>, err: impl Into<Error>) -> RunnerError {
+        RunnerError::InvalidArgs { uri: uri.into(), err: err.into() }
     }
-}
 
-impl error::Error for RunnerError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match *self {
-            RunnerError::ComponentNotAvailable => None,
-            RunnerError::InvalidArgs => None,
-        }
+    pub fn component_load_error(uri: impl Into<String>, err: impl Into<Error>) -> RunnerError {
+        RunnerError::ComponentLoadError { uri: uri.into(), err: err.into() }
+    }
+
+    pub fn component_launch_error(uri: impl Into<String>, err: impl Into<Error>) -> RunnerError {
+        RunnerError::ComponentLaunchError { uri: uri.into(), err: err.into() }
     }
 }
