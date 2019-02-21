@@ -184,8 +184,9 @@ SessionmgrImpl::~SessionmgrImpl() = default;
 
 void SessionmgrImpl::Initialize(
     fuchsia::modular::auth::AccountPtr account,
-    fuchsia::modular::AppConfig session_shell,
-    fuchsia::modular::AppConfig story_shell,
+    fuchsia::modular::AppConfig session_shell_config,
+    fuchsia::modular::AppConfig story_shell_config,
+    bool use_session_shell_for_story_shell_factory,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
     fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext>
@@ -196,32 +197,36 @@ void SessionmgrImpl::Initialize(
   // shell (see how RunSessionShell() initializes session_shell_services_) to
   // lazily initialize the following services only once they are requested
   // for the first time.
-  finish_initialization_ = [this, called = false,
-                            session_shell_url = session_shell.url,
-                            ledger_token_manager =
-                                std::move(ledger_token_manager),
-                            story_shell = std::move(story_shell)]() mutable {
-    if (called) {
-      return;
-    }
-    called = true;
+  finish_initialization_ =
+      [this, called = false, session_shell_url = session_shell_config.url,
+       ledger_token_manager = std::move(ledger_token_manager),
+       story_shell_config = std::move(story_shell_config),
+       use_session_shell_for_story_shell_factory]() mutable {
+        if (called) {
+          return;
+        }
+        called = true;
 
-    InitializeLedger(std::move(ledger_token_manager));
-    InitializeDeviceMap();
-    InitializeMessageQueueManager();
-    InitializeMaxwellAndModular(session_shell_url, std::move(story_shell));
-    ConnectSessionShellToStoryProvider();
-    AtEnd([this](std::function<void()> cont) { TerminateSessionShell(cont); });
-    InitializeClipboard();
-    ReportEvent(ModularEvent::BOOTED_TO_SESSIONMGR);
-  };
+        InitializeLedger(std::move(ledger_token_manager));
+        InitializeDeviceMap();
+        InitializeMessageQueueManager();
+        InitializeMaxwellAndModular(std::move(session_shell_url),
+                                    std::move(story_shell_config),
+                                    use_session_shell_for_story_shell_factory);
+        ConnectSessionShellToStoryProvider();
+        AtEnd([this](std::function<void()> cont) {
+          TerminateSessionShell(cont);
+        });
+        InitializeClipboard();
+        ReportEvent(ModularEvent::BOOTED_TO_SESSIONMGR);
+      };
 
   session_context_ = session_context.Bind();
   AtEnd(Reset(&session_context_));
 
   InitializeUser(std::move(account), std::move(agent_token_manager));
   InitializeSessionShell(
-      std::move(session_shell),
+      std::move(session_shell_config),
       zx::eventpair(view_owner_request.TakeChannel().release()));
 }
 
@@ -394,7 +399,8 @@ void SessionmgrImpl::InitializeMessageQueueManager() {
 
 void SessionmgrImpl::InitializeMaxwellAndModular(
     const fidl::StringPtr& session_shell_url,
-    fuchsia::modular::AppConfig story_shell) {
+    fuchsia::modular::AppConfig story_shell_config,
+    bool use_session_shell_for_story_shell_factory) {
   // NOTE: There is an awkward service exchange here between
   // AgentRunner, StoryProviderImpl, FocusHandler, VisibleStoriesHandler.
   //
@@ -576,6 +582,16 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
 
   AtEnd(Reset(&session_shell_component_context_impl_));
 
+  // The StoryShellFactory to use when creating story shells, or nullptr if no
+  // such factory exists.
+  fidl::InterfacePtr<fuchsia::modular::StoryShellFactory>
+      story_shell_factory_ptr;
+
+  if (use_session_shell_for_story_shell_factory) {
+    session_shell_app_->services().ConnectToService(
+        story_shell_factory_ptr.NewRequest());
+  }
+
   fidl::InterfacePtr<fuchsia::modular::FocusProvider>
       focus_provider_story_provider;
   auto focus_provider_request_story_provider =
@@ -598,7 +614,8 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
 
   story_provider_impl_.reset(new StoryProviderImpl(
       user_environment_.get(), device_map_impl_->current_device_id(),
-      session_storage_.get(), std::move(story_shell), component_context_info,
+      session_storage_.get(), std::move(story_shell_config),
+      std::move(story_shell_factory_ptr), component_context_info,
       std::move(focus_provider_story_provider),
       user_intelligence_provider_impl_.get(), module_resolver_service_.get(),
       entity_provider_runner_.get(), module_facet_reader_.get(),
@@ -671,7 +688,8 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
 }
 
 void SessionmgrImpl::InitializeSessionShell(
-    fuchsia::modular::AppConfig session_shell, zx::eventpair view_token) {
+    fuchsia::modular::AppConfig session_shell_config,
+    zx::eventpair view_token) {
   // We setup our own view and make the fuchsia::modular::SessionShell a child
   // of it.
   auto scenic =
@@ -685,7 +703,7 @@ void SessionmgrImpl::InitializeSessionShell(
   };
   session_shell_view_host_ =
       std::make_unique<ViewHost>(std::move(view_context));
-  RunSessionShell(std::move(session_shell));
+  RunSessionShell(std::move(session_shell_config));
 }
 
 void SessionmgrImpl::RunSessionShell(

@@ -10,8 +10,8 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fxl/command_line.h>
-#include "src/lib/files/file.h"
 #include <lib/fxl/macros.h>
+#include "src/lib/files/file.h"
 
 namespace modular {
 
@@ -27,6 +27,7 @@ class BasemgrSettings {
   fuchsia::modular::AppConfig session_shell;
 
   std::string test_name;
+  bool use_session_shell_for_story_shell_factory;
   bool disable_statistics;
   bool no_minfs;
   bool test;

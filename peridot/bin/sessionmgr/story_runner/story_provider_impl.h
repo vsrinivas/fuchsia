@@ -53,7 +53,9 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
  public:
   StoryProviderImpl(
       Environment* user_environment, std::string device_id,
-      SessionStorage* session_storage, fuchsia::modular::AppConfig story_shell,
+      SessionStorage* session_storage,
+      fuchsia::modular::AppConfig story_shell_config,
+      fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
       const ComponentContextInfo& component_context_info,
       fuchsia::modular::FocusProviderPtr focus_provider,
       fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
@@ -108,17 +110,15 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   }
 
   // Called by StoryControllerImpl.
-  const fuchsia::modular::AppConfig& story_shell() const {
-    return story_shell_;
+  const fuchsia::modular::AppConfig& story_shell_config() const {
+    return story_shell_config_;
   }
 
   // Called by StoryControllerImpl.
-  //
-  // Returns an AppClient rather than taking an interface request
-  // as an argument because the application is preloaded.
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> StartStoryShell(
+  std::unique_ptr<AsyncHolderBase> StartStoryShell(
       fidl::StringPtr story_id,
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request);
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_request,
+      fidl::InterfaceRequest<fuchsia::modular::StoryShell> story_shell_request);
 
   // Called by StoryControllerImpl.
   //
@@ -251,10 +251,16 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // The bindings for this instance.
   fidl::BindingSet<fuchsia::modular::StoryProvider> bindings_;
 
+  // Component URL and arguments used to launch story shells.
+  fuchsia::modular::AppConfig story_shell_config_;
+
   // Used to preload story shell before it is requested.
-  fuchsia::modular::AppConfig story_shell_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>>
       preloaded_story_shell_app_;
+
+  // Used to manufacture new StoryShells if not launching a new component for
+  // every requested StoryShell instance.
+  fuchsia::modular::StoryShellFactoryPtr story_shell_factory_;
 
   // When running in a test, we don't preload story shells, because then the
   // preloaded next instance of the story doesn't pass its test points.

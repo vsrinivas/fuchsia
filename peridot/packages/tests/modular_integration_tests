@@ -30,6 +30,7 @@
         "//peridot/tests/queue_persistence:queue_persistence_test_module",
         "//peridot/tests/story_shell:story_shell_test_story_shell",
         "//peridot/tests/story_shell:story_shell_test_session_shell",
+        "//peridot/tests/story_shell_factory:story_shell_factory_test_session_shell",
         "//peridot/tests/suggestion:suggestion_test_module",
         "//peridot/tests/suggestion:suggestion_test_session_shell",
         "//peridot/tests/trigger:trigger_test_agent",

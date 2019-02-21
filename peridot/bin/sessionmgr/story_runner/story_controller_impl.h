@@ -289,7 +289,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Everything for the story shell. Relationships between modules are conveyed
   // to the story shell using their instance IDs.
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> story_shell_app_;
+  std::unique_ptr<AsyncHolderBase> story_shell_holder_;
   fuchsia::modular::StoryShellPtr story_shell_;
 
   StoryShellContextImpl story_shell_context_impl_;

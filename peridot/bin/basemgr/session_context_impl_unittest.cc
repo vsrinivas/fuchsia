@@ -35,11 +35,13 @@ TEST_F(SessionContextImplTest, StartSessionmgrWithTokenManagers) {
   fuchsia::auth::TokenManagerPtr agent_token_manager;
 
   SessionContextImpl impl(
-      &launcher, CloneStruct(app_config), CloneStruct(app_config),
-      CloneStruct(app_config), std::move(ledger_token_manager),
-      std::move(agent_token_manager), nullptr /* account */,
-      nullptr /* view_owner_request */, nullptr /* base_shell_services */,
-      nullptr /* done_callback */);
+      &launcher, CloneStruct(app_config) /* sessionmgr_config */,
+      CloneStruct(app_config) /* session_shell_config */,
+      CloneStruct(app_config) /* story_shell_config */,
+      false, /* use_session_shell_for_story_shell_factory */
+      std::move(ledger_token_manager), std::move(agent_token_manager),
+      nullptr /* account */, nullptr /* view_owner_request */,
+      nullptr /* base_shell_services */, nullptr /* done_callback */);
 
   EXPECT_TRUE(callback_called);
 }
@@ -64,10 +66,13 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
 
   bool done_callback_called = false;
   SessionContextImpl impl(
-      &launcher, CloneStruct(app_config), CloneStruct(app_config),
-      CloneStruct(app_config), std::move(ledger_token_manager),
-      std::move(agent_token_manager), nullptr /* account */,
-      nullptr /* view_owner_request */, nullptr /* base_shell_services */,
+      &launcher, CloneStruct(app_config) /* sessionmgr_config */,
+      CloneStruct(app_config) /* session_shell_config */,
+      CloneStruct(app_config) /* story_shell_config */,
+      false, /* use_session_shell_for_story_shell_factory */
+      std::move(ledger_token_manager), std::move(agent_token_manager),
+      nullptr /* account */, nullptr /* view_owner_request */,
+      nullptr /* base_shell_services */,
       /* done_callback = */ [&done_callback_called](SessionContextImpl*) {
         done_callback_called = true;
       });
@@ -75,6 +80,7 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
   RunLoopUntilIdle();
   EXPECT_TRUE(done_callback_called);
 }
+
 }  // namespace
 }  // namespace testing
 }  // namespace modular

@@ -8,8 +8,8 @@
 
 #include <lib/fidl/cpp/string.h>
 #include <lib/fxl/command_line.h>
-#include "src/lib/files/file.h"
 #include <lib/fxl/macros.h>
+#include "src/lib/files/file.h"
 
 namespace modular {
 
@@ -26,6 +26,9 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
       "session_shell",
       "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/"
       "ermine_session_shell.cmx");
+
+  use_session_shell_for_story_shell_factory =
+      command_line.HasOption("use_session_shell_for_story_shell_factory");
 
   disable_statistics = command_line.HasOption("disable_statistics");
   no_minfs = command_line.HasOption("no_minfs");
@@ -71,6 +74,7 @@ std::string BasemgrSettings::GetUsage() {
       --session_shell_args=SHELL_ARGS
       --story_shell=STORY_SHELL
       --story_shell_args=SHELL_ARGS
+      --use_session_shell_for_story_shell_factory
       --disable_statistics
       --no_minfs
       --test
@@ -87,7 +91,12 @@ std::string BasemgrSettings::GetUsage() {
     STORY_SHELL: URL of the story shell to run.
                 Defaults to "mondrian".
                 For integration testing use "dev_story_shell".
-    SHELL_ARGS: Comma separated list of arguments. Backslash escapes comma.)USAGE";
+    SHELL_ARGS: Comma separated list of arguments. Backslash escapes comma.
+    --use_session_shell_for_story_shell_factory:
+                Create story shells through StoryShellFactory exposed
+                by the session shell instead of creating separate story shell
+                components. When set, the --story_shell and --story_shell_args
+                flags are ignored.)USAGE";
 }
 
 void BasemgrSettings::ParseShellArgs(const std::string& value,

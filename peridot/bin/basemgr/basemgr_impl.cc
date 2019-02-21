@@ -243,7 +243,9 @@ void BasemgrImpl::Start() {
 
   user_provider_impl_.reset(new UserProviderImpl(
       launcher_, settings_.sessionmgr, session_shell_config_,
-      settings_.story_shell, token_manager_factory_.get(),
+      settings_.story_shell,
+      settings_.use_session_shell_for_story_shell_factory,
+      token_manager_factory_.get(),
       authentication_context_provider_binding_.NewBinding().Bind(), this));
 
   ShowSetupOrLogin();

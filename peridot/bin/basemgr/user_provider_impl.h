@@ -59,9 +59,10 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   // UserProviderImpl.
   UserProviderImpl(
       fuchsia::sys::Launcher* const launcher,
-      const fuchsia::modular::AppConfig& sessionmgr,
-      const fuchsia::modular::AppConfig& session_shell,
-      const fuchsia::modular::AppConfig& story_shell,
+      const fuchsia::modular::AppConfig& sessionmgr_config,
+      const fuchsia::modular::AppConfig& session_shell_config,
+      const fuchsia::modular::AppConfig& story_shell_config,
+      bool use_session_shell_for_story_shell_factory,
       fuchsia::auth::TokenManagerFactory* token_manager_factory,
       fuchsia::auth::AuthenticationContextProviderPtr auth_context_provider,
       Delegate* const delegate);
@@ -115,11 +116,14 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
 
   fidl::BindingSet<fuchsia::modular::UserProvider> bindings_;
 
-  fuchsia::sys::Launcher* const launcher_;         // Not owned.
-  const fuchsia::modular::AppConfig& sessionmgr_;  // Neither owned nor copied.
+  fuchsia::sys::Launcher* const launcher_;  // Not owned.
   const fuchsia::modular::AppConfig&
-      session_shell_;                               // Neither owned nor copied.
-  const fuchsia::modular::AppConfig& story_shell_;  // Neither owned nor copied.
+      sessionmgr_config_;  // Neither owned nor copied.
+  const fuchsia::modular::AppConfig&
+      session_shell_config_;  // Neither owned nor copied.
+  const fuchsia::modular::AppConfig&
+      story_shell_config_;  // Neither owned nor copied.
+  bool use_session_shell_for_story_shell_factory_;
   fuchsia::auth::TokenManagerFactory* const
       token_manager_factory_;  // Neither owned nor copied.
   fuchsia::auth::AuthenticationContextProviderPtr

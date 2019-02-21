@@ -6,11 +6,11 @@
 
 #include <utility>
 
+#include <lib/fxl/functional/make_copyable.h>
+#include <lib/fxl/strings/string_printf.h>
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-#include <lib/fxl/functional/make_copyable.h>
-#include <lib/fxl/strings/string_printf.h>
 
 #include "peridot/bin/basemgr/users_generated.h"
 #include "peridot/lib/fidl/clone.h"
@@ -113,17 +113,20 @@ std::vector<fuchsia::auth::AuthProviderConfig> GetAuthProviderConfigs() {
 
 UserProviderImpl::UserProviderImpl(
     fuchsia::sys::Launcher* const launcher,
-    const fuchsia::modular::AppConfig& sessionmgr,
-    const fuchsia::modular::AppConfig& session_shell,
-    const fuchsia::modular::AppConfig& story_shell,
+    const fuchsia::modular::AppConfig& sessionmgr_config,
+    const fuchsia::modular::AppConfig& session_shell_config,
+    const fuchsia::modular::AppConfig& story_shell_config,
+    bool use_session_shell_for_story_shell_factory,
     fuchsia::auth::TokenManagerFactory* token_manager_factory,
     fuchsia::auth::AuthenticationContextProviderPtr
         authentication_context_provider,
     Delegate* const delegate)
     : launcher_(launcher),
-      sessionmgr_(sessionmgr),
-      session_shell_(session_shell),
-      story_shell_(story_shell),
+      sessionmgr_config_(sessionmgr_config),
+      session_shell_config_(session_shell_config),
+      story_shell_config_(story_shell_config),
+      use_session_shell_for_story_shell_factory_(
+          use_session_shell_for_story_shell_factory),
       token_manager_factory_(token_manager_factory),
       authentication_context_provider_(
           std::move(authentication_context_provider)),
@@ -504,10 +507,12 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
       delegate_->GetSessionShellServiceProvider(std::move(params.services));
 
   auto context = std::make_unique<SessionContextImpl>(
-      launcher_, CloneStruct(sessionmgr_), CloneStruct(session_shell_),
-      CloneStruct(story_shell_), std::move(ledger_token_manager),
-      std::move(agent_token_manager), std::move(account), std::move(view_owner),
-      std::move(service_provider), [this](SessionContextImpl* c) {
+      launcher_, CloneStruct(sessionmgr_config_),
+      CloneStruct(session_shell_config_), CloneStruct(story_shell_config_),
+      use_session_shell_for_story_shell_factory_,
+      std::move(ledger_token_manager), std::move(agent_token_manager),
+      std::move(account), std::move(view_owner), std::move(service_provider),
+      [this](SessionContextImpl* c) {
         session_contexts_.erase(c);
         delegate_->DidLogout();
       });

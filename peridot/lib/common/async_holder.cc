@@ -49,4 +49,25 @@ void AsyncHolderBase::Teardown(zx::duration timeout,
   ImplTeardown(cont_normal);
 }
 
+ClosureAsyncHolder::ClosureAsyncHolder(
+    std::string name, std::function<void(DoneCallback)> on_teardown)
+    : AsyncHolderBase(name),
+      on_teardown_(std::move(on_teardown)),
+      on_reset_([]() {}) {}
+
+ClosureAsyncHolder::ClosureAsyncHolder(
+    std::string name, std::function<void(DoneCallback)> on_teardown,
+    std::function<void()> on_reset)
+    : AsyncHolderBase(name),
+      on_teardown_(std::move(on_teardown)),
+      on_reset_(std::move(on_reset)) {}
+
+ClosureAsyncHolder::~ClosureAsyncHolder() = default;
+
+void ClosureAsyncHolder::ImplTeardown(std::function<void()> done) {
+  on_teardown_(done);
+};
+
+void ClosureAsyncHolder::ImplReset() { on_reset_(); };
+
 }  // namespace modular

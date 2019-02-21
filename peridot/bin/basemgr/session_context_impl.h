@@ -41,9 +41,10 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
 
   SessionContextImpl(
       fuchsia::sys::Launcher* const launcher,
-      fuchsia::modular::AppConfig sessionmgr,
-      fuchsia::modular::AppConfig session_shell,
-      fuchsia::modular::AppConfig story_shell,
+      fuchsia::modular::AppConfig sessionmgr_config,
+      fuchsia::modular::AppConfig session_shell_config,
+      fuchsia::modular::AppConfig story_shell_config,
+      bool use_session_shell_for_story_shell_factory,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
       fuchsia::modular::auth::AccountPtr account,
@@ -72,7 +73,8 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> sessionmgr_app_;
   fuchsia::modular::internal::SessionmgrPtr sessionmgr_;
 
-  fidl::Binding<fuchsia::modular::internal::SessionContext> session_context_binding_;
+  fidl::Binding<fuchsia::modular::internal::SessionContext>
+      session_context_binding_;
 
   std::vector<fit::function<void()>> logout_response_callbacks_;
 

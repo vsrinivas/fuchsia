@@ -54,6 +54,7 @@ fidl("fuchsia.modular") {
     "story/story_options.fidl",
     "story/story_provider.fidl",
     "story/story_shell.fidl",
+    "story/story_shell_factory.fidl",
     "story/story_state.fidl",
     "story/story_visibility_state.fidl",
     "suggestion/debug.fidl",

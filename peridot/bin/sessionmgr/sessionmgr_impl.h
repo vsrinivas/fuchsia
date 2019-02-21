@@ -92,8 +92,9 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // |Sessionmgr|
   void Initialize(
       fuchsia::modular::auth::AccountPtr account,
-      fuchsia::modular::AppConfig session_shell,
-      fuchsia::modular::AppConfig story_shell,
+      fuchsia::modular::AppConfig session_shell_config,
+      fuchsia::modular::AppConfig story_shell_config,
+      bool use_session_shell_for_story_shell_factory,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
       fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext>
@@ -114,12 +115,14 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializeDeviceMap();
   void InitializeClipboard();
   void InitializeMessageQueueManager();
-  void InitializeMaxwellAndModular(const fidl::StringPtr& session_shell_url,
-                                   fuchsia::modular::AppConfig story_shell);
-  void InitializeSessionShell(fuchsia::modular::AppConfig session_shell,
+  void InitializeMaxwellAndModular(
+      const fidl::StringPtr& session_shell_url,
+      fuchsia::modular::AppConfig story_shell_config,
+      bool use_session_shell_for_story_shell_factory);
+  void InitializeSessionShell(fuchsia::modular::AppConfig session_shell_config,
                               zx::eventpair view_token);
 
-  void RunSessionShell(fuchsia::modular::AppConfig session_shell);
+  void RunSessionShell(fuchsia::modular::AppConfig session_shell_config);
   // This is a termination sequence that may be used with |AtEnd()|, but also
   // may be executed to terminate the currently running session shell.
   void TerminateSessionShell(const std::function<void()>& done);

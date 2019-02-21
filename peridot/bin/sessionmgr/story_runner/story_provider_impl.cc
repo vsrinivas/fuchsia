@@ -306,7 +306,8 @@ class StoryProviderImpl::GetStoryEntityProviderCall
 StoryProviderImpl::StoryProviderImpl(
     Environment* const user_environment, std::string device_id,
     SessionStorage* const session_storage,
-    fuchsia::modular::AppConfig story_shell,
+    fuchsia::modular::AppConfig story_shell_config,
+    fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
     const ComponentContextInfo& component_context_info,
     fuchsia::modular::FocusProviderPtr focus_provider,
     fuchsia::modular::UserIntelligenceProvider* const
@@ -319,7 +320,8 @@ StoryProviderImpl::StoryProviderImpl(
     : user_environment_(user_environment),
       session_storage_(session_storage),
       device_id_(std::move(device_id)),
-      story_shell_(std::move(story_shell)),
+      story_shell_config_(std::move(story_shell_config)),
+      story_shell_factory_(std::move(story_shell_factory)),
       test_(test),
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider),
@@ -348,12 +350,10 @@ StoryProviderImpl::StoryProviderImpl(
       });
 
   focus_provider_->Watch(focus_watcher_binding_.NewBinding());
-  if (!test_) {
-    // As an optimization, since app startup time is long, we optimistically
-    // load a story shell instance even if there are no stories that need it
-    // yet. This can reduce the time to first frame.
-    MaybeLoadStoryShellDelayed();
-  }
+  // As an optimization, since app startup time is long, we optimistically
+  // load a story shell instance even if there are no stories that need it
+  // yet. This can reduce the time to first frame.
+  MaybeLoadStoryShellDelayed();
 }
 
 StoryProviderImpl::~StoryProviderImpl() = default;
@@ -421,34 +421,60 @@ void StoryProviderImpl::WatchActivity(
   activity_watchers_.AddInterfacePtr(std::move(watcher_ptr));
 }
 
-std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>>
-StoryProviderImpl::StartStoryShell(
+std::unique_ptr<AsyncHolderBase> StoryProviderImpl::StartStoryShell(
     fidl::StringPtr story_id,
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request) {
-  MaybeLoadStoryShell();
+    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_request,
+    fidl::InterfaceRequest<fuchsia::modular::StoryShell> story_shell_request) {
+  // When we're supplied a StoryShellFactory, use it to get StoryShells instead
+  // of launching the story shell as a separate component. In this case, there
+  // is also nothing to preload, so ignore |preloaded_story_shell_app_|.
+  if (story_shell_factory_) {
+    story_shell_factory_->AttachStory(story_id, std::move(story_shell_request));
 
-  auto app_client = std::move(preloaded_story_shell_app_);
+    auto on_teardown =
+        [this, story_id = std::move(story_id)](std::function<void()> done) {
+          story_shell_factory_->DetachStory(story_id, std::move(done));
+        };
+
+    return std::make_unique<ClosureAsyncHolder>(story_id /* name */,
+                                                std::move(on_teardown));
+  }
+
+  MaybeLoadStoryShell();
 
   // TODO(SCN-1019): This is a temporary hack to cache the endpoint ID of the
   // view so that framework can make snapshot requests.
-  view_endpoints_[story_id] = fsl::GetKoid(request.channel().get());
+  view_endpoints_[story_id] = fsl::GetKoid(view_request.channel().get());
 
   fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
-  app_client->services().ConnectToService(view_provider.NewRequest());
-  view_provider->CreateView(std::move(request), nullptr);
+  preloaded_story_shell_app_->services().ConnectToService(
+      view_provider.NewRequest());
+  view_provider->CreateView(std::move(view_request), nullptr);
+
+  preloaded_story_shell_app_->services().ConnectToService(
+      std::move(story_shell_request));
+
+  auto story_shell_holder = std::move(preloaded_story_shell_app_);
 
   // Kickoff another fuchsia::modular::StoryShell, to make it faster for next
   // story. We optimize even further by delaying the loading of the next story
   // shell instance by waiting a few seconds.
-  if (!test_) {
-    MaybeLoadStoryShellDelayed();
-  }
+  MaybeLoadStoryShellDelayed();
 
-  return app_client;
+  return story_shell_holder;
 }
 
 void StoryProviderImpl::MaybeLoadStoryShellDelayed() {
 #if PREFETCH_MONDRIAN
+  // In tests, we don't care about story shell launch latency as much, and
+  // don't want the test to wait for the delayed task to finish.
+  //
+  // When using a StoryShellFactory, the |preloaded_story_shell_app_| is never
+  // used, so it should not be loaded.
+  if (test_ || story_shell_factory_) {
+    return;
+  }
+
   async::PostDelayedTask(
       async_get_default_dispatcher(),
       [weak_this = weak_factory_.GetWeakPtr()] {
@@ -471,7 +497,7 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
 
   preloaded_story_shell_app_ =
       std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-          user_environment_->GetLauncher(), CloneStruct(story_shell_));
+          user_environment_->GetLauncher(), CloneStruct(story_shell_config_));
 }
 
 fuchsia::modular::StoryInfoPtr StoryProviderImpl::GetCachedStoryInfo(

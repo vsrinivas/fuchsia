@@ -583,8 +583,8 @@ class StoryControllerImpl::StopCall : public Operation<> {
               "StoryControllerImpl.StopCall.Run.did_teardown2");
           // If StopCall runs on a story that's not running, there is no story
           // shell.
-          if (story_controller_impl_->story_shell_) {
-            story_controller_impl_->story_shell_app_->Teardown(
+          if (story_controller_impl_->story_shell_holder_) {
+            story_controller_impl_->story_shell_holder_->Teardown(
                 kBasicTimeout, did_teardown->Completer());
           } else {
             did_teardown->Complete();
@@ -593,7 +593,7 @@ class StoryControllerImpl::StopCall : public Operation<> {
           return did_teardown;
         })
         ->AsyncMap([this] {
-          story_controller_impl_->story_shell_app_.reset();
+          story_controller_impl_->story_shell_holder_.reset();
           story_controller_impl_->story_shell_.Unbind();
 
           // Ensure every story storage operation has completed.
@@ -1404,12 +1404,12 @@ void StoryControllerImpl::GetLink(
 
 void StoryControllerImpl::StartStoryShell() {
   fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
-  auto request = view_owner.NewRequest();
+  auto view_request = view_owner.NewRequest();
   story_provider_impl_->AttachView(story_id_, std::move(view_owner));
 
-  story_shell_app_ =
-      story_provider_impl_->StartStoryShell(story_id_, std::move(request));
-  story_shell_app_->services().ConnectToService(story_shell_.NewRequest());
+  story_shell_holder_ = story_provider_impl_->StartStoryShell(
+      story_id_, std::move(view_request), story_shell_.NewRequest());
+
   fuchsia::modular::StoryShellContextPtr story_shell_context;
   story_shell_context_impl_.Connect(story_shell_context.NewRequest());
   story_shell_->Initialize(std::move(story_shell_context));

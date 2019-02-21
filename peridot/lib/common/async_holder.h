@@ -83,6 +83,32 @@ class AsyncHolder : public AsyncHolderBase {
   FXL_DISALLOW_COPY_AND_ASSIGN(AsyncHolder);
 };
 
+// ClosureAsyncHolder is a lightweight AsyncHolder that lets the client provide
+// the teardown and reset implementation as callbacks.
+//
+// TODO(MF-251): Replace std::function with fit::function
+class ClosureAsyncHolder : public AsyncHolderBase {
+ public:
+  using DoneCallback = std::function<void()>;
+
+  ClosureAsyncHolder(std::string name,
+                     std::function<void(DoneCallback)> on_teardown);
+  ClosureAsyncHolder(std::string name,
+                     std::function<void(DoneCallback)> on_teardown,
+                     std::function<void()> on_reset);
+  ~ClosureAsyncHolder() override;
+
+ private:
+  std::function<void(DoneCallback)> on_teardown_;
+  std::function<void()> on_reset_;
+
+  // Implementation of |AsyncHolderBase|
+  void ImplTeardown(std::function<void()> done) override;
+  void ImplReset() override;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ClosureAsyncHolder);
+};
+
 }  // namespace modular
 
 #endif  // PERIDOT_LIB_COMMON_ASYNC_HOLDER_H_

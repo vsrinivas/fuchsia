@@ -10,7 +10,7 @@ use fidl::encoding::OutOfLine;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_modular::AppConfig;
 use fidl_fuchsia_modular_auth::{Account, IdentityProvider};
-use fidl_fuchsia_modular_internal::{SessionmgrMarker, SessionContextMarker};
+use fidl_fuchsia_modular_internal::{SessionContextMarker, SessionmgrMarker};
 use fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba};
 use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
 use fuchsia_app::client::{App as LaunchedApp, LaunchOptions, Launcher};
@@ -112,7 +112,8 @@ impl VoilaViewAssistant {
         view_container.add_child(key, view_owner_client, host_import_token)?;
 
         // Set up SessionContext.
-        let (session_context_client, session_context_server) = create_endpoints::<SessionContextMarker>()?;
+        let (session_context_client, session_context_server) =
+            create_endpoints::<SessionContextMarker>()?;
         let session_context = SessionContext {};
         let session_context_stream = session_context_server.into_stream()?;
         fasync::spawn_local(
@@ -129,8 +130,9 @@ impl VoilaViewAssistant {
                 Some(OutOfLine(&mut account)),
                 &mut session_shell_config,
                 &mut story_shell_config,
-                None, /* ledger_token_manager */
-                None, /* agent_token_manager */
+                false, /* use_session_shell_for_story_shell_factory */
+                None,  /* ledger_token_manager */
+                None,  /* agent_token_manager */
                 session_context_client,
                 Some(view_owner_server),
             )

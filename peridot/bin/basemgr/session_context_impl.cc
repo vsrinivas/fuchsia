@@ -27,9 +27,10 @@ constexpr char kPresentationService[] = "mozart.Presentation";
 
 SessionContextImpl::SessionContextImpl(
     fuchsia::sys::Launcher* const launcher,
-    fuchsia::modular::AppConfig sessionmgr,
-    fuchsia::modular::AppConfig session_shell,
-    fuchsia::modular::AppConfig story_shell,
+    fuchsia::modular::AppConfig sessionmgr_config,
+    fuchsia::modular::AppConfig session_shell_config,
+    fuchsia::modular::AppConfig story_shell_config,
+    bool use_session_shell_for_story_shell_factory,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
     fuchsia::modular::auth::AccountPtr account,
@@ -59,12 +60,13 @@ SessionContextImpl::SessionContextImpl(
 
   // 1. Launch Sessionmgr in the current environment.
   sessionmgr_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      launcher, std::move(sessionmgr), data_origin);
+      launcher, std::move(sessionmgr_config), data_origin);
 
   // 2. Initialize the Sessionmgr service.
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
   sessionmgr_->Initialize(
-      std::move(account), std::move(session_shell), std::move(story_shell),
+      std::move(account), std::move(session_shell_config),
+      std::move(story_shell_config), use_session_shell_for_story_shell_factory,
       std::move(ledger_token_manager), std::move(agent_token_manager),
       session_context_binding_.NewBinding(), std::move(view_owner_request));
 
