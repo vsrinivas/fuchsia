@@ -165,9 +165,11 @@ func (c *Client) Path() string {
 }
 
 func (c *Client) changeStateLocked(s link.State) {
-	c.state = s
-	if fn := c.stateFunc; fn != nil {
-		fn(s)
+	if s != c.state {
+		c.state = s
+		if fn := c.stateFunc; fn != nil {
+			fn(s)
+		}
 	}
 }
 
@@ -181,7 +183,16 @@ func (c *Client) Up() error {
 		} else if err := checkStatus(status, "Start"); err != nil {
 			return err
 		}
-		c.changeStateLocked(link.StateStarted)
+		if status, err := c.GetStatus(); err != nil {
+			return err
+		} else {
+			switch status {
+			case LinkDown:
+				c.changeStateLocked(link.StateDown)
+			case LinkUp:
+				c.changeStateLocked(link.StateStarted)
+			}
+		}
 	}
 
 	return nil

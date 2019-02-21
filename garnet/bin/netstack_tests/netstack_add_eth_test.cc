@@ -99,6 +99,10 @@ TEST_F(NetstackLaunchTest, AddEthernetInterface) {
             continue;
           }
           ASSERT_EQ(eth_id, iface.id);
+          // tap device is created with link down, so we expect physical status
+          // to be DOWN.
+          EXPECT_EQ(iface.properties.physicalStatus,
+                    fuchsia::net::stack::PhysicalStatus::DOWN);
         }
         list_ifs = true;
       });
@@ -162,14 +166,16 @@ TEST_F(NetstackLaunchTest, AddEthernetDevice) {
             continue;
           }
           ASSERT_EQ(eth_id, iface.id);
+          // tap device is created with link down, so we expect physical status
+          // to be DOWN.
+          EXPECT_EQ(iface.flags & fuchsia::netstack::NetInterfaceFlagUp, 0u);
         }
         list_ifs = true;
       });
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return list_ifs; }, zx::sec(5)));
 }
 
-// TODO(FLK-45): Test is flaky.
-TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
+TEST_F(NetstackLaunchTest, DHCPRequestSent) {
   auto services = CreateServices();
 
   // TODO(NET-1818): parameterize this over multiple netstack implementations
@@ -188,6 +194,7 @@ TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
   auto eth_config = netemul::EthertapConfig("DHCPRequestSent");
   auto tap = netemul::EthertapClient::Create(eth_config);
   ASSERT_TRUE(tap) << "failed to create ethertap device";
+  tap->SetLinkUp(true);
 
   netemul::EthernetClientFactory eth_factory;
   auto eth = eth_factory.RetrieveWithMAC(eth_config.mac);
