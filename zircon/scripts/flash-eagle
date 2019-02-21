@@ -33,7 +33,7 @@ while getopts "c:mh" FLAG; do
 done
 shift $((OPTIND-1))
 
-"${ZIRCON_DIR}/kernel/target/arm64/board/eagle/package-image.sh" -B "${ZIRCON_DIR}/build-arm64" "${EXTRA_ARGS[@]}"
+"${ZIRCON_DIR}/kernel/target/arm64/board/eagle/package-image.sh" -B "${ZIRCON_DIR}/build-gcc" "${EXTRA_ARGS[@]}"
 
-BOOT_IMG="${ZIRCON_DIR}/build-arm64/eagle-boot.img"
+BOOT_IMG="${ZIRCON_DIR}/build-gcc/eagle-boot.img"
 fastboot flash boot "${BOOT_IMG}" && fastboot reboot

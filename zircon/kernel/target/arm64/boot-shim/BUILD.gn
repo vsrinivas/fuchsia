@@ -156,6 +156,12 @@ boot_shim("imx8mevk") {
 boot_shim("imx8mmevk") {
 }
 
+boot_shim("cleo") {
+}
+
+boot_shim("eagle") {
+}
+
 boot_shim("mt8167s_ref") {
 }
 

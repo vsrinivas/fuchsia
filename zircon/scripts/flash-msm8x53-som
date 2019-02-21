@@ -11,6 +11,6 @@ set -eo pipefail
 SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ZIRCON_DIR=${SCRIPTS_DIR}/..
 
-${ZIRCON_DIR}/kernel/target/arm64/board/msm8x53-som/package-image.sh -B ${ZIRCON_DIR}/build-arm64
+${ZIRCON_DIR}/kernel/target/arm64/board/msm8x53-som/package-image.sh -B ${ZIRCON_DIR}/build-gcc
 
 ${SCRIPTS_DIR}/flash-avb -b msm8x53-som

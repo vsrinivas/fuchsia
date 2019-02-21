@@ -64,7 +64,7 @@ while getopts "b:d:fmnp:ruh" FLAG; do
 done
 shift $((OPTIND-1))
 
-BUILD_DIR="${BUILD_DIR:-build-arm64}"
+BUILD_DIR="${BUILD_DIR:-build-gcc}"
 RAMDISK="${RAMDISK:-${BUILD_DIR}/kirin970-bootdata.bin}"
 OUT_IMAGE="${BUILD_DIR}/kirin970-boot.img"
 

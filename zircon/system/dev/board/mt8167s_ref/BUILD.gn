@@ -40,6 +40,8 @@ driver("mt8167s_ref") {
     "$zx/system/ulib/zxcpp",
   ]
   data_deps = [
+    "$zx/kernel/target/arm64/boot-shim:cleo",
+    "$zx/kernel/target/arm64/boot-shim:eagle",
     "$zx/kernel/target/arm64/boot-shim:mt8167s_ref",
   ]
 }
