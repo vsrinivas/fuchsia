@@ -20,13 +20,8 @@ test_package("bluetooth-tests") {
       environments = basic_envs
     },
     {
-      name = "rust_crates/host_integration"
+      name = "rust_crates/integration"
       dest = "bt-host-integration-tests"
-      environments = basic_envs
-    },
-    {
-      name = "rust_crates/host_lifecycle"
-      dest = "bt-host-lifecycle-tests"
       environments = basic_envs
     },
   ]

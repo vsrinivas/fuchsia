@@ -4,33 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 
-group("integration") {
-  public_deps = [
-    ":host_integration",
-    ":host_lifecycle",
-  ]
-}
-
-rustc_binary("host_lifecycle") {
-  edition = "2015"
-  deps = [
-    "//garnet/lib/rust/fuchsia-bluetooth",
-    "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
-    "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.host:fuchsia.bluetooth.host-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:rand",
-  ]
-
-  source_root = "tests/host_lifecycle.rs"
-}
-
-rustc_binary("host_integration") {
+rustc_binary("integration") {
   edition = "2018"
   with_unit_tests = true
   deps = [
@@ -50,6 +24,4 @@ rustc_binary("host_integration") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:slab",
   ]
-
-  source_root = "tests/host_integration.rs"
 }

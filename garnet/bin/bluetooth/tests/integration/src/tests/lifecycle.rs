@@ -1,23 +1,14 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-extern crate failure;
-extern crate fdio;
-extern crate fidl_fuchsia_bluetooth_host;
-extern crate fuchsia_async as async;
-extern crate fuchsia_bluetooth;
-extern crate futures;
-extern crate rand;
 
 use {
     failure::Error,
     fidl_fuchsia_bluetooth_host::HostProxy,
+    fuchsia_async as fasync,
     fuchsia_bluetooth::{fake_hci::FakeHciDevice, hci, host},
     std::{path::PathBuf, thread, time},
 };
-
-mod common;
 
 // The maximum amount of time spent polling
 const MAX_POLL_MS: u64 = 30000;
@@ -29,7 +20,7 @@ fn sleep() -> () {
 }
 
 // Tests that creating and destroying a fake HCI device binds and unbinds the bt-host driver.
-fn lifecycle_test() -> Result<(), Error> {
+pub fn lifecycle_test() -> Result<(), Error> {
     let original_hosts = host::list_host_devices();
     let fake_hci = FakeHciDevice::new()?;
 
@@ -50,7 +41,7 @@ fn lifecycle_test() -> Result<(), Error> {
     }
 
     // Check a device showed up within an acceptable timeout
-    let found_device = common::open_rdwr(&bthost);
+    let found_device = hci::open_rdwr(&bthost);
     assert!(found_device.is_ok());
     let found_device = found_device.unwrap();
 
@@ -63,9 +54,9 @@ fn lifecycle_test() -> Result<(), Error> {
     assert!(device_topo.contains("bt-hci"));
 
     // Open a host channel using an ioctl and check the device is responsive
-    let mut executor = async::Executor::new().unwrap();
+    let mut executor = fasync::Executor::new().unwrap();
     let handle = host::open_host_channel(&found_device).unwrap();
-    let host = HostProxy::new(async::Channel::from_channel(handle.into()).unwrap());
+    let host = HostProxy::new(fasync::Channel::from_channel(handle.into()).unwrap());
     let info = executor.run_singlethreaded(host.get_info());
     assert!(info.is_ok());
     if let Ok(info) = info {
@@ -91,8 +82,4 @@ fn lifecycle_test() -> Result<(), Error> {
     assert!(!device_found);
 
     Ok(())
-}
-
-fn main() -> Result<(), Error> {
-    lifecycle_test()
 }

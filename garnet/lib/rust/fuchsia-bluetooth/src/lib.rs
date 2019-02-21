@@ -8,6 +8,8 @@
 pub mod assigned_numbers;
 /// Bluetooth Error type
 pub mod error;
+/// Tools for asynchronous expectations in tests
+pub mod expectation;
 /// Fake bt-hci device API
 pub mod fake_hci;
 /// Bluetooth HCI device utilities.

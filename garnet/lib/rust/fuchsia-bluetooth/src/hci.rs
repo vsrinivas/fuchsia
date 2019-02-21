@@ -103,7 +103,7 @@ pub fn open_snoop_channel(device: &File) -> Result<zircon::Handle, Error> {
     }
 }
 
-fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
+pub fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
     OpenOptions::new()
         .read(true)
         .write(true)
