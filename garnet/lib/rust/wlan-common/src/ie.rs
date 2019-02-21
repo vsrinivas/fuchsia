@@ -37,13 +37,12 @@ const EXT_SUPP_RATES_IE_MAX_BODY_LEN: usize = 255;
 
 // IEEE Std 802.11-2016, 9.4.2.1
 const IE_HDR_LEN: usize = 2;
+#[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
 pub struct InfoElementHdr {
     pub id: u8,
     pub body_len: u8,
 }
-// Safe: see macro explanation.
-unsafe_impl_zerocopy_traits!(InfoElementHdr);
 
 impl InfoElementHdr {
     pub fn body_len(&self) -> usize {

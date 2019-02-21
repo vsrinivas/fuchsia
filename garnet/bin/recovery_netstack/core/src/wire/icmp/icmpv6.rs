@@ -8,7 +8,7 @@ use std::fmt;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use packet::{BufferView, ParsablePacket, ParseMetadata};
-use zerocopy::ByteSlice;
+use zerocopy::{AsBytes, ByteSlice, FromBytes, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ipv6, Ipv6Addr};
@@ -152,13 +152,12 @@ impl_icmp_message!(
     OriginalPacket<B>
 );
 
-#[derive(Copy, Clone, Debug)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 pub struct Icmpv6PacketTooBig {
     mtu: [u8; 4],
 }
 
-impl_from_bytes_as_bytes_unaligned!(Icmpv6PacketTooBig);
 impl_icmp_message!(Ipv6, Icmpv6PacketTooBig, PacketTooBig, IcmpUnusedCode, OriginalPacket<B>);
 
 create_net_enum! {
@@ -177,8 +176,8 @@ create_net_enum! {
 }
 
 /// An ICMPv6 Parameter Problem message.
-#[derive(Copy, Clone, Debug)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 pub struct Icmpv6ParameterProblem {
     pointer: [u8; 4],
 }
@@ -190,8 +189,6 @@ impl Icmpv6ParameterProblem {
         Icmpv6ParameterProblem { pointer: buf }
     }
 }
-
-impl_from_bytes_as_bytes_unaligned!(Icmpv6ParameterProblem);
 
 impl_icmp_message!(
     Ipv6,

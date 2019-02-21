@@ -26,27 +26,8 @@ pub const TCP_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
 #[cfg(test)]
 pub const TCP_MAX_HDR_LEN: usize = 60;
 
-// HeaderPrefix has the same memory layout (thanks to repr(C, packed)) as TCP
-// header prefix. Thus, we can simply reinterpret the bytes of the TCP header
-// prefix as a HeaderPrefix and then safely access its fields. Note the
-// following caveats:
-// - We cannot make any guarantees about the alignment of an instance of this
-//   struct in memory or of any of its fields. This is true both because
-//   repr(packed) removes the padding that would be used to ensure the alignment
-//   of individual fields, but also because we are given no guarantees about
-//   where within a given memory buffer a particular packet (and thus its
-//   header) will be located.
-// - Individual fields are all either u8 or [u8; N] rather than u16, u32, etc.
-//   This is for two reasons:
-//   - u16 and larger have larger-than-1 alignments, which are forbidden as
-//     described above
-//   - We are not guaranteed that the local platform has the same endianness as
-//     network byte order (big endian), so simply treating a sequence of bytes
-//     as a u16 or other multi-byte number would not necessarily be correct.
-//     Instead, we use the NetworkEndian type and its reader and writer methods
-//     to correctly access these fields.
-#[derive(Default)]
-#[repr(C, packed)]
+#[derive(Default, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 struct HeaderPrefix {
     src_port: [u8; 2],
     dst_port: [u8; 2],
@@ -57,10 +38,6 @@ struct HeaderPrefix {
     checksum: [u8; 2],
     urg_ptr: [u8; 2],
 }
-
-unsafe impl FromBytes for HeaderPrefix {}
-unsafe impl AsBytes for HeaderPrefix {}
-unsafe impl Unaligned for HeaderPrefix {}
 
 impl HeaderPrefix {
     pub fn src_port(&self) -> u16 {

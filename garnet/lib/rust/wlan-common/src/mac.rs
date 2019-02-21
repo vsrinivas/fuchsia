@@ -160,6 +160,7 @@ pub trait OptionalField {
 impl<T: ?Sized> OptionalField for T {}
 
 // IEEE Std 802.11-2016, 9.3.3.2
+#[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
 pub struct MgmtHdr {
     pub frame_ctrl: [u8; 2],
@@ -169,8 +170,6 @@ pub struct MgmtHdr {
     pub addr3: MacAddr,
     pub seq_ctrl: [u8; 2],
 }
-// Safe: see macro explanation.
-unsafe_impl_zerocopy_traits!(MgmtHdr);
 
 impl MgmtHdr {
     pub fn frame_ctrl(&self) -> u16 {
@@ -212,6 +211,7 @@ impl MgmtHdr {
 pub type Addr4 = MacAddr;
 
 // IEEE Std 802.11-2016, 9.3.2.1
+#[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
 pub struct DataHdr {
     pub frame_ctrl: [u8; 2],
@@ -221,8 +221,6 @@ pub struct DataHdr {
     pub addr3: MacAddr,
     pub seq_ctrl: [u8; 2],
 }
-// Safe: see macro explanation.
-unsafe_impl_zerocopy_traits!(DataHdr);
 
 impl DataHdr {
     pub fn frame_ctrl(&self) -> u16 {
@@ -273,10 +271,9 @@ impl DataHdr {
     }
 }
 
+#[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
 pub struct RawHtControl([u8; 4]);
-// Safe: see macro explanation.
-unsafe_impl_zerocopy_traits!(RawHtControl);
 
 impl RawHtControl {
     pub fn get(&self) -> u32 {
@@ -295,10 +292,9 @@ impl Deref for RawHtControl {
     }
 }
 
+#[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
 pub struct RawQosControl([u8; 2]);
-// Safe: see macro explanation.
-unsafe_impl_zerocopy_traits!(RawQosControl);
 
 impl RawQosControl {
     pub fn get(&self) -> u16 {
@@ -447,6 +443,7 @@ fn skip_body_alignment_padding<B: ByteSlice>(hdr_len: usize, bytes: B) -> Option
 }
 
 // IEEE Std 802.11-2016, 9.3.3.3
+#[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
 pub struct BeaconHdr {
     pub timestamp: [u8; 8],
@@ -454,8 +451,6 @@ pub struct BeaconHdr {
     // IEEE Std 802.11-2016, 9.4.1.4
     pub capabilities: RawCapabilityInfo,
 }
-// Safe: see macro explanation.
-unsafe_impl_zerocopy_traits!(BeaconHdr);
 
 impl BeaconHdr {
     pub fn timestamp(&self) -> u64 {
@@ -553,15 +548,13 @@ pub enum ReasonCode {
 }
 
 // IEEE Std 802.11-2016, 9.3.3.12
+#[derive(Default, FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
-#[derive(Default)]
 pub struct AuthHdr {
     pub auth_alg_num: [u8; 2],
     pub auth_txn_seq_num: [u8; 2],
     pub status_code: [u8; 2],
 }
-// Safe: see macro explanation.
-unsafe_impl_zerocopy_traits!(AuthHdr);
 
 impl AuthHdr {
     pub fn auth_alg_num(&self) -> u16 {
@@ -590,13 +583,11 @@ impl AuthHdr {
 }
 
 // IEEE Std 802.11-2016, 9.3.3.13
+#[derive(Default, FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
-#[derive(Default)]
 pub struct DeauthHdr {
     pub reason_code: [u8; 2],
 }
-// Safe: see macro explanation.
-unsafe_impl_zerocopy_traits!(DeauthHdr);
 
 impl DeauthHdr {
     pub fn reason_code(&self) -> u16 {
@@ -609,6 +600,7 @@ impl DeauthHdr {
 }
 
 // IEEE Std 802.11-2016, 9.3.3.6
+#[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
 pub struct AssocRespHdr {
     // IEEE Std 802.11-2016, 9.4.1.4
@@ -616,8 +608,6 @@ pub struct AssocRespHdr {
     pub status_code: [u8; 2],
     pub aid: [u8; 2],
 }
-// Safe: see macro explanation.
-unsafe_impl_zerocopy_traits!(AssocRespHdr);
 
 impl AssocRespHdr {
     pub fn capabilities(&self) -> u16 {
@@ -662,6 +652,7 @@ impl<B: ByteSlice> MgmtSubtype<B> {
 
 // IEEE Std 802.2-1998, 3.2
 // IETF RFC 1042
+#[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
 pub struct LlcHdr {
     pub dsap: u8,
@@ -670,8 +661,6 @@ pub struct LlcHdr {
     pub oui: [u8; 3],
     pub protocol_id: [u8; 2],
 }
-// Safe: see macro explanation.
-unsafe_impl_zerocopy_traits!(LlcHdr);
 
 impl LlcHdr {
     pub fn protocol_id(&self) -> u16 {
@@ -680,6 +669,7 @@ impl LlcHdr {
 }
 
 // IEEE Std 802.11-2016, 9.3.2.2.2
+#[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
 pub struct AmsduSubframeHdr {
     // Note this is the same as the IEEE 802.3 frame format.
@@ -687,8 +677,6 @@ pub struct AmsduSubframeHdr {
     pub sa: MacAddr,
     pub msdu_len_be: [u8; 2], // In network byte order (big endian).
 }
-// Safe: see macro explanation.
-unsafe_impl_zerocopy_traits!(AmsduSubframeHdr);
 
 impl AmsduSubframeHdr {
     pub fn msdu_len(&self) -> u16 {

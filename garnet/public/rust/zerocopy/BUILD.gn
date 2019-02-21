@@ -10,4 +10,8 @@ rustc_library("zerocopy") {
   edition = "2018"
 
   with_unit_tests = true
+
+  deps = [
+    "//garnet/public/rust/zerocopy/zerocopy-derive",
+  ]
 }

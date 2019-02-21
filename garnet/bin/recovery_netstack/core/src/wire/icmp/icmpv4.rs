@@ -8,7 +8,7 @@ use std::fmt;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use packet::{BufferView, ParsablePacket, ParseMetadata};
-use zerocopy::ByteSlice;
+use zerocopy::{AsBytes, ByteSlice, FromBytes, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ipv4, Ipv4Addr};
@@ -152,13 +152,11 @@ create_net_enum! {
 }
 
 /// An ICMPv4 Redirect Message.
-#[derive(Copy, Clone, Debug)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 pub struct Icmpv4Redirect {
     gateway: Ipv4Addr,
 }
-
-impl_from_bytes_as_bytes_unaligned!(Icmpv4Redirect);
 
 impl_icmp_message!(Ipv4, Icmpv4Redirect, Redirect, Icmpv4RedirectCode, OriginalPacket<B>);
 
@@ -170,8 +168,8 @@ create_net_enum! {
 
 impl_icmp_message!(Ipv4, IcmpTimeExceeded, TimeExceeded, Icmpv4TimeExceededCode, OriginalPacket<B>);
 
-#[derive(Copy, Clone, Debug)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 struct IcmpTimestampData {
     origin_timestamp: [u8; 4],
     recv_timestamp: [u8; 4],
@@ -204,27 +202,22 @@ impl IcmpTimestampData {
     }
 }
 
-impl_from_bytes_as_bytes_unaligned!(IcmpTimestampData);
-
-#[derive(Copy, Clone, Debug)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 struct Timestamp {
     id_seq: IdAndSeq,
     timestamps: IcmpTimestampData,
 }
 
 /// An ICMPv4 Timestamp Request message.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(transparent)]
 pub struct Icmpv4TimestampRequest(Timestamp);
 
 /// An ICMPv4 Timestamp Reply message.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(transparent)]
 pub struct Icmpv4TimestampReply(Timestamp);
-
-impl_from_bytes_as_bytes_unaligned!(Icmpv4TimestampRequest);
-impl_from_bytes_as_bytes_unaligned!(Icmpv4TimestampReply);
 
 impl_icmp_message!(Ipv4, Icmpv4TimestampRequest, TimestampRequest, IcmpUnusedCode);
 impl_icmp_message!(Ipv4, Icmpv4TimestampReply, TimestampReply, IcmpUnusedCode);
@@ -237,16 +230,14 @@ create_net_enum! {
 }
 
 /// An ICMPv4 Parameter Problem message.
-#[derive(Copy, Clone, Debug)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 pub struct Icmpv4ParameterProblem {
     pointer: u8,
     _unused: [u8; 3],
     /* The rest of Icmpv4ParameterProblem is variable-length, so is stored in
      * the message_body field in IcmpPacket */
 }
-
-impl_from_bytes_as_bytes_unaligned!(Icmpv4ParameterProblem);
 
 impl_icmp_message!(
     Ipv4,

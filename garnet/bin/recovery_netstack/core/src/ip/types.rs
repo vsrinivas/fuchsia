@@ -168,13 +168,9 @@ where
 }
 
 /// An IPv4 address.
-#[derive(Copy, Clone, Default, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Default, PartialEq, Eq, Hash, FromBytes, AsBytes, Unaligned)]
 #[repr(transparent)]
 pub struct Ipv4Addr([u8; 4]);
-
-unsafe impl FromBytes for Ipv4Addr {}
-unsafe impl AsBytes for Ipv4Addr {}
-unsafe impl Unaligned for Ipv4Addr {}
 
 impl Ipv4Addr {
     /// Create a new IPv4 address.
@@ -235,13 +231,9 @@ impl Debug for Ipv4Addr {
 }
 
 /// An IPv6 address.
-#[derive(Copy, Clone, Default, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Default, PartialEq, Eq, Hash, FromBytes, AsBytes, Unaligned)]
 #[repr(transparent)]
 pub struct Ipv6Addr([u8; 16]);
-
-unsafe impl FromBytes for Ipv6Addr {}
-unsafe impl AsBytes for Ipv6Addr {}
-unsafe impl Unaligned for Ipv6Addr {}
 
 impl Ipv6Addr {
     /// Create a new IPv6 address.

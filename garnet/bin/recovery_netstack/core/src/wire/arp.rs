@@ -24,26 +24,8 @@ pub const ARP_HDR_LEN: usize = 8;
 #[cfg(test)]
 pub const ARP_ETHERNET_IPV4_PACKET_LEN: usize = 28;
 
-// Header has the same memory layout (thanks to repr(C, packed)) as an ARP
-// header. Thus, we can simply reinterpret the bytes of the ARP header as a
-// Header and then safely access its fields. Note the following caveats:
-// - We cannot make any guarantees about the alignment of an instance of this
-//   struct in memory or of any of its fields. This is true both because
-//   repr(packed) removes the padding that would be used to ensure the alignment
-//   of individual fields, but also because we are given no guarantees about
-//   where within a given memory buffer a particular packet (and thus its
-//   header) will be located.
-// - Individual fields are all either u8 or [u8; N] rather than u16, u32, etc.
-//   This is for two reasons:
-//   - u16 and larger have larger-than-1 alignments, which are forbidden as
-//     described above
-//   - We are not guaranteed that the local platform has the same endianness as
-//     network byte order (big endian), so simply treating a sequence of bytes
-//     as a u16 or other multi-byte number would not necessarily be correct.
-//     Instead, we use the NetworkEndian type and its reader and writer methods
-//     to correctly access these fields.
-#[derive(Default)]
-#[repr(C, packed)]
+#[derive(Default, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 struct Header {
     htype: [u8; 2], // Hardware (e.g. Ethernet)
     ptype: [u8; 2], // Protocol (e.g. IPv4)
@@ -51,10 +33,6 @@ struct Header {
     plen: u8,       // Length (in octets) of protocol address
     oper: [u8; 2],  // Operation: 1 for Req, 2 for Reply
 }
-
-unsafe impl FromBytes for Header {}
-unsafe impl AsBytes for Header {}
-unsafe impl Unaligned for Header {}
 
 impl Header {
     fn hardware_protocol(&self) -> u16 {
@@ -141,8 +119,18 @@ pub fn peek_arp_types<B: ByteSlice>(bytes: B) -> ParseResult<(ArpHardwareType, E
     Ok((hw, proto))
 }
 
-// See comment on Header for an explanation of the memory safety requirements.
-#[repr(C, packed)]
+// Body has the same memory layout (thanks to repr(C)) as an ARP body. Thus, we
+// can simply reinterpret the bytes of the ARP body as a Body and then safely
+// access its fields. Note the following caveats:
+// - While FromBytes and Unaligned are taken care of for us by their derives, we
+//   still have to manually verify the correctness of our AsBytes
+//   implementation. The AsBytes implementation is sound if all of the fields
+//   are themselves AsBytes and there is no padding. We are guaranteed no
+//   padding so long as each field also has no alignment requirement that would
+//   cause the layout algorithm to produce padding. Thus, we use an AsBytes +
+//   Unaligned bound for our type parameters.
+#[derive(FromBytes, Unaligned)]
+#[repr(C)]
 struct Body<HwAddr, ProtoAddr> {
     sha: HwAddr,
     spa: ProtoAddr,
@@ -150,9 +138,13 @@ struct Body<HwAddr, ProtoAddr> {
     tpa: ProtoAddr,
 }
 
-unsafe impl<HwAddr: FromBytes, ProtoAddr: FromBytes> FromBytes for Body<HwAddr, ProtoAddr> {}
-unsafe impl<HwAddr: AsBytes, ProtoAddr: AsBytes> AsBytes for Body<HwAddr, ProtoAddr> {}
-unsafe impl<HwAddr: Unaligned, ProtoAddr: Unaligned> Unaligned for Body<HwAddr, ProtoAddr> {}
+unsafe impl<HwAddr: AsBytes + Unaligned, ProtoAddr: AsBytes + Unaligned> AsBytes
+    for Body<HwAddr, ProtoAddr>
+{
+    // We're doing a bad thing, but it's necessary until derive(AsBytes)
+    // supports type parameters.
+    fn only_derive_is_allowed_to_implement_this_trait() {}
+}
 
 impl<HwAddr: Copy, ProtoAddr: Copy> Body<HwAddr, ProtoAddr> {
     fn set_sha(&mut self, sha: HwAddr) -> &mut Self {

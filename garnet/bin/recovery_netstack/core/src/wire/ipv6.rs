@@ -18,28 +18,9 @@ use crate::ip::{IpProto, Ipv6Addr};
 
 pub const IPV6_FIXED_HDR_LEN: usize = 40;
 
-// FixedHeader has the same memory layout (thanks to repr(C, packed)) as an IPv6
-// fixed header. Thus, we can simply reinterpret the bytes of the IPv6 fixed
-// header as a FixedHeader and then safely access its fields. Note the following
-// caveats:
-// - We cannot make any guarantees about the alignment of an instance of this
-//   struct in memory or of any of its fields. This is true both because
-//   repr(packed) removes the padding that would be used to ensure the alignment
-//   of individual fields, but also because we are given no guarantees about
-//   where within a given memory buffer a particular packet (and thus its
-//   header) will be located.
-// - Individual fields are all either u8 or [u8; N] rather than u16, u32, etc.
-//   This is for two reasons:
-//   - u16 and larger have larger-than-1 alignments, which are forbidden as
-//     described above
-//   - We are not guaranteed that the local platform has the same endianness as
-//     network byte order (big endian), so simply treating a sequence of bytes
-//     as a u16 or other multi-byte number would not necessarily be correct.
-//     Instead, we use the NetworkEndian type and its reader and writer methods
-//     to correctly access these fields.
 #[allow(missing_docs)]
-#[derive(Default)]
-#[repr(C, packed)]
+#[derive(Default, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 pub struct FixedHeader {
     version_tc_flowlabel: [u8; 4],
     payload_len: [u8; 2],
@@ -48,10 +29,6 @@ pub struct FixedHeader {
     src_ip: [u8; 16],
     dst_ip: [u8; 16],
 }
-
-unsafe impl FromBytes for FixedHeader {}
-unsafe impl AsBytes for FixedHeader {}
-unsafe impl Unaligned for FixedHeader {}
 
 impl FixedHeader {
     fn version(&self) -> u8 {

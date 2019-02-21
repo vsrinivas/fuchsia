@@ -1,0 +1,10 @@
+error: proc-macro derive panicked
+  --> $DIR/union.rs:11:10
+   |
+11 | #[derive(FromBytes)]
+   |          ^^^^^^^^^
+   |
+   = help: message: synstructure does not handle untagged unions (https://github.com/mystor/synstructure/issues/6)
+
+error: aborting due to previous error
+

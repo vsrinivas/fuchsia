@@ -10,7 +10,7 @@ use std::marker::PhantomData;
 use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
-use zerocopy::{ByteSlice, LayoutVerified, Unaligned};
+use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::ParseError;
 use crate::ip::{Ipv6, Ipv6Addr};
@@ -21,17 +21,17 @@ use super::{IcmpIpExt, IcmpUnusedCode};
 pub type Options<B> = util::Options<B, options::NdpOptionImpl>;
 
 /// An NDP Router Solicitation.
-#[derive(Copy, Clone, Debug)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 pub struct RouterSolicitation {
     _reserved: [u8; 4],
 }
-impl_from_bytes_as_bytes_unaligned!(RouterSolicitation);
+
 impl_icmp_message!(Ipv6, RouterSolicitation, RouterSolicitation, IcmpUnusedCode, Options<B>);
 
 /// An NDP Router Advertisment.
-#[derive(Copy, Clone, Debug)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 pub struct RouterAdvertisment {
     current_hop_limit: u8,
     configuration_mo: u8,
@@ -39,7 +39,7 @@ pub struct RouterAdvertisment {
     reachable_time: [u8; 4],
     retransmit_timer: [u8; 4],
 }
-impl_from_bytes_as_bytes_unaligned!(RouterAdvertisment);
+
 impl_icmp_message!(Ipv6, RouterAdvertisment, RouterAdvertisment, IcmpUnusedCode, Options<B>);
 
 impl RouterAdvertisment {
@@ -57,35 +57,35 @@ impl RouterAdvertisment {
 }
 
 /// An NDP Neighbor Solicitation.
-#[derive(Copy, Clone, Debug)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 pub struct NeighborSolicitation {
     _reserved: [u8; 4],
     target_address: Ipv6Addr,
 }
-impl_from_bytes_as_bytes_unaligned!(NeighborSolicitation);
+
 impl_icmp_message!(Ipv6, NeighborSolicitation, NeighborSolicitation, IcmpUnusedCode, Options<B>);
 
 /// An NDP Neighbor Advertisment.
-#[derive(Copy, Clone, Debug)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 pub struct NeighborAdvertisment {
     flags_rso: u8,
     _reserved: [u8; 3],
     target_address: Ipv6Addr,
 }
-impl_from_bytes_as_bytes_unaligned!(NeighborAdvertisment);
+
 impl_icmp_message!(Ipv6, NeighborAdvertisment, NeighborAdvertisment, IcmpUnusedCode, Options<B>);
 
 /// An ICMPv6 Redirect Message.
-#[derive(Copy, Clone, Debug)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 pub struct Redirect {
     _reserved: [u8; 4],
     target_address: Ipv6Addr,
     destination_address: Ipv6Addr,
 }
-impl_from_bytes_as_bytes_unaligned!(Redirect);
+
 impl_icmp_message!(Ipv6, Redirect, Redirect, IcmpUnusedCode, Options<B>);
 
 pub mod options {

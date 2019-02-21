@@ -1,0 +1,257 @@
+error: unrecognized representation hint
+  --> $DIR/struct.rs:16:8
+   |
+16 | #[repr("foo")]
+   |        ^^^^^
+
+error: unrecognized representation hint
+  --> $DIR/struct.rs:20:8
+   |
+20 | #[repr(foo)]
+   |        ^^^
+
+error: unsupported representation for deriving FromBytes, AsBytes, or Unaligned on a struct
+  --> $DIR/struct.rs:24:8
+   |
+24 | #[repr(u8)]
+   |        ^^
+
+error: unsupported representation for deriving FromBytes, AsBytes, or Unaligned on a struct
+  --> $DIR/struct.rs:28:8
+   |
+28 | #[repr(i8)]
+   |        ^^
+
+error: unsupported representation for deriving FromBytes, AsBytes, or Unaligned on a struct
+  --> $DIR/struct.rs:32:8
+   |
+32 | #[repr(u16)]
+   |        ^^^
+
+error: unsupported representation for deriving FromBytes, AsBytes, or Unaligned on a struct
+  --> $DIR/struct.rs:36:8
+   |
+36 | #[repr(i16)]
+   |        ^^^
+
+error: unsupported representation for deriving FromBytes, AsBytes, or Unaligned on a struct
+  --> $DIR/struct.rs:40:8
+   |
+40 | #[repr(u32)]
+   |        ^^^
+
+error: unsupported representation for deriving FromBytes, AsBytes, or Unaligned on a struct
+  --> $DIR/struct.rs:44:8
+   |
+44 | #[repr(i32)]
+   |        ^^^
+
+error: unsupported representation for deriving FromBytes, AsBytes, or Unaligned on a struct
+  --> $DIR/struct.rs:48:8
+   |
+48 | #[repr(u64)]
+   |        ^^^
+
+error: unsupported representation for deriving FromBytes, AsBytes, or Unaligned on a struct
+  --> $DIR/struct.rs:52:8
+   |
+52 | #[repr(i64)]
+   |        ^^^
+
+error: unsupported representation for deriving FromBytes, AsBytes, or Unaligned on a struct
+  --> $DIR/struct.rs:56:8
+   |
+56 | #[repr(usize)]
+   |        ^^^^^
+
+error: unsupported representation for deriving FromBytes, AsBytes, or Unaligned on a struct
+  --> $DIR/struct.rs:60:8
+   |
+60 | #[repr(isize)]
+   |        ^^^^^
+
+error: conflicting representation hints
+  --> $DIR/struct.rs:64:1
+   |
+64 | / #[repr(transparent, packed)]
+65 | | struct Generic14;
+   | |_________________^
+
+error: conflicting representation hints
+  --> $DIR/struct.rs:68:1
+   |
+68 | / #[repr(C, transparent)]
+69 | | struct Generic15;
+   | |_________________^
+
+error: must have a non-align #[repr(...)] attribute in order to guarantee this type's memory layout
+  --> $DIR/struct.rs:71:10
+   |
+71 | #[derive(FromBytes)]
+   |          ^^^^^^^^^
+
+error: unsupported on types with type parameters
+  --> $DIR/struct.rs:86:10
+   |
+86 | #[derive(AsBytes)]
+   |          ^^^^^^^
+
+error: cannot derive Unaligned with repr(align(N > 1))
+  --> $DIR/struct.rs:95:1
+   |
+95 | / #[repr(C, align(2))]
+96 | | struct Unaligned1;
+   | |__________________^
+
+error: cannot derive Unaligned with repr(align(N > 1))
+   --> $DIR/struct.rs:99:1
+    |
+99  | / #[repr(transparent, align(2))]
+100 | | struct Unaligned2 {
+101 | |     foo: u8,
+102 | | }
+    | |_^
+
+error: cannot derive Unaligned with repr(align(N > 1))
+   --> $DIR/struct.rs:105:1
+    |
+105 | / #[repr(packed, align(2))]
+106 | | struct Unaligned3;
+    | |__________________^
+
+error[E0565]: meta item in `repr` must be an identifier
+  --> $DIR/struct.rs:16:8
+   |
+16 | #[repr("foo")]
+   |        ^^^^^
+
+error[E0552]: unrecognized representation hint
+  --> $DIR/struct.rs:20:8
+   |
+20 | #[repr(foo)]
+   |        ^^^
+
+error[E0517]: attribute should be applied to enum
+  --> $DIR/struct.rs:24:8
+   |
+24 | #[repr(u8)]
+   |        ^^
+25 | struct Generic3;
+   | ---------------- not an enum
+
+error[E0517]: attribute should be applied to enum
+  --> $DIR/struct.rs:28:8
+   |
+28 | #[repr(i8)]
+   |        ^^
+29 | struct Generic4;
+   | ---------------- not an enum
+
+error[E0517]: attribute should be applied to enum
+  --> $DIR/struct.rs:32:8
+   |
+32 | #[repr(u16)]
+   |        ^^^
+33 | struct Generic5;
+   | ---------------- not an enum
+
+error[E0517]: attribute should be applied to enum
+  --> $DIR/struct.rs:36:8
+   |
+36 | #[repr(i16)]
+   |        ^^^
+37 | struct Generic6;
+   | ---------------- not an enum
+
+error[E0517]: attribute should be applied to enum
+  --> $DIR/struct.rs:40:8
+   |
+40 | #[repr(u32)]
+   |        ^^^
+41 | struct Generic7;
+   | ---------------- not an enum
+
+error[E0517]: attribute should be applied to enum
+  --> $DIR/struct.rs:44:8
+   |
+44 | #[repr(i32)]
+   |        ^^^
+45 | struct Generic8;
+   | ---------------- not an enum
+
+error[E0517]: attribute should be applied to enum
+  --> $DIR/struct.rs:48:8
+   |
+48 | #[repr(u64)]
+   |        ^^^
+49 | struct Generic9;
+   | ---------------- not an enum
+
+error[E0517]: attribute should be applied to enum
+  --> $DIR/struct.rs:52:8
+   |
+52 | #[repr(i64)]
+   |        ^^^
+53 | struct Generic10;
+   | ----------------- not an enum
+
+error[E0517]: attribute should be applied to enum
+  --> $DIR/struct.rs:56:8
+   |
+56 | #[repr(usize)]
+   |        ^^^^^
+57 | struct Generic11;
+   | ----------------- not an enum
+
+error[E0517]: attribute should be applied to enum
+  --> $DIR/struct.rs:60:8
+   |
+60 | #[repr(isize)]
+   |        ^^^^^
+61 | struct Generic12;
+   | ----------------- not an enum
+
+error[E0692]: transparent struct cannot have other repr hints
+  --> $DIR/struct.rs:64:8
+   |
+64 | #[repr(transparent, packed)]
+   |        ^^^^^^^^^^^  ^^^^^^
+
+error[E0692]: transparent struct cannot have other repr hints
+  --> $DIR/struct.rs:68:8
+   |
+68 | #[repr(C, transparent)]
+   |        ^  ^^^^^^^^^^^
+
+error[E0692]: transparent struct cannot have other repr hints
+  --> $DIR/struct.rs:99:8
+   |
+99 | #[repr(transparent, align(2))]
+   |        ^^^^^^^^^^^  ^^^^^^^^
+
+error[E0690]: transparent struct needs exactly one non-zero-sized field, but has 0
+  --> $DIR/struct.rs:65:1
+   |
+65 | struct Generic14;
+   | ^^^^^^^^^^^^^^^^^
+   |
+   = note: non-zero-sized field
+
+error[E0690]: transparent struct needs exactly one non-zero-sized field, but has 0
+  --> $DIR/struct.rs:69:1
+   |
+69 | struct Generic15;
+   | ^^^^^^^^^^^^^^^^^
+   |
+   = note: non-zero-sized field
+
+error[E0587]: type has conflicting packed and align representation hints
+   --> $DIR/struct.rs:106:1
+    |
+106 | struct Unaligned3;
+    | ^^^^^^^^^^^^^^^^^^
+
+error: aborting due to 37 previous errors
+
+Some errors occurred: E0517, E0552, E0565, E0587, E0690, E0692.
+For more information about an error, try `rustc --explain E0517`.

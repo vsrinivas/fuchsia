@@ -14,3 +14,7 @@ license = "BSD-3-Clause"
 repository = "https://fuchsia.googlesource.com/garnet"
 
 include = ["src/*", "Cargo.toml", "LICENSE"]
+
+[features]
+# Used by the zerocopy-derive crate to break a dependency cycle when testing.
+test-zerocopy-derive = []

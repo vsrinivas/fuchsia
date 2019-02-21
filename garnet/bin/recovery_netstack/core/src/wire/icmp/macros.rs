@@ -57,11 +57,3 @@ macro_rules! impl_icmp_message_inner_code_from_u8 {
         $code::from_u8($var)
     };
 }
-
-macro_rules! impl_from_bytes_as_bytes_unaligned {
-    ($type:ty) => {
-        unsafe impl zerocopy::FromBytes for $type {}
-        unsafe impl zerocopy::AsBytes for $type {}
-        unsafe impl zerocopy::Unaligned for $type {}
-    };
-}

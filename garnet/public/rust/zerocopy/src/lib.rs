@@ -21,6 +21,11 @@
 #![feature(refcell_map_split)]
 #![cfg_attr(not(test), no_std)]
 
+// Omit this when we're testing zerocopy_derive itself
+// to avoid a circular dependency.
+#[cfg(not(feature = "test-zerocopy-derive"))]
+pub use zerocopy_derive::*;
+
 use core::cell::{Ref, RefMut};
 use core::fmt::{self, Debug, Display, Formatter};
 use core::marker::PhantomData;
@@ -28,16 +33,36 @@ use core::mem;
 use core::ops::{Deref, DerefMut};
 use core::slice;
 
+// implement an unsafe trait for a range of container types
+macro_rules! impl_for_composite_types {
+    ($trait:ident) => (
+        unsafe impl<T> $trait for PhantomData<T> {
+            fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized {}
+        }
+        unsafe impl<T: $trait> $trait for [T] {
+            fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized {}
+        }
+        unsafe impl $trait for () {
+            fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized {}
+        }
+        impl_for_array_sizes!($trait);
+    );
+}
+
 // implement an unsafe trait for all signed and unsigned primitive types
 macro_rules! impl_for_primitives {
     ($trait:ident) => (
         impl_for_primitives!(@inner $trait, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, usize, isize);
     );
     (@inner $trait:ident, $type:ty) => (
-        unsafe impl $trait for $type {}
+        unsafe impl $trait for $type {
+            fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized {}
+        }
     );
     (@inner $trait:ident, $type:ty, $($types:ty),*) => (
-        unsafe impl $trait for $type {}
+        unsafe impl $trait for $type {
+            fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized {}
+        }
         impl_for_primitives!(@inner $trait, $($types),*);
     );
 }
@@ -49,15 +74,22 @@ macro_rules! impl_for_array_sizes {
         impl_for_array_sizes!(@inner $trait, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32);
     );
     (@inner $trait:ident, $n:expr) => (
-        unsafe impl<T: $trait> $trait for [T; $n] {}
+        unsafe impl<T: $trait> $trait for [T; $n] {
+            fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized {}
+        }
     );
     (@inner $trait:ident, $n:expr, $($ns:expr),*) => (
-        unsafe impl<T: $trait> $trait for [T; $n] {}
+        unsafe impl<T: $trait> $trait for [T; $n] {
+            fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized {}
+        }
         impl_for_array_sizes!(@inner $trait, $($ns),*);
     );
 }
 
 /// Types for which any byte pattern is valid.
+///
+/// WARNING: Do not implement this trait yourself! Instead, use
+/// `#[derive(FromBytes)]`.
 ///
 /// `FromBytes` types can safely be deserialized from an untrusted sequence of
 /// bytes because any byte sequence corresponds to a valid instance of the type.
@@ -72,16 +104,28 @@ macro_rules! impl_for_array_sizes {
 /// If a type has the following properties, then it is safe to implement
 /// `FromBytes` for that type:
 /// - If the type is a struct:
-///   - It must be `repr(C)` or `repr(transparent)`
+///   - It must have a defined representation (`repr(C)`, `repr(transparent)`,
+///     or `repr(packed)`)
 ///   - All of its fields must implement `FromBytes`
 /// - If the type is an enum:
 ///   - It must be a C-like enum (meaning that all variants have no fields)
-///   - It must be `repr(u8)`, `repr(u16)`, `repr(u32)`, or `repr(u64)`
+///   - It must have a defined representation (`repr`s `C`, `u8`, `u16`, `u32`,
+///     `u64`, `usize`, `i8`, `i16`, `i32`, `i64`, or `isize`).
 ///   - The maximum number of discriminants must be used (so that every possible
-///     bit pattern is a valid one)
-pub unsafe trait FromBytes {}
+///     bit pattern is a valid one). Be very careful when using the `C`,
+///     `usize`, or `isize` representations, as their size is
+///     platform-dependent.
+pub unsafe trait FromBytes {
+    // NOTE: The Self: Sized bound makes it so that FromBytes is still object
+    // safe.
+    #[doc(hidden)]
+    fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized;
+}
 
 /// Types which are safe to treat as an immutable byte slice.
+///
+/// WARNING: Do not implement this trait yourself! Instead, use
+/// `#[derive(AsBytes)]`.
 ///
 /// `AsBytes` types can be safely viewed as a slice of bytes. In particular,
 /// this means that, in any valid instance of the type, none of the bytes of the
@@ -92,29 +136,39 @@ pub unsafe trait FromBytes {}
 /// # Safety
 ///
 /// If `T: AsBytes`, then unsafe code may assume that it is sound to treat any
-/// instance of the type as an immutable `[u8]` of the appropriate length. If a
+/// instance of the type as an immutable `[u8]` of length `size_of::<T>()`. If a
 /// type is marked as `AsBytes` which violates this contract, it may cause
 /// undefined behavior.
 ///
 /// If a type has the following properties, then it is safe to implement
-/// `AsBytes` for that type:
+/// `AsBytes` for that type
 /// - If the type is a struct:
-///   - It must be `repr(C)` or `repr(transparent)`
-///   - If it is `repr(C)`, its layout must have no inter-field padding (this
-///     can be accomplished either by using `repr(packed)` or by manually adding
-///     padding fields)
-///   - All of its fields must implement `AsBytes`
+///   - It must have a defined representation (`repr(C)`, `repr(transparent)`,
+///     or `repr(packed)`).
+///   - All of its fields must be `AsBytes`
+///   - Its layout must have no inter-field padding. This is always true for
+///     `repr(transparent)` and `repr(packed)`. For `repr(C)`, see the layout
+///     algorithm described in the [Rust Reference].
 /// - If the type is an enum:
 ///   - It must be a C-like enum (meaning that all variants have no fields)
-///   - It must be `repr(u8)`, `repr(u16)`, `repr(u32)`, or `repr(u64)`
-pub unsafe trait AsBytes {}
+///   - It must have a defined representation (`repr`s `C`, `u8`, `u16`, `u32`,
+///     `u64`, `usize`, `i8`, `i16`, `i32`, `i64`, or `isize`).
+///
+/// [Rust Reference]: https://doc.rust-lang.org/reference/type-layout.html
+pub unsafe trait AsBytes {
+    #[doc(hidden)]
+    fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized;
+}
 
 impl_for_primitives!(FromBytes);
 impl_for_primitives!(AsBytes);
-impl_for_array_sizes!(FromBytes);
-impl_for_array_sizes!(AsBytes);
+impl_for_composite_types!(FromBytes);
+impl_for_composite_types!(AsBytes);
 
 /// Types with no alignment requirement.
+///
+/// WARNING: Do not implement this trait yourself! Instead, use
+/// `#[derive(Unaligned)]`.
 ///
 /// If `T: Unaligned`, then `align_of::<T>() == 1`.
 ///
@@ -124,12 +178,20 @@ impl_for_array_sizes!(AsBytes);
 /// reference to `T` at any memory location regardless of alignment. If a type
 /// is marked as `Unaligned` which violates this contract, it may cause
 /// undefined behavior.
-pub unsafe trait Unaligned {}
+pub unsafe trait Unaligned {
+    // NOTE: The Self: Sized bound makes it so that Unaligned is still object
+    // safe.
+    #[doc(hidden)]
+    fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized;
+}
 
-unsafe impl Unaligned for u8 {}
-unsafe impl Unaligned for i8 {}
-unsafe impl Unaligned for () {}
-impl_for_array_sizes!(Unaligned);
+unsafe impl Unaligned for u8 {
+    fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized {}
+}
+unsafe impl Unaligned for i8 {
+    fn only_derive_is_allowed_to_implement_this_trait() where Self: Sized {}
+}
+impl_for_composite_types!(Unaligned);
 
 /// A length- and alignment-checked reference to a byte slice which can safely
 /// be reinterpreted as another type.
@@ -149,6 +211,7 @@ impl_for_array_sizes!(Unaligned);
 /// ```rust
 /// use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 ///
+/// #[derive(FromBytes, AsBytes, Unaligned)]
 /// #[repr(C)]
 /// struct UdpHeader {
 ///     src_port: [u8; 2],
@@ -156,10 +219,6 @@ impl_for_array_sizes!(Unaligned);
 ///     length: [u8; 2],
 ///     checksum: [u8; 2],
 /// }
-///
-/// unsafe impl FromBytes for UdpHeader {}
-/// unsafe impl AsBytes for UdpHeader {}
-/// unsafe impl Unaligned for UdpHeader {}
 ///
 /// struct UdpPacket<B> {
 ///     header: LayoutVerified<B, UdpHeader>,

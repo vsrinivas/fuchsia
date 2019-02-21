@@ -14,6 +14,7 @@ rustc_library("netstack-core") {
     "//garnet/bin/recovery_netstack/core/specialize-ip-macro",
     "//garnet/public/rust/packet",
     "//garnet/public/rust/zerocopy",
+    "//garnet/public/rust/zerocopy/zerocopy-derive",
     "//third_party/rust-crates/rustc_deps:byteorder",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:log",

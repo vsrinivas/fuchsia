@@ -1,0 +1,227 @@
+error: unrecognized representation hint
+  --> $DIR/enum.rs:18:8
+   |
+18 | #[repr("foo")]
+   |        ^^^^^
+
+error: unrecognized representation hint
+  --> $DIR/enum.rs:24:8
+   |
+24 | #[repr(foo)]
+   |        ^^^
+
+error: unsupported representation for deriving FromBytes, AsBytes, or Unaligned on an enum
+  --> $DIR/enum.rs:30:8
+   |
+30 | #[repr(transparent)]
+   |        ^^^^^^^^^^^
+
+error: conflicting representation hints
+  --> $DIR/enum.rs:36:1
+   |
+36 | / #[repr(u8, u16)]
+37 | | enum Generic4 {
+38 | |     A,
+39 | | }
+   | |_^
+
+error: must have a non-align #[repr(...)] attribute in order to guarantee this type's memory layout
+  --> $DIR/enum.rs:41:10
+   |
+41 | #[derive(FromBytes)]
+   |          ^^^^^^^^^
+
+error: FromBytes requires repr of "u8", "u16", "i8", or "i16"
+  --> $DIR/enum.rs:51:1
+   |
+51 | / #[repr(C)]
+52 | | enum FromBytes1 {
+53 | |     A,
+54 | | }
+   | |_^
+
+error: FromBytes requires repr of "u8", "u16", "i8", or "i16"
+  --> $DIR/enum.rs:57:1
+   |
+57 | / #[repr(usize)]
+58 | | enum FromBytes2 {
+59 | |     A,
+60 | | }
+   | |_^
+
+error: FromBytes requires repr of "u8", "u16", "i8", or "i16"
+  --> $DIR/enum.rs:63:1
+   |
+63 | / #[repr(isize)]
+64 | | enum FromBytes3 {
+65 | |     A,
+66 | | }
+   | |_^
+
+error: FromBytes requires repr of "u8", "u16", "i8", or "i16"
+  --> $DIR/enum.rs:69:1
+   |
+69 | / #[repr(u32)]
+70 | | enum FromBytes4 {
+71 | |     A,
+72 | | }
+   | |_^
+
+error: FromBytes requires repr of "u8", "u16", "i8", or "i16"
+  --> $DIR/enum.rs:75:1
+   |
+75 | / #[repr(i32)]
+76 | | enum FromBytes5 {
+77 | |     A,
+78 | | }
+   | |_^
+
+error: FromBytes requires repr of "u8", "u16", "i8", or "i16"
+  --> $DIR/enum.rs:81:1
+   |
+81 | / #[repr(u64)]
+82 | | enum FromBytes6 {
+83 | |     A,
+84 | | }
+   | |_^
+
+error: FromBytes requires repr of "u8", "u16", "i8", or "i16"
+  --> $DIR/enum.rs:87:1
+   |
+87 | / #[repr(i64)]
+88 | | enum FromBytes7 {
+89 | |     A,
+90 | | }
+   | |_^
+
+error: Unaligned requires repr of "u8" or "i8", and no alignment (i.e., repr(align(N > 1)))
+   --> $DIR/enum.rs:97:1
+    |
+97  | / #[repr(C)]
+98  | | enum Unaligned1 {
+99  | |     A,
+100 | | }
+    | |_^
+
+error: Unaligned requires repr of "u8" or "i8", and no alignment (i.e., repr(align(N > 1)))
+   --> $DIR/enum.rs:103:1
+    |
+103 | / #[repr(u16)]
+104 | | enum Unaligned2 {
+105 | |     A,
+106 | | }
+    | |_^
+
+error: Unaligned requires repr of "u8" or "i8", and no alignment (i.e., repr(align(N > 1)))
+   --> $DIR/enum.rs:109:1
+    |
+109 | / #[repr(i16)]
+110 | | enum Unaligned3 {
+111 | |     A,
+112 | | }
+    | |_^
+
+error: Unaligned requires repr of "u8" or "i8", and no alignment (i.e., repr(align(N > 1)))
+   --> $DIR/enum.rs:115:1
+    |
+115 | / #[repr(u32)]
+116 | | enum Unaligned4 {
+117 | |     A,
+118 | | }
+    | |_^
+
+error: Unaligned requires repr of "u8" or "i8", and no alignment (i.e., repr(align(N > 1)))
+   --> $DIR/enum.rs:121:1
+    |
+121 | / #[repr(i32)]
+122 | | enum Unaligned5 {
+123 | |     A,
+124 | | }
+    | |_^
+
+error: Unaligned requires repr of "u8" or "i8", and no alignment (i.e., repr(align(N > 1)))
+   --> $DIR/enum.rs:127:1
+    |
+127 | / #[repr(u64)]
+128 | | enum Unaligned6 {
+129 | |     A,
+130 | | }
+    | |_^
+
+error: Unaligned requires repr of "u8" or "i8", and no alignment (i.e., repr(align(N > 1)))
+   --> $DIR/enum.rs:133:1
+    |
+133 | / #[repr(i64)]
+134 | | enum Unaligned7 {
+135 | |     A,
+136 | | }
+    | |_^
+
+error: Unaligned requires repr of "u8" or "i8", and no alignment (i.e., repr(align(N > 1)))
+   --> $DIR/enum.rs:139:1
+    |
+139 | / #[repr(usize)]
+140 | | enum Unaligned8 {
+141 | |     A,
+142 | | }
+    | |_^
+
+error: Unaligned requires repr of "u8" or "i8", and no alignment (i.e., repr(align(N > 1)))
+   --> $DIR/enum.rs:145:1
+    |
+145 | / #[repr(isize)]
+146 | | enum Unaligned9 {
+147 | |     A,
+148 | | }
+    | |_^
+
+error: cannot derive Unaligned with repr(align(N > 1))
+   --> $DIR/enum.rs:151:1
+    |
+151 | / #[repr(u8, align(2))]
+152 | | enum Unaligned10 {
+153 | |     A,
+154 | | }
+    | |_^
+
+error: cannot derive Unaligned with repr(align(N > 1))
+   --> $DIR/enum.rs:157:1
+    |
+157 | / #[repr(i8, align(2))]
+158 | | enum Unaligned11 {
+159 | |     A,
+160 | | }
+    | |_^
+
+error[E0565]: meta item in `repr` must be an identifier
+  --> $DIR/enum.rs:18:8
+   |
+18 | #[repr("foo")]
+   |        ^^^^^
+
+error[E0552]: unrecognized representation hint
+  --> $DIR/enum.rs:24:8
+   |
+24 | #[repr(foo)]
+   |        ^^^
+
+error[E0517]: attribute should be applied to struct
+  --> $DIR/enum.rs:30:8
+   |
+30 |   #[repr(transparent)]
+   |          ^^^^^^^^^^^
+31 | / enum Generic3 {
+32 | |     A,
+33 | | }
+   | |_- not a struct
+
+warning[E0566]: conflicting representation hints
+  --> $DIR/enum.rs:36:8
+   |
+36 | #[repr(u8, u16)]
+   |        ^^  ^^^
+
+error: aborting due to 26 previous errors
+
+Some errors occurred: E0517, E0552, E0565, E0566.
+For more information about an error, try `rustc --explain E0517`.

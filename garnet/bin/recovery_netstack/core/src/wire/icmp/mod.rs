@@ -34,27 +34,8 @@ use crate::ip::{Ip, IpAddr, IpProto, Ipv4, Ipv6};
 use crate::wire::ipv4;
 use crate::wire::util::{fits_in_u32, Checksum, OptionImpl, Options};
 
-// Header has the same memory layout (thanks to repr(C, packed)) as an ICMP
-// header. Thus, we can simply reinterpret the bytes of the ICMP header as a
-// Header and then safely access its fields.
-// Note the following caveats:
-// - We cannot make any guarantees about the alignment of an instance of this
-//   struct in memory or of any of its fields. This is true both because
-//   repr(packed) removes the padding that would be used to ensure the alignment
-//   of individual fields, but also because we are given no guarantees about
-//   where within a given memory buffer a particular packet (and thus its
-//   header) will be located.
-// - Individual fields are all either u8 or [u8; N] rather than u16, u32, etc.
-//   This is for two reasons:
-//   - u16 and larger have larger-than-1 alignments, which are forbidden as
-//     described above
-//   - We are not guaranteed that the local platform has the same endianness as
-//     network byte order (big endian), so simply treating a sequence of bytes
-//     as a u16 or other multi-byte number would not necessarily be correct.
-//     Instead, we use the NetworkEndian type and its reader and writer methods
-//     to correctly access these fields.
-#[derive(Default, Debug)]
-#[repr(C, packed)]
+#[derive(Default, Debug, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 struct Header {
     msg_type: u8,
     code: u8,
@@ -64,10 +45,6 @@ struct Header {
      * packet, and is consistent with ICMPv6, which treats the field as part of
      * messages rather than the header. */
 }
-
-unsafe impl FromBytes for Header {}
-unsafe impl AsBytes for Header {}
-unsafe impl Unaligned for Header {}
 
 impl Header {
     fn set_msg_type<T: Into<u8>>(&mut self, msg_type: T) {
@@ -563,8 +540,8 @@ impl Into<u8> for IcmpUnusedCode {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 struct IdAndSeq {
     id: [u8; 2],
     seq: [u8; 2],
@@ -595,5 +572,3 @@ impl IdAndSeq {
         NetworkEndian::write_u16(&mut self.seq, seq);
     }
 }
-
-impl_from_bytes_as_bytes_unaligned!(IdAndSeq);

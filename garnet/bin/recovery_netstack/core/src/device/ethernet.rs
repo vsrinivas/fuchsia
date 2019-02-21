@@ -19,13 +19,9 @@ use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 use crate::{Context, EventDispatcher};
 
 /// A media access control (MAC) address.
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(transparent)]
 pub struct Mac([u8; 6]);
-
-unsafe impl FromBytes for Mac {}
-unsafe impl AsBytes for Mac {}
-unsafe impl Unaligned for Mac {}
 
 impl Mac {
     /// The broadcast MAC address.

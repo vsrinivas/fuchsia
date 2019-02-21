@@ -4,11 +4,13 @@
 
 //! Common ICMP packets.
 
+use zerocopy::{AsBytes, FromBytes, Unaligned};
+
 use super::IdAndSeq;
 
 /// An ICMP Destination Unreachable message.
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 pub struct IcmpDestUnreachable {
     // Rest of Header in ICMP, unused in ICMPv6
     _unused: [u8; 4],
@@ -16,11 +18,9 @@ pub struct IcmpDestUnreachable {
      * the message_body field in IcmpPacket */
 }
 
-impl_from_bytes_as_bytes_unaligned!(IcmpDestUnreachable);
-
 /// An ICMP Echo Request message.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 pub struct IcmpEchoRequest {
     pub(super) id_seq: IdAndSeq,
     /* The rest of of IcmpEchoRequest is variable-length, so is stored in the
@@ -38,25 +38,20 @@ impl IcmpEchoRequest {
 }
 
 /// An ICMP Echo Reply message.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 pub struct IcmpEchoReply {
     pub(super) id_seq: IdAndSeq,
     /* The rest of of IcmpEchoReply is variable-length, so is stored in the
      * message_body field in IcmpPacket */
 }
 
-impl_from_bytes_as_bytes_unaligned!(IcmpEchoRequest);
-impl_from_bytes_as_bytes_unaligned!(IcmpEchoReply);
-
 /// An ICMP Time Exceeded message.
-#[derive(Copy, Clone, Default, Debug, Eq, PartialEq)]
-#[repr(C, packed)]
+#[derive(Copy, Clone, Default, Debug, Eq, PartialEq, FromBytes, AsBytes, Unaligned)]
+#[repr(C)]
 pub struct IcmpTimeExceeded {
     // Rest of Header in ICMP, unused in ICMPv6
     _unused: [u8; 4],
     /* Body of IcmpTimeExceeded is entirely variable-length, so is stored in
      * the message_body field in IcmpPacket */
 }
-
-impl_from_bytes_as_bytes_unaligned!(IcmpTimeExceeded);

@@ -1,0 +1,58 @@
+error[E0277]: the trait bound `&'static str: zerocopy::FromBytes` is not satisfied
+  --> $DIR/late_compile_pass.rs:19:10
+   |
+19 | #[derive(FromBytes)]
+   |          ^^^^^^^^^ the trait `zerocopy::FromBytes` is not implemented for `&'static str`
+   |
+note: required by `<FromBytes1 as zerocopy::FromBytes>::only_derive_is_allowed_to_implement_this_trait::ImplementsFromBytes`
+  --> $DIR/late_compile_pass.rs:19:10
+   |
+19 | #[derive(FromBytes)]
+   |          ^^^^^^^^^
+
+error[E0080]: evaluation of constant value failed
+  --> $DIR/late_compile_pass.rs:29:10
+   |
+29 | #[derive(AsBytes)]
+   |          ^^^^^^^ attempt to divide by zero
+
+error[E0277]: the trait bound `u16: zerocopy::Unaligned` is not satisfied
+  --> $DIR/late_compile_pass.rs:41:10
+   |
+41 | #[derive(Unaligned)]
+   |          ^^^^^^^^^ the trait `zerocopy::Unaligned` is not implemented for `u16`
+   |
+note: required by `<Unaligned1 as zerocopy::Unaligned>::only_derive_is_allowed_to_implement_this_trait::ImplementsUnaligned`
+  --> $DIR/late_compile_pass.rs:41:10
+   |
+41 | #[derive(Unaligned)]
+   |          ^^^^^^^^^
+
+error[E0277]: the trait bound `u16: zerocopy::Unaligned` is not satisfied
+  --> $DIR/late_compile_pass.rs:49:10
+   |
+49 | #[derive(Unaligned)]
+   |          ^^^^^^^^^ the trait `zerocopy::Unaligned` is not implemented for `u16`
+   |
+note: required by `<Unaligned2 as zerocopy::Unaligned>::only_derive_is_allowed_to_implement_this_trait::ImplementsUnaligned`
+  --> $DIR/late_compile_pass.rs:49:10
+   |
+49 | #[derive(Unaligned)]
+   |          ^^^^^^^^^
+
+error[E0277]: the trait bound `u16: zerocopy::Unaligned` is not satisfied
+  --> $DIR/late_compile_pass.rs:56:10
+   |
+56 | #[derive(Unaligned)]
+   |          ^^^^^^^^^ the trait `zerocopy::Unaligned` is not implemented for `u16`
+   |
+note: required by `<Unaligned3 as zerocopy::Unaligned>::only_derive_is_allowed_to_implement_this_trait::ImplementsUnaligned`
+  --> $DIR/late_compile_pass.rs:56:10
+   |
+56 | #[derive(Unaligned)]
+   |          ^^^^^^^^^
+
+error: aborting due to 5 previous errors
+
+Some errors occurred: E0080, E0277.
+For more information about an error, try `rustc --explain E0080`.
