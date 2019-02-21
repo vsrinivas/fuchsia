@@ -43,6 +43,13 @@ set_defaults("sdk_shared_library") {
 template("sdk_shared_library") {
   assert(defined(invoker.category), "Must define an SDK category")
 
+  no_headers = defined(invoker.no_headers) && invoker.no_headers
+
+  if ((invoker.category == "partner" || invoker.category == "public") &&
+      !no_headers) {
+    assert(defined(invoker.api), "Published libraries need an API file")
+  }
+
   main_target_name = target_name
   metadata_target_name = "${target_name}_sdk_metadata"
   manifest_target_name = "${target_name}_sdk_manifest"
@@ -97,8 +104,6 @@ template("sdk_shared_library") {
   } else {
     atom_name = output_name
   }
-
-  no_headers = defined(invoker.no_headers) && invoker.no_headers
 
   # Base path for source files of this library in SDKs.
   file_base = "pkg/$atom_name"

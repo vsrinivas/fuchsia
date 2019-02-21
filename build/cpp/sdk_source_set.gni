@@ -36,6 +36,10 @@ template("sdk_source_set") {
   assert(defined(invoker.category), "Must define an SDK category")
   assert(defined(invoker.sdk_name), "Must define an SDK name")
 
+  if (invoker.category == "partner" || invoker.category == "public") {
+    assert(defined(invoker.api), "Published libraries need an API file")
+  }
+
   main_target_name = target_name
   sdk_target_name = "${target_name}_sdk"
 
