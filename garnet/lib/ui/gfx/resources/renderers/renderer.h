@@ -139,7 +139,7 @@ class Renderer : public Resource {
   CameraPtr camera_;
   escher::MaterialPtr default_material_;
   ::fuchsia::ui::gfx::ShadowTechnique shadow_technique_ =
-      ::fuchsia::ui::gfx::ShadowTechnique::SCREEN_SPACE;
+      ::fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED;
   bool disable_clipping_ = false;
   bool enable_debugging_ = false;
 
