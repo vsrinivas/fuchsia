@@ -22,8 +22,6 @@ executable("bin") {
 }
 
 package("postfile") {
-  deprecated_system_image = true
-
   deps = [
     ":bin",
   ]
@@ -31,6 +29,7 @@ package("postfile") {
   binaries = [
     {
       name = "postfile"
+      shell = true
     },
   ]
 }
