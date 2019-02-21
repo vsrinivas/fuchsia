@@ -84,12 +84,6 @@ async fn open<'a>(
     pkgfs: &'a DirectoryProxy, meta_far_blob_id: BlobId, selectors: Vec<String>,
     dir_request: ServerEnd<DirectoryMarker>,
 ) -> Result<(), Status> {
-    fx_log_info!(
-        "opening {:?} with the selectors {:?}",
-        meta_far_blob_id,
-        selectors
-    );
-
     // FIXME: need to implement selectors.
     if !selectors.is_empty() {
         fx_log_warn!("resolve does not support selectors yet");

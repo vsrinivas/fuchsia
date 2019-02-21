@@ -37,12 +37,11 @@ pub async fn run_resolver_service(
         } = event;
 
         if should_reconnect {
-            info!("Reconnecting to amber.");
+            info!("Reconnecting to amber");
             amber = connect_to_service::<AmberMarker>().context("error connecting to amber")?;
             should_reconnect = false;
         }
 
-        info!("Resolving {}.", package_uri);
 
         let status = await!(resolve(&amber, &cache, package_uri, selectors, update_policy, dir));
 
@@ -70,7 +69,6 @@ async fn resolve<'a>(
     _update_policy: UpdatePolicy,
     dir_request: ServerEnd<DirectoryMarker>,
 ) -> Result<(), Status> {
-    fx_log_info!("resolving {:?} with the selectors {:?}", pkg_uri, selectors);
 
     let uri = FuchsiaPkgUri::parse(&pkg_uri).map_err(|err| {
         fx_log_err!("failed to parse package uri {:?}: {}", pkg_uri, err);
@@ -107,7 +105,7 @@ async fn resolve<'a>(
         Status::INTERNAL
     })?;
 
-    fx_log_info!("success: {} has a merkle of {}", name, merkle);
+    fx_log_info!("resolved {:?} with the selectors {:?} to {}", pkg_uri, selectors, merkle);
 
     await!(cache.open(&mut merkle.into(), &mut selectors.iter().map(|s| s.as_str()), dir_request))
         .map_err(|err| {

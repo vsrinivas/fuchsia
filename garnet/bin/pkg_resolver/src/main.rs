@@ -38,7 +38,7 @@ fn main() -> Result<(), Error> {
             )
         }))
         .start()
-        .context("Error starting package resolver server")?;
+        .context("error starting package resolver server")?;
 
     executor
         .run(server, SERVER_THREADS)
