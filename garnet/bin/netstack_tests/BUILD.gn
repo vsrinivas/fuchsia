@@ -35,7 +35,7 @@ executable("netstack_integration_test") {
   ]
 }
 
-test("netstack_bsdsocket_test") {
+test("netstack_bsdsocket_c_api_test") {
   if (is_linux || is_fuchsia) {
     sources = [
       "bsdsocket_test.cc",
@@ -49,9 +49,10 @@ test("netstack_bsdsocket_test") {
   ]
 }
 
-test("netstack_fdio_test") {
+test("netstack_fuchsia_c_api_test") {
   sources = [
     "fdio_test.cc",
+    "nodename_test.cc",
     "util.cc",
     "util.h",
   ]
@@ -77,19 +78,19 @@ test_package("netstack_integration_tests") {
   ]
 }
 
-test_package("netstack_libc_tests") {
+test_package("netstack_c_api_tests") {
   deps = [
-    ":netstack_bsdsocket_test",
-    ":netstack_fdio_test",
+    ":netstack_bsdsocket_c_api_test",
+    ":netstack_fuchsia_c_api_test",
   ]
 
   tests = [
     {
-      name = "netstack_bsdsocket_test"
+      name = "netstack_bsdsocket_c_api_test"
       environments = [ qemu_env ]
     },
     {
-      name = "netstack_fdio_test"
+      name = "netstack_fuchsia_c_api_test"
       environments = [ qemu_env ]
     },
   ]

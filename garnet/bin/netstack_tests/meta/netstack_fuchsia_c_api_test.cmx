@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "test/netstack_fdio_test"
+        "binary": "test/netstack_fuchsia_c_api_test"
     },
     "sandbox": {
         "services": [

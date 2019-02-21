@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "test/netstack_bsdsocket_test"
+        "binary": "test/netstack_bsdsocket_c_api_test"
     },
     "sandbox": {
         "services": [
