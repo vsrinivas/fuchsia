@@ -8,6 +8,7 @@
         "garnet/packages/experimental/sys",
         "garnet/packages/experimental/wayland_bridge",
         "garnet/packages/experimental/biscotti",
-        "garnet/packages/experimental/kms"
+        "garnet/packages/experimental/kms",
+        "garnet/packages/experimental/tennis"
     ]
 }
