@@ -105,12 +105,12 @@ void MidiKeyboard::HandleEvent() {
 
     // In theory, USB MIDI event sizes are always supposed to be 4 bytes.  1
     // byte for virtual MIDI cable IDs, and then 3 bytes of the MIDI event
-    // padded using 0s to normalize the size.  The Fuchisa USB MIDI driver is
+    // padded using 0s to normalize the size.  The Fuchsia USB MIDI driver is
     // currently stripping the first byte and passing all virtual cable events
     // along as the same, but the subsequent bytes may or may not be there.
     //
     // For now, we fill our RX buffers with zero before reading, and attempt
-    // to be handle the events in that framework.  Specifially, NOTE_ON events
+    // to be handle the events in that framework.  Specifically, NOTE_ON events
     // with a 7-bit velocity value of 0 are supposed to be treated as NOTE_OFF
     // values.
     uint8_t cmd = event[0] & MIDI_COMMAND_MASK;
