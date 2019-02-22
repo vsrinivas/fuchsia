@@ -29,12 +29,12 @@ pub enum QmuxError {
     #[fail(display = "A QMI future was polled after it had already completed.")]
     PollAfterCompletion,
 
-    /// A Service or Client has not been initilialized, but a transaction for it exists
-    #[fail(display = "A Transaction for an non-existant Service/Client pair")]
+    /// A Service or Client has not been initialized, but a transaction for it exists
+    #[fail(display = "A Transaction for an non-existent Service/Client pair")]
     InvalidSvcOrClient,
 
     /// No Client.
-    #[fail(display = "Failed to negotatiate creating a client with the modem")]
+    #[fail(display = "Failed to negotiate creating a client with the modem")]
     NoClient,
 
     /// No Transport.

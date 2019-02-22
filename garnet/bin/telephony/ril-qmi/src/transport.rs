@@ -43,7 +43,7 @@ pub struct QmiResponse {
     pub client_id: ClientId,
     pub svc_id: SvcId,
     pub tx_id: TxId,
-    // `None` if the message response has been recieved
+    // `None` if the message response has been received
     pub transport: Option<Arc<QmiTransport>>,
 }
 
@@ -67,7 +67,7 @@ impl Drop for QmiResponse {
     }
 }
 
-/// An enum reprenting either a resolved message interest or a task on which to alert
+/// An enum representing either a resolved message interest or a task on which to alert
 /// that a response message has arrived.
 #[derive(Debug)]
 enum MessageInterest {
@@ -78,7 +78,7 @@ enum MessageInterest {
     /// A message has been received, and a task will poll to receive it.
     Received(zx::MessageBuf),
     /// A message has not been received, but the person interested in the response
-    /// no longer cares about it, so the message should be discared upon arrival.
+    /// no longer cares about it, so the message should be discarded upon arrival.
     Discard,
 }
 
@@ -121,7 +121,7 @@ pub fn parse_qmux_header<T: Buf>(mut buf: T) -> Result<(QmuxHeader, T), QmuxErro
     let client_id = buf.get_u8();
     let svc_ctrl_flags;
     let transaction_id;
-    // TODO(bwb): Consider passing these paramaters in from the Decodable trait'd object,
+    // TODO(bwb): Consider passing these parameters in from the Decodable trait'd object,
     // more generic than a hardcode for CTL interfaces
     if svc_type == 0x00 {
         svc_ctrl_flags = buf.get_u8();

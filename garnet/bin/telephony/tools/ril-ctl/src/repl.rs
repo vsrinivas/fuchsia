@@ -24,7 +24,7 @@ pub async fn run<'a>(
     ril_modem: &'a RadioInterfaceLayerProxy,
     state: Arc<Mutex<crate::Connections>>,
 ) -> Result<(), Error> {
-    // `cmd_stream` blocks on input in a seperate thread and passes commands and acks back to
+    // `cmd_stream` blocks on input in a separate thread and passes commands and acks back to
     // the main thread via async channels.
     let (mut commands, mut acks) = cmd_stream();
     loop {
@@ -56,7 +56,7 @@ pub async fn run<'a>(
 /// `Sink` is passed to the caller to send acknowledgements that a command has been processed and
 /// that rustyline should handle the next line of input.
 fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<SinkItem = (), SinkError = SendError>) {
-    // Editor thread and command processing thread must be syncronized so that output
+    // Editor thread and command processing thread must be synchronized so that output
     // is printed in the correct order.
     let (mut cmd_sender, cmd_receiver) = channel(512);
     let (ack_sender, mut ack_receiver) = channel(512);

@@ -43,7 +43,7 @@ impl QmiModem {
     }
 
     pub fn connected(&self) -> bool {
-        // TODO add aditional logic for checking transport_channel open
+        // TODO add additional logic for checking transport_channel open
         self.inner.is_some()
     }
 

@@ -40,7 +40,7 @@ macro_rules! gen_commands {
                 }
             }
 
-            /// Help string for a given varient. The format is "command <arg>.. -- help message"
+            /// Help string for a given variant. The format is "command <arg>.. -- help message"
             #[allow(unused)]
             pub fn cmd_help(&self) -> &'static str {
                 match self {
