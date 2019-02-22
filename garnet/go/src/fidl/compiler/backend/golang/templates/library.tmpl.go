@@ -41,6 +41,9 @@ const (
 {{ range $union := .Unions -}}
 {{ template "UnionDefinition" $union }}
 {{ end -}}
+{{ range $xunion := .XUnions -}}
+{{ template "XUnionDefinition" $xunion }}
+{{ end -}}
 {{ range $table := .Tables -}}
 {{ template "TableDefinition" $table }}
 {{ end -}}

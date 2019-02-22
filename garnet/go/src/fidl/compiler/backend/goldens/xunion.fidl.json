@@ -11,23 +11,10 @@
   "union_declarations": [],
   "xunion_declarations": [
     {
-      "name": "test.name/EmptyUnion",
-      "location": {
-        "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
-        "line": 3,
-        "column": 7
-      },
-      "members": [],
-      "size": 24,
-      "max_out_of_line": 0,
-      "alignment": 8,
-      "max_handles": 0
-    },
-    {
       "name": "test.name/OlderSimpleUnion",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
-        "line": 5,
+        "line": 3,
         "column": 7
       },
       "members": [
@@ -40,7 +27,7 @@
           "name": "i",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
-            "line": 6,
+            "line": 4,
             "column": 8
           },
           "size": 8,
@@ -57,7 +44,7 @@
           "name": "f",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
-            "line": 7,
+            "line": 5,
             "column": 10
           },
           "size": 4,
@@ -75,7 +62,7 @@
       "name": "test.name/NewerSimpleUnion",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
-        "line": 10,
+        "line": 8,
         "column": 7
       },
       "members": [
@@ -88,7 +75,7 @@
           "name": "i",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
-            "line": 13,
+            "line": 11,
             "column": 8
           },
           "size": 8,
@@ -105,7 +92,7 @@
           "name": "s",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
-            "line": 15,
+            "line": 13,
             "column": 9
           },
           "size": 16,
@@ -126,7 +113,7 @@
           "name": "v",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.fidl",
-            "line": 16,
+            "line": 14,
             "column": 17
           },
           "size": 16,
@@ -143,11 +130,9 @@
   ],
   "declaration_order": [
     "test.name/OlderSimpleUnion",
-    "test.name/NewerSimpleUnion",
-    "test.name/EmptyUnion"
+    "test.name/NewerSimpleUnion"
   ],
   "declarations": {
-    "test.name/EmptyUnion": "xunion",
     "test.name/OlderSimpleUnion": "xunion",
     "test.name/NewerSimpleUnion": "xunion"
   }

@@ -19,6 +19,7 @@ const (
 	expectEnums expectKind = iota
 	expectBits
 	expectStructs
+	expectXUnion
 	expectInterface
 	expectTable
 )
@@ -37,6 +38,9 @@ func compileExpect(t *testing.T, testName string, kind expectKind, input types.R
 		case expectStructs:
 			actual = wrapped_actual.Structs
 			expect = wrapped_expect.Structs
+		case expectXUnion:
+			actual = wrapped_actual.XUnions
+			expect = wrapped_expect.XUnions
 		case expectInterface:
 			actual = wrapped_actual.Interfaces
 			expect = wrapped_expect.Interfaces
@@ -62,6 +66,10 @@ func compileBitsExpect(t *testing.T, testName string, input []types.Bits, expect
 
 func compileStructsExpect(t *testing.T, testName string, input []types.Struct, expect []Struct) {
 	compileExpect(t, testName, expectStructs, types.Root{Structs: input}, Root{Structs: expect})
+}
+
+func compileXUnionExpect(t *testing.T, testName string, input types.XUnion, expect XUnion) {
+	compileExpect(t, testName, expectXUnion, types.Root{XUnions: []types.XUnion{input}}, Root{XUnions: []XUnion{expect}})
 }
 
 func compileTableExpect(t *testing.T, testName string, input types.Table, expect Table) {
@@ -735,6 +743,41 @@ func TestCompileInterface(t *testing.T) {
 		},
 	})
 }
+
+func TestCompileXUnion(t *testing.T) {
+	seven := 7
+	compileXUnionExpect(
+		t,
+		"Basic",
+		types.XUnion{
+			Name:      types.EncodedCompoundIdentifier("MyExtensibleUnion"),
+			Size:      123,
+			Alignment: 456,
+			Members: []types.XUnionMember{
+				{
+					Ordinal: 2,
+					Name:    "second",
+					Type:    VectorType(PrimitiveType(types.Uint32), &seven),
+				},
+			},
+		},
+		XUnion{
+			Name:      "MyExtensibleUnion",
+			TagName:   "MyExtensibleUnionTag",
+			Size:      123,
+			Alignment: 456,
+			Members: []XUnionMember{
+				{
+					Type:        "[]uint32",
+					Ordinal:     2,
+					PrivateName: "second",
+					Name:        "Second",
+					Tags:        "`" + `fidl:"7,2" fidl2:"2,7"` + "`",
+				},
+			},
+		})
+}
+
 func TestCompileTable(t *testing.T) {
 	five, seven := 5, 7
 	compileTableExpect(

@@ -21,12 +21,6 @@ use fidl::{
 
 
 fidl_xunion! {
-	name: EmptyUnion,
-	members: [
-	],
-}
-
-fidl_xunion! {
 	name: OlderSimpleUnion,
 	members: [
 		I {

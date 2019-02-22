@@ -292,6 +292,24 @@ type UnionMember struct {
 	Tags string
 }
 
+type XUnion struct {
+	types.Attributes
+	Name      string
+	TagName   string
+	Members   []XUnionMember
+	Size      int
+	Alignment int
+}
+
+type XUnionMember struct {
+	types.Attributes
+	Ordinal     int
+	Name        string
+	PrivateName string
+	Type        Type
+	Tags        string
+}
+
 // Table represents a FIDL table as a golang struct.
 type Table struct {
 	types.Attributes
@@ -451,6 +469,9 @@ type Root struct {
 
 	// Unions represents the list of FIDL unions represented as Go structs.
 	Unions []Union
+
+	// XUnions represents the list of FIDL xunions represented as Go structs.
+	XUnions []XUnion
 
 	// Table represents the list of FIDL tables represented as Go structs.
 	Tables []Table
@@ -731,6 +752,8 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag, t2 tagNew) {
 			fallthrough
 		case types.UnionDeclType:
 			fallthrough
+		case types.XUnionDeclType:
+			fallthrough
 		case types.TableDeclType:
 			if val.Nullable {
 				r = Type("*" + e)
@@ -848,6 +871,31 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		r.Members = append(r.Members, c.compileUnionMember(r.Name, v))
 	}
 	return r
+}
+
+func (c *compiler) compileXUnion(val types.XUnion) XUnion {
+	var members []XUnionMember
+	for _, member := range val.Members {
+		ty, tag, tag2 := c.compileType(member.Type)
+		tag.Ordinal = member.Ordinal
+		tag2.reverseOfBounds = append(tag2.reverseOfBounds, member.Ordinal)
+		members = append(members, XUnionMember{
+			Attributes:  member.Attributes,
+			Ordinal:     member.Ordinal,
+			Type:        ty,
+			Name:        c.compileIdentifier(member.Name, true, ""),
+			PrivateName: c.compileIdentifier(member.Name, false, ""),
+			Tags:        tagsfmt(tag, tag2),
+		})
+	}
+	return XUnion{
+		Attributes: val.Attributes,
+		Name:       c.compileCompoundIdentifier(val.Name, ""),
+		TagName:    c.compileCompoundIdentifier(val.Name, TagSuffix),
+		Size:       val.Size,
+		Alignment:  val.Alignment,
+		Members:    members,
+	}
 }
 
 func (c *compiler) compileTable(val types.Table) Table {
@@ -1021,6 +1069,9 @@ func Compile(fidlData types.Root) Root {
 	}
 	for _, v := range fidlData.Unions {
 		r.Unions = append(r.Unions, c.compileUnion(v))
+	}
+	for _, v := range fidlData.XUnions {
+		r.XUnions = append(r.XUnions, c.compileXUnion(v))
 	}
 	for _, v := range fidlData.Tables {
 		r.Tables = append(r.Tables, c.compileTable(v))

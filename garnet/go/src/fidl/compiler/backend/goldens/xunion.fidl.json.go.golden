@@ -6,3 +6,82 @@ package name
 
 
 
+type OlderSimpleUnionTag uint32
+const (
+	OlderSimpleUnionI = 1026732503 // 0x3d32b1d7
+	OlderSimpleUnionF = 1362546558 // 0x5136cf7e
+)
+
+
+type OlderSimpleUnion struct {
+	OlderSimpleUnionTag `fidl2:"x,24,8"`
+	I int64 `fidl:"1026732503" fidl2:"1026732503"`
+	F float32 `fidl:"1362546558" fidl2:"1362546558"`
+}
+
+// Implements Payload.
+func (_ *OlderSimpleUnion) InlineAlignment() int {
+	return 8
+}
+
+// Implements Payload.
+func (_ *OlderSimpleUnion) InlineSize() int {
+	return 24
+}
+
+func (_m *OlderSimpleUnion) Which() OlderSimpleUnionTag {
+	return _m.OlderSimpleUnionTag
+}
+
+func (_m *OlderSimpleUnion) SetI(i int64) {
+	_m.OlderSimpleUnionTag = OlderSimpleUnionI
+	_m.I = i
+}
+
+func (_m *OlderSimpleUnion) SetF(f float32) {
+	_m.OlderSimpleUnionTag = OlderSimpleUnionF
+	_m.F = f
+}
+type NewerSimpleUnionTag uint32
+const (
+	NewerSimpleUnionI = 693944286 // 0x295cbfde
+	NewerSimpleUnionS = 473666119 // 0x1c3b9247
+	NewerSimpleUnionV = 1815655055 // 0x6c38b28f
+)
+
+
+type NewerSimpleUnion struct {
+	NewerSimpleUnionTag `fidl2:"x,24,8"`
+	I int64 `fidl:"693944286" fidl2:"693944286"`
+	S string `fidl:",473666119" fidl2:"473666119,"`
+	V []string `fidl:",,1815655055" fidl2:"1815655055,,"`
+}
+
+// Implements Payload.
+func (_ *NewerSimpleUnion) InlineAlignment() int {
+	return 8
+}
+
+// Implements Payload.
+func (_ *NewerSimpleUnion) InlineSize() int {
+	return 24
+}
+
+func (_m *NewerSimpleUnion) Which() NewerSimpleUnionTag {
+	return _m.NewerSimpleUnionTag
+}
+
+func (_m *NewerSimpleUnion) SetI(i int64) {
+	_m.NewerSimpleUnionTag = NewerSimpleUnionI
+	_m.I = i
+}
+
+func (_m *NewerSimpleUnion) SetS(s string) {
+	_m.NewerSimpleUnionTag = NewerSimpleUnionS
+	_m.S = s
+}
+
+func (_m *NewerSimpleUnion) SetV(v []string) {
+	_m.NewerSimpleUnionTag = NewerSimpleUnionV
+	_m.V = v
+}
