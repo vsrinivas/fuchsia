@@ -20,7 +20,10 @@ class MockRemoteAPI : public RemoteAPI {
   MockRemoteAPI();
   ~MockRemoteAPI();
 
-  // Resume.
+  // Resume. By default Resume() counts the number of calls, but many tests
+  // also want to opt-in to an implicit MessageLoop exit when this happens so
+  // they can continue testing from after the IPC message is sent.
+  void set_resume_quits_loop(bool quit) { resume_quits_loop_ = true; }
   int GetAndResetResumeCount();  // Zeroes out internal value.
 
   // Thread status.
@@ -75,6 +78,7 @@ class MockRemoteAPI : public RemoteAPI {
  private:
   debug_ipc::ThreadStatusReply thread_status_reply_;
 
+  bool resume_quits_loop_ = false;
   int resume_count_ = 0;
   int breakpoint_add_count_ = 0;
   int breakpoint_remove_count_ = 0;

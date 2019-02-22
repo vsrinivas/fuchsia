@@ -64,6 +64,7 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, Finish) {
 
   EXPECT_EQ(0, mock_remote_api()->breakpoint_add_count());
   Err out_err;
+  mock_remote_api()->set_resume_quits_loop(true);
   thread()->ContinueWith(std::make_unique<FinishPhysicalFrameThreadController>(
                              thread()->GetStack(), 0),
                          [&out_err](const Err& err) {
@@ -121,6 +122,7 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, BottomStackFrame) {
 
   EXPECT_EQ(0, mock_remote_api()->breakpoint_add_count());
   Err out_err;
+  mock_remote_api()->set_resume_quits_loop(true);
   thread()->ContinueWith(std::make_unique<FinishPhysicalFrameThreadController>(
                              thread()->GetStack(), 0),
                          [&out_err](const Err& err) {

@@ -101,6 +101,7 @@ TEST_F(ThreadImplTest, Frames) {
   EXPECT_EQ(kStack2, stack[1]->GetStackPointer());
 
   // Resuming the thread should be asynchronous so nothing should change.
+  mock_remote_api().set_resume_quits_loop(true);
   thread->Continue();
   EXPECT_EQ(2u, thread->GetStack().size());
   EXPECT_TRUE(thread->GetStack().has_all_frames());

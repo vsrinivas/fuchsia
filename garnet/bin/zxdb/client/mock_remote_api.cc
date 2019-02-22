@@ -49,13 +49,14 @@ void MockRemoteAPI::ThreadStatus(
 void MockRemoteAPI::Resume(
     const debug_ipc::ResumeRequest& request,
     std::function<void(const Err&, debug_ipc::ResumeReply)> cb) {
-  // Always returns success and then quits the message loop (if other tests
-  // need this, the callback should do the quit instead of this function).
+  // Always returns success.
   resume_count_++;
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
-    cb(Err(), debug_ipc::ResumeReply());
-    debug_ipc::MessageLoop::Current()->QuitNow();
-  });
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [cb, resume_quits_loop = resume_quits_loop_]() {
+        cb(Err(), debug_ipc::ResumeReply());
+        if (resume_quits_loop)
+          debug_ipc::MessageLoop::Current()->QuitNow();
+      });
 }
 
 void MockRemoteAPI::WriteRegisters(
