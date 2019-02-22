@@ -20,6 +20,10 @@ declare_args() {
 #     Name of the SDK.
 #     Defaults to the target's name.
 #
+#   id (optional)
+#     An opaque identifier for the SDK.
+#     Defaults to "notavalidid".
+#
 #   api (required)
 #     Path to the file representing the canonical contents of this SDK.
 #     This file is used to ensure modifications to the SDK contents are
@@ -75,6 +79,11 @@ template("sdk") {
   sdk_name = target_name
   if (defined(invoker.name)) {
     sdk_name = invoker.name
+  }
+
+  sdk_id = "notavalidid"
+  if (defined(invoker.id) && invoker.id != "") {
+    sdk_id = invoker.id
   }
 
   # Generates the manifest.
@@ -194,6 +203,8 @@ template("sdk") {
       target_triple,
       "--host-arch",
       host_triple,
+      "--id",
+      sdk_id,
     ]
 
     public_deps = [

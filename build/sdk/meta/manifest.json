@@ -24,6 +24,10 @@
         "target"
       ]
     },
+    "id": {
+      "description": "An opaque identifier for this SDK",
+      "type": "string"
+    },
     "parts": {
       "description": "The metadata files for elements in the SDK",
       "type": "array",
@@ -34,6 +38,7 @@
   },
   "required": [
     "arch",
+    "id",
     "parts"
   ],
   "additionalProperties": false

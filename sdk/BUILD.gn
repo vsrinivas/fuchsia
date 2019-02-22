@@ -6,11 +6,7 @@ import("//build/banjo/toolchain.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/sdk/sdk.gni")
 import("//build/sdk/sdk_documentation.gni")
-
-declare_args() {
-  # Identifier for the Garnet SDK.
-  sdk_id = ""
-}
+import("config.gni")
 
 sdk_documentation("open_source") {
   name = "open_source"
@@ -116,6 +112,8 @@ if (has_sdk_id) {
 }
 
 sdk("garnet") {
+  id = sdk_id
+
   category = "partner"
 
   api = "garnet.api"

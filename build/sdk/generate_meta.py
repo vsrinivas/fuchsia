@@ -24,6 +24,9 @@ def main():
     parser.add_argument('--host-arch',
                         help='Architecture of host tools',
                         required=True)
+    parser.add_argument('--id',
+                        help='Opaque identifier for the SDK',
+                        required=True)
     args = parser.parse_args()
 
     with open(args.manifest, 'r') as manifest_file:
@@ -37,6 +40,7 @@ def main():
                 args.target_arch,
             ],
         },
+        'id': args.id,
         'parts': sorted(filter(lambda m: m, [a.metadata for a in atoms])),
     }
 
