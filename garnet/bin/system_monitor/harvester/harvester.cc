@@ -99,6 +99,28 @@ grpc::Status Harvester::SendSample(const std::string& stream_name,
   return status;
 }
 
+grpc::Status Harvester::SendSampleList(const SampleList list) {
+  // TODO(dschuyler): system_clock might be at usec resolution. Consider using
+  // high_resolution_clock.
+  auto now = std::chrono::system_clock::now();
+  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                             now.time_since_epoch())
+                             .count();
+  SampleListById by_id(list.size());
+  auto name_iter = list.begin();
+  auto id_iter = by_id.begin();
+  for (; name_iter != list.end(); ++name_iter, ++id_iter) {
+    dockyard::SampleStreamId stream_id;
+    grpc::Status status = GetStreamIdForName(&stream_id, name_iter->first);
+    if (!status.ok()) {
+      return status;
+    }
+    id_iter->first = stream_id;
+    id_iter->second = name_iter->second;
+  }
+  return SendSampleListById(nanoseconds, by_id);
+}
+
 grpc::Status Harvester::SendSampleById(uint64_t time,
                                        dockyard::SampleStreamId stream_id,
                                        uint64_t value) {
@@ -110,10 +132,31 @@ grpc::Status Harvester::SendSampleById(uint64_t time,
 
   grpc::ClientContext context;
   std::shared_ptr<grpc::ClientReaderWriter<dockyard_proto::RawSample,
-                                           dockyard_proto::EmptyMessage> >
+                                           dockyard_proto::EmptyMessage>>
       stream(stub_->SendSample(&context));
 
   stream->Write(sample);
+  stream->WritesDone();
+  return stream->Finish();
+}
+
+grpc::Status Harvester::SendSampleListById(uint64_t time,
+                                           const SampleListById list) {
+  // Data we are sending to the server.
+  dockyard_proto::RawSamples samples;
+  samples.set_time(time);
+  for (auto iter = list.begin(); iter != list.end(); ++iter) {
+    auto sample = samples.add_sample();
+    sample->set_key(iter->first);
+    sample->set_value(iter->second);
+  }
+
+  grpc::ClientContext context;
+  std::shared_ptr<grpc::ClientReaderWriter<dockyard_proto::RawSamples,
+                                           dockyard_proto::EmptyMessage>>
+      stream(stub_->SendSamples(&context));
+
+  stream->Write(samples);
   stream->WritesDone();
   return stream->Finish();
 }
@@ -169,6 +212,39 @@ void GatherCpuSamples(zx_handle_t root_resource, Harvester* harvester) {
   }
 }
 
+void GatherMemorySamples(zx_handle_t root_resource, Harvester* harvester) {
+  zx_info_kmem_stats_t stats;
+  zx_status_t err = zx_object_get_info(root_resource, ZX_INFO_KMEM_STATS,
+                                       &stats, sizeof(stats), NULL, NULL);
+  if (err != ZX_OK) {
+    FXL_LOG(ERROR) << "ZX_INFO_KMEM_STATS error " << zx_status_get_string(err);
+    return;
+  }
+
+  FXL_LOG(INFO) << "free memory total " << stats.free_bytes << ", heap "
+                << stats.free_heap_bytes << ", vmo " << stats.vmo_bytes
+                << ", mmu " << stats.mmu_overhead_bytes << ", ipc "
+                << stats.ipc_bytes;
+
+  const std::string FREE_BYTES = "memory:free_bytes";
+  const std::string FREE_HEAP_BYTES = "memory:free_heap_bytes";
+  const std::string VMO_BYTES = "memory:vmo_bytes";
+  const std::string MMU_OVERHEAD_BYTES = "memory:mmu_overhead_by";
+  const std::string IPC_BYTES = "memory:ipc_bytes";
+
+  SampleList list;
+  list.push_back(std::make_pair(FREE_BYTES, stats.free_bytes));
+  list.push_back(std::make_pair(MMU_OVERHEAD_BYTES, stats.mmu_overhead_bytes));
+  list.push_back(std::make_pair(FREE_HEAP_BYTES, stats.free_heap_bytes));
+  list.push_back(std::make_pair(VMO_BYTES, stats.vmo_bytes));
+  list.push_back(std::make_pair(IPC_BYTES, stats.ipc_bytes));
+  grpc::Status status = harvester->SendSampleList(list);
+  if (!status.ok()) {
+    FXL_LOG(ERROR) << "SendSampleList failed " << status.error_code() << ": "
+                   << status.error_message();
+  }
+}
+
 void GatherThreadSamples(zx_handle_t root_resource, Harvester* harvester) {
   // TODO(dschuyler): Actually gather the thread samples.
 }
@@ -179,10 +255,10 @@ int main(int argc, char** argv) {
   // A broad 'something went wrong' error.
   constexpr int EXIT_CODE_GENERAL_ERROR = 1;
 
-  FXL_LOG(INFO) << "System Monitor Harvester - wip 7";
+  FXL_LOG(INFO) << "System Monitor Harvester - wip 8";
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
-    exit(1);  // 1 == General error.
+    exit(EXIT_CODE_GENERAL_ERROR);
   }
   const auto& positional_args = command_line.positional_args();
   if (positional_args.size() < 1) {
@@ -208,6 +284,7 @@ int main(int argc, char** argv) {
 
   while (true) {
     GatherCpuSamples(root_resource, &harvester);
+    GatherMemorySamples(root_resource, &harvester);
     GatherThreadSamples(root_resource, &harvester);
     // TODO(dschuyler): Make delay configurable (100 msec is arbitrary).
     std::this_thread::sleep_for(std::chrono::milliseconds(100));

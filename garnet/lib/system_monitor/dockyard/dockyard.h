@@ -47,6 +47,8 @@ constexpr uint32_t DOCKYARD_VERSION = 1;
 
 // A Sample.
 struct Sample {
+  Sample(SampleTimeNs t, SampleValue v) : time(t), value(v) {}
+
   SampleTimeNs time;
   // Sample values range from [0 to SAMPLE_MAX_VALUE].
   SampleValue value;
@@ -167,6 +169,10 @@ class Dockyard {
  public:
   Dockyard();
   ~Dockyard();
+
+  // Insert sample information for a given stream_id. Not intended for use by
+  // the GUI.
+  void AddSample(SampleStreamId stream_id, Sample sample);
 
   // Insert sample information for a given stream_id. Not intended for use by
   // the GUI.

@@ -21,6 +21,9 @@ service Dockyard {
 
   // Sends a single sample.
   rpc SendSample (stream RawSample) returns (stream EmptyMessage) {}
+
+  // Sends a list of samples.
+  rpc SendSamples (stream RawSamples) returns (stream EmptyMessage) {}
 }
 
 // Introduction from the Harvester to the Dockyard.
@@ -71,5 +74,5 @@ message RawSample {
 // samples with `RawSample`.
 message RawSamples {
   uint64 time = 1;
-  repeated Sample samples = 2;
+  repeated Sample sample = 2;
 }

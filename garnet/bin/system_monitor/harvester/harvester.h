@@ -11,6 +11,9 @@
 
 namespace harvester {
 
+typedef std::vector<std::pair<const std::string, uint64_t>> SampleList;
+typedef std::vector<std::pair<uint64_t, uint64_t>> SampleListById;
+
 class Harvester {
  public:
   Harvester(std::shared_ptr<grpc::Channel> channel)
@@ -22,6 +25,9 @@ class Harvester {
   // Send a single sample to the Dockyard.
   grpc::Status SendSample(const std::string& stream_name, uint64_t value);
 
+  // Send a list of samples with the same timestamp to the Dockyard.
+  grpc::Status SendSampleList(const SampleList list);
+
  private:
   // A local stub for the remote Dockyard instance.
   std::unique_ptr<dockyard_proto::Dockyard::Stub> stub_;
@@ -32,6 +38,10 @@ class Harvester {
   // See also: SendSample().
   grpc::Status SendSampleById(uint64_t time, dockyard::SampleStreamId stream_id,
                               uint64_t value);
+
+  // Actually send a list of samples with the same timestamp to the Dockyard.
+  // See also: SendSampleList().
+  grpc::Status SendSampleListById(uint64_t time, const SampleListById list);
 
   // Get the ID from the local cache or from the remote Dockyard if it's not in
   // the cache.

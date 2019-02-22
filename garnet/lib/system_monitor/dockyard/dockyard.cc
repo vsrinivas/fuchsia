@@ -63,6 +63,30 @@ class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
     while (stream->Read(&sample)) {
       FXL_LOG(INFO) << "Received sample at " << sample.time() << ", key "
                     << sample.sample().key() << ": " << sample.sample().value();
+
+      dockyard_->AddSample(sample.sample().key(),
+                           Sample(sample.time(), sample.sample().value()));
+    }
+    return grpc::Status::OK;
+  }
+
+  // Handler for the Harvester calling `SendSamples()`.
+  grpc::Status SendSamples(
+      grpc::ServerContext* context,
+      grpc::ServerReaderWriter<dockyard_proto::EmptyMessage,
+                               dockyard_proto::RawSamples>* stream) override {
+    dockyard_proto::RawSamples samples;
+    while (stream->Read(&samples)) {
+      FXL_LOG(INFO) << "Received samples at " << samples.time() << ", size "
+                    << samples.sample_size();
+      int limit = samples.sample_size();
+      for (int i = 0; i < limit; ++i) {
+        auto sample = samples.sample(i);
+        FXL_LOG(INFO) << "  " << i << ", key " << sample.key() << ": "
+                      << sample.value();
+        dockyard_->AddSample(sample.key(),
+                             Sample(samples.time(), sample.value()));
+      }
     }
     return grpc::Status::OK;
   }
@@ -136,6 +160,39 @@ Dockyard::~Dockyard() {
   for (SampleStreamMap::iterator i = sample_streams_.begin();
        i != sample_streams_.end(); ++i) {
     delete i->second;
+  }
+}
+
+void Dockyard::AddSample(SampleStreamId stream_id, Sample sample) {
+  std::lock_guard<std::mutex> guard(mutex_);
+  // Find or create a sample_stream for this stream_id.
+  SampleStream* sample_stream;
+  auto search = sample_streams_.find(stream_id);
+  if (search == sample_streams_.end()) {
+    sample_stream = new SampleStream();
+    sample_streams_.emplace(stream_id, sample_stream);
+  } else {
+    sample_stream = search->second;
+  }
+  sample_stream->emplace(sample.time, sample.value);
+
+  // Track the overall lowest and highest values encountered.
+  sample_stream_low_high_.try_emplace(stream_id,
+                                      std::make_pair(SAMPLE_MAX_VALUE, 0ULL));
+  auto low_high = sample_stream_low_high_.find(stream_id);
+  SampleValue lowest = low_high->second.first;
+  SampleValue highest = low_high->second.second;
+  bool change = false;
+  if (lowest > sample.value) {
+    lowest = sample.value;
+    change = true;
+  }
+  if (highest < sample.value) {
+    highest = sample.value;
+    change = true;
+  }
+  if (change) {
+    sample_stream_low_high_[stream_id] = std::make_pair(lowest, highest);
   }
 }
 

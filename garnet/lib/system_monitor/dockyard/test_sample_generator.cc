@@ -36,7 +36,6 @@ void GenerateRandomSamples(const RandomSampleGenerator& gen,
                            Dockyard* dockyard) {
   srand(gen.seed);
   constexpr double PI_DIV_16 = 3.141592653 / 16.0;
-  std::vector<Sample> samples;
   SampleTimeNs time_range = gen.finish - gen.start;
   SampleTimeNs time_stride =
       CalcStride(gen.start, gen.finish, gen.sample_count);
@@ -74,10 +73,7 @@ void GenerateRandomSamples(const RandomSampleGenerator& gen,
             gen.value_min + value_range * (1 + sin(PI_DIV_16 * sample_n)) / 2;
         break;
     }
-    Sample sample;
-    sample.time = time;
-    sample.value = value;
-    samples.push_back(sample);
+    dockyard->AddSample(gen.stream_id, Sample(time, value));
     // Make sure time advances by at least one nanosecond.
     ++time;
     switch (gen.time_style) {
@@ -99,7 +95,6 @@ void GenerateRandomSamples(const RandomSampleGenerator& gen,
         break;
     }
   }
-  dockyard->AddSamples(gen.stream_id, samples);
 }
 
 }  // namespace dockyard
