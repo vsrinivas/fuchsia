@@ -50,7 +50,6 @@ VmObjectDispatcher::~VmObjectDispatcher() {
     // Intentionally leave vmo_->user_id() set to our koid even though we're
     // dying and the koid will no longer map to a Dispatcher. koids are never
     // recycled, and it could be a useful breadcrumb.
-    vmo_->SetChildObserver(nullptr);
 }
 
 
@@ -70,6 +69,12 @@ void VmObjectDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
 zx_status_t VmObjectDispatcher::set_name(const char* name, size_t len) {
     canary_.Assert();
     return vmo_->set_name(name, len);
+}
+
+void VmObjectDispatcher::on_zero_handles() {
+    // Clear when handle count reaches zero rather in the destructor because we're retaining a
+    // VmObject that might call back into |this| via VmObjectChildObserver when it's destroyed.
+    vmo_->SetChildObserver(nullptr);
 }
 
 zx_status_t VmObjectDispatcher::Read(user_out_ptr<void> user_data,

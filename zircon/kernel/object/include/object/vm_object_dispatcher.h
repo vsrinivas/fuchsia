@@ -41,6 +41,9 @@ public:
     zx_status_t set_name(const char* name, size_t len) final;
     CookieJar* get_cookie_jar() final { return &cookie_jar_; }
 
+    // Dispatcher implementation.
+    void on_zero_handles() final;
+
     // VmObjectDispatcher own methods.
     zx_status_t Read(user_out_ptr<void> user_data, size_t length,
                      uint64_t offset);

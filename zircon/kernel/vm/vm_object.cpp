@@ -48,17 +48,7 @@ VmObject::~VmObject() {
     // remove ourself from our parent (if present)
     if (parent_) {
         LTRACEF("removing ourself from our parent %p\n", parent_.get());
-
-        // conditionally grab our shared lock with the parent, but only if it's
-        // not held. There are some destruction paths that may try to tear
-        // down the object with the parent locks held.
-        const bool need_lock = !lock_.lock().IsHeld();
-        if (need_lock) {
-            Guard<fbl::Mutex> guard{&lock_};
-            parent_->RemoveChildLocked(this);
-        } else {
-            parent_->RemoveChildLocked(this);
-        }
+        parent_->RemoveChild(this);
     }
 
     DEBUG_ASSERT(mapping_list_.is_empty());
@@ -195,31 +185,51 @@ uint32_t VmObject::share_count() const {
 }
 
 void VmObject::SetChildObserver(VmObjectChildObserver* child_observer) {
-    Guard<fbl::Mutex> guard{&lock_};
+    Guard<fbl::Mutex> guard{&child_observer_lock_};
     child_observer_ = child_observer;
 }
 
-void VmObject::AddChildLocked(VmObject* o) {
+uint32_t VmObject::AddChildLocked(VmObject* o) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.lock().IsHeld());
     children_list_.push_front(o);
     children_list_len_++;
+    return children_list_len_;
+}
+
+void VmObject::NotifyOneChild() {
+    canary_.Assert();
+
+    // Make sure we're not holding the shared lock while notifying the observer in case it calls
+    // back into this object.
+    DEBUG_ASSERT(!lock_.lock().IsHeld());
+
+    Guard<fbl::Mutex> observer_guard{&child_observer_lock_};
 
     // Signal the dispatcher that there are child VMOS
-    if ((child_observer_ != nullptr) && (children_list_len_ == 1)) {
+    if (child_observer_ != nullptr) {
         child_observer_->OnOneChild();
     }
 }
 
-void VmObject::RemoveChildLocked(VmObject* o) {
+void VmObject::RemoveChild(VmObject* o) {
     canary_.Assert();
-    DEBUG_ASSERT(lock_.lock().IsHeld());
+    Guard<fbl::Mutex> shared_guard{&lock_};
     children_list_.erase(*o);
     DEBUG_ASSERT(children_list_len_ > 0);
     children_list_len_--;
+    if (children_list_len_ != 0) {
+        return;
+    }
+
+    Guard<fbl::Mutex> observer_guard{&child_observer_lock_};
+
+    // Drop shared lock before calling out to the observer to reduce the risk of self-deadlock in
+    // case it calls back into this object.
+    shared_guard.Release();
 
     // Signal the dispatcher that there are no more child VMOS
-    if ((child_observer_ != nullptr) && (children_list_len_ == 0)) {
+    if (child_observer_ != nullptr) {
         child_observer_->OnZeroChild();
     }
 }

@@ -227,8 +227,13 @@ public:
     // is mapped into.
     uint32_t share_count() const;
 
-    void AddChildLocked(VmObject* r) TA_REQ(lock_);
-    void RemoveChildLocked(VmObject* r) TA_REQ(lock_);
+    // Returns the number of children post-add.
+    uint32_t AddChildLocked(VmObject* r) TA_REQ(lock_);
+
+    // Notifies the chlid observer that there is one child.
+    void NotifyOneChild() TA_EXCL(lock_);
+
+    void RemoveChild(VmObject* r);
     uint32_t num_children() const;
 
     // Calls the provided |func(const VmObject&)| on every VMO in the system,
@@ -302,8 +307,10 @@ protected:
     fbl::Name<ZX_MAX_NAME_LEN> name_;
 
 private:
+    mutable DECLARE_MUTEX(VmObject) child_observer_lock_;
+
     // This member, if not null, is used to signal the user facing Dispatcher.
-    VmObjectChildObserver* child_observer_ TA_GUARDED(lock_) = nullptr;
+    VmObjectChildObserver* child_observer_ TA_GUARDED(child_observer_lock_) = nullptr;
 
     // Per-node state for the global VMO list.
     using NodeState = fbl::DoublyLinkedListNodeState<VmObject*>;

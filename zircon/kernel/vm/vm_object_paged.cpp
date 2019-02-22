@@ -291,7 +291,9 @@ zx_status_t VmObjectPaged::CloneCOW(bool resizable, uint64_t offset, uint64_t si
 
     auto options = resizable ? kResizable : 0u;
 
-    // allocate the clone up front outside of our lock
+    // allocate the clone up front outside of our lock to ensure that if we
+    // return early, destroying the new vmo, it'll happen after the lock has
+    // been released because we share the lock and the vmo's dtor may acquire it
     fbl::AllocChecker ac;
     auto vmo = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(
         options, pmm_alloc_flags_, size, fbl::WrapRefPtr(this), nullptr));
@@ -299,25 +301,32 @@ zx_status_t VmObjectPaged::CloneCOW(bool resizable, uint64_t offset, uint64_t si
         return ZX_ERR_NO_MEMORY;
     }
 
-    Guard<fbl::Mutex> guard{&lock_};
+    uint32_t num_children;
+    {
+        Guard<fbl::Mutex> guard{&lock_};
 
-    // add the new VMO as a child before we do anything, since its
-    // dtor expects to find it in its parent's child list
-    AddChildLocked(vmo.get());
+        // add the new VMO as a child before we do anything, since its
+        // dtor expects to find it in its parent's child list
+        num_children = AddChildLocked(vmo.get());
 
-    // check that we're not uncached in some way
-    if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
-        return ZX_ERR_BAD_STATE;
+        // check that we're not uncached in some way
+        if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
+            return ZX_ERR_BAD_STATE;
+        }
+
+        // set the offset with the parent
+        status = vmo->SetParentOffsetLocked(offset);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        if (copy_name) {
+            vmo->name_ = name_;
+        }
     }
 
-    // set the offset with the parent
-    status = vmo->SetParentOffsetLocked(offset);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    if (copy_name) {
-        vmo->name_ = name_;
+    if (num_children == 1) {
+        NotifyOneChild();
     }
 
     *clone_vmo = ktl::move(vmo);
