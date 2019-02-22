@@ -186,7 +186,16 @@ def main():
         # contain our target, discard it and keep the current entry.
         if (crate_id in crate_id_to_info) and (args.target not in lib_path):
             continue
+
         crate_name = data["target"]["name"]
+
+        # Build scripts built for our dependencies unfortunately have the same
+        # package ID as the crates themselves. In order to distinguish them,
+        # we look for the crate name that cargo uses for these artifacts,
+        # "build-script-build".
+        if crate_name == "build-script-build":
+            continue
+
         if crate_name != "fuchsia-third-party":
             # go from e.g. target/debug/deps/libfoo.rlib to target/debug/deps
             deps_folders.add(os.path.dirname(lib_path))
