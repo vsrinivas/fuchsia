@@ -891,6 +891,28 @@ pub trait BufferView<B: ByteSlice>: Sized + AsRef<[u8]> {
         Some(LayoutVerified::new_unaligned(bytes).unwrap())
     }
 
+    /// Takes a slice of objects from the front of the buffer's body.
+    ///
+    /// `take_slice_front` consumes `n * size_of::<T>()` bytes from the front of
+    /// the buffer's body, and interprets them as a `[T]` with `n` elements.
+    /// After a successful call to `take_slice_front::<T>()`, the prefix is
+    /// `n * size_of::<T>()` bytes longer and the body is `n * size_of::<T>()`
+    /// bytes shorter. If the body is not at least `n * size_of::<T>()` bytes in
+    /// length, `take_slice_front` returns `None`.
+    ///
+    /// # Panics
+    ///
+    /// `take_slice_front` panics if `T` is a zero-sized type.
+    fn take_slice_front<T>(&mut self, n: usize) -> Option<LayoutVerified<B, [T]>>
+    where
+        T: Unaligned,
+    {
+        let bytes = self.take_front(n * mem::size_of::<T>())?;
+        // `new_slice_unaligned` will return `None` only if `bytes.len()` is
+        // not a multiple of `mem::size_of::<T>()`.
+        Some(LayoutVerified::new_slice_unaligned(bytes).unwrap())
+    }
+
     /// Takes an object from the back of the buffer's body.
     ///
     /// `take_obj_back` consumes `size_of::<T>` bytes from the back of the
@@ -905,6 +927,28 @@ pub trait BufferView<B: ByteSlice>: Sized + AsRef<[u8]> {
         let bytes = self.take_back(mem::size_of::<T>())?;
         // new_unaligned only returns None if there aren't enough bytes
         Some(LayoutVerified::new_unaligned(bytes).unwrap())
+    }
+
+    /// Takes a slice of objects from the back of the buffer's body.
+    ///
+    /// `take_slice_back` consumes `n * size_of::<T>()` bytes from the back of
+    /// the buffer's body, and interprets them as a `[T]` with `n` elements.
+    /// After a successful call to `take_slice_back::<T>()`, the suffix is
+    /// `n * size_of::<T>()` bytes longer and the body is `n * size_of::<T>()`
+    /// bytes shorter. If the body is not at least `n * size_of::<T>()` bytes in
+    /// length, `take_slice_back` returns `None`.
+    ///
+    /// # Panics
+    ///
+    /// `take_slice_back` panics if `T` is a zero-sized type.
+    fn take_slice_back<T>(&mut self, n: usize) -> Option<LayoutVerified<B, [T]>>
+    where
+        T: Unaligned,
+    {
+        let bytes = self.take_back(n * mem::size_of::<T>())?;
+        // `new_slice_unaligned` will return `None` only if `bytes.len()` is
+        // not a multiple of `mem::size_of::<T>()`.
+        Some(LayoutVerified::new_slice_unaligned(bytes).unwrap())
     }
 }
 
