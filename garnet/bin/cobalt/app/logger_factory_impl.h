@@ -12,20 +12,20 @@
 #include "garnet/bin/cobalt/app/logger_impl.h"
 #include "garnet/bin/cobalt/app/timer_manager.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "third_party/cobalt/config/client_config.h"
-#include "third_party/cobalt/config/project_configs.h"
 #include "third_party/cobalt/encoder/observation_store.h"
 #include "third_party/cobalt/encoder/shipping_manager.h"
 #include "third_party/cobalt/logger/encoder.h"
 #include "third_party/cobalt/logger/event_aggregator.h"
 #include "third_party/cobalt/logger/observation_writer.h"
+#include "third_party/cobalt/logger/project_context_factory.h"
 #include "third_party/cobalt/util/encrypted_message_util.h"
 
 namespace cobalt {
 
 class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
  public:
-  LoggerFactoryImpl(encoder::ClientSecret client_secret,
+  LoggerFactoryImpl(const std::string& global_cobalt_registry_bytes,
+                    encoder::ClientSecret client_secret,
                     encoder::ObservationStore* legacy_observation_store,
                     util::EncryptedMessageMaker* legacy_encrypt_to_analyzer,
                     encoder::ShippingManager* legacy_shipping_manager,
@@ -33,11 +33,69 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
                     TimerManager* timer_manager,
                     logger::Encoder* logger_encoder,
                     logger::ObservationWriter* observation_writer,
-                    logger::EventAggregator* event_aggregator,
-                    std::shared_ptr<config::ClientConfig> client_config,
-                    std::shared_ptr<config::ProjectConfigs> project_configs);
+                    logger::EventAggregator* event_aggregator);
 
  private:
+  // Constructs a new LegacyLoggerImpl based on |project_context|, binds it to
+  // |request|, and stores the binding in |binding_set|.
+  // |LoggerInterface| should be Logger or LoggerSimple.
+  template <typename LoggerInterface>
+  void BindNewLegacyLogger(
+      std::unique_ptr<encoder::ProjectContext> project_context,
+      fidl::InterfaceRequest<LoggerInterface> request,
+      fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>*
+          binding_set);
+
+  // Constructs a new LoggerImpl based on |project_context|, binds it to
+  // |request|, and stores the binding in |binding_set|.
+  // |LoggerInterface| should be Logger or LoggerSimple.
+  template <typename LoggerInterface>
+  void BindNewLogger(
+      std::unique_ptr<logger::ProjectContext> project_context,
+      fidl::InterfaceRequest<LoggerInterface> request,
+      fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>*
+          binding_set);
+
+  // Attempts to extract a CobaltRegistry containing a single project from
+  // |profile| and uses this to construct either a LoggerImpl or a
+  // LegacyLoggerImpl depending on whether the single project is for
+  // Cobalt 1.0 or Cobalt 0.1. Binds this to |request| and stores the binding
+  // in |binding_set|. |callback| will be invoked with OK upon success or an
+  // error status otherwise.
+  // |LoggerInterface| should be Logger or LoggerSimple.
+  template <typename LoggerInterface, typename Callback>
+  void CreateAndBindLogger(
+      fuchsia::cobalt::ProjectProfile profile,
+      fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
+      fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>*
+          binding_set);
+
+  // Extracts the Cobalt 1.0 project with the given |project_name| from the
+  // global CobaltRegistry, if there is such a project in the registry, and
+  // uses this, and |release_stage|, to construct a  LoggerImpl. Binds this to
+  // |request| and stores the binding in |binding_set|. |callback| will be
+  // invoked with OK upon success or an error status otherwise.
+  // |LoggerInterface| should be Logger or LoggerSimple.
+  template <typename LoggerInterface, typename Callback>
+  void CreateAndBindLoggerFromProjectName(
+      std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
+      fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
+      fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>*
+          binding_set);
+
+  // Extracts the Cobalt 0.1 project with the given |project_id| from the
+  // global CobaltRegistry, if there is such a project in the registry, and
+  // uses this to construct a  LoggerImpl. Binds this to |request|
+  // and stores the binding in |binding_set|. |callback| will be invoked
+  // with OK upon success or an error status otherwise.
+  // |LoggerInterface| should be Logger or LoggerSimple.
+  template <typename LoggerInterface, typename Callback>
+  void CreateAndBindLoggerFromProjectId(
+      uint32_t project_id, fidl::InterfaceRequest<LoggerInterface> request,
+      Callback callback,
+      fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>*
+          binding_set);
+
   void CreateLogger(fuchsia::cobalt::ProjectProfile profile,
                     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
                     CreateLoggerCallback callback);
@@ -75,10 +133,6 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
                    std::unique_ptr<fuchsia::cobalt::LoggerSimple>>
       logger_simple_bindings_;
 
-  // The owned copy of the ProjectContext for internal_logger_.
-  // TODO(zmbush): Update logger::Logger to own its ProjectContext.
-  std::unique_ptr<logger::ProjectContext> internal_project_context_;
-
   // Cobalt uses internal_logger_ to log events about Cobalt.
   std::unique_ptr<logger::Logger> internal_logger_;
 
@@ -90,12 +144,8 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   logger::Encoder* logger_encoder_;                          // not owned
   logger::ObservationWriter* observation_writer_;            // not owned
   logger::EventAggregator* event_aggregator_;                // not owned
-
-  // Used for cobalt v0.1 clients.
-  std::shared_ptr<config::ClientConfig> client_config_;
-
-  // Used for cobalt v1.0 clients.
-  std::shared_ptr<config::ProjectConfigs> project_configs_;
+  std::shared_ptr<cobalt::logger::ProjectContextFactory>
+      global_project_context_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LoggerFactoryImpl);
 };

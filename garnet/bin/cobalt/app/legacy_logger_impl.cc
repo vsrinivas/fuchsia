@@ -260,8 +260,8 @@ void LegacyLoggerImpl::LogElapsedTime(
 }
 
 void LegacyLoggerImpl::LogFrameRate(
-    uint32_t metric_id, uint32_t event_code, std::string component,
-    float fps, fuchsia::cobalt::LoggerBase::LogFrameRateCallback callback) {
+    uint32_t metric_id, uint32_t event_code, std::string component, float fps,
+    fuchsia::cobalt::LoggerBase::LogFrameRateCallback callback) {
   LogThreePartMetric("frame rate", metric_id, event_code, component, fps,
                      std::move(callback), true);
 }
@@ -390,8 +390,7 @@ void LegacyLoggerImpl::LogIntHistogram(
 
 void LegacyLoggerImpl::LogIntHistogram(
     uint32_t metric_id, uint32_t event_code, std::string component,
-    std::vector<uint32_t> bucket_indices,
-    std::vector<uint64_t> bucket_counts,
+    std::vector<uint32_t> bucket_indices, std::vector<uint64_t> bucket_counts,
     fuchsia::cobalt::LoggerSimple::LogIntHistogramCallback callback) {
   const Metric* metric = encoder_.GetMetric(metric_id);
   if (!metric) {

@@ -38,8 +38,7 @@ class LoggerImpl : public fuchsia::cobalt::Logger,
       fuchsia::cobalt::LoggerBase::LogElapsedTimeCallback callback) override;
 
   void LogFrameRate(
-      uint32_t metric_id, uint32_t event_code, std::string component,
-      float fps,
+      uint32_t metric_id, uint32_t event_code, std::string component, float fps,
       fuchsia::cobalt::LoggerBase::LogFrameRateCallback callback) override;
 
   void LogMemoryUsage(
@@ -58,8 +57,7 @@ class LoggerImpl : public fuchsia::cobalt::Logger,
 
   void LogIntHistogram(
       uint32_t metric_id, uint32_t event_code, std::string component,
-      std::vector<uint32_t> bucket_indices,
-      std::vector<uint64_t> bucket_counts,
+      std::vector<uint32_t> bucket_indices, std::vector<uint64_t> bucket_counts,
       fuchsia::cobalt::LoggerSimple::LogIntHistogramCallback callback) override;
 
   void LogCustomEvent(
@@ -81,7 +79,6 @@ class LoggerImpl : public fuchsia::cobalt::Logger,
       fuchsia::cobalt::LoggerBase::EndTimerCallback callback) override;
 
  private:
-  std::unique_ptr<logger::ProjectContext> project_context_;
   logger::Logger logger_;
   TimerManager* timer_manager_;
 };

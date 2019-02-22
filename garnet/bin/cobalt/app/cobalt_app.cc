@@ -16,8 +16,6 @@ namespace cobalt {
 namespace http = ::fuchsia::net::oldhttp;
 
 using clearcut::ClearcutUploader;
-using config::ClientConfig;
-using config::ProjectConfigs;
 using encoder::ClearcutV1ShippingManager;
 using encoder::ClientSecret;
 using encoder::FileObservationStore;
@@ -61,9 +59,7 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
       send_retryer_(&shuffler_client_),
       network_wrapper_(
           dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
-          [this] {
-            return context_->svc()->Connect<http::HttpService>();
-          }),
+          [this] { return context_->svc()->Connect<http::HttpService>(); }),
       // NOTE: Currently all observations are immediate observations and so it
       // makes sense to use MAX_BYTES_PER_EVENT as the value of
       // max_bytes_per_observation. But when we start implementing non-immediate
@@ -138,35 +134,19 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
   FXL_CHECK(registry_file_stream && registry_file_stream.good())
       << "Could not open the Cobalt global metrics registry: "
       << kMetricsRegistryPath;
-  std::string metrics_registry_bytes;
-  metrics_registry_bytes.assign(
+  std::string global_metrics_registry_bytes;
+  global_metrics_registry_bytes.assign(
       (std::istreambuf_iterator<char>(registry_file_stream)),
       std::istreambuf_iterator<char>());
-  FXL_CHECK(!metrics_registry_bytes.empty())
+  FXL_CHECK(!global_metrics_registry_bytes.empty())
       << "Could not read the Cobalt global metrics registry: "
       << kMetricsRegistryPath;
 
-  // Parse the data as a ClientConfig
-  client_config_.reset(
-      ClientConfig::CreateFromCobaltRegistryBytes(metrics_registry_bytes)
-          .release());
-  FXL_CHECK(client_config_)
-      << "Could not parse the Cobalt global metrics registry: "
-      << kMetricsRegistryPath;
-
-  // Parse the data as a ProjectConfigs
-  project_configs_.reset(
-      ProjectConfigs::CreateFromCobaltRegistryBytes(metrics_registry_bytes)
-          .release());
-  FXL_CHECK(project_configs_)
-      << "Could not parse the Cobalt global metrics registry: "
-      << kMetricsRegistryPath;
-
   logger_factory_impl_.reset(new LoggerFactoryImpl(
-      getClientSecret(), &legacy_observation_store_,
-      legacy_encrypt_to_analyzer_.get(), &legacy_shipping_manager_,
-      &system_data_, &timer_manager_, &logger_encoder_, &observation_writer_,
-      &event_aggregator_, client_config_, project_configs_));
+      global_metrics_registry_bytes, getClientSecret(),
+      &legacy_observation_store_, legacy_encrypt_to_analyzer_.get(),
+      &legacy_shipping_manager_, &system_data_, &timer_manager_,
+      &logger_encoder_, &observation_writer_, &event_aggregator_));
 
   context_->outgoing().AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));

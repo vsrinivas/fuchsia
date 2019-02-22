@@ -10,7 +10,6 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 
 #include "garnet/bin/cobalt/app/timer_manager.h"
-#include "third_party/cobalt/config/client_config.h"
 #include "third_party/cobalt/encoder/client_secret.h"
 #include "third_party/cobalt/encoder/encoder.h"
 #include "third_party/cobalt/encoder/observation_store.h"
@@ -72,8 +71,7 @@ class LegacyLoggerImpl : public fuchsia::cobalt::Logger,
       fuchsia::cobalt::LoggerBase::LogElapsedTimeCallback callback) override;
 
   void LogFrameRate(
-      uint32_t metric_id, uint32_t event_code, std::string component,
-      float fps,
+      uint32_t metric_id, uint32_t event_code, std::string component, float fps,
       fuchsia::cobalt::LoggerBase::LogFrameRateCallback callback) override;
 
   void LogMemoryUsage(
@@ -109,8 +107,7 @@ class LegacyLoggerImpl : public fuchsia::cobalt::Logger,
 
   void LogIntHistogram(
       uint32_t metric_id, uint32_t event_code, std::string component,
-      std::vector<uint32_t> bucket_indices,
-      std::vector<uint64_t> bucket_counts,
+      std::vector<uint32_t> bucket_indices, std::vector<uint64_t> bucket_counts,
       fuchsia::cobalt::LoggerSimple::LogIntHistogramCallback callback) override;
 
   void LogCustomEvent(

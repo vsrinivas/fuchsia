@@ -11,10 +11,8 @@
 
 namespace cobalt {
 
-constexpr char kInternalMetricsProtoPath[] =
-    "/pkgfs/packages/cobalt/0/data/cobalt_internal_metrics_registry.pb";
-
 using cobalt::TimerManager;
+using cobalt::logger::ProjectContextFactory;
 using config::ClientConfig;
 using config::ProjectConfigs;
 using fuchsia::cobalt::ProjectProfile;
@@ -22,26 +20,28 @@ using fuchsia::cobalt::Status;
 
 const int32_t kFuchsiaCustomerId = 1;
 constexpr char kFuchsiaCustomerName[] = "fuchsia";
+constexpr char kCobaltInternalCustomerName[] = "cobalt_internal";
+constexpr char kCobaltInternalMetricsProjectName[] = "metrics";
 
 namespace {
-std::pair<std::unique_ptr<ClientConfig>, uint32_t> GetClientConfig(
-    ProjectProfile profile) {
-  fsl::SizedVmo config_vmo;
+bool ExtractCobaltRegistryBytes(ProjectProfile profile,
+                                std::string* metrics_registry_bytes_out) {
+  CHECK(metrics_registry_bytes_out);
+  fsl::SizedVmo registry_vmo;
   bool success =
-      fsl::SizedVmo::FromTransport(std::move(profile.config), &config_vmo);
+      fsl::SizedVmo::FromTransport(std::move(profile.config), &registry_vmo);
   if (!success) {
     FXL_LOG(ERROR) << "Transport buffer is invalid";
-    return std::make_pair(nullptr, 0);
+    return false;
   }
 
-  std::string config_bytes;
-  success = fsl::StringFromVmo(config_vmo, &config_bytes);
+  success = fsl::StringFromVmo(registry_vmo, metrics_registry_bytes_out);
   if (!success) {
-    FXL_LOG(ERROR) << "Could not read Cobalt config from VMO";
-    return std::make_pair(nullptr, 0);
+    FXL_LOG(ERROR) << "Could not read Metrics Registry from VMO";
+    return false;
   }
 
-  return ClientConfig::CreateFromCobaltProjectRegistryBytes(config_bytes);
+  return true;
 }
 
 ReleaseStage ToReleaseStageProto(fuchsia::cobalt::ReleaseStage stage) {
@@ -59,39 +59,10 @@ ReleaseStage ToReleaseStageProto(fuchsia::cobalt::ReleaseStage stage) {
       return ReleaseStage::DEBUG;
   }
 }
-std::pair<std::unique_ptr<encoder::ProjectContext>,
-          std::unique_ptr<logger::ProjectContext>>
-CreateProjectContexts(ProjectProfile profile) {
-  auto release_stage = profile.release_stage;
-  auto config_id_pair = GetClientConfig(std::move(profile));
-
-  std::shared_ptr<config::ClientConfig> project_config;
-  project_config.reset(config_id_pair.first.release());
-  if (project_config == nullptr) {
-    FXL_LOG(ERROR) << "Cobalt config is invalid";
-    return std::pair(nullptr, nullptr);
-  }
-
-  if (project_config->IsLegacy()) {
-    std::unique_ptr<encoder::ProjectContext> project_context(
-        new encoder::ProjectContext(kFuchsiaCustomerId, config_id_pair.second,
-                                    project_config));
-    return std::pair(std::move(project_context), nullptr);
-  } else {
-    auto customer_cfg = project_config->TakeCustomerConfig();
-    auto project_cfg = customer_cfg->mutable_projects(0);
-    auto metrics = std::make_unique<MetricDefinitions>();
-    metrics->mutable_metric()->Swap(project_cfg->mutable_metrics());
-    return std::pair(
-        nullptr, std::make_unique<logger::ProjectContext>(
-                     customer_cfg->customer_id(), project_cfg->project_id(),
-                     customer_cfg->customer_name(), project_cfg->project_name(),
-                     std::move(metrics), ToReleaseStageProto(release_stage)));
-  }
-}
 }  // namespace
 
 LoggerFactoryImpl::LoggerFactoryImpl(
+    const std::string& global_cobalt_registry_bytes,
     encoder::ClientSecret client_secret,
     encoder::ObservationStore* legacy_observation_store,
     util::EncryptedMessageMaker* legacy_encrypt_to_analyzer,
@@ -99,9 +70,7 @@ LoggerFactoryImpl::LoggerFactoryImpl(
     const encoder::SystemData* system_data, TimerManager* timer_manager,
     logger::Encoder* logger_encoder,
     logger::ObservationWriter* observation_writer,
-    logger::EventAggregator* event_aggregator,
-    std::shared_ptr<config::ClientConfig> client_config,
-    std::shared_ptr<ProjectConfigs> project_configs)
+    logger::EventAggregator* event_aggregator)
     : client_secret_(std::move(client_secret)),
       legacy_observation_store_(legacy_observation_store),
       legacy_encrypt_to_analyzer_(legacy_encrypt_to_analyzer),
@@ -111,154 +80,182 @@ LoggerFactoryImpl::LoggerFactoryImpl(
       logger_encoder_(logger_encoder),
       observation_writer_(observation_writer),
       event_aggregator_(event_aggregator),
-      client_config_(client_config),
-      project_configs_(project_configs) {
-  ProjectProfile profile;
-  fsl::SizedVmo config_vmo;
-  fsl::VmoFromFilename(kInternalMetricsProtoPath, &config_vmo);
-  profile.config = std::move(config_vmo).ToTransport();
+      global_project_context_factory_(
+          new ProjectContextFactory(global_cobalt_registry_bytes)) {
+  auto internal_project_context =
+      global_project_context_factory_->NewProjectContext(
+          kCobaltInternalCustomerName, kCobaltInternalMetricsProjectName,
+          ReleaseStage::GA);
+  if (!internal_project_context) {
+    FXL_LOG(ERROR) << "The CobaltRegistry bundled with Cobalt does not "
+                      "include the expected internal metrics project. "
+                      "Cobalt-measuring-Cobalt will be disabled.";
+  }
 
-  auto [legacy_project_context, project_context] =
-      CreateProjectContexts(std::move(profile));
-  internal_project_context_ = std::move(project_context);
-  internal_logger_.reset(new logger::Logger(
-      logger_encoder_, event_aggregator_, observation_writer_,
-      internal_project_context_.get(), nullptr));
+  // Help the compiler understand which of several constructor overloads we
+  // mean to be invoking here.
+  logger::LoggerInterface* null_logger = nullptr;
+  internal_logger_.reset(new logger::Logger(std::move(internal_project_context),
+                                            logger_encoder_, event_aggregator_,
+                                            observation_writer_, null_logger));
+}
+
+template <typename LoggerInterface>
+void LoggerFactoryImpl::BindNewLegacyLogger(
+    std::unique_ptr<encoder::ProjectContext> project_context,
+    fidl::InterfaceRequest<LoggerInterface> request,
+    fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>*
+        binding_set) {
+  binding_set->AddBinding(
+      std::make_unique<LegacyLoggerImpl>(
+          std::move(project_context), client_secret_, legacy_observation_store_,
+          legacy_encrypt_to_analyzer_, legacy_shipping_manager_, system_data_,
+          timer_manager_),
+      std::move(request));
+}
+
+template <typename LoggerInterface>
+void LoggerFactoryImpl::BindNewLogger(
+    std::unique_ptr<logger::ProjectContext> project_context,
+    fidl::InterfaceRequest<LoggerInterface> request,
+    fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>*
+        binding_set) {
+  binding_set->AddBinding(
+      std::make_unique<LoggerImpl>(std::move(project_context), logger_encoder_,
+                                   event_aggregator_, observation_writer_,
+                                   timer_manager_, internal_logger_.get()),
+      std::move(request));
+}
+
+template <typename LoggerInterface, typename Callback>
+void LoggerFactoryImpl::CreateAndBindLogger(
+    fuchsia::cobalt::ProjectProfile profile,
+    fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
+    fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>*
+        binding_set) {
+  ReleaseStage release_stage = ToReleaseStageProto(profile.release_stage);
+  std::string cobalt_registry_bytes;
+  if (!ExtractCobaltRegistryBytes(std::move(profile), &cobalt_registry_bytes)) {
+    FXL_LOG(ERROR) << "Unable to extract a CobaltRegistry from the provided "
+                      "ProjectProfile.";
+    callback(Status::INVALID_ARGUMENTS);
+    return;
+  }
+  std::shared_ptr<ProjectContextFactory> factory(
+      new ProjectContextFactory(cobalt_registry_bytes));
+  if (!factory->is_valid()) {
+    FXL_LOG(ERROR) << "Unable to extract a valid CobaltRegistry from the "
+                      "provided ProjectProfile.";
+    callback(Status::INVALID_ARGUMENTS);
+    return;
+  }
+  if (factory->is_single_legacy_project()) {
+    BindNewLegacyLogger(factory->NewSingleLegacyProjectContext(),
+                        std::move(request), binding_set);
+    callback(Status::OK);
+    return;
+  } else if (factory->is_single_project()) {
+    BindNewLogger(factory->TakeSingleProjectContext(release_stage),
+                  std::move(request), binding_set);
+    callback(Status::OK);
+    return;
+  } else {
+    FXL_LOG(ERROR) << "The CobaltRegistry in the provided ProjectProfile was "
+                      "invalid because it contained multiple projects.";
+    callback(Status::INVALID_ARGUMENTS);
+    return;
+  }
+}
+
+template <typename LoggerInterface, typename Callback>
+void LoggerFactoryImpl::CreateAndBindLoggerFromProjectName(
+    std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
+    fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
+    fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>*
+        binding_set) {
+  auto project_context = global_project_context_factory_->NewProjectContext(
+      kFuchsiaCustomerName, project_name, ToReleaseStageProto(release_stage));
+  if (!project_context) {
+    FXL_LOG(ERROR) << "The CobaltRegistry bundled with this release does not "
+                      "include a Fuchsia project named "
+                   << project_name;
+    callback(Status::INVALID_ARGUMENTS);
+    return;
+  }
+  BindNewLogger(std::move(project_context), std::move(request), binding_set);
+  callback(Status::OK);
+}
+
+template <typename LoggerInterface, typename Callback>
+void LoggerFactoryImpl::CreateAndBindLoggerFromProjectId(
+    uint32_t project_id, fidl::InterfaceRequest<LoggerInterface> request,
+    Callback callback,
+    fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>*
+        binding_set) {
+  auto project_context =
+      global_project_context_factory_->NewLegacyProjectContext(
+          kFuchsiaCustomerId, project_id);
+  if (!project_context) {
+    FXL_LOG(ERROR) << "The CobaltRegistry bundled with this release does not "
+                      "include a Fuchsia project with id="
+                   << project_id;
+    callback(Status::INVALID_ARGUMENTS);
+    return;
+  }
+  BindNewLegacyLogger(std::move(project_context), std::move(request),
+                      binding_set);
+  callback(Status::OK);
 }
 
 void LoggerFactoryImpl::CreateLogger(
     ProjectProfile profile,
     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
     CreateLoggerCallback callback) {
-  auto [legacy_project_context, project_context] =
-      CreateProjectContexts(std::move(profile));
-  if (legacy_project_context) {
-    logger_bindings_.AddBinding(
-        std::make_unique<LegacyLoggerImpl>(
-            std::move(legacy_project_context), client_secret_,
-            legacy_observation_store_, legacy_encrypt_to_analyzer_,
-            legacy_shipping_manager_, system_data_, timer_manager_),
-        std::move(request));
-    callback(Status::OK);
-  } else if (project_context) {
-    logger_bindings_.AddBinding(
-        std::make_unique<LoggerImpl>(
-            std::move(project_context), logger_encoder_, event_aggregator_,
-            observation_writer_, timer_manager_, internal_logger_.get()),
-        std::move(request));
-    callback(Status::OK);
-  } else {
-    callback(Status::INVALID_ARGUMENTS);
-  }
+  CreateAndBindLogger(std::move(profile), std::move(request),
+                      std::move(callback), &logger_bindings_);
 }
 
 void LoggerFactoryImpl::CreateLoggerSimple(
     ProjectProfile profile,
     fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
     CreateLoggerSimpleCallback callback) {
-  auto [legacy_project_context, project_context] =
-      CreateProjectContexts(std::move(profile));
-
-  if (legacy_project_context) {
-    logger_simple_bindings_.AddBinding(
-        std::make_unique<LegacyLoggerImpl>(
-            std::move(legacy_project_context), client_secret_,
-            legacy_observation_store_, legacy_encrypt_to_analyzer_,
-            legacy_shipping_manager_, system_data_, timer_manager_),
-        std::move(request));
-    callback(Status::OK);
-  } else if (project_context) {
-    logger_simple_bindings_.AddBinding(
-        std::make_unique<LoggerImpl>(
-            std::move(project_context), logger_encoder_, event_aggregator_,
-            observation_writer_, timer_manager_, internal_logger_.get()),
-        std::move(request));
-    callback(Status::OK);
-  } else {
-    callback(Status::INVALID_ARGUMENTS);
-  }
+  CreateAndBindLogger(std::move(profile), std::move(request),
+                      std::move(callback), &logger_simple_bindings_);
 }
 
 void LoggerFactoryImpl::CreateLoggerFromProjectName(
     std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
     CreateLoggerFromProjectNameCallback callback) {
-  auto project_context_or = logger::ProjectContext::ConstructWithProjectConfigs(
-      kFuchsiaCustomerName, project_name, project_configs_,
-      ToReleaseStageProto(release_stage));
-
-  if (!project_context_or.ok()) {
-    FXL_LOG(ERROR) << "Failed to construct ProjectContext from ProjectConfigs: "
-                   << project_context_or.status().error_message();
-    callback(ToCobaltStatus(project_context_or.status()));
-    return;
-  }
-
-  logger_bindings_.AddBinding(
-      std::make_unique<LoggerImpl>(project_context_or.ConsumeValueOrDie(),
-                                   logger_encoder_, event_aggregator_,
-                                   observation_writer_, timer_manager_,
-                                   internal_logger_.get()),
-      std::move(request));
-  callback(Status::OK);
+  CreateAndBindLoggerFromProjectName(std::move(project_name), release_stage,
+                                     std::move(request), std::move(callback),
+                                     &logger_bindings_);
 }
 
 void LoggerFactoryImpl::CreateLoggerSimpleFromProjectName(
     std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
     fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
     CreateLoggerSimpleFromProjectNameCallback callback) {
-  auto project_context_or = logger::ProjectContext::ConstructWithProjectConfigs(
-      kFuchsiaCustomerName, project_name, project_configs_,
-      ToReleaseStageProto(release_stage));
-
-  if (!project_context_or.ok()) {
-    FXL_LOG(ERROR) << "Failed to construct ProjectContext from ProjectConfigs: "
-                   << project_context_or.status().error_message();
-    callback(ToCobaltStatus(project_context_or.status()));
-    return;
-  }
-
-  logger_simple_bindings_.AddBinding(
-      std::make_unique<LoggerImpl>(project_context_or.ConsumeValueOrDie(),
-                                   logger_encoder_, event_aggregator_,
-                                   observation_writer_, timer_manager_,
-                                   internal_logger_.get()),
-      std::move(request));
-  callback(Status::OK);
+  CreateAndBindLoggerFromProjectName(std::move(project_name), release_stage,
+                                     std::move(request), std::move(callback),
+                                     &logger_simple_bindings_);
 }
 
 void LoggerFactoryImpl::CreateLoggerFromProjectId(
     uint32_t project_id, fuchsia::cobalt::ReleaseStage release_stage,
     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
     CreateLoggerFromProjectIdCallback callback) {
-  auto project_context = std::make_unique<encoder::ProjectContext>(
-      kFuchsiaCustomerId, project_id, client_config_);
-
-  logger_bindings_.AddBinding(
-      std::make_unique<LegacyLoggerImpl>(
-          std::move(project_context), client_secret_, legacy_observation_store_,
-          legacy_encrypt_to_analyzer_, legacy_shipping_manager_, system_data_,
-          timer_manager_),
-      std::move(request));
-
-  callback(Status::OK);
+  CreateAndBindLoggerFromProjectId(project_id, std::move(request),
+                                   std::move(callback), &logger_bindings_);
 }
 
 void LoggerFactoryImpl::CreateLoggerSimpleFromProjectId(
     uint32_t project_id, fuchsia::cobalt::ReleaseStage release_stage,
     fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
     CreateLoggerSimpleFromProjectIdCallback callback) {
-  auto project_context = std::make_unique<encoder::ProjectContext>(
-      kFuchsiaCustomerId, project_id, client_config_);
-
-  logger_simple_bindings_.AddBinding(
-      std::make_unique<LegacyLoggerImpl>(
-          std::move(project_context), client_secret_, legacy_observation_store_,
-          legacy_encrypt_to_analyzer_, legacy_shipping_manager_, system_data_,
-          timer_manager_),
-      std::move(request));
-
-  callback(Status::OK);
+  CreateAndBindLoggerFromProjectId(project_id, std::move(request),
+                                   std::move(callback),
+                                   &logger_simple_bindings_);
 }
 
 }  // namespace cobalt

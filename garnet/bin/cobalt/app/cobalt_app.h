@@ -94,9 +94,6 @@ class CobaltApp {
   logger::ObservationWriter observation_writer_;
   logger::EventAggregator event_aggregator_;
 
-  std::shared_ptr<config::ClientConfig> client_config_;
-  std::shared_ptr<config::ProjectConfigs> project_configs_;
-
   std::unique_ptr<fuchsia::cobalt::Controller> controller_impl_;
   fidl::BindingSet<fuchsia::cobalt::Controller> controller_bindings_;
 
