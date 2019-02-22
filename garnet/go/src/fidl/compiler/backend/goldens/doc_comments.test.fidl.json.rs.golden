@@ -124,6 +124,7 @@ pub struct InterfaceProxy {
 }
 
 impl fidl::endpoints::Proxy for InterfaceProxy {
+	type Service = InterfaceMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
 		Self::new(inner)
 	}
@@ -374,6 +375,8 @@ impl futures::stream::FusedStream for InterfaceRequestStream {
 }
 
 impl fidl::endpoints::RequestStream for InterfaceRequestStream {
+	type Service = InterfaceMarker;
+
 	/// Consume a channel to make a InterfaceRequestStream
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {

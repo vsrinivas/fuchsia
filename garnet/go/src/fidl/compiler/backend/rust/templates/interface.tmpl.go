@@ -125,6 +125,7 @@ pub struct {{ $interface.Name }}Proxy {
 }
 
 impl fidl::endpoints::Proxy for {{ $interface.Name }}Proxy {
+	type Service = {{ $interface.Name }}Marker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
 		Self::new(inner)
 	}
@@ -531,6 +532,8 @@ impl futures::stream::FusedStream for {{ $interface.Name }}RequestStream {
 }
 
 impl fidl::endpoints::RequestStream for {{ $interface.Name }}RequestStream {
+	type Service = {{ $interface.Name }}Marker;
+
 	/// Consume a channel to make a {{ $interface.Name }}RequestStream
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {

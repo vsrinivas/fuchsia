@@ -101,6 +101,7 @@ pub struct WithAndWithoutRequestResponseProxy {
 }
 
 impl fidl::endpoints::Proxy for WithAndWithoutRequestResponseProxy {
+	type Service = WithAndWithoutRequestResponseMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
 		Self::new(inner)
 	}
@@ -580,6 +581,8 @@ impl futures::stream::FusedStream for WithAndWithoutRequestResponseRequestStream
 }
 
 impl fidl::endpoints::RequestStream for WithAndWithoutRequestResponseRequestStream {
+	type Service = WithAndWithoutRequestResponseMarker;
+
 	/// Consume a channel to make a WithAndWithoutRequestResponseRequestStream
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
@@ -1481,6 +1484,7 @@ pub struct OvernetInternalProtocolProxy {
 }
 
 impl fidl::endpoints::Proxy for OvernetInternalProtocolProxy {
+	type Service = OvernetInternalProtocolMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
 		Self::new(inner)
 	}
@@ -1807,6 +1811,8 @@ impl futures::stream::FusedStream for OvernetInternalProtocolRequestStream {
 }
 
 impl fidl::endpoints::RequestStream for OvernetInternalProtocolRequestStream {
+	type Service = OvernetInternalProtocolMarker;
+
 	/// Consume a channel to make a OvernetInternalProtocolRequestStream
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
@@ -2220,6 +2226,7 @@ pub struct SocketControlProtocolProxy {
 }
 
 impl fidl::endpoints::Proxy for SocketControlProtocolProxy {
+	type Service = SocketControlProtocolMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
 		Self::new(inner)
 	}
@@ -2546,6 +2553,8 @@ impl futures::stream::FusedStream for SocketControlProtocolRequestStream {
 }
 
 impl fidl::endpoints::RequestStream for SocketControlProtocolRequestStream {
+	type Service = SocketControlProtocolMarker;
+
 	/// Consume a channel to make a SocketControlProtocolRequestStream
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
@@ -2959,6 +2968,7 @@ pub struct ChannelProtocolProxy {
 }
 
 impl fidl::endpoints::Proxy for ChannelProtocolProxy {
+	type Service = ChannelProtocolMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
 		Self::new(inner)
 	}
@@ -3285,6 +3295,8 @@ impl futures::stream::FusedStream for ChannelProtocolRequestStream {
 }
 
 impl fidl::endpoints::RequestStream for ChannelProtocolRequestStream {
+	type Service = ChannelProtocolMarker;
+
 	/// Consume a channel to make a ChannelProtocolRequestStream
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
@@ -3698,6 +3710,7 @@ pub struct KitchenSinkProxy {
 }
 
 impl fidl::endpoints::Proxy for KitchenSinkProxy {
+	type Service = KitchenSinkMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
 		Self::new(inner)
 	}
@@ -4024,6 +4037,8 @@ impl futures::stream::FusedStream for KitchenSinkRequestStream {
 }
 
 impl fidl::endpoints::RequestStream for KitchenSinkRequestStream {
+	type Service = KitchenSinkMarker;
+
 	/// Consume a channel to make a KitchenSinkRequestStream
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {

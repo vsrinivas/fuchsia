@@ -5,41 +5,49 @@
 #![feature(async_await, await_macro, futures_api)]
 
 use failure::{Error, ResultExt};
-use fidl::endpoints::{ServiceMarker, RequestStream};
-use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
-use fuchsia_app::server::ServicesServer;
+use fidl_fidl_examples_echo::{EchoRequest, EchoRequestStream};
+use fuchsia_component::server::ServiceFs;
 use fuchsia_async as fasync;
 use futures::prelude::*;
 
 use std::env;
 
-fn spawn_echo_server(chan: fasync::Channel, quiet: bool) {
-    fasync::spawn(async move {
-        let mut stream = EchoRequestStream::from_channel(chan);
-        while let Some(EchoRequest::EchoString { value, responder }) =
-            await!(stream.try_next()).context("error running echo server")?
-        {
-            if !quiet {
-                println!("Received echo request for string {:?}", value);
-            }
-            responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
-            if !quiet {
-                println!("echo response sent successfully");
-            }
+async fn run_echo_server(mut stream: EchoRequestStream, quiet: bool) -> Result<(), Error> {
+    while let Some(EchoRequest::EchoString { value, responder }) =
+        await!(stream.try_next()).context("error running echo server")?
+    {
+        if !quiet {
+            println!("Received echo request for string {:?}", value);
         }
-        Ok(())
-    }.unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)));
+        responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
+        if !quiet {
+            println!("echo response sent successfully");
+        }
+    }
+    Ok(())
+}
+
+enum IncomingServices {
+    Echo(EchoRequestStream),
+    // ... more services here
 }
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let quiet = env::args().any(|arg| arg == "-q");
 
-    let fut = ServicesServer::new()
-                .add_service((EchoMarker::NAME, move |chan| spawn_echo_server(chan, quiet)))
-                .start()
-                .context("Error starting echo services server")?;
+    let mut fs = ServiceFs::new_local();
+    fs.dir("public")
+      .add_fidl_service(IncomingServices::Echo);
 
-    await!(fut).context("failed to execute echo future")?;
+    fs.take_and_serve_directory_handle()?;
+
+    const MAX_CONCURRENT: usize = 10_000;
+    let fut = fs.for_each_concurrent(MAX_CONCURRENT, |IncomingServices::Echo(stream)|
+        run_echo_server(stream, quiet)
+            .unwrap_or_else(|e| println!("{:?}", e))
+    );
+
+    await!(fut);
     Ok(())
 }

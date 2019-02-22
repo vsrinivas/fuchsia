@@ -30,12 +30,18 @@ pub trait ServiceMarker: Sized + Send + Sync + 'static {
 
 /// A type which allows querying a remote FIDL server over a channel.
 pub trait Proxy: Sized {
+    /// The service which this `Proxy` controls.
+    type Service: ServiceMarker;
+
     /// Create a proxy over the given channel.
     fn from_channel(inner: fasync::Channel) -> Self;
 }
 
 /// A stream of requests coming into a FIDL server over a channel.
 pub trait RequestStream: Sized {
+    /// The service which this `RequestStream` serves.
+    type Service: ServiceMarker;
+
     /// A type that can be used to send events and shut down the request stream.
     type ControlHandle;
 

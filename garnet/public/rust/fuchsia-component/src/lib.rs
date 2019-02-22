@@ -5,8 +5,6 @@
 //! Connect to or provide Fuchsia services.
 
 #![feature(futures_api)]
-
-#![deny(warnings)]
 #![deny(missing_docs)]
 
 #[allow(unused)] // Remove pending fix to rust-lang/rust#53682
@@ -15,11 +13,15 @@ use {
     fdio::fdio_sys,
     fuchsia_async as fasync,
     futures::{
-        Future, Poll,
+        Future, Poll, Stream,
+        ready,
         stream::{FuturesUnordered, StreamExt, StreamFuture},
         task::Waker,
     },
-    fidl::endpoints::{RequestStream, ServiceMarker, Proxy},
+    fidl::{
+        encoding::Decodable,
+        endpoints::{RequestStream, ServiceMarker, Proxy},
+    },
     fidl_fuchsia_io::{
         DirectoryRequestStream,
         DirectoryRequest,
@@ -41,6 +43,7 @@ use {
     },
     fuchsia_zircon::{self as zx, Peered, Signals},
     std::{
+        collections::hash_map::{HashMap, Entry},
         fs::File,
         marker::{PhantomData, Unpin},
         os::unix::io::IntoRawFd,
@@ -210,161 +213,430 @@ pub mod server {
     #[fail(display = "The startup handle on which the FIDL server attempted to start was missing.")]
     pub struct MissingStartupHandle;
 
-    /// `ServiceFactory` lazily creates instances of services.
+    /// `Service` connects channels to service instances.
     ///
-    /// Note that this trait is implemented by `FnMut` closures like `|| MyService { ... }`.
-    pub trait ServiceFactory: Send + 'static {
-        /// The path name of a service.
-        ///
-        /// Used by the `FdioServer` to know which service to connect incoming requests to.
-        fn service_name(&self) -> &str;
-
-        /// Create a new instance of the service on the provided `fasync::Channel`.
-        fn spawn_service(&mut self, channel: fasync::Channel);
+    /// Note that this trait is implemented by the `FidlService` type.
+    pub trait Service: 'static {
+        /// The type of the value yielded by the `spawn_service` callback.
+        type Output: 'static;
 
         /// Create a new instance of the service on the provided `zx::Channel`.
-        fn spawn_service_zx_channel(&mut self, channel: zx::Channel) {
+        ///
+        /// The value returned by this function will be yielded from the stream
+        /// output of the `ServiceFs` type.
+        fn connect(&mut self, channel: zx::Channel) -> Option<Self::Output>;
+    }
+
+    /// A wrapper for functions from `RequestStream` to `Output` which implements
+    /// `Service`.
+    ///
+    /// This type throws away channels that cannot be converted to the approprate
+    /// `RequestStream` type.
+    pub struct FidlService<F, RS, Output>
+    where
+        F: FnMut(RS) -> Output + 'static,
+        RS: RequestStream + 'static,
+        Output: 'static,
+    {
+        f: F,
+        marker: PhantomData<fn(RS) -> Output>,
+    }
+
+    impl<F, RS, Output> From<F> for FidlService<F, RS, Output>
+    where
+        F: FnMut(RS) -> Output + 'static,
+        RS: RequestStream + 'static,
+        Output: 'static,
+    {
+        fn from(f: F) -> Self {
+            Self { f, marker: PhantomData }
+        }
+    }
+
+    impl<F, RS, Output> Service for FidlService<F, RS, Output>
+    where
+        F: FnMut(RS) -> Output + 'static,
+        RS: RequestStream + 'static,
+        Output: 'static,
+    {
+        type Output = Output;
+        fn connect(&mut self, channel: zx::Channel) -> Option<Self::Output> {
             match fasync::Channel::from_channel(channel) {
-                Ok(chan) => self.spawn_service(chan),
-                Err(e) => eprintln!("Unable to convert channel to async: {:?}", e),
+                Ok(chan) => Some((self.f)(RS::from_channel(chan))),
+                Err(e) => {
+                    eprintln!("ServiceFs failed to convert channel to fasync channel: {:?}", e);
+                    None
+                },
             }
         }
     }
 
-    impl<F> ServiceFactory for (&'static str, F)
-        where F: FnMut(fasync::Channel) + Send + 'static,
-    {
-        fn service_name(&self) -> &str {
-            self.0
-        }
+    /// A `!Send` (non-thread-safe) trait object encapsulating a `Service` with
+    /// the given `Output` type.
+    ///
+    /// Types which implement the `Service` trait can be converted to objects of
+    /// this type via the `From`/`Into` traits.
+    pub struct ServiceObjLocal<Output>(Box<dyn Service<Output = Output>>);
 
-        fn spawn_service(&mut self, channel: fasync::Channel) {
-            (self.1)(channel)
+    impl<S: Service> From<S> for ServiceObjLocal<S::Output> {
+        fn from(service: S) -> Self {
+            ServiceObjLocal(Box::new(service))
         }
     }
 
-    /// `ServicesServer` is a server which manufactures service instances of
-    /// varying types on demand.
-    /// To run a `ServicesServer`, use `Server::new`.
-    pub struct ServicesServer {
-        services: Vec<Box<ServiceFactory>>,
+    /// A thread-safe (`Send`) trait object encapsulating a `Service` with
+    /// the given `Output` type.
+    ///
+    /// Types which implement the `Service` trait and the `Send` trait can
+    /// be converted to objects of this type via the `From`/`Into` traits.
+    pub struct ServiceObj<Output>(Box<dyn Service<Output = Output> + Send>);
+
+    impl<S: Service + Send> From<S> for ServiceObj<S::Output> {
+        fn from(service: S) -> Self {
+            ServiceObj(Box::new(service))
+        }
     }
 
-    impl ServicesServer {
-        /// Create a new `ServicesServer` which doesn't provide any services.
+    /// A trait implemented by both `ServiceObj` and `ServiceObjLocal` that
+    /// allows code to be generic over thread-safety.
+    ///
+    /// Code that uses `ServiceObj` will require `Send` bounds but will be
+    /// multithreaded-capable, while code that uses `ServiceObjLocal` will
+    /// allow non-`Send` types but will be restricted to singlethreaded
+    /// executors.
+    pub trait ServiceObjTrait: 'static {
+        /// The output type of the underlying `Service`.
+        type Output: 'static;
+
+        /// Get a mutable reference to the underlying `Service` trait object.
+        fn service(&mut self) -> &mut dyn Service<Output = Self::Output>;
+    }
+
+    impl<Output: 'static> ServiceObjTrait for ServiceObjLocal<Output> {
+        type Output = Output;
+
+        fn service(&mut self) -> &mut dyn Service<Output = Self::Output> {
+            &mut *self.0
+        }
+    }
+
+    impl<Output: 'static> ServiceObjTrait for ServiceObj<Output> {
+        type Output = Output;
+
+        fn service(&mut self) -> &mut dyn Service<Output = Self::Output> {
+            &mut *self.0
+        }
+    }
+
+    enum ServiceFsNode<ServiceObjTy: ServiceObjTrait> {
+        Directory {
+            /// A map from filename to index in the parent `ServiceFs`.
+            children: HashMap<String, usize>,
+        },
+        Service(ServiceObjTy),
+    }
+
+    impl<ServiceObjTy: ServiceObjTrait> ServiceFsNode<ServiceObjTy> {
+        fn expect_dir(&mut self) -> &mut HashMap<String, usize> {
+            match self {
+                ServiceFsNode::Directory { children } => children,
+                ServiceFsNode::Service(_) => panic!("ServiceFs expected directory"),
+            }
+        }
+    }
+
+    /// A filesystem which connects clients to services.
+    ///
+    /// This type implements the `Stream` trait and will yield the values
+    /// returned from calling `Service::connect` on the services it hosts.
+    ///
+    /// This can be used to, for example, yield streams of channels, request
+    /// streams, futures to run, or any other value that should be processed
+    /// as the result of a request.
+    #[must_use]
+    pub struct ServiceFs<ServiceObjTy: ServiceObjTrait> {
+        /// The open connections to this `ServiceFs`. These connections
+        /// represent external clients who may attempt to open services.
+        client_connections: FuturesUnordered<ClientConnection>,
+
+        /// The tree of `ServiceFsNode`s.
+        /// The root is always a directory at index 0.
+        ///
+        //
+        // FIXME(cramertj) move to a generational index and support
+        // removal of nodes.
+        nodes: Vec<ServiceFsNode<ServiceObjTy>>,
+    }
+
+    const ROOT_NODE: usize = 0;
+
+    impl<Output: 'static> ServiceFs<ServiceObjLocal<Output>> {
+        /// Create a new `ServiceFs` that is singlethreaded-only and does not
+        /// require services to implement `Send`.
+        pub fn new_local() -> Self {
+            Self {
+                client_connections: FuturesUnordered::new(),
+                nodes: vec![ServiceFsNode::Directory { children: HashMap::new() }],
+            }
+        }
+    }
+
+    impl<Output: 'static> ServiceFs<ServiceObj<Output>> {
+        /// Create a new `ServiceFs` that is multithreaded-capable and requires
+        /// services to implement `Send`.
         pub fn new() -> Self {
-            ServicesServer { services: vec![] }
+            Self {
+                client_connections: FuturesUnordered::new(),
+                nodes: vec![ServiceFsNode::Directory { children: HashMap::new() }],
+            }
+        }
+    }
+
+    /// A directory within a `ServiceFs`.
+    ///
+    /// Services and subdirectories can be added to it.
+    pub struct ServiceFsDir<'a, ServiceObjTy: ServiceObjTrait> {
+        position: usize,
+        fs: &'a mut ServiceFs<ServiceObjTy>,
+    }
+
+    fn dir<'a, ServiceObjTy: ServiceObjTrait>(
+        fs: &'a mut ServiceFs<ServiceObjTy>,
+        position: usize,
+        path: String,
+    ) -> ServiceFsDir<'a, ServiceObjTy> {
+        let new_node_position = fs.nodes.len();
+        let self_dir = fs.nodes[position].expect_dir();
+        let &mut position = self_dir.entry(path.clone()).or_insert(new_node_position);
+        if position == new_node_position {
+            fs.nodes.push(ServiceFsNode::Directory {
+                children: HashMap::new(),
+            });
+        } else {
+            if let ServiceFsNode::Service(_) = &fs.nodes[position] {
+                panic!("Error adding dir to ServiceFs: existing service at \"{}\"", path)
+            }
+        }
+        ServiceFsDir {
+            position,
+            fs,
+        }
+    }
+
+    fn add_service<'a, ServiceObjTy: ServiceObjTrait> (
+        fs: &'a mut ServiceFs<ServiceObjTy>,
+        position: usize,
+        path: String,
+        service: ServiceObjTy,
+    ) {
+        let new_node_position = fs.nodes.len();
+        let self_dir = fs.nodes[position].expect_dir();
+        let entry = self_dir.entry(path);
+        match entry {
+            Entry::Occupied(prev) => {
+                panic!("Duplicate ServiceFs service added at path \"{}\"", prev.key())
+            }
+            Entry::Vacant(slot) => {
+                slot.insert(new_node_position);
+                fs.nodes.push(ServiceFsNode::Service(service));
+            }
+        }
+    }
+
+
+    /// A `Service` implementation that proxies requests
+    /// to the outside environment.
+    ///
+    /// Not intended for direct use. Use the `add_proxy_service`
+    /// function instead.
+    #[doc(hidden)]
+    pub struct Proxy<S, O>(PhantomData<(S, fn() -> O)>);
+
+    impl<S: ServiceMarker, O: 'static> Service for Proxy<S, O> {
+        type Output = O;
+        fn connect(&mut self, channel: zx::Channel) -> Option<O> {
+            if let Err(e) = crate::client::connect_channel_to_service::<S>(channel) {
+                eprintln!("failed to proxy request to {}: {:?}", S::NAME, e);
+            }
+            None
+        }
+    }
+
+    struct LaunchData {
+        component_url: String,
+        arguments: Option<Vec<String>>,
+    }
+
+    /// A `Service` implementation that proxies requests
+    /// to a launched component.
+    ///
+    /// Not intended for direct use. Use the `add_component_proxy_service`
+    /// function instead.
+    #[doc(hidden)]
+    pub struct ComponentProxy<O> {
+        launch_data: Option<LaunchData>,
+        launched_app: Option<crate::client::App>,
+        service_name: &'static str,
+        _marker: PhantomData<O>,
+    }
+
+    impl<O: 'static> Service for ComponentProxy<O> {
+        type Output = O;
+        fn connect(&mut self, channel: zx::Channel) -> Option<O> {
+            let res = (|| {
+                if let Some(LaunchData { component_url, arguments }) = self.launch_data.take() {
+                    self.launched_app = Some(crate::client::launch(
+                        &crate::client::launcher()?,
+                        component_url,
+                        arguments,
+                    )?);
+                }
+                if let Some(app) = self.launched_app.as_ref() {
+                    app.pass_to_named_service(self.service_name, channel.into())?;
+                }
+                Ok::<(), Error>(())
+            })();
+            if let Err(e) = res {
+                eprintln!("ServiceFs failed to launch component: {:?}", e);
+            }
+            None
+        }
+    }
+
+    // Not part of a trait so that clients won't have to import a trait
+    // in order to call these functions.
+    macro_rules! add_service_functions {
+        () => {
+            /// Adds a FIDL service to the directory.
+            ///
+            /// The FIDL service will be hosted at the name provided by the
+            /// `[Discoverable]` annotation in the FIDL source.
+            pub fn add_fidl_service<F, RS>(
+                &mut self,
+                service: F,
+            ) -> &mut Self
+            where
+                F: FnMut(RS) -> ServiceObjTy::Output + 'static,
+                RS: RequestStream + 'static,
+                FidlService<F, RS, ServiceObjTy::Output>: Into<ServiceObjTy>,
+            {
+                self.add_service_at(
+                    RS::Service::NAME,
+                    FidlService::from(service),
+                )
+            }
+
+            /// Adds a service that proxies requests to the current environment.
+            // NOTE: we'd like to be able to remove the type parameter `O` here,
+            //  but unfortunately the bound `ServiceObjTy: From<Proxy<S, ServiceObjTy::Output>>`
+            //  makes type checking angry.
+            pub fn add_proxy_service<S: ServiceMarker, O: 'static>(&mut self) -> &mut Self
+            where
+                ServiceObjTy: From<Proxy<S, O>>,
+                ServiceObjTy: ServiceObjTrait<Output = O>,
+            {
+                self.add_service_at(
+                    S::NAME,
+                    Proxy::<S, ServiceObjTy::Output>(PhantomData),
+                )
+            }
+
+            /// Add a service to the `ServicesServer` that will launch a component
+            /// upon request, proxying requests to the launched component.
+            pub fn add_component_proxy_service<O: 'static>(
+                &mut self,
+                service_name: &'static str,
+                component_url: String,
+                arguments: Option<Vec<String>>,
+            ) -> &mut Self
+            where
+                ServiceObjTy: From<ComponentProxy<O>>,
+                ServiceObjTy: ServiceObjTrait<Output = O>,
+            {
+                self.add_service_at(
+                    service_name,
+                    ComponentProxy {
+                        launch_data: Some(LaunchData { component_url, arguments }),
+                        launched_app: None,
+                        service_name,
+                        _marker: PhantomData,
+                    }
+                )
+            }
+        };
+    }
+
+    impl<'a, ServiceObjTy: ServiceObjTrait> ServiceFsDir<'a, ServiceObjTy> {
+        /// Returns a reference to the subdirectory at the given path,
+        /// creating one if none exists.
+        ///
+        /// The path must be a single component containing no `/` characters.
+        ///
+        /// Panics if a service has already been added at the given path.
+        pub fn dir<'b>(&'b mut self, path: impl Into<String>) -> ServiceFsDir<'b, ServiceObjTy> {
+            dir(self.fs, self.position, path.into())
         }
 
-        /// Add a service to the `ServicesServer`.
-        pub fn add_service<S: ServiceFactory>(mut self, service_factory: S) -> Self {
-            self.services.push(Box::new(service_factory));
+        add_service_functions!();
+
+        /// Adds a service to the directory at the given path.
+        ///
+        /// The path must be a single component containing no `/` characters.
+        ///
+        /// Panics if any node has already been added at the given path.
+        pub fn add_service_at(
+            &mut self,
+            path: impl Into<String>,
+            service: impl Into<ServiceObjTy>,
+        ) -> &mut Self {
+            add_service(self.fs, self.position, path.into(), service.into());
             self
         }
+    }
 
-        /// Add a service that proxies requests to the current environment.
-        pub fn add_proxy_service<S: ServiceMarker>(self) -> Self {
-            struct Proxy<S>(PhantomData<S>);
-            impl<S: ServiceMarker> ServiceFactory for Proxy<S> {
-                fn service_name(&self) -> &str {
-                    S::NAME
-                }
-                fn spawn_service(&mut self, channel: fasync::Channel) {
-                    self.spawn_service_zx_channel(channel.into())
-                }
-                fn spawn_service_zx_channel(&mut self, channel: zx::Channel) {
-                    if let Err(e) = crate::client::connect_channel_to_service::<S>(channel) {
-                        eprintln!("failed to proxy request to {}: {:?}", S::NAME, e);
-                    }
-                }
-            }
-
-            self.add_service(Proxy::<S>(PhantomData))
+    impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
+        /// Returns a reference to the subdirectory at the given path,
+        /// creating one if none exists.
+        ///
+        /// The path must be a single component containing no `/` characters.
+        ///
+        /// Panics if a service has already been added at the given path.
+        pub fn dir<'a>(&'a mut self, path: impl Into<String>) -> ServiceFsDir<'a, ServiceObjTy> {
+            dir(self, ROOT_NODE, path.into())
         }
 
-        /// Add a service to the `ServicesServer` that will launch a component
-        /// upon request, proxying requests to the launched component.
-        pub fn add_component_proxy_service(
-            self,
-            service_name: &'static str,
-            component_url: String,
-            arguments: Option<Vec<String>>,
-        ) -> Self {
-            // Note: the launched app will live for the remaining lifetime of the
-            // closure, which will be exactly as long as the lifetime of the resulting
-            // `FdioServer`. When the `FdioServer` is dropped, the launched component
-            // will be terminated.
-            let mut launched_app = None;
-            let mut args = Some((component_url, arguments));
-            self.add_service((service_name, move |channel: fasync::Channel| {
-                let res = (|| {
-                    if let Some((component_url, arguments)) = args.take() {
-                        launched_app = Some(crate::client::launch(
-                            &crate::client::launcher()?,
-                            component_url,
-                            arguments,
-                        )?);
-                    }
-                    if let Some(app) = launched_app.as_ref() {
-                        app.pass_to_named_service(service_name, channel.into())?;
-                    }
-                    Ok::<(), Error>(())
-                })();
-                if let Err(e) = res {
-                    eprintln!("ServicesServer failed to launch component: {:?}", e);
-                }
-            }))
-        }
+        add_service_functions!();
 
-        /// Start serving directory protocol service requests on a new channel.
-        pub fn start_on_channel(self, channel: zx::Channel) -> Result<FdioServer, Error> {
-            let channel = fasync::Channel::from_channel(channel)?;
-            channel
-                .as_ref()
-                .signal_peer(Signals::NONE, Signals::USER_0)
-                .unwrap_or_else(|e| {
-                    eprintln!("ServicesServer::start_on_channel signal_peer failed with {}", e);
-                });
-
-            let mut server = FdioServer {
-                connections: FuturesUnordered::new(),
-                factories: self.services,
-            };
-
-            server.serve_connection(channel);
-            Ok(server)
-        }
-
-        /// Start serving directory protocol service requests on the process
-        /// PA_DIRECTORY_REQUEST handle
-        pub fn start(self) -> Result<FdioServer, Error> {
-            let fdio_handle =
-                fuchsia_runtime::take_startup_handle(
-                    fuchsia_runtime::HandleType::DirectoryRequest
-                ).ok_or(MissingStartupHandle)?;
-
-            self.start_on_channel(fdio_handle.into())
+        /// Adds a service to the directory at the given path.
+        ///
+        /// The path must be a single component containing no `/` characters.
+        ///
+        /// Panics if any node has already been added at the given path.
+        pub fn add_service_at(
+            &mut self,
+            path: impl Into<String>,
+            service: impl Into<ServiceObjTy>,
+        ) -> &mut Self {
+            add_service(self, ROOT_NODE, path.into(), service.into());
+            self
         }
 
         /// Start serving directory protocol service requests via a `ServiceList`.
         /// The resulting `ServiceList` can be attached to a new environment in
         /// order to provide child components with access to these services.
-        pub fn start_services_list(self) -> Result<(FdioServer, ServiceList), Error> {
-            let (chan1, chan2) = zx::Channel::create()?;
+        pub fn host_services_list(&mut self) -> Result<ServiceList, Error> {
+            let names = self.nodes[ROOT_NODE].expect_dir()
+                            .keys()
+                            .cloned()
+                            .collect();
 
-            self.start_on_channel(chan1).map(|fdio_server| {
-                let names = fdio_server.factories
-                                .iter()
-                                .map(|x| x.service_name().to_owned())
-                                .collect();
-                (
-                    fdio_server,
-                    ServiceList {
-                        names,
-                        provider: None,
-                        host_directory: Some(chan2),
-                    },
-                )
+            let (chan1, chan2) = zx::Channel::create()?;
+            self.serve_connection(chan1)?;
+
+            Ok(ServiceList {
+                names,
+                provider: None,
+                host_directory: Some(chan2),
             })
         }
 
@@ -374,19 +646,25 @@ pub mod server {
         /// Note that the resulting `App` and `EnvironmentControllerProxy` must be kept
         /// alive for the component to continue running. Once they are dropped, the
         /// component will be destroyed.
-        pub fn launch_component_in_nested_environment(
-            self,
+        pub fn launch_component_in_nested_environment<O: 'static>(
+            &mut self,
             url: String,
             arguments: Option<Vec<String>>,
             environment_label: &str,
-        ) -> Result<(FdioServer, EnvironmentControllerProxy, crate::client::App), Error> {
+        ) -> Result<(EnvironmentControllerProxy, crate::client::App), Error>
+        where
+            ServiceObjTy: From<Proxy<LoaderMarker, O>>,
+            ServiceObjTy: ServiceObjTrait<Output = O>,
+        {
             let env = crate::client::connect_to_service::<EnvironmentMarker>()
                 .context("connecting to current environment")?;
-            let services_with_loader = self.add_proxy_service::<LoaderMarker>();
-            let (fdio_server, mut service_list) = services_with_loader.start_services_list()?;
+            let services_with_loader = self.add_proxy_service::<LoaderMarker, _>();
+            let mut service_list = services_with_loader.host_services_list()?;
 
             let (new_env, new_env_server_end) = fidl::endpoints::create_proxy()?;
-            let (new_env_controller, new_env_controller_server_end) = fidl::endpoints::create_proxy()?;
+            let (new_env_controller, new_env_controller_server_end) =
+                fidl::endpoints::create_proxy()?;
+
             env.create_nested_environment(
                 new_env_server_end,
                 new_env_controller_server_end,
@@ -404,133 +682,195 @@ pub mod server {
                 .context("getting nested environment launcher")?;
 
             let app = crate::client::launch(&launcher_proxy, url, arguments)?;
-            Ok((fdio_server, new_env_controller, app))
+            Ok((new_env_controller, app))
         }
     }
 
-    /// `FdioServer` is a very basic vfs directory server that only responds to
-    /// OPEN and CLONE messages. OPEN always connects the client channel to a
-    /// newly spawned fidl service produced by the factory F.
-    #[must_use = "futures must be polled"]
-    pub struct FdioServer {
-        // The open connections to this FdioServer. These connections
-        // represent external clients who may attempt to open services.
-        connections: FuturesUnordered<StreamFuture<DirectoryRequestStream>>,
-        // The collection of services, exported from the current process,
-        // which may be opened from external clients.
-        factories: Vec<Box<ServiceFactory>>,
+    /// A client connection to `ServiceFs`.
+    ///
+    /// This type also implements the `Future` trait and resolves to itself
+    /// when the channel becomes readable.
+    struct ClientConnection {
+        /// The stream of incoming requests. This is always `Some` unless
+        /// this `ClientConnection` was used as a `Future` and completed, in
+        /// which case it will have given away the stream to the output of
+        /// the `Future`.
+        stream: Option<DirectoryRequestStream>,
+
+        /// The current node of the `ClientConnection` in the `ServiceFs`
+        /// filesystem.
+        position: usize,
     }
 
-    impl Unpin for FdioServer {}
+    impl ClientConnection {
+        fn stream(&mut self) -> &mut DirectoryRequestStream {
+            self.stream.as_mut().expect("ClientConnection used after `Future` completed")
+        }
+    }
 
-    impl FdioServer {
+    impl Future for ClientConnection {
+        type Output = Option<(Result<DirectoryRequest, fidl::Error>, ClientConnection)>;
+
+        fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Self::Output> {
+            let res_opt = ready!(self.stream().poll_next_unpin(waker));
+            Poll::Ready(res_opt.map(|res| {
+                (
+                    res,
+                    ClientConnection {
+                        stream: self.stream.take(),
+                        position: self.position,
+                    },
+                )
+            }))
+        }
+    }
+
+    impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
+        /// Removes the `DirectoryRequest` startup handle for the current
+        /// component and adds connects it to this `ServiceFs` as a client.
+        ///
+        /// Multiple calls to this function from the same component will
+        /// result in `Err(MissingStartupHandle)`.
+        pub fn take_and_serve_directory_handle(&mut self) -> Result<&mut Self, Error> {
+            let startup_handle =
+                fuchsia_runtime::take_startup_handle(
+                    fuchsia_runtime::HandleType::DirectoryRequest
+                ).ok_or(MissingStartupHandle)?;
+
+            self.serve_connection(zx::Channel::from(startup_handle))
+        }
+
         /// Add an additional connection to the `FdioServer` to provide services to.
-        pub fn serve_connection(&mut self, chan: fasync::Channel) {
-            self.connections.push(DirectoryRequestStream::from_channel(chan).into_future())
+        pub fn serve_connection(&mut self, chan: zx::Channel) -> Result<&mut Self, Error> {
+            self.serve_connection_at(chan, ROOT_NODE)?;
+            Ok(self)
         }
 
-        fn handle_request(&mut self, req: DirectoryRequest) -> Result<(), Error> {
-            match req {
-                DirectoryRequest::Clone { flags: _, object, control_handle: _ } => {
-                    let service_channel = fasync::Channel::from_channel(object.into_channel())?;
-                    self.serve_connection(service_channel);
-                    Ok(())
-                }
-                DirectoryRequest::Close { responder, } => {
-                    responder.send(zx::sys::ZX_OK).map_err(|e| e.into())
-                }
-                DirectoryRequest::Open { flags: _, mode: _, path, object, control_handle: _, } => {
-                    // This mechanism to open "public" redirects the service
-                    // request to the FDIO Server itself for historical reasons.
-                    //
-                    // This has the unfortunate implication that "public" can be
-                    // continually opened from the directory, resulting in paths
-                    // like "public/public/public".
-                    //
-                    // TODO(smklein): Implement a more realistic pseudo-directory,
-                    // capable of distinguishing between different characteristics
-                    // of imported / exported directories.
-                    if path == "public" {
-                        let service_channel = fasync::Channel::from_channel(object.into_channel())?;
-                        self.serve_connection(service_channel);
-                        return Ok(());
-                    }
+        fn serve_connection_at(&mut self, chan: zx::Channel, position: usize)
+            -> Result<(), Error>
+        {
+            chan
+                .signal_peer(Signals::NONE, Signals::USER_0)
+                .context("ServiceFs signal_peer failed")?;
 
-                    match self.factories.iter_mut().find(|factory| factory.service_name() == path) {
-                        Some(factory) => factory.spawn_service_zx_channel(object.into_channel()),
-                        None => eprintln!("No service found for path {}", path),
+            let chan = fasync::Channel::from_channel(chan)
+                .context("failure to convert to async channel")?;
+
+            let stream = Some(DirectoryRequestStream::from_channel(chan));
+            self.client_connections.push(ClientConnection {
+                stream,
+                position,
+            });
+            Ok(())
+        }
+
+        fn handle_request(
+            &mut self,
+            request: DirectoryRequest,
+            position: usize,
+        ) -> Result<Option<ServiceObjTy::Output>, Error> {
+            assert!(self.nodes.len() > position);
+
+            macro_rules! unsupported {
+                ($responder:ident $($args:tt)*) => {
+                    $responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED $($args)*)
+                }
+            }
+
+            match request {
+                DirectoryRequest::Clone { flags: _, object, control_handle: _ } => {
+                    if let Err(e) = self.serve_connection_at(object.into_channel(), position) {
+                        eprintln!("ServiceFs failed to clone: {:?}", e);
                     }
-                    Ok(())
+                }
+                DirectoryRequest::Close { responder, } => responder.send(zx::sys::ZX_OK)?,
+                DirectoryRequest::Open { flags: _, mode: _, path, object, control_handle: _, } => {
+                    let channel = object.into_channel();
+                    let node = self.nodes.get(position)
+                        .expect("ServiceFs client connected at missing node");
+
+                    let children = if let ServiceFsNode::Directory { children } = node {
+                        children
+                    } else {
+                        panic!("ServiceFs client connected at service node, expected directory node")
+                    };
+
+                    if let Some(&target_node_position) = children.get(&path) {
+                        match self.nodes.get_mut(target_node_position)
+                            .expect("Missing child node")
+                        {
+                            ServiceFsNode::Directory { .. } => {
+                                if let Err(e) = self.serve_connection_at(channel, target_node_position) {
+                                    eprintln!("ServiceFs failed to open directory: {:?}", e);
+                                }
+                            }
+                            ServiceFsNode::Service(service) => {
+                                return Ok(service.service().connect(channel));
+                            }
+                        }
+                    }
                 }
                 DirectoryRequest::Describe { responder } => {
                     let mut info = NodeInfo::Directory(DirectoryObject { reserved: 0 } );
-                    responder.send(&mut info).map_err(|e| e.into())
+                    responder.send(&mut info)?;
                 }
-                // Unsupported / Ignored methods.
                 DirectoryRequest::GetAttr { responder, } => {
-                    let mut attrs = NodeAttributes {
-                        mode: 0,
-                        id: 0,
-                        content_size: 0,
-                        storage_size: 0,
-                        link_count: 0,
-                        creation_time: 0,
-                        modification_time: 0,
-                    };
-                    responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED, &mut attrs).map_err(|e| e.into())
+                    let mut attrs = NodeAttributes::new_empty();
+                    unsupported!(responder, &mut attrs)?
                 }
-                DirectoryRequest::SetAttr { flags: _, attributes:_, responder, } => {
-                    responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED).map_err(|e| e.into())
+                DirectoryRequest::SetAttr { responder, .. } => unsupported!(responder)?,
+                DirectoryRequest::Ioctl { responder, .. } => {
+                    unsupported!(responder, &mut std::iter::empty(), &mut std::iter::empty())?
                 }
-                DirectoryRequest::Ioctl { opcode: _, max_out: _, handles: _, in_: _, responder, } => {
-                    responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED,
-                                   &mut std::iter::empty(),
-                                   &mut std::iter::empty()).map_err(|e| e.into())
-                }
-                DirectoryRequest::Sync { responder, } => {
-                    responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED).map_err(|e| e.into())
-                }
-                DirectoryRequest::Unlink { path: _, responder, } => {
-                    responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED).map_err(|e| e.into())
-                }
+                DirectoryRequest::Sync { responder, } => unsupported!(responder)?,
+                DirectoryRequest::Unlink { responder, .. } => unsupported!(responder)?,
                 DirectoryRequest::ReadDirents { max_bytes: _, responder, } => {
-                    responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED,
-                                   &mut std::iter::empty()).map_err(|e| e.into())
+                    // FIXME(cramertj) actually respond by listing out the
+                    // children in the ServiceFs at this position
+                    unsupported!(responder, &mut std::iter::empty())?
                 }
-                DirectoryRequest::Rewind { responder, } => {
-                    responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED).map_err(|e| e.into())
-                }
-                DirectoryRequest::GetToken { responder, } => {
-                    responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED, None).map_err(|e| e.into())
-                }
-                DirectoryRequest::Rename { src: _, dst_parent_token: _, dst: _, responder, } => {
-                    responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED).map_err(|e| e.into())
-                }
-                DirectoryRequest::Link { src: _, dst_parent_token: _, dst: _, responder, } => {
-                    responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED).map_err(|e| e.into())
-                }
-                DirectoryRequest::Watch { mask: _, options: _, watcher: _, responder, } => {
-                    responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED).map_err(|e| e.into())
-                }
+                DirectoryRequest::Rewind { responder, } => unsupported!(responder)?,
+                DirectoryRequest::GetToken { responder, } => unsupported!(responder, None)?,
+                DirectoryRequest::Rename { responder, .. } => unsupported!(responder)?,
+                DirectoryRequest::Link { responder, .. } => unsupported!(responder)?,
+                DirectoryRequest::Watch { responder, .. } => unsupported!(responder)?,
             }
+            Ok(None)
         }
     }
 
-    impl Future for FdioServer {
-        type Output = Result<(), Error>;
+    impl<ServiceObjTy: ServiceObjTrait> Unpin for ServiceFs<ServiceObjTy> {}
 
-        fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+    impl<ServiceObjTy: ServiceObjTrait> Stream for ServiceFs<ServiceObjTy> {
+        type Item = ServiceObjTy::Output;
+
+        fn poll_next(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Option<Self::Item>> {
             loop {
-                match self.connections.poll_next_unpin(lw) {
-                    Poll::Ready(Some((maybe_request, stream))) => {
-                        if let Some(Ok(request)) = maybe_request {
-                            match self.handle_request(request) {
-                                Ok(()) => self.connections.push(stream.into_future()),
-                                _ => (),
-                            }
+                let (request, client_connection) =
+                    match ready!(self.client_connections.poll_next_unpin(waker)) {
+                        // a client request
+                        Some(Some(x)) => x,
+                        // this client_connection has terminated
+                        Some(None) => continue,
+                        // all client connections have terminated
+                        None => return Poll::Ready(None),
+                    };
+                let request = match request {
+                    Ok(request) => request,
+                    Err(e) => {
+                        eprintln!("ServiceFs failed to parse an incoming request: {:?}", e);
+                        continue
+                    }
+                };
+                match self.handle_request(request, client_connection.position) {
+                    Ok(value) => {
+                        // Requeue the client to receive new requests
+                        self.client_connections.push(client_connection);
+                        if let Some(value) = value {
+                            return Poll::Ready(Some(value));
                         }
-                    },
-                    Poll::Ready(None) | Poll::Pending => return Poll::Pending,
+                    }
+                    Err(e) => eprintln!("ServiceFs failed to handle an incoming request: {:?}", e),
                 }
             }
         }

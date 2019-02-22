@@ -67,6 +67,7 @@ pub struct SwitchingOrdinalsProxy {
 }
 
 impl fidl::endpoints::Proxy for SwitchingOrdinalsProxy {
+	type Service = SwitchingOrdinalsMarker;
 	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
 		Self::new(inner)
 	}
@@ -387,6 +388,8 @@ impl futures::stream::FusedStream for SwitchingOrdinalsRequestStream {
 }
 
 impl fidl::endpoints::RequestStream for SwitchingOrdinalsRequestStream {
+	type Service = SwitchingOrdinalsMarker;
+
 	/// Consume a channel to make a SwitchingOrdinalsRequestStream
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
