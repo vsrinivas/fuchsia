@@ -20,6 +20,10 @@ func (client *FakeGCSClient) uploadSingleFile(ctx context.Context, url string, f
 	return nil
 }
 
+func (client *FakeGCSClient) getObjects(ctx context.Context) (map[string]bool, error) {
+	return map[string]bool{"alreadyExistFile.debug": true}, nil
+}
+
 func TestRunCommand(t *testing.T) {
 	tests := []struct {
 		// The name of this test case.
@@ -34,7 +38,7 @@ func TestRunCommand(t *testing.T) {
 		output map[string]string
 	}{
 		{
-			name: "should upload the files in idx.txt",
+			name: "should upload files in idx.txt",
 			input: "01634b09 /path/to/binaryA.elf\n" +
 				"02298167 /path/to/binaryB\n" +
 				"025abbbc /path/to/binaryC.so",
@@ -44,11 +48,23 @@ func TestRunCommand(t *testing.T) {
 				"025abbbc.debug": "/path/to/binaryC.so",
 			},
 		},
-		// {
-		// 	name:   "should upload nothing if nothing in ids.txt",
-		// 	input:  "",
-		// 	output: map[string]string{},
-		// },
+		{
+			name: "should not upload files already in cloud",
+			input: "alreadyExistFile /path/to/binaryA.elf\n" +
+				"01634b09 /path/to/binaryA.elf\n" +
+				"02298167 /path/to/binaryB\n" +
+				"025abbbc /path/to/binaryC.so",
+			output: map[string]string{
+				"01634b09.debug": "/path/to/binaryA.elf",
+				"02298167.debug": "/path/to/binaryB",
+				"025abbbc.debug": "/path/to/binaryC.so",
+			},
+		},
+		{
+			name:   "should upload nothing if nothing in ids.txt",
+			input:  "",
+			output: map[string]string{},
+		},
 	}
 
 	for _, tt := range tests {

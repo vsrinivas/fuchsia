@@ -20,6 +20,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"fuchsia.googlesource.com/tools/elflib"
+	"google.golang.org/api/iterator"
 )
 
 const usage = `upload_debug_symbols [flags] bucket idsFilePath
@@ -91,12 +92,21 @@ func uploadSymbolFiles(ctx context.Context, client GCSClient, idsFilePath string
 		return fmt.Errorf("failed to read %s with elflib: %v", idsFilePath, err)
 	}
 
+	objMap, err := client.getObjects(ctx)
+
+	if err != nil {
+		return err
+	}
+
 	for _, binaryFileRef := range binaries {
-		err := client.uploadSingleFile(ctx, binaryFileRef.BuildID+".debug", binaryFileRef.Filepath)
-		if err != nil {
-			return err
+		fileURL := binaryFileRef.BuildID + ".debug"
+		if _, exist := objMap[fileURL]; !exist {
+			if err := client.uploadSingleFile(ctx, fileURL, binaryFileRef.Filepath); err != nil {
+				return err
+			}
 		}
 	}
+
 	return nil
 }
 
@@ -121,9 +131,28 @@ func (client *gcsClient) uploadSingleFile(ctx context.Context, url string, fileP
 	return nil
 }
 
+// getObjects returns a set of all binaries that currently exist in Cloud Storage.
+// TODO(IN-1050)
+func (client *gcsClient) getObjects(ctx context.Context) (map[string]bool, error) {
+	existingObjects := make(map[string]bool)
+	it := client.bkt.Objects(ctx, nil)
+	for {
+		objAttrs, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		existingObjects[objAttrs.Name] = true
+	}
+	return existingObjects, nil
+}
+
 // GCSClient provide method to upload single file to gcs
 type GCSClient interface {
 	uploadSingleFile(ctx context.Context, url string, filePath string) error
+	getObjects(ctx context.Context) (map[string]bool, error)
 }
 
 // gcsClient is the object that implement GCSClient
