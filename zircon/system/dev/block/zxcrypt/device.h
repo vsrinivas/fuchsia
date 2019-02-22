@@ -58,8 +58,8 @@ public:
     inline uint32_t block_size() const { return info_->block_size; }
     inline size_t op_size() const { return info_->op_size; }
 
-    // Called via ioctl_device_bind.  This method sets up the synchronization primitives and starts
-    // the |Init| thread.
+    // Called via fuchsia.device.Controller/Bind.  This method sets up the synchronization
+    // primitives and starts the |Init| thread.
     zx_status_t Bind();
 
     // The body of the |Init| thread.  This method attempts to cryptographically unseal the device

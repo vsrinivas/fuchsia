@@ -7,8 +7,8 @@
 #include <ddk/driver.h>
 #include <zircon/types.h>
 
-// Callback for devmgr to instantiate the zxcrypt::Device when ioctl_device_bind is called on a
-// previously formatted block device.
+// Callback for devmgr to instantiate the zxcrypt::Device when
+// fuchsia.device.Controller/Bind is called on a previously formatted block device.
 extern zx_status_t zxcrypt_device_bind(void* ctx, zx_device_t* parent);
 
 static zx_driver_ops_t zxcrypt_driver_ops = {

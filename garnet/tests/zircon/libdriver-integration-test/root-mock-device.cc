@@ -109,7 +109,7 @@ zx_status_t RootMockDevice::Create(const IsolatedDevmgr& devmgr,
     }
 
     // Open a new connection to the test device to return.  We do to simplify
-    // handling around the blocking nature of fuchsia.device.Controller.Bind.  Needs to
+    // handling around the blocking nature of fuchsia.device.Controller/Bind.  Needs to
     // happen before the bind(), since bind() will cause us to get blocked in the mock device
     // driver waiting for input on what to do.
     zx::channel test_device_channel;

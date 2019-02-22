@@ -81,7 +81,7 @@ label, defined by `BI_LABEL()`.
 `BI_ABORT_IF_AUTOBIND` may be used (usually as the first instruction)
 to prevent the default automatic binding behaviour.
 In that case, a driver can be bound to a device using
-`ioctl_device_bind()` call
+`fuchsia.device.Controller/Bind` FIDL call
 
 
 ## Driver binding
