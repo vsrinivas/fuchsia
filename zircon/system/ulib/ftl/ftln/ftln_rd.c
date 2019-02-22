@@ -77,7 +77,7 @@ static int read_sectors(FTLN ftl, ui32 vsn, ui32 count, ui8* data) {
 
     // Set errno and return -1 if fatal I/O error occurred.
     if (ftl->flags & FTLN_FATAL_ERR)
-        return FsError(EIO);
+        return FsError2(FsErrCode, EIO);
 
     // Get offset in page to first sector and its virtual page number.
     vpn = vsn / ftl->sects_per_page;
@@ -172,7 +172,7 @@ int FtlnRdSects(void* buffer, ui32 sect, int count, void* vol) {
 
     // Ensure request is within volume's range of provided sectors.
     if (sect + count > ftl->num_vsects)
-        return FsError(ENOSPC);
+        return FsError2(FTL_ASSERT, ENOSPC);
 
     // If no sectors to read, return success.
     if (count == 0)
@@ -185,40 +185,6 @@ int FtlnRdSects(void* buffer, ui32 sect, int count, void* vol) {
 
     // Read sectors and return status.
     return read_sectors(ftl, sect, count, buffer);
-}
-
-//  FtlnMapRd: Read an MPN from flash - used by MPN cache
-//
-//      Inputs: vol = FTL handle
-//              mpn = map page to read
-//              buf = buffer to hold contents of map page
-//      Output: *unmapped = TRUE iff page is unmapped
-//
-//     Returns: 0 on success, -1 on error
-//
-int FtlnMapRd(void* vol, ui32 mpn, void* buf, int* unmapped) {
-    FTLN ftl = vol;
-    ui32 ppn;
-
-    // Sanity check that map page index is valid and not the meta page.
-    PfAssert(mpn < ftl->num_map_pgs - 1);
-
-    // Retrieve physical map page number from MPNs array, if available.
-    // Else output 0xFF's, set unmapped flag, and return success.
-    ppn = ftl->mpns[mpn];
-    if (ppn == (ui32)-1) {
-        memset(buf, 0xFF, ftl->page_size);
-        if (unmapped)
-            *unmapped = TRUE;
-        return 0;
-    }
-
-    // If output pointer provided, mark page as mapped.
-    if (unmapped)
-        *unmapped = FALSE;
-
-    // Read page from flash and return status.
-    return FtlnRdPage(ftl, ppn, buf);
 }
 
 //  FtlnRdPage: Read one page from flash and check return status
@@ -235,7 +201,7 @@ int FtlnRdPage(FTLN ftl, ui32 ppn, void* rd_buf) {
 
     // Set errno and return -1 if fatal I/O error occurred.
     if (ftl->flags & FTLN_FATAL_ERR)
-        return FsError(EIO);
+        return FsError2(FsErrCode, EIO);
 
     // Read page from flash. If error, set errno/fatal flag/return -1.
     ++ftl->stats.read_page;

@@ -37,6 +37,6 @@ void ftlmcDelete(FTLMC** ftlmc_ptr);
 void ftlmcInit(FTLMC* ftlmc);
 void* ftlmcGetPage(FTLMC* ftlmc, ui32 mpn, int* new_map);
 int ftlmcFlushPage(FTLMC* ftlmc, ui32 mpn);
-int ftlmcFlushMaps(FTLMC* ftlmc);
+int ftlmcFlushMap(FTLMC* ftlmc);
 ui32* ftlmcInCache(FTLMC* ftlmc, ui32 mpn);
 ui32 ftlmcRAM(const FTLMC* ftlmc);

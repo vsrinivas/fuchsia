@@ -260,7 +260,7 @@ static int build_map(FTLN ftl) {
     // Allocate space to hold block count for each map page array entry.
     bcs = FsCalloc(ftl->num_map_pgs, sizeof(ui32));
     if (bcs == NULL)
-        return -1;
+        return FsError2(FTL_ENOMEM, ENOMEM);
 
     // Loop over every block looking for map blocks. This list was made
     // by format_status() and only has one with the highest BC, but may
@@ -694,10 +694,16 @@ static int format_status(FTLN ftl) {
                 }
             }
 
-            // If copy-end not found, erase block. Return -1 if I/O error.
-            if (!ftl->copy_end_found)
+            // Check if copy-end page was not found.
+            if (!ftl->copy_end_found) {
+                // Return if doing a read-only initialization.
+                if (ftl->flags & FSF_READ_ONLY_INIT)
+                    return FsError2(FTL_VOL_BLK_XFR, EINVAL);
+
+                // Erase block. Return -1 if I/O error.
                 if (FtlnEraseBlk(ftl, b))
                     return -1;
+            }
         }
 
         // Else this looks like a map block.
@@ -733,6 +739,10 @@ static int format_status(FTLN ftl) {
                 // Else if this is the second block with highest block count,
                 // it's an interrupted map block transfer.
                 else if (ftl->high_bc == bc && ftl->high_bc_mblk != (ui32)-1) {
+                    // Return if doing a read-only initialization.
+                    if (ftl->flags & FSF_READ_ONLY_INIT)
+                        return FsError2(FTL_MAP_BLK_XFR, EINVAL);
+
                     // Erase block that was destination of interrupted transfer.
                     if (ftl->blk_wc_lag[b] > ftl->blk_wc_lag[ftl->high_bc_mblk]) {
                         rc = FtlnEraseBlk(ftl, ftl->high_bc_mblk);
@@ -895,6 +905,11 @@ static int init_ftln(FTLN ftl) {
 
     // If unformatted, blocks are free w/zero 'high_wc' lag.
     if (formatted == FALSE) {
+        // Return if doing a read-only initialization.
+        if (ftl->flags & FSF_READ_ONLY_INIT)
+            return FsError2(FTL_NO_MAP_BLKS, EINVAL);
+
+        // Record all blocks as free with zero 'high_wc' lag.
         for (b = 0; b < ftl->num_blks; ++b) {
             ftl->blk_wc_lag[b] = 0;
             ftl->bdata[b] = FREE_BLK_FLAG;
@@ -922,11 +937,17 @@ static int init_ftln(FTLN ftl) {
     if (meta_read(ftl) < 0)
         return -1;
 
-    // Erase unused map blocks. Return -1 if error
+    // Look for unused map blocks.
     for (b = 0; b < ftl->num_blks; ++b)
-        if (IS_MAP_BLK(ftl->bdata[b]) && (NUM_USED(ftl->bdata[b]) == 0))
+        if (IS_MAP_BLK(ftl->bdata[b]) && (NUM_USED(ftl->bdata[b]) == 0)) {
+            // Return if doing a read-only initialization.
+            if (ftl->flags & FSF_READ_ONLY_INIT)
+                return FsError2(FTL_UNUSED_MBLK, EINVAL);
+
+            // Erase unused map block.
             if (FtlnEraseBlk(ftl, b))
                 return -1;
+        }
 
     // If free block count is below reserved number, a recycle has been
     // interrupted by a power failure. Must avoid losing additional free
@@ -954,6 +975,10 @@ static int init_ftln(FTLN ftl) {
 #ifdef FTL_RESUME_STRESS
             ++FtlVblkResumeCnt;
 #endif
+
+            // Return if doing a read-only initialization.
+            if (ftl->flags & FSF_READ_ONLY_INIT)
+                return FsError2(FTL_VBLK_RESUME, EINVAL);
 
             // Get the number of used pages on the volume block.
             n = NUM_USED(ftl->bdata[ftl->resume_vblk]);
@@ -1013,6 +1038,10 @@ static int init_ftln(FTLN ftl) {
 #ifdef FTL_RESUME_STRESS
             ++FtlMblkResumeCnt;
 #endif
+
+            // Return if doing a read-only initialization.
+            if (ftl->flags & FSF_READ_ONLY_INIT)
+                return FsError2(FTL_MBLK_RESUME, EINVAL);
 
             // Find free block with lowest wear count. Error if none free.
             b = FtlnLoWcFreeBlk(ftl);
@@ -1081,6 +1110,40 @@ static void free_ftl(void* vol) {
     FsFree(ftl);
 }
 
+//  rd_map_pg: Read an MPN from flash - used by MPN cache
+//
+//      Inputs: vol = FTL handle
+//              mpn = map page to read
+//              buf = buffer to hold contents of map page
+//      Output: *unmapped = TRUE iff page is unmapped
+//
+//     Returns: 0 on success, -1 on error
+//
+static int rd_map_pg(void* vol, ui32 mpn, void* buf, int* unmapped) {
+    FTLN ftl = vol;
+    ui32 ppn;
+
+    // Sanity check that map page index is valid and not the meta page.
+    PfAssert(mpn < ftl->num_map_pgs - 1);
+
+    // Retrieve physical map page number from MPNs array, if available.
+    // Else output 0xFF's, set unmapped flag, and return success.
+    ppn = ftl->mpns[mpn];
+    if (ppn == (ui32)-1) {
+        memset(buf, 0xFF, ftl->page_size);
+        if (unmapped)
+            *unmapped = TRUE;
+        return 0;
+    }
+
+    // If output pointer provided, mark page as mapped.
+    if (unmapped)
+        *unmapped = FALSE;
+
+    // Read page from flash and return status.
+    return FtlnRdPage(ftl, ppn, buf);
+}
+
 // Global Function Definitions
 
 //  FtlnAddVol: Add a new TargetFTL-NDM volume
@@ -1097,20 +1160,22 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
     ui8* buf;
     FTLN ftl;
 
-    // Ensure shared FTL vstat fields remain at same offset.
-    PfAssert(offsetof(vstat_fat, garbage_level) == offsetof(vstat_xfs, garbage_level));
-    PfAssert(offsetof(vstat_fat, ftl_type) == offsetof(vstat_xfs, ftl_type));
-
     // If number of blocks less than 7, FTL-NDM cannot work.
     if (ftl_dvr->num_blocks < 7) {
-        FsError(EINVAL);
+        FsError2(FTL_CFG_ERR, EINVAL);
+        return NULL;
+    }
+
+    // Ensure FTL flags are valid.
+    if (ftl_dvr->flags & ~(FSF_EXTRA_FREE | FSF_READ_WEAR_LIMIT | FSF_READ_ONLY_INIT)) {
+        FsError2(FTL_CFG_ERR, EINVAL);
         return NULL;
     }
 
 #if CACHE_LINE_SIZE
     // Ensure driver page size is a multiple of the CPU cache line size.
     if (ftl_dvr->page_size % CACHE_LINE_SIZE) {
-        FsError(EINVAL);
+        FsError2(FTL_CFG_ERR, EINVAL);
         return NULL;
     }
 #endif
@@ -1119,23 +1184,16 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
     // not bigger than the device block size.
     if (ftl_dvr->page_size % FAT_SECT_SZ || ftl_dvr->page_size == 0 ||
         ftl_dvr->page_size > ftl_dvr->block_size) {
-        FsError(EINVAL);
+        FsError2(FTL_CFG_ERR, EINVAL);
         return NULL;
     }
-
-    // Ensure FTL flags are valid.
-    if (ftl_dvr->flags & ~(FSF_EXTRA_FREE | FSF_READ_WEAR_LIMIT)) {
-        FsError(EINVAL);
-        return NULL;
-    }
-
-    // Ensure driver has an NDM pointer.
-    PfAssert(ftl_dvr->ndm);
 
     // Allocate memory for FTL control block. Return NULL if unable.
     ftl = FsCalloc(1, sizeof(struct ftln));
-    if (ftl == NULL)
+    if (ftl == NULL) {
+        FsError2(FTL_ENOMEM, ENOMEM);
         return NULL;
+    }
 #if FTLN_DEBUG_PTR
     Ftln = ftl;
 #endif
@@ -1143,44 +1201,31 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
     // Set callback to free FTL resources from generic FTL NDM layer.
     ftl->free_ftl = free_ftl;
 
-    // Acquire exclusive access to upper file system.
-    semPend(FileSysSem, WAIT_FOREVER);
-
-    // Add volume to list of FTL volumes.
-    CIRC_LIST_APPEND(&ftl->link, &FtlnVols);
-
     // Set all FTL driver dependent variables.
+    ftl->num_blks = ftl_dvr->num_blocks;
     ftl->page_size = ftl_dvr->page_size;
     ftl->eb_size = ftl_dvr->eb_size;
     ftl->block_size = ftl_dvr->block_size;
-    ftl->num_blks = ftl_dvr->num_blocks;
+    ftl->pgs_per_blk = ftl->block_size / ftl->page_size;
+    ftl->num_pages = ftl->pgs_per_blk * ftl->num_blks;
     ftl->start_pn = ftl_dvr->start_page;
     ftl->ndm = ftl_dvr->ndm;
     ftl->type = ftl_dvr->type;
-    SET_FLAG(ftl->flags, ftl_type);
-    ftl->sect_size = sect_size;
+    ftl->flags = ftl_dvr->flags | ftl_type;
 
-    // Derive other driver dependent variables.
-    ftl->pgs_per_blk = ftl->block_size / ftl->page_size;
     if (ftl->pgs_per_blk > PGS_PER_BLK_MAX) {
-        FsError(EINVAL);
-        semPostBin(FileSysSem);
+        FsError2(FTL_CFG_ERR, EINVAL);
         goto FtlnAddV_err;
     }
-    ftl->num_pages = ftl->pgs_per_blk * ftl->num_blks;
-#if !FTLN_LEGACY
-#if FTLN_3B_PN
+#if !FTLN_LEGACY && FTLN_3B_PN
+    // Verify number of pages doesn't exceed 3B field width.
     if (ftl->num_pages > 0x1000000) {
-        FsError(EFBIG);
-        semPostBin(FileSysSem);
+        FsError2(FTL_CFG_ERR, EINVAL);
         goto FtlnAddV_err;
     }
 #endif
-#endif // !FTLN_LEGACY
+    ftl->sect_size = sect_size;
     ftl->sects_per_page = ftl->page_size / ftl->sect_size;
-
-    // Release file system exclusive access.
-    semPostBin(FileSysSem);
 
     // Copy the driver callback functions.
     ftl->write_page = ftl_dvr->write_data_and_spare;
@@ -1289,25 +1334,32 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
 // use is one block worth of spare areas for multi-page writes.
     n = ftl->page_size + ftl->eb_size * ftl->pgs_per_blk;
     buf = FsAalloc(n);
-    if (buf == NULL)
+    if (buf == NULL) {
+        FsError2(FTL_ENOMEM, ENOMEM);
         goto FtlnAddV_err;
+    }
     ftl->main_buf = buf;
-    buf += ftl->page_size;
-    ftl->spare_buf = buf;
+    ftl->spare_buf = buf + ftl->page_size;
 
     // Allocate memory for the block data and wear count lag arrays.
     ftl->bdata = FsCalloc(ftl->num_blks, sizeof(ui32));
-    if (ftl->bdata == NULL)
+    if (ftl->bdata == NULL) {
+        FsError2(FTL_ENOMEM, ENOMEM);
         goto FtlnAddV_err;
+    }
     ftl->blk_wc_lag = FsCalloc(ftl->num_blks, sizeof(ui8));
-    if (ftl->blk_wc_lag == NULL)
+    if (ftl->blk_wc_lag == NULL) {
+        FsError2(FTL_ENOMEM, ENOMEM);
         goto FtlnAddV_err;
+    }
     ftl->high_wc = 0;
 
     // Allocate memory for map pages array (holds physical page numbers).
     ftl->mpns = FsMalloc(ftl->num_map_pgs * sizeof(ui32));
-    if (ftl->mpns == NULL)
+    if (ftl->mpns == NULL) {
+        FsError2(FTL_ENOMEM, ENOMEM);
         goto FtlnAddV_err;
+    }
 
     // For SLC devices, adjust driver cached MPNs if too big or zero.
 #if INC_FTL_NDM_SLC
@@ -1322,7 +1374,7 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
 #endif
 
     // Allocate map page cache for new volume.
-    ftl->map_cache = ftlmcNew(ftl, ftl_dvr->cached_map_pages, FtlnMapWr, FtlnMapRd, ftl->page_size);
+    ftl->map_cache = ftlmcNew(ftl, ftl_dvr->cached_map_pages, FtlnMapWr, rd_map_pg, ftl->page_size);
     if (ftl->map_cache == NULL)
         goto FtlnAddV_err;
 
@@ -1337,7 +1389,7 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
 #endif
     }
     if (ftl->max_rc > RC_MASK) {
-        FsError(EINVAL);
+        FsError2(FTL_CFG_ERR, EINVAL);
         goto FtlnAddV_err;
     }
 
@@ -1376,15 +1428,17 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
         strcpy(ftl->vol_name, xfs->name);
     }
 
+    // Add FTL to FTL-NDM volume list while holding access semaphore.
+    semPend(FileSysSem, WAIT_FOREVER);
+    CIRC_LIST_APPEND(&ftl->link, &FtlnVols);
+    semPostBin(FileSysSem);
+
     // Return pointer to FTL control block.
     return ftl;
 
 // Error exit.
 FtlnAddV_err:
-    semPend(FileSysSem, WAIT_FOREVER);
-    CIRC_NODE_REMOVE(&ftl->link);
     free_ftl(ftl);
-    semPostBin(FileSysSem);
     return NULL;
 }
 
@@ -1468,7 +1522,7 @@ int FtlNdmDelVol(const char* name) {
             semPostBin(FileSysSem);
 
             // Volume not found, assign errno and return -1.
-            return FsError(ENOENT);
+            return FsError2(FTL_NOT_FOUND, ENOENT);
         }
 
         // If volume found, delete it and return success.

@@ -235,7 +235,7 @@ struct ftln {
     ui8* main_buf; // NAND main page buffer
     ui8* spare_buf; // spare buffer for single/multi-pg access
 
-    ui32 type;          // type of NAND - SLC or MLC
+    ui8 type;           // type of NAND - SLC or MLC
     ui8 eb_size;        // spare area size in bytes
     ui8 copy_end_found; // vblk resume copy-end mark found
     ui8 deferment;      // # of recycles before applying wear limit
@@ -274,7 +274,6 @@ int FtlnRecNeeded(CFTLN ftl, int wr_cnt);
 int FtlnRdPage(FTLN ftl, ui32 pn, void* buf);
 
 int FtlnMapWr(void* vol, ui32 mpn, void* buf);
-int FtlnMapRd(void* vol, ui32 mpn, void* buf, int* unmapped);
 int FtlnMetaWr(FTLN ftl, ui32 type);
 
 void FtlnDecUsed(FTLN ftl, ui32 pn, ui32 vpn);

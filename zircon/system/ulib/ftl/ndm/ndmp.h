@@ -46,7 +46,7 @@
 
 // Actions that can cause a block to go bad
 #define ERASE_BLOCK 1
-#define WRITE_PAGE 2//
+#define WRITE_PAGE 2
 
 //
 // Layout for the spare area:

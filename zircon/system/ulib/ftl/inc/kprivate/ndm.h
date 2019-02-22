@@ -123,8 +123,6 @@ int ndmSetNumPartitions(NDM ndm, ui32 num_partitions);
 int ndmReadPartition(CNDM ndm, NDMPartition* part, ui32 part_num);
 const NDMPartition* ndmGetPartition(CNDM ndm, ui32 part_num);
 int ndmWritePartition(NDM ndm, const NDMPartition* part, ui32 part_num, const char* name);
-int ndmErasePartition(NDM ndm, ui32 part_num);
-void ndmDeletePartition(CNDM ndm, ui32 part_num);
 void ndmDeletePartitionTable(NDM ndm);
 int ndmSavePartitionTable(NDM ndm);
 int ndmDelVols(CNDM ndm);

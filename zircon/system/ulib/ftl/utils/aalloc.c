@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <inc/config.h>
 #include <stdlib.h>
 #include <sys.h>
 #include <bsp.h>

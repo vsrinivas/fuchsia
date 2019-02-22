@@ -354,13 +354,13 @@ int ftlmcFlushPage(FTLMC* cache, ui32 mpn) {
     return 0;
 }
 
-// ftlmcFlushMaps: Flush all dirty map pages
+// ftlmcFlushMap: Flush all dirty map pages
 //
 //       Input: cache = cache handle
 //
 //     Returns: 0 on success, -1 on failure
 //
-int ftlmcFlushMaps(FTLMC* cache) {
+int ftlmcFlushMap(FTLMC* cache) {
     ftlmcEntry* entry = &cache->entry[0];
 
     // Loop over cache entries, flushing each dirty one.

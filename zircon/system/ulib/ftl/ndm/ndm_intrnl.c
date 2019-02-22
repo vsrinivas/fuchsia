@@ -73,7 +73,7 @@ static int get_ctrl_size(CNDM ndm) {
     for (i = 0;; ++i) {
         // Ensure the initial bad block map is valid.
         if (i > ndm->max_bad_blks) {
-            FsError(EINVAL);
+            FsError2(NDM_ASSERT, EINVAL);
             return 0;
         }
 
@@ -93,7 +93,7 @@ static int get_ctrl_size(CNDM ndm) {
     for (i = 0;; ++i) {
         // Ensure running bad block map is valid.
         if (i > ndm->max_bad_blks) {
-            FsError(EINVAL);
+            FsError2(NDM_ASSERT, EINVAL);
             return 0;
         }
 
@@ -163,7 +163,7 @@ static int wr_ctrl_page(NDM ndm, ui32 cpc, ui32* curr_pnp, ui32* badblkp) {
     if (rc) {
         // If fatal error, return fatal error indication.
         if (rc == -2) {
-            FsError(EIO);
+            FsError2(NDM_EIO, EIO);
             return rc;
         }
 
@@ -210,7 +210,7 @@ static int wr_ctrl_page(NDM ndm, ui32 cpc, ui32* curr_pnp, ui32* badblkp) {
         if (rc) {
             // If fatal error, return fatal error indication.
             if (rc == -2) {
-                FsError(EIO);
+                FsError2(NDM_EIO, EIO);
                 return rc;
             }
 
@@ -438,11 +438,8 @@ static int wr_ctrl_info(NDM ndm, ui32 frst_page, ui32* badblkp) {
             case 0:
                 puts("NONE");
                 break;
-            case FFS_VOL:
-                puts("FFS");
-                break;
-            case FAT_VOL:
-                puts("FAT");
+            case XFS_VOL:
+                puts("XFS");
                 break;
             default:
                 printf("%u\n", ndm->partitions[i].type);
@@ -471,7 +468,7 @@ static int mark_ctrl_bblock(NDM ndm, ui32* cblkp) {
 
     // Adjust bad block count. If too many, error.
     if (++ndm->num_bad_blks > ndm->max_bad_blks)
-        return FsError(ENOSPC);
+        return FsError2(NDM_TOO_MANY_RBAD, ENOSPC);
 
     // Update the running bad block map with this block.
     ndm->run_bad_blk[ndm->num_rbb].key = bad_blk;
@@ -499,7 +496,7 @@ static int mark_ctrl_bblock(NDM ndm, ui32* cblkp) {
         else if (bad_blk == ndm->ctrl_blk1)
             ndm->ctrl_blk1 = ndm->free_ctrl_blk;
         else
-            return FsError(EINVAL);
+            return FsError2(NDM_ASSERT, EINVAL);
 
         // Update pointer to next free control block and return success.
         --ndm->free_ctrl_blk;
@@ -507,7 +504,7 @@ static int mark_ctrl_bblock(NDM ndm, ui32* cblkp) {
     }
 
     // If no free block found for control block, error.
-    return FsError(ENOSPC);
+    return FsError2(NDM_NO_FREE_BLK, ENOSPC);
 }
 
 // get_free_virt_blk: Get next free block reserved for replacing bad
@@ -556,12 +553,12 @@ static int mark_extra_bblock(NDM ndm, ui32* bnp) {
 
     // Adjust number of bad blocks. If too many, error.
     if (++ndm->num_bad_blks > ndm->max_bad_blks)
-        return FsError(ENOSPC);
+        return FsError2(NDM_TOO_MANY_RBAD, ENOSPC);
 
     // Get a free block to replace the bad block.
     free_b = get_free_virt_blk(ndm);
     if (free_b == (ui32)-1)
-        return FsError(ENOSPC);
+        return FsError2(NDM_NO_FREE_BLK, ENOSPC);
 
     // Check that bad block is in the running bad block map only as a
     // transfer to block (.val field) and only once.
@@ -570,17 +567,17 @@ static int mark_extra_bblock(NDM ndm, ui32* bnp) {
         if (i == ndm->num_rbb) {
             if (found)
                 break;
-            return FsError(EINVAL);
+            return FsError2(NDM_ASSERT, EINVAL);
         }
 
         // Bad block cannot be in the map as a transfer from block (.key).
         if (ndm->run_bad_blk[i].key == *bnp)
-            return FsError(EINVAL);
+            return FsError2(NDM_ASSERT, EINVAL);
 
         // If bad block in map, ensure first occurrence and remember find.
         if (ndm->run_bad_blk[i].val == *bnp) {
             if (found)
-                return FsError(EINVAL);
+                return FsError2(NDM_ASSERT, EINVAL);
             found = TRUE;
         }
     }
@@ -671,7 +668,7 @@ static ui32 get_pbn(NDM ndm, ui32 vbn, int reason) {
     for (i = 0, bn = vbn;; ++i) {
         // Should never pass last entry, which holds 'num_dev_blks'.
         if (i > ndm->max_bad_blks)
-            return (ui32)FsError(EINVAL);
+            return (ui32)FsError2(NDM_ASSERT, EINVAL);
 
         // 'i' is the number of initial bad blocks preceding the indexed`
         // initial bad block. Break when the number of volume blocks and
@@ -687,7 +684,7 @@ static ui32 get_pbn(NDM ndm, ui32 vbn, int reason) {
 
     // At this point the initial bad block cannot be in the NDM area.
     if (bn >= ndm->frst_reserved)
-        return (ui32)FsError(EINVAL);
+        return (ui32)FsError2(NDM_ASSERT, EINVAL);
 
     // Walk the running bad block map replacing initial block with the
     // most current version (if any).
@@ -697,7 +694,7 @@ static ui32 get_pbn(NDM ndm, ui32 vbn, int reason) {
 
     // Ensure the block number is valid.
     if (bn >= ndm->num_dev_blks)
-        return (ui32)FsError(EINVAL);
+        return (ui32)FsError2(NDM_ASSERT, EINVAL);
 
     // Update last read or write lookup cache.
     if (reason == WR_MAPPING) {
@@ -730,7 +727,7 @@ static int write_page(NDM ndm, ui32 vpn, const ui8* data, ui8* spare, int action
     // Compute the virtual block number and check for error.
     vbn = vpn / ndm->pgs_per_blk;
     if (vbn >= ndm->num_vblks) {
-        FsError(EINVAL);
+        FsError2(NDM_ASSERT, EINVAL);
         return -2;
     }
 
@@ -760,13 +757,13 @@ static int write_page(NDM ndm, ui32 vpn, const ui8* data, ui8* spare, int action
         // Else fatal error, return -2.
         else {
             PfAssert(rc == -2);
-            FsError(EIO);
+            FsError2(NDM_EIO, EIO);
             return -2;
         }
     }
 } //lint !e818
 
-//   wr_pg_ftl: FTL driver function - write page (data + spare)
+//   ftl_wr_pg: FTL driver function - write page (data + spare)
 //
 //      Inputs: vpn = virtual page number
 //              data = pointer to buffer containing data to write
@@ -775,7 +772,7 @@ static int write_page(NDM ndm, ui32 vpn, const ui8* data, ui8* spare, int action
 //
 //     Returns: 0 on success, -2 on fatal error
 //
-static int wr_pg_ftl(ui32 vpn, const void* data, void* spare, void* ndm_ptr) {
+static int ftl_wr_pg(ui32 vpn, const void* data, void* spare, void* ndm_ptr) {
     int action, status;
     NDM ndm = ndm_ptr;
 
@@ -796,7 +793,7 @@ static int wr_pg_ftl(ui32 vpn, const void* data, void* spare, void* ndm_ptr) {
     return status;
 } //lint !e818
 
-// rd_spare_ftl: FTL driver function - read/decode page spare area
+// ftl_rd_spare: FTL driver function - read/decode page spare area
 //
 //      Inputs: vpn = virtual page number
 //              spare = buffer to read sparea area into
@@ -805,7 +802,7 @@ static int wr_pg_ftl(ui32 vpn, const void* data, void* spare, void* ndm_ptr) {
 //     Returns: 0 on success, -1 on ECC error, -2 on fatal error, 1 if
 //              block page belongs to needs to be recycled
 //
-static int rd_spare_ftl(ui32 vpn, void* spare, void* ndm_ptr) {
+static int ftl_rd_spare(ui32 vpn, void* spare, void* ndm_ptr) {
     ui32 vbn, bn, pn;
     NDM ndm = ndm_ptr;
     int status;
@@ -813,7 +810,7 @@ static int rd_spare_ftl(ui32 vpn, void* spare, void* ndm_ptr) {
     // Compute virtual block number. Return -2 if out-of-range.
     vbn = vpn / ndm->pgs_per_blk;
     if (vbn >= ndm->num_vblks) {
-        FsError(EINVAL);
+        FsError2(NDM_ASSERT, EINVAL);
         return -2;
     }
 
@@ -830,17 +827,17 @@ static int rd_spare_ftl(ui32 vpn, void* spare, void* ndm_ptr) {
     // Compute physical page number.
     pn = bn * ndm->pgs_per_blk + vpn % ndm->pgs_per_blk;
 
-    // Read and decode spare. Call FsError() if error.
+    // Read and decode spare. Call FsError2() if error.
     status = ndm->read_decode_spare(pn, spare, ndm->dev);
     if (status < 0)
-        FsError(EIO);
+        FsError2(NDM_EIO, EIO);
 
     // Release exclusive access to NDM and return status.
     semPostBin(ndm->sem);
     return status;
 }
 
-// pg_check_ftl: FTL driver function - determine status of a page
+// ftl_check_pg: FTL driver function - determine status of a page
 //
 //      Inputs: vpn = virtual page number
 //              data = buffer that will hold page data
@@ -850,7 +847,7 @@ static int rd_spare_ftl(ui32 vpn, void* spare, void* ndm_ptr) {
 //     Returns: -1 if error, else NDM_PAGE_ERASED (0), NDM_PAGE_VALID
 //              (1), or NDM_PAGE_INVALID (2)
 //
-static int pg_check_ftl(ui32 vpn, ui8* data, ui8* spare, void* ndm_ptr) {
+static int ftl_check_pg(ui32 vpn, ui8* data, ui8* spare, void* ndm_ptr) {
     NDM ndm = ndm_ptr;
     ui32 vbn, bn, pn;
     int status;
@@ -858,7 +855,7 @@ static int pg_check_ftl(ui32 vpn, ui8* data, ui8* spare, void* ndm_ptr) {
     // Compute the virtual block number.
     vbn = vpn / ndm->pgs_per_blk;
     if (vbn >= ndm->num_vblks)
-        return FsError(EINVAL);
+        return FsError2(NDM_ASSERT, EINVAL);
 
     // Grab exclusive access to TargetNDM internals.
     semPend(ndm->sem, WAIT_FOREVER);
@@ -876,7 +873,7 @@ static int pg_check_ftl(ui32 vpn, ui8* data, ui8* spare, void* ndm_ptr) {
     // Call the NDM driver to determine page status.
     if (ndm->check_page(pn, data, spare, &status, ndm->dev)) {
         semPostBin(ndm->sem);
-        return FsError(EIO);
+        return FsError2(NDM_EIO, EIO);
     }
 
     // Release exclusive access to NDM and return success.
@@ -902,7 +899,7 @@ static int read_page(ui32 vpn, void* buf, void* ndm_ptr) {
     // Compute the virtual block number based on virtual page number.
     vbn = vpn / ndm->pgs_per_blk;
     if (vbn >= ndm->num_vblks) {
-        FsError(EINVAL);
+        FsError2(NDM_ASSERT, EINVAL);
         return -2;
     }
 
@@ -928,9 +925,9 @@ static int read_page(ui32 vpn, void* buf, void* ndm_ptr) {
     // If error, set errno. Return status.
     if (status) {
         if (status == -1)
-            FsError(EINVAL);
+            FsError2(NDM_RD_ECC_FAIL, EINVAL);
         else if (status == -2)
-            FsError(EIO);
+            FsError2(NDM_EIO, EIO);
     }
     return status;
 }
@@ -963,7 +960,7 @@ static int ftl_xfr_page(ui32 old_vpn, ui32 new_vpn, ui8* buf, ui8* spare, void* 
     old_vbn = old_vpn / ndm->pgs_per_blk;
     new_vbn = new_vpn / ndm->pgs_per_blk;
     if (old_vbn >= ndm->num_vblks || new_vbn >= ndm->num_vblks) {
-        FsError(EINVAL);
+        FsError2(NDM_ASSERT, EINVAL);
         semPostBin(ndm->sem);
         return -2;
     }
@@ -999,7 +996,7 @@ static int ftl_xfr_page(ui32 old_vpn, ui32 new_vpn, ui8* buf, ui8* spare, void* 
 
         // Else if fatal error (-2), break to return -2.
         if (status == -2) {
-            FsError(EIO);
+            FsError2(NDM_EIO, EIO);
             break;
         }
 
@@ -1054,7 +1051,7 @@ int ndmMarkBadBlock(NDM ndm, ui32 arg, ui32 cause) {
     // Get a free block to replace the bad virtual block.
     free_b = get_free_virt_blk(ndm);
     if (free_b == (ui32)-1)
-        return FsError(ENOSPC);
+        return FsError2(NDM_NO_FREE_BLK, ENOSPC);
 
     // Based on cause, figure out bad block and first bad page.
     if (cause == ERASE_BLOCK) {
@@ -1071,7 +1068,7 @@ int ndmMarkBadBlock(NDM ndm, ui32 arg, ui32 cause) {
         if (i == ndm->num_rbb) {
             // Adjust bad block count. If too many, return -1.
             if (++ndm->num_bad_blks > ndm->max_bad_blks)
-                return FsError(ENOSPC);
+                return FsError2(NDM_TOO_MANY_RBAD, ENOSPC);
 
             // Add block as last list entry and then break.
             ndm->run_bad_blk[ndm->num_rbb].key = bad_b;
@@ -1132,17 +1129,17 @@ int ndmMarkBadBlock(NDM ndm, ui32 arg, ui32 cause) {
                 if (status == TRUE)
                     continue;
                 else if (status < 0)
-                    return FsError(EIO);
+                    return FsError2(NDM_EIO, EIO);
 
                 // Read main data. Return -1 if ECC or fatal error.
                 status = ndm->read_page(old_pn, ndm->main_buf, ndm->spare_buf, ndm->dev);
                 if (status < 0)
-                    return FsError(EIO);
+                    return FsError2(NDM_EIO, EIO);
 
                 // Read old spare data. Return -1 if ECC or fatal error.
                 status = ndm->read_decode_spare(old_pn, ndm->spare_buf, ndm->dev);
                 if (status < 0)
-                    return FsError(EIO);
+                    return FsError2(NDM_EIO, EIO);
 
                 // If FTL volume page, just ECC the spare bytes.
                 if (RD32_LE(&ndm->spare_buf[5]) == (ui32)-1)
@@ -1165,7 +1162,7 @@ int ndmMarkBadBlock(NDM ndm, ui32 arg, ui32 cause) {
 
         // Return -1 if fatal error.
         if (status == -2)
-            return FsError(EIO);
+            return FsError2(NDM_EIO, EIO);
 
         // Else bad block. Mark it. Return -1 if error.
         else {
@@ -1201,7 +1198,7 @@ int ndmWrCtrl(NDM ndm) {
             // Call driver to erase the block. Return -1 if fatal error.
             status = ndm->erase_block(first_page, ndm->dev);
             if (status == -2)
-                return FsError(EIO);
+                return FsError2(NDM_EIO, EIO);
             if (status)
                 ctrl_blk = first_page / ndm->pgs_per_blk;
         }
@@ -1245,7 +1242,7 @@ int ndmWrCtrl(NDM ndm) {
         else if (ctrl_blk == ndm->ctrl_blk1)
             ctrl_blk = ndm->ctrl_blk0;
         else
-            return FsError(EINVAL);
+            return FsError2(NDM_ASSERT, EINVAL);
         first_page = ctrl_blk * ndm->pgs_per_blk;
     }
 
@@ -1287,20 +1284,8 @@ int ndmUnformat(NDM ndm) {
         if (run_bad_block(ndm, b))
             continue;
 
-        // Erase block. If command fails, mark as bad block.
-        status = ndm->erase_block(b * ndm->pgs_per_blk, ndm->dev);
-        if (status == -1) {
-            if (ndmMarkBadBlock(ndm, b, ERASE_BLOCK)) {
-                semPostBin(ndm->sem);
-                return -1;
-            }
-        }
-
-        // If failure other than bad block, return -1.
-        else if (status) {
-            semPostBin(ndm->sem);
-            return FsError(EIO);
-        }
+        // Erase block. Ignore return code.
+        ndm->erase_block(b * ndm->pgs_per_blk, ndm->dev);
     }
 
     // Remove all the volumes on the device.
@@ -1334,36 +1319,36 @@ int ndmAddVolXfsFTL(NDM ndm, ui32 part_num, FtlNdmVol* ftl, XfsVol* xfs) {
 
     // Check partition number.
     if (part_num >= ndm->num_partitions)
-        return FsError(EINVAL);
+        return FsError2(NDM_CFG_ERR, EINVAL);
     part = &ndm->partitions[part_num];
-
-    // Check partition type.
-    if (part->type != XFS_VOL)
-        return FsError(EINVAL);
 
     // Check partition first block and number of blocks.
     if (part->first_block + part->num_blocks > ndm->num_vblks)
-        return FsError(ENOSPC);
+        return FsError2(NDM_CFG_ERR, ENOSPC);
+
+    // Set the fields dependent on flash geometry.
+    ftl->page_size = ndm->page_size;
+    ftl->eb_size = ndm->eb_size;
+    ftl->block_size = ndm->block_size;
 
     // Set up the non-customizable part of the FTL/XFS drivers.
     ftl->ndm = ndm;
     ftl->start_page = part->first_block * ndm->pgs_per_blk;
     ftl->num_blocks = part->num_blocks;
-    ftl->block_size = ndm->block_size;
-    ftl->page_size = ndm->page_size;
-    ftl->eb_size = ndm->eb_size;
+    ftl->type = ndm->dev_type;
+    xfs->name = part->name;
+
+    // Provide the TargetNDM lower-level interface to TargetFTL-NDM.
     ftl->erase_block = ndmEraseBlock;
-    ftl->write_data_and_spare = wr_pg_ftl;
+    ftl->write_data_and_spare = ftl_wr_pg;
     ftl->write_pages = ndmWritePages;
-    ftl->read_spare = rd_spare_ftl;
+    ftl->read_spare = ftl_rd_spare;
     ftl->read_pages = ndmReadPages;
-    ftl->page_check = pg_check_ftl;
+    ftl->page_check = ftl_check_pg;
     ftl->transfer_page = ftl_xfr_page;
 #if INC_FTL_NDM_MLC
     ftl->pair_offset = pair_offset;
 #endif
-    ftl->type = ndm->dev_type;
-    xfs->name = part->name;
 
     // Add a TargetXFS FTL to this TargetNDM partition.
     ftl_ndm = FtlNdmAddXfsFTL(ftl, xfs);
@@ -1403,7 +1388,7 @@ int ndmReadPages(ui32 vpn, ui32 count, void* data, void* spare, void* ndm_ptr) {
         // Compute the virtual block number based on virtual page number.
         vbn = vpn / ndm->pgs_per_blk;
         if (vbn >= ndm->num_vblks) {
-            FsError(EINVAL);
+            FsError2(NDM_ASSERT, EINVAL);
             return -2;
         }
 
@@ -1489,7 +1474,7 @@ int ndmWritePages(ui32 vpn, ui32 count, const void* data, void* spare, void* ndm
         vbn = vpn / ndm->pgs_per_blk;
         if (vbn >= ndm->num_vblks) {
             semPostBin(ndm->sem);
-            return FsError(EINVAL);
+            return FsError2(NDM_ASSERT, EINVAL);
         }
 
         // Writing to flash until success or failure other than bad block.
@@ -1513,7 +1498,7 @@ int ndmWritePages(ui32 vpn, ui32 count, const void* data, void* spare, void* ndm
 
             // If fatal error, break to return -1.
             if (rc == -2) {
-                rc = FsError(EIO);
+                rc = FsError2(NDM_EIO, EIO);
                 break;
             }
 
@@ -1583,7 +1568,7 @@ int ndmSetNumPartitions(NDM ndm, ui32 num_partitions) {
     // Allocate space for the new partitions table.
     new_partitions = FsCalloc(num_partitions, sizeof(NDMPartition));
     if (new_partitions == NULL)
-        return -1;
+        return FsError2(NDM_ENOMEM, ENOMEM);
 
     // If there is a current partitions table, copy as much of it as
     // possible to the new table before removing it.
@@ -1613,7 +1598,7 @@ int ndmSetNumPartitions(NDM ndm, ui32 num_partitions) {
 const NDMPartition* ndmGetPartition(CNDM ndm, ui32 part_num) {
     // If partition number out of bounds, error.
     if (part_num >= ndm->num_partitions) {
-        FsError(EINVAL);
+        FsError2(NDM_CFG_ERR, EINVAL);
         return NULL;
     }
 
@@ -1635,13 +1620,13 @@ int ndmWritePartition(NDM ndm, const NDMPartition* part, ui32 part_num, const ch
 
     // Ensure name is not too long and copy it to partition structure.
     if (strlen(name) >= NDM_PART_NAME_LEN)
-        return FsError(EINVAL);
+        return FsError2(NDM_CFG_ERR, EINVAL);
     strcpy((char*)part->name, name);
 
     // If partition first block or number of blocks invalid, error.
     if (part->first_block >= ndm->num_vblks ||
         part->first_block + part->num_blocks > ndm->num_vblks)
-        return FsError(EINVAL);
+        return FsError2(NDM_CFG_ERR, EINVAL);
 
     // If there are partitions already, check there is no overlap.
     for (i = 0; i < ndm->num_partitions; ++i) {
@@ -1656,7 +1641,7 @@ int ndmWritePartition(NDM ndm, const NDMPartition* part, ui32 part_num, const ch
                      ndm->partitions[i].first_block + ndm->partitions[i].num_blocks) ||
                 (ndm->partitions[i].first_block >= part->first_block &&
                  ndm->partitions[i].first_block < part->first_block + part->num_blocks))
-                return FsError(EINVAL);
+                return FsError2(NDM_CFG_ERR, EINVAL);
         }
     }
 
@@ -1685,7 +1670,7 @@ int ndmEraseBlock(ui32 vpn, void* ndm_ptr) {
     // Compute the virtual block number based on virtual page number.
     vbn = vpn / ndm->pgs_per_blk;
     if (vbn >= ndm->num_vblks)
-        return FsError(EINVAL);
+        return FsError2(NDM_ASSERT, EINVAL);
 
     // Grab exclusive access to TargetNDM internals.
     semPend(ndm->sem, WAIT_FOREVER);
@@ -1707,54 +1692,12 @@ int ndmEraseBlock(ui32 vpn, void* ndm_ptr) {
         if (status == -1)
             status = ndmMarkBadBlock(ndm, bn, ERASE_BLOCK);
         else
-            FsError(EIO);
+            FsError2(NDM_EIO, EIO);
     }
 
     // Release exclusive NDM access and return status.
     semPostBin(ndm->sem);
     return status;
-}
-
-// ndmErasePartition: Erase all the virtual blocks in a partition
-//
-//      Inputs: ndm = pointer to NDM control block
-//              part_num = partition number in table
-//
-//     Returns: 0 on success, -1 on error
-//
-int ndmErasePartition(NDM ndm, ui32 part_num) {
-    ui32 i, vpn;
-
-    // If invalid partition number, ignore call. Return error.
-    if (part_num >= ndm->num_partitions)
-        return FsError(EINVAL);
-
-    // Compute virtual page for first page on first block in partition.
-    vpn = ndm->partitions[part_num].first_block * ndm->pgs_per_blk;
-
-    // Loop over all virtual blocks in partition, erasing each.
-    for (i = 0; i < ndm->partitions[part_num].num_blocks; ++i, vpn += ndm->pgs_per_blk)
-        if (ndmEraseBlock(vpn, ndm))
-            return -1;
-
-    // Return success.
-    return 0;
-}
-
-// ndmDeletePartition: Clear a partition entry from partition table
-//
-//      Inputs: ndm = pointer to NDM control block
-//              part_num = partition number in table
-//
-void ndmDeletePartition(CNDM ndm, ui32 part_num) {
-    // If invalid partition number, ignore.
-    if (part_num >= ndm->num_partitions) {
-        FsError(EINVAL);
-        return;
-    }
-
-    // Clear the partition information in the table for this entry.
-    memset(&ndm->partitions[part_num], 0, sizeof(NDMPartition));
 }
 
 // ndmDeletePartitionTable: Delete partition table
@@ -1802,7 +1745,7 @@ int ndmExtractBBL(NDM ndm) {
     size = sizeof(Pair) * ExtractedCnt;
     ExtractedList = malloc(size);
     if (ExtractedList == NULL)
-        return -1;
+        return FsError2(NDM_ENOMEM, ENOMEM);
     memcpy(ExtractedList, ndm->run_bad_blk, size);
 #if BBL_INSERT_DEBUG
     show_rbbl(ndm->run_bad_blk, ndm->num_rbb);
@@ -1853,12 +1796,12 @@ int ndmInsertBBL(NDM ndm) {
 
         // Adjust bad block count. If too many, error.
         if (++ndm->num_bad_blks > ndm->max_bad_blks)
-            return FsError(ENOSPC);
+            return FsError2(NDM_TOO_MANY_RBAD, ENOSPC);
 
         // Get a free block to replace the bad virtual block.
         free_b = get_free_virt_blk(ndm);
         if (free_b == (ui32)-1)
-            return FsError(ENOSPC);
+            return FsError2(NDM_NO_FREE_BLK, ENOSPC);
 
         // If physical block assigned, copy its contents to free_b.
         if (pair->val != (ui32)-1) {
@@ -1867,7 +1810,7 @@ int ndmInsertBBL(NDM ndm) {
                 // Call driver to erase the free block.
                 rc = ndm->erase_block(free_b * ndm->pgs_per_blk, ndm->dev);
                 if (rc == -2)
-                    return FsError(EIO);
+                    return FsError2(NDM_EIO, EIO);
 
                 // Check if block erase command succeeded.
                 if (rc == 0) {
@@ -1883,17 +1826,17 @@ int ndmInsertBBL(NDM ndm) {
                         if (rc == TRUE)
                             continue;
                         else if (rc < 0)
-                            return FsError(EIO);
+                            return FsError2(NDM_EIO, EIO);
 
                         // Read main data. Return -1 if ECC or fatal error.
                         rc = ndm->read_page(old_pn, ndm->main_buf, ndm->spare_buf, ndm->dev);
                         if (rc < 0)
-                            return FsError(EIO);
+                            return FsError2(NDM_EIO, EIO);
 
                         // Read old spare data. Return -1 if ECC or fatal error.
                         rc = ndm->read_decode_spare(old_pn, ndm->spare_buf, ndm->dev);
                         if (rc < 0)
-                            return FsError(EIO);
+                            return FsError2(NDM_EIO, EIO);
 
                         // If volume page, request just spare bytes ECC.
                         if (RD32_LE(&ndm->spare_buf[5]) == (ui32)-1)
@@ -1919,7 +1862,7 @@ int ndmInsertBBL(NDM ndm) {
 
                 // Adjust bad block count. If too many, error.
                 if (++ndm->num_bad_blks > ndm->max_bad_blks)
-                    return FsError(ENOSPC);
+                    return FsError2(NDM_TOO_MANY_RBAD, ENOSPC);
 
                 // Add the failed copy block to the running bad block list.
                 ndm->run_bad_blk[ndm->num_rbb].val = (ui32)-1;
@@ -1929,7 +1872,7 @@ int ndmInsertBBL(NDM ndm) {
                 // Get a free block to replace the bad virtual block.
                 free_b = get_free_virt_blk(ndm);
                 if (free_b == (ui32)-1)
-                    return FsError(ENOSPC);
+                    return FsError2(NDM_NO_FREE_BLK, ENOSPC);
             }
         }
 

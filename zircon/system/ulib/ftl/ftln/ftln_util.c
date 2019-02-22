@@ -77,7 +77,7 @@ static ui32 first_free_blk(CFTLN ftl) {
     for (b = 0;; ++b) {
         // Return error if no block is free.
         if (b == ftl->num_blks)
-            return (ui32)FsError(ENOSPC);
+            return (ui32)FsError2(FTL_NO_FREE_BLK, ENOSPC);
 
         // If block is free, return its block number.
         if (IS_FREE(ftl->bdata[b]))
@@ -102,7 +102,7 @@ int FtlnReport(void* vol, ui32 msg, ...) {
 
     // Set errno and return -1 if fatal I/O error occurred.
     if (ftl->flags & FTLN_FATAL_ERR)
-        return FsError(EIO);
+        return FsError2(FsErrCode, EIO);
 
     // Handle event passed down from file system layer.
     switch (msg) {
@@ -111,7 +111,7 @@ int FtlnReport(void* vol, ui32 msg, ...) {
 
             // Return error if volume is mounted.
             if (ftl->flags & FTLN_MOUNTED)
-                return FsError(EEXIST);
+                return FsError2(FTL_MOUNTED, EEXIST);
 
             // Format volume. Return -1 if error.
             if (format_ftl(ftl))
@@ -133,9 +133,6 @@ int FtlnReport(void* vol, ui32 msg, ...) {
 
         case FS_PAGE_SZ:
             return ftl->page_size;
-
-        case FS_FAT_SECTS:
-            return ftl->num_vsects;
 
         case FS_FORMAT:
         case FS_FORMAT_RESET_WC: {
@@ -164,7 +161,7 @@ int FtlnReport(void* vol, ui32 msg, ...) {
         case FS_UNMOUNT:
             // Return error if not mounted.
             if ((ftl->flags & FTLN_MOUNTED) == FALSE)
-                return FsError(ENOENT);
+                return FsError2(FTL_UNMOUNTED, ENOENT);
 
             // Clear the 'mounted' flag.
             ftl->flags &= ~FTLN_MOUNTED;
@@ -176,7 +173,7 @@ int FtlnReport(void* vol, ui32 msg, ...) {
                 return -1;
 
             // Save all dirty map pages to flash. Return -1 if error.
-            if (ftlmcFlushMaps(ftl->map_cache))
+            if (ftlmcFlushMap(ftl->map_cache))
                 return -1;
             PfAssert(ftl->num_free_blks >= FTLN_MIN_FREE_BLKS);
 
@@ -293,8 +290,7 @@ int FtlnReport(void* vol, ui32 msg, ...) {
             va_end(ap);
 
             // Check argument for validity.
-            if (vsn > ftl->num_vsects)
-                return -1;
+            PfAssert(vsn < ftl->num_vsects);
 
             // Figure out MPN this sector belongs to.
             mpn = (vsn / ftl->sects_per_page) / ftl->mappings_per_mpg;
@@ -376,7 +372,7 @@ int FtlnReport(void* vol, ui32 msg, ...) {
             va_end(ap);
 
             // Get the garbage level.
-            buf->fat.garbage_level = FtlnGarbLvl(ftl);
+            buf->xfs.garbage_level = FtlnGarbLvl(ftl);
 
             // Get TargetFTL-NDM RAM usage.
             ftl->stats.ram_used = sizeof(struct ftln) + ftl->num_map_pgs * sizeof(ui32) +
@@ -396,8 +392,8 @@ int FtlnReport(void* vol, ui32 msg, ...) {
             ftl->stats.wear_count = ftl->high_wc;
 
             // Set TargetFTL-NDM driver call counts and reset internal ones.
-            buf->fat.drvr_stats.ftl.ndm = ftl->stats;
-            buf->fat.ftl_type = FTL_NDM;
+            buf->xfs.drvr_stats.ftl.ndm = ftl->stats;
+            buf->xfs.ftl_type = FTL_NDM;
             bzero(&ftl->stats, sizeof(ftl_ndm_stats));
 
             // Return success.
@@ -407,7 +403,7 @@ int FtlnReport(void* vol, ui32 msg, ...) {
         case FS_MOUNT:
             // Return error if already mounted. Else set mounted flag.
             if (ftl->flags & FTLN_MOUNTED)
-                return FsError(EEXIST);
+                return FsError2(FTL_MOUNTED, EEXIST);
             ftl->flags |= FTLN_MOUNTED;
 
 #if FTLN_DEBUG > 1
@@ -648,7 +644,7 @@ void FtlnDecUsed(FTLN ftl, ui32 pn, ui32 vpn) {
 //
 int FtlnFatErr(FTLN ftl) {
     ftl->flags |= FTLN_FATAL_ERR;
-    return FsError(EIO);
+    return FsError2(FsErrCode, EIO);
 }
 
 #if FTLN_DEBUG
@@ -745,10 +741,6 @@ void FtlnStats(FTLN ftl) {
             ++n;
     printf("  - # erased blks  = %d\n", n);
     printf("  - flags =");
-    if (ftl->flags & FTLN_FAT_VOL)
-        printf(" FTLN_FAT_VOL");
-    if (ftl->flags & FTLN_XFS_VOL)
-        printf(" FTLN_XFS_VOL");
     if (ftl->flags & FTLN_FATAL_ERR)
         printf(" FTLN_FATAL_ERR");
     if (ftl->flags & FTLN_MOUNTED)

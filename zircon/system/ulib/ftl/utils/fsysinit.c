@@ -11,11 +11,18 @@
 #include <lib/backtrace-request/backtrace-request.h>
 
 SEM FileSysSem; // Global File System Semaphore
+int FsErrCode;  // file system error code (enum)
 
 // Called when a file system error has occurred.
 int FsError(int err_code) {
     printf("FsError: %d. What follows is NOT a crash:\n", err_code);
     backtrace_request();
+    return -1;
+}
+
+// Called when a file system error has occurred.
+int FsError2(int fs_err_code, int errno_code) {
+    FsErrCode = fs_err_code;
     return -1;
 }
 

@@ -172,6 +172,7 @@ typedef volatile struct vol_circ_list {
 // Circular Linked List Management Macros
 
 #define CIRC_LIST_INIT(lst) ((lst)->next_fwd = (lst)->next_bck = (lst))
+#define CIRC_NODE_INIT(node) CIRC_LIST_INIT(node)
 
 #define CIRC_NODE_APPEND(free_node, list_node)         \
     do {                                               \
