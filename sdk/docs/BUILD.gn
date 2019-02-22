@@ -17,7 +17,16 @@ sdk_documentation("docs") {
 
   category = "partner"
 
-  files = []
+  files = [
+    {
+      source = "root.md"
+      dest = "README.md"
+    },
+    {
+      source = "main.md"
+      dest = "docs/README.md"
+    },
+  ]
   foreach(doc, docs) {
     files += [
       {

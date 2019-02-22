@@ -2,9 +2,9 @@
 
 The present directory contains documentation that is included in the Core SDK.
 As such, its contents should be self-sufficient and consumable outside of the
-context of the Fuchsia source repository
+context of the Fuchsia source repository.
 
-## General guidelines
+## Guidelines
 
 * this documentation does not aim to provide a Fuchsia 101 but to document
   the contents of the SDK;
