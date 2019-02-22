@@ -13,7 +13,8 @@ namespace {
 
 template <class T> uint32_t ToU32(T in) {
     if (in > std::numeric_limits<uint32_t>::max()) {
-        fprintf(stderr, "out of range %" PRIu64 "\n", in);
+        fprintf(stderr, "out of range %" PRIuMAX "\n",
+                static_cast<uintmax_t>(in));
         exit(-1);
     }
     return static_cast<uint32_t>(in);
