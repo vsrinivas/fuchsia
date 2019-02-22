@@ -559,18 +559,18 @@ private:
         }
 
         uint32_t next_usage() {
-            uint32_t usage;
+            int64_t usage;
             if (usages_ == nullptr) {
-                usage = static_cast<uint32_t>(usage_range_.min + index_);
-                if (usage > static_cast<uint32_t>(usage_range_.max))
+                usage = usage_range_.min + index_;
+                if (usage > usage_range_.max)
                     usage = usage_range_.max;
             } else {
                 usage = (index_ < usages_->size()) ? (*usages_)[index_] : last_usage_;
-                last_usage_ = usage;
+                last_usage_ = static_cast<uint32_t>(usage);
             }
             if (!is_array_)
                 ++index_;
-            return usage;
+            return static_cast<uint32_t>(usage);
         }
 
     private:

@@ -107,7 +107,7 @@ bool ExtractAsUnit(const Report& report, const hid::Attributes& attr, double* va
                     ? static_cast<double>(SignExtendFromNBits(uint_out, attr.bit_sz))
                     : uint_out;
 
-    if (val < attr.logc_mm.min || val > attr.logc_mm.max) {
+    if (val < static_cast<double>(attr.logc_mm.min) || val > static_cast<double>(attr.logc_mm.max)) {
         return false;
     }
 

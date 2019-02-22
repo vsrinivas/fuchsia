@@ -119,10 +119,9 @@ namespace hid {
 // same report id.
 
 // Logical minimum and maximum per hid spec.
-// Please note that if min >= 0, max is actually an unsigned uint32_t.
 struct MinMax {
-    int32_t min;
-    int32_t max;
+    int64_t min;
+    int64_t max;
 };
 
 // Physical units descriptor.
