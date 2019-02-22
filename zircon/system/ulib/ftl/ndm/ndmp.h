@@ -6,14 +6,12 @@
 
 #include <inc/config.h>
 
-#if INC_NDM
 #include <stdlib.h>
 #include <string.h>
-#include <stdio_tfs.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <sys.h>
-#include <modules.h>
 #include <kprivate/ndm.h>
 
 /***********************************************************************/
@@ -114,19 +112,15 @@ struct ndm {
     int (*read_pages)(ui32 pn, ui32 count, ui8* data, ui8* spare, void* dev);
     int (*xfr_page)(ui32 old_pn, ui32 new_pn, ui8* data, ui8* old_spare, ui8* new_spare,
                     int encode_spare, void* dev);
-#if INC_FFS_NDM_MLC || INC_FTL_NDM_MLC
+#if INC_FTL_NDM_MLC
     ui32 (*pair_offset)(ui32 page_offset, void* dev);
 #endif
     int (*read_decode_spare)(ui32 pn, ui8* spare, void* dev);
     int (*read_spare)(ui32 pn, ui8* spare, void* dev);
     int (*page_blank)(ui32 pn, ui8* data, ui8* spare, void* dev);
-#if INC_FTL_NDM
     int (*check_page)(ui32 pn, ui8* data, ui8* spr, int* stat, void* dev);
-#endif
     int (*erase_block)(ui32 pn, void* dev);
-#if INC_FTL_NDM || INC_FFS_NDM
     int (*is_block_bad)(ui32 pn, void* dev);
-#endif
 
     // Device Dependent Variables
     void* dev;         // optional value set by driver
@@ -153,10 +147,8 @@ int ndmInitBadBlock(CNDM ndm, ui32 b);
 int ndmWrCtrl(NDM ndm);
 void ndmCkMeta(NDM ndm);
 int ndmMarkBadBlock(NDM ndm, ui32 arg, ui32 action);
-void* ndmAddFatFTL(NDM ndm, ui32 part_num, FtlNdmVol* ftl, FatVol* fat);
 
 #if NDM_DEBUG
 int printf(const char*, ...);
 #endif
 
-#endif // INC_NDM

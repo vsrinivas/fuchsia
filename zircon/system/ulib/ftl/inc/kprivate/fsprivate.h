@@ -8,36 +8,13 @@
 extern "C" {
 #endif
 
-#include <stdio_tfs.h>
+#include <stdio.h>
 #include <posix.h>
 #include <fsdriver.h>
 
 /***********************************************************************/
-/* Configuration                                                       */
-/***********************************************************************/
-#ifndef FS_MEM_PROFILE
-#define FS_MEM_PROFILE FALSE  // TRUE to enable FS heap profiling
-#endif
-#define INC_FAT_MBR INC_FAT
-
-/***********************************************************************/
 /* Symbol Definitions                                                  */
 /***********************************************************************/
-// FS API input parameter checking
-#define FS_PARM_CHECK (OS_PARM_CHECK || CIFS_INCLUDED)
-
-// FSEARCH codes
-#define FIRST_DIR   0
-#define CURR_DIR    1
-#define PARENT_DIR  2
-#define ACTUAL_DIR  3
-#define DIR_FILE    4
-
-// The different types of FileTable entries
-#define FEMPTY 0
-#define FDIREN 1
-#define FCOMMN 2
-#define FFILEN 3
 
 // The different types of sectors
 #define FOTHR 0
@@ -46,10 +23,6 @@ extern "C" {
 
 // Number of entries per file table
 #define FNUM_ENT 20
-
-// Flag values for writing/skipping control information
-#define FFLUSH_DO 1
-#define FFLUSH_DONT 0
 
 // Flag values for adjusting file pointers in file control blocks
 #define ADJUST_FCBs TRUE
@@ -71,31 +44,8 @@ extern "C" {
 #define F_NONBLOCK         (1u << 4)
 #define F_ASYNC            (1u << 5)
 
-#define FCB_DIR            (1u << 6)
-#define FCB_FILE           (1u << 7)
-#define FCB_TTY            (1u << 8)
-#define FCB_MOD            (1u << 9)
-#define FCB_NO_UPDATE      (1u << 10)
-#define FCB_CLOSE          (1u << 11)
-#define FCB_ESC_HIT        (1u << 12)
-#define FCB_NO_OVERWRITE   (1u << 13)
-#define FSEARCH_NO_SEM     (1u << 14)
-
-// Flag values for FSearchFSUID()
-#define FILE_NAME 1
-#define PATH_NAME 2
-
-// Return values for TFFS recycle function
-#define RECYCLE_FAILED      -1
-#define RECYCLE_NOT_NEEDED  1
-#define RECYCLE_OK          0
-
 #define REMOVED_LINK 0xFFFFFFFF // Value assigned to next and
                                 // prev for removed link
-#define OFF_REMOVED_LINK 0xFFFE
-
-#define ROOT_DIR_INDEX FOPEN_MAX // index in Files[] for root
-
 // Maximum allowed number of FFS_VOLS + FAT_VOLS with NAND_FTLS or fixed
 // This value is used to issue volume ID numbers for the FSUID when a
 // serial number is not provided
@@ -114,11 +64,6 @@ extern "C" {
 // Default block read limits to avoid read-disturb errors
 #define MLC_NAND_RC_LIMIT 100000
 #define SLC_NAND_RC_LIMIT 1000000
-#define NOR_RC_LIMIT 1000000
-
-// Symbols for excluding/including SLC/MLC-specific code
-#define INC_NDM_SLC (INC_FTL_NDM_SLC || INC_FFS_NDM_SLC)
-#define INC_NDM_MLC (INC_FFS_NDM_MLC || INC_FTL_NDM_MLC)
 
 /***********************************************************************/
 /* Macro Definitions                                                   */
@@ -131,17 +76,6 @@ extern "C" {
 // Create an FSUID val(ui32) based on volume number and file number
 #define FSUID(vid, fid) (ui32)((((vid)&VID_MASK) << FID_LEN) | ((fid)&FID_MASK))
 
-// Accessor macros for volume ID, file ID from an FSUID
-#define GET_VID(fsuid) (((fsuid) & (VID_MASK << FID_LEN)) >> FID_LEN)
-#define GET_FID(fsuid) ((fsuid)&FID_MASK)
-
-// Determine if an FCB pointer/fid is valid
-#define IS_VALID_FCB(fcbp) ((fcbp) && (fcbp) >= &Files[0] && (fcbp) < &Files[FOPEN_MAX])
-#define IS_VALID_FID(fid) ((fid) >= 0 && (fid) < FOPEN_MAX)
-
-// Determine if a file system volume is on the mounted list
-#define IS_MOUNTED(vol) ((vol)->sys.prev || (MountedList.head == &((vol)->sys)))
-
 /***********************************************************************/
 /* Type Definitions                                                    */
 /***********************************************************************/
@@ -153,12 +87,7 @@ struct file_sys {
 #define FSYS_FATAL_ERR (1 << 0)
 #define FSYS_READ_ONLY (1 << 1)
 #define FSYS_VOL_BUSY (1 << 2)
-    void* (*ioctl)(FILE_TFS* stream, int code, ...);
     void* volume;
-#if FILE_AIO_INC
-    int aio_buf_size; // max number of buffered AIO transfers
-    int aio_num_bufs; // number of sectors in each AIO transfer
-#endif
     char name[(FILENAME_MAX + 3) & ~3]; // avoid extra padding
 };
 
@@ -167,42 +96,14 @@ typedef struct head_entry {
     FileSys* tail;
 } HeadEntry;
 
-#if FILE_OFFSETS
-// An indivual value in the offsets values array
-typedef struct {
-    ui32 sect_num; // volume sector for offset
-    ui32 sect_off; // sector offset within file for offset
-} FOff;
-
-// FCB offsets type
-typedef struct {
-    FOff values[FILE_OFFSETS]; // recorded file offsets
-    ui32 f_sects;              // recorded file size in sectors
-} FOffs;
-#endif // FILE_OFFSETS
-
 // FILE implementation for stdio.h, DIR implementation for posix.h
 struct file {
     SEM sem; // internal locking semaphore
-    void (*acquire)(FILE_TFS* fcb, uint access_mode);
-    void (*release)(FILE_TFS* fcb, uint access_mode);
     void* handle; // self handle to be passed to ioctl
     void* volume; // file system file/dir belongs to
     void* pos;    // directory position; used for readdir
-    void* (*ioctl)(FILE_TFS* fcb, int code, ...);
-    int (*read_TFS)(FILE_TFS* fcb, ui8* buf, ui32 len);
-    int (*write_TFS)(FILE_TFS* fcb, const ui8* buf, ui32 len);
-#if FILE_AIO_INC
-    void* aio_ext; // asynchronous I/O control block
-#endif
-#if FILE_OFFSETS
-    FOffs* offsets; // file offsets
-#endif
     int hold_char;
     int errcode;
-    struct dirent_TFS dent; // used by readdir()
-    fpos_t_TFS curr_ptr;    // current position in file
-    fpos_t_TFS old_ptr;     // previous position in file
     ui32 flags;             // file/dir specific flags
     ui32 parent;            // parent directory
 };
@@ -258,9 +159,6 @@ typedef enum {
     FSTAT,
     FTELL,
     GETCWD,
-    GET_FL,
-    GET_FSUID,
-    GET_FSUID_FID,
     GET_NAME,
     GET_QUOTA,
     GET_QUOTAM,
@@ -433,46 +331,15 @@ typedef struct {
     FileSys sys;
 } FsVolume;
 
-#if FS_CRYPT
-// FS Crypt Type
-typedef struct fscrypt FSCrypt;
-struct fscrypt {
-    // Public API
-    void (*delete)(FSCrypt** fs_crypt);
-    int (*decr)(const FSCrypt* fs_crypt, ui8* data, ui32 vpn, int n);
-    int (*rd_decr)(const FSCrypt* fs_crypt, ui8* data, ui32 vpn, int n);
-    int (*encr)(const FSCrypt* fs_crypt, ui8* data, ui32 vpn, int n);
-    int (*encr_wr)(const FSCrypt* fs_crypt, const ui8* data, ui32 vpn, int n);
-    ui32 (*ram_use)(const FSCrypt* fs_crypt);
-
-    ui32 page_sz; // FS read/write page size
-    ui32 buf_pgs; // encryption buffer size in pages
-    ui8* buf;     // encryption buffer
-    void* crypt;  // encryption/decryption engine
-    void* fs_vol; // parameter passed to FS driver functions
-
-    // FS driver read/write
-    int (*fs_wr)(const void* buf, ui32 frst, int n, void* fs_vol);
-    int (*fs_rd)(void* buf, ui32 frst, int n, void* fs_vol);
-};
-#endif // FS_CRYPT
-
 /***********************************************************************/
 /* Variable Declarations                                               */
 /***********************************************************************/
 extern int CurrFixedVols;
-extern FILE_TFS Files[FOPEN_MAX + 1];
-extern HeadEntry MountedList;
-extern FileSys TtySys;
 extern int FsMaxOpen; // maximum # of concurrently open files
 extern void* FSIterCurrVol;
 
 // FS Volumes Lists
-extern CircLink FatVols;
-extern CircLink FfsVols;
 extern CircLink XfsVols;
-extern CircLink RfsVols;
-extern CircLink ZfsVols;
 
 /***********************************************************************/
 /* Function Prototypes                                                 */
@@ -482,61 +349,24 @@ int FsInvalName(const char* name, int ignore_last);
 int FsIsLast(const char* name, ui32* lenp, ui32* incp);
 const char* FsSkipSeparators(const char* path);
 void* FSearch(void* hndl, const char** path, int dir_lookup, uint flags);
-char* FSearchFSUID(ui32 fsuid, char* buf, size_t size, int lookup);
 FileSys* FsResolvePath(const char* path);
 
 // General system/root level functions
-int IsFreeFCB(const FILE_TFS* file);
-void FsInitFCB(FILE_TFS* file, ui32 type);
-void FsCopyFCB(FILE_TFS* dst, const FILE_TFS* src);
-int DirFileWrite(FILE_TFS* stream, const ui8* buf, ui32 len);
-int DirFileRead(FILE_TFS* stream, ui8* buf, ui32 len);
-void* RootIoctl(DIR_TFS* dir, int code, ...);
 int FsError(int err_code);
 int FsIoError(FileSys* file_sys);
-int FsSetErrno(int flags);
 
 // Auxiliary functions
-void QuickSort(RFSEnt** head, RFSEnt** tail, DirEntry* e1, DirEntry* e2,
-               int (*cmp)(const DirEntry*, const DirEntry*));
 int FNameEqu(const char* s1, const char* s2);
-int FNameEquN(const char* s1, const char* s2, size_t n);
 void DNameCpy(char* dst, const char* src);
 int DNameEqu(const char* s1, const char* s2);
 int DNameEquCase(const char* s1, const char* s2);
 size_t DNameLen(const char* s);
-void FsAddMount(FileSys* volume);
-void FsDelMount(FileSys* volume);
-void* FtlNdmAddFatFTL(FtlNdmVol* ftl_dvr, FatVol* fat_dvr);
 void* FtlNdmAddXfsFTL(FtlNdmVol* ftl_dvr, XfsVol* xfs_dvr);
 void FtlnFreeFTL(void* ftl);
 int FsConvOpenMode(const char* mode);
 int FsCheckPerm(mode_t mode, uid_t uid, gid_t gid, uint permissions);
-void FsSetFl(FILE_TFS* fcb, int oflag);
-void* FsGetFl(const FILE_TFS* fcb);
-int FsFormatResetWc(const char* name);
-int FatGetSectSize(const FatVol* fat_vol);
-ui32 UDiv64(ui64 dividend, ui32 divisor);
 void FsMemPrn(void);
 ui32 FsMemPeakRst(void);
-
-#if FS_CRYPT
-// FS Crypt Initialization
-FSCrypt* FsCryptNew(FSCryptDrvr* fs_crypt);
-int FsCryptSetBufSz(FSCrypt* fs_crypt, ui32 buf_pgs);
-#endif
-
-// FCB recorded file offsets interface
-fpos_t_TFS FOffGet(const FILE_TFS* fcbp, ui32 sect_off, ui32 frst_sect);
-void FOffSet(FILE_TFS* fcbp, const fpos_t_TFS* new_pos, ui32 f_sects);
-void FOffUpdate(const FILE_TFS* fcbp, ui32 old_sect, ui32 new_sect);
-void FOffDel(FILE_TFS* fcbp);
-
-// Asynchronous I/O
-void aioInit(void);
-int aioOpen(FILE_TFS* file, int sect_size);
-void aioSetIdle(FILE_TFS* file, uint code);
-void aioVolInit(FileSys* vol);
 
 // File System Memory Allocation Wrapper Functions
 void* FsCalloc(size_t nmemb, size_t size);

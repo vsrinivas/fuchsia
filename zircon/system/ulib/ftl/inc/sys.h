@@ -8,11 +8,10 @@
 extern "C" {
 #endif
 
-#include <stdio_tfs.h>
+#include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <time.h>
-#include <modules.h>
 #include <targetos.h>
 
 /***********************************************************************/
@@ -68,88 +67,12 @@ int getKey(void);
 ui32 getInt(ui32 def_val, ui32 min_val, ui32 max_val);
 ui32 getHex(ui32 def_val, ui32 min_val, ui32 max_val);
 ui8 getDigit(ui8 value, ui8 min_val, ui8 max_val);
-int More(int* more_lines);
-
-int getIP(ui32* ip_addrp);
-int printIP(ui32 ip_addr);
-int sprintIP(char* str, ui32 ip_addr);
-int sscanIP(const char* str, ui32* ip_addr);
-
-int getEth(ui8* eth_addr);
-int printEth(void* eth_addr);
-int sprintEth(char* str, void* eth_addr);
-int sscanEth(const char* str, void* eth_addr);
-
-struct in6_addr;
-struct sockaddr_in6;
-int getIP6(struct sockaddr_in6* sockp);
-int printIP6(const struct in6_addr* ip_addr);
-int sprintIP6(char* str, const struct in6_addr* ip_addr);
-int sscanIP6(const char* str, struct in6_addr* ip_addr);
-
-/***********************************************************************/
-/* UART-related Declarations                                           */
-/***********************************************************************/
-
-// UART Mode Structure
-typedef struct uart_mode {
-    ui32 baudrate;
-    ui8 char_len;
-    ui8 num_stop_bits;
-    ui8 flow_ctrl;
-#define TTY_FC_NONE 0
-#define TTY_FC_SW 1
-#define TTY_FC_HW 2
-    ui8 conv_nl;
-    ui8 ctrl_brk;
-    ui8 parity;
-#define TTY_PARITY_NONE 0
-#define TTY_PARITY_EVEN 1
-#define TTY_PARITY_ODD 2
-#define TTY_PARITY_MARK 3
-#define TTY_PARITY_SPACE 4
-} UartMode;
-
-// TtyIoctl() Commands and Prototype
-
-typedef enum { TTY_KB_HIT, TTY_ESC_HIT, TTY_SET_MODE, TTY_GET_MODE, TTY_RECV_TO } TTY_IOCTLS;
-int TtyIoctl(FILE_TFS* stream, int code, ...);
-void TtySetEsc(FILE_TFS* stream);
-
-/***********************************************************************/
-/* Loader-related Declarations                                         */
-/***********************************************************************/
-
-// Loader's parameter structure
-typedef struct {
-    FILE_TFS* stream; // stream handle for file to be loaded
-    ui32 lo_limit;    // lower bound of downloadable memory
-    ui32 hi_limit;    // upper bound of downloadable memory
-    ui32 lo_addr;     // lowest accessed address
-    ui32 hi_addr;     // highest accessed address
-    ui32 exe_addr;    // executation start address
-    ui32 offset;      // load address offset
-    ui32 incr;        // progress dot increment
-    ui32 announce;    // progress dot threshold
-    int byte_cnt;     // number of bytes loaded
-    ui32 file_offset; // offset into load file
-    ui8 verbose;      // verbose flag
-    ui8 try_seek;     // private flag
-    ui8 byte_sum;     // S-record byte sum
-    ui8 num_dots;     // number of progress dots
-} LoadParam;
-int Loader(LoadParam* params);
-void StartImage(const LoadParam* params);
 
 /***********************************************************************/
 /* Miscellaneous Routines                                              */
 /***********************************************************************/
-time_t RtcGet(void);
-int RtcSet(struct tm* new_time);
-void SysShowTOD(void);
 int printSize(char* label, ui32 num_blks, ui32 blk_size);
 void SysEditTOD(void);
-void SetHeapHi(void);
 void StartApp(int (*func)(void));
 void SysWait50ms(void);
 void spin_wait_us(ui32 us);
@@ -212,64 +135,7 @@ Secret* SysLogin(SysLoginData* login_data);
 #define SYSLOGIN_FAILED 1
 #define SYSLOGIN_LOGOUT 2
 
-/***********************************************************************/
-/* Raw Flash File Related Definitions                                  */
-/***********************************************************************/
-typedef struct {
-    FILE_TFS* file;
-    void* vol;
-    int page_size;
-    int block_size;
-    int num_blocks;
-    ui32 base_addr;
-    int (*read_page)(ui32 addr, void* buf, void* vol);
-    int (*write_page)(ui32 addr, void* buf, void* vol);
-    int (*erase_blk)(ui32 addr, void* vol);
-    void (*lock_blk)(ui32 base, ui32 num_blks, void* vol);
-    void (*unlock_blk)(ui32 base, ui32 num_blks, void* vol);
-} RawFile;
-void* rawFileInit(RawFile* rawf);
 
-/***********************************************************************/
-/* Benchmark Measurement Prototypes                                    */
-/***********************************************************************/
-void measStart(void);
-void measStop(void);
-int measfReportBW(int fid, const char* fmt, ui32 data_size);
-int measfReportSec(int fid, char* fmt);
-int measfReportTime(int fid, char* fmt);
-int measReportBW(const char* fmt, ui32 data_size);
-int measReportRate(const char* fmt, ui32 count);
-int measReportSec(char* fmt);
-int measReportTime(char* fmt);
-int measReportTicks(const char* fmt, time_t ticks);
-ui32 measTime(void);
-void measStartOuter(void);
-void measStopOuter(void);
-
-/***********************************************************************/
-/* Boot Programmer Related Definitions                                 */
-/***********************************************************************/
-typedef struct {
-    void* vol;
-    int page_size;
-    int block_size;
-    int num_blocks;
-    ui32 flash_base;
-#ifdef __NIOS2__
-    ui32 hw_image_base;
-    ui32 hw_image_size;
-#endif
-    ui32 start_addr;
-    int (*write_page)(ui32 addr, const void* buffer, void* vol);
-    int (*read_page)(ui32 addr, void* buffer, void* vol);
-    int (*erase_blk)(ui32 addr, void* vol);
-    void (*lock_blk)(ui32 base, ui32 num_blks, void* vol);
-    void (*unlock_blk)(ui32 base, ui32 num_blks, void* vol);
-} BootPgmr;
-extern BootPgmr Boot;
-int BootPrgmr(char* file_name);
-int FpgaPrgmr(char* file_name);
 
 /***********************************************************************/
 /* CRC32 Related Definitions/Declaration                               */
@@ -278,34 +144,6 @@ extern const ui32 Crc32Tbl[256];
 #define CRC32_START 0xFFFFFFFF // starting CRC bit string
 #define CRC32_FINAL 0xDEBB20E3 // summed over data and CRC
 #define CRC32_UPDATE(crc, c) ((crc >> 8) ^ Crc32Tbl[(ui8)(crc ^ c)])
-
-/***********************************************************************/
-/* Macros for to redirecting stdio to Telnet when not using TargetOS   */
-/***********************************************************************/
-#if !INC_TARGETCORE && INC_TARGET_TCP && TELNET_SRV_INC
-#define TEL_PRINT_REG 3 /* register used for Telnet print socket */
-
-#define printf telPrint
-int telPrint(const char* format, ...);
-
-#undef putchar
-#define putchar(ch) telPutchar(ch)
-int telPutchar(int ch);
-
-#undef getchar
-#define getchar telGetchar
-int telGetchar(void);
-
-#define puts(s) telPuts(s)
-int telPuts(const char* s);
-
-#define perror(s) telPerror(s)
-void telPerror(const char* s);
-
-#define TtyIoctl telTtyIoctl
-int telTtyIoctl(FILE_TFS* stream, int code, ...);
-
-#endif
 
 /***********************************************************************/
 /* Miscellaneous Data Declarations                                     */
@@ -321,7 +159,6 @@ extern ui32 SysTtyBaud;
 extern const char* AppName;
 extern ui32 SysCountFreq;
 extern int SysMonFlag;
-extern FILE_TFS* dbgout;
 extern char* MonPrompt;
 extern char* ShellPrompt;
 extern const char* StartAppName;

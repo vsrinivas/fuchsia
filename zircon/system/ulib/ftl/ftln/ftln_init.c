@@ -4,7 +4,6 @@
 
 #include "ftlnp.h"
 
-#if INC_FTL_NDM
 // Configuration
 #define DEBUG_RESUME FALSE
 
@@ -169,28 +168,21 @@ static int map_page_check(FTLN ftl, ui32 apn, int process) {
                         if (apn == ap0)
                             break;
 
-//---------------------------------------------------------
-// Move to next written page in backwards direction. If
-// MLC flash, move to page whose pair has higher offset.
-//---------------------------------------------------------
-#if INC_FTL_NDM_MLC && (INC_FTL_NDM_SLC || INC_FTL_NOR_WR1)
-                        if (ftl->type == NDM_MLC)
-#endif
-#if INC_NDM_MLC
-                            for (;;) {
-                                ui32 pg_offset = --apn % ftl->pgs_per_blk;
+                        //---------------------------------------------------------
+                        // Move to next written page in backwards direction. If
+                        // MLC flash, move to page whose pair has higher offset.
+                        //---------------------------------------------------------
+#if INC_FTL_NDM_SLC
+                        --apn;
+#else
+                        for (;;) {
+                            ui32 pg_offset = --apn % ftl->pgs_per_blk;
 
-                                if (pg_offset == 0)
-                                    break;
-                                if (ftl->pair_offset(pg_offset, ftl->ndm) >= pg_offset)
-                                    break;
-                            }
-#endif
-#if INC_FTL_NDM_MLC && (INC_FTL_NDM_SLC || INC_FTL_NOR_WR1)
-                        else
-#endif
-#if INC_FTL_NDM_SLC || INC_FTL_NOR_WR1
-                            --apn;
+                            if (pg_offset == 0)
+                                break;
+                            if (ftl->pair_offset(pg_offset, ftl->ndm) >= pg_offset)
+                                break;
+                        }
 #endif
 
                         //---------------------------------------------------------
@@ -286,7 +278,7 @@ static int build_map(FTLN ftl) {
 #if INC_FTL_NDM_MLC
             // For MLC devices, skip pages not written by the FTL, those
             // whose pair offset is lower than their offset.
-            if (ftl->type == NDM_MLC && ftl->pair_offset(po, ftl->ndm) < po)
+            if (ftl->pair_offset(po, ftl->ndm) < po)
                 continue;
 #endif
 
@@ -601,9 +593,9 @@ static int format_status(FTLN ftl) {
                         }
 
 #if INC_FTL_NDM_MLC
-                        // If MLC, try first next page that has no earlier pair, in
+                        // For MLC, try first next page that has no earlier pair, in
                         // case FTL skipped volume pages for sync operation.
-                        if ((ftl->type == NDM_MLC) && (n == 1)) {
+                        if (n == 1) {
                             n = ndmPastPrevPair(ftl->ndm, pn + 1) - pn;
                             if (n != 1)
                                 continue;
@@ -789,48 +781,6 @@ static int format_status(FTLN ftl) {
     PfAssert(ftl->num_free_blks < ftl->num_blks);
     return TRUE;
 }
-
-#if INC_FAT_MBR
-//    read_bpb: Read the FAT boot sector to set frst_data_sect
-//
-//       Input: ftl = pointer to FTL control block
-//
-//     Returns: 0 for success or no boot sector, -1 on error
-//
-static int read_bpb(FTLN ftl) {
-    ui32 pn;
-    FATPartition part;
-
-    // Prepare to (potentially) write one map page.
-    if (FtlnRecCheck(ftl, -1))
-        return -1;
-
-    // Retrieve physical page number for sector 0. Return -1 if error.
-    if (FtlnMapGetPpn(ftl, 0, &pn) < 0)
-        return -1;
-
-    // Return 0 if boot sector is unmapped.
-    if (pn == (ui32)-1)
-        return 0;
-
-    // Read sector 0. Return -1 if error.
-    if (FtlnRdPage(ftl, pn, ftl->main_buf))
-        return -1;
-
-    // If one valid partition, use it to read location of boot sector.
-    if (FatGetPartitions(ftl->main_buf, &part, 1) == 1) {
-        ftl->vol_frst_sect = part.first_sect;
-        ftl->num_vsects -= ftl->vol_frst_sect;
-    }
-
-    // Read boot sector into temporary buffer. Return -1 if error.
-    if (FtlnRdSects(ftl->main_buf, ftl->vol_frst_sect, 1, ftl))
-        return -1;
-
-    // Extract frst_clust_sect from the boot information. Return status.
-    return FtlnSetClustSect1(ftl, ftl->main_buf, TRUE);
-}
-#endif // INC_FAT_MBR
 
 //   meta_read: Read FTL meta information page
 //
@@ -1097,14 +1047,6 @@ static int init_ftln(FTLN ftl) {
         }
     }
 
-#if INC_FAT_MBR
-    // For FAT volumes, read in boot sector, if it exists, to set
-    // frst_clust_sect. Return -1 if error.
-    if (FLAG_IS_SET(ftl->flags, FTLN_FAT_VOL))
-        if (read_bpb(ftl))
-            return -1;
-#endif
-
 #if FTLN_DEBUG > 1
     printf("init_ftln: FTL formatted - hi_bc = %u, hi_wc = %u\n", ftl->high_bc, ftl->high_wc);
 #endif
@@ -1136,10 +1078,6 @@ static void free_ftl(void* vol) {
         FsAfreeClear(&ftl->main_buf);
     if (ftl->map_cache)
         ftlmcDelete(&ftl->map_cache);
-#if INC_FTL_PAGE_CACHE
-    if (ftl->vol_cache)
-        ftlvcDelete(ftl->vol_cache);
-#endif
     FsFree(ftl);
 }
 
@@ -1185,18 +1123,11 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
         return NULL;
     }
 
-#if OS_PARM_CHECK
     // Ensure FTL flags are valid.
-    if (ftl_dvr->flags &
-        ~(FSF_EXTRA_FREE
-#if INC_FTL_PAGE_CACHE
-          | FSF_FTL_PAGE_CACHE
-#endif
-          | FSF_READ_WEAR_LIMIT)) {
+    if (ftl_dvr->flags & ~(FSF_EXTRA_FREE | FSF_READ_WEAR_LIMIT)) {
         FsError(EINVAL);
         return NULL;
     }
-#endif
 
     // Ensure driver has an NDM pointer.
     PfAssert(ftl_dvr->ndm);
@@ -1277,10 +1208,9 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
         n = (n * ftl->page_size + ftl->block_size - 1) / ftl->block_size;
 
 #if INC_FTL_NDM_MLC
-        // If MLC, double the required number of map blocks because only
+        // For MLC, double the required number of map blocks because only
         // half their pages are used.
-        if (ftl->type == NDM_MLC)
-            n *= 2;
+        n *= 2;
 #endif
 
         // Break if this number of volume blocks fits into the partition.
@@ -1289,11 +1219,10 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
     }
 
 #if INC_FTL_NDM_MLC
-    // If MLC, remove another 5% of volume space to account for having
+    // For MLC, remove another 5% of volume space to account for having
     // to advance the free volume pointer to skip possible page pair
     // corruption anytime FTL metadata is synched to flash.
-    if (ftl->type == NDM_MLC)
-        vol_blks = 95 * vol_blks / 100;
+    vol_blks = 95 * vol_blks / 100;
 #endif
 
 #else // FTLN_LEGACY
@@ -1308,30 +1237,19 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
 //   VB = TB - (4 * (TP + PB) + 6 * BS - 2) / (BS + 4 * PB)
 // For MLC devices, double the number of map blocks in computation,
 // because we only use half the pages in MLC map blocks.
-#if INC_FTL_NDM_MLC && (INC_FTL_NDM_SLC || INC_FTL_NOR_WR1)
-    if (ftl->type == NDM_SLC)
-#endif
-#if INC_FTL_NDM_SLC || INC_FTL_NOR_WR1
-    {
-        vol_blks = ftl->num_blks -
-                   (4 * (ftl->num_pages + ftl->pgs_per_blk) + 6 * ftl->block_size - 2) /
-                       (ftl->block_size + 4 * ftl->pgs_per_blk);
-    }
-#endif
-#if INC_FTL_NDM_MLC && (INC_FTL_NDM_SLC || INC_FTL_NOR_WR1)
-    else
-#endif
-#if INC_FTL_NDM_MLC
-    {
-        vol_blks = ftl->num_blks -
-                   (8 * (ftl->num_pages + ftl->pgs_per_blk) + 5 * ftl->block_size + 1) /
-                       (ftl->block_size + 8 * ftl->pgs_per_blk);
+#if INC_FTL_NDM_SLC
+    vol_blks = ftl->num_blks -
+               (4 * (ftl->num_pages + ftl->pgs_per_blk) + 6 * ftl->block_size - 2) /
+                   (ftl->block_size + 4 * ftl->pgs_per_blk);
+#else
+    vol_blks = ftl->num_blks -
+               (8 * (ftl->num_pages + ftl->pgs_per_blk) + 5 * ftl->block_size + 1) /
+                   (ftl->block_size + 8 * ftl->pgs_per_blk);
 
-        // Remove another 5% from volume space to account for the fact
-        // that the free volume pointer must be advanced to skip page
-        // pair corruption anytime the FTL meta information is flushed.
-        vol_blks = 95 * vol_blks / 100;
-    }
+    // Remove another 5% from volume space to account for the fact
+    // that the free volume pointer must be advanced to skip page
+    // pair corruption anytime the FTL meta information is flushed.
+    vol_blks = 95 * vol_blks / 100;
 #endif
 #endif // FTLN_LEGACY
 
@@ -1352,8 +1270,7 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
     // For MLC devices, account for the fact that the last recycled
     // volume block cannot be fully used. To be safe, assume worst case
     // scenario for max pair offset - half a block.
-    if (ftl->type == NDM_MLC)
-        ftl->num_vpages -= ftl->pgs_per_blk / 2;
+    ftl->num_vpages -= ftl->pgs_per_blk / 2;
 #endif
 
     // Compute number of map pages based on number of volume pages.
@@ -1370,20 +1287,12 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
 
 // Allocate one or two main data pages and spare buffers. Max spare
 // use is one block worth of spare areas for multi-page writes.
-#if INC_SECT_FTL
-    n = 2 * ftl->page_size + ftl->eb_size * ftl->pgs_per_blk;
-#else
-    n = 1 * ftl->page_size + ftl->eb_size * ftl->pgs_per_blk;
-#endif
+    n = ftl->page_size + ftl->eb_size * ftl->pgs_per_blk;
     buf = FsAalloc(n);
     if (buf == NULL)
         goto FtlnAddV_err;
     ftl->main_buf = buf;
     buf += ftl->page_size;
-#if INC_SECT_FTL
-    ftl->swap_page = buf;
-    buf += ftl->page_size;
-#endif
     ftl->spare_buf = buf;
 
     // Allocate memory for the block data and wear count lag arrays.
@@ -1400,24 +1309,16 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
     if (ftl->mpns == NULL)
         goto FtlnAddV_err;
 
-// For SLC devices, adjust driver cached MPNs if too big or zero.
-#if INC_FTL_NDM_MLC && (INC_FTL_NDM_SLC || INC_FTL_NOR_WR1)
-    if (ftl->type == NDM_SLC)
-#endif
-#if INC_FTL_NDM_SLC || INC_FTL_NOR_WR1
-    {
-        if (ftl->num_map_pgs < ftl_dvr->cached_map_pages || ftl_dvr->cached_map_pages == 0)
-            ftl_dvr->cached_map_pages = ftl->num_map_pgs;
-    }
-#endif
-
-// For MLC devices, cache all map pages so that no map write occurs
-// due to cache preemption.
-#if INC_FTL_NDM_MLC && (INC_FTL_NDM_SLC || INC_FTL_NOR_WR1)
-    else
-#endif
-#if INC_NDM_MLC
+    // For SLC devices, adjust driver cached MPNs if too big or zero.
+#if INC_FTL_NDM_SLC
+    if (ftl->num_map_pgs < ftl_dvr->cached_map_pages || ftl_dvr->cached_map_pages == 0)
         ftl_dvr->cached_map_pages = ftl->num_map_pgs;
+
+#else
+
+    // For MLC devices, cache all map pages so that no map write occurs
+    // due to cache preemption.
+    ftl_dvr->cached_map_pages = ftl->num_map_pgs;
 #endif
 
     // Allocate map page cache for new volume.
@@ -1425,37 +1326,16 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
     if (ftl->map_cache == NULL)
         goto FtlnAddV_err;
 
-#if INC_FTL_PAGE_CACHE
-    // If FAT volume and driver requests it, allocate volume page cache.
-    if (FLAG_IS_SET(ftl->flags, FTLN_FAT_VOL) && FLAG_IS_SET(ftl_dvr->flags, FSF_FTL_PAGE_CACHE)) {
-        ftl->vol_cache =
-            ftlvcNew(ftl, ftl_dvr->cached_vol_pages, FtlnVpnWr, FtlnVpnRd, ftl->page_size);
-        if (ftl->vol_cache == NULL)
-            goto FtlnAddV_err;
-    }
-#endif
-
-    // Set block read wear limit and mark no block at limit.
+    // Set block read wear limit.
     if (FLAG_IS_SET(ftl_dvr->flags, FSF_READ_WEAR_LIMIT))
         ftl->max_rc = ftl_dvr->read_wear_limit;
-#if INC_FTL_NDM_MLC
-    else
-#if INC_FTL_NDM_SLC || INC_FTL_NOR_WR1
-        if (ftl_dvr->type == NDM_MLC)
-#endif
+    else {
+#if INC_FTL_NDM_SLC
+        ftl->max_rc = SLC_NAND_RC_LIMIT;
+#else
         ftl->max_rc = MLC_NAND_RC_LIMIT;
 #endif
-#if INC_FTL_NDM_SLC
-    else
-#if INC_FTL_NOR_WR1
-        if (ftl_dvr->type == NDM_SLC)
-#endif
-        ftl->max_rc = SLC_NAND_RC_LIMIT;
-#endif
-#if INC_FTL_NOR_WR1
-    else
-        ftl->max_rc = NOR_RC_LIMIT;
-#endif
+    }
     if (ftl->max_rc > RC_MASK) {
         FsError(EINVAL);
         goto FtlnAddV_err;
@@ -1473,44 +1353,6 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
     FtlnStats(ftl);
 #endif
 
-#if INC_SECT_FTL
-    // If FAT volume, prepare for registration with TargetFAT.
-    if (ftl_type == FTLN_FAT_VOL) {
-        FatVol* fat = (FatVol*)fs_vol;
-
-// Initialize TargetFAT driver structure.
-#if INC_FAT_MBR
-        fat->start_sect = ftl->vol_frst_sect;
-        fat->num_sects = ftl->num_vsects - ftl->vol_frst_sect;
-#else
-        fat->start_sect = 0;
-        fat->num_sects = ftl->num_vsects;
-#endif
-        fat->vol = ftl;
-        fat->write_sectors = FtlnWrSects;
-        fat->read_sectors = FtlnRdSects;
-        fat->report = FtlnReport;
-        fat->flags |= FSF_BLUNK_FTL;
-
-#if FAT_DEBUG
-        printf("\nFAT STATS:\n");
-        printf("  - start_sect      = %u\n", fat->start_sect);
-        printf("  - num_sects       = %u\n", fat->num_sects);
-        printf("  - min_clust_size  = %u\n", fat->min_clust_size);
-        printf("  - flags           = 0x%X\n\n", fat->flags);
-#endif
-
-        // Standard FTL-FAT settings.
-        fat->fixed = TRUE;
-        fat->num_heads = FAT_NUM_HEADS;
-        fat->sects_per_trk = FAT_SECTS_PER_TRACK;
-
-        // Save volume name.
-        strcpy(ftl->vol_name, fat->name);
-    }
-#endif // INC_SECT_FTL
-
-#if INC_PAGE_FTL
     // If XFS volume, prepare for registration with TargetXFS.
     if (ftl_type == FTLN_XFS_VOL) {
         XfsVol* xfs = (XfsVol*)fs_vol;
@@ -1533,7 +1375,6 @@ void* FtlnAddVol(FtlNdmVol* ftl_dvr, int ftl_type, int sect_size, void* fs_vol) 
         // Save volume name.
         strcpy(ftl->vol_name, xfs->name);
     }
-#endif // INC_PAGE_FTL
 
     // Return pointer to FTL control block.
     return ftl;
@@ -1547,26 +1388,6 @@ FtlnAddV_err:
     return NULL;
 }
 
-#if INC_SECT_FTL
-// FtlNdmAddFatFTL: Create a new TargetFTL-NDM FAT FTL
-//
-//      Inputs: ftl_dvr = pointer to FTL NDM driver control block
-//              fat = pointer to FAT pseudo driver control block
-//
-//     Returns: Pointer to FTL control block on success, else NULL
-//
-void* FtlNdmAddFatFTL(FtlNdmVol* ftl_dvr, FatVol* fat) {
-    // Determine sector size.
-    fat->sect_size = FatGetSectSize(fat);
-    if (fat->sect_size == 0)
-        return NULL;
-
-    // Create new FTL and return FTL handle.
-    return FtlnAddVol(ftl_dvr, FTLN_FAT_VOL, fat->sect_size, fat);
-} //lint !e818
-#endif // INC_SECT_FTL
-
-#if INC_PAGE_FTL
 // FtlNdmAddXfsFTL: Create a new TargetFTL-NDM XFS FTL
 //
 //      Inputs: ftl_dvr = pointer to FTL NDM driver control block
@@ -1578,7 +1399,6 @@ void* FtlNdmAddXfsFTL(FtlNdmVol* ftl_dvr, XfsVol* xfs) {
     // Create new FTL and return FTL handle.
     return FtlnAddVol(ftl_dvr, FTLN_XFS_VOL, ftl_dvr->page_size, xfs);
 } //lint !e818
-#endif // INC_PAGE_FTL
 
 // FtlnFreeFTL: Free an existing FTL volume
 //
@@ -1613,19 +1433,8 @@ int FtlnDelVol(FTLN ftl) {
     // Release file system exclusive access.
     semPostBin(FileSysSem);
 
-// Delete file system volume.
-#if INC_PAGE_FTL && INC_SECT_FTL
-    if (FLAG_IS_SET(ftl->flags, FTLN_XFS_VOL))
-#endif
-#if INC_PAGE_FTL
-        (void)XfsDelVol(ftl->vol_name);
-#endif
-#if INC_PAGE_FTL && INC_SECT_FTL
-    else
-#endif
-#if INC_SECT_FTL
-        (void)FatDelVol(ftl->vol_name);
-#endif
+    // Delete file system volume.
+    (void)XfsDelVol(ftl->vol_name);
 
     // Acquire exclusive access to upper file system.
     semPend(FileSysSem, WAIT_FOREVER);
@@ -1676,4 +1485,4 @@ int FtlNdmDelVol(const char* name) {
         }
     }
 }
-#endif // INC_FTL_NDM
+

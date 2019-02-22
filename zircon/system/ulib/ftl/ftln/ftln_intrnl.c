@@ -4,7 +4,6 @@
 
 #include "ftlnp.h"
 
-#if INC_FTL_NDM
 // Configuration
 #ifndef FTLN_DEBUG_RECYCLES
 #define FTLN_DEBUG_RECYCLES FALSE
@@ -87,15 +86,15 @@ static void show_blks(FTLN ftl) {
         putchar('\n');
         n = show_blk(ftl, l);
         if (l + q <= ftl->num_blks) {
-            Spaces(31 - n);
+            printf("%*s", 31 - n, " ");
             n = show_blk(ftl, l + q);
         }
         if (l + 2 * q <= ftl->num_blks) {
-            Spaces(31 - n);
+            printf("%*s", 31 - n, " ");
             n = show_blk(ftl, l + 2 * q);
         }
         if (l + 3 * q <= ftl->num_blks) {
-            Spaces(31 - n);
+            printf("%*s", 31 - n, " ");
             n = show_blk(ftl, l + 3 * q);
         }
     }
@@ -189,38 +188,31 @@ static ui32 next_free_mpg(FTLN ftl) {
     // Use first page on free map page list.
     pn = ftl->free_mpn;
 
-// Move to next writable page. If MLC flash, that is page whose pair
-// has a higher offset. Invalidate index if end of block reached.
-#if INC_FTL_NDM_MLC && (INC_FTL_NDM_SLC || INC_FTL_NOR_WR1)
-    if (ftl->type == NDM_MLC)
-#endif
-#if INC_NDM_MLC
-        for (;;) {
-            ui32 pg_offset = ++ftl->free_mpn % ftl->pgs_per_blk;
-
-            if (pg_offset == 0) {
-                ftl->free_mpn = (ui32)-1;
-                break;
-            }
-            if (ftl->pair_offset(pg_offset, ftl->ndm) >= pg_offset)
-                break;
-        }
-#endif
-#if INC_FTL_NDM_MLC && (INC_FTL_NDM_SLC || INC_FTL_NOR_WR1)
-    else
-#endif
-#if INC_FTL_NDM_SLC || INC_FTL_NOR_WR1
-        if (++ftl->free_mpn % ftl->pgs_per_blk == 0)
+    // Move to next writable page. For MLC flash, that is page whose pair
+    // has a higher offset. Invalidate index if end of block reached.
+#if INC_FTL_NDM_SLC
+    if (++ftl->free_mpn % ftl->pgs_per_blk == 0)
         ftl->free_mpn = (ui32)-1;
-#endif
+#else
+    for (;;) {
+        ui32 pg_offset = ++ftl->free_mpn % ftl->pgs_per_blk;
 
-#if INC_FTL_NDM_MLC && FS_ASSERT
+        if (pg_offset == 0) {
+            ftl->free_mpn = (ui32)-1;
+            break;
+        }
+        if (ftl->pair_offset(pg_offset, ftl->ndm) >= pg_offset)
+            break;
+    }
+
+#if FS_ASSERT
     // For MLC devices, sanity check that this is a safe write.
-    if (ftl->type == NDM_MLC) {
+    {
         ui32 pg_offset = pn % ftl->pgs_per_blk;
 
         PfAssert(ftl->pair_offset(pg_offset, ftl->ndm) >= pg_offset);
     }
+#endif
 #endif
 
     // Return allocated page number.
@@ -397,8 +389,7 @@ static int free_map_list_pgs(CFTLN ftl) {
 
 #if INC_FTL_NDM_MLC
     // We only use half the available pages on an MLC map block.
-    if (ftl->type == NDM_MLC)
-        free_mpgs /= 2;
+    free_mpgs /= 2;
 #endif
 
     // Return the number of free pages on the free_mpn list.
@@ -430,8 +421,8 @@ static int recycle_possible(CFTLN ftl, ui32 b) {
         needed_free = 1;
         free_mpgs = ftl->pgs_per_blk;
 #if INC_FTL_NDM_MLC
-        if (ftl->type == NDM_MLC)  // only use half of MLC map block pages
-            free_mpgs /= 2;
+        // only use half of MLC map block pages
+        free_mpgs /= 2;
 #endif
     }
 
@@ -454,7 +445,7 @@ static int recycle_possible(CFTLN ftl, ui32 b) {
             // If free volume page list is empty or on the prospective block,
             // need new free volume block.
             ++needed_free;
-        } else if ((ui32)free_vol_list_pgs(ftl) < used) {
+        } else if ((ui32)free_vol_list_pgs(ftl) < used) {  // TIMER: added (ui32) cast
             // Else if the number of free volume pages is less than the number
             // of used pages on prospective block, need another volume block.
             ++needed_free;
@@ -467,8 +458,8 @@ static int recycle_possible(CFTLN ftl, ui32 b) {
         if (map_pgs > free_mpgs) {
             avail_blk_pgs = ftl->pgs_per_blk;
 #if INC_FTL_NDM_MLC
-            if (ftl->type == NDM_MLC)
-                avail_blk_pgs /= 2;
+            // only use half of MLC map block pages
+            avail_blk_pgs /= 2;
 #endif
             needed_free += (map_pgs - free_mpgs + avail_blk_pgs - 1) / avail_blk_pgs;
         }
@@ -497,7 +488,7 @@ static ui32 block_selector(FTLN ftl, ui32 b) {
     // Get maximum number of used pages. Only use half of MLC map block.
     blk_pages = ftl->pgs_per_blk;
 #if INC_FTL_NDM_MLC
-    if (ftl->type == NDM_MLC && IS_MAP_BLK(ftl->bdata[b]))
+    if (IS_MAP_BLK(ftl->bdata[b]))
         blk_pages /= 2;
 #endif
 
@@ -745,91 +736,6 @@ static int recycle(FTLN ftl) {
         return recycle_vblk(ftl, rec_b);
 }
 
-#if INC_SECT_FTL
-// partial_page_write: Write a virtual page that has been only
-//              partially modified
-//
-//      Inputs: ftl = pointer to FTL control block
-//              sect_wr = pointer to structure holding 1st VSN, sector
-//                       count, and output buffer pointer
-//
-//     Returns: 0 on success, -1 on failure
-//
-static int partial_page_write(FTLN ftl, SectWr* sect_wr) {
-    ui32 vpn, old_pn, grp_cnt, grp_i;
-#if INC_FTL_PAGE_CACHE
-    FcEntry* ftlvc_ent;
-#endif
-
-    // Compute first virtual page number.
-    vpn = sect_wr->vsn0 / ftl->sects_per_page;
-
-    // Compute number of sectors to be written in page.
-    grp_i = sect_wr->vsn0 % ftl->sects_per_page;
-    grp_cnt = ftl->sects_per_page - grp_i;
-    if (grp_cnt > sect_wr->cnt)
-        grp_cnt = sect_wr->cnt;
-
-#if INC_FTL_PAGE_CACHE
-    // Check if there is a virtual pages cache and this page is in it.
-    if (ftl->vol_cache && (ftlvc_ent = FcGetEntry(ftl->vol_cache, vpn, 0, NULL)) != NULL) {
-        // Update page contents.
-        memcpy(&ftlvc_ent->data[grp_i * ftl->sect_size], sect_wr->buf, grp_cnt * ftl->sect_size);
-
-        // Mark cache entry dirty and unpin it.
-        ftlvcSetPageDirty(ftl->vol_cache, ftlvc_ent);
-        FcFreeEntry(ftl->vol_cache, &ftlvc_ent);
-    }
-
-    // Else update page in flash.
-    else
-#endif
-    {
-        // Prepare to write one volume page.
-        if (FtlnRecCheck(ftl, 1))
-            return -1;
-
-        // Retrieve physical page number for VPN. Return -1 if error.
-        if (FtlnMapGetPpn(ftl, vpn, &old_pn) < 0)
-            return -1;
-
-#if FS_ASSERT
-        // Confirm no physical page number changes below.
-        ftl->assert_no_recycle = TRUE;
-#endif
-
-        // If unmapped, fill page with 0xFF.
-        if (old_pn == (ui32)-1)
-            memset(ftl->swap_page, 0xFF, ftl->page_size);
-
-        // Else read page contents in. Return -1 if error.
-        else if (FtlnRdPage(ftl, old_pn, ftl->swap_page))
-            return -1;
-
-        // Update contents of page with new data to be written.
-        memcpy(&ftl->swap_page[grp_i * ftl->sect_size], sect_wr->buf, grp_cnt * ftl->sect_size);
-
-        // Write page to flash. Return -1 if error.
-        if (wr_vol_page(ftl, vpn, ftl->swap_page, old_pn))
-            return -1;
-        PfAssert(ftl->num_free_blks >= FTLN_MIN_FREE_BLKS);
-
-#if FS_ASSERT
-        // End check for no physical page number changes.
-        ftl->assert_no_recycle = FALSE;
-#endif
-    }
-
-    // Adjust input parameters based on number of sectors written.
-    sect_wr->buf += grp_cnt * ftl->sect_size;
-    sect_wr->cnt -= grp_cnt;
-    sect_wr->vsn0 += grp_cnt;
-
-    // Return success.
-    return 0;
-}
-#endif // INC_SECT_FTL
-
 // flush_pending_writes: Write any pending consecutive writes to flash
 //
 //      Inputs: ftl = pointer to FTL control block
@@ -853,13 +759,6 @@ static int flush_pending_writes(FTLN ftl, PageWr* page_wr) {
                          ftl->ndm))
         return FtlnFatErr(ftl);
     ftl->stats.write_page += page_wr->cnt;
-
-#if INC_FTL_PAGE_CACHE
-    // If virtual pages cache, update any entry that contains any of the
-    // successfully written pages.
-    if (ftl->vol_cache)
-        ftlvcUpdate(ftl->vol_cache, page_wr->vpn0, page_wr->cnt, page_wr->buf, ftl->page_size);
-#endif
 
     // Loop over all written pages to update mappings.
     end = page_wr->ppn0 + page_wr->cnt;
@@ -900,6 +799,8 @@ static int flush_pending_writes(FTLN ftl, PageWr* page_wr) {
 static int write_sectors(FTLN ftl, ui32 vsn, ui32 count, const ui8* buf) {
     SectWr sect_wr;
     PageWr page_wr;
+    int need_recycle;
+    ui8* spare = ftl->spare_buf;
 
     // Set errno and return -1 if fatal I/O error occurred.
     if (ftl->flags & FTLN_FATAL_ERR)
@@ -913,94 +814,73 @@ static int write_sectors(FTLN ftl, ui32 vsn, ui32 count, const ui8* buf) {
     page_wr.cnt = 0;
     page_wr.ppn0 = page_wr.vpn0 = (ui32)-1;
 
-#if INC_SECT_FTL
-    // If sector is not page aligned, perform partial first page write.
-    if (sect_wr.vsn0 % ftl->sects_per_page)
-        if (partial_page_write(ftl, &sect_wr))
-            return -1;
+    // Check if recycles are needed for one page write.
+    need_recycle = FtlnRecNeeded(ftl, 1);
 
-    // Check if there are any whole pages to write.
-    if (sect_wr.cnt >= ftl->sects_per_page)
-#endif
-    {
-        int need_recycle;
-        ui8* spare = ftl->spare_buf;
+    // Loop while there are whole pages to write.
+    do {
+        ui32 pn, vpn, wc;
 
-        // Check if recycles are needed for one page write.
-        need_recycle = FtlnRecNeeded(ftl, 1);
+        // If needed, recycle blocks until at least one page is free.
+        if (need_recycle)
+            if (FtlnRecCheck(ftl, 1))
+                return -1;
 
-        // Loop while there are whole pages to write.
-        do {
-            ui32 pn, vpn, wc;
+        // Allocate next free volume page. Return -1 if error.
+        pn = next_free_vpg(ftl);
+        if (pn == (ui32)-1)
+            return pn;
 
-            // If needed, recycle blocks until at least one page is free.
-            if (need_recycle)
-                if (FtlnRecCheck(ftl, 1))
+        // Compute virtual page number associated with sector and ensure
+        // sector is first in page.
+        vpn = sect_wr.vsn0 / ftl->sects_per_page;
+        PfAssert(sect_wr.vsn0 % ftl->sects_per_page == 0);
+
+        // If no pending writes, start new sequence. Else add to it.
+        if (page_wr.vpn0 == (ui32)-1) {
+            page_wr.vpn0 = vpn;
+            page_wr.buf = sect_wr.buf;
+            page_wr.ppn0 = pn;
+            page_wr.cnt = 1;
+            spare = ftl->spare_buf;
+        } else
+            ++page_wr.cnt;
+
+        // Set the spare area VPN, BC, and block WC for this page.
+        memset(spare, 0xFF, ftl->eb_size);
+        SET_SA_VPN(vpn, spare);
+        wc = ftl->high_wc - ftl->blk_wc_lag[pn / ftl->pgs_per_blk];
+        SET_SA_WC(wc, spare);
+
+        // Check if physical page number is at block boundary or writing
+        // one more page than staged would trigger a recycle.
+        need_recycle = FtlnRecNeeded(ftl, page_wr.cnt + 1);
+        if ((ftl->free_vpn == (ui32)-1) || need_recycle) {
+            // If any, flush currently staged pages and reset the staging.
+            if (page_wr.vpn0 != (ui32)-1) {
+                if (flush_pending_writes(ftl, &page_wr))
                     return -1;
-
-            // Allocate next free volume page. Return -1 if error.
-            pn = next_free_vpg(ftl);
-            if (pn == (ui32)-1)
-                return pn;
-
-            // Compute virtual page number associated with sector and ensure
-            // sector is first in page.
-            vpn = sect_wr.vsn0 / ftl->sects_per_page;
-            PfAssert(sect_wr.vsn0 % ftl->sects_per_page == 0);
-
-            // If no pending writes, start new sequence. Else add to it.
-            if (page_wr.vpn0 == (ui32)-1) {
-                page_wr.vpn0 = vpn;
-                page_wr.buf = sect_wr.buf;
-                page_wr.ppn0 = pn;
-                page_wr.cnt = 1;
-                spare = ftl->spare_buf;
-            } else
-                ++page_wr.cnt;
-
-            // Set the spare area VPN, BC, and block WC for this page.
-            memset(spare, 0xFF, ftl->eb_size);
-            SET_SA_VPN(vpn, spare);
-            wc = ftl->high_wc - ftl->blk_wc_lag[pn / ftl->pgs_per_blk];
-            SET_SA_WC(wc, spare);
-
-            // Check if physical page number is at block boundary or writing
-            // one more page than staged would trigger a recycle.
-            need_recycle = FtlnRecNeeded(ftl, page_wr.cnt + 1);
-            if ((ftl->free_vpn == (ui32)-1) || need_recycle) {
-                // If any, flush currently staged pages and reset the staging.
-                if (page_wr.vpn0 != (ui32)-1) {
-                    if (flush_pending_writes(ftl, &page_wr))
-                        return -1;
-                    page_wr.vpn0 = (ui32)-1;
-                }
-
-                // Invoke recycles to prepare for the next page write.
-                need_recycle = TRUE;
+                page_wr.vpn0 = (ui32)-1;
             }
 
-            // Advance input parameters and spare buffer pointer.
-            sect_wr.buf += ftl->page_size;
-            sect_wr.cnt -= ftl->sects_per_page;
-            sect_wr.vsn0 += ftl->sects_per_page;
-            spare += ftl->eb_size;
-        } while (sect_wr.cnt >= ftl->sects_per_page);
-
-        // If there are any, flush pending writes.
-        if (page_wr.vpn0 != (ui32)-1) {
-            if (FtlnRecCheck(ftl, page_wr.cnt))
-                return -1;
-            if (flush_pending_writes(ftl, &page_wr))
-                return -1;
+            // Invoke recycles to prepare for the next page write.
+            need_recycle = TRUE;
         }
-    }
 
-#if INC_SECT_FTL
-    // If still unwritten sectors, do partial write of last page.
-    if (sect_wr.cnt)
-        if (partial_page_write(ftl, &sect_wr))
+        // Advance input parameters and spare buffer pointer.
+        sect_wr.buf += ftl->page_size;
+        sect_wr.cnt -= ftl->sects_per_page;
+        sect_wr.vsn0 += ftl->sects_per_page;
+        spare += ftl->eb_size;
+    } while (sect_wr.cnt >= ftl->sects_per_page);
+
+    // If there are any, flush pending writes.
+    if (page_wr.vpn0 != (ui32)-1) {
+        if (FtlnRecCheck(ftl, page_wr.cnt))
             return -1;
-#endif
+        if (flush_pending_writes(ftl, &page_wr))
+            return -1;
+    }
 
     // Return success.
     return 0;
@@ -1043,8 +923,7 @@ int FtlnRecNeeded(CFTLN ftl, int wr_cnt) {
         ui32 avail_blk_pgs = ftl->pgs_per_blk;
 
 #if INC_FTL_NDM_MLC
-        if (ftl->type == NDM_MLC)
-            avail_blk_pgs /= 2;
+        avail_blk_pgs /= 2;
 #endif
         mblks_req = (need - free_pgs + avail_blk_pgs - 1) / avail_blk_pgs;
     }
@@ -1087,11 +966,10 @@ int FtlnRecycleMapBlk(FTLN ftl, ui32 recycle_b) {
             return FtlnFatErr(ftl);
 
 #if INC_FTL_NDM_MLC
-        // If MLC NAND and not first page on block, skip pages whose pair
+        // For MLC NAND, if not first page on block, skip pages whose pair
         // is at a lower offset, to not corrupt them by a failed write.
-        if (ftl->type == NDM_MLC && i)
-            if (ftl->pair_offset(i, ftl->ndm) < i)
-                continue;
+        if (i && (ftl->pair_offset(i, ftl->ndm) < i))
+            continue;
 #endif
 
         // Read page's spare area. Return -1 if fatal I/O error.
@@ -1130,21 +1008,6 @@ int FtlnRecycleMapBlk(FTLN ftl, ui32 recycle_b) {
     // Return success.
     return 0;
 }
-
-#if INC_FTL_PAGE_CACHE
-//   FtlnVpnWr: Cache function to write a volume page
-//
-//      Inputs: c_e = cache entry with volume page number/content
-//              vol_ptr = FTL handle
-//
-//     Returns: 0 on success, -1 on failure
-//
-int FtlnVpnWr(FcEntry* c_e, int unused, void* vol_ptr) {
-    FTLN ftl = vol_ptr;
-
-    return write_sectors(ftl, c_e->sect_num * ftl->sects_per_page, ftl->sects_per_page, c_e->data);
-} //lint !e818
-#endif
 
 //  FtlnMetaWr: Write FTL meta information page
 //
@@ -1383,35 +1246,10 @@ int FtlnWrSects(const void* buf, ui32 sect, int count, void* vol) {
     if (count == 0)
         return 0;
 
-#if INC_FAT_MBR
-    // Ensure all cluster requests are page aligned.
-    if (sect >= ftl->frst_clust_sect)
-        sect += ftl->clust_off;
-
-    // When first sector is written, check if it's a master boot one and
-    // update the boot sector value for the volume then.
-    if (sect == 0) {
-        FATPartition part;
-
-        if (FatGetPartitions(buf, &part, 1) == 1) {
-            int diff = part.first_sect - ftl->vol_frst_sect;
-
-            ftl->vol_frst_sect = part.first_sect;
-            ftl->num_vsects -= diff;
-        }
-    }
-#endif
-
     // Write sectors. Return -1 if error.
     status = write_sectors(ftl, sect, count, buf);
     if (status)
         return -1;
-
-#if INC_FAT_MBR
-    // If FAT boot sector has just been written, set frst_clust_sect.
-    if (FLAG_IS_SET(ftl->flags, FTLN_FAT_VOL) && sect == ftl->vol_frst_sect)
-        status = FtlnSetClustSect1(ftl, buf, buf == ftl->main_buf);
-#endif
 
     // Return status.
     return status;
@@ -1477,4 +1315,3 @@ void FtlnShowBlks(void) {
 }
 #endif
 
-#endif // INC_FTL_NDM

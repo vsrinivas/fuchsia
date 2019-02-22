@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <sys.h>
+#include <kprivate/fsprivate.h>
 
 #include <string.h>
 
@@ -17,3 +18,4 @@ const ui8 NumberOnes[] = {
 int FNameEqu(const char* s1, const char* s2) {
     return (strcmp(s1, s2) == 0) ? TRUE : FALSE;
 }
+

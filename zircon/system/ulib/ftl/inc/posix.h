@@ -11,7 +11,7 @@ extern "C" {
 #include <stddef.h>    // for size_t definition
 #include <stdint.h>    // for fixed width types
 #include <time.h>      // for time_t definition
-#include <stdio_tfs.h> // for FILENAME_MAX
+#include <stdio.h>     // for FILENAME_MAX
 
 /***********************************************************************/
 /* Symbol Definitions                                                  */

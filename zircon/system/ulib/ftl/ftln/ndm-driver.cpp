@@ -6,9 +6,9 @@
 
 #include <zircon/assert.h>
 
+#include "kprivate/fsdriver.h"
 #include "kprivate/ndm.h"
 #include "posix.h"
-#include "utils/modules.h"
 
 namespace ftl {
 
@@ -185,7 +185,7 @@ bool InitModules() {
     if (!g_init_performed) {
         // Unfortunately, module initialization is a global affair, and there is
         // no cleanup. At least, make sure no re-initialization takes place.
-        if (NdmModule(kInitMod) != nullptr || FsModule(kInitMod) != nullptr) {
+        if (NdmInit() != 0 || FtlInit() != 0) {
             return false;
         }
         g_init_performed = true;

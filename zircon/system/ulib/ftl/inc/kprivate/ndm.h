@@ -86,7 +86,7 @@ typedef struct {
     int (*read_pages)(ui32 pn, ui32 count, ui8* data, ui8* spare, void* dev);
     int (*transfer_page)(ui32 old_pn, ui32 new_pn, ui8* data, ui8* old_spare, ui8* new_spare,
                          int encode_spare, void* dev);
-#if INC_FFS_NDM_MLC || INC_FTL_NDM_MLC
+#if INC_FTL_NDM_MLC
     ui32 (*pair_offset)(ui32 page_offset, void* dev);
 #endif
     int (*read_decode_spare)(ui32 pn, ui8* spare, void* dev);
@@ -129,7 +129,6 @@ void ndmDeletePartitionTable(NDM ndm);
 int ndmSavePartitionTable(NDM ndm);
 int ndmDelVols(CNDM ndm);
 int ndmDelVol(CNDM ndm, ui32 part_num);
-int ndmWrFatPartition(NDM ndm, ui32 part_num);
 
 // User Volume API
 int ndmEraseBlock(ui32 pn, void* ndm_ptr);
@@ -137,9 +136,7 @@ int ndmReadPages(ui32 start_pn, ui32 count, void* data, void* spare, void* ndm_p
 int ndmWritePages(ui32 start_pn, ui32 count, const void* data, void* spare, void* ndm_ptr);
 
 // FAT/XFS/FFS Volume API
-int ndmAddVolFatFTL(NDM ndm, ui32 part_no, FtlNdmVol* ftl, FatVol* fat);
 int ndmAddVolXfsFTL(NDM ndm, ui32 part_no, FtlNdmVol* ftl, XfsVol* xfs);
-int ndmAddVolFFS(NDM ndm, ui32 part_num, FfsVol* ffs_dvr);
 
 // Driver Test/Special Routines
 int ndmExtractBBL(NDM ndm);

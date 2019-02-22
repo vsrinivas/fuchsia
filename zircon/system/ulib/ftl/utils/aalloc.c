@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <inc/config.h>
 #include <stdlib.h>
 #include <sys.h>
 #include <bsp.h>
@@ -33,22 +34,22 @@ void* aalloc(size_t size) {
 #if CACHE_LINE_SIZE <= 8
     return malloc(size);
 #else
-    ui64 malloc_addr, fs_alloc_addr;
+    uintptr_t malloc_addr, fs_alloc_addr;
 
     // Increase size for malloc request to allow for alignment and for
     // storage of start of malloc-ed memory.
-    size += sizeof(ui64) + CACHE_LINE_SIZE - 1;
+    size += sizeof(uintptr_t) + CACHE_LINE_SIZE - 1;
 
     // Allocate memory.
-    malloc_addr = (ui64)calloc(size, sizeof(ui8));
+    malloc_addr = (uintptr_t)calloc(size, sizeof(ui8));
     if (malloc_addr == 0)
         return NULL;
 
     // Compute start of aligned memory block.
-    fs_alloc_addr = (malloc_addr + sizeof(ui64) + CACHE_LINE_SIZE - 1) & ~(CACHE_LINE_SIZE - 1);
+    fs_alloc_addr = (malloc_addr + sizeof(uintptr_t) + CACHE_LINE_SIZE - 1) & ~(CACHE_LINE_SIZE - 1);
 
     // Store start address immediately prior to aligned memory.
-    *(ui64*)(fs_alloc_addr - sizeof(ui64)) = malloc_addr;
+    *(uintptr_t*)(fs_alloc_addr - sizeof(uintptr_t)) = malloc_addr;
 
     // Return start of aligned memory.
     return (void*)fs_alloc_addr;
@@ -71,3 +72,4 @@ void afree_clear(void* aligned_ptr_addr) {
     *aptr = 0;
 #endif
 }
+

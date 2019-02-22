@@ -420,3 +420,4 @@ ui32* ftlmcInCache(FTLMC* cache, ui32 mpn) {
     // Page is not in cache, return NULL.
     return NULL;
 }
+

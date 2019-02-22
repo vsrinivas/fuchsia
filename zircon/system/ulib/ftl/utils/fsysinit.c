@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 #include "kernel.h"
-#include "modules.h"
+#include "fsprivate.h"
 
 #include <lib/backtrace-request/backtrace-request.h>
 
@@ -19,12 +19,10 @@ int FsError(int err_code) {
     return -1;
 }
 
-void* FsModule(int req, ...) {
-    // Only respond to module initialization request.
-    if (req == kInitMod) {
-        FileSysSem = semCreate("fsys sem", 1, OS_FIFO);
-        if (FileSysSem == NULL)
-            return (void*)-1;
-    }
-    return NULL;
+int FtlInit(void) {
+    FileSysSem = semCreate("fsys sem", 1, OS_FIFO);
+    if (FileSysSem == NULL)
+        return -1;
+    return 0;
 }
+

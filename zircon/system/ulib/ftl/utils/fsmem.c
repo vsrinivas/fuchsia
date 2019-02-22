@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <inc/config.h>
 #include <fsprivate.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys.h>
 
 // Wrapper for malloc()
@@ -49,3 +47,4 @@ void FsFreeClear(void* ptr) {
 void FsAfreeClear(void* ptr) {
     afree_clear(ptr);
 }
+

@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include "ndmp.h"
-
-#if INC_NDM
 #include <kprivate/fsprivate.h>
 
 // Symbol Definitions
@@ -993,25 +991,20 @@ static int ndm_xfr_page(ui32 old_pn, ui32 new_pn, ui8* buf, ui8* old_spare, ui8*
 
 // Global Function Definitions
 
-//   NdmModule: NDM interface to software object manager
+//   NdmInit: Initialize NDM
 //
-//       Input: req = module request code
-//              ... = additional parameters specific to request
+//     Returns: 0 on success, -1 on failure
 //
-void* NdmModule(int req, ...) {
-    switch (req) {
-        case kInitMod: {
-            // Initialize the devices list.
-            CIRC_LIST_INIT(&NdmDevs);
+int NdmInit(void) {
+    // Initialize the devices list.
+    CIRC_LIST_INIT(&NdmDevs);
 
-            // Create the NDM global synchronization semaphore.
-            NdmSem = semCreate("NDM_SEM", 1, OS_FIFO);
-            if (NdmSem == NULL)
-                return (void*)-1;
-        }
-    }
+    // Create the NDM global synchronization semaphore.
+    NdmSem = semCreate("NDM_SEM", 1, OS_FIFO);
+    if (NdmSem == NULL)
+        return -1;
 
-    return NULL;
+    return 0;
 }
 
 //   ndmAddDev: Create a new NDM
@@ -1034,35 +1027,21 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
 #endif
 
     // Error if unsupported flash type.
-    if (dvr->type != NDM_MLC && dvr->type != NDM_SLC) {
-        FsError(EINVAL);
-        return NULL;
-    }
-
-#if !INC_FFS_NDM_MLC && !INC_FTL_NDM_MLC
-    // Error if type is NDM_MLC and no MLC support is enabled.
-    if (dvr->type == NDM_MLC) {
-        FsError(EINVAL);
-        return NULL;
-    }
+#if INC_FTL_NDM_SLC
+    if (dvr->type != NDM_SLC) {
+#else
+    if (dvr->type != NDM_MLC) {
 #endif
-
-#if !INC_FFS_NDM_SLC && !INC_FTL_NDM_SLC
-    // Error if type is NDM_SLC and no SLC support is enabled.
-    if (dvr->type == NDM_SLC) {
         FsError(EINVAL);
         return NULL;
     }
-#endif
 
-#if OS_PARM_CHECK
     // Ensure NDM driver flags are valid.
     if (dvr->flags &
         ~(FSF_MULTI_ACCESS | FSF_TRANSFER_PAGE | FSF_FREE_SPARE_ECC | FSF_NDM_INIT_WRITE)) {
         FsError(EINVAL);
         return NULL;
     }
-#endif
 
     // Check for valid number of blocks.
     if (dvr->num_blocks <= dvr->max_bad_blocks + NDM_META_BLKS) {
@@ -1151,14 +1130,12 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
     ndm->read_decode_spare = dvr->read_decode_spare;
     ndm->read_spare = dvr->read_spare;
     ndm->page_blank = dvr->data_and_spare_erased;
-#if INC_FTL_NDM
     ndm->check_page = dvr->data_and_spare_check;
-#endif
     ndm->erase_block = dvr->erase_block;
     ndm->is_block_bad = dvr->is_block_bad;
     ndm->dev = dvr->dev;
 
-#if INC_FFS_NDM_MLC || INC_FTL_NDM_MLC
+#if INC_FTL_NDM_MLC
     // The 'pair_offset' driver function does not take a page/address.
     ndm->pair_offset = dvr->pair_offset;
 #endif
@@ -1331,4 +1308,4 @@ void ndmCkMeta(NDM ndm0) {
     free(ndm1);
 }
 #endif // RDBACK_CHECK
-#endif // INC_NDM
+

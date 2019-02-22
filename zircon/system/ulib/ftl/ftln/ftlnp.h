@@ -6,11 +6,10 @@
 
 #include <inc/config.h>
 
-#if INC_FTL_NDM
 #include <errno.h>
 #include <string.h>
 #include <sys.h>
-#include <kprivate/ftl_vc.h>
+#include <fsprivate.h>
 #include <kprivate/ndm.h>
 #include <kprivate/ftl_mc.h>
 
@@ -194,9 +193,6 @@ struct ftln {
     void (*free_ftl)(void* vol);
 
 // Virtual Volume Variables
-#if INC_FAT_MBR
-    ui32 vol_frst_sect; // first (boot) volume sector
-#endif
     ui32 sect_size;      // virtual sector size in bytes
     ui32 sects_per_page; // virtual sectors in a page
 
@@ -210,17 +206,10 @@ struct ftln {
     void* ndm;        // pointer to NDM this FTL belongs to
 
     ui32 flags; // holds various FTL flags
-#if INC_FAT_MBR
-    ui32 frst_clust_sect; // first sector of first FAT cluster
-    ui32 clust_off;       // offset to page align cluster sectors
-#endif
     ui32* bdata;     // block metadata: flags and counts
     ui8* blk_wc_lag; // amount block erase counts lag 'high_wc'
     ui32* mpns;      // array holding phy page # of map pages
 
-#if INC_FTL_PAGE_CACHE
-    void* vol_cache; // handle to volume page cache
-#endif
     FTLMC* map_cache;      // handle to map page cache
     ui32 free_vpn;         // next free page for volume page write
     ui32 free_mpn;         // next free page for map page write
@@ -244,9 +233,6 @@ struct ftln {
     ftl_ndm_stats stats; // driver call counts
 
     ui8* main_buf; // NAND main page buffer
-#if INC_SECT_FTL
-    ui8* swap_page; // for accessing sector in page
-#endif
     ui8* spare_buf; // spare buffer for single/multi-pg access
 
     ui32 type;          // type of NAND - SLC or MLC
@@ -291,9 +277,6 @@ int FtlnMapWr(void* vol, ui32 mpn, void* buf);
 int FtlnMapRd(void* vol, ui32 mpn, void* buf, int* unmapped);
 int FtlnMetaWr(FTLN ftl, ui32 type);
 
-int FtlnVpnWr(FcEntry* c_e, int unused, void* vol);
-int FtlnVpnRd(void* buf, ui32 vpn, void* vol);
-
 void FtlnDecUsed(FTLN ftl, ui32 pn, ui32 vpn);
 int FtlnFormat(FTLN ftl, ui32 meta_block);
 void FtlnStateRst(FTLN ftl);
@@ -314,4 +297,3 @@ void FtlnStats(FTLN ftl);
 void FtlnShowBlks(void);
 void FtlnCheckBlank(FTLN ftl, ui32 b);
 
-#endif // INC_FTL_NDM
