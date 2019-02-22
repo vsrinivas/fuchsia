@@ -26,11 +26,13 @@ class Config {
   const std::vector<Network>& networks() const;
   const Environment& environment() const;
   const std::string& default_url() const;
+  bool disabled() const;
 
  private:
   std::vector<Network> networks_;
   Environment environment_;
   std::string default_url_;
+  bool disabled_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Config);
 };

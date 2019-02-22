@@ -54,14 +54,18 @@ Sandbox::Sandbox(SandboxArgs args) : env_config_(std::move(args.config)) {
 }
 
 void Sandbox::Start(async_dispatcher_t* dispatcher) {
-  if (!parent_env_ || !loader_) {
-    Terminate(TerminationReason::INTERNAL_ERROR);
-    return;
-  }
-
   main_dispatcher_ = dispatcher;
   setup_done_ = false;
   test_spawned_ = false;
+
+  if (!parent_env_ || !loader_) {
+    Terminate(TerminationReason::INTERNAL_ERROR);
+    return;
+  } else if (env_config_.disabled()) {
+    FXL_LOG(INFO) << "test is disabled, skipping.";
+    Terminate(0, TerminationReason::EXITED);
+    return;
+  }
 
   helper_loop_ =
       std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);

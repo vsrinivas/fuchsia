@@ -175,11 +175,12 @@ Below is the documentation of the objects accepted. The root object is of type [
 ### Config
 
 
-| Field       | Type                        | Description                                                                    |
-|-------------|-----------------------------|--------------------------------------------------------------------------------|
-| default_url | String                      | Global default URL, will be used by any instance of [LaunchArgs](#launchargs)  |
-| environment | [Environment](#environment) | root environment configuration                                                 |
-| networks    | Array of [Network](#network)| collection of networks to setup                                                |
+| Field       | Type                        | Description                                                                                          |
+|-------------|-----------------------------|------------------------------------------------------------------------------------------------------|
+| default_url | String                      | Global default URL, will be used by any instance of [LaunchArgs](#launchargs)                        |
+| disabled    | Boolean                     | if true, no tests or environments will be created and sandbox will exit cleanly. defaults to *false* |
+| environment | [Environment](#environment) | root environment configuration                                                                       |
+| networks    | Array of [Network](#network)| collection of networks to setup                                                                      |
 
 ### Environment
 

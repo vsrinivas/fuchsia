@@ -639,5 +639,21 @@ TEST_F(SandboxTest, NoTestsIsFailedtest) {
   RunSandboxInternalError();
 }
 
+TEST_F(SandboxTest, DisabledTestSucceeds) {
+  // Start with a component that is instructed to fail,
+  // but mark the test as disabled.
+  // expect sandbox to exit with success.
+  SetCmx(R"(
+{
+   "disabled" : true,
+   "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+   "environment" : {
+      "test" : [ { "arguments": ["-f"] } ]
+   }
+}
+)");
+  RunSandboxSuccess();
+}
+
 }  // namespace testing
 }  // namespace netemul

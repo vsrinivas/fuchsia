@@ -10,6 +10,7 @@ namespace config {
 static const char* kNetworks = "networks";
 static const char* kEnvironment = "environment";
 static const char* kDefaultUrl = "default_url";
+static const char* kDisabled = "disabled";
 
 const char Config::Facet[] = "fuchsia.netemul";
 
@@ -55,7 +56,22 @@ bool Config::ParseFromJSON(const rapidjson::Value& value,
 
   auto default_url = value.FindMember(kDefaultUrl);
   if (default_url != value.MemberEnd()) {
+    if (!default_url->value.IsString()) {
+      json_parser->ReportError("\"default_url\" must be a String");
+      return false;
+    }
     default_url_ = default_url->value.GetString();
+  }
+
+  auto disabled = value.FindMember(kDisabled);
+  if (disabled != value.MemberEnd()) {
+    if (!disabled->value.IsBool()) {
+      json_parser->ReportError("\"disabled\" must be a Boolean value");
+      return false;
+    }
+    disabled_ = disabled->value.GetBool();
+  } else {
+    disabled_ = false;
   }
 
   return true;
@@ -66,6 +82,8 @@ const std::vector<Network>& Config::networks() const { return networks_; }
 const Environment& Config::environment() const { return environment_; }
 
 const std::string& Config::default_url() const { return default_url_; }
+
+bool Config::disabled() const { return disabled_; }
 
 }  // namespace config
 }  // namespace netemul

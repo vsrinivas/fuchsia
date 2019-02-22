@@ -112,6 +112,7 @@ TEST_F(ModelTest, ParseTest) {
 
   EXPECT_EQ(config.default_url(),
             "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/default.cmx");
+  EXPECT_EQ(config.disabled(), false);
 
   // sanity check the objects:
   auto& root_env = config.environment();
