@@ -36,7 +36,7 @@ fuchsia/sysroot/${os=linux}-${arch} git_revision:a96053c799a0f1ad0b7e8ab8199edbf
 
 # Symbolizer tool.  This is a standalone executable, not a subdirectory.
 @Subdir
-fuchsia/tools/symbolize/${platform} git_revision:5e5a9e55af0926d9ce08c9da9cf46dc3f9eabc1b
+fuchsia/tools/symbolize/${platform} git_revision:0ce34c429c451d8fc23cb69b5ffbf609e91b4a63
 
 # QEMU
 @Subdir qemu
