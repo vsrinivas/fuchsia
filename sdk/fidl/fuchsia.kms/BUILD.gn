@@ -9,6 +9,7 @@ fidl("fuchsia.kms") {
 
   sources = [
     "key_manager.fidl",
+    "key_manager_stateless.fidl",
   ]
 
   public_deps = [
