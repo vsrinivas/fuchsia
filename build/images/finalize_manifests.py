@@ -253,7 +253,7 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
 # Take an iterable of binary_entry, and return list of binary_entry (all
 # stripped files), a list of binary_info (all debug files), and a boolean
 # saying whether any new stripped output files were written in the process.
-def strip_binary_manifest(manifest, stripped_dir, examined):
+def strip_binary_manifest(manifest, stripped_dir, build_id_dir, examined):
     new_output = False
 
     def find_debug_file(filename):
@@ -292,7 +292,7 @@ def strip_binary_manifest(manifest, stripped_dir, examined):
         examined.add(debugfile)
         return debug
 
-    # The toolchain-supplied shared libraries, and Go binaries, are
+    # The toolchain-supplied shared libraries, and Rust binaries, are
     # delivered unstripped.  For these, strip the binary right here and
     # update the manifest entry to point to the stripped file.
     def make_debug_file(entry, info):
@@ -301,7 +301,7 @@ def strip_binary_manifest(manifest, stripped_dir, examined):
         dir = os.path.dirname(stripped)
         if not os.path.isdir(dir):
             os.makedirs(dir)
-        if info.strip(stripped):
+        if info.strip(stripped, build_id_dir):
             new_output = True
         info = binary_info(stripped)
         assert info, ("Stripped file '%s' for '%s' is invalid" %
@@ -360,7 +360,7 @@ def emit_manifests(args, selected, unselected, input_binaries):
     # stripped files are implicit outputs (there's no such thing as a depfile
     # for outputs, only for inputs).
     binaries, debug_files, force_update = strip_binary_manifest(
-        binaries, args.stripped_dir, examined)
+        binaries, args.stripped_dir, args.build_id_dir, examined)
 
     # Collate groups.
     for entry in itertools.chain((binary.entry for binary in binaries),
@@ -423,6 +423,9 @@ is used for shared libraries and the like.
     parser.add_argument('--build-id-file', required=True,
                         metavar='FILE',
                         help='Output build ID list')
+    parser.add_argument('--build-id-dir', required=False,
+                        metavar='DIR',
+                        help='.build-id directory to populate when stripping')
     parser.add_argument('--depfile',
                         metavar='DEPFILE',
                         help='Ninja depfile to write')
