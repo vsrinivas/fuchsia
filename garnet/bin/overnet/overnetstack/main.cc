@@ -82,7 +82,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   overnetstack::FuchsiaLog fuchsia_log;
   overnet::ScopedRenderer scoped_renderer(&fuchsia_log);
-  // overnet::ScopedSeverity scoped_severity(overnet::Severity::INFO);
+  overnet::ScopedSeverity scoped_severity(overnet::Severity::INFO);
   overnetstack::FuchsiaTimer fuchsia_timer;
   overnetstack::OvernetApp app(&fuchsia_timer);
   app.InstantiateActor<overnetstack::Service>();
