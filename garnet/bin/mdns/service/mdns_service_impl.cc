@@ -29,7 +29,7 @@ std::string GetHostName() {
   std::string host_name;
 
   if (result < 0) {
-    FXL_LOG(ERROR) << "gethostname failed, errno " << errno;
+    FXL_LOG(ERROR) << "gethostname failed, " << strerror(errno);
     host_name = kUnsetHostName;
   } else {
     host_name = host_name_buffer;

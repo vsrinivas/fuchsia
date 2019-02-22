@@ -56,7 +56,7 @@ bool MdnsInterfaceTransceiver::Start(InboundMessageCallback callback) {
   socket_fd_ = fxl::UniqueFD(socket(address_.family(), SOCK_DGRAM, 0));
 
   if (!socket_fd_.is_valid()) {
-    FXL_LOG(ERROR) << "Failed to open socket, errno " << errno;
+    FXL_LOG(ERROR) << "Failed to open socket, " << strerror(errno);
     return false;
   }
 
@@ -111,7 +111,7 @@ void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
   bytes_sent_ += packet_size;
 
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to sendto, errno " << errno;
+    FXL_LOG(ERROR) << "Failed to sendto, " << strerror(errno);
     return;
   }
 }
@@ -146,8 +146,8 @@ int MdnsInterfaceTransceiver::SetOptionSharePort() {
   int result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_REUSEADDR, &param,
                           sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option SO_REUSEADDR, errno "
-                   << errno;
+    FXL_LOG(ERROR) << "Failed to set socket option SO_REUSEADDR, "
+                   << strerror(errno);
     return result;
   }
 
@@ -155,8 +155,8 @@ int MdnsInterfaceTransceiver::SetOptionSharePort() {
   result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_REUSEPORT, &param,
                       sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option SO_REUSEPORT, errno "
-                   << errno;
+    FXL_LOG(ERROR) << "Failed to set socket option SO_REUSEPORT, "
+                   << strerror(errno);
   }
 
   return result;
@@ -178,7 +178,7 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status,
                0, reinterpret_cast<sockaddr*>(&source_address_storage),
                &source_address_length);
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to recvfrom, errno " << errno;
+    FXL_LOG(ERROR) << "Failed to recvfrom, " << strerror(errno);
     // Wait a bit before trying again to avoid spamming the log.
     async::PostDelayedTask(async_get_default_dispatcher(),
                            [this]() { WaitForInbound(); }, zx::sec(10));

@@ -28,8 +28,8 @@ int MdnsInterfaceTransceiverV6::SetOptionJoinMulticastGroup() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_JOIN_GROUP,
                           &param, sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option IPV6_JOIN_GROUP, errno "
-                   << errno;
+    FXL_LOG(ERROR) << "Failed to set socket option IPV6_JOIN_GROUP, "
+                   << strerror(errno);
   }
 
   return result;
@@ -40,8 +40,8 @@ int MdnsInterfaceTransceiverV6::SetOptionOutboundInterface() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_IF,
                           &index, sizeof(index));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option IP_MULTICAST_IF, errno "
-                   << errno;
+    FXL_LOG(ERROR) << "Failed to set socket option IP_MULTICAST_IF, "
+                   << strerror(errno);
   }
 
   return result;
@@ -52,8 +52,8 @@ int MdnsInterfaceTransceiverV6::SetOptionUnicastTtl() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_UNICAST_HOPS,
                           &param, sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option IPV6_UNICAST_HOPS, errno "
-                   << errno;
+    FXL_LOG(ERROR) << "Failed to set socket option IPV6_UNICAST_HOPS, "
+                   << strerror(errno);
   }
 
   return result;
@@ -64,8 +64,8 @@ int MdnsInterfaceTransceiverV6::SetOptionMulticastTtl() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
                           &param, sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option IPV6_MULTICAST_HOPS, errno "
-                   << errno;
+    FXL_LOG(ERROR) << "Failed to set socket option IPV6_MULTICAST_HOPS, "
+                   << strerror(errno);
   }
 
   return result;
@@ -77,8 +77,8 @@ int MdnsInterfaceTransceiverV6::SetOptionFamilySpecific() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_HOPLIMIT,
                           &param, sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option IPV6_HOPLIMIT, errno "
-                   << errno;
+    FXL_LOG(ERROR) << "Failed to set socket option IPV6_HOPLIMIT, "
+                   << strerror(errno);
     return result;
   }
 
@@ -87,8 +87,8 @@ int MdnsInterfaceTransceiverV6::SetOptionFamilySpecific() {
   result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_V6ONLY, &param,
                       sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option IPV6_V6ONLY, errno "
-                   << errno;
+    FXL_LOG(ERROR) << "Failed to set socket option IPV6_V6ONLY, "
+                   << strerror(errno);
     return false;
   }
 
@@ -99,7 +99,8 @@ int MdnsInterfaceTransceiverV6::Bind() {
   int result = bind(socket_fd().get(), MdnsAddresses::kV6Bind.as_sockaddr(),
                     MdnsAddresses::kV6Bind.socklen());
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to bind socket to V6 address, errno " << errno;
+    FXL_LOG(ERROR) << "Failed to bind socket to V6 address, "
+                   << strerror(errno);
     // TODO(dalesat): Remove the following once NET-1809 is fixed.
     if (errno == EADDRINUSE) {
       FXL_LOG(ERROR) << "(EADDRINUSE) This is probably due to NET-1809.";
