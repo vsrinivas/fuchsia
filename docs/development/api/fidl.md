@@ -31,7 +31,7 @@ and how the interfaces for manipulating those concepts might be structured.
 
 ### Language neutrality
 
-There are FIDL backends for many different languages.  You should avoid
+There are FIDL back ends for many different languages.  You should avoid
 over-specializing your FIDL definitions for any particular target language.
 Over time, your FIDL protocol is likely to be used by many different languages,
 perhaps even some languages that are not even supported today.  FIDL is the
@@ -51,20 +51,20 @@ Names defined in FIDL are used to generate identifiers in each target language.
 Some languages attach semantic or conventional meaning to names of various
 forms.  For example, in Go, whether the initial letter in an identifier is
 capitalized controls the visibility of the identifier.  For this reason, many of
-the language backends transform the names in your library to make them more
+the language back ends transform the names in your library to make them more
 appropriate for their target language.  The naming rules in this section are a
 balancing act between readability in the FIDL source, usability in each target
 language, and consistency across target languages.
 
-Avoid commonly reserved words, such as `goto`.  The language backends will
+Avoid commonly reserved words, such as `goto`.  The language back ends will
 transform reserved words into non-reserved identifiers, but these transforms
 reduce usability in those languages.  Avoiding commonly reserved words reduces
 the frequency with which these transformations are applied.
 
 While some FIDL keywords are also commonly reserved words in target languages,
-(such as `struct` in C and C++), and should thus be avoided, other FIDL keywords,
-particularly `request` and `handle`, are generally descriptive and can be
-used as appropriate.
+(such as `struct` in C and C++), and should thus be avoided, other FIDL
+keywords, particularly `request` and `handle`, are generally descriptive and
+can be used as appropriate.
 
 Names must not contain leading or trailing underscores.  Leading or trailing
 underscores have semantic meaning in some languages (e.g., leading underscores
@@ -85,12 +85,14 @@ identifiers.  Our style is as follows:
  * Start with the original phrase in US English (e.g., "Non-Null HTTP Client")
  * Remove any punctuation. ("Non Null HTTP Client")
  * Make everything lowercase ("non null http client")
- * Do one of the following, depending on what style is appropriate for the given identifier:
-    * Replace spaces with underscores ('_') for _lower snake case_ (`non_null_http_client`).
+ * Do one of the following, depending on what style is appropriate for the given
+   identifier:
+    * Replace spaces with underscores ('_') for _lower snake case_
+      (`non_null_http_client`).
     * Capitalize and replace spaces with underscores for _upper snake case_
       (`NON_NULL_HTTP_CLIENT`).
-    * Capitalize the first letter of each word and join all words together for _upper
-      camel case_ (`NonNullHttpClient`).
+    * Capitalize the first letter of each word and join all words together for
+      _upper camel case_ (`NonNullHttpClient`).
 
 ### Libraries
 
@@ -105,12 +107,13 @@ selected a conservative least common denominator in order for FIDL to work well
 with our current set of target languages and with potential future target
 languages.
 
-Prefer functional names (e.g., `fuchsia.media`) over product or codenames (e.g.,
-`fuchsia.amber` or `fuchsia.mozart`).  Product names are appropriate when the
-product has some external existence beyond Fuchsia and when the interface is
-specific to that product.  For example, `fuchsia.cobalt` is a better name for
-the Cobalt interface than `fuchsia.metrics` because other metrics
-implementations (e.g., Firebase) are unlikely to implement the same protocol.
+Prefer functional names (e.g., `fuchsia.media`) over product or code names
+(e.g., `fuchsia.amber` or `fuchsia.mozart`).  Product names are appropriate
+when the product has some external existence beyond Fuchsia and when the
+interface is specific to that product.  For example, `fuchsia.cobalt` is a
+better name for the Cobalt interface than `fuchsia.metrics` because other
+metrics implementations (e.g., Firebase) are unlikely to implement the same
+protocol.
 
 FIDL libraries defined in the Platform Source Tree (i.e., defined in
 fuchsia.googlesource.com) must be in the `fuchsia` top-level namespace (e.g.,
@@ -125,8 +128,8 @@ hardware functionality to applications must be in the `fuchsia.hardware`
 namespace.  For example, an interface for exposing an ethernet device might
 be named `fuchsia.hardware.ethernet.Device`.  Higher-level functionality built
 on top of these interfaces does not belong in the `fuchsia.hardware` namespace.
-For example, it is more appropriate for network protocols to be under `fuchsia.net`
-than `fuchsia.hardware`.
+For example, it is more appropriate for network protocols to be under
+`fuchsia.net` than `fuchsia.hardware`.
 
 Avoid library names with more than two dots (e.g., `fuchsia.foo.bar.baz`).
 There are some cases when a third dot is appropriate, but those cases are rare.
@@ -186,10 +189,10 @@ and `MAX_`, respectively.
 
 Interfaces are specified with the `protocol` keyword.
 
-Interfaces must be named in `UpperCamelCase` and must be noun phrases.  Typically,
-interfaces are named using nouns that suggest an action.  For example,
-`AudioRenderer` is a noun that suggests that the interface is related to
-rendering audio.  Similarly, `Launcher` is a noun that suggests that the
+Interfaces must be named in `UpperCamelCase` and must be noun phrases.
+Typically, interfaces are named using nouns that suggest an action.  For
+example, `AudioRenderer` is a noun that suggests that the interface is related
+to rendering audio.  Similarly, `Launcher` is a noun that suggests that the
 interface is related to launching something.  Interfaces can also be passive
 nouns, particularly if they relate to some state held by the implementation.
 For example, `Directory` is a noun that suggests that the interface is used for
@@ -233,16 +236,16 @@ Parameter must be named in `lower_snake_case`.
 
 ### Structs, unions, and tables
 
-Structs, unions, and tables must be named in `UpperCamelCase` and must be noun phrases.
-For example, `Point` is a struct that defines a location in space and
+Structs, unions, and tables must be named in `UpperCamelCase` and must be noun
+phrases. For example, `Point` is a struct that defines a location in space and
 `KeyboardEvent` is a struct that defines a keyboard-related event.
 
 ### Structs, unions, and tables members
 
-Structs, unions, and tables members must be named in `lower_snake_case`.  Prefer names with
-a single word when practical because single-word names render more consistently
-across target languages.  However, do not be afraid to use multiple words if a
-single word would be ambiguous or confusing.
+Structs, unions, and tables members must be named in `lower_snake_case`. Prefer
+names with a single word when practical because single-word names render more
+consistently across target languages.  However, do not be afraid to use
+multiple words if a single word would be ambiguous or confusing.
 
 Member names must not repeat names from the enclosing type (or library).  For
 example, the `KeyboardEvent` member that contains the time the event was
@@ -273,8 +276,9 @@ their enclosing type.
  * Use 4 space indents.
  * Never use tabs.
  * Avoid trailing whitespace.
- * Separate declarations for `struct`, `union`, `enum`, and `protocol` constructs
-   from other declarations with one newline.
+ * Separate declarations for `struct`, `union`, `enum`, and `protocol`
+   constructs from other declarations with one blank line (two consecutive
+   newline characters).
  * End files with exactly one newline character.
 
 ### Comments
@@ -422,9 +426,9 @@ following questions:
 
 Ideally, we would produce a FIDL library structure for Fuchsia as a whole that
 is a global optimum.  However, Conway's law states that "organizations which
-design systems \[...\] are constrained to produce designs which are copies of the
-communication structures of these organizations."  We should spend a moderate
-amount of time fighting Conway's law.
+design systems \[...\] are constrained to produce designs which are copies of
+the communication structures of these organizations."  We should spend a
+moderate amount of time fighting Conway's law.
 
 ## Types
 
@@ -676,8 +680,8 @@ Use `bytes` or `array<uint8>` for small non-text data:
 
 Use shared-memory primitives for blobs:
 
- * Use `fuchsia.mem.Buffer` for images and (large) protobufs, when it makes sense
-   to buffer the data completely.
+ * Use `fuchsia.mem.Buffer` for images and (large) protobufs, when it makes
+   sense to buffer the data completely.
  * Use `handle<socket>` for audio and video streams because data may arrive over
    time, or when it makes sense to process data before completely written or
    available.
@@ -1015,7 +1019,7 @@ The client-assigned identifier pattern has some disadvantages.  For example,
 clients are more difficult to author because clients need to manage their own
 identifiers.  Developers commonly want to create a client library that provides
 an object-oriented facades for the service to hide the complexity of managing
-identifiers, which itself is an antipattern (see _client libraries_ below).
+identifiers, which itself is an anti-pattern (see _client libraries_ below).
 
 A strong signal that you should create a separate interface instance to
 represent an object rather than using a client-assigned identifier is when you
@@ -1030,8 +1034,8 @@ as a capability that controls access to that object.
 In protocols that use feed-forward dataflow, the client often sends many one-way
 messages to the server before sending a two-way synchronization message.  If the
 protocol involves a particularly high volume of messages, the overhead for
-sending a message can become noticeable.  In those situations, consider using the
-_command union pattern_ to batch multiple commands into a single message.
+sending a message can become noticeable.  In those situations, consider using
+the _command union pattern_ to batch multiple commands into a single message.
 
 In this pattern, the client sends a `vector` of commands rather than sending an
 individual message for each command.  The vector contains a union of all the
@@ -1154,9 +1158,9 @@ and the client returns the token to the server with each partial read:
 ```fidl
 struct Token { array<uint8>:16 opaque; }
 protocol TokenBasedGetter {
-    // If token is null, fetch the first N entries. If token is not null, return the
-    // N items starting at token. Returns as many entries as it can in results and
-    // populates next_token if more entries are available.
+    // If token is null, fetch the first N entries. If token is not null, return
+    // the N items starting at token. Returns as many entries as it can in
+    // results and populates next_token if more entries are available.
     GetEntries(Token? token) -> (vector<Entry> entries, Token? next_token);
 }
 ```
