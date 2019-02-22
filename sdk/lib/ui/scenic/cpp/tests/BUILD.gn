@@ -1,0 +1,38 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+test("scenic_cpp_unittests") {
+  sources = [
+    "view_token_pair_test.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/ui/scenic/cpp",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+fuchsia_test_component("scenic_cpp_unittests_component") {
+  deps = [
+    ":scenic_cpp_unittests",
+  ]
+  binary = "scenic_cpp_unittests"
+}
+
+# TODO(IN-933): Convert back to package
+test_package("scenic_cpp_tests") {
+  deps = [
+    ":scenic_cpp_unittests",
+  ]
+
+  tests = [
+    {
+      name = "scenic_cpp_unittests"
+    },
+  ]
+}

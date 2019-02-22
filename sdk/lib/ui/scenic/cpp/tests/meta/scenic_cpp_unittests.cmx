@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/scenic_cpp_unittests"
+    }
+}
