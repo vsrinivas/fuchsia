@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 	"syscall/zx"
@@ -521,10 +522,13 @@ var _ net.SocketControl = (*iostate)(nil)
 func tcpipErrorToCode(err *tcpip.Error) int16 {
 	if err != tcpip.ErrConnectStarted {
 		errStr := err.String()
-		if pc, _, _, ok := runtime.Caller(1); ok {
-			errStr = runtime.FuncForPC(pc).Name() + ": " + errStr
+		if _, file, line, ok := runtime.Caller(1); ok {
+			if i := strings.LastIndexByte(file, '/'); i != -1 {
+				file = file[i+1:]
+			}
+			errStr = fmt.Sprintf("%s:%d: %s", file, line, errStr)
 		}
-		logger.VLogf(logger.DebugVerbosity, err.String())
+		logger.VLogf(logger.DebugVerbosity, errStr)
 	}
 	switch err {
 	case tcpip.ErrUnknownProtocol:
