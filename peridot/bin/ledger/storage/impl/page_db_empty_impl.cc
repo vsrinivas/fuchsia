@@ -28,18 +28,21 @@ Status PageDbEmptyImpl::GetCommitStorageBytes(CoroutineHandler* /*handler*/,
                                               std::string* /*storage_bytes*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::ReadObject(CoroutineHandler* /*handler*/,
-                                   ObjectIdentifier /*object_identifier*/,
-                                   std::unique_ptr<const Object>* /*object*/) {
+Status PageDbEmptyImpl::ReadObject(
+    CoroutineHandler* /*handler*/,
+    const ObjectIdentifier& /*object_identifier*/,
+    std::unique_ptr<const Object>* /*object*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::HasObject(CoroutineHandler* /*handler*/,
-                                  ObjectIdentifier /*object_identifier*/) {
+Status PageDbEmptyImpl::HasObject(
+    CoroutineHandler* /*handler*/,
+    const ObjectIdentifier& /*object_identifier*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetObjectStatus(CoroutineHandler* /*handler*/,
-                                        ObjectIdentifier /*object_identifier*/,
-                                        PageDbObjectStatus* /*object_status*/) {
+Status PageDbEmptyImpl::GetObjectStatus(
+    CoroutineHandler* /*handler*/,
+    const ObjectIdentifier& /*object_identifier*/,
+    PageDbObjectStatus* /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetUnsyncedCommitIds(
@@ -90,14 +93,16 @@ Status PageDbEmptyImpl::RemoveCommit(CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::WriteObject(
-    CoroutineHandler* /*handler*/, ObjectIdentifier /*object_identifier*/,
+    CoroutineHandler* /*handler*/,
+    const ObjectIdentifier& /*object_identifier*/,
     std::unique_ptr<DataSource::DataChunk> /*content*/,
     PageDbObjectStatus /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::SetObjectStatus(CoroutineHandler* /*handler*/,
-                                        ObjectIdentifier /*object_identifier*/,
-                                        PageDbObjectStatus /*object_status*/) {
+Status PageDbEmptyImpl::SetObjectStatus(
+    CoroutineHandler* /*handler*/,
+    const ObjectIdentifier& /*object_identifier*/,
+    PageDbObjectStatus /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::MarkCommitIdSynced(CoroutineHandler* /*handler*/,

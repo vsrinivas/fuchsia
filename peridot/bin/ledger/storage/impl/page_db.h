@@ -73,14 +73,16 @@ class PageDbMutator {
   // Object data.
   // Writes the content of the given object.
   FXL_WARN_UNUSED_RESULT virtual Status WriteObject(
-      coroutine::CoroutineHandler* handler, ObjectIdentifier object_identifier,
+      coroutine::CoroutineHandler* handler,
+      const ObjectIdentifier& object_identifier,
       std::unique_ptr<DataSource::DataChunk> content,
       PageDbObjectStatus object_status) = 0;
 
   // Object sync metadata.
   // Sets the status of the object with the given id.
   FXL_WARN_UNUSED_RESULT virtual Status SetObjectStatus(
-      coroutine::CoroutineHandler* handler, ObjectIdentifier object_identifier,
+      coroutine::CoroutineHandler* handler,
+      const ObjectIdentifier& object_identifier,
       PageDbObjectStatus object_status) = 0;
 
   // Commit sync metadata.
@@ -164,18 +166,20 @@ class PageDb : public PageDbMutator {
   // Object data.
   // Reads the content of the given object.
   FXL_WARN_UNUSED_RESULT virtual Status ReadObject(
-      coroutine::CoroutineHandler* handler, ObjectIdentifier object_identifier,
+      coroutine::CoroutineHandler* handler,
+      const ObjectIdentifier& object_identifier,
       std::unique_ptr<const Object>* object) = 0;
 
   // Checks whether the object with the given |object_digest| is stored in the
   // database. Returns |OK| if the objet was found, or |NOT_FOUND| if not.
   FXL_WARN_UNUSED_RESULT virtual Status HasObject(
       coroutine::CoroutineHandler* handler,
-      ObjectIdentifier object_identifier) = 0;
+      const ObjectIdentifier& object_identifier) = 0;
 
   // Returns the status of the object with the given id.
   FXL_WARN_UNUSED_RESULT virtual Status GetObjectStatus(
-      coroutine::CoroutineHandler* handler, ObjectIdentifier object_identifier,
+      coroutine::CoroutineHandler* handler,
+      const ObjectIdentifier& object_identifier,
       PageDbObjectStatus* object_status) = 0;
 
   // Commit sync metadata.

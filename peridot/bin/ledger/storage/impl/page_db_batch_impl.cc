@@ -60,7 +60,7 @@ Status PageDbBatchImpl::RemoveCommit(CoroutineHandler* handler,
 }
 
 Status PageDbBatchImpl::WriteObject(
-    CoroutineHandler* handler, ObjectIdentifier object_identifier,
+    CoroutineHandler* handler, const ObjectIdentifier& object_identifier,
     std::unique_ptr<DataSource::DataChunk> content,
     PageDbObjectStatus object_status) {
   FXL_DCHECK(object_status > PageDbObjectStatus::UNKNOWN);
@@ -85,9 +85,9 @@ Status PageDbBatchImpl::WriteObject(
       "");
 }
 
-Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,
-                                        ObjectIdentifier object_identifier,
-                                        PageDbObjectStatus object_status) {
+Status PageDbBatchImpl::SetObjectStatus(
+    CoroutineHandler* handler, const ObjectIdentifier& object_identifier,
+    PageDbObjectStatus object_status) {
   FXL_DCHECK(object_status >= PageDbObjectStatus::LOCAL);
   RETURN_ON_ERROR(DCheckHasObject(handler, object_identifier));
 
@@ -131,8 +131,8 @@ Status PageDbBatchImpl::Execute(CoroutineHandler* handler) {
   return batch_->Execute(handler);
 }
 
-Status PageDbBatchImpl::DCheckHasObject(
-    CoroutineHandler* handler, const ObjectIdentifier& key) {
+Status PageDbBatchImpl::DCheckHasObject(CoroutineHandler* handler,
+                                        const ObjectIdentifier& key) {
 #ifdef NDEBUG
   return Status::OK;
 #else

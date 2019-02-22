@@ -92,7 +92,7 @@ Status PageDbImpl::GetCommitStorageBytes(CoroutineHandler* handler,
 }
 
 Status PageDbImpl::ReadObject(CoroutineHandler* handler,
-                              ObjectIdentifier object_identifier,
+                              const ObjectIdentifier& object_identifier,
                               std::unique_ptr<const Object>* object) {
   FXL_DCHECK(object);
   return db_->GetObject(handler,
@@ -101,13 +101,13 @@ Status PageDbImpl::ReadObject(CoroutineHandler* handler,
 }
 
 Status PageDbImpl::HasObject(CoroutineHandler* handler,
-                             ObjectIdentifier object_identifier) {
+                             const ObjectIdentifier& object_identifier) {
   return db_->HasKey(handler,
                      ObjectRow::GetKeyFor(object_identifier.object_digest()));
 }
 
 Status PageDbImpl::GetObjectStatus(CoroutineHandler* handler,
-                                   ObjectIdentifier object_identifier,
+                                   const ObjectIdentifier& object_identifier,
                                    PageDbObjectStatus* object_status) {
   // Check must be done in ascending order of status, so that a change of status
   // between 2 reads does not create the case where no key is found.
@@ -244,7 +244,7 @@ Status PageDbImpl::RemoveCommit(CoroutineHandler* handler,
 }
 
 Status PageDbImpl::WriteObject(CoroutineHandler* handler,
-                               ObjectIdentifier object_identifier,
+                               const ObjectIdentifier& object_identifier,
                                std::unique_ptr<DataSource::DataChunk> content,
                                PageDbObjectStatus object_status) {
   std::unique_ptr<Batch> batch;
@@ -255,7 +255,7 @@ Status PageDbImpl::WriteObject(CoroutineHandler* handler,
 }
 
 Status PageDbImpl::SetObjectStatus(CoroutineHandler* handler,
-                                   ObjectIdentifier object_identifier,
+                                   const ObjectIdentifier& object_identifier,
                                    PageDbObjectStatus object_status) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
