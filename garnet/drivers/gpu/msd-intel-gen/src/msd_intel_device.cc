@@ -546,10 +546,6 @@ magma::Status MsdIntelDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch)
         client_id = connection ? connection->client_id() : 0;
     }
 
-    // Create a virtual flow event to the GPU vthread.
-    uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
-    TRACE_VTHREAD_FLOW_STEP("magma", "command_buffer", "GPU", client_id, buffer_id, current_ticks);
-
     RequestMaxFreq();
 
     return MAGMA_STATUS_OK;

@@ -685,10 +685,17 @@ void RenderEngineCommandStreamer::ProcessCompletedCommandBuffers(uint32_t last_c
         DASSERT(context);
         context->get_ringbuffer(id())->update_head(sequence.ringbuffer_offset());
 
-        if (sequence.mapped_batch()->was_scheduled())
-            scheduler_->CommandBufferCompleted(context);
-
+        // NOTE: The order of the following lines matter.
+        //
+        // We need to pop() before telling the scheduler we're done so that the
+        // flow events in the Command Buffer destructor happens before the
+        // Context Exec virtual duration event is over.
+        bool was_scheduled = sequence.mapped_batch()->was_scheduled();
         inflight_command_sequences_.pop();
+
+        if (was_scheduled) {
+            scheduler_->CommandBufferCompleted(context);
+        }
     }
 }
 

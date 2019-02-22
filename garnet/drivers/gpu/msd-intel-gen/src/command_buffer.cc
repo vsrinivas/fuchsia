@@ -58,8 +58,14 @@ CommandBuffer::~CommandBuffer()
     if (!prepared_to_execute_)
         return;
 
-    TRACE_DURATION("magma", "Command Buffer End");
+    std::shared_ptr<MsdIntelConnection> connection = locked_context_->connection().lock();
+    uint64_t connection_id = connection ? connection->client_id() : 0;
+    uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
+
     uint64_t ATTRIBUTE_UNUSED buffer_id = resource(batch_buffer_resource_index()).buffer_id();
+    TRACE_DURATION("magma", "Command Buffer End");
+    TRACE_VTHREAD_FLOW_STEP("magma", "command_buffer", "GPU", connection_id, buffer_id,
+                            current_ticks);
     TRACE_FLOW_END("magma", "command_buffer", buffer_id);
 
     UnmapResourcesGpu();
@@ -68,7 +74,6 @@ CommandBuffer::~CommandBuffer()
         semaphore->Signal();
     }
 
-    std::shared_ptr<MsdIntelConnection> connection = locked_context_->connection().lock();
     if (connection) {
         std::vector<uint64_t> buffer_ids(num_resources());
         for (uint32_t i = 0; i < num_resources(); i++) {
