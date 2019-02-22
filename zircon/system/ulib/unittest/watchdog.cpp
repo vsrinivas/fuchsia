@@ -132,8 +132,10 @@ static void* watchdog_thread_func(void* arg) {
             break;
         }
 
+        // Use REALTIME because that's the default clock for conds and
+        // OSX doesn't include the pthread APIs for changing it.
         struct timespec delay;
-        clock_gettime(CLOCK_MONOTONIC, &delay);
+        clock_gettime(CLOCK_REALTIME, &delay);
         delay.tv_sec += WATCHDOG_TICK_SECONDS;
         // If compiled with #define NDEBUG the assert essentially goes away.
         // Thus we need to protect |result| with __UNUSED lest the compiler
