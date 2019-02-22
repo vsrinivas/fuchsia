@@ -30,6 +30,8 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 
+namespace harvester {
+
 namespace {
 
 zx_status_t get_root_resource(zx_handle_t* root_resource) {
@@ -171,6 +173,8 @@ void GatherThreadSamples(zx_handle_t root_resource, Harvester* harvester) {
   // TODO(dschuyler): Actually gather the thread samples.
 }
 
+}  // namespace harvester
+
 int main(int argc, char** argv) {
   // A broad 'something went wrong' error.
   constexpr int EXIT_CODE_GENERAL_ERROR = 1;
@@ -189,15 +193,15 @@ int main(int argc, char** argv) {
   }
   // TODO(dschuyler): This channel isn't authenticated
   // (InsecureChannelCredentials()).
-  Harvester harvester(grpc::CreateChannel(positional_args[0],
-                                          grpc::InsecureChannelCredentials()));
+  harvester::Harvester harvester(grpc::CreateChannel(
+      positional_args[0], grpc::InsecureChannelCredentials()));
 
   if (!harvester.Init()) {
     exit(EXIT_CODE_GENERAL_ERROR);
   }
 
   zx_handle_t root_resource;
-  zx_status_t ret = get_root_resource(&root_resource);
+  zx_status_t ret = harvester::get_root_resource(&root_resource);
   if (ret != ZX_OK) {
     exit(EXIT_CODE_GENERAL_ERROR);
   }

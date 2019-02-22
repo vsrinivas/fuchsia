@@ -2,9 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_H_
+#define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_H_
+
 #include <grpc++/grpc++.h>
-#include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
+#include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
+
+namespace harvester {
 
 class Harvester {
  public:
@@ -33,3 +38,7 @@ class Harvester {
   grpc::Status GetStreamIdForName(dockyard::SampleStreamId* stream_id,
                                   const std::string& stream_name);
 };
+
+}  // namespace harvester
+
+#endif  // GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_H_
