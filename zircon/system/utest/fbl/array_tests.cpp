@@ -44,8 +44,55 @@ bool destructor_test() {
     END_TEST;
 }
 
+bool move_to_const_ctor_test() {
+    BEGIN_TEST;
+
+    constexpr size_t kSize = 10;
+    fbl::Array<uint32_t> array(new uint32_t[kSize], kSize);
+    for (uint32_t i = 0; i < kSize; ++i) {
+        array[i] = i;
+    }
+    uint32_t* array_ptr = array.get();
+
+    fbl::Array<const uint32_t> const_array(std::move(array));
+    EXPECT_NULL(array.get());
+    EXPECT_EQ(array.size(), 0);
+    EXPECT_EQ(const_array.get(), array_ptr);
+    EXPECT_EQ(const_array.size(), kSize);
+    for (size_t i = 0; i < kSize; ++i) {
+        EXPECT_EQ(const_array[i], i);
+    }
+
+    END_TEST;
+}
+
+bool move_to_const_assignment_test() {
+    BEGIN_TEST;
+
+    constexpr size_t kSize = 10;
+    fbl::Array<uint32_t> array(new uint32_t[kSize], kSize);
+    for (uint32_t i = 0; i < kSize; ++i) {
+        array[i] = i;
+    }
+    uint32_t* array_ptr = array.get();
+
+    fbl::Array<const uint32_t> const_array;
+    const_array = std::move(array);
+    EXPECT_NULL(array.get());
+    EXPECT_EQ(array.size(), 0);
+    EXPECT_EQ(const_array.get(), array_ptr);
+    EXPECT_EQ(const_array.size(), kSize);
+    for (size_t i = 0; i < kSize; ++i) {
+        EXPECT_EQ(const_array[i], i);
+    }
+
+    END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(array_tests)
 RUN_NAMED_TEST("destructor test", destructor_test)
+RUN_TEST(move_to_const_ctor_test)
+RUN_TEST(move_to_const_assignment_test)
 END_TEST_CASE(array_tests);
