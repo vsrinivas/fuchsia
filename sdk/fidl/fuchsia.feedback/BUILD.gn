@@ -5,6 +5,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.feedback") {
+  sdk_category = "partner"
+
   sources = [
     "data_provider.fidl",
   ]

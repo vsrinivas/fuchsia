@@ -18,7 +18,12 @@ sdk_documentation("open_source") {
   category = "public"
 
   files = []
-  foreach(file, ["AUTHORS", "LICENSE", "PATENTS"]) {
+  foreach(file,
+          [
+            "AUTHORS",
+            "LICENSE",
+            "PATENTS",
+          ]) {
     files += [
       {
         source = "//$file"
@@ -133,6 +138,7 @@ sdk("garnet") {
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.camera:fuchsia.camera_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.images:fuchsia.images_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.math:fuchsia.math_sdk($fidl_toolchain)",
