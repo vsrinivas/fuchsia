@@ -35,53 +35,11 @@ App::App(const fxl::CommandLine& command_line)
 
 App::~App() {}
 
-Presentation::YieldCallback App::GetYieldCallback() {
-  return [this](bool yield_to_next) {
-    if (yield_to_next) {
-      SwitchToNextPresentation();
-    } else {
-      SwitchToPreviousPresentation();
-    }
-  };
-}
-
-Presentation::ShutdownCallback App::GetShutdownCallback(
-    Presentation* presentation) {
-  return [this, presentation] {
-    size_t idx;
-    for (idx = 0; idx < presentations_.size(); ++idx) {
-      if (presentations_[idx].get() == presentation) {
-        break;
-      }
-    }
-    FXL_DCHECK(idx != presentations_.size());
-
-    if (idx == active_presentation_idx_) {
-      // This works fine when idx == 0, because the previous idx chosen will
-      // also be 0, and it will be an no-op within SwitchToPreviousPresentation.
-      // Finally, at the end of the callback, everything will be cleaned up.
-      SwitchToPreviousPresentation();
-    }
-
-    presentations_.erase(presentations_.begin() + idx);
-    if (idx < active_presentation_idx_) {
-      // Adjust index into presentations_.
-      active_presentation_idx_--;
-    }
-
-    if (presentations_.empty()) {
-      layer_stack_->RemoveAllLayers();
-      active_presentation_idx_ = std::numeric_limits<size_t>::max();
-    }
-  };
-}
-
-void App::Present2(zx::eventpair view_holder_token,
-                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                       presentation_request) {
+void App::Present(fuchsia::ui::views::ViewHolderToken view_holder_token,
+                  fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                      presentation_request) {
   InitializeServices();
 
-  // Duplication intentional, this copy will go away soon.
   int32_t display_startup_rotation_adjustment = 0;
   {
     std::string rotation_value;
@@ -93,40 +51,38 @@ void App::Present2(zx::eventpair view_holder_token,
     }
   }
 
-  auto presentation = std::make_unique<Presentation1>(
+  auto presentation = std::make_unique<Presentation>(
       scenic_.get(), session_.get(), compositor_->id(),
-      std::move(view_holder_token), renderer_params_,
-      display_startup_rotation_adjustment, startup_context_.get());
-  presentation->Present(std::move(presentation_request), GetYieldCallback(),
-                        GetShutdownCallback(presentation.get()));
+      std::move(view_holder_token), std::move(presentation_request),
+      renderer_params_, display_startup_rotation_adjustment,
+      [this](bool yield_to_next) {
+        if (yield_to_next) {
+          SwitchToNextPresentation();
+        } else {
+          SwitchToPreviousPresentation();
+        }
+      });
 
   AddPresentation(std::move(presentation));
+}
+
+void App::Present2(zx::eventpair view_holder_token,
+                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                       presentation_request) {
+  Present(fuchsia::ui::views::ViewHolderToken({
+              .value = std::move(view_holder_token),
+          }),
+          std::move(presentation_request));
 }
 
 void App::PresentView(
     zx::eventpair view_holder_token,
     ::fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
         presentation_request) {
-  InitializeServices();
-
-  int32_t display_startup_rotation_adjustment = 0;
-  {
-    std::string rotation_value;
-    if (files::ReadFileToString("/system/data/root_presenter/display_rotation",
-                                &rotation_value)) {
-      display_startup_rotation_adjustment = atoi(rotation_value.c_str());
-      FXL_LOG(INFO) << "Display rotation adjustment applied: "
-                    << display_startup_rotation_adjustment << " degrees.";
-    }
-  }
-
-  auto presentation = std::make_unique<Presentation2>(
-      scenic_.get(), session_.get(), compositor_->id(),
-      std::move(view_holder_token), renderer_params_,
-      display_startup_rotation_adjustment);
-  presentation->PresentView(std::move(presentation_request), GetYieldCallback(),
-                            GetShutdownCallback(presentation.get()));
-  AddPresentation(std::move(presentation));
+  Present(fuchsia::ui::views::ViewHolderToken({
+              .value = std::move(view_holder_token),
+          }),
+          std::move(presentation_request));
 }
 
 void App::AddPresentation(std::unique_ptr<Presentation> presentation) {
@@ -171,6 +127,27 @@ void App::HACK_SetRendererParams(
   }
   for (const auto& presentation : presentations_) {
     presentation->OverrideRendererParams(renderer_params_);
+  }
+}
+
+void App::ShutdownPresentation(size_t presentation_idx) {
+  if (presentation_idx == active_presentation_idx_) {
+    // This works fine when idx == 0, because the previous idx
+    // chosen will also be 0, and it will be an no-op within
+    // SwitchToPreviousPresentation. Finally, at the end of the
+    // callback, everything will be cleaned up.
+    SwitchToPreviousPresentation();
+  }
+
+  presentations_.erase(presentations_.begin() + presentation_idx);
+  if (presentation_idx < active_presentation_idx_) {
+    // Adjust index into presentations_.
+    active_presentation_idx_--;
+  }
+
+  if (presentations_.empty()) {
+    layer_stack_->RemoveAllLayers();
+    active_presentation_idx_ = std::numeric_limits<size_t>::max();
   }
 }
 
@@ -257,7 +234,12 @@ void App::InitializeServices() {
       FXL_LOG(ERROR) << "Session died, destroying all presentations.";
       Reset();
     });
-
+    session_->set_event_handler(
+        [this](std::vector<fuchsia::ui::scenic::Event> events) {
+          for (auto& event : events) {
+            HandleScenicEvent(event);
+          }
+        });
     // Globally disable parallel dispatch of input events.
     // TODO(SCN-1047): Enable parallel dispatch.
     {
@@ -286,6 +268,36 @@ void App::Reset() {
   compositor_ = nullptr;
   session_ = nullptr;
   scenic_.Unbind();
+}
+
+void App::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
+  switch (event.Which()) {
+    case fuchsia::ui::scenic::Event::Tag::kGfx:
+      switch (event.gfx().Which()) {
+        case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
+          auto& evt = event.gfx().view_disconnected();
+
+          size_t idx = 0;
+          for (idx = 0; idx < presentations_.size(); ++idx) {
+            if (evt.view_holder_id == presentations_[idx]->view_holder().id()) {
+              break;
+            }
+          }
+          FXL_DCHECK(idx != presentations_.size());
+
+          FXL_LOG(ERROR)
+              << "Root presenter: Content view terminated unexpectedly.";
+          ShutdownPresentation(idx);
+          break;
+        }
+        default: {
+          break;
+        }
+      }
+    default: {
+      break;
+    }
+  }
 }
 
 }  // namespace root_presenter

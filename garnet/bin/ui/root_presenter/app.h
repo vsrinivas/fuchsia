@@ -11,21 +11,20 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
-#include "garnet/bin/ui/root_presenter/presentation1.h"
-#include "garnet/bin/ui/root_presenter/presentation2.h"
+#include "garnet/bin/ui/root_presenter/presentation.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/input/input_device_impl.h"
 #include "lib/ui/scenic/cpp/resources.h"
+#include "lib/zx/eventpair.h"
 
 namespace root_presenter {
-
-class Presentation1;
 
 // The presenter provides a |fuchsia::ui::policy::Presenter| service which
 // displays UI by attaching the provided view to the root of a new view tree
@@ -47,12 +46,14 @@ class App : public fuchsia::ui::policy::Presenter,
                 fuchsia::ui::input::InputReport report) override;
 
  private:
+  void Present(fuchsia::ui::views::ViewHolderToken view_holder_token,
+               fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                   presentation_request);
+
   // |Presenter|
   void Present2(zx::eventpair view_holder_token,
                 fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                     presentation_request) final;
-
-  // |Presenter|
   void HACK_SetRendererParams(
       bool enable_clipping,
       std::vector<fuchsia::ui::gfx::RendererParam> params) override;
@@ -70,14 +71,15 @@ class App : public fuchsia::ui::policy::Presenter,
   void InitializeServices();
   void Reset();
 
+  // Used to receive a ViewDisconnected event, which causes root_presenter to
+  // shut down; can handle other Scenic events in the future.
+  void HandleScenicEvent(const fuchsia::ui::scenic::Event& event);
+
   void AddPresentation(std::unique_ptr<Presentation> presentation);
+  void ShutdownPresentation(size_t presentation_idx);
   void SwitchToPresentation(size_t presentation_idx);
   void SwitchToNextPresentation();
   void SwitchToPreviousPresentation();
-
-  Presentation::YieldCallback GetYieldCallback();
-  Presentation::ShutdownCallback GetShutdownCallback(
-      Presentation* presentation);
 
   std::unique_ptr<component::StartupContext> startup_context_;
   fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;

@@ -2,30 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/root_presenter/presentation2.h"
+#include "garnet/bin/ui/root_presenter/presentation.h"
 
 #include <cmath>
 #include <utility>
 
-#if defined(countof)
-// Workaround for compiler error due to Zircon defining countof() as a macro.
-// Redefines countof() using GLM_COUNTOF(), which currently provides a more
-// sophisticated implementation anyway.
-#undef countof
-#include <glm/glm.hpp>
-#define countof(X) GLM_COUNTOF(X)
-#else
-// No workaround required.
-#include <glm/glm.hpp>
-#endif
-#include <glm/ext.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include <lib/component/cpp/connect.h>
 #include <lib/fxl/logging.h>
 #include <lib/ui/input/cpp/formatting.h>
-#include <lib/ui/scenic/cpp/id.h>
-#include <lib/ui/views/cpp/formatting.h>
 #include <trace/event.h>
 
 #include "garnet/bin/ui/root_presenter/displays/display_configuration.h"
@@ -52,12 +36,14 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
 }
 }  // namespace
 
-Presentation2::Presentation2(fuchsia::ui::scenic::Scenic* scenic,
-                             scenic::Session* session,
-                             scenic::ResourceId compositor_id,
-                             zx::eventpair view_holder_token,
-                             RendererParams renderer_params,
-                             int32_t display_startup_rotation_adjustment)
+Presentation::Presentation(
+    fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
+    scenic::ResourceId compositor_id,
+    fuchsia::ui::views::ViewHolderToken view_holder_token,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+        presentation_request,
+    RendererParams renderer_params, int32_t display_startup_rotation_adjustment,
+    YieldCallback yield_callback)
     : scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
@@ -70,13 +56,15 @@ Presentation2::Presentation2(fuchsia::ui::scenic::Scenic* scenic,
       point_light_(session_),
       view_holder_node_(session),
       root_node_(session_),
-      view_holder_(session, std::move(view_holder_token), "root_presenter"),
+      view_holder_(session, std::move(view_holder_token.value),
+                   "root_presenter"),
       cursor_shape_(session_, kCursorWidth, kCursorHeight, 0u, kCursorRadius,
                     kCursorRadius, kCursorRadius),
       cursor_material_(session_),
-      renderer_params_override_(renderer_params),
       display_startup_rotation_adjustment_(display_startup_rotation_adjustment),
+      yield_callback_(std::move(yield_callback)),
       presentation_binding_(this),
+      renderer_params_override_(renderer_params),
       weak_factory_(this) {
   FXL_DCHECK(compositor_id != 0);
   renderer_.SetCamera(camera_);
@@ -101,25 +89,35 @@ Presentation2::Presentation2(fuchsia::ui::scenic::Scenic* scenic,
   ambient_light_.SetColor(kAmbient, kAmbient, kAmbient);
   directional_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
   point_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
-  light_direction_ = glm::vec3(1.f, 1.f, 2.f);
-  directional_light_.SetDirection(light_direction_.x, light_direction_.y,
-                                  light_direction_.z);
+  directional_light_.SetDirection(1.f, 1.f, 2.f);
   point_light_.SetPosition(300.f, 300.f, -2000.f);
   point_light_.SetFalloff(0.f);
 
   cursor_material_.SetColor(0xff, 0x00, 0xff, 0xff);
 
-  // TODO(SCN-874): All instances of Presentation2 share the same Session.
-  // Therefore, this stomps the event_handler set by any previously-created
-  // instance of Presentation2.
-  session_->set_event_handler(
-      fit::bind_member(this, &Presentation2::HandleScenicEvents));
-
   OverrideRendererParams(renderer_params, false);
+
+  // Link ourselves to the presentation interface once screen dimensions are
+  // available for us to present into.
+  scenic_->GetDisplayInfo(
+      [weak = weak_factory_.GetWeakPtr(),
+       presentation_request = std::move(presentation_request)](
+          fuchsia::ui::gfx::DisplayInfo display_info) mutable {
+        if (weak) {
+          if (presentation_request) {
+            weak->presentation_binding_.Bind(std::move(presentation_request));
+          }
+
+          // Get display parameters and propagate values appropriately.
+          weak->InitializeDisplayModel(std::move(display_info));
+
+          weak->PresentScene();
+        }
+      });
 }
 
-void Presentation2::OverrideRendererParams(RendererParams renderer_params,
-                                           bool present_changes) {
+void Presentation::OverrideRendererParams(RendererParams renderer_params,
+                                          bool present_changes) {
   renderer_params_override_ = renderer_params;
 
   if (renderer_params_override_.clipping_enabled.has_value()) {
@@ -147,35 +145,9 @@ void Presentation2::OverrideRendererParams(RendererParams renderer_params,
       << display_startup_rotation_adjustment_;
 }
 
-Presentation2::~Presentation2() {}
+Presentation::~Presentation() {}
 
-void Presentation2::PresentView(
-    ::fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-        presentation_request,
-    YieldCallback yield_callback, ShutdownCallback shutdown_callback) {
-  FXL_DCHECK(!display_model_initialized_);
-
-  yield_callback_ = std::move(yield_callback);
-  shutdown_callback_ = std::move(shutdown_callback);
-
-  scenic_->GetDisplayInfo(
-      [weak = weak_factory_.GetWeakPtr(),
-       presentation_request = std::move(presentation_request)](
-          fuchsia::ui::gfx::DisplayInfo display_info) mutable {
-        if (weak) {
-          if (presentation_request) {
-            weak->presentation_binding_.Bind(std::move(presentation_request));
-          }
-
-          // Get display parameters and propagate values appropriately.
-          weak->InitializeDisplayModel(std::move(display_info));
-
-          weak->PresentScene();
-        }
-      });
-}
-
-void Presentation2::InitializeDisplayModel(
+void Presentation::InitializeDisplayModel(
     fuchsia::ui::gfx::DisplayInfo display_info) {
   FXL_DCHECK(!display_model_initialized_);
 
@@ -207,39 +179,7 @@ void Presentation2::InitializeDisplayModel(
   ApplyDisplayModelChanges(true, false);
 }
 
-void Presentation2::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
-  switch (event.Which()) {
-    case fuchsia::ui::scenic::Event::Tag::kGfx:
-      switch (event.gfx().Which()) {
-        case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
-          auto& evt = event.gfx().view_disconnected();
-          // TODO(SCN-874): All Presentation2 instances share the same Scenic
-          // Session.  Therefore, there is no guarantee that the disconnection
-          // event is intended for this presentation.
-          FXL_DCHECK(view_holder_.id() == evt.view_holder_id);
-          FXL_LOG(ERROR)
-              << "Root presenter: Content view terminated unexpectedly.";
-          Shutdown();
-          break;
-        }
-        default: {
-          break;
-        }
-      }
-    default: {
-      break;
-    }
-  }
-}
-
-void Presentation2::HandleScenicEvents(
-    std::vector<fuchsia::ui::scenic::Event> events) {
-  for (auto& event : events) {
-    HandleScenicEvent(event);
-  }
-}
-
-void Presentation2::SetDisplaySizeInMm(float width_in_mm, float height_in_mm) {
+void Presentation::SetDisplaySizeInMm(float width_in_mm, float height_in_mm) {
   uint32_t old_width_in_mm =
       display_model_simulated_.display_info().width_in_mm;
   uint32_t old_height_in_mm =
@@ -254,7 +194,7 @@ void Presentation2::SetDisplaySizeInMm(float width_in_mm, float height_in_mm) {
     return;
   }
 
-  FXL_LOG(INFO) << "Presentation2::SetDisplaySizeInMm: changing display "
+  FXL_LOG(INFO) << "Presentation::SetDisplaySizeInMm: changing display "
                    "dimensions to "
                 << "width="
                 << display_model_simulated_.display_info().width_in_mm << "mm, "
@@ -265,13 +205,14 @@ void Presentation2::SetDisplaySizeInMm(float width_in_mm, float height_in_mm) {
   ApplyDisplayModelChanges(true, true);
 }
 
-void Presentation2::SetDisplayRotation(float display_rotation_degrees,
-                                       bool animate) {
+void Presentation::SetDisplayRotation(float display_rotation_degrees,
+                                      bool animate) {
   display_rotater_.SetDisplayRotation(this, display_rotation_degrees, animate);
 };
 
-bool Presentation2::SetDisplaySizeInMmWithoutApplyingChanges(
-    float width_in_mm, float height_in_mm, bool print_errors) {
+bool Presentation::SetDisplaySizeInMmWithoutApplyingChanges(float width_in_mm,
+                                                            float height_in_mm,
+                                                            bool print_errors) {
   if (width_in_mm == 0 || height_in_mm == 0) {
     display_model_simulated_.display_info().width_in_px =
         display_model_actual_.display_info().width_in_px;
@@ -291,7 +232,7 @@ bool Presentation2::SetDisplaySizeInMmWithoutApplyingChanges(
 
   if (width_in_px > display_model_actual_.display_info().width_in_px) {
     if (print_errors) {
-      FXL_LOG(ERROR) << "Presentation2::SetDisplaySizeInMm: tried to change "
+      FXL_LOG(ERROR) << "Presentation::SetDisplaySizeInMm: tried to change "
                         "display width to "
                      << width_in_mm
                      << ", which is larger than the actual display width "
@@ -302,7 +243,7 @@ bool Presentation2::SetDisplaySizeInMmWithoutApplyingChanges(
   }
   if (height_in_px > display_model_actual_.display_info().height_in_px) {
     if (print_errors) {
-      FXL_LOG(ERROR) << "Presentation2::SetDisplaySizeInMm: tried to change "
+      FXL_LOG(ERROR) << "Presentation::SetDisplaySizeInMm: tried to change "
                         "display height to "
                      << height_in_mm
                      << ", which is larger than the actual display height "
@@ -319,7 +260,7 @@ bool Presentation2::SetDisplaySizeInMmWithoutApplyingChanges(
   return true;
 }
 
-void Presentation2::SetDisplayUsage(fuchsia::ui::policy::DisplayUsage usage) {
+void Presentation::SetDisplayUsage(fuchsia::ui::policy::DisplayUsage usage) {
   fuchsia::ui::policy::DisplayUsage old_usage =
       display_model_simulated_.environment_info().usage;
   SetDisplayUsageWithoutApplyingChanges(usage);
@@ -330,12 +271,12 @@ void Presentation2::SetDisplayUsage(fuchsia::ui::policy::DisplayUsage usage) {
 
   ApplyDisplayModelChanges(true, true);
 
-  FXL_LOG(INFO) << "Presentation2::SetDisplayUsage: changing display usage to "
+  FXL_LOG(INFO) << "Presentation::SetDisplayUsage: changing display usage to "
                 << GetDisplayUsageAsString(
                        display_model_simulated_.environment_info().usage);
 }
 
-void Presentation2::SetDisplayUsageWithoutApplyingChanges(
+void Presentation::SetDisplayUsageWithoutApplyingChanges(
     fuchsia::ui::policy::DisplayUsage usage) {
   display_model_simulated_.environment_info().usage =
       (usage == fuchsia::ui::policy::DisplayUsage::kUnknown)
@@ -343,8 +284,8 @@ void Presentation2::SetDisplayUsageWithoutApplyingChanges(
           : usage;
 }
 
-bool Presentation2::ApplyDisplayModelChanges(bool print_log,
-                                             bool present_changes) {
+bool Presentation::ApplyDisplayModelChanges(bool print_log,
+                                            bool present_changes) {
   bool updated = ApplyDisplayModelChangesHelper(print_log);
 
   if (updated && present_changes) {
@@ -353,7 +294,7 @@ bool Presentation2::ApplyDisplayModelChanges(bool print_log,
   return updated;
 }
 
-bool Presentation2::ApplyDisplayModelChangesHelper(bool print_log) {
+bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
   if (!display_model_initialized_)
     return false;
 
@@ -459,7 +400,7 @@ bool Presentation2::ApplyDisplayModelChangesHelper(bool print_log) {
   return true;
 }
 
-void Presentation2::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
+void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
   FXL_VLOG(1) << "OnDeviceAdded: device_id=" << input_device->id();
 
   FXL_DCHECK(device_states_by_id_.count(input_device->id()) == 0);
@@ -487,7 +428,7 @@ void Presentation2::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
   device_states_by_id_.emplace(input_device->id(), std::move(device_pair));
 }
 
-void Presentation2::OnDeviceRemoved(uint32_t device_id) {
+void Presentation::OnDeviceRemoved(uint32_t device_id) {
   FXL_VLOG(1) << "OnDeviceRemoved: device_id=" << device_id;
   if (device_states_by_id_.count(device_id) != 0) {
     device_states_by_id_[device_id].second->OnUnregistered();
@@ -501,8 +442,8 @@ void Presentation2::OnDeviceRemoved(uint32_t device_id) {
   }
 }
 
-void Presentation2::OnReport(uint32_t device_id,
-                             fuchsia::ui::input::InputReport input_report) {
+void Presentation::OnReport(uint32_t device_id,
+                            fuchsia::ui::input::InputReport input_report) {
   TRACE_DURATION("input", "presentation_on_report");
   TRACE_ASYNC_END("input", "dispatch_3_report_to_presentation",
                   input_report.trace_id);
@@ -529,7 +470,7 @@ void Presentation2::OnReport(uint32_t device_id,
   state->Update(std::move(input_report), size);
 }
 
-void Presentation2::CaptureKeyboardEventHACK(
+void Presentation::CaptureKeyboardEventHACK(
     fuchsia::ui::input::KeyboardEvent event_to_capture,
     fidl::InterfaceHandle<fuchsia::ui::policy::KeyboardCaptureListenerHACK>
         listener_handle) {
@@ -551,7 +492,7 @@ void Presentation2::CaptureKeyboardEventHACK(
       KeyboardCaptureItem{std::move(event_to_capture), std::move(listener)});
 }
 
-void Presentation2::CapturePointerEventsHACK(
+void Presentation::CapturePointerEventsHACK(
     fidl::InterfaceHandle<fuchsia::ui::policy::PointerCaptureListenerHACK>
         listener_handle) {
   fuchsia::ui::policy::PointerCaptureListenerHACKPtr listener;
@@ -571,11 +512,11 @@ void Presentation2::CapturePointerEventsHACK(
   captured_pointerbindings_.push_back(PointerCaptureItem{std::move(listener)});
 }
 
-void Presentation2::GetPresentationMode(GetPresentationModeCallback callback) {
+void Presentation::GetPresentationMode(GetPresentationModeCallback callback) {
   callback(presentation_mode_);
 }
 
-void Presentation2::SetPresentationModeListener(
+void Presentation::SetPresentationModeListener(
     fidl::InterfaceHandle<fuchsia::ui::policy::PresentationModeListener>
         listener) {
   if (presentation_mode_listener_) {
@@ -593,7 +534,7 @@ void Presentation2::SetPresentationModeListener(
   FXL_LOG(INFO) << "Presentation mode, now listening.";
 }
 
-bool Presentation2::GlobalHooksHandleEvent(
+bool Presentation::GlobalHooksHandleEvent(
     const fuchsia::ui::input::InputEvent& event) {
   return display_rotater_.OnEvent(event, this) ||
          display_usage_switcher_.OnEvent(event, this) ||
@@ -602,7 +543,7 @@ bool Presentation2::GlobalHooksHandleEvent(
          presentation_switcher_.OnEvent(event, this);
 }
 
-void Presentation2::OnEvent(fuchsia::ui::input::InputEvent event) {
+void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
   TRACE_DURATION("input", "presentation_on_event");
   trace_flow_id_t trace_id = 0;
 
@@ -717,8 +658,8 @@ void Presentation2::OnEvent(fuchsia::ui::input::InputEvent event) {
   }
 }
 
-void Presentation2::OnSensorEvent(uint32_t device_id,
-                                  fuchsia::ui::input::InputReport event) {
+void Presentation::OnSensorEvent(uint32_t device_id,
+                                 fuchsia::ui::input::InputReport event) {
   FXL_VLOG(2) << "OnSensorEvent(device_id=" << device_id << "): " << event;
 
   FXL_DCHECK(device_states_by_id_.count(device_id) > 0);
@@ -739,8 +680,7 @@ void Presentation2::OnSensorEvent(uint32_t device_id,
   }
 }
 
-// |Presentation|
-void Presentation2::EnableClipping(bool enabled) {
+void Presentation::EnableClipping(bool enabled) {
   if (presentation_clipping_enabled_ != enabled) {
     FXL_LOG(INFO) << "enable clipping: " << (enabled ? "true" : "false");
     presentation_clipping_enabled_ = enabled;
@@ -748,19 +688,17 @@ void Presentation2::EnableClipping(bool enabled) {
   }
 }
 
-// |Presentation|
-void Presentation2::UseOrthographicView() {
+void Presentation::UseOrthographicView() {
   FXL_LOG(INFO) << "Presentation Controller method called: "
                    "UseOrthographicView!! (not implemented)";
 }
 
-// |Presentation|
-void Presentation2::UsePerspectiveView() {
+void Presentation::UsePerspectiveView() {
   FXL_LOG(INFO) << "Presentation Controller method called: "
                    "UsePerspectiveView!! (not implemented)";
 }
 
-void Presentation2::PresentScene() {
+void Presentation::PresentScene() {
   if (session_present_state_ == kPresentPendingAndSceneDirty) {
     return;
   } else if (session_present_state_ == kPresentPending) {
@@ -826,32 +764,30 @@ void Presentation2::PresentScene() {
   });
 }
 
-void Presentation2::Shutdown() { shutdown_callback_(); }
-
-void Presentation2::SetRendererParams(
+void Presentation::SetRendererParams(
     ::std::vector<fuchsia::ui::gfx::RendererParam> params) {
   for (size_t i = 0; i < params.size(); ++i) {
     switch (params.at(i).Which()) {
       case ::fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
         if (renderer_params_override_.shadow_technique.has_value()) {
           FXL_LOG(WARNING)
-              << "Presentation2::SetRendererParams: Cannot change "
-                 "shadow technique, default was overridden in root_presenter";
+              << "Presentation::SetRendererParams: Cannot change "
+                 "shadow technique, default was overriden in root_presenter";
           continue;
         }
         break;
       case fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency:
         if (renderer_params_override_.render_frequency.has_value()) {
           FXL_LOG(WARNING)
-              << "Presentation2::SetRendererParams: Cannot change "
-                 "render frequency, default was overridden in root_presenter";
+              << "Presentation::SetRendererParams: Cannot change "
+                 "render frequency, default was overriden in root_presenter";
           continue;
         }
         break;
       case fuchsia::ui::gfx::RendererParam::Tag::kEnableDebugging:
         if (renderer_params_override_.debug_enabled.has_value()) {
           FXL_LOG(WARNING)
-              << "Presentation2::SetRendererParams: Cannot change "
+              << "Presentation::SetRendererParams: Cannot change "
                  "debug enabled, default was overriden in root_presenter";
           continue;
         }
