@@ -5,6 +5,7 @@
 visibility = [
   "//peridot/bin/*",
   "//peridot/lib/*",
+  "//src/ledger/*",
 ]
 
 # TODO(prathyushk): Refactor this once the GN feature discussed below

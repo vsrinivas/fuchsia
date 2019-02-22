@@ -1,5 +1,5 @@
 {
     "packages": [
-        "//peridot/bin/cloud_provider_firestore"
+        "//src/ledger/cloud_provider_firestore/bin"
     ]
 }

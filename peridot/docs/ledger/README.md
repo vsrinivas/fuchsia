@@ -74,5 +74,5 @@ Design documentation:
 
 [cloud provider]: /peridot/public/fidl/fuchsia.ledger.cloud/cloud_provider.fidl
 [component context]: /peridot/public/fidl/fuchsia.modular/component/component_context.fidl
-[Firestore]: /peridot/bin/cloud_provider_firestore/README.md
+[Firestore]: /src/ledger/cloud_provider_firestore/README.md
 [Modular]: /peridot/docs/modular/overview.md

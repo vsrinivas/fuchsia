@@ -13,13 +13,13 @@
 #include <lib/fxl/strings/string_view.h>
 #include <lib/svc/cpp/services.h>
 
-#include "peridot/bin/cloud_provider_firestore/testing/cloud_provider_factory.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 #include "peridot/bin/ledger/tests/e2e_sync/ledger_app_instance_factory_e2e.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_manager.h"
+#include "src/ledger/cloud_provider_firestore/bin/testing/cloud_provider_factory.h"
 
 namespace ledger {
 namespace {

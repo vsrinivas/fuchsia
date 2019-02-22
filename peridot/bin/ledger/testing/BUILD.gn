@@ -4,7 +4,7 @@
 
 visibility = [
   "//peridot/bin/ledger/*",
-  "//peridot/bin/cloud_provider_firestore/validation",
+  "//src/ledger/cloud_provider_firestore/bin/validation",
 ]
 
 source_set("lib") {

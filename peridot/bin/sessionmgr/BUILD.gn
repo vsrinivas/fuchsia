@@ -30,7 +30,6 @@ executable_package("sessionmgr") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/basemgr/cobalt",
-    "//peridot/bin/cloud_provider_firestore/fidl",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/sessionmgr/agent_runner",
     "//peridot/bin/sessionmgr/entity_provider_runner",
@@ -70,6 +69,7 @@ executable_package("sessionmgr") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",
+    "//src/ledger/cloud_provider_firestore/bin/fidl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]

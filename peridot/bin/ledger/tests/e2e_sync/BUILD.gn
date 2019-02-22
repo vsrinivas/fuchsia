@@ -19,8 +19,6 @@ executable("e2e_sync") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/bin/cloud_provider_firestore/fidl",
-    "//peridot/bin/cloud_provider_firestore/testing",
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/bin/ledger/testing:ledger_instance_factory",
     "//peridot/bin/ledger/testing:lib",
@@ -29,6 +27,8 @@ executable("e2e_sync") {
     "//peridot/lib/firebase_auth/testing",
     "//peridot/lib/rng:system",
     "//sdk/lib/fidl/cpp",
+    "//src/ledger/cloud_provider_firestore/bin/fidl",
+    "//src/ledger/cloud_provider_firestore/bin/testing",
     "//third_party/googletest:gtest",
   ]
 

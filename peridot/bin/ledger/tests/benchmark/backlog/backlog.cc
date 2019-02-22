@@ -21,7 +21,6 @@
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <trace/event.h>
 
-#include "peridot/bin/cloud_provider_firestore/testing/cloud_provider_factory.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/filesystem/get_directory_content_size.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
@@ -33,6 +32,7 @@
 #include "peridot/bin/ledger/testing/sync_params.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
+#include "src/ledger/cloud_provider_firestore/bin/testing/cloud_provider_factory.h"
 
 namespace ledger {
 
