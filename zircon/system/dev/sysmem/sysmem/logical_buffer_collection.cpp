@@ -323,8 +323,10 @@ void LogicalBufferCollection::TryAllocate() {
     // constraints at least for GetUsageBasedRightsAttenuation() purposes.
     for (auto& [key, value] : collection_views_) {
         ZX_DEBUG_ASSERT(key->is_set_constraints_seen());
-        constraints_list_.emplace_back(
-            BufferCollectionConstraintsClone(key->constraints()));
+        if (key->constraints()) {
+            constraints_list_.emplace_back(
+                BufferCollectionConstraintsClone(key->constraints()));
+        }
     }
 
     if (!CombineConstraints()) {

@@ -401,6 +401,17 @@ extern "C" bool test_sysmem_multiple_participants(void) {
         token_client_1.get(), std::numeric_limits<uint32_t>::max(), token_server_2.release());
     ASSERT_EQ(status, ZX_OK, "");
 
+    zx::channel token_client_3;
+    zx::channel token_server_3;
+    status = zx::channel::create(0, &token_client_3, &token_server_3);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Client 3 is used to test a participant that doesn't set any constraints
+    // and only wants a notification that the allocation is done.
+    status = fuchsia_sysmem_BufferCollectionTokenDuplicate(
+        token_client_1.get(), std::numeric_limits<uint32_t>::max(), token_server_3.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
     zx::channel collection_client_1;
     zx::channel collection_server_1;
     status = zx::channel::create(0, &collection_client_1, &collection_server_1);
@@ -486,6 +497,22 @@ extern "C" bool test_sysmem_multiple_participants(void) {
         allocator2_client_2.get(), token_client_2.release(), collection_server_2.release());
     ASSERT_EQ(status, ZX_OK, "");
 
+    zx::channel collection_client_3;
+    zx::channel collection_server_3;
+    status = zx::channel::create(0, &collection_client_3, &collection_server_3);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_NE(token_client_3.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_Allocator2BindSharedCollection(
+        allocator2_client_2.get(), token_client_3.release(), collection_server_3.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    fuchsia_sysmem_BufferCollectionConstraints empty_constraints = {};
+
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_3.get(), false,
+                                                           &empty_constraints);
+    ASSERT_EQ(status, ZX_OK, "");
+
     // Not all constraints have been input, so the buffers haven't been
     // allocated yet.
     zx_status_t check_status;
@@ -531,6 +558,13 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     ASSERT_EQ(status, ZX_OK, "");
     ASSERT_EQ(allocation_status, ZX_OK, "");
 
+    BufferCollectionInfo buffer_collection_info_3(BufferCollectionInfo::Default);
+    memset(buffer_collection_info_3.get(), 0, sizeof(*buffer_collection_info_3.get()));
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client_3.get(), &allocation_status, buffer_collection_info_3.get());
+    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_EQ(allocation_status, ZX_OK, "");
+
     //
     // buffer_collection_info_1 and buffer_collection_info_2 should be exactly
     // equal except their non-zero handle values, which should be different.  We
@@ -564,10 +598,18 @@ extern "C" bool test_sysmem_multiple_participants(void) {
             copy_1.buffers[i].vmo = ZX_HANDLE_INVALID;
             copy_2.buffers[i].vmo = ZX_HANDLE_INVALID;
         }
+
+        // Buffer collection 3 never got a SetConstraints(), so we get no VMOs.
+        ASSERT_EQ(ZX_HANDLE_INVALID, buffer_collection_info_3->buffers[i].vmo, "");
     }
     int32_t memcmp_result = memcmp(&copy_1, &copy_2, sizeof(copy_1));
     // Check that buffer_collection_info_1 and buffer_collection_info_2 are
     // consistent.
+    ASSERT_EQ(memcmp_result, 0, "");
+
+    memcmp_result = memcmp(&copy_1, buffer_collection_info_3.get(), sizeof(copy_1));
+    // Check that buffer_collection_info_1 and buffer_collection_info_3 are
+    // consistent, except for the vmos.
     ASSERT_EQ(memcmp_result, 0, "");
 
     //

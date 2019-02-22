@@ -331,14 +331,12 @@ BufferCollection::BufferCollection(fbl::RefPtr<LogicalBufferCollection> parent)
 // This method is only meant to be called from GetClientVmoRights().
 uint32_t BufferCollection::GetUsageBasedRightsAttenuation() {
     ZX_DEBUG_ASSERT(is_set_constraints_seen_);
-    if (!constraints_) {
-        // If there are no constraints from this participant, it means this
-        // participant doesn't intend to do any "usage" at all aside from
-        // referring to buffers by their index in communication with other
-        // participants, so this participant doesn't need any VMO handles at
-        // all.  We track that by setting the rights mask to 0.
-        return 0;
-    }
+    // If there are no constraints from this participant, it means this
+    // participant doesn't intend to do any "usage" at all aside from referring
+    // to buffers by their index in communication with other participants, so
+    // this participant doesn't need any VMO handles at all.  So this method
+    // never should be called if that's the case.
+    ZX_DEBUG_ASSERT(constraints_);
 
     // We assume that read and map are both needed by all participants.  Only
     // ZX_RIGHT_WRITE is controlled by usage.
@@ -453,6 +451,11 @@ BufferCollection::BufferCollectionInfoClone(
     //
     // struct copy
     *clone.get() = temp;
+
+    if (!constraints_) {
+        // No VMO handles should be copied in this case.
+        return clone;
+    }
 
     // We duplicate the handles in buffer_collection_info into to_send, so that
     // if we fail mid-way we'll still remember to close the non-sent duplicates.
