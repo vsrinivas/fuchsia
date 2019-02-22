@@ -8,7 +8,7 @@ and the most common operations, not necessarily to cover the entire API surface.
 
 ## Connecting to Ledger
 
-The Ledger API is exposed through a [FIDL interface].
+The Ledger API is exposed through a [FIDL protocol].
 
 Access to Ledger is vended from the `fuchsia::modular::ComponentContext` of the running
 application. Each application component has a separate private data store for
@@ -41,7 +41,7 @@ componentContext.getLedger(ledger.ctrl.request());
 |||---|||
 
 *** aside
-Note that the Ledger connection is provided through a FIDL *interface request*,
+Note that the Ledger connection is provided through a FIDL *protocol request*,
 so it can be immediately used to make requests.
 ***
 
@@ -107,7 +107,7 @@ forward.
 
 ### Writing
 
-Values can be written/modified using mutation methods of the Page interface.
+Values can be written/modified using mutation methods of the Page protocol.
 
 There are two ways to write a value into a page:
 
@@ -128,9 +128,9 @@ In order to ensure that reads across multiple entries (key-value pairs) are
 consistent, read operations are exposed through a snapshot API. Snapshot of the
 page can be obtained:
 
- - directly from the page interface (`GetSnapshot()`), yielding a snapshot
+ - directly from the page protocol (`GetSnapshot()`), yielding a snapshot
    corresponding to the state of the page tracked by this page connection
- - through the [watcher](#Watch) interface, which when delivering each
+ - through the [watcher](#Watch) protocol, which when delivering each
    notification allows to also request the snapshot corresponding to the state
    associated with the notification
 
@@ -179,7 +179,7 @@ to be synced and surfaced atomically. A client application would typically:
  - start a transaction
  - get a snapshot of the page state through `GetSnapshot()` or a watcher (see
    below), and read the data
- - make changes through the Page interface
+ - make changes through the Page protocol
  - commit the transaction
 
 Once a transaction is started, the state of the page tracked on the page
@@ -220,7 +220,7 @@ commits, based on best-effort, not-guaranteed-to-be-right, timestamps of each
 commit.
 
 The client might opt for a different merge policy by implementing the
-`ConflictResolverFactory` interface and setting it through a Ledger connection.
+`ConflictResolverFactory` protocol and setting it through a Ledger connection.
 
 Available conflict resolution policies:
 
@@ -261,6 +261,6 @@ automatically in the background, and clients do not have to manage them.
  - [Data Organization](data_organization.md)
  - [Examples of client apps](examples.md)
 
-[FIDL interface]: /peridot/public/fidl/fuchsia.ledger/ledger.fidl
+[FIDL protocol]: /peridot/public/fidl/fuchsia.ledger/ledger.fidl
 [C++ watcher example]: /peridot/examples/todo_cpp/todo.h
 [Dart watcher example]: https://fuchsia.googlesource.com/topaz/+/master/examples/ledger/todo_list/lib/src/models/todo_list_model.dart

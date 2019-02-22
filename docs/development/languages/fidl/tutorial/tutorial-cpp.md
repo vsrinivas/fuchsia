@@ -42,7 +42,7 @@ fx full-build
 ### Generated files
 
 Building runs the FIDL compiler automatically.
-It writes the glue code that allows the interfaces to be used from different languages.
+It writes the glue code that allows the protocols to be used from different languages.
 Below are the implementation files created for C++, assuming that your build flavor is `x64`.
 
 ```
@@ -55,14 +55,14 @@ Below are the implementation files created for C++, assuming that your build fla
 The echo server implementation can be found at:
 [//garnet/examples/fidl/echo_server_cpp/](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo_server_cpp/).
 
-Find the implementation of the main function, and that of the `Echo` interface.
+Find the implementation of the main function, and that of the `Echo` protocol.
 
 To understand how the code works, here's a summary of what happens in the server
 to execute an IPC call.
 
 1.  Fuchsia loads the server executable, and your `main()` function starts.
 1.  `main` creates an `EchoServerApp` object which will bind to the service
-    interface when it is constructed.
+    protocol when it is constructed.
 1.  `EchoServerApp()` registers itself with the `StartupContext` by calling
     `context->outgoing().AddPublicService<Echo>()`. It passes a lambda function
     that is called when a connection request arrives.
@@ -96,10 +96,8 @@ Here are the #include files used in the server implementation:
 #include "lib/component/cpp/startup_context.h"
 ```
 
--   `fidl.h` contains the generated C++ definition of our `Echo` FIDL
-    interface.
--   `startup_context.h` is used by `EchoServerApp` to expose service
-    implementations.
+-   `fidl.h` contains the generated C++ definition of our `Echo` FIDL protocol.
+-   `startup_context.h` is used by `EchoServerApp` to expose service implementations.
 
 ### main
 
@@ -130,7 +128,7 @@ EchoServerApp()
 
 The function calls `AddPublicService` once for each service it makes available
 to the other component (remember that each service exposes a single
-interface). The information is cached by `StartupContext` and used to decide
+protocol). The information is cached by `StartupContext` and used to decide
 which `Interface` factory to use for additional incoming channels. A new
 channel is created every time someone calls `ConnectToService()` on the other
 end.
@@ -138,7 +136,7 @@ end.
 If you read the code carefully, you'll see that the parameter to
 `AddPublicService` is actually a lambda function that captures `this`. This
 means that the lambda function won't be executed until a channel tries to bind
-to the interface, at which point the object is bound to the channel and will
+to the protocol, at which point the object is bound to the channel and will
 receive calls from other components. Note that these calls have
 thread-affinity, so calls will only be made from the same thread.
 
@@ -154,7 +152,7 @@ Connections are always point to point. There are no multicast connections.
 
 Finally we reach the end of our server discussion. When the message loop
 receives a message in the channel to call the `EchoString()` function in the
-`Echo` interface, it will be directed to the implementation below:
+`Echo` protocol, it will be directed to the implementation below:
 
 ```cpp
 void EchoString(fidl::StringPtr value, EchoStringCallback callback) override {
@@ -177,7 +175,7 @@ Here's what's interesting about this code:
     often returns before the callback is run in the client.
 -   Because the callback is async, the callback also returns void.
 
-Any call to an interface in FIDL is asynchronous. This is a big shift if you are
+Any call to a protocol in FIDL is asynchronous. This is a big shift if you are
 used to a procedural world where function calls return after the work is
 complete. Because it's async, there's no guarantee that the call will ever
 actually happen, so your callback may never be called. The remote FIDL
@@ -212,7 +210,7 @@ Here is the summary of how the client makes a connection to the echo service.
 1.  `main` calls into `echo_->EchoString(...)` and passes the callback. Because
     FIDL IPC calls are async, `EchoString()` will probably return before the
     server processes the call.
-1.  `main` then blocks on a response on the interface.
+1.  `main` then blocks on a response on the protocol.
 1.  Eventually, the response arrives, and the callback is called with the
     result.
 
@@ -260,14 +258,14 @@ void Start(std::string server_url) {
 ```
 
 First, `Start()` calls `CreateComponent()` to launch `echo_server`. Then, it
-calls `ConnectToService()` to bind to the server's `Echo` interface. The exact
-mechanism is somewhat hidden, but the particular interface is automatically
+calls `ConnectToService()` to bind to the server's `Echo` protocol. The exact
+mechanism is somewhat hidden, but the particular protocol is automatically
 inferred from the type of `EchoPtr`, which is a typedef for
 `fidl::InterfacePtr<Echo>`.
 
 The second parameter to `ConnectToService()` is the service name.
 
-Next the client calls `EchoString()` in the returned interface. FIDL interfaces
+Next the client calls `EchoString()` in the returned protocol. FIDL protocols
 are asynchronous, so the call itself does not wait for `EchoString()` to
 complete remotely before returning. `EchoString()` returns void because of the
 async behavior.

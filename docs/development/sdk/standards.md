@@ -18,11 +18,11 @@ clients of the SDK can link into their programs), but all of these libraries are
 optional and provided for the convenience of clients, not for the convenience of
 the system.
 
-## FIDL Interface Definitions
+## FIDL Protocol Definitions
 
 ### Binary stability
 
-FIDL interfaces are defined in `.fidl` files, which are contained in the SDK.
+FIDL protocols are defined in `.fidl` files, which are contained in the SDK.
 All the FIDL definitions that have been published in an SDK should be considered
 public ABI for the system. The system might also contain additional FIDL
 definitions that have not been published in an SDK. Those definitions are
@@ -32,7 +32,7 @@ work properly in future versions of the system.
 ### Source stability
 
 FIDL definitions in the SDK might evolve in source-incompatible ways. For
-example, we might rename a method in an interface while maintaining its ordinal
+example, we might rename a method in a protocol while maintaining its ordinal
 and semantics (the ordinal can be maintained by adding a `Selector` attribute
 that is set to the original name). Such a change preserves the ABI but breaks
 source compatibility.
@@ -104,7 +104,7 @@ located in the source tree at a path with the following pattern:
 
 In some cases, a library only makes sense for one language. In that case, the
 language suffix may be omitted unless the client library has an associated
-FIDL interface.
+FIDL protocol.
 
 ### Style
 

@@ -22,16 +22,16 @@ Fuchsia account system.
 
 * */lib/auth/token_manager* - Token Manager Factory uses the TokenManager
   library to perform its authentication token management and implement the
-  fuchsia.auth.TokenManager FIDL interface
+  fuchsia.auth.TokenManager FIDL protocol
 * *Auth Providers* - Token Manager Factory launches instances of components that
-  implement the fuchsia.auth.AuthProviderFactory FIDL interface. A single
+  implement the fuchsia.auth.AuthProviderFactory FIDL protocol. A single
   component is launched for each configured AuthProvider, serving all users
 
 
 ## Design
 
 `TokenManagerFactory` implements the fuchsia.auth.TokenManagerFactory FIDL
-interface. The crate's main function creates a single instance of this struct
+protocol. The crate's main function creates a single instance of this struct
 and uses it to handle all incoming requests.  `TokenManagerFactory` maintains a
 single instance of `AuthProviderSupplier` and a map from user to instances of
 `token_manager::TokenManager`, creating new entries in the map on the first

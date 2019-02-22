@@ -1,7 +1,6 @@
 # Network
 
-This repository contains the interface and implementation of FIDL
-HTTP Service.
+This repository contains the FIDL HTTP Service protocol and implementation.
 
      +-----------+           +-----------+
      | FIDL app  |           | POSIX app |

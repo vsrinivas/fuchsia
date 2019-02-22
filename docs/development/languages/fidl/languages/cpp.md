@@ -38,7 +38,7 @@ appropriate.
 *   Code generator only produces type declarations, data tables, and simple
     inline functions.
 *   Client is fully responsible for dispatching incoming method calls on
-    interfaces (write their own switch statement and invoke argument decode
+    protocols (write their own switch statement and invoke argument decode
     functions).
 *   Essentially just like C language bindings but using zero-cost C++ features
     such as namespaces, string views, and array containers.
@@ -65,9 +65,9 @@ appropriate.
 *   Can copy (move) data from idiomatic heap allocated objects to in-place
     buffers.
 *   Code generator produces somewhat more code, including constructors,
-    destructors, interface proxies, interface stubs, copy/move functions, and
+    destructors, protocol proxies, protocol stubs, copy/move functions, and
     conversions to/from native style.
-*   Client performs interface dispatch by subclassing a provided stub and
+*   Client performs protocol dispatch by subclassing a provided stub and
     implementing the virtual methods for each operation.
 
 ### Comparison of Usage Styles
@@ -81,8 +81,8 @@ Category                           | C style                                   |
 **lifecycle**                      | manual free (POD)                         | manual free (POD)                         | automatic free (RAII)
 **receive behavior**               | decode in-place                           | decode in-place                           | decode then move to heap
 **send behavior**                  | encode in-place                           | encode in-place                           | move to buffer then encode
-**calling interface methods**      | manual proxy                              | manual proxy                              | call through proxies, register callbacks
-**implementing interface methods** | manual dispatch                           | manual dispatch                           | implement stub object, invoke callbacks
+**calling protocol methods**       | manual proxy                              | manual proxy                              | call through proxies, register callbacks
+**implementing protocol methods**  | manual dispatch                           | manual dispatch                           | implement stub object, invoke callbacks
 **generated code**                 | structures, data tables, inline functions | structures, data tables, inline functions | structures, data tables, constructors, destructors, proxies, stubs, inline functions
 **generated code footprint**       | small (data tables only)                  | small (data tables only)                  | moderate (data tables, constructors, destructors, proxies, and stubs)
 **friendliness**                   | surly                                     | aloof                                     | genial
@@ -121,7 +121,7 @@ FIDL                                        | Native C++ Style                  
 `vector<T>`                                 | `fidl::vector<T>`                                    | `std::vector<T>`
 `vector<T>?`                                | `fidl::vector<T>`                                    | `std::optional<std::vector>`
 `array<T>:N`                                | `fidl::array<T, N>`                                  | `std::array<T, N>`
-*protocol, protocol?*                       | interface named *typedef to zx_handle_t* [3]         | *Interface*Ptr
+*protocol, protocol?*                       | protocol named *typedef to zx_handle_t* [3]          | *Interface*Ptr
 *request<Interface>, request<Interface>?*   | *interface_request named typedef to zx_handle_t* [4] | *Interface*Request
 *struct*                                    | struct *Struct*                                      | *Struct*Ptr
 *struct?*                                   | struct *Struct**                                     | *Struct*Ptr
@@ -330,7 +330,7 @@ etc...
 
 ## Suggested API Improvements over FIDL v1
 
-The FIDL v1 API for calling and implementing FIDL interfaces has generally been
+The FIDL v1 API for calling and implementing FIDL protocols has generally been
 fairly effective so we would like to retain most of its structure in the
 idiomatic FIDL v2 bindings. However, there are a few areas that could be
 improved.
@@ -344,7 +344,7 @@ clients of FIDL v1 because method result callbacks and connection error
 callbacks are implemented by different parts of the client program.
 
 It would be desirable to consider an API which allows for localized handling of
-connection errors at the point of method calls (in addition to interface level
+connection errors at the point of method calls (in addition to protocol level
 connection error handling as before).
 
 See https://fuchsia-review.googlesource.com/#/c/23457/ for one example of how

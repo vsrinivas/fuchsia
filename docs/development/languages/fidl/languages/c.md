@@ -25,7 +25,7 @@ This document is a description of the Fuchsia Interface Definition Language
  * Defer all memory allocation decisions to the client.
  * Code generator only produces type declarations, data tables, and simple inline functions.
  * Client is fully responsible for dispatching incoming method calls on
-   interfaces (write their own switch statement and invoke argument decode
+   protocols (write their own switch statement and invoke argument decode
    functions).
 
 ### Simple Usage Style
@@ -46,7 +46,7 @@ instead produce encoding tables which describe how objects are encoded.
 
 To allow for objects to be introspected (eg. printed), the C language bindings
 produce introspection tables which describe the name and type signature of each
-method of each interface and data structure.
+method of each protocol and data structure.
 
 Although small, introspection tables will be stripped out by the linker if
 unused.
@@ -451,8 +451,8 @@ prior to closing a channel.
 ### Dispatching Messages
 
 The C language bindings do not provide any special affordances for dispatching
-interface method calls. The client should dispatch manually based on the
-interface method ordinal, such as by using a **switch** statement.
+protocol method calls. The client should dispatch manually based on the
+protocol method ordinal, such as by using a **switch** statement.
 
 ## Simple Bindings
 
@@ -461,12 +461,12 @@ language.
 
 ### Simple Layout
 
-In order to generate simple C bindings for an interface, the interface must have
-the `[Layout="Simple"]` attribute. This attribute enforces that the interface,
-including the types referenced by the interface, conform to the language subset
+In order to generate simple C bindings for a protocol, the protocol must have
+the `[Layout="Simple"]` attribute. This attribute enforces that the protocol,
+including the types referenced by it, conform to the language subset
 supported by FIDL.
 
-Specifically, every message in the interface (including both requests and
+Specifically, every message in the protocol (including both requests and
 response) must not have any secondary objects except strings and vectors of
 handles or primitives (see
 [wire format](../reference/wire-format/README.md)
@@ -479,9 +479,9 @@ buffer management for clients that receive these values.
 For example, structs and unions can embed other structs and unions, but they
 cannot contain nullable references to other structs or unions because nullable
 structs and unions are stored out-of-line in secondary objects. Nullable handles
-and interfaces are allowed because they're stored inline as `ZX_HANDLE_INVALID`.
+and protocols are allowed because they're stored inline as `ZX_HANDLE_INVALID`.
 
-Below is an example of an interface that meets these requirements:
+Below is an example of a protocol that meets these requirements:
 
 ```fidl
 library unn.fleet;
@@ -533,7 +533,7 @@ was successful. Protocol-level status is communicated through out parameters.
 ### Server
 
 For servers, the simple C bindings generate an ops table that contains a
-function pointer for every method in the interface and a dispatch method that
+function pointer for every method in the protocol and a dispatch method that
 decodes the `fidl_msg_t` and calls the appropriate function pointer:
 
 ```c

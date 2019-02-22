@@ -55,7 +55,7 @@ This file implements the `main()` function and the `EchoImpl` class:
 -   The `main()` function is executed when the component is loaded. `main()`
     registers the availability of the service with incoming connections from
     FIDL.
--   `EchoImpl` processes requests on the `Echo` interface. A new object is
+-   `EchoImpl` processes requests on the `Echo` protocol. A new object is
     created for each channel.
 
 To understand how the code works, here's a summary of what happens in the server
@@ -65,7 +65,7 @@ not necessary to understand all of this before you move on.
 1.  **Startup.** The FIDL Shell loads the Dart runner, which starts the VM,
     loads `main.dart`, and calls `main()`.
 1.  **Registration** `main()` registers `EchoImpl` to bind itself to incoming
-    requests on the `Echo` interface. `main()` returns, but the program doesn't
+    requests on the `Echo` protocol. `main()` returns, but the program doesn't
     exit, because an [event
     loop](https://webdev.dartlang.org/articles/performance/event-loop) to handle
     incoming requests is running.
@@ -95,8 +95,8 @@ import 'package:lib.app.dart/app.dart';
     for `InterfaceRequest`.
 -   `app.dart` is required for `StartupContext`, which is where we register
     our service.
--   `echo2.dart` contains bindings for the `Echo` interface.This file is
-    generated from the interface defined in `echo2.fidl`.
+-   `echo2.dart` contains bindings for the `Echo` protocol. This file is
+    generated from the protocol defined in `echo2.fidl`.
 
 ### main()
 
@@ -112,7 +112,7 @@ void main(List<String> args) {
 
 `main()` is called by the Dart VM when your service is loaded, similar to
 `main()` in a C or C++ component. It binds an instance of `EchoImpl`, our
-implementation of the `Echo` interface, to the name of the `Echo` service.
+implementation of the `Echo` protocol, to the name of the `Echo` service.
 
 Eventually, another FIDL component will attempt to connect to our component.
 
@@ -128,7 +128,7 @@ void bind(InterfaceRequest<Echo> request) {
 
 The `bind()` function is called when the first channel is received from another
 component. This function binds once for each service it makes available to the
-other component (remember that each service exposes a single interface). The
+other component (remember that each service exposes a single protocol). The
 information is cached in a data structure owned by the FIDL runtime, and used to
 create objects to be the endpoints for additional incoming channels.
 

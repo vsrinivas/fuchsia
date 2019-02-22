@@ -11,7 +11,7 @@ Implementation of Ledger.
  - [coroutine](coroutine) coroutine library
  - [encryption](encryption) implements encryption service for Ledger
  - [environment](environment)
- - [fidl](fidl) FIDL interfaces internal to Ledger and peridot framework (not exposed to upper layers)
+ - [fidl](fidl) FIDL protocols internal to Ledger and peridot framework (not exposed to upper layers)
  - [fidl_helpers](fidl_helpers)
  - [lock](lock)
  - [filesystem](filesystem) contains filesystem-related helper functions

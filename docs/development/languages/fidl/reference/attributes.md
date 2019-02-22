@@ -57,7 +57,7 @@ It should be used only by Fuchsia developers.
 
 ## Layout
 
-This attribute currently has one valid value, `Simple`, and is meaningful only on interfaces.
+This attribute currently has one valid value, `Simple`, and is meaningful only on protocols.
 
 It's used to indicate that all arguments and returns must contain objects that are of a fixed size.
 The arguments and returns themselves, however, can be dynamically sized string or vector
@@ -67,7 +67,7 @@ To clarify with an example, the following is valid:
 
 ```fidl
 [Layout = "Simple"]
-protocol MyInterface {
+protocol MyProtocol {
     DynamicCountOfFixedArguments(bytes:1024 inputs);
 };
 ```

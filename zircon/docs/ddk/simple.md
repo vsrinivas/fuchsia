@@ -486,18 +486,18 @@ However, it's a good idea to understand the mechanism, end-to-end.
 
 Using FIDL for your device control is simple:
 
-*   define your inputs, outputs, and interfaces in a "`.fidl`" file,
+*   define your inputs, outputs, and protocols in a "`.fidl`" file,
 *   compile the FIDL code and generate your client functions, and
 *   add message handlers to your driver to receive control messages.
 
 We'll look at these steps by implementing the "preset counter to value"
 control function for our `/dev/misc/demo-number` driver.
 
-#### Define the FIDL interface
+#### Define the FIDL protocol
 
-The first thing we need to do is define what the interface looks like.
+The first thing we need to do is define what the protocol looks like.
 Since all we want to do is preset the count to a user-specified value,
-our interface will be very simple.
+our protocol will be very simple.
 
 This is what the "`.fidl`" file looks like:
 
@@ -517,10 +517,10 @@ be generated.
 
 Next, `[Layout="Simple"]` generates [simple C bindings](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/languages/c.md#simple-bindings).
 
-Finally, the `protocol` section defines all of the interfaces that are available.
-Each interface has a name, and specifies inputs and outputs.
+Finally, the `protocol` section defines all of the methods that are available.
+Each method has a name, and specifies inputs and outputs.
 
-Here, we have one interface function, called **SetNumber()**, which takes a `uint32` (which is
+Here, we have one method function, called **SetNumber()**, which takes a `uint32` (which is
 the FIDL equivalent of the C standard integer `uint32_t` type) as input, and returns a `uint32`
 as the result (the previous value of the counter before it was changed).
 
@@ -553,7 +553,7 @@ For this example, we'll use the following paths:
 * ...`/zircon/system/dev/sample/number/demo-number.c`
 	* source file for `/dev/misc/demo-number` driver
 * ...`/zircon/system/fidl/zircon-sample/demo_number.fidl`
-	* source file for FIDL interface definition
+	* source file for FIDL protocol definition
 * ...`/zircon/build-x64/system/fidl/zircon-sample/gen/include/zircon/sample/number/c/fidl.h`
 	* generated interface definition header include file
 
@@ -616,14 +616,14 @@ Briefly, the generated code presents:
     overhead header and the data we specified,
 4.  client binding prototypes &mdash; we'll see how the client uses this below,
 5.  FIDL message ops structure; this is a list of functions that you supply in the driver
-    to handle each and every FIDL interface defined in the "`.fidl`" file,
+    to handle each and every FIDL method defined by all the protocols in the "`.fidl`" file,
 6.  display prototypes &mdash; this is called by our FIDL message handler,
 7.  reply prototype &mdash; we call this in our driver when we want to reply to the client.
 
 #### The client side
 
 Let's start with a tiny, command-line based client, called `set_number`,
-that uses the above FIDL interface.
+that uses the above FIDL protocol.
 It assumes that the device we're controlling is called `/dev/misc/demo-number`.
 The program takes exactly one argument &mdash; the number to set the current counter to.
 
@@ -710,7 +710,7 @@ Notice the FDIO command has a very long name: **zircon_sample_number_NumberSetNu
 This is a facet of the code generation process from the FIDL compiler &mdash; the
 "`zircon_sample_number`" part came from the "`library zircon.sample.number`"
 statement, the first "`Number`" came from the "`protocol Number`" statement, and the final
-"`SetNumber`" is the name of the interface from the interface definition statement.
+"`SetNumber`" is the name of the method from the protocol definition statement.
 
 #### Add a message handler to the driver
 
@@ -772,7 +772,7 @@ The **fidl_SetNumber()** handler:
 Notice that the **fidl_SetNumber()** function has a prototype that matches the FIDL
 specification, ensuring type safety. Similarly, the reply function,
 **zircon_sample_number_NumberSetNumber_reply()** also conforms to the FIDL
-specification's prototype of the result portion of the interface definition.
+specification's prototype of the result portion of the method definition.
 
 #### Advanced uses
 

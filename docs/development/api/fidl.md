@@ -4,19 +4,19 @@
 
 ## General Advice
 
-This section contains some general advice about defining interfaces in the
-[Fuchsia Interface Definition Language](../languages/fidl/README.md).
+This section contains some general advice about defining protocols
+in the [Fuchsia Interface Definition Language](../languages/fidl/README.md).
 
 ### Protocols not objects
 
 FIDL is a language for defining interprocess communication protocols.  Although
 the syntax resembles a definition of an object-oriented interface, the design
 considerations are more akin to network protocols than to object systems.  For
-example, to design a high-quality interface, you need to consider bandwidth,
-latency, and flow control.  You should also consider that an interface is more
-than just a logical grouping of operations: an interface also imposes a FIFO
-ordering on requests and breaking an interface into two smaller interfaces means
-that requests made on the two different interfaces can be reordered with respect
+example, to design a high-quality protocol, you need to consider bandwidth,
+latency, and flow control.  You should also consider that a protocol is more
+than just a logical grouping of operations: a protocol also imposes a FIFO
+ordering on requests and breaking a protocol into two smaller protocols means
+that requests made on the two different protocols can be reordered with respect
 to each other.
 
 ### Focus on the types
@@ -27,7 +27,7 @@ networking would likely contain data structures for various types of IP
 addresses and a FIDL protocol about graphics would likely contain data
 structures for various geometric concepts.  You should be able to look at the
 type names and have some intuition about the concepts the protocol manipulates
-and how the interfaces for manipulating those concepts might be structured.
+and how those concepts might be structured.
 
 ### Language neutrality
 
@@ -110,9 +110,9 @@ languages.
 Prefer functional names (e.g., `fuchsia.media`) over product or code names
 (e.g., `fuchsia.amber` or `fuchsia.mozart`).  Product names are appropriate
 when the product has some external existence beyond Fuchsia and when the
-interface is specific to that product.  For example, `fuchsia.cobalt` is a
-better name for the Cobalt interface than `fuchsia.metrics` because other
-metrics implementations (e.g., Firebase) are unlikely to implement the same
+protocol is specific to that product.  For example, `fuchsia.cobalt` is a
+better name for the Cobalt interface protocol than `fuchsia.metrics` because
+other metrics implementations (e.g., Firebase) are unlikely to implement the same
 protocol.
 
 FIDL libraries defined in the Platform Source Tree (i.e., defined in
@@ -125,9 +125,9 @@ namespace must be `test`.
 
 FIDL libraries defined in the Platform Source Tree for the purpose of exposing
 hardware functionality to applications must be in the `fuchsia.hardware`
-namespace.  For example, an interface for exposing an ethernet device might
+namespace.  For example, a protocol for exposing an ethernet device might
 be named `fuchsia.hardware.ethernet.Device`.  Higher-level functionality built
-on top of these interfaces does not belong in the `fuchsia.hardware` namespace.
+on top of these FIDL protocols does not belong in the `fuchsia.hardware` namespace.
 For example, it is more appropriate for network protocols to be under
 `fuchsia.net` than `fuchsia.hardware`.
 
@@ -156,7 +156,7 @@ concepts in `fuchsia.foo` rather than in `fuchsia.foo.common`.
 ### Top-level
 
 Avoid repeating the names from the library name.  For example, in the
-`fuchsia.process` library, an interface that launches process should be named
+`fuchsia.process` library, a protocol that launches process should be named
 `Launcher` rather than `ProcessLauncher` because the name `process` already
 appears in the library name.  In all target languages, top-level names are
 scoped by the library name in some fashion.
@@ -187,36 +187,37 @@ languages, constant names are scoped by their enclosing library.
 Constants that describe minimum and maximum bounds should use the prefix `MIN_`
 and `MAX_`, respectively.
 
-### Interfaces
+### Protocols
 
-Interfaces are specified with the `protocol` keyword.
+Protocols are specified with the `protocol` keyword.
 
-Interfaces must be named in `UpperCamelCase` and must be noun phrases.
-Typically, interfaces are named using nouns that suggest an action.  For
-example, `AudioRenderer` is a noun that suggests that the interface is related
+Protocols must be named in `UpperCamelCase` and must be noun phrases.
+Typically, protocols are named using nouns that suggest an action.  For
+example, `AudioRenderer` is a noun that suggests that the protocol is related
 to rendering audio.  Similarly, `Launcher` is a noun that suggests that the
-interface is related to launching something.  Interfaces can also be passive
+protocol is related to launching something.  Protocols can also be passive
 nouns, particularly if they relate to some state held by the implementation.
-For example, `Directory` is a noun that suggests that the interface is used for
+For example, `Directory` is a noun that suggests that the protocol is used for
 interacting with a directory held by the implementation.
 
-Interface may be named using object-oriented design patterns.  For example,
+A protocol may be named using object-oriented design patterns.  For example,
 `fuchsia.fonts.Provider` uses the "provider" suffix, which indicates that the
-interface provides fonts (rather than represents a font itself).  Similarly,
+protocol provides fonts (rather than represents a font itself).  Similarly,
 `fuchsia.tracing.Controller` uses the "controller" suffix, which indicates that
-the interface controls the tracing system (rather than represents a trace
+the protocol controls the tracing system (rather than represents a trace
 itself).
 
-The name `Manager` may be used as a name of last resort for an interface with
+The name `Manager` may be used as a name of last resort for a protocol with
 broad scope.  For example, `fuchsia.power.Manager`.  However, be warned that
-"manager" interfaces tend to attract a large amount of loosely related
-functionality that might be better factored into multiple interfaces.
+"manager" protocols tend to attract a large amount of loosely related
+functionality that might be better factored into multiple protocols.
 
-Interfaces must not include the name "service."  All interfaces define services.
+Protocols must not include the name "service."  All protocols define services.
 The term is meaningless.  For example, `fuchsia.net.oldhttp.HttpService`
 violates this rubric in two ways.  First, the "http" prefix is redundant with
-the library name.  Second, the "service" suffix is banned.  Notice that the
-successor FIDL library, `fuchsia.net.http` simply omits this useless interface.
+the library name.  Second, the "service" suffix is banned.
+Notice that the successor library simply omits this altogether by being
+explicit in naming the service it offers `fuchsia.net.http.Loader`.
 
 ### Methods
 
@@ -224,12 +225,12 @@ Methods must be named in `UpperCamelCase` and must be verb phrases.  For
 example, `GetBatteryStatus` and `CreateSession` are verb phrases that indicate
 what action the method performs.
 
-Methods on "listener" or "observer" interfaces that are called when an event
+Methods on "listener" or "observer" protocols that are called when an event
 occurs should be prefixed with `On` and describe the event that occurred in the
-past tense.  For example, the `ViewContainerListener` interface has a method
+past tense.  For example, the `ViewContainerListener` protocol has a method
 named `OnChildAttached`.  Similarly, events (i.e., unsolicited messages from the
 server to the client) should be prefixed with `On` and describe the event that
-occurred in the past tense.  For example, the `AudioCapturer` interface has an
+occurred in the past tense.  For example, the `AudioCapturer` protocol has an
 event named `OnPacketCaptured`.
 
 ### Parameters
@@ -376,7 +377,7 @@ libraries with less than a dozen files.  This directory structure matches how
 FIDL files are included in the Fuchsia SDK.
 
 The division of a library into files has no technical impact on consumers of the
-library.  Declarations, including interfaces, can reference each other and
+library.  Declarations, including protocols, can reference each other and
 themselves throughout the library, regardless of the file in which they appear.
 Divide libraries into files to maximize readability.
 
@@ -386,17 +387,17 @@ Divide libraries into files to maximize readability.
    ideally in the same file.
 
  * For complex libraries, prefer defining pure data types or constants in leaf
-   files and defining interfaces that reference those types together in a trunk
+   files and defining protocols that reference those types together in a trunk
    file.
 
 ### Ordinals
 
-Interfaces contain a number of methods.  Each method is automatically assigned a
+Protocols contain a number of methods.  Each method is automatically assigned a
 unique 32 bit identifier, called an ordinal.  Servers use the ordinal value
-to determine which interface method should be dispatched.
+to determine which protocol method should be dispatched.
 
-The compiler determines the ordinal value by hashing the library, interface, and
-method name.  In rare cases, ordinals in the same interface may collide.  If
+The compiler determines the ordinal value by hashing the library, protocol, and
+method name.  In rare cases, ordinals in the same protocol may collide.  If
 this happens, you can use the `Selector` attribute to change the name of the
 method the compiler uses for hashing.  The following example will use the method
 name "C" instead of the method name "B" for calculating the hash:
@@ -413,7 +414,7 @@ format in cases where developers wish to change the name of a method.
 
 ### Library structure
 
-Carefully consider how you divide your type and interface definitions into
+Carefully consider how you divide your type and protocol definitions into
 libraries.  How you decompose these definitions into libraries has a large
 effect on the consumers of these definitions because a FIDL library is the unit
 of dependency and distribution for your protocols.
@@ -623,12 +624,12 @@ protocol Frobinator {
 };
 ```
 
-In some unusual situations, interfaces may include a string description of the
+In some unusual situations, protocols may include a string description of the
 error in addition to a `status` or enum value if the range of possible error
 conditions is large and descriptive error messages are likely to be useful to
 clients.  However, including a string invites difficulties.  For example,
 clients might try to parse the string to understand what happened, which means
-the exact format of the string becomes part of the interface, which is
+the exact format of the string becomes part of the protocol, which is
 especially problematic when the strings are localized.  *Security note:*
 Similarly, reporting stack traces or exception messages to the client can
 unintentionally leak privileged information.
@@ -773,12 +774,12 @@ by an IANA registry.
 This section describes several good design patterns that recur in many FIDL
 protocols.
 
-### Interface request pipelining
+### Protocol request pipelining
 
-One of the best and most widely used design patterns is _interface request
-pipelining_.  Rather than returning a channel that implements an interface, the
+One of the best and most widely used design patterns is _protocol request
+pipelining_.  Rather than returning a channel that supports a protocol, the
 client sends the channel and requests the server to bind an implementation of
-the interface to that channel:
+the protocol to that channel:
 
 ```fidl
 GOOD:
@@ -793,10 +794,10 @@ protocol Foo {
 ```
 
 This pattern is useful because the client does not need to wait for a round-trip
-before starting to use the `Bar` interface.  Instead, the client can queue
+before starting to use the `Bar` protocol.  Instead, the client can queue
 messages for `Bar` immediately.  Those messages will be buffered by the kernel
-and processed eventually once an implementation of `Bar` binds to the interface
-request.  By contrast, if the server returns an instance of the `Bar` interface,
+and processed eventually once an implementation of `Bar` binds to the protocol
+request.  By contrast, if the server returns an instance of the `Bar` protocol,
 the client needs to wait for the whole round-trip before queuing messages for
 `Bar`.
 
@@ -810,7 +811,7 @@ protocol CodecProvider {
 ```
 
 To handle the failure case, the client waits for the reply and takes some other
-action if the request failed.  Another approach is for the interface to have an
+action if the request failed.  Another approach is for the protocol to have an
 event that the server sends at the start of the protocol:
 
 ```fidl
@@ -878,7 +879,7 @@ in situations where the client and server need to synchronize their work.
 One approach to providing flow control in protocols that use the push, is the
 _acknowledgment pattern_, in which the caller provides an acknowledgement
 response that the caller uses for flow control.  For example, consider this
-generic listener interface:
+generic listener protocol:
 
 ```fidl
 protocol Listener {
@@ -963,9 +964,9 @@ required to perform a given task.
 
 The key to feed-forward dataflow is to remove the need for clients to wait for
 results from prior method calls before sending subsequent messages.  For
-example, interface request pipelining removes the need for the client to wait
-for the server to reply with an interface before the client can use the
-interface.  Similarly, client-assigned identifiers (see below) removes the need
+example, protocol request pipelining removes the need for the client to wait
+for the server to reply with a protocol before the client can use the
+protocol.  Similarly, client-assigned identifiers (see below) removes the need
 for the client to wait for the server to assign identifiers for state held by
 the server.
 
@@ -1006,23 +1007,23 @@ protocol Canvas {
 
 ### Client-assigned identifiers
 
-Often an interface will let a client manipulate multiple pieces of state held by
+Often a protocol will let a client manipulate multiple pieces of state held by
 the server.  When designing an object system, the typical approach to this
 problem is to create separate objects for each coherent piece of state held by
 the server.  However, when designing a protocol, using separate objects for each
 piece of state has several disadvantages:
 
-Creating separate interface instances for each logical object consumes kernel
-resources because each interface instance requires a separate channel object.
-Each interface instance maintains a separate FIFO queue of messages.  Using
-separate interface instances for each logical object means that messages sent
+Creating separate protocol instances for each logical object consumes kernel
+resources because each instance requires a separate channel object.
+Each instance maintains a separate FIFO queue of messages.  Using
+separate instances for each logical object means that messages sent
 to different objects can be reordered with respect to each other, leading to
 out-of-order interactions between the client and the server.
 
 The _client-assigned identifier pattern_ avoids these problems by having the
-client assign uint32 or uint64 identifiers to objects retained by the server.
+client assign `uint32` or `uint64` identifiers to objects retained by the server.
 All the messages exchanged between the client and the server are funnelled
-through a single interface instance, which provides a consistent FIFO ordering
+through a single protocol instance, which provides a consistent FIFO ordering
 for the whole interaction.
 
 Having the client (rather than the server) assign the identifiers allows for
@@ -1040,12 +1041,12 @@ identifiers.  Developers commonly want to create a client library that provides
 an object-oriented facades for the service to hide the complexity of managing
 identifiers, which itself is an anti-pattern (see _client libraries_ below).
 
-A strong signal that you should create a separate interface instance to
+A strong signal that you should create a separate protocol instance to
 represent an object rather than using a client-assigned identifier is when you
 want to use the kernel's object capability system to protect access to that
 object.  For example, if you want a client to be able to interact with an object
 but you do not want the client to be able to interact with other objects,
-creating a separate interface instance means you can use the underlying channel
+creating a separate protocol instance means you can use the underlying channel
 as a capability that controls access to that object.
 
 ### Command union
@@ -1111,8 +1112,8 @@ protocol Foo {
 For example, this pattern is used by `fuchsia.process.Launcher` to let the
 client send an arbitrary number of environment variables.
 
-A more sophisticated version of this pattern creates an interface that
-represents the transaction, often called a _tear-off interface_:
+A more sophisticated version of this pattern creates a protocol that
+represents the transaction, often called a _tear-off protocol:
 
 ```fidl
 protocol BarTransaction {
@@ -1129,7 +1130,7 @@ This approach is useful when the client might be performing many operations
 concurrently and breaking the writes into separate messages loses atomicity.
 Notice that `BarTransaction` does not need an `Abort` method.  The better
 approach to aborting the transaction is for the client to close the
-`BarTransaction` interface.
+`BarTransaction` protocol.
 
 #### Paginating Reads
 
@@ -1149,9 +1150,9 @@ second event that signals when the server is done sending data.  This approach
 works well for simple cases but has a number of scaling problems.  For example,
 the protocol lacks flow control and the client has no way to stop the server if
 the client no longer needs additional data (short of closing the whole
-interface).
+protocol).
 
-A more robust approach uses a tear-off interface to create an iterator:
+A more robust approach uses a tear-off protocol to create an iterator:
 
 ```fidl
 protocol BarIterator {
@@ -1163,7 +1164,7 @@ protocol ChannelBasedGetter {
 };
 ```
 
-After calling `GetBars`, the client uses interface request pipelining to queue
+After calling `GetBars`, the client uses protocol request pipelining to queue
 the first `GetNext` call immediately.  Thereafter, the client repeatedly calls
 `GetNext` to read additional data from the server, bounding the number of
 outstanding `GetNext` messages to provide flow control.  Notice that the
@@ -1187,7 +1188,7 @@ protocol TokenBasedGetter {
 This pattern is especially attractive when the server can escrow all of its
 pagination state to the client and therefore no longer need to maintain
 paginations state at all.  The server should document whether the client can
-persist the token and reuse it across instances of the interface.  *Security
+persist the token and reuse it across instances of the protocol.  *Security
 note:* In either case, the server must validate the token supplied by the client
 to ensure that the client's access is limited to its own paginated results and
 does not include results intended for another client.
@@ -1226,16 +1227,16 @@ the entangled event objects.
 
 ### Eventpair cancellation
 
-When using tear-off transactions, the client can cancel long-running operations
-by closing the client end of the interface.  The server should listen for
+When using tear-off protocol transactions, the client can cancel long-running operations
+by closing the client end of the protocol.  The server should listen for
 `ZX_CHANNEL_PEER_CLOSED` and abort the transaction to avoid wasting resources.
 
 There is a similar use case for operations that do not have a dedicated channel.
-For example, the `fuchsia.net.http.Loader` interface has a `Fetch` method that
+For example, the `fuchsia.net.http.Loader` protocol has a `Fetch` method that
 initiates an HTTP request.  The server replies to the request with the HTTP
 response once the HTTP transaction is complete, which might take a significant
 amount of time.  The client has no obvious way to cancel the request short of
-closing the entire `Loader` interface, which might cancel many other outstanding
+closing the entire `Loader` protocol, which might cancel many other outstanding
 requests.
 
 The _eventpair cancellation pattern_ solves this problem by having the client
@@ -1247,11 +1248,11 @@ implicitly handles the case where the client crashes or otherwise tears down
 because the `ZX_EVENTPAIR_PEER_CLOSED` is generated automatically by the kernel
 when the entangled event retained by the client is destroyed.
 
-### Empty interfaces
+### Empty protocols
 
-Sometimes an empty interface can provide value.  For example, a method that
+Sometimes an empty protocol can provide value.  For example, a method that
 creates an object might also receive a `request<FooController>` parameter.  The
-caller provides an implementation of this empty interface:
+caller provides an implementation of this empty protocol:
 
 ```fidl
 protocol FooController {};
@@ -1259,7 +1260,7 @@ protocol FooController {};
 
 The `FooController` does not contain any methods for controlling the created
 object, but the server can use the `ZX_CHANNEL_PEER_CLOSED` signal on the
-interface to trigger destruction of the object.  In the future, the interface
+protocol to trigger destruction of the object.  In the future, the protocol
 could potentially be extended with methods for controlling the created object.
 
 ## Antipatterns
@@ -1271,11 +1272,11 @@ avoiding using them in the wrong ways.
 ### Client libraries
 
 Ideally, clients interface with protocols defined in FIDL using
-language-specific client libraries generated by the FIDL compiler.  This
-approach lets Fuchsia provide high-quality support for a large number of target
-languages, but sometimes the protocol is too low-level to program directly and
-a a hand-written client library is appropriate to provide an interface to the
-same underlying protocol that is easier to use correctly.
+language-specific client libraries generated by the FIDL compiler.
+While this approach lets Fuchsia provide high-quality support for a large
+number of target languages, sometimes the protocol is too low-level to program directly.
+In such cases, it's appropriate to provide a hand-written client library that
+interfaces to the same underlying protocol, but is easier to use correctly.
 
 For example, `fuchsia.io` has a client library, `libfdio.so`, which provides a
 POSIX-like frontend to the protocol.  Clients that expect a POSIX-style
@@ -1312,8 +1313,8 @@ implementations of the library in at least two languages.
 
 ### Service hubs
 
-A _service hub_ is a `Discoverable` interface that simply lets you discover a
-number of other interfaces, typically with explicit names:
+A _service hub_ is a `Discoverable` protocol that simply lets you discover a
+number of other protocols, typically with explicit names:
 
 ```fidl
 BAD:
@@ -1326,8 +1327,8 @@ protocol ServiceHub {
 };
 ```
 
-Particularly if stateless, the `ServiceHub` interface does not provide much
-value over simply making the individual services discoverable directly:
+Particularly if stateless, the `ServiceHub` protocol does not provide much
+value over simply making the individual protocol services discoverable directly:
 
 ```fidl
 [Discoverable]
@@ -1349,66 +1350,66 @@ mechanism used throughout the system to discover services.  Using the normal
 mechanism lets the core platform apply appropriate policy to discovery.
 
 However, service hubs can be useful in some situations.  For example, if the
-interface were stateful or was obtained through some process more elaborate than
-normal service discovery, then the interface could provide value by transferring
+protocol were stateful or was obtained through some process more elaborate than
+normal service discovery, then the protocol could provide value by transferring
 state to the obtained services.  As another example, if the methods for
-obtaining the services take additional parameters, then the interface could
+obtaining the services take additional parameters, then the protocol could
 provide value by taking those parameters into account when connecting to the
 services.
 
 ### Overly object-oriented design
 
-Some libraries create separate interface instances for every logical object in
+Some libraries create separate protocol instances for every logical object in
 the protocol, but this approach has a number of disadvantages:
 
- * Message ordering between the different interface instances is undefined.
-   Messages sent over a single interface are processed in FIFO order (in each
+ * Message ordering between the different protocol instances is undefined.
+   Messages sent over a single protocol are processed in FIFO order (in each
    direction), but messages sent over different channels race.  When the
    interaction between the client and the server is spread across many channels,
    there is a larger potential for bugs when messages are unexpectedly
    reordered.
 
- * Each interface instance has a cost in terms of kernel resources, waiting
+ * Each protocol instance has a cost in terms of kernel resources, waiting
    queues, and scheduling.  Although Fuchsia is designed to scale to large
    numbers of channels, the costs add up over the whole system and creating a
    huge proliferation of objects to model every logical object in the system
    places a large burden on the system.
 
 * Error handling and teardown is much more complicated because the number of
-  error and teardown states grows exponentially with the number of interface
-  instances involved in the interaction.  When you use a single interface
+  error and teardown states grows exponentially with the number of protocol
+  instances involved in the interaction.  When you use a single protocol
   instance, both the client and the server can cleanly shut down the interaction
-  by closing the interface.  With multiple interface instances, the interaction
+  by closing the protocol.  With multiple protocol instances, the interaction
   can get into states where the interaction is partially shutdown or where the
   two parties have inconsistent views of the shutdown state.
 
- * Coordination across interface boundaries is more complex than within a single
-   interface because protocols that involve multiple interfaces need to allow
-   for the possibility that different interfaces will be used by different
+ * Coordination across protocol boundaries is more complex than within a single
+   protocol because multiple protocols need to allow
+   for the possibility that different protocols will be used by different
    clients, who might not completely trust each other.
 
 However, there are use cases for separating functionality into multiple
-interfaces:
+protocols:
 
- * Providing separate interfaces can be beneficial for security because some
-   clients might have access to only one of the interfaces and thereby be
+ * Providing separate protocols can be beneficial for security because some
+   clients might have access to only one of the protocols and thereby be
    restricted in their interactions with the server.
 
- * Separate interfaces can also more easily be used from separate threads.  For
-   example, one interface might be bound to one thread and another interface
+ * Separate protocols can also more easily be used from separate threads.  For
+   example, one protocol might be bound to one thread and another protocol
    might be bound to another thread.
 
- * Clients and servers pay a (small) cost for each method in an interface.
-   Having one giant interface that contains every possible method can be less
-   efficient than having multiple smaller interfaces if only a few of the
-   smaller interfaces are needed at a time.
+ * Clients and servers pay a (small) cost for each method in a protocol.
+   Having one giant protocol that contains every possible method can be less
+   efficient than having multiple smaller protocols if only a few of the
+   smaller protocols are needed at a time.
 
  * Sometimes the state held by the server factors cleanly along method
-   boundaries.  In those cases, consider factoring the interface into smaller
-   interfaces along those same boundaries to provide separate interfaces for
+   boundaries.  In those cases, consider factoring the protocol into smaller
+   protocols along those same boundaries to provide separate protocols for
    interacting with separate state.
 
 A good way to avoid over object-orientation is to use client-assigned
 identifiers to model logical objects in the protocol.  That pattern lets clients
 interact with a potentially large set of logical objects through a single
-interface.
+protocol.

@@ -98,8 +98,8 @@ use futures::prelude::*;
     where the error occurred.
 -   `fidl::endpoints2::ServiceMarker` is the trait implemented by `XXXMarker`
     types. It provides the associated string `NAME`.
--   `fidl_fidl_examples_echo` contains bindings for the `Echo` interface.
-    This file is generated from the interface defined in `echo.fidl`.
+-   `fidl_fidl_examples_echo` contains bindings for the `Echo` protocol.
+    This file is generated from the protocol defined in `echo.fidl`.
     These bindings include:
     -   The `EchoMarker` type, a [zero-sized type] used to hold compile-time
         metadata about the `Echo` service (such as `NAME`)
@@ -207,7 +207,7 @@ expression will result in `None`, the `while` loop will exit, and we return
 
 When a request is received, we
 use pattern-matching to extract the contents of the `EchoString` variant
-of the `EchoRequest` enum. For an interface with more than one type of request,
+of the `EchoRequest` enum. For a protocol with more than one type of request,
 we would instead write `|x| match x { MyServiceRequest::Req1 { ... } => ... }`.
 In our case, we receive `value`, an optional string, and `responder`, a control
 handle with a `send` method for sending a response.

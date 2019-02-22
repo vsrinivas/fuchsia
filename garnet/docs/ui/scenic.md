@@ -14,7 +14,7 @@
   * [Fences](#fences)
 * [Examples of using Scenic](#examples-of-using-scenic)
 * [API Guide](#api-guide)
-  * [FIDL interfaces](#fidl-interfaces)
+  * [FIDL protocols](#fidl-protocols)
 
 # Introduction
 
@@ -76,11 +76,11 @@ and the system _Display Driver_.
 
 ## Scenic
 
-The `Scenic` FIDL interface is Scenic's front door.  Each instance of the
-interface represents a Scenic instance. Each Scenic instance is an isolated
+The `Scenic` FIDL protocol is Scenic's front door.  Each instance of the
+protocol represents a Scenic instance. Each Scenic instance is an isolated
 rendering context with its own content, render targets, and scheduling loop.
 
-The `Scenic` interface allows a client to create a [`Session`](#session) which
+The `Scenic` protocol allows a client to create a [`Session`](#session) which
 is the communication channel used to publish graphical content to this instance.
 
 A single Scenic instance can update, animate, and render multiple
@@ -103,7 +103,7 @@ they receive a Scenic `Session` from the view manager.
 
 ## Sessions
 
-The `Session` FIDL interface is the primary API used by clients of Scenic to
+The `Session` FIDL protocol is the primary API used by clients of Scenic to
 contribute graphical content in the form of `Resources`.  Each session has
 its own resource table and is unable to directly interact with resources
 belonging to other sessions.
@@ -211,18 +211,29 @@ Add sections to discuss all other kinds of resources: shapes, materials,
 links, memory, images, buffers, animations, variables, renderers etc.
 
 ## Coordinate Frames and Units
-Scenic manages a global scene graph in a three dimensional space. Some of the charactaristics of this space are defined by Scenic itself, whereas some are defined by the root presenter or even other clients.
+Scenic manages a global scene graph in a three dimensional space. Some of the charactaristics of
+this space are defined by Scenic itself, whereas some are defined by the root presenter or even
+other clients.
 
 ![Scenic Axes](scenic_axes.png)
 
 ### Units
-Units are configured by the root presenter. The default root presenter uses a device-independent scalable unit called "pips" for the root space. See [Units and Metrics](units_and_metrics.md) for details. What units are used for your view space depends on what transforms are applied to your view by your parent.
+Units are configured by the root presenter. The default root presenter uses a device-independent
+scalable unit called "pips" for the root space. See [Units and Metrics](units_and_metrics.md) for
+details. What units are used for your view space depends on what transforms are applied to your
+view by your parent.
 
 ### World Space
-The Scenic world space is a right handed Cartesian space. It is configured by the root presenter which configures the view and projection parameters of the camera. The default root presenter will put the origin at the top left of the screen and make +X point right, +Y point down, and +Z point into the screen.
+The Scenic world space is a right handed Cartesian space. It is configured by the root presenter
+which configures the view and projection parameters of the camera. The default root presenter
+will put the origin at the top left of the screen and make +X point right, +Y point down, and
++Z point into the screen.
 
 ### View Space
-Ultimately the space of a given view depends on what transforms are applied to it by its parent View and the parent View's parent and so on. If no rotation transform is applied and all scale transforms are positive along all axes then the View's axes will align with the axes of the root presenter and the handedness will match.
+Ultimately the space of a given view depends on what transforms are applied to it by its parent
+View and the parent View's parent and so on. If no rotation transform is applied and all scale
+transforms are positive along all axes then the View's axes will align with the axes of the root
+presenter and the handedness will match.
 
 The bounds of the root view are defined by a min and a max point as follows:
 
@@ -242,12 +253,12 @@ A simple example of using Scenic is the [bouncing ball](https://fuchsia.googleso
 
 # API Guide
 
-## FIDL interfaces
+## FIDL protocols
 
-The following files define and document the collection of FIDL interfaces that
+The following files define and document the collection of FIDL protocols that
 make up Scenic.
 
-* [Scenic top-level interfaces](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.scenic) (`fuchsia.ui.scenic`)
+* [Scenic top-level protocols](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.scenic) (`fuchsia.ui.scenic`)
   * [scenic.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.scenic/scenic.fidl)
   * [session.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.scenic/session.fidl)
   * [commands.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.scenic/commands.fidl)

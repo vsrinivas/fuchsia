@@ -27,9 +27,9 @@ component within it. The exit code of the `netemul_sandbox` process will mimic t
 using enclosing process, clients will typically setup a layout for the test using the netemul
 (facet)[#facet] in the component-under-test's cmx manifest.
 
-In service provider mode, `netemul_sandbox` will expose the
-[fuchsia.netemul.sandbox.Sandbox](../../public/lib/netemul/fidl/sandbox.fidl) interface that allows
-users to create netemul's managed environments or run full sandboxes from components.
+In service provider mode, `netemul_sandbox` will expose the 
+[fuchsia.netemul.sandbox.Sandbox](../../public/lib/netemul/fidl/sandbox.fidl) protocol that allows
+users to create netemul's managed environments or run full sandboxes from components. 
 
 In sum, users have two options to use netemul for a given component under test:
 * use `netemul_runner`, which will use `netemul_sandbox` in enclosing process mode and spawn the
@@ -258,7 +258,7 @@ OPTIONS:
 
 ### mock_device_settings
 
-The `mock_device_settings` helper is a mock implementation of the FIDL interface
+The `mock_device_settings` helper is a mock implementation of the FIDL protocol
 `fuchsia.devicesettings.DeviceSettingsManager`. You can launch it
 by using its package url: `fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/mock_device_settings.cmx`.
 It receives the command line arguments shown below and is intended to be used as a "services" entry in

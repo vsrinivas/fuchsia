@@ -1,7 +1,7 @@
 # Simple Sine Example App
 
 This directory contains an example application that shows, in simplest possible
-implementation, how to play audio via the lowest-layer FIDL interfaces.
+implementation, how to play audio via the lowest-layer FIDL protocols.
 
 ### USAGE
 
@@ -9,7 +9,7 @@ implementation, how to play audio via the lowest-layer FIDL interfaces.
 
 ### Asynchronous applications and Fuchsia
 
-This example uses asynchronous interface calls, establishing an asynchronous
+This example uses asynchronous protocol calls, establishing an asynchronous
 message loop before calling into its MediaApp object. Once the MediaApp performs
 initial setup -- including establishing a callback that will be triggered later
 -- we run the loop. The loop accepts and dispatches incoming messages until
@@ -20,7 +20,7 @@ in the MediaApp constructor.
 
 ### Internals
 
-Note: this example omits numerous important aspects of the Media interfaces,
+Note: this example omits numerous important aspects of the Media protocols,
 including the retrieval of supported media formats, setting the AudioRenderer gain,
 packet demand management, and nuanced treatment of timeline transforms.
 
@@ -33,7 +33,7 @@ the app subsequently exits.
 
 Focusing on this example's media-specific setup and asynchronous tasks, the
 highest-level description of events (shown in `MediaApp::Run`) is as follows:
-1. Open the primary FIDL interface to the audio subsystem (AudioRenderer);
+1. Open the primary FIDL protocol to the audio subsystem (AudioRenderer);
 2. Set the audio playback format;
 3. Map a shared memory section through which we transport audio to the AudioRenderer;
 4. Write audio data into that memory (in this case a looping sine wave);
@@ -45,19 +45,19 @@ highest-level description of events (shown in `MediaApp::Run`) is as follows:
 
 Below is a more detailed account of the steps taken, and why each is necessary.
 
-##### Open FIDL interfaces
+##### Open FIDL protocols
 
-With the provided StartupContext, we obtain an Audio interface pointer to, and
-use that to obtain interface pointers to AudioRenderer. At that point we no longer
-need our Audio interface and can allow it to go out of scope (and hence be
+With the provided StartupContext, we obtain an Audio protocol pointer to, and
+use that to obtain protocol pointers to AudioRenderer. At that point we no longer
+need our Audio protocol and can allow it to go out of scope (and hence be
 automatically closed).
 
-We use the AudioRenderer interface to _set playback format_ and start playback. If we
-so desired, we could also acquire a GainControl interface and use it to set the
+We use the AudioRenderer protocol to _set playback format_ and start playback. If we
+so desired, we could also acquire a GainControl protocol and use it to set the
 gain for our audio stream (not shown in this example).
 
-We must **set_error_handler** on each asynchronous interface before using it.
-These interfaces represent FIDL channels, which can close asynchronously. The
+We must **set_error_handler** on each asynchronous protocol before using it.
+These protocols represent FIDL channels, which can close asynchronously. The
 system notifies us of closures via an error handler callback. In this example,
 if an unexpected channel closure occurs we log the problem and begin the
 shutdown process.
@@ -152,7 +152,7 @@ still outstanding at the AudioRenderer, and others have not yet been sent -- we 
 nonetheless exit our `MediaApp::Run` method at this point, returning to main.cc
 while our message loop dutifully waits until it receives each callback, and
 eventually the Quit task. Note: our thread *must* be a message loop thread, for
-FIDL interface calls (and callbacks) to function.
+FIDL protocol calls (and callbacks) to function.
 
 ##### Shutdown
 
@@ -164,8 +164,8 @@ There are actually two scenarios that can lead to our calling Shutdown.
 1. In the normal case described above, after completing the correct number
 of packets, we call Shutdown to complete an orderly winding-down.
 2. If at any time during setup or playback we receive a connection error from
-any of the FIDL interfaces, we call Shutdown (after logging the problem).
-Connection errors indicate that the channel has been closed and the interface
+any of the FIDL protocols, we call Shutdown (after logging the problem).
+Connection errors indicate that the channel has been closed and the protocol
 pointer is unusable, so our best course of action is to close everything else
 and exit.
 
@@ -173,4 +173,4 @@ Our Shutdown function unmaps our section of shared memory and closes (resets)
 our VMO object. It also posts a Quit task to our message loop thread, allowing
 it to exit its "dutiful" wait (and immediately thereafter, the app). Once the
 main function exits, our MediaApp object is destroyed, and at this point any
-remaining FIDL interface (`AudioRenderer`, in case of normal shutdown) is released.
+remaining FIDL protocol (`AudioRenderer`, in case of normal shutdown) is released.

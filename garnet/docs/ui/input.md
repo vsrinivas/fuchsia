@@ -66,8 +66,8 @@ and its designated event forwarding channel, an
 [`InputDevice`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_device_registry.fidl#17),
 to the
 [`InputDeviceRegistry`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_device_registry.fidl#12)
-FIDL interface. (The `InputDeviceRegistry` interface also enables programmatic
-input injection from outside RootPresenter.) The `InputDeviceRegistry` interface
+FIDL protocol. (The `InputDeviceRegistry` protocol also enables programmatic
+input injection from outside RootPresenter.) The `InputDeviceRegistry` protocol
 is vended by RootPresenter, and in addition to bookkeeping (details below),
 informs each `Presentation` about the new peripheral.
 

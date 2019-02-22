@@ -21,9 +21,10 @@ In garnet, `Alt`+`Esc` toggles back and forth between the console and graphics.
 ## Getting Started: Exposing a ViewProvider
 
 For an application to draw any UI, it first needs to implement a service to
-expose that UI externally. That interface is called [`ViewProvider`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.app/view_provider.fidl).
+expose that UI externally. That protocol is called
+[`ViewProvider`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.app/view_provider.fidl).
 
-First, let's publish our `ViewProvider` interface to our outgoing services. We don't
+First, let's publish our `ViewProvider` protocol to our outgoing services. We don't
 do anything with incoming request for a `ViewProvider` yet.
 
 ``` cpp
@@ -106,11 +107,17 @@ int main(int argc, const char** argv) {
 
 ## Attaching a UI
 
-On Fuchsia, a component creates a UI by communicating to the graphics compositor, Scenic, over a FIDL interface. More specifically, the component uses a `Session` interface, which allows a client to enqueue a list of `Commands` that can create and modify objects called `Resources`. `Resources` describes a variety of types which includes nodes, materials, textures, and shapes, among others.
+On Fuchsia, a component creates a UI by communicating to the graphics compositor, Scenic, over a
+FIDL protocol.
+More specifically, the component uses a `Session` protocol, which allows a client to enqueue a
+list of `Commands` that can create and modify objects called `Resources`. `Resources` describes a
+variety of types which includes nodes, materials, textures, and shapes, among others.
 
 A client creates a scene graph by creating and modifying the `Resources`.
 
-The _root_ of a client's scene graph is called a `View`. A `View` also has an associated size, which we will talk about later. First, however, let's create a class `BouncingBallView` which creates a `Session` and uses that to create a `View`.
+The _root_ of a client's scene graph is called a `View`. A `View` also has an associated size,
+which we will talk about later. First, however, let's create a class `BouncingBallView` which
+creates a `Session` and uses that to create a `View`.
 
 ``` cpp
 class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
@@ -134,8 +141,8 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
 In `InitializeScene`, we create a list of `Commands`, then `Enqueue` them.
 However, the commands are not applied until `Present` is called. `Present`
 takes a presentation time when the commands should be applied; it is
-acceptable to call it with a time of `0` but subsequent calls to `Present` should use presentation times based on the `PresentationInfo` we receive
-from Scenic.
+acceptable to call it with a time of `0` but subsequent calls to `Present` should use
+presentation times based on the `PresentationInfo` we receive from Scenic.
 
 ``` cpp
   static void PushCommand(std::vector<fuchsia::ui::scenic::Command>* cmds,
@@ -170,9 +177,13 @@ from Scenic.
 
 Once we've created a `View` resource, we can now attach our UI to it.
 
-We attach a `EntityNode` to it, and to that, we attach `ShapeNodes`. We also create `Materials` for the `ShapeNodes`.
+We attach a `EntityNode` to it, and to that, we attach `ShapeNodes`. We also create `Materials`
+for the `ShapeNodes`.
 
-Note, however, that this code is not sufficient to draw a UI. We also need to attach a `Shape` (which represents the geometry to render) to a `ShapeNode` for it to render. However, we don't yet know the size of our UI and therefore we postpone creating `Shapes` until we do, in the next section.
+Note, however, that this code is not sufficient to draw a UI. We also need to attach a `Shape`
+(which represents the geometry to render) to a `ShapeNode` for it to render. However, we don't
+yet know the size of our UI and therefore we postpone creating `Shapes` until we do, in the
+next section.
 
 Here, we create a node for a pink background and for a purple circle we will
 draw on top of it.
@@ -227,12 +238,15 @@ void InitializeScene(zx::eventpair view_token) {
 
 ## Getting our size (ViewProperties)
 
-When we created our Session, we also created a binding to a `SessionListener`. `SessionListener` is how we get events from Scenic, including size change events (sent as ViewProperties) and input events.
+When we created our Session, we also created a binding to a `SessionListener`. `SessionListener`
+is how we get events from Scenic, including size change events (sent as ViewProperties) and input
+events.
 
 For now, we only process ViewPropertiesChanged events. We get our size, and then
-create `Shapes` (in this case, `Rectangle` for the background and `Circle` for the ball) for the two nodes in our scene.
+create `Shapes` (in this case, `Rectangle` for the background and `Circle` for the ball) for
+the two nodes in our scene.
 ``` cpp
-// Note: we implement the SessionListener interface
+// Note: we implement the SessionListener protocol
 class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
     ...
 
@@ -319,7 +333,9 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
 ## Pushing new frames
 
 If we want to push new content, we send more `Commands` and call `Present`.
-However, we should use the information we received in `PresentationInfo` to determine what the next presentation time will be. In this example, we continually request new frames to animate the circle.
+However, we should use the information we received in `PresentationInfo` to determine what the
+next presentation time will be. In this example, we continually request new frames to animate
+the circle.
 
 ``` cpp
   void InitializeScene(zx::eventpair view_token) {
@@ -409,6 +425,6 @@ Congratulations! You've learned how to create a component that can display some 
    * Library: [//garnet/public/lib/ui/base_view/cpp](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/ui/base_view/cpp)
    * Example: [Spinning Square](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/ui/spinning_square/spinning_square_view.cc)
 * Learn to use the Scenic cpp library, which creates an abstraction of a more object-oriented interface to Scenic `Resources`, rather than using `Commands` directly like we have here.
-   * Library: [//garnet/public/lib/ui/scenic/cpp](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/ui/scenic/cpp)
+   * Library: [//sdk/lib/ui/scenic/cpp](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/ui/scenic/cpp)
    * Example: [Spinning Square](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/ui/spinning_square/spinning_square_view.cc)
 * Learn to write an app which draws to textures and then displays those textures through Scenic. [NoodlesView](https://fuchsia.googlesource.com/topaz/+/master/examples/ui/noodles) (and [SkiaView](https://fuchsia.googlesource.com/topaz/+/master/examples/ui/lib/skia_view.cc) which it is built on)

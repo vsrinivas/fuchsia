@@ -28,7 +28,7 @@ Once all the files are parsed into AST nodes, it's time to flatten the
 representation.
 
 Recall that some declarations can be nested. For instance, a const declaration
-can be present in an interface or struct declaration.
+can be present in a protocol or struct declaration.
 
 Flattening pulls all the declarations out to one level, which entails computing
 fully qualified names for nested types.

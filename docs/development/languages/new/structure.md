@@ -87,8 +87,8 @@ These pieces are usually not built into the language implementation or runtime.
 Instead, the libraries are part of the developer's program and versioned
 independently from the language runtime. The stable interface between the
 program and the language runtime should be the *system calls* rather than the
-FIDL interfaces so that developers can pick the versions of their FIDL
-interfaces and the version of their language runtimes independently.
+FIDL protocols so that developers can pick the versions of their FIDL
+protocols and the version of their language runtimes independently.
 
 In some cases, the language runtime might need to use FIDL internally. If that
 happens, prefer to hide this implementation detail from the developer's program
@@ -120,11 +120,11 @@ Typically the generated code will contain the following types of code:
   [FIDL language](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/language.md).
 * A codec that can serialize and deserialize these data structure into and from
   the [FIDL wire format](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/wire-format/README.md).
-* Stub objects that represent the server end of a FIDL interfaces. Typically,
+* Stub objects that represent the server end of a FIDL protocol. Typically,
   stub object have a *dispatch* method that deserializes a message read from a
   Zircon channel and perform an indirect jump into an implementation of the
   method specied by the message's *ordinal*.
-* Proxy objects that represent the client end of a FIDL interface. Typically,
+* Proxy objects that represent the client end of a FIDL protocol. Typically,
   method calls on proxy objects result in a message being serialized and
   sent over a Zircon channel. Typically, proxy object have a *dispatch* for
   event messages similar to the dispatch method found in stubs for request
@@ -149,7 +149,7 @@ protocols are designed to be used in an asynchronous, feed-forward pattern.
 
 When designing the generated code for your language, pay particular attention to
 binary size. Sophisticated program often interact with a large number of FIDL
-protocols, each of which might define many data structures and interfaces.
+protocols, each of which might define many data structures and protocols.
 
 One important technique for reducing binary size is to factor as much code as
 possible into a FIDL *support library*. For example, the C bindings, all the

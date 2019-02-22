@@ -17,12 +17,12 @@ end-user product documentation.
 
 ## What should I document?
 
-In brief, document your interfaces, introduce essential concepts, explain how
+In brief, document your protocols, introduce essential concepts, explain how
 everything fits together.
 
 - Conventions: e.g. this document about documentation, code style
 - System Design: e.g. network stack, compositor, kernel, assumptions
-- APIs: e.g. FIDL interfaces, library functions, syscalls
+- APIs: e.g. FIDL protocols, library functions, syscalls
 - Protocols: e.g. schemas, encodings, wire formats, configuration files
 - Tools: e.g. `bootserver`, `netcp`, `fx`
 - Workflows: e.g. environment set up, test methodologies, where to find various
@@ -74,7 +74,7 @@ Tips for writing effective prose documentation:
 ### Documentation Comments
 
 Documentation comments are especially effective at describing the purpose of
-interfaces, structures, methods, data types, and other elements of program
+protocols, structures, methods, data types, and other elements of program
 code.
 
 Documentation comments should be applied consistently to all public APIs since
@@ -107,7 +107,7 @@ Tips for leaving breadcrumbs:
 - Bottom-up linkage: Add links from more detailed documents to more broadly
   scoped documents to help readers develop more awareness of the overall
   context of the topics being discussed.  Adding links from module, class, or
-  interface level documentation comments to higher level prose documentation
+  protocol level documentation comments to higher level prose documentation
   overviews can be particularly effective.
 - Sideways linkage: Add links to documents in related subject domains with
   which a reader should familiarize themselves in order to better understand

@@ -12,10 +12,10 @@ authentication for each account.
 
 Each device that supports Fuchsia accounts will have a single instance of the
 Account Manager component, started on demand, that implements the discoverable
-fuchsia.auth.account.AccountManager FIDL interface and acts as the entry point
+fuchsia.auth.account.AccountManager FIDL protocols and acts as the entry point
 to the account system. Only a small number of core system components should
 depend directly on Account Manager, the remaining components should only rely on
-the least powerful interface required to perform their role, typically
+the least powerful protocol required to perform their role, typically
 fuchsia.auth.account.Persona or fuchsia.auth.TokenManager.
 
 
@@ -27,9 +27,9 @@ fuchsia.auth.account.Persona or fuchsia.auth.TokenManager.
   definitions from this crate
 * */lib/auth/token_manager* - Account Manager uses the AuthProviderConnection
   struct to lazily launch and maintain connections to components implementing
-  the fuchsia.auth.AuthProviderFactory FIDL interface
+  the fuchsia.auth.AuthProviderFactory FIDL protocol
 * *Auth Providers* - Account Manager launches instances of components that
-  implement the fuchsia.auth.AuthProviderFactory FIDL interface. A single
+  implement the fuchsia.auth.AuthProviderFactory FIDL protocol. A single
   component is launched for each configured AuthProvider, serving all Fuchsia
   accounts
 
@@ -37,7 +37,7 @@ fuchsia.auth.account.Persona or fuchsia.auth.TokenManager.
 ## Design
 
 `AccountManager` implements the fuchsia.auth.account.AccountManager FIDL
-interface. The crate's main function creates a single instance of this struct
+protocol. The crate's main function creates a single instance of this struct
 and uses it to handle all incoming requests.
 
 `AccountManager` maintains a single `AccountHandlerContext` instance and a map
@@ -49,7 +49,7 @@ created lazily upon the first request pertaining to a particular account.
 an instance of the Account Handler component.
 
 `AccountHandlerContext` implements the
-fuchsia.auth.account.internal.AccountHandlerContext FIDL interface, using a map
+fuchsia.auth.account.internal.AccountHandlerContext FIDL protocol, using a map
 from all configured auth_provider_type strings to an associated
 `AuthProviderConnection`.
 
@@ -57,7 +57,7 @@ from all configured auth_provider_type strings to an associated
 ## Future Work
 
 The Account Manager is not yet fully complete. In particular the change listener
-interfaces and local authentication state are not finished.
+protocols and local authentication state are not finished.
 
 Currently the set of Auth Providers known to Account Manager is hard coded. In
 the near future this will move to a config file based configuration that will

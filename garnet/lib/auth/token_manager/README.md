@@ -3,7 +3,7 @@
 ## Overview
 
 Token Manager defines a common implementation of the auth.account.TokenManager
-FIDL interface and underlying database that may be used by both Token Manager
+FIDL protocol and underlying database that may be used by both Token Manager
 Factory and Account Handler.
 
 Clients of this library must supply the path to use for the credential database
@@ -19,7 +19,7 @@ must also be associated with a `TokenManagerContext`.
 * */lib/auth/cache* - Token Manager uses this crate to implement a cache of
   short-lived credentials such as OAuth access tokens
 * *Auth Providers* - Token Manager communicates with components that implement
-  the fuchsia.auth.AuthProvider FIDL interface to establish and exchange
+  the fuchsia.auth.AuthProvider FIDL protocol to establish and exchange
   credentials
 
 
@@ -33,7 +33,7 @@ must also be associated with a `TokenManagerContext`.
 * The `AuthProviderSupplier` trait supplies the client end of a
   fuchsia.auth.AuthProvider channel given a particular `auth_provider_type`
 
-`TokenManager` implements the fuchsia.auth.TokenManager FIDL interface and may
+`TokenManager` implements the fuchsia.auth.TokenManager FIDL protocol and may
 be instantiated by clients of the library.
 
 `TokenManagerError` defines an Error type implementing failure::Fail and
@@ -50,7 +50,7 @@ directly access each other's tokens. However, additional design work is required
 to retain sharing in certain cases (e.g. between components from the same vendor
 or between different vendors given explicit user consent).
 
-Potentially the interface between Token Manager and Auth Providers will be
+Potentially the protocol between Token Manager and Auth Providers will be
 redesigned to better enable additional types of authentication token in the
 future.
 

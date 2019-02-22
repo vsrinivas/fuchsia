@@ -194,7 +194,7 @@ necessary to shut down the interrupt thread during driver clean up.
 
 Messages for each device class are defined in the
 [FIDL](../../../docs/development/languages/fidl/README.md) language.
-Each device implements zero or more FIDL interfaces, multiplexed over a single
+Each device implements zero or more FIDL protocols, multiplexed over a single
 channel per client.  The driver is given the opportunity to interpret FIDL
 messages via the `message()` hook.
 

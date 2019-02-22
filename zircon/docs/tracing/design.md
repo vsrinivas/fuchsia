@@ -46,7 +46,7 @@ The trace manager is a system service which coordinates registration of
 trace providers.  It ensures that tracing proceeds in an orderly manner
 and isolates components which offer trace providers from trace clients.
 
-The trace manager implements two FIDL interfaces:
+The trace manager implements two FIDL protocols:
 
 - `TraceController`: Provides trace clients with the ability to enumerate
   trace providers and collect trace data.
@@ -59,7 +59,7 @@ to publish trace providers from components.
 ### Trace Providers
 
 Components which can be traced or offer tracing information to the system
-implement the `TraceProvider` FIDL interface and register it with the
+implement the `TraceProvider` FIDL protocol and register it with the
 `TraceRegistry`.  Once registered, they will receive messages whenever
 tracing is started or stopped and will have the opportunity to provide
 trace data encoded in the [Fuchsia Trace Format](trace_format.md).
@@ -78,7 +78,7 @@ other formats, such as Catapult JSON records which can be visualized
 using Catapult (aka. chrome:://tracing).
 
 Trace information can also be collected programmatically by using the
-`TraceController` FIDL interface directly.
+`TraceController` FIDL protocol directly.
 
 ## Libraries
 

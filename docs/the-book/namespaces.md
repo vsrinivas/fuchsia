@@ -70,7 +70,7 @@ objects in the scope of its namespace during
 [Namespace Transfer](#namespace-transfer).
 
 You can also create new objects out of thin air by implementing the
-appropriate FIDL interfaces.
+appropriate FIDL protocols.
 
 Given an object's channel, you can open a channel for one of its sub-objects
 by sending it a FIDL message which includes an object relative path expression
@@ -105,7 +105,7 @@ of bytes) subject to the following constraints:
 - Always compared using byte-for-byte equality (implies case-sensitive).
 
 Object names are valid arguments to a container's `Open()` method.
-See [FIDL Interfaces](#fidl-interfaces).
+See [FIDL Protocols](#fidl-protocols).
 
 It is intended that object names be encoded and interpreted as human-readable
 sequences of UTF-8 graphic characters, however this property is not enforced
@@ -142,7 +142,7 @@ Object relative path expressions have the following additional constraints:
 - Always compared using byte-for-byte equality (implies case-sensitive).
 
 Object relative path expressions are valid arguments to a container's `Open()`
-method.  See [FIDL Interfaces](#fidl-interfaces).
+method.  See [FIDL Protocols](#fidl-protocols).
 
 ### Client Interpreted Path Expressions
 
@@ -170,7 +170,7 @@ container.
 Client interpreted path expressions that contain these optional features
 are not valid arguments to a container's `Open()` method; they must be
 translated by the client prior to communicating with the namespace.
-See [FIDL Interfaces](#fidl-interfaces).
+See [FIDL Protocols](#fidl-protocols).
 
 For example, `fdio` implements client-side interpretation of `..` paths
 in file manipulation APIs such as `open()`, `stat()`, `unlink()`, etc.
@@ -248,7 +248,7 @@ are included in someone else's namespace.
 Services live in namespaces.
 
 A service is a well-known object which provides an implementation of a FIDL
-interface which can be discovered using the namespace.
+protocol which can be discovered using the namespace.
 
 A service name corresponds to a path within the `svc` branch of the namespace
 from which a component can access an implementation of the service.
@@ -293,6 +293,6 @@ Manifest](package_metadata.md#Component-Manifest) which are exposed as files in
 the /config namespace entry. These are defined by the feature set of the
 component.
 
-## FIDL Interfaces
+## FIDL Protocols
 
-_TODO(jeffbrown): Explain how the namespace interfaces work._
+_TODO(jeffbrown): Explain how the namespace protocols work._

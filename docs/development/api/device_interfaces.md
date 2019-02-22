@@ -1,6 +1,6 @@
 # Fuchsia Device Interface Rubric
 
-The Fuchsia device interfaces are expressed as FIDL interfaces.  These FIDL
+The Fuchsia device interfaces are expressed as FIDL protocols.  These FIDL
 definitions should conform to the [FIDL Readability Rubric][fidl-readability-rubric].
 
 ## Identifiers
@@ -8,14 +8,14 @@ definitions should conform to the [FIDL Readability Rubric][fidl-readability-rub
 Prefer descriptive identifiers.  If you are using domain-specific abbreviations,
 document the expansion or provide a reference for further information.
 
-Every identifier that is defined as part of an interface must be documented with
+Every identifier that is defined as part of a protocol must be documented with
 a comment explaining its interpretation (in the case of fields, types, and
 parameters) or behavior (in the case of methods).
 
-## Interfaces
+## Protocols
 
-All device interfaces must use the `[Layout = "Simple"]` attribute.  This
-restriction exists to allow ease of implementing interfaces in any of our
+All device interface protocols must use the `[Layout = "Simple"]` attribute.  This
+restriction exists to allow ease of implementing protocols in any of our
 supported languages for driver development.
 
 ## Method Statuses
@@ -28,7 +28,7 @@ values, the `zx.status` should come first.
 
 All arrays, strings, and vectors must be of bounded length.  For arbitrarily
 selected bounds, prefer to use a `const` identifier as the length so that
-interface consumers can programmatically inspect the length.
+protocol consumers can programmatically inspect the length.
 
 ## Enums
 
@@ -37,7 +37,7 @@ integer types when a field has a constrained set of non-arithmetic values.
 
 ## Bitfields
 
-If your interface has a bitfield, represent its values using `bits` values
+If your protocol has a bitfield, represent its values using `bits` values
 (for details, see [`FTP-025`: "Bit Flags."][ftp-025])
 
 For example:
@@ -70,7 +70,7 @@ This is the same as the previous example.
 
 ## Non-channel based protocols
 
-Some interfaces may negotiate a non-channel protocol as a performance
+Some interface protocols may negotiate a non-channel protocol as a performance
 optimization (e.g. the zircon.ethernet.Device's GetFifos/SetIOBuffer methods).
 FIDL does not currently support expressing these protocols.  For now, represent
 any shared data structures with `struct` definitions and provide detailed

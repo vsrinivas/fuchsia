@@ -22,8 +22,8 @@ transmitted from the client running Fuchsia to the Cobalt servers.
 * **Encoding**: A built-in algorithm for encoding Observations. Some of Cobalt's
 encodings implement special privacy-preserving algorithms.
 
-## FIDL Interface
-Fuchsia code uses Cobalt through its FIDL interface.
+## FIDL Protocol
+Fuchsia code uses Cobalt through its FIDL protocol.
 See `//garnet/public/lib/cobalt/fidl/cobalt.fidl`.
 
 ### Cobalt Test App

@@ -16,7 +16,7 @@ the `fuchsia::modular::Agent` described here.
 `SimpleAgent` is an `fuchsia::modular::Agent` that periodically writes a simple message to
 a `fuchsia::modular::MessageQueue` (a common communication channel).
 
-`SimpleAgent` implements the `Simple` FIDL interface which exposes the
+`SimpleAgent` implements the `Simple` FIDL protocol which exposes the
 ability to control which `fuchsia::modular::MessageQueue` the messages will be sent to.
 
 ```
@@ -24,7 +24,7 @@ library simple;
 
 [Discoverable]
 protocol Simple {
-  // Provides the Simple interface with a message queue to which
+  // Provides the Simple protocol with a message queue to which
   // messages will be written periodically.
   1: SetMessageQueue(string queue_token);
 };
@@ -56,19 +56,19 @@ to provide services to other components via `outgoing_services`.
 
 #### `fuchsia::modular::AgentContext`
 
-`fuchsia::modular::AgentContext` is an interface that is exposed to all `Agents`.
+`fuchsia::modular::AgentContext` is a protocol that is exposed to all `Agents`.
 For example, it allows agents to schedule `Task`s that will be executed at
 specific intervals.
 
 `fuchsia::modular::AgentContext` also gives `fuchsia::modular::Agent`s access to
-`fuchsia::modular::ComponentContext` which is an interface that is exposed to all
+`fuchsia::modular::ComponentContext` which is a protocol that is exposed to all
 Peridot components (i.e. `fuchsia::modular::Agent` and `Module`).
 For example, `fuchsia::modular::ComponentContext` provides access to `Ledger`,
 Peridot's cross-device storage solution.
 
-### Advertising the `Simple` Interface
+### Advertising the `Simple` Protocol
 
-In order for the `SimpleAgent` to advertise the `Simple` interface to the system
+In order for the `SimpleAgent` to advertise the `Simple` protocol to the system
 it needs to provide it in its `outgoing_services`.
 
 ```c++
@@ -111,7 +111,7 @@ class SimpleImpl : Simple {
   std::string message_queue_token() const { return token_; }
 
  private:
-  // |Simple| interface method.
+  // |Simple| protocol method.
   void SetMessageQueue(fidl::StringPtr queue_token);
 
   // The bindings to the Simple service.
@@ -124,7 +124,7 @@ class SimpleImpl : Simple {
 
 The `SimpleImpl` could be part of the `SimpleAgent` class, but it's good practice
 to separate out the implementation of an `fuchsia::modular::Agent` from the
-implementation(s) of the interface(s) it provides.
+implementation(s) of the protocol(s) it provides.
 
 ## Running the fuchsia::modular::Agent
 
@@ -181,8 +181,8 @@ Here the component context is asked to connect to the fuchsia::modular::Agent at
 and is given a request for the services that the `SimpleAgent` will provide via `agent_services`,
 and a controller for the `fuchsia::modular::Agent` via `agent_controller`.
 
-Then the client connects to the `Simple` interface by invoking `ConnectToService` with
-a request for a new `SimpleServicePtr`. This interface pointer can be used immediately
+Then the client connects to the `Simple` protocol by invoking `ConnectToService` with
+a request for a new `SimpleServicePtr`. This protocol pointer can be used immediately
 to provide the agent with the token for the `fuchsia::modular::MessageQueue` to send messages to.
 
 See the [SimpleModule](how_to_write_a_mod.md) guide for a more in-depth example.

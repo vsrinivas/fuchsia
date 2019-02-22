@@ -13,7 +13,7 @@ There are multiple methods to do put operations, with slightly different
 semantics. For this example we can use the FIDL method
 ``Put(array<uint8> key, array<uint8> value) => (Status status);``.
 
-This FIDL interface is implemented by PageImpl, which takes a generated callback
+This FIDL protocol is implemented by PageImpl, which takes a generated callback
 type (PutCallback) used to pass the completion status back to the client.
 
 ### Storing the Value to disk

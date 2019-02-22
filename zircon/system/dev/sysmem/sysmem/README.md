@@ -25,12 +25,12 @@ A zircon non-driver (aka "user mode") process (such as virtcon) can connect to
 sysmem by requesting fuchsia.sysmem.Allocator2 service (from among zircon
 services), and make requests using the client end of that channel (like a normal
 service request).  This is achieved via a sysmem zircon service that brokers the
-FIDL interface request through to the sysmem driver.
+FIDL protocol request through to the sysmem driver.
 
 A garnet (etc) non-driver program can connect to sysmem by requesting
 fuchsia.sysmem.Allocator2 service (from among garnet services), and make
 requests using the client end of that channel.  This is achieved by having
-svcmgr garnet code broker the sysmem interface request through to the zircon
+svcmgr garnet code broker the sysmem protocol request through to the zircon
 sysmem service which in turn sends the request to the sysmem zircon driver.
 
 This way, all of the following categories of clients (potential participants)
@@ -65,7 +65,7 @@ to avoid blocking, the client must act as a server/stub for
 BufferCollectionEvents, and send the client end of a BufferCollectionEvents
 channel using BufferCollection.SetEventSink().
 
-The generated FIDL C code requires Layout="Simple", so all sysmem interfaces
+The generated FIDL C code requires Layout="Simple", so all sysmem protocols
 conform to that.  This means that any time there would normally be a nullable
 field x, there's instead a "bool has_x;" immediately before that logically
 nullable field x to indicate whether x is logically null (false) or logically

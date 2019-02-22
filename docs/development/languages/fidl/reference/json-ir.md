@@ -16,7 +16,7 @@ This section documents the JSON IR.
 ## A simple example
 
 To get started, we can see how a simple example looks.
-We'll use the `echo.fidl` ["Hello World Echo Interface"](../tutorial/README.md)
+We'll use the `echo.fidl` ["Hello World Echo Protocol"](../tutorial/README.md)
 example from the tutorial:
 
 ```fidl
@@ -29,7 +29,7 @@ protocol Echo {
 ```
 
 The tutorial goes through this line-by-line, but the summary is that we create a
-discoverable interface called `Echo` with a method called `EchoString`.
+discoverable protocol called `Echo` with a method called `EchoString`.
 The `EchoString` method takes an optional string called `value` and returns
 an optional string called `response`.
 
@@ -61,7 +61,7 @@ name                    | A string indicating the given `library` name
 library_dependencies    | A list of dependencies on other libraries
 const_declarations      | A list of consts
 enum_declarations       | A list of enums
-interface_declarations  | A list of interfaces provided
+interface_declarations  | A list of protocols provided
 struct_declarations     | A list of structs
 table_declarations      | A list of tables
 union_declarations      | A list of unions
@@ -96,7 +96,6 @@ numbers have been added for reference; they are not part of the generated code):
 [62]      }
 [63]    }
 ```
-
 Lines `[01]` and `[63]` wrap the entire JSON object.
 
 Line `[02]` is the version number of the JSON IR schema.
@@ -113,13 +112,12 @@ because there's only the one declaration, and, finally, the
 declarations member (`[60]`..`[62]`) just indicates the declared object (here,
 `fidl.examples.echo/Echo`) and its type (it's an `interface`).
 
-## The interface
+## The protocol
 
-Where things are interesting, though, is starting with line `[07]` &mdash; it's the interface
-declaration for all interfaces in the file.
+Where things are interesting, though, is starting with line `[07]` &mdash; it's the protocol
+declaration for all protocols in the file.
 
-Our simple example has just one interface, the `Echo` interface, so there's just one
-array element:
+Our simple example has just one protocol, called `Echo`, so there's just one array element:
 
 ```json
 [07]      "interface_declarations": [
@@ -171,7 +169,7 @@ array element:
 [53]      ],
 ```
 
-Each interface declaration array element contains:
+Each protocol declaration array element contains:
 
 *   Line `[09]`: the name of the object (`fidl.examples.echo/Echo` &mdash; this
     gets matched up with the `declarations` member contents starting on line
@@ -187,7 +185,7 @@ component and a response component, and indicates the sizes and alignments of
 those componenets).
 
 The JSON output has two `bool`s, `has_request` and `has_response`,
-that indicate if the interface defines a request and a response, respectively.
+that indicate if the protocol defines a request and a response, respectively.
 
 Since the string parameters within the request and response are both optional,
 the parameter description specifies `"nullable": true` (line `[25]` and `[40]`).
@@ -626,7 +624,7 @@ sort, one that is defined elsewhere (and indeed, we defined `foo/Union1` in
 the FIDL file as a union).
 
 The `"nullable"` flag indicates if the member is optional or mandatory, just like
-we discussed above in the section on [Interfaces](#The-interface).
+we discussed above in the section on [Protocols](#The-protocol).
 In this case, since `"nullable"` is `false`, the member is mandatory.
 
 Had we specified:

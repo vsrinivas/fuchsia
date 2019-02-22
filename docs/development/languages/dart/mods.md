@@ -117,7 +117,7 @@ This means that we need to depend on this group of fidl files. In our module's
 
 `"//<dir>:<fidl_target_name>_dart"`
 
-Once this is done, we can use all the interfaces defined in `.fidl` files
+Once this is done, we can use all the protocols defined in `.fidl` files
 contained in this `story` fidl target from our code.
 
 ## Importing in Dart Code

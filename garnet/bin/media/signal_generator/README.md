@@ -2,7 +2,7 @@
 
 This directory contains a developer tool that generates and outputs audio
 signals, via the Audio, AudioRenderer, GainControl and AudioOutputRoutingPolicy FIDL
-interfaces.
+protocols.
 
 ### USAGE
 

@@ -53,7 +53,7 @@ the future.
 
 ## [FIDL](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/fidl/fuchsia-inspect/inspect.fidl)
 
-The FIDL interface, `fuchsia.inspect.Inspect`, exposes the following
+The FIDL protocol, `fuchsia.inspect.Inspect`, exposes the following
 operations on an object:
 
 ### `ReadData`
@@ -82,7 +82,7 @@ about the component to the hub. For instance, appmgr exposes
 
 Class `Object` is the implementation of an object in C++. It implements
 the `Vnode` and `Inspect` interfaces to expose the object through the
-filesystem and raw FIDL interfaces respectively.
+filesystem and raw FIDL protocols respectively.
 
 Helper classes `Property` and `Metric` wrap the functionality of dealing
 with their respective values and serializing to FIDL.

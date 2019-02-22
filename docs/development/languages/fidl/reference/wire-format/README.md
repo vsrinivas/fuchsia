@@ -44,8 +44,7 @@ Messages are aggregates of **objects**.
 
 The **primary object** of a message is simply the first object it contains. It
 is always a **struct** of fixed size whose type (and size) is known from the
-context (such as by examining the **method ordinal** in the **interface call
-header**).
+context (such as by examining the **method ordinal** in the **message header**).
 
 To store variable-size or optional data, the primary object may refer to
 **secondary objects**, such as string content, vector content, structs, and
@@ -306,10 +305,10 @@ Handles are denoted:
 *   `handle?`: nullable Zircon handle of unspecified type
 *   `handle<H>`: non-nullable Zircon handle of type **H**
 *   `handle<H>?`: nullable Zircon handle of type **H**
-*   `Interface`: non-nullable FIDL interface (client endpoint of channel)
-*   `Interface?`: nullable FIDL interface (client endpoint of channel)
-*   `request<Interface>`: non-nullable FIDL interface request (server endpoint of channel)
-*   `request<Interface>?`: nullable FIDL interface request (server endpoint of channel)
+*   `Protocol`: non-nullable FIDL protocol (client endpoint of channel)
+*   `Protocol?`: nullable FIDL protocol (client endpoint of channel)
+*   `request<Protocol>`: non-nullable FIDL protocol request (server endpoint of channel)
+*   `request<Protocol>?`: nullable FIDL protocol request (server endpoint of channel)
 
 **H** can be one of [[3]](#Footnote-3): `bti`, `channel`, `debuglog`, `event`, `eventpair`,
 `fifo`, `guest`, `interrupt`, `job`, `port`, `process`, `profile`, `resource`, `socket`,

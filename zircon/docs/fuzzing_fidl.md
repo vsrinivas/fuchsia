@@ -1,6 +1,7 @@
-# Fuzzing the fidl host tools
+# Fuzzing the FIDL host tools
 
-Some notes on fuzzing the `system/host/fidl` parser using [afl-fuzz](http://lcamtuf.coredump.cx/afl/).
+Some notes on fuzzing the `system/host/fidl` parser using
+[afl-fuzz](http://lcamtuf.coredump.cx/afl/).
 
 ## Build afl-fuzz
 
@@ -12,8 +13,9 @@ with whatever path you downloaded and built it with.
 
 ## Patch the parser to not trap on invalid syntax
 
-afl-fuzz treats crashes as interesting but the parser currently calls `__builtin_trap()` when it encounters invalid
-syntax. Remove that line in [parser.h](../system/host/fidl/parser.h) - its in the `Parser::Fail()` method.
+afl-fuzz treats crashes as interesting but the parser currently calls `__builtin_trap()`
+when it encounters invalid syntax.
+Remove that line in [parser.h](../system/host/fidl/parser.h) - its in the `Parser::Fail()` method.
 
 ## Build the `fidl` tool with afl-fuzz's instrumentation
 
@@ -29,8 +31,9 @@ adjusting if you're not building on x86 Linux, etc.
 
 ## Run the fuzzer
 
-The parser includes some examples to use as inputs. As fidl becomes adopted we can expand our inputs to include all of
-the different interfaces declared across our tree, but for now we use what's in `system/host/fidl/examples`.
+The parser includes some examples to use as inputs.
+As FIDL becomes adopted we can expand our inputs to include all of the different protocols
+declared across our tree, but for now we use what's in `system/host/fidl/examples`.
 
 ```
 $AFL_PATH/afl-fuzz -i system/host/fidl/examples -o fidl-fuzz-out build-x86/tools/fidl dump '@@'
@@ -38,5 +41,5 @@ $AFL_PATH/afl-fuzz -i system/host/fidl/examples -o fidl-fuzz-out build-x86/tools
 
 ## Results
 
-Running against the source from early May 2017, there were no crashes or hangs after two days of fuzzing on a fairly
-fast machine. It ran over 300 million executions.
+Running against the source from early May 2017, there were no crashes or hangs after two days
+of fuzzing on a fairly fast machine. It ran over 300 million executions.

@@ -77,7 +77,7 @@ Requirements
 
 # Purpose
 
-*   Describe data structures and interfaces used by IPC protocols on Zircon.
+*   Describe data structures and protocols used by IPC on Zircon.
 *   Optimized for interprocess communication only; FIDL must not be persisted to
     disk or used for network transfer across device boundaries.
 *   Efficiently transport messages consisting of data (bytes) and capabilities
@@ -104,11 +104,11 @@ Requirements
 *   Avoid back-patching pointers.
 *   Avoid expensive validation.
 *   Avoid calculations which may overflow.
-*   Leverage pipelining of interface requests for asynchronous operation.
+*   Leverage pipelining of protocol requests for asynchronous operation.
 *   Structures are fixed size; variable-size data is stored out-of-line.
 *   Structures are not self-described; FIDL files describe their contents.
-*   No versioning of structures, but interfaces can be extended with new methods
-    for protocol evolution.
+*   No versioning of structures, but protocols can be extended with new methods
+    for evolution.
 
 # Ergonomics
 
@@ -156,14 +156,14 @@ The FIDL wire format is documented [Wire Format Specification].
 
 ### FIDL Language
 
-The FIDL language is the syntax by which interfaces are described in ***.fidl**
+The FIDL language is the syntax by which protocols are described in ***.fidl**
 files.
 
 The FIDL language is documented [Language Specification].
 
 ### FIDL Compiler
 
-The FIDL compiler generates code for programs to use and implement interfaces
+The FIDL compiler generates code for programs to use and implement protocols
 described by the FIDL language.
 
 The FIDL compiler is documented [Compiler Specification].
@@ -172,7 +172,7 @@ The FIDL compiler is documented [Compiler Specification].
 
 FIDL bindings are language-specific runtime support libraries and code
 generators which provide APIs for manipulating FIDL data structures and
-interfaces.
+protocols.
 
 Languages-specific topics:
 
@@ -190,7 +190,7 @@ Bindings are available in various flavors depending on the language:
     strings or vectors), but correspondingly somewhat less efficient as a
     result.
 
-Bindings offer several various ways of invoking interface methods depending on
+Bindings offer several various ways of invoking protocol methods depending on
 the language:
 
 *   **Send/receive**: read or write messages directly to a channel, no built-in
@@ -212,7 +212,7 @@ Bindings provide some or all of the following principal operations:
     into native data structures, handles are moved
 *   **Clone**: copy native or idiomatic data structures (that do not contain
     move-only types)
-*   **Call**: invoke interface method
+*   **Call**: invoke protocol method
 
 ## Workflow
 
@@ -222,7 +222,7 @@ protocols described using FIDL.
 # Authoring FIDL
 
 The author of a FIDL based protocol creates one or more ***.fidl files** to
-describe their data structures and interfaces.
+describe their data structures, protocols, and methods.
 
 FIDL files are grouped into one or more **FIDL libraries** by the author. Each
 library represents a group of logically related functionality with a unique
