@@ -18,6 +18,10 @@ declare_args() {
   # doesn't exist yet when it's needed, it will be generated.  New
   # keys can be generated with the `pm -k FILE genkey` host command.
   system_package_key = "//build/development.key"
+
+  # Whether to generate an assertion if the specified package set is
+  # inconsistent with the package definition.
+  assert_on_inconsistent_package_set = false
 }
 
 # Generate a signed, sealed package file from a manifest.
@@ -392,7 +396,7 @@ template("package") {
               {
                 schema = "//build/cmx/block_deprecated_global_persistent_storage.json"
                 error_msg = "The 'deprecated-global-persistent-storage' feature is deprecated and guarded by a whitelist. Use 'isolated-persistent-storage' instead."
-              }
+              },
             ]
           }
         }
@@ -779,10 +783,12 @@ template("package") {
         pkg.package_set = "monolith"
       }
     }
-    assert(
-        !pkg.deprecated_system_image || pkg.package_set == "monolith" ||
-            pkg.package_set == "",
-        "Package ${pkg_label} has deprecated_system_image but is in the \"${pkg.package_set}\" set, not monolith")
+    if (assert_on_inconsistent_package_set) {
+      assert(
+          !pkg.deprecated_system_image || pkg.package_set == "monolith" ||
+              pkg.package_set == "",
+          "Package ${pkg_label} has deprecated_system_image but is in the \"${pkg.package_set}\" set, not monolith")
+    }
 
     generate_system_index("${pkg_target_name}.system_index.rsp") {
       deprecated_system_image = pkg.deprecated_system_image
