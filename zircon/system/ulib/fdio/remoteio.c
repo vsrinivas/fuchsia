@@ -34,7 +34,7 @@ static_assert(fuchsia_io_VMO_FLAG_EXEC == ZX_VM_PERM_EXECUTE,
 static_assert(ZX_USER_SIGNAL_0 == (1 << POLL_SHIFT), "");
 static_assert((POLLIN << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_READABLE, "");
 static_assert((POLLPRI << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_OOB, "");
-static_assert((POLLOUT << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_WRITEABLE, "");
+static_assert((POLLOUT << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_WRITABLE, "");
 static_assert((POLLERR << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_ERROR, "");
 static_assert((POLLHUP << POLL_SHIFT) == fuchsia_device_DEVICE_SIGNAL_HANGUP, "");
 

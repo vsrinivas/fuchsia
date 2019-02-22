@@ -24,7 +24,7 @@ const uint32 DEVICE_SIGNAL_READABLE = 0x01000000; // ZX_USER_SIGNAL_0
 const uint32 DEVICE_SIGNAL_OOB = 0x02000000; // ZX_USER_SIGNAL_1
 /// Signal that will be active on a device event handle if the device's write() method
 /// will accept data.
-const uint32 DEVICE_SIGNAL_WRITEABLE = 0x04000000; // ZX_USER_SIGNAL_2
+const uint32 DEVICE_SIGNAL_WRITABLE = 0x04000000; // ZX_USER_SIGNAL_2
 /// Signal that will be active on a device event handle if the device has encountered an error.
 /// This is primarily used by the PTY support.
 const uint32 DEVICE_SIGNAL_ERROR = 0x08000000; // ZX_USER_SIGNAL_3

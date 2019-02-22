@@ -616,7 +616,7 @@ static zx_status_t fidl_DeviceControllerGetEventHandle(void* ctx, fidl_txn_t* tx
     zx::eventpair event;
     zx_status_t status = conn->dev->event.duplicate(ZX_RIGHTS_BASIC, &event);
     static_assert(fuchsia_device_DEVICE_SIGNAL_READABLE == DEV_STATE_READABLE);
-    static_assert(fuchsia_device_DEVICE_SIGNAL_WRITEABLE == DEV_STATE_WRITABLE);
+    static_assert(fuchsia_device_DEVICE_SIGNAL_WRITABLE == DEV_STATE_WRITABLE);
     static_assert(fuchsia_device_DEVICE_SIGNAL_ERROR == DEV_STATE_ERROR);
     static_assert(fuchsia_device_DEVICE_SIGNAL_HANGUP == DEV_STATE_HANGUP);
     static_assert(fuchsia_device_DEVICE_SIGNAL_OOB == DEV_STATE_OOB);
