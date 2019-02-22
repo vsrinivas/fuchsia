@@ -8,4 +8,8 @@ fidl_library("fuchsia-hardware-display") {
   sources = [
     "display-controller.fidl",
   ]
+
+  public_deps = [
+    "$zx/system/fidl/fuchsia-sysmem",
+  ]
 }

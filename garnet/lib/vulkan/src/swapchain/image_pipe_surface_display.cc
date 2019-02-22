@@ -126,7 +126,7 @@ bool ImagePipeSurfaceDisplay::CreateImage(
   constexpr uint32_t kBufferCollectionId = 1;
 
   display_controller_->ImportBufferCollection(
-      kBufferCollectionId, display_token.Unbind().TakeChannel(),
+      kBufferCollectionId, std::move(display_token),
       [this, &status](zx_status_t import_status) {
         status = import_status;
         got_message_response_ = true;

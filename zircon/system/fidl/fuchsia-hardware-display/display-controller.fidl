@@ -4,6 +4,7 @@
 
 library fuchsia.hardware.display;
 
+using fuchsia.sysmem;
 using zx;
 
 // Invalid id for displays, images, and events.
@@ -187,6 +188,7 @@ struct ClientCompositionOp {
 // allows the layout and each layer's contents to advance independently when
 // possible.
 //
+
 // Performing illegal actions on the interface will result in the interface
 // being closed.
 protocol Controller {
@@ -255,9 +257,9 @@ protocol Controller {
     // array is NaN, the array is treated as the identity element for the relevant
     // operation.
     SetDisplayColorConversion(uint64 display_id,
-                                 array<float32>:3 preoffsets,
-                                 array<float32>:9 coefficients,
-                                 array<float32>:3 postoffsets);
+                              array<float32>:3 preoffsets,
+                              array<float32>:9 coefficients,
+                              array<float32>:3 postoffsets);
 
     // Sets which layers are on a display. The list is in increasing z-order.
     //
@@ -417,8 +419,9 @@ protocol Controller {
 
     // Import a sysmem buffer collection token. |collection_id| must not
     // already be in use.
-    // TODO: Use fuchsia.sysmem.BufferCollectionToken after GN conversion.
-    ImportBufferCollection(uint64 collection_id, handle collection_token) -> (zx.status res);
+    ImportBufferCollection(uint64 collection_id,
+                           fuchsia.sysmem.BufferCollectionToken collection_token)
+        -> (zx.status res);
 
     // Release an imported buffer collection.
     ReleaseBufferCollection(uint64 collection_id);
