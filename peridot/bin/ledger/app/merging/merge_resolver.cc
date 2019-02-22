@@ -200,49 +200,45 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
     return;
   }
   check_conflicts_in_progress_ = true;
-  storage_->GetHeadCommitIds(task_runner_.MakeScoped(
-      [this, delayed_status](storage::Status s,
-                             std::vector<storage::CommitId> heads) {
-        check_conflicts_in_progress_ = false;
+  std::vector<storage::CommitId> heads;
+  storage::Status s = storage_->GetHeadCommitIds(&heads);
+  check_conflicts_in_progress_ = false;
 
-        if (merge_candidates_->NeedsReset()) {
-          merge_candidates_->ResetCandidates(heads.size());
-        }
-        FXL_DCHECK(merge_candidates_->head_count() == heads.size())
-            << merge_candidates_->head_count() << " != " << heads.size();
+  if (merge_candidates_->NeedsReset()) {
+    merge_candidates_->ResetCandidates(heads.size());
+  }
+  FXL_DCHECK(merge_candidates_->head_count() == heads.size())
+      << merge_candidates_->head_count() << " != " << heads.size();
 
-        if (s != storage::Status::OK || heads.size() == 1 ||
-            !(merge_candidates_->HasCandidate())) {
-          // An error occurred, or there is no conflict we can resolve. In
-          // either case, return early.
-          if (s != storage::Status::OK) {
-            FXL_LOG(ERROR) << "Failed to get head commits with status " << s;
-          } else if (heads.size() == 1) {
-            for (auto& callback : no_conflict_callbacks_) {
-              callback(has_merged_
-                           ? ConflictResolutionWaitStatus::CONFLICTS_RESOLVED
-                           : ConflictResolutionWaitStatus::NO_CONFLICTS);
-            }
-            no_conflict_callbacks_.clear();
-            has_merged_ = false;
-          }
-          if (on_empty_callback_) {
-            on_empty_callback_();
-          }
-          return;
-        }
-        if (!strategy_) {
-          if (on_empty_callback_) {
-            on_empty_callback_();
-          }
-          return;
-        }
-        merge_in_progress_ = true;
-        std::pair<size_t, size_t> head_indexes =
-            merge_candidates_->GetCurrentPair();
-        ResolveConflicts(delayed_status, std::move(heads[head_indexes.first]),
-                         std::move(heads[head_indexes.second]));
-      }));
+  if (s != storage::Status::OK || heads.size() == 1 ||
+      !(merge_candidates_->HasCandidate())) {
+    // An error occurred, or there is no conflict we can resolve. In
+    // either case, return early.
+    if (s != storage::Status::OK) {
+      FXL_LOG(ERROR) << "Failed to get head commits with status " << s;
+    } else if (heads.size() == 1) {
+      for (auto& callback : no_conflict_callbacks_) {
+        callback(has_merged_ ? ConflictResolutionWaitStatus::CONFLICTS_RESOLVED
+                             : ConflictResolutionWaitStatus::NO_CONFLICTS);
+      }
+      no_conflict_callbacks_.clear();
+      has_merged_ = false;
+    }
+    if (on_empty_callback_) {
+      on_empty_callback_();
+    }
+    return;
+  }
+  if (!strategy_) {
+    if (on_empty_callback_) {
+      on_empty_callback_();
+    }
+    return;
+  }
+  merge_in_progress_ = true;
+  std::pair<size_t, size_t> head_indexes = merge_candidates_->GetCurrentPair();
+  ResolveConflicts(delayed_status, std::move(heads[head_indexes.first]),
+                   std::move(heads[head_indexes.second]));
 }
 
 void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,

@@ -35,9 +35,8 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 
   void SetSyncDelegate(storage::PageSyncDelegate* page_sync_delegate) override;
 
-  void GetHeadCommitIds(
-      fit::function<void(storage::Status, std::vector<storage::CommitId>)>
-          callback) override;
+  storage::Status GetHeadCommitIds(
+      std::vector<storage::CommitId>* head_commit_ids) override;
 
   void GetCommit(storage::CommitIdView commit_id,
                  fit::function<void(storage::Status,
@@ -88,8 +87,6 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   bool should_fail_add_commit_from_sync = false;
   bool should_delay_add_commit_confirmation = false;
   std::vector<fit::closure> delayed_add_commit_confirmations;
-  bool should_delay_get_head_commit_ids = false;
-  std::vector<fit::closure> delayed_get_head_commit_ids;
 
   unsigned int add_commits_from_sync_calls = 0u;
 

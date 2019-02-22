@@ -278,20 +278,17 @@ BranchTracker::BranchTracker(coroutine::CoroutineService* coroutine_service,
 BranchTracker::~BranchTracker() { storage_->RemoveCommitWatcher(this); }
 
 void BranchTracker::Init(fit::function<void(Status)> on_done) {
-  storage_->GetHeadCommitIds(callback::MakeScoped(
-      weak_factory_.GetWeakPtr(),
-      [this, on_done = std::move(on_done)](
-          storage::Status status, std::vector<storage::CommitId> commit_ids) {
-        if (status != storage::Status::OK) {
-          on_done(PageUtils::ConvertStatus(status));
-          return;
-        }
+  std::vector<storage::CommitId> commit_ids;
+  storage::Status status = storage_->GetHeadCommitIds(&commit_ids);
+  if (status != storage::Status::OK) {
+    on_done(PageUtils::ConvertStatus(status));
+    return;
+  }
 
-        FXL_DCHECK(!commit_ids.empty());
-        InitCommitAndSetWatcher(std::move(commit_ids[0]));
+  FXL_DCHECK(!commit_ids.empty());
+  InitCommitAndSetWatcher(std::move(commit_ids[0]));
 
-        on_done(Status::OK);
-      }));
+  on_done(Status::OK);
 }
 
 void BranchTracker::set_on_empty(fit::closure on_empty_callback) {

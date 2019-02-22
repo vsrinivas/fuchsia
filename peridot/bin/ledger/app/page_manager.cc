@@ -169,20 +169,18 @@ void PageManager::OnSyncBacklogDownloaded() {
 }
 
 void PageManager::GetHeadCommitsIds(GetHeadCommitsIdsCallback callback) {
-  page_storage_->GetHeadCommitIds(
-      [callback = std::move(callback)](storage::Status status,
-                                       std::vector<storage::CommitId> heads) {
-        fidl::VectorPtr<ledger_internal::CommitId> result;
-        result.resize(0);
-        for (const auto& head : heads) {
-          ledger_internal::CommitId commit_id;
-          commit_id.id = convert::ToArray(head);
-          result.push_back(std::move(commit_id));
-        }
+  std::vector<storage::CommitId> heads;
+  storage::Status status = page_storage_->GetHeadCommitIds(&heads);
+  fidl::VectorPtr<ledger_internal::CommitId> result;
+  result.resize(0);
+  for (const auto& head : heads) {
+    ledger_internal::CommitId commit_id;
+    commit_id.id = convert::ToArray(head);
+    result.push_back(std::move(commit_id));
+  }
 
-        callback(PageUtils::ConvertStatus(status, Status::INVALID_ARGUMENT),
-                 std::move(result));
-      });
+  callback(PageUtils::ConvertStatus(status, Status::INVALID_ARGUMENT),
+           std::move(result));
 }
 
 void PageManager::GetSnapshot(

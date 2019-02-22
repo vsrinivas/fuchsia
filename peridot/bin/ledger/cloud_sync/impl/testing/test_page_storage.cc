@@ -39,22 +39,10 @@ void TestPageStorage::SetSyncDelegate(
   page_sync_delegate_ = page_sync_delegate;
 }
 
-void TestPageStorage::GetHeadCommitIds(
-    fit::function<void(storage::Status, std::vector<storage::CommitId>)>
-        callback) {
-  size_t returned_head_count = head_count;
-  auto confirm = [returned_head_count, callback = std::move(callback)] {
-    // Current tests only rely on the number of heads, not on the actual
-    // ids.
-    callback(storage::Status::OK,
-             std::vector<storage::CommitId>(returned_head_count));
-  };
-  if (should_delay_get_head_commit_ids) {
-    delayed_get_head_commit_ids.emplace_back(std::move(confirm));
-    return;
-  }
-
-  async::PostTask(dispatcher_, std::move(confirm));
+storage::Status TestPageStorage::GetHeadCommitIds(
+    std::vector<storage::CommitId>* head_commit_ids) {
+  *head_commit_ids = std::vector<storage::CommitId>(head_count);
+  return storage::Status::OK;
 }
 
 void TestPageStorage::GetCommit(

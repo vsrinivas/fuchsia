@@ -100,35 +100,31 @@ void PageUpload::VerifyUnsyncedCommits(
     return;
   }
 
-  storage_->GetHeadCommitIds(callback::MakeScoped(
-      weak_ptr_factory_.GetWeakPtr(),
-      [this, commits = std::move(commits)](
-          storage::Status status,
-          std::vector<storage::CommitId> heads) mutable {
-        if (status != storage::Status::OK) {
-          HandleError("Failed to retrieve the current heads");
-          return;
-        }
+  std::vector<storage::CommitId> heads;
+  storage::Status status = storage_->GetHeadCommitIds(&heads);
+  if (status != storage::Status::OK) {
+    HandleError("Failed to retrieve the current heads");
+    return;
+  }
 
-        FXL_DCHECK(!heads.empty());
+  FXL_DCHECK(!heads.empty());
 
-        if (!delegate_->IsDownloadIdle()) {
-          // If a commit batch is currently being downloaded, don't try to start
-          // the upload.
-          SetState(UPLOAD_WAIT_REMOTE_DOWNLOAD);
-          PreviousState();
-          return;
-        }
+  if (!delegate_->IsDownloadIdle()) {
+    // If a commit batch is currently being downloaded, don't try to start
+    // the upload.
+    SetState(UPLOAD_WAIT_REMOTE_DOWNLOAD);
+    PreviousState();
+    return;
+  }
 
-        if (heads.size() > 1u) {
-          // Too many local heads.
-          SetState(UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS);
-          PreviousState();
-          return;
-        }
+  if (heads.size() > 1u) {
+    // Too many local heads.
+    SetState(UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS);
+    PreviousState();
+    return;
+  }
 
-        HandleUnsyncedCommits(std::move(commits));
-      }));
+  HandleUnsyncedCommits(std::move(commits));
 }
 
 void PageUpload::HandleUnsyncedCommits(

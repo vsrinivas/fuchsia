@@ -309,13 +309,8 @@ class PageStorageTest : public ledger::TestWithEnvironment {
   PageStorage* GetStorage() { return storage_.get(); }
 
   std::vector<CommitId> GetHeads() {
-    bool called;
-    Status status;
     std::vector<CommitId> ids;
-    storage_->GetHeadCommitIds(
-        callback::Capture(callback::SetWhenCalled(&called), &status, &ids));
-    RunLoopUntilIdle();
-    EXPECT_TRUE(called);
+    Status status = storage_->GetHeadCommitIds(&ids);
     EXPECT_EQ(Status::OK, status);
     return ids;
   }
@@ -1023,13 +1018,8 @@ TEST_F(PageStorageTest, OrderHeadCommitsByTimestampThenId) {
   }
 
   // Check that GetHeadCommitIds returns sorted commits.
-  bool called;
   std::vector<CommitId> heads;
-  Status status;
-  storage_->GetHeadCommitIds(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &heads));
-  RunLoopUntilIdle();
-  EXPECT_TRUE(called);
+  Status status = storage_->GetHeadCommitIds(&heads);
   EXPECT_EQ(Status::OK, status);
   std::sort(sorted_commits.begin(), sorted_commits.end());
   for (size_t i = 0; i < sorted_commits.size(); ++i) {

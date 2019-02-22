@@ -126,10 +126,11 @@ void PageStorageImpl::SetSyncDelegate(PageSyncDelegate* page_sync) {
   page_sync_ = page_sync;
 }
 
-void PageStorageImpl::GetHeadCommitIds(
-    fit::function<void(Status, std::vector<CommitId>)> callback) {
-  // TODO(etiennej): Make this method synchronous.
-  callback(Status::OK, commit_tracker_.GetHeads());
+Status PageStorageImpl::GetHeadCommitIds(
+    std::vector<CommitId>* head_commit_ids) {
+  FXL_DCHECK(head_commit_ids);
+  *head_commit_ids = commit_tracker_.GetHeads();
+  return Status::OK;
 }
 
 void PageStorageImpl::GetMergeCommitIds(

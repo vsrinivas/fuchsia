@@ -341,31 +341,28 @@ void PageCommunicatorImpl::OnNewCommits(
     commits_to_upload_.emplace_back(commit->Clone());
   }
   // We need to check if we need to merge first.
-  storage_->GetHeadCommitIds(
-      callback::MakeScoped(weak_factory_.GetWeakPtr(),
-                           [this](storage::Status status,
-                                  std::vector<storage::CommitId> commit_ids) {
-                             if (status != storage::Status::OK) {
-                               return;
-                             }
-                             if (commit_ids.size() != 1) {
-                               // A merge needs to happen, let's wait until we
-                               // have one.
-                               return;
-                             }
-                             if (commits_to_upload_.empty()) {
-                               // Commits have already been sent. Let's stop
-                               // early.
-                               return;
-                             }
-                             flatbuffers::FlatBufferBuilder buffer;
-                             BuildCommitBuffer(&buffer, commits_to_upload_);
+  std::vector<storage::CommitId> commit_ids;
+  storage::Status status = storage_->GetHeadCommitIds(&commit_ids);
+  if (status != storage::Status::OK) {
+    return;
+  }
+  if (commit_ids.size() != 1) {
+    // A merge needs to happen, let's wait until we
+    // have one.
+    return;
+  }
+  if (commits_to_upload_.empty()) {
+    // Commits have already been sent. Let's stop
+    // early.
+    return;
+  }
+  flatbuffers::FlatBufferBuilder buffer;
+  BuildCommitBuffer(&buffer, commits_to_upload_);
 
-                             for (const auto& device : interested_devices_) {
-                               mesh_->Send(device, buffer);
-                             }
-                             commits_to_upload_.clear();
-                           }));
+  for (const auto& device : interested_devices_) {
+    mesh_->Send(device, buffer);
+  }
+  commits_to_upload_.clear();
 }
 
 void PageCommunicatorImpl::RequestCommits(fxl::StringView device,

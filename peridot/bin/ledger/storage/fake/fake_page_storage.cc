@@ -53,8 +53,8 @@ FakePageStorage::~FakePageStorage() {}
 
 PageId FakePageStorage::GetId() { return page_id_; }
 
-void FakePageStorage::GetHeadCommitIds(
-    fit::function<void(Status, std::vector<CommitId>)> callback) {
+Status FakePageStorage::GetHeadCommitIds(
+    std::vector<CommitId>* head_commit_ids) {
   std::vector<std::pair<CommitId, zx::time_utc>> heads(heads_.begin(),
                                                        heads_.end());
   std::sort(heads.begin(), heads.end(), [](const auto& p1, const auto& p2) {
@@ -67,7 +67,8 @@ void FakePageStorage::GetHeadCommitIds(
   if (commit_ids.empty()) {
     commit_ids.emplace_back();
   }
-  callback(Status::OK, std::move(commit_ids));
+  head_commit_ids->swap(commit_ids);
+  return Status::OK;
 }
 
 void FakePageStorage::GetMergeCommitIds(

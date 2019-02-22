@@ -491,25 +491,15 @@ TEST_F(PageUploadTest, UploadNewCommitsConcurrentNoCrash) {
   upload_is_idle = false;
 
   storage_.head_count = 2;
-  storage_.should_delay_get_head_commit_ids = true;
   auto commit0 = storage_.NewCommit("id0", "content0");
   storage_.new_commits_to_return["id0"] = commit0->Clone();
   storage_.watcher_->OnNewCommits(commit0->AsList(),
                                   storage::ChangeSource::LOCAL);
-  RunLoopUntilIdle();
 
   auto commit1 = storage_.NewCommit("id1", "content1");
   storage_.new_commits_to_return["id1"] = commit1->Clone();
   storage_.watcher_->OnNewCommits(commit1->AsList(),
                                   storage::ChangeSource::LOCAL);
-  RunLoopUntilIdle();
-  ASSERT_EQ(1u, storage_.delayed_get_head_commit_ids.size());
-  storage_.head_count = 1;
-  storage_.delayed_get_head_commit_ids[0]();
-  RunLoopUntilIdle();
-
-  ASSERT_EQ(2u, storage_.delayed_get_head_commit_ids.size());
-  storage_.delayed_get_head_commit_ids[1]();
   RunLoopUntilIdle();
 }
 

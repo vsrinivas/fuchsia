@@ -143,13 +143,8 @@ TEST_F(JournalTest, JournalsPutRollback) {
   // changed.
   journal_.reset();
 
-  bool called;
-  Status status;
   std::vector<CommitId> heads;
-  page_storage_.GetHeadCommitIds(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &heads));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
+  Status status = page_storage_.GetHeadCommitIds(&heads);
   ASSERT_EQ(Status::OK, status);
   ASSERT_THAT(heads, SizeIs(1));
   EXPECT_EQ(kFirstPageCommitId, heads[0]);
