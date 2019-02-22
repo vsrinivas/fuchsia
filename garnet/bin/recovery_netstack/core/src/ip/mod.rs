@@ -333,28 +333,30 @@ pub(crate) fn add_route<D: EventDispatcher, A: IpAddress>(
 }
 
 /// Add a device route to the forwarding table.
-pub(crate) fn add_device_route<D: EventDispatcher, A: ext::IpAddress>(
+#[specialize_ip_address]
+pub(crate) fn add_device_route<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
     device: DeviceId,
 ) {
-    // NOTE(joshlf): This weird nesting is a holdover until
-    // #[specialize_ip_address] supports ext::IpAddress in addition to IpAddress.
-    #[specialize_ip_address]
-    fn add_device_route<D: EventDispatcher, A: IpAddress>(
-        ctx: &mut Context<D>,
-        subnet: Subnet<A>,
-        device: DeviceId,
-    ) {
-        let state = &mut ctx.state_mut().ip;
+    let state = &mut ctx.state_mut().ip;
 
-        #[ipv4addr]
-        state.v4.table.add_device_route(subnet, device);
-        #[ipv6addr]
-        state.v6.table.add_device_route(subnet, device);
-    }
+    #[ipv4addr]
+    state.v4.table.add_device_route(subnet, device);
+    #[ipv6addr]
+    state.v6.table.add_device_route(subnet, device);
+}
 
-    add_device_route(ctx, subnet, device);
+/// Return the routes for the provided `IpAddress` type
+#[specialize_ip_address]
+pub(crate) fn iter_routes<D: EventDispatcher, I: IpAddress>(
+    ctx: &Context<D>,
+) -> std::slice::Iter<Entry<I>> {
+    let state = &ctx.state().ip;
+    #[ipv4addr]
+    return state.v4.table.iter_routes();
+    #[ipv6addr]
+    return state.v6.table.iter_routes();
 }
 
 /// Is this one of our local addresses?

@@ -45,6 +45,11 @@
 /// * `Subnet`: A v4 or v6 subnet, as specificed by the type parameter.
 /// * `SubnetEither`: An enum of either a v4 subnet or a v6 subnet.
 ///
+/// # Forwarding Entries
+///
+/// * `EntryDest<A>`: A forwarding entry destination, A is v4 or v6.
+/// * `EntryEither`: A subnet and `EntryDest` paired, both either v4 or v6.
+///
 /// # Address + Subnet Pairs:
 ///
 /// * `AddrSubnet`: A v4 or v6 subnet + address pair, as specificed by the type
@@ -77,7 +82,9 @@
 // intend to re-export, and also allows us to enforce that programmatically (the
 // `pub(crate) use` will prevent items from being accidentally re-exported).
 pub(crate) use self::internal::*;
-pub use self::internal::{AddrSubnet, AddrSubnetEither, Ipv4Addr, Ipv6Addr, Subnet, SubnetEither};
+pub use self::internal::{
+    AddrSubnet, AddrSubnetEither, EntryDest, EntryEither, Ipv4Addr, Ipv6Addr, Subnet, SubnetEither,
+};
 
 mod internal {
     use std::fmt::{self, Debug, Display, Formatter};
@@ -89,6 +96,7 @@ mod internal {
     use packet::{PacketBuilder, ParsablePacket};
     use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, Unaligned};
 
+    use crate::device::DeviceId;
     use crate::error::ParseError;
     use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
     use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
@@ -249,7 +257,8 @@ mod internal {
     /// An IPv4 or IPv6 address.
     pub trait IpAddress
     where
-        Self: Sized + Eq + PartialEq + Hash + Copy + Display + Debug + self::sealed::Sealed,
+        Self:
+            Sized + Eq + PartialEq + Hash + Copy + Display + Debug + self::sealed::Sealed + Default,
     {
         /// The number of bytes in an address of this type.
         ///
@@ -291,7 +300,7 @@ mod internal {
         }
 
         /// Get the bytes of the IPv4 address.
-        pub(crate) const fn ipv4_bytes(self) -> [u8; 4] {
+        pub const fn ipv4_bytes(self) -> [u8; 4] {
             self.0
         }
     }
@@ -354,7 +363,7 @@ mod internal {
         }
 
         /// Get the bytes of the IPv6 address.
-        pub(crate) const fn ipv6_bytes(&self) -> [u8; 16] {
+        pub const fn ipv6_bytes(&self) -> [u8; 16] {
             self.0
         }
     }
@@ -466,12 +475,12 @@ mod internal {
         ///
         /// `network` returns the network address component of this subnet. Any
         /// bits beyond the prefix will be zero.
-        pub(crate) fn network(&self) -> A {
+        pub fn network(&self) -> A {
             self.network
         }
 
         /// Get the prefix length component of this subnet.
-        pub(crate) fn prefix(&self) -> u8 {
+        pub fn prefix(&self) -> u8 {
             self.prefix
         }
 
@@ -516,7 +525,7 @@ mod internal {
 
     /// An IPv4 subnet or an IPv6 subnet.
     ///
-    /// SubnetEither` is an enum of `Subnet<Ipv4Addr>` and `Subnet<Ipv6Addr>`.
+    /// `SubnetEither` is an enum of `Subnet<Ipv4Addr>` and `Subnet<Ipv6Addr>`.
     #[allow(missing_docs)]
     #[derive(Copy, Clone, Eq, PartialEq, Debug)]
     pub enum SubnetEither {
@@ -555,6 +564,45 @@ mod internal {
     impl From<Subnet<Ipv6Addr>> for SubnetEither {
         fn from(subnet: Subnet<Ipv6Addr>) -> SubnetEither {
             SubnetEither::V6(subnet)
+        }
+    }
+
+    /// The destination for forwarding a packet.
+    ///
+    /// `EntryDest` can either be a device or another network address.
+    #[allow(missing_docs)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    pub enum EntryDest<A> {
+        Local { device: DeviceId },
+        Remote { next_hop: A },
+    }
+
+    /// A forwarding entry.
+    ///
+    /// `Entry` is a `Subnet` paired with an `EntryDest`.
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    pub struct Entry<A> {
+        pub subnet: Subnet<A>,
+        pub dest: EntryDest<A>,
+    }
+
+    /// An IPv4 forwarding entry or an IPv6 forwarding entry.
+    #[allow(missing_docs)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    pub enum EntryEither {
+        V4(Entry<Ipv4Addr>),
+        V6(Entry<Ipv6Addr>),
+    }
+
+    impl From<Entry<Ipv4Addr>> for EntryEither {
+        fn from(entry: Entry<Ipv4Addr>) -> EntryEither {
+            EntryEither::V4(entry)
+        }
+    }
+
+    impl From<Entry<Ipv6Addr>> for EntryEither {
+        fn from(entry: Entry<Ipv6Addr>) -> EntryEither {
+            EntryEither::V6(entry)
         }
     }
 

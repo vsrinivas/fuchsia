@@ -103,10 +103,10 @@ use futures::{select, TryFutureExt, TryStreamExt};
 use log::{error, info};
 
 use netstack_core::{
-    add_device_route, get_ip_addr_subnet, handle_timeout, receive_frame, set_ip_addr_subnet,
-    AddrSubnet, AddrSubnetEither, Context, DeviceId, DeviceLayerEventDispatcher, EventDispatcher,
-    Mac, StackState, Subnet, SubnetEither, TimerId, TransportLayerEventDispatcher,
-    UdpEventDispatcher,
+    add_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout, receive_frame,
+    set_ip_addr_subnet, AddrSubnet, AddrSubnetEither, Context, DeviceId,
+    DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, Mac, StackState, Subnet,
+    SubnetEither, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
 };
 
 /// The message that is sent to the main event loop to indicate that an
@@ -473,8 +473,50 @@ impl EventLoop {
     }
 
     fn fidl_get_forwarding_table(&self) -> Vec<fidl_net_stack::ForwardingEntry> {
-        // TODO(eyalsoha): Implement this.
-        vec![]
+        get_all_routes(&self.ctx)
+            .map(|entry| match entry {
+                EntryEither::V4(v4_entry) => fidl_net_stack::ForwardingEntry {
+                    subnet: fidl_net::Subnet {
+                        addr: fidl_net::IpAddress::Ipv4(fidl_net::IPv4Address {
+                            addr: v4_entry.subnet.network().ipv4_bytes(),
+                        }),
+                        prefix_len: v4_entry.subnet.prefix(),
+                    },
+                    destination: match v4_entry.dest {
+                        EntryDest::Local { device } => {
+                            fidl_net_stack::ForwardingDestination::DeviceId(device.id())
+                        }
+                        EntryDest::Remote { next_hop } => {
+                            fidl_net_stack::ForwardingDestination::NextHop(
+                                fidl_net::IpAddress::Ipv4(fidl_net::IPv4Address {
+                                    addr: next_hop.ipv4_bytes(),
+                                }),
+                            )
+                        }
+                    },
+                },
+                EntryEither::V6(v6_entry) => fidl_net_stack::ForwardingEntry {
+                    subnet: fidl_net::Subnet {
+                        addr: fidl_net::IpAddress::Ipv6(fidl_net::IPv6Address {
+                            addr: v6_entry.subnet.network().ipv6_bytes(),
+                        }),
+                        prefix_len: v6_entry.subnet.prefix(),
+                    },
+                    destination: match v6_entry.dest {
+                        EntryDest::Local { device } => {
+                            fidl_net_stack::ForwardingDestination::DeviceId(device.id())
+                        }
+                        EntryDest::Remote { next_hop } => {
+                            fidl_net_stack::ForwardingDestination::NextHop(
+                                fidl_net::IpAddress::Ipv6(fidl_net::IPv6Address {
+                                    addr: next_hop.ipv6_bytes(),
+                                }),
+                            )
+                        }
+                    },
+                },
+            })
+            .collect()
     }
 
     fn fidl_add_forwarding_entry(

@@ -36,7 +36,7 @@ mod wire;
 pub use crate::device::{
     ethernet::Mac, get_ip_addr_subnet, receive_frame, DeviceId, DeviceLayerEventDispatcher,
 };
-pub use crate::ip::{AddrSubnet, AddrSubnetEither, Subnet, SubnetEither};
+pub use crate::ip::{AddrSubnet, AddrSubnetEither, EntryDest, EntryEither, Subnet, SubnetEither};
 pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::TransportLayerEventDispatcher;
 
@@ -229,4 +229,13 @@ pub fn add_device_route<D: EventDispatcher>(
     device: DeviceId,
 ) {
     map_addr_version!(SubnetEither, subnet, crate::ip::add_device_route(ctx, subnet, device));
+}
+
+/// Get all the routes.
+pub fn get_all_routes<'a, D: EventDispatcher>(
+    ctx: &'a Context<D>,
+) -> impl 'a + Iterator<Item = EntryEither> {
+    let v4_routes = ip::iter_routes::<_, ip::Ipv4Addr>(ctx);
+    let v6_routes = ip::iter_routes::<_, ip::Ipv6Addr>(ctx);
+    v4_routes.cloned().map(From::from).chain(v6_routes.cloned().map(From::from))
 }

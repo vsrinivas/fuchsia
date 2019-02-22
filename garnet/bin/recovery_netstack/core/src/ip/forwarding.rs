@@ -42,25 +42,13 @@ impl<I: Ip> Debug for Destination<I> {
     }
 }
 
-#[derive(Copy, Clone)]
-struct Entry<I: Ip> {
-    subnet: Subnet<I::Addr>,
-    dest: EntryDest<I::Addr>,
-}
-
-#[derive(Copy, Clone)]
-enum EntryDest<A> {
-    Local { device: DeviceId },
-    Remote { next_hop: A },
-}
-
 /// An IP forwarding table.
 ///
 /// `ForwardingTable` maps destination subnets to the nearest IP hosts (on the
 /// local network) able to route IP packets to those subnets.
 #[derive(Default)]
 pub(crate) struct ForwardingTable<I: Ip> {
-    entries: Vec<Entry<I>>,
+    entries: Vec<Entry<I::Addr>>,
 }
 
 impl<I: Ip> ForwardingTable<I> {
@@ -104,6 +92,10 @@ impl<I: Ip> ForwardingTable<I> {
         let dst = self.lookup_helper(address);
         trace!("lookup({}) -> {:?}", address, dst);
         dst
+    }
+
+    pub(crate) fn iter_routes(&self) -> std::slice::Iter<Entry<I::Addr>> {
+        self.entries.iter()
     }
 
     fn lookup_helper(&self, address: I::Addr) -> Option<Destination<I>> {
