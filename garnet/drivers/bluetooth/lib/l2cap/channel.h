@@ -153,14 +153,14 @@ class Channel : public fbl::RefCounted<Channel> {
           hci::ConnectionHandle link_handle);
   virtual ~Channel() = default;
 
-  ChannelId id_;
-  ChannelId remote_id_;
-  hci::Connection::LinkType link_type_;
-  hci::ConnectionHandle link_handle_;
+  const ChannelId id_;
+  const ChannelId remote_id_;
+  const hci::Connection::LinkType link_type_;
+  const hci::ConnectionHandle link_handle_;
 
   // The maximum SDU sizes for this channel.
-  uint16_t tx_mtu_;
-  uint16_t rx_mtu_;
+  const uint16_t tx_mtu_;
+  const uint16_t rx_mtu_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Channel);
 };
