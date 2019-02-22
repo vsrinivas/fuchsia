@@ -23,6 +23,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/pdu.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/rx_engine.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/tx_engine.h"
 #include "garnet/drivers/bluetooth/lib/sm/status.h"
 #include "garnet/drivers/bluetooth/lib/sm/types.h"
 #include "lib/fxl/macros.h"
@@ -141,9 +142,14 @@ class Channel : public fbl::RefCounted<Channel> {
   virtual void UpgradeSecurity(sm::SecurityLevel level,
                                sm::StatusCallback callback) = 0;
 
-  // Sends the given SDU payload over this channel. This takes ownership of
-  // |sdu|. Returns false if the SDU is rejected, for example because it exceeds
-  // the channel's MTU or because the link has been closed.
+  // Queue the given SDU payload for transmission over this channel, taking
+  // ownership of |sdu|. Returns true if the SDU was queued successfully, and
+  // false otherwise.
+  //
+  // For reasons why queuing might fail, see the documentation for the relevant
+  // TxEngine's QueueSdu() method. Note: a successfully enqueued SDU may still
+  // fail to reach the receiver, due to asynchronous local errors, transmission
+  // failure, or remote errors.
   virtual bool Send(common::ByteBufferPtr sdu) = 0;
 
  protected:
@@ -221,6 +227,9 @@ class ChannelImpl : public Channel {
   // The engine which processes received PDUs, and converts them to SDUs for
   // upper layers.
   std::unique_ptr<RxEngine> rx_engine_ __TA_GUARDED(mtx_);
+
+  // The engine which accepts SDUs, and converts them to PDUs for lower layers.
+  std::unique_ptr<TxEngine> tx_engine_ __TA_GUARDED(mtx_);
 
   // The pending SDUs on this channel. Received PDUs are buffered if |rx_cb_| is
   // currently not set.

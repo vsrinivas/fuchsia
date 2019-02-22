@@ -9,6 +9,7 @@
 #include "garnet/drivers/bluetooth/lib/common/log.h"
 #include "garnet/drivers/bluetooth/lib/common/run_or_post.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/basic_mode_rx_engine.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/basic_mode_tx_engine.h"
 #include "lib/fxl/strings/string_printf.h"
 
 #include "logical_link.h"
@@ -44,7 +45,15 @@ ChannelImpl::ChannelImpl(ChannelId id, ChannelId remote_id,
       active_(false),
       dispatcher_(nullptr),
       link_(link),
-      rx_engine_(std::make_unique<BasicModeRxEngine>()) {
+      rx_engine_(std::make_unique<BasicModeRxEngine>()),
+      tx_engine_(std::make_unique<BasicModeTxEngine>(
+          id, tx_mtu_, [rid = remote_id, link = link_](auto pdu) {
+            async::PostTask(link->dispatcher(), [=, pdu = std::move(pdu)] {
+              // |link| is expected to ignore this call and drop the
+              // packet if it has been closed.
+              link->SendBasicFrame(rid, *pdu);
+            });
+          })) {
   ZX_DEBUG_ASSERT(link_);
   for (const auto& pdu : buffered_pdus) {
     auto sdu = std::make_unique<common::DynamicByteBuffer>(pdu.length());
@@ -121,6 +130,7 @@ void ChannelImpl::Deactivate() {
   rx_cb_ = {};
   closed_cb_ = {};
   rx_engine_ = {};
+  tx_engine_ = {};
 
   // Tell the link to release this channel on its thread.
   async::PostTask(link_->dispatcher(), [this, link = link_] {
@@ -147,12 +157,6 @@ void ChannelImpl::SignalLinkError() {
 bool ChannelImpl::Send(common::ByteBufferPtr sdu) {
   ZX_DEBUG_ASSERT(sdu);
 
-  if (sdu->size() > tx_mtu()) {
-    bt_log(TRACE, "l2cap", "SDU size exceeds channel TxMTU (channel-id: %#.4x)",
-           id());
-    return false;
-  }
-
   std::lock_guard<std::mutex> lock(mtx_);
 
   if (!link_) {
@@ -164,14 +168,7 @@ bool ChannelImpl::Send(common::ByteBufferPtr sdu) {
   if (!active_)
     return false;
 
-  async::PostTask(link_->dispatcher(),
-                  [id = remote_id(), link = link_, sdu = std::move(sdu)] {
-                    // |link| is expected to ignore this call and drop the
-                    // packet if it has been closed.
-                    link->SendBasicFrame(id, *sdu);
-                  });
-
-  return true;
+  return tx_engine_->QueueSdu(std::move(sdu));
 }
 
 void ChannelImpl::UpgradeSecurity(sm::SecurityLevel level,

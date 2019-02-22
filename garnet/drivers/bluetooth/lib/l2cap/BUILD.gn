@@ -19,6 +19,8 @@ static_library("l2cap") {
   sources = [
     "basic_mode_rx_engine.cc",
     "basic_mode_rx_engine.h",
+    "basic_mode_tx_engine.cc",
+    "basic_mode_tx_engine.h",
     "bredr_command_handler.cc",
     "bredr_command_handler.h",
     "bredr_dynamic_channel.cc",
@@ -51,6 +53,7 @@ static_library("l2cap") {
     "scoped_channel.h",
     "signaling_channel.cc",
     "signaling_channel.h",
+    "tx_engine.h",
   ]
 
   public_deps = [
@@ -88,6 +91,7 @@ source_set("tests") {
 
   sources = [
     "basic_mode_rx_engine_unittest.cc",
+    "basic_mode_tx_engine_unittest.cc",
     "bredr_command_handler_unittest.cc",
     "bredr_dynamic_channel_unittest.cc",
     "bredr_signaling_channel_unittest.cc",
