@@ -5,6 +5,7 @@
 #pragma once
 
 #include <fbl/unique_fd.h>
+#include <fvm-host/file-wrapper.h>
 #include <fvm/fvm-sparse.h>
 
 // Wrapper around FVM metadata which attempts to read existing metadata from disk, allows
@@ -18,7 +19,7 @@ public:
 
     // Loads and validates metadata from disk. If invalid metadata is found a success status is
     // returned, but valid_ is marked false.
-    zx_status_t Load(const fbl::unique_fd& fd, uint64_t disk_offset, uint64_t disk_size);
+    zx_status_t Load(fvm::host::FileWrapper* file, uint64_t disk_offset, uint64_t disk_size);
 
     // Validates the loaded metadata.
     zx_status_t Validate() const;
@@ -29,9 +30,9 @@ public:
     // Grows in-memory metadata representation to account for |slice_count| additional slices.
     zx_status_t GrowForSlices(size_t slice_count);
 
-    // Writes metadata to the partition described by |fd| of size |disk_size|, starting at offset
+    // Writes metadata to the file wrapped by |wrapper| of size |disk_size|, starting at offset
     // |disk_offset|.
-    zx_status_t Write(const fbl::unique_fd& fd, size_t disk_offset, size_t disk_size);
+    zx_status_t Write(fvm::host::FileWrapper* wrapper, size_t disk_offset, size_t disk_size);
 
     // Allocates new partition (in memory) with a single slice.
     zx_status_t AllocatePartition(const fvm::partition_descriptor_t* partition, uint8_t* guid,

@@ -8,6 +8,7 @@
 #include <fbl/unique_ptr.h>
 #include <fvm/sparse-reader.h>
 #include <fvm-host/container.h>
+#include <fvm-host/file-wrapper.h>
 
 #define DEFAULT_SLICE_SIZE (8lu * (1 << 20))
 
@@ -296,7 +297,13 @@ int main(int argc, char** argv) {
         }
 
         SparseContainer sparseData(input_path, slice_size, flags);
-        if (sparseData.Pave(path, offset, length) != ZX_OK) {
+        fbl::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
+
+        if (fvm::host::UniqueFdWrapper::Open(path, O_CREAT | O_WRONLY, 0644, &wrapper) != ZX_OK) {
+            return -1;
+        }
+
+        if (sparseData.Pave(std::move(wrapper), offset, length) != ZX_OK) {
             return -1;
         }
     } else {

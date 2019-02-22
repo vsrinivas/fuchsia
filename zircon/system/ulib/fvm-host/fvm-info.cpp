@@ -45,17 +45,18 @@ zx_status_t FvmInfo::Reset(size_t disk_size, size_t slice_size) {
     xprintf("fvm_init: Vpart offset: %zu, length: %zu\n",
             fvm::kVPartTableOffset, fvm::kVPartTableLength);
     xprintf("fvm_init: Atable offset: %zu, length: %zu\n",
-            fvm::kAllocTableOffset, fvm::AllocTableLength(disk_size_, slice_size_));
+            fvm::kAllocTableOffset, fvm::AllocTableLength(disk_size, slice_size));
     xprintf("fvm_init: Backup meta starts at: %zu\n",
-            fvm::BackupStart(disk_size_, slice_size_));
+            fvm::BackupStart(disk_size, slice_size));
     xprintf("fvm_init: Slices start at %zu, there are %zu of them\n",
-            fvm::SlicesStart(disk_size_, slice_size_),
-            fvm::UsableSlicesCount(disk_size_, slice_size_));
+            fvm::SlicesStart(disk_size, slice_size),
+            fvm::UsableSlicesCount(disk_size, slice_size));
 
     return ZX_OK;
 }
 
-zx_status_t FvmInfo::Load(const fbl::unique_fd& fd, uint64_t disk_offset, uint64_t disk_size) {
+zx_status_t FvmInfo::Load(fvm::host::FileWrapper* file, uint64_t disk_offset, uint64_t disk_size) {
+    uint64_t start_position = file->Tell();
     valid_ = false;
 
     if (disk_size == 0) {
@@ -68,7 +69,10 @@ zx_status_t FvmInfo::Load(const fbl::unique_fd& fd, uint64_t disk_offset, uint64
 
     // If Container already exists, read metadata from disk.
     // Read superblock first so we can determine if container has a different slice size.
-    ssize_t result = pread(fd.get(), metadata_.get(), sizeof(fvm::fvm_t), disk_offset);
+    file->Seek(disk_offset, SEEK_SET);
+    ssize_t result = file->Read(metadata_.get(), sizeof(fvm::fvm_t));
+    file->Seek(start_position, SEEK_SET);
+
     if (result != static_cast<ssize_t>(sizeof(fvm::fvm_t))) {
         fprintf(stderr, "Superblock read failed: expected %ld, actual %ld\n",
                 sizeof(fvm::fvm_t), result);
@@ -94,7 +98,10 @@ zx_status_t FvmInfo::Load(const fbl::unique_fd& fd, uint64_t disk_offset, uint64
         fbl::make_unique<uint8_t[]>(old_metadata_size * 2);
 
     // Read remainder of metadata.
-    result = pread(fd.get(), old_metadata.get(), old_metadata_size * 2, disk_offset);
+    file->Seek(disk_offset, SEEK_SET);
+    result = file->Read(old_metadata.get(), old_metadata_size * 2);
+    file->Seek(start_position, SEEK_SET);
+
     if (result != static_cast<ssize_t>(old_metadata_size * 2)) {
         fprintf(stderr, "Metadata read failed: expected %ld, actual %ld\n",
                 old_metadata_size * 2, result);
@@ -130,7 +137,7 @@ zx_status_t FvmInfo::Validate() const {
     return ZX_OK;
 }
 
-zx_status_t FvmInfo::Write(const fbl::unique_fd& fd, size_t disk_offset, size_t disk_size) {
+zx_status_t FvmInfo::Write(fvm::host::FileWrapper* file, size_t disk_offset, size_t disk_size) {
     fvm::fvm_t* sb = SuperBlock();
     if (disk_size != sb->fvm_partition_size) {
         // If disk size has changed, update and attempt to grow metadata.
@@ -152,17 +159,17 @@ zx_status_t FvmInfo::Write(const fbl::unique_fd& fd, size_t disk_offset, size_t 
         return ZX_ERR_BAD_STATE;
     }
 
-    if (lseek(fd.get(), disk_offset, SEEK_SET) < 0) {
+    if (file->Seek(disk_offset, SEEK_SET) < 0) {
         fprintf(stderr, "Error seeking disk\n");
         return ZX_ERR_IO;
     }
 
-    if (write(fd.get(), metadata_.get(), metadata_size_) != static_cast<ssize_t>(metadata_size_)) {
+    if (file->Write(metadata_.get(), metadata_size_) != static_cast<ssize_t>(metadata_size_)) {
         fprintf(stderr, "Error writing metadata to disk\n");
         return ZX_ERR_IO;
     }
 
-    if (write(fd.get(), metadata_.get(), metadata_size_) != static_cast<ssize_t>(metadata_size_)) {
+    if (file->Write(metadata_.get(), metadata_size_) != static_cast<ssize_t>(metadata_size_)) {
         fprintf(stderr, "Error writing metadata to disk\n");
         return ZX_ERR_IO;
     }

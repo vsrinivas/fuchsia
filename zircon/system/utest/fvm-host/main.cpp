@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <functional>
+
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fvm-host/container.h>
@@ -12,9 +14,9 @@
 
 #include <utility>
 
-#define DEFAULT_SLICE_SIZE (8lu * (1 << 20))  // 8 mb
-#define PARTITION_SIZE     (1lu * (1 << 27))  // 128 mb
-#define CONTAINER_SIZE     (2lu * (1 << 30))  // 2 gb
+#define DEFAULT_SLICE_SIZE (8lu * (1 << 20)) // 8 mb
+#define PARTITION_SIZE     (1lu * (1 << 27)) // 128 mb
+#define CONTAINER_SIZE     (2lu * (1 << 30)) // 2 gb
 
 #define MAX_PARTITIONS 6
 
@@ -336,7 +338,8 @@ bool PopulateMinfs(const char* path, size_t ndirs, size_t nfiles, size_t max_siz
 bool AddFileBlobfs(blobfs::Blobfs* bs, size_t size) {
     BEGIN_HELPER;
     char new_file[PATH_MAX];
-    GenerateFilename(test_dir, 10, new_file);;
+    GenerateFilename(test_dir, 10, new_file);
+
     fbl::unique_fd datafd(open(new_file, O_RDWR | O_CREAT | O_EXCL, 0755));
     ASSERT_TRUE(datafd, "Unable to create new file");
     fbl::unique_ptr<uint8_t[]> data;
@@ -558,7 +561,10 @@ bool TestDiskSizeCalculation() {
     ASSERT_TRUE(DestroyFvm());
 
     // Create an FVM by paving the sparse file and verify its size matches expected.
-    ASSERT_EQ(sparseContainer.Pave(fvm_path, 0, 0), ZX_OK);
+    fbl::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
+    ASSERT_EQ(fvm::host::UniqueFdWrapper::Open(fvm_path, O_RDWR | O_CREAT | O_EXCL, 0644, &wrapper),
+              ZX_OK);
+    ASSERT_EQ(sparseContainer.Pave(std::move(wrapper), 0, 0), ZX_OK);
     ASSERT_TRUE(VerifyFvmSize(expected_size));
     ASSERT_TRUE(DestroyFvm());
 
@@ -597,12 +603,10 @@ enum class PaveSizeType {
 enum class PaveCreateType {
     kBefore, // Create FVM file before paving.
     kOffset, // Create FVM at an offset within the file.
-    kOnPave, // Create the file at the time of pave.
 };
 
 // Creates a file at |fvm_path| to which an FVM is intended to be paved from an existing sparse
-// file. If create_type is kOnPave, no file is created.
-// The size of the file will depend on the |expected_size|, as well as the |create_type| and
+// file. The size of the file will depend on the |expected_size|, as well as the |create_type| and
 // |size_type| options.
 // The intended offset and allocated size for the paved FVM will be returned as |out_pave_offset|
 // and |out_pave_size| respectively.
@@ -612,36 +616,32 @@ bool CreatePaveFile(PaveCreateType create_type, PaveSizeType size_type, size_t e
     *out_pave_offset = 0;
     *out_pave_size = 0;
 
-    if (create_type == PaveCreateType::kOnPave) {
-        ASSERT_EQ(size_type, PaveSizeType::kExact);
-    } else {
-        size_t disk_size = 0;
+    size_t disk_size = 0;
 
-        switch (size_type) {
-        case PaveSizeType::kSmall:
-            disk_size = expected_size - 1;
-            break;
-        case PaveSizeType::kExact:
-            disk_size = expected_size;
-            break;
-        case PaveSizeType::kLarge:
-            disk_size = expected_size * 2;
-            break;
-        }
-
-        *out_pave_size = disk_size;
-        *out_pave_offset = 0;
-
-        if (create_type == PaveCreateType::kOffset) {
-            disk_size = disk_size * 2;
-            ASSERT_GT(disk_size, *out_pave_size);
-            *out_pave_offset = disk_size - *out_pave_size;
-        }
-
-        fbl::unique_fd fd(open(fvm_path, O_CREAT | O_EXCL | O_WRONLY, 0644));
-        ASSERT_TRUE(fd);
-        ASSERT_EQ(ftruncate(fd.get(), disk_size), 0);
+    switch (size_type) {
+    case PaveSizeType::kSmall:
+        disk_size = expected_size - 1;
+        break;
+    case PaveSizeType::kExact:
+        disk_size = expected_size;
+        break;
+    case PaveSizeType::kLarge:
+        disk_size = expected_size * 2;
+        break;
     }
+
+    *out_pave_size = disk_size;
+    *out_pave_offset = 0;
+
+    if (create_type == PaveCreateType::kOffset) {
+        disk_size = disk_size * 2;
+        ASSERT_GT(disk_size, *out_pave_size);
+        *out_pave_offset = disk_size - *out_pave_size;
+    }
+
+    fbl::unique_fd fd(open(fvm_path, O_CREAT | O_EXCL | O_WRONLY, 0644));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(ftruncate(fd.get(), disk_size), 0);
 
     END_HELPER;
 }
@@ -658,14 +658,18 @@ bool TestPave() {
 
     size_t pave_offset = 0;
     size_t pave_size = 0;
+
     SparseContainer sparseContainer(src_path, 0, 0);
     size_t expected_size = sparseContainer.CalculateDiskSize();
     ASSERT_TRUE(CreatePaveFile(CreateType, SizeType, expected_size, &pave_offset, &pave_size));
 
+    fbl::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
+    ASSERT_EQ(fvm::host::UniqueFdWrapper::Open(fvm_path, O_RDWR | O_CREAT, 0644, &wrapper), ZX_OK);
+
     if (SizeType == PaveSizeType::kSmall) {
-        ASSERT_NE(sparseContainer.Pave(fvm_path, pave_offset, pave_size), ZX_OK);
+        ASSERT_NE(sparseContainer.Pave(std::move(wrapper), pave_offset, pave_size), ZX_OK);
     } else {
-        ASSERT_EQ(sparseContainer.Pave(fvm_path, pave_offset, pave_size), ZX_OK);
+        ASSERT_EQ(sparseContainer.Pave(std::move(wrapper), pave_offset, pave_size), ZX_OK);
         ASSERT_TRUE(ReportFvm(pave_offset));
     }
 
@@ -682,7 +686,10 @@ bool TestPaveZxcryptFail() {
     BEGIN_TEST;
     ASSERT_TRUE(CreateSparse(0, DEFAULT_SLICE_SIZE));
     SparseContainer sparseContainer(sparse_path, 0, 0);
-    ASSERT_NE(sparseContainer.Pave(fvm_path, 0, 0), ZX_OK);
+
+    fbl::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
+    ASSERT_EQ(fvm::host::UniqueFdWrapper::Open(fvm_path, O_RDWR | O_CREAT, 0644, &wrapper), ZX_OK);
+    ASSERT_NE(sparseContainer.Pave(std::move(wrapper), 0, 0), ZX_OK);
     ASSERT_TRUE(DestroySparse(0));
     END_TEST;
 }
@@ -783,7 +790,6 @@ bool Cleanup() {
     RUN_ALL_SPARSE(PaveCreateType::kOffset, PaveSizeType::kSmall, slice_size) \
     RUN_ALL_SPARSE(PaveCreateType::kOffset, PaveSizeType::kExact, slice_size) \
     RUN_ALL_SPARSE(PaveCreateType::kOffset, PaveSizeType::kLarge, slice_size) \
-    RUN_ALL_SPARSE(PaveCreateType::kOnPave, PaveSizeType::kExact, slice_size)
 
 // TODO(planders): add tests for FVM on GPT (with offset)
 BEGIN_TEST_CASE(fvm_host_tests)

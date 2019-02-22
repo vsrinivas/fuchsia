@@ -5,11 +5,12 @@
 #include "fvm-host/fvm-info.h"
 #include "fvm-host/sparse-paver.h"
 
-zx_status_t SparsePaver::Create(const char* path, size_t slice_size, size_t disk_offset,
-                                size_t disk_size, fbl::unique_ptr<SparsePaver>* out) {
+zx_status_t SparsePaver::Create(fbl::unique_ptr<fvm::host::FileWrapper> wrapper, size_t slice_size,
+                                size_t disk_offset, size_t disk_size,
+                                fbl::unique_ptr<SparsePaver>* out) {
     fbl::unique_ptr<SparsePaver> paver(new SparsePaver(disk_offset, disk_size));
 
-    zx_status_t status = paver->Init(path, slice_size);
+    zx_status_t status = paver->Init(std::move(wrapper), slice_size);
 
     if (status != ZX_OK) {
         return status;
@@ -56,7 +57,7 @@ zx_status_t SparsePaver::Commit() {
         return ZX_ERR_INTERNAL;
     }
 
-    zx_status_t status = info_.Write(fd_, disk_offset_, disk_size_);
+    zx_status_t status = info_.Write(file_.get(), disk_offset_, disk_size_);
 
     if (status != ZX_OK) {
         return status;
@@ -67,12 +68,8 @@ zx_status_t SparsePaver::Commit() {
     return ZX_OK;
 }
 
-zx_status_t SparsePaver::Init(const char* path, size_t slice_size) {
-    fd_.reset(open(path, O_WRONLY, 0644));
-    if (!fd_) {
-        return ZX_ERR_IO;
-    }
-
+zx_status_t SparsePaver::Init(fbl::unique_ptr<fvm::host::FileWrapper> wrapper, size_t slice_size) {
+    file_ = std::move(wrapper);
     zx_status_t status = info_.Reset(disk_size_, slice_size);
     if (status != ZX_OK) {
         return status;
@@ -84,7 +81,7 @@ zx_status_t SparsePaver::Init(const char* path, size_t slice_size) {
         return ZX_ERR_INTERNAL;
     }
 
-    off_t result = lseek(fd_.get(), disk_ptr_, SEEK_SET);
+    off_t result = file_->Seek(disk_ptr_, SEEK_SET);
     if (result < 0 || static_cast<size_t>(result) != disk_ptr_) {
         return ZX_ERR_IO;
     }
@@ -165,7 +162,7 @@ zx_status_t SparsePaver::WriteSlice(size_t* bytes_left, fvm::SparseReader* reade
         memset(data_.get(), 0, slice_size);
     }
 
-    ssize_t result = write(fd_.get(), data_.get(), slice_size);
+    ssize_t result = file_->Write(data_.get(), slice_size);
     if (result < 0 || static_cast<size_t>(result) != slice_size) {
         return ZX_ERR_IO;
     }

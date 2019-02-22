@@ -10,11 +10,12 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
-#include <fbl/vector.h>
 #include <fbl/unique_fd.h>
-#include <fvm/sparse-reader.h>
+#include <fbl/vector.h>
 #include <fvm/fvm-sparse.h>
+#include <fvm/sparse-reader.h>
 
+#include "file-wrapper.h"
 #include "format.h"
 #include "fvm-info.h"
 #include "sparse-paver.h"
@@ -57,6 +58,7 @@ public:
 
     // Calculates the minimum disk size required to hold the unpacked contents of the container.
     virtual uint64_t CalculateDiskSize() const = 0;
+
 protected:
     // Returns the minimum disk size necessary to store |slice_count| slices of size |slice_size_|
     // in an FVM.
@@ -99,6 +101,7 @@ public:
 
     // Returns the actual disk size.
     uint64_t GetDiskSize() const;
+
 private:
     uint64_t disk_offset_;
     uint64_t disk_size_;
@@ -161,8 +164,10 @@ public:
     zx_status_t Verify() const final;
     zx_status_t Commit() final;
 
-    // Unpacks the sparse container and "paves" it to |path|.
-    zx_status_t Pave(const char* path, size_t disk_offset = 0, size_t disk_size = 0);
+    // Unpacks the sparse container and "paves" it to the file system exposed by |wrapper|.
+    zx_status_t Pave(fbl::unique_ptr<fvm::host::FileWrapper> wrapper,
+                     size_t disk_offset = 0, size_t disk_size = 0);
+
     size_t SliceSize() const final;
     size_t SliceCount() const;
     zx_status_t AddPartition(const char* path, const char* type_name) final;
@@ -175,6 +180,7 @@ public:
 
     // Checks whether the container will fit within a disk of size |target_size| (in bytes).
     zx_status_t CheckDiskSize(uint64_t target_size) const;
+
 private:
     bool valid_;
     bool dirty_;

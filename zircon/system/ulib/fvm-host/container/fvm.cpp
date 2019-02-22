@@ -80,7 +80,8 @@ FvmContainer::FvmContainer(const char* path, size_t slice_size, off_t offset, of
     }
 
     // Attempt to load metadata from disk
-    if (info_.Load(fd_, disk_offset_, disk_size_) != ZX_OK) {
+    fvm::host::FdWrapper wrapper = fvm::host::FdWrapper(fd_.get());
+    if (info_.Load(&wrapper, disk_offset_, disk_size_) != ZX_OK) {
         exit(-1);
     }
 
@@ -269,7 +270,8 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
         return status;
     }
 
-    if ((status = info_.Write(fd, 0, disk_size)) != ZX_OK) {
+    fvm::host::FdWrapper wrapper = fvm::host::FdWrapper(fd.get());
+    if ((status = info_.Write(&wrapper, 0, disk_size)) != ZX_OK) {
         return status;
     }
 
@@ -328,7 +330,8 @@ zx_status_t FvmContainer::Commit() {
         }
     }
 
-    zx_status_t status = info_.Write(fd_, disk_offset_, disk_size_);
+    fvm::host::FdWrapper wrapper = fvm::host::FdWrapper(fd_.get());
+    zx_status_t status = info_.Write(&wrapper, disk_offset_, disk_size_);
     if (status != ZX_OK) {
         return status;
     }

@@ -8,6 +8,7 @@ library("fvm-host") {
     "container/container.cpp",
     "container/fvm.cpp",
     "container/sparse.cpp",
+    "file-wrapper.cpp",
     "format/blobfs.cpp",
     "format/format.cpp",
     "format/minfs.cpp",
@@ -36,6 +37,7 @@ library("fvm-host") {
     "$zx/system/ulib/fs",
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/minfs",
+    "$zx/system/ulib/zircon:headers",
     "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/uboringssl",
   ]

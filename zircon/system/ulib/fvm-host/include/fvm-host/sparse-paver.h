@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fvm-host/file-wrapper.h>
 #include <fvm/sparse-reader.h>
 
 #include "format.h"
@@ -18,7 +19,8 @@ struct SparsePartitionInfo {
 class SparsePaver {
 public:
     // Creates a SparsePaver with the given attributes.
-    static zx_status_t Create(const char* path, size_t slice_size, size_t disk_offset,
+    static zx_status_t Create(fbl::unique_ptr<fvm::host::FileWrapper> wrapper,
+                              size_t slice_size, size_t disk_offset,
                               size_t disk_size, fbl::unique_ptr<SparsePaver>* out);
 
     // Allocates the partition and slices described by |partition| to info_, and writes out
@@ -32,7 +34,7 @@ private:
                                                         disk_size_(disk_size) {}
 
     // Initializes the FVM metadata.
-    zx_status_t Init(const char* path, size_t slice_size);
+    zx_status_t Init(fbl::unique_ptr<fvm::host::FileWrapper> wrapper, size_t slice_size);
 
     // Allocates the extent described by |extent| to the partition at |vpart_index|, as well as
     // allocating its slices and persisting all associated data.
@@ -44,7 +46,7 @@ private:
     zx_status_t WriteSlice(size_t* bytes_left, fvm::SparseReader* reader);
 
     FvmInfo info_;
-    fbl::unique_fd fd_;
+    fbl::unique_ptr<fvm::host::FileWrapper> file_;
     size_t disk_offset_; // Offset into fd_ at which to create FVM.
     size_t disk_size_; // Number of bytes allocated for the FVM.
     size_t disk_ptr_; // Marks the current offset within the target image.

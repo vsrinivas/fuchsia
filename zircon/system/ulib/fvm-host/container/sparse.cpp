@@ -335,30 +335,36 @@ zx_status_t SparseContainer::Commit() {
     return ZX_OK;
 }
 
-zx_status_t SparseContainer::Pave(const char* path, size_t disk_offset, size_t disk_size) {
+zx_status_t SparseContainer::Pave(
+    fbl::unique_ptr<fvm::host::FileWrapper> wrapper, size_t disk_offset, size_t disk_size) {
     if (disk_size == 0) {
-        // If target disk does not already exist, create it.
         if (disk_offset > 0) {
             fprintf(stderr, "Cannot specify offset without length\n");
             return ZX_ERR_INVALID_ARGS;
         }
 
-        fbl::unique_fd fd(open(path, O_CREAT | O_EXCL | O_WRONLY, 0644));
-
-        if (!fd) {
-            return ZX_ERR_IO;
-        }
-
         disk_size = CalculateDiskSize();
 
-        if (ftruncate(fd.get(), disk_size) < 0) {
-            return ZX_ERR_IO;
+        // Truncate file to size we expect. Some files wrapped by FileWrapper may not support
+        // truncate, e.g. block devices.
+        zx_status_t status = wrapper->Truncate(disk_size);
+        if (status != ZX_OK && status != ZX_ERR_NOT_SUPPORTED) {
+            return status;
+        }
+
+        if (wrapper->Size() < static_cast<ssize_t>(disk_size)) {
+            fprintf(stderr, "FileWrapper reported size as %ld bytes. Expected at least %lu bytes",
+                    wrapper->Size(), disk_size);
+            return ZX_ERR_BUFFER_TOO_SMALL;
         }
     }
 
     fbl::unique_ptr<SparsePaver> paver;
-    zx_status_t status = SparsePaver::Create(path, slice_size_, disk_offset, disk_size, &paver);
+    zx_status_t status = SparsePaver::Create(std::move(wrapper), slice_size_,
+                                             disk_offset, disk_size, &paver);
+
     if (status != ZX_OK) {
+        fprintf(stderr, "Failed to create SparsePaver\n");
         return status;
     }
 
