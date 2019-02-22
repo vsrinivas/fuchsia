@@ -5,8 +5,7 @@
 #include "garnet/examples/ui/hello_base_view/example_presenter.h"
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
-
-#include "lib/fxl/logging.h"
+#include <lib/fxl/logging.h>
 
 namespace hello_base_view {
 

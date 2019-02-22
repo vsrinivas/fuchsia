@@ -8,9 +8,8 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-
-#include "lib/ui/base_view/cpp/base_view.h"
-#include "lib/ui/scenic/cpp/resources.h"
+#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/scenic/cpp/resources.h>
 
 namespace hello_base_view {
 

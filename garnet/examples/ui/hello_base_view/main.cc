@@ -5,13 +5,14 @@
 #include <memory>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/log_settings_command_line.h>
+#include <lib/ui/base_view/cpp/view_provider_component.h>
+#include <zircon/system/ulib/zircon/include/zircon/status.h>
 
 #include "garnet/examples/ui/hello_base_view/example_presenter.h"
 #include "garnet/examples/ui/hello_base_view/view.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings_command_line.h"
-#include "lib/ui/base_view/cpp/view_provider_component.h"
 
 using namespace hello_base_view;
 
@@ -56,11 +57,12 @@ int main(int argc, const char** argv) {
     // environment services.
     std::unique_ptr<component::StartupContext> startup_context =
         component::StartupContext::CreateFromStartupInfo();
-    fidl::InterfacePtr<fuchsia::ui::scenic::Scenic> scenic =
+    fuchsia::ui::scenic::ScenicPtr scenic =
         startup_context
             ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
     scenic.set_error_handler([&loop](zx_status_t status) {
-      FXL_LOG(INFO) << "Lost connection to Scenic with error " << status << ".";
+      FXL_LOG(ERROR) << "Lost connection to Scenic with error "
+                     << zx_status_get_string(status) << ".";
       loop.Quit();
     });
 
