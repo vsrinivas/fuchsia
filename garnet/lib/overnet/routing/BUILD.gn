@@ -64,8 +64,8 @@ source_set("routing_table") {
     "routing_table.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.overnet.protocol",
     "//garnet/public/lib/fostr/fidl/fuchsia.overnet.protocol",
+    "//sdk/fidl/fuchsia.overnet.protocol",
   ]
   deps = [
     "//garnet/lib/overnet/environment:timer",

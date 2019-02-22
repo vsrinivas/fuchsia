@@ -124,6 +124,7 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
     if (r == -1) {
       auto got_errno = errno;
       OVERNET_TRACE(WARNING) << "sendto sets errno " << got_errno;
+      return;
     }
     assert(static_cast<size_t>(r) == slice.length());
   }
@@ -173,9 +174,8 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
     if (result < 0) {
       OVERNET_TRACE(ERROR) << "Failed to recvfrom, errno " << errno;
       // Wait a bit before trying again to avoid spamming the log.
-      async::PostDelayedTask(
-          async_get_default_dispatcher(), [this]() { WaitForInbound(); },
-          zx::sec(10));
+      async::PostDelayedTask(async_get_default_dispatcher(),
+                             [this]() { WaitForInbound(); }, zx::sec(10));
       return;
     }
 
