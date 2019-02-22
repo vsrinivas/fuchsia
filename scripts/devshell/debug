@@ -24,6 +24,8 @@
 ##    --verbose-agent   Whether the debug agent's stdout/stderr should be shown.
 ##                      Useful for debugging the debugger. Yo' dawg.
 ##
+## Flags after -- are parsed by zxdb.  See zxdb's documentation for more
+## details.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
@@ -48,8 +50,13 @@ while [[ "$1" =~ ^- ]]; do
       agent_out=""
       break
       ;;
+    --)
+      shift
+      break # Remaining flags are passed to zxdb
+      ;;
     *)
-      break
+      echo "Invalid flag $1"
+      exit 1
   esac
   shift
 done
@@ -103,4 +110,4 @@ while true; do
 done
 
 # We start the client with the flag that tells it to quit the agent when zxdb quits.
-"${FUCHSIA_BUILD_DIR}/host_x64/zxdb" "--connect" "[${target}]:${port}" "--quit-agent-on-exit"
+"${FUCHSIA_BUILD_DIR}/host_x64/zxdb" "--connect" "[${target}]:${port}" "--quit-agent-on-exit" "$@"
