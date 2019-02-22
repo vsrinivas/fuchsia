@@ -42,7 +42,7 @@ void DisplayRotater::SetDisplayRotation(Presentation* p,
     spring_.SetTargetValue(display_rotation_degrees);
     UpdateAnimation(p, animation_start_time);
   } else {
-    p->set_display_rotation_desired(display_rotation_degrees);
+    p->display_rotation_desired_ = display_rotation_degrees;
     p->ApplyDisplayModelChanges(false, true);
   }
 }
@@ -66,7 +66,7 @@ bool DisplayRotater::UpdateAnimation(Presentation* p,
   last_animation_update_time_ = presentation_time;
 
   spring_.ElapseTime(seconds_since_last_frame);
-  p->set_display_rotation_desired(spring_.GetValue());
+  p->display_rotation_desired_ = spring_.GetValue();
 
   p->ApplyDisplayModelChanges(false, true);
   return true;
@@ -79,10 +79,12 @@ glm::vec2 DisplayRotater::RotatePointerCoordinates(Presentation* p, float x,
   // On the other hand, this method is only used when capturing touch events,
   // which is something we intend to deprecate anyway.
 
-  const float anchor_w = p->actual_display_info().width_in_px / 2;
-  const float anchor_h = p->actual_display_info().height_in_px / 2;
-  const int32_t startup_rotation = p->display_startup_rotation_adjustment();
-  const float current_rotation = p->display_rotation_current();
+  const float anchor_w =
+      p->display_model_actual_.display_info().width_in_px / 2;
+  const float anchor_h =
+      p->display_model_actual_.display_info().height_in_px / 2;
+  const int32_t startup_rotation = p->display_startup_rotation_adjustment_;
+  const float current_rotation = p->display_rotation_current_;
   const float rotation = current_rotation - startup_rotation;
 
   glm::vec4 pointer_coords(x, y, 0.f, 1.f);
@@ -93,10 +95,8 @@ glm::vec2 DisplayRotater::RotatePointerCoordinates(Presentation* p, float x,
 
   if (abs(startup_rotation) % 180 == 90) {
     // If the aspect ratio is flipped, the origin needs to be adjusted too.
-    int32_t sim_w =
-        static_cast<int32_t>(p->simulated_display_metrics().width_in_px());
-    int32_t sim_h =
-        static_cast<int32_t>(p->simulated_display_metrics().height_in_px());
+    int32_t sim_w = static_cast<int32_t>(p->display_metrics_.width_in_px());
+    int32_t sim_h = static_cast<int32_t>(p->display_metrics_.height_in_px());
     float adjust_origin = (sim_w - sim_h) / 2.f;
     rotated_coords =
         glm::translate(glm::vec3(-adjust_origin, adjust_origin, 0)) *
