@@ -31,7 +31,7 @@ class LevelDb : public Db {
   Status Get(coroutine::CoroutineHandler* handler,
              convert::ExtendedStringView key, std::string* value) override;
   Status HasKey(coroutine::CoroutineHandler* handler,
-                convert::ExtendedStringView key, bool* has_key) override;
+                convert::ExtendedStringView key) override;
   Status GetObject(coroutine::CoroutineHandler* handler,
                    convert::ExtendedStringView key,
                    ObjectIdentifier object_identifier,

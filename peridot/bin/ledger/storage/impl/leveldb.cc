@@ -264,11 +264,13 @@ Status LevelDb::Get(CoroutineHandler* handler, convert::ExtendedStringView key,
 }
 
 Status LevelDb::HasKey(CoroutineHandler* handler,
-                       convert::ExtendedStringView key, bool* has_key) {
+                       convert::ExtendedStringView key) {
   std::unique_ptr<leveldb::Iterator> iterator(db_->NewIterator(read_options_));
   iterator->Seek(key);
 
-  *has_key = iterator->Valid() && iterator->key() == key;
+  if (!iterator->Valid() || iterator->key() != key) {
+    return Status::NOT_FOUND;
+  }
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 
@@ -276,6 +278,7 @@ Status LevelDb::GetObject(CoroutineHandler* handler,
                           convert::ExtendedStringView key,
                           ObjectIdentifier object_identifier,
                           std::unique_ptr<const Object>* object) {
+  FXL_DCHECK(object);
   std::unique_ptr<leveldb::Iterator> iterator(db_->NewIterator(read_options_));
   iterator->Seek(key);
 
@@ -283,10 +286,8 @@ Status LevelDb::GetObject(CoroutineHandler* handler,
     return Status::NOT_FOUND;
   }
 
-  if (object) {
-    *object = std::make_unique<LevelDBObject>(std::move(object_identifier),
-                                              std::move(iterator));
-  }
+  *object = std::make_unique<LevelDBObject>(std::move(object_identifier),
+                                            std::move(iterator));
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 

@@ -162,18 +162,16 @@ class PageDb : public PageDbMutator {
       std::string* storage_bytes) = 0;
 
   // Object data.
-  // Reads the content of the given object. To check whether an object is stored
-  // in the PageDb without retrieving its value, |nullptr| can be given for the
-  // |object| argument.
+  // Reads the content of the given object.
   FXL_WARN_UNUSED_RESULT virtual Status ReadObject(
       coroutine::CoroutineHandler* handler, ObjectIdentifier object_identifier,
       std::unique_ptr<const Object>* object) = 0;
 
   // Checks whether the object with the given |object_digest| is stored in the
-  // database.
+  // database. Returns |OK| if the objet was found, or |NOT_FOUND| if not.
   FXL_WARN_UNUSED_RESULT virtual Status HasObject(
-      coroutine::CoroutineHandler* handler, const ObjectDigest& object_digest,
-      bool* has_object) = 0;
+      coroutine::CoroutineHandler* handler,
+      ObjectIdentifier object_identifier) = 0;
 
   // Returns the status of the object with the given id.
   FXL_WARN_UNUSED_RESULT virtual Status GetObjectStatus(

@@ -173,6 +173,7 @@ Status FakeDb::StartBatch(coroutine::CoroutineHandler* handler,
 
 Status FakeDb::Get(coroutine::CoroutineHandler* handler,
                    convert::ExtendedStringView key, std::string* value) {
+  FXL_DCHECK(value);
   auto it = key_value_store_.find(key.ToString());
   if (it == key_value_store_.end()) {
     return Status::NOT_FOUND;
@@ -182,9 +183,11 @@ Status FakeDb::Get(coroutine::CoroutineHandler* handler,
 }
 
 Status FakeDb::HasKey(coroutine::CoroutineHandler* handler,
-                      convert::ExtendedStringView key, bool* has_key) {
+                      convert::ExtendedStringView key) {
   auto it = key_value_store_.find(key.ToString());
-  *has_key = it != key_value_store_.end();
+  if (it == key_value_store_.end()) {
+    return Status::NOT_FOUND;
+  }
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 

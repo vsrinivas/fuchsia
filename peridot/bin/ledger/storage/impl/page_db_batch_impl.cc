@@ -65,15 +65,16 @@ Status PageDbBatchImpl::WriteObject(
     PageDbObjectStatus object_status) {
   FXL_DCHECK(object_status > PageDbObjectStatus::UNKNOWN);
 
-  bool has_key;
-  RETURN_ON_ERROR(
-      db_->HasObject(handler, object_identifier.object_digest(), &has_key));
-  if (has_key) {
+  Status status = db_->HasObject(handler, object_identifier);
+  if (status == Status::OK) {
     if (object_status == PageDbObjectStatus::TRANSIENT) {
       return Status::OK;
     }
     return SetObjectStatus(handler, std::move(object_identifier),
                            object_status);
+  }
+  if (status != Status::NOT_FOUND) {
+    return status;
   }
 
   RETURN_ON_ERROR(batch_->Put(
@@ -88,7 +89,7 @@ Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,
                                         ObjectIdentifier object_identifier,
                                         PageDbObjectStatus object_status) {
   FXL_DCHECK(object_status >= PageDbObjectStatus::LOCAL);
-  RETURN_ON_ERROR(DCheckHasObject(handler, object_identifier.object_digest()));
+  RETURN_ON_ERROR(DCheckHasObject(handler, object_identifier));
 
   PageDbObjectStatus previous_object_status;
   RETURN_ON_ERROR(db_->GetObjectStatus(handler, object_identifier,
@@ -130,17 +131,16 @@ Status PageDbBatchImpl::Execute(CoroutineHandler* handler) {
   return batch_->Execute(handler);
 }
 
-Status PageDbBatchImpl::DCheckHasObject(CoroutineHandler* handler,
-                                        const ObjectDigest& key) {
+Status PageDbBatchImpl::DCheckHasObject(
+    CoroutineHandler* handler, const ObjectIdentifier& key) {
 #ifdef NDEBUG
   return Status::OK;
 #else
-  bool result;
-  Status status = db_->HasObject(handler, key, &result);
+  Status status = db_->HasObject(handler, key);
   if (status == Status::INTERRUPTED) {
     return status;
   }
-  FXL_DCHECK(status == Status::OK && result);
+  FXL_DCHECK(status == Status::OK);
   return Status::OK;
 #endif
 }

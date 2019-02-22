@@ -233,8 +233,8 @@ class ControlledLevelDb : public Db {
   }
 
   Status HasKey(coroutine::CoroutineHandler* handler,
-                convert::ExtendedStringView key, bool* has_key) override {
-    return leveldb_.HasKey(handler, key, has_key);
+                convert::ExtendedStringView key) override {
+    return leveldb_.HasKey(handler, key);
   }
 
   Status GetObject(coroutine::CoroutineHandler* handler,

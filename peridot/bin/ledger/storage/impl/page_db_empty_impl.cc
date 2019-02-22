@@ -34,8 +34,7 @@ Status PageDbEmptyImpl::ReadObject(CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::HasObject(CoroutineHandler* /*handler*/,
-                                  const ObjectDigest& /*object_digest*/,
-                                  bool* /*has_object*/) {
+                                  ObjectIdentifier /*object_identifier*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetObjectStatus(CoroutineHandler* /*handler*/,

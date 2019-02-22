@@ -60,7 +60,7 @@ class PageDbBatchImpl : public PageDb::Batch {
 
  private:
   Status DCheckHasObject(coroutine::CoroutineHandler* handler,
-                         const ObjectDigest& key);
+                         const ObjectIdentifier& key);
 
   std::unique_ptr<Db::Batch> batch_;
   PageDb* const db_;
