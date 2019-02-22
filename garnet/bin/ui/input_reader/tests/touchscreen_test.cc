@@ -36,7 +36,7 @@ void ParseTouchscreen(const uint8_t *desc, size_t desc_len, mozart::Touch *ts) {
   ASSERT_NE(nullptr, input_desc);
   ASSERT_LT(0UL, input_desc->input_count);
 
-  auto success = ts->ParseTouchDescriptor(input_desc);
+  auto success = ts->ParseTouchDescriptor(*input_desc);
   ASSERT_EQ(true, success);
 }
 }  // namespace

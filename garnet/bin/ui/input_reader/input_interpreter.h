@@ -16,6 +16,8 @@
 #include "garnet/bin/ui/input_reader/hardcoded.h"
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 #include "garnet/bin/ui/input_reader/protocols.h"
+#include "garnet/bin/ui/input_reader/touchpad.h"
+#include "garnet/bin/ui/input_reader/touchscreen.h"
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 
@@ -66,17 +68,7 @@ class InputInterpreter {
   // set correctly.
   bool ParseProtocol();
 
-  bool ParseReport(const uint8_t* report, size_t len,
-                   Touch::Report* touchscreen);
-  bool SetDescriptor(Touch::Descriptor* touch_desc);
-
   void NotifyRegistry();
-
-  bool ParseTouchscreenReport(
-      uint8_t* report, size_t len,
-      fuchsia::ui::input::InputReport* touchscreen_report);
-  bool ParseTouchpadReport(uint8_t* report, size_t len,
-                           fuchsia::ui::input::InputReport* mouse_report);
 
   fuchsia::ui::input::InputDeviceRegistry* registry_;
 
@@ -104,21 +96,6 @@ class InputInterpreter {
   MouseDeviceType mouse_device_type_ = MouseDeviceType::NONE;
   SensorDeviceType sensor_device_type_ = SensorDeviceType::NONE;
 
-  // Global variables necessary to do conversion from touchpad information
-  // into mouse information. All information is from the previous seen report,
-  // which enables us to do relative deltas and finger tracking.
-
-  // True if any fingers are pressed on the touchpad.
-  bool has_touch_ = false;
-  // True if the tracking finger is no longer pressed, but other fingers are
-  // still pressed.
-  bool tracking_finger_was_lifted_ = false;
-  // Used to keep track of which finger is controlling the mouse on a touchpad
-  uint32_t tracking_finger_id_;
-  // Used for converting absolute coords from paradise into relative deltas
-  int32_t mouse_abs_x_ = -1;
-  int32_t mouse_abs_y_ = -1;
-
   // Keep track of which sensor gave us a report. Index into
   // |sensor_descriptors_| and |sensor_devices_|.
   uint8_t sensor_idx_ = kNoSuchSensor;
@@ -135,7 +112,8 @@ class InputInterpreter {
   std::unique_ptr<HidDecoder> hid_decoder_;
 
   Protocol protocol_;
-  Touch ts_;
+  TouchScreen touchscreen_ = {};
+  Touchpad touchpad_ = {};
   Mouse mouse_;
   Hardcoded hardcoded_;
 };

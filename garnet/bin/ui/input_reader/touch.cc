@@ -16,7 +16,7 @@
 #include "lib/fxl/logging.h"
 
 namespace mozart {
-bool Touch::ParseTouchDescriptor(const hid::ReportDescriptor *desc) {
+bool Touch::ParseTouchDescriptor(const hid::ReportDescriptor &desc) {
   size_t touch_points = 0;
   TouchPointConfig configs[MAX_TOUCH_POINTS] = {};
   hid::Attributes scan_time = {};
@@ -25,8 +25,8 @@ bool Touch::ParseTouchDescriptor(const hid::ReportDescriptor *desc) {
   hid::Collection *finger_collection;
   uint32_t caps = 0;
 
-  for (size_t i = 0; i < desc->input_count; i++) {
-    const hid::ReportField field = desc->input_fields[i];
+  for (size_t i = 0; i < desc.input_count; i++) {
+    const hid::ReportField field = desc.input_fields[i];
 
     // Process the global items if we haven't seen them before
     if (!(caps & Capabilities::CONTACT_COUNT) &&
@@ -127,8 +127,8 @@ bool Touch::ParseTouchDescriptor(const hid::ReportDescriptor *desc) {
   button_ = button;
   contact_count_ = contact_count;
   capabilities_ = caps;
-  report_size_ = desc->input_byte_sz;
-  report_id_ = desc->report_id;
+  report_size_ = desc.input_byte_sz;
+  report_id_ = desc.report_id;
   for (size_t i = 0; i < touch_points; i++) {
     configs_[i] = configs[i];
   }

@@ -127,41 +127,11 @@ bool InputInterpreter::Initialize() {
   } else if (protocol == Protocol::Touch) {
     FXL_VLOG(2) << "Device " << name() << " has hid touch";
 
-    has_touchscreen_ = true;
-    touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
-    Touch::Descriptor touch_desc;
-    SetDescriptor(&touch_desc);
-    touchscreen_descriptor_->x.range.min = touch_desc.x_min;
-    touchscreen_descriptor_->x.range.max = touch_desc.x_max;
-    touchscreen_descriptor_->x.resolution = touch_desc.x_resolution;
-
-    touchscreen_descriptor_->y.range.min = touch_desc.y_min;
-    touchscreen_descriptor_->y.range.max = touch_desc.y_max;
-    touchscreen_descriptor_->y.resolution = touch_desc.x_resolution;
-
-    touchscreen_descriptor_->max_finger_id = touch_desc.max_finger_id;
-
     touchscreen_report_ = fuchsia::ui::input::InputReport::New();
     touchscreen_report_->touchscreen =
         fuchsia::ui::input::TouchscreenReport::New();
-
-    touch_device_type_ = TouchDeviceType::HID;
   } else if (protocol == Protocol::Touchpad) {
     FXL_VLOG(2) << "Device " << name() << " has hid touchpad";
-
-    has_mouse_ = true;
-    mouse_descriptor_ = fuchsia::ui::input::MouseDescriptor::New();
-    mouse_device_type_ = MouseDeviceType::TOUCH;
-
-    mouse_descriptor_->rel_x.range.min = INT32_MIN;
-    mouse_descriptor_->rel_x.range.max = INT32_MAX;
-    mouse_descriptor_->rel_x.resolution = 1;
-
-    mouse_descriptor_->rel_y.range.min = INT32_MIN;
-    mouse_descriptor_->rel_y.range.max = INT32_MAX;
-    mouse_descriptor_->rel_y.resolution = 1;
-
-    mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonPrimary;
 
     mouse_report_ = fuchsia::ui::input::InputReport::New();
     mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
@@ -573,8 +543,10 @@ bool InputInterpreter::Read(bool discard) {
       }
       break;
     case MouseDeviceType::TOUCH:
-      if (ParseTouchpadReport(report.data(), rc, mouse_report_.get())) {
+      if (touchpad_.ParseReport(report.data(), rc, mouse_report_.get())) {
         if (!discard) {
+          mouse_report_->event_time = InputEventTimestampNow();
+          mouse_report_->trace_id = TRACE_NONCE();
           TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
                            mouse_report_->trace_id);
           input_device_->DispatchReport(CloneReport(*mouse_report_));
@@ -629,9 +601,11 @@ bool InputInterpreter::Read(bool discard) {
 
   switch (touch_device_type_) {
     case TouchDeviceType::HID:
-      if (ParseTouchscreenReport(report.data(), rc,
-                                 touchscreen_report_.get())) {
+      if (touchscreen_.ParseReport(report.data(), rc,
+                                   touchscreen_report_.get())) {
         if (!discard) {
+          touchscreen_report_->event_time = InputEventTimestampNow();
+          touchscreen_report_->trace_id = TRACE_NONCE();
           TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
                            touchscreen_report_->trace_id);
           input_device_->DispatchReport(CloneReport(*touchscreen_report_));
@@ -659,7 +633,6 @@ bool InputInterpreter::Read(bool discard) {
         }
       }
       break;
-
     case TouchDeviceType::SAMSUNG:
       if (report[0] == SAMSUNG_RPT_ID_TOUCH) {
         if (hardcoded_.ParseSamsungTouchscreenReport(
@@ -799,104 +772,6 @@ bool InputInterpreter::Read(bool discard) {
       break;
     default:
       break;
-  }
-
-  return true;
-}
-
-// This logic converts the multi-finger report from the touchpad into
-// a mouse report. It does this by only tracking the first finger that
-// is placed down, and converting the absolution finger position into
-// relative X and Y movements. All other fingers besides the tracking
-// finger are ignored.
-bool InputInterpreter::ParseTouchpadReport(
-    uint8_t* report, size_t len,
-    fuchsia::ui::input::InputReport* mouse_report) {
-  Touch::Report touchpad;
-  if (!ParseReport(report, len, &touchpad)) {
-    return false;
-  }
-  mouse_report->event_time = InputEventTimestampNow();
-  mouse_report->trace_id = TRACE_NONCE();
-  mouse_report->mouse->rel_x = 0;
-  mouse_report->mouse->rel_y = 0;
-  mouse_report->mouse->pressed_buttons = 0;
-
-  // If all fingers are lifted reset our tracking finger.
-  if (touchpad.contact_count == 0) {
-    has_touch_ = false;
-    tracking_finger_was_lifted_ = true;
-    return true;
-  }
-
-  // If we don't have a tracking finger then set one.
-  if (!has_touch_) {
-    has_touch_ = true;
-    tracking_finger_was_lifted_ = false;
-    tracking_finger_id_ = touchpad.contacts[0].id;
-
-    mouse_abs_x_ = touchpad.contacts[0].x;
-    mouse_abs_y_ = touchpad.contacts[0].y;
-    return true;
-  }
-
-  // Find the finger we are tracking.
-  Touch::ContactReport* contact = nullptr;
-  for (size_t i = 0; i < touchpad.contact_count; i++) {
-    if (touchpad.contacts[i].id == tracking_finger_id_) {
-      contact = &touchpad.contacts[i];
-      break;
-    }
-  }
-
-  // If our tracking finger isn't pressed return early.
-  if (contact == nullptr) {
-    tracking_finger_was_lifted_ = true;
-    return true;
-  }
-
-  // If our tracking finger was lifted then reset the abs values otherwise
-  // the pointer will jump rapidly.
-  if (tracking_finger_was_lifted_) {
-    tracking_finger_was_lifted_ = false;
-    mouse_abs_x_ = contact->x;
-    mouse_abs_y_ = contact->y;
-  }
-
-  // The touch driver returns in units of 10^-5m, but the resolution expected
-  // by |mouse_report_| is 10^-3.
-  mouse_report->mouse->rel_x = (contact->x - mouse_abs_x_) / 100;
-  mouse_report->mouse->rel_y = (contact->y - mouse_abs_y_) / 100;
-
-  mouse_report->mouse->pressed_buttons =
-      touchpad.button ? fuchsia::ui::input::kMouseButtonPrimary : 0;
-
-  mouse_abs_x_ = touchpad.contacts[0].x;
-  mouse_abs_y_ = touchpad.contacts[0].y;
-
-  return true;
-}
-
-bool InputInterpreter::ParseTouchscreenReport(
-    uint8_t* report, size_t len,
-    fuchsia::ui::input::InputReport* touchscreen_report) {
-  Touch::Report touchscreen;
-  if (!ParseReport(report, len, &touchscreen)) {
-    return false;
-  }
-  touchscreen_report->event_time = InputEventTimestampNow();
-  touchscreen_report->trace_id = TRACE_NONCE();
-  touchscreen_report->touchscreen->touches.resize(touchscreen.contact_count);
-
-  for (size_t i = 0; i < touchscreen.contact_count; ++i) {
-    fuchsia::ui::input::Touch touch;
-    touch.finger_id = touchscreen.contacts[i].id;
-    touch.x = touchscreen.contacts[i].x;
-    touch.y = touchscreen.contacts[i].y;
-    // TODO(SCN-1188): Add support for contact ellipse.
-    touch.width = 5;
-    touch.height = 5;
-    touchscreen_report->touchscreen->touches.at(i) = std::move(touch);
   }
 
   return true;
@@ -1133,12 +1008,25 @@ bool InputInterpreter::ParseProtocol() {
         hardcoded_.ParseButtonsDescriptor(input_desc->input_fields,
                                           input_desc->input_count);
         break;
-      case Protocol::Touchpad:
-        // Fallthrough
-      case Protocol::Touch: {
-        bool success = ts_.ParseTouchDescriptor(input_desc);
-        if (!success) {
+      case Protocol::Touchpad: {
+        Device::Descriptor device_descriptor = {};
+        if (!touchpad_.ParseReportDescriptor(*input_desc, &device_descriptor)) {
           FXL_LOG(ERROR) << "invalid touchscreen descriptor for " << name();
+          return false;
+        }
+        if (!ConsumeDescriptor(&device_descriptor)) {
+          return false;
+        }
+        break;
+      }
+      case Protocol::Touch: {
+        Device::Descriptor device_descriptor = {};
+        if (!touchscreen_.ParseReportDescriptor(*input_desc,
+                                                &device_descriptor)) {
+          FXL_LOG(ERROR) << "invalid touchscreen descriptor for " << name();
+          return false;
+        }
+        if (!ConsumeDescriptor(&device_descriptor)) {
           return false;
         }
         break;
@@ -1161,23 +1049,6 @@ bool InputInterpreter::ParseProtocol() {
   }
 
   return true;
-}
-
-bool InputInterpreter::ParseReport(const uint8_t* report, size_t len,
-                                   Touch::Report* touchscreen) {
-  if (report[0] != ts_.report_id()) {
-    FXL_VLOG(0) << name() << " Touch report "
-                << static_cast<uint32_t>(report[0])
-                << " does not match report id "
-                << static_cast<uint32_t>(ts_.report_id());
-    return false;
-  }
-
-  return ts_.ParseReport(report, len, touchscreen);
-}
-
-bool InputInterpreter::SetDescriptor(Touch::Descriptor* touch_desc) {
-  return ts_.SetDescriptor(touch_desc);
 }
 
 }  // namespace mozart

@@ -71,6 +71,10 @@ source_set("device") {
     "mouse.h",
     "touch.cc",
     "touch.h",
+    "touchpad.cc",
+    "touchpad.h",
+    "touchscreen.cc",
+    "touchscreen.h",
   ]
 
   deps = [

@@ -11,8 +11,8 @@
 
 namespace mozart {
 
-// This reprents a HID device that uses touch. It currently supports both
-// touchscreens and touchpads.
+// This reprents a HID device that uses touch. It is a helper class that both
+// touchscreens and touchpads rely on.
 class Touch {
  public:
   static constexpr size_t MAX_TOUCH_POINTS = 10;
@@ -72,11 +72,11 @@ class Touch {
     }
   }
 
-  bool ParseTouchDescriptor(const hid::ReportDescriptor *desc);
+  bool ParseTouchDescriptor(const hid::ReportDescriptor &desc);
   bool ParseReport(const uint8_t *data, size_t len, Report *report) const;
   bool SetDescriptor(Touch::Descriptor *touch_desc);
+  uint8_t ReportId() const { return report_id_; }
 
-  uint8_t report_id() const { return report_id_; }
   size_t touch_points() const { return touch_points_; }
   int32_t contact_id_max() const { return contact_id_max_; }
   uint32_t capabilities() const { return capabilities_; }

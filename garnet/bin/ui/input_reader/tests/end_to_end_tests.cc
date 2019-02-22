@@ -164,4 +164,56 @@ TEST_F(ReaderInterpreterInputTest, ParadiseTouchscreen) {
   EXPECT_TRUE(touch.y = 200);
 }
 
+TEST_F(ReaderInterpreterInputTest, ParadiseTouchpad) {
+  // Create the paradise report descriptor.
+  size_t desc_len;
+  const uint8_t* desc_data = get_paradise_touchpad_v1_report_desc(&desc_len);
+  ASSERT_TRUE(desc_len > 0);
+  std::vector<uint8_t> report_descriptor(desc_data, desc_data + desc_len);
+
+  // Create the MockHidDecoder with our report descriptor.
+  fxl::WeakPtr<MockHidDecoder> device = AddDevice(report_descriptor);
+  RunLoopUntilIdle();
+
+  // Create a single touch report.
+  paradise_touchpad_v1_t touch_report = {};
+  touch_report.report_id = 1;
+  touch_report.contact_count = 1;
+  touch_report.fingers[0].tip_switch = 1;
+  touch_report.fingers[0].id = 1;
+  touch_report.fingers[0].x = 100;
+  touch_report.fingers[0].y = 200;
+  uint8_t* touch_report_bytes = reinterpret_cast<uint8_t*>(&touch_report);
+  std::vector<uint8_t> report(touch_report_bytes,
+                              touch_report_bytes + sizeof(touch_report));
+
+  // Send the touch report.
+  device->Send(report, sizeof(touch_report));
+  RunLoopUntilIdle();
+
+  // Check that we saw one report. Mice are relative so we shouldn't see
+  // any movement yet.
+  ASSERT_EQ(1, report_count_);
+  ASSERT_TRUE(last_report_.mouse);
+  EXPECT_EQ(0, last_report_.mouse->rel_x);
+  EXPECT_EQ(0, last_report_.mouse->rel_y);
+
+  // Send a second touch report.
+  touch_report.fingers[0].x = 150;
+  touch_report.fingers[0].y = 300;
+  report = std::vector<uint8_t>(touch_report_bytes,
+                                touch_report_bytes + sizeof(touch_report));
+
+  // Send the touch report.
+  device->Send(report, sizeof(touch_report));
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(2, report_count_);
+  ASSERT_TRUE(last_report_.mouse);
+  // These output values were hand calculated by converting the relative x
+  // and y to the units described by the paradise report.
+  EXPECT_EQ(39, last_report_.mouse->rel_x);
+  EXPECT_EQ(78, last_report_.mouse->rel_y);
+}
+
 }  // namespace mozart
