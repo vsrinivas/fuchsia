@@ -25,7 +25,7 @@ introduction section, by opening
 library fidl.examples.echo;
 
 [Discoverable]
-interface Echo {
+protocol Echo {
     EchoString(string? value) -> (string? response);
 };
 ```

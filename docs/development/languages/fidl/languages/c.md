@@ -73,13 +73,17 @@ produces.
 | `string`, `string?`                      | `fidl_string_t`            |
 | `vector`, `vector?`                      | `fidl_vector_t`            |
 | `array<T>:N`                             | `T[N]`                     |
-| `Interface`, `Interface?`                | typedef to `zx_handle_t`   |
+| `protocol`, `protocol?`                  | typedef to `zx_handle_t`   |
 | `request<I>`, `request<I>?`              | typedef to `zx_handle_t`   |
-| `Struct`                                 | `struct Struct`            |
-| `Struct?`                                | `struct Struct*`           |
-| `Union`                                  | `struct Union`             |
-| `Union?`                                 | `struct Union*`            |
-| `Enum`                                   | typedef to underlying type |
+| `struct`                                 | `struct Struct`            |
+| `struct?`                                | `struct Struct*`           |
+| `union`                                  | `struct Union`             |
+| `union?`                                 | `struct Union*`            |
+| `xunion`                                 | `struct Xunion`            |
+| `xunion?`                                | `struct Xunion*`           |
+| `table`                                  | `struct Table`             |
+| `table?`                                 | `struct Table*`            |
+| `enum`                                   | typedef to underlying type |
 
 ## zircon/fidl.h
 
@@ -493,7 +497,7 @@ enum Alert {
 };
 
 [Layout="Simple"]
-interface SpaceShip {
+protocol SpaceShip {
     AdjustHeading(SolarPosition destination) -> (int8 result);
     ScanForLifeforms() -> (vector<uint32>:64 life_signs);
     SetDefenseCondition(Alert alert);

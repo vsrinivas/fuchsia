@@ -34,7 +34,7 @@ devices it is compatible with via bindings.
 The following bind program
 declares the [AHCI driver](../../system/dev/block/ahci/ahci.c):
 
-```
+```c
 ZIRCON_DRIVER_BEGIN(ahci, ahci_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x01),
@@ -50,7 +50,7 @@ with PCI class 1, subclass 6, interface 1.
 The [PCI driver](../../system/dev/bus/pci/kpci.c) publishes the matching
 device with the following properties:
 
-```
+```c
 zx_device_prop_t device_props[] = {
     {BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI},
     {BIND_PCI_VID, 0, info.vendor_id},

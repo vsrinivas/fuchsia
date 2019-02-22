@@ -76,7 +76,7 @@ Category                           | C style                                   |
 -----------------------------------|-------------------------------------------|-------------------------------------------|--------------------
 **audience**                       | drivers                                   | drivers                                   | high-level services
 **abstraction overhead**           | almost zero                               | almost zero                               | heap allocation, construction, destruction
-**type safe types**                | enums, structs, unions                    | enums, structs, unions                    | enums, structs, unions, handles, interfaces
+**type safe types**                | enums, structs, unions                    | enums, structs, unions                    | enums, structs, unions, handles, protocols
 **storage**                        | in-place buffer                           | in-place buffer                           | heap
 **lifecycle**                      | manual free (POD)                         | manual free (POD)                         | automatic free (RAII)
 **receive behavior**               | decode in-place                           | decode in-place                           | decode then move to heap
@@ -121,17 +121,17 @@ FIDL                                        | Native C++ Style                  
 `vector<T>`                                 | `fidl::vector<T>`                                    | `std::vector<T>`
 `vector<T>?`                                | `fidl::vector<T>`                                    | `std::optional<std::vector>`
 `array<T>:N`                                | `fidl::array<T, N>`                                  | `std::array<T, N>`
-*Interface, Interface?*                     | interface named *typedef to zx_handle_t* [3]         | *Interface*Ptr
+*protocol, protocol?*                       | interface named *typedef to zx_handle_t* [3]         | *Interface*Ptr
 *request<Interface>, request<Interface>?*   | *interface_request named typedef to zx_handle_t* [4] | *Interface*Request
-*Struct*                                    | struct *Struct*                                      | *Struct*Ptr
-*Struct?*                                   | struct *Struct**                                     | *Struct*Ptr
-`table`                                     | `class TheTableName`                                 | `class TheTableName`
-`table?`                                    | `class TheTableName*`                                | `class TheTableName`
-*Union*                                     | struct *Union*                                       | *Union*Ptr
-*Union?*                                    | struct *Union**                                      | *Union*Ptr
-*Xunion*                                    | struct *Xunion*                                      | *Xunion*Ptr
-*Xunion?*                                   | struct *Xunion**                                     | *Xunion*Ptr
-*Enum*                                      | *enum class Foo : data type*                         | *enum class Foo : data type*
+*struct*                                    | struct *Struct*                                      | *Struct*Ptr
+*struct?*                                   | struct *Struct**                                     | *Struct*Ptr
+*table*                                     | class TheTableName                                   | *class TheTableName*
+*table?*                                    | class TheTableName*                                  | *class TheTableName*
+*union*                                     | struct *Union*                                       | *Union*Ptr
+*union?*                                    | struct *Union**                                      | *Union*Ptr
+*xunion*                                    | struct *Xunion*                                      | *Xunion*Ptr
+*xunion?*                                   | struct *Xunion**                                     | *Xunion*Ptr
+*enum*                                      | *enum class Foo : data type*                         | *enum class Foo : data type*
 
 Notes:
 1. or perhaps `zx::unowned_handle`

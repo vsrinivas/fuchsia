@@ -87,8 +87,10 @@ identifiers.  Our style is as follows:
  * Make everything lowercase ("non null http client")
  * Do one of the following, depending on what style is appropriate for the given identifier:
     * Replace spaces with underscores ('_') for _lower snake case_ (`non_null_http_client`).
-    * Capitalize and replace spaces with underscores for _upper snake case_ (`NON_NULL_HTTP_CLIENT`).
-    * Capitalize the first letter of each word and join all words together for _upper camel case_ (`NonNullHttpClient`).
+    * Capitalize and replace spaces with underscores for _upper snake case_
+      (`NON_NULL_HTTP_CLIENT`).
+    * Capitalize the first letter of each word and join all words together for _upper
+      camel case_ (`NonNullHttpClient`).
 
 ### Libraries
 
@@ -158,7 +160,7 @@ scoped by the library name in some fashion.
 
 Primitive aliases must be named in `lower_snake_case`.
 
-```
+```fidl
 using vaddr = uint64;
 ```
 
@@ -170,7 +172,7 @@ type and therefore do not cause name collisions.
 
 Constants must be named in `ALL_CAPS_SNAKE_CASE`.
 
-```
+```fidl
 const uint64 FOO_BAR = 4096;
 ```
 
@@ -181,6 +183,8 @@ Constants that describe minimum and maximum bounds should use the prefix `MIN_`
 and `MAX_`, respectively.
 
 ### Interfaces
+
+Interfaces are specified with the `protocol` keyword.
 
 Interfaces must be named in `UpperCamelCase` and must be noun phrases.  Typically,
 interfaces are named using nouns that suggest an action.  For example,
@@ -269,7 +273,8 @@ their enclosing type.
  * Use 4 space indents.
  * Never use tabs.
  * Avoid trailing whitespace.
- * Separate declarations for `struct`, `union`, `enum`, and `interface` constructs from other declarations with one newline.
+ * Separate declarations for `struct`, `union`, `enum`, and `protocol` constructs
+   from other declarations with one newline.
  * End files with exactly one newline character.
 
 ### Comments
@@ -278,7 +283,7 @@ Use `// comments` to document your library.  Place comments above the thing
 being described.  Use reasonably complete sentences with proper capitalization
 and periods:
 
-```
+```fidl
 struct Widget {
     // Widgets must be published with monotonically increasing ids.
     uint64 id;
@@ -338,7 +343,7 @@ struct WatchedEvent {
 A library is comprised of one or more files.  The files are stored in a
 directory hierarchy with the following conventions:
 
-```
+```fidl
 fidl/<library>/[<dir>/]*<file>.fidl
 ```
 
@@ -373,8 +378,8 @@ this happens, you can use the `Selector` attribute to change the name of the
 method the compiler uses for hashing.  The following example will use the method
 name "C" instead of the method name "B" for calculating the hash:
 
-```
-interface A {
+```fidl
+protocol A {
     [ Selector = "C" ]
     B(string s, bool b);
 };
@@ -447,7 +452,7 @@ represented using primitives.  For example, an IPv4 address is an important
 concept in the networking library and should be named using a struct even
 through the data can be represented using a primitive:
 
-```
+```fidl
 struct Ipv4Address {
     array<uint8>:4 octets;
 };
@@ -587,10 +592,10 @@ propagate the error to another system.
 
 If a method can return either an error or a result, use the following pattern:
 
-```
+```fidl
 enum MyStatus { OK; FOO; BAR; ... };
 
-interface Frobinator {
+protocol Frobinator {
     1: Frobinate(...) -> (MyStatus status, FrobinateResult? result);
 };
 ```
@@ -752,14 +757,14 @@ pipelining_.  Rather than returning a channel that implements an interface, the
 client sends the channel and requests the server to bind an implementation of
 the interface to that channel:
 
-```
+```fidl
 GOOD:
-interface Foo {
+protocol Foo {
     GetBar(string name, request<Bar> bar);
 };
 
 BAD:
-interface Foo {
+protocol Foo {
     GetBar(string name) -> (Bar bar);
 };
 ```
@@ -775,8 +780,8 @@ the client needs to wait for the whole round-trip before queuing messages for
 If the request is likely to fail, consider extending this pattern with a reply
 that describes whether the operation succeeded:
 
-```
-interface CodecProvider {
+```fidl
+protocol CodecProvider {
     TryToCreateCodec(CodecParams params, request<Codec> codec) -> (bool succeed);
 };
 ```
@@ -785,12 +790,12 @@ To handle the failure case, the client waits for the reply and takes some other
 action if the request failed.  Another approach is for the interface to have an
 event that the server sends at the start of the protocol:
 
-```
-interface Codec2 {
+```fidl
+protocol Codec2 {
     -> OnReady();
 };
 
-interface CodecProvider2 {
+protocol CodecProvider2 {
     TryToCreateCodec(CodecParams params, request<Codec2> codec);
 };
 ```
@@ -852,8 +857,8 @@ _acknowledgment pattern_, in which the caller provides an acknowledgement
 response that the caller uses for flow control.  For example, consider this
 generic listener interface:
 
-```
-interface Listener {
+```fidl
+protocol Listener {
     OnBar(...) -> ();
 };
 ```
@@ -876,8 +881,8 @@ A good use case for events is when at most one instance of the event will be
 sent for the lifetime of the channel.  In this pattern, the protocol does not
 need any flow control for the event:
 
-```
-interface DeathWish {
+```fidl
+protocol DeathWish {
     -> OnFatalError(status error_code);
 };
 ```
@@ -888,8 +893,8 @@ bounded.  This pattern is a more sophisticated version of the hanging get
 pattern in which the server can respond to the "get" request a bounded number of
 times (rather than just once):
 
-```
-interface NetworkScanner {
+```fidl
+protocol NetworkScanner {
     ScanForNetworks();
     -> OnNetworkDiscovered(string network);
     -> OnScanFinished();
@@ -903,8 +908,8 @@ server are switched.  As in the acknowledgement pattern, the server should
 throttle event production to match the rate at which the client consumes the
 events:
 
-```
-interface View {
+```fidl
+protocol View {
     -> OnInputEvent(InputEvent event);
     NotifyInputEventHandled();
 };
@@ -917,8 +922,8 @@ This pattern allows for more efficient batch processing by reducing the volume
 of acknowledgement messages and works well for in-order processing of multiple
 event types:
 
-```
-interface View {
+```fidl
+protocol View {
     -> OnInputEvent(InputEvent event, uint64 seq);
     -> OnFocusChangedEvent(FocusChangedEvent event, uint64 seq);
     NotifyEventsHandled(uint64 last_seq);
@@ -964,8 +969,8 @@ until the client synchronizes and recovers from the error in some way.
 
 Example:
 
-```
-interface Canvas {
+```fidl
+protocol Canvas {
     Flush() -> (status code);
     Clear();
     UploadImage(uint32 image_id, Image image);
@@ -1033,7 +1038,7 @@ individual message for each command.  The vector contains a union of all the
 possible commands, and the server uses the union tag as the selector for command
 dispatch in addition to using the method ordinal number:
 
-```
+```fidl
 struct PokeCmd { int32 x; int32 y; };
 
 struct ProdCmd { string:64 message; };
@@ -1043,7 +1048,7 @@ union MyCommand {
     ProdCmd prod;
 };
 
-interface HighVolumeSink {
+protocol HighVolumeSink {
   Enqueue(vector<MyCommand> commands);
   Commit() -> (MyStatus result);
 };
@@ -1073,8 +1078,8 @@ A simple approach to paginating writes to the server is to let the client send
 data in multiple messages and then have a "finalize" method that causes the
 server to process the sent data:
 
-```
-interface Foo {
+```fidl
+protocol Foo {
     AddBars(vector<Bar> bars);
     UseTheBars() -> (...);
 };
@@ -1086,13 +1091,13 @@ client send an arbitrary number of environment variables.
 A more sophisticated version of this pattern creates an interface that
 represents the transaction, often called a _tear-off interface_:
 
-```
-interface BarTransaction {
+```fidl
+protocol BarTransaction {
     Add(vector<Bar> bars);
     Commit() -> (...);
 };
 
-interface Foo {
+protocol Foo {
     StartBarTransaction(request<BarTransaction> transaction);
 };
 ```
@@ -1108,8 +1113,8 @@ approach to aborting the transaction is for the client to close the
 A simple approach to paginating reads from the server is to let the server send
 multiple responses to a single request using events:
 
-```
-interface EventBasedGetter {
+```fidl
+protocol EventBasedGetter {
     GetBars();
     -> OnBars(vector<Bar> bars);
     -> OnBarsDone();
@@ -1125,12 +1130,12 @@ interface).
 
 A more robust approach uses a tear-off interface to create an iterator:
 
-```
-interface BarIterator {
+```fidl
+protocol BarIterator {
     GetNext() -> (vector<Bar> bars);
 };
 
-interface ChannelBasedGetter {
+protocol ChannelBasedGetter {
     GetBars(request<BarIterator> iterator);
 };
 ```
@@ -1146,11 +1151,12 @@ Another approach to paginating reads is to use a token.  In this approach, the
 server stores the iterator state on the client in the form of an opaque token,
 and the client returns the token to the server with each partial read:
 
-```
+```fidl
 struct Token { array<uint8>:16 opaque; }
-interface TokenBasedGetter {
-    // If  token  is null, fetch the first N entries. If  token  is not null, return the N items starting at  token
-    // Returns as many entries as it can in  results  and populates  next_token  if more entries are available.
+protocol TokenBasedGetter {
+    // If token is null, fetch the first N entries. If token is not null, return the
+    // N items starting at token. Returns as many entries as it can in results and
+    // populates next_token if more entries are available.
     GetEntries(Token? token) -> (vector<Entry> entries, Token? next_token);
 }
 ```
@@ -1181,12 +1187,12 @@ of the object.  The client then sends the other entangled event to the other
 client, which forwards the event to the server with its own client-assigned
 identifier for the now-shared object:
 
-```
-interface Foo {
+```fidl
+protocol Foo {
     ExportThing(uint32 client_assigned_id, ..., handle<eventpair> export_token);
 };
 
-interface Bar {
+protocol Bar {
     ImportThing(uint32 some_other_client_assigned_id, ..., handle<eventpair> import_token);
 };
 ```
@@ -1224,8 +1230,8 @@ Sometimes an empty interface can provide value.  For example, a method that
 creates an object might also receive a `request<FooController>` parameter.  The
 caller provides an implementation of this empty interface:
 
-```
-interface FooController {};
+```fidl
+protocol FooController {};
 ```
 
 The `FooController` does not contain any methods for controlling the created
@@ -1286,10 +1292,10 @@ implementations of the library in at least two languages.
 A _service hub_ is a `Discoverable` interface that simply lets you discover a
 number of other interfaces, typically with explicit names:
 
-```
+```fidl
 BAD:
 [Discoverable]
-interface ServiceHub {
+protocol ServiceHub {
     GetFoo(request<Foo> foo);
     GetBar(request<Bar> bar);
     GetBaz(request<Baz> baz);
@@ -1300,18 +1306,18 @@ interface ServiceHub {
 Particularly if stateless, the `ServiceHub` interface does not provide much
 value over simply making the individual services discoverable directly:
 
-```
+```fidl
 [Discoverable]
-interface Foo { ... };
+protocol Foo { ... };
 
 [Discoverable]
-interface Bar { ... };
+protocol Bar { ... };
 
 [Discoverable]
-interface Baz { ... };
+protocol Baz { ... };
 
 [Discoverable]
-interface Qux { ... };
+protocol Qux { ... };
 ```
 
 Either way, the client can establish a connection to the enumerated services.

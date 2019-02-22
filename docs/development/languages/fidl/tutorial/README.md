@@ -96,7 +96,7 @@ to the server, the server just echoes back to the client.
 1   library fidl.examples.echo;
 2
 3   [Discoverable]
-4   interface Echo {
+4   protocol Echo {
 5       EchoString(string? value) -> (string? response);
 6   };
 ```
@@ -110,7 +110,7 @@ is used to distinguish amongst them.
 **Line 3:** The `[Discoverable]` attribute indicates that the interface that
 follows should be made available for clients to connect to.
 
-**Line 4:** The `interface` keyword introduces the name of the interface, here it's called `Echo`.
+**Line 4:** The `protocol` keyword introduces the name of the interface, here it's called `Echo`.
 
 **Line 5:** The method, its parameters, and return values.
 There are two unusual aspects of this line:
@@ -336,7 +336,7 @@ interface definition file:
 1   library fidl.examples.echo;
 2
 3   [Discoverable]
-4   interface Echo {
+4   protocol Echo {
 5       EchoString(string? value) -> (string? response);
 6       SendString(string? value);
 7       -> ReceiveString (string? response);

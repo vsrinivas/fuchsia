@@ -515,7 +515,7 @@ does not affect the wire format).
 We'll use the following interface for the next few examples:
 
 ```fidl
-interface Calculator {
+protocol Calculator {
     Add(int32 a, int32 b) -> (int32 sum);
     Divide(int32 dividend, int32 divisor)
         -> (int32 quotient, int32 remainder);
@@ -575,7 +575,7 @@ These support sending unsolicited messages from the server back to the client.
 Here we've added an `Error` method to our `Calculator` example:
 
 ```fidl
-interface Calculator {
+protocol Calculator {
     Add(int32 a, int32 b) -> (int32 sum);
     Divide(int32 dividend, int32 divisor) -> (int32 quotient, int32 remainder);
     Clear();

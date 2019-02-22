@@ -60,18 +60,21 @@ It should be used only by Fuchsia developers.
 This attribute currently has one valid value, `Simple`, and is meaningful only on interfaces.
 
 It's used to indicate that all arguments and returns must contain objects that are of a fixed size.
-The arguments and returns themselves, however, can be dynamically sized string or vector of primitives.
+The arguments and returns themselves, however, can be dynamically sized string or vector
+of primitives.
 
 To clarify with an example, the following is valid:
 
 ```fidl
 [Layout = "Simple"]
-interface MyInterface {
+protocol MyInterface {
     DynamicCountOfFixedArguments(bytes:1024 inputs);
 };
 ```
 
-Here, the argument is a dynamically sized `vector` of unsigned 8-bit integers called `inputs`, with a maximum bound of 1024 elements.
+Here, the argument is a dynamically sized `vector` of unsigned 8-bit integers called `inputs`,
+with a maximum bound of 1024 elements.
 
-The benefit of `[Layout = "Simple"]` is that the data can be directly mapped without having to be copied and assembled.
+The benefit of `[Layout = "Simple"]` is that the data can be directly mapped without having
+to be copied and assembled.
 

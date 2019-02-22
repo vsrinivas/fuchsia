@@ -50,7 +50,7 @@ This is the file [`//zircon/system/banjo/ddk-protocol-i2c/i2c.banjo`](https://fu
 [17] };
 [18]
 [19] [Layout = "ddk-protocol"]
-[20] interface I2c {
+[20] protocol I2c {
 [21]     /// Writes and reads data on an i2c channel. Up to I2C_MAX_RW_OPS operations can be passed in.
 [22]     /// For write ops, i2c_op_t.data points to data to write.  The data to write does not need to be
 [23]     /// kept alive after this call.  For read ops, i2c_op_t.data is ignored.  Any combination of reads
@@ -103,12 +103,12 @@ implementation (the driver) and the protocol user (the program that's using the 
 
 ## The interface
 
-The more interesting part is the `interface` specification.
+The more interesting part is the `protocol` specification.
 
 We'll skip the `[Layout]` (line `[19]`) and `[Async]` (line `[27]`) attributes for now,
 but will return to them below, in [Attributes](#attributes).
 
-The `interface` section defines three interface methods:
+The `protocol` section defines three interface methods:
 
 * `Transact`
 * `GetMaxTransferSize`
@@ -127,7 +127,7 @@ to include the structure definition that's common to the C++ version as well.
 The C implementation is relatively straightforward:
 * `struct`s and `union`s map almost directly into their C language counterparts.
 * `enum`s and constants are generated as `#define` macros.
-* `interface`s are generated as two `struct`s:
+* `protocol`s are generated as two `struct`s:
     * a function table, and
     * a struct with pointers to the function table and a context.
 * Some helper functions are also generated.
@@ -231,11 +231,11 @@ And now we get into the good parts.
 [39] } i2c_protocol_ops_t;
 ```
 
-This `typedef` creates a structure definition that contains the three `interface` methods
+This `typedef` creates a structure definition that contains the three `protocol` methods
 that were defined in the original `.banjo` file at lines `[28]`, `[30]` and `[31]`.
 
 Notice the name mangling that has occurred &mdash; this is how you can map the
-`interface` method names to the C function pointer names so that you know what
+`protocol` method names to the C function pointer names so that you know what
 they're called:
 
 Banjo                | C                       | Rule
@@ -649,19 +649,19 @@ at how we would use it.
 
 ## Attributes
 
-Recall from the example above that the `interface` section had two attributes;
+Recall from the example above that the `protocol` section had two attributes;
 a `[Layout]` and an `[Async]` attribute.
 
 ### The Layout attribute
 
-The line just before the `interface` is the `[Layout]` attribute:
+The line just before the `protocol` is the `[Layout]` attribute:
 
 ```banjo
 [19] [Layout = "ddk-protocol"]
-[20] interface I2c {
+[20] protocol I2c {
 ```
 
-The attribute applies to the next item; so in this case, the entire `interface`.
+The attribute applies to the next item; so in this case, the entire `protocol`.
 Only one layout is allowed per interface.
 
 There are in fact 3 `Layout` attribute types currently supported:
@@ -713,10 +713,10 @@ struct callback {
 
 ### The Async attribute
 
-Within the `interface` section, we see another attribute: the `[Async]` attribute:
+Within the `protocl` section, we see another attribute: the `[Async]` attribute:
 
 ```banjo
-[20] interface I2c {
+[20] protocl I2c {
 ...      /// comments (removed)
 [27]     [Async]
 ```

@@ -48,7 +48,7 @@ The following are keywords in FIDL.
 
 ```
 array, as, bool, const, enum, float32, float64, handle, int8, int16,
-int32, int64, interface, library, request, string, struct, table, uint8,
+int32, int64, library, protocol, request, string, struct, table, uint8,
 uint16, uint32, uint64, union, using, vector
 ```
 
@@ -88,7 +88,7 @@ prefixing the identifier with the library name or alias.
 library objects;
 using textures as tex;
 
-interface Frob {
+protocol Frob {
     // "Thing" refers to "Thing" in the "objects" library
     // "tex.Color" refers to "Color" in the "textures" library
     Paint(Thing thing, tex.Color color);
@@ -569,7 +569,7 @@ struct Paint {
 ##### Declaration
 
 ```fidl
-interface Calculator {
+protocol Calculator {
     Add(int32 a, int32 b) -> (int32 sum);
     Divide(int32 dividend, int32 divisor)
         -> (int32 quotient, int32 remainder);
@@ -577,18 +577,18 @@ interface Calculator {
     -> OnClear();
 };
 
-interface RealCalculator : Calculator {
+protocol RealCalculator : Calculator {
     AddFloats(float32 a, float32 b) -> (float32 sum);
 };
 
-interface Science {
+protocol Science {
     Hypothesize();
     Investigate();
     Explode();
     Reproduce();
 };
 
-interface ScientificCalculator : RealCalculator, Science {
+protocol ScientificCalculator : RealCalculator, Science {
     Sin(float32 x) -> (float32 result);
 };
 ```

@@ -21,7 +21,7 @@ tool. When adding a new language, consider using the `-json` flag to dump
 [a JSON representation](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/host/abigen/syscall_schema.json)
 of the Zircon system calls:
 
-```
+```sh
 abigen -json syscalls.json zircon/system/public/zircon/syscalls.abigen
 ```
 

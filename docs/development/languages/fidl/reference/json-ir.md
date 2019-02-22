@@ -23,7 +23,7 @@ example from the tutorial:
 library fidl.examples.echo;
 
 [Discoverable]
-interface Echo {
+protocol Echo {
     EchoString(string? value) -> (string? response);
 };
 ```

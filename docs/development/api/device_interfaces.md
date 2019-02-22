@@ -41,7 +41,7 @@ If your interface has a bitfield, represent its values using `const` values.
 They should be grouped together in the FIDL file and have a common prefix.  For
 example:
 
-```
+```fidl
 // Bit definitions for Info.features field
 
 // If present, this device represents WLAN hardware.

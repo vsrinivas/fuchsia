@@ -24,7 +24,7 @@ The available URLs for for flutter module examples are:
 After a successful build of fuchsia, type the following command from the zx
 console to run the basemgr with the dev session shell:
 
-```
+```sh
 killall scenic  # Kills all other mods.
 basemgr --session_shell=dev_session_shell --session_shell_args=--root_module=hello_mod
 ```
@@ -102,7 +102,7 @@ look at the `BUILD.gn` file, in this case `//peridot/public/lib/BUILD.gn`. In
 this file we can see that the `module.fidl` file is included in the
 `fidl("fidl")` target.
 
-```
+```gn
 fidl("fidl") {
   sources = [
     ...
@@ -186,7 +186,7 @@ You need to have the correct `.packages` file generated for the dart packages in
 fuchsia tree. After building fuchsia, run this script form the terminal of your
 development machine:
 
-```
+```sh
 <fuchsia_root>$ scripts/symlink-dot-packages.py
 ```
 

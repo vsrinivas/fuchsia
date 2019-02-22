@@ -23,7 +23,7 @@ ability to control which `fuchsia::modular::MessageQueue` the messages will be s
 library simple;
 
 [Discoverable]
-interface Simple {
+protocol Simple {
   // Provides the Simple interface with a message queue to which
   // messages will be written periodically.
   1: SetMessageQueue(string queue_token);
@@ -60,10 +60,11 @@ to provide services to other components via `outgoing_services`.
 For example, it allows agents to schedule `Task`s that will be executed at
 specific intervals.
 
-`fuchsia::modular::AgentContext` also gives `fuchsia::modular::Agent`s access to `fuchsia::modular::ComponentContext` which is an
-interface that is exposed to all Peridot components (i.e. `fuchsia::modular::Agent` and `Module`).
-For example, `fuchsia::modular::ComponentContext` provides access to `Ledger`, Peridot's cross-device
-storage solution.
+`fuchsia::modular::AgentContext` also gives `fuchsia::modular::Agent`s access to
+`fuchsia::modular::ComponentContext` which is an interface that is exposed to all
+Peridot components (i.e. `fuchsia::modular::Agent` and `Module`).
+For example, `fuchsia::modular::ComponentContext` provides access to `Ledger`,
+Peridot's cross-device storage solution.
 
 ### Advertising the `Simple` Interface
 
@@ -122,8 +123,8 @@ class SimpleImpl : Simple {
 ```
 
 The `SimpleImpl` could be part of the `SimpleAgent` class, but it's good practice
-to separate out the implementation of an `fuchsia::modular::Agent` from the implementation(s) of the
-interface(s) it provides.
+to separate out the implementation of an `fuchsia::modular::Agent` from the
+implementation(s) of the interface(s) it provides.
 
 ## Running the fuchsia::modular::Agent
 
@@ -154,8 +155,8 @@ void RunTask(const fidl::StringPtr& task_id,
 void Terminate(const std::function<void()>& done) { done(); }
 ```
 
-`RunTask` is called when a task, scheduled through `fuchsia::modular::AgentContext`'s `ScheduleTask`,
-is triggered.
+`RunTask` is called when a task, scheduled through `fuchsia::modular::AgentContext`'s
+`ScheduleTask`, is triggered.
 
 `Terminate` is called when the framework requests `fuchsia::modular::Agent` to
 exit gracefully.
@@ -176,8 +177,8 @@ ConnectToService(agent_services.get(), agent_service.NewRequest());
 agent_service->SetMessageQueue(...);
 ```
 
-Here the component context is asked to connect to the fuchsia::modular::Agent at `agent_url`, and is
-given a request for the services that the `SimpleAgent` will provide via `agent_services`,
+Here the component context is asked to connect to the fuchsia::modular::Agent at `agent_url`,
+and is given a request for the services that the `SimpleAgent` will provide via `agent_services`,
 and a controller for the `fuchsia::modular::Agent` via `agent_controller`.
 
 Then the client connects to the `Simple` interface by invoking `ConnectToService` with
