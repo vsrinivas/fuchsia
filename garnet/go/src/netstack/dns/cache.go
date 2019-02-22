@@ -225,7 +225,7 @@ func newCachedResolver(fallback Resolver) Resolver {
 		logger.VLogTf(logger.TraceVerbosity, tag, "DNS cache miss for the message %v(%v)", question.Name, question.Type)
 		cname, rrs, msg, err := fallback(c, question)
 		if err != nil {
-			logger.WarnTf(tag, "DNS cache miss, server returned %v(%v) => err=%v", question.Name, question.Type, err)
+			logger.WarnTf(tag, "%s", err)
 		}
 
 		cache.mu.Lock()

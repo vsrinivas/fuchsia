@@ -65,7 +65,7 @@ type Error struct {
 
 func (e *Error) Error() string {
 	if e.Server != nil {
-		return fmt.Sprintf("lookup %s on %v: %s", e.Name, e.Server, e.Err)
+		return fmt.Sprintf("lookup %s on %+v: %s", e.Name, *e.Server, e.Err)
 	}
 	return fmt.Sprintf("lookup %s: %s", e.Name, e.Err)
 }
