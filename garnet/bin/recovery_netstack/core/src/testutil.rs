@@ -4,8 +4,6 @@
 
 //! Testing-related utilities.
 
-#![allow(deprecated)]
-
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Once;
 use std::time::{Duration, Instant};
@@ -13,7 +11,8 @@ use std::time::{Duration, Instant};
 use byteorder::{ByteOrder, NativeEndian};
 use log::debug;
 use packet::{ParsablePacket, ParseBuffer};
-use rand::{SeedableRng, XorShiftRng};
+use rand::SeedableRng;
+use rand_xorshift::XorShiftRng;
 
 use crate::device::ethernet::{EtherType, Mac};
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
