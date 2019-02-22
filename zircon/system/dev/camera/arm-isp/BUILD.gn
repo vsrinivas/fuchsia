@@ -6,6 +6,7 @@ driver("arm-isp") {
   sources = [
     "arm-isp-impl.cpp",
     "arm-isp.cpp",
+    "init_sequences.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-clk",

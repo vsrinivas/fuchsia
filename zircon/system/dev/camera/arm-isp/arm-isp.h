@@ -53,6 +53,13 @@ public:
     // ZX_PROTOCOL_ISP ops.
     void IspDummyCall(){};
 
+    void IspLoadSeq_linear();
+    void IspLoadSeq_settings();
+    void IspLoadSeq_fs_lin_2exp();
+    void IspLoadSeq_fs_lin_3exp();
+    void IspLoadSeq_fs_lin_4exp();
+    void IspLoadSeq_settings_context();
+
 private:
     void ShutDown();
     void PowerUpIsp();
