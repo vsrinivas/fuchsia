@@ -7,8 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.images") {
   sdk_category = "partner"
 
-  api = "fuchsia.images.api"
-
   sources = [
     "encoded_image.fidl",
     "image_info.fidl",

@@ -9,8 +9,6 @@ fidl("fuchsia.auth") {
   # partner sdk dependency for internal interfaces.
   sdk_category = "partner"
 
-  api = "fuchsia.auth.api"
-
   sources = [
     "attestation_signer.fidl",
     "auth_provider.fidl",

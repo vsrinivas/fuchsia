@@ -7,8 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.wlan.stats") {
   sdk_category = "partner"
 
-  api = "fuchsia.wlan.stats.api"
-
   sources = [
     "wlan_stats.fidl",
   ]

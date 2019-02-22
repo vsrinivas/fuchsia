@@ -7,8 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.simplecamera") {
   sdk_category = "partner"
 
-  api = "fuchsia.simplecamera.api"
-
   sources = [
     "simple_camera.fidl",
   ]

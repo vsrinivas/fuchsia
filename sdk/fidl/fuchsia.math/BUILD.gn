@@ -7,8 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.math") {
   sdk_category = "partner"
 
-  api = "fuchsia.math.api"
-
   sources = [
     "math.fidl",
   ]

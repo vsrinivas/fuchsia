@@ -7,8 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.developer.tiles") {
   sdk_category = "partner"
 
-  api = "fuchsia.developer.tiles.api"
-
   sources = [
     "tiles.fidl",
   ]

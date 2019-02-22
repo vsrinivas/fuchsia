@@ -18,7 +18,9 @@ import("//build/sdk/sdk_atom.gni")
 #   api (optional)
 #     Path to the file representing the API of this library.
 #     This file is used to ensure modifications to the library's API are
-#     explicitly acknowledged.
+#     explicitly acknowledged. It is mandatory for publication categories of
+#     "partner" or "public".
+#     Defaults to "<SDK name>.api".
 #
 #   sdk_name (required)
 #     Name of the library in the SDK.
@@ -37,7 +39,10 @@ template("sdk_source_set") {
   assert(defined(invoker.sdk_name), "Must define an SDK name")
 
   if (invoker.category == "partner" || invoker.category == "public") {
-    assert(defined(invoker.api), "Published libraries need an API file")
+    api_reference = "${invoker.sdk_name}.api"
+    if (defined(invoker.api)) {
+      api_reference = invoker.api
+    }
   }
 
   main_target_name = target_name
@@ -166,8 +171,8 @@ template("sdk_source_set") {
     id = "sdk://pkg/${invoker.sdk_name}"
     category = invoker.category
 
-    if (defined(invoker.api)) {
-      api = invoker.api
+    if (defined(api_reference)) {
+      api = api_reference
 
       api_contents = sdk_header_files
     }

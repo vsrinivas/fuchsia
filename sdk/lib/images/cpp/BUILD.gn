@@ -7,8 +7,6 @@ import("//build/cpp/sdk_source_set.gni")
 sdk_source_set("cpp") {
   category = "partner"
 
-  api = "images_cpp.api"
-
   sdk_name = "images_cpp"
 
   include_base = "//sdk"

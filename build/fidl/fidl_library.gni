@@ -164,12 +164,10 @@ template("fidl_library") {
   if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
     sdk_category = invoker.sdk_category
     if (sdk_category == "partner" || sdk_category == "public") {
-      assert(defined(invoker.api), "Published libraries need an API file")
-    }
-
-    library_name = target_name
-    if (defined(invoker.name)) {
-      library_name = invoker.name
+      api_reference = "$library_name.api"
+      if (defined(invoker.api)) {
+        api_reference = invoker.api
+      }
     }
 
     # Process sources.
@@ -236,8 +234,8 @@ template("fidl_library") {
 
       category = sdk_category
 
-      if (defined(invoker.api)) {
-        api = invoker.api
+      if (defined(api_reference)) {
+        api = api_reference
 
         api_contents = all_files
       }

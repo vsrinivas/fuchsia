@@ -16,7 +16,9 @@ import("//build/sdk/sdk_atom_alias.gni")
 #   api (optional)
 #     Path to the file representing the API of this library.
 #     This file is used to ensure modifications to the library's API are
-#     explicitly acknowledged.
+#     explicitly acknowledged. It is mandatory for publication categories of
+#     "partner" or "public".
+#     Defaults to "<SDK name>.api".
 #
 #   no_headers (optional)
 #     Whether to include the library's headers in the SDK.
@@ -43,11 +45,25 @@ set_defaults("sdk_shared_library") {
 template("sdk_shared_library") {
   assert(defined(invoker.category), "Must define an SDK category")
 
+  output_name = target_name
+  if (defined(invoker.output_name)) {
+    output_name = invoker.output_name
+  }
+
+  if (defined(invoker.sdk_name)) {
+    atom_name = invoker.sdk_name
+  } else {
+    atom_name = output_name
+  }
+
   no_headers = defined(invoker.no_headers) && invoker.no_headers
 
   if ((invoker.category == "partner" || invoker.category == "public") &&
       !no_headers) {
-    assert(defined(invoker.api), "Published libraries need an API file")
+    api_reference = "${atom_name}.api"
+    if (defined(invoker.api)) {
+      api_reference = invoker.api
+    }
   }
 
   main_target_name = target_name
@@ -92,17 +108,6 @@ template("sdk_shared_library") {
     # Request that the runtime deps be written out to a file. This file will be
     # used later to verify that all runtime deps are available in the SDK.
     write_runtime_deps = "$target_out_dir/$target_name.runtime_deps"
-  }
-
-  output_name = target_name
-  if (defined(invoker.output_name)) {
-    output_name = invoker.output_name
-  }
-
-  if (defined(invoker.sdk_name)) {
-    atom_name = invoker.sdk_name
-  } else {
-    atom_name = output_name
   }
 
   # Base path for source files of this library in SDKs.
@@ -232,8 +237,8 @@ template("sdk_shared_library") {
 
     category = invoker.category
 
-    if (defined(invoker.api) && !no_headers) {
-      api = invoker.api
+    if (defined(api_reference) && !no_headers) {
+      api = api_reference
 
       api_contents = sdk_header_files
     }

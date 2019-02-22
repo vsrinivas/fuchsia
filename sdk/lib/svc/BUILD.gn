@@ -10,8 +10,6 @@ import("//build/testing/environments.gni")
 sdk_shared_library("svc") {
   category = "partner"
 
-  api = "svc.api"
-
   sources = [
     "dir.cc",
     "dir.h",

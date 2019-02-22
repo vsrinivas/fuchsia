@@ -7,8 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.ledger") {
   sdk_category = "partner"
 
-  api = "fuchsia.ledger.api"
-
   sources = [
     "ledger.fidl",
   ]

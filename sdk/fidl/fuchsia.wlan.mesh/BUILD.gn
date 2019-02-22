@@ -7,8 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.wlan.mesh") {
   sdk_category = "internal"
 
-  api = "fuchsia.wlan.mesh.api"
-
   sources = [
     "wlan_mesh.fidl",
   ]

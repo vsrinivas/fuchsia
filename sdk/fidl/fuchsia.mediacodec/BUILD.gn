@@ -7,8 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.mediacodec") {
   sdk_category = "partner"
 
-  api = "fuchsia.mediacodec.api"
-
   sources = [
     "codec_factory.fidl",
   ]

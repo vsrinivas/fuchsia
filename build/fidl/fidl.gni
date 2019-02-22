@@ -33,7 +33,9 @@ import("//build/rust/toolchain.gni")
 #   api (optional)
 #     Path to the file representing the API of this library.
 #     This file is used to ensure modifications to the library's API are
-#     explicitly acknowledged.
+#     explicitly acknowledged. It is mandatory for publication categories of
+#     "partner" or "public".
+#     Defaults to "<target name>.api".
 #
 #   cpp_legacy_callbacks (optional)
 #     If true, uses std::function instead of fit::function.

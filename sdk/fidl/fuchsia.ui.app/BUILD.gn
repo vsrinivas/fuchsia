@@ -9,8 +9,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.ui.app") {
   sdk_category = "partner"
 
-  api = "fuchsia.ui.app.api"
-
   sources = [
     "view.fidl",
     "view_config.fidl",
