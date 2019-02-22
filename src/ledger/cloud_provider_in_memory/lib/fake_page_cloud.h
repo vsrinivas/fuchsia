@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_IN_MEMORY_FAKE_PAGE_CLOUD_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_IN_MEMORY_FAKE_PAGE_CLOUD_H_
+#ifndef SRC_LEDGER_CLOUD_PROVIDER_IN_MEMORY_LIB_FAKE_PAGE_CLOUD_H_
+#define SRC_LEDGER_CLOUD_PROVIDER_IN_MEMORY_LIB_FAKE_PAGE_CLOUD_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
@@ -12,9 +12,9 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 
-#include "peridot/bin/cloud_provider_in_memory/types.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/lib/commit_pack/commit_pack.h"
+#include "src/ledger/cloud_provider_in_memory/lib/types.h"
 
 namespace ledger {
 
@@ -62,4 +62,4 @@ class FakePageCloud : public cloud_provider::PageCloud {
 
 }  // namespace ledger
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_IN_MEMORY_FAKE_PAGE_CLOUD_H_
+#endif  // SRC_LEDGER_CLOUD_PROVIDER_IN_MEMORY_LIB_FAKE_PAGE_CLOUD_H_

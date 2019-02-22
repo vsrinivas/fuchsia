@@ -17,8 +17,6 @@
 #include <lib/timekeeper/test_loop_test_clock.h>
 
 #include "gtest/gtest.h"
-#include "peridot/bin/cloud_provider_in_memory/fake_cloud_provider.h"
-#include "peridot/bin/cloud_provider_in_memory/types.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/fidl/error_notifier.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
@@ -33,6 +31,8 @@
 #include "peridot/lib/rng/test_random.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
+#include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
+#include "src/ledger/cloud_provider_in_memory/lib/types.h"
 
 namespace ledger {
 namespace {

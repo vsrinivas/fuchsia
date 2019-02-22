@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_IN_MEMORY_TYPES_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_IN_MEMORY_TYPES_H_
+#ifndef SRC_LEDGER_CLOUD_PROVIDER_IN_MEMORY_LIB_TYPES_H_
+#define SRC_LEDGER_CLOUD_PROVIDER_IN_MEMORY_LIB_TYPES_H_
 
 namespace ledger {
 
@@ -13,4 +13,4 @@ enum class InjectNetworkError { YES, NO };
 
 }  // namespace ledger
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_IN_MEMORY_TYPES_H_
+#endif  // SRC_LEDGER_CLOUD_PROVIDER_IN_MEMORY_LIB_TYPES_H_

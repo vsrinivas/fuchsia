@@ -10,7 +10,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fxl/macros.h>
 
-#include "peridot/bin/cloud_provider_in_memory/fake_cloud_provider.h"
+#include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 
 namespace cloud_provider {
 namespace {

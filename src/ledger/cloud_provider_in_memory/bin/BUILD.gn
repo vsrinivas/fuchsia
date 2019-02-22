@@ -9,34 +9,6 @@ visibility = [
   ":*",
 ]
 
-source_set("lib") {
-  sources = [
-    "fake_cloud_provider.cc",
-    "fake_cloud_provider.h",
-    "fake_device_set.cc",
-    "fake_device_set.h",
-    "fake_page_cloud.cc",
-    "fake_page_cloud.h",
-    "types.h",
-  ]
-
-  public_deps = [
-    "//garnet/public/lib/callback",
-    "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/fidl/include",
-    "//peridot/lib/commit_pack",
-  ]
-
-  deps = [
-    "//peridot/bin/ledger/fidl_helpers",
-    "//peridot/lib/convert",
-    "//sdk/fidl/fuchsia.ledger.cloud",
-    "//third_party/murmurhash",
-  ]
-
-  configs += [ "//peridot/bin/ledger:ledger_config" ]
-}
-
 executable("app") {
   output_name = "cloud_provider_in_memory"
 
@@ -45,22 +17,23 @@ executable("app") {
   ]
 
   deps = [
-    ":lib",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rng:system",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/fidl/cpp",
+    "//src/ledger/cloud_provider_in_memory/lib",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
 }
 
-package("cloud_provider_in_memory") {
+package("bin") {
   deps = [
     ":app",
   ]
 
+  package_name = "cloud_provider_in_memory"
   binary = "cloud_provider_in_memory"
 
   meta = [
@@ -75,6 +48,6 @@ group("tests") {
   testonly = true
 
   public_deps = [
-    "//peridot/bin/cloud_provider_in_memory/validation",
+    "//src/ledger/cloud_provider_in_memory/bin/validation",
   ]
 }

@@ -47,13 +47,13 @@ package("ledger_tests") {
   deps = [
     ":ledger_e2e_sync_credentials",
     ":ledger_unittests",
-    "//peridot/bin/cloud_provider_in_memory",
-    "//peridot/bin/cloud_provider_in_memory:tests",
     "//peridot/bin/ledger/tests/cloud_provider",
     "//peridot/bin/ledger/tests/e2e_local",
     "//peridot/bin/ledger/tests/e2e_sync",
     "//peridot/bin/ledger/tests/integration",
     "//src/ledger/cloud_provider_firestore/bin:tests",
+    "//src/ledger/cloud_provider_in_memory/bin",
+    "//src/ledger/cloud_provider_in_memory/bin:tests",
   ]
 
   meta = [
@@ -85,7 +85,7 @@ package("ledger_tests") {
     },
     {
       path = rebase_path(
-              "//peridot/bin/cloud_provider_in_memory/validation/validation_in_memory.cmx")
+              "//src/ledger/cloud_provider_in_memory/bin/validation/validation_in_memory.cmx")
       dest = "validation_in_memory.cmx"
     },
     {

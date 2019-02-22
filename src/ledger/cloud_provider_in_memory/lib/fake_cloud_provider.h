@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_CLOUD_PROVIDER_IN_MEMORY_FAKE_CLOUD_PROVIDER_H_
-#define PERIDOT_BIN_CLOUD_PROVIDER_IN_MEMORY_FAKE_CLOUD_PROVIDER_H_
+#ifndef SRC_LEDGER_CLOUD_PROVIDER_IN_MEMORY_LIB_FAKE_CLOUD_PROVIDER_H_
+#define SRC_LEDGER_CLOUD_PROVIDER_IN_MEMORY_LIB_FAKE_CLOUD_PROVIDER_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fxl/macros.h>
 
-#include "peridot/bin/cloud_provider_in_memory/fake_device_set.h"
-#include "peridot/bin/cloud_provider_in_memory/fake_page_cloud.h"
-#include "peridot/bin/cloud_provider_in_memory/types.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
+#include "src/ledger/cloud_provider_in_memory/lib/fake_device_set.h"
+#include "src/ledger/cloud_provider_in_memory/lib/fake_page_cloud.h"
+#include "src/ledger/cloud_provider_in_memory/lib/types.h"
 
 namespace ledger {
 
@@ -65,4 +65,4 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
 
 }  // namespace ledger
 
-#endif  // PERIDOT_BIN_CLOUD_PROVIDER_IN_MEMORY_FAKE_CLOUD_PROVIDER_H_
+#endif  // SRC_LEDGER_CLOUD_PROVIDER_IN_MEMORY_LIB_FAKE_CLOUD_PROVIDER_H_
