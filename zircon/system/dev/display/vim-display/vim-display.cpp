@@ -112,6 +112,7 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
         info.wrap = 0;
         info.blkmode = 0;
         info.endianness = 0;
+        info.flags = CANVAS_FLAGS_READ;
 
         status = amlogic_canvas_config(&display->canvas, vmo.release(),
                                        offset + image->planes[0].byte_offset,
@@ -135,6 +136,7 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
         info.blkmode = 0;
         // Do 64-bit endianness conversion.
         info.endianness = 7;
+        info.flags = CANVAS_FLAGS_READ;
 
         zx::vmo dup_vmo;
         status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);

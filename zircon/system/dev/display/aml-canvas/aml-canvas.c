@@ -80,7 +80,13 @@ static zx_status_t aml_canvas_config(void* ctx, zx_handle_t vmo,
         goto fail;
     }
 
-    status = zx_bti_pin(canvas->bti, ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS,
+    uint32_t pin_flags = ZX_BTI_CONTIGUOUS;
+    if (info->flags & CANVAS_FLAGS_READ)
+        pin_flags |= ZX_BTI_PERM_READ;
+    if (info->flags & CANVAS_FLAGS_WRITE)
+        pin_flags |= ZX_BTI_PERM_WRITE;
+
+    status = zx_bti_pin(canvas->bti, pin_flags,
                         vmo, offset & ~(PAGE_SIZE - 1), size,
                         &paddr, 1,
                         &canvas->pmt_handle[index]);

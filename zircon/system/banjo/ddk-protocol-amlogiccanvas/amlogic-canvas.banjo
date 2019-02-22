@@ -6,12 +6,18 @@ library ddk.protocol.amlogiccanvas;
 
 using zx;
 
+enum CanvasFlags : uint32 {
+    READ = 0x1;
+    WRITE = 0x2;
+};
+
 struct CanvasInfo {
     uint32 height;
     uint32 stride_bytes;
     uint32 wrap;
     uint32 blkmode;
     uint32 endianness;
+    uint32 flags;
 };
 
 [Layout = "ddk-protocol"]

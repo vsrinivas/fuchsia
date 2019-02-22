@@ -226,6 +226,7 @@ std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(
   info.endianness =
       kSwapBytes | kSwapWords |
       kSwapDoublewords;  // 64-bit big-endian to little-endian conversion.
+  info.flags = CANVAS_FLAGS_READ | CANVAS_FLAGS_WRITE;
 
   zx::unowned_vmo vmo(io_buffer->vmo_handle);
   zx::vmo dup_vmo;

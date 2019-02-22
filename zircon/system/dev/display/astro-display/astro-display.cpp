@@ -267,6 +267,7 @@ zx_status_t AstroDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx
     canvas_info.wrap            = 0;
     canvas_info.blkmode         = 0;
     canvas_info.endianness      = 0;
+    canvas_info.flags           = CANVAS_FLAGS_READ;
 
     uint8_t local_canvas_idx;
     status = amlogic_canvas_config(&canvas_, vmo.release(), offset, &canvas_info,
