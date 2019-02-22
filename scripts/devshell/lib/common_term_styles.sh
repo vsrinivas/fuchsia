@@ -26,7 +26,7 @@
 ##
 ##  details << EOF
 ##A multi-line message with bash ${variable} expansion.
-##Excape dollars with backslash \$
+##Escape dollars with backslash \$
 ##See $(link 'https://some/hyper/link') to insert a link.
 ##EOF
 ##

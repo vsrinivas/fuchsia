@@ -257,7 +257,7 @@ def parse_color_map(string):
     string (str): a text line
 
   Returns:
-   Dictonary whose key is a text pattern and value is the color name.
+   Dictionary whose key is a text pattern and value is the color name.
   """
   m = {}
   items = string.split(',')
@@ -286,7 +286,7 @@ def proc_cmdline():
   """
   example_commands = """
 
-  Pro tip: Use comma seperated texts for multiple matches
+  Pro tip: Use comma separated texts for multiple matches
 
   Example:
   $ flog --begin \'my module starts,rare event\'

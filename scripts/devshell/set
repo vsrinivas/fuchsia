@@ -32,7 +32,7 @@
 ## If GN succeeds, this also points subsequent `fx` commands at OUTDIR,
 ## just as `fx use` does and ensures Goma is ready (if enabled).
 ##
-## NAME|PATH can be provided as arugments to --board and --product. In the
+## NAME|PATH can be provided as arguments to --board and --product. In the
 ## case of NAME the name is searched for in //layer/board/NAME.gni, otherwise it
 ## is treated as a PATH.
 ##
@@ -114,7 +114,7 @@
 ##
 ## Deprecated flags:
 ##
-##   --boards              Use the listed board target definition (seperated by
+##   --boards              Use the listed board target definition (separated by
 ##                         comas) in the build, each board results in an import
 ##                         statement and MUST define the `fuchsia_packages`
 ##                         variable as well as deal with variable re-definition.

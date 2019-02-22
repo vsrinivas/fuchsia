@@ -156,7 +156,7 @@ function get-netsvc-device-addr {
 #     OR
 #   - $2 if it doesn't
 # else return ""
-# if -z is suppled as the third argument, get the netsvc
+# if -z is supplied as the third argument, get the netsvc
 # address instead of the netstack one
 function get-device-addr {
   device=""
@@ -347,7 +347,7 @@ function fx-run-ninja {
       # Load level on Darwin is quite different from that of Linux, wherein a
       # load level of 1 per CPU is not necessarily a prohibitive load level. An
       # unscientific study of build side effects suggests that cpus*20 is a
-      # reaosnable value to prevent catastrophic load (i.e. user can not kill
+      # reasonable value to prevent catastrophic load (i.e. user can not kill
       # the build, can not lock the screen, etc).
       local cpus="$(fx-cpu-count)"
       args+=("-l" $(($cpus * 20)))

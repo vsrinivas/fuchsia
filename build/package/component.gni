@@ -18,10 +18,10 @@ import("//build/images/manifest.gni")
 #   manifest_dest (optional)
 #     [path] Defines the destination of the component manifest within the assembled package.
 #
-#     If not provided, defaults to "meta/<manifest>.cmx" if manifest was .cmx, and "meta/<manifest>.cm" if manfiest was .cml.
+#     If not provided, defaults to "meta/<manifest>.cmx" if manifest was .cmx, and "meta/<manifest>.cm" if manifest was .cml.
 #
 #   binary (required)
-#     [path] The path to the the primary binary for the component.
+#     [path] The path to the primary binary for the component.
 #
 #   loadable_modules (optional)
 #     [list of scopes] Defines the loadable modules in the package.  These
@@ -278,13 +278,13 @@ template("fuchsia_component") {
 # Parameters
 #
 #   binary (required)
-#     [path] The path to the the primary binary for the component.
+#     [path] The path to the primary binary for the component.
 #            This is also be used to infer your manifest source and
 #            destination path.
 #
 #   manifest (optional)
 #     see fuchsia_component()
-#     Would be infered from binary name if not specified.
+#     Would be inferred from binary name if not specified.
 #
 #
 #   loadable_modules (optional)

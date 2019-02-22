@@ -14,7 +14,7 @@ import("//build/testing/test_spec.gni")
 
 declare_args() {
   # The package key to use for signing Fuchsia packages made by the
-  # `package()` template (and the `system_image` packge).  If this
+  # `package()` template (and the `system_image` package).  If this
   # doesn't exist yet when it's needed, it will be generated.  New
   # keys can be generated with the `pm -k FILE genkey` host command.
   system_package_key = "//build/development.key"
@@ -132,7 +132,7 @@ template("pm_build_package") {
 #         [path] Location the resource will be placed within `meta/`.
 #
 #   binary (optional, *DEPRECATED*)
-#     [string] The path to the the primary binary for the package, relative to
+#     [string] The path to the primary binary for the package, relative to
 #     `$root_out_dir`. The binary will be placed in the assembled package at
 #     `bin/app` and will be executed by default when running the package.
 #

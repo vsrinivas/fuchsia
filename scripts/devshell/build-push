@@ -10,7 +10,7 @@
 ## Build ALL targets. After building all the targets, push the ones that were
 ## supplied to this command. If no targets were specified push all of them.
 ## The packages are pushed to the device specified. If no device is supplied
-## explictly this will push to the single connected device. If multiple devices
+## explicitly this will push to the single connected device. If multiple devices
 ## are connected and no device is specified, pushing will fail.
 
 set -e

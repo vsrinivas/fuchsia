@@ -28,7 +28,7 @@ scripts/push-package.py out/debug-x64/package/modular*/system_manifest
 
 `fx publish` will take a package from the build and create a Fuchsia package
 manager [package] from a build package. It will then add the package to a local
-update respository which, by default, is put at
+update repository which, by default, is put at
 `${FUCHSIA_BUILD_DIR}/amber-files`. It will also add the package content files
 to the update repository and name these file after their [Merkle Root].  If a
 package name is supplied to `fx publish`, only that package will be processed.
