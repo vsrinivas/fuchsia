@@ -75,7 +75,7 @@ the build-run-setup loop:
 ```
 fx build &&
 fx run -kN -- -netdev type=tap,ifname=qemu-extra,script=no,downscript=no,id=net1 -device e1000,netdev=net1,mac=52:54:00:63:5e:7b &&
-$FUCHSIA_OUT_DIR/build-zircon/tools/netruncmd : "run fuchsia-pkg://fuchsia.com/net-cli#meta/net-cli.cmx if add /dev/class/ethernet/000 && run fuchsia-pkg://fuchsia.com/net-cli#meta/net-cli.cmx if addr add 1 192.168.1.39 24 && run fuchsia-pkg://fuchsia.com/net-cli#meta/net-cli.cmx fwd add-device 1 192.168.1.0 24"
+$FUCHSIA_OUT_DIR/build-zircon/tools/netruncmd : "net_cli if add /dev/class/ethernet/000 && net_cli if addr add 1 192.168.1.39 24 && net_cli fwd add-device 1 192.168.1.0 24"
 ```
 
 Once you've done this, you can check that the recovery netstack is reachable by
