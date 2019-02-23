@@ -50,22 +50,21 @@ source_set("stdmem") {
   if (current_cpu == "arm64") {
     # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
     include_dirs = [ "$zx/" ]
-    sources += [ "aarch64/memmove.S" ]
-  } else if (current_cpu == "x64") {
-    sources += [ "x86_64/memmove.S" ]
-  } else {
-    sources += [ "memmove.c" ]
-  }
-  if (current_cpu == "arm64") {
     sources += [
-      "$zx/third_party/lib/cortex-strings/src/aarch64/memchr.S",
+      "aarch64/memchr.S",
       "aarch64/memcmp.S",
+      "aarch64/memmove.S",
     ]
   } else {
     sources += [
       "memchr.c",
       "memcmp.c",
     ]
+    if (current_cpu == "x64") {
+      sources += [ "x86_64/memmove.S" ]
+    } else {
+      sources += [ "memmove.c" ]
+    }
   }
 }
 
@@ -90,9 +89,11 @@ source_set("minimal_str") {
     "$zx/third_party/ulib/musl:musl_internal",
   ]
   if (current_cpu == "arm64") {
+    # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
+    include_dirs = [ "$zx/" ]
     sources = [
-      "$zx/third_party/lib/cortex-strings/src/aarch64/strlen.S",
-      "$zx/third_party/lib/cortex-strings/src/aarch64/strncmp.S",
+      "aarch64/strlen.S",
+      "aarch64/strncmp.S",
     ]
   } else {
     sources = [
@@ -122,10 +123,12 @@ source_set("stdstr") {
     "strtok_r.c",
   ]
   if (current_cpu == "arm64") {
+    # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
+    include_dirs = [ "$zx/" ]
     sources += [
-      "$zx/third_party/lib/cortex-strings/src/aarch64/strchr.S",
-      "$zx/third_party/lib/cortex-strings/src/aarch64/strcmp.S",
-      "$zx/third_party/lib/cortex-strings/src/aarch64/strcpy.S",
+      "aarch64/strchr.S",
+      "aarch64/strcmp.S",
+      "aarch64/strcpy.S",
     ]
   } else {
     sources += [
