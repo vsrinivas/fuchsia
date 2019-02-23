@@ -4,8 +4,8 @@
 
 driver("aml-rawnand") {
   sources = [
-    "aml-rawnand.c",
-    "onfi.c",
+    "aml-rawnand.cpp",
+    "onfi.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-platform-device",
@@ -13,7 +13,12 @@ driver("aml-rawnand") {
     "$zx/system/dev/lib/amlogic",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
   ]
 }

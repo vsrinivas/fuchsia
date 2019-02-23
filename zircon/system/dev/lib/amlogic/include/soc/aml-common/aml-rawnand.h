@@ -4,6 +4,9 @@
 
 #define AML_NAME "aml-nand"
 
+// TODO : The #defines here should be converted to constexprs. And the
+// macros should be converted to constexpr function.
+
 #define P_NAND_CMD      (0x00)
 #define P_NAND_CFG      (0x04)
 #define P_NAND_DADR     (0x08)
@@ -41,14 +44,14 @@
      (short) << 13 | ((pagesize)&0x7f) << 6 | ((pages)&0x3f))
 
 #define GENCMDDADDRL(adl, addr) \
-    ((adl) | ((addr) & 0xffff))
+    static_cast<uint32_t>((adl) | ((addr) & 0xffff))
 #define GENCMDDADDRH(adh, addr) \
-    ((adh) | (((addr) >> 16) & 0xffff))
+    static_cast<uint32_t>((adh) | (((addr) >> 16) & 0xffff))
 
 #define GENCMDIADDRL(ail, addr) \
-    ((ail) | ((addr) & 0xffff))
+    static_cast<uint32_t>((ail) | ((addr) & 0xffff))
 #define GENCMDIADDRH(aih, addr) \
-    ((aih) | (((addr) >> 16) & 0xffff))
+    static_cast<uint32_t>((aih) | (((addr) >> 16) & 0xffff))
 
 #define RB_STA(x) (1<<(26+x))
 
