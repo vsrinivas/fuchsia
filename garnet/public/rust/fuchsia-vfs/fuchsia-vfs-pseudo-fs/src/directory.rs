@@ -849,17 +849,73 @@ mod tests {
     }
 
     #[test]
+    fn clone() {
+        let root = pseudo_directory! {
+            "file" => read_only(|| Ok(b"Content".to_vec())),
+        };
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |first_proxy| {
+            async fn assert_read_file(root: &DirectoryProxy) {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+
+                assert_read!(file, "Content");
+                assert_close!(file);
+            }
+
+            await!(assert_read_file(&first_proxy));
+
+            let second_proxy = clone_get_directory_proxy_assert_ok!(
+                &first_proxy,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE
+            );
+
+            await!(assert_read_file(&second_proxy));
+
+            assert_close!(first_proxy);
+            assert_close!(second_proxy);
+        });
+    }
+
+    #[test]
+    fn clone_cannot_increase_access() {
+        let root = pseudo_directory! {
+            "file" => read_only(|| Ok(b"Content".to_vec())),
+        };
+
+        run_server_client(0, root, async move |first_proxy| {
+            async fn assert_read_file(root: &DirectoryProxy) {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+
+                assert_read!(file, "Content");
+                assert_close!(file);
+            }
+
+            await!(assert_read_file(&first_proxy));
+
+            clone_as_directory_assert_err!(
+                &first_proxy,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                Status::ACCESS_DENIED
+            );
+
+            assert_close!(first_proxy);
+        });
+    }
+
+    #[test]
     fn one_file_open_existing() {
         let root = pseudo_directory! {
-            "file1" => read_only(|| Ok(b"Content".to_vec())),
+            "file" => read_only(|| Ok(b"Content".to_vec())),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-            let file1 = open_get_file_proxy_assert_ok!(&root, flags, "file1");
+            let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
 
-            assert_read!(file1, "Content");
-            assert_close!(file1);
+            assert_read!(file, "Content");
+            assert_close!(file);
 
             assert_close!(root);
         });
@@ -868,7 +924,7 @@ mod tests {
     #[test]
     fn one_file_open_missing() {
         let root = pseudo_directory! {
-            "file1" => read_only(|| Ok(b"Content".to_vec())),
+            "file" => read_only(|| Ok(b"Content".to_vec())),
         };
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {

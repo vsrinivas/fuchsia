@@ -837,7 +837,6 @@ mod tests {
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl_fuchsia_io::{FileEvent, FileMarker, FileProxy, INO_UNKNOWN, MODE_TYPE_FILE},
         fuchsia_async as fasync,
-        fuchsia_zircon::sys::{ZX_ERR_ACCESS_DENIED, ZX_ERR_SHOULD_WAIT},
         futures::channel::{mpsc, oneshot},
         futures::{future::LocalFutureObj, select, Future, FutureExt, SinkExt},
         libc::{S_IRGRP, S_IROTH, S_IRUSR, S_IWGRP, S_IWOTH, S_IWUSR, S_IXGRP, S_IXOTH, S_IXUSR},
@@ -1145,7 +1144,7 @@ mod tests {
 
                 await!(open_sender.send((flags, 0, server_end))).unwrap();
                 assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
-                    assert_eq!(s, ZX_ERR_SHOULD_WAIT);
+                    assert_eq!(Status::from_raw(s), Status::SHOULD_WAIT);
                     assert_eq!(info, None);
                 });
             }
@@ -1650,28 +1649,10 @@ mod tests {
                 assert_seek!(first_proxy, 0, Start);
                 assert_write!(first_proxy, "As updated");
 
-                let (second_proxy, second_server_end) = create_proxy::<FileMarker>().unwrap();
-
-                first_proxy
-                    .clone(
-                        OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-                        // second_server_end is a ServerEnd<FileMarker> while we need a
-                        // ServerEnd<NodeMarker> :(
-                        ServerEnd::new(second_server_end.into_channel()),
-                    )
-                    .unwrap();
-
-                let event_stream = second_proxy.take_event_stream();
-                match await!(event_stream.into_future()) {
-                    (Some(Ok(FileEvent::OnOpen_ { s, info })), _) => {
-                        assert_eq!(s, ZX_OK);
-                        assert!(info.is_some());
-                        assert_eq!(*info.unwrap(), NodeInfo::File(FileObject { event: None }));
-                    }
-                    (unexpected, _) => {
-                        panic!("Unexpected event: {:?}", unexpected);
-                    }
-                }
+                let second_proxy = clone_get_file_proxy_assert_ok!(
+                    &first_proxy,
+                    OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE
+                );
 
                 assert_read!(second_proxy, "Initial content");
                 assert_truncate_err!(second_proxy, 0, Status::ACCESS_DENIED);
@@ -1861,28 +1842,11 @@ mod tests {
                 assert_read!(first_proxy, "Initial content");
                 assert_write_err!(first_proxy, "Write attempt", Status::ACCESS_DENIED);
 
-                let (second_proxy, second_server_end) = create_proxy::<FileMarker>().unwrap();
-
-                first_proxy
-                    .clone(
-                        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
-                        // TODO second_server_end is ServerEnd<FileMarker> but we need
-                        // ServerEnd<NodeMarker> :(  Should we add an implementation of From<> to
-                        // the FIDL compiler output?
-                        ServerEnd::new(second_server_end.into_channel()),
-                    )
-                    .unwrap();
-
-                let event_stream = second_proxy.take_event_stream();
-                match await!(event_stream.into_future()) {
-                    (Some(Ok(FileEvent::OnOpen_ { s, info })), _) => {
-                        assert_eq!(s, ZX_ERR_ACCESS_DENIED);
-                        assert_eq!(info, None);
-                    }
-                    (unexpected, _) => {
-                        panic!("Unexpected event: {:?}", unexpected);
-                    }
-                }
+                let second_proxy = clone_as_file_assert_err!(
+                    &first_proxy,
+                    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
+                    Status::ACCESS_DENIED
+                );
 
                 assert_read_fidl_err!(second_proxy, fidl::Error::ClientWrite(Status::PEER_CLOSED));
                 assert_write_fidl_err!(

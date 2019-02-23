@@ -8,7 +8,7 @@
 
 use {
     fidl::endpoints::{create_proxy, ServerEnd, ServiceMarker},
-    fidl_fuchsia_io::{DirectoryProxy, NodeMarker},
+    fidl_fuchsia_io::{DirectoryProxy, FileProxy, NodeMarker, NodeProxy},
 };
 
 // All of the macros in this file could instead be async functions, but then I would have to say
@@ -27,6 +27,47 @@ where
         .unwrap();
 
     new_proxy
+}
+
+/// This trait is implemented by all the objects that should be clonable via clone_get_proxy().  In
+/// particular NodeProxy, FileProxy and DirectoryProxy.  In FIDL, Node is the protocol that
+/// specifies the "Clone()" method.  And File and Directory just compose it in.  So if we would
+/// forward this formation from FIDL, then this trait would be unnecessary.
+pub trait ClonableProxy {
+    fn clone(&self, flags: u32, server_end: ServerEnd<NodeMarker>) -> Result<(), fidl::Error>;
+}
+
+/// Calls .clone() on the proxy object, and returns a client side of the connection passed into the
+/// clone() method.
+pub fn clone_get_proxy<Proxy, M>(proxy: &Proxy, flags: u32) -> M::Proxy
+where
+    M: ServiceMarker,
+    Proxy: ClonableProxy,
+{
+    let (new_proxy, new_server_end) =
+        create_proxy::<M>().expect("Failed to create connection endpoints");
+
+    proxy.clone(flags, ServerEnd::<NodeMarker>::new(new_server_end.into_channel())).unwrap();
+
+    new_proxy
+}
+
+impl ClonableProxy for NodeProxy {
+    fn clone(&self, flags: u32, server_end: ServerEnd<NodeMarker>) -> Result<(), fidl::Error> {
+        NodeProxy::clone(self, flags, server_end)
+    }
+}
+
+impl ClonableProxy for FileProxy {
+    fn clone(&self, flags: u32, server_end: ServerEnd<NodeMarker>) -> Result<(), fidl::Error> {
+        FileProxy::clone(self, flags, server_end)
+    }
+}
+
+impl ClonableProxy for DirectoryProxy {
+    fn clone(&self, flags: u32, server_end: ServerEnd<NodeMarker>) -> Result<(), fidl::Error> {
+        DirectoryProxy::clone(self, flags, server_end)
+    }
 }
 
 // See comment at the top of the file for why this is a macro.
@@ -321,6 +362,70 @@ macro_rules! open_as_directory_assert_err {
             $proxy,
             $flags,
             $path,
+            DirectoryMarker,
+            DirectoryEvent::OnOpen_ { s, info },
+            {
+                assert_eq!(Status::from_raw(s), $expected_status);
+                assert_eq!(info, None);
+            }
+        );
+    };
+}
+
+macro_rules! clone_get_proxy_assert {
+    ($proxy:expr, $flags:expr, $new_proxy_type:ty, $expected_pattern:pat,
+     $expected_assertion:block) => {{
+        let new_proxy = $crate::test_utils::clone_get_proxy::<_, $new_proxy_type>($proxy, $flags);
+        assert_event!(new_proxy, $expected_pattern, $expected_assertion);
+        new_proxy
+    }};
+}
+
+// See comment at the top of the file for why this is a macro.
+macro_rules! clone_get_file_proxy_assert_ok {
+    ($proxy:expr, $flags:expr) => {
+        clone_get_proxy_assert!($proxy, $flags, FileMarker, FileEvent::OnOpen_ { s, info }, {
+            assert_eq!(Status::from_raw(s), Status::OK);
+            assert_eq!(info, Some(Box::new(NodeInfo::File(FileObject { event: None }))),);
+        })
+    };
+}
+
+// See comment at the top of the file for why this is a macro.
+macro_rules! clone_as_file_assert_err {
+    ($proxy:expr, $flags:expr, $expected_status:expr) => {
+        clone_get_proxy_assert!($proxy, $flags, FileMarker, FileEvent::OnOpen_ { s, info }, {
+            assert_eq!(Status::from_raw(s), $expected_status);
+            assert_eq!(info, None);
+        });
+    };
+}
+
+// See comment at the top of the file for why this is a macro.
+macro_rules! clone_get_directory_proxy_assert_ok {
+    ($proxy:expr, $flags:expr) => {
+        clone_get_proxy_assert!(
+            $proxy,
+            $flags,
+            DirectoryMarker,
+            DirectoryEvent::OnOpen_ { s, info },
+            {
+                assert_eq!(Status::from_raw(s), Status::OK);
+                assert_eq!(
+                    info,
+                    Some(Box::new(NodeInfo::Directory(DirectoryObject { reserved: 0 }))),
+                );
+            }
+        )
+    };
+}
+
+// See comment at the top of the file for why this is a macro.
+macro_rules! clone_as_directory_assert_err {
+    ($proxy:expr, $flags:expr, $expected_status:expr) => {
+        clone_get_proxy_assert!(
+            $proxy,
+            $flags,
             DirectoryMarker,
             DirectoryEvent::OnOpen_ { s, info },
             {
