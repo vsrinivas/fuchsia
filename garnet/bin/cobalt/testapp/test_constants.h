@@ -41,6 +41,7 @@ const int64_t kElapsedTime = 30;
 
 // For V1 frame rates.
 const uint32_t kFrameRateMetricId = 12;
+const uint32_t kFrameRateEventIndex = 0;
 const std::string kFrameRateComponent = "some_component";
 const float kFrameRate = 45.5;
 
@@ -58,6 +59,47 @@ const uint32_t kErrorOccurredIndicesToUse[] = {0, 1, 2, 9};
 const uint32_t kErrorOccurredInvalidIndex = 18;
 
 const uint32_t kErrorOccurredIndex = 2;
+
+// Common metric constants.
+const std::string kApplicationComponentNames[] =
+    {"audio_core", "chromium", "logger", "netstack", "scheduler", "sysmng",
+     "view_manager", "", "unknown"};
+
+// file_system_cache_misses metric constants.
+const uint32_t kFileSystemCacheMissesIndices[] = {0, 1};
+const std::string kFileSystemCacheMissesComponentNames[] = {"blobfs", "minfs",
+                                                            "thinfs", "",
+                                                            "unknown"};
+const int64_t kFileSystemCacheMissesCountMax = 2;
+
+// update_duration metric constants.
+const int32_t kUpdateDurationIndices[] = {0, 1, 2, 3};
+const std::string kUpdateDurationComponentNames[] =
+    {"DownloadPayload", "VerifyPayload", "ApplyPayload", "VerifyUpdate", "",
+     "unknown"};
+const int64_t kUpdateDurationValues[] = {-1, 0, 1, 2, 5, 10, 22, 37, 64, 158,
+                                         301, 702};
+
+// game_frame_rate metric constants.
+const int32_t kGameFrameRateIndices[] = {0, 1, 2};
+const std::string kGameFrameRateComponentNames[] =
+    {"Forest", "Beach", "Dungeon", "City", "", "unknown"};
+const float kGameFrameRateValues[] = {0.50, 1.23, 3.042, 7.999, 8.0, 25.4,
+                                      55.1, 64.003, 201.21, 415.235, 600.001};
+
+// application_memory metric constants
+const int32_t kApplicationMemoryIndices[] = {0, 1, 2};
+const int64_t kApplicationMemoryValues[] = {0, 1000, 2000, 4000, 8000, 16000,
+                                            32000, 64000, 128000, 256000,
+                                            512000};
+
+// power_usage metric constants.
+const int32_t kPowerUsageIndices[] = {0, 1};
+const int32_t kPowerUsageBuckets = 52;
+
+// bandwidth_usage metric constants.
+const int32_t kBandwidthUsageIndices[] = {0, 1};
+const int64_t kBandwidthUsageBuckets = 22;
 
 }  // namespace testapp
 }  // namespace cobalt
