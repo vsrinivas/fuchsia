@@ -24,33 +24,43 @@ namespace testapp {
 
 namespace legacy {
 
-bool TestLogEvent(CobaltTestAppLogger* logger_);
+bool TestLogEvent(CobaltTestAppLogger* logger);
 
-bool TestLogEventUsingServiceFromEnvironment(CobaltTestAppLogger* logger_);
+bool TestLogEventUsingServiceFromEnvironment(CobaltTestAppLogger* logger);
 
-bool TestLogEventCount(CobaltTestAppLogger* logger_);
+bool TestLogEventCount(CobaltTestAppLogger* logger);
 
-bool TestLogElapsedTime(CobaltTestAppLogger* logger_);
+bool TestLogElapsedTime(CobaltTestAppLogger* logger);
 
-bool TestLogFrameRate(CobaltTestAppLogger* logger_);
+bool TestLogFrameRate(CobaltTestAppLogger* logger);
 
-bool TestLogMemoryUsage(CobaltTestAppLogger* logger_);
+bool TestLogMemoryUsage(CobaltTestAppLogger* logger);
 
-bool TestLogString(CobaltTestAppLogger* logger_);
+bool TestLogString(CobaltTestAppLogger* logger);
 
-bool TestLogStringUsingBlockUntilEmpty(CobaltTestAppLogger* logger_);
+bool TestLogStringUsingBlockUntilEmpty(CobaltTestAppLogger* logger);
 
-bool TestLogTimer(CobaltTestAppLogger* logger_);
+bool TestLogTimer(CobaltTestAppLogger* logger);
 
-bool TestLogIntHistogram(CobaltTestAppLogger* logger_);
+bool TestLogIntHistogram(CobaltTestAppLogger* logger);
 
-bool TestLogCustomEvent(CobaltTestAppLogger* logger_);
+bool TestLogCustomEvent(CobaltTestAppLogger* logger);
 
 }  // namespace legacy
 
-bool TestLogEvent(CobaltTestAppLogger* logger_);
+bool TestLogEvent(CobaltTestAppLogger* logger);
 
-bool TestLogCustomEvent(CobaltTestAppLogger* logger_);
+bool TestLogEventCount(CobaltTestAppLogger* logger);
+
+bool TestLogElapsedTime(CobaltTestAppLogger* logger);
+
+bool TestLogFrameRate(CobaltTestAppLogger* logger);
+
+bool TestLogMemoryUsage(CobaltTestAppLogger* logger);
+
+bool TestLogIntHistogram(CobaltTestAppLogger* logger);
+
+bool TestLogCustomEvent(CobaltTestAppLogger* logger);
 
 }  // namespace testapp
 }  // namespace cobalt

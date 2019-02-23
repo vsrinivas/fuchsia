@@ -40,11 +40,13 @@ class CobaltTestAppLogger {
                              bool use_request_send_soon);
   // Synchronously invokes LogFrameRate() |num_observations_per_batch_|
   // times using the given parameters. Then invokes CheckForSuccessfulSend().
-  bool LogFrameRateAndSend(uint32_t metric_id, const std::string& component,
-                           float fps, bool use_request_send_soon);
+  bool LogFrameRateAndSend(uint32_t metric_id, uint32_t index,
+                           const std::string& component, float fps,
+                           bool use_request_send_soon);
   // Synchronously invokes LogMemoryUsage() |num_observations_per_batch_|
   // times using the given parameters. Then invokes CheckForSuccessfulSend().
-  bool LogMemoryUsageAndSend(uint32_t metric_id, uint32_t index, int64_t bytes,
+  bool LogMemoryUsageAndSend(uint32_t metric_id, uint32_t index,
+                             const std::string& component, int64_t bytes,
                              bool use_request_send_soon);
   // Synchronously invokes LogString() |num_observations_per_batch_|
   // times using the given parameters. Then invokes CheckForSuccessfulSend().
@@ -56,7 +58,8 @@ class CobaltTestAppLogger {
   // Synchronously invokes LogIntHistogram()
   // |num_observations_per_batch_| times using the given parameters. Then
   // invokes CheckForSuccessfulSend().
-  bool LogIntHistogramAndSend(uint32_t metric_id,
+  bool LogIntHistogramAndSend(uint32_t metric_id, uint32_t index,
+                              const std::string& component,
                               std::map<uint32_t, uint64_t> histogram_map,
                               bool use_request_send_soon);
   // Synchronously invokes LogCustomEvent() for an event with
