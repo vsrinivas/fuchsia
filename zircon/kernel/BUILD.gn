@@ -125,6 +125,18 @@ if (current_toolchain == default_toolchain) {
       "-fno-unwind-tables",
     ]
 
+    if (current_cpu == "x64") {
+      # This only matters in an environment where interrupt handlers might
+      # push trap frames in the same privilege level, like the kernel.
+      # e.g. Multiboot probably doesn't actually need it, but it doesn't hurt.
+      cflags += [ "-mno-red-zone" ]
+    } else if (current_cpu == "arm64") {
+      # This matters if vector registers are not available, e.g. in the kernel
+      # since the they hold unsaved user state, or in the physmem environment
+      # because they might not be enabled in hardware yet.
+      cflags += [ "-mgeneral-regs-only" ]
+    }
+
     if (!is_gcc && current_os == "fuchsia") {
       # In the Fuchsia-target toolchains there's no way to prevent the
       # compiler driver from passing -pie, so negate it.  BFD ld doesn't

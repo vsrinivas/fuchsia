@@ -47,11 +47,16 @@ static void start_zircon(uint64_t entry, void* bootdata) {
         "jmp *%[entry] \n" ::[entry] "a"(entry),
         [bootdata] "S"(bootdata),
         "b"(0), "D"(0));
+#elif defined(__aarch64__)
+    __asm__("mov x0, %[zbi]\n"          // Argument register.
+            "mov x29, xzr\n"            // Clear FP.
+            "mov x30, xzr\n"            // Clear LR.
+            "br %[entry]\n"
+            :: [entry] "r"(entry), [zbi] "r"(bootdata) : "x0", "x29", "x30");
 #else
-#warning "add code for other arches here"
+# error "add code for other arches here"
 #endif
-    for (;;)
-        ;
+    __builtin_unreachable();
 }
 
 static int add_bootdata(void** ptr, size_t* avail,

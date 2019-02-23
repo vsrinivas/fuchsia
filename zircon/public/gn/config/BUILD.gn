@@ -485,7 +485,7 @@ config("visibility_hidden") {
 
 config("machine") {
   ldflags = []
-  if (current_cpu == "arm64") {
+  if (current_cpu == "arm64" && current_os != "win") {
     # The linker rewrites instructions to work around a CPU bug.
     ldflags += [ "-Wl,--fix-cortex-a53-843419" ]
   }

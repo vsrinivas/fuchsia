@@ -72,6 +72,30 @@ if (current_toolchain == default_toolchain) {
     }
   }
 
+  # Make ninja aliases for e.g. bootloader that gets all bootloader-$cpu.
+  top_level_redirects = [
+    "bootloader",
+    "kernel",
+  ]
+  foreach(name, top_level_redirects) {
+    group(name) {
+      deps = []
+      foreach(cpu, standard_fuchsia_cpus) {
+        deps += [ ":$name-$cpu" ]
+      }
+    }
+
+    foreach(cpu, standard_fuchsia_cpus) {
+      environment_redirect("$name-$cpu") {
+        environment_label = "$zx/public/gn/toolchain:user"
+        cpu = cpu
+        deps = [
+          name,
+        ]
+      }
+    }
+  }
+
   # TODO(BLD-353): Temporary hacks for integrating with the legacy Fuchsia
   # GN build.
   host_tests_rspfile = "$target_gen_dir/host_tests.rsp"
@@ -252,15 +276,13 @@ foreach(cpu, standard_fuchsia_cpus) {
     environment_label = "$zx/public/gn/toolchain:user"
     cpu = cpu
     deps = [
+      "$zx/bootloader",
       "$zx/kernel",
       "$zx/system/core",
       "$zx/system/dev",
       "$zx/system/uapp",
       "$zx/third_party/uapp",
     ]
-    if (cpu == "x64") {
-      deps += [ "$zx/bootloader" ]
-    }
   }
 
   environment_redirect("legacy-tests-deps-$cpu") {

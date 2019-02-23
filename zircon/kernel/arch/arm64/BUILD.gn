@@ -28,8 +28,6 @@ if (current_toolchain == default_toolchain) {
     cflags = [
       "-fpie",
 
-      "-mgeneral-regs-only",
-
       # With the MMU disabled, alignment checking is always enabled.  So make
       # sure the compiler doesn't use any unaligned memory accesses.
       "-mstrict-align",
@@ -44,13 +42,10 @@ if (current_toolchain == default_toolchain) {
 
   # This is used pervasively throughout the kernel on arm64.
   config("kernel") {
-    # The kernel does not use FP or vector registers.
-    cflags = [ "-mgeneral-regs-only" ]
-
     if (!is_gcc) {
       # Clang needs -mcmodel=kernel to tell it to use the right safe-stack
       # ABI for the kernel.
-      cflags += [ "-mcmodel=kernel" ]
+      cflags = [ "-mcmodel=kernel" ]
     }
 
     defines = [

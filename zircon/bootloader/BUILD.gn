@@ -6,23 +6,29 @@ import("$zx/public/gn/toolchain/environment.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
 
 # Gigaboot gets its own toolchains to build EFI code.
+# TODO(mcgrathr): Put efi into standard.gni?  That would require moving
+# the referenced configs (efi_config + kernel:standalone) int public/gn.
+# Maybe only worthwhile if lib+include gets turned into an efi-libc
+# library() that could theoretically be exported.
 if (current_toolchain == default_toolchain) {
-  environment("efi") {
-    cpu = "x64"
-    os = "win"
-    globals = {
-      is_kernel = true
+  foreach(cpu, standard_fuchsia_cpus) {
+    environment("efi") {
+      cpu = cpu
+      os = "win"
+      globals = {
+        is_kernel = true
+      }
+      configs += standard_fuchsia_configs + [ ":efi_config" ]
+
+      # TODO: harmless, but just to match build.mk
+      configs -= [ "$zx/public/gn/config:default_frame_pointers" ]
+
+      # TODO: strip = true
+
+      # There isn't a GCC toolchain that supports the Windows target directly
+      # the way we use it.
+      exclude_variant_tags = [ "gcc" ]
     }
-    configs += standard_fuchsia_configs + [ ":efi_config" ]
-
-    # TODO: harmless, but just to match build.mk
-    configs -= [ "$zx/public/gn/config:default_frame_pointers" ]
-
-    # TODO: strip = true
-
-    # There isn't a GCC toolchain that supports the Windows target directly
-    # the way we use it.
-    exclude_variant_tags = [ "gcc" ]
   }
 } else if (toolchain.environment == "efi") {
   # This is the top config for all code in the efi_toolchain.
@@ -38,21 +44,21 @@ if (current_toolchain == default_toolchain) {
       "-std=c99",
       "-fshort-wchar",
     ]
-    if (current_cpu == "x64") {
-      cflags += [ "-mno-red-zone" ]
-    }
   }
 
   executable("bootloader") {
     output_dir = root_out_dir
-    output_name = "boot${current_cpu}"
+    if (current_cpu == "arm64") {
+      output_name = "bootaa64"
+    } else {
+      output_name = "boot${current_cpu}"
+    }
     output_extension = "efi"
     deps = [
       "lib",
       "src",
     ]
     ldflags = [
-      "-nostdlib",
       "-Wl,/subsystem:efi_application",
       "-Wl,/entry:efi_main",
     ]
