@@ -114,8 +114,12 @@ config("compiler") {
       # But the GCC toolchain is the generic --target=*-elf one.
       defines += [ "__Fuchsia__" ]
 
-      # This is done by default in the Clang toolchain.
-      ldflags += [ "-Wl,--build-id" ]
+      # These are done by default in the Clang toolchain.
+      cflags += [ "-fasynchronous-unwind-tables" ]
+      ldflags += [
+        "-Wl,--eh-frame-hdr",
+        "-Wl,--build-id",
+      ]
 
       # In the Clang toolchain assembly files with no explicit marker don't
       # cause the presumption of executable stack as they do in GCC.
