@@ -115,9 +115,9 @@ if (current_toolchain == default_toolchain) {
     group("legacy-$cpu") {
       testonly = true
       deps = [
+        ":ids-$cpu",
         ":legacy-image-$cpu",
         ":legacy-tests-$cpu",
-        ":ids-$cpu",
         ":tools",
         "$zx/system/ulib:asan-manifest-$cpu",
       ]
@@ -202,6 +202,13 @@ foreach(cpu, standard_fuchsia_cpus) {
       cpu = cpu
       deps = [
         ":everything-$cpu",
+      ]
+
+      # Since this is the top-level target people tend to use by hand
+      # instead of default when they want only one architecture at a time,
+      # give them tools as well since that's what they expect.
+      data_deps = [
+        ":tools",
       ]
     }
 
