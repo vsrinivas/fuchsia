@@ -1247,6 +1247,32 @@ mod tests {
     }
 
     #[test]
+    fn directories_do_not_restrict_write_permission() {
+        let root = pseudo_directory! {
+            "file" => read_write(
+                || Ok(b"Content".to_vec()),
+                20,
+                |content| {
+                    assert_eq!(*&content, b"New content");
+                    Ok(())
+                }),
+        };
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
+            let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+
+            assert_read!(file, "Content");
+            assert_seek!(file, 0, Start);
+            assert_write!(file, "New content");
+
+            assert_close!(file);
+
+            assert_close!(root);
+        });
+    }
+
+    #[test]
     fn read_dirents_large_buffer() {
         let root = pseudo_directory! {
             "etc" => pseudo_directory! {
