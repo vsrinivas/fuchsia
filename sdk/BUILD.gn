@@ -91,26 +91,6 @@ sdk("ddk") {
   ]
 }
 
-has_sdk_id = sdk_id != ""
-
-if (has_sdk_id) {
-  sdk_id_file = "$target_gen_dir/sdk_id.txt"
-  write_file(sdk_id_file, sdk_id)
-
-  sdk_documentation("sdk_id") {
-    name = "sdk_id"
-
-    category = "partner"
-
-    files = [
-      {
-        source = sdk_id_file
-        dest = "meta/id.txt"
-      },
-    ]
-  }
-}
-
 sdk("core") {
   id = sdk_id
 
@@ -184,10 +164,6 @@ sdk("core") {
     "//zircon/public/tool/minfs:minfs_sdk($host_toolchain)",
     "//zircon/public/tool/zbi:zbi_sdk($host_toolchain)",
   ]
-
-  if (has_sdk_id) {
-    deps += [ ":sdk_id" ]
-  }
 
   # We explicitly do not want to pull these dependencies into the SDK.
   #
