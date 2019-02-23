@@ -175,6 +175,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   fuchsia::ui::app::ViewConfig view_config_;
 
   zx_time_t last_presentation_time_ = 0;
+  size_t session_present_count_ = 0;
   bool invalidate_pending_ = false;
   bool present_pending_ = false;
 };

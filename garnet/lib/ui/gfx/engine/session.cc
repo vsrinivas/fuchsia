@@ -32,6 +32,9 @@ namespace gfx {
 
 namespace {
 
+#define SESSION_TRACE_ID(session_id, count) \
+  (((uint64_t)(session_id) << 32) | (count))
+
 // Converts the provided vector of Hits into a fidl array of HitPtrs.
 fidl::VectorPtr<::fuchsia::ui::gfx::Hit> WrapHits(
     const std::vector<Hit>& hits) {
@@ -164,6 +167,10 @@ bool Session::ScheduleUpdate(
         }
       });
 
+  ++scheduled_update_count_;
+  TRACE_FLOW_BEGIN("gfx", "scheduled_update",
+                   SESSION_TRACE_ID(id_, scheduled_update_count_));
+
   scheduled_updates_.push(
       Update{requested_presentation_time, std::move(commands),
              std::move(acquire_fence_set), std::move(release_events),
@@ -184,7 +191,8 @@ void Session::ScheduleImagePipeUpdate(uint64_t presentation_time,
 
 Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
     CommandContext* command_context, uint64_t requested_presentation_time,
-    uint64_t actual_presentation_time, uint64_t presentation_interval) {
+    uint64_t actual_presentation_time, uint64_t presentation_interval,
+    uint64_t needs_render_id) {
   TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "session_id", id_,
                  "session_debug_name", debug_name_, "requested time",
                  requested_presentation_time, "time", actual_presentation_time,
@@ -215,12 +223,19 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
                     scheduled_updates_.front().presentation_time / 1000);
       break;
     }
+
+    ++applied_update_count_;
+    TRACE_FLOW_END("gfx", "scheduled_update",
+                   SESSION_TRACE_ID(id_, applied_update_count_));
+
     if (ApplyUpdate(command_context,
                     std::move(scheduled_updates_.front().commands))) {
       update_results.needs_render = true;
       auto info = fuchsia::images::PresentationInfo();
       info.presentation_time = actual_presentation_time;
       info.presentation_interval = presentation_interval;
+      // TODO(emircan): Make this unique per session via id().
+      TRACE_FLOW_BEGIN("gfx", "present_callback", info.presentation_time);
       scheduled_updates_.front().present_callback(std::move(info));
 
       FXL_DCHECK(last_applied_update_presentation_time_ <=
@@ -283,6 +298,9 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
     update_results.needs_render = true;
   }
   image_pipe_updates_to_upload.clear();
+
+  if (update_results.needs_render)
+    TRACE_FLOW_BEGIN("gfx", "needs_render", needs_render_id);
 
   update_results.success = true;
   return update_results;

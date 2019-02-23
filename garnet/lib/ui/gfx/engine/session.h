@@ -103,10 +103,14 @@ class Session {
   // like to be scheduled for, and is used for tracing.
   // |presentation_interval| is the estimated time until next frame and is
   // returned to the client.
+  // |needs_render_id| is the id given for starting a trace flow that hooks to
+  // RenderFrame event for this Session if it is setting
+  // ApplyUpdateResult::needs_render.
   ApplyUpdateResult ApplyScheduledUpdates(CommandContext* command_context,
                                           uint64_t requested_presentation_time,
                                           uint64_t actual_presentation_time,
-                                          uint64_t presentation_interval);
+                                          uint64_t presentation_interval,
+                                          uint64_t needs_render_id);
 
   // Convenience.  Forwards an event to the EventReporter.
   void EnqueueEvent(::fuchsia::ui::gfx::Event event);
@@ -172,6 +176,10 @@ class Session {
   ResourceContext resource_context_;
   ResourceMap resources_;
   size_t resource_count_ = 0;
+
+  // Tracks the number of method calls for tracing.
+  uint64_t scheduled_update_count_ = 0;
+  uint64_t applied_update_count_ = 0;
 
   fxl::WeakPtrFactory<Session> weak_factory_;  // must be last
 };

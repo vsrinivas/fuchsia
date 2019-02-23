@@ -148,14 +148,17 @@ bool Engine::UpdateSessions(std::vector<SessionUpdate> sessions_to_update,
 
     auto update_results = session->ApplyScheduledUpdates(
         &command_context, session_to_update.requested_presentation_time,
-        presentation_time, presentation_interval);
+        presentation_time, presentation_interval, needs_render_count_);
 
     // If update fails, kill the entire client session.
     if (!update_results.success) {
       session_handler->KillSession();
     }
 
-    needs_render |= update_results.needs_render;
+    if (update_results.needs_render) {
+      needs_render |= true;
+      ++needs_render_count_;
+    }
   }
 
   // Flush work to the gpu
@@ -171,6 +174,11 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
   // without also updating the "process_gfx_trace.go" script.
   TRACE_DURATION("gfx", "RenderFrame", "frame_number", timings->frame_number(),
                  "time", presentation_time, "interval", presentation_interval);
+
+  while (processed_needs_render_count_ < needs_render_count_) {
+    TRACE_FLOW_END("gfx", "needs_render", processed_needs_render_count_);
+    ++processed_needs_render_count_;
+  }
 
   // TODO(SCN-1092): make |timings| non-nullable, and unconditionally use
   // timings->frame_number() below.  When this is done, uncomment the following

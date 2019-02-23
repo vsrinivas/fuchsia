@@ -4,6 +4,8 @@
 
 #include "lib/ui/base_view/cpp/base_view.h"
 
+#include <trace/event.h>
+
 #include "lib/fxl/logging.h"
 #include "lib/ui/gfx/cpp/math.h"
 #include "lib/ui/scenic/cpp/commands.h"
@@ -41,6 +43,7 @@ void BaseView::SetReleaseHandler(fit::function<void(zx_status_t)> callback) {
 }
 
 void BaseView::InvalidateScene() {
+  TRACE_DURATION("view", "BaseView::InvalidateScene");
   if (invalidate_pending_)
     return;
 
@@ -58,6 +61,7 @@ void BaseView::InvalidateScene() {
 }
 
 void BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
+  TRACE_DURATION("view", "BaseView::OnScenicEvent");
   for (auto& event : events) {
     switch (event.Which()) {
       case ::fuchsia::ui::scenic::Event::Tag::kGfx:
@@ -97,6 +101,7 @@ void BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
 }
 
 void BaseView::PresentScene(zx_time_t presentation_time) {
+  TRACE_DURATION("view", "BaseView::PresentScene");
   FXL_DCHECK(!present_pending_);
 
   present_pending_ = true;
@@ -105,24 +110,30 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
   // Session.Present(), for use in InvalidateScene().
   last_presentation_time_ = presentation_time;
 
-  session()->Present(presentation_time,
-                     [this](fuchsia::images::PresentationInfo info) {
-                       FXL_DCHECK(present_pending_);
+  TRACE_FLOW_BEGIN("gfx", "Session::Present", session_present_count_);
+  ++session_present_count_;
 
-                       zx_time_t next_presentation_time =
-                           info.presentation_time + info.presentation_interval;
+  session()->Present(
+      presentation_time, [this](fuchsia::images::PresentationInfo info) {
+        TRACE_DURATION("view", "BaseView::PresentationCallback");
+        TRACE_FLOW_END("gfx", "present_callback", info.presentation_time);
 
-                       bool present_needed = false;
-                       if (invalidate_pending_) {
-                         invalidate_pending_ = false;
-                         OnSceneInvalidated(std::move(info));
-                         present_needed = true;
-                       }
+        FXL_DCHECK(present_pending_);
 
-                       present_pending_ = false;
-                       if (present_needed)
-                         PresentScene(next_presentation_time);
-                     });
+        zx_time_t next_presentation_time =
+            info.presentation_time + info.presentation_interval;
+
+        bool present_needed = false;
+        if (invalidate_pending_) {
+          invalidate_pending_ = false;
+          OnSceneInvalidated(std::move(info));
+          present_needed = true;
+        }
+
+        present_pending_ = false;
+        if (present_needed)
+          PresentScene(next_presentation_time);
+      });
 }
 
 }  // namespace scenic

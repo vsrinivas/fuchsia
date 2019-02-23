@@ -201,6 +201,11 @@ class Engine : public SessionUpdater, public FrameRenderer {
 
   uint32_t imported_memory_type_index_ = 0;
 
+  // Tracks the number of sessions returning ApplyUpdateResult::needs_render and
+  // uses it for tracing.
+  uint64_t needs_render_count_ = 0;
+  uint64_t processed_needs_render_count_ = 0;
+
   bool render_continuously_ = false;
   bool has_vulkan_ = false;
 
