@@ -551,12 +551,6 @@ zx_status_t Coordinator::GetTopologicalPath(const Device* dev, char* out, size_t
         const char* name;
         if (dev->parent) {
             name = dev->name.data();
-        } else if (misc_device_.name == dev->name) {
-            name = "dev/misc";
-        } else if (sys_device_.name == dev->name) {
-            name = "dev/sys";
-        } else if (sys_device_.name == dev->name) {
-            name = "dev/test";
         } else {
             name = "dev";
         }
