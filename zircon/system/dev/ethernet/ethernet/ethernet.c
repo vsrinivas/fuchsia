@@ -275,9 +275,12 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
                               countof(edev->rx_entries), &count);
         if (status != ZX_OK) {
             if (status == ZX_ERR_SHOULD_WAIT) {
-                if ((edev->fail_rx_read++ % FAIL_REPORT_RATE) == 0) {
-                    zxlogf(ERROR, "eth [%s]: no rx buffers available (%u times)\n",
-                           edev->name, edev->fail_rx_read);
+                edev->fail_rx_read += 1;
+                if (edev->fail_rx_read == 1 ||
+                        (edev->fail_rx_read % FAIL_REPORT_RATE) == 0) {
+                    zxlogf(WARN, "eth [%s]: warning: no rx buffers available, frame dropped "
+                            "(%u time%s)\n",
+                           edev->name, edev->fail_rx_read, edev->fail_rx_read > 1 ? "s" : "");
                 }
             } else {
                 // Fatal, should force teardown
