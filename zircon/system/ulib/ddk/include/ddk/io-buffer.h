@@ -176,6 +176,9 @@ public:
     inline uint64_t phys_count() const {
         return io_buffer_.phys_count;
     }
+    inline size_t size() const {
+        return io_buffer_.size;
+    }
 
 private:
     io_buffer_t io_buffer_ = {};
