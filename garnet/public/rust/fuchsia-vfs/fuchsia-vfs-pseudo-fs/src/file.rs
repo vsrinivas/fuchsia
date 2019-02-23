@@ -42,7 +42,8 @@ use {
         FileMarker, FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,
         NodeMarker, SeekOrigin, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_PROTECTION_MASK,
         MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_DIRECTORY, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::{
         sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
@@ -353,7 +354,12 @@ where
         }
     }
 
-    fn validate_flags(&mut self, parent_flags: u32, flags: u32) -> Result<(), Status> {
+    fn validate_flags(&mut self, parent_flags: u32, mut flags: u32) -> Result<u32, Status> {
+        if flags & OPEN_FLAG_NODE_REFERENCE != 0 {
+            flags &= !OPEN_FLAG_NODE_REFERENCE;
+            flags &= OPEN_FLAG_DIRECTORY | OPEN_FLAG_DESCRIBE;
+        }
+
         if flags & OPEN_FLAG_DIRECTORY != 0 {
             return Err(Status::NOT_DIR);
         }
@@ -390,7 +396,7 @@ where
             return Err(Status::NOT_SUPPORTED);
         }
 
-        Ok(())
+        Ok(flags)
     }
 
     fn add_connection(
@@ -411,9 +417,10 @@ where
             return send_on_open_with_error(flags, server_end, status);
         }
 
-        if let Err(status) = self.validate_flags(parent_flags, flags) {
-            return send_on_open_with_error(flags, server_end, status);
-        }
+        let flags = match self.validate_flags(parent_flags, flags) {
+            Ok(updated) => updated,
+            Err(status) => return send_on_open_with_error(flags, server_end, status),
+        };
 
         match self.init_buffer(flags) {
             Ok((buffer, was_written)) => {
@@ -1856,6 +1863,30 @@ mod tests {
                 );
 
                 assert_close!(first_proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn node_reference_ignores_read_access() {
+        run_server_client(
+            OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE,
+            read_only(|| panic!("Not supposed to read!")),
+            async move |proxy| {
+                assert_read_err!(proxy, Status::ACCESS_DENIED);
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn node_reference_ignores_write_access() {
+        run_server_client(
+            OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_WRITABLE,
+            write_only(10, |_content| panic!("Not supposed to write!")),
+            async move |proxy| {
+                assert_write_err!(proxy, "Can write", Status::ACCESS_DENIED);
+                assert_close!(proxy);
             },
         );
     }

@@ -18,8 +18,8 @@ use {
         NodeInfo, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MAX_FILENAME,
         MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND,
         OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-        WATCH_EVENT_ADDED, WATCH_MASK_ADDED,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE, WATCH_EVENT_ADDED, WATCH_MASK_ADDED,
     },
     fuchsia_async::Channel,
     fuchsia_zircon::{
@@ -182,7 +182,12 @@ impl<'entries> PseudoDirectory<'entries> {
         self.watchers.retain(|watcher| !watcher.is_dead(lw));
     }
 
-    fn validate_flags(&self, parent_flags: u32, flags: u32) -> Result<(), Status> {
+    fn validate_flags(&self, parent_flags: u32, mut flags: u32) -> Result<u32, Status> {
+        if flags & OPEN_FLAG_NODE_REFERENCE != 0 {
+            flags &= !OPEN_FLAG_NODE_REFERENCE;
+            flags &= OPEN_FLAG_DIRECTORY | OPEN_FLAG_DESCRIBE;
+        }
+
         let allowed_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DIRECTORY | OPEN_FLAG_DESCRIBE;
 
         let prohibited_flags =
@@ -205,7 +210,7 @@ impl<'entries> PseudoDirectory<'entries> {
             return Err(Status::NOT_SUPPORTED);
         }
 
-        Ok(())
+        Ok(flags)
     }
 
     fn add_watcher(&mut self, mask: u32, channel: Channel) -> Result<(), fidl::Error> {
@@ -237,9 +242,10 @@ impl<'entries> PseudoDirectory<'entries> {
             return send_on_open_with_error(flags, server_end, status);
         }
 
-        if let Err(status) = self.validate_flags(parent_flags, flags) {
-            return send_on_open_with_error(flags, server_end, status);
-        }
+        let flags = match self.validate_flags(parent_flags, flags) {
+            Ok(updated) => updated,
+            Err(status) => return send_on_open_with_error(flags, server_end, status),
+        };
 
         let (request_stream, control_handle) =
             ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
@@ -1379,5 +1385,120 @@ mod tests {
             // Entry header is 10 bytes, so this read should not be able to return a single entry.
             assert_read_dirents_err!(root, 8, Status::BUFFER_TOO_SMALL);
         });
+    }
+
+    #[test]
+    fn node_reference_ignores_read_access() {
+        let root = pseudo_directory! {
+            "file" => read_only(|| Ok(b"Content".to_vec())),
+        };
+
+        run_server_client(
+            OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE,
+            root,
+            async move |root| {
+                {
+                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                    let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+
+                    assert_read!(file, "Content");
+                    assert_close!(file);
+                }
+
+                clone_as_directory_assert_err!(
+                    &root,
+                    OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                    Status::ACCESS_DENIED
+                );
+
+                assert_close!(root);
+            },
+        );
+    }
+
+    #[test]
+    fn node_reference_ignores_write_access() {
+        let root = pseudo_directory! {
+            "file" => read_only(|| Ok(b"Content".to_vec())),
+        };
+
+        run_server_client(
+            OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_WRITABLE,
+            root,
+            async move |root| {
+                {
+                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                    let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+
+                    assert_read!(file, "Content");
+                    assert_close!(file);
+                }
+
+                clone_as_directory_assert_err!(
+                    &root,
+                    OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
+                    Status::ACCESS_DENIED
+                );
+
+                assert_close!(root);
+            },
+        );
+    }
+
+    #[test]
+    fn node_reference_allows_read_dirent() {
+        let root = pseudo_directory! {
+            "etc" => pseudo_directory! {
+                "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+                "ssh" => pseudo_directory! {
+                    "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                },
+            },
+            "files" => read_only(|| Ok(b"Content".to_vec())),
+        };
+
+        run_server_client(
+            OPEN_RIGHT_READABLE | OPEN_FLAG_NODE_REFERENCE,
+            root,
+            async move |root| {
+                let mut expected = Vec::new();
+                {
+                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b".");
+                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b"etc");
+                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"files");
+
+                    assert_read_dirents!(root, 1000, expected);
+                }
+
+                {
+                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                    let etc_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
+
+                    expected.clear();
+
+                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b".");
+                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"fstab");
+                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b"ssh");
+
+                    assert_read_dirents!(etc_dir, 1000, expected);
+                    assert_close!(etc_dir);
+                }
+
+                {
+                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                    let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
+
+                    expected.clear();
+
+                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_DIRECTORY, b".");
+                    dirents_add_entry(&mut expected, INO_UNKNOWN, DIRENT_TYPE_FILE, b"sshd_config");
+
+                    assert_read_dirents!(ssh_dir, 1000, expected);
+                    assert_close!(ssh_dir);
+                }
+
+                assert_close!(root);
+            },
+        );
     }
 }
