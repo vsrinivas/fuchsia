@@ -349,7 +349,9 @@ impl EventLoop {
                 self.fidl_get_forwarding_table(responder);
             }
             StackRequest::AddForwardingEntry { entry, responder } => {
-                self.fidl_add_forwarding_entry(entry, responder);
+                responder.send(self.fidl_add_forwarding_entry(entry).as_mut().map(
+                    fidl::encoding::OutOfLine
+                ));
             }
             StackRequest::DelForwardingEntry { subnet, responder } => {
                 self.fidl_del_forwarding_entry(subnet, responder);
@@ -447,9 +449,8 @@ impl EventLoop {
     fn fidl_add_forwarding_entry(
         &mut self,
         entry: ForwardingEntry,
-        responder: StackAddForwardingEntryResponder,
-    ) {
-        responder.send(match entry.destination {
+    ) -> Option<fidl_fuchsia_net_stack::Error> {
+        match entry.destination {
             fidl_net_stack::ForwardingDestination::DeviceId(id) => {
                 if let Some(device_id) = self.ctx.dispatcher().get_device_client(id).map(|x| x.id) {
                     add_device_route(
@@ -462,12 +463,14 @@ impl EventLoop {
                     );
                     None
                 } else {
-                    None
-                    // Error - wrong device ID
+                    // Invalid device ID
+                    Some(fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::NotFound })
                 }
             }
-            fidl_net_stack::ForwardingDestination::NextHop(x) => None,
-        });
+            fidl_net_stack::ForwardingDestination::NextHop(x) => {
+                None
+            }
+        }
     }
 
     fn fidl_del_forwarding_entry(
