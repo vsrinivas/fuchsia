@@ -85,8 +85,7 @@ while getopts "b:d:fmnp:ruh" FLAG; do
 done
 shift $((OPTIND-1))
 
-BUILD_DIR="${BUILD_DIR:-build-arm64}"
-RAMDISK="${RAMDISK:-${BUILD_DIR}/hikey960-bootdata.bin}"
+BUILD_DIR="${BUILD_DIR:-build-gcc}"
 OUT_IMAGE="${BUILD_DIR}/hikey960-boot.img"
 
 if [[ $FLAG_FIRMWARE ]]; then

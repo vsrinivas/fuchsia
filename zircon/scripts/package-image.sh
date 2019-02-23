@@ -113,7 +113,7 @@ AVB_PUBLIC_KEY_METADATA="${AVB_DIR}/test/data/atx_metadata.bin"
 
 # zircon image built by the Zircon build system
 if [[ -z "${ZIRCON_BOOTIMAGE}" ]]; then
-    ZIRCON_BOOTIMAGE="${BUILD_DIR}/zircon.zbi"
+    ZIRCON_BOOTIMAGE="${BUILD_DIR}/arm64.zbi"
 fi
 
 # boot shim for our board
