@@ -24,6 +24,7 @@ InputDeviceImpl::~InputDeviceImpl() {}
 
 void InputDeviceImpl::DispatchReport(fuchsia::ui::input::InputReport report) {
   TRACE_DURATION("input", "input_report_listener");
+  TRACE_FLOW_END("input", "hid_read_to_listener", report.trace_id);
   TRACE_ASYNC_END("input", "dispatch_1_report_to_listener", report.trace_id);
   TRACE_ASYNC_BEGIN("input", "dispatch_2_report_to_presenter", report.trace_id);
   listener_->OnReport(this, std::move(report));

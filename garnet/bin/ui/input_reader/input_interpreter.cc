@@ -542,9 +542,13 @@ bool InputInterpreter::Read(bool discard) {
     return false;
   }
 
+  // TODO(emircan): Consider removing all async events and adding durations and
+  // flows instead.
   if (has_keyboard_) {
     hardcoded_.ParseKeyboardReport(report.data(), rc, keyboard_report_.get());
     if (!discard) {
+      TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                       keyboard_report_->trace_id);
       TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                         keyboard_report_->trace_id, "device_type", "keyboard");
       input_device_->DispatchReport(CloneReport(*keyboard_report_));
@@ -557,6 +561,8 @@ bool InputInterpreter::Read(bool discard) {
       return false;
 
     if (!discard) {
+      TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                       buttons_report_->trace_id);
       TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                         buttons_report_->trace_id, "device_type", "buttons");
       input_device_->DispatchReport(CloneReport(*buttons_report_));
@@ -567,6 +573,8 @@ bool InputInterpreter::Read(bool discard) {
     case MouseDeviceType::BOOT:
       hardcoded_.ParseMouseReport(report.data(), rc, mouse_report_.get());
       if (!discard) {
+        TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                         mouse_report_->trace_id);
         TRACE_ASYNC_BEGIN("inputinput", "dispatch_1_report_to_listener",
                           mouse_report_->trace_id, "device_type", "mouse");
         input_device_->DispatchReport(CloneReport(*mouse_report_));
@@ -575,6 +583,8 @@ bool InputInterpreter::Read(bool discard) {
     case MouseDeviceType::TOUCH:
       if (ParseTouchpadReport(report.data(), rc, mouse_report_.get())) {
         if (!discard) {
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                           mouse_report_->trace_id);
           TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                             mouse_report_->trace_id, "device_type", "touchpad");
           input_device_->DispatchReport(CloneReport(*mouse_report_));
@@ -584,6 +594,8 @@ bool InputInterpreter::Read(bool discard) {
     case MouseDeviceType::HID:
       if (mouse_.ParseReport(report.data(), rc, mouse_report_.get())) {
         if (!discard) {
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                           mouse_report_->trace_id);
           TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                             mouse_report_->trace_id, "device_type", "mouse");
           mouse_report_->event_time = InputEventTimestampNow();
@@ -596,6 +608,8 @@ bool InputInterpreter::Read(bool discard) {
       if (hardcoded_.ParseParadiseTouchpadReportV1(report.data(), rc,
                                                    mouse_report_.get())) {
         if (!discard) {
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                           mouse_report_->trace_id);
           TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                             mouse_report_->trace_id, "device_type", "touchpad");
           input_device_->DispatchReport(CloneReport(*mouse_report_));
@@ -606,6 +620,8 @@ bool InputInterpreter::Read(bool discard) {
       if (hardcoded_.ParseParadiseTouchpadReportV2(report.data(), rc,
                                                    mouse_report_.get())) {
         if (!discard) {
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                           mouse_report_->trace_id);
           TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                             mouse_report_->trace_id, "device_type", "touchpad");
           input_device_->DispatchReport(CloneReport(*mouse_report_));
@@ -617,6 +633,8 @@ bool InputInterpreter::Read(bool discard) {
       if (hardcoded_.ParseGamepadMouseReport(report.data(), rc,
                                              mouse_report_.get())) {
         if (!discard) {
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                           mouse_report_->trace_id);
           TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                             mouse_report_->trace_id, "device_type", "gamepad");
           input_device_->DispatchReport(CloneReport(*mouse_report_));
@@ -632,6 +650,8 @@ bool InputInterpreter::Read(bool discard) {
       if (ParseTouchscreenReport(report.data(), rc,
                                  touchscreen_report_.get())) {
         if (!discard) {
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                           touchscreen_report_->trace_id);
           TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                             touchscreen_report_->trace_id, "device_type",
                             "touchscreen");
@@ -644,6 +664,8 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseAcer12StylusReport(report.data(), rc,
                                                stylus_report_.get())) {
           if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
             TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                               stylus_report_->trace_id, "device_type",
                               "stylus");
@@ -654,6 +676,8 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseAcer12TouchscreenReport(
                 report.data(), rc, touchscreen_report_.get())) {
           if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
             TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                               touchscreen_report_->trace_id, "device_type",
                               "touchscreen");
@@ -668,6 +692,8 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseSamsungTouchscreenReport(
                 report.data(), rc, touchscreen_report_.get())) {
           if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
             TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                               touchscreen_report_->trace_id, "device_type",
                               "touchscreen");
@@ -682,6 +708,8 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseParadiseTouchscreenReportV1(
                 report.data(), rc, touchscreen_report_.get())) {
           if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
             TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                               touchscreen_report_->trace_id, "device_type",
                               "touchscreen");
@@ -695,6 +723,8 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseParadiseTouchscreenReportV2(
                 report.data(), rc, touchscreen_report_.get())) {
           if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
             TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                               touchscreen_report_->trace_id, "device_type",
                               "touchscreen");
@@ -705,6 +735,8 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseParadiseStylusReport(report.data(), rc,
                                                  stylus_report_.get())) {
           if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             stylus_report_->trace_id);
             TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                               stylus_report_->trace_id, "device_type",
                               "stylus");
@@ -719,6 +751,8 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseParadiseTouchscreenReportV1(
                 report.data(), rc, touchscreen_report_.get())) {
           if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
             TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                               touchscreen_report_->trace_id, "device_type",
                               "touchscreen");
@@ -729,6 +763,8 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseParadiseStylusReport(report.data(), rc,
                                                  stylus_report_.get())) {
           if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             stylus_report_->trace_id);
             TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                               stylus_report_->trace_id, "device_type",
                               "stylus");
@@ -742,6 +778,8 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseEGalaxTouchscreenReport(
                 report.data(), rc, touchscreen_report_.get())) {
           if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
             TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                               touchscreen_report_->trace_id, "device_type",
                               "touchscreen");
@@ -756,6 +794,8 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseEyoyoTouchscreenReport(report.data(), rc,
                                                    touchscreen_report_.get())) {
           if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
             TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                               touchscreen_report_->trace_id, "device_type",
                               "touchscreen");
@@ -769,6 +809,8 @@ bool InputInterpreter::Read(bool discard) {
         if (hardcoded_.ParseFt3x27TouchscreenReport(
                 report.data(), rc, touchscreen_report_.get())) {
           if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
             TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                               touchscreen_report_->trace_id, "device_type",
                               "touchscreen");
@@ -789,6 +831,8 @@ bool InputInterpreter::Read(bool discard) {
         if (!discard) {
           FXL_DCHECK(sensor_idx_ < kMaxSensorCount);
           FXL_DCHECK(sensor_devices_[sensor_idx_]);
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                           sensor_report_->trace_id);
           TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                             sensor_report_->trace_id, "device_type", "sensor");
           sensor_devices_[sensor_idx_]->DispatchReport(
@@ -802,6 +846,8 @@ bool InputInterpreter::Read(bool discard) {
         if (!discard) {
           FXL_DCHECK(sensor_idx_ < kMaxSensorCount);
           FXL_DCHECK(sensor_devices_[sensor_idx_]);
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                           sensor_report_->trace_id);
           TRACE_ASYNC_BEGIN("input", "dispatch_1_report_to_listener",
                             sensor_report_->trace_id, "device_type",
                             "ambient_light");
