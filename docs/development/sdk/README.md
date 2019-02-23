@@ -2,9 +2,43 @@
 
 This folder contains information about developing the Fuchsia SDK.
 
-> [Download the Fuchsia SDK](download.md)
+> [Download the Fuchsia Core SDK](download.md)
 
-## What belongs in an SDK?
+
+## Strategy
+
+Fuchsia is taking a modular approach to building an SDK, just as it took one to
+building a new operating system.
+
+At the center of this strategy is the Fuchsia Core SDK, distilled out of the
+present Git repository.
+This SDK contains a small set of libraries and tools required to start building
+and running programs that target Fuchsia.
+The contents of that SDK represent the most basic contract that the Fuchsia
+platform developers offer to prospective developers.
+
+The Fuchsia Core SDK is not suitable for immediate consumption.
+It does not contain any reference to toolchains or build systems, and in fact
+does not require any specific instance of these.
+While this might be viewed as a drawback, this is actually a feature, an
+integral part of a layered approach to building a fully-functional SDK.
+Even though it is not tied to a particular build system, the Core SDK contains
+metadata that may be used to produced support for a large variety of build
+systems, thereby producing various SDK distributions.
+Having the Core SDK cleanly separated from these various distributions allows
+for very flexible release schemes and iteration cycles.
+
+The present documentation focuses on the details of the creation process of the
+Core SDK.
+The documentation included in the Core SDK, hosted under `//sdk/docs`, contains
+information regarding how to work with the Core SDK.
+Lastly, some examples of SDK distributions can be found under `//scripts/sdk`;
+most notably it contains a [frontend](#frontend) generating a workspace
+enabling Fuchsia development using [Bazel][bazel] - this distribution is
+currently used to test versions of the Core SDK before they are published.
+
+
+## What belongs in the Core SDK?
 
 By default, a piece of code in the Fuchsia tree cannot be added to any SDK:
 participation is a strictly opt-in decision. Additionally, this decision is
@@ -95,3 +129,4 @@ for more details.
 
 [backend]: https://fuchsia.googlesource.com/fuchsia/+/master/build/sdk/README.md
 [frontends]: https://fuchsia.googlesource.com/fuchsia/+/master/scripts/sdk/README.md
+[bazel]: https://bazel.build/
