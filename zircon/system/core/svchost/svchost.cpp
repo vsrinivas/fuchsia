@@ -13,7 +13,6 @@
 #include <lib/profile/profile.h>
 #include <lib/svc/outgoing.h>
 #include <lib/sysmem/sysmem.h>
-#include <lib/kernel-debug/kernel-debug.h>
 #include <lib/zx/job.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -94,7 +93,6 @@ static zx_status_t provider_load(zx_service_provider_instance_t* instance,
 
 static zx_handle_t appmgr_svc;
 static zx_handle_t root_job;
-static zx_handle_t root_resource;
 
 // We should host the tracelink service ourselves instead of routing the request
 // to appmgr.
@@ -158,7 +156,6 @@ int main(int argc, char** argv) {
 
     appmgr_svc = zx_take_startup_handle(PA_HND(PA_USER0, 0));
     root_job = zx_take_startup_handle(PA_HND(PA_USER0, 1));
-    root_resource = zx_take_startup_handle(PA_HND(PA_USER0, 2));
 
     zx_status_t status = outgoing.ServeFromStartupInfo();
     if (status != ZX_OK) {
@@ -179,8 +176,6 @@ int main(int argc, char** argv) {
         {.provider = launcher_get_service_provider(), .ctx = nullptr},
         {.provider = sysmem_get_service_provider(), .ctx = nullptr},
         {.provider = sysmem2_get_service_provider(), .ctx = nullptr},
-        {.provider = kernel_debug_get_service_provider(),
-         .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(root_resource))},
         {.provider = profile_get_service_provider(),
          .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(profile_root_job_copy))},
     };
