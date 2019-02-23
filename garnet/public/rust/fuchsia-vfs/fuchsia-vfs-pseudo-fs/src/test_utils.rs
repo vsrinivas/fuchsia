@@ -6,26 +6,27 @@
 
 #![cfg(test)]
 
+use {
+    fidl::endpoints::{create_proxy, ServerEnd, ServiceMarker},
+    fidl_fuchsia_io::{DirectoryProxy, NodeMarker},
+};
+
 // All of the macros in this file could instead be async functions, but then I would have to say
-// `await!(open_get_proxy(...))`, while with a macro it is `open_get_proxy!(...)`.  As this is
-// local to the testing part of this module, it is probably OK to use macros to save some
-// repetition.
+// `await!(assert_read(...))`, while with a macro it is `assert_read!(...)`.  As this is local to
+// the testing part of this module, it is probably OK to use macros to save some repetition.
 
-// See comment at the top of the file for why this is a macro.
-macro_rules! open_get_proxy {
-    ($proxy:expr, $flags:expr, $mode:expr, $path:expr, $new_proxy_type:ty) => {{
-        let (new_proxy, new_server_end) =
-            create_proxy::<$new_proxy_type>().expect("Failed to create connection endpoints");
+pub fn open_get_proxy<M>(proxy: &DirectoryProxy, flags: u32, mode: u32, path: &str) -> M::Proxy
+where
+    M: ServiceMarker,
+{
+    let (new_proxy, new_server_end) =
+        create_proxy::<M>().expect("Failed to create connection endpoints");
 
-        $proxy
-            .open($flags, $mode, $path, ServerEnd::<NodeMarker>::new(new_server_end.into_channel()))
-            .unwrap();
+    proxy
+        .open(flags, mode, path, ServerEnd::<NodeMarker>::new(new_server_end.into_channel()))
+        .unwrap();
 
-        new_proxy
-    }};
-    ($proxy:expr, $flags:expr, $path:expr, $new_proxy_type:ty) => {
-        open_get_proxy!($proxy, $flags, 0, $path, $new_proxy_type)
-    };
+    new_proxy
 }
 
 // See comment at the top of the file for why this is a macro.
@@ -259,7 +260,7 @@ macro_rules! assert_no_event {
 macro_rules! open_get_proxy_assert {
     ($proxy:expr, $flags:expr, $path:expr, $new_proxy_type:ty, $expected_pattern:pat,
      $expected_assertion:block) => {{
-        let new_proxy = open_get_proxy!($proxy, $flags, $path, $new_proxy_type);
+        let new_proxy = open_get_proxy::<$new_proxy_type>($proxy, $flags, 0, $path);
         assert_event!(new_proxy, $expected_pattern, $expected_assertion);
         new_proxy
     }};

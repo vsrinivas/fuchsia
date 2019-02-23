@@ -638,6 +638,7 @@ mod tests {
 
     use {
         crate::file::{read_only, read_write, write_only},
+        crate::test_utils::open_get_proxy,
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl_fuchsia_io::{
             DirectoryEvent, DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent,
@@ -855,7 +856,7 @@ mod tests {
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-            let file1 = open_get_file_proxy_assert_ok!(root, flags, "file1");
+            let file1 = open_get_file_proxy_assert_ok!(&root, flags, "file1");
 
             assert_read!(file1, "Content");
             assert_close!(file1);
@@ -872,7 +873,7 @@ mod tests {
 
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-            open_as_file_assert_err!(root, flags, "file2", Status::NOT_FOUND);
+            open_as_file_assert_err!(&root, flags, "file2", Status::NOT_FOUND);
 
             assert_close!(root);
         });
@@ -897,7 +898,7 @@ mod tests {
                 expected_content: &'a str,
             ) {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                let file = open_get_file_proxy_assert_ok!(from_dir, flags, path);
+                let file = open_get_file_proxy_assert_ok!(&from_dir, flags, path);
                 assert_read!(file, expected_content);
                 assert_close!(file);
             }
@@ -906,7 +907,7 @@ mod tests {
 
             {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                let ssh_dir = open_get_directory_proxy_assert_ok!(root, flags, "etc/ssh");
+                let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
 
                 await!(open_read_close(&ssh_dir, "sshd_config", "# Empty"));
             }
@@ -948,7 +949,7 @@ mod tests {
                 expected_count: u32,
             ) {
                 let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-                let file = open_get_file_proxy_assert_ok!(from_dir, flags, path);
+                let file = open_get_file_proxy_assert_ok!(&from_dir, flags, path);
                 assert_read!(file, expected_content);
                 assert_seek!(file, 0, Start);
                 assert_write!(file, new_content);
@@ -959,7 +960,7 @@ mod tests {
 
             {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                let ssh_dir = open_get_directory_proxy_assert_ok!(root, flags, "etc/ssh");
+                let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
 
                 await!(open_read_write_close(
                     &ssh_dir,
@@ -1009,7 +1010,7 @@ mod tests {
                 expected_count: u32,
             ) {
                 let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-                let file = open_get_file_proxy_assert_ok!(from_dir, flags, "dev/output");
+                let file = open_get_file_proxy_assert_ok!(&from_dir, flags, "dev/output");
                 assert_write!(file, new_content);
                 assert_close!(file);
 
@@ -1074,14 +1075,14 @@ mod tests {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             let mode = MODE_TYPE_DIRECTORY;
             {
-                let proxy = open_get_proxy!(&root, flags, mode, "file2", FileMarker);
+                let proxy = open_get_proxy::<FileMarker>(&root, flags, mode, "file2");
                 assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
                     assert_eq!(Status::from_raw(s), Status::NOT_DIR);
                     assert_eq!(info, None);
                 });
             }
             {
-                let proxy = open_get_proxy!(&root, flags, mode, "dir/file1", FileMarker);
+                let proxy = open_get_proxy::<FileMarker>(&root, flags, mode, "dir/file1");
                 assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
                     assert_eq!(Status::from_raw(s), Status::NOT_DIR);
                     assert_eq!(info, None);
@@ -1104,14 +1105,14 @@ mod tests {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             let mode = MODE_TYPE_FILE;
             {
-                let proxy = open_get_proxy!(&root, flags, mode, "dir", DirectoryMarker);
+                let proxy = open_get_proxy::<DirectoryMarker>(&root, flags, mode, "dir");
                 assert_event!(proxy, DirectoryEvent::OnOpen_ { s, info }, {
                     assert_eq!(Status::from_raw(s), Status::NOT_FILE);
                     assert_eq!(info, None);
                 });
             }
             {
-                let proxy = open_get_proxy!(&root, flags, mode, "dir/dir2", DirectoryMarker);
+                let proxy = open_get_proxy::<DirectoryMarker>(&root, flags, mode, "dir/dir2");
                 assert_event!(proxy, DirectoryEvent::OnOpen_ { s, info }, {
                     assert_eq!(Status::from_raw(s), Status::NOT_FILE);
                     assert_eq!(info, None);
@@ -1135,13 +1136,13 @@ mod tests {
             open_as_file_assert_err!(&root, flags, "file/", Status::NOT_DIR);
 
             {
-                let file = open_get_file_proxy_assert_ok!(root, flags, "file");
+                let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
                 assert_read!(file, "Content");
                 assert_close!(file);
             }
 
             {
-                let sub_dir = open_get_directory_proxy_assert_ok!(root, flags, "dir/");
+                let sub_dir = open_get_directory_proxy_assert_ok!(&root, flags, "dir/");
                 assert_close!(sub_dir);
             }
 
@@ -1219,7 +1220,7 @@ mod tests {
 
             {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                let etc_dir = open_get_directory_proxy_assert_ok!(root, flags, "etc");
+                let etc_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
 
                 expected.clear();
 
@@ -1235,7 +1236,7 @@ mod tests {
 
             {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                let ssh_dir = open_get_directory_proxy_assert_ok!(root, flags, "etc/ssh");
+                let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
 
                 expected.clear();
 
