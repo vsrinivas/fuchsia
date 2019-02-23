@@ -112,7 +112,7 @@ foreach(pkg, _preprocessed_products.available) {
 
 # Additional packages that are specified using labels.
 foreach(pkg, extra_package_labels) {
-  monolith_package += [ get_label_info(pkg, "label_no_toolchain") ]
+  monolith_packages += [ get_label_info(pkg, "label_no_toolchain") ]
 }
 
 # Every extra GN target the package JSON requests be built on the side.
