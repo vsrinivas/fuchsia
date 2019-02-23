@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_BASEMGR_USER_CONTEXT_IMPL_H_
-#define PERIDOT_BIN_BASEMGR_USER_CONTEXT_IMPL_H_
+#ifndef PERIDOT_BIN_BASEMGR_SESSION_CONTEXT_IMPL_H_
+#define PERIDOT_BIN_BASEMGR_SESSION_CONTEXT_IMPL_H_
 
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
@@ -27,19 +27,19 @@
 
 namespace modular {
 
-// |UserContextImpl| starts and manages a Sessionmgr. The life time of a
-// Sessionmgr is bound to this class. |UserContextImpl| is not self-owned,
+// |SessionContextImpl| starts and manages a Sessionmgr. The life time of a
+// Sessionmgr is bound to this class. |SessionContextImpl| is not self-owned,
 // but still drives its own deletion: On logout, it signals its
 // owner (BasemgrImpl) to delete it.
-class UserContextImpl : fuchsia::modular::internal::UserContext {
+class SessionContextImpl : fuchsia::modular::internal::SessionContext {
  public:
   // After perfoming logout, to signal our completion (and deletion of our
   // instance) to our owner, we do it using a callback supplied to us in our
   // constructor. (The alternative is to take in a BasemgrImpl*, which seems
   // a little specific and overscoped).
-  using DoneCallback = std::function<void(UserContextImpl*)>;
+  using DoneCallback = std::function<void(SessionContextImpl*)>;
 
-  UserContextImpl(
+  SessionContextImpl(
       fuchsia::sys::Launcher* const launcher,
       fuchsia::modular::AppConfig sessionmgr,
       fuchsia::modular::AppConfig session_shell,
@@ -61,10 +61,10 @@ class UserContextImpl : fuchsia::modular::internal::UserContext {
       fuchsia::modular::AppConfig session_shell_config);
 
  private:
-  // |fuchsia::modular::internal::UserContext|
+  // |fuchsia::modular::internal::SessionContext|
   void Logout() override;
 
-  // |fuchsia::modular::internal::UserContext|
+  // |fuchsia::modular::internal::SessionContext|
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                            request) override;
 
@@ -72,7 +72,7 @@ class UserContextImpl : fuchsia::modular::internal::UserContext {
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> sessionmgr_app_;
   fuchsia::modular::internal::SessionmgrPtr sessionmgr_;
 
-  fidl::Binding<fuchsia::modular::internal::UserContext> user_context_binding_;
+  fidl::Binding<fuchsia::modular::internal::SessionContext> session_context_binding_;
 
   std::vector<fit::function<void()>> logout_response_callbacks_;
 
@@ -80,9 +80,9 @@ class UserContextImpl : fuchsia::modular::internal::UserContext {
 
   DoneCallback done_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(UserContextImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SessionContextImpl);
 };
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_BASEMGR_USER_CONTEXT_IMPL_H_
+#endif  // PERIDOT_BIN_BASEMGR_SESSION_CONTEXT_IMPL_H_

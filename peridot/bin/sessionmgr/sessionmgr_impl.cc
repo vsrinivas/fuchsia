@@ -186,7 +186,8 @@ void SessionmgrImpl::Initialize(
     fuchsia::modular::AppConfig story_shell,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
-    fidl::InterfaceHandle<fuchsia::modular::internal::UserContext> user_context,
+    fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext>
+        session_context,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
   // This is called in the service connection factory callbacks for session
@@ -213,8 +214,10 @@ void SessionmgrImpl::Initialize(
     ReportEvent(ModularEvent::BOOTED_TO_SESSIONMGR);
   };
 
-  InitializeUser(std::move(account), std::move(agent_token_manager),
-                 std::move(user_context));
+  session_context_ = session_context.Bind();
+  AtEnd(Reset(&session_context_));
+
+  InitializeUser(std::move(account), std::move(agent_token_manager));
   InitializeSessionShell(
       std::move(session_shell),
       zx::eventpair(view_owner_request.TakeChannel().release()));
@@ -228,14 +231,9 @@ void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
 
 void SessionmgrImpl::InitializeUser(
     fuchsia::modular::auth::AccountPtr account,
-    fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
-    fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
-        user_context) {
+    fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager) {
   agent_token_manager_ = agent_token_manager.Bind();
   AtEnd(Reset(&agent_token_manager_));
-
-  user_context_ = user_context.Bind();
-  AtEnd(Reset(&user_context_));
 
   account_ = std::move(account);
   AtEnd(Reset(&account_));
@@ -863,7 +861,7 @@ void SessionmgrImpl::GetLink(
 
 void SessionmgrImpl::GetPresentation(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
-  user_context_->GetPresentation(std::move(request));
+  session_context_->GetPresentation(std::move(request));
 }
 
 void SessionmgrImpl::GetSpeechToText(
@@ -887,7 +885,7 @@ void SessionmgrImpl::GetVisibleStoriesController(
   visible_stories_handler_->AddControllerBinding(std::move(request));
 }
 
-void SessionmgrImpl::Logout() { user_context_->Logout(); }
+void SessionmgrImpl::Logout() { session_context_->Logout(); }
 
 // |EntityProviderLauncher|
 void SessionmgrImpl::ConnectToEntityProvider(

@@ -10,7 +10,7 @@ use fidl::encoding::OutOfLine;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_modular::AppConfig;
 use fidl_fuchsia_modular_auth::{Account, IdentityProvider};
-use fidl_fuchsia_modular_internal::{SessionmgrMarker, UserContextMarker};
+use fidl_fuchsia_modular_internal::{SessionmgrMarker, SessionContextMarker};
 use fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba};
 use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
 use fuchsia_app::client::{App as LaunchedApp, LaunchOptions, Launcher};
@@ -22,10 +22,10 @@ use std::any::Any;
 use std::collections::BTreeMap;
 
 mod layout;
-mod user_context;
+mod session_context;
 
 use crate::layout::{layout, ChildViewData};
-use crate::user_context::UserContext;
+use crate::session_context::SessionContext;
 
 struct VoilaAppAssistant {}
 
@@ -111,15 +111,15 @@ impl VoilaViewAssistant {
         self.replicas.insert(key, session_data);
         view_container.add_child(key, view_owner_client, host_import_token)?;
 
-        // Set up UserContext.
-        let (user_context_client, user_context_server) = create_endpoints::<UserContextMarker>()?;
-        let user_context = UserContext {};
-        let user_context_stream = user_context_server.into_stream()?;
+        // Set up SessionContext.
+        let (session_context_client, session_context_server) = create_endpoints::<SessionContextMarker>()?;
+        let session_context = SessionContext {};
+        let session_context_stream = session_context_server.into_stream()?;
         fasync::spawn_local(
             async move {
-                await!(user_context.handle_requests_from_stream(user_context_stream))
+                await!(session_context.handle_requests_from_stream(session_context_stream))
                     .unwrap_or_else(|err| {
-                        warn!("Error handling UserContext request channel: {:?}", err);
+                        warn!("Error handling SessionContext request channel: {:?}", err);
                     })
             },
         );
@@ -131,7 +131,7 @@ impl VoilaViewAssistant {
                 &mut story_shell_config,
                 None, /* ledger_token_manager */
                 None, /* agent_token_manager */
-                user_context_client,
+                session_context_client,
                 Some(view_owner_server),
             )
             .context("Failed to issue initialize request for sessionmgr")?;

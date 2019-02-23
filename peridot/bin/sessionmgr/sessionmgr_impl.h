@@ -96,8 +96,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fuchsia::modular::AppConfig story_shell,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
-      fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
-          user_context,
+      fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext>
+          session_context,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request) override;
 
@@ -108,9 +108,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // Sequence of Initialize() broken up into steps for clarity.
   void InitializeUser(
       fuchsia::modular::auth::AccountPtr account,
-      fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
-      fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
-          user_context);
+      fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager);
   void InitializeLedger(
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager);
   void InitializeDeviceMap();
@@ -218,7 +216,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       session_shell_context_bindings_;
 
   fuchsia::auth::TokenManagerPtr agent_token_manager_;
-  fuchsia::modular::internal::UserContextPtr user_context_;
+  fuchsia::modular::internal::SessionContextPtr session_context_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> cloud_provider_app_;
   fuchsia::ledger::cloud::firestore::FactoryPtr cloud_provider_factory_;
   std::unique_ptr<AppClient<fuchsia::ledger::internal::LedgerController>>

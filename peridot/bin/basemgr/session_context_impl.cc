@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/basemgr/user_context_impl.h"
+#include "peridot/bin/basemgr/session_context_impl.h"
 
 #include <memory>
 #include <utility>
@@ -25,7 +25,7 @@ namespace {
 constexpr char kPresentationService[] = "mozart.Presentation";
 }  // namespace
 
-UserContextImpl::UserContextImpl(
+SessionContextImpl::SessionContextImpl(
     fuchsia::sys::Launcher* const launcher,
     fuchsia::modular::AppConfig sessionmgr,
     fuchsia::modular::AppConfig session_shell,
@@ -37,7 +37,7 @@ UserContextImpl::UserContextImpl(
         view_owner_request,
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> base_shell_services,
     DoneCallback done)
-    : user_context_binding_(this),
+    : session_context_binding_(this),
       base_shell_services_(base_shell_services ? base_shell_services.Bind()
                                                : nullptr),
       done_(std::move(done)) {
@@ -66,13 +66,13 @@ UserContextImpl::UserContextImpl(
   sessionmgr_->Initialize(
       std::move(account), std::move(session_shell), std::move(story_shell),
       std::move(ledger_token_manager), std::move(agent_token_manager),
-      user_context_binding_.NewBinding(), std::move(view_owner_request));
+      session_context_binding_.NewBinding(), std::move(view_owner_request));
 
   sessionmgr_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "
                    << "Calling done_().";
     // This prevents us from receiving any further requests.
-    user_context_binding_.Unbind();
+    session_context_binding_.Unbind();
     // Logout(), which expects a graceful shutdown of sessionmgr, does not
     // apply here because sessionmgr crashed. Just run |done_| directly.
     done_(this);
@@ -81,7 +81,7 @@ UserContextImpl::UserContextImpl(
 
 // TODO(MF-120): Replace method in favor of letting sessionmgr launch base
 // shell via SessionUserProvider.
-void UserContextImpl::Logout(fit::function<void()> callback) {
+void SessionContextImpl::Logout(fit::function<void()> callback) {
   FXL_LOG(INFO) << "fuchsia::modular::UserController::Logout()";
   logout_response_callbacks_.push_back(std::move(callback));
   if (logout_response_callbacks_.size() > 1) {
@@ -89,7 +89,7 @@ void UserContextImpl::Logout(fit::function<void()> callback) {
   }
 
   // This should prevent us from receiving any further requests.
-  user_context_binding_.Unbind();
+  session_context_binding_.Unbind();
 
   sessionmgr_app_->Teardown(kSessionmgrTimeout, [this] {
     for (const auto& callback : logout_response_callbacks_) {
@@ -100,7 +100,7 @@ void UserContextImpl::Logout(fit::function<void()> callback) {
   });
 }
 
-void UserContextImpl::GetPresentation(
+void SessionContextImpl::GetPresentation(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
   if (base_shell_services_) {
     base_shell_services_->ConnectToService(kPresentationService,
@@ -108,7 +108,7 @@ void UserContextImpl::GetPresentation(
   }
 }
 
-FuturePtr<> UserContextImpl::SwapSessionShell(
+FuturePtr<> SessionContextImpl::SwapSessionShell(
     fuchsia::modular::AppConfig session_shell_config) {
   auto future = Future<>::Create("SwapSessionShell");
   sessionmgr_->SwapSessionShell(std::move(session_shell_config),
@@ -116,7 +116,7 @@ FuturePtr<> UserContextImpl::SwapSessionShell(
   return future;
 }
 
-void UserContextImpl::Logout() {
+void SessionContextImpl::Logout() {
   Logout([] {});
 }
 

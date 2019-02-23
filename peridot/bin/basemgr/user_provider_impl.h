@@ -13,7 +13,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 
-#include "peridot/bin/basemgr/user_context_impl.h"
+#include "peridot/bin/basemgr/session_context_impl.h"
 
 namespace fuchsia {
 namespace modular {
@@ -131,7 +131,8 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   std::string serialized_users_;
   const fuchsia::modular::UsersStorage* users_storage_ = nullptr;
 
-  std::map<UserContextImpl*, std::unique_ptr<UserContextImpl>> user_contexts_;
+  std::map<SessionContextImpl*, std::unique_ptr<SessionContextImpl>>
+      session_contexts_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserProviderImpl);
 };
