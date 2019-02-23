@@ -165,20 +165,6 @@ sdk("core") {
     "//zircon/public/tool/zbi:zbi_sdk($host_toolchain)",
   ]
 
-  # We explicitly do not want to pull these dependencies into the SDK.
-  #
-  # These libraries are common dependencies in the Platform Source Tree, but they
-  # are not stable enough to expose in the SDK.
-  #
-  # See <https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/sdk/standards.md#dependencies>
-  # for more information.
-  assert_no_deps = [
-    "//garnet/public/lib/fsl:fsl_sdk",
-    "//garnet/public/lib/fxl:fxl_sdk",
-    "//zircon/public/lib/fbl:fbl_sdk",
-    "//zircon/public/lib/fs:fs_sdk",
-  ]
-
   if (target_cpu != "arm64") {
     deps += [
       "//build/images:fvm.sparse.blk_sdk",
