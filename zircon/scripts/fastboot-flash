@@ -9,7 +9,7 @@
 set -eo pipefail
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-BUILD_DIR="${DIR}/../build-arm64"
+BUILD_DIR="${DIR}/../build-gcc"
 SYSCFG_A_BIN="${DIR}/../prebuilt/images/syscfg_a.bin"
 SYSCFG_B_BIN="${DIR}/../prebuilt/images/syscfg_b.bin"
 SYSCFG_R_BIN="${DIR}/../prebuilt/images/syscfg_r.bin"
@@ -141,7 +141,7 @@ fi
 
 
 ZBI="${BUILD_DIR}/tools/zbi"
-BOOTIMAGE="${BUILD_DIR}/zircon.zbi"
+BOOTIMAGE="${BUILD_DIR}/arm64.zbi"
 CMDLINE_FILE="${BUILD_DIR}/${BOARD}-cmdline.txt"
 OUT_IMAGE="${BUILD_DIR}/${BOARD}-boot.img"
 
