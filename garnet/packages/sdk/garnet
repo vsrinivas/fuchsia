@@ -41,6 +41,6 @@
         "garnet/packages/tools/tiles"
     ],
     "labels": [
-        "//sdk:garnet"
+        "//sdk:core"
     ]
 }

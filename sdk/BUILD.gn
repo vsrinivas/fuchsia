@@ -111,7 +111,7 @@ if (has_sdk_id) {
   }
 }
 
-sdk("garnet") {
+sdk("core") {
   id = sdk_id
 
   category = "partner"

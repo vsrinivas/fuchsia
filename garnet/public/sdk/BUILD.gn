@@ -6,6 +6,6 @@ import("//build/sdk/sdk_alias.gni")
 
 sdk_alias("garnet_molecule") {
   testonly = true
-  target = "//sdk:garnet_molecule"
+  target = "//sdk:core_molecule"
   type = "molecule"
 }
