@@ -112,6 +112,14 @@ The next step is to add that content to an existing SDK definition. For a target
 `//path/to/my:super_target`, this is accomplished by making the implicit
 `//path/to/my:super_target_sdk` target a dependency of the `sdk` target.
 
+Note that some content types require a `.api` source file describing the state
+of the SDK element's API.
+These files are produced by the build system.
+In order to seed the first version of such a file, let the build system tell you
+where it expects to find the file, then create this file and leave it empty,
+and finally run the build again: it will again tell you where to get the initial
+version from.
+
 ### Turning SDK-related errors into warnings
 
 There exist some build steps to verify that the contents of an SDK don't get
