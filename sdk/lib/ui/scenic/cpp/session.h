@@ -9,12 +9,10 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
-
 #include <utility>
-
-#include "lib/fidl/cpp/binding.h"
 
 namespace scenic {
 
@@ -74,6 +72,10 @@ class Session : private fuchsia::ui::scenic::SessionListener {
 
   // Gets a pointer to the underlying session interface.
   fuchsia::ui::scenic::Session* session() { return session_.get(); }
+
+  // Gets the next resource id which will be provided when |AllocResourceId| is
+  // called.
+  uint32_t next_resource_id() const { return next_resource_id_; }
 
   // Allocates a new unique resource id.
   uint32_t AllocResourceId();

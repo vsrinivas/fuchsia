@@ -5,11 +5,11 @@
 #ifndef LIB_UI_SCENIC_CPP_COMMANDS_H_
 #define LIB_UI_SCENIC_CPP_COMMANDS_H_
 
-#include <string>
-
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
+#include <string>
 
 namespace scenic {
 
@@ -86,11 +86,19 @@ fuchsia::ui::gfx::Command NewCreateClipNodeCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateEntityNodeCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateOpacityNodeCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateShapeNodeCmd(uint32_t id);
+
 fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id, zx::eventpair token,
+                                           const std::string& debug_name);
+fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id,
+                                           fuchsia::ui::views::ViewToken token,
                                            const std::string& debug_name);
 fuchsia::ui::gfx::Command NewCreateViewHolderCmd(uint32_t id,
                                                  zx::eventpair token,
                                                  const std::string& debug_name);
+fuchsia::ui::gfx::Command NewCreateViewHolderCmd(
+    uint32_t id, fuchsia::ui::views::ViewHolderToken token,
+    const std::string& debug_name);
+
 fuchsia::ui::gfx::Command NewCreateVariableCmd(uint32_t id,
                                                fuchsia::ui::gfx::Value value);
 

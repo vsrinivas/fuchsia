@@ -5,13 +5,11 @@
 #ifndef LIB_UI_SCENIC_CPP_HOST_MEMORY_H_
 #define LIB_UI_SCENIC_CPP_HOST_MEMORY_H_
 
+#include <lib/ui/scenic/cpp/resources.h>
+#include <lib/zx/vmo.h>
 #include <memory>
 #include <utility>
 #include <vector>
-
-#include <lib/zx/vmo.h>
-
-#include "lib/ui/scenic/cpp/resources.h"
 
 namespace scenic {
 

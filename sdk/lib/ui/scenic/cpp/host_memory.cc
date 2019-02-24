@@ -2,14 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/scenic/cpp/host_memory.h"
+#include <lib/ui/scenic/cpp/host_memory.h>
 
+#include <lib/ui/scenic/cpp/commands.h>
 #include <lib/zx/vmar.h>
-#include <lib/zx/vmo.h>
 #include <zircon/assert.h>
-#include <memory>
-
-#include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic {
 namespace {

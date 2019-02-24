@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/scenic/cpp/commands.h"
+#include <lib/ui/scenic/cpp/commands.h>
 
-#include <array>
-
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/assert.h>
+#include <array>
 
 namespace scenic {
 
@@ -396,25 +396,38 @@ fuchsia::ui::gfx::Command NewCreateShapeNodeCmd(uint32_t id) {
 
 fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id, zx::eventpair token,
                                            const std::string& debug_name) {
-  ZX_DEBUG_ASSERT(token);
-  fuchsia::ui::gfx::ViewArgs view;
+  return NewCreateViewCmd(id, ToViewToken(std::move(token)), debug_name);
+}
+
+fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id,
+                                           fuchsia::ui::views::ViewToken token,
+                                           const std::string& debug_name) {
+  ZX_DEBUG_ASSERT(token.value);
+  fuchsia::ui::gfx::ViewArgs2 view;
   view.token = std::move(token);
   view.debug_name = debug_name;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_view(std::move(view));
+  resource.set_view2(std::move(view));
   return NewCreateResourceCmd(id, std::move(resource));
 }
 
 fuchsia::ui::gfx::Command NewCreateViewHolderCmd(
     uint32_t id, zx::eventpair token, const std::string& debug_name) {
-  ZX_DEBUG_ASSERT(token);
-  fuchsia::ui::gfx::ViewHolderArgs view_holder;
+  return NewCreateViewHolderCmd(id, ToViewHolderToken(std::move(token)),
+                                debug_name);
+}
+
+fuchsia::ui::gfx::Command NewCreateViewHolderCmd(
+    uint32_t id, fuchsia::ui::views::ViewHolderToken token,
+    const std::string& debug_name) {
+  ZX_DEBUG_ASSERT(token.value);
+  fuchsia::ui::gfx::ViewHolderArgs2 view_holder;
   view_holder.token = std::move(token);
   view_holder.debug_name = debug_name;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_view_holder(std::move(view_holder));
+  resource.set_view_holder2(std::move(view_holder));
   return NewCreateResourceCmd(id, std::move(resource));
 }
 

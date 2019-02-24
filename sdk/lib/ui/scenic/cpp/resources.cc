@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/scenic/cpp/resources.h"
+#include <lib/ui/scenic/cpp/resources.h>
 
+#include <lib/images/cpp/images.h>
+#include <lib/ui/scenic/cpp/commands.h>
 #include <algorithm>
-
-#include "lib/images/cpp/images.h"
-#include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic {
 namespace {
@@ -324,6 +323,17 @@ void ImportNode::Snapshot(fuchsia::ui::gfx::SnapshotCallbackHACKPtr callback) {
 ViewHolder::ViewHolder(Session* session, zx::eventpair token,
                        const std::string& debug_name)
     : Resource(session) {
+  session->Enqueue(NewCreateViewHolderCmd(id(),
+                                          fuchsia::ui::views::ViewHolderToken({
+                                              .value = std::move(token),
+                                          }),
+                                          debug_name));
+}
+
+ViewHolder::ViewHolder(Session* session,
+                       fuchsia::ui::views::ViewHolderToken token,
+                       const std::string& debug_name)
+    : Resource(session) {
   session->Enqueue(NewCreateViewHolderCmd(id(), std::move(token), debug_name));
 }
 
@@ -344,6 +354,16 @@ void ViewHolder::SetViewProperties(
 }
 
 View::View(Session* session, zx::eventpair token, const std::string& debug_name)
+    : Resource(session) {
+  session->Enqueue(NewCreateViewCmd(id(),
+                                    fuchsia::ui::views::ViewToken({
+                                        .value = std::move(token),
+                                    }),
+                                    debug_name));
+}
+
+View::View(Session* session, fuchsia::ui::views::ViewToken token,
+           const std::string& debug_name)
     : Resource(session) {
   session->Enqueue(NewCreateViewCmd(id(), std::move(token), debug_name));
 }

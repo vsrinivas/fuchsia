@@ -4,7 +4,6 @@
 
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
-#include <lib/zx/eventpair.h>
 #include <zircon/assert.h>
 
 namespace scenic {
@@ -22,6 +21,18 @@ ViewTokenPair NewViewTokenPair() {
   ZX_ASSERT(status == ZX_OK);
 
   return new_tokens;
+}
+
+fuchsia::ui::views::ViewToken ToViewToken(zx::eventpair raw_token) {
+  return fuchsia::ui::views::ViewToken({
+      .value = std::move(raw_token),
+  });
+}
+
+fuchsia::ui::views::ViewHolderToken ToViewHolderToken(zx::eventpair raw_token) {
+  return fuchsia::ui::views::ViewHolderToken({
+      .value = std::move(raw_token),
+  });
 }
 
 }  // namespace scenic

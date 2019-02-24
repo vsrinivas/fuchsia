@@ -5,8 +5,10 @@
 #ifndef LIB_UI_SCENIC_CPP_RESOURCES_H_
 #define LIB_UI_SCENIC_CPP_RESOURCES_H_
 
-#include "lib/ui/scenic/cpp/session.h"
-
+#include <fuchsia/images/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
+#include <lib/ui/scenic/cpp/session.h>
 #include <zircon/assert.h>
 
 namespace scenic {
@@ -351,16 +353,16 @@ class ImportNode final : public ContainerNode {
   bool is_bound_ = false;
 };
 
-// Represents a proxy for a View which can be added to a scene graph in order
-// to embed the View within it.
-//
-// Each ViewHolder is linked to a paired View via a shared token.
-//
-// Usually the ViewHolder and its associated View exist in separate processes,
-// allowing a distributed scene graph to be constructed.
+/// Represents an attachment point for a subgraph within a larger scene graph.
+/// The |ViewHolder| can be attached to a Node as a child, and the contents of
+/// the linked |View| will become a child of the Node as well.
+///
+/// Each |ViewHolder| is linked to a paired |View| via a shared token pair.
 class ViewHolder final : public Resource {
  public:
   ViewHolder(Session* session, zx::eventpair token,
+             const std::string& debug_name);
+  ViewHolder(Session* session, fuchsia::ui::views::ViewHolderToken token,
              const std::string& debug_name);
   ~ViewHolder();
 
@@ -382,12 +384,17 @@ class ViewHolder final : public Resource {
   void SetViewProperties(const fuchsia::ui::gfx::ViewProperties& props);
 };
 
-// Represents a transform space which serves as a container for Nodes.  The
-// Nodes will have the Views' coordinate transform applied to their own, in
-// addition to being clipped to the Views' bounding box.
+// Represents the root of a subgraph within a larger scene graph.  |Node|s can
+// be attached to the |View| as children, and these |Node|s will have the
+// |View|s' coordinate transform applied to their own, in addition to being
+// clipped to the |View|s' bounding box.
+//
+// Each |View| is linked to an associated |ViewHolder| via a shared token pair.
 class View final : public Resource {
  public:
   View(Session* session, zx::eventpair token, const std::string& debug_name);
+  View(Session* session, fuchsia::ui::views::ViewToken token,
+       const std::string& debug_name);
   ~View();
 
   void AddChild(const Node& child) const;
