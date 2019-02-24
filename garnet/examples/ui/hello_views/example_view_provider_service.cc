@@ -4,14 +4,8 @@
 
 #include "garnet/examples/ui/hello_views/example_view_provider_service.h"
 
-#include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/app/cpp/fidl.h>
-#include <lib/zx/eventpair.h>
-
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fxl/logging.h"
-#include "lib/ui/scenic/cpp/resources.h"
-#include "lib/ui/scenic/cpp/session.h"
+#include <lib/fxl/logging.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 namespace hello_views {
 
@@ -36,7 +30,6 @@ ExampleViewProviderService::~ExampleViewProviderService() {
       ->RemoveService<fuchsia::ui::app::ViewProvider>();
 }
 
-// |ui::ViewProvider|
 void ExampleViewProviderService::CreateView(
     ::zx::eventpair token,
     ::fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
@@ -45,7 +38,7 @@ void ExampleViewProviderService::CreateView(
   // Services in the ViewContext are from the view's perspective.
   ViewContext view_ctx{
       .startup_context = startup_ctx_,
-      .token = std::move(token),
+      .token = scenic::ToViewToken(std::move(token)),
       .incoming_services = std::move(outgoing_services),
       .outgoing_services = std::move(incoming_services),
   };

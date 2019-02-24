@@ -5,21 +5,18 @@
 #include "garnet/examples/ui/hello_views/app.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/app/cpp/fidl.h>
-#include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/fdio/limits.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
+#include <lib/fxl/logging.h>
+#include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/file_descriptor.h>
-#include <lib/zx/eventpair.h>
+#include <lib/ui/scenic/cpp/commands.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/time.h>
 #include <zircon/types.h>
 
+#include <unistd.h>
+
 #include "example_view_provider_service.h"
-#include "lib/fxl/logging.h"
-#include "lib/svc/cpp/services.h"
-#include "lib/ui/scenic/cpp/commands.h"
 
 // Returns a human-readable string for a given hello_views process type -
 // either container or subview.
@@ -99,35 +96,31 @@ App::App(async::Loop* loop, AppType type)
   });
 
   if (type_ == AppType::CONTAINER) {
-    zx::eventpair view_holder_token;
-    zx::eventpair view_token;
-    zx_status_t status =
-        zx::eventpair::create(0u, &view_holder_token, &view_token);
-    FXL_DCHECK(status == ZX_OK);
+    auto view_tokens = scenic::NewViewTokenPair();
 
     // Create the subview and bind the ServiceProviders.
     FXL_LOG(INFO) << AppTypeString(type_) << "Creating view.";
     fuchsia::sys::ServiceProviderPtr outgoing_services;
     outgoing_services.Bind(service_bindings_.AddBinding(this));
-    view_provider_->CreateView(std::move(view_token),
+    view_provider_->CreateView(std::move(view_tokens.first.value),
                                incoming_services_.NewRequest(),
                                std::move(outgoing_services));
 
     // Create the ViewHolder resource that will proxy the view.
     view_id_ = session_->AllocResourceId();
     session_->Enqueue(scenic::NewCreateViewHolderCmd(
-        view_id_, std::move(view_holder_token), "Subview-Holder"));
+        view_id_, std::move(view_tokens.second), "Subview-Holder"));
   }
 
   // Close the session and quit after several seconds.
-  async::PostDelayedTask(loop_->dispatcher(),
-                         [this] {
-                           FXL_LOG(INFO)
-                               << AppTypeString(type_) << "Closing session.";
-                           ReleaseSessionResources();
-                           loop_->Quit();
-                         },
-                         zx::sec(30));
+  async::PostDelayedTask(
+      loop_->dispatcher(),
+      [this] {
+        FXL_LOG(INFO) << AppTypeString(type_) << "Closing session.";
+        ReleaseSessionResources();
+        loop_->Quit();
+      },
+      zx::sec(30));
 
   // Set up a scene after we get display info, since the scene relies on the
   // size of the display.

@@ -8,16 +8,17 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/component/cpp/startup_context.h>
 #include <lib/fxl/logging.h>
-
-#include "lib/component/cpp/startup_context.h"
-#include "lib/ui/scenic/cpp/commands.h"
+#include <lib/ui/scenic/cpp/commands.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
  public:
   BouncingBallView(component::StartupContext* startup_context,
-                   zx::eventpair view_token)
+                   fuchsia::ui::views::ViewToken view_token)
       : session_listener_binding_(this) {
     // Connect to Scenic.
     fuchsia::ui::scenic::ScenicPtr scenic =
@@ -38,7 +39,7 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
     cmds->push_back(scenic::NewCommand(std::move(cmd)));
   }
 
-  void InitializeScene(zx::eventpair view_token) {
+  void InitializeScene(fuchsia::ui::views::ViewToken view_token) {
     // Build up a list of commands we will send over our Scenic Session.
     std::vector<fuchsia::ui::scenic::Command> cmds;
 
@@ -304,8 +305,8 @@ class ViewProviderService : public fuchsia::ui::app::ViewProvider {
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services)
       override {
-    auto view = std::make_unique<BouncingBallView>(startup_context_,
-                                                   std::move(view_token));
+    auto view = std::make_unique<BouncingBallView>(
+        startup_context_, scenic::ToViewToken(std::move(view_token)));
     views_.push_back(std::move(view));
   }
 

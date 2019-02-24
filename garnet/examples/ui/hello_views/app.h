@@ -5,13 +5,13 @@
 #ifndef GARNET_EXAMPLES_UI_HELLO_VIEWS_APP_H_
 #define GARNET_EXAMPLES_UI_HELLO_VIEWS_APP_H_
 
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-
-#include "lib/component/cpp/startup_context.h"
-#include "lib/ui/scenic/cpp/resources.h"
-#include "lib/ui/scenic/cpp/session.h"
+#include <lib/component/cpp/startup_context.h>
+#include <lib/ui/scenic/cpp/resources.h>
+#include <lib/ui/scenic/cpp/session.h>
 
 namespace hello_views {
 

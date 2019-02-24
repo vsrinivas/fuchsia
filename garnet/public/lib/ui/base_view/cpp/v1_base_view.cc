@@ -8,6 +8,7 @@
 #include <lib/fxl/logging.h>
 #include <lib/fxl/time/time_point.h>
 #include <lib/ui/geometry/cpp/geometry_util.h>
+#include <lib/zx/eventpair.h>
 #include <trace/event.h>
 
 namespace scenic {
@@ -23,14 +24,20 @@ V1BaseView::V1BaseView(scenic::ViewContext context,
       outgoing_services_(std::move(context.incoming_services)),
       session_(std::move(context.session_and_listener_request)),
       parent_node_(&session_) {
-  FXL_DCHECK(context.view_token);
+  zx::eventpair view_token;
+  if (context.view_token2.value) {
+    view_token = std::move(context.view_token2.value);
+  } else {
+    FXL_DCHECK(context.view_token);
+    view_token = std::move(context.view_token);
+  }
 
   session_.SetDebugName(debug_name);
 
   zx::eventpair parent_export_token;
   parent_node_.BindAsRequest(&parent_export_token);
 
-  view_manager_->CreateView2(view_.NewRequest(), std::move(context.view_token),
+  view_manager_->CreateView2(view_.NewRequest(), std::move(view_token),
                              view_listener_binding_.NewBinding(),
                              std::move(parent_export_token), debug_name);
 

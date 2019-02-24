@@ -9,8 +9,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-
-#include <lib/zx/eventpair.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/engine.h"
@@ -29,6 +28,7 @@
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/commands.h"
+#include "lib/ui/scenic/cpp/view_token_pair.h"
 
 // The test setup here is sufficiently different from hittest_unittest.cc to
 // merit its own file.  We access the global hit test through the compositor,
@@ -75,16 +75,9 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   std::unique_ptr<Engine> engine = std::make_unique<EngineForTest>(
       &display_manager, /*release fence signaller*/ nullptr);
 
-  // Create our eventpair tokens for View/ViewHolder creation.
-  zx::eventpair token_v1, token_vh1, token_v2, token_vh2;
-  {
-    zx_status_t status;
-    status = zx::eventpair::create(/*flags*/ 0u, &token_vh1, &token_v1);
-    FXL_CHECK(status == ZX_OK);
-
-    status = zx::eventpair::create(/*flags*/ 0u, &token_vh2, &token_v2);
-    FXL_CHECK(status == ZX_OK);
-  }
+  // Create our tokens for View/ViewHolder creation.
+  auto tokens_1 = scenic::NewViewTokenPair();
+  auto tokens_2 = scenic::NewViewTokenPair();
 
   // Root session sets up the scene and two view holders.
   CustomSession s_r(0, engine->session_context());
@@ -116,12 +109,12 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     const uint32_t kViewHolder1Id = 1008;
     s_r.Apply(scenic::NewAddChildCmd(kSceneId, kRootNodeId));
     s_r.Apply(scenic::NewCreateViewHolderCmd(
-        kViewHolder1Id, std::move(token_vh1), "viewholder_1"));
+        kViewHolder1Id, std::move(tokens_1.second), "viewholder_1"));
     s_r.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolder1Id));
 
     const uint32_t kViewHolder2Id = 1009;
     s_r.Apply(scenic::NewCreateViewHolderCmd(
-        kViewHolder2Id, std::move(token_vh2), "viewholder_2"));
+        kViewHolder2Id, std::move(tokens_2.second), "viewholder_2"));
     s_r.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolder2Id));
   }
 
@@ -129,7 +122,8 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   CustomSession s_1(1, engine->session_context());
   {
     const uint32_t kViewId = 2001;
-    s_1.Apply(scenic::NewCreateViewCmd(kViewId, std::move(token_v1), "view_1"));
+    s_1.Apply(
+        scenic::NewCreateViewCmd(kViewId, std::move(tokens_1.first), "view_1"));
 
     const uint32_t kRootNodeId = 2002;  // Hit
     s_1.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
@@ -150,7 +144,8 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   CustomSession s_2(2, engine->session_context());
   {
     const uint32_t kViewId = 3001;
-    s_2.Apply(scenic::NewCreateViewCmd(kViewId, std::move(token_v2), "view_2"));
+    s_2.Apply(
+        scenic::NewCreateViewCmd(kViewId, std::move(tokens_2.first), "view_2"));
 
     const uint32_t kRootNodeId = 3002;  // Hit
     s_2.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));

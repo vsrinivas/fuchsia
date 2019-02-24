@@ -4,6 +4,7 @@
 
 #include "lib/ui/base_view/cpp/embedded_view_utils.h"
 
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include "lib/fxl/logging.h"
 
 namespace scenic {
@@ -13,12 +14,9 @@ EmbeddedViewInfo LaunchComponentAndCreateView(
     const std::vector<std::string>& component_args) {
   FXL_DCHECK(launcher);
 
-  zx::eventpair view_holder_token, view_token;
-  auto status = zx::eventpair::create(0u, &view_holder_token, &view_token);
-  FXL_DCHECK(status == ZX_OK) << "failed to create tokens.";
+  auto view_tokens = scenic::NewViewTokenPair();
 
   EmbeddedViewInfo info;
-  info.view_holder_token = std::move(view_holder_token);
 
   launcher->CreateComponent(
       {.url = component_url,
@@ -32,7 +30,8 @@ EmbeddedViewInfo LaunchComponentAndCreateView(
   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> services_to_child_view;
   info.services_to_child_view = services_to_child_view.NewRequest();
 
-  info.view_provider->CreateView(std::move(view_token),
+  info.view_holder_token = std::move(view_tokens.second);
+  info.view_provider->CreateView(std::move(view_tokens.first.value),
                                  info.services_from_child_view.NewRequest(),
                                  std::move(services_to_child_view));
 

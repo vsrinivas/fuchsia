@@ -9,6 +9,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"
@@ -37,7 +38,7 @@ struct EmbeddedViewInfo {
   // was provided to |view_provider| via ViewProvider.CreateView().  The
   // launched app is expected to create a View, which will be connected to the
   // ViewHolder created with this token.
-  zx::eventpair view_holder_token;
+  fuchsia::ui::views::ViewHolderToken view_holder_token;
 
   // Handle to services provided by ViewProvider.CreateView().
   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> services_from_child_view;

@@ -15,6 +15,7 @@
 #include "lib/ui/base_view/cpp/embedded_view_utils.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
+#include "lib/zx/eventpair.h"
 
 namespace scenic {
 
@@ -22,6 +23,7 @@ namespace scenic {
 struct ViewContext {
   scenic::SessionPtrAndListenerRequest session_and_listener_request;
   zx::eventpair view_token;
+  fuchsia::ui::views::ViewToken view_token2;
   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services;
   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services;
   component::StartupContext* startup_context;

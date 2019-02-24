@@ -9,6 +9,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/ui/gfx/cpp/math.h"
 #include "lib/ui/scenic/cpp/commands.h"
+#include "lib/ui/scenic/cpp/view_token_pair.h"
 
 namespace scenic {
 
@@ -21,7 +22,11 @@ BaseView::BaseView(ViewContext context, const std::string& debug_name)
       listener_binding_(this,
                         std::move(context.session_and_listener_request.second)),
       session_(std::move(context.session_and_listener_request.first)),
-      view_(&session_, std::move(context.view_token), debug_name) {
+      view_(&session_,
+            context.view_token2.value
+                ? std::move(context.view_token2)
+                : scenic::ToViewToken(std::move(context.view_token)),
+            debug_name) {
   session_.SetDebugName(debug_name);
 
   // We must immediately invalidate the scene, otherwise we wouldn't ever hook

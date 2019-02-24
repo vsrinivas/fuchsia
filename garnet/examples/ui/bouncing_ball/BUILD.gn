@@ -10,12 +10,14 @@ executable("bouncing_ball") {
   ]
 
   deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//garnet/public/lib/component/cpp:cpp",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/scenic/cpp:cpp",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
