@@ -65,10 +65,8 @@ def main():
     if removed_ids or added_ids:
         type = 'Warning' if args.warn else 'Error'
         print('%s: SDK contents have changed!' % type)
-        print('Please acknowledge this change by copying:')
-        print('  ' + args.updated)
-        print('into:')
-        print('  ' + args.reference)
+        print('Please acknowledge this change by running:')
+        print('  cp ' + args.updated + ' ' + args.reference)
         if not args.warn:
             return 1
 

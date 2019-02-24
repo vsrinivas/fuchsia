@@ -31,10 +31,8 @@ def main():
         if not filecmp.cmp(args.reference, args.current):
             type = 'Warning' if args.warn else 'Error'
             print('%s: API has changed!' % type)
-            print('Please acknowledge this change by copying:')
-            print('  ' + args.current)
-            print('into:')
-            print('  ' + args.reference)
+            print('Please acknowledge this change by running:')
+            print('  cp ' + args.current + ' ' + args.reference)
             if not args.warn:
                 return 1
 
