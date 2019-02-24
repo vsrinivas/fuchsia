@@ -72,11 +72,12 @@ namespace {
 // - <base_path>/staging/
 //   The staging path. Used for removing all contents of this repository.
 //
-// Note that content/ should be the only directory storing information on the
-// repository: When deleting a repository, the content/ directory is moved
-// atomically to the staging path and then contents are recursively deleted.
-// This two-phase deletion guarantees that the repository will be in a correct
-// state even if the deletion execution is unexpectedly terminated.
+// Note that <serialization_version>/ should be the only directory storing
+// information on the repository; when deleting a repository, the
+// <serialization_version>/ directory is moved atomically to the staging path
+// and then contents are recursively deleted. This two-phase deletion guarantees
+// that the repository will be in a correct state even if the deletion execution
+// is unexpectedly terminated.
 
 constexpr fxl::StringView kCachePath = "cache";
 constexpr fxl::StringView kPageUsageDbPath = "page_usage_db";
@@ -190,7 +191,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   }
 
   // Shuts down the repository impl (if already initialized) and detaches all
-  // handles bound to it, moving their owneship to the container.
+  // handles bound to it, moving their ownership to the container.
   void Detach() {
     if (ledger_repository_) {
       detached_handles_ = ledger_repository_->Unbind();
@@ -420,8 +421,10 @@ Status LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
   files::ScopedTempDirAt tmp_directory(
       repository_information.staging_path.root_fd(),
       repository_information.staging_path.path());
-  std::string destination = tmp_directory.path() + "/content";
+  std::string destination = tmp_directory.path() + "/graveyard";
 
+  // <base_path>/<serialization_version> becomes
+  // <base_path>/<random temporary name>/graveyard/<serialization_version>
   if (renameat(repository_information.content_path.root_fd(),
                repository_information.content_path.path().c_str(),
                tmp_directory.root_fd(), destination.c_str()) != 0) {
