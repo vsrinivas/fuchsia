@@ -76,9 +76,37 @@ Presentation::ShutdownCallback App::GetShutdownCallback(
   };
 }
 
-void App::Present(fuchsia::ui::views::ViewHolderToken view_holder_token,
-                  fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                      presentation_request) {
+void App::Present2(zx::eventpair view_holder_token,
+                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+                       presentation_request) {
+  InitializeServices();
+
+  // Duplication intentional, this copy will go away soon.
+  int32_t display_startup_rotation_adjustment = 0;
+  {
+    std::string rotation_value;
+    if (files::ReadFileToString("/system/data/root_presenter/display_rotation",
+                                &rotation_value)) {
+      display_startup_rotation_adjustment = atoi(rotation_value.c_str());
+      FXL_LOG(INFO) << "Display rotation adjustment applied: "
+                    << display_startup_rotation_adjustment << " degrees.";
+    }
+  }
+
+  auto presentation = std::make_unique<Presentation1>(
+      scenic_.get(), session_.get(), compositor_->id(),
+      std::move(view_holder_token), renderer_params_,
+      display_startup_rotation_adjustment, startup_context_.get());
+  presentation->Present(std::move(presentation_request), GetYieldCallback(),
+                        GetShutdownCallback(presentation.get()));
+
+  AddPresentation(std::move(presentation));
+}
+
+void App::PresentView(
+    zx::eventpair view_holder_token,
+    ::fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+        presentation_request) {
   InitializeServices();
 
   int32_t display_startup_rotation_adjustment = 0;
@@ -92,33 +120,13 @@ void App::Present(fuchsia::ui::views::ViewHolderToken view_holder_token,
     }
   }
 
-  auto presentation = std::make_unique<Presentation>(
+  auto presentation = std::make_unique<Presentation2>(
       scenic_.get(), session_.get(), compositor_->id(),
       std::move(view_holder_token), renderer_params_,
       display_startup_rotation_adjustment);
-  presentation->Present(std::move(presentation_request), GetYieldCallback(),
-                        GetShutdownCallback(presentation.get()));
-
+  presentation->PresentView(std::move(presentation_request), GetYieldCallback(),
+                            GetShutdownCallback(presentation.get()));
   AddPresentation(std::move(presentation));
-}
-
-void App::Present2(zx::eventpair view_holder_token,
-                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                       presentation_request) {
-  Present(fuchsia::ui::views::ViewHolderToken({
-              .value = std::move(view_holder_token),
-          }),
-          std::move(presentation_request));
-}
-
-void App::PresentView(
-    zx::eventpair view_holder_token,
-    ::fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-        presentation_request) {
-  Present(fuchsia::ui::views::ViewHolderToken({
-              .value = std::move(view_holder_token),
-          }),
-          std::move(presentation_request));
 }
 
 void App::AddPresentation(std::unique_ptr<Presentation> presentation) {

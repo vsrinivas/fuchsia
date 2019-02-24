@@ -2,14 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/root_presenter/presentation.h"
+#include "garnet/bin/ui/root_presenter/presentation1.h"
 
 #include <cmath>
 #include <utility>
 
+#if defined(countof)
+// Workaround for compiler error due to Zircon defining countof() as a macro.
+// Redefines countof() using GLM_COUNTOF(), which currently provides a more
+// sophisticated implementation anyway.
+#undef countof
+#include <glm/glm.hpp>
+#define countof(X) GLM_COUNTOF(X)
+#else
+// No workaround required.
+#include <glm/glm.hpp>
+#endif
+#include <glm/ext.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <lib/component/cpp/connect.h>
+#include <lib/fidl/cpp/optional.h>
 #include <lib/fxl/logging.h>
 #include <lib/ui/input/cpp/formatting.h>
+#include <lib/ui/views/cpp/formatting.h>
 #include <trace/event.h>
 
 #include "garnet/bin/ui/root_presenter/displays/display_configuration.h"
@@ -17,14 +33,17 @@
 namespace root_presenter {
 namespace {
 
+// View Key: The presentation's own root view.
+constexpr uint32_t kRootViewKey = 1u;
+
+// View Key: The presented content view.
+constexpr uint32_t kContentViewKey = 2u;
+
 // The shape and elevation of the cursor.
 constexpr float kCursorWidth = 20;
 constexpr float kCursorHeight = 20;
 constexpr float kCursorRadius = 10;
-// TODO(SCN-1276): Don't hardcode Z bounds in multiple locations.
-// Derive cursor elevation from non-hardcoded Z bounds.
 constexpr float kCursorElevation = 800;
-constexpr float kDefaultRootViewDepth = 1000;
 
 // TODO(SCN-1278): Remove this.
 // Turn two floats (high bits, low bits) into a 64-bit uint.
@@ -36,11 +55,13 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
 }
 }  // namespace
 
-Presentation::Presentation(
-    fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
-    scenic::ResourceId compositor_id,
-    fuchsia::ui::views::ViewHolderToken view_holder_token,
-    RendererParams renderer_params, int32_t display_startup_rotation_adjustment)
+Presentation1::Presentation1(fuchsia::ui::scenic::Scenic* scenic,
+                             scenic::Session* session,
+                             scenic::ResourceId compositor_id,
+                             zx::eventpair view_holder_token,
+                             RendererParams renderer_params,
+                             int32_t display_startup_rotation_adjustment,
+                             component::StartupContext* startup_context)
     : scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
@@ -51,24 +72,34 @@ Presentation::Presentation(
       ambient_light_(session_),
       directional_light_(session_),
       point_light_(session_),
-      view_holder_node_(session),
-      root_node_(session_),
-      view_holder_(session, std::move(view_holder_token.value),
-                   "root_presenter"),
+      root_view_host_node_(session_),
+      root_view_parent_node_(session_),
+      content_view_host_node_(session_),
       cursor_shape_(session_, kCursorWidth, kCursorHeight, 0u, kCursorRadius,
                     kCursorRadius, kCursorRadius),
       cursor_material_(session_),
+      renderer_params_override_(renderer_params),
       display_startup_rotation_adjustment_(display_startup_rotation_adjustment),
       presentation_binding_(this),
-      renderer_params_override_(renderer_params),
+      tree_listener_binding_(this),
+      tree_container_listener_binding_(this),
+      view_container_listener_binding_(this),
+      view_listener_binding_(this),
+      startup_context_(startup_context),
       weak_factory_(this) {
   FXL_DCHECK(compositor_id != 0);
+
+  // Connect to the ViewManager.
+  startup_context_->ConnectToEnvironmentService(view_manager_.NewRequest());
+  view_manager_.set_error_handler([this](zx_status_t error) {
+    FXL_LOG(ERROR) << "Root presenter: ViewManager terminated unexpectedly.";
+    Shutdown();
+  });
+
+  // Set up the compositor for this presentation.
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
-  scene_.AddChild(root_node_);
-  root_node_.SetTranslationRH(0.f, 0.f, -0.1f);  // TODO(SCN-371).
-  root_node_.AddChild(view_holder_node_);
-  view_holder_node_.Attach(view_holder_);
+  scene_.AddChild(root_view_host_node_);
 
   // Create the root view's scene.
   // TODO(SCN-1255): we add a directional light and a point light, expecting
@@ -85,23 +116,77 @@ Presentation::Presentation(
   ambient_light_.SetColor(kAmbient, kAmbient, kAmbient);
   directional_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
   point_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
-  directional_light_.SetDirection(1.f, 1.f, 2.f);
-  point_light_.SetPosition(300.f, 300.f, -2000.f);
+  light_direction_ = glm::vec3(1.f, 1.f, 2.f);
+
+  directional_light_.SetDirection(light_direction_.x, light_direction_.y,
+                                  light_direction_.z);
+  point_light_.SetPosition(300.f, 300.f, 2000.f);
   point_light_.SetFalloff(0.f);
 
+  // Create host nodes for the views.
+  root_view_host_node_.ExportAsRequest(&root_view_host_import_token_);
+  root_view_parent_node_.BindAsRequest(&root_view_parent_export_token_);
+  root_view_parent_node_.AddChild(content_view_host_node_);
+  content_view_host_node_.ExportAsRequest(&content_view_host_import_token_);
   cursor_material_.SetColor(0xff, 0x00, 0xff, 0xff);
 
-  // TODO(SCN-874): All instances of Presentation share the same Session.
-  // Therefore, this stomps the event_handler set by any previously-created
-  // instance of Presentation.
-  session_->set_event_handler(
-      fit::bind_member(this, &Presentation::HandleScenicEvents));
+  // Listen to events on the root view.
+  fuchsia::ui::viewsv1::ViewListenerPtr root_view_listener;
+  fuchsia::ui::viewsv1::ViewContainerListenerPtr view_container_listener;
+  view_listener_binding_.Bind(root_view_listener.NewRequest());
+  view_container_listener_binding_.Bind(view_container_listener.NewRequest());
+
+  // Create root view.
+  zx::eventpair root_view_token, root_view_holder_token;
+  if (zx::eventpair::create(0u, &root_view_token, &root_view_holder_token) !=
+      ZX_OK)
+    FXL_NOTREACHED() << "Failed to create view tokens";
+  view_manager_->CreateView2(
+      root_view_.NewRequest(), std::move(root_view_token),
+      std::move(root_view_listener), std::move(root_view_parent_export_token_),
+      "RootView");
+  root_view_->GetContainer(root_container_.NewRequest());
+  root_container_->SetListener(std::move(view_container_listener));
+
+  // Attach content view to root view.
+  root_container_->AddChild2(kContentViewKey, std::move(view_holder_token),
+                             std::move(content_view_host_import_token_));
+  root_container_->SetChildProperties(
+      kContentViewKey, fuchsia::ui::viewsv1::ViewProperties::New());
+
+  // Register the view tree.
+  fuchsia::ui::viewsv1::ViewTreeListenerPtr tree_listener;
+  tree_listener_binding_.Bind(tree_listener.NewRequest());
+  view_manager_->CreateViewTree(tree_.NewRequest(), std::move(tree_listener),
+                                "Presentation");
+  tree_.set_error_handler([this](zx_status_t error) {
+    FXL_LOG(ERROR) << "Root presenter: View tree connection error.";
+    Shutdown();
+  });
+
+  // Prepare the view tree's container for the root.
+  tree_->GetContainer(tree_container_.NewRequest());
+  tree_container_.set_error_handler([this](zx_status_t error) {
+    FXL_LOG(ERROR) << "Root presenter: Tree view container connection error.";
+    Shutdown();
+  });
+  fuchsia::ui::viewsv1::ViewContainerListenerPtr tree_container_listener;
+  tree_container_listener_binding_.Bind(tree_container_listener.NewRequest());
+  tree_container_->SetListener(std::move(tree_container_listener));
+
+  // Attach root view to view tree.
+  tree_container_->AddChild2(kRootViewKey, std::move(root_view_holder_token),
+                             std::move(root_view_host_import_token_));
+
+  FXL_CHECK(display_startup_rotation_adjustment_ % 90 == 0)
+      << "Rotation adjustments must be in (+/-) 90 deg increments; received: "
+      << display_startup_rotation_adjustment_;
 
   OverrideRendererParams(renderer_params, false);
 }
 
-void Presentation::OverrideRendererParams(RendererParams renderer_params,
-                                          bool present_changes) {
+void Presentation1::OverrideRendererParams(RendererParams renderer_params,
+                                           bool present_changes) {
   renderer_params_override_ = renderer_params;
 
   if (renderer_params_override_.clipping_enabled.has_value()) {
@@ -120,19 +205,16 @@ void Presentation::OverrideRendererParams(RendererParams renderer_params,
         renderer_params_override_.shadow_technique.value());
     renderer_.SetParam(std::move(param));
   }
+
   if (present_changes) {
     PresentScene();
   }
-
-  FXL_CHECK(display_startup_rotation_adjustment_ % 90 == 0)
-      << "Rotation adjustments must be in (+/-) 90 deg increments; received: "
-      << display_startup_rotation_adjustment_;
 }
 
-Presentation::~Presentation() {}
+Presentation1::~Presentation1() {}
 
-void Presentation::Present(
-    ::fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
+void Presentation1::Present(
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
         presentation_request,
     YieldCallback yield_callback, ShutdownCallback shutdown_callback) {
   FXL_DCHECK(!display_model_initialized_);
@@ -145,19 +227,16 @@ void Presentation::Present(
        presentation_request = std::move(presentation_request)](
           fuchsia::ui::gfx::DisplayInfo display_info) mutable {
         if (weak) {
-          if (presentation_request) {
-            weak->presentation_binding_.Bind(std::move(presentation_request));
-          }
+          weak->presentation_binding_.Bind(std::move(presentation_request));
 
           // Get display parameters and propagate values appropriately.
           weak->InitializeDisplayModel(std::move(display_info));
-
           weak->PresentScene();
         }
       });
 }
 
-void Presentation::InitializeDisplayModel(
+void Presentation1::InitializeDisplayModel(
     fuchsia::ui::gfx::DisplayInfo display_info) {
   FXL_DCHECK(!display_model_initialized_);
 
@@ -189,7 +268,7 @@ void Presentation::InitializeDisplayModel(
   ApplyDisplayModelChanges(true, false);
 }
 
-void Presentation::SetDisplaySizeInMm(float width_in_mm, float height_in_mm) {
+void Presentation1::SetDisplaySizeInMm(float width_in_mm, float height_in_mm) {
   uint32_t old_width_in_mm =
       display_model_simulated_.display_info().width_in_mm;
   uint32_t old_height_in_mm =
@@ -204,7 +283,7 @@ void Presentation::SetDisplaySizeInMm(float width_in_mm, float height_in_mm) {
     return;
   }
 
-  FXL_LOG(INFO) << "Presentation::SetDisplaySizeInMm: changing display "
+  FXL_LOG(INFO) << "Presentation1::SetDisplaySizeInMm: changing display "
                    "dimensions to "
                 << "width="
                 << display_model_simulated_.display_info().width_in_mm << "mm, "
@@ -215,14 +294,13 @@ void Presentation::SetDisplaySizeInMm(float width_in_mm, float height_in_mm) {
   ApplyDisplayModelChanges(true, true);
 }
 
-void Presentation::SetDisplayRotation(float display_rotation_degrees,
-                                      bool animate) {
+void Presentation1::SetDisplayRotation(float display_rotation_degrees,
+                                       bool animate) {
   display_rotater_.SetDisplayRotation(this, display_rotation_degrees, animate);
 };
 
-bool Presentation::SetDisplaySizeInMmWithoutApplyingChanges(float width_in_mm,
-                                                            float height_in_mm,
-                                                            bool print_errors) {
+bool Presentation1::SetDisplaySizeInMmWithoutApplyingChanges(
+    float width_in_mm, float height_in_mm, bool print_errors) {
   if (width_in_mm == 0 || height_in_mm == 0) {
     display_model_simulated_.display_info().width_in_px =
         display_model_actual_.display_info().width_in_px;
@@ -242,7 +320,7 @@ bool Presentation::SetDisplaySizeInMmWithoutApplyingChanges(float width_in_mm,
 
   if (width_in_px > display_model_actual_.display_info().width_in_px) {
     if (print_errors) {
-      FXL_LOG(ERROR) << "Presentation::SetDisplaySizeInMm: tried to change "
+      FXL_LOG(ERROR) << "Presentation1::SetDisplaySizeInMm: tried to change "
                         "display width to "
                      << width_in_mm
                      << ", which is larger than the actual display width "
@@ -253,7 +331,7 @@ bool Presentation::SetDisplaySizeInMmWithoutApplyingChanges(float width_in_mm,
   }
   if (height_in_px > display_model_actual_.display_info().height_in_px) {
     if (print_errors) {
-      FXL_LOG(ERROR) << "Presentation::SetDisplaySizeInMm: tried to change "
+      FXL_LOG(ERROR) << "Presentation1::SetDisplaySizeInMm: tried to change "
                         "display height to "
                      << height_in_mm
                      << ", which is larger than the actual display height "
@@ -270,7 +348,7 @@ bool Presentation::SetDisplaySizeInMmWithoutApplyingChanges(float width_in_mm,
   return true;
 }
 
-void Presentation::SetDisplayUsage(fuchsia::ui::policy::DisplayUsage usage) {
+void Presentation1::SetDisplayUsage(fuchsia::ui::policy::DisplayUsage usage) {
   fuchsia::ui::policy::DisplayUsage old_usage =
       display_model_simulated_.environment_info().usage;
   SetDisplayUsageWithoutApplyingChanges(usage);
@@ -281,12 +359,12 @@ void Presentation::SetDisplayUsage(fuchsia::ui::policy::DisplayUsage usage) {
 
   ApplyDisplayModelChanges(true, true);
 
-  FXL_LOG(INFO) << "Presentation::SetDisplayUsage: changing display usage to "
+  FXL_LOG(INFO) << "Presentation1::SetDisplayUsage: changing display usage to "
                 << GetDisplayUsageAsString(
                        display_model_simulated_.environment_info().usage);
 }
 
-void Presentation::SetDisplayUsageWithoutApplyingChanges(
+void Presentation1::SetDisplayUsageWithoutApplyingChanges(
     fuchsia::ui::policy::DisplayUsage usage) {
   display_model_simulated_.environment_info().usage =
       (usage == fuchsia::ui::policy::DisplayUsage::kUnknown)
@@ -294,8 +372,8 @@ void Presentation::SetDisplayUsageWithoutApplyingChanges(
           : usage;
 }
 
-bool Presentation::ApplyDisplayModelChanges(bool print_log,
-                                            bool present_changes) {
+bool Presentation1::ApplyDisplayModelChanges(bool print_log,
+                                             bool present_changes) {
   bool updated = ApplyDisplayModelChangesHelper(print_log);
 
   if (updated && present_changes) {
@@ -304,7 +382,7 @@ bool Presentation::ApplyDisplayModelChanges(bool print_log,
   return updated;
 }
 
-bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
+bool Presentation1::ApplyDisplayModelChangesHelper(bool print_log) {
   if (!display_model_initialized_)
     return false;
 
@@ -323,6 +401,9 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
 
   // Layout size
   {
+    auto root_properties = ::fuchsia::ui::viewsv1::ViewProperties::New();
+    root_properties->view_layout = ::fuchsia::ui::viewsv1::ViewLayout::New();
+
     float metrics_width = display_metrics_.width_in_pp();
     float metrics_height = display_metrics_.height_in_pp();
 
@@ -331,9 +412,11 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
       std::swap(metrics_width, metrics_height);
     }
 
-    view_holder_.SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth,
-                                   metrics_width, metrics_height, 0.f, 0.f, 0.f,
-                                   0.f, 0.f, 0.f, 0.f);
+    root_properties->view_layout->size.width = metrics_width;
+    root_properties->view_layout->size.height = metrics_height;
+
+    tree_container_->SetChildProperties(kRootViewKey,
+                                        std::move(root_properties));
     FXL_VLOG(2) << "DisplayModel layout: " << metrics_width << ", "
                 << metrics_height;
   }
@@ -363,7 +446,7 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
       std::swap(anchor_x, anchor_y);
     }
 
-    view_holder_node_.SetAnchor(anchor_x, anchor_y, 0);
+    root_view_host_node_.SetAnchor(anchor_x, anchor_y, 0);
     FXL_VLOG(2) << "DisplayModel anchor: " << anchor_x << ", " << anchor_y;
   }
 
@@ -373,8 +456,8 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
         glm::vec3(0, 0,
                   glm::radians<float>(display_rotation_current_ +
                                       display_startup_rotation_adjustment_)));
-    view_holder_node_.SetRotation(display_rotation.x, display_rotation.y,
-                                  display_rotation.z, display_rotation.w);
+    root_view_host_node_.SetRotation(display_rotation.x, display_rotation.y,
+                                     display_rotation.z, display_rotation.w);
   }
 
   const DisplayModel::DisplayInfo& display_info =
@@ -398,7 +481,7 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
     float left_offset = (info_w - metrics_w) / density_w / 2;
     float top_offset = (info_h - metrics_h) / density_h / 2;
 
-    view_holder_node_.SetTranslationRH(left_offset, top_offset, 0.f);
+    root_view_host_node_.SetTranslationRH(left_offset, top_offset, 0.f);
     FXL_VLOG(2) << "DisplayModel translation: " << left_offset << ", "
                 << top_offset;
   }
@@ -410,7 +493,7 @@ bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
   return true;
 }
 
-void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
+void Presentation1::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
   FXL_VLOG(1) << "OnDeviceAdded: device_id=" << input_device->id();
 
   FXL_DCHECK(device_states_by_id_.count(input_device->id()) == 0);
@@ -438,7 +521,7 @@ void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
   device_states_by_id_.emplace(input_device->id(), std::move(device_pair));
 }
 
-void Presentation::OnDeviceRemoved(uint32_t device_id) {
+void Presentation1::OnDeviceRemoved(uint32_t device_id) {
   FXL_VLOG(1) << "OnDeviceRemoved: device_id=" << device_id;
   if (device_states_by_id_.count(device_id) != 0) {
     device_states_by_id_[device_id].second->OnUnregistered();
@@ -452,13 +535,13 @@ void Presentation::OnDeviceRemoved(uint32_t device_id) {
   }
 }
 
-void Presentation::OnReport(uint32_t device_id,
-                            fuchsia::ui::input::InputReport input_report) {
+void Presentation1::OnReport(uint32_t device_id,
+                             fuchsia::ui::input::InputReport input_report) {
   TRACE_DURATION("input", "presentation_on_report");
   TRACE_ASYNC_END("input", "dispatch_3_report_to_presentation",
                   input_report.trace_id);
 
-  FXL_VLOG(2) << "OnReport device=" << device_id
+  FXL_VLOG(3) << "OnReport device=" << device_id
               << ", count=" << device_states_by_id_.count(device_id)
               << ", report=" << input_report;
 
@@ -480,7 +563,7 @@ void Presentation::OnReport(uint32_t device_id,
   state->Update(std::move(input_report), size);
 }
 
-void Presentation::CaptureKeyboardEventHACK(
+void Presentation1::CaptureKeyboardEventHACK(
     fuchsia::ui::input::KeyboardEvent event_to_capture,
     fidl::InterfaceHandle<fuchsia::ui::policy::KeyboardCaptureListenerHACK>
         listener_handle) {
@@ -488,7 +571,7 @@ void Presentation::CaptureKeyboardEventHACK(
   listener.Bind(std::move(listener_handle));
   // Auto-remove listeners if the interface closes.
   listener.set_error_handler(
-      [this, listener = listener.get()](zx_status_t status) {
+      [this, listener = listener.get()](zx_status_t error) {
         captured_keybindings_.erase(
             std::remove_if(captured_keybindings_.begin(),
                            captured_keybindings_.end(),
@@ -502,14 +585,14 @@ void Presentation::CaptureKeyboardEventHACK(
       KeyboardCaptureItem{std::move(event_to_capture), std::move(listener)});
 }
 
-void Presentation::CapturePointerEventsHACK(
+void Presentation1::CapturePointerEventsHACK(
     fidl::InterfaceHandle<fuchsia::ui::policy::PointerCaptureListenerHACK>
         listener_handle) {
   fuchsia::ui::policy::PointerCaptureListenerHACKPtr listener;
   listener.Bind(std::move(listener_handle));
   // Auto-remove listeners if the interface closes.
   listener.set_error_handler(
-      [this, listener = listener.get()](zx_status_t status) {
+      [this, listener = listener.get()](zx_status_t error) {
         captured_pointerbindings_.erase(
             std::remove_if(captured_pointerbindings_.begin(),
                            captured_pointerbindings_.end(),
@@ -522,11 +605,11 @@ void Presentation::CapturePointerEventsHACK(
   captured_pointerbindings_.push_back(PointerCaptureItem{std::move(listener)});
 }
 
-void Presentation::GetPresentationMode(GetPresentationModeCallback callback) {
+void Presentation1::GetPresentationMode(GetPresentationModeCallback callback) {
   callback(presentation_mode_);
 }
 
-void Presentation::SetPresentationModeListener(
+void Presentation1::SetPresentationModeListener(
     fidl::InterfaceHandle<fuchsia::ui::policy::PresentationModeListener>
         listener) {
   if (presentation_mode_listener_) {
@@ -544,39 +627,7 @@ void Presentation::SetPresentationModeListener(
   FXL_LOG(INFO) << "Presentation mode, now listening.";
 }
 
-void Presentation::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
-  switch (event.Which()) {
-    case fuchsia::ui::scenic::Event::Tag::kGfx:
-      switch (event.gfx().Which()) {
-        case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
-          auto& evt = event.gfx().view_disconnected();
-          // TODO(SCN-874): All Presentation instances share the same Scenic
-          // Session.  Therefore, there is no guarantee that the disconnection
-          // event is intended for this presentation.
-          FXL_DCHECK(view_holder_.id() == evt.view_holder_id);
-          FXL_LOG(ERROR)
-              << "Root presenter: Content view terminated unexpectedly.";
-          Shutdown();
-          break;
-        }
-        default: {
-          break;
-        }
-      }
-    default: {
-      break;
-    }
-  }
-}
-
-void Presentation::HandleScenicEvents(
-    std::vector<fuchsia::ui::scenic::Event> events) {
-  for (auto& event : events) {
-    HandleScenicEvent(event);
-  }
-}
-
-bool Presentation::GlobalHooksHandleEvent(
+bool Presentation1::GlobalHooksHandleEvent(
     const fuchsia::ui::input::InputEvent& event) {
   return display_rotater_.OnEvent(event, this) ||
          display_usage_switcher_.OnEvent(event, this) ||
@@ -585,13 +636,11 @@ bool Presentation::GlobalHooksHandleEvent(
          presentation_switcher_.OnEvent(event, this);
 }
 
-void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
+void Presentation1::OnEvent(fuchsia::ui::input::InputEvent event) {
   TRACE_DURATION("input", "presentation_on_event");
   trace_flow_id_t trace_id = 0;
 
   FXL_VLOG(1) << "OnEvent " << event;
-
-  fuchsia::ui::input::Command input_cmd;
 
   bool invalidate = false;
   bool dispatch_event = true;
@@ -618,9 +667,9 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
         cursors_[pointer.device_id].position.x = pointer.x;
         cursors_[pointer.device_id].position.y = pointer.y;
 
-        // TODO(SCN-823) for now don't show cursor when mouse is added until
-        // we have a timer to hide it. Acer12 sleeve reports 2 mice but only
-        // one will generate events for now.
+        // TODO(jpoichet) for now don't show cursor when mouse is added until we
+        // have a timer to hide it. Acer12 sleeve reports 2 mice but only one
+        // will generate events for now.
         if (pointer.phase != fuchsia::ui::input::PointerEventPhase::ADD &&
             pointer.phase != fuchsia::ui::input::PointerEventPhase::REMOVE) {
           cursors_[pointer.device_id].visible = true;
@@ -640,7 +689,6 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
       for (size_t i = 0; i < captured_pointerbindings_.size(); i++) {
         fuchsia::ui::input::PointerEvent clone;
         fidl::Clone(pointer, &clone);
-
         clone.x = rotated_point.x;
         clone.y = rotated_point.y;
 
@@ -659,11 +707,6 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
         captured_pointerbindings_[i].listener->OnPointerEvent(std::move(clone));
       }
 
-      fuchsia::ui::input::SendPointerInputCmd pointer_cmd;
-      pointer_cmd.pointer_event = std::move(pointer);
-      pointer_cmd.compositor_id = compositor_id_;
-      input_cmd.set_send_pointer_input(std::move(pointer_cmd));
-
     } else if (event.is_keyboard()) {
       const fuchsia::ui::input::KeyboardEvent& kbd = event.keyboard();
 
@@ -680,11 +723,6 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
           }
         }
       }
-
-      fuchsia::ui::input::SendKeyboardInputCmd keyboard_cmd;
-      keyboard_cmd.keyboard_event = std::move(kbd);
-      keyboard_cmd.compositor_id = compositor_id_;
-      input_cmd.set_send_keyboard_input(std::move(keyboard_cmd));
     }
   }
 
@@ -693,6 +731,19 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
   }
 
   if (dispatch_event) {
+    fuchsia::ui::input::Command input_cmd;
+    if (event.is_pointer()) {
+      fuchsia::ui::input::SendPointerInputCmd pointer_cmd;
+      pointer_cmd.pointer_event = std::move(event.pointer());
+      pointer_cmd.compositor_id = compositor_id_;
+      input_cmd.set_send_pointer_input(std::move(pointer_cmd));
+    } else if (event.is_keyboard()) {
+      fuchsia::ui::input::SendKeyboardInputCmd keyboard_cmd;
+      keyboard_cmd.keyboard_event = std::move(event.keyboard());
+      keyboard_cmd.compositor_id = compositor_id_;
+      input_cmd.set_send_keyboard_input(std::move(keyboard_cmd));
+    }
+
     if (trace_id) {
       TRACE_FLOW_BEGIN("input", "dispatch_event_to_scenic", trace_id);
     }
@@ -700,9 +751,9 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
   }
 }
 
-void Presentation::OnSensorEvent(uint32_t device_id,
-                                 fuchsia::ui::input::InputReport event) {
-  FXL_VLOG(2) << "OnSensorEvent(device_id=" << device_id << "): " << event;
+void Presentation1::OnSensorEvent(uint32_t device_id,
+                                  fuchsia::ui::input::InputReport event) {
+  FXL_VLOG(3) << "OnSensorEvent(device_id=" << device_id << "): " << event;
 
   FXL_DCHECK(device_states_by_id_.count(device_id) > 0);
   FXL_DCHECK(device_states_by_id_[device_id].first);
@@ -722,7 +773,40 @@ void Presentation::OnSensorEvent(uint32_t device_id,
   }
 }
 
-void Presentation::EnableClipping(bool enabled) {
+void Presentation1::OnChildAttached(
+    uint32_t child_key, ::fuchsia::ui::viewsv1::ViewInfo child_view_info,
+    OnChildAttachedCallback callback) {
+  if (kContentViewKey == child_key) {
+    FXL_VLOG(1) << "OnChildAttached(content): child_view_info="
+                << child_view_info;
+  }
+  callback();
+}
+
+void Presentation1::OnChildUnavailable(uint32_t child_key,
+                                       OnChildUnavailableCallback callback) {
+  if (kRootViewKey == child_key) {
+    FXL_LOG(ERROR) << "Root presenter: Root view terminated unexpectedly.";
+    Shutdown();
+  } else if (kContentViewKey == child_key) {
+    FXL_LOG(ERROR) << "Root presenter: Content view terminated unexpectedly.";
+    Shutdown();
+  }
+  callback();
+}
+
+void Presentation1::OnPropertiesChanged(
+    ::fuchsia::ui::viewsv1::ViewProperties properties,
+    OnPropertiesChangedCallback callback) {
+  // Update the content view's size to match our size.
+  root_container_->SetChildProperties(
+      kContentViewKey, fidl::MakeOptional(std::move(properties)));
+
+  callback();
+}
+
+// |Presentation|
+void Presentation1::EnableClipping(bool enabled) {
   if (presentation_clipping_enabled_ != enabled) {
     FXL_LOG(INFO) << "enable clipping: " << (enabled ? "true" : "false");
     presentation_clipping_enabled_ = enabled;
@@ -730,17 +814,19 @@ void Presentation::EnableClipping(bool enabled) {
   }
 }
 
-void Presentation::UseOrthographicView() {
+// |Presentation|
+void Presentation1::UseOrthographicView() {
   FXL_LOG(INFO) << "Presentation Controller method called: "
                    "UseOrthographicView!! (not implemented)";
 }
 
-void Presentation::UsePerspectiveView() {
+// |Presentation|
+void Presentation1::UsePerspectiveView() {
   FXL_LOG(INFO) << "Presentation Controller method called: "
                    "UsePerspectiveView!! (not implemented)";
 }
 
-void Presentation::PresentScene() {
+void Presentation1::PresentScene() {
   if (session_present_state_ == kPresentPendingAndSceneDirty) {
     return;
   } else if (session_present_state_ == kPresentPending) {
@@ -806,16 +892,16 @@ void Presentation::PresentScene() {
   });
 }
 
-void Presentation::Shutdown() { shutdown_callback_(); }
+void Presentation1::Shutdown() { shutdown_callback_(); }
 
-void Presentation::SetRendererParams(
+void Presentation1::SetRendererParams(
     ::std::vector<fuchsia::ui::gfx::RendererParam> params) {
   for (size_t i = 0; i < params.size(); ++i) {
     switch (params.at(i).Which()) {
       case ::fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
         if (renderer_params_override_.shadow_technique.has_value()) {
           FXL_LOG(WARNING)
-              << "Presentation::SetRendererParams: Cannot change "
+              << "Presentation1::SetRendererParams: Cannot change "
                  "shadow technique, default was overriden in root_presenter";
           continue;
         }
@@ -823,7 +909,7 @@ void Presentation::SetRendererParams(
       case fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency:
         if (renderer_params_override_.render_frequency.has_value()) {
           FXL_LOG(WARNING)
-              << "Presentation::SetRendererParams: Cannot change "
+              << "Presentation1::SetRendererParams: Cannot change "
                  "render frequency, default was overriden in root_presenter";
           continue;
         }
@@ -831,7 +917,7 @@ void Presentation::SetRendererParams(
       case fuchsia::ui::gfx::RendererParam::Tag::kEnableDebugging:
         if (renderer_params_override_.debug_enabled.has_value()) {
           FXL_LOG(WARNING)
-              << "Presentation::SetRendererParams: Cannot change "
+              << "Presentation1::SetRendererParams: Cannot change "
                  "debug enabled, default was overriden in root_presenter";
           continue;
         }

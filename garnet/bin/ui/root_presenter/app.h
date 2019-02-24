@@ -11,19 +11,21 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/views/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1/cpp/fidl.h>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
-#include "garnet/bin/ui/root_presenter/presentation.h"
+#include "garnet/bin/ui/root_presenter/presentation1.h"
+#include "garnet/bin/ui/root_presenter/presentation2.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/input/input_device_impl.h"
 #include "lib/ui/scenic/cpp/resources.h"
-#include "lib/zx/eventpair.h"
 
 namespace root_presenter {
+
+class Presentation1;
 
 // The presenter provides a |fuchsia::ui::policy::Presenter| service which
 // displays UI by attaching the provided view to the root of a new view tree
@@ -45,14 +47,12 @@ class App : public fuchsia::ui::policy::Presenter,
                 fuchsia::ui::input::InputReport report) override;
 
  private:
-  void Present(fuchsia::ui::views::ViewHolderToken view_holder_token,
-               fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                   presentation_request);
-
   // |Presenter|
   void Present2(zx::eventpair view_holder_token,
                 fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                     presentation_request) final;
+
+  // |Presenter|
   void HACK_SetRendererParams(
       bool enable_clipping,
       std::vector<fuchsia::ui::gfx::RendererParam> params) override;

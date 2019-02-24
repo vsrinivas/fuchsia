@@ -20,9 +20,11 @@ executable("root_presenter") {
     "main.cc",
     "perspective_demo_mode.cc",
     "perspective_demo_mode.h",
-    "presentation.cc",
     "presentation.h",
-    "presentation.h",
+    "presentation1.cc",
+    "presentation1.h",
+    "presentation2.cc",
+    "presentation2.h",
     "presentation_switcher.cc",
     "presentation_switcher.h",
   ]
@@ -32,15 +34,18 @@ executable("root_presenter") {
     "//garnet/bin/ui/input_reader",
     "//garnet/bin/ui/presentation_mode",
     "//garnet/lib/ui/scenic/util:rk4_spring_simulation",
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/input",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.viewsv1token",
+    "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/ui/scenic/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/input",
+    "//garnet/public/lib/ui/input/cpp",
+    "//garnet/public/lib/ui/scenic/cpp",
+    "//garnet/public/lib/ui/views/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hid",
@@ -60,7 +65,7 @@ source_set("renderer_params") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
     "//sdk/fidl/fuchsia.ui.gfx",
+    "//garnet/public/lib/fxl",
   ]
 }
