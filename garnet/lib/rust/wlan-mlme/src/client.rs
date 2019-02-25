@@ -8,8 +8,9 @@ use {
     std::{ops::Deref, ops::DerefMut},
     wlan_common::{
         buffer_writer::{BufferWriter, ByteSliceMut, LayoutVerified},
+        data_writer,
         mac::{self, OptionalField},
-        data_writer, mgmt_writer,
+        mgmt_writer,
     },
 };
 
@@ -68,6 +69,22 @@ pub fn write_keep_alive_resp_frame<B: ByteSliceMut>(
         data_writer::FixedFields::sent_from_client(frame_ctrl, bssid, client_addr, seq_ctrl),
         data_writer::OptionalFields::none(),
     )?;
+    Ok(w)
+}
+
+pub fn write_eth_frame<B: ByteSliceMut>(
+    buf: B,
+    dst_addr: MacAddr,
+    src_addr: MacAddr,
+    protocol_id: u16,
+    body: &[u8],
+) -> Result<BufferWriter<B>, Error> {
+    let (mut eth_hdr, w) = BufferWriter::new(buf).reserve_zeroed::<mac::EthernetIIHdr>()?;
+    eth_hdr.da = dst_addr;
+    eth_hdr.sa = src_addr;
+    eth_hdr.set_ether_type(protocol_id);
+
+    let w = w.write_bytes(body)?;
     Ok(w)
 }
 
@@ -140,6 +157,51 @@ mod tests {
                 1, 1, 1, 1, 1, 1, // addr3
                 42, 0, // Sequence Control
                 3  // Trailing bytes
+            ],
+            buf
+        );
+    }
+
+    #[test]
+    fn eth_frame_ok() {
+        let mut buf = [7u8; 25];
+        let written_bytes = write_eth_frame(&mut buf[..], [1; 6], [2; 6], 3333, &[4; 9])
+            .expect("failed writing ethernet frame")
+            .written_bytes();
+        assert_eq!(23, written_bytes);
+        assert_eq!(
+            [
+                1, 1, 1, 1, 1, 1, // dst_addr
+                2, 2, 2, 2, 2, 2, // src_addr
+                0x0d, 0x05, // ether_type
+                4, 4, 4, 4, 4, 4, 4, 4, // payload
+                4, // more payload
+                7, 7, // untouched bytes
+            ],
+            buf
+        );
+    }
+
+    #[test]
+    fn eth_frame_buffer_too_small() {
+        let mut buf = [7u8; 22];
+        let write_result = write_eth_frame(&mut buf[..], [1; 6], [2; 6], 3333, &[4; 9]);
+        assert!(write_result.is_err());
+    }
+
+    #[test]
+    fn eth_frame_empty_payload() {
+        let mut buf = [7u8; 16];
+        let written_bytes = write_eth_frame(&mut buf[..], [1; 6], [2; 6], 3333, &[])
+            .expect("failed writing ethernet frame")
+            .written_bytes();
+        assert_eq!(14, written_bytes);
+        assert_eq!(
+            [
+                1, 1, 1, 1, 1, 1, // dst_addr
+                2, 2, 2, 2, 2, 2, // src_addrfx
+                0x0d, 0x05, // ether_type
+                7, 7, // untouched bytes
             ],
             buf
         );
