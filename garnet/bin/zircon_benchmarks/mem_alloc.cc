@@ -25,6 +25,23 @@ constexpr size_t kLargeBlockSizeBytes = 8192;
 // RegisterRetainedMemTest().
 constexpr size_t kLiveAllocLimitBytes = 32u * 1024 * 1024;
 
+template <size_t Size>
+class DataBuf {
+ public:
+  DataBuf() {
+    // We provide a user-defined default constructor that does nothing, to
+    // avoid the cost of zeroing out |data|.
+    //
+    // Rationale: in the absence of a user-defined constructor, expressions
+    // such as |DataBuf()| or |new DataBuf()| trigger value-initialization,
+    // which zeros out |data|. For details, see
+    // https://stackoverflow.com/a/2418195
+  };
+
+ private:
+  char data[Size];
+};
+
 template <typename AllocatorTraits>
 class SlabDataBuf;
 
@@ -34,13 +51,14 @@ class SlabDataBuf : public fbl::SlabAllocated<AllocatorTraits>,
                     public fbl::SinglyLinkedListable<
                         fbl::RefPtr<SlabDataBuf<AllocatorTraits>>> {
  public:
-  SlabDataBuf(){
-    // We provide a user-defined default constructor that does nothing, to
-    // avoid the cost of zeroing out |data|.
+  SlabDataBuf() {
+    // As with DataBuf, we provide a user-defined default constructor that
+    // does nothing, to avoid the cost of zeroing out |data|.
     //
-    // Rationale: in the absence of a user-defined constructor, expressions
-    // such as |DataBuf()| or |new DataBuf()| trigger value-initialization,
-    // which zeros out |data|. For details, see: stackoverflow.com/a/2418195
+    // CAUTION: For reasons that are unclear, inheriting DataBuf (rather than
+    // declaring our own |data|) does not avoid the cost of zeroing out
+    // DataBuf::data, even though DataBuf has a user-defined default
+    // constructor.
   };
 
  private:
@@ -62,6 +80,11 @@ struct StaticSlabAllocatorTraits
   static constexpr char kName[] = "SlabStatic";
   static constexpr size_t kUserBufSize = ObjSize;
   static constexpr size_t kSlabSizeKbytes = SlabSize / 1024;
+
+  static auto GetConfigAsString() {
+    return fbl::StringPrintf("%zubytes/%zuKbytes", kUserBufSize,
+                             kSlabSizeKbytes);
+  }
 };
 
 template <typename AllocatorTraits>
@@ -100,6 +123,11 @@ struct InstancedSlabAllocatorTraits
   static constexpr char kName[] = "SlabInstanced";
   static constexpr size_t kUserBufSize = ObjSize;
   static constexpr size_t kSlabSizeKbytes = SlabSize / 1024;
+
+  static auto GetConfigAsString() {
+    return fbl::StringPrintf("%zubytes/%zuKbytes", kUserBufSize,
+                             kSlabSizeKbytes);
+  }
 };
 
 template <typename AllocatorTraits>
@@ -134,6 +162,30 @@ static_assert(
     "InstancedLargeBlockAllocatorTraits, so that the "
     "InstancedLargeBlockAllocator amortizes malloc() calls over as many slab "
     "objects as the InstancedSmallBlockAllocator.");
+
+/*** Heap allocator definitions ***/
+template <typename AllocatorTraits>
+class HeapAllocator;
+
+template <size_t ObjSize>
+struct HeapAllocatorTraits {
+  using AllocT = HeapAllocator<HeapAllocatorTraits<ObjSize>>;
+  static constexpr char kName[] = "Malloc";
+  static constexpr size_t kUserBufSize = ObjSize;
+  static auto GetConfigAsString() {
+    return fbl::StringPrintf("%zubytes", kUserBufSize);
+  }
+};
+
+template <typename AllocatorTraits>
+class HeapAllocator {
+ public:
+  static constexpr size_t kUserBufSize = AllocatorTraits::kUserBufSize;
+  auto New() { return std::make_unique<DataBuf<kUserBufSize>>(); }
+};
+
+using HeapSmallBlockAllocatorTraits = HeapAllocatorTraits<kSmallBlockSizeBytes>;
+using HeapLargeBlockAllocatorTraits = HeapAllocatorTraits<kLargeBlockSizeBytes>;
 
 /*** Benchmark code ***/
 // Utility function called from RetainAndFreeOldest() and RetainAndFreeRandom().
@@ -227,28 +279,25 @@ using RetainedMemPerfTest = bool (*)(perftest::RepeatState* state,
                                      size_t num_bufs_to_retain);
 template <typename AllocatorTraits, RetainedMemPerfTest PerfTest>
 void RegisterTest(const char* bench_name) {
-  constexpr size_t kBlockSizeBytes = AllocatorTraits::kUserBufSize;
   // The maximum value of 32768KB below was chosen empirically, as the point at
   // which allocators started showing scaling behaviors on Eve.
   for (size_t total_size_kbytes : {8, 32, 128, 512, 2048, 8192, 32768}) {
     const size_t total_size_bytes = total_size_kbytes * 1024;
     perftest::RegisterTest(
-        fbl::StringPrintf("MemAlloc/%s/%s/%zubytes/%zuKbytes/%zuKbytes",
-                          AllocatorTraits::kName, bench_name, kBlockSizeBytes,
-                          AllocatorTraits::kSlabSizeKbytes, total_size_kbytes)
+        fbl::StringPrintf(
+            "MemAlloc/%s/%s/%s/%zuKbytes", AllocatorTraits::kName, bench_name,
+            AllocatorTraits::GetConfigAsString().c_str(), total_size_kbytes)
             .c_str(),
-        PerfTest, total_size_bytes / kBlockSizeBytes);
+        PerfTest, total_size_bytes / AllocatorTraits::kUserBufSize);
   }
 }
 
 using NoRetainedMemPerfTest = bool (*)(perftest::RepeatState* state);
 template <typename AllocatorTraits, NoRetainedMemPerfTest PerfTest>
 void RegisterTest(const char* bench_name) {
-  constexpr size_t kBlockSizeBytes = AllocatorTraits::kUserBufSize;
   perftest::RegisterTest(
-      fbl::StringPrintf("MemAlloc/%s/%s/%zubytes/%zuKbytes",
-                        AllocatorTraits::kName, bench_name, kBlockSizeBytes,
-                        AllocatorTraits::kSlabSizeKbytes)
+      fbl::StringPrintf("MemAlloc/%s/%s/%s", AllocatorTraits::kName, bench_name,
+                        AllocatorTraits::GetConfigAsString().c_str())
           .c_str(),
       PerfTest);
 }
@@ -268,6 +317,10 @@ void RegisterTest(const char* bench_name) {
                                 InstancedSmallBlockAllocatorTraits); \
     REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,                  \
                                 InstancedLargeBlockAllocatorTraits); \
+    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,                  \
+                                HeapSmallBlockAllocatorTraits);      \
+    REGISTER_PERF_TEST_INSTANCE(ALLOCATION_PATTERN,                  \
+                                HeapLargeBlockAllocatorTraits);      \
   } while (0)
 
 void RegisterTests() {
