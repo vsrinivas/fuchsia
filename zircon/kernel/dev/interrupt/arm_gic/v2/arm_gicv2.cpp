@@ -122,24 +122,6 @@ static int arm_gic_max_cpu() {
 
 static zx_status_t arm_gic_init() {
     uint i;
-    // see if we're gic v2
-    uint rev = 0;
-    uint32_t pidr2 = GICREG(0, GICD_PIDR2);
-    if (pidr2 != 0) {
-        uint rev = BITS_SHIFT(pidr2, 7, 4);
-        if (rev != GICV2) {
-            return ZX_ERR_NOT_FOUND;
-        }
-    } else {
-        // some v2's return a null PIDR2
-        pidr2 = GICREG(0, GICD_V3_PIDR2);
-        rev = BITS_SHIFT(pidr2, 7, 4);
-        if (rev >= GICV3) {
-            // looks like a gic v3
-            return ZX_ERR_NOT_FOUND;
-        }
-        // HACK: if gicv2 and v3 pidr2 seems to be blank, assume we're v2 and continue
-    }
 
     uint32_t typer = GICREG(0, GICD_TYPER);
     uint32_t it_lines_number = BITS_SHIFT(typer, 4, 0);
