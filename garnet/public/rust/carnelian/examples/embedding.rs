@@ -27,7 +27,7 @@ fn inset(rect: &mut RectF, border: f32) {
     rect.height = rect.height - inset_width;
 }
 
-struct EmbeddingAppAssistant {}
+struct EmbeddingAppAssistant;
 
 impl AppAssistant for EmbeddingAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {

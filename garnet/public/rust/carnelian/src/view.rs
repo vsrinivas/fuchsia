@@ -206,7 +206,7 @@ impl ViewController {
             metrics: self.metrics,
             messages: Vec::new(),
         };
-        self.assistant.update(&context).unwrap_or_else(|e| eprintln!("Update error: {:?}", e));
+        self.assistant.update(&context).unwrap_or_else(|e| panic!("Update error: {:?}", e));
         self.present();
     }
 
@@ -249,7 +249,7 @@ impl ViewController {
                 .lock()
                 .present(0)
                 .map_ok(|_| ())
-                .unwrap_or_else(|e| eprintln!("present error: {:?}", e)),
+                .unwrap_or_else(|e| panic!("present error: {:?}", e)),
         );
     }
 

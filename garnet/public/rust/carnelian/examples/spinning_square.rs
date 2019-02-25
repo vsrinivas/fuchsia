@@ -17,7 +17,7 @@ use fuchsia_zircon::{ClockId, Duration, Time};
 use futures::prelude::*;
 use std::f32::consts::PI;
 
-struct SpinningSquareAppAssistant {}
+struct SpinningSquareAppAssistant;
 
 impl AppAssistant for SpinningSquareAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {

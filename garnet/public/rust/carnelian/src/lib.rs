@@ -14,6 +14,7 @@
 mod app;
 mod canvas;
 mod geometry;
+mod label;
 mod view;
 
 pub use crate::{
@@ -23,6 +24,7 @@ pub use crate::{
         SharedBufferPixelSink,
     },
     geometry::{Coord, Point, Rect, Size},
+    label::Label,
     view::{
         ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewController, ViewKey,
         ViewMessages,

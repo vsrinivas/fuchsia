@@ -3,39 +3,19 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    measure_text, App, AppAssistant, Canvas, Color, Coord, FontDescription, FontFace, Paint, Point,
-    Rect, SharedBufferPixelSink, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
+    App, AppAssistant, Color, Label, Paint, Point, Rect, Size, ViewAssistant, ViewAssistantContext,
+    ViewAssistantPtr,
 };
-use failure::{Error, ResultExt};
-use fidl_fuchsia_images as images;
+use failure::Error;
 use fidl_fuchsia_ui_gfx as gfx;
 use fidl_fuchsia_ui_input::{InputEvent::Pointer, PointerEvent, PointerEventPhase};
-use fuchsia_scenic::{EntityNode, HostImageCycler, Material, Rectangle, SessionPtr, ShapeNode};
-use lazy_static::lazy_static;
+use fuchsia_scenic::{EntityNode, Material, Rectangle, SessionPtr, ShapeNode};
 use std::any::Any;
-
-// This font creation method isn't ideal. The correct method would be to ask the Fuchsia
-// font service for the font data.
-static FONT_DATA: &'static [u8] =
-    include_bytes!("../../../../bin/fonts/third_party/robotoslab/RobotoSlab-Regular.ttf");
-
-lazy_static! {
-    pub static ref FONT_FACE: FontFace<'static> =
-        FontFace::new(&FONT_DATA).expect("Failed to create font");
-}
-
-const BASELINE: i32 = 0;
 
 /// enum that defines all messages sent with `App::send_message` that
 /// the button view assistant will understand and process.
 pub enum ButtonMessages {
     Pressed,
-}
-
-// Utility routine to create the FontDescription structure that
-// canvas wants for filling text.
-fn make_font_description<'a, 'b>(size: u32, baseline: i32) -> FontDescription<'a, 'b> {
-    FontDescription { face: &FONT_FACE, size: size, baseline: baseline }
 }
 
 // Utility routine to create the FontDescription structure that
@@ -46,7 +26,7 @@ fn set_node_color(session: &SessionPtr, node: &ShapeNode, color: &Color) {
     node.set_material(&material);
 }
 
-struct ButtonAppAssistant {}
+struct ButtonAppAssistant;
 
 impl AppAssistant for ButtonAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
@@ -55,76 +35,6 @@ impl AppAssistant for ButtonAppAssistant {
 
     fn create_view_assistant(&mut self, session: &SessionPtr) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(ButtonViewAssistant::new(session)?))
-    }
-}
-
-struct Label {
-    text: String,
-    image_cycler: HostImageCycler,
-}
-
-impl Label {
-    pub fn new(session: &SessionPtr, text: &str) -> Result<Label, Error> {
-        Ok(Label { text: text.to_string(), image_cycler: HostImageCycler::new(session.clone()) })
-    }
-
-    pub fn update(&mut self, font_size: u32, paint: &Paint) -> Result<(), Error> {
-        // Figure out the pixel dimension of the label
-        let (w, h) = self.dimensions(font_size);
-
-        // Fuchsia is uniformly 4 bytes per pixel but ideally this would
-        // come from the graphics environment.
-        let stride = w * 4;
-
-        // Create a description of this pixel buffer that
-        // Scenic can understand.
-        let info = images::ImageInfo {
-            transform: images::Transform::Normal,
-            width: w,
-            height: h,
-            stride: stride,
-            pixel_format: images::PixelFormat::Bgra8,
-            color_space: images::ColorSpace::Srgb,
-            tiling: images::Tiling::Linear,
-            alpha_format: images::AlphaFormat::Opaque,
-        };
-
-        // Grab an image buffer from the cycler
-        let guard = self.image_cycler.acquire(info).context("failed to allocate buffer")?;
-
-        // Create a canvas to render into the buffer
-        let mut canvas = Canvas::<SharedBufferPixelSink>::new(guard.image().buffer(), stride);
-
-        // since the label buffer is sized to fit the text, allways draw at 0,0
-        let location = Point::zero();
-
-        // fill the buffer with the bg color, since fill_text ignore pixels that
-        // aren't covered by glyphs
-        let bounds = Rect::from_size(Size::new(w as Coord, h as Coord));
-        canvas.fill_rect(&bounds, paint.bg);
-
-        // Fill the text
-        canvas.fill_text(
-            &self.text,
-            location,
-            &mut make_font_description(font_size, BASELINE),
-            &paint,
-        );
-
-        Ok(())
-    }
-
-    // Use canvas's measure_text() to find the pixel size of the label
-    pub fn dimensions(&self, font_size: u32) -> (u32, u32) {
-        let mut font_description = make_font_description(font_size, BASELINE);
-        let (w, h) = measure_text(&self.text, &mut font_description);
-        (w as u32, h as u32)
-    }
-
-    // Expose the image cycler's node so that it can be added to the
-    // button's container
-    pub fn node(&mut self) -> &EntityNode {
-        self.image_cycler.node()
     }
 }
 
@@ -188,9 +98,9 @@ impl Button {
 
         // calculate button size based on label's text size
         // plus padding.
-        let (w, h) = self.label.dimensions(font_size);
-        let button_w = w as f32 + 2.0 * padding;
-        let button_h = h as f32 + 2.0 * padding;
+        let button_size = self.label.dimensions(font_size);
+        let button_w = button_size.width + 2.0 * padding;
+        let button_h = button_size.height + 2.0 * padding;
 
         // record bounds for hit testing
         self.bounds = Rect::new(

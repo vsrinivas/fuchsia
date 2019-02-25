@@ -266,17 +266,11 @@ impl<T: PixelSink> Canvas<T> {
             }
         }
     }
-
-    /// Measure a line of text `text` and with the typographic characterists in `font`.
-    /// Returns a tuple containing the measured width and height.
-    pub fn measure_text(&self, text: &str, font: &mut FontDescription) -> (i32, i32) {
-        measure_text(text, font)
-    }
 }
 
 /// Measure a line of text `text` and with the typographic characterists in `font`.
 /// Returns a tuple containing the measured width and height.
-pub fn measure_text(text: &str, font: &mut FontDescription) -> (i32, i32) {
+pub fn measure_text(text: &str, font: &mut FontDescription) -> Size {
     let scale = Scale::uniform(font.size as f32);
     let v_metrics = font.face.font.v_metrics(scale);
     let offset = rusttype::point(0.0, v_metrics.ascent);
@@ -284,7 +278,7 @@ pub fn measure_text(text: &str, font: &mut FontDescription) -> (i32, i32) {
     let width = g_opt
         .map(|g| g.position().x as f32 + g.unpositioned().h_metrics().advance_width)
         .unwrap_or(0.0)
-        .ceil() as usize;
+        .ceil();
 
-    (width as i32, font.size as i32)
+    Size::new(width, font.size as Coord)
 }

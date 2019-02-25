@@ -29,7 +29,7 @@ fn make_bounds(context: &ViewAssistantContext) -> Rect {
     Rect::new(Point::zero(), context.size)
 }
 
-struct ShapeDropAppAssistant {}
+struct ShapeDropAppAssistant;
 
 impl AppAssistant for ShapeDropAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {

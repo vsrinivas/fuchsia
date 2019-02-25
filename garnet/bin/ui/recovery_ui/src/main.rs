@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use carnelian::{Canvas, Color, FontDescription, FontFace, Paint, PixelSink, Point, Rect, Size};
+use carnelian::{
+    measure_text, Canvas, Color, FontDescription, FontFace, Paint, PixelSink, Point, Rect, Size,
+};
 use failure::{bail, Error, Fail, ResultExt};
 use fidl_fuchsia_amber as amber;
 use fuchsia_app as app;
@@ -33,26 +35,26 @@ impl<'a> RecoveryUI<'a> {
 
         let mut font_description =
             FontDescription { baseline: 0, face: &mut self.face, size: self.text_size };
-        let (width, height) = self.canvas.measure_text(url, &mut font_description);
+        let size = measure_text(url, &mut font_description);
         let paint = Paint { fg: Color { r: 255, g: 255, b: 255, a: 255 }, bg: bg };
         self.canvas.fill_text(
             url,
             Point::new(
-                (self.config.width / 2) as f32 - (width / 2) as f32,
-                (self.config.height / 4) as f32 - (height / 2) as f32,
+                (self.config.width / 2) as f32 - (size.width / 2.0),
+                (self.config.height / 4) as f32 - (size.height / 2.0),
             ),
             &mut font_description,
             &paint,
         );
 
-        let (width, height) = self.canvas.measure_text(user_code, &mut font_description);
+        let size = measure_text(user_code, &mut font_description);
 
         self.canvas.fill_text(
             user_code,
             Point::new(
-                (self.config.width / 2) as f32 - (width / 2) as f32,
+                (self.config.width / 2) as f32 - (size.width / 2.0),
                 (self.config.height / 2) as f32 + (self.config.height / 4) as f32
-                    - (height / 2) as f32,
+                    - (size.height / 2.0),
             ),
             &mut font_description,
             &paint,
