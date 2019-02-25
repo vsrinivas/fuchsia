@@ -80,7 +80,7 @@ static_assert(sizeof(DeviceAddressBytes) == 6,
 class DeviceAddress {
  public:
   // Bluetooth device address types.
-  enum class Type {
+  enum class Type : uint16_t {
     // BD_ADDR as used in Bluetooth Classic.
     kBREDR,
 
@@ -143,6 +143,9 @@ class DeviceAddress {
   Type type_;
   DeviceAddressBytes value_;
 };
+
+static_assert(sizeof(DeviceAddress) == 8,
+              "DeviceAddress must take up exactly 8 bytes");
 
 }  // namespace common
 }  // namespace btlib
