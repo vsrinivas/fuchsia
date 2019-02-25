@@ -107,6 +107,45 @@ FUNCTION vcpu_resume_start
     test_complete
 FUNCTION vcpu_resume_end
 
+// Test vcpu_read_state and vcpu_write_state.
+FUNCTION vcpu_read_write_state_start
+    add x1, x1, #1
+    add x2, x2, #2
+    add x3, x3, #3
+    add x4, x4, #4
+    add x5, x5, #5
+    add x6, x6, #6
+    add x7, x7, #7
+    add x8, x8, #8
+    add x9, x9, #9
+    add x10, x10, #10
+    add x11, x11, #11
+    add x12, x12, #12
+    add x13, x13, #13
+    add x14, x14, #14
+    add x15, x15, #15
+    add x16, x16, #16
+    add x17, x17, #17
+    add x18, x18, #18
+    add x19, x19, #19
+    add x20, x20, #20
+    add x21, x21, #21
+    add x22, x22, #22
+    add x23, x23, #23
+    add x24, x24, #24
+    add x25, x25, #25
+    add x26, x26, #26
+    add x27, x27, #27
+    add x28, x28, #28
+    add x29, x29, #29
+    add x30, x30, #30
+
+    add sp, sp, #64
+    cmp sp, #128 // Set ZC bits of CPSR.
+
+    test_complete
+FUNCTION vcpu_read_write_state_end
+
 // Test vcpu_interrupt.
 FUNCTION vcpu_interrupt_start
     msr daifclr, #2
@@ -115,6 +154,13 @@ FUNCTION vcpu_interrupt_start
     exception_vector CURRENT_EL_ELx_BASE, IRQ_EXC_OFFSET
     test_complete
 FUNCTION vcpu_interrupt_end
+
+// Test guest_set_trap using a memory-based trap.
+FUNCTION guest_set_trap_start
+    mov x0, TRAP_ADDR
+    str xzr, [x0]
+    test_complete
+FUNCTION guest_set_trap_end
 
 // Test wfi instruction handling.
 FUNCTION vcpu_wfi_start
@@ -130,7 +176,7 @@ FUNCTION vcpu_wfi_start
 FUNCTION vcpu_wfi_end
 
 // Test wfi handling with pending interrupt in LR (GICv2).
-FUNCTION vcpu_wfi_pending_interrupt_start_gicv2
+FUNCTION vcpu_wfi_pending_interrupt_gicv2_start
     msr daifclr, #2
     b .
 
@@ -140,10 +186,10 @@ FUNCTION vcpu_wfi_pending_interrupt_start_gicv2
     ldr w1, [x0, GICC_IAR_OFFSET]
     wfi
     test_complete
-FUNCTION vcpu_wfi_pending_interrupt_end_gicv2
+FUNCTION vcpu_wfi_pending_interrupt_gicv2_end
 
 // Test wfi handling with pending interrupt in LR (GICv3).
-FUNCTION vcpu_wfi_pending_interrupt_start_gicv3
+FUNCTION vcpu_wfi_pending_interrupt_gicv3_start
     msr daifclr, #2
     b .
 
@@ -154,7 +200,7 @@ FUNCTION vcpu_wfi_pending_interrupt_start_gicv3
     dsb sy
     wfi
     test_complete
-FUNCTION vcpu_wfi_pending_interrupt_end_gicv3
+FUNCTION vcpu_wfi_pending_interrupt_gicv3_end
 
 // Test wfi instruction handling.
 // Execution of WFI at EL0 on AARCH32 is propagated to EL1 / AARCH64.
@@ -200,49 +246,3 @@ FUNCTION vcpu_aarch32_fp_start
     msr cpacr_el1, x0
     eret
 FUNCTION vcpu_aarch32_fp_end
-
-// Test vcpu_read_state and vcpu_write_state.
-FUNCTION vcpu_read_write_state_start
-    add x1, x1, #1
-    add x2, x2, #2
-    add x3, x3, #3
-    add x4, x4, #4
-    add x5, x5, #5
-    add x6, x6, #6
-    add x7, x7, #7
-    add x8, x8, #8
-    add x9, x9, #9
-    add x10, x10, #10
-    add x11, x11, #11
-    add x12, x12, #12
-    add x13, x13, #13
-    add x14, x14, #14
-    add x15, x15, #15
-    add x16, x16, #16
-    add x17, x17, #17
-    add x18, x18, #18
-    add x19, x19, #19
-    add x20, x20, #20
-    add x21, x21, #21
-    add x22, x22, #22
-    add x23, x23, #23
-    add x24, x24, #24
-    add x25, x25, #25
-    add x26, x26, #26
-    add x27, x27, #27
-    add x28, x28, #28
-    add x29, x29, #29
-    add x30, x30, #30
-
-    add sp, sp, #64
-    cmp sp, #128 // Set ZC bits of CPSR.
-
-    test_complete
-FUNCTION vcpu_read_write_state_end
-
-// Test guest_set_trap using a memory-based trap.
-FUNCTION guest_set_trap_start
-    mov x0, TRAP_ADDR
-    str xzr, [x0]
-    test_complete
-FUNCTION guest_set_trap_end

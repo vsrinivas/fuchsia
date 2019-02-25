@@ -38,44 +38,33 @@ static constexpr uint32_t kNmiVector = 2u;
 static constexpr uint32_t kExceptionVector = 16u;
 #endif
 
-extern const char vcpu_resume_start[];
-extern const char vcpu_resume_end[];
-extern const char vcpu_interrupt_start[];
-extern const char vcpu_interrupt_end[];
-extern const char vcpu_hlt_start[];
-extern const char vcpu_hlt_end[];
-extern const char vcpu_pause_start[];
-extern const char vcpu_pause_end[];
-extern const char vcpu_write_cr0_start[];
-extern const char vcpu_write_cr0_end[];
-extern const char vcpu_wfi_start[];
-extern const char vcpu_wfi_end[];
-extern const char vcpu_wfi_pending_interrupt_start_gicv2[];
-extern const char vcpu_wfi_pending_interrupt_end_gicv2[];
-extern const char vcpu_wfi_pending_interrupt_start_gicv3[];
-extern const char vcpu_wfi_pending_interrupt_end_gicv3[];
-extern const char vcpu_aarch32_wfi_start[];
-extern const char vcpu_aarch32_wfi_end[];
-extern const char vcpu_fp_start[];
-extern const char vcpu_fp_end[];
-extern const char vcpu_aarch32_fp_start[];
-extern const char vcpu_aarch32_fp_end[];
-extern const char vcpu_read_write_state_start[];
-extern const char vcpu_read_write_state_end[];
-extern const char vcpu_compat_mode_start[];
-extern const char vcpu_compat_mode_end[];
-extern const char vcpu_syscall_start[];
-extern const char vcpu_syscall_end[];
-extern const char vcpu_sysenter_start[];
-extern const char vcpu_sysenter_end[];
-extern const char vcpu_sysenter_compat_start[];
-extern const char vcpu_sysenter_compat_end[];
-extern const char vcpu_vmcall_start[];
-extern const char vcpu_vmcall_end[];
-extern const char guest_set_trap_start[];
-extern const char guest_set_trap_end[];
-extern const char guest_set_trap_with_io_start[];
-extern const char guest_set_trap_with_io_end[];
+#define DECLARE_TEST_FUNCTION(name)                                                                \
+    extern const char name##_start[];                                                              \
+    extern const char name##_end[];
+
+DECLARE_TEST_FUNCTION(vcpu_resume);
+DECLARE_TEST_FUNCTION(vcpu_read_write_state);
+DECLARE_TEST_FUNCTION(vcpu_interrupt);
+DECLARE_TEST_FUNCTION(guest_set_trap);
+#ifdef __aarch64__
+DECLARE_TEST_FUNCTION(vcpu_wfi);
+DECLARE_TEST_FUNCTION(vcpu_wfi_pending_interrupt_gicv2);
+DECLARE_TEST_FUNCTION(vcpu_wfi_pending_interrupt_gicv3);
+DECLARE_TEST_FUNCTION(vcpu_aarch32_wfi);
+DECLARE_TEST_FUNCTION(vcpu_fp);
+DECLARE_TEST_FUNCTION(vcpu_aarch32_fp);
+#elif __x86_64__
+DECLARE_TEST_FUNCTION(vcpu_hlt);
+DECLARE_TEST_FUNCTION(vcpu_pause);
+DECLARE_TEST_FUNCTION(vcpu_write_cr0);
+DECLARE_TEST_FUNCTION(vcpu_compat_mode);
+DECLARE_TEST_FUNCTION(vcpu_syscall);
+DECLARE_TEST_FUNCTION(vcpu_sysenter);
+DECLARE_TEST_FUNCTION(vcpu_sysenter_compat);
+DECLARE_TEST_FUNCTION(vcpu_vmcall);
+DECLARE_TEST_FUNCTION(guest_set_trap_with_io);
+#endif
+#undef DECLARE_TEST_FUNCTION
 
 enum {
     X86_PTE_P = 0x01,  // P    Valid
@@ -276,6 +265,114 @@ static bool vcpu_resume() {
     END_TEST;
 }
 
+static bool vcpu_read_write_state() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_read_write_state_start, vcpu_read_write_state_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    zx_vcpu_state_t vcpu_state = {
+#if __aarch64__
+        // clang-format off
+        .x = {
+             0u,  1u,  2u,  3u,  4u,  5u,  6u,  7u,  8u,  9u,
+            10u, 11u, 12u, 13u, 14u, 15u, 16u, 17u, 18u, 19u,
+            20u, 21u, 22u, 23u, 24u, 25u, 26u, 27u, 28u, 29u,
+            30u,
+        },
+        // clang-format on
+        .sp = 64u,
+        .cpsr = 0,
+#elif __x86_64__
+        .rax = 1u,
+        .rcx = 2u,
+        .rdx = 3u,
+        .rbx = 4u,
+        .rsp = 5u,
+        .rbp = 6u,
+        .rsi = 7u,
+        .rdi = 8u,
+        .r8 = 9u,
+        .r9 = 10u,
+        .r10 = 11u,
+        .r11 = 12u,
+        .r12 = 13u,
+        .r13 = 14u,
+        .r14 = 15u,
+        .r15 = 16u,
+        .rflags = 0,
+#endif
+    };
+
+    ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
+
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+
+    ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
+
+#if __aarch64__
+    EXPECT_EQ(vcpu_state.x[0], EXIT_TEST_ADDR);
+    EXPECT_EQ(vcpu_state.x[1], 2u);
+    EXPECT_EQ(vcpu_state.x[2], 4u);
+    EXPECT_EQ(vcpu_state.x[3], 6u);
+    EXPECT_EQ(vcpu_state.x[4], 8u);
+    EXPECT_EQ(vcpu_state.x[5], 10u);
+    EXPECT_EQ(vcpu_state.x[6], 12u);
+    EXPECT_EQ(vcpu_state.x[7], 14u);
+    EXPECT_EQ(vcpu_state.x[8], 16u);
+    EXPECT_EQ(vcpu_state.x[9], 18u);
+    EXPECT_EQ(vcpu_state.x[10], 20u);
+    EXPECT_EQ(vcpu_state.x[11], 22u);
+    EXPECT_EQ(vcpu_state.x[12], 24u);
+    EXPECT_EQ(vcpu_state.x[13], 26u);
+    EXPECT_EQ(vcpu_state.x[14], 28u);
+    EXPECT_EQ(vcpu_state.x[15], 30u);
+    EXPECT_EQ(vcpu_state.x[16], 32u);
+    EXPECT_EQ(vcpu_state.x[17], 34u);
+    EXPECT_EQ(vcpu_state.x[18], 36u);
+    EXPECT_EQ(vcpu_state.x[19], 38u);
+    EXPECT_EQ(vcpu_state.x[20], 40u);
+    EXPECT_EQ(vcpu_state.x[21], 42u);
+    EXPECT_EQ(vcpu_state.x[22], 44u);
+    EXPECT_EQ(vcpu_state.x[23], 46u);
+    EXPECT_EQ(vcpu_state.x[24], 48u);
+    EXPECT_EQ(vcpu_state.x[25], 50u);
+    EXPECT_EQ(vcpu_state.x[26], 52u);
+    EXPECT_EQ(vcpu_state.x[27], 54u);
+    EXPECT_EQ(vcpu_state.x[28], 56u);
+    EXPECT_EQ(vcpu_state.x[29], 58u);
+    EXPECT_EQ(vcpu_state.x[30], 60u);
+    EXPECT_EQ(vcpu_state.sp, 128u);
+    EXPECT_EQ(vcpu_state.cpsr, 0b0110 << 28);
+#elif __x86_64__
+    EXPECT_EQ(vcpu_state.rax, 2u);
+    EXPECT_EQ(vcpu_state.rcx, 4u);
+    EXPECT_EQ(vcpu_state.rdx, 6u);
+    EXPECT_EQ(vcpu_state.rbx, 8u);
+    EXPECT_EQ(vcpu_state.rsp, 10u);
+    EXPECT_EQ(vcpu_state.rbp, 12u);
+    EXPECT_EQ(vcpu_state.rsi, 14u);
+    EXPECT_EQ(vcpu_state.rdi, 16u);
+    EXPECT_EQ(vcpu_state.r8, 18u);
+    EXPECT_EQ(vcpu_state.r9, 20u);
+    EXPECT_EQ(vcpu_state.r10, 22u);
+    EXPECT_EQ(vcpu_state.r11, 24u);
+    EXPECT_EQ(vcpu_state.r12, 26u);
+    EXPECT_EQ(vcpu_state.r13, 28u);
+    EXPECT_EQ(vcpu_state.r14, 30u);
+    EXPECT_EQ(vcpu_state.r15, 32u);
+    EXPECT_EQ(vcpu_state.rflags, (1u << 0) | (1u << 18));
+#endif // __x86_64__
+
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
 static bool vcpu_interrupt() {
     BEGIN_TEST;
 
@@ -306,7 +403,175 @@ static bool vcpu_interrupt() {
     END_TEST;
 }
 
-#ifdef __x86_64__
+static bool guest_set_trap_with_mem() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, guest_set_trap_start, guest_set_trap_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    // Trap on access of TRAP_ADDR.
+    ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_MEM, TRAP_ADDR, PAGE_SIZE, zx::port(), kTrapKey),
+              ZX_OK);
+
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
+    EXPECT_EQ(packet.key, kTrapKey);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
+
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool guest_set_trap_with_bell() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, guest_set_trap_start, guest_set_trap_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    zx::port port;
+    ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
+
+    // Trap on access of TRAP_ADDR.
+    ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey), ZX_OK);
+
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
+    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+
+    ASSERT_EQ(port.wait(zx::time::infinite(), &packet), ZX_OK);
+    EXPECT_EQ(packet.key, kTrapKey);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
+    EXPECT_EQ(packet.guest_bell.addr, TRAP_ADDR);
+
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+#ifdef __aarch64__
+
+static bool vcpu_wfi() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_wfi_start, vcpu_wfi_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_wfi_pending_interrupt() {
+    BEGIN_TEST;
+
+    fuchsia_sysinfo_InterruptControllerInfo info;
+    ASSERT_EQ(ZX_OK, get_interrupt_controller_info(&info));
+
+    test_t test;
+    switch (info.type) {
+    case fuchsia_sysinfo_InterruptControllerType_GIC_V2:
+        ASSERT_TRUE(setup(&test, vcpu_wfi_pending_interrupt_gicv2_start,
+                          vcpu_wfi_pending_interrupt_gicv2_end));
+        break;
+    case fuchsia_sysinfo_InterruptControllerType_GIC_V3:
+        ASSERT_TRUE(setup(&test, vcpu_wfi_pending_interrupt_gicv3_start,
+                          vcpu_wfi_pending_interrupt_gicv3_end));
+        break;
+    default:
+        ASSERT_TRUE(false, "Unsupported GIC version");
+    }
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    // Inject two interrupts so that there will be one pending when the guest exits on wfi.
+    ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
+    ASSERT_EQ(test.vcpu.interrupt(kInterruptVector + 1), ZX_OK);
+
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_wfi_aarch32() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_aarch32_wfi_start, vcpu_aarch32_wfi_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
+    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+    EXPECT_EQ(packet.guest_mem.read, false);
+    EXPECT_EQ(packet.guest_mem.data, 0);
+
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_fp() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_fp_start, vcpu_fp_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_fp_aarch32() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_aarch32_fp_start, vcpu_aarch32_fp_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
+    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+    EXPECT_EQ(packet.guest_mem.read, false);
+    EXPECT_EQ(packet.guest_mem.data, 0);
+
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+#elif __x86_64__
 
 static bool vcpu_interrupt_priority() {
     BEGIN_TEST;
@@ -470,232 +735,6 @@ static bool vcpu_write_cr0() {
     END_TEST;
 }
 
-#endif // __x86_64__
-
-#ifdef __aarch64__
-
-static bool vcpu_wfi() {
-    BEGIN_TEST;
-
-    test_t test;
-    ASSERT_TRUE(setup(&test, vcpu_wfi_start, vcpu_wfi_end));
-    if (!test.supported) {
-        // The hypervisor isn't supported, so don't run the test.
-        return true;
-    }
-
-    ASSERT_TRUE(resume_and_clean_exit(&test));
-    ASSERT_TRUE(teardown(&test));
-
-    END_TEST;
-}
-
-static bool vcpu_wfi_pending_interrupt() {
-    BEGIN_TEST;
-
-    fuchsia_sysinfo_InterruptControllerInfo info;
-    ASSERT_EQ(ZX_OK, get_interrupt_controller_info(&info));
-
-    test_t test;
-    switch (info.type) {
-    case fuchsia_sysinfo_InterruptControllerType_GIC_V2:
-        ASSERT_TRUE(setup(&test, vcpu_wfi_pending_interrupt_start_gicv2,
-                          vcpu_wfi_pending_interrupt_end_gicv2));
-        break;
-    case fuchsia_sysinfo_InterruptControllerType_GIC_V3:
-        ASSERT_TRUE(setup(&test, vcpu_wfi_pending_interrupt_start_gicv3,
-                          vcpu_wfi_pending_interrupt_end_gicv3));
-        break;
-    default:
-        ASSERT_TRUE(false, "Unsupported GIC version");
-    }
-    if (!test.supported) {
-        // The hypervisor isn't supported, so don't run the test.
-        return true;
-    }
-
-    // Inject two interrupts so that there will be one pending when the guest exits on wfi.
-    ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
-    ASSERT_EQ(test.vcpu.interrupt(kInterruptVector + 1), ZX_OK);
-
-    ASSERT_TRUE(resume_and_clean_exit(&test));
-    ASSERT_TRUE(teardown(&test));
-
-    END_TEST;
-}
-
-static bool vcpu_wfi_aarch32() {
-    BEGIN_TEST;
-
-    test_t test;
-    ASSERT_TRUE(setup(&test, vcpu_aarch32_wfi_start, vcpu_aarch32_wfi_end));
-    if (!test.supported) {
-        // The hypervisor isn't supported, so don't run the test.
-        return true;
-    }
-
-    zx_port_packet_t packet = {};
-    ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
-    EXPECT_EQ(packet.guest_mem.read, false);
-    EXPECT_EQ(packet.guest_mem.data, 0);
-
-    ASSERT_TRUE(teardown(&test));
-
-    END_TEST;
-}
-
-static bool vcpu_fp() {
-    BEGIN_TEST;
-
-    test_t test;
-    ASSERT_TRUE(setup(&test, vcpu_fp_start, vcpu_fp_end));
-    if (!test.supported) {
-        // The hypervisor isn't supported, so don't run the test.
-        return true;
-    }
-
-    ASSERT_TRUE(resume_and_clean_exit(&test));
-    ASSERT_TRUE(teardown(&test));
-
-    END_TEST;
-}
-
-static bool vcpu_fp_aarch32() {
-    BEGIN_TEST;
-
-    test_t test;
-    ASSERT_TRUE(setup(&test, vcpu_aarch32_fp_start, vcpu_aarch32_fp_end));
-    if (!test.supported) {
-        // The hypervisor isn't supported, so don't run the test.
-        return true;
-    }
-
-    zx_port_packet_t packet = {};
-    ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
-    EXPECT_EQ(packet.guest_mem.read, false);
-    EXPECT_EQ(packet.guest_mem.data, 0);
-
-    ASSERT_TRUE(teardown(&test));
-
-    END_TEST;
-}
-
-#endif // __aarch64__
-
-static bool vcpu_read_write_state() {
-    BEGIN_TEST;
-
-    test_t test;
-    ASSERT_TRUE(setup(&test, vcpu_read_write_state_start, vcpu_read_write_state_end));
-    if (!test.supported) {
-        // The hypervisor isn't supported, so don't run the test.
-        return true;
-    }
-
-    zx_vcpu_state_t vcpu_state = {
-#if __aarch64__
-        // clang-format off
-        .x = {
-             0u,  1u,  2u,  3u,  4u,  5u,  6u,  7u,  8u,  9u,
-            10u, 11u, 12u, 13u, 14u, 15u, 16u, 17u, 18u, 19u,
-            20u, 21u, 22u, 23u, 24u, 25u, 26u, 27u, 28u, 29u,
-            30u,
-        },
-        // clang-format on
-        .sp = 64u,
-        .cpsr = 0,
-#elif __x86_64__
-        .rax = 1u,
-        .rcx = 2u,
-        .rdx = 3u,
-        .rbx = 4u,
-        .rsp = 5u,
-        .rbp = 6u,
-        .rsi = 7u,
-        .rdi = 8u,
-        .r8 = 9u,
-        .r9 = 10u,
-        .r10 = 11u,
-        .r11 = 12u,
-        .r12 = 13u,
-        .r13 = 14u,
-        .r14 = 15u,
-        .r15 = 16u,
-        .rflags = 0,
-#endif
-    };
-
-    ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
-
-    ASSERT_TRUE(resume_and_clean_exit(&test));
-
-    ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
-
-#if __aarch64__
-    EXPECT_EQ(vcpu_state.x[0], EXIT_TEST_ADDR);
-    EXPECT_EQ(vcpu_state.x[1], 2u);
-    EXPECT_EQ(vcpu_state.x[2], 4u);
-    EXPECT_EQ(vcpu_state.x[3], 6u);
-    EXPECT_EQ(vcpu_state.x[4], 8u);
-    EXPECT_EQ(vcpu_state.x[5], 10u);
-    EXPECT_EQ(vcpu_state.x[6], 12u);
-    EXPECT_EQ(vcpu_state.x[7], 14u);
-    EXPECT_EQ(vcpu_state.x[8], 16u);
-    EXPECT_EQ(vcpu_state.x[9], 18u);
-    EXPECT_EQ(vcpu_state.x[10], 20u);
-    EXPECT_EQ(vcpu_state.x[11], 22u);
-    EXPECT_EQ(vcpu_state.x[12], 24u);
-    EXPECT_EQ(vcpu_state.x[13], 26u);
-    EXPECT_EQ(vcpu_state.x[14], 28u);
-    EXPECT_EQ(vcpu_state.x[15], 30u);
-    EXPECT_EQ(vcpu_state.x[16], 32u);
-    EXPECT_EQ(vcpu_state.x[17], 34u);
-    EXPECT_EQ(vcpu_state.x[18], 36u);
-    EXPECT_EQ(vcpu_state.x[19], 38u);
-    EXPECT_EQ(vcpu_state.x[20], 40u);
-    EXPECT_EQ(vcpu_state.x[21], 42u);
-    EXPECT_EQ(vcpu_state.x[22], 44u);
-    EXPECT_EQ(vcpu_state.x[23], 46u);
-    EXPECT_EQ(vcpu_state.x[24], 48u);
-    EXPECT_EQ(vcpu_state.x[25], 50u);
-    EXPECT_EQ(vcpu_state.x[26], 52u);
-    EXPECT_EQ(vcpu_state.x[27], 54u);
-    EXPECT_EQ(vcpu_state.x[28], 56u);
-    EXPECT_EQ(vcpu_state.x[29], 58u);
-    EXPECT_EQ(vcpu_state.x[30], 60u);
-    EXPECT_EQ(vcpu_state.sp, 128u);
-    EXPECT_EQ(vcpu_state.cpsr, 0b0110 << 28);
-#elif __x86_64__
-    EXPECT_EQ(vcpu_state.rax, 2u);
-    EXPECT_EQ(vcpu_state.rcx, 4u);
-    EXPECT_EQ(vcpu_state.rdx, 6u);
-    EXPECT_EQ(vcpu_state.rbx, 8u);
-    EXPECT_EQ(vcpu_state.rsp, 10u);
-    EXPECT_EQ(vcpu_state.rbp, 12u);
-    EXPECT_EQ(vcpu_state.rsi, 14u);
-    EXPECT_EQ(vcpu_state.rdi, 16u);
-    EXPECT_EQ(vcpu_state.r8, 18u);
-    EXPECT_EQ(vcpu_state.r9, 20u);
-    EXPECT_EQ(vcpu_state.r10, 22u);
-    EXPECT_EQ(vcpu_state.r11, 24u);
-    EXPECT_EQ(vcpu_state.r12, 26u);
-    EXPECT_EQ(vcpu_state.r13, 28u);
-    EXPECT_EQ(vcpu_state.r14, 30u);
-    EXPECT_EQ(vcpu_state.r15, 32u);
-    EXPECT_EQ(vcpu_state.rflags, (1u << 0) | (1u << 18));
-#endif // __x86_64__
-
-    ASSERT_TRUE(teardown(&test));
-
-    END_TEST;
-}
-
-#ifdef __x86_64__
-
 static bool vcpu_compat_mode() {
     BEGIN_TEST;
 
@@ -791,65 +830,6 @@ static bool vcpu_vmcall() {
     END_TEST;
 }
 
-#endif // __x86_64__
-
-static bool guest_set_trap_with_mem() {
-    BEGIN_TEST;
-
-    test_t test;
-    ASSERT_TRUE(setup(&test, guest_set_trap_start, guest_set_trap_end));
-    if (!test.supported) {
-        // The hypervisor isn't supported, so don't run the test.
-        return true;
-    }
-
-    // Trap on access of TRAP_ADDR.
-    ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_MEM, TRAP_ADDR, PAGE_SIZE, zx::port(), kTrapKey),
-              ZX_OK);
-
-    zx_port_packet_t packet = {};
-    ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
-    EXPECT_EQ(packet.key, kTrapKey);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-
-    ASSERT_TRUE(resume_and_clean_exit(&test));
-    ASSERT_TRUE(teardown(&test));
-
-    END_TEST;
-}
-
-static bool guest_set_trap_with_bell() {
-    BEGIN_TEST;
-
-    test_t test;
-    ASSERT_TRUE(setup(&test, guest_set_trap_start, guest_set_trap_end));
-    if (!test.supported) {
-        // The hypervisor isn't supported, so don't run the test.
-        return true;
-    }
-
-    zx::port port;
-    ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
-
-    // Trap on access of TRAP_ADDR.
-    ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey), ZX_OK);
-
-    zx_port_packet_t packet = {};
-    ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
-
-    ASSERT_EQ(port.wait(zx::time::infinite(), &packet), ZX_OK);
-    EXPECT_EQ(packet.key, kTrapKey);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
-    EXPECT_EQ(packet.guest_bell.addr, TRAP_ADDR);
-
-    ASSERT_TRUE(teardown(&test));
-
-    END_TEST;
-}
-
-#ifdef __x86_64__
 static bool guest_set_trap_with_io() {
     BEGIN_TEST;
 
@@ -874,6 +854,7 @@ static bool guest_set_trap_with_io() {
 
     END_TEST;
 }
+
 #endif // __x86_64__
 
 BEGIN_TEST_CASE(guest)
@@ -889,7 +870,6 @@ RUN_TEST(vcpu_wfi_aarch32)
 RUN_TEST(vcpu_fp)
 RUN_TEST(vcpu_fp_aarch32)
 #elif __x86_64__
-RUN_TEST(guest_set_trap_with_io)
 RUN_TEST(vcpu_interrupt_priority)
 RUN_TEST(vcpu_nmi)
 RUN_TEST(vcpu_nmi_priority)
@@ -902,5 +882,6 @@ RUN_TEST(vcpu_syscall)
 RUN_TEST(vcpu_sysenter)
 RUN_TEST(vcpu_sysenter_compat)
 RUN_TEST(vcpu_vmcall)
+RUN_TEST(guest_set_trap_with_io)
 #endif
 END_TEST_CASE(guest)

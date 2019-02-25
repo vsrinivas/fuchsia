@@ -165,6 +165,31 @@ FUNCTION vcpu_resume_start
     movq $0, (EXIT_TEST_ADDR)
 FUNCTION vcpu_resume_end
 
+// Test vcpu_read_state and vcpu_write_state.
+FUNCTION vcpu_read_write_state_start
+    add $1, %rax
+    add $2, %rcx
+    add $3, %rdx
+    add $4, %rbx
+    add $5, %rsp
+    add $6, %rbp
+    add $7, %rsi
+    add $8, %rdi
+    add $9, %r8
+    add $10, %r9
+    add $11, %r10
+    add $12, %r11
+    add $13, %r12
+    add $14, %r13
+    add $15, %r14
+    add $16, %r15
+
+    stc  // Set carry flag (bit 0)
+    stac // Set AC flag (bit 18)
+
+    movq $0, (EXIT_TEST_ADDR)
+FUNCTION vcpu_read_write_state_end
+
 // Test vcpu_interrupt.
 FUNCTION vcpu_interrupt_start
     init_interrupt_handling vcpu_interrupt_start
@@ -172,6 +197,12 @@ FUNCTION vcpu_interrupt_start
     movq $0, (EXIT_TEST_ADDR)
     jmp .
 FUNCTION vcpu_interrupt_end
+
+// Test guest_set_trap using a memory-based trap.
+FUNCTION guest_set_trap_start
+    movq $0, (TRAP_ADDR)
+    movq $0, (EXIT_TEST_ADDR)
+FUNCTION guest_set_trap_end
 
 // Test guest HLT instruction handling.
 FUNCTION vcpu_hlt_start
@@ -200,31 +231,6 @@ FUNCTION vcpu_write_cr0_start
 
     movq $0, (EXIT_TEST_ADDR)
 FUNCTION vcpu_write_cr0_end
-
-// Test vcpu_read_state and vcpu_write_state.
-FUNCTION vcpu_read_write_state_start
-    add $1, %rax
-    add $2, %rcx
-    add $3, %rdx
-    add $4, %rbx
-    add $5, %rsp
-    add $6, %rbp
-    add $7, %rsi
-    add $8, %rdi
-    add $9, %r8
-    add $10, %r9
-    add $11, %r10
-    add $12, %r11
-    add $13, %r12
-    add $14, %r13
-    add $15, %r14
-    add $16, %r15
-
-    stc  // Set carry flag (bit 0)
-    stac // Set AC flag (bit 18)
-
-    movq $0, (EXIT_TEST_ADDR)
-FUNCTION vcpu_read_write_state_end
 
 // Test 32 bit compatibility mode (long mode disabled).
 FUNCTION vcpu_compat_mode_start
@@ -379,11 +385,11 @@ vcpu_sysenter_compat_done:
     movq $0, (EXIT_TEST_ADDR)
 FUNCTION vcpu_sysenter_compat_end
 
-// Test guest_set_trap using a memory-based trap.
-FUNCTION guest_set_trap_start
-    movq $0, (TRAP_ADDR)
+FUNCTION vcpu_vmcall_start
+    movq $(INVALID_HYPERCALL), %rax
+    vmcall
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION guest_set_trap_end
+FUNCTION vcpu_vmcall_end
 
 // Test guest_set_trap using an IO-based trap.
 FUNCTION guest_set_trap_with_io_start
@@ -391,8 +397,3 @@ FUNCTION guest_set_trap_with_io_start
     movq $0, (EXIT_TEST_ADDR)
 FUNCTION guest_set_trap_with_io_end
 
-FUNCTION vcpu_vmcall_start
-    movq $(INVALID_HYPERCALL), %rax
-    vmcall
-    movq $0, (EXIT_TEST_ADDR)
-FUNCTION vcpu_vmcall_end
