@@ -407,6 +407,16 @@ zx_status_t svchost_start(bool require_system) {
         return status;
     }
 
+    // svchost needs to hold this to talk to zx_kerneldebug but doesn't need any rights.
+    // TODO(ZX-971): when zx_debug_send_command syscall is descoped, update this too.
+    zx::resource root_resource_copy;
+    if (g_handles.root_resource.is_valid()) {
+        status = g_handles.root_resource.duplicate(ZX_RIGHT_TRANSFER, &root_resource_copy);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+
     launchpad_t* lp = nullptr;
     launchpad_create(svc_job_copy.get(), name, &lp);
     launchpad_load_from_file(lp, argv[0]);
@@ -421,6 +431,12 @@ zx_status_t svchost_start(bool require_system) {
     // as it controls system-wide process launching. With the root job it can consolidate a few
     // services such as crashsvc and the profile service.
     launchpad_add_handle(lp, root_job_copy.release(), PA_HND(PA_USER0, 1));
+
+    // Also give svchost a restricted root resource handle, this allows it to run the kernel-debug
+    // service.
+    if (root_resource_copy.is_valid()) {
+        launchpad_add_handle(lp, root_resource_copy.release(), PA_HND(PA_USER0, 2));
+    }
 
     // Give svchost access to /dev/class/sysmem, to enable svchost to forward sysmem service
     // requests to the sysmem driver.  Create a namespace containing /dev/class/sysmem.
@@ -854,6 +870,12 @@ int main(int argc, char** argv) {
     g_handles.root_job->set_property(ZX_PROP_NAME, "root", 4);
     bool require_system = devmgr::getenv_bool("devmgr.require-system", false);
 
+    zx_status_t status = fetch_root_resource(&g_handles.root_resource);
+    if (status != ZX_OK) {
+        fprintf(stderr, "devmgr: did not receive root resource: %d\n", status);
+        return 1;
+    }
+
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     devmgr::CoordinatorConfig config;
     config.dispatcher = loop.dispatcher();
@@ -861,10 +883,13 @@ int main(int argc, char** argv) {
     config.asan_drivers = devmgr::getenv_bool("devmgr.devhost.asan", false);
     config.suspend_fallback = devmgr::getenv_bool("devmgr.suspend-timeout-fallback", false);
     config.suspend_debug = devmgr::getenv_bool("devmgr.suspend-timeout-debug", false);
-    zx_status_t status = fetch_root_resource(&config.root_resource);
-    if (status != ZX_OK) {
-        fprintf(stderr, "devmgr: did not receive root resource: %d\n", status);
-        return 1;
+
+    if (g_handles.root_resource.is_valid()) {
+      status = g_handles.root_resource.duplicate(ZX_RIGHT_SAME_RIGHTS, &config.root_resource);
+      if (status != ZX_OK) {
+          fprintf(stderr, "devmgr: did not duplicate root resource: %d\n", status);
+          return 1;
+      }
     }
     // TODO: limit to enumerate rights
     status = g_handles.root_job->duplicate(ZX_RIGHT_SAME_RIGHTS, &config.sysinfo_job);
