@@ -125,11 +125,10 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
             );
         }
         let body = if (hdr_prefix.total_length() as usize) < total_len {
-            // This unwrap is safe because of the check against total_len.
-            let body = buffer.take_back(hdr_prefix.total_length() as usize - hdr_bytes).unwrap();
-            // Discard the padding left by the previous layer.
-            buffer.into_rest();
-            body
+            // Discard the padding left by the previous layer. This unwrap is
+            // safe because of the check against total_len.
+            buffer.take_back(total_len - (hdr_prefix.total_length() as usize)).unwrap();
+            buffer.into_rest()
         } else if hdr_prefix.total_length() as usize == total_len {
             buffer.into_rest()
         } else {
@@ -410,7 +409,7 @@ impl PacketBuilder for Ipv4PacketBuilder {
         packet.hdr_prefix.dscp_ecn = (self.dscp << 2) | self.ecn;
         let total_len = packet.total_packet_len();
         if total_len >= 1 << 16 {
-            panic!("packet length of {} exceeds maximum of {}", total_len, 1 << 16 - 1,);
+            panic!("packet length of {} exceeds maximum of {}", total_len, 1 << 16 - 1);
         }
         NetworkEndian::write_u16(&mut packet.hdr_prefix.total_len, total_len as u16);
         NetworkEndian::write_u16(&mut packet.hdr_prefix.id, self.id);
@@ -477,9 +476,12 @@ mod tests {
     use packet::{Buf, BufferSerializer, ParseBuffer, Serializer};
 
     use super::*;
-    use crate::device::ethernet::EtherType;
-    use crate::wire::ethernet::EthernetFrame;
+    use crate::device::ethernet::{EtherType, Mac};
+    use crate::ip::{IpExt, Ipv4};
+    use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 
+    const DEFAULT_SRC_MAC: Mac = Mac::new([1, 2, 3, 4, 5, 6]);
+    const DEFAULT_DST_MAC: Mac = Mac::new([7, 8, 9, 0, 1, 2]);
     const DEFAULT_SRC_IP: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const DEFAULT_DST_IP: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
 
@@ -579,6 +581,35 @@ mod tests {
         assert_eq!(packet.src_ip(), DEFAULT_SRC_IP);
         assert_eq!(packet.dst_ip(), DEFAULT_DST_IP);
         assert_eq!(packet.body(), []);
+    }
+
+    fn test_parse_padding() {
+        // Test that we properly discard post-packet padding.
+        let mut buffer = BufferSerializer::new_vec(Buf::new(vec![], ..))
+            .encapsulate(<Ipv4 as IpExt<&[u8]>>::PacketBuilder::new(
+                DEFAULT_DST_IP,
+                DEFAULT_DST_IP,
+                0,
+                IpProto::Tcp,
+            ))
+            .encapsulate(EthernetFrameBuilder::new(
+                DEFAULT_SRC_MAC,
+                DEFAULT_DST_MAC,
+                EtherType::Ipv4,
+            ))
+            .serialize_outer();
+        buffer.parse::<EthernetFrame<_>>().unwrap();
+        // Test that the Ethernet body is the minimum length, which far exceeds
+        // the IPv4 packet header size of 20 bytes (without options).
+        assert_eq!(buffer.len(), 46);
+        let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
+        // Test that we've properly discarded the post-packet padding, and have
+        // an empty body.
+        assert_eq!(packet.body().len(), 0);
+        // Test that we not only ignored the padding, but properly consumed it
+        // from the underlying buffer as we're required to do by the
+        // ParsablePacket contract.
+        assert_eq!(buffer.len(), 0);
     }
 
     #[test]
