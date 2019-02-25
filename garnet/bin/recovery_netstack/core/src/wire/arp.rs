@@ -349,7 +349,7 @@ where
     HwAddr: Copy + HType + FromBytes + AsBytes + Unaligned,
     ProtoAddr: Copy + PType + FromBytes + AsBytes + Unaligned,
 {
-    fn bytes(&self) -> usize {
+    fn bytes_len(&self) -> usize {
         mem::size_of::<Header>() + mem::size_of::<Body<HwAddr, ProtoAddr>>()
     }
 
