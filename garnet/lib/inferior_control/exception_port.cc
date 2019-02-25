@@ -2,22 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "exception_port.h"
-
-#include <string>
-
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/handles/object_info.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-#include "lib/fsl/handles/object_info.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
-
 #include "garnet/lib/debugger_utils/util.h"
 
+#include "exception_port.h"
 #include "thread.h"
 
 namespace inferior_control {

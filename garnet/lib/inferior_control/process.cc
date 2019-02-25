@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "process.h"
-
 #include <fcntl.h>
-#include <lib/fdio/io.h>
 #include <link.h>
+#include <cinttypes>
+
+#include <lib/fdio/io.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
-#include <cinttypes>
 
 #include "garnet/lib/debugger_utils/breakpoints.h"
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/util.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
 
+#include "process.h"
 #include "server.h"
 
 namespace inferior_control {

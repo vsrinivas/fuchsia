@@ -2,23 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "registers_arm64.h"
-#include "registers.h"
-
-#include <cinttypes>
 #include <cstring>
 
-#include <zircon/compiler.h>
+#include <lib/fxl/arraysize.h>
+#include <lib/fxl/logging.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
 
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/logging.h"
-
 #include "garnet/lib/debugger_utils/util.h"
 
-//#include "arch-arm64.h"
-//#include "thread.h"
+#include "registers_arm64.h"
+#include "registers.h"
 
 namespace inferior_control {
 

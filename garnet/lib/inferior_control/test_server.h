@@ -5,15 +5,15 @@
 #ifndef GARNET_LIB_INFERIOR_CONTROL_TEST_SERVER_H_
 #define GARNET_LIB_INFERIOR_CONTROL_TEST_SERVER_H_
 
-#include <cstdint>
+#include <memory>
 #include <string>
+#include <vector>
 
+#include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_view.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
-
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
-#include "lib/sys/cpp/service_directory.h"
 
 #include "gtest/gtest.h"
 

@@ -2,16 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "thread.h"
-
-#include <cinttypes>
 #include <string>
 
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
-
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
 
 #include "garnet/lib/debugger_utils/breakpoints.h"
 #include "garnet/lib/debugger_utils/threads.h"
@@ -20,6 +16,7 @@
 #include "arch.h"
 #include "process.h"
 #include "server.h"
+#include "thread.h"
 
 namespace inferior_control {
 

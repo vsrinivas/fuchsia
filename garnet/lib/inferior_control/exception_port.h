@@ -5,19 +5,16 @@
 #pragma once
 
 #include <atomic>
-#include <cstdio>
 #include <mutex>
 #include <thread>
-#include <unordered_map>
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <lib/fxl/macros.h>
+#include <lib/fxl/memory/ref_ptr.h>
 #include <lib/zx/port.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
-
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
 
 namespace inferior_control {
 

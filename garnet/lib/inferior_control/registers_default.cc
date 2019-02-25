@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "registers.h"
+#include <lib/fxl/logging.h>
 
-#include "lib/fxl/logging.h"
+#include "registers.h"
 
 namespace inferior_control {
 

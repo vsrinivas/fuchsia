@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "breakpoint.h"
-
 #include <cinttypes>
 
-#include "garnet/lib/debugger_utils/breakpoints.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
 
+#include "garnet/lib/debugger_utils/breakpoints.h"
+
+#include "breakpoint.h"
 #include "process.h"
 
 namespace inferior_control {

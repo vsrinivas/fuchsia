@@ -7,11 +7,10 @@
 #include <memory>
 #include <string>
 
+#include <lib/fxl/macros.h>
+#include <lib/fxl/strings/string_view.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
-
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_view.h"
 
 namespace inferior_control {
 

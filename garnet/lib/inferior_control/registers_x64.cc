@@ -2,20 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "registers_x64.h"
-#include "registers.h"
-
 #include <cinttypes>
 #include <cstring>
 
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
-
 #include "garnet/lib/debugger_utils/util.h"
 
+#include "registers_x64.h"
+#include "registers.h"
 #include "arch_x64.h"
 #include "thread.h"
 

@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test_server.h"
-
-#include <array>
 #include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
@@ -12,6 +9,9 @@
 #include <string>
 #include <vector>
 
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_printf.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
@@ -21,10 +21,7 @@
 
 #include "gtest/gtest.h"
 
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
-#include "lib/sys/cpp/service_directory.h"
+#include "test_server.h"
 
 namespace inferior_control {
 

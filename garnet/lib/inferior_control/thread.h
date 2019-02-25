@@ -4,15 +4,14 @@
 
 #pragma once
 
-#include <string>
 #include <memory>
+#include <string>
 
+#include <lib/fxl/macros.h>
+#include <lib/fxl/memory/weak_ptr.h>
+#include <lib/zx/suspend_token.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
-#include <lib/zx/suspend_token.h>
-
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/weak_ptr.h"
 
 #include "arch.h"
 #include "breakpoint.h"
