@@ -28,7 +28,7 @@ function HELP {
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-GN_SWITCHES=()
+GN_SWITCHES=(--export-compile-commands)
 GN_ARGS=()
 NINJA_ARGS=()
 VARIANT=gcc
