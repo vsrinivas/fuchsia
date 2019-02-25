@@ -13,8 +13,7 @@
 #include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_base.h"
 
-namespace media {
-namespace audio_dfx_test {
+namespace media::audio_dfx_test {
 
 // DfxSwap: an example of an in-place effect with no controls. It has a channel
 // restriction: it must be stereo-in and stereo-out. This effect swaps the left
@@ -60,7 +59,6 @@ class DfxSwap : public DfxBase {
   }
 };
 
-}  // namespace audio_dfx_test
-}  // namespace media
+}  // namespace media::audio_dfx_test
 
 #endif  // LIB_MEDIA_AUDIO_DFX_LIB_DFX_SWAP_H_

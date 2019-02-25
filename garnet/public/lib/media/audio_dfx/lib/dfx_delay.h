@@ -14,8 +14,7 @@
 #include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_base.h"
 
-namespace media {
-namespace audio_dfx_test {
+namespace media::audio_dfx_test {
 
 // DfxDelay: example of inplace effect with one control. Channels_in must always
 // equal channels_out, but it has no further restriction. This effect delays all
@@ -60,7 +59,6 @@ class DfxDelay : public DfxBase {
   std::unique_ptr<float[]> delay_buff_;
 };
 
-}  // namespace audio_dfx_test
-}  // namespace media
+}  // namespace media::audio_dfx_test
 
 #endif  // LIB_MEDIA_AUDIO_DFX_LIB_DFX_DELAY_H_

@@ -13,8 +13,7 @@
 #include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_base.h"
 
-namespace media {
-namespace audio_dfx_test {
+namespace media::audio_dfx_test {
 
 // DfxRechannel: an example of non-in-place effect with no controls. Being non-
 // inplace, it has channel restrictions: specifically it must take in six
@@ -87,7 +86,6 @@ class DfxRechannel : public DfxBase {
   bool encode_ = false;
 };
 
-}  // namespace audio_dfx_test
-}  // namespace media
+}  // namespace media::audio_dfx_test
 
 #endif  // LIB_MEDIA_AUDIO_DFX_LIB_DFX_RECHANNEL_H_

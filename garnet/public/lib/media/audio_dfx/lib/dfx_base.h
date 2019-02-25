@@ -13,8 +13,7 @@
 
 #include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
 
-namespace media {
-namespace audio_dfx_test {
+namespace media::audio_dfx_test {
 
 enum Effect : uint32_t { Delay = 0, Rechannel = 1, Swap = 2, Count = 3 };
 
@@ -68,7 +67,6 @@ class DfxBase {
   uint32_t suggested_buff_frames_;
 };
 
-}  // namespace audio_dfx_test
-}  // namespace media
+}  // namespace media::audio_dfx_test
 
 #endif  // LIB_MEDIA_AUDIO_DFX_LIB_DFX_BASE_H_
