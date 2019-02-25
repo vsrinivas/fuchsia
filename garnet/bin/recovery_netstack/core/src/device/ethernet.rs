@@ -159,6 +159,7 @@ impl Debug for EtherType {
 /// The state associated with an Ethernet device.
 pub struct EthernetDeviceState {
     mac: Mac,
+    mtu: usize,
     ipv4_addr: Option<(Ipv4Addr, Subnet<Ipv4Addr>)>,
     ipv6_addr: Option<(Ipv6Addr, Subnet<Ipv6Addr>)>,
     ipv4_arp: ArpState<Ipv4Addr, EthernetArpDevice>,
@@ -166,8 +167,20 @@ pub struct EthernetDeviceState {
 
 impl EthernetDeviceState {
     /// Construct a new `EthernetDeviceState`.
-    pub fn new(mac: Mac) -> EthernetDeviceState {
-        EthernetDeviceState { mac, ipv4_addr: None, ipv6_addr: None, ipv4_arp: ArpState::default() }
+    pub fn new(mac: Mac, mtu: usize) -> EthernetDeviceState {
+        // TODO(joshlf): Ensure that the configured MTU meets the minimum IPv6 MTU
+        // requirement. A few questions:
+        // - How much do we have to take into account link-layer headers when
+        //   deciding what MTUs are acceptable?
+        // - How do we wire error information back up the call stack? Should this
+        //   just return a Result or something?
+        EthernetDeviceState {
+            mac,
+            mtu,
+            ipv4_addr: None,
+            ipv6_addr: None,
+            ipv4_arp: ArpState::default(),
+        }
     }
 }
 
@@ -200,11 +213,12 @@ pub fn send_ip_frame<D: EventDispatcher, A: IpAddr, S: Serializer>(
     local_addr: A,
     body: S,
 ) {
+    let local_mac = get_device_state(ctx, device_id).mac;
+
     #[ipv4addr]
     let dst_mac = {
-        let src_mac = get_device_state(ctx, device_id).mac;
         if let Some(dst_mac) = crate::device::arp::lookup::<_, _, EthernetArpDevice>(
-            ctx, device_id, src_mac, local_addr,
+            ctx, device_id, local_mac, local_addr,
         ) {
             Some(dst_mac)
         } else {
@@ -219,11 +233,12 @@ pub fn send_ip_frame<D: EventDispatcher, A: IpAddr, S: Serializer>(
     let dst_mac = log_unimplemented!(None, "device::ethernet::send_ip_frame: IPv6 unimplemented");
 
     if let Some(dst_mac) = dst_mac {
-        let src_mac = get_device_state(ctx, device_id).mac;
-        let buffer = body
-            .encapsulate(EthernetFrameBuilder::new(src_mac, dst_mac, A::Version::ETHER_TYPE))
-            .serialize_outer();
-        ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
+        if let Ok(buffer) = body
+            .encapsulate(EthernetFrameBuilder::new(local_mac, dst_mac, A::Version::ETHER_TYPE))
+            .serialize_mtu_outer(get_device_state(ctx, device_id).mtu)
+        {
+            ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
+        }
     }
 }
 
@@ -349,7 +364,10 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
 
 #[cfg(test)]
 mod tests {
+    use packet::{Buf, BufferSerializer};
+
     use super::*;
+    use crate::testutil::{DummyEventDispatcherBuilder, DUMMY_CONFIG};
 
     #[test]
     fn test_mac_to_eui() {
@@ -377,5 +395,28 @@ mod tests {
                 0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x1a, 0xaa, 0xfe, 0xfe, 0x12, 0x34, 0x56
             ])
         );
+    }
+
+    #[test]
+    fn test_mtu() {
+        // Test that we send an Ethernet frame whose size is less than the MTU,
+        // and that we don't send an Ethernet frame whose size is greater than
+        // the MTU.
+        fn test(size: usize, expect_frames_sent: usize) {
+            let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG).build();
+            send_ip_frame(
+                &mut ctx,
+                1,
+                DUMMY_CONFIG.remote_ip,
+                BufferSerializer::new_vec(Buf::new(&mut vec![0; size], ..)),
+            );
+            assert_eq!(ctx.dispatcher().frames_sent().len(), expect_frames_sent);
+        }
+
+        // Since the Ethernet device MTU currently defaults to IPV6_MIN_MTU, an
+        // Ethernet body of IPV6_MIN_MTU will cause the total frame length
+        // (including Ethernet header) to exceed the MTU.
+        test(crate::ip::IPV6_MIN_MTU, 0);
+        test(0, 1);
     }
 }

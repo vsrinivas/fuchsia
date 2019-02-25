@@ -17,7 +17,9 @@ use rand_xorshift::XorShiftRng;
 use crate::device::ethernet::{EtherType, Mac};
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::error::{ParseError, ParseResult};
-use crate::ip::{Ip, IpAddr, IpAddress, IpExt, IpPacket, IpProto, IpSubnet, Ipv4Addr, Subnet};
+use crate::ip::{
+    Ip, IpAddr, IpAddress, IpExt, IpPacket, IpProto, IpSubnet, Ipv4Addr, Subnet, IPV6_MIN_MTU,
+};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
 use crate::wire::ethernet::EthernetFrame;
@@ -316,7 +318,7 @@ impl DummyEventDispatcherBuilder {
         let mut idx_to_device_id =
             HashMap::<_, _, std::collections::hash_map::RandomState>::default();
         for (idx, (mac, ip_subnet)) in devices.into_iter().enumerate() {
-            let id = ctx.state().add_ethernet_device(mac);
+            let id = ctx.state().add_ethernet_device(mac, IPV6_MIN_MTU);
             idx_to_device_id.insert(idx, id);
             match ip_subnet {
                 Some((IpAddress::V4(ip), IpSubnet::V4(subnet))) => {

@@ -27,7 +27,7 @@ use crate::{Context, EventDispatcher};
 const DEFAULT_TTL: u8 = 64;
 
 // minimum MTU required by all IPv6 devices
-const IPV6_MIN_MTU: usize = 1280;
+pub const IPV6_MIN_MTU: usize = 1280;
 
 /// The state associated with the IP layer.
 #[derive(Default)]

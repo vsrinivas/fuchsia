@@ -66,8 +66,8 @@ impl<D: EventDispatcher> Default for StackState<D> {
 
 impl<D: EventDispatcher> StackState<D> {
     /// Add a new ethernet device to the device layer.
-    pub fn add_ethernet_device(&mut self, mac: Mac) -> DeviceId {
-        self.device.add_ethernet_device(mac)
+    pub fn add_ethernet_device(&mut self, mac: Mac, mtu: usize) -> DeviceId {
+        self.device.add_ethernet_device(mac, mtu)
     }
 }
 
