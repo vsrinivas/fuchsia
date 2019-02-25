@@ -112,28 +112,18 @@ std::vector<fuchsia::auth::AuthProviderConfig> GetAuthProviderConfigs() {
 }  // namespace
 
 UserProviderImpl::UserProviderImpl(
-    fuchsia::sys::Launcher* const launcher,
-    const fuchsia::modular::AppConfig& sessionmgr_config,
-    const fuchsia::modular::AppConfig& session_shell_config,
-    const fuchsia::modular::AppConfig& story_shell_config,
-    bool use_session_shell_for_story_shell_factory,
     fuchsia::auth::TokenManagerFactory* token_manager_factory,
     fuchsia::auth::AuthenticationContextProviderPtr
         authentication_context_provider,
-    Delegate* const delegate)
-    : launcher_(launcher),
-      sessionmgr_config_(sessionmgr_config),
-      session_shell_config_(session_shell_config),
-      story_shell_config_(story_shell_config),
-      use_session_shell_for_story_shell_factory_(
-          use_session_shell_for_story_shell_factory),
-      token_manager_factory_(token_manager_factory),
+    OnLoginCallback on_login)
+    : token_manager_factory_(token_manager_factory),
       authentication_context_provider_(
           std::move(authentication_context_provider)),
-      delegate_(delegate),
-      authentication_context_provider_binding_(this) {
-  FXL_DCHECK(delegate);
+      authentication_context_provider_binding_(this),
+      on_login_(std::move(on_login)) {
+  FXL_DCHECK(token_manager_factory_);
   FXL_DCHECK(authentication_context_provider_);
+  FXL_DCHECK(on_login_);
 
   authentication_context_provider_binding_.set_error_handler(
       [this](zx_status_t status) {
@@ -162,25 +152,6 @@ UserProviderImpl::UserProviderImpl(
 void UserProviderImpl::Connect(
     fidl::InterfaceRequest<fuchsia::modular::UserProvider> request) {
   bindings_.AddBinding(this, std::move(request));
-}
-
-void UserProviderImpl::Teardown(const std::function<void()>& callback) {
-  if (session_contexts_.empty()) {
-    callback();
-    return;
-  }
-
-  for (auto& it : session_contexts_) {
-    auto cont = [this, callback] {
-      if (session_contexts_.empty()) {
-        callback();
-        return;
-      }
-    };
-
-    // Logout will remove the user context from |session_contexts_|.
-    it.second->Logout(cont);
-  }
 }
 
 void UserProviderImpl::Login(fuchsia::modular::UserLoginParams params) {
@@ -223,6 +194,30 @@ void UserProviderImpl::PreviousUsers(PreviousUsersCallback callback) {
     }
   }
   callback(std::move(accounts));
+}
+
+void UserProviderImpl::RemoveAllUsers(std::function<void()> callback) {
+  PreviousUsers([this, callback](
+                    std::vector<fuchsia::modular::auth::Account> accounts) {
+    std::vector<FuturePtr<>> did_remove_users;
+    did_remove_users.reserve(accounts.size());
+
+    for (const auto& account : accounts) {
+      auto did_remove_user =
+          Future<>::Create("UserProviderImpl::RemoveAllUsers.did_remove_user");
+      RemoveUser(account.id, [did_remove_user](fidl::StringPtr error_code) {
+        if (error_code) {
+          FXL_LOG(WARNING) << "Account was not removed. Error code: "
+                           << error_code;
+        }
+        did_remove_user->Complete();
+      });
+      did_remove_users.emplace_back(did_remove_user);
+    }
+
+    Wait("UserProviderImpl::RemoveAllUsers.Wait", did_remove_users)
+        ->Then([callback] { callback(); });
+  });
 }
 
 void UserProviderImpl::AddUser(
@@ -381,8 +376,6 @@ void UserProviderImpl::RemoveUserInternal(
        callback](fuchsia::auth::Status status) {
         if (status != fuchsia::auth::Status::OK) {
           FXL_LOG(ERROR) << "Token Manager Authorize() call returned error";
-          callback("Unable to remove user");
-          return;
         }
 
         std::string error;
@@ -501,56 +494,8 @@ void UserProviderImpl::LoginInternal(fuchsia::modular::auth::AccountPtr account,
   fuchsia::auth::TokenManagerPtr agent_token_manager =
       CreateTokenManager(account_id);
 
-  auto view_owner =
-      delegate_->GetSessionShellViewOwner(std::move(params.view_owner));
-  auto service_provider =
-      delegate_->GetSessionShellServiceProvider(std::move(params.services));
-
-  auto context = std::make_unique<SessionContextImpl>(
-      launcher_, CloneStruct(sessionmgr_config_),
-      CloneStruct(session_shell_config_), CloneStruct(story_shell_config_),
-      use_session_shell_for_story_shell_factory_,
-      std::move(ledger_token_manager), std::move(agent_token_manager),
-      std::move(account), std::move(view_owner), std::move(service_provider),
-      [this](SessionContextImpl* c) {
-        session_contexts_.erase(c);
-        delegate_->DidLogout();
-      });
-  auto context_ptr = context.get();
-  session_contexts_[context_ptr] = std::move(context);
-
-  delegate_->DidLogin();
-}
-
-FuturePtr<> UserProviderImpl::SwapSessionShell(
-    fuchsia::modular::AppConfig session_shell_config) {
-  if (session_contexts_.size() == 0)
-    return Future<>::CreateCompleted("SwapSessionShell(Completed)");
-
-  FXL_CHECK(session_contexts_.size() == 1)
-      << session_contexts_.size()
-      << " user contexts exist, which should be impossible.";
-
-  auto session_context = session_contexts_.begin()->first;
-  return session_context->SwapSessionShell(std::move(session_shell_config));
-}
-
-void UserProviderImpl::RestartSession(
-    const std::function<void()>& on_restart_complete) {
-  // Callback to log the user back in if login is not automatic
-  auto login = [this, on_restart_complete]() {
-    if (session_contexts_.size() < 1 && users_storage_) {
-      auto account = Convert(users_storage_->users()->Get(0));
-
-      fuchsia::modular::UserLoginParams params;
-      params.account_id = account->id;
-      Login(std::move(params));
-    }
-    on_restart_complete();
-  };
-
-  // Log the user out to shut down sessionmgr
-  session_contexts_.begin()->first->Logout(login);
+  on_login_(std::move(account), std::move(ledger_token_manager),
+            std::move(agent_token_manager));
 }
 
 }  // namespace modular

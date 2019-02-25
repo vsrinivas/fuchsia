@@ -22,6 +22,7 @@
 #include <lib/fxl/macros.h>
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
+#include "peridot/bin/basemgr/session_provider.h"
 #include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"
 #include "peridot/bin/basemgr/user_provider_impl.h"
 #include "peridot/bin/basemgr/wait_for_minfs.h"
@@ -72,9 +73,9 @@ BasemgrImpl::BasemgrImpl(
       presenter_(std::move(presenter)),
       device_settings_manager_(std::move(device_settings_manager)),
       on_shutdown_(std::move(on_shutdown)),
-      user_provider_impl_("UserProviderImpl"),
       base_shell_context_binding_(this),
-      authentication_context_provider_binding_(this) {
+      authentication_context_provider_binding_(this),
+      session_provider_("SessionProvider") {
   UpdateSessionShellConfig();
 
   // TODO(SCN-595): Presentation is now discoverable, so we don't need
@@ -231,7 +232,7 @@ void BasemgrImpl::Start() {
     WaitForMinfs();
   }
 
-  // Start OAuth Token Manager App.
+  // 1. Initialize user provider.
   token_manager_factory_app_.release();
   fuchsia::modular::AppConfig token_manager_config;
   token_manager_config.url = kTokenManagerFactoryUrl;
@@ -241,13 +242,38 @@ void BasemgrImpl::Start() {
   token_manager_factory_app_->services().ConnectToService(
       token_manager_factory_.NewRequest());
 
-  user_provider_impl_.reset(new UserProviderImpl(
-      launcher_, settings_.sessionmgr, session_shell_config_,
-      settings_.story_shell,
-      settings_.use_session_shell_for_story_shell_factory,
+  user_provider_impl_ = std::make_unique<UserProviderImpl>(
       token_manager_factory_.get(),
-      authentication_context_provider_binding_.NewBinding().Bind(), this));
+      authentication_context_provider_binding_.NewBinding().Bind(),
+      /* on_login= */
+      [this](fuchsia::modular::auth::AccountPtr account,
+             fuchsia::auth::TokenManagerPtr ledger_token_manager,
+             fuchsia::auth::TokenManagerPtr agent_token_manager) {
+        OnLogin(std::move(account), std::move(ledger_token_manager),
+                std::move(agent_token_manager));
+      });
 
+  // 2. Initialize session provider.
+  session_provider_.reset(new SessionProvider(
+      user_provider_impl_.get(), launcher_, settings_.sessionmgr,
+      session_shell_config_, settings_.story_shell,
+      settings_.use_session_shell_for_story_shell_factory,
+      /* on_zero_sessions= */ [this] {
+        if (settings_.test) {
+          // TODO(MI4-1117): Integration tests currently
+          // expect base shell to always be running. So, if
+          // we're running under a test, DidLogin() will not
+          // shut down the base shell after login; thus this
+          // method doesn't need to re-start the base shell
+          // after a logout.
+          return;
+        }
+
+        FXL_DLOG(INFO) << "Re-starting due to logout";
+        ShowSetupOrLogin();
+      }));
+
+  // 3. Show setup UI or proceed to auto-login into a session.
   ShowSetupOrLogin();
 
   ReportEvent(ModularEvent::BOOTED_TO_BASEMGR);
@@ -276,18 +302,17 @@ void BasemgrImpl::Shutdown() {
         << "======================== [" << settings_.test_name << "] Done";
   }
 
-  // TODO(mesch): Some of these could be done in parallel too.
-  // fuchsia::modular::UserProvider must go first, but the order after user
-  // provider is for now rather arbitrary. We terminate base shell last so
-  // that in tests testing::Teardown() is invoked at the latest possible time.
-  // Right now it just demonstrates that AppTerminate() works as we like it
-  // to.
-  user_provider_impl_.Teardown(kUserProviderTimeout, [this] {
-    FXL_DLOG(INFO) << "- fuchsia::modular::UserProvider down";
-    StopTokenManagerFactoryApp()->Then([this] {
-      FXL_DLOG(INFO) << "- fuchsia::auth::TokenManagerFactory down";
-      StopBaseShell()->Then([this] {
-        FXL_LOG(INFO) << "Clean Shutdown";
+  // |session_provider_| teardown is asynchronous because it holds the
+  // sessionmgr processes.
+  session_provider_.Teardown(kSessionProviderTimeout, [this] {
+    StopBaseShell()->Then([this] {
+      FXL_DLOG(INFO) << "- fuchsia::modular::BaseShell down";
+      user_provider_impl_.reset();
+      FXL_DLOG(INFO) << "- fuchsia::modular::UserProvider down";
+
+      StopTokenManagerFactoryApp()->Then([this] {
+        FXL_DLOG(INFO) << "- fuchsia::auth::TokenManagerFactory down";
+        FXL_LOG(INFO) << "Clean shutdown";
         on_shutdown_();
       });
     });
@@ -303,53 +328,33 @@ void BasemgrImpl::GetAuthenticationUIContext(
   base_shell_->GetAuthenticationUIContext(std::move(request));
 }
 
-void BasemgrImpl::DidLogin() {
-  // Continues if `enable_presenter` is set to true during testing, as
-  // ownership of the Presenter should still be moved to the session shell.
-  if (settings_.test && !settings_.enable_presenter) {
-    // TODO(MI4-1117): Integration tests currently expect base shell to
-    // always be running. So, if we're running under a test, do not shut down
-    // the base shell after login.
-    return;
+void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
+                          fuchsia::auth::TokenManagerPtr ledger_token_manager,
+                          fuchsia::auth::TokenManagerPtr agent_token_manager) {
+  if (session_shell_view_owner_.is_bound()) {
+    session_shell_view_owner_.Unbind();
   }
+  auto view_owner = session_shell_view_owner_.NewRequest();
+  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider;
+  service_namespace_.AddBinding(service_provider.NewRequest());
 
-  // TODO(MI4-1117): See above. The base shell shouldn't be shut down.
+  session_provider_->StartSession(
+      std::move(view_owner), std::move(service_provider), std::move(account),
+      std::move(ledger_token_manager), std::move(agent_token_manager));
+
+  // TODO(MI4-1117): Integration tests currently expect base shell to always be
+  // running. So, if we're running under a test, do not shut down the base shell
+  // after login.
   if (!settings_.test) {
     FXL_DLOG(INFO) << "Stopping base shell due to login";
     StopBaseShell();
   }
 
-  InitializePresentation(session_shell_view_owner_);
-}
-
-void BasemgrImpl::DidLogout() {
-  if (settings_.test) {
-    // TODO(MI4-1117): Integration tests currently expect base shell to
-    // always be running. So, if we're running under a test, DidLogin() will
-    // not shut down the base shell after login; thus this method doesn't
-    // need to re-start the base shell after a logout.
-    return;
+  // Ownership of the Presenter should be moved to the session shell for tests
+  // that enable presenter, and production code.
+  if (!settings_.test || settings_.enable_presenter) {
+    InitializePresentation(session_shell_view_owner_);
   }
-
-  FXL_DLOG(INFO) << "Re-starting base shell due to logout";
-
-  StartBaseShell();
-}
-
-fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-BasemgrImpl::GetSessionShellViewOwner(
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>) {
-  return session_shell_view_owner_.is_bound()
-             ? session_shell_view_owner_.Unbind().NewRequest()
-             : session_shell_view_owner_.NewRequest();
-}
-
-fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
-BasemgrImpl::GetSessionShellServiceProvider(
-    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>) {
-  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle;
-  service_namespace_.AddBinding(handle.NewRequest());
-  return handle;
 }
 
 void BasemgrImpl::OnEvent(fuchsia::ui::input::KeyboardEvent event) {
@@ -410,7 +415,7 @@ void BasemgrImpl::SwapSessionShell() {
 
   UpdateSessionShellConfig();
 
-  user_provider_impl_->SwapSessionShell(CloneStruct(session_shell_config_))
+  session_provider_->SwapSessionShell(CloneStruct(session_shell_config_))
       ->Then([] { FXL_DLOG(INFO) << "Swapped session shell"; });
 }
 
@@ -531,30 +536,7 @@ void BasemgrImpl::ShowSetupOrLogin() {
                 }
               });
 
-          user_provider_impl_->PreviousUsers(
-              [this](std::vector<fuchsia::modular::auth::Account> accounts) {
-                std::vector<FuturePtr<>> did_remove_users;
-                did_remove_users.reserve(accounts.size());
-
-                for (const auto& account : accounts) {
-                  auto did_remove_user = Future<>::Create(
-                      "BasemgrImpl.ShowSetupOrLogin.did_remove_user");
-                  user_provider_impl_->RemoveUser(
-                      account.id,
-                      [did_remove_user](fidl::StringPtr error_code) {
-                        if (error_code) {
-                          FXL_LOG(WARNING) << "Account was not removed during "
-                                              "factory reset. Error code: "
-                                           << error_code;
-                        }
-                        did_remove_user->Complete();
-                      });
-                  did_remove_users.emplace_back(did_remove_user);
-                }
-
-                Wait("BasemgrImpl.ShowSetupOrLogin.Wait", did_remove_users)
-                    ->Then([this] { StartBaseShell(); });
-              });
+          user_provider_impl_->RemoveAllUsers([this] { StartBaseShell(); });
         } else {
           show_setup_or_login();
         }
@@ -562,7 +544,7 @@ void BasemgrImpl::ShowSetupOrLogin() {
 }
 
 void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
-  user_provider_impl_->RestartSession(on_restart_complete);
+  session_provider_->RestartSession(on_restart_complete);
 }
 
 void BasemgrImpl::LoginAsGuest() {

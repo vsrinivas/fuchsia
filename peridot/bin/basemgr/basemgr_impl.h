@@ -25,6 +25,7 @@
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
+#include "peridot/bin/basemgr/session_provider.h"
 #include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"
 #include "peridot/bin/basemgr/user_provider_impl.h"
 #include "peridot/lib/fidl/clone.h"
@@ -41,8 +42,7 @@ namespace modular {
 class BasemgrImpl : fuchsia::modular::BaseShellContext,
                     fuchsia::auth::AuthenticationContextProvider,
                     fuchsia::modular::internal::BasemgrDebug,
-                    fuchsia::ui::policy::KeyboardCaptureListenerHACK,
-                    modular::UserProviderImpl::Delegate {
+                    fuchsia::ui::policy::KeyboardCaptureListenerHACK {
  public:
   // Initializes as BasemgrImpl instance with the given parameters:
   //
@@ -92,23 +92,6 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
       fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request)
       override;
 
-  // |UserProviderImpl::Delegate|
-  void DidLogin() override;
-
-  // |UserProviderImpl::Delegate|
-  void DidLogout() override;
-
-  // |UserProviderImpl::Delegate|
-  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-      GetSessionShellViewOwner(
-          fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>)
-          override;
-
-  // |UserProviderImpl::Delegate|
-  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
-      GetSessionShellServiceProvider(
-          fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>) override;
-
   // |KeyboardCaptureListenerHACK|
   void OnEvent(fuchsia::ui::input::KeyboardEvent event) override;
 
@@ -126,6 +109,12 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   void ToggleClipping();
 
   void ShowSetupOrLogin();
+
+  // Invoked when a user has been logged in. Starts a new session for the given
+  // |account|.
+  void OnLogin(fuchsia::modular::auth::AccountPtr account,
+               fuchsia::auth::TokenManagerPtr ledger_token_manager,
+               fuchsia::auth::TokenManagerPtr agent_token_manager);
 
   // Updates the session shell app config to the active session shell. Done once
   // on initialization and every time the session shells are swapped.
@@ -153,7 +142,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager_;
   std::function<void()> on_shutdown_;
 
-  AsyncHolder<UserProviderImpl> user_provider_impl_;
+  std::unique_ptr<UserProviderImpl> user_provider_impl_;
 
   fidl::BindingSet<fuchsia::modular::internal::BasemgrDebug> basemgr_bindings_;
   fidl::Binding<fuchsia::modular::BaseShellContext> base_shell_context_binding_;
@@ -181,6 +170,8 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
         fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED;
     bool clipping_enabled{};
   } presentation_state_;
+
+  AsyncHolder<SessionProvider> session_provider_;
 
   component::ServiceNamespace service_namespace_;
 

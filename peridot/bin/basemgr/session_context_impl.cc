@@ -37,11 +37,11 @@ SessionContextImpl::SessionContextImpl(
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> base_shell_services,
-    DoneCallback done)
+    OnSessionShutdownCallback on_session_shutdown)
     : session_context_binding_(this),
       base_shell_services_(base_shell_services ? base_shell_services.Bind()
                                                : nullptr),
-      done_(std::move(done)) {
+      on_session_shutdown_(std::move(on_session_shutdown)) {
   // 0. Generate the path to map '/data' for the sessionmgr we are starting.
   std::string data_origin;
   if (!account) {
@@ -72,33 +72,38 @@ SessionContextImpl::SessionContextImpl(
 
   sessionmgr_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "
-                   << "Calling done_().";
+                   << "Calling on_session_shutdown_().";
     // This prevents us from receiving any further requests.
     session_context_binding_.Unbind();
-    // Logout(), which expects a graceful shutdown of sessionmgr, does not
-    // apply here because sessionmgr crashed. Just run |done_| directly.
-    done_(this);
+
+    // Shutdown(), which expects a graceful shutdown of sessionmgr, does not
+    // apply here because sessionmgr crashed. Just run |on_session_shutdown_|
+    // directly.
+    on_session_shutdown_(/* logout_users= */ false);
   });
 }
 
 // TODO(MF-120): Replace method in favor of letting sessionmgr launch base
 // shell via SessionUserProvider.
-void SessionContextImpl::Logout(fit::function<void()> callback) {
-  FXL_LOG(INFO) << "fuchsia::modular::UserController::Logout()";
-  logout_response_callbacks_.push_back(std::move(callback));
-  if (logout_response_callbacks_.size() > 1) {
+void SessionContextImpl::Shutdown(bool logout_users,
+                                  fit::function<void()> callback) {
+  shutdown_callbacks_.push_back(std::move(callback));
+  if (shutdown_callbacks_.size() > 1) {
+    FXL_LOG(INFO)
+        << "fuchsia::modular::internal::SessionContext::Shutdown() "
+           "already called, queuing callback while shutdown is in progress.";
     return;
   }
 
   // This should prevent us from receiving any further requests.
   session_context_binding_.Unbind();
 
-  sessionmgr_app_->Teardown(kSessionmgrTimeout, [this] {
-    for (const auto& callback : logout_response_callbacks_) {
+  sessionmgr_app_->Teardown(kSessionmgrTimeout, [this, logout_users] {
+    for (const auto& callback : shutdown_callbacks_) {
       callback();
     }
 
-    done_(this);
+    on_session_shutdown_(logout_users);
   });
 }
 
@@ -119,7 +124,7 @@ FuturePtr<> SessionContextImpl::SwapSessionShell(
 }
 
 void SessionContextImpl::Logout() {
-  Logout([] {});
+  Shutdown(/* logout_users= */ true, [] {});
 }
 
 }  // namespace modular

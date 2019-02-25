@@ -29,7 +29,7 @@ constexpr auto kStoryProviderTimeout = kBasicTimeout * 2;
 constexpr auto kSessionmgrTimeout =
     kBasicTimeout * 3 + kAgentRunnerTimeout + kStoryProviderTimeout;
 
-constexpr auto kUserProviderTimeout = kBasicTimeout + kSessionmgrTimeout;
+constexpr auto kSessionProviderTimeout = kBasicTimeout + kSessionmgrTimeout;
 
 }  // namespace modular
 

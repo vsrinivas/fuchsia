@@ -33,11 +33,11 @@ namespace modular {
 // owner (BasemgrImpl) to delete it.
 class SessionContextImpl : fuchsia::modular::internal::SessionContext {
  public:
-  // After perfoming logout, to signal our completion (and deletion of our
-  // instance) to our owner, we do it using a callback supplied to us in our
-  // constructor. (The alternative is to take in a BasemgrImpl*, which seems
-  // a little specific and overscoped).
-  using DoneCallback = std::function<void(SessionContextImpl*)>;
+  // Called after perfoming shutdown of the session, to signal our completion
+  // (and deletion of our instance) to our owner, we do it using a callback
+  // supplied to us in our constructor. (The alternative is to take in a
+  // SessionProvider*, which seems a little specific and overscoped).
+  using OnSessionShutdownCallback = std::function<void(bool logout_users)>;
 
   SessionContextImpl(
       fuchsia::sys::Launcher* const launcher,
@@ -51,10 +51,13 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> base_shell_services,
-      DoneCallback done);
+      OnSessionShutdownCallback on_session_shutdown);
 
-  // This will effectively tear down the entire instance by calling |done_|.
-  void Logout(fit::function<void()> callback);
+  // This will effectively tear down the entire instance by calling
+  // |on_session_shutdown_|. If |logout_users| is true, all the users will be
+  // logged out with the assumption that all users belong to the current
+  // session.
+  void Shutdown(bool logout_users, fit::function<void()> callback);
 
   // Stops the active session shell, and starts the session shell specified in
   // |session_shell_config|.
@@ -76,11 +79,11 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   fidl::Binding<fuchsia::modular::internal::SessionContext>
       session_context_binding_;
 
-  std::vector<fit::function<void()>> logout_response_callbacks_;
+  std::vector<fit::function<void()>> shutdown_callbacks_;
 
   fuchsia::sys::ServiceProviderPtr base_shell_services_;
 
-  DoneCallback done_;
+  OnSessionShutdownCallback on_session_shutdown_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionContextImpl);
 };

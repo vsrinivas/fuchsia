@@ -1,0 +1,73 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef PERIDOT_BIN_BASEMGR_SESSION_PROVIDER_H_
+#define PERIDOT_BIN_BASEMGR_SESSION_PROVIDER_H_
+
+#include <fuchsia/auth/cpp/fidl.h>
+#include <fuchsia/modular/auth/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async/cpp/future.h>
+
+#include "peridot/bin/basemgr/session_context_impl.h"
+#include "peridot/bin/basemgr/session_provider.h"
+#include "peridot/bin/basemgr/user_provider_impl.h"
+
+namespace modular {
+
+class SessionProvider {
+ public:
+  // TODO(MF-245): Remove UserProviderImpl dependency.
+  // |on_zero_sessions| is invoked when all sessions have been deleted. This is
+  // meant to be a callback for BasemgrImpl to either display a base shell or
+  // start a new session.
+  SessionProvider(UserProviderImpl* const user_provider_impl,
+                  fuchsia::sys::Launcher* const launcher,
+                  const fuchsia::modular::AppConfig& sessionmgr,
+                  const fuchsia::modular::AppConfig& session_shell,
+                  const fuchsia::modular::AppConfig& story_shell,
+                  bool use_session_shell_for_story_shell_factory,
+                  fit::function<void()> on_zero_sessions);
+
+  // Starts a new sessionmgr process if there isn't one already. If there is an
+  // existing sessionmgr process, it is a no-op.
+  void StartSession(
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider,
+      fuchsia::modular::auth::AccountPtr account,
+      fuchsia::auth::TokenManagerPtr ledger_token_manager,
+      fuchsia::auth::TokenManagerPtr agent_token_manager);
+
+  // Asynchronously tears down the sessionmgr process. |callback| is invoked
+  // once teardown is complete or has timed out.
+  void Teardown(const std::function<void()>& callback);
+
+  // Stops the active session shell, and starts the session shell specified in
+  // |session_shell_config|. If no session shells are running, this has no
+  // effect, and will return an immediately-completed future.
+  FuturePtr<> SwapSessionShell(
+      fuchsia::modular::AppConfig session_shell_config);
+
+  // Shuts down the running session without logging any users out, which will
+  // effectively restart a new session with the same users.
+  void RestartSession(const std::function<void()>& on_restart_complete);
+
+ private:
+  UserProviderImpl* const user_provider_impl_;     // Not owned.
+  fuchsia::sys::Launcher* const launcher_;         // Not owned.
+  const fuchsia::modular::AppConfig& sessionmgr_;  // Neither owned nor copied.
+  const fuchsia::modular::AppConfig&
+      session_shell_;                               // Neither owned nor copied.
+  const fuchsia::modular::AppConfig& story_shell_;  // Neither owned nor copied.
+  bool use_session_shell_for_story_shell_factory_;
+
+  fit::function<void()> on_zero_sessions_;
+  std::unique_ptr<SessionContextImpl> session_context_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(SessionProvider);
+};
+
+}  // namespace modular
+
+#endif  // PERIDOT_BIN_BASEMGR_SESSION_PROVIDER_H_

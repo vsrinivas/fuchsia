@@ -26,60 +26,19 @@ namespace modular {
 class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
                          fuchsia::modular::UserProvider {
  public:
-  // Users of UserProviderImpl must register a Delegate object.
-  class Delegate {
-   public:
-    // Called after UserProviderImpl successfully logs in a user.
-    virtual void DidLogin() = 0;
+  // Called after UserProviderImpl successfully logs in a user.
+  using OnLoginCallback =
+      fit::function<void(fuchsia::modular::auth::AccountPtr account,
+                         fuchsia::auth::TokenManagerPtr ledger_token_manager,
+                         fuchsia::auth::TokenManagerPtr agent_token_manager)>;
 
-    // Called after UserProviderImpl successfully logs out a user.
-    virtual void DidLogout() = 0;
-
-    // Enables the delegate to intercept the session shell's view owner, so that
-    // e.g. the delegate can embed it in a parent view or present it.
-    // |default_view_owner| is the view owner request that's passed to
-    // UserProviderImpl from base shell. If you don't need to intercept the
-    // view owner, return it without modifying it.
-    virtual fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-    GetSessionShellViewOwner(
-        fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-            default_view_owner) = 0;
-
-    // Enables the delegate to supply a different service provider to the user
-    // shell. |default_service_provider| is the service provider passed to the
-    // session shell by the base shell. If you don't need to replace it, return
-    // it without modifying it.
-    virtual fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
-    GetSessionShellServiceProvider(
-        fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
-            default_service_provider) = 0;
-  };
-
-  // |launcher|, |token_manager_factory| and |delegate| must outlive
-  // UserProviderImpl.
+  // All parameters must outlive UserProviderImpl.
   UserProviderImpl(
-      fuchsia::sys::Launcher* const launcher,
-      const fuchsia::modular::AppConfig& sessionmgr_config,
-      const fuchsia::modular::AppConfig& session_shell_config,
-      const fuchsia::modular::AppConfig& story_shell_config,
-      bool use_session_shell_for_story_shell_factory,
       fuchsia::auth::TokenManagerFactory* token_manager_factory,
       fuchsia::auth::AuthenticationContextProviderPtr auth_context_provider,
-      Delegate* const delegate);
+      OnLoginCallback on_login);
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request);
-
-  void Teardown(const std::function<void()>& callback);
-
-  // Stops the active session shell, and starts the session shell specified in
-  // |session_shell_config|. This has no effect, and will return an
-  // immediately-completed future, if no session shells are running.
-  FuturePtr<> SwapSessionShell(
-      fuchsia::modular::AppConfig session_shell_config);
-
-  // Restarts the current session by logging out the current user and logging
-  // that user back in.
-  void RestartSession(const std::function<void()>& on_restart_complete);
 
   // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
   void Login(fuchsia::modular::UserLoginParams params) override;
@@ -87,13 +46,17 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
   // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
   void PreviousUsers(PreviousUsersCallback callback) override;
 
-  // |fuchsia::modular::UserProvider|, also called by |basemgr_impl|.
-  void RemoveUser(std::string account_id, RemoveUserCallback callback) override;
+  // Removes all the users in storage. |callback| is invoked after all users
+  // have been removed.
+  void RemoveAllUsers(std::function<void()> callback);
 
  private:
   // |fuchsia::modular::UserProvider|
   void AddUser(fuchsia::modular::auth::IdentityProvider identity_provider,
                AddUserCallback callback) override;
+
+  // |fuchsia::modular::UserProvider|
+  void RemoveUser(std::string account_id, RemoveUserCallback callback) override;
 
   // |fuchsia::auth::AuthenticationContextProvider|
   void GetAuthenticationUIContext(
@@ -116,27 +79,17 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
 
   fidl::BindingSet<fuchsia::modular::UserProvider> bindings_;
 
-  fuchsia::sys::Launcher* const launcher_;  // Not owned.
-  const fuchsia::modular::AppConfig&
-      sessionmgr_config_;  // Neither owned nor copied.
-  const fuchsia::modular::AppConfig&
-      session_shell_config_;  // Neither owned nor copied.
-  const fuchsia::modular::AppConfig&
-      story_shell_config_;  // Neither owned nor copied.
-  bool use_session_shell_for_story_shell_factory_;
   fuchsia::auth::TokenManagerFactory* const
       token_manager_factory_;  // Neither owned nor copied.
   fuchsia::auth::AuthenticationContextProviderPtr
       authentication_context_provider_;
-  Delegate* const delegate_;  // Neither owned nor copied.
 
   fidl::Binding<fuchsia::auth::AuthenticationContextProvider>
       authentication_context_provider_binding_;
   std::string serialized_users_;
   const fuchsia::modular::UsersStorage* users_storage_ = nullptr;
 
-  std::map<SessionContextImpl*, std::unique_ptr<SessionContextImpl>>
-      session_contexts_;
+  OnLoginCallback on_login_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserProviderImpl);
 };

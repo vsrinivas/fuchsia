@@ -102,6 +102,8 @@ source_set("lib") {
   sources = [
     "session_context_impl.cc",
     "session_context_impl.h",
+    "session_provider.cc",
+    "session_provider.h",
     "user_provider_impl.cc",
     "user_provider_impl.h",
   ]
@@ -118,6 +120,7 @@ source_set("lib") {
     "//peridot/lib/fidl:clone",
     "//peridot/lib/fidl:environment",
     "//peridot/lib/fidl:json_xdr",
+    "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.modular.internal",

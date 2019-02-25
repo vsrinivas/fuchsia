@@ -69,11 +69,11 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
       &launcher, CloneStruct(app_config) /* sessionmgr_config */,
       CloneStruct(app_config) /* session_shell_config */,
       CloneStruct(app_config) /* story_shell_config */,
-      false, /* use_session_shell_for_story_shell_factory */
+      false /* use_session_shell_for_story_shell_factory */,
       std::move(ledger_token_manager), std::move(agent_token_manager),
       nullptr /* account */, nullptr /* view_owner_request */,
       nullptr /* base_shell_services */,
-      /* done_callback = */ [&done_callback_called](SessionContextImpl*) {
+      /* done_callback = */ [&done_callback_called](bool) {
         done_callback_called = true;
       });
 
